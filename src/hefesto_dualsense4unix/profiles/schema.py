@@ -2573,7 +2573,7 @@ A_ECONOMIA_EM_CADA_PECA: tuple[PecaDaEconomia, ...] = (
     ),
     PecaDaEconomia(
         "Vibração",
-        "O teto da Economia, nos dois motores.",
+        "O teto da Economia, nos dois motores e na háptica.",
         "hefesto_dualsense4unix.profiles.schema:vibracao_na_economia",
     ),
     PecaDaEconomia(

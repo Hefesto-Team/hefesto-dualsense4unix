@@ -85,12 +85,23 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SerializationInfo,
+    SerializerFunctionWrapHandler,
     ValidationError,
     computed_field,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
+from hefesto_dualsense4unix.profiles.schema import (
+    ControllerOverrides,
+    LedsConfig,
+    Profile,
+    ProfileMouseConfig,
+    ProfileSpeakerConfig,
+    RumbleConfig,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 # A GRAFIA DO LUGAR mora em ``utils/lugar.py`` desde a ENTRADA-A-ENTRADA-02
@@ -1033,6 +1044,141 @@ class GestoDeclarado(BaseModel):
         return self
 
 
+# ---------------------------------------------------------------------------
+# O padrão do computador (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01)
+# ---------------------------------------------------------------------------
+#
+# O som, os sensores, a luz, a vibração, o mouse e o teclado têm um valor do
+# computador, um por controle e um para todo controle, e o perfil do jogo só
+# sobrepõe (`D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE`). As seções são os
+# MESMOS modelos do perfil, nunca uma segunda cópia; quem decide o que é de quem,
+# quem monta a vista e quem grava é ``profiles/o_padrao_do_computador.py``.
+
+#: As seções de cada controle que o computador guarda. As outras do
+#: ``ControllerOverrides`` (gatilhos, máscara, mira) são do jogo.
+SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
+    "leds", "speaker", "mic", "rumble", "sensores",
+)
+
+
+class MouseDoComputador(BaseModel):
+    """As duas velocidades do mouse emulado. O liga e desliga é do jogo.
+
+    A faixa é a do ``ProfileMouseConfig``, conferida por ele (um dono só).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    speed: int | None = None
+    scroll_speed: int | None = None
+
+    @model_validator(mode="after")
+    def _a_faixa_e_a_do_perfil(self) -> MouseDoComputador:
+        campos = {c: getattr(self, c) for c in ("speed", "scroll_speed")
+                  if getattr(self, c) is not None}
+        ProfileMouseConfig(enabled=False, **campos)
+        return self
+
+
+class ComputadorGlobal(BaseModel):
+    """O «todo controle» do computador: o que vale em todo controle, e no novo."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    leds: LedsConfig | None = None
+    rumble: RumbleConfig | None = None
+    speaker: ProfileSpeakerConfig | None = None
+    mouse: MouseDoComputador | None = None
+    button_actions: dict[str, str] | None = None
+    key_bindings: dict[str, list[str]] | None = None
+    teclado_emulado: bool | None = None
+
+    @model_validator(mode="after")
+    def _botoes_e_teclas_pelo_dono(self) -> ComputadorGlobal:
+        """Os botões e as teclas passam pelas regras do perfil, que é o dono delas."""
+        if self.button_actions is None and self.key_bindings is None:
+            return self
+        Profile.model_validate({
+            "name": "computador",
+            "match": {"type": "any"},
+            "button_actions": self.button_actions,
+            "key_bindings": self.key_bindings,
+        })
+        return self
+
+
+class ComputadorDeclarado(BaseModel):
+    """O padrão do computador: ``global`` e cada controle pela identidade.
+
+    Nasce vazio («ninguém declarou»). ``migrado`` é a marca da migração de
+    ``profiles/o_padrao_do_computador.migrar_uma_vez``: ela roda uma vez, e o
+    «Restaurar de fábrica» esvazia o resto sem apagar a marca.
+
+    O DISCO GUARDA SÓ O QUE FOI DECLARADO (o serializador abaixo): cada seção
+    sai com ``exclude_unset``. Um campo que ninguém declarou não pode ir ao
+    arquivo com o valor de fábrica, senão o brilho de fábrica de UM controle
+    passaria a vencer o brilho que ela deu ao computador inteiro.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    global_: ComputadorGlobal = Field(default_factory=ComputadorGlobal, alias="global")
+    controles: dict[str, ControllerOverrides] = Field(default_factory=dict)
+    migrado: bool | None = None
+
+    @field_validator("controles", mode="before")
+    @classmethod
+    def _chave_e_a_identidade_e_none_esquece(cls, valor: Any) -> Any:
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        if len(vivos) > _MAXIMO_DE_ENTRADAS:
+            raise ValueError(
+                f"{len(vivos)} controles no computador, e o teto é {_MAXIMO_DE_ENTRADAS}")
+        for chave in vivos:
+            if not isinstance(chave, str) or not _CHAVE_DE_CONTROLE.match(chave):
+                raise ValueError(
+                    f"chave de controle {chave!r} não é a identidade do controle "
+                    "(doze hex minúsculos, sem separador)")
+        return vivos
+
+    @field_validator("controles")
+    @classmethod
+    def _so_o_que_e_do_computador(
+        cls, valor: dict[str, ControllerOverrides]
+    ) -> dict[str, ControllerOverrides]:
+        for chave, entrada in valor.items():
+            do_jogo = sorted(
+                c for c in entrada.model_fields_set
+                if c not in SECOES_DO_CONTROLE_NO_COMPUTADOR
+                and getattr(entrada, c) is not None
+            )
+            if do_jogo:
+                raise ValueError(
+                    f"o controle {chave} traz {do_jogo}, que são do jogo e não do computador")
+        return valor
+
+    @model_serializer(mode="wrap")
+    def _so_o_que_foi_declarado(
+        self, handler: SerializerFunctionWrapHandler, info: SerializationInfo
+    ) -> Any:
+        modo = "json" if info.mode_is_json() else "python"
+        saida: dict[str, Any] = {}
+        do_global = self.global_.model_dump(mode=modo, exclude_unset=True)
+        if do_global:
+            saida["global"] = do_global
+        controles = {
+            chave: dados
+            for chave, entrada in self.controles.items()
+            if (dados := entrada.model_dump(mode=modo, exclude_unset=True))
+        }
+        if controles:
+            saida["controles"] = controles
+        if self.migrado is not None:
+            saida["migrado"] = self.migrado
+        return saida
+
+
 class MaquinaConfig(BaseModel):
     """O documento inteiro. Nasce todo em "não sei", e é assim que ele é útil."""
 
@@ -1076,6 +1222,11 @@ class MaquinaConfig(BaseModel):
     # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
     # None}}`` devolve o gesto ao de fábrica.
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
+    # O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (02/10/2026): o padrão do
+    # computador (``ComputadorDeclarado``). O nome é ``computador`` e não
+    # «padrão»: a chave vai a string em toda tela, e a regra do cabeçalho pede
+    # palavra sem acento. A ``version`` não sobe, pela razão do ``mapa``.
+    computador: ComputadorDeclarado = Field(default_factory=ComputadorDeclarado)
     # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
     # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
     # correção de ambiente é ``gravar_correcao_de_ambiente``
@@ -1573,6 +1724,17 @@ def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
     return gravar_maquina_com_descartes(declaracao).gravou
 
 
+def gravar_o_computador(computador: Mapping[str, Any]) -> bool:
+    """Troca o padrão do computador INTEIRO pelo ``computador`` dado.
+
+    O único escritor é ``profiles/o_padrao_do_computador``, que lê, muda e
+    manda o documento todo: assim um campo tirado de uma seção sai do disco.
+    """
+    return gravar_maquina_com_descartes(
+        {"computador": dict(computador)}, substituir=("computador",)
+    ).gravou
+
+
 def gravar_rascunho_da_mesa(declaracao: Mapping[str, Any]) -> bool:
     """Grava a seção ``mesa`` como RASCUNHO — sem o gesto de "Aplicar" atrás.
 
@@ -1598,8 +1760,15 @@ def gravar_rascunho_da_mesa(declaracao: Mapping[str, Any]) -> bool:
     return gravar_maquina({"mesa": dict(declaracao)})
 
 
-def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGravacao:
+def gravar_maquina_com_descartes(
+    declaracao: Mapping[str, Any], *, substituir: Sequence[str] = ()
+) -> ResultadoDaGravacao:
     """Funde a declaração PARCIAL no documento do disco.
+
+    ``substituir`` lista os campos de topo que a declaração TROCA inteiros, em
+    vez de fundir. É o caminho de quem precisa tirar um campo de dentro de uma
+    seção (o «Voltar ao padrão» do computador): a fusão desce nos dicionários e
+    não sabe apagar uma chave que a declaração não traz.
 
     ``gravou=False`` significa uma coisa só: **o arquivo em disco tem uma
     ``version`` que não é a nossa**, e então nada é lido nem escrito — os bytes
@@ -1646,11 +1815,10 @@ def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGr
         # leitura, e um calculado que voltasse pela fusão seria lido como uma
         # declaração — e iria ao disco. (Pelo ``exclude``: ver
         # :data:`CALCULADOS_DA_ENTRADA`.)
-        fundido = MaquinaConfig.model_validate(
-            fundir_declaracao(
-                atual.model_dump(mode="json", exclude=_SEM_OS_CALCULADOS), declaracao
-            )
-        )
+        base = atual.model_dump(mode="json", exclude=_SEM_OS_CALCULADOS)
+        for campo in substituir:
+            base.pop(campo, None)
+        fundido = MaquinaConfig.model_validate(fundir_declaracao(base, declaracao))
         documento = {
             campo: valor
             for campo, valor in bruto.items()
@@ -1978,7 +2146,30 @@ _O_RESGATE_POR_DENTRO: dict[str, Callable[[Any], Any]] = {
         {k: v for k, v in gestos.items() if _campo_isolado_passa("gestos", {k: v})}
         if isinstance(gestos, Mapping) else None
     ),
+    # Uma seção torta do computador sai sozinha; o resto do que ela ajustou
+    # continua valendo (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01).
+    "computador": lambda computador: _o_computador_que_ainda_vale(computador),
 }
+
+
+def _o_computador_que_ainda_vale(computador: Any) -> dict[str, Any] | None:
+    """O ``computador`` com cada seção global e cada controle validados sozinhos."""
+    if not isinstance(computador, Mapping):
+        return None
+    saida: dict[str, Any] = {}
+    do_global = computador.get("global")
+    if isinstance(do_global, Mapping):
+        saida["global"] = _so_os_campos_que_passam(ComputadorGlobal, do_global)
+    controles = computador.get("controles")
+    if isinstance(controles, Mapping):
+        saida["controles"] = {
+            chave: entrada
+            for chave, entrada in controles.items()
+            if _campo_isolado_passa("computador", {"controles": {chave: entrada}})
+        }
+    if isinstance(computador.get("migrado"), bool):
+        saida["migrado"] = computador["migrado"]
+    return saida
 
 
 def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
