@@ -1924,6 +1924,12 @@ def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bo
         momento = agora if agora is not None else time.monotonic()
         if momento < float(prazo):
             return False
+        # A ESCRITA DA BORDA AINDA EM VOO (O-APP-RESPONDE-NA-HORA-01): o recibo
+        # dela está a caminho, e julgar agora seria regravar e gritar sobre o
+        # que a borda já escreveu. O relógio fica armado e vencido: o tique
+        # seguinte decide, com o recibo pousado (`_a_escrita_em_voo`).
+        if _a_escrita_em_voo():
+            return False
         # Desarma ANTES de decidir: se a materialização falhar, o vigia rearma
         # sozinho no tique seguinte (a assinatura gravada não terá mudado) em
         # vez de o relógio ficar vencido disparando a cada tique.
@@ -3037,6 +3043,10 @@ class EscreventeDoLancamento:
         self._parar = False
         #: Quantas fotos o fio escreveu (a régua conta as escritas por aqui).
         self.escritas = 0
+        #: A ordem da última foto pedida, e a da última cujas devoluções já
+        #: voltaram ao laço: entre as duas, a escrita está EM VOO (`em_voo`).
+        self._pedida = 0
+        self._pousada = 0
         self._fio = threading.Thread(
             target=self._laco, name="hefesto-lancamento", daemon=True
         )
@@ -3060,7 +3070,23 @@ class EscreventeDoLancamento:
         """Guarda a foto mais nova e acorda o fio. Não espera a escrita."""
         with self._trava:
             self._pendente = foto
+            self._pedida = max(self._pedida, foto.ordem)
             self._tem_pedido.set()
+
+    def em_voo(self) -> bool:
+        """Há foto pedida cujo recibo ainda não voltou ao laço?
+
+        É o que o vigia de 1 Hz pergunta antes de comparar a mesa com o recibo
+        (`_a_escrita_em_voo`): com a escrita fora do laço, o recibo da borda
+        chega depois dela, e a mesa de agora divergiria de um recibo que já
+        está a caminho.
+        """
+        with self._trava:
+            return self._pedida > self._pousada
+
+    def _pousou(self, ordem: int) -> None:
+        with self._trava:
+            self._pousada = max(self._pousada, ordem)
 
     def esvaziar_e_parar(self, teto_s: float = 5.0) -> None:
         """Escreve o que estiver pendente e para o fio (até `teto_s`)."""
@@ -3076,8 +3102,15 @@ class EscreventeDoLancamento:
                 foto, self._pendente = self._pendente, None
                 self._tem_pedido.clear()
                 parar = self._parar
-            if foto is not None and _escrever_o_lancamento(foto, self._devolver):
-                self.escritas += 1
+            if foto is not None:
+                try:
+                    if _escrever_o_lancamento(foto, self._devolver):
+                        self.escritas += 1
+                finally:
+                    # DEPOIS das devoluções da foto, na mesma fila do laço: a
+                    # escrita pousou (ou falhou, e o recibo ficou o de antes).
+                    with contextlib.suppress(Exception):
+                        self._devolver(lambda ordem=foto.ordem: self._pousou(ordem))
             if not parar:
                 continue
             # PARANDO, O FIO NÃO VOLTA A ESPERAR: o evento já foi consumido, e
@@ -3093,6 +3126,21 @@ class EscreventeDoLancamento:
 #: O escrevente armado, ou None (a escrita de sempre, na hora). Só o
 #: `IpcServer.start` arma: a suíte, a CLI e os instrumentos não o sobem.
 _ESCREVENTE: EscreventeDoLancamento | None = None
+
+
+def _a_escrita_em_voo() -> bool:
+    """O escrevente armado tem uma escrita cujo recibo ainda não voltou ao laço?
+
+    O vigia de 1 Hz compara a mesa de agora com o recibo da última escrita
+    (`rematerializar_se_sossegou`). Na escrita de sempre o recibo era carimbado
+    na própria borda; com o escrevente ele chega depois da escrita, que leva de
+    0,3 a 2,8 s, e o tique que vence o sossego de 0,6 s da borda a julgaria
+    divergente: regravaria e gritaria `launch_env_mudou_depois_do_exec` sobre o
+    jogo de pé por uma mudança que a borda já escreveu. Com a escrita em voo, o
+    vigia julga no tique seguinte.
+    """
+    escrevente = _ESCREVENTE
+    return escrevente is not None and escrevente.vivo() and escrevente.em_voo()
 
 
 #: O arming do lançamento precisa do arquivo escrito ANTES de seguir: dentro de

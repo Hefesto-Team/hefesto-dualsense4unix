@@ -760,6 +760,93 @@ class TestUmPedidoAMaisNoMaximo:
             "as divergências voltaram às da foto velha")
 
 
+class TestOVigiaEsperaAEscritaEmVoo:
+    def test_a_borda_com_a_escrita_em_voo_nao_vira_regravacao_nem_aviso(
+        self, sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A borda de um jogador de co-op escreve (no fio) e arma o sossego de
+        0,6 s; o tique de 1 Hz que vence o sossego chega com a escrita ainda em
+        voo. O vigia espera a escrita pousar: não regrava, e não grita
+        `launch_env_mudou_depois_do_exec` sobre o jogo de pé, que é o que a
+        escrita na hora (o recibo carimbado na borda) sempre fez.
+
+        MORDIDA: tire a espera da escrita em voo de `rematerializar_se_sossegou`
+        — o tique regrava e grita sobre uma mudança que a borda já escreveu.
+        """
+        eventos: list[str] = []
+
+        class _Espiao:
+            def _grava(self, evento: str, **_campos: Any) -> None:
+                eventos.append(evento)
+
+            info = warning = debug = _grava
+
+        monkeypatch.setattr(launch_env, "logger", _Espiao())
+        monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: tmp_path)
+        monkeypatch.setattr(launch_env, "_load_profiles", lambda _leitor: [])
+        monkeypatch.setattr(launch_env, "_permite_uhid", lambda _daemon: True)
+        monkeypatch.setattr(launch_env, "_device_ks_nos_lancadores", lambda: {})
+        import hefesto_dualsense4unix.integrations.cura_por_estrada as cura
+
+        monkeypatch.setattr(cura, "curar_todas_as_estradas", lambda: {})
+        # O jogo do wrapper de pé: é com ele que o aviso honesto acorda.
+        (tmp_path / "last_run").write_text(
+            f"appid=1599660\nepoch={int(time.time())}\npid={os.getpid()}\n",
+            encoding="utf-8")
+        jogadores: dict[str, Any] = {}
+        daemon = SimpleNamespace(
+            is_native_mode=lambda: False,
+            config=SimpleNamespace(gamepad_emulation_enabled=True, gamepad_flavor="dualsense"),
+            _gamepad_device=SimpleNamespace(backend="uhid"),
+            _coop_manager=SimpleNamespace(_players=jogadores),
+            controller=SimpleNamespace(
+                describe_controllers=lambda: [{"connected": True}] * 2))
+        # Sem o escrevente, na hora: o recibo diz um vpad para dois físicos.
+        launch_env.materialize_launch_env(daemon)  # type: ignore[arg-type]
+        assert daemon._launch_env_assinatura[3] == ("uhid",)
+
+        real = launch_env._a_parte_de_fora
+        solta = threading.Event()
+
+        def lenta(foto: Any, devolver: Any) -> None:
+            solta.wait(10)
+            real(foto, devolver)
+
+        monkeypatch.setattr(launch_env, "_a_parte_de_fora", lenta)
+        laco = asyncio.new_event_loop()
+        escrevente = launch_env.armar_o_escrevente(laco.call_soon_threadsafe, laco)
+        assert escrevente is not None
+        try:
+            async def borda_e_dois_tiques() -> tuple[bool, bool]:
+                jogadores["p2"] = SimpleNamespace(vpad=SimpleNamespace(backend="uhid"))
+                launch_env.materialize_launch_env(daemon)  # type: ignore[arg-type]
+                launch_env.armar_rematerializacao(daemon, motivo="borda", agora=0.0)
+                await asyncio.sleep(0.05)
+                vencido = launch_env.JANELA_DE_SOSSEGO_SEC
+                launch_env.vigiar_a_mesa(daemon, agora=vencido)
+                em_voo = launch_env.rematerializar_se_sossegou(daemon, agora=vencido)
+                solta.set()
+                while escrevente.escritas < 1:
+                    await asyncio.sleep(0.01)
+                await asyncio.sleep(0.1)  # as devoluções voltam a este laço
+                launch_env.vigiar_a_mesa(daemon, agora=vencido + 1.0)
+                pousada = launch_env.rematerializar_se_sossegou(daemon, agora=vencido + 1.0)
+                return em_voo, pousada
+
+            em_voo, pousada = laco.run_until_complete(
+                asyncio.wait_for(borda_e_dois_tiques(), 20))
+        finally:
+            solta.set()
+            launch_env.desarmar_o_escrevente(escrevente)
+            laco.close()
+        assert em_voo is False, "o tique regravou com a escrita da borda em voo"
+        assert pousada is False, "o tique regravou o que a borda já tinha escrito"
+        assert "launch_env_mudou_depois_do_exec" not in eventos, eventos
+        assert "launch_env_rematerializado_no_sossego" not in eventos, eventos
+        assert daemon._launch_env_assinatura[3] == ("uhid", "uhid")
+        assert escrevente.escritas == 1
+
+
 # ===========================================================================
 # R5 — o servidor diz quem o segurou
 # ===========================================================================
