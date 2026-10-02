@@ -29,12 +29,13 @@ dez páginas. Fica no piloto, que é quem já tem a mesa na mão.
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from typing import Any
 
 import argparse
 import contextlib
 import dataclasses
+import os
 import pathlib
 import sys
 import threading
@@ -75,14 +76,25 @@ from gi.repository import GLib, Gtk  # noqa: E402
 # alcançados a partir das bocas do produto. O portão que existe para achar a
 # cura escrita e nunca ligada não enxergava a interface INTEIRA — e por isso
 # acusava de dívida as camadas que ela já chama.
+#
+# A JANELA PEDE A PÁGINA ANTES DAS DEZ ABAS — O-APP-RESPONDE-NA-HORA-01, cura 3
+# (02/10/2026). Aberto como o produto abre (o `__main__`, pelo `runpy` do
+# `abrir_interface.py`), o piloto não importa os pacotes das abas nem a
+# `mesa_viva` aqui: o `Piloto` cria a janela, pede a 01, deixa o WebKit nascer
+# e só então os importa (`_importar_as_abas`), enquanto o processo dele carrega
+# a página. Medido no lar de mentira: os dois custam ~0,3 s, e importados no
+# laço parado ANTES de o WebKit começar atrasam a página o mesmo tanto;
+# depois do `committed`, não atrasam nada. Importado como módulo (a suíte, os
+# instrumentos), tudo segue como sempre foi, pelo mesmo nome do pacote.
 from hefesto_dualsense4unix.interface import (  # noqa: E402
-    mesa_viva,
     monta,
     onde,
-    pacotes,
     regua_do_mockup,
 )
-from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
+
+if __name__ != "__main__":
+    from hefesto_dualsense4unix.interface import mesa_viva, pacotes
+    from hefesto_dualsense4unix.interface.pacotes import ponte
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
@@ -290,8 +302,10 @@ def _a_pagina_pedida(pedido: str) -> str:
 #: extraem do fonte por expressão regular, então nenhuma das duas pode ser
 #: concatenada nem interpolada. O seletor vive escrito nelas e aqui, e
 #: `test_o_seletor_do_dono_pergunta_ao_dono` exige que os três digam o mesmo.
-SELETOR_DO_DONO = '[data-uniq],[data-controle=""],' + ",".join(
-    f'[data-controle="{lugar}"]' for lugar in sorted(pacotes.TODOS_OS_LUGARES))
+#:
+#: Ele se monta em `_ligar_as_abas`, porque os assentos moram nos pacotes e a
+#: janela do produto só os importa depois de pedir a página.
+SELETOR_DO_DONO: str
 
 #: O QUE UM GESTO **VIVO** NÃO PODE DEVOLVER — a quarta porta é de LEITURA.
 #:
@@ -2313,8 +2327,14 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
 # Sem a guarda, a segunda importação chamaria `@gesto` de novo e o despachante
 # mataria o processo com *"o gesto já tem dono"*, que é a proteção dele contra
 # dois donos de verdade fazendo o trabalho de um acidente de `sys.path`.
-if ("*", monta.GESTO_DA_FITA) not in pacotes.GESTOS:
-    pacotes.gesto("*", monta.GESTO_DA_FITA)(_escolher_na_fita)
+#
+# E ELE RODA QUANDO AS ABAS CHEGAM (`_ligar_as_abas`, no fim do arquivo): no
+# fim da importação como módulo, e logo depois de a janela pedir a página
+# quando o piloto abre como o produto (O-APP-RESPONDE-NA-HORA-01, cura 3).
+def _registrar_a_fita() -> None:
+    """O gesto da fita no despachante, uma vez só, por qualquer dos dois nomes."""
+    if ("*", monta.GESTO_DA_FITA) not in pacotes.GESTOS:
+        pacotes.gesto("*", monta.GESTO_DA_FITA)(_escolher_na_fita)
 
 
 def _a_fita_desta_pagina_escolhe(pagina: str) -> bool:
@@ -2759,7 +2779,10 @@ _METODO_DO_GESTO = {
 #: a linha também esquece o `grava=`; duas fontes independentes é o que fecha.
 #: O laudo completo, com as medições que cada entrada carregava, está em
 #: `docs/process/agentes/2026-09-06/ONDA3-GESTO-DECLARA-01.md`.
-PERIGOSOS = pacotes.perigosos()
+#:
+#: Derivada quando as abas chegam (`_ligar_as_abas`, no fim do arquivo) —
+#: O-APP-RESPONDE-NA-HORA-01, cura 3.
+PERIGOSOS: set[tuple[str, str]]
 
 
 def _achatar(o: Any, prefixo: str = "") -> dict[str, Any]:
@@ -2945,6 +2968,11 @@ class LeitorDoEstado:
         self._erro: BaseException | None = None
         #: Sobe a cada RESPOSTA — boa ou muda. É o que o tique compara.
         self._geracao = 0
+        #: Quanto a ÚLTIMA viagem ao serviço custou, em ms — o «daemon» da linha
+        #: `[tique lento]` (O-APP-RESPONDE-NA-HORA-01). O tique não espera o
+        #: serviço desde 15/09; sem este número, a linha dizia «IPC 0 ms» com o
+        #: serviço preso.
+        self._ultima_viagem_ms = 0.0
         self._parar = threading.Event()
         #: A JANELA À VISTA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Com
         #: ela escondida o fio lê de `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA` em
@@ -2960,6 +2988,11 @@ class LeitorDoEstado:
         """O estado, o erro e a geração de agora. Não espera por ninguém."""
         with self._trava:
             return self._estado, self._erro, self._geracao
+
+    def ultima_viagem_ms(self) -> float:
+        """Quanto a última leitura do serviço custou, em ms."""
+        with self._trava:
+            return self._ultima_viagem_ms
 
     # -- o fio -------------------------------------------------------------
     def comecar(self) -> None:
@@ -2995,16 +3028,19 @@ class LeitorDoEstado:
         self._acordar.set()
 
     def _uma_leitura(self) -> None:
+        t0 = time.perf_counter()
         try:
             st = self._ler()
         except Exception as erro:  # noqa: BLE001 — o motivo viaja para a folga
             with self._trava:
                 self._estado, self._erro = None, erro
                 self._geracao += 1
+                self._ultima_viagem_ms = (time.perf_counter() - t0) * 1000
         else:
             with self._trava:
                 self._estado, self._erro = st, None
                 self._geracao += 1
+                self._ultima_viagem_ms = (time.perf_counter() - t0) * 1000
 
     def _laco(self) -> None:
         # ESPERA PRIMEIRO, E LÊ DEPOIS. `comecar()` acabou de semear uma
@@ -3072,7 +3108,10 @@ class Piloto:
     def __init__(self, args: argparse.Namespace) -> None:
         from collections import deque
 
-
+        #: A HORA DE CADA PASSO DA ABERTURA — a linha `[abertura]`
+        #: (O-APP-RESPONDE-NA-HORA-01): o piloto começou, a janela pediu a
+        #: página, e a primeira pintura pousou (`_contar_a_abertura`).
+        self._abertura: dict[str, float] = {"piloto": time.monotonic()}
         self.args = args
         self.pronto = False
         self.agendado = False
@@ -3158,7 +3197,6 @@ class Piloto:
         self._medindo = False
         self._carga_de_agora: dict[str, Any] = {}
         self._mesa_de_agora: list[dict[str, Any]] = []
-        self._ctx_de_agora = pacotes.Contexto(state={})
         #: O CONTADOR DE MUTAÇÕES (`--conta-mutacoes`): quantos tiques correram
         #: desde que a página ficou de pé, e se a tabela já foi lida.
         #: `getattr` porque quem monta o `Namespace` à mão — as réguas que abrem
@@ -3184,10 +3222,6 @@ class Piloto:
         self._pular = 0
         #: O que o tique pinta quando o serviço não respondeu — ver a classe.
         self._folga = FolgaDoServicoMudo()
-        #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
-        #: só sobe em `_instalado`, junto com o timer: uma régua que monte um
-        #: Piloto para ler um atributo não abre socket nenhum.
-        self._estado_vivo = LeitorDoEstado()
         #: A última geração que o tique consumiu. Enquanto ela não anda, o tique
         #: repinta o estado que já tinha e NÃO mexe na folga — ver a classe.
         self._geracao_vista = -1
@@ -3211,9 +3245,6 @@ class Piloto:
         #: As listas que um `data-hef-molde` conta, por página — ver
         #: `_moldes_da_pagina`.
         self._moldes: dict[str, frozenset[str]] = {}
-        #: Quem pode perguntar de novo, e quando, é do leitor
-        #: (`cor_do_plastico.AgendaDaPergunta`) — nunca duas em voo por controle.
-        self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
         #: OS CONTROLES QUE O HEFESTO SÓ VÊ, e as duas travas da leitura deles —
         #: EXTERNOS-01, 06/09/2026. A lista é a ÚLTIMA resposta boa; o carimbo
         #: diz quando ela chegou; a bandeira impede duas perguntas no ar.
@@ -3269,6 +3300,20 @@ class Piloto:
         # piloto ficaria pintando a página errada. É a mesma nota que o
         # `controles_vivos` carrega, e a razão é a mesma.
         self.view.connect("load-changed", self._carregou)
+        self._abertura["janela"] = time.monotonic()
+        # AS ABAS CHEGAM DEPOIS DO PEDIDO DA PÁGINA — O-APP-RESPONDE-NA-HORA-01,
+        # cura 3. Aberto como o produto, é aqui que os pacotes das dez abas e a
+        # `mesa_viva` entram, com o WebKit já carregando a 01; importado como
+        # módulo, eles já estavam aqui e isto não faz nada.
+        _importar_as_abas(self.tela)
+        self._ctx_de_agora = pacotes.Contexto(state={})
+        #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
+        #: só sobe em `_instalado`, junto com o timer: uma régua que monte um
+        #: Piloto para ler um atributo não abre socket nenhum.
+        self._estado_vivo = LeitorDoEstado()
+        #: Quem pode perguntar de novo, e quando, é do leitor
+        #: (`cor_do_plastico.AgendaDaPergunta`) — nunca duas em voo por controle.
+        self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
 
         # O SELETOR DE ARQUIVO É DA JANELA, e por isso é ligado AQUI. Os pacotes
         # são puros — um `import gi` neles obrigaria toda régua a ter GTK e o CI
@@ -4387,6 +4432,7 @@ class Piloto:
         # A aba decide se há o que bater e com que espaçamento (o dela é 1 s);
         # o piloto só bate, e `bater_os_coracoes` nunca levanta.
         pacotes.bater_os_coracoes(ctx, ponte)
+        t_pacote0 = time.perf_counter()
         try:
             pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
         except Exception as e:
@@ -4409,6 +4455,7 @@ class Piloto:
             # é dona do topo. Um pacote VAZIO é o que ela é: nada de próprio a
             # pintar, e tudo o que é de todas continua valendo.
             pacote = {}
+        t_pacote = (time.perf_counter() - t_pacote0) * 1000
 
         # A FORMA CANÔNICA E A TRADUÇÃO `uniq → pref`, as duas no despachante.
         # Ele é quem conhece as três palavras que as abas usam para a mesma
@@ -4509,6 +4556,11 @@ class Piloto:
             # e sossegou" e "a página trocou 177 vezes" saíam iguais.
             if n > 0:
                 self.pinturas.setdefault(self.pagina, []).append(n)
+                # A LINHA DA ABERTURA É INSTRUMENTO: um piloto sem o relógio
+                # dela (a régua que monta o seu) segue sem a linha.
+                abertura = getattr(self, "_abertura", None)
+                if abertura is not None and "pintura" not in abertura:
+                    Piloto._contar_a_abertura(self)
 
         # A CARGA SERIALIZA ANTES DE A TRAVA SUBIR — 13/09/2026. A ordem era a
         # inversa: a trava subia, o `_json` levantava logo depois, o `contou`
@@ -4545,11 +4597,36 @@ class Piloto:
         # o seguinte na hora só empilha atraso sobre atraso.
         if custo > TIQUE_MS:
             self._pular += 1
+            # A LINHA DIZ ONDE GASTOU — O-APP-RESPONDE-NA-HORA-01: o pacote da
+            # aba, o contexto (o `_estado_do_tique` e o `_contexto`) e a última
+            # viagem do leitor do estado ao serviço, que corre em outro fio.
+            viagem = getattr(getattr(self, "_estado_vivo", None), "ultima_viagem_ms", None)
+            daemon_ms = viagem() if callable(viagem) else 0.0
             print(f"[tique lento] {self.pagina}: {custo:.0f} ms "
-                  f"(IPC {t_ipc:.0f} ms) — teto {TIQUE_MS} ms, pulando o "
-                  f"próximo", file=sys.stderr)
+                  f"(pacote {t_pacote:.0f} · contexto {t_ipc:.0f} · daemon "
+                  f"{daemon_ms:.0f}) — teto {TIQUE_MS} ms, pulando o próximo",
+                  file=sys.stderr)
         self._contar_mutacoes()
         return True
+
+    def _contar_a_abertura(self) -> None:
+        """A linha `[abertura]`, uma vez — O-APP-RESPONDE-NA-HORA-01, cura 3.
+
+        Do nascimento do processo à primeira pintura que pousou, em três
+        pedaços: importar (até o piloto começar), janela (até ela pedir a
+        página) e página (até a pintura pousar; as abas entram aqui, com o
+        WebKit carregando). É o instrumento da abertura na máquina dela.
+        """
+        agora = time.monotonic()
+        self._abertura["pintura"] = agora
+        vida = _segundos_de_vida()
+        piloto = self._abertura["piloto"]
+        janela = self._abertura.get("janela", piloto)
+        total = vida if vida is not None else agora - piloto
+        importar = max(0.0, total - (agora - piloto))
+        print(f"[abertura] primeira pintura em {total * 1000:.0f} ms "
+              f"(importar {importar * 1000:.0f} · janela {(janela - piloto) * 1000:.0f} "
+              f"· página {(agora - janela) * 1000:.0f})", file=sys.stderr)
 
     # -- o contador de mutações (A-TELA-SAMBA-01) --------------------------
     def _contar_mutacoes(self) -> None:
@@ -5593,6 +5670,27 @@ TEXTOS_QUE_O_FUNIL_LEMBRA = 4096
 _TEXTOS_LIDOS_PELO_FUNIL: dict[str, tuple[str, ...]] = {}
 
 
+@contextlib.contextmanager
+def _o_processo_da_janela() -> Iterator[None]:
+    """O que o processo da janela liga ao subir e desliga ao sair.
+
+    O-APP-RESPONDE-NA-HORA-01, cura 1 (02/10/2026): a leitura dos perfis pela
+    assinatura do `stat`. A aba Perfis relia os 29 perfis dela, com um
+    `FileLock` cada, dez vezes por segundo; com a leitura ligada, só o perfil
+    que mudou é relido. O dono do evento NÃO se arma aqui: armado, ele
+    alongaria para 60 s o «não há jogo» que a aba do jogo lê, e quem invalida
+    esse negativo ao ver outra janela em foco é o autoswitch, que mora no
+    daemon. Decisão por delegação, a validar por ela.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+
+    loader.ligar_a_leitura_pela_assinatura()
+    try:
+        yield
+    finally:
+        loader.desligar_a_leitura_pela_assinatura()
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--oculta", action="store_true",
@@ -5726,7 +5824,8 @@ def main() -> None:
             lambda: GLib.timeout_add(2000, piloto._provar_cliques))
     if args.abre:
         _quando_a_pagina_estiver_de_pe(lambda: piloto._ir(args.abre))
-    Gtk.main()
+    with _o_processo_da_janela():
+        Gtk.main()
 
     # O RC DIZ A VERDADE SOBRE A MEDIÇÃO — e é o que faltava.
     #
@@ -5754,6 +5853,83 @@ def main() -> None:
               file=sys.stderr)
         raise SystemExit(1)
 
+
+def _ligar_as_abas() -> None:
+    """O que depende das dez abas: o gesto da fita e a lista dos perigosos."""
+    global PERIGOSOS, SELETOR_DO_DONO
+    _registrar_a_fita()
+    PERIGOSOS = pacotes.perigosos()
+    SELETOR_DO_DONO = '[data-uniq],[data-controle=""],' + ",".join(
+        f'[data-controle="{lugar}"]' for lugar in sorted(pacotes.TODOS_OS_LUGARES))
+
+
+def _segundos_de_vida() -> float | None:
+    """Há quanto tempo este processo nasceu, pelo `/proc` (None fora do Linux)."""
+    try:
+        with open("/proc/self/stat", encoding="ascii") as arq:
+            campos = arq.read().rsplit(")", 1)[1].split()
+        nasceu = int(campos[19]) / os.sysconf("SC_CLK_TCK")
+        return time.clock_gettime(time.CLOCK_BOOTTIME) - nasceu
+    except (OSError, ValueError, IndexError, AttributeError):
+        return None
+
+
+#: As abas já estão neste processo? Importado como módulo, sim, desde o topo.
+_AS_ABAS_CHEGARAM = __name__ != "__main__"
+
+#: Quanto a abertura espera o WebKit começar a carregar a página antes de
+#: importar as abas mesmo assim (uma página que não nasce não segura a janela).
+TETO_DA_ESPERA_DO_WEBKIT_S = 3.0
+
+
+def _esperar_o_webkit_comecar(tela: Any, teto_s: float = TETO_DA_ESPERA_DO_WEBKIT_S) -> None:
+    """Roda o laço do GTK até o WebKit começar a carregar a página (`committed`).
+
+    É o que deixa o processo do WebKit nascer: com o laço parado ele não anda
+    (medido no lar de mentira, a importação das abas logo depois do pedido
+    atrasou o `committed` em ~270 ms; depois dele, não atrasou nada).
+    """
+    from gi.repository import WebKit2
+
+    comecou: list[bool] = []
+
+    def viu(_view: Any, evento: Any) -> None:
+        if evento in (WebKit2.LoadEvent.COMMITTED, WebKit2.LoadEvent.FINISHED):
+            comecou.append(True)
+
+    ligacao = tela.view.connect("load-changed", viu)
+    # O LAÇO VOLTA A CADA 20 ms MESMO SEM EVENTO, para o teto valer.
+    acordar = GLib.timeout_add(20, lambda: True)
+    prazo = time.monotonic() + teto_s
+    try:
+        while not comecou and tela.morreu is None and time.monotonic() < prazo:
+            Gtk.main_iteration_do(True)
+    finally:
+        GLib.source_remove(acordar)
+        tela.view.disconnect(ligacao)
+
+
+def _importar_as_abas(tela: Any = None) -> None:
+    """As dez abas e a `mesa_viva`, depois de a janela pedir a página.
+
+    O-APP-RESPONDE-NA-HORA-01, cura 3. Só faz algo quando o piloto abriu como
+    o produto (`__main__`); importado como módulo, as abas vieram com ele. O
+    import é pelo nome do pacote, o mesmo do topo do arquivo.
+    """
+    global _AS_ABAS_CHEGARAM, mesa_viva, pacotes, ponte
+    if _AS_ABAS_CHEGARAM:
+        return
+    if tela is not None:
+        _esperar_o_webkit_comecar(tela)
+    from hefesto_dualsense4unix.interface import mesa_viva, pacotes
+    from hefesto_dualsense4unix.interface.pacotes import ponte
+
+    _AS_ABAS_CHEGARAM = True
+    _ligar_as_abas()
+
+
+if __name__ != "__main__":
+    _ligar_as_abas()
 
 if __name__ == "__main__":
     main()
