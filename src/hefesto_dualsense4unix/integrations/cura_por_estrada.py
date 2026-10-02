@@ -2084,20 +2084,19 @@ def tirar_o_nosso_do_jogo_do_lutris(
 def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
     """A carona mantém o `.yml` do excluído cobrindo a caixa de agora.
 
-    Só acrescenta (o par que a caixa perdeu, no Modo Nativo, fica: ele é o «não
-    veio» e não muda nada). Devolve o registro novo quando escreveu, ``None``
-    quando não mudou nada ou não pôde. Se ela mexeu no arquivo desde a última
-    escrita nossa, a volta exata deixa de valer (``antes=None``).
+    Só acrescenta, e o que falta se lê no ARQUIVO, não no registro: o uninstall
+    que guarda a configuração devolve o `.yml` e deixa a entrada, e o install de
+    depois deixava o excluído sem a camada (medido em 02/10/2026).
+    Devolve o registro novo quando escreveu, ``None`` quando não mudou nada ou
+    não pôde. Se ela mexeu no arquivo desde a última escrita nossa, a volta
+    exata deixa de valer (``antes=None``); o arquivo igual ao «antes» a mantém.
     """
     alvo = Path(yml.arquivo)
     try:
         texto = alvo.read_text(encoding="utf-8")
     except OSError:
         return None
-    faltam = {k: v for k, v in pares.items() if k not in dict(yml.pares)}
-    if not faltam:
-        return None
-    feito = _com_o_nosso_no_yml(texto, faltam, yml.moldura)
+    feito = _com_o_nosso_no_yml(texto, pares, yml.moldura) if pares else None
     if feito is None:
         return None
     novo, postos, moldura = feito
@@ -2107,8 +2106,9 @@ def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
         _escrever_atomico(alvo, novo)
     except OSError:
         return None
-    antes = yml.antes if _sha(texto) == yml.depois else None
-    return YmlDoJogo(yml.arquivo, antes, _sha(novo), (*yml.pares, *postos), moldura)
+    antes = yml.antes if _sha(texto) == yml.depois or texto == yml.antes else None
+    todos = tuple({**dict(yml.pares), **dict(postos)}.items())
+    return YmlDoJogo(yml.arquivo, antes, _sha(novo), todos, moldura)
 
 
 def _sem_os_pares_no_yml(texto: str, yml: YmlDoJogo) -> str | None:

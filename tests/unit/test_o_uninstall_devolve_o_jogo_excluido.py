@@ -408,6 +408,49 @@ def test_o_desfazer_adiado_leva_a_lista_e_termina_depois(
         f"a pasta de estado ficou: {sorted(os.listdir(r.estado / m.SLUG))}")
 
 
+def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
+    """O uninstall que GUARDA a configuração (o padrão) devolve os jogos e deixa
+    a lista; o install de depois põe o nosso de volta na caixa e na global, e o
+    excluído tem de voltar a ser excluído, nos dois lançadores.
+
+    Medido em 02/10/2026 na conferência: o `.yml` do Lutris ficava sem a camada
+    (a carona lia o que faltava no REGISTRO, que dizia «já pus»), e o jogo
+    excluído herdava da caixa o `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o
+    `PROTON_DISABLE_HIDRAW` — zero controles com o Modo Nativo em foco.
+
+    MORDIDA: a carona do `.yml` lendo o que falta no registro (`k not in
+    dict(yml.pares)`); reprova pelo `.yml`.
+    """
+    casa = _heroic(lar, {"A": None})
+    ymls = _lutris(lar, {"q": "11"})
+    _carona(lar)
+    assert lx.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
+    assert lx.adicionar("steam_app_70000", lancador="lutris", nome="Q", lar=lar) == "adicionado"
+    feitos, completo = _desfazer(lar)
+    assert completo, [cpe.frase_do_desfeito(f) for f in feitos]
+    assert [e.chave for e in lx.ler()] == ["steam_app_100", "steam_app_70000"]
+
+    (_pasta() / "default.env").parent.mkdir(parents=True, exist_ok=True)
+    (_pasta() / "default.env").write_text(_PONTE)  # o install de depois
+    _carona(lar)
+
+    caixa = (lar / ".local/share/flatpak/overrides" / _LUTRIS).read_text()
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES=" in caixa, "a carona não reescreveu a caixa"
+    env = (yaml.safe_load(ymls["q"].read_text()).get("system") or {}).get("env") or {}
+    faltam = sorted(k for k in ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "PROTON_DISABLE_HIDRAW")
+                    if env.get(k) != "")
+    assert not faltam, (
+        f"o jogo excluído do Lutris herda da caixa {faltam} depois do install de novo: "
+        f"o `.yml` dele é {ymls['q'].read_text()!r}")
+    propria = dict(_lista_propria(casa, "A") or [])
+    assert propria and not set(propria) & {"SDL_GAMECONTROLLER_IGNORE_DEVICES",
+                                           "PROTON_DISABLE_HIDRAW"}, (
+        f"o jogo excluído do Heroic voltou a seguir a global com o nosso: {propria}")
+    assert lx.tirar("steam_app_70000", lar=lar) == "removido"
+    env = (yaml.safe_load(ymls["q"].read_text()).get("system") or {}).get("env") or {}
+    assert env == {"MANGOHUD": "1"}, f"o «Tirar» de depois não devolveu o `.yml`: {env}"
+
+
 def test_o_caminho_da_lista_e_um_so() -> None:
     """O desfazer repete o caminho da lista porque roda sem o pacote; os dois
     não podem se afastar."""
