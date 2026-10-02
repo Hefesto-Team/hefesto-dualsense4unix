@@ -16,8 +16,7 @@ de cada régua sai do que a régua montou, nunca do que o pacote escreveu:
 4. o endereço existe dos dois lados (pacote e página);
 5. a classe acende a peça, no motor dela (WebKit);
 6. a fita é uma só: o chip do mapa leva o gesto das abas, e a escolha feita no
-   mapa chega ao contexto das abas (esta última espera a linha do
-   `hefesto_vivo._contexto`, ver o `xfail`);
+   mapa chega ao contexto das abas, pelo `hefesto_vivo._contexto`;
 7. o desenho nunca fica com o controle de outro chip: a mesa sem controle apaga
    as lâmpadas e a barra, e o «Todos» desenha o primeiro da mesa (WebKit).
 
@@ -28,7 +27,8 @@ depois do `--publicar`, a publicada.
 AS MORDIDAS: o pacote ler o primeiro da mesa no lugar do escolhido (1, 2); a
 troca com o id cru (3); tirar a regra da marca tracejada, ou emitir
 `trocada-` para toda peça (3b); tirar o endereço de um item do gerador (4);
-tirar a regra `.on` do laço (5); um gesto local do mapa (6); o `segue` sem a
+tirar a regra `.on` do laço (5); um gesto local do mapa, ou o `escolhido` fora do
+`pacotes.Contexto` do `hefesto_vivo._contexto` (6); o `segue` sem a
 queda no «Nenhum», ou o `desenha` do «Todos» sem o primeiro da mesa (7).
 
 Sem tela o WebKit não abre e as réguas 3b, 5 e 7 PULAM: rode com `xvfb-run -a`.
@@ -190,14 +190,6 @@ def escolha_limpa() -> Any:
     mod.ESCOLHA_DA_FITA.uniq = antes
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=("o `hefesto_vivo._contexto` ainda não passa `escolhido=_pref_escolhido(mesa)` "
-            "ao `pacotes.Contexto` (a linha é da costura: o hefesto_vivo.py é de outro "
-            "tema nesta onda). Quando ela entrar este teste PASSA e o strict reprova — "
-            "que é o gatilho para apagar este xfail."),
-)
 def test_a_escolha_feita_no_mapa_chega_ao_contexto_das_abas(escolha_limpa: Any) -> None:
     mod = escolha_limpa
     st = _contexto().state

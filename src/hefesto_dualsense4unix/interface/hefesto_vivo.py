@@ -4163,7 +4163,7 @@ class Piloto:
         mesa = mesa_viva.mesa_do_estado(st, self.leitor.conhecidos())
         para_pref = {str(c.get("uniq") or ""): c["pref"] for c in mesa}
         ctx = pacotes.Contexto(state=st, mesa=mesa, conectados=conectados, estados={},
-                               externos=list(self._externos))
+                               externos=list(self._externos), escolhido=_pref_escolhido(mesa))
         return ctx, para_pref
 
     def _talvez_ler_os_externos(self) -> None:
