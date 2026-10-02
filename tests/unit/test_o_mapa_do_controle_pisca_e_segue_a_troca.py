@@ -45,6 +45,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, monta, onde, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a13_mapa_do_controle as a13
 from hefesto_dualsense4unix.interface.pacotes import perfil

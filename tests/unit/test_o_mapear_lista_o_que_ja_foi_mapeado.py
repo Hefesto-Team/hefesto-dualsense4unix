@@ -38,6 +38,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
