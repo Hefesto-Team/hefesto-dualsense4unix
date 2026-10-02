@@ -345,6 +345,30 @@ def test_quem_espera_nao_perde_para_quem_retoma(tmp_path: Path, _lar: Path) -> N
     assert max(gastos) < 1.0, f"a espera passou de 1 s: {gastos}"
 
 
+def test_quem_desistiu_nao_fica_com_a_trava(tmp_path: Path, _lar: Path) -> None:
+    """Quem desistiu no prazo deixa a espera na fila; quando o outro solta, a
+    trava pega e se solta sozinha, e o próximo pedido deste processo entra.
+
+    MORDIDA: o fio que desistiu não solta (`_soltar` fora do `desistiu`) — a
+    trava fica presa num descritor que ninguém mais conhece, e todo pedido
+    seguinte deste processo espera até o prazo.
+    """
+    pronto, fim = tmp_path / "pronto", tmp_path / "fim"
+    janela = subprocess.Popen(
+        [sys.executable, "-c", _SEGURA_A_TRAVA,
+         str(lx.caminho().parent / cpe.NOME_DA_TRAVA), str(pronto), str(fim)],
+        env=_ambiente(_lar), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        _esperar_o_arquivo(pronto, janela)
+        with cpe.trava_da_lista(espera=0.3) as na_mao:
+            assert not na_mao
+    finally:
+        fim.touch()
+        janela.communicate(timeout=30)
+    with cpe.trava_da_lista(espera=2.0) as na_mao:
+        assert na_mao, "a espera que desistiu ficou com a trava"
+
+
 def test_sem_a_trava_no_prazo_o_excluir_nao_escreve(
         _lar: Path, _a_janela_segura: subprocess.Popen[str],
         monkeypatch: pytest.MonkeyPatch) -> None:
