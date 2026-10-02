@@ -1002,6 +1002,42 @@ def _identidades(perfil: Profile, uniq: object) -> list[str]:
     return sorted(_entradas_por_chave(perfil.controllers))
 
 
+#: O que vale num controle sem entrada própria, quando a vista também não tem a
+#: seção global: os sensores nascem ligados (a regra do interruptor da aba
+#: Controles), e o ``None`` do perfil é «não mexer», não «ligado».
+_DE_FABRICA_NO_CONTROLE: dict[str, dict[str, Any]] = {
+    "sensores": {"giroscopio": True, "acelerometro": True},
+}
+
+
+def _o_que_vale_no_controle_sem_entrada(vista: Profile, nome: str) -> dict[str, Any]:
+    """A seção ``nome`` de um controle sem entrada própria, na forma da seção por controle.
+
+    Sem entrada, o controle vale a seção GLOBAL da vista (a luz, o som, a
+    força da vibração), e o que ela não tem vale o de fábrica (os sensores). O
+    «Só neste jogo» de UM controle copia esse valor para a entrada dele, com os
+    campos escritos: uma entrada vazia não é escolha, e o clique não faria
+    nada. Só entram os campos que a seção por controle conhece (a da vibração
+    é um pedaço da global). O microfone não se copia: o mudo é do controle
+    (O-MUDO-E-DO-CONTROLE-01), e o volume sem opinião é silêncio.
+    """
+    from pydantic import BaseModel
+
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    if nome == "mic":
+        return {}
+    global_ = getattr(vista, nome, None)
+    if isinstance(global_, BaseModel):
+        anotacao = ControllerOverrides.model_fields[nome].annotation
+        campos = {c for a in getattr(anotacao, "__args__", (anotacao,))
+                  if isinstance(a, type) and issubclass(a, BaseModel)
+                  for c in a.model_fields}
+        return {k: v for k, v in global_.model_dump(mode="json").items()
+                if k in campos and v is not None}
+    return dict(_DE_FABRICA_NO_CONTROLE.get(nome, {}))
+
+
 def so_neste_jogo(cartao: str, uniq: object, perfil: str) -> Profile:
     """Copia para o perfil o que vale agora no cartão. Daí em diante, o jogo manda.
 
@@ -1034,14 +1070,16 @@ def so_neste_jogo(cartao: str, uniq: object, perfil: str) -> Profile:
         vistos = _entradas_por_chave(vista.controllers)
         for identidade in identidades:
             entrada_vista = (vista.controllers or {}).get(vistos.get(identidade, ""))
-            if entrada_vista is None:
-                continue
             original = originais.get(identidade, identidade)
             entrada = dict(controles.get(original) or {})
             for nome in secao.por_controle:
-                valor = getattr(entrada_vista, nome, None)
+                valor = getattr(entrada_vista, nome, None) if entrada_vista else None
                 if valor is not None:
                     entrada[nome] = valor.model_dump(mode="json", exclude_unset=True)
+                elif uniq is not None and nome not in entrada:
+                    copia = _o_que_vale_no_controle_sem_entrada(vista, nome)
+                    if copia:
+                        entrada[nome] = copia
             if entrada:
                 controles[original] = entrada
         cru["controllers"] = controles or None

@@ -34,9 +34,11 @@ CAMADAS = frozenset({COMPUTADOR, CONTROLE, JOGO, ATO, JANELA})
 
 _J, _C, _T, _A, _W = JOGO, COMPUTADOR, CONTROLE, ATO, JANELA
 
-#: A CAMADA DE TODO GESTO PUBLICADO: ``(página, gesto) -> camada``. A régua
+#: A CAMADA DE TODO GESTO PUBLICADO: ``(página, gesto) -> camada``. O gesto é
+#: o nome que o piloto despacha: o ``data-gesto``, ou o ``data-hef-gesto`` (a
+#: 10), ou o ``data-papel`` (a 05). A régua
 #: `tests/unit/test_cada_gesto_diz_de_quem_e.py` confere os dois sentidos: todo
-#: ``data-gesto`` das dez páginas tem linha aqui, e toda linha tem gesto.
+#: gesto das dez páginas tem linha aqui, e toda linha tem gesto.
 CAMADA: dict[tuple[str, str], str] = {
     # 01 Jogar
     ("01-jogar.html", "cadeado"): _C,
@@ -73,9 +75,15 @@ CAMADA: dict[tuple[str, str], str] = {
     ("04-iluminacao.html", "cor"): _C,
     ("04-iluminacao.html", "player"): _T,
     ("04-iluminacao.html", "reenviar"): _C,
-    # 05 Vibração (os outros gestos da 05 nascem na pintura)
+    # 05 Vibração (`data-gesto` e `data-papel`)
+    ("05-vibracao.html", "forca"): _C,
     ("05-vibracao.html", "haptica"): _C,
+    ("05-vibracao.html", "intensidade"): _C,
     ("05-vibracao.html", "lado"): _C,
+    ("05-vibracao.html", "motor"): _C,
+    ("05-vibracao.html", "parar"): _A,
+    ("05-vibracao.html", "testar"): _A,
+    ("05-vibracao.html", "testar-haptica"): _A,
     # 06 Navegação
     ("06-navegacao.html", "acao-do-gesto"): _C,
     ("06-navegacao.html", "fechar-definicoes"): _W,
@@ -168,6 +176,21 @@ CAMADA: dict[tuple[str, str], str] = {
     ("09-sistema.html", "refazer-consertos"): _C,
     ("09-sistema.html", "reiniciar"): _A,
     ("09-sistema.html", "restaurar-de-fabrica"): _C,
+    # 10 Perfis (`data-hef-gesto`): o perfil é a camada do jogo
+    ("10-perfis.html", "ativar"): _J,
+    ("10-perfis.html", "detectar"): _A,
+    ("10-perfis.html", "duplicar"): _J,
+    ("10-perfis.html", "editor.ambiente"): _J,
+    ("10-perfis.html", "editor.estilo"): _J,
+    ("10-perfis.html", "editor.jogo"): _J,
+    ("10-perfis.html", "editor.nome"): _J,
+    ("10-perfis.html", "editor.prioridade"): _J,
+    ("10-perfis.html", "largura-da-coluna"): _W,
+    ("10-perfis.html", "novo"): _J,
+    ("10-perfis.html", "ordenar"): _W,
+    ("10-perfis.html", "recarregar"): _A,
+    ("10-perfis.html", "remover"): _J,
+    ("10-perfis.html", "selecionar"): _W,
     # Das dez: a marca do cartão
     ("*", _marca.SO_NESTE_JOGO): _J,
     ("*", _marca.VOLTAR_AO_DO_COMPUTADOR): _J,
