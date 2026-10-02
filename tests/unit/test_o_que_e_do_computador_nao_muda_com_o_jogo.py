@@ -821,6 +821,32 @@ def test_o_ps_da_linha_vai_para_a_tabela() -> None:
     assert load_profile("Jogo X").button_actions == {"cross": "KEY_BACKSPACE"}
 
 
+@pytest.mark.parametrize(("token", "faz"), [("__NADA__", "nada"),
+                                            ("__STEAM__", "abrir_a_steam")])
+def test_o_ps_do_freestyle_muda_de_dono_sem_se_perder(token: str, faz: str) -> None:
+    """O PS do Freestyle na linha das Definições vira o ⑥ da tabela, e não some.
+
+    Medido na conferência de 02/10/2026: a migração tirava o ``__NADA__`` do
+    Freestyle e não o levava a lugar nenhum, e um PS calado fora do jogo
+    voltaria a abrir a Steam. Um ⑥ já escolhido vence.
+
+    MORDIDA: tirar a chamada do ``migrar_uma_vez`` reprova.
+    """
+    save_profile(Profile.model_validate({"name": "Freestyle", "match": {"type": "any"},
+                                         "button_actions": {"ps": token}}))
+    opc.migrar_uma_vez()
+    assert m.carregar_maquina().gestos["ps"].faz == faz
+    assert "ps" not in (load_profile("Freestyle").button_actions or {})
+
+
+def test_o_sexto_ja_escolhido_vence_o_ps_do_freestyle() -> None:
+    assert m.gravar_maquina({"gestos": {"ps": {"faz": "abrir_o_hefesto"}}})
+    save_profile(Profile.model_validate({"name": "Freestyle", "match": {"type": "any"},
+                                         "button_actions": {"ps": "__NADA__"}}))
+    opc.migrar_uma_vez()
+    assert m.carregar_maquina().gestos["ps"].faz == "abrir_o_hefesto"
+
+
 # ---------------------------------------------------------------------------
 # O PS tem um lugar só para o que faz no computador (commit 5)
 # ---------------------------------------------------------------------------

@@ -937,6 +937,30 @@ def _contar(semente: Mapping[str, Any]) -> int:
     return total
 
 
+def _o_ps_do_freestyle_vai_ao_sexto(freestyle: Profile | None) -> None:
+    """O que o PS sozinho fazia fora do jogo muda de dono sem se perder.
+
+    O ``__NADA__`` e o ``__STEAM__`` da linha do PS do Freestyle eram a escolha
+    dela para o PS fora do jogo, e o dono disso passou a ser o ⑥ da tabela dos
+    gestos (``D-0110-A-LINHA-DO-PS-SO-DIGITA``). A migração tira o token do
+    perfil; sem esta volta, um PS calado fora do jogo voltaria a abrir a
+    Steam. Só quando a tabela ainda não declara o ⑥: um gesto já escolhido
+    vence. O dos perfis de jogo não vem: com um jogo aberto, o PS sozinho é do
+    jogo (``D-0110-NO-JOGO-O-PS-SOZINHO-E-DO-JOGO``).
+    """
+    if freestyle is None:
+        return
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina, gravar_maquina
+
+    faz = {"__NADA__": ag.NADA, "__STEAM__": ag.ABRIR_A_STEAM}.get(
+        str((freestyle.button_actions or {}).get("ps") or ""))
+    if faz is None or ag.GESTO_DO_PS in (carregar_maquina().gestos or {}):
+        return
+    if gravar_maquina({"gestos": {ag.GESTO_DO_PS: {"faz": faz}}}):
+        logger.info("ps_do_freestyle_foi_ao_sexto", faz=faz)
+
+
 def migrar_uma_vez() -> dict[str, int] | None:
     """O computador nasce do Freestyle, e cada perfil perde o que já vale igual.
 
@@ -967,6 +991,7 @@ def migrar_uma_vez() -> dict[str, int] | None:
         except Exception:
             logger.warning("computador_pulou_perfil_torto", arquivo=caminho.name)
     freestyle = next((p for _c, p, _d in perfis if e_o_freestyle(p.name)), None)
+    _o_ps_do_freestyle_vai_ao_sexto(freestyle)
     semente = semente_do_freestyle(freestyle)
     documento = _por_baixo(computador.model_dump(mode="json"), semente)
     if not gravar_o_computador(documento):
