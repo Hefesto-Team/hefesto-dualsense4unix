@@ -248,3 +248,81 @@ def test_a_abertura_pede_a_pagina_antes_de_importar_as_abas(tmp_path: Path) -> N
         "esperou o import antes de mostrar qualquer coisa")
     assert medida["a10_depois"] is True, (
         "as abas nunca chegaram depois do pedido da página")
+
+
+# ===========================================================================
+# R9b — quem fecha a janela durante a espera da abertura, fecha o processo
+# ===========================================================================
+def _vista_de_mentira() -> object:
+    """Um objeto com o sinal `load-changed` da `WebKit2.WebView`, e nada mais."""
+    from typing import Any, ClassVar
+
+    from gi.repository import GObject
+
+    class _Vista(GObject.Object):
+        __gsignals__: ClassVar[dict[str, tuple[Any, ...]]] = {
+            "load-changed": (GObject.SignalFlags.RUN_FIRST, None, (object,)),
+        }
+
+    return _Vista()
+
+
+def _o_laco_que_vem_s(gtk: object, teto_s: float) -> float:
+    """Quanto um `Gtk.main` dura depois da espera, com uma guarda de `teto_s`."""
+    from gi.repository import GLib
+
+    guarda_no_ar = [True]
+
+    def guarda() -> bool:
+        guarda_no_ar[0] = False
+        gtk.main_quit()  # type: ignore[attr-defined]
+        return False
+
+    fonte = GLib.timeout_add(int(teto_s * 1000), guarda)
+    t0 = time.monotonic()
+    gtk.main()  # type: ignore[attr-defined]
+    dura = time.monotonic() - t0
+    if guarda_no_ar[0]:
+        GLib.source_remove(fonte)
+    return dura
+
+
+def test_quem_fecha_a_janela_durante_a_espera_fecha_o_processo() -> None:
+    """A janela do produto aparece antes de as abas chegarem, e a abertura
+    espera o WebKit começar (`_esperar_o_webkit_comecar`). O «X» da janela (e
+    a carga que falha) chama `Gtk.main_quit` nesse meio-tempo: a espera acaba
+    na hora, e o `Gtk.main` que vem depois sai sozinho, como saía antes de a
+    espera existir. Sem pedido de sair, a espera acaba no `committed` e o laço
+    seguinte segue de pé.
+
+    MORDIDA: volte a espera às voltas à mão do laço (`Gtk.main_iteration_do`),
+    como ela nasceu — o `Gtk.main_quit` sem laço rodando se perde, a espera vai
+    até o teto e o laço que vem não sai mais: o processo pendura sem janela.
+    """
+    gtk = _gtk()
+    from gi.repository import GLib, WebKit2
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo as hv
+
+    # 1. O «X» aos 20 ms: a espera acaba, e o laço que vem sai sozinho.
+    tela = SimpleNamespace(view=_vista_de_mentira(), morreu=None)
+    GLib.timeout_add(20, lambda: (gtk.main_quit(), False)[1])
+    t0 = time.monotonic()
+    hv._esperar_o_webkit_comecar(tela, teto_s=3.0)
+    espera = time.monotonic() - t0
+    laco = _o_laco_que_vem_s(gtk, teto_s=4.0)
+    assert espera < 1.5, f"o «X» não encerrou a espera: ela durou {espera:.2f} s"
+    assert laco < 1.5, (
+        f"o pedido de sair se perdeu na espera: o laço que vem durou {laco:.2f} s, "
+        "e o processo ficaria pendurado sem janela")
+
+    # 2. O WebKit começa aos 20 ms: a espera acaba, e o laço que vem fica de pé.
+    tela = SimpleNamespace(view=_vista_de_mentira(), morreu=None)
+    GLib.timeout_add(20, lambda: (tela.view.emit("load-changed",
+                                                 WebKit2.LoadEvent.COMMITTED), False)[1])
+    t0 = time.monotonic()
+    hv._esperar_o_webkit_comecar(tela, teto_s=3.0)
+    espera = time.monotonic() - t0
+    laco = _o_laco_que_vem_s(gtk, teto_s=0.4)
+    assert espera < 1.5, f"o `committed` não encerrou a espera: {espera:.2f} s"
+    assert laco >= 0.3, f"a espera inventou um pedido de sair: o laço durou {laco:.2f} s"

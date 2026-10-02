@@ -5888,25 +5888,55 @@ def _esperar_o_webkit_comecar(tela: Any, teto_s: float = TETO_DA_ESPERA_DO_WEBKI
     É o que deixa o processo do WebKit nascer: com o laço parado ele não anda
     (medido no lar de mentira, a importação das abas logo depois do pedido
     atrasou o `committed` em ~270 ms; depois dele, não atrasou nada).
+
+    A ESPERA É UM `Gtk.main` DE VERDADE, e não voltas do laço à mão: o «X» da
+    janela e a carga que falha chamam `Gtk.main_quit`, e sem laço rodando o
+    pedido se perde (`gtk_main_quit: assertion 'main_loops != NULL' failed`).
+    Medido no lar de mentira em 02/10/2026: com as voltas à mão, a janela
+    fechada logo que aparece deixava o processo pendurado, sem janela nenhuma,
+    segurando a vez da próxima abertura. O pedido de sair encerra a espera e
+    vale para o laço que vem: quem pediu para sair, sai.
     """
     from gi.repository import WebKit2
 
-    comecou: list[bool] = []
+    fim: list[str] = []
+    vigia_no_ar = [True]
+
+    def acabou(motivo: str) -> None:
+        if not fim:
+            fim.append(motivo)
+            Gtk.main_quit()
 
     def viu(_view: Any, evento: Any) -> None:
         if evento in (WebKit2.LoadEvent.COMMITTED, WebKit2.LoadEvent.FINISHED):
-            comecou.append(True)
+            acabou("carregando")
+
+    def olhar() -> bool:
+        # A CADA 20 ms: o teto, e a página que morreu sem pedir a saída.
+        if tela.morreu is not None:
+            acabou("morreu")
+        elif time.monotonic() >= prazo:
+            acabou("teto")
+        vigia_no_ar[0] = not fim
+        return vigia_no_ar[0]
+
+    def sair_do_laco_que_vem() -> bool:
+        Gtk.main_quit()
+        return False
 
     ligacao = tela.view.connect("load-changed", viu)
-    # O LAÇO VOLTA A CADA 20 ms MESMO SEM EVENTO, para o teto valer.
-    acordar = GLib.timeout_add(20, lambda: True)
     prazo = time.monotonic() + teto_s
+    vigia = GLib.timeout_add(20, olhar)
     try:
-        while not comecou and tela.morreu is None and time.monotonic() < prazo:
-            Gtk.main_iteration_do(True)
+        Gtk.main()
     finally:
-        GLib.source_remove(acordar)
+        if vigia_no_ar[0]:
+            GLib.source_remove(vigia)
         tela.view.disconnect(ligacao)
+    if not fim:
+        # Ninguém desta espera a encerrou: foi um `Gtk.main_quit` de fora (o
+        # «X», a carga que falhou). O pedido é do processo, não da espera.
+        GLib.idle_add(sair_do_laco_que_vem)
 
 
 def _importar_as_abas(tela: Any = None) -> None:
