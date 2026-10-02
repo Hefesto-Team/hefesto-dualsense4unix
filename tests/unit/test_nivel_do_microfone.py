@@ -27,9 +27,18 @@ from hefesto_dualsense4unix.integrations.nivel_do_microfone import (
     Histerese,
     NivelDoMicrofone,
     argv_do_medidor,
-    e_stream_do_medidor,
     propriedades_do_medidor,
 )
+from hefesto_dualsense4unix.integrations.quem_ouve_o_microfone import (
+    StreamDeCaptura,
+    e_stream_do_hefesto,
+)
+
+
+def e_stream_do_medidor(propriedades: dict[str, str]) -> bool:
+    """O crivo da PEÇA A (o único) sobre um fluxo com estas propriedades."""
+    fluxo = StreamDeCaptura(indice=0, fonte=0, corked=False, props=dict(propriedades))
+    return e_stream_do_hefesto(fluxo, raiz_proc="/nao-existe")
 
 #: Piso de silêncio MEDIDO no mic do DualSense pelo cabo, **605 s** (15.120
 PISO_MEDIDO_P50 = 0.008713
@@ -306,7 +315,7 @@ def test_amostra_suja_nao_derruba_a_regua() -> None:
 
 
 def test_a_peca_a_reconhece_o_nosso_fluxo_pelas_tres_marcas() -> None:
-    """MORDE: faça `e_stream_do_medidor` devolver sempre False e a PEÇA A"""
+    """MORDE: faça `e_stream_do_hefesto` devolver sempre False e a PEÇA A"""
     nosso = {
         "application.name": NOME_DO_MEDIDOR,
         "media.name": "luz-do-mic",

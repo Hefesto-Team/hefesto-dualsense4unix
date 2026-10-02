@@ -32,7 +32,6 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.lifecycle import (
-    CALADA_VPAD_SUSPENSO,
     Daemon,
     DaemonConfig,
 )
@@ -238,7 +237,6 @@ class _FakeDaemonIpc:
         self.config = DaemonConfig(keyboard_emulation_enabled=enabled)
         self._keyboard_device: Any = MagicMock() if enabled else None
         self._emulation_suppressed = False
-        self._steam_input_vpad_suspenso = False
         self.chamadas: list[bool] = []
         self._ok = ok
 
@@ -247,9 +245,6 @@ class _FakeDaemonIpc:
         self.config.keyboard_emulation_enabled = enabled
         self._keyboard_device = MagicMock() if (enabled and self._ok) else None
         return self._ok if enabled else True
-
-    def _jogo_no_controle_do_desktop(self) -> str | None:
-        return CALADA_VPAD_SUSPENSO if self._steam_input_vpad_suspenso else None
 
 
 class _Handlers(IpcHandlersMixin):
@@ -299,7 +294,7 @@ async def test_metodo_registrado_no_ipc_server() -> None:
 
 
 def test_payload_diz_o_motivo_do_silencio() -> None:
-    """Os quatro estados de `bloqueio`, incluindo o defeito medido de 29/07."""
+    """Os três estados de `bloqueio`, e o `None` de quando emite."""
     d = _FakeDaemonIpc(enabled=True)
     h = _Handlers(d)
 
@@ -308,13 +303,6 @@ def test_payload_diz_o_motivo_do_silencio() -> None:
     d._emulation_suppressed = True
     assert h._keyboard_emulation_payload()["bloqueio"] == "modo_jogo"
     d._emulation_suppressed = False
-
-    d._steam_input_vpad_suspenso = True
-    payload = h._keyboard_emulation_payload()
-    assert payload["bloqueio"] == CALADA_VPAD_SUSPENSO
-    assert payload["despachando"] is False
-    assert payload["enabled"] is True
-    d._steam_input_vpad_suspenso = False
 
     d._keyboard_device = None
     assert h._keyboard_emulation_payload()["bloqueio"] == "sem_device"
@@ -348,9 +336,6 @@ async def test_status_publica_o_bloco_do_teclado() -> None:
         "despachando": True,
         "bloqueio": None,
     }
-    daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
-    res = await h._handle_daemon_status({})
-    assert res["keyboard_emulation"]["bloqueio"] == CALADA_VPAD_SUSPENSO
 
 
 @pytest.mark.asyncio
@@ -367,21 +352,17 @@ async def test_state_full_publica_o_mesmo_bloco() -> None:
     status = await h._handle_daemon_status({})
     assert cheio["keyboard_emulation"] == status["keyboard_emulation"]
     assert cheio["keyboard_emulation"]["bloqueio"] is None
-    assert cheio["steam_input"] == {"excecao_ativa": False, "vpad_suspenso": False}
-    daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
+    assert cheio["steam_input"] == {"excecao_ativa": False}
     daemon._steam_input_excecao = True  # type: ignore[attr-defined]
     cheio = await h._handle_daemon_state_full({})
-    assert cheio["steam_input"] == {"excecao_ativa": True, "vpad_suspenso": True}
-    assert cheio["keyboard_emulation"]["bloqueio"] == CALADA_VPAD_SUSPENSO
+    assert cheio["steam_input"] == {"excecao_ativa": True}
 
 
 class _SnapR1:
     buttons_pressed: ClassVar[list[str]] = ["r1"]
 
 
-async def _um_tique_com_r1(
-    monkeypatch: pytest.MonkeyPatch, *, vpad_suspenso: bool
-) -> list[frozenset[str]]:
+async def _um_tique_com_r1(monkeypatch: pytest.MonkeyPatch) -> list[frozenset[str]]:
     """Roda o poll loop com R1 pressionado e devolve o que o teclado recebeu."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
@@ -410,7 +391,6 @@ async def _um_tique_com_r1(
     daemon._keyboard_device = kbd
     daemon._gamepad_device = None
     daemon._emulation_suppressed = False
-    daemon._steam_input_vpad_suspenso = vpad_suspenso  # type: ignore[attr-defined]
 
     task = asyncio.create_task(daemon.run())
     limite = time.monotonic() + 5.0
@@ -428,60 +408,9 @@ async def _um_tique_com_r1(
 
 
 @pytest.mark.asyncio
-async def test_teclado_nao_emite_com_o_vpad_suspenso_pelo_steam_input(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O R1 NÃO chega ao teclado virtual dentro do jogo da allowlist."""
-    despachos = await _um_tique_com_r1(monkeypatch, vpad_suspenso=True)
-    assert all("r1" not in bp for bp in despachos), despachos
-    assert frozenset() in despachos
-
-
-@pytest.mark.asyncio
 async def test_teclado_emite_no_desktop_no_mesmo_tique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Espelho legítimo: sem jogo com autoridade, o R1 continua chegando."""
-    despachos = await _um_tique_com_r1(monkeypatch, vpad_suspenso=False)
+    despachos = await _um_tique_com_r1(monkeypatch)
     assert any("r1" in bp for bp in despachos), despachos
-
-
-def test_predicado_nomeia_o_motivo() -> None:
-    daemon = Daemon(controller=FakeController(transport="usb"))
-    assert daemon._jogo_no_controle_do_desktop() is None
-    daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
-    assert daemon._jogo_no_controle_do_desktop() == CALADA_VPAD_SUSPENSO
-
-
-def test_autoridade_sticky_sozinha_nao_cala_o_desktop() -> None:
-    """`display_authority == "game"` NÃO é o sinal deste gate — de propósito."""
-    daemon = Daemon(controller=FakeController(transport="usb"))
-
-    class _Sinal:
-        authority = "game"
-
-    daemon._game_signal = _Sinal()  # type: ignore[assignment]
-    assert daemon.display_authority == "game"
-    assert daemon._jogo_no_controle_do_desktop() is None
-
-
-def test_flush_e_log_uma_vez_por_episodio() -> None:
-    """Borda: solta a tecla presa 1x; a 60 Hz não pode inundar o journal."""
-    daemon = Daemon(controller=FakeController(transport="usb"))
-    kbd = MagicMock()
-    daemon._keyboard_device = kbd
-
-    daemon._calar_emulacao_de_desktop(CALADA_VPAD_SUSPENSO, frozenset({"r1"}))
-    assert daemon._emu_calada_motivo == CALADA_VPAD_SUSPENSO
-    assert kbd.dispatch.call_args_list[0][0][0] == frozenset()
-    chamadas_apos_borda = kbd.dispatch.call_count
-
-    for _ in range(30):
-        daemon._calar_emulacao_de_desktop(CALADA_VPAD_SUSPENSO, frozenset({"r1"}))
-    assert kbd.dispatch.call_count == chamadas_apos_borda
-
-    daemon._liberar_emulacao_de_desktop(frozenset({"r1"}))
-    assert daemon._emu_calada_motivo == ""
-    kbd.prime.assert_called_once_with(frozenset({"r1"}))
-
-

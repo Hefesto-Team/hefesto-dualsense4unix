@@ -130,30 +130,9 @@ _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 _TERRITORIO = "daemon"
 
 
-#: sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-_PAR_ACEITO: dict[str, str] = {
-    "_steam_input_vpad_suspenso": (
-        "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1). O armador "
-        "`suspend_vpads_for_steam_input` (daemon/subsystems/gamepad.py:491) tem ZERO "
-        "chamadores em src/; os desarmadores `resume_vpads_after_steam_input` "
-        "(gamepad.py:297) e `start_gamepad_emulation_desfecho` (lifecycle.py:853) "
-        "estão vivos. NÃO é descuido: o commit `d8022ea` (09/08/2026) tirou a chamada "
-        "da borda de entrada da exceção de Steam Input e pôs `esconder_o_fisico_para_o_"
-        "jogo` no lugar, por decisão DELA — ESCONDER-EM-VEZ-DE-SAIR-01, *a allowlist do "
-        "Steam Input NÃO tira o Hefesto da frente*. O preço que matou a suspensão foi "
-        "medido na máquina dela em 08/08: o jogador 2 É um gamepad virtual, e derrubar "
-        "os virtuais para curar o duplicado do P1 derrubava o P2 junto "
-        "(`coop_derrubado_pela_excecao_steam_input`, 20 ocorrências num dia). "
-        "A ENTRADA FICA ATÉ A DECISÃO DELA, e o que falta está escrito: são CINCO os "
-        "leitores em produção, e DOIS deles estão na tela — a frase da ponte em "
-        "app/actions/home_actions.py:695 (Início) e a frase do vpad recolhido em "
-        "app/actions/emulation_actions.py:300 (Emulação) são inalcançáveis. Os outros "
-        "três: lifecycle.py:1272 (CALADA_VPAD_SUSPENSO), hotkey.py:153 e "
-        "ipc_handlers.py:1680, e nenhuma dessas leituras pode ser verdadeira. Ou as "
-        "leituras saem, ou a suspensão ganha caminho de volta — as duas mexem em "
-        "arquivo de outra frente e a escolha é DELA, não deste portão."
-    ),
-}
+#: Vazio desde 02/10/2026: a única entrada (`_steam_input_vpad_suspenso`) saiu com
+#: a suspensão do vpad, na O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01.
+_PAR_ACEITO: dict[str, str] = {}
 
 #: do irmão (`portao_a_casa_sabe_e_o_produto_nao_faz._confere_razoes`).
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
@@ -499,54 +478,56 @@ def _copia_de_src(destino: Path) -> Path:
     return copia
 
 
+_LEITOR_DO_PLANTIO = '''"""Lê a flag plantada pelo acessor — só existe dentro de um tmp."""
+from hefesto_dualsense4unix.daemon.plantio_da_mordida import plantio_armado
+
+
+def quem_le_o_plantio(daemon):
+    return 1 if plantio_armado(daemon) else 0
+'''
+
+
+def _plantar(destino: Path, armador: str) -> Path:
+    """Uma cópia de ``src/`` com o par plantado em ``daemon/``."""
+    copia = _copia_de_src(destino)
+    (copia / "daemon" / "plantio_da_mordida.py").write_text(armador, encoding="utf-8")
+    (copia / "daemon" / "leitor_do_plantio.py").write_text(
+        _LEITOR_DO_PLANTIO, encoding="utf-8"
+    )
+    return copia
+
+
 class TestOPortaoMorde:
     """Um portão que nunca reprovou é decoração com nome de portão."""
 
-    def test_a_regua_ve_o_par_de_hoje(self) -> None:
-        """A régua conferida contra resposta JÁ CONHECIDA (armadilha A5)."""
-        acusados = pares_com_metade_ligada()
-        assert "_steam_input_vpad_suspenso" in acusados, (
-            "a régua deixou de ver o par que a sprint mediu. OU a suspensão do vpad "
-            "ganhou chamador em produção (então apague a entrada de `_PAR_ACEITO` e "
-            "avise as Ondas 2 e 5), OU a varredura quebrou."
+    def test_a_regua_ve_o_par_plantado(self, tmp_path: Path) -> None:
+        """Armador sem chamador e desarmador vivo: a régua acusa, nas duas direções."""
+        copia = _plantar(tmp_path, _ARMADOR_SEM_CHAMADOR)
+        acusados = pares_com_metade_ligada(copia)
+        assert "_plantio_da_mordida" in acusados, (
+            "a régua não viu o par plantado — a varredura quebrou"
         )
-        par = acusados["_steam_input_vpad_suspenso"]
-        assert par.metade_morta == "True", (
-            "a metade morta deste par é a que ARMA: `suspend_vpads_for_steam_input`. "
-            f"A régua disse {par.metade_morta}."
-        )
-        assert par.armadores == {"suspend_vpads_for_steam_input": False}, (
-            f"os armadores medidos mudaram: {par.armadores}"
-        )
-        assert par.desarmadores.get("resume_vpads_after_steam_input") is True, (
-            "a régua não vê o chamador direto de `resume_vpads_after_steam_input` "
-            "(gamepad.py:297) — sem isso ela acusaria as duas metades e o portão "
-            "estaria medindo ausência, não assimetria."
+        par = acusados["_plantio_da_mordida"]
+        assert par.metade_morta == "True", par
+        assert par.armadores == {"armar_o_plantio": False}, par.armadores
+        assert par.desarmadores.get("desarmar_o_plantio") is True, (
+            "a régua não vê o chamador direto do desarmador — sem isso ela acusaria "
+            "as duas metades e mediria ausência, não assimetria"
         )
 
-    def test_a_lista_de_leituras_atravessa_o_acessor(self) -> None:
-        """O endereço é o que roteia o conserto, e ele estava faltando."""
-        par = pares_com_metade_ligada()["_steam_input_vpad_suspenso"]
-        for arquivo, chamada in (
-            ("daemon/lifecycle.py", "if steam_input_vpad_suspenso(self):"),
-            ("daemon/subsystems/hotkey.py",
-             "steam_input_excecao_ativa(daemon) or steam_input_vpad_suspenso(daemon)"),
-        ):
-            fonte = (_RAIZ / "src" / "hefesto_dualsense4unix" / arquivo).read_text(
-                encoding="utf-8").split("\n")
-            numeros = [i for i, linha in enumerate(fonte, 1) if chamada in linha]
-            assert len(numeros) == 1, (
-                f"achei {len(numeros)} linhas com {chamada!r} em {arquivo} — a "
-                f"régua precisa de UMA para saber qual endereço cobrar.")
-            endereco = f"{arquivo}:{numeros[0]}"
-            assert any(onde.startswith(endereco) for onde in par.leituras), (
-                f"o portão não nomeia {endereco}, que LÊ a flag pelo acessor. "
-                f"Ele listou: {par.leituras}"
-            )
-        assert any("(via " in onde for onde in par.leituras), (
-            "nenhuma leitura foi marcada como indireta — o salto pelo acessor "
-            "morreu e o portão voltou a medir só o toque direto"
+        copia_viva = _plantar(tmp_path / "viva", _ARMADOR_COM_CHAMADOR)
+        assert "_plantio_da_mordida" not in pares_com_metade_ligada(copia_viva), (
+            "com o armador chamado, o par tem as duas metades e não pode ser acusado"
         )
+
+    def test_a_lista_de_leituras_atravessa_o_acessor(self, tmp_path: Path) -> None:
+        """O endereço é o que roteia o conserto: a leitura pelo acessor entra na lista."""
+        copia = _plantar(tmp_path, _ARMADOR_SEM_CHAMADOR)
+        par = pares_com_metade_ligada(copia)["_plantio_da_mordida"]
+        assert any(
+            onde.startswith("daemon/leitor_do_plantio.py:") and "(via plantio_armado)" in onde
+            for onde in par.leituras
+        ), f"o portão não nomeia a leitura pelo acessor. Ele listou: {par.leituras}"
 
     def test_a_regua_nao_acusa_os_pares_simetricos(self) -> None:
         """Portão que grita dezessete vezes é desligado na primeira semana."""

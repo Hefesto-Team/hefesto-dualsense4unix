@@ -39,8 +39,8 @@ Política:
     gamepad virtual — `coop_derrubado_pela_excecao_steam_input`, vinte
     ocorrências no journal dela em 08/08. O raciocínio antigo não estava errado
     sobre o duplicado; estava errado sobre o preço, que ninguém tinha declarado.
-    As funções da suspensão continuam neste arquivo, documentadas e testadas,
-    mas **fora do caminho da exceção** — ver `suspend_vpads_for_steam_input`.
+    As funções da suspensão saíram em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01):
+    sem chamador desde 09/08, o flag que elas armavam nunca podia ser verdade.
   - **A exceção mexe na ENTRADA, e só nela** (NOTA DATADA, 07/08/2026): a casa
     dizia *"o Hefesto sai da frente"*, e a medição dela de 06/08
     (`docs/process/sprints/arquivados/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md`,
@@ -55,10 +55,9 @@ Política:
 """
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.profiles.schema import MOTOR_PCT_PADRAO
@@ -75,8 +74,6 @@ logger = get_logger(__name__)
 REBACKEND_COOLDOWN_SEC = 30.0
 
 LAUNCH_RECONCILE_INTERVAL_SEC = 1.0
-
-STEAM_INPUT_VIGIA_INTERVAL_SEC = 1.0
 
 
 EMU_APLICADO = "aplicado"
@@ -310,8 +307,6 @@ def sync_steam_input_exception(
         esconder_o_fisico_para_o_jogo(daemon, appid=appid)
         return True
     logger.info("steam_input_excecao_encerrada")
-    if resume_vpads_after_steam_input(daemon):
-        return False
     if daemon.is_native_mode():
         return False
     if not getattr(daemon.config, "gamepad_emulation_enabled", False):
@@ -353,85 +348,6 @@ def esconder_o_fisico_para_o_jogo(
     return True
 
 
-def steam_input_vpad_suspenso(daemon: Any) -> bool:
-    """True quando o vpad está fora de cena por causa da allowlist (JOGO-01)."""
-    return bool(getattr(daemon, "_steam_input_vpad_suspenso", False))
-
-
-def steam_input_coop_derrubados(daemon: Any) -> int:
-    """Quantos CONTROLES do co-op saíram da mesa na suspensão (0 = nenhum).
-
-    CONTAGEM-E-COOP-01 (29/07). Conta SECUNDÁRIOS (P2, P3, P4) — o P1 não é
-    jogador do co-op, ele é o vpad primário, e a queda dele já tem observável
-    próprio (`steam_input_vpad_suspenso`). Somar os dois num número só faria
-    "co-op de três" virar "4" na tela.
-
-    NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01). Até aqui este número era
-    "quantos gamepads virtuais o teardown recolheu", e por isso a janela
-    acusava *"1 jogador saiu"* com os dois controles dela listados logo abaixo,
-    conectados: a caixinha de Steam Input recolhe vpad a cada entrada em sessão
-    (20 vezes num dia no journal dela) e nenhuma delas era um controle saindo
-    da mesa. O número do journal continua sendo o dos vpads — é o fato de
-    engenharia; este, que é o que a JANELA lê, passou a ser o dos CONTROLES
-    (`coop.secundarios_fora_da_mesa`).
-
-    Leitura de um inteiro em memória, como as duas irmãs deste módulo, e pelo
-    mesmo motivo (é consumida pelo `state_full`, que roda a 10 Hz) — a
-    enumeração é paga no tique lento do co-op, nunca aqui. Vive
-    exatamente enquanto a suspensão vive: as DUAS saídas dela (a borda de saída
-    da exceção e o gesto manual de religar a emulação) zeram junto com o flag —
-    um número pendurado depois de o co-op voltar mandaria a janela avisar de um
-    estrago que já acabou.
-    """
-    valor = getattr(daemon, "_steam_input_coop_derrubados", 0)
-    return valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
-
-
-def coop_sentados_na_suspensao(daemon: Any) -> tuple[str, ...]:
-    """Identidades (MAC) dos secundários que a suspensão em curso derrubou."""
-    macs = getattr(daemon, "_steam_input_coop_caidos", ())
-    if not isinstance(macs, (tuple, list, set, frozenset)):
-        return ()
-    return tuple(mac for mac in macs if isinstance(mac, str))
-
-
-def reavaliar_coop_fora_da_mesa(daemon: Any, presentes: Iterable[str]) -> int:
-    """Recalcula o número do aviso e o publica no daemon. Devolve o novo valor."""
-    from hefesto_dualsense4unix.daemon.subsystems.coop import secundarios_fora_da_mesa
-
-    sentados = coop_sentados_na_suspensao(daemon)
-    if not sentados:
-        return steam_input_coop_derrubados(daemon)
-    antes = steam_input_coop_derrubados(daemon)
-    agora = secundarios_fora_da_mesa(sentados, presentes)
-    daemon._steam_input_coop_derrubados = agora
-    if agora != antes:
-        logger.info(
-            "coop_controles_fora_da_mesa",
-            antes=antes,
-            agora=agora,
-            secundarios_suspensos=len(sentados),
-        )
-    return agora
-
-
-async def _vigia_da_excecao_steam_input(daemon: DaemonProtocol) -> None:
-    """Reconciliação de launch a 1 Hz enquanto o vpad está suspenso (JOGO-01)."""
-    try:
-        while not _daemon_parando(daemon):
-            await asyncio.sleep(STEAM_INPUT_VIGIA_INTERVAL_SEC)
-            if not steam_input_excecao_ativa(daemon):
-                return
-            with contextlib.suppress(Exception):
-                _reconciliar_launch(daemon)
-            if not steam_input_excecao_ativa(daemon):
-                return
-    except asyncio.CancelledError:  # pragma: no cover - shutdown do daemon
-        raise
-    finally:
-        daemon._steam_input_vigia = None  # type: ignore[attr-defined]
-
-
 def _daemon_parando(daemon: Any) -> bool:
     """True quando o daemon já está em shutdown (tolerante a dublês)."""
     fn = getattr(daemon, "_is_stopping", None)
@@ -441,190 +357,6 @@ def _daemon_parando(daemon: Any) -> bool:
         return bool(fn())
     except Exception:
         return False
-
-
-def _armar_vigia_da_excecao(daemon: DaemonProtocol) -> bool:
-    """Cria a task-vigia da exceção. False = não há como trazer o vpad de volta.
-
-    JOGO-01 — este é o gate de segurança da Entrega 1: a suspensão do vpad SÓ
-    acontece quando existe quem a desfaça. Sem event loop rodando (daemon
-    dublado em teste, uso do módulo fora do daemon) a task não nasce, a suspensão
-    é abortada e a decisão fica no journal — degradar para o comportamento antigo
-    (físico exposto COM o vpad de pé, ou seja, o duplicado) é ruim, mas deixar a
-    usuária sem gamepad virtual até reiniciar o daemon é pior e não é reversível
-    por ela.
-
-    Idempotente: vigia viva devolve True sem criar outra. A task entra em
-    `daemon._tasks` quando a lista existe (mesmo padrão do `start_mic_hotkey`),
-    para o shutdown do daemon cancelá-la junto com o resto.
-    """
-    if getattr(daemon, "_steam_input_vigia", None) is not None:
-        return True
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        logger.warning("steam_input_vigia_sem_event_loop")
-        return False
-    try:
-        task = loop.create_task(
-            _vigia_da_excecao_steam_input(daemon), name="steam_input_excecao"
-        )
-    except Exception as exc:  # pragma: no cover - loop fechando no meio
-        logger.warning("steam_input_vigia_falhou", err=str(exc))
-        return False
-    daemon._steam_input_vigia = task  # type: ignore[attr-defined]
-    tasks = getattr(daemon, "_tasks", None)
-    if isinstance(tasks, list):
-        tasks.append(task)
-    return True
-
-
-def suspend_vpads_for_steam_input(
-    daemon: DaemonProtocol, *, appid: int | None = None
-) -> bool:
-    """Retira o gamepad virtual de cena pelo tempo do jogo da allowlist (JOGO-01)."""
-    if steam_input_vpad_suspenso(daemon):
-        return False
-    device = getattr(daemon, "_gamepad_device", None)
-    coop = getattr(daemon, "_coop_manager", None)
-    jogadores = getattr(coop, "_players", None) or {}
-    if device is None and not jogadores:
-        return False
-    if not _armar_vigia_da_excecao(daemon):
-        logger.warning(
-            "steam_input_vpad_mantido_de_pe",
-            appid=appid,
-            motivo="sem_vigia_para_devolver_o_vpad",
-        )
-        return False
-    flavor = getattr(device, "flavor", None) or getattr(
-        daemon.config, "gamepad_flavor", None
-    )
-    n_jogadores = len(jogadores)
-    sentados = tuple(jogadores)
-    daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
-    daemon._steam_input_flavor_suspenso = (  # type: ignore[attr-defined]
-        flavor if device is not None else None
-    )
-    # a volta sem caminho não opina, e o Xbox do perfil voltaria DualSense.
-    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_do_vpad
-
-    daemon._steam_input_caminho_suspenso = (  # type: ignore[attr-defined]
-        caminho_do_vpad(device) if device is not None else None
-    )
-    with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-        if coop is not None:
-            with contextlib.suppress(Exception):
-                coop.disable()
-        if device is not None:
-            stop_gamepad_emulation(daemon, persist=False, release_grab=False)
-    # publicado no `state_full` (`coop.derrubado_por_steam_input`), para a
-    de_pe = set(getattr(coop, "_players", None) or {}) if coop is not None else set()
-    restantes = len(de_pe)
-    caidos = tuple(mac for mac in sentados if mac not in de_pe)
-    derrubados = len(caidos)
-    daemon._steam_input_coop_caidos = caidos  # type: ignore[attr-defined]
-    daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
-    logger.info(
-        "steam_input_vpad_suspenso",
-        appid=appid,
-        flavor=flavor,
-        jogadores_coop=n_jogadores,
-    )
-    if derrubados:
-        logger.warning(
-            "coop_derrubado_pela_excecao_steam_input",
-            appid=appid,
-            secundarios_derrubados=derrubados,
-            secundarios_restantes=restantes,
-        )
-    store = getattr(daemon, "store", None)
-    if store is not None:
-        with contextlib.suppress(Exception):
-            store.bump("gamepad.steam_input.vpad_suspenso")
-        if derrubados:
-            with contextlib.suppress(Exception):
-                store.bump("gamepad.steam_input.coop_derrubado")
-    return True
-
-
-def resume_vpads_after_steam_input(daemon: DaemonProtocol) -> bool:
-    """Devolve o gamepad virtual quando o jogo da allowlist sai (JOGO-01).
-
-    True = o vpad voltou (ou a suspensão foi encerrada sem ter o que devolver).
-    Chamada na borda de SAÍDA da exceção, depois de `_steam_input_excecao` já
-    ser False — a ordem importa: o gate de `start_gamepad_emulation` recusa
-    apply automático enquanto a exceção estiver de pé, e ele recusaria também
-    esta devolução.
-
-    `origin="profile"` de propósito, pela mesma razão do R-07: a preferência em
-    disco nunca foi tocada na suspensão, e reescrevê-la agora seria o Hefesto
-    "decidindo" por ela um estado que ela não pediu. A máscara restaurada é a
-    que estava valendo quando o jogo abriu.
-
-    Modo Nativo entrando no meio da sessão vence: ali o físico é o dispositivo
-    por escolha dela, e ressuscitar o vpad recriaria o duplicado do outro lado.
-    A suspensão é encerrada mesmo assim (o estado não pode ficar pendurado); o
-    caminho canônico do Modo Nativo é quem manda a partir daí.
-    """
-    if not steam_input_vpad_suspenso(daemon):
-        return False
-    flavor = getattr(daemon, "_steam_input_flavor_suspenso", None)
-    caminho = getattr(daemon, "_steam_input_caminho_suspenso", None)
-    daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
-    daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
-    daemon._steam_input_caminho_suspenso = None  # type: ignore[attr-defined]
-    # CONTAGEM-E-COOP-01: o aviso do co-op derrubado morre com a suspensão, aqui
-    # e em TODAS as saídas dela — inclusive nas que devolvem antes do
-    # `coop.sync(force=True)` do fim (Modo Nativo, "não havia vpad"). Zerar só no
-    # caminho felizmente-completo deixaria a janela avisando de um estrago
-    # encerrado. Ver `steam_input_coop_derrubados`.
-    derrubados_antes = steam_input_coop_derrubados(daemon)
-    daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
-    # AVISO-FALSO-DO-COOP-01: a lista dos sentados morre junto com o número, e
-    # pelo mesmo motivo — deixá-la de pé faria o tick do co-op reabrir a conta
-    # de uma suspensão encerrada e ressuscitar o aviso sozinho.
-    daemon._steam_input_coop_caidos = ()  # type: ignore[attr-defined]
-    if derrubados_antes:
-        # Nome do fato EXATO: o aviso acabou. "Devolvido" seria mentira nas
-        # saídas que não recriam o co-op (Modo Nativo, "não havia vpad") — quem
-        # recria é o `coop.sync(force=True)` do fim desta função.
-        logger.info(
-            "steam_input_coop_aviso_encerrado",
-            secundarios_derrubados=derrubados_antes,
-        )
-    nativo = False
-    with contextlib.suppress(Exception):
-        nativo = bool(daemon.is_native_mode())
-    if nativo:
-        logger.info("steam_input_vpad_nao_retomado", motivo="modo_nativo")
-        return True
-    if not isinstance(flavor, str) or not flavor:
-        # Não havia vpad do P1 quando a exceção entrou (ver a máscara gravada na
-        # suspensão): devolver aqui seria CRIAR um device que ela não tinha.
-        logger.info("steam_input_vpad_nao_retomado", motivo="nao_havia_vpad")
-        return True
-    logger.info("steam_input_vpad_retomado", flavor=flavor)
-    store = getattr(daemon, "store", None)
-    if store is not None:
-        with contextlib.suppress(Exception):
-            store.bump("gamepad.steam_input.vpad_retomado")
-    caminho_do_dono = nomear_o_restart(daemon, "volta_do_steam_input")
-    if caminho is not None and caminho != caminho_do_dono:
-        logger.info(
-            "volta_do_steam_input_segue_o_dono",
-            caminho_da_suspensao=caminho,
-            caminho=caminho_do_dono,
-        )
-    with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-        start_gamepad_emulation(
-            daemon, flavor=flavor, origin="profile", caminho=caminho_do_dono
-        )
-        coop = getattr(daemon, "_coop_manager", None)
-        if coop is not None:
-            with contextlib.suppress(Exception):
-                coop.sync(force=True)
-    return True
 
 
 def vpad_vivo(device: Any) -> bool:
@@ -1769,21 +1501,6 @@ def start_gamepad_emulation_desfecho(
     caminho_pedido = normalizar_caminho(caminho) or _caminho_a_herdar(daemon)
     uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)
 
-    if steam_input_vpad_suspenso(daemon):
-        logger.info("steam_input_vpad_retomado", motivo="apply", origem=origin)
-        daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
-        daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
-        coop_derrubado_antes = steam_input_coop_derrubados(daemon)
-        daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
-        daemon._steam_input_coop_caidos = ()  # type: ignore[attr-defined]
-        if coop_derrubado_antes:
-            logger.info(
-                "steam_input_coop_aviso_encerrado",
-                secundarios_derrubados=coop_derrubado_antes,
-                motivo="apply",
-                origem=origin,
-            )
-
     existing = daemon._gamepad_device
     if existing is not None:
         # DualSense caía aqui: a máscara efetiva não muda, a função voltava
@@ -1895,7 +1612,7 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
     cfg = getattr(daemon, "config", None)
     if not getattr(cfg, "gamepad_emulation_enabled", False):
         return None
-    if getattr(daemon, "_native_mode", False) or steam_input_vpad_suspenso(daemon):
+    if getattr(daemon, "_native_mode", False):
         return None
     flavor_do_jogo = getattr(cfg, "gamepad_flavor", None)
     caminho = caminho_da_sessao(daemon)
@@ -2497,7 +2214,6 @@ __all__ = [
     "ORIGENS_GESTO_DELA",
     "ORIGENS_QUE_PASSAM_COM_O_JOGO",
     "REBACKEND_COOLDOWN_SEC",
-    "STEAM_INPUT_VIGIA_INTERVAL_SEC",
     "GamepadSubsystem",
     "anotar_rumble_no_vpad",
     "aplicar_o_toque",
@@ -2517,17 +2233,13 @@ __all__ = [
     "ralos_do_mic",
     "read_primary_calibration",
     "rehide_physical_hidraw",
-    "resume_vpads_after_steam_input",
     "soltar_o_cursor_do_toque",
     "start_gamepad_emulation",
     "start_gamepad_emulation_desfecho",
     "start_motion_reader",
-    "steam_input_coop_derrubados",
     "steam_input_excecao_ativa",
-    "steam_input_vpad_suspenso",
     "stop_gamepad_emulation",
     "stop_motion_reader",
-    "suspend_vpads_for_steam_input",
     "sync_steam_input_exception",
     "upgrade_primary_vpad_to_uhid",
     "vpad_vivo",

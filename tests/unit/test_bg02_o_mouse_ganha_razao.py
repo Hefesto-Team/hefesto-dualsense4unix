@@ -37,11 +37,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon import ipc_handlers as ih
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
-from hefesto_dualsense4unix.daemon.lifecycle import (
-    CALADA_VPAD_SUSPENSO,
-    Daemon,
-    DaemonConfig,
-)
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.testing import FakeController
 
 
@@ -52,7 +48,6 @@ class _FakeDaemonMouse:
         self.config = DaemonConfig(mouse_emulation_enabled=enabled)
         self._mouse_device: Any = MagicMock() if enabled else None
         self._emulation_suppressed = False
-        self._steam_input_vpad_suspenso = False
         self._ok = ok
         self.chamadas: list[tuple[bool, int | None, int | None]] = []
         self.velocidades: list[tuple[int | None, int | None]] = []
@@ -82,9 +77,6 @@ class _FakeDaemonMouse:
         self.velocidades.append((speed, scroll_speed))
         return self._ok
 
-    def _jogo_no_controle_do_desktop(self) -> str | None:
-        return CALADA_VPAD_SUSPENSO if self._steam_input_vpad_suspenso else None
-
 
 class _Handlers(IpcHandlersMixin):
     def __init__(self, daemon: object) -> None:
@@ -98,8 +90,8 @@ class _HandlersCompletos(IpcHandlersMixin):
         self.controller = controller
 
 
-def test_o_bloqueio_do_mouse_percorre_os_cinco_estados() -> None:
-    """Os cinco desfechos, na ordem em que quem lê a tela os encontra."""
+def test_o_bloqueio_do_mouse_percorre_os_quatro_estados() -> None:
+    """Os quatro desfechos, na ordem em que quem lê a tela os encontra."""
     d = _FakeDaemonMouse(enabled=True)
     h = _Handlers(d)
 
@@ -108,10 +100,6 @@ def test_o_bloqueio_do_mouse_percorre_os_cinco_estados() -> None:
     d._emulation_suppressed = True
     assert h._bloqueio_do_mouse() == "modo_jogo"
     d._emulation_suppressed = False
-
-    d._steam_input_vpad_suspenso = True
-    assert h._bloqueio_do_mouse() == CALADA_VPAD_SUSPENSO
-    d._steam_input_vpad_suspenso = False
 
     d._mouse_device = None
     assert h._bloqueio_do_mouse() == "sem_device"
@@ -127,17 +115,6 @@ def test_o_interruptor_vence_o_device_na_ordem_dos_motivos() -> None:
     assert _Handlers(d)._bloqueio_do_mouse() == "desligada"
 
 
-def test_o_predicado_que_estoura_nao_derruba_o_payload() -> None:
-    """O `state_full` roda a 10-20 Hz: um predicado torto não pode apagar a aba."""
-    d = _FakeDaemonMouse(enabled=True)
-
-    def _explode() -> str:
-        raise RuntimeError("janela sumiu")
-
-    d._jogo_no_controle_do_desktop = _explode  # type: ignore[method-assign]
-    assert _Handlers(d)._bloqueio_do_mouse() is None
-
-
 def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # maiúsculas para destacar o ponto, sem acento (noqa-acento)
     """Um dono só para o gate do poll loop — ver `_bloqueio_da_emulacao_de_desktop`."""
     d = _FakeDaemonMouse(enabled=True)
@@ -145,13 +122,8 @@ def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # 
     d._keyboard_device = MagicMock()  # type: ignore[attr-defined]
     h = _Handlers(d)
 
-    for suprimido, suspenso, esperado in (
-        (False, False, None),
-        (True, False, "modo_jogo"),
-        (False, True, CALADA_VPAD_SUSPENSO),
-    ):
+    for suprimido, esperado in ((False, None), (True, "modo_jogo")):
         d._emulation_suppressed = suprimido
-        d._steam_input_vpad_suspenso = suspenso
         assert h._bloqueio_do_mouse() == esperado
         assert h._keyboard_emulation_payload()["bloqueio"] == esperado
 

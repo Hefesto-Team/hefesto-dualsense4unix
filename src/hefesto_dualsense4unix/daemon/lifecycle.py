@@ -506,8 +506,6 @@ STASH_DA_EXCLUSAO = "exclusão"
 
 IGNORADO_UM_CONTROLE_SO = "ignorado_um_controle_so"
 
-#: `keyboard_emulation.bloqueio` do `daemon.status`/`daemon.state_full`, e é por
-CALADA_VPAD_SUSPENSO = "vpad_suspenso_pelo_steam_input"
 
 
 @dataclass
@@ -582,8 +580,6 @@ class Daemon:
     _emulation_suppressed: bool = False
     _suppress_manual_ts: float = field(default=float("-inf"))
     _suppress_from_profile: bool = False
-    _emu_calada_motivo: str = ""
-    _emu_calada_botoes_logados: bool = False
     _emu_manual_ts: float = field(default=float("-inf"))
     _mode_pendente: ModoAdiado | None = None
     _mascara_adiada_por_jogo: MascaraAdiada | None = None
@@ -2237,59 +2233,6 @@ class Daemon:
         except Exception as exc:  # pragma: no cover - disco hostil
             logger.debug("catalogo_de_janelas_indisponivel", err=str(exc))
             return False
-
-    def _jogo_no_controle_do_desktop(self) -> str | None:
-        """Motivo para CALAR a emulação de desktop, ou None se ela pode falar."""
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-            steam_input_vpad_suspenso,
-        )
-
-        if steam_input_vpad_suspenso(self):
-            return CALADA_VPAD_SUSPENSO
-        return None
-
-    def _calar_emulacao_de_desktop(
-        self, motivo: str, buttons_pressed: frozenset[str]
-    ) -> None:
-        """Fecha o gate do desktop porque o jogo assumiu (EMULACAO-NO-JOGO-01)."""
-        if self._emu_calada_motivo != motivo:
-            self._emu_calada_motivo = motivo
-            self._emu_calada_botoes_logados = False
-            self._flush_emulation_devices()
-            logger.info(
-                "emulacao_de_desktop_calada_no_jogo",
-                motivo=motivo,
-                teclado_ativo=self._keyboard_device is not None,
-                mouse_ativo=self._mouse_device is not None,
-                modo_jogo=self._emulation_suppressed,
-            )
-        if (
-            not self._emu_calada_botoes_logados
-            and buttons_pressed
-            and self._keyboard_device is not None
-            and not self._emulation_suppressed
-        ):
-            self._emu_calada_botoes_logados = True
-            logger.info(
-                "teclado_no_jogo_bloqueado",
-                motivo=motivo,
-                botoes=sorted(buttons_pressed),
-            )
-        if self._touchpad_reader is not None:
-            from hefesto_dualsense4unix.daemon.subsystems.mouse import (
-                discard_touchpad_motion,
-            )
-
-            discard_touchpad_motion(self)
-
-    def _liberar_emulacao_de_desktop(self, buttons_pressed: frozenset[str]) -> None:
-        """Reabre o gate do desktop ao fim do episódio (EMULACAO-NO-JOGO-01)."""
-        motivo = self._emu_calada_motivo
-        self._emu_calada_motivo = ""
-        self._emu_calada_botoes_logados = False
-        if self._keyboard_device is not None:
-            self._prime_keyboard_emulation(buttons_pressed)
-        logger.info("emulacao_de_desktop_liberada", motivo_anterior=motivo)
 
     def apply_profile_mode(
         self,
@@ -4294,14 +4237,7 @@ class Daemon:
                     emu_buttons = buttons_pressed - blocked
 
             emu_active = not self._emulation_suppressed
-            motivo_jogo = (
-                self._jogo_no_controle_do_desktop() if not gamepad_dispatched else None
-            )
-            if motivo_jogo is not None:
-                self._calar_emulacao_de_desktop(motivo_jogo, emu_buttons)
-            elif self._emu_calada_motivo:
-                self._liberar_emulacao_de_desktop(emu_buttons)
-            if not gamepad_dispatched and motivo_jogo is None:
+            if not gamepad_dispatched:
                 if self._mouse_device is not None and emu_active:
                     self._dispatch_mouse_emulation(state, emu_buttons)
                 elif self._touchpad_reader is not None:

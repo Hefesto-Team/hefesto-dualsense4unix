@@ -143,7 +143,7 @@ async def _encerrar_vigia(daemon: Any) -> Any:
 async def test_com_dois_controles_a_marca_nao_derruba_o_jogador_2(
     _broker_falso: None, _sem_env: None, _jogo_marcado_na_frente: None
 ) -> None:
-    """A MORDIDA: devolva `suspend_vpads_for_steam_input(daemon, appid=appid)`"""
+    """A MORDIDA: faça a borda de entrada da marca desligar o co-op ou parar o P1."""
     daemon = _DaemonFalso(jogadores=1)
     vpad_do_p1 = daemon._gamepad_device
 
@@ -156,8 +156,6 @@ async def test_com_dois_controles_a_marca_nao_derruba_o_jogador_2(
         "o co-op foi desligado — é este teardown que derrubava o jogador 2"
     )
     assert len(daemon._coop_manager._players) == 1, "o jogador 2 saiu da mesa"
-    assert gp.steam_input_vpad_suspenso(daemon) is False
-    assert gp.steam_input_coop_derrubados(daemon) == 0
     assert vigia is None, (
         "nasceu a task-vigia da suspensão — ela só existe para desfazer uma "
         "suspensão, e a marca não suspende mais nada"
@@ -254,7 +252,6 @@ def test_sair_do_jogo_marcado_mantem_o_estado_canonico(
     assert gp.sync_steam_input_exception(daemon) is False
 
     assert gp.steam_input_excecao_ativa(daemon) is False
-    assert gp.steam_input_vpad_suspenso(daemon) is False
     assert daemon.grabs == [True] and daemon.hides == ["/dev/hidraw0"]
     assert daemon._gamepad_device is not None
 

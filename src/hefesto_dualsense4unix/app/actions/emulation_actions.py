@@ -84,12 +84,6 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "modo_jogo": (
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
     ),
-    # inteira, com a nota datada de 07/08 que ela já custou (abaixo). Marcar
-    "vpad_suspenso_pelo_steam_input": (
-        "Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, "
-        "e o controle virtual foi recolhido. Não foi desligado — volta sozinho "
-        "quando você fechar o jogo."
-    ),
 }
 
 

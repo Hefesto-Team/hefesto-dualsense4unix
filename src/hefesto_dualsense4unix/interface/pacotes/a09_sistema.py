@@ -1460,8 +1460,8 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE ELE FAZ DE VERDADE, medido no fonte do daemon em 05/09/2026, e é
     MENOS do que "recarregar a configuração" dá a entender: o clique manda
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
-    (`daemon/ipc_handlers.py:4581`) e `new_cfg = replace(self.daemon.config)` é
-    uma cópia de valor igual (`:6292`). Os dois ramos que reaplicariam mouse e
+    (`daemon/ipc_handlers.py:4542`) e `new_cfg = replace(self.daemon.config)` é
+    uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
     teclado comparam `old` com `new` (`daemon/lifecycle.py:1119` e `:2089`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1117-1118` derruba e sobe

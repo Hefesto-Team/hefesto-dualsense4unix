@@ -5,25 +5,19 @@ API de alto nível: lightbar RGB, 5 LEDs de jogador (bitmask) e LED do microfone
 Cobertura atual:
 - Lightbar RGB: `IController.set_led` (implementado).
 - LED do microfone: `IController.set_mic_led` (implementado — INFRA-SET-MIC-LED-01).
-  **Não é aplicado por `apply_led_settings`**: mic_led é tratado como estado
+  **Não é aplicado pelo perfil**: mic_led é tratado como estado
   runtime puro (ver AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 e armadilha A-06).
   Transições de mic_led vêm do botão físico ou de handlers IPC dedicados
   (`udp_server` MicLED, `HotkeyManager` mic_btn), nunca de profile switch.
 - Player LEDs: `IController.set_player_leds` (implementado — player bitmask).
   Player LEDs continuam com API básica de bitmask; efeitos avançados (animação)
   dependem de sprint futura.
-
-Uso:
-    from hefesto_dualsense4unix.core.led_control import LedSettings, apply_led_settings
-    apply_led_settings(controller, LedSettings(lightbar=(255, 128, 0)))
 """
 from __future__ import annotations
 
 import colorsys
 from collections.abc import Iterable
 from dataclasses import dataclass
-
-from hefesto_dualsense4unix.core.controller import IController
 
 RGB = tuple[int, int, int]
 
@@ -59,7 +53,7 @@ class LedSettings:
       sobre o RGB antes de enviar ao hardware. 1.0 = sem dimming.
     - `player_leds`: lista de 5 booleanos para os indicadores inferiores
       (esquerda para direita). Padrão: todos apagados.
-    - `mic_led`: **reservado / no-op em `apply_led_settings`**. Preservado no
+    - `mic_led`: **reservado / no-op na aplicação do perfil**. Preservado no
       dataclass por compatibilidade de API (callers antigos que instanciavam
       `LedSettings(lightbar=..., mic_led=...)` seguem válidos), mas o valor
       NÃO é propagado ao hardware pelo apply. Mic LED é estado runtime puro:
@@ -471,13 +465,6 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     return saida
 
 
-def apply_led_settings(controller: IController, settings: LedSettings) -> None:
-    """Aplica settings no controle."""
-    effective = settings.apply_brightness(settings.brightness_level)
-    controller.set_led(effective.lightbar)
-    controller.set_player_leds(settings.player_leds)
-
-
 def off() -> LedSettings:
     return LedSettings(lightbar=(0, 0, 0))
 
@@ -543,7 +530,6 @@ __all__ = [
     "RGB",
     "LedSettings",
     "PecaDaMesa",
-    "apply_led_settings",
     "cor_automatica",
     "cor_escolhida",
     "cores_sem_colisao",

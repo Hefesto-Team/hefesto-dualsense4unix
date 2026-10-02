@@ -133,19 +133,6 @@ class TestAFraseDoTecladoEmulado:
         )
         assert "pausa" in dica.lower()
 
-    def test_o_jogo_assumiu_promete_a_volta(self) -> None:
-        _ligado, dica = descrever_teclado_emulado(
-            {"enabled": True, "bloqueio": "vpad_suspenso_pelo_steam_input"}
-        )
-        assert "fechar o jogo" in dica.lower()
-
-    def test_a_pausa_do_steam_input_nao_promete_perder_a_luz(self) -> None:
-        """NOTA DATADA — 07/08/2026: a frase dizia "o jogo assumiu o controle"."""
-        _ligado, dica = descrever_teclado_emulado(
-            {"enabled": True, "bloqueio": "vpad_suspenso_pelo_steam_input"}
-        )
-        assert "assumiu o controle" not in dica
-        assert "quem entrega o controle é a Steam" in dica
 
     def test_sem_device_manda_para_a_cura(self) -> None:
         _ligado, dica = descrever_teclado_emulado(

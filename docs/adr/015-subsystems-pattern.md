@@ -27,12 +27,12 @@ daemon/
     __init__.py         (SUBSYSTEM_REGISTRY + reexportações)
     base.py             (Protocol Subsystem: start/stop/is_enabled)
     poll.py             (BatteryDebouncer + evdev_buttons_once + PollSubsystem)
-    ipc.py              (IpcSubsystem + start_ipc / stop_ipc)
-    udp.py              (UdpSubsystem + start_udp / stop_udp)
-    autoswitch.py       (AutoswitchSubsystem + start_autoswitch / stop_autoswitch)
+    ipc.py              (IpcSubsystem + start_ipc)
+    udp.py              (UdpSubsystem + start_udp)
+    autoswitch.py       (AutoswitchSubsystem + start_autoswitch)
     mouse.py            (MouseSubsystem + start/stop/dispatch_mouse)
     rumble.py           (RumbleSubsystem + reassert_rumble + _effective_mult_inline)
-    hotkey.py           (HotkeySubsystem + start/stop_hotkey_manager + mic_button_loop)
+    hotkey.py           (start/stop_hotkey_manager + mic_button_loop)
     connection.py       (connect_with_retry + reconnect + restore_last_profile + shutdown)
 ```
 

@@ -332,7 +332,6 @@ SYNC_FORCADO: dict[tuple[str, str], bool] = {
     ("daemon/lifecycle.py", "set_gamepad_emulation_desfecho"): True,
     ("daemon/lifecycle.py", "vestir_a_mascara_do_aparelho"): True,
     ("daemon/lifecycle.py", "set_coop_enabled"): False,
-    ("daemon/subsystems/gamepad.py", "resume_vpads_after_steam_input"): False,
     ("daemon/subsystems/gamepad.py", "reconciliar_as_mascaras"): False,
 }
 

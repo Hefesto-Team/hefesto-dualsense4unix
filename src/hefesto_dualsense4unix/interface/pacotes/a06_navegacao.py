@@ -14,9 +14,9 @@ lista da tela grava e pinta por ela — ver `acao_do_gesto`, no fim do módulo
 FATO SUBSTITUÍDO (06/09/2026): esta linha dizia que o `ps_button_action` da
 config é *"o único pedaço ajustável"* e que *"método de IPC nenhum escreve"*.
 As duas metades caíram. **Escreve** — `daemon.reload` aceita `config_overrides`
-com qualquer campo do `DaemonConfig` (`ipc_handlers.py:4581`, a leitura dos
+com qualquer campo do `DaemonConfig` (`ipc_handlers.py:4542`, a leitura dos
 overrides) e aplica com `replace(config, **overrides)` + `reload_config`
-(`:6292-6293`); o que ele NÃO faz é gravar em disco, então a escolha morre no
+(`:4553-4554`); o que ele NÃO faz é gravar em disco, então a escolha morre no
 próximo start do daemon. E **deixou de ser o único ajustável**: desde a
 ONDA5-06-01 o toque solo no PS tem dono no PERFIL
 (`Profile.button_actions["ps"]`), que VENCE o degrau da máquina — a precedência
@@ -1896,10 +1896,8 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     2. `apply_profile_suppression` (`daemon/lifecycle.py:1976`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
-       desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
-       (`:2263`, a cura da queixa dela de 29/07 — *"aperto r1 e ele muda de app
-       ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
-       (`:4780`).
+       desktop no tique em que o gamepad virtual despachou (o
+       `gamepad_dispatched` do laço de `daemon/lifecycle.py`).
 
     Logo o teclado emulado ligado **é** "só fora do jogo", e a etiqueta velha
     ("Ligada — atalhos e teclado na tela") é que afirmava um alcance maior do
@@ -1918,7 +1916,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
-    guarda está em `lifecycle.py:4307`, no `if not gamepad_dispatched`. Copiar o
+    guarda está em `lifecycle.py:4240`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa dela, 29/07).

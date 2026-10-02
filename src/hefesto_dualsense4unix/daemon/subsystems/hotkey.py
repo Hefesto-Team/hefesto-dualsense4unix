@@ -24,7 +24,6 @@ from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -306,10 +305,9 @@ def modo_vigente(daemon: DaemonProtocol) -> str:
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             steam_input_excecao_ativa,
-            steam_input_vpad_suspenso,
         )
 
-        if steam_input_excecao_ativa(daemon) or steam_input_vpad_suspenso(daemon):
+        if steam_input_excecao_ativa(daemon):
             return MODO_STEAM_INPUT
     return ponte_atual(daemon)
 
@@ -2195,23 +2193,6 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
     return _ciclar_mascara
 
 
-class HotkeySubsystem:
-    """Subsystem sentinela para hotkey no registry."""
-
-    name = "hotkey"
-
-    async def start(self, ctx: DaemonContext) -> None:
-        """Noop: hotkey é iniciado diretamente pelo Daemon.run()."""
-        logger.debug("hotkey_subsystem_start")
-
-    async def stop(self) -> None:
-        """Noop: daemon._hotkey_manager é limpado em _shutdown."""
-        logger.debug("hotkey_subsystem_stop")
-
-    def is_enabled(self, config: Any) -> bool:
-        return True
-
-
 _O_QUE_O_CANAL_LE: tuple[str, ...] = ("sources", "server")
 
 _MARCA_DO_CANAL: list[int | None] = [None]
@@ -2651,7 +2632,6 @@ __all__ = [
     "PONTE_MOUSE_TECLADO",
     "PONTE_XBOX",
     "AtoDoMicrofone",
-    "HotkeySubsystem",
     "MetadeDoAto",
     "MicrofonesNoAr",
     "acao_do_ps_do_perfil",

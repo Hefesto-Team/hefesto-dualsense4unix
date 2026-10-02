@@ -13,7 +13,7 @@ DE ONDE VEM CADA COISA NA TELA
 -------------------------------
 
 * **os controles adotados** — `daemon.state_full`, que é o único lugar onde o
-  `player_slot` de um DualSense existe (`ipc_handlers.py:2328`); o
+  `player_slot` de um DualSense existe (`ipc_handlers.py:2294`); o
   `controller.list` devolve a lista sem ele;
 * **os que o Hefesto só vê** — `controller.list {external: true}`, que já traz o
   `player_slot` deles resolvido pelo registro do daemon;

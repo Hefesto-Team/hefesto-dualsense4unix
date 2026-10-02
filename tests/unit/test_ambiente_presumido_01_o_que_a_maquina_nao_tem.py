@@ -227,7 +227,7 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
             "nenhum arquivo em app/ lê 'osk_disponivel' -- a chave publicada "
             "em daemon/ipc_handlers.py:1568 continua órfã (F2)"
         )
-        assert any(p.name == "ambiente_na_tela.py" for p in achados)
+        assert any(p.name == "input_actions.py" for p in achados)
 
     def test_arrancar_o_leitor_reprova_nomeando_a_chave(
         self, repo_root: Path, tmp_path: Path
@@ -253,8 +253,9 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         que dependia de contar leitores. Esta falsifica as DUAS, sem
         depender de quantos leitores existam hoje:
 
-        1. sem `ambiente_na_tela.py`, a segunda asserção do portão (a que
-           nomeia o dono da frase) cai;
+        1. sem `input_actions.py` (o dono da frase desde 02/10/2026, quando a
+           `descrever_teclado_na_tela` de `ambiente_na_tela.py` saiu sem
+           chamador), a segunda asserção do portão cai;
         2. com a chave arrancada de TODOS os leitores, a primeira cai.
         """
         import shutil as _shutil
@@ -263,11 +264,11 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         copia = tmp_path / "app_sem_leitor_de_osk"
         _shutil.copytree(alvo, copia)
 
-        (copia / "actions" / "ambiente_na_tela.py").unlink()
+        (copia / "actions" / "input_actions.py").unlink()
         sobraram = _leitores_de_osk(copia)
-        assert not any(p.name == "ambiente_na_tela.py" for p in sobraram), (
+        assert not any(p.name == "input_actions.py" for p in sobraram), (
             "a mordida não conseguiu arrancar o dono da frase -- "
-            "`actions/ambiente_na_tela.py` mudou de lugar?"
+            "`actions/input_actions.py` mudou de lugar?"
         )
 
         for arquivo in sobraram:

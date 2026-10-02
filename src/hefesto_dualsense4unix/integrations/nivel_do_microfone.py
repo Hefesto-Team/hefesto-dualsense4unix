@@ -208,10 +208,10 @@ respondido com ``None``. Soltar o microfone dela é obrigação, não zelo.
 
 Se o nosso próprio medidor contar como ouvinte, a luz acende sozinha e a PEÇA A
 mente. Esse defeito **não mora dentro de nenhuma das duas peças**: mora na
-junta. Por isso o crivo é constante daqui e a PEÇA A o IMPORTA — o mesmo
-movimento que :data:`~hefesto_dualsense4unix.integrations.fontes_de_captura.PREFIXO_SOURCE_PONTE_BT`
-já fez nesta casa, pelo mesmo motivo. Quem precisa digitar um nome que já
-existe noutro arquivo, LEIA de lá: use :func:`e_stream_do_medidor`.
+junta. As propriedades são constantes daqui (:func:`propriedades_do_medidor`);
+o crivo é um só, o da PEÇA A
+(:func:`~hefesto_dualsense4unix.integrations.quem_ouve_o_microfone.e_stream_do_hefesto`),
+e ele cobre as três marcas abaixo.
 
 Medido em ``pactl list source-outputs`` com o argv de :func:`argv_do_medidor`,
 verbatim: ``application.name = "hefesto-medidor-de-nivel"``,
@@ -220,7 +220,7 @@ verbatim: ``application.name = "hefesto-medidor-de-nivel"``,
 ``hefesto.papel = "medidor-de-nivel"``, ``hefesto.uniq = "143a9a0000ab"`` e
 ``resample.peaks = "true"``.
 
-O crivo aceita TRÊS marcas, e a ordem não é preferência estética:
+O crivo da PEÇA A aceita TRÊS marcas, e a ordem não é preferência estética:
 
 1. ``resample.peaks = "true"`` é o **intrínseco**. Um fluxo em modo de pico
    recebe envelope, não áudio — ele estruturalmente não consegue ouvir, seja
@@ -292,14 +292,6 @@ def propriedades_do_medidor(uniq: str = "") -> dict[str, str]:
         props[CHAVE_DO_UNIQ] = uniq
     return props
 
-
-def e_stream_do_medidor(propriedades: Mapping[str, str]) -> bool:
-    """Este fluxo de captura é o NOSSO medidor? — o crivo que a PEÇA A usa."""
-    if propriedades.get(CHAVE_DO_PICO, "").strip().lower() == VALOR_DO_PICO:
-        return True
-    if propriedades.get(CHAVE_DO_PAPEL, "").strip() == PAPEL_DO_MEDIDOR:
-        return True
-    return propriedades.get("application.id", "").strip() == APLICACAO_ID
 
 
 TAXA_HZ = 25
@@ -692,6 +684,5 @@ __all__ = [
     "NivelDoMicrofone",
     "abrir_fluxo",
     "argv_do_medidor",
-    "e_stream_do_medidor",
     "propriedades_do_medidor",
 ]

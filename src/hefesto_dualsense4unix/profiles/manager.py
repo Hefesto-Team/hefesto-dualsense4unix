@@ -375,7 +375,7 @@ class ProfileManager:
         selecionado (manual OU via autoswitch, que passa pela MESMA cadeia
         `activate()` → `apply()`) atingia SÓ o alvo — bug provado do sprint.
         O brilho passa pelo MESMO caminho de escala do histórico
-        (`LedSettings.apply_brightness`, paridade com `apply_led_settings`).
+        (`LedSettings.apply_brightness`).
 
         Na sequência, a ativação republica a CAMADA DO PERFIL no mapa de
         overrides por-controle (`reset_profile_overrides`): nada do perfil

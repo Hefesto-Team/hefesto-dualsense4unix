@@ -21,10 +21,6 @@ BLOQUEIO_DO_MOUSE_EM_PORTUGUES: dict[str, str] = {
     # `{gesto}` é trocado em `frase_da_recusa_do_mouse` pela frase única de
     "sem_device": "o mouse virtual não subiu — {gesto}",
     "modo_jogo": "o modo jogo está suspendendo mouse e teclado",
-    "vpad_suspenso_pelo_steam_input": (
-        "neste jogo quem entrega o controle é a Steam, e o controle virtual foi "
-        "recolhido"
-    ),
 }
 
 RECUSA_SEM_MOTIVO = (

@@ -206,14 +206,6 @@ def _pelo_revive(d: _Daemon) -> None:
     assert gp.upgrade_primary_vpad_to_uhid(d) is True  # type: ignore[arg-type]
 
 
-def _pela_volta_do_steam_input(d: _Daemon) -> None:
-    _parar(d)
-    d._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
-    d._steam_input_flavor_suspenso = "dualsense"  # type: ignore[attr-defined]
-    d._steam_input_caminho_suspenso = "dualsense"  # type: ignore[attr-defined]
-    assert gp.resume_vpads_after_steam_input(d) is True  # type: ignore[arg-type]
-
-
 def _pelo_cartao(d: _Daemon) -> None:
     # O gesto do cartão escolhe MÁSCARA (do Pro de volta ao DualSense); o modo
     em.registro_de_mascaras().set_mask(P1, "dualsense")
@@ -240,7 +232,6 @@ def _pelo_juiz_das_mascaras(d: _Daemon) -> None:
 RESTARTS: dict[str, tuple[Any, str | None]] = {
     "ordem_do_coop": (_pela_ordem_do_coop, None),
     "revive_pos_falha_total": (_pelo_revive, None),
-    "volta_do_steam_input": (_pela_volta_do_steam_input, None),
     "mascara_do_cartao": (_pelo_cartao, "nintendo"),
     "saida_do_modo_nativo": (_pela_saida_do_modo_nativo, None),
     "dois_controles_na_mesa": (_por_dois_controles_na_mesa, None),
@@ -254,8 +245,8 @@ def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     """Com o modo Xbox de pé, nenhum restart devolve o pad ao DualSense.
 
     MORDE: tire o `caminho=` do cartão, da saída do Modo Nativo ou dos dois
-    controles (o start sem opinião limpa o slot e o pad volta uhid); devolva à
-    volta do Steam Input a foto da suspensão; ou à promoção o caminho do pad velho.
+    controles (o start sem opinião limpa o slot e o pad volta uhid); ou devolva à
+    promoção o caminho do pad velho.
     """
     restart, cartao = RESTARTS[motivo]
     d = _mesa_no_modo_xbox(cartao)

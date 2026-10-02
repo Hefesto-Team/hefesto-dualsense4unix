@@ -1907,10 +1907,8 @@ class IpcHandlersMixin:
         - `despachando`  -- ele emitiria tecla NESTE instante (é a conjunção
                          completa do gate do poll loop);
         - `bloqueio`  -- POR QUE não emitiria: `"desligada"`, `"sem_device"`,
-                         `"modo_jogo"` (a supressão que ela chama de modo jogo),
-                         `"vpad_suspenso_pelo_steam_input"` (o jogo assumiu a
-                         ENTRADA — o defeito medido em 29/07; a saída continua
-                         do Hefesto, MEDIDO em 06/08) ou `null` quando emite.
+                         `"modo_jogo"` (a supressão que ela chama de modo jogo)
+                         ou `null` quando emite.
 
         A quinta chave é de outra natureza e entrou em 10/08/2026
         (TECLADO-QUE-NAO-DIGITA-01):
@@ -1963,9 +1961,8 @@ class IpcHandlersMixin:
 
         UM DONO SÓ, e é este método. O mouse e o teclado de desktop são calados
         pela MESMA conjunção — `lifecycle._poll_loop` decide os dois no mesmo
-        `if` (`emu_active = not self._emulation_suppressed`, `motivo_jogo =
-        self._jogo_no_controle_do_desktop()`) e só então pergunta, para cada um,
-        se o device existe. Escrever a leitura duas vezes é como as duas
+        `if` (`emu_active = not self._emulation_suppressed`) e só então pergunta,
+        para cada um, se o device existe. Escrever a leitura duas vezes é como as duas
         respostas divergem: o teclado dizendo "modo jogo" e o mouse dizendo
         "ligado e feliz" no mesmo instante, sobre o mesmo controle.
 
@@ -1977,8 +1974,7 @@ class IpcHandlersMixin:
 
         Vocabulário (o mesmo dos dois payloads, e o que
         `app/actions/mouse_actions.BLOQUEIO_DO_MOUSE_EM_PORTUGUES` traduz):
-        `"desligada"`, `"sem_device"`, `"modo_jogo"` e o que o predicado do
-        daemon devolver (hoje `"vpad_suspenso_pelo_steam_input"`).
+        `"desligada"`, `"sem_device"` e `"modo_jogo"`.
         """
         daemon = self.daemon
         if not enabled:
@@ -1987,11 +1983,6 @@ class IpcHandlersMixin:
             return "sem_device"
         if bool(getattr(daemon, "_emulation_suppressed", False)):
             return "modo_jogo"
-        predicado = getattr(daemon, "_jogo_no_controle_do_desktop", None)
-        if callable(predicado):
-            with contextlib.suppress(Exception):
-                bruto = predicado()
-                return bruto if isinstance(bruto, str) else None
         return None
 
     def _bloqueio_do_mouse(self) -> str | None:
@@ -2046,35 +2037,10 @@ class IpcHandlersMixin:
         }
 
     def _steam_input_payload(self) -> dict[str, bool]:
-        """O PAR "exceção ativa" + "vpad suspenso" (JOGO-01, Entrega 2).
-
-        A docstring de `subsystems/gamepad.steam_input_vpad_suspenso` já descrevia
-        este payload como pendência: quem for dizer à usuária por que a emulação
-        aparece desligada com o jogo aberto precisa dos DOIS valores, porque eles
-        distinguem os dois desfechos possíveis do opt-in —
-
-          - `excecao_ativa=True` + `vpad_suspenso=True`  → o jogo da allowlist
-            está rodando com a ENTRADA entregue a ele (é o regime em que o R1
-            dela emitia Alt+Tab, e agora o que cala o desktop). Só a entrada:
-            cor, gatilhos e vibração seguem sendo do Hefesto — MEDIDO em 06/08
-            (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*), e quem escrever a frase
-            da aba a partir daqui não pode prometer o contrário;
-          - `excecao_ativa=True` + `vpad_suspenso=False` → o jogo da allowlist
-            está rodando com o vpad DE PÉ porque a suspensão não pôde ser armada
-            (ver `suspend_vpads_for_steam_input`).
-
-        Publicado no `state_full` porque `mode_of_state` (app/actions) hoje chama
-        de "Controlar o PC" exatamente o primeiro caso — `stop_gamepad_emulation`
-        zera `config.gamepad_emulation_enabled` mesmo com `persist=False` — e
-        deixa CINZA o único botão que curava o problema dela. A correção mora na
-        GUI (dono diferente); o dado sai daqui para ela não precisar adivinhar.
-        """
+        """A exceção do Steam Input ativa agora (JOGO-01): o jogo da allowlist aberto."""
         daemon = self.daemon
         return {
             "excecao_ativa": bool(getattr(daemon, "_steam_input_excecao", False)),
-            "vpad_suspenso": bool(
-                getattr(daemon, "_steam_input_vpad_suspenso", False)
-            ),
         }
 
     def _jogo_steam_payload(self) -> dict[str, Any]:
@@ -2493,11 +2459,6 @@ class IpcHandlersMixin:
                     vistos = conectados()
                     if isinstance(vistos, (set, frozenset)):
                         result["coop"]["externals"] = len(vistos)
-            derrubados = getattr(self.daemon, "_steam_input_coop_derrubados", 0)
-            if not isinstance(derrubados, int) or isinstance(derrubados, bool):
-                derrubados = 0
-            result["coop"]["derrubado_por_steam_input"] = derrubados > 0
-            result["coop"]["secundarios_derrubados"] = derrubados
             rumble_mult_applied = float(getattr(self.daemon, "_last_auto_mult", 1.0))
             result["rumble_policy"] = str(getattr(daemon_cfg, "rumble_policy", "balanceado"))
             result["rumble_policy_custom_mult"] = float(

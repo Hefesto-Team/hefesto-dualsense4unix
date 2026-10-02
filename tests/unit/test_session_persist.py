@@ -63,7 +63,7 @@ def test_save_nao_explode_em_diretorio_inexistente(
 def _mgr_and_saved() -> tuple[object, list[str], object]:
     """Manager com controller dublado + captura de save_last_profile.
 
-    PERFIL-01: `apply()` migrou de `apply_led_settings` para a API por-uniq
+    PERFIL-01: `apply()` usa a API por-uniq
     (`controller.apply_output_defaults`) — o MagicMock do controller já
     absorve a chamada; não há mais função de LED no manager para patchear.
     """

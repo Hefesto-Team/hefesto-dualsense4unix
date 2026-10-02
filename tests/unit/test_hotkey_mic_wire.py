@@ -100,7 +100,7 @@ async def test_mic_btn_do_button_down_nao_muta_mais_nada() -> None:
 async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
     """Com mic_button_toggles_system=False, o subscriber não é criado e toggle não é chamado.
 
-    Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: `apply_led_settings` não toca
+    Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: aplicar o perfil não toca
     mic_led; portanto mic_led_history fica vazio se nenhum wire-up de hotkey
     mic disparar. O invariante deste teste é que toggle não foi chamado e que
     _audio permanece None.
@@ -126,7 +126,7 @@ async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
 async def test_outros_botoes_nao_disparam_toggle() -> None:
     """Eventos de outros botoes (cross, circle) não chamam toggle do microfone.
 
-    Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: `apply_led_settings` não toca
+    Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: aplicar o perfil não toca
     mic_led. O invariante deste teste é que toggle não foi chamado e mic_led
     nunca ficou True (mutado) pelo wire-up.
     """

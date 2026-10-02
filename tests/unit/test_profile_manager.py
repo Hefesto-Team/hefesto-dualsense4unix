@@ -440,12 +440,12 @@ def test_apply_brightness_maximo_nao_escala(isolated_profiles_dir: Path):
 
 def test_apply_propaga_player_leds_ao_controller(isolated_profiles_dir: Path):
     """BUG-PLAYER-LEDS-APPLY-01 / A-06: player_leds do perfil chega ao hardware
-    via ProfileManager.apply → apply_led_settings → controller.set_player_leds.
+    via ProfileManager.apply → controller.set_player_leds.
 
     Cenário alvo: usuário marca padrão `0b10101` no editor, salva perfil, troca
     de janela e o autoswitch reaplica o perfil — os 5 LEDs do controle devem
-    refletir exatamente o bitmask salvo. Sem a propagação em `apply_led_settings`,
-    o perfil aparece correto na GUI mas o hardware mantém a configuração antiga.
+    refletir exatamente o bitmask salvo. Sem a propagação no apply, o perfil
+    aparece correto na tela mas o hardware mantém a configuração antiga.
     """
     profile = _mk_profile(
         "player_leds_test",

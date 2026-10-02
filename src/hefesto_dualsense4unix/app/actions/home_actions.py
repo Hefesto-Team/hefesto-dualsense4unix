@@ -691,8 +691,8 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     1. **A condição é inalcançável** — `VPAD-SUSPENSO-MORTO-01`/E1, MEDIDO em
        25/08/2026: `daemon._steam_input_vpad_suspenso` só anda para `False`
        desde o commit `d8022ea` (09/08/2026), e esta era uma das CINCO leituras
-       de produção de um valor impossível. O portão que guarda o achado é
-       `tests/unit/test_portao_o_par_com_metade_ligada.py`.
+       de produção de um valor impossível. O flag e as cinco leituras saíram
+       em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01).
     2. **Trocar a condição por `excecao_ativa` sozinho — a saída recomendada
        para o PAR — publicaria aqui uma frase que a medição derruba.** Desde a
        `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão dela: *a allowlist do

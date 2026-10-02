@@ -16,38 +16,15 @@ metade: o ramo do `launch_env` omitia `SDL_GAMECONTROLLER_IGNORE_DEVICES` e
 dedup)") e o gamepad virtual CONTINUAVA DE PÉ. Cada metade estava certa
 isoladamente; juntas produziam o duplicado.
 
-Estas travas cobrem o invariante que passou a valer: a allowlist muda QUAL
-dispositivo o jogo vê, nunca QUANTOS. E cobrem também o beco sem saída que a
-cura poderia criar — o tick que traz o vpad de volta é o mesmo que a suspensão
-apaga (`lifecycle._poll_loop` só despacha o gamepad com `_gamepad_device is not
-None`), então sem a task-vigia o vpad não voltaria nem depois de fechar o jogo.
+A allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS. Desde 09/08/2026
+(ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela) o dispositivo escolhido é o virtual:
+esconde-se o FÍSICO e o Hefesto fica, porque o jogador 2 é um gamepad virtual e
+derrubar os virtuais o derrubava junto. A suspensão do vpad, que era a cura
+antiga, saiu em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01): a borda da
+marca não a chamava mais, e o flag que ela armava nunca podia ser verdade.
 
-NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela)
-===================================================================
-**O invariante ficou; o dispositivo escolhido virou o outro.** A JOGO-01 leu
-certo o defeito (dois dispositivos onde há um controle) e escolheu curá-lo
-retirando o VIRTUAL. O preço nunca foi declarado, e foi MEDIDO na máquina dela
-em 08/08: **o jogador 2 é um gamepad virtual** — derrubar os virtuais para curar
-o dobrado do jogador 1 derruba o jogador 2 junto
-(`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia).
-
-A decisão dela fecha a conta pelo outro lado: esconde-se o FÍSICO, e o Hefesto
-fica. O que isso muda neste arquivo, teste a teste:
-
-- **a suspensão continua existindo e continua sendo testada aqui**, porque não
-  se apaga decisão medida e porque ela ainda tem uma entrada viva: um daemon que
-  subiu ANTES desta cura pode estar com uma suspensão de pé agora, e as saídas
-  são o caminho de volta dele. O que mudou é **quem a chama** — a borda da marca
-  não chama mais, então os testes que passavam por `sync_steam_input_exception`
-  passaram a chamar `suspend_vpads_for_steam_input` direto. Sem isso eles
-  virariam tautologia: verdes porque a borda não faz mais nada;
-- **os dois gates que existiam para PROTEGER a suspensão morreram** (o apply
-  automático recusado e a rede de segurança do vpad recusada). Estão invertidos
-  em `TestQuemTentaLevantarOVpadDeVolta`, com o motivo de cada um;
-- **a env própria do appid marcado morreu inteira** — ver `TestEnvDaAllowlist`.
-
-A borda de hoje está em `test_esconder_em_vez_de_sair_01.py`; o desenho, em
-`docs/process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`.
+A borda de hoje está em `test_esconder_em_vez_de_sair_01.py`. Aqui ficam o
+revive dentro do jogo marcado e a env da allowlist (`TestEnvDaAllowlist`).
 """
 
 from __future__ import annotations
@@ -201,122 +178,9 @@ async def _encerrar_vigia(daemon: Any) -> Any:
     return vigia
 
 
-class TestSuspensaoDoVpad:
-    """NOTA DATADA — 09/08/2026: a marca não chama mais a suspensão."""
-
-    async def test_a_suspensao_derruba_o_vpad_do_p1_e_o_coop(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        """O que a suspensão faz — e o PREÇO dela, na mesma asserção."""
-        daemon = _DaemonFalso(jogadores=3)
-        vpad = daemon._gamepad_device
-
-        assert gp.suspend_vpads_for_steam_input(daemon, appid=MMJ) is True
-        vigia = await _encerrar_vigia(daemon)
-
-        assert daemon._gamepad_device is None
-        assert vpad.parado is True
-        assert daemon._coop_manager.desligado == 1, "P2+ caem junto — é o preço"
-        assert gp.steam_input_vpad_suspenso(daemon) is True
-        assert vigia is not None, "sem vigia o vpad nunca voltaria"
-        assert vigia in daemon._tasks
-
-    async def test_a_suspensao_guarda_o_modo_em_que_o_pad_nasceu(
-        self,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        """O-MODO-XBOX-NAO-E-QUEDA-02: a máscara volta, e o modo tem de voltar junto."""
-        daemon = _DaemonFalso()
-        daemon._gamepad_device.caminho = "xbox"
-
-        gp.suspend_vpads_for_steam_input(daemon, appid=MMJ)
-        await _encerrar_vigia(daemon)
-
-        assert daemon._steam_input_caminho_suspenso == "xbox"
-
-    async def test_a_preferencia_em_disco_nao_e_tocada(
-        self,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        """R-07/HARM-06: só gesto manual escreve a preferência. A suspensão é"""
-        daemon = _DaemonFalso()
-
-        gp.suspend_vpads_for_steam_input(daemon, appid=MMJ)
-        await _encerrar_vigia(daemon)
-
-        assert _sem_disco == []
-        assert daemon.config.gamepad_emulation_enabled is False, (
-            "o False em MEMÓRIA é o que cala os revivedores automáticos"
-        )
-
-    def test_sem_event_loop_o_vpad_fica_de_pe_e_a_decisao_e_dita(
-        self,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        """Fail-safe declarado: sem quem devolva o vpad, não se retira o vpad."""
-        daemon = _DaemonFalso()
-
-        assert gp.suspend_vpads_for_steam_input(daemon, appid=MMJ) is False
-
-        assert daemon._gamepad_device is not None
-        assert gp.steam_input_vpad_suspenso(daemon) is False
-        assert getattr(daemon, "_steam_input_vigia", None) is None
-
-    async def test_sem_vpad_nem_jogadores_nao_arma_nada(
-        self,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        """Emulação já desligada: não há duplicado a remover (nem vigia a criar)."""
-        daemon = _DaemonFalso()
-        daemon._gamepad_device = None
-        daemon.config.gamepad_emulation_enabled = False
-
-        assert gp.suspend_vpads_for_steam_input(daemon, appid=MMJ) is False
-
-        assert gp.steam_input_vpad_suspenso(daemon) is False
-        assert getattr(daemon, "_steam_input_vigia", None) is None
-
-
 class TestQuemTentaLevantarOVpadDeVolta:
     """NOTA DATADA — 09/08/2026: os dois gates que protegiam a suspensão caíram."""
 
-    def test_apply_automatico_volta_a_ser_aceito_no_jogo_marcado(
-        self, _broker_falso: None, _sem_disco: list[Any]
-    ) -> None:
-        """A MORDIDA: devolva o `if origin != "manual": return False` ao gate de"""
-        daemon = _DaemonFalso()
-        daemon._gamepad_device = None
-        daemon._steam_input_excecao = True
-        daemon._steam_input_vpad_suspenso = True
-
-        assert gp.start_gamepad_emulation(daemon, "dualsense", origin="profile") is True
-
-        assert daemon._gamepad_device is not None
-        assert gp.steam_input_vpad_suspenso(daemon) is False, (
-            "a suspensão herdada tem de morrer no apply, e não esperar um "
-            "clique dela que pode nunca vir"
-        )
-
-    def test_gesto_manual_vence_e_encerra_a_suspensao(
-        self, _broker_falso: None, _sem_disco: list[Any]
-    ) -> None:
-        """A última palavra é dela. Religar na mão devolve o vpad e a suspensão"""
-        daemon = _DaemonFalso()
-        daemon._gamepad_device = None
-        daemon._steam_input_excecao = True
-        daemon._steam_input_vpad_suspenso = True
-
-        assert gp.start_gamepad_emulation(daemon, "dualsense", origin="manual") is True
-
-        assert daemon._gamepad_device is not None
-        assert gp.steam_input_vpad_suspenso(daemon) is False
 
     def test_revive_pos_falha_total_vale_dentro_do_jogo_marcado(
         self, _broker_falso: None, _sem_disco: list[Any], monkeypatch: pytest.MonkeyPatch
@@ -329,129 +193,6 @@ class TestQuemTentaLevantarOVpadDeVolta:
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
         assert daemon._gamepad_device is not None
-
-
-class TestDevolucaoDoVpad:
-    @staticmethod
-    def _suspenso(flavor: str = "dualsense") -> _DaemonFalso:
-        daemon = _DaemonFalso()
-        daemon._gamepad_device = None
-        daemon.config.gamepad_emulation_enabled = False
-        daemon._steam_input_excecao = True
-        daemon._steam_input_vpad_suspenso = True
-        daemon._steam_input_flavor_suspenso = flavor
-        return daemon
-
-    def test_sair_da_excecao_devolve_o_vpad_com_a_mascara_de_antes(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        daemon = self._suspenso(flavor="xbox")
-        monkeypatch.setattr(le, "steam_input_exception_appid", lambda d, **k: None)
-
-        assert gp.sync_steam_input_exception(daemon) is False
-
-        assert daemon._gamepad_device is not None
-        assert daemon._gamepad_device.flavor == "xbox"
-        assert daemon.config.gamepad_emulation_enabled is True
-        assert gp.steam_input_vpad_suspenso(daemon) is False
-        assert daemon._coop_manager.syncs == [True], "P2+ voltam junto com o P1"
-        assert _sem_disco == [], "a volta também não escreve preferência nenhuma"
-        assert daemon.grabs == [True] and daemon.hides == ["/dev/hidraw0"]
-
-    def test_a_devolucao_volta_no_modo_em_que_o_pad_nasceu(
-        self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None, _sem_disco: list[Any]
-    ) -> None:
-        """O-MODO-XBOX-NAO-E-QUEDA-02: sem o caminho o start não opina, e o Xbox
-        do perfil voltava DualSense. Mordida: tire o `caminho=` da devolução.
-
-        NOTA DATADA — 28/09/2026: o caminho da devolução é o do DONO da sessão
-        (`gamepad.caminho_da_sessao`), e não mais a foto da suspensão; a foto só
-        vai ao diário quando discorda dele (a régua de que a foto perde para o
-        dono é a `test_o_modo_tem_um_dono.py`)."""
-        daemon = self._suspenso(flavor="dualsense")
-        daemon.config.gamepad_caminho = "xbox"
-        daemon._steam_input_caminho_suspenso = "xbox"
-        partidas: list[dict[str, Any]] = []
-        monkeypatch.setattr(
-            gp,
-            "start_gamepad_emulation",
-            lambda _d, flavor=None, **kw: partidas.append({"flavor": flavor, **kw}) or True,
-        )
-
-        assert gp.resume_vpads_after_steam_input(daemon) is True
-
-        assert partidas == [{"flavor": "dualsense", "origin": "profile", "caminho": "xbox"}]
-        assert daemon._steam_input_caminho_suspenso is None
-
-    def test_sem_mascara_gravada_a_devolucao_nao_inventa_um_vpad(
-        self, _broker_falso: None, _sem_disco: list[Any]
-    ) -> None:
-        """Máscara `None` na suspensão = não havia vpad do P1 para derrubar."""
-        daemon = self._suspenso()
-        daemon._steam_input_flavor_suspenso = None
-
-        assert gp.resume_vpads_after_steam_input(daemon) is True
-
-        assert daemon._gamepad_device is None
-        assert gp.steam_input_vpad_suspenso(daemon) is False
-
-    def test_modo_nativo_no_meio_da_sessao_vence_a_devolucao(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        _broker_falso: None,
-        _sem_disco: list[Any],
-    ) -> None:
-        """No Modo Nativo o físico é o dispositivo por escolha dela: ressuscitar"""
-        daemon = self._suspenso()
-        daemon._nativo = True
-        monkeypatch.setattr(le, "steam_input_exception_appid", lambda d, **k: None)
-
-        assert gp.sync_steam_input_exception(daemon) is False
-
-        assert daemon._gamepad_device is None
-        assert gp.steam_input_vpad_suspenso(daemon) is False, (
-            "estado pendurado voltaria a mentir na próxima borda"
-        )
-
-
-class TestVigiaDaExcecao:
-    async def test_vigia_reconcilia_ate_a_excecao_cair_e_morre(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """É ela que substitui o tick do `dispatch_gamepad` enquanto não há vpad."""
-        daemon = _DaemonFalso()
-        daemon._steam_input_excecao = True
-        chamadas: list[int] = []
-
-        def _reconciliar(d: Any) -> None:
-            chamadas.append(1)
-            if len(chamadas) == 2:
-                d._steam_input_excecao = False
-
-        monkeypatch.setattr(gp, "STEAM_INPUT_VIGIA_INTERVAL_SEC", 0.001)
-        monkeypatch.setattr(gp, "_reconciliar_launch", _reconciliar)
-
-        await gp._vigia_da_excecao_steam_input(daemon)
-
-        assert chamadas == [1, 1]
-        assert daemon._steam_input_vigia is None, "a vigia não pode vazar"
-
-    async def test_vigia_nao_reconcilia_com_o_daemon_parando(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        daemon = _DaemonFalso()
-        daemon._steam_input_excecao = True
-        daemon.parando = True
-        chamadas: list[int] = []
-        monkeypatch.setattr(gp, "STEAM_INPUT_VIGIA_INTERVAL_SEC", 0.001)
-        monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: chamadas.append(1))
-
-        await gp._vigia_da_excecao_steam_input(daemon)
-
-        assert chamadas == []
 
 
 class TestEnvDaAllowlist:

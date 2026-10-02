@@ -213,8 +213,3 @@ def test_a_frase_viva_de_pausa_continua_dizendo_que_nao_foi_desligado() -> None:
     assert "esligado" not in viva, viva
 
 
-def test_a_frase_marcada_como_morta_ainda_esta_no_disco() -> None:
-    """A escolha declarada: MARCAR, não apagar."""
-    frase = ea.BLOQUEIO_DO_TECLADO_EM_PORTUGUES.get("vpad_suspenso_pelo_steam_input")
-    assert frase, "a frase foi apagada — se foi decisão dela, apague este caso junto"
-    assert "Não foi desligado" in frase, frase

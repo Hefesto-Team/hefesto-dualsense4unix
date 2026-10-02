@@ -26,18 +26,6 @@ _CALIB_PRAZO_S = 2.0
 ESPERA_PELA_ORDEM_S = 4.0
 
 
-def secundarios_fora_da_mesa(
-    sentados: Iterable[str], presentes: Iterable[str]
-) -> int:
-    """Quantos dos secundários DERRUBADOS perderam também o controle físico."""
-    vivos = {str(mac) for mac in presentes}
-    return sum(
-        1
-        for mac in sentados
-        if isinstance(mac, str) and not mac.startswith("path:") and mac not in vivos
-    )
-
-
 def _texto_ou_none(valor: Any) -> str | None:
     """`str` não-vazia, ou None — blindagem de serialização do `state_full`.
 
@@ -389,7 +377,6 @@ class CoopManager:
             self._was_active = False
             if self._players or self._leds_overridden:
                 self.disable()
-            self._reavaliar_a_mesa_suspensa()
             return
 
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
@@ -539,25 +526,6 @@ class CoopManager:
         self._broker_hide_player(player)
         return True
 
-    def _reavaliar_a_mesa_suspensa(self) -> None:
-        """Reabre a conta do aviso enquanto os vpads estão suspensos."""
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-            coop_sentados_na_suspensao,
-            reavaliar_coop_fora_da_mesa,
-        )
-
-        if not coop_sentados_na_suspensao(self._daemon):
-            return
-        if not self._watch.poll():
-            return
-        from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
-
-        try:
-            presentes = set(discover_dualsense_evdevs())
-        except Exception as exc:
-            logger.debug("coop_reavaliacao_da_mesa_falhou", err=str(exc))
-            return
-        reavaliar_coop_fora_da_mesa(self._daemon, presentes)
 
     def algum_boneco_ficou_para_tras(self) -> bool:
         """Algum secundário veste máscara ou canal diferente do efetivo de agora?"""
@@ -2318,5 +2286,4 @@ __all__ = [
     "planejar_a_ordem",
     "player_led_pattern",
     "resolve_player_numbers",
-    "secundarios_fora_da_mesa",
 ]

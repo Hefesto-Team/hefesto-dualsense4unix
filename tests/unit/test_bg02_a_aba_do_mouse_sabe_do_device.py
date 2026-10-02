@@ -11,7 +11,6 @@ import pytest
 pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.app.actions.mouse_actions import BLOQUEIO_DO_MOUSE_EM_PORTUGUES
-from hefesto_dualsense4unix.daemon.lifecycle import CALADA_VPAD_SUSPENSO
 
 PRONTO = "Pronto para usar como mouse"
 SEM_PERMISSAO = "está sem permissão"
@@ -35,7 +34,7 @@ def test_todo_motivo_que_o_daemon_emite_tem_traducao() -> None:
     tela como texto cru (`frase_da_recusa_do_mouse` é honesta nesse caso) — o
     que este teste impede é que ele sirva DUAS vezes, com dois vocabulários.
     """
-    do_daemon = {"desligada", "sem_device", "modo_jogo", CALADA_VPAD_SUSPENSO}
+    do_daemon = {"desligada", "sem_device", "modo_jogo"}
     assert do_daemon == set(BLOQUEIO_DO_MOUSE_EM_PORTUGUES), (
         "o vocabulário do daemon e o da janela divergiram: "
         f"{do_daemon ^ set(BLOQUEIO_DO_MOUSE_EM_PORTUGUES)}"
