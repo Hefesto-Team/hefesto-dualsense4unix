@@ -944,7 +944,17 @@ def curar_todas_as_estradas(
                              if e.app_id.casefold() not in fora.caixas)
             if not estradas:
                 continue
+            #: O registro de ANTES da escrita vai às cópias: a escrita tira dele
+            #: a chave que saiu do ambiente (o `IGNORE` no Modo Nativo), e a
+            #: cópia ainda a tem — sem o de antes, ela ficaria lá.
+            registro_antes = ler_registro(pasta_do_ambiente)
             escrever_a_estrada(replace(plano, estradas=estradas))
+            for estrada in estradas:
+                if estrada.tipo == HEROIC_CONFIG:
+                    _por_o_nosso_nas_copias(
+                        estrada.arquivo.parent, plano.ambiente, pasta_do_ambiente,
+                        frozenset(c.arquivo for c in fora.copias),
+                        registro_antes.get(str(estrada.arquivo)))
         except Exception:  # pragma: no cover - disco hostil; ver a docstring
             continue
         escritos.append(chave)
@@ -952,6 +962,161 @@ def curar_todas_as_estradas(
         with contextlib.suppress(Exception):
             _sem_o_nosso_no_jogo(Path(copia.arquivo), copia.app, pasta_do_ambiente)
     return tuple(escritos)
+
+
+# ── AS CÓPIAS DOS JOGOS DO HEROIC recebem o ambiente de agora ─────────────
+#
+# AS-SOLUCOES-NOS-LANCADORES-01 (01/10/2026). A escrita acima vai à lista
+# GLOBAL do Heroic, e o jogo com cópia própria não a lê mais (o Heroic monta
+# `{...globais, ...do jogo}`). Todo jogo INSTALADO tem cópia: o Heroic a grava
+# ao instalar, com o `winePrefix`. Medido no disco dela em 01/10, só leitura: a
+# global tinha as 8 variáveis da ponte, e a cópia do Guardiões (de 22/09) não
+# tinha três: `PROTON_ENABLE_MHWILDS_USB_AUDIO`,
+# `PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE` e `SDL_ACCELEROMETER_AS_JOYSTICK`.
+# A háptica pelo áudio e o acelerômetro não chegavam ao único jogo instalado
+# do Heroic. Era a «dívida aberta» do cabeçalho deste módulo.
+#
+# A CONTA É A MESMA DA GLOBAL, com o registro da casa: os valores que vão à
+# cópia são os mesmos que acabaram de ir à global, então o desfazer do
+# uninstall (que lê a cópia pelo registro da casa) os reconhece. As que
+# PODEM SER DELA não entram na cópia: numa cópia elas são a escolha dela para
+# aquele jogo (:func:`_entrada_da_copia`). O jogo excluído não recebe nada.
+def _ambiente_da_copia(ambiente: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in ambiente.items() if k not in PODEM_SER_DELA}
+
+
+def _unir(*entradas: Entrada | None) -> Entrada:
+    """Os valores nossos que QUALQUER uma destas entradas conhece, por chave."""
+    fora = Entrada(HEROIC_CONFIG)
+    for entrada in entradas:
+        for chave, marca in (entrada.chaves.items() if entrada is not None else ()):
+            atual = fora.chaves.setdefault(chave, Marca([], marca.antes))
+            atual.valores += [v for v in marca.valores if v not in atual.valores]
+    return fora
+
+
+def _por_o_nosso_nas_copias(
+    casa: Path, ambiente: dict[str, str], pasta_do_ambiente: Path | None,
+    excluidas: frozenset[str], antes: Entrada | None = None,
+) -> int:
+    """O ambiente de agora em cada cópia com lista própria desta casa.
+
+    ``antes``: o registro da casa de antes da escrita da global, somado ao de
+    agora. Devolve quantas cópias mudaram. Cópia ilegível não se reescreve;
+    cópia sem lista própria segue a global e fica como está. Nunca levanta.
+    """
+    entrada = _unir(antes, ler_registro(pasta_do_ambiente).get(str(casa / "config.json")))
+    nosso = _ambiente_da_copia(ambiente)
+    mudaram = 0
+    pasta = casa / _PASTA_DOS_JOGOS_DO_HEROIC
+    for arquivo in sorted(pasta.glob("*.json")) if pasta.is_dir() else ():
+        if str(arquivo) in excluidas or arquivo.is_symlink() or not arquivo.is_file():
+            continue
+        try:
+            raiz = cast("object", json.loads(arquivo.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(raiz, dict):
+            continue
+        mudou = False
+        for jogo in raiz.values():
+            lista = jogo.get(CHAVE_DO_HEROIC) if isinstance(jogo, dict) else None
+            if not isinstance(jogo, dict) or not isinstance(lista, list):
+                continue
+            pares = _pares_da_lista(lista)
+            novos = _tomar(pares, nosso, _entrada_da_copia(entrada))
+            if novos != pares:
+                jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in novos]
+                mudou = True
+        if mudou:
+            try:
+                _escrever_atomico(arquivo, json.dumps(raiz, indent=2, ensure_ascii=False))
+            except OSError:
+                continue
+            mudaram += 1
+    return mudaram
+
+
+def frase_das_estradas(escritos: Iterable[str]) -> str:
+    """O recibo da carona, para o diário: os lançadores que receberam o ambiente.
+
+    O nome é o do censo (`_ONDE`), e não a chave interna. Vazio = nenhum.
+    """
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import _ONDE
+
+    nomes = {k.casefold(): k for k in _ONDE}
+    quem = [nomes.get(c, c) for c in escritos]
+    if not quem:
+        return "Nenhum outro lançador recebeu o ambiente do Hefesto agora."
+    return "O ambiente do Hefesto está em: " + ", ".join(quem) + "."
+
+
+def onde_falta_o_ambiente(
+    chave: str, atalhos: tuple[str, ...], *, lar: Path | None = None,
+    pasta_do_ambiente: Path | None = None, raiz_sistema: Path | None = None,
+    exclusao: NaExclusao | None = None,
+) -> tuple[str, ...]:
+    """Onde o ambiente de agora NÃO está neste cartão — para a aba Lançadores.
+
+    No Heroic, os nomes dos jogos INSTALADOS cuja lista efetiva (a própria, ou
+    a global para quem não tem) não traz o ambiente; nas caixas do Flatpak, os
+    `app-id` das caixas sem ele. Vazio quando está tudo no lugar, quando não há
+    estrada, ou quando o serviço não publicou o ambiente (não há com o que
+    comparar). O excluído não conta: ele está sem o ambiente de propósito.
+
+    SÓ LÊ, e abre disco: quem chama é a vigia da aba, nunca a pintura.
+    """
+    lar = Path.home() if lar is None else lar
+    plano = planejar(chave, atalhos, lar, pasta_do_ambiente, raiz_sistema)
+    if plano.impedimento or not plano.estradas or not plano.ambiente:
+        return ()
+    fora = _a_exclusao() if exclusao is None else exclusao
+
+    def falta_em(pares: Pares, ambiente: dict[str, str]) -> bool:
+        tem = dict(pares)
+        return any(tem.get(k) != v for k, v in ambiente.items())
+
+    #: SÓ O QUE A CARONA ESCREVE: a caixa de um lançador que ela declarou à mão
+    #: não está na tabela da carona (:func:`cartoes_com_estrada`), e dizer que
+    #: falta ali seria cobrar o que nada põe.
+    da_carona = {a.casefold() for _, ats in cartoes_com_estrada() for a in ats}
+    faltam: list[str] = []
+    for estrada in plano.estradas:
+        if estrada.tipo == FLATPAK_OVERRIDE:
+            if (estrada.app_id.casefold() in fora.caixas
+                    or estrada.app_id.casefold() not in da_carona):
+                continue
+            cfg = _ler_override(estrada.arquivo)
+            pares: Pares = (list(cfg.items("Environment"))
+                            if cfg is not None and cfg.has_section("Environment") else [])
+            if falta_em(pares, plano.ambiente):
+                faltam.append(estrada.app_id)
+            continue
+        raiz = _ler_heroic(estrada.arquivo)
+        global_falta = raiz is None or falta_em(_pares_do_heroic(raiz), plano.ambiente)
+        excluidas = {c.arquivo for c in fora.copias}
+        from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+        biblioteca = censo.biblioteca_de("Heroic", lar)
+        pasta = estrada.arquivo.parent / _PASTA_DOS_JOGOS_DO_HEROIC
+        for jogo in biblioteca.jogos:
+            if not jogo.instalado or "/" in jogo.chave:
+                continue
+            arquivo = pasta / f"{jogo.chave}.json"
+            if str(arquivo) in excluidas:
+                continue
+            try:
+                copia = cast("object", json.loads(arquivo.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                copia = None
+            dele = copia.get(jogo.chave) if isinstance(copia, dict) else None
+            lista = dele.get(CHAVE_DO_HEROIC) if isinstance(dele, dict) else None
+            if isinstance(lista, list):
+                if falta_em(_pares_da_lista(lista), _ambiente_da_copia(plano.ambiente)):
+                    faltam.append(jogo.nome)
+            elif global_falta:
+                faltam.append(jogo.nome)
+    return tuple(faltam)
 
 
 # ── O DESFAZER: o uninstall tira exatamente o que é nosso ─────────────────

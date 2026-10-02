@@ -301,6 +301,25 @@ def carimbo_html(texto: str) -> str:
     return f'<span class="carimbo">◆ {_e(texto)}</span>' if texto else ""
 
 
+#: Os cartões cujo ambiente entra JOGO A JOGO (a cópia de cada jogo no
+#: Heroic). Nos outros a estrada é a caixa do Flatpak, uma para todos.
+POR_JOGO = ("heroic",)
+
+
+def sem_o_ambiente_html(chave: str, onde: tuple[str, ...]) -> str:
+    """A linha do cartão em que o ambiente do Hefesto falta — vazia quando não.
+
+    A forma é a do «N jogos sem o atalho» da Steam, que é a mesma pergunta pela
+    estrada dela: o selo vira `COM IMPEDIMENTO`, e quem aplica é o «Aplicar
+    soluções nos lançadores» da aba Sistema (ou a próxima troca de controle).
+    """
+    if not onde:
+        return ""
+    if chave in POR_JOGO:
+        return f"<b>{_plural(len(onde), 'jogo', 'jogos')} sem o ambiente do Hefesto</b>"
+    return "<b>Sem o ambiente do Hefesto</b>"
+
+
 def contador_html(pontes: int) -> str:
     """O contador do corpo do cartão — o MESMO nos oito, zero inclusive.
 
@@ -1259,11 +1278,21 @@ class DoDisco:
     #: que a :class:`DoDisco` inteira existe para não pagar — `tem_estrada` abre
     #: o `config.json` do Heroic e as caixas do Flatpak a cada volta da vigia.
 
+    #: ONDE O AMBIENTE DO HEFESTO FALTA, por cartão: `(chave, onde)` —
+    #: AS-SOLUCOES-NOS-LANCADORES-01, 01/10/2026. No Heroic, os jogos
+    #: instalados sem ele; nas caixas do Flatpak, a caixa. Quem mede é o dono
+    #: da estrada (`cura_por_estrada.onde_falta_o_ambiente`), na vigia. Chave
+    #: ausente = está no lugar (ou não há estrada).
+    sem_ambiente: tuple[tuple[str, tuple[str, ...]], ...] = ()
+
     def resumo(self, chave: str) -> str:
         return dict(self.resumos).get(chave, "")
 
     def pontes_de(self, chave: str) -> int:
         return dict(self.pontes).get(chave, 0)
+
+    def sem_ambiente_de(self, chave: str) -> tuple[str, ...]:
+        return dict(self.sem_ambiente).get(chave, ())
 
 
 #: A RESPOSTA VAZIA — a primeira meia volta, e o padrão de toda `Leitura`
@@ -2116,10 +2145,14 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     # A FILEIRA COMUM — 21/09/2026, o desenho aprovado por ela: os oito cartões
     # LOCALIZADOS têm os mesmos quatro botões (:func:`fileira_comum`), e o
     # «Apontar outro caminho» que morava aqui é o terceiro deles.
+    # O AMBIENTE QUE FALTA — AS-SOLUCOES-NOS-LANCADORES-01, 01/10/2026. A
+    # mesma forma da Steam quando o atalho falta: o contador abre o corpo, a
+    # linha vem embaixo, e o selo diz `COM IMPEDIMENTO`.
+    falta = sem_o_ambiente_html(item.chave, do_disco.sem_ambiente_de(item.chave))
     return Lancador(
-        chave=item.chave, nome=item.nome, selo="localizado",
+        chave=item.chave, nome=item.nome, selo="warn" if falta else "localizado",
         jogos=resumo or "—",
-        diz=contador_html(do_disco.pontes_de(item.chave)),
+        diz=contador_html(do_disco.pontes_de(item.chave)) + (f"<br>{falta}" if falta else ""),
         acoes=fileira_comum(item.chave) + tirar, presente=True)
 
 

@@ -768,7 +768,7 @@ MIOLO = f'''
           <div class="risco"></div>
           <div class="coluna">
 {item("Reaplicar correções automáticas", "Desliga o Steam Input onde ele atrapalha e leva à lixeira as versões do Proton que nenhum jogo usa. Sem senha, sem fechar nada, e com cópia de segurança.", gesto=_gesto("refazer-consertos"))}
-{item("Aplicar soluções nos lançadores", "Põe a linha do Hefesto nos jogos da Steam, sem perder as suas opções. Pergunta antes: fecha a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
+{item("Aplicar soluções nos lançadores", "Põe o Hefesto nos jogos da Steam e dos outros lançadores, sem perder as suas opções. Pergunta antes: fecha a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
 {item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
           </div>
           <div class="risco"></div>

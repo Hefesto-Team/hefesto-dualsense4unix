@@ -543,6 +543,35 @@ def _dispensados() -> tuple[tuple[str, str], ...]:
     return tuple((a, slo.rotulo_do_jogo(a)) for a in appids)
 
 
+def _onde_falta_o_ambiente(
+    onde_estao: tuple[tuple[str, str], ...], declarados: tuple[desenho.SemCenso, ...],
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Os cartões ACHADOS em que o ambiente do Hefesto falta — AS-SOLUCOES-NOS-LANCADORES-01.
+
+    Quem mede é o dono da estrada (`cura_por_estrada.onde_falta_o_ambiente`);
+    a exclusão é lida uma vez para todos. Nunca levanta: um cartão que não se
+    lê fica sem a linha.
+    """
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
+
+    onde = dict(onde_estao)
+    try:
+        exclusao = lista_de_exclusao.o_que_a_carona_pula()
+    except Exception:
+        exclusao = cpe.NaExclusao()
+    fora: list[tuple[str, tuple[str, ...]]] = []
+    for item in desenho.procurados(declarados):
+        if item.chave == desenho.STEAM or not onde.get(item.chave):
+            continue
+        try:
+            faltam = cpe.onde_falta_o_ambiente(item.chave, item.atalhos, exclusao=exclusao)
+        except Exception:
+            continue
+        if faltam:
+            fora.append((item.chave, faltam))
+    return tuple(fora)
+
+
 def _ler_do_disco() -> desenho.Leitura:
     """Uma passada de leitura. **Nunca escreve** — nem no vdf, nem no registro.
 
@@ -593,6 +622,8 @@ def _ler_do_disco() -> desenho.Leitura:
     except Exception:
         com_ponte = frozenset()
     do_disco = desenho.medir_no_disco(onde_estao, declarados, com_ponte=com_ponte)
+    do_disco = dataclasses.replace(
+        do_disco, sem_ambiente=_onde_falta_o_ambiente(onde_estao, declarados))
 
     try:
         censo = sw.censo_do_wrapper(anotar=False)

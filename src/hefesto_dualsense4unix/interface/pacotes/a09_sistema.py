@@ -3268,7 +3268,11 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("09-sistema.html", "aplicar-aos-jogos", grava="with_steam_closed")
 def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Aplicar aos jogos da Steam" — a metade que APLICA o atalho de inicialização.
+    """«Aplicar soluções nos lançadores» — o atalho na Steam, o ambiente nos outros.
+
+    Desde 01/10/2026 (AS-SOLUCOES-NOS-LANCADORES-01) o botão vale para todo
+    lançador: antes da Steam, a carona dos outros (o Heroic e as caixas do
+    Flatpak) roda na hora. O que vem abaixo é a metade da Steam.
 
     A LINHA **L340** DO CSV, e ela nunca teve caminho na interface nova: o
     "Copiar a linha" da `07-lancadores` só entrega o texto na área de
@@ -3314,6 +3318,16 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         return _so_armou(_de_pe(ctx), _para_o_painel(
             _pergunta_da_steam(), pergunta_de="aplicar-aos-jogos"))
     _limpar_o_painel()
+    # OS OUTROS LANÇADORES PRIMEIRO — AS-SOLUCOES-NOS-LANCADORES-01, 01/10/2026.
+    # O ambiente entra no Heroic (na lista global e na cópia de cada jogo) e nas
+    # caixas do Flatpak pelo mesmo dono da carona de cada transição
+    # (`cura_por_estrada.curar_todas_as_estradas`), e nada disso fecha
+    # programa nenhum: com a Steam recusando (jogo aberto), os outros já
+    # receberam o deles.
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
+
+    _relatar_o_recibo("aplicar-aos-jogos",
+                      cpe.frase_das_estradas(cpe.curar_todas_as_estradas()))
     janela, resultado = slo.with_steam_closed(aplicar)
     recusa = _daemon.format_steam_janela_recusa(janela)
     if recusa is not None:
