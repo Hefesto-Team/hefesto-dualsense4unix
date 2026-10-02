@@ -196,9 +196,20 @@ def _roda_na_importacao(no: ast.AST) -> Iterator[ast.AST]:
     """Os nós que rodam quando o módulo é importado.
 
     O corpo de uma função (ou de um lambda) só roda quando alguém a chama, e
-    fica de fora; o de uma classe, o de um `if` e o de um `try` rodam ali.
+    fica de fora; o de uma classe, o de um `if` e o de um `try` rodam ali. Os
+    decoradores e os valores padrão da função rodam na definição, e entram.
     """
     if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
+        na_definicao: list[ast.expr] = [*no.args.defaults]
+        na_definicao += [d for d in no.args.kw_defaults if d is not None]
+        if not isinstance(no, ast.Lambda):
+            # `@nome` sem parênteses também é chamada: `nome(função)`.
+            na_definicao += [
+                d if isinstance(d, ast.Call) else ast.Call(func=d, args=[], keywords=[])
+                for d in no.decorator_list
+            ]
+        for expressao in na_definicao:
+            yield from _roda_na_importacao(expressao)
         return
     yield no
     for filho in ast.iter_child_nodes(no):
@@ -463,6 +474,11 @@ _O_PLANTIO_NA_CLASSE = (
 _POR_DUAS_FUNCOES = (
     _CABECA + "def _preparar():\n    _plantar()\n\n_preparar()\n\nexigir_gi_real()\n"
 )
+#: O decorador roda na definição da função, antes da guarda.
+_NO_DECORADOR = (
+    _CABECA + "def _marcar(f):\n    _plantar()\n    return f\n\n"
+    "@_marcar\ndef test_x():\n    pass\n\nexigir_gi_real()\n"
+)
 #: O `test_o_botao_que_tira_o_que_faz_engasgar.py`: define, guarda e não chama.
 _SO_DEFINE = _CABECA + "_GI_REAL = exigir_gi_real('so define')\n"
 
@@ -511,8 +527,9 @@ class TestAGuardaVemAntesDoPlantio:
             (_POR_DUAS_FUNCOES, "_preparar()"),
             (_O_PLANTIO_DIRETO_ANTES, "try:"),
             (_O_PLANTIO_NA_CLASSE, "class _Gi:"),
+            (_NO_DECORADOR, "def test_x():"),
         ],
-        ids=["por-duas-funcoes", "direto-no-try", "no-corpo-da-classe"],
+        ids=["por-duas-funcoes", "direto-no-try", "no-corpo-da-classe", "no-decorador"],
     )
     def test_o_plantio_ao_importar_conta_por_onde_vier(self, fonte: str, texto: str) -> None:
         falta = falta_de_guarda(fonte)
