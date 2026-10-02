@@ -1502,7 +1502,6 @@ def pytest_sessionstart(session: Any) -> None:
     # Depois do berço, porque é dele que sai o `/tmp` de verdade.
     _armar_som_de_mentira()
     _armar_lancador_de_mentira(session)  # LANCADOR-DE-MENTIRA, a mesma razão
-    _armar_jogo_so_da_sessao()  # JOGO-SO-DA-SESSAO: o jogo dela não entra
     # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
     # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
     # razão de ela existir.
@@ -4432,8 +4431,10 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
 # que quer o jogo aberto já dubla o `_cmdline_of` (ou o `steam_game_running`)
 # pelo `monkeypatch`, que vence este embrulho e o devolve no fim.
 #
-# Armado no `sessionstart` e conferido em cada teste: um teste que tire o
-# módulo do `sys.modules` e o importe de novo ganha o embrulho no seguinte.
+# Armado por uma fixture `autouse`, antes de cada teste (e não no
+# `sessionstart`, que não precisa: nada na coleta pergunta pelo jogo): um teste
+# que tire o módulo do `sys.modules` e o importe de novo ganha o embrulho no
+# seguinte.
 #
 # O QUE ISTO NÃO ALCANÇA: o produto rodado num SUBPROCESSO (a CLI, o
 # `uninstall.sh` avulso), que tem o próprio `/proc` sem embrulho; e as outras
