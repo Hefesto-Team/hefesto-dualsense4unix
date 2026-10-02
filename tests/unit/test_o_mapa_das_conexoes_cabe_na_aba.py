@@ -29,7 +29,8 @@ AS MORDIDAS (arranque a cura na edição dela, regere a bancada, veja reprovar):
   uma coluna, uma entrada embaixo da outra;
 * régua 3 — volte o resumo a dois ``<p>``; tire a legenda da linha dos modos;
   desfaça um acento do «então»; devolva o parágrafo «Eu não presumo»; devolva o
-  ``id="reexaminar"`` ao «Já movi».
+  ``id="reexaminar"`` ao «Já movi»; devolva o «estava na…» e o «vai para a…» ao
+  mapa do Sugestões.
 """
 from __future__ import annotations
 
@@ -173,6 +174,9 @@ MEDIR = r"""
          Math.round(r(q('#painel .escolhas .escolha')).bottom)]
       : null,
     nao_presumo: /n[ãa]o presumo/i.test(painel.innerText),
+    porques: [...document.querySelectorAll('#faces .porque')]
+      .map(e => e.textContent.trim()).filter(Boolean),
+    faces_null: /\bnull\b|\bundefined\b/i.test(q('#faces').innerText),
   });
 })()
 """
@@ -385,6 +389,19 @@ def test_o_sugestoes_fala_menos_e_o_mapa_comeca_na_vista(vista: str) -> None:
     assert sug["primeira_chapa_top"] < sug["corpo_bottom"], (
         f"({QUAL}) o mapa do Sugestões começa em {sug['primeira_chapa_top']:.0f}, "
         f"fora da vista (que acaba em {sug['corpo_bottom']:.0f})")
+
+
+def test_o_mapa_do_sugestoes_diz_so_o_veredito() -> None:
+    """No mapa do Sugestões cada entrada diz só o veredito («vem para cá», «sai
+    daqui», «fica»): o «estava na…» e o «vai para a…» já estão na lista de cima.
+
+    MORDIDA: devolva o ``porque`` dos três vereditos na edição «SÓ O VEREDITO»
+    e regere a bancada → cada entrada que muda ganha a segunda linha, e reprova.
+    (Esta régua faltava: a edição saía e as outras treze continuavam verdes.)
+    """
+    sug = _medido("dela")["sugestoes"]
+    assert sug["porques"] == [], f"({QUAL}) o mapa do Sugestões explica o veredito: {sug['porques']}"
+    assert not sug["faces_null"], f"({QUAL}) o mapa do Sugestões diz «null» ou «undefined»"
 
 
 def test_a_razao_de_cada_movimento_mora_no_interrogacao() -> None:
