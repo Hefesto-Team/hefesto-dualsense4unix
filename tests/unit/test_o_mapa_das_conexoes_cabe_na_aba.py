@@ -400,7 +400,8 @@ def test_o_mapa_do_sugestoes_diz_so_o_veredito() -> None:
     (Esta régua faltava: a edição saía e as outras treze continuavam verdes.)
     """
     sug = _medido("dela")["sugestoes"]
-    assert sug["porques"] == [], f"({QUAL}) o mapa do Sugestões explica o veredito: {sug['porques']}"
+    assert sug["porques"] == [], (
+        f"({QUAL}) o mapa do Sugestões explica o veredito: {sug['porques']}")
     assert not sug["faces_null"], f"({QUAL}) o mapa do Sugestões diz «null» ou «undefined»"
 
 
