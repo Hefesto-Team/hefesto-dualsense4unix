@@ -601,6 +601,75 @@ class TestUmPedidoAMaisNoMaximo:
                 launch_env.desarmar_o_escrevente(launch_env._ESCREVENTE)
             laco_novo.close()
 
+    def test_o_stop_com_uma_foto_pendente_escreve_e_sai_sem_esperar_o_teto(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O serviço que sai com uma foto pendente: ela é escrita, e o fio sai
+        logo depois, sem segurar o `stop` até o teto.
+
+        MORDIDA: devolva o `continue` incondicional depois da escrita em
+        `EscreventeDoLancamento._laco` — o fio volta a esperar um evento já
+        consumido, e o `stop` leva o teto inteiro (aqui, 10 s).
+        """
+        escritas: list[int] = []
+        entrou = threading.Event()
+        solta = threading.Event()
+
+        def parte_de_fora(foto: Any, _devolver: Any) -> None:
+            escritas.append(foto.ordem)
+            entrou.set()
+            solta.wait(10)
+
+        monkeypatch.setattr(launch_env, "_a_parte_de_fora", parte_de_fora)
+        escrevente = launch_env.EscreventeDoLancamento(lambda acao: acao())
+        primeira, pendente = _foto(), _foto()
+        escrevente.pedir(primeira)
+        assert entrou.wait(10), "a primeira escrita não começou"
+        escrevente.pedir(pendente)
+        solta.set()
+        t0 = time.perf_counter()
+        escrevente.esvaziar_e_parar(10)
+        parou_em = time.perf_counter() - t0
+        assert escritas == [primeira.ordem, pendente.ordem], (
+            f"a foto pendente não foi escrita no stop: {escritas}")
+        assert parou_em < 2.0, (
+            f"o stop esperou {parou_em:.1f} s: o fio voltou a esperar depois "
+            "da última escrita, e o serviço sai só no teto")
+
+    def test_a_devolucao_de_uma_foto_vencida_nao_pinta_por_cima_da_nova(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O fio põe as devoluções da foto M na fila do laço; antes de a fila
+        andar, o arming escreve (e devolve na hora) a foto N, mais nova. Quando
+        a fila anda, o recibo e as divergências continuam os da N.
+
+        MORDIDA: tire a conferência da ordem do `carimbar` e do `publicar` em
+        `_foto_do_lancamento` — o recibo volta ao da foto velha, e o vigia de
+        1 Hz rematerializa e grita sobre o jogo que acabou de abrir.
+        """
+        monkeypatch.setattr(launch_env, "_ULTIMA_ORDEM_ESCRITA", 0)
+        daemon = SimpleNamespace(config=SimpleNamespace(gamepad_emulation_enabled=False))
+        velha = launch_env._foto_do_lancamento(daemon, no_fio=True)  # type: ignore[arg-type]
+        daemon.config.gamepad_emulation_enabled = True
+        nova = launch_env._foto_do_lancamento(daemon, no_fio=False)  # type: ignore[arg-type]
+        fila: list[Any] = []
+        monkeypatch.setattr(launch_env, "_a_parte_de_fora",
+                            lambda foto, devolver: (devolver(lambda: foto.publicar([{
+                                "appid": foto.ordem, "motivo": "m", "em_cena": False,
+                                "profile": "p", "mascara_perfil": "x",
+                                "mascara_viva": "y"}])), devolver(foto.carimbar)))
+        # o fio escreve a velha e põe as devoluções na fila do laço…
+        assert launch_env._escrever_o_lancamento(velha, fila.append) is True
+        # …o arming escreve a nova, na hora, antes de a fila andar…
+        assert launch_env._escrever_o_lancamento(nova) is True
+        # …e a fila anda.
+        for acao in fila:
+            acao()
+        assert daemon._launch_env_assinatura[1] is True, (
+            f"o recibo voltou ao da foto velha: {daemon._launch_env_assinatura}")
+        assert [d["appid"] for d in daemon._mascara_divergencias] == [nova.ordem], (
+            "as divergências voltaram às da foto velha")
+
 
 # ===========================================================================
 # R5 — o servidor diz quem o segurou

@@ -2972,15 +2972,26 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         _o_freestyle_na_assinatura(daemon),
     )
 
+    ordem = next(_ORDEM_DAS_FOTOS)
+
+    # A DEVOLUÇÃO DE UMA FOTO VENCIDA NÃO PINTA POR CIMA DA MAIS NOVA. O fio
+    # põe as duas devoluções na fila do laço, e o arming do lançamento pode
+    # escrever (e devolver na hora) uma foto mais nova antes de a fila andar:
+    # sem esta conferência o recibo voltava ao da foto velha, e o vigia de 1 Hz
+    # gritava `launch_env_mudou_depois_do_exec` sobre o jogo que acabou de abrir.
     def carimbar() -> None:
+        if ordem < _ULTIMA_ORDEM_ESCRITA:
+            return
         with contextlib.suppress(Exception):
             daemon._launch_env_assinatura = recibo  # type: ignore[attr-defined]
 
     def publicar(divergencias: list[dict[str, Any]]) -> None:
+        if ordem < _ULTIMA_ORDEM_ESCRITA:
+            return
         _publicar_divergencias(daemon, divergencias)
 
     return _FotoDoLancamento(
-        ordem=next(_ORDEM_DAS_FOTOS),
+        ordem=ordem,
         native=native,
         enabled=enabled,
         flavor=flavor,
@@ -3065,12 +3076,18 @@ class EscreventeDoLancamento:
                 foto, self._pendente = self._pendente, None
                 self._tem_pedido.clear()
                 parar = self._parar
-            if foto is not None:
-                if _escrever_o_lancamento(foto, self._devolver):
-                    self.escritas += 1
+            if foto is not None and _escrever_o_lancamento(foto, self._devolver):
+                self.escritas += 1
+            if not parar:
                 continue
-            if parar:
-                return
+            # PARANDO, O FIO NÃO VOLTA A ESPERAR: o evento já foi consumido, e
+            # esperá-lo de novo prendia o `stop` do serviço o teto inteiro
+            # (5 s) sempre que havia uma foto pendente. O que chegou durante
+            # esta escrita ainda é escrito; depois, o fio sai.
+            with self._trava:
+                if self._pendente is None:
+                    return
+                self._tem_pedido.set()
 
 
 #: O escrevente armado, ou None (a escrita de sempre, na hora). Só o
