@@ -24,6 +24,7 @@ nunca rodados.
 """
 from __future__ import annotations
 
+import dataclasses
 import fnmatch
 import json
 import os
@@ -273,6 +274,31 @@ def test_o_heroic_e_o_mesmo_que_a_cura_por_estrada_acha(raizes: m.Raizes) -> Non
         achada = cura_por_estrada._pasta_do_heroic(raizes.lar)
         assert achada is not None
         assert achada / "config.json" in m._achar_heroic(raizes)
+
+
+def test_o_heroic_do_xdg_desviado_entra_no_inventario(
+        raizes: m.Raizes, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Com o `XDG_CONFIG_HOME` fora do lar, o censo lê o Heroic nativo de lá, a
+    carona escreve ali e o desfazer limpa ali (02/10/2026): o «limpa?» e o
+    guardar olham a mesma casa, e o ambiente esquecido nela vira rastro.
+
+    MORDIDA: o `_achar_heroic` só com as casas fixas do lar."""
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+    from hefesto_dualsense4unix.integrations import cura_por_estrada
+
+    desviado = dataclasses.replace(raizes, config=tmp_path / "xdg-config")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(desviado.config))
+    casa = desviado.config / "heroic"
+    casa.mkdir(parents=True)
+    config = casa / "config.json"
+    config.write_text(json.dumps({"defaultSettings": {"enviromentOptions": [
+        {"key": "SDL_JOYSTICK_HIDAPI", "value": "0"}]}}), encoding="utf-8")
+    assert censo.pastas_lidas("Heroic") == (casa,)
+    rede = {p for p, tipo in cura_por_estrada.estradas_possiveis(raizes.lar)
+            if tipo == cura_por_estrada.HEROIC_CONFIG}
+    assert rede == {config}
+    assert m._achar_heroic(desviado) == [config]
+    assert str(config) in {r.onde for r in m._rastros_nos_lancadores(desviado)}
 
 
 # ─── 2. todo arquivo que o produto grava tem classificação ────────────────

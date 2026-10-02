@@ -179,8 +179,10 @@ _VARIAVEIS_QUE_PODEM_SER_DELA = frozenset(
     {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "PROTON_USE_XALIA"}
 )
 
-#: As pastas do Heroic — espelho de ``integrations/camadas_vulkan._CONFIG_DO_HEROIC``
-#: e de ``integrations/cura_por_estrada._pasta_do_heroic`` (a régua confere).
+#: As pastas do Heroic num lar sem XDG desviado — espelho de
+#: ``integrations/camadas_vulkan._CONFIG_DO_HEROIC`` e das casas do censo
+#: (``integrations/censo_dos_lancadores._casas``), de onde a carona as tira (a
+#: régua confere). A nativa do ``XDG_CONFIG_HOME`` entra em :func:`_achar_heroic`.
 PASTAS_DO_HEROIC: tuple[str, ...] = (
     ".var/app/com.heroicgameslauncher.hgl/config/heroic",
     ".config/heroic",
@@ -1062,11 +1064,16 @@ def _achar_steam(raizes: Raizes, lugar: Lugar) -> list[Path]:
 
 
 def _achar_heroic(raizes: Raizes) -> list[Path]:
-    return [
-        raizes.lar / rel / "config.json"
-        for rel in PASTAS_DO_HEROIC
-        if (raizes.lar / rel / "config.json").is_file()
-    ]
+    """O ``config.json`` de toda casa do Heroic em que a carona pode ter escrito.
+
+    As do lar e, com o ``XDG_CONFIG_HOME`` desviado, a nativa de lá: desde
+    02/10/2026 a carona escreve onde o Heroic nativo guarda a casa, e o
+    desfazer limpa a mesma rede (``cura_por_estrada._casas_do_heroic_na_rede``).
+    """
+    casas = [raizes.lar / rel for rel in PASTAS_DO_HEROIC]
+    if raizes.config / "heroic" not in casas:
+        casas.append(raizes.config / "heroic")
+    return [casa / "config.json" for casa in casas if (casa / "config.json").is_file()]
 
 
 def variaveis_do_produto_no_override(texto: str) -> list[str]:
