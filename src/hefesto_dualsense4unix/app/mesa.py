@@ -21,10 +21,7 @@ publica.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
-
-from hefesto_dualsense4unix.utils.i18n import _
 
 
 def controles_conectados(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -40,74 +37,6 @@ def controles_conectados(state: dict[str, Any]) -> list[dict[str, Any]]:
     return [c for c in controllers if isinstance(c, dict) and c.get("connected")]
 
 
-@dataclass(frozen=True)
-class ContagemDeControles:
-    """A contagem de controles da janela — os DOIS espaços, num só lugar.
-
-    CONTAGEM-E-COOP-01 (29/07). A mesma tela dizia números diferentes para
-    "quantos controles": o cabeçalho e a linha "Conectado (N controles)"
-    contavam só os DualSense adotados, enquanto a fita de chips do topo e a
-    faixa "Número deste controle" contavam adotados + externos. Com dois
-    DualSense e dois externos vivos, o cabeçalho dizia "2 controles" ao lado
-    de quatro chips e de uma faixa oferecendo os números 1 a 4.
-
-    A resposta certa NÃO é somar tudo em um número só: os dois espaços são
-    reais e cada um tem razão histórica registrada —
-
-    - ``adotados`` — DualSense que o Hefesto governa (tem vpad, card, bateria,
-      alvo de edição). É a base da numeração dos externos (``_dualsense_count``
-      → `external_controllers.slot_of`) e o denominador dos cards
-      (`_status_card_keys_for`, filtrado por ``connected``);
-    - ``externos`` — Nintendo Pro, 8BitDo… que o daemon NUMERA mas não adota.
-      Read-only POR DECISÃO DE PRODUTO (EXT-COUNT-01, 25/07: "numerar e acender
-      o LED certo != adotar o controle"), então eles não têm card nem bateria —
-      mas dividem o MESMO espaço de numeração dos adotados (R-24/NUM-01), e é
-      por isso que a faixa de números tem de oferecer 1..``na_mesa``.
-
-    Inflar ``adotados`` com os externos regrediria as duas coisas: os cards
-    ganhariam entradas sem controle por trás e o rótulo dos externos deslizaria
-    (o ponto cego do incidente de 14:42 citado em `slot_of`).
-
-    A cura, então, é DERIVAR tudo daqui e NOMEAR cada número na tela — ver
-    :func:`texto_de_contagem`.
-    """
-
-    adotados: int
-    externos: int
-
-    @property
-    def na_mesa(self) -> int:
-        """Quantos controles estão na mesa — o espaço de numeração (R-24/NUM-01)."""
-        return self.adotados + self.externos
-
-
-def contagem_de_controles(state: dict[str, Any], externos: int) -> ContagemDeControles:
-    """A contagem, a partir do `state` de `daemon.state_full` e do inventário
-    de externos (`_externals`, que a janela já mantém — este módulo não sabe
-    ler externos sozinho, é a única dependência que o mixin ainda empresta)."""
-    return ContagemDeControles(adotados=len(controles_conectados(state)), externos=externos)
-
-
-def texto_de_contagem(contagem: ContagemDeControles) -> str:
-    """Frase NOMEADA da contagem, ou ``""`` quando não há plural a explicar."""
-    adotados = contagem.adotados
-    externos = contagem.externos
-    if contagem.na_mesa <= 1:
-        return ""
-    if externos == 0:
-        return _("{n} controles").format(n=adotados)
-    parte_ext = (
-        _("1 externo") if externos == 1 else _("{n} externos").format(n=externos)
-    )
-    if adotados == 0:
-        # Defensivo: `state["connected"]` é do DualSense primário, então este
-        return _("{ext} (nenhum do Hefesto)").format(ext=parte_ext)
-    return _("{n} do Hefesto + {ext}").format(n=adotados, ext=parte_ext)
-
-
 __all__ = [
-    "ContagemDeControles",
-    "contagem_de_controles",
     "controles_conectados",
-    "texto_de_contagem",
 ]

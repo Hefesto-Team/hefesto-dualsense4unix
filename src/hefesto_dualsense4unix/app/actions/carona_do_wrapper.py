@@ -168,12 +168,10 @@ carona religa explicitamente, com fixtures.
 """
 from __future__ import annotations
 
-import contextlib
 import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -186,13 +184,9 @@ VALORES_DESLIGADOS = frozenset(
     {"0", "off", "false", "no", "não", "nao"}  # (noqa-acento): valor de ambiente
 )
 
-INTERVALO_DA_VIGIA_S = 45
 
 CONTEXTO_DA_BARRA = "carona_wrapper"
 
-GESTO_SALVAR = "salvar_perfil"
-GESTO_APLICAR = "aplicar_perfil"
-GESTO_VIGIA = "vigia_da_steam"
 
 ADIADO_SEM_OLHAR = "adiado_sem_olhar"
 
@@ -302,82 +296,6 @@ class CaronaDoWrapperMixin(WidgetAccessMixin):
     _carona_ja_avisado: frozenset[str] = frozenset()
 
 
-    def pegar_carona_no_gesto(self, gesto: str = GESTO_SALVAR) -> None:
-        """Chamada pelos gestos de SALVAR e APLICAR perfil. Nunca levanta."""
-        self._carona_passar(gesto=gesto, completa=True)
-
-    def _carona_passar(self, *, gesto: str, completa: bool) -> None:
-        if not ligada():
-            return
-        if getattr(self, "_carona_em_curso", False):
-            logger.debug("carona_do_wrapper_ja_em_curso", gesto=gesto)
-            return
-        self._carona_em_curso = True
-        try:
-            despachar(
-                lambda: passada(completa=completa), self._carona_ao_terminar
-            )
-        except Exception as exc:
-            self._carona_em_curso = False
-            logger.warning("carona_do_wrapper_despacho_falhou", erro=str(exc))
-
-    def _carona_ao_terminar(self, resultado: ResultadoDaCarona) -> bool:
-        """Callback na thread do GTK. Retorna ``False`` (contrato do idle_add)."""
-        self._carona_em_curso = False
-        try:
-            self._carona_reagir(resultado)
-        except Exception as exc:
-            logger.warning("carona_do_wrapper_reacao_falhou", erro=str(exc))
-        return False
-
-    def _carona_reagir(self, resultado: ResultadoDaCarona) -> None:
-        """Decide a vigia e a linha do rodapé. Thread do GTK."""
-        if resultado.adiado:
-            self._carona_armar_vigia()
-        else:
-            self._carona_desarmar_vigia()
-            self._carona_ja_avisado = frozenset()
-        if not resultado.frase:
-            return
-        if resultado.adiado and resultado.faltantes == self._carona_ja_avisado:
-            return
-        if resultado.adiado:
-            self._carona_ja_avisado = resultado.faltantes
-        logger.info(
-            "carona_do_wrapper", status=resultado.status, frase=resultado.frase
-        )
-        self._carona_toast(resultado.frase)
-
-
-    def _carona_armar_vigia(self) -> None:
-        """Passa a reperguntar "a Steam já fechou?" até o reparo caber."""
-        if getattr(self, "_carona_vigia_id", None) is not None:
-            return
-        try:
-            from gi.repository import GLib
-        except Exception:  # pragma: no cover - dublê sem GTK
-            return
-        with contextlib.suppress(Exception):
-            self._carona_vigia_id = GLib.timeout_add_seconds(
-                INTERVALO_DA_VIGIA_S, self._carona_tique_da_vigia
-            )
-
-    def _carona_tique_da_vigia(self) -> bool:
-        """Tique barato: só olha a Steam. Quem desarma é o ``_carona_reagir``."""
-        self._carona_passar(gesto=GESTO_VIGIA, completa=False)
-        return True
-
-    def _carona_desarmar_vigia(self) -> None:
-        vigia: Any = getattr(self, "_carona_vigia_id", None)
-        if vigia is None:
-            return
-        self._carona_vigia_id = None
-        with contextlib.suppress(Exception):
-            from gi.repository import GLib
-
-            GLib.source_remove(vigia)
-
-
     def _carona_toast(self, msg: str) -> None:
         """A linha no rodapé, pelo caminho que o mixin dono já usa."""
         for nome in ("_footer_toast", "_toast_profile"):
@@ -392,10 +310,6 @@ __all__ = [
     "ADIADO_SEM_OLHAR",
     "CARONA_ENV",
     "CONTEXTO_DA_BARRA",
-    "GESTO_APLICAR",
-    "GESTO_SALVAR",
-    "GESTO_VIGIA",
-    "INTERVALO_DA_VIGIA_S",
     "VALORES_DESLIGADOS",
     "CaronaDoWrapperMixin",
     "ResultadoDaCarona",

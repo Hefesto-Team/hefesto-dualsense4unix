@@ -135,7 +135,7 @@ def _logica_do_mapa() -> Any:
     global _LOGICA
     if _LOGICA is None:
         perfil._com_o_src()
-        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+        from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
         from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
         declarada = _declaracao()
@@ -1008,7 +1008,7 @@ def _bancada() -> Any:
     if censo is None:
         return None
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import bancada_do_rascunho
+    from hefesto_dualsense4unix.interface.logica_do_mapa import bancada_do_rascunho
 
     with contextlib.suppress(Exception):
         return bancada_do_rascunho(_logica_do_mapa(), censo)
@@ -1060,7 +1060,7 @@ def _confissao_do_mapa() -> dict[str, str]:
         return {}
     try:
         perfil._com_o_src()
-        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (
+        from hefesto_dualsense4unix.interface.logica_do_mapa import (
             confissao_do_desenho,
         )
 
@@ -1087,8 +1087,8 @@ def _html_do_mapa() -> str:
     disso, com os cinco vereditos digitados.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.widgets import mapa_da_mesa as mm
     from hefesto_dualsense4unix.interface import conexoes as _tela
+    from hefesto_dualsense4unix.interface import logica_do_mapa as mm
 
     logica = _logica_do_mapa()
     bancada = _bancada()
@@ -1128,7 +1128,7 @@ def _html_do_mapa() -> str:
 def _html_dos_aparelhos() -> str:
     """O que o censo achou — o PRIMEIRO tempo do gesto de dois tempos."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.widgets import mapa_da_mesa as mm
+    from hefesto_dualsense4unix.interface import logica_do_mapa as mm
     from hefesto_dualsense4unix.interface.conexoes import _e
 
     censo = _censo()
@@ -4943,8 +4943,8 @@ def _laco() -> Any:
 def _campos_da_cerimonia() -> dict[str, Any]:
     """As três telas do «Mapear Entrada a Entrada», pelo laço (ENTRADA-A-ENTRADA-02)."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.widgets import calibrar_entradas as calib
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+    from hefesto_dualsense4unix.interface import calibracao_das_entradas as calib
 
     # `/sys`, e com ela encaixando o DualSense o kernel o segura por segundos.
     foto = _laco().foto_sem_esperar()

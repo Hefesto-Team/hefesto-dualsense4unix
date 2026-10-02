@@ -438,8 +438,8 @@ def frase_dos_transportes(usb: int, bt: int) -> str:
     return " · ".join(pedacos)
 
 
-#: (`app/widgets/sensor_widgets.ESCALA_GYRO_GRAUS_S`), lida de lá.
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import (  # noqa: E402
+#: (`interface/sensores.ESCALA_GYRO_GRAUS_S`), lida de lá.
+from hefesto_dualsense4unix.interface.sensores import (  # noqa: E402
     ESCALA_GYRO_GRAUS_S,
 )
 
@@ -491,7 +491,7 @@ def _eixo_do_analogico(inputs: dict[str, Any], nome: str) -> int:
     `core/evdev_reader.py` já escreve que "num stick o mínimo é um EXTREMO".
 
     É REGRESSÃO SÓ DAQUI: o produto que ela usa há meses faz
-    `int(inputs.get("lx", 128))` (`app/widgets/controller_card.py`), a forma com
+    `int(inputs.get("lx", 128))` (`interface/cartao_do_controle.py`), a forma com
     default, imune ao falsy. Os outros `or` deste arquivo NÃO têm o defeito —
     `l2_raw`/`r2_raw` caem em `or 0`, e ali o zero É o repouso.
     """

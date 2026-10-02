@@ -49,28 +49,6 @@ def _escapar_markup(texto: str) -> str:
     return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def descrever_teclado_na_tela(state: object) -> str:
-    """O que a máquina dela tem, para o L3 abrir um teclado que digita.
-
-    Lê ``osk_disponivel`` (``daemon/ipc_handlers.py:_keyboard_emulation_payload``,
-    publicado em ``daemon.state_full``). Ausência da CHAVE é um terceiro
-    estado ("não consegui ler") — nunca um `False`: um daemon mais velho, ou
-    um `state` que não é o payload de verdade, não afirma que a máquina não
-    tem teclado na tela, só que esta janela não sabe.
-    """
-    if not isinstance(state, dict) or "osk_disponivel" not in state:
-        return "Teclado na tela: não consegui ler — o serviço pode estar desligado."
-    disponivel = state.get("osk_disponivel")
-    if disponivel is True:
-        return "Teclado na tela: instalado — o L3 abre um teclado que digita."
-    if disponivel is False:
-        return (
-            "Teclado na tela: nenhum programa encontrado — o L3 não tem o que "
-            "abrir nesta máquina."
-        )
-    return "Teclado na tela: não consegui ler — resposta inesperada do Hefesto."
-
-
 def descrever_display_grafico(state: object) -> str:
     """O Hefesto enxerga QUALQUER janela nesta máquina, agora?"""
     if not isinstance(state, dict) or "window_detect_backend" not in state:
@@ -90,17 +68,3 @@ def descrever_display_grafico(state: object) -> str:
     return "Detector de janela: sem ver nada agora."
 
 
-def descrever_steam_encontrada(state: object) -> str:
-    """A Steam desta máquina — o layout achado, ou onde o Hefesto procurou.
-
-    Lê ``steam_layout_achado`` — chave que NENHUMA frente desta sprint
-    publica ainda (ver o cabeçalho do módulo). Contra o `state_full` de hoje
-    esta função sempre cai no ramo "não consegui ler", o que é a resposta
-    honesta e não um defeito: publicar a chave é gancho de outra onda.
-    """
-    if not isinstance(state, dict) or "steam_layout_achado" not in state:
-        return "Steam: não consegui ler — o serviço pode estar desligado."
-    layout = state.get("steam_layout_achado")
-    if isinstance(layout, str) and layout:
-        return f"Steam: encontrada ({_escapar_markup(layout)})."
-    return "Steam: não encontrada nesta máquina."

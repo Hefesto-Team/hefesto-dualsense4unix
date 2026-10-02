@@ -17,10 +17,6 @@ class _NaoMedidoSentinela:
 
 NAO_MEDIDO: Final = _NaoMedidoSentinela()
 
-FRASE_NAO_MEDIDO: Final[dict[str, str]] = {
-    "cabo": "Ainda não medimos isto no cabo.",
-    "radio": "Ainda não medimos isto no rádio.",
-}
 
 AFIRMA_EXISTE: Final = "existe"
 AFIRMA_NAO_EXISTE: Final = "nao-existe"
@@ -134,14 +130,6 @@ class Fala:
                 "Fala.texto vazio não é permitido — nunca vazio: escreva a "
                 "frase ou declare pendente= com texto=NAO_MEDIDO."
             )
-
-
-def frase_de_exibicao(fala: Fala) -> str:
-    """O que a tela mostra: a frase escrita, ou a frase única de `NAO_MEDIDO`."""
-    if fala.texto is NAO_MEDIDO:
-        return FRASE_NAO_MEDIDO[fala.lado]
-    assert isinstance(fala.texto, str)
-    return fala.texto
 
 
 @dataclass(frozen=True)

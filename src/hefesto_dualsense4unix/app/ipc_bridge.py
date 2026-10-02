@@ -193,21 +193,6 @@ def profile_list() -> list[dict[str, Any]]:
         return []
 
 
-def active_profile_name() -> str | None:
-    """Nome do perfil ATIVO no daemon (``state_full.active_profile``) ou None.
-
-    PERFIL-SAVE-APPLY-01: usado pelo Salvar da aba Perfis para decidir se o
-    perfil recém-gravado precisa ser reaplicado na hora (daemon não relê
-    JSON de perfil por conta própria). Best-effort: offline = None.
-    """
-    ok, res = _safe_call("daemon.state_full", {})
-    if ok and isinstance(res, dict):
-        nome = res.get("active_profile")
-        if isinstance(nome, str) and nome:
-            return nome
-    return None
-
-
 def profile_switch(name: str) -> bool:
     """Ativa um perfil no daemon; ``False`` quando ele não confirmou."""
     ok, _ = _safe_call(
@@ -675,25 +660,6 @@ def _rotulos_dos_campos() -> dict[str, str]:
     return rotulos
 
 
-def __getattr__(nome: str) -> Any:
-    """``ipc_bridge._CAMPOS_DA_MAQUINA`` continua existindo, agora DERIVADO.
-
-    Ele deixou de ser uma atribuição de módulo e passou a ser calculado na hora
-    da leitura (PEP 562). Duas razões, e as duas são de fronteira:
-
-    * como atribuição no topo, a derivação rodaria na IMPORTAÇÃO do módulo, que
-      é exatamente o instante em que o ciclo com ``secao_janela`` se fecha;
-    * três arquivos de teste leem ``ipc_bridge._CAMPOS_DA_MAQUINA`` como
-      dicionário (``test_descartados_chegam_ao_rodape.py:304``,
-      ``test_o_teto_da_mesa_diz_o_que_faz.py:44``). Trocar a forma do nome
-      público quebraria portões de outras frentes por uma mudança que é de
-      redação — e a regra desta fronteira é aditiva, não destrutiva.
-    """
-    if nome == "_CAMPOS_DA_MAQUINA":
-        return _rotulos_dos_campos()
-    raise AttributeError(f"module {__name__!r} has no attribute {nome!r}")
-
-
 def _rotulos_dos_descartados(result: dict[str, Any]) -> tuple[str, ...]:
     """Os campos descartados do corpo do daemon, já em rótulo de tela."""
     descartados = result.get("descartados")
@@ -803,18 +769,6 @@ def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type
     if ok and isinstance(result, dict):
         return result
     return None
-
-
-def aplicacao_confirmada(resposta: Any) -> bool:
-    """A resposta do ``profile.apply_draft`` confirma que algo entrou? (R-18)."""
-    if not isinstance(resposta, dict):
-        return False
-    if resposta.get("status") != "ok":
-        return False
-    aplicado = resposta.get("applied")
-    if isinstance(aplicado, list):
-        return bool(aplicado)
-    return True
 
 
 def destinos_da_aplicacao(resposta: Any) -> tuple[list[str], list[str]]:
@@ -1187,9 +1141,7 @@ def haptica_testar(uniq: str, ligado: bool) -> tuple[bool, dict[str, Any] | None
 
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",
-    "active_profile_name",
     "alvo_honrado",
-    "aplicacao_confirmada",
     "apply_draft_detalhado",
     "call_async",
     "daemon_state_full",

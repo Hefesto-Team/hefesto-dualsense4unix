@@ -2,7 +2,6 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 import tempfile
@@ -13,17 +12,10 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_GAMEPAD,
     mode_of_state,
-)
-from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
-from hefesto_dualsense4unix.integrations.steam_launch_options import (
-    WRAPPER_LAUNCH,
-    appid_needs_wrapper,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -33,9 +25,6 @@ logger = get_logger(__name__)
 DECISION_SKIP = "skip"
 DECISION_READ_VDF = "read_vdf"
 DECISION_PROMPT = "prompt"
-
-RESPONSE_COPY = 101
-RESPONSE_DISMISS = 102
 
 
 def extract_steam_appid(wm_class: object) -> str | None:
@@ -159,24 +148,6 @@ def load_dismissed_appids() -> set[str]:
     return out
 
 
-def add_dismissed_appid(appid: str) -> None:
-    """Persiste a dispensa de UM appid (escrita atômica, best-effort)."""
-    try:
-        path = _dismissed_path(ensure=True)
-        atual = load_dismissed_appids()
-        atual.add(str(appid).strip())
-        data = json.dumps({_DISMISSED_KEY: sorted(atual)}, ensure_ascii=False)
-        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".launch_dialog_")
-        try:
-            os.write(fd, data.encode())
-        finally:
-            os.close(fd)
-        os.replace(tmp, path)
-        logger.debug("launch_dialog_dismiss_salvo", appid=appid)
-    except Exception as exc:
-        logger.debug("launch_dialog_dismiss_save_falhou", erro=str(exc))
-
-
 def remove_dismissed_appid(appid: str) -> bool:
     """DESFAZ a dispensa de UM appid. Devolve se ele saiu da lista.
 
@@ -223,189 +194,10 @@ def remove_dismissed_appid(appid: str) -> bool:
     return True
 
 
-_DIALOG_TITLE = "Este jogo ainda não abre pelo launcher do Hefesto"
-
-_DIALOG_BODY = (
-    "Sem o launcher, o jogo pode ver o controle DUPLICADO (o físico e o "
-    "virtual ao mesmo tempo) — mas nunca zero controles: nada quebra, só "
-    "duplica.\n\n"
-    "Para este jogo usar o launcher, cole esta linha em Steam → jogo "
-    "(botão direito) → Propriedades → Opções de inicialização:\n\n"
-    f"{WRAPPER_LAUNCH}\n\n"
-    "Com o jogo aberto não dá para aplicar automaticamente (a Steam "
-    "regrava esse arquivo ao fechar e a mudança se perderia). Com o jogo e "
-    "a Steam fechados, o botão \"Aplicar aos jogos da Steam\" na aba "
-    "Sistema faz isso em um clique."
-)
-
-
-class LaunchWrapperDialogMixin(WidgetAccessMixin):
-    """Mostra o lembrete do wrapper no tick de estado existente da GUI."""
-
-    _wrapper_dialog_open: bool = False
-    _wrapper_dialog_vdf_inflight: bool = False
-    _wrapper_dialog_dismissed: set[str] | None = None
-    _wrapper_dialog_widget: Any = None
-    _wrapper_dialog_vdf_cache: dict[str, bool]
-    _wrapper_dialog_shown_appids: set[str]
-
-
-    def _wrapper_dialog_bootstrap(self) -> None:
-        """Cria os contêineres mutáveis por instância (idempotente)."""
-        if not hasattr(self, "_wrapper_dialog_vdf_cache"):
-            self._wrapper_dialog_vdf_cache = {}
-        if not hasattr(self, "_wrapper_dialog_shown_appids"):
-            self._wrapper_dialog_shown_appids = set()
-
-    def _wrapper_dialog_dismissed_set(self) -> set[str]:
-        """Dispensas persistidas, carregadas UMA vez por sessão (lazy)."""
-        if self._wrapper_dialog_dismissed is None:
-            self._wrapper_dialog_dismissed = load_dismissed_appids()
-        return self._wrapper_dialog_dismissed
-
-
-    def _maybe_prompt_wrapper_dialog(self, state: dict[str, Any] | None) -> None:
-        """Avalia o gatilho a cada tick de estado; nunca propaga exceção.
-
-        Chamado por ``HefestoApp._render_slow_state`` DEPOIS do render normal
-        (2 Hz — o tick que a GUI já tem; zero timers novos). Toda a decisão é
-        da função pura ``wrapper_dialog_decision``; aqui só moram o cache, o
-        worker de leitura e a exibição.
-        """
-        try:
-            self._wrapper_dialog_bootstrap()
-            popup_gate = getattr(self, "_popup_is_open", None)
-            popup_open = bool(popup_gate()) if callable(popup_gate) else False
-            action, appid = wrapper_dialog_decision(
-                state,
-                vdf_cache=self._wrapper_dialog_vdf_cache,
-                dismissed=self._wrapper_dialog_dismissed_set(),
-                shown_this_session=self._wrapper_dialog_shown_appids,
-                popup_open=popup_open,
-                dialog_open=self._wrapper_dialog_open,
-            )
-            if action == DECISION_READ_VDF and appid is not None:
-                self._wrapper_dialog_read_vdf(appid)
-            elif action == DECISION_PROMPT and appid is not None:
-                self._wrapper_dialog_shown_appids.add(appid)
-                self._wrapper_dialog_open = True
-                try:
-                    self._show_wrapper_dialog(appid)
-                except Exception:
-                    self._wrapper_dialog_open = False
-                    raise
-        except Exception as exc:
-            logger.warning("launch_dialog_tick_falhou", erro=str(exc))
-
-    def _wrapper_dialog_read_vdf(self, appid: str) -> None:
-        """Lê o localconfig.vdf UMA vez por appid (worker) e memoiza o veredito."""
-        if self._wrapper_dialog_vdf_inflight:
-            return
-        self._wrapper_dialog_vdf_inflight = True
-
-        def _read() -> bool:
-            return appid_needs_wrapper(appid)
-
-        def _ok(needs: Any) -> bool:
-            self._wrapper_dialog_vdf_inflight = False
-            self._wrapper_dialog_vdf_cache[appid] = bool(needs)
-            return False
-
-        def _fail(exc: Exception) -> bool:
-            self._wrapper_dialog_vdf_inflight = False
-            self._wrapper_dialog_vdf_cache[appid] = False
-            logger.debug(
-                "launch_dialog_vdf_read_falhou", appid=appid, erro=str(exc)
-            )
-            return False
-
-        run_in_thread(_read, _ok, _fail)
-
-
-    def _build_wrapper_dialog(self, appid: str) -> Gtk.MessageDialog:
-        """Monta o GtkMessageDialog (sem exibir) — separado para os testes."""
-        window = getattr(self, "window", None)
-        dialog = Gtk.MessageDialog(
-            transient_for=window,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.NONE,
-            text=f"{_DIALOG_TITLE} (app {appid})",
-        )
-        with contextlib.suppress(Exception):
-            dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
-        dialog.format_secondary_text(_DIALOG_BODY)
-        dialog.add_button("Copiar opções", RESPONSE_COPY)
-        dialog.add_button("Não perguntar para este jogo", RESPONSE_DISMISS)
-        dialog.add_button("Fechar", Gtk.ResponseType.CLOSE)
-        with contextlib.suppress(Exception):
-            for child in dialog.get_message_area().get_children():
-                if hasattr(child, "set_selectable"):
-                    child.set_selectable(True)
-        dialog.connect(
-            "response",
-            lambda dlg, resp: self._on_wrapper_dialog_response(dlg, resp, appid),
-        )
-        return dialog
-
-    def _show_wrapper_dialog(self, appid: str) -> None:
-        """Cria e exibe o diálogo (bookkeeping fica no chamador)."""
-        dialog = self._build_wrapper_dialog(appid)
-        self._wrapper_dialog_widget = dialog
-        dialog.show()
-        logger.info("launch_dialog_exibido", appid=appid)
-
-    def _on_wrapper_dialog_response(
-        self, dialog: Any, response: int, appid: str
-    ) -> None:
-        """Handler do sinal ``response`` — roda na thread GTK."""
-        if response == RESPONSE_COPY:
-            if self._copy_wrapper_launch_to_clipboard():
-                self._status_toast(
-                    "launch_dialog",
-                    "Copiado! Cole em: Steam → jogo → Propriedades → "
-                    "Opções de inicialização.",
-                )
-            else:
-                self._status_toast(
-                    "launch_dialog",
-                    "Não consegui copiar — selecione a linha no próprio "
-                    "aviso e copie com Ctrl+C.",
-                )
-            return
-        if response == RESPONSE_DISMISS:
-            self._wrapper_dialog_dismissed_set().add(appid)
-            add_dismissed_appid(appid)
-            logger.info("launch_dialog_dispensado", appid=appid)
-            self._status_toast(
-                "launch_dialog", "Certo — não pergunto mais para este jogo."
-            )
-        self._wrapper_dialog_open = False
-        self._wrapper_dialog_widget = None
-        with contextlib.suppress(Exception):
-            dialog.destroy()
-
-    @staticmethod
-    def _copy_wrapper_launch_to_clipboard() -> bool:
-        """Copia a string constante do wrapper para o clipboard."""
-        with contextlib.suppress(Exception):
-            from gi.repository import Gdk, Gtk
-
-            clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-            clip.set_text(WRAPPER_LAUNCH, -1)
-            clip.store()
-            return True
-        return False
-
-
 __all__ = [
     "DECISION_PROMPT",
     "DECISION_READ_VDF",
     "DECISION_SKIP",
-    "RESPONSE_COPY",
-    "RESPONSE_DISMISS",
-    "LaunchWrapperDialogMixin",
-    "add_dismissed_appid",
     "extract_steam_appid",
     "load_dismissed_appids",
     "wrapper_dialog_decision",

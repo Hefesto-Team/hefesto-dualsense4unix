@@ -77,8 +77,6 @@ ATRIBUTO_LEGADO_UNIQ = "_edit_target_uniq"
 ATRIBUTO_LEGADO_LABEL = "_edit_target_label"
 
 MOTIVO_SEM_ESTADO = "a janela ainda não leu o estado do Hefesto"
-MOTIVO_MESA_VAZIA = "não há controle ligado"
-MOTIVO_DAEMON_DESLIGADO = "o Hefesto está desligado"
 
 
 class EstadoDoAlvo(Enum):
@@ -111,9 +109,6 @@ class AlvoDeEdicao:
     def por_controle(self) -> bool:
         return self.estado is EstadoDoAlvo.CONTROLE
 
-    def pode_escrever(self) -> bool:
-        """Só ``DESCONHECIDO`` recusa; os outros dois escrevem como sempre."""
-        return not self.desconhecido
 
     def recusa(self) -> str | None:
         """A frase da recusa; ``None`` quando há alvo e a escrita segue."""
@@ -148,13 +143,6 @@ def definir_alvo(host: Any, uniq: str | None, label: str | None) -> AlvoDeEdicao
         alvo = AlvoDeEdicao(EstadoDoAlvo.CONTROLE, uniq=uniq, label=label)
     else:
         alvo = AlvoDeEdicao(EstadoDoAlvo.TODOS, uniq=None, label=label)
-    _gravar(host, alvo)
-    return alvo
-
-
-def esquecer_alvo(host: Any, motivo: str) -> AlvoDeEdicao:
-    """Declara que a janela NÃO sabe qual é o alvo, e por quê."""
-    alvo = AlvoDeEdicao(EstadoDoAlvo.DESCONHECIDO, motivo=motivo)
     _gravar(host, alvo)
     return alvo
 

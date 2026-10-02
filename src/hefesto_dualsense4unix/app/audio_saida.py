@@ -66,7 +66,7 @@ import subprocess
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Final, NamedTuple
+from typing import Any, Final
 
 from hefesto_dualsense4unix.core.ds_output_report import (
     SAIDA_ESTEREO_NO_FONE,
@@ -253,15 +253,6 @@ def acordar_sink(sink: str, *, runner: Callable[[list[str]], str] | None = None)
     return estado_do_canal(
         rodar(["pactl", "list", "sinks", "short"]), sink
     ) == CANAL_ACORDADO
-
-
-def apelido_do_sink(nome: str) -> str:
-    """Pedaço legível do nome de um sink, para caber numa dica."""
-    limpo = nome.strip()
-    if not limpo:
-        return ""
-    segmento = limpo.rsplit(".", 1)[-1]
-    return segmento or limpo
 
 
 def arquivo_de_confirmacao(
@@ -453,43 +444,6 @@ def som_ligado(carregar: Callable[[], dict[str, Any]] | None = None) -> bool:
     return bool(valor) if isinstance(valor, bool) else True
 
 
-TEXTO_ROTA_PARA_O_CONTROLE: Final[str] = "Ouvir no controle"
-TEXTO_ROTA_VOLTAR: Final[str] = "Voltar ao anterior"
-
-DICA_ROTA_INICIAL: Final[str] = (
-    "Manda o som do sistema para o alto-falante do controle, e desfaz. O "
-    "rótulo do botão diz o que o próximo clique faz, e a dica muda junto com "
-    "ele assim que a janela ler a saída de áudio."
-)
-
-DICA_ROTA_PARA_O_CONTROLE: Final[str] = (
-    "Manda o som do sistema INTEIRO para o alto-falante do controle: jogo, "
-    "navegador, notificações, tudo. É a mesma troca de saída padrão que as "
-    "configurações de som do sistema fazem, e ela continua valendo depois de "
-    "fechar esta janela. Onde o som sai depois de chegar ao controle — "
-    "alto-falante ou fone — é o canal, no bloco Alto-falante. A janela guarda "
-    "a saída de agora para o botão de volta."
-)
-DICA_ROTA_VOLTAR: Final[str] = (
-    "Devolve o som do sistema para {apelido}, que era a saída antes de a "
-    "janela mandá-lo para o controle. O alto-falante do controle continua "
-    "existindo: ela só deixa de receber o áudio do sistema."
-)
-#: dizia que sinks de vários DualSense não se distinguem. Eles se distinguem
-DICA_ROTA_SEM_SINK: Final[str] = (
-    "Não há uma saída de áudio única para mandar o som. Pelo rádio o "
-    "DualSense não publica placa de som nenhuma — ela só aparece no cabo. "
-    "Com mais de um controle no cabo há mais de uma placa, e este botão é um "
-    "só: escolher uma por você seria a janela decidindo em que controle o som "
-    "sai. Use o seletor Alto-falante do card do controle que você quer."
-)
-DICA_ROTA_SEM_VOLTA: Final[str] = (
-    "O som do sistema já está saindo no controle, e não foi esta janela que o "
-    "mandou para lá — não há como saber para onde voltar. Escolha a saída nas "
-    "configurações de som do sistema."
-)
-
-
 @dataclass(frozen=True)
 class EstadoDaRota:
     """Onde o som do sistema está, para onde ele pode ir, e de onde ele veio."""
@@ -499,36 +453,6 @@ class EstadoDaRota:
     anterior: str = ""
     no_controle: bool = False
     canais: Mapping[str, str] = field(default_factory=dict)
-
-
-class AcaoRota(NamedTuple):
-    """O que o botão da rota diz, se ele responde, e o que o clique faz."""
-
-    rotulo: str
-    sensivel: bool
-    dica: str
-    alvo: str
-
-
-def acao_da_rota(estado: EstadoDaRota) -> AcaoRota:
-    """Estado do botão da rota — função pura, e o coração da entrega 2."""
-    if estado.no_controle:
-        if estado.anterior:
-            return AcaoRota(
-                TEXTO_ROTA_VOLTAR,
-                True,
-                DICA_ROTA_VOLTAR.format(apelido=apelido_do_sink(estado.anterior)),
-                estado.anterior,
-            )
-        return AcaoRota(TEXTO_ROTA_VOLTAR, False, DICA_ROTA_SEM_VOLTA, "")
-    if not estado.sink_do_controle:
-        return AcaoRota(TEXTO_ROTA_PARA_O_CONTROLE, False, DICA_ROTA_SEM_SINK, "")
-    return AcaoRota(
-        TEXTO_ROTA_PARA_O_CONTROLE,
-        True,
-        DICA_ROTA_PARA_O_CONTROLE,
-        estado.sink_do_controle,
-    )
 
 
 class RotaDeSaida:
@@ -909,24 +833,6 @@ def _gravar_anterior(sink: str) -> None:
 
 NOME_REGRA_NUNCA_DORME: Final[str] = "54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
 
-ESTADO_SUSPENSO: Final[str] = "SUSPENDED"
-
-TEXTO_SONO_ACORDADO: Final[str] = "Alto-falante acordado — o som sai desde o primeiro instante"
-
-TEXTO_SONO_ATRASADO: Final[str] = (
-    "Alto-falante ainda dormindo — a regra entrou depois deste controle; "
-    "reconecte-o para valer"
-)
-
-#: Não há placa de som do controle na mesa. Não é defeito: por rádio o DualSense
-TEXTO_SONO_SEM_PLACA: Final[str] = (
-    "Sem placa de som do controle (no rádio o DualSense não publica placa ALSA)"
-)
-
-TEXTO_SONO_PODE_DORMIR: Final[str] = (
-    "Alto-falante pode dormir — o primeiro som depois do silêncio se perde"
-)
-
 
 def caminho_regra_nunca_dorme(home: str | None = None) -> str:
     """Onde o drop-in 54 mora depois de instalado (não garante que exista)."""
@@ -962,64 +868,6 @@ def e_saida_de_controle(sink: str, saida_pactl: str) -> bool:
     return bool(sufixo_do_sink_do_som(sink)) or sink in sinks_dualsense(saida_pactl)
 
 
-def sono_dos_sinks_do_controle(saida_pactl: str) -> dict[str, str]:
-    """``{nome do sink do controle: ESTADO}`` a partir de `pactl list sinks short`.
-
-    Quem decide "este sink é de um DualSense" continua sendo
-    ``mic_monitor.sinks_dualsense`` — o dono desse critério nesta janela. Aqui
-    só se acrescenta a coluna que faltava: o ESTADO, que quem lê é
-    :func:`estados_crus_dos_sinks`, o parser único da coluna (SOM-ACORDADO-01
-    juntou os dois que tinham nascido no mesmo dia).
-    """
-    from hefesto_dualsense4unix.app.mic_monitor import sinks_dualsense
-
-    do_controle = set(sinks_dualsense(saida_pactl))
-    return {
-        nome: cru
-        for nome, cru in estados_crus_dos_sinks(saida_pactl).items()
-        if nome in do_controle
-    }
-
-
-def texto_do_sono(instalada: bool, estados: dict[str, str]) -> str:
-    """O que a aba Status escreve, dados os dois fatos que ela consegue saber."""
-    if not instalada:
-        return TEXTO_SONO_PODE_DORMIR
-    if not estados:
-        return TEXTO_SONO_SEM_PLACA
-    if any(estado == ESTADO_SUSPENSO for estado in estados.values()):
-        return TEXTO_SONO_ATRASADO
-    return TEXTO_SONO_ACORDADO
-
-
-def estado_do_sono(home: str | None = None) -> str:
-    """A leitura completa numa frase só. BLOQUEIA — rode em worker.
-
-    Mesma disciplina do resto do módulo: nada de subprocess na thread do GTK
-    (use ``ipc_bridge.run_in_thread``, o padrão do card).
-
-    NOTA DATADA — 18/08/2026: **a tela já diz isto, por outro caminho, e esta
-    composição não tem chamador de propósito.** O item 6 da
-    ``SOM-QUE-NAO-DORME-01`` (*"a aba Status consegue dizer o estado —
-    inclusive denunciar a cura arrancada"*) foi entregue pela
-    ``SOM-ACORDADO-01``, que mediu o desenho e escolheu dizer o estado POR
-    CONTROLE, no rótulo da moldura de cada card, em vez de uma frase global:
-    ``RotaDeSaida.estado`` publica os canais (:786 e :817 acima, via
-    :func:`estados_dos_sinks`), ``status_actions.py``:1038 lê a regra na MESMA
-    worker, :1249 entrega os dois ao card por ``definir_estado_do_canal``, e
-    ``controller_card.py``:4216-4224 escreve as frases — inclusive a
-    ``dica_canal_sem_a_regra()``, que é a cura arrancada sendo denunciada.
-
-    Por isso ela **não deve ganhar chamador na janela**: seria um segundo
-    leitor de PipeWire aqui dentro (`controller_card.py`:4044-4049 escreve por que
-    isso é defeito) para repetir o que já está na tela. O corpo fica de pé
-    porque é a única forma de perguntar as duas coisas de uma vez fora da
-    janela, e porque podar símbolo público é decisão DELA, não deste módulo.
-    """
-    saida = rodar_leitura(["pactl", "list", "sinks", "short"])
-    return texto_do_sono(regra_nunca_dorme_instalada(home), sono_dos_sinks_do_controle(saida))
-
-
 __all__ = [
     "BYTE_SONS_DO_JOGO",
     "BYTE_TODO_O_SOM_DO_PC",
@@ -1028,11 +876,6 @@ __all__ = [
     "CANAL_SEM_LEITURA",
     "CHAVE_PREF_ROTA_ANTERIOR",
     "CHAVE_PREF_SOM",
-    "DICA_ROTA_PARA_O_CONTROLE",
-    "DICA_ROTA_SEM_SINK",
-    "DICA_ROTA_SEM_VOLTA",
-    "DICA_ROTA_VOLTAR",
-    "ESTADO_SUSPENSO",
     "MOTIVO_A_SAIDA_NAO_E_DESTE",
     "MOTIVO_DESLIGADO",
     "MOTIVO_FALHOU",
@@ -1048,21 +891,12 @@ __all__ = [
     "MOTIVO_TOCOU",
     "NOME_REGRA_NUNCA_DORME",
     "RECADOS",
-    "TEXTO_ROTA_PARA_O_CONTROLE",
-    "TEXTO_ROTA_VOLTAR",
-    "TEXTO_SONO_ACORDADO",
-    "TEXTO_SONO_ATRASADO",
-    "TEXTO_SONO_PODE_DORMIR",
-    "TEXTO_SONO_SEM_PLACA",
-    "AcaoRota",
     "DesfechoDaRota",
     "EstadoDaRota",
     "ResultadoDoSom",
     "RotaDasDuasCamadas",
     "RotaDeSaida",
-    "acao_da_rota",
     "acordar_sink",
-    "apelido_do_sink",
     "argv_do_tocador",
     "arquivo_de_confirmacao",
     "botao_da_rota_aceso",
@@ -1070,7 +904,6 @@ __all__ = [
     "devolver_o_som_do_pc",
     "e_saida_de_controle",
     "estado_do_canal",
-    "estado_do_sono",
     "estados_crus_dos_sinks",
     "estados_dos_sinks",
     "ler_as_duas_camadas",
@@ -1082,7 +915,5 @@ __all__ = [
     "sink_do_controle",
     "sink_padrao_da_saida",
     "som_ligado",
-    "sono_dos_sinks_do_controle",
-    "texto_do_sono",
     "tocar_confirmacao",
 ]

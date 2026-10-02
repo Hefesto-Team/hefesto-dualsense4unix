@@ -1666,14 +1666,14 @@ UTIL_TV = 831
 
 
 MAPA = _constantes(
-    R / "src/hefesto_dualsense4unix/app/widgets/mapa_da_mesa.py",
+    R / "src/hefesto_dualsense4unix/interface/logica_do_mapa.py",
     {"EXPLICACAO", "ROTULO_APARELHOS", "ROTULO_TIRAR", "ROTULO_EXTENSAO",
      "ROTULO_NOVA_ENTRADA", "ROTULO_NOVA_FACE", "ROTULO_FECHAR", "ROTULO_VAZIA",
      "ROTULO_POR_EXTENSAO", "NOME_DA_FACE_EM_BRANCO", "ESPERA_O_APLICAR",
      "GRAVA_NO_CLIQUE", "CONFISSAO_ABERTURA", "CONFISSAO", "_COLUNAS"})
 
 CALIB = _constantes(
-    R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py",
+    R / "src/hefesto_dualsense4unix/interface/calibracao_das_entradas.py",
     {"FACES", "PERGUNTA_SENTADA", "SEM_SAIR_DA_CADEIRA", "ROTULO_JA_CHEGA",
      "ROTULO_NAO_SEI", "ROTULO_NAO_ALCANCO", "FIM_DA_FASE_SENTADA",
      "CONVITE_EM_PE", "ROTULO_VOU_MOSTRAR", "ROTULO_DEIXAR_PARA_DEPOIS",
@@ -1727,7 +1727,7 @@ OS_DOIS_RELOGIOS = (
     "correção que o próprio Hefesto instala para ele não falhar. Não é você, e "
     "não é o seu cabo.")
 _confere_no_produto(
-    R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py",
+    R / "src/hefesto_dualsense4unix/interface/calibracao_das_entradas.py",
     ["A entrada aparece para mim em ~", "Não é você, e não é o "])
 
 
@@ -1809,19 +1809,18 @@ CONFISSAO_NA_TELA = (
     f'<b data-campo="confissao-conta">{_POR_EXTENSO[len(LACUNAS)]}</b>.'
     f'</span></div>')
 
-from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (  # noqa: E402
+from hefesto_dualsense4unix.interface.logica_do_mapa import (  # noqa: E402
     DICA_ENUMERA,
     DICA_EXTENSAO,
     DICA_JA_COLOCADO,
 )
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase  # noqa: E402
 
-_MAPA_PY = R / "src/hefesto_dualsense4unix/app/widgets/mapa_da_mesa.py"
+_MAPA_PY = R / "src/hefesto_dualsense4unix/interface/logica_do_mapa.py"
 _confere_no_produto(_MAPA_PY, [
     "Você já colocou este aparelho {onde}.",
     "O sistema enumera este aparelho como {c}.",
     "Foi você quem disse que há uma extensão aqui.",
-    "botao.set_size_request(84, 56)",
 ])
 
 
@@ -1897,10 +1896,6 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
 
 RESPOSTAS_DA_ALTURA = (("acima", "Sim"), ("abaixo", "Não"), ("", "Não sei"))
 RESPOSTAS_DA_VISADA = (("com_gente", "Sim"), ("livre", "Não"), ("", "Não sei"))
-_confere_no_produto(
-    R / "src/hefesto_dualsense4unix/app/actions/config/secao_mesa.py",
-    ['("acima", "Sim")', '("abaixo", "Não")',
-     '("com_gente", "Sim")', '("livre", "Não")', '("nao_sei", "Não sei")'])
 
 
 def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
@@ -2789,7 +2784,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
 """
 
 
-_CALIB_PY = R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py"
 
 
 # campos_do_mapear`), e o Salvar grava pelo dono. <!-- noqa-acento: citação literal dela -->
@@ -2859,10 +2853,6 @@ TELA_MAPEAR_PORTAS = f'''
 </script>
 '''
 PROGRESSO = "entrada {feitos} de {total}"
-_confere_no_produto(_CALIB_PY, [
-    '"entrada {feitos} de {total}"', 'botao.set_size_request(-1, 30)',
-    'self.rotulo_contador.set_text("")',
-])
 
 SEM_LUGAR = [(esp, no) for esp, no, em, _q in CENSO if not em]
 

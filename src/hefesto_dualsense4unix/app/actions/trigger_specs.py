@@ -219,30 +219,10 @@ def preset_to_positional_params(spec: TriggerPresetSpec, values: dict[str, int])
     return [values.get(p.name, p.default) for p in spec.params]
 
 
-def preset_to_factory_args(
-    spec: TriggerPresetSpec, values: dict[str, int]
-) -> dict[str, object] | list[int]:
-    """Formato aceito por `build_from_name`: positional list ou dict nomeado."""
-    if spec.name == "MultiPositionFeedback":
-        strengths = [values.get(f"pos_{i}", 0) for i in range(10)]
-        return {"strengths": strengths}
-    if spec.name == "MultiPositionVibration":
-        strengths = [values.get(f"pos_{i}", 0) for i in range(10)]
-        return {
-            "frequency": values.get("frequency", 0),
-            "strengths": strengths,
-        }
-    if spec.name == "Custom":
-        forces = tuple(values.get(f"force_{i}", 0) for i in range(7))
-        return {"mode": values.get("mode", 0), "forces": forces}
-    return preset_to_positional_params(spec, values)
-
-
 __all__ = [
     "PRESETS",
     "TriggerParamSpec",
     "TriggerPresetSpec",
     "get_spec",
-    "preset_to_factory_args",
     "preset_to_positional_params",
 ]

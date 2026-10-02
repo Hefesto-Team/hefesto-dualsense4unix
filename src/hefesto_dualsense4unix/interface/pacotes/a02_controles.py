@@ -93,7 +93,14 @@ from hefesto_dualsense4unix.app.ipc_bridge import (
     frase_do_ato_do_microfone,
     frase_do_interruptor_de_sensor,
 )
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.core.speaker_scale import (
+    percentual_do_volume,
+    volume_do_percentual,
+)
+from hefesto_dualsense4unix.integrations import (
+    ganho_do_microfone as _ganho_no_aparelho,
+)
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
     CANAL_NADA_NO_CONTROLE,
     CANAL_SONS_DO_JOGO,
@@ -116,7 +123,8 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     texto_motion,
     uniq_do_entry,
 )
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+from hefesto_dualsense4unix.interface.monta import luzinhas
+from hefesto_dualsense4unix.interface.sensores import (
     ESCALA_ACCEL_G,
     ESCALA_GYRO_GRAUS_S,
     texto_eixo,
@@ -124,14 +132,6 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     texto_toques,
     texto_volume,
 )
-from hefesto_dualsense4unix.core.speaker_scale import (
-    percentual_do_volume,
-    volume_do_percentual,
-)
-from hefesto_dualsense4unix.integrations import (
-    ganho_do_microfone as _ganho_no_aparelho,
-)
-from hefesto_dualsense4unix.interface.monta import luzinhas
 
 from . import (
     LUGAR_VAZIO,
@@ -1512,7 +1512,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # morre, o novo nasce sem leitura e a chave `audio` SOME do `state_full`.
         # o selo sem montar um `state_full` inteiro.
         pct = c.get("battery_pct")
-        # do dono na GTK (`app/widgets/controller_card.py:3275`, `"l3" in
+        # do dono na GTK (`interface/cartao_do_controle.py:3275`, `"l3" in
         apertados = set(e.get("buttons") or ())
         # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
         toque_txt, dedos = dedos_do_controle(e)

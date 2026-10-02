@@ -121,7 +121,7 @@ def _hex(rgb: Any) -> str:
 
     ELE SÓ FORMATA — 02/09/2026, e o guarda que estava aqui tinha dono. A linha
     era `if not rgb or len(rgb) < 3: return "—"`, que é o `_rgb3` do
-    `app/widgets/controller_card.py`; o dono público dele é `cor_do_swatch`, e o
+    `interface/cartao_do_controle.py`; o dono público dele é `cor_do_swatch`, e o
     docstring dele diz por que existe: *"Existe como função separada — em vez de
     um ``_rgb3`` repetido em cada chamador (…) com duas leituras do
     ``lightbar_rgb``, as duas abas divergiriam no primeiro caso de borda"*. A
@@ -733,7 +733,7 @@ def estado_da_tira(recado: str | None) -> str:
     """Qual dos três estados a tira desenha — **perguntado ao motor**.
 
     O DISCRIMINADOR É O PRIMEIRO RETORNO de
-    `app/widgets/controller_card.rotulo_lightbar`, e não o segundo: a docstring
+    `interface/cartao_do_controle.rotulo_lightbar`, e não o segundo: a docstring
     dele diz que a cor devolvida é *"a BASE do accent"*, e ela vem PREENCHIDA
     no ramo em que o próprio motor avisa que a cor pode não estar no plástico
     (a Steam). Ler a base como "há luz?" colapsa dois estados — é o mesmo
@@ -1514,9 +1514,9 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
 
-    # `app/widgets/controller_card.rotulo_lightbar` é a mesma que os cards da
+    # `interface/cartao_do_controle.rotulo_lightbar` é a mesma que os cards da
     # (`recado, _base = …`) e decidia de novo, com `c.get("lightbar_on", True)`
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         cor_do_swatch,
         rotulo_lightbar,
     )
@@ -2029,13 +2029,13 @@ def _a_cor_guardada(cru: dict[str, Any] | None,
 def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
                              c: dict[str, Any]) -> tuple[int, int, int] | None:
     """A cor gravada DESTE controle — ou `None` quando ela é FÓSSIL."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
     from hefesto_dualsense4unix.core.led_control import (
         LEGADO,
         PecaDaMesa,
         fosseis,
         player_slot_color,
     )
+    from hefesto_dualsense4unix.interface.cartao_do_controle import cor_do_swatch
 
     uniq = str(c.get("uniq") or "")
     guardada = _a_cor_guardada(cru, uniq)
@@ -2502,7 +2502,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     nome = perfil.nome_do_ativo(ctx.state).strip()
 
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
     dele = next((c for c in ctx.conectados if str(c.get("uniq") or "") == uniq), None)
     if dele is None:
@@ -2630,8 +2630,8 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
         devolveria `None` em silêncio — o brilho sumiria da inversão de escala e
         a cor gravada sairia escurecida.
     """
-    from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
     from hefesto_dualsense4unix.core.led_control import cor_automatica
+    from hefesto_dualsense4unix.interface.cartao_do_controle import cor_do_swatch
 
     uniq = str(c.get("uniq") or "")
     efetiva = cor_do_swatch(c)

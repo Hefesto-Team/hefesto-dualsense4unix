@@ -408,15 +408,6 @@ class AppTray:
         self._refresh_inflight = False
         return False
 
-    def _controllers_suffix(self) -> str:
-        """Compat/síncrono: busca o estado via ``on_state()`` e formata o sufixo."""
-        if self.on_state is None:
-            return ""
-        try:
-            state = self.on_state()
-        except Exception:
-            return ""
-        return self._controllers_suffix_from_state(state)
 
     @staticmethod
     def _controllers_suffix_from_state(state: dict[str, Any] | None) -> str:

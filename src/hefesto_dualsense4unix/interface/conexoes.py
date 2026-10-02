@@ -439,7 +439,7 @@ def html_do_mapa(
 
     if not faces:
         # branco — e "não há nada aqui" é indistinguível de "isto quebrou".
-        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import ROTULO_SEM_FACE
+        from hefesto_dualsense4unix.interface.logica_do_mapa import ROTULO_SEM_FACE
 
         return f'            <div class="tn-frase">{_e(ROTULO_SEM_FACE)}</div>'
 

@@ -1645,7 +1645,7 @@ def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
 
 #     ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
 #     ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
-# `app/widgets/controller_card.acao_mic` são LEITURA pura do que o `state_full`
+# `interface/cartao_do_controle.acao_mic` são LEITURA pura do que o `state_full`
 
 
 def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
@@ -2654,21 +2654,15 @@ __all__ = [
     "HotkeySubsystem",
     "MetadeDoAto",
     "MicrofonesNoAr",
-    "acao_do_ps_do_perfil",  # (noqa-acento) nome de função
+    "acao_do_ps_do_perfil",
     "avisar_troca_de_modo",
     "build_next_bridge_callback",
     "build_profile_cycle_callback",
     "build_ps_solo_callback",
     "canal_do_microfone",
-    "canal_do_microfone_loop",
-    "definir_acao_do_ps",  # (noqa-acento) nome de função
+    "definir_acao_do_ps",
     "devolver_a_luz_ao_kernel",
-    "ligar_o_microfone",
-    "mic_button_loop",
-    "mic_do_jogo_loop",
     "modo_vigente",
-    "o_jogo_pede_o_mudo",
-    "passar_o_padrao_do_no_morto",
     "ponte_atual",
     "proxima_ponte",
     "start_hotkey_manager",

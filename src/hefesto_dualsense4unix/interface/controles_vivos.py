@@ -196,7 +196,7 @@ DONOS_DOS_GESTOS = {
     "(daemon). Nesta leva o acordeão só RELATA quem está aberto.",
     "mudo:microfone": "mic.set {muted: bool} (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge.mic_set — é o botão de três caras do "
-    "app/widgets/controller_card.py. Clicar faz o Hefesto ASSUMIR o registrador "
+    "interface/cartao_do_controle.py. Clicar faz o Hefesto ASSUMIR o registrador "
     "do mudo, e o botão físico do controle para de valer até o Liberar.",
     "mudo:mic-liberar": "mic.set {muted: null} — a MESMA chamada com `null`, que "
     "devolve a posse ao kernel (hid_playstation). É o TEXTO_BOTAO_MIC_DEVOLVER "

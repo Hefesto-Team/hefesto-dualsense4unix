@@ -20,12 +20,6 @@ MARGEM_VERTICAL = 10
 MARGEM_HORIZONTAL = 12
 ESPACAMENTO = 8
 
-QUANDO_VALE = 'A escolha passa a valer quando você clicar em "Aplicar", no rodapé.'
-
-VALE_JA = 'A escolha fica guardada na hora — não espera o "Aplicar".'
-
-RECIBO_GUARDADO = "Guardado."
-
 
 def _descer(widget: Any) -> Iterator[Any]:
     """Todo widget da subárvore, o topo incluído."""

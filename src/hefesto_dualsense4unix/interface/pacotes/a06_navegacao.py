@@ -788,7 +788,7 @@ def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
     """
     if primario:
         return False
-    from hefesto_dualsense4unix.app.widgets.controller_card import gyro_do_inputs
+    from hefesto_dualsense4unix.interface.cartao_do_controle import gyro_do_inputs
 
     from .a02_controles import _mira_ligada, _na_navegacao, _sensor_ligado
 

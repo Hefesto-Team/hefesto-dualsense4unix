@@ -143,7 +143,7 @@ def _inteiro(valor: Any) -> int | None:
 
 def motores_do_controle(entrada: dict[str, Any], state: dict[str, Any]) -> dict[str, int | None]:
     """``{"e": esquerdo, "d": direito}`` do que chegou aos motores AGORA."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         _item_do_vpad,
         motores_no_fisico,
     )
@@ -226,10 +226,6 @@ def pacote_da_mesa(
 #: mesma promessa sem caminho, e o ``portao_a_casa_sabe_e_o_produto_nao_faz``
 ALERTA = "alerta"
 INFO = "info"
-
-#: quadro dos quatro DualSense na mesa: *"Vibração remove essa última frase
-#: tendo dono vivo em ``rumble_actions`` — a função da contagem e a irmã que a
-SEM_A_CONTAGEM_DE_PEDIDOS = True
 
 
 def _pedido_da_politica(state: dict[str, Any]) -> float | None:

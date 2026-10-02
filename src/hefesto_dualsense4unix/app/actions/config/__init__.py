@@ -16,7 +16,6 @@ ao bug de popup do cosmic-comp (cosmic-epoch#2497).
 
     moldura.py       o molde visual de uma seção (Gtk.Frame + título + margens)
     secoes.py        a ORDEM das cinco
-    mixin.py         o montador: cria as molduras e chama cada seção
     secao_exame.py       seção 0 — "Está tudo certo?"
     secao_controles.py   seção 1 — "Os controles"
     secao_mesa.py        seção 2 — "A mesa"
@@ -25,17 +24,9 @@ ao bug de popup do cosmic-comp (cosmic-epoch#2497).
 """
 from __future__ import annotations
 
-from hefesto_dualsense4unix.app.actions.config.mixin import (
-    ABA_CONFIG,
-    MOTIVO_ALVO_NAO_SE_APLICA,
-    ConfigActionsMixin,
-)
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES, SECOES_DA_ABA
 
 __all__ = [
-    "ABA_CONFIG",
-    "MOTIVO_ALVO_NAO_SE_APLICA",
     "SECOES",
     "SECOES_DA_ABA",
-    "ConfigActionsMixin",
 ]

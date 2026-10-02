@@ -47,11 +47,6 @@ import threading
 from dataclasses import dataclass, replace
 from typing import Any, ClassVar
 
-from hefesto_dualsense4unix.app.usb_pai import (
-    nos_e_sysfs,
-    usb_pai_por_no,
-    usb_pai_por_uniq,
-)
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (  # noqa: F401
     MARCADORES_DUALSENSE as _MARCADORES_DUALSENSE,
 )
@@ -71,6 +66,11 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (  # noqa: F401
     so_hex as _so_hex,
+)
+from hefesto_dualsense4unix.integrations.usb_pai import (
+    nos_e_sysfs,
+    usb_pai_por_no,
+    usb_pai_por_uniq,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -205,27 +205,6 @@ class MicMonitor:
             )
         return None
 
-    def sink_de(self, uniq: str) -> str:
-        """Nome do sink de SAÍDA deste controle; ``""`` = não dá para saber.
-
-        A porta que o som de confirmação e o botão de rota (SOM-04) usam, e a
-        razão de ela existir separada de :meth:`leitura`: o sink é um fato da
-        SAÍDA e sobrevive à ausência de microfone (sem `parec` na máquina, ou
-        por Bluetooth sem a ponte de mic, não há captura nenhuma e o
-        alto-falante continua lá).
-
-        ``""`` sai em dois casos que valem a mesma recusa: o sistema não
-        publicou sink nenhum para este controle — o caso do RÁDIO, em que o
-        DualSense não expõe placa de som (medido 15/08/2026: a placa segue o
-        transporte) —, ou o casamento por dispositivo USB não fechou. Quem
-        recebe "" não toca e não roteia.
-
-        Desde 15/08/2026 "mais de um DualSense no cabo" NÃO é mais um desses
-        casos: o ``escolher_sink`` casa cada placa com o seu controle pelo nó
-        USB em que os dois penduram, e devolve o sink certo para cada um.
-        """
-        with self._lock:
-            return self._sinks.get(uniq, "")
 
     def stop(self) -> None:
         """Encerra tudo. Idempotente (fechamento da janela)."""

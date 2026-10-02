@@ -8,10 +8,10 @@ from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    ressalva as monta_ressalva, tom_da_casa)
 
 # A DIREÇÃO É OBRIGATÓRIA, e não gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz`
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+from hefesto_dualsense4unix.interface.sensores import texto_toques
 # `texto_motion` monta a LINHA DO GIROSCÓPIO (o desenho pergunta com uma cena,
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
-from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
+from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, carga_na_tela
 from pacotes.a02_controles import campo_da_onda_calada
 from pacotes.a02_controles import meias_da_barra as _meias_da_barra
@@ -606,7 +606,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      ponto de 8px na conta e o dedo lê 4px à direita e abaixo de onde está: em
      148px de superfície são 2,7% do curso, e no fim do curso (100%) o ponto
      saía inteiro para fora do pad. O produto centra: `ctx.arc(px, py, 3.5)`
-     em `app/widgets/sensor_widgets.TouchpadView._on_draw`. */
+     em `interface/sensores.TouchpadView._on_draw`. */
   /* O PONTO NASCE APAGADO E A CLASSE `on` O ACENDE — decisão dela de
      02/09/2026: *"o pontinho do touchpad só aparece quando há toque — hoje ele
      aparece com `touching` falso, contra o que a própria dica promete"*. Ele
@@ -2792,7 +2792,7 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que mudou em 31/08</h2>
   <ul>
-    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:238</code>) e o daemon aceita <code>mic.set {{muted: null}}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
+    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>interface/cartao_do_controle.py:238</code>) e o daemon aceita <code>mic.set {{muted: null}}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
     <li><b>Esta legenda anunciava o botão de cima como novidade — dois dias depois de ele sair da tela.</b> É o defeito que esta aba existe para não cometer, virado para dentro: <i>a prosa afirmando o que o produto não faz</i>. Agora o gerador <b>para</b> se a legenda citar um rótulo que o desenho não escreve, e só um <code>&lt;li class="foi"&gt;</code> — a lápide, o item recuado aqui em cima — tem licença de nomear o que saiu. A mesma régua recusa título com data relativa: foi um <i>"hoje"</i> num <code>&lt;h2&gt;</code> que envelheceu calado.</li>
   </ul>
 

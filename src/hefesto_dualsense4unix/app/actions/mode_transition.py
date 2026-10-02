@@ -9,15 +9,10 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import DEFAULT_FLAVOR
 
 MODE_IPC_TIMEOUT_S = 2.0
 
-#: HARM-15: folga para LER o modo (`daemon.state_full`). O daemon monta o estado
-#: da usuária. Mora junto de `mode_of_state` porque é a MESMA leitura.
-STATE_IPC_TIMEOUT_S = 1.0
 
 MODE_DESKTOP = "desktop"
 MODE_GAMEPAD = "gamepad"
 MODE_NATIVE = "native"
-
-MODES: tuple[str, ...] = (MODE_DESKTOP, MODE_GAMEPAD, MODE_NATIVE)
 
 
 def plan_mode_transition(
@@ -158,12 +153,10 @@ def mode_of_state(state: dict[str, Any] | None) -> str | None:
 
 __all__ = [
     "DEFAULT_FLAVOR",
-    "MODES",
     "MODE_DESKTOP",
     "MODE_GAMEPAD",
     "MODE_IPC_TIMEOUT_S",
     "MODE_NATIVE",
-    "STATE_IPC_TIMEOUT_S",
     "apply_mode",
     "mode_of_state",
     "plan_mode_transition",

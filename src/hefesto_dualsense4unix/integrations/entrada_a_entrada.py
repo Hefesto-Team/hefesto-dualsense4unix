@@ -17,7 +17,7 @@ O MOTOR SERVE AS TRÊS TELAS APROVADAS (ENTRADA-A-ENTRADA-02)
 
 A conferência da 01 achou que as três telas da âncora
 ``#mapear-entrada-a-entrada`` descrevem o fluxo da ``LogicaDaCalibracao``
-(``app/widgets/calibrar_entradas``), e o motor da 01 perguntava a face a cada
+(``interface/calibracao_das_entradas``), e o motor da 01 perguntava a face a cada
 plug. Decisão de quem coordena: **o motor serve as telas aprovadas** — a regra
 da casa, implemente a imagem aprovada e não o arranjo mais barato. As telas não
 mudam, e cada fase abaixo diz qual delas pinta (:data:`TELAS`):

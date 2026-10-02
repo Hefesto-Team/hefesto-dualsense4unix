@@ -48,10 +48,10 @@ from __future__ import annotations
 import html
 from typing import Any
 
-from hefesto_dualsense4unix.app.widgets.controller_card import ALL_BUTTONS, rotulo_lightbar
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 from hefesto_dualsense4unix.core.led_control import player_slot_color
+from hefesto_dualsense4unix.interface.cartao_do_controle import ALL_BUTTONS, rotulo_lightbar
 
 from . import Contexto, perfil, registrar
 from . import a02_controles as a02

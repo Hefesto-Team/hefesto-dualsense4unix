@@ -108,11 +108,6 @@ SEM_LEITOR = "—"
 
 SEM_ALGARISMO = "\N{EN DASH}"
 
-# o único sem leitor no produto: `mode_of_state` devolve três valores e nunca um
-# quarto, e chamar de "Desligado" o `state_full.paused` (que é o PS+Options, com
-# **Desligado = Modo Nativo**, *"o DualSense da forma como veio ao mundo"*. O
-MODO_DESLIGADO = "desligado"
-
 
 class Modo(NamedTuple):
     """Um botão da fileira "O que o controle faz agora"."""
@@ -334,12 +329,6 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
         ponte_escada.Ponte(ponte_escada.KIND_DESKTOP),
         modo=MODE_DESKTOP,
     ),
-)
-
-DEGRAUS_DA_TELA = CHIPS_DA_ESCADA
-
-PONTES_DO_INTERRUPTOR: frozenset[ponte_escada.Ponte] = frozenset(
-    {ponte_escada.Ponte(ponte_escada.KIND_NATIVE)}
 )
 
 
@@ -569,14 +558,11 @@ def avisos_do_estado(state: dict[str, Any] | None) -> list[dict[str, str]]:
 __all__ = [
     "AVISOS_DA_TELA",
     "CHIPS_DA_ESCADA",
-    "DEGRAUS_DA_TELA",
     "ESCRITOR_DOS_MODOS",
     "FRASE_DA_ORIGEM_DO_MODO",
     "FRASE_DO_MODO_NATIVO",
     "MODOS_DA_TELA",
     "MODOS_LIGADOS",
-    "MODO_DESLIGADO",
-    "PONTES_DO_INTERRUPTOR",
     "RECONECTAR_SEM_SERVICO",
     "SELO_DO_MODO",
     "SEM_ALGARISMO",

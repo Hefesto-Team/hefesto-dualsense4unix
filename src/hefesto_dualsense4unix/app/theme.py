@@ -21,69 +21,14 @@ duas vezes com at-rules (``theme.css:105`` e ``:805``).
 # ruff: noqa: E402
 from __future__ import annotations
 
-import re
-
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk
+from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.constants import GUI_DIR
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-_CSS_PATH = GUI_DIR / "theme.css"
-
-from hefesto_dualsense4unix.app.escala import (  # noqa: F401 — reexportados
-    CHAVE_ESCALA,
-    DEGRAUS_DE_ESCALA,
-    ESCALA_MAXIMA,
-    ESCALA_PADRAO,
-    degrau_da_escala,
-    escala_gravada,
-)
-
-_PONTOS_POR_PIXEL = 0.75
-
-_PONTOS_PADRAO_PANGO = 10.0
-
-_REGRA_TAMANHO = re.compile(r"(font-size\s*:\s*)([0-9]+(?:\.[0-9]+)?)px")
-_NOME_COM_TAMANHO = re.compile(r"^(.*?)\s+([0-9]+(?:\.[0-9]+)?)$")
-
-_escala_aplicada: int | None = None
-
-
-def escala_fonte() -> int:
-    """Delta de tamanho da fonte, em px, APLICADO nesta sessão."""
-    global _escala_aplicada
-    if _escala_aplicada is not None:
-        return _escala_aplicada
-    _escala_aplicada = escala_gravada()
-    return _escala_aplicada
-
-
-def escalar_css(texto: str, delta: int) -> str:
-    """Soma ``delta`` px a cada ``font-size: Npx`` do CSS."""
-    if not delta:
-        return texto
-
-    def _somar(m: re.Match[str]) -> str:
-        return f"{m.group(1)}{float(m.group(2)) + delta:g}px"
-
-    return _REGRA_TAMANHO.sub(_somar, texto)
-
-
-def escalar_nome_da_fonte(nome: str, delta: int) -> str:
-    """Soma ``delta`` px (convertidos em pontos) ao nome de fonte do GTK."""
-    if not delta:
-        return nome
-    casado = _NOME_COM_TAMANHO.match(nome.strip())
-    if casado is not None:
-        familia, pontos = casado.group(1), float(casado.group(2))
-    else:
-        familia, pontos = nome.strip(), _PONTOS_PADRAO_PANGO
-    return f"{familia} {pontos + delta * _PONTOS_POR_PIXEL:g}"
 
 
 _CHAVE_DO_TEMA = ("org.gnome.desktop.interface", "gtk-theme")
@@ -218,54 +163,3 @@ def pedir_a_variante_escura() -> bool:
     return True
 
 
-def apply_theme(window: Gtk.Window) -> None:
-    """Carrega theme.css e aplica à janela principal com classe .hefesto-dualsense4unix-window."""
-    if not _CSS_PATH.exists():
-        logger.warning("theme_css_ausente", path=str(_CSS_PATH))
-        return
-
-    settings = Gtk.Settings.get_default()
-
-    pedir_a_variante_escura()
-
-    delta = escala_fonte()
-
-    if settings is not None and delta:
-        try:
-            atual = settings.get_property("gtk-font-name") or ""
-            settings.set_property(
-                "gtk-font-name", escalar_nome_da_fonte(atual, delta)
-            )
-        except (TypeError, ValueError) as exc:
-            logger.warning("theme_font_name_indisponivel", erro=str(exc))
-
-    provider = Gtk.CssProvider()
-    try:
-        bruto = _CSS_PATH.read_text(encoding="utf-8")
-        provider.load_from_data(escalar_css(bruto, delta).encode("utf-8"))
-    except Exception as exc:
-        logger.warning("theme_css_falha_carga", erro=str(exc))
-        return
-
-    screen = Gdk.Screen.get_default()
-    if screen is None:
-        logger.warning("theme_sem_display_disponivel")
-        return
-
-    Gtk.StyleContext.add_provider_for_screen(
-        screen,
-        provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-    )
-    window.get_style_context().add_class("hefesto-dualsense4unix-window")
-
-    # classe de override. GTK3 não tem @media (prefers-contrast: more) — noqa-acento
-    if settings is not None:
-        theme_name = settings.get_property("gtk-theme-name") or ""
-        if "highcontrast" in theme_name.lower():
-            window.get_style_context().add_class(
-                "hefesto-dualsense4unix-high-contrast"
-            )
-            logger.info("theme_high_contrast_aplicado", system_theme=theme_name)
-
-    logger.info("theme_aplicado", css=str(_CSS_PATH), escala=delta)

@@ -2666,7 +2666,7 @@ def _luz_agora(entrada: dict[str, Any], state: dict[str, Any], _linha: dict[str,
     Quem traduz o rótulo em aceso, apagado ou incerto é a aba Iluminação
     (`a04_iluminacao.estado_da_tira`), e é ela que se pergunta aqui.
     """
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
     from . import a04_iluminacao
 
@@ -2707,7 +2707,7 @@ def _vibracao_agora(_entrada: dict[str, Any], state: dict[str, Any],
 def _alto_falante_agora(entrada: dict[str, Any], _state: dict[str, Any],
                         _linha: dict[str, Any]) -> bool | None:
     """Ligado e sem mudo (`controller_card.speaker_do_entry`)."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import speaker_do_entry
+    from hefesto_dualsense4unix.interface.cartao_do_controle import speaker_do_entry
 
     lido = speaker_do_entry(entrada)
     if lido is None:

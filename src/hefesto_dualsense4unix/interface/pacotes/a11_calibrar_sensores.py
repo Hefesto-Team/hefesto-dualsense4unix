@@ -62,11 +62,11 @@ from typing import Any
 import calibrar
 import mesa_viva
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     accel_do_inputs,
     gyro_do_inputs,
 )
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+from hefesto_dualsense4unix.interface.sensores import (
     ESCALA_ACCEL_G,
     ESCALA_GYRO_GRAUS_S,
     texto_eixo,

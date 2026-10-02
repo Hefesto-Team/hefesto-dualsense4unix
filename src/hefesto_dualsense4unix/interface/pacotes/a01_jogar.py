@@ -822,7 +822,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     esta função não faz a segunda.
 
     **QUEM O DISTINGUE É A MARCA**, e é o que a janela GTK fazia
-    (`app/widgets/external_card.py`, o título): o assento diz *"Sony · Player
+    (`interface/dados_do_controle.py`, o título): o assento diz *"Sony · Player
     1"*, o externo diz *"Controle 3 — 8BitDo"*. A palavra da marca vem de
     ``external_controllers.brand_of`` por dentro de ``_format_external_title`` —
     nenhuma marca se digita aqui.
