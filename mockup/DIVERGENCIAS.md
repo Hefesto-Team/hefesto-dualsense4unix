@@ -21,6 +21,9 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+## 02-controles.html
+- **01/10/2026** — o botão «Mapa do controle» sai do canto da aba (o Calibrar fica sozinho ali), porque o mapa mora só na aba Conexões desde 29/09, por ordem dela; a legenda ganha a lápide do botão (O-MAPA-DO-CONTROLE-MORA-SO-NA-CONEXOES-01). Até publicar, a 02 dela ainda mostra os dois botões.
+
 ## 08-conexoes.html
 - **01/10/2026** — o «Mapear Entradas» lista toda entrada numerada (com nome ou sem), a conta embaixo é a da lista («15 entradas mapeadas.»), a lista rola na altura da coluna da esquerda, os valores medidos começam com maiúscula («Num hub», «Direto no computador», «Nenhuma em 7 dias») e a frase da entrada encontrada é a que ela ditou em 29/09 (O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01). A dica «?» do diálogo deixa de mandar dar nome e lugar (os dois são opcionais) e chama a seção pelo nome de hoje, «Gestão de Controles». Até publicar, a frase, a lista, a conta e as maiúsculas já chegam à tela dela pelo pacote, que pinta esses campos a cada tique, a lista com as 15 entradas dela empurra o diálogo para baixo em vez de rolar (o CSS da rolagem é da página), e a dica ainda diz «dê um nome e o lugar» e «Check-up».
 

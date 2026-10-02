@@ -2750,18 +2750,15 @@
           A <b>borda</b> tem a cor do controle, e o <b>fundo lilás</b> diz qual está
           escolhido. <b>Todos</b> abre os quatro de uma vez.
         </span></span>
-        <!-- OS DOIS BOTÕES VOLTARAM AO CANTO SUPERIOR DIREITO — decisão dela,
-             31/08/2026: *"A posição deles volta pro canto superior direito."*
-             É onde o Calibrar morava antes desta leva, e a classe `.sensores`
-             que os alinha à direita nunca deixou de existir.
-             DE QUEBRA, ELES DEIXAM DE DISPUTAR ALTURA com a lista de controles:
-             no fim do quadro custavam 46px do corpo, e foi por isso que o card
-             precisou dos 24px dos lugares vazios para caber. -->
+        <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
+             Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
+             superior direito."*); o «Mapa do controle» ganhou a casa na aba
+             Conexões em 25/09 e saiu desta em 29/09, por ordem dela: *"mapa do
+             controle deveria ter saído da guia de Controles e ter ficado só na
+             guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
           <a class="btn" href="calibrar-sensores.html"
              title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
-          <a class="btn" href="mapa-do-controle.html"
-             title="Abre o mapa do controle: cada peça, com o nome e o que o Hefesto lê dela.">Mapa do controle</a>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -5150,7 +5147,8 @@
   <h2>Os sensores desceram para cada controle; o Calibrar ficou e cresceu</h2>
   <ul>
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas 4. Eles estavam no topo do quadro, valendo para todos — e um interruptor global com 4 controles ligados <b>mente sobre 3 deles</b>.</li>
-    <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4 controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome e ganhou um irmão</b>, por ordem sua: <i>"o botão Mapa do Controle que abre a interface do mapa do Controle"</i>. <span class="marca">Calibrar sensores de movimento</span> diz <b>o que se calibra</b> (a maiúscula decorativa caiu em <b>11/09</b>, por sua aprovação — o título da página que ele abre já era assim) — o escopo continua no ponteiro. Os dois <b>chegaram a ir para o fim do quadro</b> e você os mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E o Calibrar abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
+    <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4 controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome</b>: <span class="marca">Calibrar sensores de movimento</span> diz <b>o que se calibra</b> (a maiúscula decorativa caiu em <b>11/09</b>, por sua aprovação — o título da página que ele abre já era assim) — o escopo continua no ponteiro. Ele <b>chegou a ir para o fim do quadro</b> e você o mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E ele abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
+    <li class="foi"><b>O Mapa do controle saiu desta aba em 29/09</b>, por ordem sua: <i>"mapa do controle deveria ter saído da guia de Controles e ter ficado só na guia conexões."</i> Ele tinha chegado aqui em 31/08, ao lado do Calibrar, e ganhou a casa na aba <b>Conexões</b> em 25/09, junto das ferramentas do Check-up. O botão dele mora só lá.</li>
     <li><b>O par custa 246,6 px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo dos quatro: ela tinha <b>103,2 px</b> livres, e o par pede 246,6 mais o vão. Saíram <span class="marca">Hefesto on</span> (91,7 px, e dizia a mesma coisa nas 4 linhas) e <span class="marca">Giroscópio em rajadas</span> (168,8 px), que juntas devolvem 260,5 — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>108 px</b> livres (4,8 a mais do que antes) e a do card aberto, 270,8.</li>
     <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde ela vem continua no ponteiro, para quem passar o mouse.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>

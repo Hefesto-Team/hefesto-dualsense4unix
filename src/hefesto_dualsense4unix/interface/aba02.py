@@ -4008,18 +4008,15 @@ MIOLO = f'''
           A <b>borda</b> tem a cor do controle, e o <b>fundo lilás</b> diz qual está
           escolhido. <b>Todos</b> abre os {QUANTOS_NA_MESA} de uma vez.
         </span></span>
-        <!-- OS DOIS BOTÕES VOLTARAM AO CANTO SUPERIOR DIREITO — decisão dela,
-             31/08/2026: *"A posição deles volta pro canto superior direito."*
-             É onde o Calibrar morava antes desta leva, e a classe `.sensores`
-             que os alinha à direita nunca deixou de existir.
-             DE QUEBRA, ELES DEIXAM DE DISPUTAR ALTURA com a lista de controles:
-             no fim do quadro custavam 46px do corpo, e foi por isso que o card
-             precisou dos 24px dos lugares vazios para caber. -->
+        <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
+             Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
+             superior direito."*); o «Mapa do controle» ganhou a casa na aba
+             Conexões em 25/09 e saiu desta em 29/09, por ordem dela: *"mapa do
+             controle deveria ter saído da guia de Controles e ter ficado só na
+             guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
           <a class="btn" href="calibrar-sensores.html"
              title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
-          <a class="btn" href="mapa-do-controle.html"
-             title="Abre o mapa do controle: cada peça, com o nome e o que o Hefesto lê dela.">Mapa do controle</a>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -4105,7 +4102,8 @@ LEGENDA = f'''<div class="nota">
   <h2>Os sensores desceram para cada controle; o Calibrar ficou e cresceu</h2>
   <ul>
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas {len(MESA)}. Eles estavam no topo do quadro, valendo para todos — e um interruptor global com {len(MESA)} controles ligados <b>mente sobre {len(MESA) - 1} deles</b>.</li>
-    <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome e ganhou um irmão</b>, por ordem sua: <i>"o botão Mapa do Controle que abre a interface do mapa do Controle"</i>. <span class="marca">Calibrar sensores de movimento</span> diz <b>o que se calibra</b> (a maiúscula decorativa caiu em <b>11/09</b>, por sua aprovação — o título da página que ele abre já era assim) — o escopo continua no ponteiro. Os dois <b>chegaram a ir para o fim do quadro</b> e você os mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E o Calibrar abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
+    <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome</b>: <span class="marca">Calibrar sensores de movimento</span> diz <b>o que se calibra</b> (a maiúscula decorativa caiu em <b>11/09</b>, por sua aprovação — o título da página que ele abre já era assim) — o escopo continua no ponteiro. Ele <b>chegou a ir para o fim do quadro</b> e você o mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E ele abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
+    <li class="foi"><b>O Mapa do controle saiu desta aba em 29/09</b>, por ordem sua: <i>"mapa do controle deveria ter saído da guia de Controles e ter ficado só na guia conexões."</i> Ele tinha chegado aqui em 31/08, ao lado do Calibrar, e ganhou a casa na aba <b>Conexões</b> em 25/09, junto das ferramentas do Check-up. O botão dele mora só lá.</li>
     <li><b>O par custa {num(LARG_PAR_SENSORES)} px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo dos quatro: ela tinha <b>{num(VAO_ANTES_P3)} px</b> livres, e o par pede {num(LARG_PAR_SENSORES)} mais o vão. Saíram <span class="marca">Hefesto on</span> ({num(CUSTO_HEFESTO_ON)} px, e dizia a mesma coisa nas {len(MESA)} linhas) e <span class="marca">Giroscópio em rajadas</span> ({num(CUSTO_GIRO_RAJADAS)} px), que juntas devolvem {num(CUSTO_HEFESTO_ON + CUSTO_GIRO_RAJADAS)} — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>{num(VAO_DEPOIS_P3)} px</b> livres ({num(VAO_DEPOIS_P3 - VAO_ANTES_P3)} a mais do que antes) e a do card aberto, {num(VAO_DEPOIS_P1)}.</li>
     <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde ela vem continua no ponteiro, para quem passar o mouse.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>
@@ -4226,8 +4224,11 @@ def a_legenda_nao_promete_o_que_a_tela_nao_tem(legenda, miolo):
         classes = " ".join(re.findall(r'class="([^"]*)"', atributos or "")).split()
         if "foi" in classes:
             continue                      # lápide: tem licença para nomear o que saiu
+        # SEM CAIXA nos dois lados — 29/09/2026, O-MAPA-DO-CONTROLE-MORA-SO-NA-
+        # CONEXOES-01. Com caixa, o item que escrevia «Mapa do Controle» passava
+        # pelo termo «Mapa do controle» e a régua ficava cega a ele.
         for termo in TERMOS_DA_TELA:
-            if termo in corpo and termo not in miolo:
+            if termo.casefold() in corpo.casefold() and termo.casefold() not in miolo.casefold():
                 raise SystemExit(
                     f'ERRO na legenda: ela cita "{termo}" e o desenho não escreve\n'
                     "  esse rótulo em lugar nenhum. Ou o termo volta à tela, ou o\n"
@@ -5058,13 +5059,16 @@ def _conferir(doc):
                f"o lugar vazio voltou a poder abrir: sumiu a regra que fecha "
                f"{oque} (`{regra.splitlines()[0]}`)")
 
-    # 6. OS DOIS BOTÕES, e eles apontam para páginas que EXISTEM. Um botão que
-    #    abre o nada é pior que nenhum botão.
-    for destino, rot in (("calibrar-sensores.html", "Calibrar sensores de movimento"),
-                         ("mapa-do-controle.html", "Mapa do controle")):
-        exigir(f'href="{destino}"' in corpo, f"o botão {rot!r} sumiu")
-        exigir(onde.pagina(destino).exists(),
-               f"o botão {rot!r} aponta para {destino}, que NÃO existe na bancada")
+    # 6. O CALIBRAR, e ele aponta para uma página que EXISTE. Um botão que abre
+    #    o nada é pior que nenhum botão. O «Mapa do controle» saiu desta aba em
+    #    29/09/2026 (O-MAPA-DO-CONTROLE-MORA-SO-NA-CONEXOES-01): a régua passa a
+    #    exigir que ele NÃO volte.
+    destino, rot = "calibrar-sensores.html", "Calibrar sensores de movimento"
+    exigir(f'href="{destino}"' in corpo, f"o botão {rot!r} sumiu")
+    exigir(onde.pagina(destino).exists(),
+           f"o botão {rot!r} aponta para {destino}, que NÃO existe na bancada")
+    exigir('href="mapa-do-controle.html"' not in corpo,
+           "o Mapa do controle mora na aba Conexões (29/09)")
     exigir("Calibrar sensores da mesa" not in corpo, "o nome antigo do Calibrar voltou")
     # O RÓTULO PERDEU A MAIÚSCULA DECORATIVA em 11/09/2026, aprovado por ela:
     # o título da tela que este botão abre já se escrevia em minúsculas, e o
@@ -5072,11 +5076,11 @@ def _conferir(doc):
     # a DONA da palavra dela — trocar o rótulo tem de passar por aqui.
     exigir(">Calibrar sensores de movimento</a>" in corpo,
            "o rótulo do Calibrar não é o que ela aprovou")
-    # E ELES MORAM NO CABEÇALHO, não no fim — *"a posição deles volta pro canto
-    # superior direito."* Já estiveram nos dois lugares nesta mesma sessão.
+    # E ELE MORA NO CABEÇALHO, não no fim — *"a posição deles volta pro canto
+    # superior direito."* Já esteve nos dois lugares, em 31/08.
     topo = corpo.split('<div class="quadro-corpo">', 1)[0]
-    exigir('href="calibrar-sensores.html"' in topo and 'href="mapa-do-controle.html"' in topo,
-           "os dois botões saíram do canto superior direito")
+    exigir('href="calibrar-sensores.html"' in topo,
+           "o Calibrar saiu do canto superior direito")
     exigir("acoes-da-mesa" not in corpo, "o bloco de ações do FIM do quadro voltou")
 
     # 7. OS MODOS DO MICROFONE FICAM ABAIXO DO SLIDER, na mesma fileira do som —

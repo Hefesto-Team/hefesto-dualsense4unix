@@ -69,7 +69,7 @@ def bancada_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
     """Uma bancada de mentira, com as páginas de hoje dentro.
 
     AS PÁGINAS VÃO JUNTO porque alguns geradores CONFEREM a vizinhança: o
-    `aba02` recusa se o `mapa-do-controle.html` não estiver ao lado, e está
+    `aba02` recusa se o `calibrar-sensores.html` não estiver ao lado, e está
     certo — um botão que aponta para página inexistente é um botão que mente.
     Uma pasta vazia faria este caso reprovar por um motivo que não é o dele.
     """
