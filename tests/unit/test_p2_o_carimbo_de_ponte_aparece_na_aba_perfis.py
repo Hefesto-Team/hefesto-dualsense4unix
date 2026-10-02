@@ -34,6 +34,13 @@ resposta no instante seguinte ao salvar, e o `daemon.status` não paga o cache.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
+# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
+# falso. Sem aquele plantio, a guarda vem antes do import da janela.
+exigir_gi_real("p2: o carimbo de ponte na aba Perfis")
+
 from typing import Any
 
 import pytest

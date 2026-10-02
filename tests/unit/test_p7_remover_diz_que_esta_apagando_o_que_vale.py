@@ -21,6 +21,13 @@ alarme falso que o §P1 desta mesma sprint existe para matar.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
+# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
+# falso. Sem aquele plantio, a guarda vem antes do import da janela.
+exigir_gi_real("p7: o Remover diz o que apaga")
+
 import types
 from typing import Any
 

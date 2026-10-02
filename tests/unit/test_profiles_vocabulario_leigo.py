@@ -9,6 +9,13 @@ GTK, e o resto do módulo (`Gtk.ListStore`) fica fora do caminho.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
+# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
+# falso. Sem aquele plantio, a guarda vem antes do import da janela.
+exigir_gi_real("o vocabulário leigo dos perfis")
+
 from hefesto_dualsense4unix.app.actions.profiles_actions import (
     _MODE_FLAVOR_ITEMS,
     _MODE_KIND_ITEMS,
