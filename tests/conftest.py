@@ -4443,8 +4443,8 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
 
 _MODULO_DO_JOGO = "hefesto_dualsense4unix.integrations.steam_launch_options"
 
-#: O leitor de cmdline de verdade, guardado no arme. Lista para a régua poder
-#: trocá-lo por um que finge o `/proc` dela com o jogo aberto.
+#: O leitor de cmdline de verdade (o `cmdline_de_pid` do módulo), guardado no
+#: arme. Lista, e não nome solto, para o arme trocá-lo sem `global`.
 _LEITOR_DO_JOGO_REAL: list[Callable[[Any], str]] = []
 
 #: O pid desta sessão de pytest: a raiz de quem conta como «da sessão».

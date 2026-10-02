@@ -77,9 +77,9 @@ def test_o_embrulho_esta_no_leitor_do_dono() -> None:
 def test_o_jogo_de_fora_nao_chega_a_pergunta(proc_com_o_jogo: set[str]) -> None:
     """Com o jogo dela aberto, «há jogo da Steam?» responde não, nas duas perguntas.
 
-    MORDIDA: tire o `_armar_jogo_so_da_sessao()` do `sessionstart` e da
-    fixture `_o_jogo_de_fora_nao_entra`: as duas respostas viram o jogo dela
-    (`True` e `1599660`).
+    MORDIDA: tire o `_armar_jogo_so_da_sessao()` da fixture
+    `_o_jogo_de_fora_nao_entra` (o único arme): as duas respostas viram o
+    jogo dela (`True` e `1599660`).
     """
     assert slo.cmdline_de_pid(PID_DE_FORA).startswith("/home/x/.steam"), (
         "o /proc de mentira não serve o reaper: a régua não mediria nada"

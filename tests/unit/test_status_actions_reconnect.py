@@ -10,9 +10,9 @@ from tests.conftest import exigir_gi_real
 
 # AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
 # qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e nunca entrava no job `gtk-real`,
-# que seleciona por `exigir_gi_real`. Agora ele pula com o motivo onde não há
-# GTK e roda contra o de verdade onde há.
+# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
+# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
+# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("status_actions: o reconectar da janela")
 
 import sys
