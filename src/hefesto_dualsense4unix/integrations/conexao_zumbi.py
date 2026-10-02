@@ -382,16 +382,30 @@ def links_de_pe(
 
 
 def uniqs_com_hid(raiz: str | os.PathLike[str] = RAIZ_HIDRAW) -> set[str]:
-    """Os endereços que TÊM um ``hidraw`` vivo, normalizados.
+    """Os endereços que TÊM um ``hidraw`` vivo, normalizados; vazio quando a raiz não abre.
+
+    É a leitura da cura do zumbi, que lê a raiz fechada como «ninguém tem» e se
+    protege pela terceira condição. Quem precisa separar «ninguém tem» de «não
+    sei» pergunta a :func:`quem_tem_hid`.
+    """
+    return quem_tem_hid(raiz) or set()
+
+
+def quem_tem_hid(raiz: str | os.PathLike[str] | None = None) -> set[str] | None:
+    """Os endereços que TÊM um ``hidraw`` vivo, normalizados, ou ``None`` = não sei.
 
     Mesma fonte de ``doctor.sh:_hidraw_uniqs`` — ``HID_UNIQ`` do ``uevent`` do
-    pai HID, que existe tanto no cabo quanto no rádio.
+    pai HID, que existe tanto no cabo quanto no rádio. Três respostas, no molde
+    do ``esta_conectado`` do rádio: a raiz que não abre é ``None``, nunca o
+    conjunto vazio, que se leria como «ninguém tem HID»
+    (O-RECONECTAR-SO-DERRUBA-O-ELO-MORTO-01, 02/10/2026). A raiz se resolve na
+    chamada.
     """
     achados: set[str] = set()
     try:
-        entradas = sorted(Path(raiz).iterdir())
+        entradas = sorted(Path(RAIZ_HIDRAW if raiz is None else raiz).iterdir())
     except OSError:
-        return achados
+        return None
     for entrada in entradas:
         try:
             texto = (entrada / "device" / "uevent").read_text(
@@ -704,6 +718,7 @@ __all__ = [
     "mac_limpo",
     "olhar_a_mesa",
     "pedido_a_ponte",
+    "quem_tem_hid",
     "uniqs_com_hid",
     "zumbis",
 ]

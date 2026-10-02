@@ -24,6 +24,15 @@ sem HID nenhum deles — elo de pé, sessão de entrada morta. Para o rádio já
 estava tudo certo, então apertar PS não fazia nada; o que destrava é derrubar o
 elo morto. :func:`reconectar` faz os dois passos e diz qual deles bastou.
 
+**O ELO SÓ É MORTO QUANDO O KERNEL NÃO TEM O HID DELE (02/10/2026).** Às 19h07
+de 01/10, com o serviço mudo e a lista de jogadores vazia, o «Reconectar
+controles» derrubou dois DualSense que o kernel tinha registrado de volta um
+minuto antes: o «morto» era «fora da lista de quem chama», e a lista era a do
+serviço que não respondia. Desde a O-RECONECTAR-SO-DERRUBA-O-ELO-MORTO-01,
+:func:`reconectar` pergunta ao dono do ``HID_UNIQ``
+(``conexao_zumbi.quem_tem_hid``) antes de derrubar: com o HID vivo, o controle
+está no ar e nada se mexe; sem leitura do kernel, na dúvida, ele fica.
+
 **O ``Connect`` NÃO ACORDA CONTROLE DORMINDO, e isso foi medido no mesmo dia:**
 depois do ``Disconnect`` os três responderam ``br-connection-create-socket``,
 porque um DualSense desligado não atende chamado. Por isso o estado
@@ -74,7 +83,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
-from hefesto_dualsense4unix.integrations import bluez_dbus
+from hefesto_dualsense4unix.integrations import bluez_dbus, conexao_zumbi
 from hefesto_dualsense4unix.integrations.bluez_dbus import RADIO_DE_VERDADE_NA_SUITE
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -93,6 +102,9 @@ ESTADO_VOLTOU = "voltou"
 #: O elo morto caiu, e o resto é dela: um DualSense dormindo não atende
 #: `Connect`. É o desfecho mais comum quando o controle ficou parado.
 ESTADO_SO_O_PS = "so_o_ps"  # (noqa-acento): chave de máquina
+#: O kernel tem o HID deste controle: ele está no ar, e nada se derruba nem se
+#: chama. Não conta como «voltou» nem como «espera o PS».
+ESTADO_JA_NO_AR = "ja_no_ar"  # (noqa-acento): chave de máquina
 
 #: As frases, uma por estado. Elas vão para a tela como estão — e nenhuma delas
 #: diz "a barra vai acender": este módulo derruba uma conexão, e o que a luz faz
@@ -114,6 +126,11 @@ FRASE_SO_O_PS = (
 FRASE_NAO_DEU = (
     "Não consegui falar com o Bluetooth do sistema, então não sei se o controle "
     "caiu. Ele continua pareado."
+)
+FRASE_JA_NO_AR = "Este controle já está conectado."
+#: A dúvida do kernel é um «não deu», com a frase do que não se leu.
+FRASE_SEM_O_KERNEL = (
+    "Não consegui ver se o sistema enxerga este controle, então ele ficou como estava."
 )
 
 #: O que roda um `busctl`: recebe os argumentos e devolve a saída, ou ``None``
@@ -213,6 +230,21 @@ def esta_conectado(mac: str, *, executar: Executar | None = None) -> bool | None
     return None if caminho is None else _conectado(leitor, caminho)
 
 
+def tem_hid_no_kernel(mac: str) -> bool | None:
+    """O kernel tem um ``hidraw`` com este endereço? ``None`` = não deu para ler.
+
+    O dono é ``conexao_zumbi.quem_tem_hid`` (o ``HID_UNIQ`` do pai de cada
+    ``hidraw``, no cabo e no rádio), e o endereço passa pelo mesmo
+    ``mac_limpo`` que normaliza o ``HID_UNIQ``.
+    """
+    com_hid = conexao_zumbi.quem_tem_hid()
+    if com_hid is None:
+        return None
+    alvo = _normalizar(mac)
+    limpo = conexao_zumbi.mac_limpo(alvo.replace("_", ":")) if alvo else None
+    return limpo is not None and limpo in com_hid
+
+
 def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     """Derruba este controle do rádio. Best-effort, e nunca levanta.
 
@@ -289,11 +321,17 @@ def dualsenses_do_radio(
 def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     """Devolve este controle ao rádio: derruba o elo morto e chama de volta.
 
+    ANTES, O KERNEL: com o HID deste endereço vivo, o controle está no ar, e o
+    desfecho é :data:`ESTADO_JA_NO_AR`, sem ``Disconnect`` e sem ``Connect``.
+
     OS DOIS PASSOS, e o primeiro é o que o botão PS não consegue fazer:
 
-    1. ``Disconnect`` quando o BlueZ ainda diz ``Connected`` — é o elo morto do
-       estado que ela viu, com o rádio de pé e o kernel sem HID. Sem derrubá-lo,
-       o PS dela não tem efeito: para o rádio o controle já está aqui;
+    1. ``Disconnect`` quando o BlueZ ainda diz ``Connected`` (ou não responde)
+       e o kernel não tem o HID — é o elo morto do estado que ela viu, com o
+       rádio de pé e o kernel sem HID. Sem derrubá-lo, o PS dela não tem
+       efeito: para o rádio o controle já está aqui. Se o kernel não puder ser
+       lido, ele NÃO cai (:data:`ESTADO_NAO_DEU`): o rádio é acréscimo, e na
+       dúvida o controle fica;
     2. ``Connect``, com o teto maior do dono (``ESPERA_DO_CONNECT_S``: o
        ``Connect`` CHAMA o aparelho). Funciona com o controle ACORDADO; com ele
        dormindo, o BlueZ recusa e o desfecho é :data:`ESTADO_SO_O_PS` — a
@@ -313,7 +351,16 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     leitor = _leitor(executar)
     try:
         with bluez_dbus.na_trava(QUEM):
+            # O kernel se lê DENTRO da trava, colado à decisão: o controle que
+            # volta enquanto outro gesto segura o rádio não é derrubado.
+            com_hid = tem_hid_no_kernel(mac)
+            if com_hid:
+                logger.info("reconexao_elo_vivo_preservado", endereco=mascara)
+                return Resultado(ESTADO_JA_NO_AR, FRASE_JA_NO_AR, mascara)
             if esta_conectado(mac, executar=executar) is not False:
+                if com_hid is None:
+                    logger.info("reconexao_sem_o_kernel_elo_preservado", endereco=mascara)
+                    return Resultado(ESTADO_NAO_DEU, FRASE_SEM_O_KERNEL, mascara)
                 # O elo morto sai primeiro. Um `Connect` por cima dele responde
                 # "já está conectado" e não levanta sessão de entrada nenhuma —
                 # medido na mesa dela, quatro vezes, com o kernel sem HID.
@@ -335,14 +382,17 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
 __all__ = [
     "ESTADO_DESCONECTOU",
     "ESTADO_JA_ESTAVA_FORA",
+    "ESTADO_JA_NO_AR",
     "ESTADO_NAO_DEU",
     "ESTADO_SEM_ALVO",
     "ESTADO_SO_O_PS",
     "ESTADO_VOLTOU",
     "FRASE_DESCONECTOU",
     "FRASE_JA_ESTAVA_FORA",
+    "FRASE_JA_NO_AR",
     "FRASE_NAO_DEU",
     "FRASE_SEM_ALVO",
+    "FRASE_SEM_O_KERNEL",
     "QUEM",
     "RADIO_DE_VERDADE_NA_SUITE",
     "Resultado",
@@ -351,4 +401,5 @@ __all__ = [
     "dualsenses_do_radio",
     "esta_conectado",
     "mascarar",
+    "tem_hid_no_kernel",
 ]
