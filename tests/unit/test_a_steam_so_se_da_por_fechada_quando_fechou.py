@@ -251,16 +251,20 @@ def test_a_steam_deste_lar_na_bandeja_ainda_se_mostra(monkeypatch: pytest.Monkey
     assert abertos == [["steam"]]
 
 
-def test_reabrir_com_a_steam_de_pe_nao_lanca_outra(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O cliente voltou sozinho (ou nunca fechou): o reabrir não repassa nada.
-    ARRANQUE a pergunta do `reopen_steam` e este teste reprova."""
+def test_o_abrir_o_lancador_mostra_a_steam_que_esta_na_bandeja(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O «Abrir o lançador» do cartão da Steam (aba 07) chama o
+    `reopen_steam`. Com a Steam deste lar de pé e sem janela (na bandeja), o
+    `steam` repassa o pedido à instância viva, que se mostra: é a mesma
+    decisão do PS da bandeja. ARRANQUE o repasse (um «já está de pé, não faço
+    nada» no `reopen_steam`) e este teste reprova: o botão responderia calado."""
     pedidos: list[list[str]] = []
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo.fora_do_servico, "abrir",
                         lambda cmd, **_k: pedidos.append(list(cmd)))
     monkeypatch.setattr(slo.shutil, "which", lambda n: f"/usr/bin/{n}")
     assert slo.reopen_steam() is True
-    assert pedidos == []
+    assert pedidos == [["steam"]]
 
 
 def test_a_foto_do_reiniciar_so_ve_o_lancador_deste_lar(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1201,8 +1201,8 @@ def steam_de_pe(proc: Path = PROC, lar: Path | None = None) -> bool:
 def steam_running() -> bool:
     """A Steam DESTE lar está aberta? O cliente, ou o webhelper que ele pôs de pé.
 
-    É A PERGUNTA SÓ, e todos a fazem: o `stop_steam`, o `with_steam_closed`, o
-    `reopen_steam`, o «abrir ou focar» e o «Reiniciar o serviço». O
+    É A PERGUNTA SÓ, e todos a fazem: o `stop_steam`, o `with_steam_closed`
+    (que decide se reabre), o «abrir ou focar» e o «Reiniciar o serviço». O
     `disable_steam_input.sh` tem a dele, em shell.
     """
     return steam_de_pe()
@@ -1759,11 +1759,13 @@ def reopen_steam() -> bool:
     STEAM-FORA-DO-SERVICO-01 (26/09/2026): e nasce por
     `fora_do_servico.abrir` — de dentro de um serviço (a bandeja do autostart
     é um), numa unidade própria; do terminal ou do painel, pelo `Popen`.
+
+    COM A STEAM DESTE LAR DE PÉ, O PEDIDO VAI A ELA (01/10/2026): o `steam`
+    repassa à instância viva, que se mostra, e sai sem abrir outra. É o
+    «Abrir o lançador» do cartão da Steam com ela na bandeja, e é a mesma
+    decisão do PS da bandeja (`steam_launcher.open_or_focus_steam`). Quem
+    decide SE reabre é quem fechou (`with_steam_closed`, pelo `steam_running`).
     """
-    if steam_running():
-        # A STEAM DESTE LAR JÁ ESTÁ DE PÉ (01/10/2026): o cliente voltou sozinho,
-        # ou nunca fechou. Um segundo `steam` só repassaria o comando a ela.
-        return True
     for cmd in (["steam"], ["xdg-open", "steam://open/main"]):
         if shutil.which(cmd[0]) is None:
             continue
