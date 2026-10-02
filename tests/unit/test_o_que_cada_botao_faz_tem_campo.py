@@ -94,13 +94,23 @@ def test_as_vinte_e_uma_linhas_tem_padrao_e_rotulo() -> None:
 
     A MORDIDA: tire uma linha de `aba06.BOTOES` e regere a página — este caso a
     nomeia.
+
+    SÓ AS LINHAS DAS DEFINIÇÕES CONTAM — 02/10/2026. A tabela dos seis gestos
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01) também põe `data-linha` nos
+    seus `<select>`, com o gesto no valor (`ps_options`, `ps_r3`…), e a régua
+    passou a contá-los como botões a mais assim que a 06 nova foi publicada. A
+    linha de botão se diz pelo próprio gesto, `linha-de-botao`.
     """
     from hefesto_dualsense4unix.core.acoes_de_botao import ACOES, BOTOES, padrao
     from hefesto_dualsense4unix.interface import onde
 
     p = padrao()
     doc = onde.pagina("06-navegacao.html", publicado=True).read_text(encoding="utf-8")
-    na_tela = set(re.findall(r'<select[^>]*data-linha="([^"]+)"', doc))
+    na_tela = {
+        re.search(r'data-linha="([^"]+)"', s).group(1)  # type: ignore[union-attr]
+        for s in re.findall(r"<select[^>]*>", doc)
+        if 'data-gesto="linha-de-botao"' in s and "data-linha=" in s
+    }
     assert na_tela == set(BOTOES), (
         f"a tela e o produto contam listas diferentes — a mais na tela: "
         f"{sorted(na_tela - set(BOTOES))}; a menos: {sorted(set(BOTOES) - na_tela)}")
