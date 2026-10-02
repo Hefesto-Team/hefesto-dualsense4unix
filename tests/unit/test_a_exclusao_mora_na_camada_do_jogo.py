@@ -342,7 +342,7 @@ def test_o_prefixo_dividido_fica_com_o_device_ks(
     from hefesto_dualsense4unix.daemon import launch_env
 
     dividido = _prefixo(_lar / "Games/Heroic/Prefixes/Dividido")
-    a = {"winePrefix": str(dividido)}
+    a: dict[str, object] = {"winePrefix": str(dividido)}
     b: dict[str, object] = {"winePrefix": str(dividido)} if como == "pela-copia" else {}
     _heroic(_lar, {"A": a, "B": b},
             moradores={dividido: ["A", "B"]} if como != "pela-copia" else None)
