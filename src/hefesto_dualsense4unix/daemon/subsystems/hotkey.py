@@ -197,15 +197,6 @@ def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
     return _GestoDoPs(fazer=_on_ps_solo, fio=fio)
 
 
-def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
-    """Cria o callback on_ps_long_press: alterna o modo jogo (supressao da"""
-
-    def _on_ps_long_press() -> None:
-        daemon.set_emulation_suppressed()
-
-    return _on_ps_long_press
-
-
 #: pegar": máscara Xbox primeiro não, porque a casa parte do DualSense — a
 #: máscaras: Sony DualSense → Xbox → Navegação → Sony DualSense, os mesmos três
 PONTE_DUALSENSE = "dualsense"
@@ -2667,7 +2658,6 @@ __all__ = [
     "avisar_troca_de_modo",
     "build_next_bridge_callback",
     "build_profile_cycle_callback",
-    "build_ps_long_press_callback",
     "build_ps_solo_callback",
     "canal_do_microfone",
     "canal_do_microfone_loop",

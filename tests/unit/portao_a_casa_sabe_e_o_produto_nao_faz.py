@@ -489,14 +489,18 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
 
 _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_JOGADOR": (
-        "daemon/subsystems/hotkey.py::_rodar_o_script_do_gesto",
-        "A MÃO é o despachante dos gestos: ele monta o ambiente do script dela com esta chave "
-        "antes de rodá-lo.",
+        "daemon/subsystems/hotkey.py::start_hotkey_manager",
+        "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:712) "
+        "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
+        "script dela antes de rodá-lo (hotkey.py:2631). Não há `Environment=` a escrever: a chave"
+        " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
     "HEFESTO_TRANSPORTE": (
-        "daemon/subsystems/hotkey.py::_rodar_o_script_do_gesto",
-        "A MÃO é o despachante dos gestos: ele monta o ambiente do script dela com esta chave "
-        "antes de rodá-lo.",
+        "daemon/subsystems/hotkey.py::start_hotkey_manager",
+        "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:712) "
+        "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
+        "script dela antes de rodá-lo (hotkey.py:2631). Não há `Environment=` a escrever: a chave"
+        " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
         "daemon/subsystems/conexoes.py::ConexoesSubsystem",
@@ -619,6 +623,11 @@ _SEM_MAO_HOJE: dict[str, str] = {
 
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "core/acoes_do_gesto.py::por_grupo": (
+        "02/10/2026 — é do gerador do desenho, não do produto: `interface/aba06.py` "
+        "(o gerador do mockup da Navegação) monta com ela as opções da tabela dos seis "
+        "gestos; o pacote da aba lê o vocabulário pelo `tabela` e pelo `GESTOS`."
+    ),
     "integrations/endpoint_de_haptica.py::nome_do_endpoint": (
         "02/10/2026 — é o instrumento, não promessa ao produto: `scripts/o_basico.py` "
         "(o retrato do básico) o importa para casar cada controle com o nome do "

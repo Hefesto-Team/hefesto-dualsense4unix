@@ -637,8 +637,6 @@ _JANELA = 3
 
 #: sai com: O-CODIGO-SEM-NARRADOR-01
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
-    "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:229",
-    "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:91-103",
     # `a10_perfis.py::rodape.py:101` SAIU DAQUI NO MESMO DIA (13/09/2026): a
     # reapontou o docstring de `editor_nome` pelo SÍMBOLO, `rodape._draft_do_ativo`.
     # A DE `a06_navegacao.py` -> `core/acoes_de_botao.py:203` SAIU DAQUI EM
