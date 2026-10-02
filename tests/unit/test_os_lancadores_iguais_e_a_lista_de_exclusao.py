@@ -1134,9 +1134,13 @@ def test_o_device_ks_nao_volta_ao_prefixo_do_jogo_excluido(
 
 
 def test_tirar_do_disco_tira_o_ks_do_prefixo_do_heroic(
-        monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch: pytest.MonkeyPatch, _steam_do_teste: tuple[Path, Path, Path]) -> None:
     """ARRANQUE os prefixos do Heroic do `tirar_do_disco` e este teste
-    reprova: o jogo excluído seguiria com o device KS que a carona gravou."""
+    reprova: o jogo excluído seguiria com o device KS que a carona gravou.
+
+    A Steam e o jogo da máquina ficam fora (`_steam_do_teste`): sem isso, um
+    jogo aberto na máquina de quem roda a suíte fazia o `tirar_do_disco`
+    responder «espera_a_steam», e a régua media a máquina, não o produto."""
     _heroic_de_mentira(com_copia=True)
     raiz = Path.home() / "Games/Heroic/Prefixes/Guardioes"
     (raiz / "pfx").mkdir(parents=True)
