@@ -22,6 +22,15 @@ renders são EXECUTADOS e o despacho é observado por dublê (`MagicMock` com
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (02/10/2026): o `home_actions` faz
+# `import gi`. Sem o GTK real este módulo só não errava na coleta do `lint-test`
+# porque outro módulo, colhido antes, deixava o `home_actions` no `sys.modules`
+# montado sobre um `gi` falso, e o pulo dele vinha emprestado do
+# `test_home_render_state`. A guarda própria diz o motivo dele.
+exigir_gi_real("test_wrapper_banner: importa código da janela GTK")
+
 import sys
 import types
 from pathlib import Path
