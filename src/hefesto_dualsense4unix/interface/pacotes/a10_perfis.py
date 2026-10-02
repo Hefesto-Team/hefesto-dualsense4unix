@@ -849,12 +849,8 @@ SEM_ENDERECO = {
 #: a régua se desligando sem ninguém decidir isso — a lista deixa de ser lida
 #: como fila e passa a ser lida como decoração.
 ESPERANDO_A_PUBLICACAO: dict[str, str] = {
-    # A SÉTIMA CARGA, 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01): a
-    # coluna «Status» ganhou o ponto embaixo do glifo, o tracejado do «não
-    # sei» e a dica da célula. Mudam pixel; o `--publicar 10` dá a baixa.
-    "guarda.proprio": "o ponto embaixo do glifo (o disco do perfil do editor)",
-    "guarda.incerto": "o tracejado da célula que o controle não responde",
-    "guarda.dica": "a dica da célula neutra e da máscara que não é a DualSense",
+    # A SÉTIMA CARGA (o ponto, o tracejado e a dica da coluna «Status») teve
+    # a baixa no `--publicar 10` de 02/10/2026.
 }
 
 
