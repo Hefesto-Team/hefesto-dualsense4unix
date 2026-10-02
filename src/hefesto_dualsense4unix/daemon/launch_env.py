@@ -2529,7 +2529,6 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
             aplicar,
             controles_do_registro,
         )
-
         from hefesto_dualsense4unix.integrations.lista_de_exclusao import (
             prefixos_excluidos,
         )

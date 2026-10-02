@@ -27,7 +27,16 @@ FRENTE do jogo que ela excluiu. Esta lista não toca na do Steam Input, em
 nenhum sentido.
 
 Excluir é ESCREVER nas duas; tirar é sair delas. Nenhum leitor muda — cada um
-continua lendo o mesmo arquivo de antes. A alternativa (cada feature aprender a
+continua lendo o mesmo arquivo de antes.
+
+FORA DA STEAM, O AMBIENTE (01/10/2026). O jogo do Heroic com a mesma janela
+ganha a lista própria de ambiente sem o que é nosso (o Heroic monta
+`{...globais, ...do jogo}`), e a entrada guarda o «antes» dela em ``heroic``;
+a caixa do Flatpak de um emulador excluído perde o ambiente inteiro. A carona
+de cada transição (`cura_por_estrada.curar_todas_as_estradas`) pergunta a esta
+lista o que pular (:func:`o_que_a_carona_pula`), e a do device KS também
+(:func:`prefixos_excluidos`). Os donos dos arquivos continuam sendo os de
+sempre; esta lista só diz QUAIS jogos. A alternativa (cada feature aprender a
 perguntar a esta lista) faria oito donos lerem um arquivo novo, e o primeiro que
 esquecesse deixaria uma feature viva num jogo que ela excluiu.
 
@@ -471,7 +480,9 @@ def _devolver_o_prefixo(appid: str, do_heroic: list[Path] | None = None) -> str:
     Duas coisas moram lá, e as duas são nossas: o device KS da háptica
     (`audio_ks_dualsense`) e as camadas Vulkan que a cura desligou
     (`camadas_vulkan`). O KS sai inteiro; as camadas voltam a ligar SÓ as que
-    nós desligamos, sem virar escolha dela (``pela_exclusao``).
+    nós desligamos, sem virar escolha dela (``pela_exclusao``). Os prefixos
+    são o `compatdata/<appid>` da Steam e, em ``do_heroic``, o prefixo próprio
+    do mesmo jogo no Heroic.
 
     Com o jogo aberto o `wineserver` regravaria o registro ao sair, e a edição
     seria perdida: ``"ocupado"``. Status: ``"feito"`` | ``"nada"`` |

@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
@@ -957,8 +958,6 @@ def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
 # da transição seguinte reescrevia). Com a janela excluída em foco o daemon
 # liga o Modo Nativo, sem controle virtual: o jogo ficava sem controle nenhum.
 # ---------------------------------------------------------------------------
-from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe  # noqa: E402
-
 _APP_DO_HEROIC = "63a665088eb1480298f1e57943b225d8"
 _NOSSOS_NO_HEROIC = (("PROTON_DISABLE_HIDRAW", "0x054c/0x0ce6"),
            ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6"))
@@ -983,8 +982,9 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
     """
     casa = Path.home() / ".var/app/com.heroicgameslauncher.hgl/config/heroic"
     (casa / "store_cache").mkdir(parents=True)
+    globais = _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)
     (casa / "config.json").write_text(json.dumps(
-        {"defaultSettings": {"enviromentOptions": _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)}}), encoding="utf-8")
+        {"defaultSettings": {"enviromentOptions": globais}}), encoding="utf-8")
     (casa / "store_cache" / "umu.json").write_text(
         json.dumps({f"legendary_{_APP_DO_HEROIC}": "umu-1088850"}), encoding="utf-8")
     (casa / "store_cache" / "legendary_library.json").write_text(json.dumps(
@@ -1007,7 +1007,8 @@ def test_excluir_o_jogo_do_heroic_tira_o_nosso_da_copia() -> None:
     _casa, copia = _heroic_de_mentira(com_copia=True)
     assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
     assert _chaves_do_jogo(copia) == ["MANGOHUD"]
-    assert lx.prefixos_excluidos() == {(Path.home() / "Games/Heroic/Prefixes/Guardioes").resolve()}
+    prefixo = (Path.home() / "Games/Heroic/Prefixes/Guardioes").resolve()
+    assert lx.prefixos_excluidos() == {prefixo}
 
 
 def test_o_jogo_sem_copia_ganha_a_lista_propria_e_a_volta_a_apaga() -> None:

@@ -930,7 +930,7 @@ def curar_todas_as_estradas(
     **A LISTA DE EXCLUSÃO MANDA AQUI TAMBÉM** (01/10/2026): a caixa de um
     emulador excluído não recebe o ambiente, e a cópia de um jogo do Heroic
     excluído volta a ficar sem o que é nosso — ver :class:`NaExclusao`.
-    ``exclusao`` existe para a régua; ``None`` lê a lista do dono.
+    O parâmetro da exclusão existe para a régua; ``None`` lê a lista do dono.
     """
     fora = _a_exclusao() if exclusao is None else exclusao
     escritos: list[str] = []
