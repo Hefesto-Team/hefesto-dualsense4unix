@@ -982,6 +982,57 @@ class OrcamentoDeclarado(BaseModel):
     teto: Literal["economia", "balanceado", "max", "auto"] | None = None
 
 
+class GestoDeclarado(BaseModel):
+    """O que ela escolheu para UM gesto do controle (OS-GESTOS-DO-CONTROLE-01).
+
+    ``faz`` é um token de ``core/acoes_do_gesto.ACOES``; ``script`` é o caminho
+    do arquivo escolhido, e só existe com ``faz == "script"``. A forma é
+    conferida aqui; a conferência do ARQUIVO (dono, permissão, ``#!``) é de
+    ``acoes_do_gesto.conferir_o_script``, que a tela chama ao escolher e o
+    daemon chama ao rodar — o disco muda entre as duas, e o esquema não lê
+    disco.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    faz: str
+    script: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _so_o_script_guarda_caminho(cls, valor: Any) -> Any:
+        """Trocar o script por outro ato larga o caminho.
+
+        A gravação FUNDE dicionário com dicionário (:func:`fundir_declaracao`):
+        declarar ``{"faz": "nada"}`` sobre um gesto que rodava um script
+        deixaria o caminho velho ao lado de um ato que não o usa.
+        """
+        from hefesto_dualsense4unix.core.acoes_do_gesto import SCRIPT
+
+        if isinstance(valor, Mapping) and valor.get("faz") != SCRIPT and "script" in valor:
+            return {k: v for k, v in valor.items() if k != "script"}
+        return valor
+
+    @model_validator(mode="after")
+    def _o_token_e_o_caminho_tem_forma(self) -> GestoDeclarado:
+        from hefesto_dualsense4unix.core.acoes_do_gesto import (
+            ACOES,
+            MAXIMO_DO_CAMINHO,
+            SCRIPT,
+        )
+
+        if self.faz not in ACOES:
+            raise ValueError(f"o gesto não sabe fazer {self.faz!r}")
+        if self.faz != SCRIPT:
+            return self
+        caminho = self.script or ""
+        if (not caminho.startswith("/") or "\0" in caminho
+                or len(caminho) > MAXIMO_DO_CAMINHO):
+            raise ValueError(
+                "o script precisa de um caminho absoluto, escolhido no seletor")
+        return self
+
+
 class MaquinaConfig(BaseModel):
     """O documento inteiro. Nasce todo em "não sei", e é assim que ele é útil."""
 
@@ -1019,6 +1070,12 @@ class MaquinaConfig(BaseModel):
     # Bluetooth, pela chave do endereço (doze hex minúsculos, a grafia de
     # ``controles``). De topo: é do aparelho, e não de uma entrada.
     adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)
+    # OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026): o que cada um dos
+    # seis gestos do controle faz, pela chave de ``core/acoes_do_gesto.GESTOS``.
+    # Da máquina e não do perfil (``D-2909-OS-GESTOS-SAO-DA-MAQUINA``). Vazio =
+    # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
+    # None}}`` devolve o gesto ao de fábrica.
+    gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
     # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
     # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
     # correção de ambiente é ``gravar_correcao_de_ambiente``
@@ -1110,6 +1167,20 @@ class MaquinaConfig(BaseModel):
                     f"chave de adaptador {chave!r} não é endereço "
                     "(doze hex minúsculos, sem separador)"
                 )
+        return vivos
+
+    @field_validator("gestos", mode="before")
+    @classmethod
+    def _gesto_conhecido_e_none_devolve_o_de_fabrica(cls, valor: Any) -> Any:
+        """A chave é um dos seis gestos; ``{"gestos": {g: None}}`` esquece a escolha."""
+        if not isinstance(valor, Mapping):
+            return valor
+        from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS
+
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        for chave in vivos:
+            if chave not in GESTOS:
+                raise ValueError(f"{chave!r} não é um dos gestos do controle")
         return vivos
 
 
@@ -1901,6 +1972,12 @@ def _o_mapa_que_ainda_vale(mapa: Any) -> dict[str, Any] | None:
 #: inteiros, como sempre saíram.
 _O_RESGATE_POR_DENTRO: dict[str, Callable[[Any], Any]] = {
     "mapa": _o_mapa_que_ainda_vale,
+    # Um gesto com o ato de uma versão mais nova sai sozinho; os outros cinco
+    # continuam fazendo o que ela escolheu (OS-GESTOS-DO-CONTROLE-01).
+    "gestos": lambda gestos: (
+        {k: v for k, v in gestos.items() if _campo_isolado_passa("gestos", {k: v})}
+        if isinstance(gestos, Mapping) else None
+    ),
 }
 
 
