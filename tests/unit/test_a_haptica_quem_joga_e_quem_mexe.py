@@ -78,13 +78,12 @@ def assento(uniq: str) -> int | None:
 
 
 def no_do(uniq: str) -> str:
-    """O endpoint do LUGAR deste controle — o dublê de ``_EndpointDeMentira``.
+    """O endpoint do APARELHO deste controle — o dublê de ``_EndpointDeMentira``.
 
-    O endpoint é do lugar desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
-    DEPOIS-01): o jogo toca no endpoint do lugar em que o controle senta. Quem
-    o dono não numera senta no primeiro lugar livre.
+    O endpoint é do aparelho desde 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01; de
+    28/09 a 02/10 era do lugar em que o controle sentava).
     """
-    return f"endpoint::{assento(uniq) or 1}"
+    return f"endpoint::{uniq}"
 
 
 def colada(uniq: str) -> str:

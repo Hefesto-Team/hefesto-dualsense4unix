@@ -14,11 +14,11 @@ Duas pontas, e cada uma morde:
 * o doctor conta as MESMAS âncoras (o código do daemon, importado) e diz o
   gesto.
 
-**A CONTA É POR LUGAR DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
-DEPOIS-01): o endpoint é um por lugar (P1 a P4), e os quatro sobem com o
-primeiro DualSense. O daemon conta os lugares sem âncora; o doctor avisa
-quando falta âncora para um lugar OCUPADO e informa os livres. As réguas que
-contavam controles no rádio foram trocadas pelo fato de agora.
+**A CONTA DO DAEMON É POR APARELHO DESDE 02/10/2026** (A-HAPTICA-E-POR-
+APARELHO-01): um endpoint por DualSense da mesa, nos dois transportes (de 28/09
+a 02/10 eram os quatro lugares). O daemon conta os aparelhos sem âncora. O
+doctor ainda fala em lugares (a conta dele é contra os quatro números, e para
+até quatro controles dá o mesmo número): a frase dele é do dono do doctor.
 
 Nada vai para a tela: a dívida é nossa, e a tela não a confessa.
 """
@@ -97,19 +97,25 @@ def _avisos(registros: list[dict[str, Any]], evento: str) -> list[dict[str, Any]
 
 
 def test_faltando_ancora_o_daemon_diz_quantos(bancada: _Bancada) -> None:
-    """Uma âncora para os quatro lugares: três sem âncora.
+    """Uma âncora para os três aparelhos da mesa: dois sem âncora.
+
+    Desde 02/10/2026 a conta é por APARELHO (A-HAPTICA-E-POR-APARELHO-01; de
+    28/09 a 02/10 era contra os quatro lugares).
 
     A MORDIDA: arranque o aviso e o `continue` volta a ser mudo.
     """
+    from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+
     with structlog.testing.capture_logs() as registros:
         bancada.sub._casar_as_pontes(_tres_no_radio())
     avisos = _avisos(registros, "haptica_sem_ancora")
     assert len(avisos) == 1, registros
-    assert avisos[0]["faltam"] == 3
-    assert avisos[0]["lugares"] == 4
+    assert avisos[0]["faltam"] == 2
+    assert avisos[0]["aparelhos"] == 3
     assert avisos[0]["log_level"] == "warning"
-    assert [e.lugar for e in _EndpointDeMentira.criados] == [1], (
-        "o lugar que tinha âncora continua ganhando endpoint"
+    primeiro = min((c.uniq for c in _tres_no_radio()), key=eh.marca_do_aparelho)
+    assert [e.uniq for e in _EndpointDeMentira.criados] == [primeiro], (
+        "o aparelho que tinha âncora continua ganhando endpoint"
     )
 
 
@@ -132,11 +138,11 @@ def test_a_ancora_que_chega_desliga_o_aviso(bancada: _Bancada) -> None:
         bancada.sub._casar_as_pontes(_tres_no_radio())
     assert _avisos(registros, "haptica_ancoras_bastam"), registros
     assert not _avisos(registros, "haptica_sem_ancora")
-    assert len(_EndpointDeMentira.criados) == 4
+    assert len(_EndpointDeMentira.criados) == 3
 
 
 def test_ancoras_de_sobra_nao_avisam_nada(bancada: _Bancada) -> None:
-    """Quatro âncoras, uma por lugar: nenhuma linha."""
+    """Quatro âncoras para um aparelho: nenhuma linha."""
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
     bancada.ancoras.extend(

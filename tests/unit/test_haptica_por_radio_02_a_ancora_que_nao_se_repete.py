@@ -27,12 +27,12 @@ sintética ``aa:bb:cc``.
 LIMITE DECLARADO: é fiação e conta. A prova com o jogo aberto e o escritor
 único é bancada, e está pendente.
 
-**POR LUGAR DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): o
-endpoint era um por controle no rádio, e passou a ser um por LUGAR (P1 a P4),
-os quatro de pé desde o primeiro DualSense. A âncora que não se repete é a
-mesma conta, com os lugares no lugar dos ``uniq``; a régua do controle que
-chegava depois com o ``uniq`` menor virou a de que quem chega depois não mexe
-em lugar nenhum.
+**POR APARELHO DESDE 02/10/2026** (A-HAPTICA-E-POR-APARELHO-01): de 28/09 a
+02/10 o endpoint foi um por LUGAR (P1 a P4), e voltou a ser um por DualSense,
+agora pela marca do aparelho (``dualsense_bt_audio.marca_do_aparelho``) e não
+pelo rabo do endereço. A âncora que não se repete é a mesma conta, com as
+marcas como chave; e a régua do controle que chega depois com o ``uniq`` menor
+voltou a valer.
 """
 
 from __future__ import annotations
@@ -51,6 +51,11 @@ _A = "aa:bb:cc:00:00:01"
 _B = "aa:bb:cc:00:00:02"
 _C = "aa:bb:cc:00:00:03"
 _D = "aa:bb:cc:00:00:04"
+#: As marcas dos aparelhos: as chaves da conta das âncoras.
+_MA, _MB, _MC, _MD = (eh.marca_do_aparelho(u) for u in (_A, _B, _C, _D))
+#: O de marca MENOR e o de marca MAIOR: pela ordem pura das marcas, o menor que
+#: chega depois levaria a âncora do maior que já estava.
+_MENOR, _MAIOR = sorted((_A, _B), key=eh.marca_do_aparelho)
 
 
 def _ancora(i: int) -> eh.Ancora:
@@ -61,12 +66,12 @@ def _ancora(i: int) -> eh.Ancora:
 
 
 _QUATRO = [_ancora(i) for i in range(4)]
-#: Uma âncora a mais que os lugares: a troca de âncora precisa de uma livre.
+#: Uma âncora a mais que os quatro: a troca de âncora precisa de uma livre.
 _CINCO = [_ancora(i) for i in range(5)]
 
 
-def _no(lugar: int, ancora: eh.Ancora, module_id: str = "70") -> dict[str, list[tuple[str, str]]]:
-    return {eh.nome_do_endpoint(lugar): [(module_id, ancora.declarado)]}
+def _no(marca: str, ancora: eh.Ancora, module_id: str = "70") -> dict[str, list[tuple[str, str]]]:
+    return {eh.nome_da_marca(marca): [(module_id, ancora.declarado)]}
 
 
 # ---------------------------------------------------------------------------
@@ -75,65 +80,65 @@ def _no(lugar: int, ancora: eh.Ancora, module_id: str = "70") -> dict[str, list[
 
 
 def test_quem_ja_tem_ancora_fica_com_ela() -> None:
-    """O lugar 2 já tinha a âncora 0; o lugar 1, menor, ganha outra."""
-    postas = eh.distribuir_ancoras([1, 2], _QUATRO, ja_postas={2: _QUATRO[0]})
-    assert postas[2] == _QUATRO[0]
-    assert postas[1] != _QUATRO[0]
+    """B já tinha a âncora 0; A ganha outra, seja qual for a ordem das marcas."""
+    postas = eh.distribuir_ancoras([_MA, _MB], _QUATRO, ja_postas={_MB: _QUATRO[0]})
+    assert postas[_MB] == _QUATRO[0]
+    assert postas[_MA] != _QUATRO[0]
 
 
 def test_o_servidor_semeia_quem_o_processo_esqueceu() -> None:
     """O restart: a memória nasce vazia, e o nó de pé diz qual era a âncora."""
-    de_pe = {**_no(1, _QUATRO[2], "71"), **_no(2, _QUATRO[0], "72")}
-    postas = eh.distribuir_ancoras([1, 2], _QUATRO, de_pe)
-    assert postas == {1: _QUATRO[2], 2: _QUATRO[0]}
+    de_pe = {**_no(_MA, _QUATRO[2], "71"), **_no(_MB, _QUATRO[0], "72")}
+    postas = eh.distribuir_ancoras([_MA, _MB], _QUATRO, de_pe)
+    assert postas == {_MA: _QUATRO[2], _MB: _QUATRO[0]}
 
 
 def test_o_no_que_declara_aparelho_que_saiu_nao_e_adotado() -> None:
     sumida = _ancora(9)
-    postas = eh.distribuir_ancoras([1], _QUATRO, _no(1, sumida))
-    assert postas[1] in _QUATRO
+    postas = eh.distribuir_ancoras([_MA], _QUATRO, _no(_MA, sumida))
+    assert postas[_MA] in _QUATRO
 
 
 def test_dois_nos_de_pe_com_a_mesma_ancora_se_separam() -> None:
     """O estado que o defeito deixou no servidor não sobrevive à distribuição."""
-    de_pe = {**_no(1, _QUATRO[0], "71"), **_no(2, _QUATRO[0], "72")}
-    postas = eh.distribuir_ancoras([1, 2], _QUATRO, de_pe)
-    assert postas[1].syspath != postas[2].syspath
+    de_pe = {**_no(_MA, _QUATRO[0], "71"), **_no(_MB, _QUATRO[0], "72")}
+    postas = eh.distribuir_ancoras([_MA, _MB], _QUATRO, de_pe)
+    assert postas[_MA].syspath != postas[_MB].syspath
 
 
 def test_a_ancora_lembrada_que_saiu_do_barramento_e_trocada() -> None:
-    postas = eh.distribuir_ancoras([1], _QUATRO[1:], ja_postas={1: _QUATRO[0]})
-    assert postas[1] == _QUATRO[1]
+    postas = eh.distribuir_ancoras([_MA], _QUATRO[1:], ja_postas={_MA: _QUATRO[0]})
+    assert postas[_MA] == _QUATRO[1]
 
 
 def test_a_memoria_vence_o_servidor_quando_discordam() -> None:
     """O nó deste processo está vivo; o do servidor é resto de outro."""
-    de_pe = _no(1, _QUATRO[0])
-    postas = eh.distribuir_ancoras([1, 2], _QUATRO, de_pe, ja_postas={2: _QUATRO[0]})
-    assert postas[2] == _QUATRO[0]
-    assert postas[1] != _QUATRO[0]
+    de_pe = _no(_MA, _QUATRO[0])
+    postas = eh.distribuir_ancoras([_MA, _MB], _QUATRO, de_pe, ja_postas={_MB: _QUATRO[0]})
+    assert postas[_MB] == _QUATRO[0]
+    assert postas[_MA] != _QUATRO[0]
 
 
 def test_faltando_ancora_ninguem_recebe_a_de_outro() -> None:
-    postas = eh.distribuir_ancoras([1, 2, 3], _QUATRO[:2], ja_postas={3: _QUATRO[0]})
+    postas = eh.distribuir_ancoras([_MA, _MB, _MC], _QUATRO[:2], ja_postas={_MC: _QUATRO[0]})
     assert len(postas) == 2
     assert len({a.syspath for a in postas.values()}) == 2
 
 
-def test_o_que_nao_e_lugar_nao_ganha_ancora() -> None:
-    """Só os quatro lugares da mesa: o quinto (ou um ``uniq`` de antes) fica de fora."""
-    postas = eh.distribuir_ancoras([0, 1, 5], _QUATRO)
-    assert list(postas) == [1]
+def test_o_que_nao_e_marca_nao_ganha_ancora() -> None:
+    """Só a marca de um aparelho: um lugar de antes, ou um rabo de endereço, fica de fora."""
+    postas = eh.distribuir_ancoras([1, "LUGAR1", "000003", _MA], _QUATRO)  # type: ignore[list-item]
+    assert list(postas) == [_MA]
 
 
-@pytest.mark.parametrize("chegada", list(itertools.permutations([1, 2, 3, 4])))
-def test_nenhuma_ordem_de_chegada_repete_ancora(chegada: tuple[int, ...]) -> None:
-    """Os quatro lugares chegam um por um, em cada uma das 24 ordens, lembrando o de antes.
+@pytest.mark.parametrize("chegada", list(itertools.permutations([_MA, _MB, _MC, _MD])))
+def test_nenhuma_ordem_de_chegada_repete_ancora(chegada: tuple[str, ...]) -> None:
+    """Os quatro aparelhos chegam um por um, em cada uma das 24 ordens, lembrando o de antes.
 
     MORDIDA: distribuir sem ``ja_postas`` (a ordenação pura de antes) reprova
     em 23 das 24 ordens.
     """
-    lembradas: dict[int, eh.Ancora] = {}
+    lembradas: dict[str, eh.Ancora] = {}
     for n in range(1, len(chegada) + 1):
         presentes = list(chegada[:n])
         postas = eh.distribuir_ancoras(presentes, _QUATRO, ja_postas=lembradas)
@@ -171,14 +176,14 @@ class _Servidor:
         self.som_de: set[str] = set()
         self._proximo = 500
 
-    def por(self, lugar: int, ancora: eh.Ancora) -> str:
+    def por(self, uniq: str, ancora: eh.Ancora) -> str:
         """Um nó que um processo ANTERIOR deixou de pé."""
         self._proximo += 1
-        self.modulos[str(self._proximo)] = (eh.nome_do_endpoint(lugar), ancora.declarado)
+        self.modulos[str(self._proximo)] = (eh.nome_do_endpoint(uniq), ancora.declarado)
         return str(self._proximo)
 
-    def caminho_de(self, lugar: int) -> list[str]:
-        nome = eh.nome_do_endpoint(lugar)
+    def caminho_de(self, uniq: str) -> list[str]:
+        nome = eh.nome_do_endpoint(uniq)
         return [c for n, c in self.modulos.values() if n == nome]
 
     def __call__(self, argv: list[str]) -> str | None:
@@ -321,24 +326,24 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     return _Mesa(sub=sub, servidor=servidor, ancoras=ancoras)
 
 
-def test_quem_chega_depois_nao_mexe_em_lugar_nenhum(mesa: _Mesa) -> None:
-    """B chega sozinho e sobe os quatro lugares; A chega depois e nada se mexe.
+def test_quem_chega_depois_nao_herda_a_ancora_de_quem_estava(mesa: _Mesa) -> None:
+    """O de marca maior chega sozinho; o menor chega depois e ganha OUTRA âncora.
 
-    FATO QUE CAIU (28/09/2026): a régua era «o controle que chega depois com o
-    ``uniq`` menor não herda a âncora». Com o endpoint do lugar, quem chega
-    não cria nó nenhum — e quem estava, talvez com o jogo aberto no nó, não
+    A régua de 18/09 volta com o endpoint por aparelho (A-HAPTICA-E-POR-
+    APARELHO-01, 02/10/2026): quem estava, talvez com o jogo aberto no nó, não
     paga pela chegada do outro.
 
-    MORDIDA: em ``_lugares_de_pe``, devolva só os lugares ocupados — B sobe um
-    nó só, e A faz nascer outro na chegada.
+    MORDIDA: arranque o ``ja_postas=`` da chamada em ``_casar_as_pontes`` e o
+    passo do servidor em ``distribuir_ancoras`` — pela ordem pura, o menor
+    leva a âncora do maior.
     """
-    mesa.casar(_B)
-    antes = {n: mesa.servidor.caminho_de(n) for n in eh.LUGARES}
-    mesa.casar(_A, _B)
-    assert len(mesa.servidor.modulos) == 4
+    mesa.casar(_MAIOR)
+    antes = mesa.servidor.caminho_de(_MAIOR)
+    mesa.casar(_MENOR, _MAIOR)
+    assert len(mesa.servidor.modulos) == 2
     caminhos = [c for _n, c in mesa.servidor.modulos.values()]
-    assert len(set(caminhos)) == 4, f"dois nós com o mesmo ContainerId: {caminhos}"
-    assert {n: mesa.servidor.caminho_de(n) for n in eh.LUGARES} == antes
+    assert len(set(caminhos)) == 2, f"dois nós com o mesmo ContainerId: {caminhos}"
+    assert mesa.servidor.caminho_de(_MAIOR) == antes
     assert mesa.servidor.quedas == []
 
 
@@ -346,16 +351,16 @@ def test_a_queda_e_a_volta_em_outra_ordem_nao_repete(mesa: _Mesa) -> None:
     """O adaptador cai, leva os dois, e eles voltam na ordem inversa."""
     mesa.casar(_A, _B)
     mesa.casar()
-    assert mesa.servidor.modulos == {}, "sem DualSense e sem jogo, os lugares ficaram"
-    mesa.casar(_B)
-    antes = {n: mesa.servidor.caminho_de(n) for n in eh.LUGARES}
+    assert mesa.servidor.modulos == {}, "sem DualSense e sem jogo, os endpoints ficaram"
+    mesa.casar(_MAIOR)
+    antes = mesa.servidor.caminho_de(_MAIOR)
     quedas = len(mesa.servidor.quedas)
-    mesa.casar(_A, _B)
+    mesa.casar(_MENOR, _MAIOR)
     caminhos = [c for _n, c in mesa.servidor.modulos.values()]
-    assert len(caminhos) == 4
-    assert len(set(caminhos)) == 4, caminhos
-    assert {n: mesa.servidor.caminho_de(n) for n in eh.LUGARES} == antes
-    assert len(mesa.servidor.quedas) == quedas, "a volta de A derrubou um lugar"
+    assert len(caminhos) == 2
+    assert len(set(caminhos)) == 2, caminhos
+    assert mesa.servidor.caminho_de(_MAIOR) == antes
+    assert len(mesa.servidor.quedas) == quedas, "a volta do menor derrubou o nó do maior"
 
 
 def test_o_restart_com_os_nos_de_pe_nao_recarrega_nada(mesa: _Mesa) -> None:
@@ -365,34 +370,34 @@ def test_o_restart_com_os_nos_de_pe_nao_recarrega_nada(mesa: _Mesa) -> None:
     subir outro, e com a âncora trocada o device KS do prefixo deixaria de
     casar.
 
-    MORDIDA: a distribuição sem ``de_pe`` dá 1→0, 2→1… pela ordem, e os nós
-    são derrubados e recarregados.
+    MORDIDA: a distribuição sem ``de_pe`` dá as âncoras pela ordem das marcas,
+    e os nós são derrubados e recarregados.
     """
-    ordem = (_QUATRO[2], _QUATRO[0], _QUATRO[3], _QUATRO[1])
-    for lugar, ancora in zip(eh.LUGARES, ordem, strict=True):
-        mesa.servidor.por(lugar, ancora)
+    mesa.servidor.por(_A, _QUATRO[2])
+    mesa.servidor.por(_B, _QUATRO[0])
     mesa.casar(_A, _B)
     assert mesa.servidor.cargas == [], "recarregou nó que estava de pé"
     assert mesa.servidor.quedas == []
-    assert mesa.servidor.caminho_de(1) == [_QUATRO[2].declarado]
-    assert mesa.servidor.caminho_de(2) == [_QUATRO[0].declarado]
+    assert mesa.servidor.caminho_de(_A) == [_QUATRO[2].declarado]
+    assert mesa.servidor.caminho_de(_B) == [_QUATRO[0].declarado]
 
 
 def test_os_nos_que_o_defeito_deixou_repetidos_se_separam(mesa: _Mesa) -> None:
     """Quem atualiza o produto herda o servidor com dois nós na âncora 0."""
-    mesa.servidor.por(1, _QUATRO[0])
-    mesa.servidor.por(2, _QUATRO[0])
+    mesa.servidor.por(_A, _QUATRO[0])
+    mesa.servidor.por(_B, _QUATRO[0])
     mesa.casar(_A, _B)
-    assert mesa.servidor.caminho_de(1) == [_QUATRO[0].declarado]
-    assert mesa.servidor.caminho_de(2) not in ([], [_QUATRO[0].declarado])
+    um, outro = sorted((_A, _B), key=eh.marca_do_aparelho)
+    assert mesa.servidor.caminho_de(um) == [_QUATRO[0].declarado]
+    assert mesa.servidor.caminho_de(outro) not in ([], [_QUATRO[0].declarado])
 
 
 def test_a_ancora_cujo_aparelho_saiu_e_trocada_fora_do_jogo(mesa: _Mesa) -> None:
     mesa.casar(_A)
-    antes = mesa.servidor.caminho_de(1)
+    antes = mesa.servidor.caminho_de(_A)
     mesa.ancoras.remove(next(a for a in _CINCO if a.declarado == antes[0]))
     mesa.casar(_A)
-    depois = mesa.servidor.caminho_de(1)
+    depois = mesa.servidor.caminho_de(_A)
     assert len(depois) == 1
     assert depois != antes
 
@@ -400,12 +405,12 @@ def test_a_ancora_cujo_aparelho_saiu_e_trocada_fora_do_jogo(mesa: _Mesa) -> None
 def test_com_o_jogo_tocando_a_ancora_nao_troca(mesa: _Mesa) -> None:
     """Trocar derrubaria o nó com o jogo tocando nele — a partida perde a háptica."""
     mesa.casar(_A)
-    antes = mesa.servidor.caminho_de(1)
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     mesa.casar(_A)  # a ponte vira a da háptica
     mesa.ancoras.remove(next(a for a in _CINCO if a.declarado == antes[0]))
     mesa.casar(_A)
-    assert mesa.servidor.caminho_de(1) == antes
+    assert mesa.servidor.caminho_de(_A) == antes
 
 
 def test_o_servidor_mudo_numa_volta_nao_reancora_quem_ja_estava(
@@ -415,27 +420,25 @@ def test_o_servidor_mudo_numa_volta_nao_reancora_quem_ja_estava(
 
     Uma volta com `list short modules` sem resposta (prazo estourado, um
     `pipewire-pulse` lento) e um controle chegando nela. O servidor não semeia
-    nada; quem sabe que B já tem âncora é só a memória deste processo.
+    nada; quem sabe que o maior já tem âncora é só a memória deste processo.
 
     MORDIDA: arrancar o ``ja_postas=`` da chamada em ``_casar_as_pontes``. A
-    distribuição volta à ordem pura, A < B leva a âncora de B, e o nó de B é
-    derrubado e recarregado noutra.
+    distribuição volta à ordem pura, o menor leva a âncora do maior, e o nó do
+    maior é derrubado e recarregado noutra.
     """
-    mesa.casar(_B)
-    antes = {n: mesa.servidor.caminho_de(n) for n in eh.LUGARES}
+    mesa.casar(_MAIOR)
+    antes = mesa.servidor.caminho_de(_MAIOR)
     servidor = mesa.servidor
     monkeypatch.setattr(
         eh,
         "rodar_pactl",
         lambda argv: None if argv[:4] == ["pactl", "list", "short", "modules"] else servidor(argv),
     )
-    mesa.casar(_A, _B)
-    assert {n: mesa.servidor.caminho_de(n) for n in eh.LUGARES} == antes, (
-        "o nó de um lugar trocou de âncora"
-    )
+    mesa.casar(_MENOR, _MAIOR)
+    assert mesa.servidor.caminho_de(_MAIOR) == antes, "o nó do maior trocou de âncora"
     assert mesa.servidor.quedas == []
     caminhos = [c for _n, c in mesa.servidor.modulos.values()]
-    assert len(set(caminhos)) == 4, caminhos
+    assert len(set(caminhos)) == 2, caminhos
 
 
 # -- a troca de âncora pergunta ao SERVIDOR se o jogo toca --------------------
@@ -458,11 +461,11 @@ def test_o_jogo_que_abre_na_mesma_volta_segura_o_no(mesa: _Mesa) -> None:
     servidor sabe que o jogo já toca.
     """
     mesa.casar(_A)
-    antes = mesa.servidor.caminho_de(1)
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     _o_aparelho_da_ancora_sai(mesa, antes)
     mesa.casar(_A)
-    assert mesa.servidor.caminho_de(1) == antes, "o nó caiu com o jogo tocando nele"
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
     assert mesa.servidor.quedas == []
 
 
@@ -478,13 +481,13 @@ def test_a_fonte_da_haptica_que_nao_sobe_nao_derruba_o_no(
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
     mesa.casar(_A)
-    antes = mesa.servidor.caminho_de(1)
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     mesa.casar(_A)
     assert _PonteDeMentira.criadas[-1].arranjo is None, "a ponte devia ter ficado no som"
     _o_aparelho_da_ancora_sai(mesa, antes)
     mesa.casar(_A)
-    assert mesa.servidor.caminho_de(1) == antes, "o nó caiu com o jogo tocando nele"
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
     assert mesa.servidor.quedas == []
 
 
@@ -493,12 +496,12 @@ def test_o_controle_sem_ponte_nao_perde_o_no_com_o_jogo_aberto(mesa: _Mesa) -> N
     sem_ponte = [_Controle(_A, caminho="")]
     mesa.sub._casar_as_pontes(sem_ponte)
     assert _PonteDeMentira.criadas == []
-    antes = mesa.servidor.caminho_de(1)
+    antes = mesa.servidor.caminho_de(_A)
     assert len(antes) == 1
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     _o_aparelho_da_ancora_sai(mesa, antes)
     mesa.sub._casar_as_pontes(sem_ponte)
-    assert mesa.servidor.caminho_de(1) == antes, "o nó caiu com o jogo tocando nele"
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
     assert mesa.servidor.quedas == []
 
 
@@ -513,21 +516,21 @@ def test_o_servidor_mudo_nao_e_ninguem_tocando(
     derruba o nó com o jogo aberto.
     """
     mesa.casar(_A)
-    antes = mesa.servidor.caminho_de(1)
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     _o_aparelho_da_ancora_sai(mesa, antes)
     with monkeypatch.context() as mudo:
         mudo.setattr(eh, "rodar_pactl", lambda _argv: None)
         mudo.setattr(af, "rodar_pactl", lambda _argv: None)
         mesa.casar(_A)
-    assert mesa.servidor.caminho_de(1) == antes, "o nó caiu na volta muda"
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu na volta muda"
     assert mesa.servidor.quedas == []
     mesa.casar(_A)  # o servidor voltou, e o jogo segue tocando
-    assert mesa.servidor.caminho_de(1) == antes
+    assert mesa.servidor.caminho_de(_A) == antes
     mesa.servidor.jogo_em.clear()
     mesa.casar(_A)  # a ponte sai da háptica
     mesa.casar(_A)  # e a troca acontece
-    depois = mesa.servidor.caminho_de(1)
+    depois = mesa.servidor.caminho_de(_A)
     assert len(depois) == 1
     assert depois != antes
 
@@ -535,8 +538,8 @@ def test_o_servidor_mudo_nao_e_ninguem_tocando(
 def test_na_duvida_e_resposta_so_do_servidor_mudo() -> None:
     """Resposta VAZIA é resposta: sem sink ou sem stream, ninguém toca."""
     servidor = _Servidor()
-    servidor.por(1, _QUATRO[0])
-    nome = eh.nome_do_endpoint(1)
+    servidor.por(_A, _QUATRO[0])
+    nome = eh.nome_do_endpoint(_A)
     assert af.sink_esta_tocando(nome, lambda _argv: None) is False
     assert af.sink_esta_tocando(nome, lambda _argv: None, na_duvida=True) is True
     assert af.sink_esta_tocando(nome, servidor, na_duvida=True) is False
@@ -559,18 +562,18 @@ def test_o_leitor_do_monitor_nao_conta_como_jogo() -> None:
     MORDIDA: devolver ``sink_esta_tocando`` ao estado ``RUNNING`` do sink.
     """
     servidor = _Servidor()
-    servidor.por(1, _QUATRO[0])
-    assert af.sink_esta_tocando(eh.nome_do_endpoint(1), servidor) is False
-    servidor.jogo_em.add(eh.nome_do_endpoint(1))
-    assert af.sink_esta_tocando(eh.nome_do_endpoint(1), servidor) is True
+    servidor.por(_A, _QUATRO[0])
+    assert af.sink_esta_tocando(eh.nome_do_endpoint(_A), servidor) is False
+    servidor.jogo_em.add(eh.nome_do_endpoint(_A))
+    assert af.sink_esta_tocando(eh.nome_do_endpoint(_A), servidor) is True
 
 
 def test_o_stream_de_outro_sink_nao_e_deste() -> None:
     servidor = _Servidor()
-    servidor.por(1, _QUATRO[0])
-    servidor.por(2, _QUATRO[1])
-    servidor.jogo_em.add(eh.nome_do_endpoint(2))
-    assert af.sink_esta_tocando(eh.nome_do_endpoint(1), servidor) is False
+    servidor.por(_A, _QUATRO[0])
+    servidor.por(_B, _QUATRO[1])
+    servidor.jogo_em.add(eh.nome_do_endpoint(_B))
+    assert af.sink_esta_tocando(eh.nome_do_endpoint(_A), servidor) is False
 
 
 def test_o_jogo_que_fecha_devolve_a_ponte_ao_som(mesa: _Mesa) -> None:
@@ -583,7 +586,7 @@ def test_o_jogo_que_fecha_devolve_a_ponte_ao_som(mesa: _Mesa) -> None:
     """
     mesa.casar(_A)
     assert _PonteDeMentira.criadas[-1].arranjo is None
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     mesa.casar(_A)
     assert _PonteDeMentira.criadas[-1].arranjo is af.ARRANJO_HAPTICA_032
     mesa.servidor.jogo_em.clear()

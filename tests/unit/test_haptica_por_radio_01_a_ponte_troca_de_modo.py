@@ -10,11 +10,10 @@ endpoint. Estas réguas medem a FIAÇÃO: quem é construído, com o quê, e em 
 ordem cai. O comportamento da bomba está em
 ``test_haptica_por_radio_01_a_bomba_que_vibra.py``.
 
-O ENDPOINT É DO LUGAR DESDE 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
-eram um por controle no rádio, e passaram a ser quatro, um por lugar, de pé
-desde o primeiro DualSense da mesa, em qualquer transporte. O dublê abaixo é
-construído pelo LUGAR, e as réguas que diziam «um endpoint por controle no
-rádio» e «o cabo não ganha endpoint» foram trocadas pelo fato de agora.
+O ENDPOINT É DO APARELHO DESDE 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01): um por
+DualSense da mesa, em qualquer transporte (de 28/09 a 02/10 eram quatro, um por
+lugar). O dublê abaixo é construído pelo ``uniq``, e a régua que dizia «o cabo
+não ganha endpoint» segue trocada pelo fato de agora.
 """
 
 from __future__ import annotations
@@ -60,13 +59,20 @@ class _PonteDeMentira:
 
 
 class _EndpointDeMentira:
-    criados: ClassVar[list[Any]] = []
-    quedas: ClassVar[list[int]] = []
+    """O endpoint do APARELHO (A-HAPTICA-E-POR-APARELHO-01): nasce pelo ``uniq``."""
 
-    def __init__(self, *, lugar: int, ancora: Any, **_: Any) -> None:
-        self.lugar = lugar
+    criados: ClassVar[list[Any]] = []
+    quedas: ClassVar[list[str]] = []
+
+    def __init__(self, *, uniq: str, ancora: Any, **_: Any) -> None:
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            marca_do_aparelho,
+        )
+
+        self.uniq = uniq
+        self.marca = marca_do_aparelho(uniq)
         self.ancora = ancora
-        self.nome = f"endpoint::{lugar}"
+        self.nome = f"endpoint::{uniq}"
         self.subiu = False
         _EndpointDeMentira.criados.append(self)
 
@@ -79,7 +85,7 @@ class _EndpointDeMentira:
         return True
 
     def parar(self) -> None:
-        _EndpointDeMentira.quedas.append(self.lugar)
+        _EndpointDeMentira.quedas.append(self.uniq)
 
 
 @dataclass
@@ -171,10 +177,10 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     return _Estado(sub=sub, controles=controles, tocando=tocando, monitores=monitores)
 
 
-def test_os_quatro_lugares_sobem_com_o_primeiro_controle(bancada: _Estado) -> None:
-    """FATO QUE CAIU (28/09/2026): o endpoint era um por controle no rádio."""
+def test_o_controle_sobe_o_endpoint_dele(bancada: _Estado) -> None:
+    """Um por aparelho (A-HAPTICA-E-POR-APARELHO-01; de 28/09 a 02/10, os quatro lugares)."""
     bancada.sub._casar_as_pontes(bancada.controles)
-    assert [e.lugar for e in _EndpointDeMentira.criados] == [1, 2, 3, 4]
+    assert [e.uniq for e in _EndpointDeMentira.criados] == ["aa:bb:cc:00:00:01"]
     assert all(e.subiu for e in _EndpointDeMentira.criados)
 
 
@@ -190,8 +196,7 @@ def test_sem_o_jogo_tocando_a_ponte_e_a_do_som(bancada: _Estado) -> None:
 def test_com_o_jogo_tocando_a_ponte_vira_a_da_haptica(bancada: _Estado) -> None:
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
-    # O único controle da mesa senta no lugar 1 (sem daemon, o primeiro livre).
-    bancada.tocando["endpoint::1"] = True
+    bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
     bancada.sub._casar_as_pontes(bancada.controles)
     ponte = _PonteDeMentira.criadas[-1]
     assert ponte.arranjo is af.ARRANJO_HAPTICA_032
@@ -200,8 +205,7 @@ def test_com_o_jogo_tocando_a_ponte_vira_a_da_haptica(bancada: _Estado) -> None:
 
 def test_a_fonte_da_haptica_pede_quatro_canais(bancada: _Estado) -> None:
     """Dois canais dariam a voz do jogo aos motores e nenhum motor."""
-    # O único controle da mesa senta no lugar 1 (sem daemon, o primeiro livre).
-    bancada.tocando["endpoint::1"] = True
+    bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
     bancada.sub._casar_as_pontes(bancada.controles)
     assert any(m.endswith("#4") for m in bancada.monitores), bancada.monitores
 
@@ -211,8 +215,7 @@ def test_o_jogo_abrindo_no_meio_derruba_e_sobe_de_novo(bancada: _Estado) -> None
     bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     primeira = _PonteDeMentira.criadas[-1]
-    # O único controle da mesa senta no lugar 1 (sem daemon, o primeiro livre).
-    bancada.tocando["endpoint::1"] = True
+    bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
     bancada.sub._casar_as_pontes(bancada.controles)
     assert primeira.desceu is True
     assert len(_PonteDeMentira.criadas) == 2
@@ -228,17 +231,17 @@ def test_o_modo_que_nao_muda_nao_reconstroi_nada(bancada: _Estado) -> None:
     assert len(_PonteDeMentira.criadas) == 1
 
 
-def test_o_ultimo_controle_que_sai_leva_a_ponte_e_os_lugares(bancada: _Estado) -> None:
-    """Sem DualSense e sem jogo tocando, os quatro lugares caem com a ponte."""
+def test_o_ultimo_controle_que_sai_leva_a_ponte_e_o_endpoint(bancada: _Estado) -> None:
+    """Sem DualSense e sem jogo tocando, o endpoint do aparelho cai com a ponte."""
     bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     bancada.sub._casar_as_pontes([])
     assert _PonteDeMentira.criadas[-1].desceu is True
-    assert sorted(_EndpointDeMentira.quedas) == [1, 2, 3, 4]
+    assert _EndpointDeMentira.quedas == [bancada.controles[0].uniq]
 
 
-def test_cada_lugar_ganha_uma_ancora_propria(bancada: _Estado) -> None:
-    """Âncoras iguais são ContainerIds iguais, e o jogo confunde os lugares."""
+def test_cada_aparelho_ganha_uma_ancora_propria(bancada: _Estado) -> None:
+    """Âncoras iguais são ContainerIds iguais, e o jogo confunde os controles."""
     quatro = [
         _Controle(f"aa:bb:cc:00:00:0{i}", f"/dev/hidraw{i}", "bluetooth") for i in range(1, 5)
     ]
@@ -246,12 +249,12 @@ def test_cada_lugar_ganha_uma_ancora_propria(bancada: _Estado) -> None:
     assert len({e.ancora.syspath for e in _EndpointDeMentira.criados}) == 4
 
 
-def test_o_controle_no_cabo_tambem_sobe_os_lugares(bancada: _Estado) -> None:
+def test_o_controle_no_cabo_tambem_sobe_o_endpoint_dele(bancada: _Estado) -> None:
     """FATO QUE CAIU (28/09/2026): «no cabo o endpoint é a placa de verdade».
 
-    O jogo casa o LUGAR, e o cabo passa por ele (um laço do endpoint do lugar à
-    placa, ``integrations/haptica_do_cabo``). Nenhuma ponte do rádio sobe.
+    O cabo passa pelo endpoint do aparelho (um laço dele à placa,
+    ``integrations/haptica_do_cabo``). Nenhuma ponte do rádio sobe.
     """
     bancada.sub._casar_as_pontes([_Controle("aa:bb:cc:00:00:09", "/dev/hidraw9", "usb")])
-    assert [e.lugar for e in _EndpointDeMentira.criados] == [1, 2, 3, 4]
+    assert [e.uniq for e in _EndpointDeMentira.criados] == ["aa:bb:cc:00:00:09"]
     assert _PonteDeMentira.criadas == []

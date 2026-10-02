@@ -73,19 +73,24 @@ class _PonteDeMentira:
 
 
 class _EndpointDeMentira:
-    """O endpoint do LUGAR (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01, 28/09/2026).
+    """O endpoint do APARELHO (A-HAPTICA-E-POR-APARELHO-01, 02/10/2026).
 
-    Era um por controle no rádio, construído pelo ``uniq``; passou a ser um por
-    lugar, construído pelo ``lugar``.
+    Construído pelo ``uniq``, como o do produto (de 28/09 a 02/10 era pelo
+    lugar).
     """
 
-    def __init__(self, *, lugar: int, ancora: Any = None, **_: Any) -> None:
-        self.lugar = lugar
+    def __init__(self, *, uniq: str, ancora: Any = None, **_: Any) -> None:
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            marca_do_aparelho,
+        )
+
+        self.uniq = uniq
+        self.marca = marca_do_aparelho(uniq)
         #: A POSSE, e ela é lembrada de propósito: a segunda volta lê
         #: `self._endpoints[…].ancora` para não trocar a âncora de ninguém, e
         #: um dublê sem este campo derruba a volta com `AttributeError`.
         self.ancora = ancora
-        self.nome = f"endpoint::{lugar}"
+        self.nome = f"endpoint::{uniq}"
 
     @property
     def monitor(self) -> str:
@@ -111,12 +116,8 @@ class _Bancada:
         self.tocando[nome_do_sink(uniq)] = sim
 
     def o_jogo_toca_no_endpoint(self, uniq: str, sim: bool = True) -> None:
-        """O jogo toca no endpoint do LUGAR deste controle.
-
-        Sem daemon, o lugar é o primeiro livre na ordem da mesa — o recuo de
-        ``AltoFalanteSubsystem._lugares_da_mesa`` —, e a mesa daqui é a ``MESA``.
-        """
-        self.tocando[f"endpoint::{MESA.index(uniq) + 1}"] = sim
+        """O jogo toca no endpoint do APARELHO deste controle."""
+        self.tocando[f"endpoint::{uniq}"] = sim
 
     def volta(self, *uniqs: str) -> None:
         self.sub._casar_as_pontes([_Controle(u) for u in uniqs])

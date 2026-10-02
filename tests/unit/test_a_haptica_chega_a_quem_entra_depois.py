@@ -1,19 +1,21 @@
-"""A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01 — o jogo casa o lugar, e não o aparelho.
+"""A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01 — o cabo passa pelo endpoint, e o registro tem dono.
 
 O registro que o jogo lê (o device KS do prefixo) só se grava no lançamento,
-com o ``wineserver`` fora do ar. O endpoint era um por controle no rádio, e no
-cabo o bloco levava o ``BUSNUM-DEVNUM`` daquele instante: quem entrava com o
-jogo aberto caía num endpoint que o jogo não conhecia. Agora são quatro
-endpoints, um por LUGAR, de pé desde o primeiro DualSense; a ponte do rádio lê o
-do lugar, e no cabo um laço leva o do lugar à placa.
+com o ``wineserver`` fora do ar. Desde 28/09 o cabo passa por um laço do
+endpoint de háptica até a placa do controle, e a lista do registro tem um dono
+(``audio_ks_dualsense.controles_do_registro``). De 28/09 a 02/10 os endpoints
+eram quatro, um por LUGAR; desde a A-HAPTICA-E-POR-APARELHO-01 (a palavra dela
+de 29/09, *«todas as features são um por aparelho. sempre.»*) são um por
+APARELHO, e as réguas do lugar que ela revogou saíram daqui: as do aparelho
+estão em ``tests/unit/test_a_haptica_e_por_aparelho.py``. Ficam as do laço, do
+registro, das âncoras e da ordem de queda, medidas pelo aparelho.
 
-AS NOVE RÉGUAS DA SPRINT, e cada uma foi vista reprovar com a mordida escrita
-nela. Nada aqui toca o servidor de som, o sysfs ou o registro de ninguém: o
-servidor é um dublê com estado, o ``/sys`` e o ``system.reg`` moram no
-``tmp_path``, e os ``uniq`` são da faixa sintética ``aa:bb:cc``.
+Nada aqui toca o servidor de som, o sysfs ou o registro de ninguém: o servidor
+é um dublê com estado, o ``/sys`` e o ``system.reg`` moram no ``tmp_path``, e
+os ``uniq`` são da faixa sintética ``aa:bb:cc``.
 
-LIMITE DECLARADO: é fiação e conta. Se o jogo acha o endpoint que aparece
-depois, e o atraso do laço na mão, são a prova no aparelho, e são dela.
+LIMITE DECLARADO: é fiação e conta. O atraso do laço na mão é a prova no
+aparelho, e é dela.
 """
 
 from __future__ import annotations
@@ -38,7 +40,7 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     MAPA,
     HapticaDoCabo,
-    chave_do_lugar,
+    chave_do_aparelho,
     no_de_captura,
 )
 from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
@@ -177,10 +179,10 @@ class _Servidor:
             if f["nome"] != f"output.hefesto-haptica-do-cabo-{chave}"
         }
 
-    def fluxo_do_laco(self, lugar: int) -> int:
+    def fluxo_do_laco(self, uniq: str) -> int:
         (indice,) = [
             i for i, f in self.fluxos.items()
-            if f["nome"] == f"output.hefesto-haptica-do-cabo-{chave_do_lugar(lugar)}"
+            if f["nome"] == f"output.hefesto-haptica-do-cabo-{_chave(uniq)}"
         ]
         return indice
 
@@ -386,8 +388,13 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     return m
 
 
-def _ancora_do_lugar(servidor: _Servidor, lugar: int) -> str:
-    (no,) = servidor.do_nome(eh.nome_do_endpoint(lugar))
+def _chave(uniq: str) -> str:
+    """A chave do laço do cabo deste controle: a marca do aparelho."""
+    return chave_do_aparelho(eh.marca_do_aparelho(uniq))
+
+
+def _ancora_do_aparelho(servidor: _Servidor, uniq: str) -> str:
+    (no,) = servidor.do_nome(eh.nome_do_endpoint(uniq))
     return str(no["props"]["sysfs.path"])
 
 
@@ -402,130 +409,8 @@ def _do_aparelho(sysfs: Path, nome: str) -> str:
     return f"HEFESTOKS&003&{devnum:03d}&0"
 
 
-# ---------------------------------------------------------------------------
-# 1. O lugar: o bloco do P4 existe antes de o P4 chegar
-# ---------------------------------------------------------------------------
-
-
-def test_o_bloco_do_lugar_4_existe_antes_de_o_p4_chegar(mesa: _Mesa) -> None:
-    """Três no lançamento, o quarto depois: o jogo já conhece o lugar dele.
-
-    MORDIDA: em ``AltoFalanteSubsystem._lugares_de_pe``, devolva só os lugares
-    ocupados (``tuple(sorted(set(...)))`` dos lugares da mesa) — a lista volta
-    a ser só os presentes, e o bloco do lugar 4 não nasce.
-    """
-    mesa.assentos.update({_P1: 1, _P2: 2, _P3: 3})
-    mesa.volta(*(_Controle(u, "bt") for u in (_P1, _P2, _P3)))
-    lancamento = mesa.registro()
-    assert len(lancamento) == 4, f"o registro do lançamento tem {len(lancamento)} lugar(es)"
-    do_lugar_4 = _do_aparelho(mesa.sysfs, "3-4")
-    assert do_lugar_4 in _instancias(lancamento), "o P4 que entrar depois não terá bloco"
-    assert _ancora_do_lugar(mesa.servidor, 4).startswith("/devices/pci0000:00/usb3/3-4/")
-
-
-# ---------------------------------------------------------------------------
-# 2. O nome não é o endereço
-# ---------------------------------------------------------------------------
-
-
-def test_um_controle_sobe_os_quatro_lugares_sem_endereco_no_nome(mesa: _Mesa) -> None:
-    """Com um só na mesa, quatro endpoints de nomes distintos e nenhum hex do ``uniq``.
-
-    MORDIDA: troque ``MOLDE_DA_MARCA_DO_LUGAR`` por seis dígitos
-    (``"{lugar}{lugar}{lugar}{lugar}{lugar}{lugar}"``) — o nome ganha a forma de
-    endereço que as réguas de forma leem como o rabo de um controle.
-    """
-    mesa.assentos[_P3] = 1
-    mesa.volta(_Controle(_P3, "bt"))
-    nomes = mesa.servidor.nossos()
-    assert nomes == sorted(eh.nome_do_endpoint(n) for n in eh.LUGARES)
-    assert len(set(nomes)) == 4
-    for nome in nomes:
-        assert eh.marca_do_controle(_P3) not in nome.lower()
-        assert not re.search(r"HEFESTO[0-9A-Fa-f]{6}(?![0-9A-Fa-f])", nome), nome
-        assert all(agulha in nome for agulha in eh.AGULHAS)
-
-
-# ---------------------------------------------------------------------------
-# 3. Quem entra não cria nó
-# ---------------------------------------------------------------------------
-
-
-def test_o_p4_que_entra_com_o_jogo_aberto_le_o_endpoint_que_ja_existia(mesa: _Mesa) -> None:
-    """Jogo aberto com três; o P4 liga pelo BT e a ponte lê o endpoint 4 de antes.
-
-    MORDIDA: a mesma da régua 1 (só os lugares ocupados de pé) — o endpoint 4
-    passa a nascer NA CHEGADA, com o jogo aberto, e o jogo não o conhece.
-    """
-    tres = [_Controle(u, "bt", f"/dev/hidraw{i}") for i, u in enumerate((_P1, _P2, _P3), 1)]
-    mesa.assentos.update({_P1: 1, _P2: 2, _P3: 3, _P4: 4})
-    mesa.volta(*tres)
-    mesa.servidor.jogo_em.update(eh.nome_do_endpoint(n) for n in eh.LUGARES)
-    mesa.jogando.add(_P4)
-    cargas = list(mesa.servidor.cargas)
-    mesa.volta(*tres, _Controle(_P4, "bt", "/dev/hidraw4"))
-    assert mesa.servidor.cargas == cargas, "o P4 fez nascer um nó com o jogo aberto"
-    assert mesa.servidor.quedas == []
-    assert (eh.nome_do_endpoint(4), "haptica") in mesa.lidos
-    (ponte_do_p4,) = [p for p in _PonteDeMentira.criadas if p.uniq == _P4]
-    assert ponte_do_p4.arranjo is af.ARRANJO_HAPTICA_032
-
-
-# ---------------------------------------------------------------------------
-# Por controle: as 24 ordens de conexão, cabo e BT misturados
-# ---------------------------------------------------------------------------
-
-#: O lugar de cada um, e o aparelho dos dois que chegam pelo cabo.
-_LUGAR = {_P1: 1, _P2: 2, _P3: 3, _P4: 4}
-_NO_CABO = {_P1: ("3-8", 28), _P2: ("3-7", 29)}
-_ORDENS = list(itertools.permutations((_P1, _P2, _P3, _P4)))
-
-
-@pytest.mark.parametrize(
-    "ordem", _ORDENS, ids=["".join(u[-1] for u in o) for o in _ORDENS]
-)
-def test_em_qualquer_ordem_quem_chega_cai_no_lugar_que_ja_existia(
-    mesa: _Mesa, ordem: tuple[str, ...]
-) -> None:
-    """O critério «por controle» da sprint: os quatro lugares, nas 24 ordens.
-
-    P1 e P2 chegam pelo cabo, P3 e P4 pelo rádio, em cada uma das 24 ordens.
-    Depois da primeira chegada, ninguém faz nascer nó, nenhum nó cai, e a
-    lista que o registro grava não muda — é a mesma do lançamento, com quem
-    chegar depois. No fim, os dois do cabo têm laço, e só eles.
-
-    MORDIDA: a da régua 1 (só os lugares ocupados de pé) — cada chegada passa
-    a carregar o nó do lugar, e o registro muda a cada uma.
-    """
-    chegaram: list[_Controle] = []
-    cargas: list[Any] | None = None
-    blocos: set[str] | None = None
-    for uniq in ordem:
-        if uniq in _NO_CABO:
-            aparelho, devnum = _NO_CABO[uniq]
-            chegaram.append(_no_cabo(mesa, uniq, _LUGAR[uniq], aparelho, devnum))
-        else:
-            mesa.assentos[uniq] = _LUGAR[uniq]
-            chegaram.append(_Controle(uniq, "bt", f"/dev/hidraw{_LUGAR[uniq]}"))
-        mesa.volta(*chegaram)
-        assert mesa.servidor.nossos() == sorted(eh.nome_do_endpoint(n) for n in eh.LUGARES)
-        agora = _instancias(mesa.registro())
-        if cargas is None or blocos is None:
-            cargas, blocos = list(mesa.servidor.cargas), agora
-        assert mesa.servidor.cargas == cargas, f"a chegada de {uniq} fez nascer um nó"
-        assert agora == blocos, f"a lista do registro mudou quando {uniq} chegou"
-    assert len(blocos or ()) == 4
-    assert mesa.servidor.quedas == []
-    assert set(mesa.lacos.vivos) == {chave_do_lugar(1), chave_do_lugar(2)}
-
-
-# ---------------------------------------------------------------------------
-# 4. O replug do cabo
-# ---------------------------------------------------------------------------
-
-
 def _no_cabo(mesa: _Mesa, uniq: str, lugar: int, aparelho: str, devnum: int) -> _Controle:
-    """Um DualSense no cabo: o aparelho no ``/sys``, a placa no servidor e o lugar."""
+    """Um DualSense no cabo: o aparelho no ``/sys``, a placa no servidor e o número."""
     if not (mesa.sysfs / "bus" / "usb" / "devices" / aparelho).exists():
         _aparelho(mesa.sysfs, aparelho, vid="054c", pid="0ce6", devnum=devnum, placa=True)
     placa = _PLACA.format(n="" if lugar == 1 else f".{lugar}")
@@ -535,18 +420,68 @@ def _no_cabo(mesa: _Mesa, uniq: str, lugar: int, aparelho: str, devnum: int) -> 
     return _Controle(uniq, "usb")
 
 
-def test_o_replug_nao_muda_o_lugar_e_o_laco_segue_a_placa_nova(mesa: _Mesa) -> None:
-    """O P1 volta com ``DEVNUM`` novo: o endpoint e o bloco do lugar 1 ficam.
+# ---------------------------------------------------------------------------
+# Por controle: as 24 ordens de conexão, cabo e BT misturados
+# ---------------------------------------------------------------------------
+
+#: O número de cada um, e o aparelho dos dois que chegam pelo cabo.
+_LUGAR = {_P1: 1, _P2: 2, _P3: 3, _P4: 4}
+_NO_CABO = {_P1: ("3-8", 28), _P2: ("3-7", 29)}
+_ORDENS = list(itertools.permutations((_P1, _P2, _P3, _P4)))
+
+
+@pytest.mark.parametrize(
+    "ordem", _ORDENS, ids=["".join(u[-1] for u in o) for o in _ORDENS]
+)
+def test_em_qualquer_ordem_cada_um_que_chega_ganha_o_endpoint_dele(
+    mesa: _Mesa, ordem: tuple[str, ...]
+) -> None:
+    """O critério «por controle», nas 24 ordens, pelo aparelho.
+
+    P1 e P2 chegam pelo cabo, P3 e P4 pelo rádio, em cada uma das 24 ordens. A
+    cada chegada nasce UM nó, o do aparelho que chegou; nenhum nó cai, e a
+    lista do registro ganha um bloco por aparelho. No fim, os dois do cabo têm
+    laço, e só eles.
+
+    MORDIDA: em ``AltoFalanteSubsystem._aparelhos_da_mesa``, devolva só o
+    primeiro aparelho da mesa — quem chega depois fica sem endpoint.
+    """
+    chegaram: list[_Controle] = []
+    for uniq in ordem:
+        if uniq in _NO_CABO:
+            aparelho, devnum = _NO_CABO[uniq]
+            chegaram.append(_no_cabo(mesa, uniq, _LUGAR[uniq], aparelho, devnum))
+        else:
+            mesa.assentos[uniq] = _LUGAR[uniq]
+            chegaram.append(_Controle(uniq, "bt", f"/dev/hidraw{_LUGAR[uniq]}"))
+        cargas = list(mesa.servidor.cargas)
+        mesa.volta(*chegaram)
+        assert mesa.servidor.nossos() == sorted(eh.nome_do_endpoint(c.uniq) for c in chegaram)
+        assert mesa.servidor.cargas[len(cargas):] == [eh.nome_do_endpoint(uniq)], (
+            f"a chegada de {uniq} não fez nascer só o nó dele"
+        )
+        assert len(_instancias(mesa.registro())) == len(chegaram)
+    assert mesa.servidor.quedas == []
+    assert set(mesa.lacos.vivos) == {_chave(_P1), _chave(_P2)}
+
+
+# ---------------------------------------------------------------------------
+# O replug do cabo
+# ---------------------------------------------------------------------------
+
+
+def test_o_replug_nao_muda_o_endpoint_e_o_laco_segue_a_placa_nova(mesa: _Mesa) -> None:
+    """O P1 volta com ``DEVNUM`` novo: o endpoint e o bloco do aparelho ficam.
 
     MORDIDA: em ``controles_do_registro``, devolva ``controles_no_cabo(...) +
-    lugares`` sem tirar as placas servidas — o bloco volta a ser pelo
+    endpoints`` sem tirar as placas servidas — o bloco volta a ser pelo
     ``BUSNUM-DEVNUM``, e o replug o troca.
     """
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
     antes = mesa.registro()
-    ancora = _ancora_do_lugar(mesa.servidor, 1)
-    (primeira,) = [lig for lig in mesa.lacos.ligacoes if lig[0] == chave_do_lugar(1)]
+    ancora = _ancora_do_aparelho(mesa.servidor, _P1)
+    (primeira,) = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(_P1)]
     # O cabo sai e volta: outro DEVNUM, e o ALSA publica a placa de novo.
     velha = mesa.placas[_P1]
     mesa.servidor.sinks = {i: s for i, s in mesa.servidor.sinks.items() if s["nome"] != velha}
@@ -555,22 +490,22 @@ def test_o_replug_nao_muda_o_lugar_e_o_laco_segue_a_placa_nova(mesa: _Mesa) -> N
     mesa.servidor.placa(nova, _caminho_da_placa("3-8"))
     mesa.placas[_P1] = nova
     mesa.volta(p1)
-    assert _ancora_do_lugar(mesa.servidor, 1) == ancora
-    assert mesa.servidor.quedas == [], "o endpoint do lugar caiu com o replug"
-    ultima = [lig for lig in mesa.lacos.ligacoes if lig[0] == chave_do_lugar(1)][-1]
+    assert _ancora_do_aparelho(mesa.servidor, _P1) == ancora
+    assert mesa.servidor.quedas == [], "o endpoint do aparelho caiu com o replug"
+    ultima = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(_P1)][-1]
     assert ultima[2] == str(mesa.servidor.indice(nova)) != primeira[2], "o laço não seguiu a placa"
     depois = mesa.registro()
-    assert _instancias(depois) == _instancias(antes), "o bloco do lugar 1 mudou com o replug"
+    assert _instancias(depois) == _instancias(antes), "o bloco do aparelho mudou com o replug"
     assert "HEFESTOKS&003&041&0" not in _instancias(depois)
 
 
 # ---------------------------------------------------------------------------
-# 5. Um alvo por controle
+# Um alvo por controle
 # ---------------------------------------------------------------------------
 
 
-def test_o_cabo_com_lugar_ancorado_nao_tem_bloco_proprio(mesa: _Mesa) -> None:
-    """A placa e o lugar seriam dois alvos para o mesmo controle.
+def test_o_cabo_com_endpoint_ancorado_nao_tem_bloco_proprio(mesa: _Mesa) -> None:
+    """A placa e o endpoint seriam dois alvos para o mesmo controle.
 
     MORDIDA: em ``controles_do_registro``, mantenha o ``controles_no_cabo`` na
     lista (``servidas = set()``).
@@ -578,48 +513,48 @@ def test_o_cabo_com_lugar_ancorado_nao_tem_bloco_proprio(mesa: _Mesa) -> None:
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
     instancias = _instancias(mesa.registro())
     assert _do_aparelho(mesa.sysfs, "3-8") not in instancias, (
-        "o P1 tem bloco pela placa E pelo lugar"
+        "o P1 tem bloco pela placa E pelo endpoint"
     )
-    assert len(instancias) == 4
+    assert len(instancias) == 1
 
 
 # ---------------------------------------------------------------------------
-# 6. A (b) no cabo
+# A (b) no cabo
 # ---------------------------------------------------------------------------
 
 
 def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa) -> None:
-    """Dois no cabo, o mesmo sinal nos endpoints 1 e 2, e só o P2 mexeu.
+    """Dois no cabo, o mesmo sinal nos dois endpoints, e só o P2 mexeu.
 
     MORDIDA: em ``_casar_o_cabo``, abra o portão de todo laço
-    (``abertos.add(lugar)`` fora do ``if este_joga``).
+    (``abertos.add(marca)`` fora do ``if este_joga``).
     """
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
-    mesa.servidor.jogo_em.update({eh.nome_do_endpoint(1), eh.nome_do_endpoint(2)})
+    mesa.servidor.jogo_em.update({eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)})
     mesa.jogando.add(_P2)
     mesa.volta(p1, p2)
-    um = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(1)]
-    dois = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(2)]
+    um = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P1)]
+    dois = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P2)]
     assert um == ["100%", "100%", "0%", "0%"], f"o P1 parado vibrou: {um}"
     assert dois == ["100%", "100%", "100%", "100%"], f"o P2 na mão não vibrou: {dois}"
-    for _chave, captura, destino, canais, mapa in mesa.lacos.ligacoes:
+    for _chave_do_laco, captura, destino, canais, mapa in mesa.lacos.ligacoes:
         assert (canais, mapa) == (4, MAPA), "o laço não leva os quatro canais um a um"
         assert captura.isdigit() and destino.isdigit(), "o laço pelo nome cai na fonte padrão"
     assert {lig[1] for lig in mesa.lacos.ligacoes} == {
-        str(mesa.servidor.indice(eh.nome_do_endpoint(n))) for n in (1, 2)
+        str(mesa.servidor.indice(eh.nome_do_endpoint(u))) for u in (_P1, _P2)
     }
 
 
 # ---------------------------------------------------------------------------
-# 7. A guarda do Black Desert pergunta pelo controle, e não pelo endpoint
+# A guarda do Black Desert pergunta pelo controle, e não pelo endpoint
 # ---------------------------------------------------------------------------
 
 
 def _lancar(tmp_path: Path, sysfs: Path) -> str:
     """Roda o wrapper com a opção ligada pelo daemon; devolve o que o jogo viu.
 
-    O ``pactl`` de mentira responde que os QUATRO lugares estão de pé — o
+    O ``pactl`` de mentira responde que quatro endpoints estão de pé — o
     estado em que a sonda de antes dizia "há endpoint" sem controle nenhum.
     """
     home = tmp_path / "home"
@@ -636,8 +571,8 @@ def _lancar(tmp_path: Path, sysfs: Path) -> str:
     (compat / "pfx" / "system.reg").write_text("WINE REGISTRY Version 2\n", encoding="utf-8")
     binarios = Path(_path_minimo(tmp_path / "bin"))
     linhas = "\\n".join(
-        f"{n}\\t{eh.nome_do_endpoint(n)}\\tPipeWire\\tfloat32le 4ch 48000Hz\\tIDLE"
-        for n in eh.LUGARES
+        f"{n}\\t{eh.nome_do_endpoint(u)}\\tPipeWire\\tfloat32le 4ch 48000Hz\\tIDLE"
+        for n, u in enumerate((_P1, _P2, _P3, _P4), 1)
     )
     (binarios / "pactl").write_text(f"#!/bin/sh\nprintf '{linhas}\\n'\n", encoding="utf-8")
     (binarios / "pactl").chmod(0o755)
@@ -662,12 +597,12 @@ def _lancar(tmp_path: Path, sysfs: Path) -> str:
     return feito.stdout.strip()
 
 
-def test_os_lugares_de_pe_sem_dualsense_na_mesa_deixam_a_opcao_em_zero(tmp_path: Path) -> None:
-    """Os quatro endpoints de pé e nenhum DualSense físico: o Black Desert fica salvo.
+def test_os_endpoints_de_pe_sem_dualsense_na_mesa_deixam_a_opcao_em_zero(tmp_path: Path) -> None:
+    """Quatro endpoints de pé e nenhum DualSense físico: o Black Desert fica salvo.
 
     MORDIDA: faça ``dualsense_fisico_na_mesa`` perguntar pelo endpoint
     (``dualsense_no_cabo || pactl list short sinks | grep -q HEFESTO``) — os
-    lugares respondem «há», e a opção liga sem controle nenhum.
+    endpoints respondem «há», e a opção liga sem controle nenhum.
     """
     vazio = tmp_path / "sys"
     (vazio / "bus" / "usb" / "devices").mkdir(parents=True)
@@ -688,17 +623,20 @@ def test_o_dualsense_no_radio_liga_a_opcao(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 8. O lugar sem âncora: o cabo segue pela placa, e o doctor diz
+# O aparelho sem âncora: o cabo segue pela placa, e o doctor diz
 # ---------------------------------------------------------------------------
 
 
-def test_o_lugar_sem_ancora_deixa_o_cabo_na_placa(
+def test_o_aparelho_sem_ancora_deixa_o_cabo_na_placa(
     monkeypatch: pytest.MonkeyPatch, mesa: _Mesa, tmp_path: Path
 ) -> None:
-    """Uma âncora e dois no cabo: o lugar 1 pelo endpoint, o P2 pelo ``BUSNUM-DEVNUM``.
+    """Uma âncora e dois no cabo: um pelo endpoint, o outro pelo ``BUSNUM-DEVNUM``.
+
+    Faltando âncora, quem fica de fora é o de marca maior
+    (``endpoint_de_haptica.distribuir_ancoras``), e ele segue pela placa.
 
     MORDIDA: em ``controles_do_registro``, tire o cabo da lista (``cabo = []``)
-    — sem o recuo, o controle do lugar 2 fica sem bloco nenhum.
+    — sem o recuo, o controle sem âncora fica sem bloco nenhum.
     """
     uma = _sysfs(tmp_path / "uma", ancoras=1)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", uma)
@@ -706,11 +644,13 @@ def test_o_lugar_sem_ancora_deixa_o_cabo_na_placa(
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
     mesa.volta(p1, p2)
-    assert mesa.servidor.nossos() == [eh.nome_do_endpoint(1)]
-    assert set(mesa.lacos.vivos) == {chave_do_lugar(1)}, "o lugar sem âncora ganhou laço"
+    com, sem = sorted((_P1, _P2), key=eh.marca_do_aparelho)
+    aparelho = {_P1: "3-8", _P2: "3-7"}
+    assert mesa.servidor.nossos() == [eh.nome_do_endpoint(com)]
+    assert set(mesa.lacos.vivos) == {_chave(com)}, "o aparelho sem âncora ganhou laço"
     instancias = _instancias(mesa.registro())
-    assert _do_aparelho(uma, "3-7") in instancias, "o controle do lugar 2 ficou sem bloco"
-    assert _do_aparelho(uma, "3-8") not in instancias, "o P1 tem dois alvos"
+    assert _do_aparelho(uma, aparelho[sem]) in instancias, "o controle sem âncora ficou sem bloco"
+    assert _do_aparelho(uma, aparelho[com]) not in instancias, "um controle tem dois alvos"
     assert len(instancias) == 2
 
 
@@ -749,25 +689,24 @@ def test_o_doctor_conta_contra_os_quatro_lugares(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 9. O órfão de nome velho
+# O órfão de nome velho
 # ---------------------------------------------------------------------------
 
 
-def test_o_endpoint_de_nome_por_endereco_cai_na_primeira_volta(mesa: _Mesa) -> None:
-    """O servidor com os endpoints por controle do processo de antes do install.
+def test_os_endpoints_de_nome_velho_caem_na_primeira_volta(mesa: _Mesa) -> None:
+    """O servidor com os endpoints por controle (até 28/09) e por lugar (28/09 a 02/10).
 
     MORDIDA: em ``_modulos_desta_casa``, pule a linha que não traz a marca do
-    lugar (``if "HEFESTOLUGAR" not in linha: continue``) — o varredor passa a
-    conhecer só o nome novo, e o de antes fica na lista de som dela.
+    aparelho (``if "HEFESTOAPARELHO" not in linha: continue``) — o varredor
+    passa a conhecer só o nome novo, e os de antes ficam na lista de som dela.
     """
     velhos = [
-        mesa.servidor.modulo_herdado(eh.MOLDE_DO_NOME.format(marca=f"0000c{n}"), f"/d/{n}/i:1.0")
-        for n in (3, 4)
+        mesa.servidor.modulo_herdado(eh.MOLDE_DO_NOME.format(marca=marca), f"/d/{n}/i:1.0")
+        for n, marca in enumerate(("0000c3", "0000c4", "LUGAR1", "LUGAR2"))
     ]
-    mesa.assentos[_P3] = 1
     mesa.volta(_Controle(_P3, "bt"))
-    assert set(velhos) <= set(mesa.servidor.quedas), "o endpoint de nome velho ficou de pé"
-    assert mesa.servidor.nossos() == sorted(eh.nome_do_endpoint(n) for n in eh.LUGARES)
+    assert set(velhos) <= set(mesa.servidor.quedas), "um endpoint de nome velho ficou de pé"
+    assert mesa.servidor.nossos() == [eh.nome_do_endpoint(_P3)]
 
 
 def test_o_endpoint_do_ensaio_nao_e_orfao(mesa: _Mesa) -> None:
@@ -776,38 +715,25 @@ def test_o_endpoint_do_ensaio_nao_e_orfao(mesa: _Mesa) -> None:
     mesa.servidor(["pactl", "load-module", "module-null-sink",
                    f"sink_name={eh.MOLDE_DO_NOME.format(marca='0000c9')}", "channels=4",
                    f'sink_properties="{props} sysfs.path=/d/9/i:1.0 {eh.MARCA_DO_ENSAIO}"'])
-    mesa.assentos[_P3] = 1
     mesa.volta(_Controle(_P3, "bt"))
     assert mesa.servidor.quedas == []
 
 
 # ---------------------------------------------------------------------------
-# E o que o sistema faz sem a mesa: os lugares caem, menos com o jogo tocando
+# A ordem da queda: o laço sai antes do endpoint
 # ---------------------------------------------------------------------------
 
 
-def test_sem_dualsense_os_lugares_caem_e_o_jogo_tocando_os_segura(mesa: _Mesa) -> None:
-    """Os quatro ficam enquanto houver DualSense ou jogo com fluxo num deles."""
-    mesa.assentos[_P3] = 1
-    mesa.volta(_Controle(_P3, "bt"))
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(2))
-    mesa.volta()
-    assert len(mesa.servidor.nossos()) == 4, "o nó sumiu debaixo do jogo"
-    mesa.servidor.jogo_em.clear()
-    mesa.volta()
-    assert mesa.servidor.nossos() == []
-
-
-def test_o_laco_cai_antes_do_endpoint_do_lugar(
+def test_o_laco_cai_antes_do_endpoint_do_aparelho(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O laço cujo alvo some pode ser religado à fonte padrão: ele sai primeiro.
 
-    MORDIDA: tire o ``self._o_cabo().soltar(lugar)`` de antes do
+    MORDIDA: tire o ``self._o_cabo().soltar(marca)`` de antes do
     ``endpoint.parar()`` em ``_casar_as_pontes`` — o nó cai com o laço lendo.
     """
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
-    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert _chave(_P1) in mesa.lacos.vivos
     ordem: list[str] = []
     desligar = mesa.lacos.desligar
     servidor = mesa.servidor
@@ -826,7 +752,7 @@ def test_o_laco_cai_antes_do_endpoint_do_lugar(
     monkeypatch.setattr(mesa.lacos, "desligar", _desligar)
     monkeypatch.setattr(af, "_rodar", _pactl)
     mesa.volta()
-    assert ordem[:1] == [f"laço:{chave_do_lugar(1)}"], ordem
+    assert ordem[:1] == [f"laço:{_chave(_P1)}"], ordem
     assert "endpoint" in ordem
 
 
@@ -896,39 +822,39 @@ def test_o_laco_ligado_a_outro_no_cai_e_nao_se_religa(mesa: _Mesa) -> None:
     ela mandaria a voz dela ao alto-falante da placa. Sem o laço, o registro
     devolve ao controle o bloco da placa, que é o caminho que já vibrava.
 
-    MORDIDA: em ``HapticaDoCabo._conferir``, tire o ``self.soltar(lugar)`` do
+    MORDIDA: em ``HapticaDoCabo._conferir``, tire o ``self.soltar(marca)`` do
     ramo do nó errado — o laço fica de pé, lendo a fonte errada.
     """
     olhados = _com_a_conferencia(mesa, "alsa_input.a_fonte_padrao")
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
-    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert _chave(_P1) in mesa.lacos.vivos
     assert olhados == [], "conferiu na mesma volta que ligou, antes de o grafo ligar"
     mesa.volta(p1)
-    assert olhados == [no_de_captura(1)]
-    assert chave_do_lugar(1) not in mesa.lacos.vivos, "o laço ficou na fonte errada"
+    assert olhados == [no_de_captura(eh.marca_do_aparelho(_P1))]
+    assert _chave(_P1) not in mesa.lacos.vivos, "o laço ficou na fonte errada"
     mesa.volta(p1)
-    assert chave_do_lugar(1) not in mesa.lacos.vivos, "a rota que caiu noutro nó se religou"
+    assert _chave(_P1) not in mesa.lacos.vivos, "a rota que caiu noutro nó se religou"
     assert _do_aparelho(mesa.sysfs, "3-8") in _instancias(mesa.registro())
 
 
-def test_o_laco_no_endpoint_do_lugar_se_confere_uma_vez(mesa: _Mesa) -> None:
+def test_o_laco_no_endpoint_do_aparelho_se_confere_uma_vez(mesa: _Mesa) -> None:
     """Ligado ao endpoint certo, o laço fica, e o grafo não se lê a cada volta.
 
-    MORDIDA: tire o ``self._conferidos.add(lugar)`` — a conferência passa a
+    MORDIDA: tire o ``self._conferidos.add(marca)`` — a conferência passa a
     ler o grafo inteiro a cada volta do daemon.
     """
-    olhados = _com_a_conferencia(mesa, eh.nome_do_endpoint(1))
+    olhados = _com_a_conferencia(mesa, eh.nome_do_endpoint(_P1))
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     for _ in range(4):
         mesa.volta(p1)
-    assert olhados == [no_de_captura(1)]
-    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert olhados == [no_de_captura(eh.marca_do_aparelho(_P1))]
+    assert _chave(_P1) in mesa.lacos.vivos
 
 
 # ---------------------------------------------------------------------------
-# A conferência de 28/09: o lugar que anda troca a ponte, o «não sei» do
-# servidor não derruba o laço, e quem está sentado vem primeiro nas âncoras
+# A conferência de 28/09: o «não sei» do servidor não derruba o laço, a ponte
+# que lê o nó segura a reancoragem, e a âncora vai primeiro a quem está na mesa
 # ---------------------------------------------------------------------------
 
 
@@ -944,50 +870,17 @@ def _quem_le(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
     return lidos
 
 
-def test_o_lugar_que_anda_troca_a_ponte_de_endpoint(
-    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """P1 e P2 no rádio trocam de lugar com o jogo aberto: cada ponte passa a ler o do lugar novo.
-
-    É a metade do «o número que anda troca o laço ou a ponte» que o cabo já
-    fazia (a rota do laço muda com o endpoint) e a ponte não: ela só descia
-    quando o MODO mudava, e seguia lendo o endpoint do lugar de antes — o
-    controle vibrava pelo jogador que se sentou ali.
-
-    MORDIDA: em ``_casar_as_pontes``, volte a comparar só o modo
-    (``if self._modo_da_ponte.get(uniq) == modo: continue``) — as duas pontes
-    ficam de pé lendo o endpoint trocado.
-    """
-    lidos = _quem_le(monkeypatch)
-    um, dois = _Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P2, "bt", "/dev/hidraw2")
-    mesa.assentos.update({_P1: 1, _P2: 2})
-    mesa.servidor.jogo_em.update({eh.nome_do_endpoint(1), eh.nome_do_endpoint(2)})
-    mesa.jogando.update({_P1, _P2})
-    mesa.volta(um, dois)
-    assert (_P1, eh.nome_do_endpoint(1), "haptica") in lidos
-    assert (_P2, eh.nome_do_endpoint(2), "haptica") in lidos
-    lidos.clear()
-    mesa.assentos.update({_P1: 2, _P2: 1})
-    mesa.volta(um, dois)
-    assert (_P1, eh.nome_do_endpoint(2), "haptica") in lidos, "o P1 segue lendo o lugar de antes"
-    assert (_P2, eh.nome_do_endpoint(1), "haptica") in lidos, "o P2 segue lendo o lugar de antes"
-    assert mesa.servidor.quedas == [], "o lugar que anda derrubou um endpoint"
-    lidos.clear()
-    mesa.volta(um, dois)
-    assert lidos == [], "a ponte que já lê o lugar certo desceu e subiu à toa"
-
-
-def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_da_troca(
+def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O controle mudou de lugar e a âncora do lugar de antes saiu, na mesma volta.
+    """O jogo fecha o fluxo e a âncora do P1 sai, na mesma volta.
 
     A reancoragem roda antes da troca de ponte: se ela derrubasse o endpoint
     que a ponte ainda lê, o gravador cairia na fonte padrão (SOM-ECO-02). A
     ponte desce primeiro; o nó se reancora na volta seguinte.
 
     MORDIDA: tire o ``atual.nome in lido`` da guarda da reancoragem — o nó do
-    lugar 1 cai com a ponte do P1 ainda lendo.
+    P1 cai com a ponte dele ainda lendo.
     """
     cinco = _sysfs(tmp_path / "cinco", ancoras=5)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
@@ -1001,13 +894,12 @@ def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_da_troca(
 
     monkeypatch.setattr(_PonteDeMentira, "descer", _descer)
     um = _Controle(_P1, "bt", "/dev/hidraw1")
-    mesa.assentos[_P1] = 1
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    nome_do_1 = eh.nome_do_endpoint(_P1)
+    mesa.servidor.jogo_em.add(nome_do_1)
     mesa.jogando.add(_P1)
     mesa.volta(um)
-    ancora_de_antes = _ancora_do_lugar(mesa.servidor, 1)
+    ancora_de_antes = _ancora_do_aparelho(mesa.servidor, _P1)
     servidor = mesa.servidor
-    nome_do_1 = eh.nome_do_endpoint(1)
 
     def _pactl(argv: list[str]) -> str | None:
         if argv[:2] == ["pactl", "unload-module"]:
@@ -1016,16 +908,16 @@ def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_da_troca(
         return servidor(argv)
 
     monkeypatch.setattr(af, "_rodar", _pactl)
-    # O jogo fecha o fluxo, o P1 vai para o lugar 2 e o aparelho da âncora do 1 sai.
+    # O jogo fecha o fluxo e o aparelho da âncora do P1 sai do barramento.
     servidor.jogo_em.clear()
-    (cinco / "bus" / "usb" / "devices" / "3-1").unlink()
-    mesa.assentos[_P1] = 2
+    ancora_usb = ancora_de_antes.split("/")[-2]
+    (cinco / "bus" / "usb" / "devices" / ancora_usb).unlink()
     mesa.volta(um)
     mesa.volta(um)
     assert f"endpoint:{nome_do_1}" in ordem, "o nó da âncora que saiu não se reancorou"
     assert f"ponte:{_P1}" in ordem
     assert ordem.index(f"ponte:{_P1}") < ordem.index(f"endpoint:{nome_do_1}"), ordem
-    assert _ancora_do_lugar(mesa.servidor, 1) != ancora_de_antes
+    assert _ancora_do_aparelho(mesa.servidor, _P1) != ancora_de_antes
 
 
 def test_o_servidor_mudo_nao_derruba_o_laco_do_cabo(
@@ -1043,65 +935,51 @@ def test_o_servidor_mudo_nao_derruba_o_laco_do_cabo(
     """
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
-    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert _chave(_P1) in mesa.lacos.vivos
     monkeypatch.setattr(af, "_rodar", lambda _argv: None)
     mesa.volta(p1)
     mesa.volta(p1)
-    assert chave_do_lugar(1) in mesa.lacos.vivos, "o laço caiu porque o servidor não respondeu"
+    assert _chave(_P1) in mesa.lacos.vivos, "o laço caiu porque o servidor não respondeu"
     mesa.volta()
-    assert chave_do_lugar(1) not in mesa.lacos.vivos, "o laço de quem saiu do cabo ficou"
+    assert _chave(_P1) not in mesa.lacos.vivos, "o laço de quem saiu do cabo ficou"
 
 
-def test_com_uma_ancora_o_controle_sozinho_no_lugar_2_fica_com_ela(
-    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Um notebook com uma âncora e um DualSense só, que é o «Controle 2».
+def test_as_livres_vao_primeiro_a_quem_esta_na_mesa() -> None:
+    """A conta pura, pelas marcas: duas âncoras, três aparelhos, um deles na mesa.
 
-    Antes desta leva o endpoint era do controle, e a âncora era dele. Por
-    lugar, na ordem pura, ela ia ao lugar 1 vazio e o controle ficava sem
-    vibração pelo rádio.
+    O aparelho na mesa vem antes do que só segue de pé porque um jogo toca no
+    nó dele; e a posse não muda: quem já tem âncora fica com ela.
 
-    MORDIDA: em ``distribuir_ancoras``, sirva as livres só em ordem de lugar
+    MORDIDA: em ``distribuir_ancoras``, sirva as livres só em ordem de marca
     (sem os ``ocupados`` primeiro).
     """
-    uma = _sysfs(tmp_path / "uma", ancoras=1)
-    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", uma)
-    mesa.sysfs = uma
-    lidos = _quem_le(monkeypatch)
-    mesa.assentos[_P2] = 2
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(2))
-    mesa.jogando.add(_P2)
-    mesa.volta(_Controle(_P2, "bt", "/dev/hidraw2"))
-    assert mesa.servidor.nossos() == [eh.nome_do_endpoint(2)]
-    assert (_P2, eh.nome_do_endpoint(2), "haptica") in lidos
-
-
-def test_as_livres_vao_primeiro_a_quem_esta_sentado() -> None:
-    """A conta pura: duas âncoras, o lugar 3 ocupado — o 3 e depois o 1."""
+    a, b, c = sorted(eh.marca_do_aparelho(u) for u in (_P1, _P2, _P3))
     duas = [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(2)]
-    postas = eh.distribuir_ancoras(eh.LUGARES, duas, ocupados={3})
-    assert {n: a.syspath for n, a in postas.items()} == {3: "/d/0", 1: "/d/1"}
-    # A posse não muda: quem já tem âncora fica com ela, ocupado ou não.
-    postas = eh.distribuir_ancoras(eh.LUGARES, duas, ja_postas={1: duas[0]}, ocupados={3})
-    assert {n: a.syspath for n, a in postas.items()} == {1: "/d/0", 3: "/d/1"}
+    postas = eh.distribuir_ancoras((a, b, c), duas, ocupados={c})
+    assert {m: x.syspath for m, x in postas.items()} == {c: "/d/0", a: "/d/1"}
+    postas = eh.distribuir_ancoras((a, b, c), duas, ja_postas={a: duas[0]}, ocupados={c})
+    assert {m: x.syspath for m, x in postas.items()} == {a: "/d/0", c: "/d/1"}
+    # Um número de lugar não é marca: a conta o recusa em vez de lhe dar âncora.
+    assert eh.distribuir_ancoras((1, 2), duas) == {}  # type: ignore[arg-type]
 
 
 def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A âncora do lugar do P1 saiu: o laço cai ANTES de o endpoint cair.
+    """A âncora do aparelho do P1 saiu: o laço cai ANTES de o endpoint cair.
 
     O laço cujo alvo some pode ser religado à fonte padrão (SOM-ECO-02), e a
-    reancoragem derruba o endpoint do lugar como a saída da mesa derruba.
+    reancoragem derruba o endpoint do aparelho como a saída da mesa derruba.
 
-    MORDIDA: tire o ``self._o_cabo().soltar(lugar)`` do ramo da reancoragem.
+    MORDIDA: tire o ``self._o_cabo().soltar(marca)`` do ramo da reancoragem.
     """
     cinco = _sysfs(tmp_path / "cinco", ancoras=5)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
     mesa.sysfs = cinco
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
-    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert _chave(_P1) in mesa.lacos.vivos
+    ancora_usb = _ancora_do_aparelho(mesa.servidor, _P1).split("/")[-2]
     ordem: list[str] = []
     desligar = mesa.lacos.desligar
     servidor = mesa.servidor
@@ -1119,11 +997,11 @@ def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
 
     monkeypatch.setattr(mesa.lacos, "desligar", _desligar)
     monkeypatch.setattr(af, "_rodar", _pactl)
-    (cinco / "bus" / "usb" / "devices" / "3-1").unlink()
+    (cinco / "bus" / "usb" / "devices" / ancora_usb).unlink()
     mesa.volta(p1)
     assert "endpoint" in ordem, "o endpoint da âncora que saiu não se reancorou"
-    assert ordem[:1] == [f"laço:{chave_do_lugar(1)}"], ordem
-    assert chave_do_lugar(1) in mesa.lacos.vivos, "o laço não voltou no endpoint reancorado"
+    assert ordem[:1] == [f"laço:{_chave(_P1)}"], ordem
+    assert _chave(_P1) in mesa.lacos.vivos, "o laço não voltou no endpoint reancorado"
 
 
 def test_o_stop_solta_os_lacos_do_cabo(mesa: _Mesa) -> None:
@@ -1135,7 +1013,7 @@ def test_o_stop_solta_os_lacos_do_cabo(mesa: _Mesa) -> None:
     import asyncio
 
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
-    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert _chave(_P1) in mesa.lacos.vivos
     asyncio.run(mesa.sub.stop())
     assert mesa.lacos.vivos == {}
 
@@ -1158,37 +1036,10 @@ def test_a_placa_sem_os_quatro_canais_nao_ganha_laco(mesa: _Mesa) -> None:
 def test_o_endpoint_nosso_nunca_e_a_placa_do_laco(mesa: _Mesa) -> None:
     """Se a placa que o dono responde for um endpoint desta casa, não há laço.
 
-    MORDIDA: tire o ``MARCA_DO_NOME in placa`` de ``_casar_o_cabo`` — o lugar
-    1 passa a tocar no endpoint do lugar 2.
+    MORDIDA: tire o ``MARCA_DO_NOME in placa`` de ``_casar_o_cabo`` — o P1
+    passa a tocar no endpoint do P2.
     """
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
-    mesa.placas[_P1] = eh.nome_do_endpoint(2)
+    mesa.placas[_P1] = eh.nome_do_endpoint(_P2)
     mesa.volta(p1)
     assert mesa.lacos.vivos == {}
-
-
-def test_quem_o_dono_nao_numera_fica_no_lugar_de_antes(mesa: _Mesa) -> None:
-    """O numerador pisca (sem daemon por um instante): o controle não pula de lugar.
-
-    MORDIDA: tire o segundo passo de ``_lugares_da_mesa`` (o lugar da volta
-    anterior) — o P3 cai no primeiro lugar livre, o 2.
-    """
-    um, tres = _Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P3, "bt", "/dev/hidraw3")
-    mesa.assentos.update({_P1: 1, _P3: 3})
-    mesa.volta(um, tres)
-    mesa.assentos[_P3] = None  # type: ignore[assignment]
-    mesa.volta(um, tres)
-    assert mesa.sub._endpoint_de(_P3).nome == eh.nome_do_endpoint(3)
-
-
-def test_dois_com_o_mesmo_numero_nao_dividem_o_lugar(mesa: _Mesa) -> None:
-    """O dono responde o mesmo número para dois: um fica com ele, o outro vai ao livre.
-
-    MORDIDA: tire o ``numero not in tomados`` do primeiro passo de
-    ``_lugares_da_mesa`` — os dois leem o mesmo endpoint.
-    """
-    um, dois = _Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P2, "bt", "/dev/hidraw2")
-    mesa.assentos.update({_P1: 1, _P2: 1})
-    mesa.volta(um, dois)
-    assert mesa.sub._endpoint_de(_P1).nome == eh.nome_do_endpoint(1)
-    assert mesa.sub._endpoint_de(_P2).nome == eh.nome_do_endpoint(2)

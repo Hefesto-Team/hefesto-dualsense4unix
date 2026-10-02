@@ -1513,36 +1513,22 @@ def _linha_dos_nos_de_som(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _linha_dos_endpoints(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
-    """O endpoint do LUGAR de cada controle, nos DOIS transportes.
+    """O endpoint do APARELHO de cada controle, nos DOIS transportes.
 
-    A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01 (28/09/2026): o endpoint é um por
-    lugar (P1 a P4), e o do cabo também passa por ele (um laço do endpoint à
-    placa). A linha dizia «no cabo a háptica é a placa do próprio controle» e
-    pulava o cabo.
-
-    **O LUGAR É O «CONTROLE N» DO CARTÃO, e não o ``player`` do estado**
-    (conferência de 28/09/2026). O daemon senta cada controle no lugar do
-    número que a tela imprime (``AltoFalanteSubsystem.numero_do_assento``,
-    pela regra de ``ipc_handlers._numero_de_exibicao``: o ``player_slot``,
-    senão a posição). O ``player`` é o número que o JOGO vê, e com o co-op
-    desligado ele é 1 para todos: a linha conferia o lugar 1 quatro vezes e
-    dava verde sobre o lugar sem endpoint. A regra se importa do dono.
+    A-HAPTICA-E-POR-APARELHO-01 (02/10/2026): o endpoint é um por aparelho,
+    com o nome pela marca da chave do controle (``nome_do_endpoint(uniq)``),
+    e o do cabo também passa por ele (um laço do endpoint à placa). O número
+    do cartão não entra na conta: renumerar a mesa não troca o endpoint de
+    ninguém, e a linha confere o nó do aparelho que está na mão.
     """
     rc, texto = s.rodar_ensaio("os_endpoints_de_haptica.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     endpoints = _lista(_dict(dado).get("endpoints")) if isinstance(dado, Mapping) else []
-    nome_do_endpoint: Callable[[int], str] | None
-    numero_do_cartao: Callable[[dict[str, Any]], int] | None
+    nome_do_endpoint: Callable[[str | None], str] | None
     try:
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import nome_do_endpoint
     except Exception:
         nome_do_endpoint = None
-    try:
-        from hefesto_dualsense4unix.daemon.ipc_handlers import (
-            _numero_de_exibicao as numero_do_cartao,
-        )
-    except Exception:
-        numero_do_cartao = None
     for c in mesa:
         jogador = f"P{c['player']}"
         if not isinstance(dado, Mapping) or nome_do_endpoint is None:
@@ -1550,24 +1536,19 @@ def _linha_dos_endpoints(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
                    f"o ensaio dos endpoints não respondeu em JSON (rc={rc})",
                    comando="os_endpoints_de_haptica.py --json")
             continue
-        # Sem ``player_slot`` nem ``index`` a regra devolveria 1 — um número
-        # inventado, e a linha conferiria o lugar 1 por todos. Aqui é «não sei».
-        tem_numero = any(
-            isinstance(c.get(k), int) and not isinstance(c.get(k), bool)
-            for k in ("player_slot", "index")
-        )
-        lugar = numero_do_cartao(dict(c)) if numero_do_cartao and tem_numero else None
-        nome = nome_do_endpoint(lugar) if isinstance(lugar, int) and not isinstance(lugar, bool) else ""
+        uniq = c.get("uniq")
+        nome = nome_do_endpoint(uniq) if isinstance(uniq, str) else ""
         if not nome:
             _passo(s, "o endpoint de háptica", jogador, transporte_de(c), NAO_SEI,
-                   "o estado não dá a este controle um dos quatro lugares",
+                   "o estado não dá a chave deste controle",
                    comando="os_endpoints_de_haptica.py --json")
             continue
         esperado = s.mascarado(nome)
         achados = [ep for ep in endpoints if s.mascarado(str(ep.get("nome") or "")) == esperado]
         if len(achados) != 1:
             veredito = VERMELHO if not achados else NAO_SEI
-            porque = f"o lugar P{lugar} sem endpoint de háptica" if not achados else "dois endpoints com o mesmo nome mascarado"
+            porque = (f"o aparelho do {jogador} sem endpoint de háptica" if not achados
+                      else "dois endpoints com o mesmo nome mascarado")
         else:
             faltam = [frase for ok, frase in achados[0].get("laudo") or [] if not ok]
             veredito = VERMELHO if faltam else VERDE

@@ -365,13 +365,12 @@ MESA = (P1, P2, P3, P4)
 
 
 def no_do(uniq: str) -> str:
-    """O endpoint do LUGAR deste controle — o dublê de ``_EndpointDeMentira``.
+    """O endpoint do APARELHO deste controle — o dublê de ``_EndpointDeMentira``.
 
-    O endpoint é do lugar desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
-    DEPOIS-01), e o lugar é o «Controle N» que o dono responde: a ordem da MESA
-    (o dublê de ``numero_do_assento`` na bancada abaixo).
+    O endpoint é do aparelho desde 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01; de
+    28/09 a 02/10 era do lugar).
     """
-    return f"endpoint::{MESA.index(uniq) + 1}"
+    return f"endpoint::{uniq}"
 #: O cliente do servidor de som que é o jogo (o ``winepulse`` do PRAGMATA).
 JOGO = "4243"
 
@@ -428,7 +427,7 @@ class MesaDeQuatro:
 
     def _fonte(self, id_do_no: str, **kw: Any) -> tuple[Any, Any, str]:
         if kw.get("papel") == "haptica":
-            uniq = MESA[int(id_do_no.removeprefix("endpoint::")) - 1]
+            uniq = id_do_no.removeprefix("endpoint::")
             return _fonte(self.sinal.get(uniq, [])), None, ""
         return (lambda _n: b""), None, ""
 
@@ -905,7 +904,9 @@ def test_a_volta_guarda_o_que_leu_e_a_espera_so_acorda_pela_mudanca(
     mesa = mesa_de_quatro({})
     mesa.sub._fonte = mesa.controles
     mesa.sub._reconciliar(_Gerenciador())
-    assert sorted(mesa.sub._endpoints) == [1, 2, 3, 4], "a volta não publicou os lugares"
+    assert sorted(e.uniq for e in mesa.sub._endpoints.values()) == sorted(MESA), (
+        "a volta não publicou os endpoints dos aparelhos"
+    )
     assert mesa.sub._a_mesa_do_som_mudou() is False, "a mesa parada acordou a volta"
     mesa.servidor.tocar("alsa_output.fone_dela", "77")
     assert mesa.sub._a_mesa_do_som_mudou() is False, "o fluxo de fora da mesa acordou a volta"

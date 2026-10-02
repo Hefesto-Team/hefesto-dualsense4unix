@@ -54,8 +54,8 @@ FRENTE = struct.pack("<4h", 20000, -20000, 0, 0)
 
 
 def no_do(uniq: str) -> str:
-    """O endpoint do LUGAR deste controle (o ``_EndpointDeMentira`` da irmã)."""
-    return f"endpoint::{MESA.index(uniq) + 1}"
+    """O endpoint do APARELHO deste controle (o ``_EndpointDeMentira`` da irmã)."""
+    return f"endpoint::{uniq}"
 
 
 class FonteDeMentira:
@@ -431,12 +431,12 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
     mundo.rumble(_X1, 0, 180)
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     mundo.mesa.volta(*controles)
-    # O tocador do rumble toca no endpoint do lugar, e a ponte do som o escuta.
+    # O tocador do rumble toca no endpoint do aparelho, e a ponte do som o escuta.
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     af.fonte_que_ouve(
-        lambda n: MOTOR * (n // 8), eh.nome_do_endpoint(1), canais=af.CANAIS_DA_HAPTICA
+        lambda n: MOTOR * (n // 8), eh.nome_do_endpoint(_X1), canais=af.CANAIS_DA_HAPTICA
     )(4096)
     mundo.mesa.volta(*controles)
     assert mundo.sub._pontes[_X1].arranjo is af.ARRANJO_HAPTICA_032, (
@@ -516,132 +516,9 @@ def test_o_ouvido_diz_nao_sei_quando_ninguem_escuta() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 6. Os três nós do lugar dizem o lugar
+# 6. Os três nós de um controle: desde 02/10 dizem o APARELHO, e a régua mora
+# em ``tests/unit/test_a_haptica_e_por_aparelho.py`` (A-HAPTICA-E-POR-APARELHO-01)
 # ---------------------------------------------------------------------------
-
-
-class ServidorQueGuarda:
-    """O ``pipewire-pulse`` de mentira que guarda o que o NÓ recebeu.
-
-    O argumento ``sink_properties=``/``source_properties=`` é lido como o real
-    o lê (``_props_do_argumento`` da irmã de 28/09): entre aspas duplas vale
-    inteiro, sem elas o valor morre no primeiro espaço. Quem é lido é o nó, e
-    não o argv. Todo o resto responde vazio, como um comando que deu certo.
-    """
-
-    def __init__(self) -> None:
-        self.nos: dict[str, dict[str, str]] = {}
-        self._id = 500
-
-    def __call__(self, argv: list[str]) -> str | None:
-        from tests.unit.test_a_haptica_chega_a_quem_entra_depois import _props_do_argumento
-
-        a = list(argv)
-        if a[:2] != ["pactl", "load-module"]:
-            return ""
-        nome = next(
-            (x.split("=", 1)[1] for x in a if x.startswith(("sink_name=", "source_name="))), ""
-        )
-        self.nos[nome] = next(
-            (
-                _props_do_argumento(x)
-                for x in a
-                if x.startswith(("sink_properties=", "source_properties="))
-            ),
-            {},
-        )
-        self._id += 1
-        return f"{self._id}\n"
-
-
-#: O dono do assento desta régua: nenhum lugar é a posição do controle na lista.
-ASSENTOS = {P1: 3, P2: 1, P3: 4, P4: 2}
-
-
-@pytest.mark.parametrize("uniq", MESA)
-def test_os_tres_nos_do_lugar_dizem_o_lugar(
-    uniq: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
-) -> None:
-    """O alto-falante, o microfone do rádio e a háptica do lugar N: ``hefesto.lugar=N``.
-
-    O N é o que o dono do assento deu ao controle (lido dele, e não do
-    rótulo), e é o MESMO nos três nós.
-
-    MORDIDA: tire ``*campo_do_lugar(...)`` de um dos três
-    (``propriedades_do_sink``, ``propriedades_da_source`` ou
-    ``propriedades_do_endpoint``) — aquele nó chega ao servidor sem o lugar.
-    """
-    from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
-    from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
-    from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
-
-    servidor = ServidorQueGuarda()
-    monkeypatch.setattr(dba, "_NUMERADOR_DE_ASSENTO", ASSENTOS.get)
-    monkeypatch.setattr(dba, "_rodar", servidor)
-    monkeypatch.setattr(af, "_o_servidor_atende", lambda *_a, **_k: True)
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    monkeypatch.setattr(canal, "_DE_PE", {})
-    lugar = dba.numero_do_assento(uniq)
-    assert lugar == ASSENTOS[uniq]
-
-    assert af.SinkVirtualPipeWire(uniq=uniq, runner=servidor).iniciar()
-    canal.abrir(uniq, dba.descricao_do_microfone(uniq))
-    endpoint = eh.EndpointDeHaptica(
-        lugar=lugar, ancora=eh.Ancora(syspath="/d/1", declarado="/d/1/i:1.0"), runner=servidor
-    )
-    assert endpoint.iniciar()
-
-    nos = {
-        "alto-falante": af.nome_do_sink(uniq),
-        "microfone": canal.nome_do_canal(uniq),
-        "háptica": eh.nome_do_endpoint(lugar),
-    }
-    for papel, nome in nos.items():
-        assert nome in servidor.nos, f"o nó do {papel} não foi publicado"
-        assert servidor.nos[nome].get("hefesto.lugar") == str(lugar), (
-            f"o nó do {papel} não diz o lugar {lugar}: {servidor.nos[nome]}"
-        )
-    # O rótulo continua o dele: a propriedade nova não comeu o que vinha antes.
-    assert servidor.nos[nos["alto-falante"]]["device.description"] == (
-        af.descricao_do_alto_falante(uniq)
-    )
-
-
-def test_o_microfone_do_radio_pelo_caminho_de_volta_tambem_diz_o_lugar(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
-) -> None:
-    """O canal recusa (o ``uniq`` sem identidade, ou o canal que não sobe) e a ponte
-    publica o nó de sempre: ele também diz o lugar, o mesmo N do dono do assento.
-
-    MORDIDA: tire o ``lugar=numero_do_assento(...)`` do ``SourceVirtualPipeWire``
-    de reserva em ``PonteMicBluetooth.iniciar`` — o nó chega sem o lugar.
-    """
-    from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
-    from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
-
-    servidor = ServidorQueGuarda()
-    monkeypatch.setattr(dba, "_NUMERADOR_DE_ASSENTO", ASSENTOS.get)
-    monkeypatch.setattr(dba, "_rodar", servidor)
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    monkeypatch.setattr(canal, "abrir", lambda *_a, **_k: None)
-
-    class _SourceQuePublicaEPara(dba.SourceVirtualPipeWire):
-        """Publica o nó de verdade no servidor de mentira e recusa depois: a
-        régua lê o NÓ, e não quer uma thread de áudio girando na suíte."""
-
-        def iniciar(self) -> bool:
-            super().iniciar()
-            return False
-
-    monkeypatch.setattr(dba, "SourceVirtualPipeWire", _SourceQuePublicaEPara)
-    leitura, escrita = os.pipe()
-    os.close(escrita)
-    no = dba.NoDualSenseBT(caminho="/dev/hidraw9", uniq=P3, produto=0x0CE6)
-    ponte = dba.PonteMicBluetooth(no, opener=lambda _c: leitura, decodificador=object())
-    assert ponte.iniciar() is False
-    nome = ponte._nome_source
-    assert nome in servidor.nos, "o nó de reserva do microfone não foi publicado"
-    assert servidor.nos[nome].get("hefesto.lugar") == str(ASSENTOS[P3]), servidor.nos[nome]
 
 
 def test_a_ponte_do_som_que_subiu_antes_do_endpoint_ganha_o_ouvido(sala: Mesa) -> None:

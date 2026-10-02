@@ -230,6 +230,7 @@ from __future__ import annotations
 import contextlib
 import ctypes
 import fcntl
+import hashlib
 import os
 import shutil
 import subprocess
@@ -729,26 +730,64 @@ _COLUNA_DOS_ARGS = 2
 _F_SETPIPE_SZ = getattr(fcntl, "F_SETPIPE_SZ", 1031)
 
 
-def campo_do_lugar(lugar: int | None) -> tuple[str, ...]:
-    """``hefesto.lugar=N``, a propriedade que diz de qual lugar à mesa o nó é.
+#: A MARCA DO APARELHO — A-HAPTICA-E-POR-APARELHO-01, 02/10/2026. O que vem
+#: antes das seis letras, e as letras de onde elas saem: NENHUMA é hexadecimal
+#: (as réguas de forma da casa leem seis hex seguidos como o rabo de um
+#: endereço, ``core/formas_do_endereco.py``), e nenhuma se lê como dígito (sem
+#: I, L, O).
+PREFIXO_DA_MARCA_DO_APARELHO = "APARELHO"
+LETRAS_DA_MARCA_DO_APARELHO = "GHJKMNPQRSTUVWXYZ"
+#: Quantas letras: 17 elevado a 6 são 24 milhões de marcas para os quatro
+#: controles de uma mesa.
+TAMANHO_DA_MARCA_DO_APARELHO = 6
+#: Quantos hex o ``uniq`` precisa ter para dar uma marca (o mesmo piso do rabo
+#: do nó do som, ``alto_falante_bt.HEX_DO_SUFIXO``).
+_HEX_MINIMOS_DA_MARCA = 6
 
-    A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026: os
-    três nós do lugar N (o alto-falante, o microfone do rádio e a háptica)
-    declaram o MESMO N, lido do dono do assento (:func:`numero_do_assento`) —
-    um endereço que um jogo nativo lê sem depender do texto do rótulo. O
-    espaço ``hefesto.`` é lido do dono dele. Sem lugar sabido, nada: sem
-    número não se inventa número.
+
+def marca_do_aparelho(uniq: str | None) -> str:
+    """``APARELHO`` e seis letras: o resumo estável da chave de UM controle. "" = sem identidade.
+
+    A-HAPTICA-E-POR-APARELHO-01, 02/10/2026, pela palavra dela de 29/09
+    (*«todas as features são um por aparelho. sempre.»*).
+    É a marca do endpoint de háptica do controle (o nome do nó), do tocador do
+    rumble, do laço do cabo e da propriedade ``hefesto.controle`` dos três nós
+    dele. **Não é o rabo do endereço:** sai de um resumo SHA-256 dos dígitos
+    (``norm_mac``, a mesma chave no cabo e no rádio), escrito em letras que não
+    são hex. O mesmo aparelho dá a mesma marca em toda volta, todo restart e
+    os dois transportes; o número do jogador não entra nela.
+    """
+    digitos = "".join(ch for ch in str(uniq or "").lower() if ch in "0123456789abcdef")
+    if len(digitos) < _HEX_MINIMOS_DA_MARCA:
+        return ""
+    resumo = hashlib.sha256(f"hefesto-aparelho:{digitos}".encode("ascii")).digest()
+    n = int.from_bytes(resumo[:8], "big")
+    letras = []
+    for _ in range(TAMANHO_DA_MARCA_DO_APARELHO):
+        n, resto = divmod(n, len(LETRAS_DA_MARCA_DO_APARELHO))
+        letras.append(LETRAS_DA_MARCA_DO_APARELHO[resto])
+    return PREFIXO_DA_MARCA_DO_APARELHO + "".join(letras)
+
+
+def campo_do_controle(uniq: str | None) -> tuple[str, ...]:
+    """``hefesto.controle=<marca>``, a propriedade que diz de qual APARELHO o nó é.
+
+    A-HAPTICA-E-POR-APARELHO-01, 02/10/2026: os três nós de um controle (o
+    alto-falante, o microfone do rádio e a háptica) declaram a MESMA marca
+    (:func:`marca_do_aparelho`), e o número de agora fica no rótulo. Era
+    ``hefesto.lugar=N`` desde 29/09 (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
+    CHEGAM-AO-RADIO-01), e o lugar anda quando a mesa se renumera; o aparelho,
+    não. O espaço ``hefesto.`` é lido do dono dele. Sem identidade, nada.
     """
     from hefesto_dualsense4unix.integrations.quem_ouve_o_microfone import (
         PREFIXO_PROPRIEDADE_HEFESTO,
     )
 
-    if isinstance(lugar, int) and not isinstance(lugar, bool) and lugar > 0:
-        return (f"{PREFIXO_PROPRIEDADE_HEFESTO}lugar={lugar}",)
-    return ()
+    marca = marca_do_aparelho(uniq)
+    return (f"{PREFIXO_PROPRIEDADE_HEFESTO}controle={marca}",) if marca else ()
 
 
-def propriedades_da_source(descricao: str, lugar: int | None = None) -> str:
+def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
     """O argumento `source_properties=` do `load-module` — ENTRE ASPAS DUPLAS.
 
     **AS ASPAS SÃO A CURA, e sem elas a ponte perdia DOIS fatos em silêncio.**
@@ -788,9 +827,9 @@ def propriedades_da_source(descricao: str, lugar: int | None = None) -> str:
                 f"device.description='{descricao}'",
                 f"priority.session={PRIORIDADE_SESSAO_DA_PONTE}",
                 "device.icon_name=audio-input-microphone",
-                # O LUGAR, o mesmo N do alto-falante e da háptica do lugar
-                # (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01).
-                *campo_do_lugar(lugar),
+                # O APARELHO, a mesma marca do alto-falante e da háptica dele
+                # (A-HAPTICA-E-POR-APARELHO-01).
+                *campo_do_controle(controle),
             )
         )
         + '"'
@@ -813,13 +852,13 @@ class SourceVirtualPipeWire:
         taxa_hz: int = MIC_TAXA_HZ,
         canais: int = MIC_CANAIS,
         runner: Callable[[list[str]], str | None] | None = None,
-        lugar: int | None = None,
+        controle: str | None = None,
     ) -> None:
         self.nome = nome
         self.descricao = descricao
-        #: O LUGAR à mesa (``hefesto.lugar``): quem constrói sabe o controle e
-        #: o lê do dono do assento, no mesmo instante do rótulo.
-        self.lugar = lugar
+        #: O ``uniq`` do APARELHO dono do canal (``hefesto.controle``): quem
+        #: constrói sabe o controle, e o nó só conhece o nome.
+        self.controle = controle
         self.taxa_hz = taxa_hz
         self.canais = canais
         self.runner = _com_recuo(runner or _rodar)
@@ -913,7 +952,7 @@ class SourceVirtualPipeWire:
                 # falha que o 200 criava (perder para o laço de retorno do
                 # alto-falante) deixa de ser possível. Ver
                 # `PRIORIDADE_SESSAO_DA_PONTE` para os números medidos.
-                propriedades_da_source(self.descricao, self.lugar),
+                propriedades_da_source(self.descricao, self.controle),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
@@ -1280,7 +1319,7 @@ class PonteMicBluetooth:
             self._source = SourceVirtualPipeWire(
                 nome=self._nome_source,
                 descricao=descricao,
-                lugar=numero_do_assento(self.no.uniq),
+                controle=self.no.uniq,
             )
         if not self._source.iniciar():
             self._fechar_fd()
@@ -2553,12 +2592,13 @@ __all__ = [
     "SourceVirtualPipeWire",
     "abrir_hidraw_rw",
     "alguem_escreve_no_fifo",
-    "campo_do_lugar",
+    "campo_do_controle",
     "descarregar_modulo",
     "descricao_do_microfone",
     "diagnosticar",
     "eh_report_de_audio",
     "frame_opus_do_report",
+    "marca_do_aparelho",
     "modulos_de_captura_da_casa",
     "montar_pedido_de_mic",
     "nos_dualsense_bluetooth",

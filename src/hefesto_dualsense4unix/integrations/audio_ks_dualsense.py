@@ -70,22 +70,22 @@ o nó declara** — um `usb_device` real sem placa de som, a ÂNCORA. É a mesma
 conta que o `winepulse` faz, com a mesma entrada, e por isso nenhum acerto
 precisa ser combinado entre o daemon e o lançador: os dois lados leem o nó.
 
-O REGISTRO É DOS LUGARES, E TEM UM DONO DA LISTA — 28/09/2026
--------------------------------------------------------------
+O REGISTRO É DOS APARELHOS, E TEM UM DONO DA LISTA — 02/10/2026
+---------------------------------------------------------------
 
-A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01. A lista era `controles_no_cabo() +
-controles_no_radio()`, e o texto novo apaga todo bloco nosso e escreve só
-esses: com o jogo aberto (`wineserver` vivo) nada se grava, e o controle que
-chegava depois não tinha bloco. Agora os endpoints são um por LUGAR
-(`endpoint_de_haptica`, P1 a P4), de pé desde o primeiro DualSense da mesa, e
-o registro grava os quatro no lançamento: quem entra depois cai num lugar que
-o jogo já conhece.
+A-HAPTICA-E-POR-APARELHO-01, pela palavra dela de 29/09 (*«todas as features
+são um por aparelho. sempre.»*). Os endpoints são um por DualSense da mesa
+(`endpoint_de_haptica`), e o registro grava, no lançamento, um bloco por
+endpoint vivo: um por aparelho. De 28/09 a 02/10 eram os quatro lugares, de pé
+desde o primeiro DualSense (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01). O preço,
+que ela aceitou na pergunta: com o jogo aberto (`wineserver` vivo) nada se
+grava, e o aparelho que chega depois não tem bloco até o jogo reabrir.
 
-O cabo cujo lugar tem endpoint SAI da lista: um laço nosso leva o endpoint do
-lugar à placa dele (`integrations/haptica_do_cabo.py`), e placa e lugar seriam
-dois alvos para o mesmo controle. Quem diz que placa um lugar serve é o
-SERVIDOR (:func:`placas_servidas`), e não uma segunda conta de assento aqui. O
-cabo sem lugar ancorado segue pela placa, pelo `BUSNUM-DEVNUM`, como sempre.
+O cabo cujo aparelho tem endpoint SAI da lista: um laço nosso leva o endpoint
+à placa dele (`integrations/haptica_do_cabo.py`), e placa e endpoint seriam
+dois alvos para o mesmo controle. Quem diz que placa um endpoint serve é o
+SERVIDOR (:func:`placas_servidas`), e não uma segunda conta aqui. O cabo sem
+endpoint ancorado segue pela placa, pelo `BUSNUM-DEVNUM`, como sempre.
 
 A lista tem UM dono, :func:`controles_do_registro`: o `main` deste curador (o
 gancho de lançamento) e o `daemon/launch_env._device_ks_nos_lancadores` leem a
@@ -388,9 +388,10 @@ def controles_no_radio(
     não há nada a combinar entre quem monta o nó e quem grava o registro — os
     dois leem o mesmo lugar.
 
-    **Desde 28/09/2026 os nós são os LUGARES** (P1 a P4, em qualquer
-    transporte), e o nome desta função ficou do tempo em que eram só do rádio.
-    Quem monta a lista do registro é :func:`controles_do_registro`.
+    **Desde 02/10/2026 os nós são os APARELHOS** (um por DualSense da mesa, em
+    qualquer transporte; de 28/09 a 02/10 eram os quatro lugares), e o nome
+    desta função ficou do tempo em que eram só do rádio. Quem monta a lista do
+    registro é :func:`controles_do_registro`.
     """
     achados: list[Controle] = []
     for pid, caminho in endpoints_de_mentira(runner):
@@ -469,7 +470,7 @@ def placas_servidas(
     sysfs: Path = Path("/sys"),
     runner: Callable[[list[str]], str | None] = _pactl,
 ) -> list[tuple[int, int]]:
-    """`(BUSNUM, DEVNUM)` de cada placa de DualSense que um LUGAR já serve.
+    """`(BUSNUM, DEVNUM)` de cada placa de DualSense que o endpoint de um aparelho já serve.
 
     A pergunta é ao SERVIDOR, e não a uma conta de assento: o laço do cabo é
     um fluxo que toca na placa do controle, e o nome dele carrega
@@ -514,7 +515,7 @@ def indice_do_fluxo(
     O portão dos motores do cabo é o volume do fluxo do laço
     (`integrations/haptica_do_cabo`), e o índice muda a cada laço que sobe; o
     nome que o dono dos laços dá ao nó (:data:`MARCA_DO_LACO_DO_CABO` mais a
-    chave do lugar) aparece nas propriedades do fluxo, e é por ele que se acha.
+    marca do aparelho) aparece nas propriedades do fluxo, e é por ele que se acha.
     Mora aqui, ao lado de :func:`placas_servidas`, porque as duas leem o MESMO
     fluxo pela mesma marca: uma para o registro, a outra para o portão.
     """
@@ -537,20 +538,20 @@ def controles_do_registro(
 ) -> list[Controle]:
     """A lista que o registro grava — o DONO dela, desde 28/09/2026.
 
-    Os lugares com endpoint (:func:`controles_no_radio`, que lê os nós
-    vivos) e o cabo que nenhum lugar serve (:func:`placas_servidas`), nesta
+    Os aparelhos com endpoint (:func:`controles_no_radio`, que lê os nós
+    vivos) e o cabo que nenhum endpoint serve (:func:`placas_servidas`), nesta
     ordem: o cabo primeiro, como sempre, e nunca o mesmo aparelho duas vezes.
-    Um alvo por controle: o cabo servido por um lugar é o lugar. Sem controle
-    no cabo, os fluxos nem se perguntam — é uma ida ao servidor a menos no
-    lançamento de quem joga pelo rádio.
+    Um alvo por controle: o cabo servido pelo endpoint é o endpoint. Sem
+    controle no cabo, os fluxos nem se perguntam — é uma ida ao servidor a
+    menos no lançamento de quem joga pelo rádio.
     """
     perguntar = _lembrando(runner)
-    lugares = controles_no_radio(sysfs, udev_data, perguntar)
+    endpoints = controles_no_radio(sysfs, udev_data, perguntar)
     cabo = controles_no_cabo(sysfs, udev_data)
     if cabo:
         servidas = set(placas_servidas(sysfs, perguntar))
         cabo = [c for c in cabo if (c.bus, c.dev) not in servidas]
-    return cabo + lugares
+    return cabo + endpoints
 
 
 # --------------------------------------------------------------------------
@@ -874,8 +875,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.remover:
         controles: list[Controle] = []
     else:
-        # A LISTA TEM UM DONO (28/09/2026): os lugares e o cabo que nenhum
-        # lugar serve — a mesma função que o daemon lê.
+        # A LISTA TEM UM DONO (28/09/2026): os endpoints dos aparelhos e o
+        # cabo que nenhum deles serve — a mesma função que o daemon lê.
         controles = controles_do_registro(Path(args.sysfs), Path(args.udev_data))
     try:
         resultado = aplicar(Path(args.prefixo), controles=controles)

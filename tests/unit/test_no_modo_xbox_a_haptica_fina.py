@@ -10,8 +10,9 @@ A MEDIDA ANTES DA CURA (diários e ``pactl`` da noite de 27/09, as sessões com
 DON'T SCREAM no L5, o G6) abriram ZERO fluxos nos quatro endpoints, no cabo e
 no rádio. Só o PRAGMATA (G1) abriu, porque ele acha a háptica pelo registro
 KS e não pelo pad. No modo Xbox o áudio do jogo não chega: o rumble do pad
-vira háptica no endpoint do lugar de quem o recebe, e o laço do cabo e a ponte
-do rádio o levam como levam o do jogo.
+vira háptica no endpoint do aparelho de quem o recebe (desde 02/10, A-HAPTICA-E-
+POR-APARELHO-01; era o do lugar), e o laço do cabo e a ponte do rádio o levam
+como levam o do jogo.
 
 O mundo do alto-falante é o da régua da A-HAPTICA-CHEGA (o servidor de som
 com memória, o ``/sys`` no ``tmp_path``), com o que aquele servidor não lista:
@@ -58,6 +59,9 @@ from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
 
 _QUATRO = (_P1, _P2, _P3, _P4)
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
+#: A marca do aparelho de cada um, e o número do cliente do tocador dele.
+_MARCA = {u: eh.marca_do_aparelho(u) for u in _QUATRO}
+_CLIENTE = {eh.marca_do_aparelho(u): str(60 + n) for n, u in enumerate(_QUATRO, 1)}
 _ABERTO = ["100%", "100%", "100%", "100%"]
 _FECHADO = ["100%", "100%", "0%", "0%"]
 
@@ -77,8 +81,8 @@ class _Fluxos:
 
     def __init__(self, servidor: _Servidor) -> None:
         self.servidor = servidor
-        #: lugar -> o cliente do nosso tocador que toca no endpoint dele
-        self.tocando: dict[int, str] = {}
+        #: marca -> o cliente do nosso tocador que toca no endpoint do aparelho
+        self.tocando: dict[str, str] = {}
 
     def _todos(self) -> list[tuple[str, int, str, dict[str, str]]]:
         s = self.servidor
@@ -87,10 +91,10 @@ class _Fluxos:
             for i, sk in s.sinks.items() if sk["nome"] in s.jogo_em
         ]
         todos += [(str(i), f["sink"], "77", {"node.name": f["nome"]}) for i, f in s.fluxos.items()]
-        for lugar, cliente in sorted(self.tocando.items()):
-            rotulo = eh.rotulo_do_tocador(lugar)
+        for marca, cliente in sorted(self.tocando.items()):
+            rotulo = eh.rotulo_do_tocador(marca)
             todos.append((
-                f"8{lugar}", s.indice(eh.nome_do_endpoint(lugar)), cliente,
+                f"8{cliente}", s.indice(eh.nome_da_marca(marca)), cliente,
                 {"node.name": rotulo, "media.name": rotulo},
             ))
         return todos
@@ -118,17 +122,17 @@ class _Tocador:
     """O tocador de mentira, que publica o que o real publica.
 
     Fica de pé com o primeiro nível não nulo, e aí o fluxo NOSSO aparece no
-    endpoint do lugar (com cliente próprio); com zero cala e segue de pé, até
+    endpoint do aparelho (com cliente próprio); com zero cala e segue de pé, até
     a folga vencer (:meth:`sair`). Avisa ``ao_mudar`` nas duas pontas, como o
     real.
     """
 
-    criados: ClassVar[dict[int, _Tocador]] = {}
+    criados: ClassVar[dict[str, _Tocador]] = {}
     fluxos: ClassVar[_Fluxos | None] = None
     eventos: ClassVar[list[str]] = []
 
-    def __init__(self, lugar: int, *, ao_mudar: Any = None, **_k: Any) -> None:
-        self.lugar = lugar
+    def __init__(self, marca: str, *, ao_mudar: Any = None, **_k: Any) -> None:
+        self.marca = marca
         self.ao_mudar = ao_mudar
         self._nivel = (0, 0)
         self._sink = ""
@@ -136,7 +140,7 @@ class _Tocador:
         self._vivo = False
         self.parou = False
         self.pedidos: list[tuple[int, int, str, str]] = []
-        _Tocador.criados[lugar] = self
+        _Tocador.criados[marca] = self
 
     @property
     def nivel(self) -> tuple[int, int]:
@@ -160,7 +164,7 @@ class _Tocador:
         if any(self._nivel) and not self._vivo and not self.parou:
             self._vivo = True
             if self.fluxos is not None:
-                self.fluxos.tocando[self.lugar] = str(60 + self.lugar)
+                self.fluxos.tocando[self.marca] = _CLIENTE.get(self.marca, "69")
             if self.ao_mudar is not None:
                 self.ao_mudar()
 
@@ -172,12 +176,12 @@ class _Tocador:
             return
         self._vivo = False
         if self.fluxos is not None:
-            self.fluxos.tocando.pop(self.lugar, None)
+            self.fluxos.tocando.pop(self.marca, None)
         if self.ao_mudar is not None:
             self.ao_mudar()
 
     def parar(self) -> None:
-        _Tocador.eventos.append(f"tocador-{self.lugar}-parou")
+        _Tocador.eventos.append(f"tocador-{self.marca}-parou")
         self.parou = True
         self.sair()
 
@@ -214,8 +218,8 @@ class _Mundo:
     def sub(self) -> Any:
         return self.mesa.sub
 
-    def tocador(self, lugar: int) -> _Tocador:
-        return _Tocador.criados[lugar]
+    def tocador(self, uniq: str) -> _Tocador:
+        return _Tocador.criados[_MARCA[uniq]]
 
     def rumble(self, uniq: str, fraco: int, forte: int, *, vpad: Any = None) -> Any:
         """O que o ``rumble_sink`` do pad de ``uniq`` faz com o pedido do jogo."""
@@ -265,8 +269,8 @@ def _no_radio_os_quatro(m: _Mundo) -> list[_Controle]:
     return [_Controle(u, "bt", f"/dev/hidraw{n}") for n, u in enumerate(_QUATRO, 1)]
 
 
-def _motores(m: _Mundo, lugar: int) -> list[str]:
-    return m.mesa.servidor.volumes[m.mesa.servidor.fluxo_do_laco(lugar)]
+def _motores(m: _Mundo, uniq: str) -> list[str]:
+    return m.mesa.servidor.volumes[m.mesa.servidor.fluxo_do_laco(uniq)]
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +328,8 @@ def test_o_zero_e_silencio_e_o_nivel_novo_nao_estala() -> None:
 # O comando: pelo serial, e nunca para a saída padrão
 # ---------------------------------------------------------------------------
 
-_ENDPOINT_1 = eh.nome_do_endpoint(1)
+_ENDPOINT_1 = eh.nome_do_endpoint(_P1)
+_TOCADOR_1 = eh.rotulo_do_tocador(eh.marca_do_aparelho(_P1))
 
 
 def _servidor_de(nome_do_servidor: str) -> Any:
@@ -351,7 +356,7 @@ def test_o_tocador_mira_pelo_serial_e_nunca_recua_para_a_saida_padrao(
     """
     monkeypatch.setattr(eh.shutil, "which", lambda b: f"/usr/bin/{b}")
     monkeypatch.setattr(af, "_rodar", _servidor_de("PulseAudio (on PipeWire 1.6.8)"))
-    argv = eh.argv_do_tocador(_ENDPOINT_1, eh.rotulo_do_tocador(1))
+    argv = eh.argv_do_tocador(_ENDPOINT_1, _TOCADOR_1)
     assert argv[:3] == ["pw-cat", "--playback", "--raw"]
     assert "--target=207" in argv
     assert not any(_ENDPOINT_1 in a for a in argv), "o tocador mira pelo nome"
@@ -362,7 +367,7 @@ def test_o_tocador_mira_pelo_serial_e_nunca_recua_para_a_saida_padrao(
     for pedaco in (
         "node.dont-fallback=true", "node.dont-reconnect=true",
         "state.restore-target=false", "state.restore-props=false",
-        f"node.name={eh.rotulo_do_tocador(1)}",
+        f"node.name={_TOCADOR_1}",
     ):
         assert pedaco in propriedades, pedaco
 
@@ -375,35 +380,35 @@ def test_sem_o_pipewire_o_pacat_acerta_pelo_nome(monkeypatch: pytest.MonkeyPatch
     """
     monkeypatch.setattr(eh.shutil, "which", lambda b: f"/usr/bin/{b}")
     monkeypatch.setattr(af, "_rodar", _servidor_de("PulseAudio"))
-    argv = eh.argv_do_tocador(_ENDPOINT_1, eh.rotulo_do_tocador(1))
+    argv = eh.argv_do_tocador(_ENDPOINT_1, _TOCADOR_1)
     assert argv[0] == "pacat"
     assert f"--device={_ENDPOINT_1}" in argv
     assert "--property=node.dont-fallback=true" in argv
     assert any(a.startswith("--latency-msec=") for a in argv)
     monkeypatch.setattr(eh.shutil, "which", lambda _b: None)
-    assert eh.argv_do_tocador(_ENDPOINT_1, eh.rotulo_do_tocador(1)) == []
+    assert eh.argv_do_tocador(_ENDPOINT_1, _TOCADOR_1) == []
 
 
 def test_o_fluxo_nosso_se_separa_do_fluxo_do_jogo() -> None:
     """Pela listagem longa: o nosso pelo nome, o do jogo pelo resto, o do módulo fora.
 
-    MORDIDA: em ``fluxos_nos_lugares``, conte o fluxo nosso como de outro
-    (tire o ``if nosso:``) — o endpoint 2 vira «o jogo toca aqui».
+    MORDIDA: em ``fluxos_nos_endpoints``, conte o fluxo nosso como de outro
+    (tire o ``if nosso:``) — o endpoint do P2 vira «o jogo toca aqui».
     """
-    nomes = [eh.nome_do_endpoint(n) for n in (1, 2, 3)]
+    nomes = [eh.nome_do_endpoint(u) for u in (_P1, _P2, _P3)]
     sinks = "\n".join(f"{200 + n}\t{nome}\tPipeWire\tx\tIDLE" for n, nome in enumerate(nomes, 1))
     longa = (
         'Sink Input #1\n\tClient: 118\n\tSink: 201\n\tProperties:\n\t\tapplication.name = "J"\n\n'
         "Sink Input #2\n\tClient: 130\n\tSink: 202\n\tProperties:\n"
-        f'\t\tnode.name = "{eh.rotulo_do_tocador(2)}"\n\n'
+        f'\t\tnode.name = "{eh.rotulo_do_tocador(_MARCA[_P2])}"\n\n'
         'Sink Input #3\n\tClient: n/a\n\tSink: 203\n\tProperties:\n\t\tnode.name = "laço"\n'
     )
 
     def _rodar(argv: list[str]) -> str | None:
         return sinks if "short" in argv else longa
 
-    assert eh.fluxos_nos_lugares(nomes, _rodar) == (frozenset({"130"}), frozenset({nomes[0]}))
-    assert eh.fluxos_nos_lugares(nomes, lambda _a: None) is None
+    assert eh.fluxos_nos_endpoints(nomes, _rodar) == (frozenset({"130"}), frozenset({nomes[0]}))
+    assert eh.fluxos_nos_endpoints(nomes, lambda _a: None) is None
 
 
 # ---------------------------------------------------------------------------
@@ -475,7 +480,7 @@ def _tocador(**kw: Any) -> eh.TocadorDoRumble:
         "folga_s": 0.15,
     }
     base.update(kw)
-    return eh.TocadorDoRumble(1, **base)
+    return eh.TocadorDoRumble(_MARCA[_P1], **base)
 
 
 def test_o_tocador_sobe_com_o_rumble_toca_o_nivel_e_sai_no_silencio(processos: Any) -> None:
@@ -558,13 +563,13 @@ def test_sem_tocador_na_maquina_o_hid_segue_sozinho(processos: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# O rumble do pad uinput leva a háptica ao lugar, P1 a P4, cabo e rádio
+# O rumble do pad uinput leva a háptica ao aparelho, P1 a P4, cabo e rádio
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
-def test_no_cabo_o_rumble_de_cada_lugar_abre_so_os_motores_dele(mundo: _Mundo, lugar: int) -> None:
-    """Quatro no cabo, ninguém mexeu: o rumble do jogador N abre os motores do laço N.
+def test_no_cabo_o_rumble_de_cada_um_abre_so_os_motores_dele(mundo: _Mundo, lugar: int) -> None:
+    """Quatro no cabo, ninguém mexeu: o rumble do jogador N abre só os motores do laço dele.
 
     Antes do caminho, o HID leva o par; com o portão aberto, a volta reaplica
     e os motores do HID vão a zero, porque o bit do rumble cala a háptica.
@@ -577,26 +582,26 @@ def test_no_cabo_o_rumble_de_cada_lugar_abre_so_os_motores_dele(mundo: _Mundo, l
     uniq = _QUATRO[lugar - 1]
     assert mundo.rumble(uniq, 100, 200) == (100, 200)
     assert mundo.backend.do(uniq) == [(100, 200)], "antes do caminho, o HID leva"
-    tocador = mundo.tocador(lugar)
+    tocador = mundo.tocador(uniq)
     assert (tocador.nivel, tocador.sink, tocador.dono) == (
-        (100, 200), eh.nome_do_endpoint(lugar), uniq
+        (100, 200), eh.nome_do_endpoint(uniq), uniq
     )
     mundo.mesa.volta(*controles)
-    for n in (1, 2, 3, 4):
-        esperado = _ABERTO if n == lugar else _FECHADO
-        assert _motores(mundo, n) == esperado, f"lugar {n}: {_motores(mundo, n)}"
+    for outro in _QUATRO:
+        esperado = _ABERTO if outro == uniq else _FECHADO
+        assert _motores(mundo, outro) == esperado, f"{outro}: {_motores(mundo, outro)}"
     assert mundo.backend.do(uniq) == [(100, 200), (0, 0)], "o HID não soltou o rumble"
     mundo.rumble(uniq, 150, 50)
     assert mundo.backend.do(uniq)[-1] == (0, 0)
     assert tocador.nivel == (150, 50)
-    assert set(_Tocador.criados) == {lugar}
+    assert set(_Tocador.criados) == {_MARCA[uniq]}
 
 
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
 def test_no_radio_o_rumble_sobe_a_ponte_da_haptica_de_quem_recebe(
     mundo: _Mundo, lugar: int
 ) -> None:
-    """Quatro no rádio: o rumble do jogador N sobe a ponte dele em háptica, lendo o lugar N.
+    """Quatro no rádio: o rumble do jogador N sobe a ponte dele em háptica, lendo o endpoint dele.
 
     MORDIDA: no laço das pontes de ``_casar_as_pontes``, tire o
     ``pelo_rumble`` do modo — a ponte não sobe, e o HID nunca solta.
@@ -608,7 +613,7 @@ def test_no_radio_o_rumble_sobe_a_ponte_da_haptica_de_quem_recebe(
     mundo.mesa.lidos.clear()
     mundo.mesa.volta(*controles)
     hapticas = [no for no, papel in mundo.mesa.lidos if papel == "haptica"]
-    assert hapticas == [eh.nome_do_endpoint(lugar)], hapticas
+    assert hapticas == [eh.nome_do_endpoint(uniq)], hapticas
     (ponte,) = [p for p in _PonteDeMentira.criadas if p.uniq == uniq]
     assert ponte.arranjo is af.ARRANJO_HAPTICA_032
     assert mundo.backend.do(uniq) == [(0, 180), (0, 0)]
@@ -644,29 +649,29 @@ def test_pelo_radio_o_alto_falante_tocando_fica_com_o_radio(
     ponte = mundo.sub._pontes[_P1]
     assert ponte.arranjo is None, "a háptica do rumble tirou o alto-falante dela"
     assert mundo.backend.do(_P1)[-1] == (0, 180), "o HID não voltou a levar"
-    assert mundo.tocador(1).nivel == (0, 0)
+    assert mundo.tocador(_P1).nivel == (0, 0)
     assert mundo.rumble(_P1, 0, 90) == (0, 90)
     assert mundo.backend.do(_P1)[-1] == (0, 90)
 
 
 def test_onde_o_jogo_toca_a_haptica_e_a_dele(mundo: _Mundo) -> None:
-    """O jogo que toca no endpoint do lugar é a háptica dali: o rumble segue pelo HID.
+    """O jogo que toca no endpoint do aparelho é a háptica dali: o rumble segue pelo HID.
 
     É o «ou» da sprint: o áudio do jogo, ou o rumble convertido — nunca os
     dois somados no mesmo atuador.
 
-    MORDIDA: em ``_quer_a_haptica_fina``, tire o ``lugar in
-    self._lugares_com_jogo`` — o tocador segue somando no lugar do jogo.
+    MORDIDA: em ``_quer_a_haptica_fina``, tire o ``marca in
+    self._aparelhos_com_jogo`` — o tocador segue somando na háptica do jogo.
     """
     controles = _no_cabo_os_quatro(mundo)
-    mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P1))
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 100, 200)
     mundo.mesa.volta(*controles)
-    assert 1 in mundo.sub._lugares_com_jogo
-    assert mundo.tocador(1).nivel == (0, 0), "o rumble convertido soma na háptica do jogo"
+    assert _MARCA[_P1] in mundo.sub._aparelhos_com_jogo
+    assert mundo.tocador(_P1).nivel == (0, 0), "o rumble convertido soma na háptica do jogo"
     assert mundo.backend.do(_P1)[-1] == (100, 200)
-    assert _motores(mundo, 1) == _FECHADO
+    assert _motores(mundo, _P1) == _FECHADO
 
 
 def test_o_nosso_tocador_nao_abre_a_partida(mundo: _Mundo) -> None:
@@ -679,9 +684,9 @@ def test_o_nosso_tocador_nao_abre_a_partida(mundo: _Mundo) -> None:
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 100, 200)
     mundo.mesa.volta(*controles)
-    assert mundo.fluxos.tocando == {1: "61"}
+    assert mundo.fluxos.tocando == {_MARCA[_P1]: "61"}
     assert mundo.sub._donos_dos_fluxos() == frozenset()
-    mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(3))
+    mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P3))
     mundo.mesa.volta(*controles)
     assert mundo.sub._donos_dos_fluxos() == frozenset({"42"})
 
@@ -697,35 +702,57 @@ def test_o_caminho_que_cai_devolve_o_rumble_ao_hid(mundo: _Mundo) -> None:
     mundo.rumble(_P2, 30, 60)
     mundo.mesa.volta(*controles)
     assert mundo.backend.do(_P2) == [(30, 60), (0, 0)]
-    mundo.tocador(2).sair()
+    mundo.tocador(_P2).sair()
     mundo.mesa.volta(*controles)
     assert mundo.backend.do(_P2)[-1] == (30, 60), "o caminho caiu e o motor ficou mudo"
-    assert _motores(mundo, 2) == _FECHADO
+    assert _motores(mundo, _P2) == _FECHADO
     mundo.mesa.volta(*controles)
     assert len(mundo.backend.do(_P2)) == 4, "a volta sem mudança reaplicou à toa"
 
 
-def test_o_assento_que_anda_cala_o_tocador_do_lugar_de_antes(mundo: _Mundo) -> None:
-    """O P1 passa ao lugar 2: o tocador do lugar 1 cala, e não vibra quem se sentou ali.
+def test_o_numero_que_anda_nao_cala_o_tocador_do_aparelho(mundo: _Mundo) -> None:
+    """O P1 passa a ser o 2 e o P2 o 1: o tocador do P1 segue tocando o P1.
 
-    MORDIDA: tire o ``self._conferir_os_tocadores(lugar_de)`` de
-    ``_casar_as_pontes`` — sem quem reaplicar, o lugar 1 segue tocando o P1.
+    De 28/09 a 02/10 o tocador era do LUGAR, e o número que andava o calava. O
+    tocador é do aparelho (A-HAPTICA-E-POR-APARELHO-01): renumerar não muda o
+    endpoint nem o tocador de ninguém.
+
+    MORDIDA: em ``AltoFalanteSubsystem._aparelhos_da_mesa``, chaveie pelo
+    número (``marca_do_aparelho(f"00:00:00:00:00:0{self.numero_do_assento(uniq)}")``)
+    — o tocador do P1 cala e um novo nasce.
     """
     controles = _no_radio_os_quatro(mundo)
     mundo.mesa.volta(*controles)
     assert mundo.sub.levar_o_rumble(_P1, 0, 200) is False
-    assert mundo.tocador(1).nivel == (0, 200)
+    assert mundo.tocador(_P1).nivel == (0, 200)
     mundo.mesa.assentos.update({_P1: 2, _P2: 1})
     mundo.mesa.volta(*controles)
-    assert mundo.tocador(1).nivel == (0, 0), "o lugar 1 segue tocando o P1"
+    assert mundo.tocador(_P1).nivel == (0, 200), "o número que andou calou o P1"
+    assert set(_Tocador.criados) == {_MARCA[_P1]}
 
 
-def test_o_tocador_sai_antes_do_endpoint_do_lugar(
+def test_quem_sai_da_mesa_cala_o_tocador_dele(mundo: _Mundo) -> None:
+    """O P1 sai com o rumble pedido: o tocador dele cala, porque não há a quem levá-lo.
+
+    O nó do P1 fica de pé enquanto algo toca nele (o tocador, aqui), e o tocador
+    que cala sai na folga.
+
+    MORDIDA: tire o ``self._conferir_os_tocadores(aparelho_de)`` de
+    ``_casar_as_pontes`` — o tocador segue tocando para ninguém.
+    """
+    controles = _no_radio_os_quatro(mundo)
+    mundo.mesa.volta(*controles)
+    mundo.sub.levar_o_rumble(_P1, 0, 200)
+    mundo.mesa.volta(*controles[1:])
+    assert mundo.tocador(_P1).nivel == (0, 0), "o tocador do P1 segue tocando sem o P1"
+
+
+def test_o_tocador_sai_antes_do_endpoint_do_aparelho(
     mundo: _Mundo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Sem DualSense e sem jogo, os lugares caem — e o tocador sai antes do endpoint.
+    """Sem DualSense e sem jogo, os endpoints caem — e o tocador sai antes do endpoint.
 
-    MORDIDA: tire o ``self._parar_o_tocador(lugar)`` do laço que derruba os
+    MORDIDA: tire o ``self._parar_o_tocador(marca)`` do laço que derruba os
     endpoints — o fluxo fica sem nó, e o recuo manda o zumbido à saída dela.
     """
     controles = _no_radio_os_quatro(mundo)
@@ -735,13 +762,16 @@ def test_o_tocador_sai_antes_do_endpoint_do_lugar(
     parar = eh.EndpointDeHaptica.parar
 
     def _parar(self: Any) -> None:
-        _Tocador.eventos.append(f"endpoint-{self.lugar}-caiu")
+        _Tocador.eventos.append(f"endpoint-{self.marca}-caiu")
         parar(self)
 
     monkeypatch.setattr(eh.EndpointDeHaptica, "parar", _parar)
     mundo.mesa.volta()
-    assert _Tocador.eventos.index("tocador-1-parou") < _Tocador.eventos.index("endpoint-1-caiu")
-    assert 1 not in mundo.sub._tocadores
+    m1 = _MARCA[_P1]
+    assert _Tocador.eventos.index(f"tocador-{m1}-parou") < _Tocador.eventos.index(
+        f"endpoint-{m1}-caiu"
+    )
+    assert m1 not in mundo.sub._tocadores
 
 
 def test_o_stop_derruba_os_tocadores(mundo: _Mundo) -> None:
@@ -754,7 +784,7 @@ def test_o_stop_derruba_os_tocadores(mundo: _Mundo) -> None:
     mundo.mesa.volta(*controles)
     mundo.rumble(_P3, 0, 90)
     asyncio.run(mundo.sub.stop())
-    assert mundo.tocador(3).parou
+    assert mundo.tocador(_P3).parou
     assert mundo.sub._tocadores == {}
 
 
@@ -777,9 +807,9 @@ def test_o_pad_uhid_nunca_converte(mundo: _Mundo) -> None:
     assert mundo.rumble(_P1, 100, 200, vpad=uhid) == (100, 200)
     assert _Tocador.criados == {}
     mundo.rumble(_P1, 100, 200)
-    assert mundo.tocador(1).nivel == (100, 200)
+    assert mundo.tocador(_P1).nivel == (100, 200)
     mundo.rumble(_P1, 90, 90, vpad=uhid)
-    assert mundo.tocador(1).nivel == (0, 0)
+    assert mundo.tocador(_P1).nivel == (0, 0)
     assert mundo.backend.do(_P1)[-1] == (90, 90)
 
 
@@ -789,7 +819,7 @@ def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_no_hid(
 ) -> None:
     """O pad trocou de ``uinput`` para ``uhid`` com o caminho da háptica ainda de pé.
 
-    O tocador do lugar cala, mas segue no endpoint durante a folga, e o laço
+    O tocador do aparelho cala, mas segue no endpoint durante a folga, e o laço
     do cabo (ou a ponte do rádio) segue aberto para ele. O rumble que o jogo
     manda ao pad ``uhid`` nessa janela vai ao HID inteiro: quem converte é só o
     ``uinput``, e o caminho de pé não é licença para soltar os motores.
@@ -803,10 +833,10 @@ def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_no_hid(
     mundo.rumble(_P1, 100, 200)
     mundo.mesa.volta(*controles)
     assert mundo.backend.do(_P1)[-1] == (0, 0), "o caminho da háptica não abriu"
-    assert mundo.tocador(1).vivo
+    assert mundo.tocador(_P1).vivo
     uhid = UhidDualSense(player=1)
     assert mundo.rumble(_P1, 90, 90, vpad=uhid) == (90, 90)
-    assert mundo.tocador(1).nivel == (0, 0)
+    assert mundo.tocador(_P1).nivel == (0, 0)
     assert mundo.backend.do(_P1)[-1] == (90, 90), "o rumble do pad uhid não chegou ao HID"
 
 
@@ -821,7 +851,7 @@ def test_o_rumble_fixado_pela_tela_cala_a_haptica_fina(mundo: _Mundo) -> None:
     mundo.rumble(_P1, 100, 200)
     mundo.daemon.config.rumble_active = (10, 20)
     assert mundo.rumble(_P1, 120, 220) is None
-    assert mundo.tocador(1).nivel == (0, 0)
+    assert mundo.tocador(_P1).nivel == (0, 0)
 
 
 def test_o_degrau_e_a_barra_valem_na_haptica_fina(mundo: _Mundo) -> None:
@@ -834,7 +864,7 @@ def test_o_degrau_e_a_barra_valem_na_haptica_fina(mundo: _Mundo) -> None:
     mundo.mesa.volta(*controles)
     mundo.daemon.config.rumble_policy = "custom"
     assert mundo.rumble(_P4, 100, 200) == (50, 100)
-    assert mundo.tocador(4).nivel == (50, 100)
+    assert mundo.tocador(_P4).nivel == (50, 100)
 
 
 def test_o_sink_do_p1_leva_o_pad_dele(mundo: _Mundo) -> None:
@@ -847,13 +877,13 @@ def test_o_sink_do_p1_leva_o_pad_dele(mundo: _Mundo) -> None:
     mundo.mesa.volta(*controles)
     mundo.daemon._gamepad_device = UinputGamepad.for_flavor("xbox")
     gp.make_primary_rumble_sink(mundo.daemon)(40, 80)
-    assert mundo.tocador(1).nivel == (40, 80)
-    assert mundo.tocador(1).dono == _P1
+    assert mundo.tocador(_P1).nivel == (40, 80)
+    assert mundo.tocador(_P1).dono == _P1
 
 
 @pytest.mark.parametrize("uniq", [_P2, _P3, _P4], ids=["P2", "P3", "P4"])
 def test_o_sink_de_cada_secundario_leva_o_pad_dele(mundo: _Mundo, uniq: str) -> None:
-    """O ``rumble_sink`` de cada jogador do co-op entrega o pad DELE, ao lugar dele.
+    """O ``rumble_sink`` de cada jogador do co-op entrega o pad DELE, ao aparelho dele.
 
     MORDIDA: em ``CoopManager._make_player_rumble_sink``, não passe o ``vpad``
     — os P2 a P4 nunca vibram pela háptica.
@@ -863,7 +893,6 @@ def test_o_sink_de_cada_secundario_leva_o_pad_dele(mundo: _Mundo, uniq: str) -> 
     coop = CoopManager(mundo.daemon)
     coop._players[uniq] = SimpleNamespace(vpad=UinputGamepad.for_flavor("xbox"))
     coop._make_player_rumble_sink(uniq)(70, 0)
-    lugar = _QUATRO.index(uniq) + 1
-    assert mundo.tocador(lugar).nivel == (70, 0)
-    assert mundo.tocador(lugar).dono == uniq
-    assert set(_Tocador.criados) == {lugar}
+    assert mundo.tocador(uniq).nivel == (70, 0)
+    assert mundo.tocador(uniq).dono == uniq
+    assert set(_Tocador.criados) == {_MARCA[uniq]}

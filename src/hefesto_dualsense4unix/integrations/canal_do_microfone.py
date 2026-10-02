@@ -157,7 +157,6 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_TAXA_HZ,
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
-    numero_do_assento,
     rotulo_envelheceu,
 )
 from hefesto_dualsense4unix.integrations.filho_de_som import (
@@ -644,11 +643,10 @@ def abrir(
         construir = fabrica or SourceVirtualPipeWire
         try:
             source = construir(nome=nome, descricao=descricao)
-            # O LUGAR do canal (`hefesto.lugar`), lido do dono do assento no
-            # mesmo instante do rótulo, antes do `iniciar` que o publica —
-            # A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01. Quem o
-            # sabe é o canal: o nó só conhece o nome, e não o controle.
-            source.lugar = numero_do_assento(uniq)
+            # O APARELHO do canal (`hefesto.controle`), antes do `iniciar` que
+            # o publica — A-HAPTICA-E-POR-APARELHO-01. Quem o sabe é o canal:
+            # o nó só conhece o nome, e não o controle.
+            source.controle = uniq
             if not source.iniciar():
                 return None
         except Exception:  # o gesto dela não vira traceback

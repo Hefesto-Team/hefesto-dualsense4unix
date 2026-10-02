@@ -573,7 +573,7 @@ def test_no_xbox_a_haptica_em_zero_devolve_o_rumble_ao_hid(
     assert m.backend.do(p1)[-1] == (100, 200), "com a háptica em 0 o HID não voltou a levar"
     assert m.rumble(p1, 40, 90) == (40, 90)
     assert m.backend.do(p1)[-1] == (40, 90)
-    assert m.tocador(1).nivel == (0, 0), "o tocador segue somando com a háptica em 0"
+    assert m.tocador(p1).nivel == (0, 0), "o tocador segue somando com a háptica em 0"
 
 
 # ---------------------------------------------------------------------------

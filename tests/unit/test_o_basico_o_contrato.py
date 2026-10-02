@@ -1271,27 +1271,27 @@ def test_o_vizinho_que_nao_se_leu_nao_conta_como_parado(ob: ModuleType) -> None:
 
 
 # ---------------------------------------------------------------------------
-# O endpoint do LUGAR, nos dois transportes — 28/09/2026
+# O endpoint do APARELHO, nos dois transportes — 02/10/2026
 # ---------------------------------------------------------------------------
 
 
-def _endpoints_dos_lugares(lugares: Sequence[int]) -> str:
-    """O ``--json`` do ensaio dos endpoints, com o laudo inteiro nos lugares dados."""
+def _endpoints_dos_aparelhos(uniqs: Sequence[str]) -> str:
+    """O ``--json`` do ensaio dos endpoints, com o laudo inteiro nos aparelhos dados."""
     from hefesto_dualsense4unix.integrations.endpoint_de_haptica import nome_do_endpoint
 
     return json.dumps({"endpoints": [
-        {"nome": nome_do_endpoint(n), "laudo": [[True, "o nó declara a âncora"]]}
-        for n in lugares
+        {"nome": nome_do_endpoint(u), "laudo": [[True, "o nó declara a âncora"]]}
+        for u in uniqs
     ]})
 
 
-def test_o_endpoint_do_lugar_e_medido_no_cabo_e_no_radio(
+def test_o_endpoint_do_aparelho_e_medido_no_cabo_e_no_radio(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01: o cabo também passa pelo lugar.
+    """A-HAPTICA-E-POR-APARELHO-01: o cabo também passa pelo endpoint do aparelho.
 
     A mesa de mentira tem P1 e P2 no cabo e P3 e P4 no rádio; o ensaio devolve
-    os endpoints dos lugares 1, 2 e 4. O P3 sai vermelho, dizendo o lugar, e o
+    os endpoints dos aparelhos 1, 2 e 4. O P3 sai vermelho, dizendo quem, e o
     cabo sai MEDIDO — e não «não se aplica».
 
     MORDIDA: volte `_linha_dos_endpoints` a pular o cabo («no cabo a háptica é
@@ -1302,7 +1302,9 @@ def test_o_endpoint_do_lugar_e_medido_no_cabo_e_no_radio(
         ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
         ensaios={
             "quem_e_quem.py": quem_e_quem_json(ob, estado),
-            "os_endpoints_de_haptica.py": _endpoints_dos_lugares((1, 2, 4)),
+            "os_endpoints_de_haptica.py": _endpoints_dos_aparelhos(
+                (UNIQS[0], UNIQS[1], UNIQS[3])
+            ),
         },
     )
     saida = tmp_path / "saida"
@@ -1312,20 +1314,20 @@ def test_o_endpoint_do_lugar_e_medido_no_cabo_e_no_radio(
     assert {j: p["veredito"] for j, p in por_jogador.items()} == {
         "P1": ob.VERDE, "P2": ob.VERDE, "P3": ob.VERMELHO, "P4": ob.VERDE,
     }
-    assert "o lugar P3 sem endpoint de háptica" in por_jogador["P3"]["porque"]
+    assert "o aparelho do P3 sem endpoint de háptica" in por_jogador["P3"]["porque"]
 
 
-def test_o_lugar_e_o_numero_do_cartao_e_nao_o_do_jogo(ob: ModuleType, tmp_path: Path) -> None:
-    """O lugar de cada controle é o «Controle N» do cartão, e não o ``player``.
+def test_o_endpoint_segue_o_aparelho_e_nao_o_numero_do_cartao(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """Renumerar o cartão não muda o endpoint que a linha confere.
 
-    O daemon senta cada controle no número que a tela imprime (o
-    ``player_slot``); o ``player`` do estado é o número que o jogo vê. Na mesa
-    de quatro medida (MESA-CHEIA-11) as duas listas são outras: ``[4, 1, 3,
-    2]`` contra ``[1, 2, 3, 4]``. Sem o endpoint do lugar 4, quem fica sem
-    vibração é o controle do cartão 4 — o P1 do jogo.
+    Na mesa de quatro medida (MESA-CHEIA-11) o cartão diz ``[4, 1, 3, 2]``
+    contra ``[1, 2, 3, 4]`` do jogo. O endpoint é do aparelho: sem o do
+    quarto aparelho, quem sai vermelho é ele, qualquer que seja o número.
 
-    MORDIDA: volte o lugar a ``c.get("player")`` — o vermelho cai no P4, que
-    tem endpoint, e o P1 sem endpoint sai verde.
+    MORDIDA: devolva a linha ao número do cartão (``nome_do_endpoint`` do
+    lugar) — o vermelho cai em outro controle, e reprova.
     """
     estado = estado_da_mesa()
     for controle, cartao in zip(estado["controllers"], (4, 1, 3, 2), strict=True):
@@ -1334,7 +1336,7 @@ def test_o_lugar_e_o_numero_do_cartao_e_nao_o_do_jogo(ob: ModuleType, tmp_path: 
         ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
         ensaios={
             "quem_e_quem.py": quem_e_quem_json(ob, estado),
-            "os_endpoints_de_haptica.py": _endpoints_dos_lugares((1, 2, 3)),
+            "os_endpoints_de_haptica.py": _endpoints_dos_aparelhos(UNIQS[:3]),
         },
     )
     saida = tmp_path / "saida"
@@ -1342,21 +1344,24 @@ def test_o_lugar_e_o_numero_do_cartao_e_nao_o_do_jogo(ob: ModuleType, tmp_path: 
 
     por_jogador = {p["jogador"]: p for p in da_linha(saida, "o endpoint de háptica")}
     assert {j: p["veredito"] for j, p in por_jogador.items()} == {
-        "P1": ob.VERMELHO, "P2": ob.VERDE, "P3": ob.VERDE, "P4": ob.VERDE,
+        "P1": ob.VERDE, "P2": ob.VERDE, "P3": ob.VERDE, "P4": ob.VERMELHO,
     }
-    assert "o lugar P4 sem endpoint de háptica" in por_jogador["P1"]["porque"]
+    assert "o aparelho do P4 sem endpoint de háptica" in por_jogador["P4"]["porque"]
 
 
-def test_sem_numero_de_cartao_o_lugar_e_nao_sei(ob: ModuleType, tmp_path: Path) -> None:
-    """Sem ``player_slot`` nem ``index`` o estado não diz o lugar: «não sei», e não o 1."""
+def test_sem_a_chave_do_controle_o_endpoint_e_nao_sei(ob: ModuleType, tmp_path: Path) -> None:
+    """Sem a chave (``uniq`` vazio) o estado não diz o aparelho.
+
+    A linha é «não sei», e não um endpoint inventado.
+    """
     estado = estado_da_mesa()
     for controle in estado["controllers"]:
-        del controle["player_slot"]
+        controle["uniq"] = ""
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
         ensaios={
             "quem_e_quem.py": quem_e_quem_json(ob, estado),
-            "os_endpoints_de_haptica.py": _endpoints_dos_lugares((1, 2, 3, 4)),
+            "os_endpoints_de_haptica.py": _endpoints_dos_aparelhos(UNIQS),
         },
     )
     saida = tmp_path / "saida"
