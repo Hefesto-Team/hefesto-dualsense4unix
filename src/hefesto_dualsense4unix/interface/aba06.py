@@ -76,6 +76,14 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
 #: Estilo Point-and-click virou a SEGUNDA a usá-lo: duas digitações do mesmo
 #: prefixo é como o desenho e o produto deixam de se encontrar sem ninguém ver.
 from pacotes.a06_navegacao import PREFIXO_DA_ACAO  # noqa: E402
+#: OS GESTOS DO CONTROLE — o vocabulário e os endereços, dos donos
+#: (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01, 01/10/2026).
+from hefesto_dualsense4unix.core import acoes_do_gesto as _acoes_do_gesto  # noqa: E402
+from pacotes.a06_navegacao import (  # noqa: E402
+    ENDERECO_DA_DICA_DOS_GESTOS,
+    PREFIXO_DO_GESTO,
+    PREFIXO_DO_SCRIPT,
+)
 #: A PALAVRA DO LUGAR VAZIO, do dono dela — 07/09/2026,
 #: O-LUGAR-VAZIO-TEM-ENDERECO. Agora que o rótulo do lugar vazio tem endereço,
 #: o PRODUTO escreve nele (`pacotes.apagar_os_lugares_sem_dono`, chave
@@ -1131,17 +1139,16 @@ REMAP = [
     ("Sistema", [x for i in _ids("centro") for x in _alvo(i)]),
     ("", ["— Sem troca —"]),
 ]
-ACOES_GESTO = [
-    ("Navegação Interna", ["Suspender mouse e teclado", "Próximo perfil", "Perfil anterior",
-                           "Sair do modo jogo"]),
-    ("Modo", ["Próximo Modo"]),
-    # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a máscara é o degrau de cima do modo,
-    # e tem gesto próprio desde o PS + L3.
-    ("Máscara", ["Próxima Máscara"]),
-    ("Modo Steam", ["Abrir a Steam"]),
-    ("Executar Comando", ["Religar o controle"]),
-    ("", ["— Nada —"]),
-]
+#: A LISTA DOS GESTOS SAI DO PRODUTO — 01/10/2026,
+#: OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01. Ela era digitada aqui, e o
+#: daemon não tinha onde ler a escolha: a lista aceitava o clique e o controle
+#: seguia fazendo o de fábrica. O dono do vocabulário é `core/acoes_do_gesto`,
+#: e o daemon despacha pelo mesmo. A «Navegação Interna» se partiu em «Perfil»
+#: e «Mouse e teclado» (a decisão 4 da sprint, dela); entram o grupo «Hefesto»
+#: (os três da bandeja) e o «Escolher um script…»; o «— Nada —» ficou (a §14,
+#: dela, 01/10: ele volta nos seis gestos), e o «Religar o controle» saiu (o
+#: produto nunca o atendeu: religar é segurar o PS, coisa do próprio controle).
+ACOES_GESTO = _acoes_do_gesto.por_grupo()
 
 
 def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo="",
@@ -1398,14 +1405,11 @@ def ajuda(txt, largura="", vivas=()):
 # pelas máscaras como o PS + R3 anda pelos modos, e os dois ficam lado a lado —
 # analógico esquerdo e direito, uma linha cada.
 # ---------------------------------------------------------------------------
-COMBOS = [
-    (1, ("ps", "options"), "Suspender mouse e teclado"),
-    (2, ("ps", "dpad_up"), "Próximo perfil"),
-    (3, ("ps", "dpad_down"), "Perfil anterior"),
-    (4, ("ps", "stick_r"), "Próximo Modo"),
-    (5, ("ps", "stick_l"), "Próxima Máscara"),
-    (6, ("ps",), "Abrir a Steam"),
-]
+#: O de fábrica de cada linha sai do produto (`acoes_do_gesto.PADRAO`), e as
+#: peças também (`GESTOS`): a tabela, o realce e o daemon leem o mesmo dono.
+COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO[g.chave]))
+          for g in _acoes_do_gesto.GESTOS.values()]
+_GESTO_DA_LINHA = {g.numero: g.chave for g in _acoes_do_gesto.GESTOS.values()}
 
 # ---------------------------------------------------------------------------
 # O REALCE DO COMBO — e ele estava MORTO em três das cinco linhas.
@@ -1793,7 +1797,23 @@ def linha_combo(n, pecas, faz):
     combo = ' <span class="mais">+</span> '.join(nomes)
     return (f'                <tr class="g g{n}"><td class="b">'
             f'<span class="gls"><span class="mk-n">{n}</span>{combo}</span></td>'
-            f'<td>{drop(ACOES_GESTO, faz, gesto="acao-do-gesto")}</td></tr>')
+            f'<td>{drop_do_gesto(_GESTO_DA_LINHA[n], faz)}</td></tr>')
+
+
+def drop_do_gesto(chave, faz):
+    """A lista de UM gesto, com o endereço de leitura e o de pintura.
+
+    `data-linha` diz ao pacote QUAL gesto mudou, e `data-campo` deixa o tique
+    escrever o que a máquina diz — sem ele a lista mostrava a escolha recusada
+    até a aba reabrir, e aí voltava ao de fábrica (a noite de 01/10). A opção
+    do script tem endereço PRÓPRIO: com um arquivo escolhido, ela mostra o
+    nome dele.
+    """
+    lista = drop(ACOES_GESTO, faz, gesto="acao-do-gesto", linha=chave,
+                 campo=PREFIXO_DO_GESTO + chave)
+    rotulo = _acoes_do_gesto.rotulo(_acoes_do_gesto.SCRIPT)
+    return lista.replace(f"<option>{rotulo}</option>",
+                         f'<option data-campo="{PREFIXO_DO_SCRIPT}{chave}">{rotulo}</option>')
 
 # A LISTA ÚNICA DE BOTÕES — a MESMA primeira coluna nas duas telas de botões.
 # Ela, 27/08: "Em que cada linha seria um dos botões do controle" e, da tabela da
@@ -2819,13 +2839,22 @@ D_MESA = ajuda(
     "O alvo de um ajuste se escolhe na <b>fita do topo</b>; estes cartões são "
     "leitura.")
 
+#: A DICA DOS GESTOS FALA DA TABELA — 01/10/2026 (OS-GESTOS-DO-CONTROLE-01).
+#: Ela cravava *«o PS sozinho abre a Steam»* e *«o PS + R3 e o PS + Options
+#: são as duas saídas de emergência»*: com a tabela configurável, as duas
+#: passariam a mentir. O que muda com a escolha dela vem do pacote, pelo
+#: endereço vivo (`ENDERECO_DA_DICA_DOS_GESTOS`); o fixo diz só o que vale sempre.
 D_GESTOS = ajuda(
     "Combinações que valem <b>sem largar o controle</b>, a qualquer momento — "
-    "mesmo com o jogo aberto.<br><br>"
+    "mesmo com o jogo aberto. O que cada uma faz vale para o computador, em "
+    "todo perfil e nos quatro controles.<br><br>"
     "Segure os dois <b>juntos</b> por <b>0,15 s</b>. Um toque rápido demais não "
-    "vira combo: solta o PS sozinho, e o PS sozinho abre a Steam.<br><br>"
-    "<b>Ressalva:</b> o <b>PS + R3</b> e o <b>PS + Options</b> são as duas saídas "
-    "de emergência quando o jogo não responde.")
+    "vira combo: vira o PS sozinho. Com um jogo aberto, o PS sozinho é do "
+    "jogo.<br><br>"
+    "Um script escolhido precisa ser seu, executável e começar com <b>#!</b>; "
+    "ele roda por até 60 s. Para deixar um programa aberto, o script o entrega "
+    "ao sistema (xdg-open).",
+    vivas=(ENDERECO_DA_DICA_DOS_GESTOS,))
 
 MIOLO = f'''
     <div class="quadro">

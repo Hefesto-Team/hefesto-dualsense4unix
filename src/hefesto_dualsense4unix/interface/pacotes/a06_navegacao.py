@@ -6,10 +6,10 @@ O daemon marca um controle como primário, e a tela já dizia isso à mão: o
 `NAVEGA` do gerador tirava o MENOR número da mesa, que acerta por coincidência
 enquanto o P1 estiver na frente. Agora sai do daemon.
 
-O QUE NÃO TEM: os cinco gestos (PS+Options, PS+↑…). Eles NÃO são configuráveis —
-`daemon/subsystems/hotkey.py` monta um callback por combo, em código. A tabela da
-tela oferece trocar o que cada combo faz; o produto não tem onde guardar essa
-troca.
+OS SEIS GESTOS (PS+Options, PS+↑…) TÊM DONO DESDE 01/10/2026: a tabela mora no
+`maquina.json` (`core/acoes_do_gesto.tabela`), o daemon despacha por ela e a
+lista da tela grava e pinta por ela — ver `acao_do_gesto`, no fim do módulo
+(OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01).
 
 FATO SUBSTITUÍDO (06/09/2026): esta linha dizia que o `ps_button_action` da
 config é *"o único pedaço ajustável"* e que *"método de IPC nenhum escreve"*.
@@ -217,10 +217,10 @@ SEM_ENDERECO: dict[str, str] = {
     "rato-despachando": "a GTK não tem frase para 'o daemon está despachando' — "
                         "as quatro dela falam do device, que `rato-estado` já "
                         "diz. Inventar a frase é decisão dela",
-    # OS ATALHOS DO PERFIL: a tabela da tela é a dos cinco COMBOS (PS+Options…),
+    # OS ATALHOS DO PERFIL: a tabela da tela é a dos seis GESTOS (PS+Options…),
     # que não são `key_bindings`. Não há onde mostrar a contagem, e mostrá-la na
     # tabela dos combos seria pôr um número ao lado de outra coisa.
-    "gestos": "a tabela da tela é a dos cinco COMBOS, e `key_bindings` são os "
+    "gestos": "a tabela da tela é a dos seis GESTOS, e `key_bindings` são os "
               "nove BOTÕES — não é o mesmo dado, e não há linha para ele",
     "gestos-lista": "idem; e a lista é estrutura, que o piloto pula",
 }
@@ -2014,9 +2014,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # E ELAS PARAM DE SER REPINTADAS ENQUANTO ELA ESTÁ MEXENDO — decisão dela,
     # 02/09/2026. Ver `_o_que_a_tabela_mostra`.
     mesa.update(_o_que_a_tabela_mostra(p))
-    # AS LINHAS DA TELA "Trocar os botões" — F1-REMAPEAR, 13/09/2026. Do perfil
-    # dela, com a mesma trava de quem está mexendo. Ver `_o_que_a_troca_mostra`.
-    mesa.update(_o_que_a_troca_mostra(p))
+    # AS LINHAS DA TELA "Trocar os botões" (F1-REMAPEAR, do perfil) e as dos SEIS
+    # GESTOS, que são da máquina: `_o_que_a_troca_mostra` e `_o_que_os_gestos_fazem`.
+    mesa.update({**_o_que_a_troca_mostra(p), **_o_que_os_gestos_fazem()})
     # A LISTA "Função do teclado" SÓ É REESCRITA QUANDO O DAEMON FALOU, e a
     # ausência da chave é o que impede a mentira: sem o bloco
     # `keyboard_emulation` (daemon mudo, ou config inacessível — o `state_full`
@@ -4067,12 +4067,8 @@ SEM_GESTO = {
     # ENDEREÇOS REMEDIDOS EM 06/09/2026: eram `:4556` e `:4567`, que hoje são o
     # cache de órfãos HID. Medidos com `grep -n` no HEAD desta árvore, nunca
     # copiados de relatório.
-    "acao-do-gesto": "os cinco combos são callbacks montados em código "
-                     "(`daemon/subsystems/hotkey.py:1096-1104`), não dado. O "
-                     "vizinho deles, o `config.ps_button_action` do PS solo, "
-                     "tem escritor VIVO (`daemon.reload` com `config_overrides`) "
-                     "e nenhum que grave em disco — e ele nem é o que esta "
-                     "tabela oferece trocar",
+    # `acao-do-gesto` SAIU DAQUI em 01/10/2026 (OS-GESTOS-DO-CONTROLE-01): a
+    # tabela é dado do `maquina.json`, e o daemon despacha por ela.
     "padrao-da-aba": "a frase do botão promete a aba INTEIRA — as opções de "
                      "ativação, os 5 gestos e as 22 linhas das duas telas. Só as "
                      "duas velocidades têm rota (`mouse.emulation.set` "
@@ -4182,11 +4178,12 @@ SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
            "linha-de-troca", "fechar-troca")
 
 
-PONTE = {"chamar"}
+PONTE = {"chamar", "machine_declare", "escolher_arquivo"}
 #: O `desktop.status.set` é o «Status do Modo» desde 29/09/2026
 #: (O-MOUSE-SEGUE-A-NAVEGACAO-01): o mouse, o teclado e a gravação do
 #: perfil numa chamada só, no daemon.
-METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set"}
+METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set",
+           "machine.declare"}
 
 
 PAGINA = "06-navegacao.html"
@@ -4253,4 +4250,155 @@ PROVAS = [
            [("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
     _prova("teclado", {"valor": TECLADO_DESATIVADO},
            [("resultado", ["keyboard.emulation.set"], {"enabled": False})]),
+    # O GESTO DA TABELA grava na MÁQUINA (OS-GESTOS-DO-CONTROLE-01): o «— Nada —»
+    # no PS + L3, que é a visita errando o combo e reescrevendo o perfil do jogo.
+    _prova("acao-do-gesto", {"linha": "ps_l3", "rotulo": "— Nada —", "valor": "— Nada —"},
+           [("machine_declare", [{"gestos": {"ps_l3": {"faz": "nada"}}}], {})]),
 ]
+
+
+# ---------------------------------------------------------------------------
+# OS GESTOS DO CONTROLE — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026)
+#
+# NO FIM DO MÓDULO de propósito: o mapa cita linhas deste arquivo até a 3198, e
+# nada acima delas anda.
+#
+# A tabela «Os gestos do controle» é DA MÁQUINA (`D-2909-OS-GESTOS-SAO-DA-MAQUINA`,
+# dela): o gesto grava no `maquina.json` pelo `machine.declare`, que relê o
+# daemon no mesmo pedido, e a pintura lê o MESMO arquivo — o que a lista mostra
+# é o que o controle faz, e sobrevive a reabrir a aba e a trocar de perfil (a
+# noite de 01/10, em que a lista voltava a «Abrir a Steam» a cada troca).
+# ---------------------------------------------------------------------------
+
+#: O endereço de cada lista, `faz-<gesto>`: o valor que o tique escreve.
+PREFIXO_DO_GESTO = "faz-"
+#: O endereço da opção do script de cada lista, `script-<gesto>`: o texto dela
+#: é o nome do arquivo escolhido.
+PREFIXO_DO_SCRIPT = "script-"
+#: A frase viva da dica da tabela — o que muda com a escolha dela.
+ENDERECO_DA_DICA_DOS_GESTOS = "gestos-dica"
+#: O título do seletor do sistema, e o filtro.
+TITULO_DO_SELETOR_DO_SCRIPT = "Escolher um script"
+FILTRO_DO_SCRIPT = "*.sh"
+
+_A_MAQUINA: Any = None
+_SELO_DA_MAQUINA: Any = None
+
+
+def _selo_da_maquina() -> tuple[int, int, int] | None:
+    """`(inode, mtime_ns, tamanho)` do `maquina.json`: a mesma regra da 08."""
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
+        st = caminho_da_maquina().stat()
+    except Exception:
+        return None
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
+
+
+def _a_maquina() -> Any:
+    """O `maquina.json` validado, RELIDO QUANDO O ARQUIVO MUDA (um `stat` por tique).
+
+    É o caminho da 08 (`a08_conexoes._declaracao`), copiado de propósito: os
+    pacotes são território exclusivo. O `carregar_maquina` nunca levanta.
+    """
+    global _A_MAQUINA, _SELO_DA_MAQUINA
+    selo = _selo_da_maquina()
+    if _A_MAQUINA is None or selo != _SELO_DA_MAQUINA:
+        try:
+            perfil._com_o_src()
+            from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+            _A_MAQUINA, _SELO_DA_MAQUINA = carregar_maquina(), selo
+        except Exception:
+            return None
+    return _A_MAQUINA
+
+
+def _a_dica_dos_gestos(escolhas: dict[str, Any]) -> str:
+    """O que a dica da tabela diz sobre a escolha de hoje, ou o «nada a dizer».
+
+    Duas frases, cada uma só quando é verdade: a saída de emergência que ficou
+    sem gesto (nada se trava — a dica diz), e a volta do «Parar o serviço»,
+    que não existe pelo controle.
+    """
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    frases = [f"Nenhum gesto faz <b>{ag.rotulo(t)}</b>, uma das saídas de emergência."
+              for t in ag.saidas_sem_gesto(escolhas)]
+    if any(e.faz == ag.PARAR_O_SERVICO for e in escolhas.values()):
+        frases.append("<b>Parar o serviço</b> não volta pelo controle: a volta é "
+                      "pela bandeja ou pela aba Sistema.")
+    return "<br><br>".join(frases) if frases else NADA_A_DIZER
+
+
+def _o_que_os_gestos_fazem() -> dict[str, str]:
+    """As seis listas da tabela, a opção do script de cada uma, e a dica viva.
+
+    A opção do script vem ANTES da lista na mesma pintura: a lista só aceita o
+    texto de uma opção que existe (`escrever`, o ramo do `<select>`), e o nome
+    do arquivo tem de estar na opção quando o valor chega.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    escolhas = ag.tabela(_a_maquina())
+    fora: dict[str, str] = {}
+    for chave, escolha in escolhas.items():
+        fora[PREFIXO_DO_SCRIPT + chave] = (
+            ag.nome_do_script(escolha.script) if escolha.faz == ag.SCRIPT and escolha.script
+            else ag.rotulo(ag.SCRIPT))
+        fora[PREFIXO_DO_GESTO + chave] = ag.rotulo_da_escolha(escolha)
+    fora[ENDERECO_DA_DICA_DOS_GESTOS] = _a_dica_dos_gestos(escolhas)
+    return fora
+
+
+def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
+    """`(ok, motivo)`, seja tupla ou `bool` o que a ponte devolveu (a régua usa `bool`)."""
+    if isinstance(resposta, tuple) and len(resposta) == 2:
+        return bool(resposta[0]), resposta[1]
+    return bool(resposta), None
+
+
+@gesto("06-navegacao.html", "acao-do-gesto", grava="machine_declare")
+def acao_do_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Uma das seis listas da tabela: grava na MÁQUINA o que o gesto faz.
+
+    `data-linha` diz qual gesto (as chaves de `acoes_do_gesto.GESTOS`); a página
+    publicada antes desta sprint não o tem, e o clique dela recusa como antes.
+    O rótulo vira o token pelo dono do vocabulário. «Escolher um script…» (ou o
+    nome de um já escolhido) abre o seletor do sistema
+    (`D-2909-O-SCRIPT-E-UM-ARQUIVO-ESCOLHIDO`): cancelar não grava nada e a
+    pintura devolve a lista ao que era; o arquivo é conferido aqui
+    (`conferir_o_script`) e de novo pelo daemon na hora de rodar.
+
+    A recusa pisca na lista, e a frase vai ao diário, como todo gesto da casa.
+    """
+    global _A_MAQUINA
+    perfil._com_o_src()
+    import os
+
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    qual = str(o.get("linha") or "").strip()
+    if qual not in ag.GESTOS:
+        raise ValueError(f"a lista não disse de qual gesto ela é ({qual!r})")
+    texto = str(o.get("rotulo") or o.get("valor") or "").strip()
+    faz = ag.token_do_rotulo(texto)
+    if faz is None or faz == ag.SCRIPT:
+        caminho = p.escolher_arquivo(TITULO_DO_SELETOR_DO_SCRIPT, padrao=FILTRO_DO_SCRIPT)
+        if not caminho:
+            return None
+        real = os.path.realpath(str(caminho))
+        motivo = ag.conferir_o_script(real)
+        if motivo is not None:
+            raise RuntimeError(f"Não dá para usar {ag.nome_do_script(real)}: {motivo}.")
+        declarado: dict[str, Any] = {"faz": ag.SCRIPT, "script": real}
+    else:
+        declarado = {"faz": faz}
+    ok, motivo_da_recusa = _ok_e_motivo(p.machine_declare({"gestos": {qual: declarado}}))
+    if not ok:
+        raise RuntimeError(motivo_da_recusa or "Não consegui guardar o que o gesto faz.")
+    _A_MAQUINA = None
+    return None

@@ -460,13 +460,25 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     assert com_troca in (0, len(REMAPEAVEIS)), (
         f"a página {onde_estou} pinta {com_troca} das {len(REMAPEAVEIS)} linhas "
         "da troca de botões — o Guardar dela gravaria só o que achou.")
-    esperados = len(BOTOES) + 3 + com_tecla + com_troca
+    # E AS SEIS LISTAS DOS GESTOS DO CONTROLE — 01/10/2026,
+    # OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01. Cada uma ganhou endereço de
+    # pintura (`faz-<gesto>`), e a conta pergunta ao dono do vocabulário
+    # (`acoes_do_gesto.GESTOS`), com a mesma trava de meia tela.
+    from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS
+
+    com_gesto = sum(1 for g in GESTOS
+                    if _opcoes_da_pagina(publicado, f"faz-{g}") is not None)
+    assert com_gesto in (0, len(GESTOS)), (
+        f"a página {onde_estou} pinta {com_gesto} das {len(GESTOS)} listas dos "
+        "gestos — meia tabela mentiria sobre a outra metade.")
+    esperados = len(BOTOES) + 3 + com_tecla + com_troca + com_gesto
     assert len(conferidos) == esperados, (
         f"conferi {len(conferidos)} endereço(s) na página {onde_estou} e a aba tem "
         f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
-        f"as DUAS barras de velocidade, {com_tecla} campo(s) de tecla e "
-        f"{com_troca} linha(s) da troca de botões) — se o número caiu, uma linha "
-        "perdeu o endereço e saiu da conferência sem reprovar nada.")
+        f"as DUAS barras de velocidade, {com_tecla} campo(s) de tecla, "
+        f"{com_troca} linha(s) da troca de botões e {com_gesto} lista(s) dos "
+        "gestos) — se o número caiu, uma linha perdeu o endereço e saiu da "
+        "conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
