@@ -4051,7 +4051,10 @@ class _AtosDoGesto:
         def _no_laco() -> None:
             resultado = self.fazer(ag.GESTO_DO_PS, escolha, quem)
             if asyncio.iscoroutine(resultado):
-                asyncio.get_running_loop().create_task(resultado, context=ctx)
+                # A tarefa copia o contexto de quem a cria, e quem a cria já
+                # roda em `ctx` (o `call_soon_threadsafe` abaixo): o
+                # `create_task(context=)` só existe do Python 3.11 em diante.
+                asyncio.get_running_loop().create_task(resultado)
 
         if laco is not None and not laco.is_closed():
             laco.call_soon_threadsafe(_no_laco, context=ctx)
