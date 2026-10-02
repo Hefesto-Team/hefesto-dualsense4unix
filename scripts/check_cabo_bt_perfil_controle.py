@@ -340,12 +340,14 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 #: leu na tela antes de qualquer um de nós reler este arquivo. Dívida declarada
 #: é melhor que dívida escondida; melhor ainda é a que não dura um dia.
 A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
-    "haptica": (  # sai com: O-GANHO-DA-HAPTICA-TEM-DONO-01
-        "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
+    # A O-GANHO-DA-HAPTICA-TEM-DONO-01 fechou o código em 02/10/2026 (ela era a
+    # dona até ali); o grau do aparelho é medida, e quem a tem é o banco de prova.
+    "haptica": (  # sai com: O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01
+        "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
         "a linha `vibracao.haptics_vcm@dualsense` do mapa segue em dívida nos dois "
         "transportes: o ganho grava e alcança a placa (cabo) e o conversor da ponte "
-        "(rádio) com régua que morde, mas o grau do aparelho só sobe com o passo 0 "
-        "da sprint e a mão dela nos Caminhos da Forja",
+        "(rádio) com régua que morde, mas o grau do aparelho só sobe com a medida "
+        "(o banco de prova, ou a mão dela nos Caminhos da Forja)",
     ),
 }
 
