@@ -19,6 +19,7 @@ de cada régua sai do que a régua montou, nunca do que o pacote escreveu:
    mapa chega ao contexto das abas, pelo `hefesto_vivo._contexto`;
 7. o desenho nunca fica com o controle de outro chip: a mesa sem controle apaga
    as lâmpadas e a barra, e o «Todos» desenha o primeiro da mesa (WebKit).
+8. o nome do controle cabe no chip em toda janela, da dela à estreita (WebKit).
 
 A PÁGINA LIDA: enquanto o mapa estiver declarado em trabalho no
 `mockup/DIVERGENCIAS.md` (a licença do portão `desenho-aprovado`), a bancada;
@@ -29,9 +30,10 @@ troca com o id cru (3); tirar a regra da marca tracejada, ou emitir
 `trocada-` para toda peça (3b); tirar o endereço de um item do gerador (4);
 tirar a regra `.on` do laço (5); um gesto local do mapa, ou o `escolhido` fora do
 `pacotes.Contexto` do `hefesto_vivo._contexto` (6); o `segue` sem a
-queda no «Nenhum», ou o `desenha` do «Todos» sem o primeiro da mesa (7).
+queda no «Nenhum», ou o `desenha` do «Todos» sem o primeiro da mesa (7); tirar o
+`flex-wrap` da `.prova .linha` (8: o chip sai da caixa da janela).
 
-Sem tela o WebKit não abre e as réguas 3b, 5 e 7 PULAM: rode com `xvfb-run -a`.
+Sem tela o WebKit não abre e as réguas 3b, 5, 7 e 8 PULAM: rode com `xvfb-run -a`.
 """
 from __future__ import annotations
 
@@ -362,3 +364,77 @@ def test_o_todos_desenha_o_primeiro_da_mesa() -> None:
     assert no_outro["leds"] == acesas(int(outro["jogador"])), no_outro
     assert no_todos["leds"] == acesas(primeiro), (
         f"o «Todos» ficou com as lâmpadas do chip anterior: {no_todos}")
+
+
+# --------------------------------------------------------------------------
+# 8. o nome do controle cabe no chip, em toda janela
+# --------------------------------------------------------------------------
+#: As janelas que a casa mede nas páginas avulsas (as do Mapa das Conexões).
+VISTAS_DO_MAPA = {"dela": (1918, 840), "ladrilhada": (1212, 809), "estreita": (860, 809)}
+
+CHIPS = r"""
+(function(){
+  return JSON.stringify(Array.from(
+      document.querySelectorAll('[data-bloco="controles-do-mapa"] .bt')).map(b => {
+    const r = b.getBoundingClientRect(), bloco = b.closest('.prova').getBoundingClientRect();
+    const caixa = document.querySelector('.cx').getBoundingClientRect();
+    return {texto: (b.textContent || '').trim(),
+            vaza: b.scrollHeight > b.clientHeight + 1 || b.scrollWidth > b.clientWidth + 1,
+            fora: r.right > Math.min(bloco.right, caixa.right, window.innerWidth) + 1
+                  || r.left < bloco.left - 1};
+  }));
+})()
+"""
+
+
+def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre (rode com xvfb-run -a)")
+    saiu: list[str] = []
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(largura, altura)
+    view = WebKit2.WebView()
+    view.set_size_request(largura, altura)
+    janela.add(view)
+    janela.show_all()
+
+    def mediu(v: Any, res: Any) -> None:
+        try:
+            saiu.append(v.evaluate_javascript_finish(res).to_string())
+        except Exception as e:
+            saiu.append(f"ERRO na medida: {e}")
+        Gtk.main_quit()
+
+    def carregou(v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            GLib.timeout_add(300, lambda: (v.evaluate_javascript(
+                CHIPS, -1, None, None, None, mediu), False)[1])
+
+    view.connect("load-changed", carregou)
+    view.load_uri(_a_pagina().as_uri())
+    guarda = GLib.timeout_add(20000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert len(saiu) == 1 and not saiu[0].startswith("ERRO"), f"o WebKit não respondeu: {saiu}"
+    return list(json.loads(saiu[0]))
+
+
+@pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
+def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str) -> None:
+    """8 (conferência final, 02/10/2026): os chips levam o nome do controle
+    («P3 • Galactic Purple • BT»), e na janela ladrilhada e na estreita o texto
+    quebrava e vazava por baixo do chip de 28 px. Agora o nome fica numa linha e
+    os chips descem para a linha seguinte. Sem a descida, o nome inteiro empurra
+    os chips para fora da caixa da janela."""
+    chips = _chips_na_vista(*VISTAS_DO_MAPA[vista])
+    assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
+    ruins = [c for c in chips if c["vaza"] or c["fora"]]
+    assert ruins == [], f"na janela {vista}, o nome vaza do chip ou o chip sai do bloco: {ruins}"

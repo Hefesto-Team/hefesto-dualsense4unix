@@ -1049,7 +1049,7 @@ def main():
      `space-between` entre eles: ela reprovou isso com todas as letras. */
   .prova-rot{{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;line-height:1}}
-  .prova .linha{{display:flex;gap:6px;align-items:center}}
+  .prova .linha{{display:flex;gap:6px;align-items:center;flex-wrap:wrap}}
   .ct{{height:28px;background:var(--elevated);color:var(--fg);
        border:1px solid var(--border-forte);border-radius:6px;
        padding:0 8px;font-family:var(--f);font-size:12px}}
@@ -1059,7 +1059,7 @@ def main():
      medem o que a palavra pede. */
   .bt{{height:28px;min-width:30px;padding:0 9px;background:var(--elevated);
        color:var(--texto-suave);border:1px solid var(--border-forte);
-       border-radius:6px;font-family:var(--f);font-size:12px;cursor:pointer}}
+       border-radius:6px;font-family:var(--f);font-size:12px;cursor:pointer;white-space:nowrap}}
   .bt:hover{{border-color:var(--pink);color:var(--fg)}}
   .bt.on{{border-color:var(--pink);background:rgba(255,121,198,.14);color:var(--fg)}}
   .prova-nota{{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
