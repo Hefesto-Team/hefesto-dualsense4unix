@@ -574,3 +574,276 @@ def test_no_xbox_a_haptica_em_zero_devolve_o_rumble_ao_hid(
     assert m.rumble(p1, 40, 90) == (40, 90)
     assert m.backend.do(p1)[-1] == (40, 90)
     assert m.tocador(1).nivel == (0, 0), "o tocador segue somando com a háptica em 0"
+
+
+# ---------------------------------------------------------------------------
+# 7. A Economia corta também a háptica (a resposta [25] dela, item 11)
+# ---------------------------------------------------------------------------
+
+
+def _mesa_com_orcamento(orcamento: str | None) -> Any:
+    """O daemon na forma que o funil do rumble lê: ``config.orcamento_da_mesa``."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(config=SimpleNamespace(orcamento_da_mesa=lambda: orcamento))
+
+
+class TestAEconomiaCortaAHaptica:
+    def test_na_economia_o_dono_responde_o_teto_nas_duas_portas(self) -> None:
+        """Régua 7: ``haptica_pct=150`` vale 0,3 na Economia, e 1,5 no Balanceado.
+
+        O cabo é o que o SERVIDOR guardou nos traseiros da placa; o rádio é o
+        bloco que a bomba de verdade monta (meia escala vezes 0,3 vezes 127 sobre 32768 =
+        19).
+
+        MORDIDA: em ``GanhoDaHaptica.fator``, tire o ``_sob_o_teto`` → 1,5 na
+        Economia, e reprova nas duas portas.
+        """
+        dono = _dono(branco=150)
+        dono.ler_o_teto(_mesa_com_orcamento("economia"))
+        assert dono.fator(BRANCO) == pytest.approx(0.3)
+        assert dono.pct(BRANCO) == 150, "o teto é leitura: o que ela escolheu não muda"
+        assert dono.pct_que_vale(BRANCO) == 30
+        srv = _servidor()
+        dono.escrever_nas_placas([BRANCO], [BRANCO], [PLACA_BRANCO], runner=srv,
+                                 placa_de=_placa_de)
+        assert srv.traseiros(PLACA_BRANCO) == [0.3, 0.3]
+        assert set(_bloco(functools.partial(dono.fator, BRANCO))) == {19}
+
+        dono.ler_o_teto(_mesa_com_orcamento("balanceado"))
+        assert dono.fator(BRANCO) == pytest.approx(1.5)
+        dono.escrever_nas_placas([BRANCO], [BRANCO], [PLACA_BRANCO], runner=srv,
+                                 placa_de=_placa_de)
+        assert srv.traseiros(PLACA_BRANCO) == [1.5, 1.5]
+
+    def test_o_teto_e_min_e_nunca_produto(self) -> None:
+        """Abaixo do teto, o ganho passa inteiro: 20 % na Economia é 0,2, e não 0,06."""
+        dono = _dono(branco=20)
+        dono.ler_o_teto(_mesa_com_orcamento("economia"))
+        assert dono.fator(BRANCO) == pytest.approx(0.2)
+
+    def test_o_teto_e_relido_com_o_perfil_a_cada_volta(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A volta do som e o pedido releem os dois juntos (``ler_do_daemon``)."""
+        from types import SimpleNamespace
+
+        from hefesto_dualsense4unix.profiles import manager
+
+        perfil = SimpleNamespace(controllers={
+            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=150))
+        })
+        monkeypatch.setattr(loader_module, "perfil_em_disco", lambda _n: perfil)
+        monkeypatch.setattr(manager, "nome_do_perfil_que_grava", lambda _a: "Estilo")
+        orcamento = {"agora": "economia"}
+        daemon = SimpleNamespace(
+            store=SimpleNamespace(active_profile="Estilo"),
+            config=SimpleNamespace(orcamento_da_mesa=lambda: orcamento["agora"]),
+        )
+        dono = GanhoDaHaptica()
+        dono.ler_do_daemon(daemon)
+        assert dono.fator(BRANCO) == pytest.approx(0.3)
+        orcamento["agora"] = None
+        dono.ler_do_daemon(daemon)
+        assert dono.fator(BRANCO) == pytest.approx(1.5)
+
+    def test_o_state_full_diz_o_que_vale_ao_lado_do_que_ela_escolheu(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
+
+        dono = _dono(branco=150)
+        dono.ler_o_teto(_mesa_com_orcamento("economia"))
+        monkeypatch.setattr(mod, "GANHO", dono)
+        h = _Handlers(ativo=None, primario=BRANCO)
+        h._sensor_hub = object()  # type: ignore[attr-defined]
+        monkeypatch.setattr(h, "_adaptadores_do_radio", lambda _u: {}, raising=False)
+        entries: list[dict[str, Any]] = [{"uniq": BRANCO, "transport": "usb"}]
+        h._merge_radio(entries)
+        assert entries[0]["haptica_pct"] == 150
+        assert entries[0]["haptica_vale_pct"] == 30
+
+
+# ---------------------------------------------------------------------------
+# 8. Desligada pelo rádio fora do Xbox: a ponte não vai à háptica (item 6)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def sala_do_radio(monkeypatch: pytest.MonkeyPatch) -> Any:
+    from tests.unit.test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio import Mesa
+
+    m = Mesa(monkeypatch)
+    yield m
+    m.fechar()
+
+
+def _ganho_fixo(monkeypatch: pytest.MonkeyPatch, **por_uniq: int) -> None:
+    """O dono com estes ganhos, sem a volta reler o disco (o daemon é de mentira)."""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+
+    monkeypatch.setattr(GANHO, "_escritos", {norm_mac(u): p for u, p in por_uniq.items()})
+    monkeypatch.setattr(GANHO, "_teto", None)
+    monkeypatch.setattr(GANHO, "ler_do_daemon", lambda *_a, **_k: None)
+
+
+def test_pelo_radio_a_haptica_desligada_deixa_o_radio_com_o_alto_falante(
+    sala_do_radio: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O jogo toca nos motores e o P4 está com a háptica em 0: a ponte não vai à háptica.
+
+    O P3, na mesma sala e com a háptica ligada, vai: o zero é DAQUELE controle.
+
+    MORDIDA: tire o ``GANHO.pct(uniq) > 0`` do ``candidata`` em
+    ``_casar_as_pontes`` — a ponte do P4 vai ao ``0x32`` para mandar silêncio,
+    e reprova.
+    """
+    from tests.unit.test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio import (
+        MOTOR,
+        P3,
+        P4,
+        no_do,
+    )
+
+    sala = sala_do_radio
+    _ganho_fixo(monkeypatch, **{P4: 0, P3: 150})
+    for uniq in (P3, P4):
+        sala.fonte(no_do(uniq)).quadro = MOTOR
+    sala.abrir_a_sala(P3, P4)
+    sala.volta()
+    for uniq in (P3, P4):
+        sala.esperar(no_do(uniq), True)
+    sala.mexer(P3, P4)
+    sala.volta()
+    assert sala.arranjo(P3) == af.ARRANJO_HAPTICA_032.nome
+    assert sala.arranjo(P4) != af.ARRANJO_HAPTICA_032.nome, (
+        "com a háptica do P4 em 0 a ponte foi à háptica mandar silêncio"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 9. A luz «no ar» (item 8): há háptica chegando a ESTE controle agora
+# ---------------------------------------------------------------------------
+
+
+def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
+    sala_do_radio: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rádio: acesa com a ponte em háptica e sinal nos motores; apagada no silêncio e em 0.
+
+    MORDIDA: em ``haptica_no_ar``, responda pela ponte (``modo == "haptica"``)
+    sem perguntar ao ouvido — no silêncio entre dois passos a luz fica acesa,
+    e reprova.
+    """
+    from tests.unit.test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio import (
+        MOTOR,
+        P2,
+        no_do,
+    )
+
+    sala = sala_do_radio
+    _ganho_fixo(monkeypatch, **{P2: 150})
+    endpoint = no_do(P2)
+    sala.fonte(endpoint).quadro = MOTOR
+    sala.abrir_a_sala(P2)
+    sala.volta()
+    sala.esperar(endpoint, True)
+    sala.mexer(P2)
+    sala.volta()
+    assert sala.arranjo(P2) == af.ARRANJO_HAPTICA_032.nome
+    sala.esperar(endpoint, True)
+    assert sala.sub.haptica_no_ar(P2) is True
+    _ganho_fixo(monkeypatch, **{P2: 0})
+    assert sala.sub.haptica_no_ar(P2) is False, "com o ganho em 0 o motor não mexe"
+    _ganho_fixo(monkeypatch, **{P2: 150})
+    sala.fonte(endpoint).quadro = None
+    sala.esperar(endpoint, False)
+    assert sala.arranjo(P2) == af.ARRANJO_HAPTICA_032.nome
+    assert sala.sub.haptica_no_ar(P2) is False, "a ponte em háptica sem sinal acendeu a luz"
+
+
+def test_no_cabo_a_luz_ouve_a_placa_do_controle(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cabo: o ouvido da placa lê o monitor dela, e a luz segue o sinal dos traseiros.
+
+    O gravador é o de produção (``fonte_do_monitor_do_no``), com o dublê que
+    faz o que o ``pw-record`` faz; e ele pede para não recuar à fonte padrão.
+
+    MORDIDAS: tire o ``propriedades=RECUO_PROIBIDO_DO_OUVIDO`` do
+    ``OuvidoDaPlaca.subir`` → o argv não proíbe o recuo, e reprova; tire o
+    ``self._casar_os_ouvidos_das_placas(ouvir)`` do fim de ``_casar_o_cabo``
+    não muda esta régua (ela casa direto), e a da volta abaixo reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
+    from tests.unit.test_o_gravador_do_monitor_entrega_so_o_pcm import Gravadores
+
+    gravadores = Gravadores(monkeypatch)
+    monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
+    monkeypatch.setattr(af, "JANELA_DO_SINAL_S", 0.2)
+    _ganho_fixo(monkeypatch, **{BRANCO: 150})
+    sub = AltoFalanteSubsystem(daemon=None)
+    try:
+        gravadores.toca[PLACA_BRANCO] = (0, 0, 9000, -9000)
+        sub._casar_os_ouvidos_das_placas({BRANCO: PLACA_BRANCO})
+        [proc] = gravadores.abertos
+        propriedades = proc.argv[proc.argv.index("-P") + 1]
+        assert "node.dont-reconnect=true" in propriedades
+        assert "node.dont-fallback=true" in propriedades
+        assert f"--rate={af.TAXA_DO_OUVIDO_DA_PLACA}" in proc.argv
+        _esperar_que(lambda: sub.haptica_no_ar(BRANCO) is True)
+        gravadores.toca[PLACA_BRANCO] = (5000, 5000, 0, 0)  # só o alto-falante
+        _esperar_que(lambda: sub.haptica_no_ar(BRANCO) is False)
+        sub._casar_os_ouvidos_das_placas({})
+        assert proc.returncode is not None, "o ouvido de quem saiu do cabo ficou vivo"
+        assert not sub._ouvidos_das_placas
+    finally:
+        for ouvido in dict(sub._ouvidos_das_placas).values():
+            ouvido.descer()
+        gravadores.fechar()
+
+
+def test_a_volta_do_cabo_casa_o_ouvido_da_placa(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A volta de produção (``_casar_o_cabo``) sobe o ouvido da placa de quem está no cabo.
+
+    MORDIDA: tire o ``self._casar_os_ouvidos_das_placas(ouvir)`` do fim de
+    ``_casar_o_cabo`` — nenhum ouvido sobe, e reprova.
+    """
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
+    from hefesto_dualsense4unix.integrations import alto_falante_bt as afb
+
+    subidos: list[tuple[str, str]] = []
+
+    class _OuvidoQueAnota:
+        def __init__(self, *, placa: str, uniq: str) -> None:
+            self.placa, self.uniq = placa, uniq
+            self.vivo = True
+
+        def subir(self) -> bool:
+            subidos.append((self.uniq, self.placa))
+            return True
+
+        def descer(self) -> None:
+            self.vivo = False
+
+    monkeypatch.setattr(afb, "OuvidoDaPlaca", _OuvidoQueAnota)
+    monkeypatch.setattr(afb, "sink_do_controle", lambda u, _m, **_k: _placa_de(u, None))
+    sub = AltoFalanteSubsystem(daemon=None)
+    controles = [
+        SimpleNamespace(uniq=BRANCO, transporte="usb", caminho="/dev/hidraw40"),
+        SimpleNamespace(uniq=PRETO, transporte="usb", caminho="/dev/hidraw41"),
+    ]
+    sub._casar_o_cabo(controles, set(), [PLACA_BRANCO, PLACA_PRETO])
+    assert sorted(subidos) == sorted([(BRANCO, PLACA_BRANCO), (PRETO, PLACA_PRETO)])
+
+
+def _esperar_que(condicao: Any, prazo_s: float = 5.0) -> None:
+    import time
+
+    fim = time.monotonic() + prazo_s
+    while time.monotonic() < fim:
+        if condicao():
+            return
+        time.sleep(0.01)
+    raise AssertionError("a condição não chegou no prazo")

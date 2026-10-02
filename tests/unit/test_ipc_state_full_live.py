@@ -297,6 +297,11 @@ class TestPlayerPorControle:
         # (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01). O nível é o padrão do
         # DONO, lido do esquema e não digitado; e no cabo o Hefesto está sempre
         # no caminho, então alcança.
+        #
+        # NOTA DATADA — 02/10/2026 (O-GANHO-DA-HAPTICA-TEM-DONO-01, itens 8 e
+        # 11). Entraram `haptica_vale_pct` (o ganho sob o teto da Economia; sem
+        # teto, o escolhido) e `haptica_no_ar` (a luz «no ar»: sem subsystem do
+        # som, ninguém ouviu, e é falso).
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
@@ -310,6 +315,7 @@ class TestPlayerPorControle:
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None,
              "haptica_pct": HAPTICA_PCT_PADRAO, "haptica_alcanca": True,
+             "haptica_vale_pct": HAPTICA_PCT_PADRAO, "haptica_no_ar": False,
              "mira": {"ligada": False, "destino": "nenhum",
                       "toque": "nenhum", "inclinacao": "nenhum",
                       "sensibilidade": 6, "zona_morta_graus_s": 3.0,

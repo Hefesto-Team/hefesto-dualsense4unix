@@ -7865,6 +7865,9 @@ class IpcHandlersMixin:
             from hefesto_dualsense4unix.daemon.subsystems import rumble
 
             nativo = bool(rumble.modo_nativo_manda_nos_motores(self.daemon))
+        no_ar_fn = getattr(
+            getattr(self.daemon, "_alto_falante_subsystem", None), "haptica_no_ar", None
+        )
         for entry in entries:
             uniq = entry.get("uniq") if isinstance(entry.get("uniq"), str) else None
             radio = entry.get("transport") == "bt"
@@ -7887,6 +7890,15 @@ class IpcHandlersMixin:
             # jogo escreve no hidraw e o ganho não alcança.
             entry["haptica_pct"] = GANHO.pct(uniq)
             entry["haptica_alcanca"] = not (radio and nativo and modo is None)
+            # O QUE VALE E O QUE CHEGA (O-GANHO-DA-HAPTICA-TEM-DONO-01, itens 8 e
+            # 11, 02/10/2026): o ganho sob o teto da Economia, e se há háptica
+            # chegando a ESTE controle agora (a luz «no ar»), do subsystem do som.
+            entry["haptica_vale_pct"] = GANHO.pct_que_vale(uniq)
+            no_ar = False
+            if vivo and callable(no_ar_fn):
+                with contextlib.suppress(Exception):
+                    no_ar = no_ar_fn(uniq) is True
+            entry["haptica_no_ar"] = no_ar
 
     def _adaptadores_do_radio(self, uniqs: list[str]) -> dict[str, str]:
         """``{uniq: endereço do adaptador | ""}``, relido no máximo a cada 2 s."""

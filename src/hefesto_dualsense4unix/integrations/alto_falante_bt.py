@@ -1680,8 +1680,14 @@ def argv_do_gravador(
     taxa: int = TAXA_DO_ENCODER,
     canais: int = CANAIS_DO_ENCODER,
     rotulo: str = "hefesto-ponte",
+    propriedades: Sequence[str] = (),
 ) -> list[str]:
     """O comando que lê PCM cru do monitor de um nó. `[]` se não há tocador.
+
+    ``propriedades`` são ``chave=valor`` a mais para o nó do gravador (o
+    ``-P`` do ``pw-record``, o ``--property`` do ``parec``). Quem as usa é o
+    ouvido da placa do cabo (:data:`RECUO_PROIBIDO_DO_OUVIDO`); a ponte segue
+    sem nenhuma.
 
     A fonte vai como ARGUMENTO próprio e nunca por texto de comando (nada de
     ``shell=True``, invariante do projeto), e ela vai **explícita e não
@@ -1733,14 +1739,20 @@ def argv_do_gravador(
             serial = serial_do_no(fonte) if o_servidor_e_o_pipewire() else None
             if serial is None:
                 continue
-            return [binario, *(m.format(fonte=str(serial), taxa=taxa,
+            argv = [binario, *(m.format(fonte=str(serial), taxa=taxa,
                                         canais=canais, rotulo=rotulo,
                                         latencia_ms=LATENCIA_DO_GRAVADOR_MS)
                                for m in modelo)]
+            if propriedades:
+                # O `-P` é UM texto de propriedades: as nossas vão junto do nome.
+                indice = argv.index(f"node.name={rotulo}")
+                argv[indice] = " ".join((argv[indice], *propriedades))
+            return argv
         return [binario, *(m.format(fonte=fonte, taxa=taxa, canais=canais,
                                     rotulo=rotulo,
                                     latencia_ms=LATENCIA_DO_GRAVADOR_MS)
-                           for m in modelo)]
+                           for m in modelo),
+                *(f"--property={p}" for p in propriedades)]
     return []
 
 
@@ -2952,6 +2964,107 @@ def fonte_que_ouve(
     return _ler
 
 
+#: O ouvido da placa do cabo não recua para a fonte padrão: quando a placa some
+#: (o cabo saiu), o fluxo de captura sem estas duas seria religado pelo
+#: WirePlumber à fonte padrão, que nesta casa é o microfone do controle, e a luz
+#: «no ar» acenderia com a voz dela. São as mesmas do tocador do rumble
+#: (``endpoint_de_haptica.argv_do_tocador``).
+RECUO_PROIBIDO_DO_OUVIDO: tuple[str, ...] = (
+    "node.dont-reconnect=true",
+    "node.dont-fallback=true",
+)
+
+#: A taxa em que o ouvido da placa lê o monitor: ele só pergunta «há sinal nos
+#: motores?», e 8 kHz respondem isso com um sexto dos bytes de 48 kHz. Zero
+#: exato reamostrado continua zero exato.
+TAXA_DO_OUVIDO_DA_PLACA = 8_000
+
+
+class OuvidoDaPlaca:
+    """Escuta o monitor da placa de UM controle no cabo, só para o :data:`OUVIDO`.
+
+    O-GANHO-DA-HAPTICA-TEM-DONO-01, item 8 (02/10/2026): a luz «no ar» diz se
+    há háptica chegando a ESTE controle agora. No rádio quem escuta é a ponte;
+    no cabo não há ponte, e quem toca na placa é o jogo direto (pelo nome) ou o
+    laço do lugar. O monitor da placa vê os dois, depois do volume de cada
+    fluxo (o portão do laço inclusive) e antes do volume da placa (o ganho, que
+    a resposta pergunta ao dono à parte).
+
+    Nada vai a lugar nenhum: os blocos passam por :func:`fonte_que_ouve` e são
+    jogados fora. O gravador nasce preso ao pai e é colhido no :meth:`descer`,
+    pelo mesmo dono das pontes (``filho_de_som``).
+    """
+
+    def __init__(
+        self,
+        *,
+        placa: str,
+        uniq: str,
+        abrir: Callable[[list[str]], Any] | None = None,
+    ) -> None:
+        self.placa = placa
+        self.uniq = uniq
+        self._abrir = abrir
+        self._proc: Any = None
+        self._fio: threading.Thread | None = None
+        self._parar = threading.Event()
+        self.motivo = ""
+
+    @property
+    def vivo(self) -> bool:
+        fio = self._fio
+        return fio is not None and fio.is_alive()
+
+    def subir(self) -> bool:
+        """Sobe o gravador e o fio que o lê. Idempotente; ``False`` diz o motivo."""
+        if self.vivo:
+            return True
+        fonte, proc, motivo = fonte_do_monitor_do_no(
+            self.placa,
+            uniq=self.uniq,
+            papel="placa",
+            abrir=self._abrir,
+            taxa=TAXA_DO_OUVIDO_DA_PLACA,
+            canais=CANAIS_DA_HAPTICA,
+            propriedades=RECUO_PROIBIDO_DO_OUVIDO,
+        )
+        if fonte is None:
+            self.motivo = motivo
+            return False
+        self._proc = proc
+        self._parar = threading.Event()
+        ouvir = fonte_que_ouve(fonte, self.placa, canais=CANAIS_DA_HAPTICA)
+        tamanho = (TAXA_DO_OUVIDO_DA_PLACA // 100) * 2 * CANAIS_DA_HAPTICA
+        parar = self._parar
+
+        def _escutar() -> None:
+            try:
+                while not parar.is_set():
+                    if not ouvir(tamanho):
+                        return
+            except Exception:  # o ouvido nunca derruba o subsystem
+                logger.debug("haptica_ouvido_da_placa_caiu", exc_info=True)
+
+        self._fio = threading.Thread(
+            target=_escutar, name="hefesto-ouvido-da-placa", daemon=True
+        )
+        self._fio.start()
+        return True
+
+    def descer(self) -> None:
+        """Para o fio e colhe o gravador. Idempotente, nunca levanta."""
+        from hefesto_dualsense4unix.integrations.filho_de_som import (
+            derrubar_leitor_de_pipe,
+        )
+
+        self._parar.set()
+        proc, self._proc = self._proc, None
+        fio, self._fio = self._fio, None
+        if proc is not None:
+            with contextlib.suppress(Exception):
+                derrubar_leitor_de_pipe(proc, leitor=fio)
+
+
 #: O PISO DOS MOTORES no sink de 4 canais do DualSense — HAPTICA-CABO-VOLUME-01
 #: (Z2), medido no aparelho dela em 19/09/2026 com o controle NO CABO:
 #:
@@ -3217,6 +3330,7 @@ def fonte_do_monitor_do_no(
     abrir: Callable[[list[str]], Any] | None = None,
     taxa: int | None = None,
     canais: int = CANAIS_DO_ENCODER,
+    propriedades: Sequence[str] = (),
 ) -> tuple[Callable[[int], bytes] | None, Any, str]:
     """`(fonte de PCM, processo, motivo)` lendo o monitor do nó DAQUELE controle.
 
@@ -3258,6 +3372,7 @@ def fonte_do_monitor_do_no(
         rotulo=rotulo,
         taxa=taxa_da_fonte(papel) if taxa is None else taxa,
         canais=canais,
+        propriedades=propriedades,
     )
     if not argv:
         return None, None, "nem `pw-record` nem `parec` nesta máquina"
@@ -4389,11 +4504,13 @@ __all__ = [
     "POR_RADIO",
     "PREFIXO_SINK_DO_SOM",
     "PRIORIDADE_SESSAO_DO_SOM",
+    "RECUO_PROIBIDO_DO_OUVIDO",
     "SURDO_S",
     "TAMANHO_DO_DEGRAU",
     "TAXA_DA_FONTE_DO_SOM",
     "TAXA_DA_FONTE_POR_PAPEL",
     "TAXA_DO_ENCODER",
+    "TAXA_DO_OUVIDO_DA_PLACA",
     "TETO_DE_CEDER_S",
     "TRANSPORTE_CABO",
     "TRANSPORTE_RADIO",
@@ -4404,6 +4521,7 @@ __all__ = [
     "CodificadorOpus",
     "ContagemDaBomba",
     "Diagnostico",
+    "OuvidoDaPlaca",
     "OuvidoDosNos",
     "PonteDeSomPorRadio",
     "RotaDoNo",

@@ -841,6 +841,10 @@ class AltoFalanteSubsystem:
     #: na primeira volta que precisa dele (:meth:`_o_cabo`) — dublê montado por
     #: ``__new__`` também o ganha.
     _cabo: Any = None
+    #: ``{uniq: OuvidoDaPlaca}`` de cada controle no cabo com placa de quatro
+    #: canais: o monitor da placa lido só para o ouvido, de onde a luz «no ar»
+    #: do cabo responde (O-GANHO-DA-HAPTICA-TEM-DONO-01, item 8, 02/10/2026).
+    _ouvidos_das_placas: Mapping[str, Any] = MappingProxyType({})
     #: A HÁPTICA FINA DO RUMBLE — NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4
     #: (29/09/2026). ``{lugar: TocadorDoRumble}``: o rumble do pad sem háptica
     #: (o ``uinput``), tocado no endpoint do lugar de quem recebe. Nasce no
@@ -1624,6 +1628,7 @@ class AltoFalanteSubsystem:
         ]
         cabo = self._cabo
         if not [u for u in no_cabo if u] and (cabo is None or not cabo.lugares()):
+            self._casar_os_ouvidos_das_placas({})
             return
         rotas: dict[int, Any] = {}
         abertos: set[int] = set()
@@ -1639,13 +1644,17 @@ class AltoFalanteSubsystem:
             self._o_cabo().casar(rotas, abertos)
             return
         placas = set(motores)
+        ouvir: dict[str, str] = {}
         for uniq in no_cabo:
+            placa = sink_do_controle(uniq, na_mesa) if uniq else ""
+            if not placa or placa not in placas or MARCA_DO_NOME in placa:
+                continue
+            # A PLACA É OUVIDA COM OU SEM LAÇO: o jogo que toca nela pelo nome
+            # também vibra este controle (a luz «no ar», :meth:`haptica_no_ar`).
+            ouvir[uniq] = placa
             lugar = self._lugar_de.get(uniq)
             endpoint = self._endpoint_de(uniq)
             if lugar is None or endpoint is None or getattr(endpoint, "module_id", None) is None:
-                continue
-            placa = sink_do_controle(uniq, na_mesa)
-            if not placa or placa not in placas or MARCA_DO_NOME in placa:
                 continue
             captura, destino = alvo_do_no(str(endpoint.nome)), alvo_do_no(placa)
             if not captura or not destino:
@@ -1669,6 +1678,58 @@ class AltoFalanteSubsystem:
                 controles=controles,
             )
         self._o_cabo().casar(rotas, abertos)
+        self._casar_os_ouvidos_das_placas(ouvir)
+
+    def _casar_os_ouvidos_das_placas(self, ouvir: Mapping[str, str]) -> None:
+        """Um ouvido por controle no cabo, na placa dele; quem saiu ou trocou de placa desce.
+
+        O-GANHO-DA-HAPTICA-TEM-DONO-01, item 8. Quem desce, desce ANTES de o
+        novo subir: dois gravadores com o mesmo rótulo confundiriam a
+        conferência do alvo.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import OuvidoDaPlaca
+
+        vivos = dict(self._ouvidos_das_placas)
+        for uniq, ouvido in list(vivos.items()):
+            if ouvir.get(uniq) != getattr(ouvido, "placa", None) or not ouvido.vivo:
+                vivos.pop(uniq)
+                ouvido.descer()
+        for uniq, placa in ouvir.items():
+            if uniq in vivos:
+                continue
+            ouvido = OuvidoDaPlaca(placa=placa, uniq=uniq)
+            if ouvido.subir():
+                vivos[uniq] = ouvido
+            else:
+                logger.debug("haptica_ouvido_da_placa_sem_fonte", motivo=ouvido.motivo)
+        self._ouvidos_das_placas = MappingProxyType(vivos)
+
+    def haptica_no_ar(self, uniq: str) -> bool:
+        """Há háptica chegando a ESTE controle agora? LEITURA pura, nunca levanta.
+
+        O-GANHO-DA-HAPTICA-TEM-DONO-01, item 8 (02/10/2026): é a luz «no ar»
+        da linha da háptica. O sinal é o do :data:`OUVIDO`, o dono do «tem
+        sinal agora?»: no cabo, o monitor da placa do controle
+        (:meth:`_casar_os_ouvidos_das_placas`); no rádio, o endpoint que a
+        ponte EM HÁPTICA lê. A ponte no som não leva háptica, e a háptica com o
+        ganho em 0 não mexe o motor: as duas respondem ``False``.
+        """
+        try:
+            if GANHO.fator(uniq) <= 0:
+                return False
+            for dono, ouvido in dict(self._ouvidos_das_placas).items():
+                if _mesmo_controle(dono, uniq):
+                    return self._o_no_tem_sinal(str(ouvido.placa)) is True
+            for dono, modo in dict(self._modo_da_ponte).items():
+                if not _mesmo_controle(dono, uniq):
+                    continue
+                lendo = self._endpoint_da_ponte.get(dono) or ""
+                return modo == "haptica" and bool(lendo) and (
+                    self._o_no_tem_sinal(lendo) is True
+                )
+        except Exception:  # a leitura da tela nunca derruba o subsystem
+            logger.debug("haptica_no_ar_ilegivel", exc_info=True)
+        return False
 
     def _o_ganho_nas_placas(self, controles: list[Any], placas: list[str]) -> set[str]:
         """Relê o ganho do perfil e o escreve na placa de cada controle no cabo.
@@ -2227,7 +2288,10 @@ class AltoFalanteSubsystem:
                 else:
                     pelo_rumble = True
             endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)
-            candidata = endpoint_aberto and (este_joga or pelo_rumble)
+            # A HÁPTICA DESLIGADA NÃO PEDE O RÁDIO (O-GANHO-DA-HAPTICA-TEM-DONO-01,
+            # item 6): com o ganho dela em 0 neste controle, a ponte não vai à
+            # háptica para mandar silêncio, e o alto-falante fica com o rádio.
+            candidata = endpoint_aberto and (este_joga or pelo_rumble) and GANHO.pct(uniq) > 0
             modo = self._modo_pelo_sinal(
                 uniq,
                 candidata=candidata,
@@ -2729,6 +2793,14 @@ class AltoFalanteSubsystem:
         if cabo is not None:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(cabo.parar)
+        # OS OUVIDOS DAS PLACAS MORREM COM O SUBSYSTEM: cada um é um gravador
+        # lendo o monitor da placa de um controle no cabo.
+        ouvidos = list(self._ouvidos_das_placas.values())
+        self._ouvidos_das_placas = MappingProxyType({})
+        if ouvidos:
+            await asyncio.gather(
+                *(asyncio.to_thread(o.descer) for o in ouvidos), return_exceptions=True
+            )
         # O GANHO NÃO SOBREVIVE AO HEFESTO: os traseiros das placas voltam a 1,0.
         with contextlib.suppress(Exception):
             await asyncio.to_thread(GANHO.devolver_as_placas)

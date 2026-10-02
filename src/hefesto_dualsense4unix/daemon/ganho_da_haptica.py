@@ -14,6 +14,12 @@ duas portas perguntam aqui:
 - **o rádio** — o ``ganho`` do ``ConversorDeHaptica`` da ponte daquele
   controle, antes do int8 (:meth:`fator`, perguntado a cada bloco).
 
+**A ECONOMIA CORTA TAMBÉM A HÁPTICA** (a resposta [25] dela, 29/09 ~21h50,
+«Corta também»): com o orçamento da mesa em ``economia``, o fator que as duas
+portas recebem é ``min(ganho, teto)``, pela regra do teto do rumble
+(``core.rumble._sob_o_teto``), chamada e não copiada. O ``pct`` segue sendo o
+que ela escolheu; o teto é leitura (:meth:`GanhoDaHaptica.pct_que_vale`).
+
 **O ``%`` DO SERVIDOR DE SOM É CÚBICO.** 40 % no ``pactl`` é -23,88 dB, e o
 WirePlumber o guarda como 0,063997 linear (0,4³). Um ganho de 150 % escrito
 como ``150%`` viraria 3,375 vezes (+10,6 dB). A escrita vai em fator linear
@@ -79,6 +85,9 @@ class GanhoDaHaptica:
         #: O perfil que só o carregador inteiro achou (fora do nome do arquivo):
         #: ele não se relê a cada volta, só quando o gravador pede.
         self._pelo_carregador: str | None = None
+        #: O teto do orçamento da mesa, em fator (``None`` = sem teto). Relido
+        #: com o perfil, a cada volta do som e no ato do pedido.
+        self._teto: float | None = None
 
     # -- a leitura ---------------------------------------------------------
     def ler_do_perfil(self, controllers: Any) -> None:
@@ -102,6 +111,7 @@ class GanhoDaHaptica:
         Nunca levanta: perfil ilegível é «ninguém opinou», e a háptica segue no
         padrão em vez de sumir por um JSON torto.
         """
+        self.ler_o_teto(daemon)
         controllers: Any = None
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.profiles.loader import load_profile, perfil_em_disco
@@ -120,8 +130,24 @@ class GanhoDaHaptica:
             controllers = getattr(perfil, "controllers", None)
         self.ler_do_perfil(controllers)
 
+    def ler_o_teto(self, daemon: Any) -> None:
+        """O teto do orçamento da mesa de agora, pela fonte que o funil do rumble lê.
+
+        Nunca levanta: sem config, sem a fonte ou com ela levantando, não há
+        teto — nunca um teto inventado (``core.rumble._orcamento_declarado``).
+        """
+        teto: float | None = None
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.core.rumble import (
+                _orcamento_declarado,
+                teto_do_orcamento,
+            )
+
+            teto = teto_do_orcamento(_orcamento_declarado(getattr(daemon, "config", None)))
+        self._teto = teto
+
     def pct(self, uniq: str | None) -> int:
-        """O ganho que vale para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
+        """O ganho que ela escolheu para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
         from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 
         chave = _chave(uniq)
@@ -130,8 +156,14 @@ class GanhoDaHaptica:
         return self._escritos.get(chave, HAPTICA_PCT_PADRAO)
 
     def fator(self, uniq: str | None) -> float:
-        """O mesmo ganho em fator linear de amplitude (150 % → 1,5)."""
-        return self.pct(uniq) / 100.0
+        """O ganho que VALE em fator linear de amplitude (150 % → 1,5; na Economia, 0,3)."""
+        from hefesto_dualsense4unix.core.rumble import _sob_o_teto
+
+        return _sob_o_teto(self.pct(uniq) / 100.0, self._teto)
+
+    def pct_que_vale(self, uniq: str | None) -> int:
+        """O ganho que vale agora, em %: o escolhido sob o teto do orçamento."""
+        return round(self.fator(uniq) * 100.0)
 
     # -- a porta do cabo ---------------------------------------------------
     def escrever_nas_placas(

@@ -285,8 +285,10 @@ padrão, 150, apaga a chave). Ele não multiplica o degrau: no PCM do jogo a For
 alcança, e esta barra é o único fator. Quem o aplica é o dono do ganho
 (`daemon/ganho_da_haptica.py`), relido no mesmo ato: os traseiros da placa daquele
 controle no cabo, em fator linear, e o conversor da ponte no rádio, antes do int8. No
-`state_full`, cada controle traz `haptica_pct` (o que vale) e `haptica_alcanca` (o
-Hefesto está no caminho dele), e `haptica_pct_padrao` traz o padrão.
+`state_full`, cada controle traz `haptica_pct` (o que ela escolheu), `haptica_vale_pct`
+(o que vale: na Economia, no máximo 30), `haptica_alcanca` (o Hefesto está no caminho
+dele) e `haptica_no_ar` (há háptica chegando a ele agora: no cabo, o monitor da placa
+dele; no rádio, a ponte em háptica com sinal), e `haptica_pct_padrao` traz o padrão.
 
 ### `mic.set` / `speaker.set` — o áudio do controle (D4 / MIC-USB-01)
 
