@@ -286,6 +286,63 @@ def test_a_ativacao_aplica_o_computador_no_que_o_jogo_nao_escolheu() -> None:
     assert _ultima_cor(fc) == esperada
 
 
+#: AS QUATRO PORTAS DA TROCA. O «Ativar» da aba Perfis (`profile.switch`) e o
+#: ciclo do PS no controle (`hotkey.build_profile_cycle_callback`) entram como
+#: `manual`; a troca de janela, como `autoswitch`; o jogo que abre, como
+#: `launch`. As quatro chamam o mesmo `ProfileManager.activate`, e a régua as
+#: passa pela origem que cada uma diz.
+PORTAS = ("manual", "autoswitch", "launch")
+P4 = "aabbcc000004"
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+@pytest.mark.parametrize("porta", PORTAS)
+@pytest.mark.parametrize("uniq", [P1, P2, P3, P4])
+def test_a_troca_nao_leva_o_que_e_do_computador(uniq: str, porta: str, transporte: str) -> None:
+    """Régua 1: B, A, B de novo — e o B volta ao computador, nunca ao que o A escolheu.
+
+    O jogo A sobrepõe a luz (global) e o som daquele controle; o B não escolhe
+    nenhum dos dois. O computador tem os dois. Nos quatro lugares, nos dois
+    transportes e pelas três origens: o B recebe o do computador, o A o dele, e
+    o B outra vez o do computador.
+
+    MORDIDA: tirar a vista do `ProfileManager._ativar` deixa o B sem a cor e sem
+    o som do computador, e a régua reprova.
+    """
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.testing import FakeController
+
+    som: dict[str, int] = {}
+
+    def _som(volume: int, muted: bool, *, uniq: str | None = None, **_k: Any) -> str:
+        som[str(uniq)] = int(volume)
+        return "aplicado"
+
+    save_profile(_perfil("Jogo A", leds={"lightbar": [200, 10, 10]},
+                         controllers={uniq: {"speaker": {"volume": 30}}}))
+    save_profile(_perfil("Jogo B"))
+    _computador({"global": {"leds": {"lightbar": [10, 20, 200]}},
+                 "controles": {uniq: {"speaker": {"volume": 90}}}})
+    fc = FakeController(transport=transporte)  # type: ignore[arg-type]
+    fc.connect()
+    gerente = ProfileManager(controller=fc, store=StateStore(), speaker_applier=_som)
+
+    def _troca(nome: str) -> tuple[Any, dict[str, int]]:
+        som.clear()
+        gerente.activate(nome, origin=porta)
+        return _ultima_cor(fc), dict(som)
+
+    cor_b, som_b = _troca("Jogo B")
+    cor_a, som_a = _troca("Jogo A")
+    cor_b2, som_b2 = _troca("Jogo B")
+    assert som_b == {uniq: 90}, som_b
+    assert som_a == {uniq: 30}, som_a
+    assert som_b2 == {uniq: 90}, f"o B ficou com o som do A: {som_b2}"
+    assert cor_a != cor_b, (cor_a, cor_b)
+    assert cor_b2 == cor_b, f"o B ficou com a cor do A: {cor_b2} != {cor_b}"
+
+
 def test_as_velocidades_do_jogo_de_mouse_vem_do_computador() -> None:
     """O Point-and-click é do jogo; as duas velocidades, do computador."""
     recebidos: list[tuple[Any, ...]] = []
@@ -720,3 +777,54 @@ def test_a_linha_do_ps_so_digita() -> None:
         assert hotkey._a_metade_da_maquina(de_fabrica, antigo) == ag.ABRIR_A_STEAM
     calado = SimpleNamespace(declarada=True, faz=ag.NADA)
     assert hotkey._a_metade_da_maquina(de_fabrica, acoes.TOKEN_STEAM, calado) == ag.NADA
+
+
+# ---------------------------------------------------------------------------
+# A frase da troca (commit 6)
+# ---------------------------------------------------------------------------
+def test_a_frase_fala_a_lingua_da_tela() -> None:
+    """Régua 7: o que é de fábrica ou do computador não é «menos», e chave crua não sai.
+
+    Às 19h15 de 01/10 a janela escreveu «menos: button_actions, remapeamento,
+    movimento e mais 8» sobre uma troca que deu certo.
+
+    MORDIDA: devolver o ``!= "aplicado"`` sozinho ao ``relato_da_ativacao``
+    reprova na primeira frase.
+    """
+    from hefesto_dualsense4unix.app.actions import profiles_actions as pa
+
+    certa = {"leds": "aplicado", "button_actions": "de_fabrica", "remapeamento": "de_fabrica",
+             "movimento": "desligado", "speaker": "do_computador",
+             "keyboard": "ignorado_sem_device"}
+    assert pa.mensagem_de_ativacao("Jogo X", {"secoes": certa}) == "Perfil ativado: Jogo X"
+
+    caiu = {"leds": "aplicado", "button_actions": "falhou", "remapeamento": "falhou",
+            "movimento": "falhou"}
+    frase = pa.mensagem_de_ativacao("Jogo X", {"secoes": caiu})
+    assert "menos" in frase, frase
+    for crua in ("button_actions", "remapeamento", "movimento"):
+        assert crua not in frase, frase
+
+
+@pytest.mark.parametrize(("cartao", "secao", "esperado"), [
+    ("luz", "leds", {"lightbar": [10, 20, 200]}),
+    ("sensores", "sensores", {"giroscopio": True, "acelerometro": True}),
+    ("som", "speaker", {"volume": 70}),
+])
+def test_so_neste_jogo_num_controle_sem_entrada_copia_o_que_vale(
+    cartao: str, secao: str, esperado: dict[str, Any]
+) -> None:
+    """O controle sem entrada vale o global da vista (ou o de fábrica): é isso que se copia.
+
+    Sem a cópia, o «Só neste jogo» de um controle que só tinha o valor global
+    não escrevia nada, e a marca continuava dizendo «PC».
+    """
+    _computador({"global": {"leds": {"lightbar": [10, 20, 200]},
+                            "speaker": {"volume": 70}}})
+    save_profile(_perfil("Jogo X"))
+    opc.so_neste_jogo(cartao, UM, "Jogo X")
+    perfil = load_profile("Jogo X")
+    assert opc.sobrepoe(perfil, cartao, UM)
+    gravado = getattr(perfil.controllers[opc.chave_no_perfil(perfil, UM)], secao)
+    dados = gravado.model_dump(mode="json")
+    assert {k: dados[k] for k in esperado} == esperado, dados
