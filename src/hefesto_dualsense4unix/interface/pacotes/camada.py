@@ -96,7 +96,9 @@ CAMADA: dict[tuple[str, str], str] = {
     ("06-navegacao.html", "guardar-teclas"): _C,
     ("06-navegacao.html", "linha-de-botao"): _W,
     ("06-navegacao.html", "linha-de-troca"): _W,
-    ("06-navegacao.html", "modo"): _C,
+    # O «Status do Modo» grava o `mouse.enabled` no perfil ativo (é do jogo,
+    # `DO_JOGO`); o lado do teclado vai pelo dono do cartão.
+    ("06-navegacao.html", "modo"): _J,
     ("06-navegacao.html", "modo-steam"): _C,
     ("06-navegacao.html", "navegacao-interna"): _C,
     ("06-navegacao.html", "padrao-da-aba"): _C,

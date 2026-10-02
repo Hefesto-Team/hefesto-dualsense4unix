@@ -265,6 +265,46 @@ def test_o_freestyle_nao_sobrepoe_nada() -> None:
         opc.so_neste_jogo("luz", P2, "Freestyle")
 
 
+def test_na_vista_o_freestyle_fica_por_baixo_do_computador() -> None:
+    """O que o arquivo do Freestyle ainda guarda de um cartão do computador não vence.
+
+    O «Status do Modo» e o «Salvar» do rodapé reescrevem o Freestyle depois da
+    migração. A marca diz «PC» e o clique grava no computador; se a vista
+    deixasse o Freestyle por cima, o aparelho receberia o valor velho dele
+    (medido na conferência de 02/10/2026: a luz do P2 seguia vermelha com o
+    computador dizendo azul).
+
+    MORDIDA: devolver às entradas do Freestyle a proteção do jogo
+    (``escritos`` sem a guarda do Freestyle) reprova na luz e na força; tirar
+    o ``freestyle`` do teclado reprova no teclado.
+    """
+    _computador({"global": {"teclado_emulado": True, "button_actions": {"r1": "KEY_UP"}},
+                 "controles": {P2: {"leds": {"lightbar": [0, 0, 255]},
+                                    "rumble": {"motor_forte_pct": 40}}}})
+    save_profile(Profile.model_validate({
+        "name": "Freestyle", "match": {"type": "any"}, "teclado_emulado": False,
+        "button_actions": {"r1": "KEY_DOWN", "l1": "KEY_LEFT"},
+        "controllers": {P2: {"leds": {"lightbar": [255, 0, 0]},
+                             "rumble": {"motor_forte_pct": 100}}}}))
+    freestyle = load_profile("Freestyle")
+    assert opc.onde_grava("luz", freestyle, P2) == opc.COMPUTADOR
+    vista = opc.o_que_vale(freestyle)
+    entrada = vista.controllers[opc.chave_no_perfil(vista, P2)]
+    assert tuple(entrada.leds.lightbar) == (0, 0, 255)
+    assert entrada.rumble.motor_forte_pct == 40
+    assert vista.teclado_emulado is True
+    assert vista.button_actions == {"r1": "KEY_UP", "l1": "KEY_LEFT"}
+    # Num jogo, o mesmo arquivo é escolha dele e vence o computador.
+    save_profile(Profile.model_validate({
+        **freestyle.model_dump(mode="json", exclude_unset=True),
+        "name": "Jogo X", "match": {"type": "criteria", "window_class": ["jogox"]}}))
+    jogo = opc.o_que_vale(load_profile("Jogo X"))
+    entrada = jogo.controllers[opc.chave_no_perfil(jogo, P2)]
+    assert tuple(entrada.leds.lightbar) == (255, 0, 0)
+    assert jogo.teclado_emulado is False
+    assert jogo.button_actions == {"r1": "KEY_DOWN", "l1": "KEY_LEFT"}
+
+
 def test_restaurar_esvazia_o_computador_e_guarda_a_marca_da_migracao() -> None:
     _computador({"global": {"leds": {"lightbar": [1, 2, 3]}}, "migrado": True})
     assert opc.restaurar_o_computador()
@@ -860,3 +900,57 @@ def test_so_neste_jogo_num_controle_sem_entrada_copia_o_que_vale(
     gravado = getattr(perfil.controllers[opc.chave_no_perfil(perfil, UM)], secao)
     dados = gravado.model_dump(mode="json")
     assert {k: dados[k] for k in esperado} == esperado, dados
+
+
+@pytest.mark.parametrize("porta", ["status", "chip"])
+def test_entrar_na_navegacao_nao_da_ao_jogo_o_que_e_do_computador(porta: str) -> None:
+    """O «Status do Modo» e a entrada à mão na Navegação gravam o liga, e só ele, no jogo.
+
+    As velocidades vivas são as do computador, e o teclado é cartão do
+    computador. Medido na conferência de 02/10/2026: o jogo sem a seção
+    ``mouse`` ganhava ``speed: 11`` (a do computador), a marca do Mouse virava
+    o nome do jogo, e a velocidade 4 escolhida depois no PC não chegava mais a
+    ele; e o teclado ia ao perfil, com a marca do Teclado virando junto.
+
+    MORDIDA: devolver as vivas à seção nova (``secao_do_mouse_da_navegacao``)
+    reprova no mouse; devolver o ``teclado_emulado`` ao perfil reprova no
+    teclado.
+    """
+    from hefesto_dualsense4unix.profiles import manager
+
+    _computador({"global": {"mouse": {"speed": 11, "scroll_speed": 3},
+                            "teclado_emulado": True}})
+    save_profile(_perfil("Jogo X"))
+    if porta == "status":
+        manager.gravar_a_navegacao_no_perfil_ativo(
+            "Jogo X", ligado=False, porta="ipc", velocidades=(11, 3))
+    else:
+        manager.gravar_o_modo_no_perfil_ativo(
+            "Jogo X", kind="desktop", porta="ipc", mouse_ligado=True, velocidades=(11, 3))
+    jogo = load_profile("Jogo X")
+    assert jogo.mouse is not None and jogo.mouse.enabled is (porta == "chip")
+    assert not opc.sobrepoe(jogo, "mouse"), jogo.mouse
+    assert not opc.sobrepoe(jogo, "teclado"), jogo.teclado_emulado
+    _computador({"global": {"mouse": {"speed": 4, "scroll_speed": 2},
+                            "teclado_emulado": True}})
+    vista = opc.o_que_vale(load_profile("Jogo X"))
+    assert (vista.mouse.speed, vista.mouse.scroll_speed) == (4, 2)
+    if porta == "status":
+        # O desligar do teclado vai ao computador, pelo dono, e não ao jogo.
+        _computador({"global": {"teclado_emulado": True}})
+        save_profile(_perfil("Jogo Y"))
+        manager.gravar_a_navegacao_no_perfil_ativo(
+            "Jogo Y", ligado=False, porta="ipc", velocidades=(6, 1))
+        assert opc.o_computador().global_.teclado_emulado is False
+        assert load_profile("Jogo Y").teclado_emulado is None
+
+
+def test_o_status_no_jogo_que_ja_tem_o_teclado_grava_nele() -> None:
+    """O jogo que já sobrepõe o teclado guarda o lado do teclado do «Status do Modo»."""
+    from hefesto_dualsense4unix.profiles import manager
+
+    _computador({"global": {"teclado_emulado": True}})
+    save_profile(_perfil("Jogo X", teclado_emulado=True))
+    manager.gravar_a_navegacao_no_perfil_ativo("Jogo X", ligado=False, porta="ipc")
+    assert load_profile("Jogo X").teclado_emulado is False
+    assert opc.o_computador().global_.teclado_emulado is True

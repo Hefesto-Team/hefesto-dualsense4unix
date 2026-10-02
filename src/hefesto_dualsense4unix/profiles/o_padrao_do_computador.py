@@ -310,11 +310,23 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
             if campo not in escolhas:
                 atual[campo] = valor
         cru[secao] = atual
+    # O FREESTYLE NÃO SOBREPÕE NADA, também na vista: o que o arquivo dele
+    # ainda guarda de um cartão do computador (o «Status do Modo» e o «Salvar»
+    # do rodapé o reescrevem) fica POR BAIXO do computador. Sem isto a marca
+    # dizia «PC», o clique gravava no computador, e o aparelho recebia o
+    # valor velho do Freestyle (medido na conferência de 02/10/2026).
+    freestyle = e_o_freestyle(perfil.name)
     if do_global.button_actions is not None:
-        cru["button_actions"] = {**do_global.button_actions, **(perfil.button_actions or {})}
-    if do_global.key_bindings is not None and perfil.key_bindings != {}:
-        cru["key_bindings"] = {**do_global.key_bindings, **(perfil.key_bindings or {})}
-    if do_global.teclado_emulado is not None and perfil.teclado_emulado is None:
+        acoes_do_jogo = perfil.button_actions or {}
+        cru["button_actions"] = (
+            {**acoes_do_jogo, **do_global.button_actions} if freestyle
+            else {**do_global.button_actions, **acoes_do_jogo})
+    if do_global.key_bindings is not None and (freestyle or perfil.key_bindings != {}):
+        teclas_do_jogo = perfil.key_bindings or {}
+        cru["key_bindings"] = (
+            {**teclas_do_jogo, **do_global.key_bindings} if freestyle
+            else {**do_global.key_bindings, **teclas_do_jogo})
+    if do_global.teclado_emulado is not None and (freestyle or perfil.teclado_emulado is None):
         cru["teclado_emulado"] = do_global.teclado_emulado
     if computador.controles:
         cru["controllers"] = _controles_que_valem(perfil, cru.get("controllers"), computador)
@@ -326,6 +338,7 @@ def _controles_que_valem(
 ) -> dict[str, Any]:
     entradas: dict[str, Any] = {k: dict(v) for k, v in (do_jogo or {}).items()}
     originais = _entradas_por_chave(entradas)
+    freestyle = e_o_freestyle(perfil.name)
     globais = {
         secao: set(escolhas_globais_do_jogo(perfil, secao))
         for secao in ("leds", "rumble", "speaker", "mic")
@@ -338,7 +351,9 @@ def _controles_que_valem(
             if secao not in _CAMPOS_DO_CONTROLE or not isinstance(campos, Mapping):
                 continue
             do_controle = dict(entrada.get(secao) or {})
-            escritos = {c for c, v in do_controle.items() if v is not None}
+            # O Freestyle não protege as próprias entradas: o computador vence.
+            escritos = set() if freestyle else {
+                c for c, v in do_controle.items() if v is not None}
             escolhidos = _expandir_pares(secao, escritos | globais.get(secao, set()))
             for campo, valor in campos.items():
                 if campo not in escolhidos:

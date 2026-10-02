@@ -2973,11 +2973,39 @@ def secao_do_mouse_da_navegacao(
     if atual is not None:
         campos: dict[str, object] = atual.model_dump()
     elif velocidades is not None:
-        campos = {"speed": velocidades[0], "scroll_speed": velocidades[1]}
+        campos = _velocidades_que_nao_sao_do_computador(velocidades)
     else:
         campos = {}
     campos["enabled"] = bool(ligado)
     return ProfileMouseConfig(**campos)  # type: ignore[arg-type]
+
+
+def _velocidades_que_nao_sao_do_computador(
+    velocidades: tuple[int, int],
+) -> dict[str, object]:
+    """As velocidades vivas que a seção nova leva: só as que o computador não guarda.
+
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. A velocidade é do computador,
+    e as vivas SÃO as dele quando ele as declara. Copiá-las para a seção nova
+    do jogo fazia o jogo sobrepor o cartão do mouse sem ela pedir: a marca
+    virava o nome do jogo, e mudar a velocidade no PC deixava de chegar a ele
+    (medido na conferência de 02/10/2026, entrando na Navegação à mão). O
+    campo que o computador guarda fica no de fábrica do esquema, que não é
+    escolha (``o_padrao_do_computador.escolhas_globais_do_jogo``), e a vista
+    põe o do computador por baixo. Sem o do computador, a viva entra, como
+    antes (O-MOUSE-SEGUE-A-NAVEGACAO-01).
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        velocidades_do_computador,
+    )
+
+    do_computador = velocidades_do_computador()
+    return {
+        campo: viva
+        for campo, viva, do_pc in zip(
+            ("speed", "scroll_speed"), velocidades, do_computador, strict=True)
+        if do_pc is None
+    }
 
 
 def gravar_o_modo_no_perfil_ativo(
@@ -3060,9 +3088,11 @@ def gravar_a_navegacao_no_perfil_ativo(
 
     Os dois lados vão NA MESMA GRAVAÇÃO (a decisão D2 de 05/09/2026): gravar só
     o mouse deixaria o perfil dizendo *mouse desligado, teclado ligado*, um
-    estado que o interruptor não sabe produzir. A seção do mouse sai do dono,
-    :func:`secao_do_mouse_da_navegacao`: só o ``enabled`` muda, e as
-    velocidades que a seção já tinha ficam.
+    estado que o interruptor não sabe produzir. Desde 01/10/2026 o lado do
+    teclado vai pelo dono do cartão do computador (o perfil, só quando ele já
+    sobrepõe o teclado), e o ``mouse.enabled``, que é do jogo, fica aqui.
+    A seção do mouse sai do dono, :func:`secao_do_mouse_da_navegacao`: só o
+    ``enabled`` muda, e as velocidades que a seção já tinha ficam.
 
     NADA MUDOU, NADA SE GRAVA. None = não havia perfil a gravar.
     """
@@ -3075,8 +3105,18 @@ def gravar_a_navegacao_no_perfil_ativo(
     mudou: dict[str, Any] = {}
     if profile.mouse is None or profile.mouse.model_dump() != mouse.model_dump():
         mudou["mouse"] = mouse
-    if profile.teclado_emulado is not bool(ligado):
-        mudou["teclado_emulado"] = bool(ligado)
+    # O TECLADO É DO COMPUTADOR (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
+    # vai ao perfil só quando ele já sobrepõe o cartão do teclado; nos outros
+    # casos, ao computador, pelo dono. O ``mouse.enabled`` fica no perfil: é do
+    # jogo (``DO_JOGO``).
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    if opc.onde_grava("teclado", profile) == opc.JOGO:
+        if profile.teclado_emulado is not bool(ligado):
+            mudou["teclado_emulado"] = bool(ligado)
+    elif opc.o_computador().global_.teclado_emulado is not bool(ligado):
+        opc.gravar("teclado", {"teclado_emulado": bool(ligado)}, perfil_ativo=nome,
+                   origem=porta)
     if not mudou:
         return profile
     novo = profile.model_copy(update=mudou)
