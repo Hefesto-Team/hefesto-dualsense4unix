@@ -898,7 +898,7 @@ async def test_o_ipc_ocupado_e_a_recusa_e_o_parametro_torto_levanta(
 #: Os métodos que nasceram DEPOIS do `radio.mover`, na ordem — e por isso vêm
 #: depois dele na tabela. A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026) pôs o
 #: `mira.set` no fim, pela mesma regra.
-_DEPOIS_DO_RADIO_MOVER = ("mira.set", "haptica.testar", "radio.busca.set")
+_DEPOIS_DO_RADIO_MOVER = ("mira.set", "haptica.testar", "radio.busca.set", "radio.dispensar")
 
 
 def test_radio_mover_e_o_ultimo_metodo_da_tabela() -> None:

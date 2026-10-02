@@ -180,6 +180,9 @@ class RadioDeMentira:
         self.fechado = False
         self.pair_falha = False
         self.pair_mente = False
+        #: A ponte de mentira RECUSA o ``esquecer`` (não instalada, ou o sudo
+        #: dizendo não): nada sai, e nenhuma lápide nasce.
+        self.ponte_recusa = False
         self.exportar_da = True
         #: ``(caminho, interface, método, argumentos)`` de toda chamada.
         self.chamadas: list[tuple[str, str, str, tuple[Any, ...]]] = []
@@ -352,6 +355,8 @@ class RadioDeMentira:
 
     def esquecer_na_ponte(self, adaptador: str, aparelho: str) -> tuple[bool, str]:
         """O verbo ``esquecer`` da ponte: tira o objeto (como root) e enterra."""
+        if self.ponte_recusa:
+            return False, "a ponte privilegiada não está instalada"
         with self.tranca:
             self.lapides.append((adaptador, aparelho))
             self.linha_do_tempo.append(("esquecer", adaptador, aparelho))
@@ -359,6 +364,77 @@ class RadioDeMentira:
             if caminho in self.mesa:
                 self._remover(caminho)
         return True, ""
+
+    # -- os gestos DE FORA do Hefesto (ESQUECER-E-LIMPAR-AS-CONEXOES-01) -------
+    # Outro programa (as Configurações do COSMIC, o ``bluetoothctl``), o
+    # autorestore, o desplugue e o ``bluetoothd`` que reinicia — nenhum deles
+    # segura a trava do rádio, e tudo sai como sinal, como no BlueZ.
+
+    def remover_por_fora(self, adaptador: str, aparelho: str) -> None:
+        """Outro programa tira a chave de ``aparelho`` em ``adaptador``."""
+        with self.tranca:
+            fisico = self.fisicos.get(aparelho)
+            if fisico is not None and fisico.conectado_em == adaptador:
+                fisico.conectado_em = ""
+            self._remover(no_de(adaptador, aparelho))
+
+    def chave_que_volta(self, adaptador: str, aparelho: str) -> None:
+        """A chave velha volta (o autorestore, ou um pareamento antigo que
+        ninguém tirou): ``Paired`` ali, e o controle não guarda este host."""
+        with self.tranca:
+            self.fisicos.setdefault(aparelho, Fisico(aparelho, CLASSE_DE_CONTROLE))
+            self._entrar_pareado(adaptador, aparelho, conectado=False)
+
+    def parear_por_fora(self, adaptador: str, aparelho: str) -> None:
+        """Outro programa pareia ``aparelho`` em ``adaptador`` (ela segurou PS +
+        Create pelas Configurações): o controle passa a guardar este host e
+        conecta nele; a chave que ele tinha noutro adaptador fica lá, morta."""
+        with self.tranca:
+            fisico = self.fisicos.setdefault(aparelho, Fisico(aparelho, CLASSE_DE_CONTROLE))
+            antes = fisico.conectado_em
+            if antes and no_de(antes, aparelho) in self.mesa:
+                self._mudar(no_de(antes, aparelho), bd.APARELHO, "Connected", False)
+            if fisico.host and fisico.host != adaptador:
+                fisico.antigos.insert(0, fisico.host)
+            fisico.host = fisico.conectado_em = adaptador
+            fisico.pareando = False
+            if no_de(adaptador, aparelho) in self.mesa:
+                self._remover(no_de(adaptador, aparelho))
+            self._entrar_pareado(adaptador, aparelho, conectado=True)
+
+    def para_o_cabo(self, aparelho: str) -> None:
+        """Ela liga o controle no cabo: sai do rádio (o ``Connected`` cai e o
+        ``HID_PHYS`` deixa de ser um adaptador); o host que ele guarda não muda."""
+        self.desligar(aparelho)
+
+    def desplugar(self, adaptador: str) -> None:
+        """O adaptador sai da máquina: os aparelhos dele saem, e depois o ``Adapter1``."""
+        with self.tranca:
+            caminho = HCIS[adaptador]
+            for no in [n for n in self.mesa if n.startswith(caminho + "/")]:
+                self._remover(no)
+            for fisico in self.fisicos.values():
+                if fisico.conectado_em == adaptador:
+                    fisico.conectado_em = ""
+            self._remover(caminho)
+
+    def reiniciar_o_bluetoothd(self) -> None:
+        """O ``bluetoothd`` sai e volta: o ``org.bluez`` ganha outro dono."""
+        self.DONO_DO_BLUEZ = f":1.{int(self.DONO_DO_BLUEZ.rsplit('.', 1)[1]) + 1}"
+        self._emitir(bd.Sinal("dono", dono_novo=""))
+        self._emitir(bd.Sinal("dono", dono_novo=self.DONO_DO_BLUEZ))
+
+    def _entrar_pareado(self, adaptador: str, aparelho: str, *, conectado: bool) -> None:
+        fisico = self.fisicos[aparelho]
+        fabrica = NOME_DE_FABRICA.get(fisico.classe, "aparelho de mentira")
+        propriedades = {bd.APARELHO: {
+            "Address": aparelho.upper(), "Name": fabrica, "Alias": fabrica,
+            "Modalias": fisico.modalias_publicado, "Icon": fisico.icone, "Paired": True,
+            "Bonded": True, "Trusted": True, "Connected": conectado, "Class": fisico.classe,
+        }}
+        caminho = no_de(adaptador, aparelho)
+        self.mesa[caminho] = copy.deepcopy(propriedades)
+        self._emitir(bd.Sinal("entrou", caminho=caminho, propriedades=propriedades))
 
     # -- a costura Barramento -------------------------------------------------
 

@@ -115,6 +115,16 @@ _METODOS_DO_DIARIO = frozenset(
 #: lista seja exatamente esta.
 METODOS_SEM_TRAVA = frozenset({"StopDiscovery"})
 
+#: Os AVISOS do :class:`DonoVivo` a quem o ouve (ESQUECER-E-LIMPAR-AS-CONEXOES-01):
+#: um aparelho com chave (``Paired``) saiu do ar (``Connected`` de verdadeiro a
+#: falso), ou a chave dele saiu do BlueZ (o ``Device1`` saiu). Os dados são
+#: ``caminho``, ``aparelho``, ``adaptador`` (o endereço) e, no segundo, ``dono``
+#: (o nome único do ``org.bluez`` naquele instante) e ``pela_trava`` (a trava
+#: comum do rádio estava na mão de alguém — a remoção é do Hefesto).
+AVISO_DESLIGOU = "desligou"
+AVISO_SAIU_PAREADO = "saiu_pareado"
+Ouvinte = Callable[[str, Mapping[str, Any]], None]
+
 #: Teto de cada pergunta pelo caminho de reserva. O número que ``exame_da_mesa``,
 #: ``apelido_do_dongle`` e ``gesto_de_reconexao`` repetiam, cada um no seu.
 ESPERA_DO_BUSCTL_S = 5.0
@@ -301,6 +311,34 @@ def na_trava(quem: str = QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterat
             yield espera
         finally:
             _POR_FIO.dentro = 0
+
+
+def a_trava_esta_tomada() -> bool:
+    """A trava comum do rádio está na mão de alguém AGORA — deste fio, de outro
+    fio, ou de outro processo do produto (a janela)? Pergunta sem esperar, e
+    solta na hora. É como o dono separa a remoção do Hefesto (que segura a
+    trava em todo ``RemoveDevice``) da que veio de fora. Sem a trava no disco,
+    ``False``: ninguém a segura."""
+    if getattr(_POR_FIO, "dentro", 0):
+        return True
+    from hefesto_dualsense4unix.integrations import diario_do_radio
+
+    try:
+        fd = os.open(diario_do_radio.caminho_da_trava(),
+                     os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    except OSError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return True
+    except OSError:
+        return False
+    else:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return False
+    finally:
+        os.close(fd)
 
 
 def _no_diario(quem: str, metodo: str, caminho: str, escrita: Escrita) -> None:
@@ -1569,6 +1607,11 @@ class DonoVivo(LeitorDoBluez):
         self._ultima_foto: float | None = None
         self._agente: Any = None
         self._tranca_do_agente = threading.Lock()
+        #: Quem ouve os avisos (:meth:`ouvir`), e quantas vezes cada objeto
+        #: ENTROU desde a foto (:meth:`entrada`): o objeto que saiu e voltou é
+        #: outro pareamento.
+        self._ouvintes: list[Ouvinte] = []
+        self._entradas: dict[str, int] = {}
 
     # -- ciclo ----------------------------------------------------------------
 
@@ -1610,13 +1653,15 @@ class DonoVivo(LeitorDoBluez):
                 self._ultima_foto = time.monotonic()
             foto = self._barramento.objetos(espera=ESPERA_DA_FOTO_S)
             dono = self._barramento.dono_do_nome(SERVICO) if foto is not None else ""
+            avisos: list[tuple[str, dict[str, Any]]] = []
             with self._tranca:
                 self._objetos = foto or {}
                 self._bluez_de_pe = foto is not None
                 self._dono_do_bluez = dono
                 fila, self._fila = self._fila or [], None
                 for sinal in fila:
-                    self._aplicar(sinal)
+                    avisos.extend(self._aplicar(sinal))
+            self._avisar(avisos)
 
     def _ao_sinal(self, sinal: Sinal) -> None:
         if sinal.tipo == "dono":
@@ -1637,30 +1682,85 @@ class DonoVivo(LeitorDoBluez):
             if self._fila is not None:
                 self._fila.append(sinal)
                 return
-            self._aplicar(sinal)
+            avisos = self._aplicar(sinal)
+        self._avisar(avisos)
         adaptador_novo = sinal.tipo == "entrou" and ADAPTADOR in (sinal.propriedades or {})
         if self.toca_o_sistema and adaptador_novo:
             self._em_segundo_plano(self.conferir_os_lugares)
 
-    def _aplicar(self, sinal: Sinal) -> None:
-        """Um sinal na foto. Chamado com :attr:`_tranca` na mão."""
+    def _aplicar(self, sinal: Sinal) -> list[tuple[str, dict[str, Any]]]:
+        """Um sinal na foto. Chamado com :attr:`_tranca` na mão. Devolve os
+        avisos que ele dá (:data:`AVISO_DESLIGOU`, :data:`AVISO_SAIU_PAREADO`),
+        que :meth:`_avisar` entrega DEPOIS de soltar a tranca."""
+        avisos: list[tuple[str, dict[str, Any]]] = []
         if sinal.tipo == "entrou":
             objeto = self._objetos.setdefault(sinal.caminho, {})
             for interface, propriedades in (sinal.propriedades or {}).items():
                 objeto[interface] = dict(propriedades)
+            if APARELHO in (sinal.propriedades or {}):
+                self._entradas[sinal.caminho] = self._entradas.get(sinal.caminho, 0) + 1
         elif sinal.tipo == "saiu":
             restante = self._objetos.get(sinal.caminho)
             if restante is not None:
+                antes = dict(restante.get(APARELHO) or {})
                 for interface in sinal.interfaces_que_sairam:
                     restante.pop(interface, None)
                 if not restante:
                     del self._objetos[sinal.caminho]
+                if APARELHO in sinal.interfaces_que_sairam and como_booleano(
+                        antes.get("Paired")) is True:
+                    avisos.append((AVISO_SAIU_PAREADO, {
+                        **self._de_quem(sinal.caminho), "dono": self._dono_do_bluez}))
         elif sinal.tipo == "mudou":
             objeto = self._objetos.setdefault(sinal.caminho, {})
             propriedades = objeto.setdefault(sinal.interface, {})
+            estava = como_booleano(propriedades.get("Connected"))
             propriedades.update(sinal.mudadas or {})
             for nome in sinal.invalidadas:
                 propriedades.pop(nome, None)
+            if (sinal.interface == APARELHO and estava is True
+                    and como_booleano(propriedades.get("Connected")) is False
+                    and como_booleano(propriedades.get("Paired")) is True):
+                avisos.append((AVISO_DESLIGOU, self._de_quem(sinal.caminho)))
+        return avisos
+
+    def _de_quem(self, caminho: str) -> dict[str, Any]:
+        """O aparelho e o adaptador de um caminho, pela foto. Com a tranca na mão."""
+        pai = caminho.rsplit("/", 1)[0]
+        endereco = self._objetos.get(pai, {}).get(ADAPTADOR, {}).get("Address")
+        return {"caminho": caminho, "aparelho": endereco_do_aparelho(caminho) or "",
+                "adaptador": str(endereco or "")}
+
+    def _avisar(self, avisos: Sequence[tuple[str, dict[str, Any]]]) -> None:
+        """Entrega os avisos a quem ouve, FORA da tranca. A remoção que chegou
+        com a trava do rádio na mão (deste processo ou de outro do produto) é
+        do Hefesto. Um ouvinte que levanta não cala os outros."""
+        if not avisos:
+            return
+        with self._tranca:
+            ouvintes = list(self._ouvintes)
+        if not ouvintes:
+            return
+        for aviso, dados in avisos:
+            if aviso == AVISO_SAIU_PAREADO:
+                dados = {**dados, "pela_trava": a_trava_esta_tomada()}
+            for ouvinte in ouvintes:
+                try:
+                    ouvinte(aviso, dados)
+                except Exception:
+                    _registrar("bluez_ouvinte_levantou", nivel="warning", aviso=aviso)
+
+    def ouvir(self, ouvinte: Ouvinte) -> None:
+        """Assina os avisos deste dono. Idempotente pelo ouvinte."""
+        with self._tranca:
+            if ouvinte not in self._ouvintes:
+                self._ouvintes.append(ouvinte)
+
+    def entrada(self, caminho: str) -> int:
+        """Quantas vezes o objeto em ``caminho`` entrou desde a foto (0: estava
+        nela). O mesmo caminho com outra entrada é outro pareamento."""
+        with self._tranca:
+            return self._entradas.get(caminho, 0)
 
     # -- leitura: a foto ------------------------------------------------------
 

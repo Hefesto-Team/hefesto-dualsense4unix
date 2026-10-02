@@ -8463,6 +8463,25 @@ class IpcHandlersMixin:
             central.ligar_a_busca, ligada, (destino or "").strip() or None)
         return dict(resposta)
 
+    async def _handle_radio_dispensar(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação.
+
+        ``{aparelho: "aa:bb:…"}`` → ``{status, dispensado}``. A dispensa morava na
+        janela e voltava quando ela fechava e abria o Hefesto
+        (ESQUECER-E-LIMPAR-AS-CONEXOES-01, cura 2); agora toda janela lê a mesma.
+        Nunca tira um «esperando» (``ocupado``). Não toca no rádio.
+        """
+        aparelho = params.get("aparelho")
+        if not isinstance(aparelho, str) or not aparelho.strip():
+            raise ValueError("radio.dispensar: `aparelho` é o endereço do aparelho")
+        central = self._a_central()
+        if central is None:
+            return {"status": "sem_central", "dispensado": False}
+        atual = central.movimento_de(aparelho)
+        if atual is not None and atual.em_curso:
+            return {"status": "ocupado", "dispensado": False}
+        return {"status": "ok", "dispensado": central.dispensar(aparelho) is not None}
+
 
 # ---------------------------------------------------------------------------
 # A MESA QUE ELA VÊ, para a troca do `identity.number.set`

@@ -220,6 +220,9 @@ METODOS_QUE_ESCREVEM = {
     # O «PROCURAR» — O-CONECTAR-E-UM-INTERRUPTOR-01, 30/09/2026: liga a busca do
     # rádio dela (``StartDiscovery`` e ``Pairable`` no adaptador).
     "radio.busca.set",
+    # O X DO «NÃO CONECTOU» — ESQUECER-E-LIMPAR-AS-CONEXOES-01, 30/09/2026: tira
+    # da central o movimento acabado (a linha some em toda janela).
+    "radio.dispensar",
     # O «STATUS DO MODO» — O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026. O
     # interruptor da aba Navegação gravava `mouse.enabled` e `teclado_emulado`
     # pela janela (`_guardar_no_perfil`); agora o daemon grava os dois no perfil

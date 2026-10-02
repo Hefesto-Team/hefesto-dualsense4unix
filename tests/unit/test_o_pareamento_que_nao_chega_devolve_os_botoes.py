@@ -19,13 +19,15 @@ O que esta régua segura, sempre com o rádio de mentira de três adaptadores:
 1. o «esperando» segura a tela por :data:`ESPERA_NA_TELA_S` — o prazo da
    central, ``central_do_radio.PRAZO_DO_PENDENTE_S``, desde 26/09/2026 — e NÃO MAIS —
    depois disso a linha diz «Não Conectou», e «Tentar de Novo» e o X aparecem;
-2. a busca que ninguém respondeu vira «Não Conectou» sem aparelho, e o X só
-   tira a linha (não há pareamento a esquecer);
+2. a busca que ninguém respondeu não vira linha nenhuma (desde a
+   O-CONECTAR-E-UM-INTERRUPTOR-01), e o X da linha «Não Conectou» só tira a
+   linha (``dispensar-linha``, desde a ESQUECER-E-LIMPAR-AS-CONEXOES-01);
 3. o branco — ``Pair`` que dá e controle que não conecta — perde a meia chave
    SÓ naquele adaptador, e «Tentar de Novo» abre outro «Conectar» no mesmo;
 4. o controle que o ``Pair`` já conecta não recebe ``Connect`` (item 5b: o
    ``Connect`` fica para quando ele não está no ar);
-5. o X esquece o controle ligado ou desligado SÓ no adaptador da linha.
+5. o «Esquecer» do «⋮» esquece o controle ligado ou desligado SÓ no adaptador
+   da linha (era um X até a ESQUECER-E-LIMPAR-AS-CONEXOES-01).
 
 E o que a O-RADIO-CONECTA-ONDE-ELA-MANDA-02 fechou (26/09/2026), os dois
 buracos que a conferência da 01 deixou fora da posse dela:
@@ -163,7 +165,11 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
         assert linha["aparelho"] == id_da_tela(VERDE)
         assert "Não Conectou" in sala
         assert f'data-gesto="tentar-de-novo" data-alvo="{id_da_tela(destino)}"' in sala
-        assert (f'data-gesto="esquecer-aparelho" data-alvo="{linha["id"]}" '
+        # O X da linha «Não Conectou» TIRA A LINHA e não esquece nada
+        # (ESQUECER-E-LIMPAR-AS-CONEXOES-01, D-3009-A-LINHA-TEM-APARELHO): o
+        # gesto dele é o ``dispensar-linha``; o «Esquecer» mora no «⋮» de quem
+        # tem pareamento ali.
+        assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
                 f'data-lugar="{id_da_tela(destino)}"') in sala
         assert cena["aberto"] == id_da_tela(destino), "a caixa de quem não chegou fechou"
 
@@ -175,11 +181,12 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
         bancada.fechar()
 
 
-def test_com_a_janela_aberta_o_x_treme(
+def test_com_a_janela_aberta_o_esquecer_treme(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O X segue o um-por-vez do «Mover»: com um controle esperando PS + Create
-    noutro adaptador, o X do vermelho treme e nada sai do rádio."""
+    """O «Esquecer» segue o um-por-vez do «Mover»: com um controle esperando
+    PS + Create noutro adaptador, o «⋮» e o «Esquecer» do vermelho tremem e nada
+    sai do rádio."""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -187,6 +194,8 @@ def test_com_a_janela_aberta_o_x_treme(
             "", QUARTO, cr.ESPERANDO, cr.PASSO_GESTO, quando=time.time()))
         bancada.cena()
         vermelho = {"alvo": rm.uniq(VERMELHO), "lugar": id_da_tela(SALA)}
+        with pytest.raises(RuntimeError):
+            bancada.gesto("aparelho-menu", **vermelho)
         with pytest.raises(RuntimeError):
             bancada.gesto("esquecer-aparelho", **vermelho)
         with pytest.raises(RuntimeError):
@@ -247,7 +256,7 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
 ) -> None:
     """O ``Pair`` do branco dá, e ele não fica ``Connected`` (a física do diário
     dela). A tela mostra «Não Conectou» com o nome dele, a meia chave sai SÓ
-    naquele adaptador — pelo mesmo verbo do X —, e «Tentar de Novo» abre outro
+    naquele adaptador — pelo mesmo verbo do «Esquecer» —, e «Tentar de Novo» abre outro
     «Conectar» no MESMO adaptador, onde ele chega.
 
     UM DONO PARA A CHAVE, E UMA LÁPIDE SÓ: a central a tira ANTES de publicar o
@@ -337,7 +346,7 @@ def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
 
 
 # ---------------------------------------------------------------------------
-# 5. o X esquece só no adaptador da linha
+# 5. o «Esquecer» tira só no adaptador da linha
 # ---------------------------------------------------------------------------
 
 
@@ -355,24 +364,33 @@ def _mesa_das_chaves() -> rm.RadioDeMentira:
 def test_o_desligado_aparece_em_cada_adaptador_em_que_tem_chave(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O X vale para controle ligado ou desligado: o roxo desligado tem uma linha
-    «Desligado» (com X) em cada adaptador em que tem chave; o vermelho, no ar na
-    sala, não vira «Desligado» no quarto — a linha dele é a viva."""
+    """O «Esquecer» vale para controle ligado ou desligado: o roxo desligado tem
+    uma linha «Desligado» (com o «⋮») em cada adaptador em que tem chave; o
+    vermelho, no ar na sala, não vira «Desligado» no quarto — a linha dele é a
+    viva.
+
+    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME): o
+    X que esquecia virou o «⋮» (``aparelho-menu``) na linha, e o «Esquecer»
+    (``esquecer-aparelho``) mora no menu dele, nos moldes. O par
+    ``(linha, adaptador)`` é o mesmo."""
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
-        sala = bancada.tique()["radio-sala"]
+        campos = bancada.tique()
+        sala, moldes = campos["radio-sala"], campos["radio-moldes"]
         cena = dict(a08._CENA_NA_TELA)
         assert len(_linhas(cena, VARANDA, desligado=True)) == 1
         assert len(_linhas(cena, SALA, desligado=True)) == 1
         assert not _linhas(cena, QUARTO, desligado=True), "o vermelho no ar virou Desligado"
         assert sala.count("Desligado</span>") == 2
         for lugar in (VARANDA, SALA):
-            assert (f'data-gesto="esquecer-aparelho" data-alvo="{id_da_tela(ROXO)}" '
-                    f'data-lugar="{id_da_tela(lugar)}"') in sala
+            par = (f'data-alvo="{id_da_tela(ROXO)}" data-lugar="{id_da_tela(lugar)}"')
+            assert f'data-gesto="aparelho-menu" {par}' in sala
+            assert f'data-gesto="esquecer-aparelho" {par}' in moldes
         # A linha viva tem o ``uniq`` do daemon como id; a desligada, o endereço.
-        assert (f'data-gesto="esquecer-aparelho" data-alvo="{rm.uniq(VERMELHO)}" '
-                f'data-lugar="{id_da_tela(SALA)}"') in sala
+        par = f'data-alvo="{rm.uniq(VERMELHO)}" data-lugar="{id_da_tela(SALA)}"'
+        assert f'data-gesto="aparelho-menu" {par}' in sala
+        assert f'data-gesto="esquecer-aparelho" {par}' in moldes
     finally:
         bancada.fechar()
 
@@ -382,13 +400,13 @@ def test_o_desligado_aparece_em_cada_adaptador_em_que_tem_chave(
     (ROXO, SALA, VARANDA),      # desligado: sai da sala, a da varanda fica
     (VERMELHO, SALA, QUARTO),   # no ar: sai da sala (e desconecta), a do quarto fica
 ])
-def test_o_x_esquece_so_no_adaptador_da_linha(
+def test_o_esquecer_tira_so_no_adaptador_da_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     quem: str, onde: str, fica: str,
 ) -> None:
-    """O X abre a pergunta (nada sai), e o «Esquecer» dela tira a chave DAQUELE
-    controle NAQUELE adaptador — o ``RemoveDevice`` e o verbo ``esquecer`` da
-    ponte, que já existia. A chave dele no outro adaptador fica.
+    """O «Esquecer» do «⋮» abre a pergunta (nada sai), e o «Esquecer» dela tira
+    a chave DAQUELE controle NAQUELE adaptador — o ``RemoveDevice`` e o verbo
+    ``esquecer`` da ponte, que já existia. A chave dele no outro adaptador fica.
 
     MORDIDA: faça ``esquecer_o_pareamento`` procurar o objeto sem o adaptador
     (``caminho_do_aparelho(alvo)``) — ele tira a chave do primeiro adaptador da
@@ -402,11 +420,12 @@ def test_o_x_esquece_so_no_adaptador_da_linha(
         clique = {"alvo": rm.uniq(quem) if no_ar else id_da_tela(quem),
                   "lugar": id_da_tela(onde)}
         assert bancada.gesto("esquecer-aparelho", **clique) == {"armou": True}
-        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == [], "o X esqueceu sem ela"
+        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == [], (
+            "o «Esquecer» esqueceu sem ela")
 
         bancada.gesto("confirmar-esquecer", **clique)
         assert mundo.objeto(onde, quem) is None
-        assert mundo.objeto(fica, quem) is not None, "o X esqueceu noutro adaptador"
+        assert mundo.objeto(fica, quem) is not None, "o «Esquecer» esqueceu noutro adaptador"
         assert mundo.lapides == [(onde, quem)]
         cena = bancada.cena()
         assert not [a for a in cena["aparelhos"]
@@ -812,9 +831,14 @@ def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O fone que ela moveu para a varanda não chegou. A linha «Não Conectou» dele
-    tem o X, com a pergunta (a linha nunca fica sem saída), e «Tentar de Novo»
-    refaz o MESMO mover — o fone para a varanda —, sem o painel do «Procurando»:
-    a janela do «Conectar» só aceita controle, e seguraria o rádio à toa.
+    tem o X (a linha nunca fica sem saída), e «Tentar de Novo» refaz o MESMO
+    mover — o fone para a varanda —, sem o painel do «Procurando»: a janela do
+    «Conectar» só aceita controle, e seguraria o rádio à toa.
+
+    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-A-LINHA-TEM-APARELHO): o X
+    da linha «Não Conectou» tira a linha (``dispensar-linha``) e não pergunta
+    nada — ele não esquece pareamento. Quem tem chave ali aparece «Desligado»,
+    com o «⋮».
 
     MORDIDAS: o X só em controle (``_tem_x`` pedindo ``tipo == "controle"``) — a
     linha fica sem X; e ``tentar_de_novo`` sempre com ``_mover(p, None, …)`` — o
@@ -831,10 +855,10 @@ def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
         (linha,) = _linhas(cena, VARANDA, nao_conectou=True)
         assert linha["tipo"] != "controle" and linha["aparelho"] == id_da_tela(FONE)
         varanda = id_da_tela(VARANDA)
-        assert (f'data-gesto="esquecer-aparelho" data-alvo="{linha["id"]}" '
+        assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
                 f'data-lugar="{varanda}"') in campos["radio-sala"]
-        assert (f'data-esquecer="1" data-alvo="{linha["id"]}" data-destino="{varanda}"'
-                in campos["radio-moldes"])
+        assert (f'data-esquecer="1" data-alvo="{linha["id"]}"'
+                not in campos["radio-moldes"]), "o X que só tira a linha ganhou pergunta"
         tentar = re.search(r'<button class="btn tentar"[^>]*>', campos["radio-sala"])
         assert tentar is not None and "data-abre" not in tentar.group(0)
 
@@ -846,23 +870,24 @@ def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
         bancada.fechar()
 
 
-def test_todo_x_na_tela_tem_a_pergunta_dele(
+def test_todo_menu_na_tela_tem_o_esquecer_e_a_pergunta_dele(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O X não esquece sozinho: a página abre a pergunta pelo par ``(linha,
-    adaptador)``, e sem o molde dela o clique não faz NADA — nem pergunta, nem
-    tremida. Todo X que tem o que esquecer (o vermelho no ar, o roxo desligado em
-    cada adaptador, o branco que não chegou) tem a pergunta com o «Esquecer»
-    (``confirmar-esquecer``); o «Não Conectou» sem aparelho não tem: o X dele só
-    tira a linha.
+    """O «Esquecer» não esquece sozinho: o «⋮» da linha abre o menu pelo par
+    ``linha|adaptador``, o «Esquecer» de lá abre a pergunta pelo par ``(linha,
+    adaptador)``, e sem os moldes o clique não faz NADA. Todo «⋮» (o vermelho no
+    ar, o roxo desligado em cada adaptador) tem o menu com o «Esquecer» e a
+    pergunta com o ``confirmar-esquecer``; o X do branco que não chegou não tem
+    pergunta: ele só tira a linha (``dispensar-linha``).
 
-    MORDIDA: tire ``_moldes_de_esquecer`` de ``html_dos_moldes`` — todo X vira um
-    botão morto, e esta régua reprova.
+    MORDIDA: tire ``_moldes_de_esquecer`` de ``html_dos_moldes`` — todo «⋮» vira
+    um botão morto, e esta régua reprova.
 
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA):
-    a busca que ninguém respondeu (``sem_gesto`` sem aparelho) não faz mais
-    linha; a linha sem aparelho que sobra é a da janela que não abriu
-    (``sem_janela``). O pedido é o mesmo.
+    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME e
+    D-3009-A-LINHA-TEM-APARELHO): era «todo X na tela tem a pergunta dele». O X
+    que esquecia virou o «⋮» com o menu, e o X que sobra só tira a linha «Não
+    Conectou». A janela que não abriu (``sem_janela`` sem aparelho) não faz
+    mais linha nenhuma.
     """
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
@@ -875,21 +900,30 @@ def test_todo_x_na_tela_tem_a_pergunta_dele(
                        cr.Movimento("", VARANDA, cr.NAO_CHEGOU, cr.PASSO_FIM,
                                     motivo=cr.MOTIVO_SEM_JANELA, quando=agora - 5.0))
         campos = bancada.tique()
-        xis = re.findall(r'data-gesto="esquecer-aparelho" data-alvo="([^"]+)" '
+        menus = re.findall(r'data-gesto="aparelho-menu" data-alvo="([^"]+)" '
+                           r'data-lugar="([^"]+)"', campos["radio-sala"])
+        xis = re.findall(r'data-gesto="dispensar-linha" data-alvo="([^"]+)" '
                          r'data-lugar="([^"]+)"', campos["radio-sala"])
-        moldes = set(re.findall(
+        paineis = dict(re.findall(
+            r'<template class="painel-molde" data-painel="menu" data-alvo="([^"]+)"'
+            r'[^>]*>(.*?)</template>', campos["radio-moldes"]))
+        perguntas = set(re.findall(
             r'<template class="pergunta-molde" data-esquecer="1" data-alvo="([^"]+)" '
             r'data-destino="([^"]+)" data-sim="Esquecer" data-gesto="confirmar-esquecer">',
             campos["radio-moldes"]))
         cena = dict(a08._CENA_NA_TELA)
-        sem_aparelho = {(a["id"], a["lugar"]) for a in cena["aparelhos"]
-                        if a.get("nao_conectou") and not a.get("aparelho")}
-        assert len(xis) >= 5 and len(sem_aparelho) == 1
+        assert not [a for a in cena["aparelhos"]
+                    if a.get("nao_conectou") and not a.get("aparelho")], (
+            "a janela que não abriu virou linha sem aparelho")
+        assert len(menus) >= 3 and len(xis) == 1
+        for alvo, lugar in menus:
+            painel = paineis.get(f"{alvo}|{lugar}")
+            assert painel is not None, f"o «⋮» de {(alvo, lugar)} não abre menu nenhum"
+            assert (f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '
+                    f'data-lugar="{lugar}"') in painel
+            assert (alvo, lugar) in perguntas, f"o «Esquecer» de {(alvo, lugar)} não pergunta"
         for par in xis:
-            if par in sem_aparelho:
-                assert par not in moldes, f"o X que só tira a linha ganhou pergunta: {par}"
-            else:
-                assert par in moldes, f"o X de {par} não abre pergunta nenhuma"
+            assert par not in perguntas, f"o X que só tira a linha ganhou pergunta: {par}"
     finally:
         bancada.fechar()
 
@@ -900,8 +934,14 @@ def test_o_fone_da_sony_desligado_nao_vira_controle(
     """A CLASSE decide quando ela existe, e só sem ela o ``Icon`` e o
     ``Modalias`` falam — a regra da central (``_e_controle``). Um fone pareado e
     desligado, com a classe de fone e o ``054C`` da Sony no ``Modalias``, não é
-    a linha «Desligado» de um controle, e não ganha o X que esqueceria o
-    pareamento dele. O DualSense desligado ao lado continua ganhando.
+    a linha «Desligado» de um CONTROLE: é a de um fone. O DualSense desligado ao
+    lado continua controle.
+
+    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME): o
+    fone desligado passou a ter linha «Desligado», com o tipo fone e o «⋮» que
+    esquece o pareamento DELE — até aqui ele não aparecia, e o único jeito de
+    esquecê-lo era fora do Hefesto. O que esta régua guarda é o mesmo: o fone
+    não vira controle.
 
     MORDIDA: volte ``_e_controle_do_bluez`` a perguntar às três com ``or`` — o
     fone vira controle, e esta régua reprova.
@@ -913,7 +953,9 @@ def test_o_fone_da_sony_desligado_nao_vira_controle(
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
         cena = bancada.cena()
-        desligados = {(a["id"], a["lugar"]) for a in cena["aparelhos"] if a.get("desligado")}
-        assert desligados == {(id_da_tela(ROXO), id_da_tela(QUARTO))}
+        desligados = {(a["id"], a["lugar"]): a["tipo"]
+                      for a in cena["aparelhos"] if a.get("desligado")}
+        assert desligados == {(id_da_tela(ROXO), id_da_tela(QUARTO)): "controle",
+                              (id_da_tela(FONE), id_da_tela(SALA)): "fone"}
     finally:
         bancada.fechar()

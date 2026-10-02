@@ -237,6 +237,12 @@ ESQUECEU_A_SOBRA = "esqueceu a sobra de um bond"
 ESQUECEU_A_MEIA_CHAVE = "esqueceu a meia chave de um pareamento que não chegou"
 #: O ``o_que`` da linha quando o «Conectar» acaba pelo pareamento antigo.
 VOLTOU_PELO_PAREAMENTO_ANTIGO = "o controle voltou pelo pareamento antigo"
+#: O ``o_que`` da linha quando a limpeza achou uma sobra e NÃO a tirou: a ponte
+#: não gravou a lápide, e sem ela nada sai (o autorestore a devolveria).
+NAO_LIMPOU_SEM_LAPIDE = "não limpou: sem lápide"
+#: O ``o_que`` da linha quando a central grava a lápide de um pareamento que
+#: saiu do BlueZ por fora do Hefesto.
+ENTERROU_O_QUE_SAIU_POR_FORA = "gravou a lápide de um pareamento tirado por fora"
 
 # --- o que é controle, e qual o daemon mede -----------------------------------
 
@@ -310,6 +316,31 @@ _FIO_DA_FAXINA = "faxina"
 #: caminho de reserva (``busctl``), que custa subprocessos, a volta vai no passo
 #: da faxina.
 INTERVALO_DOS_NOMES_S = 2.0
+
+#: Quanto um movimento ACABADO fica publicado, e quanto a tela lembra o «Não
+#: Conectou» dele (ESQUECER-E-LIMPAR-AS-CONEXOES-01, cura 4: a constante morava
+#: na tela, e quem corta a publicação é a central — a tela a lê daqui).
+LEMBRA_O_NAO_CONECTOU_S = 600.0
+
+#: Quanto a central espera, depois que um pareamento sai do BlueZ por fora (as
+#: Configurações, o ``bluetoothctl``), antes de gravar a lápide dele (cura 5).
+#: Em 15/08 os bonds comidos pelo crash do ``bluetoothd`` sumiram até ~48 s
+#: antes do SIGABRT (``bt_bonds_autorestore.sh``, §1): uma lápide gravada nesse
+#: meio enterraria o bond que o autorestore existe para devolver.
+ESPERA_DA_LAPIDE_DE_FORA_S = 60.0
+
+#: O teto de pares de UMA volta da limpeza: ela anda um par por chamada da
+#: ponte (a R6 dela, nada em lote), e uma volta nunca é infinita.
+PARES_POR_LIMPEZA = 32
+
+#: Os três momentos em que a casa se limpa sozinha (D-3009-A-CASA-SE-LIMPA-SOZINHA,
+#: pela resposta dela de 30/09, ~03h, na sprint):
+#: *«limpar com frequencia a cada troca <!-- noqa-acento: citação literal dela -->
+#: ou ao desligar os controles»*.
+#: São o ``por_que`` da linha no diário.
+DEPOIS_DE_UMA_TROCA = "depois de uma troca"
+QUANDO_O_CONTROLE_DESLIGOU = "quando o controle desligou"
+NA_VOLTA_DA_FAXINA = "na volta da faxina"
 
 
 # ---------------------------------------------------------------------------
@@ -469,6 +500,13 @@ AbrirJanela = Callable[[str, int, bluez_dbus.LeitorDoBluez], Janela]
 def _hex12(endereco: str) -> str:
     """``aa:bb:…`` → ``aabb…`` — a forma do ``uniq`` do estado do daemon."""
     return endereco.replace(":", "").lower()
+
+
+def _entrada(dono: bluez_dbus.LeitorDoBluez, objeto: bluez_dbus.AparelhoDoBluez) -> int:
+    """Quantas vezes o objeto ENTROU no BlueZ desde a foto — o dono vivo conta
+    (:meth:`bluez_dbus.DonoVivo.entrada`); o caminho de reserva não conta (0)."""
+    contar = getattr(dono, "entrada", None)
+    return int(contar(objeto.caminho)) if callable(contar) else 0
 
 
 def endereco_de(valor: object) -> str | None:
@@ -760,6 +798,28 @@ class CentralDoRadio:
         #: O último dono que :meth:`_dono` devolveu — é o que o tique usa, sem
         #: abrir nada (:meth:`_dono_sem_abrir`).
         self._dono_visto: bluez_dbus.LeitorDoBluez | None = dono
+        #: A CASA SE LIMPA SOZINHA (ESQUECER-E-LIMPAR-AS-CONEXOES-01, cura 4). O
+        #: fim de um movimento e o controle que desliga PEDEM uma volta da
+        #: limpeza ao fio da faxina, que a roda assim que a trava sai; o
+        #: ``por_que`` é o do primeiro pedido. Uma tranca só dela: o pedido chega
+        #: do fio do barramento, no meio de qualquer escrita.
+        self._tranca_da_limpeza = threading.Lock()
+        self._limpeza_pedida = threading.Event()
+        self._por_que_limpar = ""
+        #: ONDE CADA CONTROLE COM A CHAVE DOBRADA ESTAVA NO AR, e as chaves dele
+        #: naquele instante: ``{aparelho: (adaptador, {(adaptador, entrada)})}``.
+        #: É a verdade que o ``HID_PHYS`` não dá mais depois que ele desliga
+        #: (:meth:`_lembrar_onde_estao`, :meth:`_a_lembranca_que_vale`).
+        self._lembrancas: dict[str, tuple[str, frozenset[tuple[str, int]]]] = {}
+        #: Os pareamentos que saíram do BlueZ por fora, esperando a lápide (cura
+        #: 5): ``[(adaptador, aparelho, hora no relógio, dono do org.bluez)]``.
+        self._saidas_de_fora: list[tuple[str, str, float, str]] = []
+        #: As sobras que a ponte não enterrou, já ditas no diário: uma linha por par.
+        self._sem_lapide_dito: set[tuple[str, str]] = set()
+        #: O dono cujos avisos esta central ouve (:meth:`_ouvir`).
+        self._ouvindo: object | None = None
+        if dono is not None:
+            self._ouvir(dono)
 
     # -- ciclo ----------------------------------------------------------------
 
@@ -768,7 +828,43 @@ class CentralDoRadio:
             return self._dono_fixo
         dono = bluez_dbus.dono()
         self._dono_visto = dono
+        self._ouvir(dono)
         return dono
+
+    def _ouvir(self, dono: bluez_dbus.LeitorDoBluez) -> None:
+        """Assina os avisos do dono (o :class:`bluez_dbus.DonoVivo`): o controle
+        que desligou e o pareamento que saiu. Só o dono do DAEMON tem quem ouça
+        — a janela não sobe central —, e o caminho de reserva não avisa."""
+        with self._tranca_da_limpeza:
+            if dono is self._ouvindo:
+                return
+            self._ouvindo = dono
+        ouvir = getattr(dono, "ouvir", None)
+        if callable(ouvir):
+            ouvir(self._ao_aviso_do_dono)
+
+    def _ao_aviso_do_dono(self, aviso: str, dados: Mapping[str, Any]) -> None:
+        """Chega no fio do barramento: só anota e pede — nada de D-Bus aqui."""
+        if aviso == bluez_dbus.AVISO_DESLIGOU:
+            self._pedir_a_limpeza(QUANDO_O_CONTROLE_DESLIGOU)
+        elif aviso == bluez_dbus.AVISO_SAIU_PAREADO:
+            adaptador = endereco_de(dados.get("adaptador"))
+            aparelho = endereco_de(dados.get("aparelho"))
+            # A remoção do Hefesto segura a trava comum do rádio (a janela, o
+            # mover, a faxina): essa já tem a lápide da ponte.
+            if dados.get("pela_trava") or adaptador is None or aparelho is None:
+                return
+            pendente = (adaptador, aparelho, self._relogio(), str(dados.get("dono") or ""))
+            with self._tranca_da_limpeza:
+                if not any(p[:2] == pendente[:2] for p in self._saidas_de_fora):
+                    self._saidas_de_fora.append(pendente)
+
+    def _pedir_a_limpeza(self, por_que: str) -> None:
+        """Pede UMA volta da limpeza ao fio da faxina (:meth:`limpar`)."""
+        with self._tranca_da_limpeza:
+            if not self._por_que_limpar:
+                self._por_que_limpar = por_que
+        self._limpeza_pedida.set()
 
     def _dono_sem_abrir(self) -> bluez_dbus.LeitorDoBluez | None:
         """O último dono visto, se ainda pergunta — ``None`` sem abrir nada.
@@ -795,6 +891,7 @@ class CentralDoRadio:
     def fechar(self, *, espera: float = 3.0) -> None:
         """Pede para os fios pararem e espera. Idempotente, nunca levanta."""
         self._parar.set()
+        self._limpeza_pedida.set()  # acorda a faxina, que espera por ela
         with self._tranca:
             fios = list(self._fios.values())
         for fio in fios:
@@ -822,8 +919,19 @@ class CentralDoRadio:
     def _guardar(self, movimento: Movimento) -> Movimento:
         with self._tranca:
             self._movimentos[movimento.aparelho] = movimento
+            self._mudou_o_movimento(movimento)
         self._no_fio_atual.chave = movimento.aparelho
         return movimento
+
+    def _mudou_o_movimento(self, movimento: Movimento) -> None:
+        """COM A ``_tranca`` NA MÃO. O movimento que começa tira a lembrança de
+        onde aquele controle estava (é ele mudando de casa); o que acaba pede
+        uma volta da limpeza (D-3009-A-CASA-SE-LIMPA-SOZINHA: depois de cada
+        troca, e também do «não chegou»)."""
+        if movimento.em_curso:
+            self._lembrancas.pop(movimento.aparelho, None)
+        else:
+            self._pedir_a_limpeza(DEPOIS_DE_UMA_TROCA)
 
     def _comecar(self, movimento: Movimento) -> Movimento:
         """O «esperando» de um movimento novo — e nenhum destino pedido para o de antes.
@@ -855,6 +963,7 @@ class CentralDoRadio:
             if feito.aparelho != movimento.aparelho:
                 self._movimentos.pop(movimento.aparelho, None)
             self._movimentos[feito.aparelho] = feito
+            self._mudou_o_movimento(feito)
         self._no_fio_atual.chave = feito.aparelho
         return feito
 
@@ -2349,12 +2458,33 @@ class CentralDoRadio:
                 if self._pela_chave(movimento.aparelho) != movimento:
                     return self._pela_chave(movimento.aparelho) or movimento
                 esquecida = self._esquecer_a_meia_chave(movimento, dono)
+                movimento = self._esquecer_as_origens_mortas(movimento, dono)
                 # «Não sei» (o rádio mudo, a chave que não sumiu) também deve.
                 return self._acabou_se_ainda(movimento, motivo, meia_chave=esquecida is True,
                                              devida=esquecida is None)
         except TravaOcupadaError:
             logger.warning("central_meia_chave_sem_trava", aparelho=mascarar(movimento.aparelho))
             return self._acabou_se_ainda(movimento, motivo, meia_chave=False, devida=True)
+
+    def _esquecer_as_origens_mortas(
+        self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez
+    ) -> Movimento:
+        """O «Conectar» que PAREOU no destino e não conferiu: o ``Pair`` trocou o
+        host que o controle guarda (ele guarda UM), e as chaves dele nos outros
+        adaptadores morreram com isso — saem pelo mesmo ``_esquecer`` do mover,
+        com lápide (cura 4 da ESQUECER-E-LIMPAR-AS-CONEXOES-01). Sem ``Pair``, o
+        controle nem entrou em modo de parear, e a chave dele continua a que
+        vale. O «Mover» já esqueceu as dele antes do gesto.
+
+        Com o controle NO AR (o «voltou» para a origem), o host que ele guarda
+        não trocou: a chave por onde ele voltou é a que vale, e nenhuma origem
+        sai — esquecer ali o obrigaria a parear de novo."""
+        if (not movimento.pareou_no_destino or movimento.origens_esquecidas
+                or not movimento.origens or self._onde_esta(_hex12(movimento.aparelho))):
+            return movimento
+        for origem in movimento.origens:
+            self._esquecer(dono, origem, movimento.aparelho)
+        return self._guardar(replace(movimento, origens_esquecidas=True))
 
     def _acabou_se_ainda(
         self, movimento: Movimento, motivo: str, *, meia_chave: bool, devida: bool = False
@@ -2368,6 +2498,7 @@ class CentralDoRadio:
             if atual != movimento:
                 return atual or movimento
             self._movimentos[movimento.aparelho] = feito
+            self._mudou_o_movimento(feito)
         if devida:
             self._dever_a_meia_chave(feito)
         self._no_diario_do_nao_chegou(feito, meia_chave=meia_chave)
@@ -2515,7 +2646,10 @@ class CentralDoRadio:
         * o objeto sem chave — o BlueZ guarda um para todo aparelho que uma
           busca achou, e o vizinho visto por dois adaptadores não é bond;
         * o controle desligado ou no cabo (``HID_PHYS`` sem endereço de
-          adaptador): ele ainda não disse qual chave vale;
+          adaptador), a não ser pela LEMBRANÇA de onde ele estava no ar
+          (:meth:`_a_lembranca_que_vale`, ESQUECER-E-LIMPAR-AS-CONEXOES-01):
+          saem as chaves que já eram sobra no último instante em que ele foi
+          visto no ar, e só elas;
         * o aparelho que a classe não diz controle — um teclado de vários
           hosts pode querer as duas chaves;
         * o controle conectado num adaptador em que o BlueZ não mostra chave
@@ -2523,6 +2657,31 @@ class CentralDoRadio:
 
         ``None`` = não deu para perguntar, nunca «não há».
         """
+        chaves = self._chaves_dobradas(dono)
+        if chaves is None:
+            return None
+        achadas: list[tuple[str, str, str]] = []
+        for aparelho, onde_tem in sorted(chaves.items()):
+            agora = self._onde_esta(_hex12(aparelho))
+            if agora:
+                if agora in onde_tem:
+                    achadas.extend(
+                        (sai, aparelho, agora) for sai in sorted(onde_tem) if sai != agora)
+                continue
+            lembrada = self._a_lembranca_que_vale(aparelho, onde_tem, dono)
+            if lembrada is None:
+                continue
+            onde, eram = lembrada
+            achadas.extend(
+                (sai, aparelho, onde) for sai in sorted(onde_tem)
+                if sai != onde and (sai, _entrada(dono, onde_tem[sai])) in eram)
+        return tuple(achadas)
+
+    def _chaves_dobradas(
+        self, dono: bluez_dbus.LeitorDoBluez
+    ) -> dict[str, dict[str, bluez_dbus.AparelhoDoBluez]] | None:
+        """``{controle: {adaptador: objeto}}`` de quem tem CHAVE (``Paired``) em dois
+        ou mais adaptadores da máquina. Só lê; ``None`` = não deu para perguntar."""
         adaptadores = dono.adaptadores()
         aparelhos = dono.aparelhos()
         if adaptadores is None or aparelhos is None:
@@ -2533,20 +2692,78 @@ class CentralDoRadio:
             if objeto.pareado is not True or objeto.adaptador not in por_caminho:
                 continue
             chaves.setdefault(objeto.endereco, {})[por_caminho[objeto.adaptador]] = objeto
-        achadas: list[tuple[str, str, str]] = []
-        for aparelho, onde_tem in sorted(chaves.items()):
-            if len(onde_tem) < 2:
-                continue
-            if not any(e_controle(o.classe) for o in onde_tem.values()):
-                continue
-            agora = self._onde_esta(_hex12(aparelho))
-            if not agora or agora not in onde_tem:
-                continue
-            achadas.extend((sai, aparelho, agora) for sai in sorted(onde_tem) if sai != agora)
-        return tuple(achadas)
+        return {aparelho: onde_tem for aparelho, onde_tem in chaves.items()
+                if len(onde_tem) >= 2 and any(e_controle(o.classe) for o in onde_tem.values())}
 
-    def esquecer_as_sobras(self) -> tuple[str, str] | None:
-        """UMA volta da faxina: esquece UMA sobra e devolve ``(adaptador, controle)``.
+    def _lembrar_onde_estao(self) -> None:
+        """Onde cada controle com a chave dobrada está no ar AGORA, e as chaves
+        dele neste instante — a cada passo do fio, com o dono vivo (a foto em
+        memória e o ``HID_PHYS``; não escreve nada).
+
+        É o que a limpeza usa quando ele desliga ou passa para o cabo e o
+        ``HID_PHYS`` não diz mais nada (cura 4 da ESQUECER-E-LIMPAR-AS-CONEXOES-01).
+        Conectado num adaptador sem chave dele, a lembrança cai: é estado que a
+        central não entende. Nunca levanta.
+        """
+        try:
+            dono = self._dono_sem_abrir()
+            if dono is None or not dono.atende_o_proprio_pareamento:
+                return
+            chaves = self._chaves_dobradas(dono)
+            if chaves is None:
+                return
+            for aparelho, onde_tem in chaves.items():
+                agora = self._onde_esta(_hex12(aparelho))
+                if not agora:
+                    continue
+                with self._tranca:
+                    if any(m.em_curso and m.aparelho == aparelho
+                           for m in self._movimentos.values()):
+                        continue
+                    if agora in onde_tem:
+                        self._lembrancas[aparelho] = (agora, frozenset(
+                            (onde, _entrada(dono, objeto)) for onde, objeto in onde_tem.items()))
+                    else:
+                        self._lembrancas.pop(aparelho, None)
+        except Exception:
+            logger.warning("central_lembranca_levantou", exc_info=True)
+
+    def _a_lembranca_que_vale(
+        self,
+        aparelho: str,
+        onde_tem: Mapping[str, bluez_dbus.AparelhoDoBluez],
+        dono: bluez_dbus.LeitorDoBluez,
+    ) -> tuple[str, frozenset[tuple[str, int]]] | None:
+        """A lembrança de onde ``aparelho`` estava no ar — se ela ainda vale.
+
+        Cai (e sai) quando a chave de onde ele estava saiu, ou quando uma chave
+        dele nasceu DEPOIS dela: um adaptador novo, ou o mesmo com o objeto
+        recriado (o dono conta cada entrada, e o objeto que saiu e voltou é
+        outro). Uma chave nova é um pareamento dela, e nunca é sobra.
+        """
+        with self._tranca:
+            lembrada = self._lembrancas.get(aparelho)
+        if lembrada is None:
+            return None
+        onde, eram = lembrada
+        agora = {(ad, _entrada(dono, objeto)) for ad, objeto in onde_tem.items()}
+        if onde not in onde_tem or not agora <= eram:
+            with self._tranca:
+                if self._lembrancas.get(aparelho) == lembrada:
+                    del self._lembrancas[aparelho]
+            return None
+        return lembrada
+
+    def esquecer_as_sobras(self, por_que: str = NA_VOLTA_DA_FAXINA) -> tuple[str, str] | None:
+        """Esquece UMA sobra e devolve ``(adaptador, controle)``.
+
+        A LÁPIDE VEM PRIMEIRO (ESQUECER-E-LIMPAR-AS-CONEXOES-01, cura 4): a
+        limpeza que ninguém pediu chama o verbo ``esquecer`` da ponte — o
+        ``RemoveDevice`` como root, o disco, o cache e a lápide —, e só com ele
+        feito o objeto que sobrar na foto sai pelo dono. Sem a ponte (não
+        instalada, recusando, ou sob a suíte) nada sai, e o diário diz uma vez
+        por par que não limpou: uma limpeza que o autorestore pode desfazer não é
+        limpeza. ``por_que`` é o momento, e vai ao diário.
 
         ``None`` quando não havia sobra, quando um movimento está «esperando»
         (o mover esquece a própria origem, e dois motores na mesma chave é o
@@ -2571,7 +2788,15 @@ class CentralDoRadio:
                 if not achadas:
                     return None
                 sai, aparelho, fica = achadas[0]
-                fez = self._esquecer(dono, sai, aparelho)
+                no = dono.caminho_do_aparelho(aparelho, adaptador=sai)
+                fez, motivo = self._esquecer_na_ponte(sai, aparelho)
+                if not fez:
+                    self._nao_limpou(sai, aparelho, fica, motivo)
+                    return None
+                resto = dono.caminho_do_aparelho(aparelho, adaptador=sai)
+                if resto is not None:
+                    dono.remover_aparelho(resto, quem=QUEM)
+                self._lembrar_o_alias(dono, aparelho, sai, caminho=no, sumiu=True)
                 self._esperar_sumir(dono, aparelho, sai)
         except TravaOcupadaError:
             logger.info("central_faxina_trava_ocupada")
@@ -2579,12 +2804,14 @@ class CentralDoRadio:
         except Exception:
             logger.warning("central_faxina_levantou", exc_info=True)
             return None
+        with self._tranca:
+            self._sem_lapide_dito.discard((sai, aparelho))
         logger.info(
             "central_esqueceu_a_sobra",
             aparelho=mascarar(aparelho),
             adaptador=mascarar(sai),
             fica=mascarar(fica),
-            lapide=fez,
+            por_que=por_que,
         )
         try:
             from hefesto_dualsense4unix.integrations import diario_do_radio
@@ -2592,10 +2819,9 @@ class CentralDoRadio:
             diario_do_radio.registrar(
                 QUEM,
                 ESQUECEU_A_SOBRA,
-                "o controle está conectado em outro adaptador, e guarda um host só: "
-                "a chave deste era sobra de um mover feito pela metade",
+                por_que,
                 antes={"adaptadores": sorted({sai, fica})},
-                depois={"adaptador": fica, "sem_lapide": None if fez else [sai]},
+                depois={"adaptador": fica},
                 controle=aparelho,
                 adaptador=sai,
             )
@@ -2603,7 +2829,161 @@ class CentralDoRadio:
             logger.warning("central_diario_nao_gravou", exc_info=True)
         return sai, aparelho
 
-    def comecar_a_faxina(self, intervalo_s: float = INTERVALO_DA_FAXINA_S) -> None:
+    def _nao_limpou(self, sai: str, aparelho: str, fica: str, motivo: str) -> None:
+        """A ponte não enterrou a sobra: nada sai, e o diário diz UMA vez por par."""
+        logger.warning("central_sobra_sem_lapide", aparelho=mascarar(aparelho),
+                       adaptador=mascarar(sai), motivo=str(motivo)[:200])
+        with self._tranca:
+            if (sai, aparelho) in self._sem_lapide_dito:
+                return
+            self._sem_lapide_dito.add((sai, aparelho))
+        try:
+            from hefesto_dualsense4unix.integrations import diario_do_radio
+
+            diario_do_radio.registrar(
+                QUEM, NAO_LIMPOU_SEM_LAPIDE, str(motivo)[:200] or "a ponte não respondeu",
+                antes={"adaptadores": sorted({sai, fica})}, depois={"adaptador": fica},
+                controle=aparelho, adaptador=sai,
+            )
+        except Exception:
+            logger.warning("central_diario_nao_gravou", exc_info=True)
+
+    def limpar(self, por_que: str = NA_VOLTA_DA_FAXINA) -> tuple[tuple[str, str], ...]:
+        """UMA volta da limpeza: as sobras, um par por vez, até não haver
+        nenhuma; e os movimentos acabados que não dizem mais nada saem da
+        publicação (:meth:`_tirar_os_acabados`).
+
+        A mesma volta nos três momentos (D-3009-A-CASA-SE-LIMPA-SOZINHA): depois
+        de cada troca, quando um controle desliga, e na volta da faxina. Cada
+        chamada pega a trava, relê a foto, esquece UM par e a solta — a R6 dela,
+        nunca em lote. Nunca levanta.
+        """
+        feitas: list[tuple[str, str]] = []
+        for _ in range(PARES_POR_LIMPEZA):
+            feito = self.esquecer_as_sobras(por_que)
+            if feito is None:
+                break
+            feitas.append(feito)
+        self._tirar_os_acabados()
+        return tuple(feitas)
+
+    def _no_ar(self, aparelho: str, dono: bluez_dbus.LeitorDoBluez | None) -> bool:
+        """``aparelho`` está no ar por algum transporte: o ``HID_PHYS`` no rádio,
+        o ``Connected`` do BlueZ, ou o daemon o publicando (o cabo também)."""
+        u = _hex12(aparelho)
+        if self._onde_esta(u):
+            return True
+        if any(_hex12(str(c.get("uniq") or "")) == u and c.get("connected", True) is not False
+               for c in self._ultimos_controles):
+            return True
+        if dono is not None:
+            return any(o.conectado is True and _hex12(o.endereco) == u
+                       for o in dono.aparelhos() or ())
+        return False
+
+    def _tirar_os_acabados(self) -> tuple[Movimento, ...]:
+        """Os movimentos acabados que não dizem mais nada saem da publicação: o
+        «não chegou» de um aparelho que já está no ar, e todo acabado com mais
+        de :data:`LEMBRA_O_NAO_CONECTOU_S`. O «chegou» fica até lá, para a tela
+        o mostrar chegando; o «esperando» nunca sai. Nunca levanta."""
+        try:
+            dono = self._dono_sem_abrir()
+            agora = time.time()
+            with self._tranca:
+                acabados = [m for m in self._movimentos.values() if not m.em_curso]
+            sair = [m for m in acabados
+                    if agora - m.quando > LEMBRA_O_NAO_CONECTOU_S
+                    or (m.estado == NAO_CHEGOU and m.aparelho and self._no_ar(m.aparelho, dono))]
+            with self._tranca:
+                for m in sair:
+                    if self._movimentos.get(m.aparelho) == m:
+                        del self._movimentos[m.aparelho]
+            return tuple(sair)
+        except Exception:
+            logger.warning("central_acabados_levantou", exc_info=True)
+            return ()
+
+    def dispensar(self, aparelho: str) -> Movimento | None:
+        """O X do «Não Conectou»: o movimento ACABADO de ``aparelho`` sai da
+        publicação — e toda janela que abrir depois lê a mesma coisa (cura 2 da
+        ESQUECER-E-LIMPAR-AS-CONEXOES-01: a dispensa morava na janela, e voltava
+        quando ela fechava e abria o Hefesto). Nunca um «esperando». Devolve o
+        que saiu, ou ``None``."""
+        alvo = endereco_de(aparelho)
+        if alvo is None:
+            return None
+        with self._tranca:
+            atual = self._movimentos.get(alvo)
+            if atual is None or atual.em_curso:
+                return None
+            del self._movimentos[alvo]
+        return atual
+
+    def gravar_as_lapides_de_fora(self) -> tuple[tuple[str, str], ...]:
+        """A LÁPIDE DE QUEM SAIU POR FORA (cura 5 da ESQUECER-E-LIMPAR-AS-CONEXOES-01).
+
+        O pareamento que saiu do BlueZ sem a trava do Hefesto (as
+        Configurações, o ``bluetoothctl``) ganha a lápide pelo mesmo verbo da
+        ponte — mas só ao fim de :data:`ESPERA_DA_LAPIDE_DE_FORA_S`, e só se
+        três coisas forem verdade: o dono do ``org.bluez`` é o mesmo (um
+        ``bluetoothd`` que morreu e voltou é o crash que come bonds, e a
+        lápide enterraria o que o autorestore devolve), o adaptador continua na
+        máquina (o desplugue não é esquecer), e a chave não voltou. Sem a ponte,
+        o par espera a volta seguinte. Devolve os pares enterrados.
+        """
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        with self._tranca_da_limpeza:
+            pendentes = list(self._saidas_de_fora)
+        if not pendentes:
+            return ()
+        agora = self._relogio()
+        dono = self._dono_sem_abrir()
+        resolvidos: list[tuple[str, str, float, str]] = []
+        enterrados: list[tuple[str, str]] = []
+        for pendente in pendentes:
+            adaptador, aparelho, quando, dono_de_entao = pendente
+            if agora - quando < ESPERA_DA_LAPIDE_DE_FORA_S or dono is None:
+                continue
+            try:
+                adaptadores = dono.adaptadores()
+                if (dono.dono_do_bluez() != dono_de_entao or adaptadores is None
+                        or adaptador not in {a.endereco for a in adaptadores}):
+                    resolvidos.append(pendente)
+                    continue
+                with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
+                    if dono.caminho_do_aparelho(aparelho, adaptador=adaptador) is not None:
+                        resolvidos.append(pendente)
+                        continue
+                    fez, motivo = self._esquecer_na_ponte(adaptador, aparelho)
+            except TravaOcupadaError:
+                continue
+            except Exception:
+                logger.warning("central_lapide_de_fora_levantou", exc_info=True)
+                continue
+            if not fez:
+                logger.warning("central_lapide_de_fora_sem_ponte", aparelho=mascarar(aparelho),
+                               adaptador=mascarar(adaptador), motivo=str(motivo)[:200])
+                continue
+            resolvidos.append(pendente)
+            enterrados.append((adaptador, aparelho))
+            try:
+                from hefesto_dualsense4unix.integrations import diario_do_radio
+
+                diario_do_radio.registrar(
+                    QUEM, ENTERROU_O_QUE_SAIU_POR_FORA,
+                    "o pareamento saiu do BlueZ por fora do Hefesto, com o serviço vivo",
+                    depois={"adaptador": adaptador}, controle=aparelho, adaptador=adaptador,
+                )
+            except Exception:
+                logger.warning("central_diario_nao_gravou", exc_info=True)
+        with self._tranca_da_limpeza:
+            self._saidas_de_fora = [p for p in self._saidas_de_fora if p not in resolvidos]
+        return tuple(enterrados)
+
+    def comecar_a_faxina(
+        self, intervalo_s: float = INTERVALO_DA_FAXINA_S, *, passo_s: float | None = None
+    ) -> None:
         """Sobe o fio da faxina — uma volta a cada ``intervalo_s``. Idempotente.
 
         A primeira volta espera um intervalo inteiro: no arranque os controles
@@ -2614,6 +2994,13 @@ class CentralDoRadio:
         :data:`INTERVALO_DOS_NOMES_S` com o dono vivo, e no passo da faxina
         pelo caminho de reserva; e, no mesmo ritmo, da MEIA CHAVE DEVIDA
         (:meth:`tirar_as_meias_chaves`) — só pega a trava quando há dívida.
+
+        A CASA SE LIMPA SOZINHA (ESQUECER-E-LIMPAR-AS-CONEXOES-01, cura 4): o
+        mesmo fio atende os pedidos de limpeza (:meth:`_pedir_a_limpeza`) assim
+        que chegam, guarda a cada passo, com o dono vivo, onde está quem tem a
+        chave dobrada (:meth:`_lembrar_onde_estao`), e grava a lápide de quem
+        saiu por fora (:meth:`gravar_as_lapides_de_fora`). ``passo_s`` é o passo
+        do fio; sem ele, o dos nomes.
         """
         with self._tranca:
             vivo = self._fios.get(_FIO_DA_FAXINA)
@@ -2621,20 +3008,33 @@ class CentralDoRadio:
                 return
             fio = threading.Thread(
                 target=self._faxinar_sempre,
-                args=(float(intervalo_s),),
+                args=(float(intervalo_s), passo_s),
                 name="hefesto-central-faxina",
                 daemon=True,
             )
             self._fios[_FIO_DA_FAXINA] = fio
         fio.start()
 
-    def _faxinar_sempre(self, intervalo_s: float) -> None:
-        passo = min(intervalo_s, INTERVALO_DOS_NOMES_S)
+    def _faxinar_sempre(self, intervalo_s: float, passo_s: float | None = None) -> None:
+        passo = min(intervalo_s, INTERVALO_DOS_NOMES_S) if passo_s is None else float(passo_s)
         desde_a_faxina = 0.0
-        while not self._parar.wait(passo):
+        while not self._parar.is_set():
+            pedida = self._limpeza_pedida.wait(passo)
+            if self._parar.is_set():
+                return
+            if pedida:
+                with self._tranca_da_limpeza:
+                    por_que, self._por_que_limpar = self._por_que_limpar, ""
+                    self._limpeza_pedida.clear()
+                self.limpar(por_que or NA_VOLTA_DA_FAXINA)
+                continue
             desde_a_faxina += passo
             faxina = desde_a_faxina >= intervalo_s
-            if faxina or self._o_dono_e_a_foto_viva():
+            vivo = self._o_dono_e_a_foto_viva()
+            if vivo:
+                self._lembrar_onde_estao()
+            self.gravar_as_lapides_de_fora()
+            if faxina or vivo:
                 # A meia chave devida não espera a faxina inteira: ela é o que
                 # faz o próximo «Conectar» naquele adaptador não ver o controle.
                 # Pelo caminho de reserva (subprocessos) ela vai no passo da
@@ -2645,7 +3045,7 @@ class CentralDoRadio:
                 self.cuidar_dos_nomes()
             if faxina:
                 desde_a_faxina = 0.0
-                self.esquecer_as_sobras()
+                self.limpar(NA_VOLTA_DA_FAXINA)
 
     def _o_dono_e_a_foto_viva(self) -> bool:
         """O dono de agora lê da foto em memória (o Gio), e não de subprocessos."""

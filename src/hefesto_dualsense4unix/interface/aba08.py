@@ -3209,11 +3209,17 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha .quem-resto{font-size:12.5px;color:var(--texto-suave);flex:none}
   .radio .lugar-topo[draggable="true"]{cursor:grab}
   .radio .lugar.arrastando{opacity:.45}
-  .radio .linha .esquecer{width:22px;height:22px;padding:0;display:inline-flex;align-items:center;
+  /* O «⋮» com o «Esquecer» e o X que só tira o aviso (ESQUECER-E-LIMPAR-AS-CONEXOES-01):
+     o mesmo lugar e o mesmo tamanho que o X de antes, e nenhum botão a mais por linha. */
+  .radio .linha .xis,.radio .linha .menu-da-linha{width:22px;height:22px;padding:0;
+                          display:inline-flex;align-items:center;
                           justify-content:center;border-radius:50%;border:1px solid transparent;
                           background:transparent;color:var(--texto-mudo);cursor:pointer;font-size:12px}
-  .radio .linha .esquecer:hover{border-color:var(--orange);color:var(--orange)}
-  .radio .linha .esquecer:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+  .radio .linha .menu-da-linha{font-size:15px;line-height:1}
+  .radio .linha .xis:hover,.radio .linha .menu-da-linha:hover{border-color:var(--orange);
+                          color:var(--orange)}
+  .radio .linha .xis:focus-visible,.radio .linha .menu-da-linha:focus-visible{
+                          outline:2px solid var(--purple);outline-offset:2px}
   .radio .linha .nome-fixo{font-size:12.5px;color:var(--texto-suave);overflow:hidden;
                            text-overflow:ellipsis}
   .radio .linha .features .nao-conectou{color:var(--orange);font-size:11.5px;margin-right:8px}
@@ -3382,13 +3388,18 @@ def _cena_do_desenho() -> dict:
              for x in _csv_do_desenho("perto")]
     quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
     # O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026): os estados que a lista
-    # dela de 26/09 pediu, na caixa aberta — o «Conectar» que não chegou (com o
-    # «Tentar de Novo» e o X), e um controle pareado ali e desligado (com o X).
-    # E os dois receptores sem nome que o kernel sugere, com a palavra junto.
-    aparelhos.append({"id": f"nao-conectou-{cheio['id']}", "aparelho": "", "tipo": "controle",
-                      "lugar": cheio["id"], "nome": "", "rotulo": "DualSense", "cor": "",
-                      "cor_nome": "", "nao_conectou": True, "chave": "desenho",
-                      "esperando": False, "fixo": True})
+    # dela de 26/09 pediu, na caixa aberta — o controle que ela moveu e não
+    # chegou (com o «Tentar de Novo» e o X), e um controle pareado ali e
+    # desligado (com o «⋮»). E os dois receptores sem nome que o kernel
+    # sugere, com a palavra junto.
+    # A LINHA TEM APARELHO (ESQUECER-E-LIMPAR-AS-CONEXOES-01): o desenho
+    # desenhava um «DualSense · Não Conectou» sem aparelho — a busca que
+    # ninguém respondeu, o *«controle fantasma»* dela. A linha do desenho é a
+    # de um controle de verdade, com nome e cor. <!-- noqa-acento: citação literal dela -->
+    aparelhos.append({"id": f"nao-conectou-{cheio['id']}-P5", "aparelho": "P5",
+                      "tipo": "controle", "lugar": cheio["id"], "nome": "Lia",
+                      "rotulo": "DualSense", "cor": "#7eb8d4", "cor_nome": "Starlight Blue",
+                      "nao_conectou": True, "esperando": False, "fixo": True})
     aparelhos.append({"id": "D9", "aparelho": "D9", "tipo": "controle", "lugar": cheio["id"],
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
@@ -3648,6 +3659,15 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         todos('.op', chip.parentNode).forEach(function(o){ o.setAttribute('aria-pressed', 'false'); });
         chip.setAttribute('aria-pressed', 'true'); return;
       }
+      // O «ESQUECER» DO MENU DA LINHA abre a pergunta de sempre — o par
+      // (linha, adaptador), como o X abria até a ESQUECER-E-LIMPAR-AS-CONEXOES-01.
+      var esquecer = perto(ev, '#rd-painel .escolha [data-gesto="esquecer-aparelho"]');
+      if(esquecer){
+        var mx = moldeDoX(esquecer.dataset.alvo, esquecer.dataset.lugar);
+        fecharPainel();
+        if(mx) perguntar(mx);
+        return;
+      }
       if(perto(ev, '#rd-painel .escolha [data-gesto]') || perto(ev, '#rd-painel .achado .btn')){
         fecharPainel(); return;
       }
@@ -3658,12 +3678,17 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         return;
       }
       if((b = perto(ev, '.radio .selo-fora.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
-      // O X: a pergunta antes (o «Não Conectou» sem aparelho não tem pergunta —
-      // o Python só tira a linha). Com um controle esperando, não há molde, e
-      // o Python faz o botão tremer.
-      if((b = perto(ev, '.radio .linha .esquecer'))){
-        var mx = moldeDoX(b.dataset.alvo, b.dataset.lugar);
-        if(mx) perguntar(mx);
+      // O «⋮» DA LINHA (ESQUECER-E-LIMPAR-AS-CONEXOES-01): o menu dela, com o
+      // «Esquecer». Com um controle esperando, não há molde, e o Python faz o
+      // botão tremer.
+      if((b = perto(ev, '.radio .linha .menu-da-linha'))){
+        abrirPainel('menu', b.dataset.alvo + '|' + b.dataset.lugar);
+        return;
+      }
+      // O X do «Não Conectou» tira o aviso, e não esquece nada: com o piloto,
+      // quem tira é a central (a linha some no tique); no desenho, a página.
+      if((b = perto(ev, '.radio .linha .xis'))){
+        if(!comPiloto()){ var aviso = b.closest('.linha'); if(aviso) aviso.remove(); }
         return;
       }
       // «Tentar de Novo» é o «Conectar» daquele adaptador: o mesmo painel abre.

@@ -621,17 +621,22 @@ def test_o_zumbi_de_adaptador_fora_da_tela_nao_aparece(a08: Any) -> None:
 
 
 def test_o_x_tira_a_linha_ate_o_episodio_acabar(a08: Any) -> None:
-    """O X (`esquecer-aparelho`) tira a linha sem esquecer nada, e ela não volta
+    """O X (`dispensar-linha`) tira a linha sem esquecer nada, e ela não volta
     no tique seguinte; quando uma volta fresca já não traz o controle, o
-    próximo episódio aparece de novo."""
+    próximo episódio aparece de novo.
+
+    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01: o X da linha «Não Conectou» é o
+    ``dispensar-linha`` (o ``esquecer-aparelho`` mora no «⋮» de quem tem
+    pareamento ali). A linha do controle preso não é movimento da central, e
+    sai pelo episódio, como saía."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])
     _volta(ponte, [LINK_ZUMBI])
     linha = _presos(_cena_da_aba(a08))[0]
     ctx = Contexto(state={}, conectados=[], mesa=[])
-    assert a08.esquecer_aparelho(ctx, {"alvo": linha["id"], "lugar": linha["lugar"]},
-                                 None) == {"armou": True}
+    assert a08.dispensar_linha(ctx, {"alvo": linha["id"], "lugar": linha["lugar"]},
+                               None) == {"armou": True}
     assert _presos(_cena_da_aba(a08)) == [], "o X não tirou a linha"
     _volta(ponte, [])  # o controle saiu da lista do vigia
     assert _presos(_cena_da_aba(a08)) == []

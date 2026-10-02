@@ -322,6 +322,9 @@ class IpcServer(IpcHandlersMixin):
             # O-CONECTAR-E-UM-INTERRUPTOR-01 (30/09/2026): o «Procurar» da aba
             # Conexões — liga e desliga a busca do rádio, com valor absoluto.
             "radio.busca.set": self._handle_radio_busca_set,
+            # ESQUECER-E-LIMPAR-AS-CONEXOES-01 (30/09/2026): o X do «Não
+            # Conectou» tira a linha na central, e não só na janela.
+            "radio.dispensar": self._handle_radio_dispensar,
         }
 
     async def start(self) -> None:
