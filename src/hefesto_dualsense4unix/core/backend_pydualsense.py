@@ -5086,6 +5086,7 @@ class PyDualSenseController(IController):
                 key=key,
                 cor=cor,
                 players=players,
+                numero=numero_do_desenho(players) if players is not None else None,
                 enviado=ok,
             )
         return resultado
@@ -7381,7 +7382,7 @@ class PyDualSenseController(IController):
             return self._merged_desired_for_key(uniq).player_led_brightness
 
     def set_coop_outputs(
-        self, outputs: Mapping[str, OutputSpec] | None = None
+        self, outputs: Mapping[str, OutputSpec] | None = None, *, escrever: bool = True
     ) -> None:
         """SUBSTITUI a camada do CO-OP e converge os controles afetados (R-13).
 
@@ -7399,6 +7400,13 @@ class PyDualSenseController(IController):
         Escreve no hardware dos conectados cujo resolvido MUDOU (entrou, saiu
         ou trocou de padrão), pela mesma rota do resto do backend (sysfs com
         fallback pydualsense). `None`/vazio revoga a camada inteira.
+
+        ``escrever=False`` (A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1): troca a
+        camada e não escreve nada. É o preparo do gatilho da lightbar, que
+        escreve logo depois, uma vez por controle, nos dois transportes — duas
+        escritas do mesmo número seriam duas fatias do rádio por nada. A escrita
+        que sai daqui diz o número em ``info`` (``camada_do_coop_escrita``): até
+        02/10 ela era só ``debug``, e o diário não dizia a correção do número.
         """
         novo: dict[str, _DesiredOutput] = {}
         for uniq, spec in (outputs or {}).items():
@@ -7421,6 +7429,8 @@ class PyDualSenseController(IController):
             if antigo == novo:
                 return
             self._desired_coop_by_uniq = novo
+            if not escrever:
+                return
             for alvo in set(antigo) | set(novo):
                 key = self._key_for_uniq(alvo)
                 handle = self._handles.get(key) if key is not None else None
@@ -7435,6 +7445,14 @@ class PyDualSenseController(IController):
         for handle, node, out in escritas:
             self._write_partial_output(
                 handle, node, out, what="set_coop_outputs"
+            )
+        if escritas:
+            logger.info(
+                "camada_do_coop_escrita",
+                numeros={
+                    _endereco_mascarado(u) or "?": numero_do_desenho(d.player_leds)
+                    for u, d in novo.items()
+                },
             )
 
     def set_rumble_for(self, uniq: str, weak: int, strong: int) -> bool:

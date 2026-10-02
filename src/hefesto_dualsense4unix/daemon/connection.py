@@ -9,7 +9,7 @@ import asyncio
 import contextlib
 import os
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
@@ -1310,26 +1310,13 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
     """
 
     def _reafirmar() -> object:
-        # AS LÂMPADAS ESPERAM A COR, E É AQUI QUE ELAS SÃO SOLTAS —
-        # APARELHO-NAO-SE-CONTRADIZ-01, decisão dela de 20/09/2026, verbatim:
-        # *"As lâmpadas esperam a cor"*, porque **o aparelho nunca se
-        # contradiz consigo mesmo**.
+        # AS LÂMPADAS JÁ FORAM SOLTAS, no PREPARO deste gatilho
+        # (`_preparar_a_lightbar`, logo abaixo), na thread do laço e antes de
+        # esta tarefa ir ao executor — e a camada do co-op já foi republicada
+        # com o número novo. O merge de cinco camadas resolve cor e número já
+        # novos, juntos (APARELHO-NAO-SE-CONTRADIZ-01, A-NUMERACAO-BATE-A-LUZ-
+        # COM-O-JOGO-01).
         #
-        # ANTES de resolver, e não ao ARMAR: o gatilho arma e só escreve
-        # `ATRASO_APOS_A_ULTIMA_CONEXAO_S` depois (1,5 s, o silêncio da
-        # rajada). Liberar no armar devolveria esse 1,5 s de contradição — o
-        # mesmo defeito, menor, e nenhuma régua da casa o veria.
-        #
-        # Por que aqui e não dentro do backend: o número é do REGISTRO DE
-        # IDENTIDADE, e a única coisa que o daemon sabe fazer no mesmo instante
-        # dos dois escritores abaixo é isto — soltar a tabela e então deixar o
-        # merge de cinco camadas resolver cor e número já novos, juntos.
-        with contextlib.suppress(Exception):
-            soltar = getattr(
-                getattr(daemon, "identity_registry", None), "liberar_as_lampadas", None
-            )
-            if callable(soltar):
-                soltar()
         # OS DOIS TRANSPORTES, e são DOIS escritores por necessidade: o rádio
         # só aceita o report cru do 0x31, o cabo é pintado pela classe LED do
         # kernel. Até 07/09/2026 o gatilho chamava só o primeiro, e o do cabo
@@ -1354,6 +1341,51 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
         _reafirmar,
         atraso_s=ATRASO_APOS_A_ULTIMA_CONEXAO_S,
     )
+
+
+def _preparar_a_lightbar(daemon: DaemonProtocol) -> None:
+    """O PREPARO do gatilho da lightbar: solta as lâmpadas e republica o co-op.
+
+    A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1 (02/10/2026). Roda na thread do
+    LAÇO, chamado pelo `disparar_gatilhos_devidos` antes de a tarefa ir ao
+    executor — o co-op só se mexe no fio dele, e o `_reafirmar` roda no
+    executor.
+
+    AS LÂMPADAS ESPERAM A COR, E É AQUI QUE ELAS SÃO SOLTAS —
+    APARELHO-NAO-SE-CONTRADIZ-01, decisão dela de 20/09/2026, verbatim:
+    *"As lâmpadas esperam a cor"*, porque **o aparelho nunca se contradiz
+    consigo mesmo**. No DISPARO, e não ao ARMAR: liberar no armar devolveria o
+    1,5 s de contradição do silêncio da rajada.
+
+    E A CAMADA DO CO-OP VAI JUNTO, SEM ESCRITA. Ela é uma cópia do número, fica
+    acima da automática no merge, e só se atualizava no tique do co-op, DEPOIS
+    da liberação: em 30/09, às 03:07:55, o registro soltou 1, 2 e 3 e o mesmo
+    disparo escreveu 1, 3 e 4 no aparelho, três milissegundos depois. Vinte e
+    oito das 133 liberações de 24/09 a 30/09 feitas só pelo rádio escreveram um
+    desenho diferente do número solto. Republicada aqui, sem escrever, a
+    escrita do gatilho (uma por controle, nos dois transportes) já resolve o
+    número novo.
+    """
+    with contextlib.suppress(Exception):
+        soltar = getattr(
+            getattr(daemon, "identity_registry", None), "liberar_as_lampadas", None
+        )
+        if callable(soltar):
+            soltar()
+    publicar = getattr(getattr(daemon, "_coop_manager", None), "publicar_os_numeros", None)
+    if callable(publicar):
+        try:
+            publicar(escrever=False)
+        except Exception as exc:
+            logger.warning("gatilho_da_cor_preparo_falhou", err=str(exc))
+
+
+#: O preparo de cada gatilho, por nome: o que roda na thread do laço antes de a
+#: tarefa ir ao executor. O registro genérico (`core/gatilho_fim_de_sequencia`)
+#: não muda; quem precisa de preparo se declara aqui.
+_PREPAROS: dict[str, Callable[[DaemonProtocol], None]] = {
+    NOME_DO_GATILHO_DA_LIGHTBAR: _preparar_a_lightbar,
+}
 
 
 def armar_gatilho_da_cor_por_evento(daemon: DaemonProtocol, evento: str) -> None:
@@ -1965,6 +1997,11 @@ async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:
     registro = registro_de_gatilhos_de(daemon)
     prontos = registro.devidos(time.monotonic())
     for gatilho, eventos in prontos:
+        # A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01: o preparo roda AQUI, no fio do
+        # laço, e só depois a tarefa vai ao executor (`_PREPAROS`).
+        preparo = _PREPAROS.get(gatilho.nome)
+        if preparo is not None:
+            preparo(daemon)
         try:
             resultado = await daemon._run_blocking(gatilho.tarefa)
         except Exception as exc:

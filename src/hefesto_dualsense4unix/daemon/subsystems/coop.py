@@ -2084,7 +2084,7 @@ class CoopManager:
         return False
 
     def _publicar_camada_coop(
-        self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]]
+        self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]], *, escrever: bool = True
     ) -> bool:
         """Publica (ou revoga, com `{}`) a camada do co-op no backend (R-13).
 
@@ -2105,7 +2105,8 @@ class CoopManager:
         try:
             publicar(
                 {mac: OutputSpec(player_leds=bits) for mac, bits in padroes.items()}
-                or None
+                or None,
+                **({} if escrever else {"escrever": False}),
             )
         except Exception as exc:
             logger.warning("coop_publicar_camada_falhou", err=str(exc))
@@ -2893,22 +2894,7 @@ class CoopManager:
         (`_publicar_camada_coop` compara antes). Só pela camada: backend sem
         ela (Fake, legado) fica com o ciclo cheio, que é quem sabe o sysfs cru.
         """
-        if not self._players:
-            return
-        ctrl = getattr(self._daemon, "controller", None)
-        if not callable(getattr(ctrl, "set_coop_outputs", None)):
-            return
-        numeros = self.numeros_de_jogador()
-        padroes = {mac: player_led_pattern(numero) for mac, numero in numeros.items()}
-        if padroes == self._camada_coop:
-            return
-        from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
-
-        logger.info(
-            "coop_numero_repintado",
-            numeros={mascarar_endereco(m): n for m, n in numeros.items()},
-        )
-        self._publicar_camada_coop(padroes)
+        self.publicar_os_numeros(escrever=True)
 
     # -- o nome que o jogo vê (A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01) ---
     # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
@@ -3070,6 +3056,42 @@ class CoopManager:
             "player": self.numero_do_diario(player.identity, player.player_index),
             "indice": player.player_index,
         }
+
+    # -- o número que se solta é o que acende (A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01) --
+
+    def publicar_os_numeros(self, *, escrever: bool) -> bool:
+        """Republica a camada do co-op com os números de agora. Devolve se mudou.
+
+        O corpo do `_repintar_se_o_numero_mudou` (o tique quieto, que segue
+        chamando com escrita), com a escrita opcional. ``escrever=False`` é o
+        PREPARO do gatilho da lightbar (`connection._preparar_a_lightbar`): ele
+        solta as lâmpadas e chama isto na thread do laço, antes de a tarefa ir
+        ao executor. Medido em 30/09, 03:07:55: o gatilho soltou 1, 2 e 3 e o
+        mesmo disparo escreveu 1, 3 e 4, porque esta camada é uma CÓPIA do
+        número, fica acima da automática no merge, e só se atualizava no tique
+        seguinte do co-op. Republicada antes, a escrita do gatilho já resolve o
+        número novo — e é ela que escreve, uma vez por controle.
+
+        Sem jogador secundário não faz nada: a camada já está revogada
+        (`_apply_coop_player_leds`).
+        """
+        if not self._players:
+            return False
+        ctrl = getattr(self._daemon, "controller", None)
+        if not callable(getattr(ctrl, "set_coop_outputs", None)):
+            return False
+        numeros = self.numeros_de_jogador()
+        padroes = {mac: player_led_pattern(numero) for mac, numero in numeros.items()}
+        if padroes == self._camada_coop:
+            return False
+        from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
+
+        diario = logger.info if escrever else logger.debug
+        diario(
+            "coop_numero_repintado" if escrever else "coop_numero_republicado",
+            numeros={mascarar_endereco(m): n for m, n in numeros.items()},
+        )
+        return self._publicar_camada_coop(padroes, escrever=escrever)
 
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
