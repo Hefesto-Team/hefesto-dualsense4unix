@@ -104,11 +104,12 @@ PREFIXO_DO_EMULADOR = "emulador:"
 
 
 def caminho(config_home: Path | None = None) -> Path:
-    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``."""
-    if config_home is None:
-        xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
-        config_home = Path(xdg) if xdg else Path.home() / ".config"
-    return config_home / RELPATH
+    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``.
+
+    A conta é do dono da trava (`cura_por_estrada.caminho_da_lista`): a trava
+    mora ao lado do arquivo, e quem escreve tem de achar a mesma.
+    """
+    return cpe.caminho_da_lista(config_home)
 
 
 def appid_da_chave(chave: str) -> str | None:
@@ -286,6 +287,11 @@ def anotar_os_ymls(ymls: Iterable[cpe.YmlDoJogo], config_home: Path | None = Non
     if not novos:
         return "nada"
     destino = caminho(config_home)
+    with cpe.trava_da_lista(destino) as na_mao:
+        return _anotar_na_trava(destino, novos) if na_mao else "erro"
+
+
+def _anotar_na_trava(destino: Path, novos: dict[str, cpe.YmlDoJogo]) -> str:
     try:
         atuais = _ler_cru(destino)
     except (_ArquivoTortoError, OSError):
@@ -479,6 +485,21 @@ def adicionar(
     if not alvo:
         return "chave_invalida"
     destino = caminho(config_home)
+    # UM ESCRITOR POR VEZ (02/10/2026): a lista se lê com a trava na mão, e
+    # tudo o que a exclusão escreve fica dentro dela (`cpe.trava_da_lista`).
+    with cpe.trava_da_lista(destino) as na_mao:
+        if not na_mao:
+            return "erro"
+        return _adicionar_na_trava(
+            alvo, destino, lancador=lancador, nome=nome, nota=nota,
+            escritas_herdadas=escritas_herdadas, janelas=janelas, lar=lar)
+
+
+def _adicionar_na_trava(
+    alvo: str, destino: Path, *, lancador: str, nome: str, nota: str,
+    escritas_herdadas: tuple[str, ...], janelas: tuple[str, ...], lar: Path | None,
+) -> str:
+    """O corpo de :func:`adicionar`, com a trava na mão."""
     try:
         atuais = _ler_cru(destino)
     except (_ArquivoTortoError, OSError):
@@ -557,6 +578,12 @@ def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = Non
     """
     alvo = chave.strip()
     destino = caminho(config_home)
+    with cpe.trava_da_lista(destino) as na_mao:
+        return _tirar_na_trava(alvo, destino, lar) if na_mao else "erro"
+
+
+def _tirar_na_trava(alvo: str, destino: Path, lar: Path | None) -> str:
+    """O corpo de :func:`tirar`, com a trava na mão (a carona entra nela)."""
     try:
         atuais = _ler_cru(destino)
     except (_ArquivoTortoError, OSError):

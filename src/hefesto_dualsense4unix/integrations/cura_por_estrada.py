@@ -140,7 +140,9 @@ import os
 import stat
 import sys
 import tempfile
-from collections.abc import Iterable, Sequence
+import threading
+import time
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType
@@ -962,6 +964,7 @@ def curar_todas_as_estradas(
     pasta_do_ambiente: Path | None = None,
     raiz_sistema: Path | None = None,
     exclusao: NaExclusao | None = None,
+    espera: float | None = None,
 ) -> tuple[str, ...]:
     """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu.
 
@@ -1005,7 +1008,29 @@ def curar_todas_as_estradas(
     jogo excluído do Lutris Flatpak volta a cobrir a caixa — ver
     :class:`NaExclusao`.
     O parâmetro da exclusão existe para a régua; ``None`` lê a lista do dono.
+
+    **UM ESCRITOR POR VEZ (02/10/2026):** a carona inteira roda sob a
+    :func:`trava_da_lista` (a lista, o registro das estradas e os arquivos dos
+    lançadores), e a lista se lê já com ela na mão. ``espera``: ``None`` é a do
+    serviço (:data:`ESPERA_DO_SERVICO_S`); sem a trava no prazo, a carona pula
+    esta vez e o diário diz `carona_esperou_a_janela`.
     """
+    prazo = ESPERA_DO_SERVICO_S if espera is None else espera
+    with trava_da_lista(espera=prazo) as na_mao:
+        if not na_mao:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+                get_logger(__name__).info("carona_esperou_a_janela", espera_s=prazo)
+            return ()
+        return _curar_na_trava(lar, pasta_do_ambiente, raiz_sistema, exclusao)
+
+
+def _curar_na_trava(
+    lar: Path | None, pasta_do_ambiente: Path | None, raiz_sistema: Path | None,
+    exclusao: NaExclusao | None,
+) -> tuple[str, ...]:
+    """O corpo de :func:`curar_todas_as_estradas`, com a trava na mão."""
     fora = _a_exclusao() if exclusao is None else exclusao
     escritos: list[str] = []
     for chave, atalhos in cartoes_com_estrada():
@@ -1418,6 +1443,170 @@ def _desfazer_no_arquivo(alvo: Path, entrada: Entrada, *, copia_do_jogo: bool = 
 RELPATH_DA_LISTA = "hefesto-dualsense4unix/lista_de_exclusao.json"
 
 
+def caminho_da_lista(config_home: Path | None = None) -> Path:
+    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``.
+
+    A conta é uma só (`lista_de_exclusao.caminho` pergunta aqui): a trava mora
+    ao lado do arquivo, e a janela e o serviço têm de achar a mesma.
+    """
+    if config_home is None:
+        xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+        config_home = Path(xdg) if xdg else Path.home() / ".config"
+    return config_home / RELPATH_DA_LISTA
+
+
+# ── A TRAVA DA LISTA: um escritor por vez ─────────────────────────────────
+#
+# A-LISTA-DE-EXCLUSAO-TEM-UM-ESCRITOR-POR-VEZ-01 (02/10/2026). A lista de
+# exclusão, o registro das estradas e os arquivos dos lançadores têm dois
+# processos que leem, juntam e regravam: a janela («Excluir», «Tirar da
+# lista», «Aplicar soluções nos lançadores») e o serviço (a carona de cada
+# transição). Cada escrita é atômica, e nenhuma é trava: medido num lar de
+# mentira com 300 «Excluir» seguidos e a anotação da carona em laço noutro
+# processo, 147, 222 e 149 das 300 exclusões sumiram do arquivo. A exclusão que
+# some deixa no disco o que ela fez, sem registro para o «Tirar» devolver.
+#
+# O DONO DA TRAVA É ESTE MÓDULO, e não a lista: o desfazer do uninstall roda
+# este arquivo sozinho, com o `python3` do sistema. Só biblioteca padrão.
+#
+# É REENTRANTE NO MESMO PROCESSO: o «Tirar da lista» de uma caixa chama a
+# carona, e a carona chama o `anotar_os_ymls`, com a trava na mão. Um segundo
+# `flock` num descritor novo do mesmo arquivo, no mesmo processo, esperaria o
+# primeiro. O descritor abre uma vez por processo; o mesmo fio entra de novo
+# sem pedir, outro fio do processo espera como outro processo esperaria.
+
+#: O arquivo da trava, ao lado da lista. Nunca sai: apagar um arquivo de
+#: `flock` enquanto outro processo o espera daria duas trancas a dois donos.
+NOME_DA_TRAVA = ".lista_de_exclusao.trava"
+
+#: Quanto a JANELA espera: o clique dela termina (por delegação, a validar por
+#: ela). O desfazer do uninstall espera como ela.
+ESPERA_DA_JANELA_S = 5.0
+
+#: Quanto o SERVIÇO espera: a carona é idempotente e a próxima transição a
+#: refaz; sem a trava, ela pula a transição e diz `carona_esperou_a_janela`.
+ESPERA_DO_SERVICO_S = 1.0
+
+#: De quanto em quanto tempo quem espera torna a perguntar ao `flock`.
+_PASSO_DA_ESPERA_S = 0.02
+
+
+@dataclass
+class _Trava:
+    """A trava de UM arquivo, neste processo."""
+
+    fio: threading.RLock = field(default_factory=threading.RLock)
+    fd: int = -1
+    contagem: int = 0
+
+
+_TRAVAS: dict[str, _Trava] = {}
+_TRAVAS_DO_PROCESSO = threading.Lock()
+
+
+def _esquecer_as_travas_no_filho() -> None:
+    """O filho de um `fork` nasce sem trava: o descritor herdado só se fecha.
+
+    Fechar não solta o `flock` do pai (a descrição aberta segue com ele); um
+    `LOCK_UN` aqui soltaria.
+    """
+    global _TRAVAS_DO_PROCESSO
+    for trava in _TRAVAS.values():
+        if trava.fd >= 0:
+            with contextlib.suppress(OSError):
+                os.close(trava.fd)
+    _TRAVAS.clear()
+    _TRAVAS_DO_PROCESSO = threading.Lock()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_esquecer_as_travas_no_filho)
+
+
+def _travar_o_arquivo(alvo: Path, prazo: float, criar: bool) -> int | None:
+    """O descritor com o `flock` exclusivo; ``-1`` = segue sem; ``None`` = o prazo passou.
+
+    Segue sem trava (``-1``) onde não há `fcntl`, onde a pasta não existe e
+    ``criar`` é falso (o desfazer do uninstall não cria a configuração dela),
+    e onde o arquivo não abre: é o comportamento de antes, e recusar ali
+    deixaria a janela sem «Excluir» por uma permissão.
+    """
+    try:
+        import fcntl
+    except ImportError:  # pragma: no cover - só Linux roda isto
+        return -1
+    if not criar and not alvo.parent.is_dir():
+        return -1
+    try:
+        if criar:
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(alvo, os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError:
+        return -1
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return fd
+        except BlockingIOError:
+            if time.monotonic() >= prazo:
+                os.close(fd)
+                return None
+            time.sleep(_PASSO_DA_ESPERA_S)
+        except OSError:
+            os.close(fd)
+            return -1
+
+
+def _soltar(fd: int) -> None:
+    """Solta o `flock` e fecha. O `LOCK_UN` vem antes: um filho de `fork` que
+    ainda tenha a cópia do descritor não segura a trava depois do dono."""
+    with contextlib.suppress(OSError, ImportError):
+        import fcntl
+
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    with contextlib.suppress(OSError):
+        os.close(fd)
+
+
+@contextlib.contextmanager
+def trava_da_lista(lista: Path | None = None, *, espera: float | None = None,
+                   criar: bool = True) -> Iterator[bool]:
+    """Um escritor por vez na lista de exclusão e no que ela anota.
+
+    Rende ``True`` com a trava na mão (ou sem trava possível, ver
+    :func:`_travar_o_arquivo`), e ``False`` quando o prazo passou: quem chama
+    não escreve nada. Quem já a segura neste fio entra sem esperar.
+    ``espera``: ``None`` é a da janela (:data:`ESPERA_DA_JANELA_S`).
+    """
+    alvo = (caminho_da_lista() if lista is None else lista).parent / NOME_DA_TRAVA
+    chave = os.path.realpath(alvo)
+    with _TRAVAS_DO_PROCESSO:
+        trava = _TRAVAS.setdefault(chave, _Trava())
+    teto = max(0.0, ESPERA_DA_JANELA_S if espera is None else espera)
+    prazo = time.monotonic() + teto
+    if not trava.fio.acquire(timeout=teto):
+        yield False
+        return
+    try:
+        if trava.contagem == 0:
+            fd = _travar_o_arquivo(alvo, prazo, criar)
+            if fd is None:
+                yield False
+                return
+            trava.fd = fd
+        trava.contagem += 1
+        try:
+            yield True
+        finally:
+            trava.contagem -= 1
+            if trava.contagem == 0:
+                fd, trava.fd = trava.fd, -1
+                if fd >= 0:
+                    _soltar(fd)
+    finally:
+        trava.fio.release()
+
+
 def _ler_a_lista_crua(arquivo: Path) -> tuple[list[CopiaDoJogo], list[YmlDoJogo]] | None:
     """As cópias do Heroic e os `.yml` do Lutris que a lista anotou, lida como JSON cru.
 
@@ -1550,7 +1739,23 @@ def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
     saía do uninstall com uma lista própria (e o cache de shader nosso
     dentro), e não seguia mais a global dela. Cada `listas_de_exclusao` é lida
     como JSON cru, e a volta de cada jogo vem antes de tirar o nosso.
+
+    **ESPERA COMO A JANELA (02/10/2026):** a trava da lista
+    (:func:`trava_da_lista`) é a mesma da janela e do serviço, e sem ela no
+    prazo nada se escreve: o desfazer fica para depois, com o registro
+    intacto. A pasta da configuração dela não nasce daqui.
     """
+    with trava_da_lista(criar=False) as na_mao:
+        if not na_mao:
+            return [Desfeito(caminho_da_lista(), erro=(
+                "a lista de exclusão está sendo escrita agora — o desfazer fica para "
+                "depois"))], False
+        return _desfazer_na_trava(pastas_do_ambiente, lar, listas_de_exclusao)
+
+
+def _desfazer_na_trava(pastas_do_ambiente: Iterable[Path], lar: Path | None,
+                       listas_de_exclusao: Iterable[Path]) -> tuple[list[Desfeito], bool]:
+    """O corpo de :func:`desfazer_as_estradas`, com a trava na mão."""
     lar = Path.home() if lar is None else lar
     pastas = list(pastas_do_ambiente)
     registro: dict[str, Entrada] = {}
