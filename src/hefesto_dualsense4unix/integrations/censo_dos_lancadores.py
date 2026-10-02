@@ -374,7 +374,7 @@ def _instalados_do_heroic(caminho: Path) -> set[str]:
 #: Sem elas todo jogo do Lutris caía no «não sei».
 #:
 #: **02/10/2026 (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01): o degrau 1 (o umu-id)
-#: passou a ter leitor no Lutris também** — ver `_umu_do_lutris`. A frase que
+#: passou a ter leitor no Lutris também** — ver `_UmuDoLutris`. A frase que
 #: ficava aqui dizia que ele «só tem leitor no Heroic».
 _COLUNAS_DO_LUTRIS = ("name", "slug", "executable", "directory", "installed",
                       "runner", "service", "service_id")
@@ -458,7 +458,7 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
     `UMU_ID` do ambiente do jogo, ou a loja e o id do jogo no `umu-games.json`
     da casa dele. O umu põe a janela em `steam_app_<N>` — medido no Guardiões
     pelo Heroic em 21/09 (`identidade_de_janela`), que é o mesmo umu. A regra
-    está em :func:`_umu_do_lutris`, com as condições do Lutris (o runner `wine`
+    está em :class:`_UmuDoLutris`, com as condições do Lutris (o runner `wine`
     e uma versão que seja Proton). A janela de um jogo do Lutris continua sem
     leitura em aparelho nenhum desta casa (o Lutris dela segue vazio).
     """
@@ -467,7 +467,7 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
     vistos: set[str] = set()
     ymls_vistos: set[str] = set()
     umu = _UmuDoLutris(pasta)
-    banco = pasta / "pga.db"
+    banco = Path(umu._conf.get("pga_path") or umu._dados / "pga.db")
     if banco.is_file():
         try:
             conexao = sqlite3.connect(f"file:{banco}?mode=ro", uri=True)
@@ -660,15 +660,18 @@ def _lar_da_pasta(pasta: Path) -> Path:
 
 
 def _pasta_de_dados_do_lutris(pasta: Path) -> Path:
-    """A pasta de dados do Lutris (a do `runtime/`), a partir da de configuração.
+    """A pasta de dados do Lutris (o `pga.db`, o `runtime/`), pela regra dele.
 
-    No Flatpak dela a configuração é um atalho para os dados
-    (`config/lutris -> data/lutris`, medido em 11/09/2026); no nativo os dados
-    moram em `~/.local/share/lutris`.
+    No 0.5.22 (`settings.DATA_DIR`) os dados moram sempre em `data/lutris` no
+    Flatpak e em `~/.local/share/lutris` no nativo; a configuração é a mesma
+    pasta só quando é o atalho para lá (o Flatpak dela, medido em 11/09/2026).
+    A de quem usa o Lutris desde antes do 0.5.17 é pasta própria, com `runners/`
+    e sem o `pga.db` (02/10/2026): por isso os dados vêm antes dela.
     """
-    casa = pasta.parent.parent
-    for tentativa in (pasta, casa / "data" / "lutris", casa / ".local/share/lutris"):
-        if (tentativa / "runtime").is_dir() or (tentativa / "runners").is_dir():
+    dados = pasta.parent.parent / (
+        "data/lutris" if ".var" in pasta.parts else ".local/share/lutris")
+    for tentativa in (dados, pasta):
+        if (tentativa / "pga.db").is_file() or (tentativa / "runtime").is_dir():
             return tentativa
     return pasta
 
@@ -900,14 +903,18 @@ _FONTES: dict[str, tuple[str, ...]] = {
     #: em `mode=ro` enxerga os dois; a impressão tem de enxergar os dois.
     #: O `runners/wine.yml` e o `umu-games.json` ENTRARAM EM 02/10/2026, com o
     #: degrau 1 do Lutris (`_UmuDoLutris`): a versão do Wine e a tabela do umu
-    #: mudam a chave de janela sem tocar no banco. O segundo só é visto quando a
-    #: configuração é o atalho para os dados (o Flatpak dela).
+    #: mudam a chave de janela sem tocar no banco. Com a configuração em pasta
+    #: própria, o banco e a tabela moram nos dados (`_FONTES_DOS_DADOS_DO_LUTRIS`).
     "Lutris": ("pga.db", "pga.db-wal", "games/*.yml", "runners/wine.yml",
                "runtime/umu-games/umu-games.json"),
     "RetroArch": ("playlists/*.lpl",),
     "Dolphin": ("Dolphin.ini",),
     "mGBA": ("config.ini",),
 }
+
+#: O que o Lutris lê da pasta de DADOS quando ela não é a de configuração
+#: (`_pasta_de_dados_do_lutris`, 02/10/2026).
+_FONTES_DOS_DADOS_DO_LUTRIS = ("pga.db", "pga.db-wal", "runtime/umu-games/umu-games.json")
 
 
 def _impressao(caminho: Path) -> tuple[str, int, int]:
@@ -972,6 +979,10 @@ def assinatura_das_bibliotecas(
             except OSError:  # pragma: no cover - pasta ilegível
                 achados = []
             linhas.extend(_impressao(a) for a in achados)
+        if nome == "Lutris":
+            dados = _pasta_de_dados_do_lutris(pasta)
+            if dados.resolve() != pasta.resolve():
+                linhas.extend(_impressao(dados / rel) for rel in _FONTES_DOS_DADOS_DO_LUTRIS)
     return tuple(linhas)
 
 

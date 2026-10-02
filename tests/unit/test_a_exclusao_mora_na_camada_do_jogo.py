@@ -493,3 +493,62 @@ def test_o_lutris_nativo_fica_como_esta(_lar: Path) -> None:
     md5 = _md5(yml)
     assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     assert _md5(yml) == md5, yml.read_text()
+
+
+# ---------------------------------------------------------------------------
+# 9 · A configuração em pasta própria (o Lutris de antes do 0.5.17)
+# ---------------------------------------------------------------------------
+def _lutris_com_a_configuracao_a_parte(casa_config: Path, casa_dados: Path) -> Path:
+    """A forma de quem usa o Lutris desde antes do 0.5.17: a configuração é
+    pasta própria (`games/`, `runners/`), e o `pga.db` e o `runtime/` moram nos
+    dados (`settings.DATA_DIR` do 0.5.22, lido no fonte instalado nela)."""
+    alvo = _lutris(casa_dados, casa_dados)
+    (casa_config / "games").mkdir(parents=True)
+    (casa_config / "runners").mkdir()
+    (casa_config / "runners" / "wine.yml").write_text("wine:\n  version: ge-proton\n")
+    movido = casa_config / "games" / alvo.name
+    alvo.rename(movido)
+    return movido
+
+
+@pytest.mark.parametrize("casa", ["flatpak", "nativo"])
+def test_com_a_configuracao_a_parte_o_lutris_le_o_banco_dos_dados(
+        _lar: Path, casa: str) -> None:
+    """Medido na conferência de 02/10/2026: com a configuração em pasta própria,
+    o censo procurava o `pga.db` nela, caía nos `.yml` soltos sem o umu-id, e
+    o jogo da GOG ficava no «não sei» — o cartão não o oferecia e a exclusão
+    feita por outro cartão não achava o `.yml` dele.
+
+    MORDIDA: o banco lido só da pasta de configuração (`pasta / "pga.db"`).
+    """
+    if casa == "flatpak":
+        _flatpak(_lar, _LUTRIS)
+        raiz = _lar / ".var/app" / _LUTRIS
+        yml = _lutris_com_a_configuracao_a_parte(raiz / "config/lutris", raiz / "data/lutris")
+    else:
+        yml = _lutris_com_a_configuracao_a_parte(_lar / ".config/lutris",
+                                                 _lar / ".local/share/lutris")
+    jogos = censo.biblioteca_de("Lutris", _lar).jogos
+    assert [(j.nome, j.classe_de_janela) for j in jogos] == [("Recettear", _JANELA)], jogos
+    assert jogos[0].configuracao == yml
+    if casa == "nativo":
+        return
+    _carona(_lar)
+    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
+    assert _env_do_yml(yml).get("SDL_GAMECONTROLLER_IGNORE_DEVICES") == "", (
+        f"o jogo excluído herda da caixa o IGNORE: {yml.read_text()}")
+
+
+def test_a_assinatura_ve_o_banco_dos_dados(_lar: Path) -> None:
+    """Um jogo novo no `pga.db` dos dados muda a assinatura, mesmo com a
+    configuração em pasta própria (o caderno da aba Perfis não congela)."""
+    _flatpak(_lar, _LUTRIS)
+    raiz = _lar / ".var/app" / _LUTRIS
+    _lutris_com_a_configuracao_a_parte(raiz / "config/lutris", raiz / "data/lutris")
+    antes = censo.assinatura_das_bibliotecas(_lar)
+    con = sqlite3.connect(raiz / "data/lutris/pga.db")
+    with con:
+        con.execute("INSERT INTO games (name, slug, runner, installed) "
+                    "VALUES ('Outro', 'outro', 'linux', 1)")
+    con.close()
+    assert censo.assinatura_das_bibliotecas(_lar) != antes
