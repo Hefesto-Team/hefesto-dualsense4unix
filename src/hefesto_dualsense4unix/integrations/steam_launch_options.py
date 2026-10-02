@@ -63,7 +63,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Collection, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -1063,11 +1063,41 @@ def _inicio(pasta: Path) -> str:
     return depois[19] if len(depois) > 19 else ""
 
 
+#: AS PASTAS QUE SÓ EXISTEM DENTRO DE UM LAR, na ordem em que se conferem: a
+#: caixa do flatpak, a da Snap e as duas raízes da Steam nativa. O lar é o que
+#: vem antes da marca.
+_MARCAS_DO_LAR = ("/.var/app/", "/snap/", "/.steam/", "/.local/share/Steam/")
+
+
+def _lar_pelo_binario(pasta: Path, argv: list[str]) -> str:
+    """O lar pela pasta do binário (`<lar>/.steam/…/steamwebhelper`); ``""`` = não se sabe."""
+    caminho = argv[0] if argv and argv[0].startswith("/") else ""
+    if not caminho:
+        try:
+            caminho = os.readlink(pasta / "exe")
+        except OSError:
+            return ""
+    for marca in _MARCAS_DO_LAR:
+        antes, achou, _ = caminho.partition(marca)
+        if achou and antes.startswith("/"):
+            return antes
+    return ""
+
+
 def _lar_do_processo(pasta: Path) -> str:
+    """O `HOME` do processo; ``""`` = não se sabe.
+
+    O `environ` primeiro, e a pasta do binário quando ele não traz o `HOME`.
+    MEDIDO EM 01/10/2026 (o Chrome desta máquina, sem tela e com o `HOME`
+    trocado): os processos da família do Chromium regravam a área do `environ`
+    com o título do processo, e nenhum dos treze trazia `HOME=`. O
+    `steamwebhelper` é dessa família, e o Heroic nativo também.
+    """
     for item in _texto(pasta / "environ").split("\0"):
         if item.startswith("HOME="):
             return item[5:]
-    return ""
+    return _lar_pelo_binario(
+        pasta, [a for a in _texto(pasta / "cmdline").split("\0") if a])
 
 
 def processos_da_steam(proc: Path = PROC) -> list[ProcessoDaSteam]:
@@ -1078,6 +1108,7 @@ def processos_da_steam(proc: Path = PROC) -> list[ProcessoDaSteam]:
     uid = os.getuid()
     achados: dict[int, ProcessoDaSteam] = {}
     referidos: set[int] = set()
+    dono_do_webhelper: dict[int, int] = {}
     try:
         pastas = [x for x in proc.iterdir() if x.name.isdigit()]
     except OSError:
@@ -1089,8 +1120,11 @@ def processos_da_steam(proc: Path = PROC) -> list[ProcessoDaSteam]:
         argv = [a for a in _texto(pasta / "cmdline").split("\0") if a]
         if comm == "steamwebhelper":
             papel = "webhelper"
-            referidos.update(int(a.split("=", 1)[1]) for a in argv
-                             if a.startswith("-steampid=") and a.split("=", 1)[1].isdigit())
+            donos = [int(a.split("=", 1)[1]) for a in argv
+                     if a.startswith("-steampid=") and a.split("=", 1)[1].isdigit()]
+            referidos.update(donos)
+            if donos:
+                dono_do_webhelper[int(pasta.name)] = donos[0]
         elif comm == "steam" and argv and Path(argv[0]).parent.name in _PASTAS_DO_CLIENTE:
             papel = "cliente"
         else:
@@ -1103,6 +1137,13 @@ def processos_da_steam(proc: Path = PROC) -> list[ProcessoDaSteam]:
         if _uid_real(pasta) == uid:
             achados[pid] = ProcessoDaSteam(pid, "cliente", _lar_do_processo(pasta),
                                            _inicio(pasta))
+    #: O WEBHELPER É DO LAR DO CLIENTE QUE O PÔS DE PÉ: o `environ` dele não
+    #: diz o `HOME` (ver :func:`_lar_do_processo`), e o `-steampid=` diz de quem
+    #: ele é.
+    for pid, cliente in dono_do_webhelper.items():
+        dele = achados.get(cliente)
+        if dele is not None and dele.lar and not achados[pid].lar:
+            achados[pid] = replace(achados[pid], lar=dele.lar)
     return sorted(achados.values(), key=lambda x: (x.papel != "cliente", x.pid))
 
 
@@ -1128,12 +1169,29 @@ def e_deste_lar(pid: int, proc: Path = PROC, lar: Path | None = None) -> bool:
     A mesma pergunta serve aos outros lançadores (`reposicao_dos_lancadores`).
     """
     pasta = proc / str(pid)
-    return _uid_real(pasta) == os.getuid() and do_meu_lar(_lar_do_processo(pasta), lar)
+    if _uid_real(pasta) != os.getuid():
+        return False
+    dele = _lar_do_processo(pasta) or next(
+        (x.lar for x in processos_da_steam(proc) if x.pid == pid), "")
+    #: «NÃO SEI» NÃO É «DE OUTRO LAR»: o processo do mesmo usuário cujo `HOME`
+    #: não se lê (o Heroic nativo, que é Chromium e mora em `/opt`) continua
+    #: na foto, como era antes desta conferência. Tirá-lo deixaria o
+    #: «Reiniciar o serviço» sem fechar nem reabrir um lançador dela.
+    return do_meu_lar(dele, lar) if dele else True
 
 
 def steam_deste_lar(proc: Path = PROC, lar: Path | None = None) -> list[ProcessoDaSteam]:
-    """Os processos da Steam do `HOME` de quem pergunta."""
+    """Os processos da Steam do `HOME` de quem pergunta — os que levam sinal."""
     return [x for x in processos_da_steam(proc) if do_meu_lar(x.lar, lar)]
+
+
+def steam_de_pe(proc: Path = PROC, lar: Path | None = None) -> bool:
+    """Há Steam de pé para quem pergunta? A deste lar, ou uma cujo lar não se lê.
+
+    «Não sei» não é «fechada»: editar o vdf com ela viva é edição perdida. Mas
+    a que não se confere também não leva sinal (:func:`steam_deste_lar`).
+    """
+    return any(not x.lar or do_meu_lar(x.lar, lar) for x in processos_da_steam(proc))
 
 
 def steam_running() -> bool:
@@ -1143,7 +1201,7 @@ def steam_running() -> bool:
     `reopen_steam`, o «abrir ou focar» e o «Reiniciar o serviço». O
     `disable_steam_input.sh` tem a dele, em shell.
     """
-    return bool(steam_deste_lar())
+    return steam_de_pe()
 
 
 #: Agulha que identifica a cmdline de launch da Steam. `reaper SteamLaunch
@@ -1640,7 +1698,7 @@ def stop_steam(
     def de_pe() -> bool:
         if proc is None and lar is None:
             return steam_running()
-        return bool(steam_deste_lar(pasta, lar))
+        return steam_de_pe(pasta, lar)
 
     if not de_pe():
         return True

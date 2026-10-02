@@ -67,11 +67,12 @@ def _warn_steam_missing_once() -> None:
 
 def _steam_de_outro_lar() -> bool:
     """A Steam de pé é toda de outro `HOME`? Quem responde é o dono da pergunta
-    (`steam_launch_options`, pelo `/proc`). Nenhuma lida = não se sabe = não."""
+    (`steam_launch_options`, pelo `/proc`). Nenhuma lida, ou um lar que não se
+    lê, é «não se sabe», e «não se sabe» não é «de outro lar»."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     todas = slo.processos_da_steam()
-    return bool(todas) and not any(slo.do_meu_lar(x.lar) for x in todas)
+    return bool(todas) and all(x.lar and not slo.do_meu_lar(x.lar) for x in todas)
 
 
 def _steam_running(

@@ -48,7 +48,8 @@ class Mesa:
         raiz.mkdir(parents=True, exist_ok=True)
 
     def processo(self, pid: int, comm: str, argv: list[str], *, lar: Path | None = None,
-                 inicio: str = "4242", uid: int | None = None) -> None:
+                 inicio: str = "4242", uid: int | None = None,
+                 como_o_chromium: bool = False) -> None:
         pasta = self.raiz / str(pid)
         pasta.mkdir(parents=True, exist_ok=True)
         dono = os.getuid() if uid is None else uid
@@ -56,7 +57,12 @@ class Mesa:
         (pasta / "comm").write_text(comm + "\n")
         (pasta / "cmdline").write_bytes("\0".join(argv).encode() + b"\0")
         casa = self.lar if lar is None else lar
-        (pasta / "environ").write_bytes(f"PATH=/usr/bin\0HOME={casa}\0".encode())
+        #: A FAMÍLIA DO CHROMIUM (o webhelper, o Heroic nativo) regrava a área
+        #: do `environ` com o título do processo: medido no Chrome desta máquina
+        #: em 01/10/2026, nenhum dos treze processos trazia `HOME=`.
+        environ = (" ".join(argv) + "\0" * 8 if como_o_chromium
+                   else f"PATH=/usr/bin\0HOME={casa}\0")
+        (pasta / "environ").write_bytes(environ.encode())
         campos = ["S"] + ["0"] * 18 + [inicio] + ["0"] * 5
         (pasta / "stat").write_text(f"{pid} ({comm}) " + " ".join(campos) + "\n")
 
@@ -67,8 +73,10 @@ class Mesa:
         self.webhelper(lar=lar)
 
     def webhelper(self, *, lar: Path | None = None) -> None:
+        #: O webhelper como ele é: Chromium, sem `HOME` no `environ`.
         self.processo(WEBHELPER, "steamwebhelper",
-                      ["./steamwebhelper", f"-steampid={CLIENTE}", "-lang=pt"], lar=lar)
+                      ["./steamwebhelper", f"-steampid={CLIENTE}", "-lang=pt"], lar=lar,
+                      como_o_chromium=True)
 
     def morre(self, pid: int) -> None:
         for arq in (self.raiz / str(pid)).glob("*"):
@@ -246,3 +254,52 @@ def test_a_foto_do_reiniciar_so_ve_o_lancador_deste_lar(monkeypatch: pytest.Monk
     monkeypatch.setattr(slo, "e_deste_lar", lambda pid, *a, **k: pid == 300)
     heroic = next(x for x in rl.LANCADORES if x.chave == "heroic")
     assert rl.pids_de(heroic) == [300]
+
+
+# ---------------------------------------------------------------------------
+# 3 · O lar que o `environ` não diz (a conferência de 01/10/2026)
+# ---------------------------------------------------------------------------
+def test_o_webhelper_sem_home_e_do_lar_do_cliente(mesa: Mesa) -> None:
+    """O webhelper é Chromium e não traz `HOME` no `environ`: ele é do lar do
+    cliente que o carrega no `-steampid=`. ARRANQUE essa herança e este teste
+    reprova: a foto do «Reiniciar o serviço» (`pgrep -x steamwebhelper`) nunca
+    via a Steam dela aberta, e o fecho deixava o webhelper sem sinal."""
+    mesa.a_steam_dela()
+    lares = {x.pid: x.lar for x in slo.processos_da_steam(mesa.raiz)}
+    assert lares == {CLIENTE: str(mesa.lar), WEBHELPER: str(mesa.lar)}
+    assert slo.e_deste_lar(WEBHELPER, mesa.raiz, mesa.lar)
+
+
+def test_sem_home_no_environ_o_lar_vem_da_pasta_do_binario(mesa: Mesa) -> None:
+    """O cliente sem `HOME` no `environ` é do lar em que a Steam mora
+    (`<lar>/.steam/…/ubuntu12_32/steam`). ARRANQUE a leitura pela pasta do
+    binário e este teste reprova."""
+    mesa.processo(CLIENTE, "steam",
+                  [f"{mesa.lar}/.steam/debian-installation/ubuntu12_32/steam"],
+                  como_o_chromium=True)
+    assert [x.lar for x in slo.processos_da_steam(mesa.raiz)] == [str(mesa.lar)]
+    assert slo.steam_deste_lar(mesa.raiz, mesa.lar)
+
+
+def test_a_steam_de_lar_que_nao_se_le_nao_e_fechada_nem_leva_sinal(mesa: Mesa) -> None:
+    """«Não sei» não é «fechada»: com o lar ilegível o `stop_steam` não devolve
+    `True` (editar o vdf com ela viva é edição perdida), e nenhum sinal sai a
+    quem não se conferiu. ARRANQUE o «não sei» do `steam_de_pe` e este teste
+    reprova."""
+    mesa.processo(CLIENTE, "steam", ["/opt/steam/ubuntu12_32/steam"], como_o_chromium=True)
+    mesa.cliente_teimoso = True
+    assert slo.steam_de_pe(mesa.raiz, mesa.lar)
+    assert _parar(mesa) is False
+    assert mesa.sinais == []
+
+
+def test_o_ps_nao_recusa_a_steam_de_lar_que_nao_se_le(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Um lar que não se lê não é «de outro lar»: o PS da bandeja continua
+    mostrando a Steam. ARRANQUE o «não sei» do `_steam_de_outro_lar` e este
+    teste reprova."""
+    abertos: list[list[str]] = []
+    _sem_wmctrl(monkeypatch, abertos)
+    monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
+        slo.ProcessoDaSteam(CLIENTE, "cliente", "", "1")])
+    assert steam_launcher.open_or_focus_steam(which=lambda n: f"/usr/bin/{n}") is True
+    assert abertos == [["steam"]]
