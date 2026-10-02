@@ -215,6 +215,14 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "confirmar-esquecer": "esquece o pareamento deste aparelho NESTE adaptador "
                           "(`esquecer_o_pareamento`) — é o rádio da máquina: os "
                           "outros adaptadores não se tocam",
+    # Os três do tema Conexões (02/10/2026): o interruptor da busca, o «⋮» de
+    # todo pareado e o X que a central lembra.
+    "radio-procurar": "liga e desliga a busca do rádio (`radio.busca.set`) — é o "
+                      "rádio da máquina: o controle que já está no ar não muda",
+    "aparelho-menu": "abre o «⋮» de um pareado — é da tela; quem esquece é o "
+                     "`confirmar-esquecer`",
+    "dispensar-linha": "tira a linha «Não Conectou» (`radio.dispensar`), lembrada "
+                       "pela central — é do rádio da máquina, sem perfil nem controle",
     "ligar-mesmo-assim": "sobe a ponte de som além do limite do adaptador "
                          "(`radio.ponte.ligar_aqui`) — é do rádio da máquina, e o "
                          "som em si responde pelas linhas do `rota` e do `volume`",

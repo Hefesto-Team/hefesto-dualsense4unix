@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 10-perfis.html
-- **28/09/2026** — a coluna do `movimento` passa a se chamar «comandos virtuais» na dica do cabeçalho: ela guarda a Mira Virtual, a Inclinação e o Cursor ou os Botões do touchpad (NO-MODO-XBOX-TUDO-FUNCIONA-01). Até publicar, a dica da tela dela diz «mira virtual», e a coluna acende igual com qualquer um dos três.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
