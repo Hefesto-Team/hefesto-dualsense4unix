@@ -770,8 +770,13 @@ class TestOVigiaEsperaAEscritaEmVoo:
         `launch_env_mudou_depois_do_exec` sobre o jogo de pé, que é o que a
         escrita na hora (o recibo carimbado na borda) sempre fez.
 
-        MORDIDA: tire a espera da escrita em voo de `rematerializar_se_sossegou`
-        — o tique regrava e grita sobre uma mudança que a borda já escreveu.
+        E a espera acaba: depois de a escrita pousar, a mesa que muda sem borda
+        (mais um físico, nenhum vpad novo) volta a ser julgada e regravada.
+
+        MORDIDAS: tire a espera da escrita em voo de `rematerializar_se_sossegou`
+        — o tique regrava e grita sobre uma mudança que a borda já escreveu;
+        tire a volta do pouso (`self._devolver(pousou)`) do `_laco` do
+        escrevente — a escrita fica em voo para sempre, e o vigia emudece.
         """
         eventos: list[str] = []
 
@@ -817,7 +822,7 @@ class TestOVigiaEsperaAEscritaEmVoo:
         escrevente = launch_env.armar_o_escrevente(laco.call_soon_threadsafe, laco)
         assert escrevente is not None
         try:
-            async def borda_e_dois_tiques() -> tuple[bool, bool]:
+            async def borda_e_tres_tiques() -> tuple[bool, bool, bool, list[str]]:
                 jogadores["p2"] = SimpleNamespace(vpad=SimpleNamespace(backend="uhid"))
                 launch_env.materialize_launch_env(daemon)  # type: ignore[arg-type]
                 launch_env.armar_rematerializacao(daemon, motivo="borda", agora=0.0)
@@ -831,20 +836,34 @@ class TestOVigiaEsperaAEscritaEmVoo:
                 await asyncio.sleep(0.1)  # as devoluções voltam a este laço
                 launch_env.vigiar_a_mesa(daemon, agora=vencido + 1.0)
                 pousada = launch_env.rematerializar_se_sossegou(daemon, agora=vencido + 1.0)
-                return em_voo, pousada
+                antes_da_mesa_mudar = list(eventos)
+                # O terceiro tique: mais um físico na mesa, sem borda nenhuma.
+                daemon.controller.describe_controllers = lambda: [{"connected": True}] * 3
+                launch_env.vigiar_a_mesa(daemon, agora=vencido + 2.0)
+                julgou = launch_env.rematerializar_se_sossegou(
+                    daemon, agora=vencido + 2.0 + launch_env.JANELA_DE_SOSSEGO_SEC)
+                while julgou and escrevente.escritas < 2:
+                    await asyncio.sleep(0.01)
+                await asyncio.sleep(0.1)
+                return em_voo, pousada, julgou, antes_da_mesa_mudar
 
-            em_voo, pousada = laco.run_until_complete(
-                asyncio.wait_for(borda_e_dois_tiques(), 20))
+            em_voo, pousada, julgou, antes_da_mesa_mudar = laco.run_until_complete(
+                asyncio.wait_for(borda_e_tres_tiques(), 20))
         finally:
             solta.set()
             launch_env.desarmar_o_escrevente(escrevente)
             laco.close()
         assert em_voo is False, "o tique regravou com a escrita da borda em voo"
         assert pousada is False, "o tique regravou o que a borda já tinha escrito"
-        assert "launch_env_mudou_depois_do_exec" not in eventos, eventos
-        assert "launch_env_rematerializado_no_sossego" not in eventos, eventos
-        assert daemon._launch_env_assinatura[3] == ("uhid", "uhid")
-        assert escrevente.escritas == 1
+        assert "launch_env_mudou_depois_do_exec" not in antes_da_mesa_mudar, antes_da_mesa_mudar
+        assert "launch_env_rematerializado_no_sossego" not in antes_da_mesa_mudar, (
+            antes_da_mesa_mudar)
+        assert julgou is True, (
+            "a mesa mudou sem borda depois da escrita pousar, e o vigia não a julgou: "
+            "a escrita ficou em voo para sempre")
+        assert "launch_env_rematerializado_no_sossego" in eventos, eventos
+        assert daemon._launch_env_assinatura[3:5] == (("uhid", "uhid"), 3)
+        assert escrevente.escritas == 2
 
 
 class TestOServicoQueSaiTiraOSocket:
