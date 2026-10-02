@@ -1441,19 +1441,29 @@ class DaemonActionsMixin(WidgetAccessMixin):
     #: frase digitada duas vezes se afasta no primeiro dia em que alguém mexe
     #: numa das duas. Quem consome a outra ponta é
     #: `interface/pacotes/a09_sistema.aplicar_aos_jogos`.
+    #:
+    #: O ATO DE HOJE, NA ORDEM DELE — A-PERGUNTA-DO-APLICAR-DIZ-TODO-LANCADOR-01
+    #: (02/10/2026). Desde 01/10 o segundo clique escreve primeiro nos outros
+    #: lançadores (`cura_por_estrada.curar_todas_as_estradas`, sem fechar nada) e
+    #: só depois fecha a Steam; com um jogo aberto a Steam recusa e os outros já
+    #: receberam o deles. O texto antigo falava só da Steam e prometia «com um
+    #: jogo aberto eu não mexo em nada». O backup ao lado do arquivo é só da
+    #: Steam (`steam_launch_options`, os `.bak.hefesto-launch-<ts>`); a carona
+    #: guarda o registro do que escreveu (`cura_por_estrada.caminho_do_registro`),
+    #: e o texto não promete aos outros o que só a Steam tem. Texto por
+    #: delegação, a validar por ela.
     _STEAM_APPLY_CORPO = (
-        "Cada jogo instalado passa a abrir pelo launcher do Hefesto — é "
-        "isso que evita o controle duplicado no jogo.\n\n"
-        "As opções que você já tem nos jogos são preservadas (o launcher "
-        "entra na frente delas) e fica um backup ao lado de cada "
-        "arquivo.\n\n"
-        # HONESTIDADE-STEAM-01: este parágrafo dizia "A Steam precisa
-        # estar FECHADA — se estiver aberta, eu aviso e não mexo em nada",
-        # que virou mentira no momento em que o botão passou a saber
-        # fechá-la. O texto agora descreve o que o botão faz de verdade.
-        "A edição só vale com a Steam fechada — se ela estiver aberta eu "
-        "peço a sua permissão antes de fechá-la por uns 20 segundos e "
-        "abro de novo em seguida. Com um jogo aberto eu não mexo em nada."
+        "Os jogos da Steam passam a abrir pelo launcher do Hefesto, e o "
+        "Heroic, o Lutris e os emuladores recebem o ambiente do Hefesto. As "
+        "opções que você já tem nos jogos são preservadas: na Steam fica um "
+        "backup ao lado de cada arquivo, e nos outros eu anoto o que pus, "
+        "para tirar no uninstall.\n\n"
+        # HONESTIDADE-STEAM-01: a permissão e os 20 segundos descrevem o que
+        # o botão faz com a Steam aberta; a régua antiga cobra as duas.
+        "Os outros lançadores recebem na hora, sem fechar nada. A Steam só "
+        "aceita fechada: se ela estiver aberta eu peço a sua permissão antes "
+        "de fechá-la por uns 20 segundos e abro de novo em seguida. Com um "
+        "jogo aberto, a Steam fica para depois."
     )
 
     def _build_steam_apply_confirm_dialog(self) -> Gtk.MessageDialog:
