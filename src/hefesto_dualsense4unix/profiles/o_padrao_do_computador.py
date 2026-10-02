@@ -255,7 +255,8 @@ def sobrepoe(perfil: Profile | None, cartao: str, uniq: object = None) -> bool:
 # ---------------------------------------------------------------------------
 # A vista
 # ---------------------------------------------------------------------------
-def _computador_vazio(computador: Any) -> bool:
+def computador_vazio(computador: Any) -> bool:
+    """O computador não declarou nada (a vista devolve o próprio perfil)."""
     if computador is None:
         return True
     return not computador.controles and not computador.global_.model_dump(
@@ -268,7 +269,7 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
     Perfil e computador sem nada devolvem o MESMO objeto: quem nunca declarou
     nada aplica byte a byte o que aplicava. É memória: o disco não muda.
     """
-    if _computador_vazio(computador):
+    if computador_vazio(computador):
         return perfil
     cru: dict[str, Any] = perfil.model_dump(mode="json", exclude_unset=True)
     do_global = computador.global_
@@ -329,28 +330,51 @@ def _controles_que_valem(
     return entradas
 
 
-def carregar_o_que_vale(nome: str, maquina: Any = None) -> Profile:
+def carregar_o_que_vale(nome: str) -> Profile:
     """``load_profile`` com o computador por baixo. É a leitura de quem APLICA.
 
     Quem grava continua lendo cru (``loader.load_profile``): o computador não
-    pode ir parar no perfil. ``maquina`` é o documento já carregado (o do
-    daemon); sem ele, o do disco.
+    pode ir parar no perfil.
     """
     from hefesto_dualsense4unix.profiles import loader
 
-    perfil = loader.load_profile(nome)
-    if maquina is None:
-        from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+    return o_que_vale(loader.load_profile(nome))
 
-        maquina = carregar_maquina()
-    return perfil_que_vale(perfil, getattr(maquina, "computador", None))
+
+def o_que_vale(perfil: Profile) -> Profile:
+    """:func:`perfil_que_vale` com o computador do disco. Para quem já leu o perfil."""
+    return perfil_que_vale(perfil, o_computador())
+
+
+#: ``(selo do maquina.json, ComputadorDeclarado)``: a leitura de cada volta é um
+#: ``stat``, e o JSON só se lê quando o arquivo muda. Os leitores do daemon
+#: perguntam por aqui, e não ao ``Daemon._maquina``: a janela grava o arquivo
+#: direto, e a memória do daemon só se refaz pelo ``machine.declare``.
+_O_COMPUTADOR_LIDO: tuple[Any, Any] = (None, None)
+
+
+def selo_da_maquina() -> tuple[int, int, int] | None:
+    """``(inode, mtime_ns, tamanho)`` do ``maquina.json``, ou ``None`` sem arquivo."""
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
+    try:
+        st = caminho_da_maquina().stat()
+    except OSError:
+        return None
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
 
 
 def o_computador() -> Any:
-    """O padrão do computador do disco (``ComputadorDeclarado``)."""
+    """O padrão do computador do disco (``ComputadorDeclarado``), relido quando muda."""
+    global _O_COMPUTADOR_LIDO
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
-    return carregar_maquina().computador
+    selo = selo_da_maquina()
+    lido_em, computador = _O_COMPUTADOR_LIDO
+    if computador is None or selo is None or selo != lido_em:
+        computador = carregar_maquina().computador
+        _O_COMPUTADOR_LIDO = (selo, computador)
+    return computador
 
 
 def velocidades_do_computador() -> tuple[int | None, int | None]:
@@ -723,6 +747,7 @@ __all__ = [
     "Secao",
     "carregar_o_que_vale",
     "chave",
+    "computador_vazio",
     "e_o_freestyle",
     "escolhas_do_controle_do_jogo",
     "escolhas_globais_do_jogo",
@@ -731,9 +756,11 @@ __all__ = [
     "marca",
     "o_computador",
     "o_que_mudou",
+    "o_que_vale",
     "onde_grava",
     "perfil_que_vale",
     "restaurar_o_computador",
+    "selo_da_maquina",
     "so_neste_jogo",
     "sobrepoe",
     "velocidades_do_computador",

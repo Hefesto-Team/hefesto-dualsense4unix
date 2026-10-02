@@ -328,7 +328,7 @@ def _perfil_ativo(ctx: Contexto) -> dict[str, Any]:
     duas pernas (o daemon primeiro, o disco depois) e devolve `""` só quando
     ninguém está valendo — e `perfil.ativo("")` já responde `{}` por si.
     """
-    return _perfil.ativo(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
+    return _perfil.ativo_que_vale(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
 
 
 def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str:

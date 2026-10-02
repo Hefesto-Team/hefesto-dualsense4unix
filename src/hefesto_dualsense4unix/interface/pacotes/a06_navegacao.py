@@ -1897,7 +1897,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     st = ctx.state
     rato = st.get("mouse_emulation") or {}
     tecla = st.get("keyboard_emulation") or {}
-    p = perfil.ativo(st.get("active_profile"))
+    p = perfil.ativo_que_vale(st.get("active_profile"))
     atalhos = (p.get("key_bindings") or {}) if p else {}
 
     cards = {}
@@ -2912,7 +2912,8 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             "(`core/acoes_de_botao.ACOES`) — se divergiram, foi o desenho que "
             "andou sem o gerador.")
     campo = f"{PREFIXO_DA_ACAO}{botao}"
-    do_perfil = _linhas_dos_botoes(perfil.ativo((ctx.state or {}).get("active_profile")))
+    do_perfil = _linhas_dos_botoes(
+        perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))
     if do_perfil.get(campo) == rotulo:
         # ELA VOLTOU AO QUE O PERFIL JÁ GUARDA. Não há nada a segurar, e segurar
         # assim mesmo deixaria a trava presa por uma escolha que não é escolha.
@@ -2941,7 +2942,7 @@ def fechar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     """
     _largar_o_que_ela_mexeu()
     return {"mesa": _linhas_dos_botoes(
-        perfil.ativo((ctx.state or {}).get("active_profile")))}
+        perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
 
 
 @gesto("06-navegacao.html", "fechar-ponto")
@@ -2962,7 +2963,7 @@ def fechar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
     """
     _largar_o_que_ela_mexeu()
     return {"mesa": _linhas_dos_botoes(
-        perfil.ativo((ctx.state or {}).get("active_profile")))}
+        perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
 
 
 @gesto("06-navegacao.html", "tecla-escrita")
@@ -3033,7 +3034,7 @@ def fechar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     """
     _largar_o_que_ela_mexeu()
     return {"mesa": teclas_dos_botoes(
-        perfil.ativo((ctx.state or {}).get("active_profile")))}
+        perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
 
 
 def _atalhos_de_hoje(prof: Any) -> dict[str, list[str]]:
@@ -3171,7 +3172,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             + ". Para a tecla que você escreveu valer, ponha essas linhas de "
               "volta no de fábrica lá.")
     return {"mesa": teclas_dos_botoes(
-        perfil.ativo((ctx.state or {}).get("active_profile")))}
+        perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
 
 
 @gesto("06-navegacao.html", "padrao-da-tecla", grava="gravar_e_reaplicar")
@@ -3244,7 +3245,7 @@ def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
               + ". As outras linhas não foram tocadas.")
     return {"recado": recado,
             "mesa": teclas_dos_botoes(
-                perfil.ativo((ctx.state or {}).get("active_profile")))}
+                perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
 
 
 def _o_desenho_congelado(diferentes: dict[str, str]) -> dict[str, tuple[str, str]]:

@@ -1224,7 +1224,7 @@ def _motores_do_perfil_ativo(daemon: Any) -> dict[str, tuple[int, int]]:
     POR QUE MEMOIZADO, e o número é medido: o FF do jogo chega a centenas de
     Hz (`core/rumble` abre com isso), e ler o disco por report seria uma
     tempestade de syscalls no caminho mais quente do daemon. O cache é
-    `(nome_do_perfil, mapa)` guardado no próprio daemon, no molde de
+    `(nome_do_perfil, mapa, selo do maquina.json)` guardado no próprio daemon, no molde de
     `_grab_retry_falhas` e `_steam_input_coop_derrubados` — os dois atributos
     que este arquivo já cria em runtime.
 
@@ -1242,29 +1242,62 @@ def _motores_do_perfil_ativo(daemon: Any) -> dict[str, tuple[int, int]]:
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     if not isinstance(nome, str) or not nome:
         nome = None
+    selo = _selo_da_maquina_a_cada_segundo()
     cache = getattr(daemon, "_rumble_motores_pct", None)
-    if isinstance(cache, tuple) and len(cache) == 2 and cache[0] == nome:
+    if (isinstance(cache, tuple) and len(cache) == 3 and cache[0] == nome
+            and cache[2] == selo):
         mapa_cacheado = cache[1]
         if isinstance(mapa_cacheado, dict):
             return mapa_cacheado
     mapa: dict[str, tuple[int, int]] = {}
-    if nome is not None:
-        try:
-            from hefesto_dualsense4unix.profiles.loader import load_profile
-            from hefesto_dualsense4unix.profiles.schema import motores_dos_controles
+    try:
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_computador,
+            o_que_vale,
+        )
+        from hefesto_dualsense4unix.profiles.schema import motores_dos_controles
 
-            cru = motores_dos_controles(load_profile(nome).controllers)
-            mapa = {
-                chave: par
-                for uniq, par in cru.items()
-                if (chave := _chave_da_peca(uniq)) is not None
-            }
-        except Exception:
-            logger.debug("rumble_motores_perfil_ilegivel", exc_info=True)
-            mapa = {}
+        # O padrão do computador por baixo do perfil, e sozinho sem perfil
+        # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01).
+        controles = (
+            o_que_vale(load_profile(nome)).controllers
+            if nome is not None else o_computador().controles or None
+        )
+        cru = motores_dos_controles(controles)
+        mapa = {
+            chave: par
+            for uniq, par in cru.items()
+            if (chave := _chave_da_peca(uniq)) is not None
+        }
+    except Exception:
+        logger.debug("rumble_motores_perfil_ilegivel", exc_info=True)
+        mapa = {}
     with contextlib.suppress(Exception):
-        daemon._rumble_motores_pct = (nome, mapa)
+        daemon._rumble_motores_pct = (nome, mapa, selo)
     return mapa
+
+
+#: ``(quando, selo)`` do ``maquina.json``: o FF do jogo chega a centenas de Hz,
+#: e o ``stat`` do arquivo vai no máximo uma vez por segundo.
+_SELO_DA_MAQUINA: tuple[float, Any] = (float("-inf"), None)
+
+
+def _selo_da_maquina_a_cada_segundo() -> Any:
+    """O selo do ``maquina.json``, relido no máximo uma vez por segundo. Nunca levanta."""
+    global _SELO_DA_MAQUINA
+    agora = time.monotonic()
+    quando, selo = _SELO_DA_MAQUINA
+    if agora - quando < 1.0:
+        return selo
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            selo_da_maquina,
+        )
+
+        selo = selo_da_maquina()
+    _SELO_DA_MAQUINA = (agora, selo)
+    return selo
 
 
 def esquecer_motores_do_perfil(daemon: Any) -> None:

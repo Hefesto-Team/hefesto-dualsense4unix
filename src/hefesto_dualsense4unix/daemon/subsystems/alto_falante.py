@@ -698,7 +698,7 @@ def _uniq_de_perfil(uniq: str) -> str:
 
 
 def _carimbo_do_perfil(nome: str) -> Any:
-    """`mtime_ns` do arquivo daquele perfil — `None` quando não dá para saber.
+    """`(mtime_ns do perfil, selo do maquina.json)` — `None` quando não dá para saber.
 
     É o que invalida o cache das fontes. `None` (arquivo não encontrado, erro
     de `stat`) força a releitura na varredura seguinte, que é o lado seguro:
@@ -710,8 +710,13 @@ def _carimbo_do_perfil(nome: str) -> Any:
         # e uma segunda regra de "onde mora o perfil" é como esta casa já
         # perdeu escrita dela — o `slugify` e a recusa de travessia moram lá.
         from hefesto_dualsense4unix.profiles.loader import _profile_path
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            selo_da_maquina,
+        )
 
-        return Path(_profile_path(nome)).stat().st_mtime_ns
+        # O padrão do computador entra na fonte (O-QUE-E-DO-COMPUTADOR-NAO-
+        # MUDA-COM-O-JOGO-01): mudar o `maquina.json` também relê.
+        return (Path(_profile_path(nome)).stat().st_mtime_ns, selo_da_maquina())
     except Exception:
         return None
 
@@ -726,8 +731,9 @@ def _fontes_por_controle(nome: str) -> dict[str, str]:
     """
     try:
         from hefesto_dualsense4unix.profiles.loader import load_profile
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
-        perfil = load_profile(nome)
+        perfil = o_que_vale(load_profile(nome))
     except Exception:
         logger.debug("som_perfil_ilegivel", perfil=nome, exc_info=True)
         return {}

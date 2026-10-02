@@ -130,7 +130,17 @@ class GanhoDaHaptica:
                 perfil = load_profile(nome)
             else:
                 self._pelo_carregador = None
-            controllers = getattr(perfil, "controllers", None)
+            # O padrão do computador por baixo do perfil, e sozinho quando não
+            # há perfil (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01).
+            from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+                o_computador,
+                o_que_vale,
+            )
+
+            controllers = (
+                getattr(o_que_vale(perfil), "controllers", None)
+                if perfil is not None else o_computador().controles or None
+            )
         self.ler_do_perfil(controllers)
 
     def ler_o_teto(self, daemon: Any) -> None:

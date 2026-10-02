@@ -232,3 +232,148 @@ def test_a_economia_diz_que_corta_tambem_a_haptica() -> None:
     """A economia corta a háptica desde 29/09 (``daemon/ganho_da_haptica``)."""
     vibracao = next(p for p in A_ECONOMIA_EM_CADA_PECA if p.nome == "Vibração")
     assert vibracao.o_que_faz == "O teto da Economia, nos dois motores e na háptica."
+
+
+# ---------------------------------------------------------------------------
+# Quem lê, lê a vista (commit 2)
+# ---------------------------------------------------------------------------
+def _gerente(**appliers: Any) -> tuple[Any, Any]:
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.testing import FakeController
+
+    fc = FakeController(transport="usb")
+    fc.connect()
+    return ProfileManager(controller=fc, store=StateStore(), **appliers), fc
+
+
+def _ultima_cor(fc: Any) -> Any:
+    cores = [c.payload for c in fc.commands if c.kind == "set_led"]
+    return cores[-1] if cores else None
+
+
+def test_a_ativacao_aplica_o_computador_no_que_o_jogo_nao_escolheu() -> None:
+    """O jogo sem cor recebe a cor do computador, igual a um perfil que a escolhesse.
+
+    MORDIDA: tirar o `o_que_vale` do `ProfileManager._ativar` deixa o jogo sem cor.
+    """
+    save_profile(_perfil("Controle", leds={"lightbar": [10, 20, 200]}))
+    gerente, fc = _gerente()
+    gerente.activate("Controle", origin="launch")
+    esperada = _ultima_cor(fc)
+    assert esperada is not None
+
+    save_profile(_perfil("Jogo X", leds={}))
+    _computador({"global": {"leds": {"lightbar": [10, 20, 200]}}})
+    gerente, fc = _gerente()
+    gerente.activate("Jogo X", origin="launch")
+    assert _ultima_cor(fc) == esperada
+
+
+def test_as_velocidades_do_jogo_de_mouse_vem_do_computador() -> None:
+    """O Point-and-click é do jogo; as duas velocidades, do computador."""
+    recebidos: list[tuple[Any, ...]] = []
+    save_profile(_perfil(mouse={"enabled": True, "speed": 6, "scroll_speed": 1}))
+    _computador({"global": {"mouse": {"speed": 11, "scroll_speed": 4}}})
+    gerente, _fc = _gerente(
+        mouse_applier=lambda en, sp, sc, **_k: recebidos.append((en, sp, sc)) or True)
+    gerente.activate("Jogo X", origin="launch")
+    assert recebidos == [(True, 11, 4)]
+
+
+def test_o_reinicio_nao_esquece_a_velocidade(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem a seção no perfil, a Navegação liga o mouse com a velocidade do computador.
+
+    MORDIDA: deixar a velocidade só no `mouse_emulation.flag` (o recuo pular o
+    computador) devolve a da sessão.
+    """
+    from hefesto_dualsense4unix.daemon import lifecycle
+    from hefesto_dualsense4unix.utils import session
+
+    monkeypatch.setattr(session, "load_mouse_preference", lambda: (True, 3, 1))
+    _computador({"global": {"mouse": {"speed": 11, "scroll_speed": 4}}})
+    assert lifecycle._velocidades_ou_as_da_sessao(None, None) == (11, 4)
+    assert lifecycle._velocidades_ou_as_da_sessao(7, None) == (7, 4)
+
+
+def test_os_motores_do_computador_chegam_ao_jogo() -> None:
+    """O mapa dos motores do FF do jogo sai da vista, com o selo do `maquina.json`."""
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad
+
+    save_profile(_perfil())
+    _computador({"controles": {P2: {"rumble": {"motor_forte_pct": 40, "motor_fraco_pct": 70}}}})
+
+    class _Daemon:
+        class store:  # noqa: N801 - a forma do dublê é a do daemon
+            active_profile = "Jogo X"
+
+    assert gamepad._motores_do_perfil_ativo(_Daemon())[P2] == (40, 70)
+
+
+def test_o_mouse_virtual_volta_ao_de_fabrica_sem_os_botoes() -> None:
+    """Perfil e computador sem `button_actions`: o device volta ao de fábrica.
+
+    MORDIDA: tirar o `_mouse_ao_de_fabrica` deixa no device o mapa do perfil anterior.
+    """
+    chamadas: list[Any] = []
+
+    class _Mouse:
+        def set_button_actions(self, do_mouse: Any, calados: Any = None) -> None:
+            chamadas.append(do_mouse)
+
+    gerente, _fc = _gerente(mouse_device_provider=lambda: _Mouse())
+    gerente.apply_button_actions(_perfil())
+    assert chamadas == [None]
+
+
+#: Os leitores do perfil que NÃO aplicam o que é do computador, com a razão.
+LEITORES_DO_QUE_E_DO_JOGO: dict[tuple[str, str], str] = {
+    ("daemon/connection.py", "perfil_que_o_boot_restaura"):
+        "o boot lê só o `match` e o `mode`, que são do jogo",
+    ("profiles/manager.py", "get"): "o perfil cru, para quem edita",
+}
+
+
+def test_todo_leitor_le_a_vista() -> None:
+    """Todo `load_profile(` do daemon e do gerente: escritor, leitor do jogo, ou a vista.
+
+    Um escritor só conta se a MESMA função chama `save_profile(` — a lista não
+    se mede contra ela mesma.
+
+    MORDIDA: devolver o `load_profile` cru ao `gamepad._motores_do_perfil_ativo`
+    (sem o `o_que_vale`) deixa um leitor sem classe.
+    """
+    import ast
+    from pathlib import Path
+
+    import hefesto_dualsense4unix
+
+    raiz = Path(hefesto_dualsense4unix.__file__).parent
+    arquivos = [*sorted((raiz / "daemon").rglob("*.py")), raiz / "profiles" / "manager.py"]
+    sem_classe: list[str] = []
+    vistos: set[tuple[str, str]] = set()
+    for arquivo in arquivos:
+        relativo = arquivo.relative_to(raiz).as_posix()
+        for funcao in ast.walk(ast.parse(arquivo.read_text(encoding="utf-8"))):
+            if not isinstance(funcao, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            chamadas = [n for n in ast.walk(funcao) if isinstance(n, ast.Call)]
+            nomes = {getattr(c.func, "id", None) or getattr(c.func, "attr", None)
+                     for c in chamadas}
+            if "load_profile" not in nomes:
+                continue
+            internas = [n for n in ast.walk(funcao)
+                        if n is not funcao and isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)
+                        and "load_profile" in {getattr(c.func, "id", None)
+                                               or getattr(c.func, "attr", None)
+                                               for c in ast.walk(n) if isinstance(c, ast.Call)}]
+            if internas:
+                continue
+            chave_ = (relativo, funcao.name)
+            vistos.add(chave_)
+            if nomes & {"o_que_vale", "carregar_o_que_vale"} or "save_profile" in nomes:
+                continue
+            if chave_ not in LEITORES_DO_QUE_E_DO_JOGO:
+                sem_classe.append(f"{relativo}::{funcao.name}")
+    assert not sem_classe, f"leitor do perfil que não lê a vista: {sem_classe}"
+    assert set(LEITORES_DO_QUE_E_DO_JOGO) <= vistos, "a lista dos leitores do jogo envelheceu"

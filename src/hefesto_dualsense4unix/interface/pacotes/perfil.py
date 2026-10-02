@@ -198,6 +198,45 @@ def ativo(nome: str | None) -> dict[str, Any]:
     return _o_que_a_tela_leu(onde, str(nome))
 
 
+def ativo_que_vale(nome: str | None) -> dict[str, Any]:
+    """O perfil ativo com o padrão do computador por baixo: o que a tela PINTA.
+
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. A mesma forma de
+    :func:`ativo` (o dicionário do arquivo), com o que o computador dá no
+    lugar do que o perfil não escolheu. Quem GRAVA continua lendo
+    :func:`ativo`: o computador não pode ir parar no perfil.
+
+    Computador vazio, perfil vazio ou perfil que o esquema recusa devolvem o
+    cru, como antes. Nunca levanta: é pintura de tique.
+    """
+    cru = ativo(nome)
+    if not cru:
+        return cru
+    try:
+        _com_o_src()
+        from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+        from hefesto_dualsense4unix.profiles.schema import Profile
+
+        computador = opc.o_computador()
+        if opc.computador_vazio(computador):
+            return cru
+        chave = (json.dumps(cru, sort_keys=True), opc.selo_da_maquina())
+        lembrado = _VISTA_LIDA.get(str(cru.get("name") or ""))
+        if lembrado is not None and lembrado[0] == chave:
+            return dict(lembrado[1])
+        vista = opc.perfil_que_vale(Profile.model_validate(cru), computador).model_dump(
+            mode="json", exclude_unset=True)
+        _VISTA_LIDA[str(cru.get("name") or "")] = (chave, vista)
+        return dict(vista)
+    except Exception:
+        return cru
+
+
+#: `nome -> (chave, vista)`: a vista de cada perfil, refeita quando o arquivo
+#: ou o `maquina.json` mudam (o tique pinta várias vezes por segundo).
+_VISTA_LIDA: dict[str, tuple[Any, dict[str, Any]]] = {}
+
+
 #: POR QUANTO TEMPO a resposta de :func:`arquivo` vale sem perguntar de novo, em
 #: segundos. A varredura por `name` custa ~7 ms com 34 perfis, e a aba aberta e
 #: a dica do rodapé perguntam a cada tique, no laço do GTK. Medido em 25/09/2026

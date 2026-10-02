@@ -33,6 +33,7 @@ from hefesto_dualsense4unix.profiles.loader import (
     load_profile,
     save_profile,
 )
+from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from hefesto_dualsense4unix.profiles.schema import (
     CONFIRMADA_POR_GESTO,
     ControllerOverrides,
@@ -596,7 +597,9 @@ class ProfileManager:
             raise OFreestyleDesligadoError(
                 f"o Modo Freestyle está desligado: {name!r} não entra por {origin!r}"
             )
-        profile = load_profile(name)
+        # O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: aplica-se a VISTA, o
+        # perfil por cima do padrão do computador. O disco não muda.
+        profile = o_que_vale(load_profile(name))
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
         # `apply` para as categorias travadas na mão entrarem nele — ver lá.
         self.apply(profile, origin=origin, relatorio=relatorio)
@@ -1067,6 +1070,11 @@ class ProfileManager:
         """
         self._empurrar_o_ps(profile)
         if profile.button_actions is None:
+            # O MOUSE VIRTUAL VOLTA AO DE FÁBRICA (O-QUE-E-DO-COMPUTADOR-NAO-
+            # MUDA-COM-O-JOGO-01): sem isto, o mapa do perfil anterior ficava no
+            # device. Com a vista, só chega aqui quem nem o jogo nem o
+            # computador declararam.
+            self._mouse_ao_de_fabrica(profile)
             if relatorio is not None:
                 relatorio["button_actions"] = "de_fabrica"
             return
@@ -1114,6 +1122,19 @@ class ProfileManager:
             return
         if relatorio is not None:
             relatorio["button_actions"] = "aplicado"
+
+    def _mouse_ao_de_fabrica(self, profile: Profile) -> None:
+        """O mapa de botões do mouse virtual de fábrica. Sem device, nada; nunca levanta."""
+        provider = self.mouse_device_provider
+        device = provider() if provider is not None else None
+        if device is None:
+            return
+        try:
+            # `None` é o de fábrica do device (`UinputMouseDevice.set_button_actions`).
+            device.set_button_actions(None)  # type: ignore[attr-defined]
+        except Exception as exc:
+            logger.warning("button_actions_de_fabrica_falhou",
+                           profile=profile.name, err=str(exc))
 
     def apply_remapeamento(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
@@ -2098,7 +2119,7 @@ class ProfileManager:
         if not nome:
             return None
         try:
-            profile = load_profile(str(nome))
+            profile = o_que_vale(load_profile(str(nome)))
         except Exception as exc:
             logger.warning(
                 "profile_speaker_reapply_load_failed", name=str(nome), err=str(exc)
@@ -2244,7 +2265,7 @@ class ProfileManager:
         if not nome:
             return None
         try:
-            return load_profile(str(nome))
+            return o_que_vale(load_profile(str(nome)))
         except Exception as exc:
             logger.warning(
                 "profile_mic_reapply_load_failed", name=str(nome), err=str(exc)

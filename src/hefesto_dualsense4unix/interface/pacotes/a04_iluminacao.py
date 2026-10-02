@@ -2067,7 +2067,7 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
 
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
-    p = perfil.ativo(ctx.state.get("active_profile"))
+    p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     #: O BRILHO É O QUE O DAEMON ACENDE, e o do perfil só quando ele não diz —
     #: `brilho_aceso`, A-04-PERGUNTA-AO-DAEMON-VIVO-01. A leitura tem UM dono
     #: desde 03/09/2026, porque os gestos que escrevem a cor precisam do mesmo
@@ -2765,7 +2765,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
         rgb, recado = _sem_repetir_a_cor_do_vizinho(ctx, uniq, rgb)
     cru: dict[str, Any] | None = None
     if brilho is _DO_PERFIL:
-        cru = perfil.ativo(ctx.state.get("active_profile"))
+        cru = perfil.ativo_que_vale(ctx.state.get("active_profile"))
         brilho = brilho_aceso(ctx.por_uniq(uniq), cru, uniq)
     #: A COR ESCOLHIDA NUMA BARRA APAGADA A ACENDE — 25/09/2026,
     #: A-04-PERGUNTA-AO-DAEMON-VIVO-01. Desde que o «Desligar» é o brilho em 0%
@@ -2777,7 +2777,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     religar = bool(escolha and brilho is not None and float(brilho) <= 0.0)
     if religar:
         brilho = _o_brilho_de_religar(
-            cru if cru is not None else perfil.ativo(ctx.state.get("active_profile")),
+            cru if cru is not None else perfil.ativo_que_vale(ctx.state.get("active_profile")),
             uniq)
     corpo = p.led_set_detalhado(rgb, brightness=brilho, uniq=uniq)
     if corpo is None:
@@ -3247,7 +3247,7 @@ def _sem_repetir_a_cor_do_vizinho(
     # com o daemon calado esta aba voltaria a ver `{}` e a comparação de cor
     # diria "livre" sobre o tom que o vizinho está acendendo. Há régua:
     # `tests/unit/test_o_perfil_ativado_chega_nas_outras_abas.py`.
-    cru = perfil.ativo(ctx.state.get("active_profile"))
+    cru = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     # A MESMA MESA DA FILEIRA — 29/09/2026, A-PALETA-MARCA-A-COR-DE-CADA-
     # CONTROLE-01. Este mapa era outro: guardava o PRIMEIRO dono de cada hex
     # (o do X guardava o último) e não isentava o preto. A pergunta agora é a

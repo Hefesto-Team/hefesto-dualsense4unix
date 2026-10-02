@@ -182,7 +182,7 @@ def _caminho_do_dono(daemon: Any, motivo: str) -> str | None:
 def _velocidades_ou_as_da_sessao(
     speed: int | None, scroll: int | None
 ) -> tuple[int | None, int | None]:
-    """``(speed, scroll_speed)`` do perfil, e o que faltar sai da flag de sessão.
+    """``(speed, scroll_speed)`` do perfil; o que faltar sai do computador, e depois da sessão.
 
     O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o recuo que o arranjo e a
     ativação de um perfil de Navegação sem a seção `mouse` fazem, com UM dono.
@@ -191,6 +191,17 @@ def _velocidades_ou_as_da_sessao(
     """
     from hefesto_dualsense4unix.utils.session import load_mouse_preference
 
+    if speed is None or scroll is None:
+        # O COMPUTADOR ANTES DA SESSÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
+        # a velocidade dela é do computador, e a flag volta a ser só a memória
+        # da sessão, para quem nunca escolheu.
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            velocidades_do_computador,
+        )
+
+        speed_pc, scroll_pc = velocidades_do_computador()
+        speed = speed if speed is not None else speed_pc
+        scroll = scroll if scroll is not None else scroll_pc
     if speed is None or scroll is None:
         _pref, speed_flag, scroll_flag = load_mouse_preference()
         speed = speed if speed is not None else speed_flag
@@ -2192,7 +2203,9 @@ class Daemon:
             )
             if not nome:
                 return None
-            return load_profile(nome)
+            from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
+
+            return o_que_vale(load_profile(nome))
         except Exception as exc:
             logger.warning("arranjo_do_desktop_sem_perfil", err=str(exc))
             return None
