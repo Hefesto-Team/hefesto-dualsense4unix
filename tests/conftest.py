@@ -2348,9 +2348,16 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # máquina decidia o veredito dos testes do rádio (sem `/sys/class/hidraw`,
     # a dúvida segura o elo e três deles reprovavam). A pasta vazia é «ninguém
     # tem HID»; quem precisa de árvore monta a sua e aponta por cima.
-    from hefesto_dualsense4unix.integrations import conexao_zumbi
-
-    monkeypatch.setattr(conexao_zumbi, "RAIZ_HIDRAW", str(hidraw_vazio))
+    # A guarda é a do `evdev_reader`, e não a do `quem_o_jogo_le`: o
+    # `conexao_zumbi` puxa o `structlog`, e os jobs que instalam só o pytest
+    # (os documentos, o mapa, «A casa sabe») erravam em todo teste, na fixture.
+    try:
+        from hefesto_dualsense4unix.integrations import conexao_zumbi
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+    else:
+        monkeypatch.setattr(conexao_zumbi, "RAIZ_HIDRAW", str(hidraw_vazio))
     # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026) — mesma classe do BROKER-01 acima, e
     # medida ao vivo: vários testes rodam os scripts `bt_*.sh` DE VERDADE, e
     # eles registram no journal. Os DADOS já eram isolados (raízes em tmp); o
