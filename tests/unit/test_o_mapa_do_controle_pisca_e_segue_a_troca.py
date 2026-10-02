@@ -31,7 +31,7 @@ troca com o id cru (3); tirar a regra da marca tracejada, ou emitir
 tirar a regra `.on` do laço (5); um gesto local do mapa, ou o `escolhido` fora do
 `pacotes.Contexto` do `hefesto_vivo._contexto` (6); o `segue` sem a
 queda no «Nenhum», ou o `desenha` do «Todos» sem o primeiro da mesa (7); tirar o
-`flex-wrap` da `.prova .linha` (8: o chip sai da caixa da janela).
+`flex-wrap` do bloco dos chips (8: o chip sai da caixa da janela).
 
 Sem tela o WebKit não abre e as réguas 3b, 5, 7 e 8 PULAM: rode com `xvfb-run -a`.
 """

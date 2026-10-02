@@ -269,7 +269,9 @@
      `space-between` entre eles: ela reprovou isso com todas as letras. */
   .prova-rot{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;line-height:1}
-  .prova .linha{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .prova .linha{display:flex;gap:6px;align-items:center}
+  /* Os chips levam o nome do controle: na janela estreita eles descem de linha. */
+  .prova [data-bloco="controles-do-mapa"]{flex-wrap:wrap}
   .ct{height:28px;background:var(--elevated);color:var(--fg);
        border:1px solid var(--border-forte);border-radius:6px;
        padding:0 8px;font-family:var(--f);font-size:12px}
