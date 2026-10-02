@@ -556,6 +556,32 @@ _RAIZES_DE_JOGO = (
 #: caso real é uma dúzia de jogos.
 _MAXIMO_DE_FILHOS_POR_RAIZ = 400
 
+#: AS CASAS NATIVAS SEGUEM O XDG (02/10/2026,
+#: O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01), como o lançador segue: o
+#: Heroic nativo guarda a casa no `appData` do Electron (o `XDG_CONFIG_HOME`), e
+#: o Lutris nativo no `GLib.get_user_data_dir()` (o `XDG_DATA_HOME`). Os
+#: caminhos acima são os de sem XDG; com ele, o começo de cada um troca pela
+#: pasta da variável. A casa do Flatpak não muda: dentro da caixa o XDG é sempre
+#: `~/.var/app/<id>/{config,data}`. A regra é a do censo
+#: (`censo_dos_lancadores._Onde`), escrita aqui de novo porque esta cópia
+#: avulsa roda sem o pacote, e uma régua compara as duas respostas.
+_DO_XDG = ((".config/", "XDG_CONFIG_HOME"), (".local/share/", "XDG_DATA_HOME"))
+
+
+def _no_lar(relativo: str, home: Path | None) -> Path:
+    """O caminho de uma casa: no lar dado, ou no XDG do ambiente quando o lar é o
+    de verdade (``home is None``) e a variável vem absoluta.
+
+    O XDG anda junto com o lar, o mesmo molde de :func:`a_steam_instalou_as_camadas`:
+    quem passa um lar de mentira fica com o padrão dentro dele.
+    """
+    lar = Path.home() if home is None else home
+    for comeco, variavel in _DO_XDG:
+        valor = os.environ.get(variavel, "").strip() if home is None else ""
+        if relativo.startswith(comeco) and os.path.isabs(valor):
+            return Path(valor) / relativo[len(comeco):]
+    return lar / relativo
+
 
 def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
     """Todo prefixo wine de lançador que NÃO é a Steam. Read-only.
@@ -587,7 +613,6 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
     NUNCA LEVANTA: disco hostil, JSON torto ou lançador ausente devolvem menos
     prefixos, nunca uma exceção.
     """
-    lar = Path.home() if home is None else home
     achados: list[Path] = []
     vistos: set[Path] = set()
 
@@ -607,7 +632,7 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
         achados.append(alvo)
 
     for relativo in _CONFIG_DO_HEROIC:
-        pasta = lar / relativo
+        pasta = _no_lar(relativo, home)
         if not pasta.is_dir():
             continue
         # 1. O prefixo DE CADA JOGO, que é o mais exato.
@@ -640,7 +665,7 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
     # e esta varredura só acrescenta o que ninguém declarou. O `_guardar` já
     # descarta repetido pelo caminho resolvido.
     for relativo in _RAIZES_DE_JOGO:
-        raiz = lar / relativo
+        raiz = _no_lar(relativo, home)
         try:
             filhos = sorted(raiz.iterdir())[:_MAXIMO_DE_FILHOS_POR_RAIZ]
         except OSError:

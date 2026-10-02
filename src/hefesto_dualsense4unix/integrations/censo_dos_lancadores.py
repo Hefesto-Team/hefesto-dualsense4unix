@@ -565,10 +565,10 @@ def _registro_do_heroic(pasta: Path, arq: str
     instalados: dict[str, dict[str, object]] = {}
     erros: list[str] = []
     principal, *outros = _REGISTROS_DO_HEROIC[arq]
-    existe = (pasta / principal).exists()
+    existe = os.path.lexists(pasta / principal)
     for rel in (principal, *outros):
         alvo = pasta / rel
-        if not alvo.exists():
+        if not os.path.lexists(alvo):
             continue
         itens = _itens_do_registro(arq, rel, _json(alvo))
         if itens is None:

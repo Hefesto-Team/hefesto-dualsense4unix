@@ -170,10 +170,6 @@ FLATPAK_OVERRIDE = "flatpak-override"
 #: Heroic não lê: seria a cura silenciosa, que é pior que nenhuma.
 CHAVE_DO_HEROIC = "enviromentOptions"
 
-#: A subpasta de configuração do Heroic, dentro do flatpak ou do lar nativo —
-#: a mesma que `censo_dos_lancadores._pasta_de_config` acha.
-_HEROIC_APP_ID = "com.heroicgameslauncher.hgl"
-
 #: A FRASE DA RECUSA SEM AMBIENTE. Ela nomeia o que falta e o que fazer, e não
 #: menciona arquivo nenhum: «ambiente», «serviço» e «controle» são as palavras
 #: da tela; `default.env` é a língua de dentro.
@@ -335,17 +331,27 @@ class Plano:
 #: como o `sandbox_dos_lancadores` lê.
 _PASTA_DOS_OVERRIDES = ".local/share/flatpak/overrides"
 
-#: As duas casas do Heroic no lar — flatpak primeiro, nativo depois.
-_PASTAS_DO_HEROIC = (f".var/app/{_HEROIC_APP_ID}/config/heroic", ".config/heroic")
+def _pastas_do_heroic(lar: Path | None) -> tuple[Path, ...]:
+    """As casas do Heroic em que a carona escreve: as que o censo lê.
+
+    **A REGRA MORA NO CENSO (02/10/2026,
+    O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01):** a cópia das duas casas que
+    morava aqui (`~/.var/app/…/config/heroic` e `~/.config/heroic`, fixas) não
+    seguia o XDG, e com o `XDG_CONFIG_HOME` desviado a carona não achava o
+    `config.json` do Heroic nativo; nem a regra do programa instalado, e com
+    a sobra do Flatpak ela escrevia na casa que nenhum Heroic lê. O ``lar``
+    ``None`` é o de verdade, com o XDG do ambiente
+    (`censo_dos_lancadores._Onde`).
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    return censo.pastas_lidas("Heroic", lar)
 
 
-def _pasta_do_heroic(lar: Path) -> Path | None:
-    """A pasta de configuração do Heroic — flatpak primeiro, nativo depois."""
-    for rel in _PASTAS_DO_HEROIC:
-        tentativa = lar / rel
-        if tentativa.is_dir():
-            return tentativa
-    return None
+def _pasta_do_heroic(lar: Path | None) -> Path | None:
+    """A primeira casa do Heroic que o censo lê (a do Flatpak, quando são duas)."""
+    pastas = _pastas_do_heroic(lar)
+    return pastas[0] if pastas else None
 
 
 def estradas_do_cartao(chave: str, atalhos: tuple[str, ...],
@@ -362,14 +368,14 @@ def estradas_do_cartao(chave: str, atalhos: tuple[str, ...],
     A STEAM NÃO ENTRA AQUI. Ela tem o atalho de inicialização, que é a estrada
     dela, e um override por cima seria a segunda entrega do mesmo ambiente.
     """
-    lar = Path.home() if lar is None else lar
     if chave == "steam":
         return ()
     if chave == "heroic":
-        pasta = _pasta_do_heroic(lar)
-        if pasta is None:
-            return ()
-        return (Estrada(chave, HEROIC_CONFIG, pasta / "config.json"),)
+        #: COM OS DOIS HEROIC INSTALADOS, A CARONA ENTRA NOS DOIS (02/10/2026):
+        #: cada um lança o jogo pela casa dele.
+        return tuple(Estrada(chave, HEROIC_CONFIG, pasta / "config.json")
+                     for pasta in _pastas_do_heroic(lar))
+    lar = Path.home() if lar is None else lar
     raiz = lar / _PASTA_DOS_OVERRIDES
     #: QUEM SABE QUAIS CAIXAS ESTE CARTÃO TEM é o `sandbox_dos_lancadores` —
     #: a mesma função que o cartão «Flatpak» usa para contar. Duas listas de
@@ -1168,7 +1174,6 @@ def onde_falta_o_ambiente(
 
     SÓ LÊ, e abre disco: quem chama é a vigia da aba, nunca a pintura.
     """
-    lar = Path.home() if lar is None else lar
     plano = planejar(chave, atalhos, lar, pasta_do_ambiente, raiz_sistema)
     if plano.impedimento or not plano.estradas or not plano.ambiente:
         return ()
@@ -1202,7 +1207,9 @@ def onde_falta_o_ambiente(
         excluidas = {c.arquivo for c in fora.copias}
         from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-        biblioteca = censo.biblioteca_de("Heroic", lar)
+        #: OS JOGOS DESTA CASA, e não os do Heroic inteiro: com os dois
+        #: instalados, o jogo da outra casa tem a cópia na outra `GamesConfig`.
+        biblioteca = censo._heroic(estrada.arquivo.parent)
         pasta = estrada.arquivo.parent / _PASTA_DOS_JOGOS_DO_HEROIC
         for jogo in biblioteca.jogos:
             if not jogo.instalado or "/" in jogo.chave:
@@ -1244,16 +1251,36 @@ class Desfeito:
     voltou: bool = False
 
 
+def _casas_do_heroic_na_rede(lar: Path) -> list[Path]:
+    """Toda casa do Heroic que existe, instalado ou não — a rede do desfazer.
+
+    As do lar e, quando o ambiente desvia o `XDG_CONFIG_HOME`, a nativa de lá:
+    a mesma conta das listas de exclusão (:func:`_listas_de_exclusao_padrao`),
+    porque o `uninstall.sh` passa o `--lar` e o XDG dela vem do ambiente. A
+    regra das casas é do censo (`censo_dos_lancadores.pastas_que_existem`).
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    casas = list(censo.pastas_que_existem("Heroic", lar))
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if os.path.isabs(xdg):
+        for casa in censo.pastas_que_existem("Heroic", lar, xdg_config=Path(xdg)):
+            if casa not in casas:
+                casas.append(casa)
+    return casas
+
+
 def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
     """Todo arquivo de lançador em que a cura pode ter escrito, e que existe.
 
-    É a rede de quem escreveu SEM registro: o `config.json` nas duas casas do
-    Heroic, e o override de cada `app-id` dos cartões com estrada — instalado
-    ou não, porque desinstalar o lançador pelo Flatpak não leva o override.
+    É a rede de quem escreveu SEM registro: o `config.json` em toda casa do
+    Heroic (:func:`_casas_do_heroic_na_rede`), e o override de cada `app-id`
+    dos cartões com estrada — instalado ou não, porque desinstalar o lançador
+    pelo Flatpak não leva o override.
     """
     achados: list[tuple[Path, str]] = []
-    for rel in _PASTAS_DO_HEROIC:
-        alvo = lar / rel / "config.json"
+    for casa in _casas_do_heroic_na_rede(lar):
+        alvo = casa / "config.json"
         if alvo.is_file():
             achados.append((alvo, HEROIC_CONFIG))
     raiz = lar / _PASTA_DOS_OVERRIDES
@@ -1273,7 +1300,7 @@ _PASTA_DOS_JOGOS_DO_HEROIC = "GamesConfig"
 
 
 def copias_por_jogo_do_heroic(lar: Path) -> list[tuple[Path, Path]]:
-    """``[(config.json da casa, cópia de um jogo)]`` nas duas casas do Heroic.
+    """``[(config.json da casa, cópia de um jogo)]`` em toda casa do Heroic.
 
     **O HEROIC COPIA O AMBIENTE GLOBAL PARA DENTRO DO JOGO — conferência de
     25/09/2026, medido no fonte dele e no disco dela.** O `GameConfigV0` monta
@@ -1288,8 +1315,7 @@ def copias_por_jogo_do_heroic(lar: Path) -> list[tuple[Path, Path]]:
     DualSense físico, que é o defeito que esta sprint existe para fechar.
     """
     achados: list[tuple[Path, Path]] = []
-    for rel in _PASTAS_DO_HEROIC:
-        casa = lar / rel
+    for casa in _casas_do_heroic_na_rede(lar):
         pasta = casa / _PASTA_DOS_JOGOS_DO_HEROIC
         if not pasta.is_dir():
             continue
@@ -2037,24 +2063,25 @@ def jogos_do_heroic_pela_janela(classe: str, lar: Path | None = None) -> list[Pa
     """As cópias (`GamesConfig/<app>.json`) dos jogos do Heroic com esta janela.
 
     Quem diz qual jogo anuncia qual janela é o censo
-    (`JogoDoLancador.classe_de_janela`); a casa é a que ele leu. O arquivo
-    pode ainda não existir: é onde a cópia nasce.
+    (`JogoDoLancador.classe_de_janela`); a casa é a que ele leu, e com os dois
+    Heroic instalados cada jogo fica na dele. O arquivo pode ainda não
+    existir: é onde a cópia nasce.
     """
     alvo = classe.strip()
     if not alvo:
         return []
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-    biblioteca = censo.biblioteca_de("Heroic", Path.home() if lar is None else lar)
-    if biblioteca.onde is None:
-        return []
-    pasta = biblioteca.onde / _PASTA_DOS_JOGOS_DO_HEROIC
     vistos: list[Path] = []
-    for jogo in biblioteca.jogos:
-        if jogo.classe_de_janela == alvo and "/" not in jogo.chave:
-            arquivo = pasta / f"{jogo.chave}.json"
-            if arquivo not in vistos:
-                vistos.append(arquivo)
+    for biblioteca in censo.bibliotecas_por_casa("Heroic", lar):
+        if biblioteca.onde is None:
+            continue
+        pasta = biblioteca.onde / _PASTA_DOS_JOGOS_DO_HEROIC
+        for jogo in biblioteca.jogos:
+            if jogo.classe_de_janela == alvo and "/" not in jogo.chave:
+                arquivo = pasta / f"{jogo.chave}.json"
+                if arquivo not in vistos:
+                    vistos.append(arquivo)
     return vistos
 
 
@@ -2339,7 +2366,7 @@ def _a_camada_da_caixa(
     return fora, frozenset(por_jogo)
 
 
-def _pasta_do_lutris_flatpak(lar: Path) -> Path | None:
+def _pasta_do_lutris_flatpak(lar: Path | None) -> Path | None:
     """A casa do Lutris Flatpak, que o censo acha pela regra do Lutris.
 
     A regra mora no censo (`censo_dos_lancadores.pasta_do_flatpak`): a cópia
@@ -2353,12 +2380,14 @@ def _pasta_do_lutris_flatpak(lar: Path) -> Path | None:
 
 def _pelo_proton_por_yml(lar: Path | None) -> dict[str, bool]:
     """``{.yml do jogo: abre pelo Proton}`` no Lutris Flatpak, pelo censo."""
-    pasta = _pasta_do_lutris_flatpak(Path.home() if lar is None else lar)
+    pasta = _pasta_do_lutris_flatpak(lar)
     if pasta is None:
         return {}
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-    return {str(j.configuracao): j.pelo_proton for j in censo._lutris(pasta).jogos
+    #: O LAR VAI JUNTO (02/10/2026): o censo não o deduz do caminho, e é nele
+    #: que acha a pasta de dados e o Proton.
+    return {str(j.configuracao): j.pelo_proton for j in censo._lutris(pasta, lar).jogos
             if j.configuracao is not None}
 
 
@@ -2378,14 +2407,13 @@ def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Pa
     Só os `.yml` que existem: sem ele o Lutris nem abre o jogo.
     """
     alvo = classe.strip()
-    lar = Path.home() if lar is None else lar
     pasta = _pasta_do_lutris_flatpak(lar)
     if not alvo or pasta is None:
         return []
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     vistos: list[Path] = []
-    for jogo in censo._lutris(pasta).jogos:
+    for jogo in censo._lutris(pasta, lar).jogos:
         yml = jogo.configuracao
         if (jogo.classe_de_janela == alvo and yml is not None and yml.is_file()
                 and not yml.is_symlink() and yml not in vistos):
