@@ -2114,10 +2114,14 @@ class EvdevReader(_EvdevReconnectLoop):
     _reset_buttons_on_disconnect = _reset_on_disconnect
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
+        antes = self._snapshot.buttons_pressed
         if event.type == ecodes.EV_ABS:
             self._handle_abs(event.code, event.value, ecodes)
         elif event.type == ecodes.EV_KEY:
             self._handle_key(event.code, event.value, ecodes)
+        depois = self._snapshot.buttons_pressed  # fora da trava: o despertador
+        if depois is not antes and depois != antes:
+            _acordar_quem_entrega_ao_jogo()
 
     def _handle_abs(self, code: int, value: int, ecodes: Any) -> None:
         with self._lock:
@@ -3230,6 +3234,45 @@ def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
     return leitor._stop_flag.is_set()
 
 
+# ---------------------------------------------------------------------------
+# O APERTO ACORDA O TIQUE — O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01-NA-HORA (02/10)
+# ---------------------------------------------------------------------------
+#
+# O caminho do botão até o jogo esperava o tique: um aperto que chega logo
+# depois de um tique espera o período inteiro (16,7 ms a 60 Hz, 8,3 ms em
+# média). O leitor de cada controle chama o despertador, FORA da trava, sempre
+# que o conjunto de botões muda (`EvdevReader._handle_event`), e o daemon o
+# liga ao evento que acorda as esperas do laço (`lifecycle._esperar_o_tique`).
+# No fim do módulo para as citações de cima não andarem (e o import também).
+
+from collections.abc import Callable  # noqa: E402
+
+#: O chamável que o leitor acorda, do processo inteiro (um daemon por processo).
+_despertador: Callable[[], None] | None = None
+
+
+def definir_o_despertador(acordar: Callable[[], None] | None) -> None:
+    """Liga (ou desliga, com ``None``) quem o leitor acorda num aperto.
+
+    Chamado pelo laço do daemon (`lifecycle._o_aperto_do_laco`). O chamável
+    roda na thread do leitor e tem de voltar na hora: o do daemon só agenda
+    um `Event.set` no laço (`call_soon_threadsafe`).
+    """
+    global _despertador
+    _despertador = acordar
+
+
+def _acordar_quem_entrega_ao_jogo() -> None:
+    """O conjunto de botões mudou: acorda o laço. Nunca levanta."""
+    acordar = _despertador
+    if acordar is None:
+        return
+    try:
+        acordar()
+    except Exception as exc:  # o leitor nunca cai pelo despertador
+        logger.debug("despertador_falhou", err=str(exc))
+
+
 __all__ = [
     "DUALSENSE_ACC_RES_PER_G",
     "DUALSENSE_GYRO_RES_PER_DEG_S",
@@ -3248,6 +3291,7 @@ __all__ = [
     "PontoDeToque",
     "TouchState",
     "TouchpadReader",
+    "definir_o_despertador",
     "discover_dualsense_motion_evdevs",
     "discover_dualsense_touchpad_evdevs",
     "discover_external_gamepads",

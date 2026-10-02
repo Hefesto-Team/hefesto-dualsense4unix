@@ -6370,7 +6370,7 @@ class Daemon:
                 stop_event = self._stop_event
                 assert stop_event is not None
                 with contextlib.suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(stop_event.wait(), timeout=period)
+                    await _esperar_o_tique(self, stop_event, period)
                     break
                 continue
             try:
@@ -6550,7 +6550,7 @@ class Daemon:
                     stop_event = self._stop_event
                     assert stop_event is not None
                     with contextlib.suppress(asyncio.TimeoutError):
-                        await asyncio.wait_for(stop_event.wait(), timeout=sleep_for)
+                        await _esperar_o_tique(self, stop_event, sleep_for)
                         break
                 continue
 
@@ -6637,7 +6637,7 @@ class Daemon:
                 stop_event = self._stop_event
                 assert stop_event is not None
                 with contextlib.suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(stop_event.wait(), timeout=sleep_for)
+                    await _esperar_o_tique(self, stop_event, sleep_for)
                     break
 
         # HANG-01: ao sair do poll loop (stop pedido ou erro fatal), não
@@ -6879,6 +6879,134 @@ class _HubAusente:
 
 #: Um só, sem estado: é resposta, não recurso.
 HUB_AUSENTE = _HubAusente()
+
+
+# ---------------------------------------------------------------------------
+# O APERTO ACORDA O TIQUE — O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01-NA-HORA (02/10/2026)
+# ---------------------------------------------------------------------------
+#
+# As três esperas do `_poll_loop` (o controle fora da mesa, o assentamento e o
+# fim do tique) chamam `_esperar_o_tique` no lugar do
+# `asyncio.wait_for(stop_event.wait(), timeout=...)`, com o mesmo contrato:
+# volta quando a parada chega e levanta `asyncio.TimeoutError` quando o prazo
+# acaba. No meio, o aperto que o leitor avisa (`evdev_reader.definir_o_despertador`)
+# acorda uma volta SÓ DO JOGO (`_volta_do_aperto`): o P1 e os jogadores 2 a 4
+# recebem o botão na hora. O resto (o `poll.tick`, a bateria, os atalhos do PS,
+# o mouse e o teclado emulados) fica no relógio do período, porque há quem conte
+# voltas como tempo: o cursor do mouse emulado anda `velocidade / poll_hz` por
+# volta (`uinput_mouse.py`).
+#
+# Funções de módulo, e não métodos, no fim do arquivo: o dublê do laço roda o
+# `_poll_loop` de produção, e toda leitura nova de `self.` lá dentro exigiria
+# um irmão nele (`test_o_duble_do_poll_loop_acompanha_o_produto.py`); e as
+# citações `lifecycle.py:N` de cima não andam.
+
+#: Duas voltas do jogo nunca a menos disto: no máximo 250 por segundo, com
+#: quantos controles houver.
+INTERVALO_MINIMO_DA_VOLTA_S = 0.004
+
+
+class _OAperto:
+    """O evento do aperto de UM laço, e a hora da última volta do jogo."""
+
+    __slots__ = ("evento", "laco", "ultima_volta")
+
+    def __init__(self, laco: asyncio.AbstractEventLoop) -> None:
+        from hefesto_dualsense4unix.core.evdev_reader import definir_o_despertador
+
+        self.laco = laco
+        self.evento = asyncio.Event()
+        self.ultima_volta = laco.time()
+        evento = self.evento
+
+        def acordar() -> None:
+            # Roda na thread do leitor: só agenda o `set` no laço, e nada depois
+            # de o laço fechar (o daemon parado não deixa o leitor levantar).
+            if not laco.is_closed():
+                laco.call_soon_threadsafe(evento.set)
+
+        definir_o_despertador(acordar)
+
+
+def _o_aperto_do_laco(daemon: Any) -> _OAperto:
+    """O `_OAperto` do laço que roda agora, ligado ao despertador do leitor."""
+    laco = asyncio.get_running_loop()
+    aperto = getattr(daemon, "_o_aperto_do_laco", None)
+    if not isinstance(aperto, _OAperto) or aperto.laco is not laco:
+        aperto = _OAperto(laco)
+        daemon._o_aperto_do_laco = aperto
+    return aperto
+
+
+async def _esperar_o_tique(daemon: Any, stop_event: asyncio.Event, timeout: float) -> None:
+    """A espera do laço, que acorda com a parada OU com o aperto.
+
+    Volta quando a parada chega; levanta `asyncio.TimeoutError` quando o prazo
+    acaba, como o `asyncio.wait_for(stop_event.wait(), timeout)` que ela
+    substitui. Cada aperto avisado no meio roda `_volta_do_aperto`, nunca a
+    menos de `INTERVALO_MINIMO_DA_VOLTA_S` da volta anterior (a do relógio
+    conta: ela acabou de rodar quando a espera começa) nem da próxima volta do
+    relógio, que então leva o aperto ela mesma.
+    """
+    aperto = _o_aperto_do_laco(daemon)
+    laco = aperto.laco
+    prazo = laco.time() + timeout
+    aperto.ultima_volta = laco.time()
+    parada = laco.create_task(stop_event.wait())
+    try:
+        while True:
+            resto = prazo - laco.time()
+            if resto <= 0:
+                raise asyncio.TimeoutError
+            acordou = laco.create_task(aperto.evento.wait())
+            try:
+                await asyncio.wait(
+                    (parada, acordou), timeout=resto, return_when=asyncio.FIRST_COMPLETED
+                )
+            finally:
+                acordou.cancel()
+            if stop_event.is_set():
+                return
+            if not aperto.evento.is_set():
+                continue  # o prazo acabou
+            aperto.evento.clear()
+            cedo = aperto.ultima_volta + INTERVALO_MINIMO_DA_VOLTA_S - laco.time()
+            if cedo > 0:
+                await asyncio.wait((parada,), timeout=min(cedo, max(prazo - laco.time(), 0.0)))
+                if stop_event.is_set():
+                    return
+            if prazo - laco.time() < INTERVALO_MINIMO_DA_VOLTA_S:
+                continue  # a volta do relógio está mais perto que o teto: ela leva
+            _volta_do_aperto(daemon)
+            aperto.ultima_volta = laco.time()
+    finally:
+        parada.cancel()
+
+
+def _volta_do_aperto(daemon: Any) -> None:
+    """A volta que o aperto acorda: SÓ o caminho do jogo. Nunca levanta.
+
+    Os mesmos portões do tique: o assentamento da conexão (`_input_ready_at`)
+    segura os dois; o P1 só com o vpad de pé, a leitura do último tique e o
+    controle na mesa. O `dispatch_gamepad` lê os botões do retrato do leitor
+    (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01), e o analógico é o do último tique.
+    """
+    try:
+        if asyncio.get_running_loop().time() < daemon._input_ready_at:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        daemon.store.bump("poll.volta_do_aperto")
+        get_coop_manager(daemon).forward_all()
+        estado = getattr(daemon, "_last_state", None)
+        if (
+            daemon._gamepad_device is not None
+            and estado is not None
+            and daemon.controller.is_connected()
+        ):
+            daemon._dispatch_gamepad_emulation(estado, daemon._evdev_buttons_once())
+    except Exception as exc:  # a volta acordada nunca derruba o laço
+        logger.debug("volta_do_aperto_falhou", err=str(exc))
 
 
 __all__ = [
