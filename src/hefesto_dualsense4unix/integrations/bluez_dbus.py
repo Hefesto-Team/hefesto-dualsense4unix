@@ -1081,8 +1081,12 @@ LEITURAS = (
     "caminhos_do_aparelho",
     "conferir_os_lugares",
     "dono_do_bluez",
+    # Quantas vezes um objeto entrou desde a foto (ESQUECER-E-LIMPAR-AS-CONEXOES-01).
+    "entrada",
 )
-CICLO = ("ligar", "fechar")
+#: O ``ouvir`` assina os avisos do dono vivo (a central do rádio): não escreve
+#: no BlueZ, e vive o tempo do dono (ESQUECER-E-LIMPAR-AS-CONEXOES-01).
+CICLO = ("ligar", "fechar", "ouvir")
 
 
 # ---------------------------------------------------------------------------

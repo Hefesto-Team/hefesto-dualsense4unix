@@ -4705,7 +4705,7 @@ PROCURAR_RECUSA = "o rádio não ligou nem desligou a busca agora"
 #: O traço do «não há» e da faixa de canais (o do desenho aprovado).
 TRACO_CURTO = "\u2013"
 
-# -- o pareamento que não chega, e o X que esquece ---------------------------
+# -- o pareamento que não chega, e o «Esquecer» de cada linha ---------------
 # O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026), itens 2 e 3 dela: *«se o
 # controle não conecta, ele fica nesse estado morto aqui e não faz nada. Além
 # disso precisamos de um x pra indicar que vamos desconectar tal controle»*.
@@ -4718,7 +4718,7 @@ DESLIGADO = "Desligado"
 #: O mesmo controle, quando ele está no USB — a palavra do transporte da tela
 #: (decisão dela de 21/09/2026: a tela diz USB e BT).
 USB = "USB"
-#: O «sim» da pergunta do X.
+#: O «sim» da pergunta do «Esquecer».
 ESQUECER = "Esquecer"
 #: O botão do menu da linha: os três pontos das Configurações do COSMIC.
 MENU_DA_LINHA = "\u22ee"
@@ -4951,7 +4951,8 @@ def _moradores(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
 
 def _no_ar(ap: dict[str, Any]) -> bool:
     """A linha é de quem está no ar (ou chegando) — e não o «Não Conectou» nem o
-    controle desligado, que ficam na caixa só para o X e o «Tentar de Novo»."""
+    controle desligado, que ficam na caixa só para o «⋮», o X e o «Tentar de
+    Novo»."""
     return not ap.get("nao_conectou") and not ap.get("desligado")
 
 
@@ -5457,7 +5458,8 @@ def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
 
 
 def pergunta_de_esquecer(ap: dict[str, Any], lug: dict[str, Any]) -> str:
-    """A pergunta ANTES do X (item 3): quem sai, e de onde — só deste adaptador."""
+    """A pergunta ANTES do «Esquecer» (item 3): quem sai, e de onde — só deste
+    adaptador."""
     return (f"Esquecer {como_se_chama(ap)} n{como_se_chama_o_lugar(lug)}?<br>"
             "Só o pareamento deste adaptador sai. Para voltar, use Conectar.")
 
@@ -6763,12 +6765,14 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
     Fica de fora quem está no ar em qualquer adaptador (a linha dele é a viva,
     e a chave que sobra noutro é da faxina da central) e quem já é um «Não
     Conectou» naquele adaptador. Um controle desligado com chave em dois
-    adaptadores aparece nos dois: as duas chaves existem, e o X de cada uma é
-    dela.
+    adaptadores aparece nos dois: as duas chaves existem, e o «Esquecer» de
+    cada uma é dela (a dobra que a central sabe que é sobra sai sozinha, na
+    limpeza dela).
 
     O CONTROLE NO USB NÃO ESTÁ DESLIGADO (26/09/2026): com a chave BT aqui e o
     cabo na máquina, a linha diz «USB» (`no_usb`, os ``uniq`` que o daemon vê
-    no cabo), as palavras do transporte da tela. O X continua.
+    no cabo), as palavras do transporte da tela. O «⋮» continua: a chave BT
+    sai, e o cabo fica.
     """
     no_ar = {_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True}
     vivos = {_so_hex(str(a["id"])) for a in ja if not a.get("nao_conectou")}
@@ -6808,7 +6812,7 @@ def _com_dois_pontos(valor: object) -> str:
 
 
 def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
-    """O pareamento de ``aparelho`` em ``lugar`` sai — pelo dono do X
+    """O pareamento de ``aparelho`` em ``lugar`` sai — pelo dono do «Esquecer»
     (`gesto_de_pareamento.esquecer_o_pareamento`: o ``RemoveDevice`` e o verbo
     ``esquecer`` da ponte privilegiada, que já existia), e em nenhum outro
     adaptador."""
@@ -7488,7 +7492,7 @@ def esquecer_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
 @gesto("08-conexoes.html", "confirmar-esquecer", grava="esquecer_o_pareamento")
 def confirmar_esquecer(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Esquecer» da pergunta do X: o pareamento DESTE controle NESTE adaptador
+    """«Esquecer» da pergunta do «⋮»: o pareamento DESTE aparelho NESTE adaptador
     sai (a «chave de registro» dela é a chave do pareamento no BlueZ), pelo verbo
     ``esquecer`` que a ponte privilegiada já tinha. Os outros adaptadores não
     se tocam. Vale ligado ou desligado; o ligado desconecta."""
@@ -7671,7 +7675,8 @@ def entrada_parar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 
 PONTE = {"chamar", "machine_declare", "resultado", "mic_canal_set_detalhado"}
-METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui"}
+METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui",
+           "radio.busca.set", "radio.dispensar"}
 
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, e não no
@@ -7682,7 +7687,10 @@ PAGINA = "08-conexoes.html"
 #: e a cerimônia do «Mapear Entrada a Entrada» (TRANSPLANTE-DA-SECAO-01).
 #: 37 → 40 em 26/09/2026: o «Tentar de Novo», o X e o «Esquecer» da pergunta
 #: dele (O-RADIO-CONECTA-ONDE-ELA-MANDA-01).
-PISO_DA_ABA = 40
+#: 40 → 49 em 01/10/2026: entre outros, o «Procurar»
+#: (O-CONECTAR-E-UM-INTERRUPTOR-01), o «⋮» de cada linha e o X que só tira a
+#: linha «Não Conectou» (ESQUECER-E-LIMPAR-AS-CONEXOES-01).
+PISO_DA_ABA = 49
 PROVAS = [
     # O `index` da prova é 0 porque o controle de mentira é o único da lista —
     # e o `_indice` cai na posição quando o daemon não publicou `index`.

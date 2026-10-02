@@ -2,15 +2,19 @@
 
 O item novo da sprint (26/09/2026): a linha de um controle que tem chave BT
 num adaptador e está no USB agora diz «USB», não «Desligado» — as palavras do
-transporte da tela são USB e BT (decisão dela de 21/09). O X continua: a chave
-BT daquele adaptador existe, e esquecê-la é dela.
+transporte da tela são USB e BT (decisão dela de 21/09). O «Esquecer» continua:
+a chave BT daquele adaptador existe, e esquecê-la é dela.
 
 A conferência achou o item entregue sem régua. Esta é a régua, com o rádio de
 mentira de três adaptadores e o roxo com chave em dois deles:
 
-* com o roxo no cabo, as DUAS linhas dele dizem «USB», com o X de cada
+* com o roxo no cabo, as DUAS linhas dele dizem «USB», com o «⋮» de cada
   adaptador, e nenhuma diz «Desligado» — em qualquer grafia do ``uniq`` que o
   daemon publique;
+
+MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME): o X
+que esquecia virou o «⋮» (``aparelho-menu``), com o «Esquecer» no menu dele. O
+par ``(linha, adaptador)`` é o mesmo.
 * com o roxo em lugar nenhum, as duas voltam a dizer «Desligado»;
 * um OUTRO controle no cabo não muda a linha do roxo.
 
@@ -65,8 +69,8 @@ def _com_no_cabo(bancada: Bancada, monkeypatch: pytest.MonkeyPatch, uniq: str) -
     monkeypatch.setattr(bancada, "estado", estado)
 
 
-def _o_x(lugar: str) -> str:
-    return (f'data-gesto="esquecer-aparelho" data-alvo="{id_da_tela(ROXO)}" '
+def _o_menu(lugar: str) -> str:
+    return (f'data-gesto="aparelho-menu" data-alvo="{id_da_tela(ROXO)}" '
             f'data-lugar="{id_da_tela(lugar)}"')
 
 
@@ -84,7 +88,8 @@ def test_o_controle_no_cabo_diz_usb_nas_linhas_de_cada_adaptador(
         for lugar in (VARANDA, SALA):
             (linha,) = _linhas(cena, lugar, desligado=True)
             assert linha["usb"] is True, (lugar, linha)
-            assert _o_x(lugar) in sala, f"o X da linha no {lugar} sumiu com o controle no cabo"
+            assert _o_menu(lugar) in sala, (
+                f"o «⋮» da linha no {lugar} sumiu com o controle no cabo")
         assert not _linhas(cena, QUARTO, desligado=True)
         assert sala.count(f">{a08.USB}</span>") == 2, sala
         assert "Desligado</span>" not in sala, "o controle no cabo foi dito «Desligado»"
@@ -105,7 +110,7 @@ def test_fora_do_cabo_a_linha_volta_a_dizer_desligado(
         for lugar in (VARANDA, SALA):
             (linha,) = _linhas(cena, lugar, desligado=True)
             assert linha["usb"] is False, (lugar, linha)
-            assert _o_x(lugar) in sala
+            assert _o_menu(lugar) in sala
         assert sala.count("Desligado</span>") == 2, sala
         assert f">{a08.USB}</span>" not in sala
     finally:

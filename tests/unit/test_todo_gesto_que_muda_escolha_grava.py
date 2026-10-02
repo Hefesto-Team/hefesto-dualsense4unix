@@ -130,6 +130,10 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "abrir-adaptador"):
         "tela: abre um adaptador e fecha os outros (o acordeão)",
     ("08-conexoes.html", "aceitar-sugestao"): _PERGUNTA_DO_RADIO,
+    # O «⋮» da linha (ESQUECER-E-LIMPAR-AS-CONEXOES-01): só abre o menu.
+    ("08-conexoes.html", "aparelho-menu"):
+        "tela: abre o menu «⋮» da linha; quem muda o pareamento é o "
+        "«Esquecer» de lá, confirmado na pergunta, que declara `grava=`",
     ("08-conexoes.html", "adaptador-historico"):
         "leitura: o que aconteceu com este adaptador, pela hora",
     ("08-conexoes.html", "alvo"):
