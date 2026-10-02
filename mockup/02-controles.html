@@ -2557,6 +2557,28 @@
   .mudo-i[data-mic-luz="retorno"]{
     border-color:var(--green);color:var(--green)}
 
+.camadas{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:17px}
+.camada-rot{font-size:11px;line-height:17px;color:var(--texto-mudo,#9aa0b4)}
+.camada{display:inline-flex;gap:6px;align-items:center;height:17px;max-width:100%;
+  font-size:11px;line-height:15px;color:var(--texto-mudo,#9aa0b4);white-space:nowrap}
+.camada-dono{padding:0 6px;border:1px solid currentColor;border-radius:8px;
+  flex:0 100 auto;min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.camada a{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;color:var(--cyan,#8be9fd);text-decoration:none}
+.camada a:hover{text-decoration:underline}
+[data-conectado="nao"] .camada{visibility:hidden}
+
+  .faixa .camadas{display:none}
+  .ctl:has(> input:checked) .faixa .camadas,
+  body:has(#c-todos:checked) .ctl .faixa .camadas{display:inline-flex;flex:0 1 auto;min-width:0}
+  .ctl:has(> input:checked) .faixa .camadas + .sensores-peca,
+  body:has(#c-todos:checked) .ctl .faixa .camadas + .sensores-peca{margin-left:0}
+  .faixa .camada,.rot-linha > .camada{min-width:0;flex:0 1 auto}
+  .rot-linha > .camada{margin-left:auto;font-weight:400}
+  @media (max-width:1400px){
+    .rot-linha > .camada > .camada-dono:has(+ a){display:none}
+  }
+
 </style>
 <style data-campo="plastico-css" data-hef-alvo="html">
   .ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}
@@ -2862,6 +2884,7 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
+          <span class="camadas"><span class="camada-rot">Sensores</span><span class="camada" data-campo="camada-sensores" data-hef-alvo="html"><span class="camada-dono">Computador</span></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -3111,6 +3134,7 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
+              <span class="camada" data-campo="camada-som" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
             </div>
             <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:48%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:72%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:95%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:64%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:52%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:80%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:44%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:58%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:88%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:40%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:20%"></i></span></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -3427,6 +3451,7 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
+          <span class="camadas"><span class="camada-rot">Sensores</span><span class="camada" data-campo="camada-sensores" data-hef-alvo="html"><span class="camada-dono">Computador</span></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -3676,6 +3701,7 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
+              <span class="camada" data-campo="camada-som" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
             </div>
             <span class="onda-do-mudo calada" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -3992,6 +4018,7 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
+          <span class="camadas"><span class="camada-rot">Sensores</span><span class="camada" data-campo="camada-sensores" data-hef-alvo="html"><span class="camada-dono">Computador</span></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -4241,6 +4268,7 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
+              <span class="camada" data-campo="camada-som" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
             </div>
             <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:18%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:41%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:28%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:19%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:35%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:24%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:20%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:31%"></i></span></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -4557,6 +4585,7 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
+          <span class="camadas"><span class="camada-rot">Sensores</span><span class="camada" data-campo="camada-sensores" data-hef-alvo="html"><span class="camada-dono">Computador</span></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -4806,6 +4835,7 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
+              <span class="camada" data-campo="camada-som" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
             </div>
             <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">

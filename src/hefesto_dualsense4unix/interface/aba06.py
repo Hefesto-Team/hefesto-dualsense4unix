@@ -91,6 +91,7 @@ from pacotes.a06_navegacao import (  # noqa: E402
 #: mesma palavra — o desenho dizendo uma e o tique escrevendo outra por cima,
 #: que é exatamente como o desenho e o produto divergem calados.
 from pacotes import SEM_NINGUEM_AQUI  # noqa: E402
+import marca_da_camada as _marca  # noqa: E402
 
 #: OS CONTROLES QUE A FITA MOSTRA. Só quem está na mesa — 31/08/2026, decisão
 #: dela: um controle desconectado não se escolhe, e pôr o chip dele ali seria
@@ -1502,6 +1503,8 @@ CSS += REALCE + "\n"
 _FOLHA_NO_SVG = re.compile(
     r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
 
+# A MARCA DE QUEM É O VALOR — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01.
+CSS += _marca.CSS
 CSS += "\n  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */\n"
 CSS += re.sub(r"</?style[^>]*>", "", folha_das_cores())
 
@@ -2368,8 +2371,9 @@ FILEIRA = '''
               <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
               <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
-                <span>Devolver ao de fábrica a velocidade do cursor e a da rolagem?
-                  As telas de botões e os gestos não são tocados.</span>
+                <span>Voltar ao padrão o mouse, as Definições e as teclas? No jogo
+                  que os escolheu, volta o do computador; sem jogo, o computador
+                  volta ao de fábrica, e os gestos também. A troca de botões fica.</span>
                 <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
                      o de cima só ABRE a pergunta (é `<label for>` do mesmo
                      checkbox, e funciona), e marcá-lo faria o piloto acusar de
@@ -2830,6 +2834,15 @@ TELA_PONTO = f'''
 '''
 
 
+#: AS DUAS MARCAS DA ATIVAÇÃO — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+#: 01/10/2026. O mouse (as velocidades e as Definições) e o teclado (a função e
+#: as teclas) são cartões do computador: a marca diz de quem é o valor, e o
+#: pacote a reescreve a cada tique (`pacotes/camada.py`). A cena do desenho não
+#: tem perfil ativo («—» no topo), e por isso nasce «Computador».
+MARCAS_DA_ATIVACAO = "        " + _marca.rotuladas(
+    (("mouse", "Mouse"), ("teclado", "Teclado")))
+
+
 def at_linha(rot, dica, campo):
     return (f'              <div class="at-linha"><span class="at-rot">{rot}{dica}</span>'
             f'{campo}</div>')
@@ -2924,6 +2937,7 @@ MIOLO = f'''
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">As opções de ativação</span>
+{MARCAS_DA_ATIVACAO}
       </div>
       <div class="quadro-corpo">
         <div class="moldura">

@@ -1953,6 +1953,17 @@
   .gestos:has(.g5:hover) :is(#p1-glifo-ps,#p1-glifo-ps *,#p1-stick_l > .peca,#p1-glifo-stick_l,#p1-glifo-stick_l *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
   .gestos:has(.g6:hover) :is(#p1-glifo-ps,#p1-glifo-ps *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
 
+.camadas{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:17px}
+.camada-rot{font-size:11px;line-height:17px;color:var(--texto-mudo,#9aa0b4)}
+.camada{display:inline-flex;gap:6px;align-items:center;height:17px;max-width:100%;
+  font-size:11px;line-height:15px;color:var(--texto-mudo,#9aa0b4);white-space:nowrap}
+.camada-dono{padding:0 6px;border:1px solid currentColor;border-radius:8px;
+  flex:0 100 auto;min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.camada a{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;color:var(--cyan,#8be9fd);text-decoration:none}
+.camada a:hover{text-decoration:underline}
+[data-conectado="nao"] .camada{visibility:hidden}
+
   /* ---- as 28 cores do mapa, publicadas UMA vez ---- */
 
     /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
@@ -3798,6 +3809,7 @@
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">As opções de ativação</span>
+        <span class="camadas"><span class="camada-rot">Mouse</span><span class="camada" data-campo="camada-mouse" data-hef-alvo="html"><span class="camada-dono">Computador</span></span><span class="camada-rot">Teclado</span><span class="camada" data-campo="camada-teclado" data-hef-alvo="html"><span class="camada-dono">Computador</span></span></span>
       </div>
       <div class="quadro-corpo">
         <div class="moldura">
@@ -3865,8 +3877,9 @@
               <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
               <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
-                <span>Devolver ao de fábrica a velocidade do cursor e a da rolagem?
-                  As telas de botões e os gestos não são tocados.</span>
+                <span>Voltar ao padrão o mouse, as Definições e as teclas? No jogo
+                  que os escolheu, volta o do computador; sem jogo, o computador
+                  volta ao de fábrica, e os gestos também. A troca de botões fica.</span>
                 <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
                      o de cima só ABRE a pergunta (é `<label for>` do mesmo
                      checkbox, e funciona), e marcá-lo faria o piloto acusar de

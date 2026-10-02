@@ -2010,6 +2010,22 @@
      trocadilho com outra coisa. */
   .sec-rot .gl{opacity:.9;flex:0 0 auto}
 
+.camadas{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:17px}
+.camada-rot{font-size:11px;line-height:17px;color:var(--texto-mudo,#9aa0b4)}
+.camada{display:inline-flex;gap:6px;align-items:center;height:17px;max-width:100%;
+  font-size:11px;line-height:15px;color:var(--texto-mudo,#9aa0b4);white-space:nowrap}
+.camada-dono{padding:0 6px;border:1px solid currentColor;border-radius:8px;
+  flex:0 100 auto;min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.camada a{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;color:var(--cyan,#8be9fd);text-decoration:none}
+.camada a:hover{text-decoration:underline}
+[data-conectado="nao"] .camada{visibility:hidden}
+
+  .luz-grade .ctrl{position:relative}
+  .luz-grade .ctrl > .camada{position:absolute;top:-8px;left:22px;z-index:1;
+    padding:0 5px;background:var(--panel);max-width:calc(100% - 34px)}
+  .luz-grade .ctrl > .camada::before{content:none}
+
   .luz-grade{
     --larg-rot:85px;
     --gap-col:16px;
@@ -3056,6 +3072,7 @@
                  mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">—</span>
           </div>
+          <span class="camada" data-campo="camada-luz" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
         </div>
         <div class="ctrl" data-controle="p2" data-conectado="sim">
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
@@ -3454,6 +3471,7 @@
                  mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">—</span>
           </div>
+          <span class="camada" data-campo="camada-luz" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
         </div>
         <div class="ctrl vazia" data-controle="p3" data-conectado="nao"
              title="Nenhum controle neste lugar.">
@@ -3829,6 +3847,7 @@
                  mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">—</span>
           </div>
+          <span class="camada" data-campo="camada-luz" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
         </div>
         <div class="ctrl vazia" data-controle="p4" data-conectado="nao"
              title="Nenhum controle neste lugar.">
@@ -4204,6 +4223,7 @@
                  mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">—</span>
           </div>
+          <span class="camada" data-campo="camada-luz" data-hef-alvo="html"><span class="camada-dono">Computador</span></span>
         </div>
 
         </div>

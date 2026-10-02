@@ -31,6 +31,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (  # noqa: E402
     MESA, cor_da_zona, glifo, monta, svg,
 )
+import marca_da_camada as _marca  # noqa: E402
 
 # O DONO ÚNICO DO DEGRAU DE FORÇA. O `monta` já põe `src/` no `sys.path` para
 # ler o padrão das lâmpadas do produto; esta aba faz o mesmo com a tabela de
@@ -1876,6 +1877,7 @@ def _coluna(c, e=None, conectado=None):
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
+            {_marca.bloco("vibracao")}
           </div>'''
 
 
@@ -2087,6 +2089,22 @@ LEGENDA = f'''<div class="nota">
 </body>
 </html>
 '''
+
+#: A MARCA DA VIBRAÇÃO — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+#: 01/10/2026. A força de cada controle é do computador, e o jogo pode
+#: sobrepor: a marca diz de quem é o valor da coluna
+#: (`interface/marca_da_camada.py`), e o pacote a reescreve a cada tique
+#: (`pacotes/camada.py`). Ela pousa na borda de cima da moldura, como a
+#: legenda de um quadro, e não ganha linha: as faixas da grade são a mesma
+#: régua nas quatro colunas. É a mesma forma da Iluminação (`aba04.py`), e a
+#: mesma razão de ela ser a ÚLTIMA filha da coluna.
+CSS += _marca.CSS + """
+  .vib .ctrl{position:relative}
+  .vib .ctrl > .camada{position:absolute;top:-8px;left:18px;z-index:1;
+    padding:0 5px;background:var(--panel);max-width:calc(100% - 30px)}
+  .vib .ctrl > .camada::before{content:none}
+"""
+
 
 # Fora de `monta.ABAS_QUE_ESCOLHEM` — decisão dela, 28/08/2026: em Gatilhos, Iluminação e
 # Vibração os quatro ficam lado a lado, sempre visíveis, e a fita fica

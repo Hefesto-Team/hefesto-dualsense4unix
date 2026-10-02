@@ -1,5 +1,6 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
+import marca_da_camada as _marca
 import onde
 from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    MESA, CONECTADOS,
@@ -1938,6 +1939,31 @@ def sensores_da_peca(c):
           </span>'''
 
 
+#: AS MARCAS DO SOM E DOS SENSORES — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+#: 01/10/2026. O som (o alto-falante e o microfone) e os sensores de cada
+#: controle são do computador, e o jogo pode sobrepor: a marca diz de quem é o
+#: valor (`interface/marca_da_camada.py`), e o pacote a reescreve a cada tique
+#: (`pacotes/camada.py`). O corpo não tem altura a dar (24px de folga, e o
+#: assert é portão), então as duas moram em linhas que já existem:
+#:
+#: - A DOS SENSORES, no vão do cabeçalho do card aberto, antes do par de
+#:   sensores e pela mesma conta do `giro-no-jogo`. A linha FECHADA é a mais
+#:   apertada da mesa, e por isso ela só aparece com o card aberto. O
+#:   empurrão para a direita passa do par para a marca, sem mover o par: o que
+#:   fica à direita dele é a bateria, da mesma largura nas quatro linhas.
+#: - A DO SOM, no fim do rótulo do Microfone, que é o topo da coluna do som
+#:   (o microfone em cima, o alto-falante embaixo).
+#:
+#: MEDIDO NA JANELA MÍNIMA (1212px, `ponte_da_tela.LARGURA_DO_DESENHO`): as
+#: duas no cabeçalho, com um jogo ativo, empurravam a bateria para uma segunda
+#: linha; por isso o som desceu para a coluna dele. Onde aperta, o nome do jogo
+#: encolhe com reticências e o botão fica inteiro. No rótulo do Microfone, abaixo
+#: de 1400px, a palavra sai e fica só o botão quando há um: «Só neste jogo» já
+#: diz que o valor é do computador, e «Voltar ao do computador», que é do jogo.
+MARCAS_DO_CARTAO = _marca.rotuladas((("sensores", "Sensores"),))
+MARCA_DO_SOM = _marca.bloco("som")
+
+
 def identidade(c, *, bat, carga=None, meio=""):
     """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
 
@@ -2115,6 +2141,7 @@ def identidade(c, *, bat, carga=None, meio=""):
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="{GIRO_NO_JOGO_DO_DESENHO}"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
+          {MARCAS_DO_CARTAO}
 {sensores_da_peca(c)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3226,6 +3253,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
+              {MARCA_DO_SOM}
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
@@ -3995,6 +4023,19 @@ CSS += f"""
      parágrafo acima já a aplicava a si mesmo. */
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"]{{
     border-color:var(--green);color:var(--green)}}
+"""
+
+#: A folha das marcas do som e dos sensores; o lugar e a razão estão em
+#: :data:`MARCAS_DO_CARTAO`.
+CSS += _marca.CSS + f"""
+  .faixa .camadas{{display:none}}
+  {_aberto(" .faixa .camadas")}{{display:inline-flex;flex:0 1 auto;min-width:0}}
+  {_aberto(" .faixa .camadas + .sensores-peca")}{{margin-left:0}}
+  .faixa .camada,.rot-linha > .camada{{min-width:0;flex:0 1 auto}}
+  .rot-linha > .camada{{margin-left:auto;font-weight:400}}
+  @media (max-width:1400px){{
+    .rot-linha > .camada > .camada-dono:has(+ a){{display:none}}
+  }}
 """
 
 MIOLO = f'''
@@ -5016,7 +5057,11 @@ def _conferir(doc):
     #    Acelerômetro e outra gatilhos."*
     for b in ("giroscopio", "acelerometro"):
         exigir(f'data-bloco="{b}"' in corpo, f"a moldura {b} sumiu")
-    exigir(">Sensores" not in corpo, "a moldura única 'Sensores' voltou")
+    # A RÉGUA MEDE A MOLDURA, e não a palavra (01/10/2026): a marca dos
+    # sensores no cabeçalho do card (`MARCAS_DO_CARTAO`) diz «Sensores» sem
+    # ser moldura, e a decisão dela é sobre as molduras.
+    exigir(not re.search(r'class="rot[^"]*">\s*Sensores', corpo),
+           "a moldura única 'Sensores' voltou")
     for u in (">°/s<", "Acelerômetro <span"):
         exigir(u not in corpo, f"uma unidade voltou ao rótulo do sensor: {u!r}")
 

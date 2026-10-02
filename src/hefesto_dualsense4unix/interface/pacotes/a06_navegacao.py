@@ -3738,6 +3738,59 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
         f"{quais}.")}
 
 
+@gesto("06-navegacao.html", "padrao-da-aba", grava="voltar_o_computador_ao_de_fabrica")
+def padrao_da_aba(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O «Voltar ao padrão» da aba: o mouse e o teclado voltam UM DEGRAU.
+
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, `D-0110-VOLTAR-AO-PADRAO-E-UM-
+    DEGRAU` (por delegação, a validar por ela). Os dois cartões desta aba são do
+    computador: no jogo que os sobrepõe, sai a escolha do jogo e volta a valer
+    o computador; sem sobreposição, o computador volta ao de fábrica. Fora do
+    jogo (sem perfil, ou o Freestyle), a tabela dos gestos também volta, pelo
+    `machine.declare` (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01, §11). A
+    troca de botões e o Point-and-click são do jogo, e não são tocados.
+
+    A pergunta antes é a do desenho (o «Confirmar» é que tem o endereço), e as
+    duas velocidades que passam a valer vão ao daemon no mesmo clique.
+    """
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+    from hefesto_dualsense4unix.profiles.schema import ProfileMouseConfig
+
+    nome = _nome_do_ativo_ou_nada(ctx)
+    loader = perfil._com_o_src()
+    cru = None
+    if nome:
+        try:
+            cru = loader.load_profile(nome)
+        except Exception:
+            cru = None
+    no_jogo = cru is not None and not opc.e_o_freestyle(cru.name)
+    for cartao in ("mouse", "teclado"):
+        if cru is not None and no_jogo and opc.sobrepoe(cru, cartao):
+            opc.voltar_ao_do_computador(cartao, None, cru.name)
+        else:
+            opc.voltar_o_computador_ao_de_fabrica(cartao)
+    if not no_jogo:
+        ok, motivo = _ok_e_motivo(
+            p.machine_declare({"gestos": dict.fromkeys(ag.GESTOS)}))
+        if not ok:
+            raise RuntimeError(
+                "o mouse e o teclado voltaram, e os gestos não: "
+                + (motivo or "o Hefesto não respondeu"))
+    vista = opc.carregar_o_que_vale(nome) if no_jogo else None
+    mouse = vista.mouse if vista is not None else None
+    speed, scroll = opc.velocidades_do_computador()
+    if mouse is not None:
+        speed, scroll = mouse.speed, mouse.scroll_speed
+    campos = ProfileMouseConfig.model_fields
+    _mandar(p, origin=MANUAL,
+            speed=speed if speed is not None else campos["speed"].default,
+            scroll_speed=scroll if scroll is not None else campos["scroll_speed"].default)
+    perfil.reaplicar(nome, ctx, p)
+    _largar_o_que_ela_mexeu()
+
+
 @gesto("06-navegacao.html", "guardar-ponto", grava="gravar_e_reaplicar")
 def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Guardar" do *Estilo Point-and-click*. Escreve `Profile.button_actions`.
@@ -4172,12 +4225,9 @@ SEM_GESTO = {
     # copiados de relatório.
     # `acao-do-gesto` SAIU DAQUI em 01/10/2026 (OS-GESTOS-DO-CONTROLE-01): a
     # tabela é dado do `maquina.json`, e o daemon despacha por ela.
-    "padrao-da-aba": "a frase do botão promete a aba INTEIRA — as opções de "
-                     "ativação, os 5 gestos e as 22 linhas das duas telas. Só as "
-                     "duas velocidades têm rota (`mouse.emulation.set` "
-                     "speed-only); as outras três promessas não têm nenhuma, e "
-                     "um 'Voltar ao padrão' que devolve dois números de cinco "
-                     "coisas é um botão que responde calado sobre as outras três",
+    # `padrao-da-aba` SAIU DAQUI em 01/10/2026
+    # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o mouse e o teclado são
+    # do computador, e voltar um degrau tem dono (`padrao_da_aba`).
     # `guardar-definicoes` SAIU DAQUI em 01/09/2026, e não porque a medição
     # estivesse errada: ela estava certa. A tela deixava escolher 21 linhas e o
     # perfil alcançava 9, e guardar 9 de 21 caladas seria o botão que responde

@@ -193,7 +193,10 @@ def test_o_ativar_diz_o_que_o_lock_manual_comeu(
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, None)
     a10_perfis._ESCOLHIDO = "Pragmata"
-    corpo = {"secoes": {"leds": "aplicado", "triggers": "adiado_lock_manual"}}
+    # SÓ A FALHA É «MENOS» desde 01/10/2026 (`D-0110-SO-A-FALHA-E-MENOS`,
+    # O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a seção que caiu é a que a
+    # frase nomeia.
+    corpo = {"secoes": {"leds": "aplicado", "triggers": "falhou"}}
     ponte = PonteDeMentira(corpo=corpo)
 
     carga = a10_perfis.ativar(_ctx(ativo="Sackboy"), {"texto": "Ativar"}, ponte)

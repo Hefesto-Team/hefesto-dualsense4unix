@@ -482,6 +482,11 @@ def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
     if fn is None:
         return None
     fora = fn(ctx)
+    # A MARCA DE QUEM É O VALOR — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+    # 01/10/2026: das dez abas, como o topo (`camada.com_a_camada`).
+    from .camada import com_a_camada
+
+    fora = com_a_camada(pagina, ctx, fora)
     molde = molde_do_lugar(pagina, ctx, fora)
     if not molde:
         return fora
@@ -1880,6 +1885,9 @@ from . import (  # noqa: E402
     # A `a13` é a terceira avulsa, o «Mapa do controle»: o pisca, a troca e os
     # chips da fita. O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01.
     a13_mapa_do_controle,  # noqa: F401
+    # A CAMADA É DAS DEZ, como o rodapé: a marca de quem é o valor e os dois
+    # gestos dela (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01).
+    camada,  # noqa: F401
     rodape,  # noqa: F401
 )
 
@@ -1902,6 +1910,7 @@ def _carregar_tudo() -> None:
     # logo os quatro botões do rodapé recusam em todas as abas — em silêncio,
     # porque um gesto não registrado é indistinguível de um gesto sem dono.
     importlib.import_module(f"{__name__}.rodape")
+    importlib.import_module(f"{__name__}.camada")
 
 
 _carregar_tudo()

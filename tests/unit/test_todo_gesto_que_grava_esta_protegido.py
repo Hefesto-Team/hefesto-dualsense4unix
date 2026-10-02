@@ -95,6 +95,11 @@ ESCREVEM = {
     # COM-O-JOGO-01, 01/10/2026: grava no `maquina.json` dela, ou no perfil
     # quando ele já sobrepõe o cartão.
     "gravar_pelo_gesto",
+    # OS DOIS DEGRAUS DO CARTÃO (a mesma sprint): o «Só neste jogo» grava o
+    # perfil do jogo, e as duas voltas gravam o perfil ou o `maquina.json`.
+    "so_neste_jogo",
+    "voltar_ao_do_computador",
+    "voltar_o_computador_ao_de_fabrica",
     # `gravar_o_modo_no_ativo` SAIU DAQUI em 29/09/2026
     # (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01), com a função: a seção `mode` do perfil
     # ativo deixou de ser escrita pela janela. Quem a grava é o daemon, depois

@@ -795,6 +795,14 @@ _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     # da irmã `rumble_policy` aqui do lado, e o botão que liga esta seção se
     # chama "Deixar o jogo controlar a vibração" (`gui/main.glade:2028`).
     "rumble_passthrough": "vibração do jogo",
+    # AS TRÊS QUE CHEGAVAM CRUAS — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+    # 01/10/2026. Às 19h15 a janela escreveu «menos: button_actions,
+    # remapeamento, movimento e mais 8». As palavras são as das telas: as
+    # «Definições Controle e Mouse» (o que cada botão faz), a «Trocar os
+    # botões» e a «Mira Virtual».
+    "button_actions": "o que cada botão faz",
+    "remapeamento": "a troca de botões",
+    "movimento": "a mira",
 }
 
 #: PROVISÓRIO — decisão dela. Como nomear o alto-falante DE UM controle quando a
@@ -855,10 +863,15 @@ def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
     if not isinstance(secoes, dict) or not secoes:
         return None
     aplicadas = [str(s) for s, estado in secoes.items() if str(estado) == "aplicado"]
+    # SÓ A FALHA É «MENOS» — `D-0110-SO-A-FALHA-E-MENOS`, por delegação, a
+    # validar por ela (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01). O
+    # `de_fabrica`, o `do_computador`, o `ignorado_*` e o `adiado_*` são o
+    # produto fazendo o que devia: a seção que o perfil não diz vale o
+    # computador ou o de fábrica, e isso não é perda.
     nao_entraram = {
         nome_da_secao_da_ativacao(str(s)): str(estado)
         for s, estado in secoes.items()
-        if str(estado) != "aplicado"
+        if str(estado) == "falhou"
     }
     return {"applied": aplicadas, "failed": nao_entraram}
 

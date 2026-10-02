@@ -3401,6 +3401,16 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     cru = json.loads(asset.read_text(encoding="utf-8"))
     cru["name"] = NOME_DO_PADRAO
     prof = Profile.model_validate(cru)
+    # O PADRÃO DO COMPUTADOR VOLTA JUNTO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-
+    # JOGO-01, `D-0110-VOLTAR-AO-PADRAO-E-UM-DEGRAU`): o som, a luz, a vibração,
+    # o mouse e o teclado que ela ajustou fora do jogo moram no `maquina.json`,
+    # e o Freestyle de fábrica sozinho não os devolveria. Antes de reaplicar,
+    # para a reaplicação já ler o computador vazio.
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        restaurar_o_computador,
+    )
+
+    restaurar_o_computador()
     era = perfil_que_esta_valendo(getattr(ctx, "state", None)).nome or ""
     perfil.gravar_e_reaplicar(prof, ctx, p, era=era)
     return {"blocos": blocos_dos_botoes(_de_pe(ctx)),

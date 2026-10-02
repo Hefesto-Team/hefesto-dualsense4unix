@@ -1113,7 +1113,12 @@ def restaurar_o_computador() -> bool:
     from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
 
     migrado = o_computador().migrado
-    return gravar_o_computador({"migrado": True} if migrado else {})
+    feito = gravar_o_computador({"migrado": True} if migrado else {})
+    if feito:
+        logger.info("computador_de_fabrica")
+    else:
+        logger.warning("computador_nao_voltou_ao_de_fabrica")
+    return feito
 
 
 def marca(cartao: str, perfil: Profile | None, uniq: object = None) -> str:

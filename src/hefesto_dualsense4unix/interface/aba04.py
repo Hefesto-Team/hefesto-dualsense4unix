@@ -7,6 +7,7 @@ from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
 #: O PACOTE DESENHA A FILEIRA DE NÚMEROS, e o gerador a chama. Um dono, dois
 #: chamadores — ver `botao_player` abaixo.
 from pacotes import a04_iluminacao as _pacote04
+import marca_da_camada as _marca
 
 # ---------------------------------------------------------------------------
 # AS TRÊS MUDANÇAS DE 28/08/2026, e a que arrastou o resto.
@@ -1598,6 +1599,7 @@ def coluna(c):
                  mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">{VAZIO}</span>
           </div>
+          {_marca.bloco("luz")}
         </div>'''
 
 # ---------------------------------------------------------------------------
@@ -2449,6 +2451,24 @@ def _conferir(doc):
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
+
+
+#: A MARCA DA LUZ — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, 01/10/2026.
+#: A luz de cada controle é do computador, e o jogo pode sobrepor: a marca diz
+#: de quem é a cor que a coluna mostra (`interface/marca_da_camada.py`), e o
+#: pacote a reescreve a cada tique (`pacotes/camada.py`). Ela pousa na borda
+#: de cima da moldura, como a legenda de um quadro, e não ganha linha: a coluna
+#: mede 472 contra o teto de 476, e uma oitava faixa empurraria as quatro.
+#: Dentro da moldura ela cobriria o L1 do desenho, que vai de ponta a ponta.
+#: Ela é a ÚLTIMA filha da coluna e sai da grade por ser `absolute`: como
+#: primeira, ela tiraria da moldura o `:first-child` que apaga a divisória de
+#: cima. E o `::before` que toda célula ganha (a divisória) não é dela.
+CSS += _marca.CSS + """
+  .luz-grade .ctrl{position:relative}
+  .luz-grade .ctrl > .camada{position:absolute;top:-8px;left:22px;z-index:1;
+    padding:0 5px;background:var(--panel);max-width:calc(100% - 34px)}
+  .luz-grade .ctrl > .camada::before{content:none}
+"""
 
 
 #: AS DUAS MEDIDAS DA PRIMEIRA COLUNA, injetadas do dono (`medidas.py`). Elas não
