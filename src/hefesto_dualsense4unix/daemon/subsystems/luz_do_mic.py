@@ -563,7 +563,7 @@ async def _fora_do_laco(daemon: Any, fn: Any, *args: Any) -> Any:
     pior caso, 9 s, se lê como a máquina dela travando.
 
     A queda para a chamada direta existe porque `_run_blocking` exige o
-    executor montado (`daemon/lifecycle.py:6512` afirma isso), e um daemon
+    executor montado (`daemon/lifecycle.py:6665` afirma isso), e um daemon
     dublado ou meio subido não o tem. Bloquear um teste é aceitável; derrubar
     a luz por causa dele não é.
     """
@@ -1008,7 +1008,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                             desinscrever(topico, aberta)
             # A DEVOLUÇÃO NO DESLIGAMENTO mora aqui porque o
             # `connection.shutdown` só sabe CANCELAR tasks
-            # (`daemon/connection.py:2435-2436`) — um laço cancelado não repinta e
+            # (`daemon/connection.py:2306-2307`) — um laço cancelado não repinta e
             # não solta nada. O `finally` roda com a cancelação já entregue, e
             # como o `shutdown` chama `cancel()` UMA vez por task, o `await` de
             # dentro de `_devolver` sobrevive; se não sobreviver, a repintura já

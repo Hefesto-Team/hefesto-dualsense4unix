@@ -62,7 +62,7 @@ POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
 
 * `HotkeySubsystem` (`hotkey.py:3564`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
-  sempre, por FUNÇÃO — `lifecycle.py:972` (`start_hotkey_manager`) e `:974`
+  sempre, por FUNÇÃO — `lifecycle.py:1098` (`start_hotkey_manager`) e `:1100`
   (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas
   de log e a impressão falsa de que o registry é quem manda.
 """
