@@ -71,7 +71,8 @@ O QUE ESTE MÓDULO NUNCA FAZ
   `MANGOHUD=1` que ela pôs no Heroic continua lá depois da cura — e a
   PERMISSÃO do arquivo volta como estava, que é parte do que estava lá (ver
   :func:`_escrever_atomico`);
-* **nunca escreve fora da allowlist** (`daemon.launch_env.ENV_ALLOWLIST`). O
+* **nunca escreve fora da allowlist** (`daemon.launch_env.ENV_ALLOWLIST`) e
+  das correções que não dependem de controle (:data:`CORRECOES_DA_CARONA`). O
   arquivo do daemon é lido por um wrapper `sh` que filtra por essa lista
   justamente contra arquivo adulterado; a mesma lista filtra aqui.
 
@@ -183,10 +184,10 @@ SEM_AMBIENTE = ("O serviço ainda não publicou o ambiente desta sessão. Ligue 
 ILEGIVEL = ("Não consegui ler o `{arquivo}` deste lançador, e não vou "
             "reescrevê-lo por cima. Abra o lançador uma vez e tente de novo.")
 
-#: AS DUAS QUE UMA PESSOA COSTUMA PÔR SOZINHA — o cache de shader da NVIDIA. É
-#: a mesma leitura do «limpa?» (`utils/memoria_dos_controles`, a régua confere
-#: que são iguais): o valor que ela tinha antes da primeira escrita do Hefesto
-#: é guardado e volta no desfazer.
+#: AS DUAS QUE UMA PESSOA COSTUMA PÔR SOZINHA — o cache de shader da NVIDIA. Com
+#: as :data:`DELA_MANDA`, é a leitura do «limpa?» (`utils/memoria_dos_controles`,
+#: a régua confere que são iguais): o valor que ela tinha antes da primeira
+#: escrita do Hefesto é guardado e volta no desfazer.
 PODEM_SER_DELA: frozenset[str] = frozenset(
     {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"})
 
@@ -205,6 +206,23 @@ _DO_PRODUTO_SEM_REGISTRO: frozenset[str] = frozenset({
     "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
     "PROTON_ENABLE_MHWILDS_USB_AUDIO",
 })
+
+#: AS CORREÇÕES QUE NÃO DEPENDEM DE CONTROLE, e a carona as leva junto com a
+#: ponte (AS-CORRECOES-AUTOMATICAS-DESLIGAM-O-XALIA-E-O-FOSSILIZE-01, 02/10/2026).
+#: O `proton` (Valve e GE) liga o xalia quando `PROTON_USE_XALIA` não vem
+#: (GE-Proton10-34 `proton:2093-2099`, o 11-7 em `:2527-2533`), e nem o Heroic
+#: nem o Lutris a escrevem. O lançador da Steam já a entrega (`xalia_fora`, em
+#: `assets/hefesto-launch.sh`, com o mesmo valor: a régua confere); fora dela,
+#: o jogo do Heroic e o do Lutris abriam com o xalia ligado. Ela não passa pela
+#: `ENV_ALLOWLIST`, que é a lista do que o serviço publica por estado dos
+#: controles. Nasce anotada no registro: não entra no :data:`_DO_PRODUTO_SEM_REGISTRO`.
+CORRECOES_DA_CARONA: tuple[tuple[str, str], ...] = (("PROTON_USE_XALIA", "0"),)
+
+#: AS QUE, POSTAS POR ELA, MANDAM: a regra do lançador da Steam («quem já pôs
+#: `PROTON_USE_XALIA` manda»). Um valor que já está no arquivo e não é um dos
+#: nossos é dela: a carona não escreve por cima, não anota, e o desfazer não o
+#: toca (:func:`_sem_o_que_ela_pos`).
+DELA_MANDA: frozenset[str] = frozenset(k for k, _ in CORRECOES_DA_CARONA)
 
 #: Quantos valores nossos o registro lembra por chave. O último é o de agora;
 #: os de antes cobrem a escrita que caiu no meio e o arquivo que o «devolver»
@@ -260,6 +278,16 @@ def ambiente_da_ponte(pasta: Path | None = None) -> dict[str, str]:
         if nome in ENV_ALLOWLIST:
             fora[nome] = valor.strip()
     return fora
+
+
+def ambiente_da_carona(pasta: Path | None = None) -> dict[str, str]:
+    """O que a carona leva a cada estrada: a ponte e as :data:`CORRECOES_DA_CARONA`.
+
+    Sem a ponte, `{}`: a carona recusa como antes (:data:`SEM_AMBIENTE`), e a
+    correção não sai sozinha para um lançador que o serviço nunca alcançou.
+    """
+    ponte = ambiente_da_ponte(pasta)
+    return {**ponte, **dict(CORRECOES_DA_CARONA)} if ponte else {}
 
 
 @dataclass(frozen=True)
@@ -362,7 +390,7 @@ def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
     if not estradas:
         return Plano(chave, (), {}, "não há por onde entrar neste lançador",
                      nome, pasta_do_ambiente)
-    ambiente = ambiente_da_ponte(pasta_do_ambiente)
+    ambiente = ambiente_da_carona(pasta_do_ambiente)
     if not ambiente:
         return Plano(chave, estradas, {}, SEM_AMBIENTE, nome, pasta_do_ambiente)
     return Plano(chave, estradas, ambiente, "", nome, pasta_do_ambiente)
@@ -654,13 +682,33 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
     return pares
 
 
+def _sem_o_que_ela_pos(pares: Pares, ambiente: dict[str, str],
+                       entrada: Entrada) -> dict[str, str]:
+    """O ambiente deste arquivo sem as :data:`DELA_MANDA` que ela já pôs nele.
+
+    É dela o valor que está no arquivo e não é um dos nossos no registro: o que
+    ela pôs antes do Hefesto (sem marca) e o que ela trocou depois. Fora do
+    ambiente, a marca velha sai do registro pelo :func:`_devolver_chaves`, que
+    não tira valor que não é nosso.
+    """
+    fora = dict(ambiente)
+    for chave in DELA_MANDA & ambiente.keys():
+        marca = entrada.chaves.get(chave)
+        nossos = set(marca.valores) if marca is not None else set()
+        if any(a == chave and b not in nossos for a, b in pares):
+            del fora[chave]
+    return fora
+
+
 def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
     """A ESCRITA sobre os pares do arquivo, anotando no registro o que é nosso.
 
     Uma chave nossa que saiu do ambiente sai do arquivo (o Modo Nativo não tem
     `IGNORE`: um `IGNORE` congelado no Heroic deixava o jogo sem o controle
-    que o Modo Nativo existe para mostrar). As de agora entram por cima.
+    que o Modo Nativo existe para mostrar). As de agora entram por cima, menos
+    as :data:`DELA_MANDA` que ela já pôs.
     """
+    ambiente = _sem_o_que_ela_pos(pares, ambiente, entrada)
     atual = dict(pares)
     pares = _devolver_chaves(
         pares, [k for k in entrada.chaves if k not in ambiente], entrada, _Contas())
@@ -1090,8 +1138,11 @@ def onde_falta_o_ambiente(
     fora = _a_exclusao() if exclusao is None else exclusao
 
     def falta_em(pares: Pares, ambiente: dict[str, str]) -> bool:
+        #: Uma :data:`DELA_MANDA` presente não falta, com qualquer valor: o
+        #: dela manda, e a carona não o trocaria.
         tem = dict(pares)
-        return any(tem.get(k) != v for k, v in ambiente.items())
+        return any(tem.get(k) != v and not (k in DELA_MANDA and k in tem)
+                   for k, v in ambiente.items())
 
     #: SÓ O QUE A CARONA ESCREVE: a caixa de um lançador que ela declarou à mão
     #: não está na tabela da carona (:func:`cartoes_com_estrada`), e dizer que
@@ -1912,12 +1963,29 @@ _PASTAS_DO_LUTRIS_FLATPAK = (f".var/app/{_LUTRIS_APP_ID}/config/lutris",
 #:   o efeito do `''` não está medido (ele pode desligar o cache). Por
 #:   delegação, a validar por ela: sem a medida, o jogo excluído do Lutris herda
 #:   da caixa o cache de shader, que não toca o controle. Com um «antes» dela no
-#:   registro da caixa, o `.yml` leva o dela.
+#:   registro da caixa, o `.yml` leva o dela;
+#: * o ``PROTON_USE_XALIA`` FICA FORA (:data:`_SEM_NAO_VEIO`): ele não tem valor
+#:   de «não veio».
 _NAO_VEIO: tuple[tuple[str, str], ...] = (("SDL_", ""), ("PROTON_", ""))
+
+#: AS QUE NÃO TÊM VALOR DE «NÃO VEIO», e o jogo excluído do Lutris Flatpak fica
+#: com o da caixa. MEDIDO em 02/10/2026 no GE-Proton 11-7 e no 10-34 instalados
+#: nela, só leitura: o script decide o xalia por PRESENÇA (`if
+#: "PROTON_USE_XALIA" not in self.env`, `proton:2527` no 11-7, `:2093` no
+#: 10-34), e quem sobe o `xalia.exe` é o `explorer.exe` do Wine dele, que lê a
+#: variável por `GetEnvironmentVariableW` e só a sobe com um valor não vazio e
+#: diferente de `0` (`manage_desktop`, desmontado do binário do 11-7). O vazio
+#: dá zero caracteres: `''` desliga como o `0`. O `1` ligaria o xalia em
+#: toda janela (sem o `XALIA_SUPPORTED_ONLY` que o script põe) e também no runner
+#: `wine`, que sem o Hefesto não o liga. Por delegação, a validar por ela: o
+#: excluído do Lutris fica sem o xalia, como os outros jogos da caixa.
+_SEM_NAO_VEIO: frozenset[str] = frozenset({"PROTON_USE_XALIA"})
 
 
 def nao_veio(chave: str) -> str | None:
     """O valor que o leitor de `chave` lê como «não veio»; ``None`` = sem medida."""
+    if chave in _SEM_NAO_VEIO:
+        return None
     for prefixo, valor in _NAO_VEIO:
         if chave.startswith(prefixo):
             return valor

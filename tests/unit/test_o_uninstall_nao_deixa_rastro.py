@@ -403,7 +403,8 @@ def test_os_espelhos_do_desfazer() -> None:
     from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
 
     allowlist = set(ENV_ALLOWLIST)
-    assert cura.PODEM_SER_DELA == m._VARIAVEIS_QUE_PODEM_SER_DELA
+    assert cura.PODEM_SER_DELA | cura.DELA_MANDA == m._VARIAVEIS_QUE_PODEM_SER_DELA
+    assert not cura._DO_PRODUTO_SEM_REGISTRO & cura.DELA_MANDA
     assert allowlist >= cura.PODEM_SER_DELA
     assert not cura._DO_PRODUTO_SEM_REGISTRO & cura.PODEM_SER_DELA
     historico = allowlist - cura.PODEM_SER_DELA - NASCIDAS_DEPOIS_DO_REGISTRO

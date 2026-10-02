@@ -154,9 +154,11 @@ _FORMA_DO_MAC = re.compile(r"^[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}$")
 _FORMA_DA_PASTA = re.compile(r"^\d{8}-\d{6}-(?:controles|casa)$")
 
 #: As variáveis que o produto exporta para os jogos — espelho de
-#: ``daemon/launch_env.ENV_ALLOWLIST`` (a régua confere que são iguais). É por
-#: elas que o «limpa?» reconhece o rastro do Hefesto no ``config.json`` do Heroic
-#: e nos ``overrides`` do Flatpak, que o ``uninstall.sh`` não visita.
+#: ``daemon/launch_env.ENV_ALLOWLIST`` e, no fim, das
+#: ``integrations/cura_por_estrada.CORRECOES_DA_CARONA`` (a régua confere que são
+#: iguais). É por elas que o «limpa?» reconhece o rastro do Hefesto no
+#: ``config.json`` do Heroic e nos ``overrides`` do Flatpak, que o
+#: ``uninstall.sh`` não visita.
 VARIAVEIS_DO_PRODUTO: tuple[str, ...] = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_JOYSTICK_HIDAPI",
@@ -167,12 +169,14 @@ VARIAVEIS_DO_PRODUTO: tuple[str, ...] = (
     "SDL_ACCELEROMETER_AS_JOYSTICK",
     "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
     "PROTON_ENABLE_MHWILDS_USB_AUDIO",
+    "PROTON_USE_XALIA",
 )
 
-#: As duas que uma pessoa costuma pôr sozinha (cache de shader da NVIDIA): no
-#: «limpa?» elas contam como «pode ser sua», e não como rastro certo.
+#: As que uma pessoa costuma pôr sozinha — o cache de shader da NVIDIA e o
+#: ``PROTON_USE_XALIA``, que o desfazer deixa quando é dela: no «limpa?» elas
+#: contam como «pode ser sua», e não como rastro certo.
 _VARIAVEIS_QUE_PODEM_SER_DELA = frozenset(
-    {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"}
+    {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "PROTON_USE_XALIA"}
 )
 
 #: As pastas do Heroic — espelho de ``integrations/camadas_vulkan._CONFIG_DO_HEROIC``
