@@ -1529,9 +1529,9 @@ class ControllerIdentityRegistry:
         """Solta o número novo para o APARELHO. Devolve se algo se mexeu.
 
         APARELHO-NAO-SE-CONTRADIZ-01. É o instante em que a cor e as lâmpadas
-        se refazem JUNTAS, e por isso quem chama é UM só: a tarefa do gatilho
-        da lightbar (``daemon/connection.registrar_gatilho_da_lightbar``),
-        imediatamente ANTES de resolver o que vai no report. Assim o mesmo
+        se refazem JUNTAS, e por isso quem chama é UM só: o preparo do gatilho
+        da lightbar (``daemon/connection._preparar_a_lightbar``, no fio do
+        laço), imediatamente ANTES de a tarefa resolver o report. Assim o mesmo
         report leva o número novo e a cor nova.
 
         **Chamar de outro lugar reabre o defeito**, e por um caminho que régua
