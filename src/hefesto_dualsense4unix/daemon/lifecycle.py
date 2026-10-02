@@ -258,6 +258,82 @@ def _mascara_da_maquina() -> str:
     return escolhida or DaemonConfig.gamepad_flavor
 
 
+def _a_maquina_deixa_o_pad_ligado() -> bool:
+    """A preferência dela, no disco, é o pad virtual LIGADO? Nunca levanta.
+
+    O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (01/10/2026). É a base para onde volta o
+    modo que um perfil ligou, quando o perfil seguinte não tem `mode`: só o
+    `True` do `gamepad_emulation.flag` (o gesto dela) segura o pad. O
+    desligado de propósito e o «nunca decidiu» seguem o caminho de antes.
+    """
+    from hefesto_dualsense4unix.utils.session import load_gamepad_preference
+
+    try:
+        ligado, _flavor = load_gamepad_preference()
+    except Exception:
+        return False
+    return ligado is True
+
+
+def _o_ramo_do_pad(
+    daemon: Any, mode: Any | None, *, profile: Any | None, origin: str
+) -> str:
+    """O pad de pé no caminho e na máscara da seção — `None` é a da máquina.
+
+    O ramo `kind="gamepad"` do `Daemon.apply_profile_mode`, e também a volta
+    à base quando um perfil sem `mode` sucede um que ligou o pad com a
+    preferência dela de pé (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 01/10/2026).
+    Quem chama já passou pela trava de gesto manual. Não mexe na posse
+    (`_mode_from_profile`): quem decide isso é o chamador.
+    """
+    if daemon._native_mode:
+        # Sem reapply: o perfil ATUAL acabou de aplicar triggers/LEDs;
+        # re-aplicar o last_profile/stash desfaria a ativação corrente.
+        daemon.set_native_mode(False, reapply=False, origin="profile")
+    gamepad_on = (
+        daemon.config.gamepad_emulation_enabled
+        and daemon._gamepad_device is not None
+    )
+    flavor = getattr(mode, "gamepad_flavor", None)
+    # A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026): `None` é "sem opinião de
+    # máscara", e sem opinião a máscara do jogo é a da MÁQUINA (a escolha
+    # dela, `_mascara_da_maquina`), nunca a que o jogo anterior deixou na
+    # sessão. Até aqui o `None` não pedia nada e o `xbox` do Future
+    # Knight seguia vestido no PRAGMATA, sem giroscópio.
+    flavor_do_jogo = flavor if flavor is not None else _mascara_da_maquina()
+    flavor_atual = getattr(daemon._gamepad_device, "flavor", None)
+    # MODO-DE-CONEXAO-01 (13/09/2026): a seção `mode` também diz o
+    # CAMINHO, e ele é pedido pela mesma porta da máscara. `None` é "sem
+    # opinião": o de fábrica (CAMINHO-CONTAGIO-01), e nunca o do perfil
+    # anterior; a escolha global dela fica (só o gesto dela a grava).
+    caminho = _caminho_da_secao(mode)
+    adiada_por_jogo = False
+    if (
+        not gamepad_on
+        or flavor_do_jogo != _mascara_da_sessao(daemon)
+        or _o_p1_vestiria(daemon, flavor_do_jogo) != flavor_atual
+        or (caminho is not None and caminho != _caminho_vivo(daemon))
+        # O dono ainda com o caminho de OUTRO perfil (conferência da
+        # O-MODO-XBOX-NAO-E-QUEDA-02): o start sem opinião o limpa, e só
+        # recria o pad se o canal mudar.
+        or (caminho is None and getattr(daemon.config, "gamepad_caminho", None))
+    ):
+        adiada_por_jogo = daemon._pedir_mascara_do_perfil(
+            flavor_do_jogo,
+            profile=profile,
+            origin=origin,
+            **({"caminho": caminho} if caminho is not None else {}),
+        )
+    else:
+        # Este perfil não pede troca nenhuma (a máscara vigente já é a
+        # dele). Isso NÃO encerra por si a divergência de OUTRO perfil:
+        # no journal de 19/08 duas janelas se revezavam, e quem pedia a
+        # máscara vigente apagaria o latch a tempo de a outra reabrir o
+        # mesmo pedido recusado na volta seguinte.
+        daemon._reavaliar_mascara_adiada(flavor_atual)
+    return ADIADO_JOGO_ABERTO if adiada_por_jogo else APLICADO
+
+
 def _mascara_da_sessao(daemon: Any) -> str:
     """A máscara do jogo que a sessão vale agora (a que os sem cartão herdam)."""
     from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
@@ -3591,6 +3667,16 @@ class Daemon:
             # caminho de volta agora que o checkbox saiu da tela. Mesma decisão
             # do `mode_transition.plan_mode_transition` (desktop).
             elif self._mode_from_profile == "gamepad" and gamepad_on:
+                # O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (01/10/2026): reverter é
+                # voltar à BASE da máquina, e não abaixo dela. Medido às
+                # 22:40:34 de 01/10: o «Ativar» do Bail or Jail (sem `mode`)
+                # depois do Freestyle (gamepad) parou o pad com o
+                # `gamepad_emulation.flag` dela dizendo `dualsense`, e o
+                # controle caiu no mouse e teclado. Com a preferência dela de
+                # pé, o pad fica, no caminho e na máscara da máquina.
+                if _a_maquina_deixa_o_pad_ligado():
+                    self._mode_from_profile = None
+                    return _o_ramo_do_pad(self, None, profile=profile, origin=origin)
                 self.set_gamepad_emulation(False, origin="profile")
             self._mode_from_profile = None
             return APLICADO
@@ -3602,54 +3688,14 @@ class Daemon:
             return APLICADO
 
         if kind == "gamepad":
-            if self._native_mode:
-                # Sem reapply: o perfil ATUAL acabou de aplicar triggers/LEDs;
-                # re-aplicar o last_profile/stash desfaria a ativação corrente.
-                self.set_native_mode(False, reapply=False, origin="profile")
-            flavor = getattr(mode, "gamepad_flavor", None)
-            # A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026): `None` é "sem opinião de
-            # máscara", e sem opinião a máscara do jogo é a da MÁQUINA (a escolha
-            # dela, `_mascara_da_maquina`), nunca a que o jogo anterior deixou na
-            # sessão. Até aqui o `None` não pedia nada e o `xbox` do Future
-            # Knight seguia vestido no PRAGMATA, sem giroscópio.
-            flavor_do_jogo = flavor if flavor is not None else _mascara_da_maquina()
-            flavor_atual = getattr(self._gamepad_device, "flavor", None)
-            # MODO-DE-CONEXAO-01 (13/09/2026): a seção `mode` também diz o
-            # CAMINHO, e ele é pedido pela mesma porta da máscara. `None` é "sem
-            # opinião": o de fábrica (CAMINHO-CONTAGIO-01), e nunca o do perfil
-            # anterior; a escolha global dela fica (só o gesto dela a grava).
-            caminho = _caminho_da_secao(mode)
-            adiada_por_jogo = False
-            if (
-                not gamepad_on
-                or flavor_do_jogo != _mascara_da_sessao(self)
-                or _o_p1_vestiria(self, flavor_do_jogo) != flavor_atual
-                or (caminho is not None and caminho != _caminho_vivo(self))
-                # O dono ainda com o caminho de OUTRO perfil (conferência da
-                # O-MODO-XBOX-NAO-E-QUEDA-02): o start sem opinião o limpa, e só
-                # recria o pad se o canal mudar.
-                or (caminho is None and getattr(self.config, "gamepad_caminho", None))
-            ):
-                adiada_por_jogo = self._pedir_mascara_do_perfil(
-                    flavor_do_jogo,
-                    profile=profile,
-                    origin=origin,
-                    **({"caminho": caminho} if caminho is not None else {}),
-                )
-            else:
-                # Este perfil não pede troca nenhuma (a máscara vigente já é a
-                # dele). Isso NÃO encerra por si a divergência de OUTRO perfil:
-                # no journal de 19/08 duas janelas se revezavam, e quem pedia a
-                # máscara vigente apagaria o latch a tempo de a outra reabrir o
-                # mesmo pedido recusado na volta seguinte.
-                self._reavaliar_mascara_adiada(flavor_atual)
+            resultado = _o_ramo_do_pad(self, mode, profile=profile, origin=origin)
             # CADA CONTROLE É UM JOGADOR, e o perfil não opina sobre isso:
             # quem liga dois controles quer dois jogadores. O co-op vive num
             # dono só, `DaemonConfig.coop_enabled`.
             # A POSSE do eixo é do perfil mesmo com a máscara adiada — ele
             # opinou, e quem opina é dono. O que ficou em aberto é só a máscara.
             self._mode_from_profile = "gamepad"
-            return ADIADO_JOGO_ABERTO if adiada_por_jogo else APLICADO
+            return resultado
 
         # kind == "desktop": declaração explícita — limpa qualquer modo.
         # LEIGO-01: o co-op fica de fora da limpeza pelo mesmo motivo do ramo

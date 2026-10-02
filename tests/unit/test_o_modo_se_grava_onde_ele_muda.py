@@ -619,3 +619,83 @@ def test_o_diario_diz_por_qual_porta_o_modo_chegou(bancada: _Bancada) -> None:
         f"o PS + R3 não disse a porta dele: {_gravacoes(registros)}")
     modo = _modo_no_disco(FREESTYLE)
     assert modo is not None and modo.caminho == "xbox"
+
+
+# ---------------------------------------------------------------------------
+# 9. O «Salvar» logo depois do chip não devolve o modo velho (resposta [2] dela)
+# ---------------------------------------------------------------------------
+def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
+    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O Freestyle em Xbox no disco; o «Salvar» antes do chip e depois dele.
+
+    A resposta [2] dela, de 29/09: *«Tem que respeitar o que eu decidir na
+    interface e eu clicar em salvar.»* O «Salvar» (`rodape.salvar`) regrava o
+    perfil como o disco o tem (`D-2709-O-SALVAR-LE-O-PERFIL`); o chip grava
+    pelo daemon. Nas duas ordens, o disco termina no modo que ela escolheu.
+
+    MORDIDA: um «Salvar» que guarda o rascunho lido no primeiro clique e o
+    regrava no seguinte (lido antes do escritor, gravado depois dele) deixa o
+    disco em `xbox`, e a régua reprova.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as pacote_perfil
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+
+    monkeypatch.setattr(pacote_perfil, "com_a_carona", lambda frase="": "")
+    d = _daemon()
+    _freestyle_ligado_em(d, "xbox")
+    h = _Handlers(d, _gerente(d))
+    ctx = SimpleNamespace(state={"active_profile": FREESTYLE})
+
+    rodape.salvar(ctx, {}, None)
+    assert _modo_no_disco(FREESTYLE).caminho == "xbox", "premissa: o Salvar antes do chip"  # type: ignore[union-attr]
+
+    _chip(h, "dualsense")
+    rodape.salvar(ctx, {}, None)
+
+    modo = _modo_no_disco(FREESTYLE)
+    assert modo is not None and (modo.kind, modo.caminho) == ("gamepad", "dualsense"), (
+        f"o «Salvar» logo depois do chip devolveu {modo!r} ao disco")
+
+
+# ---------------------------------------------------------------------------
+# 10. O perfil sem `mode` volta à base da máquina, e não abaixo dela
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("pad_da_maquina", [True, False])
+def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
+    bancada: _Bancada, pad_da_maquina: bool
+) -> None:
+    """O Freestyle (gamepad) valendo, e ela ativa à mão um jogo sem `mode`.
+
+    Medido às 22:40:34 de 01/10: o «Ativar» do Bail or Jail (sem `mode`) depois
+    do Freestyle parou o pad, com o `gamepad_emulation.flag` dela dizendo
+    `dualsense`; o controle caiu no mouse e teclado e a aba Vibração passou a
+    dizer que a vibração não chegava a jogo nenhum. Perfil sem `mode` não tem
+    opinião: o modo volta à BASE (a preferência dela no disco). Com o pad
+    ligado de propósito, ele fica; desligado de propósito, a reversão de sempre
+    o desliga.
+
+    MORDIDA: tire o `_a_maquina_deixa_o_pad_ligado()` do ramo `kind is None` de
+    `apply_profile_mode` e a célula `True` reprova com uma parada.
+    """
+    from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
+
+    save_gamepad_emulation(pad_da_maquina, "dualsense")
+    d = _daemon()
+    _perfil(FREESTYLE, mode={"kind": "gamepad", "caminho": "dualsense"})
+    _perfil(JOGO, mode=None, match=MatchCriteria(window_class=[JANELA_DO_JOGO]))
+    h = _Handlers(d, _gerente(d))
+    asyncio.run(h._handle_profile_switch({"name": FREESTYLE}))
+    assert d._gamepad_device is not None, "premissa: o Freestyle ligou o pad"
+    paradas = bancada.paradas
+
+    asyncio.run(h._handle_profile_switch({"name": JOGO}))
+
+    if pad_da_maquina:
+        assert bancada.paradas == paradas and d._gamepad_device is not None, (
+            "o perfil sem `mode` derrubou o pad que a preferência dela deixa ligado: "
+            "o controle caiu no mouse e teclado (22:40:34 de 01/10)")
+        assert d.config.gamepad_emulation_enabled is True
+    else:
+        assert d._gamepad_device is None, (
+            "com o pad desligado de propósito, a reversão de sempre não desligou")
