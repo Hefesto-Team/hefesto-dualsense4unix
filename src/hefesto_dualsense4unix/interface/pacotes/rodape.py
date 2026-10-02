@@ -186,8 +186,8 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     perguntar (a interface nova é de ação imediata, decisão dela de 01/09).
     Salvar com outro nome é o "Duplicar" da aba Perfis.
 
-    SEM PERFIL ATIVO, GRAVA NO «FREESTYLE», o que o boot restaura
-    (:func:`perfil_do_rodape`). A recusa fica para a máquina sem ele no disco.
+    SEM PERFIL ATIVO E SEM ESCOLHA, RECUSA apontando a aba Perfis
+    (:func:`perfil_do_rodape`, sem a perna do Freestyle desde 01/10/2026).
     """
     nome = perfil_do_rodape(ctx.state)
     draft = _draft_do_ativo(nome)
