@@ -10,15 +10,32 @@ lançador DE VERDADE num lar de mentira, com o `env` no lugar do jogo.
 A MORDIDA: troque o `xf_envs="PROTON_USE_XALIA=0"` de `xalia_fora` em
 `assets/hefesto-launch.sh` por `xf_envs=""` e
 `test_todo_jogo_nasce_sem_o_xalia` reprova.
+
+A SEGUNDA METADE (02/10) é a dos outros lançadores: a carona leva a mesma
+correção ao Heroic, ao Lutris e às caixas dos emuladores, com a mesma regra (o
+que ela pôs manda, o excluído não recebe, o desfazer tira só o nosso).
 """
 from __future__ import annotations
 
+import configparser
+import json
 import subprocess
 from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import lista_de_exclusao
+from hefesto_dualsense4unix.utils import memoria_dos_controles as m
+from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
+    _JANELA,
+    _PONTE,
+    _env_do_yml,
+    _flatpak,
+    _heroic,
+    _janela,
+    _lutris_flatpak,
+)
 
 RAIZ = Path(__file__).resolve().parents[2]
 LANCADOR = RAIZ / "assets" / "hefesto-launch.sh"
@@ -101,22 +118,6 @@ def test_o_jogo_da_lista_de_exclusao_abre_como_sem_o_hefesto(lar: Path) -> None:
 # A MORDIDA: troque o valor de `CORRECOES_DA_CARONA` em `cura_por_estrada.py`
 # por uma tupla vazia, e `test_a_carona_desliga_o_xalia_em_toda_estrada`
 # reprova pelo nome do arquivo do Heroic.
-
-import configparser  # noqa: E402
-import json  # noqa: E402
-
-from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe  # noqa: E402
-from hefesto_dualsense4unix.utils import memoria_dos_controles as m  # noqa: E402
-from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (  # noqa: E402
-    _JANELA,
-    _PONTE,
-    _caixa,
-    _env_do_yml,
-    _flatpak,
-    _heroic,
-    _janela,
-    _lutris_flatpak,
-)
 
 _XALIA = "PROTON_USE_XALIA"
 _RETROARCH = "org.libretro.RetroArch"
@@ -272,8 +273,7 @@ def test_o_desfazer_tira_so_o_nosso(casa: Path) -> None:
 
 def test_o_jogo_excluido_do_heroic_nao_recebe(casa: Path) -> None:
     """A cópia do jogo excluído fica sem o nosso; o vizinho segue a global, com ele."""
-    from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
-
+    lx = lista_de_exclusao
     heroic = _heroic(casa, {"A": {}, "B": {}})
     _carona(casa)
     assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
@@ -299,8 +299,7 @@ def test_o_jogo_excluido_do_lutris_herda_a_caixa(casa: Path) -> None:
 
     MORDIDA: tire o `PROTON_USE_XALIA` de `_SEM_NAO_VEIO`, e o `''` entra no `.yml`.
     """
-    from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
-
+    lx = lista_de_exclusao
     yml = _lutris_flatpak(casa)
     _carona(casa)
     assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=casa) == "adicionado"

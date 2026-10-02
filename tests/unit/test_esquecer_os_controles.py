@@ -250,8 +250,8 @@ def test_os_espelhos_sao_os_dos_donos() -> None:
     from hefesto_dualsense4unix.integrations import camadas_vulkan, cura_por_estrada
     from hefesto_dualsense4unix.profiles import loader
 
-    assert m.VARIAVEIS_DO_PRODUTO == ENV_ALLOWLIST + tuple(
-        k for k, _ in cura_por_estrada.CORRECOES_DA_CARONA)
+    esperadas = ENV_ALLOWLIST + tuple(k for k, _ in cura_por_estrada.CORRECOES_DA_CARONA)
+    assert esperadas == m.VARIAVEIS_DO_PRODUTO
     assert m.PASTAS_DO_HEROIC == camadas_vulkan._CONFIG_DO_HEROIC
     assert cura_por_estrada.CHAVE_DO_HEROIC == "enviromentOptions"
     historico = next(lg for lg in m.INVENTARIO if lg.chave == "versoes-antigas-dos-perfis")
