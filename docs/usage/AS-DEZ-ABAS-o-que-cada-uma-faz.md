@@ -186,12 +186,14 @@ Esta aba é do computador, não de um controle, e a fita fica esmaecida.
 
 Um perfil guarda o que você ajustou nas outras abas e o traz quando o jogo abre.
 
-- **Perfis salvos**, com **Nome**, **Prioridade** e **Funciona em**, e os
-  botões **Duplicar · Novo · Remover · Editar · Ativar**.
+- **Perfis salvos**, com **Nome**, **Preferência** e **Funciona em**, e os
+  botões **Duplicar · Novo · Remover · Editar · Ativar**. Um clique em
+  qualquer ponto da linha abre aquele perfil no editor.
 - **Funciona em**, **Nome do Jogo** com o botão **Detectar**, que lê o jogo
   aberto e monta a regra, e **Estilo de Jogo** (FPS, Corrida, Terror,
   Retrô/Emulador e outros), que já traz gatilho, luz, vibração e som
   resolvidos.
-- **Controle · Status · ID da peça**: quais controles têm ajuste próprio neste
-  perfil. Para escrever um perfil à mão, ver
+- **Controle · Status · ID da peça**: o ícone aceso é o que está ligado agora
+  naquele controle, e o ponto embaixo dele diz o que o perfil aberto guarda só
+  para aquele controle. Para escrever um perfil à mão, ver
   [creating-profiles.md](creating-profiles.md).
