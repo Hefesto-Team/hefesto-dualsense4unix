@@ -523,6 +523,9 @@ def _controles_do_estado(estado: Mapping[str, Any]) -> dict[str, dict[str, Any]]
             "adaptador": str(entrada.get("adaptador") or "").lower() or None,
             "jogador": entrada.get("player"),
             "modelo": entrada.get("modelo") if isinstance(entrada.get("modelo"), str) else None,
+            # O caminho do pad (``uinput`` no Xbox, ``uhid`` no DualSense): a MATRIZ.
+            "pad": entrada.get("vpad_backend") if isinstance(entrada.get("vpad_backend"), str)
+            else None,
             "bateria": _numero(entrada.get("battery_pct")),
             "mic_mudo": audio.get("mic_mudo"),
             "mic_mudo_desejado": audio.get("mic_mudo_desejado"),
@@ -605,7 +608,7 @@ def linha_da_janela(
         controles[rotulo] = {
             "jogador": None, "transporte": None, "adaptador": None, "conectado": False,
             "segundos": 0, "movimento": None, "voz": None, "mic_mudo": None,
-            "mic_mudo_desejado": None, "bateria": None,
+            "mic_mudo_desejado": None, "bateria": None, "pad": None,
         }
     for uniq, leituras in por_uniq.items():
         rotulo = rotulo_de[uniq]
@@ -624,6 +627,7 @@ def linha_da_janela(
             "mic_mudo": ultima["mic_mudo"],
             "mic_mudo_desejado": ultima["mic_mudo_desejado"],
             "bateria": ultima["bateria"],
+            "pad": ultima["pad"],
         }
         if movimento:
             medias[rotulo] = (_media(movimento) or 0.0) + (_media(voz) or 0.0)
@@ -806,12 +810,15 @@ def fatores_do_grupo(linha: Mapping[str, Any]) -> dict[str, Any]:
     voz = sorted(r for r, c in controles.items()
                  if c.get("conectado") and (c.get("voz") or {}).get("mediana") is not None
                  and c["voz"]["mediana"] > VOZ_NO_AR)
+    pads = sorted({str(c["pad"]) for c in controles.values()
+                   if c.get("conectado") and c.get("pad")})
     return {
         "steam_dela": 1 if fatores.get("steam_dela") else 0,
         "jogo": fatores.get("jogo"),
         "arranjo": arranjo,
         "cabo": cabo,
         "voz_no_ar": voz,
+        "pads": pads,
     }
 
 
@@ -884,7 +891,8 @@ def resumo_em_texto(grupos: Sequence[Mapping[str, Any]]) -> str:
         partes.append(
             f"grupo {n} · Steam dela {f['steam_dela']} · jogo {_ou_traco(f['jogo'])} · "
             f"arranjo [{arranjo or '-'}] · cabo [{', '.join(f['cabo']) or '-'}] · "
-            f"voz no ar [{', '.join(f['voz_no_ar']) or '-'}]"
+            f"voz no ar [{', '.join(f['voz_no_ar']) or '-'}] · "
+            f"pads [{', '.join(f['pads']) or '-'}]"
         )
         partes.append(
             f"  janelas {grupo['janelas']} · no veredito {grupo['no_veredito']} · "

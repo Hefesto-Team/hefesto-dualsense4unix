@@ -171,6 +171,16 @@ def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
     da_steam = [g for g in grupos if g["fatores"]["steam_dela"] == 1]
     assert len(da_steam) == 1 and da_steam[0]["janelas"] == 1
     assert da_steam[0]["passos"] == ["base"]
+    # O modo é fator da MATRIZ: o mesmo passo em Xbox (``uinput``) e em
+    # DualSense (``uhid``) são dois grupos, pelo pad que o estado disse.
+    xbox = _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 300,
+                                                       extra={"vpad_backend": "uinput"}))),
+                   rotulos, inst.ContextoDaJanela(passo="base"))
+    sony = _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 300,
+                                                       extra={"vpad_backend": "uhid"}))),
+                   rotulos, inst.ContextoDaJanela(passo="base"))
+    pelos_pads = {tuple(g["fatores"]["pads"]): g["janelas"] for g in inst.resumir([xbox, sony])}
+    assert pelos_pads == {("uinput",): 1, ("uhid",): 1}, pelos_pads
 
 
 # ---------------------------------------------------------------------------
