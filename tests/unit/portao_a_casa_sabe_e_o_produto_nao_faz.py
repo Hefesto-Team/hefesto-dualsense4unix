@@ -622,6 +622,518 @@ _SEM_MAO_HOJE: dict[str, str] = {
 }
 
 
+_NAO_E_PROMESSA: dict[str, str] = {
+    "core/acoes_do_gesto.py::por_grupo": (
+        "02/10/2026 — é do gerador do desenho, não do produto: `interface/aba06.py` "
+        "(o gerador do mockup da Navegação) monta com ela as opções da tabela dos seis "
+        "gestos; o pacote da aba lê o vocabulário pelo `tabela` e pelo `GESTOS`."
+    ),
+    "integrations/endpoint_de_haptica.py::nome_do_endpoint": (
+        "02/10/2026 — é o instrumento, não promessa ao produto: `scripts/o_basico.py` "
+        "(o retrato do básico) o importa para casar cada controle com o nome do "
+        "endpoint da háptica; o produto monta o nome pelo dono da marca do aparelho."
+    ),
+    "daemon/ganho_da_haptica.py::linear_do_cru": (
+        "29/09/2026, O-GANHO-DA-HAPTICA-TEM-DONO-01 — é o instrumento das "
+        "réguas, não promessa ao produto: traduz o volume CRU que o servidor de "
+        "som de mentira de `tests/unit/test_o_ganho_da_haptica_tem_dono.py` "
+        "guarda (:127, :159) para o fator de amplitude. O produto lê a placa pelo "
+        "`%` do leitor da casa (`volumes_do_sink`) e usa as irmãs `linear_do_pct` "
+        "e `pct_do_linear`, que têm chamador no dono do ganho"
+    ),
+    "core/formas_do_endereco.py::formas_do_endereco": (
+        "28/09/2026, O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 — são as "
+        "formas de UM endereço para as RÉGUAS, e não uma promessa ao produto: "
+        "a docstring diz «É o que as réguas de forma procuram», e o item 9 da "
+        "sprint nomeia quem as lê (`scripts/check_o_endereco_dela_em_toda_forma.py`, "
+        "`scripts/check_endereco_de_radio.py` e "
+        "`tests/unit/test_docs_mac_anonimato.py`), que `scripts/` e `tests/` "
+        "não contam para este portão. O produto mascara por `mascarar` e "
+        "`mascarar_endereco`, que não precisam das formas."
+    ),
+    "core/faixa_sintetica.py::e_endereco_sintetico": (
+        "18/09/2026, UM-NUMERO-SO-01 — é a leitura da lista de faixas de teste "
+        "desta casa, e o dono dela existe para o PORTÃO, não para o produto. "
+        "As três faixas moravam digitadas dentro de "
+        "`scripts/check_faixa_sintetica.py`, que não é pacote; quando o "
+        "produto precisou da mesma lista, a alternativa era digitá-la de novo "
+        "do outro lado — duas definições de \"é lixo\", que é como esta casa "
+        "fabrica divergência. Quem a chama é `check_faixa_sintetica.py` (o "
+        "`--limpar`, que o `doctor --fix` roda), e `scripts/` não conta para "
+        "este portão. **E a ausência de chamador em produção é MEDIDA, não "
+        "descuido:** a primeira cura de 18/09 expurgava a faixa dentro do "
+        "`identity.order_entries` e foi RECUADA pela suíte no mesmo dia — 27 "
+        "réguas desta casa usam `aa:bb:cc` como endereço de controle de "
+        "verdade, e 236 arquivos a citam. Expurgar no produto é regra sobre a "
+        "nossa suíte, não sobre o aparelho."
+    ),
+    "integrations/censo_dos_lancadores.py::sabe_ler": (
+        "09/09/2026, LANCADORES-ZERO-01 — é a pergunta que uma RÉGUA faz ao "
+        "módulo, e não uma promessa ao produto: a tela nunca a chama, porque "
+        "`biblioteca_do_cartao` já devolve o estado certo para os quatro "
+        "casos (`LIDO`, `NUNCA_ABERTO`, `ILEGIVEL`, `SEM_BIBLIOTECA`) e a "
+        "frase sai de `BibliotecaDoLancador.resumo`. Perguntar "
+        "\"sei ler?\" antes de ler seria a segunda verdade sobre a mesma "
+        "tabela `_LEITORES`. Quem chama é "
+        "`tests/unit/test_a_aba_lancadores_diz_a_verdade.py::"
+        "test_os_cinco_lancadores_ganharam_leitor_de_biblioteca`, que existe "
+        "para reprovar no dia em que um dos cinco perder o leitor — a régua "
+        "que ANTES provava o contrário, e que escrevia o próprio gatilho de "
+        "virada. Evidência: `tests/unit/"
+        "test_o_censo_dos_lancadores_le_a_biblioteca.py`, 13 casos com lar de "
+        "mentira; arrancar o leitor do Heroic reprova oito."
+    ),
+    "interface/frases_que_ela_baniu.py::texto_visivel_no_produto": (
+        "06/09/2026, A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01 — é a irmã de "
+        "`texto_visivel` e não é promessa pela MESMA razão: o produto não lê a "
+        "própria página, ele a ESCREVE. A diferença entre as duas é o que a "
+        "folha do piloto esconde (`.nota{display:none !important}`), e ela "
+        "existe porque a régua acusava 34 ocorrências de `mesa` \"em o "
+        "produto\" sobre uma tela que não mostrava nenhuma. Quem chama são o "
+        "portão `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` "
+        "(`test_a_palavra_nao_e_lida_em_nenhuma_das_dez_paginas_do_produto`) e "
+        "o instrumento `interface/olhar.py --palavra --publicado` — os dois "
+        "mundos que este portão não conta, e com razão. Evidência: "
+        "`tests/unit/test_a_regua_da_palavra_ve_o_produto.py`, que a morde nos "
+        "dois sentidos — arrancar a folha devolve as 34, e apagar a tela "
+        "inteira reprova em `test_a_leitura_do_produto_nao_apaga_a_tela`."
+    ),
+    "interface/frases_que_ela_baniu.py::texto_visivel": (
+        "06/09/2026, A-PALAVRA-MESA-SAI-01 — é a LEITURA de uma régua, e o "
+        "produto nunca lê a própria página: ele a ESCREVE. Quem chama são o "
+        "portão `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` e o "
+        "instrumento `interface/olhar.py --palavra`, que são os dois mundos "
+        "que esta régua não conta, e com razão. Ela vive no módulo da lista "
+        "porque a decisão que ela aplica é a MESMA — o que está dentro de "
+        "`<code>` é nome interno e não é palavra de tela —, e duas cópias "
+        "dessa decisão divergiriam no dia em que a lista ganhasse a segunda "
+        "palavra. Evidência: o docstring dela cita a conferência contra o "
+        "`innerText` do Chrome, e o `test_o_stripper_nao_engole_a_dica_nem_"
+        "inventa_tamanho` a morde."
+    ),
+    "core/acoes_de_botao.py::por_grupo": (
+        "A lista agrupada como a tela a desenha "
+        "(core/acoes_de_botao.py). Quem a chama e o GERADOR da aba Navegacao, "
+        "`interface/aba06.py` - que e BANCADA e sai da conta pela poda de "
+        "`promessas_sem_caminho`. Ela nasceu em 01/09/2026 justamente para a "
+        "lista deixar de ser DIGITADA no gerador: as duas copias ja tinham "
+        "divergido, e a da tela deixava de fora o Backspace e o Delete "
+        "que o produto emite no touchpad. A IRMA dela, `token_do_rotulo`, e do "
+        "produto: o gesto `guardar-definicoes` a chama a cada Guardar. "
+        "MEDIDO em 01/09/2026."
+    ),
+    "interface/monta.py::larg_rotulos": (
+        "Auxiliar do gerador do mockup (interface/monta.py:125), chamado só pelos "
+        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
+        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
+        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    ),
+    "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
+        "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
+        "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
+        "Jogar — `interface/aba01.py:629` e `:1799` —, que é BANCADA e sai da "
+        "conta pela poda de `promessas_sem_caminho`. "
+        "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "
+        "é do CÓDIGO, e não do estado da máquina: ela não muda entre dois tiques. "
+        "Por isso o chip cinza do `Nintendo Pro` vai CRAVADO no HTML publicado, "
+        "em vez de ser repintado dez vezes por segundo com a mesma resposta. "
+        "A IRMÃ dela é do produto e não está aqui: `mascara_do_controle` (o "
+        "gesto) recusa em tempo de execução lendo a mesma fonte, e é ela que "
+        "põe a frase no cartão quando alguém clica assim mesmo. "
+        "MEDIDO em 04/09/2026, na leva das quinze queixas dela."
+    ),
+    "interface/monta.py::monta": (
+        "O gerador do esqueleto das dez páginas. A página que ele escreve É o que o "
+        "WebView renderiza, mas quem o chama são os dez `interface/abaNN.py`, que "
+        "são BANCADA: rodam à mão, escrevem em `mockup/`, e o produto lê o HTML já "
+        "pronto de `interface/paginas/`. A poda da bancada em "
+        "`promessas_sem_caminho` tira os geradores da conta e, com eles, os "
+        "chamadores desta função. MEDIDO em 01/09/2026."
+    ),
+    "interface/monta.py::botao_cinza": (
+        "Auxiliar do gerador do mockup (a peça S-03 da D-03, 04/09/2026), que "
+        "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
+        "conta pela poda de `promessas_sem_caminho`. É a mesma classificação que "
+        "`interface/monta.py::monta` carrega logo acima, pela mesma razão medida: "
+        "o produto não gera página em tempo de execução, ele lê o HTML já escrito "
+        "em `interface/paginas/`. O docstring da função diz o mecanismo, e a "
+        "régua `tests/unit/test_o_botao_cinza_diz_a_razao.py` a exercita."
+    ),
+    "core/virtual_motion.py::sensores_vivos_na_janela": (
+        "SENSOR-DE-VERDADE-01, 04/09/2026. Régua do ENSAIO de bancada, não "
+        "promessa ao produto: ela lê uma janela "
+        "de motion e diz que sensor ainda carrega dado. Quem a chama é "
+        "`scripts/ensaios/o_jogo_para_de_ver_o_giro.py` — instrumento, e por "
+        "isso fora da conta. O produto não precisa dela: quem decide o que sai "
+        "é `janela_com_sensores`, fiada no `_emit` do `PhysicalReportReader`. O "
+        "docstring dela diz o limite (zero num quadro é indício, não prova) e "
+        "`tests/unit/test_o_sensor_desliga_de_verdade.py` a exercita."
+    ),
+    "daemon/subsystems/identity.py::reset_identity_registry": (
+        "MEDIDO em 12/08/2026. Instrumento de isolamento entre casos: o próprio "
+        "docstring diz `APENAS testes — isola estado entre casos`, e o corpo "
+        "descarta o singleton `_registry`. Chamá-lo em produção apagaria a "
+        "numeração dos controles no meio da sessão dela."
+    ),
+    "gui/widgets/button_glyph.py::limpar_cache_tinting": (
+        "MEDIDO em 12/08/2026. Instrumento: o docstring diz `higiene de testes` "
+        "e o corpo esvazia `_PIXBUF_TINT_CACHE`. O cache é uma otimização de "
+        "desenho; limpá-lo em produção só faria a janela redesenhar glifos que "
+        "já estavam certos."
+    ),
+    "integrations/desktop_notifications.py::reset_throttle_cache": (
+        "MEDIDO em 12/08/2026. Instrumento: docstring `útil em testes`, corpo "
+        "esvazia `_last_emit_at`. Existe para um caso poder emitir duas "
+        "notificações seguidas sem esperar o intervalo real passar."
+    ),
+    "integrations/desktop_notifications.py::reset_once_cache": (
+        "MEDIDO em 12/08/2026. Instrumento: docstring `útil em testes`, corpo "
+        "esvazia `_announced_once`. Irmã da anterior, para a dedução por "
+        "`once_key` não vazar de um caso para o seguinte."
+    ),
+    "utils/logging_config.py::reset_for_tests": (
+        "MEDIDO em 12/08/2026. Instrumento, e o nome o declara. Reconfigura o "
+        "logging entre casos; em produção o logging é configurado uma vez, no "
+        "início do processo, e reconfigurá-lo perderia handlers."
+    ),
+    "integrations/uhid_gamepad.py::capture_dualsense_blueprint": (
+        "MEDIDO em 12/08/2026. Ferramenta de diagnóstico, e o docstring o diz em "
+        "maiúsculas: `(DIAGNÓSTICO)`, `irmã de scripts/capture_blueprint.py`. "
+        "Está FORA do caminho de criação do vpad desde a VPAD-03/BT-01 de "
+        "propósito, e o docstring explica por quê: por Bluetooth cada "
+        "GET_REPORT num controle ocioso estoura o timeout de 5 s do hidp com "
+        "EIO. Religá-la seria a regressão, não a cura."
+    ),
+    "broker/hidraw_broker.py::physical_nodes_exposure": (
+        "13/09/2026, RESTOS-DA-ONDA-DOIS-01 — FERRAMENTA DE DIAGNÓSTICO desde "
+        "hoje. O chamador em produção era "
+        "`EmulationActionsMixin._steam_input_excecao_status`, que a aba 07 "
+        "chamava a cada leitura do cartão da Steam só para medir o `efetiva`, "
+        "e o `efetiva` já não chegava à tela desde a FRASES-E-DICAS-03. A "
+        "sprint tirou a varredura, e a nota datada está na docstring de "
+        "`EmulationActionsMixin._steam_input_excecoes`. Quem continua "
+        "chamando é o `_censo_de_fisicos` de `scripts/doctor.sh`, num heredoc "
+        "Python, e o comentário dele diz por quê: é o MESMO critério de físico "
+        "que o broker usa, e duas réguas para a mesma pergunta já produziram "
+        "alarme falso nesta casa. Desde a RESTOS-DA-ONDA-TRES-01 a docstring da "
+        "função diz o mesmo: só o `doctor.sh` consulta. Evidência: "
+        "`tests/unit/test_r06_status_honesto.py::TestExposicaoDoFisico` a "
+        "exercita, e `tests/unit/test_os_restos_da_onda_dois.py::"
+        "test_a_07_a_leitura_do_steam_input_nao_varre_hidraw` reprova se a 07 "
+        "voltar a chamá-la."
+    ),
+    "integrations/kernel_cmdline.py::plan_cmdline": (
+        "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
+        "em `_SEM_CAMINHO_HOJE` afirmando um FATO ERRADO: que *'enquanto o "
+        "shell do install for o dono, este módulo é uma segunda implementação "
+        "da mesma regra em outra linguagem'*. Não existe segunda implementação. "
+        "O instalador IMPORTA este próprio módulo, num heredoc Python do passo "
+        "`3e` (`sys.path.insert(0, root/'src')`, depois `kc.plan_tokens(tokens)` "
+        "e `kc.forbidden_reintroductions(actions)`), e o `install.sh` declara a "
+        "política com todas as letras: *'quem DECIDE é o módulo puro "
+        "integrations/kernel_cmdline.py (100% stdlib, testável); aqui só "
+        "traduzimos o plano'*. A regra tem UM dono, e é este arquivo. "
+        "O que sobra é diferença de FORMA, não de regra, e é por isso que a "
+        "função não é promessa sem caminho: a produção nunca tem o "
+        "`/proc/cmdline` cru na mão — lê tokens do JSON do kernelstub ou da "
+        "linha do GRUB — e por isso chama a irmã `plan_tokens`, que É alcançada. "
+        "Esta é a porta de string crua, irmã do `apply_plan` logo abaixo e da "
+        "mesma espécie: quem tem a linha inteira usa. NÃO foi podada de "
+        "propósito; a nota datada está no docstring dela."
+    ),
+    "integrations/kernel_cmdline.py::apply_plan": (
+        "MEDIDO em 12/08/2026. Instrumento: o docstring diz `SIMULA o plano "
+        "sobre os tokens (para testes e para o doctor comparar)` e `Não toca "
+        "sistema nenhum`. Quem de fato escreve a linha de comando do kernel é "
+        "o instalador, em shell; esta função existe para prever o resultado."
+    ),
+    "profiles/curva_propria.py::gerar_tabela_markdown": (
+        "MEDIDO em 22/08/2026, e isto SUBSTITUI a nota de 15/08 que o dava por "
+        "fiado em produção. O docstring (:290) diz o que ele é: gera a tabela de "
+        "`docs/protocol/curvas-proprias.md`. O único chamador é "
+        "`scripts/gerar-tabela-de-curvas.py`:52-83, que roda no CI com `--check` "
+        "(`.github/workflows/ci.yml`:400). Gerador de documentação é instrumento, "
+        "e instrumento não é caminho de produção — a mesma linha que vale para "
+        "`tests/`."
+    ),
+
+    # 56 citações em `interface/`, `rumble_actions` 28, `input_actions` 21,
+    "app/actions/footer_actions.py::FooterActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp`, que saiu com a janela. "
+        "O módulo é produção viva: `interface/pacotes/rodape.py` e as dez abas "
+        "o citam 16 vezes. Evidência: `grep -rn footer_actions "
+        "src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/home_actions.py::HomeActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva, e a maior de todas: 56 "
+        "citações em `src/hefesto_dualsense4unix/interface/` — é dele que sai o "
+        "`id_da_pagina` e o censo da aba Início. Evidência: `grep -rn "
+        "home_actions src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/input_actions.py::InputActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva: 21 citações em "
+        "`src/hefesto_dualsense4unix/interface/`, entre elas o mapa de teclas "
+        "que a aba 06 lê. Evidência: `grep -rn input_actions "
+        "src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/launch_wrapper_dialog.py::LaunchWrapperDialogMixin": (
+        "06/09/2026 — LÁPIDE, mesma razão. 15 citações do módulo em "
+        "`interface/`. O plano D-19 §2 já dizia que este é um dos quatro de "
+        "`app/actions/` sem chamador na interface nova, e que isso NÃO o torna "
+        "da janela."
+    ),
+    "app/actions/rumble_actions.py::RumbleActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva: 28 citações em "
+        "`src/hefesto_dualsense4unix/interface/`, entre elas "
+        "`texto_do_alcance_da_intensidade` (`interface/aba05.py:589`) e "
+        "`BTN_GIVE_BACK_TO_GAME` (`aba05.py:90`). Evidência: `grep -rn "
+        "rumble_actions src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/triggers_actions.py::TriggersActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva: 16 citações em "
+        "`src/hefesto_dualsense4unix/interface/`, e é dele que a aba 03 lê os "
+        "19 modos de gatilho. Evidência: `grep -rn triggers_actions "
+        "src/hefesto_dualsense4unix/interface/`."
+    ),
+    "integrations/tray.py::TrayController": (
+        "19/09/2026 — LÁPIDE, e ela é o efeito direto da `TRAY-ORFAO-01`. Este "
+        "era o tray POBRE: clicar no ícone abria a TUI no terminal, a lista de "
+        "perfis não marcava o ativo, e a linha de estado era remontada aqui em "
+        "vez de vir do dono. O `cli/cmd_tray.py` passou a subir o "
+        "`app.tray.AppTray`, que tem «Abrir painel», o submenu com o ativo "
+        "marcado e `N controles` de `daemon.state_full` — medido na máquina "
+        "dela no mesmo dia, com o daemon vivo. Decisão dela: *\"o tray faz o "
+        "mesmo mas melhor\"*. "
+        "`probe_gi_availability`, do MESMO arquivo, continua vivo e é chamado "
+        "pelo `app/tray.py:21` — por isso a classe ganha lápide em vez de o "
+        "arquivo ir para o código aposentado."
+    ),
+    "app/gui_dialogs.py::presentar_dialogos_em_curso": (
+        "06/09/2026 — LÁPIDE. Ela trazia para a frente os diálogos abertos "
+        "quando a JANELA era reapresentada, e o único chamador era o "
+        "`app/app.py`. A interface nova não tem diálogo GTK modal: o que ela "
+        "usa é o canal de recado das dez páginas."
+    ),
+    "app/theme.py::apply_theme": (
+        "06/09/2026 — LÁPIDE do CHAMADOR, não do módulo. `apply_theme` aplicava "
+        "o `gui/theme.css` na `Gtk.Window` do `app/app.py`. O `theme.css` "
+        "CONTINUA vivo e com dois donos — `scripts/paleta_da_casa.py` e "
+        "`tests/unit/test_paleta_unica.py` derivam dele as cores da casa —, e "
+        "`app/theme.escalar_css` continua sendo chamado pelas réguas de "
+        "geometria. O que morreu foi a janela onde a folha era pendurada."
+    ),
+    "utils/memoria_dos_controles.py::conferir_a_casa": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — é o «a máquina está limpa?» da "
+        "rotina de controle de qualidade, e quem o chama é "
+        "`scripts/guardar-e-devolver-a-casa.py limpa`. Não tem chamador no "
+        "produto POR CONSTRUÇÃO, e o docstring do script diz por quê: ele roda "
+        "DEPOIS do `uninstall.sh`, quando o comando do Hefesto e a `.venv` já "
+        "não existem, com o `python3` do sistema carregando este módulo pelo "
+        "caminho. Um ponto de entrada do produto que o chamasse não existiria "
+        "na hora em que a pergunta é feita."
+    ),
+    "interface/pacotes/a08_conexoes.py::rotulo_do_controle": (
+        "26/09/2026, A-08-O-CHECKUP-ABSORVE-A-GESTAO-01 — o rótulo LONGO do "
+        "controle («Sony • Player N • plástico • via») deixou de ser pintado "
+        "pelo tique quando a linha da Gestão virou o cartão, que mostra o "
+        "`rotulo_curto_do_controle`. Quem o chama é o gerador da 08 "
+        "(`interface/aba08.py`, o `rotulo = _pacote08.rotulo_do_controle` e a "
+        "régua interna que confere que o lugar vazio não o traz) — é o dono do "
+        "texto que o desenho escreve, e o gerador não é caminho do produto."
+    ),
+    "core/o_modo_no_ar.py::modo_contra_o_ar": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — FERRAMENTA "
+        "DE DIAGNÓSTICO. Quem a chama é o `check_o_modo_no_ar` de "
+        "`scripts/doctor.sh`, num heredoc Python, com o `daemon.state_full` do "
+        "socket; e o doctor roda no fim de todo install (a conferência final "
+        "do `install.sh`). A docstring do módulo diz o mesmo: «Quem lê é o "
+        "`doctor.sh`». A tela não a lê de propósito (a sprint, item 3: um aviso "
+        "novo na tela é desenho). Evidência: "
+        "`tests/unit/test_o_doctor_pergunta_o_modo_e_a_hora_do_pad.py::"
+        "TestODoctorPergunta` roda a checagem pelo doctor."
+    ),
+    "core/o_modo_no_ar.py::ModoDoJogador": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — a linha que "
+        "`modo_contra_o_ar` devolve e que o `check_o_modo_no_ar` de "
+        "`scripts/doctor.sh` imprime pela `frase()`. Mesma razão da função: "
+        "ferramenta de diagnóstico, sem caminho na tela por decisão da sprint."
+    ),
+    "core/o_modo_no_ar.py::hora_do_pad": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — FERRAMENTA "
+        "DE DIAGNÓSTICO. Quem a chama é o `check_a_hora_do_pad` de "
+        "`scripts/doctor.sh`, num heredoc Python, com o diário do kernel e o "
+        "da unit do daemon; o produto não lê diário. A docstring do módulo "
+        "diz: «Quem lê é o `doctor.sh`». Evidência: "
+        "`tests/unit/test_o_doctor_pergunta_o_modo_e_a_hora_do_pad.py::"
+        "TestAHoraDoPad` e o `test_a_noite_reprova_a_hora_no_doctor`."
+    ),
+    "core/o_modo_no_ar.py::HoraDoPad": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — a medida que "
+        "`hora_do_pad` devolve e que o `check_a_hora_do_pad` de "
+        "`scripts/doctor.sh` imprime pela `frase()`. Mesma razão da função: "
+        "ferramenta de diagnóstico, e o produto não lê diário."
+    ),
+    "interface/monta.py::folha_das_cores": (
+        "29/09/2026, A-TELA-PERGUNTA-AO-DONO-01 — a folha inteira dos 28 modelos "
+        "é da BANCADA, não promessa ao produto: quem a chama são os geradores das "
+        "abas 05 e 06 (`aba05.FOLHA_DOS_28`, `aba06`) e a mesa de medição "
+        "(`scripts/mesa_de_medicao.py`), e nem `interface/abaNN.py` nem "
+        "`scripts/` contam para este portão. A página publicada leva a folha "
+        "podada de cada desenho (`monta._so_o_colorway`)."
+    ),
+    "interface/monta.py::folha_de_realce": (
+        "29/09/2026, A-TELA-PERGUNTA-AO-DONO-01 — a regra CSS do `apertados=` de "
+        "`monta.svg` é do INSTRUMENTO: quem a chama é a mesa de medição "
+        "(`scripts/mesa_de_medicao.py`), e nenhuma aba aponta uma peça do "
+        "desenho. A primeira aba que precisar apontar uma peça publica esta folha "
+        "e passa `apertados=`; até lá, `scripts/` não conta para este portão."
+    ),
+    "integrations/alto_falante_bt.py::common_de_audio": (
+        "29/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01 — INSTRUMENTO, não "
+        "promessa, e a nota de 28/09/2026 no docstring o diz: o `0x35` da ponte "
+        "não leva `common` (`ARRANJO_035`). Quem chama são os ensaios do rádio "
+        "(`scripts/ensaios/o_som_que_sai.py` e os irmãos) e as réguas da bomba e "
+        "do governador, que o importam deste módulo com nome e assinatura fixos."
+    ),
+    "integrations/alto_falante_bt.py::fonte_com_ritmo": (
+        "29/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01 — INSTRUMENTO, não "
+        "promessa, e a nota de 28/09/2026 no docstring o diz: a ponte lê o "
+        "monitor do nó por `pw-record`, que já entrega no tempo real "
+        "(`fonte_do_monitor_do_no`). Quem chama é o ensaio de bancada "
+        "(`scripts/ensaios/o_som_que_sai.py`) e as réguas da bomba e do "
+        "governador."
+    ),
+    "integrations/alto_falante_bt.py::diagnosticar": (
+        "29/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01 — DIAGNÓSTICO DE "
+        "BANCADA, e a nota de 28/09/2026 no docstring o diz: quem chama é o "
+        "ensaio `scripts/ensaios/o_som_que_sai.py --sink`. O produto pergunta o "
+        "que precisa a `a_ponte_do_radio_pode_subir` e a "
+        "`ha_gravador_de_monitor`; o laudo fica no módulo porque a frase da "
+        "libopus dele tem régua própria."
+    ),
+    "integrations/arranjo_da_mesa.py::adaptadores_da_mesa": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `adaptadores_da_mesa` é parte da gêmea Python do motor do "
+        "arranjo que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::candidatas": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `candidatas` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::consequencias": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `consequencias` é parte da gêmea Python do motor do arranjo "
+        "que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::plano_dos_controles": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `plano_dos_controles` é parte da gêmea Python do motor do "
+        "arranjo que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::qualidade": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `qualidade` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::receita": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `receita` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::reexame": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `reexame` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::sem_entrada": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `sem_entrada` é parte da gêmea Python do motor do arranjo "
+        "que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::variante_por_id": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `variante_por_id` é parte da gêmea Python do motor do "
+        "arranjo que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+}
+
 _SEM_CAMINHO_HOJE: dict[str, str] = {
     # sai com: A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01
     "integrations/haptica_bt.py::bloco_de_silencio":
@@ -711,7 +1223,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
     #     por ela é o DESPACHO do daemon, não a janela.
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "interface/calibracao_das_entradas.py::botoes_para_o_jogo": (
+    "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
         "MEDIDO em 26/08/2026, e esta é a lápide que MENOS depende da L2-E: a "
         "peneira que a posse arma, e quem tem de perguntar por ela é o "
         "DESPACHO — `daemon/lifecycle.py`, no bloco do "
@@ -1667,6 +2179,14 @@ def _confere_razoes(*registros: tuple[str, dict[str, str]]) -> None:
     )
 
 
+def _registros_de_promessa() -> tuple[tuple[str, dict[str, str]], ...]:
+    """Os dois registros de classificação de promessa pública."""
+    return (
+        ("_NAO_E_PROMESSA", _NAO_E_PROMESSA),
+        ("_SEM_CAMINHO_HOJE", _SEM_CAMINHO_HOJE),
+    )
+
+
 class TestTodoInterruptorTemMao:
     """Uma env que o produto lê promete que algo pode ser ligado."""
 
@@ -1786,6 +2306,79 @@ class TestTodoInterruptorTemMao:
 class TestTodaPromessaPublicaTemCaminho:
     """O produto promete que isto faz algo — e existe por onde chegar nisto?"""
 
+    def test_toda_promessa_solta_esta_classificada(self) -> None:
+        """O caso que importa: o portão existe para pegar a PRÓXIMA."""
+        soltas = set(promessas_sem_caminho())
+        declaradas = set(_NAO_E_PROMESSA) | set(_SEM_CAMINHO_HOJE)
+        novas = sorted(soltas - declaradas)
+        assert not novas, (
+            "estas promessas públicas não têm chamador em produção e ninguém "
+            "disse o que elas são:\n  "
+            + "\n  ".join(novas)
+            + "\n"
+            "Nenhum módulo ALCANÇADO a partir de `_PONTOS_DE_ENTRADA` a "
+            "cita, nem o Python embutido nos heredocs de "
+            "`install.sh`/`uninstall.sh`. `tests/` e `scripts/` NÃO contam — "
+            "foi assim que 52 das 60 curas desta lista ficaram parecendo "
+            "entregues.\n"
+            "FAÇA UMA das quatro:\n"
+            "  1. FIE — chame de onde o produto passa, e o defeito acaba;\n"
+            "  2. APAGUE — se outro caminho já a substituiu, ela é resto;\n"
+            "  3. DECLARE em `_NAO_E_PROMESSA` — se não é promessa ao produto "
+            "(instrumento de teste, ferramenta de diagnóstico, lápide com nota "
+            "datada). A razão tem de CITAR a evidência: o docstring que diz "
+            "isso, a nota datada, o script irmão;\n"
+            "  4. DECLARE em `_SEM_CAMINHO_HOJE` — se é promessa e o caminho "
+            "ainda não existe. A razão tem de dizer onde o caminho se perde e "
+            "o que o fecharia.\n"
+            "Declarar é honesto e este portão não castiga honestidade. Ele só "
+            "não deixa a lápide envelhecer calada."
+        )
+
+    def test_nenhuma_declaracao_cita_simbolo_que_nao_existe(self) -> None:
+        """Registro que cita símbolo apagado é cemitério, não registro."""
+        publicas = _promessas_publicas_por_chave()
+        fantasmas = [
+            f"{rotulo}: {chave}"
+            for rotulo, registro in _registros_de_promessa()
+            for chave in sorted(set(registro) - publicas)
+        ]
+        assert not fantasmas, (
+            f"há {len(fantasmas)} declaração(ões) citando símbolo que não "
+            "existe mais como promessa pública de módulo:\n"
+            + "\n".join(f"  - {f}" for f in fantasmas)
+            + "\nAPAGUE a entrada (o símbolo saiu da árvore), ou corrija o "
+            "endereço se ele só mudou de arquivo."
+        )
+
+    def test_nenhuma_lapide_sobreviveu_a_propria_cura(self) -> None:
+        """O dia em que o caminho nasce é o dia de apagar a entrada."""
+        soltas = set(promessas_sem_caminho())
+        curadas = [
+            f"{rotulo}: {chave}"
+            for rotulo, registro in _registros_de_promessa()
+            for chave in sorted(set(registro) - soltas)
+        ]
+        assert not curadas, (
+            f"há {len(curadas)} lápide(s) declarando símbolo como sem caminho "
+            "enquanto ALGO em produção já o alcança:\n"
+            + "\n".join(f"  - {c}" for c in curadas)
+            + "\nAPAGUE a entrada. A cura chegou e a lápide ficou — é assim "
+            "que um registro honesto vira mentira, e a próxima pessoa perde "
+            "uma tarde descobrindo que o texto está velho."
+        )
+
+    def test_nenhum_simbolo_esta_nos_dois_registros(self) -> None:
+        """Ou não é promessa, ou é dívida. Estar nos dois é não ter decidido."""
+        ambos = sorted(set(_NAO_E_PROMESSA) & set(_SEM_CAMINHO_HOJE))
+        assert not ambos, (
+            f"estes símbolos estão declarados como 'não é promessa' E como "
+            f"dívida: {ambos}\nESCOLHA um."
+        )
+
+    def test_as_razoes_dos_simbolos_nao_envelhecem_caladas(self) -> None:
+        """Sem isto, os registros viram o lugar onde se esconde o que incomoda."""
+        _confere_razoes(*_registros_de_promessa())
 
     def test_todo_ponto_de_entrada_tem_fonte_viva(self) -> None:
         """A lista de entradas é o chão da régua — e chão apodrece calado."""
@@ -2015,6 +2608,114 @@ class TestOPortaoMorde:
             "o detector aceitou a LEITURA do applet (ipc.rs:54) como escrita"
         )
 
+    def test_uma_promessa_fabricada_e_acusada_sem_estar_na_lista(
+        self, tmp_path: Path
+    ) -> None:
+        """A prova que vale: o portão pega a PRÓXIMA, não as já escritas."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "cura_recem_nascida.py").write_text(
+            '"""Uma cura escrita e nunca ligada — o defeito-mãe, fabricado."""\n'
+            "\n\n"
+            "def rearmar_o_gatilho_da_cor() -> bool:\n"
+            '    """Faz algo importante que nada no produto pede."""\n'
+            "    return True\n"
+            "\n\n"
+            "class RegistroDeCoresPorAparelho:\n"
+            '    """Uma classe que ninguém instancia."""\n'
+            "\n"
+            "    def aplicar(self) -> None:\n"
+            "        return None\n",
+            encoding="utf-8",
+        )
+
+        soltas = set(promessas_sem_caminho(copia))
+        fabricadas = {
+            "daemon/cura_recem_nascida.py::rearmar_o_gatilho_da_cor",
+            "daemon/cura_recem_nascida.py::RegistroDeCoresPorAparelho",
+        }
+        assert fabricadas <= soltas, (
+            "o portão NÃO acusou a promessa fabricada — ele não pega a "
+            f"próxima, só cataloga as de hoje. Acusadas: "
+            f"{sorted(soltas & fabricadas)}"
+        )
+        declaradas = set(_NAO_E_PROMESSA) | set(_SEM_CAMINHO_HOJE)
+        assert not (fabricadas & declaradas), (
+            "a promessa fabricada está nos registros de classificação — a "
+            "mordida está medindo a lista, não o portão"
+        )
+        assert not (fabricadas & set(promessas_sem_caminho())), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_fiar_a_promessa_fabricada_a_faz_sumir_da_acusacao(
+        self, tmp_path: Path
+    ) -> None:
+        """A outra metade: o portão CALA quando a cura é entregue."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "cura_recem_nascida.py").write_text(
+            "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
+            encoding="utf-8",
+        )
+        chave = "daemon/cura_recem_nascida.py::rearmar_o_gatilho_da_cor"
+        assert chave in promessas_sem_caminho(copia)
+
+        (copia / "daemon" / "chamador_da_cura.py").write_text(
+            "from hefesto_dualsense4unix.daemon.cura_recem_nascida import (\n"
+            "    rearmar_o_gatilho_da_cor,\n"
+            ")\n"
+            "\n\n"
+            "def borda_do_produto() -> bool:\n"
+            "    return rearmar_o_gatilho_da_cor()\n",
+            encoding="utf-8",
+        )
+        assert chave in promessas_sem_caminho(copia), (
+            "a cura sumiu da acusação com um chamador que NINGUÉM alcança — o "
+            "fecho de import parou de valer e a corrente fechada em si mesma "
+            "voltou a passar"
+        )
+
+        entrada = copia / "cli" / "app.py"
+        entrada.write_text(
+            "from hefesto_dualsense4unix.daemon.chamador_da_cura import (\n"
+            "    borda_do_produto,\n"
+            ")\n\n"
+            + entrada.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        assert chave not in promessas_sem_caminho(copia), (
+            "o portão continuou acusando uma promessa JÁ FIADA — ele grita "
+            "sempre, e um portão que grita sempre é desligado na primeira "
+            "semana"
+        )
+
+    def test_um_chamador_so_em_tests_nao_conta_como_caminho(
+        self, tmp_path: Path
+    ) -> None:
+        """A linha que separa a dívida solta do resto da árvore."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "cura_recem_nascida.py").write_text(
+            "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
+            encoding="utf-8",
+        )
+        testes = tmp_path / "tests" / "unit"
+        testes.mkdir(parents=True)
+        (testes / "test_cura_recem_nascida.py").write_text(
+            "from hefesto_dualsense4unix.daemon.cura_recem_nascida import (\n"
+            "    rearmar_o_gatilho_da_cor,\n"
+            ")\n"
+            "\n\n"
+            "def test_a_cura_devolve_true() -> None:\n"
+            "    assert rearmar_o_gatilho_da_cor() is True\n",
+            encoding="utf-8",
+        )
+        assert (
+            "daemon/cura_recem_nascida.py::rearmar_o_gatilho_da_cor"
+            in promessas_sem_caminho(copia)
+        ), (
+            "o portão aceitou um chamador de `tests/` como caminho de produção "
+            "— é exatamente esse engano que fez 52 das 60 curas desta lista "
+            "parecerem entregues por meses"
+        )
 
     def test_arrancar_o_unico_chamador_de_uma_cura_viva_a_acusa(
         self, tmp_path: Path
@@ -2120,6 +2821,162 @@ class TestOPortaoMorde:
             "`_CADEIA_DA_INTERFACE_NOVA` não está segurando nada"
         )
 
+    def test_a_cura_chamada_so_pela_mordida_do_piloto_continua_acusada(
+        self, tmp_path: Path
+    ) -> None:
+        """O ponto delicado da migração, medido em vez de afirmado."""
+        copia = _copia_de_src(tmp_path, sem_a_ponte=True)
+        (copia / "daemon" / "cura_recem_nascida.py").write_text(
+            "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
+            encoding="utf-8",
+        )
+        chave = "daemon/cura_recem_nascida.py::rearmar_o_gatilho_da_cor"
+
+        pasta = tmp_path / _PASTA_DA_PONTE
+        pasta.mkdir(parents=True, exist_ok=True)
+        piloto = tmp_path / _PILOTO_DA_INTERFACE_NOVA
+        cabeca = (
+            "import argparse\n"
+            "\n"
+            "from hefesto_dualsense4unix.daemon import cura_recem_nascida\n"
+            "\n\n"
+            "class Janela:\n"
+            "    def __init__(self, args):\n"
+            "        self.args = args\n"
+            "\n"
+            "    def _instalar(self):\n"
+        )
+        rabo = (
+            "\n"
+            "    def _marcar_gestos_de_mentira(self):\n"
+            "        return cura_recem_nascida.rearmar_o_gatilho_da_cor()\n"
+            "\n\n"
+            "def main():\n"
+            "    p = argparse.ArgumentParser()\n"
+            '    p.add_argument("--prova-gesto", action="store_true")\n'
+            "    return Janela(p.parse_args())\n"
+        )
+        piloto.write_text(
+            cabeca
+            + "        if self.args.prova_gesto:\n"
+            + "            self._marcar_gestos_de_mentira()\n"
+            + rabo,
+            encoding="utf-8",
+        )
+        assert pontes_vivas(tmp_path), (
+            "o piloto fabricado não virou ponte — o fecho não achou a boca, e "
+            "as duas medições abaixo passariam por ausência"
+        )
+        assert chave in promessas_sem_caminho(copia), (
+            "a cura chamada SÓ de dentro de `if self.args.prova_gesto:` foi "
+            "dada por ligada. A poda da bancada parou de valer, e a partir "
+            "daqui basta uma linha na régua para uma cura desligada ficar "
+            "verde — que é exatamente a dívida que este portão existe para ver."
+        )
+        assert chave not in promessas_sem_caminho(copia, podar_a_bancada=False), (
+            "com a ponte INTEIRA a cura continuou acusada — então não é a poda "
+            "que a está acusando, e esta mordida não mede a distinção entre "
+            "espinha e bancada"
+        )
+
+        piloto.write_text(
+            cabeca
+            + "        self._marcar_gestos_de_mentira()\n"
+            + rabo,
+            encoding="utf-8",
+        )
+        assert chave not in promessas_sem_caminho(copia), (
+            "tirada a guarda, a chamada passou a ser espinha viva e o portão "
+            "continuou acusando — a poda ficou larga demais e agora cobra de "
+            "quem está fiado, que é o defeito mais caro que este portão pode ter"
+        )
+        assert chave not in promessas_sem_caminho(), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_a_corrente_fechada_em_si_mesma_nao_passa_mais(
+        self, tmp_path: Path
+    ) -> None:
+        """DEFEITO (a): ``A`` chama ``B``, ``B`` chama ``A``, e mais ninguém."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "corrente_fechada.py").write_text(
+            "def entrar_no_ciclo() -> int:\n"
+            "    return sair_do_ciclo() + 1\n"
+            "\n\n"
+            "def sair_do_ciclo() -> int:\n"
+            "    if False:\n"
+            "        return entrar_no_ciclo()\n"
+            "    return 0\n",
+            encoding="utf-8",
+        )
+        chaves = {
+            "daemon/corrente_fechada.py::entrar_no_ciclo",
+            "daemon/corrente_fechada.py::sair_do_ciclo",
+        }
+
+        plana = _regua_plana(copia)
+        assert not (chaves & plana), (
+            "a régua PLANA acusou a corrente fechada — então ela não é a régua "
+            "de ontem, e esta mordida não está medindo a troca de 22/08/2026"
+        )
+        assert chaves <= set(promessas_sem_caminho(copia)), (
+            "a régua de ALCANCE deixou passar a corrente fechada em si mesma: "
+            "dois símbolos que ninguém alcança se satisfazendo um ao outro. É "
+            "exatamente o defeito que a troca de 22/08/2026 existe para fechar"
+        )
+        assert not (chaves & set(promessas_sem_caminho())), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_a_colisao_de_nome_entre_modulos_nao_perdoa_mais(
+        self, tmp_path: Path
+    ) -> None:
+        """DEFEITO (b): um nome não é um endereço."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "orfa_com_nome_comum.py").write_text(
+            "class LevantamentoDaMesa:\n"
+            '    """A órfã de verdade — ninguém a instancia."""\n'
+            "\n"
+            "    def valor(self) -> int:\n"
+            "        return 0\n",
+            encoding="utf-8",
+        )
+        (copia / "cli" / "homonimo_alcancado.py").write_text(
+            "class LevantamentoDaMesa:\n"
+            "    def valor(self) -> int:\n"
+            "        return 1\n"
+            "\n\n"
+            "def usar() -> int:\n"
+            "    return LevantamentoDaMesa().valor()\n",
+            encoding="utf-8",
+        )
+        alvo = copia / "cli" / "app.py"
+        alvo.write_text(
+            "from hefesto_dualsense4unix.cli.homonimo_alcancado import usar\n\n"
+            + alvo.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        chave = "daemon/orfa_com_nome_comum.py::LevantamentoDaMesa"
+
+        assert chave not in _regua_plana(copia), (
+            "a régua PLANA acusou a órfã mesmo com o homônimo presente — então "
+            "ela não é a régua de ontem, e esta mordida não mede a troca"
+        )
+        assert chave in promessas_sem_caminho(copia), (
+            "a régua de ALCANCE perdoou a órfã por causa de um homônimo em "
+            "outro módulo — o nome voltou a valer como endereço, e a colisão "
+            "de nome (defeito b de 22/08/2026) está de volta"
+        )
+        assert (
+            "cli/homonimo_alcancado.py::LevantamentoDaMesa"
+            not in promessas_sem_caminho(copia)
+        ), (
+            "o homônimo ALCANÇADO foi acusado junto — a resolução por módulo "
+            "ficou estrita demais e passou a cobrar de quem está fiado"
+        )
+        assert chave not in promessas_sem_caminho(), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
 
     def test_o_comentario_do_roteiro_nao_conta_como_chamada(self) -> None:
         """Citar não é chamar — a mesma linha que separa o P3a inteiro."""
@@ -2202,6 +3059,43 @@ _RAZAO_FABRICADA = (
 class TestOPortaoNaoEscondeMetadeDoQueVe:
     """As réguas que varrem DOIS registros nomeiam os dois, não só o primeiro."""
 
+    def test_a_lapide_curada_nomeia_os_dois_registros(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Uma lápide caduca em CADA registro; as duas têm de sair na acusação."""
+        monkeypatch.setitem(
+            globals(), "_NAO_E_PROMESSA", {_LAPIDE_FABRICADA_A: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "_SEM_CAMINHO_HOJE", {_LAPIDE_FABRICADA_B: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "promessas_sem_caminho", lambda raiz=None: {}
+        )
+
+        with pytest.raises(AssertionError) as erro:
+            TestTodaPromessaPublicaTemCaminho().test_nenhuma_lapide_sobreviveu_a_propria_cura()
+
+        _os_dois_registros_saem_na_acusacao(str(erro.value), "lápide curada")
+
+    def test_o_simbolo_fantasma_nomeia_os_dois_registros(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Idem para o cemitério: citar símbolo apagado, nos dois registros."""
+        monkeypatch.setitem(
+            globals(), "_NAO_E_PROMESSA", {_LAPIDE_FABRICADA_A: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "_SEM_CAMINHO_HOJE", {_LAPIDE_FABRICADA_B: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "_promessas_publicas_por_chave", lambda raiz=None: set()
+        )
+
+        with pytest.raises(AssertionError) as erro:
+            TestTodaPromessaPublicaTemCaminho().test_nenhuma_declaracao_cita_simbolo_que_nao_existe()
+
+        _os_dois_registros_saem_na_acusacao(str(erro.value), "símbolo fantasma")
 
     def test_a_razao_mal_escrita_nomeia_os_dois_registros(self) -> None:
         """E a guarda das razões: uma queixa em cada registro, as duas na conta."""
