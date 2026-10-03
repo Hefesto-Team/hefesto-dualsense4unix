@@ -1548,8 +1548,7 @@ else
     done <<<"${_dono_tokens}"
 
     #: A DÍVIDA DECLARADA — `arquivo:razão com data`. Molde de
-    #: `INSTALL_OPTIONAL_RULES` acima e de `_SEM_ESCRITOR_HOJE`
-    #: (tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py:86): declarar é
+    #: `INSTALL_OPTIONAL_RULES` acima: declarar é
     #: honesto, e este portão não castiga honestidade — só não deixa a lápide
     #: envelhecer calada (a conferência está logo abaixo do laço, e uma entrada que
     #: já ganhou dono REPROVA até alguém apagá-la).
