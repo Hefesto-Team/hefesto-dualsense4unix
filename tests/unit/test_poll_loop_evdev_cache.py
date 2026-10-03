@@ -37,6 +37,23 @@ class _FakeSnapComBotoes:
     buttons_pressed: ClassVar[list[str]] = ["cross", "ps"]
 
 
+async def _rodar_ate_n_ticks(daemon: Daemon, n_ticks: int, teto_s: float = 20.0) -> None:
+    """Roda o daemon até ele contar ``n_ticks`` tiques e o para.
+
+    A conta é de tiques, não de segundos: o ``run`` gasta o começo da janela
+    subindo os subsistemas, e numa máquina carregada (a CI sob cobertura) 0,15 s
+    de relógio davam um tique só. O teto é só o guarda contra um laço que não anda.
+    """
+    run_task = asyncio.create_task(daemon.run())
+    fim = asyncio.get_running_loop().time() + teto_s
+    while (daemon.store.counter("poll.tick") < n_ticks
+           and not run_task.done()
+           and asyncio.get_running_loop().time() < fim):
+        await asyncio.sleep(0.01)
+    daemon.stop()
+    await run_task
+
+
 @pytest.mark.asyncio
 async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
     """Com evdev disponível mas sem mouse nem hotkey ativos, snapshot() deve ser"""
@@ -62,10 +79,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
         ),
     )
 
-    run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.15)
-    daemon.stop()
-    await run_task
+    await _rodar_ate_n_ticks(daemon, n_ticks)
 
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks, f"poll.tick esperado >= {n_ticks}, obtido {ticks}"
@@ -114,10 +128,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
     mock_mouse.dispatch.side_effect = lambda **kw: dispatch_calls.append(kw)
     daemon._mouse_device = mock_mouse
 
-    run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.15)
-    daemon.stop()
-    await run_task
+    await _rodar_ate_n_ticks(daemon, n_ticks)
 
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks, f"poll.tick esperado >= {n_ticks}, obtido {ticks}"
@@ -190,10 +201,7 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
         ),
     )
 
-    run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.10)
-    daemon.stop()
-    await run_task
+    await _rodar_ate_n_ticks(daemon, n_ticks)
 
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks, (
@@ -250,10 +258,7 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
     )
     daemon._mouse_device = mock_mouse
 
-    run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.10)
-    daemon.stop()
-    await run_task
+    await _rodar_ate_n_ticks(daemon, n_ticks)
 
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks
