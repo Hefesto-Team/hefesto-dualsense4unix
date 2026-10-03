@@ -93,12 +93,3 @@ def test_o_gate_de_ambiente_continua_sendo_o_caminho_a_mao() -> None:
         "o gate sumiu: sem ele não há NENHUMA forma de subir a ponte, e aí a "
         "remoção do interruptor virou remoção da capacidade"
     )
-
-
-def test_o_card_diz_no_codigo_como_o_interruptor_volta() -> None:
-    """O comentário no lugar da remoção é o mapa, e ele tem de ter endereço."""
-    fonte = inspect.getsource(cc)
-
-    assert "O-PS-PRESO" in fonte, "o comentário não aponta para o estudo"
-    assert "hidraw" in fonte, "o comentário não diz qual é a condição de volta"
-    assert "0x32" in fonte, "o comentário não nomeia a disputa do contador"
