@@ -128,9 +128,12 @@ def pac():
 def disco(monkeypatch):
     """Um disco de mentira: guarda o que o gesto mandou gravar."""
     from hefesto_dualsense4unix.profiles import loader
-
+    from hefesto_dualsense4unix.profiles import manager as _manager  # noqa: F401
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
+    # O `manager` copia `load_profile` pelo nome ao ser importado: o primeiro
+    # import sob o dublê prendia o dublê nele para o resto do processo e
+    # derrubava os testes seguintes (a_04). Importa-se ANTES de trocar.
     gravados: list[Any] = []
     estado: dict[str, Any] = {}
 
