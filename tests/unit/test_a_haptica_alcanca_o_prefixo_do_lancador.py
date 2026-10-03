@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import pathlib
 
@@ -84,8 +85,10 @@ class TestAHapticaPercorreTodosOsPrefixos:
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
         ).read_text(encoding="utf-8")
-        i = fonte.index("def censo(")
-        corpo = fonte[i : fonte.index("\n# ---", i)]
+        corpo = next(
+            ast.get_source_segment(fonte, no) or ""
+            for no in ast.walk(ast.parse(fonte))
+            if isinstance(no, ast.FunctionDef) and no.name == "censo")
         assert "raizes_de_prefixo(home)" in corpo
         assert "raiz.name.isdigit()" not in corpo
 
