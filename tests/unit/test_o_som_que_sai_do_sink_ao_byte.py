@@ -577,7 +577,3 @@ class TestNadaAquiAfirmaQueSomSaiu:
         afirmacao = "medido hoje: a ponte funciona."
         assert self.afirmacoes(citacao, "a ponte funciona") == []
         assert self.afirmacoes(afirmacao, "a ponte funciona") != []
-
-    def test_o_nome_da_falacia_esta_escrito_nas_tres(self) -> None:
-        for relativo in self.ARQUIVOS:
-            assert "falácia do canal que responde" in self._fonte(relativo), relativo

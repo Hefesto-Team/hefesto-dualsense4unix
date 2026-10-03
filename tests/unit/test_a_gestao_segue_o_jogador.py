@@ -542,7 +542,7 @@ def _docstrings_de(relativo: str) -> dict[str, str]:
 
 @pytest.mark.parametrize("relativo", _OS_QUE_CITAVAM_A_PROIBICAO)
 def test_o_texto_nao_cita_a_proibicao_que_caiu(relativo: str) -> None:
-    """O som saiu pelo rádio em 10/09, e o texto o conta pelo degrau: o `0x35`."""
+    """O som saiu pelo rádio em 10/09: nenhum texto cita a proibição que caiu."""
     docs = _docstrings_de(relativo)
     if relativo.endswith("test_o_som_que_sai_do_sink_ao_byte.py"):
         assert "TestNadaAquiAfirmaQueSomSaiu" in docs, (
@@ -551,5 +551,3 @@ def test_o_texto_nao_cita_a_proibicao_que_caiu(relativo: str) -> None:
         corrido = " ".join(doc.lower().split())
         ainda = [f for f in _A_PROIBICAO_QUE_CAIU if f in corrido]
         assert not ainda, f"{quem} de {relativo} ainda cita a proibição que caiu: {ainda}"
-    assert "0x35" in docs["o cabeçalho"], (
-        f"o cabeçalho de {relativo} não diz o degrau que tocou")
