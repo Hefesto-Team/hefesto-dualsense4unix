@@ -1020,7 +1020,7 @@ def folha_do_desenho(prefixos: Sequence[str]) -> str:
     do_desenho = [(sel, corpo) for sel, corpo in regras
                   if (sel.startswith(".ds ") or sel.startswith(".sobre"))
                   and ":hover" not in sel]
-    if not any("var(--z-casca-solida)" in corpo for _, corpo in do_desenho):
+    if not any("var(--z-casca-solida" in corpo for _, corpo in do_desenho):
         raise RuntimeError(
             f"o desenho perdeu a folha do traço em {_A_PAGINA_DO_MAPA} — a mesa "
             f"lê de lá e não tem cópia própria")

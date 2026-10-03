@@ -185,9 +185,22 @@ def test_a_condicao_de_cada_controle_vem_da_coluna_do_roteiro() -> None:
     assert "AZUL" in oito.condicoes["P2"], oito.condicoes
     assert oito.condicoes["P1"] != oito.condicoes["P2"] != oito.condicoes["P3"]
 
-    de_quatro = med.linhas_do_roteiro.__doc__ or ""
-    assert "duas larguras" in de_quatro, (
-        "a leitura deixou de declarar que aceita a tabela de quatro colunas")
+
+def test_a_leitura_do_roteiro_aceita_as_duas_larguras_da_tabela(tmp_path, monkeypatch) -> None:
+    """Linha de cinco colunas traz a condição; a de quatro, a condição vazia."""
+    roteiro = tmp_path / "roteiro.md"
+    roteiro.write_text(
+        "## 2. O ROTEIRO\n\n"
+        "| n | gesto | o que cada controle faz | tempo | esperado |\n"
+        "|---|---|---|---|---|\n"
+        "| 1 | aperte | P1 vermelho | 5 s | acende |\n"
+        "| 2 | solte | 10 s | apaga |\n\n"
+        "## 3. OUTRA\n| 9 | x | y | z | w |\n", encoding="utf-8")
+    monkeypatch.setattr(med, "arquivo_do_roteiro", lambda: roteiro)
+    assert med.linhas_do_roteiro() == [
+        ("1", "aperte", "P1 vermelho", "5 s", "acende"),
+        ("2", "solte", "", "10 s", "apaga"),
+    ]
 
 
 def test_o_timer_conta_o_que_a_linha_nomeia() -> None:

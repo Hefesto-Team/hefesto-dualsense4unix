@@ -784,7 +784,7 @@ def test_a_peca_em_foco_acende_como_no_mapa_do_controle(pw, lar, mentira) -> Non
 def test_a_folha_do_desenho_vem_do_mapa_do_controle() -> None:
     """*"e cara o contorno não tá pintado (…) abra o playwright e mude o tipo"""
     folha = med.folha_do_desenho(["p1", "p2"])
-    assert "stroke:var(--z-casca-solida)" in folha, (
+    assert "stroke:var(--z-casca-solida" in folha and "--sem-plastico:" in folha, (
         "a folha do desenho perdeu o contorno na cor do plástico")
     assert ".sem-tinta{fill:none !important" in folha.replace(" ", " "), (
         "sem a `sem-tinta` o círculo do PS volta — *\"o do PS não tem esse "
