@@ -576,8 +576,9 @@ _pkg_nome() {
             _pacman="hidapi" ;;
         # O loader SVG do gdk-pixbuf. ARMADILHA DE NOME: `librsvg2-bin` é o
         # `rsvg-convert`, ferramenta de BUILD; quem desenha na tela é o
-        # `librsvg2-common`. Sem ele o ícone da bandeja some e todo glifo SVG
-        # da interface cai junto (BUG-TRAY-ICONE-INVISIVEL-01, app/arranque.py).
+        # `librsvg2-common`. Sem ele o ícone da bandeja some
+        # (BUG-TRAY-ICONE-INVISIVEL-01, app/tray.py); os glifos da interface são
+        # desenhados pelo WebKit e não passam por ele.
         svg-loader)
             _apt="librsvg2-common";   _dnf="librsvg2"
             _pacman="librsvg" ;;
@@ -779,7 +780,7 @@ comando_manual_pkg() {
 # preço por nada.
 _DEPS_DE_SISTEMA=(
     "hidapi|obrigatoria|lib:libhidapi-hidraw.so.0,libhidapi-libusb.so.0|o backend do controle não abre NENHUM aparelho (o pydualsense faz dlopen da libhidapi; a wheel do pip não traz o .so)"
-    "svg-loader|obrigatoria|svg|o ícone da bandeja some e todo glifo SVG da interface cai junto"
+    "svg-loader|obrigatoria|svg|o ícone da bandeja some"
     "toolchain-c|importante|toolchain|as extensões sem wheel (python-uinput, evdev) não compilam e o passo 2 pode abortar"
     "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
     # ROTA-WEBKIT. `importante` VIRA `obrigatoria` — a troca é desta palavra,
