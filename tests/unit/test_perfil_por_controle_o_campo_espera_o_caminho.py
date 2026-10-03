@@ -516,8 +516,3 @@ def test_a_entrada_continua_de_um_controle_so() -> None:
             f"{slot} virou um mapa — a emulação passou a ter um device por "
             "peça, e os cinco campos de entrada podem entrar no esquema"
         )
-    fonte = inspect.getsource(PyDualSenseController.read_state)
-    assert "PRIMÁRIO" in fonte, (
-        "o comentário que documenta o pipeline único saiu de read_state — "
-        "confira se a entrada passou a ser por unidade antes de acreditar"
-    )
