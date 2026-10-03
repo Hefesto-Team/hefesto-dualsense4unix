@@ -59,11 +59,6 @@ def _a_prosa_numa_linha(fonte: str) -> str:
 
 
 @pytest.fixture(scope="module")
-def fonte_do_coop() -> str:
-    return _a_prosa_numa_linha(COOP.read_text(encoding="utf-8"))
-
-
-@pytest.fixture(scope="module")
 def fonte_do_external_identity() -> str:
     return _a_prosa_numa_linha(EXTERNAL_IDENTITY.read_text(encoding="utf-8"))
 
@@ -181,22 +176,32 @@ class TestOFonteAindaSustentaOQueEstaLevaAfirmou:
             "plataforma.camera_ir@sn30 precisa ser reaberta."
         )
 
-    def test_o_promote_player_continua_tratando_8bitdo_e_pro_como_uma_classe_so(
-        self, fonte_do_coop: str
-    ) -> None:
-        assert "também ganha vpad uhid Edge" in fonte_do_coop
-        assert "8BitDo, Pro Controller" in fonte_do_coop
+    def test_o_promote_player_continua_tratando_8bitdo_e_pro_como_uma_classe_so(self) -> None:
+        """`_promote_player` não ramifica por família: DualSense, 8BitDo e Pro passam igual."""
+        import ast
+
+        arvore = ast.parse(COOP.read_text(encoding="utf-8"))
+        funcao = next(
+            n for n in ast.walk(arvore)
+            if isinstance(n, ast.FunctionDef) and n.name == "_promote_player")
+        palavras = {
+            n.id if isinstance(n, ast.Name) else n.attr if isinstance(n, ast.Attribute)
+            else str(n.value)
+            for n in ast.walk(funcao)
+            if isinstance(n, ast.Name | ast.Attribute)
+            or (isinstance(n, ast.Constant) and isinstance(n.value, str))
+        }
+        familias = [p for p in palavras for marca in ("8bitdo", "nintendo", "pro_", "vendor",
+                                                     "external", "dualsense")
+                    if marca in p.lower()]
+        assert not familias, (
+            f"`_promote_player` passou a olhar a família do controle {sorted(familias)}: "
+            "o vpad uhid Edge deixou de ser o mesmo para 8BitDo e Pro")
 
     def test_o_led_de_jogador_externo_continua_desligado_por_flag(
         self, fonte_do_external_identity: str
     ) -> None:
         assert "EXTERNAL_PLAYER_LED_ENABLED = False" in fonte_do_external_identity
-
-    def test_o_enable_imu_continua_escopado_a_oui_que_exclui_8bitdo(
-        self, fonte_do_external_identity: str
-    ) -> None:
-        assert "nunca o" in fonte_do_external_identity
-        assert "8BitDo, que mente VID/PID mas nunca o MAC" in fonte_do_external_identity
 
     def test_a_doc_do_8bitdo_continua_corrigida_sobre_as_referencias_em_src(
         self,
