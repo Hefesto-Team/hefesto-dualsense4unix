@@ -10,9 +10,9 @@
 > **não descrevem trabalho em andamento**: o survey parou onde está, e nenhuma
 > fase seguinte começou. Nada aqui é promessa de recurso — é levantamento
 > bibliográfico, e fica publicado porque poupa a próxima pessoa de refazer a
-> busca. Companheiro do
-> [`firmware-update-protocol.md`](firmware-update-protocol.md), que traz a
-> mesma ressalva.
+> busca. O levantamento anterior (PHASE1, de 23/04/2026) saiu
+> em 02/10/2026: as hipóteses dele sobre o modo DFU caíram com o protocolo
+> achado abaixo, e o que só ele dizia (os riscos) mora no fim desta página.
 >
 > Uma nota sobre o "achado game-changer" logo abaixo: ele diz que o
 > `dualsensectl` upstream implementou o update em dezembro de 2025 e que isso
@@ -21,8 +21,6 @@
 > contra o repositório upstream depois disso, nem testada em controle real
 > aqui.
 >
-> Complementação ao `firmware-update-protocol.md` (PHASE1, 2026-04-23): agrega
-> achados de pesquisa na web, sem reescrever o doc PHASE1.
 
 ## Sumário executivo
 
@@ -570,3 +568,15 @@ Ao fechar PHASE2 como COMPLETED-BY-UPSTREAM, o próximo passo depende de escolha
 - Se opção D: simplesmente atualizar README apontando `dualsensectl`.
 
 Quando decisão for tomada, reescrever PHASE3 conforme escopo efetivo.
+
+## Apêndice E — Os riscos de gravar firmware (do levantamento PHASE1)
+
+- **Brick.** Uma atualização interrompida pode deixar o controle sem modo de
+  recuperação acessível a quem usa. Qualquer protótipo exigiria: `--dry-run`,
+  bateria de pelo menos 50%, `vid:pid` `054c:0ce6` ou `054c:0df2` (recusa
+  qualquer outro), tempo limite por bloco com nova tentativa antes de abortar, e
+  o aviso de não tirar o cabo durante a gravação.
+- **Cadeia de confiança.** Se o controle só confere a assinatura da Sony no
+  blob, aplicar a imagem oficial é possível. Se a Sony exigir que o computador
+  assine cada transação com uma chave embutida no atualizador do Windows, o
+  caminho é inviável sem quebrar DRM, e este projeto não cruza essa linha.

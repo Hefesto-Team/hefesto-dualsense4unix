@@ -19,7 +19,6 @@ FAMILIAS_DE_FOTO = (FOTOS, FOTOS_DA_VISTA)
 CODIGO_DA_TELA = (
     "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
-    "src/hefesto_dualsense4unix/gui",
 )
 
 CONFERIDO = f"{FOTOS}/CONFERIDO-EM.txt"

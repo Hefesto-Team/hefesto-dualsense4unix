@@ -87,7 +87,7 @@ e por isso ficam de fora da conta.
 | **gerador** · **bancada** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (a bancada, o que ela olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato dela** |
 | **campo** · **gesto** · **alvo** | `data-campo` (onde o piloto escreve), `data-gesto` (o que o clique chama), `data-hef-alvo` (como escreve: texto, classe, atributo, marcado…) |
 | **dono** | o único lugar que sabe um fato ou uma frase; a tela LÊ do dono, nunca redigita |
-| **motor** | `app/actions/*`, `app/widgets/*`, `daemon/`: o que a janela GTK usava e a nova reusa. **A janela GTK saiu; o motor fica** |
+| **motor** | `app/actions/*`, `daemon/` e os donos em `interface/` (`janela`, `cartao_do_controle`, `logica_do_mapa`): o que a tela lê e chama. A janela GTK saiu inteira em 02/10/2026 |
 | **portão** · **régua** · **mordida** | `scripts/portoes.sh` (43); um teste; arrancar a cura e ver a régua reprovar |
 | **lápide** · **nota datada** · **fato substituído** | decisão medida que caducou ganha data; número errado é trocado em todos os lugares |
 | **estado** de uma sprint | `aberta` (vale e se despacha) · `feita` (entrou, com prova) · `absorvida` (o que falta vive em outro lugar) · `caducou` (a premissa morreu). Está no frontmatter; `check_colisao_de_sprints.py --abertas` é a lista viva |

@@ -58,7 +58,6 @@ def test_os_recibos_das_fotos_ficam_de_fora(tmp_path: Path) -> None:
     _pagina(tmp_path, "Nada aqui.")
     for recibo in (
         "docs/usage/assets/CONFERIDO-EM.txt",
-        "docs/usage/assets/CONFERIDO-EM.md",
         "docs/usage/assets/PROVA-DA-FOTO.txt",
         "docs/usage/assets/maximizada/PROVA-DA-FOTO.txt",
     ):

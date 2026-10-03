@@ -2,7 +2,7 @@
 #
 # A régua é `tests/unit/test_as_fotos_acompanham_a_versao.py`, e a primeira
 # porta dela é a topologia: as fotos desta pasta têm de vir DEPOIS da última
-# mexida em `src/…/interface`, `src/…/app` ou `src/…/gui` — a tupla
+# mexida em `src/…/interface` ou `src/…/app` — a tupla
 # `CODIGO_DA_TELA` da régua. Ela citava `scripts/gui-captura` até 06/09/2026,
 # quando a pasta saiu com a janela GTK; o retratista de hoje mora dentro da
 # primeira entrada, e é por isso que a tupla encolheu sem perder alcance.

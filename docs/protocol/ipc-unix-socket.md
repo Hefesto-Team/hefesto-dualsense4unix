@@ -443,9 +443,8 @@ presente agora*. É por isso que um controle sozinho na mesa é sempre o 1.
 
 - `identity.renumber` **compacta todo mundo** para 1..N preservando a ordem
   relativa, e empurra quem está ausente para o fim da fila. É o acabamento do
-  botão **"Reconciliar jogadores"** da aba Início — um gesto de faxina.
-  (Até 06/08/2026 o botão se chamava *"Renumerar agora"* e disparava só este
-  método; ver `coop.sync`, abaixo.)
+  botão **"Reconectar Controles"** da aba Jogar — um gesto de faxina (ver
+  `coop.sync`, abaixo).
 - `identity.number.set` (PLAYER-01, 25/07) atribui o número de **UM** controle:
   permuta entre si os lugares que os PRESENTES já ocupam, pondo o alvo na
   posição pedida. Os lugares de quem está ausente ficam intocados — este gesto
@@ -498,7 +497,7 @@ cada um controle o próprio personagem"*.
   (`CoopManager.sync(force=True)`): recria o jogador cujo grab foi recusado ou
   cujo vpad morreu, sem esperar o próximo hotplug. Não liga nem desliga nada,
   não persiste preferência e não toma a posse do eixo `mode`. É o botão
-  **"Reconciliar jogadores"** da aba Início, e é o gesto de recuperação do
+  **"Reconectar Controles"** da aba Jogar, e é o gesto de recuperação do
   jogador que nasce e morre em dois segundos.
 
 `active` no retorno de `coop.sync` é o `should_be_active()` do gate — `false`

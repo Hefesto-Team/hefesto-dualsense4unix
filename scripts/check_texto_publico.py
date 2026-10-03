@@ -25,7 +25,6 @@ PASTAS = (
 
 EXCLUIDOS: dict[str, str] = {
     "docs/usage/assets/CONFERIDO-EM.txt": "recibo das fotos: o commit conferido e o que se mediu",
-    "docs/usage/assets/CONFERIDO-EM.md": "recibo das fotos, a versão legível do .txt",
     "docs/usage/assets/PROVA-DA-FOTO.txt": "recibo que o retratista escreve junto com as fotos",
     "docs/usage/assets/maximizada/PROVA-DA-FOTO.txt": "o mesmo recibo, da vista maximizada",
 }

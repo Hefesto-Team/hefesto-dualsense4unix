@@ -68,13 +68,8 @@ PNG por aba em `docs/usage/assets/aba-NN-*.png`, recortado na moldura da janela
 (1180x777) — que são as imagens do `README.md` e do
 [`AS-DEZ-ABAS`](../usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md).
 
-**ESTA SEÇÃO MUDOU DE COMANDO EM 06/09/2026 (`GTK-3`).** Aqui estava
-`scripts/gui-captura/retratar_abas.py`, que montava o `gui/main.glade` numa
-`Gtk.OffscreenWindow` e fotografava as ONZE abas da JANELA. A janela foi
-aposentada por decisão dela (`D-0609-GTK-LEVA-INTEIRA`) e o estúdio inteiro —
-os cinco arquivos de `scripts/gui-captura/` — saiu com ela. **O que ela abre
-hoje tem DEZ páginas HTML**, e o retratista delas mora dentro do pacote porque
-depende só do Chrome; o antigo importava GTK na primeira linha.
+O retratista mora dentro do pacote porque depende só do Chrome. O da janela GTK
+(`scripts/gui-captura/`) saiu com ela em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`).
 
 Sem `--doc` ele grava em `/tmp` e não toca no repositório:
 

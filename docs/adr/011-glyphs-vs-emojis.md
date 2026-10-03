@@ -19,11 +19,11 @@ Quem cobre os proibidos é `scripts/validar-glifos.py`. Ele deriva o conjunto da
 
 > **Correção de 2026-07-27.** Este parágrafo creditava, desde a redação original, "o hook `guardian.py`" — arquivo que nunca existiu nesta árvore — e `scripts/check_anonymity.sh`, que só verifica anonimato e nunca olhou glifo. A decisão ficou apoiada por três meses num portão imaginário. O portão real foi construído na sprint GATE-EMOJI-01 e é o citado acima. <!-- ref-externa: o nome citado aqui é justamente o arquivo que nunca existiu; a ausência é o assunto da frase -->
 
-Validação de preservação dos permitidos continua sendo responsabilidade do validador-sprint: em qualquer diff tocando `*_actions.py`, `tui/widgets/`, ou `main.glade`, scanear deleções de U+25CF, U+25CB, U+25AE, U+25AF, U+25D0 antes de aprovar.
+Validação de preservação dos permitidos continua sendo responsabilidade do validador-sprint: em qualquer diff tocando `tui/widgets/` ou `src/hefesto_dualsense4unix/interface/`, scanear deleções de U+25CF, U+25CB, U+25AE, U+25AF, U+25D0 antes de aprovar.
 
 ## Consequências
 
 (+) Regra sai do campo subjetivo ("é emoji?") para o objetivo ("está em Emoji_Presentation?").
 (+) UI textual funcional (barras de progresso, indicadores de estado, frames de TUI) permanece expressiva sem violar a regra.
 (+) Teste `test_tui_widgets.test_icon_bateria_varia_com_nivel` serve de regressão permanente para o `BatteryMeter`.
-(−) Novos contribuidores precisam internalizar a distinção. `VALIDATOR_BRIEF.md` A-04 registra o precedente como ancoragem.
+(−) Novos contribuidores precisam internalizar a distinção.
