@@ -21,8 +21,9 @@ Medido por AST, nunca por palavra no texto: comentário e string não contam.
 O teto mora em ``docs/data/a-catraca-da-origem.json`` e DESCE sozinho (o portão
 o regrava menor; nunca maior). Para subir de propósito, ``--forcar-piso``.
 
-Faixa dos commits do tamanho: ``--base REV``, ou ``HEFESTO_BASE_DA_LEVA``, ou o
-último commit que mexeu no teto. Uma ``Origem:`` ainda sem commit entra por
+Faixa dos commits do tamanho: ``--base REV``, ou ``HEFESTO_BASE_DA_LEVA``, ou a
+base da leva (``merge-base HEAD dev``), ou, no próprio ``dev``, o último commit
+que mexeu no teto. Uma ``Origem:`` ainda sem commit entra por
 ``--origem ID`` ou ``HEFESTO_ORIGEM``.
 """
 
@@ -105,8 +106,25 @@ def _nome_do_lado(no: ast.AST) -> str | None:
     return None
 
 
-def _constantes(no: ast.AST) -> list[str | int] | None:
+def _constantes_do_modulo(arvore: ast.AST) -> dict[str, str | int]:
+    """``NOME = "literal"`` no topo do módulo: a constante não deixa de ser constante com nome."""
+    nomeadas: dict[str, str | int] = {}
+    for inst in getattr(arvore, "body", []):
+        alvo = valor = None
+        if isinstance(inst, ast.Assign) and len(inst.targets) == 1:
+            alvo, valor = inst.targets[0], inst.value
+        elif isinstance(inst, ast.AnnAssign):
+            alvo, valor = inst.target, inst.value
+        if isinstance(alvo, ast.Name) and isinstance(valor, ast.Constant) \
+                and isinstance(valor.value, (str, int)) and not isinstance(valor.value, bool):
+            nomeadas[alvo.id] = valor.value
+    return nomeadas
+
+
+def _constantes(no: ast.AST, nomeadas: dict[str, str | int] | None = None) -> list[str | int] | None:
     """As constantes de um lado da comparação, ou ``None`` se há algo que não é constante."""
+    if isinstance(no, ast.Name) and nomeadas and no.id in nomeadas:
+        no = ast.Constant(nomeadas[no.id])
     if isinstance(no, ast.Constant) and isinstance(no.value, (str, int)) \
             and not isinstance(no.value, bool):
         valor = no.value
@@ -114,7 +132,7 @@ def _constantes(no: ast.AST) -> list[str | int] | None:
     if isinstance(no, (ast.Tuple, ast.List, ast.Set)) and no.elts:
         todas: list[str | int] = []
         for elt in no.elts:
-            sub = _constantes(elt)
+            sub = _constantes(elt, nomeadas)
             if sub is None:
                 return None
             todas.extend(sub)
@@ -122,14 +140,15 @@ def _constantes(no: ast.AST) -> list[str | int] | None:
     return None
 
 
-def _eixos_da_comparacao(comp: ast.Compare) -> set[str]:
+def _eixos_da_comparacao(comp: ast.Compare,
+                         nomeadas: dict[str, str | int] | None = None) -> set[str]:
     if not all(isinstance(op, (ast.Eq, ast.NotEq, ast.In, ast.NotIn)) for op in comp.ops):
         return set()
     lados = [comp.left, *comp.comparators]
     achados: set[str] = set()
     for i, lado in enumerate(lados):
         nome = _nome_do_lado(lado)
-        outros = [_constantes(x) for j, x in enumerate(lados) if j != i]
+        outros = [_constantes(x, nomeadas) for j, x in enumerate(lados) if j != i]
         if any(c is None for c in outros):
             continue
         consts = [v for c in outros if c for v in c]
@@ -160,10 +179,11 @@ def ramos_de_eixo(fonte: str) -> list[tuple[int, str]]:
         return []
     achados: list[tuple[int, str]] = []
     vistos: set[tuple[int, str]] = set()
+    nomeadas = _constantes_do_modulo(arvore)
     for teste in _testes_de_ramo(arvore):
         for no in ast.walk(teste):
             if isinstance(no, ast.Compare):
-                for eixo in _eixos_da_comparacao(no):
+                for eixo in _eixos_da_comparacao(no, nomeadas):
                     chave = (no.lineno, eixo)
                     if chave not in vistos:
                         vistos.add(chave)
@@ -383,7 +403,8 @@ def origens_da_faixa(raiz: Path, base: str | None, extra: str | None = None) -> 
     if extra:
         achadas.append(extra)
     if base is None:
-        base = os.environ.get("HEFESTO_BASE_DA_LEVA") or _ultimo_commit_do_teto(raiz)
+        base = (os.environ.get("HEFESTO_BASE_DA_LEVA") or _base_da_leva(raiz)
+                or _ultimo_commit_do_teto(raiz))
     if base and set(base) == {"0"}:
         base = _ultimo_commit_do_teto(raiz)  # push que cria branch: o `before` é só zeros
     if base:
@@ -394,6 +415,23 @@ def origens_da_faixa(raiz: Path, base: str | None, extra: str | None = None) -> 
             for mensagem in saida.stdout.split("\0"):
                 achadas.extend(_TRAILER.findall(mensagem))
     return achadas
+
+
+def _base_da_leva(raiz: Path) -> str | None:
+    """Onde a leva saiu do ``dev``: a faixa é o que a integração recebe, não o dia.
+
+    Uma leva nasce do ``dev`` (a integração e cada árvore de entrada), e o ``dev``
+    só anda no fecho; logo ``merge-base HEAD dev`` é a base da leva inteira, e a
+    faixa não encolhe quando o teto se regrava no meio dela. No próprio ``dev``
+    (faixa vazia) vale o último commit que mexeu no teto.
+    """
+    saida = subprocess.run(
+        ["git", "merge-base", "HEAD", "dev"], cwd=raiz,
+        capture_output=True, text=True, check=False)
+    base = saida.stdout.strip() if saida.returncode == 0 else ""
+    topo = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=raiz, capture_output=True, text=True, check=False)
+    return base if base and base != topo.stdout.strip() else None
 
 
 def _ultimo_commit_do_teto(raiz: Path) -> str | None:

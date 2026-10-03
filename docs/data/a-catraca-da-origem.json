@@ -5,13 +5,21 @@
       "data": "2026-10-03",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 28,
+      "piso": 42,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
+        "broker/hidraw_broker.py::modelo": 3,
+        "core/evdev_reader.py::modelo": 3,
         "core/lightbar_reset.py::transporte": 1,
         "daemon/ipc_handlers.py::transporte": 2,
         "daemon/main.py::transporte": 1,
+        "daemon/subsystems/external_identity.py::transporte": 1,
         "daemon/subsystems/hotkey.py::transporte": 1,
+        "integrations/audio_ks_dualsense.py::modelo": 2,
+        "integrations/cor_do_plastico.py::modelo": 1,
+        "integrations/cor_do_plastico.py::transporte": 1,
+        "integrations/dualsense_bt_audio.py::modelo": 1,
+        "integrations/ponte_escada.py::mascara": 1,
         "integrations/sinal_da_barra.py::transporte": 1,
         "integrations/storm_doctor.py::transporte": 1,
         "interface/aba01.py::transporte": 1,
@@ -19,6 +27,7 @@
         "interface/aba07.py::transporte": 2,
         "interface/aba08.py::transporte": 1,
         "interface/aba09.py::transporte": 2,
+        "interface/aba10.py::mascara": 1,
         "interface/cartao_do_controle.py::jogador": 2,
         "interface/monta.py::jogador": 1,
         "interface/monta.py::transporte": 2,
@@ -26,7 +35,15 @@
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
       },
-      "razao": "primeiro teto, da árvore enxuta da leva 0110 (03/10/2026)",
+      "razao": "a régua passou a ler a constante com nome no topo do módulo (RADIO, VID_SONY, DUALSENSE_EDGE_PID…): os 14 ramos existiam e eram invisíveis, nada novo entrou; conferência da A-CATRACA-DA-ORIGEM-01, 03/10/2026",
+      "subidas": [
+        {
+          "data": "2026-10-03",
+          "de": 28,
+          "para": 42,
+          "razao": "a régua passou a ler a constante com nome no topo do módulo (RADIO, VID_SONY, DUALSENSE_EDGE_PID…): os 14 ramos existiam e eram invisíveis, nada novo entrou; conferência da A-CATRACA-DA-ORIGEM-01, 03/10/2026"
+        }
+      ],
       "unidade": "ramos",
       "universo": 353
     },

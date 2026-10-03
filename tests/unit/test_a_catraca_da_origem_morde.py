@@ -101,6 +101,17 @@ def test_cada_eixo_e_medido(arvore, ramo):
     assert rodar() == 1
 
 
+@pytest.mark.parametrize("ramo", [
+    'RADIO = "bt"\n\n\ndef f(c):\n    if c.transporte == RADIO:\n        return 1\n    return 0\n',
+    'VID_SONY: int = 0x054C\n\n\ndef f(vid):\n    return 1 if vid == VID_SONY else 0\n',
+])
+def test_a_constante_com_nome_continua_constante(arvore, ramo):
+    """Dar nome à constante não tira o ramo da conta: era o desvio mais barato."""
+    raiz, _mod, rodar = arvore
+    _escreve(raiz, FORA, ramo)
+    assert rodar() == 1
+
+
 def test_comentario_e_string_nao_contam(arvore):
     raiz, _mod, rodar = arvore
     _escreve(raiz, FORA, (
@@ -275,3 +286,23 @@ def test_o_commit_da_faixa_sem_origem_nao_paga(arvore):
     raiz, _mod, rodar = arvore
     base = _commita_o_crescimento(raiz, "feat(x): cresce sem dizer por quê")
     assert rodar("--base", base, paga=False) == 1
+
+
+def test_a_faixa_e_a_leva_e_nao_encolhe_quando_o_teto_se_regrava(arvore):
+    """A Origem paga pela leva inteira: um commit do teto no meio não a apaga."""
+    raiz, _mod, rodar = arvore
+    _git(raiz, "init", "-q", "-b", "dev")
+    _git(raiz, "add", "-A")
+    _git(raiz, "commit", "-q", "-m", "base")
+    _git(raiz, "checkout", "-q", "-b", "integra/leva")
+    _cresce(raiz)
+    _git(raiz, "add", "-A")
+    _git(raiz, "commit", "-q", "-m", "feat(x): cresce\n\nOrigem: audio.alto_falante")
+    teto = raiz / "docs/data/a-catraca-da-origem.json"
+    teto.write_text(teto.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    _git(raiz, "add", "-A")
+    _git(raiz, "commit", "-q", "-m", "chore(catraca): o teto se regravou")
+    assert rodar(paga=False) == 0
+    _git(raiz, "checkout", "-q", "dev")
+    _git(raiz, "merge", "-q", "--ff-only", "integra/leva")
+    assert rodar(paga=False) == 1, "no dev, a faixa vazia não pode pagar o que o teto não subiu"
