@@ -451,6 +451,22 @@ def test_regua_2_ida_e_volta_nas_mascaras_do_uinput(mascara: str, jogador: int) 
     assert not erros, "\n".join(erros)
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "Defeito lido no fonte, fora da posse desta sprint: a máscara DualSense do "
+        "uinput mostra o VID da Sony e escreve o quadrado como BTN_X (o número do "
+        "BTN_NORTH); o SDL lê o X da Sony no BTN_WEST, e o quadrado chega como "
+        "triângulo. Curado o uinput_gamepad.py, este xfail vira vermelho e sai."
+    ),
+)
+def test_regua_2b_a_frente_na_mascara_dualsense_do_uinput() -> None:
+    driver = _esperado_driver_lido()
+    mesa, escritas = _mesa_uinput("dualsense")
+    erros = _ida_e_volta_no_uinput(mesa, escritas, 1, driver, so=_A_FRENTE_QUE_O_VID_DECIDE)
+    assert not erros, "\n".join(erros)
+
+
 def test_regua_3_o_driver_trocado_reprova_a_regua_1(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
