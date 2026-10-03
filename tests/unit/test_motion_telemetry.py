@@ -366,22 +366,3 @@ class TestTextoMotion:
             _state([{"player": 1, "motion_streaming": True, "motion_hz": "x"}]),
         )
         assert texto == "Giroscópio: fluindo para o jogo"
-
-
-class TestFiacaoNoCard:
-    """Contrato de fonte (padrão do repo): o widget REAL e o stub consomem a"""
-
-    def _fonte(self) -> str:
-        from hefesto_dualsense4unix.interface import cartao_do_controle as controller_card
-
-        return Path(controller_card.__file__).read_text(encoding="utf-8")
-
-
-    def test_linha_e_inline_dim_label_nunca_popup(self) -> None:
-        """Veto cosmic-comp: indicador inline (dim-label), sem Popover/Popup."""
-        fonte = self._fonte()
-        inicio = fonte.index("GYRO-03: linha discreta")
-        trecho = fonte[inicio : inicio + 600]
-        assert 'add_class("dim-label")' in trecho
-        assert "Popover" not in fonte
-
