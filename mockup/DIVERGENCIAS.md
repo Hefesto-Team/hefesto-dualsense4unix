@@ -21,12 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 08-conexoes.html
-- **03/10/2026** — o glifo do «⋮» da linha sai da árvore de acessibilidade, e o botão
-  deixa de ler o nome duas vezes. Até publicar, o leitor de tela da página publicada lê
-  o nome do «⋮» duas vezes. Falta só o `--publicar 08` no fecho.
-
-## mapa-do-controle.html
-- **03/10/2026** — o PS do desenho diz «Sem tecla» na Navegação, como a aba 06 passou a dizer.
-  Até publicar, o mapa publicado mostra «Abrir a Steam» no PS. Falta só o `--publicar`
-  desta página no fecho.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
