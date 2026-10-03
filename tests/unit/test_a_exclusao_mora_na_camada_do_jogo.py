@@ -7,7 +7,6 @@ import json
 import os
 import re
 import sqlite3
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -498,6 +497,7 @@ def _esta_no_formato(texto: str, formato: str, nomes: set[str], pip: str) -> boo
 
 def test_a_dependencia_de_execucao_chega_a_todo_formato() -> None:
     """MORDIDA: tire o `python-yaml` do `PKGBUILD`; reprova pelo arquivo."""
+    tomllib = pytest.importorskip("tomllib", reason="tomllib exige Python 3.11+")
     projeto = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
     dependencias = projeto["project"]["dependencies"]
     assert any(_nomes(d) & {"pyyaml", "yaml"} for d in dependencias), (
