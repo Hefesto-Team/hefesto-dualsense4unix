@@ -5466,24 +5466,6 @@ PROVAS = [
                 [{"controles": {"aabbcc000001": {"microfone": False}}}], {})]},
 ]
 
-#:                        payload de `machine_declare` é o gabinete inteiro:
-#:                        mantém `vizinho-o-que-e` fora. A prova deles injeta
-#:     vizinho-o-que-e    precisa dos rádios vizinhos lidos do `/sys` dela.
-#: `teclado_so_no_hub` com o arranjo `3-1.1.2`, e o `vizinho-o-que-e` traduziu
-
-#: OS QUE GRAVAM NO DISCO, e não no daemon — o `state_full` não republica nada
-#: `mic-existe` TEM efeito vivo, porque o `_handle_machine_declare` sobe ou desce
-#: `state_full` não publica quem está declarado.
-#: mas está aqui pelo mesmo motivo de fundo: o `state_full` não publica override
-#: vivo (o `profile.switch` de `gravar_e_reaplicar` faz `ProfileManager.apply` publicar
-#:     tirar-daqui        ValueError           ACEITOU               machine_declare
-#:     nova-entrada       ValueError           ACEITOU               machine_declare
-#:     nova-extensao      ValueError           ACEITOU               machine_declare
-#:     nova-face          ValueError           ACEITOU               machine_declare
-#: `state_full` NÃO PUBLICA O MAPA. Medido contra o daemon vivo em 02/09: 47
-#: `state_full` não publica nenhum dos três.
-#: só ligam e desligam o olhar do dono no processo da interface. O `state_full`
-#: `state_full` não publica.
 _NO_MAQUINA = "grava no `maquina.json`; o `state_full` não o republica"
 _NO_BLUEZ = "grava o `Alias` no BlueZ; o `state_full` não o publica"
 _O_MAPA = "grava o desenho do gabinete (`_gravar_o_mapa`); o `state_full` não publica o mapa"
