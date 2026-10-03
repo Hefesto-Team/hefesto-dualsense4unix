@@ -1,4 +1,4 @@
-"""conexoes — as frases, os desenhos e as contas da aba 08, sem GTK."""
+"""As frases, os desenhos e as contas da aba 08 (Conexões), sem GTK."""
 from __future__ import annotations
 
 import html
