@@ -150,14 +150,14 @@ já rodando.
 > **Dois números desta nota caducaram, e os dois ficam aqui porque medição
 > datada não se apaga.**
 >
-> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são quatro
->    parâmetros. Ver a nota de 2026-08-01, abaixo. (A frase "quatro parâmetros"
+> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são cinco
+>    parâmetros. Ver a nota de 2026-08-01, abaixo. (A frase "cinco parâmetros"
 >    é literal de propósito: `test_doc_verdade_02_contagens_derivadas` a procura
 >    inteira, e quebrá-la em duas linhas já derrubou o portão uma vez.)
 > 2. **O "zero ocorrências em `src/`"** caducou em 01/08/2026, quando as duas
 >    variáveis nasceram. Medido em 22/08/2026:
->    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **quatro** linhas,
->    todas em `daemon/subsystems/metrics.py`. Ver a nota de 2026-08-22, no fim.
+>    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas,
+>    as duas em `daemon/subsystems/metrics.py`. Ver a nota de 2026-08-22, no fim.
 
 Consequência prática: hoje o endpoint só sobe mexendo no código. O item
 "histograma de latência por tick, previsto para V2.1" também não foi feito, e
@@ -169,11 +169,11 @@ Corrige um número da nota anterior, e só ele. O veredito de 25/07 continua de
 pé: não há chave de usuário para as métricas, e subir o endpoint exige mexer no
 código.
 
-O `DaemonConfig` é construído em `daemon/main.py` com **quatro** parâmetros, não
-três: `poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
-`keyboard_emulation_enabled`. O quarto entrou em 29/07 com a
-EMULACAO-NO-JOGO-01 — é o campo que desliga o teclado emulado dentro da
-partida, lido de `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`.
+O `DaemonConfig` é construído em `daemon/main.py` com cinco parâmetros:
+`poll_hz`, `auto_reconnect`, `ps_long_press_ms`, `keyboard_emulation_enabled`
+(29/07, EMULACAO-NO-JOGO-01, lido de `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`)
+e `plugins_enabled` (02/10/2026, lido do `plugins.flag` que o
+`hefesto-dualsense4unix plugin ligar` grava).
 
 Vale registrar por que o erro passou: esta ADR, o `README.md` e o
 `docs/usage/metrics.md` são as três páginas **mais honestas** do projeto, e
@@ -203,9 +203,9 @@ ela; `_porta_efetiva(9090)` devolve `19199` com a variável de porta em `19199`,
 e `9090` com ela em `abc` ou `70000`.
 
 **O número que a nota de 25/07 errou, medido:**
-`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **quatro** linhas — duas
-no docstring do módulo e as duas constantes `ENV_METRICS_ENABLED` e
-`ENV_METRICS_PORT` —, todas em `daemon/subsystems/metrics.py`. Era zero em
+`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas, as
+constantes `ENV_METRICS_ENABLED` e `ENV_METRICS_PORT`, em
+`daemon/subsystems/metrics.py`. Era zero em
 25/07, e foi por isso que aquela nota disse zero.
 
 **Duas metades do veredito antigo continuam de pé, e é por elas que esta nota

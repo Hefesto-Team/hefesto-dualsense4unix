@@ -135,7 +135,7 @@ def _linhas_antes_da_nota(relativo: str) -> list[tuple[int, str]]:
     return list(enumerate(linhas[:fim], start=1))
 
 
-def test_o_daemon_config_e_construido_com_quatro_parametros() -> None:
+def test_o_daemon_config_e_construido_com_cinco_parametros() -> None:
     """Ancora a premissa: se o número mudar, mudou de propósito."""
     campos = _campos_do_daemon_config()
 
@@ -144,6 +144,7 @@ def test_o_daemon_config_e_construido_com_quatro_parametros() -> None:
         "auto_reconnect",
         "ps_long_press_ms",
         "keyboard_emulation_enabled",
+        "plugins_enabled",
     ], (
         "a construção do DaemonConfig em daemon/main.py mudou. Isso é legítimo "
         "— mas as páginas que afirmam a contagem precisam mudar junto: "

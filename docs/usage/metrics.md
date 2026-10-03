@@ -22,8 +22,9 @@ Nada no instalador nem na janela liga as métricas por você, e ligar exige
 reiniciar o serviço: o `daemon.reload` não sobe o servidor de métricas.
 
 As variáveis são o único caminho porque o serviço constrói o `DaemonConfig` com
-quatro parâmetros (`poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
-`keyboard_emulation_enabled`), e `metrics_enabled` não é um deles.
+cinco parâmetros (`poll_hz`, `auto_reconnect`, `ps_long_press_ms`,
+`keyboard_emulation_enabled` e `plugins_enabled`), e `metrics_enabled` não é um
+deles.
 
 ## Conferir
 
