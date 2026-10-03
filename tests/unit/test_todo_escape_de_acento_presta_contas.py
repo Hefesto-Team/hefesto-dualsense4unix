@@ -18,7 +18,7 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "scripts/gerar-mapa.py": 2,
     "scripts/generate_glyph_active.py": 1,
     "scripts/install_osk.sh": 2,
-    "src/hefesto_dualsense4unix/broker/hidraw_broker.py": 3,
+    "src/hefesto_dualsense4unix/broker/hidraw_broker.py": 2,
     "src/hefesto_dualsense4unix/cli/cmd_profile.py": 2,
     "src/hefesto_dualsense4unix/profiles/loader.py": 1,
     "src/hefesto_dualsense4unix/profiles/manager.py": 1,
@@ -29,7 +29,7 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "tests/unit/test_modo01_o_modo_jogo_liga_sozinho.py": 1,
     "tests/unit/test_o_gesto_da_ponte_e_universal.py": 2,
     "tests/unit/test_o_preset_nao_escolhe_a_mascara.py": 2,
-    "tests/unit/test_profile_manager.py": 2,
+    "tests/unit/test_profile_manager.py": 1,
     "tests/unit/test_state_full_game_signal.py": 1,
     "tests/unit/test_validar_acentuacao_multiplos_arquivos.py": 2,
 }
