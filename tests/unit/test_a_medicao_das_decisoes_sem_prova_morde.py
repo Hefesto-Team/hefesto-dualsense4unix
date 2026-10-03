@@ -330,7 +330,7 @@ def test_o_laudo_de_hoje_sai_com_as_tres_medicoes(mi, capsys):
 
 def test_o_nome_do_instrumento_e_o_do_arquivo(mi):
     """A constante é o que o faz reconhecer a si mesmo: renomear o arquivo a quebra."""
-    assert mi.NOME_DO_INSTRUMENTO == pathlib.Path(mi.__file__).stem
+    assert pathlib.Path(mi.__file__).stem == mi.NOME_DO_INSTRUMENTO
     assert mi._e_o_proprio_instrumento(
         pathlib.Path(mi.__file__).read_text(encoding="utf-8"))
 
