@@ -201,14 +201,14 @@
       "data": "2026-10-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 914544,
+      "piso": 914558,
       "por_item": {
         "docs": 57710,
         "scripts": 95114,
-        "src": 273351,
-        "tests": 488369
+        "src": 273333,
+        "tests": 488401
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "03/10/2026: as +14 linhas das curas do CI foram pagas pela Origem: D-0609-GTK-LEVA-INTEIRA, que já desceu ao dev; a faixa medida começa no dev e não as vê",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -227,6 +227,12 @@
           "de": 914355,
           "para": 915693,
           "razao": "03/10/2026, costura da leva 0110: a energia (D-0210-O-INSTALL-PERGUNTA-PELO-DESEMPENHO) e os dados da leva (144 decisões no decisoes-dela.csv) nasceram antes da catraca e não podiam trazer Origem:"
+        },
+        {
+          "data": "2026-10-03",
+          "de": 914544,
+          "para": 914558,
+          "razao": "03/10/2026: as +14 linhas das curas do CI foram pagas pela Origem: D-0609-GTK-LEVA-INTEIRA, que já desceu ao dev; a faixa medida começa no dev e não as vê"
         }
       ],
       "unidade": "linhas",
