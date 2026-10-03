@@ -440,6 +440,12 @@ _NEEDS_SUDO=0
 [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]] && _NEEDS_SUDO=1
 # HAPTICA-NATIVA-01: o verbo UCM do DualSense mora em /usr/share, de root.
 [[ -e /usr/share/alsa/ucm2/USB-Audio/Hefesto/DualSense-HiFi.conf ]] && _NEEDS_SUDO=1
+# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01: o modo desempenho (unit de sistema,
+# modprobe.d e tmpfiles.d) — todos de root.
+[[ -e /etc/systemd/system/hefesto-desempenho.service \
+   || -e /etc/modprobe.d/hefesto-desempenho-nvidia.conf \
+   || -e /etc/modprobe.d/hefesto-desempenho-audio.conf \
+   || -e /etc/tmpfiles.d/hefesto-desempenho-aspm.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] && _NEEDS_SUDO=1
 # BUG-UNINSTALL-PRIMING-CEGO-AO-BLOCO-UNIFICADO-01 (RADIO-ABERTO-01/E1-bis,
 # 06/08/2026): esta lista primava a credencial pelos sentinelas LEGADOS e pelos
@@ -946,6 +952,28 @@ if [[ -e "${UCM_VERBO}" ]]; then
     else
         log "sudo indisponível — perfil UCM do DualSense NÃO removido"
         log "  bash scripts/install_ucm_dualsense.sh --remover"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01: o modo desempenho — simétrico ao passo
+# 3j3 do install, e pelo MESMO dono: scripts/desempenho.sh remover. Tira a unit
+# do perfil de energia (hefesto-desempenho.service) e os arquivos de
+# modprobe.d/tmpfiles.d dos ajustes provados. O perfil de energia de AGORA fica
+# como está (o script diz como mudá-lo); os valores de fábrica dos módulos
+# voltam no próximo boot.
+# ---------------------------------------------------------------------------
+if [[ -e /etc/systemd/system/hefesto-desempenho.service \
+      || -e /etc/modprobe.d/hefesto-desempenho-nvidia.conf \
+      || -e /etc/modprobe.d/hefesto-desempenho-audio.conf \
+      || -e /etc/tmpfiles.d/hefesto-desempenho-aspm.conf ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo o modo desempenho (unit do perfil de energia, modprobe.d e tmpfiles.d)"
+        bash "${ROOT_DIR}/scripts/desempenho.sh" remover \
+            || log "  ERRO: remoção adiada — rode: bash scripts/desempenho.sh remover"
+    else
+        log "sudo indisponível — o modo desempenho NÃO foi removido"
+        log "  (rode: bash ${ROOT_DIR}/scripts/desempenho.sh remover)"
     fi
 fi
 

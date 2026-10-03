@@ -3815,6 +3815,153 @@ check_btusb_autosuspend() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026) — o modo desempenho
+# ---------------------------------------------------------------------------
+# O install pergunta se o computador deve ser usado no modo desempenho, e cada
+# ajuste é um arquivo permanente (unit de sistema, modprobe.d, tmpfiles.d). O
+# doctor diz o estado de CADA um: aplicado, não pedido, a provar, desfeito por
+# outro programa, pulado (a máquina não tem o que o ajuste mexe), e o comando
+# para ligar e para desligar à mão. Só LÊ: nada é escrito, nenhum perfil trocado.
+#
+# É autônomo de propósito (não chama o scripts/desempenho.sh): o doctor viaja em
+# todo formato de pacote, e o roteiro só viaja com o install do checkout.
+# `tests/unit/test_a_energia_de_notebook_num_desktop.py` confere que os dois
+# falam dos mesmos arquivos e da mesma lista de ajustes provados.
+#
+# OS PROVADOS: o espelho do `DESEMPENHO_PROVADOS` do install.sh, vazio para os
+# três (nvidia audio aspm) até a prova no aparelho. O perfil de energia é decisão
+# dela e vale sempre.
+_DESEMPENHO_PROVADOS=""
+
+# O instante do boot, em segundos de época: o arquivo gravado DEPOIS dele ainda
+# não teve um boot para valer; gravado ANTES e com o valor de fábrica, alguém o
+# desfez.
+_desempenho_boot() {
+    local b="${HEFESTO_DESEMPENHO_BOOT:-}"
+    [[ -n "${b}" ]] || b="$(awk '/^btime/ { print $2 }' "${HEFESTO_PROC:-/proc}/stat" 2>/dev/null)"
+    printf '%s' "${b:-0}"
+}
+
+# O gerenciador de energia desta máquina (system76-power primeiro, depois o
+# power-profiles-daemon): imprime o caminho do cliente, ou nada.
+_desempenho_cliente() {
+    local d="${HEFESTO_DESEMPENHO_BIN:-}" nome
+    for nome in system76-power powerprofilesctl; do
+        if [[ -n "${d}" ]]; then
+            [[ -x "${d}/${nome}" ]] && { printf '%s' "${d}/${nome}"; return 0; }
+        elif command -v "${nome}" 2>/dev/null; then
+            return 0
+        fi
+    done
+    return 0
+}
+
+# O perfil de energia de agora, em minúsculas; vazio sem gerenciador.
+_desempenho_perfil_agora() {
+    local bin
+    bin="$(_desempenho_cliente)"
+    case "${bin}" in
+        */system76-power)
+            timeout 3 "${bin}" profile 2>/dev/null | sed -n 's/^Power Profile: *//p' | head -1 | tr '[:upper:]' '[:lower:]' || true
+            ;;
+        */powerprofilesctl)
+            timeout 3 "${bin}" get 2>/dev/null | head -1 | tr '[:upper:]' '[:lower:]' || true
+            ;;
+    esac
+}
+
+# O comando de ligar um ajuste de arquivo à mão: só o checkout tem o asset.
+_desempenho_ligar_arquivo() {
+    local arq="$1" destino="$2"
+    if [[ -f "${ROOT_DIR}/assets/desempenho/${arq}" ]]; then
+        printf 'sudo install -Dm644 %s/assets/desempenho/%s %s (vale no próximo boot)' "${ROOT_DIR}" "${arq}" "${destino}"
+    else
+        printf '%s' "$(conselho_de_instalacao --desempenho)"
+    fi
+}
+
+# Um ajuste: $1 id · $2 o que é · $3 o arquivo permanente · $4 o valor de agora
+# · $5 o valor que o arquivo pede · $6 como ligar · $7 como desligar.
+_desempenho_diz() {
+    local id="$1" rotulo="$2" arq="$3" agora="$4" quer="$5" ligar="$6" desligar="$7"
+    local provado=0 mtime
+    [[ "${id}" == "perfil" || " ${_DESEMPENHO_PROVADOS} " == *" ${id} "* ]] && provado=1
+    if [[ -f "${arq}" ]]; then
+        if [[ "${agora}" == "${quer}" ]]; then
+            pass "modo desempenho, ${rotulo}: aplicado (agora: ${agora}). Para desligar: ${desligar}"
+            return
+        fi
+        mtime="$(stat -c %Y "${arq}" 2>/dev/null || echo 0)"
+        if [[ "${mtime}" -gt "$(_desempenho_boot)" ]]; then
+            info "modo desempenho, ${rotulo}: gravado, vale no PRÓXIMO BOOT (agora: ${agora:-?}). Para desligar: ${desligar}"
+        else
+            warn "modo desempenho, ${rotulo}: DESFEITO por outro programa (o arquivo pede ${quer}, agora está ${agora:-?}). Veja o que escreve ali depois do boot; para desligar de vez: ${desligar}"
+        fi
+    elif [[ "${provado}" -eq 1 ]]; then
+        if [[ "${agora}" == "${quer}" ]]; then
+            info "modo desempenho, ${rotulo}: não pedido; já está assim agora (${agora}), mas nada o guarda depois do boot. Para guardar: ${ligar}"
+        else
+            info "modo desempenho, ${rotulo}: não pedido (agora: ${agora:-?}). Para ligar: ${ligar}"
+        fi
+    else
+        info "modo desempenho, ${rotulo}: não aplicado: a provar (agora: ${agora:-?}) — só entra depois da medida no aparelho. À mão: ${ligar}; para desligar: ${desligar}"
+    fi
+}
+
+check_desempenho() {
+    local raiz="${HEFESTO_DESEMPENHO_RAIZ:-}" sys="${HEFESTO_SYSFS:-/sys}" proc="${HEFESTO_PROC:-/proc}"
+    local etc="${raiz}/etc" agora ligar
+    local unit="${etc}/systemd/system/hefesto-desempenho.service"
+    local wants="${etc}/systemd/system/multi-user.target.wants/hefesto-desempenho.service"
+    ligar="$(conselho_de_instalacao --desempenho)"
+
+    # perfil de energia
+    agora="$(_desempenho_perfil_agora)"
+    if [[ -z "$(_desempenho_cliente)" ]]; then
+        info "modo desempenho, perfil de energia: pulado, sem system76-power nem power-profiles-daemon não há perfil a pedir"
+    elif [[ -f "${unit}" && ! -L "${wants}" ]]; then
+        warn "modo desempenho, perfil de energia: a unit hefesto-desempenho.service está gravada e NÃO habilitada (agora: ${agora:-?}). Habilitar: sudo systemctl enable --now hefesto-desempenho.service"
+    else
+        _desempenho_diz perfil "perfil de energia em Performance" "${unit}" "${agora}" performance \
+            "${ligar}" "sudo systemctl disable --now hefesto-desempenho.service && sudo rm /etc/systemd/system/hefesto-desempenho.service"
+    fi
+
+    # NVIDIA (hipótese 1): o modo de economia de notebook do driver
+    if [[ -r "${proc}/driver/nvidia/params" ]]; then
+        agora="$(sed -n 's/^DynamicPowerManagement: *//p' "${proc}/driver/nvidia/params" 2>/dev/null | head -1)"
+        _desempenho_diz nvidia "GPU NVIDIA sem o modo de economia de notebook (DynamicPowerManagement=0)" \
+            "${etc}/modprobe.d/hefesto-desempenho-nvidia.conf" "${agora}" 0 \
+            "$(_desempenho_ligar_arquivo hefesto-desempenho-nvidia.conf /etc/modprobe.d/hefesto-desempenho-nvidia.conf)" \
+            "sudo rm /etc/modprobe.d/hefesto-desempenho-nvidia.conf (vale no próximo boot)"
+    else
+        info "modo desempenho, GPU NVIDIA: pulado, sem o driver NVIDIA carregado (a placa é outra, ou está sem driver)"
+    fi
+
+    # áudio HDA (hipótese 2): o codec que dorme após 1 s de silêncio
+    if [[ -d "${sys}/module/snd_hda_intel" ]]; then
+        agora="$(cat "${sys}/module/snd_hda_intel/parameters/power_save" 2>/dev/null || echo '?')/$(cat "${sys}/module/snd_hda_intel/parameters/power_save_controller" 2>/dev/null || echo '?')"
+        _desempenho_diz audio "áudio da placa-mãe sem o sono do codec (power_save=0)" \
+            "${etc}/modprobe.d/hefesto-desempenho-audio.conf" "${agora}" "0/N" \
+            "$(_desempenho_ligar_arquivo hefesto-desempenho-audio.conf /etc/modprobe.d/hefesto-desempenho-audio.conf)" \
+            "sudo rm /etc/modprobe.d/hefesto-desempenho-audio.conf (vale no próximo boot)"
+    else
+        info "modo desempenho, áudio da placa-mãe: pulado, sem snd_hda_intel carregado (o áudio desta máquina é outro)"
+    fi
+
+    # ASPM (hipótese 3): a política do PCIe. Com pcie_aspm=off no cmdline a
+    # política do sysfs continua mostrando [default], e ela MENTE (ver check_pcie_aspm).
+    if [[ -r "${sys}/module/pcie_aspm/parameters/policy" ]]; then
+        agora="$(sed -n 's/.*\[\([a-z]*\)\].*/\1/p' "${sys}/module/pcie_aspm/parameters/policy" 2>/dev/null | head -1)"
+        _desempenho_diz aspm "PCIe com a política de ASPM em performance" \
+            "${etc}/tmpfiles.d/hefesto-desempenho-aspm.conf" "${agora}" performance \
+            "$(_desempenho_ligar_arquivo hefesto-desempenho-aspm.conf /etc/tmpfiles.d/hefesto-desempenho-aspm.conf)" \
+            "sudo rm /etc/tmpfiles.d/hefesto-desempenho-aspm.conf (vale no próximo boot)"
+    else
+        info "modo desempenho, ASPM do PCIe: pulado, este kernel não expõe a política"
+    fi
+}
+
 # PLAT-04 item 3: FastConnectable = reconexão entrante mais rápida (botão PS).
 #
 # RADIO-ABERTO-01/E1-bis (06/08/2026): esta função só conhecia a sentinela
@@ -8693,6 +8840,7 @@ main() {
     check_pcie_aspm
     check_power_saboteurs
     check_btusb_autosuspend
+    check_desempenho
     check_bluez_fastconnectable
     check_bluez_justworks_repairing
     check_bt_clone_ds4

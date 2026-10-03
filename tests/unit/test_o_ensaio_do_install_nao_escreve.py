@@ -302,6 +302,7 @@ DONOS_DOS_CAMINHOS = {
         "scripts/install_udev.sh",
         "scripts/install_osk.sh",
         "scripts/dkms_lib.sh",
+        "scripts/desempenho.sh",
     ),
 }
 

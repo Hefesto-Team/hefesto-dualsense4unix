@@ -1,0 +1,24 @@
+# hefesto-dualsense4unix — o computador no modo desempenho (perfil de energia).
+#
+# Gravado pelo install quando a pessoa pede o modo desempenho (--desempenho, ou
+# a resposta «sim» à pergunta). Pede o perfil Performance ao gerenciador de
+# energia da máquina a cada boot; o gerenciador (system76-power ou
+# power-profiles-daemon) é o que o install achou, e os dois marcadores abaixo
+# são trocados na hora de gravar.
+# REVERSÍVEL: ./uninstall.sh, ou systemctl disable --now + apagar este arquivo.
+[Unit]
+Description=Hefesto: o computador no modo desempenho (perfil de energia)
+After=__SERVICO_DO_GERENCIADOR__
+Wants=__SERVICO_DO_GERENCIADOR__
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=__COMANDO__
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

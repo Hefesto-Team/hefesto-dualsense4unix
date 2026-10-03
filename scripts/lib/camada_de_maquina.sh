@@ -60,6 +60,8 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 : "${NO_DKMS:=0}"
 : "${NO_UCM:=0}"
 : "${NO_WIFI_USB:=0}"
+: "${DESEMPENHO_PEDIDO:=}"
+: "${DESEMPENHO_PROVADOS:=}"
 : "${AUTO_YES:=0}"
 
 # ---------------------------------------------------------------------------
@@ -1351,6 +1353,97 @@ install_wifi_usb_host() {
             | sed 's/^/      /' || true
     fi
     [[ "${_wifi_ok}" -eq 1 ]] || warn "vigia do Wi-Fi USB instalado PARCIALMENTE — confira as mensagens acima"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# O MODO DESEMPENHO — A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026)
+# ---------------------------------------------------------------------------
+# A decisão dela, 02/10 ~21h: *«na real no nosso install por default deveriamos
+# ter uma flag perguntando pro user se ele gostaria de usar o pc dele no modo
+# performance e aproveitarmos e usarmos a mesma politica que usamos pra criarmos  # noqa-acento: citação literal dela
+# soluções permanentes no pc da pc.»* O COSMIC e o system76-power são feitos para
+# notebook: a economia de bateria vem ligada de fábrica, e num computador de
+# mesa ela só custa latência.
+#
+# O install PERGUNTA. `--desempenho` e `--sem-desempenho` respondem sem
+# perguntar; sem TTY (o `--yes`, o CI) vale o PADRÃO: sim no desktop, não no
+# notebook (a máquina com bateria, `power_supply/BAT*`), onde o desempenho custa
+# a bateria de quem joga fora da tomada. O padrão é escolha de quem coordena
+# pelo padrão dela, a validar por ela.
+#
+# Cada ajuste é um arquivo permanente, e o mecanismo mora em
+# `scripts/desempenho.sh` (aplicar e remover; o uninstall chama o mesmo dono).
+# Esta função só decide: os portões, a pergunta, a lista dos ajustes provados.
+# SÓ ENTRA O QUE A PROVA MOSTROU: o perfil de energia é decisão dela; os outros
+# três (NVIDIA, áudio HDA, ASPM) esperam a medida no aparelho, e a variável
+# `DESEMPENHO_PROVADOS` do `install.sh` os liga, um id por vez.
+#
+# O gate `--no-udev` pula, como tudo o que escreve em /etc. Chamada dos DOIS
+# lados da cerca do `install.sh`.
+_DESEMPENHO_QUER=""
+
+# O padrão: notebook = a máquina com bateria ACPI (BAT0, BAT1...). A bateria de
+# um controle (`ps-controller-battery-*`) não é do computador e não conta.
+_desempenho_tem_bateria() {
+    compgen -G "${HEFESTO_DESEMPENHO_SYS:-/sys}/class/power_supply/BAT*" >/dev/null 2>&1
+}
+
+# Decide e deixa o resultado em `_DESEMPENHO_QUER` (sim|sem). Não pode ser
+# chamada em `$(...)`: o `ask_yn` escreve em `REPLY` e a pergunta vai à tela.
+_desempenho_decidir() {
+    case "${DESEMPENHO_PEDIDO}" in
+        sim|sem) _DESEMPENHO_QUER="${DESEMPENHO_PEDIDO}"; return 0 ;;
+    esac
+    local padrao="y" quem="um computador sem bateria"
+    if _desempenho_tem_bateria; then
+        padrao="n"
+        quem="um computador com bateria"
+    fi
+    printf '      Modo desempenho: o perfil de energia fica em Performance para jogar (custa bateria fora da tomada).\n'
+    printf '      Esta máquina é %s: o padrão é "%s".\n' "${quem}" "$([[ "${padrao}" == "y" ]] && echo sim || echo não)"
+    if declare -F ask_yn >/dev/null 2>&1; then
+        ask_yn "Usar este computador no modo desempenho para jogar?" "${AUTO_YES}" "${padrao}"
+    else
+        REPLY="${padrao}"
+    fi
+    case "${REPLY}" in
+        [YySs]*) _DESEMPENHO_QUER="sim" ;;
+        *)       _DESEMPENHO_QUER="sem" ;;
+    esac
+}
+
+install_desempenho_host() {
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      pulado (--no-udev) — o modo desempenho escreve em /etc\n'
+        return 0
+    fi
+    _desempenho_decidir
+    if [[ "${_DESEMPENHO_QUER}" != "sim" ]]; then
+        printf '      modo desempenho não pedido — nada foi alterado (para ligar depois: ./install.sh --desempenho)\n'
+        if [[ -e "${HEFESTO_DESEMPENHO_RAIZ:-}/etc/systemd/system/hefesto-desempenho.service" ]]; then
+            printf '      aviso: ficaram os ajustes de uma instalação anterior; para desfazer: bash %s/scripts/desempenho.sh remover\n' "${ROOT_DIR}"
+        fi
+        return 0
+    fi
+    if [[ -z "${HEFESTO_DESEMPENHO_RAIZ:-}" ]]; then
+        if ! command -v sudo >/dev/null 2>&1; then
+            warn "sudo ausente — o modo desempenho NÃO foi aplicado"
+            return 0
+        fi
+        if ! sudo -n true 2>/dev/null; then
+            warn "sudo recusado — o modo desempenho pulado (re-execute ./install.sh --desempenho)"
+            return 0
+        fi
+    fi
+    if ! HEFESTO_DESEMPENHO_PROVADOS="${DESEMPENHO_PROVADOS}" \
+            bash "${ROOT_DIR}/scripts/desempenho.sh" aplicar; then
+        warn "o modo desempenho não ficou inteiro — rode: bash ${ROOT_DIR}/scripts/desempenho.sh aplicar"
+        return 0
+    fi
+    if [[ -n "${DESEMPENHO_PROVADOS//[[:space:]]/}" ]]; then
+        anotar_reinicio_pendente "o modo desempenho (a NVIDIA, o áudio e o PCIe só mudam no próximo boot)"
+    fi
     return 0
 }
 

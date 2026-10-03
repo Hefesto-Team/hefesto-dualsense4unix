@@ -147,6 +147,17 @@
 #                         no hefesto-wifi-usb-vigia.timer. Vale para TODO
 #                         formato. --no-udev também pula.
 #   --no-wifi-usb         OPT-OUT do vigia do Wi-Fi USB (acima).
+#   --desempenho          responde SIM, sem perguntar, ao modo desempenho: o
+#                         perfil de energia fica em Performance a cada boot (unit
+#                         hefesto-desempenho.service, para o system76-power ou o
+#                         power-profiles-daemon). Cada ajuste é um arquivo
+#                         permanente; o uninstall desfaz e o doctor diz o estado
+#                         de cada um. O que a máquina não tem é pulado e dito.
+#                         Sem a flag o install PERGUNTA; sem TTY (--yes) vale o
+#                         padrão: sim no desktop, não no notebook (com bateria).
+#                         --no-udev também pula.
+#   --sem-desempenho      responde NÃO ao modo desempenho, sem perguntar. Não
+#                         escreve nada.
 #   --wifi-powersave-off  OPT-IN (W2 — gateado por evidência): instala
 #                         assets/NetworkManager/hefesto-wifi-powersave.conf em
 #                         /etc/NetworkManager/conf.d/ (wifi.powersave=2). Use
@@ -307,6 +318,14 @@ WIFI_POWERSAVE_OFF=0
 # DEFAULT, e todo passo default da camada de máquina tem saída — o produto é
 # para qualquer usuário (resposta 3 de quem coordena).
 NO_WIFI_USB=0
+# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026): o modo desempenho. Vazio =
+# o install pergunta (ou, sem TTY, vale o padrão da máquina); sim|sem = a flag.
+DESEMPENHO_PEDIDO=""
+# Os ajustes de desempenho cuja PROVA no aparelho já foi feita, por id separado
+# por espaço (nvidia audio aspm). VAZIA para os três: o doctor os diz «não
+# aplicado: a provar», e a prova liga um acrescentando o id aqui. O perfil de
+# energia é decisão dela e entra sempre que o pedido é sim.
+DESEMPENHO_PROVADOS=""
 AUTO_YES=0
 # ENSAIO-DO-INSTALL-01 (03/09/2026). Pedido dela ao rever o instalador antes de
 # rodá-lo: *"antes revisa o install. não roda agora."* São 3.4 mil linhas que
@@ -344,6 +363,8 @@ for arg in "$@"; do
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --wifi-powersave-off) WIFI_POWERSAVE_OFF=1 ;;
         --no-wifi-usb)        NO_WIFI_USB=1 ;;
+        --desempenho)         DESEMPENHO_PEDIDO="sim" ;;
+        --sem-desempenho)     DESEMPENHO_PEDIDO="sem" ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
         --native)             FORMAT="native" ;;
@@ -1357,6 +1378,27 @@ _ensaio_camada() {
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh e a cópia dele em /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb (root, 755) — o scan de fundo do Wi-Fi USB sai a cada associação"
             _faria_root "instalar /etc/systemd/system/hefesto-wifi-usb-vigia.service e hefesto-wifi-usb-vigia.timer e habilitar o timer (reinicia a porta do dongle quando ele trava mudo; sem Wi-Fi USB, não faz nada)"
             ;;
+        desempenho)
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "modo desempenho (--no-udev)"
+                return 0
+            fi
+            if [[ "${DESEMPENHO_PEDIDO:-}" == "sem" ]]; then
+                _nao_faria "modo desempenho (--sem-desempenho)"
+                return 0
+            fi
+            _desempenho_decidir
+            if [[ "${_DESEMPENHO_QUER}" != "sim" ]]; then
+                _nao_faria "modo desempenho (a resposta assumida é não)"
+                return 0
+            fi
+            _faria_root "gravar /etc/systemd/system/hefesto-desempenho.service e habilitar (o perfil de energia em Performance a cada boot; para o system76-power ou o power-profiles-daemon, o que a máquina tiver)"
+            if [[ -n "${DESEMPENHO_PROVADOS//[[:space:]]/}" ]]; then
+                _faria_root "os ajustes provados no aparelho (${DESEMPENHO_PROVADOS}): arquivos em /etc/modprobe.d e /etc/tmpfiles.d (hefesto-desempenho-nvidia.conf, hefesto-desempenho-audio.conf, hefesto-desempenho-aspm.conf), valem no próximo boot"
+            else
+                _nao_faria "os ajustes ainda sem prova no aparelho (NVIDIA, áudio HDA, ASPM): o doctor os diz «a provar»"
+            fi
+            ;;
         dkms-playstation)
             if [[ "${NO_DKMS}" -eq 1 ]]; then
                 _nao_faria "módulo DKMS hefesto-hid-playstation (--no-dkms)"
@@ -1436,6 +1478,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_dkms_hid_nintendo_host:dkms-nintendo"
     "install_dkms_rtw88_usb_host:dkms-rtw88"
     "install_wifi_usb_host:wifi-usb"
+    "install_desempenho_host:desempenho"
     "install_dkms_hid_playstation_host:dkms-playstation"
     "install_dkms_uhid_host:dkms-uhid"
     "install_ucm_dualsense_host:ucm"
@@ -1795,6 +1838,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     # SISTEMA, ortogonal ao formato: mesma função do passo 3j2 do nativo.
     step "wifi-usb" "vigia do dongle Wi-Fi USB (DEFAULT em todo formato; opt-out --no-wifi-usb)"
     install_wifi_usb_host
+    # A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01: o modo desempenho é mudança de
+    # SISTEMA (perfil de energia), ortogonal ao formato do aplicativo. Mesma
+    # função do passo 3j3 do fluxo native.
+    step "desempenho" "modo desempenho: o perfil de energia em Performance (pergunta; --desempenho / --sem-desempenho)"
+    install_desempenho_host
     # 3ª instância da mesma mudança de SISTEMA/kernel — mesma função do passo
     # 3k do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-p" "módulo hid-playstation corrigido (DKMS; DEFAULT em todo formato)"
@@ -2970,6 +3018,15 @@ install_dkms_rtw88_usb_host
 # cabeçalho de `scripts/wifi_usb.sh`.
 step "3j2" "vigia do dongle Wi-Fi USB (scan de fundo + travamento mudo)"
 install_wifi_usb_host
+
+# ---------------------------------------------------------------------------
+# 3j3. O modo desempenho — PERGUNTA, com padrão pela máquina
+# ---------------------------------------------------------------------------
+# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (decisão dela, 02/10/2026). O corpo e o
+# porquê moram em `install_desempenho_host` (camada de máquina) e no cabeçalho
+# de `scripts/desempenho.sh`.
+step "3j3" "modo desempenho (o perfil de energia em Performance, se a pessoa quiser)"
+install_desempenho_host
 
 # ---------------------------------------------------------------------------
 # 3k. DKMS hid-playstation patchado (contenção BT) — DEFAULT, opt-out --no-dkms
