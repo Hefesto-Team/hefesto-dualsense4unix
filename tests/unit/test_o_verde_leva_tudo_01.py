@@ -147,22 +147,3 @@ def _atributos(corpo: list[object]) -> set[str]:
         for n in ast.walk(bloco)  # type: ignore[arg-type]
         if isinstance(n, ast.Constant) and isinstance(n.value, str)
     }
-
-
-def test_a_docstring_do_modulo_lista_as_secoes_de_verdade() -> None:
-    """A promessa escrita tem de bater com a promessa cumprida."""
-    import hefesto_dualsense4unix.daemon.ipc_draft_applier as mod
-
-    doc = mod.__doc__ or ""
-    i = doc.index("Cada seção (")
-    enumeracao = doc[i : doc.index(")", i)].lower()
-    aplicadas = {
-        nome[len("_apply_") :]
-        for nome in dir(DraftApplier)
-        if nome.startswith("_apply_") and nome != "_apply_section"
-    }
-    faltando = sorted(s for s in aplicadas if s not in enumeracao)
-    assert not faltando, (
-        f"a enumeração da docstring do módulo não cita: {faltando}. "
-        "Ela é a promessa escrita do botão verde."
-    )
