@@ -1,6 +1,7 @@
 """A régua da CHAVE — desligar um Hefesto por completo, e religar."""
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from hefesto_dualsense4unix.utils import chave
@@ -81,15 +82,45 @@ def test_o_daemon_consulta_a_chave_antes_de_tomar_o_aparelho():
     )
 
 
-def test_o_botao_da_gui_nao_contorna_a_chave_pelo_popen():
-    """O furo que a máscara não tapa, e a régua que o prova fechado."""
-    fonte = (
-        RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions"
-        / "daemon_actions.py"
-    ).read_text(encoding="utf-8")
-    onde_a_guarda = fonte.index("motivo_do_desligamento")
-    onde_o_popen = fonte.index("Fallback: spawn do daemon como child via Popen")
-    assert onde_a_guarda < onde_o_popen
+def _sobe_o_daemon_fora_do_systemd(fonte: str) -> list[int]:
+    """Linhas de listas `[..., "daemon", "start", ...]`: o argv que sobe o daemon."""
+    achadas: list[int] = []
+    for no in ast.walk(ast.parse(fonte)):
+        if not isinstance(no, ast.List):
+            continue
+        textos = [e.value for e in no.elts
+                  if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+        if any(a == "daemon" and b == "start" for a, b in zip(textos, textos[1:])):
+            achadas.append(no.lineno)
+    return achadas
+
+
+def test_nenhum_botao_sobe_o_daemon_fora_do_systemd():
+    """O furo que a máscara não tapa: subir o daemon por `Popen`, sem a unit.
+
+    Só o `daemon/main.py` consulta a chave. A régua mede que nenhum módulo
+    fora do daemon e da CLI monte o argv `daemon start`: o painel sobe o
+    serviço pelo `systemctl`, que a unit mascarada recusa.
+    """
+    raiz_src = RAIZ / "src" / "hefesto_dualsense4unix"
+    for arquivo in sorted(raiz_src.rglob("*.py")):
+        if arquivo.relative_to(raiz_src).parts[0] in ("daemon", "cli"):
+            continue
+        achadas = _sobe_o_daemon_fora_do_systemd(arquivo.read_text(encoding="utf-8"))
+        assert not achadas, (
+            f"{arquivo.relative_to(RAIZ)}:{achadas} sobe o daemon sem passar "
+            "pelo systemd, e a chave não o alcança"
+        )
+
+
+def test_a_regua_do_popen_morde_o_argv_do_fallback_antigo():
+    """O argv exato que o painel montava antes de sair o `Popen`."""
+    antigo = (
+        'cmd = [sys.executable, "-m", "hefesto_dualsense4unix",\n'
+        '       "daemon", "start", "--foreground"]\n'
+    )
+    assert _sobe_o_daemon_fora_do_systemd(antigo) == [1]
+    assert _sobe_o_daemon_fora_do_systemd('cmd = ["systemctl", "start", "x"]') == []
 
 
 def test_o_script_da_chave_usa_os_nomes_de_unit_que_existem():
