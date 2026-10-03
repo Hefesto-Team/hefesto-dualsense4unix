@@ -168,6 +168,8 @@ def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
         for arq in (raiz / pasta).rglob("*"):
             if arq.suffix not in {".py", ".md"} or not arq.is_file():
                 continue
+            if arq.resolve() == pathlib.Path(__file__).resolve():
+                continue
             linhas = arq.read_text(encoding="utf-8", errors="replace").splitlines()
             for n, linha in enumerate(linhas, 1):
                 if not any(p in linha for p in proibidas):
