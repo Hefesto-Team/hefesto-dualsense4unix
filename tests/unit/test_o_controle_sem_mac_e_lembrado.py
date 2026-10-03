@@ -164,7 +164,9 @@ class TestADesistenciaEAnunciada:
         ]
 
     def test_a_frase_e_a_decidida_por_ela(self) -> None:
-        """Texto que vai à tela um dia é dela, e é literal."""
+        """Texto que vai à tela um dia é dela, e é literal.
+        (D-0609-A-FRASE-DO-CONTROLE-SEM-CRACHA)
+        """
         assert FRASE_SEM_CRACHA == (
             "Este controle não tem identificação estável: o Hefesto não vai "
             "lembrar dele no próximo jogo."

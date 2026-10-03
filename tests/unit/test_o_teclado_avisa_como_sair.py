@@ -161,7 +161,9 @@ def test_a_frase_ensina_o_gesto_de_saida(mesa: dict[str, Any]) -> None:
 
 
 def test_a_frase_e_a_que_ela_decidiu(mesa: dict[str, Any]) -> None:
-    """O texto publicado é, palavra por palavra, o da decisão dela."""
+    """O texto publicado é, palavra por palavra, o da decisão dela.
+    (D-0609-A-FRASE-DO-TECLADO-NA-TELA)
+    """
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     assert controlador.esperar_os_toques(5.0)

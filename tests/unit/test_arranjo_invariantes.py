@@ -125,7 +125,9 @@ def _mesa_do_empate() -> motor.Mesa:
 def test_arrancado_o_filtro_a_receita_manda_mexer_a_toa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A MORDIDA: sem o filtro, o mapa E a receita mandam mexer sem ganho nenhum."""
+    """A MORDIDA: sem o filtro, o mapa E a receita mandam mexer sem ganho nenhum.
+    (D-MAPA-SEM-RECEITA)
+    """
     mesa, op = _mesa_do_empate(), SEM_BONUS
     plano = motor.planejar(mesa, op)
     assert plano.motivo["cam"].ganho == 0, "o cenário deixou de ser um empate"
@@ -171,7 +173,9 @@ def _quem_muda(controles: tuple[motor.Controle, ...],
 
 
 def test_ninguem_troca_de_adaptador_sem_baixar_o_pico() -> None:
-    """Trocar custa desfazer pareamento, apagar o cache SDP e parear de novo."""
+    """Trocar custa desfazer pareamento, apagar o cache SDP e parear de novo.
+    (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO)
+    """
     equilibrados = (
         motor.Controle("Jogador 1", mic=True, onde="bt-a"),
         motor.Controle("Jogador 2", mic=True, onde="bt-a"),

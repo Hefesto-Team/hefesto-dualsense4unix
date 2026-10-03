@@ -293,7 +293,7 @@ def test_o_plano_nao_carrega_palavra_de_culpa() -> None:
 
 
 def test_a_tela_nunca_chama_o_adaptador_de_hci() -> None:
-    """`hciN` é a VAGA, não o aparelho — e o índice inverte entre boots."""
+    """`hciN` é a VAGA, não o aparelho — e o índice inverte entre boots. (D-HCI1-BLOQUEADO)"""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1)], **_bancada({P1: HUB_A})
     )
@@ -303,7 +303,9 @@ def test_a_tela_nunca_chama_o_adaptador_de_hci() -> None:
 
 
 def test_o_microfone_nasce_ligado_e_o_dono_responde() -> None:
-    """O dono do padrão (`profiles/schema.py`, `dono=`) diz ligado."""
+    """O dono do padrão (`profiles/schema.py`, `dono=`) diz ligado.
+    (D-O-MIC-LIGADO-VALE-NO-RADIO)
+    """
     assert plano_de_radio.microfone_nasce_ligado() is True
 
 

@@ -325,7 +325,9 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
 
 
 def test_o_piso_de_gestos_da_aba_so_sobe(a07):
-    """Ele SÓ SOBE por queda sem querer. Uma queda não aparece na tela: o clique"""
+    """Ele SÓ SOBE por queda sem querer. Uma queda não aparece na tela: o clique
+    (D-0609-STEAM-DIVIDIDO)
+    """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)

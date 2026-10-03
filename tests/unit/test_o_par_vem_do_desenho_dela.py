@@ -61,7 +61,9 @@ PEER_DA_BANCADA: dict[str, str] = {
 
 
 def test_a_irma_nao_aceita_leitura_de_sistema_nenhuma() -> None:
-    """``irmas_de`` recebe o MAPA e mais nada — a assinatura é a régua."""
+    """``irmas_de`` recebe o MAPA e mais nada — a assinatura é a régua.
+    (D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS)
+    """
     parametros = list(inspect.signature(irmas_de).parameters)
     assert parametros == ["mapa"], (
         "a irmã tem UMA fonte, e ela é o desenho dela. Parâmetro a mais na "

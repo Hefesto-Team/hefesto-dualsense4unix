@@ -272,7 +272,9 @@ def test_nenhuma_ordem_cita_milimetro_nem_altura() -> None:
 
 
 def test_nao_medi_e_nao_declarado_sao_frases_diferentes() -> None:
-    """F7: "olhei e não sei" não é "só você sabe, e você não me disse"."""
+    """F7: "olhei e não sei" não é "só você sabe, e você não me disse".
+    (D-O-QUE-O-PRODUTO-DIZ-SEM-SABER)
+    """
     assert ordens.NAO_MEDI != ordens.NAO_DECLARADO
     assert ordens.NAO_MEDI not in ordens.NAO_DECLARADO
     assert ordens.NAO_DECLARADO not in ordens.NAO_MEDI

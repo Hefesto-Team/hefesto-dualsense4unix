@@ -867,7 +867,7 @@ def test_a_grafia_do_lugar_responde_sem_pydantic_na_chamada() -> None:
 
 
 def test_o_motor_nao_escreve_no_bluez() -> None:
-    """O ``Alias`` tem UM escritor, o ``bt_active_mode.sh``"""
+    """O ``Alias`` tem UM escritor, o ``bt_active_mode.sh`` (D-COSTURA-BLUEZ)"""
     arvore = ast.parse((SRC / "integrations" / "entrada_a_entrada.py").read_text(encoding="utf-8"))
     importados = {
         (no.module or "") + "." + nome.name

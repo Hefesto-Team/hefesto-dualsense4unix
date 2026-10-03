@@ -123,7 +123,7 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
-    """O `?` que fica é o da linha do exame, e ele traz o que saiu do card."""
+    """O `?` que fica é o da linha do exame, e ele traz o que saiu do card. (D-ORDEM-DE-SERVICO)"""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
     from hefesto_dualsense4unix.integrations.exame_da_mesa import (
         ESTADO_ATENCAO,
@@ -436,3 +436,21 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
         assert re.search(rf'data-campo="{campo}" data-hef-alvo="html"', html), (
             f"`{campo}` troca um bloco INTEIRO e precisa do alvo `html`; sem "
             "ele o piloto escreveria a marcação como texto na tela")
+
+
+JARGAO_DAS_DUAS_PERGUNTAS = ("antena", "visada")
+
+
+def test_as_duas_perguntas_da_sala_nao_falam_antena_nem_visada() -> None:
+    """A redação decidida em D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO, na página.
+
+    O rótulo de cada pergunta é a marca `.mm-q`; o jargão que ela disse não
+    entender fica só no nome do campo (`sala-visada`), nunca no que se lê.
+    """
+    html = BANCADA.read_text(encoding="utf-8")
+    perguntas = re.findall(r'<span class="mm-q"[^>]*>([^<]*)</span>', html)
+    assert len(perguntas) == 2, f"a sala tem {len(perguntas)} pergunta(s), e são duas"
+    for texto in perguntas:
+        assert texto.endswith("?"), f"a pergunta da sala não é pergunta: {texto!r}"
+        achados = [p for p in JARGAO_DAS_DUAS_PERGUNTAS if p in texto.lower()]
+        assert not achados, f"a pergunta voltou ao jargão {achados}: {texto!r}"

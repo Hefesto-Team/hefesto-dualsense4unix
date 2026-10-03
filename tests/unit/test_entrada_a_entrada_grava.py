@@ -702,7 +702,9 @@ def test_a_extensao_fica_no_quadrado_de_quem_a_hospeda(disco: Path) -> None:
 
 
 def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
-    """O rótulo de um campo vai para a barra de status dela quando o campo é"""
+    """O rótulo de um campo vai para a barra de status dela quando o campo é
+    (D-A-PALAVRA-ENTRADA)
+    """
     from hefesto_dualsense4unix.app import ipc_bridge
 
     com_porta = {

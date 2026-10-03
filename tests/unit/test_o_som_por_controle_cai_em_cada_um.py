@@ -207,7 +207,9 @@ def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
 
 
 def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
-    """Sem `mix`, nenhum loopback ENTRA no nó — ele espera a corrente do jogo."""
+    """Sem `mix`, nenhum loopback ENTRA no nó — ele espera a corrente do jogo.
+    (D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX)
+    """
     assert som.FONTE_PADRAO == "sfx"
     linhas = _no_de_pe(_UNIQ_P1).linhas
 

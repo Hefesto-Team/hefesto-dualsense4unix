@@ -581,7 +581,9 @@ class TestOGestoDaAba:
     """A metade que só a TELA cumpre — a frase que diz de quem é a cor."""
 
     def test_escolher_o_tom_do_vizinho_recusa_e_diz_de_quem_e(self) -> None:
-        """A cor com dono RECUSA — decisão dela, 09/09/2026."""
+        """A cor com dono RECUSA — decisão dela, 09/09/2026.
+        (D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X)
+        """
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         with pytest.raises(RuntimeError) as erro:

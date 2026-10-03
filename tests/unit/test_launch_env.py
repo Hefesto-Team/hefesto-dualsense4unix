@@ -248,7 +248,9 @@ def test_nativo_por_titulo_e_arriscado_e_por_appid_nao():
 
 
 def test_nativo_matchany_e_arriscado_e_a_navegacao_por_processo_nao_e():
-    """NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu da"""
+    """NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu da
+    (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL)
+    """
     matchany_nativo = SimpleNamespace(
         name="tudo_nativo", mode=SimpleNamespace(kind="native"), match=SimpleNamespace()
     )

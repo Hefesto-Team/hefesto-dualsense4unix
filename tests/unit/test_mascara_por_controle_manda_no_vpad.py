@@ -511,7 +511,9 @@ def test_cinquenta_aplicares_identicos_nao_recriam_o_vpad_do_p1(p1: Any) -> None
 
 
 def test_o_aplicar_recria_quando_a_escolha_dela_muda(p1: Any) -> None:
-    """E o Aplicar CONTINUA aplicando — a decisão dela vale no gesto."""
+    """E o Aplicar CONTINUA aplicando — a decisão dela vale no gesto.
+    (D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR)
+    """
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
         EMU_APLICADO,
         start_gamepad_emulation_desfecho,

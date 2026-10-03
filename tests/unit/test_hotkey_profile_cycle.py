@@ -156,7 +156,9 @@ async def test_cycle_prev_retrocede(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_cycle_arma_lock_e_flasha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Gesto explícito: arma o lock manual + flasha o lightbar (senão o"""
+    """Gesto explícito: arma o lock manual + flasha o lightbar (senão o
+    (D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO)
+    """
     _patch_manager(monkeypatch)
     d = _FakeDaemon(active="a")
     await build_profile_cycle_callback(d, +1)()

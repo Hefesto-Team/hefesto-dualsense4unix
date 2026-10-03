@@ -30,7 +30,7 @@ def test_a_dispensa_cala_a_ordem_no_arranjo_que_ela_viu() -> None:
 
 
 def test_a_dispensa_volta_quando_o_arranjo_muda() -> None:
-    """A MORDIDA: chavear a dispensa só pelo slug reprova aqui."""
+    """A MORDIDA: chavear a dispensa só pelo slug reprova aqui. (D-ORDEM-IGNORADA-VOLTA)"""
     dispensadas = {"radio_largo_no_mesmo_hub": "4-1.1.2|3-1.1.4"}
     depois = ordem(arranjo="4-1.1.2|3-1.2")
     assert ordens.ordens_novas([depois], dispensadas) == (depois,)
