@@ -201,12 +201,12 @@
       "data": "2026-10-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 914576,
+      "piso": 914544,
       "por_item": {
-        "docs": 57709,
-        "scripts": 95106,
-        "src": 273315,
-        "tests": 488446
+        "docs": 57710,
+        "scripts": 95114,
+        "src": 273351,
+        "tests": 488369
       },
       "razao": "o teto desceu sozinho com o número",
       "subidas": [
@@ -230,7 +230,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 2397
+      "universo": 2396
     }
   }
 }
