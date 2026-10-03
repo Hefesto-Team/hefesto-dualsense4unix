@@ -52,9 +52,10 @@ def test_a_contagem_de_ocorrencias_em_src_e_medida_e_nao_copiada() -> None:
     assert achados, "a régua quebrou: o prefixo sumiu de `src/` inteiro"
 
     modulos = {caminho.split(":")[0] for caminho in achados}
-    assert modulos == {"src/hefesto_dualsense4unix/daemon/subsystems/metrics.py"}, (
-        f"o prefixo saiu do módulo de métricas e a ADR não sabe: {sorted(modulos)}"
-    )
+    assert modulos == {
+        "src/hefesto_dualsense4unix/daemon/subsystems/metrics.py",
+        "src/hefesto_dualsense4unix/cli/cmd_metrics.py",
+    }, f"o prefixo mudou de módulo e a ADR não sabe: {sorted(modulos)}"
 
     quantidade = len(achados)
     adr = _ADR.read_text(encoding="utf-8")

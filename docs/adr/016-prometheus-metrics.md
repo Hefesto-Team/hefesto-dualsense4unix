@@ -156,8 +156,9 @@ já rodando.
 >    inteira, e quebrá-la em duas linhas já derrubou o portão uma vez.)
 > 2. **O "zero ocorrências em `src/`"** caducou em 01/08/2026, quando as duas
 >    variáveis nasceram. Medido em 03/10/2026:
->    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **uma** linha,
->    em `daemon/subsystems/metrics.py`. Ver a nota de 2026-08-22, no fim.
+>    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas,
+>    em `daemon/subsystems/metrics.py` e em `cli/cmd_metrics.py` (a frase do
+>    verbo `ligar`). Ver a nota de 2026-08-22, no fim.
 
 Consequência prática: hoje o endpoint só sobe mexendo no código. O item
 "histograma de latência por tick, previsto para V2.1" também não foi feito, e
@@ -204,10 +205,10 @@ ela; `_porta_efetiva(9090)` devolve `19199` com a variável de porta em `19199`,
 e `9090` com ela em `abc` ou `70000`.
 
 **O número que a nota de 25/07 errou, medido:**
-`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **uma** linha, a
-constante `ENV_METRICS_PORT`, em `daemon/subsystems/metrics.py` (eram duas até
-03/10/2026, quando a `ENV_METRICS_ENABLED` saiu). Era zero em 25/07, e foi por
-isso que aquela nota disse zero.
+`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas: a
+constante `ENV_METRICS_PORT`, em `daemon/subsystems/metrics.py`, e a frase do
+verbo `ligar`, em `cli/cmd_metrics.py` (a `ENV_METRICS_ENABLED` saiu em
+03/10/2026). Era zero em 25/07, e foi por isso que aquela nota disse zero.
 
 **Duas metades do veredito antigo continuam de pé, e é por elas que esta nota
 não é uma absolvição:**
