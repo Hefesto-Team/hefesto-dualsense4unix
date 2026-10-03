@@ -474,6 +474,32 @@ def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
         bancada.fechar()
 
 
+def test_a_busca_acabada_nao_responde_ocupado_nem_fica_publicada(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O fio fecha o movimento da busca ANTES de largar a ``_busca`` (o ``finally``
+    da janela): nesse vão o «Procurar» desligado lia a busca ainda de pé com o
+    movimento já acabado e respondia «ocupado». Sem movimento em curso não há
+    busca publicada, e quem espera por ela a vê apagada."""
+    bancada, _parada = montar(a08, monkeypatch)
+    central = bancada.central
+    try:
+        with central._tranca:
+            central._busca = {"adaptador": SALA, "desde": 1.0, "ate": 121.0}
+            central._movimentos[cr.CONECTANDO] = cr.Movimento(
+                cr.CONECTANDO, SALA, cr.NAO_CHEGOU, cr.PASSO_FIM, motivo=cr.MOTIVO_DESLIGADA)
+        assert central.publicar()["busca"] is None
+        assert central._esperar_a_busca(lambda busca: busca is None) is None
+        with central._tranca:
+            central._movimentos[cr.CONECTANDO] = cr.Movimento(
+                cr.CONECTANDO, SALA, cr.ESPERANDO, cr.PASSO_GESTO)
+        assert central.publicar()["busca"] is not None, "a busca em curso sumiu"
+    finally:
+        with central._tranca:
+            central._busca = None
+        bancada.fechar()
+
+
 def _folha(fonte: str, prefixo: str) -> dict[str, dict[str, str]]:
     """As regras ``.cadeado…`` de uma folha, por seletor, sem o ``prefixo``."""
     regras: dict[str, dict[str, str]] = {}

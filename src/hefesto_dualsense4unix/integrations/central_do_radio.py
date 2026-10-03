@@ -742,7 +742,8 @@ class CentralDoRadio:
     def _busca_publicada(self) -> dict[str, Any] | None:
         """A busca do «Procurar» como a tela a lê, ou ``None``: com o chip dela"""
         with self._tranca:
-            if self._busca is None:
+            conectando = self._movimentos.get(CONECTANDO)
+            if self._busca is None or (conectando is not None and not conectando.em_curso):
                 return None
             busca = dict(self._busca)
             if self._destino_pedido is not None:
