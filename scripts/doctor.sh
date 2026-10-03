@@ -8676,6 +8676,14 @@ _desempenho_cliente() {
     return 0
 }
 
+# O power-profiles-daemon sem o perfil «performance» (nenhum driver da máquina o
+# sustenta): o mesmo critério do scripts/desempenho.sh, que então pula o perfil.
+_desempenho_ppd_sem_performance() {
+    local lista
+    lista="$(timeout 3 "$1" list 2>/dev/null)" || return 1
+    ! grep -Eq '^[[:space:]*]*performance:' <<<"${lista}"
+}
+
 # O perfil de energia de agora, em minúsculas; vazio sem gerenciador.
 _desempenho_perfil_agora() {
     local bin
@@ -8730,17 +8738,25 @@ _desempenho_diz() {
 
 check_desempenho() {
     local raiz="${HEFESTO_DESEMPENHO_RAIZ:-}" sys="${HEFESTO_SYSFS:-/sys}" proc="${HEFESTO_PROC:-/proc}"
-    local etc="${raiz}/etc" agora ligar
+    local etc="${raiz}/etc" agora ligar cliente
     local unit="${etc}/systemd/system/hefesto-desempenho.service"
     local wants="${etc}/systemd/system/multi-user.target.wants/hefesto-desempenho.service"
     ligar="$(conselho_de_instalacao --desempenho)"
 
     # perfil de energia
     agora="$(_desempenho_perfil_agora)"
-    if [[ -z "$(_desempenho_cliente)" ]]; then
+    cliente="$(_desempenho_cliente)"
+    if [[ -z "${cliente}" ]]; then
         info "modo desempenho, perfil de energia: pulado, sem system76-power nem power-profiles-daemon não há perfil a pedir"
+    elif [[ "${cliente}" == */powerprofilesctl ]] && _desempenho_ppd_sem_performance "${cliente}"; then
+        info "modo desempenho, perfil de energia: pulado, o power-profiles-daemon desta máquina não oferece o perfil performance"
     elif [[ -f "${unit}" && ! -L "${wants}" ]]; then
         warn "modo desempenho, perfil de energia: a unit hefesto-desempenho.service está gravada e NÃO habilitada (agora: ${agora:-?}). Habilitar: sudo systemctl enable --now hefesto-desempenho.service"
+    elif [[ -f "${unit}" && "${agora}" != "performance" ]]; then
+        # O perfil não é arquivo de módulo: a unit o pede a cada boot e na hora
+        # do install, e trocá-lo depois no menu de energia é direito de quem
+        # usa. Não é conflito a avisar: é o estado, com o caminho de volta.
+        info "modo desempenho, perfil de energia: a unit pede Performance a cada boot, e agora está ${agora:-?} (trocado depois, no menu de energia ou por outro programa). Para voltar: sudo systemctl restart hefesto-desempenho.service; para desligar: sudo systemctl disable --now hefesto-desempenho.service && sudo rm /etc/systemd/system/hefesto-desempenho.service"
     else
         _desempenho_diz perfil "perfil de energia em Performance" "${unit}" "${agora}" performance \
             "${ligar}" "sudo systemctl disable --now hefesto-desempenho.service && sudo rm /etc/systemd/system/hefesto-desempenho.service"

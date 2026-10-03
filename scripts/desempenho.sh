@@ -93,12 +93,25 @@ _gerenciador() {
     fi
 }
 
+# O power-profiles-daemon só oferece «performance» quando um driver da máquina
+# o sustenta (platform_profile, ou o pstate da CPU); sem ele a unit pediria um
+# perfil que não existe e falharia a cada boot. Sem resposta do daemon não se
+# sabe, e não se pula: a unit é o lado reversível.
+_ppd_sem_performance() {
+    local lista
+    lista="$(timeout 5 "$(_achar powerprofilesctl)" list 2>/dev/null)" || return 1
+    ! grep -Eq '^[[:space:]*]*performance:' <<<"${lista}"
+}
+
 # Diz se a máquina tem o que o ajuste mexe. Imprime o MOTIVO quando não tem.
 _falta_na_maquina() {
     case "$1" in
         perfil)
-            [[ -n "$(_gerenciador)" ]] \
-                || printf 'sem system76-power nem power-profiles-daemon, não há perfil de energia a pedir'
+            if [[ -z "$(_gerenciador)" ]]; then
+                printf 'sem system76-power nem power-profiles-daemon, não há perfil de energia a pedir'
+            elif [[ "$(_gerenciador)" == "power-profiles-daemon" ]] && _ppd_sem_performance; then
+                printf 'o power-profiles-daemon desta máquina não oferece o perfil performance'
+            fi
             ;;
         nvidia)
             [[ -d "${SYS}/module/nvidia" || -r "${PROC}/driver/nvidia/params" ]] \

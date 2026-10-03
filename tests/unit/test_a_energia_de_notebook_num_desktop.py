@@ -52,6 +52,7 @@ class Maquina:
         aspm: bool = False,
         bateria: bool = False,
         perfil_agora: str = "Balanced",
+        ppd_com_performance: bool = True,
     ) -> None:
         self.raiz = tmp / "raiz"
         self.sys = tmp / "sys"
@@ -62,7 +63,21 @@ class Maquina:
         if gerenciador == "system76-power":
             self._cliente("system76-power", f'echo "Power Profile: {perfil_agora}"\n')
         elif gerenciador == "power-profiles-daemon":
-            self._cliente("powerprofilesctl", f'echo "{perfil_agora.lower()}"\n')
+            # Como o real: `get` diz o perfil, `list` só traz «performance» quando
+            # um driver da máquina o sustenta.
+            desempenho = (
+                "  performance:\n    CpuDriver:\tamd_pstate\n    Degraded:   no\n\n"
+                if ppd_com_performance
+                else ""
+            )
+            self._cliente(
+                "powerprofilesctl",
+                'case "$1" in\n'
+                f'  get) echo "{perfil_agora.lower()}" ;;\n'
+                f"  list) printf '{desempenho}* balanced:\\n    CpuDriver:\\tamd_pstate\\n\\n"
+                "  power-saver:\\n    CpuDriver:\\tamd_pstate\\n' ;;\n"
+                "esac\n",
+            )
         if nvidia:
             (self.sys / "module/nvidia").mkdir(parents=True)
             (self.proc / "driver/nvidia").mkdir(parents=True)
@@ -163,6 +178,14 @@ class TestOMecanismo:
         codigo = "\n".join(ln for ln in unit.splitlines() if not ln.startswith("#"))
         assert "system76" not in codigo
 
+    def test_ppd_sem_o_perfil_performance_e_pulado_e_dito_sem_erro(self, tmp_path: Path) -> None:
+        # Sem driver que sustente «performance», a unit falharia a cada boot.
+        m = Maquina(tmp_path, gerenciador="power-profiles-daemon", ppd_com_performance=False)
+        r = _roda(m, "aplicar")
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert m.escritos() == set()
+        assert "perfil: pulado, o power-profiles-daemon desta máquina não oferece" in r.stdout
+
     def test_sem_gerenciador_o_perfil_e_pulado_e_dito_sem_erro(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, gerenciador=None, nvidia=True)
         r = _roda(m, "aplicar")
@@ -231,6 +254,21 @@ class TestOMecanismo:
             "hefesto-desempenho-aspm.conf",
         ):
             assert arq in texto, f"o uninstall não olha {arq} (nem para pedir a credencial)"
+
+    def test_o_uninstall_pede_a_credencial_por_cada_arquivo(self) -> None:
+        # Sem a credencial pedida no começo, o bloco cai no «sudo indisponível» e
+        # os arquivos de root ficam: cada um tem de armar o `_NEEDS_SUDO`.
+        texto = UNINSTALL.read_text(encoding="utf-8")
+        armam = " ".join(
+            re.findall(r"\[\[ -e (?:[^\]]|\](?!\]))*\]\] && _NEEDS_SUDO=1", texto)
+        )
+        for arq in (
+            "/etc/systemd/system/hefesto-desempenho.service",
+            "/etc/modprobe.d/hefesto-desempenho-nvidia.conf",
+            "/etc/modprobe.d/hefesto-desempenho-audio.conf",
+            "/etc/tmpfiles.d/hefesto-desempenho-aspm.conf",
+        ):
+            assert arq in armam, f"{arq} não arma o _NEEDS_SUDO do uninstall"
 
 
 # ---------------------------------------------------------------------------
@@ -468,12 +506,27 @@ class TestODoctor:
         assert linha.startswith("[ OK ]") and "aplicado (agora: performance)" in linha
         assert "systemctl disable --now hefesto-desempenho.service" in linha
 
-    def test_perfil_gravado_e_depois_trocado_por_outro_programa(self, tmp_path: Path) -> None:
+    def test_perfil_gravado_e_depois_trocado_no_menu_e_estado_nao_alarme(
+        self, tmp_path: Path
+    ) -> None:
+        # O perfil não é arquivo de módulo: trocá-lo no menu de energia depois do
+        # boot é direito de quem usa. O doctor diz o estado e o caminho de volta,
+        # em qualquer época de gravação da unit (ela roda na hora do install).
         m = Maquina(tmp_path, perfil_agora="Balanced")
         _roda(m, "aplicar")
-        os.utime(m.raiz / UNIT, (100, 100))  # gravada ANTES do boot
-        linha = _linha(_doctor(m, HEFESTO_DESEMPENHO_BOOT="1000"), "perfil de energia")
-        assert linha.startswith("[WARN]") and "DESFEITO por outro programa" in linha
+        for boot, mtime in (("1000", 100), ("1", None)):
+            if mtime is not None:
+                os.utime(m.raiz / UNIT, (mtime, mtime))
+            linha = _linha(_doctor(m, HEFESTO_DESEMPENHO_BOOT=boot), "perfil de energia")
+            assert not linha.startswith(("[WARN]", "[FAIL]", "[ OK ]")), linha
+            assert "agora está balanced" in linha and "PRÓXIMO BOOT" not in linha, linha
+            assert "systemctl restart hefesto-desempenho.service" in linha, linha
+
+    def test_ppd_sem_o_perfil_performance_o_doctor_diz_pulado(self, tmp_path: Path) -> None:
+        m = Maquina(tmp_path, gerenciador="power-profiles-daemon", ppd_com_performance=False)
+        linha = _linha(_doctor(m), "perfil de energia")
+        assert not linha.startswith("[WARN]") and "pulado" in linha, linha
+        assert "não oferece o perfil performance" in linha, linha
 
     def test_arquivo_gravado_depois_do_boot_diz_proximo_boot(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, nvidia=True)
