@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import pathlib
 
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
@@ -9,23 +10,41 @@ from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 LAUNCH_ENV = pathlib.Path("src/hefesto_dualsense4unix/daemon/launch_env.py")
 
 
+def _funcao(nome: str) -> ast.FunctionDef:
+    """A função de `launch_env.py`, pela árvore: não depende de comentário."""
+    fonte = LAUNCH_ENV.read_text(encoding="utf-8")
+    for no in ast.walk(ast.parse(fonte)):
+        if isinstance(no, ast.FunctionDef) and no.name == nome:
+            return no
+    raise AssertionError(f"{nome} sumiu do launch_env.py")
+
+
+def _chama(no: ast.AST, nome: str) -> bool:
+    return any(
+        isinstance(c, ast.Call)
+        and getattr(c.func, "id", getattr(c.func, "attr", None)) == nome
+        for c in ast.walk(no)
+    )
+
+
 class TestOModuloDeixouDeSerOrfao:
     def test_o_materializador_chama_a_cura(self):
-        """**A RÉGUA QUE IMPEDE A ÓRFÃ DE VOLTAR.**"""
-        fonte = LAUNCH_ENV.read_text(encoding="utf-8")
-        i = fonte.index("def materialize_launch_env(")
-        corpo = fonte[i : fonte.index("\n# ---", i)]
-        assert "curar_todas_as_estradas()" in corpo, (
+        """A cadeia: materializar -> escrever o lançamento -> a parte de fora -> a cura."""
+        assert _chama(_funcao("materialize_launch_env"), "_escrever_o_lancamento")
+        assert _chama(_funcao("_escrever_o_lancamento"), "_a_parte_de_fora")
+        assert _chama(_funcao("_a_parte_de_fora"), "curar_todas_as_estradas"), (
             "o materializador não reescreve as estradas dos outros lançadores")
 
     def test_a_carona_vai_dentro_do_try(self):
-        """A função já promete nunca levantar, e o `except` da borda é a"""
-        fonte = LAUNCH_ENV.read_text(encoding="utf-8")
-        i = fonte.index("def materialize_launch_env(")
-        corpo = fonte[i : fonte.index("\n# ---", i)]
-        assert corpo.index("curar_todas_as_estradas()") < corpo.index(
-            'logger.warning("launch_env_materialize_falhou"'), (
-            "a carona saiu de dentro da rede do `try`")
+        """A parte de fora, onde a cura mora, só roda dentro do `try` que não deixa subir."""
+        dentro = [
+            t for t in ast.walk(_funcao("_escrever_o_lancamento"))
+            if isinstance(t, ast.Try)
+            and any(_chama(corpo, "_a_parte_de_fora") for corpo in t.body)
+            and any(h.type is not None and "Exception" in ast.unparse(h.type)
+                    for h in t.handlers)
+        ]
+        assert dentro, "a carona saiu de dentro da rede do `try`"
 
 
 class TestACuraPercorreTodosOsCartoes:
