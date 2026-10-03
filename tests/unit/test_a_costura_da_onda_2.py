@@ -9,6 +9,17 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import diario_do_radio
+from tests.unit.radio_de_mentira import AZUL
+from collections.abc import Iterator
+from tests.unit.radio_de_mentira import QUARTO
+from tests.unit.radio_de_mentira import SALA
+from tests.unit.radio_de_mentira import VARANDA
+from tests.unit.radio_de_mentira import VERDE
+from tests.unit.radio_de_mentira import VERMELHO
+import contextlib
+from hefesto_dualsense4unix.integrations import central_do_radio as cr
+from tests.unit import radio_de_mentira as rm
+import threading
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -145,6 +156,145 @@ class _DonoDoNome:
     def __call__(self, chave: str, **_k: Any) -> str | None:
         self.perguntas.append(chave)
         return self.nomes.get(chave)
+
+
+def _central(
+    dono: bd.LeitorDoBluez, mundo: rm.RadioDeMentira, relogio: rm.Relogio, **extra: Any
+) -> cr.CentralDoRadio:
+    return cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=mundo.onde_esta,
+        movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        relogio=relogio,
+        dormir=relogio.dormir,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+        **extra,
+    )
+
+
+def _controle(u: str, adaptador: str, ponte: str | None = None) -> dict[str, Any]:
+    return {
+        "uniq": rm.uniq(u),
+        "transport": "bt",
+        "connected": True,
+        "adaptador": adaptador,
+        "ponte_do_radio": ponte,
+    }
+
+
+def _ela_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
+    """Dois no A, um no B: o terceiro do A pergunta, e ela responde «Ligar aqui»."""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    governador = _governador(onde, relogio)
+    for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_4):
+        vaga = governador.pedir_vaga(uniq, "som")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu("som")
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+    assert governador.ligar_aqui(CONTROLE_3) is True
+    vaga = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
+    vaga.subiu("som")
+    vaga.soltar("a fonte do som secou")
+    return governador
+
+
+def _mesa(
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    *,
+    pontes: dict[str, str | None],
+    no_c: tuple[str, ...] = (),
+) -> tuple[Any, Any]:
+    """A mesma mesa para o governador e para a central."""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B, **dict.fromkeys(no_c, ADAPTADOR_C),
+    }
+    enlaces: dict[str, tuple[str, ...]] = {}
+    for controle, adaptador in onde.items():
+        enlaces[adaptador] = (*enlaces.get(adaptador, ()), controle)
+    governador = _governador(
+        onde, _Relogio(), medidor=_MedidorDaMesa(enlaces), nomear={
+            ADAPTADOR_A: "Entrada 1", ADAPTADOR_B: "Entrada 2", ADAPTADOR_C: "Entrada 3",
+        }.get,
+    )
+    governador.tique()
+    for controle, modo in pontes.items():
+        if modo is not None:
+            vaga = governador.pedir_vaga(controle, modo)
+            assert isinstance(vaga, gov.Vaga), controle
+            vaga.subiu(modo)
+
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=lambda u: onde.get(":".join(u[i : i + 2] for i in range(0, 12, 2)), ""),
+        relogio=relogio,
+        dormir=relogio.dormir,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+    )
+    central.conhecer([
+        {
+            "uniq": controle.replace(":", ""),
+            "transport": "bt",
+            "connected": True,
+            "adaptador": adaptador,
+            "ponte_do_radio": pontes.get(controle),
+        }
+        for controle, adaptador in onde.items()
+    ])
+    return governador, central
+
+
+def _o_vermelho_fica_esperando(
+    mundo: rm.RadioDeMentira, relogio: rm.Relogio, central: cr.CentralDoRadio
+) -> cr.Movimento:
+    """O ``Pair`` diz que deu e o controle não chega: «esperando», e a trava livre."""
+    mundo.pair_mente = True
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    feito = central.mover(VERMELHO, QUARTO)
+    assert (feito.estado, feito.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO)
+    return feito
+
+
+def _governador(onde: dict[str, str], relogio: _Relogio, **extra: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    def adaptador_de(uniq: str) -> str:
+        valor = onde[uniq]
+        if isinstance(valor, Exception):
+            raise valor
+        return valor
+
+    return gov.GovernadorDoRadio(
+        adaptador_de=adaptador_de, registrar=_Diario(), relogio=relogio, **extra
+    )
+
+
+@pytest.fixture()
+def dono(mundo: rm.RadioDeMentira) -> Iterator[bd.DonoVivo]:
+    vivo = bd.DonoVivo(mundo)
+    assert vivo.ligar()
+    yield vivo
+    vivo.fechar()
+
+
+@pytest.fixture()
+def mundo() -> rm.RadioDeMentira:
+    """A sala com o vermelho e o azul; o quarto e a varanda livres."""
+    radio = rm.RadioDeMentira()
+    radio.pareado(SALA, VERMELHO)
+    radio.pareado(SALA, AZUL)
+    return radio
+
+
+@pytest.fixture()
+def relogio() -> rm.Relogio:
+    return rm.Relogio()
 
 
 def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
@@ -292,3 +442,412 @@ def test_o_nome_da_porta_tem_um_dono_so() -> None:
     caducos = sorted(set(_OS_QUE_PODEM) - achados)
     assert not intrusos, f"um segundo dono do nome da porta: {intrusos}"
     assert not caducos, f"a exceção deixou de existir — tire-a de _OS_QUE_PODEM: {caducos}"
+
+
+@pytest.mark.parametrize(
+    ("pontes", "no_c", "esperada"),
+    [
+        ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"}, (),
+         (ADAPTADOR_C, ADAPTADOR_B)),
+        ({CONTROLE_1: "som", CONTROLE_2: "haptica", CONTROLE_4: None}, (),
+         (ADAPTADOR_C, ADAPTADOR_B)),
+        ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"}, (CONTROLE_5, CONTROLE_6),
+         (ADAPTADOR_C, ADAPTADOR_B)),
+    ],
+    ids=["mais-vaga", "menos-controles", "a-vaga-vence-os-controles"],
+)
+def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
+    diario: Path,
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    pontes: dict[str, str | None],
+    no_c: tuple[str, ...],
+    esperada: tuple[str, ...],
+) -> None:
+    """A tela pergunta «Mover para a primeira vaga?», e a central, sem destino"""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    governador, central = _mesa(dono, relogio, pontes=pontes, no_c=no_c)
+
+    recusa = governador.pedir_vaga(CONTROLE_3, "som")
+
+    assert isinstance(recusa, gov.Recusa)
+    assert recusa.vagas == esperada
+    assert central.escolher_destino(CONTROLE_3) == recusa.vagas[0], (
+        "a tela e a central divergem sobre «para onde»"
+    )
+    [pedido] = governador.publicar()[ADAPTADOR_A]["pedidos"]
+    assert tuple(pedido["vagas"]) == esperada
+    assert recusa.frase.endswith("Há vaga na Entrada 3 e na Entrada 2.")
+
+
+@pytest.mark.asyncio
+async def test_com_um_movimento_esperando_nenhum_outro_comeca(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """Um por vez vale também para o arrastar. A palavra dela:"""
+    from types import SimpleNamespace
+
+    central = _central(dono, mundo, relogio)
+    primeiro = _o_vermelho_fica_esperando(mundo, relogio, central)
+    chamadas, escritas = len(mundo.chamadas), len(mundo.escritas)
+
+    recusas = {
+        "o azul, arrastado": central.comecar_a_mover(AZUL, VARANDA),
+        "um controle novo": central.comecar_a_conectar(VARANDA),
+        "o vermelho, para outro lugar": central.comecar_a_mover(VERMELHO, VARANDA),
+        "o corpo do fio, direto": central.mover(AZUL, VARANDA),
+        "o conectar, direto": central.conectar(VARANDA),
+    }
+    for quem, recusa in recusas.items():
+        assert (recusa.estado, recusa.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_OCUPADO), quem
+
+    assert central.comecar_a_mover(VERMELHO, QUARTO) == primeiro
+    resposta = await _handlers(SimpleNamespace(_central_do_radio=central))._handle_radio_mover(
+        {"aparelho": rm.uniq(AZUL), "destino": VARANDA}
+    )
+    assert resposta["status"] == "ocupado"
+
+    assert [m.aparelho for m in central.movimentos()] == [VERMELHO]
+    assert central.movimento_de(VERMELHO) == primeiro
+    assert set(central._fios) <= {VERMELHO}, "a recusa abriu um fio"
+    assert mundo.chamadas[chamadas:] == []
+    assert mundo.escritas[escritas:] == []
+    assert [c for c, _a in mundo.metodos("StartDiscovery")] == [rm.HCIS[QUARTO]]
+    central.fechar()
+
+
+def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
+    diario: Path,
+    mundo: rm.RadioDeMentira,
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A régua de cima, para o «Conectar»: a segunda olhada vale nele também."""
+    central = _central(dono, mundo, relogio)
+    mundo.pair_mente = True
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    rm.ela_pareia(relogio, mundo, central, VERDE)
+
+    chegaram = threading.Semaphore(0)
+    de_verdade = bd.na_trava
+
+    @contextlib.contextmanager
+    def contando(quem: str = bd.QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
+        chegaram.release()
+        with de_verdade(quem, prazo_s=prazo_s) as esperou:
+            yield esperou
+
+    monkeypatch.setattr(bd, "na_trava", contando)
+    fins: list[cr.Movimento] = []
+    fios = [
+        threading.Thread(target=lambda d=d: fins.append(central.conectar(d)))
+        for d in (QUARTO, VARANDA)
+    ]
+    with diario_do_radio.trava_do_radio("vigia"):
+        for fio in fios:
+            fio.start()
+        assert chegaram.acquire(timeout=5) and chegaram.acquire(timeout=5)
+    for fio in fios:
+        fio.join(timeout=10)
+
+    desfechos = sorted((m.estado, m.motivo) for m in fins)
+    assert desfechos == [
+        (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO),
+        (cr.NAO_CHEGOU, cr.MOTIVO_OCUPADO),
+    ], desfechos
+    assert len(mundo.metodos("StartDiscovery")) == 1, "duas janelas abriram"
+
+
+def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
+    """O sysfs que some sob a mão é «não sei», e «não sei» não decide nada."""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde: dict[str, Any] = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    relogio = _Relogio()
+    governador = _ela_liga_aqui_o_terceiro(onde, relogio)
+
+    onde[CONTROLE_3] = OSError("o hidraw sumiu no meio da leitura")
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+    assert governador.conferir_as_autorizacoes() == 0
+    onde[CONTROLE_3] = ADAPTADOR_A
+    vaga = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
+
+
+def test_no_radio_central_controle_e_sempre_o_uniq(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """``controle`` quer dizer UMA coisa no ``state_full["radio_central"]``.
+
+    Na ``proposta`` do «Equilibrar» é o ``uniq`` de quem se move — é o que a
+    tela manda de volta em ``radio.mover``. Nos ``movimentos[]`` era um
+    booleano com o mesmo nome; agora é ``e_controle``.
+
+    MORDIDA: volte o ``Movimento.publicar`` a escrever ``"controle"`` — a mesma
+    chave aparece booleana e esta régua reprova.
+    """
+    mundo.pareado(SALA, VERDE)
+    mundo.pareado(SALA, rm.ROXO)
+    dono._fotografar()
+    central = _central(dono, mundo, relogio)
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
+
+    publicado = central.publicar([
+        _controle(VERMELHO, QUARTO, "som"),
+        _controle(AZUL, SALA, "som"),
+        _controle(VERDE, SALA, "haptica"),
+        _controle(rm.ROXO, SALA, "som"),
+    ])
+
+    [movimento] = publicado["movimentos"]
+    assert movimento["e_controle"] is True
+    assert "controle" not in movimento
+    assert publicado["proposta"] is not None, "a régua precisa da proposta para medir"
+    sentidos = _chaves(publicado, "controle")
+    assert sentidos, "nenhuma chave `controle` para conferir"
+    for valor in sentidos:
+        assert isinstance(valor, str) and len(valor) == 12, (
+            f"`controle` com outro sentido no radio_central: {valor!r}"
+        )
+    assert all(isinstance(v, bool) for v in _chaves(publicado, "e_controle"))
+
+
+@pytest.mark.asyncio
+async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo
+) -> None:
+    """O daemon para no meio da janela: o ``Pairable`` do destino volta a ``false``."""
+    import asyncio
+
+    from hefesto_dualsense4unix.daemon.connection import shutdown
+
+    daemon = _daemon_de_mentira()
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=mundo.onde_esta,
+        movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+        segundos_da_janela=60,
+    )
+    daemon._central_do_radio = central
+    try:
+        feito = await asyncio.to_thread(central.comecar_a_mover, VERMELHO, QUARTO)
+        assert feito.estado == cr.ESPERANDO
+        assert await asyncio.to_thread(
+            _esperar, lambda: mundo.propriedade_do_adaptador(QUARTO, "Pairable") is True
+        ), "a janela não abriu"
+
+        await shutdown(daemon)
+
+        assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False, (
+            "o daemon parou e o Pairable do destino ficou ligado"
+        )
+        assert central.movimento_de(VERMELHO).estado == cr.NAO_CHEGOU
+        assert not any(fio.is_alive() for fio in central._fios.values())
+        assert central.comecar_a_mover(AZUL, VARANDA).motivo == cr.MOTIVO_OCUPADO
+        assert mundo.escritas_no(VARANDA, "Pairable") == []
+    finally:
+        central.fechar()
+
+
+def test_o_fechar_espera_o_fio_da_janela_mesmo_com_a_recusa_da_mesma_chave(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dois «Conectar» quase juntos, e o daemon para com a janela aberta."""
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=mundo.onde_esta,
+        movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+        segundos_da_janela=60,
+        prazo_da_trava_s=0.3,
+    )
+    de_verdade = bd.na_trava
+    chegaram = threading.Semaphore(0)
+    solta_o_primeiro = threading.Event()
+    ordem = iter(range(2))
+
+    @contextlib.contextmanager
+    def em_ordem(quem: str = bd.QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
+        vez = next(ordem, None)
+        if vez is not None:
+            chegaram.release()
+        if vez == 0:
+            assert solta_o_primeiro.wait(5)
+        elif vez == 1:
+            assert _esperar(lambda: central.em_curso), "o primeiro não abriu a janela"
+        with de_verdade(quem, prazo_s=prazo_s) as esperou:
+            yield esperou
+
+    monkeypatch.setattr(bd, "na_trava", em_ordem)
+    voltas: list[cr.Movimento] = []
+
+    def pedir() -> None:
+        voltas.append(central.comecar_a_conectar(QUARTO))
+
+    try:
+        primeiro = threading.Thread(target=pedir)
+        primeiro.start()
+        assert chegaram.acquire(timeout=5)
+        segundo = threading.Thread(target=pedir)
+        segundo.start()
+        assert chegaram.acquire(timeout=5)
+        solta_o_primeiro.set()
+        primeiro.join(timeout=10)
+        segundo.join(timeout=10)
+        assert sorted(m.motivo for m in voltas) == ["", cr.MOTIVO_OCUPADO], voltas
+        assert _esperar(lambda: mundo.propriedade_do_adaptador(QUARTO, "Pairable") is True)
+
+        central.fechar()
+
+        assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False, (
+            "o fechar() voltou antes de o fio da janela devolver o Pairable"
+        )
+    finally:
+        central.fechar()
+
+
+@pytest.mark.parametrize("longe", [ADAPTADOR_C, ""], ids=["movido", "desconectou"])
+def test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador(longe: str) -> None:
+    """Ele saiu do adaptador cheio — movido, ou desconectado —, e voltou: a R3"""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde: dict[str, Any] = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    relogio = _Relogio()
+    governador = _ela_liga_aqui_o_terceiro(onde, relogio)
+
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+    governador.tique()
+    vibracao = governador.pedir_vaga(CONTROLE_3, "haptica")
+    assert isinstance(vibracao, gov.Vaga) and vibracao.por_escolha_dela
+    vibracao.soltar("a vibração parou")
+
+    onde[CONTROLE_3] = longe
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+    governador.tique()
+    onde[CONTROLE_3] = ADAPTADOR_A
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+
+    de_volta = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(de_volta, gov.Recusa), (
+        "ele saiu do adaptador e voltou, e a ponte subiu além do limite sem perguntar"
+    )
+    assert de_volta.motivo == gov.MOTIVO_CHEIO
+
+
+def test_o_sysfs_ilegivel_do_leitor_de_verdade_tambem_e_nao_sei(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O «não sei» com o LEITOR DE PRODUÇÃO, e não com um dublê que levanta."""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+
+    raiz = tmp_path / "hidraw"
+
+    def plugar(controle: str, adaptador: str) -> None:
+        no = raiz / f"hidraw{controle[-1]}" / "device"
+        no.mkdir(parents=True, exist_ok=True)
+        (no / "uevent").write_text(
+            f"HID_NAME=Wireless Controller\nHID_PHYS={adaptador}\nHID_UNIQ={controle}\n",
+            encoding="utf-8",
+        )
+
+    for controle, adaptador in (
+        (CONTROLE_1, ADAPTADOR_A), (CONTROLE_2, ADAPTADOR_A), (CONTROLE_3, ADAPTADOR_A),
+        (CONTROLE_4, ADAPTADOR_B),
+    ):
+        plugar(controle, adaptador)
+    monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(raiz))
+    relogio = _Relogio()
+    governador = gov.GovernadorDoRadio(registrar=_Diario(), relogio=relogio)
+    for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_4):
+        vaga = governador.pedir_vaga(uniq, "som")
+        assert isinstance(vaga, gov.Vaga)
+        assert vaga.adaptador == (ADAPTADOR_B if uniq == CONTROLE_4 else ADAPTADOR_A)
+        vaga.subiu("som")
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+    assert governador.ligar_aqui(CONTROLE_3) is True
+
+    ilegivel = tmp_path / "nao-e-pasta"
+    ilegivel.write_text("", encoding="utf-8")
+    monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(ilegivel))
+    assert governador.conferir_as_autorizacoes() == 0, (
+        "o /sys ilegível foi lido como «desconectou» e a resposta dela caiu"
+    )
+
+    monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(raiz))
+    plugar(CONTROLE_3, ADAPTADOR_B)
+    assert governador.conferir_as_autorizacoes() == 1
+
+
+def test_pedir_vaga_em_outro_adaptador_tambem_derruba_a_resposta() -> None:
+    """Movido, ele pediu som no adaptador novo antes de o tique olhar: a"""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde: dict[str, Any] = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    governador = _ela_liga_aqui_o_terceiro(onde, _Relogio())
+
+    onde[CONTROLE_3] = ADAPTADOR_B
+    no_b = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(no_b, gov.Vaga) and not no_b.alem_do_limite
+    no_b.soltar("a fonte do som secou")
+
+    onde[CONTROLE_3] = ADAPTADOR_A
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+
+
+def test_quem_esperou_a_trava_confere_de_novo_com_ela_na_mao(
+    diario: Path,
+    mundo: rm.RadioDeMentira,
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dois pedidos quase juntos: os dois passam pela primeira olhada, e só um move."""
+    central = _central(dono, mundo, relogio)
+    mundo.pair_mente = True
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(AZUL))
+
+    chegaram = threading.Semaphore(0)
+    de_verdade = bd.na_trava
+
+    @contextlib.contextmanager
+    def contando(quem: str = bd.QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
+        chegaram.release()
+        with de_verdade(quem, prazo_s=prazo_s) as esperou:
+            yield esperou
+
+    monkeypatch.setattr(bd, "na_trava", contando)
+    fins: dict[str, cr.Movimento] = {}
+    fios = [
+        threading.Thread(target=lambda a=a, d=d: fins.__setitem__(a, central.mover(a, d)))
+        for a, d in ((VERMELHO, QUARTO), (AZUL, VARANDA))
+    ]
+    with diario_do_radio.trava_do_radio("vigia"):
+        for fio in fios:
+            fio.start()
+        assert chegaram.acquire(timeout=5) and chegaram.acquire(timeout=5)
+    for fio in fios:
+        fio.join(timeout=10)
+
+    desfechos = sorted((m.estado, m.motivo) for m in fins.values())
+    assert desfechos == [
+        (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO),
+        (cr.NAO_CHEGOU, cr.MOTIVO_OCUPADO),
+    ], desfechos
+    assert len(mundo.metodos("StartDiscovery")) == 1, "duas janelas abriram"

@@ -127,3 +127,10 @@ def test_o_teto_e_a_soma_declarada():
         if x["veredito"].startswith("DUPLICATA") and x["economia_linhas"].isdigit()
     )
     assert soma == mod.TETO_DE_LINHAS_DUPLICADAS
+
+
+def test_arquivo_que_sumiu_reprova(portao):
+    def mexer(linhas):
+        linhas[0]["dono"] = "app/actions/arquivo_que_nao_existe.py:qualquer"
+
+    assert portao(mexer) == 1

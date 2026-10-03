@@ -57,7 +57,10 @@ from tests.unit.ponte_do_rodape import PonteDoRodape
 
 exigir_gi_real("importa as réguas e os pacotes da aba 04, que carregam o GTK")
 
-from tests.unit.test_a_marca_da_cor_nao_some import NOME
+from tests.unit import test_a_04_pergunta_ao_daemon_vivo as viva
+from tests.unit import test_a_barra_nao_escurece_ao_reaplicar as barra
+from tests.unit import test_a_marca_da_cor_nao_some as marca
+from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
 
 import pacotes
 from pacotes import a04_iluminacao, rodape
@@ -66,6 +69,89 @@ CLIQUE = {"tipo": "button", "evento": "click",
           "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
 OUTRA = {"fraco": "forte", "medio": "fraco", "forte": "medio"}  # (noqa-acento) chaves ASCII
+
+
+class _PonteDaAba(viva._Ponte):
+    """A ponte da aba 04 com as duas portas do `perfil.gravar_e_reaplicar`, nos handlers REAIS.
+
+    O interruptor «Cores automáticas» grava o perfil e o reaplica
+    (`profile.switch`, depois `launch_env.refresh`). A ponte da A-04 recusa as
+    duas, e sem elas a varredura da seção 2 não sabia clicar nele.
+    """
+
+    def profile_switch(self, nome: str) -> bool:
+        self.mesa.rodar(self.mesa.server._handle_profile_switch({"name": nome}))
+        return True
+
+    def profile_reaplicar(self, nome: str) -> bool:
+        self.mesa.rodar(self.mesa.server._handle_profile_reaplicar({"name": nome}))
+        return True
+
+    def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
+        if metodo != "launch_env.refresh":
+            raise AttributeError(f"a régua não previu a aba chamar {metodo!r}")
+        return isinstance(self.mesa.rodar(
+            self.mesa.server._handle_launch_env_refresh(params)), dict)
+
+
+@pytest.fixture
+def mesa_de(tmp_path, monkeypatch):
+    """A mesa de quatro da A-04-PERGUNTA-AO-DAEMON-VIVO-01, no transporte pedido."""
+    feitas: list[Any] = []
+
+    def montar(alvo: str = "todos", via: str = "usb") -> Any:
+        monkeypatch.setattr(marca, "_handle_falso", lambda: viva._handle(via))
+        m = viva.MesaViva(tmp_path / f"mesa-{len(feitas)}", pacotes, a04_iluminacao,
+                          alvo=alvo)
+        m.ponte = _PonteDaAba(m)
+        feitas.append(m)
+        vias = {m.ctl._detect_transport(h) for h in m.ctl._handles.values()}
+        assert vias == {via}, f"a mesa pediu {via} e o backend leu {vias}"
+        return m
+
+    yield montar
+    for m in feitas:
+        m.fechar()
+
+
+class _PonteDoRodape(barra._PonteDoRodape):
+    """A ponte do rodapé, que guarda o rascunho que o «Aplicar» leva ao handler REAL."""
+
+    def __init__(self, mesa: Any) -> None:
+        super().__init__(mesa)
+        self.rascunhos: list[dict[str, Any]] = []
+
+    def profile_reaplicar(self, nome: str) -> Any:
+        """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome."""
+        self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
+        return super().profile_reaplicar(nome)
+
+    def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
+        self.rascunhos.append(payload)
+        return super().apply_draft_detalhado(payload)
+
+    @property
+    def luzes(self) -> list[dict[str, Any]]:
+        """A palavra que o rascunho levou de cada controle — só de quem a escreveu."""
+        return [{"brilho": palavra, "uniq": uniq}
+                for rascunho in self.rascunhos
+                for uniq, entrada in sorted((rascunho.get("controllers") or {}).items())
+                if (palavra := ((entrada or {}).get("leds") or {}).get(
+                    "player_led_brightness")) is not None]
+
+
+def _o_perfil_que_o_daemon_le(nome: str) -> dict[str, Any]:
+    """O perfil do disco na forma do rascunho: o que o `profile.reaplicar` aplica."""
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    return DraftConfig.from_profile(load_profile(nome)).to_ipc_dict()
+
+
+def _aplicar(mesa: Any) -> _PonteDoRodape:
+    ponte = _PonteDoRodape(mesa)
+    rodape.aplicar(mesa.ctx(), CLIQUE, ponte)
+    return ponte
 
 
 def _salvar(mesa: Any) -> None:
@@ -131,6 +217,69 @@ def _o_disco(mesa: Any, n: int) -> dict[str, Any]:
     if leds is None:
         return saida
     return {**saida, **{campo: getattr(leds, campo) for campo in leds.model_fields_set}}
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_o_tom_regravado_pelo_salvar_nao_vira_fossil(mesa_de, via: str) -> None:
+    """O P4 escolhe o tom do número 2; o «Salvar» o regrava; o perfil reaplicado o mantém.
+
+    O tom da guia grava a cor COM o número para o qual foi escolhida
+    (`lightbar_para_o_numero`). Sem ele a cor é `LEGADO`, e o resolvedor a
+    prova fóssil pela forma: o tom do número de outro controle da mesa.
+
+    **A MORDIDA:** tire o `_a_procedencia_da_mesma_cor` do `_draft_do_ativo`
+    e o P4 acende a cor do número dele depois da troca manual.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import _na
+    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
+
+    tom = player_slot_color(2)
+    mesa = mesa_de("todos", via)
+    mesa.clicar_no_tom(4, tom)
+    assert mesa.luz(4) == _na(tom, BRILHO_GLOBAL), "a régua precisa do tom no P4"
+    _salvar(mesa)
+    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, (
+        f"o «Salvar» tirou do disco o número do tom: {mesa.disco(NOME, 4)}")
+    mesa.trocar(NOME, "manual")
+    assert mesa.luz(4) == _na(tom, BRILHO_GLOBAL), (
+        f"o tom que ela escolheu virou fóssil depois do «Salvar»: o P4 acende {mesa.luz(4)}")
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> None:
+    """A cor que muda só no daemon fica fora do disco, e a dela fica com o número dela.
+
+    O P4 escolhe o tom do número 2 (o disco guarda o número 4 com ele); depois
+    a luz dele muda só no daemon — é a camada da mão que atravessa a troca
+    automática de perfil. Até 27/09 o «Salvar» gravava a cor viva, e a régua
+    cobrava que ela fosse sem o número da antiga. Desde 27/09 o Salvar lê o
+    disco (`D-2709-O-SALVAR-LE-O-PERFIL`): a cor e o número que ficam são os
+    que o clique no tom gravou. A regra da procedência (a cor nova não leva o
+    número da antiga) continua medida no dono, o `with_controller_leds`
+    (`test_o_aplicar_nao_solta_o_teto_do_controle.py`, seção 4).
+
+    **A MORDIDA:** devolva ao «Salvar» a luz acesa no override e o disco sai
+    com o roxo.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import ROXO, _na
+    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
+
+    tom = player_slot_color(2)
+    mesa = mesa_de("todos", via)
+    mesa.clicar_no_tom(4, tom)
+    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, "a régua precisa do número no disco"
+    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[3])
+    assert mesa.luz(4) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa da luz nova no P4"
+    _salvar(mesa)
+    leds = mesa.disco(NOME, 4)
+    assert tuple(leds.lightbar) == tom, (
+        f"o «Salvar» gravou a cor que mudou só no aparelho: {leds}")
+    assert leds.lightbar_para_o_numero == 4, (
+        f"o «Salvar» perdeu o número do tom que ela escolheu: {leds}")
 
 
 @pytest.fixture

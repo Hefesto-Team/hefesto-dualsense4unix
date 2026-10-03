@@ -1274,3 +1274,39 @@ def test_a_regua_de_forma_acusa_os_pedacos_do_endereco_acusado(tmp_path: Path) -
     assert r.returncode == 1, r.stdout + r.stderr
     assert "docs/despejo.txt:2: pedaço do endereço acusado A0" in r.stdout
     assert " ".join(acusado[3:5][::-1]) not in r.stdout.split("despejo.txt")[-1]
+
+
+def test_mordida_sem_a_ordem_invertida_as_reguas_de_forma_nao_veem_o_despejo(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from tests.unit import test_docs_mac_anonimato as portao
+
+    regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_na_mordida")
+    copiado = tmp_path / "copiado.txt"
+    copiado.write_text(_despejo(_DA_MAQUINA), encoding="utf-8")
+    cru = portao._despejo_invertido(("11", "22", "33"))
+
+    def varrer() -> list[str]:
+        return cast(list[str], regua.varrer(
+            [copiado], regua.padrao_das_janelas({_DA_MAQUINA}),
+            regua.janelas_coladas({_DA_MAQUINA})))
+
+    assert varrer() != [] and portao._ocorrencias_em_texto_nas_duas_ordens(cru) != []
+
+    def so_a_direta(octetos: Any) -> Iterator[tuple[int, int, int]]:
+        for inicio in (1, 2, 3):
+            if any(octetos[i] != "00" for i in (3, 4) if inicio <= i < inicio + 3):
+                yield (inicio, inicio + 1, inicio + 2)
+
+    monkeypatch.setattr(dono, "_janelas", so_a_direta)
+    assert varrer() == []
+    assert portao._ocorrencias_em_texto_nas_duas_ordens(cru) == []
+
+
+def test_o_portao_de_oui_ve_o_despejo_invertido() -> None:
+    from tests.unit import test_docs_mac_anonimato as portao
+
+    cru = portao._despejo_invertido(("11", "22", "33"))
+    assert [ordem for _linha, ordem, _oui in portao._ocorrencias_em_texto_nas_duas_ordens(cru)] == [
+        "invertida"
+    ]

@@ -413,3 +413,38 @@ class TestAGuardaVemAntesDoPlantio:
         if alvo.exists():
             assert plantacoes_de_gi_falso(alvo.read_text(encoding="utf-8"))
             assert alvo.name not in arquivos_em_falta()
+
+
+RAIZ = TESTS_UNIT.parents[1]
+
+OS_DOIS_DO_MARCADOR = (
+    "tests/unit/test_p10_os_quatro_caminhos_da_aba_perfis_sem_mordida.py",
+    "tests/unit/test_p3_o_salvar_solta_a_thread_e_para_de_prometer.py",
+)
+
+_ESCONDE_O_GI = '''
+import sys
+class _EscondeOGi:
+    def find_spec(self, nome, caminho=None, alvo=None):
+        if nome.split(".")[0] in ("gi", "cairo"):
+            raise ModuleNotFoundError(f"No module named {nome!r}", name=nome)
+        return None
+sys.meta_path.insert(0, _EscondeOGi())
+'''
+
+_ESPIA_DA_JANELA = '''
+import json, os, sys
+_VISTOS = []
+def pytest_collectreport(report):
+    if report.nodeid.endswith(".py"):
+        _VISTOS.append(report.nodeid)
+def pytest_collection_finish(session):
+    janela = sorted(m for m in sys.modules
+                    if m == "hefesto_dualsense4unix.app"
+                    or m.startswith("hefesto_dualsense4unix.app."))
+    escondido = any(type(f).__name__ == "_EscondeOGi" for f in sys.meta_path)
+    with open(os.environ["ESPIA_DA_JANELA"], "w", encoding="utf-8") as saida:
+        json.dump({"gi_escondido": escondido, "vistos": _VISTOS, "janela": janela}, saida)
+'''
+
+

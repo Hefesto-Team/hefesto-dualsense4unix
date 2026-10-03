@@ -397,6 +397,17 @@ def pares_com_metade_ligada(raiz: Path | None = None) -> dict[str, Par]:
     return acusados
 
 
+_PLANTIO = "daemon/subsystems/plantio_da_mordida.py"
+
+
+def _citante_plantado(linha: int) -> str:
+    """Um comentário que promete `ancora_plantada` na linha pedida."""
+    return (
+        f"# `ancora_plantada` mora em `utils/_alvo_da_mordida.py:{linha}`.\n"
+        "VALOR = 1\n"
+    )
+
+
 class TestTodoParTemAsDuasMetadesLigadas:
     """Um estado que o produto lê e não consegue produzir é dado que mente."""
 
@@ -542,6 +553,68 @@ class TestOPortaoMorde:
                 f"a régua acusou `{indesejado}`, que tem as duas metades fiadas em "
                 "produção — o detector de chamador quebrou"
             )
+
+    def test_a_regua_ignora_flag_que_ninguem_le(self, tmp_path: Path) -> None:
+        """O preço declarado no cabeçalho, exercido: sem leitor, sem acusação."""
+        copia = _copia_de_src(tmp_path)
+        muda = _ARMADOR_SEM_CHAMADOR.replace(
+            "def plantio_armado(daemon):\n"
+            '    return bool(getattr(daemon, "_plantio_da_mordida", False))',
+            "def plantio_armado(daemon):\n    return False",
+        )
+        assert "getattr(daemon" not in muda, "o plantio mudo ainda lê a flag"
+        (copia / _PLANTIO).write_text(muda, encoding="utf-8")
+        assert "_plantio_da_mordida" not in pares_com_metade_ligada(copia)
+
+    def test_a_regua_nao_confunde_prosa_com_chamador(self, tmp_path: Path) -> None:
+        """As duas armadilhas do cabeçalho, plantadas."""
+        assert "armar_o_plantio(daemon)" in _ARMADOR_SEM_CHAMADOR, (
+            "o plantio perdeu a citação em docstring e parou de exercer a armadilha 1"
+        )
+        assert '__all__ = ["armar_o_plantio"' in _ARMADOR_SEM_CHAMADOR, (
+            "o plantio perdeu o `__all__` e parou de exercer a armadilha 2"
+        )
+        copia = _copia_de_src(tmp_path)
+        (copia / _PLANTIO).write_text(_ARMADOR_SEM_CHAMADOR, encoding="utf-8")
+        assert "_plantio_da_mordida" in pares_com_metade_ligada(copia)
+
+    def test_a_regua_sabe_recusar(self, tmp_path: Path) -> None:
+        """Régua que só sabe passar não é régua (armadilha A2)."""
+        copia = _copia_de_src(tmp_path)
+        (copia / _PLANTIO).write_text(_ARMADOR_COM_CHAMADOR, encoding="utf-8")
+        acusados = pares_com_metade_ligada(copia)
+        assert "_plantio_da_mordida" not in acusados, (
+            "a régua acusou um par cujas DUAS metades têm chamador em produção — "
+            "ela não sabe recusar, e acusaria a árvore inteira"
+        )
+
+    def test_a_regua_ve_um_par_novo_plantado(self, tmp_path: Path) -> None:
+        copia = _copia_de_src(tmp_path)
+        (copia / _PLANTIO).write_text(_ARMADOR_SEM_CHAMADOR, encoding="utf-8")
+        acusados = pares_com_metade_ligada(copia)
+        assert "_plantio_da_mordida" in acusados, (
+            "a régua não viu um par plantado com o armador sem chamador — ela "
+            f"acusou {sorted(acusados)}"
+        )
+        assert acusados["_plantio_da_mordida"].metade_morta == "True"
+
+    def test_uma_frase_de_tela_nao_desliga_o_portao(self, tmp_path: Path) -> None:
+        """A TERCEIRA armadilha, achada em 25/08/2026 — e a que quase passou."""
+        frase = (
+            "Não consegui aplicar: o armar_o_plantio do daemon recusou o pedido."
+        )
+        assert not frase.isidentifier(), "a frase de prova deixou de ser prosa"
+        assert "armar_o_plantio" in frase, (
+            "a frase de prova parou de citar o símbolo e não exerce mais a armadilha"
+        )
+        com_frase = _ARMADOR_SEM_CHAMADOR + f'\n\nAVISO_DA_TELA = {frase!r}\n'
+        copia = _copia_de_src(tmp_path)
+        (copia / _PLANTIO).write_text(com_frase, encoding="utf-8")
+        assert "_plantio_da_mordida" in pares_com_metade_ligada(copia), (
+            "uma frase de tela citando o símbolo DESLIGOU o portão — a régua "
+            "voltou a contar prosa como despacho, e ela para de medir "
+            "exatamente quando alguém escreve uma mensagem boa"
+        )
 
 
 import tokenize
@@ -813,3 +886,71 @@ class TestTodaCitacaoDeLinhaConfere:
             encoding="utf-8",
         )
         assert not [k for k in enderecos_envelhecidos(copia) if "_da_mordida" in k]
+
+    def test_a_regua_le_a_citacao_dentro_de_f_string_em_qualquer_python(
+        self, tmp_path: Path
+    ) -> None:
+        """A citação escrita dentro de uma f-string é prosa em todo Python."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_alvo_da_mordida.py").write_text(
+            _ALVO_PLANTADO, encoding="utf-8"
+        )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            'NOME = "x"\n'
+            'TEXTO = f"""<p>O {NOME} mora em\n'
+            '`ancora_plantada` (<code>utils/_alvo_da_mordida.py:2</code>).</p>"""\n',
+            encoding="utf-8",
+        )
+        queixas = enderecos_envelhecidos(copia)
+        chave = "utils/_citante_da_mordida.py::utils/_alvo_da_mordida.py:2"
+        assert chave in queixas, (
+            "a régua não viu um endereço envelhecido escrito dentro de uma "
+            f"f-string. Ela achou: {sorted(k for k in queixas if '_da_mordida' in k)}"
+        )
+
+    def test_a_regua_nao_acusa_o_endereco_certo(self, tmp_path: Path) -> None:
+        """O outro lado do dublê: o MESMO plantio, com o número certo, passa."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_alvo_da_mordida.py").write_text(
+            _ALVO_PLANTADO, encoding="utf-8"
+        )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            _citante_plantado(4), encoding="utf-8"
+        )
+        plantadas = [k for k in enderecos_envelhecidos(copia) if "_da_mordida" in k]
+        assert not plantadas, f"a régua acusou um endereço CERTO: {plantadas}"
+
+    def test_a_regua_sabe_reprovar(self, tmp_path: Path) -> None:
+        """Régua que só sabe passar não é régua (armadilha A2)."""
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_alvo_da_mordida.py").write_text(
+            _ALVO_PLANTADO, encoding="utf-8"
+        )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            _citante_plantado(2), encoding="utf-8"
+        )
+        queixas = enderecos_envelhecidos(copia)
+        chave = "utils/_citante_da_mordida.py::utils/_alvo_da_mordida.py:2"
+        assert chave in queixas, (
+            "a régua não viu um endereço plantado fora do símbolo que ele "
+            f"promete. Ela achou: {sorted(queixas)}"
+        )
+        queixa = queixas[chave]
+        assert "linha 2" in queixa and "linha 4" in queixa, (
+            f"a queixa não nomeia OS DOIS números: {queixa!r}"
+        )
+
+    def test_o_caminho_parcial_entra_na_regua(self, tmp_path: Path) -> None:
+        """`pacotes/perfil.py:134` é nosso, e até 25/09/2026 a régua não o via."""
+        copia = _copia_de_src(tmp_path)
+        fundo = copia / "utils" / "fundo"
+        fundo.mkdir()
+        (fundo / "_alvo_parcial_da_mordida.py").write_text(_ALVO_PLANTADO, encoding="utf-8")
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            "# `ancora_plantada` mora em `fundo/_alvo_parcial_da_mordida.py:2`.\nVALOR = 1\n",
+            encoding="utf-8",
+        )
+        chave = "utils/_citante_da_mordida.py::fundo/_alvo_parcial_da_mordida.py:2"
+        assert chave in enderecos_envelhecidos(copia), (
+            "a régua não viu o endereço plantado por caminho parcial"
+        )

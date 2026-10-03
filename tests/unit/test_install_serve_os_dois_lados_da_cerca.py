@@ -153,6 +153,13 @@ def helpers_do_fecho(nomes: set[str], corpos: dict[str, list[str]]) -> set[str]:
     return achados
 
 
+def curas_de_host() -> list[str]:
+    """As funções `*_host` do `install.sh`, derivadas do arquivo."""
+    return sorted(
+        nome for nome in corpos_das_duas_casas() if nome.endswith("_host")
+    )
+
+
 def test_a_ancora_da_cerca_continua_de_pe() -> None:
     """Sem esta trava, uma reescrita do `install.sh` desligaria tudo calada."""
     achadas = regioes()
@@ -167,6 +174,84 @@ def test_a_ancora_da_cerca_continua_de_pe() -> None:
         f"alguma região da cerca saiu vazia: "
         f"{ {regiao: len(ls) for regiao, ls in achadas.items()} }"
     )
+
+
+def test_a_lista_de_curas_de_host_nao_encolheu() -> None:
+    """Trava contra parser quebrado: lista derivada vazia passa por vacuidade."""
+    achadas = curas_de_host()
+    assert len(achadas) >= PISO_DE_FUNCOES, (
+        f"achei {len(achadas)} funções `*_host` no install.sh, piso "
+        f"{PISO_DE_FUNCOES}: {achadas}\n"
+        "Se uma cura de host FOI EMBORA de propósito, baixe o piso no mesmo "
+        "commit. Se não foi, o leitor de funções deste arquivo quebrou — e um "
+        "portão que lê zero funções aprova qualquer coisa."
+    )
+
+
+def test_toda_cura_de_host_alcanca_os_dois_lados() -> None:
+    corpos = corpos_das_duas_casas()
+    por_regiao = regioes()
+    alcance = {
+        regiao: alcancadas_de(linhas, corpos) for regiao, linhas in por_regiao.items()
+    }
+    helpers_por_regiao = {
+        regiao: helpers_do_fecho(alcance[regiao], corpos) | helpers_executados(linhas)
+        for regiao, linhas in por_regiao.items()
+    }
+
+    for cura in curas_de_host():
+        if cura in SERVE_UM_LADO_SO:
+            continue
+        if cura in alcance["preambulo"]:
+            continue
+
+        proprios = helpers_do_fecho({cura}, corpos)
+        faltando = []
+        for regiao, apelido in (
+            ("formatos", "o lado dos FORMATOS (flatpak/appimage/deb, antes do `exit 0`)"),
+            ("native", "o lado NATIVE (depois do `fi`)"),
+        ):
+            if cura in alcance[regiao]:
+                continue
+            if proprios and proprios <= helpers_por_regiao[regiao]:
+                continue
+            faltando.append(apelido)
+
+        assert not faltando, (
+            f"`{cura}` é cura de HOST e não chega a todos os formatos.\n"
+            + "".join(f"  falta em {lado}\n" for lado in faltando)
+            + f"  helpers que ela executa: {sorted(proprios) or 'nenhum'}\n"
+            "FAÇA UMA das três:\n"
+            f"  1. CHAME `{cura}` também do lado que falta — é o conserto do "
+            "achado #7 da Onda S, do TECLADO-QUE-NAO-DIGITA-01 e do "
+            "MIC-EM-TODO-FORMATO-01, todos o mesmo defeito;\n"
+            "  2. MOVA a chamada para o preâmbulo comum, antes da cerca, se ela "
+            "serve a todo formato de qualquer jeito — mas cuidado: chamada "
+            "dentro de `format_flatpak`/`format_appimage` NÃO é preâmbulo, é o "
+            "lado dos formatos;\n"
+            "  3. DECLARE em `SERVE_UM_LADO_SO`, com data e com o motivo de o "
+            "outro lado não precisar dela.\n"
+            "Quem instala pelo .deb tem o mesmo aparelho que quem instala do "
+            "fonte."
+        )
+
+
+def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
+    """Sem isto, `SERVE_UM_LADO_SO` vira o lugar onde se esconde o que incomoda."""
+    derivadas = curas_de_host()
+    for chave, razao in SERVE_UM_LADO_SO.items():
+        assert chave in derivadas, (
+            f"{chave!r} está declarada como cura de um lado só e nem existe "
+            "mais no install.sh — APAGUE a entrada."
+        )
+        assert len(razao) > 120, (
+            f"a razão de {chave!r} não diz por que o outro lado dispensa a "
+            f"cura: {razao!r}"
+        )
+        assert re.search(r"\d{2}/\d{2}/\d{4}", razao), (
+            f"a lacuna {chave!r} não tem data. Sem data ninguém sabe se ela "
+            "envelheceu — e uma lacuna sem idade vira paisagem."
+        )
 
 
 CURA_DE_MENTIRA = "install_exemplo_host"

@@ -19,6 +19,8 @@ RAIZES_ATE_HOJE: tuple[str, ...] = (
     "src/hefesto_dualsense4unix/interface",
 )
 
+PISO_ATE_HOJE: dict[str, int] = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 0}
+
 
 def _modulo_do_portao() -> ModuleType:
     """O roteiro carregado como módulo — para exercer as funções puras."""
@@ -74,6 +76,25 @@ def test_o_alcance_da_regua_so_cresce() -> None:
         "nome, troque nos DOIS lugares; se a decisão foi outra, ela tem de "
         f"sair também deste arquivo, com data e razão. Hoje: {no_roteiro}"
     )
+
+
+def test_o_piso_compara_e_nao_tem_a_resposta_cravada() -> None:
+    """A régua muda de resposta quando o conjunto muda — os quatro casos."""
+    valida = _modulo_do_portao().valida_piso_da_regua
+    piso = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 1}
+
+    assert valida({"raizes": 2, "falas": 1, "numeros": 3, "abas": 1}, piso) == []
+    assert valida({"raizes": 9, "falas": 9, "numeros": 9, "abas": 9}, piso) == [], (
+        "crescer tem de PASSAR — régua que reprova quem melhora é o defeito "
+        "que onze réguas desta casa já tiveram"
+    )
+
+    encolheu = valida({"raizes": 1, "falas": 1, "numeros": 3, "abas": 1}, piso)
+    assert len(encolheu) == 1 and "raizes" in encolheu[0], encolheu
+
+    tudo = valida({"raizes": 0, "falas": 0, "numeros": 0, "abas": 0}, piso)
+    assert len(tudo) == 4, tudo
+    assert all("NÃO baixe o piso" in problema for problema in tudo), tudo
 
 
 def test_a_arvore_de_mentira_nao_e_o_produto_e_a_de_verdade_e() -> None:

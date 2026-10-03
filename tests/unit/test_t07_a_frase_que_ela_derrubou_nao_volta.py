@@ -26,6 +26,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
@@ -60,6 +61,14 @@ FRASES_DERRUBADAS: dict[str, tuple[str, str]] = {
     ),
 }
 
+ARQUIVOS_ISENTOS = {
+    SRC / "gui" / "main.glade",
+}
+
+
+def _arquivos_python() -> list[Path]:
+    return sorted(p for p in SRC.rglob("*.py") if p not in ARQUIVOS_ISENTOS)
+
 
 def _strings_de_tela(texto: str) -> list[tuple[int, str]]:
     """[(linha, texto)] de toda string que PINTA — docstring excluída."""
@@ -88,6 +97,25 @@ def _strings_de_tela(texto: str) -> list[tuple[int, str]]:
         ):
             saida.append((no.lineno, no.value))
     return saida
+
+
+@pytest.mark.parametrize("frase", sorted(FRASES_DERRUBADAS))
+def test_frase_derrubada_nao_e_pintada_na_tela(frase: str) -> None:
+    """A mordida: ponha a frase numa string de código e isto reprova."""
+    quando, o_que_dizer = FRASES_DERRUBADAS[frase]
+
+    achados: list[str] = []
+    for arquivo in _arquivos_python():
+        texto = arquivo.read_text(encoding="utf-8")
+        for numero, valor in _strings_de_tela(texto):
+            if frase.lower() in valor.lower():
+                achados.append(f"{arquivo.relative_to(RAIZ)}:{numero}: {valor!r}")
+
+    assert not achados, (
+        f"a frase {frase!r} foi derrubada em {quando} e voltou a ser PINTADA:\n  "
+        + "\n  ".join(achados)
+        + f"\n\n{o_que_dizer}"
+    )
 
 
 def test_o_portao_sabe_recusar_uma_frase_pintada() -> None:

@@ -430,6 +430,50 @@ def test_a_coluna_sem_ajuste_proprio_acende_e_diz_que_herdou() -> None:
         f"que esses campos pintavam saiu em 05/09/2026")
 
 
+def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
+    """Ela volta da tela para o `?` do "Testar agora" — e aparece UMA vez.
+
+    **05-Q2 dela, 05/09/2026: _"As duas na dica."_** Ela leu as quatro opções
+    — as duas na dica, só a nota do Testar, a do Automático quando valer, as
+    duas na tela — e escolheu a primeira. Até 05/09 o produto fazia a segunda,
+    e aquilo estava escrito como *"decisão [02] dela, 04/09/2026"* em quatro
+    lugares: a fonte real era a `ONDA2-05-VIBRACAO-01`, que decidiu no lugar
+    dela. **A palavra dela vence a atribuição.**
+
+    O QUE NÃO MUDOU, e é a metade da razão de 04/09 que não caducou: a frase é
+    LIDA do `gui/main.glade` (`DICA_DOS_VALORES_QUE_PASSAM`), nunca redigitada.
+    Esta régua a compara com o que o glade diz AGORA, e por isso ela não
+    sobrevive a uma segunda cópia do texto.
+
+    O ENDEREÇO É A CÉLULA DO RÓTULO, não a página: perguntar `frase in bancada`
+    daria verde com ela de volta na linha embaixo da grade.
+
+    MORDIDA: em `aba05.MIOLO`, devolva a linha
+    `<div class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}</div>` depois da
+    `.vib` e regere — a régua 16 do gerador reprova antes desta, pelo
+    `count == 1`.
+    """
+    import aba05
+
+    celula = bancada.split('<span class="sec-rot">Testar agora', 1)
+    assert len(celula) == 2, (
+        'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
+        "onde a dica morar")
+    dica = celula[-1].split("</div>", 1)[0].split('<span class="dica"', 1)
+    assert len(dica) == 2, 'o `?` do "Testar agora" sumiu da célula do rótulo'
+    assert aba05.DICA_DOS_VALORES_QUE_PASSAM in dica[-1], (
+        'a nota do Testar não está no `?` do "Testar agora" — a 05-Q2 dela é '
+        '*"As duas na dica"*')
+    assert 'class="vib-nota"' not in bancada, (
+        "a linha permanente embaixo da grade voltou — ela saiu na 05-Q2, e a "
+        "classe sem regra de CSS seria um dado morto na página")
+    assert bancada.count(aba05.DICA_DOS_VALORES_QUE_PASSAM) == 1, (
+        "a nota do Testar aparece duas vezes na mesma tela — o `?` e a linha")
+    assert "Espera 5 segundos" not in bancada, (
+        "a dica dos 5 s do Auto voltou ao desenho — o botão que ela explicava "
+        "saiu em 05/09/2026")
+
+
 def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(
         a05, disco) -> None:
     """A gravação aconteceu: o canal é o de SUCESSO, não o da recusa.

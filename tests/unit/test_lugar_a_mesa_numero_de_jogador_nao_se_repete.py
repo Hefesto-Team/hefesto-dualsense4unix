@@ -55,13 +55,14 @@ Nenhum endereço real: todos os aparelhos usam a faixa forjada `aa:bb:cc:…`
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
 
 from hefesto_dualsense4unix.core import external_leds, sysfs_leds
-from hefesto_dualsense4unix.core.led_control import player_led_pattern
+from hefesto_dualsense4unix.core.led_control import player_led_pattern, player_slot_color
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     ExternalIdentityRegistry,
@@ -92,6 +93,38 @@ class Lampada:
     _raiz: Path = field(repr=False, default=Path())
 
 
+    def criar(self, raiz: Path) -> None:
+        self._raiz = raiz
+        leds = raiz / "leds"
+        if self.especie == "dualsense":
+            hid = raiz / "devices" / self.prefixo
+            (hid / "leds" / f"{self.prefixo}:rgb:indicator").mkdir(parents=True)
+            (hid / "uevent").write_text(
+                f"HID_UNIQ={self.identidade}\n", encoding="utf-8"
+            )
+            os.symlink(
+                hid / "leds" / f"{self.prefixo}:rgb:indicator",
+                leds / f"{self.prefixo}:rgb:indicator",
+            )
+            for i in range(1, 6):
+                (leds / f"{self.prefixo}:white:player-{i}").mkdir()
+        elif self.especie == "nintendo":
+            for i in range(1, 5):
+                alvo = leds / f"{self.prefixo}:green:player-{i}" / "brightness"
+                alvo.parent.mkdir()
+                alvo.write_text("0", encoding="ascii")
+            azul = leds / f"{self.prefixo}:blue:player-5" / "brightness"
+            azul.parent.mkdir()
+            azul.write_text("0", encoding="ascii")
+        elif self.especie == "ds4":
+            for cor in ("red", "green", "blue", "global"):
+                alvo = leds / f"{self.prefixo}:{cor}" / "brightness"
+                alvo.parent.mkdir()
+                alvo.write_text("0", encoding="ascii")
+        else:  # pragma: no cover - erro de escrita do teste
+            raise AssertionError(f"espécie de lâmpada desconhecida: {self.especie}")
+
+
     def acender(self, numero: int) -> None:
         raiz = str(self._raiz / "leds")
         if self.especie == "dualsense":
@@ -102,6 +135,31 @@ class Lampada:
             assert external_leds.write_player_number(self.prefixo, numero, raiz)
         else:
             assert external_leds.write_lightbar_slot(self.prefixo, numero, raiz)
+
+
+    def numero_aceso(self) -> int | None:
+        """Decodifica o número lendo os nós — ``None`` = padrão de ninguém."""
+        raiz = str(self._raiz / "leds")
+        if self.especie == "dualsense":
+            nodes = sysfs_leds.discover()
+            bits = nodes[sysfs_leds.norm_mac(self.identidade) or ""].get_players()
+            if bits is None:
+                return None
+            for n in range(1, 9):
+                if tuple(bits) == player_led_pattern(n):
+                    return n
+            return None
+        if self.especie == "nintendo":
+            lido = external_leds.read_player_pattern(self.prefixo, raiz)
+            return lido if isinstance(lido, int) and lido >= 1 else None
+        cor = tuple(
+            int((self._raiz / "leds" / f"{self.prefixo}:{c}" / "brightness").read_text())
+            for c in ("red", "green", "blue")
+        )
+        for n in range(1, 9):
+            if cor == player_slot_color(n):
+                return n
+        return None
 
 
 @dataclass
@@ -286,6 +344,45 @@ def _mesa_de_06_08(raiz: Path, *, com_vpad: bool) -> Mesa:
     return mesa
 
 
+class TestAMesaMedidaEm0608:
+    """O cenário exato das 22h40 — e ele tem de continuar sem repetir."""
+
+    def test_os_numeros_batem_com_o_journal_dela(self, raiz_leds: Path) -> None:
+        """Ancoragem: se estes três números mudarem, o resto não vale nada.
+
+        A medição entregue: `external_led_written slot=2` no Pro e `slot=3` no
+        8BitDo, e o DualSense presente acendendo o LED do meio da barra branca
+        — que é o padrão canônico do número **1** (`player_led_pattern(1)` ==
+        `(False, False, True, False, False)`, e o nó do meio chama-se
+        `:white:player-3` no sysfs; o nome do NÓ não é o número do JOGADOR).
+        """
+        mesa = _mesa_de_06_08(raiz_leds, com_vpad=False)
+        assert mesa.numeros_exibidos() == {
+            "DualSense físico": 1,
+            "Pro Controller": 2,
+            "8BitDo (modo PS4)": 3,
+        }
+
+    def test_sem_o_vpad_ninguem_repete(self, raiz_leds: Path) -> None:
+        conferir_sem_repetir(_mesa_de_06_08(raiz_leds, com_vpad=False))
+
+    def test_com_o_vpad_na_conta_ninguem_repete(self, raiz_leds: Path) -> None:
+        """O vpad P1 e o DualSense que ele espelha são o MESMO jogador.
+
+        Os dois exibem 1 — e é assim que tem de ser. O que este teste prova é
+        que o vpad ENTRA na conta sem colidir com o Pro (2) nem com o 8BitDo
+        (3), que é a metade da medição das 22h40 que se sustenta.
+        """
+        conferir_sem_repetir(_mesa_de_06_08(raiz_leds, com_vpad=True))
+
+    def test_a_lampada_do_p1_casa_com_o_nome_do_vpad(self, raiz_leds: Path) -> None:
+        """O par que ela usa para saber quem é quem: a luz e o nome."""
+        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
+        numeros = mesa.numeros_exibidos()
+        assert numeros["vpad Hefesto P1"] == numeros["DualSense físico"]
+        assert "Hefesto P1" in UhidDualSense(player=1).name
+
+
 class TestOVpadEntraNaConta:
     """O vpad anuncia número em TEXTO, e o texto tem de ser o mesmo da luz."""
 
@@ -449,3 +546,29 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
         conferir_sem_repetir(mesa)
 
 
+class TestOTesteMorde:
+    """Prova que o invariante reprova quando a numeração de fato colide."""
+
+    def test_dois_fisicos_no_mesmo_numero_reprovam(self, raiz_leds: Path) -> None:
+        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
+        # O Pro passa a acender o mesmo número do DualSense presente.
+        pro = next(a for a in mesa.aparelhos if a.nome == "Pro Controller")
+        assert pro.lampada is not None
+        pro.lampada.acender(1)
+        with pytest.raises(AssertionError, match="dois jogadores exibem o número 1"):
+            conferir_sem_repetir(mesa)
+
+    def test_vpad_no_numero_de_outro_jogador_reprova(self, raiz_leds: Path) -> None:
+        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
+        vpad = next(a for a in mesa.aparelhos if a.vpad is not None)
+        vpad.vpad = UhidDualSense(player=3)
+        with pytest.raises(AssertionError, match="dois jogadores exibem o número 3"):
+            conferir_sem_repetir(mesa)
+
+    def test_lampada_que_discorda_do_nome_reprova(self, raiz_leds: Path) -> None:
+        mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
+        fisico = next(a for a in mesa.aparelhos if a.nome == "DualSense físico")
+        assert fisico.lampada is not None
+        fisico.lampada.acender(4)
+        with pytest.raises(AssertionError, match="números diferentes"):
+            conferir_sem_repetir(mesa)

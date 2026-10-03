@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
+from tests.unit import mesa_do_mockup as mock
 
 RAIZ = Path(__file__).resolve().parents[2]
 ORACULO = RAIZ / "tests" / "fixtures" / "motor_do_arranjo_do_mockup.js"
@@ -96,6 +97,12 @@ def _controles(p: motor.PlanoDosControles) -> dict[str, Any]:
             "cabe": p.cabe, "sobra": p.sobra}
 
 
+def _plano_dos_controles(mesa: motor.Mesa, quantos: int = 4,
+                         controles: tuple[motor.Controle, ...] | None = None) -> dict[str, Any]:
+    vivos = (mock.CONTROLES if controles is None else controles)[:quantos]
+    return _controles(motor.plano_dos_controles(vivos, motor.adaptadores_da_mesa(mesa)))
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="node não está nesta máquina")
 def test_o_ouro_ainda_e_o_que_o_mockup_diz_hoje() -> None:
     """O JSON gravado é o que o mockup de HOJE produz — não uma cópia velha."""
@@ -104,6 +111,148 @@ def test_o_ouro_ainda_e_o_que_o_mockup_diz_hoje() -> None:
         capture_output=True, text=True, check=True, cwd=RAIZ, timeout=120,
     )
     assert json.loads(saida.stdout) == json.loads(OURO.read_text(encoding="utf-8"))
+
+
+def test_a_alocacao_derivada_e_a_mesma() -> None:
+    assert motor.alocacao(mock.MAPA, mock.LEITURA_AGORA) == ouro("alocacao/agora")
+    assert motor.alocacao(mock.MAPA, mock.LEITURA_ANTES) == ouro("alocacao/antes")
+
+
+def test_o_mapa_vazio_e_o_mapa_com_entrada_que_nao_existe() -> None:
+    assert motor.alocacao({}, mock.LEITURA_AGORA) == ouro("mapa-vazio/alocacao")
+    assert motor.alocacao({"99": "9-9"}, mock.LEITURA_AGORA) == ouro("mapa-inexistente/alocacao")
+
+
+@pytest.mark.parametrize(
+    "caminho",
+    ["3-1.2", "3-1.1.1", "4-1.1.2", "4-2", "1-3", "1-6", "1-4", "3-1", None],
+)
+def test_a_regiao_sai_do_barramento(caminho: str | None) -> None:
+    mesa = mock.mesa()
+    esperado = ouro(f"regiao/{_js(caminho)}")
+    assert motor.regiao_do_caminho(caminho, motor.caminho_do_hub(mesa)) == esperado
+
+
+def test_quem_o_mapa_nao_conhece_ainda_diz_de_que_lado_esta() -> None:
+    achado = [{"id": s.aparelho.id, "caminho": s.caminho, "regiao": s.regiao}
+              for s in motor.sem_entrada(mock.mesa())]
+    assert achado == ouro("semEntrada/agora")
+    antes = [{"id": s.aparelho.id, "caminho": s.caminho, "regiao": s.regiao}
+             for s in motor.sem_entrada(mock.mesa(leitura=mock.LEITURA_ANTES))]
+    assert antes == ouro("semEntrada/antes")
+
+
+def test_as_candidatas_saem_de_dezesseis_para_quatro() -> None:
+    mesa = mock.mesa()
+    assert [e.n for e in motor.candidatas(mesa, "pc")] == ouro("candidatas/pc")
+    assert [e.n for e in motor.candidatas(mesa, "hub")] == ouro("candidatas/hub")
+    assert [e.n for e in motor.todas_as_entradas(mesa.faces)] == ouro("todasPortas")
+
+
+@pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
+def test_o_plano_e_o_mesmo_do_javascript(variante: str) -> None:
+    plano = motor.planejar(mock.mesa(), OPCOES[variante])
+    assert como_o_mockup_planeja(plano) == ouro(f"planejar/{variante}")
+
+
+@pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
+def test_a_receita_e_a_mesma_do_javascript(variante: str) -> None:
+    movs = motor.receita(mock.mesa(), OPCOES[variante])
+    assert como_o_mockup_receita(movs) == _receita_do_ouro(f"receita/{variante}")
+
+
+@pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
+def test_o_que_se_perde_e_a_mesma_frase(variante: str) -> None:
+    assert motor.consequencias(mock.mesa(), OPCOES[variante]) == ouro(f"consequencias/{variante}")
+    assert motor.qualidade(mock.mesa(), OPCOES[variante]) == ouro(f"qualidade/{variante}")
+
+
+def test_a_receita_sem_o_bonus_de_ficar_parado_bate_tambem() -> None:
+    """A regra é PARÂMETRO, e o porte tem de reproduzir os dois valores dela."""
+    op = motor.Opcoes(bonus_parado=0)
+    plano = como_o_mockup_planeja(motor.planejar(mock.mesa(), op))
+    assert plano == ouro("planejar/sem-bonus-parado")
+    assert como_o_mockup_receita(motor.receita(mock.mesa(), op)) == _receita_do_ouro(
+        "receita/sem-bonus-parado")
+
+
+def test_a_receita_do_mapa_vazio_e_do_mapa_torto() -> None:
+    vazio = mock.mesa(mapa={})
+    assert como_o_mockup_planeja(motor.planejar(vazio)) == ouro("mapa-vazio/planejar")
+    assert como_o_mockup_receita(motor.receita(vazio)) == _receita_do_ouro("mapa-vazio/receita")
+    assert [e.n for e in motor.candidatas(vazio, "pc")] == ouro("mapa-vazio/candidatas-pc")
+    torto = mock.mesa(mapa={"99": "9-9"})
+    assert como_o_mockup_receita(motor.receita(torto)) == _receita_do_ouro(
+        "mapa-inexistente/receita")
+
+
+@pytest.mark.parametrize("n", ["1", "2", "3", "7", "9", "10", "13", "15", "15a"])
+@pytest.mark.parametrize("na_mao", ["bt", "wifi", "teclado", "mouse", "webcam", None])
+def test_o_julgamento_de_cada_entrada_e_o_mesmo(n: str, na_mao: str | None) -> None:
+    mesa = mock.mesa()
+    entrada = motor.por_num(mesa.faces, n)
+    assert entrada is not None
+    assert _veredito(motor.julgar(entrada, na_mao, mesa)) == ouro(f"julgar/{n}/{_js(na_mao)}")
+
+
+@pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
+def test_segurando_um_dongle_do_hub_a_outra_regiao_se_recusa(n: str) -> None:
+    mesa = mock.mesa()
+    entrada = motor.por_num(mesa.faces, n)
+    assert entrada is not None
+    veredito = motor.julgar(entrada, "bt", mesa, segurando="bt-c")
+    assert _veredito(veredito) == ouro(f"julgar-segurando/bt-c/{n}")
+
+
+def test_o_reexame_reconhece_quem_mudou_de_lugar() -> None:
+    mudou = motor.reexame(mock.mesa(), mock.LEITURA_ANTES, mock.LEITURA_AGORA)
+    achado = [{"id": m.aparelho.id, "antes": m.antes, "agora": m.agora,
+               "entradaAntes": m.entrada_antes, "entradaAgora": m.entrada_agora}
+              for m in mudou]
+    assert achado == ouro("reexame/antes-agora")
+    assert motor.reexame(mock.mesa(), mock.LEITURA_AGORA, mock.LEITURA_AGORA) == []
+
+
+@pytest.mark.parametrize("quantos", [1, 2, 3, 4])
+def test_a_distribuicao_dos_controles_e_a_mesma(quantos: int) -> None:
+    assert _plano_dos_controles(mock.mesa(), quantos) == ouro(f"controles/quantos={quantos}")
+
+
+def test_o_microfone_e_o_unico_que_muda_a_conta() -> None:
+    sem_mic = tuple(motor.Controle(c.nome, mic=False, onde=c.onde) for c in mock.CONTROLES)
+    assert _plano_dos_controles(mock.mesa(), 4, sem_mic) == ouro("controles/sem-mic")
+
+
+def test_os_quatro_no_mesmo_dongle_e_o_adaptador_que_sumiu() -> None:
+    juntos = tuple(motor.Controle(c.nome, c.mic, onde="bt-a") for c in mock.CONTROLES)
+    assert _plano_dos_controles(mock.mesa(), 4, juntos) == ouro("controles/todos-no-bt-a")
+    orfaos = tuple(motor.Controle(c.nome, c.mic, onde="sumiu") for c in mock.CONTROLES)
+    assert _plano_dos_controles(mock.mesa(), 4, orfaos) == ouro("controles/adaptador-sumiu")
+
+
+def test_sem_o_hub_o_motor_responde_e_nao_inventa() -> None:
+    mesa = mock.mesa_sem_hub()
+    assert motor.alocacao(mesa.mapa, mesa.leitura) == ouro("sem-hub/alocacao")
+    assert motor.caminho_do_hub(mesa) is None
+    assert motor.regiao_do_caminho("1-3", motor.caminho_do_hub(mesa)) == ouro("sem-hub/regiao-1-3")
+    assert motor.regiao_do_caminho("4-4", motor.caminho_do_hub(mesa)) == ouro("sem-hub/regiao-4-4")
+    achado = [{"id": s.aparelho.id, "caminho": s.caminho, "regiao": s.regiao}
+              for s in motor.sem_entrada(mesa)]
+    assert achado == ouro("sem-hub/semEntrada")
+    assert como_o_mockup_planeja(motor.planejar(mesa)) == ouro("sem-hub/planejar")
+    assert como_o_mockup_receita(motor.receita(mesa)) == _receita_do_ouro("sem-hub/receita")
+    assert motor.consequencias(mesa) == ouro("sem-hub/consequencias")
+
+
+def test_sem_adaptador_nenhum_controle_cabe_e_o_motor_diz_isso() -> None:
+    """Estado de primeira classe: o hub saiu às 02h36 e levou os três dongles."""
+    mesa = mock.mesa_sem_hub()
+    assert motor.adaptadores_da_mesa(mesa) == ()
+    assert _plano_dos_controles(mesa, 4) == ouro("sem-hub/controles")
+    plano = motor.plano_dos_controles(mock.CONTROLES, motor.adaptadores_da_mesa(mesa))
+    assert plano.cabe is False
+    assert plano.sobra == 0
+    assert plano.destino == {}
 
 
 def test_as_traducoes_da_palavra_mesa_ainda_disparam() -> None:

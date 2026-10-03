@@ -186,3 +186,21 @@ def test_a_divida_de_app_que_sumir_reprova_pedindo_para_apagar(validador: Any) -
 def test_a_arvore_de_hoje_passa_no_portao(validador: Any) -> None:
     """`--all` verde, com a dívida de 23/08/2026 declarada e nada além dela."""
     assert validador.main(["--all"]) == 0
+
+
+def test_o_portao_ignora_as_constantes_de_app_que_nao_sao_tela(
+    textos_de_app: list[Any],
+) -> None:
+    """Três casos reais, cada um de uma família diferente de falso positivo."""
+    vistos = {rotulo.texto for rotulo in textos_de_app}
+    for fora_da_tela in (
+        "desktop",
+        "/dev/uinput",
+        "hefesto-dualsense4unix",
+        "identity",
+        "escala_fonte",
+    ):
+        assert fora_da_tela not in vistos, (
+            f"{fora_da_tela!r} entrou como texto de tela. Ele não é: nenhuma "
+            "dessas strings chega a escoadouro de tela."
+        )

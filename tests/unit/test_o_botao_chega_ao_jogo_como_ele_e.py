@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -56,6 +57,7 @@ from hefesto_dualsense4unix.daemon.subsystems.poll import evdev_buttons_once
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+from tests.unit import test_o_report_de_entrada_bate_com_o_driver as o_report
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,50 @@ def _esperado_corpo_da_leitura(fonte: str) -> str:
     inicio = fonte.index("static int dualsense_parse_report")
     corpo = fonte[inicio:]
     return corpo[: corpo.index("\n}\n")]
+
+
+def _esperado_driver_lido() -> _EsperadoDriver:
+    fonte = o_report.DRIVER.read_text(encoding="utf-8")
+    mascaras = o_report._mascaras_de_botao()
+    corpo = _esperado_corpo_da_leitura(fonte)
+    pares = tuple(
+        (btn, int(byte), mascaras[nome])
+        for btn, byte, nome in re.findall(
+            r"input_report_key\(ds->gamepad,\s*(BTN_\w+),\s*"
+            r"ds_report->buttons\[(\d)\]\s*&\s*(DS_BUTTONS\d_\w+)\)",
+            corpo,
+        )
+    )
+    hat = re.search(r"value = ds_report->buttons\[(\d)\] & (DS_BUTTONS\d_HAT_SWITCH);", corpo)
+    centro = re.search(r"value = (\d+); /\* center \*/", corpo)
+    tabela = re.search(r"ps_gamepad_hat_mapping\[\] = \{(.*?)\};", fonte, re.S)
+    cabo = re.search(
+        r"report->id == DS_INPUT_REPORT_USB.*?ds_report = "
+        r"\(struct dualsense_input_report \*\)&data\[(\d)\];",
+        corpo,
+        re.S,
+    )
+    radio = re.search(
+        r"report->id == DS_INPUT_REPORT_BT.*?ds_report = "
+        r"\(struct dualsense_input_report \*\)&data\[(\d)\];",
+        corpo,
+        re.S,
+    )
+    assert hat and centro and tabela and cabo and radio, "a leitura do driver mudou de forma"
+    vetores = tuple(
+        (int(x), int(y)) for x, y in re.findall(r"\{(-?\d+),\s*(-?\d+)\}", tabela.group(1))
+    )
+    return _EsperadoDriver(
+        pares=pares,
+        hat_byte=int(hat.group(1)),
+        hat_mascara=mascaras[hat.group(2)],
+        hat_vetores=vetores,
+        hat_centro=int(centro.group(1)),
+        offset_dos_botoes=dict(o_report._campos_do_struct())["buttons"],
+        inicio_no_cabo=int(cabo.group(1)),
+        inicio_no_radio=int(radio.group(1)),
+        atribuicoes=len(re.findall(r"\bds_report = ", corpo)),
+    )
 
 
 def _esperado_le_o_report(
@@ -306,6 +352,27 @@ def _ida_e_volta_no_uhid(
     return erros
 
 
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_1_ida_e_volta_pelo_driver_no_uhid(
+    jogador: int, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """Os 13 pares do driver e as 8 direções do hat, P1 a P4, ida igual à volta."""
+    driver = _esperado_driver_lido()
+    assert len(driver.pares) == 13 and len(driver.hat_vetores) == 9
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    erros = _ida_e_volta_no_uhid(mesa, reports, jogador, driver)
+    assert not erros, "\n".join(erros)
+
+
+def test_o_cabo_e_o_radio_passam_pela_mesma_leitura() -> None:
+    """O driver lê o `0x01` do cabo e o `0x31` do rádio numa função só: os dois"""
+    driver = _esperado_driver_lido()
+    assert driver.atribuicoes == 2
+    assert (driver.inicio_no_cabo, driver.inicio_no_radio) == (1, 2)
+    nomes = [btn for btn, _b, _m in driver.pares]
+    assert len(nomes) == len(set(nomes)), "um BTN_* lido duas vezes"
+
+
 def _o_que_o_jogo_ve_no_uinput(
     escritas: list[tuple[int, int, int]],
 ) -> tuple[frozenset[int], tuple[int, int], dict[int, int]]:
@@ -369,6 +436,45 @@ def test_as_mascaras_desta_regua_sao_as_do_produto() -> None:
     assert set(BOTOES_POR_FLAVOR) == {"dualsense", "xbox", "nintendo"}
 
 
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+@pytest.mark.parametrize("mascara", ["dualsense", "xbox", "nintendo"])
+def test_regua_2_ida_e_volta_nas_mascaras_do_uinput(mascara: str, jogador: int) -> None:
+    """Cada botão chega como o botão que o jogo lê, pelo VID da máscara.
+
+    Fica de fora só o par da frente na máscara DualSense (a régua 2b).
+    Mordidas: trocar `l3` e `r3` em `BUTTON_TO_UINPUT` reprova a DualSense e a
+    Xbox e não a Nintendo; o mesmo em `BOTOES_PROCON` reprova só a Nintendo."""
+    driver = _esperado_driver_lido()
+    mesa, escritas = _mesa_uinput(mascara)
+    menos = _A_FRENTE_QUE_O_VID_DECIDE if mascara == "dualsense" else frozenset()
+    erros = _ida_e_volta_no_uinput(mesa, escritas, jogador, driver, menos=menos)
+    assert not erros, "\n".join(erros)
+
+
+def test_regua_3_o_driver_trocado_reprova_a_regua_1(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]],
+) -> None:
+    """Uma cópia do `hid-playstation.c` com `DS_BUTTONS1_L3` e `DS_BUTTONS1_R3`"""
+    fonte = o_report.DRIVER.read_text(encoding="utf-8")
+    l3 = re.search(r"#define DS_BUTTONS1_L3\s+(BIT\(\d+\))", fonte)
+    r3 = re.search(r"#define DS_BUTTONS1_R3\s+(BIT\(\d+\))", fonte)
+    assert l3 and r3
+    trocado = re.sub(
+        r"(#define DS_BUTTONS1_(L3|R3)\s+)BIT\(\d+\)",
+        lambda m: m.group(1) + (r3.group(1) if m.group(2) == "L3" else l3.group(1)),
+        fonte,
+    )
+    copia = tmp_path / "hid-playstation.c"
+    copia.write_text(trocado, encoding="utf-8")
+    monkeypatch.setattr(o_report, "DRIVER", copia)
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    erros = _ida_e_volta_no_uhid(mesa, reports, 1, _esperado_driver_lido())
+    assert any("BTN_THUMBL" in e for e in erros) and any("BTN_THUMBR" in e for e in erros)
+    assert all("THUMB" in e for e in erros), erros
+
+
 _TABELAS_DO_PRODUTO = frozenset({
     "_BUTTONS0_BITS",
     "_BUTTONS1_BITS",
@@ -421,8 +527,59 @@ def _o_aperto_curto(mesa: _Mesa, jogador: int, nome: str) -> None:
     assert nome not in mesa.leitores[jogador].snapshot().buttons_pressed
 
 
+def _o_report_tem(nome: str, report: bytes) -> bool:
+    """O nome está apertado no report, pela leitura do driver."""
+    driver = _esperado_driver_lido()
+    apertados, vetor = _esperado_le_o_report(driver, report)
+    if nome == "r3":
+        return "BTN_THUMBR" in apertados
+    return vetor == (1, 0)
+
+
 def _janela(n: int) -> bytes:
     return bytes([n & 0xFF, (n >> 8) & 0xFF]) + bytes(uhid_gamepad._MOTION_WINDOW_LEN - 2)
+
+
+@pytest.mark.parametrize("nome", sorted(_APERTOS_CURTOS))
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_4_o_aperto_curto_chega_no_uhid_sem_espelho(
+    jogador: int, nome: str, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """Sem o espelho, quem emite é o tique: um report com o bit e depois um sem."""
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    mesa.tique()
+    mesa.tique()
+    inicio = len(reports[jogador])
+    _o_aperto_curto(mesa, jogador, nome)
+    mesa.tique()
+    novos = [_o_report_tem(nome, r) for r in reports[jogador][inicio:]]
+    assert novos == [True, False], novos
+
+
+@pytest.mark.parametrize("nome", sorted(_APERTOS_CURTOS))
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_4_o_aperto_curto_chega_no_uhid_com_o_espelho(
+    jogador: int, nome: str, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """Com o espelho ligado, o tique só guarda: o aperto pega carona no report
+    seguinte do leitor de movimento, e o seguinte já sai sem ele.
+
+    Mordida: sem os `_pendentes` do `UhidDualSense`, só este caso reprova (o
+    tique entrega `apertados | soltos` e logo `apertados`, e o leitor só emite
+    depois)."""
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    for pad in mesa.pads.values():
+        pad._motion_streaming = True
+    mesa.tique()
+    mesa.pads[jogador].forward_motion(_janela(1))
+    inicio = len(reports[jogador])
+    _o_aperto_curto(mesa, jogador, nome)
+    mesa.tique()
+    assert len(reports[jogador]) == inicio, "o tique não emite com o espelho ligado"
+    mesa.pads[jogador].forward_motion(_janela(2))
+    mesa.pads[jogador].forward_motion(_janela(3))
+    novos = [_o_report_tem(nome, r) for r in reports[jogador][inicio:]]
+    assert novos == [True, False], novos
 
 
 @pytest.mark.parametrize("nome", sorted(_APERTOS_CURTOS))
@@ -466,6 +623,50 @@ def test_regua_5_nenhum_report_a_mais_com_o_espelho(
     assert len(reports[jogador]) - inicio == 20
 
 
+def _algum_report_tem(nome: str, reports: list[bytes]) -> bool:
+    return any(_o_report_tem(nome, r) for r in reports)
+
+
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_8_o_aperto_dentro_do_grace_nao_chega(
+    jogador: int, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """A conexão arma o grace (`_input_ready_at` muda), e o laço não despacha"""
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    mesa.tique()
+    mesa.tique()
+    mesa.daemon._input_ready_at = 1_000.0
+    _o_aperto_curto(mesa, jogador, "r3")
+    inicio = len(reports[jogador])
+    mesa.tique()
+    mesa.tique()
+    assert not _algum_report_tem("r3", reports[jogador][inicio:]), "entrada fantasma"
+    inicio = len(reports[jogador])
+    _o_aperto_curto(mesa, jogador, "r3")
+    mesa.tique()
+    assert [_o_report_tem("r3", r) for r in reports[jogador][inicio:]] == [True, False]
+
+
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_8_o_aperto_sem_pad_nao_chega_ao_pad_novo(
+    jogador: int, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """O pad do jogador morre (o grab que volta a pendente, o arming que"""
+    mesa, _reports = _mesa_uhid(fazer_uhid)
+    mesa.tique()
+    mesa.tique()
+    mesa.trocar_o_pad(jogador, None)
+    mesa.tique()
+    _o_aperto_curto(mesa, jogador, "r3")
+    mesa.tique()
+    novo, reports_do_novo = fazer_uhid(jogador)
+    mesa.trocar_o_pad(jogador, novo)
+    mesa.tique()
+    mesa.tique()
+    assert reports_do_novo, "o pad novo nasce com um report"
+    assert not _algum_report_tem("r3", reports_do_novo), "entrada fantasma no pad novo"
+
+
 def test_regua_8_o_contador_de_bordas_e_um_so() -> None:
     """O `EvdevSnapshot` tem UM campo de contagem por borda (a NAVEGACAO lê o"""
     contadores = [f.name for f in fields(EvdevSnapshot) if str(f.type) == "dict[str, int]"]
@@ -488,3 +689,26 @@ def test_a_contagem_e_na_borda_e_sobrevive_a_queda() -> None:
     assert leitor.snapshot().apertos == {"r3": 2, "dpad_right": 1, "dpad_up": 1}
 
 
+def _o_report_tem_o_btn(btn: str, report: bytes) -> bool:
+    """O BTN_* está apertado no report, pela leitura do driver."""
+    apertados, _vetor = _esperado_le_o_report(_esperado_driver_lido(), report)
+    return btn in apertados
+
+
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_4c_o_aperto_curto_chega_com_a_troca_do_perfil(
+    jogador: int, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """Com a troca L3 ↔ R3 no perfil, o R3 de 10 ms entre dois tiques chega ao"""
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import definir_ativo
+
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    definir_ativo(mesa.daemon.store, {"l3": "r3", "r3": "l3"})
+    mesa.tique()
+    mesa.tique()
+    inicio = len(reports[jogador])
+    _o_aperto_curto(mesa, jogador, "r3")
+    mesa.tique()
+    novos = reports[jogador][inicio:]
+    assert [_o_report_tem_o_btn("BTN_THUMBL", r) for r in novos] == [True, False]
+    assert not any(_o_report_tem_o_btn("BTN_THUMBR", r) for r in novos), "o R3 cru chegou"

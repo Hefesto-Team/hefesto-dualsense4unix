@@ -93,6 +93,39 @@ def _arquivo(tmp_path: Path, corpo: str) -> Path:
     return p
 
 
+def test_citar_numa_docstring_nao_e_usar(portao, tmp_path):
+    """O caso REAL de 06/09: o nome da função da GTK dentro de uma docstring."""
+    alvo = _arquivo(tmp_path, '''
+def _o_avulso_saiu(pid):
+    """Pede ao daemon avulso que saia.
+
+    A janela antiga tinha (`daemon_actions.on_daemon_migrate_to_systemd`).
+    """
+    return True
+''')
+    arvore = portao.Arvore()
+    assert arvore.ocorre("on_daemon_migrate_to_systemd", [alvo]) == alvo, (
+        "o símbolo ESTÁ no arquivo; `ocorre` tem de continuar vendo-o")
+    assert arvore.usa("on_daemon_migrate_to_systemd", [alvo]) is None, (
+        "citar numa docstring NÃO é usar — foi este falso que promoveu a "
+        "linha 315 do CSV em 03/09 e de novo em 06/09")
+
+
+def test_citar_num_comentario_nao_e_usar(portao, tmp_path):
+    """O caso REAL de 03/09: o comentário de uma linha."""
+    alvo = _arquivo(tmp_path, "x = 1  # o mesmo que on_daemon_migrate_to_systemd faz\n")
+    arvore = portao.Arvore()
+    assert arvore.ocorre("on_daemon_migrate_to_systemd", [alvo]) == alvo
+    assert arvore.usa("on_daemon_migrate_to_systemd", [alvo]) is None
+
+
+def test_chamar_de_verdade_e_usar(portao, tmp_path):
+    """O outro lado, e sem ele a cura seria um portão que emudeceu."""
+    alvo = _arquivo(tmp_path, "def f():\n    return on_daemon_migrate_to_systemd()\n")
+    arvore = portao.Arvore()
+    assert arvore.usa("on_daemon_migrate_to_systemd", [alvo]) == alvo
+
+
 def test_cadeia_usada_como_valor_e_codigo(portao, tmp_path):
     """A tentativa errada nº 1, congelada: apagar toda cadeia derrubou 165 linhas."""
     alvo = _arquivo(tmp_path, 'GESTOS = ["restaurar-de-fabrica", "refazer-proton"]\n')
@@ -131,6 +164,13 @@ def test_a_borda_de_palavra_recusa_sufixo(portao, tmp_path):
     assert arvore.usa("player_slot_color", [alvo]) == alvo
 
 
+def test_arquivo_ilegivel_falha_para_o_lado_seguro(portao, tmp_path):
+    """Sintaxe quebrada devolve o texto CRU, e a régua continua vendo."""
+    alvo = _arquivo(tmp_path, "def f(:\n    on_daemon_migrate_to_systemd()\n")
+    arvore = portao.Arvore()
+    assert arvore.usa("on_daemon_migrate_to_systemd", [alvo]) == alvo
+
+
 def _modulo_dos_donos():
     spec = importlib.util.spec_from_file_location("_donos_de_comportamento", DONOS)
     assert spec and spec.loader
@@ -151,6 +191,19 @@ def test_a_separacao_tem_dono_e_o_portao_da_paridade_pergunta_a_ele(portao):
 
     assert portao.prosa_do_codigo is prosa_do_codigo
     assert portao.Arvore.usa.__doc__ and "prosa" in portao.Arvore.usa.__doc__.lower()
+
+
+def test_o_portao_dos_donos_resolve_a_mesma_pergunta_por_outro_caminho(donos, tmp_path):
+    """Dois instrumentos, duas técnicas, e a diferença é do dado que cada um lê."""
+    corpo = (
+        "def _o_avulso_saiu(pid):\n"
+        '    """A janela antiga tinha (`daemon_actions.on_daemon_migrate_to_systemd`)."""\n'
+        "    return True\n"
+    )
+    alvo = tmp_path / "a09.py"
+    alvo.write_text(corpo, encoding="utf-8")
+    assert donos._cita(alvo, "on_daemon_migrate_to_systemd") is False, (
+        "no portão dos donos, `_cita` passou a significar CHAMA — citar não conta")
 
 
 def test_os_donos_contam_atributo_e_import(donos, tmp_path):

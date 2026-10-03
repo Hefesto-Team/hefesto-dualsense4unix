@@ -57,6 +57,53 @@ class TestWritePlayerNumber:
             "1",
         ]
 
+    def test_slot_5_acende_so_o_azul(self, tmp_path: Path) -> None:
+        """R-25: o 5º LED (azul) é o bit "+5" — slot 5 = azul sozinho."""
+        _mk_player_nodes(tmp_path, _INST)
+        external_leds.write_player_number(_INST, 5, leds_root=str(tmp_path))
+        assert [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] == [
+            "0",
+            "0",
+            "0",
+            "0",
+        ]
+        assert _read(tmp_path, _INST, "blue", 5) == "1"
+
+    def test_slot_7_nao_pode_ser_igual_ao_4(self, tmp_path: Path) -> None:
+        """R-25 — TROCA DELIBERADA de contrato (`test_capa_acima_de_4`).
+
+        Este caso assertava que o slot 7 acendia EXATAMENTE o mesmo padrão do
+        slot 4 (capping em 4). Com o espaço de numeração único (R-24) o slot
+        7 é alcançável de verdade (2 DualSense + Pro + 8BitDo + …), e dois
+        controles idênticos na barra é a queixa "nunca sei o que é o quê"
+        chegando ao hardware. Agora 7 = azul + 2 verdes.
+        """
+        _mk_player_nodes(tmp_path, _INST)
+        external_leds.write_player_number(_INST, 7, leds_root=str(tmp_path))
+        sete = [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] + [
+            _read(tmp_path, _INST, "blue", 5)
+        ]
+        assert sete == ["1", "1", "0", "0", "1"]
+
+        external_leds.write_player_number(_INST, 4, leds_root=str(tmp_path))
+        quatro = [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] + [
+            _read(tmp_path, _INST, "blue", 5)
+        ]
+        assert quatro != sete
+
+    def test_padroes_de_1_a_9_sao_todos_distintos(self, tmp_path: Path) -> None:
+        """R-25: a barra (4 verdes + azul) codifica 9 números SEM repetir."""
+        _mk_player_nodes(tmp_path, _INST)
+        vistos: list[tuple[str, ...]] = []
+        for slot in range(1, 10):
+            external_leds.write_player_number(_INST, slot, leds_root=str(tmp_path))
+            vistos.append(
+                tuple(
+                    [_read(tmp_path, _INST, "green", i) for i in range(1, 5)]
+                    + [_read(tmp_path, _INST, "blue", 5)]
+                )
+            )
+        assert len(set(vistos)) == 9
 
     def test_sem_o_azul_capa_em_4_por_limite_fisico(self, tmp_path: Path) -> None:
         """Hardware sem a 5ª lâmpada não tem como exibir 5+: capa em 4 (o"""
@@ -79,6 +126,10 @@ class TestWritePlayerNumber:
             "0",
         ]
 
+    def test_slot_ate_4_apaga_o_5_azul(self, tmp_path: Path) -> None:
+        _mk_player_nodes(tmp_path, _INST, blue5=True)
+        external_leds.write_player_number(_INST, 2, leds_root=str(tmp_path))
+        assert _read(tmp_path, _INST, "blue", 5) == "0"
 
     def test_sem_nos_e_best_effort(self, tmp_path: Path) -> None:
         assert (
@@ -166,6 +217,14 @@ class TestHidInstanceForHidraw:
         assert external_leds.hid_instance_for_hidraw("/dev/input/event8") is None
 
 
+def _mk_lightbar_nodes(root: Path, prefix: str) -> None:
+    """Cria a lightbar RGB de um DS4 no sysfs falso (red/green/blue/global)."""
+    for ch in ("red", "green", "blue", "global"):
+        node = root / f"{prefix}:{ch}"
+        node.mkdir(parents=True)
+        (node / "brightness").write_text("0", encoding="ascii")
+
+
 def _read_lb(root: Path, prefix: str, ch: str) -> str:
     return (root / f"{prefix}:{ch}" / "brightness").read_text().strip()
 
@@ -173,6 +232,25 @@ def _read_lb(root: Path, prefix: str, ch: str) -> str:
 class TestWriteLightbarSlot:
     """8BitDo por BT (modo DS4): pinta a lightbar com a COR do slot."""
 
+    def test_slot_3_pinta_verde(self, tmp_path: Path) -> None:
+        _mk_lightbar_nodes(tmp_path, "input111")
+        assert (
+            external_leds.write_lightbar_slot("input111", 3, leds_root=str(tmp_path))
+            is True
+        )
+        # player_slot_color(3) = verde (0, 255, 0); 'global' mestre = 1.
+        assert _read_lb(tmp_path, "input111", "red") == "0"
+        assert _read_lb(tmp_path, "input111", "green") == "255"
+        assert _read_lb(tmp_path, "input111", "blue") == "0"
+        assert _read_lb(tmp_path, "input111", "global") == "1"
+
+    def test_slot_1_pinta_azul(self, tmp_path: Path) -> None:
+        _mk_lightbar_nodes(tmp_path, "input111")
+        external_leds.write_lightbar_slot("input111", 1, leds_root=str(tmp_path))
+        # slot 1 = azul (0, 0, 255) — mesma paleta dos DualSense.
+        assert _read_lb(tmp_path, "input111", "blue") == "255"
+        assert _read_lb(tmp_path, "input111", "red") == "0"
+        assert _read_lb(tmp_path, "input111", "green") == "0"
 
     def test_sem_nos_best_effort(self, tmp_path: Path) -> None:
         assert (
@@ -236,6 +314,18 @@ class TestApplyPlayerNumber:
             "0",
         ]
 
+    def test_despacha_ds4_lightbar(self, tmp_path: Path, monkeypatch) -> None:
+        _mk_lightbar_nodes(tmp_path, "input111")
+        monkeypatch.setattr(
+            external_leds, "resolve_external_leds", lambda h, r=None: ("ds4", "input111")
+        )
+        assert (
+            external_leds.apply_player_number(
+                "/dev/hidraw7", 3, leds_root=str(tmp_path)
+            )
+            is True
+        )
+        assert _read_lb(tmp_path, "input111", "green") == "255"
 
     def test_sem_modo_e_noop(self, monkeypatch) -> None:
         monkeypatch.setattr(

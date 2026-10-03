@@ -89,6 +89,36 @@ def _clique(**extra) -> dict:
     return {**base, **extra}
 
 
+def test_o_inventario_le_os_metodos_do_daemon():
+    """Zero métodos é ERRO, não silêncio."""
+    from tests.unit import inventario_do_daemon as daemon
+
+    m = daemon.metodos()
+    assert len(m) >= 39, (
+        f"o inventário achou {len(m)} métodos e o daemon atende pelo menos 39. "
+        f"Se caiu, o padrão do `ROTA` voltou a perder os de três níveis.")
+    assert "identity.number.set" in m, "o de três níveis sumiu do censo"
+    assert daemon.parametros("led.set") == ("rgb", "brightness", "uniq")
+
+
+def test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende(pac):
+    """Um nome inventado aparece AQUI, não na mão de quem clica."""
+    import importlib
+
+    from tests.unit import inventario_do_daemon as daemon
+
+    usados: set[str] = set()
+    for arq in sorted((RAIZ /
+    "src/hefesto_dualsense4unix/interface/pacotes").glob("a[0-9][0-9]_*.py")):
+        mod = importlib.import_module(f"pacotes.{arq.stem}")
+        usados |= set(getattr(mod, "METODOS", set()))
+    inventados = daemon.confere(usados)
+    assert inventados == [], (
+        f"estes métodos não existem no daemon: {inventados}. "
+        f"O `ipc_server.py` é a fonte — se o nome mudou, mude aqui também; "
+        f"se o método não existe, o botão NÃO tem dono e deve recusar dizendo.")
+
+
 @pytest.mark.parametrize("nome", [n for n, _ in _pacotes()])
 def test_a_aba_tem_o_piso_de_gestos(pac, nome):
     """`PISO_DA_ABA` é declarado no pacote e SÓ SOBE."""

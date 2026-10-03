@@ -41,15 +41,19 @@ from tests.unit.ponte_do_rodape import PonteDoRodape
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
+from hefesto_dualsense4unix.integrations import bluez_dbus as bd
+from hefesto_dualsense4unix.integrations import conexao_zumbi, diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 from hefesto_dualsense4unix.interface.pacotes import (
     Contexto,
     a01_jogar,
     perfil,
+    ponte,
     rodape,
 )
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import Profile
+from tests.unit import bluez_de_mentira as bm
 
 NOME = "Auditoria"
 OUTRO = "Outro perfil"
@@ -188,6 +192,41 @@ def test_o_reconectar_segue_tentando_todos_os_de_fora(tocados: list[str]) -> Non
     assert tocados == ["aa:bb:cc:00:00:0a", "aa:bb:cc:00:00:0b", "aa:bb:cc:00:00:0c"]
 
 
+@pytest.fixture()
+def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> bm.BarramentoDeMentira:
+    """O BlueZ de mentira com dois DualSense `Connected` fora da mesa."""
+    monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
+    monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(tmp_path / "radio-diario.jsonl"))
+    b = bm.BarramentoDeMentira()
+    b.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO]["Connected"] = True
+    b.mesa[bm.no_de("aa:bb:cc:00:00:44")] = {
+        bd.APARELHO: {"Address": "AA:BB:CC:00:00:44", "Alias": "DualSense Wireless Controller",
+                      "Paired": True, "Connected": True, "Modalias": "usb:v054Cp0CE6d0100"}}
+    dono = bd.DonoVivo(b)
+    assert dono.ligar()
+    monkeypatch.setattr(bd, "_DONO", dono)
+    raiz = tmp_path / "class-hidraw"
+    pai = raiz / "hidraw0" / "device"
+    pai.mkdir(parents=True)
+    (pai / "uevent").write_text(
+        "DRIVER=playstation\nHID_ID=0005:0000054C:00000CE6\n"
+        f"HID_NAME=DualSense Wireless Controller\nHID_UNIQ={bm.CONTROLE}\n",
+        encoding="utf-8")
+    monkeypatch.setattr(conexao_zumbi, "RAIZ_HIDRAW", str(raiz))
+    return b
+
+
+def test_o_connected_com_hid_vivo_nao_cai_na_volta(
+    barramento: bm.BarramentoDeMentira,
+) -> None:
+    """A seção de 02/10: o elo morto se pergunta ao kernel."""
+    perfil.a_volta_do_perfil(_ctx(), PonteDoRodape())
+    quedas = [c for c, _i, m, _a, _t in barramento.chamadas if m == "Disconnect"]
+    assert quedas == [bm.no_de("aa:bb:cc:00:00:44")], f"a volta derrubou {quedas}"
+    vivo = [m for c, _i, m, _a, _t in barramento.chamadas if c == bm.no_de(bm.CONTROLE)]
+    assert vivo == [], f"o controle com HID vivo foi mexido: {vivo}"
+
+
 def test_o_reconectar_e_a_volta_chegam_ao_mesmo_dono(
     monkeypatch: pytest.MonkeyPatch, tocados: list[str],
 ) -> None:
@@ -248,3 +287,12 @@ def test_o_importar_termina_com_a_volta(tmp_path: Path, tocados: list[str]) -> N
     assert tocados == ["aa:bb:cc:00:00:0a"]
 
 
+def test_o_rodape_declara_o_que_a_volta_usa() -> None:
+    """`PONTE` e `METODOS` do rodapé: a ponte tem as funções, o daemon os métodos."""
+    from tests.unit import inventario_do_daemon as daemon
+
+    assert {"chamar", "resultado"} <= rodape.PONTE
+    assert set(A_VOLTA) <= rodape.METODOS
+    for nome in sorted(rodape.PONTE):
+        assert hasattr(ponte, nome), f"o rodapé chama `ponte.{nome}` e a ponte não tem"
+    assert daemon.confere(rodape.METODOS) == [], daemon.confere(rodape.METODOS)

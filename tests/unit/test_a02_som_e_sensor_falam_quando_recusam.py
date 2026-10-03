@@ -249,6 +249,30 @@ class TestOsQuatroBotoesDeSensor:
         assert str(erro.value) == recado
         assert p.chamadas, "levantou a ressalva sem ter chamado o daemon"
 
+    def test_o_calado_nao_confessa_divida_nossa(self) -> None:
+        """`_corpo(None)` é o serviço que não respondeu — e a frase é curta."""
+        p = PonteQueDevolveOCorpo({})
+        p.corpo = None  # type: ignore[assignment]
+        with pytest.raises(RuntimeError) as erro:
+            _gesto("sensor")(_ctx(**_com_sensores()),
+                             {"uniq": UNIQ, "sensor": "giroscopio"}, p)
+        frase = str(erro.value)
+        assert "não confirmou" in frase and "parou" in frase, frase
+        assert "daemon" not in frase.lower(), (
+            f"a tela voltou a chamar o Hefesto de «daemon»: {frase!r}")
+        assert "sensor.set" not in frase and "esta janela" not in frase, (
+            f"a tela voltou a confessar dívida nossa: {frase!r}")
+
+    def test_o_daemon_tem_o_metodo_de_sensor(self) -> None:
+        """A premissa da CHAMADA, remedida a cada execução — o estopim invertido."""
+        from tests.unit import inventario_do_daemon as daemon
+
+        metodos = daemon.metodos()
+        assert metodos, "o inventário de métodos veio vazio — régua cega"
+        assert "sensor.set" in metodos, (
+            "o daemon perdeu `sensor.set`: o gesto `sensor` da aba 02 chama "
+            f"um método que não existe mais. Os que há: {sorted(metodos)[:8]}…"
+        )
 
     def test_o_botao_pinta_pelo_que_o_aparelho_diz(
         self, monkeypatch: pytest.MonkeyPatch

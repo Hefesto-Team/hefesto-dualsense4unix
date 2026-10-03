@@ -311,6 +311,24 @@ def test_o_nome_da_janela_so_aparece_com_o_detector_vendo(a09):
     assert a09._com_quem_esta_na_frente("Sem ver a janela agora", cego) is None
 
 
+def test_decisao_3_o_aviso_do_process_name_nao_aparece(a09):
+    """*"Aviso do `process_name`: Não deve aparecer."* Sai.
+
+    O aviso é o `profile_process_name_aviso` da janela antiga
+    (`gui/main.glade:2603`, com `profiles_actions.texto_do_processo_que_nao_casa`).
+    Ele NÃO tem par no HTML, e a decisão dela é que não passe a ter. A régua
+    existe porque a dívida está registrada no inventário como
+    `FALTA_NO_HTML` — quem fechar a lista sem ler esta decisão o traria de volta
+    achando que está fechando um buraco.
+    """
+    pag = _pagina()
+    for palavra in ("process_name", "texto_do_processo_que_nao_casa",
+                    "nome do processo"):
+        assert palavra not in pag, (
+            f"a página traz {palavra!r}. A decisão 3 dela, de 03/09/2026, é que "
+            "o aviso do `process_name` NÃO deve aparecer.")
+
+
 def test_decisao_10_o_serial_de_fabrica_aparece_inteiro(a09, ctx):
     """*"Serial de fábrica: inteiro, e SÓ na aba Sistema (a de diagnóstico)."*"""
     texto = a09.pacote(ctx)[a09.REGISTRO]

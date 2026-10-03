@@ -9,6 +9,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit import radio_de_mentira as rm
+from tests.unit.radio_de_mentira import VERMELHO
 
 PCI = "0000:00:14.0"
 ADAPTADORES = ("aa:bb:cc:00:00:09", "aa:bb:cc:00:00:15", "aa:bb:cc:00:00:21")
@@ -183,6 +185,15 @@ def test_a_busca_e_a_varredura_nao_trocam_a_sala(
     assert re.search(r'<button class="soltar[^"]*"[^>]*data-campo="radio-ocupado"', sala)
 
 
+def test_quem_espera_num_mover_continua_na_sala(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O controle que ela moveu para a Direita, esperando o gesto, é conteúdo"""
+    _ler(a08, monkeypatch)
+    campos = _campos(a08, _busca(1, aparelho=rm.uniq(VERMELHO)))
+    assert "esperando" in _cartao(campos["radio-sala"], 1).split()
+    assert "esperando" not in _cartao(campos["radio-sala"], 0).split()
+
+
 def test_a_lista_e_do_chip_aceso_com_o_sinal_dele(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """A pulseira vista só pela Esquerda fica fora da lista do Centro, e"""
@@ -205,6 +216,23 @@ def test_o_desenho_tem_os_achados_no_painel_do_destino_dele() -> None:
     assert len(linhas) == len(aba08.CENA_DO_RADIO["perto"]) >= 3
 
 
+@pytest.mark.parametrize("passo", ["pareando", "conferindo"])
+def test_depois_do_gesto_o_chip_de_outro_adaptador_diz_que_agora_nao(
+        a08: Any, monkeypatch: pytest.MonkeyPatch, passo: str) -> None:
+    """Com a busca na Esquerda e o controle já pareando ou conferindo, a"""
+    _ler(a08, monkeypatch)
+    chips = _chips(_campos(a08, _busca(0, passo=passo, aparelho=rm.uniq(VERMELHO))))
+    esquerda, direita, centro = (chips[_id(e)] for e in ADAPTADORES)
+
+    assert esquerda["aria-pressed"] == "true"
+    assert esquerda.get("data-gesto") == "escolher-adaptador"
+    assert "aria-disabled" not in esquerda
+    for chip in (direita, centro):
+        assert "data-gesto" not in chip
+        assert chip["aria-disabled"] == "true"
+        assert chip["title"] == a08.ESPERANDO_O_CONTROLE
+
+
 def test_no_gesto_todo_chip_pede_ao_radio(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """No passo ``gesto`` a central ainda leva a busca junto: nenhum chip apaga."""
     _ler(a08, monkeypatch)
@@ -213,6 +241,19 @@ def test_no_gesto_todo_chip_pede_ao_radio(a08: Any, monkeypatch: pytest.MonkeyPa
         for chip in chips.values():
             assert chip.get("data-gesto") == "escolher-adaptador"
             assert "aria-disabled" not in chip
+
+
+def test_o_chip_de_um_mover_conferindo_tambem_diz_que_agora_nao(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O chip de outro adaptador com um «Mover» de pé TAMBÉM pede ao rádio: o"""
+    _ler(a08, monkeypatch)
+    quem = rm.uniq(VERMELHO)
+    conferindo = _chips(_campos(a08, _busca(1, passo="conferindo", aparelho=quem)))
+    assert conferindo[_id(ADAPTADORES[1])].get("data-gesto") == "escolher-adaptador"
+    for outro in (ADAPTADORES[0], ADAPTADORES[2]):
+        assert conferindo[_id(outro)]["aria-disabled"] == "true"
+    no_gesto = _chips(_campos(a08, _busca(1, passo="gesto", aparelho=quem)))
+    assert all("aria-disabled" not in c for c in no_gesto.values())
 
 
 PASSOS_DO_PAINEL = (

@@ -92,6 +92,15 @@ def test_load_perfil_inexistente(isolated_profiles_dir: Path):
         load_profile("inexistente")
 
 
+def test_load_all_ordenado(isolated_profiles_dir: Path):
+    save_profile(_mk_profile("zeta"))
+    save_profile(_mk_profile("alpha"))
+    save_profile(_mk_profile("beta"))
+    profiles = load_all_profiles()
+    names = [p.name for p in profiles]
+    assert names == ["alpha", "beta", "zeta"]
+
+
 def test_delete_remove_arquivo(isolated_profiles_dir: Path):
     save_profile(_mk_profile("bow"))
     assert (isolated_profiles_dir / "bow.json").exists()
