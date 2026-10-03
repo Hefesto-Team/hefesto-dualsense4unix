@@ -282,12 +282,6 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "Ajuste de operação, não escolha publicada: a unit é quem decidiria "
         "isso, e decide por outros meios. MEDIDO em 12/08/2026."
     ),
-    "HEFESTO_DUALSENSE4UNIX_NOTIFY_THROTTLE_SEC": (
-        "Intervalo mínimo entre notificações repetidas "
-        "(integrations/desktop_notifications.py:22). Calibração do instrumento "
-        "de notificação; a promessa é a chave `..._DESKTOP_NOTIFICATIONS`, que "
-        "está declarada como lacuna. MEDIDO em 12/08/2026."
-    ),
     "HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT": (
         "Desliga a detecção de janela em foco (cli/app.py:265, "
         "profiles/autoswitch.py:70). Existe para o teste do autoswitch não "
@@ -445,11 +439,6 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "o interruptor por controle da aba Configurações —, e a env virou o "
         "atalho à mão. Ver `_MAO_FORA_DO_AMBIENTE`."
     ),
-    "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS": (
-        "Liga as notificações de desktop "
-        "(integrations/desktop_notifications.py:140). É feature dela — bateria "
-        "baixa, perfil ativado. MEDIDO em 12/08/2026: sem mão."
-    ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que ela QUER o DualSense como microfone padrão do sistema "
         "(core/system_check.py:119), e com isso cala o alarme do doctor. É "
@@ -474,16 +463,6 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "`1:0.7.0-1`). O endereço é a ENTRADA do changelog e não a linha, de "
         "propósito: o %changelog cresce por cima, e o ponteiro por número de "
         "linha já apodreceu duas vezes em dez dias."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": (
-        "Liga o carregamento de plugins (daemon/subsystems/plugins.py:149). É "
-        "feature dela: sem isto, plugin instalado não roda. MEDIDO em "
-        "12/08/2026: sem mão."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY": (
-        "Faz os avisos de infraestrutura do boot virarem notificação de desktop "
-        "(daemon/lifecycle.py:1993). É escolha dela: receber ou não o aviso na "
-        "tela. MEDIDO em 12/08/2026: sem mão."
     ),
 }
 
@@ -564,35 +543,6 @@ _SEM_MAO_HOJE: dict[str, str] = {
         "mais óbvio — e mesmo assim não a fecho, porque tocar no instalador não "
         "foi pedido e o passo tem de ser provado por ciclo uninstall→install."
     ),
-    "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": (
-        "MEDIDO em 12/08/2026: nenhuma porta escreve a env, e o campo "
-        "companheiro `DaemonConfig.plugins_enabled` (daemon/lifecycle.py:117) é "
-        "só um default `False` com leitores — subsystems/plugins.py:150 lê os "
-        "dois em OU e nenhum dos dois tem escritor. Então o subsistema de "
-        "plugins não sobe nunca, por caminho nenhum. "
-        "O EFEITO EM CASCATA, e é o que torna esta entrada cara: o "
-        "`plugin_api/` inteiro é contrato PÚBLICO para terceiros — `on_tick`, "
-        "`on_button_down`, `on_battery_change`, `on_profile_change` — e quem "
-        "escrever um plugin contra esse contrato hoje não tem como fazê-lo "
-        "rodar sem editar variável de ambiente à mão. O `cli/cmd_plugin.py` "
-        "existe, com `list` e `reload`, e avisa no docstring que `requer daemon "
-        "em execução com plugins_enabled=True`. "
-        "O QUE A FECHA: um interruptor na janela ou `Environment=` na unit. É "
-        "DECISÃO DELA: plugins de terceiros rodando por padrão é escolha de "
-        "segurança, não de conveniência, e não é minha para tomar."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS": (
-        "MEDIDO em 12/08/2026: zero ocorrências em install.sh, assets/, "
-        "packaging/, flatpak/ e em toda a janela (app/ e gui/). A cura das "
-        "notificações está inteira e desligada: `notify_battery_low` e "
-        "`notify_battery_recovered` estão logo abaixo, na lista de símbolos sem "
-        "caminho, pelo mesmo motivo. "
-        "O QUE A FECHA: um interruptor na janela, porque notificação é "
-        "incômodo pessoal e o padrão certo depende de quem usa; ou "
-        "`Environment=` na unit se a decisão for que nasce ligada. Não fecho "
-        "por conta própria: ligar notificação que ninguém pediu é o oposto de "
-        "uma cura."
-    ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
         "REMEDIDO em 22/08/2026: ninguém ESCREVE a chave — nenhum "
         "`Environment=` em assets/, nada no install.sh. O %changelog do pacote "
@@ -608,16 +558,6 @@ _SEM_MAO_HOJE: dict[str, str] = {
         "ATENÇÃO ao decidir: enquanto ninguém liga isto, o `MetricsSubsystem` "
         "nunca sobe — e é essa a razão de o defeito irmão (o subsystem que "
         "ninguém PARA no shutdown) nunca ter sido observado numa máquina viva."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY": (
-        "MEDIDO em 12/08/2026: nenhuma porta a escreve. O daemon calcula os "
-        "avisos de infraestrutura no boot, escreve cada um no log "
-        "(lifecycle.py:1990) e então descarta a notificação porque a chave está "
-        "vazia — o trabalho é feito e jogado fora. "
-        "O QUE A FECHA: a mesma decisão da chave `..._DESKTOP_NOTIFICATIONS`, e "
-        "as duas deviam ser decididas juntas: um interruptor só de "
-        "'me avise na tela' cobre as duas, e dois interruptores separados para "
-        "a mesma pergunta é superfície a mais na janela dela."
     ),
 }
 
@@ -775,17 +715,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "descarta o singleton `_registry`. Chamá-lo em produção apagaria a "
         "numeração dos controles no meio da sessão dela."
     ),
-    "gui/widgets/button_glyph.py::limpar_cache_tinting": (
-        "MEDIDO em 12/08/2026. Instrumento: o docstring diz `higiene de testes` "
-        "e o corpo esvazia `_PIXBUF_TINT_CACHE`. O cache é uma otimização de "
-        "desenho; limpá-lo em produção só faria a janela redesenhar glifos que "
-        "já estavam certos."
-    ),
-    "integrations/desktop_notifications.py::reset_throttle_cache": (
-        "MEDIDO em 12/08/2026. Instrumento: docstring `útil em testes`, corpo "
-        "esvazia `_last_emit_at`. Existe para um caso poder emitir duas "
-        "notificações seguidas sem esperar o intervalo real passar."
-    ),
     "integrations/desktop_notifications.py::reset_once_cache": (
         "MEDIDO em 12/08/2026. Instrumento: docstring `útil em testes`, corpo "
         "esvazia `_announced_once`. Irmã da anterior, para a dedução por "
@@ -858,47 +787,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
 
     # 56 citações em `interface/`, `rumble_actions` 28, `input_actions` 21,
-    "app/actions/footer_actions.py::FooterActionsMixin": (
-        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp`, que saiu com a janela. "
-        "O módulo é produção viva: `interface/pacotes/rodape.py` e as dez abas "
-        "o citam 16 vezes. Evidência: `grep -rn footer_actions "
-        "src/hefesto_dualsense4unix/interface/`."
-    ),
-    "app/actions/home_actions.py::HomeActionsMixin": (
-        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
-        "saiu com a janela. O módulo é produção viva, e a maior de todas: 56 "
-        "citações em `src/hefesto_dualsense4unix/interface/` — é dele que sai o "
-        "`id_da_pagina` e o censo da aba Início. Evidência: `grep -rn "
-        "home_actions src/hefesto_dualsense4unix/interface/`."
-    ),
-    "app/actions/input_actions.py::InputActionsMixin": (
-        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
-        "saiu com a janela. O módulo é produção viva: 21 citações em "
-        "`src/hefesto_dualsense4unix/interface/`, entre elas o mapa de teclas "
-        "que a aba 06 lê. Evidência: `grep -rn input_actions "
-        "src/hefesto_dualsense4unix/interface/`."
-    ),
-    "app/actions/launch_wrapper_dialog.py::LaunchWrapperDialogMixin": (
-        "06/09/2026 — LÁPIDE, mesma razão. 15 citações do módulo em "
-        "`interface/`. O plano D-19 §2 já dizia que este é um dos quatro de "
-        "`app/actions/` sem chamador na interface nova, e que isso NÃO o torna "
-        "da janela."
-    ),
-    "app/actions/rumble_actions.py::RumbleActionsMixin": (
-        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
-        "saiu com a janela. O módulo é produção viva: 28 citações em "
-        "`src/hefesto_dualsense4unix/interface/`, entre elas "
-        "`texto_do_alcance_da_intensidade` (`interface/aba05.py:589`) e "
-        "`BTN_GIVE_BACK_TO_GAME` (`aba05.py:90`). Evidência: `grep -rn "
-        "rumble_actions src/hefesto_dualsense4unix/interface/`."
-    ),
-    "app/actions/triggers_actions.py::TriggersActionsMixin": (
-        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
-        "saiu com a janela. O módulo é produção viva: 16 citações em "
-        "`src/hefesto_dualsense4unix/interface/`, e é dele que a aba 03 lê os "
-        "19 modos de gatilho. Evidência: `grep -rn triggers_actions "
-        "src/hefesto_dualsense4unix/interface/`."
-    ),
     "integrations/tray.py::TrayController": (
         "19/09/2026 — LÁPIDE, e ela é o efeito direto da `TRAY-ORFAO-01`. Este "
         "era o tray POBRE: clicar no ícone abria a TUI no terminal, a lista de "
@@ -911,20 +799,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`probe_gi_availability`, do MESMO arquivo, continua vivo e é chamado "
         "pelo `app/tray.py:21` — por isso a classe ganha lápide em vez de o "
         "arquivo ir para o código aposentado."
-    ),
-    "app/gui_dialogs.py::presentar_dialogos_em_curso": (
-        "06/09/2026 — LÁPIDE. Ela trazia para a frente os diálogos abertos "
-        "quando a JANELA era reapresentada, e o único chamador era o "
-        "`app/app.py`. A interface nova não tem diálogo GTK modal: o que ela "
-        "usa é o canal de recado das dez páginas."
-    ),
-    "app/theme.py::apply_theme": (
-        "06/09/2026 — LÁPIDE do CHAMADOR, não do módulo. `apply_theme` aplicava "
-        "o `gui/theme.css` na `Gtk.Window` do `app/app.py`. O `theme.css` "
-        "CONTINUA vivo e com dois donos — `scripts/paleta_da_casa.py` e "
-        "`tests/unit/test_paleta_unica.py` derivam dele as cores da casa —, e "
-        "`app/theme.escalar_css` continua sendo chamado pelas réguas de "
-        "geometria. O que morreu foi a janela onde a folha era pendurada."
     ),
     "utils/memoria_dos_controles.py::conferir_a_casa": (
         "25/09/2026, ESQUECER-OS-CONTROLES-01 — é o «a máquina está limpa?» da "
@@ -1173,42 +1047,10 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
 
     # `state_full["controllers"][i]["sensores"]["giroscopio_ligado"]`".
 
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "integrations/nivel_do_microfone.py::e_stream_do_medidor": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026), REMEDIDA em 28/09/2026: não tem "
-        "chamador, nem pelo import dinâmico. O `luz_do_mic.py` resolve por `importlib` só "
-        "`NivelDoMicrofone` e `quem_ouve_agora`, e a PEÇA A reconhece o medidor com um crivo "
-        "próprio (`quem_ouve_o_microfone.e_stream_do_hefesto`), sem importar a PEÇA B: são "
-        "dois crivos para a mesma pergunta. FECHA quando a PEÇA A chamar este, ou quando ele "
-        "sair junto com a frase do cabeçalho de `nivel_do_microfone.py` que manda usá-lo."
-    ),
     # `identidade_de` SAIU DAQUI EM 03/09/2026, e fechou pela porta que a própria
     #     `data-campo="peca"` + `data-campo="via"`, e `a02_controles.pacote()`
     #     os escreve com `identidade_de(c, ctx.mesa)`. Com os dois controles
     #   aba 06 — `aba06.py` deu `data-campo="identidade"` ao nome do cartão e
-    # sai com: A-TELA-PERGUNTA-AO-DONO-01
-    "app/audio_saida.py::estado_do_sono": (
-        "A leitura completa numa frase só, e ela BLOQUEIA — o docstring manda rodar "
-        "em worker (app/audio_saida.py:678). O sono da placa de áudio é a causa "
-        "histórica de o alto-falante do controle não funcionar, e a frase existe "
-        "para a tela dizer isso. Nenhuma aba a mostra. Fecha quando a Conexões ou a "
-        "Sistema a pedirem, em thread. MEDIDO em 01/09/2026."
-    ),
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "core/led_control.py::apply_led_settings": (
-        "Aplica settings no controle (core/led_control.py:128) — o caminho DIRETO, "
-        "sem passar pelo daemon. O produto de hoje escreve pela IPC (`led.set`), "
-        "que é o certo enquanto o daemon segura o hidraw. Fecha, ou some, quando a "
-        "decisão sobre escrita direta for tomada; hoje é caminho vivo sem chamador. "
-        "MEDIDO em 01/09/2026."
-    ),
-    "daemon/subsystems/gamepad.py::suspend_vpads_for_steam_input": (
-        "Retira o gamepad virtual de cena pelo tempo do jogo da allowlist (JOGO-01, "
-        "daemon/subsystems/gamepad.py:460). É a cura do terceiro controle — o "
-        "espelho que o Steam Input faz de CADA gamepad que vê, inclusive do nosso. "
-        "Nenhum caminho do daemon a chama. Fecha quando a allowlist de jogo passar "
-        "a acioná-la. MEDIDO em 01/09/2026."
-    ),
     # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "interface/mesa_viva.py::estado_do_card": (
         "O estado de UM card da mesa — mic, volume, canal, rota "
@@ -1222,22 +1064,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `daemon.reload` que não chega ao serviço fazia a tela dizer **"Pronto."**
     # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
     #     por ela é o DESPACHO do daemon, não a janela.
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
-        "MEDIDO em 26/08/2026, e esta é a lápide que MENOS depende da L2-E: a "
-        "peneira que a posse arma, e quem tem de perguntar por ela é o "
-        "DESPACHO — `daemon/lifecycle.py`, no bloco do "
-        "`_dispatch_gamepad_emulation`, que hoje manda os botões CRUS ao "
-        "gamepad virtual gateado só pelos 0,3 s de grace e sobrevive de "
-        "propósito ao `daemon.pause` e ao modo jogo. Sem essa pergunta, "
-        "confirmar uma entrada com o cabo na mão dispara um pulo ou um tiro "
-        "no jogo aberto atrás da janela. "
-        "ONDE O CAMINHO SE PERDE: o daemon não pergunta. NÃO fiz porque "
-        "`daemon/lifecycle.py` não é posse da L1-F (regra R-A da leva: "
-        "precisou de arquivo alheio, relata e para). "
-        "O QUE A FECHA: uma linha no despacho, subtraindo o que esta função "
-        "devolve. DONO: a Onda do daemon, ou quem coordena a leva seguinte."
-    ),
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "core/physical_report_reader.py::eh_report_de_estado": (
         "MEDIDO em 29/09/2026: a porta pública do `_struct_base` (BATERIA-QUE-PULA-01) "
@@ -1272,39 +1098,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "e quando for, o `bt_active_mode.sh` para de costurar NO MESMO commit."
     ),
     # dela"*. A assinatura mudou (I1 da INÍCIO NÃO MENTE-01): o `ao_aplicar` do
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "daemon/subsystems/hotkey.py::HotkeySubsystem": (
-        "MEDIDO em 12/08/2026: a classe existe, tem `name = 'hotkey'` e um "
-        "`start` que o próprio docstring chama de `Noop`, e NÃO está no "
-        "`SUBSYSTEM_REGISTRY` de daemon/subsystems/__init__.py:41. Quem sobe o "
-        "hotkey de verdade é lifecycle.py:393, chamando `start_hotkey_manager` "
-        "direto. A classe é uma sentinela de um registro que ninguém itera. "
-        "O QUE A FECHA: ou ela entra no registro e o `lifecycle` para de subir "
-        "o hotkey à mão, ou ela sai da árvore. Como o próprio "
-        "`SUBSYSTEM_REGISTRY` confessa no docstring do módulo (linha 13) que "
-        "`não é iterado por ninguém em produção`, fechar isto de verdade é "
-        "fechar o registro inteiro — trabalho de desenho, não de uma linha."
-    ),
-    # sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
-    "integrations/desktop_notifications.py::notify_battery_low": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama; em `src/` só existe a "
-        "citação do exemplo em comentário (linha 220). É a outra ponta da "
-        "lacuna do interruptor `..._DESKTOP_NOTIFICATIONS`: mesmo que alguém "
-        "ligasse a env hoje, nada chamaria esta função, porque nenhum ponto do "
-        "daemon observa a bateria caindo e a invoca. "
-        "O QUE A FECHA: chamar do lugar onde a bateria já é lida — a mesma "
-        "borda que hoje só atualiza a janela. A ordem certa é ligar o "
-        "interruptor e o chamador na MESMA leva; ligar só um dos dois deixa a "
-        "promessa igualmente vazia e mais difícil de enxergar."
-    ),
-    "integrations/desktop_notifications.py::notify_battery_recovered": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É o par de "
-        "`notify_battery_low` — sem ela, a dedução por `once_key` nunca é "
-        "rearmada e o aviso de bateria baixa seria emitido UMA vez por processo, "
-        "mesmo que ela carregasse o controle e ele descarregasse de novo. "
-        "O QUE A FECHA: a mesma borda da entrada anterior, na mesma leva; as "
-        "duas juntas ou nenhuma, porque metade da cura é pior que nenhuma aqui."
-    ),
     # `core/led_control.py::apply_led_settings` e `::player_bitmask` MORARAM
     # `trigger_set_detalhado` e `trigger_reset_detalhado` SAÍRAM daqui em
     # o `_toast_trigger` decide pelo CORPO do daemon, via `frase_do_desfecho`.
@@ -1331,38 +1124,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "catálogo compartilhado que guarda as curvas (:259), e o único leitor "
         "dele é `scripts/gerar-tabela-de-curvas.py`:52, um gerador de "
         "documentação. Nada em `src/` o carrega do disco."
-    ),
-    "app/actions/ambiente_na_tela.py::descrever_teclado_na_tela": (
-        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7); a razão foi SUBSTITUÍDA em "
-        "26/08/2026 (LEVA-3-D), porque a de antes mandava pendurar esta frase "
-        "e a medição derrubou a ordem. ONDE O CAMINHO SE PERDE, e agora são "
-        "duas coisas: (1) a função procura `osk_disponivel` no TOPO do "
-        "`state`, e o daemon a publica DENTRO do bloco `keyboard_emulation` "
-        "(`daemon/ipc_handlers.py:_keyboard_emulation_payload`) — contra "
-        "`tests/fixtures/state_full_quatro_controles.json`, capturado com a "
-        "máquina TENDO teclado na tela, ela responde 'não consegui ler'; "
-        "(2) o defeito que ela existia para curar FECHOU por outro caminho em "
-        "25/08 (`e909b62`, N12): `app/actions/mouse_actions.py:_anotar_teclado"
-        "_na_tela` lê a chave do lugar certo e "
-        "`app/actions/input_actions.py:179 frase_do_teclado_na_tela` a "
-        "transforma na frase da legenda — no gancho exato que a razão antiga "
-        "nomeava. Pendurá-la hoje poria DUAS frases sobre o mesmo fato na "
-        "mesma legenda, uma delas falsa. O QUE FECHA: a DECISÃO entre as duas "
-        "— consertar o nível da chave e apagar a irmã, ou apagar esta. Enquanto "
-        "não se decide, `tests/unit/test_ambiente_presumido_01_o_que_a_maquina"
-        "_nao_tem.py::TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade` trava a "
-        "medição e reprova em quem consertar o nível sem escolher."
-    ),
-    # sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
-    "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
-        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
-        "chave que NENHUMA frente desta sprint publica ainda em `state_full` "
-        "(Z7-C não toca `daemon/ipc_handlers.py`, por posse declarada em §5). "
-        "ONDE O CAMINHO SE PERDE: falta o publicador da chave, além do leitor "
-        "de tela. O QUE FECHA: a Onda 11 · Sistema, ou quem publicar a chave "
-        "primeiro (§10 da sprint). 29/09/2026: a A-TELA-PERGUNTA-AO-DONO-01 a "
-        "deixou à OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01, que a liga ou a tira "
-        "junto com o publicador do `steam_layout_achado`."
     ),
 
 }
