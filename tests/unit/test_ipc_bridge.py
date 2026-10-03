@@ -327,7 +327,7 @@ _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 _PONTE = _SRC / "app" / "ipc_bridge.py"
 
 _QUEM_FICOU_NO_LUGAR: dict[str, str] = {
-    "apply_draft": "apply_draft_detalhado + aplicacao_confirmada",
+    "apply_draft": "apply_draft_detalhado",
     "rumble_policy_set": "rumble_policy_set_checked",
     "rumble_policy_set_detalhado": "rumble_policy_set_checked",
     "trigger_reset": "trigger_reset_detalhado",

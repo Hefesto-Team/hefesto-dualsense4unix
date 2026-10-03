@@ -700,7 +700,7 @@ def machine_declare_detalhado(
 
     ``descartados`` (CONFIG-06, 23/08/2026) é o que a gravação teve de deixar
     para trás — campo de topo que já estava em disco com valor que o schema
-    recusa. Vem em RÓTULO de tela (:data:`_CAMPOS_DA_MAQUINA`), e é **vazio no
+    recusa. Vem em RÓTULO de tela (:func:`_rotulos_dos_campos`), e é **vazio no
     caso comum**: a chave nem aparece no corpo quando não há nada a dizer.
 
     Duas funções em vez de trocar o tipo de retorno da :func:`machine_declare`
@@ -775,7 +775,7 @@ def destinos_da_aplicacao(resposta: Any) -> tuple[list[str], list[str]]:
     """``(aplicado_em, guardado_em)`` de uma resposta do daemon (ELO-MUDO-01).
 
     Dono ÚNICO da leitura desses dois campos do lado da janela, pelo mesmo
-    motivo de :func:`aplicacao_confirmada`: quatro rotas os publicam
+    motivo de todo dono único desta ponte: quatro rotas os publicam
     (``trigger.set``, ``trigger.reset``, ``led.set``, ``led.player_set``) e cada
     aba que os lesse por conta própria seria mais uma chance de nascerem duas
     leituras do mesmo payload.

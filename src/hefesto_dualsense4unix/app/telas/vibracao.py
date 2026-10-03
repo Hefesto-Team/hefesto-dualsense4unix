@@ -300,7 +300,7 @@ def textos_do_estado(
     ==================================== =========================================
 
     **ERAM QUATRO ATÉ 07/09/2026**, e a que saiu era a primeira — a contagem de
-    pedidos do jogo. Ver :data:`SEM_A_CONTAGEM_DE_PEDIDOS`.
+    pedidos do jogo.
 
     **NENHUMA FRASE NASCE AQUI.** Este módulo escolhe QUANDO perguntar e traduz
     a resposta para a forma que a tela consome; o texto tem dono, e o dono é o
