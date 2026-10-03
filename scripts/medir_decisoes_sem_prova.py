@@ -131,9 +131,17 @@ def problemas_de_forma(linhas) -> list[str]:
     return ruins
 
 
+NOME_DO_INSTRUMENTO = "medir_decisoes_sem_prova"
+
+
 def _e_o_proprio_instrumento(fonte: str) -> bool:
-    """O arquivo que carrega ESTE instrumento não é régua de decisão nenhuma."""
-    return pathlib.Path(__file__).stem in fonte
+    """O arquivo que carrega ESTE instrumento não é régua de decisão nenhuma.
+
+    O nome é uma constante, e não a prosa do cabeçalho: o corte dos comentários
+    tirou o nome do arquivo de dentro dele, e o instrumento passou a se contar
+    como prova de 30 decisões.
+    """
+    return NOME_DO_INSTRUMENTO in fonte
 
 
 def _regex_dos_ids(ids):

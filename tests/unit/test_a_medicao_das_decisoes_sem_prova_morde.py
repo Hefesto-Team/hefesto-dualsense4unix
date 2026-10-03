@@ -320,9 +320,19 @@ def test_o_laudo_de_hoje_sai_com_as_tres_medicoes(mi, capsys):
     for cabeca in ("MEDIÇÃO 1", "MEDIÇÃO 2", "MEDIÇÃO 3",
                    "O CUSTO DE CADA DEGRAU"):
         assert cabeca in saida
-    assert "D-GESTO-DO-MAPA" in saida, (
-        "as citadas só no cabeçalho saem NOMEADAS — é a fila mais barata")
+    so_no_cabecalho = mi.medir()["citadas_so_no_cabecalho"]
+    assert so_no_cabecalho, "a fila das citadas só no cabeçalho esvaziou: o laudo não a prova"
+    sem_nome = [i for i in so_no_cabecalho if i not in saida]
+    assert not sem_nome, (
+        f"as citadas só no cabeçalho saem NOMEADAS — é a fila mais barata: {sem_nome}")
     assert "D-AUDIO-E-GIRO-NASCEM-LIGADOS" in saida
+
+
+def test_o_nome_do_instrumento_e_o_do_arquivo(mi):
+    """A constante é o que o faz reconhecer a si mesmo: renomear o arquivo a quebra."""
+    assert mi.NOME_DO_INSTRUMENTO == pathlib.Path(mi.__file__).stem
+    assert mi._e_o_proprio_instrumento(
+        pathlib.Path(mi.__file__).read_text(encoding="utf-8"))
 
 
 def test_o_instrumento_nao_compra_a_propria_regua_como_prova(mi, tmp_path):
