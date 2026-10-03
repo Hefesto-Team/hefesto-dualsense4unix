@@ -8,6 +8,8 @@ import statistics
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -32,6 +34,20 @@ ASSENTAR = 3
 TETO_DA_MEDIANA_MS = 15.0
 TETO_DO_P95_MS = 40.0
 TETO_DA_ABA_S = 20.0
+
+
+@contextmanager
+def _sem_o_rastreador() -> Iterator[None]:
+    """Suspende, neste fio, o rastreador de linhas (a cobertura da CI) enquanto
+    o tique é cronometrado: o teto é do custo do PRODUTO, e sob `--cov` cada
+    linha custa de 2 a 3 vezes mais (medido: a mediana da aba 10 sobe de 5 ms
+    para 12 ms, a 3 ms do teto, e uma máquina de CI 20 % mais lenta o cruza)."""
+    antes = sys.gettrace()
+    sys.settrace(None)
+    try:
+        yield
+    finally:
+        sys.settrace(antes)
 
 
 def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
@@ -61,9 +77,10 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
         def tique() -> bool:
             if roteiro.acabou:
                 return False
-            t0 = time.thread_time()
-            volta = tique_original()
-            custo = (time.thread_time() - t0) * 1000
+            with _sem_o_rastreador():
+                t0 = time.thread_time()
+                volta = tique_original()
+                custo = (time.thread_time() - t0) * 1000
             aba = ABAS[roteiro.i] if roteiro.i < len(ABAS) else ""
             if aba and piloto.pagina == aba and piloto.pronto and piloto.tela.na_aba:
                 roteiro.chegou += 1
@@ -107,6 +124,24 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
         f"abas que não juntaram {TIQUES} tiques em {TETO_DA_ABA_S:.0f} s: "
         f"{roteiro.famintas} (a página não ficou de pé, ou o laço andou devagar)")
     return custos
+
+
+def test_o_cronometro_do_tique_suspende_o_rastreador_e_o_devolve() -> None:
+    """O rastreador some só durante a medida, e volta ao que era (a cobertura da
+    CI continua contando o resto do teste)."""
+    def rastro(_frame: object, _evento: str, _arg: object) -> object:
+        return rastro
+
+    antes = sys.gettrace()
+    sys.settrace(rastro)
+    try:
+        with _sem_o_rastreador():
+            dentro = sys.gettrace()
+        depois = sys.gettrace()
+    finally:
+        sys.settrace(antes)
+    assert dentro is None, "o rastreador ficou ligado dentro da medida"
+    assert depois is rastro, "o rastreador não voltou"
 
 
 def _p95(valores: list[float]) -> float:
