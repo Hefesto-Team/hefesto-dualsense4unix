@@ -881,7 +881,7 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
 
     codigo = (
         "import sys\n"
-        "from hefesto_dualsense4unix.interface import conexoes as t\n"
+        "from hefesto_dualsense4unix.interface import conexoes as t\n"  # noqa-acento: nome do módulo
         "t.opcoes_do_teto()\n"
         "t.fala_do_teto('economia')\n"
         "t.teto_que_vale(t.Vibracao(a_viva='balanceado'))\n"
