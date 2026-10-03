@@ -5484,14 +5484,45 @@ PROVAS = [
 #: `state_full` não publica nenhum dos três.
 #: só ligam e desligam o olhar do dono no processo da interface. O `state_full`
 #: `state_full` não publica.
-SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
-           "ignorar", "examinar-portas", "teto-da-vibracao",
-           "escolher-aparelho", "escolher-entrada", "tirar-daqui",
-           "nova-entrada", "nova-extensao", "nova-face",
-           "adaptador-renomear", "aparelho-renomear", "entrada-face",
-           "entrada-nao-alcanco", "adaptador-reordenar",
-           "dono-renomear", "perfil-do-controle", "mapear-gravar",
-           "mapear-comecar", "mapear-parar", "esquecer-aparelho", "confirmar-esquecer")
+_NO_MAQUINA = "grava no `maquina.json`; o `state_full` não o republica"
+_NO_BLUEZ = "grava o `Alias` no BlueZ; o `state_full` não o publica"
+_O_MAPA = "grava o desenho do gabinete (`_gravar_o_mapa`); o `state_full` não publica o mapa"
+
+#: Cada gesto sem eco no `state_full`, e a razão: sem ela a declaração é lápide.
+RAZAO_DO_SEM_ECO: dict[str, str] = {
+    "sala-altura": _NO_MAQUINA,
+    "sala-visada": _NO_MAQUINA,
+    "mic-existe": "grava no `maquina.json` e sobe ou desce o `bt_mic` no mesmo pedido: "
+                  "tem efeito vivo, não tem eco",
+    "vizinho-o-que-e": _NO_MAQUINA,
+    "ignorar": "a dispensa de uma ordem vai ao `maquina.json`; o `state_full` não a publica",
+    "examinar-portas": "não toca o daemon: muda a tira do Check-up no tique seguinte",
+    "teto-da-vibracao": "grava no perfil; o efeito vivo vem do `profile.switch`, e o "
+                        "`state_full` não publica override por controle",
+    "escolher-aparelho": "primeiro tempo do gesto de dois: guarda o aparelho na mão e "
+                         "não chama a ponte",
+    "escolher-entrada": _O_MAPA,
+    "tirar-daqui": _O_MAPA,
+    "nova-entrada": _O_MAPA,
+    "nova-extensao": _O_MAPA,
+    "nova-face": _O_MAPA,
+    "adaptador-renomear": _NO_MAQUINA,
+    "aparelho-renomear": _NO_BLUEZ,
+    "entrada-face": _NO_MAQUINA,
+    "entrada-nao-alcanco": _NO_MAQUINA,
+    "adaptador-reordenar": "grava a ordem das caixas no `gui_preferences.json`, "
+                           "que o daemon não lê",
+    "dono-renomear": _NO_BLUEZ,
+    "perfil-do-controle": "grava `controles[uniq].economia` no `maquina.json`; o "
+                          "`state_full` não o publica",
+    "mapear-gravar": "grava a porta da vez no `maquina.json` pelo dono do mapa",
+    "mapear-comecar": "só liga o olhar do dono, no processo da interface",
+    "mapear-parar": "só desliga o olhar do dono, no processo da interface",
+    "esquecer-aparelho": "só abre a pergunta, ou tira a linha do «Não Conectou»",
+    "confirmar-esquecer": "apaga a chave do pareamento no BlueZ, que o `state_full` "
+                          "não publica",
+}
+SEM_ECO = tuple(RAZAO_DO_SEM_ECO)
 
 
 # só leitura, com o ✓ de «tudo certo». <!-- noqa-acento: citação literal dela -->

@@ -37,11 +37,8 @@ A MORDIDA: tire `escolher-entrada` do `SEM_ECO` do pacote, ou acrescente
 """
 from __future__ import annotations
 
-import ast
-import io
 import pathlib
 import sys
-import tokenize
 from typing import Any
 
 import pytest
@@ -162,30 +159,6 @@ def _gesto(pac, nome: str):
 def _ctx(pac):
     return pac.Contexto(state={"active_profile": "regua"}, mesa=[],
                         conectados=CONECTADOS, estados={})
-
-
-def _onde_a_razao_mora(caminho: pathlib.Path) -> str:
-    """A prosa que EXPLICA o `SEM_ECO`, e só ela — não o arquivo inteiro."""
-    texto = caminho.read_text(encoding="utf-8")
-    linhas = texto.splitlines()
-
-    fim = next(i for i, linha in enumerate(linhas)
-               if linha.startswith("SEM_ECO"))
-    inicio = fim
-    while inicio > 0 and (linhas[inicio - 1].startswith("#")
-                          or not linhas[inicio - 1].strip()):
-        inicio -= 1
-    pedacos = linhas[inicio:fim]
-
-    for no in ast.walk(ast.parse(texto)):
-        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
-            doc = ast.get_docstring(no)
-            if doc:
-                pedacos.append(doc)
-    for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
-        if tok.type == tokenize.COMMENT and inicio < tok.start[0] <= fim:
-            pedacos.append(tok.string)
-    return "\n".join(pedacos)
 
 
 @pytest.mark.parametrize("nome", [*DO_GABINETE, "luz-nao-acende"])
@@ -318,11 +291,12 @@ def test_os_seis_do_gabinete_estao_declarados_sem_eco(a08, nome) -> None:
 
 
 def test_todo_sem_eco_desta_aba_tem_razao_escrita(a08) -> None:
-    """`SEM_ECO` sem razão escrita é lápide para esconder defeito."""
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/"
-             "a08_conexoes.py")
-    prosa = _onde_a_razao_mora(fonte)
-    mudos = [nome for nome in a08.SEM_ECO if nome not in prosa]
+    """`SEM_ECO` sem razão escrita é lápide para esconder defeito: a razão é DADO."""
+    razoes = a08.RAZAO_DO_SEM_ECO
+    assert set(a08.SEM_ECO) == set(razoes), (
+        "o `SEM_ECO` e o dicionário das razões divergem: "
+        f"{sorted(set(a08.SEM_ECO) ^ set(razoes))}")
+    mudos = [nome for nome, razao in razoes.items() if len(razao.split()) < 4]
     assert mudos == [], (
         f"estes gestos estão em `SEM_ECO` e ninguém escreveu por quê: {mudos}. "
         f"Uma declaração sem razão é indistinguível de um defeito escondido — "
