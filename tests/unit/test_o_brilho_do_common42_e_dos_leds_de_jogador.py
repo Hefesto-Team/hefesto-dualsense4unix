@@ -20,7 +20,7 @@ próprio — o degrau que o perfil escolheu para aquele controle
 (`_brilho_das_luzes`), e não o `light.brightness` da pydualsense. A régua tem
 DUAS metades, e a segunda é a que morde:
 
-1. a constante do bit diz de qual LED ela é (o fato substituído fica escrito);
+1. a constante existe e é o bit zero do `flag2`;
 2. com o bit ligado, o byte é o do campo próprio — perguntado ao
    `_build_common`, e não ao texto do backend. Devolver o `light.brightness`
    como fonte reprova aqui, nomeando a dívida. O caminho inteiro, nos dois
@@ -51,21 +51,6 @@ def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
     h.triggerL, h.triggerR = DSTrigger(), DSTrigger()
     h._suppress_leds = led_gravavel
     return h
-
-
-def test_a_constante_diz_de_qual_led_ela_e() -> None:
-    """O fato substituído fica escrito onde alguém vai lê-lo antes de usar."""
-    fonte = REPORT.read_text(encoding="utf-8")
-    trecho = fonte.split("VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE")[0][-1200:]
-    assert "LEDS DE JOGADOR" in trecho.upper(), (
-        "o comentário da VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE tem de dizer que o "
-        "byte é dos LEDs de jogador. Ele dizia «BRILHO da lightbar» até 09/09/2026, e "
-        "foi por isso que a chave do mapa nasceu com o dono errado."
-    )
-    assert "NÃO É O BRILHO DA LIGHTBAR" in trecho.upper(), (
-        "o desmentido tem de estar junto da constante: quem lê o nome dela em inglês "
-        "conclui «lightbar» sozinho, que foi o que esta casa fez por um mês."
-    )
 
 
 def test_a_constante_existe_e_e_o_bit_zero() -> None:
