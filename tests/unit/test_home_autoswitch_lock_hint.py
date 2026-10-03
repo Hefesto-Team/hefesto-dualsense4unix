@@ -203,16 +203,6 @@ def gtk_de_mentira(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
 
-    seletor = types.ModuleType(
-        "hefesto_dualsense4unix.app.widgets.segmented_selector"
-    )
-    seletor.SegmentedSelector = _WidgetFalso  # type: ignore[attr-defined]
-    monkeypatch.setitem(
-        sys.modules,
-        "hefesto_dualsense4unix.app.widgets.segmented_selector",
-        seletor,
-    )
-
 
 class TestEstadoDoDaemonCarregaOCampo:
     """A frase depende do campo chegar nos DOIS payloads que a GUI lê.

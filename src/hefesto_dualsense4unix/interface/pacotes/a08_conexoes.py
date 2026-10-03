@@ -1360,7 +1360,7 @@ def dica_da_luz(via: str) -> str:
     que `trava_da_luz` já respondeu — a mesma junção que
     `secao_controles._BlocoDaLuz` faz do lado da janela GTK. A ordem
     de 13/09 que tirou o aviso e a razão está no índice da terceira lista,
-    `docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`.
+    o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.actions.config.secao_controles import (
@@ -1568,9 +1568,7 @@ def _orcamento_da_mesa() -> tuple[str | None, bool]:
     `_declaracao()` (:100) guarda o `maquina.json` inteiro validado, e
     `MaquinaConfig.orcamento.teto` é exatamente o campo que
     `orcamento_em_vigor()` devolveria — `carregar_maquina().orcamento.teto`, o
-    corpo dela. A leitura antiga abria o arquivo a cada tique E arrastava
-    `gi`/GTK para o processo (por `app.widgets.segmented_selector`), para zero
-    informação nova.
+    corpo dela. Reler o arquivo a cada tique não traria informação nova.
     """
     declaracao = _declaracao()
     if declaracao is None:
