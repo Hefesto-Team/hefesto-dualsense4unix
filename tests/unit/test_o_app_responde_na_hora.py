@@ -749,7 +749,7 @@ class TestOServicoQueSaiTiraOSocket:
                 assert servidor.socket_path.exists()
                 launch_env.materialize_launch_env(SimpleNamespace())  # type: ignore[arg-type]
                 assert await asyncio.to_thread(entrou.wait, 10), "a escrita não começou"
-                with contextlib.suppress(TimeoutError):
+                with contextlib.suppress(TimeoutError, asyncio.TimeoutError):
                     await asyncio.wait_for(servidor.stop(), timeout=0.5)
                 return servidor.socket_path.exists()
 
