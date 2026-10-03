@@ -187,7 +187,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ### Adicionado
 
-- `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` liga as métricas Prometheus, e `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta.
+- `hefesto-dualsense4unix metrics ligar` liga as métricas Prometheus, e `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta.
 
 ### Mudado
 

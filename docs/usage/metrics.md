@@ -5,26 +5,23 @@ O serviço pode expor métricas no formato do Prometheus em
 
 ## Ligar
 
-Duas variáveis de ambiente, lidas quando o serviço sobe:
-
-- `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` liga (só o valor `1` liga);
-- `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta (o padrão é 9090). Um
-  valor inválido não derruba o serviço: ele fica na porta padrão e registra o
-  motivo no diário.
-
 ```bash
-systemctl --user set-environment HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1 \
-                                 HEFESTO_DUALSENSE4UNIX_METRICS_PORT=19199
+hefesto-dualsense4unix metrics ligar
 systemctl --user restart hefesto-dualsense4unix.service
 ```
 
-Nada no instalador nem na janela liga as métricas por você, e ligar exige
-reiniciar o serviço: o `daemon.reload` não sobe o servidor de métricas.
+O verbo grava `metrics.flag` na pasta de configuração, e o serviço lê a escolha
+quando sobe: ligar exige reiniciar o serviço, porque o `daemon.reload` não sobe o
+servidor de métricas. `hefesto-dualsense4unix metrics desligar` desfaz.
 
-As variáveis são o único caminho porque o serviço constrói o `DaemonConfig` com
-cinco parâmetros (`poll_hz`, `auto_reconnect`, `ps_long_press_ms`,
-`keyboard_emulation_enabled` e `plugins_enabled`), e `metrics_enabled` não é um
-deles.
+`HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta (o padrão é 9090). Um valor
+inválido não derruba o serviço: ele fica na porta padrão e registra o motivo no
+diário. Essa variável é lida quando o serviço sobe.
+
+O serviço constrói o `DaemonConfig` com seis parâmetros (`poll_hz`,
+`auto_reconnect`, `ps_long_press_ms`, `keyboard_emulation_enabled`,
+`plugins_enabled` e `metrics_enabled`), e os dois últimos vêm dos arquivos que
+`plugin ligar` e `metrics ligar` gravam.
 
 ## Conferir
 

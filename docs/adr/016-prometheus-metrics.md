@@ -150,14 +150,14 @@ já rodando.
 > **Dois números desta nota caducaram, e os dois ficam aqui porque medição
 > datada não se apaga.**
 >
-> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são cinco
->    parâmetros. Ver a nota de 2026-08-01, abaixo. (A frase "cinco parâmetros"
+> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são seis
+>    parâmetros. Ver a nota de 2026-08-01, abaixo. (A frase "seis parâmetros"
 >    é literal de propósito: `test_doc_verdade_02_contagens_derivadas` a procura
 >    inteira, e quebrá-la em duas linhas já derrubou o portão uma vez.)
 > 2. **O "zero ocorrências em `src/`"** caducou em 01/08/2026, quando as duas
->    variáveis nasceram. Medido em 22/08/2026:
->    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas,
->    as duas em `daemon/subsystems/metrics.py`. Ver a nota de 2026-08-22, no fim.
+>    variáveis nasceram. Medido em 03/10/2026:
+>    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **uma** linha,
+>    em `daemon/subsystems/metrics.py`. Ver a nota de 2026-08-22, no fim.
 
 Consequência prática: hoje o endpoint só sobe mexendo no código. O item
 "histograma de latência por tick, previsto para V2.1" também não foi feito, e
@@ -169,11 +169,12 @@ Corrige um número da nota anterior, e só ele. O veredito de 25/07 continua de
 pé: não há chave de usuário para as métricas, e subir o endpoint exige mexer no
 código.
 
-O `DaemonConfig` é construído em `daemon/main.py` com cinco parâmetros:
+O `DaemonConfig` é construído em `daemon/main.py` com seis parâmetros:
 `poll_hz`, `auto_reconnect`, `ps_long_press_ms`, `keyboard_emulation_enabled`
-(29/07, EMULACAO-NO-JOGO-01, lido de `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`)
-e `plugins_enabled` (02/10/2026, lido do `plugins.flag` que o
-`hefesto-dualsense4unix plugin ligar` grava).
+(29/07, EMULACAO-NO-JOGO-01, lido de `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`),
+`plugins_enabled` (02/10/2026, lido do `plugins.flag` que o
+`hefesto-dualsense4unix plugin ligar` grava) e `metrics_enabled` (03/10/2026, lido
+do `metrics.flag` que o `hefesto-dualsense4unix metrics ligar` grava).
 
 Vale registrar por que o erro passou: esta ADR, o `README.md` e o
 `docs/usage/metrics.md` são as três páginas **mais honestas** do projeto, e
@@ -203,10 +204,10 @@ ela; `_porta_efetiva(9090)` devolve `19199` com a variável de porta em `19199`,
 e `9090` com ela em `abc` ou `70000`.
 
 **O número que a nota de 25/07 errou, medido:**
-`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas, as
-constantes `ENV_METRICS_ENABLED` e `ENV_METRICS_PORT`, em
-`daemon/subsystems/metrics.py`. Era zero em
-25/07, e foi por isso que aquela nota disse zero.
+`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **uma** linha, a
+constante `ENV_METRICS_PORT`, em `daemon/subsystems/metrics.py` (eram duas até
+03/10/2026, quando a `ENV_METRICS_ENABLED` saiu). Era zero em 25/07, e foi por
+isso que aquela nota disse zero.
 
 **Duas metades do veredito antigo continuam de pé, e é por elas que esta nota
 não é uma absolvição:**
@@ -231,3 +232,15 @@ deriva do código as duas chaves, o corpo do `reload_config`, a ausência de
 `METRICS` em `assets/*.service` e no `install.sh`, os oito nomes de métrica e o
 comportamento do `is_enabled`/`_porta_efetiva` — e reprova a página que
 divergir. Nenhuma das seis afirmações desta nota pode caducar em silêncio.
+
+## Nota de verificação — 2026-10-03
+
+**A chave `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED` saiu, e a primeira metade do
+veredito de 22/08 foi curada.** Nada escrevia a variável, e `systemctl --user
+set-environment` não sobrevive ao fim da sessão. A mão agora é um verbo:
+`hefesto-dualsense4unix metrics ligar` grava `metrics.flag` na pasta de
+configuração, e `daemon/main.py` o lê na subida
+(`metrics_enabled=session.load_metrics_enabled()`). Só
+`HEFESTO_DUALSENSE4UNIX_METRICS_PORT` segue como variável, porque é parâmetro e
+não interruptor. A segunda metade continua de pé: ligar exige reiniciar o daemon.
+A régua é `tests/unit/test_as_metricas_ligam_pela_mao.py`.

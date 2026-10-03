@@ -503,6 +503,37 @@ def load_plugins_enabled() -> bool:
     return isinstance(data, dict) and data.get("enabled") is True
 
 
+_METRICS_FLAG_FILE = "metrics.flag"
+
+
+def save_metrics_enabled(enabled: bool) -> bool:
+    """Grava a escolha de expor as métricas (``hefesto metrics ligar|desligar``).
+
+    Ferramenta de diagnóstico, desligada por padrão: só a mão de quem quer
+    medir a liga (OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01, 03/10/2026). Vale na
+    próxima subida do daemon. ``False`` = não gravou.
+    """
+    try:
+        flag = config_dir(ensure=True) / _METRICS_FLAG_FILE
+        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+    except Exception as exc:
+        logger.debug("metrics_flag_save_failed", err=str(exc))
+        return False
+    return True
+
+
+def load_metrics_enabled() -> bool:
+    """A escolha gravada por :func:`save_metrics_enabled`; sem arquivo, desligada."""
+    try:
+        flag = config_dir() / _METRICS_FLAG_FILE
+        if not flag.exists():
+            return False
+        data = json.loads(flag.read_text(encoding="utf-8") or "{}")
+    except Exception:
+        return False
+    return isinstance(data, dict) and data.get("enabled") is True
+
+
 _GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
 
 _GAMEPAD_DISABLED_FLAG_FILE = "gamepad_disabled.flag"
@@ -663,6 +694,7 @@ __all__ = [
     "load_gamepad_preference",
     "load_keyboard_preference",
     "load_last_profile",
+    "load_metrics_enabled",
     "load_mouse_emulation",
     "load_mouse_preference",
     "load_paused_state",
@@ -677,6 +709,7 @@ __all__ = [
     "save_gamepad_emulation",
     "save_keyboard_emulation",
     "save_last_profile",
+    "save_metrics_enabled",
     "save_mouse_emulation",
     "save_paused_state",
     "save_plugins_enabled",

@@ -98,6 +98,7 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
             os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
         ),
         plugins_enabled=session.load_plugins_enabled(),
+        metrics_enabled=session.load_metrics_enabled(),
     )
     daemon = Daemon(controller=controller, config=config)
 

@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems.metrics import (
-    ENV_METRICS_ENABLED,
     ENV_METRICS_PORT,
     MetricsSubsystem,
     _porta_efetiva,
@@ -35,13 +34,12 @@ def _ocorrencias_em_src() -> list[str]:
     return achados
 
 
-def test_as_duas_chaves_sao_as_que_a_doc_nomeia() -> None:
-    """Mordida: renomear `ENV_METRICS_PORT` no módulo."""
-    assert f"{_PREFIXO}_ENABLED" == ENV_METRICS_ENABLED
+def test_a_chave_da_porta_e_o_verbo_sao_os_que_a_doc_nomeia() -> None:
+    """Mordida: renomear `ENV_METRICS_PORT` no módulo, ou tirar o verbo da página."""
     assert f"{_PREFIXO}_PORT" == ENV_METRICS_PORT
 
     texto = _METRICS_MD.read_text(encoding="utf-8")
-    for chave in (ENV_METRICS_ENABLED, ENV_METRICS_PORT):
+    for chave in (ENV_METRICS_PORT, "hefesto-dualsense4unix metrics ligar"):
         assert chave in texto, (
             f"a página de métricas não cita {chave}, que é como se liga o "
             "endpoint. Sem o nome exato, a instrução não é executável"
@@ -115,22 +113,21 @@ def test_a_tabela_da_doc_e_os_nomes_que_o_modulo_registra() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("valor", "esperado"),
-    [("1", True), ("true", False), ("0", False), (None, False)],
-)
-def test_is_enabled_so_aceita_o_literal_um(
-    valor: str | None, esperado: bool, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("valor", ["1", "true", "0", None])
+def test_a_variavel_de_ambiente_nao_liga_as_metricas(
+    valor: str | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`"true"` NÃO liga, e a nota afirma isso por extenso."""
+    """A chave que nada escrevia saiu em 03/10/2026: só `metrics_enabled` liga."""
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
+    chave = f"{_PREFIXO}_ENABLED"
     if valor is None:
-        monkeypatch.delenv(ENV_METRICS_ENABLED, raising=False)
+        monkeypatch.delenv(chave, raising=False)
     else:
-        monkeypatch.setenv(ENV_METRICS_ENABLED, valor)
+        monkeypatch.setenv(chave, valor)
 
-    assert MetricsSubsystem().is_enabled(DaemonConfig()) is esperado
+    assert MetricsSubsystem().is_enabled(DaemonConfig()) is False
+    assert MetricsSubsystem().is_enabled(DaemonConfig(metrics_enabled=True)) is True
 
 
 @pytest.mark.parametrize(

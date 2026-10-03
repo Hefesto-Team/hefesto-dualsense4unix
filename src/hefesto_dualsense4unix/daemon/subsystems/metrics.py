@@ -17,7 +17,6 @@ logger = get_logger(__name__)
 
 _BIND_HOST = "127.0.0.1"
 
-ENV_METRICS_ENABLED = "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED"
 ENV_METRICS_PORT = "HEFESTO_DUALSENSE4UNIX_METRICS_PORT"
 
 _LabeledSeries = list[tuple[dict[str, str], int | float]]
@@ -289,9 +288,8 @@ class MetricsSubsystem:
         logger.info("metrics_subsystem_stopped")
 
     def is_enabled(self, config: DaemonConfig) -> bool:
-        """Habilitado por ``metrics_enabled=True`` OU pela variável de ambiente."""
-        env_force = os.environ.get(ENV_METRICS_ENABLED, "0") == "1"
-        return bool(getattr(config, "metrics_enabled", False)) or env_force
+        """Habilitado só com ``metrics_enabled`` — a mão é ``hefesto metrics ligar``."""
+        return bool(getattr(config, "metrics_enabled", False))
 
 
 __all__ = ["MetricsCollector", "MetricsSubsystem"]

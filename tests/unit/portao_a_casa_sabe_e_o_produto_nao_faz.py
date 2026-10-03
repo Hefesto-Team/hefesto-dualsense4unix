@@ -273,9 +273,10 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_PORT": (
         "Porta do servidor de métricas (daemon/subsystems/metrics.py:21). É "
-        "parâmetro do instrumento cujo INTERRUPTOR é `..._METRICS_ENABLED` — "
-        "afinar a porta sem poder ligar o servidor não é promessa; a promessa "
-        "está declarada como lacuna na chave ENABLED. MEDIDO em 12/08/2026."
+        "parâmetro do instrumento cujo INTERRUPTOR é o verbo `hefesto metrics "
+        "ligar` (cli/cmd_metrics.py, que grava o `metrics.flag` lido por "
+        "daemon/main.py) — a chave `..._METRICS_ENABLED` saiu em 03/10/2026. "
+        "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_NICE": (
         "Prioridade de escalonamento do processo do daemon (daemon/main.py:66). "
@@ -442,7 +443,9 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que ela QUER o DualSense como microfone padrão do sistema "
         "(core/system_check.py:119), e com isso cala o alarme do doctor. É "
-        "escolha dela por definição. MEDIDO em 12/08/2026: sem mão."
+        "escolha dela por definição. REMEDIDO em 03/10/2026: a mão existe e não "
+        "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
+        "grava (install.sh:4090). Ver `_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "Liga/desliga o teclado emulado (daemon/main.py:79). É feature dela e "
@@ -450,19 +453,6 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "< o `keyboard_emulation.flag`, que é a decisão DELA. MEDIDO em "
         "12/08/2026: LIGADA — não pela env, e sim pelo companheiro declarado em "
         "`_MAO_FORA_DO_AMBIENTE`."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
-        "Liga o servidor HTTP de métricas (daemon/subsystems/metrics.py:20). "
-        "Publicar métricas é escolha de quem instala. REMEDIDO em 22/08/2026: "
-        "sem mão — nenhum `Environment=` em assets/, e o install.sh não menciona "
-        "METRICS. Fora de src/ a chave aparece em OITO lugares e nenhum deles a "
-        "ESCREVE, que é o que importa para este portão: README.md, CHANGELOG.md, "
-        "docs/adr/016, docs/usage/metrics.md, o sprint DOC-QUE-NAO-MENTE-03 de "
-        "03/08, tests/unit/test_metrics.py, este arquivo, e o %changelog do "
-        "pacote Fedora (packaging/fedora/hefesto-dualsense4unix.spec, entrada "
-        "`1:0.7.0-1`). O endereço é a ENTRADA do changelog e não a linha, de "
-        "propósito: o %changelog cresce por cima, e o ponteiro por número de "
-        "linha já apodreceu duas vezes em dez dias."
     ),
 }
 
@@ -508,6 +498,19 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "Logo a FEATURE tem mão — a env é o atalho de quem quer forçar o degrau "
         "do meio sem gravar decisão nenhuma no disco dela.",
     ),
+    "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
+        "core/system_check.py::system_warnings",
+        "REMEDIDO em 03/10/2026, e a lacuna de 12/08 já estava curada desde "
+        "26/08 (DROPIN-AMBIGUO-01): `install.sh --keep-dualsense-mic` grava a "
+        "MARCA DO GESTO (`fix_wireplumber_default_source.sh --marcar-gesto-do-mic`, "
+        "install.sh:4090), e as duas perguntas leem o mesmo dono em cinco "
+        "degraus — `system_warnings` pelo `_dualsense_mic_intended` "
+        "(system_check.py:88, chamada por lifecycle.py:3424) e o doctor pelo "
+        "`_prefere_mic_do_dualsense`. A env é o degrau 2 desses cinco, o atalho "
+        "de quem exporta à mão; gravá-la no instalador daria uma SEGUNDA fonte "
+        "de verdade para a mesma escolha, que é o defeito que o DROPIN-AMBIGUO "
+        "curou.",
+    ),
     "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
         "daemon/subsystems/bt_mic.py::uniqs_declarados",
         "REMEDIDO em 22/08/2026 (QUATRO-MICROFONES-01), e esta entrada é a "
@@ -524,42 +527,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     ),
 }
 
-#: sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
-_SEM_MAO_HOJE: dict[str, str] = {
-    "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
-        "MEDIDO em 12/08/2026, e este é o achado mais desconfortável da lista, "
-        "porque a porta parece existir e não existe: `install.sh` TEM a opção "
-        "`--keep-dualsense-mic` (declarada em :157, tratada em :260) e ela só "
-        "faz `WITH_WIREPLUMBER_FIX=0`. A env nunca é escrita — a única "
-        "ocorrência dela no instalador é o COMENTÁRIO de :227, que diz à "
-        "usuária `ou export HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1`, "
-        "isto é, manda ela fazer à mão o que o instalador poderia ter feito. "
-        "CONSEQUÊNCIA: quem instala com `--keep-dualsense-mic` continua ouvindo "
-        "o doctor alarmar que o DualSense virou a fonte padrão, e continua "
-        "sendo aconselhado a rodar `doctor --fix`, que desfaria a escolha que "
-        "ela acabou de fazer. Duas metades da mesma decisão, sem fio entre elas. "
-        "O QUE A FECHA: `--keep-dualsense-mic` gravar a env na unit (ou no "
-        "estado local que o doctor lê). É a lacuna desta lista com o caminho "
-        "mais óbvio — e mesmo assim não a fecho, porque tocar no instalador não "
-        "foi pedido e o passo tem de ser provado por ciclo uninstall→install."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
-        "REMEDIDO em 22/08/2026: ninguém ESCREVE a chave — nenhum "
-        "`Environment=` em assets/, nada no install.sh. O %changelog do pacote "
-        "Fedora (packaging/fedora/hefesto-dualsense4unix.spec, entrada "
-        "`1:0.7.0-1`) a ANUNCIA sem escrevê-la, que é exatamente a forma de "
-        "promessa que este portão existe para acusar. Ela é citada em outros "
-        "sete lugares fora de src/ (README.md, CHANGELOG.md, ADR-016, "
-        "docs/usage/metrics.md, o sprint DOC-QUE-NAO-MENTE-03, "
-        "tests/unit/test_metrics.py e este arquivo), e citar não é escrever. "
-        "O campo irmão "
-        "`DaemonConfig.metrics_enabled` também só tem leitor (metrics.py:294). "
-        "O QUE A FECHA: `Environment=` na unit ou uma opção do instalador. "
-        "ATENÇÃO ao decidir: enquanto ninguém liga isto, o `MetricsSubsystem` "
-        "nunca sobe — e é essa a razão de o defeito irmão (o subsystem que "
-        "ninguém PARA no shutdown) nunca ter sido observado numa máquina viva."
-    ),
-}
+_SEM_MAO_HOJE: dict[str, str] = {}
 
 
 _NAO_E_PROMESSA: dict[str, str] = {
@@ -2461,9 +2429,6 @@ class TestOPortaoMorde:
         assert not portas_que_ligam(
             "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED"
         ), "o detector aceitou o COMENTÁRIO de install.sh:227 como escrita"
-        assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED"), (
-            "o detector aceitou a linha de CHANGELOG do .spec como escrita"
-        )
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_BT_MIC"), (
             "o detector aceitou o TEXTO DE AJUDA do controller_card como escrita"
         )

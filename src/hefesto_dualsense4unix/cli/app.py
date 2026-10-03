@@ -54,6 +54,7 @@ app.add_typer(daemon_app, name="daemon")
 from hefesto_dualsense4unix.cli.cmd_controller import app as controller_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_coop import app as coop_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_gamepad import app as gamepad_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_metrics import app as metrics_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_mouse import app as mouse_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_native import app as native_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_plugin import app as plugin_app  # noqa: E402
@@ -68,6 +69,7 @@ app.add_typer(gamepad_app, name="gamepad")
 app.add_typer(coop_app, name="coop")
 app.add_typer(controller_app, name="controller")
 app.add_typer(plugin_app, name="plugin")
+app.add_typer(metrics_app, name="metrics")
 
 
 @app.command()

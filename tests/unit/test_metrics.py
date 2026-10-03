@@ -11,7 +11,6 @@ import pytest
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.metrics import (
     _BIND_HOST,
-    ENV_METRICS_ENABLED,
     ENV_METRICS_PORT,
     MetricsCollector,
     MetricsSubsystem,
@@ -180,8 +179,7 @@ class TestMetricsCollector:
 class TestMetricsSubsystem:
     @pytest.fixture(autouse=True)
     def _sem_env_de_metricas(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """As duas chaves saem do ambiente antes de cada teste desta classe."""
-        monkeypatch.delenv(ENV_METRICS_ENABLED, raising=False)
+        """A chave da porta sai do ambiente antes de cada teste desta classe."""
         monkeypatch.delenv(ENV_METRICS_PORT, raising=False)
 
     def _make_config(self, *, enabled: bool = True, port: int = 0) -> MagicMock:
@@ -206,25 +204,6 @@ class TestMetricsSubsystem:
         subsystem = MetricsSubsystem()
         assert subsystem.is_enabled(self._make_config(enabled=False)) is False
 
-
-    def test_a_env_liga_as_metricas_com_a_config_desligada(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A queixa C1 em uma linha: o campo era inalcançável de fora do código."""
-        monkeypatch.setenv(ENV_METRICS_ENABLED, "1")
-        subsystem = MetricsSubsystem()
-
-        assert subsystem.is_enabled(self._make_config(enabled=False)) is True
-
-    @pytest.mark.parametrize("valor", ["0", "true", "yes", "", "2"])
-    def test_so_o_literal_um_liga(
-        self, valor: str, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Mesma gramática dos plugins: só `"1"`, e nada de `"true"`."""
-        monkeypatch.setenv(ENV_METRICS_ENABLED, valor)
-        subsystem = MetricsSubsystem()
-
-        assert subsystem.is_enabled(self._make_config(enabled=False)) is False
 
     def test_a_config_ligada_continua_valendo_sem_env(self) -> None:
         """A metade que já funcionava não pode passar a depender da env."""

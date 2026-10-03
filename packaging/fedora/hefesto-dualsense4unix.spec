@@ -605,8 +605,8 @@ fi
   saiu dos botoes de microfone e alto-falante
 - Mascara Xbox passa a dizer o que custa: sem giroscopio e sem touchpad no
   jogo (a API do controle de Xbox nao tem os dois)
-- Metricas ganham chave de usuario (HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED
-  e _METRICS_PORT), cumprindo a decisao registrada na ADR-016
+- Metricas ganham chave de usuario (`hefesto-dualsense4unix metrics ligar`
+  e HEFESTO_DUALSENSE4UNIX_METRICS_PORT), cumprindo a decisao registrada na ADR-016
 - Quadrado vermelho ao lado dos interruptores curado (icone quebrado do GTK)
 
 * Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.6.0-1
