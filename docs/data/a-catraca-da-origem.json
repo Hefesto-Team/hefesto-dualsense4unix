@@ -201,20 +201,26 @@
       "data": "2026-10-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 914286,
+      "piso": 914355,
       "por_item": {
         "docs": 57562,
-        "scripts": 94540,
+        "scripts": 94578,
         "src": 274432,
-        "tests": 487752
+        "tests": 487783
       },
-      "razao": "a sprint A-CATRACA-DA-ORIGEM-01 acrescentou o próprio portão, o teste e o dono de cada eixo (03/10/2026): o teto nasce depois do que ela mesma escreveu",
+      "razao": "a conferência da A-CATRACA-DA-ORIGEM-01 acrescentou a régua da constante com nome e a da faixa da leva (o teste e o motor), 03/10/2026",
       "subidas": [
         {
           "data": "2026-10-03",
           "de": 914247,
           "para": 914286,
           "razao": "a sprint A-CATRACA-DA-ORIGEM-01 acrescentou o próprio portão, o teste e o dono de cada eixo (03/10/2026): o teto nasce depois do que ela mesma escreveu"
+        },
+        {
+          "data": "2026-10-03",
+          "de": 914286,
+          "para": 914355,
+          "razao": "a conferência da A-CATRACA-DA-ORIGEM-01 acrescentou a régua da constante com nome e a da faixa da leva (o teste e o motor), 03/10/2026"
         }
       ],
       "unidade": "linhas",
