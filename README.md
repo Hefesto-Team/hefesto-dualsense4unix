@@ -44,7 +44,7 @@ Para quem joga no Linux com um DualSense, e em especial para quem precisa adapta
 - O jogo pode enxergar um DualSense, um Xbox 360 ou um Nintendo Pro, ou falar direto com o controle físico.
 - Perfis por jogo para Steam, Heroic, Lutris, RetroArch e outros lançadores.
 - Compatibilidade parcial com mods do DualSenseX, por UDP em `127.0.0.1:6969` ([udp-schema.md](docs/protocol/udp-schema.md)).
-- Automação: um socket JSON-RPC local ([ipc-unix-socket.md](docs/protocol/ipc-unix-socket.md)) e plugins em Python, que se ligam com `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1` ([exemplos](examples/)).
+- Automação: um socket JSON-RPC local ([ipc-unix-socket.md](docs/protocol/ipc-unix-socket.md)) e plugins em Python, que se ligam com `hefesto-dualsense4unix plugin ligar` ([exemplos](examples/)).
 
 Controles Nintendo Pro e 8BitDo também são reconhecidos, mas chegam ao jogo como o controle que já são.
 

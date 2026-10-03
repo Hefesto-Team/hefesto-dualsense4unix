@@ -258,6 +258,7 @@ ARQUIVOS_FORA_DO_INDICE_DE_ENV = frozenset(
         "scripts/validar-referencias-docs.py",
         "tests/unit/test_validar_referencias_docs.py",
         "tests/unit/test_doc_verdade_02_contagens_derivadas.py",
+        "tests/unit/test_os_plugins_ligam_pela_mao.py",
     }
 )
 

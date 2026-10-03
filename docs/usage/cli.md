@@ -25,7 +25,7 @@ instala o completar pelo Tab no bash e no zsh.
 | `mic …` | o microfone do controle |
 | `speaker …` | o alto-falante e o fone do controle |
 | `esquecer-controles` | esquece os controles, como numa máquina nova, e os devolve |
-| `plugin list/reload` | os plugins |
+| `plugin list/reload/ligar/desligar` | os plugins (ligados só pela mão, valem na próxima subida do serviço) |
 | `tui` / `tray` | a interface de terminal / o ícone da bandeja |
 
 Os instrumentos `test`, `lightbar-reset` e `player-leds` estão no fim da página.

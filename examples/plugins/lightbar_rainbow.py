@@ -7,8 +7,9 @@ que os métodos de output do ControllerProxy operam corretamente.
 Instalação:
     cp examples/plugins/lightbar_rainbow.py ~/.config/hefesto-dualsense4unix/plugins/
 
-Ativação (em ~/.config/hefesto-dualsense4unix/config.toml ou env var):
-    HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1 HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR=examples/plugins
+Ativação (vale na próxima subida do serviço):
+    hefesto-dualsense4unix plugin ligar
+    # para rodar direto desta pasta: HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR=examples/plugins
 """
 from __future__ import annotations
 

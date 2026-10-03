@@ -79,8 +79,8 @@ hefesto-dualsense4unix plugin desligar
 ```
 
 A escolha só é lida na **subida** do daemon: vale quando o serviço subir de
-novo. A variável `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED`, que nada escrevia,
-saiu em 02/10/2026.
+novo. A variável de ambiente que os ligava, e que nada escrevia, saiu em
+02/10/2026.
 
 ---
 
