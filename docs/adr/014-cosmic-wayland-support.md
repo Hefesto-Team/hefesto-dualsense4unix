@@ -59,10 +59,10 @@ Se nenhuma biblioteca estiver disponível, retorna `None` sem erro. A dependênc
 
 Crate Rust `cosmic-applet-hefesto-dualsense4unix` para integração nativa com o painel COSMIC.
 
-> **Entregue.** Era "sprint futura em V3.4" quando esta ADR foi escrita; o applet
-> existe em `packaging/cosmic-applet/` e o `install.sh` o compila e instala por
-> **padrão em sessões COSMIC** (`--enable-cosmic-applet` força fora do COSMIC,
-> `--no-cosmic-applet` desliga). Verificado em 25/07/2026.
+> **Aposentado em 19/09/2026.** O ícone da bandeja (SNI, `app/tray.py`) faz o
+> mesmo, sobe sozinho pelo autostart e funciona fora do COSMIC. O applet segue em
+> `packaging/cosmic-applet/` e só se compila com `./install.sh
+> --enable-cosmic-applet`; o padrão é não instalar.
 
 ### Camada 2.1 — Cascade portal → wlrctl (v3.1.0)
 
