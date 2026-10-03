@@ -80,8 +80,6 @@ hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.interface.hefesto_vivo:main
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto_dualsense4unix"]
 include = [
-    # A logo do cabeçalho, que `app/constants._resolve_icon_path` procura aqui primeiro.
-    "src/hefesto_dualsense4unix/gui/assets/*.png",
     # As páginas da janela e os arquivos que elas referenciam.
     "src/hefesto_dualsense4unix/interface/paginas/*.html",
     "src/hefesto_dualsense4unix/interface/assets/*",
