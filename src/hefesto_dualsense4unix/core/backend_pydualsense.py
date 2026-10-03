@@ -695,7 +695,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._write_lock = threading.Lock()
         self._entrega = threading.Lock()
         #
-        # LIGHTBAR-BT-ADOPT-01 (provado ao vivo 2026-07-18; estudo 5 agentes):
+        # LIGHTBAR-BT-ADOPT-01 (provado ao vivo 2026-07-18; medido em 5 corridas):
         # nasce TRUE, nunca False. O report_thread começa a escrever assim que o
         # handle abre — ANTES de `_refresh_sysfs_leds` rodar. Nascendo False, o
         # 1º report saía com os flags de lightbar/player LIGADOS — e o report BT

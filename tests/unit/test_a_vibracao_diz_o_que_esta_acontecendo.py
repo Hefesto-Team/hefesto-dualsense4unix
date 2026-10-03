@@ -15,9 +15,9 @@ calada e a pessoa continuava clicando em "Máximo".
 
 **ERAM QUATRO ATÉ 07/09/2026, E HOJE SÃO TRÊS.** A primeira — a contagem de
 pedidos do jogo — saiu por ordem dela: *"Vibração remove essa última frase
-também."* Ver ``app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`` e o caso
-``test_a_contagem_de_pedidos_do_jogo_nao_volta``, que é a mordida que a segura
-fora. **A função do produto NÃO morreu** — a janela estável continua a chamar;
+também."* Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
+``test_as_frases_sao_as_do_produto``, que segura a lista fora (uma frase a mais
+reprova). **A função do produto NÃO morreu** — a janela estável continua a chamar;
 o que esta aba deixou de fazer é perguntar.
 
 AS FRASES JÁ EXISTIAM E NINGUÉM AS CHAMAVA — ``rumble_actions.py``

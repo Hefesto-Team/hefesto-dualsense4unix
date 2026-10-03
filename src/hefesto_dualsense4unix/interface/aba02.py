@@ -175,8 +175,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      plástico). Uma `var()` sem valor **invalida a declaração inteira**, em
      silêncio: a borda não fica cinza — ela deixa de existir. Medido no DOM,
      depois de a foto mostrar dois lugares soltos, sem caixa nenhuma:
-     `border-width: 0px, border-style: none`, com o `border-color` que eu tinha
-     escrito ali, intacto e inútil.
+     `border-width: 0px, border-style: none`, com o `border-color` escrito
+     ali, intacto e inútil.
      Trocar só a COR de uma regra que usa `var()` indefinido não conserta nada.
 
      E A COR NÃO É A `--border-sutil` DA JOGAR: lá o cartão vazio fica sobre
@@ -2100,17 +2100,11 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
         <div>
           <div class="moldura" data-bloco="microfone"
                data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <!-- O "LIBERAR" SAIU — 30/08/2026, e o argumento é dela, não meu:
-                 *"o botão do Controle sempre controla a interface, por isso não faz
-                 sentido o liberar ali"*.
-
-                 EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {{muted: null}}` EXISTE (`ipc_handlers.py:4742`) e devolve a
-                 posse ao `hid-playstation` — a minha objeção era que o botão tinha
-                 dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
-                 nunca deixa de comandar a interface, não há posse a devolver, e um
-                 botão que desfaz algo que não acontece é um botão que ensina errado.
-                 O método continua no daemon, para quem precisar dele. -->
+            <!-- O "LIBERAR" SAIU (30/08/2026): o botão físico do controle nunca
+                 deixa de comandar a interface, então não há posse a devolver, e um
+                 botão que desfaz algo que não acontece ensina errado. O
+                 `mic.set {{muted: null}}` segue no daemon (`ipc_handlers.py`) e
+                 devolve a posse ao `hid-playstation`. -->
             <div class="rot rot-linha">Microfone
               {selo_do_mic}
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
@@ -2140,14 +2134,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    Este bloco é `return f` com aspas triplas (linha 834), e chave
                    dupla ESCAPA para chave simples literal: a expressão nunca era
                    avaliada e os 12 botões (4 controles x 3 modos) nasciam todos com
-                   a mesma classe crua, nenhum aceso. Medido pelo cético:
-                   classList.contains("on") falso nos doze.
-                   É o defeito que o GUIA.md nomeia — *"uma validação de interface
-                   que não cobre o botão novo é uma validação que mente"*: eu conferi
-                   que os três botões EXISTEM e não que um deles ACENDE.
-                   E o comentário que eu escrevi para explicar isto quebrou o gerador,
-                   porque trazia chaves dentro da própria f-string. Por isso ele não
-                   as tem. -->
+                   a mesma classe crua, nenhum aceso (`classList.contains("on")`
+                   falso nos doze). Conferir que os botões EXISTEM não prova que um
+                   deles ACENDE. Este comentário não traz chaves: dentro da
+                   f-string elas quebram o gerador. -->
               {MARCA_DO_SOM}
             </div>
             {onda(mic_v, mic_mudo, "mic")}
@@ -3391,7 +3381,7 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = monta("02-controles", "Controles", MIOLO, CSS, legenda=LEGENDA)
+    n = monta("02-controles", "Controles", MIOLO, CSS)
     SAIDA = onde.pagina("02-controles.html")
     SAIDA.write_text(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text())))
     _conferir(SAIDA.read_text())

@@ -529,10 +529,10 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = monta("07-lancadores", "Lançadores", MIOLO, CSS, legenda=LEGENDA)
+    n = monta("07-lancadores", "Lançadores", MIOLO, CSS)
 
     # esses dois chips inteiros: dois `--plastico`, dois nomes de colorway no texto
-    _MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
+    _MARCA = "<!-- ===== fim da aba ===== -->"
     _PAG = onde.pagina("07-lancadores.html")
     _DOC = _PAG.read_text()
     if _MARCA not in _DOC:

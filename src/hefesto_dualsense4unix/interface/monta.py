@@ -121,7 +121,7 @@ def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
 
 #: que fiquem em harmonia"*. `core/led_control.player_slot_color` devolve
 #: primárias cruas (#0000FF, #FF0000, #00FF00…) — cor de monitor de teste ao lado
-#: na 04, e o cético mediu o resultado: a 02 continuou pintando #0000FF na barra
+#: na 04, e a medição mostrou o resultado: a 02 continuou pintando #0000FF na barra
 #: tem azul próprio, e mapear o azul do player 1 para o ciano fazia DUAS casas da
 TOM_DA_CASA = {
     "#0000FF": "#7EB8D4",
@@ -884,9 +884,13 @@ RECUO_DA_FITA = "    "
 
 def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
           legenda: str = "") -> int:
+    """Grava a página. A `legenda` é só o que a página precisa trazer ao fim (o
+    que o produto endereça); a nota de revisão do desenho NÃO entra: a página que
+    se aprova é a que o produto instala, e a nota vai para a sessão dos desenhos
+    (a fonte é a constante `LEGENDA` do gerador de cada aba)."""
     t = TOPO
-    t = t.replace("<title>Hefesto — aba JOGAR (mockup 26/08/2026)</title>",
-                  f"<title>Hefesto — aba {titulo_aba.upper()} (mockup 26/08/2026)</title>")
+    t = t.replace("<title>Hefesto — aba JOGAR</title>",
+                  f"<title>Hefesto — aba {titulo_aba.upper()}</title>")
     t = troca(t, arq, "</style>", CSS_FOLHA + "\n</style>")
     if css_extra:
         t = t.replace("</style>", css_extra + "\n</style>", 1)
@@ -924,8 +928,8 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
 
     fim = FIM
     if legenda:
-        k = fim.index('<div class="nota">')
-        fim = fim[:k] + legenda
+        k = fim.index("</body>")
+        fim = fim[:k] + legenda + "\n\n" + fim[k:]
     doc = t + '  <div class="miolo">\n' + miolo + '\n  </div>\n\n' + fim
     abertas, fechadas = doc.count("<div"), doc.count("</div>")
     if abertas != fechadas:

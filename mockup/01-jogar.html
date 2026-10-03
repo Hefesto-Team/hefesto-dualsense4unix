@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba JOGAR (mockup 26/08/2026)</title>
+<title>Hefesto — aba JOGAR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -696,20 +696,6 @@
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
-  /* ---------- legenda do mockup (fora da janela) ---------- */
-  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
-     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
-     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
-     a bancada — sem devolver nada ao produto. */
-  .nota{
-    width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
-    border-left:2px solid var(--purple);padding-left:14px;
-  }
-  .nota h2{font-size:13px;color:var(--purple);margin-bottom:6px;font-weight:600}
-  .nota b{color:var(--texto-suave)}
-  .nota code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)}
-  .nota ul{margin:5px 0 10px 16px}
-  .nota li{margin-bottom:3px}
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
@@ -1444,8 +1430,8 @@
   /* O DUALSENSE OCUPA A LINHA INTEIRA, e os outros dois dividem a de baixo.
      Era o contrário, e ela viu na hora: *"o DualSense é o foco do app e o
      Nintendo Pro tá roubando a cena"*. Estava certa — na primeira versão do 2+1
-     eu pus o terceiro chip esticado só porque "Nintendo Pro" é o rótulo mais
-     largo, e com isso dei ao menos importante o maior pedaço da tela.
+     o terceiro chip era esticado só porque "Nintendo Pro" é o rótulo mais
+     largo, e com isso o menos importante ganhava o maior pedaço da tela.
      Cabe: "Xbox 360" e "Nintendo Pro" medem 47 e 74px de texto, e cada metade
      tem 126,4 — o mais largo sobra 52. */
   .mascara .chip:nth-child(1){grid-column:1/-1}
@@ -3844,234 +3830,7 @@
 
 </div>
 
-<!-- ================= LEGENDA DO MOCKUP ================= -->
-<div class="nota">
-  <h2>O que mudou, e por quê</h2>
-  <ul>
-    <li><b>"Trava o perfil ativo" virou <span class="marca">Modo Freestyle</span>, com letra e altura maiores</b> — sua palavra, 23/09:
-      <span class="marca">"Vira Modo Freestyle o botão. E a fonte dele aumenta e a altura do botão
-      aumenta também"</span>. A letra foi de 10,5 para <b>12,5 px</b>, a de todo botão desta janela;
-      a altura, de 17 para <b>26 px</b>, a do botão de giroscópio no dia em que você o apontou como
-      modelo. O que ele faz não mudou: ligado, o perfil que está valendo continua valendo; só o
-      perfil próprio de um jogo entra por cima, como já era.</li>
-    <li><b>O "Personalizado" virou <span class="marca">Freestyle</span></b> — é o perfil de fora do
-      jogo, com os seus ajustes dos quatro controles; mudou só o nome. Do ligar o computador ao
-      primeiro jogo <b>o topo diz Freestyle</b>, e o que você ajustar nas outras abas cai nele. O jogo
-      com perfil próprio entra por cima, com o botão ligado ou não; com ele desligado, fechar o jogo
-      devolve o Freestyle. O arquivo de antes fica no histórico, inteiro.</li>
-    <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
-      <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
-      Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
-      — <span class="marca">"qual a diferença de nativo pra dualsense?"</span> —, e ela era
-      boa: a tela punha os dois na <b>mesma</b> fileira, como alternativas do mesmo tipo. Não
-      são. <b>Nativo é o Hefesto FORA do meio</b>; os outros são jeitos de ele <b>estar</b> no
-      meio. Agora a tela mostra isso: em cima o interruptor, embaixo o que ele abre.</li>
-    <li><b>E o interruptor SUBIU para fora do quadro</b> — sua decisão da tarde de 31/08,
-      olhando a foto: ele tinha nascido <b>dentro</b> de "Quando o jogo abrir", e um quadro é um
-      <b>escopo</b>. Ali ele lia como <i>"ligar o Hefesto quando um jogo abrir"</i>, e não é isso:
-      <b>ligado ou desligado vale sempre</b>, com jogo aberto ou sem nenhum. O que o lançamento
-      decide de verdade é o <b>modo</b>, e é só ele que fica no quadro.
-      <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"Selecionar:
-      [Todos] [P1 · o plástico · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
-      moldura, acima do que ela governa. O "Hefesto" nasce no <b>mesmo x</b> de "Quando o jogo
-      abrir" e "Conectado agora" — os três títulos da aba numa coluna só.
-      <br><b>E ela DEVOLVEU altura em vez de custar</b>, que era o risco: o quadro perdeu a linha
-      do interruptor e a divisória que a separava dos modos (63px), e o que subiu custa 50 (a
-      fileira de 36 mais o passo de 14 do miolo). Saldo <b>−13px</b>: o miolo pedia <b>514</b> de
-      542 e passou a pedir <b>501</b>; a folga foi de <b>28</b> para <b>41px</b>, nas duas
-      posições do interruptor.</li>
-    <li><b>"Desligado" deixou de ser um estado inventado, e isso fecha a MIGRA-JOGAR-06</b> —
-      sem construir nada. O quarto botão da fileira antiga não tinha leitor:
-      <code>mode_transition.mode_of_state</code> é o ponto único de leitura do modo vivo e
-      devolve <b>três</b> valores, nunca um quarto. Com a sua decisão, <b>Desligado = Modo
-      Nativo</b> (<code>MODE_NATIVE</code>), que <b>lê</b> (o mesmo <code>mode_of_state</code>)
-      e <b>escreve</b> (<code>apply_mode('native')</code>, em <code>painel.ESCRITOR_DOS_MODOS</code>).
-      Parar o Hefesto inteiro continua sendo <b>"Parar o serviço"</b>, na Sistema — e o verbo
-      é escolha dela de 31/08: <i>parar</i> é o que o <code>systemctl stop</code> faz e é o par
-      de <i>Ligado</i>; <i>encerrar</i> sugeria fim definitivo, e o serviço volta no próximo
-      login.</li>
-    <li><b>O chip que se chamava "Hefesto" virou "Sony DualSense"</b> — ele sempre foi
-      <code>Ponte(gamepad, dualsense)</code>, o primeiro degrau de
-      <code>integrations/ponte_escada.ESCADA</code>. Era o nome do <b>produto</b> no lugar do
-      nome da <b>máscara</b>, numa fileira em que os outros também são o Hefesto.</li>
-    <li><b>O Xbox chegou à tela pela primeira vez</b> — <code>Ponte(gamepad, xbox)</code> é o
-      <b>segundo</b> degrau que o produto tenta, e nenhum chip o nomeava. Era exatamente o que
-      a conferência dos degraus denunciava: <span class="marca">"um degrau real não
-      tem chip na tela"</span>. Agora tem.</li>
-    <li><b>Os algarismos saíram, e é decisão dela de 31/08</b> — a tela escrevia
-      <b>③ Steam Input</b>, o produto o tenta em <b>quarto</b>
-      (<code>ponte_escada.indice_do_degrau + 1</code> = 4) e esta legenda prometia que o número
-      ERA esse índice. Os três não podiam estar certos, e a causa é a própria decisão dela do
-      mesmo dia: o terceiro degrau é o <b>Nativo</b>, que saiu da fileira para virar o
-      interruptor <b>Desligado</b>. Havia três saídas — numerar <i>1 · 2 · 4</i> com o buraco do
-      3, numerar pela posição na tela (e esta linha passar a mentir), ou tirar os números. Ela
-      tirou. <b>A ordem não se perdeu</b>: está na dica de cada modo e na do quadro
-      <b>Quando o jogo abrir</b>.</li>
-    <li><b>A máscara virou POR CONTROLE</b> — decisão sua, 28/08. Três opções e
-      <b>sem "Automático"</b>: DualSense · Xbox 360 · Nintendo Pro. O seletor mora dentro
-      do cartão de cada controle. O que era um seletor único lá em cima
-      (<span class="marca">"O jogo vê o controle como:"</span>) saiu do quadro
-      <b>Quando o jogo abrir</b> — e o rótulo veio junto, no plural.</li>
-    <li><b>Nenhum aviso do que se perde</b> — não há "você perde giro", "perde touchpad"
-      nem "perde microfone" em máscara nenhuma. A dica diz o que muda de verdade: a máscara
-      muda <b>o que o jogo vê</b>, e por isso os botões que ele desenha. O controle na sua
-      mão continua o mesmo (<code>docs/usage/modos.md</code>) — a luz, o gatilho e o
-      giroscópio seguem por conta do Hefesto em qualquer máscara. O microfone segue o
-      <b>transporte</b>, não a máscara.</li>
-    <li><b>"Automático" saiu da máscara</b> — substitui a <code>D-A-MASCARA-GANHA-O-AUTOMATICO</code>
-      de 26/08, que o queria como terceira opção ligada. A heurística que o moveria
-      (<code>api_de_entrada.py</code>) errou em <b>13 dos 14</b> jogos do seu censo.</li>
-    <li><b>"Automático" saiu também do Modo de conexão</b> — sua palavra, 31/08:
-      <span class="marca">"na aba jogar o Botão Automático não existe"</span>. E não existe
-      mesmo: ele não tinha <b>leitor</b> (<code>painel.CHIPS_DA_ESCADA</code> o declarava com
-      <code>ponte=None</code>, e o chip só acendia comparando pontes — nenhum
-      estado do produto podia acendê-lo) nem <b>escritor</b> (não há método de IPC que fixe um
-      degrau). <b>O mecanismo ficou</b>: tentar na ordem e parar quando acerta é o que o produto
-      já faz sozinho, e está dito na dica.</li>
-    <li><b>A fita ficou viva, e agora ela tem alvo</b> — era a contradição que esta legenda
-      declarava em aberto: a fita dizia <span class="marca">"vai para o controle escolhido
-      aqui"</span> numa aba em que nada era por controle. A máscara resolveu isso. O cartão
-      do alvo leva o <b>mesmo realce do chip escolhido</b>, para os dois lerem como uma
-      escolha só.</li>
-    <li><b>O modo continua da máquina inteira</b>, e não desceu para o cartão junto com a
-      máscara. Não é descuido: o modo é <b>estado do processo</b> — existe um só
-      (<code>app/actions/mode_transition.py</code>), e duas peças pedindo modos diferentes
-      não têm resposta. Máscara é do <b>aparelho</b>; modo é da <b>máquina</b>.</li>
-    <li><b>O Point And Click é a Navegação, e a fileira tem quatro chips</b> — é a sua ordem
-      de 31/08 (<i>"nos mockups tira o point and click e deixa só o navegação"</i>), e a de
-      17/09 a completa: <i>"o modo point and click é o modo navegação e o modo que nós mesmos
-      podemos usar e configurar na aba navegação. Ele ativa o modo configurado lá."</i>
-      <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
-      (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"), e desde 17/09 ele
-      <b>carrega o seu perfil</b> ao entrar — o mouse, as teclas, os botões e a função do
-      teclado que você gravou na aba Navegação. O <b>PS + R3</b> para nela e entra pela mesma
-      porta. O que ela não é, e por isso leva traço no lugar do algarismo, é degrau da escada
-      automática: a ordem em que o Hefesto tenta sozinho não passa por ela.
-      <br>Nenhum chip desta fileira entra <b>marcado</b> hoje. A marca continua desenhada —
-      borda tracejada, cor explícita e cursor de "não clique", e nada de <code>opacity</code>,
-      porque a lição da fita inerte é que a opacidade some com o texto e cega toda régua de
-      contraste —, e ela está pronta para a próxima fileira que precisar dela.</li>
-    <li><b>Quatro controles ligados, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
-    <li><b>A borda e a cor vêm do mapa</b> — a cor do plástico sai do <code>cores-do-dualsense.csv</code> pela folha que o gerador escreveu dentro do desenho. Não está digitada aqui.</li>
-    <li><b>As cinco lâmpadas do jogador ficam apagadas neste cartão</b> — medido de novo hoje,
-      no 1× da sua tela: cada lâmpada mede <b>1,06 × 0,36 px</b> no desenho de 62px, e acender
-      as dez mudava <b>de 2 a 7 pixels de 2666</b> por cartão. Para se lerem, o cartão
-      precisaria de ~460px — os quatro somariam 1840px numa fileira que tem 1163px. Quem diz
-      o número aqui é o rótulo <b>Player N</b>; o padrão das luzes, desenhado grande, está na
-      <b>Iluminação</b>.</li>
-    <li><b>O botão do canto do bloco Modo (era "Trava o perfil ativo") mora na linha do título</b> — como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra dela de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
-    <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
-    <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
-    <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>
-  </ul>
-
-  <h2>O que eu decidi por conta, e você pode derrubar</h2>
-  <ul>
-    <li><b>As três máscaras são chip, e não o botão de 36px do resto da janela</b>, e o preço
-      está medido dos dois lados. Com o botão, as três somam 116px por cartão: o miolo pede
-      <b>560px</b> e a janela oferece <b>542</b> — o quadro "Conectado agora" passava a rolar
-      por dentro, com 18px do <b>Reconectar Controles</b> fora da tela. Com o chip a conta
-      fecha em <b>502</b>. E não é uma altura nova: o <b>chip da fita</b>, três linhas acima,
-      já é o seletor por controle desta casa, na mesma altura e com o mesmo destaque — o que
-      muda é a direção, a fita deita e o cartão empilha.</li>
-    <li><b>Empilhadas, e não lado a lado</b> — o cartão tem 208px e só "Nintendo Pro" pede
-      ~104px; três na horizontal precisariam de ~326px. A saída seria dois cartões por
-      fileira (423px cada), e o preço disso é desfazer <b>os quatro numa fileira só</b>, que é
-      o que deixa todos os controles num relance. Se você preferir a horizontal, é esse o troco.</li>
-    <li><b>As máscaras que aparecem escolhidas</b> — o P1 em DualSense e o P2 em Xbox 360. É para você <b>ver</b> que a escolha é por controle; os seus quatro
-      hoje são DualSense.</li>
-    <li><b>Clicar num cartão leva a fita para ele</b> — é a mesma gramática que você fixou hoje
-      para o acordeão da Controles ("clicar num card muda a fita").</li>
-    <li><b>A ordem dos cinco modos não é a ordem em que você os listou</b>, e é a única coisa
-      em que me afastei do seu texto. Você escreveu <span class="marca">"Steam Input, Xbox, Sony
-      DualSense, Point And Click"</span>; eu pus <b>Sony DualSense · Xbox · Steam Input</b>,
-      que é a ordem <b>medida</b> em que o produto tenta
-      (<code>ponte_escada.ESCADA</code>): a DualSense primeiro porque <b>dez</b> linhas do
-      <code>mapa-controles.csv</code> só chegam ao jogo por ela, e o Steam Input por último
-      porque é o único que exige <b>fechar a Steam, reabrir a Steam e reabrir o jogo</b>. Sem os
-      algarismos, <b>a ordem da fileira é a única coisa que ainda diz o que o produto tenta
-      primeiro</b> — trocá-la para a sua ordem passaria a afirmar que o Hefesto começa pelo Steam
-      Input, e isso é falso e caro. <b>Se você preferir a sua ordem mesmo assim</b>, é uma linha
-      no <code>MODOS</code>; mas então a dica de cada modo tem de deixar de dizer "é o primeiro
-      que o Hefesto tenta", ou a tela volta a se contradizer.</li>
-    <li><b>O rótulo "Hefesto" ficou DEITADO, ao lado do interruptor</b>, e não em cima como as
-      outras linhas desta casa. Nasceu como pagamento de altura — o miolo tinha <b>2px</b> de
-      folga em 542 antes do redesenho da manhã, e um rótulo por cima custa 22px. Esse aperto
-      passou (a subida devolveu 13px, e a folga hoje é de 41), mas ele <b>continua deitado</b>
-      porque é a forma que você desenhou (<span class="marca">"Hefesto Ligado/Desligado"</span>,
-      tudo numa linha) — e porque é a da fita do topo da janela, que é o lugar de onde ele
-      agora fala.</li>
-    <li><b>O "?" dos modos subiu do rótulo "Modo" para o topo do quadro</b> — é consequência de
-      o interruptor ter saído: com só os cinco modos dentro, a ajuda do quadro <b>é</b> a ajuda
-      dos modos, e dois "?" a três linhas um do outro diriam a mesma coisa duas vezes. Nada de
-      texto se perdeu — ele está inteiro no "?" do <b>Quando o jogo abrir</b>. De quebra os
-      rótulos das duas posições ficaram idênticos (texto puro dos dois lados), que é o que já
-      tinha custado <b>180 contra 176</b> quando divergiram.</li>
-    <li><b>O nome da seção é "Modo", e não "Modo de conexão"</b> — é a sua palavra
-      (<span class="marca">"Abre as seções de Modo"</span>). O quadro continua se chamando
-      <b>Quando o jogo abrir</b>, e o de baixo <b>Conectado agora</b>: os dois títulos são seus,
-      de 26 e 28/08, e não os troquei sem você pedir.</li>
-    <li><b>Continua sem uma linha de JavaScript, mas o combinador mudou</b> — e a troca foi
-      forçada, não gosto. Com o interruptor fora do quadro, os dois <code>radio</code> deixaram
-      de ser irmãos das seções que abrem, e o <code>~</code> só enxerga irmão posterior. A saída
-      óbvia — pendurar os dois <code>input</code> direto no miolo — <b>reprovou numa régua real</b>:
-      o <code>regua.py</code> exige que todo filho direto do miolo comece no x do miolo e tenha a
-      largura inteira, e um <code>input</code> de 0×0 é filho direto com largura própria; a cura
-      teria custado um erro na régua da aba que <b>é a referência das outras nove</b>. O que
-      está lá é <code>:has()</code>, que não é mecanismo novo aqui: o esqueleto já abre e fecha
-      as seções da <b>Conexões</b> com ele.</li>
-    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
-    <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
-    <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
-  </ul>
-
-  <h2>O que isto encomenda ao código</h2>
-  <ul>
-    <li><b>O interruptor tem de ler DOIS modos como "Ligado"</b>. Hoje a pintura viva acende um
-      botão comparando <code>data-modo</code> com o modo do daemon, um a um — e o Hefesto ligado
-      é <b>gamepad</b> <i>ou</i> <b>desktop</b> (Navegação). Sem uma leitura derivada
-      (<code>ligado = modo in {gamepad, desktop}</code>) o interruptor fica apagado dos dois
-      lados quando você escolhe a Navegação: a tela não estaria mentindo, estaria muda — e mudo
-      é pior, porque parece defeito.</li>
-    <li><b>O Steam Input não se fixa pela tela</b>: não há método de IPC que o ligue, e ele só
-      sobrevive com a Steam fechada. <b>Sony DualSense</b> e <b>Xbox</b> se fixam — cada clique
-      escolhe o caminho, com o jogo aberto, e o <b>PS + R3</b> na sua mão faz o mesmo.</li>
-    <li><b>A máscara Nintendo Pro não existe hoje</b>, e entra assim mesmo — isto é mockup, e
-      mockup desenha o produto que vai existir. O catálogo do produto
-      (<code>integrations/uinput_gamepad.py</code>, <code>FLAVORS</code>) tem <b>duas</b>
-      entradas: <code>dualsense</code> e <code>xbox</code>. A terceira nasce como
-      <b>MÁSCARA-NINTENDO-01</b>, com um invariante duro: o PID <b>não</b> pode ser o
-      <code>0x2009</code> do Pro físico (VPAD-04 — vpad e aparelho real com o mesmo VID/PID
-      somem juntos da Steam, e o jogo fica com zero controles). Boa parte já está pronta:
-      <code>mascaras_validas()</code> deriva do catálogo, então o terceiro sabor passa a valer
-      no disco e no portão do IPC <b>sem uma linha de edição</b>.</li>
-    <li><b>A máscara já é por aparelho no código</b> (<code>daemon/subsystems/external_mask.py</code>,
-      desde 15/08) — o registro por <code>MAC</code> e a herança existem. O que falta é <b>passar a
-      identidade</b> em três lugares: <code>virtual_pad.make_virtual_pad</code>,
-      <code>coop.py</code> e <code>gamepad.py</code>. Hoje ninguém a passa, e por isso a
-      máscara viva é uma só para todos os controles — que é exatamente o que esta tela deixa de
-      mostrar.</li>
-    <li><b>Um fato do specs, para a sprint não prometer o que o aparelho não tem:</b> o
-      Pro Controller <b>não tem</b> microfone, alto-falante, touchpad, lightbar RGB, gatilho
-      adaptativo nem gatilho analógico (ZL/ZR são digitais) — 99 linhas do
-      <code>mapa-controles.csv</code>. Nada disso é aviso para esta tela: máscara não é
-      adoção. A máscara Nintendo Pro faz o <b>seu DualSense</b> aparecer como um Pro para o
-      jogo; ela não faz o Hefesto adotar um Pro.</li>
-  </ul>
-
-  <h2>Ainda é sua a palavra</h2>
-  <ul>
-    <li><b>O microfone quando a máscara é Xbox 360 ou Nintendo Pro.</b> A ONDA-CONEXOES-06
-      escreve que nessas máscaras o jogo não pergunta pelo microfone e por isso ele
-      <b>some do jogo</b>, e cria o estado <b>Emulado</b> para tapar o buraco — uma fonte de
-      captura virtual que qualquer jogo enxerga. É por isso que esta tela não escreve aviso
-      nenhum. <b>Mas essa afirmação não tem medição</b>: não há uma linha de microfone ×
-      máscara no <code>ensaios.csv</code>, e a régua que a provaria está escrita na própria
-      sprint <b>sem dono</b>. Hoje quem entrega o mic ao jogo é a prioridade do WirePlumber,
-      que é cega à máscara — o que <b>estreita</b> o buraco e ninguém sabe quanto. É uma
-      sprint de bancada, e ela não está na fila.</li>
-  </ul>
-</div>
+<!-- ===== fim da aba ===== -->
 
 </body>
 </html>

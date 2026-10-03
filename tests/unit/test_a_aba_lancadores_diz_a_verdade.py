@@ -1084,7 +1084,7 @@ def test_o_texto_de_ajuda_nao_conta_controle_por_conta_propria():
 
 
 #     DualSense na mesa
-_FIM_DA_ABA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
+_FIM_DA_ABA = "<!-- ===== fim da aba ===== -->"
 
 
 def _publicada(com_a_legenda: bool = False) -> str:

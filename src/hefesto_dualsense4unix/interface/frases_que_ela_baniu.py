@@ -18,7 +18,7 @@ achado pela frente da aba 01 e da mesma família dos sete do `O-PO-DECIDE`:
 
 A proibição vivia **só** dentro de `aba01._conferir`, que lê o **HTML
 ESTÁTICO** da página gerada. A coluna Atenção, porém, é escrita em **tempo de
-execução** — o piloto manda o texto pelo `_json`. Logo um agente cumprindo a
+execução** — o piloto manda o texto pelo `_json`. Logo quem cumprir a
 decisão [01] ao pé da letra (*"o aviso do Modo Nativo na coluna Atenção"*)
 poria a frase banida na tela dela **com o gerador VERDE**.
 

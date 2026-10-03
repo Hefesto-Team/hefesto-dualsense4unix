@@ -10,7 +10,7 @@ Dois **flavors** (a "máscara" que o jogo vê):
     VPAD-04/VPAD-06: nenhum caminho de criação de vpad pode dividir VID/PID
     com o controle real, senão a launch option persistida na Steam
     (``IGNORE_DEVICES=0x054c/0x0ce6``) esconde físico E vpad juntos e o jogo
-    fica com ZERO controles (o bug do estudo de 117 agentes).
+    fica com ZERO controles (o bug medido em 117 corridas de estudo).
   - ``xbox``: VID/PID Xbox 360 (045e:028e) → **prompts Xbox**. Fallback
     para jogos "XInput-only" (Windows-ports via Proton) que ignoram Sony.
 

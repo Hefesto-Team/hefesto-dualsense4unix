@@ -502,8 +502,8 @@ CSS = """
   /* O DUALSENSE OCUPA A LINHA INTEIRA, e os outros dois dividem a de baixo.
      Era o contrário, e ela viu na hora: *"o DualSense é o foco do app e o
      Nintendo Pro tá roubando a cena"*. Estava certa — na primeira versão do 2+1
-     eu pus o terceiro chip esticado só porque "Nintendo Pro" é o rótulo mais
-     largo, e com isso dei ao menos importante o maior pedaço da tela.
+     o terceiro chip era esticado só porque "Nintendo Pro" é o rótulo mais
+     largo, e com isso o menos importante ganhava o maior pedaço da tela.
      Cabe: "Xbox 360" e "Nintendo Pro" medem 47 e 74px de texto, e cada metade
      tem 126,4 — o mais largo sobra 52. */
   .mascara .chip:nth-child(1){grid-column:1/-1}
@@ -1984,7 +1984,7 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = montar("01-jogar", "Jogar", MIOLO, CSS, legenda=LEGENDA)
+    n = montar("01-jogar", "Jogar", MIOLO, CSS)
     _conferir(onde.pagina("01-jogar.html").read_text())
     shutil.copyfile(_prova / "01-jogar.html", _real / "01-jogar.html")
     shutil.rmtree(_prova)

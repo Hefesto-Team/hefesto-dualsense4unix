@@ -80,7 +80,7 @@ separadamente caem numa faixa de 0,08 pontos percentuais.
 O de UM canal é ruidoso de propósito (0,11 a 0,30 %) e não deve ser citado
 sozinho: ele mora no chão do instrumento. O ``/proc`` conta em tiques de 10 ms,
 o que dá ±0,025 pontos percentuais numa janela de 40 s, e a máquina tinha
-outros agentes trabalhando (``loadavg`` entre 1,2 e 2,4 durante as corridas).
+outros processos trabalhando (``loadavg`` entre 1,2 e 2,4 durante as corridas).
 
 O custo NÃO cresce quatro vezes — o marginal do 2º ao 4º canal é pequeno,
 porque os quatro compartilham o mesmo servidor de som e o mesmo ``epoll``.

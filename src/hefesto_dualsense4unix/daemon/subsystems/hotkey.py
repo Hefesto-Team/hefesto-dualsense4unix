@@ -983,8 +983,8 @@ class MetadeDoAto:
 class AtoDoMicrofone:
     """O ato inteiro: o canal no sistema **e** o mudo no firmware.
 
-    O CONCEITO É DELA, e ele derrubou a pergunta que eu tinha feito. Eu levei
-    o microfone como *"duas camadas se contradizem"* e ofereci três arranjos
+    O CONCEITO É DELA, e ele derrubou a pergunta anterior. O microfone foi levado
+    como *"duas camadas se contradizem"* e foram oferecidos três arranjos
     que GUARDAVAM a contradição; ela recusou os três:
 
         *"tá errado o conceito da coisa. o botão é pra ligar o microfone e ele

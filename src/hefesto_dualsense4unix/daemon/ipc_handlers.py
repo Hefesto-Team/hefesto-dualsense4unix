@@ -5612,7 +5612,7 @@ class IpcHandlersMixin:
         corpo, porque "descartei zero campos" é ruído — e assim o
         `{"ok": True}` de sempre continua sendo o corpo do caso comum. Nomes
         CRUS do schema; a tradução para o rótulo da tela é da ponte da GUI
-        (`_CAMPOS_DA_MAQUINA`, `app/ipc_bridge.py`), pela mesma razão do
+        (`_rotulos_dos_campos`, `app/ipc_bridge.py`), pela mesma razão do
         `_MOTIVOS_MAQUINA`: o daemon não conhece o texto da janela.
 
         **Toda recusa vem no CORPO, nunca como erro JSON-RPC**, e as três pela
@@ -5943,7 +5943,7 @@ class IpcHandlersMixin:
         adaptador; sem ele, a D8 escolhe.
 
         Volta assim que a trava do rádio vem — no máximo 5 s de espera, decisão
-        de quem coordena —, com o movimento «esperando»; o resto segue num fio e
+        registrada —, com o movimento «esperando»; o resto segue num fio e
         chega pelo ``state_full["radio_central"]``. ``status: "ocupado"`` é a
         recusa, e ela tem DUAS causas com a mesma resposta: a trava do rádio não
         veio no prazo do gesto, ou OUTRO MOVIMENTO ESTÁ EM CURSO — um por vez

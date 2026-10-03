@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O pacote da aba `10` Perfis.
 
-ESTA ABA JÁ ESTAVA MARCADA, e não por mim: o outro agente pôs **77 endereços**
+ESTA ABA JÁ ESTAVA MARCADA: **77 endereços**
 (`data-hef`) e 11 gestos nela em 31/08, com um esquema de nomes próprio. Os dois
 convivem — o nome do atributo não é o contrato; o contrato é este despachante.
 

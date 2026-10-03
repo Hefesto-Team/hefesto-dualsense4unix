@@ -4302,7 +4302,7 @@ class Daemon:
     _central_do_radio: Any = None
 
     async def _start_central_do_radio(self) -> None:
-        """Sobe a central e abre o dono do BlueZ — decisão de quem coordena, 23/09."""
+        """Sobe a central e abre o dono do BlueZ — decisão registrada, 23/09."""
         if os.environ.get("HEFESTO_DUALSENSE4UNIX_FAKE") == "1":
             return
         from hefesto_dualsense4unix.integrations.central_do_radio import CentralDoRadio

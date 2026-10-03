@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba LANÇADORES (mockup 26/08/2026)</title>
+<title>Hefesto — aba LANÇADORES</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -696,20 +696,6 @@
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
-  /* ---------- legenda do mockup (fora da janela) ---------- */
-  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
-     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
-     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
-     a bancada — sem devolver nada ao produto. */
-  .nota{
-    width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
-    border-left:2px solid var(--purple);padding-left:14px;
-  }
-  .nota h2{font-size:13px;color:var(--purple);margin-bottom:6px;font-weight:600}
-  .nota b{color:var(--texto-suave)}
-  .nota code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)}
-  .nota ul{margin:5px 0 10px 16px}
-  .nota li{margin-bottom:3px}
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
@@ -1755,50 +1741,7 @@
     </div></div>
 </div>
 
-<!-- ================= LEGENDA DO MOCKUP ================= -->
-<div class="nota">
-  <h2>A aba mudou de assunto inteiro</h2>
-  <ul>
-    <li><b>A antiga era "Emulação" de <i>gamepad</i></b> (<code>uinput</code>) — termo técnico que ninguém entende. O conteúdo dela foi para os donos certos: diagnóstico e "Testar o controle virtual" para a <b>Sistema</b>, os combos para a <b>Navegação</b>, o microfone para a <b>Conexões</b>, modo e máscara para a <b>Jogar</b> e os <b>Perfis</b>.</li>
-    <li><b>A nova é sobre de onde o jogo vem</b> — e existe para fechar uma lacuna medida: o produto tem <b>zero</b> menção a RetroArch, Dolphin ou mGBA no código, e o Orpheus depende de um emulador de GBC. Heroic e Lutris só aparecem em <b>comentário</b> (<code>hotkey.py:37</code>, <code>lifecycle.py:1407</code> — era <code>:2250</code>, e a linha andou).</li>
-    <li><b>A interface diz "Steam" 689 vezes</b> para um motor que já casa por <code>process_name</code> e <code>window_class</code>. É aqui que o jogo de fora da Steam ganha porta de entrada.</li>
-  </ul>
-
-  <h2>02/09/2026 — a aba saiu do desenho, e três números dela caíram</h2>
-  <ul>
-    <li><b>Nenhuma caixa andou.</b> A grade, o CSS, os textos de ajuda e o lugar de cada botão são os que ela aprovou (<i>"lançadores perfeito parabéns"</i>). O que mudou é <b>de onde vem o que está escrito dentro deles</b>.</li>
-    <li><b>Os cartões deixaram de contar controle.</b> Eles diziam <i>"Os N controles chegam"</i>, com o N saindo da <code>MESA</code>. A aba responde por <b>lançador</b>, e isto já estava medido no próprio arquivo: nenhuma função de <code>prontuario_dos_jogos.py</code> recebe controle, <code>MAC</code>, device ou transporte — os cinco impedimentos (<code>:139-143</code>) e as duas curas (<code>:878</code>) são fatos do <b>jogo em disco</b>. Contar controle aqui era responder com um número que a pergunta não tem. A régua do gerador virou o inverso: ela reprova se um cartão voltar a prometer para um número.</li>
-    <li><b>Os números do cartão da Steam eram digitados, e o produto contradiz os quatro.</b> Medido na máquina dela em 02/09 com <code>censo_do_wrapper</code> e <code>prontuario_dos_jogos</code>: <i>412 jogos</i> → <b>23 instalados</b>; <i>3 jogos já sabem por onde entrar</i> → <b>0 pontes confirmadas</b>; <i>5 encontrados · 1 com impedimento</i> → <b>1 lançador medível</b>; e o <i>Heroic · 28 jogos · NÃO CHEGAM</i> era afirmação sobre um lançador que o produto <b>nunca olhou</b>.</li>
-    <li><b>Nasceu o selo <code>NÃO SEI</code>, e ele é a cura disso.</b> Heroic, Lutris, Flatpak, RetroArch e Dolphin·mGBA passam a dizer que o produto ainda não sabe olhá-los — <code>CHEGAM</code> e <code>NÃO CHEGAM</code> seriam as duas afirmações que ele não pode fazer. Há régua que reprova no dia em que um deles ganhar fonte e continuar com o <code>NÃO SEI</code>.</li>
-    <li><b>O cartão da Steam ganhou a lista dos jogos que perderam o atalho</b>, com o nome de cada um e o botão de tirar/devolver. Ela <b>nasce vazia</b> e não ocupa um pixel quando não há o que dizer — a mesma regra do carimbo.</li>
-    <li><b>A contagem do quadro continua derivada</b> — hoje <b>0</b> —, e agora dos mesmos cartões que o produto monta.</li>
-  </ul>
-
-  <h2>08/09/2026 — o que ela decidiu olhando a aba</h2>
-  <ul>
-    <li><b>O selo diz <code>NÃO LOCALIZADO</code></b>, e não mais <code>NÃO ACHEI</code> — palavra dela. O valor mudou num lugar só (<code>desenho_dos_lancadores.SELOS</code>); as dezenas de menções em comentário ficaram, porque contam o que aconteceu num dia. E as réguas que digitavam a palavra passaram a <b>ler</b> o selo.</li>
-    <li><b>Todo cartão que não localizou oferece <code>Localizar este lançador</code></b> — os seis, a Steam inclusive. Ele não instala nada: ele abre a tela onde <b>você diz onde o lançador está</b>, que é o que faz o cartão acender. No cartão que <i>achou</i>, o botão continua sendo <code>Abrir o lançador</code>: são dois estados, dois botões.</li>
-    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>Adicionar um lançador</code>, pedido dela <i>"pra devs mais experimentais"</i>. Ele é o outro ato, e por isso a outra palavra: <i>localizar</i> é para o cartão que já está na tela, <i>adicionar novo</i> é para o que não tem cartão nenhum. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>Tirar daqui</code>.</li>
-    <li><b>A Epic e a GOG ficam dentro do Heroic</b> — palavra dela, e o rótulo daquele cartão já dizia <code>Heroic (Epic · GOG)</code> desde que ele nasceu. É por ali que o jogo das duas lojas entra nesta máquina.</li>
-  </ul>
-
-  <h2>O que estava no código e nunca teve tela — agora tem</h2>
-  <ul>
-    <li><b>"Ver o que impede"</b> — <code>prontuario_dos_jogos.levantar_censo</code> nomeia cinco impedimentos e <b>não tinha chamador em <code>src/</code></b>. O botão é o chamador. Ele leva <b>13,4 s</b> (examina o executável de cada jogo), por isso é gesto e não pintura.</li>
-    <li><b>"Consertar"</b> — <code>sentinela_do_wrapper.reparar_ou_adiar</code>, com os portões dele intactos: jogo aberto antes de tudo, Steam aberta depois, e só então a escrita. A recusa vai para a tela com a frase que <b>nomeia o jogo</b>.</li>
-    <li><b>"Não usar neste jogo" / "Voltar a usar"</b> — o <code>jogos_sem_wrapper.txt</code> existia e <b>nenhuma tela o escrevia</b>: a única forma de tirar um jogo era editar o arquivo à mão.</li>
-    <li><b>"Detectar o jogo que está aberto"</b> — <code>steam_game_running_appid</code>, a mesma fonte do lembrete do wrapper. Ele diz <b>qual</b> jogo e se ele abre pelo atalho; <b>criar o perfil continua sendo da aba Perfis</b>.</li>
-  </ul>
-
-  <h2>Ainda aberto</h2>
-  <ul>
-    <li><b>Os cinco botões de Steam da Sistema vêm para cá?</b> <b>RESPONDIDA — ficam na Sistema</b> (D-A-ABA-LANCADORES-NASCE-PLACEHOLDER). Não reabrir.</li>
-    <li><b>"Abrir o lançador" LIGOU</b> — decisão dela, 03/09/2026. O cartão da Steam chama <code>steam_launch_options.reopen_steam</code>, que existia desde 23/08 com os dois caminhos (o binário <code>steam</code> e o <code>steam://open/main</code> de quem a instalou por Flatpak ou Snap) e <b>zero chamadores vindos da interface</b>. Nos outros cinco o botão <b>recusa dizendo</b>: o produto sabe ONDE eles estão e não sabe abri-los — não há função que abra o Heroic, o Lutris, o RetroArch ou os emuladores, e o Flatpak não é aplicativo. O gesto está em <code>hefesto_vivo.PERIGOSOS</code>, para que a prova automática nunca abra a Steam na tela dela.</li>
-    <li><b>"Criar perfil" LIGOU</b> — 21/09/2026 (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01). Ele abre a escolha do jogo daquele lançador, e o perfil nasce pelo <b>gravador da aba Perfis</b> (<code>a10_perfis.criar_para_o_jogo</code>): um gravador, dois caminhos de chegada — a razão de antes, cumprida em vez de contornada.</li>
-    <li><b>A lista de exclusão</b> — 21/09/2026. O jogo escolhido vê o controle como se o Hefesto não estivesse instalado, e o pé do cartão só aparece quando há jogo na lista. Os quatro botões dos cartões localizados cabem numa linha — palavra dela.</li>
-    <li><b>Quem mede Heroic, Lutris e os emuladores?</b> Ninguém, ainda. É varredura nova, não é ligar o que existe — e por isso os cinco cartões dizem <code>NÃO SEI</code> em vez de escolher um selo.</li>
-  </ul>
-</div>
+<!-- ===== fim da aba ===== -->
 
 </body>
 </html>

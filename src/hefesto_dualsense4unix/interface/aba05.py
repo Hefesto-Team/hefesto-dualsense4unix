@@ -685,7 +685,7 @@ CSS = """
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
   /* O TOM `diz` SAIU — 07/09/2026, com a única frase que o vestia. Ordem dela,
      olhando o pé do quadro com os quatro na mesa: *"Vibração remove essa última
-     frase também."* Ver `app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`.
+     frase também."* Ver `app/telas/vibracao.py` (as três frases que ficam).
 
      A REGRA SAI JUNTO E NÃO É ZELO: `.est.diz` era o cinza da contagem de
      pedidos, e nenhuma outra linha desta faixa usa esse tom. Cor que nada veste
@@ -1750,8 +1750,7 @@ if __name__ == "__main__":
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("05-vibracao", "Vibração", MIOLO,
-              CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28,
-              legenda=LEGENDA)
+              CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28)
     _conferir(onde.pagina("05-vibracao.html").read_text())
     shutil.copyfile(_prova / "05-vibracao.html", _real / "05-vibracao.html")
     shutil.rmtree(_prova)

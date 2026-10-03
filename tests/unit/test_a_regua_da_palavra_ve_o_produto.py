@@ -191,10 +191,15 @@ def test_a_leitura_do_produto_nao_apaga_a_tela() -> None:
 
 
 def test_a_bancada_continua_lendo_o_que_o_produto_esconde() -> None:
-    """O bilhete é a maior parte do texto do desenho, e ele tem de contar."""
+    """Uma `.nota` na página tem de contar na leitura da bancada e sumir na do produto.
+
+    As páginas deixaram de trazer a legenda do desenho (ela vai para a sessão
+    dos desenhos), então a prova põe uma `.nota` sintética no fim de cada uma.
+    """
     iguais: list[str] = []
+    nota = '<div class="nota"><p>' + "palavra " * 150 + "</p></div>"
     for pagina in _paginas(BANCADA):
-        cru = pagina.read_text(encoding="utf-8")
+        cru = pagina.read_text(encoding="utf-8").replace("</body>", nota + "</body>")
         so_no_desenho = len(texto_visivel(cru).split()) - len(
             texto_visivel_no_produto(cru).split()
         )

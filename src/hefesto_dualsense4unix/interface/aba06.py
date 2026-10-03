@@ -2585,7 +2585,7 @@ def _conferir(doc):
 
 
 def _gerar() -> None:
-    n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
+    n = monta("06-navegacao", "Navegação", MIOLO, CSS)
 
     p = onde.pagina("06-navegacao.html")
     s = p.read_text()
@@ -2607,7 +2607,7 @@ def _gerar() -> None:
                    + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
         s, count=1)
 
-    marca = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
+    marca = "<!-- ===== fim da aba ===== -->"
     if marca not in s:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
     telas = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_TECLAS,

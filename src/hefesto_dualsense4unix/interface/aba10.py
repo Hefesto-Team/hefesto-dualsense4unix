@@ -1938,18 +1938,18 @@ def _conferir(html: str) -> None:
            "da fileira de quatro botões, e era essa fileira (36px) que deixava "
            "a linha do P4 fora do quadro sempre que a tira do desfecho acendia")
 
-    exigir("O quadro &quot;Modo&quot;" in html or 'O quadro "Modo"' in html,
-           "a legenda parou de dizer que o quadro Modo saiu e onde ele mora — "
+    exigir("O quadro &quot;Modo&quot;" in LEGENDA or 'O quadro "Modo"' in LEGENDA,
+           "a legenda (nota de revisão, fora da página) parou de dizer que o quadro Modo saiu e onde ele mora — "
            "quem abrir a aba depois de 11/09 procuraria um quadro que a versão "
            "anterior tinha, sem nada na tela que o mande à Jogar")
 
     # `Daemon.gravar_o_modo_escolhido`, que resolve o alvo por
-    exigir("no perfil que está valendo" in html,
+    exigir("no perfil que está valendo" in LEGENDA,
            "a legenda perdeu o ALCANCE do que a aba Jogar escreve — sem ele a "
            "frase promete que a Jogar escolhe o modo de QUALQUER perfil, e o "
            "escritor (`Daemon.gravar_o_modo_escolhido`) só alcança o perfil "
            "ativo")
-    exigir("quem o escolhe é a Jogar" not in html,
+    exigir("quem o escolhe é a Jogar" not in LEGENDA,
            "a frase larga voltou à legenda — ela afirma que a Jogar escolhe o "
            "modo de qualquer perfil, e a Jogar grava só no que está valendo")
 
@@ -2241,7 +2241,7 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = monta("10-perfis", "Perfis", MIOLO, CSS, legenda=LEGENDA)
+    n = monta("10-perfis", "Perfis", MIOLO, CSS)
     _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
     shutil.copyfile(_prova / "10-perfis.html", _real / "10-perfis.html")
     shutil.rmtree(_prova)

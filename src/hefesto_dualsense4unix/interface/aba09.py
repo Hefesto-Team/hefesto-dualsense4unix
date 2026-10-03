@@ -751,7 +751,7 @@ CAMPO_DO_CHIP = "fita-chip"
 
 def escrever_a_bancada():
     """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`."""
-    n = monta("09-sistema", "Sistema", MIOLO, CSS, legenda=LEGENDA)
+    n = monta("09-sistema", "Sistema", MIOLO, CSS)
 
     p = onde.pagina("09-sistema.html")
     s = p.read_text()

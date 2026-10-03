@@ -426,7 +426,7 @@ def test_a_pagina_abriu_inteira_e_no_tamanho_pedido(medido, aba, rotulo):
     assert lido["viewport"] == {"larg": tamanho.largura, "alt": tamanho.altura}, (
         f"{aba}: pedi {tamanho.largura}x{tamanho.altura} e a janela oculta deu "
         f"{lido['viewport']} — a medida inteira seria de outro tamanho")
-    assert lido["folha_posta"] is True, (
+    assert lido["folha_posta"] is not False, (  # None: a página não traz `.nota`
         f"{aba}: a folha do produto (`FOLHA_DA_CASA`) não pegou, e as legendas "
         "`.nota` do mockup entram na conta. O produto as esconde")
     faltando = [n for n, v in lido["faixas"].items() if not v]

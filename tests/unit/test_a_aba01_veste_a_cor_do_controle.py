@@ -114,8 +114,9 @@ def test_o_cartao_nao_tem_dica_com_nome_de_colorway() -> None:
 
 def test_a_prosa_da_legenda_nao_nomeia_um_colorway() -> None:
     """A legenda citava a fita com um exemplo: `[P1 · Cosmic Red · USB]`."""
-    doc = bancada()
-    legenda = doc[doc.index('<div class="nota">'):]
+    import aba01
+
+    legenda = aba01.LEGENDA
     for nome in nomes_de_colorway():
         assert nome not in legenda, (
             f"a legenda voltou a nomear o plástico {nome!r} — a prosa passa a "

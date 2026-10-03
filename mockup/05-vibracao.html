@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba VIBRAÇÃO (mockup 26/08/2026)</title>
+<title>Hefesto — aba VIBRAÇÃO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -696,20 +696,6 @@
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
-  /* ---------- legenda do mockup (fora da janela) ---------- */
-  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
-     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
-     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
-     a bancada — sem devolver nada ao produto. */
-  .nota{
-    width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
-    border-left:2px solid var(--purple);padding-left:14px;
-  }
-  .nota h2{font-size:13px;color:var(--purple);margin-bottom:6px;font-weight:600}
-  .nota b{color:var(--texto-suave)}
-  .nota code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)}
-  .nota ul{margin:5px 0 10px 16px}
-  .nota li{margin-bottom:3px}
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
@@ -1585,7 +1571,7 @@
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
   /* O TOM `diz` SAIU — 07/09/2026, com a única frase que o vestia. Ordem dela,
      olhando o pé do quadro com os quatro na mesa: *"Vibração remove essa última
-     frase também."* Ver `app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`.
+     frase também."* Ver `app/telas/vibracao.py` (as três frases que ficam).
 
      A REGRA SAI JUNTO E NÃO É ZELO: `.est.diz` era o cinza da contagem de
      pedidos, e nenhuma outra linha desta faixa usa esse tom. Cor que nada veste
@@ -3884,39 +3870,7 @@
 
 </div>
 
-<!-- ================= LEGENDA DO MOCKUP ================= -->
-<div class="nota">
-  <h2>O que você pediu, e está aqui</h2>
-  <ul>
-    <li><b>O trilho do Personalizado mora dentro da Força</b> (02/10), logo abaixo dos três degraus: o valor que vale é o do trilho, e acende o maior degrau que ele alcança (de 150% para cima, o Máximo). A faixa que era dele virou a <b>Sensor Háptico</b>, com a bolinha verde acesa quando a háptica está chegando ao controle; o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só; e o desenho do controle voltou aos 124 px. A faixa entre os degraus (o Balanceado de 100 a 149, o Economia de 30 a 99) foi escolhida por delegação, e é sua para validar.</li>
-    <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
-    <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem os seus quatro degraus e a sua barra. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
-    <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
-    <li><b>Um bloco só</b> — as duas áreas viraram uma tabela do mesmo quadro.</li>
-    <li><b>Motor esquerdo e direito são o que ATIVA o lado durante o jogo</b> — o interruptor de cada lado, e o desenho mostra qual punho treme.</li>
-    <li><b>A barra de Força para em 200%</b>, que é o Máximo — não passa dele.</li>
-  </ul>
-
-  <h2>O que passou a vir do mapa, e deixou de ser digitado</h2>
-  <ul>
-    <li><b>Os quatro controles</b> saem de <code>monta.MESA</code> — nome, jogador, plástico e transporte. A aba não sabe contar até quatro: ela percorre a lista.</li>
-    <li><b>As cores</b> saem de <code>cor_da_zona()</code>, que lê o <code>&lt;style&gt;</code> gerado por <code>gerar_cores_do_dualsense.py</code> a partir de <code>docs/data/cores-do-dualsense.csv</code>. Não há um hexadecimal de plástico escrito nesta aba.</li>
-    <li><b>Os dois motores</b> saem de <code>docs/data/pecas-do-dualsense.csv</code>: o id no desenho (<code>feat-rumble-esquerdo</code> e <code>feat-rumble-direito</code>), o glifo de cada um, o nome e a nota que vira dica.</li>
-    <li><b>O padrão das lâmpadas</b> continua vindo do produto (<code>core/led_control.py</code>): P1 é a do meio e o P3 é <code>135</code> — não <code>234</code>, que era o que estava digitado no mockup. Ele não é desenhado nesta aba (elas saíram, por tamanho), e segue desenhado na Iluminação.</li>
-  </ul>
-
-  <h2>A sua dúvida sobre os motores, respondida</h2>
-  <p style="margin:5px 0 10px">Você desconfiou certo do nome. <b>Não existe "leve" e "forte" para cada motor</b> — existem <b>dois motores</b>, um em cada punho, e cada um recebe <b>um</b> valor de 0 a 255. O da esquerda tem <b>contrapeso maior</b>, por isso soa grosso; o da direita, menor, soa fino. "Leve" e "forte" são apelidos dos <b>lados</b>.</p>
-  <p style="margin:0 0 10px">Medido nesta casa, e está na canônica (<code>dualsense-referencia-canonica.md:303</code>): com o daemon parado, um <code>EV_FF</code> ligou o esquerdo e o report seguinte pediu <code>common[2]=200</code> (direito) e <code>common[3]=0</code> (esquerdo) — <b>o tremor trocou de lado</b>. Palavra sua, na medição: <i>"esquerda e senti que foi pra direita e lá morreu"</i>. São dois bytes independentes. No código do produto o par é <code>weak</code>/<code>strong</code> = direito/esquerdo.</p>
-
-  <h2>Ainda aberto — precisa da sua palavra</h2>
-  <ul>
-    <li><b>A cor do lado que treme — e o rótulo que a contradizia.</b> Você decidiu "cor do plástico" (D-O-SVG-VIBRA-POR-LADO), e o rótulo da coluna prometia isso com estas palavras: <i>"acende na cor do plástico daquele controle"</i>. O que está desenhado é <b>laranja</b>, e a tela se contradizia sozinha. A frase passou a descrever o desenho, porque o laranja tem motivo medido: o contorno do controle <i>já é</i> a cor do plástico, então um traço de plástico sobre ele <b>apagaria</b> o lado em vez de mostrá-lo, e o laranja é o que diz o LADO de longe — a cor do plástico não distingue os dois punhos do mesmo controle. Quem diz de quem é o tremor é o contorno e a borda da moldura, que são o plástico.<br>
-        <b>Se você quiser o contrário, é uma linha:</b> o traço vira <code>var(--plastico)</code> e a frase volta ao que era — mas então os dois lados acesos de um controle ficam da mesma cor do corpo dele, e o "qual punho treme" passa a depender só da espessura do traço.</li>
-    <li><b>Respondida em 28/08, e por isso saiu daqui:</b> "com a fita em Todos, as quatro colunas mexem juntas?". Não há mais o que a fita mexa nesta aba — os quatro ficam lado a lado e cada coluna se ajusta sozinha. A fita esmaecida é a tela dizendo isso.</li>
-    <li><b>O "Auto" mostra 70% no P3</b> porque a bateria dele está no meio. Esse número muda sozinho na tela enquanto joga, ou só quando você entra na aba?</li>
-  </ul>
-</div>
+<!-- ===== fim da aba ===== -->
 
 </body>
 </html>

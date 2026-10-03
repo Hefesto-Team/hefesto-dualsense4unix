@@ -83,8 +83,8 @@ CHAVE_DO_CLIQUE_QUE_SO_ARMOU = "armou"
 #: O QUE A GUARDA DE CARGA ACEITA. Os pilotos de uma aba só passavam o nome
 #: Aqui as DEZ são legítimas, então o esperado é o que as dez compartilham:
 #:
-#:     Hefesto — aba JOGAR (mockup 26/08/2026)
-#:     Hefesto — aba GATILHOS (mockup 26/08/2026)
+#:     Hefesto — aba JOGAR
+#:     Hefesto — aba GATILHOS
 #:
 #: A guarda casa por SUBSTRING, e `"Jogar"` não casa com `"aba JOGAR"` — foi o
 #: que matou a primeira execução deste piloto. Continua servindo para o que ela
@@ -1285,9 +1285,9 @@ BOOTSTRAP = r"""
     // sem dono. Um `<select>` não se "clica" no sentido útil — ele MUDA; e um
     // `<input>` de texto nunca dispara clique com o valor novo. Medido em
     // 01/09/2026: os quatro campos do editor da aba Perfis, os selects da
-    // Conexões e o nome da face nova ficaram sem dono por isto, e o relato dos
-    // agentes nomeia a causa uma vez por aba — *"o ouvinte manda `texto:
-    // alvo.textContent`, que num `<input>` é vazio"*.
+    // Conexões e o nome da face nova ficaram sem dono por isto, e a causa é a
+    // mesma em cada aba: o ouvinte manda `texto: alvo.textContent`, que num
+    // `<input>` é vazio.
     document.addEventListener('change', function(ev){ manda_do_alvo(ev); }, true);
     document.addEventListener('click', function(ev){
       // Os quatro atributos que marcam algo CLICÁVEL nas dez páginas. Eles já
@@ -3492,8 +3492,8 @@ class Piloto:
         `--prova-no-aparelho` a consultava. Achado pela `ONDA5-03-02`, que
         mediu o próprio estrago: o clique dela **gravou no perfil real** da dona
         (a gravação foi no-op — o valor já era o mesmo desde as 02:46, e nenhum
-        arquivo nasceu no `.historico/` — mas a porta estava aberta e nenhum
-        agente sabia). É a terceira vez em quatro dias que o comentário que
+        arquivo nasceu no `.historico/` — mas a porta estava aberta e ninguém
+        sabia). É a terceira vez em quatro dias que o comentário que
         AVISA do risco fica ao lado do código que o comete.
 
         A recusa é BARULHENTA e não um pulo em silêncio: uma régua que pula

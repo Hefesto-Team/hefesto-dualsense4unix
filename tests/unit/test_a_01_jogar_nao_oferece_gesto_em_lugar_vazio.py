@@ -94,8 +94,7 @@ def _gerar(destino: pathlib.Path) -> pathlib.Path:
         import aba01
         import onde
 
-        aba01.montar("01-jogar", "Jogar", aba01.MIOLO, aba01.CSS,
-                     legenda=aba01.LEGENDA)
+        aba01.montar("01-jogar", "Jogar", aba01.MIOLO, aba01.CSS)
         return onde.pagina(PAGINA)
     finally:
         if anterior is None:

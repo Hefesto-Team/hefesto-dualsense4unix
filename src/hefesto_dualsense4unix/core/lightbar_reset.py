@@ -1,6 +1,6 @@
 """LIGHTBAR-BT-RESET-01: destrava a lightbar do DualSense por Bluetooth.
 
-O QUE ACONTECE (provado ao vivo 2026-07-17/18 + estudo de 5 agentes): a ADOÇÃO
+O QUE ACONTECE (provado ao vivo 2026-07-17/18 + 5 corridas de estudo): a ADOÇÃO
 do controle pelo daemon (abertura do hidraw pela pydualsense + feature reads do
 ``init``) derruba o "claim" da lightbar na máquina de estados do FIRMWARE — a
 lightbar apaga no ato e passa a IGNORAR as escritas de cor do kernel (rota

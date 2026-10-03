@@ -1272,8 +1272,7 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA,
-              legenda=LEGENDA)
+    n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA)
     _conferir(onde.pagina("03-gatilhos.html").read_text())
     shutil.copyfile(_prova / "03-gatilhos.html", _real / "03-gatilhos.html")
     shutil.rmtree(_prova)

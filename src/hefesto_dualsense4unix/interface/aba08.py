@@ -3382,11 +3382,11 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = monta("08-conexoes", "Conexões", MIOLO, CSS, legenda=LEGENDA)
+    n = monta("08-conexoes", "Conexões", MIOLO, CSS)
 
     p = onde.pagina("08-conexoes.html")
     x = p.read_text()
-    MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
+    MARCA = "<!-- ===== fim da aba ===== -->"
     if MARCA not in x:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
     TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, TELA_SENTADA, TELA_FIM, TELA_EM_PE,

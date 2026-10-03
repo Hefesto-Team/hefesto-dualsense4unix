@@ -127,7 +127,7 @@ o "Liberar" nasce travado e não responde — provado o silêncio
 
 1. `Tela(pagina, titulo_esperado="Hefesto")` — o título é conferido. Escrever
    `titulo_esperado="Controles"` **reprova**, porque a página se chama
-   *"Hefesto — aba CONTROLES (mockup 26/08/2026)"*. Medido hoje: o instrumento
+   *"Hefesto — aba CONTROLES"*. Medido hoje: o instrumento
    levanta `CargaFalhou` dizendo o `readyState`, o URI e o título que achou.
 2. `tela.executar(controles_vivos.BOOTSTRAP)` — **o mockup sozinho não tem
    ouvinte**. Sem esta linha, todo `clicar_e_ouvir` reprova por silêncio, e

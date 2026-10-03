@@ -104,7 +104,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
    *slot volátil* (abaixo). Em
    o registro «O-QUE-ELA-DESENHOU-o-todo-por-aba» de 26/08/2026 ``D9`` é
    outra coisa — a decisão dos três botões de sensor na aba Controles. Os dois
-   documentos estão entre os primeiros que um agente novo abre, e a colisão já
+   documentos estão entre os primeiros que quem chega abre, e a colisão já
    custa uma busca errada por leitura; registrada em 29/08/2026 para não custar
    duas.
 

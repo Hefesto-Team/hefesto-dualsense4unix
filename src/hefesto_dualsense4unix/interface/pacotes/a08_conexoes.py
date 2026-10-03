@@ -4563,7 +4563,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     ou o «esperando» que passou de :data:`ESPERA_NA_TELA_S`.
 
     A LINHA TEM APARELHO (ESQUECER-E-LIMPAR-AS-CONEXOES-01,
-    D-3009-A-LINHA-TEM-APARELHO, quem coordena, 30/09/2026, a validar por ela).
+    D-3009-A-LINHA-TEM-APARELHO, 30/09/2026, a validar por ela).
     A busca que ninguém respondeu (o movimento sem endereço) virava «DualSense ·
     Não Conectou», com o desenho do controle, a borda laranja e a caixa que
     abria — o *«controle fantasma»* dela. Agora a linha só existe enquanto há um
@@ -4852,7 +4852,7 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
     """O que CADA rádio está vendo e não está ligado — as listas do «Conectar».
 
     UMA LINHA POR ADAPTADOR QUE VIU O APARELHO, com o sinal medido POR ELE
-    (D-3009-A-LISTA-E-DO-ADAPTADOR-ACESO, quem coordena, 30/09/2026, a validar
+    (D-3009-A-LISTA-E-DO-ADAPTADOR-ACESO, 30/09/2026, a validar
     por ela). A lista de antes era de todo aparelho com sinal em qualquer
     adaptador, pelo endereço só: o mesmo aparelho visto por dois ficava com o
     sinal do último que o BlueZ listou, e o «Parear» mandava o chip aceso como

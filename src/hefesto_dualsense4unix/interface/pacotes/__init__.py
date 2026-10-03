@@ -1,27 +1,19 @@
 #!/usr/bin/env python3
 """O DESPACHANTE: uma função de pacote por aba, e um contrato só para as dez.
 
-DECISÃO DELA, 01/09/2026, e ela recusou a alternativa com estas palavras:
+DECISÃO DE 01/09/2026: as dez abas se ligam numa mão só, aba a aba, e não por
+um pacote de trabalho independente por aba. A razão é medida, e são três:
 
-    "se vc achar melhor, ao invés de agentes, você mesmo vai conectando tudo aba
-     a aba. e olhando o arquivo de specs.html — lá já temos até a parte do BT
-     mapeada."
-
-O plano de uma hora previa oito agentes, um por aba. A razão de NÃO ir por ali é
-medida, e são três:
-
-1. **O plano é anterior à leva que mudou as dez abas.** Ele foi escrito em 31/08
-   às ~20h; depois disso a mesa virou dois conectados e dois lugares vazios, os
-   rótulos mudaram, a fita virou "Selecionar:" e a janela foi para 777px. Os
-   pilotos que os agentes leriam apontam endereços que essa leva moveu — oito
-   agentes sobre premissa velha entregam oito pacotes que não pintam, e a régua
-   só acusaria no fim.
-2. **O teto de sessão.** O próprio plano registra: em 31/08, **37 de 40 agentes
-   morreram** por isso, e a auditoria mais importante do dia ficou 3/39.
+1. **O plano era anterior à leva que mudou as dez abas.** Os pilotos de cada aba
+   apontavam endereços que essa leva moveu (a mesa virou dois conectados e dois
+   lugares vazios, os rótulos mudaram, a fita virou "Selecionar:" e a janela foi
+   para 777px): oito pacotes escritos em paralelo sobre premissa velha não pintam,
+   e a régua só acusaria no fim.
+2. **O teto de sessão.** Em 31/08, **37 de 40 execuções paralelas morreram** por
+   isso, e a auditoria mais importante do dia ficou 3/39.
 3. **O defeito mais comum do dia atravessava abas.** "Frase que nomeia um
    controle fora da mesa" apareceu QUATRO vezes — na Iluminação, na Navegação, na
-   Conexões e na Sistema — e só foi visto porque as abas irmãs estavam na mesma
-   cabeça. Um agente por aba não enxerga o que se repete entre abas.
+   Conexões e na Sistema — e só foi visto olhando as abas irmãs juntas.
 
 O CONTRATO, e ele é o que impede a integração de virar um segundo projeto:
 

@@ -5,7 +5,7 @@ POR QUE ESTE ARQUIVO EXISTE, e ele nasceu de um erro meu que ela pegou em
 01/09/2026 com uma pergunta só: *"vc tá corrigindo na origem esses problemas que
 tá relatando né?"*
 
-A resposta era NÃO. Eu tinha escrito dezessete valores `sem_dono` — travessões
+A resposta era NÃO. O pacote trazia dezessete valores `sem_dono` — travessões
 na tela, com uma frase explicando que o produto não sabia aquilo. **Doze deles
 tinham dono**, e o dono era o perfil:
 

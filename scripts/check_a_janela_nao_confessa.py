@@ -53,8 +53,8 @@ equipe fala do próprio trabalho, e o jeito como ela chama o piloto.
 
 O QUE ELE NÃO LÊ, e é DECISÃO — o ``<title>`` das dez páginas
 --------------------------------------------------------------
-As dez páginas trazem ``<title>Hefesto — aba JOGAR (mockup 26/08/2026)</title>``,
-e isso É língua da casa. Ele fica de fora porque **nesta janela ninguém o lê**: o
+As dez páginas trazem ``<title>Hefesto — aba JOGAR</title>``. Ele fica de fora
+porque **nesta janela ninguém o lê**: o
 ``WebKit2.WebView`` mora dentro de uma ``Gtk.Window`` com ``HeaderBar`` própria,
 sem barra de abas e sem barra de endereço — quem escreve o que aparece na
 moldura é o ``set_title`` que esta régua já mede.

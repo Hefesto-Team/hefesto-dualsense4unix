@@ -1475,30 +1475,7 @@ LEGENDA = f'''<div class="nota">
 {_pacote04.secao_da_troca(MESA, recuo="    ")}
   </div>
 
-  <!-- O BILHETE DE PROJETO SAIU DA PÁGINA — 08/09/2026.
-
-       Moravam aqui três listas — "O que mudou hoje", "O que você pediu, e
-       continua aqui" e "Ainda aberto" —, 87 linhas que narravam commits,
-       citavam decisões dela por data e nomeavam um botão que não existe mais
-       (o por coluna, que saiu no `2c228352`). A regra dela, 07/09: *"O app tem
-       que funcionar e não mostrar na tela que o app não presta. (...) o layout
-       não informa os nossos defeitos."*
-
-       A `.nota` é `display:none` no PRODUTO (`interface/folha_da_casa.py`), mas
-       NÃO na BANCADA: `mockup/04-iluminacao.html` é o que ela abre no
-       navegador, sem folha de usuário nenhuma, e ali as 87 linhas eram texto
-       visível. Era esse o terceiro canto da queixa *"ainda temos 3 cantos
-       falando sobre o automatico"*. (noqa-acento: citação literal dela)
-
-       O REGISTRO NÃO SE PERDEU, ele mudou de casa:
-       `A-LEGENDA-DA-ABA-04`.
-
-       O que FICA aqui é a `.nota-troca`: ela não é bilhete, é PRODUTO — o
-       `data-hef="troca"` que o piloto reescreve a cada tique com `ctx.mesa`. -->
 </div>
-
-</body>
-</html>
 '''
 
 _UMA_COLUNA = re.compile(r'<div class="ctrl([" ][^>]*?)>(.*?)(?=<div class="ctrl[" ]|\Z)',

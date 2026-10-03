@@ -90,7 +90,7 @@ instante de cada queda).
 OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
 ====================================================================
 1. **«Ligar aqui» vale enquanto o CONTROLE ficar naquele adaptador.** REVISTO
-   em 23/09 pela A-COSTURA-DA-ONDA-2-01, decisão de quem coordena: a
+   em 23/09 pela A-COSTURA-DA-ONDA-2-01, decisão registrada: a
    GOVERNADOR-02 dizia «enquanto a ponte estiver de pé», e o preço medido na
    conferência foi perguntar a ela no meio da partida — cada controle tem uma
    ponte só, a troca som → vibração derruba e sobe a ponte, e a ponte do som
