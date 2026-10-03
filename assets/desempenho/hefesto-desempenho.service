@@ -4,7 +4,9 @@
 # a resposta «sim» à pergunta). Pede o perfil Performance ao gerenciador de
 # energia da máquina a cada boot; o gerenciador (system76-power ou
 # power-profiles-daemon) é o que o install achou, e os dois marcadores abaixo
-# são trocados na hora de gravar.
+# são trocados na hora de gravar. O sucesso é o perfil lido de volta, não o
+# código de saída do pedido (o system76-power sai 1 quando uma peça do perfil
+# falha, mesmo com o perfil aplicado).
 # REVERSÍVEL: ./uninstall.sh, ou systemctl disable --now + apagar este arquivo.
 [Unit]
 Description=Hefesto: o computador no modo desempenho (perfil de energia)

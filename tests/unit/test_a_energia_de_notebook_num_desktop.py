@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -132,6 +133,12 @@ class Maquina:
         }
 
 
+def _exec_start(unit: str) -> str:
+    linhas = [ln for ln in unit.splitlines() if ln.startswith("ExecStart=")]
+    assert len(linhas) == 1, unit
+    return linhas[0].removeprefix("ExecStart=")
+
+
 def _roda(
     maquina: Maquina, *args: str, script: Path = SCRIPT, **extra: str
 ) -> subprocess.CompletedProcess[str]:
@@ -164,7 +171,7 @@ class TestOMecanismo:
         m = Maquina(tmp_path)
         _roda(m, "aplicar")
         unit = (m.raiz / UNIT).read_text(encoding="utf-8")
-        assert "ExecStart=/usr/bin/env system76-power profile performance" in unit
+        assert "system76-power profile performance;" in _exec_start(unit)
         assert "After=com.system76.PowerDaemon.service" in unit
         assert "__" not in unit, "sobrou marcador sem trocar"
         assert (m.raiz / WANTS).is_symlink()
@@ -173,10 +180,50 @@ class TestOMecanismo:
         m = Maquina(tmp_path, gerenciador="power-profiles-daemon")
         _roda(m, "aplicar")
         unit = (m.raiz / UNIT).read_text(encoding="utf-8")
-        assert "ExecStart=/usr/bin/env powerprofilesctl set performance" in unit
+        assert "powerprofilesctl set performance;" in _exec_start(unit)
         assert "After=power-profiles-daemon.service" in unit
         codigo = "\n".join(ln for ln in unit.splitlines() if not ln.startswith("#"))
         assert "system76" not in codigo
+
+    @pytest.mark.parametrize(
+        ("gerenciador", "cliente", "pedido_sai", "le_de_volta", "deve_passar"),
+        [
+            # o pedido sai 1 com o perfil aplicado (a porta SATA da máquina dela)
+            ("system76-power", "system76-power", 1, "Power Profile: Performance", True),
+            ("system76-power", "system76-power", 0, "Power Profile: Balanced", False),
+            ("power-profiles-daemon", "powerprofilesctl", 1, "performance", True),
+            ("power-profiles-daemon", "powerprofilesctl", 0, "balanced", False),
+        ],
+    )
+    def test_a_unit_confere_o_perfil_e_nao_o_codigo_de_saida(
+        self,
+        tmp_path: Path,
+        gerenciador: str,
+        cliente: str,
+        pedido_sai: int,
+        le_de_volta: str,
+        deve_passar: bool,
+    ) -> None:
+        m = Maquina(tmp_path, gerenciador=gerenciador)
+        _roda(m, "aplicar")
+        argv = shlex.split(_exec_start((m.raiz / UNIT).read_text(encoding="utf-8")))
+        # Um cliente como o real: o pedido (com argumento de perfil) sai com o
+        # código dado; a leitura (sem ele) diz o perfil de agora.
+        falso = tmp_path / "pelo-boot"
+        falso.mkdir()
+        alvo = falso / cliente
+        alvo.write_text(
+            "#!/bin/sh\n"
+            f'case "$*" in *performance*) exit {pedido_sai} ;; esac\n'
+            f'echo "{le_de_volta}"\n',
+            encoding="utf-8",
+        )
+        alvo.chmod(0o755)
+        r = subprocess.run(
+            argv, capture_output=True, text=True, timeout=30, check=False,
+            env={"PATH": f"{falso}:/usr/bin:/bin"},
+        )
+        assert (r.returncode == 0) is deve_passar, (argv, r.returncode, r.stderr)
 
     def test_ppd_sem_o_perfil_performance_e_pulado_e_dito_sem_erro(self, tmp_path: Path) -> None:
         # Sem driver que sustente «performance», a unit falharia a cada boot.
@@ -497,7 +544,7 @@ class TestODoctor:
         self, tmp_path: Path
     ) -> None:
         m = Maquina(tmp_path, perfil_agora="Performance")
-        assert "nada o guarda depois do boot" in _linha(_doctor(m), "perfil de energia")
+        assert "o Hefesto não o guarda depois do boot" in _linha(_doctor(m), "perfil de energia")
 
     def test_aplicado_passa_com_o_valor_de_agora(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, perfil_agora="Performance")

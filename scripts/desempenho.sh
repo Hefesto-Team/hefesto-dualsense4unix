@@ -137,15 +137,20 @@ _instalar_asset() {
 _aplicar_perfil() {
     local gerenciador comando unidade tmp
     gerenciador="$(_gerenciador)"
+    # O sucesso da unit é o ESTADO, não o código de saída do pedido: o
+    # system76-power sai 1 quando uma peça do perfil falha (a política de link
+    # de uma porta SATA que não a aceita, medido na máquina dela em 03/10) mesmo
+    # com o perfil aplicado, e a unit ficaria falhada a cada boot. Pede, e
+    # confere lendo o perfil de volta; o Restart= só volta a pedir se não pegou.
     if [[ "${gerenciador}" == "system76-power" ]]; then
-        comando="/usr/bin/env system76-power profile performance"
+        comando="/bin/sh -c 'system76-power profile performance; system76-power profile | grep -q \"^Power Profile: Performance\"'"
         unidade="com.system76.PowerDaemon.service"
     else
-        comando="/usr/bin/env powerprofilesctl set performance"
+        comando="/bin/sh -c 'powerprofilesctl set performance; powerprofilesctl get | grep -qx performance'"
         unidade="power-profiles-daemon.service"
     fi
     tmp="$(mktemp)"
-    sed -e "s|__SERVICO_DO_GERENCIADOR__|${unidade}|g" -e "s|__COMANDO__|${comando}|g" \
+    sed -e "s#__SERVICO_DO_GERENCIADOR__#${unidade}#g" -e "s#__COMANDO__#${comando}#g" \
         "${ASSETS}/hefesto-desempenho.service" >"${tmp}"
     # A guarda pós-render, como a das units do broker: nunca gravar unit com
     # marcador literal.

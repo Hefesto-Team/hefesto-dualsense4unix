@@ -8727,7 +8727,7 @@ _desempenho_diz() {
         fi
     elif [[ "${provado}" -eq 1 ]]; then
         if [[ "${agora}" == "${quer}" ]]; then
-            info "modo desempenho, ${rotulo}: não pedido; já está assim agora (${agora}), mas nada o guarda depois do boot. Para guardar: ${ligar}"
+            info "modo desempenho, ${rotulo}: não pedido; já está assim agora (${agora}), mas o Hefesto não o guarda depois do boot. Para guardar: ${ligar}"
         else
             info "modo desempenho, ${rotulo}: não pedido (agora: ${agora:-?}). Para ligar: ${ligar}"
         fi
