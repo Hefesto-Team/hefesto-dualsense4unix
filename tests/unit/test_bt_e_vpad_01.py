@@ -305,7 +305,7 @@ def test_o_probe_do_kernel_nao_conta_como_jogo() -> None:
 
     Ou seja: este teste prova que o carimbo respeita o gate — **não** que o
     gate separa jogo de kernel. Ele não separa. Ver "A REFUTAÇÃO DO VEREDITO"
-    em `docs/process/sprints/2026-08-01-PARIDADE-SONY-01-*.md`.
+    na sprint `PARIDADE-SONY-01`.
 
     Fica como está, de propósito: o gate segue sendo o certo a exigir (é o
     mesmo da REPLICA-03, e dois gates divergiriam), e a mordida segue válida.

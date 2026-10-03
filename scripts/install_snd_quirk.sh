@@ -42,7 +42,7 @@
 #                                            na próxima reenumeração/replug). Requer root.
 #
 # SPRINT-GAME-RUMBLE-01 / incidente Sackboy 2026-07-14. Pesquisa e descritores em
-# docs/process/sprints/2026-07-14-plano-raiz-anti-storm.md.
+# o registro «plano-raiz-anti-storm» de 14/07/2026.
 
 set -euo pipefail
 

@@ -174,7 +174,7 @@ máquina, 6 s por janela::
 Ou seja: o flag é REAL e o áudio o segue. **O ciclo de trabalho publicado antes
 aqui caducou em 07/08/2026** (medido com um desmutador acidental rodando por
 baixo — ver ``docs/data/caducos.csv`` e o estudo de 03/08/2026 em
-``docs/process/estudos/2026-08-03-a-noite-em-que-o-microfone-do-bluetooth-voltou.md``).
+o estudo «a-noite-em-que-o-microfone-do-bluetooth-voltou» de 03/08/2026).
 Ainda não há substituto medido; o que fica é a ausência declarada, não um
 número novo.
 

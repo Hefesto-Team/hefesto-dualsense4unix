@@ -1581,7 +1581,7 @@ def acao_de_tirar(chave: str) -> Acao:
 # vira *"Adicionar jogo a lista de exclusão do Hefesto (cujo objetivo é
 # garantir que tal jogo não use nenhuma feature do hefesto)"*.  # noqa-acento: citação literal dela
 # O desenho foi APROVADO por ela no mesmo dia (*"perfeito aprovadíssimo."*),
-# e está em `docs/process/assets/2026-09-21-os-lancadores-iguais-*.png`.
+# e está nas fotos «os-lancadores-iguais» de 21/09/2026.
 #
 # A FILEIRA É DE QUATRO NOS OITO CARTÕES: abrir, criar perfil, apontar outro
 # caminho, excluir. A função do «Este jogo não funciona» (a lista do Steam

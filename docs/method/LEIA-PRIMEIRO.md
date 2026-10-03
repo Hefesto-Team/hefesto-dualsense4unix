@@ -56,19 +56,6 @@ o defeito que ela apontou em 07/09 olhando a linha 10: *"sinceramente não
 entendi o que diabos é pra fazer aqui"*. Sete réguas ficaram vermelhas e
 nenhuma sabia dizer por quê.
 
-## O PONTEIRO no lugar antigo
-
-`docs/process/` continua no disco dela e do André, e quem abrir o caminho
-velho encontra uma folha de uma linha dizendo para onde o arquivo foi. Essa
-folha **não viaja no git** — a pasta é ignorada —, então quem tem a pasta a
-escreve com:
-
-```bash
-python3 scripts/apontar-o-dado-que-saiu-do-processo.py --escrever
-```
-
-Sem a pasta, o script diz que não há o que apontar e sai com `0`.
-
 ## AS RÉGUAS QUE SEGURAM ISTO
 
 `tests/unit/test_o_dado_nao_mora_no_processo.py` cobra as três coisas:
@@ -78,5 +65,6 @@ Sem a pasta, o script diz que não há o que apontar e sai com `0`.
 2. esta página nomeia cada um, com o endereço velho e o leitor — um arquivo
    novo na pasta sem linha aqui reprova;
 3. **nenhum módulo de `src/`, `scripts/` ou `tests/` lê a árvore real
-   `docs/process/`**, salvo as ferramentas de processo declaradas com a razão
-   (as que mexem nas sprints: o painel, o movedor, a colisão).
+   `docs/process/`**, salvo as réguas declaradas com a razão. O movedor de
+   sprints e a régua da colisão saíram do repositório em 02/10/2026 e moram com
+   as ferramentas de quem coordena.

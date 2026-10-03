@@ -479,7 +479,7 @@ datada** com o que a medição achou. O padrão delas tem nome, e é o oposto do
 que a fila costuma supor: **adiamento não é remoção**. As decisões de 06/09
 sobre controles externos, editor avançado de regra, "Mapear Entrada a Entrada"
 e o custo da máscara antes do clique são de **prazo** — a §10 da
-[24 HORAS](../process/2026-09-06-AS-VINTE-E-QUATRO-HORAS-a-ordem-que-o-orquestrador-despacha-e-as-rotas-corrigidas.md)
+24 HORAS
 as põe fora das 24 horas e fecha dizendo *"o resto dos FALTA fica na régua, que
 é onde fila mora"*. Promovê-las a `DIFERENTE` esvaziaria a fila sobre trabalho
 que ninguém fez.
@@ -605,7 +605,7 @@ CSV**: `01-jogar` vai de `13 IGUAL · 1 FALTA · 31%` para `12 · 2 · 29%`,
 `144 · 161 · 29 · 36%` para `143 · 160 · 31 · 36%`.
 
 **A razão:** a terceira lista dela manda as frases de aviso pararem de aparecer
-nas abas ([o índice](../process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)), e a
+nas abas (o índice), e a
 marca era uma: o asterisco com o motivo da queda no `title`. No WebKit ele nunca
 acendia, porque a camada de dicas tira o `title` e `.degradou[title]` não casava.
 A decisão de 04/09 que o desenhou, `D-02C-DEGRADACAO-VPAD`, ficou `caduca` em

@@ -895,7 +895,7 @@ PYEOF
     fi
 }
 
-# Onda T (desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
+# Onda T (desenho: o estudo «desenho-onda-t-patch-dkms» de 20/07/2026):
 # módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
 # genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
 # da casa: install SEM FLAGS aplica), opt-out --no-dkms. Compartilhada entre o
@@ -1204,7 +1204,7 @@ flush_initramfs_host() {
     return 0
 }
 
-# Onda W (desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md):
+# Onda W (desenho: o estudo «desenho-onda-w-patch-dkms» de 20/07/2026):
 # módulo rtw88_usb patchado (device-gone + queue de port reset — cura do
 # fantasma USB do dongle WiFi) via a MESMA lib genérica scripts/dkms_lib.sh
 # (2ª instância — hid-nintendo é a 1ª; ZERO ajuste na lib). DEFAULT ON (regra

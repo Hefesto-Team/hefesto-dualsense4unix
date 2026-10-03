@@ -3,7 +3,7 @@ sprint: O-COMO-DAS-21
 estado: feita
 posse:
   O-COMO-DAS-21:
-    - docs/process/sprints/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md
+    - docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md
 bancada: true
 ---
 

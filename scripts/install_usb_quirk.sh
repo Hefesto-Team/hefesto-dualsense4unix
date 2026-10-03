@@ -38,7 +38,7 @@
 #                                            substitui o cmdline). Requer root.
 #
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D). Pesquisa e descritores reais em
-# docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md.
+# o registro «storm-audio-pesquisa-profunda-quirk-vs-audiooff» de 26/06/2026.
 
 set -euo pipefail
 

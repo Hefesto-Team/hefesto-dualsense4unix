@@ -21,7 +21,7 @@
 > BIOS / trocar de porta" foi superada na investigação de 2026-06-26.
 >
 > **Ver também (doc canônico, no arquivo de processo):**
-> `docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
+> o registro «storm-audio-pesquisa-profunda-quirk-vs-audiooff» de 26/06/2026.
 
 # DualSense em Pop!_OS COSMIC — dropout USB `-71` e WirePlumber default-source (2026-05-28)
 

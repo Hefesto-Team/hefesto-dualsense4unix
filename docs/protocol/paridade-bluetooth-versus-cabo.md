@@ -117,7 +117,7 @@ Tudo o mais é paridade. Estas três não são:
 > O controle positivo é o `hardware_version`, que **não** mudou de aparelho — se
 > tivesse mudado, o instrumento estaria trocando rótulos e nada acima valeria.
 > A página inteira, com o que **não** fechou, está em
-> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
+> A TROCA DE BRAÇOS.
 
 ### 1. O canal de áudio é outro — não é o mesmo degradado
 
@@ -182,7 +182,7 @@ Ordenado por (impacto ÷ custo):
 
 1. **o desmute do microfone com dono** — o mic BT funciona, mas o firmware retém
    o mudo e ninguém o limpa no ciclo de vida da ponte. Custo: baixo.
-   Ver [a noite em que o microfone do Bluetooth voltou](../process/estudos/2026-08-03-a-noite-em-que-o-microfone-do-bluetooth-voltou.md);
+   Ver a noite em que o microfone do Bluetooth voltou;
 2. **ligar a ponte de mic pela interface** — hoje só por CLI (`mic bt`), sem
    widget, e o daemon publica campo morto no status. Custo: baixo;
 3. **o filtro do bit de áudio no espelho de motion** —
@@ -245,7 +245,7 @@ Ordenado por (impacto ÷ custo):
   > **`GYRO-EDGE-RATE-01` é NOME DE DIVERGÊNCIA, não sprint.** Não existe
   > arquivo com esse nome em `docs/process/sprints/`, e chamá-lo de sprint faz
   > parecer que alguém está com o trabalho na mão. O apelido está registrado em
-  > [divergências nomeadas](../process/DIVERGENCIAS-NOMEADAS.md).
+  > divergências nomeadas.
   >
   > **Continua não existindo nesta árvore uma linha que reconcilie a taxa
   > declarada com a real** — nem conversão, nem aviso, nem número guardado. E o

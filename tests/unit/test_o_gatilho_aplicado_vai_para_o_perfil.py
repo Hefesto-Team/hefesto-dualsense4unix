@@ -9,7 +9,7 @@ Ela pediu, com estas palavras, em 05/09/2026:
     no dia seguinte e por diante."*
 
 A decisão que a atende é a **D2** —
-`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md`:
+o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026:
 *"persistência no clique em toda parte, com o rodapé como rede de segurança"*.
 
 O DEFEITO, MEDIDO ANTES DA CURA
@@ -41,7 +41,7 @@ AS SETE COISAS QUE ESTA RÉGUA COBRA
    seria a tela mentindo do lado caro.
 7. **QUANDO MEIO ATO DEU CERTO, A FRASE DIZ AS DUAS METADES** — 06/09/2026, a
    decisão **D-17** dela (*"as duas abas falam"*),
-   `docs/process/sprints/2026-09-05-AS-DUAS-ABAS-FALAM-01-*.md`. Perfil NOMEADO
+   a sprint `AS-DUAS-ABAS-FALAM-01`. Perfil NOMEADO
    que não abre não cala mais: o recibo sai *«… aplicado · o efeito FOI para o
    aparelho, mas não consegui ABRIR o perfil …»*, pelo canal do `recado` verde
    e nunca pelo `RuntimeError` laranja — um gesto que fez o que prometeu no

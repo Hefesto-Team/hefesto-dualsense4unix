@@ -28,7 +28,7 @@ vpad. O que a torna suportável é que ninguém repinta quem não mudou —
 ``apply_controller_mascaras`` escreve peça a peça e :func:`vpad_ficou_para_tras`
 compara antes de derrubar, então um perfil que repete a máscara de um jogador
 não o faz sumir. A sprint que fechou a porta velha é
-``docs/process/sprints/arquivados/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``
+a sprint `MASCARA-01`
 (seção *"Onde a máscara mora"*), e o que valia lá vale só até esta nota.
 
 **O QUE ESTE REGISTRO É AGORA: um CACHE do perfil ativo, não o dono.** Ele
@@ -66,7 +66,7 @@ jogo como **padrão herdado** — quem não escolheu nada segue o jogo, exatamen
 como um campo em branco de ``ControllerOverrides`` herda a seção global.
 
 A medição que separou os dois casos (documento
-``docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-*``): o ``mode`` é
+a sprint `MASCARA-POR-JOGADOR-01`): o ``mode`` é
 estado do PROCESSO — existe um só e duas unidades pedindo modos diferentes não
 têm resposta. A máscara **já tem um lugar por jogador**: o co-op cria um gamepad
 virtual por controle e cada um carrega o próprio ``flavor``.

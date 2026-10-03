@@ -336,7 +336,7 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
     **O ``[ OK ]`` NÃO FOI OBSERVADO AQUI com controle no cabo** — ele saiu da
     função com o texto dado à mão, acima. **Mas ele JÁ FOI VISTO VIVO nesta
     máquina**, do sysfs real, em 06/09/2026 e com a bancada LIVRE a sessão
-    inteira: `docs/process/agentes/2026-09-06/ONDA5-01-01.md:53-62` registra o
+    inteira: `ONDA5-01-01`:53-62` registra o
     `/sys/module/snd_usb_audio/parameters/quirk_flags` EXISTINDO com o quirk e
     o `check_snd_quirk()` devolvendo ``[ OK ]``. É a prova de que o ramo bom é
     alcançável, e é por isso que ele não custa um gesto dela na bancada: esta

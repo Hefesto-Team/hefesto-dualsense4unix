@@ -1,6 +1,6 @@
 """NUMA-05 — `game_signal` no `daemon.state_full` (autoridade de exibição).
 
-A síntese da Onda N (docs/process/sprints/2026-07-19-sprint-numeracao-una.md)
+A síntese da Onda N (o registro «sprint-numeracao-una» de 19/07/2026)
 decidiu um sinal global de três estados ('game'/'daemon'/'unknown') que o
 NUMA-01 (ainda não fiado neste tree) vai popular via property PÚBLICA
 `daemon.display_authority` + diagnóstico rico opcional em

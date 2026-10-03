@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """As QUATRO decisões dela na aba Iluminação, medidas uma a uma — 04/09/2026.
 
-A fonte é `docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`,
+A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
 §2, aba `04-iluminacao`, e a sprint
 `2026-09-04-ONDA2-04-ILUMINACAO-01-o-interruptor-de-verdade-e-a-cor-que-se-grava-ao-desligar`:
 

@@ -17,7 +17,7 @@ o DualSense do P1 fora da mesa — bateria, cabo solto, um blip de Bluetooth —
 jogador 2 ficava sem input no meio da partida, e nada no journal explicava.
 
 Estava registrado como aberto e SEM DONO em
-`docs/process/sprints/2026-08-10-ESTADO-DA-NOITE-01*.md`.
+a sprint `ESTADO-DA-NOITE-01`.
 
 A CURA
 ======

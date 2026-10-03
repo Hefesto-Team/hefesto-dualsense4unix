@@ -19,7 +19,7 @@ emite por PASSTHROUGH do que veio do disco — então desligar o teclado e clica
 Salvar devolvia o valor VELHO, por cima da escolha dela, sem uma palavra.
 
 E O CAMINHO DO CLIQUE NÃO EXISTIA PARA NENHUM DOS DOIS (decisão D2 do
-`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md`):
+o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
 fechar a janela depois de arrastar a barra perdia a escolha, calada. O requisito
 dela é DURABILIDADE — *"no dia seguinte e por diante"* —, não o gesto de salvar.
 

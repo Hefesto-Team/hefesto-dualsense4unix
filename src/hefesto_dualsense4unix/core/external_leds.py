@@ -217,7 +217,7 @@ def read_player_pattern(
          anterior**.
 
        A medição inteira está em
-       ``docs/process/sprints/arquivados/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
+       a sprint `A-LUZ-QUE-CUROU-01`,
        seções 2.1 a 2.3. GRAU: MEDIDO.
 
     Espelho de leitura de :func:`write_player_number` — e tem de acompanhá-la

@@ -26,8 +26,8 @@ projeto) roda como root isolado/hardened e, a pedido do daemon:
     também o `/dev/input/eventN` do físico, que é por onde o daemon lê o
     gamepad, o touchpad e os sensores de movimento.
 
-Desenho vigente: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
-(spec original da mecânica ACL: docs/process/estudos/2026-07-18-estudo-broker-hide-hidraw.md).
+Desenho vigente: o estudo «desenho-onda-s-broker-fd-injection» de 20/07/2026
+(spec original da mecânica ACL: o estudo «estudo-broker-hide-hidraw» de 18/07/2026).
 
 Regras de ouro (invariante "duplicado > zero controles"):
   - A conexão do daemon É a lease: EOF (daemon morreu) restaura TUDO que aquela

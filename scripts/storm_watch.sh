@@ -10,8 +10,8 @@
 #   [USB-71]  o storm clássico (-71/enum) — mesmos padrões do doctor.sh;
 #   [JOYCON]  joycon_enforce_subcmd_rate — o rate-limit do hid-nintendo que
 #             derruba o 8BitDo/Pro Controller em BT (provado ao vivo 2026-07-18);
-#   [JOYCON-PROBE]  Onda T (2026-07-20, desenho: docs/process/estudos/2026-07-
-#             20-desenho-onda-t-patch-dkms.md) — a morte "invisível" por
+#   [JOYCON-PROBE]  Onda T (2026-07-20, desenho: o estudo
+#             «desenho-onda-t-patch-dkms») — a morte "invisível" por
 #             PROBE (joycon_read_info -110, ANTES do device registrar; a
 #             cascata [JOYCON] acima não vê nada porque o subcmd rate nem
 #             chega a rodar) + o retry do patch DKMS agindo ("init over
@@ -31,7 +31,7 @@
 #
 # AS QUATRO FAMÍLIAS DO RÁDIO (O-DIARIO-DO-RADIO-01, 23/09/2026). A palavra
 # «storm» cobre pelo menos quatro físicas diferentes (dossiê de 23/09, em
-# docs/process/estudos/2026-09-23-radio/dossies.md), e esta vigia era cega a
+# o estudo «dossies»), e esta vigia era cega a
 # três delas — 0 dos 4.019 «Output queue is full» de 22/09 chegaram ao log:
 #   [USB-71]         família 1, o -71 de porta. O do ARRANQUE (a enumeração
 #                    que acontece antes de a vigia subir) passou a entrar: a

@@ -739,7 +739,7 @@ def arm_launch_profile(
     lista aberto. A decisão de código NÃO muda (a máscara continua fora, e por
     um motivo agora mais preciso); o que muda é a frase que a descreve, e ela
     é a mesma que o estudo
-    `docs/process/estudos/2026-08-06-desenho-a-flag-do-jogo-e-o-perfil-a-partir-da-biblioteca.md`
+    o estudo «desenho-a-flag-do-jogo-e-o-perfil-a-partir-da-biblioteca» de 06/08/2026
     (seção 5.3, item 2) já cobrava desta função.
 
     NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). A refutação virou

@@ -59,9 +59,8 @@ EXCLUDE_PATHSPECS=(
     # versionados por ordem dela — este portão varre o `git grep`, e o que não
     # é rastreado não é medido. Isenção sem alvo é paisagem: sai.
     #
-    # Sobraram TRÊS arquivos de `docs/history/` no repositório, e os três
-    # estão limpos: `gh-repo-config.md`, `releases-nao-publicados.md` e o
-    # `.diff` da regressão de glifos.
+    # Sobrou UM arquivo em `docs/history/` (02/10/2026): o estudo do bluetoothd
+    # de 19/07, que está limpo.
     ':!tests/fixtures/**'
     ':!tests/unit/test_check_anonymity.py'
     ':!.git/**'

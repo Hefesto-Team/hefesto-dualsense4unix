@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO DEGRAU 0.9.5 — que existia só como promessa até 01/09/2026.
 
-A escada de releases (`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`) declara
+A escada de releases (o registro «A-ESCADA-DE-RELEASES» de 24/08/2026) declara
 o degrau **0.9.5 — o rádio para de mentir** e nomeia o arquivo que o mede:
 *"arquivo a nascer: `scripts/check_bancada_de_bt.py`"*. Ele não existia, e o
 degrau dela não tinha como ser conferido por ninguém — só descrito.

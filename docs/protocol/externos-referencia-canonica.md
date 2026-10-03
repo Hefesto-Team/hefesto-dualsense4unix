@@ -190,7 +190,7 @@ quem vence e por quê.
 
 **Uma sétima divergência, que é com o passado desta casa e não entre as
 frentes:** a seção 3.4 do
-[estudo dos externos de 07/08](../process/estudos/2026-08-07-ISOLAR-os-externos-o-metodo-da-lightbar-no-pro-e-no-8bitdo.md)
+estudo dos externos de 07/08
 registrou *"~268 pacotes por segundo"* no Pro. **Aquilo não era a taxa do
 rádio** — era a taxa de **amostra** de IMU, que é 3x a de relatório. Os dois
 números são compatíveis (89,2 x 3 = 268), e a página fica corrigida aqui, com
@@ -951,7 +951,7 @@ independentes, 17 dias entre elas:
 - **25/07** — os bonds do BlueZ nesta bancada, dois endereços que só diferem no
   fim, um em modo Switch e outro em `054c:05c4`. Registrado em
   [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md) e
-  na [IDENT-01](../process/sprints/arquivados/2026-07-25-IDENT-01-um-controle-duas-identidades.md),
+  na IDENT-01,
   que é quem mediu;
 - **11/08** — o `REQ_DEV_INFO` pelo cabo devolveu, para o modo Switch, **o mesmo
   endereço** que o log daquele dia registrara para aquele modo, sem parear nada.
@@ -1168,7 +1168,7 @@ falsificável e derivada do código; **LEITURA** é a tabela escrita **antes** d
 medir.
 
 Nenhum item aqui repete os cinco do
-[estudo dos externos de 07/08](../process/estudos/2026-08-07-ISOLAR-os-externos-o-metodo-da-lightbar-no-pro-e-no-8bitdo.md)
+estudo dos externos de 07/08
 (E-1 a E-5). Estes são os que **esta página** abriu.
 
 **A fila abriu com cinco e hoje tem QUATRO.** A `P-2` fechou em 11/08 — e o
@@ -1210,7 +1210,7 @@ dia. O desenvolvimento está em 5.3.
 
 **Onde ela já estava respondida, e é a lição que custa.** A medição de 25/07
 está em [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md)
-e na [IDENT-01](../process/sprints/arquivados/2026-07-25-IDENT-01-um-controle-duas-identidades.md)
+e na IDENT-01
 **desde 25/07** — duas semanas antes de esta página abrir a pergunta. Esta
 página perguntou o que a casa já sabia, em outra página da mesma árvore. Fica
 registrado: **antes de abrir item de medição, procurar a resposta no
@@ -1332,7 +1332,7 @@ causa é outra e a hipótese de contenção morre.
 ## 9. Notas de instrumento — as armadilhas desta frente
 
 As nove do
-[estudo de 07/08](../process/estudos/2026-08-07-ISOLAR-os-externos-o-metodo-da-lightbar-no-pro-e-no-8bitdo.md),
+estudo de 07/08,
 seção 9, **valem inteiras aqui e não se repetem**. Estas são as que esta
 varredura acrescentou:
 
@@ -1408,7 +1408,7 @@ varredura acrescentou:
 - [a referência canônica do DualSense](dualsense-referencia-canonica.md) — o
   molde desta página, e o contraste em cada tabela
 - [paridade Bluetooth versus cabo](paridade-bluetooth-versus-cabo.md)
-- [o estudo dos externos de 07/08](../process/estudos/2026-08-07-ISOLAR-os-externos-o-metodo-da-lightbar-no-pro-e-no-8bitdo.md)
+- o estudo dos externos de 07/08
   — o método, o E-1 fechado e os cinco itens de protocolo que esta página **não**
   repete
 - [a página de uso do 8BitDo](../usage/troubleshooting-8bitdo.md) — e a nota 3

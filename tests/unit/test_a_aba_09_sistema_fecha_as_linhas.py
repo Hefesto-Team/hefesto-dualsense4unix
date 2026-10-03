@@ -2,7 +2,7 @@
 """AS TRÊS DECISÕES DA ABA `09` SISTEMA — e as três são sobre o mesmo botão.
 
 A [02] é do PO em 04/09/2026
-(`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`, §2 `09`);
+(o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026, §2 `09`);
 a [01] e a [03] são DELA, em 05/09/2026, e a [01] REVERTEU o PO.
 
 **[01] — o botão continua se chamando "Atualizar".** Palavra dela na 09-Q1:

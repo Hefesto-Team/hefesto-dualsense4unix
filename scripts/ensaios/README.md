@@ -133,8 +133,7 @@ impossível** (A-1, 15/08/2026, `entrada_em_repouso.py` — bruto em
   lido só para saber a faixa, nunca para semear a posição.
 
 **Duas réguas desta pasta que NÃO se adivinha, e que já custaram caro** (E-8,
-15/08/2026 — a história inteira está em
-[`docs/process/estudos/2026-08-15-E8-O-CONTADOR-QUE-O-DRIVER-JOGA-FORA-e-a-regua-que-errava-62-vezes.md`](../../docs/process/estudos/2026-08-15-E8-O-CONTADOR-QUE-O-DRIVER-JOGA-FORA-e-a-regua-que-errava-62-vezes.md)):
+15/08/2026, o estudo «E8-O-CONTADOR-QUE-O-DRIVER-JOGA-FORA»):
 
 - **Giroscópio.** `DS_GYRO_RES_PER_DEG_S = 1024` é a resolução **de SAÍDA**, do
   `ABS_RX/RY/RZ` que o kernel publica **depois** de calibrar. Dividir o valor
@@ -307,8 +306,8 @@ da própria unidade que o emitiu, a conferência vale unidade por unidade, em
 qualquer transporte, sem comparar braço com braço.
 
 **O que muda com a resposta:** se existe crachá sem escrita, a cor vira luxo em
-vez de necessidade — e foi o que aconteceu. Ver
-[o estudo de 15/08](../../docs/process/estudos/2026-08-15-SEMPRE-IDENTIFICADO-a-resposta-e-o-MAC-e-onde-ela-falha.md).
+vez de necessidade — e foi o que aconteceu (o estudo «SEMPRE-IDENTIFICADO» de
+15/08/2026).
 
 **A armadilha que ele já pisou, e que fica registrada:** a primeira versão
 procurava o MAC do adaptador do host em `/sys/class/bluetooth/hci0/device/address`,

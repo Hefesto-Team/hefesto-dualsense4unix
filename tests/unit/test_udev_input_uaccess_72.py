@@ -7,12 +7,12 @@ desta máquina está no grupo ``input`` **por fora do produto**.
 
 O ITEM JÁ TINHA NOME, e este módulo usa o nome que a casa deu, não um inventado:
 
-- ``docs/process/sprints/2026-08-07-INDICE-a-ordem-de-execucao-do-que-o-
+- o registro «INDICE-a-ordem-de-execucao-do-que-o» de 07/08/2026
   diagnostico-abriu.md:372`` — **OQ-6**, *"a regra que daria acesso aos nós de
   entrada nunca foi escrita"*, custo M, marcado para entrar no jogo;
-- ``docs/process/sprints/2026-08-08-INDICE-a-madrugada-em-que-o-produto-era-o-
+- o registro «INDICE-a-madrugada-em-que-o-produto-era-o» de 08/08/2026
   reu.md:123`` — o mesmo item como **C-3**, grau MEDIDO;
-- ``docs/process/sprints/2026-08-09-A-NOITE-DOS-QUATRO-INVENTARIOS-01-o-que-a-
+- a sprint `A-NOITE-DOS-QUATRO-INVENTARIOS-01`
   casa-sabe-e-o-que-o-produto-faz.md:133`` — **F-8**, *"o touchpad e o
   giroscópio dela funcionam por acidente"*.
 

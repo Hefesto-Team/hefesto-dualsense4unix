@@ -3,8 +3,7 @@
 LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
 `common[8]` por decisão de estado; as peças A e B só respondem perguntas.
 
-**O CONTRATO, e ele é decisão dela** (`docs/process/sprints/
-2026-09-02-LUZ-DO-MIC-01-a-luz-diz-quem-te-escuta.md` §1)::
+**O CONTRATO, e ele é decisão dela** (a sprint `LUZ-DO-MIC-01`, §1)::
 
     apagado (0)      = MUDO. É a ÚNICA coisa que apaga esta luz.
     aceso fixo (1)   = o microfone está LIGADO — haja ou não app ouvindo
@@ -14,7 +13,7 @@ LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
 A precedência está em `decidir`, e ela é a §1.1 escrita em código.
 
 **O `0` DEIXOU DE SER DUAS COISAS — 19/09/2026, decisão dela**
-(`docs/process/sprints/2026-09-19-A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01.md`). O
+(a sprint `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`). O
 contrato de 02/09 dizia *"apagado = MUDO, ou ninguém ouvindo — OS DOIS SÃO A
 MESMA LUZ"*, e foi isso que custou a noite dela: com o microfone LIGADO e
 ninguém gravando, a luz apagada lhe disse *"desligado"*, ela apertou o botão

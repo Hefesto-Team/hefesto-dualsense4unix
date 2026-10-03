@@ -5,7 +5,7 @@ A PERGUNTA QUE ELE RESPONDE
 ----------------------------
 *Quantos relatórios por segundo cada DualSense entrega no fio, e cada vpad
 repassa, medidos todos ao mesmo tempo?* É o instrumento I-1 do
-`docs/process/estudos/2026-08-15-PLANO-DA-MESA-2-2-o-que-so-se-mede-com-quatro.md`,
+o estudo «PLANO-DA-MESA-2-2-o-que-so-se-mede-com-quatro» de 15/08/2026,
 e dele saem os ensaios E-2 (taxa), E-3 (CRC de entrada) e E-6 (dose-resposta).
 
 POR QUE HIDRAW, E NÃO EVDEV

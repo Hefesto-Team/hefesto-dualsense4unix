@@ -972,7 +972,7 @@ escrito**, em duas linhas suas:
 
 Enquanto isso, o mapa inteiro podia ficar verde **enquanto ela não conseguia
 jogar** — porque nenhuma célula falava do jogo. O desenho dos dois degraus é o
-da `../process/sprints/arquivados/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md`, §7.
+da sprint `TRES-PORTOES-01`, §7.
 
 | degrau | o critério | quem fecha |
 |---|---|---|

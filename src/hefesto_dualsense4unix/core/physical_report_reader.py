@@ -10,7 +10,7 @@ ao vivo (2026-07-19): o físico emite gyro a 250 Hz no USB e, no BT, em RAJADA
 gyro aiming morto para quem joga pelo hefesto.
 
 A cura é um espelho de report PARCIAL (ARCH-1 do estudo
-`docs/process/estudos/2026-07-18-estudo-imu-touchpad-vpad.md`): uma thread
+o estudo «estudo-imu-touchpad-vpad» de 18/07/2026): uma thread
 abre um 2º fd SOMENTE-LEITURA no hidraw do físico, extrai VERBATIM a janela
 `raw[base+15 : base+40]` de cada report cru (0x01 USB, base 1; 0x31 BT, base 2
 com CRC-32 validado — seed 0xA1, o `PS_INPUT_CRC32_SEED` do kernel) e a entrega

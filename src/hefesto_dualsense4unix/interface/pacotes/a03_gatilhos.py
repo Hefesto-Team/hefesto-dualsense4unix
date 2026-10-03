@@ -1624,7 +1624,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     separador pendurado e o R2 sumido. É a cura TRG-01 de novo, pelo avesso.
 
     **E O RECIBO PASSOU A DIZER AS DUAS METADES — 06/09/2026, a decisão D-17**
-    (`docs/process/sprints/2026-09-05-AS-DUAS-ABAS-FALAM-01-*.md`). Quando o
+    (a sprint `AS-DUAS-ABAS-FALAM-01`). Quando o
     efeito FOI para o aparelho e o DISCO não recebeu, a terceira casa sai como
     *«… aplicado · o efeito FOI para o aparelho, mas não consegui ABRIR o
     perfil …»*, somada pelo :data:`_E_TAMBEM`. Ela continua sendo a frase de
@@ -1634,7 +1634,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     tinha feito, com a razão escrita lá.
 
     E ELE PASSOU A GRAVAR NO PERFIL — 05/09/2026, a **decisão D2**
-    (`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md`):
+    (o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
     *"persistência no clique em toda parte, com o rodapé como rede de
     segurança"*. Ela pediu, com estas palavras: *"ao pular e sair configurando
     de aba em aba o perfil vai se lembrando de cada config de cada aba pra cada

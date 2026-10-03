@@ -21,7 +21,7 @@ Os cinco chegavam ao aparelho e NENHUM chegava ao disco. Ela mexia no volume do
 microfone do P2, e no dia seguinte o número era o de ontem.
 
 É PERSISTÊNCIA NO CLIQUE — a decisão D2 de 05/09
-(``docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md``):
+(o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
 o requisito dela é DURABILIDADE, não o gesto de salvar, e só a escrita no clique
 sobrevive a fechar a janela sem clicar em nada.
 

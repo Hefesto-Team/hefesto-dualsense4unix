@@ -215,11 +215,11 @@ produto ainda não usa**:
    diferentes para quem usa.
 
 **E isto muda o que a aba Configurações pode PERGUNTAR.** O
-[VETO 3](../process/sprints/2026-08-21-ABA-CONFIGURACOES/CONFIG-08-a-aba-entra-na-documentacao.md)
+VETO 3
 proíbe declarar o que o produto pode medir. Onde a controladora responde, **o
 produto sabe**, e perguntar vira a tela fingindo ignorância. A pergunta legítima
 encolhe para onde o dado não existe — e a §3 diz exatamente onde é. A
-[sprint das portas](../process/sprints/arquivados/2026-08-27-A-FAXINA-o-que-saiu-e-por-que.md)
+sprint das portas
 depende desta página para desenhar essa fronteira.
 
 ---
@@ -325,5 +325,5 @@ dependa desta página tem de sobreviver a isso.
 - [bluetooth-varios-adaptadores.md](../usage/bluetooth-varios-adaptadores.md)
   — quantos controles cabem num adaptador Bluetooth e como dividi-los entre
   vários. Esta página é o instrumento; aquela é o motivo.
-- [PORTAS-DA-CASA-01](../process/sprints/arquivados/2026-08-27-A-FAXINA-o-que-saiu-e-por-que.md)
+- PORTAS-DA-CASA-01
   — a leva que consome esta medição.

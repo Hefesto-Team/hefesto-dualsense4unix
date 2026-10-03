@@ -43,7 +43,7 @@ Política:
     sem chamador desde 09/08, o flag que elas armavam nunca podia ser verdade.
   - **A exceção mexe na ENTRADA, e só nela** (NOTA DATADA, 07/08/2026): a casa
     dizia *"o Hefesto sai da frente"*, e a medição dela de 06/08
-    (`docs/process/sprints/arquivados/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md`,
+    (a sprint `CONTROLE-SONY-MEDIDO-01`,
     seção *A INVERSÃO*, grau MEDIDO) mostrou que a frase é meia verdade.
     **Nenhum caminho fecha o handle de saída**: os chamadores de
     `steam_input_excecao_ativa` estão todos NESTE arquivo, nenhum em `core/`, e

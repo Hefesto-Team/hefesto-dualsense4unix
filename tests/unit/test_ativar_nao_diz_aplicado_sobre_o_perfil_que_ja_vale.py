@@ -1,7 +1,7 @@
 """O "Ativar" da aba Perfis estava na lista dos DEZESSEIS — e a causa era outra.
 
 O MAPA DE 02/09/2026 o acusa em
-``docs/process/2026-09-02-O-MAPA-DA-INTERFACE-medido-clicando-e-as-ondas.md:120``:
+o registro «O-MAPA-DA-INTERFACE-medido-clicando-e-as-ondas» de 02/09/2026:120``:
 *"clicou, respondeu `aplicado`, o estado do daemon não mudou, e ele NÃO está
 declarado como gesto sem eco"*. O FATO está certo. **A causa, não**: o gesto não
 falhava — ele trocava para o perfil que **já estava valendo**.

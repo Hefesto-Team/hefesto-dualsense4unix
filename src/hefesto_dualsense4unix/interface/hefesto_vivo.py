@@ -1479,7 +1479,7 @@ BOOTSTRAP = r"""
         // O QUE ISSO CUSTAVA, medido pela ONDA5-01-03 em 06/09 com foto: a
         // recusa de um gesto de PÁGINA (o cadeado da 01, que liga o Hefesto
         // inteiro) seguia o mesmo alvo e pousava no cartão do P1, cobrindo o
-        // nome dele (`docs/process/agentes/2026-09-06/ONDA5-P-01.md` §7).
+        // nome dele (`ONDA5-P-01` §7).
         // **Deixou de custar em 13/09/2026** (FRASES-E-DICAS-01): a recusa não
         // pousa em cartão nenhum — pisca no botão clicado.
         //

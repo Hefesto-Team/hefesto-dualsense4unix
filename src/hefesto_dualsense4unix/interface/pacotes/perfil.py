@@ -411,7 +411,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     chamador cujos OITO gestos são o perfil inteiro (renomear, prioridade,
     ambiente, estilo, jogo, detectar, novo, duplicar) e não um campo. Esse é o
     que falta, com o `voltar-a-de-ontem` ao lado, e é posse da a10 — está
-    relatado em `docs/process/agentes/2026-09-06/ONDA5-07-02.md`.
+    relatado em `ONDA5-07-02`.
     """
     loader = _com_o_src()
     loader.save_profile(prof, origem="interface-nova")

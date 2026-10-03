@@ -499,7 +499,7 @@ confirmada nesta máquina**.
 
 O ensaio que a confirmaria está escrito e **aberto**: *J3 · Quem toca no
 alto-falante do controle*, em
-`docs/process/2026-09-11-A-AUDITORIA-DO-SOM-E-DO-GIROSCOPIO.md` — 10 minutos, 1
+o registro «A-AUDITORIA-DO-SOM-E-DO-GIROSCOPIO» de 11/09/2026 — 10 minutos, 1
 controle, 1 jogo. Nada em `docs/data/ensaios.csv` mede um jogo Windows abrindo o
 alto-falante do controle: as linhas de `audio.alto_falante@dualsense` são todas
 do caminho **nosso** (IPC `speaker.set` e `pw-play`), medidas em 15/08.

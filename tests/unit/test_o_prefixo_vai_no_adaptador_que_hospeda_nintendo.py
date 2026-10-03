@@ -1,6 +1,6 @@
 """N-IGUAL-A-UM-01 — o prefixo vai no adaptador certo, e são TRÊS.
 
-Sprint: `docs/process/sprints/2026-08-22-N-IGUAL-A-UM-01-*.md`, entrega E2.
+Sprint: a sprint `N-IGUAL-A-UM-01`, entrega E2.
 
 O DEFEITO, MEDIDO em 22/08/2026 na bancada de três adaptadores
 -----------------------------------------------------------------

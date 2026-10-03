@@ -1491,7 +1491,7 @@ LEGENDA = f'''<div class="nota">
        falando sobre o automatico"*. (noqa-acento: citação literal dela)
 
        O REGISTRO NÃO SE PERDEU, ele mudou de casa:
-       `docs/process/2026-09-08-A-LEGENDA-DA-ABA-04-o-bilhete-sai-da-tela.md`.
+       `A-LEGENDA-DA-ABA-04`.
 
        O que FICA aqui é a `.nota-troca`: ela não é bilhete, é PRODUTO — o
        `data-hef="troca"` que o piloto reescreve a cada tique com `ctx.mesa`. -->

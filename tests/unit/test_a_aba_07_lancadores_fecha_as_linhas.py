@@ -2,7 +2,7 @@
 """AS QUATRO DECISÕES DA ABA LANÇADORES, cobradas uma a uma.
 
 Elas são do PO, 04/09/2026
-(`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` §2,
+(o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026 §2,
 `07-lancadores`), e a sprint que as executa é a `ONDA2-07-LANCADORES-01`:
 
     [01] o reparo manual sem caminho   a linha à mostra, SÓ no estado em que
@@ -32,7 +32,7 @@ O QUE ELAS CURAM, e cada uma é um defeito medido:
   dizendo que contam conjuntos diferentes.
 
 A MORDIDA DE CADA UMA está colada no relatório desta frente
-(`docs/process/agentes/2026-09-04/ONDA2-07.md`), e o resumo é este:
+(`ONDA2-07`), e o resumo é este:
 
     apague o `if lida.intocaveis and lida.linha:` de `cartao_da_steam`
         → 1 reprova (o bloco some do corpo)

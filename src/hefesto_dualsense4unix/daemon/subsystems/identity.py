@@ -102,7 +102,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
 
    **"D9" AQUI NÃO É O "D9" DO DESENHO.** Neste módulo ``D9`` é a decisão do
    *slot volátil* (abaixo). Em
-   ``docs/process/2026-08-26-O-QUE-ELA-DESENHOU-o-todo-por-aba.md`` ``D9`` é
+   o registro «O-QUE-ELA-DESENHOU-o-todo-por-aba» de 26/08/2026 ``D9`` é
    outra coisa — a decisão dos três botões de sensor na aba Controles. Os dois
    documentos estão entre os primeiros que um agente novo abre, e a colisão já
    custa uma busca errada por leitura; registrada em 29/08/2026 para não custar

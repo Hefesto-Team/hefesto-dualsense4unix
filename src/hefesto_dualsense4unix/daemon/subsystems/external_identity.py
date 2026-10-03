@@ -157,7 +157,7 @@ LED_MIN_INTERVAL_SEC = 2.0
 
 #: LUGAR-À-MESA-01 / E0 — **DECISÃO DELA, 07/08/2026: "calar a luz até a
 #: entrega existir"** (resposta 12 do painel, em
-#: ``docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md``).
+#: o registro «DECISOES-DELA-as-onze-respostas-do-painel» de 07/08/2026).
 #: Enquanto o controle externo NÃO for jogador de verdade dentro do jogo, o
 #: Hefesto **não acende número de jogador nele**.
 #:
@@ -1025,7 +1025,7 @@ class ExternalLedSync:
        **Quem for contar repinturas em qualquer janela do journal precisa ler
        isto antes:** o número não mede disputa de LED. A medição, e a correção
        de uma linha que devolveria o nome ao log (S3), estão em
-       ``docs/process/sprints/arquivados/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
+       a sprint `A-LUZ-QUE-CUROU-01`,
        seções 2.1 a 2.3 e 6. GRAU: MEDIDO.
     """
 

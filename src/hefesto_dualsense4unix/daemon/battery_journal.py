@@ -1,7 +1,7 @@
 """Diário da bateria — o daemon para de medir a carga no escuro.
 
 Entrega 1 do
-``docs/process/estudos/2026-08-07-PROTOCOLO-o-controle-que-cai-sozinho.md``.
+o estudo «PROTOCOLO-o-controle-que-cai-sozinho» de 07/08/2026.
 
 O buraco que isto tapa, MEDIDO em 07/08/2026: o daemon **lê** a carga a cada
 tique (``core/backend_pydualsense.py`` → ``BATTERY_CHANGE`` em

@@ -3,7 +3,7 @@ sprint: O-COMO-DO-MAPA
 estado: feita
 posse:
   O-COMO-DO-MAPA:
-    - docs/process/sprints/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md
+    - docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md
 bancada: true
 ---
 

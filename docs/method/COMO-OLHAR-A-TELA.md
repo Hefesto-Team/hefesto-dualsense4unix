@@ -147,7 +147,7 @@ Seja honesto sobre isto ao usá-la:
   régua que clica (`tests/unit/test_a_palavra_de_tela_da_interface_nova.py` é o
   molde);
 - **não substitui o olho dela.** A regra da casa
-  ([PROVA-DE-TELA-01](../process/sprints/arquivados/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md))
+  (PROVA-DE-TELA-01)
   continua valendo: interface só fecha com ela olhando.
 
 Para *"o que tem nesta aba, e onde?"*, a foto é fiel. É para isso que serve.
@@ -317,7 +317,7 @@ Refeita a medição com instrumento validado, o número **inverte a conclusão**
 quatro controles estáveis custam **14,6** perdas de IMU por minuto, e **três**
 controles com o 8BitDo tentando voltar custam **48,4**. Não é a quantidade de
 controles; é o que não consegue entrar. A retratação está na
-[CONECTA-E-DESLIGA-01](../process/sprints/arquivados/2026-08-07-CONECTA-E-DESLIGA-01-a-regressao-que-ela-relatou-e-a-suspeita-que-recai-sobre-nos.md).
+CONECTA-E-DESLIGA-01.
 
 **A regra tem duas metades, e a segunda é a que faltava:**
 
@@ -355,7 +355,7 @@ A casa já pagou por isso **duas vezes**, com custo medido:
   de perfil eram de 05/08 00:38:41. Ela trocava de perfil e a cor/gatilho/rumble
   não entravam. **Era o defeito já curado no disco**, e ela estava olhando para o
   produto de anteontem
-  ([PERFIL-REESCRITO-NA-PARTIDA-01](../process/sprints/arquivados/2026-08-05-PERFIL-REESCRITO-NA-PARTIDA-01-o-perfil-dela-era-reescrito-sozinho-no-meio-da-partida.md),
+  (PERFIL-REESCRITO-NA-PARTIDA-01,
   linhas 43-47);
 - **07/08/2026** — o diário da bateria (474 linhas, 49 testes verdes) ficou
   **5h49m** no disco sem escrever **uma linha** no journal, com o controle dela
@@ -384,7 +384,7 @@ partida em curso.
 
 O caso inteiro, com a mordida (0 antes, 2 depois, mesmo código no disco) e o
 desenho de um aviso no `doctor` que mediria isso sozinho, está em
-[PROTOCOLO — o controle que cai sozinho](../process/estudos/2026-08-07-PROTOCOLO-o-controle-que-cai-sozinho.md),
+PROTOCOLO — o controle que cai sozinho,
 seções 8.1 e 9.
 
 ### `paplay --device=inexistente` sai ZERO e toca no padrão
@@ -478,7 +478,7 @@ anonimizado.
 
 **MEDIDO em 16/08/2026**, e a armadilha voltou em 23/08 num traje novo, o que é
 o motivo de estar nesta página e não só no estudo que a mediu
-([O RÁDIO MEIO MUDO](../process/estudos/2026-08-16-O-RADIO-MEIO-MUDO-o-que-atravessa-e-o-que-nao.md),
+(O RÁDIO MEIO MUDO,
 §"Os erros de instrumento do dia").
 
 O `quem_o_jogo_abre.py` dizia *"o WRAPPER rodou? NÃO"* para dois jogos. Ele lia
@@ -494,7 +494,7 @@ o padrão, nunca o primeiro, e nunca por conteúdo. Já é código:
 para o lugar mais caro possível.* Em 23/08 esse mesmo formato de leitura
 produziu a conclusão *"cura por variável de ambiente no wrapper não serve"* —
 generalização que a
-[ESCONDE-SÓ-O-HIDRAW-01](../process/sprints/arquivados/2026-08-23-ESCONDE-SO-O-HIDRAW-01-o-jogo-continua-vendo-o-fisico-pelo-evdev.md)
+ESCONDE-SÓ-O-HIDRAW-01
 teve de desfazer com nota datada.
 
 ### Régua que casa um token em QUALQUER lugar do texto, em vez do campo que o significa

@@ -4,7 +4,7 @@ Queixa dela, 29/07: *"inicio o jogo e ele quando aperto r1 muda de app ao invés
 de funcionar no jogo"*; e, no mesmo relato, o raciocínio que aponta o defeito —
 com o modo mouse/teclado desligado, isso não deveria impactar. A transcrição
 literal (sem correção de grafia) está na sprint
-`docs/process/sprints/2026-07-29-EMULACAO-NO-JOGO-01-*`; aqui ela vem acentuada
+a sprint `EMULACAO-NO-JOGO-01`; aqui ela vem acentuada
 porque o portão de acentuação varre este arquivo.
 
 Não deveria — e o motivo de impactar era que aquele interruptor governa só o

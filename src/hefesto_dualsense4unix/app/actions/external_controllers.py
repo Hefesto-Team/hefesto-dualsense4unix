@@ -12,8 +12,8 @@ nada — só se traduz a identidade crua para linguagem de gente e se avisa a
 armadilha conhecida (o Nintendo/8BitDo por Bluetooth morre — é o driver
 ``hid-nintendo`` do kernel desistindo, NÃO o Hefesto).
 
-**NOTA DATADA — 21/08/2026: o escopo acima foi REABERTO por ela.** A ``D-A2`` de
-``docs/process/sprints/2026-08-21-ABA-CONFIGURACOES/DECISOES-ABERTAS.md`` foi
+**NOTA DATADA — 21/08/2026: o escopo acima foi REABERTO por ela.** A ``D-A2`` do
+registro «DECISOES-ABERTAS» da aba Configurações foi
 respondida mantendo a seção "Os controles" na leva da aba Configurações —
 **contrária à recomendação**, que era cortá-la justamente por causa da fala
 acima. A escolha é dela e está registrada com data; a fala de origem fica onde

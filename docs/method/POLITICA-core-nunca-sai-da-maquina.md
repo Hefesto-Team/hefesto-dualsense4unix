@@ -1,7 +1,7 @@
 # Política — o core dump do `bluetoothd` NUNCA sai desta máquina
 
 - **Escrita em:** 05/08/2026
-- **Origem:** [RADIO-ABERTO-01](../process/sprints/arquivados/2026-08-04-RADIO-ABERTO-01-o-que-instalamos-por-padrao-anula-a-autenticacao.md), S3/E7
+- **Origem:** RADIO-ABERTO-01, S3/E7
 - **Portão que a protege:** `tests/unit/test_radio_aberto_e7_e9.py`
 
 ---
@@ -61,7 +61,7 @@ relatório"* não.
 - **os snapshots de bond** (`/var/lib/hefesto-dualsense4unix/bt-bonds`). Eles
   **contêm** LinkKeys, e são locais, com permissão de root. Nunca devem ser
   anexados a nada — mas o vetor deles é outro, e está na
-  [RADIO-ABERTO-01](../process/sprints/arquivados/2026-08-04-RADIO-ABERTO-01-o-que-instalamos-por-padrao-anula-a-autenticacao.md)
+  RADIO-ABERTO-01
   S4/E10, já curado;
 - **um observador de `mgmt`**, que esta casa ainda **não** tem. Se alguém
   escrever um, valem as E4/E5/E6 da sprint: partir em dois, nunca reter o

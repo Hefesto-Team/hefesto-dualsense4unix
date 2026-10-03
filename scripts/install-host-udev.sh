@@ -127,7 +127,7 @@ done
 # binário standalone (stdlib pura, roda no python3 do sistema) e as units-
 # template nos mesmos 3 contextos acima. PRIMEIRO serviço de SISTEMA
 # (systemd system, socket-activated) do projeto. Desenho completo:
-# docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.4.
+# o estudo «desenho-onda-s-broker-fd-injection» de 20/07/2026 §7.4.
 BROKER_BIN_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/broker" \
@@ -272,7 +272,7 @@ MODLOAD_DEST="/etc/modules-load.d"
 # Sincronizado com scripts/install_udev.sh.
 # 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23 — abriam o controle a
 # cada ACTION=="add" e amplificavam a re-enumeração do storm -71. Causa-raiz
-# real: porta USB ruim (full-speed/-71 na 3-1). Ver docs/process/discoveries.
+# real: porta USB ruim (full-speed/-71 na 3-1). Ver o registro «discoveries».
 RULES=(
     # 73-hefesto: o nó do DualSense físico nasce fechado. O nome ordena depois
     # de todo 70-*, 71-* e 72-* de terceiro e antes da 73-seat-late.rules (ver
@@ -510,7 +510,7 @@ _build_install_cmd() {
             && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
         # PARIDADE-QUENTE-01 (07/08/2026) — a simetria da AUTO-01.7 tinha sido
         # paga em UM sentido só. O achado de 25/07
-        # (docs/process/sprints/arquivados/2026-07-25-AUTO-01-um-clique-em-vez-de-dez.md:114)
+        # (a sprint `AUTO-01`)
         # dizia que ERA ESTE script que escrevia os params a quente e o
         # install.sh não; a cura veio, o install.sh alcançou — e os TRÊS params
         # do patch 0003 (clone USB 057E:2009) nasceram depois, só no

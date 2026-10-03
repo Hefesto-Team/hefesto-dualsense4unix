@@ -4841,7 +4841,7 @@ check_cmdline_platform() {
 #   docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md).
 #
 # TETO 5.87 — a MENOR versão REJEITADA conhecida. Motivo medido (estudo
-#   docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-
+#   o estudo «o-defeito-do-bluez-que-ela-lembrou-e-os» de 07/08/2026
 #   outros-cinco.md §D, GRAU MEDIDO pela topologia do git): o commit `5d836f1`
 #   introduziu um uso-depois-de-liberado (UAF) em `dev_disconnected`
 #   (`src/adapter.c`) — `device_is_connected()` chamado DEPOIS de
@@ -6194,7 +6194,7 @@ _medir_o_broker_em_memoria() {
 # wrapper de launch acima). Verifica a unit de SISTEMA (não --user), o ping
 # autenticado por SO_PEERCRED, a coerência do que está escondido (com o
 # daemon ativo e o Modo Nativo) e — best-effort — a recusa a outro uid.
-# Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.3.
+# Desenho: o estudo «desenho-onda-s-broker-fd-injection» de 20/07/2026 §7.3.
 check_hidraw_broker() {
     command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo o broker hide-hidraw"; return; }
     if ! systemctl cat hefesto-hidraw-broker.socket >/dev/null 2>&1; then
@@ -7671,7 +7671,7 @@ check_hid_nintendo_bt_cascade() {
 
 # ---------------------------------------------------------------------------
 # Onda T — patch DKMS do hid-nintendo (probe BT resiliente + module params).
-# Desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md.
+# Desenho: o estudo «desenho-onda-t-patch-dkms» de 20/07/2026.
 # ---------------------------------------------------------------------------
 # Nomes fixos (mesmos do assets/dkms/hid-nintendo/dkms.conf) — mudar de
 # versão exige atualizar os dois lados.
@@ -7785,8 +7785,8 @@ _hid_nintendo_dense_exceeded_scan() {
         ' | sort
 }
 
-# Assinaturas do estudo de premissas (LER: docs/process/estudos/2026-07-20-
-# estudo-premissas-onda-t-hid-nintendo.md, premissa 7) que HOJE não têm check
+# Assinaturas do estudo de premissas (o estudo «estudo-premissas-onda-t-hid-nintendo»
+# de 20/07/2026, premissa 7) que HOJE não têm check
 # dedicado: a morte por PROBE (o driver falha ANTES de registrar o device —
 # "exceeded max attempts" nem entra na cadeia, então check_hid_nintendo_bt_
 # cascade não vê nada) e o "exceeded" denso sem cascata (acima). Usa
@@ -7878,7 +7878,7 @@ check_hefesto_hid_nintendo_dkms() {
 # ---------------------------------------------------------------------------
 # Onda W — patch DKMS do rtw88_usb (device-gone + queue de port reset — cura
 # do fantasma USB do dongle WiFi). Desenho:
-# docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md.
+# o estudo «desenho-onda-w-patch-dkms» de 20/07/2026.
 # ---------------------------------------------------------------------------
 # Nomes fixos (mesmos do assets/dkms/rtw88-usb/dkms.conf) — mudar de versão
 # exige atualizar os dois lados.

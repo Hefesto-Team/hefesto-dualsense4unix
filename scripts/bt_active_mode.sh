@@ -17,7 +17,7 @@
 # `_adaptadores` e a seção 1.
 #
 # Pesquisa original
-# (docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-e-lightbar-keepalive.md):
+# (o estudo «pesquisa-pro-controller-bt-e-lightbar-keepalive» de 22/07/2026):
 #
 # 1) NOME do host prefixado "Nintendo": o Pro Controller LÊ o nome Bluetooth do
 #    host e, se não for "Nintendo*", cai num sniff mode frágil que não manda
@@ -583,7 +583,7 @@ fi
 #
 # "Só o nome" NÃO é alternativa: medido em 22/07 — com o alias sozinho o Pro
 # durou muito mais, "mas sob carga pesada ele ainda caiu. Não é cura completa
-# sozinho" (docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-*).
+# sozinho" (o estudo «pesquisa-pro-controller-bt» de 22/07/2026).
 
 # SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): link policy —
 # ler ou escrever, no adaptador ou na conexão — NÃO existe na mgmt API do BlueZ,

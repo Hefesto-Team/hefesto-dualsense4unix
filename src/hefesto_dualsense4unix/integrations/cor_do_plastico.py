@@ -3,7 +3,7 @@
 Até 22/08/2026 esta leitura vivia só em ``scripts/ensaios/cor_do_plastico.py``,
 fora do aplicativo: ``grep -rn 'cor_do_plastico|plastic|nome_da_cor' src`` devolvia
 ZERO, e o ``state_full`` só publica ``lightbar_rgb`` — que é a LUZ, não o plástico.
-A decisão **T6** de ``docs/process/sprints/2026-08-21-ABA-CONFIGURACOES/DECISOES-DA-EXECUCAO.md``
+A decisão **T6** do registro «DECISOES-DA-EXECUCAO» da aba Configurações
 trouxe a leitura para cá: sem ela, toda linha "Cor:" da aba Configurações nasceria
 em "Não sei", inclusive nos controles no cabo, que o desenho mostra com a cor lida.
 

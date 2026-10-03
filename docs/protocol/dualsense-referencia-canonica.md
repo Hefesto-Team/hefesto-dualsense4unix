@@ -109,7 +109,7 @@ pedido).
 > temporizador) contra **0,01-0,02 s no rádio**. Nenhum retry em 102 leituras
 > somando as duas corridas da tarde. A medição, a ressalva e a explicação de como
 > a crença nasceu estão em
-> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
+> A TROCA DE BRAÇOS.
 > E o número **dezessete** é do descritor do **rádio**: o do cabo declara
 > **vinte e dois**, a união é **vinte e quatro**, e nenhum conjunto é
 > subconjunto do outro.
@@ -402,7 +402,7 @@ razão de esta seção morar entre o §2 e o §3.
 
 Medido em **15/08/2026**, de madrugada, na máquina dela. A medição completa, com
 os MACs e o passo a passo, está em
-[a escada que responde](../process/estudos/2026-08-15-A-ESCADA-QUE-RESPONDE-o-audio-por-radio-deixou-de-ser-impossivel.md).
+a escada que responde.
 
 ### O instrumento, declarado — porque instrumento mente mais que produto
 
@@ -1440,7 +1440,7 @@ O lado do **aparelho** está medido acima; o lado do **SDL** não.
 > **`GYRO-EDGE-RATE-01` é NOME DE DIVERGÊNCIA, não sprint.** Não existe
 > arquivo com esse nome em `docs/process/sprints/`, e chamá-lo de sprint faz
 > parecer que alguém está com o trabalho na mão. O apelido está registrado em
-> [divergências nomeadas](../process/DIVERGENCIAS-NOMEADAS.md), que é onde se
+> divergências nomeadas, que é onde se
 > confere o que cada nome desses quer dizer.
 >
 > **O aparelho vizinho já mostrou que a família de defeito é real:** o Pro
@@ -1813,7 +1813,7 @@ controle nenhum para obtê-lo.
 > sete exclusivos do cabo, **cinco devolvem `EPIPE`** na leitura (`0x0a`,
 > `0x0c`, `0x21`, `0x84`, `0xa0`): o descritor promete, o firmware não entrega.
 > Ver
-> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
+> A TROCA DE BRAÇOS.
 
 ### O instrumento, declarado — porque instrumento mente mais que produto
 
@@ -1937,7 +1937,7 @@ segundos e voltou vazia, foi timeout de transporte, **não** é feature ausente.
 > DKMS desta árvore continua justificado. Quem **orçar** 3 s por leitura desenha
 > o ensaio em cima de um custo que não existe. A medição e a explicação de como
 > a crença nasceu estão em
-> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
+> A TROCA DE BRAÇOS.
 
 Daí as duas regras, e nenhuma delas é opcional:
 

@@ -1,7 +1,7 @@
 """O-MUDO-E-DO-CONTROLE-01 — o mudo do microfone é do controle, e vale em todo jogo.
 
 **A DECISÃO É DELA** (resposta 9 da noite de 27/09,
-``docs/process/estudos/2026-09-27-as-respostas-dela-da-noite.md``). O relatório
+o estudo «as-respostas-dela-da-noite» de 27/09/2026). O relatório
 04 da auditoria (A2) mediu o defeito que ela cura: o mudo tinha TRÊS cópias — o
 perfil (``controllers[k].mic.muted``), a sessão do daemon (a memória do último
 ato, que vencia um perfil «mais velho» na reconexão) e o aparelho —, e DOIS

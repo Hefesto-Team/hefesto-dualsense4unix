@@ -2,7 +2,7 @@
 """A RÉGUA DA ONDA2-06: o que a aba Navegação passou a DIZER, e por que é verdade.
 
 Ela cobre as cinco decisões do PO de 04/09/2026 sobre esta aba
-(`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` §2
+(o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026 §2
 `06-navegacao`) e a metade DITA dos dois defeitos da §3 — os que apagam o que
 ela escreveu:
 

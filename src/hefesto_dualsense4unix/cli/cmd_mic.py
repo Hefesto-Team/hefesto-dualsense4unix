@@ -225,7 +225,7 @@ def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:
     return 0
 
 
-# O estudo `docs/process/estudos/2026-08-16-O-PS-PRESO-*.md` mediu um DualSense
+# O estudo «O-PS-PRESO» de 16/08/2026 mediu um DualSense
 # desde 23/08: `daemon.state_full` → `bt_mic.uniqs`, os `uniq` cuja ponte SUBIU.
 
 

@@ -287,7 +287,7 @@ def tabela_efetiva(
     `— Nada —`.
 
     ELA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
-    `resolve_key_bindings` (`profiles/manager.py:1890`) devolve só as chaves do
+    `resolve_key_bindings` (`profiles/manager.py:1881`) devolve só as chaves do
     dict, e é ele quem alimenta o device no `apply_keyboard`. Mesclar aqui faria
     esta tabela discordar do device que ela mesma vai reescrever um método
     depois — que é o defeito que esta camada existe para fechar.
@@ -330,7 +330,7 @@ def botoes_calados(
     `SEM_ATENDENTE`, vai para a terceira sacola do `resolver()` e **continua
     emitindo o de fábrica** — é o gêmeo deste defeito, com a mesma linha de
     código como causa, e está RELATADO em
-    `docs/process/agentes/2026-09-06/ONDA3-MOTOR-01.md`. Curá-lo aqui de
+    `ONDA3-MOTOR-01`. Curá-lo aqui de
     carona seria a segunda cura escondida dentro da primeira.
     """
     tabela = tabela_efetiva(escolhas, key_bindings)

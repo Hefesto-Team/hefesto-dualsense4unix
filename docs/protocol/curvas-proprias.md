@@ -2,7 +2,7 @@
 
 Este arquivo é o registro de origem de **cada valor de curva de gatilho criado
 pelo Hefesto**. Ele existe por causa do processo de sala limpa
-([CLEAN-ROOM.md](../process/CLEAN-ROOM.md), regra R3): o dado e a origem nunca
+(CLEAN-ROOM.md, regra R3): o dado e a origem nunca
 se separam.
 
 > **Vazio, e agora vazio de vez — nota datada de 29/08/2026, grau: DECISÃO DELA.**
@@ -11,10 +11,10 @@ se separam.
 > sem a bancada de medir não há efeitos da casa, e sem eles não há o que devolver ao
 > ecossistema. O Hefesto vive com o catálogo de efeitos que já tem. Para onde foram
 > as três, veja
-> [o manifesto do corte](../process/sprints/arquivados/2026-08-29-O-CORTE-DO-CLEAN-ROOM-o-que-saiu-e-por-que.md).
+> o manifesto do corte.
 >
 > **O arquivo fica, e não é por respeito ao passado.** Ele é a entrega da regra **R3**
-> do [processo de sala limpa](../process/CLEAN-ROOM.md) — *o dado e a origem nunca se
+> do processo de sala limpa — *o dado e a origem nunca se
 > separam* —, e essa regra segue normativa: a posição jurídica e o formato que recusa
 > foram entregues, e `profiles/curva_propria.py` continua reprovando efeito sem
 > `medido_por`, `controle` ou `nota`. No dia em que alguém medir uma curva própria —
@@ -22,7 +22,7 @@ se separam.
 > tabela honesta já está de pé.
 
 **Atualização de 2026-07-31 — o formato já existe, e ele recusa.** A
-[CR-02](../process/sprints/arquivados/2026-07-25-CR-02-formato-e-proveniencia.md) foi
+CR-02 foi
 entregue: `profiles/curva_propria.py` define `CurvaPropria`, e um efeito com
 `medido_por`, `controle` ou `nota` vazios **não instancia** — levanta erro, não
 aviso. A tabela da seção "Efeitos" sai da função `gerar_tabela_markdown`, a
