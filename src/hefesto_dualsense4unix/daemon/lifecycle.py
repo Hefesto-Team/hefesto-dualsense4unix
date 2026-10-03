@@ -1698,9 +1698,17 @@ class Daemon:
         pela regra do dono (`manager.secao_do_mouse_da_navegacao`), com as
         velocidades vivas quando o perfil não tinha a seção.
 
+        O CARIMBO VAI JUNTO (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01,
+        03/10/2026): o daemon passa o jogo que vale (o appid do wrapper vivo, o
+        mesmo que a escada usa) e o Steam Input dele (a allowlist que a escada
+        lê), e o escritor carimba a ponte `por=escolha_dela` quando o perfil
+        que grava é a regra desse jogo. A autoridade de exibição não entra: a
+        escolha pela janela acontece com a janela do Hefesto em foco.
+
         NUNCA LEVANTA: o aparelho já trocou, e um `.json` ilegível não pode
         transformar a troca em recusa.
         """
+        from hefesto_dualsense4unix.daemon import launch_env
         from hefesto_dualsense4unix.profiles.manager import (
             gravar_o_modo_no_perfil_ativo,
             nome_do_perfil_que_grava,
@@ -1715,6 +1723,7 @@ class Daemon:
                 if mouse_ligado is not None
                 else None
             )
+            appid = launch_env.launch_session_appid()
             salvo = gravar_o_modo_no_perfil_ativo(
                 nome,
                 kind=kind,
@@ -1722,6 +1731,8 @@ class Daemon:
                 porta=porta,
                 mouse_ligado=mouse_ligado,
                 velocidades=velocidades,
+                appid_do_jogo=appid,
+                steam_input=appid is not None and appid in launch_env.steam_input_appids(),
             )
         except Exception as exc:
             logger.warning(

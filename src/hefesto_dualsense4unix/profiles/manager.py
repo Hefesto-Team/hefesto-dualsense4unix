@@ -25,6 +25,7 @@ from hefesto_dualsense4unix.profiles.loader import (
 )
 from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from hefesto_dualsense4unix.profiles.schema import (
+    CONFIRMADA_POR_ESCOLHA,
     CONFIRMADA_POR_GESTO,
     ControllerOverrides,
     LedsConfig,
@@ -1433,6 +1434,8 @@ class ProfileManager:
         """Carimba a ponte no perfil do jogo e GRAVA. None = não há perfil."""
 
         def _carimbar(profile: Profile) -> Profile:
+            if _a_escolha_dela_ja_carimbou(profile, kind, gamepad_flavor, steam_input):
+                return profile
             carimbado = carimbar_ponte(
                 profile,
                 kind=kind,
@@ -1452,6 +1455,14 @@ class ProfileManager:
         )
         if salvo is None:
             return None
+        if salvo.ponte is not None and salvo.ponte.confirmada_por == CONFIRMADA_POR_ESCOLHA:
+            logger.info(
+                "ponte_ja_confirmada_pela_escolha_dela",
+                appid=str(appid),
+                profile=salvo.name,
+                pedida_por=por,
+            )
+            return salvo
         logger.info(
             "ponte_confirmada",
             appid=str(appid),
@@ -1495,12 +1506,18 @@ class ProfileManager:
         origem: str,
         evento: str,
     ) -> Profile | None:
-        """O ÚNICO `save_profile` do caminho por appid. None = não há perfil."""
+        """O ÚNICO `save_profile` do caminho por appid. None = não há perfil.
+
+        O `transformar` que devolve o PRÓPRIO perfil diz «nada a mudar», e nada
+        se grava (a guarda da escolha dela em :meth:`confirmar_ponte`).
+        """
         profile = perfil_do_appid(appid)
         if profile is None:
             logger.info(evento, appid=str(appid))
             return None
         novo = transformar(profile)
+        if novo is profile:
+            return profile
         save_profile(novo, origem=origem)
         return novo
 
@@ -1611,6 +1628,27 @@ def pontes_confirmadas(
         if ponte is not None:
             saida[str(appid)] = ponte.model_dump(mode="json")
     return saida
+
+
+def _a_escolha_dela_ja_carimbou(
+    profile: Profile, kind: str, gamepad_flavor: object, steam_input: bool
+) -> bool:
+    """O perfil já tem ESTA ponte carimbada pela escolha dela?
+
+    O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01: a escada pede o carimbo da
+    ponte de pé depois do silêncio, `por=silencio` ou `por=gesto`. Quando a
+    escolha dela já carimbou a MESMA ponte (o PS + R3 carimba na hora e deixa o
+    gesto anotado, que o tique colhe 180 s depois), o carimbo dela fica: a
+    escada não rebaixa a escolha. Outra ponte de pé, a escada carimba como
+    sempre.
+    """
+    atual = profile.ponte
+    if atual is None or atual.confirmada_por != CONFIRMADA_POR_ESCOLHA:
+        return False
+    pedida = carimbar_ponte(
+        profile, kind=kind, gamepad_flavor=gamepad_flavor, steam_input=steam_input
+    ).ponte
+    return pedida is not None and _mesma_ponte_carimbada(atual, pedida)
 
 
 def carimbar_ponte(
@@ -1735,6 +1773,8 @@ def gravar_o_modo_no_perfil_ativo(
     porta: str,
     mouse_ligado: bool | None = None,
     velocidades: tuple[int, int] | None = None,
+    appid_do_jogo: object = None,
+    steam_input: bool = False,
 ) -> Profile | None:
     """O modo escolhido vai ao perfil ATIVO, na hora. None = não gravou.
 
@@ -1756,6 +1796,16 @@ def gravar_o_modo_no_perfil_ativo(
     na Navegação grava, NA MESMA GRAVAÇÃO, o ``mouse.enabled`` que ela deixou
     de pé (:func:`secao_do_mouse_da_navegacao`); ``None`` não toca a seção.
 
+    `appid_do_jogo` e `steam_input` (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01,
+    03/10/2026): o jogo que o wrapper lançou e que ainda roda, e se ele está na
+    allowlist do Steam Input. Quando o perfil que grava é a regra DESSE jogo, o
+    carimbo vai na mesma gravação, `por=escolha_dela`
+    (:func:`_carimbo_da_escolha`): a escolha dela é confirmação da ponte naquele
+    jogo. Sem isto, o modo mudava e o carimbo ficava na ponte de antes, e o
+    serviço avisava `ponte_confirmada_diverge_do_perfil` sobre a escolha dela
+    (Pro Jank Footy, 01/10, 19h17). Fora de jogo, ou com o Freestyle valendo,
+    nada de carimbo: ele é «confirmada NESTE jogo».
+
     NADA MUDOU, NADA SE GRAVA: o `.json` dela não ganha uma versão idêntica a
     cada aperto repetido.
     """
@@ -1767,6 +1817,11 @@ def gravar_o_modo_no_perfil_ativo(
     mudou: dict[str, Any] = {}
     if antes is None or antes.model_dump() != depois.model_dump():
         mudou["mode"] = depois
+    carimbo = _carimbo_da_escolha(
+        profile, depois, appid_do_jogo=appid_do_jogo, steam_input=steam_input
+    )
+    if carimbo is not None:
+        mudou["ponte"] = carimbo
     if mouse_ligado is not None:
         mouse = secao_do_mouse_da_navegacao(
             profile.mouse,
@@ -1786,8 +1841,56 @@ def gravar_o_modo_no_perfil_ativo(
         caminho=depois.caminho,
         porta=porta,
         **({"mouse_enabled": mudou["mouse"].enabled} if "mouse" in mudou else {}),
+        **({"ponte_confirmada_por": carimbo.confirmada_por} if carimbo else {}),
     )
     return novo
+
+
+def _carimbo_da_escolha(
+    profile: Profile,
+    modo: ProfileModeConfig,
+    *,
+    appid_do_jogo: object,
+    steam_input: bool,
+) -> PonteConfirmada | None:
+    """O carimbo `escolha_dela` que a escolha do modo leva, ou None quando nenhum.
+
+    None em três casos: não há jogo do wrapper vivo; o perfil que grava não é a
+    regra desse jogo (o Freestyle, ou o perfil escolhido fora dele); o carimbo
+    de hoje já é este, pela escolha dela. O gamepad sem caminho declarado não
+    carimba: a ponte dele é a máscara do aparelho, que este escritor não lê, e
+    carimbar `gamepad` sem o canal diria «confirmada» sobre o que ninguém
+    escolheu.
+    """
+    if appid_do_jogo is None:
+        return None
+    do_jogo = perfil_do_appid(appid_do_jogo)
+    if do_jogo is None or do_jogo.name != profile.name:
+        return None
+    if modo.kind == "gamepad" and modo.caminho is None:
+        return None
+    novo = carimbar_ponte(
+        profile,
+        kind=modo.kind,
+        gamepad_flavor=modo.caminho,
+        steam_input=steam_input,
+        por=CONFIRMADA_POR_ESCOLHA,
+    ).ponte
+    atual = profile.ponte
+    if (
+        novo is not None
+        and atual is not None
+        and atual.confirmada_por == CONFIRMADA_POR_ESCOLHA
+        and _mesma_ponte_carimbada(atual, novo)
+    ):
+        return None
+    return novo
+
+
+def _mesma_ponte_carimbada(a: PonteConfirmada, b: PonteConfirmada) -> bool:
+    """Os dois carimbos dizem a mesma ponte (`kind`, canal, Steam Input)?"""
+    return (a.kind, a.gamepad_flavor, a.steam_input) == (
+        b.kind, b.gamepad_flavor, b.steam_input)
 
 
 def gravar_a_navegacao_no_perfil_ativo(
