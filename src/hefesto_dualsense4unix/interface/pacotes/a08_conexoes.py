@@ -5495,8 +5495,8 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
     "adaptador-reordenar": "grava a ordem das caixas no `gui_preferences.json`, "
                            "que o daemon não lê",
     "dono-renomear": _NO_BLUEZ,
-    "perfil-do-controle": "grava `controles[uniq].economia` no `maquina.json`; o "
-                          "`state_full` não o publica",
+    "perfil-do-controle": "grava a economia de cada controle no `maquina.json`; o "
+                          "`state_full` não a publica",
     "mapear-gravar": "grava a porta da vez no `maquina.json` pelo dono do mapa",
     "mapear-comecar": "só liga o olhar do dono, no processo da interface",
     "mapear-parar": "só desliga o olhar do dono, no processo da interface",
