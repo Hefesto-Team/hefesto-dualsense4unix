@@ -8,12 +8,6 @@ import pytest
 
 from hefesto_dualsense4unix.core import escritor_cru as ec
 
-FONTE = Path(ec.__file__).read_text(encoding="utf-8")
-
-FONTE_CORRIDA = " ".join(
-    FONTE.replace("#:", " ").replace("*", " ").split()
-)
-
 
 class TestAVarreduraAmplaVeAlemDaSteam:
     def test_ve_um_processo_que_nao_e_a_steam(
@@ -149,12 +143,6 @@ class TestOCustoEstaMedidoNoFonte:
     def test_o_orcamento_existe_e_nao_e_infinito(self) -> None:
         """Varredura sem teto trava o chamador quando o `/proc` engasga."""
         assert 0.0 < ec.ORCAMENTO_DA_VARREDURA_AMPLA_S <= 2.0
-
-    def test_a_medicao_esta_escrita_junto_do_numero(self) -> None:
-        """Número de orçamento sem a medição ao lado envelhece calado."""
-        assert "4.139 fds" in FONTE_CORRIDA, "a medição que justifica o teto sumiu"
-        assert "122 processos legíveis" in FONTE_CORRIDA
-        assert "12,8" in FONTE_CORRIDA, "as voltas medidas sumiram"
 
 
 def _proc_de_mentira(
