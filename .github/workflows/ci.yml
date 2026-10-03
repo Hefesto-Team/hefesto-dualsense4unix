@@ -426,6 +426,13 @@ jobs:
       # endereço morto, cura descosturada, SO-GTK já migrado, e dívida que cresce.
       - name: Cada comportamento tem um dono só
         run: python3 scripts/check_donos_de_comportamento.py
+      # A CATRACA DA ORIGEM (03/10/2026): caso especial fora do dono do eixo e
+      # remendo de sintoma só descem, e o projeto que cresce diz `Origem: <id>` na
+      # faixa de commits (o `before` do push, ou a base do pull request).
+      - name: A catraca da origem (três números que só descem)
+        env:
+          BASE_DA_FAIXA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: python3 scripts/check_a_origem.py ${BASE_DA_FAIXA:+--base "$BASE_DA_FAIXA"}
       # NADA NOVO APONTA PARA A JANELA (06/09/2026, sprint GTK-1). Decisão dela
       # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no
       # gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK sai em

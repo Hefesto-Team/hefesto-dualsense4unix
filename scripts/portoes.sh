@@ -125,6 +125,14 @@ rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
 # julga se um código recria — ele impede o LAUDO de envelhecer: endereço morto,
 # cura descosturada, SO-GTK que já migrou, e a dívida declarada, que só desce.
 rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
+# A CATRACA DA ORIGEM — 03/10/2026, a ordem dela de 02/10: *«a cada script novo,
+# cada alteração nova enxugariamos e deixariamos o projeto mais enxuto, porém cada
+# vez mais inteligente e preciso»*. Três números que só descem (caso especial fora
+# do dono do eixo, remendo de sintoma por arquivo, linhas do projeto) sobre o
+# motor `scripts/catraca.py`; o tamanho que cresce exige `Origem: <id>` na faixa.
+# É portão e não gancho de commit porque o cherry-pick não roda gancho. A mordida
+# é `tests/unit/test_a_catraca_da_origem_morde.py`, na suíte.
+rapido|a-origem|py|scripts/check_a_origem.py
 # NADA NOVO APONTA PARA A JANELA — 06/09/2026, sprint GTK-1. Decisão dela
 # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no gtk e
 # não apontar nada mais pra lá mas pro html"*. A janela GTK sai em três sprints

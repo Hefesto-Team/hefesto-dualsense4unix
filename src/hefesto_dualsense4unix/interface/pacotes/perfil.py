@@ -473,7 +473,7 @@ def com_a_carona(frase: str = "") -> str:
 
     O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. `frase` vazia de volta quer dizer
     *não diga nada*: sem nada a repor, `ResultadoDaCarona.frase` é vazia
-    (`carona_do_wrapper.py:317`) e quem chamou volta a devolver `None` — o "deu
+    (`carona_do_wrapper.py:197`) e quem chamou volta a devolver `None` — o "deu
     certo" é a piscada verde de ~1,5 s (decisão dela, `03-Q4`), **sem palavra
     nova na tela**. A carona só fala quando tem notícia.
 

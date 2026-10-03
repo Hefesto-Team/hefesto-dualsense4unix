@@ -2281,7 +2281,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     continua publicando a fonte. O que a tela promete aqui é outra coisa —
     *"Desligado, nenhum programa o enxerga"* — e isso é a PONTE, que existe ou
     não existe: `ControleDeclarado.microfone` no `maquina.json`
-    (`utils/maquina.py:462`), decisão dela de 22/08/2026 (*"por controle"*).
+    (`utils/maquina.py:522`), decisão dela de 22/08/2026 (*"por controle"*).
 
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU

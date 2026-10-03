@@ -55,7 +55,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     # `profiles_actions._aplicar_nascimento_com_jogo:3097` usa
     "detectar": "TEM DONO, e ele é a CLASSE da janela: o `state_full` publica "
     "`window_detect_last_class` e `window_detect_current_class` "
-    "(daemon/state_store.py:343). O TÍTULO é que não é publicado. Quem quiser o "
+    "(daemon/state_store.py:316). O TÍTULO é que não é publicado. Quem quiser o "
     "título espera a ONDA-PERFIS-03.",
     "voltar-a-de-ontem": "O MOTOR EXISTE E NUNCA TEVE TELA: "
     "profiles/loader.restaurar_do_historico:3090 e listar_historico:2809, com "
