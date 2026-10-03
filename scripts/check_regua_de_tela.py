@@ -13,7 +13,6 @@ GRAU = 1
 TELA = (
     "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
-    "src/hefesto_dualsense4unix/gui",
 )
 
 NAO_E_DESENHO = (

@@ -17,7 +17,6 @@ FAMILIAS_DE_FOTO = (FOTOS, FOTOS_DA_VISTA)
 CODIGO_DA_TELA = (
     "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
-    "src/hefesto_dualsense4unix/gui",
 )
 
 ARVORE_VAZIA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
