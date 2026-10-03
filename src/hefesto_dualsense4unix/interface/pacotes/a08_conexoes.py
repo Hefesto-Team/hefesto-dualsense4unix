@@ -3294,7 +3294,8 @@ def _o_menu(ap: dict[str, Any]) -> str:
     dica = f"Opções de {nome} neste adaptador"
     return (f'<button class="menu-da-linha" title="{_x(dica)}" aria-label="{_x(dica)}" '
             f'aria-haspopup="true" data-gesto="aparelho-menu" data-alvo="{_x(ap["id"])}" '
-            f'data-lugar="{_x(ap.get("lugar") or "")}">{MENU_DA_LINHA}</button>')
+            f'data-lugar="{_x(ap.get("lugar") or "")}">'
+            f'<span aria-hidden="true">{MENU_DA_LINHA}</span></button>')
 
 
 def _o_x(ap: dict[str, Any]) -> str:
