@@ -68,7 +68,7 @@ from tests.unit import bancada_das_ordens as bancada
 
 SERIAL = re.compile(
     "(?<![0-9A-Fa-f])[0-9A-Fa-f]{"
-    f"{ordens._TAMANHO_DO_SERIAL_DE_ENDERECO}"
+    "12"
     "}(?![0-9A-Fa-f])"
 )
 

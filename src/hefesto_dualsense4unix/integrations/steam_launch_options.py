@@ -735,23 +735,6 @@ def tirar_o_atalho_dos_jogos(
     return result
 
 
-def appid_needs_wrapper(appid: str, home: Path | None = None) -> bool:
-    """True quando o lembrete do wrapper se aplica ao jogo `appid` (read-only)."""
-    eligible = [v for v in discover_vdfs(home) if not is_sandboxed_layout(v)]
-    if not eligible:
-        return False
-    alvo = str(appid).strip()
-    for vdf in eligible:
-        try:
-            text = vdf.read_text(encoding="utf-8")
-        except (OSError, ValueError):
-            continue
-        value = read_launch_options_by_appid(text).get(alvo)
-        if value is not None and WRAPPER_PREFIX in value:
-            return False
-    return True
-
-
 PROC = Path("/proc")
 
 _PASTAS_DO_CLIENTE = frozenset({"ubuntu12_32", "steamrt64"})
@@ -1142,22 +1125,6 @@ def steam_game_running_appid() -> int | None:
     return int(achado.group(1)) if achado else None
 
 
-def start_steam_game(appid: int) -> bool:
-    """Pede à Steam que abra o jogo. True = o pedido saiu."""
-    url = f"steam://rungameid/{int(appid)}"
-    for cmd in (["steam", url], ["xdg-open", url]):
-        if shutil.which(cmd[0]) is None:
-            continue
-        try:
-            fora_do_servico.abrir(
-                cmd, env=ambiente_limpo(os.environ), popen=subprocess.Popen
-            )
-            return True
-        except (OSError, subprocess.SubprocessError):
-            continue
-    return False
-
-
 def stop_steam(
     *,
     proc: Path | None = None,
@@ -1209,8 +1176,8 @@ def reopen_steam() -> bool:
     PATH e, quando não achava, voltava MUDO. Quem instalou a Steam pela
     Flatpak ou pela Snap não tem esse binário — então `with_steam_closed`
     fechava a Steam dela, fazia o trabalho, e a deixava fechada sem uma
-    palavra. A URL `steam://` é o mesmo fallback que `start_steam_game` já
-    usa, e é ela que o `.desktop` da Flatpak/Snap registra.
+    palavra. O fallback é a URL `steam://` pelo `xdg-open`, que é ela que o
+    `.desktop` da Flatpak/Snap registra.
 
     Sobra um caso sem voz — nem ``steam`` nem ``xdg-open`` no PATH —, e é por
     isso que o retorno virou `bool`: os três chamadores de `with_steam_closed`

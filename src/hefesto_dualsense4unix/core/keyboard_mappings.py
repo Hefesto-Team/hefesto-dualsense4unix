@@ -84,11 +84,6 @@ def parse_binding(spec: str) -> KeyBinding:
     return tuple(tokens)
 
 
-def format_binding(binding: KeyBinding) -> str:
-    """Inverso de `parse_binding`. Útil para serialização e UI."""
-    return "+".join(binding)
-
-
 __all__ = [
     "DEFAULT_BUTTON_BINDINGS",
     "PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ",
@@ -96,7 +91,6 @@ __all__ = [
     "TOKEN_OPEN_OSK",
     "TOKEN_TOGGLE_OSK",
     "KeyBinding",
-    "format_binding",
     "is_virtual_token",
     "parse_binding",
 ]

@@ -254,11 +254,6 @@ class PortaDeclarada(BaseModel):
     acha que são dois buracos e manda a pessoa se ajoelhar atrás do gabinete
     duas vezes pelo mesmo furo.
 
-    Quem RESOLVE esta lista contra a leitura de agora é
-    ``integrations/entradas_do_gabinete.furo_declarado``, e a comparação é por
-    INTERSEÇÃO: um buraco declarado com dois nós continua sendo o mesmo buraco
-    quando o kernel de hoje publica um só.
-
     **Entrada vazia não tem entrada aqui.** ``_podar`` tira ``None`` e vazio do
     documento antes de escrever, e a ausência é a resposta "aqui não tem nada"
     — a mesma gramática de "não sei" do arquivo inteiro.

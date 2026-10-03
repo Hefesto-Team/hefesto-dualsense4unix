@@ -404,7 +404,7 @@ def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
     asyncio.run(connection.restore_last_profile(SimpleNamespace(  # type: ignore[arg-type]
         controller=controle, store=store, _run_blocking=_bloqueante, _native_mode=False)))
 
-    assert (store.active_profile, store.perfil_adiado_por_janela) == (FREESTYLE, None)
+    assert store.active_profile == FREESTYLE
 
 
 def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> None:

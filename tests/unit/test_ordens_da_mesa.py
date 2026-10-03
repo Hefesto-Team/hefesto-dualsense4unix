@@ -260,32 +260,6 @@ def test_nenhuma_ordem_publica_serial() -> None:
             assert serial.lower() not in texto.lower()
 
 
-def test_a_identidade_nao_carrega_o_serial() -> None:
-    """O serial entra em `identidades`, decide a ambiguidade, e morre lá."""
-    achadas = ordens.identidades(
-        bancada.censo(), ler_serial=bancada.ler_serial
-    )
-    for identidade in achadas.values():
-        for serial in bancada.SERIAIS.values():
-            assert serial.lower() not in repr(identidade).lower()
-
-
-def test_dois_dongles_de_mesmo_vid_pid_sao_separados_pelo_serial() -> None:
-    """`2357:0604` são dois, e só o serial os separa — nenhum é ambíguo."""
-    achadas = ordens.identidades(
-        bancada.censo(), ler_serial=bancada.ler_serial
-    )
-    assert achadas["3-1.1.4"].ambigua is False
-    assert achadas["3-1.2"].ambigua is False
-
-
-def test_sem_serial_a_tripla_colapsa_e_a_identidade_fica_ambigua() -> None:
-    """Dois aparelhos que o sysfs não sabe separar são, de fato, ambíguos."""
-    achadas = ordens.identidades(bancada.censo(), ler_serial=lambda _no: "")
-    assert achadas["3-1.1.4"].ambigua is True
-    assert achadas["3-1.2"].ambigua is True
-
-
 def test_nenhuma_ordem_cita_milimetro_nem_altura() -> None:
     """O GUIA é raciocínio, e ela já disse que não sabe o que isso quer dizer."""
     proibidas = ("mm", "milímetro", "centímetro", "altura da antena", "visada")

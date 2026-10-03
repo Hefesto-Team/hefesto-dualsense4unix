@@ -36,9 +36,8 @@ Ele nasce LIGADO desde 17/09: a chegada do controle põe o microfone no ar
 (`daemon/subsystems/hotkey.nascer_no_ar`), que é a `D-O-MIC-LIGADO-VALE-NO-RADIO`
 (decisoes-dela.csv id 38) finalmente implementada. **A decisão de 24/08 não
 depende disso** — ela é sobre o perfil não ser o dono do microfone, e isso vale
-igual com o microfone nascendo ligado. O que esta seção mostra dele continua
-sendo o **preço** (:func:`plano_de_radio.frase_do_preco_por_controle`), que é a
-condição que ela mesma pôs: *"LIGADO SEMPRE… COM A TELA DIZENDO O PREÇO"*.
+igual com o microfone nascendo ligado. A condição que ela mesma pôs, sobre o
+preço que o `plano_de_radio` conta, foi: *"LIGADO SEMPRE… COM A TELA DIZENDO O PREÇO"*.
 
 **3. A tabela tem UMA linha com ponto de aplicação, e diz as outras quatro.**
 :data:`LINHAS_DO_TETO` é o dono único da lista, e :func:`alcance_de_hoje`

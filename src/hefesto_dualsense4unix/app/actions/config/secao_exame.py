@@ -50,24 +50,11 @@ entrada na aba, e é dele que a leitura viva tem de continuar fora.
 O CARD RESPONDE (26/08/2026)
 -----------------------------
 
-Até esta data o card de ordem era só leitura: ela lia "mova o aparelho", ia lá,
-movia — e não tinha como dizer isso ao produto. A seção tinha UM botão
-("Examinar de novo") e o conselho dispensado nunca sumia. A lógica inteira já
-estava escrita e medida em `integrations/ordens_da_mesa.py`
-(`resposta_ao_ja_movi`, `ordens_novas`, `ordens_caladas`, `cabecalho`,
-`identidades`) e não tinha um único chamador: era a
-`A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na forma cara — cinco funções medidas e
-nenhuma tela.
-
-Agora cada card de ordem traz `[Já movi — reexaminar]` e `[Ignorar]`:
-
-* **Já movi** refaz o exame e COMPARA o arranjo, respondendo uma das quatro
-  frases de `FRASE_DA_RESPOSTA`. A resposta FICA na tela até o próximo exame —
-  um card que simplesmente some é indistinguível de um card que nunca foi
-  desenhado, e ela apertou um botão e precisa ver o que ele fez;
-* **Ignorar** grava a dispensa no rascunho da máquina, chaveada pelo ARRANJO
-  (`D-ORDEM-IGNORADA-VOLTA`). Ela mexeu nos cabos e a mesma regra disparou com
-  arranjo novo? é fato novo, e a ordem VOLTA.
+O conselho dispensado nunca sumia. Cada card de ordem traz `[Ignorar]`: grava a
+dispensa no rascunho da máquina, chaveada pelo ARRANJO (`D-ORDEM-IGNORADA-VOLTA`).
+Ela mexeu nos cabos e a mesma regra disparou com arranjo novo? é fato novo, e a
+ordem VOLTA. O `[Já movi — reexaminar]` saiu: ela decidiu em 31/08/2026 que não
+faz sentido ter o examinar e o reexaminar.
 
 O TOPO, E QUEM DECIDE A COR (26/08/2026)
 ------------------------------------------

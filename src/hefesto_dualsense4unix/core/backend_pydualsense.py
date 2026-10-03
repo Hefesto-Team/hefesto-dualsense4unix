@@ -5251,8 +5251,8 @@ class PyDualSenseController(IController):
         expor também a cor-identidade PRÉ-brilho, mas separá-la exigiria
         refactor do estado desejado (fora do escopo desta frente); o objetivo
         do D8 (traços legíveis com cor escura) foi resolvido por outra via —
-        `utils/color_contrast.ensure_min_contrast` clareia preservando o matiz
-        na borda da GUI. None = nenhum perfil/GUI setou cor ainda. Não toca
+        o contraste do traço é ajustado na borda da GUI, clareando
+        a cor e preservando o matiz. None = nenhum perfil/GUI setou cor ainda. Não toca
         hardware nem muta estado.
         """
         with self._io_lock:

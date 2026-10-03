@@ -1006,6 +1006,132 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
         "decidiria por ela, e ligá-la também."
     ),
+    "app/actions/mode_transition.py::apply_mode": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
+        "piloto da aba Controles, não promessa ao produto: só "
+        "`interface/controles_vivos.py:818` a chama (bancada, fora do fecho do "
+        "`hefesto_vivo`). A janela viva monta a MESMA sequência pelo dono "
+        "único, `plan_mode_transition` (`app/actions/jogar/painel.py:232`), e a "
+        "executa pela ponte (`interface/pacotes/a01_jogar.py`, `PROVAS`). Sai "
+        "com o piloto da aba Controles."
+    ),
+    "app/fala_do_mapa.py::Fala": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o tipo que duas "
+        "réguas leem por AST, não promessa ao produto: "
+        "`scripts/validar-fala-de-tela.py:151` e "
+        "`scripts/check_a_tela_nao_confessa.py:160` varrem toda chamada "
+        "`Fala(...)` em `src/`. Hoje há zero (`validar-fala-de-tela.py:674`, "
+        "`PISO_DA_REGUA[\"falas\"] = 0`): a interface nova não declara nenhuma. "
+        "O tipo fica para a próxima frase de tela que ligar um número ao mapa."
+    ),
+    "app/mic_monitor.py::MicMonitor": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
+        "piloto da aba Controles, não promessa ao produto: só "
+        "`interface/controles_vivos.py:899` o instancia (bancada). A janela "
+        "viva desenha a onda do microfone por `integrations/ondas_de_som` "
+        "(`interface/hefesto_vivo.py:3835`) e o daemon publica o estado do "
+        "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "
+        "seguem chamadas por `app/audio_saida.py`. Sai com o piloto."
+    ),
+    "integrations/cor_do_plastico.py::ler_pelo_cabo": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
+        "bancada, não promessa ao produto: `scripts/mesa_de_medicao.py:735` e "
+        "`scripts/ensaios/a_folha_dos_ensaios.py:390` leem a cor do plástico "
+        "pelo cabo com ela. O produto lê pela porta do broker "
+        "(`tests/unit/test_a_cor_do_plastico_entra_pela_porta_do_broker.py`), "
+        "sem passar por esta função."
+    ),
+    "integrations/plano_de_radio.py::microfone_nasce_ligado": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o DONO declarado do "
+        "padrão «o microfone nasce ligado», não promessa ao produto: "
+        "`profiles/schema.py:1953` e `:2137` o citam em `dono=` por nome, e "
+        "`tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` "
+        "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "
+        "sumir. A frase que o lia na tela saiu com a janela GTK."
+    ),
+    "integrations/steam_launch_options.py::read_launch_options_by_appid": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o oráculo das "
+        "réguas, não promessa ao produto: seis arquivos de teste leem com ela o "
+        "que o aplicador gravou no VDF "
+        "(`tests/unit/test_steam_launch_options_vdf.py:464`, "
+        "`test_launch_options_apply_cli.py`, "
+        "`test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch.py`, "
+        "`test_opcoes_por_jogo_01_uma_linha_um_dono.py`). O produto escreve o "
+        "VDF e nunca o lê por esta função desde que o lembrete do wrapper saiu."
+    ),
+    "integrations/varredura_do_radio.py::Varredura": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
+        "bancada e o dono de dois números, não promessa ao produto: "
+        "`scripts/ensaios/o_travamento_fator_a_fator.py:886` pergunta quem varre "
+        "com ela, e `QUEDA_MINIMA_MEDIDA` e `QUEDA_MAXIMA_MEDIDA` são os que o "
+        "`scripts/doctor.sh:4400` cita (régua: "
+        "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
+        "viva lê a varredura do estado do BlueZ que o daemon publica "
+        "(`interface/pacotes/a08_conexoes.py:4343`)."
+    ),
+    "integrations/varredura_do_radio.py::quem_esta_varrendo": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
+        "bancada, não promessa ao produto: a pergunta ao `Discovering` do BlueZ "
+        "é feita por `scripts/ensaios/o_travamento_fator_a_fator.py:886` e "
+        "medida por `tests/unit/test_o_bluez_tem_um_dono.py`. Irmã de "
+        "`::Varredura`, que carrega a razão."
+    ),
+    "integrations/varredura_do_radio.py::varredura_recente": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é a memória curta da "
+        "pergunta, não promessa ao produto: o laço do GTK que a chamava "
+        "(`_aplicar_estado`) saiu com a janela GTK, e hoje só a régua "
+        "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py:477` a exercita. "
+        "Irmã de `::Varredura`, que carrega a razão."
+    ),
+    "integrations/censo_do_barramento.py::hub_em_comum": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — lápide de feature "
+        "ADIADA, não promessa ao produto: a linha «um hub acima de todos os "
+        "adaptadores» saiu da tela com a seção «Rádio e Adaptadores» em "
+        "23/09/2026 (TRANSPLANTE-DA-SECAO-01), por decisão de quem coordenou, "
+        "e `docs/data/paridade-gtk-html.csv` (linha «O hub em comum acima de "
+        "todos os adaptadores») registra que a volta é palavra dela. A função "
+        "e as provas ficam em `tests/unit/test_o_censo_le_o_barramento_inteiro.py`."
+    ),
+    "integrations/censo_do_gabinete.py::contagens_declaradas": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — lápide de feature "
+        "ADIADA, não promessa ao produto: as duas contagens do gabinete, lado a "
+        "lado, saíram da tela em 23/09/2026 (TRANSPLANTE-DA-SECAO-01) porque o "
+        "desenho aprovado não tem onde elas caibam, e "
+        "`docs/data/paridade-gtk-html.csv` (linha «As contagens do gabinete») "
+        "deixa a volta como palavra dela. O dono fica com a função, sem chamador."
+    ),
+    "integrations/censo_do_gabinete.py::pergunta_pendente": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — irmã de "
+        "`::contagens_declaradas`, que carrega a razão: a pergunta que só ela "
+        "responde («quantas entradas USB o gabinete tem?») saiu da tela em "
+        "23/09/2026 junto com as contagens, e a volta é palavra dela "
+        "(`docs/data/paridade-gtk-html.csv`, linha «As contagens do gabinete»)."
+    ),
+    "integrations/window_detect.py::backend_ve_nome_do_processo": (
+        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — lápide de feature "
+        "ADIADA, não promessa ao produto: o aviso de que o `process_name` não "
+        "casa nesta máquina (PROCESSO-CEGO-01) morava na página avançada do "
+        "editor de perfis, que a interface nova ainda não tem — adiada por "
+        "prazo em 06/09/2026, e `D-0609-ADIAMENTO-NAO-E-REMOCAO` manda a linha "
+        "ficar na régua da paridade. A tabela de backends e as provas "
+        "(`tests/unit/test_o_nome_do_processo_que_nao_casa.py`) ficam."
+    ),
+    "profiles/curva_propria.py::CurvaPropria": (
+        "03/10/2026, decisão pelo padrão dela (o mais reversível na dúvida): "
+        "FICA. É a entrega da regra R3 do clean-room — o dado e a origem nunca se "
+        "separam —, e `docs/protocol/curvas-proprias.md:16-22` e `NOTICE:195-199` "
+        "dizem que o arquivo fica; a decisão de 29/08/2026 "
+        "(`D-A-CORRENTE-DO-CLEAN-ROOM-SAI`) tirou a corrente CR-03, CR-04 e "
+        "CR-06, não o formato da CR-02. Nenhum módulo de `src/` o importa e não "
+        "existe curva própria no repositório."
+    ),
+    "profiles/curva_propria.py::CatalogoCurvasProprias": (
+        "03/10/2026, FICA, pela mesma decisão de `::CurvaPropria`: é o catálogo "
+        "compartilhado do formato da CR-02, e o único leitor dele é "
+        "`scripts/gerar-tabela-de-curvas.py:52`, o gerador de "
+        "`docs/protocol/curvas-proprias.md`, que o `NOTICE:195-199` cita. "
+        "Apagá-lo quebra o gerador e a entrega da R3."
+    ),
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
@@ -1097,35 +1223,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "chamador a esta função é REGRESSÃO até que a decisão seja revertida, "
         "e quando for, o `bt_active_mode.sh` para de costurar NO MESMO commit."
     ),
-    # dela"*. A assinatura mudou (I1 da INÍCIO NÃO MENTE-01): o `ao_aplicar` do
-    # `core/led_control.py::apply_led_settings` e `::player_bitmask` MORARAM
-    # `trigger_set_detalhado` e `trigger_reset_detalhado` SAÍRAM daqui em
-    # o `_toast_trigger` decide pelo CORPO do daemon, via `frase_do_desfecho`.
-    # `led_set_detalhado` e `player_leds_set_detalhado` saíram pelo mesmo
-    # motivo em 26/08/2026 (BG-01): `_aplicar_cor_no_controle`,
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    # `::load_keyboard_emulation_enabled` — SAÍRAM em 26/08/2026 porque os três
-    # boot do daemon, onde o `keyboard_emulation.flag` já é lido"*. O boot JÁ
-    "profiles/curva_propria.py::CurvaPropria": (
-        "MEDIDO em 22/08/2026: NENHUM módulo de `src/` importa "
-        "`profiles/curva_propria.py`. O formato do efeito de gatilho próprio "
-        "(CR-02) está escrito, validado e desligado — `profiles/schema.py` não o "
-        "cita, e o docstring do módulo (:34) confessa o estado: *não existe "
-        "nenhuma curva própria no repositório*. Até 21/08 a régua plana o "
-        "perdoava pelo gerador de documentação de `scripts/`. "
-        "O QUE FECHA: a ONDA-GATILHOS-05, que dá tela ao catálogo e põe a mão "
-        "dela no gatilho para produzir a primeira curva. SUBSTITUÍDO em "
-        "29/08/2026: esta linha dizia `a CR-04`, e a CR-04 saiu do disco com a "
-        "corrente do clean-room, por decisão dela — não há mais sprint futura "
-        "esperando pela primeira curva."
-    ),
-    "profiles/curva_propria.py::CatalogoCurvasProprias": (
-        "MEDIDO em 22/08/2026. Irmã da anterior (ver `::CurvaPropria`): é o "
-        "catálogo compartilhado que guarda as curvas (:259), e o único leitor "
-        "dele é `scripts/gerar-tabela-de-curvas.py`:52, um gerador de "
-        "documentação. Nada em `src/` o carrega do disco."
-    ),
-
 }
 
 #: execução — `app/ipc_bridge.py::machine_declare` e
@@ -2276,12 +2373,17 @@ class TestAPonteDaInterfaceNovaEProducao:
 
 
 def _copia_de_src(destino: Path, *, sem_a_ponte: bool = False) -> Path:
-    """Uma cópia de ``src/`` onde se pode fabricar defeito sem sujar a árvore."""
+    """Uma cópia de ``src/`` onde se pode fabricar defeito sem sujar a árvore.
+
+    ``sem_a_ponte`` tira só a BOCA (o piloto): o motor da janela mora ao lado
+    dela em ``interface/`` desde 02/10/2026, e podar a pasta inteira levaria a
+    ``JanelaDaAba`` junto, que é o que a mordida da boca precisa ver acusada.
+    """
     copia = destino / "src" / "hefesto_dualsense4unix"
     copia.parent.mkdir(parents=True, exist_ok=True)
     padroes = ["__pycache__", "*.pyc"]
     if sem_a_ponte:
-        padroes.append(Path(_PASTA_DA_PONTE).name)
+        padroes.append(Path(_PILOTO_DA_INTERFACE_NOVA).name)
     shutil.copytree(_SRC, copia, ignore=shutil.ignore_patterns(*padroes))
     for roteiro in (*_ROTEIROS_DE_PRODUCAO, *_LANCADORES):
         origem = _RAIZ / roteiro
@@ -2322,11 +2424,11 @@ class TestOPortaoMorde:
             "resolução de import quebrou. Em 22/08/2026 eram 196 de 201."
         )
         assert (
-            "daemon/subsystems/gamepad.py::resume_vpads_after_steam_input"
+            "daemon/subsystems/gamepad.py::sync_steam_input_exception"
             not in soltas
         ), (
-            "a varredura não vê chamada direta (gamepad.py:180) — e é ela que "
-            "prova que a saída da ESCONDER-EM-VEZ-DE-SAIR-01 continua viva"
+            "a varredura não vê chamada direta (gamepad.py:989) — e é ela que "
+            "prova que a exceção do Steam Input continua viva"
         )
         assert (
             "integrations/proton_pin.py::lock_proton_for_all_games" not in soltas
@@ -2485,14 +2587,14 @@ class TestOPortaoMorde:
         copia = _copia_de_src(tmp_path)
         alvo = copia / "daemon" / "subsystems" / "gamepad.py"
         texto = alvo.read_text(encoding="utf-8")
-        chamada = "resume_vpads_after_steam_input(daemon)"
+        chamada = "sync_steam_input_exception(daemon)"
         assert chamada in texto, (
             "a chamada mudou de forma — esta mordida precisa de outro alvo, "
             "senão ela deixa de morder em silêncio"
         )
         alvo.write_text(texto.replace(chamada, "None"), encoding="utf-8")
 
-        chave = "daemon/subsystems/gamepad.py::resume_vpads_after_steam_input"
+        chave = "daemon/subsystems/gamepad.py::sync_steam_input_exception"
         assert chave in promessas_sem_caminho(copia), (
             "arrancado o único chamador, o portão NÃO acusou — ele não morde"
         )

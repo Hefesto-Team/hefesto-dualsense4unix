@@ -307,66 +307,6 @@ class TestLeituraDoVdfPorAppid:
         assert slo.read_launch_options_by_appid(texto) == {}
 
 
-class TestAppidNeedsWrapper:
-    def test_sem_nenhum_vdf_nao_ha_o_que_lembrar(self, tmp_path: Path) -> None:
-        home = tmp_path / "home"
-        home.mkdir()
-        assert slo.appid_needs_wrapper(APPID, home=home) is False
-
-    def test_jogo_sem_wrapper_precisa(self, tmp_path: Path) -> None:
-        home = _home_com_vdf(tmp_path, _vdf({APPID: "MANGOHUD=1 %command%"}))
-        assert slo.appid_needs_wrapper(APPID, home=home) is True
-
-    def test_jogo_sem_entrada_no_vdf_tambem_precisa(self, tmp_path: Path) -> None:
-        home = _home_com_vdf(tmp_path, _vdf({"42": "-fullscreen"}))
-        assert slo.appid_needs_wrapper(APPID, home=home) is True
-
-    def test_jogo_com_wrapper_nao_precisa(self, tmp_path: Path) -> None:
-        home = _home_com_vdf(tmp_path, _vdf({APPID: slo.WRAPPER_LAUNCH}))
-        assert slo.appid_needs_wrapper(APPID, home=home) is False
-
-    def test_wrapper_em_outro_jogo_nao_conta(self, tmp_path: Path) -> None:
-        home = _home_com_vdf(
-            tmp_path,
-            _vdf({"42": slo.WRAPPER_LAUNCH, APPID: "-fullscreen"}),
-        )
-        assert slo.appid_needs_wrapper(APPID, home=home) is True
-
-    def test_steam_sandboxed_fica_de_fora(self, tmp_path: Path) -> None:
-        """Só Flatpak/Snap no computador → o wrapper do host é invisível à"""
-        home = _home_com_vdf(
-            tmp_path, _vdf({APPID: "-fullscreen"}), sandbox=True
-        )
-        assert slo.appid_needs_wrapper(APPID, home=home) is False
-
-
-@pytest.fixture()
-def leitura_vdf(
-    monkeypatch: pytest.MonkeyPatch,
-) -> dict[str, int]:
-    """Worker síncrono + contador de leituras do vdf (sempre "precisa")."""
-    contador = {"leituras": 0}
-
-    def fake_needs(appid: str, home: Path | None = None) -> bool:
-        contador["leituras"] += 1
-        return True
-
-    def sync_run_in_thread(
-        fn: Any, on_success: Any, on_failure: Any = None
-    ) -> None:
-        try:
-            result = fn()
-        except Exception as exc:
-            if on_failure is not None:
-                on_failure(exc)
-            return
-        on_success(result)
-
-    monkeypatch.setattr(lwd, "appid_needs_wrapper", fake_needs)
-    monkeypatch.setattr(lwd, "run_in_thread", sync_run_in_thread)
-    return contador
-
-
 class _FakeDialog:
     def __init__(self) -> None:
         self.destroyed = False

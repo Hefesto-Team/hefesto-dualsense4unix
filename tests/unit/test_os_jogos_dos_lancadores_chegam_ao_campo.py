@@ -214,16 +214,6 @@ def test_o_rotulo_diz_o_nome_do_jogo_do_lancador() -> None:
         jl.MSG_NAO_RECONHECI, True)
 
 
-def test_a_busca_do_campo_acha_pelo_endereco_do_lancador() -> None:
-    """Depois de escolher, o campo tem `gotg.exe` — e a lista tem de segurá-lo."""
-    jogo = jl.JogoLocal(appid="", nome="Marvel's Guardians of the Galaxy",
-                        fonte="heroic", lancador="Heroic", chave="gotg.exe")
-
-    assert jl.casa_com_o_que_ela_digitou(jogo, "gotg")
-    assert jl.casa_com_o_que_ela_digitou(jogo, "guardians")
-    assert not jl.casa_com_o_que_ela_digitou(jogo, "elden")
-
-
 def test_nenhum_lancador_instalado_e_lista_so_da_steam(
     tmp_path: pathlib.Path,
 ) -> None:

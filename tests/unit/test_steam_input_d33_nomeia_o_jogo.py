@@ -100,10 +100,6 @@ class TestQuemEstaLigado:
         assert appids == []
         assert glob_on is True
 
-    def test_o_veredito_booleano_antigo_continua_valendo(self) -> None:
-        assert sd.steam_input_on_fora_da_allowlist(_vdf([_MMJ]), {_MMJ}) is False
-        assert sd.steam_input_on_fora_da_allowlist(_vdf([_SACKBOY]), {_MMJ}) is True
-
 
 class TestMensagemDoDoctor:
     def test_nomeia_o_jogo_e_nao_conta_arquivos(self, casa: Path) -> None:

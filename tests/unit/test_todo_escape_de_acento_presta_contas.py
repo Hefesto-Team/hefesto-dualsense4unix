@@ -20,7 +20,6 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "scripts/install_osk.sh": 2,
     "src/hefesto_dualsense4unix/broker/hidraw_broker.py": 3,
     "src/hefesto_dualsense4unix/cli/cmd_profile.py": 2,
-    "src/hefesto_dualsense4unix/integrations/ordens_da_mesa.py": 2,
     "src/hefesto_dualsense4unix/profiles/loader.py": 1,
     "src/hefesto_dualsense4unix/profiles/manager.py": 1,
     "src/hefesto_dualsense4unix/profiles/sanidade.py": 1,

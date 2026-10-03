@@ -196,15 +196,6 @@ class TestAPontaPython:
         assert popen_de_mentira[0]["cmd"] == ["steam"]
         _confere_limpo(popen_de_mentira[0]["env"], terminal_sujo, sessao)
 
-    def test_start_steam_game(
-        self,
-        terminal_sujo: dict[str, str],
-        sessao: dict[str, str],
-        popen_de_mentira: list[dict[str, Any]],
-    ) -> None:
-        assert slo.start_steam_game(1599660) is True
-        assert popen_de_mentira[0]["cmd"] == ["steam", "steam://rungameid/1599660"]
-        _confere_limpo(popen_de_mentira[0]["env"], terminal_sujo, sessao)
 
     def test_stop_steam(
         self,

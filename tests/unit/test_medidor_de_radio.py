@@ -10,7 +10,7 @@ barra (`fatias_da_barra`), que o módulo expõe fora do ramo do GTK.
 A MORDIDA, feita em 22/08/2026 e registrada aqui porque teste que passa com a
 cura arrancada não testa nada:
 
-* **arranquei** a exclusão de `transport != "bt"` de `ocupacao_por_adaptador`
+* **arranquei** a exclusão de `transport != "bt"` da conta (hoje `plano_por_adaptador`)
   (a linha `if controle.get("transport") == "bt"` do filtro);
 * **reprovaram DOIS nós**, com a mesma assinatura:
   `test_controle_no_cabo_nao_ocupa_radio_de_ninguem` e
@@ -46,9 +46,15 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     SEM_ADAPTADOR,
     SLOTS_POR_SEGUNDO,
     adaptador_por_uniq,
-    ocupacao_por_adaptador,
     palavra_da_ocupacao,
 )
+from hefesto_dualsense4unix.integrations.plano_de_radio import plano_por_adaptador
+
+
+def ocupacao_por_adaptador(controles, **kw):
+    """A conta de ocupação de cada adaptador, pelo dono que a tela e o daemon usam."""
+    return {end: plano.agora for end, plano in plano_por_adaptador(controles, **kw).items()}
+
 
 #: como os dois DualSense reais desta bancada com a máscara da casa (octetos 4
 UNIQ_A = "aa:bb:cc:00:00:03"

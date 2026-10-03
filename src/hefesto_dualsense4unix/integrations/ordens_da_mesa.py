@@ -90,7 +90,6 @@ O QUE NENHUMA ORDEM PODE DIZER
 """
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
@@ -139,10 +138,6 @@ _CLASSE_BLUETOOTH = ("e0", "01", "01")
 _CLASSE_TECLADO = ("03", "01", "01")
 
 ENCAIXE_DE_GENTE = "hotplug"
-
-_TAMANHO_DO_SERIAL_DE_ENDERECO = 12
-
-_ARQUIVO_DO_SERIAL = "serial"
 
 # ---------------------------------------------------------------------------
 # As chaves das regras. São a chave de DISPENSA e a chave de teste, e por isso
@@ -254,49 +249,6 @@ def _plastico_dos_hubs(
         nome = hub.nome_do_kernel
         saida |= classes.get(nome, frozenset({nome}))
     return saida
-
-
-def identidades(
-    censo: Censo, *, ler_serial: Callable[[str], str] | None = None
-) -> dict[str, Identidade]:
-    """``{nome do kernel: Identidade}`` — e o serial morre aqui dentro."""
-    leitor = _serial_do_no if ler_serial is None else ler_serial
-    triplas: dict[str, tuple[str, str, str]] = {}
-    for aparelho in censo.conectados():
-        triplas[aparelho.nome_do_kernel] = (
-            aparelho.vid,
-            aparelho.pid,
-            _serial_normalizado(leitor(aparelho.no)),
-        )
-    quantas: dict[tuple[str, str, str], int] = {}
-    for tripla in triplas.values():
-        quantas[tripla] = quantas.get(tripla, 0) + 1
-    return {
-        nome: Identidade(
-            vid=tripla[0],
-            pid=tripla[1],
-            caminho=nome,
-            ambigua=quantas[tripla] > 1,
-        )
-        for nome, tripla in triplas.items()
-    }
-
-
-def _serial_normalizado(serial: str) -> str:
-    """O serial em minúsculas e sem separador — ``""`` quando não há serial."""
-    limpo = serial.strip().replace(":", "").replace("-", "").lower()
-    return limpo[:_TAMANHO_DO_SERIAL_DE_ENDERECO] if limpo else ""
-
-
-def _serial_do_no(no: str) -> str:
-    """O ``serial`` de um nó USB; ``""`` em qualquer erro."""
-    try:
-        with open(
-            os.path.join(no, _ARQUIVO_DO_SERIAL), encoding="utf-8", errors="replace"
-        ) as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
@@ -660,35 +612,6 @@ def ordens_caladas(
     )
 
 
-CONFIRMEI = "confirmei"
-
-MOVEU_E_CONTINUA = "moveu_e_continua"
-
-SEM_MUDANCA = "sem_mudanca"
-
-NAO_CONSEGUI_CONFIRMAR = "nao_consegui_confirmar"
-
-FRASE_DA_RESPOSTA = {
-    CONFIRMEI: "Confirmei: o aparelho saiu de perto do adaptador.",
-    MOVEU_E_CONTINUA: "Você moveu, e continua apertado:",
-    SEM_MUDANCA: "Não vi mudança: o aparelho continua na mesma entrada.",
-    NAO_CONSEGUI_CONFIRMAR: (
-        "Não consegui confirmar: há dois aparelhos iguais na mesa."
-    ),
-}
-
-
-def resposta_ao_ja_movi(anterior: Ordem, agora: Ordem | None) -> str:
-    """O que a tela diz depois do "Já movi — reexaminar"."""
-    if anterior.alvo.ambigua or (agora is not None and agora.alvo.ambigua):
-        return NAO_CONSEGUI_CONFIRMAR
-    if agora is None:
-        return CONFIRMEI
-    if agora.arranjo != anterior.arranjo:
-        return MOVEU_E_CONTINUA
-    return SEM_MUDANCA
-
-
 TOPO_HA_ORDENS = "ha_ordens"
 
 TOPO_NADA_A_MUDAR = "nada_a_mudar"
@@ -949,9 +872,7 @@ __all__ = [
     "Ordem",
     "cabecalho",
     "catalogo",
-    "identidades",
     "mesmo_hub_fisico",
     "ordens_caladas",
     "ordens_novas",
-    "resposta_ao_ja_movi",
 ]

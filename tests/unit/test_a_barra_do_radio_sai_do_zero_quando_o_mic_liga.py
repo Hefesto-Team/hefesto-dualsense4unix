@@ -1,7 +1,7 @@
 """QUATRO-MICROFONES-01 (E2) — o medidor de rádio responde ao microfone.
 
-O medidor de `CONFIG-04` já sabia pintar a fatia de áudio: `ocupacao_por_adaptador`
-recebe `com_ponte_de_mic` desde o dia em que nasceu, e o
+O medidor de `CONFIG-04` já sabia pintar a fatia de áudio: a conta de ocupação (hoje
+`plano_por_adaptador`) recebe `com_ponte_de_mic` desde o dia em que nasceu, e o
 `test_medidor_de_radio` prova a aritmética dela. O que faltava era o
 **parâmetro estar ligado à verdade**: o `daemon.state_full` não publicava de
 QUAIS controles a ponte estava de pé, e a seção "A mesa" lia uma chave que não
@@ -14,7 +14,7 @@ A CADEIA TEM TRÊS ELOS, e este arquivo guarda os três
 1. o subsystem sabe de quem é cada ponte (`BtMicSubsystem.uniqs_com_ponte`);
 2. o `daemon.state_full` publica isso em `bt_mic.uniqs` — a terceira chave do
    bloco, e a única das três que fala de CONTROLE em vez de PROCESSO;
-3. a seção "A mesa" lê aquela chave e a repassa a `ocupacao_por_adaptador`.
+3. a seção "A mesa" lê aquela chave e a repassa a `plano_por_adaptador`.
 
 A LINHA DE BASE, e ela é o controle negativo desta entrega
 -----------------------------------------------------------
@@ -50,8 +50,8 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
     HZ_INPUT_SEM_MIC,
-    ocupacao_por_adaptador,
 )
+from hefesto_dualsense4unix.integrations.plano_de_radio import plano_por_adaptador
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -231,6 +231,11 @@ class TestOStateFullDizDeQuemEACadaPonte:
 
         bloco = (await _state_full(socket_path))["bt_mic"]
         assert bloco["motivo"] == bt_mic.MOTIVO_SEM_A_GUARDA
+
+
+def ocupacao_por_adaptador(controles, **kw):
+    """A conta de ocupação de cada adaptador, pelo dono que a tela e o daemon usam."""
+    return {end: plano.agora for end, plano in plano_por_adaptador(controles, **kw).items()}
 
 
 class TestABarraSeMexe:

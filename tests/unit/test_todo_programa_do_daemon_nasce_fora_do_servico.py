@@ -95,7 +95,6 @@ PROGRAMAS_DELA: dict[str, str] = {
         "os três atos da bandeja que um gesto alcança (OS-GESTOS, 01/10/2026)"
     ),
     "integrations/steam_launcher.py::_spawn_steam": "a Steam do PS",
-    "integrations/steam_launch_options.py::start_steam_game": "o jogo pela Steam",
     "integrations/steam_launch_options.py::reopen_steam": "a Steam reaberta",
     "integrations/reposicao_dos_lancadores.py::abrir": (
         "o lançador reposto no «Reiniciar o serviço»"

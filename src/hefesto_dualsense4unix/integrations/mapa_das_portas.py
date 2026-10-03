@@ -23,19 +23,6 @@ from hefesto_dualsense4unix.utils.maquina import (
 
 _ARQUIVO_DO_SERIAL = "serial"
 
-@dataclass(frozen=True)
-class Resumo:
-    """Os três números da linha-resumo de "Conexões" — nada de texto."""
-
-    faces: int = 0
-    entradas: int = 0
-    colocados: int = 0
-
-    @property
-    def vazio(self) -> bool:
-        """Ninguém desenhou nada — e este é o estado legítimo mais comum."""
-        return self.faces == 0 and self.entradas == 0
-
 
 def controladores_do_censo(censo: Censo) -> dict[int, str]:
     """``{busnum: controlador PCI}`` pelos hubs-raiz do censo que já está na mão."""
@@ -97,19 +84,6 @@ def irmas_de(mapa: MapaDaMesa) -> dict[str, str]:
             achadas[primeira] = segunda
             achadas[segunda] = primeira
     return achadas
-
-
-def resumo_do_mapa(mapa: MapaDaMesa, censo: Censo) -> Resumo:
-    """Quantas faces, quantas entradas e quantos aparelhos colocados."""
-    entradas = {numero for face in mapa.faces for numero in face.portas}
-    presentes = _caminhos_do_censo(censo)
-    controladores = controladores_do_censo(censo)
-    colocados = sum(
-        1
-        for declarada in mapa.portas.values()
-        if caminho_da_porta(declarada, controladores) in presentes
-    )
-    return Resumo(faces=len(mapa.faces), entradas=len(entradas), colocados=colocados)
 
 
 def portas_livres(mapa: MapaDaMesa, censo: Censo) -> tuple[str, ...]:
@@ -708,7 +682,6 @@ __all__ = [
     "USB_PELO_APARELHO",
     "Bancada",
     "FatosDoBuraco",
-    "Resumo",
     "aparelho_usb3_na_entrada",
     "caminho_de",
     "fatos_do_buraco",
@@ -717,7 +690,6 @@ __all__ = [
     "mesa_do_motor",
     "porta_de",
     "portas_livres",
-    "resumo_do_mapa",
     "serial_do_no",
     "velocidade_da_entrada",
     "velocidades_dos_aparelhos",

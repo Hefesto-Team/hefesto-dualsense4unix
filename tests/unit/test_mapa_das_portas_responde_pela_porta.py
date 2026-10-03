@@ -6,7 +6,6 @@ from hefesto_dualsense4unix.integrations.mapa_das_portas import (
     filhas_de,
     porta_de,
     portas_livres,
-    resumo_do_mapa,
     vizinhas_de_verdade,
 )
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
@@ -92,19 +91,3 @@ def test_a_entrada_por_extensao_nao_e_vizinha_da_fileira() -> None:
     )
 
 
-def test_o_resumo_conta_faces_entradas_e_aparelhos_colocados() -> None:
-    """Os três números da linha-resumo, e nada de texto."""
-    resumo = resumo_do_mapa(mapa_dela(), bancada_de_agora().censo())
-
-    assert (resumo.faces, resumo.entradas, resumo.colocados) == (3, 15, 7), (
-        f"o resumo mudou: {resumo}"
-    )
-    assert not resumo.vazio
-
-
-def test_quem_nunca_desenhou_tem_resumo_vazio() -> None:
-    """Zero entradas declaradas é estado legítimo, e a tela tem de saber disso."""
-    resumo = resumo_do_mapa(MapaDaMesa(), bancada_de_agora().censo())
-
-    assert resumo.vazio, f"o mapa vazio não se reconheceu vazio: {resumo}"
-    assert (resumo.faces, resumo.entradas, resumo.colocados) == (0, 0, 0)

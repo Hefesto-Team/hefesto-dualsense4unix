@@ -5,7 +5,6 @@ import pytest
 
 from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
-    format_binding,
     parse_binding,
 )
 
@@ -85,12 +84,6 @@ def test_parse_binding_rejeita_formato_invalido() -> None:
         parse_binding("Ctrl+C")
 
 
-def test_format_binding_inverso_de_parse() -> None:
-    for spec in ("KEY_ENTER", "KEY_LEFTALT+KEY_TAB",
-                 "KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_T"):
-        assert format_binding(parse_binding(spec)) == spec
-
-
 def test_parse_binding_aceita_tokens_virtuais_osk() -> None:
     """GUI Sprint 4 T1 (perda de dados): tokens virtuais OSK NÃO podem levantar."""
     assert parse_binding("__TOGGLE_OSK__") == ("__TOGGLE_OSK__",)
@@ -98,9 +91,4 @@ def test_parse_binding_aceita_tokens_virtuais_osk() -> None:
     assert parse_binding("__CLOSE_OSK__") == ("__CLOSE_OSK__",)
     assert parse_binding("__open_osk__") == ("__OPEN_OSK__",)
 
-
-def test_parse_binding_round_trip_tokens_virtuais() -> None:
-    """Round-trip `format_binding(parse_binding(x)) == x` para os tokens OSK."""
-    for spec in ("__TOGGLE_OSK__", "__OPEN_OSK__", "__CLOSE_OSK__"):
-        assert format_binding(parse_binding(spec)) == spec
 

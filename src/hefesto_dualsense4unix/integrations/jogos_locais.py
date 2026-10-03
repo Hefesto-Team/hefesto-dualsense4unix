@@ -456,15 +456,6 @@ def nomes_por_appid(jogos: Iterable[JogoLocal]) -> dict[str, str]:
     return {jogo.appid: jogo.nome for jogo in jogos}
 
 
-def casa_com_o_que_ela_digitou(jogo: JogoLocal, digitado: str) -> bool:
-    """A linha entra na lista suspensa para este texto?"""
-    chave = chave_de_busca(digitado)
-    if not chave:
-        return False
-    endereco = chave_de_busca(jogo.valor)
-    return chave in chave_de_busca(jogo.nome) or endereco.startswith(chave)
-
-
 #: testável sem GTK — mesmo molde de `texto_do_processo_que_nao_casa`.
 MSG_NAO_RECONHECI = "Não reconheci este endereço."
 
@@ -503,7 +494,6 @@ __all__ = [
     "JogoLocal",
     "assinatura_da_biblioteca",
     "assinatura_das_janelas",
-    "casa_com_o_que_ela_digitou",
     "catalogo_de_jogos",
     "chave_de_busca",
     "e_ferramenta_da_steam",

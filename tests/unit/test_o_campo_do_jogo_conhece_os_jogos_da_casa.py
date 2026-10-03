@@ -9,7 +9,6 @@ from hefesto_dualsense4unix.integrations.jogos_locais import (
     MSG_FORA_DA_MAQUINA,
     MSG_NAO_RECONHECI,
     JogoLocal,
-    casa_com_o_que_ela_digitou,
     catalogo_de_jogos,
     chave_de_busca,
     e_ferramenta_da_steam,
@@ -200,29 +199,6 @@ class TestOCatalogoInteiro:
         catalogo = catalogo_de_jogos(home=casa_de_mentira, pastas_de_atalhos=[])
         rotulos = {j.rotulo for j in catalogo}
         assert "Mar de Estrelas (appid 851100)" in rotulos
-
-
-class TestOQueElaDigita:
-    def test_acha_por_pedaco_do_nome_e_sem_acento(self) -> None:
-        jogo = JogoLocal(appid="2111190", nome="Café Cósmico", fonte="steam")
-        for digitado in ("cafe", "Café", "COSMICO", "cósm", "  cafe  "):
-            assert casa_com_o_que_ela_digitou(jogo, digitado), digitado
-
-    def test_acha_pelo_comeco_do_numero(self) -> None:
-        """Depois de escolher, o campo fica com o appid — e ele é conferível."""
-        jogo = JogoLocal(appid="2111190", nome="Café Cósmico", fonte="steam")
-        assert casa_com_o_que_ela_digitou(jogo, "2111")
-
-    def test_nao_acha_o_que_nao_e_dele(self) -> None:
-        jogo = JogoLocal(appid="2111190", nome="Café Cósmico", fonte="steam")
-        assert not casa_com_o_que_ela_digitou(jogo, "eldenring")
-        assert not casa_com_o_que_ela_digitou(jogo, "")
-
-    def test_o_simbolo_de_marca_nao_atrapalha(self) -> None:
-        jogo = JogoLocal(
-            appid="1599660", nome="Saco de Aventura™: O Retorno", fonte="steam"
-        )
-        assert casa_com_o_que_ela_digitou(jogo, "saco de aventura")
 
 
 class TestAFraseAoLadoDoCampo:

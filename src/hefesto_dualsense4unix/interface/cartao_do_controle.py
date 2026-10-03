@@ -4,8 +4,8 @@ A aba Status deixou de ser single-controller: cada DualSense conectado ganha
 um card com identidade própria — título pelo ``player_slot`` de sessão,
 bateria própria, swatch da cor CRUA da lightbar — e os inputs ao vivo DAQUELE
 controle (barras L2/R2, dois ``StickPreviewGtk`` e o grid 4x4 de
-``ButtonGlyph``) com os traços pintados na cor da lightbar dele, ajustada por
-``ensure_min_contrast`` (decisão D8: o swatch mostra a cor crua; só os TRAÇOS
+``ButtonGlyph``) com os traços pintados na cor da lightbar dele, ajustada para
+contrastar com o fundo (decisão D8: o swatch mostra a cor crua; só os TRAÇOS
 recebem a ajustada).
 
 O corpo do card ocupa DUAS linhas, montadas em código — não no Glade::
@@ -89,7 +89,7 @@ Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
   escrita nossa pode ser o azul-kernel brilhando agora, refutação 1 do
   sprint); o Modo Nativo segue as mesmas regras desde 24/09/2026 (a barra é
   do Hefesto nele também). Sem cor conhecida, os traços usam o accent neutro
-  (``ACCENT_NEUTRO``) ajustado.
+  (#6272a4) ajustado.
 * BT-03: ``vpad_backend == "uinput"`` com ``vpad_motivo`` preenchido acende
   uma linha visível de degradação com o motivo em palavras leigas
   (``MOTIVOS_DEGRADACAO_LEIGOS``). O texto NUNCA crava o mecanismo do sono
@@ -308,7 +308,7 @@ def rotulo_lightbar(
     * cor conhecida e acesa → sem rótulo; o accent é a própria cor.
 
     A cor devolvida é a BASE do accent (crua); ``None`` = usar o neutro.
-    O chamador ajusta com ``ensure_min_contrast`` antes de pintar traço.
+    O chamador ajusta o contraste antes de pintar traço.
     """
     rgb = _rgb3(entry.get("lightbar_rgb"))
     if bool(entry.get("lightbar_disputada")):

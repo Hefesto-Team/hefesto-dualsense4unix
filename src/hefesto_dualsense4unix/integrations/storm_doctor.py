@@ -350,12 +350,6 @@ def steam_input_fora_da_allowlist(text: str, allow: set[str]) -> tuple[list[str]
     return appids, global_ligado
 
 
-def steam_input_on_fora_da_allowlist(text: str, allow: set[str]) -> bool:
-    """True se alguma chave de Steam Input em "1"/"2" está FORA da allowlist."""
-    appids, global_ligado = steam_input_fora_da_allowlist(text, allow)
-    return bool(appids) or global_ligado
-
-
 def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
     """O quirk anti-storm (DELAY_CTRL_MSG) está ativo? (preserva o áudio do controle)."""
     if quirks_text is None:
@@ -953,6 +947,5 @@ __all__ = [
     "rotulos_de_reserva",
     "steam_input_allowlist",
     "steam_input_fora_da_allowlist",
-    "steam_input_on_fora_da_allowlist",
     "storm_report",
 ]

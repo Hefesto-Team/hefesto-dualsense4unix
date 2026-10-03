@@ -17,11 +17,8 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
     HZ_INPUT_COM_MIC,
     HZ_INPUT_SEM_MIC,
-    PALAVRA_APERTADA,
     PALAVRA_CHEIA,
     PALAVRAS_DE_CULPA,
-    SLOTS_POR_SEGUNDO,
-    Ocupacao,
 )
 
 HUB_A = "e8:47:3a:00:00:09"
@@ -119,9 +116,6 @@ def test_o_jogador_sem_numero_nao_e_chutado_pela_posicao() -> None:
     )
     plano = planos[HUB_A]
     assert plano.jogadores == (None, 2)
-    fala = plano_de_radio.nomes_dos_jogadores(plano)
-    assert plano_de_radio.SEM_NUMERO in fala
-    assert "Jogador 1" not in fala
 
 
 def test_a_ponte_pedida_e_a_ponte_de_pe_sao_duas_contas() -> None:
@@ -148,8 +142,7 @@ def test_o_declarado_que_nao_subiu_aparece_na_tela() -> None:
         mic_declarado=[_sem_dois_pontos(P1)],
         **_bancada({P1: HUB_A}),
     )
-    linha = plano_de_radio.linha_do_declarado_que_nao_subiu(planos[HUB_A])
-    assert linha is not None and "ainda não subiu" in linha
+    assert planos[HUB_A].declarado_que_nao_subiu
 
 
 def test_quando_a_ponte_subiu_a_tela_nao_tem_nada_a_corrigir() -> None:
@@ -161,55 +154,8 @@ def test_quando_a_ponte_subiu_a_tela_nao_tem_nada_a_corrigir() -> None:
         **_bancada({P1: HUB_A}),
     )
     plano = planos[HUB_A]
-    assert plano_de_radio.linha_do_declarado_que_nao_subiu(plano) is None
+    assert not plano.declarado_que_nao_subiu
     assert plano.agora.slots_total == pytest.approx(HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC)
-
-
-def test_cabe_mais_um_com_mic_no_adaptador_de_tres() -> None:
-    """Três sem mic (781) mais um com mic dá 1058 e "Apertada" — e cabe."""
-    tres = Ocupacao(slots_input=HZ_INPUT_SEM_MIC * 3, controles=3)
-    cabe, depois = plano_de_radio.cabe_mais_um(tres, com_mic=True)
-    assert cabe is True
-    assert round(depois.slots_total) == 1058
-    assert depois.rotulo == PALAVRA_APERTADA
-
-
-def test_com_cinco_de_pe_nao_cabe_mais_um() -> None:
-    """A régua sabe dizer NÃO — sem isso ela não é régua."""
-    cinco = Ocupacao(
-        slots_input=HZ_INPUT_COM_MIC * 5,
-        slots_audio=HZ_AUDIO_COM_MIC * 5,
-        controles=5,
-        com_microfone=5,
-    )
-    assert cinco.rotulo == PALAVRA_CHEIA
-    cabe, depois = plano_de_radio.cabe_mais_um(cinco, com_mic=True)
-    assert cabe is False
-    assert depois.rotulo == PALAVRA_CHEIA
-
-
-def test_cabe_mais_um_usa_o_corte_do_medidor_e_nao_um_proprio() -> None:
-    """MORDIDA 3. A fronteira do "cabe" é o corte da "Cheia" do `radio_da_mesa`."""
-    for controles in range(0, 7):
-        base = Ocupacao(
-            slots_input=HZ_INPUT_SEM_MIC * controles, controles=controles
-        )
-        for com_mic in (False, True):
-            cabe, depois = plano_de_radio.cabe_mais_um(base, com_mic=com_mic)
-            assert cabe is (depois.rotulo != PALAVRA_CHEIA)
-
-
-def test_a_linha_do_cabe_mais_um_diz_o_numero_e_nao_so_o_sim() -> None:
-    """"Sim" sozinho não planeja nada: a linha nomeia como ficaria."""
-    planos = plano_de_radio.plano_por_adaptador(
-        [_controle(P1, 1), _controle(P2, 2), _controle(P3, 3)],
-        apelidos={HUB_A: "Hub 9"},
-        **_bancada({P1: HUB_A, P2: HUB_A, P3: HUB_A}),
-    )
-    linha = plano_de_radio.linha_do_cabe_mais_um(planos[HUB_A])
-    assert "Hub 9" in linha
-    assert "sim" in linha
-    assert "1058" in linha and str(SLOTS_POR_SEGUNDO) in linha
 
 
 def _mesa_de_cinco_num_hub_so() -> dict[str, plano_de_radio.PlanoDoAdaptador]:
@@ -323,58 +269,13 @@ def test_a_mesa_folgada_nao_manda_mudar_nada() -> None:
     assert plano_de_radio.ordem_de_redistribuicao(planos) is None
 
 
-def test_o_selo_nomeia_as_tres_procedencias() -> None:
-    """Especificação, medido e derivado — e sumir com uma reprova nomeando."""
-    plano = plano_de_radio.PlanoDoAdaptador(
-        endereco=HUB_A, agora=Ocupacao(slots_input=HZ_INPUT_SEM_MIC * 2, controles=2)
-    )
-    selo = " ".join(plano_de_radio.selo_das_procedencias(plano)).lower()
-    for palavra in ("especificação", "medido", "derivado"):
-        assert palavra in selo, f"o selo parou de dizer `{palavra}`"
-
-
-def test_com_tres_controles_o_selo_confessa_a_extrapolacao() -> None:
-    """O maior ensaio desta casa foi de DOIS; do terceiro em diante, confessa."""
-    def _plano(controles: int) -> plano_de_radio.PlanoDoAdaptador:
-        return plano_de_radio.PlanoDoAdaptador(
-            endereco=HUB_A,
-            agora=Ocupacao(
-                slots_input=HZ_INPUT_SEM_MIC * controles, controles=controles
-            ),
-        )
-
-    frase = plano_de_radio.frase_da_extrapolacao()
-    assert frase not in plano_de_radio.selo_das_procedencias(_plano(1))
-    assert frase not in plano_de_radio.selo_das_procedencias(_plano(2))
-    assert frase in plano_de_radio.selo_das_procedencias(_plano(3))
-
-
-def test_o_selo_nao_digita_nenhum_numero() -> None:
-    """Os números do selo saem das constantes — remexê-las move o selo."""
-    assert str(SLOTS_POR_SEGUNDO) in plano_de_radio.selo_da_especificacao()
-    medido = plano_de_radio.selo_do_medido()
-    assert "260,4" in medido and "276,7" in medido
-
-
 def test_o_plano_nao_carrega_palavra_de_culpa() -> None:
     """Ocupação não é qualidade, e a desigualdade do rádio continua ABERTA."""
     planos = _cinco_apertados_mais_um_folgado()
     textos: list[str] = [
         plano_de_radio.FRASE_DO_ADAPTADOR_UNICO,
         plano_de_radio.POR_QUE_IMPORTA,
-        plano_de_radio.frase_da_capacidade_do_mic(),
-        plano_de_radio.frase_da_extrapolacao(),
-        plano_de_radio.frase_do_preco_por_controle(),
     ]
-    for plano in planos.values():
-        textos.append(plano_de_radio.linha_do_plano(plano))
-        textos.append(plano_de_radio.linha_do_cabe_mais_um(plano))
-        textos.append(plano_de_radio.linha_do_cabe_mais_um(plano, com_mic=False))
-        textos.append(plano_de_radio.nomes_dos_jogadores(plano))
-        textos.extend(plano_de_radio.selo_das_procedencias(plano))
-        pendente = plano_de_radio.linha_do_declarado_que_nao_subiu(plano)
-        if pendente:
-            textos.append(pendente)
     ordem = plano_de_radio.ordem_de_redistribuicao(planos)
     assert ordem is not None
     textos.extend([ordem.o_que_eu_vi, ordem.por_que_importa, ordem.ganho_esperado])
@@ -398,50 +299,12 @@ def test_a_tela_nunca_chama_o_adaptador_de_hci() -> None:
     )
     plano = planos[HUB_A]
     assert plano.nome_na_tela == plano_de_radio.ADAPTADOR_SEM_NOME
-    for texto in (
-        plano_de_radio.linha_do_plano(plano),
-        plano_de_radio.linha_do_cabe_mais_um(plano),
-    ):
-        assert "hci" not in texto.lower()
+    assert "hci" not in plano.nome_na_tela.lower()
 
 
-def test_a_frase_de_capacidade_e_derivada_do_medidor(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """MORDIDA 6. Digitar "1042" à mão sobrevive à remedição do A/B."""
-    assert "1042" in plano_de_radio.frase_da_capacidade_do_mic(4)
-    assert "1107" in plano_de_radio.frase_da_capacidade_do_mic(4)
-    monkeypatch.setattr(plano_de_radio, "HZ_INPUT_SEM_MIC", 100.0)
-    assert "400" in plano_de_radio.frase_da_capacidade_do_mic(4)
-    assert "1042" not in plano_de_radio.frase_da_capacidade_do_mic(4)
-
-
-def test_a_frase_diz_o_achado_que_muda_a_decisao() -> None:
-    """O microfone não é o vilão: quem enche o adaptador é a QUANTIDADE."""
-    frase = plano_de_radio.frase_da_capacidade_do_mic(4)
-    assert "4 pontos" in frase
-    assert "quantidade de controles" in frase
-
-
-def test_o_preco_por_controle_esta_na_tela_com_os_dois_numeros() -> None:
-    """`D-O-MIC-LIGADO-VALE-NO-RADIO` precisa dos dois lados para ser decidida."""
-    frase = plano_de_radio.frase_do_preco_por_controle()
-    assert "260,4" in frase and "276,7" in frase
-    assert str(SLOTS_POR_SEGUNDO) in frase
-
-
-def test_a_tela_diz_o_padrao_de_hoje_e_ele_e_ligado() -> None:
-    """A linha que a `D-O-MIC-LIGADO-VALE-NO-RADIO` exigia — e ela fechou."""
+def test_o_microfone_nasce_ligado_e_o_dono_responde() -> None:
+    """O dono do padrão (`profiles/schema.py`, `dono=`) diz ligado."""
     assert plano_de_radio.microfone_nasce_ligado() is True
-    frase = plano_de_radio.frase_do_preco_por_controle()
-    assert "nasce ligado" in frase
-    assert "nasce desligado" not in frase, (
-        "a tela diz à pessoa que o microfone nasce desligado depois de ele "
-        "ter subido sozinho na conexão"
-    )
-    assert "260,4" in frase and "276,7" in frase, (
-        "o preço saiu da frase — a condição dela era o padrão COM o preço"
-    )
 
 
 class _Host:

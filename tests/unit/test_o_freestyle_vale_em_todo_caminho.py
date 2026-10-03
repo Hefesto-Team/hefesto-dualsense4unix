@@ -165,11 +165,6 @@ def _o_gatilho_de_nascimento() -> tuple[int, ...]:
     return (int(efeito.mode), *efeito.forces)
 
 
-def _o_estado_do_boot(store: StateStore) -> tuple[str | None, str | None]:
-    """O par que diz a verdade inteira (PERFIL-ADIADO-POR-JANELA-01)."""
-    return store.active_profile, store.perfil_adiado_por_janela
-
-
 VALE_NO_BOOT = {
     "sessao-vazia": (loader.NOME_DO_PADRAO, True),
     "sessao-com-perfil-de-janela": (JOGO, False),

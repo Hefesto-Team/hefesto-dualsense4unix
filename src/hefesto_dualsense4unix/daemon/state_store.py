@@ -51,8 +51,6 @@ class StateStore:
         self._window_detect_last_useful_monotonic: float | None = None
         self._window_detect_reason: str | None = None
         self._udp_trigger_thresholds: dict[str, int] = {"left": 0, "right": 0}
-        # name=Sackboy) e o `daemon.state_full` responde `active_profile: None` —
-        self._perfil_adiado_por_janela: str | None = None
         self._steam_jogo_appid: int | None = None
         self._steam_jogo_lido: bool = False
 
@@ -83,27 +81,9 @@ class StateStore:
             self._controller_state = None
 
     def set_active_profile(self, name: str | None) -> None:
-        """Publica o perfil ativo — e ENCERRA a espera do perfil adiado.
-
-        PERFIL-ADIADO-POR-JANELA-01: a limpeza mora aqui, e não no autoswitch,
-        porque este é o ponto de estrangulamento ÚNICO por onde toda ativação
-        passa (`ProfileManager.activate`, de qualquer origem: manual, autoswitch,
-        system). A espera termina quando um perfil entra de verdade — foi
-        exatamente o que aconteceu na máquina dela às 00:04:58, quando o
-        `profile.switch` manual para `Sackboy` apagou a pergunta.
-
-        Limpa também no `None` (o `delete()` do perfil ativo, `manager.py:159`):
-        preferimos perder a dica a exibi-la velha. O journal guarda o fato
-        original de qualquer jeito.
-        """
+        """Publica o perfil ativo, de qualquer origem (`ProfileManager.activate`)."""
         with self._lock:
             self._active_profile = name
-            self._perfil_adiado_por_janela = None
-
-    def set_perfil_adiado_por_janela(self, name: str | None) -> None:
-        """Registra que o restore de boot adiou `name` por ser de janela."""
-        with self._lock:
-            self._perfil_adiado_por_janela = name or None
 
     def set_steam_jogo_appid(self, appid: int | None) -> None:
         """Publica o resultado de UMA sonda por jogo da Steam aberto.
@@ -114,8 +94,7 @@ class StateStore:
         simplesmente NÃO chama isto (`lifecycle._sync_steam_jogo_aberto` engole a
         falha), e o último fato conhecido continua valendo.
 
-        Molde do `set_perfil_adiado_por_janela` acima, e pela mesma razão: quem
-        escreve é o tique lento do daemon, quem lê é o `state_full` a 10 Hz —
+        Quem escreve é o tique lento do daemon, quem lê é o `state_full` a 10 Hz —
         duas threads que só se encontram pelo store, então a escrita é sob lock.
         """
         with self._lock:
@@ -251,12 +230,6 @@ class StateStore:
         """O perfil EM VIGOR agora, no daemon vivo."""
         with self._lock:
             return self._active_profile
-
-    @property
-    def perfil_adiado_por_janela(self) -> str | None:
-        """Perfil que o boot recusou restaurar por ser escopado a uma janela."""
-        with self._lock:
-            return self._perfil_adiado_por_janela
 
     @property
     def steam_jogo_appid(self) -> int | None:

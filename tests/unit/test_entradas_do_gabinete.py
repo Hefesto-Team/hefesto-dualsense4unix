@@ -57,7 +57,6 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     Furo,
     NoDeEntrada,
     entrada_de,
-    furo_declarado,
     furos,
     listar_entradas,
     vazias,
@@ -342,18 +341,6 @@ def test_a_caminhada_nao_visita_o_buraco_onde_o_mouse_dela_esta() -> None:
         f"4 buracos ocupados de 15 deixam 11 para a caminhada; contei "
         f"{len(caminhada)}"
     )
-
-
-def test_o_hub_que_sumiu_nao_vira_entrada_inexistente() -> None:
-    """Desplugar o hub apaga os nós dele — e o LUGAR continua no mapa."""
-    com_hub = _entradas(com_hub=True)
-    sem_hub = _entradas()
-
-    assert len(com_hub) == 26 and len(sem_hub) == 22
-    presente = furo_declarado(["3-1-port2"], com_hub)
-    assert presente is not None and presente.aparelho == "3-1.2"
-    assert furo_declarado(["3-1-port2"], sem_hub) is None
-    assert furo_declarado(["usb1-port3"], sem_hub) is not None
 
 
 def test_entrada_de_atravessa_o_symlink_do_aparelho() -> None:

@@ -17,12 +17,10 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     N_MAX_PONTES,
     SEM_ADAPTADOR,
     SLOTS_POR_RELATORIO,
-    SLOTS_POR_SEGUNDO,
     Ocupacao,
     OrcamentoDoAdaptador,
     adaptador_por_uniq,
     orcamento_por_adaptador,
-    palavra_da_ocupacao,
     palavra_das_pontes,
 )
 
@@ -181,17 +179,6 @@ def _somar(
     )
 
 
-def apelido_por_endereco(dongles: Sequence[Any]) -> dict[str, str]:
-    """``endereço minúsculo -> nome DELA``, só para quem tem nome."""
-    achados: dict[str, str] = {}
-    for dongle in dongles:
-        endereco = str(getattr(dongle, "endereco", "") or "").lower()
-        nome = str(getattr(dongle, "nome", "") or "")
-        if endereco and nome:
-            achados[endereco] = nome
-    return achados
-
-
 def plano_por_adaptador(
     controles: Iterable[Mapping[str, Any]],
     *,
@@ -212,8 +199,7 @@ def plano_por_adaptador(
     ``maquina.json`` que ELA marcou. As duas alimentam contas diferentes, e é
     a regra 1 do cabeçalho.
 
-    As três regras de descarte são as mesmas de
-    ``radio_da_mesa.ocupacao_por_adaptador``, e por isso não se reescrevem: quem
+    As três regras de descarte: quem
     não está em ``bt`` não toca o rádio, quem não tem endereço legível vai para
     o balde do "não sei", e a fração passa de 1,0 quando passa.
 
@@ -305,14 +291,6 @@ def _mac_minusculo(valor: str) -> str:
     if len(texto) == 12 and all(c in "0123456789abcdef" for c in texto):
         texto = ":".join(texto[i:i + 2] for i in range(0, 12, 2))
     return mac_limpo(texto) or ""
-
-
-def cabe_mais_um(ocupacao: Ocupacao, *, com_mic: bool) -> tuple[bool, Ocupacao]:
-    """``(cabe?, como ficaria)`` — a pergunta do planejamento."""
-    depois = _somar(ocupacao, com_mic=com_mic)
-    from hefesto_dualsense4unix.integrations.radio_da_mesa import PALAVRA_CHEIA
-
-    return palavra_da_ocupacao(depois.fracao_total) != PALAVRA_CHEIA, depois
 
 
 def ordem_dos_destinos(
@@ -452,133 +430,9 @@ def _ordem_que_equilibra(
     return None
 
 
-def selo_da_especificacao() -> str:
-    """As 1600 fatias — especificação de terceiro, nunca medida aqui."""
-    return (
-        f"as {SLOTS_POR_SEGUNDO} fatias por segundo: especificação de "
-        "terceiro (Bluetooth Classic, 625 µs por fatia)"
-    )
-
-
-def selo_do_medido() -> str:
-    """O custo de UM controle — medido nesta casa, e só de um."""
-    total_com_mic = HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC
-    return (
-        f"{_numero(HZ_INPUT_SEM_MIC)} sem microfone e "
-        f"{_numero(total_com_mic)} com: medido aqui, A/B de 25/07/2026, "
-        "e é UM controle"
-    )
-
-
-def selo_do_derivado() -> str:
-    """A soma de N controles — derivada da conta, e nunca medida."""
-    return "a soma de N controles: derivado da conta, e nunca medido"
-
-
-def selo_das_procedencias(plano: PlanoDoAdaptador) -> tuple[str, ...]:
-    """As três partes do selo, mais a confissão quando ela é devida."""
-    partes = [selo_da_especificacao(), selo_do_medido(), selo_do_derivado()]
-    if plano.agora.controles > ENSAIO_MAXIMO_DESTA_CASA:
-        partes.append(frase_da_extrapolacao())
-    return tuple(partes)
-
-
-def frase_da_extrapolacao() -> str:
-    """A confissão do que esta casa nunca mediu — e o número sai do ensaio."""
-    return (
-        "Esta conta soma o custo medido de UM controle. O maior ensaio desta "
-        f"casa no rádio foi de {ENSAIO_MAXIMO_DESTA_CASA} — "
-        f"{MESA_CHEIA_DESTA_CASA} ao mesmo tempo nunca foi medido."
-    )
-
-
 def microfone_nasce_ligado() -> bool:
     """O microfone nasce ligado? **Sim, desde 17/09/2026.**"""
     return True
-
-
-def frase_do_preco_por_controle() -> str:
-    """O preço do microfone em UM controle — os dois números, lado a lado."""
-    total_com_mic = HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC
-    hoje = (
-        "Hoje ele nasce ligado assim que o controle conecta."
-        if microfone_nasce_ligado()
-        else "Hoje ele nasce desligado, e só você o liga."
-    )
-    return (
-        f"Um controle no rádio ocupa {_numero(HZ_INPUT_SEM_MIC)} das "
-        f"{SLOTS_POR_SEGUNDO} fatias sem microfone, e {_numero(total_com_mic)} "
-        f"com ele ligado. {hoje}"
-    )
-
-
-def frase_da_capacidade_do_mic(quantos: int = MESA_CHEIA_DESTA_CASA) -> str:
-    """O achado que muda a decisão: quem enche o adaptador é a QUANTIDADE."""
-    quantos = max(1, quantos)
-    sem = _somar(Ocupacao(), com_mic=False, quantos=quantos)
-    com = _somar(Ocupacao(), com_mic=True, quantos=quantos)
-    pontos = round((com.fracao_total - sem.fracao_total) * 100)
-    return (
-        f"Com {quantos} controles no mesmo adaptador, ligar o microfone de "
-        f"todos sobe de {round(sem.slots_total)} para "
-        f"{round(com.slots_total)} das {sem.slots_teto} fatias — "
-        f"{pontos} pontos. Quem enche o adaptador é a quantidade de "
-        "controles, não o microfone."
-    )
-
-
-def nomes_dos_jogadores(plano: PlanoDoAdaptador) -> str:
-    """``"Jogadores 1 e 2"`` — e :data:`SEM_NUMERO` para quem não tem número."""
-    numeros = [str(j) for j in plano.jogadores if j is not None]
-    sem_numero = sum(1 for j in plano.jogadores if j is None)
-    partes: list[str] = []
-    if numeros:
-        rotulo = "Jogadores" if len(numeros) > 1 else "Jogador"
-        partes.append(f"{rotulo} {_lista_em_portugues(numeros)}")
-    if sem_numero:
-        partes.append(SEM_NUMERO if sem_numero == 1 else f"{sem_numero}x {SEM_NUMERO}")
-    return ", ".join(partes) if partes else SEM_NUMERO
-
-
-def linha_do_plano(plano: PlanoDoAdaptador) -> str:
-    """A linha de um adaptador: nome, quem está nele, a conta e a palavra."""
-    ocupacao = plano.agora
-    quantos_com_mic = ocupacao.com_microfone
-    if quantos_com_mic == 0:
-        mic = "sem microfone"
-    elif quantos_com_mic == ocupacao.controles:
-        mic = "com microfone"
-    else:
-        mic = f"{quantos_com_mic} com microfone"
-    return (
-        f'Adaptador "{plano.nome_na_tela}" · {nomes_dos_jogadores(plano)}, '
-        f"{mic}   {round(ocupacao.slots_total)}/{ocupacao.slots_teto}  "
-        f"{ocupacao.rotulo}"
-    )
-
-
-def linha_do_cabe_mais_um(plano: PlanoDoAdaptador, *, com_mic: bool = True) -> str:
-    """A pergunta do planejamento, respondida sem inventar controle nenhum."""
-    cabe, depois = cabe_mais_um(plano.agora, com_mic=com_mic)
-    com = "com microfone" if com_mic else "sem microfone"
-    resposta = "sim" if cabe else "não"
-    return (
-        f'Cabe mais um controle {com} no "{plano.nome_na_tela}": {resposta} — '
-        f"ficaria em {round(depois.slots_total)} de {depois.slots_teto}."
-    )
-
-
-def linha_do_declarado_que_nao_subiu(plano: PlanoDoAdaptador) -> str | None:
-    """A segunda linha, quando o que ela quer não é o que está de pé."""
-    pendentes = plano.declarado_que_nao_subiu
-    if not pendentes:
-        return None
-    quantos = len(pendentes)
-    if quantos == 1:
-        return "O microfone de um controle deste adaptador ainda não subiu."
-    return (
-        f"O microfone de {quantos} controles deste adaptador ainda não subiu."
-    )
 
 
 def _lista_em_portugues(itens: Sequence[str]) -> str:
@@ -609,21 +463,8 @@ __all__ = [
     "SEM_NUMERO",
     "PlanoDoAdaptador",
     "Redistribuicao",
-    "apelido_por_endereco",
-    "cabe_mais_um",
-    "frase_da_capacidade_do_mic",
-    "frase_da_extrapolacao",
-    "frase_do_preco_por_controle",
-    "linha_do_cabe_mais_um",
-    "linha_do_declarado_que_nao_subiu",
-    "linha_do_plano",
     "microfone_nasce_ligado",
-    "nomes_dos_jogadores",
     "ordem_de_redistribuicao",
     "ordem_dos_destinos",
     "plano_por_adaptador",
-    "selo_da_especificacao",
-    "selo_das_procedencias",
-    "selo_do_derivado",
-    "selo_do_medido",
 ]

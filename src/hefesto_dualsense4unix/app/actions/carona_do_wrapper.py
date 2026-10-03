@@ -169,8 +169,6 @@ carona religa explicitamente, com fixtures.
 from __future__ import annotations
 
 import os
-import threading
-from collections.abc import Callable
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
@@ -206,37 +204,6 @@ def ligada() -> bool:
     """A carona está ligada neste processo? Produção: sempre. Suíte: nunca."""
     bruto = os.environ.get(CARONA_ENV, "").strip().lower()
     return bruto not in VALORES_DESLIGADOS
-
-
-def despachar(
-    trabalho: Callable[[], ResultadoDaCarona],
-    ao_terminar: Callable[[ResultadoDaCarona], bool],
-) -> None:
-    """Roda ``trabalho()`` fora da thread do GTK e devolve na thread do GTK."""
-
-    def _corpo() -> None:
-        try:
-            resultado = trabalho()
-        except Exception as exc:
-            logger.warning("carona_do_wrapper_passada_falhou", erro=str(exc))
-            return
-        _de_volta_para_o_gtk(ao_terminar, resultado)
-
-    threading.Thread(
-        target=_corpo, name="hefesto-carona-wrapper", daemon=True
-    ).start()
-
-
-def _de_volta_para_o_gtk(
-    fn: Callable[[ResultadoDaCarona], bool], resultado: ResultadoDaCarona
-) -> None:
-    """``GLib.idle_add`` quando há GTK; chamada direta quando não há."""
-    try:
-        from gi.repository import GLib
-    except Exception:  # pragma: no cover - sem GTK (dublê de teste)
-        fn(resultado)
-        return
-    GLib.idle_add(fn, resultado)
 
 
 def passada(*, completa: bool = True) -> ResultadoDaCarona:
@@ -313,7 +280,6 @@ __all__ = [
     "VALORES_DESLIGADOS",
     "CaronaDoWrapperMixin",
     "ResultadoDaCarona",
-    "despachar",
     "ligada",
     "passada",
 ]

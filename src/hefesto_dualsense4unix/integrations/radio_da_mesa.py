@@ -348,83 +348,6 @@ def adaptador_por_uniq(
     return saida
 
 
-def ocupacao_por_adaptador(
-    controles: Iterable[Mapping[str, Any]],
-    *,
-    com_ponte_de_mic: Iterable[str] = (),
-    raiz: str = "/sys/class/hidraw",
-    listar: Callable[[str], list[str]] = os.listdir,
-    ler: Callable[[str], str] | None = None,
-) -> dict[str, Ocupacao]:
-    """``{endereço do adaptador: Ocupacao}`` a partir do estado do daemon.
-
-    ``controles`` é a lista ``state["controllers"]`` como ela já chega
-    (``core/backend_pydualsense.py:5347``, o `describe_controllers`): cada item traz ``transport``,
-    ``connected`` e ``uniq`` — este último com 12 hex sem separador, **ou
-    ``None``** quando a chave do backend era um caminho e não um MAC
-    (``:4664-4679``, a guarda que impediu o pseudo-MAC ``deda4``).
-
-    ``com_ponte_de_mic`` é o conjunto de ``uniq`` com a ponte agente por HID de
-    pé. É só ela que custa rádio: por rádio o DualSense **não publica placa ALSA
-    nenhuma** (medido 15/08/2026, ``integrations/usb_pai.py:38-42``), então
-    ``controllers[].audio`` não diz nada sobre ocupação, e as duas primeiras
-    chaves do ``bt_mic`` do ``daemon.state_full`` são do PROCESSO — com quatro
-    controles e uma ponte elas dizem ``running: true`` e pintariam áudio nos
-    quatro. Decisão R4.
-
-    A FONTE, desde 22/08/2026 (``QUATRO-MICROFONES-01``): a terceira chave
-    daquele bloco, ``bt_mic.uniqs``, que o daemon publica com os ``uniq`` cuja
-    ponte SUBIU — não os que ela pediu. Uma ponte pedida que não subiu (libopus
-    ausente, hidraw recusado) não ocupa fatia de rádio nenhuma, e contá-la aqui
-    seria o produto respondendo pelo pedido em vez de pelo efeito.
-
-    Três regras, e as três são de honestidade:
-
-    * controle que não está em ``bt`` é DESCARTADO. No cabo o rádio não é
-      tocado, e um vpad não tem rádio nenhum;
-    * controle bt sem endereço legível vai para :data:`SEM_ADAPTADOR`, e a tela
-      diz que não sabe — nunca empresta o adaptador do vizinho;
-    * a fração passa de 1,0 quando passa. Saturar aqui esconderia justamente o
-      caso que a barra existe para mostrar.
-    """
-    conectados = [
-        controle
-        for controle in controles
-        if controle.get("transport") == "bt" and controle.get("connected", True)
-    ]
-    if not conectados:
-        return {}
-
-    uniqs = [_hex(str(c.get("uniq") or "")) for c in conectados]
-    enderecos = adaptador_por_uniq(
-        [u for u in uniqs if u], raiz=raiz, listar=listar, ler=ler
-    )
-    com_mic = {_hex(u) for u in com_ponte_de_mic if _hex(u)}
-
-    acumulado: dict[str, list[float]] = {}
-    for uniq in uniqs:
-        endereco = enderecos.get(uniq, SEM_ADAPTADOR)
-        alvo = acumulado.setdefault(endereco, [0.0, 0.0, 0.0, 0.0])
-        if uniq and uniq in com_mic:
-            alvo[0] += HZ_INPUT_COM_MIC * SLOTS_POR_RELATORIO
-            alvo[1] += HZ_AUDIO_COM_MIC * SLOTS_POR_RELATORIO
-            alvo[3] += 1
-        else:
-            alvo[0] += HZ_INPUT_SEM_MIC * SLOTS_POR_RELATORIO
-        alvo[2] += 1
-
-    return {
-        endereco: Ocupacao(
-            slots_input=entrada,
-            slots_audio=audio,
-            slots_teto=SLOTS_POR_SEGUNDO,
-            controles=int(quantos),
-            com_microfone=int(com_microfone),
-        )
-        for endereco, (entrada, audio, quantos, com_microfone) in acumulado.items()
-    }
-
-
 N_MAX_PONTES = 2
 
 HZ_DA_PONTE = 93.75
@@ -637,7 +560,6 @@ __all__ = [
     "OrcamentoDoAdaptador",
     "adaptador_por_uniq",
     "nivel_do_movimento",
-    "ocupacao_por_adaptador",
     "orcamento_por_adaptador",
     "palavra_da_ocupacao",
     "palavra_das_pontes",

@@ -55,9 +55,8 @@ O HUB QUE SUMIU É ESTADO DE PRIMEIRA CLASSE
 Quando o hub externo é desplugado (aconteceu às 02h36 de 25/08/2026), os 16 nós
 dele **deixam de existir** no ``/sys``. Este módulo não inventa: eles somem da
 leitura. Quem guarda o LUGAR é o mapa declarado; quem diz o que está lá agora é
-esta leitura. :func:`furo_declarado` é a ponte entre os dois, e ela devolve
-``None`` — que significa *"o lugar existe e o barramento não o mostra agora"*, e
-nunca *"a entrada não existe"*.
+esta leitura. Um lugar declarado cujos nós sumiram da leitura significa *"o lugar
+existe e o barramento não o mostra agora"*, e nunca *"a entrada não existe"*.
 
 UNIVERSALIDADE E ISOLAMENTO
 ----------------------------
@@ -224,18 +223,6 @@ def entrada_de(
     return next((furo for furo in furos(entradas) if alvo in furo.nos), None)
 
 
-def furo_declarado(
-    nos: Sequence[str], entradas: Sequence[NoDeEntrada]
-) -> Furo | None:
-    """O buraco que o MAPA declarou, resolvido contra a leitura de AGORA."""
-    procurados = set(nos)
-    if not procurados:
-        return None
-    return next(
-        (furo for furo in furos(entradas) if procurados & set(furo.nos)), None
-    )
-
-
 def _ler_um_no(
     nome: str,
     caminho: str,
@@ -369,7 +356,6 @@ __all__ = [
     "Furo",
     "NoDeEntrada",
     "entrada_de",
-    "furo_declarado",
     "furos",
     "listar_entradas",
     "vazias",
