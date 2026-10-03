@@ -201,14 +201,14 @@
       "data": "2026-10-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 914355,
+      "piso": 915693,
       "por_item": {
-        "docs": 57562,
-        "scripts": 94578,
+        "docs": 57709,
+        "scripts": 95106,
         "src": 274432,
-        "tests": 487783
+        "tests": 488446
       },
-      "razao": "a conferência da A-CATRACA-DA-ORIGEM-01 acrescentou a régua da constante com nome e a da faixa da leva (o teste e o motor), 03/10/2026",
+      "razao": "03/10/2026, costura da leva 0110: a energia (D-0210-O-INSTALL-PERGUNTA-PELO-DESEMPENHO) e os dados da leva (144 decisões no decisoes-dela.csv) nasceram antes da catraca e não podiam trazer Origem:",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -221,10 +221,16 @@
           "de": 914286,
           "para": 914355,
           "razao": "a conferência da A-CATRACA-DA-ORIGEM-01 acrescentou a régua da constante com nome e a da faixa da leva (o teste e o motor), 03/10/2026"
+        },
+        {
+          "data": "2026-10-03",
+          "de": 914355,
+          "para": 915693,
+          "razao": "03/10/2026, costura da leva 0110: a energia (D-0210-O-INSTALL-PERGUNTA-PELO-DESEMPENHO) e os dados da leva (144 decisões no decisoes-dela.csv) nasceram antes da catraca e não podiam trazer Origem:"
         }
       ],
       "unidade": "linhas",
-      "universo": 2395
+      "universo": 2397
     }
   }
 }
