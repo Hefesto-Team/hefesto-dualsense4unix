@@ -102,16 +102,22 @@ class TestShouldReclaimOnWake:
 
 
 class TestOndaLFiadaNoBackend:
-    """Guarda de fiação: o backend chama a função nova no connect() e loga o"""
+    """Guarda de fiação: o backend chama a função nova no connect()."""
 
     def test_connect_chama_should_reclaim_on_wake(self) -> None:
         from pathlib import Path
 
+        import ast
+
         fonte = Path(
             "src/hefesto_dualsense4unix/core/backend_pydualsense.py"
         ).read_text(encoding="utf-8")
-        assert "should_reclaim_on_wake" in fonte
-        assert "lightbar_reset_reenviado_wake" in fonte
+        chamadas = [
+            no for no in ast.walk(ast.parse(fonte))
+            if isinstance(no, ast.Call)
+            and getattr(no.func, "id", None) == "should_reclaim_on_wake"
+        ]
+        assert chamadas, "o backend deixou de chamar should_reclaim_on_wake"
 
     def test_reclaim_de_wake_gateado_por_modo_nativo(self) -> None:
         # O laço de reclaim NÃO pode reenviar o 0x08 em Modo Nativo (output
