@@ -368,8 +368,8 @@ def test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem() -> N
 def test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa() -> None:
     """Arranca a linha do travessão e vê a régua acusar a mesa dela."""
     linha = re.compile(
-        r'\n    if campo\.alvo == "atributo":\n.*?'
-        r'\n        return "" if declarado == TRAVESSAO else declarado\n', re.S)
+        r'\n    if campo\.alvo == "atributo":\n(?:.*?\n)?'
+        r'        return "" if declarado == TRAVESSAO else declarado\n', re.S)
     mordida = _regua_sem(linha, "a linha do travessão do alvo `atributo`")
     campo = mordida._Campo(chave="desenho", dono="p1", alvo="atributo", valor="")
     assert mordida._declarado_neste_elemento(campo, mordida.TRAVESSAO) != "", (
