@@ -2069,9 +2069,9 @@ else
             echo "[FAIL] loader SVG: ${_svg_m}"
         done
         echo "       Sem o loader, GdkPixbuf.Pixbuf.new_from_file_at_scale devolve None"
-        echo "       EM SILÊNCIO: o ícone some da bandeja e os 38 glifos da interface"
-        echo "       caem junto, sem UMA linha de erro no log. Quem instalar por esse"
-        echo "       formato vai ver uma interface quebrada sem nada que a explique."
+        echo "       EM SILÊNCIO: o ícone some da bandeja, sem UMA linha de erro no"
+        echo "       log. Quem instalar por esse formato fica sem o ícone e sem nada"
+        echo "       que explique o sumiço."
         echo "       ARMADILHA DE NOME: quem desenha é librsvg2-common (Debian),"
         echo "       librsvg2 (Fedora) e librsvg (Arch/Nix). O librsvg2-bin e o"
         echo "       librsvg2-tools são o rsvg-convert, ferramenta de BUILD — errados."

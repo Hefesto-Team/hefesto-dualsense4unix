@@ -36,11 +36,9 @@ Description: Gerenciador DualSense para Linux
    sudo apt install ydotool
  .
  librsvg2-common (19/08/2026) e o LOADER SVG do gdk-pixbuf, e por
- isso e Depends e nao Recommends: a interface carrega 38 glifos SVG em
- execucao (gui/widgets/button_glyph.py, GdkPixbuf.Pixbuf.new_from_file_at_scale)
- e o icone da bandeja e um SVG simbolico (app/tray.py). Sem o loader o pixbuf
- sai None em silencio — o icone SOME da barra e todo glifo da interface cai
- junto, sem erro nenhum no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
+ isso e Depends e nao Recommends: o icone da bandeja e um SVG simbolico
+ (app/tray.py). Sem o loader o pixbuf sai None em silencio — o icone SOME
+ da barra, sem erro nenhum no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
  app/arranque.py). Nao apague por parecer superfluo: o sintoma nao aponta para a
  causa.
  .

@@ -18,8 +18,7 @@
 # junta os loaders dos pacotes que estao nos `buildInputs` DESTA derivacao —
 # o `gtk3` nao propaga o `librsvg`. Sem ele o wrapper aponta para um
 # loaders.cache sem svg, o pixbuf sai None em silencio, o icone da bandeja
-# some da barra (app/tray.py) e os 38 glifos SVG da interface caem junto
-# (gui/widgets/button_glyph.py) — BUG-TRAY-ICONE-INVISIVEL-01, descrito em
+# some da barra (app/tray.py) — BUG-TRAY-ICONE-INVISIVEL-01, descrito em
 # app/arranque.py. Nao remova por parecer superfluo: o sintoma nao aponta para a
 # causa. Paridade com librsvg2-common (.deb), librsvg2 (RPM) e librsvg (Arch);
 # no Flatpak quem cobre e o proprio runtime (org.gnome.Platform//47 ja traz

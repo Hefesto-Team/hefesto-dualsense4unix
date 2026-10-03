@@ -31,10 +31,8 @@ depends=(
     'hidapi'
     'libnotify'
     # LOADER SVG DO GDK-PIXBUF (19/08/2026) — dependência DURA, não optdepends.
-    # A interface carrega 38 glifos SVG em execução (gui/widgets/button_glyph.py,
-    # GdkPixbuf.Pixbuf.new_from_file_at_scale) e o ícone da bandeja é um SVG
-    # simbólico (app/tray.py). Sem o loader o pixbuf sai None EM SILÊNCIO: o
-    # ícone some da barra e todo glifo da interface cai junto, sem erro no log
+    # O ícone da bandeja é um SVG simbólico (app/tray.py). Sem o loader o
+    # pixbuf sai None EM SILÊNCIO: o ícone some da barra, sem erro no log
     # (BUG-TRAY-ICONE-INVISIVEL-01, descrito em app/arranque.py). Não remova por
     # parecer supérfluo — o sintoma não aponta para a causa.
     #

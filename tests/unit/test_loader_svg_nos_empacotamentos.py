@@ -79,8 +79,8 @@ def test_cada_empacotamento_declara_o_loader_svg(caminho: str, pacote: str) -> N
     campo = _campo_de_execucao(caminho)
     assert re.search(rf"(?<![\w-]){re.escape(pacote)}(?![\w-])", campo), (
         f"{caminho} não declara o loader SVG no campo que o gerenciador lê "
-        f"(esperado: {pacote}). Sem ele o ícone da bandeja some e os 38 glifos "
-        f"SVG da interface caem junto — BUG-TRAY-ICONE-INVISIVEL-01."
+        f"(esperado: {pacote}). Sem ele o ícone da bandeja some "
+        f"— BUG-TRAY-ICONE-INVISIVEL-01."
     )
 
 
@@ -102,7 +102,7 @@ def test_o_loader_e_dependencia_dura_e_nao_fraca() -> None:
     for campo in ("Recommends", "Suggests"):
         assert "librsvg" not in _campo_deb(control, campo), (
             f"packaging/debian/control declara o loader SVG em {campo} — "
-            "é dependência dura: sem ele a interface fica sem 38 glifos."
+            "é dependência dura: sem ele o ícone da bandeja some."
         )
 
     spec = _sem_comentarios(

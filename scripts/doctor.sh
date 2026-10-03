@@ -367,9 +367,9 @@ except Exception:
     sys.exit(1)
 finally:
     os.unlink(caminho)" 2>/dev/null; then
-        pass "loader SVG do gdk-pixbuf presente (os glifos e o ícone da bandeja desenham)"
+        pass "loader SVG do gdk-pixbuf presente (o ícone da bandeja desenha)"
     else
-        fail "loader SVG AUSENTE — o ícone some da barra e os 38 glifos dos botões saem vazios. Instale o loader do librsvg (Debian: librsvg2-common), ou $(conselho_de_instalacao)"
+        fail "loader SVG AUSENTE — o ícone some da barra. Instale o loader do librsvg (Debian: librsvg2-common), ou $(conselho_de_instalacao)"
     fi
 }
 
