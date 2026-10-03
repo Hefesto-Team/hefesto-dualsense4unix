@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import itertools
 from pathlib import Path
 
 from hefesto_dualsense4unix.utils import chave
@@ -90,7 +91,7 @@ def _sobe_o_daemon_fora_do_systemd(fonte: str) -> list[int]:
             continue
         textos = [e.value for e in no.elts
                   if isinstance(e, ast.Constant) and isinstance(e.value, str)]
-        if any(a == "daemon" and b == "start" for a, b in zip(textos, textos[1:])):
+        if any(a == "daemon" and b == "start" for a, b in itertools.pairwise(textos)):
             achadas.append(no.lineno)
     return achadas
 
