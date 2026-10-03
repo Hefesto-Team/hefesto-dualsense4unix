@@ -29,10 +29,15 @@ PALAVRAS_DA_MASCARA = (
 )
 
 def _codigo_com_a_palavra(arquivo: str) -> list[tuple[int, str]]:
-    """As palavras da máscara no CÓDIGO — nunca em comentário ou docstring."""
+    """As palavras da máscara no CÓDIGO de um arquivo do `src`."""
     caminho = SRC / arquivo
     assert caminho.exists(), f"{arquivo} sumiu — o caminho do microfone mudou?"
-    arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+    return _palavras_no_codigo(caminho.read_text(encoding="utf-8"))
+
+
+def _palavras_no_codigo(fonte: str) -> list[tuple[int, str]]:
+    """As palavras da máscara no CÓDIGO — nunca em comentário ou docstring."""
+    arvore = ast.parse(fonte)
 
     docstrings = {
         id(no.body[0].value)
@@ -79,13 +84,15 @@ def test_a_mascara_nao_aparece_no_caminho_do_microfone(arquivo: str) -> None:
 
 
 def test_a_regua_le_codigo_e_nao_prosa() -> None:
-    """A régua de si mesma: a palavra na PROSA não pode reprovar."""
-    canal = SRC / "integrations/canal_do_microfone.py"
-    bruto = canal.read_text(encoding="utf-8").lower()
-    assert "mascara" in bruto, (
-        "o módulo do canal deixou de citar o documento do princípio — se a "
-        "prosa mudou, esta régua perdeu o caso que ela guarda")
-    assert _codigo_com_a_palavra("integrations/canal_do_microfone.py") == [], (
-        "a régua voltou a medir prosa")
-
-
+    """A régua de si mesma: a palavra na PROSA não reprova, e no CÓDIGO reprova."""
+    na_prosa = (
+        '"""O canal não conhece a máscara."""\n'
+        "# a máscara (flavor) não entra aqui\n"
+        "def abre():\n"
+        '    """Sem mascara nem native_mode."""\n'
+        "    return 1\n"
+    )
+    assert _palavras_no_codigo(na_prosa) == [], "a régua voltou a medir prosa"
+    assert _palavras_no_codigo("def abre(flavor):\n    return flavor\n") != []
+    assert _palavras_no_codigo('x = {"native_mode": 1}\n') != []
+    assert _palavras_no_codigo("x = cfg.gamepad_emulation_enabled\n") != []
