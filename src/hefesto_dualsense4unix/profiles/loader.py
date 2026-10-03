@@ -1047,9 +1047,17 @@ def _caminho_da_marca(directory: Path) -> Path:
 
 
 def _identidade(appid: str, chave: str) -> str:
-    """A identidade de UM jogo na marca — e as duas formas não se confundem."""
+    """A identidade de UM jogo na marca — e as duas formas não se confundem.
+
+    O dono ÚNICO da forma: a janela ``steam_app_<N>`` é o jogo do appid
+    ``<N>`` (a mesma identidade que o perfil dele grava), e nenhum chamador
+    converte por conta própria.
+    """
     if appid.strip():
         return appid.strip()
+    da_steam = steam_appid_from_wm_class(chave)
+    if da_steam is not None:
+        return str(da_steam)
     if chave.strip():
         return f"{PREFIXO_DA_CHAVE_DE_JANELA}{chave.strip().casefold()}"
     return ""
@@ -1128,10 +1136,7 @@ def _donos_dos_jogos(directory: Path) -> dict[str, str]:
         if dados is None:
             continue
         for classe in _classes_do_match(dados):
-            appid = steam_appid_from_wm_class(classe)
-            identidade = (
-                str(appid) if appid is not None else _identidade("", classe)
-            )
+            identidade = _identidade("", classe)
             if identidade:
                 donos.setdefault(identidade, path.name)
     return donos
