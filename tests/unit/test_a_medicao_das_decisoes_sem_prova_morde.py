@@ -320,12 +320,41 @@ def test_o_laudo_de_hoje_sai_com_as_tres_medicoes(mi, capsys):
     for cabeca in ("MEDIÇÃO 1", "MEDIÇÃO 2", "MEDIÇÃO 3",
                    "O CUSTO DE CADA DEGRAU"):
         assert cabeca in saida
-    so_no_cabecalho = mi.medir()["citadas_so_no_cabecalho"]
-    assert so_no_cabecalho, "a fila das citadas só no cabeçalho esvaziou: o laudo não a prova"
-    sem_nome = [i for i in so_no_cabecalho if i not in saida]
-    assert not sem_nome, (
-        f"as citadas só no cabeçalho saem NOMEADAS — é a fila mais barata: {sem_nome}")
     assert "D-AUDIO-E-GIRO-NASCEM-LIGADOS" in saida
+
+
+def test_o_laudo_nomeia_cada_citada_so_no_cabecalho(mi, tmp_path, capsys):
+    """As citadas só no cabeçalho saem NOMEADAS: é a fila mais barata.
+
+    Numa árvore de mentira, e não na fila viva: a fila esvaziar é o trabalho
+    feito, e a régua não pode reprovar por isso.
+    """
+    base = _arvore_de_mentira(tmp_path, {
+        "test_so_no_cabecalho.py": '''
+            """Nasceu da D-SO-NO-CABECALHO, e não a mede."""
+
+
+            def test_a_outra():
+                """Mede a D-NA-FUNCAO."""
+                assert True
+        ''',
+    })
+    alvo = _csv_de_mentira(tmp_path / "laudo.csv", [
+        {"id": "D-SO-NO-CABECALHO", "estado": "decidida", "titulo": "o botão da aba"},
+        {"id": "D-NA-FUNCAO", "estado": "decidida", "titulo": "o botão da aba"},
+    ])
+    mi.CSV_DAS_DECISOES = alvo
+    mi.RAIZ = base
+    try:
+        assert mi.main([]) == 0
+        saida = capsys.readouterr().out
+    finally:
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.RAIZ = RAIZ
+    medicao_3 = saida[saida.index("MEDIÇÃO 3"):saida.index("O CUSTO DE CADA DEGRAU")]
+    assert "D-SO-NO-CABECALHO" in medicao_3, (
+        "as citadas só no cabeçalho saem NOMEADAS — é a fila mais barata")
+    assert "D-NA-FUNCAO" not in medicao_3, "a que tem régua entrou na fila do cabeçalho"
 
 
 def test_o_nome_do_instrumento_e_o_do_arquivo(mi):
