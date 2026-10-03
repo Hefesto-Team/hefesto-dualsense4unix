@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba PERFIS (mockup 26/08/2026)</title>
+<title>Hefesto — aba PERFIS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -696,20 +696,6 @@
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
-  /* ---------- legenda do mockup (fora da janela) ---------- */
-  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
-     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
-     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
-     a bancada — sem devolver nada ao produto. */
-  .nota{
-    width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
-    border-left:2px solid var(--purple);padding-left:14px;
-  }
-  .nota h2{font-size:13px;color:var(--purple);margin-bottom:6px;font-weight:600}
-  .nota b{color:var(--texto-suave)}
-  .nota code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)}
-  .nota ul{margin:5px 0 10px 16px}
-  .nota li{margin-bottom:3px}
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
@@ -2858,87 +2844,7 @@
 
 </div>
 
-<!-- ================= LEGENDA DO MOCKUP ================= -->
-<div class="nota">
-  <h2>O que mudou com quatro controles ligados</h2>
-  <ul>
-    <li><b>O editor mostrava cinco campos e gravava vinte.</b> A tabela de baixo mostra o
-      resto: <span class="marca">"cada controle guarda a sua configuração aqui dentro, pelo
-      ID da peça"</span> era uma promessa que só existia na dica do <b>Perfil ativo</b>. Agora
-      ela está desenhada, e são <b>4 configurações dentro do mesmo perfil</b>.</li>
-    <li><b>Os oito ajustes da linha não são escolha minha.</b> São os campos de
-      <code>ControllerOverrides</code> — luz, gatilhos, vibração, alto-falante, microfone, sensores, máscara e comandos virtuais —, nem um a mais.
-      O <b>microfone</b> entrou por decisão dela em 03/09 e os <b>sensores</b> em 04/09,
-      quando o giroscópio e o acelerômetro passaram a desligar de verdade por peça
-      (<code>manager.apply_controller_sensores</code>). A lista da tela sai da mesma
-      ordem do esquema: um campo novo lá aparece aqui, em vez de ficar guardado no
-      disco e invisível na tabela. Modo, mouse e teclado continuam sendo do
-      perfil inteiro, e a classe escreve o motivo de cada um.</li>
-    <li><b>O glifo diz o controle agora; o ponto embaixo diz o perfil.</b> Aceso é ligado
-      agora naquele controle, apagado é desligado, e o tracejado é o que o controle não
-      diz (o gatilho, hoje). O <b>ponto</b> é o que o perfil aberto no editor guarda só
-      para aquele controle; sem ponto, ele usa a seção global do perfil, e isso não é
-      falta, é herança, e é o caso mais comum.</li>
-    <li><b>O desenho do controle saiu da linha, e a cor ficou.</b> Ele tinha 32px e
-      <span class="marca">os quatro liam como quatro cinzas</span>: medido no 1x desta tela,
-      o par de cores mais próximo se distinguia em <b>33 pixels de
-      736</b>. A cor do plástico aqui é um traço fino, e a 32px o traço vale um terço de
-      pixel. Crescer não cabia: no tamanho em que a cor se lê, as quatro linhas pedem 209px
-      de altura e a tabela tem 132px. Quem diz de quem é a linha agora é a <b>barra de 3px
-      na cor do plástico</b> e o <b>rótulo curto</b> do controle — os dois já estavam lá.
-      A cor continua saindo do <code>&lt;style&gt;</code> que o
-      <code>gerar_cores_do_dualsense.py</code> escreveu, por <code>cor_da_zona()</code>:
-      <b>nenhum hexadecimal digitado aqui</b>. Os glifos são os mesmos
-      <code>assets/glyphs/</code> das outras abas.</li>
-    <li><b>A barra e o rótulo dizem o controle DELA, não o do desenho.</b> A barra virou um
-      elemento endereçado (<code>guarda.plastico</code>) e quem escreve a cor é
-      <code>a10_perfis</code>, com o que leu dos controles — a mesma leitura da fita do topo.
-      Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
-    <li><b>O cabeçalho conta os controles</b>: 14 perfis e
-      3 de 4 controles com ajuste próprio.</li>
-    <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
-      verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem
-      <b>é esta que o editor ao lado está mostrando</b> — a que os nove botões vão mexer.
-      Quando são a mesma linha, a barra vem <b>dupla</b>: verde e roxa, lado a lado. É o
-      estado desenhado aqui, porque é o estado em que a aba abre.
-      <span class="marca">Antes disto, clicar num nome não mudava um pixel</span> — palavra
-      sua: "quando clica em algum nome do perfis salvos nada indica que tal coisa tá
-      selecionado".</li>
-  </ul>
-
-  <h2>O que você mandou tirar, e continua fora</h2>
-  <ul>
-    <li><b>"◆ 2 perfis nunca vão entrar — veja quais"</b>, com o <b>?</b> — fora.</li>
-    <li><b>"Salvar este perfil"</b> — fora.</li>
-    <li><b>"Esconder os controles físicos neste jogo"</b> — fora.</li>
-    <li><b>"◆ este jogo já sabe por onde entra"</b> — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.</li>
-    <li><b>O quadro "Modo"</b>, com os quatro botões — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.
-      O que este perfil já guarda continua guardado — nenhum botão desta aba mexe nisso.
-      <span class="marca">Quem escreve o modo é a Jogar, e ela escreve no perfil que está valendo</span>.</li>
-  </ul>
-
-  <h2>O que estava no código e nunca teve tela</h2>
-  <ul>
-    <li><b>Os ajustes por controle</b> — <code>Profile.controllers</code> existe desde
-      16/07 e gravava calado: nenhuma tela dizia quais controles têm ajuste próprio.
-      Era a pergunta <b>4</b> do contrato desta aba, e a tabela é a resposta.</li>
-    <li><b>"Voltar à de ontem"</b> — cada gravação já guarda a anterior e nenhuma tela oferecia isso (<code>profiles/loader.py:740</code>).</li>
-    <li><b>"Detectar"</b> — abra o jogo de onde for, volte e clique; o perfil nasce com a regra certa.</li>
-  </ul>
-
-  <h2>Ainda é sua a palavra</h2>
-  <ul>
-    <li><b>"O jogo vê o controle como" não está desenhado aqui.</b> Ele mora hoje na
-      <b>Jogar</b>; se vem também para cá, é decisão sua, e a tela não decide por você.
-      <span class="marca">O "Modo que liga" saiu desta lista</span> — você já decidiu, e
-      ele está no bloco de cima.</li>
-    <li><b>O conteúdo dos Estilos de Jogo</b> continua em aberto: a lista está aqui, o que
-      cada um liga não.</li>
-    <li><b>A tabela é leitura</b>, como a fita esmaecida diz. Se você quiser mudar o ajuste de
-      um controle a partir daqui — em vez de ir à aba da peça com aquele controle escolhido
-      na fita —, isso é tela nova, e eu não a inventei.</li>
-  </ul>
-</div>
+<!-- ===== fim da aba ===== -->
 
 </body>
 </html>

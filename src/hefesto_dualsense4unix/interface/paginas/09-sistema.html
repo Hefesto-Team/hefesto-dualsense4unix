@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba SISTEMA (mockup 26/08/2026)</title>
+<title>Hefesto — aba SISTEMA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -696,20 +696,6 @@
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
-  /* ---------- legenda do mockup (fora da janela) ---------- */
-  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
-     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
-     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
-     a bancada — sem devolver nada ao produto. */
-  .nota{
-    width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
-    border-left:2px solid var(--purple);padding-left:14px;
-  }
-  .nota h2{font-size:13px;color:var(--purple);margin-bottom:6px;font-weight:600}
-  .nota b{color:var(--texto-suave)}
-  .nota code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)}
-  .nota ul{margin:5px 0 10px 16px}
-  .nota li{margin-bottom:3px}
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
@@ -1483,32 +1469,7 @@
 
 </div>
 
-<!-- ================= LEGENDA DO MOCKUP ================= -->
-<div class="nota">
-  <h2>A aba Sistema em três seções — 25/09/2026</h2>
-  <ul>
-    <li><b>O pedido dela:</b> <i>"praticamente vamos só mudar de lugar as coisas dessa aba"</i>,
-      com menos texto e mais gesto. <!-- noqa-acento: citação literal dela --></li>
-    <li><b>1. Status</b> — o antigo <i>O serviço</i> virou <b>Status</b>, com quatro linhas na
-      forma do exame (a pílula e o texto curto): <b>Serviço</b> (LIGADO, PAUSADO ou PARADO — a
-      pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e
-      <b>Bluetooth</b>, que leva à seção do rádio da aba Conexões. O exame fica ao lado, em duas
-      colunas, e o Bluetooth saiu dele. As frases do exame saem curtas; a inteira fica no
-      <code>title</code>. As linhas do Status não têm <code>?</code>: a frase de cada uma fica no
-      <code>title</code>, e o exame não tem rótulo nem contagem — o lugar fica vazio (os ajustes
-      dela das 22h13).</li>
-    <li><b>2. Configurações Avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
-      só, Atualizar, Reiniciar), <b>Perfil Global de Bateria</b> (as três escolhas na vertical),
-      <b>Saúde do App</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
-      Restaurar de fábrica) e <b>Automático</b> (Iniciar com o sistema, Fixar Proton, Corrigir
-      Vulkan — a pílula do Modo Freestyle, verde quando ligada).</li>
-    <li><b>3. Detalhes técnicos</b> — sempre à vista, com o registro do serviço, a altura que sobra
-      e um <b>Copiar</b>. O <i>Ver detalhes</i> deixou de existir.</li>
-    <li><b>Saíram</b>: a chave <i>Ligar junto com o computador</i> do topo (virou o ligável
-      <i>Iniciar com o sistema</i>) e as quatro linhas de baixo do Perfil de Bateria (Limite, Vale
-      para, Com limite, Sem limite).</li>
-  </ul>
-</div>
+<!-- ===== fim da aba ===== -->
 
 </body>
 </html>
