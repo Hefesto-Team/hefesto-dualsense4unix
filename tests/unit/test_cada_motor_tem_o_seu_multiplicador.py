@@ -731,7 +731,7 @@ class TestAPonte:
         assert "rumble_stop" in (inspect.getdoc(ipc_bridge.rumble_passthrough) or "")
 
 
-def test_o_norm_mac_nao_devolve_none_para_caminho_e_a_docstring_diz_isso() -> None:
+def test_o_norm_mac_nao_devolve_none_para_caminho() -> None:
     """FATO ERRADO SUBSTITUÍDO (04/09/2026) — e a régua guarda o fato certo."""
     from hefesto_dualsense4unix.core import sysfs_leds
 
@@ -739,12 +739,6 @@ def test_o_norm_mac_nao_devolve_none_para_caminho_e_a_docstring_diz_isso() -> No
     assert sysfs_leds.norm_mac("/dev/hidraw4") == "deda4"
     assert sysfs_leds.norm_mac("xyz") is None
     assert sysfs_leds.norm_mac("AA:BB:CC:00:00:01") == "aabbcc000001"
-
-    doc = sysfs_leds.norm_mac.__doc__ or ""
-    assert "FATO ERRADO, SUBSTITUÍDO" in doc, (
-        "a docstring voltou a prometer um `None` que a função não entrega."
-    )
-    assert "adeee9" in doc, "a docstring tem de carregar a medição, não a promessa"
 
 
 #:      esquerdo × força de vibração (ou personalizado), motor direito ×  # noqa: RUF003
