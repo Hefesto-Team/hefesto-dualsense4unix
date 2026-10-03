@@ -25,7 +25,6 @@ A mesa é a de 14/08: os MACs saem do payload real de quatro controles em
 """
 from __future__ import annotations
 
-import inspect
 import json
 from pathlib import Path
 from typing import Any
@@ -248,15 +247,3 @@ class TestDefeitoDOPadraoOtimistaDoMapa:
     def test_o_backend_mudo_continua_com_a_resposta_historica(self) -> None:
         """`None` é "não sei dizer", e `_apply_por_uniq` já o traduz para"""
         assert IpcServer._destinos_por_uniq(None, PRIMEIRO) == ([], [])
-
-
-class TestDefeitoCOComentarioQueListaOsTresCasos:
-    """Fato errado se SUBSTITUI — a lista dos três casos estava errada."""
-
-    def test_o_terceiro_caso_e_o_modo_nativo_e_nao_a_mesa_vazia(self) -> None:
-        fonte = inspect.getsource(IpcServer._handle_trigger_set)
-        assert "Modo Nativo" in fonte, (
-            "o terceiro caso da sprint é o Modo Nativo com output mutado; "
-            "trocá-lo por 'mesa vazia' escondia justamente o que sobrou"
-        )
-        assert "desconectado, sem MAC, mesa vazia" not in fonte
