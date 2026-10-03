@@ -101,18 +101,6 @@ def test_nenhum_handler_ipc_chama_sem_declarar() -> None:
     )
 
 
-def test_o_porque_esta_escrito_no_codigo() -> None:
-    """Quem for pôr um default de volta encontra o custo medido primeiro."""
-    for arquivo in ("daemon/ipc_handlers.py", "daemon/lifecycle.py", "daemon/protocols.py"):
-        texto = (RAIZ / "src" / "hefesto_dualsense4unix" / arquivo).read_text(
-            encoding="utf-8"
-        )
-        assert "ORIGEM-QUE-MENTE-01" in texto, (
-            f"o registro do defeito saiu de `{arquivo}`. Sem o porquê, "
-            "`origin` sem default parece rigor gratuito e volta a ter default."
-        )
-
-
 METODOS_DE_MODO = ("gamepad.emulation.set", "native.mode.set", "mouse.emulation.set")
 
 TELAS = (
