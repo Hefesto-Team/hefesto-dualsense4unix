@@ -29,6 +29,7 @@ por default mas esse vazamento me preocupa"*.
 
 from __future__ import annotations
 
+import ast
 import pathlib
 
 LIFECYCLE = pathlib.Path("src/hefesto_dualsense4unix/daemon/lifecycle.py")
@@ -44,17 +45,17 @@ class TestPonto1AMascaraDeUmJogoNaoViraPadraoDaMaquina:
         assert "self._gravar_mascara_do_perfil(" not in corpo, (
             "o perfil voltou a promover a própria máscara a padrão da máquina")
 
-    def test_o_gravador_fica_como_nota_datada_e_nao_escreve(self):
-        """**NÃO SE APAGA DECISÃO MEDIDA** — ela ganha nota datada."""
-        fonte = LIFECYCLE.read_text(encoding="utf-8")
-        i = fonte.index("    def _gravar_mascara_do_perfil(")
-        corpo = fonte[i : fonte.index("\n    def ", i + 10)]
-        assert "save_gamepad_emulation" not in corpo, (
-            "o gravador voltou a escrever o padrão da máquina")
-        assert "MASCARA-PERSISTE-01" in corpo, (
-            "a decisão de 22/08 sumiu — ela tem de ficar como nota datada")
-        assert "MASCARA-NO-PERFIL-01" in corpo, (
-            "falta dizer ONDE a máscara do perfil persiste hoje")
+    def test_o_gravador_fica_como_nota_datada_e_nao_escreve(self, monkeypatch):
+        """A decisão de 22/08 virou nota datada: o gravador existe e não grava nada."""
+        from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+        from hefesto_dualsense4unix.utils import session
+
+        def _escreveu(*a, **k):
+            raise AssertionError("o gravador voltou a escrever o padrão da máquina")
+
+        monkeypatch.setattr(session, "save_gamepad_emulation", _escreveu)
+        for flavor in ("xbox", "dualsense", None):
+            assert Daemon._gravar_mascara_do_perfil(object(), flavor) is None
 
 
 class TestPonto2OGestoQueNaoFalaDeMascaraNaoEscreveMascara:
@@ -133,7 +134,11 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
 class TestOsDoisEixosTemAMesmaForma:
     def test_a_irma_do_caminho_continua_la(self):
         """As duas funções são irmãs e a segunda foi escrita olhando a"""
-        fonte = LIFECYCLE.read_text(encoding="utf-8")
-        assert "def _a_escolha_dela_sem_o_vazamento(" in fonte
-        assert "def _a_mascara_dela_sem_o_vazamento(" in fonte
-        assert "CAMINHO-CONTAGIO-01" in fonte and "MASCARA-CONTAGIO-01" in fonte
+        arvore = ast.parse(LIFECYCLE.read_text(encoding="utf-8"))
+        definidas = {n.name for n in ast.walk(arvore) if isinstance(n, ast.FunctionDef)}
+        chamadas = {
+            getattr(c.func, "id", getattr(c.func, "attr", ""))
+            for c in ast.walk(arvore) if isinstance(c, ast.Call)}
+        for irma in ("_a_escolha_dela_sem_o_vazamento", "_a_mascara_dela_sem_o_vazamento"):
+            assert irma in definidas, f"{irma} sumiu"
+            assert irma in chamadas, f"{irma} existe e ninguém a chama"
