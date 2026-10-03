@@ -215,6 +215,11 @@ class TestAGuardaSemEndereco:
         assert DICA_AUDIO_SEM_ENDERECO not in porques.values()
 
 
+    def test_o_cartao_apaga_as_pecas_que_mandam_som(self) -> None:
+        """A metade VISÍVEL: o `data-apagado` da moldura do alto-falante."""
+        card = _card(_entrada(uniq=None))
+        assert card["alto-apagado"] == mod.MIC_SEM_ALVO
+
     def test_com_endereco_o_campo_volta_vazio_e_a_guarda_solta(self) -> None:
         """Vazio faz o piloto REMOVER o `data-apagado`, e a folha devolve as peças."""
         assert _card(_entrada())["alto-apagado"] == ""

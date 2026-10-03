@@ -882,7 +882,7 @@ def _mapa_declarado_do_mockup() -> object:
 
 def _confirmar(entrada: str) -> dict[str, str]:
     """O 'Já movi' dela, pelo gesto do produto — devolve `entrada -> caminho`."""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
 
     logica = LogicaDoMapa(_mapa_declarado_do_mockup())  # type: ignore[arg-type]
     logica.escolhido = _CAMINHO_NOVO_DO_WIFI
@@ -892,6 +892,42 @@ def _confirmar(entrada: str) -> dict[str, str]:
         for numero, valor in logica.portas.items()
         if valor.get("caminho")
     }
+
+
+def test_a_confirmacao_da_ordem_liga_a_entrada() -> None:
+    """O mapa ganha `N -> caminho novo` só quando ela diz que foi para o N."""
+    mesa_agora = mock.mesa(leitura=mock.LEITURA_AGORA)
+    mudou = {m.aparelho.id: m for m in motor.reexame(
+        mesa_agora, mock.LEITURA_ANTES, mock.LEITURA_AGORA)}
+    assert "wifi" in mudou, sorted(mudou)
+    assert mudou["wifi"].agora == _CAMINHO_NOVO_DO_WIFI
+    assert mudou["wifi"].entrada_agora is None, (
+        "o motor deu uma entrada a um caminho que ninguém declarou — "
+        "isso é presumir")
+
+    perdidos = {s.aparelho.id: s for s in motor.sem_entrada(mesa_agora)}
+    assert "wifi" in perdidos and perdidos["wifi"].regiao == "pc"
+    livres = [e.n for e in motor.candidatas(mesa_agora, "pc")]
+    assert _ENTRADA_SUGERIDA in livres and _ENTRADA_ONDE_ELA_POS in livres, livres
+    assert len(livres) < len(motor.todas_as_entradas(mesa_agora.faces)), (
+        "a dedução não cortou candidata nenhuma")
+
+    depois_do_sim = _confirmar(_ENTRADA_SUGERIDA)
+    assert depois_do_sim[_ENTRADA_SUGERIDA] == _CAMINHO_NOVO_DO_WIFI
+    assert _ENTRADA_ONDE_ELA_POS not in depois_do_sim
+    aprendida = mock.mesa(mapa=depois_do_sim, leitura=mock.LEITURA_AGORA)
+    assert motor.alocacao(aprendida.mapa, aprendida.leitura)[
+        _ENTRADA_SUGERIDA] == "wifi"
+    assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(aprendida)}
+
+    depois_do_nao = _confirmar(_ENTRADA_ONDE_ELA_POS)
+    novas = sorted(n for n in depois_do_nao if n not in mock.MAPA)
+    assert depois_do_nao.get(_ENTRADA_ONDE_ELA_POS) == _CAMINHO_NOVO_DO_WIFI, (
+        f"ela apontou a entrada {_ENTRADA_ONDE_ELA_POS} e o mapa aprendeu "
+        f"{novas} — o produto presumiu em vez de gravar o que ela disse")
+    assert _ENTRADA_SUGERIDA not in depois_do_nao, (
+        f"o mapa gravou a entrada {_ENTRADA_SUGERIDA}, que o produto sugeriu, "
+        "e ela disse outra — mapa que mente é pior que mapa vazio")
 
 
 def test_presumir_a_entrada_sugerida_faz_o_mapa_mentir() -> None:
