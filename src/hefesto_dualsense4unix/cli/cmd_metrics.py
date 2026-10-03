@@ -15,15 +15,15 @@ console = Console()
 
 @app.command("ligar")
 def cmd_ligar() -> None:
-    """Liga as métricas na próxima subida do daemon (127.0.0.1, porta 9090)."""
+    """Liga as métricas na próxima subida do daemon (127.0.0.1, porta 9090 por padrão)."""
     from hefesto_dualsense4unix.utils.session import save_metrics_enabled
 
     if not save_metrics_enabled(True):
         console.print("[red]Não consegui gravar a escolha na pasta de configuração.[/red]")
         raise typer.Exit(code=1)
     console.print(
-        "Métricas ligadas. Valem quando o serviço do Hefesto subir de novo, "
-        "em http://127.0.0.1:9090/metrics."
+        "Métricas ligadas. Valem quando o serviço do Hefesto subir de novo, em "
+        "127.0.0.1, na porta 9090 ou na de HEFESTO_DUALSENSE4UNIX_METRICS_PORT."
     )
 
 

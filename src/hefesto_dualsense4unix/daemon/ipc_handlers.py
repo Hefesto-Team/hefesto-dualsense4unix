@@ -2742,13 +2742,13 @@ class IpcHandlersMixin:
           a barra apagada e com ela verde. Sai da FOTO do sentinela do daemon
           (tique de 30 s) — este handler não toca ``/proc``.
 
-          Contrato de cor (D8 — divergência fundamentada, decisão do
-          orquestrador da onda): expõe-se UMA cor, a efetiva conhecida
+          Contrato de cor (D8 — divergência fundamentada, registrada
+          na onda): expõe-se UMA cor, a efetiva conhecida
           (pós-escala de brilho — o `_DesiredOutput.led` já é pós-escala; o
           manager pré-escala na borda). O par pré/pós-brilho do D8 original
           exigiria refactor do estado desejado fora do escopo; a legibilidade
-          de cor escura (objetivo do D8) é da GUI, que ajusta o contraste
-          do traço na borda.
+          de cor escura (objetivo do D8) é da tela, pela borda de
+          `integrations/cor_do_plastico.tom_para_a_borda`.
         - ``brilho_da_barra``/``brilho_das_luzes`` (A-04-PERGUNTA-AO-DAEMON-VIVO-01):
           o brilho em que ``lightbar_rgb`` foi acesa e o degrau das luzes de
           número que o merge manda, com a camada da usuária. ``None`` = não

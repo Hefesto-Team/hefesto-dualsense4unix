@@ -5244,7 +5244,7 @@ class PyDualSenseController(IController):
         não é gravável (escrita foi por hidraw → classe LED stale por
         construção), esta é a última cor que o daemon mandou aplicar.
 
-        Nota (D8 — divergência fundamentada, decidida pelo orquestrador da
+        Nota (D8 — divergência fundamentada, registrada na
         onda): o valor devolvido é PÓS-escala de brilho — `_DesiredOutput.led`
         guarda o RGB como chegou ao `set_led`, e o manager pré-escala
         `lightbar_brightness` na borda (`led_control.py`). O D8 original pedia

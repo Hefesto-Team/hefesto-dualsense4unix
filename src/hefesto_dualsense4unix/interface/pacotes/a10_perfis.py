@@ -695,7 +695,7 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
 
     **A CURA MORA NO PILOTO, e não aqui** — carimbar o selo fora da serialização
     (um `WeakSet` em JS) ou comparar sem ele. Emitir o selo daqui faria esta aba
-    conhecer um detalhe interno do pintor. Está relatado ao orquestrador.
+    conhecer um detalhe interno do pintor.
 
     HOJE SÓ ESTA LISTA PAGA, e conferi antes de acusar as irmãs: o defeito só
     morde um `blocos` cujos FILHOS tenham endereço, e os dois da `08-conexoes`
