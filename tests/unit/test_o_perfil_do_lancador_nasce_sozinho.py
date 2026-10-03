@@ -559,7 +559,9 @@ def _chamados_por(alvo: str) -> set[str]:
 def test_a_semeadura_le_os_lancadores_e_declara_as_classes() -> None:
     chamados = _chamados_por("semear_perfis_dos_jogos")
 
-    assert "jogos_dos_lancadores" in chamados, (
+    # `jogos_com_janela` é a segunda origem (os lançadores) MAIS o jogo
+    # instalado aqui, com a duplicata já tirada: um dono só.
+    assert "jogos_com_janela" in chamados, (
         "a semeadura voltou a ler SÓ a Steam. A decisão dela é que todo jogo "
         "instalado de um lançador que o produto lê ganhe perfil sozinho."
     )
@@ -599,6 +601,7 @@ def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
         jogos_locais, "assinatura_da_biblioteca", lambda home=None: (("/x", 1),)
     )
     monkeypatch.setattr(jogos_locais, "jogos_da_biblioteca_steam", lambda home=None: [])
+    monkeypatch.setattr(jogos_locais, "pastas_de_atalhos", lambda: [])
 
     loader._talvez_semear_jogos()
     assert list(destino.glob("*.json")) == []

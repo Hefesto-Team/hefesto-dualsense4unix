@@ -5,6 +5,7 @@ import configparser
 import contextlib
 import os
 import re
+import shlex
 import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -307,10 +308,73 @@ _CLIENTES_DE_LOJA = frozenset({"rare"})
 LANCADOR_DIRETO = "Instalado aqui"
 
 
+_CATEGORIAS_DE_FERRAMENTA = frozenset(
+    {"utility", "network", "filetransfer", "system", "settings", "development"}
+)
+
+_PROGRAMAS_QUE_ABREM_OUTRO = frozenset(
+    {"xdg-open", "gio", "gtk-launch", "kde-open", "kde-open5"}
+)
+
+_LOJAS_SEM_CLASSE = frozenset(
+    {
+        "steam", "steamwebhelper", "com.valvesoftware.steam",
+        "heroic", "com.heroicgameslauncher.hgl",
+        "lutris", "net.lutris.lutris",
+        "bottles", "com.usebottles.bottles",
+        "itch", "io.itch.itch", "minigalaxy", "rare",
+    }
+)
+
+
+def _e_atalho_para_outro_programa(comando: str) -> bool:
+    """O `Exec=` só pede a OUTRO programa que abra o jogo (`xdg-open heroic://…`)?"""
+    try:
+        partes = shlex.split(comando)
+    except ValueError:
+        return False
+    if not partes:
+        return False
+    if partes[0].rsplit("/", 1)[-1] in _PROGRAMAS_QUE_ABREM_OUTRO:
+        return True
+    return any("://" in parte for parte in partes[1:])
+
+
+def _chave_do_atalho_sem_classe(
+    arquivo: Path, texto: str, categorias: frozenset[str], comando: str
+) -> str:
+    """A chave de janela de um jogo cujo `.desktop` NÃO traz `StartupWMClass`.
+
+    É o **id do atalho** (o nome do arquivo sem `.desktop`): o que o compositor
+    usa para casar a janela com o atalho quando o atalho não declara a classe, e
+    a classe de janela é comparada sem distinguir maiúscula (`forja` casa a
+    janela `FORJA`). Nunca é um nome inventado: é o que o atalho já se chama.
+
+    Devolve `""` quando o atalho não é um jogo com janela própria: ferramenta
+    (`Utility`…), lançador (`Emulator`/`PackageManager`, que têm a aba deles),
+    cliente de loja ou um atalho que só manda OUTRO programa abrir o jogo.
+    """
+    if categorias & _CATEGORIAS_DE_FERRAMENTA:
+        return ""
+    if e_lancador_de_jogos(texto):
+        return ""
+    if _e_atalho_para_outro_programa(comando):
+        return ""
+    chave = arquivo.stem.strip()
+    if chave.casefold() in _LOJAS_SEM_CLASSE or chave.casefold() in _CLIENTES_DE_LOJA:
+        return ""
+    return chave
+
+
 def jogos_diretos_dos_atalhos(
     pastas: Sequence[Path] | None = None,
 ) -> list[JogoLocal]:
-    """A TERCEIRA ORIGEM — o jogo que não é de lançador nenhum, pelo `.desktop`."""
+    """A TERCEIRA ORIGEM — o jogo que não é de lançador nenhum, pelo `.desktop`.
+
+    O atalho que declara `StartupWMClass` entra com ela. O que não declara (o
+    jogo nativo comum) entra com o id do atalho como chave
+    (:func:`_chave_do_atalho_sem_classe`).
+    """
     alvos = list(pastas) if pastas is not None else pastas_de_atalhos()
     achados: dict[str, JogoLocal] = {}
     for pasta in alvos:
@@ -336,7 +400,13 @@ def jogos_diretos_dos_atalhos(
             classe = entrada.get("StartupWMClass", "").strip()
             categorias = {c.strip().casefold()
                           for c in entrada.get("Categories", "").split(";")}
-            if not classe or "game" not in categorias:
+            if "game" not in categorias:
+                continue
+            if not classe:
+                classe = _chave_do_atalho_sem_classe(
+                    arquivo, texto, frozenset(categorias),
+                    entrada.get("Exec", ""))
+            if not classe:
                 continue
             if _CATEGORIA_QUE_NAO_E_JOGO in categorias:
                 continue
@@ -347,7 +417,7 @@ def jogos_diretos_dos_atalhos(
             nome = _nome_do_desktop(texto)
             if not nome:
                 continue
-            achados.setdefault(classe, JogoLocal(
+            achados.setdefault(classe.casefold(), JogoLocal(
                 appid="", nome=nome, fonte="desktop",
                 lancador=LANCADOR_DIRETO, chave=classe))
     return sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave))

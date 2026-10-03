@@ -1039,7 +1039,7 @@ class ResultadoDaSemeadura:
 
 
 _ultima_varredura_de_jogos: float | None = None
-_assinatura_da_biblioteca_vista: tuple[object, object] | None = None
+_assinatura_da_biblioteca_vista: tuple[object, ...] | None = None
 
 
 def _caminho_da_marca(directory: Path) -> Path:
@@ -1250,11 +1250,15 @@ def semear_perfis_dos_jogos(
     directory.mkdir(parents=True, exist_ok=True)
     if jogos is None:
         from hefesto_dualsense4unix.integrations.jogos_locais import (
+            jogos_com_janela,
             jogos_da_biblioteca_steam,
-            jogos_dos_lancadores,
         )
 
-        jogos = [*jogos_da_biblioteca_steam(home), *jogos_dos_lancadores(home)]
+        # As três origens: a biblioteca da Steam, os lançadores e o jogo
+        # instalado aqui (o `.desktop`). Com um `home` dado, os atalhos são
+        # os DELE, nunca os desta máquina.
+        pastas = None if home is None else [Path(home) / ".local/share/applications"]
+        jogos = [*jogos_da_biblioteca_steam(home), *jogos_com_janela(home, pastas)]
 
     marca = _caminho_da_marca(directory)
     linhas: list[PerfilSemeado] = []
@@ -1401,9 +1405,14 @@ def _talvez_semear_jogos() -> None:
         )
         from hefesto_dualsense4unix.integrations.jogos_locais import (
             assinatura_da_biblioteca,
+            assinatura_das_janelas,
         )
 
-        assinatura = (assinatura_da_biblioteca(), assinatura_das_bibliotecas())
+        assinatura = (
+            assinatura_da_biblioteca(),
+            assinatura_das_bibliotecas(),
+            assinatura_das_janelas(),
+        )
         if assinatura == _assinatura_da_biblioteca_vista:
             return
         semear_perfis_dos_jogos()
