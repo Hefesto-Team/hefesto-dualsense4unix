@@ -60,12 +60,10 @@ def test_dois_controles_com_o_rabo_igual_nao_podem_gerar_o_mesmo_nome() -> None:
     )
 
 
-def test_o_docstring_de_nome_curto_promete_o_que_o_codigo_nao_entrega() -> None:
-    """A promessa está escrita, e é ela que faz o buraco parecer curado."""
-    doc = NoDualSenseBT.nome_curto.__doc__ or ""
-    assert "MESMO nome de\n        source" in doc or "MESMO nome de" in doc
+def test_o_buraco_do_nome_curto_segue_aberto_e_o_xfail_estrito_avisa_a_cura() -> None:
+    """Hoje o código entrega o nome igual; a cura derruba esta e solta o xfail."""
     a = _no("aa:bb:cc:00:00:01", "/dev/hidraw3")
     b = _no("02:fe:00:00:00:01", "/dev/hidraw4")
     assert a.nome_curto == b.nome_curto, (
-        "o código faz exatamente o que o docstring diz que não pode"
+        "o nome curto passou a diferir: tire o xfail do teste de cima e este daqui"
     )

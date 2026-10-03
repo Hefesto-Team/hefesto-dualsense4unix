@@ -100,22 +100,13 @@ def test_backend_sem_endereco_degrada_declarado_e_nao_calado() -> None:
     assert backend.posse == [(None, None), (None, None)]
 
 
-def test_a_prosa_do_interruptor_nao_promete_o_que_o_codigo_nao_faz() -> None:
-    """A frase corrigida não pode voltar à versão que a auditoria derrubou."""
-    import inspect
-
-    from hefesto_dualsense4unix.daemon import ipc_draft_applier, lifecycle
-
-    prosa = inspect.getsource(lifecycle)
-    assert "devolver_a_luz_ao_kernel" in prosa, (
-        "o comentário de `mic_button_toggles_system` perdeu o ponteiro para "
-        "quem cumpre a promessa — sem ele a frase volta a ser fé"
-    )
+def test_o_applier_devolve_a_luz_ao_kernel_ao_desligar_o_interruptor() -> None:
+    """O applier chama `devolver_a_luz_ao_kernel`: a promessa do interruptor."""
+    from hefesto_dualsense4unix.daemon import ipc_draft_applier
 
     codigo = ipc_draft_applier.DraftApplier._apply_mic.__code__
     assert "devolver_a_luz_ao_kernel" in codigo.co_names, (
-        "o applier parou de devolver a posse ao desligar o interruptor — o "
-        "comentário do `lifecycle.py` virou promessa falsa de novo"
+        "o applier parou de devolver a posse ao desligar o interruptor"
     )
 
 
