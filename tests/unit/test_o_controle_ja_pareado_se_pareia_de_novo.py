@@ -1,7 +1,7 @@
 """O controle já pareado se pareia de novo num clique (O-CONTROLE-JA-PAREADO-...-01).
 
 O dublê do BlueZ tem um par antigo e o aparelho em modo de pareamento (a chave dele foi
-apagada): a linha diz «Parear de novo», e o gesto esquece o par velho ANTES de abrir a
+apagada): a linha diz «Parear de Novo», e o gesto esquece o par velho ANTES de abrir a
 busca. O «Procurar» com o serviço lento responde sem «não respondeu», e o «⋮» abre com a
 busca ligada.
 """
@@ -98,7 +98,7 @@ def test_o_pareado_fora_do_ar_aparece_com_conectar_e_o_novo_com_parear() -> None
     assert re.search(r'conectar-aparelho" data-alvo="[^"]+">Conectar</button>', html)
 
 
-# --- 2. a linha diz «Parear de novo» quando o par velho ainda está aqui -------------------
+# --- 2. a linha diz «Parear de Novo» quando o par velho ainda está aqui -------------------
 
 @pytest.mark.parametrize("controle", CONTROLES)
 @pytest.mark.parametrize("adaptador", list(ADAPTADORES))
@@ -114,12 +114,66 @@ def test_a_linha_do_pareado_que_nao_conectou_diz_parear_de_novo(
     assert a08.TENTAR_DE_NOVO not in html
 
 
+def test_o_botao_da_linha_fala_como_o_irmao_tentar_de_novo() -> None:
+    """Os dois botões moram no mesmo lugar da linha «Não Conectou» e se escrevem do mesmo
+    jeito: cada palavra com maiúscula, menos as miúdas («Tentar de Novo», «Parear de Novo»)."""
+    for rotulo in (a08.TENTAR_DE_NOVO, a08.PAREAR_DE_NOVO):
+        assert a08._em_titulo(rotulo) == rotulo, rotulo
+
+
 def test_sem_par_velho_aqui_a_linha_continua_tentar_de_novo() -> None:
     linha = _linha_que_nao_conectou(ADAPTADORES["/org/bluez/hci0"], a08._mac(CONTROLES[0]),
                                     frozenset({_par("/org/bluez/hci1", CONTROLES[0])}))
     assert linha["pareado_aqui"] is False
     html = a08.html_da_linha(linha, {"lugares": [], "aparelhos": [linha]})
     assert f">{a08.TENTAR_DE_NOVO}<" in html and 'data-gesto="tentar-de-novo"' in html
+
+
+@pytest.mark.parametrize("adaptador", list(ADAPTADORES))
+def test_a_cena_marca_o_par_velho_pelo_que_o_bluez_diz(
+    monkeypatch: pytest.MonkeyPatch, adaptador: str
+) -> None:
+    """A cena INTEIRA, do BlueZ de mentira até a linha: o par velho é o `Paired` daquele
+    aparelho NAQUELE adaptador, e o pareado noutro adaptador não conta."""
+    import time
+
+    from hefesto_dualsense4unix.integrations.bluez_dbus import (
+        AdaptadorDoBluez,
+        AparelhoDoBluez,
+    )
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA"):
+        monkeypatch.setattr(a08, nome, {})
+    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: Mesa())
+    adaptadores = tuple(AdaptadorDoBluez(caminho, caminho.rsplit("/", 1)[1],
+                                         _com_dois_pontos(hexa), varrendo=False)
+                        for caminho, hexa in ADAPTADORES.items())
+    outro = next(c for c in ADAPTADORES if c != adaptador)
+
+    def _aparelho(controle: str, onde: str, pareado: bool) -> Any:
+        return AparelhoDoBluez(f"{onde}/dev_{controle.replace(':', '_')}", onde, controle,
+                               nome="Wireless Controller", conectado=False, pareado=pareado,
+                               classe=0x002508)
+
+    aparelhos = (_aparelho(CONTROLES[0], adaptador, True),
+                 _aparelho(CONTROLES[1], adaptador, False),
+                 _aparelho(CONTROLES[2], outro, True))
+    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
+    monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
+    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
+    monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
+    monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
+    destino = _com_dois_pontos(ADAPTADORES[adaptador])
+    movimentos = [{"aparelho": c, "destino": destino, "estado": "nao_chegou", "motivo": "prazo",
+                   "quando": time.time() - 1.0, "e_controle": True} for c in CONTROLES[:3]]
+    estado = {"controllers": [], "radio_central": {"movimentos": movimentos, "proposta": None}}
+    cena = a08.cena_do_radio(pacotes.Contexto(state=estado, mesa=[], conectados=[]))
+    linhas = {a["aparelho"]: a["pareado_aqui"] for a in cena["aparelhos"] if a.get("nao_conectou")}
+    assert linhas == {a08._mac(CONTROLES[0]): True, a08._mac(CONTROLES[1]): False,
+                      a08._mac(CONTROLES[2]): False}
 
 
 def _na_tela(monkeypatch: pytest.MonkeyPatch, linha: dict[str, Any], **cena: Any) -> None:

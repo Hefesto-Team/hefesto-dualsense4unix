@@ -235,6 +235,17 @@ def test_quando_chega_o_segundo_a_referencia_do_primeiro_recomeca(tela_limpa: li
         "o 650 de quando ele estava sozinho não vale com dois no adaptador")
 
 
+def test_o_controle_que_muda_de_adaptador_recomeca_a_referencia(tela_limpa: list[float]) -> None:
+    """A referência é do controle NAQUELE adaptador: o 650 que ele dava sozinho no L1 não
+    vale no L2, onde ele também está sozinho (a conta de quem divide não muda)."""
+    for _ in range(3):
+        tela_limpa[0] += 1.0
+        a08.campos_da_secao(_cena({"a": {"hz_mov": 650.0, "sinal": -30}}), segurar=True)
+    tela_limpa[0] += 1.0
+    nivel, _ = _nivel_e_dica(_cena({"a": {"hz_mov": 300.0, "sinal": -30, "lugar": "L2"}}))
+    assert nivel == rm.NIVEL_LISO, "o 650 do L1 não é a referência dele no L2"
+
+
 # --- 4. sem o sinal a linha diz «sinal desconhecido», e não verde ---------------------------
 
 def test_pelo_radio_sem_sinal_a_linha_nao_e_verde_e_diz_que_nao_sabe(

@@ -23,6 +23,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **03/10/2026** — a faixa «Dispositivos Conectados» em pistas, uma por adaptador, rede e rádio
-  vizinho (CADA-FAIXA-TEM-DONO-01), o «Parear de novo» e a janelinha do «Esquecer» sem o
+  vizinho (CADA-FAIXA-TEM-DONO-01), o «Parear de Novo» e a janelinha do «Esquecer» sem o
   «Procurar» (O-CONTROLE-JA-PAREADO-SE-PAREIA-DE-NOVO-NUM-CLIQUE-01). Até publicar, a 08 publicada
   traz os selos soltos no cabeçalho. Falta só o `--publicar 08` no fecho.

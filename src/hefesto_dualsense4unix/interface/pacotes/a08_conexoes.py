@@ -3025,7 +3025,7 @@ TRACO_CURTO = "\u2013"
 
 NAO_CONECTOU = "Não Conectou"
 TENTAR_DE_NOVO = "Tentar de Novo"
-PAREAR_DE_NOVO = "Parear de novo"
+PAREAR_DE_NOVO = "Parear de Novo"
 DESLIGUE_O_PROCURAR = "desligue o Procurar para esquecer"
 ESQUECER_FAZ = "Tira o pareamento com este adaptador. Para voltar, use Conectar."
 DESLIGADO = "Desligado"
@@ -4177,7 +4177,9 @@ def _nivel_seguro(uniq: str, nivel: str, agora: float) -> str:
     return antes[0]
 
 
-_REFERENCIA_DO_HZ: dict[str, tuple[int, float, float]] = {}
+#: A referência do Hz é do controle NAQUELE adaptador: a chave é `(controle, adaptador)`, e
+#: o controle que muda de adaptador recomeça a dele.
+_REFERENCIA_DO_HZ: dict[tuple[str, str], tuple[int, float, float]] = {}
 _CAUSA_NA_TELA: dict[str, tuple[str, str]] = {}
 
 
@@ -4190,9 +4192,12 @@ def _diagnostico_do_controle(a: dict[str, Any], controles: list[dict[str, Any]],
     if referencia is None and segurar and a.get("hz_mov") is not None:
         dividem = sum(1 for o in controles if str(o.get("lugar") or "") == lugar
                       and not o.get("usb"))
-        _REFERENCIA_DO_HZ[uid] = atualizar_a_referencia(
-            _REFERENCIA_DO_HZ.get(uid), dividem, a["hz_mov"], agora)
-        referencia = _REFERENCIA_DO_HZ[uid][1]
+        chave = (uid, lugar)
+        for outra in [k for k in _REFERENCIA_DO_HZ if k[0] == uid and k != chave]:
+            del _REFERENCIA_DO_HZ[outra]
+        _REFERENCIA_DO_HZ[chave] = atualizar_a_referencia(
+            _REFERENCIA_DO_HZ.get(chave), dividem, a["hz_mov"], agora)
+        referencia = _REFERENCIA_DO_HZ[chave][1]
     return diagnosticar_o_movimento(
         a.get("hz_mov"), sinal_dbm=a.get("sinal"), referencia_hz=referencia,
         via_radio=not a.get("usb"),
@@ -4231,7 +4236,8 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
         for saiu in set(_NIVEL_NA_TELA) - {str(a["id"]) for a in controles}:
             del _NIVEL_NA_TELA[saiu]
             _CAUSA_NA_TELA.pop(saiu, None)
-            _REFERENCIA_DO_HZ.pop(saiu, None)
+            for chave in [k for k in _REFERENCIA_DO_HZ if k[0] == saiu]:
+                del _REFERENCIA_DO_HZ[chave]
     cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)},
             "dicas": {str(a["id"]): d for a, d in zip(controles, dicas, strict=True)}}
     return {
@@ -5417,7 +5423,7 @@ def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "parear-de-novo", grava="esquecer_o_pareamento")
 def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Parear de novo»: o controle que o BlueZ ainda tem pareado aqui e não conectou
+    """«Parear de Novo»: o controle que o BlueZ ainda tem pareado aqui e não conectou
     (a chave dele foi apagada, ele está em modo de parear): o pareamento velho sai
     e a busca abre neste adaptador, onde ele chega como novo."""
     lug = _lugar_na_tela(o)
