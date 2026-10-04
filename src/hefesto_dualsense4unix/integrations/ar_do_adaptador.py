@@ -467,11 +467,6 @@ def _erro_do_comando(evento: bytes, opcode_esperado: int) -> int | None:
     return int(status) if opcode == opcode_esperado and status else None
 
 
-def resposta_de_erro_do_afh(evento: bytes) -> int | None:
-    """O status de erro do nosso comando (``Command Complete`` ou ``Status``)."""
-    return _erro_do_comando(evento, OPCODE_LER_MAPA_AFH)
-
-
 def _abrir_hci_cru(hci: int) -> socket.socket:
     sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
     try:
@@ -679,5 +674,4 @@ __all__ = [
     "mapa_afh_da_resposta",
     "mapas_afh_do_adaptador",
     "nivel_dos_canais",
-    "resposta_de_erro_do_afh",
 ]

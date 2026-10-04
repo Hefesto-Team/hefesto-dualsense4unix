@@ -334,7 +334,7 @@ def test_resposta_de_outro_handle_nao_e_a_nossa() -> None:
 def test_a_resposta_de_erro_medida_na_maquina_dela_e_nao_sei() -> None:
     evento = RESPOSTA_MEDIDA_DE_HANDLE_INEXISTENTE
     assert ar.mapa_afh_da_resposta(evento, 0x0EFE) is None
-    assert ar.resposta_de_erro_do_afh(evento) == 0x02
+    assert ar._erro_do_comando(evento, ar.OPCODE_LER_MAPA_AFH) == 0x02
 
 
 class _SocketDeMentira:
