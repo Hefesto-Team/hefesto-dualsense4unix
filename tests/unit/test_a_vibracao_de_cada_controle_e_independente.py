@@ -256,3 +256,24 @@ def test_a_haptica_dos_dois_controles_fica_ligada(aba: Any) -> None:
     ponte.chamadas.clear()
     _clicar(aba, "parar", P1, ponte)
     assert a05.em_teste_da_haptica() == {P2}
+
+
+@pytest.mark.asyncio
+async def test_o_resumo_solto_de_fora_nao_ressuscita_o_par_velho(mesa: _Mesa) -> None:
+    """A troca de perfil e o Modo Nativo soltam o resumo direto (`rumble_active =
+    None`, `daemon/lifecycle.py`). O par de antes não volta com o próximo pedido,
+    nem no vão de 200 ms antes do tique que limparia o registro. MORDIDA: tire a
+    limpeza do começo de `fixar_par` → o P2 volta a tremer aqui."""
+    p1, p2 = mesa.uniqs[0], mesa.uniqs[1]
+    await _testar(mesa, p1, 160, 220)
+    await _testar(mesa, p2, 100, 50)
+    mesa.config.rumble_active = None          # o que o lifecycle faz
+    mesa.config.rumble_active_uniq = None
+    await _testar(mesa, p1, 30, 40)           # o batimento do P1, antes do tique
+
+    assert set(pares_fixados(mesa.config)) == {p1}, (
+        "o par do P2, solto pela troca de perfil, voltou junto com o do P1"
+    )
+    mesa.limpar_motores()
+    mesa.ticks(2)
+    assert not any(v for _lado, v in mesa.motores_de(p2)), "o P2 voltou a tremer"

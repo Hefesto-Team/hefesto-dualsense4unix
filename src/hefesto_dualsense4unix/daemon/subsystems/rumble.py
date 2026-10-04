@@ -139,6 +139,12 @@ def fixar_par(
     ``None`` é o par sem prazo de ociosidade (o do «Aplicar» do rodapé).
     """
     registro = pares_fixados(cfg)
+    if getattr(cfg, "rumble_active", None) is None:
+        # Quem soltou o resumo direto (a troca de perfil, a devolução ao jogo do
+        # Modo Nativo) soltou a mesa inteira: o registro que sobrou é de antes
+        # e não volta junto com o par novo (o mesmo que :func:`_pares_de_pe` faz
+        # no tique seguinte, só que antes de publicar).
+        registro.clear()
     largados: list[str | None] = []
     if not so_este:
         do_resumo = getattr(cfg, "rumble_active_uniq", None)
