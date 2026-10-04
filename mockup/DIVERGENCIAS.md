@@ -21,11 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 02-controles.html
-- **03/10/2026** — o par «Virtual | Nativo» do Microfone saiu do cartão (decisão dela de
-  02/10, OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01). No `--publicar 02`, o
-  `a02_controles.py` perde junto o gesto `mic-modo`, as provas dele, os campos
-  `mic-modo-aceso` e `mic-nativo-fora` e o `SEM_ECO`.
-  Até publicar, a página do produto mostra o par, e o gesto `mic-modo` segue gravando
-  a chave `microfone` do `maquina.json`, que o daemon lê como a recusa do microfone
-  daquele controle (o `False` do «Nativo» tira o canal, nos dois transportes).
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
