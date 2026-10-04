@@ -770,6 +770,31 @@ if [[ "${_wp_do_xdg}" != "${HOME}/.config/wireplumber/wireplumber.conf.d" ]]; th
     done
 fi
 
+# OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01: o WirePlumber lembra pelo NOME a
+# escolha de fonte e de saída (`default-nodes`) e o volume de cada fluxo
+# (`stream-properties`), e nunca esquece uma chave. Saem só as linhas com nome
+# do Hefesto (o dono é `memoria_dos_controles.linha_nossa_do_wireplumber`, o
+# mesmo que o «limpa?» lê); as dela ficam byte a byte. Com o WirePlumber
+# PARADO, porque ele grava o estado ao sair e regravaria as nossas.
+MEMORIA_DOS_CONTROLES_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/utils/memoria_dos_controles.py"
+_wp_estado="${XDG_STATE_HOME:-${HOME}/.local/state}/wireplumber"
+if [[ -d "${_wp_estado}" && -f "${MEMORIA_DOS_CONTROLES_PY}" ]] \
+        && command -v python3 >/dev/null 2>&1; then
+    _wp_nossas="$(python3 -I -c '
+import runpy, sys
+from pathlib import Path
+dono = runpy.run_path(sys.argv[1])
+print(sum(len(v) for v in dono["chaves_nossas_do_wireplumber"](Path(sys.argv[2])).values()))
+' "${MEMORIA_DOS_CONTROLES_PY}" "${_wp_estado}" 2>/dev/null || true)"
+    if [[ "${_wp_nossas}" =~ ^[1-9][0-9]*$ ]]; then
+        log "tirando do estado do WirePlumber ${_wp_nossas} chave(s) com nome do Hefesto (o WirePlumber para e volta)"
+        systemctl --user stop wireplumber >/dev/null 2>&1 || true
+        python3 "${MEMORIA_DOS_CONTROLES_PY}" wireplumber --tirar --pasta "${_wp_estado}" \
+            || log "  não consegui reescrever o estado do WirePlumber em ${_wp_estado}"
+        systemctl --user start wireplumber >/dev/null 2>&1 || true
+    fi
+fi
+
 # DROPIN-AMBIGUO-01: a marca do gesto do microfone sai junto do 51 (acima).
 if [[ -f "${MARCA_MIC_PEDIDO}" ]]; then
     log "removendo a marca do gesto do microfone: ${MARCA_MIC_PEDIDO}"

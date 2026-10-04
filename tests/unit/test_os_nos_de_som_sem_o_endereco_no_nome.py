@@ -307,3 +307,133 @@ def test_a_saida_gravada_passa_e_a_escolha_que_nao_e_de_controle_fica(wireplumbe
         ler=wireplumber.ler, rodar=wireplumber.rodar,
     )
     assert wireplumber.pedidos == [["pactl", "set-default-sink", af.nome_do_sink(p3)]]
+
+
+#: O estado do WirePlumber de um lar de mentira: as linhas nossas e as dela.
+_DEFAULT_NODES = (
+    "[default-nodes]\n"
+    "default.configured.audio.sink=alsa_output.pci-0000_00_1f.3.hdmi-stereo\n"
+    "default.configured.audio.sink.0=hefesto_som_000012\n"
+    "default.configured.audio.sink.1=alsa_output.usb-Sony_Interactive_Entertainment_"
+    "DualSense_Wireless_Controller-00.HiFi__Speaker__sink\n"
+    "default.configured.audio.sink.3=alsa_output.usb-Sony_Interactive_Entertainment_"
+    "DualSense_Wireless_Controller_HEFESTOLUGAR1-00.HiFi__Speaker__sink\n"
+    "default.configured.audio.source=hefesto_mic_APARELHOKUKTZP\n"
+    "default.configured.audio.source.0=alsa_input.usb-Webcam_C920-02.analog-stereo\n"
+)
+_STREAM_PROPERTIES = (
+    "[stream-properties]\n"
+    "Audio/Sink:node.name:hefesto_som_000012={\"volume\":1.0}\n"
+    "Audio/Sink:node.name:alsa_output.usb-Sony_Interactive_Entertainment_DualSense_"
+    "Wireless_Controller-00.HiFi__Speaker__sink={\"volume\":0.5}\n"
+    "Input/Audio:application.id:br.dev.hefesto.luz_do_mic={\"mute\":false}\n"
+    "Input/Audio:application.name:Firefox={\"volume\":0.8}\n"
+    "Input/Audio:media.name:hefesto-retorno-do-mic-APARELHOKUKTZP\\sinput={\"mute\":false}\n"
+    "Output/Audio:media.role:Notification={\"volume\":0.3}\n"
+)
+#: O que é dela, e tem de ficar byte a byte.
+_DELA = {
+    "default-nodes": [
+        "[default-nodes]",
+        "default.configured.audio.sink=alsa_output.pci-0000_00_1f.3.hdmi-stereo",
+        "default.configured.audio.sink.1=alsa_output.usb-Sony_Interactive_Entertainment_"
+        "DualSense_Wireless_Controller-00.HiFi__Speaker__sink",
+        "default.configured.audio.source.0=alsa_input.usb-Webcam_C920-02.analog-stereo",
+    ],
+    "stream-properties": [
+        "[stream-properties]",
+        "Audio/Sink:node.name:alsa_output.usb-Sony_Interactive_Entertainment_DualSense_"
+        "Wireless_Controller-00.HiFi__Speaker__sink={\"volume\":0.5}",
+        "Input/Audio:application.name:Firefox={\"volume\":0.8}",
+        "Output/Audio:media.role:Notification={\"volume\":0.3}",
+    ],
+}
+
+
+def _estado_do_wireplumber(pasta: Path) -> Path:
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / "default-nodes").write_text(_DEFAULT_NODES, encoding="utf-8")
+    (pasta / "stream-properties").write_text(_STREAM_PROPERTIES, encoding="utf-8")
+    return pasta
+
+
+def test_o_estado_do_wireplumber_perde_so_as_chaves_nossas(tmp_path: Path) -> None:
+    """Régua 5, a metade do dono. MORDIDA: «nosso» por «contém DualSense» → as dela somem."""
+    from hefesto_dualsense4unix.utils import memoria_dos_controles as m
+
+    pasta = _estado_do_wireplumber(tmp_path / "wireplumber")
+    achadas = m.chaves_nossas_do_wireplumber(pasta)
+    assert {k: len(v) for k, v in achadas.items()} == {
+        "default-nodes": 3, "stream-properties": 3,
+    }
+    assert m.tirar_as_chaves_nossas_do_wireplumber(pasta) == 6
+    for nome, linhas in _DELA.items():
+        assert (pasta / nome).read_text(encoding="utf-8").splitlines() == linhas, nome
+    assert m.chaves_nossas_do_wireplumber(pasta) == {}
+    assert m.tirar_as_chaves_nossas_do_wireplumber(pasta) == 0
+
+
+def test_o_limpa_lista_as_chaves_nossas_do_wireplumber(tmp_path: Path) -> None:
+    """O «limpa?» enxerga o rastro no estado do WirePlumber, e cala quando ele sai."""
+    from dataclasses import replace
+
+    from hefesto_dualsense4unix.utils import memoria_dos_controles as m
+
+    raizes = m.Raizes(
+        lar=tmp_path, config=tmp_path / ".config", estado=tmp_path / ".local/state",
+        dados=tmp_path / ".local/share", cache=tmp_path / ".cache",
+        execucao=tmp_path / "run", bluez=tmp_path / "bluez", varlib=tmp_path / "varlib",
+        guardado_do_root=tmp_path / "guardado", sistema=tmp_path / "sistema",
+    )
+    pasta = _estado_do_wireplumber(raizes.estado / "wireplumber")
+    rastros = [r for r in m.conferir_a_casa(raizes) if "WirePlumber" in r.o_que]
+    assert sorted(Path(r.onde).name for r in rastros) == ["default-nodes", "stream-properties"]
+    m.tirar_as_chaves_nossas_do_wireplumber(pasta)
+    assert [r for r in m.conferir_a_casa(replace(raizes)) if "WirePlumber" in r.o_que] == []
+
+
+def _o_passo_do_uninstall() -> str:
+    """O bloco do `uninstall.sh` que tira as chaves — só ele, nunca o roteiro inteiro."""
+    texto = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
+    inicio = texto.index("# OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01")
+    fim = texto.index("# DROPIN-AMBIGUO-01", inicio)
+    return texto[inicio:fim]
+
+
+def test_o_uninstall_para_o_wireplumber_antes_de_reescrever(tmp_path: Path) -> None:
+    """Régua 5, a metade do roteiro: o passo do uninstall num lar de mentira.
+
+    O `systemctl` é um dublê que anota a chamada e o que o estado tinha naquela
+    hora: no `stop` as nossas ainda estão lá (a escrita veio depois), no
+    `start` já saíram, e as dela ficam byte a byte.
+    """
+    import subprocess
+
+    lar = tmp_path / "lar"
+    pasta = _estado_do_wireplumber(lar / ".local/state/wireplumber")
+    dubles = tmp_path / "bin"
+    dubles.mkdir()
+    diario = tmp_path / "systemctl.txt"
+    systemctl = dubles / "systemctl"
+    systemctl.write_text(
+        "#!/bin/sh\n"
+        f'printf "%s %s\\n" "$*" "$(grep -c hefesto_ {pasta}/default-nodes)" >> {diario}\n',
+        encoding="utf-8",
+    )
+    systemctl.chmod(0o755)
+    roteiro = 'log() { printf "%s\\n" "$*"; }\n' + _o_passo_do_uninstall()
+    ambiente = {
+        "PATH": f"{dubles}:/usr/bin:/bin",
+        "HOME": str(lar),
+        "XDG_STATE_HOME": str(lar / ".local/state"),
+        "ROOT_DIR": str(RAIZ),
+        "LC_ALL": "C",
+    }
+    feito = subprocess.run(
+        ["bash", "-c", roteiro], env=ambiente, capture_output=True, text=True, timeout=60
+    )
+    assert feito.returncode == 0, feito.stderr
+    chamadas = diario.read_text(encoding="utf-8").splitlines()
+    assert chamadas == ["--user stop wireplumber 2", "--user start wireplumber 0"], chamadas
+    for nome, linhas in _DELA.items():
+        assert (pasta / nome).read_text(encoding="utf-8").splitlines() == linhas, nome

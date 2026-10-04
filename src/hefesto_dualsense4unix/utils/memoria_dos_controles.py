@@ -1662,6 +1662,91 @@ def _rastros_do_lar(raizes: Raizes) -> list[Rastro]:
     return rastros
 
 
+#: Os arquivos do estado do WirePlumber que lembram nó pelo NOME
+#: (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01, medido em 02/10/2026: 9 chaves
+#: nossas no ``default-nodes`` e 55 no ``stream-properties``, e o WirePlumber
+#: nunca esquece uma chave).
+ARQUIVOS_DO_ESTADO_DO_WIREPLUMBER = ("default-nodes", "stream-properties")
+_INICIOS_DE_NOME_NOSSO = ("hefesto", "br.com.hefesto", "br.dev.hefesto")
+
+
+def _nome_e_nosso(nome: str) -> bool:
+    """O nó, o app ou o fluxo é do Hefesto: o prefixo nosso, ou o ``HEFESTO`` do endpoint.
+
+    O endpoint da háptica se chama ``alsa_output.usb-…_HEFESTO…`` (é ele que o
+    jogo acha como um DualSense de cabo); o nó cru do DualSense de verdade não
+    tem o ``HEFESTO`` e é dela.
+    """
+    return nome.strip().lower().startswith(_INICIOS_DE_NOME_NOSSO) or "HEFESTO" in nome
+
+
+def linha_nossa_do_wireplumber(arquivo: str, linha: str) -> bool:
+    """A linha ``chave=valor`` do estado do WirePlumber que lembra um nome nosso.
+
+    No ``default-nodes`` o nome é o VALOR (``default.configured.audio.source=…``);
+    no ``stream-properties`` é o fim da CHAVE (``Audio/Sink:node.name:…``).
+    """
+    chave, igual, valor = linha.partition("=")
+    if not igual:
+        return False
+    if arquivo == "default-nodes":
+        return _nome_e_nosso(valor)
+    partes = chave.split(":", 2)
+    return len(partes) == 3 and _nome_e_nosso(partes[2])
+
+
+def chaves_nossas_do_wireplumber(pasta: Path) -> dict[str, list[str]]:
+    """``{arquivo: [linhas nossas]}`` do estado do WirePlumber em ``pasta``. Só lê."""
+    achadas: dict[str, list[str]] = {}
+    for nome in ARQUIVOS_DO_ESTADO_DO_WIREPLUMBER:
+        arquivo = pasta / nome
+        if not arquivo.is_file() or arquivo.is_symlink():
+            continue
+        try:
+            linhas = arquivo.read_text(encoding="utf-8", errors="surrogateescape").splitlines()
+        except OSError:
+            continue
+        nossas = [linha for linha in linhas if linha_nossa_do_wireplumber(nome, linha)]
+        if nossas:
+            achadas[nome] = nossas
+    return achadas
+
+
+def tirar_as_chaves_nossas_do_wireplumber(pasta: Path) -> int:
+    """Reescreve o estado do WirePlumber sem as linhas nossas. Devolve quantas saíram.
+
+    As linhas dela ficam byte a byte, na ordem. Quem chama para o WirePlumber
+    antes (ele grava o estado ao sair, e regravaria as nossas) e o religa depois.
+    """
+    tiradas = 0
+    for nome in chaves_nossas_do_wireplumber(pasta):
+        arquivo = pasta / nome
+        bruto = arquivo.read_bytes()
+        ficam = [
+            linha
+            for linha in bruto.splitlines(keepends=True)
+            if not linha_nossa_do_wireplumber(
+                nome, linha.decode("utf-8", errors="surrogateescape").rstrip("\r\n")
+            )
+        ]
+        tiradas += len(bruto.splitlines()) - len(ficam)
+        tmp = arquivo.with_name("." + arquivo.name + ".hefesto-novo")
+        tmp.write_bytes(b"".join(ficam))
+        with contextlib.suppress(OSError):
+            os.chmod(tmp, arquivo.stat().st_mode & 0o7777)
+        os.replace(tmp, arquivo)
+    return tiradas
+
+
+def _rastros_do_wireplumber(raizes: Raizes) -> list[Rastro]:
+    pasta = raizes.estado / "wireplumber"
+    return [
+        Rastro(str(pasta / nome), f"{len(linhas)} chave(s) com nome do Hefesto no estado "
+               "do WirePlumber")
+        for nome, linhas in chaves_nossas_do_wireplumber(pasta).items()
+    ]
+
+
 _SUFIXOS_DAS_COPIAS = (".bak.hefesto-", ".bak.steam-input")
 
 
@@ -1739,8 +1824,8 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
 
 def conferir_a_casa(raizes: Raizes, sistema: Sistema | None = None) -> list[Rastro]:
     """Depois do uninstall: o que sobrou do Hefesto, lugar por lugar."""
-    return (_rastros_do_lar(raizes) + _rastros_nos_lancadores(raizes)
-            + _rastros_do_sistema(raizes, sistema))
+    return (_rastros_do_lar(raizes) + _rastros_do_wireplumber(raizes)
+            + _rastros_nos_lancadores(raizes) + _rastros_do_sistema(raizes, sistema))
 
 
 def _principal_do_root(argv: Sequence[str]) -> int:
@@ -1766,8 +1851,17 @@ def principal(argv: Iterable[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["raiz"]:
         return _principal_do_root(args[1:])
+    if args[:1] == ["wireplumber"] and "--pasta" in args[1:-1]:
+        pasta = Path(args[args.index("--pasta") + 1])
+        if "--tirar" in args:
+            print(f"{tirar_as_chaves_nossas_do_wireplumber(pasta)} chave(s) do Hefesto tiradas "
+                  f"do estado do WirePlumber em {pasta}")
+        else:
+            for nome, linhas in chaves_nossas_do_wireplumber(pasta).items():
+                print(f"{nome}: {len(linhas)}")
+        return 0
     print("uso: memoria_dos_controles.py raiz {esquecer,restaurar} --pasta P [--seco]"
-          " | raiz olhar", file=sys.stderr)
+          " | raiz olhar | wireplumber --pasta P [--tirar]", file=sys.stderr)
     return 2
 
 
