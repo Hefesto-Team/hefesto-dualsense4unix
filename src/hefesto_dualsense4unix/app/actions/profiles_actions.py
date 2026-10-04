@@ -227,7 +227,7 @@ _PECAS_CUJO_VALOR_E_O_DADO: dict[str, frozenset[str]] = {
 }
 
 #: A peça de um controle que não está ligado agora não é falta: não há o que escrever, e o
-#: produto reaplica quando ele conecta (o alto-falante e o microfone, `reapply_speaker_on_connect` e `reapply_mic_on_connect`).
+#: produto reaplica quando ele conecta (`reapply_speaker_on_connect` e `reapply_mic_on_connect`).
 _PECAS_QUE_ESPERAM_O_CONTROLE = ("speaker:", "mic:")
 _SEM_CONTROLE = "ignorado_sem_controle"
 
@@ -280,7 +280,10 @@ def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
         str(s)
         for s, estado in secoes.items()
         if str(estado) == "aplicado"
-        or (str(s).startswith(tuple(_PECAS_CUJO_VALOR_E_O_DADO)) and not _e_falta(str(s), str(estado)))
+        or (
+            str(s).startswith(tuple(_PECAS_CUJO_VALOR_E_O_DADO))
+            and not _e_falta(str(s), str(estado))
+        )
     ]
     nao_entraram = {
         nome_da_secao_da_ativacao(str(s)): str(estado)
