@@ -195,7 +195,13 @@ async def test_caminho_com_uniq_continua_mirando_so_um(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_o_broadcast_dela_vence_o_jogo(tmp_path: Path) -> None:
-    """DECISÃO DELA — 16/09/2026, PERFIL-MANDA-01: *"meu perfil manda"*."""
+    """O «Todos» é gesto dela: vence a cor que o jogo pintou, até o jogo pintar de novo.
+
+    A regra de 16/09 («meu perfil manda») caiu em 03/10/2026: o jogo manda, e na
+    ausência dele o perfil ganha. O gesto dela na interface é a ordem mais nova
+    (por delegação, a validar por ela), e o «Todos» é gesto como o clique num
+    controle.
+    """
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)
     ctl.set_game_authority_provider(lambda: "game")
     assert ctl.set_game_output_for(MAC_1, led=(255, 0, 255)) is True
