@@ -117,35 +117,16 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
        border:2px solid var(--plastico);border-radius:9px;background:var(--app-bg);
        position:relative}
 
-  /* ---------- DOIS ANÉIS: O CASCO FORA, A LUZ VIVA DENTRO (D-06 / S-11) ----
-     Decisão dela, 04/09/2026, verbatim: *"Casco borda externa lightbar borda
-     interna"*. São duas cores que respondem a duas perguntas diferentes e
-     estavam disputando a mesma borda: o PLÁSTICO é o que o aparelho É (não
-     muda enquanto ele existir) e a BARRA DE LUZ é o que ele mostra AGORA.
-
-     É ELA QUE FAZ RECONHECER DE RELANCE numa mesa de quatro: os quatro cascos
-     podem ser iguais (quatro DualSense brancos), e a luz do jogador nunca é.
-
-     O ANEL É UM ELEMENTO, E NÃO UMA SEGUNDA BORDA da `.ctl`. A razão é o
-     mecanismo: o piloto pinta cor por `data-campo`, e um elemento só aceita UM
-     alvo — a `.ctl` já carrega `--plastico` (alvo `plastico`) e o `data-controle`
-     que endereça o card inteiro. O anel próprio compartilha o `data-campo` do
-     retângulo da Barra de luz (`luz-cor`), e é isso que garante que os dois
-     NUNCA divirjam: `achar()` visita os dois elementos com o mesmo valor, no
-     mesmo tique.
-
-     `transparent` É O REPOUSO, e não uma cor de espera: quando o motor diz "não
-     sei" o pacote manda vazio, o `escrever` do alvo `cor` faz
-     `el.style.color = ''` e a regra abaixo volta a valer. Anel invisível é o
-     que a tela pode afirmar sobre uma luz que ninguém leu — e é a mesma regra
-     que o retângulo já segue desde 03/09.
-
-     O RAIO É 7 E NÃO 9 porque o anel mora DENTRO dos 2px da borda do casco:
-     `border-radius` externo menos a espessura da borda é o que faz os dois
-     arcos ficarem concêntricos. Com 9 nos dois, o interno abre uma meia-lua
-     branca em cada canto. */
-  .ctl.card > .anel-vivo{position:absolute;inset:0;border-radius:7px;
-       border:1px solid currentColor;color:transparent;pointer-events:none;z-index:1}
+  /* ---------- A BORDA DO CARTÃO É O PLÁSTICO, E SÓ ELE ----------
+     Ela, 03/10/2026, olhando a foto dos quatro controles Bluetooth: *"as borda
+     tá nas cores do lightbar e não do plastico ainda né?"* — e a lista de
+     sprints pediu a borda de cada cartão, aberto e fechado, com a cor do
+     plástico. Medido no DOM: o `borderTopColor` do `.ctl` JÁ era o plástico
+     (2px); o que parecia a borda verde era o anel de 1px da barra de luz, por
+     dentro, mais vivo que o casco e por isso lido como a borda.
+     Revoga o «casco fora, lightbar dentro» de 04/09 (D-06 / S-11). A barra de
+     luz fica onde ela tem nome: o quadro «Barra de luz» do cartão aberto
+     (`luz-cor`), que não deixa de ser pintado. */
   .ctl > .faixa{flex:1;margin:0;padding:0 26px;border:0;border-radius:0;
                 background:transparent;flex-wrap:nowrap;white-space:nowrap;
                 cursor:pointer;-webkit-user-select:none;user-select:none}
@@ -1997,7 +1978,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
            é o que este elemento pode ter sem disputar o clique dela.
            A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
       <input class="radio-mesa" type="radio" name="mesa" id="{rid}" data-campo="card-aberto" data-hef-alvo="marcado"{" checked" if c["alvo"] else ""}>
-      <span class="anel-vivo" data-campo="luz-cor" data-hef-alvo="cor"></span>
 {fx}
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -3099,7 +3079,7 @@ def _conferir(doc):
                          ("alto-barra", ("largura", "valor")),
                          ("mic-barra", ("largura", "valor")),
                          ("mic-ganho-barra", ("largura", "valor")),
-                         ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",)),
+                         ("luz-cor", ("cor",)), ("touch-ponto", ("classe",)),
                          ("touch-ponto-2", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
         exigir(len(tags) == len(MESA) * len(alvos),

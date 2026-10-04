@@ -446,35 +446,44 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   botao.click();
   linha.removeAttribute('data-porque');
 
-  // OS DOIS ANÉIS. O de fora é a borda do card (o plástico); o de dentro é o
-  // elemento próprio, e a régua o pinta pelo mesmo `style.color` que o alvo
-  // `cor` do piloto escreve.
-  // ELEMENTO AUSENTE É MEDIDA, E NÃO ERRO DE INSTRUMENTO: sem esta guarda a
-  // mordida (tirar o `<span class="anel-vivo">` do gerador) estoura no
-  // `getComputedStyle` e derruba a leitura INTEIRA — a régua reprovaria pelo
-  // caso errado, e quem lesse o vermelho procuraria o defeito noutro lugar.
-  const anel = card.querySelector('.anel-vivo');
-  const casco = getComputedStyle(card).borderTopColor;
-  let anel_apagado = 'sem o anel', anel_aceso = 'sem o anel', anel_dentro = false;
-  if (anel) {
-    anel_apagado = getComputedStyle(anel).borderTopColor;
-    anel.style.color = 'rgb(0, 0, 255)';
-    anel_aceso = getComputedStyle(anel).borderTopColor;
-    const caixa_do_card = card.getBoundingClientRect();
-    const caixa_do_anel = anel.getBoundingClientRect();
-    anel_dentro = (caixa_do_anel.left >= caixa_do_card.left
-                   && caixa_do_anel.right <= caixa_do_card.right);
-    anel.style.color = '';
-  }
+  // A BORDA DE CADA CARTÃO É O PLÁSTICO (03/10/2026). A régua pinta a barra de
+  // luz de TODOS os cartões de vermelho, pelo mesmo `style.color` que o alvo
+  // `cor` do piloto escreve, e mede duas coisas: (1) a borda do próprio cartão é
+  // o hexa do `--plastico` dele, que a régua lê de uma sonda e não de uma lista;
+  // (2) nenhum elemento colado na beirada do cartão tomou o vermelho — o anel de
+  // 1px por dentro foi o que ela leu como «borda nas cores do lightbar».
+  const sonda = document.createElement('i');
+  document.body.appendChild(sonda);
+  const rgb = (cor) => { sonda.style.color = ''; sonda.style.color = cor;
+                         return getComputedStyle(sonda).color; };
+  document.querySelectorAll('[data-campo="luz-cor"]').forEach(
+    (el) => { el.style.color = 'rgb(255, 0, 0)'; });
+  const bordas = [];
+  document.querySelectorAll('.ctl.card').forEach((c) => {
+    const cx = c.getBoundingClientRect();
+    const gs = getComputedStyle(c);
+    const plastico = c.style.getPropertyValue('--plastico').trim()
+                     || gs.getPropertyValue('--plastico').trim();
+    const colados = [];
+    c.querySelectorAll('*').forEach((el) => {
+      const e = getComputedStyle(el);
+      if (parseFloat(e.borderTopWidth) <= 0 || e.borderTopColor !== 'rgb(255, 0, 0)') return;
+      const r = el.getBoundingClientRect();
+      if (r.left - cx.left <= 4 && cx.right - r.right <= 4) colados.push(el.className);
+    });
+    bordas.push({casco: gs.borderTopColor, largura: gs.borderTopWidth,
+                 plastico: plastico, plastico_rgb: plastico ? rgb(plastico) : '',
+                 colados: colados});
+  });
+  sonda.remove();
+  const casco = bordas.length ? bordas[0].casco : '';
 
   return {
     botao_antes: antes, botao_depois: depois, clique_recebido: recebeu,
     botao_tem_disabled: botao.hasAttribute('disabled'),
     porque_sem: porque_sem, porque_com: porque_com,
-    casco: casco, anel_apagado: anel_apagado, anel_aceso: anel_aceso,
-    anel_dentro: anel_dentro,
-    // OS DOIS ELEMENTOS DO MESMO ENDEREÇO, que é o que impede o anel e o
-    // retângulo de discordarem.
+    casco: casco, bordas: bordas,
+    // UM ELEMENTO POR CARTÃO: a barra de luz, no quadro com o nome dela.
     luz_cor_no_card: card.querySelectorAll('[data-campo="luz-cor"]').length,
     radio_alvo: card.querySelector('.radio-mesa').dataset.hefAlvo,
     radio_campo: card.querySelector('.radio-mesa').dataset.campo,
@@ -524,19 +533,22 @@ def test_o_botao_de_som_apaga_e_ainda_assim_responde(desenhado: dict[str, Any]) 
         "o `?` não apareceu com o botão apagado — a razão ficou inalcançável")
 
 
-def test_o_casco_fica_fora_e_a_luz_viva_dentro(desenhado: dict[str, Any]) -> None:
-    """D-06 / S-11 — dois anéis, duas perguntas, e eles não se disputam."""
-    assert desenhado["anel_apagado"] != desenhado["anel_aceso"], (
-        "o anel interno não seguiu a cor de linha — ele deixou de ser a luz "
-        "viva e virou desenho")
-    assert desenhado["anel_aceso"] == "rgb(0, 0, 255)"
-    assert desenhado["anel_aceso"] != desenhado["casco"], (
-        "o anel interno e o casco pintaram a MESMA cor — são duas perguntas "
-        "diferentes, e uma delas deixou de ser respondida")
-    assert desenhado["anel_dentro"], "o anel interno saiu de dentro do casco"
-    assert desenhado["luz_cor_no_card"] == 2, (
-        "o retângulo e o anel deixaram de compartilhar o endereço `luz-cor` — "
-        "com dois campos, os dois podem discordar na tela")
+def test_a_borda_do_cartao_tem_a_cor_do_plastico(desenhado: dict[str, Any]) -> None:
+    """03/10/2026 — com a barra de luz pintada de outra cor, a borda segue o plástico."""
+    bordas = desenhado["bordas"]
+    assert len(bordas) == 4, f"a régua mediu {len(bordas)} cartões, e a mesa tem 4"
+    for b in bordas:
+        assert b["plastico_rgb"], "um cartão nasceu sem `--plastico`: não há o que medir"
+        assert b["casco"] == b["plastico_rgb"], (
+            f"a borda do cartão ({b['casco']}) não é a cor do plástico "
+            f"({b['plastico_rgb']})")
+        assert b["casco"] != "rgb(255, 0, 0)", "a borda tomou a cor da barra de luz"
+        assert not b["colados"], (
+            f"há elemento colado na beirada do cartão com a cor da barra de luz "
+            f"({b['colados']}): é ele que se lê como a borda")
+    assert desenhado["luz_cor_no_card"] == 1, (
+        "a barra de luz do cartão perdeu o endereço `luz-cor`: o quadro dela "
+        "deixa de ser pintado")
 
 
 def test_o_acordeao_publica_o_decimo_alvo(desenhado: dict[str, Any]) -> None:
