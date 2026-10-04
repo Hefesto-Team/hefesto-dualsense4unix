@@ -226,3 +226,47 @@ def test_a_onda_do_lado_esquerdo_vai_so_no_canal_3(ensaio: Any) -> None:
     assert any(bloco[0::2]) and not any(bloco[1::2])
     centro = ensaio.onda_por_bloco(120.0, "centro")()
     assert centro[0::2] == centro[1::2]
+
+
+def test_nao_sei_se_o_daemon_esta_no_ar_e_recusa(monkeypatch: pytest.MonkeyPatch) -> None:
+    """«Não sei» nunca é «parado»: só o socket ausente ou recusando libera o ensaio.
+
+    O ``daemon.status`` tem 0,25 s; o daemon ocupado não responde a tempo, e a
+    pergunta que propaga um erro inesperado também não. Nos dois, o ensaio
+    escrevia no hidraw que o daemon escreve.
+
+    MORDIDA: devolver False no erro ou sem resposta do ``daemon.status``
+    (a pergunta do ``test trigger --raw`` sozinha) e o ensaio vê o daemon
+    ocupado como parado.
+    """
+    import shutil
+    import socket
+    import tempfile
+
+    from hefesto_dualsense4unix.app import ipc_bridge
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    modulo = _carregar_o_ensaio()
+    pasta = Path(tempfile.mkdtemp(prefix="ens", dir="/tmp"))
+    caminho = pasta / "s"
+    monkeypatch.setattr(xdg_paths, "ipc_socket_path", lambda: caminho)
+    monkeypatch.setattr(ipc_bridge, "daemon_status_basic", lambda: None)
+    try:
+        assert modulo.daemon_no_ar() is False, "sem socket, o daemon está parado"
+
+        ouvinte = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        ouvinte.bind(str(caminho))
+        ouvinte.listen(1)
+        assert modulo.daemon_no_ar() is True, "alguém aceita a conexão: pode estar no ar"
+        ouvinte.close()
+        assert modulo.daemon_no_ar() is False, "o socket que sobrou de um daemon morto"
+
+        def _quebra() -> None:
+            raise RuntimeError("defeito na pergunta")
+
+        monkeypatch.setattr(ipc_bridge, "daemon_status_basic", _quebra)
+        assert modulo.daemon_no_ar() is True, "o erro inesperado virou «parado»"
+        monkeypatch.setattr(ipc_bridge, "daemon_status_basic", lambda: {"ok": True})
+        assert modulo.daemon_no_ar() is True
+    finally:
+        shutil.rmtree(pasta, ignore_errors=True)

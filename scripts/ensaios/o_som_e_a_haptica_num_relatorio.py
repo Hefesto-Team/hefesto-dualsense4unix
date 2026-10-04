@@ -140,13 +140,33 @@ def descrever(relatorio: bytes) -> list[str]:
 
 
 def daemon_no_ar() -> bool:
-    """O daemon responde? É a mesma pergunta do ``test trigger --raw``."""
+    """O daemon pode estar no ar? Na dúvida, SIM: «não sei» nunca é «parado».
+
+    Primeiro a pergunta do ``test trigger --raw`` (``daemon.status``). Sem
+    resposta, o socket decide: nenhum socket, ou um socket que recusa a
+    conexão (o que sobrou de um daemon morto), é o daemon parado; alguém que
+    aceita a conexão (o daemon ocupado demais para responder em 0,25 s) ou
+    qualquer outro erro é «pode estar no ar», e o ensaio recusa.
+    """
+    import socket
+
     from hefesto_dualsense4unix.app.ipc_bridge import daemon_status_basic
+    from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
     try:
-        return daemon_status_basic() is not None
-    except Exception:
+        if daemon_status_basic() is not None:
+            return True
+        caminho = ipc_socket_path()
+        if not caminho.exists():
+            return False
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conexao:
+            conexao.settimeout(1.0)
+            conexao.connect(str(caminho))
+    except (ConnectionRefusedError, FileNotFoundError):
         return False
+    except Exception:
+        return True
+    return True
 
 
 def _exigir_bancada() -> tuple[bool, str]:
