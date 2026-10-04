@@ -1727,6 +1727,11 @@ class PyDualSenseController(IController):
         # guarda de 12 dígitos que impede um pseudo-MAC de key por path
         # (`/dev/hidrawN` → "deda4") levar a posse ao controle errado.
         self._mic_mute_by_uniq: dict[str, bool] = {}
+        # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: quem tem a háptica por áudio
+        # tocando, por MAC. Mora aqui, e não só no handle, pelo motivo do mudo
+        # acima: a troca de nó (rádio para cabo) e a reconexão RECRIAM o
+        # handle, e o dono das pontes só diz a borda.
+        self._haptica_de_audio_por_uniq: set[str] = set()
         # R-20 item 2: escala de brilho POR CONTROLE, aplicada à BASE do merge.
         # Um override que só mexia no brilho materializava a cor GLOBAL no
         # slot por-uniq (`_controllers_to_specs` resolvia `lightbar` do global
@@ -3653,6 +3658,11 @@ class PyDualSenseController(IController):
                 else {}
             )
             mic_mudo = self._mic_mute_by_uniq.get(uniq) if uniq is not None else None
+            haptica_de_audio = uniq is not None and uniq in self._haptica_de_audio_por_uniq
+        definir_a_haptica = getattr(handle, "set_haptica_de_audio", None)
+        if callable(definir_a_haptica):
+            with contextlib.suppress(Exception):
+                definir_a_haptica(haptica_de_audio)
         for side, block in game_triggers.items():
             attr = "_raw_trigger_left" if side == "left" else "_raw_trigger_right"
             with contextlib.suppress(Exception):
@@ -5019,12 +5029,18 @@ class PyDualSenseController(IController):
         `HAPTICS_SELECT` enquanto ela toca (:meth:`_PinnedPyDualSense.
         set_haptica_de_audio`). Vale nos dois transportes, porque o bit é o
         mesmo no `0x02` do cabo e no `0x31` do rádio. Devolve False quando o
-        MAC não casa com handle nenhum.
+        MAC não casa com handle nenhum. O que foi dito fica no mapa por MAC, e
+        o handle que nasce depois (a reconexão, a troca de nó) o recebe em
+        :meth:`_reapply_desired`.
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
             return False
         with self._io_lock:
+            if ativa:
+                self._haptica_de_audio_por_uniq.add(alvo)
+            else:
+                self._haptica_de_audio_por_uniq.discard(alvo)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
         definir = getattr(handle, "set_haptica_de_audio", None)

@@ -146,6 +146,43 @@ def test_o_controlador_mira_o_handle_do_controle(jogador: int) -> None:
     assert inst.set_haptica_de_audio_for("aabbcc0000ff", True) is False
 
 
+def test_o_handle_novo_herda_a_haptica_que_ja_tocava() -> None:
+    """A troca de nó (rádio para cabo) e a reconexão recriam o handle.
+
+    O dono das pontes só diz a BORDA: com a háptica seguindo de pé (a ponte do
+    rádio vira o laço do cabo), ele não repete o True, e o handle novo nascia
+    com o bit 1 de volta no rumble. O mapa por MAC do controlador o
+    rependura no handle novo; o vizinho não herda.
+
+    MORDIDA: tire a leitura do mapa de `_reapply_desired` e o handle novo
+    manda o rumble com o HAPTICS_SELECT, calando a háptica que toca.
+    """
+    from tests.unit.test_o_mudo_do_microfone_sobrevive_a_reconexao import (
+        KEY_1,
+        KEY_2,
+        _ctl_com,
+        _handle_recem_nascido,
+        _reconectar,
+    )
+
+    ctl = _ctl_com(_handle_recem_nascido(radio=True))
+    ctl._handles[KEY_2] = _handle_recem_nascido(radio=True)
+    assert ctl.set_haptica_de_audio_for(KEY_1, True) is True
+
+    novo = _reconectar(ctl, radio=False)
+    flag0 = novo._build_common(rumble_asserted=True)[0]
+    assert flag0 & BIT0 and not flag0 & BIT1, f"o handle novo perdeu a háptica: {flag0:#04x}"
+
+    vizinho = _handle_recem_nascido(radio=True)
+    ctl._handles[KEY_2] = vizinho
+    ctl._reapply_desired(KEY_2, vizinho)
+    assert vizinho._build_common(rumble_asserted=True)[0] & BIT1, "o vizinho herdou a háptica"
+
+    ctl.set_haptica_de_audio_for(KEY_1, False)
+    de_novo = _reconectar(ctl, radio=True)
+    assert de_novo._build_common(rumble_asserted=True)[0] & BIT1, "a háptica parada ficou no mapa"
+
+
 class _Controlador:
     """O controlador de mentira: anota o que o subsystem disse a quem."""
 
