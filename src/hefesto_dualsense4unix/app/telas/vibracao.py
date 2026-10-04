@@ -18,9 +18,10 @@ uma: **o que não tem fonte fica declarado, nunca inventado.** Um número
 plausível e falso é pior que um traço honesto, porque ela confia nele.
 
 * **tem fonte, e é da MESA (um valor para os quatro):** o degrau de força
-  (``rumble_policy``), o multiplicador aplicado (``rumble_mult_applied``), a
-  trava (``rumble_active``) e o passthrough (``rumble_passthrough``);
-* **tem fonte, e é POR CONTROLE:** o par que chegou aos motores agora
+  (``rumble_policy``), o multiplicador aplicado (``rumble_mult_applied``) e o
+  passthrough (``rumble_passthrough``);
+* **tem fonte, e é POR CONTROLE:** a trava (o par fixado de cada controle,
+  ``subsystems/rumble.pares_fixados``, desde 03/10/2026); o par que chegou aos motores agora
   (``rumble_ff.per_vpad[].rumble_no_fisico``), lido pelo
   ``controller_card.motores_no_fisico`` — que é quem sabe quando o par está
   velho demais para ser dito;
@@ -116,10 +117,6 @@ SEM_FONTE: dict[str, str] = {
     "`subsystems/rumble.reassert_rumble` e `subsystems/gamepad._game_rumble_mult`). "
     "As quatro colunas mostram o MESMO valor porque é o que existe. "
     "Fecha: MIGRA-VIBRACAO-04.",
-    "trava:por-controle": "A trava é UMA para a mesa — `daemon_cfg.rumble_active` "
-    "mais `rumble_active_uniq` (`daemon/ipc_handlers.py:3709-3715`). Quatro "
-    "'Parar' sobre uma trava só: parar o P2 apaga a vibração do P1. "
-    "Fecha: MIGRA-VIBRACAO-05.",
     "estado:da-vibracao": "O produto de hoje tem uma LINHA DE ESTADO da vibração e "
     "um aviso de teto do orçamento (`rumble_state_label`, `rumble_policy_aviso` "
     "no `gui/main.glade`); o desenho aprovado não tem onde pô-los. "
