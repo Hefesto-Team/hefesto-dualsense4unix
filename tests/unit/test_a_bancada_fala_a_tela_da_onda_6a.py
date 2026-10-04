@@ -241,9 +241,11 @@ def test_a_replica_nao_escolhe_antes_a_cor_do_controle_que_mede() -> None:
     ctl.apply_output_for(_UNIQ, OutputSpec(led=_AMARELO))
     ctl.set_game_output_for(_MAC, led=_COR_DO_JOGO)
     with ctl._io_lock:
-        assert ctl._merged_desired_for_key(_MAC).led == _AMARELO, (
-            "a cor do jogo venceu a cor clicada — a premissa desta régua caiu, e a "
-            "réplica pode voltar a partir de uma cor escolhida")
+        # Desde 03/10/2026 o jogo manda e o que foi clicado ANTES cede (a decisão
+        # dela que revoga a PERFIL-MANDA-01): a réplica que começa sem cor escolhida
+        # segue medindo só a cor do jogo.
+        assert ctl._merged_desired_for_key(_MAC).led == _COR_DO_JOGO, (
+            "a cor clicada antes do jogo venceu a do jogo — o jogo deixou de mandar")
 
     erradas = []
     for titulo, corpo in _replicas().items():

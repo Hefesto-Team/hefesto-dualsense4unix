@@ -475,10 +475,10 @@ def _sem_os_campos(
 ) -> _DesiredOutput | None:
     """Cópia de `desired` sem os campos defendidos. None = não sobrou nada.
 
-    PERFIL-MANDA-01: a camada GAME passa por aqui antes de entrar no merge.
-    Devolver `None` quando o perfil defendeu TODOS os campos daquela camada é o
-    que faz `_merged_desired_for_key` pular o `_merge_desired` — um merge com
-    tudo em `None` seria no-op caro chamado a cada resolve, e esta função roda
+    A camada GAME passa por aqui antes de entrar no merge, sem a numeração do
+    jogador (que é do Hefesto). Devolver `None` quando não sobrou campo é o que
+    faz `_merged_desired_for_key` pular o `_merge_desired` — um merge com tudo
+    em `None` seria no-op caro chamado a cada resolve, e esta função roda
     dentro do `_io_lock`.
     """
     if not campos:
@@ -2180,7 +2180,10 @@ class PyDualSenseController(IController):
         )
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         if game is not None and self._game_wins():
-            nao_pinta = self._campos_do_perfil_locked(uniq) | numeracao_do_jogo(
+            # O jogo manda; na ausência dele, o perfil ganha (decisão dela de
+            # 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09). Só a numeração
+            # do jogador é do Hefesto, e não se pinta pelo jogo.
+            nao_pinta = numeracao_do_jogo(
                 {nome: getattr(game, nome) for nome in _OUTPUT_FIELDS}
             )
             game = _sem_os_campos(game, nao_pinta)
@@ -2301,12 +2304,31 @@ class PyDualSenseController(IController):
         self._prune_overrides_locked()
 
     def _stamp_owner_locked(self, uniq: str, campos: Any, layer: str) -> None:
-        """Carimba a procedência dos campos escritos. Sob `_io_lock` (R-20)."""
+        """Carimba a procedência dos campos escritos. Sob `_io_lock` (R-20).
+
+        O jogo manda; na ausência dele, o perfil ganha (decisão dela de
+        03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09): o perfil carimbado
+        não tira o que o jogo pintou. O GESTO dela na interface (`usuaria`) é
+        a ordem mais nova, e vale o último que mandou: ele solta o que o jogo
+        pintou NAQUELES campos, até o jogo pintar de novo.
+        """
         donos = self._desired_owner_by_uniq.setdefault(uniq, {})
         for campo in campos:
             donos[campo] = layer
-        if layer not in (_LAYER_PROFILE, _LAYER_USER):
-            return
+        if layer == _LAYER_USER:
+            self._o_gesto_solta_o_que_o_jogo_pintou_locked(uniq, tuple(campos))
+
+    def _o_gesto_solta_o_que_o_jogo_pintou_locked(
+        self, uniq: str, campos: tuple[str, ...]
+    ) -> None:
+        """Tira da camada do jogo os campos que o gesto dela acabou de escrever."""
+        game = self._game_output_by_uniq.get(uniq)
+        if game is not None:
+            restante = _sem_os_campos(game, frozenset(campos))
+            if restante is None:
+                self._game_output_by_uniq.pop(uniq, None)
+            else:
+                self._game_output_by_uniq[uniq] = restante
         lados = [
             ("left" if campo == "trigger_left" else "right")
             for campo in campos
@@ -2330,59 +2352,15 @@ class PyDualSenseController(IController):
     def _pode_defender_locked(self) -> bool:
         """A defesa de exibição (NUMA-03) já pode repintar? Sob `_io_lock`.
 
-        O rate-limit é o mesmo de antes (`DEFEND_DISPLAY_MIN_INTERVAL_S`); o que
-        mudou em 16/09/2026 é que ele passou a ter DOIS chamadores — a réplica
-        retida sob 'daemon' e a réplica recusada pela PERFIL-MANDA-01. Virou
-        função para não haver duas contas do mesmo relógio: duas cópias da mesma
-        aritmética foi como o `rumble` ganhou duas memórias, e a casa pagou.
+        O rate-limit é o de `DEFEND_DISPLAY_MIN_INTERVAL_S`, e quem o consulta é
+        a réplica retida sob 'daemon'. É função para não haver duas contas do
+        mesmo relógio: duas cópias da mesma aritmética foi como o `rumble`
+        ganhou duas memórias, e a casa pagou.
         """
         agora = time.monotonic()
         return (
             self._defend_last_at is None
             or (agora - self._defend_last_at) >= DEFEND_DISPLAY_MIN_INTERVAL_S
-        )
-
-    def _campos_do_perfil_locked(self, uniq: str | None) -> frozenset[str]:
-        """Os campos DELE que têm dono declarado — o que o jogo não pinta.
-
-        PERFIL-MANDA-01 (16/09/2026), e a ordem é dela, com o Sackboy aberto na
-        frente: *"meu perfil manda"*. Este é o predicado inteiro da regra — o
-        resto da cura só o consulta.
-
-        O QUE CONTA COMO «DELA», e a distinção é o desenho todo: um campo de
-        `_desired_by_uniq` com dono `perfil` ou `usuaria` (o carimbo do R-20).
-        Ou seja, a cor/gatilho que ELA escolheu para ESTE controle — pelo perfil
-        do jogo ou por um gesto na interface, que grava a cada clique. Fica de
-        fora, de propósito e sem carimbo:
-
-          * o `_desired_default` (o broadcast global do perfil), que nasce nos
-            valores de fábrica do schema — defendê-lo faria um perfil que nunca
-            escolheu cor APAGAR a barra dentro do jogo, com `(0, 0, 0)`;
-          * a camada AUTOMÁTICA (COR-03, a cor do número), que é do produto e
-            não dela — defendê-la tiraria a luz de TODO jogo, inclusive de quem
-            nunca configurou nada.
-
-        A MEDIÇÃO QUE FEZ ESTA REGRA NASCER, no journal dela de 16/09/2026: o
-        perfil do Sackboy entrou às 00:18:34 com a cor de cada controle
-        (`(255,255,0)` e `(0,255,128)`) e os gatilhos por controle; dezenove
-        segundos depois, `game_output_replicado autoridade=game` trocou os dois
-        pela paleta de jogador do SDL (`(0,64,0)` e `(32,0,32)`, os mesmos
-        0x40/0x20 que a LIGHTBAR-NA-STEAM-01 identificou), e às 00:20:26 o
-        `uhid_replica_ativa categoria=trigger_left/right` trocou os gatilhos. É
-        o §I.4 daquela sprint — escrito, adiado *"só se a telemetria do passo 2
-        mostrar a paleta chegando já sob `game`"*, e a telemetria mostrou.
-        """
-        if uniq is None:
-            return frozenset()
-        override = self._desired_by_uniq.get(uniq)
-        if override is None:
-            return frozenset()
-        donos = self._desired_owner_by_uniq.get(uniq) or {}
-        return frozenset(
-            campo
-            for campo, dono in donos.items()
-            if dono in (_LAYER_PROFILE, _LAYER_USER)
-            and getattr(override, campo, None) is not None
         )
 
     def _carimbar_procedencia_locked(
@@ -5061,18 +5039,9 @@ class PyDualSenseController(IController):
             )
             return False
         lado = "left" if side == "left" else "right"
-        campo = "trigger_left" if lado == "left" else "trigger_right"
         with self._io_lock:
-            # Sackboy aplicou `SimpleRigid`/`Rigid` por controle às 00:18:34 e o
-            if campo in self._campos_do_perfil_locked(alvo):
-                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
-                se_diz = campo not in ja_dito
-                ja_dito.add(campo)
-                if se_diz:
-                    logger.info(
-                        "game_trigger_recusado_o_perfil_manda", uniq=alvo, lado=lado
-                    )
-                return True
+            # O jogo manda no gatilho, de qualquer perfil e do Freestyle (decisão
+            # dela de 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09).
             self._game_triggers_by_uniq.setdefault(alvo, {})[lado] = block_b
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
@@ -5124,21 +5093,6 @@ class PyDualSenseController(IController):
                     )
                 if not fields:
                     return True
-            defendidos = self._campos_do_perfil_locked(alvo)
-            recusados = sorted(campo for campo in fields if campo in defendidos)
-            if recusados:
-                recusa = {campo: fields.pop(campo) for campo in recusados}
-                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
-                novos = sorted(campo for campo in recusados if campo not in ja_dito)
-                ja_dito.update(recusados)
-                if novos:
-                    logger.info(
-                        "game_output_recusado_o_perfil_manda",
-                        uniq=alvo,
-                        campos=novos,
-                        **self._luz_para_o_journal(recusa),
-                    )
-                defender = self._pode_defender_locked()
             wins = bool(fields) and self._game_wins()
             if fields and not wins:
                 retido = self._retained_game_outputs.setdefault(alvo, {})
