@@ -1103,9 +1103,16 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # sai com: A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01
+    # sai com: O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01
+    "integrations/alto_falante_bt.py::RelatorioCombinado":
+        "03/10/2026, o primeiro tempo da sprint: o escritor único do 0x36 (o som "
+        "e a háptica num relatório, um contador só no 0x11) nasceu com as réguas "
+        "e o ensaio de bancada, e a ponte só passa a usá-lo depois que o ensaio "
+        "provar o formato no aparelho (o segundo tempo).",
+    # sai com: O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026: a A-HAPTICA-DO-RADIO
+    # fechou pela prova no PRAGMATA; o bloco vai com o escritor do relatório combinado)
     "integrations/haptica_bt.py::bloco_de_silencio":
-        "Irmã da entrada acima, mesma sprint e mesma lacuna: o bloco zerado é "
+        "O bloco zerado é "
         "o que a ponte manda quando o jogo cala, e é a MORDIDA da bancada — "
         "com ele o controle parou, e foi isso que separou o voice-coil do "
         "rumble clássico em 18/09/2026.",
