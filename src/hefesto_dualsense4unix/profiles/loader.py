@@ -1084,6 +1084,10 @@ def _linhas_da_marca(marca: Path) -> list[tuple[str, str]]:
         identidade, _, arquivo = linha.strip().partition("\t")
         if not _identidade_valida(identidade):
             continue
+        if identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA):
+            # A marca de antes de 03/10 gravou o jogo da janela `steam_app_<N>`
+            # na forma da janela; lida pelo mesmo dono, é a identidade `<N>`.
+            identidade = _identidade("", identidade[len(PREFIXO_DA_CHAVE_DE_JANELA) :])
         lidas.append((identidade, arquivo.strip()))
     return lidas
 

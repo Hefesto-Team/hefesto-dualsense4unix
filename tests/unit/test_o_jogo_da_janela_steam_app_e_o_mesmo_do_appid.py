@@ -78,3 +78,31 @@ def test_dois_jogos_de_nomes_diferentes_com_o_mesmo_slug_seguem_nome_ocupado(
     resultado = loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=[outro])
 
     assert [x.desfecho for x in resultado.linhas] == ["nome_ocupado"]
+
+
+def test_a_marca_velha_com_a_forma_da_janela_continua_valendo(tmp_path: Path) -> None:
+    """A marca escrita ANTES da cura (``janela:steam_app_<N>``) é a mesma identidade.
+
+    O jogo semeado pela janela antes de 03/10 ficou na marca com a forma velha.
+    Se ela apagou aquele perfil, a marca é o que impede o produto de recriá-lo;
+    lida sem a conversão, a identidade nova (``<N>``) não estaria lá e o perfil
+    apagado voltaria na próxima varredura.
+    """
+    destino = tmp_path / "perfis"
+    destino.mkdir()
+    (destino / loader.MARCA_DE_SEMEADURA_DE_JOGOS).write_text(
+        "janela:steam_app_1088850\tmarvels_guardians_of_the_galaxy.json\n",
+        encoding="utf-8",
+    )
+    jogo = JogoLocal(
+        appid="",
+        nome="Marvel's Guardians of the Galaxy",
+        fonte="heroic",
+        chave="steam_app_1088850",
+    )
+
+    resultado = loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=[jogo])
+
+    assert resultado.criados == ()
+    assert [x.desfecho for x in resultado.linhas] == ["ja_semeado"]
+    assert not (destino / "marvels_guardians_of_the_galaxy.json").exists()
