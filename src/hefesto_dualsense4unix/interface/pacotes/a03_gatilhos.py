@@ -317,9 +317,10 @@ def descricao_do_modo(chave: str) -> str:
     return str(getattr(spec, "description", "") or "")
 
 
-#: O QUE A TELA CHAMA O «DESLIGADO» DO GATILHO — 03/10/2026, ela: *«o certo seria
-#: os controles obedecerem quando o jogo manda e na ausencia disso o perfil
-#: ganha»*. A chave segue sendo `Off` (o perfil não muda de forma, e o
+#: O QUE A TELA CHAMA O «DESLIGADO» DO GATILHO — 03/10/2026, ela: *«o certo
+#: seria os controles obedecerem quando o jogo manda e na ausencia disso o
+#: perfil ganha»*  (noqa-acento: citação literal dela). A chave segue sendo
+#: `Off` (o perfil não muda de forma, e o
 #: `trigger.reset` do gesto é o mesmo): o que muda é o NOME, que diz o que o
 #: gesto faz. O dono do rótulo do produto (`trigger_specs`, «Desligado») não
 #: muda: a CLI e o daemon seguem falando dele.
