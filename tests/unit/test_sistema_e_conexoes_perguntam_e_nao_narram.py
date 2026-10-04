@@ -144,13 +144,19 @@ def test_o_segundo_clique_do_aplicar_devolve_so_os_rotulos(monkeypatch, capsys) 
 
 
 def test_a_recusa_do_segundo_clique_tambem_tira_a_pergunta(monkeypatch) -> None:
-    """O dublê RECUSA (jogo aberto): o gesto levanta e a pergunta não fica."""
-    visto = _com_a_steam(monkeypatch, janela="jogo_aberto")
+    """O dublê RECUSA (a Steam não fechou): o gesto levanta e a pergunta não fica.
+
+    O jogo aberto NÃO entra aqui desde 03/10/2026: é recibo, não recusa (ver
+    `test_o_aplicar_com_jogo_aberto_diz_o_que_fez.py`) e é a única exceção ao
+    «não narra» — o painel diz o que os outros lançadores receberam e que a
+    Steam espera.
+    """
+    visto = _com_a_steam(monkeypatch, janela="nao_fechou")
     a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"), PonteDeMentira())
     with pytest.raises(RuntimeError) as erro:
         a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
                               PonteDeMentira())
-    assert str(erro.value) == _daemon.format_steam_janela_recusa("jogo_aberto")
+    assert str(erro.value) == _daemon.format_steam_janela_recusa("nao_fechou")
     assert visto["aplicou"] == []
     assert a09._no_painel("repouso") == "repouso"
 

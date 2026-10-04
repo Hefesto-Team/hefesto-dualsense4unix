@@ -167,11 +167,12 @@ def test_com_jogo_aberto_a_pergunta_nao_promete_nada(
     visto = _a_steam_recusa(monkeypatch)
     pergunta = _pergunta()
     antes = _foto(_lar)
-    with pytest.raises(RuntimeError):
-        a09.aplicar_aos_jogos(
-            Contexto(state={}, mesa=[], conectados=[], estados={}),
-            {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
+    # jogo aberto é recibo, não falha (03/10/2026): o gesto volta dizendo o que fez
+    fora = a09.aplicar_aos_jogos(
+        Contexto(state={}, mesa=[], conectados=[], estados={}),
+        {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
     assert visto["fechou"] == [True] and visto["aplicou"] == [], visto
+    assert fora["mesa"][a09.REGISTRO].endswith(a09.STEAM_FICA_PARA_DEPOIS), fora
     mudaram = _o_que_mudou(antes, _foto(_lar))
     global_ = copia.parent.parent / "config.json"
     assert global_ in mudaram, (
@@ -205,10 +206,9 @@ def test_o_backup_so_se_promete_onde_ele_existe(
     _a_steam_recusa(monkeypatch)
     pergunta = _pergunta()
     antes = _foto(_lar)
-    with pytest.raises(RuntimeError):
-        a09.aplicar_aos_jogos(
-            Contexto(state={}, mesa=[], conectados=[], estados={}),
-            {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
+    a09.aplicar_aos_jogos(
+        Contexto(state={}, mesa=[], conectados=[], estados={}),
+        {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
     depois = _foto(_lar)
     estado = Path(cpe.caminho_do_registro()).parent
     mudaram = [p for p in _o_que_mudou(antes, depois) if estado not in p.parents]

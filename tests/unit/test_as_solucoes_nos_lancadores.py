@@ -251,8 +251,12 @@ def test_o_botao_da_sistema_aplica_nos_outros_mesmo_com_a_steam_recusando(
     ctx = Contexto(state={"active_profile": "regua"}, mesa=[], conectados=[], estados={})
     a09.aplicar_aos_jogos(ctx, {"gesto": "aplicar-aos-jogos", "texto": "rótulo"}, None)
     assert caronas == [], "o PRIMEIRO clique já aplicou — o consentimento sumiu"
-    with pytest.raises(RuntimeError):
-        a09.aplicar_aos_jogos(ctx, {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
+    fora = a09.aplicar_aos_jogos(
+        ctx, {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
+    # jogo aberto não é falha: é o recibo (O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-…)
+    assert fora["mesa"][a09.REGISTRO] == (
+        "O ambiente do Hefesto está em: Heroic, RetroArch. "
+        "A Steam fica para quando o jogo fechar.")
     a09._ARMADO.clear()
     a09._PAINEL[0] = None
     assert caronas == [True]

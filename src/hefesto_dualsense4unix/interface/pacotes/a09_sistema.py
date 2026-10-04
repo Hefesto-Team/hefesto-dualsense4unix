@@ -2048,6 +2048,16 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             "recado": _daemon.MIGRAR_DEU_CERTO}
 
 
+#: O desfecho de `with_steam_closed` quando há um jogo aberto: a Steam NÃO fecha, e
+#: só a Steam espera — o resto do gesto (os outros lançadores) já rodou.
+JANELA_COM_JOGO_ABERTO = "jogo_aberto"
+
+#: O recibo, não a falha (O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-DIZ-O-QUE-FEZ-01):
+#: com um jogo aberto o gesto aplicou o que não exige fechar a Steam, e diz que a
+#: Steam fica para quando o jogo fechar.
+STEAM_FICA_PARA_DEPOIS = "A Steam fica para quando o jogo fechar."
+
+
 @gesto("09-sistema.html", "aplicar-aos-jogos", grava="with_steam_closed")
 def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Aplicar soluções nos lançadores» — o atalho na Steam, o ambiente nos outros.
@@ -2089,7 +2099,9 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     quantos jogos mudaram, quantos ficaram, quantos falharam). **O resultado
     saiu da tela em 13/09/2026** (é recibo, e a régua dela tira recibo): ele vai
     ao diário da janela por :func:`_relatar_o_recibo`, e o segundo clique
-    devolve só os rótulos. A recusa continua levantando.
+    devolve só os rótulos. A recusa continua levantando — menos a do **jogo
+    aberto**, que não é falha (03/10/2026): os outros lançadores já receberam o
+    ambiente, e o painel diz quais e que a Steam fica para quando o jogo fechar.
     """
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -2102,9 +2114,13 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     _limpar_o_painel()
     from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 
-    _relatar_o_recibo("aplicar-aos-jogos",
-                      cpe.frase_das_estradas(cpe.curar_todas_as_estradas()))
+    das_estradas = cpe.frase_das_estradas(cpe.curar_todas_as_estradas())
+    _relatar_o_recibo("aplicar-aos-jogos", das_estradas)
     janela, resultado = slo.with_steam_closed(aplicar)
+    if janela == JANELA_COM_JOGO_ABERTO:
+        _relatar_o_recibo("aplicar-aos-jogos", STEAM_FICA_PARA_DEPOIS)
+        return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
+                **_para_o_painel(f"{das_estradas} {STEAM_FICA_PARA_DEPOIS}")}
     recusa = _daemon.format_steam_janela_recusa(janela)
     if recusa is not None:
         raise RuntimeError(recusa)

@@ -302,17 +302,21 @@ def test_o_segundo_clique_aplica_o_atalho_a_todos_os_jogos(
     assert "3 jogo(s)" in diario, diario
 
 
-def test_o_jogo_aberto_recusa_com_a_frase_do_dono(
+def test_o_jogo_aberto_nao_e_falha_e_diz_o_que_o_gesto_fez(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O dublê tem de saber RECUSAR, e a recusa não é uma frase minha."""
+    """O dublê tem de saber RECUSAR a Steam, e o gesto não cai por isso.
+
+    O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-DIZ-O-QUE-FEZ-01 (03/10/2026): os outros
+    lançadores já receberam o ambiente; o painel diz isso e que a Steam espera.
+    """
     _com_a_steam(monkeypatch, janela="jogo_aberto")
     a09.aplicar_aos_jogos(
         _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "x"}, PonteDeMentira())
-    with pytest.raises(RuntimeError) as erro:
-        a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
-                              PonteDeMentira())
-    assert str(erro.value) == _daemon.format_steam_janela_recusa("jogo_aberto")
-    assert "jogo aberto" in str(erro.value)
+    fora = a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
+                                 PonteDeMentira())
+    frase = fora["mesa"][a09.REGISTRO]
+    assert frase.endswith(a09.STEAM_FICA_PARA_DEPOIS), frase
+    assert "Nada foi mudado" not in frase and "Tem um jogo aberto" not in frase
 
 
 def test_a_instalacao_sem_aplicacao_em_massa_recusa_dizendo_como_atualizar(

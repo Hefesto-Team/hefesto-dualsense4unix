@@ -395,6 +395,8 @@ ROTEIRO = (
     ("arma", "refazer-consertos"), ("arma", "aplicar-aos-jogos"),
     ("vence", "aplicar-aos-jogos"), ("foto", "depois-a-pergunta-vencida"),
     ("rearma", "aplicar-aos-jogos"), ("recusa", "aplicar-aos-jogos"),
+    ("janela", "jogo_aberto"), ("rearma", "aplicar-aos-jogos"),
+    ("recibo", "aplicar-aos-jogos"), ("foto", "depois-o-recibo-do-jogo-aberto"),
 )
 
 PASSO_MS = 50
@@ -503,7 +505,7 @@ def na_tela(tmp_path_factory) -> dict:
     conf.write_text("# conf de prova\n", encoding="utf-8")
     asset = berco / "personalizado.json"
     asset.write_text("{}", encoding="utf-8")
-    steam = {"aberta": False}
+    steam = {"aberta": False, "janela": "nao_fechou"}
     travou: list[object] = []
     fechou: list[object] = []
     leitura = a9._tela.Leitura(
@@ -511,8 +513,10 @@ def na_tela(tmp_path_factory) -> dict:
         achados=None, deteccao=None, ambiente=None, perfil=None)
 
     def janela_da_steam(fn: object, *_a: object, **_k: object) -> tuple[str, None]:
+        # `nao_fechou` é a recusa que SEGUE sendo recusa; o `jogo_aberto` virou
+        # recibo (03/10/2026) e o roteiro troca para ele no passo `janela`.
         fechou.append(fn)
-        return ("jogo_aberto", None)
+        return (steam["janela"], None)
 
     dubles: dict[tuple[Any, str], Any] = {
         (proton_pin, "default_pin_conf_path"): lambda: conf,
@@ -606,15 +610,20 @@ def na_tela(tmp_path_factory) -> dict:
             if fotos:
                 piloto.tela.fotografar(str(pathlib.Path(fotos) / f"{alvo}.png"))
             proximo()
+        elif tipo == "janela":
+            steam["janela"] = alvo
+            proximo()
         elif tipo == "recusa":
             recusa(alvo)
+        elif tipo == "recibo":
+            recusa(alvo, recibo=True)
         elif tipo in ("arma", "rearma"):
             arma(alvo, f"{tipo}:{alvo}")
         else:
             vence(alvo)
 
-    def recusa(gesto_: str) -> None:
-        marco = f"recusa:{gesto_}"
+    def recusa(gesto_: str, recibo: bool = False) -> None:
+        marco = f"{'recibo' if recibo else 'recusa'}:{gesto_}"
 
         def assentou_a_recusa(lido: dict) -> dict | None:
             trilha = lido.get("trilha")
@@ -632,6 +641,11 @@ def na_tela(tmp_path_factory) -> dict:
             fora[f"{marco}:desfecho"] = desfecho
             frase = str(desfecho[1]).split(": ", 1)[-1] if len(desfecho) == 2 else ""
             fora[f"{marco}:frase"] = frase
+            if recibo:
+                esperar(f"{marco}:painel", LER_O_PAINEL % js(gesto_),
+                        lambda lido: lido if "Steam fica" in (lido.get("painel") or "")
+                        else None, proximo, "o painel dizer o recibo do jogo aberto")
+                return
             esperar(f"{marco}:tela", LER_A_TELA % js(frase[:TRECHO] or "sem frase de recusa"),
                     lambda lido: lido, proximo, f"a leitura da tela depois do {gesto_}")
 
@@ -748,9 +762,27 @@ def test_na_tela_nenhuma_recusa_fixou_o_proton_nem_fechou_a_steam(na_tela: dict)
     """A Steam aberta recusou antes da fixação; a janela da Steam só no clique 2."""
     _marco(na_tela, "recusa:fixar-proton")
     assert na_tela["travou"] == []
-    assert len(na_tela["fechou"]) == 1, (
+    # uma por clique 2 do roteiro: a recusa (`nao_fechou`) e o recibo (`jogo_aberto`)
+    assert len(na_tela["fechou"]) == 2, (
         f"a janela da Steam foi pedida {len(na_tela['fechou'])} vez(es) — o "
         "clique 1 do «Aplicar aos jogos» não pode fechar a Steam")
+
+
+def test_na_tela_o_jogo_aberto_nao_falha_e_o_painel_diz_o_que_o_gesto_fez(
+        na_tela: dict) -> None:
+    """O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-DIZ-O-QUE-FEZ-01, no WebKit de verdade."""
+    marco = "recibo:aplicar-aos-jogos"
+    assert na_tela.get(f"{marco}:clique") == "cliquei", na_tela.get(f"{marco}:clique")
+    desfecho = _marco(na_tela, f"{marco}:desfecho")
+    assert desfecho and desfecho[0] == "aplicou", desfecho
+    classes = str(_marco(na_tela, marco)["pouso"]["classes"]).split()
+    assert "hef-recusou" not in classes, classes
+    painel = _marco(na_tela, f"{marco}:painel")["painel"]
+    assert painel.endswith("A Steam fica para quando o jogo fechar."), painel
+    assert "O ambiente do Hefesto está em:" in painel or "Nenhum outro lançador" in painel
+    falhas = [linha for linha in str(na_tela["diario"]).splitlines()
+              if linha.startswith(f"[gesto falhou] {PAGINA} · aplicar-aos-jogos")]
+    assert len(falhas) == 1, f"só a recusa `nao_fechou` falha, e falhou {falhas}"
 
 
 @pytest.mark.parametrize("marco", [f"arma:{g}" for g in ARMAM]
