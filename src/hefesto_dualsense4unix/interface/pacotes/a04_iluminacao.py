@@ -3081,7 +3081,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Dar o Player N a este controle" — o número E as cinco lâmpadas.
 
     NÃO é `identity.renumber`, e a diferença está escrita no
-    `app/ipc_bridge.py:531`: o `renumber` COMPACTA todos preservando a ordem
+    `interface/pacotes/a01_jogar.py:2427`: o `renumber` COMPACTA todos preservando a ordem
     relativa, e mora na aba Início. Dizer "este controle é o 2" foi o comando
     que faltou ao projeto até 25/07.
 
