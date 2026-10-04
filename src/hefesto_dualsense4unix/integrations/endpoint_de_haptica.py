@@ -131,11 +131,9 @@ from typing import Any
 
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     CANAIS_DA_HAPTICA,
-    HEX_DO_SUFIXO,
     o_servidor_e_o_pipewire,
     rodar_pactl,
     serial_do_no,
-    so_hex,
 )
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     LETRAS_DA_MARCA_DO_APARELHO,
@@ -289,12 +287,6 @@ def distribuir_ancoras(
             if tomar(marca, ancora):
                 break
     return postas
-
-
-def marca_do_controle(uniq: str) -> str:
-    """Os seis hex do rabo do ``uniq`` — a identidade que sobrevive a hotplug."""
-    rabo = so_hex(str(uniq))
-    return rabo[-HEX_DO_SUFIXO:] if len(rabo) >= HEX_DO_SUFIXO else ""
 
 
 def nome_da_marca(marca: str) -> str:
@@ -1139,7 +1131,6 @@ __all__ = [
     "endpoints_de_pe",
     "fluxos_nos_endpoints",
     "marca_do_aparelho",
-    "marca_do_controle",
     "nome_da_marca",
     "nome_do_endpoint",
     "propriedades_do_endpoint",

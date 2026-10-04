@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import subprocess
 import threading
@@ -14,6 +15,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_TAXA_HZ,
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
+    marca_do_aparelho,
     rotulo_envelheceu,
 )
 from hefesto_dualsense4unix.integrations.filho_de_som import (
@@ -21,7 +23,6 @@ from hefesto_dualsense4unix.integrations.filho_de_som import (
     lancar_leitor,
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
-    MIN_HEX_SUFIXO_BT,
     PREFIXO_SOURCE_CANAL_DO_MIC,
     so_hex,
 )
@@ -61,31 +62,25 @@ _TIMEOUT_PACTL_S = 5.0
 
 
 def sufixo_do_controle(uniq: str) -> str:
-    """Os seis últimos dígitos hex do `uniq` — "" se ele não for um endereço.
+    """A marca do aparelho deste `uniq` — "" se ele não for um endereço.
 
-    É a MESMA regra de `NoDualSenseBT.nome_curto`, e a diferença é o que
-    acontece quando não dá: aquela propriedade cai no nome do nó, o que só faz
-    sentido para quem está lendo o sysfs do Bluetooth. Aqui a resposta certa é
-    `""` — **sem identidade não se batiza um canal**, e um nome inventado
-    colidiria com o do vizinho na mesa de quatro, que é pior que não ter nome.
-
-    E ELE EXIGE UM ENDEREÇO INTEIRO, não "seis dígitos hex em algum lugar" —
-    medido ao escrever este módulo, em 05/09/2026: ``so_hex`` sobre
-    ``"sem-identidade"`` devolve ``"emdedade"``, porque **e**, **d** e **a** são
-    dígitos hex, e o canal nasceria com o sufixo ``dedade``. É a mesma
-    armadilha de casamento por acaso que `fontes_de_captura.sufixo_da_ponte_bt`
-    já paga com o ``so_hex(resto) != resto``, aqui na entrada em vez da saída.
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): o nome do canal
+    levava os seis últimos dígitos do endereço; leva a marca do aparelho
+    (`dualsense_bt_audio.marca_do_aparelho`), a mesma do cabo e do rádio. **Sem
+    identidade não se batiza um canal**, e ele EXIGE UM ENDEREÇO INTEIRO, não
+    "seis dígitos hex em algum lugar" (medido em 05/09/2026: ``so_hex`` sobre
+    ``"sem-identidade"`` devolve ``"emdedade"``).
     """
     limpo = uniq.lower()
     for separador in _SEPARADORES:
         limpo = limpo.replace(separador, "")
     if len(limpo) < _HEX_DE_UM_ENDERECO or so_hex(limpo) != limpo:
         return ""
-    return limpo[-MIN_HEX_SUFIXO_BT:]
+    return marca_do_aparelho(limpo)
 
 
 def nome_do_canal(uniq: str) -> str:
-    """`hefesto_mic_<hex6>` para este controle — "" se ele não tem identidade."""
+    """`hefesto_mic_<marca>` para este controle — "" se ele não tem identidade."""
     sufixo = sufixo_do_controle(uniq)
     return f"{PREFIXO_CANAL}{sufixo}" if sufixo else ""
 
@@ -228,6 +223,16 @@ _FONTE_PEDIDA: dict[str, str] = {}
 _TRANCA = threading.Lock()
 
 
+def _passar_a_escolha_dela(uniq: str, nome: str) -> None:
+    """A fonte padrão gravada no nome velho deste canal passa ao nome novo. Nunca levanta."""
+    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+        passar_a_escolha_gravada_ao_nome_novo,
+    )
+
+    with contextlib.suppress(Exception):
+        passar_a_escolha_gravada_ao_nome_novo(uniq, nome, prefixo=PREFIXO_CANAL)
+
+
 def abrir(
     uniq: str,
     descricao: str,
@@ -257,6 +262,7 @@ def abrir(
             return None
         _DE_PE[uniq] = source
         _FONTE_PEDIDA[uniq] = str(fonte or "")
+        _passar_a_escolha_dela(uniq, nome)
         if not desmutar(nome, rodar=rodar):
             logger.warning("canal_do_mic_nasceu_mudo", extra={"source": nome})
         if fonte:

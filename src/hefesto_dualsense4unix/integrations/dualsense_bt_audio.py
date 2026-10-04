@@ -230,6 +230,8 @@ from __future__ import annotations
 import contextlib
 import ctypes
 import fcntl
+import hashlib
+import hmac
 import os
 import shutil
 import subprocess
@@ -364,10 +366,10 @@ class NoDualSenseBT:
 
     @property
     def nome_curto(self) -> str:
-        """Sufixo estável do MAC — o que vai no nome da source do PipeWire."""
-        hexa = "".join(ch for ch in self.uniq.lower() if ch in "0123456789abcdef")
-        if len(hexa) >= 6:
-            return hexa[-6:]
+        """A marca do aparelho — o que vai no nome da source do PipeWire, sem o endereço."""
+        marca = marca_do_aparelho(self.uniq)
+        if marca:
+            return marca
         return self.caminho.rsplit("/", 1)[-1] or "desconhecido"
 
 
@@ -575,14 +577,92 @@ TAMANHO_DA_MARCA_DO_APARELHO = 6
 _HEX_MINIMOS_DA_MARCA = 6
 
 
-def marca_do_aparelho(uniq: str | None) -> str:
-    """``APARELHO`` e seis letras: o resumo estável da chave de UM controle. "" = sem identidade."""
-    import hashlib
+#: A identidade do Hefesto para a chave por aplicativo derivada do
+#: ``/etc/machine-id`` (a receita do ``sd_id128_get_machine_app_specific`` do
+#: systemd: HMAC-SHA-256 com o machine-id como chave e esta identidade como
+#: mensagem). Fixa: mudá-la muda a marca de todo aparelho em toda máquina.
+ID_DO_APLICATIVO_DA_MARCA = hashlib.sha256(
+    b"hefesto-dualsense4unix:marca-do-aparelho"
+).digest()[:16]
 
+_ARQUIVOS_DO_MACHINE_ID = ("/etc/machine-id", "/var/lib/dbus/machine-id")
+
+_NOME_DA_CHAVE_GUARDADA = "chave-da-marca-do-aparelho"
+
+_CHAVE_DA_MARCA: bytes | None = None
+_TRAVA_DA_CHAVE = threading.Lock()
+
+
+def _machine_id(arquivos: tuple[str, ...] = _ARQUIVOS_DO_MACHINE_ID) -> bytes | None:
+    """Os 16 bytes do machine-id desta máquina, ou None quando ele não se lê."""
+    for caminho in arquivos:
+        try:
+            texto = Path(caminho).read_text(encoding="ascii").strip()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if len(texto) == 32:
+            try:
+                return bytes.fromhex(texto)
+            except ValueError:
+                continue
+    return None
+
+
+def _chave_guardada() -> bytes:
+    """A chave aleatória do estado do produto, para a máquina sem machine-id legível."""
+    import secrets
+
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    arquivo = state_dir(ensure=True) / _NOME_DA_CHAVE_GUARDADA
+    with contextlib.suppress(OSError, ValueError):
+        guardada = bytes.fromhex(arquivo.read_text(encoding="ascii").strip())
+        if len(guardada) == 32:
+            return guardada
+    chave = secrets.token_bytes(32)
+    with contextlib.suppress(OSError):
+        arquivo.write_text(chave.hex() + "\n", encoding="ascii")
+        arquivo.chmod(0o600)
+    return chave
+
+
+def chave_da_marca() -> bytes:
+    """A chave desta máquina para a marca do aparelho. Lida uma vez por processo.
+
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): sem chave, a marca
+    era um SHA-256 dos 12 dígitos, e quem tinha a marca e a lista dos prefixos
+    da Sony tinha o endereço em 27 s (medido). Com a chave por aplicativo do
+    machine-id, a mesma máquina dá a mesma marca em toda volta, todo transporte
+    e todo reinstalar, e a marca não volta ao endereço fora dela.
+    """
+    global _CHAVE_DA_MARCA
+    with _TRAVA_DA_CHAVE:
+        if _CHAVE_DA_MARCA is None:
+            maquina = _machine_id()
+            if maquina is not None:
+                _CHAVE_DA_MARCA = hmac.new(
+                    maquina, ID_DO_APLICATIVO_DA_MARCA, hashlib.sha256
+                ).digest()
+            else:
+                _CHAVE_DA_MARCA = _chave_guardada()
+        return _CHAVE_DA_MARCA
+
+
+def marca_do_aparelho(uniq: str | None, *, chave: bytes | None = None) -> str:
+    """``APARELHO`` e seis letras: o resumo estável da chave de UM controle. "" = sem identidade.
+
+    O resumo é um HMAC-SHA-256 dos dígitos do endereço com a chave da máquina
+    (:func:`chave_da_marca`): igual no cabo e no rádio, e diferente em outra
+    máquina. A forma (nenhuma letra hexadecimal depois do prefixo) é a mesma de
+    antes, e as réguas de forma da casa não a leem como endereço.
+    """
     digitos = "".join(ch for ch in str(uniq or "").lower() if ch in "0123456789abcdef")
     if len(digitos) < _HEX_MINIMOS_DA_MARCA:
         return ""
-    resumo = hashlib.sha256(f"hefesto-aparelho:{digitos}".encode("ascii")).digest()
+    segredo = chave_da_marca() if chave is None else chave
+    resumo = hmac.new(
+        segredo, f"hefesto-aparelho:{digitos}".encode("ascii"), hashlib.sha256
+    ).digest()
     n = int.from_bytes(resumo[:8], "big")
     letras = []
     for _ in range(TAMANHO_DA_MARCA_DO_APARELHO):
@@ -980,7 +1060,8 @@ class PonteMicBluetooth:
         descricao = descricao_do_microfone(self.no.uniq)
         if self._source is None:
             self._source = self._abrir_o_canal_por_controle(descricao)
-        if self._source is None:
+        reserva = self._source is None
+        if reserva:
             self._source = SourceVirtualPipeWire(
                 nome=self._nome_source,
                 descricao=descricao,
@@ -990,6 +1071,15 @@ class PonteMicBluetooth:
             self._fechar_fd()
             self._encerrar_decodificador()
             return False
+        if reserva:
+            from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+                passar_a_escolha_gravada_ao_nome_novo,
+            )
+
+            with contextlib.suppress(Exception):
+                passar_a_escolha_gravada_ao_nome_novo(
+                    self.no.uniq, self._nome_source, prefixo=PREFIXO_SOURCE_PONTE_BT
+                )
 
         self._parar_evt.clear()
         self._ultimo_audio = time.monotonic()

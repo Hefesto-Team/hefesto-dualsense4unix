@@ -56,6 +56,16 @@ def fonte_configurada_do_wireplumber() -> str | None:
     `None` quando não há escolha gravada (a máquina nova, que nunca escolheu),
     ou quando o arquivo não se deixa ler. Nunca levanta.
     """
+    return escolha_configurada_do_wireplumber(_CHAVE_DA_FONTE_CONFIGURADA)
+
+
+def escolha_configurada_do_wireplumber(chave_pedida: str) -> str | None:
+    """O valor de ``chave_pedida`` no `default-nodes` do WirePlumber, ou `None`.
+
+    O leitor único do arquivo: a fonte (``default.configured.audio.source``,
+    :func:`fonte_configurada_do_wireplumber`) e a saída
+    (``default.configured.audio.sink``) que alguém escolheu. Nunca levanta.
+    """
     estado = Path.home() / ".local/state/wireplumber/default-nodes"
     try:
         linhas = estado.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -63,7 +73,7 @@ def fonte_configurada_do_wireplumber() -> str | None:
         return None
     for linha in linhas:
         chave, igual, valor = linha.partition("=")
-        if igual and chave.strip().lower() == _CHAVE_DA_FONTE_CONFIGURADA:
+        if igual and chave.strip().lower() == chave_pedida:
             return valor.strip() or None
     return None
 

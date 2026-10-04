@@ -744,22 +744,26 @@ _DIRS_PIPEWIRE = (
 
 
 def nome_do_sink(uniq: str) -> str:
-    """``hefesto_som_<hex6>`` a partir do ``uniq`` do controle. "" se ilegível."""
-    rabo = so_hex(str(uniq))
-    if len(rabo) < HEX_DO_SUFIXO:
-        return ""
-    return f"{PREFIXO_SINK_DO_SOM}{rabo[-HEX_DO_SUFIXO:]}"
+    """``hefesto_som_<marca>`` a partir do ``uniq`` do controle. "" se ilegível.
+
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): o nome leva a marca
+    do aparelho, e não o rabo do endereço.
+    """
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        marca_do_aparelho,
+    )
+
+    marca = marca_do_aparelho(str(uniq))
+    return f"{PREFIXO_SINK_DO_SOM}{marca}" if marca else ""
 
 
 def sufixo_do_sink_do_som(nome: str) -> str:
-    """Rabo hex do MAC no nome do nó de som — "" se não for um."""
-    baixa = nome.lower()
-    if not baixa.startswith(PREFIXO_SINK_DO_SOM):
-        return ""
-    resto = baixa[len(PREFIXO_SINK_DO_SOM) :]
-    if len(resto) < HEX_DO_SUFIXO or so_hex(resto) != resto:
-        return ""
-    return resto
+    """A identidade no nome do nó de som (a marca, ou o rabo hex da forma velha) — ""."""
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        identidade_depois_do_prefixo,
+    )
+
+    return identidade_depois_do_prefixo(nome, PREFIXO_SINK_DO_SOM)
 
 
 def propriedades_do_sink(descricao: str, controle: str | None = None) -> str:
@@ -870,7 +874,19 @@ class SinkVirtualPipeWire:
         self._module_id = linhas[-1]
         logger.info("som_sink_publicado", sink=self.nome, module_id=self._module_id)
         self._ligar_a_rota()
+        self._passar_a_escolha_dela()
         return True
+
+    def _passar_a_escolha_dela(self) -> None:
+        """A saída padrão gravada no nome velho deste nó passa ao nome novo. Nunca levanta."""
+        from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            passar_a_escolha_gravada_ao_nome_novo,
+        )
+
+        with contextlib.suppress(Exception):
+            passar_a_escolha_gravada_ao_nome_novo(
+                self.uniq, self.nome, prefixo=PREFIXO_SINK_DO_SOM, saida=True
+            )
 
     def _ligar_a_rota(self) -> None:
         """Carrega os ``module-loopback`` desta rota. Silencioso quando não há."""
@@ -1001,11 +1017,11 @@ def o_servidor_e_o_pipewire(
 
 def rotulo_do_gravador(*, uniq: str, papel: str = "som") -> str:
     """O nome que damos ao NOSSO nó de gravação. Único por controle E POR PAPEL."""
-    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
-        marca_do_controle,
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        marca_do_aparelho,
     )
 
-    marca = marca_do_controle(uniq)
+    marca = marca_do_aparelho(uniq)
     if not marca:
         return ""
     return f"hefesto-ponte-{marca}-{papel}"

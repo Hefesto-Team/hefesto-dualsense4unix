@@ -789,7 +789,69 @@ def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
         return None
 
 
+#: As chaves do `default-nodes` do WirePlumber que guardam a escolha dela.
+CHAVE_DA_FONTE_GRAVADA = "default.configured.audio.source"
+CHAVE_DA_SAIDA_GRAVADA = "default.configured.audio.sink"
+
+_ESCOLHAS_JA_PASSADAS: set[tuple[str, str]] = set()
+_TRAVA_DA_PASSAGEM = threading.Lock()
+
+
+def passar_a_escolha_gravada_ao_nome_novo(
+    uniq: str,
+    novo: str,
+    *,
+    prefixo: str,
+    saida: bool = False,
+    ler: Callable[[str], str | None] | None = None,
+    rodar: Callable[[list[str]], tuple[int, str]] | None = None,
+) -> bool:
+    """A escolha que ela gravou no nome VELHO deste controle passa ao nome novo. Uma vez.
+
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): os nós do controle
+    trocaram o rabo do endereço pela marca do aparelho, e o WirePlumber lembra
+    a escolha pelo nome. Na primeira subida do nó novo (``novo``, de
+    ``prefixo``), se a fonte padrão gravada (ou a saída, com ``saida=True``) é
+    o nome velho DAQUELE controle (``prefixo`` + os seis últimos hex do
+    ``uniq``), ela passa ao nome novo, com uma linha no diário. A de outro
+    controle não se toca, e a escolha que não é de controle nenhum também não.
+    Devolve se passou. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.core.system_check import (
+        escolha_configurada_do_wireplumber,
+    )
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import so_hex
+
+    rabo = so_hex(uniq)[-6:]
+    if len(rabo) < 6 or not novo:
+        return False
+    papel = "sink" if saida else "source"
+    chave_da_vez = (f"{papel}:{prefixo}", rabo)
+    with _TRAVA_DA_PASSAGEM:
+        if chave_da_vez in _ESCOLHAS_JA_PASSADAS:
+            return False
+        _ESCOLHAS_JA_PASSADAS.add(chave_da_vez)
+    ler_a_escolha = ler or escolha_configurada_do_wireplumber
+    try:
+        gravada = ler_a_escolha(CHAVE_DA_SAIDA_GRAVADA if saida else CHAVE_DA_FONTE_GRAVADA)
+    except Exception:
+        return False
+    if not gravada or gravada.strip().lower() != f"{prefixo}{rabo}":
+        return False
+    escrever = rodar or _rodar
+    try:
+        rc, _ = escrever(["pactl", f"set-default-{papel}", novo])
+    except Exception:
+        rc = -1
+    logger.info(
+        "escolha_gravada_passou_ao_nome_novo", papel=papel, para=novo, ok=rc == 0
+    )
+    return rc == 0
+
+
 __all__ = [
+    "CHAVE_DA_FONTE_GRAVADA",
+    "CHAVE_DA_SAIDA_GRAVADA",
     "ESPERA_DO_CANAL_PASSOS",
     "ESPERA_DO_CANAL_PASSO_S",
     "ConsultaIndisponivelError",
@@ -805,6 +867,7 @@ __all__ = [
     "fontes_de_captura_agora",
     "outra_captura_elegivel",
     "palavra_no_ar",
+    "passar_a_escolha_gravada_ao_nome_novo",
     "pedir_canal",
     "recusa_de_quem_nao_elegeu",
     "registrar_dizedor_do_no_ar",

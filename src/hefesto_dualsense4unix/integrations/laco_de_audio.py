@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import re
 import shutil
 import subprocess
 import threading
@@ -14,6 +15,12 @@ logger = structlog.get_logger(__name__)
 __all__ = ["LATENCIA_MS", "Lacos", "fechar_tudo"]
 
 LATENCIA_MS = 50
+
+#: Seis ou mais dígitos hexadecimais seguidos: a cara de um pedaço de endereço.
+#: A chave vai ao nome do nó (`--name`), e nome de nó não leva o endereço
+#: (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): quem chama passa a marca do
+#: aparelho (`dualsense_bt_audio.marca_do_aparelho`).
+_CARA_DE_ENDERECO = re.compile(r"[0-9a-fA-F]{6,}")
 
 _FAMILIAS: list[Lacos] = []
 
@@ -59,6 +66,9 @@ class Lacos:
     ) -> bool:
         """Abre a laçada. `True` = de pé."""
         if not chave or not captura:
+            return False
+        if _CARA_DE_ENDERECO.search(chave):
+            logger.warning("laco_recusa_chave_com_endereco", familia=self.familia)
             return False
         if self.esta_ligado(chave):
             return True

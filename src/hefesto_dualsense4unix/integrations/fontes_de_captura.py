@@ -283,26 +283,52 @@ def escolher_sink(
     return escolher_fonte(sinks, uniq, uniqs_com_audio, usb)
 
 
+def marca_na_forma(texto: str) -> str:
+    """A marca do aparelho em ``texto`` (``APARELHO`` e seis letras), em maiúsculas, ou ""."""
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        LETRAS_DA_MARCA_DO_APARELHO,
+        PREFIXO_DA_MARCA_DO_APARELHO,
+        TAMANHO_DA_MARCA_DO_APARELHO,
+    )
+
+    alta = texto.upper()
+    if not alta.startswith(PREFIXO_DA_MARCA_DO_APARELHO):
+        return ""
+    letras = alta[len(PREFIXO_DA_MARCA_DO_APARELHO) :]
+    if len(letras) != TAMANHO_DA_MARCA_DO_APARELHO or any(
+        ch not in LETRAS_DA_MARCA_DO_APARELHO for ch in letras
+    ):
+        return ""
+    return alta
+
+
+def identidade_depois_do_prefixo(nome: str, prefixo: str) -> str:
+    """A identidade do controle no nome de um nó NOSSO de ``prefixo`` — "" se não houver.
+
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): o nome leva a marca
+    do aparelho. A forma velha (o rabo hexadecimal do endereço) segue lida por
+    uma versão, para a escolha que ela gravou no nome velho.
+    """
+    if not nome.lower().startswith(prefixo):
+        return ""
+    resto = nome[len(prefixo) :]
+    marca = marca_na_forma(resto)
+    if marca:
+        return marca
+    baixa = resto.lower()
+    if len(baixa) < MIN_HEX_SUFIXO_BT or so_hex(baixa) != baixa:
+        return ""
+    return baixa
+
+
 def sufixo_da_ponte_bt(fonte: str) -> str:
-    """Rabo hex do MAC no nome da source da ponte BT — "" se não for uma."""
-    baixa = fonte.lower()
-    if not baixa.startswith(PREFIXO_SOURCE_PONTE_BT):
-        return ""
-    resto = baixa[len(PREFIXO_SOURCE_PONTE_BT) :]
-    if len(resto) < MIN_HEX_SUFIXO_BT or so_hex(resto) != resto:
-        return ""
-    return resto
+    """A identidade no nome da source da ponte BT (a marca, ou o rabo hex velho) — ""."""
+    return identidade_depois_do_prefixo(fonte, PREFIXO_SOURCE_PONTE_BT)
 
 
 def sufixo_do_canal_do_mic(fonte: str) -> str:
-    """Rabo hex do MAC no nome do CANAL POR CONTROLE — "" se não for um."""
-    baixa = fonte.lower()
-    if not baixa.startswith(PREFIXO_SOURCE_CANAL_DO_MIC):
-        return ""
-    resto = baixa[len(PREFIXO_SOURCE_CANAL_DO_MIC) :]
-    if len(resto) < MIN_HEX_SUFIXO_BT or so_hex(resto) != resto:
-        return ""
-    return resto
+    """A identidade no nome do CANAL POR CONTROLE (a marca, ou o rabo hex velho) — ""."""
+    return identidade_depois_do_prefixo(fonte, PREFIXO_SOURCE_CANAL_DO_MIC)
 
 
 _OCTETOS_DE_UM_MAC = 6
@@ -323,7 +349,11 @@ def _mac_no_nome_bluez(fonte: str) -> str:
 
 
 def identidade_no_nome(fonte: str) -> str:
-    """O pedaço do endereço que o NOME do nó carrega — "" quando não carrega nada."""
+    """A identidade do controle que o NOME do nó carrega — "" quando não carrega nada.
+
+    A marca do aparelho nos nossos nós; os doze hex no ``bluez_*``, que é nome
+    do BlueZ e não nosso; e o rabo hex da forma velha dos nossos, por uma versão.
+    """
     return sufixo_do_canal_do_mic(fonte) or sufixo_da_ponte_bt(fonte) or _mac_no_nome_bluez(fonte)
 
 
@@ -332,6 +362,12 @@ def e_de_outro_controle(fonte: str, uniq: str) -> bool:
     identidade = identidade_no_nome(fonte)
     if not identidade:
         return False
+    if marca_na_forma(identidade):
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            marca_do_aparelho,
+        )
+
+        return marca_do_aparelho(uniq) != identidade
     return not so_hex(uniq).endswith(identidade)
 
 
@@ -350,7 +386,9 @@ __all__ = [
     "escolher_fonte",
     "escolher_sink",
     "fontes_dualsense",
+    "identidade_depois_do_prefixo",
     "identidade_no_nome",
+    "marca_na_forma",
     "sinks_dualsense",
     "so_hex",
     "sufixo_da_ponte_bt",
