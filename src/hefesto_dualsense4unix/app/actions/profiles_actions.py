@@ -203,18 +203,56 @@ _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     "button_actions": "o que cada botão faz",
     "remapeamento": "a troca de botões",
     "movimento": "a mira",
+    "mic:ganho": "ganho do microfone",
 }
 
-_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE = "speaker:"
-_NOME_DO_ALTO_FALANTE_POR_CONTROLE = "alto-falante de um controle"
+#: As seções POR CONTROLE do `profile.switch` (`<prefixo><uniq>`), com a palavra de tela
+#: de cada uma. A ordem importa: `mic:ganho:` antes de `mic:`.
+_PECAS_POR_CONTROLE: tuple[tuple[str, str], ...] = (
+    ("mic:ganho:", "ganho do microfone de um controle"),
+    ("mic:", "microfone de um controle"),
+    ("speaker:", "alto-falante de um controle"),
+    ("mascara:", "máscara de um controle"),
+    ("sensores:", "sensores de um controle"),
+    ("movimento:", "mira de um controle"),
+)
+
+#: O valor destas seções é o DADO que foi escrito (`mascara:<uniq>` → «xbox» ou «padrão»,
+#: `sensores:<uniq>` → «giro=on accel=off»), e não um estado. Ler a palavra «aplicado» nelas
+#: chamava de falta uma máscara que tinha entrado (03/10/2026, o Avatar Legends). A única
+#: palavra de falta delas é a que o dono escreve quando recusa.
+_PECAS_CUJO_VALOR_E_O_DADO: dict[str, frozenset[str]] = {
+    "mascara:": frozenset({"recusado"}),
+    "sensores:": frozenset(),
+}
+
+#: A peça de um controle que não está ligado agora não é falta: não há o que escrever, e o
+#: produto reaplica quando ele conecta (o alto-falante e o microfone, `reapply_speaker_on_connect` e `reapply_mic_on_connect`).
+_PECAS_QUE_ESPERAM_O_CONTROLE = ("speaker:", "mic:")
+_SEM_CONTROLE = "ignorado_sem_controle"
 
 
 def nome_da_secao_da_ativacao(chave: str) -> str:
     """A palavra de tela desta seção, ou a chave crua quando não há nome."""
-    if chave.startswith(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE):
-        uniq = chave[len(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE) :]
-        return f"{_NOME_DO_ALTO_FALANTE_POR_CONTROLE} ({uniq})"
+    if chave in _NOMES_DAS_SECOES_DA_ATIVACAO:
+        return _NOMES_DAS_SECOES_DA_ATIVACAO[chave]
+    for prefixo, nome in _PECAS_POR_CONTROLE:
+        if chave.startswith(prefixo):
+            uniq = chave[len(prefixo) :]
+            return f"{nome} ({uniq})" if uniq else nome
     return _NOMES_DAS_SECOES_DA_ATIVACAO.get(chave, chave)
+
+
+def _e_falta(chave: str, estado: str) -> bool:
+    """Esta seção, com este valor, é algo que NÃO entrou no controle?"""
+    for prefixo, so_estas in _PECAS_CUJO_VALOR_E_O_DADO.items():
+        if chave.startswith(prefixo):
+            return estado in so_estas
+    if estado in NAO_E_FALTA:
+        return False
+    if estado == _SEM_CONTROLE and chave.startswith(_PECAS_QUE_ESPERAM_O_CONTROLE):
+        return False
+    return estado != "aplicado"
 
 
 #: 01/10 a janela escreveu «menos: button_actions, remapeamento, movimento e
@@ -238,11 +276,16 @@ def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
     secoes = result.get("secoes")
     if not isinstance(secoes, dict) or not secoes:
         return None
-    aplicadas = [str(s) for s, estado in secoes.items() if str(estado) == "aplicado"]
+    aplicadas = [
+        str(s)
+        for s, estado in secoes.items()
+        if str(estado) == "aplicado"
+        or (str(s).startswith(tuple(_PECAS_CUJO_VALOR_E_O_DADO)) and not _e_falta(str(s), str(estado)))
+    ]
     nao_entraram = {
         nome_da_secao_da_ativacao(str(s)): str(estado)
         for s, estado in secoes.items()
-        if str(estado) != "aplicado" and str(estado) not in NAO_E_FALTA
+        if _e_falta(str(s), str(estado))
     }
     return {"applied": aplicadas, "failed": nao_entraram}
 
