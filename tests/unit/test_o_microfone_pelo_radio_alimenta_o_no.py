@@ -764,6 +764,42 @@ def test_o_supervisor_do_cabo_sem_fonte_do_kernel_nao_abre_canal(pactl, monkeypa
     assert pedidos == []
 
 
+FONTES_NO_CABO = (
+    "42\talsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00"
+    ".HiFi__Mic__source\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED\n"
+    f"43\t{fc.PREFIXO_SOURCE_CANAL_DO_MIC}aabbcc\tPipeWire\ts16le 1ch 48000Hz\tIDLE\n"
+)
+FONTES_NO_RADIO = (
+    f"51\t{fc.PREFIXO_SOURCE_CANAL_DO_MIC}aabbcc\tPipeWire\ts16le 1ch 48000Hz\tIDLE\n"
+    f"52\t{fc.PREFIXO_SOURCE_PONTE_BT}aabbcc\tPipeWire\ts16le 1ch 48000Hz\tIDLE\n"
+)
+
+
+def test_no_cabo_sobra_a_fonte_do_kernel() -> None:
+    """O dono de «qual destas é do kernel» deixa a placa USB e tira o canal nosso."""
+    nativas = fc.fontes_nativas(FONTES_NO_CABO)
+    assert len(nativas) == 1
+    assert nativas[0].startswith("alsa_input.usb-Sony")
+
+
+def test_no_radio_nenhuma_e_do_kernel() -> None:
+    """As duas do rádio são nossas, inclusive a que tem «dualsense» no nome."""
+    assert fc.fontes_dualsense(FONTES_NO_RADIO), "a lista de teste ficou vazia"
+    assert fc.fontes_nativas(FONTES_NO_RADIO) == []
+    assert fc.sem_os_nos_nossos(fc.fontes_dualsense(FONTES_NO_RADIO)) == []
+
+
+def test_o_dono_dos_nos_nossos_nao_pergunta_o_transporte() -> None:
+    """Quem separa o kernel do nosso é o NOME; nenhuma linha pergunta «é cabo?»."""
+    corpo = (SRC / "integrations" / "fontes_de_captura.py").read_text(encoding="utf-8")
+    for funcao in ("def fontes_nativas", "def sem_os_nos_nossos"):
+        inicio = corpo.index(funcao)
+        depois_da_doc = corpo.index('"""', corpo.index('"""', inicio) + 3) + 3
+        corpo_da_funcao = corpo[depois_da_doc : corpo.index("\ndef ", depois_da_doc)]
+        for palavra in ("transport", "usb", '"bt"', "'bt'"):
+            assert palavra not in corpo_da_funcao, (funcao, palavra)
+
+
 def test_a_regra_0_alcanca_a_escolha_gravada_do_nascimento(pactl) -> None:  # type: ignore[no-untyped-def]
     """Chamador 8/8 — `daemon/subsystems/hotkey.py`, no nascimento do microfone."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey

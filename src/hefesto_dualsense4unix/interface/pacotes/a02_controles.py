@@ -534,9 +534,6 @@ def luz_porque(rotulo: str | None, base: tuple[int, ...] | None) -> str:
     return DICA_DA_LUZ if rotulo is None and base is not None else str(rotulo or "")
 
 
-# que o `state_full` não ecoa de propósito — ver `SEM_ECO`).
-
-
 def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
     """O bloco `speaker` cru do controle, nas DUAS posições em que ele chega.
 

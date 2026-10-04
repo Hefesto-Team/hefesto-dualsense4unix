@@ -369,6 +369,75 @@ class TestPerfilAteOJogoProvar:
         assert handle._raw_trigger_left == SEM_EFEITO
 
 
+def _handle_que_monta_o_report(transporte: str) -> Any:
+    """Um handle de verdade (`_PinnedPyDualSense`), sem hidraw, que monta o report do fio."""
+    from pydualsense.enums import ConnectionType
+
+    handle = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
+    handle.conType = ConnectionType.BT if transporte == "radio" else ConnectionType.USB
+    handle.leftMotor = 0
+    handle.rightMotor = 0
+    handle._rumble_active = False
+    handle._rumble_stop_pending = False
+    handle._suppress_leds = False
+    handle._volumes_audio = None
+    handle._mic_mute_desejado = None
+    handle._preamp_audio = None
+    handle._raw_trigger_right = None
+    handle._raw_trigger_left = None
+    handle.light = DSLight()
+    handle.audio = DSAudio()
+    handle.triggerR = DSTrigger()
+    handle.triggerL = DSTrigger()
+    return handle
+
+
+def _gatilho_direito_no_fio(handle: Any, transporte: str) -> bytes:
+    """Os 11 bytes do gatilho direito no report que vai ao controle (0x02 ou 0x31)."""
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    report = handle.prepareReport()
+    common = handle._build_common(rumble_asserted=False)
+    if transporte == "radio":
+        assert report == list(rep.build_bt_report(common, seq=0)), "caiu no upstream"
+        inicio = 3
+    else:
+        assert report == list(rep.build_usb_report(common)), "caiu no upstream"
+        inicio = 1
+    return bytes(report[inicio + 10 : inicio + 10 + bp.GAME_TRIGGER_BLOCK_LEN])
+
+
+@pytest.mark.parametrize("transporte", ["cabo", "radio"])
+def test_no_fio_o_perfil_vale_ate_o_jogo_provar(transporte: str) -> None:
+    """Cabo e rádio: o report que sai leva o Rígido do perfil até o jogo provar.
+
+    MORDIDA: tratar o «sem efeito» como ordem e o report sai com o gatilho zerado
+    nos dois transportes, com o perfil de pé.
+    """
+    handle = _handle_que_monta_o_report(transporte)
+    ctl = bp.PyDualSenseController()
+    ctl._handles = {MAC_1: handle}
+    ctl._sysfs = {MAC_1: _NoDeLed()}
+    ctl.set_game_authority_provider(lambda: "game")
+    ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(trigger_right=EFEITO_DO_PERFIL)
+    ctl._desired_owner_by_uniq[UNIQ_1] = {"trigger_right": bp._LAYER_PROFILE}
+    bp.PyDualSenseController._apply_trigger(handle, "right", EFEITO_DO_PERFIL)
+    do_perfil = _gatilho_direito_no_fio(handle, transporte)
+    assert do_perfil[:3] == bytes([0x01, 5, 200]), do_perfil
+
+    ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
+    assert _gatilho_direito_no_fio(handle, transporte) == do_perfil
+
+    ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
+    assert _gatilho_direito_no_fio(handle, transporte) == BLOCO_DO_JOGO
+
+    ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
+    assert _gatilho_direito_no_fio(handle, transporte) == SEM_EFEITO
+
+    ctl.end_game_session_for(MAC_1)
+    assert _gatilho_direito_no_fio(handle, transporte) == do_perfil
+
+
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_cada_um_dos_quatro_obedece_ao_jogo(n: int) -> None:
     """P1 a P4: a regra é por `uniq`, e o jogo pinta cada um com o seu perfil de pé."""
