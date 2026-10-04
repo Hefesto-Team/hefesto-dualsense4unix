@@ -2309,8 +2309,9 @@ class PyDualSenseController(IController):
         O jogo manda; na ausência dele, o perfil ganha (decisão dela de
         03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09): o perfil carimbado
         não tira o que o jogo pintou. O GESTO dela na interface (`usuaria`) é
-        a ordem mais nova, e vale o último que mandou: ele solta o que o jogo
-        pintou NAQUELES campos, até o jogo pintar de novo.
+        a ordem mais nova, e vale o último que mandou (por delegação, a validar
+        por ela): ele solta o que o jogo pintou NAQUELES campos, até o jogo
+        pintar de novo.
         """
         donos = self._desired_owner_by_uniq.setdefault(uniq, {})
         for campo in campos:
