@@ -72,8 +72,8 @@ class PonteQueAnota:
         self.chamadas.append(("rumble_passthrough", a))
         return True, {"status": "ok"}
 
-    def rumble_set_checked(self, *a: Any) -> tuple[bool, dict[str, Any]]:
-        self.chamadas.append(("rumble_set_checked", a))
+    def rumble_set_checked(self, *a: Any, **k: Any) -> tuple[bool, dict[str, Any]]:
+        self.chamadas.append(("rumble_set_checked", (*a, k.get("uniq"))))
         return True, {"status": "ok"}
 
     @property
@@ -85,10 +85,10 @@ class PonteQueAnota:
 def _mesa_limpa():
     """Nenhum teste herda o `_EM_TESTE` do anterior — eles rodam no MESMO processo."""
     a05.parar_o_teste()
-    a05._BATEU_EM[0] = 0.0
+    a05._BATEU_EM.clear()
     yield
     a05.parar_o_teste()
-    a05._BATEU_EM[0] = 0.0
+    a05._BATEU_EM.clear()
 
 
 def _ctx(com_o_controle: bool = True) -> pacotes.Contexto:
@@ -112,14 +112,14 @@ def test_a_aba_registrou_a_largada_no_despachante() -> None:
 def test_largar_devolve_os_motores_ao_jogo_na_ordem_do_parar() -> None:
     """`rumble.stop` e DEPOIS `passthrough(True)` — parar sozinho deixa mudo."""
     p = PonteQueAnota()
-    a05._EM_TESTE[0] = UNIQ
+    a05._EM_TESTE.add(UNIQ)
     a05._largar_o_teste(p)
     assert p.nomes == ["rumble_stop", "rumble_passthrough"], (
         f"a largada chamou {p.nomes}")
-    assert p.chamadas[1][1] == (True,), (
+    assert p.chamadas[1][1] == (True, UNIQ), (
         f"o passthrough foi devolvido com {p.chamadas[1][1]!r} — tem de ser "
         f"`True`, que é o que devolve a mão ao jogo")
-    assert a05.em_teste() == "", "a marca do teste sobreviveu à largada"
+    assert a05.em_teste() == frozenset(), "a marca do teste sobreviveu à largada"
 
 
 def test_largar_sem_teste_ligado_nao_fala_com_o_daemon() -> None:
@@ -139,9 +139,9 @@ def test_a_marca_cai_mesmo_com_a_ponte_morta() -> None:
         def rumble_passthrough(self, *a: Any) -> None:
             raise OSError("a ponte morreu")
 
-    a05._EM_TESTE[0] = UNIQ
+    a05._EM_TESTE.add(UNIQ)
     a05._largar_o_teste(PonteMorta())
-    assert a05.em_teste() == "", (
+    assert a05.em_teste() == frozenset(), (
         "a ponte morta deixou a marca do teste ligada")
 
 
@@ -172,12 +172,15 @@ def test_sem_teste_ligado_o_coracao_nao_bate() -> None:
 def test_o_coracao_bate_uma_vez_por_segundo_e_nao_por_tique() -> None:
     """O espaçamento é da ABA, e é o que separa a cura de uma enxurrada."""
     p = PonteQueAnota()
-    a05._EM_TESTE[0] = UNIQ
+    a05._EM_TESTE.add(UNIQ)
     for _ in range(10):
         a05._bater_o_coracao_do_teste(_ctx(), p)
     assert p.nomes == ["rumble_set_checked"], (
         f"dez tiques deram {len(p.nomes)} batimentos: {p.nomes}. O espaçamento "
         f"de {a05.SEGUNDOS_ENTRE_BATIMENTOS}s morreu")
+    assert p.chamadas[0][1][-1] == UNIQ, (
+        "o batimento não leva o endereço do controle em teste: o daemon fixaria "
+        "o par no alvo de agora, e o teste de um abandonaria o do outro")
 
 
 def test_o_teto_do_daemon_cabe_em_tres_batimentos() -> None:
@@ -194,10 +197,10 @@ def test_o_teto_do_daemon_cabe_em_tres_batimentos() -> None:
 def test_o_controle_que_sai_da_mesa_desliga_o_teste() -> None:
     """Rebater com o dono ausente mandaria o par para o alvo de output DE AGORA."""
     p = PonteQueAnota()
-    a05._EM_TESTE[0] = UNIQ
+    a05._EM_TESTE.add(UNIQ)
     a05._bater_o_coracao_do_teste(_ctx(com_o_controle=False), p)
     assert p.nomes == [], f"bateu com o controle fora da mesa: {p.nomes}"
-    assert a05.em_teste() == "", "o teste continuou ligado com o dono ausente"
+    assert a05.em_teste() == frozenset(), "o teste continuou ligado com o dono ausente"
 
 
 def test_o_despachante_nunca_levanta_por_causa_de_um_coracao() -> None:

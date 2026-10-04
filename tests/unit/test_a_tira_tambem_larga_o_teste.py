@@ -92,31 +92,31 @@ def _carregar(piloto: _Piloto) -> None:
 
 
 def test_o_clique_na_tira_cala_o_teste_da_haptica(ponte: _PonteQueAnota) -> None:
-    a05._EM_TESTE_DA_HAPTICA[0] = UNIQ
+    a05._EM_TESTE_DA_HAPTICA.add(UNIQ)
     piloto = _Piloto("05-vibracao.html", "03-gatilhos.html")
     _carregar(piloto)
     assert ("haptica_testar", (UNIQ, False)) in ponte.chamadas, (
         "a página trocou pela tira e o teste da háptica seguiu ligado: o coração "
         "rebate na aba nova, e o controle vibra até ela voltar à Vibração")
-    assert a05.em_teste_da_haptica() == ""
+    assert a05.em_teste_da_haptica() == frozenset()
     assert piloto.instalou == 1 and piloto.pagina == "03-gatilhos.html"
 
 
 def test_o_clique_na_tira_devolve_os_motores_do_teste_da_vibracao(
     ponte: _PonteQueAnota,
 ) -> None:
-    a05._EM_TESTE[0] = UNIQ
+    a05._EM_TESTE.add(UNIQ)
     _carregar(_Piloto("05-vibracao.html", "02-controles.html"))
     nomes = [n for n, _ in ponte.chamadas]
     assert nomes == ["rumble_stop", "rumble_passthrough"], (
         f"a tira trocou a página e os motores ficaram com o teste: {nomes}")
-    assert ponte.chamadas[1] == ("rumble_passthrough", (True,))
-    assert a05.em_teste() == ""
+    assert ponte.chamadas[1] == ("rumble_passthrough", (True, UNIQ))
+    assert a05.em_teste() == frozenset()
 
 
 def test_a_mesma_pagina_e_a_primeira_carga_nao_largam(ponte: _PonteQueAnota) -> None:
-    a05._EM_TESTE_DA_HAPTICA[0] = UNIQ
+    a05._EM_TESTE_DA_HAPTICA.add(UNIQ)
     _carregar(_Piloto("05-vibracao.html", "05-vibracao.html", pronto=True))
     _carregar(_Piloto("05-vibracao.html", "05-vibracao.html", pronto=False))
     assert ponte.chamadas == []
-    assert a05.em_teste_da_haptica() == UNIQ
+    assert a05.em_teste_da_haptica() == {UNIQ}

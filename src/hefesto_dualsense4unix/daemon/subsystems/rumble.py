@@ -77,6 +77,113 @@ def escrever_rumble_no_dono(
     controller.set_rumble(weak=weak, strong=strong)
 
 
+def pares_fixados(cfg: Any) -> dict[str | None, tuple[int, int, float | None]]:
+    """O par FIXADO de cada controle: ``{dono: (weak, strong, carimbo)}``.
+
+    A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01 (03/10/2026).
+    Até aqui o serviço guardava UM par para a mesa inteira (``rumble_active`` e
+    ``rumble_active_uniq``), e fixar o Controle 2 abandonava o 1: o «Testar» de
+    um calava o outro. Agora cada dono tem o seu par, o seu carimbo de
+    ociosidade e o seu «Parar». ``None`` é o dono «a mesa inteira» (alvo
+    «Todos», o gesto sem controle).
+
+    ``rumble_active``/``rumble_active_uniq``/``rumble_active_em`` ficam como o
+    RESUMO (o par mais recente), porque é neles que o resto do daemon lê «há
+    vibração fixada por nós» (o FF do jogo cala, a troca de perfil preserva o
+    silêncio). Quem solta o resumo (``rumble_active = None``, a devolução ao
+    jogo) solta o registro inteiro — ver :func:`reassert_rumble`.
+    """
+    registro = getattr(cfg, "rumble_fixados", None)
+    if not isinstance(registro, dict):
+        registro = {}
+        try:
+            cfg.rumble_fixados = registro
+        except Exception:  # pragma: no cover — config imutável/exótica
+            logger.debug("rumble_fixados_nao_gravado", exc_info=True)
+    return registro
+
+
+def _publicar_o_resumo(cfg: Any) -> None:
+    """O par mais recente vira ``rumble_active``; sem nenhum, o resumo é ``None``."""
+    registro = pares_fixados(cfg)
+    if not registro:
+        cfg.rumble_active = None
+        cfg.rumble_active_uniq = None
+        cfg.rumble_active_em = None
+        return
+    dono, (weak, strong, em) = max(registro.items(), key=lambda item: item[1][2] or 0.0)
+    cfg.rumble_active = (weak, strong)
+    cfg.rumble_active_uniq = dono
+    cfg.rumble_active_em = em
+
+
+def fixar_par(
+    cfg: Any,
+    dono: str | None,
+    weak: int,
+    strong: int,
+    agora: float | None,
+    *,
+    so_este: bool,
+) -> list[str | None]:
+    """Fixa o par de ``dono`` e devolve os donos que ficaram sem par e vibravam.
+
+    ``so_este=True`` (o gesto com ``uniq``, o da aba Vibração): só o par DESTE
+    controle muda, os outros seguem como estavam. ``so_este=False`` (o gesto
+    sem controle, da CLI e do «Aplicar»): é «o par da mesa», um só, como era —
+    os outros saem do registro, e quem chama zera os que vibravam — menos
+    quando o novo dono é a mesa inteira (``None``): o broadcast alcança os
+    outros junto, e zerar antes só piscaria o motor — e menos o dono do resumo
+    anterior, que a rede de :func:`silenciar_dono_abandonado` já zera uma vez.
+    ``agora``
+    ``None`` é o par sem prazo de ociosidade (o do «Aplicar» do rodapé).
+    """
+    registro = pares_fixados(cfg)
+    largados: list[str | None] = []
+    if not so_este:
+        do_resumo = getattr(cfg, "rumble_active_uniq", None)
+        for outro, (w, s, _em) in list(registro.items()):
+            if outro != dono:
+                del registro[outro]
+                if (w or s) and dono is not None and outro != do_resumo:
+                    largados.append(outro)
+    registro[dono] = (weak, strong, agora)
+    _publicar_o_resumo(cfg)
+    return largados
+
+
+def soltar_par(cfg: Any, dono: str | None) -> None:
+    """Tira o par de ``dono`` do registro (a devolução DELE ao jogo)."""
+    pares_fixados(cfg).pop(dono, None)
+    _publicar_o_resumo(cfg)
+
+
+def soltar_todos(cfg: Any) -> None:
+    """A devolução da mesa inteira ao jogo."""
+    pares_fixados(cfg).clear()
+    _publicar_o_resumo(cfg)
+
+
+def _pares_de_pe(cfg: Any) -> list[tuple[str | None, tuple[int, int], float | None]]:
+    """Os pares que o reassert reafirma agora: ``[(dono, (weak, strong), carimbo)]``.
+
+    ``rumble_active is None`` é a chave-mestra: ninguém tem par fixado, e o
+    registro que sobrou é limpo. Um resumo que NÃO está no registro (um par
+    posto direto em ``rumble_active``, como fazem as portas antigas e os
+    testes) entra como o par do dono dele.
+    """
+    ativo = getattr(cfg, "rumble_active", None)
+    registro = pares_fixados(cfg)
+    if ativo is None:
+        registro.clear()
+        return []
+    pares = [(dono, (w, s), em) for dono, (w, s, em) in registro.items()]
+    dono_do_resumo = getattr(cfg, "rumble_active_uniq", None)
+    if dono_do_resumo not in registro:
+        pares.append((dono_do_resumo, (ativo[0], ativo[1]), getattr(cfg, "rumble_active_em", None)))
+    return pares
+
+
 def _lembrar_dono_vibrando(cfg: Any, uniq: str | None) -> None:
     """Anota quem está vibrando por nossa conta — ou apaga a anotação."""
     try:
@@ -137,30 +244,35 @@ def silenciar_dono_abandonado(
 
 
 def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
-    """Re-aplica rumble_active no hardware a cada ~200ms com política."""
+    """Re-aplica cada par fixado no controle dele a cada ~200ms, com a política."""
     from hefesto_dualsense4unix.core.rumble import _effective_mult
 
     cfg = daemon.config
-    active = cfg.rumble_active
-    if active is None:
+    pares = _pares_de_pe(cfg)
+    if not pares:
         _lembrar_dono_vibrando(cfg, None)
         return
     # naquele momento isso nao interfere in game (noqa-acento: dela). (…) clicar
     # M2 (`lifecycle.apply_profile_rumble_passthrough`) preserva o silêncio
-    carimbo = getattr(cfg, "rumble_active_em", None)
-    if isinstance(carimbo, (int, float)) and now - carimbo > TETO_DO_RUMBLE_FIXADO_S:
-        logger.info(
-            "rumble_fixado_solto_por_ociosidade",
-            parado_ha_s=round(now - carimbo, 1),
-            teto_s=TETO_DO_RUMBLE_FIXADO_S,
-            par=active,
-            dono=getattr(cfg, "rumble_active_uniq", None),
-        )
-        cfg.rumble_active = None
-        cfg.rumble_active_em = None
+    vivos = []
+    for dono, par, carimbo in pares:
+        if isinstance(carimbo, (int, float)) and now - carimbo > TETO_DO_RUMBLE_FIXADO_S:
+            logger.info(
+                "rumble_fixado_solto_por_ociosidade",
+                parado_ha_s=round(now - carimbo, 1),
+                teto_s=TETO_DO_RUMBLE_FIXADO_S,
+                par=par,
+                dono=dono,
+            )
+            if dono in pares_fixados(cfg):
+                del pares_fixados(cfg)[dono]
+            continue
+        vivos.append((dono, par))
+    if len(vivos) != len(pares):
+        _publicar_o_resumo(cfg)
+    if not vivos:
         _lembrar_dono_vibrando(cfg, None)
         return
-    weak_raw, strong_raw = active
 
     battery_pct = 50
     try:
@@ -179,18 +291,24 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
         last_auto_change_at=daemon._last_auto_change_at,
         auto_debounce_sec=AUTO_DEBOUNCE_SEC,
     )
-    weak = max(0, min(255, round(weak_raw * mult)))
-    strong = max(0, min(255, round(strong_raw * mult)))
-
-    dono = getattr(cfg, "rumble_active_uniq", None)
-    try:
-        silenciar_dono_abandonado(
-            daemon.controller, getattr(cfg, "rumble_dono_vibrando", None), dono
-        )
-        escrever_rumble_no_dono(daemon.controller, dono, weak, strong)
-    except Exception as exc:
-        logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
-    _lembrar_dono_vibrando(cfg, dono if (weak or strong) else None)
+    # O dono «mesa inteira» escreve primeiro: o par de um controle, que vem
+    # depois, vale sobre o dele.
+    vivos.sort(key=lambda item: item[0] is not None)
+    vibrando: str | None = None
+    for dono, (weak_raw, strong_raw) in vivos:
+        weak = max(0, min(255, round(weak_raw * mult)))
+        strong = max(0, min(255, round(strong_raw * mult)))
+        try:
+            if len(vivos) == 1:
+                silenciar_dono_abandonado(
+                    daemon.controller, getattr(cfg, "rumble_dono_vibrando", None), dono
+                )
+            escrever_rumble_no_dono(daemon.controller, dono, weak, strong)
+        except Exception as exc:
+            logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
+        if weak or strong:
+            vibrando = dono
+    _lembrar_dono_vibrando(cfg, vibrando)
 
 
 def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
@@ -318,9 +436,13 @@ __all__ = [
     "RUMBLE_SOLTO_NO_MODO_NATIVO",
     "RumbleSubsystem",
     "escrever_rumble_no_dono",
+    "fixar_par",
     "modo_nativo_manda_nos_motores",
+    "pares_fixados",
     "reassert_rumble",
     "sem_dono_do_rumble",
     "silenciar_dono_abandonado",
+    "soltar_par",
+    "soltar_todos",
     "zero_motors_on_mode_exit",
 ]

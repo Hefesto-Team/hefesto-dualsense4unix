@@ -296,8 +296,8 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 return True
             if not comeco[0]:
                 comeco[0] = fora.comeco = time.monotonic()
-                a05._EM_TESTE[0] = str(estado.base["controllers"][0]["uniq"])
-                a05._BATEU_EM[0] = 0.0
+                a05._EM_TESTE.add(str(estado.base["controllers"][0]["uniq"]))
+                a05._BATEU_EM.clear()
             if roteiro(fora, piloto, time.monotonic() - comeco[0]):
                 return True
             with contextlib.suppress(SystemExit):

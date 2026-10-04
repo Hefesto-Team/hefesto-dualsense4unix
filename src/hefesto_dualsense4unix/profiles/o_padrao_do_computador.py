@@ -483,6 +483,17 @@ def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
     velho = antes.model_dump(mode="json", exclude_unset=True) if antes is not None else {}
     mudou = {c: v for c, v in novo.items() if velho.get(c, object()) != v}
     mudou.update({c: None for c in velho if c not in novo})
+    # O PAR ANDA JUNTO COM O VALOR QUE ELE TEM, e não com «tira o colega»:
+    # mexer só no `custom_mult` de quem já está em `custom` deixava `policy`
+    # de fora do diff, e `_com_os_pares` o completava com `None` — o computador
+    # gravava um `custom_mult` sem `policy` e o `maquina.json` recusava o
+    # documento («custom_mult só é válido com policy='custom'»). Medido em
+    # 03/10/2026: qualquer arraste da barra de intensidade depois do primeiro.
+    for par in PARES.get(secao, ()):
+        if set(mudou) & set(par):
+            for campo in par:
+                if campo not in mudou and campo in novo:
+                    mudou[campo] = novo[campo]
     return mudou
 
 

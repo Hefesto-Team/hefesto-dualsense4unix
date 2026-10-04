@@ -59,9 +59,9 @@ def test_a_dica_do_testar_nao_promete_duracao() -> None:
         f"— o Testar fica ligado até o Parar desde 07/09: {dica!r}")
     assert re.search(r"\baté o Parar\b", dica), (
         f"o `?` do «Testar agora» não diz mais quem termina o teste: {dica!r}")
-    assert re.search(r"\boutro controle\b", dica), (
-        f"o `?` do «Testar agora» não diz que o teste de outro controle "
-        f"encerra este (um teste só, `_EM_TESTE`): {dica!r}")
+    assert re.search(r"\bcada controle tem o seu teste\b", dica), (
+        f"o `?` do «Testar agora» não diz que cada controle tem o seu teste "
+        f"(um por controle, `_EM_TESTE`): {dica!r}")
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ def _ctx(pac: Any) -> Any:
         estados={})
 
 
-def test_o_testar_fica_ligado_ate_o_parar_e_o_de_outro_controle_o_encerra(
+def test_o_testar_fica_ligado_ate_o_parar_e_o_de_outro_controle_nao_o_encerra(
         pac: Any, a05: Any) -> None:
     """O fato que a frase nova afirma, medido no gesto — não na prosa."""
     testar = pac.gesto_da_pagina("05-vibracao.html", "testar")
@@ -112,15 +112,17 @@ def test_o_testar_fica_ligado_ate_o_parar_e_o_de_outro_controle_o_encerra(
     paradas = [n for n in p.nomes if n.startswith(("rumble_stop", "rumble_passthrough"))]
     assert not paradas, f"o Testar parou sozinho: {p.nomes}"
     assert "rumble_set_checked" in p.nomes, f"o Testar não mandou vibração: {p.nomes}"
-    assert a05.em_teste() == P1, "o Testar do P1 não ficou ligado"
+    assert a05.em_teste() == {P1}, "o Testar do P1 não ficou ligado"
 
     testar(ctx, {"uniq": P2, "controle": "p2"}, PonteDeMentira())
-    assert a05.em_teste() == P2, (
-        "o Testar do P2 não encerrou o do P1 — um teste só, `_EM_TESTE`")
+    assert a05.em_teste() == {P1, P2}, (
+        "o Testar do P2 encerrou o do P1 — é um teste por controle, `_EM_TESTE`")
 
     fim = PonteDeMentira()
     parar(ctx, {"uniq": P2, "controle": "p2"}, fim)
-    assert a05.em_teste() == "", "o Parar não apagou a marca do teste"
+    assert a05.em_teste() == {P1}, "o Parar do P2 apagou a marca do teste do P1"
+    parar(ctx, {"uniq": P1, "controle": "p1"}, PonteDeMentira())
+    assert a05.em_teste() == frozenset(), "o Parar não apagou a marca do teste"
     assert "rumble_stop_checked" in fim.nomes and "rumble_passthrough" in fim.nomes, (
         f"o Parar não devolveu os motores ao jogo: {fim.nomes}")
 

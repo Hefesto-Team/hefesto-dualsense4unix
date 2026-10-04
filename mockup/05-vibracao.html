@@ -2285,14 +2285,14 @@
                      (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela prometia um pulso,
                      e o gesto deixou de ser pulso em 07/09, a pedido dela: o
                      `a05_vibracao.testar` fica ligado até o Parar, segue as
-                     barras ao vivo, e o Testar de outra coluna encerra o
-                     anterior (`_EM_TESTE`, um teste só). Medido no daemon de
-                     mentira: nenhum `rumble.stop` sai sem o Parar. -->
+                     barras ao vivo, e o teste de cada controle é dele
+                     (`_EM_TESTE`, um por controle desde 03/10). Medido no
+                     daemon de mentira: nenhum `rumble.stop` sai sem o Parar. -->
                 <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
                 seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
-                fina pelo som, com a força do <b>Sensor Háptico</b>. Ligar um desliga
-                o outro, e testar outro controle encerra este. <b>Parar</b> corta os
-                dois e devolve a vibração ao jogo.<br><br>
+                fina pelo som, com a força do <b>Sensor Háptico</b>. No mesmo controle
+                ligar um desliga o outro, e cada controle tem o seu teste. <b>Parar</b>
+                corta os dois deste controle e devolve a vibração dele ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
                      05/09/2026: *"As duas na dica."* Ela é a única frase desta
                      aba que explica um resultado que a PRÓPRIA TELA produz (por
@@ -2624,12 +2624,11 @@
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -2665,8 +2664,10 @@
               <!-- OS DOIS TESTES LADO A LADO — 02/10/2026, a resposta [24] dela:
                    *«ficam dois botões lado a Lado Vibração e Háptica»*. O
                    «Vibração» é o Testar de sempre; o «Háptica» toca a vibração
-                   fina pelo som. Ligar um desliga o outro, e o «Parar» corta
-                   os dois. -->
+                   fina pelo som. No mesmo controle ligar um desliga o outro, e
+                   o «Parar» corta os dois DELE; cada controle tem o seu teste
+                   (03/10/2026, ela: «vibração e háptico é por cada controle e
+                   precisam funcionar em independente»). -->
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
                       aria-pressed="false">Vibração</button>
@@ -2990,12 +2991,11 @@
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -3031,8 +3031,10 @@
               <!-- OS DOIS TESTES LADO A LADO — 02/10/2026, a resposta [24] dela:
                    *«ficam dois botões lado a Lado Vibração e Háptica»*. O
                    «Vibração» é o Testar de sempre; o «Háptica» toca a vibração
-                   fina pelo som. Ligar um desliga o outro, e o «Parar» corta
-                   os dois. -->
+                   fina pelo som. No mesmo controle ligar um desliga o outro, e
+                   o «Parar» corta os dois DELE; cada controle tem o seu teste
+                   (03/10/2026, ela: «vibração e háptico é por cada controle e
+                   precisam funcionar em independente»). -->
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
                       aria-pressed="false">Vibração</button>
@@ -3355,12 +3357,11 @@
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -3396,8 +3397,10 @@
               <!-- OS DOIS TESTES LADO A LADO — 02/10/2026, a resposta [24] dela:
                    *«ficam dois botões lado a Lado Vibração e Háptica»*. O
                    «Vibração» é o Testar de sempre; o «Háptica» toca a vibração
-                   fina pelo som. Ligar um desliga o outro, e o «Parar» corta
-                   os dois. -->
+                   fina pelo som. No mesmo controle ligar um desliga o outro, e
+                   o «Parar» corta os dois DELE; cada controle tem o seu teste
+                   (03/10/2026, ela: «vibração e háptico é por cada controle e
+                   precisam funcionar em independente»). -->
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
                       aria-pressed="false">Vibração</button>
@@ -3720,12 +3723,11 @@
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -3761,8 +3763,10 @@
               <!-- OS DOIS TESTES LADO A LADO — 02/10/2026, a resposta [24] dela:
                    *«ficam dois botões lado a Lado Vibração e Háptica»*. O
                    «Vibração» é o Testar de sempre; o «Háptica» toca a vibração
-                   fina pelo som. Ligar um desliga o outro, e o «Parar» corta
-                   os dois. -->
+                   fina pelo som. No mesmo controle ligar um desliga o outro, e
+                   o «Parar» corta os dois DELE; cada controle tem o seu teste
+                   (03/10/2026, ela: «vibração e háptico é por cada controle e
+                   precisam funcionar em independente»). -->
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
                       aria-pressed="false">Vibração</button>

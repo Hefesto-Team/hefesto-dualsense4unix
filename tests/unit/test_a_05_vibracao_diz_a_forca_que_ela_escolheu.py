@@ -371,19 +371,22 @@ def test_o_testar_fica_ligado_e_so_o_parar_desliga() -> None:
 
     p1 = _PonteDeMentira()
     pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, clique, p1)
-    assert p1.chamadas == ["controller.target.set", "rumble.set"], (
-        f"o Testar não pode parar sozinho: {p1.chamadas}")
-    assert a05.em_teste() == UNIQS[0], "o Testar não ficou ligado"
+    assert p1.chamadas == ["rumble.set"], (
+        f"o Testar não pode parar sozinho, nem mirar o seletor global: {p1.chamadas}")
+    assert a05.em_teste() == {UNIQS[0]}, "o Testar não ficou ligado"
 
     p2 = _PonteDeMentira()
     pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, {"uniq": UNIQS[1]}, p2)
-    assert a05.em_teste() == UNIQS[1], "o segundo Testar não tomou o lugar"
+    assert a05.em_teste() == {UNIQS[0], UNIQS[1]}, (
+        "o segundo Testar tomou o lugar do primeiro — é um teste por controle")
 
     p3 = _PonteDeMentira()
     pacotes.gesto_da_pagina(PAGINA, "parar")(ctx, {"uniq": UNIQS[1]}, p3)
-    assert p3.chamadas == ["controller.target.set", "rumble.stop",
-                           "rumble.passthrough"], p3.chamadas
-    assert a05.em_teste() == "", (
+    assert p3.chamadas == ["rumble.stop", "rumble.passthrough"], p3.chamadas
+    assert a05.em_teste() == {UNIQS[0]}, (
+        "o Parar do P2 apagou a marca do teste do P1")
+    pacotes.gesto_da_pagina(PAGINA, "parar")(ctx, {"uniq": UNIQS[0]}, _PonteDeMentira())
+    assert a05.em_teste() == frozenset(), (
         "o Parar não apagou a marca — o próximo arraste de barra "
         "ressuscitaria o tremor de um teste que ela encerrou")
 

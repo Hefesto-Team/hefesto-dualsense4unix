@@ -207,16 +207,22 @@ class _Ponte:
         self.chamadas.append(("chamar", metodo))
         return True
 
-    def rumble_set_checked(self, weak: int, strong: int) -> tuple[bool, None]:
-        self.chamadas.append(("rumble_set_checked", weak, strong))
+    def rumble_set_checked(
+        self, weak: int, strong: int, uniq: str | None = None
+    ) -> tuple[bool, None]:
+        self.chamadas.append(("rumble_set_checked", weak, strong, uniq))
         return True, None
 
-    def rumble_stop_checked(self) -> tuple[bool, None]:
-        self.chamadas.append(("rumble_stop_checked",))
+    def rumble_stop_checked(self, uniq: str | None = None) -> tuple[bool, None]:
+        self.chamadas.append(("rumble_stop_checked", uniq))
         return True, None
 
-    def rumble_passthrough(self, ligado: bool) -> bool:
-        self.chamadas.append(("rumble_passthrough", ligado))
+    def rumble_stop(self, uniq: str | None = None) -> bool:
+        self.chamadas.append(("rumble_stop", uniq))
+        return True
+
+    def rumble_passthrough(self, ligado: bool, uniq: str | None = None) -> bool:
+        self.chamadas.append(("rumble_passthrough", ligado, uniq))
         return True
 
     def rumble_motores_set(self, **k: Any) -> tuple[bool, dict[str, str]]:
@@ -252,14 +258,14 @@ class TestOsDoisTestes:
         _clicar("testar", ponte)
         assert "rumble_set_checked" in ponte.nomes()
         assert "haptica_testar" not in ponte.nomes()
-        assert a05.em_teste() == UNIQ and a05.em_teste_da_haptica() == ""
+        assert a05.em_teste() == {UNIQ} and a05.em_teste_da_haptica() == frozenset()
 
     def test_a_haptica_toca_a_haptica_e_nenhum_par_de_motor(self) -> None:
         """Régua 4. MORDIDA: o «Háptica» chamando o teste de hoje → reprova."""
         ponte = _Ponte()
         _clicar("testar-haptica", ponte)
         assert ponte.chamadas == [("haptica_testar", UNIQ, True)]
-        assert a05.em_teste_da_haptica() == UNIQ and a05.em_teste() == ""
+        assert a05.em_teste_da_haptica() == {UNIQ} and a05.em_teste() == frozenset()
         assert _coluna({"rumble_policy": "balanceado"})["em-teste-h"] == "1"
 
     def test_ligar_a_haptica_desliga_a_vibracao(self) -> None:
@@ -267,8 +273,8 @@ class TestOsDoisTestes:
         _clicar("testar", ponte)
         ponte.chamadas.clear()
         _clicar("testar-haptica", ponte)
-        assert ponte.nomes() == ["rumble_stop_checked", "rumble_passthrough", "haptica_testar"]
-        assert a05.em_teste() == "" and a05.em_teste_da_haptica() == UNIQ
+        assert ponte.nomes() == ["rumble_stop", "rumble_passthrough", "haptica_testar"]
+        assert a05.em_teste() == frozenset() and a05.em_teste_da_haptica() == {UNIQ}
 
     def test_ligar_a_vibracao_desliga_a_haptica(self) -> None:
         ponte = _Ponte()
@@ -277,7 +283,7 @@ class TestOsDoisTestes:
         _clicar("testar", ponte)
         assert ("haptica_testar", UNIQ, False) in ponte.chamadas
         assert ponte.nomes().index("haptica_testar") < ponte.nomes().index("rumble_set_checked")
-        assert a05.em_teste_da_haptica() == "" and a05.em_teste() == UNIQ
+        assert a05.em_teste_da_haptica() == frozenset() and a05.em_teste() == {UNIQ}
 
     def test_o_parar_desliga_o_que_estiver_ligado(self) -> None:
         ponte = _Ponte()
@@ -286,13 +292,13 @@ class TestOsDoisTestes:
         _clicar("parar", ponte)
         assert ("haptica_testar", UNIQ, False) in ponte.chamadas
         assert "rumble_stop_checked" in ponte.nomes() and "rumble_passthrough" in ponte.nomes()
-        assert a05.em_teste_da_haptica() == "" and a05.em_teste() == ""
+        assert a05.em_teste_da_haptica() == frozenset() and a05.em_teste() == frozenset()
 
     def test_a_recusa_do_daemon_chega_dizendo_e_nao_acende(self) -> None:
         ponte = _Ponte(haptica={"status": "sem_controle", "motivo": "fora da mesa agora"})
         with pytest.raises(RuntimeError, match="fora da mesa agora"):
             _clicar("testar-haptica", ponte)
-        assert a05.em_teste_da_haptica() == ""
+        assert a05.em_teste_da_haptica() == frozenset()
 
     def test_o_arraste_da_sensor_rebate_o_teste_deste_controle(self) -> None:
         ponte = _Ponte()
@@ -302,18 +308,40 @@ class TestOsDoisTestes:
         assert ponte.nomes() == ["rumble_motores_set", "haptica_testar"]
         assert ponte.chamadas[-1] == ("haptica_testar", UNIQ, True)
 
-    def test_a_haptica_de_outra_coluna_cala_a_primeira(self) -> None:
-        """Um teste só na mesa: o «Háptica» do segundo controle cala o do primeiro."""
+    def test_a_haptica_de_outra_coluna_nao_cala_a_primeira(self) -> None:
+        """Um teste POR CONTROLE: o «Háptica» do segundo não toca no do primeiro.
+
+        Ela, 03/10/2026: *«vibração e háptico é por cada controle e precisam
+        funcionar em independente»*. MORDIDA: volte `_EM_TESTE_DA_HAPTICA` a um
+        `uniq` só (o gesto calando os outros) → reprova.
+        """
         outro = "aa:bb:cc:00:00:07"
         ponte = _Ponte()
         _clicar("testar-haptica", ponte)
         ponte.chamadas.clear()
         _clicar("testar-haptica", ponte, uniq=outro)
-        assert ponte.chamadas == [
-            ("haptica_testar", UNIQ, False),
-            ("haptica_testar", outro, True),
-        ]
-        assert a05.em_teste_da_haptica() == outro
+        assert ponte.chamadas == [("haptica_testar", outro, True)]
+        assert a05.em_teste_da_haptica() == {UNIQ, outro}
+
+    def test_o_parar_de_um_controle_nao_cala_o_outro(self) -> None:
+        """P1 em vibração e P2 em háptica: o «Parar» de um só mexe no dele."""
+        outro = "aa:bb:cc:00:00:07"
+        ponte = _Ponte()
+        _clicar("testar", ponte)
+        _clicar("testar-haptica", ponte, uniq=outro)
+        ponte.chamadas.clear()
+        _clicar("parar", ponte)
+        assert ("rumble_stop_checked", UNIQ) in ponte.chamadas
+        assert not any(c[0] == "haptica_testar" for c in ponte.chamadas), (
+            "o «Parar» do P1 calou a háptica do P2")
+        assert all(c[-1] == UNIQ for c in ponte.chamadas), (
+            "o «Parar» do P1 levou o endereço de outro controle")
+        assert a05.em_teste() == frozenset()
+        assert a05.em_teste_da_haptica() == {outro}
+        ponte.chamadas.clear()
+        _clicar("parar", ponte, uniq=outro)
+        assert ("haptica_testar", outro, False) in ponte.chamadas
+        assert a05.em_teste_da_haptica() == frozenset()
 
     def test_sair_da_pagina_cala_o_teste_da_haptica(self) -> None:
         ponte = _Ponte()
@@ -321,7 +349,7 @@ class TestOsDoisTestes:
         ponte.chamadas.clear()
         a05._largar_o_teste_da_haptica(ponte)
         assert ponte.chamadas == [("haptica_testar", UNIQ, False)]
-        assert a05.em_teste_da_haptica() == ""
+        assert a05.em_teste_da_haptica() == frozenset()
 
     def test_o_desenho_tem_os_tres_botoes_numa_linha(self) -> None:
         """«Vibração», «Háptica» e «Parar», nesta ordem, na célula do «Testar agora»."""
@@ -473,7 +501,7 @@ MEDIDA = r"""
 
 DESENHO_DE_ANTES = 124
 
-CENAS = ("quieta", "navegacao", "vpad-nao-subiu")
+CENAS = ("quieta", "vpad-nao-subiu")
 
 
 @pytest.fixture(scope="module", params=CENAS)

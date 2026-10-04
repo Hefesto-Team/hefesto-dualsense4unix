@@ -565,7 +565,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "degrau": degrau_da_faixa(politica, custom),
             "degrau-herdado": "1" if politica and not propria else "",
             "mult-teto": _no_teto(pct),
-            "em-teste": "1" if uniq and uniq == em_teste() else "",
+            "em-teste": "1" if uniq and uniq in em_teste() else "",
         }
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")
@@ -586,7 +586,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         plano["haptica-fora"] = "" if alcanca else "1"
         # chegando a ESTE controle agora, do `state_full` (`haptica_no_ar`).
         plano["haptica-no-ar"] = "1" if _haptica_no_ar(ctx.state, uniq) else ""
-        plano["em-teste-h"] = "1" if uniq and uniq == em_teste_da_haptica() else ""
+        plano["em-teste-h"] = "1" if uniq and uniq in em_teste_da_haptica() else ""
         for lado, treme in (col.get("treme") or {}).items():
             plano[f"treme-{lado}"] = "1" if treme else ""
         # sempre vai ser o jogo mandando os input pro controle e a gnt
@@ -627,138 +627,141 @@ _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 #: (`app/actions/rumble_actions.py`) remove a fonte GLib pendente e é
 _VEZ = [0]
 
-_EM_TESTE = [""]
+#: Os controles com o «Testar» da vibração LIGADO agora. UM POR CONTROLE: o
+#: teste de um não toca no do outro (03/10/2026, ela: *«vibração e háptico é
+#: por cada controle e precisam funcionar em independente»*). Era um `uniq` só,
+#: e ligar o do P2 calava o do P1.
+_EM_TESTE: set[str] = set()
 
 
-def em_teste() -> str:
-    """O `uniq` em teste agora, ou `""`. Leitura pura, para a tela e a régua."""
-    return _EM_TESTE[0]
+def em_teste() -> frozenset[str]:
+    """Os `uniq` em teste agora. Leitura pura, para a tela e a régua."""
+    return frozenset(_EM_TESTE)
 
 
-#: botões lado a Lado Vibração e Háptica»*. <!-- noqa-acento: citação literal dela -->
-_EM_TESTE_DA_HAPTICA = [""]
+#: O mesmo para o «Háptica» (botões lado a lado, a resposta [24] dela).
+_EM_TESTE_DA_HAPTICA: set[str] = set()
 
 
-def em_teste_da_haptica() -> str:
-    """O `uniq` com o teste da háptica ligado agora, ou `""`. Leitura pura."""
-    return _EM_TESTE_DA_HAPTICA[0]
+def em_teste_da_haptica() -> frozenset[str]:
+    """Os `uniq` com o teste da háptica ligado agora. Leitura pura."""
+    return frozenset(_EM_TESTE_DA_HAPTICA)
 
 
-def parar_o_teste_da_haptica() -> None:
-    """Apaga a marca do teste da háptica. Pelas mesmas duas portas do irmão."""
-    _EM_TESTE_DA_HAPTICA[0] = ""
+def parar_o_teste_da_haptica(uniq: str | None = None) -> None:
+    """Apaga a marca do teste da háptica de `uniq`, ou de todos sem argumento."""
+    if uniq is None:
+        _EM_TESTE_DA_HAPTICA.clear()
+        _BATEU_A_HAPTICA_EM.clear()
+        return
+    _EM_TESTE_DA_HAPTICA.discard(uniq)
+    _BATEU_A_HAPTICA_EM.pop(uniq, None)
 
 
-def parar_o_teste() -> None:
-    """Apaga a marca do teste. O ÚNICO jeito de zerá-la de fora.
+def parar_o_teste(uniq: str | None = None) -> None:
+    """Apaga a marca do teste de `uniq`, ou de todos sem argumento.
 
     DUAS PORTAS PRECISAM DISTO, e as duas são risco de verdade:
 
     * a suíte, que roda os gestos no MESMO processo — um "Testar" de um caso
       deixava a marca ligada e o arraste de barra do caso seguinte mandava
-      vibração que ninguém pediu (medido em 07/09/2026, e a régua da barra
-      pegou: *"o gesto chamou ['rumble_motores_set', 'rumble_set_checked']"*);
+      vibração que ninguém pediu (medido em 07/09/2026);
     * o controle que SAI da mesa com o teste ligado. Sem apagar a marca, o
-      próximo arraste de barra tentaria vibrar um aparelho que não está aqui —
-      e, pior, `rumble.stop` não leva endereço: o silêncio cairia em quem
-      estivesse mirado.
+      próximo arraste de barra tentaria vibrar um aparelho que não está aqui.
     """
-    _EM_TESTE[0] = ""
+    if uniq is None:
+        _EM_TESTE.clear()
+        _BATEU_EM.clear()
+        return
+    _EM_TESTE.discard(uniq)
+    _BATEU_EM.pop(uniq, None)
 
 
 SEGUNDOS_ENTRE_BATIMENTOS = 1.0
 
-_BATEU_EM = [0.0]
+_BATEU_EM: dict[str, float] = {}
 
 
 @coracao
 def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
-    """Diz ao daemon, a cada segundo, que a janela ainda segura os motores.
+    """Diz ao daemon, a cada segundo, que a janela ainda segura os motores DE CADA teste.
 
     NASCEU DA ORDEM DELA, 15/09/2026: *"o testar e parar é sobre o teste naquele
     momento isso nao interfere in game"*  (noqa-acento: citação literal dela). O
-    "Testar" tira os motores do jogo e os devolve no "Parar" — e até hoje NADA
-    mais os devolvia: fechar a janela, trocar de aba ou a janela morrer deixava
-    o jogo mudo até ela voltar aqui e clicar.
-
-    ESTE É O LADO DA JANELA VIVA. O daemon ganhou um teto de ociosidade
-    (`TETO_DO_RUMBLE_FIXADO_S`) que solta o rumble fixado que ninguém rebate; o
-    batimento é o que diz *"ainda estou aqui"* enquanto ela olha. Sem ele o
-    teste soltaria sozinho em três segundos, e ela pediu o contrário em
-    07/09/2026: *"o botão Testar tem que ficar em estado de ligado"*.
+    "Testar" tira os motores do jogo e os devolve no "Parar" — e fechar a
+    janela, trocar de aba ou a janela morrer deixava o jogo mudo até ela voltar
+    e clicar. O daemon solta o par que ninguém rebate
+    (`TETO_DO_RUMBLE_FIXADO_S`); o batimento é o que diz *"ainda estou aqui"*.
 
     ELE NÃO MANDA VIBRAÇÃO NOVA. O par vem de :func:`_par_das_barras`, o mesmo
-    que o arraste reenvia — então um batimento no meio de um arraste não
-    atropela nada: os dois mandam o mesmo número.
+    que o arraste reenvia, e cada controle em teste bate com o endereço dele.
     """
-    uniq = _EM_TESTE[0]
-    if not uniq:
-        return
     agora = _monotonic()
-    if agora - _BATEU_EM[0] < SEGUNDOS_ENTRE_BATIMENTOS:
-        return
-    _BATEU_EM[0] = agora
-    if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
-        parar_o_teste()
-        return
-    weak, strong = _par_das_barras(ctx, uniq)
-    with contextlib.suppress(Exception):
-        p.rumble_set_checked(weak, strong)
+    for uniq in sorted(_EM_TESTE):
+        if agora - _BATEU_EM.get(uniq, 0.0) < SEGUNDOS_ENTRE_BATIMENTOS:
+            continue
+        _BATEU_EM[uniq] = agora
+        if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
+            parar_o_teste(uniq)
+            continue
+        weak, strong = _par_das_barras(ctx, uniq)
+        with contextlib.suppress(Exception):
+            p.rumble_set_checked(weak, strong, uniq=uniq)
 
 
-_BATEU_A_HAPTICA_EM = [0.0]
+_BATEU_A_HAPTICA_EM: dict[str, float] = {}
 
 
 @coracao
 def _bater_o_coracao_da_haptica(ctx: Contexto, p: Any) -> None:
-    """Rebate o teste da háptica a cada segundo: o daemon solta o que ninguém rebate."""
-    uniq = _EM_TESTE_DA_HAPTICA[0]
-    if not uniq:
-        return
+    """Rebate o teste da háptica de cada controle a cada segundo."""
     agora = _monotonic()
-    if agora - _BATEU_A_HAPTICA_EM[0] < SEGUNDOS_ENTRE_BATIMENTOS:
-        return
-    _BATEU_A_HAPTICA_EM[0] = agora
-    if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
-        parar_o_teste_da_haptica()
-        return
-    with contextlib.suppress(Exception):
-        p.haptica_testar(uniq, True)
+    for uniq in sorted(_EM_TESTE_DA_HAPTICA):
+        if agora - _BATEU_A_HAPTICA_EM.get(uniq, 0.0) < SEGUNDOS_ENTRE_BATIMENTOS:
+            continue
+        _BATEU_A_HAPTICA_EM[uniq] = agora
+        if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
+            parar_o_teste_da_haptica(uniq)
+            continue
+        with contextlib.suppress(Exception):
+            p.haptica_testar(uniq, True)
 
 
 @largada
 def _largar_o_teste_da_haptica(p: Any) -> None:
-    """Cala o teste da háptica ao trocar de página e ao fim da janela."""
-    uniq = _EM_TESTE_DA_HAPTICA[0]
-    if not uniq:
+    """Cala os testes da háptica ao trocar de página e ao fim da janela."""
+    for uniq in sorted(_EM_TESTE_DA_HAPTICA):
+        _calar_o_teste_da_haptica(p, uniq)
+
+
+def _calar_o_teste_da_haptica(p: Any, uniq: str) -> None:
+    """O teste da háptica DESTE controle cala, e a marca cai. Os outros seguem."""
+    if uniq not in _EM_TESTE_DA_HAPTICA:
         return
-    parar_o_teste_da_haptica()
-    _BATEU_A_HAPTICA_EM[0] = 0.0
+    parar_o_teste_da_haptica(uniq)
     with contextlib.suppress(Exception):
         p.haptica_testar(uniq, False)
 
 
-def _calar_o_teste_da_haptica(p: Any) -> None:
-    """O teste da háptica ligado (de qualquer coluna) cala, e a marca cai."""
-    uniq = _EM_TESTE_DA_HAPTICA[0]
-    if not uniq:
-        return
-    parar_o_teste_da_haptica()
+def _devolver_ao_jogo(p: Any, uniq: str) -> None:
+    """Para os motores DESTE controle e devolve a mão dele ao jogo.
+
+    São os dois passos que o «Parar» sempre deu: parar sozinho fixa `(0, 0)` e o
+    laço do daemon re-afirma o silêncio, e o jogo ficaria mudo depois de um teste
+    (SPRINT-GAME-RUMBLE-01). Com `uniq`, nenhum dos dois toca no par dos outros.
+    """
     with contextlib.suppress(Exception):
-        p.haptica_testar(uniq, False)
+        p.rumble_stop(uniq)
+    with contextlib.suppress(Exception):
+        p.rumble_passthrough(True, uniq)
 
 
 @largada
 def _largar_o_teste(p: Any) -> None:
     """Devolve os motores ao jogo. Chamado ao trocar de página e ao fim da janela."""
-    if not _EM_TESTE[0]:
-        return
-    parar_o_teste()
-    _BATEU_EM[0] = 0.0
-    with contextlib.suppress(Exception):
-        p.rumble_stop()
-    with contextlib.suppress(Exception):
-        p.rumble_passthrough(True)
+    for uniq in sorted(_EM_TESTE):
+        parar_o_teste(uniq)
+        _devolver_ao_jogo(p, uniq)
 
 
 def _reduzido_pela_barra(valor: int, pontos: int) -> int:
@@ -836,14 +839,14 @@ def _refrescar_o_teste(
     acabou_de_gravar: tuple[str, int] | None = None,
 ) -> None:
     """Reenvia o par ao controle em teste — é o "ao vivo" que ela pediu."""
-    if not uniq or _EM_TESTE[0] != uniq:
+    if not uniq or uniq not in _EM_TESTE:
         return
     if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
-        parar_o_teste()
+        parar_o_teste(uniq)
         return
     weak, strong = _par_das_barras(ctx, uniq, acabou_de_gravar=acabou_de_gravar)
     with contextlib.suppress(Exception):
-        p.rumble_set_checked(weak, strong)
+        p.rumble_set_checked(weak, strong, uniq=uniq)
 
 
 def _minha_vez() -> int:
@@ -899,60 +902,6 @@ def _uniq(o: dict[str, Any]) -> str:
     return ""
 
 
-def _indice(ctx: Contexto, uniq: str) -> int:
-    """A POSIÇÃO daquele controle na lista do daemon — o que o alvo espera.
-
-    `controller.target.set` recebe `index` (0 = primário), **não** `uniq`:
-    `daemon/ipc_handlers.py:3782`. O número sai do próprio bloco `controllers`
-    (`core/backend_pydualsense.py:5016`, `"index": idx`), que é a posição em
-    `list(self._handles)` — o MESMO que cada linha do seletor da janela estável
-    carrega (`app/actions/status_actions.py`).
-
-    O RECURSO À POSIÇÃO NA MESA existe porque nem toda entrada publica `index`
-    (backend falso, daemon legado); o próprio handler cai nesse recurso em
-    `_numero_de_exibicao` (`ipc_handlers.py:483`). E se o controle não estiver
-    na mesa, levanta: mirar um lugar vazio deixaria o alvo ANTERIOR de pé, e o
-    tremor sairia na coluna errada, calado.
-
-    **A RECUSA VIRA `RuntimeError` — 04/09/2026, e era um dos dois silêncios
-    desta aba.** Ela era `ValueError`, e o contrato do piloto é explícito:
-    `RuntimeError` leva a frase ao CARTÃO dela e `ValueError` fica no `stderr`
-    de quem lançou a janela (`hefesto_vivo._recusou_dizendo` — *"quem clica na
-    janela não lê o terminal de quem a lançou"*). **Esta metade vale inteira.**
-
-    **A OUTRA METADE CADUCOU EM 05/09/2026, MEDIDA.** Este parágrafo dizia que
-    este era *"o caminho do 'Testar' e do 'Parar' clicados numa coluna cujo
-    controle acabou de cair"*, e não é — nem nunca foi, pelo caminho dela. A
-    prova é de duas linhas: `_indice` só roda depois de o `uniq` não ser vazio
-    (:func:`_mirar`), um `uniq` não vazio veio de `ctx.mesa`, e `ctx.mesa` está
-    **contida** em `ctx.conectados` (o piloto filtra `connected` com padrão
-    `True`; `app/mesa.py` filtra `connected` sem padrão). Então
-    :meth:`Contexto.por_uniq` sempre acha, e este `raise` **não dispara pelo
-    clique dela**. A cura de 04/09 foi entregue no ramo errado; o caminho dela é
-    o de :func:`_uniq`, que hoje sabe a diferença.
-
-    **E O `raise` FICA.** Ele é a guarda contra o broadcast para qualquer
-    chamador que não seja o piloto — um `uniq` fora da mesa devolvendo posição
-    faria a mira cair no controle ERRADO, e mirar um lugar vazio deixaria o alvo
-    ANTERIOR de pé: o tremor sairia na coluna errada, calado. Inalcançável pelo
-    piloto não é o mesmo que enfeite.
-
-    E A FRASE FALA COM QUEM ESTÁ COM O CONTROLE NA MÃO, não com quem programa:
-    o `ValueError` de antes dizia `o controle d4:2f:… não está na mesa agora`,
-    com o endereço de rádio no meio — e é justamente o que os dois portões de
-    anonimato desta casa existem para não deixar sair. Ela é a mesma de
-    :func:`_uniq` porque é o mesmo fato, e mora em
-    :data:`FRASE_DO_CONTROLE_QUE_SAIU`.
-    """
-    i = ctx.por_uniq(uniq).get("index")
-    if isinstance(i, int) and not isinstance(i, bool):
-        return i
-    for pos, c in enumerate(ctx.conectados):
-        if str(c.get("uniq") or "") == uniq:
-            return pos
-    raise RuntimeError(FRASE_DO_CONTROLE_QUE_SAIU)
-
-
 def _resposta(r: Any) -> tuple[bool, str | None]:
     """`(ok, motivo)` seja qual for a forma que a função da ponte devolveu."""
     if isinstance(r, tuple):
@@ -960,61 +909,6 @@ def _resposta(r: Any) -> tuple[bool, str | None]:
         motivo = r[1] if len(r) > 1 else None
         return ok, (str(motivo) if motivo else None)
     return bool(r), None
-
-
-def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
-    """Aponta o alvo de output para a coluna clicada, e devolve o `uniq`.
-
-    ISTO NÃO É ENFEITE: é a única forma de o botão da coluna falar com AQUELE
-    controle, porque `rumble.set` e `rumble.stop` não têm parâmetro de endereço
-    (ver o bloco no topo desta seção). O `rumble.stop` mira no mesmo lugar —
-    `ipc_handlers.py:4042` lê `uniq_do_alvo_de_output` antes de zerar.
-
-    É o MESMO par de passos da janela estável, só que sem seletor: lá o chip
-    manda `controller.target.set` (`app/actions/status_actions.py`) e a
-    aba Rumble manda o `rumble.set` depois. Aqui os dois viram um gesto só,
-    porque nesta aba o endereço é a coluna — a fita nasce esmaecida de
-    propósito (decisão dela, 28/08).
-
-    `controller.target.set` não tem função no `ipc_bridge` (procurei: o módulo
-    não cita `target` uma vez), então é o degrau 3 da ponte — e passa pelo
-    mesmo `_safe_call`, com o mesmo timeout.
-
-    **A MIRA PASSOU A SER CONFERIDA — 04/09/2026, e é o defeito mais caro que
-    esta função guardava.** O `chamar()` devolve `bool` e o retorno era jogado
-    fora: com o daemon mudo — ou só lento além dos 250 ms do `_safe_call` —, a
-    mira FALHAVA e o gesto seguia adiante para o `rumble.set`, **que sem alvo
-    escolhido é BROADCAST** (`ipc_handlers.py:3902`). O "Testar" da coluna do
-    P2 sacudia os quatro controles, e a tela não dizia uma palavra. É o
-    contrário do que o desenho promete — *"Testar faz este controle tremer até
-    o Parar"* — e é pior que não fazer nada: faz na mesa inteira.
-
-    RECUSAR É MAIS HONESTO QUE ACERTAR POR ACASO: quando a mira não vai, nada
-    é mandado e a frase diz por quê. O par `_minha_vez()`/`_mirar()` continua na
-    mesma ordem — quem toma a vez e não consegue mirar não deixa estado morto,
-    porque não chegou a pedir vibração nenhuma.
-
-    **AS DUAS RECUSAS SÃO `RuntimeError` — 04/09/2026.** A primeira era
-    `ValueError`, e ia para o `stderr` de quem lançou a janela; ver
-    :func:`_indice`, que caiu pelo mesmo motivo no mesmo dia.
-
-    **E A PRIMEIRA DELAS DEIXOU DE ACUSAR O CLIQUE DELA — 05/09/2026.** A frase
-    *"o clique não disse em qual controle"* cobre um fato só: o clique que veio
-    SEM coluna. O outro — a coluna cujo controle caiu entre o clique e agora —
-    chegava aqui com o mesmo `""` e levava a mesma frase, e o clique tinha dito
-    em qual controle. Quem separa os dois é :func:`_uniq`, que recusa antes com
-    :data:`FRASE_DO_CONTROLE_QUE_SAIU`; esta função só vê o clique solto.
-    """
-    uniq = _uniq(o)
-    if not uniq:
-        raise RuntimeError(
-            "Clique o botão dentro da coluna do controle que você quer "
-            "sentir.")
-    if not p.chamar("controller.target.set", index=_indice(ctx, uniq)):
-        raise RuntimeError(
-            "o Hefesto não aceitou mirar este controle, e nada foi mandado. "
-            "Veja se ele está rodando, na aba Sistema.")
-    return uniq
 
 
 TETO_DA_LINHA_DA_FAIXA = 180
@@ -1568,7 +1462,7 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             str(resposta.get("motivo")
                 or "o Hefesto não gravou esta barra. Tente de novo."))
-    if _EM_TESTE_DA_HAPTICA[0] == uniq:
+    if uniq in _EM_TESTE_DA_HAPTICA:
         with contextlib.suppress(Exception):
             p.haptica_testar(uniq, True)
 
@@ -1577,94 +1471,71 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle começa a tremer e FICA tremendo até ela parar.
 
-    PEDIDO DELA, 07/09/2026, com os quatro na bancada: *"o botão Testar tem que
-    ficar em estado de ligado e ir refletindo os slicers ao vivo comigo. E se eu
-    clicar em Parar ele para de testar"*.
+    PEDIDO DELA, 07/09/2026: *"o botão Testar tem que ficar em estado de ligado
+    e ir refletindo os slicers ao vivo comigo. E se eu clicar em Parar ele para
+    de testar"*. Era um pulso de meio segundo, e o pulso não responde *"quanto é
+    40%?"*: para isso a mão precisa estar no controle enquanto a outra arrasta a
+    barra. `_refrescar_o_teste` reenvia o par a cada mudança de barra.
 
-    ERA UM PULSO DE MEIO SEGUNDO, e o pulso responde a outra pergunta. *"O motor
-    vive?"* se responde com meio segundo; *"quanto é 40%?"* não — para isso a
-    mão precisa estar no controle enquanto a outra arrasta a barra. Com o pulso,
-    cada arraste custava um reclique e o que ela sentia era sempre o valor
-    ANTERIOR ao que estava vendo.
+    **UM TESTE POR CONTROLE — 03/10/2026, ela: *«vibração e háptico é por cada
+    controle e precisam funcionar em independente. hoje se eu clico em um o
+    outro controle para de ter o efeito»*.** O pedido leva o `uniq` do controle
+    (`rumble_set_checked(..., uniq=...)`) e o serviço guarda um par por
+    controle; esta aba não mira mais o seletor global (`controller.target.set`),
+    que era o que fazia o serviço inteiro seguir o último clique. O «Testar» de
+    um controle só cala o teste da háptica DELE (os dois se excluem no mesmo
+    controle, D-0210).
 
-    DUAS CHAMADAS, e o que sumiu é o terceiro e o quarto passo:
+    A CHECADA, e não a crua: a recusa do Modo Nativo vem no CORPO da resposta, e
+    foi por não a ler que a aba anunciou "vibração travada" com o motor parado
+    (NATIVO-RUMBLE-01). **O par sai reduzido pela barra de cada motor** (ver
+    :func:`_par_das_barras`, para a inversão `weak`/`strong`).
 
-    1. `controller.target.set` — sem ele o par iria para os quatro (`_mirar`);
-    2. `rumble_set_checked` — a mesma função do `on_rumble_test_500ms`
-       (`app/actions/rumble_actions.py`). A CHECADA, e não a crua: a
-       recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
-       (`app/ipc_bridge.py:456`), e foi por não a ler que a aba anunciou
-       "vibração travada" com o motor parado — NATIVO-RUMBLE-01.
-
-    O `rumble_stop` E O `rumble_passthrough(True)` NÃO SUMIRAM DO PRODUTO —
-    mudaram de dono. Eles são o "Parar", e continuam sendo os dois passos
-    exatos do `_rumble_test_stop` (`rumble_actions.py`): parar sozinho
-    fixa `(0, 0)` e o laço do daemon re-afirma o silêncio, e o jogo ficaria mudo
-    depois de um teste (SPRINT-GAME-RUMBLE-01). **A mão só volta ao jogo quando
-    ela clicar em Parar** — que é exatamente o que ela pediu, e é o preço
-    honesto de um teste que fica ligado.
-
-    OS VALORES SÃO OS DAS BARRAS DAQUELA COLUNA, e agora eles seguem o arraste:
-    `_refrescar_o_teste` reenvia o par a cada mudança de barra, de intensidade e
-    de força, enquanto o teste for DESTE controle. Ver `_par_das_barras` para a
-    inversão `weak`/`strong`, que é a armadilha deste assunto.
-
-    **E O PAR SAI REDUZIDO PELA BARRA DE CADA MOTOR — 09/09/2026,
-    VIBRA-MULT-01.** Até esta manhã a frase acima era falsa em duas camadas: a
-    leitura das barras batia em chave inexistente e o caminho do rumble FIXADO
-    não aplica a barra em lugar nenhum. Um motor posto em ZERO tremia igual ao
-    outro no "Testar", que é a queixa dela — *"os slicers não estão se
-    multiplicando"*. A medição e o que ficou em aberto estão em
-    :func:`_par_das_barras`.
+    **A mão só volta ao jogo quando ela clicar em Parar**, que é o que ela pediu.
     """
     _minha_vez()
-    uniq = _mirar(ctx, o, p)
-    _calar_o_teste_da_haptica(p)
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "Clique o botão dentro da coluna do controle que você quer sentir.")
+    _calar_o_teste_da_haptica(p, uniq)
     weak, strong = _par_das_barras(ctx, uniq)
-    ok, motivo = _resposta(p.rumble_set_checked(weak, strong))
+    ok, motivo = _resposta(p.rumble_set_checked(weak, strong, uniq=uniq))
     if not ok:
         raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
-    _EM_TESTE[0] = uniq
+    _EM_TESTE.add(uniq)
 
 
 @gesto("05-vibracao.html", "parar")
 def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Parar": corta a vibração daquele controle AGORA e devolve a mão ao jogo.
+    """"Parar": corta a vibração DAQUELE controle AGORA e devolve a mão dele ao jogo.
 
     SÃO DUAS COISAS, e nesta aba elas são um botão só — a dica publicada diz
-    isso com todas as letras: *"Parar corta a vibração dele agora e devolve a
-    mão ao jogo"*. Na janela estável são DOIS botões: o "Parar"
-    (`rumble_stop_checked`, que FIXA `(0, 0)` e manda o laço re-afirmar o
-    silêncio) e o "Devolver ao jogo" (`rumble_passthrough(True)`,
-    `rumble_actions.py`).
+    *"Parar corta a vibração dele agora e devolve a mão ao jogo"*. O pedido leva
+    o `uniq`: o par dos outros controles em teste segue de pé (03/10/2026).
 
     O NOME DO MÉTODO DO DONO **NÃO** SE ESCREVE AQUI, e não é descuido: ele é o
     `sinal` da linha 177 do `docs/data/paridade-gtk-html.csv`, e
     `scripts/check_paridade_gtk_html.py` reprova quando um sinal declarado
-    AUSENTE no lado HTML aparece num arquivo de `interface/`. Escrevê-lo em
-    prosa faria a régua anunciar dívida fechada por causa de um comentário —
-    medido em 06/09/2026, com o portão vermelho na mão.
+    AUSENTE no lado HTML aparece num arquivo de `interface/`.
 
     O SEGUNDO PASSO NÃO É ENFEITE: esta aba não tem o botão de devolver, e sem
     ele o "Parar" deixaria o controle num estado MORTO — mudo para o jogo, sem
-    caminho de volta na tela. É a regra da casa: *nada fica num estado morto*.
-
-    A CHECADA, e não a crua: dentro do Modo Nativo o `rumble.stop` não trava
-    silêncio, ele SOLTA o par e diz que não alcança o motor que o jogo toca
-    pelo hidraw (`ipc_handlers.py:3868`). Anunciar "parada" ali seria prometer
-    o que não aconteceu — NATIVO-RUMBLE-01, segunda metade. O motivo sobe como
-    erro porque é o único canal que esta aba tem hoje; um recado de tela para
-    ele ainda não existe, e está no relato.
+    caminho de volta na tela. A CHECADA, e não a crua: dentro do Modo Nativo o
+    `rumble.stop` não trava silêncio, ele SOLTA o par e diz que não alcança o
+    motor que o jogo toca pelo hidraw — NATIVO-RUMBLE-01, segunda metade.
     """
-    # estável faz em `on_rumble_stop` (`rumble_actions.py`). Sem ela, um
     _minha_vez()
-    _mirar(ctx, o, p)
-    _calar_o_teste_da_haptica(p)
-    ok, motivo = _resposta(p.rumble_stop_checked())
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "Clique o botão dentro da coluna do controle que você quer sentir.")
+    _calar_o_teste_da_haptica(p, uniq)
+    ok, motivo = _resposta(p.rumble_stop_checked(uniq=uniq))
     if not ok:
         raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
-    p.rumble_passthrough(True)
-    parar_o_teste()
+    p.rumble_passthrough(True, uniq=uniq)
+    parar_o_teste(uniq)
     if motivo:
         raise RuntimeError(motivo)
 
@@ -1682,28 +1553,24 @@ def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise RuntimeError(
             "Clique o botão dentro da coluna do controle que você quer sentir.")
-    if _EM_TESTE[0]:
-        p.rumble_stop_checked()
-        p.rumble_passthrough(True)
-        parar_o_teste()
-    antes = _EM_TESTE_DA_HAPTICA[0]
-    if antes and antes != uniq:
-        _calar_o_teste_da_haptica(p)
+    if uniq in _EM_TESTE:
+        parar_o_teste(uniq)
+        _devolver_ao_jogo(p, uniq)
     ok, corpo = p.haptica_testar(uniq, True)
     if not ok:
         raise RuntimeError("o Hefesto não está rodando — ligue na aba Sistema")
     resposta = corpo if isinstance(corpo, dict) else {}
     if str(resposta.get("status") or "") != "ok":
         raise RuntimeError(str(resposta.get("motivo") or FRASE_SEM_HAPTICA_NESTE_CONTROLE))
-    _EM_TESTE_DA_HAPTICA[0] = uniq
-    _BATEU_A_HAPTICA_EM[0] = _monotonic()
+    _EM_TESTE_DA_HAPTICA.add(uniq)
+    _BATEU_A_HAPTICA_EM[uniq] = _monotonic()
 
 
 #: `perfil.gravar_e_reaplicar` grava e manda o daemon reaplicar. É a decisão
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough",
          "rumble_motores_set", "rumble_policy_set_checked", "haptica_testar"}
-METODOS = {"controller.target.set"}
+METODOS: set[str] = set()
 
 
 PAGINA = "05-vibracao.html"
@@ -1712,12 +1579,10 @@ PISO_DA_ABA = 5
 PROVAS = [
     # não pode ficar ligado — o `rumble_stop` e o `rumble_passthrough` mudaram
     {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento) chave do contrato
-     "chama": [("chamar", ["controller.target.set"], {"index": 0}),
-               ("rumble_set_checked", [160, 220], {})]},
+     "chama": [("rumble_set_checked", [160, 220], {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento) chave do contrato
-     "chama": [("chamar", ["controller.target.set"], {"index": 0}),
-               ("rumble_stop_checked", [], {}),
-               ("rumble_passthrough", [True], {})]},
+     "chama": [("rumble_stop_checked", [], {"uniq": "aa:bb:cc:00:00:01"}),
+               ("rumble_passthrough", [True], {"uniq": "aa:bb:cc:00:00:01"})]},
 ]
 
 #: tremor não deixa rastro no `state_full`. O `rumble_ff` conta os pedidos do

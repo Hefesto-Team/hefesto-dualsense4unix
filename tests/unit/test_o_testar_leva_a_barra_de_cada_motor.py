@@ -212,7 +212,7 @@ def test_o_arraste_reenvia_o_valor_que_acabou_de_gravar(pac, a05, monkeypatch) -
 
     a05_mod.parar_o_teste()
     _testar(pac, a05, ctx, P1, "p1")
-    a05_mod._EM_TESTE[0] = P1
+    a05_mod._EM_TESTE.add(P1)
     fn = pac.gesto_da_pagina("05-vibracao.html", "motor")
     assert fn is not None, "05-vibracao.html:motor perdeu o dono"
     fn(ctx, {"uniq": P1, "lado": "e", "valor": "25"}, p)
@@ -238,7 +238,7 @@ def test_o_arraste_no_p2_nao_sacode_o_p1_em_teste(pac, a05, monkeypatch) -> None
                       (True, {"status": "ok"}))[1],
         raising=False)
 
-    a05_mod._EM_TESTE[0] = P1
+    a05_mod._EM_TESTE.add(P1)
     fn = pac.gesto_da_pagina("05-vibracao.html", "motor")
     assert fn is not None
     fn(ctx, {"uniq": P2, "lado": "e", "valor": "25"}, p)

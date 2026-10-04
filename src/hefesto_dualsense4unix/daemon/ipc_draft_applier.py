@@ -401,7 +401,10 @@ class DraftApplier:
     def _apply_rumble(self, rumble_raw: Any) -> None:
         """Aplica a seção rumble do "Aplicar" do RODAPÉ."""
         from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            escrever_rumble_no_dono,
+            fixar_par,
             modo_nativo_manda_nos_motores,
+            soltar_todos,
         )
 
         if not isinstance(rumble_raw, dict):
@@ -421,13 +424,19 @@ class DraftApplier:
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if weak == 0 and strong == 0:
             if daemon_cfg is not None:
-                daemon_cfg.rumble_active = None
-                daemon_cfg.rumble_active_uniq = None
+                soltar_todos(daemon_cfg)
             self.controller.set_rumble(weak=0, strong=0)
             return
         if daemon_cfg is not None:
-            daemon_cfg.rumble_active = (weak, strong)
-            daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
+            for largado in fixar_par(
+                daemon_cfg,
+                uniq_do_alvo_de_output(self.controller),
+                weak,
+                strong,
+                None,
+                so_este=False,
+            ):
+                escrever_rumble_no_dono(self.controller, largado, 0, 0)
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
 

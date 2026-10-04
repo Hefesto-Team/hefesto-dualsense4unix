@@ -3994,6 +3994,8 @@ class IpcHandlersMixin:
             RUMBLE_APLICADO,
             RUMBLE_RECUSADO_ALVO_AUSENTE,
             RUMBLE_RECUSADO_MODO_NATIVO,
+            escrever_rumble_no_dono,
+            fixar_par,
             modo_nativo_manda_nos_motores,
         )
 
@@ -4003,6 +4005,7 @@ class IpcHandlersMixin:
             raise ValueError("rumble.set exige 'weak' e 'strong' inteiros 0-255")
         weak = max(0, min(255, weak))
         strong = max(0, min(255, strong))
+        uniq = _uniq_do_rumble(params, "rumble.set")
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if modo_nativo_manda_nos_motores(self.daemon):
             par_de_pe = getattr(daemon_cfg, "rumble_active", None)
@@ -4019,6 +4022,34 @@ class IpcHandlersMixin:
                 "weak": par_de_pe[0] if par_de_pe else 0,
                 "strong": par_de_pe[1] if par_de_pe else 0,
                 "passthrough": par_de_pe is None,
+            }
+        if uniq is not None:
+            # O gesto de UM controle (a aba Vibração): o pedido leva o endereço,
+            # o seletor global não é tocado e os pares dos outros seguem de pé.
+            eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
+            mirar = getattr(self.controller, "set_rumble_for", None)
+            if not callable(mirar) or not mirar(uniq, eff_weak, eff_strong):
+                logger.warning(
+                    "rumble_set_recusado_alvo_ausente", weak=weak, strong=strong,
+                    alvo=uniq, par_de_pe=None,
+                )
+                return {
+                    "status": "recusado",
+                    "desfecho": RUMBLE_RECUSADO_ALVO_AUSENTE,
+                    "motivo": MOTIVO_ALVO_FORA_DA_MESA,
+                    "weak": 0,
+                    "strong": 0,
+                    "passthrough": True,
+                }
+            if daemon_cfg is not None:
+                fixar_par(
+                    daemon_cfg, uniq, weak, strong, time.monotonic(), so_este=True
+                )
+            return {
+                "status": "ok",
+                "desfecho": RUMBLE_APLICADO,
+                "weak": weak,
+                "strong": strong,
             }
         alvo_ausente_fn = getattr(self.controller, "alvo_de_output_ausente", None)
         alvo_ausente = alvo_ausente_fn() if callable(alvo_ausente_fn) else None
@@ -4041,9 +4072,11 @@ class IpcHandlersMixin:
                 "passthrough": par_de_pe is None,
             }
         if daemon_cfg is not None:
-            daemon_cfg.rumble_active = (weak, strong)
-            daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
-            daemon_cfg.rumble_active_em = time.monotonic()
+            dono = uniq_do_alvo_de_output(self.controller)
+            for largado in fixar_par(
+                daemon_cfg, dono, weak, strong, time.monotonic(), so_este=False
+            ):
+                escrever_rumble_no_dono(self.controller, largado, 0, 0)
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
         return {
@@ -4059,17 +4092,20 @@ class IpcHandlersMixin:
             MOTIVO_MODO_NATIVO_SOLTOU_O_PAR,
             RUMBLE_PARADO,
             RUMBLE_SOLTO_NO_MODO_NATIVO,
+            escrever_rumble_no_dono,
+            fixar_par,
             modo_nativo_manda_nos_motores,
             silenciar_dono_abandonado,
+            soltar_todos,
         )
 
+        uniq = _uniq_do_rumble(params, "rumble.stop")
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
-        dono_de_agora = uniq_do_alvo_de_output(self.controller)
+        dono_de_agora = uniq if uniq is not None else uniq_do_alvo_de_output(self.controller)
         if modo_nativo_manda_nos_motores(self.daemon):
             par_solto = getattr(daemon_cfg, "rumble_active", None)
             if daemon_cfg is not None:
-                daemon_cfg.rumble_active = None
-                daemon_cfg.rumble_active_uniq = None
+                soltar_todos(daemon_cfg)
                 daemon_cfg.rumble_dono_vibrando = None
             with contextlib.suppress(Exception):
                 self.controller.set_rumble(weak=0, strong=0)
@@ -4083,12 +4119,20 @@ class IpcHandlersMixin:
                 "motivo": MOTIVO_MODO_NATIVO_SOLTOU_O_PAR,
                 "passthrough": True,
             }
+        if uniq is not None:
+            # O «Parar» de UM controle: o par dele vira (0, 0) e os outros
+            # pares seguem de pé.
+            if daemon_cfg is not None:
+                fixar_par(daemon_cfg, uniq, 0, 0, time.monotonic(), so_este=True)
+            escrever_rumble_no_dono(self.controller, uniq, 0, 0)
+            return {"status": "ok", "desfecho": RUMBLE_PARADO}
         if daemon_cfg is not None:
             par_velho = getattr(daemon_cfg, "rumble_active", None)
             dono_velho = getattr(daemon_cfg, "rumble_active_uniq", None)
-            daemon_cfg.rumble_active = (0, 0)
-            daemon_cfg.rumble_active_uniq = dono_de_agora
-            daemon_cfg.rumble_active_em = time.monotonic()
+            for largado in fixar_par(
+                daemon_cfg, dono_de_agora, 0, 0, time.monotonic(), so_este=False
+            ):
+                escrever_rumble_no_dono(self.controller, largado, 0, 0)
             if par_velho is not None and any(par_velho):
                 silenciar_dono_abandonado(self.controller, dono_velho, dono_de_agora)
             daemon_cfg.rumble_dono_vibrando = None
@@ -4120,14 +4164,22 @@ class IpcHandlersMixin:
         NÃO deixar rastro. `enabled=False` é documentado como sem efeito (nem
         rumble_active é tocado) — não mexe na trava por coerência.
         """
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            soltar_par,
+            soltar_todos,
+        )
+
         enabled = params.get("enabled")
         if not isinstance(enabled, bool):
             raise ValueError("rumble.passthrough exige 'enabled' boolean")
+        uniq = _uniq_do_rumble(params, "rumble.passthrough")
         if enabled:
             daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
             if daemon_cfg is not None:
-                daemon_cfg.rumble_active = None
-                daemon_cfg.rumble_active_uniq = None
+                if uniq is not None:
+                    soltar_par(daemon_cfg, uniq)
+                else:
+                    soltar_todos(daemon_cfg)
         return {"status": "ok", "passthrough": enabled}
 
     async def _handle_rumble_policy_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -6288,6 +6340,16 @@ class IpcHandlersMixin:
         if atual is not None and atual.em_curso:
             return {"status": "ocupado", "dispensado": False}
         return {"status": "ok", "dispensado": central.dispensar(aparelho) is not None}
+
+
+def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
+    """O ``uniq`` opcional do pedido de vibração: ausente é «o alvo de agora»."""
+    uniq = params.get("uniq")
+    if uniq is None:
+        return None
+    if not isinstance(uniq, str) or not uniq.strip():
+        raise ValueError(f"{metodo}: 'uniq' precisa ser o endereço do controle")
+    return uniq.strip()
 
 
 def _chaves_dos_assentos(registry: Any) -> set[str]:

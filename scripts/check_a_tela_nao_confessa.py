@@ -88,9 +88,6 @@ FATOS: dict[str, str] = {
     "o Hefesto não está rodando — ligue na aba Sistema":
         "ESTADO DE AGORA, e ela diz onde ligar. O serviço parado é fato "
         "presente, não capacidade por entregar — 11/09/2026",
-    "o Hefesto não aceitou mirar este controle":
-        "ESTADO DO ATO, e a frase diz a consequência (*sem mira a vibração iria "
-        "para todos*) e o que fazer — 11/09/2026",
     "o Hefesto não conseguiu mirar este":
         "ESTADO DO ATO, e diz AS DUAS METADES: para onde o volume foi e que o "
         "perfil deste controle não mudou — 11/09/2026",

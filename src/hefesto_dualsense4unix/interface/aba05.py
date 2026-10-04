@@ -987,7 +987,7 @@ def _linha_da_haptica(valor, ligado, vazio=False):
              f'data-campo="lado-h" data-hef-alvo="classe" '
              f'data-hef-quando="1" '
              f'title="Háptica por áudio — a vibração fina que o jogo manda como som.">'
-             f'{glifo(ESQ["glifo"], ativo=ligado, tam=18)}</button>')
+             f'{glifo("haptica", ativo=ligado, tam=18)}</button>')
     titulo = (f'A força da háptica por áudio neste controle — 0 a {TETO_DA_HAPTICA}%.'
               f' 100% é o jogo como ele mandou. Grava na hora, só para ele.')
     trilho = _trilho(valor, TETO_DA_HAPTICA, PASSO_DO_MOTOR, "barra-h", "haptica",
@@ -1240,8 +1240,10 @@ def _coluna(c, e=None, conectado=None):
               <!-- OS DOIS TESTES LADO A LADO — 02/10/2026, a resposta [24] dela:
                    *«ficam dois botões lado a Lado Vibração e Háptica»*. O
                    «Vibração» é o Testar de sempre; o «Háptica» toca a vibração
-                   fina pelo som. Ligar um desliga o outro, e o «Parar» corta
-                   os dois. -->
+                   fina pelo som. No mesmo controle ligar um desliga o outro, e
+                   o «Parar» corta os dois DELE; cada controle tem o seu teste
+                   (03/10/2026, ela: «vibração e háptico é por cada controle e
+                   precisam funcionar em independente»). -->
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
                       aria-pressed="false">Vibração</button>
@@ -1362,14 +1364,14 @@ MIOLO = f'''
                      (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela prometia um pulso,
                      e o gesto deixou de ser pulso em 07/09, a pedido dela: o
                      `a05_vibracao.testar` fica ligado até o Parar, segue as
-                     barras ao vivo, e o Testar de outra coluna encerra o
-                     anterior (`_EM_TESTE`, um teste só). Medido no daemon de
-                     mentira: nenhum `rumble.stop` sai sem o Parar. -->
+                     barras ao vivo, e o teste de cada controle é dele
+                     (`_EM_TESTE`, um por controle desde 03/10). Medido no
+                     daemon de mentira: nenhum `rumble.stop` sai sem o Parar. -->
                 <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
                 seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
-                fina pelo som, com a força do <b>Sensor Háptico</b>. Ligar um desliga
-                o outro, e testar outro controle encerra este. <b>Parar</b> corta os
-                dois e devolve a vibração ao jogo.<br><br>
+                fina pelo som, com a força do <b>Sensor Háptico</b>. No mesmo controle
+                ligar um desliga o outro, e cada controle tem o seu teste. <b>Parar</b>
+                corta os dois deste controle e devolve a vibração dele ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
                      05/09/2026: *"As duas na dica."* Ela é a única frase desta
                      aba que explica um resultado que a PRÓPRIA TELA produz (por

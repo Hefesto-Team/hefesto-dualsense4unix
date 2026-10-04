@@ -327,7 +327,7 @@ def test_o_testar_acende_so_na_coluna_em_teste() -> None:
     from pacotes import a05_vibracao as a05
 
     try:
-        a05._EM_TESTE[0] = UNIQS[1]
+        a05._EM_TESTE.add(UNIQS[1])
         colunas = pacotes.pacote_da_pagina(PAGINA, _ctx())["colunas"]
         assert {u: colunas[u].get("em-teste") for u in UNIQS} == {
             UNIQS[0]: "", UNIQS[1]: "1"}, colunas

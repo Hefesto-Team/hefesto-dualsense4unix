@@ -453,9 +453,24 @@ def _recusa_no_corpo(resultado: Any) -> str | None:
     return motivo if isinstance(motivo, str) and motivo else None
 
 
-def rumble_set_checked(weak: int, strong: int) -> tuple[bool, str | None]:
-    """Fixa a vibração devolvendo o MOTIVO quando o daemon RECUSA."""
-    ok, resultado = _safe_call("rumble.set", {"weak": weak, "strong": strong})
+def _com_o_controle(params: dict[str, Any], uniq: str | None) -> dict[str, Any]:
+    """O pedido de vibração leva ``uniq`` só quando o gesto é de UM controle."""
+    if uniq:
+        params["uniq"] = uniq
+    return params
+
+
+def rumble_set_checked(
+    weak: int, strong: int, uniq: str | None = None
+) -> tuple[bool, str | None]:
+    """Fixa a vibração devolvendo o MOTIVO quando o daemon RECUSA.
+
+    Com ``uniq`` o par é DAQUELE controle e os dos outros seguem como estavam;
+    sem ele é o par da mesa, no alvo escolhido.
+    """
+    ok, resultado = _safe_call(
+        "rumble.set", _com_o_controle({"weak": weak, "strong": strong}, uniq)
+    )
     if not ok:
         return False, None
     recusou = isinstance(resultado, dict) and resultado.get("status") == "recusado"
@@ -475,15 +490,18 @@ def rumble_set(weak: int, strong: int) -> bool:
     return ok
 
 
-def rumble_stop_checked() -> tuple[bool, str | None]:
-    """Para a vibração devolvendo a FRASE do daemon quando ele tem uma."""
-    ok, resultado = _safe_call("rumble.stop", {})
+def rumble_stop_checked(uniq: str | None = None) -> tuple[bool, str | None]:
+    """Para a vibração devolvendo a FRASE do daemon quando ele tem uma.
+
+    Com ``uniq`` só aquele controle para.
+    """
+    ok, resultado = _safe_call("rumble.stop", _com_o_controle({}, uniq))
     if not ok:
         return False, None
     return True, _recusa_no_corpo(resultado)
 
 
-def rumble_stop() -> bool:
+def rumble_stop(uniq: str | None = None) -> bool:
     """Para rumble e FIXA (0, 0) — **isto não devolve a vibração ao jogo**.
 
     Descarta a frase do daemon — use ``rumble_stop_checked`` para tê-la.
@@ -504,17 +522,19 @@ def rumble_stop() -> bool:
 
     **Quem quer devolver a vibração ao jogo chama `rumble_passthrough(True)`.**
     """
-    ok, _motivo = rumble_stop_checked()
+    ok, _motivo = rumble_stop_checked(uniq)
     return ok
 
 
-def rumble_passthrough(enabled: bool = True) -> bool:
+def rumble_passthrough(enabled: bool = True, uniq: str | None = None) -> bool:
     """Devolve a vibração ao JOGO (BUG-RUMBLE-APPLY-IGNORED-01).
 
     É o par simétrico de `rumble_stop`, e é ELE — não o "parar" — que solta o
     par fixado (`rumble_active = None`). Ver a advertência em `rumble_stop`.
     """
-    ok, _ = _safe_call("rumble.passthrough", {"enabled": bool(enabled)})
+    ok, _ = _safe_call(
+        "rumble.passthrough", _com_o_controle({"enabled": bool(enabled)}, uniq)
+    )
     return ok
 
 

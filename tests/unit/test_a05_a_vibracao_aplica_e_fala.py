@@ -8,13 +8,14 @@ Citação não se corrige: o que ela escreveu é o que ela escreveu.
 O que estava calado, medido nesta árvore com o daemon dela vivo e dois
 DualSense no cabo:
 
-1. **A MIRA NÃO ERA CONFERIDA.** `a05_vibracao._mirar` mandava
-   `controller.target.set` e jogava fora o `bool` de volta. Com o daemon mudo —
-   ou só mais lento que os 250 ms do `_safe_call` — a mira falhava e o gesto
-   seguia para o `rumble.set`, **que sem alvo escolhido é BROADCAST**
-   (`daemon/ipc_handlers.py:3135`). O "Testar" da coluna do P2 sacudia os
-   quatro controles, e a tela não dizia uma palavra. É pior que não fazer nada:
-   faz na mesa inteira.
+1. **A MIRA NÃO ERA CONFERIDA** (04/09). O gesto mandava `controller.target.set`
+   e jogava fora o `bool` de volta; com o daemon lento a mira falhava e o
+   `rumble.set` seguinte, sem alvo, era BROADCAST: o "Testar" da coluna do P2
+   sacudia os quatro. **Em 03/10/2026 a causa saiu pela raiz**
+   (A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01): o pedido leva
+   o `uniq` do controle e o gesto não mira mais o seletor global, então não há
+   mira a falhar. O que continua valendo é a RECUSA: o daemon que não achar o
+   controle responde `recusado` e o gesto sobe a frase.
 2. **AS DUAS RECUSAS DO "Testar"/"Parar" ERAM `ValueError`.** O contrato do
    piloto é explícito — `hefesto_vivo._recusou_dizendo` leva `RuntimeError` ao
    CARTÃO daquele controle e deixa `ValueError` no `stderr` de quem lançou a
@@ -33,9 +34,9 @@ DualSense no cabo:
 
 O QUE ESTA RÉGUA COBRA — e cada caso traz a mordida no docstring:
 
-* a mira recusada NÃO vira vibração, e a recusa é `RuntimeError`;
-* a mira aceita chega ao par `rumble_set_checked(weak, strong)` — a prova de
-  que a força chega ao motor pela porta certa;
+* o pedido recusado pelo daemon NÃO acende o teste, e a recusa é `RuntimeError`;
+* o pedido aceito chega ao par `rumble_set_checked(weak, strong, uniq=...)` —
+  a prova de que a força chega ao motor daquele controle, pela porta certa;
 * o `Auto` fala, com a frase que tem dono no produto;
 * a mesa em `Auto` fala, no clique **e** no tempo (a linha de estado);
 * a escolha que VIRA escala é silenciosa — porque uma frase por clique bem
@@ -171,54 +172,39 @@ def _gesto(pac, nome: str):
     return fn
 
 
-def test_a_mira_recusada_nao_vira_vibracao_na_mesa_inteira(pac) -> None:
-    """Mira que não foi = nada é mandado, e a frase diz por quê.
+def test_o_pedido_recusado_pelo_daemon_nao_acende_o_teste(pac, a05) -> None:
+    """O daemon que recusa o controle: a frase dele sobe, e o teste não acende.
 
-    É O DEFEITO MAIS CARO QUE ESTA ABA GUARDAVA. `rumble.set` e `rumble.stop`
-    **não levam endereço**: quem escolhe o controle é o alvo de output, e sem
-    alvo escolhido o daemon faz BROADCAST (`ipc_handlers.py:3135`). Com o
-    retorno da mira jogado fora, um daemon lento fazia o "Testar" de UMA coluna
-    sacudir as quatro — e o desenho promete o contrário, com todas as letras:
-    *"Testar faz aquele controle tremer meio segundo"*.
+    O pedido leva o `uniq`, e quem sabe se o controle está na mesa é o daemon
+    (`recusado_alvo_ausente`). A resposta chega como `(False, motivo)` e o
+    gesto a levanta como `RuntimeError`, que é o único canal que chega ao
+    cartão dela.
 
-    MORDIDA: em `a05_vibracao._mirar`, troque
-    `if not p.chamar("controller.target.set", …)` de volta por
-    `p.chamar("controller.target.set", …)` sem o `if` — este caso reprova
-    porque `rumble_set_checked` volta a aparecer nas chamadas, que é o
-    broadcast acontecendo.
+    MORDIDA: apague o `if not ok: raise` de `a05_vibracao.testar` — o gesto
+    marca o controle em teste sem o daemon ter vibrado nada, e este caso reprova.
     """
-    p = PonteDeMentira(mira=False)
-    with pytest.raises(RuntimeError, match="mirar"):
+    a05.parar_o_teste()
+    p = PonteDeMentira(
+        recusas={"rumble_set_checked": (False, "O controle escolhido não está na mesa.")})
+    with pytest.raises(RuntimeError, match="não está na mesa"):
         _gesto(pac, "testar")(_ctx(pac), {"uniq": UNIQ, "controle": "p1"}, p)
 
-    assert p.nomes == ["chamar"], (
-        f"com a mira recusada o gesto foi adiante e chamou {p.nomes} — sem "
-        f"alvo, `rumble.set` é BROADCAST e a mesa inteira treme")
+    assert a05.em_teste() == frozenset(), "o teste acendeu sem o daemon ter vibrado"
 
 
-def test_a_mira_aceita_leva_o_par_ao_motor(pac) -> None:
-    """A prova do outro lado: mirou, o par `weak`/`strong` sai pela porta certa.
+def test_o_pedido_aceito_leva_o_par_e_o_controle_ao_motor(pac) -> None:
+    """A prova do outro lado: o par `weak`/`strong` sai com o endereço do controle.
 
     O PAR VIAJA JUNTO, e é o contrato do daemon: `rumble.set` recebe
-    `('weak', 'strong')` numa chamada só. E é a `_checked`, não a crua — a
-    recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
-    (NATIVO-RUMBLE-01), e foi por não a ler que a aba anunciou "vibração
-    travada" com o motor parado.
+    `('weak', 'strong')` numa chamada só, agora com `uniq`. E é a `_checked`, não
+    a crua — a recusa do Modo Nativo vem no CORPO da resposta (NATIVO-RUMBLE-01).
 
-    A ORDEM É O GESTO INTEIRO: mirar, vibrar, calar, devolver. Invertida, o
-    passthrough soltaria antes de o silêncio ir, e o jogo ficaria mudo depois
-    de um teste (SPRINT-GAME-RUMBLE-01).
+    O gesto NÃO mira mais o seletor global: a única chamada é o `rumble_set_checked`
+    (a mira era o que fazia o serviço inteiro seguir o último clique).
 
-    O "PARAR" GANHOU DUAS CHAMADAS EM 07/09/2026, e este caso as perdeu. O
-    `rumble_stop` e o `rumble_passthrough` eram o fim do PULSO de meio segundo;
-    o pulso saiu a pedido dela — *"o botão Testar tem que ficar em estado de
-    ligado (…) e se eu clicar em Parar ele para de testar"* — e os dois passos
-    mudaram de dono, não sumiram do produto. A queixa de origem (*"testei os
-    motores e o jogo não vibra mais"*) continua coberta: quem devolve a mão ao
-    jogo é o "Parar", e é o `test_o_testar_fica_ligado_e_so_o_parar_desliga`
-    que o cobra.
+    O "PARAR" É QUEM DEVOLVE A MÃO AO JOGO (`test_o_testar_fica_ligado_e_so_o_parar_desliga`).
 
-    MORDIDA: apague o `_EM_TESTE[0] = uniq` do fim de `a05_vibracao.testar` — o
+    MORDIDA: apague o `_EM_TESTE.add(uniq)` do fim de `a05_vibracao.testar` — o
     último `assert` reprova, e o botão volta a ser um pulso mudo.
     """
     from pacotes import a05_vibracao as a05
@@ -227,15 +213,15 @@ def test_a_mira_aceita_leva_o_par_ao_motor(pac) -> None:
     p = PonteDeMentira()
     _gesto(pac, "testar")(_ctx(pac), {"uniq": UNIQ, "controle": "p1"}, p)
 
-    assert p.nomes == ["chamar", "rumble_set_checked"], f"a ordem saiu {p.nomes}"
-    _, args, _kw = p.chamadas[1]
+    assert p.nomes == ["rumble_set_checked"], f"a ordem saiu {p.nomes}"
+    _, args, kw = p.chamadas[0]
     assert args == (160, 220), (
         f"o par que foi ao motor é {args}, e o par de teste da casa é o mesmo "
         f"da janela estável (`rumble_actions.py:817`, weak=160/strong=220)")
-    assert p.chamadas[0][2] == {"index": 0}, (
-        f"a mira foi para {p.chamadas[0][2]} — `controller.target.set` recebe "
-        f"`index`, e o 0 é a posição deste controle na lista do daemon")
-    assert a05.em_teste() == UNIQ, "o Testar não ficou ligado neste controle"
+    assert kw == {"uniq": UNIQ}, (
+        f"o pedido foi com {kw} — sem o `uniq` o daemon fixa o par no alvo de "
+        f"agora, e o teste de um controle volta a abandonar o do outro")
+    assert a05.em_teste() == frozenset({UNIQ}), "o Testar não ficou ligado neste controle"
     a05.parar_o_teste()
 
 
@@ -298,31 +284,6 @@ def test_o_clique_sem_coluna_continua_dizendo_que_nao_tem_alvo(pac, nome) -> Non
         f"{frase!r}")
     assert p.chamadas == [], (
         f"{nome} recusou e falou com o daemon assim mesmo ({p.nomes})")
-
-
-def test_mirar_lugar_vazio_nunca_vira_broadcast(pac, a05) -> None:
-    """A guarda de `_indice` FICA, mesmo sendo inalcançável pelo piloto.
-
-    O PILOTO NÃO CHEGA AQUI, e está medido: um `uniq` não vazio veio de
-    `ctx.mesa`, e `ctx.mesa` está contida em `ctx.conectados` — então
-    `Contexto.por_uniq` sempre acha. Este caso monta o clique que o piloto NÃO
-    monta, de propósito e dizendo que é isso: é a guarda contra o broadcast para
-    qualquer outro chamador.
-
-    MIRAR UM LUGAR VAZIO É PIOR QUE NÃO MIRAR: o alvo de output ANTERIOR fica de
-    pé, e o tremor sai na coluna errada, calado.
-
-    MORDIDA: troque o `raise` do fim de `a05_vibracao._indice` por `return 0` —
-    este caso reprova, porque a mira sai (para o controle errado) em vez de o
-    gesto parar.
-    """
-    p = PonteDeMentira()
-    with pytest.raises(RuntimeError, match="se desligou"):
-        a05._mirar(_ctx(pac), {"uniq": "aa:bb:cc:00:00:09", "controle": "p9"}, p)
-
-    assert p.chamadas == [], (
-        f"a mira saiu assim mesmo ({p.nomes}) — para um `uniq` fora da mesa "
-        f"isso aponta o controle ERRADO, e o tremor sai na coluna errada")
 
 
 def test_o_parar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
