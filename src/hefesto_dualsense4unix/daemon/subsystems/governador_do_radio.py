@@ -37,8 +37,10 @@ O TEMPO REAL, a cada :data:`PERIODO_S`
 =====================================
 O déficit é a FILA DO HOST crescendo: as escritas nossas aceitas pelo kernel
 menos o que o adaptador pôs no ar (o Δ``acl_tx`` do ``ar_do_adaptador``, que só
-sobe DEPOIS de haver crédito do controlador). Acima de :data:`LIMIAR_DO_DEFICIT`
-pacotes começa um episódio de ceder NA FONTE, antes da fila do kernel; abaixo
+sobe DEPOIS de haver crédito do controlador). Acima do limiar
+(:data:`JANELAS_DO_LIMIAR` janelas de escrita de uma ponte, com
+:data:`LIMIAR_DO_DEFICIT` pacotes de piso) começa um episódio de ceder NA
+FONTE, antes da fila do kernel, se alguma ponte não couber; abaixo
 de :data:`FOLGA_PARA_VOLTAR`, todas voltam a escrever. O diário registra só a
 BORDA do episódio — e no máximo um por adaptador a cada
 :data:`INTERVALO_DAS_BORDAS_NO_DIARIO_S`, com os calados contados.
@@ -46,13 +48,18 @@ BORDA do episódio — e no máximo um por adaptador a cada
 CEDE SÓ QUEM NÃO CABE, E CADA UM NA SUA VEZ (O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01,
 28/09/2026). No episódio, a cada janela medida, o governador conta quantas
 pontes COM ESCRITA cabem na saída da janela (a saída vezes a janela, dividida
-pelo que uma ponte escreve — :meth:`GovernadorDoRadio._a_vez`) e cede o resto;
+pelo que uma ponte escreve — :meth:`GovernadorDoRadio._a_vez`) e cede o resto,
+e só o resto: quando todas cabem, nenhuma cede, e uma ponte sozinha não cede a
+si mesma enquanto o adaptador põe no ar pelo menos meia ponte
+(O-GOVERNADOR-NAO-FAZ-UMA-PONTE-SO-CEDER-01, 03/10/2026);
 a vez de ceder gira pela ORDEM DA VAGA, nunca pelo número do jogador. Três
 pontes num adaptador que escoa duas cediam e voltavam juntas, e cada uma
 ficava com metade; agora cada uma fica com dois terços. A ponte sem escrita na
 janela (a bomba não escreve o silêncio) e que não estava cedendo fica fora da
-vez. Quando não cabe nenhuma (o adaptador parado, o 2B), cede o adaptador
-inteiro, como antes, e só essas janelas andam o relógio do teto.
+vez. Quando não cabe nenhuma (o adaptador parado, o 2B: menos de
+:data:`FRACAO_DO_ENGASGO` de uma ponte no ar na janela, ou a fila além de
+:data:`FILA_DO_ENGASGO_EM_LIMIARES` limiares), cede o
+adaptador inteiro, como antes, e só essas janelas andam o relógio do teto.
 
 **«NÃO SEI» NUNCA É ZERO.** ``saida_por_s`` ``None`` é o medidor dizendo que a
 janela não deu taxa (o contador parado com enlace de pé, o adaptador que
@@ -148,6 +155,27 @@ logger = get_logger(__name__)
 PERIODO_S = 0.25
 
 LIMIAR_DO_DEFICIT = 20
+
+#: O limiar do déficit em janelas de escrita de UMA ponte (a média das pontes
+#: de pé com escrita, `_Estado.por_ponte`), com :data:`LIMIAR_DO_DEFICIT` de
+#: piso. O-GOVERNADOR-NAO-FAZ-UMA-PONTE-SO-CEDER-01 (03/10/2026): o limiar fixo
+#: de 20 pacotes ficava colado nas ~23 escritas que uma ponte de 93,75/s faz
+#: numa janela, e um engasgo de uma janela abria episódio. Duas janelas dão a
+#: folga de um engasgo inteiro; por ponte, e não pela soma das pontes, para a
+#: rajada de três pontes de vibração seguir cedendo cedo (a média segue a
+#: rajada com atraso, e o piso vale no começo dela).
+JANELAS_DO_LIMIAR = 2.0
+
+#: A janela que pôs no ar pelo menos esta fração do que uma ponte escreve,
+#: mas menos que uma ponte inteira, é ENGASGO, e uma ponte segue de pé. Menos
+#: que isso é o adaptador parado (o ``acl_tx`` conta o adaptador inteiro, e um
+#: pacote alheio na janela não prova que ele escoa), e vale o «cede o
+#: adaptador inteiro», que anda o relógio do teto.
+FRACAO_DO_ENGASGO = 0.5
+
+#: Até quantos limiares de fila o engasgo deixa uma ponte de pé: a fila que
+#: passa disto não é engasgo, é o adaptador que não dá conta de uma ponte.
+FILA_DO_ENGASGO_EM_LIMIARES = 2.0
 
 FOLGA_PARA_VOLTAR = 10
 
@@ -1024,19 +1052,51 @@ class GovernadorDoRadio:
             and not estado.cedendo
         )
 
+    @staticmethod
+    def _limiar(estado: _Estado, janela: _JanelaMedida) -> float:
+        """A fila que abre um episódio: :data:`JANELAS_DO_LIMIAR` janelas de uma ponte.
+
+        A janela que não pôs no ar nem a :data:`FRACAO_DO_ENGASGO` de uma ponte
+        fica com o piso, :data:`LIMIAR_DO_DEFICIT`: o ``acl_tx`` preso cede na
+        primeira janela, como sempre (a folga é para o engasgo, não para o
+        adaptador parado).
+        """
+        por_ponte = estado.por_ponte or 0.0
+        if janela.no_ar < FRACAO_DO_ENGASGO * por_ponte or por_ponte <= 0:
+            return float(LIMIAR_DO_DEFICIT)
+        return max(float(LIMIAR_DO_DEFICIT), JANELAS_DO_LIMIAR * por_ponte)
+
     def _a_vez(self, estado: _Estado, vagas: list[Vaga], janela: _JanelaMedida) -> None:
-        """Cede só quem não cabe, e cada um na sua vez. Chamado com a trava."""
+        """Cede só quem não cabe, e cada um na sua vez. Chamado com a trava.
+
+        O-GOVERNADOR-NAO-FAZ-UMA-PONTE-SO-CEDER-01 (03/10/2026): cede
+        ``n - cabem``, e não ``max(1, n - cabem)``. O ``max(1, …)`` fazia uma
+        ponte ceder em todo episódio mesmo quando todas cabiam, e uma ponte
+        sozinha no adaptador cedia a si mesma. E a janela que pôs algum pacote
+        no ar :data:`FRACAO_DO_ENGASGO` de uma ponte, mas não uma inteira,
+        deixa UMA de pé enquanto a fila não passa de
+        :data:`FILA_DO_ENGASGO_EM_LIMIARES` limiares: é engasgo. Menos no ar,
+        ou a fila além disso, é o adaptador parado, e cede inteiro.
+        """
         com_escrita = janela.com_escrita
         na_vez = [v for v in vagas if v.cedendo or any(v is e for e in com_escrita)]
         por_ponte = max(estado.por_ponte or 0.0, janela.por_ponte_na_janela)
         cabem = int(janela.no_ar / por_ponte) if por_ponte > 0 else 0
+        if (
+            cabem <= 0
+            and por_ponte > 0
+            and janela.no_ar >= FRACAO_DO_ENGASGO * por_ponte
+            and estado.fila
+            <= FILA_DO_ENGASGO_EM_LIMIARES * JANELAS_DO_LIMIAR * por_ponte
+        ):
+            cabem = 1
         if cabem <= 0 or not na_vez:
             estado.inteiro = True
             for vaga in vagas:
                 vaga.cedendo = True
             return
         estado.inteiro = False
-        ceder = min(len(na_vez), max(1, len(na_vez) - cabem))
+        ceder = min(len(na_vez), max(0, len(na_vez) - cabem))
         inicio = estado.vez % len(na_vez)
         cedem = [na_vez[(inicio + i) % len(na_vez)] for i in range(ceder)]
         estado.vez = inicio + ceder
@@ -1061,11 +1121,14 @@ class GovernadorDoRadio:
                 estado.cedendo_medido_s = 0.0
         if estado.cedendo and estado.fila > FOLGA_PARA_VOLTAR:
             self._a_vez(estado, vagas, janela)
-        if not estado.cedendo and estado.fila > LIMIAR_DO_DEFICIT:
+        if not estado.cedendo and estado.fila > self._limiar(estado, janela):
+            self._a_vez(estado, vagas, janela)
+            if not any(vaga.cedendo for vaga in vagas):
+                # todas cabem: não há episódio, e o diário não diz «cedeu»
+                return
             estado.cedendo = True
             estado.cedendo_desde = agora
             estado.cedendo_medido_s = 0.0
-            self._a_vez(estado, vagas, janela)
             diario_das_bordas = self._bordas_no_diario.setdefault(endereco, _BordasNoDiario())
             # é contada com os calados em vez de escrita.
             estado.episodio_escrito = endereco not in self._episodios and (
@@ -1269,11 +1332,14 @@ __all__ = [
     "ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA",
     "ESPERA_DA_FILA_PARADA_S",
     "FILA_ANDOU",
+    "FILA_DO_ENGASGO_EM_LIMIARES",
     "FILA_PARADA",
     "FOLGA_PARA_VOLTAR",
+    "FRACAO_DO_ENGASGO",
     "FRASE_DA_FILA_PARADA",
     "INTERVALO_DAS_AUTORIZACOES_S",
     "INTERVALO_DAS_BORDAS_NO_DIARIO_S",
+    "JANELAS_DO_LIMIAR",
     "LIMIAR_DO_DEFICIT",
     "MOTIVO_CHEIO",
     "MOTIVO_DO_REINICIO",
