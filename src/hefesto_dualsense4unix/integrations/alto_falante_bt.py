@@ -6,11 +6,13 @@ tocada por este módulo** — ele importa dela, nunca a edita.
 
 O SOM SAI PELO RÁDIO DESDE 10/09/2026, E A LIÇÃO FICA
 ------------------------------------------------------
-Pelo ``0x35`` de 334 B, com UM quadro Opus por report (:data:`ARRANJO_035`,
-que é o :data:`ARRANJO_PADRAO`): 70 s contínuos pelo alto-falante, com a
-orelha dela, e o som CALA com o CRC invertido. Quem escreve no controle é a
-:class:`PonteDeSomPorRadio`, uma por controle no rádio, e quem a sobe é o
-subsystem (``daemon/subsystems/alto_falante._casar_as_pontes``).
+Pelo ``0x35`` de 334 B, com UM quadro Opus por report (:data:`ARRANJO_035`):
+70 s contínuos pelo alto-falante, com a orelha dela, e o som CALA com o CRC
+invertido. Desde 03/10/2026 o produto escreve o ``0x36`` combinado
+(:func:`montar_relatorio_combinado`): o mesmo quadro Opus, o bloco da háptica e
+o ``0x10``, num relatório só, provado na bancada dela. Quem escreve no
+controle é a :class:`PonteDeSomPorRadio`, uma por controle no rádio, e quem a
+sobe é o subsystem (``daemon/subsystems/alto_falante._casar_as_pontes``).
 
 A lição que o mapa guarda tem nome (``audio.saida_dedicada@dualsense``):
 a FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal responde, ele
@@ -85,11 +87,11 @@ O QUE ESTE MÓDULO **NÃO** FAZ, E TEM DONO
   entra**; o que o firmware faz com ele depois tem dono, e não é este;
 * **não escolhe o degrau para regime.** A decisão dela
   (``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE``) deixava ``0x32`` contra
-  ``0x39`` para *depois do D5*, e a orelha dela achou o terceiro em 10/09: o
-  ``0x35`` é o :data:`ARRANJO_PADRAO`. A escolha do degrau pelo tamanho do
+  ``0x39`` para *depois do D5*, e a orelha dela achou o ``0x35`` em 10/09; o
+  ``0x36`` combinado o sucedeu em 03/10. A escolha do degrau pelo tamanho do
   payload desceu para o ensaio que a usava (``scripts/ensaios/o_som_que_sai.py``,
   O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01, 28/09/2026): o produto escreve um degrau
-  só, e o do arranjo.
+  só, o ``0x36``.
 """
 
 from __future__ import annotations
@@ -535,30 +537,6 @@ ARRANJO_035 = Arranjo(
     controle_conta_quadros=True,
 )
 
-#: o medido.
-#: como corrigimos isso"*.  <!-- noqa-acento: citação literal dela -->
-ARRANJO_HAPTICA_032 = Arranjo(
-    nome="0x32-háptica",
-    fonte=(
-        "ESTA BANCADA, 18/09/2026 — o motor voice-coil vibrou por rádio, com a "
-        "mão dela, primeiro com senoide e depois com o PCM do PRAGMATA."
-    ),
-    degrau=0x32,
-    pos_tag_controle=2,
-    len_controle=BYTES_DO_CONTROLE_035,
-    pos_tag_audio=0,
-    len_audio=0,
-    pos_audio=0,
-    quadros_de_audio=0,
-    pos_tag_haptico=11,
-    len_haptico=BYTES_DO_BLOCO_HAPTICO,
-    pos_haptico=13,
-    haptico_duplo=False,
-    intervalo_de_envio_s=INTERVALO_DE_ENVIO_035,
-    controle_conta_quadros=True,
-)
-
-
 #: O RELATÓRIO COMBINADO — O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026).
 #: O ``0x36`` de 398 B com os quatro blocos num quadro só: ``0x11`` (o controle
 #: de áudio, com O contador) em [2], ``0x10`` (o estado, 63 B, o ``common`` de
@@ -566,9 +544,9 @@ ARRANJO_HAPTICA_032 = Arranjo(
 #: ``0x13``/``0x16`` (o som, um quadro Opus de 200 B) em [142], CRC nos quatro
 #: últimos. Layout do fork loteran do DS5Dongle (``src/audio.cpp``, a função
 #: que monta o ``REPORT_ID 0x36``), lido no código; NÃO medido nesta bancada: o
-#: ensaio ``scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`` é quem prova.
-#: A ponte de hoje segue com os dois escritores (``0x35`` e ``0x32``) até a
-#: prova; este montador é a parte pura da troca.
+#: ensaio ``scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`` o provou na
+#: bancada dela em 03/10/2026 (som e háptica juntos; sem o ``0x10`` a háptica
+#: cala), e a :class:`PonteDeSomPorRadio` escreve só ele.
 DEGRAU_COMBINADO = 0x36
 POS_TAG_CONTROLE_COMBINADO = 2
 POS_TAG_ESTADO_COMBINADO = 11
@@ -641,11 +619,10 @@ def montar_relatorio_combinado(
 class RelatorioCombinado:
     """UM escritor por controle: um contador só no ``0x11``, um relatório por quadro.
 
-    Hoje a casa tem dois escritores por controle, o ``0x35`` do som e o
-    ``0x32`` da háptica, cada um com o seu contador no ``0x11``. Este é o
-    estado do escritor único: :meth:`relatorio_do_quadro` monta o quadro com o som e a
-    háptica que existirem nele (e o ``0x10`` quando houver estado a mandar), e
-    anda o contador e a sequência UMA vez por relatório.
+    É o estado do escritor único da ponte (:class:`BombaDeSomPeloRadio`):
+    :meth:`relatorio_do_quadro` monta o quadro com o som e a háptica que
+    existirem nele e o ``0x10``, e anda o contador e a sequência UMA vez por
+    relatório.
     """
 
     com_microfone: bool = False
@@ -679,8 +656,6 @@ class RelatorioCombinado:
 ARRANJO_POR_NOME: dict[str, Arranjo] = {
     a.nome: a for a in (*ARRANJOS, ARRANJO_COMMON_PRIMEIRO, ARRANJO_035)
 }
-
-ARRANJO_PADRAO = ARRANJO_035
 
 
 def montar_com_o_common_preservado(
@@ -1175,12 +1150,22 @@ class ContagemDaBomba:
 
 
 class BombaDeSomPeloRadio:
-    """Do monitor do nó ao fio: lê PCM, codifica, monta o degrau e escreve."""
+    """Do monitor dos nós ao fio: o som e a háptica do controle num ``0x36`` por quadro.
+
+    O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026). UM escritor por
+    controle (:class:`RelatorioCombinado`, um contador só no ``0x11``): a cada
+    quadro lê o PCM do nó de som (:attr:`fonte`) e, quando há endpoint, o bloco
+    da háptica (:attr:`fonte_haptica`), e monta o relatório com o som e a
+    háptica que existirem nele e SEMPRE o ``0x10`` (:attr:`common`, o neutro
+    quando ninguém pede estado): na bancada de 03/10, sem o ``0x10`` a háptica
+    não tocou. ``leva_a_haptica`` diz se o bloco da háptica vai ao fio (o
+    portão do jogo e o ganho dela); a fonte da háptica é lida mesmo quando ele
+    não vai, para o :data:`OUVIDO` saber se há sinal.
+    """
 
     def __init__(
         self,
         *,
-        arranjo: Arranjo,
         fonte: Callable[[int], bytes],
         escritor: Callable[[bytes], int] | None = None,
         codificador: Any = None,
@@ -1189,47 +1174,40 @@ class BombaDeSomPeloRadio:
         common: bytes | None = None,
         com_microfone: bool | Callable[[], bool] = False,
         fonte_haptica: Callable[[int], bytes] | None = None,
+        leva_a_haptica: bool | Callable[[], bool] = True,
         conversor: Any = None,
         vaga: Any = None,
         relogio: Callable[[], float] | None = None,
         so_com_sinal: bool = False,
         ganho_da_haptica: float | Callable[[], float] = 1.0,
     ) -> None:
-        if arranjo.common_preservado and common is None:
-            raise ValueError(
-                f"o arranjo {arranjo.nome!r} preserva o `common` em [3..49] e "
-                "a bomba não recebeu nenhum — um `common` zerado não pede rota, "
-                "volume nem pré-amp, e o corpo iria ao fio pedindo NADA. Passe "
-                "`common=alto_falante_bt.common_de_audio()`"
-            )
         if common is not None and len(common) != COMMON_LEN:
             raise ValueError(
                 f"o `common` tem de ter {COMMON_LEN} B medidos, veio com {len(common)}"
             )
-        self.arranjo = arranjo
         self.fonte = fonte
         self.escritor = escritor
         self.tag_audio = tag_audio
         self.seco = bool(seco) or escritor is None
-        self.common = common
+        self.common = bytes(COMMON_LEN) if common is None else bytes(common)
         self._codificador = codificador
         self._cedendo = False
         self._cedendo_desde: float | None = None
         self._relogio = relogio or time.monotonic
         self.vaga = vaga
         self.fila_parada = False
-        self._seq = 0
-        self._quadros_mandados = 0
         self.com_microfone = com_microfone
         self.fonte_haptica = fonte_haptica
+        self.leva_a_haptica = leva_a_haptica
         self._conversor = conversor
         self.ganho_da_haptica = ganho_da_haptica
         self._blocos: list[bytes] = []
         self.so_com_sinal = bool(so_com_sinal)
-        self._mandou_sinal = False
+        self._som_com_sinal = False
+        self._haptica_com_sinal = False
         self._calado_desde: float | None = None
+        self._escritor_do_relatorio = RelatorioCombinado()
         self.contagem = ContagemDaBomba()
-
 
     def quer_o_microfone(self) -> bool:
         """O bit 0 dos enables DESTE report. Nunca levanta."""
@@ -1242,15 +1220,26 @@ class BombaDeSomPeloRadio:
             logger.debug("som_radio_oraculo_do_mic_ilegivel", exc_info=True)
             return False
 
+    def a_haptica_vai(self) -> bool:
+        """O bloco da háptica deste quadro vai ao fio? Nunca levanta."""
+        leva = self.leva_a_haptica
+        if not callable(leva):
+            return bool(leva)
+        try:
+            return bool(leva())
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("som_radio_oraculo_da_haptica_ilegivel", exc_info=True)
+            return False
+
     @property
     def bytes_de_pcm_por_report(self) -> int:
-        """Quanto PCM cru um report deste arranjo consome."""
-        return BYTES_DE_PCM_POR_QUADRO * self.arranjo.quadros_de_audio
+        """Quanto PCM cru do nó de som um relatório consome: um quadro Opus."""
+        return BYTES_DE_PCM_POR_QUADRO
 
     @property
     def ms_por_report(self) -> int:
-        """Quantos milissegundos de som um report deste arranjo carrega."""
-        return MS_POR_QUADRO * self.arranjo.quadros_de_audio
+        """Quantos milissegundos de som um relatório carrega."""
+        return MS_POR_QUADRO
 
     @property
     def relogio(self) -> Callable[[], float]:
@@ -1259,12 +1248,8 @@ class BombaDeSomPeloRadio:
 
     @property
     def taxa_da_fonte_hz(self) -> int:
-        """A taxa em que a fonte tem de entregar para andar no ritmo deste arranjo."""
-        amostras = (
-            self.bytes_de_pcm_por_report // (2 * CANAIS_DO_ENCODER)
-            or QUADROS_POR_BLOCO_HAPTICO
-        )
-        return round(amostras / self.intervalo_de_envio_s)
+        """A taxa em que a fonte do som tem de entregar para andar no ritmo do controle."""
+        return TAXA_DA_FONTE_DO_SOM
 
     def _codificar(self, pcm: bytes) -> bytes | None:
         """O quadro Opus, ou None se a libopus recusou. Encoder preguiçoso."""
@@ -1273,78 +1258,93 @@ class BombaDeSomPeloRadio:
         quadro = self._codificador.codificar(pcm)
         return quadro if quadro is None else bytes(quadro)
 
-
     def um_report(self) -> bytes | None:
-        """Lê o PCM de UM report, codifica, monta e devolve os bytes."""
-        haptico = b""
-        if self.arranjo.len_haptico and self.fonte_haptica is not None:
-            bloco = self._bloco_haptico()
-            if bloco is None:
+        """Lê o quadro das fontes, monta o relatório combinado e devolve os bytes.
+
+        ``None`` quando uma fonte secou; ``b""`` quando nada vai ao fio neste
+        quadro (o silêncio, ou o encoder que recusou).
+        """
+        haptico: bytes | None = None
+        if self.fonte_haptica is not None:
+            haptico = self._bloco_haptico()
+            if haptico is None:
                 return None
-            haptico = bloco
         pedido = self.bytes_de_pcm_por_report
-        pcm = self.fonte(pedido) if pedido else b""
-        if not pcm and pedido:
+        pcm = self.fonte(pedido)
+        if not pcm:
             return None
         self.contagem.pcm_lido += len(pcm)
         if len(pcm) < pedido:
             self.contagem.pcm_curto += 1
             pcm = pcm + b"\x00" * (pedido - len(pcm))
-        if self.so_com_sinal and not self._vale_mandar(haptico, pcm):
+        som_vai = self._o_som_vai(pcm)
+        bloco = self._o_bloco_da_haptica(haptico)
+        if not som_vai and bloco is None:
             self.contagem.reports_calados += 1
+            if self._cedendo and self._calado_desde is None:
+                self._calado_desde = self._relogio()
             return b""
-        quadros: list[bytes] = []
-        for i in range(self.arranjo.quadros_de_audio):
-            pedaco = pcm[i * BYTES_DE_PCM_POR_QUADRO : (i + 1) * BYTES_DE_PCM_POR_QUADRO]
-            quadro = self._codificar(pedaco)
+        quadro: bytes | None = None
+        if som_vai:
+            quadro = self._codificar(pcm)
             if quadro is None:
                 self.contagem.quadros_recusados += 1
                 return b""
             self.contagem.quadros_opus += 1
-            quadros.append(quadro)
-        report = self.arranjo.montar(
-            quadros,
-            seq=self._seq,
-            tag_audio=self.tag_audio,
+        self._escritor_do_relatorio.com_microfone = self.quer_o_microfone()
+        report = self._escritor_do_relatorio.relatorio_do_quadro(
+            quadro_de_som=quadro,
+            haptico=bloco,
             common=self.common,
-            controle=self._controle_deste_report(),
-            haptico=haptico,
+            tag_som=self.tag_audio,
         )
-        self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA
-        self._quadros_mandados += self.arranjo.quadros_de_audio or 1
         self.contagem.reports_montados += 1
         return report
 
-    def _vale_mandar(self, haptico: bytes, pcm: bytes) -> bool:
-        """Este report vai ao rádio? Sinal, ou o silêncio que fecha o último sinal.
-
-        A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01, 28/09/2026. **O
-        CRITÉRIO É O DO ARRANJO**: o sinal se procura nos canais que ESTE
-        report leva, e não num canal fixo. No arranjo da háptica
-        (:data:`ARRANJO_HAPTICA_032`) é o bloco que :mod:`haptica_bt` montou
-        dos canais 3-4 do endpoint, os motores; no do alto-falante
-        (:data:`ARRANJO_035`) é o PCM do nó de som, os canais 1-2. Um critério
-        fixo nos motores calaria o alto-falante de todo controle em modo som.
+    def _o_som_vai(self, pcm: bytes) -> bool:
+        """O quadro de som vai neste relatório? Sinal, ou o silêncio que fecha o último.
 
         **SILÊNCIO É ZERO EXATO**, e isso é medido: o PRAGMATA no menu manda
-        RMS e pico 0 nos quatro canais dos quatro endpoints (27/09). Um bloco
-        háptico que a conversão para int8 arredonda para zero também não mexe
-        o motor, e também não vai.
-
-        **DEPOIS DO ÚLTIMO SINAL VAI UM SILÊNCIO** — os dados já são zero, e o
-        report montado deles é o :func:`haptica_bt.bloco_de_silencio` no
-        motor e o quadro mudo no alto-falante: o motor para no zero em vez de
-        ficar no último valor, e o rádio volta a ficar livre.
+        RMS e pico 0 (27/09). Depois do último sinal vai UM quadro mudo, e o
+        alto-falante para no zero. Sem ``so_com_sinal`` (o ensaio) o som vai
+        sempre.
         """
-        if haptico.count(0) < len(haptico) or pcm.count(0) < len(pcm):
-            self._mandou_sinal = True
+        if not self.so_com_sinal:
             return True
-        if self._mandou_sinal:
-            self._mandou_sinal = False
+        if pcm.count(0) < len(pcm):
+            self._som_com_sinal = True
             return True
-        if self._cedendo and self._calado_desde is None:
-            self._calado_desde = self._relogio()
+        if self._som_com_sinal:
+            self._som_com_sinal = False
+            return True
         return False
+
+    def _o_bloco_da_haptica(self, haptico: bytes | None) -> bytes | None:
+        """O bloco da háptica deste relatório, ou ``None`` quando ele não vai.
+
+        O critério é o mesmo do som, nos canais 3-4 do endpoint (os motores,
+        já convertidos por :mod:`haptica_bt`): vai com sinal, e depois do
+        último sinal vai o :func:`haptica_bt.bloco_de_silencio`, para o motor
+        parar no zero em vez de ficar no último valor. O mesmo silêncio vai
+        quando ``leva_a_haptica`` cai com o motor ainda andando (o jogo largou
+        este controle, ou ela pôs a háptica em 0).
+        """
+        if haptico is None:
+            return None
+        from hefesto_dualsense4unix.integrations.haptica_bt import bloco_de_silencio
+
+        if not self.a_haptica_vai():
+            if self._haptica_com_sinal:
+                self._haptica_com_sinal = False
+                return bloco_de_silencio()
+            return None
+        if haptico.count(0) < len(haptico):
+            self._haptica_com_sinal = True
+            return haptico
+        if self._haptica_com_sinal or not self.so_com_sinal:
+            self._haptica_com_sinal = False
+            return bloco_de_silencio()
+        return None
 
     @property
     def bytes_de_pcm_da_haptica(self) -> int:
@@ -1377,22 +1377,10 @@ class BombaDeSomPeloRadio:
             self.contagem.pico_haptico = pico
         return bloco
 
-    def _controle_deste_report(self) -> bytes:
-        """Os bytes do bloco de controle, montados por report quando ele conta."""
-        if not self.arranjo.controle_conta_quadros:
-            return b""
-        return controle_de_audio_035(
-            contador_de_quadros=self._quadros_mandados,
-            com_microfone=self.quer_o_microfone(),
-        )
-
     @property
     def intervalo_de_envio_s(self) -> float:
-        """O intervalo entre reports, em segundos — o MEDIDO quando existe."""
-        medido = self.arranjo.intervalo_de_envio_s
-        if medido is not None:
-            return float(medido)
-        return self.ms_por_report / 1000.0
+        """O intervalo entre relatórios, em segundos: o medido do rádio."""
+        return INTERVALO_DE_ENVIO_035
 
     def escrever(self, report: bytes) -> bool:
         """Entrega o report ao escritor. **Seco, devolve True sem escrever.**"""
@@ -2114,7 +2102,17 @@ def fonte_do_monitor_do_no(
 
 
 class PonteDeSomPorRadio:
-    """Do monitor do nó ao alto-falante do controle, por rádio. Uma por controle."""
+    """Do monitor dos nós ao controle, por rádio: o som e a háptica. Uma por controle.
+
+    O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026): a ponte tem UM
+    escritor, a :class:`BombaDeSomPeloRadio` com o relatório combinado, e uma
+    thread que lê as duas fontes no mesmo laço. O som e a háptica chegam juntos
+    ao mesmo controle; ``leva_a_haptica`` liga e desliga o bloco da háptica sem
+    derrubar a ponte.
+    """
+
+    #: O relatório que a ponte escreve, como o diário e o relato o nomeiam.
+    RELATORIO = f"0x{DEGRAU_COMBINADO:02x}"
 
     def __init__(
         self,
@@ -2122,14 +2120,15 @@ class PonteDeSomPorRadio:
         uniq: str,
         abrir_hidraw: Callable[[], int | None],
         fonte_de_pcm: Callable[[int], bytes],
-        arranjo: Arranjo | None = None,
         rota: int = BLOCO_SPEAKER,
         com_microfone: bool | Callable[[], bool] = False,
         seco: bool = False,
         gravador: Any | None = None,
         fonte_de_haptica: Callable[[int], bytes] | None = None,
         gravador_da_haptica: Any | None = None,
+        leva_a_haptica: bool | Callable[[], bool] = True,
         vaga: Any = None,
+        tipo: str = "som",
         so_com_sinal: bool = True,
         relogio: Callable[[], float] | None = None,
         no_do_som: str = "",
@@ -2140,15 +2139,15 @@ class PonteDeSomPorRadio:
         self.ganho_da_haptica = ganho_da_haptica
         self._no_do_som = no_do_som
         self._no_da_haptica = no_da_haptica
-        self._ouvinte: threading.Thread | None = None
         self.so_com_sinal = bool(so_com_sinal)
         self._relogio = relogio
         self._vaga = vaga
+        self.tipo = tipo
         self._abrir_hidraw = abrir_hidraw
         self._fonte = fonte_de_pcm
         self._fonte_da_haptica = fonte_de_haptica
         self._gravador_da_haptica = gravador_da_haptica
-        self.arranjo = arranjo or ARRANJO_PADRAO
+        self.leva_a_haptica = leva_a_haptica
         self.rota = rota
         self.com_microfone = com_microfone
         self._seco = bool(seco)
@@ -2158,6 +2157,11 @@ class PonteDeSomPorRadio:
         self.como_morreu_o_gravador: Any | None = None
         self._parar: threading.Event | None = None
         self.motivo: str = ""
+
+    @property
+    def le_a_haptica(self) -> bool:
+        """A ponte lê o endpoint da háptica (a fonte existe), leve ou não ao fio."""
+        return self._fonte_da_haptica is not None
 
     def esta_de_pe(self) -> bool:
         """A ponte está no ar para ESTE controle, **e continuará**?"""
@@ -2192,7 +2196,6 @@ class PonteDeSomPorRadio:
             return False
         parar = threading.Event()
         self._parar = parar
-        fonte_do_som = fonte_que_ouve(self._fonte, self._no_do_som)
         fonte_da_haptica = (
             fonte_que_ouve(
                 self._fonte_da_haptica, self._no_da_haptica, canais=CANAIS_DA_HAPTICA
@@ -2200,15 +2203,14 @@ class PonteDeSomPorRadio:
             if self._fonte_da_haptica is not None
             else None
         )
-        haptica_no_ar = bool(self.arranjo.len_haptico)
         self._bomba = BombaDeSomPeloRadio(
-            arranjo=self.arranjo,
-            fonte=fonte_do_som,
+            fonte=fonte_que_ouve(self._fonte, self._no_do_som),
             escritor=escritor_de_hidraw(fd),
             tag_audio=self.rota,
             seco=self._seco,
             com_microfone=self.com_microfone,
-            fonte_haptica=fonte_da_haptica if haptica_no_ar else None,
+            fonte_haptica=fonte_da_haptica,
+            leva_a_haptica=self.leva_a_haptica,
             vaga=self._vaga,
             so_com_sinal=self.so_com_sinal,
             relogio=self._relogio,
@@ -2221,49 +2223,29 @@ class PonteDeSomPorRadio:
             daemon=True,
         )
         self._thread.start()
-        so_ouvir, tamanho = (
-            (fonte_do_som if self._no_do_som else None, BYTES_DE_PCM_POR_QUADRO)
-            if haptica_no_ar
-            else (
-                fonte_da_haptica if self._no_da_haptica else None,
-                QUADROS_POR_BLOCO_HAPTICO * 2 * CANAIS_DA_HAPTICA,
-            )
-        )
-        self._ouvinte = None
-        if so_ouvir is not None:
-            self._ouvinte = threading.Thread(
-                target=self._escutar,
-                args=(so_ouvir, tamanho, parar),
-                name=f"som-ouvido-{self.uniq[:6]}",
-                daemon=True,
-            )
-            self._ouvinte.start()
         self.motivo = ""
         if self._vaga is not None:
-            self._vaga.subiu(
-                "vibracao" if self.arranjo is ARRANJO_HAPTICA_032 else "som"
-            )
+            self._vaga.subiu(self.tipo)
         logger.info(
             "som_radio_ponte_de_pe",
             uniq=self.uniq,
-            arranjo=self.arranjo.nome,
+            relatorio=self.RELATORIO,
+            le_a_haptica=self.le_a_haptica,
         )
         return True
 
     def _laco(self, fd: int, parar: threading.Event) -> None:
-        """O laço da bomba, até mandarem parar ou a fonte secar.
+        """O laço da bomba, até mandarem parar ou uma fonte secar.
 
-        **O ritmo é o da FONTE, e o laço não dorme**: o monitor do nó entrega
-        no tempo real, e pedir um report bloqueia até o nó ter tocado as
-        amostras dele na taxa do gravador. É a taxa que põe a ponte na cadência
-        do aparelho (:data:`TAXA_DA_FONTE_DO_SOM`, 93,75 reports/s); um
-        `sleep` aqui somaria um segundo relógio ao do jogo.
+        **O ritmo é o das FONTES, e o laço não dorme**: o monitor de cada nó
+        entrega no tempo real, e pedir um quadro bloqueia até o nó ter tocado
+        as amostras dele na taxa do gravador (:data:`TAXA_DA_FONTE_DO_SOM` no
+        som, 48 kHz na háptica, as duas a 93,75 quadros/s). Um `sleep` aqui
+        somaria um segundo relógio ao do jogo.
 
         **AO SAIR, ELE DIZ O QUE FEZ** (`som_radio_ponte_saiu`): os segundos
-        de pé, as leituras da fonte por segundo (os reports calados inclusive:
-        é o ritmo que a fonte impôs), as escritas que o kernel aceitou e os
-        quadros cedidos. É o número que a próxima bancada lê, contado pelo
-        relógio da bomba.
+        de pé, as leituras por segundo (os relatórios calados inclusive), as
+        escritas que o kernel aceitou e os quadros cedidos.
         """
         bomba = self._bomba
         if bomba is None:
@@ -2299,22 +2281,6 @@ class PonteDeSomPorRadio:
             self._dizer_o_que_fez(bomba, por_que, comeco, leituras)
             self._soltar_a_vaga(por_que)
 
-    def _escutar(
-        self, fonte: Callable[[int], bytes], tamanho: int, parar: threading.Event
-    ) -> None:
-        """Lê a fonte que o arranjo não leva ao rádio, só para o :data:`OUVIDO`.
-
-        Nada vai ao fio: o escritor do controle continua sendo UM, o laço da
-        bomba. Sai quando mandam parar ou quando a fonte seca (o gravador foi
-        colhido no :meth:`descer`).
-        """
-        try:
-            while not parar.is_set():
-                if not fonte(tamanho):
-                    break
-        except Exception:  # o ouvido nunca derruba a ponte
-            logger.debug("som_radio_ouvido_caiu", uniq=self.uniq, exc_info=True)
-
     def _dizer_o_que_fez(
         self, bomba: BombaDeSomPeloRadio, por_que: str, comeco: float, leituras: int
     ) -> None:
@@ -2326,12 +2292,14 @@ class PonteDeSomPorRadio:
             logger.info(
                 "som_radio_ponte_saiu",
                 uniq=self.uniq,
-                arranjo=self.arranjo.nome,
+                relatorio=self.RELATORIO,
                 por_que=por_que,
                 segundos_de_pe=round(segundos, 3),
                 leituras=leituras,
                 leituras_por_segundo=round(leituras / segundos, 2) if segundos > 0 else 0.0,
                 escritas_aceitas=contagem.escritas_aceitas_pelo_kernel,
+                quadros_de_som=contagem.quadros_opus,
+                blocos_hapticos=contagem.blocos_hapticos,
                 calados=contagem.reports_calados,
                 cedidos=(
                     contagem.quadros_cedidos_por_fila_cheia
@@ -2362,7 +2330,12 @@ class PonteDeSomPorRadio:
         )
 
     def descer(self, *, esperar_s: float = 1.0) -> bool:
-        """Para o laço e espera a thread juntar. Idempotente."""
+        """Para o laço, colhe os dois gravadores e espera a thread juntar. Idempotente.
+
+        Os dois pipes são lidos pela MESMA thread: cada gravador morre com ela
+        como leitora, e o seu ``stdout`` só se fecha depois que ela saiu (o
+        gravador morto dá fim de arquivo, e o laço sai na leitura seguinte).
+        """
         from hefesto_dualsense4unix.integrations.filho_de_som import (
             derrubar_leitor_de_pipe,
         )
@@ -2371,19 +2344,13 @@ class PonteDeSomPorRadio:
         if parar is not None:
             parar.set()
         gravador, self._gravador = self._gravador, None
-        ouvinte = self._ouvinte
-        haptica_no_ar = bool(self.arranjo.len_haptico)
         haptico, self._gravador_da_haptica = self._gravador_da_haptica, None
-        if haptico is not None:
-            derrubar_leitor_de_pipe(
-                haptico, leitor=None if haptica_no_ar else ouvinte, junta_s=esperar_s
-            )
-            logger.info("haptica_radio_gravador_colhido", uniq=self.uniq)
         thread = self._thread
+        if haptico is not None:
+            derrubar_leitor_de_pipe(haptico, leitor=thread, junta_s=esperar_s)
+            logger.info("haptica_radio_gravador_colhido", uniq=self.uniq)
         if gravador is not None:
-            como = derrubar_leitor_de_pipe(
-                gravador, leitor=ouvinte if haptica_no_ar else thread, junta_s=esperar_s
-            )
+            como = derrubar_leitor_de_pipe(gravador, leitor=thread, junta_s=esperar_s)
             self.como_morreu_o_gravador = como
             logger.info(
                 "som_radio_gravador_colhido",
@@ -2397,7 +2364,7 @@ class PonteDeSomPorRadio:
         if thread is None:
             self._soltar_a_vaga("a ponte não subiu")
             return True
-        if thread.is_alive() and (gravador is None or haptica_no_ar):
+        if thread.is_alive() and gravador is None:
             thread.join(timeout=esperar_s)
         if thread.is_alive():
             logger.info(
@@ -2807,7 +2774,6 @@ __all__ = [
     "ARRANJO_035",
     "ARRANJO_COMMON_PRIMEIRO",
     "ARRANJO_DS5DONGLE",
-    "ARRANJO_PADRAO",
     "ARRANJO_POR_NOME",
     "ARRANJO_SENSHI",
     "BITRATE_DO_ENCODER",

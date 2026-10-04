@@ -34,16 +34,17 @@ reversível numa frase — ``docs/data/decisoes-dela.csv:213``):
 2. **no cabo ele não vira saída padrão.** ``priority.session`` baixa
    (``integrations.alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM``). Publicar o nó
    é uma coisa; mandar o som do sistema para ele é outra, e a segunda é dela;
-3. **a escolha entre ``0x32`` e ``0x39`` caiu em 10/09/2026**: o som saiu pelo
-   ``0x35`` (a orelha dela, 70 s), e é esse degrau que a ``PonteDeSomPorRadio``
-   que este subsystem sobe por controle no rádio escreve (``ARRANJO_035``).
+3. **o degrau é o ``0x36`` combinado desde 03/10/2026**: o som e a háptica do
+   controle num relatório só, com o ``0x10`` em todo quadro (provado na bancada
+   dela), e é ele que a ``PonteDeSomPorRadio`` que este subsystem sobe por
+   controle no rádio escreve.
 
 O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
 ---------------------------------------------------
 * **não escreve no aparelho do cabo.** No cabo o som é da placa USB do
   próprio controle; no rádio, :meth:`AltoFalanteSubsystem._casar_as_pontes`
   sobe uma ``PonteDeSomPorRadio`` por controle, e é ela que escreve o
-  ``0x35`` no hidraw. A régua que fica é a da
+  ``0x36`` no hidraw. A régua que fica é a da
   **FALÁCIA DO CANAL QUE RESPONDE** — concluir que, porque um canal
   responde, ele FAZ o que se esperava dele: o mapa segura o degrau em
   ``MONTOU`` até a orelha dela ouvir o caminho inteiro do produto
@@ -557,7 +558,9 @@ class AltoFalanteSubsystem:
     #: ``{uniq: marca do aparelho}`` de cada DualSense da mesa na última volta
     _aparelho_de: Mapping[str, str] = MappingProxyType({})
     _endpoint_da_ponte: Mapping[str, str] = MappingProxyType({})
-    _ouvido_da_ponte: Mapping[str, str] = MappingProxyType({})
+    #: ``{uniq: o bloco da háptica vai ao fio}`` de cada ponte do rádio, relido
+    #: a cada volta e lido pela ponte a cada quadro (sem derrubá-la).
+    _leva_da_ponte: Mapping[str, bool] = MappingProxyType({})
     _cabo: Any = None
     _ouvidos_das_placas: Mapping[str, Any] = MappingProxyType({})
     _tocadores: Mapping[str, Any] = MappingProxyType({})
@@ -565,7 +568,6 @@ class AltoFalanteSubsystem:
     _clientes_do_rumble: frozenset[str] = frozenset()
     _aparelhos_com_jogo: frozenset[str] = frozenset()
     _sem_registro_no_jogo: frozenset[str] = frozenset()
-    _radio_com_som: frozenset[str] = frozenset()
     _teste_da_haptica: Mapping[str, float] = MappingProxyType({})
     _com_haptica_de_audio: frozenset[str] = frozenset()
     _trava_do_rumble = threading.Lock()
@@ -1030,7 +1032,7 @@ class AltoFalanteSubsystem:
     def _quer_a_haptica_fina(self, chave: str) -> bool:
         """O aparelho tem endpoint, o jogo não toca nele, e a háptica dele não está em 0."""
         marca = self._aparelho_de.get(chave)
-        if marca is None or marca in self._aparelhos_com_jogo or chave in self._radio_com_som:
+        if marca is None or marca in self._aparelhos_com_jogo:
             return False
         endpoint = self._endpoints.get(marca)
         return bool(
@@ -1064,7 +1066,7 @@ class AltoFalanteSubsystem:
         endpoint = self._endpoints.get(marca) if marca is not None else None
         if ponte is None or endpoint is None:
             return False
-        if self._modo_da_ponte.get(chave) != "haptica":
+        if not self._a_ponte_leva_a_haptica(chave):
             return False
         if self._endpoint_da_ponte.get(chave) != getattr(endpoint, "nome", None):
             return False
@@ -1260,11 +1262,11 @@ class AltoFalanteSubsystem:
             for dono, ouvido in dict(self._ouvidos_das_placas).items():
                 if _mesmo_controle(dono, uniq):
                     return self._o_no_tem_sinal(str(ouvido.placa)) is True
-            for dono, modo in dict(self._modo_da_ponte).items():
+            for dono in list(self._pontes):
                 if not _mesmo_controle(dono, uniq):
                     continue
                 lendo = self._endpoint_da_ponte.get(dono) or ""
-                return modo == "haptica" and bool(lendo) and (
+                return self._a_ponte_leva_a_haptica(dono) and bool(lendo) and (
                     self._o_no_tem_sinal(lendo) is True
                 )
         except Exception:
@@ -1476,7 +1478,6 @@ class AltoFalanteSubsystem:
         (A-HAPTICA-E-POR-APARELHO-01, 02/10/2026).
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-            ARRANJO_HAPTICA_032,
             CANAIS_DA_HAPTICA,
             PonteDeSomPorRadio,
             e_radio,
@@ -1595,8 +1596,8 @@ class AltoFalanteSubsystem:
 
         governador = self.governador
         esperando: set[tuple[str, str]] = set()
-        com_som: set[str] = set()
         o_jogo_manda = self._o_jogo_manda_nos_motores()
+        leva_de: dict[str, bool] = {}
         for uniq, caminho in vivos.items():
             morta = self._pontes.get(uniq)
             terminou = getattr(morta, "terminou_sozinha", None)
@@ -1606,63 +1607,40 @@ class AltoFalanteSubsystem:
                 logger.info("som_ponte_terminou_sozinha", uniq=uniq, motivo=morta.motivo)
             endpoint = self._endpoint_de(uniq)
             este_joga = o_jogo_manda or uniq.lower() in jogando
-            som_sinal = self._o_no_tem_sinal(nome_do_sink(uniq))
-            som_toca = som_sinal is True
-            pelo_rumble = False
-            if not este_joga and self._recebe_o_rumble(uniq):
-                if som_toca if som_sinal is not None else sink_esta_tocando(
-                    nome_do_sink(uniq), na_duvida=True
-                ):
-                    com_som.add(uniq)
-                else:
-                    pelo_rumble = True
+            pelo_rumble = not este_joga and self._recebe_o_rumble(uniq)
             endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)
-            candidata = endpoint_aberto and (este_joga or pelo_rumble) and GANHO.pct(uniq) > 0
-            modo = self._modo_pelo_sinal(
-                uniq,
-                candidata=candidata,
-                som_toca=som_toca,
-                haptica_toca=(
-                    self._o_no_tem_sinal(endpoint.nome) if endpoint is not None else None
-                ),
+            # O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01: a háptica vai ao fio com o som
+            # de pé ou sem ele; o portão (quem joga, ou o rumble deste controle) e
+            # o ganho dela decidem, e nunca o alto-falante.
+            leva = bool(
+                endpoint_aberto and (este_joga or pelo_rumble) and GANHO.pct(uniq) > 0
             )
+            leva_de[uniq] = leva
+            self._leva_da_ponte = MappingProxyType({**self._leva_da_ponte, uniq: leva})
             self._vigiar_o_portao(
                 uniq,
-                fechado=endpoint_aberto and not este_joga and not pelo_rumble
-                and uniq not in com_som,
+                fechado=endpoint_aberto and not este_joga and not pelo_rumble,
                 controles=controles,
             )
-            if modo == "som" and not sink_esta_tocando(
+            som_toca = sink_esta_tocando(
                 nome_do_sink(uniq), na_duvida=uniq in self._pontes
-            ):
+            )
+            if not som_toca and not leva:
                 self._descer_ponte_ociosa(uniq)
                 continue
-            if modo == "som" and som_sinal is not False:
-                com_som.add(uniq)
-            lendo = endpoint.nome if (modo == "haptica" and endpoint is not None) else ""
-            ouvir_a_haptica = (
-                endpoint.nome if (modo == "som" and endpoint_aberto and endpoint is not None)
-                else ""
-            )
+            tipo = "som" if som_toca else "haptica"
+            lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
             if uniq in self._pontes:
-                lia = self._endpoint_da_ponte.get(uniq)
-                sem_ouvido = (
-                    bool(ouvir_a_haptica) and not som_toca
-                    and self._ouvido_da_ponte.get(uniq, ouvir_a_haptica) != ouvir_a_haptica
-                )
-                if (
-                    self._modo_da_ponte.get(uniq) == modo and lia in (None, lendo)
-                    and not sem_ouvido
-                ):
+                lia = self._endpoint_da_ponte.get(uniq, "")
+                if not lendo or lia == lendo:
+                    self._modo_da_ponte[uniq] = tipo
                     continue
                 anterior = self._pontes.pop(uniq)
                 anterior.descer()
-                if sem_ouvido and self._modo_da_ponte.get(uniq) == modo:
-                    logger.info("som_ponte_ganha_o_ouvido", uniq=uniq)
-                elif self._modo_da_ponte.get(uniq) == modo:
-                    logger.info("som_ponte_troca_de_endpoint", uniq=uniq, modo=modo)
+                if lia:
+                    logger.info("som_ponte_troca_de_endpoint", uniq=uniq)
                 else:
-                    logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
+                    logger.info("som_ponte_ganha_a_haptica", uniq=uniq)
             if not caminho:
                 continue
             vaga: Any = None
@@ -1672,14 +1650,14 @@ class AltoFalanteSubsystem:
                 )
 
                 try:
-                    vaga = governador.pedir_vaga(uniq, modo)
+                    vaga = governador.pedir_vaga(uniq, tipo)
                 except Exception:
                     logger.warning(
-                        "governador_pedido_de_vaga_falhou", uniq=uniq, modo=modo, exc_info=True
+                        "governador_pedido_de_vaga_falhou", uniq=uniq, modo=tipo, exc_info=True
                     )
                     vaga = None
                 if isinstance(vaga, Recusa):
-                    esperando.add((uniq, modo))
+                    esperando.add((uniq, tipo))
                     continue
             fonte, gravador, motivo = fonte_do_monitor_do_no(
                 nome_do_sink(uniq), uniq=uniq, papel="som"
@@ -1694,9 +1672,9 @@ class AltoFalanteSubsystem:
                 continue
             fonte_h: Any = None
             gravador_h: Any = None
-            if modo == "haptica" and endpoint is not None:
+            if lendo:
                 fonte_h, gravador_h, motivo_h = fonte_do_monitor_do_no(
-                    endpoint.nome,
+                    lendo,
                     uniq=uniq,
                     papel="haptica",
                     canais=CANAIS_DA_HAPTICA,
@@ -1705,64 +1683,42 @@ class AltoFalanteSubsystem:
                     if gravador_h is not None:
                         derrubar_leitor_de_pipe(gravador_h)
                     gravador_h = None
-                    modo = "som"
+                    lendo = ""
                     logger.info("haptica_sem_fonte", uniq=uniq, motivo=motivo_h)
-                    if not sink_esta_tocando(nome_do_sink(uniq)):
-                        if gravador is not None:
-                            derrubar_leitor_de_pipe(gravador)
+                    if not som_toca:
+                        derrubar_leitor_de_pipe(gravador)
                         if vaga is not None:
                             vaga.soltar("a vibração não teve fonte")
                         self._descer_ponte_ociosa(uniq)
                         continue
-            elif ouvir_a_haptica:
-                fonte_h, gravador_h, motivo_h = fonte_do_monitor_do_no(
-                    ouvir_a_haptica,
-                    uniq=uniq,
-                    papel="haptica",
-                    canais=CANAIS_DA_HAPTICA,
-                )
-                if fonte_h is None:
-                    if gravador_h is not None:
-                        derrubar_leitor_de_pipe(gravador_h)
-                    gravador_h = None
-                    ouvir_a_haptica = ""
-                    logger.info("haptica_sem_ouvido", uniq=uniq, motivo=motivo_h)
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,
                 abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),
                 fonte_de_pcm=fonte,
                 com_microfone=functools.partial(o_microfone_esta_no_ar, uniq),
                 gravador=gravador,
-                arranjo=ARRANJO_HAPTICA_032 if modo == "haptica" else None,
                 fonte_de_haptica=fonte_h,
                 gravador_da_haptica=gravador_h,
+                leva_a_haptica=functools.partial(self._a_ponte_leva_a_haptica, uniq),
                 vaga=vaga,
+                tipo=tipo,
                 no_do_som=nome_do_sink(uniq),
-                no_da_haptica=(
-                    endpoint.nome
-                    if (modo == "haptica" and endpoint is not None) else ouvir_a_haptica
-                ),
+                no_da_haptica=lendo,
                 ganho_da_haptica=functools.partial(GANHO.fator, uniq),
             )
             if ponte.subir():
                 self._pontes[uniq] = ponte
-                self._modo_da_ponte[uniq] = modo
+                self._modo_da_ponte[uniq] = tipo
                 self._endpoint_da_ponte = MappingProxyType({
-                    **self._endpoint_da_ponte,
-                    uniq: endpoint.nome if (modo == "haptica" and endpoint is not None) else "",
-                })
-                self._ouvido_da_ponte = MappingProxyType({
-                    **self._ouvido_da_ponte,
-                    uniq: endpoint.nome
-                    if (modo == "haptica" and endpoint is not None) else ouvir_a_haptica,
+                    **self._endpoint_da_ponte, uniq: lendo,
                 })
                 self._ponte_recusada.pop(uniq, None)
             else:
                 ponte.descer()
                 self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
+        self._leva_da_ponte = MappingProxyType(leva_de)
         self._esperando_vaga = frozenset(esperando)
-        self._radio_com_som = frozenset(com_som)
         self._conferir_o_teste_da_haptica()
         self._conferir_o_rumble()
         self._dizer_a_haptica_aos_controles(controles)
@@ -1774,7 +1730,7 @@ class AltoFalanteSubsystem:
         tocando, o rumble do controle sai sem `HAPTICS_SELECT`, o bit que
         cala a háptica (`_PinnedPyDualSense.set_haptica_de_audio`). Tocando
         quer dizer o endpoint do aparelho com fluxo E o caminho dele ao
-        controle de pé: a ponte `0x32` no rádio, o laço com o portão aberto no
+        controle de pé: a ponte do rádio levando a háptica, o laço com o portão aberto no
         cabo. Só a BORDA vai ao controlador, nos dois sentidos; o servidor de
         som que não respondeu deixa tudo como estava.
         """
@@ -1826,7 +1782,7 @@ class AltoFalanteSubsystem:
                 return cabo.portao(marca) is True
         dono = uniq if uniq in self._pontes else chave
         ponte = self._pontes.get(dono)
-        if ponte is None or self._modo_da_ponte.get(dono) != "haptica":
+        if ponte is None or not self._a_ponte_leva_a_haptica(dono):
             return False
         if self._endpoint_da_ponte.get(dono) != nome:
             return False
@@ -1863,21 +1819,9 @@ class AltoFalanteSubsystem:
             logger.debug("som_ouvido_ilegivel", no=nome, exc_info=True)
             return None
 
-    def _modo_pelo_sinal(
-        self, uniq: str, *, candidata: bool, som_toca: bool, haptica_toca: bool | None
-    ) -> str:
-        """O modo da ponte de ``uniq``: quem tem SINAL fica com o rádio."""
-        if not candidata or som_toca:
-            return "som"
-        if haptica_toca is True:
-            return "haptica"
-        if (
-            haptica_toca is False
-            and uniq in self._pontes
-            and self._modo_da_ponte.get(uniq) == "som"
-        ):
-            return "som"
-        return "haptica"
+    def _a_ponte_leva_a_haptica(self, uniq: str) -> bool:
+        """O bloco da háptica vai ao fio na ponte de ``uniq``? Lido a cada quadro."""
+        return self._leva_da_ponte.get(uniq) is True
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:
         """A ponte de quem não tem o que tocar desce. Idempotente."""
