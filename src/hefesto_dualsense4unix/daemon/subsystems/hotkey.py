@@ -956,7 +956,10 @@ def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
     return False
 
 
-#: 548 ms** (duas medições, nos dois sentidos) até o `state_full` publicar o
+#: O teto da espera pela confirmação do mudo no aparelho. Os ~550 ms medidos em
+#: 30/08 eram a fila do report (63 × 8,7 ms com um controle); desde a
+#: O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 a volta esvazia a fila e a confirmação chega
+#: em uma volta. O teto segue folgado para o rádio cheio.
 CONFIRMACAO_DO_MUDO_S: float = 3.0
 
 PASSO_DA_CONFIRMACAO_S: float = 0.1
@@ -1233,8 +1236,8 @@ async def _metade_do_firmware(
     antes de o report sair, e o valor nunca aconteceria.
 
     O QUE ELA DEVOLVE quando o aparelho não confirma: `feita=True` com o
-    pedido ACEITO pelo backend é o que se sabe AGORA — a confirmação leva
-    ~550 ms e a ponte da GUI tem teto de 250 ms. Quem diz a verdade conferida
+    pedido ACEITO pelo backend é o que se sabe AGORA — a confirmação chega
+    numa volta do report, e a ponte da GUI tem teto de 250 ms. Quem diz a verdade conferida
     é o `state_full`, e é de lá que o selo composto se pinta. O que NÃO se faz
     aqui é responder "ok" sobre um backend que recusou: aí `feita` é `False`
     com a frase.
@@ -1307,8 +1310,9 @@ def _agendar_a_devolucao_da_posse(
 ) -> None:
     """Espera o aparelho CONFIRMAR e só então devolve a posse ao kernel.
 
-    Task própria porque a confirmação custa ~550 ms (medido) e o handler do
-    IPC não pode pagá-la: a ponte da GUI corta em 250 ms. Sem task, ou a tela
+    Task própria porque a confirmação custa uma volta do report (até
+    :data:`CONFIRMACAO_DO_MUDO_S` no rádio cheio) e o handler do IPC não pode
+    pagá-la: a ponte da GUI corta em 250 ms. Sem task, ou a tela
     trava, ou a posse fica nossa para sempre — e a posse nossa é o botão do
     plástico morto.
 
