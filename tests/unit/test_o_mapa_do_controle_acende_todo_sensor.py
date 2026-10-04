@@ -121,6 +121,19 @@ def test_o_teste_da_aba_vibracao_acende_os_dois_motores_daquele_controle() -> No
     assert not {"feat-rumble-esquerdo", "feat-rumble-direito"} & _acesos(_contexto("p2"))
 
 
+def test_o_teste_com_a_barra_de_um_motor_em_zero_nao_acende_esse_motor(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O desenho diz o que o «Testar» faz: com a barra do motor esquerdo em zero
+    o teste não o faz tremer, e ele fica apagado. MORDIDA: acender os dois motores
+    só por haver teste (sem olhar o par das barras) → reprova."""
+    monkeypatch.setattr(a05, "_barras_dos_motores", lambda _s, _u: {"e": 0, "d": 100})
+    a05._EM_TESTE.add(P1)
+    acesos = _acesos(_contexto("p1"))
+    assert "feat-rumble-direito" in acesos
+    assert "feat-rumble-esquerdo" not in acesos, (
+        "o motor com a barra em zero acendeu no mapa, e o teste não o faz tremer")
+
+
 def test_a_haptica_acende_quando_chega_ao_controle() -> None:
     assert "feat-haptica" not in _acesos(_contexto())
     ctx = _contexto()

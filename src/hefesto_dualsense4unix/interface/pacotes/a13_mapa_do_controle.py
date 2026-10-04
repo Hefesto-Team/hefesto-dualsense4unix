@@ -212,11 +212,14 @@ def _sensores(ctx: Contexto, itens: list[dict[str, Any]]) -> dict[str, bool]:
             continue
         gira, anda = _se_move(uniq, entrada)
         esq, dir_ = _motores(ctx.state or {}, int(item.get("jogador") or 0))
-        testando = uniq in a05.em_teste()
+        # O «Testar» da Vibração acende só o motor que ele faz tremer: o par sai
+        # das barras daquele controle, e a barra de um motor em zero o cala.
+        leve, forte = (a05._par_das_barras(ctx, uniq) if uniq in a05.em_teste()
+                       else (0, 0))
         aceso["feat-giroscopio"] |= gira
         aceso["feat-acelerometro"] |= anda
-        aceso["feat-rumble-esquerdo"] |= esq or testando
-        aceso["feat-rumble-direito"] |= dir_ or testando
+        aceso["feat-rumble-esquerdo"] |= esq or forte > 0
+        aceso["feat-rumble-direito"] |= dir_ or leve > 0
         aceso["feat-haptica"] |= (a05._haptica_no_ar(ctx.state or {}, uniq)
                                   or uniq in a05.em_teste_da_haptica())
         aceso["touchpad"] |= bool(dedos_do_inputs(entrada.get("inputs")))
