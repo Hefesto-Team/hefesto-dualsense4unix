@@ -1,4 +1,4 @@
-"""O balão do rádio vizinho se lê: fundo da faixa e uma palavra ao lado do ícone."""
+"""O rótulo da pista do rádio vizinho se lê: fundo da faixa e uma palavra ao lado do ícone."""
 
 from __future__ import annotations
 
@@ -19,20 +19,22 @@ PAGINAS = (
 
 
 def _palavras(vizinhos: list[dict[str, str]]) -> list[str]:
-    html = a08.html_fora_da_faixa({"espectro": [], "vizinhos": vizinhos})
-    return re.findall(r'<span class="palpite" aria-hidden="true">([^<]*)</span>', html)
+    cena = {"lugares": [{"id": "L1", "nome": "Sala"}], "aparelhos": [], "vizinhos": vizinhos}
+    html = a08.html_dos_canais(cena)
+    botoes = re.findall(r'<button class="rotulo vizinho".*?</button>', html)
+    return [re.search(r'<span class="nome">([^<]*)</span>', b).group(1) for b in botoes]
 
 
-def test_todo_balao_diz_uma_palavra() -> None:
+def test_todo_rotulo_diz_uma_palavra() -> None:
     vizinhos = [
         {"id": "v1", "tipo": "", "nome": "", "sugestao": "mouse", "sugestao_tipo": "mouse"},
         {"id": "v2", "tipo": "", "nome": "", "sugestao": "", "sugestao_tipo": ""},
         {"id": "v3", "tipo": "teclado", "nome": "Teclado da sala", "sugestao": ""},
     ]
-    assert _palavras(vizinhos) == ["Mouse?", a08.SEM_NOME_NO_BALAO, "Teclado da sala"]
+    assert _palavras(vizinhos) == ["Mouse?", a08.ESPECIE_DESCONHECIDA, "Teclado da sala"]
 
 
-def test_o_balao_nao_herda_o_fundo_do_sistema() -> None:
+def test_o_rotulo_que_e_botao_nao_herda_o_fundo_do_sistema() -> None:
     for pagina in PAGINAS:
         css = pagina.read_text(encoding="utf-8")
-        assert re.search(r"\.radio button\.selo-fora\{background:transparent", css), pagina
+        assert re.search(r"\.radio button\.rotulo\{background:transparent", css), pagina

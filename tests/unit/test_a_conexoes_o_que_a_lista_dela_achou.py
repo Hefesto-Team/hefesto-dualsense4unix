@@ -542,22 +542,26 @@ def test_o_teclado_de_baixo_consumo_tem_o_desenho_do_teclado(
     assert perto[_id("aa:bb:cc:00:00:6e")] == "outro"
     moldes = a08.html_dos_moldes(cena)
     painel = moldes[moldes.index('data-painel="conectar"'):]
-    assert "#rd-mouse" in painel and "#rd-radio" in painel
+    assert "#rd-mouse" in painel and "#rd-ajuda" in painel
+    assert "#rd-radio" not in painel, "a antena é só do adaptador"
 
 
 def test_o_vizinho_que_o_sistema_reconhece_mostra_o_desenho_dele(a08: Any) -> None:
-    """O selo do rádio vizinho: declarado, o tipo dele; sugerido pelo kernel, o"""
-    cena = {"espectro": [], "vizinhos": [
+    """O rótulo da pista do rádio vizinho: declarado, o tipo dele; lido pelo kernel, o
+    desenho do que ele leu; sem ninguém que saiba, o «?» — e a antena nunca."""
+    cena = {"lugares": [{"id": "L1", "nome": "Sala"}], "aparelhos": [], "vizinhos": [
         {"id": "046d:c52b", "tipo": "", "nome": "", "sugestao": "Teclado",
-         "sugestao_tipo": "teclado"},
+         "sugestao_tipo": "teclado", "lido": "Teclado"},
         {"id": "0bda:8179", "tipo": "wifi", "nome": "Wi-Fi", "sugestao": "",
          "sugestao_tipo": ""},
         {"id": "1234:5678", "tipo": "", "nome": "", "sugestao": "", "sugestao_tipo": ""},
     ]}
-    selos = a08.html_fora_da_faixa(cena).split("</button>")
-    assert "#rd-teclado" in selos[0] and "sem-nome" in selos[0]
-    assert "#rd-wifi" in selos[1]
-    assert "#rd-ajuda" in selos[2]
+    rotulos = re.findall(r'<button class="rotulo vizinho".*?</button>', a08.html_dos_canais(cena))
+    assert len(rotulos) == 3
+    assert "#rd-teclado" in rotulos[0]
+    assert "#rd-wifi" in rotulos[1]
+    assert "#rd-ajuda" in rotulos[2]
+    assert all("#rd-radio" not in r for r in rotulos)
 
 
 def test_o_nome_segue_o_controle_e_o_numero_segue_o_daemon(

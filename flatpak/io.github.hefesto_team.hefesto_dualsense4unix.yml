@@ -127,9 +127,10 @@ finish-args:
   # BlueZ pelo barramento de SISTEMA (`integrations/bluez_dbus.py`): parear,
   # reconectar, remover, mover de adaptador e dar nome ao adaptador. Sem esta
   # linha o sandbox não tem barramento de sistema, e o Flatpak ficava só com o
-  # controle que o sistema pareou. É o `org.bluez` e só ele, não o
-  # `--socket=system-bus`: o código não fala com outro serviço de sistema, e o
-  # xdg-dbus-proxy esconde os outros (medido: `ServiceUnknown`).
+  # controle que o sistema pareou. São dois nomes, e só eles, não o
+  # `--socket=system-bus`: o `org.bluez` e o NetworkManager (só LER o canal do
+  # Wi-Fi, sem varrer: `integrations/faixa_do_wifi.py`); o xdg-dbus-proxy
+  # esconde os outros (medido: `ServiceUnknown`).
   # Medido em 24/09 com o flatpak 1.18.1, num sandbox do org.gnome.Platform//47
   # com o `src/` do produto, contra um bluetoothd de mentira num barramento de
   # sistema de mentira: o agente próprio (R5) atravessa o proxy nos dois
@@ -137,6 +138,7 @@ finish-args:
   # chamadas do bluetoothd ao `Agent1` chegam e voltam. Quem cobra é
   # `tests/unit/test_o_flatpak_alcanca_o_bluez.py`.
   - --system-talk-name=org.bluez
+  - --system-talk-name=org.freedesktop.NetworkManager
   # O DIÁRIO DOS SERVIÇOS DO SISTEMA, só leitura. O watchdog e a ponte (root)
   # escrevem em /var/lib/hefesto-dualsense4unix/radio-diario.jsonl, e o daemon
   # só LÊ (`diario_do_radio.ler`). É a PASTA, e não o arquivo, porque o diário

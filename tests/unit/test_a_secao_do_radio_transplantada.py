@@ -310,7 +310,7 @@ def test_fatia_nao_chega_a_tela(mesa: Any) -> None:
     """MORDIDA: devolva `class="fatias"` à `conta-da-vaga` do pacote."""
     assert not _fala_fatia(_secao_da_pagina())
     campos = _campos(mesa)
-    for chave in ("radio-sala", "radio-moldes", "espectro-canais", "meus-no-ar"):
+    for chave in ("radio-sala", "radio-moldes", "espectro-canais"):
         assert not _fala_fatia(_ler(str(campos[chave]))), chave
 
 

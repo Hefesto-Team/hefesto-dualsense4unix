@@ -222,7 +222,7 @@ def test_a_pagina_tem_o_selo_e_o_painel_de_cada_vizinho():
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
     selos = set(re.findall(
-        r'<button class="selo-fora vizinho(?: sem-nome)?"[^>]*data-gesto="vizinho-o-que-e" '
+        r'<button class="rotulo vizinho"[^>]*data-gesto="vizinho-o-que-e" '
         r'data-alvo="([^"]+)"', html))
     paineis = set(re.findall(
         r'<template class="painel-molde" data-painel="o-que-e" data-alvo="([^"]+)"', html))

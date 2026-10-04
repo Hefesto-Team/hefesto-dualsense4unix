@@ -14,7 +14,7 @@ import pytest
 import yaml
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
-from hefesto_dualsense4unix.integrations import diario_do_radio
+from hefesto_dualsense4unix.integrations import diario_do_radio, faixa_do_wifi
 from hefesto_dualsense4unix.integrations.agente_de_pareamento import CAMINHO_DO_AGENTE
 from tests.unit import bluez_de_mentira as bm
 from tests.unit.test_o_flatpak_alcanca_o_broker import (
@@ -61,10 +61,12 @@ def test_o_manifesto_abre_o_barramento_de_sistema_so_para_o_bluez() -> None:
         "o `--socket=system-bus` dá ao sandbox o barramento de sistema inteiro, sem "
         "proxy; o código só fala com o `org.bluez`"
     )
-    assert nomes_de_sistema() == [f"--talk={bd.SERVICO}"], (
+    esperados = [f"--talk={bd.SERVICO}", f"--talk={faixa_do_wifi.SERVICO}"]
+    assert nomes_de_sistema() == esperados, (
         f"o manifesto pede {nomes_de_sistema()} no barramento de sistema, e o daemon "
-        f"fala com o {bd.SERVICO} e só com ele: sem a linha, o Flatpak não pareia, não "
-        "reconecta e não move de adaptador pelo Hefesto"
+        f"fala com o {bd.SERVICO} e com o {faixa_do_wifi.SERVICO}, e só com eles: sem a "
+        "primeira, o Flatpak não pareia, não reconecta e não move de adaptador pelo "
+        "Hefesto; sem a segunda, a faixa do Wi-Fi não se lê"
     )
 
 
@@ -179,6 +181,7 @@ def test_a_pagina_diz_as_duas_linhas_e_o_que_segue_sem_alcancar() -> None:
     tabela = [linha for linha in pagina.splitlines() if linha.startswith("| `--")]
     for linha in (
         f"--system-talk-name={bd.SERVICO}",
+        f"--system-talk-name={faixa_do_wifi.SERVICO}",
         f"--filesystem={diario_do_radio.DIARIO_DO_ROOT.parent}:ro",
     ):
         na_tabela = any(celula.startswith(f"| `{linha}`") for celula in tabela)

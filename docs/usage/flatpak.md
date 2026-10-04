@@ -90,13 +90,16 @@ cp ~/.config/hefesto-dualsense4unix/profiles/*.json \
 | `--filesystem=/run/hefesto-dualsense4unix` | a trava comum do rádio, dividida com os serviços do sistema |
 | `--filesystem=/run/udev/data:ro` | a base do udev: quem move o cursor, e a identidade do controle para a vibração |
 | `--system-talk-name=org.bluez` | parear, reconectar, remover e mover controles de adaptador |
+| `--system-talk-name=org.freedesktop.NetworkManager` | ler o canal do Wi-Fi, sem varrer |
 | `--filesystem=/var/lib/hefesto-dualsense4unix:ro` | o diário dos serviços do sistema, só leitura |
 
 ### O BlueZ e o diário dos serviços do sistema
 
 Pelo `org.bluez`, parear, reconectar, remover e mover de adaptador funcionam no
 Flatpak como fora dele, e o agente de pareamento do Hefesto atravessa o
-sandbox. O diário dos serviços do sistema entra só para leitura.
+sandbox. O diário dos serviços do sistema entra só para leitura. Pelo
+`org.freedesktop.NetworkManager` o Hefesto só lê o canal e a largura da rede
+Wi-Fi em uso, para a aba Conexões; nunca varre.
 
 O que continua sem alcançar: a ponte de administrador
 (`bt_ponte_privilegiada.sh`, pelo `sudo`), que não existe no sandbox. Sem ela, o

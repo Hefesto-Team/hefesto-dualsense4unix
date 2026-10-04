@@ -2094,10 +2094,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .sala-vazia{color:var(--texto-mudo);font-size:12.5px;padding:10px 4px}
   .radio .moldes{display:none}
   .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--texto-mudo)}
-  .radio .fora-da-faixa{display:flex;align-items:center;gap:4px;margin-left:auto}
-  .radio .fora-da-faixa .selo-fora{margin-left:0}
-  .radio .fora-da-faixa + .no-ar{margin-left:9px}
-  .radio .no-ar-dentro{display:flex;align-items:center;gap:5px}
   .radio .historico{display:flex;flex-direction:column;gap:6px}
   .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
@@ -2130,16 +2126,58 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha.nao-conectou,.radio .linha.desligado{cursor:default}
   .radio .linha.desligado .ds{opacity:.55}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
-  .radio .selo-fora .palpite{font-family:var(--font-corpo);font-size:10.5px;max-width:110px;
-                             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* O BALÃO É BOTÃO, E BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
+  /* O RÓTULO DA PISTA QUE É BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
      dela: *«nessa região o svg continua em branco não dá pra entender»*.
      Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
      baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
-     o do texto, e todo balão diz uma palavra ao lado do ícone.
+     o do texto, e todo rótulo diz uma palavra ao lado do ícone.
      (noqa-acento: citação literal dela) */
-  .radio button.selo-fora{background:transparent;color:var(--texto-suave);line-height:1.3}
-  .radio button.selo-fora:hover{border-color:var(--purple);color:var(--fg)}
+  .radio button.rotulo{background:transparent;color:var(--texto-suave);line-height:1.3;
+                       border:1px solid transparent;border-radius:6px;cursor:pointer;
+                       font:inherit;text-align:left}
+  .radio button.rotulo:hover{border-color:var(--purple);color:var(--fg)}
+  .radio button.rotulo:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
+  /* CADA FAIXA TEM DONO (CADA-FAIXA-TEM-DONO-01): uma pista por adaptador, por rede e por
+     rádio vizinho, na mesma largura de 79 canais, e o rótulo da esquerda É a legenda.
+     A cor é a IDENTIDADE (de quem é); o nível do «N/79» é o que diz se está bom. */
+  .radio .pistas{display:flex;flex-direction:column;gap:4px}
+  .radio .pista{display:grid;grid-template-columns:minmax(270px,30%) 1fr;align-items:center;
+                gap:10px;min-height:24px}
+  .radio .pista .rotulo{display:flex;align-items:center;gap:6px;min-width:0;padding:1px 5px;
+                        font-size:12px;color:var(--texto-suave)}
+  .radio .pista .rotulo .nome{font-weight:600;color:var(--fg);overflow:hidden;
+                              text-overflow:ellipsis;white-space:nowrap}
+  .radio .pista .rotulo .i{font-size:14px;flex:none}
+  .radio .pista .rotulo .ds{width:20px;height:14px}
+  .radio .pista .glifo-do-grupo{color:var(--cor-do-grupo,var(--texto-suave))}
+  .radio .pista .no-ar-dele{display:inline-flex;align-items:center;gap:3px;white-space:nowrap;
+                            font-size:11px;color:var(--texto-mudo)}
+  .radio .pista .saiba,.radio .pista .selo-lido{font-size:10.5px;color:var(--texto-mudo);
+                            font-family:var(--font-dado);white-space:nowrap}
+  .radio .pista .canais-do-lugar{margin-left:auto;font-size:11px}
+  .radio .pista .trilho{position:relative;height:22px;border-radius:7px;
+                        background:var(--app-bg);border:1px solid var(--linha);overflow:hidden}
+  .radio .pista.sem-medida .trilho{height:12px;border-style:dashed;border-radius:6px}
+  .radio .pista.sem-medida{min-height:16px}
+  .radio .pista .sem-faixa{position:absolute;inset:0;display:flex;align-items:center;
+                           padding:0 8px;font-size:9.5px;line-height:1;color:var(--texto-mudo);
+                           font-family:var(--font-dado);white-space:nowrap}
+  .radio .pista .salto{position:absolute;top:0;bottom:0;pointer-events:none;
+                       background:repeating-linear-gradient(90deg,var(--texto-mudo) 0 1px,
+                                                            transparent 1px 7px);opacity:.45}
+  .radio .pista .evitado{position:absolute;top:0;bottom:0;
+                         background:repeating-linear-gradient(45deg,var(--cor-do-grupo) 0 3px,
+                                                              transparent 3px 7px)}
+  .radio .pista .faixa{top:2px;bottom:2px;border-color:var(--cor-do-grupo);
+                       color:var(--cor-do-grupo);background:transparent}
+  .radio .lugar-nome[class*="cor-"]:not(:focus){border-color:var(--cor-do-grupo)}
+  .radio .porta svg[class*="cor-"]{color:var(--cor-do-grupo)}
+  .radio .cor-cyan{--cor-do-grupo:var(--cyan)}
+  .radio .cor-purple{--cor-do-grupo:var(--purple)}
+  .radio .cor-pink{--cor-do-grupo:var(--pink)}
+  .radio .cor-yellow{--cor-do-grupo:var(--yellow)}
+  .radio .cor-orange{--cor-do-grupo:var(--orange)}
+  .radio .cor-comment{--cor-do-grupo:var(--comment)}
   /* A VARREDURA E A BUSCA MORAM SEMPRE NO CABEÇALHO DA CAIXA, e as listas
      `radio-varrendo` e `radio-conectando` as acendem — sem refazer a sala
      (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2). A borda da busca é a da
@@ -2261,7 +2299,14 @@ def _cena_do_desenho() -> dict:
                 for x in linhas if x["tabela"] == "evitado"]
     tipo_do_desenho = {"teclado": "teclado", "mouse": "mouse", "wifi": "wifi"}
     vizinhos = [{"id": x["id"], "tipo": tipo_do_desenho.get(x["a"], ""), "nome": x["nome"],
-                 "sugestao": ""} for x in linhas if x["tabela"] == "espectro"]
+                 "sugestao": "", "no": f"/sys/usb/{x['id']}"}
+                for x in linhas if x["tabela"] == "espectro"]
+    # O que o CSV do desenho não tem: o L1 também evita canais (disjuntos dos outros dois), o
+    # Wi-Fi do desenho está em 5 GHz e há outro, interno, em 2,4 GHz.
+    evitados.append({"lugar": lugares[0]["id"], "ini": 8, "fim": 16})
+    wifi = [{"no": f"/sys/usb/{x['id']}", "mhz": 5805, "largura": 80}
+            for x in linhas if x["tabela"] == "espectro" and x["a"] == "wifi"]
+    wifi.append({"no": "", "mhz": 2437, "largura": 20})
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
                "grupo": re.sub(r"\bmesa\b", "escrivaninha", x["d"]), "rotulo": x["a"]}
               for x in linhas if x["tabela"] == "porta"]
@@ -2285,12 +2330,12 @@ def _cena_do_desenho() -> dict:
                       "esperando": False, "fixo": True})
     cheio["nao_conectou"] = True
     vizinhos += [{"id": f"E{len(vizinhos) + 1 + i}", "tipo": "", "nome": "",
-                  "sugestao": s, "sugestao_tipo": s.lower()}
+                  "sugestao": s, "sugestao_tipo": s.lower(), "lido": s}
                  for i, s in enumerate(("Teclado", "Mouse"))]
     cena = {
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
-        "canais_medidos": {lg["id"]: True for lg in lugares}, "espectro": [],
-        "vizinhos": vizinhos, "portas": portas, "pedido": None,
+        "canais_medidos": {lg["id"]: True for lg in lugares},
+        "vizinhos": vizinhos, "wifi": wifi, "portas": portas, "pedido": None,
         "proposta": {"controle": quem_sai["id"], "destino": vazio["id"]},
         "ocupado": False, "aberto": cheio["id"], "perto": perto,
         "destino_do_conectar": vazio["id"],
@@ -2316,9 +2361,9 @@ SPRITE_DO_RADIO = _sprite_do_radio()
 
 ENCAIXE_CURTO = "Encaixe o DualSense numa entrada vazia."
 
-AJUDA_DO_AR = ("Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O "
-               "hachurado são os canais que os adaptadores evitam; os selos são os rádios "
-               "que o sistema vê perto.")  # noqa-acento (texto de tela)
+AJUDA_DO_AR = ("Cada linha é um rádio. O hachurado é onde cada adaptador parou de saltar; "
+               "a faixa do Wi-Fi é a que a rede anuncia. O canal de um teclado ou mouse "
+               "sem fio não se lê.")  # noqa-acento (texto de tela)
 
 SCRIPT_DA_SECAO_DO_RADIO = r"""
   <script>
@@ -2540,7 +2585,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         if(b.classList.contains('apagado')) balancar(b); else abrirPainel('quem-vem', b.dataset.alvo);
         return;
       }
-      if((b = perto(ev, '.radio .selo-fora.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
+      if((b = perto(ev, '.radio .rotulo.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
       // O «⋮» DA LINHA (ESQUECER-E-LIMPAR-AS-CONEXOES-01): o menu dela, com o
       // «Esquecer». Com um controle esperando, não há molde, e o Python faz o
       // botão tremer.
@@ -3218,11 +3263,8 @@ MIOLO = f'''
           <div class="espectro-cab">
             Dispositivos Conectados
             <span class="ajuda" role="img" aria-label="{AJUDA_DO_AR}" title="{AJUDA_DO_AR}"><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
-            <span class="fora-da-faixa" data-campo="espectro-fora-da-faixa" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-fora-da-faixa"]}</span>
-            <span class="no-ar" data-campo="meus-no-ar" data-hef-alvo="html">{CAMPOS_DO_RADIO["meus-no-ar"]}</span>
-            <span class="conta" data-campo="espectro-conta" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-conta"]}</span>
           </div>
-          <div class="canais" data-campo="espectro-canais" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-canais"]}</div>
+          <div class="pistas" data-campo="espectro-canais" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-canais"]}</div>
           <div class="portas" data-campo="vizinhanca-das-portas" data-hef-alvo="html">{CAMPOS_DO_RADIO["vizinhanca-das-portas"]}</div>
         </div>
 
