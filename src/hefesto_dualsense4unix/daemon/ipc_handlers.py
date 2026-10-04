@@ -5702,6 +5702,10 @@ class IpcHandlersMixin:
     _afh_lido_em: float = float("-inf")
     _afh_em_voo: bool = False
     _ler_afh: Any = None
+    _sinal_dos_enlaces: dict[str, int | None] | None = None
+    _sinal_lido_em: float = float("-inf")
+    _sinal_em_voo: bool = False
+    _ler_sinal: Any = None
 
     def _enriquecer_e_medir_o_ar(
         self, result: dict[str, Any], entries: list[dict[str, Any]], state: Any
@@ -5731,6 +5735,7 @@ class IpcHandlersMixin:
 
     _ADAPTADOR_TTL_S = 2.0
     _AFH_PERIODO_S = 10.0
+    _SINAL_PERIODO_S = 1.0
 
     def _merge_radio(self, entries: list[dict[str, Any]]) -> None:
         """Quatro chaves por controle, SEMPRE presentes, ``None`` = não sei."""
@@ -5786,6 +5791,9 @@ class IpcHandlersMixin:
             entry["hz_voz"] = self._hz_ou_none(hz_voz)
             modo = pontes.get(chave(uniq)) if radio and uniq else None
             entry["ponte_do_radio"] = modo if modo in ("som", "haptica") else None
+            entry["sinal_dbm"] = (
+                (self._sinal_dos_enlaces or {}).get(chave(uniq)) if radio and uniq else None
+            )
             entry["haptica_pct"] = GANHO.pct(uniq)
             entry["haptica_alcanca"] = not (radio and nativo and modo is None)
             entry["haptica_vale_pct"] = GANHO.pct_que_vale(uniq)
@@ -5838,6 +5846,7 @@ class IpcHandlersMixin:
         if amostra is not None:
             ar = {e: a for e, a in dict(amostra).items() if e}
             self._talvez_ler_o_afh(ar)
+            self._talvez_ler_o_sinal(ar)
         orcamento = radio_da_mesa.orcamento_por_adaptador(
             entries,
             ar=ar,
@@ -5888,6 +5897,37 @@ class IpcHandlersMixin:
         except Exception:
             self._afh_em_voo = False
 
+
+    def _talvez_ler_o_sinal(self, ar: dict[str, Any]) -> None:
+        """Pergunta o sinal (RSSI) de cada enlace numa thread, no máximo a cada segundo."""
+        agora = time.monotonic()
+        if self._sinal_em_voo or agora - self._sinal_lido_em < self._SINAL_PERIODO_S:
+            return
+        from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+        if self._ler_sinal is None and fake_mode_enabled():
+            return
+        self._sinal_em_voo = True
+        self._sinal_lido_em = agora
+        leituras = dict(ar)
+
+        def perguntar() -> None:
+            from hefesto_dualsense4unix.integrations import radio_da_mesa
+
+            try:
+                self._sinal_dos_enlaces = radio_da_mesa.sinais_dos_enlaces(
+                    leituras, ler=self._ler_sinal)
+            except Exception:  # pragma: no cover - defensivo, jamais derruba o daemon
+                logger.debug("radio_sinal_nao_lido", exc_info=True)
+            finally:
+                self._sinal_em_voo = False
+
+        try:
+            import threading
+
+            threading.Thread(target=perguntar, name="radio-sinal", daemon=True).start()
+        except Exception:
+            self._sinal_em_voo = False
 
     def _o_governador(self) -> Any:
         """O governador do rádio, que mora no subsystem do som — ou ``None``."""

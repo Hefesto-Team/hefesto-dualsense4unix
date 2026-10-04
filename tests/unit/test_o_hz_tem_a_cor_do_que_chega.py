@@ -143,7 +143,8 @@ def _cena_dos_quatro(hz: dict[str, Any] | None = None) -> dict[str, Any]:
         return {"id": u, "aparelho": u, "tipo": "controle", "lugar": lugar,
                 "nome": "", "rotulo": "DualSense", "cor": "", "cor_nome": "",
                 "mic": False, "luz": True, "fixo": False, "ponte": None, "alem": False,
-                "esperando": False, "hz_mov": valores[u], "hz_voz": None}
+                "esperando": False, "hz_mov": valores[u], "hz_voz": None, "sinal": -30,
+                "hz_referencia": 360.0}
 
     cena["aparelhos"] = [controle(U[0], direita), controle(U[1], direita),
                          controle(U[2], meio), controle(U[3], esquerda)]
@@ -168,9 +169,11 @@ def test_cada_controle_tem_o_nivel_dele_na_ordem_da_sala(a08: Any) -> None:
     assert _alvos(sala, "hz-nivel") == ordem and _alvos(sala, "hz-dica") == ordem
     assert campos["hz-nivel"] == ["liso", MEDIO, "engasga", ""], campos["hz-nivel"]
     assert len(campos["hz-dica"]) == 4
-    assert campos["hz-dica"] == [a08.DICA_DO_MOVIMENTO[n] for n in campos["hz-nivel"]]
+    causa = a08.FRASE_DA_CAUSA["interferencia"]  # o sinal é bom: quem cai, cai por interferência
+    assert campos["hz-dica"] == [a08.DICA_DO_MOVIMENTO["liso"], causa, causa,
+                                 a08.DICA_DO_MOVIMENTO[""]]
     assert U[4] not in sala, "o controle do cabo apareceu na seção do rádio"
-    for dica in set(a08.DICA_DO_MOVIMENTO.values()):
+    for dica in {*a08.DICA_DO_MOVIMENTO.values(), *a08.FRASE_DA_CAUSA.values()}:
         palavras = set(re.findall(r"\w+", dica.lower()))
         assert not palavras & PALAVRAS_DE_CULPA, dica
         assert "distância" not in palavras and "cabo" not in palavras, dica

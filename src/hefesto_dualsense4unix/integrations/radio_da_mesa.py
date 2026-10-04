@@ -91,6 +91,12 @@ Duas consequências de projeto saem daí, e as duas estão no código:
    taxa varia por motivo desconhecido mesmo com a mesa folgada. A constante
    :data:`PALAVRAS_DE_CULPA` existe para que um teste varra esse limite.
 
+NOTA DATADA — 03/10/2026: a frase do MOVIMENTO de um controle (não a da ocupação do
+adaptador) passou a dizer a causa, porque deixou de ser estimada. O sinal do enlace (RSSI,
+lido sem root) segue quem se afasta e só ele, e o Hz cai contra o que o próprio controle dava
+naquele adaptador: :func:`diagnosticar_o_movimento` junta os dois números e diz «longe»,
+«interferência» ou «sinal desconhecido». A ocupação continua sem culpa.
+
 Também não é um mapa de bonds: quem amarra controle a adaptador aqui é o
 ``HID_PHYS`` do uevent do nó hidraw, que o kernel publica e que abre como uid
 1000 — nada de ``/var/lib/bluetooth`` e nada de sudo.
@@ -378,6 +384,110 @@ def nivel_do_movimento(hz: object) -> str:
     return NIVEL_ENGASGA
 
 
+#: O sinal (RSSI do enlace, dBm) que o rádio mede de cada controle. Os dois números são da
+#: bancada de 03/10/2026 (dados em `bancada-0310/x-sinal.txt`, um adaptador, a casa dela): abaixo
+#: de ~-48 o controle ainda funciona e já atrasa; abaixo de ~-52 perde aperto. São o ponto de
+#: partida, e a sprint mede de novo noutro adaptador antes de fixá-los.
+SINAL_QUE_ATRASA_DBM = -48
+SINAL_QUE_PERDE_APERTO_DBM = -52
+
+#: O Hz de um controle é relativo ao que ELE dava naquele adaptador com aquela gente dividindo
+#: (a referência abaixo): 250 Hz é normal para dois no mesmo adaptador e é queda para um sozinho
+#: que dava 650. Acima de `FRACAO_QUE_AINDA_E_NORMAL` da referência é liso; abaixo de
+#: `FRACAO_QUE_ENGASGA`, engasga.
+FRACAO_QUE_AINDA_E_NORMAL = 0.6
+FRACAO_QUE_ENGASGA = 0.3
+MEIA_VIDA_DA_REFERENCIA_S = 120.0
+
+CAUSA_LONGE = "longe"
+CAUSA_INTERFERENCIA = "interferencia"
+CAUSA_ADAPTADOR_CHEIO = "adaptador_cheio"
+CAUSA_SEM_SINAL = "sem_sinal"
+
+_ORDEM_DO_NIVEL = {"": 0, NIVEL_LISO: 1, NIVEL_MEDIO: 2, NIVEL_ENGASGA: 3}
+
+
+@dataclass(frozen=True)
+class Diagnostico:
+    """O nível (a cor) e a causa (a frase) do movimento de um controle."""
+
+    nivel: str
+    causa: str = ""
+
+
+def atualizar_a_referencia(
+    anterior: tuple[int, float, float] | None, dividem: int, hz: object, agora: float
+) -> tuple[int, float, float]:
+    """`(dividem, pico, instante)`: o maior Hz que ESTE controle deu com esta gente dividindo.
+
+    O pico recomeça quando muda quem divide o adaptador, e esquece devagar (meia-vida de
+    :data:`MEIA_VIDA_DA_REFERENCIA_S`) para a referência acompanhar um rádio que mudou de vez.
+    """
+    valor = float(hz) if isinstance(hz, int | float) and not isinstance(hz, bool) else 0.0
+    if anterior is None or anterior[0] != dividem:
+        return dividem, valor, agora
+    _, pico, quando = anterior
+    pico *= 0.5 ** (max(0.0, agora - quando) / MEIA_VIDA_DA_REFERENCIA_S)
+    return dividem, max(pico, valor), agora
+
+
+def diagnosticar_o_movimento(
+    hz: object,
+    *,
+    sinal_dbm: object = None,
+    referencia_hz: float | None = None,
+    via_radio: bool = True,
+    adaptador_cheio: bool = False,
+) -> Diagnostico:
+    """A cor e a frase, dos dois números JUNTOS: o Hz que chega e o sinal do enlace.
+
+    * Hz caindo e sinal fraco: ``longe``. Hz caindo e sinal bom: ``interferencia`` (ou
+      ``adaptador_cheio``, quando a conta de quem divide diz). Hz normal e sinal bom: liso.
+    * O Hz cai contra a REFERÊNCIA do controle naquele adaptador, não contra um número fixo;
+      sem referência, vale o absoluto (:func:`nivel_do_movimento`).
+    * Pelo rádio sem o sinal, a linha não é verde: ``sem_sinal`` e cor neutra.
+    """
+    absoluto = nivel_do_movimento(hz)
+    if not absoluto:
+        return Diagnostico("")
+    nivel = absoluto
+    if referencia_hz is not None and referencia_hz > 0:
+        razao = float(hz) / referencia_hz  # type: ignore[arg-type]
+        relativo = (NIVEL_LISO if razao >= FRACAO_QUE_AINDA_E_NORMAL
+                    else NIVEL_MEDIO if razao >= FRACAO_QUE_ENGASGA else NIVEL_ENGASGA)
+        piso = NIVEL_ENGASGA if absoluto == NIVEL_ENGASGA else NIVEL_LISO
+        nivel = max(piso, relativo, key=_ORDEM_DO_NIVEL.__getitem__)
+    caindo = nivel != NIVEL_LISO
+    if not via_radio:
+        return Diagnostico(nivel)
+    if isinstance(sinal_dbm, bool) or not isinstance(sinal_dbm, int | float):
+        return Diagnostico(nivel if caindo else "", CAUSA_SEM_SINAL)
+    if not caindo:
+        return Diagnostico(nivel)
+    if sinal_dbm <= SINAL_QUE_ATRASA_DBM:
+        return Diagnostico(nivel, CAUSA_LONGE)
+    return Diagnostico(nivel, CAUSA_ADAPTADOR_CHEIO if adaptador_cheio else CAUSA_INTERFERENCIA)
+
+
+def sinais_dos_enlaces(
+    ar: Mapping[str, Any], *, ler: Callable[[int, int], int | None] | None = None
+) -> dict[str, int | None]:
+    """`{uniq (12 hex): RSSI | None}` de cada enlace ACL de cada adaptador, lido SEM root.
+
+    ``ar`` é o que o medidor de ar entrega (:class:`ArDoAdaptador`, com as conexões e o
+    handle de cada uma). Quem pergunta ao rádio é o dono do HCI cru (``ler_rssi``).
+    """
+    from hefesto_dualsense4unix.integrations import ar_do_adaptador as _ar
+
+    leitor = ler if ler is not None else _ar.ler_rssi
+    saida: dict[str, int | None] = {}
+    for leitura in ar.values():
+        for conexao in getattr(leitura, "conexoes", None) or ():
+            if conexao.tipo == _ar.TIPO_ACL:
+                saida[_hex(conexao.endereco)] = leitor(leitura.hci, conexao.handle)
+    return saida
+
+
 def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
     """As três palavras de sempre, agora lendo PONTES contra ``n_max``."""
     if pontes < n_max:
@@ -532,10 +642,16 @@ def _hex(valor: str) -> str:
 
 
 __all__ = [
+    "CAUSA_ADAPTADOR_CHEIO",
+    "CAUSA_INTERFERENCIA",
+    "CAUSA_LONGE",
+    "CAUSA_SEM_SINAL",
     "CORTE_APERTADA",
     "CORTE_FOLGADA",
     "FATIAS_DA_PONTE",
     "FATIAS_POR_RELATORIO_DE_ENTRADA",
+    "FRACAO_QUE_AINDA_E_NORMAL",
+    "FRACAO_QUE_ENGASGA",
     "HZ_AUDIO_COM_MIC",
     "HZ_DA_PONTE",
     "HZ_DO_JOGO",
@@ -553,14 +669,20 @@ __all__ = [
     "PALAVRA_FOLGADA",
     "SEGURA_O_NIVEL_S",
     "SEM_ADAPTADOR",
+    "SINAL_QUE_ATRASA_DBM",
+    "SINAL_QUE_PERDE_APERTO_DBM",
     "SLOTS_POR_RELATORIO",
     "SLOTS_POR_SEGUNDO",
     "ControleNoAr",
+    "Diagnostico",
     "Ocupacao",
     "OrcamentoDoAdaptador",
     "adaptador_por_uniq",
+    "atualizar_a_referencia",
+    "diagnosticar_o_movimento",
     "nivel_do_movimento",
     "orcamento_por_adaptador",
     "palavra_da_ocupacao",
     "palavra_das_pontes",
+    "sinais_dos_enlaces",
 ]

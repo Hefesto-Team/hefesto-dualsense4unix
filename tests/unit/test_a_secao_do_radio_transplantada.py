@@ -186,11 +186,12 @@ def _estado(*, hz: tuple[float, float, float] = (250.0, 98.0, 200.0),
     return {
         "controllers": [
             {"uniq": U1, "transport": "bt", "adaptador": A1, "hz_movimento": hz[0],
-             "hz_voz": 16.2, "ponte_do_radio": "som", "audio": {"mic_mudo": False}},
+             "hz_voz": 16.2, "sinal_dbm": -30, "ponte_do_radio": "som",
+             "audio": {"mic_mudo": False}},
             {"uniq": U2, "transport": "bt", "adaptador": A1, "hz_movimento": hz[1],
-             "hz_voz": 0.0, "ponte_do_radio": None, "audio": {"mic_mudo": True}},
+             "hz_voz": 0.0, "sinal_dbm": -30, "ponte_do_radio": None, "audio": {"mic_mudo": True}},
             {"uniq": U3, "transport": "bt", "adaptador": A2, "hz_movimento": hz[2],
-             "hz_voz": 0.0, "ponte_do_radio": None, "audio": {"mic_mudo": True}},
+             "hz_voz": 0.0, "sinal_dbm": -30, "ponte_do_radio": None, "audio": {"mic_mudo": True}},
         ],
         "radio_ar": {A1: {"pontes": [{"uniq": U1, "modo": "som"}], "n_max": 2,
                           "canais_evitados": [20, 21, 22, 40]},
@@ -337,7 +338,8 @@ def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
                  if a.get("data-campo") == campo]
         assert alvos == ordem, (campo, alvos)
         assert len(campos[campo]) == 3, campos[campo]
-    assert campos["hz-nivel"] == ["liso", "engasga", "medio"], (  # (noqa-acento): de máquina
+    # o 200 é a primeira leitura do U3 sozinho no adaptador: ele é a referência dele, logo liso
+    assert campos["hz-nivel"] == ["liso", "engasga", "liso"], (  # (noqa-acento): de máquina
         campos["hz-nivel"])
     voz = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
            if a.get("data-campo") == "hz-voz"]

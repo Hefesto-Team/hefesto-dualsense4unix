@@ -59,6 +59,7 @@ import struct
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import Any
 
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
@@ -87,6 +88,7 @@ JANELA_S = 1.0
 JANELA_MAXIMA_S = 5.0
 
 OPCODE_LER_MAPA_AFH = (0x05 << 10) | 0x0006
+OPCODE_LER_RSSI = (0x05 << 10) | 0x0005
 CANAIS_DO_BT = 79
 CANAIS_MINIMOS_DO_AFH = 20
 CANAIS_CALMOS = 60
@@ -440,8 +442,20 @@ def mapa_afh_da_resposta(evento: bytes, handle: int) -> MapaAFH | None:
     return MapaAFH(handle=devolvido, modo=int(evento[9]), canais=canais)
 
 
-def resposta_de_erro_do_afh(evento: bytes) -> int | None:
-    """O status de erro do nosso comando (``Command Complete`` ou ``Status``)."""
+def rssi_da_resposta(evento: bytes, handle: int) -> int | None:
+    """O ``Command Complete`` do ``Read RSSI`` → o RSSI do enlace, assinado."""
+    if len(evento) < 10 or evento[0] != _HCI_EVENT_PKT or evento[1] != _EVT_CMD_COMPLETE:
+        return None
+    opcode = struct.unpack_from("<H", evento, 4)[0]
+    if opcode != OPCODE_LER_RSSI or evento[6] != 0x00:
+        return None
+    if (struct.unpack_from("<H", evento, 7)[0] & 0x0FFF) != (handle & 0x0FFF):
+        return None
+    return int(struct.unpack_from("<b", evento, 9)[0])
+
+
+def _erro_do_comando(evento: bytes, opcode_esperado: int) -> int | None:
+    """O status de erro do NOSSO comando (``Command Complete`` ou ``Status``)."""
     if len(evento) < 7 or evento[0] != _HCI_EVENT_PKT:
         return None
     if evento[1] == _EVT_CMD_COMPLETE:
@@ -450,7 +464,12 @@ def resposta_de_erro_do_afh(evento: bytes) -> int | None:
         opcode, status = struct.unpack_from("<H", evento, 5)[0], evento[3]
     else:
         return None
-    return int(status) if opcode == OPCODE_LER_MAPA_AFH and status else None
+    return int(status) if opcode == opcode_esperado and status else None
+
+
+def resposta_de_erro_do_afh(evento: bytes) -> int | None:
+    """O status de erro do nosso comando (``Command Complete`` ou ``Status``)."""
+    return _erro_do_comando(evento, OPCODE_LER_MAPA_AFH)
 
 
 def _abrir_hci_cru(hci: int) -> socket.socket:
@@ -463,15 +482,21 @@ def _abrir_hci_cru(hci: int) -> socket.socket:
     return sock
 
 
-def ler_mapa_afh(
+def _perguntar_ao_hci(
     hci: int,
     handle: int,
+    opcode: int,
+    entender: Callable[[bytes], Any],
     *,
-    prazo_s: float = PRAZO_DO_AFH_S,
-    abrir: Callable[[int], socket.socket] | None = None,
-    relogio: Callable[[], float] = time.monotonic,
-) -> MapaAFH | None:
-    """Pergunta ao rádio o mapa AFH de um enlace. ``None`` = não sei."""
+    prazo_s: float,
+    abrir: Callable[[int], socket.socket] | None,
+    relogio: Callable[[], float],
+) -> Any:
+    """Um comando de leitura de UM enlace ao rádio cru; ``entender`` lê a resposta.
+
+    ``None`` = não sei. Dono único do socket cru, do filtro e do prazo: o AFH e o
+    RSSI perguntam por aqui.
+    """
     if abrir is None:
         from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
 
@@ -488,10 +513,10 @@ def ler_mapa_afh(
                 1 << _HCI_EVENT_PKT,
                 (1 << _EVT_CMD_COMPLETE) | (1 << _EVT_CMD_STATUS),
                 0,
-                OPCODE_LER_MAPA_AFH,
+                opcode,
             )
             sock.setsockopt(_SOL_HCI, _HCI_FILTER, filtro)
-            sock.send(struct.pack("<BHBH", _HCI_COMMAND_PKT, OPCODE_LER_MAPA_AFH, 2, handle))
+            sock.send(struct.pack("<BHBH", _HCI_COMMAND_PKT, opcode, 2, handle))
         except OSError:
             return None
         fim = relogio() + prazo_s
@@ -506,11 +531,41 @@ def ler_mapa_afh(
                 evento = sock.recv(260)
             except OSError:
                 return None
-            mapa = mapa_afh_da_resposta(evento, handle)
-            if mapa is not None:
-                return mapa
-            if resposta_de_erro_do_afh(evento) is not None:
+            achado = entender(evento)
+            if achado is not None:
+                return achado
+            if _erro_do_comando(evento, opcode) is not None:
                 return None
+
+
+def ler_mapa_afh(
+    hci: int,
+    handle: int,
+    *,
+    prazo_s: float = PRAZO_DO_AFH_S,
+    abrir: Callable[[int], socket.socket] | None = None,
+    relogio: Callable[[], float] = time.monotonic,
+) -> MapaAFH | None:
+    """Pergunta ao rádio o mapa AFH de um enlace. ``None`` = não sei."""
+    achado = _perguntar_ao_hci(
+        hci, handle, OPCODE_LER_MAPA_AFH, lambda e: mapa_afh_da_resposta(e, handle),
+        prazo_s=prazo_s, abrir=abrir, relogio=relogio)
+    return achado if isinstance(achado, MapaAFH) else None
+
+
+def ler_rssi(
+    hci: int,
+    handle: int,
+    *,
+    prazo_s: float = PRAZO_DO_AFH_S,
+    abrir: Callable[[int], socket.socket] | None = None,
+    relogio: Callable[[], float] = time.monotonic,
+) -> int | None:
+    """O RSSI do enlace (``HCI_Read_RSSI``, sem root). ``None`` = não sei."""
+    achado = _perguntar_ao_hci(
+        hci, handle, OPCODE_LER_RSSI, lambda e: rssi_da_resposta(e, handle),
+        prazo_s=prazo_s, abrir=abrir, relogio=relogio)
+    return achado if isinstance(achado, int) else None
 
 
 def mapas_afh_do_adaptador(

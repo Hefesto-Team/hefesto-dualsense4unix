@@ -2965,6 +2965,10 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (  # noqa: E
     ESPECIE_DESCONHECIDA,
 )
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
+    CAUSA_ADAPTADOR_CHEIO,
+    CAUSA_INTERFERENCIA,
+    CAUSA_LONGE,
+    CAUSA_SEM_SINAL,
     FATIAS_DA_PONTE,
     HZ_AUDIO_COM_MIC,
     HZ_DA_PONTE,
@@ -2972,6 +2976,9 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
     HZ_INPUT_SEM_MIC,
     N_MAX_PONTES,
     SEGURA_O_NIVEL_S,
+    Diagnostico,
+    atualizar_a_referencia,
+    diagnosticar_o_movimento,
     nivel_do_movimento,
 )
 
@@ -2983,6 +2990,19 @@ DICA_DO_MOVIMENTO = {
     NIVEL_ENGASGA: "Movimento por segundo: engasga",
     "": "Movimento por segundo",
 }
+FRASE_DA_CAUSA = {
+    CAUSA_LONGE: "Movimento por segundo: longe do adaptador",
+    CAUSA_INTERFERENCIA: "Movimento por segundo: interferência no adaptador",
+    CAUSA_ADAPTADOR_CHEIO: "Movimento por segundo: adaptador cheio",
+    CAUSA_SEM_SINAL: "Movimento por segundo: sinal desconhecido",
+}
+
+
+def dica_do_movimento(nivel: str, causa: str = "") -> str:
+    """A frase do nível; com a causa, a frase da causa (os dois números juntos)."""
+    return FRASE_DA_CAUSA.get(causa) or DICA_DO_MOVIMENTO[nivel]
+
+
 PISO_DOS_CANAIS = ". Usa o mínimo que o rádio aceita"
 _LARGURA_DA_ENTRADA = round(2 * HZ_INPUT_SEM_MIC, 1)
 _LARGURA_DO_MIC = round(2 * (HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC - HZ_INPUT_SEM_MIC), 1)
@@ -3225,6 +3245,10 @@ def _nivel_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> s
     return str((cena.get("niveis") or {}).get(str(ap.get("id")), ""))
 
 
+def _dica_do_movimento_da_linha(ap: dict[str, Any], cena: dict[str, Any], nivel: str) -> str:
+    return (cena.get("dicas") or {}).get(str(ap.get("id"))) or DICA_DO_MOVIMENTO[nivel]
+
+
 def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> str:
     aid = _x(ap["id"])
     mic = bool(ap.get("mic"))
@@ -3240,6 +3264,7 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
     voz = (f'<span class="hz" data-campo="hz-voz" data-alvo="{aid}">'
            f'{_x(_hz(ap.get("hz_voz"))) if com_hz else ""}</span>') if mic else ""
     nivel = _nivel_da_linha(ap, cena, com_hz)
+    dica = _dica_do_movimento_da_linha(ap, cena, nivel)
     no_nivel = f' data-nivel="{nivel}"' if nivel else ""
     nome = _x(ap.get("nome") or ap.get("rotulo") or "")
     botoes_da_ponte = []
@@ -3266,7 +3291,7 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
         f'data-hef-atributo="data-nivel" data-alvo="{aid}"{no_nivel} '
         f'style="flex:{mov_flex} 1 0" title="Movimento por segundo">'
         '<span class="nivel" role="img" data-campo="hz-dica" data-hef-alvo="atributo" '
-        f'data-hef-atributo="title" data-alvo="{aid}" title="{_x(DICA_DO_MOVIMENTO[nivel])}">'
+        f'data-hef-atributo="title" data-alvo="{aid}" title="{_x(dica)}">'
         f'{_ic("sinal")}</span><span class="hz" data-campo="hz-movimento" data-alvo="{aid}">'
         f'{_x(_hz(ap.get("hz_mov"))) if com_hz else ""}</span>{passageiros}</span>'
         f'<button class="parte voz selo-mic" style="flex:{voz_flex}" '
@@ -4123,7 +4148,7 @@ _SALA_NA_TELA: dict[str, str] = {}
 
 def _sem_o_que_pisca(cena: dict[str, Any]) -> dict[str, Any]:
     """A cena sem a varredura, a busca, o «ocupado» e o nível do movimento — o"""
-    return {**cena, "ocupado": False, "niveis": {},
+    return {**cena, "ocupado": False, "niveis": {}, "dicas": {},
             "lugares": [{**lug, "varrendo": False, "conectando": False}
                         for lug in cena.get("lugares") or ()]}
 
@@ -4152,6 +4177,48 @@ def _nivel_seguro(uniq: str, nivel: str, agora: float) -> str:
     return antes[0]
 
 
+_REFERENCIA_DO_HZ: dict[str, tuple[int, float, float]] = {}
+_CAUSA_NA_TELA: dict[str, tuple[str, str]] = {}
+
+
+def _diagnostico_do_controle(a: dict[str, Any], controles: list[dict[str, Any]],
+                             cena: dict[str, Any], segurar: bool, agora: float) -> Diagnostico:
+    """O nível e a causa do movimento de UM controle: o Hz contra o que ELE dava ali, e o sinal."""
+    lugar = str(a.get("lugar") or "")
+    uid = str(a["id"])
+    referencia = a.get("hz_referencia")
+    if referencia is None and segurar and a.get("hz_mov") is not None:
+        dividem = sum(1 for o in controles if str(o.get("lugar") or "") == lugar
+                      and not o.get("usb"))
+        _REFERENCIA_DO_HZ[uid] = atualizar_a_referencia(
+            _REFERENCIA_DO_HZ.get(uid), dividem, a["hz_mov"], agora)
+        referencia = _REFERENCIA_DO_HZ[uid][1]
+    return diagnosticar_o_movimento(
+        a.get("hz_mov"), sinal_dbm=a.get("sinal"), referencia_hz=referencia,
+        via_radio=not a.get("usb"),
+        adaptador_cheio=len(_pontes(cena, lugar)) > PONTES_POR_ADAPTADOR)
+
+
+def _niveis_e_dicas(controles: list[dict[str, Any]], cena: dict[str, Any], segurar: bool,
+                    agora: float) -> tuple[list[str], list[str]]:
+    """`(níveis, frases)` na ordem dos controles; a cor segura o pior e a frase vai junto."""
+    niveis: list[str] = []
+    dicas: list[str] = []
+    for a in controles:
+        uid = str(a["id"])
+        d = _diagnostico_do_controle(a, controles, cena, segurar, agora)
+        nivel, causa = d.nivel, d.causa
+        if segurar:
+            nivel = _nivel_seguro(uid, d.nivel, agora)
+            if nivel == d.nivel:
+                _CAUSA_NA_TELA[uid] = (nivel, d.causa)
+            else:
+                causa = _CAUSA_NA_TELA.get(uid, (nivel, ""))[1]
+        niveis.append(nivel)
+        dicas.append(dica_do_movimento(nivel, causa))
+    return niveis, dicas
+
+
 def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str, Any]:
     """O que o pacote emite para a seção, NA ORDEM: a sala antes dos Hz e das"""
     controles = [a for lug in cena.get("lugares", ()) for a in _moradores(cena, str(lug["id"]))
@@ -4159,12 +4226,14 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
     com_mic = [a for a in controles if a.get("mic")]
     lugares = list(cena.get("lugares") or ())
     agora = _RELOGIO_DO_NIVEL()
-    niveis = [_nivel_seguro(str(a["id"]), nivel_do_movimento(a.get("hz_mov")), agora)
-              if segurar else nivel_do_movimento(a.get("hz_mov")) for a in controles]
+    niveis, dicas = _niveis_e_dicas(controles, cena, segurar, agora)
     if segurar:
         for saiu in set(_NIVEL_NA_TELA) - {str(a["id"]) for a in controles}:
             del _NIVEL_NA_TELA[saiu]
-    cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)}}
+            _CAUSA_NA_TELA.pop(saiu, None)
+            _REFERENCIA_DO_HZ.pop(saiu, None)
+    cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)},
+            "dicas": {str(a["id"]): d for a, d in zip(controles, dicas, strict=True)}}
     return {
         "conta-de-adaptadores": html_da_conta_do_radio(cena),
         "radio-sala": _sala_estavel(cena),
@@ -4174,7 +4243,7 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
         "radio-moldes": html_dos_moldes(cena),
         "hz-movimento": [_hz(a.get("hz_mov")) for a in controles],
         "hz-nivel": niveis,
-        "hz-dica": [DICA_DO_MOVIMENTO[n] for n in niveis],
+        "hz-dica": dicas,
         "hz-voz": [_hz(a.get("hz_voz")) for a in com_mic],
         "espectro-canais": html_dos_canais(cena),
         "vizinhanca-das-portas": html_das_portas(cena),
@@ -4889,6 +4958,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             else bool(c.get("hz_voz")),
             "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
             "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": True,
+            "sinal": c.get("sinal_dbm"),
             "esperando": False, "fixo": False,
         })
         vistos.add(_so_hex(uniq))
