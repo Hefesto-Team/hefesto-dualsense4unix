@@ -186,11 +186,20 @@ def _som_no_mic(entrada: dict[str, Any]) -> bool:
     return max(alturas) > a02._piso_da_onda() + SOM_ACIMA_DO_PISO
 
 
-def _motores(state: dict[str, Any], jogador: int) -> tuple[bool, bool]:
-    """`(esquerdo, direito)` com o jogo mandando vibração a este jogador agora."""
+def _motores(state: dict[str, Any], entrada: dict[str, Any]) -> tuple[bool, bool]:
+    """`(esquerdo, direito)` com o jogo mandando vibração a este controle agora.
+
+    O `per_vpad[].player` é o número que o JOGO vê; casa com o `player` do
+    controle, no mesmo espaço, e não com o número da tela (`jogador_de`, que lê o
+    `player_slot` antes e diverge dele no controle que o co-op ainda não
+    promoveu). Quem não é jogador do jogo (`None`) não tem vibração de jogo.
+    """
     ff = state.get("rumble_ff")
+    do_jogo = entrada.get("player")
+    if do_jogo is None:
+        return False, False
     for vp in (ff.get("per_vpad") or ()) if isinstance(ff, dict) else ():
-        if not isinstance(vp, dict) or vp.get("player") != jogador:
+        if not isinstance(vp, dict) or vp.get("player") != do_jogo:
             continue
         par = vp.get("rumble_no_fisico")
         idade = vp.get("rumble_no_fisico_ha_s")
@@ -211,7 +220,7 @@ def _sensores(ctx: Contexto, itens: list[dict[str, Any]]) -> dict[str, bool]:
         if not entrada:
             continue
         gira, anda = _se_move(uniq, entrada)
-        esq, dir_ = _motores(ctx.state or {}, int(item.get("jogador") or 0))
+        esq, dir_ = _motores(ctx.state or {}, entrada)
         # O «Testar» da Vibração acende só o motor que ele faz tremer: o par sai
         # das barras daquele controle, e a barra de um motor em zero o cala.
         leve, forte = (a05._par_das_barras(ctx, uniq) if uniq in a05.em_teste()

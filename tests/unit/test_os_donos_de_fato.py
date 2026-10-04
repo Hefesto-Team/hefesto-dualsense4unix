@@ -189,6 +189,17 @@ def test_o_nao_sei_da_mesa_e_o_mesmo_texto_das_duas_bandas() -> None:
 
 #: Trocá-la por `player_slot` casaria o vpad errado.
 EXCECOES_DATADAS: dict[str, str] = {
+    '_motores: do_jogo = entrada.get("player")': (
+        "a13_mapa_do_controle.py (04/10/2026) — a mesma natureza da exceção da "
+        "a01: o `_motores` casa o `rumble_ff.per_vpad[].player`, que é o número "
+        "que o JOGO vê, com o `player` do controle, no mesmo espaço. O "
+        "`jogador_de` lê o `player_slot` antes e acenderia o motor de um "
+        "controle que o co-op ainda não promoveu com a vibração de outro."
+    ),
+    '_motores: if not isinstance(vp, dict) or vp.get("player") != do_jogo:': (
+        "a13_mapa_do_controle.py (04/10/2026) — o outro lado da mesma comparação: "
+        "o `player` do gamepad virtual, que não é controle e não tem `player_slot`."
+    ),
     # fica: nenhuma das duas lê o jogador do controle (medido em 02/09 e 09/09)
     '_jogador_esperando: return "" if c.get("player") is not None else "1"': (
         "a01_jogar.py (04/09/2026) — A EXCEÇÃO MAIS ESTRITA DA LISTA, e a única "

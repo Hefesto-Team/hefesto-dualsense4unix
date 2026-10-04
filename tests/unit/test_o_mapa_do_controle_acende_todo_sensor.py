@@ -30,7 +30,7 @@ def _mesa() -> list[dict[str, Any]]:
 
 def _entrada(uniq: str, n: int, **inputs: Any) -> dict[str, Any]:
     return {"uniq": uniq, "connected": True, "is_primary": n == 1, "transport": "bt",
-            "player_slot": n, "inputs": {"buttons": [], **inputs}}
+            "player": n, "player_slot": n, "inputs": {"buttons": [], **inputs}}
 
 
 def _contexto(escolhido: str = "p1", p1: dict[str, Any] | None = None,
@@ -113,6 +113,17 @@ def test_cada_motor_acende_pelo_que_o_jogo_manda() -> None:
     velho = _acesos(_contexto(**_vpad(1, [90, 200], idade=30.0)))
     assert not velho & {"feat-rumble-esquerdo", "feat-rumble-direito"}, (
         "um par de 30 s atrás acendeu o motor: o jogo já parou")
+
+
+def test_o_controle_que_o_jogo_nao_ve_nao_acende_com_a_vibracao_de_outro() -> None:
+    """O `per_vpad[].player` é o número que o jogo vê, e casa com o `player` do
+    controle: o que o co-op ainda não promoveu (`player` None, `player_slot` 1)
+    não acende o motor com a vibração do jogador 1 do jogo."""
+    ctx = _contexto(**_vpad(1, [90, 200]))
+    for c in ctx.state["controllers"]:
+        if c["uniq"] == P1:
+            c["player"] = None
+    assert not _acesos(ctx) & {"feat-rumble-esquerdo", "feat-rumble-direito"}
 
 
 def test_o_teste_da_aba_vibracao_acende_os_dois_motores_daquele_controle() -> None:
