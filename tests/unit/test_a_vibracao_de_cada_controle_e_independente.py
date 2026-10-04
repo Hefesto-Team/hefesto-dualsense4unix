@@ -138,6 +138,43 @@ async def test_o_gesto_sem_controle_continua_sendo_o_par_da_mesa(mesa: _Mesa) ->
     assert not any(v for _lado, v in mesa.motores_de(p1)), "o P1 seguiu tremendo"
 
 
+@pytest.mark.asyncio
+async def test_o_teste_de_um_nao_cala_o_jogo_no_outro(mesa: _Mesa) -> None:
+    """O par fixado do P2 vence o jogo SÓ no P2: o FF do jogo segue chegando ao P1.
+
+    O caminho do jogo (`subsystems/gamepad.apply_game_rumble`) calava o FF de
+    TODOS os controles enquanto houvesse qualquer par fixado, e o «Testar» do P2
+    deixava o P1 sem a vibração do jogo que ele estava jogando.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
+
+    p1, p2 = mesa.uniqs[0], mesa.uniqs[1]
+    daemon = mesa.daemon_de_verdade()
+    await _testar(mesa, p2, 100, 50)
+    mesa.limpar_motores()
+
+    assert apply_game_rumble(daemon, 80, 120, target_uniq=p1) is not None, (
+        "o teste do P2 calou a vibração do jogo no P1"
+    )
+    assert any(v for _lado, v in mesa.motores_de(p1)), "o FF do jogo não chegou ao P1"
+    assert apply_game_rumble(daemon, 80, 120, target_uniq=p2) is None, (
+        "no P2, o par que o teste fixou tem de vencer o jogo"
+    )
+    assert not any(v for _lado, v in mesa.motores_de(p2))
+
+
+@pytest.mark.asyncio
+async def test_o_par_da_mesa_inteira_cala_o_jogo_em_todos(mesa: _Mesa) -> None:
+    """O gesto sem controle no alvo «Todos» (dono `None`) vale para os quatro."""
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
+
+    daemon = mesa.daemon_de_verdade()
+    await mesa.server._handle_rumble_set({"weak": 30, "strong": 40})
+    assert mesa.config.rumble_active_uniq is None
+    for uniq in mesa.uniqs:
+        assert apply_game_rumble(daemon, 80, 120, target_uniq=uniq) is None
+
+
 # --- a aba -------------------------------------------------------------------
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"

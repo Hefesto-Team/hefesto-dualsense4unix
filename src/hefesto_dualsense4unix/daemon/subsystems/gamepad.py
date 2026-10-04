@@ -558,11 +558,13 @@ def apply_game_rumble(
     o contrato até aqui).
 
     FEAT-VPAD-FF-PASSTHROUGH-01. Decisões (documentadas):
-      - `rumble_active` FIXADO manual VENCE: com rumble fixado (usuária
-        testando os motores pela GUI), o FF do jogo é IGNORADO — o reassert
-        de 200ms manteria o valor fixado de qualquer forma; ignorar evita
-        briga de escrita HID. Em passthrough (`rumble_active is None`) o
-        reassert é no-op e o FF do jogo manda sozinho.
+      - O par FIXADO manual VENCE, no controle dele: com rumble fixado
+        (usuária testando os motores pela GUI), o FF do jogo para AQUELE
+        controle é IGNORADO — o reassert de 200ms manteria o valor fixado de
+        qualquer forma; ignorar evita briga de escrita HID. Os outros
+        controles seguem com o jogo (`rumble.par_fixado_vale_para`,
+        03/10/2026). Em passthrough (`rumble_active is None`) o reassert é
+        no-op e o FF do jogo manda sozinho.
       - A política global de intensidade é aplicada AQUI (mesmo multiplicador
         do reassert) — o slider vale também para o rumble do jogo.
       - VIBRACAO-POR-MOTOR-01 (04/09/2026): e o degrau não vai sozinho — cada
@@ -597,7 +599,9 @@ def apply_game_rumble(
         devolvido é o que chegou pela háptica. Sem ``vpad`` (os chamadores de
         antes) nada muda.
     """
-    if daemon.config.rumble_active is not None:
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import par_fixado_vale_para
+
+    if par_fixado_vale_para(daemon.config, target_uniq):
         _levar_a_haptica_fina(daemon, vpad, target_uniq, 0, 0)
         return None
     controller = daemon.controller

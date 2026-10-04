@@ -170,6 +170,26 @@ def soltar_todos(cfg: Any) -> None:
     _publicar_o_resumo(cfg)
 
 
+def par_fixado_vale_para(cfg: Any, uniq: str | None) -> bool:
+    """Há par fixado por nós que vale para o controle ``uniq``? Leitura pura.
+
+    É a pergunta do caminho do JOGO (``subsystems/gamepad.apply_game_rumble``):
+    o par fixado vence o FF do jogo, mas só no controle dele. O «Testar» do P2
+    não cala a vibração do jogo no P1. Vale para ``uniq`` o par do próprio
+    controle e o da mesa inteira (dono ``None``, o alvo «Todos»); sem endereço
+    (backend sem ``primary_uniq``, mesa de um controle) qualquer par vale.
+    """
+    if getattr(cfg, "rumble_active", None) is None:
+        return False
+    if uniq is None:
+        return True
+    registro = getattr(cfg, "rumble_fixados", None)
+    donos = set(registro) if isinstance(registro, dict) else set()
+    # o resumo posto direto (as portas antigas) entra como o par do dono dele
+    donos.add(getattr(cfg, "rumble_active_uniq", None))
+    return None in donos or uniq in donos
+
+
 def _pares_de_pe(cfg: Any) -> list[tuple[str | None, tuple[int, int], float | None]]:
     """Os pares que o reassert reafirma agora: ``[(dono, (weak, strong), carimbo)]``.
 
@@ -444,6 +464,7 @@ __all__ = [
     "escrever_rumble_no_dono",
     "fixar_par",
     "modo_nativo_manda_nos_motores",
+    "par_fixado_vale_para",
     "pares_fixados",
     "reassert_rumble",
     "sem_dono_do_rumble",
