@@ -3,7 +3,8 @@
 A foto dela, 03/10/2026 ~18h20 (aba Gatilhos, P1, L2): a lista do modo oferecia
 `—` e `Desligado`, que pareciam a mesma entrada. A regra dela, ~18h15:
 *«o certo seria os controles obedecerem quando o jogo manda e na
-ausencia disso o perfil ganha»*  (noqa-acento: citação dela) — então o «Desligado» do gatilho é «O jogo decide»: sem jogo pintando, o
+ausencia disso o perfil ganha»*  (noqa-acento: citação dela)
+Então o «Desligado» do gatilho é «O jogo decide»: sem jogo pintando, o
 gatilho fica como o controle vem de fábrica (`trigger.reset`), e o que o jogo
 pintar chega. A chave no perfil continua `Off` (a forma do perfil não muda); o
 lado do daemon, que não trava o campo quando ele é `Off`, é do conjunto Microfone.
