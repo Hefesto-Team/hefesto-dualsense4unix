@@ -1,8 +1,9 @@
 """O jogo manda; na ausência dele, o perfil ganha — a decisão dela de 03/10/2026.
 
-*«o certo seria os controles obedecerem quando o jogo manda e na ausencia disso
-o perfil ganha.»* (ela, 03/10/2026 ~18h15, na bancada do Forja; revoga a
-PERFIL-MANDA-01 de 16/09, «meu perfil manda»). <!-- noqa-acento: citação literal dela -->
+*«o certo seria os controles obedecerem quando o jogo manda e na
+ausencia disso o perfil ganha.»* <!-- noqa-acento: citação literal dela -->
+(ela, 03/10/2026 ~18h15, na bancada do Forja; revoga a PERFIL-MANDA-01 de
+16/09, «meu perfil manda»).
 
 A causa, medida no `807c8a6d7` (`agentes/mic-15/medida-o-jogo-manda.txt`): com a
 cor e o gatilho no perfil do controle, o jogo pintou e a lightbar que valia era a
