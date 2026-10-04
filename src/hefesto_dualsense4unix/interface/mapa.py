@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """O MAPA DO CONTROLE — a fonte da verdade das peças, funcional."""
-import csv, json, pathlib, re, sys
+import csv, json, math, pathlib, re, sys
 
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
@@ -154,6 +154,30 @@ if _tinta.exists():
 
 SEM_ALVO = {"feat-giroscopio", "feat-acelerometro", "feat-bateria"}
 
+# O CHASSI NÃO É BOTÃO (ela, 03/10/2026: «removermos o chassi como botão»): sem
+# alvo no desenho e sem linha na lista. A linha dele fica no CSV das peças, que
+# é o dono delas; o que sai é só o que se podia apontar e clicar.
+SEM_BOTAO = {"corpo"}
+
+# A HÁPTICA TEM LUGAR NO DESENHO (ela: «falta colocarmos o háptico»), e o lugar é
+# o do glifo dela: a área do touchpad, com ondas na borda de cima. O grupo nasce
+# aqui, e não no `ds_limpo.svg`, porque o arquivo do desenho é dela e este
+# gerador já o enriquece com os alvos e as marcas de troca.
+HAPTICA = "feat-haptica"
+
+
+def ondas_da_haptica():
+    """O grupo `feat-haptica`: duas faixas onduladas logo acima do touchpad."""
+    def faixa(base, x0=48.0, x1=80.0, onda=0.45, espessura=0.42, passos=32):
+        xs = [x0 + (x1 - x0) * i / passos for i in range(passos + 1)]
+        de_cima = [(x, base + onda * math.sin(2 * math.pi * (x - x0) / 16)) for x in xs]
+        de_baixo = [(x, y + espessura) for x, y in reversed(de_cima)]
+        pts = de_cima + de_baixo
+        return "M" + " L".join(f"{x:.2f} {y:.2f}" for x, y in pts) + " Z"
+    return (f'  <g id="mp-{HAPTICA}" class="oculta" data-feature="haptica">'
+            f'<path class="peca" d="{faixa(25.7)}"/>'
+            f'<path class="peca" d="{faixa(24.2)}"/></g>')
+
 SO_O_GLIFO_ACENDE = {"ps"}
 
 AO_LADO = {"mic": (0, 3.4)}
@@ -230,10 +254,11 @@ def controle(pecas, trocam=()):
         bloco = x[i0:j0]
         x = x[:i0] + re.sub(r'\sstyle="([^"]*)"', _sem_cor, bloco) + x[j0:]
 
+    x = x.replace("</svg>", ondas_da_haptica() + "\n</svg>", 1)
     alvos = []
     for p in pecas:
         pid = p["id"]
-        if pid in SEM_ALVO or p["x1"] == "-":
+        if pid in SEM_ALVO or pid in SEM_BOTAO or p["x1"] == "-":
             continue
         corpo = forma_cheia(x, pid)
         if not corpo:
@@ -319,13 +344,6 @@ def banco_de_provas():
       <div class="prova-rot">Controle<span class="papel" data-campo="{a13.PAPEL}" data-hef-alvo="html"></span></div>
       <div class="linha" data-bloco="controles-do-mapa">{chips}</div>
     </div>
-    <div class="prova">
-      <div class="prova-rot">Barra de luz</div>
-      <div class="linha">
-        <input type="color" id="luz" class="ct ct-cor" value="#0000ff">
-        <button class="bt" id="luz-off">Apagar</button>
-      </div>
-    </div>
     <div class="prova-nota" id="nota">&nbsp;</div>
   </div>
 """
@@ -361,7 +379,6 @@ def banco_de_provas():
               .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
     if (luz) {{
       barra.style.setProperty("--luz", luz);
-      document.querySelector("#luz").value = luz;
     }} else if (n) {{
       barra.style.removeProperty("--luz");
     }} else {{
@@ -405,13 +422,6 @@ def banco_de_provas():
   }}
   new MutationObserver(segue).observe(chips, {{childList: true}});
 
-  document.querySelector("#luz").addEventListener("input", e => {{
-    barra.style.setProperty("--luz", e.target.value);
-  }});
-  document.querySelector("#luz-off").addEventListener("click", () => {{
-    barra.style.setProperty("--luz", "var(--luz-apagada)");
-  }});
-
   // O MAPA NASCE COM LUZ: o desenho do chip aceso. Sem jogador, o lightbar e as
   // cinco lâmpadas ficam na cor de apagado — e ela reparou na ausência antes:
   // "faltou só os dois lightbar e os led de player". O apagado continua a um
@@ -444,6 +454,8 @@ def main():
     regras = []
     for p in pecas:
         i = p["id"]
+        if i in SEM_BOTAO:
+            continue
         alvo_css = f'#mp-{i} :is(.peca, rect, circle, path, ellipse)'
         # própria) não acendia — o portão dava verde porque media o CSS computado  # (noqa-acento: verbo medir, imperfeito)
         if i not in SO_O_GLIFO_ACENDE:
@@ -464,10 +476,20 @@ def main():
                           f'{{color:var(--fg) !important;opacity:1}}')
         if i in a13.TROCAM:
             regras.append(f'.mapa:has(.item-{i} .troca.tem) .m-{i}{{display:inline}}')
+        if i in a13.SENSORES:
+            # O SENSOR ACENDE NO DESENHO, na cor do ponteiro, no hover da linha e
+            # quando o serviço diz que ele está em uso (`.item.on`). Os `feat-*`
+            # nascem `.oculta` (opacity 0 !important), e é por isso que a regra
+            # que os mostra repete o `!important`.
+            for gatilho in (f'.mapa:has(.item-{i}:hover)', f'.mapa:has(.a-{i}:hover)',
+                            f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on)'):
+                regras.append(f'{gatilho} #mp-{i}{{opacity:1 !important}}')
+                regras.append(f'{gatilho} #mp-{i} .peca'
+                              f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
 
     blocos = []
     for chave, titulo in REGIOES:
-        na_regiao = [p for p in pecas if p["regiao"] == chave]
+        na_regiao = [p for p in pecas if p["regiao"] == chave and p["id"] not in SEM_BOTAO]
         if not na_regiao:
             continue
         itens = []
@@ -478,7 +500,7 @@ def main():
             nota = f'<span class="nota-peca" title="{p["nota"]}">i</span>' if p["nota"] else ""
             pid = p["id"]
             aceso = (f' data-campo="{a13.ACESO}{pid}" data-hef-alvo="classe"'
-                     if pid in a13.PISCAM else "")
+                     if pid in a13.PISCAM or pid in a13.SENSORES else "")
             acao = (f' data-campo="{a13.ACAO}{pid}" data-hef-alvo="atributo"'
                     f' data-hef-atributo="title" title="{na_navegacao[a13.ACAO + pid]}"'
                     if pid in a13.NA_NAVEGACAO else "")
@@ -494,8 +516,7 @@ def main():
         blocos.append(f'    <div class="grupo">\n      <div class="grupo-rot">{titulo}</div>\n'
                       + "\n".join(itens) + "\n    </div>")
 
-    faltam = [p for p in pecas if p["no_svg"] == "falta"]
-    sem_glifo = [p for p in pecas if p["glifo"] == "-"]
+    faltam = [p for p in pecas if p["no_svg"] == "falta" and p["id"] != HAPTICA]
 
     html = f'''<!doctype html>
 <html lang="pt-BR">
@@ -506,7 +527,7 @@ def main():
   :root{{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    --branco:#ffffff; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     /* A COR DO PLÁSTICO NÃO MORA MAIS AQUI. Ela vem do <style> gerado dentro do
@@ -632,12 +653,6 @@ def main():
   .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito,
   .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito{{opacity:1 !important}}
 
-  /* O CORPO INTEGRA O TOUCHPAD. Ela, 27/08: "delimitação do corpo precisa ser
-     corrigida integra o touchpad também" — o touchpad é parte do corpo, e acender
-     um sem o outro desenha um buraco no meio da peça. */
-  .mapa:has(.item-corpo:hover) #mp-touchpad :is(.peca,rect,circle,path,ellipse),
-  .mapa:has(.a-corpo:hover) #mp-touchpad :is(.peca,rect,circle,path,ellipse)
-    {{fill:var(--pink) !important;stroke:var(--pink) !important}}
   /* O MARCADOR DE SENSOR É PREENCHIDO, como todo o resto do desenho.
      FATO SUBSTITUÍDO: aqui ele era vazado e tracejado, "senão vira uma laje opaca
      que apaga o PS, o microfone e a grade do alto-falante" — e era verdade
@@ -672,7 +687,7 @@ def main():
   .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria{{opacity:1}}
   .ds #mp-corpo .peca{{stroke:var(--z-casca-solida, var(--sem-plastico))}}
   /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
-  .sobre{{color:var(--texto-suave);opacity:.8;pointer-events:none}}
+  .sobre{{color:var(--branco);opacity:1;pointer-events:none}}
   /* OS GLIFOS DELA TRAZEM COR NO `style` INLINE, e style inline vence folha: no
      hover eles continuavam cinza-claro sobre a peça acesa e sumiam. `currentColor`
      com !important devolve a palavra à folha, sem tocar no desenho dela. */
@@ -710,17 +725,21 @@ def main():
      conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
      com ZERO de rolagem (era 12 px). */
   .grupo + .grupo{{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}}
-  .grupo-rot{{font-size:10.5px;color:var(--comment);
+  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026: *«colocar essas
+     fontes com cores em branco. pra ser visível. pq a tela inteira tá meio
+     dificil de ser lida»*) (noqa-acento: citação dela). A cor fica no desenho;
+     o texto lê-se. */
+  .grupo-rot{{font-size:10.5px;color:var(--branco);
               letter-spacing:.6px;margin-bottom:6px}}
   .item{{display:flex;align-items:center;gap:11px;padding:4px 9px;border-radius:7px;
-         border:1px solid transparent;color:var(--texto-suave);cursor:default}}
+         border:1px solid transparent;color:var(--branco);cursor:default}}
   .item:hover{{border-color:var(--border-forte);background:rgba(255,121,198,.06);cursor:pointer}}
   .item .gl{{flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center}}
   .item .sem{{color:var(--border-forte);font-size:15px}}
   .item .txt{{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}}
   .item .txt b{{font-size:12px;font-weight:600}}
-  .item .ap{{font-size:11px;color:var(--texto-mudo)}}
-  .item .id{{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}}
+  .item .ap{{font-size:11px;color:var(--branco)}}
+  .item .id{{margin-left:auto;font-size:10.5px;color:var(--branco)}}
   .item .prop{{font-size:9.5px;color:var(--orange);border:1px solid var(--orange);
                border-radius:4px;padding:0 4px;}}
   .nota-peca{{flex:0 0 15px;width:15px;height:15px;border-radius:50%;font-size:10px;
@@ -744,7 +763,7 @@ def main():
   .item .troca:not(.tem){{display:none}}
   .item .troca b{{font-weight:600}}
   .item .gestos{{flex:0 0 100%;list-style:none;padding-left:37px;font-size:10.5px;
-                 line-height:1.4;color:var(--texto-mudo)}}
+                 line-height:1.4;color:var(--branco)}}
   .item .gestos .n{{font-family:var(--m);color:var(--comment);margin-right:6px}}
   .marca-troca{{display:none}}
   .marca-troca *{{fill:none !important;stroke:var(--pink);stroke-width:.45;
@@ -763,7 +782,7 @@ def main():
   /* O RÓTULO DOS TRÊS BLOCOS COMEÇA NO MESMO x, e os três terminam no mesmo y.
      O vão se cura na ALTURA — os controles têm todos 28px —, nunca com
      `space-between` entre eles: ela reprovou isso com todas as letras. */
-  .prova-rot{{font-size:10.5px;color:var(--comment);
+  .prova-rot{{font-size:10.5px;color:var(--branco);
               letter-spacing:.6px;line-height:1}}
   .prova .linha{{display:flex;gap:6px;align-items:center}}
   /* Os chips levam o nome do controle: na janela estreita eles descem de linha. */
@@ -771,7 +790,6 @@ def main():
   .ct{{height:28px;background:var(--elevated);color:var(--fg);
        border:1px solid var(--border-forte);border-radius:6px;
        padding:0 8px;font-family:var(--f);font-size:12px}}
-  .ct-cor{{width:44px;padding:2px;cursor:pointer}}
   /* OS QUATRO NÚMEROS SÃO UMA FAMÍLIA, e família tem a mesma largura. O
      "Nenhum" e o "Apagar" são outro papel — palavra, não número — e por isso
      medem o que a palavra pede. */
@@ -781,11 +799,8 @@ def main():
   .bt:hover{{border-color:var(--pink);color:var(--fg)}}
   .bt.on{{border-color:var(--pink);background:rgba(255,121,198,.14);color:var(--fg)}}
   .prova-nota{{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
-               font-size:11px;line-height:1.45;color:var(--texto-mudo)}}
+               font-size:11px;line-height:1.45;color:var(--branco)}}
 
-  .rodape{{padding:12px 20px;border-top:1px solid var(--border-sutil);
-           font-size:11.5px;color:var(--texto-mudo);display:flex;gap:22px;flex-wrap:wrap}}
-  .rodape b{{color:var(--texto-suave)}}
   /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: *"ok temos um botão pra vir
      pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
      devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
@@ -811,7 +826,7 @@ def main():
          isso ela é a reserva de quem abre o arquivo direto. O dono é o
          `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
     {caixa_da_janela.voltar("08-conexoes.html")}
-    <h1><span class="p">O mapa do controle</span> — o nome de cada peça</h1>
+    <h1><span class="p">O mapa do controle</span></h1>
     <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende
          só remove isso."* O comportamento FICA: o que sai é a legenda que o
@@ -830,11 +845,6 @@ def main():
     </div>
   </div>
 
-  <div class="rodape">
-    <span><b>{len(pecas)}</b> peças</span>
-    <span><b>{len([p for p in pecas if p["glifo"] != "-"])}</b> com glifo · <b>{len(sem_glifo)}</b> sem</span>
-    <span><b>{len(cores_do_csv())}</b> modelos de cor · <b>{len(ZONAS_NA_PROVA)}</b> zonas</span>
-  </div>
   </div>
 </div>
 

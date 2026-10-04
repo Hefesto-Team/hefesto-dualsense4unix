@@ -7,7 +7,7 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    --branco:#ffffff; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     /* A COR DO PLÁSTICO NÃO MORA MAIS AQUI. Ela vem do <style> gerado dentro do
@@ -136,12 +136,6 @@
   .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito,
   .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito{opacity:1 !important}
 
-  /* O CORPO INTEGRA O TOUCHPAD. Ela, 27/08: "delimitação do corpo precisa ser
-     corrigida integra o touchpad também" — o touchpad é parte do corpo, e acender
-     um sem o outro desenha um buraco no meio da peça. */
-  .mapa:has(.item-corpo:hover) #mp-touchpad :is(.peca,rect,circle,path,ellipse),
-  .mapa:has(.a-corpo:hover) #mp-touchpad :is(.peca,rect,circle,path,ellipse)
-    {fill:var(--pink) !important;stroke:var(--pink) !important}
   /* O MARCADOR DE SENSOR É PREENCHIDO, como todo o resto do desenho.
      FATO SUBSTITUÍDO: aqui ele era vazado e tracejado, "senão vira uma laje opaca
      que apaga o PS, o microfone e a grade do alto-falante" — e era verdade
@@ -176,7 +170,7 @@
   .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria{opacity:1}
   .ds #mp-corpo .peca{stroke:var(--z-casca-solida, var(--sem-plastico))}
   /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
-  .sobre{color:var(--texto-suave);opacity:.8;pointer-events:none}
+  .sobre{color:var(--branco);opacity:1;pointer-events:none}
   /* OS GLIFOS DELA TRAZEM COR NO `style` INLINE, e style inline vence folha: no
      hover eles continuavam cinza-claro sobre a peça acesa e sumiam. `currentColor`
      com !important devolve a palavra à folha, sem tocar no desenho dela. */
@@ -214,17 +208,21 @@
      conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
      com ZERO de rolagem (era 12 px). */
   .grupo + .grupo{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}
-  .grupo-rot{font-size:10.5px;color:var(--comment);
+  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026: *«colocar essas
+     fontes com cores em branco. pra ser visível. pq a tela inteira tá meio
+     dificil de ser lida»*) (noqa-acento: citação dela). A cor fica no desenho;
+     o texto lê-se. */
+  .grupo-rot{font-size:10.5px;color:var(--branco);
               letter-spacing:.6px;margin-bottom:6px}
   .item{display:flex;align-items:center;gap:11px;padding:4px 9px;border-radius:7px;
-         border:1px solid transparent;color:var(--texto-suave);cursor:default}
+         border:1px solid transparent;color:var(--branco);cursor:default}
   .item:hover{border-color:var(--border-forte);background:rgba(255,121,198,.06);cursor:pointer}
   .item .gl{flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center}
   .item .sem{color:var(--border-forte);font-size:15px}
   .item .txt{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}
   .item .txt b{font-size:12px;font-weight:600}
-  .item .ap{font-size:11px;color:var(--texto-mudo)}
-  .item .id{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}
+  .item .ap{font-size:11px;color:var(--branco)}
+  .item .id{margin-left:auto;font-size:10.5px;color:var(--branco)}
   .item .prop{font-size:9.5px;color:var(--orange);border:1px solid var(--orange);
                border-radius:4px;padding:0 4px;}
   .nota-peca{flex:0 0 15px;width:15px;height:15px;border-radius:50%;font-size:10px;
@@ -248,7 +246,7 @@
   .item .troca:not(.tem){display:none}
   .item .troca b{font-weight:600}
   .item .gestos{flex:0 0 100%;list-style:none;padding-left:37px;font-size:10.5px;
-                 line-height:1.4;color:var(--texto-mudo)}
+                 line-height:1.4;color:var(--branco)}
   .item .gestos .n{font-family:var(--m);color:var(--comment);margin-right:6px}
   .marca-troca{display:none}
   .marca-troca *{fill:none !important;stroke:var(--pink);stroke-width:.45;
@@ -267,7 +265,7 @@
   /* O RÓTULO DOS TRÊS BLOCOS COMEÇA NO MESMO x, e os três terminam no mesmo y.
      O vão se cura na ALTURA — os controles têm todos 28px —, nunca com
      `space-between` entre eles: ela reprovou isso com todas as letras. */
-  .prova-rot{font-size:10.5px;color:var(--comment);
+  .prova-rot{font-size:10.5px;color:var(--branco);
               letter-spacing:.6px;line-height:1}
   .prova .linha{display:flex;gap:6px;align-items:center}
   /* Os chips levam o nome do controle: na janela estreita eles descem de linha. */
@@ -275,7 +273,6 @@
   .ct{height:28px;background:var(--elevated);color:var(--fg);
        border:1px solid var(--border-forte);border-radius:6px;
        padding:0 8px;font-family:var(--f);font-size:12px}
-  .ct-cor{width:44px;padding:2px;cursor:pointer}
   /* OS QUATRO NÚMEROS SÃO UMA FAMÍLIA, e família tem a mesma largura. O
      "Nenhum" e o "Apagar" são outro papel — palavra, não número — e por isso
      medem o que a palavra pede. */
@@ -285,11 +282,8 @@
   .bt:hover{border-color:var(--pink);color:var(--fg)}
   .bt.on{border-color:var(--pink);background:rgba(255,121,198,.14);color:var(--fg)}
   .prova-nota{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
-               font-size:11px;line-height:1.45;color:var(--texto-mudo)}
+               font-size:11px;line-height:1.45;color:var(--branco)}
 
-  .rodape{padding:12px 20px;border-top:1px solid var(--border-sutil);
-           font-size:11.5px;color:var(--texto-mudo);display:flex;gap:22px;flex-wrap:wrap}
-  .rodape b{color:var(--texto-suave)}
   /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: *"ok temos um botão pra vir
      pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
      devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
@@ -469,36 +463,61 @@
   .mapa:has(.a-feat-giroscopio:hover) .item-feat-giroscopio{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-feat-giroscopio:hover) .s-feat-giroscopio{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio{opacity:1 !important}
+  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio{opacity:1 !important}
+  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-giroscopio.on) #mp-feat-giroscopio{opacity:1 !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-giroscopio.on) #mp-feat-giroscopio .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-acelerometro:hover) .s-feat-acelerometro{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-acelerometro:hover) .item-feat-acelerometro{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-feat-acelerometro:hover) .s-feat-acelerometro{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro{opacity:1 !important}
+  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro{opacity:1 !important}
+  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-acelerometro.on) #mp-feat-acelerometro{opacity:1 !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-acelerometro.on) #mp-feat-acelerometro .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-bateria:hover) .s-feat-bateria{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-bateria:hover) .item-feat-bateria{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-feat-bateria:hover) .s-feat-bateria{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
-  .mapa:has(.item-corpo:hover) #mp-corpo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
-  .mapa:has(.item-corpo:hover) .s-corpo{color:var(--fg) !important;opacity:1}
-  .mapa:has(.a-corpo:hover) .item-corpo{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mapa:has(.a-corpo:hover) .s-corpo{color:var(--fg) !important;opacity:1}
-  .mapa:has(.a-corpo:hover) #mp-corpo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-rumble-esquerdo:hover) .s-feat-rumble-esquerdo{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-rumble-esquerdo:hover) .item-feat-rumble-esquerdo{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-feat-rumble-esquerdo:hover) .s-feat-rumble-esquerdo{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo{opacity:1 !important}
+  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo{opacity:1 !important}
+  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-rumble-esquerdo.on) #mp-feat-rumble-esquerdo{opacity:1 !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-rumble-esquerdo.on) #mp-feat-rumble-esquerdo .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-rumble-direito:hover) .s-feat-rumble-direito{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-rumble-direito:hover) .item-feat-rumble-direito{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-feat-rumble-direito:hover) .s-feat-rumble-direito{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito{opacity:1 !important}
+  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito{opacity:1 !important}
+  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-rumble-direito.on) #mp-feat-rumble-direito{opacity:1 !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-rumble-direito.on) #mp-feat-rumble-direito .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-haptica:hover) #mp-feat-haptica :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-feat-haptica:hover) .s-feat-haptica{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-haptica:hover) .item-feat-haptica{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-feat-haptica:hover) .s-feat-haptica{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-feat-haptica:hover) #mp-feat-haptica :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-haptica:hover) #mp-feat-haptica{opacity:1 !important}
+  .mapa:has(.item-feat-haptica:hover) #mp-feat-haptica .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.a-feat-haptica:hover) #mp-feat-haptica{opacity:1 !important}
+  .mapa:has(.a-feat-haptica:hover) #mp-feat-haptica .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-haptica.on) #mp-feat-haptica{opacity:1 !important}
+  .cx:not(.sem-controle) .mapa:has(.item-feat-haptica.on) #mp-feat-haptica .peca{fill:var(--pink) !important;stroke:var(--pink) !important}
 </style>
 </head>
 <body>
@@ -510,7 +529,7 @@
          isso ela é a reserva de quem abre o arquivo direto. O dono é o
          `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
     <a class="voltar" href="08-conexoes.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
-    <h1><span class="p">O mapa do controle</span> — o nome de cada peça</h1>
+    <h1><span class="p">O mapa do controle</span></h1>
     <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende
          só remove isso."* O comportamento FICA: o que sai é a legenda que o
@@ -530,13 +549,6 @@
     <div class="prova">
       <div class="prova-rot">Controle<span class="papel" data-campo="papel" data-hef-alvo="html"></span></div>
       <div class="linha" data-bloco="controles-do-mapa"><button class="bt" data-gesto="escolher-na-fita" data-pref="todos" data-controle="">Todos</button><button class="bt on" data-jogador="1" data-colorway="cosmic-red" data-luz="#0000ff" data-gesto="escolher-na-fita" data-pref="p1" data-controle="">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></button><button class="bt" data-jogador="2" data-colorway="starlight-blue" data-luz="#ff0000" data-gesto="escolher-na-fita" data-pref="p2" data-controle="">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></button><button class="bt" data-jogador="3" data-colorway="galactic-purple" data-luz="#00ff00" data-gesto="escolher-na-fita" data-pref="p3" data-controle="">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> <span class="via">BT</span></button><button class="bt" data-jogador="4" data-colorway="white" data-luz="#ff0080" data-gesto="escolher-na-fita" data-pref="p4" data-controle="">P4 <span class="pt">•</span> White <span class="pt">•</span> <span class="via">USB</span></button><button class="bt" data-jogador="0">Nenhum</button></div>
-    </div>
-    <div class="prova">
-      <div class="prova-rot">Barra de luz</div>
-      <div class="linha">
-        <input type="color" id="luz" class="ct ct-cor" value="#0000ff">
-        <button class="bt" id="luz-off">Apagar</button>
-      </div>
     </div>
     <div class="prova-nota" id="nota">&nbsp;</div>
   </div>
@@ -1178,6 +1190,7 @@
       <title>Glifo — Analógico Direito</title>
       <text style="dominant-baseline: central; font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre" x="15.971" y="17.025">R</text>
     </g>
+  <g id="mp-feat-haptica" class="oculta" data-feature="haptica"><path class="peca" d="M48.00 25.70 L49.00 25.87 L50.00 26.02 L51.00 26.12 L52.00 26.15 L53.00 26.12 L54.00 26.02 L55.00 25.87 L56.00 25.70 L57.00 25.53 L58.00 25.38 L59.00 25.28 L60.00 25.25 L61.00 25.28 L62.00 25.38 L63.00 25.53 L64.00 25.70 L65.00 25.87 L66.00 26.02 L67.00 26.12 L68.00 26.15 L69.00 26.12 L70.00 26.02 L71.00 25.87 L72.00 25.70 L73.00 25.53 L74.00 25.38 L75.00 25.28 L76.00 25.25 L77.00 25.28 L78.00 25.38 L79.00 25.53 L80.00 25.70 L80.00 26.12 L79.00 25.95 L78.00 25.80 L77.00 25.70 L76.00 25.67 L75.00 25.70 L74.00 25.80 L73.00 25.95 L72.00 26.12 L71.00 26.29 L70.00 26.44 L69.00 26.54 L68.00 26.57 L67.00 26.54 L66.00 26.44 L65.00 26.29 L64.00 26.12 L63.00 25.95 L62.00 25.80 L61.00 25.70 L60.00 25.67 L59.00 25.70 L58.00 25.80 L57.00 25.95 L56.00 26.12 L55.00 26.29 L54.00 26.44 L53.00 26.54 L52.00 26.57 L51.00 26.54 L50.00 26.44 L49.00 26.29 L48.00 26.12 Z"/><path class="peca" d="M48.00 24.20 L49.00 24.37 L50.00 24.52 L51.00 24.62 L52.00 24.65 L53.00 24.62 L54.00 24.52 L55.00 24.37 L56.00 24.20 L57.00 24.03 L58.00 23.88 L59.00 23.78 L60.00 23.75 L61.00 23.78 L62.00 23.88 L63.00 24.03 L64.00 24.20 L65.00 24.37 L66.00 24.52 L67.00 24.62 L68.00 24.65 L69.00 24.62 L70.00 24.52 L71.00 24.37 L72.00 24.20 L73.00 24.03 L74.00 23.88 L75.00 23.78 L76.00 23.75 L77.00 23.78 L78.00 23.88 L79.00 24.03 L80.00 24.20 L80.00 24.62 L79.00 24.45 L78.00 24.30 L77.00 24.20 L76.00 24.17 L75.00 24.20 L74.00 24.30 L73.00 24.45 L72.00 24.62 L71.00 24.79 L70.00 24.94 L69.00 25.04 L68.00 25.07 L67.00 25.04 L66.00 24.94 L65.00 24.79 L64.00 24.62 L63.00 24.45 L62.00 24.30 L61.00 24.20 L60.00 24.17 L59.00 24.20 L58.00 24.30 L57.00 24.45 L56.00 24.62 L55.00 24.79 L54.00 24.94 L53.00 25.04 L52.00 25.07 L51.00 25.04 L50.00 24.94 L49.00 24.79 L48.00 24.62 Z"/></g>
   <g class="marca-troca m-cross"><path d="M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
   <g class="marca-troca m-circle"><path d="M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
   <g class="marca-troca m-square"><path d="M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
@@ -1194,7 +1207,6 @@
   <g class="marca-troca m-dpad_right"><path d="M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/></g>
   <g class="marca-troca m-options"><rect x="-37.043" y="-26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)" style="transform-origin: -36.145px -24.279px"/></g>
   <g class="marca-troca m-share"><rect x="37.043" y="26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g>
-  <g class="alvo a-corpo"><path d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015"/></g>
   <g class="alvo a-feat-rumble-esquerdo"><g transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)"><path d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975"/></g></g>
   <g class="alvo a-feat-rumble-direito"><g transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)"><path d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895"/></g></g>
   <g class="alvo a-touchpad"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(1.001104, 0, 0, 1, -0.095276, 0)"><path d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593"/></g></g>
@@ -1336,13 +1348,13 @@
     </div>
     <div class="grupo">
       <div class="grupo-rot">Sensores</div>
-      <div class="item item-feat-giroscopio"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-feat-giroscopio" data-campo="aceso-feat-giroscopio" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span><span class="txt"><b>Giroscópio</b><span class="ap">gyro</span><span class="id mono">feat-giroscopio</span></span><span class="nota-peca" title="Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.">i</span></div>
-      <div class="item item-feat-acelerometro"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-feat-acelerometro" data-campo="aceso-feat-acelerometro" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="6" y="12" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1383,12 +1395,12 @@
   <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span><span class="txt"><b>Alto-falante</b><span class="id mono">alto-falante</span></span><span class="nota-peca" title="Duas linhas de furos: 5 em cima e 4 embaixo.">i</span></div>
-      <div class="item item-feat-haptica"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-feat-haptica" data-campo="aceso-feat-haptica" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Háptica</b><span class="ap">sensor háptico|háptica por áudio</span> <span class="prop">proposto</span><span class="id mono">feat-haptica</span></span><span class="nota-peca" title="A vibração fina que o jogo manda como som, e sai pelo touchpad. O glifo é o touchpad com ondas na borda de cima (ela, 03/10/2026). Sem grupo no desenho do controle ainda.">i</span></div>
+</svg></span><span class="txt"><b>Háptica</b><span class="ap">sensor háptico</span> <span class="prop">proposto</span><span class="id mono">feat-haptica</span></span><span class="nota-peca" title="A vibração fina que o jogo manda como som, e sai pelo touchpad. O glifo é o touchpad com ondas na borda de cima (ela, 03/10/2026). Sem grupo no desenho do controle ainda.">i</span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Energia</div>
@@ -1403,14 +1415,14 @@
     </div>
     <div class="grupo">
       <div class="grupo-rot">Vibração</div>
-      <div class="item item-feat-rumble-esquerdo"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-feat-rumble-esquerdo" data-campo="aceso-feat-rumble-esquerdo" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span><span class="txt"><b>Motor de vibração esquerdo</b><span class="ap">motor forte</span><span class="id mono">feat-rumble-esquerdo</span></span><span class="nota-peca" title="Contrapeso maior — soa grosso.">i</span></div>
-      <div class="item item-feat-rumble-direito"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-feat-rumble-direito" data-campo="aceso-feat-rumble-direito" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -1418,18 +1430,9 @@
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span><span class="txt"><b>Motor de vibração direito</b><span class="ap">motor leve</span><span class="id mono">feat-rumble-direito</span></span><span class="nota-peca" title="Contrapeso menor — soa fino.">i</span></div>
     </div>
-    <div class="grupo">
-      <div class="grupo-rot">Chassi</div>
-      <div class="item item-corpo"><span class="gl"><span class="sem">—</span></span><span class="txt"><b>Corpo</b><span class="ap">casco|chassi</span><span class="id mono">corpo</span></span><span class="nota-peca" title="O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.">i</span></div>
-    </div>
     </div>
   </div>
 
-  <div class="rodape">
-    <span><b>29</b> peças</span>
-    <span><b>28</b> com glifo · <b>1</b> sem</span>
-    <span><b>28</b> modelos de cor · <b>9</b> zonas</span>
-  </div>
   </div>
 </div>
 
@@ -1464,7 +1467,6 @@
               .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
     if (luz) {
       barra.style.setProperty("--luz", luz);
-      document.querySelector("#luz").value = luz;
     } else if (n) {
       barra.style.removeProperty("--luz");
     } else {
@@ -1507,13 +1509,6 @@
     if (b) desenha(b);
   }
   new MutationObserver(segue).observe(chips, {childList: true});
-
-  document.querySelector("#luz").addEventListener("input", e => {
-    barra.style.setProperty("--luz", e.target.value);
-  });
-  document.querySelector("#luz-off").addEventListener("click", () => {
-    barra.style.setProperty("--luz", "var(--luz-apagada)");
-  });
 
   // O MAPA NASCE COM LUZ: o desenho do chip aceso. Sem jogador, o lightbar e as
   // cinco lâmpadas ficam na cor de apagado — e ela reparou na ausência antes:

@@ -71,4 +71,4 @@ feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.
 corpo,Corpo,casco|chassi,superficie,chassi,-,corpo,7.5,29.46,120.5,101.51,ALTA,"O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.",0,-,casca
 feat-rumble-esquerdo,Motor de vibração esquerdo,motor forte,saida,vibracao,rumble_esquerdo,feat-rumble-esquerdo,7.44,29.46,44.08,101.17,ALTA,Contrapeso maior — soa grosso.,0,-,-
 feat-rumble-direito,Motor de vibração direito,motor leve,saida,vibracao,rumble_direito,feat-rumble-direito,83.99,29.46,120.5,101.24,ALTA,Contrapeso menor — soa fino.,0,-,-
-feat-haptica,Háptica,sensor háptico|háptica por áudio,saida,audio,haptica,falta,-,-,-,-,PROPOSTO,"A vibração fina que o jogo manda como som, e sai pelo touchpad. O glifo é o touchpad com ondas na borda de cima (ela, 03/10/2026). Sem grupo no desenho do controle ainda.",0,-,-
+feat-haptica,Háptica,sensor háptico,saida,audio,haptica,falta,-,-,-,-,PROPOSTO,"A vibração fina que o jogo manda como som, e sai pelo touchpad. O glifo é o touchpad com ondas na borda de cima (ela, 03/10/2026). Sem grupo no desenho do controle ainda.",0,-,-

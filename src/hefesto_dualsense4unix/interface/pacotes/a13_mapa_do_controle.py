@@ -23,6 +23,12 @@ já o calcula para outra tela, e nenhuma regra é copiada:
   troca não muda o pisca: o daemon a aplica só no caminho do JOGO, e o
   `inputs` é o do aparelho (`daemon/subsystems/gamepad.py`, antes do
   `forward_buttons`).
+* ``aceso-<sensor>`` (alvo `classe`), O-MAPA-DO-CONTROLE-ACENDE-TODO-SENSOR-01
+  (03/10/2026): o toque no touchpad (`aceso-touchpad`, junto do clique), o som
+  no mic (`aceso-mic`, junto do botão), o giroscópio e o acelerômetro quando o
+  controle se move, os dois motores e a háptica quando vibram. Cada um sai do
+  dono que a Controles e a Vibração já usam (`dedos_do_inputs`, `ondas_de_som`,
+  `gyro_do_inputs`/`accel_do_inputs`, `rumble_ff.per_vpad`, `haptica_no_ar`).
 * ``troca-<peça>`` (alvo `html`): o destino da troca de botões do perfil
   ativo, a mesma linha da tela «Trocar os botões» da Navegação
   (`a06_navegacao._linhas_da_troca`); vazio quando não troca. A troca é global
@@ -51,10 +57,17 @@ from typing import Any
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 from hefesto_dualsense4unix.core.led_control import player_slot_color
-from hefesto_dualsense4unix.interface.cartao_do_controle import ALL_BUTTONS, rotulo_lightbar
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
+    ALL_BUTTONS,
+    accel_do_inputs,
+    dedos_do_inputs,
+    gyro_do_inputs,
+    rotulo_lightbar,
+)
 
 from . import Contexto, perfil, registrar
 from . import a02_controles as a02
+from . import a05_vibracao as a05
 from . import a06_navegacao as a06
 
 PAGINA = "mapa-do-controle.html"
@@ -67,6 +80,28 @@ TROCADA = "trocada-"  # (noqa-acento) prefixo de endereço, não é prosa
 ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
 PAPEL = "papel"
 LUZ = "luz-cor"
+
+#: as peças que acendem pelo ESTADO do serviço e não por um botão: os cinco
+#: marcadores do desenho que o mapa nomeia como sensores, mais a háptica.
+SENSORES: tuple[str, ...] = ("feat-giroscopio", "feat-acelerometro",
+                             "feat-rumble-esquerdo", "feat-rumble-direito",
+                             "feat-haptica")
+
+#: o controle «se move» quando o giroscópio passa disto (graus/s) ou o
+#: acelerômetro varia mais que isto (g) entre dois tiques. Abaixo, é o ruído
+#: do sensor parado: a zona morta que a Controles já respeita é de 3 graus/s.
+GIRO_MIN = 5.0
+ACEL_MIN = 0.04
+
+#: o mic «tem som» quando o medidor de ondas passa do piso por esta margem (%).
+SOM_ACIMA_DO_PISO = 6
+
+#: a última leitura do acelerômetro por controle, que é o que faz da variação
+#: uma medida: o `inputs` traz a aceleração, não a mudança dela.
+_ULTIMA_ACEL: dict[str, tuple[float, float, float]] = {}
+
+#: o motor forte é o ESQUERDO (índice 1 do par weak/strong), o leve o direito.
+FORTE, LEVE = 1, 0
 
 #: nos dois lados (`ALL_BUTTONS`).
 NOME_NO_LEITOR = {"stick_l": "l3", "stick_r": "r3", "mic": "mic_btn"}
@@ -108,6 +143,9 @@ def _escolhidos(ctx: Contexto) -> tuple[str, list[dict[str, Any]]]:
 def _acesos(ctx: Contexto, itens: list[dict[str, Any]]) -> dict[str, str]:
     """`aceso-<peça>`: `"sim"` se algum dos controles alcançados aperta a peça."""
     acesos = dict.fromkeys(PISCAM, False)
+    nos = {no: str(i.get("uniq") or "") for i in itens
+           for no in (a02.no_do_microfone(ctx.por_uniq(str(i.get("uniq") or ""))),) if no}
+    a02._seguir_as_ondas(nos)
     for item in itens:
         entrada = ctx.por_uniq(str(item.get("uniq") or ""))
         glifos = a02.leitura_viva(entrada)
@@ -119,7 +157,71 @@ def _acesos(ctx: Contexto, itens: list[dict[str, Any]]) -> dict[str, str]:
                 acesos[peca] = acesos[peca] or NOME_NO_LEITOR[peca] in apertados
             else:
                 acesos[peca] = acesos[peca] or glifos.get(f"glifo-{peca}") == "sim"
+    for peca, ligado in _sensores(ctx, itens).items():
+        acesos[peca] = acesos.get(peca, False) or ligado
     return {f"{ACESO}{peca}": ("sim" if aceso else "") for peca, aceso in acesos.items()}
+
+
+def _se_move(uniq: str, entrada: dict[str, Any]) -> tuple[bool, bool]:
+    """`(giroscópio, acelerômetro)` em movimento neste tique. Sem leitura, nenhum."""
+    lido = entrada.get("inputs")
+    giro = gyro_do_inputs(lido)
+    accel = accel_do_inputs(lido)
+    gira = giro is not None and max(abs(v) for v in giro) > GIRO_MIN
+    antes = _ULTIMA_ACEL.get(uniq)
+    if accel is None:
+        _ULTIMA_ACEL.pop(uniq, None)
+        return gira, False
+    _ULTIMA_ACEL[uniq] = accel
+    pares = zip(accel, antes, strict=True) if antes is not None else ()
+    anda = max((abs(a - b) for a, b in pares), default=0.0) > ACEL_MIN
+    return gira, anda
+
+
+def _som_no_mic(entrada: dict[str, Any]) -> bool:
+    """O medidor do mic do controle passou do piso: há som entrando."""
+    alturas = a02.alturas_do_no(a02.no_do_microfone(entrada))
+    if not alturas:
+        return False
+    return max(alturas) > a02._piso_da_onda() + SOM_ACIMA_DO_PISO
+
+
+def _motores(state: dict[str, Any], jogador: int) -> tuple[bool, bool]:
+    """`(esquerdo, direito)` com o jogo mandando vibração a este jogador agora."""
+    ff = state.get("rumble_ff")
+    for vp in (ff.get("per_vpad") or ()) if isinstance(ff, dict) else ():
+        if not isinstance(vp, dict) or vp.get("player") != jogador:
+            continue
+        par = vp.get("rumble_no_fisico")
+        idade = vp.get("rumble_no_fisico_ha_s")
+        if not (isinstance(par, (list, tuple)) and len(par) == 2):
+            return False, False
+        if isinstance(idade, (int, float)) and idade > 2.0:
+            return False, False
+        return bool(par[FORTE]), bool(par[LEVE])
+    return False, False
+
+
+def _sensores(ctx: Contexto, itens: list[dict[str, Any]]) -> dict[str, bool]:
+    """O estado de cada sensor: aceso se algum dos controles alcançados o usa."""
+    aceso = dict.fromkeys((*SENSORES, "touchpad", "mic"), False)
+    for item in itens:
+        uniq = str(item.get("uniq") or "")
+        entrada = ctx.por_uniq(uniq)
+        if not entrada:
+            continue
+        gira, anda = _se_move(uniq, entrada)
+        esq, dir_ = _motores(ctx.state or {}, int(item.get("jogador") or 0))
+        testando = uniq in a05.em_teste()
+        aceso["feat-giroscopio"] |= gira
+        aceso["feat-acelerometro"] |= anda
+        aceso["feat-rumble-esquerdo"] |= esq or testando
+        aceso["feat-rumble-direito"] |= dir_ or testando
+        aceso["feat-haptica"] |= (a05._haptica_no_ar(ctx.state or {}, uniq)
+                                  or uniq in a05.em_teste_da_haptica())
+        aceso["touchpad"] |= bool(dedos_do_inputs(entrada.get("inputs")))
+        aceso["mic"] |= _som_no_mic(entrada)
+    return aceso
 
 
 def _trocas(p: dict[str, Any]) -> dict[str, str]:
