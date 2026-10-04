@@ -1705,7 +1705,7 @@ def chaves_nossas_do_wireplumber(pasta: Path) -> dict[str, list[str]]:
         try:
             linhas = arquivo.read_text(encoding="utf-8", errors="surrogateescape").splitlines()
         except OSError:
-            continue
+            linhas = []
         nossas = [linha for linha in linhas if linha_nossa_do_wireplumber(nome, linha)]
         if nossas:
             achadas[nome] = nossas

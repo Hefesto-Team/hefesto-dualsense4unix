@@ -597,14 +597,11 @@ def _machine_id(arquivos: tuple[str, ...] = _ARQUIVOS_DO_MACHINE_ID) -> bytes | 
     """Os 16 bytes do machine-id desta máquina, ou None quando ele não se lê."""
     for caminho in arquivos:
         try:
-            texto = Path(caminho).read_text(encoding="ascii").strip()
+            texto = Path(caminho).read_text(encoding="ascii").strip().lower()
         except (OSError, UnicodeDecodeError):
-            continue
-        if len(texto) == 32:
-            try:
-                return bytes.fromhex(texto)
-            except ValueError:
-                continue
+            texto = ""
+        if len(texto) == 32 and all(ch in "0123456789abcdef" for ch in texto):
+            return bytes.fromhex(texto)
     return None
 
 

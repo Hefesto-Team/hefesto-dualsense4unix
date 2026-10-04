@@ -49,9 +49,10 @@ _REAPPLY_DESIRED = (
     "handle, no cabo e no rádio, com ou sem perfil ativo",
 )
 _PERFIL_MANDA = (
-    "core/backend_pydualsense.py::_campos_do_perfil_locked",
-    "campo com dono `perfil`/`usuaria` é subtraído do que o jogo manda, nas "
-    "três peneiras (entrada, merge e gatilho)",
+    "core/backend_pydualsense.py::_merged_desired_for_key",
+    "o jogo manda enquanto pinta (a ordem dela de 29/09, «o jogo manda e o "
+    "controle obedece»); quando ele solta, a escolha do perfil volta pela "
+    "mesma mescla, e o gesto dela vence até o jogo pintar de novo",
 )
 _NAO_CHEGA = "não chega ao controle: é metadado do perfil, não estado do aparelho."
 
