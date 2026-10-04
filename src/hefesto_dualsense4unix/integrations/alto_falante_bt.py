@@ -120,6 +120,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     BLOCO_DUPLO,
     BLOCO_HAPTICS,
     BLOCO_PRESENTE,
+    BLOCO_SET_STATE,
     BLOCO_SPEAKER,
     MIC_TAXA_HZ,
     OpusIndisponivelError,
@@ -556,6 +557,123 @@ ARRANJO_HAPTICA_032 = Arranjo(
     intervalo_de_envio_s=INTERVALO_DE_ENVIO_035,
     controle_conta_quadros=True,
 )
+
+
+#: O RELATÓRIO COMBINADO — O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026).
+#: O ``0x36`` de 398 B com os quatro blocos num quadro só: ``0x11`` (o controle
+#: de áudio, com O contador) em [2], ``0x10`` (o estado, 63 B, o ``common`` de
+#: 47 B nos primeiros) em [11], ``0x12`` (a háptica, 64 B) em [76] e
+#: ``0x13``/``0x16`` (o som, um quadro Opus de 200 B) em [142], CRC nos quatro
+#: últimos. Layout do fork loteran do DS5Dongle (``src/audio.cpp``, a função
+#: que monta o ``REPORT_ID 0x36``), lido no código; NÃO medido nesta bancada: o
+#: ensaio ``scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`` é quem prova.
+#: A ponte de hoje segue com os dois escritores (``0x35`` e ``0x32``) até a
+#: prova; este montador é a parte pura da troca.
+DEGRAU_COMBINADO = 0x36
+POS_TAG_CONTROLE_COMBINADO = 2
+POS_TAG_ESTADO_COMBINADO = 11
+LEN_ESTADO_COMBINADO = 63
+POS_TAG_HAPTICO_COMBINADO = 76
+POS_TAG_SOM_COMBINADO = 142
+
+
+def montar_relatorio_combinado(
+    *,
+    seq: int,
+    controle: bytes,
+    common: bytes | None = None,
+    haptico: bytes | None = None,
+    quadro_de_som: bytes | None = None,
+    tag_som: int = BLOCO_SPEAKER,
+) -> bytes:
+    """O ``0x36`` combinado, com o CRC no lugar. Função pura; levanta em vez de mentir.
+
+    ``controle`` são os 7 bytes do ``0x11`` (:func:`controle_de_audio_035`,
+    com o contador do quadro). Os blocos vão em CADEIA, cada um logo depois do
+    anterior, na ordem ``0x11``, ``0x10``, ``0x12``, ``0x13``; com os quatro,
+    as posições são as do layout (:data:`POS_TAG_ESTADO_COMBINADO` e as
+    irmãs). O bloco que não veio (``None``) não entra, e os seguintes sobem:
+    a cadeia não tem buraco, como no ``0x32`` e no ``0x35`` que tocaram
+    (``0x11`` em [2] e o bloco seguinte em [11]). ``common`` tem os 47 B
+    medidos e vai no começo dos 63 do ``0x10``; ``haptico`` tem 64 B;
+    ``quadro_de_som``, até 200 B.
+    """
+    tamanho = TAMANHO_DO_DEGRAU[DEGRAU_COMBINADO]
+    if len(controle) != BYTES_DO_CONTROLE_035:
+        raise ValueError(
+            f"o 0x11 tem {BYTES_DO_CONTROLE_035} B, veio com {len(controle)}"
+        )
+    if common is not None and len(common) != COMMON_LEN:
+        raise ValueError(f"o `common` tem {COMMON_LEN} B, veio com {len(common)}")
+    if haptico is not None and len(haptico) != BYTES_DO_BLOCO_HAPTICO:
+        raise ValueError(
+            f"o bloco háptico tem {BYTES_DO_BLOCO_HAPTICO} B, veio com {len(haptico)}"
+        )
+    if quadro_de_som is not None and len(quadro_de_som) > BYTES_POR_QUADRO_OPUS:
+        raise ValueError(
+            f"quadro de {len(quadro_de_som)} B não cabe em {BYTES_POR_QUADRO_OPUS} B"
+        )
+    pkt = bytearray(tamanho)
+    pkt[0] = DEGRAU_COMBINADO
+    pkt[1] = (int(seq) & 0x0F) << 4
+
+    blocos: list[tuple[int, int, bytes]] = [
+        (BLOCO_AUDIO_CONTROL, BYTES_DO_CONTROLE_035, controle)
+    ]
+    if common is not None:
+        blocos.append((BLOCO_SET_STATE, LEN_ESTADO_COMBINADO, common))
+    if haptico is not None:
+        blocos.append((BLOCO_HAPTICS, BYTES_DO_BLOCO_HAPTICO, haptico))
+    if quadro_de_som is not None:
+        blocos.append((tag_som, BYTES_POR_QUADRO_OPUS, quadro_de_som))
+    pos = POS_TAG_CONTROLE_COMBINADO
+    for tag, tamanho_do_bloco, dados in blocos:
+        pkt[pos] = tag_tlv(tag)
+        pkt[pos + 1] = tamanho_do_bloco
+        pkt[pos + 2 : pos + 2 + len(dados)] = dados
+        pos += 2 + tamanho_do_bloco
+    crc = bt_crc32(pkt[: tamanho - CRC_BYTES], seed=BT_CRC_SEED)
+    pkt[tamanho - CRC_BYTES :] = crc.to_bytes(4, "little")
+    return bytes(pkt)
+
+
+@dataclass
+class RelatorioCombinado:
+    """UM escritor por controle: um contador só no ``0x11``, um relatório por quadro.
+
+    Hoje a casa tem dois escritores por controle, o ``0x35`` do som e o
+    ``0x32`` da háptica, cada um com o seu contador no ``0x11``. Este é o
+    estado do escritor único: :meth:`relatorio_do_quadro` monta o quadro com o som e a
+    háptica que existirem nele (e o ``0x10`` quando houver estado a mandar), e
+    anda o contador e a sequência UMA vez por relatório.
+    """
+
+    com_microfone: bool = False
+    contador: int = 0
+    seq: int = 0
+
+    def relatorio_do_quadro(
+        self,
+        *,
+        quadro_de_som: bytes | None = None,
+        haptico: bytes | None = None,
+        common: bytes | None = None,
+        tag_som: int = BLOCO_SPEAKER,
+    ) -> bytes:
+        """O relatório deste quadro. O contador e a sequência andam um."""
+        relatorio = montar_relatorio_combinado(
+            seq=self.seq,
+            controle=controle_de_audio_035(
+                contador_de_quadros=self.contador, com_microfone=self.com_microfone
+            ),
+            common=common,
+            haptico=haptico,
+            quadro_de_som=quadro_de_som,
+            tag_som=tag_som,
+        )
+        self.contador = (self.contador + 1) & 0xFF
+        self.seq = (self.seq + 1) & 0x0F
+        return relatorio
 
 
 ARRANJO_POR_NOME: dict[str, Arranjo] = {
@@ -2700,6 +2818,7 @@ __all__ = [
     "CANAIS_DO_ALTO_FALANTE",
     "CANAIS_DO_ENCODER",
     "CRC_BYTES",
+    "DEGRAU_COMBINADO",
     "DEGRAU_DO_KERNEL",
     "ENABLES_COM_MIC",
     "ENABLES_SEM_MIC",
@@ -2748,6 +2867,7 @@ __all__ = [
     "OuvidoDaPlaca",
     "OuvidoDosNos",
     "PonteDeSomPorRadio",
+    "RelatorioCombinado",
     "RotaDoNo",
     "SinkVirtualPipeWire",
     "a_ponte_do_radio_pode_subir",
@@ -2771,6 +2891,7 @@ __all__ = [
     "ha_gravador_de_monitor",
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
+    "montar_relatorio_combinado",
     "nome_do_sink",
     "o_mix_fecha_laco",
     "o_servidor_e_o_pipewire",
