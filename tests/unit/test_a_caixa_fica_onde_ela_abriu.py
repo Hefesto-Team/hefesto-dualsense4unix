@@ -311,7 +311,10 @@ def _quem_chama(nome: str) -> set[tuple[str, str]]:
 
 def test_so_o_x_dela_esquece_um_pareamento_pela_tela() -> None:
     """Na tela, o pareamento sai por UM caminho: o X dela («Esquecer» da"""
-    assert _quem_chama("_esquecer_o_pareamento") == {("a08_conexoes.py", "confirmar_esquecer")}
+    assert _quem_chama("_esquecer_o_pareamento") == {
+        ("a08_conexoes.py", "confirmar_esquecer"),
+        ("a08_conexoes.py", "parear_de_novo"),  # o Esquecer + parear, num clique só
+    }
     assert _quem_chama("esquecer_o_pareamento") == {("a08_conexoes.py", "_esquecer_o_pareamento")}
 
 

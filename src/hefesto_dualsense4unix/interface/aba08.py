@@ -2170,6 +2170,11 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                                                               transparent 3px 7px)}
   .radio .pista .faixa{top:2px;bottom:2px;border-color:var(--cor-do-grupo);
                        color:var(--cor-do-grupo);background:transparent}
+  /* O «Procurar» é do painel do «Conectar» e de mais nenhum: o do «⋮» tem o nome, uma
+     frase e o botão. */
+  .radio .painel:not([data-tipo="conectar"]) .cadeado{display:none}
+  .radio .painel .explica{margin:0 0 10px;font-size:12.5px;color:var(--texto-suave);
+                          line-height:1.4}
   .radio .lugar-nome[class*="cor-"]:not(:focus){border-color:var(--cor-do-grupo)}
   .radio .porta svg[class*="cor-"]{color:var(--cor-do-grupo)}
   .radio .cor-cyan{--cor-do-grupo:var(--cyan)}
@@ -2324,7 +2329,8 @@ def _cena_do_desenho() -> dict:
     aparelhos.append({"id": f"nao-conectou-{cheio['id']}-P5", "aparelho": "P5",
                       "tipo": "controle", "lugar": cheio["id"], "nome": "Lia",
                       "rotulo": "DualSense", "cor": "#7eb8d4", "cor_nome": "Starlight Blue",
-                      "nao_conectou": True, "esperando": False, "fixo": True})
+                      "nao_conectou": True, "esperando": False, "fixo": True,
+                      "pareado_aqui": True})
     aparelhos.append({"id": "D9", "aparelho": "D9", "tipo": "controle", "lugar": cheio["id"],
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
@@ -2478,6 +2484,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var p = document.getElementById('rd-painel');
       var corpo = encherOPainel(m);
       painelAberto = {tipo: tipo, alvo: alvo || '', marca: marcaDoMolde(m)};
+      p.setAttribute('data-tipo', tipo);
       p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
       document.getElementById('rd-veu').classList.add('aberto');
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');

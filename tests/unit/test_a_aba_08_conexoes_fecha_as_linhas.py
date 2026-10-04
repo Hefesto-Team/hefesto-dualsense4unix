@@ -214,7 +214,7 @@ def test_o_campo_do_nome_do_adaptador_tem_gesto(pacote) -> None:
     cartao = pacote.html_do_lugar(
         {"id": "E8473A000009", "lugar": "pci-0000:00:14.0-usb-0:1.2", "nome": "",
          "entrada": "Entrada 1.2"}, {"lugares": [], "aparelhos": []})
-    campo = re.search(r'<input class="lugar-nome"[^>]*>', cartao)
+    campo = re.search(r'<input class="lugar-nome[^"]*"[^>]*>', cartao)
     assert campo, cartao[:300]
     assert f'data-gesto="{pacote.GESTO_DO_APELIDO}"' in campo.group(0)
     assert 'data-alvo="E8473A000009"' in campo.group(0)

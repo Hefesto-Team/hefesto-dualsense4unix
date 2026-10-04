@@ -448,7 +448,9 @@ def test_com_um_movimento_esperando_a_tela_nem_pede(mesa: Any) -> None:
                   "aparelho": U3}]
     campos = _campos(mesa, movimentos=esperando)
     assert campos["radio-ocupado"] == "sim"
-    assert "pergunta-molde" not in campos["radio-moldes"]
+    perguntas = re.findall(r'<template class="pergunta-molde"([^>]*)>', campos["radio-moldes"])
+    assert all('data-esquecer="1"' in p for p in perguntas), (
+        "um movimento esperando segura todo «Mover»; só a pergunta do «Esquecer» fica")
     central = _CentralDeMentira()
     ponte = _PonteQueVaiAoDaemon(central, _GovernadorDeMentira())
     with pytest.raises(RuntimeError):

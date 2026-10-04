@@ -3005,6 +3005,9 @@ TRACO_CURTO = "\u2013"
 
 NAO_CONECTOU = "Não Conectou"
 TENTAR_DE_NOVO = "Tentar de Novo"
+PAREAR_DE_NOVO = "Parear de novo"
+DESLIGUE_O_PROCURAR = "desligue o Procurar para esquecer"
+ESQUECER_FAZ = "Tira o pareamento com este adaptador. Para voltar, use Conectar."
 DESLIGADO = "Desligado"
 USB = "USB"
 ESQUECER = "Esquecer"
@@ -3363,12 +3366,17 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
         fixo = (f'<span class="quem"><span class="nome-fixo">{_x(nome_na_conexoes(ap))}'
                 '</span></span>')
         abre_o_painel = ' data-abre="conectar"' if ap.get("tipo") == "controle" else ""
+        refaz = bool(ap.get("pareado_aqui"))
+        gesto = "parear-de-novo" if refaz else "tentar-de-novo"
+        dica = ("Esquece o pareamento antigo e pareia de novo neste adaptador" if refaz
+                else "Conectar de novo neste adaptador")
         return (abre + desenho + fixo + '<div class="features">'
                 f'<span class="nao-conectou">{NAO_CONECTOU}</span>'
-                '<button class="btn tentar" title="Conectar de novo neste adaptador" '
-                f'data-gesto="tentar-de-novo" data-alvo="{_x(ap.get("lugar") or "")}" '
+                f'<button class="btn tentar" title="{dica}" '
+                f'data-gesto="{gesto}" data-alvo="{_x(ap.get("lugar") or "")}" '
                 f'data-linha="{aid}"{abre_o_painel}>'
-                f'{TENTAR_DE_NOVO}</button></div>' + vazia + _o_x(ap) + '</div>')
+                f'{PAREAR_DE_NOVO if refaz else TENTAR_DE_NOVO}</button></div>'
+                + vazia + _o_x(ap) + '</div>')
     if ap.get("desligado"):
         fala, dica = ((USB, "Pareado neste adaptador, ligado no USB agora") if ap.get("usb")
                       else (DESLIGADO, "Pareado neste adaptador, fora do ar"))
@@ -3647,6 +3655,7 @@ def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
         titulo = _x(nome_na_conexoes(ap) or str(ap.get("rotulo") or ""))
         moldes.append(f'<template class="painel-molde" data-painel="menu" '
                       f'data-alvo="{alvo}|{lid}" data-titulo="{titulo}">'
+                      + f'<p class="explica">{ESQUECER_FAZ}</p>'
                       + _botoes([("sair", ESQUECER,
                                   f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '
                                   f'data-lugar="{lid}"')])
@@ -3769,8 +3778,8 @@ def html_dos_moldes(cena: dict[str, Any]) -> str:
     """As perguntas, os painéis e o balão prontos, em `<template>` — a página os abre."""
     if not cena.get("lugares"):
         return ""
-    perguntas = "" if _ocupado(cena) else _moldes_de_pergunta(cena) + _moldes_de_esquecer(cena)
-    return perguntas + _moldes_de_painel(cena) + _molde_do_balao(cena)
+    perguntas = "" if _ocupado(cena) else _moldes_de_pergunta(cena)
+    return perguntas + _moldes_de_esquecer(cena) + _moldes_de_painel(cena) + _molde_do_balao(cena)
 
 
 def _molde_do_balao(cena: dict[str, Any]) -> str:
@@ -3880,6 +3889,7 @@ def grupos_do_ar(cena: dict[str, Any]) -> list[dict[str, Any]]:
             "procedencia_do_nome": "dela" if lug.get("nome") else "entrada",
             "membros": [a for a in _moradores(cena, lid)
                         if a.get("tipo") != "webcam" and _no_ar(a)],
+            "medido": medido,
             "faixas": ([{"ini": int(v["ini"]), "fim": int(v["fim"]), "como": "evitado"}
                         for v in evitados if str(v.get("lugar")) == lid]
                        if medido else [NAO_SE_MEDE]),
@@ -3969,8 +3979,7 @@ def _rotulo_do_grupo(g: dict[str, Any], cena: dict[str, Any]) -> str:
 
 
 def _trilho_do_grupo(g: dict[str, Any]) -> str:
-    faixa = g["faixas"][0]
-    if g["tipo"] == "adaptador" and faixa["como"] != "nao_se_mede":
+    if g["tipo"] == "adaptador" and g["medido"]:
         evitados = g["faixas"]
         partes = [f'<div class="salto" style="left:{_pct(a)};width:{_pct(b - a)}"></div>'
                   for a, b in _faixas_livres(evitados)]
@@ -3982,6 +3991,7 @@ def _trilho_do_grupo(g: dict[str, Any]) -> str:
         return "".join(partes)
     if g["tipo"] == "adaptador":
         return f'<span class="sem-faixa">{SEM_MEDIDA}</span>'
+    faixa = g["faixas"][0]
     if g["tipo"] == "wifi":
         if faixa["como"] == "provavel":
             dica = f'{NOME_DO_WIFI}: canais {faixa["ini"]} a {faixa["fim"] - 1} (provável)' + (
@@ -4000,8 +4010,8 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
     pistas = []
     for g in grupos_do_ar(cena):
         cor = f" cor-{g['cor']}" if g["cor"] else ""
-        sem_medida = " sem-medida" if g["faixas"][0]["como"] in (
-            "nao_se_mede", "nao_se_le", "fora") else ""
+        sem_faixa = g["tipo"] != "adaptador" and g["faixas"][0]["como"] in ("nao_se_le", "fora")
+        sem_medida = " sem-medida" if sem_faixa or not g.get("medido", True) else ""
         pistas.append(f'<div class="pista {g["tipo"]}{cor}{sem_medida}" data-grupo="{_x(g["id"])}">'
                       f'{_rotulo_do_grupo(g, cena)}<div class="trilho">{_trilho_do_grupo(g)}</div>'
                       '</div>')
@@ -4461,7 +4471,9 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                                    endereco_do_caminho, enderecos)
     no_ar = (frozenset(_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True)
              | frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados))
-    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, no_ar)
+    pareados = frozenset((endereco_do_caminho.get(str(a.adaptador), ""), _mac(a.endereco))
+                         for a in aparelhos_bz if a.pareado)
+    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, no_ar, pareados)
     falhas += _os_que_nao_viraram_controle(
         _em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas, time.monotonic())
     aparelhos += falhas
@@ -4654,7 +4666,9 @@ _DISPENSADOS: set[str] = set()
 
 def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agora: float,
                            enderecos: list[str],
-                           no_ar: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+                           no_ar: frozenset[str] = frozenset(),
+                           pareados: frozenset[tuple[str, str]] = frozenset(),
+                           ) -> list[dict[str, Any]]:
     """A linha «Não Conectou» de cada APARELHO que não chegou e não está no ar.
 
     Não chegou é a central dizendo «não chegou» (qualquer motivo, menos a
@@ -4711,6 +4725,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
             "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
             else str(eu["nome"]),
             "nao_conectou": True, "esperando": False, "fixo": True,
+            "pareado_aqui": (destino, aparelho) in pareados,
         })
     return linhas
 
@@ -5330,6 +5345,32 @@ def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return feito
 
 
+@gesto("08-conexoes.html", "parear-de-novo", grava="esquecer_o_pareamento")
+def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Parear de novo»: o controle que o BlueZ ainda tem pareado aqui e não conectou
+    (a chave dele foi apagada, ele está em modo de parear): o pareamento velho sai
+    e a busca abre neste adaptador, onde ele chega como novo."""
+    lug = _lugar_na_tela(o)
+    lid = str(lug["id"])
+    linhas = [ap for ap in _CENA_NA_TELA.get("aparelhos", ())
+              if ap.get("nao_conectou") and ap.get("pareado_aqui") and ap.get("lugar") == lid]
+    pedida = str(o.get("linha") or "")
+    linha = next((ap for ap in linhas if ap["id"] == pedida), None)
+    if linha is None:
+        raise ValueError("esta linha não tem um pareamento velho para refazer")
+    if _CENA_NA_TELA.get("ocupado"):
+        raise RuntimeError(_por_que_o_radio_esta_ocupado())
+    feito = _esquecer_o_pareamento(lid, str(linha["aparelho"]))
+    if not getattr(feito, "deu", False):
+        raise RuntimeError(str(getattr(feito, "porque", "") or "o Bluetooth não esqueceu"))
+    _esquecer("bluez")
+    with contextlib.suppress(Exception):
+        _tirar_a_linha(p, linha)
+    _ligar_a_busca(p, True, lid)
+    _abrir_na_tela(lid)
+    return {"armou": True}
+
+
 def _tirar_a_linha(p: Any, ap: dict[str, Any]) -> dict[str, Any]:
     """A linha «Não Conectou» sai — na CENTRAL (``radio.dispensar``,"""
     if not ap.get("aparelho"):
@@ -5364,8 +5405,6 @@ def aparelho_menu(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     ap = _linha_na_tela(o)
     if not _tem_menu(ap):
         raise ValueError("esta linha não tem o que esquecer")
-    if _CENA_NA_TELA.get("ocupado"):
-        raise RuntimeError("esperando um controle chegar")
     if not _o_adaptador_foi_descrito(ap):
         raise RuntimeError("esperando o Bluetooth do sistema descrever o adaptador")
     return _so_abre()
@@ -5377,9 +5416,14 @@ def esquecer_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     ap = _linha_na_tela(o)
     if not _tem_menu(ap):
         raise ValueError("esta linha não tem o que esquecer")
-    if _CENA_NA_TELA.get("ocupado"):
-        raise RuntimeError("esperando um controle chegar")
     return _so_abre()
+
+
+def _por_que_o_radio_esta_ocupado() -> str:
+    """A razão de a escrita no BlueZ esperar: a busca ligada, ou um controle que chega."""
+    if _CENA_NA_TELA.get("procurando") == PROCURAR_LIGADO:
+        return DESLIGUE_O_PROCURAR
+    return "esperando um controle chegar"
 
 
 @gesto("08-conexoes.html", "confirmar-esquecer", grava="esquecer_o_pareamento")
@@ -5389,7 +5433,7 @@ def confirmar_esquecer(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not _tem_menu(ap):
         raise ValueError("esta linha não tem o que esquecer")
     if _CENA_NA_TELA.get("ocupado"):
-        raise RuntimeError("esperando um controle chegar")
+        raise RuntimeError(_por_que_o_radio_esta_ocupado())
     aparelho = str(ap.get("aparelho") or ap["id"])
     feito = _esquecer_o_pareamento(str(ap["lugar"]), aparelho)
     if not getattr(feito, "deu", False):

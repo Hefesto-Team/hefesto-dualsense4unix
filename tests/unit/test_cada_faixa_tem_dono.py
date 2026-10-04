@@ -441,3 +441,15 @@ def test_o_rotulo_de_vizinho_e_botao_e_o_de_adaptador_nao() -> None:
     botao = pistas["3554:fa09"].achar("button", "rotulo")[0]
     assert botao.attrs["data-gesto"] == "vizinho-o-que-e"
     assert botao.attrs["data-alvo"] == "3554:fa09"
+
+
+def test_adaptador_medido_sem_canal_evitado_tem_a_pista_inteira_livre() -> None:
+    """Medido e sem nenhum evitado (79/79) é um fato, e não «não se mede»."""
+    cena = _cena(2)
+    cena["evitados"] = [v for v in cena["evitados"] if v["lugar"] != "L2"]
+    pistas = _pistas(cena)
+    assert _conta(pistas["L2"].achar(None, "rotulo")[0])[0] == "79/79"
+    assert not pistas["L2"].achar("div", "evitado")
+    assert _canais_do_trilho(pistas["L2"], "salto") == [(0, 79)]
+    assert a08.SEM_MEDIDA not in pistas["L2"].dito()
+    assert "sem-medida" not in pistas["L2"].classes()

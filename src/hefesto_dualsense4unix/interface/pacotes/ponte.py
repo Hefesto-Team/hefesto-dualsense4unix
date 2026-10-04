@@ -52,6 +52,9 @@ if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.app import ipc_bridge as _b  # noqa: E402
+from hefesto_dualsense4unix.integrations.central_do_radio import (  # noqa: E402
+    PRAZO_DA_TRAVA_DO_GESTO_S,
+)
 
 # de propósito: quem procurar `led_set` acha os dois e vê que são o mesmo.
 led_set = _b.led_set
@@ -119,6 +122,11 @@ TETOS = {
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
     "gamepad.mask.set": 2.0,
     "identity.number.set": 2.0,
+    # O pedido do «Procurar» espera a busca SUBIR no serviço (o BlueZ abre a janela:
+    # 107 a 366 ms medidos no diário dela em 03/10), e o serviço espera, no pior caso,
+    # o prazo da trava mais 1 s. O prazo de tela de 0,25 s dava «não respondeu» sobre
+    # uma busca que subia.
+    "radio.busca.set": PRAZO_DA_TRAVA_DO_GESTO_S + 2.0,
     # Medido no daemon dela em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
     "daemon.reload": 15.0,
 }
