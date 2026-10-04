@@ -490,8 +490,16 @@ class TestOsBuracosDaPrimeiraVolta:
 
         assert ctl.resolved_led_for(UNIQS[0]) == player_slot_color(1)
 
-    def test_a_cor_dela_no_perfil_nao_cede_ao_jogo(self, tmp_path: Path) -> None:
-        """PERFIL-MANDA-01 (16/09/2026), ordem dela: *"meu perfil manda"*."""
+    def test_a_paleta_de_jogador_do_sdl_nao_pinta_por_cima_da_cor_dela(
+        self, tmp_path: Path
+    ) -> None:
+        """O número do jogador é do Hefesto: o ``(0, 64, 0)`` da paleta do SDL não pinta.
+
+        A regra de 16/09 («meu perfil manda») foi revogada em 03/10/2026: a cor
+        que o jogo pinta vence a do perfil (``test_o_jogo_manda_e_na_ausencia_o_perfil_ganha``).
+        A paleta de jogador do SDL que a Steam manda não é cor do jogo, é número,
+        e segue recusada (``numeracao_do_jogo``).
+        """
         _s, ctl, _n = _mesa_de_quatro(tmp_path)
         ctl.set_game_authority_provider(lambda: "game")
         antes = ctl.resolved_led_for(UNIQS[1])
