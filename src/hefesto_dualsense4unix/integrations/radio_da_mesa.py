@@ -482,7 +482,7 @@ def sinais_dos_enlaces(
     leitor = ler if ler is not None else _ar.ler_rssi
     saida: dict[str, int | None] = {}
     for leitura in ar.values():
-        for conexao in getattr(leitura, "conexoes", None) or ():
+        for conexao in leitura.conexoes or ():
             if conexao.tipo == _ar.TIPO_ACL:
                 saida[_hex(conexao.endereco)] = leitor(leitura.hci, conexao.handle)
     return saida

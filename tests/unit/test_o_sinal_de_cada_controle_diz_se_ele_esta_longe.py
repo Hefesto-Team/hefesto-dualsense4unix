@@ -105,10 +105,12 @@ def test_o_sinal_de_cada_enlace_acl_chega_pelo_uniq_do_controle() -> None:
     assert perguntados == [(2, 12), (2, 13)], "só o enlace ACL de dados tem sinal"
 
 
-def test_o_servico_pergunta_o_sinal_numa_thread_de_segundo_em_segundo() -> None:
+def test_o_servico_pergunta_o_sinal_numa_thread_de_segundo_em_segundo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from tests.unit.test_os_hz_de_cada_controle import _handlers
 
-    handlers = _handlers(pytest.MonkeyPatch())[1]
+    handlers = _handlers(monkeypatch)[1]
     perguntas: list[tuple[int, int]] = []
     nomes: list[str] = []
 
@@ -129,10 +131,12 @@ def test_o_servico_pergunta_o_sinal_numa_thread_de_segundo_em_segundo() -> None:
     assert perguntas == [(2, 12)], "o sinal foi perguntado de novo antes do período"
 
 
-def test_o_state_full_publica_o_sinal_do_controle_no_radio_e_nada_no_cabo() -> None:
+def test_o_state_full_publica_o_sinal_do_controle_no_radio_e_nada_no_cabo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from tests.unit.test_os_hz_de_cada_controle import UNIQ_1, UNIQ_CABO, _handlers
 
-    handlers = _handlers(pytest.MonkeyPatch())[1]
+    handlers = _handlers(monkeypatch)[1]
     handlers._sinal_dos_enlaces = {UNIQ_1: -53}  # type: ignore[attr-defined]
     entradas: list[dict[str, Any]] = [
         {"uniq": UNIQ_1, "transport": "bt", "connected": True},
