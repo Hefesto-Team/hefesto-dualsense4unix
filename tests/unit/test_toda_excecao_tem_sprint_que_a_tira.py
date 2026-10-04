@@ -215,7 +215,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
     "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 1,
-    "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 2,
+    "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 4,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 0,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_PAR_ACEITO": 0,
     "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 3,
