@@ -2313,7 +2313,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:370`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:416`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.
