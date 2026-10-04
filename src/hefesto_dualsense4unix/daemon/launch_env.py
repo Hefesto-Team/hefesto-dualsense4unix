@@ -1869,12 +1869,15 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
     # O QUE ELE DIZ QUE NINGUÉM DIZIA: com a máscara DualSense de pé, o
     # PRAGMATA com controle por movimento e o controle não respondeu.
     _avisar_canal_sem_imu(daemon, native=native, enabled=enabled)
-    # com o estado real da mesa, e não no state_full de 20 Hz. Sem vpad e
+    # O diário só acusa a FALHA do vpad (emulação ligada e nenhum vpad), com o
+    # estado real da mesa; a Navegação não é defeito (D-2909).
     from hefesto_dualsense4unix.daemon.subsystems.rumble import (
         sem_dono_do_rumble,
     )
 
-    if sem_dono_do_rumble(native=native, backends=backends):
+    if sem_dono_do_rumble(
+        native=native, backends=backends, emulacao=enabled
+    ):
         logger.warning(
             "rumble_sem_dono",
             motivo="sem_vpad_e_sem_modo_nativo",

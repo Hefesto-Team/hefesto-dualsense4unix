@@ -26,49 +26,42 @@ RUMBLE_POLICY_MULT: dict[str, float] = {
 }
 
 
-def sem_dono_do_rumble(*, native: bool, backends: Sequence[str]) -> bool:
+def sem_dono_do_rumble(
+    *, native: bool, backends: Sequence[str], emulacao: bool
+) -> bool:
     """RUMBLE-SEM-DONO-01: o quadrante em que a vibração não passa por nós.
 
-    MEDIDO na máquina dela em 11/08/2026 — o journal do daemon registrava
-    `launch_env_materializado ... backends=[] emulacao=False ... native=False`,
-    e é esse par que define o buraco:
+    São três coisas ao mesmo tempo: **sem Modo Nativo**, **sem gamepad virtual**
+    (``backends`` vazio) e **com a emulação ligada**. É a falha do gamepad
+    virtual que não subiu (VPAD-09): o daemon quer um vpad e o sistema não o
+    deixou criar, então o jogo ainda enxerga o controle físico e fala direto com
+    o nó dele, sem o multiplicador da intensidade, que mora no ``rumble_sink`` do
+    vpad (``subsystems/gamepad.make_primary_rumble_sink`` → ``apply_game_rumble``).
 
-    - **sem gamepad virtual** (`backends` vazio) o multiplicador de intensidade
-      da GUI não age, porque ele mora no `rumble_sink` do vpad
-      (`subsystems/gamepad.make_primary_rumble_sink` → `apply_game_rumble`).
-      Sem vpad, o sink não existe e o EV_FF do jogo vai direto ao nó físico:
-      o slider dela deixa de valer sem avisar;
-    - **sem Modo Nativo** o output do daemon não é mutado
-      (`lifecycle._release_controller_to_game`), então continuamos escrevendo
-      no mesmo controle que o jogo está dirigindo.
+    **O QUE ESTE PREDICADO JÁ CHAMOU DE «SEM DONO» E NÃO É.** Medido em
+    11/08/2026, sem vpad e sem Nativo o jogo via o físico à vista. Desde 14/09
+    (``D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL``) isso só vale com a
+    emulação ligada: com ela desligada é a Navegação, o jogo nasce sem o físico
+    (``launch_env.modo_do_estado_vivo``) e os nós ficam fechados para qualquer
+    outro programa. Não há dono em disputa, e a intensidade escolhida fica
+    guardada e vale no instante em que um jogo ganha o gamepad
+    (``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO``). Por isso ``emulacao`` é
+    obrigatório e nomeado: um chamador que o esqueça reprova, em vez de cair no
+    critério de antes da decisão.
 
-    Nos outros três quadrantes uma das duas coisas protege — por isso o defeito
-    parecia intermitente.
-
-    **DOIS CHAMADORES, UM CRITÉRIO SÓ** (11/08/2026). Quando esta função nasceu,
-    o produto não contava o quadrante em tela nenhuma e o journal era o mínimo
-    honesto; a decisão de mostrá-lo era dela, e ela a tomou no mesmo dia. Hoje:
+    **DOIS CHAMADORES, UM CRITÉRIO SÓ**, e a conta não se escreve fora daqui:
 
     - ``daemon.launch_env.materialize_launch_env`` emite ``rumble_sem_dono`` no
-      journal — a borda com o estado REAL da mesa;
+      journal, com o estado REAL da mesa;
     - ``app.actions.rumble_actions.texto_do_alcance_da_intensidade`` acende o
-      aviso na aba Rumble, em cima dos quatro botões de intensidade.
-
-    Os dois passam por AQUI de propósito. Chegaram a ter critérios paralelos por
-    algumas horas (a borda olhava ``backends``, a tela olhava
-    ``rumble_ff.vpads`` do ``state_full``), e dois critérios para o mesmo
-    quadrante divergem na primeira mudança — a classe de defeito que o HARM-19
-    já pagou no teto do multiplicador. A tela traduz a contagem de gamepads
-    virtuais numa sequência antes de perguntar; o predicado só olha a
-    verdade/falsidade de ``backends`` ("há gamepad virtual?"), então contagem e
-    lista respondem a mesma pergunta.
+      aviso da aba Vibração. O ``state_full`` manda a contagem de gamepads
+      virtuais, e a tela a traduz numa sequência antes de perguntar.
 
     **O que a tela diz A MAIS, e não cabe aqui:** no Modo Nativo a intensidade
     também não alcança a vibração do jogo, mas isso é o modo funcionando como
-    deve — não é defeito, e por isso não é este quadrante. A frase de lá é
-    outra, e não manda ninguém consertar nada.
+    deve, e não é defeito.
     """
-    return not native and not backends
+    return emulacao and not native and not backends
 
 
 def escrever_rumble_no_dono(

@@ -83,7 +83,11 @@ PAGINA = "05-vibracao.html"
 
 UNIQ = "aa:bb:cc:00:00:01"
 
+#: O vpad que não subiu (emulação ligada, nenhum gamepad virtual): é o único
+#: estado de falha que acende o aviso. A Navegação (`enabled=False`) cala, e a
+#: régua dela é `test_a_navegacao_nao_e_defeito_na_vibracao.py`.
 SEM_VPAD = {"rumble_policy": "max", "rumble_mult_applied": 1.5,
+            "gamepad_emulation": {"enabled": True},
             "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 0}}
 
 QUIETA = {"rumble_policy": "balanceado", "rumble_mult_applied": 1.0,

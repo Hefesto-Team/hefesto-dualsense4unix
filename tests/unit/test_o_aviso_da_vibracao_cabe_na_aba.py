@@ -19,10 +19,10 @@ intensidade``): encurtar ali muda a janela GTK junto, de propósito.
 **A FRASE VIROU TRÊS EM 17/09/2026** (RECADO-VPAD-01), e o dono continua um: a
 segunda metade passou a sair de ``rumble_actions._causa_do_alcance_perdido``,
 porque a anterior mandava pôr em "Ligado" um Status que já estava em Ligado.
-Esta régua roda agora nos DOIS estados alcançáveis
-(:data:`ESTADOS_DO_AVISO`) — a folga de uma sublinha é por RAMO, e medir só um
-deixa o outro nascer largo. Medido na estreia, na caixa de 1119 px: Navegação
-989 px, vpad-não-subiu 961 px.
+Esta régua rodou nos DOIS estados alcançáveis; em 03/10/2026
+(``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO``) a Navegação deixou de acusar
+e sobrou o vpad-não-subiu (:data:`ESTADOS_DO_AVISO`), que mediu 961 px na
+estreia, na caixa de 1119 px.
 
 POR QUE ESTA RÉGUA MEDE NO NAVEGADOR, e não conta caracteres: largura de texto
 não é linear em caracteres — ``"iii"`` e ``"MMM"`` têm o mesmo comprimento e
@@ -106,14 +106,12 @@ PAGINA = "05-vibracao.html"
 UNIQ = "aa:bb:cc:00:00:01"
 
 SEM_VPAD = {"rumble_policy": "max", "rumble_mult_applied": 1.5,
-            "native_mode": False,
+            "native_mode": False, "gamepad_emulation": {"enabled": True},
             "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 0}}
 
-#: ``rumble_actions._causa_do_alcance_perdido``, que pergunta ao painel da aba
-#: falso ``mode_of_state`` só devolve ``gamepad`` ou ``desktop`` — os dois
+#: O único estado em que o aviso sai: emulação ligada e nenhum gamepad virtual.
 ESTADOS_DO_AVISO: dict[str, dict] = {
-    "navegacao": SEM_VPAD,
-    "vpad-nao-subiu": {**SEM_VPAD, "gamepad_emulation": {"enabled": True}},
+    "vpad-nao-subiu": SEM_VPAD,
 }
 
 JANELA = TAMANHO_OCULTA

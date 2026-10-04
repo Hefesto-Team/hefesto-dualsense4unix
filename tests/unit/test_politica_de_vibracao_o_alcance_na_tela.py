@@ -79,17 +79,21 @@ class _FakeBarra:
         self.mensagens.append(msg)
 
 
-def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
+def test_vpad_que_nao_subiu_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
     texto = rumble_actions.texto_do_alcance_da_intensidade(
-        {"rumble_ff": {"vpads": 0}, "native_mode": False}
+        {
+            "rumble_ff": {"vpads": 0},
+            "native_mode": False,
+            "gamepad_emulation": {"enabled": True},
+        }
     )
     assert texto is not None, (
-        "o quadro medido na máquina dela (sem gamepad virtual e sem Nativo) "
-        "não pode ser silêncio: a tela seguia oferecendo os quatro botões"
+        "emulação ligada, sem gamepad virtual e sem Nativo não pode ser "
+        "silêncio: a tela seguia oferecendo os quatro botões"
     )
     assert "não está chegando" in texto
     # de *"a régua media o mundo de ontem"*.  # (noqa-acento: verbo medir, imperfeito)
-    assert "aba Jogar" in texto, "a frase tem de dizer ONDE fica o gesto que cura"
+    assert "gamepad virtual" in texto, "a frase tem de dizer o que falta"
     # e com ele falso `mode_of_state` só devolve `gamepad` ou `desktop` — os
     assert "aqui embaixo" in texto.lower(), (
         "sem dizer o que a intensidade AINDA faz, o aviso vira 'não serve para "
@@ -108,15 +112,26 @@ def test_no_nativo_a_frase_e_outra() -> None:
 
 
 @pytest.mark.parametrize(
-    ("native", "vpads"),
-    [(False, 0), (True, 0), (False, 2), (True, 2)],
+    ("native", "vpads", "emulacao"),
+    [
+        (native, vpads, emulacao)
+        for native in (False, True)
+        for vpads in (0, 2)
+        for emulacao in (False, True)
+    ],
 )
-def test_a_tela_e_o_journal_usam_um_criterio_so(native: bool, vpads: int) -> None:
+def test_a_tela_e_o_journal_usam_um_criterio_so(
+    native: bool, vpads: int, emulacao: bool
+) -> None:
     """A tabela-verdade inteira, comparada contra o predicado do daemon."""
-    estado = {"rumble_ff": {"vpads": vpads}, "native_mode": native}
+    estado = {
+        "rumble_ff": {"vpads": vpads},
+        "native_mode": native,
+        "gamepad_emulation": {"enabled": emulacao},
+    }
     texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
     e_o_quadrante = sem_dono_do_rumble(
-        native=native, backends=("vpad",) * vpads
+        native=native, backends=("vpad",) * vpads, emulacao=emulacao
     )
     disse_defeito = texto is not None and "não está chegando" in texto
     assert disse_defeito is e_o_quadrante, (
