@@ -189,3 +189,42 @@ def test_o_jogo_nativo_com_env_e_caminho_segue_dentro(tmp_path: Path) -> None:
     assert [j.chave for j in jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])] == [
         "jogo-nativo"
     ]
+
+
+def test_a_janela_do_jogo_instalado_aqui_troca_para_o_perfil_dele(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A régua 3 da sprint, pelo seletor REAL: do jogo com perfil para o Forja.
+
+    Sem o perfil semeado, a janela `FORJA` não tem candidato (o perfil do jogo
+    anterior ficava); com ele, o seletor escolhe o do Forja.
+    """
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+    from hefesto_dualsense4unix.testing import FakeController
+
+    casa = tmp_path / "casa"
+    _atalho(casa / ".local/share/applications", "forja.desktop", FORJA)
+    destino = tmp_path / "perfis"
+    destino.mkdir()
+    monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
+    loader.save_profile(
+        Profile(
+            name="Avatar Legends",
+            match=MatchCriteria(window_class=["steam_app_2111190"]),
+            priority=80,
+        ),
+        origem="teste",
+    )
+    loader.semear_perfis_dos_jogos(dest_dir=destino, home=casa)
+
+    fc = FakeController()
+    fc.connect()
+    gerente = ProfileManager(controller=fc)
+    assert gerente.select_for_window({"wm_class": "steam_app_2111190"}).name == (
+        "Avatar Legends"
+    )
+    escolhido = gerente.select_for_window({"wm_class": "FORJA"})
+
+    assert escolhido is not None
+    assert escolhido.name == "FORJA"
