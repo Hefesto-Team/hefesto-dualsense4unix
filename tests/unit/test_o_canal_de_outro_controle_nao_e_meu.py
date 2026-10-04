@@ -23,7 +23,11 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
 DELE = "e8:47:3a:00:00:5c"
 VIZINHO = "e8:47:3a:00:00:9e"
 
-CANAL_DELE = "hefesto_mic_00005c"
+#: O canal DELE como o Hefesto o ergue hoje (a marca do aparelho); o do vizinho
+#: fica na forma velha, a do rabo hex, que segue dizendo de QUEM é um nó alheio.
+CANAL_DELE = canal.nome_do_canal(DELE)
+PONTE_DELE = f"{bt.PREFIXO_SOURCE_PONTE_BT}{bt.marca_do_aparelho(DELE)}"
+CANAL_VELHO_DELE = "hefesto_mic_00005c"
 CANAL_DO_VIZINHO = "hefesto_mic_00009e"
 PONTE_DO_VIZINHO = "hefesto_dualsense_bt_00009e"
 BLUEZ_DO_VIZINHO = "bluez_input.E8_47_3A_00_00_9E.0"
@@ -47,7 +51,7 @@ def test_o_no_do_vizinho_sozinho_na_lista_nao_e_dele(alheio: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "do_dono", [CANAL_DELE, "hefesto_dualsense_bt_00005c", "bluez_input.E8_47_3A_00_00_5C.0"]
+    "do_dono", [CANAL_DELE, PONTE_DELE, "bluez_input.E8_47_3A_00_00_5C.0"]
 )
 def test_o_no_dele_continua_sendo_dele(do_dono: str) -> None:
     """A cura não pode apagar o microfone de quem TEM microfone."""
@@ -489,3 +493,31 @@ def test_o_canal_do_cabo_espera_o_servidor_voltar(
     recuo.agora += bt.RECUO_PISO_S
     sub._abrir_os_canais_do_cabo([_hex(DELE)])
     assert perguntas == ["fontes"]
+
+
+def test_o_no_velho_de_quem_esta_pedido_cai_como_sobra() -> None:
+    """O nó com o rabo hex de um controle presente é sobra de antes da atualização.
+
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01: nenhum nó nosso nasce mais com o rabo
+    hex. Se o varredor o protegesse por ser «do controle que está pedido», ele
+    ficaria para sempre ao lado do canal novo, e a lista de entradas dela teria dois
+    «Microfone do Controle N». Sem escritor, cai na segunda varredura.
+    """
+    servidor = _Servidor()
+    servidor.pôr("536870950", CANAL_VELHO_DELE)
+    varredor = servidor.varredor()
+    querem = frozenset({_hex(DELE)})
+    assert varredor.varrer(querem=querem, de_pe=NINGUEM) == []
+    assert varredor.varrer(querem=querem, de_pe=NINGUEM) == [CANAL_VELHO_DELE], (
+        "o nó de nome velho do controle pedido não caiu: ele fica ao lado do canal novo"
+    )
+
+
+def test_com_o_no_velho_e_o_novo_a_eleicao_fica_com_o_novo() -> None:
+    """A identidade que elege é a marca: o nó velho do mesmo controle não vence o novo."""
+    assert escolher_fonte([CANAL_VELHO_DELE, CANAL_DELE], DELE, [DELE]) == CANAL_DELE
+    assert escolher_fonte(
+        [CANAL_VELHO_DELE, "hefesto_dualsense_bt_00005c", PONTE_DELE], DELE, [DELE]
+    ) == PONTE_DELE
+    assert e_de_outro_controle(CANAL_VELHO_DELE, DELE) is False
+    assert e_de_outro_controle(CANAL_DO_VIZINHO, DELE) is True

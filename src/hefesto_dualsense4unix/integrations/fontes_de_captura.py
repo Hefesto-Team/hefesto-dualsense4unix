@@ -227,13 +227,25 @@ def escolher_fonte(
     alvo = so_hex(uniq)
     if alvo:
         for fonte in fontes:
-            if identidade_e_do_controle(sufixo_do_canal_do_mic(fonte), uniq):
+            if identidade_e_do_controle(
+                sufixo_do_canal_do_mic(fonte), uniq, forma_velha=False
+            ):
                 return fonte
         for fonte in fontes:
             if fonte.lower().startswith("bluez") and alvo in so_hex(fonte):
                 return fonte
         for fonte in fontes:
-            if identidade_e_do_controle(sufixo_da_ponte_bt(fonte), uniq):
+            if identidade_e_do_controle(
+                sufixo_da_ponte_bt(fonte), uniq, forma_velha=False
+            ):
+                return fonte
+        # O nome velho (o rabo hex) do mesmo controle só vem depois de todo nó
+        # que o Hefesto ergue hoje: ele sobra de antes da atualização, e o
+        # varredor de órfãos o derruba.
+        for fonte in fontes:
+            if identidade_e_do_controle(identidade_no_nome(fonte), uniq) and not (
+                fonte.lower().startswith("bluez")
+            ):
                 return fonte
     sem_nome_alheio = [f for f in fontes if not e_de_outro_controle(f, uniq)]
     if usb is not None:
@@ -356,12 +368,23 @@ def identidade_no_nome(fonte: str) -> str:
     return sufixo_do_canal_do_mic(fonte) or sufixo_da_ponte_bt(fonte) or _mac_no_nome_bluez(fonte)
 
 
-def identidade_e_do_controle(identidade: str, uniq: str) -> bool:
+def identidade_e_do_controle(
+    identidade: str, uniq: str, *, forma_velha: bool = True
+) -> bool:
     """A identidade lida num nome (:func:`identidade_no_nome`) é a deste `uniq`?
 
     O dono da comparação: a marca do aparelho compara com a marca do `uniq`
     (com a chave desta máquina); os hex (o ``bluez_*`` e a forma velha dos
     nossos) comparam pelo rabo do endereço. Identidade vazia não é de ninguém.
+
+    ``forma_velha=False`` é a pergunta «este nó é o que o Hefesto ergue HOJE
+    para este controle?»: só a marca responde sim. Desde a
+    OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 nenhum nó nosso nasce com o rabo
+    hex, então o nó velho de um controle presente é sobra (de antes da
+    atualização) e não o canal dele: o varredor de órfãos o derruba, e a
+    eleição (:func:`escolher_fonte`) prefere o nó da marca a ele. A forma
+    velha segue valendo para dizer de QUEM é um nó alheio
+    (:func:`e_de_outro_controle`).
     """
     if not identidade:
         return False
@@ -371,6 +394,8 @@ def identidade_e_do_controle(identidade: str, uniq: str) -> bool:
         )
 
         return marca_do_aparelho(uniq) == identidade
+    if not forma_velha:
+        return False
     alvo = so_hex(uniq)
     return bool(alvo) and alvo.endswith(identidade.lower())
 

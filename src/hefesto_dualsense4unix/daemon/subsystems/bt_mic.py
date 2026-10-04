@@ -1372,7 +1372,10 @@ class VarredorDeCanaisOrfaos:
             if not nome or not module_id or nome in de_pe:
                 continue
             identidade = identidade_no_nome(nome)
-            if any(identidade_e_do_controle(identidade, uniq) for uniq in querem):
+            if any(
+                identidade_e_do_controle(identidade, uniq, forma_velha=False)
+                for uniq in querem
+            ):
                 continue
             if alguem_escreve(str(getattr(modulo, "fifo", ""))) is not False:
                 continue
