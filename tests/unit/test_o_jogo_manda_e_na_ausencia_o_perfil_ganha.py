@@ -229,13 +229,17 @@ class TestOGestoDelaNoMeioDoJogo:
 
 SEM_EFEITO = bytes(11)
 SEM_EFEITO_OFICIAL = bytes([0x05] + [0] * 10)
+#: Um modo de efeito com os parâmetros em zero: no gatilho, nenhuma resistência.
+RIGIDO_SEM_FORCA = bytes([0x01] + [0] * 10)
 EFEITO_DO_PERFIL = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
 
 
 class TestPerfilAteOJogoProvar:
     """Decisão dela de 04/10/2026 ~00h55: o «sem efeito» é ausência até o jogo provar."""
 
-    @pytest.mark.parametrize("sem_efeito", [SEM_EFEITO, SEM_EFEITO_OFICIAL])
+    @pytest.mark.parametrize(
+        "sem_efeito", [SEM_EFEITO, SEM_EFEITO_OFICIAL, RIGIDO_SEM_FORCA]
+    )
     def test_um_jogo_que_so_escreve_sem_efeito_deixa_o_perfil_valendo(
         self, sem_efeito: bytes
     ) -> None:

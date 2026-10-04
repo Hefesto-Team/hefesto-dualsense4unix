@@ -438,8 +438,15 @@ _MODOS_DE_GATILHO_SEM_EFEITO = frozenset({0x00, 0x05})
 
 
 def gatilho_do_jogo_sem_efeito(bloco: bytes) -> bool:
-    """O bloco cru de gatilho que o jogo escreveu manda «sem efeito» (Off)."""
-    return len(bloco) > 0 and bloco[0] in _MODOS_DE_GATILHO_SEM_EFEITO
+    """O bloco cru de gatilho que o jogo escreveu não faz nada no gatilho.
+
+    É o modo «sem efeito» (`0x00` ou `0x05`) ou qualquer modo com os dez
+    parâmetros em zero (força, zona e amplitude nulas): no gatilho os dois são
+    a mesma coisa, nenhuma resistência.
+    """
+    if not bloco:
+        return False
+    return bloco[0] in _MODOS_DE_GATILHO_SEM_EFEITO or not any(bloco[1:])
 
 
 def _spec_fields(spec: OutputSpec) -> dict[str, Any]:
