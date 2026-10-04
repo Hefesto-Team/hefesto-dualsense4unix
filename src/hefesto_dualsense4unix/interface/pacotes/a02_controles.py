@@ -650,30 +650,6 @@ _SONO: dict[str, str] = {}
 
 _REGRA_DO_SONO: list[bool | None] = [None]
 
-_MIC_NATIVO: dict[str, bool | None] = {}
-
-
-def _ler_o_nativo(na_mesa: tuple[str, ...]) -> dict[str, bool | None]:
-    """`{uniq: há fonte nativa?}` da mesa inteira. BLOQUEANTE — roda `pactl`.
-
-    Uma pergunta por controle porque a resposta É por controle: com dois
-    DualSense no cabo há duas fontes nativas, e quem sabe casar cada uma com o
-    seu aparelho é o dono (`escolher_fonte`, pelo nome e pelo casamento USB).
-    """
-    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
-
-    fora: dict[str, bool | None] = {}
-    for uniq in na_mesa:
-        if not uniq:
-            continue
-        try:
-            fora[uniq] = eleicao_de_microfone.microfone_nativo_no_ar(
-                uniq, list(na_mesa))
-        except Exception:
-            continue
-    return fora
-
-
 _GANHO: dict[str, tuple[int, float] | None] = {}
 
 
@@ -853,15 +829,13 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
     def renovar() -> None:
         try:
             with _uma_leitura_por_volta():
-                novo, sono, regra, nativo, ganho = _ler_a_volta()
+                novo, sono, regra, ganho = _ler_a_volta()
             if _CAMADA_1_SELO[0] != selo:
                 return
             _CAMADA_1.clear()
             _CAMADA_1.update(novo)
             _SONO.clear()
             _SONO.update(sono)
-            _MIC_NATIVO.clear()
-            _MIC_NATIVO.update(nativo)
             _GANHO.clear()
             _GANHO.update(ganho)
             _REGRA_DO_SONO[0] = regra
@@ -869,7 +843,6 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             _CAMADA_1_EM_VOO[0] = False
 
     def _ler_a_volta() -> tuple[dict[str, Any], dict[str, str], bool | None,
-                                dict[str, bool | None],
                                 dict[str, tuple[int, float] | None]]:
         novo = _ler_a_camada_1(entradas, na_mesa)
         sono = _ler_o_sono(novo)
@@ -877,9 +850,8 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             regra = audio_saida.regra_nunca_dorme_instalada()
         except Exception:
             regra = None
-        nativo = _ler_o_nativo(na_mesa)
         ganho = _ler_o_ganho(na_mesa)
-        return novo, sono, regra, nativo, ganho
+        return novo, sono, regra, ganho
 
     threading.Thread(target=renovar, name="hefesto-rota-camada-1",
                      daemon=True).start()
@@ -887,7 +859,7 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
 
 
 _POR_CONTROLE: tuple[dict[str, Any], ...] = (
-    _CAMADA_1, _SONO, _MIC_NATIVO, _GANHO)
+    _CAMADA_1, _SONO, _GANHO)
 
 
 @poda
@@ -1237,103 +1209,9 @@ def selo_do_som(saida_muda: bool | None) -> str:
     return TEXTO_SELO_SAIDA_MUDA if saida_muda is True else ""
 
 
-# <!-- noqa-acento: citação literal dela --> Quem responde agora é
-
-
-# DualSense, lado do rádio, e a função que a lia do mapa e a devolvia ao campo
-
-
-_DECLARADOS: dict[str, Any] | None = None
-
-
-def _controles_declarados(recarregar: bool = False) -> dict[str, Any]:
-    """O bloco `controles` do `maquina.json`, por endereço normalizado.
-
-    `carregar_maquina` **nunca levanta** — no pior caso devolve o documento
-    inteiro em "não sei" —, então o `except` daqui só alcança árvore sem `src`.
-    """
-    global _DECLARADOS
-    if _DECLARADOS is None or recarregar:
-        try:
-            from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-            _DECLARADOS = dict(carregar_maquina().controles or {})
-        except Exception:
-            _DECLARADOS = {}
-    return _DECLARADOS
-
-
-def modo_do_mic(endereco: str) -> str:
-    """Qual dos dois botões do modo do microfone está aceso.
-
-    **A REGRA É A DA INVERSÃO DE 18/09/2026**, ordem dela: *"todos os controles
-    tem que nascer com tudo mic, giroscopio e afins"*. Quem responde no daemon
-    é `bt_mic.uniqs_recusados`, e a tabela dele é de três valores: ausência
-    LIGA, `True` liga, e só `False` desliga. Então só o `False` é Nativo.
-
-    AQUI ESTAVA A REGRA DE ANTES — `microfone is True` é Virtual, ausência é
-    Nativo —, que era a da GTK e valia enquanto o default fosse o silêncio.
-    Com ela, o segundo, o terceiro e o quarto controle da mesa dela nasciam com
-    a ponte de pé e o cartão acendia «Nativo»: a tela dizendo o contrário do
-    que o daemon faz, medido em 22/09/2026 com dois DualSense no rádio.
-
-    SEM ENDEREÇO NÃO SE AFIRMA NADA: um controle sem `uniq` normalizado não tem
-    linha no `maquina.json`, e escrever "Nativo" ali seria afirmar uma escolha
-    que ninguém fez. `""` apaga os dois botões, como na rota.
-    """
-    if not endereco:
-        return ""
-    meu = _controles_declarados().get(endereco)
-    return "nativo" if getattr(meu, "microfone", None) is False else "virtual"
-
-
-#:
-#: DualSense — nenhum perfil de áudio. Isso é do aparelho, não da nossa fila, e
-RAZAO_DO_NATIVO_FORA = ("Pelo rádio o controle fala só a língua dos comandos: "
-                        "o som do microfone passa pelo Hefesto.")
-
-
-def nativo_fora_de_alcance(uniq: str) -> str:
-    """A razão quando o «Nativo» não alcança este controle; `""` quando alcança.
-
-    UM CAMPO SÓ alimenta os dois lados — o cinza do botão (alvo `classe` no
-    container) e o texto do `?` (alvo `html` na dica) —, que é o contrato da
-    peça das dez (`monta.botao_cinza`): com dois campos seria possível pintar
-    cinza sem razão, ou razão sem cinza.
-
-    **"NÃO SEI" NÃO APAGA BOTÃO.** `None` (servidor de som mudo, leitura ainda
-    não feita) devolve `""`, e o botão fica como está. Apagar uma escolha dela
-    por falta de resposta seria a tela decidindo no escuro — a mesma disciplina
-    de `eleicao_de_microfone.canal_publicado`, que nunca transforma silêncio em
-    "saiu do ar".
-
-    E A PERGUNTA É AO APARELHO, nunca ao transporte: quem responde é
-    `microfone_nativo_no_ar`, que procura uma fonte de captura deste controle
-    que **não** seja nossa. No dia em que o BlueZ publicar um perfil de áudio
-    para o DualSense, o botão volta ao alcance sozinho.
-    """
-    if not uniq:
-        return ""
-    return "" if _MIC_NATIVO.get(uniq) is not False else RAZAO_DO_NATIVO_FORA
-
-
 PAGINA = "02-controles.html"
 
 A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
-
-
-def _a_pagina_tem_o_alcance_do_nativo() -> bool:
-    """A página PUBLICADA já sabe apagar o «Nativo»? Lido uma vez, do arquivo."""
-    from hefesto_dualsense4unix.interface import onde
-
-    try:
-        doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):  # pragma: no cover - defensivo
-        return False
-    return 'data-hef-classe="sem-nativo"' in doc
-
-
-A_PAGINA_APAGA_O_NATIVO = _a_pagina_tem_o_alcance_do_nativo()
 
 
 def _a_pagina_tem_o_ganho() -> bool:
@@ -1639,9 +1517,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # dos quatro degraus da Vibração, e é ela que faz "ligar um
                 # [09].** Era `rota_na_tela(c)`, o byte e mais nada, e foi
                 "alto-rota": aceso_da_fileira(uniq, c),
-                "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
-                **({"mic-nativo-fora": nativo_fora_de_alcance(uniq)}
-                   if A_PAGINA_APAGA_O_NATIVO else {}),
                 # O `getattr` É O MESMO DO `rotulo_lightbar` VINTE LINHAS ACIMA,
                 "giro-no-jogo": texto_motion(
                     c, getattr(ctx, "state", None) or {}) or "",
@@ -1686,9 +1561,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # `common[7]`) e tem dono nomeado em `core/ds_output_report.py:106`, que é
 # `dica_do_microfone` são funções de MÓDULO, puras, sobre um objeto de dados.
 from hefesto_dualsense4unix.app import audio_saida  # noqa: E402
-from hefesto_dualsense4unix.app.actions.config import (  # noqa: E402
-    secao_controles as _mic_do_produto,
-)
 from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
     SAIDA_L_FONE_R_ALTO_FALANTE,
 )
@@ -2727,175 +2599,10 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                      f"'microfone' ou 'alto-falante'")
 
 
-def _resposta(r: Any) -> tuple[bool, str]:
-    """`(ok, motivo)` do `machine_declare`, tolerando ponte que devolva só `bool`.
-
-    `ipc_bridge.machine_declare:861` devolve `(ok, motivo)`, com o motivo já
-    traduzido para frase de tela (`_MOTIVOS_MAQUINA`) — é ele que faz o botão
-    RECUSAR DIZENDO em vez de gravar calado.
-
-    O guarda existe porque o dublê da régua devolve `True` para todo nome que
-    não seja `identity…_set`: desempacotar às cegas levantaria `TypeError`
-    DENTRO do teste, e o instrumento reprovaria a si mesmo em vez de medir o
-    botão. É o mesmo `_resposta` que a Conexões e a Sistema já têm — três
-    cópias de sete linhas, e a única alternativa seria pôr a função no
-    `pacotes/ponte.py`, que é território de ninguém nesta leva.
-    """
-    if isinstance(r, tuple):
-        ok, motivo = [*r, None, None][:2]
-        return bool(ok), str(motivo or "")
-    return bool(r), ""
-
-
-def _como_o_produto_ve(ctx: Contexto, uniq: str) -> Any:
-    """O controle na forma que `pode_ligar_o_mic` e `dica_do_microfone` leem.
-
-    Os quatro campos são os do `DadosDoControle` da GUI estável, e cada um sai
-    de uma medição, não de um palpite:
-
-    * `no_cabo` — `transport` do `daemon.state_full` (`"usb"` / `"bt"`), a mesma
-      chave que o `mesa_viva.mesa_do_estado:316` já usa nesta janela;
-    * `endereco` — o `uniq` normalizado por `core/sysfs_leds.norm_mac`, que é
-      **a chave do `maquina.json`** ("doze hex minúsculos por schema",
-      `bt_mic.uniqs_declarados`). Ela não se monta à mão: o daemon publica o
-      `uniq` ora com os dois-pontos, ora sem, e as duas formas têm de cair na
-      mesma chave;
-    * `adotado` — `True`, e é afirmação medida: o `state_full["controllers"]`
-      sai do `describe_controllers` do controlador de DualSense
-      (`ipc_handlers.py:1962`), e cada entrada traz `lightbar_rgb`,
-      `player_slot` e `vpad_backend`. Controle externo (8BitDo, Pro) não entra
-      por essa porta — ele vem por `controller.list`, que esta aba não lê.
-    """
-    from types import SimpleNamespace
-
-    dele = ctx.por_uniq(uniq)
-    return SimpleNamespace(
-        adotado=True,
-        no_cabo=str(dele.get("transport") or "").lower() == "usb",
-        uniq=uniq,
-        endereco=norm_mac(uniq) or "",
-    )
-
-
-@gesto("02-controles.html", "mic-modo")
-def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Virtual" e "Nativo": por onde o som do microfone deste controle chega ao PC.
-
-    O QUE OS DOIS BOTÕES SÃO, e a resposta não estava na palavra "virtual" — a
-    primeira leva procurou por ela em `src/`, achou zero, e concluiu que não
-    havia dono. A coisa que os `title` do desenho descrevem é a **ponte de
-    microfone por Bluetooth**, e ela existe e é dela desde 22/08/2026:
-
-        Virtual  "O Hefesto cria uma fonte de áudio própria e entrega o
-                 microfone do controle ao PC por ela."
-                 → `integrations/dualsense_bt_audio.py`, que é exatamente isso:
-                   Opus tunelado no HID, virando uma fonte do PipeWire.
-        Nativo   "O microfone entra como o kernel o expõe, sem o Hefesto no
-                 meio."
-                 → a ponte no chão. Pelo cabo é o que já acontece: *"por USB o
-                   microfone do DualSense é um dispositivo de áudio USB comum e
-                   o PipeWire o publica sozinho"* (o cabeçalho daquele módulo).
-
-    QUEM LIGA NÃO É A JANELA, e isso é uma cicatriz, não um detalhe de desenho.
-    A GUI estável escreve a DECLARAÇÃO (`machine.declare`) e quem sobe a ponte é
-    o daemon; o `_ao_alternar_o_microfone` de `secao_controles.py` diz por quê: *"o
-    processo da janela não pode ter esse gesto ao alcance de um clique enquanto
-    a posse do hidraw não for arbitrada — o susto de 16/08/2026"*. Aqui é igual:
-    este gesto DECLARA, e o `bt_mic` do daemon reconcilia sozinho — a fonte dele
-    é **chamável**, relida a cada varredura, e por isso a escolha vale **sem
-    reiniciar o daemon** (`daemon/subsystems/bt_mic.py:60`).
-
-    **O "NATIVO" GRAVA `False` — MUDOU EM 22/09/2026, e é a inversão chegando
-    aqui.** Ele gravava `None`, e a razão era boa enquanto o default fosse o
-    silêncio: *"'nunca pedi' e 'não quero' deixam a ponte no chão do mesmo
-    jeito"*. A ordem dela de 18/09 — *"todos os controles tem que nascer com
-    tudo mic, giroscopio e afins"* — inverteu o default, e a ausência passou a
-    LIGAR: o `None` virou o botão que não desliga, e a ponte subia no
-    hotplug seguinte ao clique. O `False` é o único registro de que ela disse
-    não (`bt_mic.uniqs_recusados`), e é o mesmo que o «Desligado» da aba
-    Conexões grava desde 18/09 — o gêmeo deste gesto, que foi curado sozinho.
-
-    **O "VIRTUAL" NÃO RECUSA MAIS NO CABO — 04/09/2026, queixa 15 dela.** O que
-    estava escrito aqui, e caiu inteiro:
-
-        NO CABO O "VIRTUAL" RECUSA, e a frase é a do produto —
-        `DICA_MIC_NO_CABO`, palavra por palavra. A condição é
-        `pode_ligar_o_mic`, também do produto: *"pelo cabo o microfone deste
-        controle é uma placa de som USB e não passa por esta ponte — ele já
-        funciona sem ela"*. Deixá-lo gravar ali acenderia o botão sem mover uma
-        nota de som, que é o defeito que o gesto `rota` desta mesma aba recusa
-        pela mesma razão.
-
-    A palavra dela sobre esta recusa: *"esse aviso nao devia aparecer  # (dela) noqa-acento
-    pq era pra funcionar em ambos ne"*. <!-- noqa-acento: citação literal dela -->
-    E ela tem razão em duas medições independentes:
-
-    * o CSV desta casa diz o CONTRÁRIO da frase — `audio.microfone` é
-      `cabo_aciona=sim` / `radio_aciona=parcial`. Quem é parcial é o rádio;
-    * ~~a **mesma tela** já promete a simetria que este gesto recusava: o
-      `title` do próprio botão "Virtual"~~ — **ESTE ARGUMENTO CAIU em
-      08/09/2026, e a razão é a armadilha da prosa numa forma nova: A FRASE DA
-      TELA VIROU O ARGUMENTO.** Um `title` que ninguém tinha medido foi usado
-      como PROVA para mudar comportamento. Medido, ele prometia três coisas e
-      as três descreviam OUTRO botão: *"cria uma fonte de áudio própria"* só
-      acontece no rádio (no cabo o filtro de `nos_dualsense_bluetooth` descarta
-      o nó e este gesto só grava a chave), *"entrega o microfone ao PC"* é o
-      🎙, pelo gesto `mudo`, e a simetria é contradita pela linha
-      `audio.microfone.mudo@dualsense` do mapa (`radio_aciona=parcial`, com a
-      assimetria declarada desde 03/08/2026, MIC-BT-DONO-01).
-      A CONCLUSÃO DO GESTO NÃO DEPENDIA DISTO e fica de pé pelos dois motivos
-      abaixo, que são sobre o que o código FAZ.
-      **A FRASE SAIU DA TELA na segunda volta** (`aba02.DICA_MIC_VIRTUAL`): o
-      texto novo diz o que ESTE botão faz e manda para o 🎙, que faz a outra
-      metade. Ele não confessa dívida — o que falta mora no mapa, nunca na
-      página. A régua é
-      `tests/unit/test_a02_o_tooltip_do_virtual_diz_o_que_o_botao_faz.py`.
-
-    O paralelo com o gesto `rota` também não se sustentava: lá o botão promete
-    MOVER SOM AGORA e só metade do caminho existe; aqui a declaração é DURÁVEL,
-    e o `bt_mic.alvos()` — que só enxerga nós de Bluetooth — garante que ela não
-    acende nada no cabo. Declarar pelo cabo não mente sobre som nenhum.
-
-    A PERGUNTA QUE ESTE GESTO FAZ AGORA é `tem_canal_de_captura`, e não "é
-    cabo?" — a D-12 dela: *"o botão é pra ligar o microfone e ele ser ouvido no
-    canal específico dele"*. O dono da resposta já existia e já sabia os dois
-    transportes (`eleicao_de_microfone._canal_no_ar`: *"o caso do CABO, que
-    publica sozinho"*).
-
-    O "NATIVO" GRAVA NOS DOIS TRANSPORTES, e agora o "Virtual" também: no cabo
-    ele afirma o que já é verdade E deixa escrito o que vale quando este
-    controle for para o rádio. É declaração durável, não gesto de momento — o
-    `maquina.json` é o que o daemon lê no próximo boot.
-    """
-    uniq, qual = _uniq(o), str(o.get("micModo") or "")
-    if not uniq:
-        raise ValueError("mic-modo: o clique não disse em qual controle")
-    if qual not in ("virtual", "nativo"):
-        raise ValueError(f"mic-modo: não conheço o modo {qual!r} — a página "
-                         f"manda 'virtual' ou 'nativo'")
-
-    dados = _como_o_produto_ve(ctx, uniq)
-    if not _mic_do_produto.pode_ligar_o_mic(dados):
-        raise RuntimeError(_mic_do_produto.dica_do_microfone(dados))
-    if qual == "nativo" and nativo_fora_de_alcance(uniq):
-        raise RuntimeError(RAZAO_DO_NATIVO_FORA)
-
-    ok, motivo = _resposta(p.machine_declare(
-        {"controles": {dados.endereco: {
-            "microfone": qual == "virtual"}}}))
-    if not ok:
-        raise RuntimeError(motivo or "não consegui gravar o modo do microfone")
-    _controles_declarados(recarregar=True)
-
-
-PONTE = {"mic_canal_set_detalhado", "speaker_set", "machine_declare",
+PONTE = {"mic_canal_set_detalhado", "speaker_set",
          "mic_volume_set_detalhado", "sensor_set_detalhado",
          "mira_set_detalhado"}
 METODOS: set[str] = set()
-
-#: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: botões precisam de `data-campo`/`data-hef-alvo="classe"`/`data-hef-quando`,
-SEM_ECO = ("mic-modo",)
 
 
 PISO_DA_ABA = 8
@@ -2904,13 +2611,6 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},  # (noqa-acento) id
      "chama": [("speaker_set", [],
                 {"rota": SAIDA_L_FONE_R_ALTO_FALANTE, "uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "mic-modo", "clique": {"micModo": "nativo"},  # (noqa-acento) id
-     "chama": [("machine_declare",
-                [{"controles": {"aabbcc000001": {"microfone": False}}}], {})]},
-    # agora `machine_declare` é CHAMADO. Se alguém devolver o `not no_cabo` a
-    {"pagina": PAGINA, "gesto": "mic-modo", "clique": {"micModo": "virtual"},  # (noqa-acento) id
-     "chama": [("machine_declare",
-                [{"controles": {"aabbcc000001": {"microfone": True}}}], {})]},
     {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
      "clique": {"volume": "microfone", "v": "80"},
      "chama": [("mic_volume_set_detalhado", [80], {"uniq": "aa:bb:cc:00:00:01"})]},

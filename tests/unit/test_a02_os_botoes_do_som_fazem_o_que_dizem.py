@@ -373,7 +373,7 @@ class TestOGestoEntregaAFonte:
 
 
 class TestATabelaDosBotoes:
-    DA_COLUNA_DO_SOM = ("mudo", "volume", "rota", "mic-modo")
+    DA_COLUNA_DO_SOM = ("mudo", "volume", "rota")
 
     def test_todo_gesto_de_som_da_pagina_tem_dono(self) -> None:
         """MORDIDA: apague um `@gesto` da coluna de som."""

@@ -714,11 +714,6 @@ def canal_publicado(uniq: str, conectados: list[str]) -> bool | None:
     return escolher_fonte(fontes, uniq, list(conectados), usb) is not None
 
 
-def microfone_nativo_no_ar(uniq: str, conectados: list[str]) -> bool | None:
-    """Há fonte de captura NATIVA para `uniq` agora? `None` = não sei."""
-    return _a_nativa_deste(uniq, conectados)[0]
-
-
 def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str | None:
     """O NOME do nó de captura nativo deste controle agora. TRÊS respostas.
 
@@ -741,16 +736,14 @@ def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str | None:
     * ``None`` — **não sei**: o ``pactl`` não respondeu, ou o censo de USB não
       pôde ser montado. Quem recebe isto não pode dizer *"não há"* na tela.
 
-    A irmã :func:`microfone_nativo_no_ar` divide o mesmo corpo
-    (:func:`_a_nativa_deste`): duas implementações da mesma busca é como esta
-    casa fabrica divergência silenciosa.
+    O corpo é :func:`_a_nativa_deste`, e quem pergunta «há nativa?» pergunta a este.
     """
     ha, no = _a_nativa_deste(uniq, conectados)
     return None if ha is None else no
 
 
 def _a_nativa_deste(uniq: str, conectados: list[str]) -> tuple[bool | None, str]:
-    """``(há nativa?, nome)`` — o corpo único das duas perguntas acima."""
+    """``(há nativa?, nome)`` — o corpo de :func:`fonte_nativa_do_controle`."""
     rc, saida = _ler(["pactl", "list", "sources", "short"])
     if rc != 0:
         return (None, "")

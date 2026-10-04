@@ -216,21 +216,3 @@ def test_o_buraco_do_terceiro_trecho_estava_aberto_e_fechou() -> None:
         "a régua verde."
     )
     assert busca(FRASES_BANIDAS, metade_que_sobra) == "gatilhos ficam duros"
-
-
-@skip_sem_gi_real
-def test_o_trecho_curto_que_a_sprint_propunha_pegaria_frase_inocente() -> None:
-    """POR QUE NÃO ``"como no PS5"``, que era o proposto — e é medição, não gosto."""
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        DICA_MIC_NO_RADIO,
-    )
-
-    assert "como no PS5" in DICA_MIC_NO_RADIO, (
-        "a dica do microfone mudou de texto — remeça esta escolha antes de "
-        "encurtar o trecho, porque a razão dela era ESTA frase."
-    )
-    assert frase_banida_em(DICA_MIC_NO_RADIO) is None, (
-        "a lista de banidas passou a pegar a dica do microfone, que é frase "
-        "medida: o funil de execução vai recusá-la a caminho da tela."
-    )
-    assert "gatilhos ficam duros" not in DICA_MIC_NO_RADIO

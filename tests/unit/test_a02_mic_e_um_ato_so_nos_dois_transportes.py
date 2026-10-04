@@ -19,44 +19,17 @@ e recusava o mais forte — e o que "não vale no cabo" nunca foi a feature: é 
 IMPLEMENTAÇÃO dela, a `PonteMicBluetooth`. A frase deu à ponte o nome da
 capacidade.
 
-ESTE ARGUMENTO CAIU, E O `title` QUE O SUSTENTAVA SAIU DA TELA — 08/09/2026.
-Ele dizia que a mesma tela já prometia a simetria que o gesto recusava, citando
-o `title` do botão "Virtual". Medido: aquele `title` prometia TRÊS coisas e
-nenhuma era deste botão — o gesto `mic-modo` faz um `machine.declare` e mais
-nada; quem elege canal, escreve firmware e manda o `0x32` é o 🎙, pelo gesto
-`mudo`. **A frase da tela tinha virado o argumento.** O texto novo diz o que
-este botão faz (`aba02.DICA_MIC_VIRTUAL`), e a régua que o trava é
-`test_a02_o_tooltip_do_virtual_diz_o_que_o_botao_faz.py`.
-
-A CONCLUSÃO DESTE ARQUIVO NÃO DEPENDIA DAQUELA FRASE e fica de pé pelos dois
-motivos que sobram, que são sobre o que o código FAZ — o CSV e o gesto.
-
-A DECISÃO DELA (D-12), verbatim: *"tá errado o conceito da coisa. o botão é pra
-ligar o microfone e ele ser ouvido no canal específico dele."* — **é um ato só**,
-e a pergunta certa nunca foi o transporte.
-
-AS TRÊS MORDIDAS QUE ESTE ARQUIVO EXERCE
------------------------------------------
-
-1. **devolver `and not bool(getattr(dados, "no_cabo", False))` a
-   `pode_ligar_o_mic`** — reprova `test_o_virtual_grava_no_cabo` e
-   `test_o_interruptor_acende_nos_dois_transportes`;
-2. **fazer o gesto copiar as duas perguntas em vez de chamar
-   `pode_ligar_o_mic`** — reprova `test_o_gesto_pergunta_ao_produto`, que é o
-   caso que existe porque a primeira redação desta cura fez exatamente isso e a
-   mordida (1) passou VERDE;
-3. **devolver a palavra "Só vale no rádio" a `DICA_MIC_NO_CABO`** — reprova
-   `test_a_dica_do_cabo_e_informacao_e_nao_recusa`.
+O botão «Virtual | Nativo» saiu da aba 02 (decisão dela de 02/10/2026, um microfone
+por controle, sempre) com o gesto `mic-modo` e a regra que o guardava
+(`pode_ligar_o_mic`, `dica_do_microfone`, `tem_canal_de_captura`), que ficaram sem
+chamador e saíram em 04/10/2026. Sobra o que a queixa 15 provou e o mapa sustenta: o
+microfone é um ato só (o 🎙), e quem é PARCIAL é o rádio, não o cabo.
 """
 from __future__ import annotations
 
 import csv
 import pathlib
 import sys
-from types import SimpleNamespace
-from typing import Any
-
-import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
@@ -65,26 +38,7 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-    DICA_MIC_NO_CABO,
-    DICA_MIC_NO_RADIO,
-    DICA_MIC_SEM_CANAL,
-    DICA_MIC_SEM_ENDERECO,
-    dica_do_microfone,
-    pode_ligar_o_mic,
-    tem_canal_de_captura,
-)
-
-UNIQ = "aa:bb:cc:00:00:01"
-
 CSV = RAIZ / "docs/data/mapa-controles.csv"
-
-
-def _dados(**over: Any) -> SimpleNamespace:
-    base = {"adotado": True, "no_cabo": False, "uniq": UNIQ,
-            "endereco": "aabbcc000001"}
-    base.update(over)
-    return SimpleNamespace(**base)
 
 
 def _linha_do_csv(chave: str) -> dict[str, str]:
@@ -119,141 +73,6 @@ def test_o_alto_falante_age_pelo_radio_e_o_canal_continua_declarado() -> None:
         "a assimetria de CANAL do alto-falante perdeu a declaração — sem ela o "
         "portão de paridade não sabe por que cabo e rádio usam canais diferentes"
     )
-
-
-class TestARegraDoProduto:
-    def test_o_interruptor_acende_nos_dois_transportes(self) -> None:
-        """MORDIDA 1: devolva `not no_cabo` a `pode_ligar_o_mic` e isto reprova."""
-        assert pode_ligar_o_mic(_dados(no_cabo=False)) is True
-        assert pode_ligar_o_mic(_dados(no_cabo=True)) is True, (
-            "o microfone voltou a recusar no CABO, que é o transporte em que o "
-            "CSV diz `cabo_aciona=sim` — é a queixa 15 dela de volta"
-        )
-
-    def test_a_pergunta_que_sobrou_e_sobre_o_canal_e_o_endereco(self) -> None:
-        """As três condições, e nenhuma delas é o transporte."""
-        assert tem_canal_de_captura(_dados()) is True
-        assert tem_canal_de_captura(_dados(adotado=False)) is False
-        assert tem_canal_de_captura(_dados(uniq="")) is False
-        assert tem_canal_de_captura(_dados(endereco="")) is True
-        assert pode_ligar_o_mic(_dados(endereco="")) is False
-
-    def test_cada_recusa_tem_a_frase_dela(self) -> None:
-        """Uma frase só para dois motivos manda a pessoa procurar a coisa errada."""
-        assert dica_do_microfone(_dados(adotado=False)) == DICA_MIC_SEM_CANAL
-        assert dica_do_microfone(_dados(endereco="")) == DICA_MIC_SEM_ENDERECO
-        assert dica_do_microfone(_dados(no_cabo=True)) == DICA_MIC_NO_CABO
-        assert dica_do_microfone(_dados(no_cabo=False)) == DICA_MIC_NO_RADIO
-
-    def test_a_dica_do_cabo_e_informacao_e_nao_recusa(self) -> None:
-        """MORDIDA 3: devolva "Só vale no rádio" e isto reprova."""
-        baixa = DICA_MIC_NO_CABO.lower()
-        for proibida in ("só vale", "não passa", "sem ela"):
-            assert proibida not in baixa, (
-                f"{proibida!r} voltou à dica do cabo — ela é informação sobre "
-                f"por onde o canal vem, nunca recusa"
-            )
-        assert "já existe" in baixa
-
-
-class PonteDeMentira:
-    def __init__(self) -> None:
-        self.chamadas: list[tuple[str, tuple, dict]] = []
-
-    def __getattr__(self, nome: str):
-        def registrar(*args, **kwargs):
-            self.chamadas.append((nome, args, kwargs))
-            return True
-        return registrar
-
-
-@pytest.fixture
-def no_cabo():
-    """O controle dela, NO CABO — que é onde o botão recusava."""
-    import pacotes
-
-    entrada = {"uniq": UNIQ, "transport": "usb", "connected": True,
-               "inputs": {}, "audio": {}, "speaker": {}}
-    return pacotes.Contexto(state={}, mesa=[], conectados=[entrada], estados={})
-
-
-def _gesto(nome: str):
-    import pacotes
-
-    fn = pacotes.gesto_da_pagina("02-controles.html", nome)
-    assert fn is not None, f"02-controles.html:{nome} não tem dono"
-    return fn
-
-
-def test_o_virtual_grava_no_cabo(no_cabo, monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA 1, do lado do botão: o "Virtual" GRAVA com o controle no cabo."""
-    import pacotes.a02_controles as a02
-
-    monkeypatch.setattr(a02, "_controles_declarados", lambda **_: {})
-    p = PonteDeMentira()
-    _gesto("mic-modo")(no_cabo, {"uniq": UNIQ, "micModo": "virtual"}, p)
-
-    assert p.chamadas == [
-        ("machine_declare",
-         ({"controles": {"aabbcc000001": {"microfone": True}}},), {})
-    ], "o 'Virtual' no cabo não gravou — a recusa da queixa 15 voltou"
-
-
-def test_o_gesto_pergunta_ao_produto(monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA 2, e ela existe porque a primeira redação desta cura CAIU nela."""
-    import pacotes
-    import pacotes.a02_controles as a02
-
-    monkeypatch.setattr(a02, "_controles_declarados", lambda **_: {})
-    monkeypatch.setattr(a02._mic_do_produto, "pode_ligar_o_mic", lambda _d: False)
-    entrada = {"uniq": UNIQ, "transport": "usb", "connected": True}
-    ctx = pacotes.Contexto(state={}, mesa=[], conectados=[entrada], estados={})
-
-    with pytest.raises(RuntimeError):
-        _gesto("mic-modo")(ctx, {"uniq": UNIQ, "micModo": "virtual"}, PonteDeMentira())
-
-
-def test_o_nativo_tambem_pergunta_ao_produto(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A guarda vale para os DOIS botões, e antes valia só para o "Virtual"."""
-    import pacotes
-    import pacotes.a02_controles as a02
-
-    monkeypatch.setattr(a02, "_controles_declarados", lambda **_: {})
-    entrada = {"uniq": "zzz", "transport": "usb", "connected": True}
-    ctx = pacotes.Contexto(state={}, mesa=[], conectados=[entrada], estados={})
-
-    with pytest.raises(RuntimeError) as erro:
-        _gesto("mic-modo")(ctx, {"uniq": "zzz", "micModo": "nativo"},
-                           PonteDeMentira())
-    assert str(erro.value) == DICA_MIC_SEM_ENDERECO
-
-
-def test_no_radio_o_virtual_continua_gravando(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro transporte não regrediu — é a metade "em ambos" da queixa dela.
-
-    Com um controle no cabo e outro no rádio (a mesa dela em 04/09/2026), os
-    DOIS botões fazem a MESMA coisa — e a prova é o `machine_declare` abaixo
-    ser a ÚNICA chamada, nos dois transportes.
-
-    (Este docstring dizia que a simetria era *"o que a tela prometia no
-    `title`"*. Aquele `title` saiu em 08/09/2026: ele descrevia outro botão.
-    O que sustenta esta régua é a chamada medida, não a frase da tela.)
-    """
-    import pacotes
-    import pacotes.a02_controles as a02
-
-    monkeypatch.setattr(a02, "_controles_declarados", lambda **_: {})
-    entrada = {"uniq": UNIQ, "transport": "bt", "connected": True}
-    ctx = pacotes.Contexto(state={}, mesa=[], conectados=[entrada], estados={})
-    p = PonteDeMentira()
-    _gesto("mic-modo")(ctx, {"uniq": UNIQ, "micModo": "virtual"}, p)
-
-    assert p.chamadas == [
-        ("machine_declare",
-         ({"controles": {"aabbcc000001": {"microfone": True}}},), {})
-    ]
 
 
 def test_a_aba_02_nao_condiciona_mais_o_microfone_ao_transporte() -> None:

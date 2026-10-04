@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026.
 
+**O par «Virtual | Nativo» saiu da aba em 04/10/2026 (decisão dela de 02/10, um microfone por
+controle, sempre), com o gesto, o campo `mic-modo-aceso` e as réguas dele; ficam os dois
+botões da rota. O que segue conta a história dos quatro.**
+
 A aba Controles tem QUATRO botões de estado, em dois pares: a rota do
 alto-falante (`Sons do jogo` / `Todo o som do PC`) e o modo do microfone
 (`Virtual` / `Nativo`). Até hoje o aceso de todos eles era a classe `on` que o
@@ -126,83 +130,11 @@ def test_a_rota_sai_do_mesmo_bloco_que_o_volume(a02):
             f"{meu.get('volume')!r} contra {dono[0]!r}")
 
 
-def test_o_modo_do_mic_segue_a_inversao_so_false_e_nativo(a02, monkeypatch):
-    """A tabela do daemon — `bt_mic.uniqs_recusados` —, com três valores.
-
-    Ausência LIGA desde a ordem dela de 18/09/2026 (*"todos os controles tem
-    que nascer com tudo mic, giroscopio e afins"*), então só o `False` é
-    Nativo. A régua antiga cobrava a regra da GTK (`microfone is True`), e com
-    ela o cartão de todo controle não declarado acendia «Nativo» sobre uma
-    ponte de pé — medido na mesa dela em 22/09/2026.
-
-    MORDIDA: devolva `is True` a `modo_do_mic`, e as duas últimas linhas
-    reprovam.
-    """
-    from types import SimpleNamespace
-
-    monkeypatch.setattr(a02, "_DECLARADOS", {
-        "aabbcc000001": SimpleNamespace(microfone=True),
-        "aabbcc000002": SimpleNamespace(microfone=False),
-        "aabbcc000003": SimpleNamespace(microfone=None),
-    })
-    assert a02.modo_do_mic("aabbcc000001") == "virtual"
-    assert a02.modo_do_mic("aabbcc000002") == "nativo"
-    assert a02.modo_do_mic("aabbcc000003") == "virtual"
-    assert a02.modo_do_mic("aabbcc000009") == "virtual"
-
-
-def test_o_nativo_da_aba_02_grava_o_mesmo_que_o_desligado_da_aba_08(a02):
-    """Um valor só para "não quero": o `False` do `maquina.json`."""
-    prova = [p for p in a02.PROVAS
-             if p["gesto"] == "mic-modo" and p["clique"]["micModo"] == "nativo"]
-    assert len(prova) == 1, "a prova do «Nativo» sumiu das PROVAS da aba"
-    declarado = prova[0]["chama"][0][1][0]["controles"]
-    assert list(declarado.values()) == [{"microfone": False}], declarado
-
-
-def test_sem_endereco_o_modo_do_mic_nao_acende_nenhum(a02, monkeypatch):
-    """Um controle sem `uniq` normalizado não tem linha no `maquina.json`."""
-    monkeypatch.setattr(a02, "_DECLARADOS", {})
-    assert a02.modo_do_mic("") == ""
-
-
-def test_o_gesto_do_modo_invalida_a_leitura_em_cache(a02, monkeypatch):
-    """O botão que grava e não muda de cor é o defeito que esta cura veio matar."""
-    from types import SimpleNamespace
-
-    from pacotes import Contexto
-
-    endereco = "aabbcc000001"
-    monkeypatch.setattr(a02, "_DECLARADOS", {endereco: SimpleNamespace(microfone=True)})
-    recarregado: list[bool] = []
-
-    def falso_recarregar(recarregar: bool = False) -> dict:
-        recarregado.append(recarregar)
-        return {}
-
-    monkeypatch.setattr(a02, "_controles_declarados", falso_recarregar)
-
-    class Ponte:
-        def machine_declare(self, _decl):
-            return (True, "")
-
-    ctx = Contexto(state={}, mesa=[],
-                   conectados=[{"uniq": UNIQ_CABO, "transport": "usb"}], estados={})
-    a02.mic_modo(ctx, {"uniq": UNIQ_CABO, "micModo": "nativo"}, Ponte())
-    assert True in recarregado, (
-        "o gesto gravou no disco e não derrubou a leitura em cache")
-
-
 def _pares(a02, onde=None) -> dict[str, list[str]]:
     rota = sorted(a02.BOTOES_DA_FILEIRA_DO_SOM)
     if onde == PUBLICADO and _a_02_esta_em_trabalho():
         rota = [v for v in rota if v != a02.ROTA_TUDO_NO_CONTROLE]
-    pares = {"alto-rota": rota}
-    if onde != BANCADA:
-        # O par «Virtual | Nativo» saiu da bancada em 03/10/2026 (a decisão
-        # dela de 02/10); a página publicada o tem até o `--publicar 02`.
-        pares["mic-modo-aceso"] = ["nativo", "virtual"]
-    return pares
+    return {"alto-rota": rota}
 
 
 def _a_02_esta_em_trabalho() -> bool:
@@ -265,7 +197,7 @@ def test_o_endereco_do_aceso_nao_mora_no_container(a02):
     MORDIDA: tirar o `data-hef-alvo="classe"` do container da `.mic-modo`.
     """
     doc = PUBLICADO.read_text(encoding="utf-8")
-    padroes = (r'<span class="rota mic-modo"[^>]*>', r'<div class="rota"[^>]*>')
+    padroes = (r'<div class="rota"[^>]*>',)
     for padrao in padroes:
         for container in re.findall(padrao, doc):
             if "data-campo" not in container:
@@ -277,15 +209,12 @@ def test_o_endereco_do_aceso_nao_mora_no_container(a02):
                 f"troca os dois botões por um travessão: {container}")
 
 
-def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch):
+def test_o_pacote_emite_o_aceso_da_rota_e_nao_o_do_modo_do_mic(a02, monkeypatch):
     """O elo que faltava: emitir para um endereço que a página publicada NÃO tem"""
-    from types import SimpleNamespace
-
     from hefesto_dualsense4unix.app.audio_saida import RotaDasDuasCamadas
     from pacotes import Contexto
 
     monkeypatch.setattr(a02, "_ENDERECOS", None)
-    monkeypatch.setattr(a02, "_DECLARADOS", {"aabbcc000001": SimpleNamespace(microfone=True)})
     monkeypatch.setattr(a02, "_CAMADA_1", {UNIQ_CABO: RotaDasDuasCamadas(
         byte=3, sink_do_controle="alsa_output.dualsense",
         sink_padrao="alsa_output.dualsense")})
@@ -298,7 +227,8 @@ def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch)
     campos = a02.pacote(Contexto(state={}, mesa=[], conectados=[controle],
                                  estados={}))["cards"][UNIQ_CABO]
     assert campos["alto-rota"] == "pc"
-    assert campos["mic-modo-aceso"] == "virtual"
+    assert "mic-modo-aceso" not in campos, (
+        "o par «Virtual | Nativo» saiu da aba 02 (decisão dela de 02/10/2026)")
 
 
 def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
@@ -307,7 +237,6 @@ def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
     from pacotes import Contexto
 
     monkeypatch.setattr(a02, "_ENDERECOS", None)
-    monkeypatch.setattr(a02, "_DECLARADOS", {})
     controle = {"uniq": UNIQ_CABO, "transport": "usb", "battery_pct": 85,
                 "player_slot": 1, "speaker": {"volume": 102, "muted": False}}
     campos = a02.pacote(Contexto(state={}, mesa=[], conectados=[controle],
@@ -324,7 +253,6 @@ def test_a_carga_desconhecida_e_a_da_janela_antiga(a02, monkeypatch):
     from pacotes import Contexto
 
     monkeypatch.setattr(a02, "_ENDERECOS", None)
-    monkeypatch.setattr(a02, "_DECLARADOS", {})
     controle = {"uniq": UNIQ_CABO, "transport": "usb", "player_slot": 1}
     campos = a02.pacote(Contexto(state={}, mesa=[], conectados=[controle],
                                  estados={}))["cards"][UNIQ_CABO]

@@ -237,31 +237,6 @@ class EsperaPeloPS:
             return None
 
 
-#    <!-- noqa-acento: citação literal dela -->
-#    derrubou a regra assim: *"esse aviso nao devia aparecer pq era  # (dela) noqa-acento
-#    O que a declaração diz é *"o microfone deste controle chega ao PC pelo
-
-
-DICA_MIC_NO_RADIO = (
-    "Traz o microfone deste controle pelo rádio, como no PS5. Ele nasce "
-    "desligado por privacidade: a ponte é um gesto seu, e vale só para este "
-    "controle."
-)
-
-DICA_MIC_NO_CABO = (
-    "Pelo cabo o canal deste microfone já existe: o PipeWire o publica sozinho, "
-    "e o Hefesto não precisa de ponte para entregá-lo. A escolha fica gravada "
-    "para quando este controle voltar ao rádio, onde a ponte é o que o traz."
-)
-
-#: :func:`tem_canal_de_captura`, e existe porque a `dica_do_microfone` passou a
-#: pendura o interruptor em card que não é DualSense adotado —, e é justamente
-DICA_MIC_SEM_CANAL = (
-    "Este controle não tem canal de captura para o Hefesto entregar: o áudio do "
-    "microfone vem tunelado num report HID da Sony, e só um DualSense adotado o "
-    "carrega."
-)
-
 DICA_MIC_SEM_ENDERECO = (
     "Este controle não tem endereço fixo, então o Hefesto não tem como guardar "
     "a quem esta ponte pertence."
@@ -297,62 +272,6 @@ def frase_da_capacidade_do_mic() -> str:
         f"{_numero(HZ_AUDIO_COM_MIC)} quadros de áudio: {_numero(total)} das "
         f"{SLOTS_POR_SEGUNDO} fatias daquele adaptador. Quanto já está em uso "
         f'está na seção "{secao_mesa.TITULO}".'
-    )
-
-
-def tem_canal_de_captura(dados: Any) -> bool:
-    """Este controle tem canal de captura? **A pergunta que substituiu "é cabo?"**
-
-    04/09/2026, D-12: *"o botão é pra ligar o microfone e ele ser ouvido no
-    canal específico dele"*. A pergunta certa nunca foi o transporte — é se
-    existe um canal de captura DESTE controle a ligar.
-
-    E o dono da resposta já existe e já sabe os dois transportes:
-    `integrations/eleicao_de_microfone.EleitorDoMicrofone._canal_no_ar`, que diz
-    com todas as letras — *"se existe (o caso do CABO, que publica sozinho),
-    nada é pedido e nada é esperado (…) se não existe, pede uma vez e espera o
-    PipeWire publicá-lo"*. Os dois transportes têm canal; o que muda é **quem o
-    põe no ar**, e nenhum dos dois é uma recusa.
-
-    Então a condição estrutural é a mesma nos dois: um DualSense **adotado** (a
-    ponte é Opus tunelado em report HID da Sony, e o 8BitDo não tem isso) com um
-    `uniq` pelo qual o daemon o case com o nó do sysfs. Nada de `pactl` aqui: um
-    canal que está no ar AGORA é leitura de instante, e esta pergunta responde
-    pelo aparelho, não pelo relógio.
-    """
-    return bool(getattr(dados, "adotado", False)) and bool(
-        getattr(dados, "uniq", "")
-    )
-
-
-def pode_ligar_o_mic(dados: Any) -> bool:
-    """O interruptor é clicável neste card?
-
-    **ERAM QUATRO CONDIÇÕES E SÃO TRÊS — 04/09/2026.** A que saiu era
-    `not no_cabo`, e ela não era uma exigência: era a `PonteMicBluetooth`
-    usando o nome da capacidade (ver :data:`DICA_MIC_NO_CABO`). Ficam as que a
-    escolha realmente precisa — :func:`tem_canal_de_captura` (o aparelho tem
-    canal a ligar) e um `endereco` de doze hexa para a escolha ter **onde ser
-    gravada** no `maquina.json`.
-
-    NO CABO A DECLARAÇÃO NÃO ACENDE NADA, E ISSO NÃO É DEFEITO: o
-    `bt_mic.alvos()` só enxerga nós de Bluetooth (`nos_dualsense_bluetooth`),
-    então declarar pelo cabo é inerte HOJE e vale no dia em que este controle
-    voltar ao rádio. É a mesma natureza durável que o "Nativo" sempre teve.
-    """
-    return tem_canal_de_captura(dados) and bool(getattr(dados, "endereco", ""))
-
-
-def dica_do_microfone(dados: Any) -> str:
-    """A dica do interruptor, e ela nunca é vazia."""
-    if not tem_canal_de_captura(dados):
-        return DICA_MIC_SEM_CANAL
-    if not bool(getattr(dados, "endereco", "")):
-        return DICA_MIC_SEM_ENDERECO
-    return (
-        DICA_MIC_NO_CABO
-        if bool(getattr(dados, "no_cabo", False))
-        else DICA_MIC_NO_RADIO
     )
 
 

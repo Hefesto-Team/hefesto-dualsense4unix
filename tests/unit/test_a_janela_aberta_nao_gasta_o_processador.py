@@ -1288,8 +1288,8 @@ def test_r6_fora_da_renovacao_nada_muda(renovacao: Any) -> None:
     """Sem a renovação ligada, cada pergunta à eleição roda de novo."""
     renovacao.conta.nativa = "casada"
     el = renovacao.el
-    el.microfone_nativo_no_ar(UNIQS[0], list(UNIQS[:1]))
-    el.microfone_nativo_no_ar(UNIQS[0], list(UNIQS[:1]))
+    el.fonte_nativa_do_controle(UNIQS[0], list(UNIQS[:1]))
+    el.fonte_nativa_do_controle(UNIQS[0], list(UNIQS[:1]))
     assert renovacao.conta.eleicao.count("pactl list sources short") == 2
 
 

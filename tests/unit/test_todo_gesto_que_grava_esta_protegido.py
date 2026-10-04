@@ -153,9 +153,6 @@ _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")
 #: foi `ordens_dispensadas`"* — que é o ⊘, e ele ESTÁ protegido.
 #: **A ISENÇÃO É DO PAR, NUNCA DA PORTA.** Isentar `machine_declare` inteiro
 ISENTOS: dict[tuple[str, str], str] = {
-    ("02-controles.html", "mic-modo"):
-        "`machine.declare` idempotente: grava o valor que a própria página "
-        "mostra, medido em 03/09/2026",
     ("08-conexoes.html", "mic-existe"):
         "idem — foi um dos três medidos por nome naquela volta",
     ("08-conexoes.html", "sala-altura"):

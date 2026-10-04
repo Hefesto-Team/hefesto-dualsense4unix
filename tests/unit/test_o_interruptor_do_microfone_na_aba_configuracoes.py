@@ -18,14 +18,7 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.config import secao_controles
 from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-    DICA_MIC_NO_CABO,
-    DICA_MIC_NO_RADIO,
-    DICA_MIC_SEM_CANAL,
-    DICA_MIC_SEM_ENDERECO,
-    dica_do_microfone,
     frase_da_capacidade_do_mic,
-    pode_ligar_o_mic,
-    tem_canal_de_captura,
 )
 from hefesto_dualsense4unix.interface.dados_do_controle import DadosDoControle
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
@@ -76,41 +69,6 @@ def _rotulos(widget: Any, achados: list[str] | None = None) -> list[str]:
         for filho in filhos():
             _rotulos(filho, achados)
     return achados
-
-
-class TestOInterruptorEstaNaTela:
-
-
-    def test_a_dica_do_cabo_informa_e_nao_recusa(self) -> None:
-        """A frase do cabo é CAPACIDADE, não advertência — e ela dizia o inverso."""
-        for proibida in ("só vale", "não passa", "sem ela"):
-            assert proibida not in DICA_MIC_NO_CABO.lower(), (
-                f"{proibida!r} voltou à dica do cabo: ela é informação sobre "
-                "por onde o canal vem, nunca recusa (D-12)"
-            )
-        assert "já existe" in DICA_MIC_NO_CABO
-
-    def test_sem_endereco_a_dica_diz_o_outro_motivo(self) -> None:
-        """Os dois motivos de estar apagado pedem frases diferentes."""
-        dados = _dados(endereco="")
-        assert pode_ligar_o_mic(dados) is False
-        assert dica_do_microfone(dados) == DICA_MIC_SEM_ENDERECO
-
-    def test_sem_canal_de_captura_a_dica_nao_fala_de_endereco(self) -> None:
-        """Sem canal, o endereço não interessa — e a frase não pode mentir.
-
-        `dica_do_microfone` respondia a TODA recusa com a frase do endereço, e
-        isso aparecia como um controle com doze hexa sendo recusado por não ter
-        endereço. As duas perguntas agora são feitas na ordem em que mandam.
-        """
-        dados = _dados(adotado=False)
-        assert tem_canal_de_captura(dados) is False
-        assert dica_do_microfone(dados) == DICA_MIC_SEM_CANAL
-
-    def test_no_radio_a_dica_diz_que_a_escolha_e_dela_e_e_de_um_so(self) -> None:
-        assert dica_do_microfone(_dados()) == DICA_MIC_NO_RADIO
-        assert "este controle" in DICA_MIC_NO_RADIO
-        assert "desligado" in DICA_MIC_NO_RADIO
 
 
 class _HostFalso:
@@ -197,9 +155,7 @@ class TestAFraseDeCapacidade:
 
     def test_a_frase_nao_ressuscita_o_preco_contra_o_giroscopio(self) -> None:
         """O trade-off contra giroscópio foi DERRUBADO em 22/08/2026."""
-        textos = " ".join(
-            (frase_da_capacidade_do_mic(), DICA_MIC_NO_RADIO, DICA_MIC_NO_CABO)
-        ).lower()
+        textos = frase_da_capacidade_do_mic().lower()
         for proibida in ("girosc", "mira", "250"):
             assert proibida not in textos, (
                 f"{proibida!r} voltou ao texto do interruptor: a comparação "

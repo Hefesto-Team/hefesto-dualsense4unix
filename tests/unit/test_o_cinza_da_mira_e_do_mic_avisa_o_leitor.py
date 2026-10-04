@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""O CINZA DA MIRA E DO «NATIVO» DO MICROFONE AVISA O LEITOR DE TELA."""
+"""O CINZA DA MIRA AVISA O LEITOR DE TELA.
+
+O par «Virtual | Nativo» do microfone saiu da aba 02 (decisão dela de 02/10/2026) e
+saiu desta régua com ele; o arquivo ficou com o nome da régua de antes.
+"""
 from __future__ import annotations
 
 import json
@@ -14,8 +18,7 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
-#: A página publicada, e não a bancada: o par «Virtual | Nativo» saiu do desenho
-#: em 03/10/2026 (a decisão dela de 02/10) e vive no produto até o `--publicar 02`.
+#: A página publicada, que é o que o produto renderiza.
 BANCADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
 
 from tests.conftest import exigir_gi_real
@@ -23,8 +26,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from pacotes.a02_controles import MIRA_NO_NATIVO
-
-RAZAO_DE_ENSAIO = "No BT o microfone não entra sozinho."
 
 
 def _constante(nome: str) -> str:
@@ -44,8 +45,6 @@ ROTEIRO = """
   const mira = q('button[data-gesto="mira"]');
   const giro = q('button[data-sensor="giroscopio"]');
   const accel = q('button[data-sensor="acelerometro"]');
-  const nativo = q('button[data-mic-modo="nativo"]');
-  const virtual = q('button[data-mic-modo="virtual"]');
   const caixa = el => { const b = el.getBoundingClientRect();
     return [b.x, b.y, b.width, b.height].map(v => Math.round(v * 10) / 10); };
   const cara = el => { const s = getComputedStyle(el);
@@ -53,32 +52,25 @@ ROTEIRO = """
             peso: s.fontWeight, cursor: s.cursor}; };
   const foto = () => ({
     aria_mira: mira.getAttribute('aria-disabled'),
-    aria_mic: nativo.getAttribute('aria-disabled'),
-    aria_virtual: virtual.getAttribute('aria-disabled'),
     caixa_mira: caixa(mira), caixa_giro: caixa(giro), caixa_accel: caixa(accel),
-    caixa_nativo: caixa(nativo), caixa_virtual: caixa(virtual),
     cara_mira: cara(mira), cara_accel: cara(accel),
-    cara_nativo: cara(nativo), cara_virtual: cara(virtual),
   });
   const fora = {};
   fora.virgem = foto();
-  // O MODO NATIVO, no cabo e no rádio: a Mira fica cinza nos quatro, e o
-  // «Nativo» do microfone fica cinza onde ele não alcança.
+  // O MODO NATIVO, no cabo e no rádio: a Mira fica cinza nos quatro.
   window.__hef.pintar({colunas: {p1: {
     'mira-fora': 'MIRA_NO_NATIVO_AQUI', 'mira-ligada': 'DESLIGADO',
-    'accel-ligado': 'DESLIGADO', 'giro-ligado': 'LIGADO',
-    'mic-nativo-fora': 'RAZAO_AQUI', 'mic-modo-aceso': 'virtual'}}});
+    'accel-ligado': 'DESLIGADO', 'giro-ligado': 'LIGADO'}}});
   fora.cinza = foto();
-  // FORA DO NATIVO, com a Mira acesa e o «Nativo» do microfone escolhido.
+  // FORA DO NATIVO, com a Mira acesa.
   window.__hef.pintar({colunas: {p1: {
     'mira-fora': '', 'mira-ligada': 'LIGADO',
-    'accel-ligado': 'LIGADO', 'giro-ligado': 'LIGADO',
-    'mic-nativo-fora': '', 'mic-modo-aceso': 'nativo'}}});
+    'accel-ligado': 'LIGADO', 'giro-ligado': 'LIGADO'}}});
   fora.livre = foto();
   // E a Mira APAGADA fora do Nativo, ao lado de um sensor apagado.
   window.__hef.pintar({colunas: {p1: {
     'mira-ligada': 'DESLIGADO', 'accel-ligado': 'DESLIGADO',
-    'mic-modo-aceso': 'virtual'}}});
+    }}});
   fora.apagada = foto();
   return JSON.stringify(fora);
 })()
@@ -96,8 +88,7 @@ def medido() -> dict:
     if not Gtk.init_check(None)[0]:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
 
-    roteiro = (ROTEIRO.replace("MIRA_NO_NATIVO_AQUI", MIRA_NO_NATIVO)
-               .replace("RAZAO_AQUI", RAZAO_DE_ENSAIO))
+    roteiro = ROTEIRO.replace("MIRA_NO_NATIVO_AQUI", MIRA_NO_NATIVO)
     saiu: list[str] = []
     janela = Gtk.OffscreenWindow()
     view = WebKit2.WebView()
@@ -139,30 +130,23 @@ def medido() -> dict:
     return json.loads(saiu[0])
 
 
-def test_no_nativo_os_dois_avisam_o_leitor(medido: dict) -> None:
-    """Cinza na tela é `aria-disabled="true"` no botão — os dois."""
+def test_no_nativo_a_mira_avisa_o_leitor(medido: dict) -> None:
+    """Cinza na tela é `aria-disabled="true"` no botão."""
     cinza = medido["cinza"]
     assert cinza["aria_mira"] == "true", (
         f"a Mira ficou cinza no Nativo e o leitor de tela não soube: "
         f"aria-disabled={cinza['aria_mira']!r}")
-    assert cinza["aria_mic"] == "true", (
-        f"o «Nativo» do microfone ficou cinza e o leitor de tela não soube: "
-        f"aria-disabled={cinza['aria_mic']!r}")
     assert cinza["cara_mira"]["cursor"] == "not-allowed", cinza["cara_mira"]
-    assert cinza["cara_nativo"]["cursor"] == "not-allowed", cinza["cara_nativo"]
 
 
-def test_fora_do_nativo_os_dois_dizem_false(medido: dict) -> None:
+def test_fora_do_nativo_a_mira_diz_false(medido: dict) -> None:
     """`aria-disabled` ausente e `"false"` não são a mesma coisa para o ARIA."""
     livre = medido["livre"]
     assert livre["aria_mira"] == "false", livre["aria_mira"]
-    assert livre["aria_mic"] == "false", livre["aria_mic"]
-    assert livre["aria_virtual"] is None, (
-        "o «Virtual» nunca fica cinza e não tem por que carregar o atributo")
 
 
 def test_a_geometria_nao_mudou(medido: dict) -> None:
-    """O invólucro não tem caixa: os três chips e os dois do microfone continuam"""
+    """O invólucro não tem caixa: os três chips continuam na grade de três."""
     for estado in ("virgem", "cinza", "livre", "apagada"):
         foto = medido[estado]
         mira, giro, accel = foto["caixa_mira"], foto["caixa_giro"], foto["caixa_accel"]
@@ -172,15 +156,9 @@ def test_a_geometria_nao_mudou(medido: dict) -> None:
         assert mira[2] == accel[2] and mira[3] == accel[3], (
             f"{estado}: o chip da Mira mudou de tamanho — {mira} contra {accel}; o "
             f"invólucro virou caixa e saiu da grade de três")
-        nat, vir = foto["caixa_nativo"], foto["caixa_virtual"]
-        assert nat[1] == vir[1] and nat[2] == vir[2] and nat[3] == vir[3], (
-            f"{estado}: o «Nativo» do microfone mudou de tamanho — {nat} contra {vir}")
     virgem = medido["virgem"]
     for estado in ("cinza", "livre", "apagada"):
         assert medido[estado]["caixa_mira"] == virgem["caixa_mira"], estado
-    pintado = medido["cinza"]["caixa_nativo"]
-    for estado in ("livre", "apagada"):
-        assert medido[estado]["caixa_nativo"] == pintado, estado
 
 
 def test_a_mira_apagada_tem_a_cara_do_sensor_apagado(medido: dict) -> None:
@@ -194,13 +172,3 @@ def test_a_mira_apagada_tem_a_cara_do_sensor_apagado(medido: dict) -> None:
         f"a Mira acesa não tem a cara do sensor aceso: "
         f"{livre['cara_mira']} contra {livre['cara_accel']}")
     assert livre["cara_mira"] != apagada["cara_mira"], "aceso e apagado iguais"
-
-
-def test_o_nativo_escolhido_tem_a_cara_do_virtual_escolhido(medido: dict) -> None:
-    """O `on` do «Nativo» mora no invólucro: escolhido, ele tem a cara que o"""
-    livre, apagada = medido["livre"], medido["apagada"]
-    assert livre["cara_nativo"] == apagada["cara_virtual"], (
-        f"o «Nativo» escolhido não tem a cara do escolhido: "
-        f"{livre['cara_nativo']} contra {apagada['cara_virtual']}")
-    assert livre["cara_nativo"] != apagada["cara_nativo"], (
-        "o «Nativo» escolhido e o não escolhido estão iguais")

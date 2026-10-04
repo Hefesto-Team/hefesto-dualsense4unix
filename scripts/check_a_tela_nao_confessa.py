@@ -94,10 +94,6 @@ FATOS: dict[str, str] = {
     "o Hefesto ainda não disse se este sensor está ligado":
         "ESTADO DE AGORA: o dado do daemon não chegou, e a frase diz por que "
         "alternar sem ele seria chutar — 11/09/2026",
-    "o Hefesto não precisa de ponte":
-        "AFIRMAÇÃO POSITIVA: pelo cabo o PipeWire publica o canal sozinho. A "
-        "peneira a pega pela forma, e ela diz o contrário de uma dívida — "
-        "11/09/2026",
     "o Hefesto não tem como guardar a quem esta ponte pertence":
         "LIMITE DO APARELHO, e a frase nomeia a causa na mesma oração: este "
         "controle não tem endereço fixo, então não há chave por onde guardar — "

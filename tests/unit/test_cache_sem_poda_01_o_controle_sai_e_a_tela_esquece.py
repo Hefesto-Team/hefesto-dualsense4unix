@@ -67,7 +67,7 @@ def mesa() -> Any:
     """Devolve os caches de módulo como estavam. **Sem ela, esta régua envenena.**"""
     guardado = {
         "camada1": dict(a02._CAMADA_1), "sono": dict(a02._SONO),
-        "nativo": dict(a02._MIC_NATIVO), "quando": a02._CAMADA_1_QUANDO[0],
+        "ganho": dict(a02._GANHO), "quando": a02._CAMADA_1_QUANDO[0],
         "selo": a02._CAMADA_1_SELO[0], "voo": a02._CAMADA_1_EM_VOO[0],
         "lento": dict(a09._LENTO), "lento_selo": a09._LENTO_SELO[0],
         "lento_voo": a09._LENTO_EM_VOO[0], "antes": pacotes._NA_MESA_ANTES[0],
@@ -76,11 +76,11 @@ def mesa() -> Any:
     a09._JANELA_ANTIGA[:] = [_JanelaDeMentira()]
     yield
     _esperar_o_voo_da_02_pousar()
-    for cache in (a02._CAMADA_1, a02._SONO, a02._MIC_NATIVO, a09._LENTO):
+    for cache in (a02._CAMADA_1, a02._SONO, a02._GANHO, a09._LENTO):
         cache.clear()
     a02._CAMADA_1.update(guardado["camada1"])
     a02._SONO.update(guardado["sono"])
-    a02._MIC_NATIVO.update(guardado["nativo"])
+    a02._GANHO.update(guardado["ganho"])
     a02._CAMADA_1_QUANDO[0] = guardado["quando"]
     a02._CAMADA_1_SELO[0] = guardado["selo"]
     a02._CAMADA_1_EM_VOO[0] = guardado["voo"]
@@ -100,8 +100,8 @@ def _sem_pactl(monkeypatch: pytest.MonkeyPatch, ler: Any = None) -> None:
                                      for u in na_mesa}))
     monkeypatch.setattr(a02, "_ler_o_sono",
                         lambda lido: dict.fromkeys(lido, "dormindo"))
-    monkeypatch.setattr(a02, "_ler_o_nativo",
-                        lambda na_mesa: dict.fromkeys(na_mesa, False))
+    monkeypatch.setattr(a02, "_ler_o_ganho",
+                        lambda na_mesa: dict.fromkeys(na_mesa, (50, -6.0)))
     monkeypatch.setattr(a02.audio_saida, "regra_nunca_dorme_instalada",
                         lambda *_a, **_k: True)
     monkeypatch.setattr(a02, "_seguir_as_ondas", lambda _alvos: None)
@@ -119,7 +119,7 @@ def _encher_o_cache_da_02(*uniqs: str) -> None:
     for uniq in uniqs:
         a02._CAMADA_1[uniq] = _RotaFalsa(f"sink-de-{uniq[-2:]}")
         a02._SONO[uniq] = "acordado"
-        a02._MIC_NATIVO[uniq] = True
+        a02._GANHO[uniq] = (100, 0.0)
     a02._CAMADA_1_QUANDO[0] = time.monotonic()
     a02._CAMADA_1_EM_VOO[0] = False
 
@@ -153,9 +153,9 @@ def test_o_tique_poda_antes_de_pintar(mesa: Any) -> None:
     assert P2 not in a02._CAMADA_1, (
         f"o tique não podou: o cache do som ainda tem {P2!r} depois de ele "
         "sair da mesa")
-    assert P2 not in a02._SONO and P2 not in a02._MIC_NATIVO, (
+    assert P2 not in a02._SONO and P2 not in a02._GANHO, (
         "a poda alcançou uma das três leituras por controle e não as outras: "
-        f"sono={sorted(a02._SONO)} nativo={sorted(a02._MIC_NATIVO)}")
+        f"sono={sorted(a02._SONO)} ganho={sorted(a02._GANHO)}")
     assert P1 in a02._CAMADA_1, "a poda levou junto quem ficou"
 
 
@@ -193,9 +193,9 @@ def test_o_controle_que_volta_nao_recebe_a_leitura_da_sessao_passada(
         assert a02.sink_do_cache(P1) == "", (
             "o controle que voltou recebeu o sink da sessão anterior dele, "
             f"300 s depois: {a02.sink_do_cache(P1)!r}")
-        assert a02._MIC_NATIVO.get(P1) is None, (
-            "o controle que voltou recebeu o microfone nativo da sessão "
-            f"anterior dele: {a02._MIC_NATIVO.get(P1)!r}")
+        assert a02._GANHO.get(P1) != (100, 0.0), (
+            "o controle que voltou recebeu o ganho do microfone da sessão "
+            f"anterior dele: {a02._GANHO.get(P1)!r}")
     finally:
         solta.set()
         _esperar_o_voo_da_02_pousar()

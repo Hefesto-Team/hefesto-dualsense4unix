@@ -114,15 +114,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "MESA-DE-QUATRO-01; o touchpad explica por que o destino é o degrau de CIMA: lá o "
         "repasse está íntegro e o jogo não reage, sem causa desde 16/08",
     ),
-    "mic-modo": (
-        "médio",
-        "2026-09-08-MIC-OS-QUATRO-01-os-quatro-microfones-funcionando.md",
-        "`audio.microfone@dualsense` está em SAIU NO FIO nos dois: o canal "
-        "abriu, e o degrau de obedecer não foi registrado. No rádio a voz SAI "
-        "com a ponte de pé — medido 07/09, um controle de cada vez "
-        "(`mic-radio-a-voz-sai-0907`) —, e é justamente o «um de cada vez» que "
-        "falta: quatro fontes com nome estável, uma por controle",
-    ),
     "brilho-luzes": (
         "médio",
         "2026-09-24-O-BRILHO-DAS-LUZES-DE-NUMERO-01.md",

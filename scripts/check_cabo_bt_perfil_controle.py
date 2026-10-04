@@ -168,7 +168,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
 DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mascara": ("plataforma.vpad",),
     "ganho-mic": ("audio.microfone.ganho",),
-    "mic-modo": ("audio.microfone",),
     "mudo": ("audio.microfone.mudo",),
     "volume": ("audio.microfone.volume", "audio.alto_falante.volume"),
     "rota": ("audio.alto_falante.rota",),
@@ -201,7 +200,6 @@ A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
 
 NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mascara": ("mode", None),
-    "mic-modo": ("mic", "mic"),
     "volume": ("mic", "mic"),
     "ganho-mic": ("mic", "mic"),
     "rota": ("speaker", "speaker"),
