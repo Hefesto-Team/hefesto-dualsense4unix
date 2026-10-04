@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- haptica.svg — a área do touchpad (retangulo largo arredondado) com duas ondinhas saindo da borda de cima -->
+  <!-- haptica.svg — a área do touchpad (retângulo largo arredondado) com duas ondinhas saindo da borda de cima -->
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="#f8f8f2" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="#f8f8f2" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="#f8f8f2" stroke-width="2" stroke-linecap="round"/>
