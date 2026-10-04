@@ -2594,8 +2594,8 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       }
       if((b = perto(ev, '.radio .rotulo.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
       // O «⋮» DA LINHA (ESQUECER-E-LIMPAR-AS-CONEXOES-01): o menu dela, com o
-      // «Esquecer». Com um controle esperando, não há molde, e o Python faz o
-      // botão tremer.
+      // «Esquecer». O molde existe sempre e o menu abre com o que se sabe; só o
+      // «Esquecer» de verdade espera o rádio desocupar, e diz por quê.
       if((b = perto(ev, '.radio .linha .menu-da-linha'))){
         abrirPainel('menu', b.dataset.alvo + '|' + b.dataset.lugar);
         return;
