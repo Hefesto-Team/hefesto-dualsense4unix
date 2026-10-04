@@ -28,6 +28,7 @@ R = pathlib.Path(__file__).resolve().parents[1]
 import sys as _sys
 _sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.interface import onde as _onde
+from hefesto_dualsense4unix.interface.mapa import SEM_BOTAO
 _MAPA = _onde.PUBLICADO / "mapa-do-controle.html"
 ROSA = "rgb(255, 121, 198)"
 PINTAVEL = ":is(.peca, rect, circle, path, ellipse)"
@@ -45,6 +46,15 @@ with sync_playwright() as pw:
     print(f"=== o mapa · {len(pecas)} peças, cruzamento nos dois sentidos ===")
     for p in pecas:
         i = p["id"]; desenhada = p["x1"] != "-"
+        if i in SEM_BOTAO:
+            # O CHASSI NÃO É BOTÃO (03/10/2026): a peça fica no CSV, mas não tem
+            # linha na lista nem alvo no desenho. A régua mede a AUSÊNCIA, e não
+            # pula em silêncio: o alvo voltar é o defeito.
+            voltou = pg.evaluate(f"() => !!document.querySelector('.item-{i}, .a-{i}')")
+            if voltou:
+                falhas.append(i)
+            print(("  FALHA" if voltou else "  OK   ") + f" {i:22} sem linha e sem alvo (não é botão)")
+            continue
         pg.hover(f".item-{i}"); pg.wait_for_timeout(70)
         ida = pg.evaluate(f"""() => {{const e=document.querySelector('#mp-{i} {PINTAVEL}');
             const g=document.querySelector('.s-{i}');
