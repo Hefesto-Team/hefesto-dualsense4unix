@@ -327,6 +327,15 @@ _LOJAS_SEM_CLASSE = frozenset(
 )
 
 
+#: Os programas de loja que um atalho chama para abrir o jogo por eles
+#: (`env … lutris lutris:rungameid/12`, `flatpak run --command=bottles-cli …`).
+_PROGRAMAS_DE_LOJA = _LOJAS_SEM_CLASSE | {"bottles-cli", "legendary", "gogdl"}
+
+#: Um endereço com esquema (`heroic://…`, `steam://…`, `lutris:rungameid/12`).
+#: Duas letras no mínimo antes do `:`, para `C:` (o disco do Wine) não contar.
+_ENDERECO_COM_ESQUEMA = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]+:")
+
+
 def _e_atalho_para_outro_programa(comando: str) -> bool:
     """O `Exec=` só pede a OUTRO programa que abra o jogo (`xdg-open heroic://…`)?"""
     try:
@@ -335,9 +344,10 @@ def _e_atalho_para_outro_programa(comando: str) -> bool:
         return False
     if not partes:
         return False
-    if partes[0].rsplit("/", 1)[-1] in _PROGRAMAS_QUE_ABREM_OUTRO:
+    programas = {parte.rsplit("/", 1)[-1].casefold() for parte in partes}
+    if programas & (_PROGRAMAS_QUE_ABREM_OUTRO | _PROGRAMAS_DE_LOJA):
         return True
-    return any("://" in parte for parte in partes[1:])
+    return any(_ENDERECO_COM_ESQUEMA.match(parte) for parte in partes[1:])
 
 
 def _chave_do_atalho_sem_classe(

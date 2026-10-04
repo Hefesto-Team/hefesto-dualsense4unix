@@ -154,3 +154,38 @@ def test_a_varredura_automatica_acorda_com_o_atalho_novo(
     loader._talvez_semear_jogos()
 
     assert [p.name for p in destino.glob("*.json")] == ["forja.json"]
+
+
+def test_o_atalho_do_lutris_e_de_outro_programa_e_fica_fora(tmp_path: Path) -> None:
+    """O atalho que o Lutris escreve no menu chama o PRÓPRIO Lutris.
+
+    `lutris:rungameid/<N>` não tem `://`, e o comando começa por `env`: sem
+    olhar o esquema nem o programa depois do `env`, o atalho entrava como jogo
+    «instalado aqui» com a chave errada (`net.lutris.<slug>-<N>`), ao lado do
+    mesmo jogo que a segunda origem já lê pelo Lutris.
+    """
+    _atalho(
+        tmp_path, "net.lutris.celeste-12.desktop",
+        "[Desktop Entry]\nType=Application\nName=Celeste\nIcon=lutris_celeste\n"
+        "Exec=env LUTRIS_SKIP_INIT=1 lutris lutris:rungameid/12\nCategories=Game\n",
+    )
+    _atalho(
+        tmp_path, "garrafa.desktop",
+        "[Desktop Entry]\nName=Jogo na garrafa\nCategories=Game;\n"
+        "Exec=flatpak run --command=bottles-cli com.usebottles.bottles run -p Jogo -b B\n",
+    )
+
+    assert jl.jogos_diretos_dos_atalhos(pastas=[tmp_path]) == []
+
+
+def test_o_jogo_nativo_com_env_e_caminho_segue_dentro(tmp_path: Path) -> None:
+    """A metade honesta: `env` e um caminho com `:` não fazem do jogo um atalho alheio."""
+    _atalho(
+        tmp_path, "jogo-nativo.desktop",
+        "[Desktop Entry]\nName=Nativo\nCategories=Game;\n"
+        "Exec=env LD_LIBRARY_PATH=/opt/n/lib:/usr/lib /opt/n/nativo.x86_64 --tela=C:\n",
+    )
+
+    assert [j.chave for j in jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])] == [
+        "jogo-nativo"
+    ]
