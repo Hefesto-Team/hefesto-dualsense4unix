@@ -60,6 +60,7 @@ def mesa_de_quatro() -> Any:
     ctrl._desired_default = _DesiredOutput()
     ctrl._desired_by_uniq = {mac: _DesiredOutput(mic_led=False) for mac in (_A, _B, _C, _D)}
     ctrl._desired_owner_by_uniq = {}
+    ctrl._game_output_by_uniq = {}
     return ctrl
 
 
