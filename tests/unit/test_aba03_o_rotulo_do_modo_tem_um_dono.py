@@ -58,6 +58,13 @@ def presets():
     return PRESETS
 
 
+def _o_da_tela(preset) -> str:
+    """O rótulo que a tela dá ao modo: o do produto, salvo o «Desligado» (`Off`)."""
+    from pacotes.a03_gatilhos import ROTULO_DO_JOGO_DECIDE
+
+    return ROTULO_DO_JOGO_DECIDE if preset.name == "Off" else preset.label
+
+
 def _bancada() -> str:
     from hefesto_dualsense4unix.interface import onde
 
@@ -81,8 +88,8 @@ def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
     **2 testes reprovam** (este e o do DOM abaixo), nomeando `Bow` e `Weapon`.
     """
     opcoes = dict(_OPCAO.findall(a03.html_das_opcoes_de_modo()))
-    erradas = [(p.name, opcoes[p.name], p.label) for p in presets
-               if p.name in opcoes and opcoes[p.name] != p.label]
+    erradas = [(p.name, opcoes[p.name], _o_da_tela(p)) for p in presets
+               if p.name in opcoes and opcoes[p.name] != _o_da_tela(p)]
     assert not erradas, (
         "o pacote pinta um rótulo que não é o do produto:\n  "
         + "\n  ".join(f"{n}: tela={t!r} produto={e!r}" for n, t, e in erradas))
@@ -97,7 +104,7 @@ def test_todo_modo_do_produto_tem_opcao_no_pacote(a03, presets):
 
 def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
     """E o DESENHO também parou de digitar — senão sobrariam duas verdades."""
-    do_produto = {p.name: p.label for p in presets}
+    do_produto = {p.name: _o_da_tela(p) for p in presets}
     erradas: list[str] = []
     for i, dentro in enumerate(_selects(_bancada(), "modo")):
         for valor, texto in _OPCAO.findall(dentro):

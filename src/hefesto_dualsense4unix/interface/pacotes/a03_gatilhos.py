@@ -273,7 +273,7 @@ MODOS_COM_CURVA = (MODO_DA_CURVA, MODO_DA_VIBRACAO)
 
 
 DICA_DO_MODO = {
- "Off": "Sem resistência nenhuma — o gatilho fica solto, como num controle comum.",
+ "Off": "O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.",
  "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
  "SimpleRigid": "Trava dura, com um só ponto de ajuste em vez de dez.",
  "Pulse": "Um solavanco num ponto do curso e depois solta — o coice de um tiro único.",
@@ -317,8 +317,19 @@ def descricao_do_modo(chave: str) -> str:
     return str(getattr(spec, "description", "") or "")
 
 
+#: O QUE A TELA CHAMA O «DESLIGADO» DO GATILHO — 03/10/2026, ela: *«o certo seria
+#: os controles obedecerem quando o jogo manda e na ausencia disso o perfil
+#: ganha»*. A chave segue sendo `Off` (o perfil não muda de forma, e o
+#: `trigger.reset` do gesto é o mesmo): o que muda é o NOME, que diz o que o
+#: gesto faz. O dono do rótulo do produto (`trigger_specs`, «Desligado») não
+#: muda: a CLI e o daemon seguem falando dele.
+ROTULO_DO_JOGO_DECIDE = "O jogo decide"
+
+
 def _rotulo_do_modo(chave: str) -> str:
     """O rótulo de tela de um modo (`Rigid` → `Rígido`), ou a chave crua."""
+    if chave == "Off":
+        return ROTULO_DO_JOGO_DECIDE
     specs = _specs()
     spec = specs.get_spec(chave) if specs else None
     return str(getattr(spec, "label", "") or chave)
@@ -815,9 +826,13 @@ def html_das_opcoes_de_modo() -> str:
     specs = _specs()
     if specs is None:
         return _opcoes_cravadas_do_modo()
-    do_produto = {p.name: p.label for p in specs.PRESETS}
+    do_produto = {p.name: _rotulo_do_modo(p.name) for p in specs.PRESETS}
 
     def rotular(m: re.Match[str]) -> str:
+        if m.group("valor") == TRAVESSAO and "hidden" not in m.group("cabeca"):
+            # O `—` é do lugar vazio, não da lista que ela abre — também numa
+            # página publicada antes de o desenho o esconder.
+            return m.group(0).replace(">", ' hidden="">', 1)
         rot = do_produto.get(m.group("valor"))
         return m.group(0) if rot is None else f'{m.group("cabeca")}{_escapar(rot)}</option>'
 
@@ -1984,7 +1999,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     if chave == TRAVESSAO:
         raise ValueError(
             "modo: `—` é como esta tela diz que não há controle neste lugar, e "
-            "não um efeito a aplicar. Escolha `Desligado` para soltar o gatilho.")
+            "não um efeito a aplicar. Escolha `O jogo decide` para soltar o gatilho.")
     ok, motivo, recibo = _aplicar(p, lado, chave, _padroes(chave), uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, chave)

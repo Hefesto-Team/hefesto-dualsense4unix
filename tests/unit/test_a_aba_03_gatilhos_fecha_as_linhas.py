@@ -145,7 +145,10 @@ def disco_que_nao_abre(monkeypatch):
 def _rotulo(chave: str) -> str:
     """O rótulo de tela daquele modo, LIDO do produto."""
     from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+    from pacotes.a03_gatilhos import ROTULO_DO_JOGO_DECIDE
 
+    if chave == "Off":  # o «Desligado» do produto é, na tela, «O jogo decide»
+        return ROTULO_DO_JOGO_DECIDE
     return str(get_spec(chave).label)
 
 

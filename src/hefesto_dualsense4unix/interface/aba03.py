@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     GESTO_DE_TODOS,
     PREFIXO_DA_DICA_DO_MODO,
     PREFIXO_DA_DICA_DO_PRONTO,
+    ROTULO_DO_JOGO_DECIDE,
     SEM_APARELHO_AQUI,
     SEPARADOR_DOS_MEUS,
     TRAVESSAO,
@@ -591,7 +592,10 @@ if _SEM_DICA or _DICA_ORFA:
 
 ROT = {p.name: p.label for p in PRESETS}
 
-MODOS = [(p.label, DICA_DO_MODO[p.name]) for p in PRESETS]
+#: O «Desligado» do produto é, nesta tela, «O jogo decide» (ver `ROTULO_DO_JOGO_DECIDE`).
+_ROTULO_DA_TELA = {p.name: ROTULO_DO_JOGO_DECIDE if p.name == "Off" else p.label
+                   for p in PRESETS}
+MODOS = [(_ROTULO_DA_TELA[p.name], DICA_DO_MODO[p.name]) for p in PRESETS]
 
 PRONTOS = ["— Nenhum —"] + [rot for chave, rot in FEEDBACK_POSITION_LABELS.items()
                             if chave != "custom"]
@@ -636,7 +640,7 @@ def barras(modo, escolha):
 
 # mandar ao daemon: `trigger.set` quer `Rigid`, e a opção dizia `Rígido`.
 # não há casamento a fazer nem tamanho a conferir: `CHAVE_DO_MODO` sai direto do
-CHAVE_DO_MODO = {p.label: p.name for p in PRESETS}
+CHAVE_DO_MODO = {_ROTULO_DA_TELA[p.name]: p.name for p in PRESETS}
 
 # "Curva de força" (`MultiPositionFeedback`) manda ao controle.
 _PRONTO_POR_ROTULO = {rot: chave for chave, rot in FEEDBACK_POSITION_LABELS.items()}
@@ -655,8 +659,15 @@ for _rot in MEUS:
 
 # O `value` É O PRÓPRIO TRAVESSÃO, e não `""`: o piloto troca vazio por `—`
 def _op_vazio(escolhido):
+    """O `—` do lugar vazio: oferecido ao `escrever()` do piloto, e NÃO à lista.
+
+    `hidden` o tira do menu que ela abre (03/10/2026: ele aparecia ao lado do
+    «Desligado» como uma segunda entrada que parecia a mesma). Ele fica no
+    `<select>` porque o piloto só escreve `—` onde ele existe (a régua
+    `_com_travessao`): sem ele o lugar que esvazia guarda o efeito de quem saiu.
+    """
     return (f'                <option value="{TRAVESSAO}"'
-            f'{" selected" if escolhido == TRAVESSAO else ""} disabled>'
+            f'{" selected" if escolhido == TRAVESSAO else ""} disabled hidden>'
             f'{TRAVESSAO}</option>')
 
 
