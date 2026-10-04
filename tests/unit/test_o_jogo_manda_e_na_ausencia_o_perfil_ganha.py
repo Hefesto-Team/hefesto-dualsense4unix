@@ -227,6 +227,148 @@ class TestOGestoDelaNoMeioDoJogo:
         assert handle._raw_trigger_left == BLOCO_DO_JOGO, "o jogo que repinta não voltou"
 
 
+SEM_EFEITO = bytes(11)
+SEM_EFEITO_OFICIAL = bytes([0x05] + [0] * 10)
+EFEITO_DO_PERFIL = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
+
+
+class TestPerfilAteOJogoProvar:
+    """Decisão dela de 04/10/2026 ~00h55: o «sem efeito» é ausência até o jogo provar."""
+
+    @pytest.mark.parametrize("sem_efeito", [SEM_EFEITO, SEM_EFEITO_OFICIAL])
+    def test_um_jogo_que_so_escreve_sem_efeito_deixa_o_perfil_valendo(
+        self, sem_efeito: bytes
+    ) -> None:
+        """MORDIDA: tratar todo bloco como ordem e o Rígido do perfil some."""
+        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+
+        ctl.set_game_trigger_for(MAC_1, "right", sem_efeito)
+        ctl.set_game_trigger_for(MAC_1, "left", sem_efeito)
+
+        assert handle._raw_trigger_right is None
+        assert handle._raw_trigger_left is None
+        assert UNIQ_1 not in ctl._game_triggers_by_uniq
+        with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_1).trigger_right == EFEITO_DO_PERFIL
+
+    def test_o_primeiro_efeito_real_passa_a_mandar(self) -> None:
+        """MORDIDA: não marcar o «já provou» e o «sem efeito» seguinte é descartado."""
+        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
+
+        ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
+
+        assert handle._raw_trigger_right == BLOCO_DO_JOGO
+
+    def test_o_sem_efeito_depois_de_provar_vale(self) -> None:
+        """O menu do jogo que desliga o gatilho depois de ter mandado um efeito."""
+        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
+
+        ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
+
+        assert handle._raw_trigger_right == SEM_EFEITO
+        assert ctl._game_triggers_by_uniq[UNIQ_1] == {"right": SEM_EFEITO}
+
+    def test_o_que_o_jogo_provou_vale_nos_dois_lados_do_mesmo_controle(self) -> None:
+        ctl, _no, handle = _controle()
+        ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
+
+        ctl.set_game_trigger_for(MAC_1, "left", SEM_EFEITO)
+
+        assert handle._raw_trigger_left == SEM_EFEITO
+
+    def test_a_saida_do_jogo_devolve_o_perfil_e_zera_o_ja_provou(self) -> None:
+        """MORDIDA: a saída sem zerar e o «sem efeito» da partida seguinte vira ordem."""
+        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
+
+        ctl.end_game_session_for(MAC_1)
+        assert handle._raw_trigger_right is None
+        assert UNIQ_1 not in ctl._jogo_provou_o_gatilho
+
+        ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
+        assert handle._raw_trigger_right is None
+        with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_1).trigger_right == EFEITO_DO_PERFIL
+
+    def test_o_preto_de_quem_nunca_pintou_e_ausencia(self) -> None:
+        """MORDIDA: o preto tratado como ordem e a cor do perfil apaga."""
+        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+
+        ctl.set_game_output_for(MAC_1, led=(0, 0, 0))
+
+        assert (0, 0, 0) not in no.rgb_calls
+        assert UNIQ_1 not in ctl._game_output_by_uniq
+        with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+
+    def test_o_preto_depois_de_pintar_vale(self) -> None:
+        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
+
+        ctl.set_game_output_for(MAC_1, led=(0, 0, 0))
+
+        assert no.rgb_calls[-1] == (0, 0, 0)
+        with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_1).led == (0, 0, 0)
+
+    def test_a_saida_do_jogo_zera_o_ja_pintou(self) -> None:
+        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
+        ctl.end_game_session_for(MAC_1)
+
+        ctl.set_game_output_for(MAC_1, led=(0, 0, 0))
+
+        with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+
+    def test_o_preto_junto_do_numero_nao_perde_o_numero_recusado(self) -> None:
+        """O número do jogador segue do Hefesto, e o preto sozinho não pinta."""
+        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+
+        ctl.set_game_output_for(MAC_1, led=(0, 0, 0), player_leds=PADRAO_DO_JOGO)
+
+        assert not no.rgb_calls
+        assert PADRAO_DO_JOGO not in no.player_calls
+
+    @pytest.mark.parametrize("n", [1, 2, 3, 4])
+    def test_cada_controle_prova_por_conta_propria(self, n: int) -> None:
+        """P1 a P4: o que o jogo provou no P1 não vale no P2, nem a luz nem o gatilho."""
+        macs = {i: f"AA:BB:CC:00:00:0{i}" for i in (1, 2, 3, 4)}
+        ctl = bp.PyDualSenseController()
+        handles = {mac: _handle() for mac in macs.values()}
+        ctl._handles = dict(handles)
+        ctl._sysfs = {mac: _NoDeLed() for mac in macs.values()}
+        ctl.set_game_authority_provider(lambda: "game")
+        provado = macs[n]
+        ctl.set_game_trigger_for(provado, "right", BLOCO_DO_JOGO)
+        ctl.set_game_output_for(provado, led=COR_DO_JOGO)
+
+        for i, mac in macs.items():
+            ctl.set_game_trigger_for(mac, "right", SEM_EFEITO)
+            ctl.set_game_output_for(mac, led=(0, 0, 0))
+            if i == n:
+                assert handles[mac]._raw_trigger_right == SEM_EFEITO
+                assert ctl._game_output_by_uniq[mac.replace(":", "").lower()].led == (0, 0, 0)
+            else:
+                assert handles[mac]._raw_trigger_right is None
+                assert mac.replace(":", "").lower() not in ctl._game_output_by_uniq
+
+    def test_o_gesto_dela_solta_e_o_jogo_provado_segue_provado(self) -> None:
+        """O gesto tira o bloco do jogo, e o «sem efeito» que vem depois ainda é do jogo."""
+        ctl, _no, handle = _controle()
+        ctl.set_game_trigger_for(MAC_1, "left", BLOCO_DO_JOGO)
+        with ctl._io_lock:
+            ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(trigger_left=EFEITO_DO_PERFIL)
+            ctl._stamp_owner_locked(UNIQ_1, ("trigger_left",), bp._LAYER_USER)
+        assert handle._raw_trigger_left is None
+
+        ctl.set_game_trigger_for(MAC_1, "left", SEM_EFEITO)
+
+        assert handle._raw_trigger_left == SEM_EFEITO
+
+
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_cada_um_dos_quatro_obedece_ao_jogo(n: int) -> None:
     """P1 a P4: a regra é por `uniq`, e o jogo pinta cada um com o seu perfil de pé."""

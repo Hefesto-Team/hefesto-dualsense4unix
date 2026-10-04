@@ -432,6 +432,16 @@ def numeracao_do_jogo(campos: Mapping[str, Any]) -> frozenset[str]:
     return frozenset(numero)
 
 
+#: Os dois modos do bloco de gatilho que o firmware lê como «sem efeito»: o `0x00`
+#: e o `MODE_OFF` oficial da Sony (`0x05`).
+_MODOS_DE_GATILHO_SEM_EFEITO = frozenset({0x00, 0x05})
+
+
+def gatilho_do_jogo_sem_efeito(bloco: bytes) -> bool:
+    """O bloco cru de gatilho que o jogo escreveu manda «sem efeito» (Off)."""
+    return len(bloco) > 0 and bloco[0] in _MODOS_DE_GATILHO_SEM_EFEITO
+
+
 def _spec_fields(spec: OutputSpec) -> dict[str, Any]:
     """Campos NÃO-None de um `OutputSpec` (o vocabulário parcial do PERFIL-01)."""
     return {
@@ -1753,6 +1763,13 @@ class PyDualSenseController(IController):
         self._exposicao_do_no = None
         self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
         self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
+        # PERFIL ATÉ O JOGO PROVAR (decisão dela de 04/10/2026): o «sem efeito»
+        # do gatilho e o preto da lightbar são ausência até o jogo mandar um
+        # efeito (ou uma cor) de verdade pela primeira vez, naquele controle e
+        # naquela partida. Dali em diante o jogo manda em tudo, e a saída dele
+        # (`end_game_session_for`) zera o «já provou».
+        self._jogo_provou_o_gatilho: set[str] = set()
+        self._jogo_provou_a_luz: set[str] = set()
         self._game_authority_provider: Callable[[], str] | None = None
         self._retained_game_outputs: dict[str, dict[str, Any]] = {}
         self._retained_log_armed = True
@@ -5042,7 +5059,22 @@ class PyDualSenseController(IController):
         lado = "left" if side == "left" else "right"
         with self._io_lock:
             # O jogo manda no gatilho, de qualquer perfil e do Freestyle (decisão
-            # dela de 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09).
+            # dela de 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09) — mas o
+            # «sem efeito» de quem nunca mandou um efeito é ausência, e o perfil
+            # vale até o jogo provar (04/10/2026).
+            if alvo not in self._jogo_provou_o_gatilho:
+                if gatilho_do_jogo_sem_efeito(block_b):
+                    ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
+                    if "ausencia:gatilho" not in ja_dito:
+                        ja_dito.add("ausencia:gatilho")
+                        logger.info(
+                            "game_trigger_sem_efeito_e_ausencia_o_perfil_vale",
+                            uniq=alvo,
+                            lado=lado,
+                        )
+                    return True
+                self._jogo_provou_o_gatilho.add(alvo)
+                logger.info("game_trigger_provou", uniq=alvo, lado=lado)
             self._game_triggers_by_uniq.setdefault(alvo, {})[lado] = block_b
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
@@ -5094,7 +5126,22 @@ class PyDualSenseController(IController):
                     )
                 if not fields:
                     return True
+            if (
+                fields.get("led") == (0, 0, 0)
+                and alvo not in self._jogo_provou_a_luz
+            ):
+                fields.pop("led")
+                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
+                if "ausencia:luz" not in ja_dito:
+                    ja_dito.add("ausencia:luz")
+                    logger.info(
+                        "game_output_preto_e_ausencia_o_perfil_vale", uniq=alvo
+                    )
+                if not fields:
+                    return True
             wins = bool(fields) and self._game_wins()
+            if wins and fields.get("led") is not None:
+                self._jogo_provou_a_luz.add(alvo)
             if fields and not wins:
                 retido = self._retained_game_outputs.setdefault(alvo, {})
                 retido.update(fields)
@@ -5179,6 +5226,8 @@ class PyDualSenseController(IController):
             triggers = self._game_triggers_by_uniq.pop(alvo, None)
             retido = self._retained_game_outputs.pop(alvo, None)
             self._recusa_ao_jogo_logada.pop(alvo, None)
+            self._jogo_provou_o_gatilho.discard(alvo)
+            self._jogo_provou_a_luz.discard(alvo)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
