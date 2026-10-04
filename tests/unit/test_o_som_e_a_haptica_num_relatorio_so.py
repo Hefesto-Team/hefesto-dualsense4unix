@@ -6,11 +6,14 @@ ou quatro controles por adaptador; a casa usa dois escritores por controle (o
 ``0x11``. O fork loteran do DS5Dongle monta um ``0x36`` de 398 B com os quatro
 blocos num relatório só (lido no código, nunca tentado aqui).
 
-Neste tempo a ponte NÃO muda: nasce o montador do relatório combinado
+No primeiro tempo nasceram o montador do relatório combinado
 (`alto_falante_bt.montar_relatorio_combinado` e o escritor único
 `RelatorioCombinado`) e o ensaio de bancada que prova o formato
 (`scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`), que recusa com o daemon
-no ar. A troca da ponte é o segundo tempo, depois da prova.
+no ar. A bancada dela provou o formato em 03/10 ~23h15 (som e háptica juntos;
+sem o ``0x10`` a háptica cala). No SEGUNDO tempo a ponte passa a ter um
+escritor só: a `BombaDeSomPeloRadio` monta o ``0x36`` com o som e a háptica do
+quadro e o ``0x10`` sempre (as réguas do fim deste arquivo).
 
 A BANCADA: o montador é o real; o relatório é lido por um leitor de cadeia TLV
 escrito aqui, independente do montador (a tag, o tamanho, o próximo bloco logo
@@ -280,3 +283,97 @@ def test_o_ensaio_recusa_com_a_bancada_tomada(
 
     assert ensaio.main(ESCREVER) == 2
     assert ensaio.borda["abriu"] == [] and ensaio.borda["escritos"] == []
+
+
+# O SEGUNDO TEMPO: a ponte com UM escritor por controle.
+
+
+class _Codificador:
+    """O Opus de mentira: a régua não depende da libopus da máquina."""
+
+    def codificar(self, _pcm: bytes) -> bytes:
+        return bytes(range(1, 181))
+
+
+def _motor(n: int) -> bytes:
+    """PCM de quatro canais com sinal só nos motores (canais 3 e 4)."""
+    import struct
+
+    return struct.pack("<4h", 0, 0, 16000, -16000) * (n // 8)
+
+
+def _voz(n: int) -> bytes:
+    import struct
+
+    return struct.pack("<2h", 9000, -9000) * (n // 4)
+
+
+def _bomba_do_controle(**kw: Any) -> tuple[Any, list[bytes]]:
+    escritas: list[bytes] = []
+
+    def _escrever(relatorio: bytes) -> int:
+        escritas.append(relatorio)
+        return len(relatorio)
+
+    kw.setdefault("fonte", _voz)
+    bomba = af.BombaDeSomPeloRadio(
+        escritor=_escrever, seco=False, codificador=_Codificador(), so_com_sinal=True, **kw
+    )
+    return bomba, escritas
+
+
+def test_som_e_haptica_juntos_vao_num_relatorio_por_quadro_com_o_0x10() -> None:
+    """A régua 2 da sprint: os dois pedidos no mesmo controle saem no MESMO relatório.
+
+    MORDIDA: a bomba que monta um relatório por papel (o ``0x35`` e o ``0x32``
+    de antes), ou que larga o ``0x10``, reprova aqui.
+    """
+    bomba, escritas = _bomba_do_controle(fonte_haptica=_motor)
+    for _ in range(5):
+        assert bomba.escrever(bomba.um_report() or b"")
+    assert len(escritas) == 5, "um relatório por quadro, e só um"
+    for relatorio in escritas:
+        cadeia = _cadeia(relatorio)
+        assert relatorio[0] == af.DEGRAU_COMBINADO
+        assert [(pos, bloco) for pos, bloco, _n, _d in cadeia] == [
+            (2, 0x11), (11, 0x10), (76, 0x12), (142, 0x13)
+        ], cadeia
+        assert _crc_certo(relatorio)
+    assert [r[10] for r in escritas] == list(range(len(escritas))), (
+        "o contador do 0x11 é UM e anda um por relatório"
+    )
+    assert bomba.contagem.reports_montados == len(escritas)
+    assert bomba.contagem.hapticos_no_fio == len(escritas)
+    assert bomba.contagem.quadros_opus == len(escritas)
+
+
+def test_a_haptica_que_o_portao_tira_fecha_com_o_silencio_e_o_som_segue() -> None:
+    """``leva_a_haptica`` cai no meio: vai UM bloco de silêncio e o som segue sozinho."""
+    from hefesto_dualsense4unix.integrations.haptica_bt import bloco_de_silencio
+
+    leva = [True]
+    bomba, escritas = _bomba_do_controle(fonte_haptica=_motor, leva_a_haptica=lambda: leva[0])
+    for _ in range(2):
+        bomba.escrever(bomba.um_report() or b"")
+    leva[0] = False
+    for _ in range(3):
+        bomba.escrever(bomba.um_report() or b"")
+    blocos = [[b for _p, b, _n, _d in _cadeia(r)] for r in escritas]
+    assert blocos[:2] == [[0x11, 0x10, 0x12, 0x13]] * 2
+    assert blocos[2] == [0x11, 0x10, 0x12, 0x13], "o motor tinha de parar no zero"
+    assert _cadeia(escritas[2])[2][3] == bloco_de_silencio()
+    assert blocos[3:] == [[0x11, 0x10, 0x13]] * 2, "a háptica seguiu no fio sem o portão"
+
+
+def test_a_ponte_nao_tem_mais_dois_escritores() -> None:
+    """Os escritores ``0x35`` e ``0x32`` por controle saíram, sem interruptor.
+
+    MORDIDA: devolver ``ARRANJO_HAPTICA_032`` ou o parâmetro ``arranjo`` da
+    ponte reprova.
+    """
+    import inspect
+
+    assert not hasattr(af, "ARRANJO_HAPTICA_032")
+    assert not hasattr(af, "ARRANJO_PADRAO")
+    assert "arranjo" not in inspect.signature(af.PonteDeSomPorRadio).parameters
+    assert "arranjo" not in inspect.signature(af.BombaDeSomPeloRadio).parameters

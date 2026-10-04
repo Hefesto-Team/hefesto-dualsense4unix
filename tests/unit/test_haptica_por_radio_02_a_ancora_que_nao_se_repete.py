@@ -206,7 +206,7 @@ class _PonteDeMentira:
 
     def __init__(self, **kw: Any) -> None:
         self.uniq = kw["uniq"]
-        self.arranjo = kw.get("arranjo")
+        self.kw = kw
         self.desceu = False
         self.motivo = ""
         _PonteDeMentira.criadas.append(self)
@@ -220,6 +220,12 @@ class _PonteDeMentira:
 
     def esta_de_pe(self) -> bool:
         return not self.desceu
+
+    @property
+    def leva(self) -> bool:
+        """O bloco da háptica vai ao fio agora (o ``leva_a_haptica`` que a ponte lê)."""
+        leva = self.kw.get("leva_a_haptica", False)
+        return bool(leva() if callable(leva) else leva)
 
 
 @dataclass
@@ -401,7 +407,9 @@ def test_a_fonte_da_haptica_que_nao_sobe_nao_derruba_o_no(
     antes = mesa.servidor.caminho_de(_A)
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     mesa.casar(_A)
-    assert _PonteDeMentira.criadas[-1].arranjo is None, "a ponte devia ter ficado no som"
+    assert _PonteDeMentira.criadas[-1].kw.get("fonte_de_haptica") is None, (
+        "sem a fonte da háptica, a ponte devia ter ficado só com o som"
+    )
     _o_aparelho_da_ancora_sai(mesa, antes)
     mesa.casar(_A)
     assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
@@ -479,14 +487,18 @@ def test_o_stream_de_outro_sink_nao_e_deste() -> None:
     assert af.sink_esta_tocando(eh.nome_do_endpoint(_A), servidor) is False
 
 
-def test_o_jogo_que_fecha_devolve_a_ponte_ao_som(mesa: _Mesa) -> None:
-    """O defeito inteiro: fechado o jogo, o alto-falante do controle volta."""
+def test_o_jogo_que_fecha_tira_a_haptica_do_fio_e_o_som_segue(mesa: _Mesa) -> None:
+    """O defeito inteiro: fechado o jogo, o alto-falante do controle segue de pé."""
     mesa.casar(_A)
-    assert _PonteDeMentira.criadas[-1].arranjo is None
+    assert _PonteDeMentira.criadas[-1].leva is False
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
     mesa.casar(_A)
-    assert _PonteDeMentira.criadas[-1].arranjo is af.ARRANJO_HAPTICA_032
+    assert _PonteDeMentira.criadas[-1].leva is True
     mesa.servidor.jogo_em.clear()
     mesa.casar(_A)
-    assert _PonteDeMentira.criadas[-1].arranjo is None, "a ponte ficou presa na háptica"
-    assert len(_PonteDeMentira.criadas) == 3
+    assert _PonteDeMentira.criadas[-1].leva is False, "a ponte ficou presa na háptica"
+    assert _PonteDeMentira.criadas[-1].kw.get("fonte_de_haptica") is None, (
+        "a ponte segue lendo o endpoint que o jogo fechou, e ele não se reancora"
+    )
+    assert _PonteDeMentira.criadas[-1].desceu is False, "o jogo fechado derrubou o som"
+    assert len(_PonteDeMentira.criadas) == 3, "uma subida para ganhar a háptica, uma para soltá-la"

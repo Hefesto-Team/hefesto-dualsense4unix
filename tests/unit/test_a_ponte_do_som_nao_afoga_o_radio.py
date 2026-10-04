@@ -26,7 +26,7 @@ class _PonteDeMentira:
 
     def __init__(self, **kw: Any) -> None:
         self.uniq = kw["uniq"]
-        self.arranjo = kw.get("arranjo")
+        self.kw = kw
         self.motivo = ""
         self.desceu = False
         _PonteDeMentira.criadas.append(self)
@@ -40,6 +40,12 @@ class _PonteDeMentira:
 
     def esta_de_pe(self) -> bool:
         return not self.desceu
+
+    @property
+    def leva(self) -> bool:
+        """O bloco da háptica vai ao fio agora (o ``leva_a_haptica`` que a ponte lê)."""
+        leva = self.kw.get("leva_a_haptica", False)
+        return bool(leva() if callable(leva) else leva)
 
 
 class _EndpointDeMentira:
@@ -162,17 +168,15 @@ def test_o_controle_com_som_ganha_a_ponte(bancada: _Bancada) -> None:
     bancada.toca(MESA[1])
     bancada.volta(*MESA)
     assert bancada.de_pe == [MESA[1]]
-    assert _PonteDeMentira.criadas[-1].arranjo is None, "o arranjo do som é o padrão"
+    assert _PonteDeMentira.criadas[-1].leva is False, "sem jogo, a háptica não vai ao fio"
 
 
 def test_a_haptica_nao_passa_pelo_portao_do_som(bancada: _Bancada) -> None:
     """Quem vibra não precisa de alto-falante tocando — são dois nós."""
-    from hefesto_dualsense4unix.integrations import alto_falante_bt as af
-
     bancada.o_jogo_toca_no_endpoint(MESA[0])
     bancada.volta(*MESA)
     assert bancada.de_pe == [MESA[0]]
-    assert _PonteDeMentira.criadas[-1].arranjo is af.ARRANJO_HAPTICA_032
+    assert _PonteDeMentira.criadas[-1].leva is True
 
 
 def test_o_som_que_acaba_derruba_a_ponte(bancada: _Bancada) -> None:

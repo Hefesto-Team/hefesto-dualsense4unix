@@ -190,41 +190,33 @@ class TestOGateEstaLigado:
         corpo = fonte[fonte.index("def _casar_as_pontes") :]
         return corpo[: corpo.index("\n    def ", 1)]
 
-    def test_o_subsystem_consulta_quem_joga_antes_de_decidir_o_modo(self) -> None:
+    def test_o_subsystem_consulta_quem_joga_antes_de_decidir_a_haptica(self) -> None:
         """MORDIDA: tire a chamada a `_quem_mexeu_na_partida` (o voto e a"""
         corpo = self._corpo()
-        antes_do_modo = corpo[: corpo.index("modo = self._modo_pelo_sinal(")]
-        assert "jogando = self._quem_mexeu_na_partida(controles)" in antes_do_modo, (
+        antes = corpo[: corpo.index("leva = bool(")]
+        assert "jogando = self._quem_mexeu_na_partida(controles)" in antes, (
             "o voto de quem joga não é consultado dentro de `_casar_as_pontes`"
         )
         assert "self._quem_o_jogo_le(controles)" not in corpo, (
             "a varredura de /proc voltou a rodar a cada volta"
         )
 
-    def test_o_modo_haptica_exige_os_dois_sinais(self) -> None:
-        """O canal aberto E aquele controle jogando (mexeu desde que o jogo abriu)."""
+    def test_a_haptica_no_fio_exige_os_dois_sinais(self) -> None:
+        """O canal aberto E aquele controle jogando (mexeu desde que o jogo abriu).
+
+        Desde 03/10/2026 (O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01) não há modo: o
+        portão decide se o bloco da háptica vai no relatório combinado.
+        """
         corpo = self._corpo()
-        i = corpo.index("candidata = ")
-        condicao = corpo[i : corpo.index("\n", i)]
-        assert "este_joga" in condicao, "o gate saiu da condição do modo"
-        assert "endpoint_aberto" in condicao, "o canal saiu da condição do modo"
+        i = corpo.index("leva = bool(")
+        condicao = corpo[i : corpo.index("\n            )", i)]
+        assert "este_joga" in condicao, "o gate saiu da condição da háptica"
+        assert "endpoint_aberto" in condicao, "o canal saiu da condição da háptica"
         assert (
             "endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)"
             in corpo
         )
-        chamada = corpo[corpo.index("modo = self._modo_pelo_sinal(") :]
-        assert "candidata=candidata" in chamada[: chamada.index("\n            )")], (
-            "o modo deixou de receber o portão"
-        )
-        fonte = pathlib.Path(
-            "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
-        ).read_text(encoding="utf-8")
-        regra = fonte[fonte.index("def _modo_pelo_sinal") :]
-        regra = regra[regra.index('"""', regra.index('"""') + 3) + 3 :]
-        primeira = regra.strip().splitlines()[0]
-        assert primeira.startswith("if not candidata"), (
-            "o portão não é a primeira pergunta do modo: sem ele, tem de ser som"
-        )
+        assert "som_toca" not in condicao, "o alto-falante voltou a decidir a háptica"
 
 
 @pytest.mark.parametrize("quem", [P1, P2, P3, P4])

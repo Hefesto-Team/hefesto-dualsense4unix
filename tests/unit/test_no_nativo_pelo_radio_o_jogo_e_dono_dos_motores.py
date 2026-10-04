@@ -6,7 +6,6 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from tests.unit.test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio import (
     FORJA,
     MESA,
@@ -49,15 +48,15 @@ def test_no_nativo_a_ponte_de_todo_controle_no_radio_vai_a_haptica(sala: Mesa, n
     _o_jogo_toca_nos_motores(sala, quem)
     sala.volta()
     for uniq in quem:
-        assert sala.arranjo(uniq) == af.ARRANJO_HAPTICA_032.nome, (
+        assert sala.leva(uniq) is True, (
             f"no Nativo a ponte do lugar {MESA.index(uniq) + 1} não foi à háptica: "
-            f"{sala.arranjo(uniq)!r}"
+            f"{sala.leva(uniq)!r}"
         )
     for uniq in quem:
         sala.esperar(no_do(uniq), True)
     sala.volta()
     for uniq in quem:
-        assert sala.arranjo(uniq) == af.ARRANJO_HAPTICA_032.nome
+        assert sala.leva(uniq) is True
 
 
 def test_fora_do_nativo_a_escolha_dela_segue_valendo_no_radio(sala: Mesa) -> None:
@@ -66,7 +65,7 @@ def test_fora_do_nativo_a_escolha_dela_segue_valendo_no_radio(sala: Mesa) -> Non
     _o_jogo_toca_nos_motores(sala, MESA[:2])
     sala.volta()
     for uniq in MESA[:2]:
-        assert sala.arranjo(uniq) != af.ARRANJO_HAPTICA_032.nome, (
+        assert sala.leva(uniq) is False, (
             "fora do Nativo a ponte de quem não mexeu foi à háptica"
         )
 
@@ -82,4 +81,4 @@ def test_o_cabo_e_o_radio_perguntam_ao_mesmo_dono(
     _o_jogo_toca_nos_motores(sala, MESA[:2])
     sala.volta()
     for uniq in MESA[:2]:
-        assert sala.arranjo(uniq) != af.ARRANJO_HAPTICA_032.nome
+        assert sala.leva(uniq) is False

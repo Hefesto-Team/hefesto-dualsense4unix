@@ -48,23 +48,21 @@ def _relogio(passo: float = 0.01) -> Any:
     return _agora
 
 
-@pytest.fixture
-def arranjo() -> af.Arranjo:
-    return af.ARRANJO_DS5DONGLE
+_TAMANHO_DO_0X36 = af.TAMANHO_DO_DEGRAU[af.DEGRAU_COMBINADO]
 
 
 class TestOContadorDaVoltaEhOQueOFirmwareExige:
     """ARRANQUE `self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA` e veja passar."""
 
-    def test_o_nibble_gira_e_da_a_volta(self, arranjo: af.Arranjo) -> None:
-        bomba = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=_fonte_infinita())
+    def test_o_nibble_gira_e_da_a_volta(self) -> None:
+        bomba = af.BombaDeSomPeloRadio(fonte=_fonte_infinita())
         vistos = [(bomba.um_report() or b"\x00\x00")[1] >> 4 for _ in range(20)]
         assert vistos[: af.VOLTA_DA_SEQUENCIA] == list(range(af.VOLTA_DA_SEQUENCIA))
         assert vistos[af.VOLTA_DA_SEQUENCIA :] == [0, 1, 2, 3]
 
-    def test_o_crc_acompanha_a_sequencia(self, arranjo: af.Arranjo) -> None:
+    def test_o_crc_acompanha_a_sequencia(self) -> None:
         """Dois reports com o MESMO PCM e seq diferente têm CRC diferente."""
-        bomba = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=_fonte_infinita())
+        bomba = af.BombaDeSomPeloRadio(fonte=_fonte_infinita())
         primeiro = bomba.um_report() or b""
         segundo = bomba.um_report() or b""
         assert primeiro[-4:] != segundo[-4:]
@@ -73,15 +71,15 @@ class TestOContadorDaVoltaEhOQueOFirmwareExige:
 class TestALeituraCurtaEhContadaNuncaEngolida:
     """ARRANQUE o ramo do ``pcm_curto`` e veja a bomba parecer sã com a fonte agonizando."""
 
-    def test_completa_com_silencio_e_conta(self, arranjo: af.Arranjo) -> None:
+    def test_completa_com_silencio_e_conta(self) -> None:
         pedacos = [_pcm(1000), b""]
 
         def _fonte(_quantos: int) -> bytes:
             return pedacos.pop(0) if pedacos else b""
 
-        bomba = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=_fonte)
+        bomba = af.BombaDeSomPeloRadio(fonte=_fonte)
         report = bomba.um_report()
-        assert report is not None and len(report) == arranjo.tamanho
+        assert report is not None and len(report) == _TAMANHO_DO_0X36
         assert bomba.contagem.pcm_curto == 1
         assert bomba.contagem.pcm_lido == 1000
         assert bomba.um_report() is None, "fonte seca tem de parar o laço, não travar"
@@ -90,21 +88,21 @@ class TestALeituraCurtaEhContadaNuncaEngolida:
 class TestSecoNaoEscreveUmByte:
     """ARRANQUE o ``if self.seco`` do :meth:`escrever` e veja o dublê explodir."""
 
-    def test_seco_ignora_o_escritor(self, arranjo: af.Arranjo) -> None:
+    def test_seco_ignora_o_escritor(self) -> None:
         def _bomba_atomica(_dados: bytes) -> int:
             raise AssertionError("o modo seco escreveu no aparelho")
 
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo, fonte=_fonte_infinita(), escritor=_bomba_atomica, seco=True
+            fonte=_fonte_infinita(), escritor=_bomba_atomica, seco=True
         )
         bomba.rodar(segundos=0.05, agora=_relogio())
         assert bomba.contagem.escritas_aceitas_pelo_kernel == 0
         assert bomba.contagem.reports_montados > 0, "seca ela ainda faz a conta inteira"
 
-    def test_molhado_sem_escritor_continua_seco(self, arranjo: af.Arranjo) -> None:
+    def test_molhado_sem_escritor_continua_seco(self) -> None:
         """``seco=False`` sem escritor não vira escrita: não há para onde."""
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo, fonte=_fonte_infinita(), escritor=None, seco=False
+            fonte=_fonte_infinita(), escritor=None, seco=False
         )
         assert bomba.seco is True
         bomba.rodar(segundos=0.05, agora=_relogio())
@@ -114,7 +112,7 @@ class TestSecoNaoEscreveUmByte:
 class TestAEscritaRecusadaEhContadaNaoEhCrash:
     """ARRANQUE o ``except OSError`` e veja o ensaio morrer no meio da bancada."""
 
-    def test_conta_aceitas_e_recusadas(self, arranjo: af.Arranjo) -> None:
+    def test_conta_aceitas_e_recusadas(self) -> None:
         chamadas = {"n": 0}
 
         def _escritor(dados: bytes) -> int:
@@ -124,12 +122,12 @@ class TestAEscritaRecusadaEhContadaNaoEhCrash:
             return len(dados)
 
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo, fonte=_fonte_infinita(), escritor=_escritor, seco=False
+            fonte=_fonte_infinita(), escritor=_escritor, seco=False
         )
         contagem = bomba.rodar(segundos=1.0, agora=_relogio())
         assert contagem.escritas_aceitas_pelo_kernel == 2
         assert contagem.escritas_recusadas == 1
-        assert contagem.bytes_escritos == 2 * arranjo.tamanho
+        assert contagem.bytes_escritos == 2 * _TAMANHO_DO_0X36
 
 
 class TestONomeDoNumeroEhARessalva:
@@ -256,11 +254,16 @@ class TestORitmoImpedeAInundacao:
 
 
 class TestABombaNaoEscolheOArranjo:
-    """ARRANQUE a obrigatoriedade do ``arranjo`` e veja um default virar escolha."""
+    """A bomba do produto escreve só o ``0x36``; os arranjos de fora são do ensaio."""
 
-    def test_arranjo_e_obrigatorio(self) -> None:
+    def test_a_bomba_nao_aceita_arranjo_e_escreve_o_combinado(self) -> None:
         with pytest.raises(TypeError):
-            af.BombaDeSomPeloRadio(fonte=_fonte_infinita())  # type: ignore[call-arg]
+            af.BombaDeSomPeloRadio(  # type: ignore[call-arg]
+                arranjo=af.ARRANJO_DS5DONGLE, fonte=_fonte_infinita()
+            )
+        report = af.BombaDeSomPeloRadio(fonte=_fonte_infinita()).um_report() or b""
+        assert report[:1] == bytes((af.DEGRAU_COMBINADO,))
+        assert len(report) == _TAMANHO_DO_0X36
 
     def test_os_dois_continuam_registrados_sem_escolha(self) -> None:
         assert {a.nome for a in af.ARRANJOS} == {"ds5dongle", "senshi"}

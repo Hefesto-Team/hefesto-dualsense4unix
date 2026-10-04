@@ -39,7 +39,6 @@ class _PonteDeMentira:
     def __init__(self, **kw: Any) -> None:
         self.kw = kw
         self.uniq = kw["uniq"]
-        self.arranjo = kw.get("arranjo")
         self.fonte_de_haptica = kw.get("fonte_de_haptica")
         self.motivo = ""
         self.subiu = False
@@ -56,6 +55,12 @@ class _PonteDeMentira:
 
     def esta_de_pe(self) -> bool:
         return self.subiu and not self.desceu
+
+    @property
+    def leva(self) -> bool:
+        """O bloco da háptica vai ao fio agora (o ``leva_a_haptica`` que a ponte lê)."""
+        leva = self.kw.get("leva_a_haptica", False)
+        return bool(leva() if callable(leva) else leva)
 
 
 class _EndpointDeMentira:
@@ -165,17 +170,15 @@ def test_sem_o_jogo_tocando_a_ponte_e_a_do_som(bancada: _Estado) -> None:
     bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     ponte = _PonteDeMentira.criadas[-1]
-    assert ponte.arranjo is None, "arranjo None = o padrão do som"
+    assert ponte.leva is False, "sem o jogo, a háptica não vai ao fio"
     assert ponte.fonte_de_haptica is None
 
 
-def test_com_o_jogo_tocando_a_ponte_vira_a_da_haptica(bancada: _Estado) -> None:
-    from hefesto_dualsense4unix.integrations import alto_falante_bt as af
-
+def test_com_o_jogo_tocando_a_ponte_leva_a_haptica(bancada: _Estado) -> None:
     bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
     bancada.sub._casar_as_pontes(bancada.controles)
     ponte = _PonteDeMentira.criadas[-1]
-    assert ponte.arranjo is af.ARRANJO_HAPTICA_032
+    assert ponte.leva is True
     assert ponte.fonte_de_haptica is not None
 
 
@@ -187,7 +190,7 @@ def test_a_fonte_da_haptica_pede_quatro_canais(bancada: _Estado) -> None:
 
 
 def test_o_jogo_abrindo_no_meio_derruba_e_sobe_de_novo(bancada: _Estado) -> None:
-    """Trocar o arranjo com a bomba rodando mudaria o corpo do report no meio."""
+    """A ponte que subiu sem ler o endpoint sobe de novo lendo: uma vez, para ganhar a háptica."""
     bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     primeira = _PonteDeMentira.criadas[-1]

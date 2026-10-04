@@ -272,7 +272,7 @@ class _PonteDeMentira:
 
     def __init__(self, **kw: Any) -> None:
         self.uniq = kw["uniq"]
-        self.arranjo = kw.get("arranjo")
+        self.kw = kw
         self.motivo = ""
         self.desceu = False
         _PonteDeMentira.criadas.append(self)
@@ -286,6 +286,12 @@ class _PonteDeMentira:
 
     def esta_de_pe(self) -> bool:
         return not self.desceu
+
+    @property
+    def leva(self) -> bool:
+        """O bloco da háptica vai ao fio agora (o ``leva_a_haptica`` que a ponte lê)."""
+        leva = self.kw.get("leva_a_haptica", False)
+        return bool(leva() if callable(leva) else leva)
 
 
 @dataclass

@@ -15,20 +15,19 @@ combinação que importa.
 
 O QUE CADA TESTE MORDE
 -----------------------
-* trocar `ARRANJO_PADRAO` de volta para um dos candidatos do `0x39` reprova
-  `test_o_padrao_do_produto_e_o_que_tocou`;
-* apagar `intervalo_de_envio_s` do `ARRANJO_035` reprova
+* tirar o ``0x11`` ou o bloco de som do ``0x36`` da ponte, ou mudá-los de
+  lugar, reprova `test_a_ponte_leva_o_0x11_e_o_quadro_que_tocaram_dentro_do_0x36`
+  (desde 03/10/2026 a ponte escreve o ``0x36``; o ``0x35`` segue montável
+  para o ensaio);
+* mudar o intervalo da bomba reprova
   `test_a_cadencia_e_a_medida_e_nao_a_nominal` — o `rodar()` volta a 100/s;
 * apagar a guarda `if self.len_haptico:` de `Arranjo.montar` reprova
   `test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id` — o byte de id vira
   `0xD2` e o firmware descarta calado, que é o silêncio de sempre;
-* apagar `controle_conta_quadros` reprova
-  `test_o_contador_de_quadros_avanca_a_cada_report`;
+* o contador parado reprova `test_o_contador_de_quadros_avanca_a_cada_report`;
 * qualquer mudança no layout reprova `test_os_bytes_sao_os_que_ela_ouviu`.
 """
 from __future__ import annotations
-
-import dataclasses
 
 import pytest
 
@@ -93,24 +92,36 @@ def test_os_bytes_sao_os_que_ela_ouviu(
     )
 
 
-def test_o_padrao_do_produto_e_o_que_tocou() -> None:
-    """Quem manda som sem escolher arranjo recebe o MEDIDO, não um candidato."""
-    assert af.ARRANJO_PADRAO is af.ARRANJO_035
-    assert af.ARRANJO_PADRAO.degrau == 0x35, "o degrau que toca é o QUINTO, não o teto"
-    assert af.ARRANJO_PADRAO.quadros_de_audio == 1, (
-        "o `0x35` leva UM quadro; dois é o arranjo do `0x39`, que ficou mudo"
+@pytest.mark.parametrize("com_mic", [False, True])
+@pytest.mark.parametrize("rota", [af.BLOCO_SPEAKER, af.BLOCO_FONE])
+def test_a_ponte_leva_o_0x11_e_o_quadro_que_tocaram_dentro_do_0x36(
+    com_mic: bool, rota: int
+) -> None:
+    """O ``0x36`` da ponte carrega o MESMO ``0x11`` e o MESMO bloco de som do ``0x35``."""
+    class _Codificador:
+        def codificar(self, _pcm: bytes) -> bytes:
+            return QUADRO
+
+    bomba = af.BombaDeSomPeloRadio(
+        fonte=lambda n: b"\x01" * n, codificador=_Codificador(), tag_audio=rota,
+        com_microfone=com_mic,
     )
-    assert af.ARRANJO_PADRAO not in af.ARRANJOS, (
-        "`ARRANJOS` é «os candidatos de fonte externa, registrados sem "
-        "escolher» — o medido não é candidato, e misturá-lo apaga a "
-        "procedência que este módulo existe para proteger"
+    do_produto = bomba.um_report() or b""
+    do_ensaio = report_como_o_ensaio_monta(
+        QUADRO, seq=0, contador=0, rota=rota, buffer=af.BUFFER_QUE_TOCOU, com_mic=com_mic,
     )
+    assert do_produto[0] == af.DEGRAU_COMBINADO
+    assert do_produto[2:11] == do_ensaio[2:11], "o 0x11 diverge do que tocou"
+    assert do_produto[11:13] == bytes((0x90, 63)), "o 0x10 vai em todo quadro"
+    # sem háptica neste quadro, o som sobe na cadeia para logo depois do 0x10
+    assert do_produto[76:78] == do_ensaio[11:13], "a tag do som diverge da que tocou"
+    assert do_produto[78:278] == do_ensaio[13:213], "o quadro Opus saiu fora do lugar"
 
 
 def test_a_cadencia_e_a_medida_e_nao_a_nominal() -> None:
     """512/48000, e não 10 ms — o aparelho come 93,75 quadros/s, não 100."""
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035, fonte=lambda n: b"\x00" * n
+        fonte=lambda n: b"\x00" * n
     )
     assert bomba.intervalo_de_envio_s == pytest.approx(512 / 48_000)
     reports_por_segundo = 1.0 / bomba.intervalo_de_envio_s
@@ -120,21 +131,10 @@ def test_a_cadencia_e_a_medida_e_nao_a_nominal() -> None:
     )
 
 
-def test_o_nominal_continua_valendo_para_quem_nao_mediu() -> None:
-    """A cadência medida não pode sequestrar os arranjos que ninguém mediu."""
-    bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_DS5DONGLE, fonte=lambda n: b"\x00" * n
-    )
-    assert af.ARRANJO_DS5DONGLE.intervalo_de_envio_s is None
-    assert bomba.intervalo_de_envio_s == pytest.approx(
-        bomba.ms_por_report / 1000.0
-    ), "sem medição, vale o nominal — e ele fica visível como nominal"
-
-
 def test_o_contador_de_quadros_avanca_a_cada_report() -> None:
     """O `[10]` conta QUADROS. Parado em zero, o firmware perde a conta."""
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035, fonte=lambda n: b"\x00" * n
+        fonte=lambda n: b"\x00" * n
     )
     contadores = []
     sequencias = []
@@ -147,20 +147,6 @@ def test_o_contador_de_quadros_avanca_a_cada_report() -> None:
         f"o contador de quadros não avançou: {contadores}"
     )
     assert sequencias == [0, 1, 2, 3], f"a sequência não avançou: {sequencias}"
-
-
-def test_o_contador_conta_QUADROS_e_nao_reports() -> None:  # noqa: N802
-    """Um arranjo de DOIS quadros avança de dois em dois. A distinção é real."""
-    de_dois = dataclasses.replace(af.ARRANJO_DS5DONGLE, controle_conta_quadros=True)
-    assert de_dois.quadros_de_audio == 2, (
-        "este teste só morde se o arranjo levar mais de um quadro"
-    )
-    bomba = af.BombaDeSomPeloRadio(arranjo=de_dois, fonte=lambda n: b"\x00" * n)
-    for _ in range(3):
-        bomba.um_report()
-    assert bomba._quadros_mandados == 6, (
-        f"contou {bomba._quadros_mandados} — está contando REPORTS, não quadros"
-    )
 
 
 def test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id() -> None:
@@ -188,7 +174,7 @@ def test_o_microfone_entra_no_mesmo_report_que_leva_o_som() -> None:
     assert com[0] ^ sem[0] == 0x01, "a diferença tem de ser SÓ o bit 0"
 
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035, fonte=lambda n: b"\x00" * n, com_microfone=True
+        fonte=lambda n: b"\x00" * n, com_microfone=True
     )
     report = bomba.um_report()
     assert report and report[4] == 0xFF, (

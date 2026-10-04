@@ -213,11 +213,12 @@ def _subsystem(monkeypatch: pytest.MonkeyPatch, tocando: set[str]) -> Any:
     return sub
 
 
-def _no_radio(sub: Any, uniq: str, modo: str = "haptica") -> _Ponte:
+def _no_radio(sub: Any, uniq: str, *, leva: bool = True) -> _Ponte:
+    """A ponte do rádio de ``uniq`` lendo o endpoint dele, levando a háptica ou não."""
     i = UNIQS.index(uniq)
     ponte = _Ponte()
     sub._pontes[uniq] = ponte
-    sub._modo_da_ponte[uniq] = modo
+    sub._leva_da_ponte = {**sub._leva_da_ponte, uniq: leva}
     sub._endpoint_da_ponte = {**sub._endpoint_da_ponte, uniq: f"hefesto_haptica_{i}"}
     return ponte
 
@@ -225,9 +226,9 @@ def _no_radio(sub: Any, uniq: str, modo: str = "haptica") -> _Ponte:
 def test_o_subsystem_diz_a_borda_da_haptica_ao_controlador(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A ponte `0x32` de pé com o endpoint tocando: o controlador ouve True, uma vez.
+    """A ponte de pé levando a háptica, com o endpoint tocando: o controlador ouve True, uma vez.
 
-    A ponte desce: ouve False. O controle com a ponte do SOM (`0x35`) e o
+    A ponte desce: ouve False. O controle cuja ponte não leva a háptica e o
     endpoint sem fluxo não contam.
 
     MORDIDA: o subsystem que nunca chama `set_haptica_de_audio_for` deixa o
@@ -236,7 +237,7 @@ def test_o_subsystem_diz_a_borda_da_haptica_ao_controlador(
     sub = _subsystem(monkeypatch, {"hefesto_haptica_0", "hefesto_haptica_1"})
     controles = [SimpleNamespace(uniq=u) for u in UNIQS]
     ponte = _no_radio(sub, UNIQS[0])
-    _no_radio(sub, UNIQS[1], modo="som")
+    _no_radio(sub, UNIQS[1], leva=False)
     _no_radio(sub, UNIQS[2])
 
     sub._dizer_a_haptica_aos_controles(controles)

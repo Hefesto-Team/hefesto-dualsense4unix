@@ -13,7 +13,6 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 def _bomba(escritor: Any) -> Any:
     """Uma bomba molhada, com a fonte mais simples que existe."""
     return af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035,
         fonte=lambda n: b"\x00" * n,
         escritor=escritor,
         seco=False,
@@ -148,7 +147,6 @@ class _Relogio:
 
 def _bomba_com_relogio(escritor: Any, relogio: _Relogio) -> Any:
     return af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035,
         fonte=lambda n: b"\x00" * n,
         escritor=escritor,
         seco=False,

@@ -1116,6 +1116,7 @@ class ContagemDaBomba:
     blocos_hapticos: int = 0
     hapticos_mudos: int = 0
     pico_haptico: int = 0
+    hapticos_no_fio: int = 0
     reports_calados: int = 0
 
     @property
@@ -1136,7 +1137,8 @@ class ContagemDaBomba:
             f"  quadros Opus ............... {self.quadros_opus}",
             f"  quadros que o encoder recusou {self.quadros_recusados}",
             f"  blocos hápticos ............ {self.blocos_hapticos}"
-            f" ({self.hapticos_mudos} mudos, pico {self.pico_haptico}/127)",
+            f" ({self.hapticos_mudos} mudos, pico {self.pico_haptico}/127,"
+            f" {self.hapticos_no_fio} no fio)",
             f"  reports montados ........... {self.reports_montados}"
             f"  ({self.reports_por_segundo:.1f}/s)",
             f"  calados por silêncio ....... {self.reports_calados}",
@@ -1291,6 +1293,8 @@ class BombaDeSomPeloRadio:
                 self.contagem.quadros_recusados += 1
                 return b""
             self.contagem.quadros_opus += 1
+        if bloco is not None:
+            self.contagem.hapticos_no_fio += 1
         self._escritor_do_relatorio.com_microfone = self.quer_o_microfone()
         report = self._escritor_do_relatorio.relatorio_do_quadro(
             quadro_de_som=quadro,
@@ -2299,7 +2303,7 @@ class PonteDeSomPorRadio:
                 leituras_por_segundo=round(leituras / segundos, 2) if segundos > 0 else 0.0,
                 escritas_aceitas=contagem.escritas_aceitas_pelo_kernel,
                 quadros_de_som=contagem.quadros_opus,
-                blocos_hapticos=contagem.blocos_hapticos,
+                hapticos_no_fio=contagem.hapticos_no_fio,
                 calados=contagem.reports_calados,
                 cedidos=(
                     contagem.quadros_cedidos_por_fila_cheia

@@ -506,12 +506,12 @@ _O_QUE_NEGAVA = (
 
 @pytest.mark.parametrize("relativo", _CABECALHOS)
 def test_o_cabecalho_nao_nega_o_som_pelo_radio(relativo: str) -> None:
-    """O cabeçalho diz quem escreve o `0x35` e não nega que ele toque."""
+    """O cabeçalho diz quem escreve o `0x36` (desde 03/10/2026) e não nega que ele toque."""
     doc = ast.get_docstring(ast.parse((RAIZ / relativo).read_text(encoding="utf-8"))) or ""
     baixa = " ".join(doc.lower().split())
     negou = [f for f in _O_QUE_NEGAVA if f in baixa]
     assert not negou, f"o cabeçalho de {relativo} ainda nega o som pelo rádio: {negou}"
-    assert "PonteDeSomPorRadio" in doc and "0x35" in doc, (
+    assert "PonteDeSomPorRadio" in doc and "0x36" in doc, (
         f"o cabeçalho de {relativo} não diz quem escreve o som no rádio, nem o degrau")
 
 

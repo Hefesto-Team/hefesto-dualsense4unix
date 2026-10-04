@@ -281,6 +281,81 @@ def _linha_do_common(common: bytes | None) -> str:
     )
 
 
+def intervalo_do_arranjo(arranjo: af.Arranjo) -> float:
+    """O intervalo entre reports do arranjo: o medido quando existe, o nominal quando não."""
+    if arranjo.intervalo_de_envio_s is not None:
+        return float(arranjo.intervalo_de_envio_s)
+    return float(af.MS_POR_QUADRO * max(1, arranjo.quadros_de_audio) / 1000.0)
+
+
+def rodar_o_arranjo(
+    arranjo: af.Arranjo,
+    *,
+    fonte: Callable[[int], bytes],
+    escritor: Callable[[bytes], int],
+    tag_audio: int,
+    common: bytes | None,
+    segundos: float,
+) -> af.ContagemDaBomba:
+    """O laço do ensaio: lê o PCM de um report, codifica, monta pelo ARRANJO e escreve.
+
+    A ponte do produto escreve só o ``0x36`` combinado
+    (:class:`alto_falante_bt.BombaDeSomPeloRadio`); este laço é o do ensaio dos
+    arranjos de fora, e mora aqui. O relógio é o do módulo do motor, o mesmo do
+    :func:`alto_falante_bt.fonte_com_ritmo` que dá o ritmo à fonte.
+    """
+    relogio = af.time.monotonic
+    contagem = af.ContagemDaBomba()
+    pedido = af.BYTES_DE_PCM_POR_QUADRO * arranjo.quadros_de_audio
+    comeco = relogio()
+    limite = comeco + max(0.0, float(segundos))
+    seq = 0
+    quadros_mandados = 0
+    codificador = af.CodificadorOpus()
+    try:
+        while relogio() < limite:
+            pcm = fonte(pedido)
+            if not pcm:
+                break
+            contagem.pcm_lido += len(pcm)
+            pcm = pcm.ljust(pedido, b"\x00")
+            quadros = []
+            for i in range(arranjo.quadros_de_audio):
+                quadro = codificador.codificar(
+                    pcm[i * af.BYTES_DE_PCM_POR_QUADRO : (i + 1) * af.BYTES_DE_PCM_POR_QUADRO]
+                )
+                if quadro is None:
+                    contagem.quadros_recusados += 1
+                    break
+                contagem.quadros_opus += 1
+                quadros.append(bytes(quadro))
+            if len(quadros) != arranjo.quadros_de_audio:
+                continue
+            controle = (
+                af.controle_de_audio_035(contador_de_quadros=quadros_mandados)
+                if arranjo.controle_conta_quadros
+                else b""
+            )
+            report = arranjo.montar(
+                quadros, seq=seq, tag_audio=tag_audio, common=common, controle=controle
+            )
+            seq = (seq + 1) % af.VOLTA_DA_SEQUENCIA
+            quadros_mandados += max(1, arranjo.quadros_de_audio)
+            contagem.reports_montados += 1
+            try:
+                contagem.bytes_escritos += int(escritor(report))
+                contagem.escritas_aceitas_pelo_kernel += 1
+            except OSError:
+                contagem.escritas_recusadas += 1
+                break
+    finally:
+        fechar = getattr(codificador, "close", None)
+        if callable(fechar):
+            fechar()
+    contagem.segundos = relogio() - comeco
+    return contagem
+
+
 def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     """A porta do ensaio de bancada — e ela recusa muito mais do que aceita.
 
@@ -289,8 +364,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     estava escrita: *"ele existe aqui para que o instrumento esteja pronto
     quando a bancada e a orelha dela estiverem"*. As duas chegaram — ela está
     na bancada com os quatro DualSense —, e o que faltava do nosso lado era o
-    laço entre o encoder e o fio, que agora existe
-    (:class:`alto_falante_bt.BombaDeSomPeloRadio`).
+    laço entre o encoder e o fio, que agora existe (:func:`rodar_o_arranjo`).
 
     **O QUE NÃO MUDOU, E É O PONTO:** ele continua parando em rc=3 sem
     ``--eu-estou-ouvindo``. O ensaio não é *escrever*; o ensaio é *escrever com
@@ -379,26 +453,21 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print(f"RECUSADO: não deu para abrir {controle.caminho} — {erro}")
         return 2
     try:
-        molde = af.BombaDeSomPeloRadio(
-            arranjo=arranjo, fonte=pcm_pulsado(), common=common
+        intervalo = intervalo_do_arranjo(arranjo)
+        taxa = round(af.AMOSTRAS_POR_QUADRO * max(1, arranjo.quadros_de_audio) / intervalo)
+        print(
+            f"  PCM por report {af.BYTES_DE_PCM_POR_QUADRO * arranjo.quadros_de_audio} B, "
+            f"tocados em {1000 * intervalo:.3f} ms (timbre a {taxa} Hz)"
         )
-        bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo,
-            fonte=af.fonte_com_ritmo(
-                pcm_pulsado(taxa=molde.taxa_da_fonte_hz),
-                ms_por_report=1000 * molde.intervalo_de_envio_s,
-            ),
+        print(f"  cadência       {1 / intervalo:.2f} reports/s")
+        contagem = rodar_o_arranjo(
+            arranjo,
+            fonte=af.fonte_com_ritmo(pcm_pulsado(taxa=taxa), ms_por_report=1000 * intervalo),
             escritor=af.escritor_de_hidraw(fd),
             tag_audio=argumentos.tag,
-            seco=False,
             common=common,
+            segundos=segundos,
         )
-        print(
-            f"  PCM por report {bomba.bytes_de_pcm_por_report} B, tocados em "
-            f"{1000 * bomba.intervalo_de_envio_s:.3f} ms (timbre a {bomba.taxa_da_fonte_hz} Hz)"
-        )
-        print(f"  cadência       {1 / bomba.intervalo_de_envio_s:.2f} reports/s")
-        contagem = bomba.rodar(segundos=segundos)
     finally:
         os.close(fd)
 

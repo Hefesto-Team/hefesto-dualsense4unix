@@ -98,7 +98,7 @@ def _amostras_que_a_fonte_entrega_por_report(taxa: int) -> Fraction:
 
 
 def _amostras_que_o_som_le_por_report() -> int:
-    bomba = af.BombaDeSomPeloRadio(arranjo=af.ARRANJO_PADRAO, fonte=lambda n: bytes(n))
+    bomba = af.BombaDeSomPeloRadio(fonte=lambda n: bytes(n))
     return int(bomba.bytes_de_pcm_por_report // (2 * af.CANAIS_DO_ENCODER))
 
 

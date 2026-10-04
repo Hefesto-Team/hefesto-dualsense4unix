@@ -292,7 +292,6 @@ def _meia_escala(n: int) -> bytes:
 
 def _bloco(ganho: Any) -> bytes:
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_HAPTICA_032,
         fonte=lambda n: bytes(n),
         fonte_haptica=_meia_escala,
         ganho_da_haptica=ganho,
@@ -682,8 +681,8 @@ def test_pelo_radio_a_haptica_desligada_deixa_o_radio_com_o_alto_falante(
         sala.esperar(no_do(uniq), True)
     sala.mexer(P3, P4)
     sala.volta()
-    assert sala.arranjo(P3) == af.ARRANJO_HAPTICA_032.nome
-    assert sala.arranjo(P4) != af.ARRANJO_HAPTICA_032.nome, (
+    assert sala.leva(P3) is True
+    assert sala.leva(P4) is False, (
         "com a háptica do P4 em 0 a ponte foi à háptica mandar silêncio"
     )
 
@@ -707,7 +706,7 @@ def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
     sala.esperar(endpoint, True)
     sala.mexer(P2)
     sala.volta()
-    assert sala.arranjo(P2) == af.ARRANJO_HAPTICA_032.nome
+    assert sala.leva(P2) is True
     sala.esperar(endpoint, True)
     assert sala.sub.haptica_no_ar(P2) is True
     _ganho_fixo(monkeypatch, **{P2: 0})
@@ -715,7 +714,7 @@ def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
     _ganho_fixo(monkeypatch, **{P2: 150})
     sala.fonte(endpoint).quadro = None
     sala.esperar(endpoint, False)
-    assert sala.arranjo(P2) == af.ARRANJO_HAPTICA_032.nome
+    assert sala.leva(P2) is True
     assert sala.sub.haptica_no_ar(P2) is False, "a ponte em háptica sem sinal acendeu a luz"
 
 

@@ -93,7 +93,6 @@ class _GerenciadorDeMic:
 
 def _enables(com_microfone: Any) -> int:
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035,
         fonte=lambda n: bytes(n),
         com_microfone=com_microfone,
     )

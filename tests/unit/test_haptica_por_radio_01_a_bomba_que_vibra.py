@@ -48,8 +48,7 @@ def _escritor_para(escritas: list[bytes]):
 def _bomba(dados: bytes, **kw):
     escritas: list[bytes] = []
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_HAPTICA_032,
-        fonte=lambda _n: b"",
+        fonte=bytes,
         fonte_haptica=_fonte_de(dados),
         escritor=_escritor_para(escritas),
         seco=False,
@@ -58,52 +57,40 @@ def _bomba(dados: bytes, **kw):
     return bomba, escritas
 
 
-def test_o_report_montado_e_o_que_vibrou_na_mao_dela() -> None:
-    report = af.ARRANJO_HAPTICA_032.montar(
-        [],
-        seq=1,
-        controle=af.controle_de_audio_035(contador_de_quadros=1),
-        haptico=bytes(range(64)),
+def _so_a_haptica(bloco: bytes, *, contador: int = 1, seq: int = 1) -> bytes:
+    """O ``0x36`` que a bomba monta num quadro sem som: ``0x11``, ``0x10`` e ``0x12``."""
+    return af.montar_relatorio_combinado(
+        seq=seq,
+        controle=af.controle_de_audio_035(contador_de_quadros=contador),
+        common=bytes(af.COMMON_LEN),
+        haptico=bloco,
     )
-    assert len(report) == 142, "o 0x32 tem 142 bytes com o CRC"
-    assert report[:13] == _CABECA_MEDIDA
-    assert report[13:77] == bytes(range(64)), "o bloco vai em [13..76]"
-    assert report[77:-4] == bytes(142 - 77 - 4), "o resto fica zerado"
+
+
+def test_o_report_da_haptica_e_o_0x36_que_vibrou_na_mao_dela() -> None:
+    """A bancada de 03/10 (trecho 2): só a háptica, com o ``0x10`` neutro, vibrou."""
+    report = _so_a_haptica(bytes(range(64)))
+    assert len(report) == af.TAMANHO_DO_DEGRAU[0x36]
+    assert report[:2] == bytes((0x36, 0x10))
+    assert report[2:11] == _CABECA_MEDIDA[2:11], "o 0x11 é o mesmo que vibrou no 0x32"
+    assert report[11:13] == bytes((0x90, 63)), "o 0x10 vai em todo quadro"
+    assert report[76:78] == bytes((0x92, 0x40)), "a háptica, SIMPLES — não a dobrada 0xD2"
+    assert report[78:142] == bytes(range(64)), "o bloco vai em [78..141]"
+    assert report[142:-4] == bytes(len(report) - 142 - 4), "sem som, o resto fica zerado"
 
 
 def test_o_crc_e_o_do_produto_e_fecha() -> None:
-    report = af.ARRANJO_HAPTICA_032.montar(
-        [], seq=3, controle=af.controle_de_audio_035(contador_de_quadros=9),
-        haptico=bytes(64),
-    )
+    report = _so_a_haptica(bytes(64), contador=9, seq=3)
     esperado = af.bt_crc32(report[:-4], seed=af.BT_CRC_SEED)
     assert report[-4:] == esperado.to_bytes(4, "little")
 
 
-def test_sem_o_bloco_de_controle_nao_vibra_e_a_regua_sabe() -> None:
-    """MEDIDO: sem o `0x91` antes do `0x92`, o motor não se mexe."""
-    assert af.ARRANJO_HAPTICA_032.len_controle == 7
-    report = af.ARRANJO_HAPTICA_032.montar(
-        [], seq=0, controle=af.controle_de_audio_035(contador_de_quadros=1),
-        haptico=bytes(64),
-    )
-    assert report[2] == 0x91, "a tag do AudioControl"
-    assert report[11] == 0x92, "a tag do háptico, SIMPLES — não a dobrada 0xD2"
-
-
-def test_o_bloco_haptico_e_o_simples_e_nao_o_dobrado() -> None:
-    """As duas fontes externas descrevem o dobrado; o que vibrou foi o simples."""
-    assert af.ARRANJO_HAPTICA_032.haptico_duplo is False
-    assert af.ARRANJO_HAPTICA_032.len_haptico == 64
-
-
-def test_o_arranjo_da_haptica_nao_escreve_no_byte_do_id() -> None:
-    """Ele não leva áudio, e `pos_tag_audio=0` cairia em cima do id."""
-    report = af.ARRANJO_HAPTICA_032.montar(
-        [], seq=0, controle=af.controle_de_audio_035(contador_de_quadros=1),
-        haptico=bytes(64),
-    )
-    assert report[0] == 0x32
+def test_sem_o_0x10_a_bomba_nao_monta() -> None:
+    """MEDIDO em 03/10 (trecho 8): sem o ``0x10`` a háptica cala. A bomba sempre o manda."""
+    bomba, _ = _bomba(_pcm(512, canal=2))
+    report = bomba.um_report() or b""
+    assert report[11] == 0x90, "a bomba montou o quadro sem o 0x10"
+    assert report[76] == 0x92
 
 
 def test_um_report_por_bloco_e_a_fonte_e_o_relogio() -> None:
@@ -161,8 +148,7 @@ def test_o_microfone_e_perguntado_a_cada_report() -> None:
 def test_seca_a_bomba_nao_escreve_um_byte() -> None:
     escritas: list[bytes] = []
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_HAPTICA_032,
-        fonte=lambda _n: b"",
+        fonte=bytes,
         fonte_haptica=_fonte_de(_pcm(512, canal=2)),
         escritor=_escritor_para(escritas),
         seco=True,
@@ -174,7 +160,7 @@ def test_seca_a_bomba_nao_escreve_um_byte() -> None:
 
 def test_sem_fonte_de_haptica_a_bomba_de_som_segue_como_antes() -> None:
     """A peça nova não pode mexer no caminho do alto-falante, que JÁ TOCA."""
-    bomba = af.BombaDeSomPeloRadio(arranjo=af.ARRANJO_035, fonte=lambda _n: b"")
+    bomba = af.BombaDeSomPeloRadio(fonte=lambda _n: b"")
     assert bomba.fonte_haptica is None
     assert bomba.um_report() is None
     assert bomba.bytes_de_pcm_por_report == af.BYTES_DE_PCM_POR_QUADRO

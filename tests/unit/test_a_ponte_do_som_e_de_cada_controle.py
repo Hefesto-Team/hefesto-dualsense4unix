@@ -110,14 +110,14 @@ def test_a_ponte_desce_sem_ter_subido() -> None:
     assert ponte.contagem is None
 
 
-def test_a_ponte_usa_o_arranjo_que_tocou_por_padrao() -> None:
-    """Quem não escolhe recebe o MEDIDO, não um dos candidatos mudos."""
-    ponte = PonteDeSomPorRadio(
-        uniq=P1, abrir_hidraw=lambda: None, fonte_de_pcm=lambda n: b"\x00" * n
-    )
-    assert ponte.arranjo.degrau == 0x35
-    assert ponte.arranjo.quadros_de_audio == 1
-    assert ponte.arranjo.intervalo_de_envio_s == pytest.approx(512 / 48_000)
+def test_a_ponte_escreve_o_relatorio_combinado_sem_escolha() -> None:
+    """O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01: a ponte não aceita arranjo; escreve o ``0x36``."""
+    with pytest.raises(TypeError):
+        PonteDeSomPorRadio(  # type: ignore[call-arg]
+            uniq=P1, abrir_hidraw=lambda: None, fonte_de_pcm=bytes, arranjo=None
+        )
+    ponte = PonteDeSomPorRadio(uniq=P1, abrir_hidraw=lambda: None, fonte_de_pcm=bytes)
+    assert ponte.RELATORIO == "0x36"
 
 
 class _FonteQueTrava:

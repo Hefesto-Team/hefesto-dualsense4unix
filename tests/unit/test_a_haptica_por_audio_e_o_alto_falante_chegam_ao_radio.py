@@ -1,4 +1,4 @@
-"""A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01 — quem tem SINAL fica com o rádio.
+"""A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01 — o som e a háptica chegam juntos.
 
 **A causa, medida em 29/09/2026** (a Forja com os quatro DualSense): a Forja
 abre o alto-falante e a háptica de cada jogador em toda sala e toca só num
@@ -7,9 +7,10 @@ fluxo da háptica aberto e mudo a ponte ia à háptica: o canto de O Canto saía
 mudo pelo rádio, e no cabo (sem ponte) tocava.
 
 **A cura:** um dono só responde «este nó tem sinal agora?» (o ``OUVIDO``), com
-o que a ponte leu dos DOIS monitores do controle; o modo, o rumble convertido
-contra o alto-falante e o portão do cabo perguntam a ele; e a troca de sinal
-acorda a volta.
+o que a ponte leu dos DOIS monitores do controle, e a troca de sinal acorda a
+volta. **Desde 03/10/2026 (O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01) não há mais
+modo a escolher**: a ponte escreve o ``0x36`` com o som e a háptica que
+tiverem sinal no mesmo quadro, e estas réguas contam o que foi ao fio.
 
 O mundo destas réguas publica o que o real publica: o servidor de som de
 mentira da irmã de 28/09 (as leituras curtas do ``pactl``, com o cliente dono
@@ -170,9 +171,38 @@ class Mesa:
     def volta(self) -> None:
         self.sub._casar_as_pontes(self.controles())
 
-    def arranjo(self, uniq: str) -> str:
+    def ponte(self, uniq: str) -> Any:
         ponte = self.sub._pontes.get(uniq)
-        return "" if ponte is None else ponte.arranjo.nome
+        assert ponte is not None, f"o controle {uniq} ficou sem ponte"
+        return ponte
+
+    def leva(self, uniq: str) -> bool:
+        """O bloco da háptica de ``uniq`` vai ao fio (o que a ponte lê a cada quadro)."""
+        return self.sub._a_ponte_leva_a_haptica(uniq)
+
+    def no_fio(self, uniq: str) -> tuple[int, int]:
+        """``(quadros de som, blocos de háptica)`` que a ponte de ``uniq`` pôs no fio."""
+        contagem = self.ponte(uniq).contagem
+        return (contagem.quadros_opus, contagem.hapticos_no_fio)
+
+    def esperar_o_fio(self, uniq: str, *, som: bool, haptica: bool, prazo_s: float = 5.0) -> None:
+        """Espera o que deve crescer crescer; o que não deve fica parado no mesmo tempo."""
+        antes = self.no_fio(uniq)
+        fim = time.monotonic() + prazo_s
+        while time.monotonic() < fim:
+            agora = self.no_fio(uniq)
+            mudou = ((agora[0] > antes[0]) is som, (agora[1] > antes[1]) is haptica)
+            if all(mudou) and (som or haptica):
+                return
+            time.sleep(0.02)
+        if not som and not haptica:
+            agora = self.no_fio(uniq)
+            assert agora == antes, f"foi ao fio sem sinal: {antes} -> {agora}"
+            return
+        raise AssertionError(
+            f"no fio de {uniq}: esperado som={som} háptica={haptica}, "
+            f"foi {antes} -> {self.no_fio(uniq)}"
+        )
 
     def esperar(self, no: str, valor: bool | None, prazo_s: float = 5.0) -> None:
         fim = time.monotonic() + prazo_s
@@ -202,26 +232,28 @@ def sala(monkeypatch: pytest.MonkeyPatch) -> Any:
     m.fechar()
 
 
-def test_o_canto_pelo_radio_fica_no_alto_falante_com_a_haptica_aberta_e_muda(sala: Mesa) -> None:
+def test_o_canto_pelo_radio_vai_ao_fio_com_a_haptica_aberta_e_muda(sala: Mesa) -> None:
     """O Canto: a Forja abre os dois papéis, canta no alto-falante e cala a háptica."""
     som, endpoint = af.nome_do_sink(P1), no_do(P1)
     sala.fonte(som).quadro = VOZ
     sala.abrir_a_sala(P1)
     sala.volta()
-    assert sala.arranjo(P1) == af.ARRANJO_035.nome
+    primeira = sala.ponte(P1)
     sala.esperar(som, True)
     sala.mexer(P1)
     sala.volta()
-    assert sala.arranjo(P1) == af.ARRANJO_035.nome, "o fluxo mudo da háptica tirou o canto"
+    assert sala.ponte(P1) is primeira, "a partida derrubou a ponte do canto"
+    assert sala.leva(P1) is True, "quem joga recebe a háptica junto com o som"
+    sala.esperar_o_fio(P1, som=True, haptica=False)
     sala.fonte(som).quadro = None
     sala.esperar(som, False)
     sala.esperar(endpoint, False)
     sala.volta()
-    assert sala.arranjo(P1) == af.ARRANJO_035.nome, "a pausa do canto deu o rádio à háptica muda"
+    assert sala.ponte(P1) is primeira
 
 
-def test_o_canto_que_comeca_com_a_ponte_na_haptica_a_devolve_ao_alto_falante(sala: Mesa) -> None:
-    """A ponte está na háptica (o chão tocava) e o canto começa: ela volta ao ``0x35``."""
+def test_o_canto_que_comeca_com_a_haptica_tocando_vai_junto_com_ela(sala: Mesa) -> None:
+    """O chão tocava na háptica e o canto começa: os dois no MESMO relatório, sem troca."""
     som, endpoint = af.nome_do_sink(P2), no_do(P2)
     sala.fonte(endpoint).quadro = MOTOR
     sala.abrir_a_sala(P2)
@@ -229,14 +261,13 @@ def test_o_canto_que_comeca_com_a_ponte_na_haptica_a_devolve_ao_alto_falante(sal
     sala.esperar(endpoint, True)
     sala.mexer(P2)
     sala.volta()
-    assert sala.arranjo(P2) == af.ARRANJO_HAPTICA_032.nome
-    sala.esperar(som, False)
-    sala.fonte(endpoint).quadro = None
+    primeira = sala.ponte(P2)
+    sala.esperar_o_fio(P2, som=False, haptica=True)
     sala.fonte(som).quadro = VOZ
     sala.esperar(som, True)
     sala.volta()
-    assert sala.arranjo(P2) == af.ARRANJO_035.nome
-    sala.esperar(endpoint, False)
+    assert sala.ponte(P2) is primeira, "o canto derrubou a ponte da háptica"
+    sala.esperar_o_fio(P2, som=True, haptica=True)
 
 
 def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> None:
@@ -248,29 +279,28 @@ def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> Non
     sala.esperar(endpoint, False)
     sala.mexer(P3)
     sala.volta()
-    assert sala.arranjo(P3) == af.ARRANJO_035.nome
+    assert sala.leva(P3) is True
+    sala.esperar_o_fio(P3, som=False, haptica=False, prazo_s=0.3)
 
 
-def test_a_haptica_com_sinal_e_o_alto_falante_mudo_vao_a_haptica(sala: Mesa) -> None:
+def test_a_haptica_com_sinal_e_o_alto_falante_mudo_vai_so_a_haptica(sala: Mesa) -> None:
     """Os Caminhos: sinal nos motores, o alto-falante aberto e mudo."""
     som, endpoint = af.nome_do_sink(P4), no_do(P4)
     sala.fonte(endpoint).quadro = MOTOR
     sala.abrir_a_sala(P4)
     sala.volta()
-    assert sala.arranjo(P4) == af.ARRANJO_035.nome
+    assert sala.leva(P4) is False, "ninguém mexeu: o portão segura a háptica"
     sala.esperar(som, False)
     sala.esperar(endpoint, True)
+    sala.esperar_o_fio(P4, som=False, haptica=False, prazo_s=0.3)
     sala.mexer(P4)
     sala.volta()
-    assert sala.arranjo(P4) == af.ARRANJO_HAPTICA_032.nome
-    sala.esperar(endpoint, True)
-    sala.volta()
-    assert sala.arranjo(P4) == af.ARRANJO_HAPTICA_032.nome
+    assert sala.leva(P4) is True
+    sala.esperar_o_fio(P4, som=False, haptica=True)
 
 
-def test_o_alto_falante_calado_devolve_o_radio_a_haptica_que_tem_sinal(sala: Mesa) -> None:
-    """A ponte no som escuta o endpoint de quem pode passar à háptica, e passa quando o chão toca.
-    """
+def test_o_alto_falante_calado_e_a_haptica_que_chega_sem_derrubar_a_ponte(sala: Mesa) -> None:
+    """A ponte do canto já lê o endpoint: quando o chão toca, a háptica entra no mesmo fio."""
     som, endpoint = af.nome_do_sink(P1), no_do(P1)
     sala.fonte(som).quadro = VOZ
     sala.abrir_a_sala(P1)
@@ -278,7 +308,7 @@ def test_o_alto_falante_calado_devolve_o_radio_a_haptica_que_tem_sinal(sala: Mes
     sala.esperar(som, True)
     sala.mexer(P1)
     sala.volta()
-    assert sala.arranjo(P1) == af.ARRANJO_035.nome
+    primeira = sala.ponte(P1)
     sala.esperar(endpoint, False)
     sala.sub._volta_pedida = False
     sala.fonte(som).quadro = None
@@ -287,16 +317,17 @@ def test_o_alto_falante_calado_devolve_o_radio_a_haptica_que_tem_sinal(sala: Mes
     sala.esperar(som, False)
     assert sala.sub._volta_pedida, "a troca de sinal não acordou a volta"
     sala.volta()
-    assert sala.arranjo(P1) == af.ARRANJO_HAPTICA_032.nome
+    assert sala.ponte(P1) is primeira
+    sala.esperar_o_fio(P1, som=False, haptica=True)
 
 
 class _PonteQueConta:
-    """A ponte que só diz o arranjo: o que se conta aqui é quantas vezes ela troca."""
+    """A ponte que só se deixa contar: o que se conta aqui é quantas vezes ela troca."""
 
     criadas: ClassVar[list[Any]] = []
 
     def __init__(self, **kw: Any) -> None:
-        self.arranjo = kw.get("arranjo") or af.ARRANJO_035
+        self.kw = kw
         self.motivo = ""
         _PonteQueConta.criadas.append(self)
 
@@ -313,10 +344,10 @@ class _PonteQueConta:
         return False
 
 
-def test_tiro_e_fala_alternados_nao_trocam_a_ponte_mais_de_uma_vez(
+def test_tiro_e_fala_alternados_nao_trocam_a_ponte(
     sala: Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O motor toca sempre e a fala vem a cada outro bloco: a ponte troca uma vez só."""
+    """O motor toca sempre e a fala vem a cada outro bloco: a ponte não troca nunca."""
     agora = [100.0]
     sala.ouvido = af.OuvidoDosNos(relogio=lambda: agora[0])
     monkeypatch.setattr(af, "OUVIDO", sala.ouvido)
@@ -336,7 +367,7 @@ def test_tiro_e_fala_alternados_nao_trocam_a_ponte_mais_de_uma_vez(
     ouvir_o_motor(4096)
     ouvir_o_som(1920)
     sala.volta()
-    assert sala.arranjo(P2) == af.ARRANJO_035.nome
+    assert P2 in sala.sub._pontes
     antes = len(_PonteQueConta.criadas)
     for bloco in range(40):
         agora[0] += 0.010667
@@ -344,8 +375,8 @@ def test_tiro_e_fala_alternados_nao_trocam_a_ponte_mais_de_uma_vez(
         (calar_o_som if bloco % 2 == 0 else ouvir_o_som)(1920)
         sala.volta()
     trocas = len(_PonteQueConta.criadas) - antes
-    assert trocas <= 1, f"a ponte trocou {trocas} vezes em menos de uma janela"
-    assert sala.arranjo(P2) == af.ARRANJO_035.nome
+    assert trocas == 0, f"a ponte trocou {trocas} vezes; o relatório combinado leva os dois"
+    assert sala.leva(P2) is True
 
 
 def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
@@ -371,18 +402,18 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
         lambda n: MOTOR * (n // 8), eh.nome_do_endpoint(_X1), canais=af.CANAIS_DA_HAPTICA
     )(4096)
     mundo.mesa.volta(*controles)
-    assert mundo.sub._pontes[_X1].arranjo is af.ARRANJO_HAPTICA_032, (
+    assert mundo.sub._pontes[_X1].leva is True, (
         "o fluxo mudo do alto-falante segurou a ponte, e o rumble ficou sem ela"
     )
     af.fonte_que_ouve(lambda n: VOZ * (n // 4), som)(1920)
     mundo.mesa.volta(*controles)
-    assert mundo.sub._pontes[_X1].arranjo is None
+    assert mundo.sub._pontes[_X1].leva is True, "o canto tirou a háptica do rumble"
 
 
-def test_o_fluxo_do_alto_falante_que_ninguem_escutou_ainda_segura_o_rumble(
+def test_o_fluxo_do_alto_falante_que_ninguem_escutou_nao_segura_o_rumble(
     mundo: Any, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """«Não sei» não é «mudo»: sem ninguém escutando o nó do som, vale o fluxo aberto."""
+    """O fluxo do alto-falante aberto, escutado ou não, não tira a háptica do rumble."""
     monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
     controles = _no_radio_os_quatro(mundo)
     mundo.mesa.volta(*controles)
@@ -393,8 +424,8 @@ def test_o_fluxo_do_alto_falante_que_ninguem_escutou_ainda_segura_o_rumble(
     mundo.mesa.servidor.jogo_em.add(som)
     assert af.OUVIDO.tem_sinal(som) is None
     mundo.mesa.volta(*controles)
-    assert mundo.sub._pontes[_X1].arranjo is None, "o «não sei» do ouvido virou «mudo»"
-    assert mundo.backend.do(_X1)[-1] == (0, 180), "o HID não voltou a levar"
+    assert mundo.sub._pontes[_X1].leva is True, "o fluxo do alto-falante tirou a háptica"
+    assert mundo.backend.do(_X1)[-1] == (0, 0), "o HID voltou a levar com a háptica no ar"
 
 
 def test_a_troca_de_sinal_acorda_a_volta_sem_o_fluxo_mudar(sala: Mesa) -> None:
@@ -427,18 +458,23 @@ def test_o_ouvido_diz_nao_sei_quando_ninguem_escuta() -> None:
     assert ouvido.tem_sinal("hefesto_som_000021") is None
 
 
-def test_a_ponte_do_som_que_subiu_antes_do_endpoint_ganha_o_ouvido(sala: Mesa) -> None:
-    """O fluxo do alto-falante abre antes do endpoint (a ponte sobe sem ouvido da"""
+def test_a_ponte_do_som_que_subiu_antes_do_endpoint_ganha_a_haptica(sala: Mesa) -> None:
+    """O alto-falante abre antes do endpoint: a ponte sobe sem ler a háptica e, quando o
+    endpoint abre, sobe de novo UMA vez para lê-lo; a partida não a derruba de novo."""
     som, endpoint = af.nome_do_sink(P4), no_do(P4)
+    sala.fonte(som).quadro = VOZ
     sala.servidor.tocar(som, FORJA)
     sala.volta()
-    assert sala.arranjo(P4) == af.ARRANJO_035.nome
-    sala.esperar(som, False)
+    primeira = sala.ponte(P4)
+    assert primeira.le_a_haptica is False
+    sala.esperar(som, True)
     assert sala.ouvido.tem_sinal(endpoint) is None
     sala.servidor.tocar(endpoint, FORJA)
     sala.volta()
-    assert sala.arranjo(P4) == af.ARRANJO_035.nome
+    segunda = sala.ponte(P4)
+    assert segunda is not primeira and segunda.le_a_haptica is True
     sala.esperar(endpoint, False)
     sala.mexer(P4)
     sala.volta()
-    assert sala.arranjo(P4) == af.ARRANJO_035.nome, "a pausa do canto deu o rádio à háptica muda"
+    assert sala.ponte(P4) is segunda, "a partida derrubou a ponte de novo"
+    sala.esperar_o_fio(P4, som=True, haptica=False)

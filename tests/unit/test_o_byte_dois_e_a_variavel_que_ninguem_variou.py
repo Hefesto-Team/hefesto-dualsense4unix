@@ -110,11 +110,14 @@ def test_a_sequencia_rotaciona_no_nibble_alto() -> None:
         assert pkt[1] == (seq & 0x0F) << 4, f"seq={seq} saiu como 0x{pkt[1]:02x}"
 
 
+#: O ``common`` no ``0x36`` da ponte: o bloco ``0x10`` em [11], os dados em [13].
+_COMMON_NO_0X36 = slice(13, 13 + COMMON_LEN)
+
+
 def _bomba(common: bytes | None) -> af.BombaDeSomPeloRadio:
-    """A bomba do ensaio, com um encoder de mentira. **Nasce SECA.**"""
+    """A bomba da ponte, com um encoder de mentira. **Nasce SECA.**"""
     quadro = b"\xcc" * af.BYTES_POR_QUADRO_OPUS
     return af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_POR_NOME["common-preservado"],
         fonte=lambda n: b"\x00" * n,
         codificador=type("Enc", (), {"codificar": lambda self, pcm: quadro})(),
         common=common,
@@ -122,26 +125,24 @@ def _bomba(common: bytes | None) -> af.BombaDeSomPeloRadio:
 
 
 def test_o_corpo_que_a_bomba_monta_leva_o_common_do_produto() -> None:
-    """[3..49] do report da BOMBA é o mesmo do 0x31 do produto. Byte a byte."""
+    """O ``0x10`` do ``0x36`` da BOMBA leva o mesmo ``common`` do 0x31 do produto."""
     envelope = af.common_de_audio()
     report = _bomba(envelope).um_report()
     assert report is not None
     do_produto = bytes(build_bt_report(envelope)[3 : 3 + COMMON_LEN])
-    assert bytes(report[3 : 3 + COMMON_LEN]) == do_produto, (
+    assert report[11] == af.tag_tlv(BT_TAG), "o bloco 0x10 não está em [11]"
+    assert bytes(report[_COMMON_NO_0X36]) == do_produto, (
         "o corpo que a BOMBA monta não leva o mesmo `common` que o 0x31 do "
-        f"produto: {bytes(report[3:15]).hex()} != {do_produto[:12].hex()}"
+        f"produto: {bytes(report[13:25]).hex()} != {do_produto[:12].hex()}"
     )
-    assert bytes(report[3 : 3 + COMMON_LEN]) != bytes(COMMON_LEN), (
-        "o envelope saiu ZERADO — ele não pede rota, volume nem pré-amp, e o "
-        "corpo iria ao fio pedindo NADA"
-    )
-    assert report[2] == BT_TAG
 
 
-def test_a_bomba_recusa_o_corpo_preservado_sem_common() -> None:
-    """Ausência é resposta: um envelope que não pede nada não vai ao fio."""
-    with pytest.raises(ValueError, match="pedindo NADA"):
-        _bomba(None)
+def test_a_bomba_sem_estado_manda_o_0x10_neutro() -> None:
+    """Na bancada de 03/10 o ``0x10`` neutro bastou, e sem ele a háptica calou."""
+    report = _bomba(None).um_report()
+    assert report is not None
+    assert report[11] == af.tag_tlv(BT_TAG), "o 0x10 saiu do quadro"
+    assert bytes(report[13:76]) == bytes(63), "o neutro tem as validades zeradas"
 
 
 def test_o_envelope_do_ensaio_pede_os_tres_campos_que_o_mapa_nomeia() -> None:
@@ -177,6 +178,4 @@ def test_o_envelope_nao_apaga_o_caminho_do_microfone() -> None:
 def test_os_arranjos_externos_continuam_sem_common() -> None:
     """A recusa é SÓ do corpo que preserva — os dois candidatos não mudam."""
     for arranjo in af.ARRANJOS:
-        bomba = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=lambda n: b"\x00" * n)
-        assert bomba.common is None
         assert arranjo.common_preservado is False

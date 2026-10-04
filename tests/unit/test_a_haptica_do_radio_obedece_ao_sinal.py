@@ -12,8 +12,9 @@ import pytest
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import haptica_bt
 
-TAMANHO_032 = af.TAMANHO_DO_DEGRAU[0x32]
-BLOCO_032 = slice(13, 13 + af.BYTES_DO_BLOCO_HAPTICO)
+#: O ``0x36`` com o ``0x10`` em todo quadro: a háptica em [76], os dados em [78].
+TAMANHO_036 = af.TAMANHO_DO_DEGRAU[af.DEGRAU_COMBINADO]
+BLOCO_036 = slice(78, 78 + af.BYTES_DO_BLOCO_HAPTICO)
 
 
 def _bloco_de_pcm(*, canais_com_sinal: tuple[int, ...] = (), amplitude: int = 20000) -> bytes:
@@ -46,8 +47,7 @@ def _bomba_da_haptica(blocos: list[bytes], *, so_com_sinal: bool = True) -> tupl
         return len(report)
 
     bomba = af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_HAPTICA_032,
-        fonte=lambda _n: b"",
+        fonte=bytes,
         fonte_haptica=_fonte(blocos),
         escritor=_escritor,
         seco=False,
@@ -72,10 +72,10 @@ class TestORadioSoLevaOQueTemSinal:
         )
         bomba.rodar(segundos=10)
         assert len(escritas) == 3, f"eram 2 com sinal e 1 silêncio: {len(escritas)}"
-        assert all(len(r) == TAMANHO_032 for r in escritas)
-        assert escritas[0][BLOCO_032] != bytes(64), "o primeiro bloco com sinal saiu mudo"
-        assert escritas[1][BLOCO_032] != bytes(64)
-        assert escritas[2][BLOCO_032] == haptica_bt.bloco_de_silencio(), (
+        assert all(len(r) == TAMANHO_036 for r in escritas)
+        assert escritas[0][BLOCO_036] != bytes(64), "o primeiro bloco com sinal saiu mudo"
+        assert escritas[1][BLOCO_036] != bytes(64)
+        assert escritas[2][BLOCO_036] == haptica_bt.bloco_de_silencio(), (
             "depois do último sinal tem de ir o bloco de silêncio"
         )
         assert bomba.contagem.reports_calados == 4
@@ -111,7 +111,6 @@ class TestOCriterioEDoArranjo:
             return len(report)
 
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=af.ARRANJO_035,
             fonte=_fonte(pcm),
             escritor=_escritor,
             seco=False,
@@ -121,13 +120,13 @@ class TestOCriterioEDoArranjo:
         return bomba, escritas
 
     def test_o_alto_falante_com_som_nos_canais_1_e_2_manda(self) -> None:
-        """O nó de som tem dois canais — os 1-2 da sprint —, e é o que o 0x35 leva."""
+        """O nó de som tem dois canais — os 1-2 da sprint —, e é o que o bloco de som leva."""
         voz = struct.pack("<2h", 12000, -12000) * af.AMOSTRAS_POR_QUADRO
         mudo = bytes(af.BYTES_DE_PCM_POR_QUADRO)
         bomba, escritas = self._bomba_do_som([mudo, voz, voz, mudo, mudo])
         bomba.rodar(segundos=10)
         assert len(escritas) == 3, f"eram 2 com som e 1 silêncio: {len(escritas)}"
-        assert all(r[0] == 0x35 for r in escritas)
+        assert all(r[0] == af.DEGRAU_COMBINADO for r in escritas)
 
     def test_o_alto_falante_mudo_nao_manda(self) -> None:
         mudo = bytes(af.BYTES_DE_PCM_POR_QUADRO)
@@ -174,8 +173,7 @@ def test_a_ponte_do_produto_so_escreve_o_que_tem_sinal(monkeypatch: pytest.Monke
         ponte = af.PonteDeSomPorRadio(
             uniq="aa:bb:cc:00:00:03",
             abrir_hidraw=lambda: escrita,
-            fonte_de_pcm=lambda _n: b"",
-            arranjo=af.ARRANJO_HAPTICA_032,
+            fonte_de_pcm=bytes,
             fonte_de_haptica=_fonte([SILENCIO] * 5 + [MOTOR] + [SILENCIO] * 5),
         )
         assert ponte.subir() is True, ponte.motivo
@@ -183,8 +181,8 @@ def test_a_ponte_do_produto_so_escreve_o_que_tem_sinal(monkeypatch: pytest.Monke
         escrito = _ler_tudo(leitura)
     finally:
         os.close(leitura)
-    assert len(escrito) == 2 * TAMANHO_032, (
-        f"eram o sinal e um silêncio; foram {len(escrito) / TAMANHO_032:.1f} reports"
+    assert len(escrito) == 2 * TAMANHO_036, (
+        f"eram o sinal e um silêncio; foram {len(escrito) / TAMANHO_036:.1f} reports"
     )
     assert ponte.contagem is not None and ponte.contagem.reports_calados == 9
 
@@ -337,7 +335,7 @@ class MesaDeQuatro:
         if kw.get("papel") == "haptica":
             uniq = id_do_no.removeprefix("endpoint::")
             return _fonte(self.sinal.get(uniq, [])), None, ""
-        return (lambda _n: b""), None, ""
+        return bytes, None, ""
 
     def _abrir(self, caminho: str) -> int:
         leitura, escrita = os.pipe()
@@ -371,8 +369,8 @@ class MesaDeQuatro:
                 escrito = _ler_tudo(leitura)
             finally:
                 os.close(leitura)
-            assert len(escrito) % TAMANHO_032 == 0, "um report saiu cortado"
-            contagem[uniq] = len(escrito) // TAMANHO_032
+            assert len(escrito) % TAMANHO_036 == 0, "um report saiu cortado"
+            contagem[uniq] = len(escrito) // TAMANHO_036
         return contagem
 
     def fechar(self) -> None:
@@ -585,8 +583,7 @@ def _fila_cheia(_report: bytes) -> int:
 
 def _bomba_de_relogio(blocos: list[bytes], agora: list[float]) -> Any:
     return af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_HAPTICA_032,
-        fonte=lambda _n: b"",
+        fonte=bytes,
         fonte_haptica=_fonte(blocos),
         escritor=_fila_cheia,
         seco=False,

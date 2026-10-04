@@ -24,12 +24,6 @@ def _fonte_infinita() -> Any:
     return _ler
 
 
-@pytest.fixture
-def arranjo() -> af.Arranjo:
-    """O arranjo que TOCOU na bancada dela — o único que conta quadros."""
-    return af.ARRANJO_035
-
-
 def _enables(report: bytes | None) -> int:
     assert report is not None, "a bomba não montou report nenhum"
     return report[POS_ENABLES]
@@ -55,13 +49,10 @@ class TestOByteDizOQueOMicrofoneEsta:
 class TestABombaPerguntaACadaReport:
     """O coração da cura: a resposta pode mudar no meio da ponte."""
 
-    def test_o_bit_acompanha_o_oraculo_report_a_report(
-        self, arranjo: af.Arranjo
-    ) -> None:
+    def test_o_bit_acompanha_o_oraculo_report_a_report(self) -> None:
         """MORDIDA: guarde `bool(com_microfone)` no `__init__` e leia o campo."""
         no_ar = [False]
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo,
             fonte=_fonte_infinita(),
             com_microfone=lambda: no_ar[0],
         )
@@ -72,22 +63,20 @@ class TestABombaPerguntaACadaReport:
         no_ar[0] = False
         assert _enables(bomba.um_report()) == af.ENABLES_SEM_MIC
 
-    def test_o_bool_continua_valendo(self, arranjo: af.Arranjo) -> None:
+    def test_o_bool_continua_valendo(self) -> None:
         """MORDIDA: exija um chamável em `quer_o_microfone`."""
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo, fonte=_fonte_infinita(), com_microfone=True)
+            fonte=_fonte_infinita(), com_microfone=True)
         assert _enables(bomba.um_report()) == af.ENABLES_COM_MIC
 
-    def test_um_oraculo_que_explode_nao_cala_o_som(
-        self, arranjo: af.Arranjo
-    ) -> None:
+    def test_um_oraculo_que_explode_nao_cala_o_som(self) -> None:
         """MORDIDA: tire o `try` de `quer_o_microfone`."""
 
         def _explode() -> bool:
             raise RuntimeError("o subsystem do mic caiu")
 
         bomba = af.BombaDeSomPeloRadio(
-            arranjo=arranjo, fonte=_fonte_infinita(), com_microfone=_explode)
+            fonte=_fonte_infinita(), com_microfone=_explode)
         assert _enables(bomba.um_report()) == af.ENABLES_SEM_MIC
 
     def test_a_ponte_nao_transforma_o_oraculo_em_true(self) -> None:

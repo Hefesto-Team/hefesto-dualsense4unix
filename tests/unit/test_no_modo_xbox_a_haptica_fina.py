@@ -499,33 +499,36 @@ def test_no_radio_o_rumble_sobe_a_ponte_da_haptica_de_quem_recebe(
     hapticas = [no for no, papel in mundo.mesa.lidos if papel == "haptica"]
     assert hapticas == [eh.nome_do_endpoint(uniq)], hapticas
     (ponte,) = [p for p in _PonteDeMentira.criadas if p.uniq == uniq]
-    assert ponte.arranjo is af.ARRANJO_HAPTICA_032
+    assert ponte.leva is True
     assert mundo.backend.do(uniq) == [(0, 180), (0, 0)]
     assert [p.uniq for p in _PonteDeMentira.criadas] == [uniq], "outro controle ganhou ponte"
 
 
-def test_pelo_radio_o_alto_falante_tocando_fica_com_o_radio(
+def test_pelo_radio_o_alto_falante_tocando_e_o_rumble_chegam_juntos(
     mundo: _Mundo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Som e vibração pelo rádio são exclusivos: o alto-falante tocando fica, e o HID leva."""
+    """O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01: o canto não tira a háptica do rumble.
+
+    Até 03/10/2026 som e vibração pelo rádio eram exclusivos, e o alto-falante
+    tocando devolvia o rumble ao HID. Com o ``0x36`` os dois vão no mesmo
+    relatório: a ponte segue levando a háptica, e o HID segue calado.
+    """
     monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
     controles = _no_radio_os_quatro(mundo)
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 0, 180)
     mundo.mesa.volta(*controles)
     assert mundo.backend.do(_P1)[-1] == (0, 0)
+    primeira = mundo.sub._pontes[_P1]
     som = af.nome_do_sink(_P1)
     mundo.mesa.servidor.placa(som, "/devices/virtual/som")
     mundo.mesa.servidor.jogo_em.add(som)
     voz = b"\x28\x23\xd8\xdc" * af.AMOSTRAS_POR_QUADRO
     af.fonte_que_ouve(lambda _n: voz, som)(len(voz))
     mundo.mesa.volta(*controles)
-    ponte = mundo.sub._pontes[_P1]
-    assert ponte.arranjo is None, "a háptica do rumble tirou o alto-falante dela"
-    assert mundo.backend.do(_P1)[-1] == (0, 180), "o HID não voltou a levar"
-    assert mundo.tocador(_P1).nivel == (0, 0)
-    assert mundo.rumble(_P1, 0, 90) == (0, 90)
-    assert mundo.backend.do(_P1)[-1] == (0, 90)
+    assert mundo.sub._pontes[_P1] is primeira, "o canto derrubou a ponte da háptica"
+    assert primeira.leva is True, "o alto-falante tirou a háptica do rumble"
+    assert mundo.backend.do(_P1)[-1] == (0, 0), "o HID voltou a levar com a háptica no ar"
 
 
 def test_onde_o_jogo_toca_a_haptica_e_a_dele(mundo: _Mundo) -> None:

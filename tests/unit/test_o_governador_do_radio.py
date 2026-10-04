@@ -148,7 +148,6 @@ def _governador(
 
 def _bomba(vaga: Any, relogio: _Relogio, escritor: Any = None) -> af.BombaDeSomPeloRadio:
     return af.BombaDeSomPeloRadio(
-        arranjo=af.ARRANJO_035,
         fonte=lambda n: b"\x00" * n,
         escritor=escritor or (lambda report: len(report)),
         seco=False,

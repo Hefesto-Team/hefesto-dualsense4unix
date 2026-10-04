@@ -187,10 +187,8 @@ def test_o_ritmo_da_ponte_e_o_que_a_bomba_manda() -> None:
     """``HZ_DA_PONTE`` pergunta ao DONO do ritmo, a bomba do rádio."""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as bomba
 
-    for arranjo in (bomba.ARRANJO_PADRAO, bomba.ARRANJO_HAPTICA_032):
-        intervalo = arranjo.intervalo_de_envio_s
-        assert intervalo is not None, arranjo.nome
-        assert pytest.approx(1.0 / intervalo) == rm.HZ_DA_PONTE, arranjo.nome
+    intervalo = bomba.BombaDeSomPeloRadio(fonte=bytes).intervalo_de_envio_s
+    assert pytest.approx(1.0 / intervalo) == rm.HZ_DA_PONTE
 
 
 def test_o_csv_e_as_constantes_sao_o_mesmo_numero() -> None:

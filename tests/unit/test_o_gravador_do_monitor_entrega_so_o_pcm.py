@@ -236,12 +236,12 @@ def test_a_ponte_em_haptica_fica_com_o_gravador_novo_do_alto_falante(
         gravadores.toca[endpoint] = (0, 0, 20000, -20000)
         sala.abrir_a_sala(P4)
         sala.volta()
-        assert sala.arranjo(P4) == af.ARRANJO_035.nome
+        assert sala.leva(P4) is False, "ninguém mexeu: o portão segura a háptica"
         sala.esperar(endpoint, True)
         sala.esperar(som, False)
         sala.mexer(P4)
         sala.volta()
-        assert sala.arranjo(P4) == af.ARRANJO_HAPTICA_032.nome
+        assert sala.leva(P4) is True
         subiu = time.monotonic()
         fim = subiu + 5.0
         while time.monotonic() < fim:
@@ -250,7 +250,7 @@ def test_a_ponte_em_haptica_fica_com_o_gravador_novo_do_alto_falante(
             time.sleep(0.005)
         assert sala.ouvido._ultima_leitura.get(som, 0.0) > subiu, "o ouvido do som não leu"
         sala.volta()
-        assert sala.arranjo(P4) == af.ARRANJO_HAPTICA_032.nome, (
+        assert sala.leva(P4) is True, (
             "o gravador novo do alto-falante virou sinal e tirou a ponte da háptica"
         )
     finally:

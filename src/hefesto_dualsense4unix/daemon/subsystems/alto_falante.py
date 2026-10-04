@@ -1631,16 +1631,22 @@ class AltoFalanteSubsystem:
             tipo = "som" if som_toca else "haptica"
             lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
             if uniq in self._pontes:
+                # A ponte só sobe de novo quando o endpoint que ela LÊ muda: para
+                # ganhar a háptica, trocar de endpoint ou soltá-lo quando o jogo o
+                # fecha (o gravador preso nele seguraria o endpoint, que não
+                # se reancora com leitor). Ligar e desligar o bloco é `leva`.
                 lia = self._endpoint_da_ponte.get(uniq, "")
-                if not lendo or lia == lendo:
+                if lia == lendo:
                     self._modo_da_ponte[uniq] = tipo
                     continue
                 anterior = self._pontes.pop(uniq)
                 anterior.descer()
-                if lia:
+                if lia and lendo:
                     logger.info("som_ponte_troca_de_endpoint", uniq=uniq)
-                else:
+                elif lendo:
                     logger.info("som_ponte_ganha_a_haptica", uniq=uniq)
+                else:
+                    logger.info("som_ponte_solta_a_haptica", uniq=uniq)
             if not caminho:
                 continue
             vaga: Any = None
