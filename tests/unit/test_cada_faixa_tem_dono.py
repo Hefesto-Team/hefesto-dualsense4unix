@@ -426,6 +426,10 @@ def test_adaptador_sem_mapa_diz_que_nao_se_mede_e_nunca_zero_evitados() -> None:
     assert a08.SEM_MEDIDA in pistas["L2"].dito()
     assert "/79" not in pistas["L2"].dito() and not pistas["L2"].achar("div", "evitado")
     assert "sem-medida" in pistas["L2"].classes() and "sem-medida" not in pistas["L1"].classes()
+    # o mapa falta também com controle no ar (o medidor parado, o primeiro tique): a pista
+    # não pode negar o «N no ar» que o rótulo dela mesma diz
+    assert re.search(r"[1-9] no ar", pistas["L2"].dito()), pistas["L2"].dito()
+    assert "sem um controle" not in pistas["L2"].dito().lower()
 
 
 def test_com_zero_adaptadores_nao_ha_regua() -> None:

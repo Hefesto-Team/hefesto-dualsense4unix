@@ -3845,7 +3845,9 @@ COR_DO_QUINTO_EM_DIANTE = "comment"
 COR_DO_WIFI = "orange"
 SELO_LIDO = "(lido)"
 NOME_DO_WIFI = "Wi-Fi"
-SEM_MEDIDA = "Não se mede sem um controle ligado"
+#: O mapa AFH falta quando não há enlace naquele adaptador E quando a leitura não veio (o
+#: medidor parado, o primeiro tique depois de um controle chegar): a pista diz só o que sabe.
+SEM_MEDIDA = "Não se mede agora"
 FORA_DA_FAIXA_DO_WIFI = "5 GHz: fora desta faixa"
 FAIXA_DO_WIFI_NAO_SE_LE = "A faixa não se lê"
 CANAL_DO_RADIO_NAO_SE_LE = "O canal não se lê"
