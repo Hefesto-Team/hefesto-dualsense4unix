@@ -198,17 +198,17 @@
       "universo": 354
     },
     "tamanho": {
-      "data": "2026-10-03",
+      "data": "2026-10-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 914558,
+      "piso": 921053,
       "por_item": {
-        "docs": 57710,
-        "scripts": 95114,
-        "src": 273333,
-        "tests": 488401
+        "docs": 57757,
+        "scripts": 95549,
+        "src": 274611,
+        "tests": 493136
       },
-      "razao": "03/10/2026: as +14 linhas das curas do CI foram pagas pela Origem: D-0609-GTK-LEVA-INTEIRA, que já desceu ao dev; a faixa medida começa no dev e não as vê",
+      "razao": "crescimento da leva 1.5 já pago por Origem na integra/0110 (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, D-O-AVISO-DE-PORQUE-O-PERFIL-NAO-ENTRA, vibracao.haptics_vcm) que desceu ao dev em fed3f6f90",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -233,10 +233,16 @@
           "de": 914544,
           "para": 914558,
           "razao": "03/10/2026: as +14 linhas das curas do CI foram pagas pela Origem: D-0609-GTK-LEVA-INTEIRA, que já desceu ao dev; a faixa medida começa no dev e não as vê"
+        },
+        {
+          "data": "2026-10-04",
+          "de": 914558,
+          "para": 921053,
+          "razao": "crescimento da leva 1.5 já pago por Origem na integra/0110 (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, D-O-AVISO-DE-PORQUE-O-PERFIL-NAO-ENTRA, vibracao.haptics_vcm) que desceu ao dev em fed3f6f90"
         }
       ],
       "unidade": "linhas",
-      "universo": 2396
+      "universo": 2418
     }
   }
 }
