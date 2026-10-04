@@ -198,14 +198,20 @@ def test_a_janela_de_confirmacao_reescreve_a_mudanca(
     assert len(corpos) == 1, "a janela reconfirmou estados diferentes"
 
 
-def test_o_quadrante_mortal_e_so_um_dos_quatro() -> None:
-    """A tabela-verdade inteira, que é o motivo de o defeito parecer"""
+def test_o_quadrante_mortal_e_so_um_dos_oito() -> None:
+    """A tabela-verdade inteira: só `native=False`, sem vpad e COM a emulação avisa."""
+    from itertools import product
+
     from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 
-    assert sem_dono_do_rumble(native=False, backends=[]) is True
-    assert sem_dono_do_rumble(native=True, backends=[]) is False
-    assert sem_dono_do_rumble(native=False, backends=["uhid"]) is False
-    assert sem_dono_do_rumble(native=True, backends=["uhid"]) is False
+    for native, backends, emulacao in product(
+        (False, True), ([], ["uhid"]), (False, True)
+    ):
+        esperado = not native and not backends and emulacao
+        assert (
+            sem_dono_do_rumble(native=native, backends=backends, emulacao=emulacao)
+            is esperado
+        ), (native, backends, emulacao)
 
 
 class _RegistroDeLog:
@@ -227,9 +233,9 @@ class _RegistroDeLog:
 class _DaemonFalso:
     """O mínimo que `_snapshot` toca: modo nativo, emulação e vpads."""
 
-    def __init__(self, *, nativo: bool, vpad: bool) -> None:
+    def __init__(self, *, nativo: bool, vpad: bool, emulacao: bool | None = None) -> None:
         self.config = SimpleNamespace(
-            gamepad_emulation_enabled=vpad,
+            gamepad_emulation_enabled=vpad if emulacao is None else emulacao,
             gamepad_flavor="dualsense",
             rumble_active=None,
         )
@@ -261,24 +267,28 @@ def _borda_de_materializacao(
 
 
 @pytest.mark.parametrize(
-    ("nativo", "vpad", "avisa"),
+    ("nativo", "vpad", "emulacao", "avisa"),
     [
-        (False, False, True),
-        (True, False, False),
-        (False, True, False),
-        (True, True, False),
+        (False, False, True, True),
+        (False, False, False, False),
+        (True, False, True, False),
+        (False, True, True, False),
+        (True, True, True, False),
     ],
 )
 def test_a_borda_grita_no_quadrante_sem_dono(
     nativo: bool,
     vpad: bool,
+    emulacao: bool,
     avisa: bool,
     _borda_de_materializacao: _RegistroDeLog,
 ) -> None:
     """A MORDIDA: apague o `if sem_dono_do_rumble(...)` de"""
     from hefesto_dualsense4unix.daemon.launch_env import materialize_launch_env
 
-    materialize_launch_env(_DaemonFalso(nativo=nativo, vpad=vpad))  # type: ignore[arg-type]
+    materialize_launch_env(  # type: ignore[arg-type]
+        _DaemonFalso(nativo=nativo, vpad=vpad, emulacao=emulacao)
+    )
 
     avisos = [e for n, e in _borda_de_materializacao.eventos if n == "warning"]
     if avisa:
@@ -299,6 +309,8 @@ def test_a_materializacao_nao_morre_por_causa_do_aviso(
     """O aviso é telemetria, não portão: o `default.env` continua saindo."""
     from hefesto_dualsense4unix.daemon.launch_env import materialize_launch_env
 
-    materialize_launch_env(_DaemonFalso(nativo=False, vpad=False))  # type: ignore[arg-type]
+    materialize_launch_env(  # type: ignore[arg-type]
+        _DaemonFalso(nativo=False, vpad=False, emulacao=True)
+    )
 
     assert (tmp_path / "default.env").exists()

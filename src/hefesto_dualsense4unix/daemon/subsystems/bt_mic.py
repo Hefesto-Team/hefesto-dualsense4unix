@@ -1056,14 +1056,11 @@ class BtMicSubsystem:
             logger.debug("bt_mic_canal_do_cabo_espera_o_pactl", uniqs=uniqs)
             return
         from hefesto_dualsense4unix.integrations.fontes_de_captura import (
-            PREFIXO_SOURCE_CANAL_DO_MIC,
             escolher_fonte,
+            sem_os_nos_nossos,
         )
 
-        do_cabo = [
-            f for f in fontes_de_captura_agora()
-            if not f.startswith(PREFIXO_SOURCE_CANAL_DO_MIC)
-        ]
+        do_cabo = sem_os_nos_nossos(fontes_de_captura_agora())
         if not do_cabo:
             return
         na_mesa = sorted(self.uniqs_na_mesa() | set(uniqs))

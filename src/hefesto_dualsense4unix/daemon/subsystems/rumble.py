@@ -170,6 +170,26 @@ def soltar_todos(cfg: Any) -> None:
     _publicar_o_resumo(cfg)
 
 
+def soltar_os_que_vibram(cfg: Any) -> list[str | None]:
+    """Tira os pares que VIBRAM (algum motor acima de zero) e devolve os donos deles.
+
+    É a soltura do ``rumble.passthrough`` de um perfil: o par que vibra volta ao
+    jogo, e o silêncio deliberado (o «Parar», o par em zero) fica, porque ele não
+    é vibração fixada. Ela olha CADA par, e não só o resumo: com o P1 vibrando e o
+    P2 acabado de parar, o resumo é ``(0, 0)`` e o P1 seguia fixado.
+    """
+    pares = _pares_de_pe(cfg)
+    vibram = [dono for dono, (weak, strong), _em in pares if weak or strong]
+    if not vibram:
+        return []
+    registro = pares_fixados(cfg)
+    for dono in vibram:
+        registro.pop(dono, None)
+    if registro or getattr(cfg, "rumble_active", None) != (0, 0):
+        _publicar_o_resumo(cfg)
+    return vibram
+
+
 def par_fixado_vale_para(cfg: Any, uniq: str | None) -> bool:
     """Há par fixado por nós que vale para o controle ``uniq``? Leitura pura.
 
@@ -469,6 +489,7 @@ __all__ = [
     "reassert_rumble",
     "sem_dono_do_rumble",
     "silenciar_dono_abandonado",
+    "soltar_os_que_vibram",
     "soltar_par",
     "soltar_todos",
     "zero_motors_on_mode_exit",

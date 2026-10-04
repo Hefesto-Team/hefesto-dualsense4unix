@@ -40,6 +40,8 @@ from hefesto_dualsense4unix.daemon.subsystems.poll import (
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     AUTO_DEBOUNCE_SEC,
     RUMBLE_POLICY_MULT,
+    escrever_rumble_no_dono,
+    soltar_os_que_vibram,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -330,6 +332,12 @@ class DaemonConfig:
     #: a cada 1 s enquanto a janela vive. A ordem dela: *"o testar e parar é
     #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: dela)
     rumble_active_em: float | None = None
+    #: O par fixado de CADA controle, `{dono: (weak, strong, carimbo)}` (o `None` é a mesa
+    #: inteira). `rumble_active`, `rumble_active_uniq` e `rumble_active_em` são o resumo
+    #: dele (o par mais recente); quem escreve é `subsystems/rumble.pares_fixados`.
+    rumble_fixados: dict[str | None, tuple[int, int, float | None]] = field(
+        default_factory=dict
+    )
     #: MESA-CHEIA-05 (E0, terceira rodada) — o controle que está vibrando POR
     #: NOSSA CONTA neste instante, ou None quando nenhum está.
     #:
@@ -2827,15 +2835,14 @@ class Daemon:
         """Aplica `rumble.passthrough` de um perfil recém-ativado (SPRINT-GAME-RUMBLE-01)."""
         if not passthrough:
             return
-        active = self.config.rumble_active
-        if active is None:
+        if self.config.rumble_active is None:
             return
-        if active == (0, 0):
+        soltos = soltar_os_que_vibram(self.config)
+        if not soltos:
             return
-        self.config.rumble_active = None
-        self.config.rumble_active_uniq = None
-        with contextlib.suppress(Exception):
-            self.controller.set_rumble(weak=0, strong=0)
+        for dono in soltos:
+            with contextlib.suppress(Exception):
+                escrever_rumble_no_dono(self.controller, dono, 0, 0)
         logger.info("profile_rumble_passthrough_released")
 
     def apply_profile_speaker(
@@ -3098,9 +3105,6 @@ class Daemon:
             return
         from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
             apply_rumble_policy,
-        )
-        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
-            escrever_rumble_no_dono,
         )
 
         with contextlib.suppress(Exception):

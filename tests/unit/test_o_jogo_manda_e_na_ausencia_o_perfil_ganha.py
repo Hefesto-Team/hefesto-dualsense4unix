@@ -314,7 +314,7 @@ class TestPerfilAteOJogoProvar:
             assert ctl._merged_desired_for_key(MAC_1).led == (0, 0, 0)
 
     def test_a_saida_do_jogo_zera_o_ja_pintou(self) -> None:
-        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, _no, _ = _controle(campos_dela={"led": COR_DELA})
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
         ctl.end_game_session_for(MAC_1)
 

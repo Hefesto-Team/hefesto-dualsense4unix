@@ -715,6 +715,55 @@ def test_a_regra_0_e_recusada_no_supervisor_do_cabo(pactl, monkeypatch) -> None:
     )
 
 
+def test_o_supervisor_do_cabo_nao_liga_o_canal_ao_no_velho_da_ponte(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """O nó velho da ponte do rádio sobra de antes da atualização e é NOSSO.
+
+    A eleição o aceita por último (a escolha gravada de antes); o canal do cabo se
+    alimenta do nó do kernel e nunca de um nó nosso. MORDIDA: voltar o filtro só
+    pelo prefixo do canal e o canal nasce ligado ao `hefesto_dualsense_bt_<hex6>`.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import bt_mic
+
+    velho = f"{fc.PREFIXO_SOURCE_PONTE_BT}{fc.so_hex(P1)[-6:]}"
+    alsa = "alsa_input.usb-Sony_DualSense-00.iec958-stereo"
+    sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
+    monkeypatch.setattr(sub, "uniqs_na_mesa", lambda: frozenset({fc.so_hex(P1)}))
+    monkeypatch.setattr(bt_mic_eleicao(), "fontes_de_captura_agora", lambda: [velho, alsa])
+    monkeypatch.setattr(bt_mic_eleicao(), "casamento_usb_agora", lambda _m: None)
+    pedidos: list[object] = []
+
+    class _CanalDeMentira:
+        nome = canal.nome_do_canal(P1)
+
+    def _abrir(uniq: str, descricao: str, **kw: object) -> _CanalDeMentira:
+        pedidos.append(kw.get("fonte"))
+        return _CanalDeMentira()
+
+    monkeypatch.setattr(canal, "abrir", _abrir)
+
+    sub._abrir_os_canais_do_cabo([fc.so_hex(P1)])
+
+    assert velho not in pedidos
+    assert pedidos == [alsa], f"o canal do cabo foi ligado a {pedidos!r}"
+
+
+def test_o_supervisor_do_cabo_sem_fonte_do_kernel_nao_abre_canal(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Só o nó velho nosso no servidor: não há o que alimentar, e o canal espera."""
+    from hefesto_dualsense4unix.daemon.subsystems import bt_mic
+
+    velho = f"{fc.PREFIXO_SOURCE_PONTE_BT}{fc.so_hex(P1)[-6:]}"
+    sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
+    monkeypatch.setattr(sub, "uniqs_na_mesa", lambda: frozenset({fc.so_hex(P1)}))
+    monkeypatch.setattr(bt_mic_eleicao(), "fontes_de_captura_agora", lambda: [velho])
+    monkeypatch.setattr(bt_mic_eleicao(), "casamento_usb_agora", lambda _m: None)
+    pedidos: list[object] = []
+    monkeypatch.setattr(canal, "abrir", lambda *a, **k: pedidos.append(k) or None)
+
+    sub._abrir_os_canais_do_cabo([fc.so_hex(P1)])
+
+    assert pedidos == []
+
+
 def test_a_regra_0_alcanca_a_escolha_gravada_do_nascimento(pactl) -> None:  # type: ignore[no-untyped-def]
     """Chamador 8/8 — `daemon/subsystems/hotkey.py`, no nascimento do microfone."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey

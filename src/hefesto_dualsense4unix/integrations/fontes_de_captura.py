@@ -114,12 +114,20 @@ def fontes_nativas(saida_pactl: str) -> list[str]:
     nome que temos DONO para afirmar: o da ponte de rádio carrega a palavra
     ``dualsense`` dentro e passaria por qualquer teste de marcador.
     """
+    return sem_os_nos_nossos(fontes_dualsense(saida_pactl))
+
+
+def sem_os_nos_nossos(fontes: list[str]) -> list[str]:
+    """As fontes da lista que NÃO são nó do Hefesto (nenhum dos dois prefixos nossos).
+
+    O dono da pergunta «qual destas é do kernel»: a nativa para a tela e a que
+    ALIMENTA o canal do cabo. O nó velho da ponte do rádio
+    (``hefesto_dualsense_bt_<hex6>``) sobra de antes da atualização e é nosso, e a
+    eleição (:func:`escolher_fonte`) o aceita por último: sem este filtro o canal do
+    cabo podia nascer ligado a ele, e o microfone ficava mudo.
+    """
     nossos = (PREFIXO_SOURCE_PONTE_BT, PREFIXO_SOURCE_CANAL_DO_MIC)
-    return [
-        nome
-        for nome in fontes_dualsense(saida_pactl)
-        if not nome.lower().startswith(nossos)
-    ]
+    return [nome for nome in fontes if not nome.lower().startswith(nossos)]
 
 
 def sinks_dualsense(saida_pactl: str) -> list[str]:
@@ -427,6 +435,7 @@ __all__ = [
     "identidade_e_do_controle",
     "identidade_no_nome",
     "marca_na_forma",
+    "sem_os_nos_nossos",
     "sinks_dualsense",
     "so_hex",
     "sufixo_da_ponte_bt",
