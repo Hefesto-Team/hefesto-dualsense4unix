@@ -678,6 +678,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     _brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
 
+    #: A háptica por áudio está tocando neste controle (a ponte `0x32` no
+    #: rádio, o laço do cabo com o endpoint tocando): o rumble sai sem
+    #: `HAPTICS_SELECT`. A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01; ver
+    #: :meth:`set_haptica_de_audio` e `_build_common`.
+    _haptica_de_audio: bool = False
+
     #: O `hid_device`. Toda chamada ao C deste handle (o `read` da volta, o
     #: modo do `read`, o `write` de qualquer thread) entra e sai contada sob
     _entrega: threading.Lock = threading.Lock()
@@ -1364,6 +1370,23 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             with contextlib.suppress(Exception):
                 self.audio.setMicrophoneLED(bool(aceso))
 
+    def set_haptica_de_audio(self, ativa: bool) -> None:
+        """A háptica por áudio passou a tocar (ou parou) NESTE controle.
+
+        A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01 (03/10/2026). Medido com ela: a
+        vibração pelo nó do jogo e a háptica de teste ao mesmo tempo
+        ALTERNAVAM, nos quatro controles, com dois ou quatro por adaptador. O
+        rumble deste report saía com `HAPTICS_SELECT` (`flag0` bit 1), que o
+        firmware lê como «troque para a vibração emulada» e que cala a háptica
+        por áudio até o bit cair; com o report do rumble e o da háptica
+        chegando alternados, o controle trocava de modo sem parar. Com a
+        háptica tocando, o rumble vai com `COMPATIBLE_VIBRATION` (bit 0) e sem
+        o bit 1; sem háptica, como sempre. Quem diz é o dono das pontes (o
+        `AltoFalanteSubsystem`), pelo `set_haptica_de_audio_for` do
+        controlador.
+        """
+        self._haptica_de_audio = bool(ativa)
+
     def set_audio_volumes(
         self,
         *,
@@ -1507,6 +1530,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             )
             flag1 &= ~rep.VALID_FLAG1_MOTOR_POWER
             flag2 &= ~rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
+        elif self._haptica_de_audio:
+            # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01 (03/10/2026): o HAPTICS_SELECT
+            # troca os atuadores para a vibração emulada e CALA a háptica por
+            # áudio até o bit cair (hid-playstation, SDL, pydualsense). Com a
+            # háptica tocando, o rumble vai só com COMPATIBLE_VIBRATION.
+            flag0 &= ~rep.VALID_FLAG0_HAPTICS_SELECT
         if suppress_leds:
             flag1 &= ~(
                 rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
@@ -4982,6 +5011,27 @@ class PyDualSenseController(IController):
             logger.warning("output_handle_failed", op="set_rumble_for", key=key, err=str(exc))
         return True
 
+
+    def set_haptica_de_audio_for(self, uniq: str, ativa: bool) -> bool:
+        """A háptica por áudio tocando (ou não) no controle de MAC `uniq`.
+
+        A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: o handle dele manda o rumble sem
+        `HAPTICS_SELECT` enquanto ela toca (:meth:`_PinnedPyDualSense.
+        set_haptica_de_audio`). Vale nos dois transportes, porque o bit é o
+        mesmo no `0x02` do cabo e no `0x31` do rádio. Devolve False quando o
+        MAC não casa com handle nenhum.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+        definir = getattr(handle, "set_haptica_de_audio", None)
+        if not callable(definir):
+            return False
+        definir(bool(ativa))
+        return True
 
     def set_game_trigger_for(self, uniq: str, side: Side, block: bytes) -> bool:
         """Aplica no físico `uniq` o trigger effect CRU que o jogo mandou ao vpad."""

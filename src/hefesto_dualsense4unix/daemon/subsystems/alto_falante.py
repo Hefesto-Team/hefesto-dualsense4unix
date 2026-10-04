@@ -567,6 +567,7 @@ class AltoFalanteSubsystem:
     _sem_registro_no_jogo: frozenset[str] = frozenset()
     _radio_com_som: frozenset[str] = frozenset()
     _teste_da_haptica: Mapping[str, float] = MappingProxyType({})
+    _com_haptica_de_audio: frozenset[str] = frozenset()
     _trava_do_rumble = threading.Lock()
 
     #: O ``state_full`` lê a amostra de ar DELE — um medidor só no daemon.
@@ -1764,6 +1765,76 @@ class AltoFalanteSubsystem:
         self._radio_com_som = frozenset(com_som)
         self._conferir_o_teste_da_haptica()
         self._conferir_o_rumble()
+        self._dizer_a_haptica_aos_controles(controles)
+
+    def _dizer_a_haptica_aos_controles(self, controles: list[Any]) -> None:
+        """Quem tem a háptica por áudio tocando AGORA, dito ao controlador.
+
+        A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01 (03/10/2026): com a háptica
+        tocando, o rumble do controle sai sem `HAPTICS_SELECT`, o bit que
+        cala a háptica (`_PinnedPyDualSense.set_haptica_de_audio`). Tocando
+        quer dizer o endpoint do aparelho com fluxo E o caminho dele ao
+        controle de pé: a ponte `0x32` no rádio, o laço com o portão aberto no
+        cabo. Só a BORDA vai ao controlador, nos dois sentidos; o servidor de
+        som que não respondeu deixa tudo como estava.
+        """
+        definir = getattr(self._backend, "set_haptica_de_audio_for", None)
+        if not callable(definir):
+            return
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import sinks_que_tocam
+
+        caminhos: dict[str, tuple[str, str, str]] = {}
+        for controle in controles:
+            uniq = str(getattr(controle, "uniq", "") or "")
+            chave = self._chave_do_rumble(uniq) if uniq else None
+            marca = self._aparelho_de.get(chave) if chave is not None else None
+            endpoint = self._endpoints.get(marca) if marca is not None else None
+            nome = str(getattr(endpoint, "nome", "") or "")
+            if chave is not None and marca is not None and nome:
+                caminhos[uniq] = (chave, marca, nome)
+        tocando: set[str] | None = set()
+        if caminhos:
+            try:
+                tocando = sinks_que_tocam({n for _c, _m, n in caminhos.values()})
+            except Exception:
+                tocando = None
+        if tocando is None:
+            return
+        ativos = {
+            uniq
+            for uniq, (chave, marca, nome) in caminhos.items()
+            if nome in tocando and self._a_haptica_chega_ao_controle(uniq, chave, marca, nome)
+        }
+        antes = self._com_haptica_de_audio
+        for uniq in sorted({*antes, *ativos}):
+            if (uniq in ativos) == (uniq in antes):
+                continue
+            try:
+                definir(uniq, uniq in ativos)
+            except Exception as exc:
+                logger.debug("haptica_de_audio_nao_chegou_ao_controle", err=str(exc))
+        self._com_haptica_de_audio = frozenset(ativos)
+
+    def _a_haptica_chega_ao_controle(
+        self, uniq: str, chave: str, marca: str, nome: str
+    ) -> bool:
+        """O caminho do endpoint ``nome`` ao controle está de pé: o laço ou a ponte."""
+        cabo = self._cabo
+        if cabo is not None:
+            rota = cabo.aparelhos().get(marca)
+            if rota is not None and getattr(rota, "dono", "") == chave:
+                return cabo.portao(marca) is True
+        dono = uniq if uniq in self._pontes else chave
+        ponte = self._pontes.get(dono)
+        if ponte is None or self._modo_da_ponte.get(dono) != "haptica":
+            return False
+        if self._endpoint_da_ponte.get(dono) != nome:
+            return False
+        de_pe = getattr(ponte, "esta_de_pe", None)
+        try:
+            return bool(de_pe()) if callable(de_pe) else False
+        except Exception:
+            return False
 
     def _esquecer_a_espera(self, uniq: str) -> None:
         """Ela respondeu «Ligar aqui»: quem esperava vaga deixa de esperar."""
@@ -1947,6 +2018,8 @@ class AltoFalanteSubsystem:
         self._desinstalar_o_numerador()
         registrar_dizedor_da_fonte(self._dizedor_anterior)
         self._dizedor_anterior = None
+        # as pontes e os laços desceram: a háptica parou de tocar em todos
+        self._dizer_a_haptica_aos_controles([])
         self._backend = None
         logger.info("som_subsystem_parado")
 
