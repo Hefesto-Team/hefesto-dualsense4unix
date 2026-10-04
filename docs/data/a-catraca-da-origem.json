@@ -48,10 +48,10 @@
       "universo": 353
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-03",
+      "data": "2026-10-04",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 482,
+      "piso": 481,
       "por_item": {
         "__init__.py": 1,
         "app/actions/config/secao_controles.py": 2,
@@ -167,7 +167,7 @@
         "interface/jogar_vivo.py": 1,
         "interface/pacotes/__init__.py": 2,
         "interface/pacotes/a01_jogar.py": 3,
-        "interface/pacotes/a02_controles.py": 5,
+        "interface/pacotes/a02_controles.py": 4,
         "interface/pacotes/a03_gatilhos.py": 4,
         "interface/pacotes/a04_iluminacao.py": 2,
         "interface/pacotes/a06_navegacao.py": 3,
@@ -193,9 +193,9 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 2
       },
-      "razao": "primeiro teto, da árvore enxuta da leva 0110 (03/10/2026)",
+      "razao": "o teto desceu sozinho com o número",
       "unidade": "remendos",
-      "universo": 353
+      "universo": 354
     },
     "tamanho": {
       "data": "2026-10-03",
