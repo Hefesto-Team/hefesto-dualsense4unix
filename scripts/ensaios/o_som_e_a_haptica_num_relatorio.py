@@ -29,7 +29,8 @@ nada vai ao aparelho. COM ``--escrever``, ele RECUSA, nesta ordem:
 3. o controle no cabo (o ``0x36`` é do rádio);
 4. sem ``--eu-estou-ouvindo`` (rc=3): o ensaio é escrever com o ouvido e a
    mão dela do outro lado;
-5. a bancada não reservada (``scripts/bancada.sh exigir``).
+5. a bancada tomada por outra reserva (``scripts/bancada.sh exigir`` passa
+   só com ela LIVRE: quem reservou mede, e o ensaio não escreve por cima).
 
 O RETORNO DO ``os.write()`` NÃO É A MEDIÇÃO: o kernel aceita a entrega que o
 firmware descarta calado. O veredito é dela (ouviu o tom contínuo? sentiu a
@@ -312,11 +313,11 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print("PARADO ANTES DE ESCREVER, e de propósito.\n" + resumo(argumentos, controle.caminho))
         print("  Acrescente --eu-estou-ouvindo com o ouvido e a mão dela do outro lado.")
         return 3
-    reservada, recado = _exigir_bancada()
+    livre, recado = _exigir_bancada()
     if recado:
         print(f"  bancada ..... {recado}")
-    if not reservada:
-        print("RECUSADO: a bancada não está reservada. Esperar é a resposta.")
+    if not livre:
+        print("RECUSADO: a bancada está tomada por outra reserva. Esperar é a resposta.")
         return 2
 
     print("\nO QUE VAI SAIR, E POR QUANTO TEMPO\n" + resumo(argumentos, controle.caminho))
