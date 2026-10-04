@@ -641,6 +641,7 @@ class Daemon:
         )
         from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
             start_hotkey_manager,
+            start_mic_do_jogo,
             start_mic_hotkey,
         )
         from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import start_luz_do_mic
@@ -768,6 +769,7 @@ class Daemon:
             if self.config.keyboard_emulation_enabled:
                 await self._safe_start("keyboard", self._start_keyboard_emulation)
             await self._safe_start("hotkey", lambda: start_hotkey_manager(self))
+            await self._safe_start("mic_do_jogo", lambda: start_mic_do_jogo(self))
             if self.config.mic_button_toggles_system:
                 await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
             await self._safe_start("luz_do_mic", lambda: start_luz_do_mic(self))

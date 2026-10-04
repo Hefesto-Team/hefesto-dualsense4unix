@@ -5387,12 +5387,13 @@ class PyDualSenseController(IController):
         mapa ou perde o handle: as bordas, a pergunta de quem manda, e a saída
         do handle (`disconnect`, o hotplug e a troca de nó).
 
-        O laço das bordas sozinho não bastava, e a conta é do boot: ele só sobe
-        com `mic_button_toggles_system` ligado (`hotkey.start_mic_hotkey`).
-        Desligado, ninguém lia a marca — o handle já não mandava mudo, e o mapa
-        seguia dizendo «o Hefesto manda mudo» à tela e rependurando o mudo
-        velho na reconexão. Dois lugares que precisam concordar, acertados por
-        caminhos diferentes, é a família de defeito que esta casa já nomeia.
+        O laço das bordas sozinho não bastava: o handle que sai (desconecta, ou
+        o nó troca) leva a marca sem borda nenhuma, e o mapa seguiria dizendo
+        «o Hefesto manda mudo» à tela e rependurando o mudo velho na reconexão.
+        (O laço das bordas sobe sempre desde 03/10/2026, sem o
+        `mic_button_toggles_system`: `hotkey.start_mic_do_jogo`.) Dois lugares
+        que precisam concordar, acertados por caminhos diferentes, é a família
+        de defeito que esta casa já nomeia.
 
         Só solta se ninguém tomou a posse de novo depois do aperto: o ato (ou o
         perfil) que escreveu por cima vale.

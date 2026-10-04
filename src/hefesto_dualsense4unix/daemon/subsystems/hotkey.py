@@ -723,16 +723,38 @@ def stop_hotkey_manager(daemon: DaemonProtocol) -> None:
     daemon._hotkey_manager = None
 
 
-def start_mic_hotkey(daemon: DaemonProtocol) -> None:
-    """Sobe os DOIS laços do microfone: as bordas com endereço, e a eleição."""
+def start_mic_do_jogo(daemon: DaemonProtocol) -> None:
+    """Sobe as bordas com endereço e o laço do mudo que o jogo pede. Sem interruptor.
+
+    O-MUDO-DO-JOGO-NAO-DEPENDE-DO-BOTAO-SER-NOSSO-01 (03/10/2026): o
+    ``mic_button_toggles_system`` diz «o botão é nosso», e o pedido do jogo não
+    é o botão. O mudo que o jogo pede chega ao controle do jogador com o
+    interruptor ligado ou desligado, como a luz (``luz_do_mic``), e a borda do
+    plástico segue publicada nos dois casos: é ela que o laço da luz lê para
+    saber que ELA mandou depois do jogo (``luz_do_mic.a_pessoa_mandou``). O que
+    o interruptor segura é a eleição, no :func:`mic_button_loop`.
+    """
     from hefesto_dualsense4unix.daemon.subsystems.mic_da_mesa import start_mic_da_mesa
+
+    start_mic_da_mesa(daemon)
+    daemon._tasks.append(
+        asyncio.create_task(mic_do_jogo_loop(daemon), name=mic_do_jogo_loop.__name__)
+    )
+    logger.info("mic_do_jogo_iniciado")
+
+
+def start_mic_hotkey(daemon: DaemonProtocol) -> None:
+    """Sobe a eleição pelo botão e o canal: o que é do interruptor «o botão é nosso».
+
+    As bordas e o mudo do jogo sobem em :func:`start_mic_do_jogo`, sem ele.
+    """
     from hefesto_dualsense4unix.integrations.audio_control import AudioControl
 
     if daemon._audio is None:
         daemon._audio = AudioControl()
-    start_mic_da_mesa(daemon)
-    for laco in (mic_button_loop, mic_do_jogo_loop):
-        daemon._tasks.append(asyncio.create_task(laco(daemon), name=laco.__name__))
+    daemon._tasks.append(
+        asyncio.create_task(mic_button_loop(daemon), name=mic_button_loop.__name__)
+    )
     # `state_full` roda a 20 Hz e só LÊ o que o laço já leu. O laço acorda pelo
     tarefa_do_canal = asyncio.create_task(
         canal_do_microfone_loop(daemon), name="canal_do_microfone_loop"
@@ -2652,6 +2674,7 @@ __all__ = [
     "ponte_atual",
     "proxima_ponte",
     "start_hotkey_manager",
+    "start_mic_do_jogo",
     "start_mic_hotkey",
     "stop_hotkey_manager",
 ]
