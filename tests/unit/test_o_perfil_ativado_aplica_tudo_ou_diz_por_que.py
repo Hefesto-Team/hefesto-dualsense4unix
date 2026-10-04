@@ -14,6 +14,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.profiles_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
