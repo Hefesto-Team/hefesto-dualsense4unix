@@ -469,7 +469,8 @@ def test_o_laudo_sem_bandeira_recusa_csv_de_forma_errada(mi, tmp_path, capsys):
 def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     """O censo da sprint conferido contra o arquivo, não contra a lembrança."""
     medida = mi.medir()
-    # Seis desde 04/10/2026: as duas do modo da ponte do rádio (o 0x36) e a do microfone da máquina (um por controle).
+    # Seis desde 04/10/2026: as duas do modo da ponte do rádio (o 0x36) e a do
+    # microfone da máquina (um por controle).
     assert medida["decididas"] == medida["linhas"] - 6, (
         "o CSV tem seis linhas `caduca`; se isso mudou, o laudo tem de dizer")
     assert medida["decididas"] > 0
