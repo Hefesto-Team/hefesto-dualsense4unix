@@ -119,10 +119,10 @@ def test_com_a_janela_aberta_o_esquecer_treme(
             "", QUARTO, cr.ESPERANDO, cr.PASSO_GESTO, quando=time.time()))
         bancada.cena()
         vermelho = {"alvo": rm.uniq(VERMELHO), "lugar": id_da_tela(SALA)}
-        with pytest.raises(RuntimeError):
-            bancada.gesto("aparelho-menu", **vermelho)
-        with pytest.raises(RuntimeError):
-            bancada.gesto("esquecer-aparelho", **vermelho)
+        # o «⋮» e a pergunta abrem com a busca ligada (O-CONTROLE-JA-PAREADO-…, 03/10): só o
+        # esquecer de verdade espera o rádio desocupar
+        bancada.gesto("aparelho-menu", **vermelho)
+        bancada.gesto("esquecer-aparelho", **vermelho)
         with pytest.raises(RuntimeError):
             bancada.gesto("confirmar-esquecer", **vermelho)
         assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
