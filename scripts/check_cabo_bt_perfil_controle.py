@@ -130,6 +130,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "tentar-de-novo": "liga a busca no mesmo adaptador da linha que não chegou "
                       "(`radio.busca.set`), ou refaz o mover do aparelho que não é "
                       "controle — é o rádio da máquina",
+    "parear-de-novo": "esquece o par velho do controle que não conectou "
+                      "(`esquecer_o_pareamento`) e liga a busca no mesmo adaptador — é o "
+                      "rádio da máquina",
     "esquecer-aparelho": "o «Esquecer» do «⋮» abre a pergunta de esquecer — é da "
                          "tela",
     "confirmar-esquecer": "esquece o pareamento deste aparelho NESTE adaptador "
