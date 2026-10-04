@@ -34,6 +34,7 @@ casa.
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -270,19 +271,39 @@ def _com_uma_fonte(monkeypatch, fontes: list[str]) -> None:
     monkeypatch.setattr(el, "fontes_de_captura_agora", lambda: list(fontes))
 
 
-def test_sem_toque_dela_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
-    monkeypatch, dono_dublado
+def test_sem_toque_dela_o_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
+    monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """Nada pedido = nada carregado. A privacidade é a mesma do rádio."""
+    """Um microfone por controle, sempre: a decisão dela de 02/10/2026.
+
+    O rádio já erguia a ponte de todo controle; o cabo só erguia o canal de
+    quem apertava o botão. MORDIDA: devolver o `_registro.abertos()` sozinho
+    ao `_reconciliar_o_cabo` e o P1 no fio fica sem «Microfone do Controle 1».
+    """
+    bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa((P1,))
 
     sub._reconciliar_o_cabo([])
 
-    assert dono_dublado["abriu"] == [], (
-        "o supervisor ergueu canal sem ninguém ter apertado o botão do microfone"
-    )
+    assert dono_dublado["abriu"] == [
+        (_hex(P1), "Microfone do Controle 1" + _SONY, FONTE_DO_CABO)
+    ], f"o controle no fio ficou sem o microfone dele: {dono_dublado['abriu']}"
+
+
+def test_com_a_recusa_dela_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
+    monkeypatch, dono_dublado
+) -> None:
+    """O «não» dela continua tirando o canal, como no rádio."""
+    _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
+    sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
+    sub._backend = _BackendDaMesa((P1,))
+    sub._config = SimpleNamespace(bt_mic_recusados=lambda: frozenset({_hex(P1)}))
+
+    sub._reconciliar_o_cabo([])
+
+    assert dono_dublado["abriu"] == [], "o canal subiu contra a recusa dela"
 
 
 def test_o_toque_dela_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-untyped-def]
@@ -324,18 +345,16 @@ def test_o_supervisor_do_cabo_nao_encosta_em_quem_esta_no_radio(  # type: ignore
 def test_o_canal_do_cabo_cai_quando_ela_desliga(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """Soltar o pedido derruba o canal — e o `parec` que lia o microfone dela."""
+    """A recusa dela derruba o canal — e o `parec` que lia o microfone dela."""
     bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
-    registro = bt_mic.RegistroDePedidosDeCanal()
-    sub = bt_mic.BtMicSubsystem(registro=registro)
+    sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa((P1,))
 
-    sub.no_ar(P1, True)
     sub._reconciliar_o_cabo([])
     assert sub._canais_do_cabo
 
-    registro.soltar(P1)
+    sub._config = SimpleNamespace(bt_mic_recusados=lambda: frozenset({_hex(P1)}))
     sub._reconciliar_o_cabo([])
 
     assert dono_dublado["fechou"] == [_hex(P1)], (

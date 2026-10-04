@@ -197,10 +197,12 @@ def _pares(a02, onde=None) -> dict[str, list[str]]:
     rota = sorted(a02.BOTOES_DA_FILEIRA_DO_SOM)
     if onde == PUBLICADO and _a_02_esta_em_trabalho():
         rota = [v for v in rota if v != a02.ROTA_TUDO_NO_CONTROLE]
-    return {
-        "alto-rota": rota,
-        "mic-modo-aceso": ["nativo", "virtual"],
-    }
+    pares = {"alto-rota": rota}
+    if onde != BANCADA:
+        # O par «Virtual | Nativo» saiu da bancada em 03/10/2026 (a decisão
+        # dela de 02/10); a página publicada o tem até o `--publicar 02`.
+        pares["mic-modo-aceso"] = ["nativo", "virtual"]
+    return pares
 
 
 def _a_02_esta_em_trabalho() -> bool:

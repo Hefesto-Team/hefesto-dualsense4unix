@@ -182,15 +182,20 @@ class TestOGestoRecusaDizendo:
 
 
 class TestODesenhoTemOndeOProdutoEscrever:
-    """A bancada já sabe apagar o botão — o publicado espera o OK dela."""
+    """A página que o produto mostra sabe apagar o botão.
+
+    O par «Virtual | Nativo» saiu da bancada em 03/10/2026 (a decisão dela de
+    02/10, OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01); até o ``--publicar 02``
+    ele vive na página publicada, e esta classe sai junto com o gesto.
+    """
 
     @staticmethod
     def _bancada() -> str:
         from hefesto_dualsense4unix.interface import onde
 
-        return onde.pagina("02-controles.html").read_text(encoding="utf-8")
+        return onde.pagina("02-controles.html", publicado=True).read_text(encoding="utf-8")
 
-    def test_o_endereco_esta_na_bancada(self) -> None:
+    def test_o_endereco_esta_na_pagina_publicada(self) -> None:
         corpo = self._bancada()
         assert 'data-campo="mic-nativo-fora"' in corpo
         assert 'data-hef-classe="sem-nativo"' in corpo

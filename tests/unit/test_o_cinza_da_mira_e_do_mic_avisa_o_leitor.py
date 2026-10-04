@@ -14,7 +14,9 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
-BANCADA = RAIZ / "mockup/02-controles.html"
+#: A página publicada, e não a bancada: o par «Virtual | Nativo» saiu do desenho
+#: em 03/10/2026 (a decisão dela de 02/10) e vive no produto até o `--publicar 02`.
+BANCADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
 
 from tests.conftest import exigir_gi_real
 

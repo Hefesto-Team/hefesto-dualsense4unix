@@ -1897,8 +1897,6 @@ DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
                    "meio. É o que vale quando ninguém escolhe nada.")
 
 #   alto-rota        `a02_controles.rota_na_tela`, do `speaker.rota` que o
-#   mic-modo-aceso   `a02_controles.modo_do_mic`, do `maquina.json` — o
-#                    `machine.declare` fica FORA do `state_full` de propósito
 
 
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
@@ -1906,7 +1904,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           # class="mudo" data-campo="alto-estado" hidden>` saiu do desenho, e quem
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
-          mic_modo="virtual", accel=None, conectado=True,
+          accel=None, conectado=True,
           mic_ganho=GANHO_PADRAO_PCT):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
@@ -2163,38 +2161,11 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="n" data-campo="mic-ganho-num">{sinal_do_ganho(mic_ganho)}</span>
               <span class="un">{UNIDADE_DO_GANHO}</span>{ponto_de_interrogacao("mic-ganho-fora")}
             </div>
-            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
-                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
-                 igual o Sons do Jogo e Todo o som do PC."*
-
-                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
-                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
-                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
-                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
-                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
-                 Duas gramáticas para "escolher a rota do som" na mesma coluna
-                 era uma a mais. -->
-              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
-                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
-                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
-                   chegavam ao despachante chamando-se `clique`, disputando um
-                   nome com os interruptores de sensor da mesma aba.
-                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
-                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
-                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
-                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
-                   o porquê de o endereço morar no CONTAINER está no bloco
-                   `.mic-modo` do CSS. O botão leva o mesmo campo com o
-                   `aria-disabled` (24/09/2026, A-MIRA-NA-NAVEGACAO-01), e o
-                   aceso dele desceu para o invólucro `aceso-do-mic`. -->
-              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
-                <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
-                  title="{DICA_MIC_VIRTUAL}">Virtual</button>
-                <span class="aceso-do-mic{' on' if mic_modo == 'nativo' else ''}" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"><button data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"
-                  title="{DICA_MIC_NATIVO}">Nativo</button></span>{ponto_de_interrogacao("mic-nativo-fora")}
-              </span>
+            <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão dela, 02/10/2026
+                 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
+                 microfone dele, no cabo e no BT, e a entrada da máquina é o
+                 padrão quando ela não escolheu outra. Não há mais o que
+                 escolher aqui; o 🎙 continua o ato de ligar e calar. -->
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
                  metades: a luz do controle passa a espelhar o BOTÃO, e a aba
@@ -2461,7 +2432,7 @@ ESTADO = {
           ("Y", " +0.998", "left:50%;width:25%;background:var(--green)"),
           ("Z", " +0.041", "left:50%;width:1%;background:var(--cyan)"),
     ],
-    mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_modo="desativado", mic_mudo=True,
+    mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_mudo=True,
     alto_v=[70, 52, 66, 44, 72, 58, 48, 64, 54, 70, 46, 60, 50, 68], rota_nada=True),
 
   "p3": dict(bat=31, carga="descarregando",
@@ -2475,7 +2446,7 @@ ESTADO = {
           ("Y", "      —", "left:50%;width:0%"),
           ("Z", "      —", "left:50%;width:0%"),
     ],
-    mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_modo="nativo", mic_mudo=False,
+    mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_mudo=False,
     alto_v=[55, 40, 62, 48, 58, 36, 50, 44, 60, 38, 52, 46, 42, 56], rota_nada=False),
 
   "p4": dict(bat=88, carga="fora_de_faixa",
@@ -2755,6 +2726,10 @@ MIOLO = f'''
 
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que mudou em 03/10</h2>
+  <ul>
+    <li><b>Os botões «Virtual» e «Nativo» do Microfone saíram</b>, como você decidiu: <i>"deixariamos de ter a opção nativo ou virtual como escolha na interface"</i>. <!-- noqa-acento: citação literal dela --> Todo controle tem o microfone e o alto-falante dele, no cabo e no BT, e o microfone do computador (uma webcam, por exemplo) continua o padrão quando você não escolheu outro. O 🎙 continua ligando e calando.</li>
+  </ul>
   <h2>O que mudou em 24/09</h2>
   <ul>
     <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
@@ -2762,7 +2737,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>No Modo Nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
     <li><b>Na Navegação, a {ROTULO_DA_MIRA_VIRTUAL} acesa move o cursor.</b> Virar aquele controle anda o ponteiro, com a mesma sensibilidade, o mesmo «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter». Vale nos quatro controles, no USB e no BT, e dois controles com a mira acesa somam o movimento. A dica do <b>Giroscópio</b> passa a dizer <i>«{DICA_DO_GIRO_NO_CURSOR}»</i></li>
     <li><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo Nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
-    <li><b>Os botões cinza avisam o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no Modo Nativo e o «Nativo» do microfone no BT são anunciados como indisponíveis. Na tela, nada mudou de lugar.</li>
+    <li><b>O botão cinza avisa o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no Modo Nativo é anunciado como indisponível. Na tela, nada mudou de lugar.</li>
     <li><b>O quarto botão do alto-falante voltou</b> — <b>{ROTULO_TUDO_NO_CONTROLE}</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
     <li><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>{ROTULO_SO_OS_EFEITOS}</b>, <b>{ROTULO_EFEITOS_MAIS_O_PC}</b> e <b>{ROTULO_NADA_NO_CONTROLE}</b>, e o que cada um faz não mudou.</li>
     <li><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
@@ -3080,14 +3055,10 @@ def _conferir(doc):
     exigir(">Dispositivos conectados</span>" in corpo, "o título novo sumiu")
     exigir(">Conectados</span>" not in corpo, "o título antigo voltou")
 
-    exigir('data-mic-modo="desativado"' not in corpo, "o Desativado do microfone voltou")
-    exigir(corpo.count('data-mic-modo="') == 2 * len(MESA),
-           f"os modos do microfone não são 2 por lugar da mesa ({2 * len(MESA)})")
-    exigir(corpo.count('data-gesto="mic-modo"') == 2 * len(MESA),
-           "os modos do microfone perderam o `data-gesto` — chegam como 'clique'")
-    exigir('data-campo="mic-modo"' not in corpo,
-           "o `data-campo` voltou ao container dos modos do microfone: a "
-           "pintura vai apagar os dois botões")
+    # O par «Virtual | Nativo» saiu em 02/10/2026, decisão dela: um microfone
+    # por controle, sempre (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01).
+    exigir('data-mic-modo="' not in corpo and 'data-gesto="mic-modo"' not in corpo,
+           "o par «Virtual | Nativo» do microfone voltou — saiu em 02/10/2026")
 
     #      o som do PC e Ouvir Juntos?"*  <!-- noqa-acento: citação literal dela -->
     #      *"o sfx + todo o som que sai no outofalante do hmdmi"*,  <!-- noqa-acento: citação literal dela -->
@@ -3193,13 +3164,6 @@ def _conferir(doc):
     exigir(corpo.count(modo_do_toque()) == len(MESA),
            f"o «{ROTULO_DO_CURSOR} | {ROTULO_DOS_BOTOES}» do touchpad não está nos "
            f"{len(MESA)} controles")
-    exigir(len(re.findall(
-        r'<button data-gesto="mic-modo" data-mic-modo="nativo" '
-        r'data-campo="mic-nativo-fora" data-hef-alvo="classe" '
-        r'data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"',
-        corpo)) == len(MESA),
-        "o «Nativo» do microfone perdeu o `aria-disabled` em algum controle — "
-        "no BT ele fica cinza e o leitor de tela o anuncia como clicável")
 
     trilhos = {"volume": 2, "ganho-mic": 1}
     exigir(corpo.count('type="range"') == sum(trilhos.values()) * len(MESA),
@@ -3295,13 +3259,8 @@ def _conferir(doc):
            "o Calibrar saiu do canto superior direito")
     exigir("acoes-da-mesa" not in corpo, "o bloco de ações do FIM do quadro voltou")
 
-    tem_rota = 'class="rota mic-modo"' in corpo
-    exigir(tem_rota, "os modos do microfone não estão na fileira `.rota` do som")
-    if tem_rota:
-        for pedaco in corpo.split('data-bloco="microfone"')[1:]:
-            i_vol, i_rota = pedaco.find('class="vol"'), pedaco.find('class="rota mic-modo"')
-            exigir(0 <= i_vol < i_rota,
-                   "os modos do microfone voltaram para ACIMA do slider")
+    exigir('class="rota mic-modo"' not in corpo,
+           "a fileira dos modos do microfone voltou ao cartão")
 
     exigir("vê como" not in corpo, "o texto 'vê como' voltou")
     exigir(corpo.count('data-campo="mascara"') == len(MESA),

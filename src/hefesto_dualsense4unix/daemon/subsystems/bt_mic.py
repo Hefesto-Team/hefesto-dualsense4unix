@@ -1018,11 +1018,21 @@ class BtMicSubsystem:
 
 
     def _reconciliar_o_cabo(self, nos: list[Any]) -> None:
-        """O canal com nome de controle para quem está no FIO."""
+        """O canal com nome de controle para TODO controle que está no FIO.
+
+        A decisão dela de 02/10/2026 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01):
+        um microfone por controle, sempre, nos dois transportes. O rádio já
+        erguia a ponte de todo controle (``alvos``); o cabo só erguia o canal
+        de quem o pedia pelo botão. Agora todo DualSense conectado pelo fio
+        ganha o «Microfone do Controle N»; o pedido continua valendo para quem
+        ainda não está na mesa, e a recusa dela continua tirando o canal.
+        """
         do_radio = frozenset(
             (norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos
         ) - {""}
-        querem = (self._registro.abertos() - do_radio) - uniqs_negados(self._config)
+        querem = (
+            (self._registro.abertos() | self.uniqs_na_mesa()) - do_radio
+        ) - uniqs_negados(self._config)
         for uniq in list(self._canais_do_cabo):
             if uniq not in querem:
                 self._fechar_o_canal_do_cabo(uniq)

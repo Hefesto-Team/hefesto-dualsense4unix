@@ -3132,38 +3132,11 @@
               <span class="n" data-campo="mic-ganho-num">+48</span>
               <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
-            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
-                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
-                 igual o Sons do Jogo e Todo o som do PC."*
-
-                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
-                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
-                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
-                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
-                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
-                 Duas gramáticas para "escolher a rota do som" na mesma coluna
-                 era uma a mais. -->
-              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
-                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
-                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
-                   chegavam ao despachante chamando-se `clique`, disputando um
-                   nome com os interruptores de sensor da mesma aba.
-                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
-                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
-                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
-                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
-                   o porquê de o endereço morar no CONTAINER está no bloco
-                   `.mic-modo` do CSS. O botão leva o mesmo campo com o
-                   `aria-disabled` (24/09/2026, A-MIRA-NA-NAVEGACAO-01), e o
-                   aceso dele desceu para o invólucro `aceso-do-mic`. -->
-              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
-                <button class="on" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
-                  title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
-                <span class="aceso-do-mic" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"><button data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button></span><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-              </span>
+            <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão dela, 02/10/2026
+                 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
+                 microfone dele, no cabo e no BT, e a entrada da máquina é o
+                 padrão quando ela não escolheu outra. Não há mais o que
+                 escolher aqui; o 🎙 continua o ato de ligar e calar. -->
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
                  metades: a luz do controle passa a espelhar o BOTÃO, e a aba
@@ -3689,38 +3662,11 @@
               <span class="n" data-campo="mic-ganho-num">+48</span>
               <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
-            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
-                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
-                 igual o Sons do Jogo e Todo o som do PC."*
-
-                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
-                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
-                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
-                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
-                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
-                 Duas gramáticas para "escolher a rota do som" na mesma coluna
-                 era uma a mais. -->
-              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
-                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
-                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
-                   chegavam ao despachante chamando-se `clique`, disputando um
-                   nome com os interruptores de sensor da mesma aba.
-                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
-                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
-                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
-                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
-                   o porquê de o endereço morar no CONTAINER está no bloco
-                   `.mic-modo` do CSS. O botão leva o mesmo campo com o
-                   `aria-disabled` (24/09/2026, A-MIRA-NA-NAVEGACAO-01), e o
-                   aceso dele desceu para o invólucro `aceso-do-mic`. -->
-              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
-                <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
-                  title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
-                <span class="aceso-do-mic" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"><button data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button></span><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-              </span>
+            <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão dela, 02/10/2026
+                 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
+                 microfone dele, no cabo e no BT, e a entrada da máquina é o
+                 padrão quando ela não escolheu outra. Não há mais o que
+                 escolher aqui; o 🎙 continua o ato de ligar e calar. -->
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
                  metades: a luz do controle passa a espelhar o BOTÃO, e a aba
@@ -4246,38 +4192,11 @@
               <span class="n" data-campo="mic-ganho-num">—</span>
               <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
-            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
-                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
-                 igual o Sons do Jogo e Todo o som do PC."*
-
-                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
-                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
-                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
-                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
-                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
-                 Duas gramáticas para "escolher a rota do som" na mesma coluna
-                 era uma a mais. -->
-              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
-                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
-                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
-                   chegavam ao despachante chamando-se `clique`, disputando um
-                   nome com os interruptores de sensor da mesma aba.
-                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
-                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
-                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
-                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
-                   o porquê de o endereço morar no CONTAINER está no bloco
-                   `.mic-modo` do CSS. O botão leva o mesmo campo com o
-                   `aria-disabled` (24/09/2026, A-MIRA-NA-NAVEGACAO-01), e o
-                   aceso dele desceu para o invólucro `aceso-do-mic`. -->
-              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
-                <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
-                  title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
-                <span class="aceso-do-mic" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"><button data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button></span><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-              </span>
+            <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão dela, 02/10/2026
+                 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
+                 microfone dele, no cabo e no BT, e a entrada da máquina é o
+                 padrão quando ela não escolheu outra. Não há mais o que
+                 escolher aqui; o 🎙 continua o ato de ligar e calar. -->
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
                  metades: a luz do controle passa a espelhar o BOTÃO, e a aba
@@ -4803,38 +4722,11 @@
               <span class="n" data-campo="mic-ganho-num">—</span>
               <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
-            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
-                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
-                 igual o Sons do Jogo e Todo o som do PC."*
-
-                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
-                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
-                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
-                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
-                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
-                 Duas gramáticas para "escolher a rota do som" na mesma coluna
-                 era uma a mais. -->
-              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
-                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
-                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
-                   chegavam ao despachante chamando-se `clique`, disputando um
-                   nome com os interruptores de sensor da mesma aba.
-                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
-                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
-                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
-                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
-                   o porquê de o endereço morar no CONTAINER está no bloco
-                   `.mic-modo` do CSS. O botão leva o mesmo campo com o
-                   `aria-disabled` (24/09/2026, A-MIRA-NA-NAVEGACAO-01), e o
-                   aceso dele desceu para o invólucro `aceso-do-mic`. -->
-              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
-                <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
-                  title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
-                <span class="aceso-do-mic" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"><button data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button></span><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-              </span>
+            <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão dela, 02/10/2026
+                 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
+                 microfone dele, no cabo e no BT, e a entrada da máquina é o
+                 padrão quando ela não escolheu outra. Não há mais o que
+                 escolher aqui; o 🎙 continua o ato de ligar e calar. -->
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
                  metades: a luz do controle passa a espelhar o BOTÃO, e a aba
