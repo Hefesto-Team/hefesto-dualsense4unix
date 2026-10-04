@@ -215,9 +215,12 @@ def test_sysfs_ausente_devolve_lista_vazia() -> None:
     assert bt.nos_dualsense_bluetooth("/nao/existe/mesmo") == []
 
 
-def test_nome_curto_usa_o_fim_do_mac() -> None:
+def test_nome_curto_e_a_marca_do_aparelho() -> None:
+    """O nome curto é a marca: nenhum dígito do endereço vai ao nome do nó."""
     no = bt.NoDualSenseBT(caminho="/dev/hidraw6", uniq="aa:bb:cc:00:00:f0", produto=0x0CE6)
-    assert no.nome_curto == "0000f0"
+    assert no.nome_curto == bt.marca_do_aparelho("aa:bb:cc:00:00:f0")
+    assert no.nome_curto.startswith("APARELHO")
+    assert "0000f0" not in no.nome_curto.lower()
 
 
 def test_nome_curto_sem_uniq_cai_no_no() -> None:

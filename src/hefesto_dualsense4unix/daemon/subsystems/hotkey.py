@@ -957,7 +957,7 @@ def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
 
 
 #: O teto da espera pela confirmação do mudo no aparelho. Os ~550 ms medidos em
-#: 30/08 eram a fila do report (63 × 8,7 ms com um controle); desde a
+#: 30/08 eram a fila do report (63 vezes 8,7 ms com um controle); desde a
 #: O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 a volta esvazia a fila e a confirmação chega
 #: em uma volta. O teto segue folgado para o rádio cheio.
 CONFIRMACAO_DO_MUDO_S: float = 3.0
@@ -1756,7 +1756,7 @@ def _microfone_que_ja_e_da_maquina() -> str | None:
 
     **E NÃO É A PERGUNTA DO INSTALL** (`--melhor-fonte-elegivel`), que foi a
     primeira escrita desta cura: aquela lista deixa o canal por controle
-    (`hefesto_mic_<hex6>`) entrar de propósito (§D.2 da MIC-PADRAO-NO-CABO-01),
+    (`hefesto_mic_<marca>`) entrar de propósito (§D.2 da MIC-PADRAO-NO-CABO-01),
     e com ela o canal do primeiro controle passaria por headset. Lido no
     código, não medido: na mesa dela, com os canais do rádio de pé desde a
     partida, nenhum controle elegeria mais.

@@ -103,7 +103,7 @@ class NoDoControle:
 
 
 def _nome_do_sink_de_dentro(mac: str) -> str:
-    """`hefesto_som_<hex6>` deste controle, PERGUNTADO ao produto."""
+    """`hefesto_som_<marca>` deste controle, PERGUNTADO ao produto."""
     try:
         from hefesto_dualsense4unix.integrations import alto_falante_bt
     except ImportError:
@@ -115,7 +115,7 @@ def _nome_do_sink_de_dentro(mac: str) -> str:
 
 
 def _nome_da_fonte_de_dentro(mac: str) -> str:
-    """`hefesto_mic_<hex6>` deste controle, PERGUNTADO ao dono do canal."""
+    """`hefesto_mic_<marca>` deste controle, PERGUNTADO ao dono do canal."""
     try:
         from hefesto_dualsense4unix.integrations import canal_do_microfone
     except ImportError:

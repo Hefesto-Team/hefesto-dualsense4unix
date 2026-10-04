@@ -517,7 +517,7 @@ def _e_canal_de_controle(nome: str) -> bool:
     """O nó é a fonte de captura de um DualSense — o nosso canal ou a do kernel?
 
     Pelos donos de `integrations/fontes_de_captura`: a identidade no nome (o
-    `hefesto_mic_<hex6>`) ou os marcadores do DualSense (a fonte do kernel no
+    `hefesto_mic_<marca>`) ou os marcadores do DualSense (a fonte do kernel no
     cabo). É a mesma leitura de `hotkey._a_escolha_gravada_e_de_outro_controle`.
     """
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
@@ -1342,7 +1342,10 @@ class VarredorDeCanaisOrfaos:
     def varrer(self, *, querem: frozenset[str], de_pe: frozenset[str]) -> list[str]:
         """Uma varredura. Devolve os NOMES dos módulos derrubados agora."""
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
-        from hefesto_dualsense4unix.integrations.fontes_de_captura import identidade_no_nome
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+            identidade_e_do_controle,
+            identidade_no_nome,
+        )
 
         mudo = self._mudo or bt.pactl_mudo
         if mudo():
@@ -1359,7 +1362,7 @@ class VarredorDeCanaisOrfaos:
             if not nome or not module_id or nome in de_pe:
                 continue
             identidade = identidade_no_nome(nome)
-            if identidade and any(uniq.endswith(identidade) for uniq in querem):
+            if any(identidade_e_do_controle(identidade, uniq) for uniq in querem):
                 continue
             if alguem_escreve(str(getattr(modulo, "fifo", ""))) is not False:
                 continue

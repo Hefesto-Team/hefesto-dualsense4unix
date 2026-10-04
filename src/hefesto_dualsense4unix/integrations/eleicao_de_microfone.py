@@ -287,7 +287,7 @@ def outra_captura_elegivel() -> str | None:
     """A melhor captura com porta usável que não é CONTROLE NENHUM, ou `None`.
 
     Irmã da pergunta do INSTALL (`--melhor-fonte-elegivel` do script), e a
-    diferença é o canal por controle (``hefesto_mic_<hex6>``): lá ele entra de
+    diferença é o canal por controle (``hefesto_mic_<marca>``): lá ele entra de
     propósito — é o §D.2 da MIC-PADRAO-NO-CABO-01, em que pelo rádio o eleito
     do install é o microfone virtual do controle —, e aqui ele é controle.
 

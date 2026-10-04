@@ -101,7 +101,7 @@ O NOME DO NÓ MUDOU, E O DEFEITO ERA O NOME (06/09/2026)
 A ponte publicava ``hefesto_dualsense_bt_<hex6>`` — o TRANSPORTE no nome do
 microfone. Troque o cabo pelo rádio e o microfone daquele controle mudava de
 nome; um app que fixou o device o perdia. Ela agora publica o canal por
-controle, ``hefesto_mic_<hex6>``, pelo dono dele
+controle, ``hefesto_mic_<marca>``, pelo dono dele
 (:mod:`integrations.canal_do_microfone`) e pela MESMA
 :meth:`SourceVirtualPipeWire.escrever` por onde o cabo entrega o PCM dele: um
 nó, uma entrada, dois transportes. O nome antigo continua sendo o caminho de
@@ -1126,7 +1126,7 @@ class PonteMicBluetooth:
         source.parar()
 
     def _abrir_o_canal_por_controle(self, descricao: str) -> Any:
-        """O nó `hefesto_mic_<hex6>` DESTE controle — `None` quando não dá."""
+        """O nó `hefesto_mic_<marca>` DESTE controle — `None` quando não dá."""
         try:
             from hefesto_dualsense4unix.integrations import canal_do_microfone
         except Exception:  # pragma: no cover - o pacote está quebrado

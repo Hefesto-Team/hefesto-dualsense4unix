@@ -300,7 +300,7 @@ def test_o_toque_dela_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-un
     assert dono_dublado["abriu"] == [
         (_hex(P1), "Microfone do Controle 1" + _SONY, FONTE_DO_CABO)
     ], f"o canal do cabo do P1 não subiu como devia: {dono_dublado['abriu']}"
-    assert sub._canais_do_cabo == {_hex(P1): "hefesto_mic_000001"}
+    assert sub._canais_do_cabo == {_hex(P1): f"hefesto_mic_{bt.marca_do_aparelho(P1)}"}
 
 
 def test_o_supervisor_do_cabo_nao_encosta_em_quem_esta_no_radio(  # type: ignore[no-untyped-def]

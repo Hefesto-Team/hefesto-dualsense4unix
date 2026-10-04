@@ -16,7 +16,7 @@ dispositivo de saída que o jogo escolheu desaparece do sistema.** Não é o som
 que fica ruim — é a rota que some debaixo do jogo.
 
 Depois deste subsystem, o jogo aponta para **um nó que não sai do lugar**: o
-nome vem do ``uniq`` do controle (``hefesto_som_<hex6>``), e o cabo, o rádio e
+nome vem do ``uniq`` do controle (``hefesto_som_<marca>``), e o cabo, o rádio e
 o "não tem para onde ir" acontecem por baixo dele. É o mesmo contrato do
 gamepad virtual, que é o precedente que ela citou: *o jogo escolhe um
 dispositivo, não um transporte* (``integrations/virtual_pad.py``).

@@ -190,7 +190,7 @@ def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
             mic.registrar_numerador_de_assento(anterior)
 
     assert nos[0].descricao != nos[1].descricao
-    assert nos[0].nome == nos[1].nome == "hefesto_som_0000b2"
+    assert nos[0].nome == nos[1].nome == som.nome_do_sink(_UNIQ_P1)
     assert nos[0].nome == som.nome_do_sink(_UNIQ_P1)
     assert som.SinkVirtualPipeWire(uniq="", runner=_Gravador()).nome == ""
 
@@ -203,7 +203,7 @@ def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
     assert "module-null-sink" in linhas[0]
     assert f"sink={_SINK_P1}" in linhas[1]
     assert f"source={_HDMI}.monitor" in linhas[2]
-    assert "sink=hefesto_som_0000b2" in linhas[2]
+    assert f"sink={som.nome_do_sink(_UNIQ_P1)}" in linhas[2]
 
 
 def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
@@ -225,15 +225,15 @@ def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_da_bancada: None) -> None:
 
     assert len(p1) == 3 and len(p2) == 2
     assert f"sink={_SINK_P1}" in p1[1] and f"sink={_SINK_P2}" in p2[1]
-    assert "sink_name=hefesto_som_0000b2" in p1[0]
-    assert "sink_name=hefesto_som_0000b3" in p2[0]
+    assert f"sink_name={som.nome_do_sink(_UNIQ_P1)}" in p1[0]
+    assert f"sink_name={som.nome_do_sink(_UNIQ_P2)}" in p2[0]
 
 
 def test_o_mix_nao_troca_a_origem_pelo_destino() -> None:
     """Trocar as duas pontas manda o som do controle para a televisão dela."""
-    argv = " ".join(som.argv_para_ligar_o_mix("hefesto_som_0000b2", f"{_HDMI}.monitor"))
+    argv = " ".join(som.argv_para_ligar_o_mix(som.nome_do_sink(_UNIQ_P1), f"{_HDMI}.monitor"))
     assert f"source={_HDMI}.monitor" in argv
-    assert "sink=hefesto_som_0000b2" in argv
+    assert f"sink={som.nome_do_sink(_UNIQ_P1)}" in argv
 
 
 def test_sem_saida_padrao_legivel_o_mix_nao_se_inventa() -> None:
@@ -244,7 +244,7 @@ def test_sem_saida_padrao_legivel_o_mix_nao_se_inventa() -> None:
 
     assert som.monitor_da_saida_padrao(runner=mudo) == ""
     rota = som.RotaDoNo(True, sink=_SINK_P1, fonte=som.FONTE_MIX, monitor_do_mix="")
-    assert len(som.argv_das_rotas("hefesto_som_0000b2", rota)) == 1
+    assert len(som.argv_das_rotas(som.nome_do_sink(_UNIQ_P1), rota)) == 1
 
 
 def test_sem_rota_a_frase_mora_na_rota_e_nenhum_laco_sobe() -> None:

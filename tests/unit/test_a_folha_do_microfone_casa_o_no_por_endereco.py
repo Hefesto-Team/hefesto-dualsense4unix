@@ -113,9 +113,15 @@ def test_o_martelo_so_bate_o_que_ela_assumiu_e_a_porta_so_abre_ai(folha, monkeyp
     assert controle.escritor.escritos[-1] == bytes(47), "devolver não zerou o common"
 
 
-_SOURCES_COM_A_ARMADILHA = """Source #1
+def _no_do_cabo() -> str:
+    from hefesto_dualsense4unix.integrations.canal_do_microfone import nome_do_canal
+
+    return nome_do_canal(MAC_DO_CABO) or ""
+
+
+_SOURCES_COM_A_ARMADILHA = f"""Source #1
 \tState: SUSPENDED
-\tName: hefesto_mic_000011
+\tName: {_no_do_cabo()}
 \tDescription: Microfone do Controle 2
 Source #2
 \tState: RUNNING
@@ -143,7 +149,7 @@ def test_o_no_e_do_controle_cujo_endereco_ele_carrega_nao_do_numero_da_descricao
     radio = AlvoDeMentira(MAC_DO_RADIO, folha.RADIO, hidraw="hidraw2")
     leituras = folha.ler_o_sistema([cabo, radio])
 
-    assert leituras[MAC_DO_CABO].canal == "hefesto_mic_000011"
+    assert leituras[MAC_DO_CABO].canal == _no_do_cabo()
     assert leituras[MAC_DO_CABO].descricao == "Microfone do Controle 2"
     assert leituras[MAC_DO_CABO].publica is True
     assert leituras[MAC_DO_RADIO].canal == "", (

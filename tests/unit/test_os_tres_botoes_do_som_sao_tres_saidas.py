@@ -45,8 +45,11 @@ class TestOTerceiroBotaoMandaoSomParaATV:
 class TestOLacoLeOMonitorEEmEstereo:
     def test_a_captura_e_o_monitor_do_sink(self):
         """**UM SINK NÃO SE LÊ; LÊ-SE O MONITOR DELE.** Pedir o nome cru faz o"""
-        from hefesto_dualsense4unix.integrations import laco_de_audio
-        from hefesto_dualsense4unix.integrations import som_do_controle_na_tv
+        from hefesto_dualsense4unix.integrations import (
+            alto_falante_bt,
+            laco_de_audio,
+            som_do_controle_na_tv,
+        )
 
         pedidos: list[dict] = []
         original = laco_de_audio.Lacos.ligar
@@ -58,7 +61,8 @@ class TestOLacoLeOMonitorEEmEstereo:
             laco_de_audio.Lacos.ligar = original
 
         assert pedidos, "o módulo não chegou a pedir a laçada"
-        assert pedidos[0]["captura"] == "hefesto_som_000001.monitor"
+        sink = alto_falante_bt.nome_do_sink("aa:bb:cc:00:00:01")
+        assert pedidos[0]["captura"] == f"{sink}.monitor"
         assert pedidos[0]["canais"] == 2
         assert pedidos[0]["mapa"] == "[ FL FR ]"
 

@@ -99,8 +99,10 @@ def _mesa_limpa(monkeypatch):
 
 
 def test_o_nome_carrega_a_identidade_do_controle() -> None:
-    assert canal.nome_do_canal(P1) == "hefesto_mic_000001"
-    assert canal.nome_do_canal(P2) == "hefesto_mic_000002"
+    """A marca do aparelho, e não o rabo do endereço (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01)."""
+    assert canal.nome_do_canal(P1) == f"hefesto_mic_{canal_bt.marca_do_aparelho(P1)}"
+    assert canal.nome_do_canal(P2) == f"hefesto_mic_{canal_bt.marca_do_aparelho(P2)}"
+    assert "000001" not in canal.nome_do_canal(P1)
 
 
 def test_dois_controles_nao_dividem_o_nome() -> None:
@@ -124,7 +126,7 @@ def test_sem_endereco_nao_ha_canal() -> None:
 
 def test_o_caminho_de_volta_reconhece_so_o_nosso() -> None:
     """De que controle é este nó — e o prefixo do rádio NÃO é este."""
-    assert sufixo_do_canal_do_mic(canal.nome_do_canal(P1)) == "000001"
+    assert sufixo_do_canal_do_mic(canal.nome_do_canal(P1)) == canal_bt.marca_do_aparelho(P1)
     assert sufixo_do_canal_do_mic(f"{PREFIXO_SOURCE_PONTE_BT}000001") == ""
     assert sufixo_do_canal_do_mic("alsa_input.usb-Sony_DualSense-00") == ""
     assert not hasattr(canal, "sufixo_do_canal"), (
@@ -138,7 +140,7 @@ def test_os_dois_prefixos_convivem_e_nao_se_confundem() -> None:
     do_canal = canal.nome_do_canal(P1)
     assert sufixo_da_ponte_bt(do_radio) == "000001"
     assert sufixo_da_ponte_bt(do_canal) == ""
-    assert sufixo_do_canal_do_mic(do_canal) == "000001"
+    assert sufixo_do_canal_do_mic(do_canal) == canal_bt.marca_do_aparelho(P1)
     assert sufixo_do_canal_do_mic(do_radio) == ""
 
 
@@ -161,15 +163,15 @@ def test_pedir_duas_vezes_sobe_um_no_so() -> None:
     b = canal.abrir(P1, "Microfone do P1", fabrica=SourceDeMentira)
     assert a is not None and a is b
     assert len(SourceDeMentira.vivas) == 1, SourceDeMentira.vivas
-    assert canal.de_pe() == {P1: "hefesto_mic_000001"}
+    assert canal.de_pe() == {P1: canal.nome_do_canal(P1)}
 
 
 def test_dois_controles_sobem_dois_nos() -> None:
     canal.abrir(P1, "P1", fabrica=SourceDeMentira)
     canal.abrir(P2, "P2", fabrica=SourceDeMentira)
     assert canal.de_pe() == {
-        P1: "hefesto_mic_000001",
-        P2: "hefesto_mic_000002",
+        P1: canal.nome_do_canal(P1),
+        P2: canal.nome_do_canal(P2),
     }
 
 
@@ -248,7 +250,7 @@ def _sem_processos_de_mentira():
 def test_sem_fonte_o_no_sobe_mudo() -> None:
     """Publicar o canal e alimentá-lo são duas coisas — o rádio prova isso."""
     source = canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
-    assert canal.de_pe() == {P1: "hefesto_mic_000001"}
+    assert canal.de_pe() == {P1: canal.nome_do_canal(P1)}
     assert ProcessoDeMentira.lancados == []
     assert source is not None and bytes(source.recebido) == b""
 
@@ -330,7 +332,7 @@ def test_o_leitor_que_nao_lanca_nao_derruba_o_canal() -> None:
         P1, "P1", fonte=CABO_1, fabrica=SourceQueGuardaOPcm, lancar=nao_lanca
     )
     assert source is not None
-    assert canal.de_pe() == {P1: "hefesto_mic_000001"}
+    assert canal.de_pe() == {P1: canal.nome_do_canal(P1)}
     assert bytes(source.recebido) == b"", "entrou áudio num canal sem leitor"
 
 
@@ -405,7 +407,7 @@ def test_um_descarte_no_cabo_nao_custa_mais_voz_que_um_no_radio(tmp_path) -> Non
 def test_o_bombeador_le_o_pedaco_do_no_e_nao_de_um_literal() -> None:
     """Quem decide o tamanho é o formato do nó, atravessando o `_Alimentador`."""
 
-    no = SourceQueGuardaOPcm(nome="hefesto_mic_000001", descricao="P1")
+    no = SourceQueGuardaOPcm(nome=canal.nome_do_canal(P1), descricao="P1")
     no.canais = 2
     alim = canal._Alimentador(P1, CABO_1, no, lancar=ProcessoDeMentira)
     assert alim.iniciar() is True
@@ -479,7 +481,7 @@ def test_o_app_dela_no_canal_novo_continua_contando_como_ouvinte(tmp_path) -> No
 def test_o_no_com_identidade_chega_a_lista_de_fontes() -> None:
     """MEDIDO em 06/09/2026, e sem isto a regra 0 seria código morto.
 
-    `hefesto_mic_000001` não contém NENHUM dos marcadores de DualSense — o da
+    `hefesto_mic_<marca>` não contém NENHUM dos marcadores de DualSense — o da
     ponte de rádio contém, porque tem a palavra `dualsense` dentro. Sem a
     entrada por identidade o nó nunca chegava a `escolher_fonte`, e a regra 0
     dava verde sobre nada.
@@ -532,7 +534,7 @@ def test_o_canal_nasce_mudo_e_o_produto_desmuta() -> None:
     """MEDIDO na máquina dela em 06/09/2026, com PipeWire 1.6.8::"""
     source = canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
     assert source is not None
-    assert ["pactl", "set-source-mute", "hefesto_mic_000001", "0"] in PACTL_PEDIDO, (
+    assert ["pactl", "set-source-mute", canal.nome_do_canal(P1), "0"] in PACTL_PEDIDO, (
         "o canal subiu com o mudo de fábrica: ele entrega 192 KB de ZEROS, e o "
         "sintoma se lê como 'a ponte não está entregando áudio'")
 
@@ -543,7 +545,7 @@ def test_desmutar_nao_levanta_quando_nao_ha_pactl() -> None:
     def explode(_argv: list[str]) -> bool:
         raise OSError("pactl não está lá")
 
-    assert canal.desmutar("hefesto_mic_000001", rodar=explode) is False
+    assert canal.desmutar(canal.nome_do_canal(P1), rodar=explode) is False
 
 
 def test_o_canal_sobe_mesmo_que_o_desmute_falhe() -> None:
@@ -553,4 +555,4 @@ def test_o_canal_sobe_mesmo_que_o_desmute_falhe() -> None:
         rodar=lambda _argv: False,
     )
     assert source is not None
-    assert canal.de_pe() == {P1: "hefesto_mic_000001"}
+    assert canal.de_pe() == {P1: canal.nome_do_canal(P1)}

@@ -193,14 +193,14 @@ def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no(
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
     ger.reconciliar([_cabo(_UNIQ_P1)])
     no_cabo = list(servidor.nos().values())
-    rotulo_cabo = servidor.rotulo("hefesto_som_0000b2")
+    rotulo_cabo = servidor.rotulo(af.nome_do_sink(_UNIQ_P1))
     ger.reconciliar([])
     assert servidor.nos() == {}
     ger.reconciliar([_radio(_UNIQ_P1)])
     no_radio = list(servidor.nos().values())
 
-    assert no_cabo == no_radio == ["hefesto_som_0000b2"]
-    assert rotulo_cabo == servidor.rotulo("hefesto_som_0000b2")
+    assert no_cabo == no_radio == [af.nome_do_sink(_UNIQ_P1)]
+    assert rotulo_cabo == servidor.rotulo(af.nome_do_sink(_UNIQ_P1))
     assert rotulo_cabo == "Alto-falante do Controle 1" + _SONY
 
 
@@ -217,7 +217,8 @@ def test_o_rotulo_e_o_do_assento_e_o_nome_e_o_do_aparelho() -> None:
         no_no_3 = af.SinkVirtualPipeWire(uniq=_UNIQ_P1)
     finally:
         mic.registrar_numerador_de_assento(anterior)
-    assert no_no_3.nome == af.nome_do_sink(_UNIQ_P1) == "hefesto_som_0000b2"
+    assert no_no_3.nome == af.nome_do_sink(_UNIQ_P1)
+    assert "11a1b2" not in no_no_3.nome, "o nome do nó voltou a levar o endereço"
     assert no_no_3.descricao == "Alto-falante do Controle 3" + _SONY
 
 
@@ -247,11 +248,13 @@ def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
     ger = GerenciadorDeNosDeSom()
     ger.reconciliar([_cabo(_UNIQ_P1), _cabo(_UNIQ_P2)])
 
-    assert sorted(servidor.nos().values()) == ["hefesto_som_0000b2", "hefesto_som_0000b3"]
-    assert sorted(servidor.lacos()) == [
-        ("hefesto_som_0000b2.monitor", _SINK_P1),
-        ("hefesto_som_0000b3.monitor", _SINK_P2),
-    ]
+    assert sorted(servidor.nos().values()) == sorted(
+        [af.nome_do_sink(_UNIQ_P1), af.nome_do_sink(_UNIQ_P2)]
+    )
+    assert sorted(servidor.lacos()) == sorted([
+        (f"{af.nome_do_sink(_UNIQ_P1)}.monitor", _SINK_P1),
+        (f"{af.nome_do_sink(_UNIQ_P2)}.monitor", _SINK_P2),
+    ])
 
 
 def test_o_laco_do_cabo_usa_os_dois_canais_da_frente(
@@ -351,8 +354,10 @@ def test_quem_sai_da_mesa_leva_so_o_seu_no(
     ger.reconciliar([_cabo(_UNIQ_P1), _cabo(_UNIQ_P2), _radio(_UNIQ_P3)])
     ger.reconciliar([_cabo(_UNIQ_P1), _radio(_UNIQ_P3)])
 
-    assert sorted(servidor.nos().values()) == ["hefesto_som_0000b2", "hefesto_som_0000b4"]
-    assert servidor.lacos() == [("hefesto_som_0000b2.monitor", _SINK_P1)]
+    assert sorted(servidor.nos().values()) == sorted(
+        [af.nome_do_sink(_UNIQ_P1), af.nome_do_sink(_UNIQ_P3)]
+    )
+    assert servidor.lacos() == [(f"{af.nome_do_sink(_UNIQ_P1)}.monitor", _SINK_P1)]
     ger.parar()
     assert servidor.modulos == {}
 
@@ -387,5 +392,6 @@ def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no(
     GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe).reconciliar(
         [_radio(_UNIQ_NUNCA_VISTO)]
     )
-    assert list(servidor.nos().values()) == ["hefesto_som_000001"]
-    assert servidor.rotulo("hefesto_som_000001") == "Alto-falante do Controle 4" + _SONY
+    assert list(servidor.nos().values()) == [af.nome_do_sink(_UNIQ_NUNCA_VISTO)]
+    rotulo = servidor.rotulo(af.nome_do_sink(_UNIQ_NUNCA_VISTO))
+    assert rotulo == "Alto-falante do Controle 4" + _SONY

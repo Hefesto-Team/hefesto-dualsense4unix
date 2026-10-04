@@ -54,6 +54,12 @@ from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
     mesa,
 )
 
+def _rabo_hex(uniq: str) -> str:
+    """Os seis hex do rabo do endereço: a forma que os nomes levavam antes de 02/10/2026."""
+    digitos = "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
+    return digitos[-6:]
+
+
 RAIZ = Path(__file__).resolve().parents[2]
 
 
@@ -136,7 +142,7 @@ def test_o_nome_do_endpoint_nao_carrega_pedaco_do_endereco(uniq: str) -> None:
     pedacos = formas_do_endereco(uniq)
     assert pedacos, "a régua ficou cega: o endereço de teste não tem forma"
     assert not [p for p in pedacos if p.lower() in baixo], nome
-    assert eh.marca_do_controle(uniq) not in baixo
+    assert _rabo_hex(uniq) not in baixo
     assert portao.acusa_no(nome) == []
     assert portao.acusa_serial(nome) == [] and portao.acusa_mac(nome) == []
     assert eh.nome_do_endpoint(uniq.upper().replace(":", "")) == nome

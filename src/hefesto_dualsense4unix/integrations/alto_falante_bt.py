@@ -2466,7 +2466,7 @@ def assinatura_da_rota(rota: RotaDoNo | None) -> tuple[bool, str, str, str]:
 
 
 def _sink_proprio_vivo(uniq: str, saida_curta: str) -> str:
-    """``hefesto_som_<hex6>`` deste controle, se ele estiver na lista viva."""
+    """``hefesto_som_<marca>`` deste controle, se ele estiver na lista viva."""
     nome = nome_do_sink(uniq)
     if not nome:
         return ""

@@ -1,37 +1,17 @@
-"""MIC-DA-MESA-ELEICAO-01 — a colisão do nome curto na ponte de mic por BT.
+"""MIC-DA-MESA-ELEICAO-01 — dois controles nunca partilham o nome do nó.
 
-**ESTA RÉGUA NASCE VERMELHA, E ISSO É O CORRETO.** Ela não descreve uma cura
-desta leva: descreve um buraco ABERTO que a mesa de quatro passa por cima, e
-que a eleição de microfone por controle torna consequente.
+O buraco medido em 01/09/2026: `NoDualSenseBT.nome_curto` devolvia os seis
+últimos dígitos hex do endereço, e dois controles com os três últimos octetos
+iguais geravam o mesmo `source_name` e o mesmo fifo; `PontePyDualSenseBT.iniciar()`
+faz `os.unlink` do fifo, e a segunda ponte apagava a primeira. Com a eleição
+por `uniq`, `escolher_fonte` resolveria os dois controles para a mesma source.
 
-O QUE ESTÁ MEDIDO NO CÓDIGO (01/09/2026):
-
-* `NoDualSenseBT.nome_curto` devolve os SEIS últimos dígitos hex do MAC. Dois
-  controles cujos três últimos octetos coincidam geram o **mesmo**
-  `source_name` (`hefesto_dualsense_bt_<hex6>`) **e o mesmo fifo**;
-* `PontePyDualSenseBT.iniciar()` faz `os.unlink` incondicional do fifo —
-  apagando o fifo da ponte que já estava de pé;
-* o docstring de `nome_curto` promete o contrário, com todas as letras: *"o
-  que não pode é dois controles gerarem o MESMO nome de source e um
-  sobrescrever o outro"*;
-* `grep nome_curto tests/` devolvia ZERO antes deste arquivo.
-
-Com a eleição por `uniq`, isso deixa de ser um incômodo de nome: `escolher_fonte`
-resolveria os DOIS controles para a MESMA source, e a eleição do Jogador 3
-acenderia o LED do Jogador 1.
-
-Por que `xfail(strict=True)` e não um teste comentado: `strict` REPROVA se um
-dia passar sem ninguém avisar. Assim o vermelho fica registrado, o portão fica
-verde, e no dia em que a cura chegar a régua cobra que este arquivo seja
-atualizado em vez de esquecido.
-
-**Curar aqui não é desta leva** — é sprint própria, porque a cura muda o nome de
-uma source publicada (contrato com o PipeWire e com quem já tem a ponte de pé).
+Fechado em 03/10/2026 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): o nome curto é
+a marca do aparelho, uma HMAC dos doze dígitos com chave da máquina. Esta régua
+era um `xfail(strict=True)` à espera da cura; agora é a régua da cura.
 """
 
 from __future__ import annotations
-
-import pytest
 
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import NoDualSenseBT
 
@@ -40,15 +20,6 @@ def _no(uniq: str, caminho: str) -> NoDualSenseBT:
     return NoDualSenseBT(caminho=caminho, uniq=uniq, produto=0x0CE6)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BURACO ABERTO: `nome_curto` usa só os 6 últimos dígitos hex do MAC. "
-        "Dois controles com os TRÊS últimos octetos iguais colidem no nome da "
-        "source e no fifo, e `iniciar()` faz unlink incondicional. A cura muda "
-        "o contrato de nome com o PipeWire e é sprint própria."
-    ),
-)
 def test_dois_controles_com_o_rabo_igual_nao_podem_gerar_o_mesmo_nome() -> None:
     """Dois MACs distintos, mesmos três últimos octetos: nomes TÊM de diferir."""
     a = _no("aa:bb:cc:00:00:01", "/dev/hidraw3")
@@ -59,11 +30,3 @@ def test_dois_controles_com_o_rabo_igual_nao_podem_gerar_o_mesmo_nome() -> None:
         "mesmo nome de source e mesmo fifo — a segunda ponte apaga a primeira"
     )
 
-
-def test_o_buraco_do_nome_curto_segue_aberto_e_o_xfail_estrito_avisa_a_cura() -> None:
-    """Hoje o código entrega o nome igual; a cura derruba esta e solta o xfail."""
-    a = _no("aa:bb:cc:00:00:01", "/dev/hidraw3")
-    b = _no("02:fe:00:00:00:01", "/dev/hidraw4")
-    assert a.nome_curto == b.nome_curto, (
-        "o nome curto passou a diferir: tire o xfail do teste de cima e este daqui"
-    )

@@ -469,7 +469,7 @@ class EndpointDeHaptica:
     rótulo são dele. O controle chega pelo rádio (a ponte lê o monitor deste
     nó) ou pelo cabo (o laço leva o monitor à placa dele).
 
-    **Não é o ``hefesto_som_<hex6>``:** aquele é a saída da MÁQUINA para o
+    **Não é o ``hefesto_som_<marca>``:** aquele é a saída da MÁQUINA para o
     controle — a pessoa o escolhe nas saídas de som, e o nome dele tem dono.
     Este aqui é o que o JOGO escolhe sozinho, pelo teste do GE, e o nome dele é
     ditado pelos patches. Só este casa com o teste, então o jogo não se

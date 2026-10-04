@@ -7,6 +7,7 @@ import pathlib
 import pytest
 
 from hefesto_dualsense4unix.integrations import monitor_do_microfone
+from hefesto_dualsense4unix.integrations.dualsense_bt_audio import marca_do_aparelho
 
 UNIQ = "aa:bb:cc:00:00:01"
 PACOTE = pathlib.Path(
@@ -67,15 +68,17 @@ class TestOBotaoEUmaTrava:
 
     def test_um_clique_liga_e_fica_ligado(self, mesa):
         """O fato que separa a trava do gatilho: ele não termina sozinho."""
-        assert monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
+        assert monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         assert monitor_do_microfone.esta_ligado(UNIQ)
-        assert monitor_do_microfone.ligados() == (UNIQ,)
+        assert monitor_do_microfone.ligados() == (marca_do_aparelho(UNIQ),), (
+            "a chave do laço é a marca do aparelho, nunca o endereço"
+        )
         assert len(mesa) == 1, "o retorno não abriu processo nenhum"
         assert not mesa[0].terminou, "o retorno morreu no mesmo clique"
 
     def test_o_clique_seguinte_desliga(self, mesa):
         """O SEGUNDO CLIQUE APAGA, e é a metade da ordem dela que faltava."""
-        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
+        monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         assert monitor_do_microfone.esta_ligado(UNIQ)
         monitor_do_microfone.desligar(UNIQ)
         assert not monitor_do_microfone.esta_ligado(UNIQ)
@@ -83,19 +86,19 @@ class TestOBotaoEUmaTrava:
 
     def test_o_segundo_ligar_nao_abre_um_segundo_processo(self, mesa):
         """Dois cliques rápidos não podem deixar DOIS `pw-loopback` no ar."""
-        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
-        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
+        monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
+        monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         assert len(mesa) == 1, "abriu um segundo retorno para o mesmo controle"
 
     def test_um_processo_que_morreu_sozinho_conta_como_desligado(self, mesa):
         """O estado é do SISTEMA, não da nossa lembrança."""
-        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
+        monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         mesa[0]._morto = 1
         assert not monitor_do_microfone.esta_ligado(UNIQ)
 
     def test_a_latencia_vai_escrita_no_comando(self, mesa):
         """Gravador sem latência explícita atrasa dois segundos — medido nesta"""
-        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
+        monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         argv = mesa[0].argv
         assert "--latency" in argv, "o retorno saiu sem latência explícita"
         assert argv[argv.index("--latency") + 1] == str(
@@ -105,7 +108,7 @@ class TestOBotaoEUmaTrava:
 class TestOFechoNaoDeixaMicrofoneAberto:
     def test_desligar_todos_fecha_o_que_estava_de_pe(self, mesa):
         """MORDIDA: faça `desligar_todos` devolver 0 sem terminar nada."""
-        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
+        monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         monitor_do_microfone.ligar("aa:bb:cc:00:00:02", "hefesto_mic_000002")
         assert monitor_do_microfone.desligar_todos() == 2
         assert monitor_do_microfone.ligados() == ()

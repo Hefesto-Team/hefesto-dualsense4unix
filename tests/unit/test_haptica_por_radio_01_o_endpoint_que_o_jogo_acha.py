@@ -23,6 +23,12 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
+def _rabo_hex(uniq: str) -> str:
+    """Os seis hex do rabo do endereço: a forma que os nomes levavam antes de 02/10/2026."""
+    digitos = "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
+    return digitos[-6:]
+
+
 _UNIQ = "aa:bb:cc:00:00:03"
 _QUATRO = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
@@ -90,7 +96,7 @@ def test_o_que_nao_da_identidade_nao_vira_no_anonimo() -> None:
     """Sem identidade, dois nós disputariam o mesmo endpoint: um número de lugar não é uma."""
     for fora in (0, 5, -1, True, None, "1", "", "path:"):
         assert eh.nome_do_endpoint(fora) == "", fora  # type: ignore[arg-type]
-    for fora in (1, "LUGAR1", "000003", eh.marca_do_controle(_UNIQ)):
+    for fora in (1, "LUGAR1", "000003", _rabo_hex(_UNIQ)):
         assert eh.nome_da_marca(fora) == "", fora  # type: ignore[arg-type]
 
 

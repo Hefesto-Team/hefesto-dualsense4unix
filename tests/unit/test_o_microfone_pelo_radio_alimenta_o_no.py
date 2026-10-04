@@ -21,6 +21,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
 P1 = "aa:bb:cc:00:00:01"
+#: O nó do P1 pelo dono do nome: a marca do aparelho, nunca o endereço.
+NO_DO_P1 = f"hefesto_mic_{bt.marca_do_aparelho(P1)}"
 P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
 P4 = "aa:bb:cc:00:00:04"
@@ -200,7 +202,7 @@ def test_o_radio_publica_o_no_com_nome_de_controle(pactl, par) -> None:  # type:
     ponte = _ponte(P1, par)
     assert ponte.iniciar(), "a ponte não subiu com o `pactl` dublado"
     try:
-        assert ponte.nome_source == canal.nome_do_canal(P1) == "hefesto_mic_000001", (
+        assert ponte.nome_source == canal.nome_do_canal(P1) == NO_DO_P1, (
             f"o rádio publicou {ponte.nome_source!r}. O nome com IDENTIDADE é o "
             "que faz o microfone daquele controle ser o mesmo nos dois "
             "transportes — que é o 'Mic virtual' que ela pediu."
@@ -208,7 +210,7 @@ def test_o_radio_publica_o_no_com_nome_de_controle(pactl, par) -> None:  # type:
         assert not ponte.nome_source.startswith(fc.PREFIXO_SOURCE_PONTE_BT), (
             "o nome do TRANSPORTE voltou ao nó do rádio"
         )
-        assert canal.de_pe() == {P1: "hefesto_mic_000001"}, (
+        assert canal.de_pe() == {P1: NO_DO_P1}, (
             "o dono do ciclo de vida do canal não sabe que ele está de pé — "
             "e é essa tabela que impede o cabo e o rádio de publicarem dois "
             "`module-pipe-source` com o mesmo `source_name`"
@@ -229,7 +231,7 @@ def test_o_audio_do_radio_sai_do_outro_lado_do_no(pactl, par) -> None:  # type: 
         colhido = bytearray()
 
         def _chegou() -> bool:
-            colhido.extend(pactl.colher("hefesto_mic_000001"))
+            colhido.extend(pactl.colher(NO_DO_P1))
             return len(colhido) >= len(_DecodadorFixo.PCM)
 
         assert _esperar(_chegou), (
@@ -269,9 +271,9 @@ def test_a_ponte_nao_derruba_o_canal_de_quem_ela_nao_abriu(pactl, par) -> None: 
     assert ja is not None
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
-    assert ponte.nome_source == "hefesto_mic_000001"
+    assert ponte.nome_source == NO_DO_P1
     ponte.parar()
-    assert canal.de_pe() == {P1: "hefesto_mic_000001"}, (
+    assert canal.de_pe() == {P1: NO_DO_P1}, (
         "a ponte derrubou um canal que não era dela — o microfone de quem "
         "chegou antes sumiu no `parar()` de outro controle"
     )
@@ -350,7 +352,7 @@ def test_nao_sei_nunca_vira_ninguem_esta_ouvindo(pactl, par) -> None:  # type: i
     assert ponte.iniciar()
     try:
         assert _esperar(lambda: par.pedidos_de_mic() == [bt.AUDIO_CONTROL_MIC_ON])
-        pactl.nos.pop("hefesto_mic_000001", None)
+        pactl.nos.pop(NO_DO_P1, None)
         quadro = bytes(range(bt.MIC_OPUS_LEN))
         fim = time.monotonic() + 1.6
         while time.monotonic() < fim:

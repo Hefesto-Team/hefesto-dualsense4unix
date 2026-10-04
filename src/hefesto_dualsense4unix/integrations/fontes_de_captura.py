@@ -160,11 +160,12 @@ def escolher_fonte(
     que NÃO saíram:
 
     0. **O nó com IDENTIDADE vence** (ONDA5-MIC-VIRTUAL-01, 06/09/2026). O
-       canal por controle publica ``hefesto_mic_<hex6>``
-       (:data:`PREFIXO_SOURCE_CANAL_DO_MIC`), e aqueles seis dígitos são os
-       três últimos octetos do MAC — a identidade DO CONTROLE, que não muda
-       quando ele troca de transporte. Quando ele está no ar, a pergunta *"qual
-       nó é o microfone deste controle"* tem resposta exata e ela não custa
+       canal por controle publica ``hefesto_mic_<marca>``
+       (:data:`PREFIXO_SOURCE_CANAL_DO_MIC`), e a marca é a do aparelho
+       (:func:`identidade_e_do_controle`) — a identidade DO CONTROLE, que não
+       muda quando ele troca de transporte e não volta ao endereço. Quando
+       ele está no ar, a pergunta *"qual nó é o microfone deste controle"* tem
+       resposta exata e ela não custa
        censo de USB nenhum.
 
        **AS QUATRO ABAIXO FICAM, e a razão é medida:** o nó com identidade só
@@ -226,15 +227,13 @@ def escolher_fonte(
     alvo = so_hex(uniq)
     if alvo:
         for fonte in fontes:
-            sufixo = sufixo_do_canal_do_mic(fonte)
-            if sufixo and alvo.endswith(sufixo):
+            if identidade_e_do_controle(sufixo_do_canal_do_mic(fonte), uniq):
                 return fonte
         for fonte in fontes:
             if fonte.lower().startswith("bluez") and alvo in so_hex(fonte):
                 return fonte
         for fonte in fontes:
-            sufixo = sufixo_da_ponte_bt(fonte)
-            if sufixo and alvo.endswith(sufixo):
+            if identidade_e_do_controle(sufixo_da_ponte_bt(fonte), uniq):
                 return fonte
     sem_nome_alheio = [f for f in fontes if not e_de_outro_controle(f, uniq)]
     if usb is not None:
@@ -275,7 +274,7 @@ def escolher_sink(
     porque é a regra certa se um dia houver um sink com identidade no nome.
 
     **A regra 0 (o canal por controle) é inerte aqui pelo mesmo motivo, e de
-    propósito:** ``hefesto_mic_<hex6>`` é um nó de CAPTURA e
+    propósito:** ``hefesto_mic_<marca>`` é um nó de CAPTURA e
     :func:`sinks_dualsense` nunca o devolve. O microfone não sai por lugar
     nenhum; se ele aparecesse numa lista de sinks, o defeito estaria antes
     daqui.
@@ -357,9 +356,13 @@ def identidade_no_nome(fonte: str) -> str:
     return sufixo_do_canal_do_mic(fonte) or sufixo_da_ponte_bt(fonte) or _mac_no_nome_bluez(fonte)
 
 
-def e_de_outro_controle(fonte: str, uniq: str) -> bool:
-    """True quando o NOME do nó diz que ele é de um controle que NÃO é `uniq`."""
-    identidade = identidade_no_nome(fonte)
+def identidade_e_do_controle(identidade: str, uniq: str) -> bool:
+    """A identidade lida num nome (:func:`identidade_no_nome`) é a deste `uniq`?
+
+    O dono da comparação: a marca do aparelho compara com a marca do `uniq`
+    (com a chave desta máquina); os hex (o ``bluez_*`` e a forma velha dos
+    nossos) comparam pelo rabo do endereço. Identidade vazia não é de ninguém.
+    """
     if not identidade:
         return False
     if marca_na_forma(identidade):
@@ -367,8 +370,17 @@ def e_de_outro_controle(fonte: str, uniq: str) -> bool:
             marca_do_aparelho,
         )
 
-        return marca_do_aparelho(uniq) != identidade
-    return not so_hex(uniq).endswith(identidade)
+        return marca_do_aparelho(uniq) == identidade
+    alvo = so_hex(uniq)
+    return bool(alvo) and alvo.endswith(identidade.lower())
+
+
+def e_de_outro_controle(fonte: str, uniq: str) -> bool:
+    """True quando o NOME do nó diz que ele é de um controle que NÃO é `uniq`."""
+    identidade = identidade_no_nome(fonte)
+    if not identidade:
+        return False
+    return not identidade_e_do_controle(identidade, uniq)
 
 
 def so_hex(valor: str) -> str:
@@ -387,6 +399,7 @@ __all__ = [
     "escolher_sink",
     "fontes_dualsense",
     "identidade_depois_do_prefixo",
+    "identidade_e_do_controle",
     "identidade_no_nome",
     "marca_na_forma",
     "sinks_dualsense",

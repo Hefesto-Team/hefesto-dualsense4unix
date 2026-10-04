@@ -86,7 +86,7 @@ def common_do_byte(valor: int, *, com_bit: bool = True) -> bytearray:
 
 
 def no_do_canal(uniq: str) -> str:
-    """`hefesto_mic_<hex6>` deste controle — "" se ele não tem identidade."""
+    """`hefesto_mic_<marca>` deste controle — "" se ele não tem identidade."""
     try:
         return nome_do_canal(uniq) or ""
     except Exception:

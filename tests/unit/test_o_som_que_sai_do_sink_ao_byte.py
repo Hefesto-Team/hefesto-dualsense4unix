@@ -221,7 +221,7 @@ class TestONomeDoNoNaoCarregaOTransporte:
     def test_o_mesmo_controle_da_o_mesmo_no_nos_dois_transportes(self) -> None:
         no_cabo = af.SinkVirtualPipeWire(uniq=MAC_A, runner=RunnerFalso())
         no_radio = af.SinkVirtualPipeWire(uniq=MAC_A.replace(":", ""), runner=RunnerFalso())
-        assert no_cabo.nome == no_radio.nome == "hefesto_som_000001"
+        assert no_cabo.nome == no_radio.nome == af.nome_do_sink(MAC_A)
 
     def test_o_nome_nao_tem_palavra_de_transporte_dentro(self) -> None:
         nome = af.nome_do_sink(MAC_A)
@@ -236,7 +236,12 @@ class TestONomeDoNoNaoCarregaOTransporte:
             assert af.nome_do_sink(ruim) == ""
 
     def test_o_sufixo_recorta_o_prefixo_antes_de_filtrar_hex(self) -> None:
-        assert af.sufixo_do_sink_do_som("hefesto_som_000001") == "000001"
+        assert af.sufixo_do_sink_do_som(af.nome_do_sink(MAC_A)) == af.nome_do_sink(
+            MAC_A
+        ).removeprefix(af.PREFIXO_SINK_DO_SOM)
+        assert af.sufixo_do_sink_do_som("hefesto_som_000001") == "000001", (
+            "a forma velha segue lida por uma versão, para a escolha gravada"
+        )
         assert af.sufixo_do_sink_do_som("alsa_output.usb-Sony-00") == ""
         assert af.sufixo_do_sink_do_som("hefesto_som_zzzzzz") == ""
 
@@ -288,7 +293,7 @@ class TestOCicloDeVidaDoNo:
         no = af.SinkVirtualPipeWire(uniq=MAC_A, runner=runner)
         assert no.iniciar() is True
         assert no.module_id == "4242"
-        assert no.monitor() == "hefesto_som_000001.monitor"
+        assert no.monitor() == f"{af.nome_do_sink(MAC_A)}.monitor"
 
     def test_quando_o_servidor_recusa_nada_fica_de_pe(self) -> None:
         runner = RunnerFalso(aceita=False)
@@ -323,7 +328,7 @@ class TestOEstadoEhPerguntadoAoServidor:
 
     def test_le_a_quinta_coluna_separada_por_tab(self) -> None:
         curto = (
-            "58\thefesto_som_000001\tPipeWire\ts16le 2ch 48000Hz\tRUNNING\n"
+            f"58\t{af.nome_do_sink(MAC_A)}\tPipeWire\ts16le 2ch 48000Hz\tRUNNING\n"
             "59\toutro_sink\tPipeWire\ts16le 2ch 48000Hz\tIDLE\n"
         )
 

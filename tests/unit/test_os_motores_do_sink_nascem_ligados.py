@@ -191,5 +191,5 @@ def test_servidor_mudo_devolve_lista_vazia() -> None:
 def test_o_nome_do_sink_de_som_nao_serve_para_isto() -> None:
     """A régua do erro: `nome_do_sink` é de SOM, e som não tem motor."""
     de_som = bt.nome_do_sink("aabbcc000001")
-    assert de_som == "hefesto_som_000001"
+    assert de_som.startswith("hefesto_som_APARELHO")
     assert de_som not in bt.sinks_com_motores(lambda _c: LISTA_CURTA)

@@ -79,6 +79,12 @@ from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
+def _rabo_hex(uniq: str) -> str:
+    """Os seis hex do rabo do endereço: a forma que os nomes levavam antes de 02/10/2026."""
+    digitos = "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
+    return digitos[-6:]
+
+
 RAIZ = Path(__file__).resolve().parents[2]
 
 _SONY = " (DualSense Wireless Controller)"
@@ -274,7 +280,7 @@ def test_nenhum_hex_do_endereco_chega_ao_rotulo(assentos: _Assentos, uniq: str) 
     pares = [p for p in uniq.lower().split(":") if re.search(r"[a-f]", p)]
     for chave, valor in _campos_de_gente(props).items():
         baixa = valor.lower()
-        assert eh.marca_do_controle(uniq) not in baixa, f"{chave}={valor!r}"
+        assert _rabo_hex(uniq) not in baixa, f"{chave}={valor!r}"
         assert not re.search(r"\b[0-9a-f]{6}\b", baixa), f"{chave}={valor!r}"
         for par in pares:
             assert not re.search(rf"\b{par}\b", baixa), f"{chave}={valor!r} leva {par!r}"
@@ -305,7 +311,7 @@ def test_a_identidade_do_no_fica_intacta(assentos: _Assentos) -> None:
     assert props["device.vendor.name"] == "Sony Interactive Entertainment"
     assert props["priority.session"] == "0", "o endpoint não pode virar a saída padrão"
     assert eh.nome_do_endpoint(_P3) == eh.MOLDE_DO_NOME.format(marca=eh.marca_do_aparelho(_P3))
-    assert eh.marca_do_controle(_P3) not in eh.nome_do_endpoint(_P3).lower()
+    assert _rabo_hex(_P3) not in eh.nome_do_endpoint(_P3).lower()
 
 
 def test_o_no_publicado_diz_o_controle(assentos: _Assentos) -> None:
@@ -386,7 +392,7 @@ def test_os_casamentos_do_ge_dao_o_mesmo_resultado(assentos: _Assentos, numero: 
     háptica que já vibra parar.
     """
     assentos[_P3] = numero
-    velho = f"DualSense {eh.marca_do_controle(_P3)} (háptica)"
+    velho = f"DualSense {_rabo_hex(_P3)} (háptica)"
     novo = eh.descricao_da_haptica(_P3)
     assert [r for _f, r in _o_que_o_ge_ve(novo)] == [r for _f, r in _o_que_o_ge_ve(velho)]
     props = _como_o_servidor_le(eh.propriedades_do_endpoint(_P3, _ANCORAS[0]))
@@ -608,14 +614,14 @@ def test_o_no_herdado_com_o_rotulo_de_antes_renasce_uma_vez(mesa: _Mesa) -> None
             "channel_map=front-left,front-right,rear-left,rear-right",
             'sink_properties="device.bus=usb device.vendor.id=054c device.product.id=0ce6 '
             f"sysfs.path={ancora.declarado} device.vendor.name='Sony Interactive Entertainment' "
-            f"device.description='DualSense {eh.marca_do_controle(uniq)} (háptica)' "
+            f"device.description='DualSense {_rabo_hex(uniq)} (háptica)' "
             'priority.session=0 device.icon_name=audio-speakers"',
         ])
     mesa.volta()
     assert set(mesa.servidor.cargas) == {eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)}, (
         "o restart recarregou um nó vivo em vez de adotá-lo"
     )
-    assert mesa.rotulo(_P3) == f"DualSense {eh.marca_do_controle(_P3)} (háptica)"
+    assert mesa.rotulo(_P3) == f"DualSense {_rabo_hex(_P3)} (háptica)"
     o_ks_antes = _o_que_o_ks_le(mesa.servidor)
     assert len(o_ks_antes) == 4, f"o gravador do device KS não achou os quatro: {o_ks_antes}"
     mesa.volta()

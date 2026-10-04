@@ -311,5 +311,5 @@ def test_a_haptica_sem_fonte_nao_vira_som_em_silencio(
     bancada.volta(MESA[0])
 
     assert bancada.de_pe == []
-    assert bancada.colhidos == ["gravador:hefesto_som_000001"], (
+    assert bancada.colhidos == [f"gravador:{af.nome_do_sink(MESA[0])}"], (
         "o gravador do som ficou vivo sem ponte — ninguém mais o colheria")
