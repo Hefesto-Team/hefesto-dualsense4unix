@@ -1916,7 +1916,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
-    guarda está em `lifecycle.py:4240`, no `if not gamepad_dispatched`. Copiar o
+    guarda está em `lifecycle.py:4225`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa dela, 29/07).
