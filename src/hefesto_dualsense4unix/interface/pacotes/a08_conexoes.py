@@ -4000,7 +4000,9 @@ def _rotulo_do_grupo(g: dict[str, Any], cena: dict[str, Any]) -> str:
     else:
         dica = "Rádio sem nome. Toque para dizer o que é."
     dica = _x(dica)
-    return (f'<button class="rotulo vizinho" title="{dica}" aria-label="{dica}" '
+    # Sem `aria-label`: o nome do rádio escrito no botão já o nomeia, e a dica da
+    # casa leria o `title` por cima dele, duas vezes.
+    return (f'<button class="rotulo vizinho" title="{dica}" '
             f'data-gesto="vizinho-o-que-e" data-alvo="{_x(viz["id"])}">'
             f'{glifo}{nome}{selo}</button>')
 
