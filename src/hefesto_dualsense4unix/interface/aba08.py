@@ -2331,6 +2331,12 @@ def _cena_do_desenho() -> dict:
                       "rotulo": "DualSense", "cor": "#7eb8d4", "cor_nome": "Starlight Blue",
                       "nao_conectou": True, "esperando": False, "fixo": True,
                       "pareado_aqui": True})
+    # o par que não ficou guardado: a mesma linha oferece «Tentar de Novo», e o desenho mostra as duas
+    aparelhos.append({"id": f"nao-conectou-{vazio['id']}-P6", "aparelho": "P6",
+                      "tipo": "controle", "lugar": vazio["id"], "nome": "Davi",
+                      "rotulo": "DualSense", "cor": "#b5232e", "cor_nome": "Cosmic Red",
+                      "nao_conectou": True, "esperando": False, "fixo": True,
+                      "pareado_aqui": False})
     aparelhos.append({"id": "D9", "aparelho": "D9", "tipo": "controle", "lugar": cheio["id"],
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
