@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import pytest
+
 from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 from tests.unit.test_o_governador_com_um_adaptador_so import CONTROLE_4
 from tests.unit.test_o_governador_do_radio import (
@@ -209,3 +211,28 @@ def test_quatro_pontes_num_adaptador_que_escoa_tres_cedem_uma_por_vez() -> None:
     assert max(regime) == 1, f"cederam {max(regime)} pontes juntas"
     assert min(corrida.partes.values()) >= 0.70, corrida.partes
     assert not any(v.derrubar for v in corrida.vagas)
+
+
+@pytest.mark.parametrize("capacidade", [12, 15, 20])
+def test_uma_ponte_num_adaptador_que_nao_da_conta_dela_cede_e_nao_cai(capacidade: int) -> None:
+    """O engasgo tem teto: o adaptador que escoa menos que uma ponte, sempre, não é engasgo.
+
+    Cada janela põe no ar mais que meia ponte (12, 15 ou 20 de ~23), então a
+    janela sozinha parece engasgo; mas a fila do host cresce sem parar.
+    Passados os dois limiares, cede o adaptador inteiro até a fila escoar, e
+    volta: a ponte fica de pé, cedendo em rodízio consigo mesma, como o código
+    de antes, com a fila contida.
+
+    MORDIDA: tire o teto da fila (`FILA_DO_ENGASGO_EM_LIMIARES`) da conta do
+    engasgo e a ponte nunca cede (a fila do host cresce por cinco minutos); ou
+    deixe o engasgo valer no episódio que já cede inteiro, e o episódio nunca
+    fecha, o relógio do teto anda e a ponte cai.
+    """
+    medidor = _AdaptadorQueOscila(lenta=capacidade, rapida=capacidade, fase=1)
+    corrida = _correr((CONTROLE_1,), medidor)
+
+    teto_do_engasgo = gov.FILA_DO_ENGASGO_EM_LIMIARES * gov.JANELAS_DO_LIMIAR * POR_JANELA
+    assert corrida.partes[CONTROLE_1] < 1.0, "a ponte que o adaptador não escoa nunca cedeu"
+    assert not corrida.vagas[0].derrubar, "a ponte sozinha caiu no teto, onde antes ficava de pé"
+    assert medidor.pico <= teto_do_engasgo + 2 * POR_JANELA, (
+        f"a fila do host chegou a {medidor.pico} pacotes")

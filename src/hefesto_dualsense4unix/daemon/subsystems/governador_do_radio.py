@@ -1077,6 +1077,13 @@ class GovernadorDoRadio:
         deixa UMA de pé enquanto a fila não passa de
         :data:`FILA_DO_ENGASGO_EM_LIMIARES` limiares: é engasgo. Menos no ar,
         ou a fila além disso, é o adaptador parado, e cede inteiro.
+
+        O episódio que cedeu inteiro segue inteiro até a fila escoar
+        (:data:`FOLGA_PARA_VOLTAR`): sem isso, o adaptador que põe no ar só
+        2/3 de uma ponte, sempre, ficava com a fila parada perto do teto do
+        engasgo (perto de um segundo de som atrasado), o episódio nunca
+        fechava, o relógio do teto nunca zerava, e a ponte sozinha caía, onde
+        o código de antes a deixava de pé, cedendo em rodízio consigo mesma.
         """
         com_escrita = janela.com_escrita
         na_vez = [v for v in vagas if v.cedendo or any(v is e for e in com_escrita)]
@@ -1085,6 +1092,7 @@ class GovernadorDoRadio:
         if (
             cabem <= 0
             and por_ponte > 0
+            and not estado.inteiro
             and janela.no_ar >= FRACAO_DO_ENGASGO * por_ponte
             and estado.fila
             <= FILA_DO_ENGASGO_EM_LIMIARES * JANELAS_DO_LIMIAR * por_ponte
