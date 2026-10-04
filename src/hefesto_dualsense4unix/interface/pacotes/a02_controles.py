@@ -687,15 +687,12 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
     estava no cabo, com a razão mandando ligar o cabo. O `canal_fonte` é o nó
     que o produto ELEGEU (regra 0 de `escolher_fonte`), e a pergunta daqui é
     outra: *qual nó deste controle o KERNEL publica*. Quem responde é o dono —
-    :func:`eleicao_de_microfone.fonte_nativa_do_controle`, a irmã de corpo
-    único da que o «Nativo» já usa uma leitura acima.
+    :func:`eleicao_de_microfone.fonte_nativa_do_controle`.
 
     O QUE ELA CUSTA, medido na mesa de quatro dela em 20/09/2026: **~70 ms**,
-    dentro de uma thread que acorda a cada :data:`CAMADA_1_S` (2 s) — a mesma
-    ordem de grandeza do `_ler_o_nativo` logo acima (~55 ms), que faz a mesma
-    pergunta por controle. A leitura LONGA do `pactl` é uma só para a mesa
-    inteira (é dela que sai a placa de cada nó), e a do `amixer` é POR PLACA e
-    nunca por controle: com quatro DualSense no cabo são quatro placas
+    dentro de uma thread que acorda a cada :data:`CAMADA_1_S` (2 s). A leitura LONGA do
+    `pactl` é uma só para a mesa inteira (é dela que sai a placa de cada nó), e a do
+    `amixer` é POR PLACA e nunca por controle: com quatro DualSense no cabo são quatro placas
     distintas, e a mesma placa nunca é lida duas vezes na mesma volta.
     """
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone
@@ -1555,11 +1552,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                           "sem_dono": 0}}
 
 
-# ---------------------------------------------------------------------------
-#                               `sensor.*`, `gyro.*` nem `motion.*`). O
-#   Só no controle              **GANHOU DONO** — `audio_saida.mandar_o_som_do_pc`,
-# `common[7]`) e tem dono nomeado em `core/ds_output_report.py:106`, que é
-# `dica_do_microfone` são funções de MÓDULO, puras, sobre um objeto de dados.
 from hefesto_dualsense4unix.app import audio_saida  # noqa: E402
 from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
     SAIDA_L_FONE_R_ALTO_FALANTE,
