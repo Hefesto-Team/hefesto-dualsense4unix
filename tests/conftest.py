@@ -1399,6 +1399,26 @@ def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
     _descartar_registro_de_identidade()
 
 
+@pytest.fixture(autouse=True)
+def _nenhum_sensor_desligado_atravessa() -> Iterator[None]:
+    """O `virtual_motion.REGISTRO` morre com o caso, como o `identity._registry`.
+
+    Medido em 04/10/2026: o `reaplicar` de um perfil com o giroscópio desligado nos
+    quatro (test_o_aplicar_e_a_ativacao_sao_uma_so) deixava o registro sujo, e o
+    `SensorHub` de um caso seguinte fazia uma varredura a mais pelos desligados
+    (test_sensores_status::test_hub_nao_reprocura_node_inexistente_a_cada_volta,
+    vermelho só no lote, verde sozinho).
+    """
+    try:
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+    except ModuleNotFoundError:
+        yield
+        return
+    REGISTRO.limpar()
+    yield
+    REGISTRO.limpar()
+
+
 def _leitores_fisicos_vivos() -> dict[int, Any]:
     """``{ident da thread: leitor}`` de todo ``PhysicalReportReader`` rodando."""
     vivos: dict[int, Any] = {}
