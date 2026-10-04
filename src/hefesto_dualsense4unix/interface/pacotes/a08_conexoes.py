@@ -5447,6 +5447,10 @@ def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     with contextlib.suppress(Exception):
         _tirar_a_linha(p, linha)
     _ligar_a_busca(p, True, lid)
+    # O mesmo clique é a escolha dela: a central pareia ESTE endereço quando a janela o
+    # ver. Se ela não aceitar agora, a busca segue aberta e o «Parear» da lista fecha.
+    with contextlib.suppress(Exception):
+        _pedir_ao_radio(p, str(linha["aparelho"]), lid)
     _abrir_na_tela(lid)
     return {"armou": True}
 

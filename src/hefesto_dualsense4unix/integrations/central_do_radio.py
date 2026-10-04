@@ -87,8 +87,10 @@ mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
 SEM O CLIQUE DELA (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
 30/09/2026, a validar por ela): a janela pareia o aparelho que
 ela escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
-e só um que a janela viu. Até 30/09 ela pareava o primeiro controle que
-aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO
+e só um que a janela viu (a escolha do «Parear de Novo» pode chegar um passo
+antes de ele aparecer; o ``Pair`` espera o endereço dela ser visto). Até 30/09 ela
+pareava o primeiro controle que aparecesse, em meio segundo, antes de a tela o
+mostrar. E O CONTROLE QUE VOLTA PELO
 PAREAMENTO ANTIGO também chega (a foto 2 da lista dela de 25/09: *«conectou com
 algum mas não apareceu na lista»*): quem ela liga só com o PS reconecta no
 adaptador que já tinha a chave dele, sem passar pela janela. O controle que se
@@ -1017,7 +1019,15 @@ class CentralDoRadio:
         return self._com_o_destino_pedido(agora, novo)
 
     def _a_escolha_dela(self, alvo: str, destino: str | None) -> Movimento | None:
-        """O «Parear» dela na lista do «Conectar»: a escolha, e não outro movimento."""
+        """O «Parear» dela na lista do «Conectar»: a escolha, e não outro movimento.
+
+        O aparelho que a janela ainda não viu também se escolhe, para o «Parear de
+        Novo» ser UM clique (esquece o par velho, abre a busca e escolhe o mesmo
+        aparelho): com a janela aberta no destino dela e o aparelho fora do ar em
+        TODO adaptador. O ``Pair`` continua esperando a janela ver o endereço
+        escolhido, nenhum outro: o controle de outra pessoa, ou o que já está
+        no ar noutro adaptador (esse é um «Mover», e segue recusado), não entra.
+        """
         pedido = endereco_de(destino) if destino else None
         if pedido is None or self._parar.is_set():
             return None
@@ -1025,10 +1035,18 @@ class CentralDoRadio:
             atual = self._movimentos.get(CONECTANDO)
             if (atual is None or not atual.em_curso
                     or atual.passo not in PASSOS_EM_QUE_O_DESTINO_MUDA
-                    or atual.destino != pedido or alvo not in self._vistos_na_janela):
+                    or atual.destino != pedido):
+                return None
+            visto = alvo in self._vistos_na_janela
+            janela_aberta = atual.passo == PASSO_GESTO and self._busca is not None
+        if not visto and (not janela_aberta or self._onde_esta(_hex12(alvo))):
+            return None
+        with self._tranca:
+            if self._movimentos.get(CONECTANDO) is not atual:
                 return None
             self._escolha = alvo
-        logger.info("central_ela_escolheu", aparelho=mascarar(alvo), adaptador=mascarar(pedido))
+        logger.info("central_ela_escolheu", aparelho=mascarar(alvo), adaptador=mascarar(pedido),
+                    antes_de_ver=not visto)
         return atual
 
     def _tomar_o_destino_pedido(
