@@ -5065,8 +5065,8 @@ class PyDualSenseController(IController):
             if alvo not in self._jogo_provou_o_gatilho:
                 if gatilho_do_jogo_sem_efeito(block_b):
                     ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
-                    if "ausencia:gatilho" not in ja_dito:
-                        ja_dito.add("ausencia:gatilho")
+                    if "ausência:gatilho" not in ja_dito:
+                        ja_dito.add("ausência:gatilho")
                         logger.info(
                             "game_trigger_sem_efeito_e_ausencia_o_perfil_vale",
                             uniq=alvo,
@@ -5132,8 +5132,8 @@ class PyDualSenseController(IController):
             ):
                 fields.pop("led")
                 ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
-                if "ausencia:luz" not in ja_dito:
-                    ja_dito.add("ausencia:luz")
+                if "ausência:luz" not in ja_dito:
+                    ja_dito.add("ausência:luz")
                     logger.info(
                         "game_output_preto_e_ausencia_o_perfil_vale", uniq=alvo
                     )
