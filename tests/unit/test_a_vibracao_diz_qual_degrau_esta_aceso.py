@@ -6,7 +6,7 @@ DOIS controles na mesa (um no `usb`, um no `bt`).
 
 1. **O DEGRAU ACESO SAÍA DO DESENHO, e o desenho MENTIA.** A política de
    vibração é UMA, da mesa (``state_full.rumble_policy``), e o mockup crava um
-   degrau aceso por coluna: o P1 nasce em "Máximo" e o P2 em "Balanceado". Com
+   degrau aceso por coluna: o P1 nasce em "Máximo" e o P2 em "Padrão". Com
    o daemon respondendo ``rumble_policy = 'balanceado'``, a coluna do P1
    afirmava o contrário do que está no disco. Não era desenho esperando dado —
    era a tela dizendo o oposto.
@@ -345,7 +345,7 @@ def test_a_recusa_do_clique_sem_degrau_pergunta_ao_dono(monkeypatch) -> None:
     from hefesto_dualsense4unix.app.telas import vibracao as tela
     from pacotes import a05_vibracao as a05
 
-    assert a05._degraus_que_a_tela_oferece() == "Economia, Balanceado ou Máximo"
+    assert a05._degraus_que_a_tela_oferece() == "Economia, Padrão ou Máximo"
     monkeypatch.setattr(tela, "degraus_da_forca", lambda: ("max",))
     assert a05._degraus_que_a_tela_oferece() == "Máximo", (
         "a recusa do clique sem degrau deixou de perguntar ao dono dos degraus")

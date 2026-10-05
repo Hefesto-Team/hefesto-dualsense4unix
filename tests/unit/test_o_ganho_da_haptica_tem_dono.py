@@ -360,7 +360,8 @@ class TestOPedido:
         dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
         assert dele.rumble is not None and dele.rumble.haptica_pct == 180
         assert "motor_forte_pct" not in dele.rumble.model_fields_set
-        assert dono.pct(BRANCO) == 180
+        assert dono.pct_guardado(BRANCO) == 180
+        assert dono.pct(BRANCO) == 180, "o daemon de mentira está em Máximo: o ganho vale"
 
     def test_o_padrao_nao_ocupa_chave(self, perfis: Path) -> None:
         save_profile(Profile(name="Bancada", match=MatchAny()))
@@ -508,7 +509,7 @@ def _mesa_com_orcamento(orcamento: str | None) -> Any:
 
 class TestAEconomiaCortaAHaptica:
     def test_na_economia_o_dono_responde_o_teto_nas_duas_portas(self) -> None:
-        """Régua 7: ``haptica_pct=150`` vale 0,3 na Economia, e 1,5 no Balanceado."""
+        """Régua 7: ``haptica_pct=150`` vale 0,3 na Economia, e 1,5 sem o teto (em Padrão, 1,0)."""
         dono = _dono(branco=150)
         dono.ler_o_teto(_mesa_com_orcamento("economia"))
         assert dono.fator(BRANCO) == pytest.approx(0.3)
@@ -789,3 +790,53 @@ def _esperar_que(condicao: Any, prazo_s: float = 5.0) -> None:
             return
         time.sleep(0.01)
     raise AssertionError("a condição não chegou no prazo")
+
+
+def _daemon_em(politica: str) -> Any:
+    from types import SimpleNamespace
+
+    return SimpleNamespace(config=SimpleNamespace(rumble_policy=politica,
+                                                  orcamento_da_mesa=lambda: None))
+
+
+class TestOPadraoDeixaAHapticaComoOJogoMandou:
+    """04/10/2026, desenho aprovado: em Padrão o ganho guardado não se aplica (1,0 vez) e volta com
+    a Economia ou o Máximo.
+
+    MORDIDA: tirar o ``_vale_o_padrao`` do ``pct`` (o 50% guardado passa a valer em Padrão).
+    """
+
+    def test_padrao_com_50_guardado_chega_a_cem_por_cento_e_ao_fator_um(self) -> None:
+        dono = _dono(branco=50)
+        dono.ler_o_teto(_daemon_em("balanceado"))
+        assert dono.pct(BRANCO) == 100
+        assert dono.fator(BRANCO) == pytest.approx(1.0)
+        assert dono.pct_guardado(BRANCO) == 50, "o guardado espera, não se perde"
+
+    def test_voltar_a_maximo_restaura_os_50_guardados(self) -> None:
+        dono = _dono(branco=50)
+        dono.ler_o_teto(_daemon_em("balanceado"))
+        assert dono.fator(BRANCO) == pytest.approx(1.0)
+        dono.ler_o_teto(_daemon_em("max"))
+        assert dono.pct(BRANCO) == 50 and dono.fator(BRANCO) == pytest.approx(0.5)
+
+    def test_o_degrau_da_propria_peca_vence_o_global(self) -> None:
+        dono = GanhoDaHaptica()
+        dono.ler_do_perfil({
+            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
+                policy="balanceado", haptica_pct=50)),
+            PRETO: ControllerOverrides(rumble=ControllerRumbleOverride(
+                policy="max", haptica_pct=50)),
+        })
+        dono.ler_o_teto(_daemon_em("economia"))
+        assert dono.pct(BRANCO) == 100, "a peça que escolheu Padrão chega como o jogo mandou"
+        assert dono.pct(PRETO) == 50, "a que escolheu Máximo leva o ganho dela"
+
+    def test_a_tela_publica_o_guardado_e_nao_o_que_vale(self) -> None:
+        """O `haptica_pct` do state_full é o que a barra mostra ao destravar: o guardado."""
+        import inspect
+
+        from hefesto_dualsense4unix.daemon import ipc_handlers
+
+        fonte = inspect.getsource(ipc_handlers)
+        assert 'entry["haptica_pct"] = GANHO.pct_guardado(uniq)' in fonte

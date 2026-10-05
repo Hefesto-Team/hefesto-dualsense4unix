@@ -157,13 +157,70 @@ class TestAContaDela:
         """`0` é escolha, não ausência: um motor mudo e o outro inteiro."""
         _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=0)
         backend = _Backend()
-        d = _daemon(perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
 
-        gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
-        assert backend.rumbles == [(BRANCO, 0, 200)], (
+        assert backend.rumbles == [(BRANCO, 0, 150)], (
             "o motor fraco tinha de sair MUDO (barra 0) e o forte inteiro"
         )
+
+
+class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
+    """04/10/2026, desenho aprovado: em Padrão as barras ficam guardadas e o jogo chega a 1,0 vez.
+
+    MORDIDA: tirar o `vale_o_padrao` do `_pcts_dos_motores` (o 50% passa a multiplicar em Padrão).
+    """
+
+    def test_padrao_com_50_guardado_chega_ao_fator_um(self, perfis: Path) -> None:
+        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=20)
+        backend = _Backend()
+        d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
+
+        efetivo = gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+
+        assert efetivo == (100, 100), "em Padrão o jogo chega como mandou (1,0 vez)"
+        assert backend.rumbles == [(BRANCO, 100, 100)]
+
+    def test_voltar_a_maximo_restaura_os_50_que_ficaram_guardados(self, perfis: Path) -> None:
+        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        backend = _Backend()
+        d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+        d.config.rumble_policy = "max"
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+        assert backend.rumbles == [(BRANCO, 100, 100), (BRANCO, 150, 75)]
+        assert gp_mod._motores_do_perfil_ativo(d) == {BRANCO: (50, 100)}, "o disco não perdeu nada"
+
+    def test_o_degrau_da_propria_peca_vence_o_global(self, perfis: Path) -> None:
+        """A peça que escolheu Padrão ignora as barras mesmo com o global em Máximo, e a que
+        escolheu Máximo as aplica mesmo com o global em Padrão. (O degrau da PEÇA em si é o fator
+        por unidade que o backend aplica um andar abaixo; aqui sai o par sobre o degrau global.)"""
+        for degrau_dela, global_, esperado in (
+            ("balanceado", "max", (150, 150)), ("max", "balanceado", (100, 50))
+        ):
+            save_profile(Profile(
+                name="Bancada", match=MatchAny(),
+                controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
+                    policy=degrau_dela, motor_forte_pct=50))}))
+            backend = _Backend()
+            d = _daemon(policy=global_, perfil_ativo="Bancada", controller=backend)
+            gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+            assert backend.rumbles == [(BRANCO, *esperado)], (degrau_dela, global_)
+
+    def test_esquecer_os_motores_derruba_tambem_o_degrau_memoizado(self, perfis: Path) -> None:
+        save_profile(Profile(
+            name="Bancada", match=MatchAny(),
+            controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
+                policy="balanceado", motor_forte_pct=50))}))
+        d = _daemon(policy="max", perfil_ativo="Bancada")
+        assert gp_mod._degrau_da_peca(d, BRANCO) == "balanceado"
+        save_profile(Profile(
+            name="Bancada", match=MatchAny(),
+            controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
+                policy="max", motor_forte_pct=50))}))
+        gp_mod.esquecer_motores_do_perfil(d)
+        assert gp_mod._degrau_da_peca(d, BRANCO) == "max"
 
 
 class TestOQueNaoMuda:
@@ -339,36 +396,36 @@ class TestOCacheDoMapa:
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         save_profile(Profile(name="Limpo", match=MatchAny()))
         backend = _Backend()
-        d = _daemon(perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
 
-        gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
         d.store.active_profile = "Limpo"
-        gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
-        assert backend.rumbles == [(BRANCO, 200, 100), (BRANCO, 200, 200)]
+        assert backend.rumbles == [(BRANCO, 150, 75), (BRANCO, 150, 150)]
 
     def test_invalidar_o_cache_e_uma_linha(self, perfis: Path) -> None:
         """`daemon._rumble_motores_pct = None` faz a barra nova valer AGORA."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
-        d = _daemon(perfil_ativo="Bancada", controller=backend)
-        gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
+        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
         _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=100)
         d._rumble_motores_pct = None
-        gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
-        assert backend.rumbles == [(BRANCO, 200, 100), (BRANCO, 200, 200)]
+        assert backend.rumbles == [(BRANCO, 150, 75), (BRANCO, 150, 150)]
 
     def test_o_endereco_com_dois_pontos_casa_a_peca(self, perfis: Path) -> None:
         """`AA:BB:...` e `aabbcc...` são a MESMA peça — normalizar é a cura."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend(uniqs=(KEY_1,))
-        d = _daemon(perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
 
-        gp_mod.apply_game_rumble(d, 200, 200, target_uniq=KEY_1)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=KEY_1)
 
-        assert backend.rumbles == [(KEY_1, 200, 100)]
+        assert backend.rumbles == [(KEY_1, 150, 75)]
 
 
 class TestARéguaSabeRecusar:
@@ -456,14 +513,14 @@ class _Store:
 class _Handlers(IpcHandlersMixin):
     """O bastante do mixin para chamar `_handle_rumble_motores_set`."""
 
-    def __init__(self, *, ativo: str | None, primario: str | None) -> None:
+    def __init__(self, *, ativo: str | None, primario: str | None, policy: str = "max") -> None:
         self.store = _Store(ativo)  # type: ignore[assignment]
         self.controller = SimpleNamespace(  # type: ignore[assignment]
             describe_controllers=lambda: (
                 [{"connected": True, "uniq": primario}] if primario else []
             )
         )
-        self.daemon = _daemon(perfil_ativo=ativo)  # type: ignore[assignment]
+        self.daemon = _daemon(policy=policy, perfil_ativo=ativo)  # type: ignore[assignment]
         self.daemon.store = self.store
 
 
@@ -497,11 +554,11 @@ class TestOMetodoQueGrava:
         h = _Handlers(ativo="Bancada", primario=BRANCO)
         h.daemon.controller = backend
 
-        gp_mod.apply_game_rumble(h.daemon, 200, 200, target_uniq=BRANCO)
+        gp_mod.apply_game_rumble(h.daemon, 100, 100, target_uniq=BRANCO)
         _grava_ipc(h, uniq=BRANCO, forte_pct=50)
-        gp_mod.apply_game_rumble(h.daemon, 200, 200, target_uniq=BRANCO)
+        gp_mod.apply_game_rumble(h.daemon, 100, 100, target_uniq=BRANCO)
 
-        assert backend.rumbles == [(BRANCO, 200, 200), (BRANCO, 200, 100)], (
+        assert backend.rumbles == [(BRANCO, 150, 150), (BRANCO, 150, 75)], (
             "o segundo FF tinha de sair com o forte pela metade — o cache do "
             "mapa não caiu na gravação"
         )

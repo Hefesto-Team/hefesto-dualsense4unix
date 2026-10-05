@@ -340,3 +340,16 @@ def test_a_conta_inteira_da_barra_vale_uma_vez_so(pac, a05, perfis) -> None:  # 
         f"Se saiu 82, a barra foi contada DUAS vezes — uma na aba e outra no "
         f"daemon — e o que ela sente é `barra²`. Ver o comentário desta seção: "
         f"as duas metades têm de andar juntas.")
+
+
+def test_em_padrao_o_testar_sente_o_mesmo_que_o_jogo_e_ignora_as_barras(pac, a05) -> None:
+    """04/10/2026: em Padrão as barras ficam guardadas e não multiplicam, nem no «Testar».
+
+    MORDIDA: tirar o `vale_o_padrao` de `_par_das_barras` — o 50% volta a cortar o par.
+    """
+    ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 50, "fraco_pct": 20}})
+    ctx.state["rumble_policy"] = "balanceado"
+
+    assert _testar(pac, a05, ctx, P1, "p1") == (160, 220)
+    ctx.state["rumble_policy"] = "max"
+    assert _testar(pac, a05, ctx, P1, "p1") == (32, 110), "voltou a Máximo: as barras voltam"

@@ -55,3 +55,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   `docs/data/pecas-do-dualsense.csv`, coluna `regiao`): o produto recebe com o
   `--publicar mapa-do-controle` do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue com a
   háptica na seção Áudio, e o pacote a acende do mesmo jeito (o campo `feat-haptica` não muda).
+
+## 05-vibracao.html
+- **05/10/2026** — o degrau «Balanceado» passa a se chamar «Padrão» (a chave, a CLI e o perfil seguem
+  `balanceado`), e com ele as três barras do controle (Sensor Háptico, Motor esquerdo, Motor direito)
+  ficam inteiras verdes e travadas, com a palavra no lugar do número (decisão dela de 04/10, desenho
+  aprovado em `docs/process/estudos/2026-10-04-o-jogo-decide/`): o produto recebe com o
+  `--publicar 05` do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue com «Balanceado»
+  e as barras livres, e o daemon já ignora as barras em Padrão.

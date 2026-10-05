@@ -88,7 +88,7 @@ class _Ponte:
 
 
 def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
-    """O caso EXATO da máquina dela: degrau "Balanceado", teto lembrado 0,7."""
+    """O caso EXATO da máquina dela: degrau "Padrão", teto lembrado 0,7."""
     prof = _salvar(ESTADO_DELA)
     assert prof.rumble.policy is None, (
         f"o Salvar gravou a política do aparelho ({prof.rumble.policy!r}) num "

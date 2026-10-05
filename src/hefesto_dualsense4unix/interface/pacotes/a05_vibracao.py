@@ -312,7 +312,8 @@ PALAVRA_DO_PADRAO = "Padrão"
 
 PALAVRA_DO_ZERO = "Desligado"
 
-FRASE_DO_PADRAO = "Padrão: o sinal chega como o jogo mandou. Escolha Economia ou Máximo para ajustar."
+FRASE_DO_PADRAO = (
+    "Padrão: o sinal chega como o jogo mandou. Escolha Economia ou Máximo para ajustar.")
 
 
 def _texto_da_barra(valor: int, padrao: bool) -> str:

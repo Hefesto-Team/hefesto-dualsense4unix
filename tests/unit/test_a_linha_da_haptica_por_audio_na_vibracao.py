@@ -43,14 +43,14 @@ def _bloco(html: str, pref: str) -> str:
 
 
 def _ctx(haptica: int | None = None, alcanca: bool | None = None,
-         padrao: int | None = HAPTICA_PCT_PADRAO) -> pacotes.Contexto:
+         padrao: int | None = HAPTICA_PCT_PADRAO, politica: str = "max") -> pacotes.Contexto:
     controle: dict[str, Any] = {"uniq": UNIQ, "connected": True, "player": 1,
                                 "transport": "usb"}
     if haptica is not None:
         controle["haptica_pct"] = haptica
     if alcanca is not None:
         controle["haptica_alcanca"] = alcanca
-    state: dict[str, Any] = {"controllers": [controle], "rumble_policy": "balanceado"}
+    state: dict[str, Any] = {"controllers": [controle], "rumble_policy": politica}
     if padrao is not None:
         state["haptica_pct_padrao"] = padrao
     item = {"uniq": UNIQ, "pref": "p1", "jogador": 1, "nome": "Prova",
@@ -126,7 +126,7 @@ class TestOEndereco:
     def test_a_linha_mora_logo_abaixo_da_forca(self) -> None:
         """A linha é a primeira depois da Força, antes dos dois motores (02/10/2026)."""
         bloco = _bloco("".join(aba05._coluna(c) for c in aba05.MESA), "p1")
-        forca = bloco.index('<div class="forca">')
+        forca = bloco.index('<div class="forca"')
         linha = bloco.index('data-campo="haptica-fora"')
         esquerdo = bloco.index('data-campo="motor-e-pedido"')
         assert forca < linha < esquerdo
@@ -190,6 +190,14 @@ class TestAPintura:
         coluna = _coluna(haptica=180, alcanca=True)
         assert (coluna["barra-h"], coluna["barra-h-pct"], coluna["lado-h"]) == ("180", "180", "1")
         assert coluna["haptica-fora"] == ""
+
+    def test_em_padrao_o_numero_vira_a_palavra_e_a_barra_trava(self) -> None:
+        """04/10/2026: em Padrão as barras ficam travadas, com «Padrão» no lugar do número."""
+        coluna = _coluna(haptica=180, alcanca=True, politica="balanceado")
+        assert coluna["barra-h-pct"] == "Padrão" and coluna["padrao"] == "1"
+        assert coluna["barra-e-pct"] == "Padrão" and coluna["barra-d-pct"] == "Padrão"
+        fora = _coluna(haptica=180, alcanca=True, politica="max")
+        assert fora["barra-h-pct"] == "180" and fora["padrao"] == ""
 
     def test_sem_o_numero_vale_o_padrao_publicado(self) -> None:
         coluna = _coluna(padrao=HAPTICA_PCT_PADRAO)

@@ -1554,7 +1554,7 @@ def _teto_do_controle(
     A CHAVE É O `uniq` NORMALIZADO — doze hexa minúsculos sem separador, e a
     normalização é do :func:`_so_hex` deste arquivo, nunca escrita de novo. É o
     que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1371`), logo é o que está no disco; procurar por
+    (`profiles/schema.py:1385`), logo é o que está no disco; procurar por
     `aa:bb:…` não acharia nada e a tela mostraria "Segue o global" para sempre.
     A cópia que morava aqui tinha perdido o `.strip()` do helper, e um `uniq`
     com espaço ou quebra fazia a gravação cair numa chave e a pintura procurar
@@ -2370,7 +2370,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     regra desta casa manda substituí-lo. Ela dizia que *"o produto aplica `min`
     (`core/rumble.py`), e o `min` é o que impede um 'teto' de AUMENTAR a
     força"*, e que *"sobrepor mudaria o daemon, não a tela"*. O `min` de
-    `core/rumble.py:33` compara a política GLOBAL com o teto do ORÇAMENTO —
+    `core/rumble.py:48` compara a política GLOBAL com o teto do ORÇAMENTO —
     nenhum dos dois é por controle —, e o caminho por controle passa um andar
     ABAIXO dele, em `core/backend_pydualsense._escalar_rumble:3797-3818`.
 

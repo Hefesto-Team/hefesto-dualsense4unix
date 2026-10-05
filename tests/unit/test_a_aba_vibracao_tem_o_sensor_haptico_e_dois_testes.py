@@ -160,7 +160,7 @@ def test_o_degrau_aceso_e_o_maior_que_o_trilho_alcanca(valor: int) -> None:
 
 
 def test_a_escada_da_regua_e_a_da_sprint() -> None:
-    """A régua 2 com os números da sprint: 180 Máximo, 130 Balanceado, 70 Economia, 10 nada."""
+    """A régua 2 com os números da sprint: 180 Máximo, 130 Padrão, 70 Economia, 10 nada."""
     assert [_esperado(v) for v in (180, 130, 70, 10)] == ["max", "balanceado", "economia", ""]
 
 

@@ -82,7 +82,7 @@ def test_a_classe_cravada_e_lida_do_arquivo():
     assert [c.valor for c in campos] == ["", "", "max", ""], (
         "o cravado de um alvo `classe` é o `data-hef-quando` de quem tem a "
         "classe, e vazio nos outros. Ler o texto daria "
-        "['Economia','Balanceado','Máximo','Auto'] — o rótulo, não o estado.")
+        "['Economia','Padrão','Máximo','Auto'] — o rótulo, não o estado.")
     assert [c.quando for c in campos] == ["economia", "balanceado", "max", "auto"]
     assert {c.dono for c in campos} == {"p1"}
 

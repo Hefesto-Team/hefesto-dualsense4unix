@@ -53,7 +53,7 @@ def test_a_escada_da_intensidade_e_30_100_150() -> None:
     assert RUMBLE_POLICY_MULT["balanceado"] == pytest.approx(1.0)
     assert RUMBLE_POLICY_MULT["max"] == pytest.approx(1.5)
     assert RUMBLE_POLICY_MULT["max"] > RUMBLE_POLICY_MULT["balanceado"], (
-        'um botão chamado "Máximo" tem de entregar mais que o "Balanceado"'
+        'um botão chamado "Máximo" tem de entregar mais que o "Padrão"'
     )
 
 
