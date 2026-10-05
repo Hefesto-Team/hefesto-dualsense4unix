@@ -4513,7 +4513,7 @@ EDICOES: tuple[Edicao, ...] = (
             ">'\n"
             '        + \'<span><i class="amostra v3"></i> USB 3.0</spa'
             'n><span><i class="amostra v2"></i> USB 2.0</span>\'\n'
-            '      : modo === "mao"\n'  # (noqa-acento)
+            '      : modo === "mao"\n'  # (noqa-acento: data-modo)
             '      ? \'<span><i class="amostra r-ok"></i> melhor lugar'
             '</span><span><i class="amostra r-ev"></i> vale evitar</s'
             "pan>'\n"
@@ -4531,7 +4531,7 @@ EDICOES: tuple[Edicao, ...] = (
             "'\n"
             '        + \'<span><i class="amostra v3"></i> USB 3.0</spa'
             'n><span><i class="amostra v2"></i> USB 2.0</span>\'\n'
-            '      : modo === "mao"\n'  # (noqa-acento)
+            '      : modo === "mao"\n'  # (noqa-acento: data-modo)
             '      ? \'<span><i class="amostra r-ok"></i> Melhor lugar'
             '</span><span><i class="amostra r-ev"></i> Vale evitar</s'
             "pan>'\n"
@@ -4645,11 +4645,11 @@ EDICOES: tuple[Edicao, ...] = (
     Edicao(
         antes=(
             '  function julgar(porta) {\n'
-            '    var oc = alocacao[porta.n];\n'  # (noqa-acento)
+            '    var oc = alocacao[porta.n];\n'  # (noqa-acento: JS)
             '    if (oc) { var a = acha(oc); return { v: "cheia", txt'
             ': "ocupada", porque: a.tipo + " — clique para tirar" }; '
             '}\n'
-            '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento)
+            '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento: JS)
             'xt: "indisponível", porque: porta.filho ? "o extensor es'
             'tá nela" : "a entrada-mãe está em uso" };\n'
             '    if (segurando) {\n'
@@ -4664,7 +4664,7 @@ EDICOES: tuple[Edicao, ...] = (
             '    if (!naMao) return null;\n'
             '\n'
             '    var noHub = porta.onde === "hub";\n'
-            '    var vz = porta.par ? acha(alocacao[porta.par]) : nul'  # (noqa-acento)
+            '    var vz = porta.par ? acha(alocacao[porta.par]) : nul'  # (noqa-acento: JS)
             'l;\n'
             '    var vzRadio = vz && ehRadio(vz.classe);\n'
             '\n'
@@ -4733,11 +4733,11 @@ EDICOES: tuple[Edicao, ...] = (
             '  function frase1(t) { t = String(t || ""); return t.cha'
             'rAt(0).toUpperCase() + t.slice(1); }\n'
             '  function julgar(porta) {\n'
-            '    var oc = alocacao[porta.n];\n'  # (noqa-acento)
+            '    var oc = alocacao[porta.n];\n'  # (noqa-acento: JS)
             '    if (oc) { var a = acha(oc); return { v: "cheia", txt'
             ': "Ocupada", porque: a.tipo + " — clique para tirar" }; '
             '}\n'
-            '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento)
+            '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento: JS)
             'xt: "Ocupada", porque: porta.filho ? "Com o extensor" : '
             '"A entrada-mãe está em uso" };\n'
             '    if (segurando) {\n'
@@ -4752,7 +4752,7 @@ EDICOES: tuple[Edicao, ...] = (
             '    if (!naMao) return null;\n'
             '\n'
             '    var noHub = porta.onde === "hub";\n'
-            '    var vz = porta.par ? acha(alocacao[porta.par]) : nul'  # (noqa-acento)
+            '    var vz = porta.par ? acha(alocacao[porta.par]) : nul'  # (noqa-acento: JS)
             'l;\n'
             '    var vzRadio = vz && ehRadio(vz.classe);\n'
             '\n'
@@ -5431,7 +5431,7 @@ EDICOES: tuple[Edicao, ...] = (
             '    var daMaquina = !tipoAgora && !!quem.classe;\n'
             '    var cor = tipoAgora ? (COR_DO_TIPO[tipoAgora] || que'
             'm.cor) : quem.cor;\n'
-            '    var opcoes = daMaquina ? "<option selected>" + emAtr'  # (noqa-acento)
+            '    var opcoes = daMaquina ? "<option selected>" + emAtr'  # (noqa-acento: JS)
             'ibuto(quem.tipo) + "</option>"\n'
             '      : (tipoAgora ? "" : \'<option value="" selected></o'
             "ption>') + TIPOS_DO_APARELHO.map(function (t) {\n"
@@ -5445,7 +5445,7 @@ EDICOES: tuple[Edicao, ...] = (
             '      + \'<select class="tipo-do-aparelho"\' + (daMaquina '
             '? "" : g("aparelho-tipo"))\n'
             '      + (edita && !daMaquina ? "" : " disabled") + \' ari'
-            'a-label="Tipo do aparelho">\' + opcoes + "</select></span'  # (noqa-acento)
+            'a-label="Tipo do aparelho">\' + opcoes + "</select></span'  # (noqa-acento: JS)
             '></label>";\n'
             '    return h + estadoDoAparelho(n, quem);\n'
             '  }\n'
@@ -5616,7 +5616,7 @@ EDICOES: tuple[Edicao, ...] = (
             '      return f.portas.some(function (x) { return x === p'
             ' || x.filho === p; });\n'
             '    })[0];\n'
-            '    var quem = alocacao[editando] ? acha(alocacao[editan'  # (noqa-acento)
+            '    var quem = alocacao[editando] ? acha(alocacao[editan'  # (noqa-acento: JS)
             'do]) : null;\n'
             '    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. '
             'No produto, o que\n'
@@ -5918,10 +5918,10 @@ EDICOES: tuple[Edicao, ...] = (
             '      segurando = null; naMao = null; pintar(); return;\n'
             '    }\n'
             '    if (chip) {\n'
-            '      modo = "mao";\n'  # (noqa-acento)
+            '      modo = "mao";\n'  # (noqa-acento: data-modo)
             '      var ap = acha(chip.getAttribute("data-ap"));\n'
             '      var atual = portaDe(ap.id); if (atual) delete aloc'
-            'acao[atual];\n'  # (noqa-acento)
+            'acao[atual];\n'  # (noqa-acento: JS)
             '      segurando = ap.id;\n'
             '      naMao = ({ bt: "bt", wifi: "wifi", teclado: "tecla'
             'do", mouse: "mouse", webcam: "webcam" })[ap.classe] || n'
