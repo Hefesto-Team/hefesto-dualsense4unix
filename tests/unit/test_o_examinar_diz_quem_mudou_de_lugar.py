@@ -430,6 +430,9 @@ _LER = r"""
     modo: pressionado ? pressionado.dataset.modo : '',
     painel: painel ? painel.innerText.replace(/\s+/g, ' ').trim() : '',
     examinar: (document.querySelector('.topo #reexaminar') || {dataset: {}}).dataset.gesto || '',
+    aviso: (document.querySelector('#painel .aviso-uma-linha') || {innerText: ''}).innerText
+      .replace(/\s+/g, ' ').trim(),
+    painelDoAparelho: !!(ed && !ed.hidden && ed.querySelector('.ap-cab')),
   });
 })()
 """
@@ -530,7 +533,11 @@ def _webcam(caminho: str) -> Aparelho:
 
 
 def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
-    """O teclado sai da 1 e vai para a 2, e uma webcam chega no hub."""
+    """O teclado sai da 1 e vai para a 2, e uma webcam chega no hub.
+
+    Desde o desenho aprovado de 04/10/2026 (d3) o reexame é uma linha com ✓, em frase (fora do
+    «toda palavra com maiúscula»), e o «Ver» abre o detalhe de quem foi para onde.
+    """
     aberta = _ler(_teclado("9-1"), _dongle("9-5"), _hub("9-3"))
     relida = _ler(_teclado("9-2"), _dongle("9-5"), _hub("9-3"), _webcam("9-3.1"),
                   reexame=True)
@@ -542,8 +549,10 @@ def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
         _LER,
         _js(relida, reexame=True),
         _LER,
+        _clicar("#painel #aviso-ver"),
+        _LER,
     ])
-    exemplo, _, entregue, _, no_clique, entrega, depois = lidas
+    exemplo, _, entregue, _, no_clique, entrega, linha, ver, depois = lidas
     assert exemplo["examinar"] == "", "no exemplo o «Examinar» não tem o que pedir ao produto"
     assert entregue["examinar"] == "reexaminar", "o «Examinar» do produto não leva o gesto"
     pedidos = [m for m in mensagens if m.get("gesto") == "reexaminar"]
@@ -551,6 +560,9 @@ def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
     assert no_clique["modo"] != "reexame" and "Nada Mudou" not in no_clique["painel"], (
         "a página pintou o reexame antes de a leitura nova chegar: " + no_clique["painel"])
     assert entrega == "ok", entrega
+    assert linha["aviso"].startswith("✓ 2 aparelhos mudaram de lugar, e eu sei onde 1"), linha
+    assert "Estava em" not in linha["painel"], "o detalhe nasceu aberto: " + linha["painel"]
+    assert ver == "clicou", ver
     texto = depois["painel"]
     assert "2 Aparelhos Mudaram de Lugar" in texto and "Nada Mudou" not in texto, texto
     assert re.search(r"Estava em 9-1 \(Entrada 1\), Agora Está em 9-2 \(Entrada 2\)", texto), texto
@@ -618,7 +630,7 @@ def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(
         _LER,
         _js(relida, reexame=True),
         _LER,
-        _clicar("#voltar-leitura"),
+        _clicar("#painel #aviso-fecha"),
         _LER,
     ])
     ensinado, reexame, fechado = lidas[1], lidas[3], lidas[5]
@@ -690,14 +702,19 @@ _LER_O_JA_MOVI = (
 def test_o_examinar_do_exemplo_continua_na_pagina() -> None:
     """Sem a leitura desta máquina, o reexame é o das duas leituras do exemplo."""
     lidas, mensagens = _na_pagina([_clicar(".topo #reexaminar"), _LER])
-    painel = lidas[1]["painel"]
-    assert "Mudou de Lugar" in painel or "Mudaram de Lugar" in painel, painel
+    aviso = lidas[1]["aviso"]
+    assert re.search(r"^✓ .*mud(ou|aram) de lugar", aviso), aviso
     assert not [m for m in mensagens if m.get("gesto") == "reexaminar"], (
         "o exemplo pediu ao produto uma leitura que ele não tem")
 
 
 def test_o_hub_fica_cinza_onde_ha_um_aparelho_direto(disco: Path) -> None:
-    """Dongle direto na 5: o «Hub» da 5 é cinza, diz por quê, e não grava."""
+    """Dongle direto na 5: ali não se declara hub, e nada grava.
+
+    Até 04/10/2026 a 5 abria o editor da entrada com o «Hub» cinza («Bluetooth Está Direto
+    Nesta Entrada»). No desenho aprovado (d2) clicar na entrada de um aparelho abre o painel
+    DELE, que não oferece «Hub» nenhum: a máquina vence no que mede (DECISOES 6).
+    """
     aberta = _ler(_teclado("9-1"), _dongle("9-5"))
     lidas, mensagens = _na_pagina([
         _js(aberta),
@@ -708,11 +725,10 @@ def test_o_hub_fica_cinza_onde_ha_um_aparelho_direto(disco: Path) -> None:
         _clicar('.plug[data-porta="3"]'),
         _LER,
     ])
-    _, _, na_5, _, depois, _, na_3 = lidas
-    assert na_5["hub"] is not None, na_5
-    assert na_5["hub"]["cinza"] == "true" and "apagado" in na_5["hub"]["classe"], na_5["hub"]
-    assert na_5["hub"]["dica"] == "Bluetooth Está Direto Nesta Entrada", na_5["hub"]
-    assert na_5["hub"]["gesto"] == "", "o «Hub» cinza leva o gesto ao disco"
+    _, _, na_5, clique, depois, _, na_3 = lidas
+    assert na_5["editor"] and na_5["painelDoAparelho"], na_5
+    assert na_5["hub"] is None, f"o painel do dongle oferece «Hub»: {na_5['hub']}"
+    assert clique.startswith("sem "), clique
     assert not [m for m in mensagens if m.get("liga") == "hub"], mensagens
     assert ee.FACE_DO_HUB_DECLARADO.format(numero="5") not in depois["faces"]
     assert carregar_maquina().mapa.portas["5"].liga is None
@@ -740,9 +756,8 @@ def test_a_sugestao_nunca_manda_para_dentro_do_hub_desenhado(disco: Path) -> Non
 def test_o_hub_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> None:
     """Hub na 4 grava pelo gesto da entrada; a 4.1, desenhada, não edita.
 
-    (O «Extensor» deixou de ser uma resposta de «O que tem aqui» em 04/10/2026: a página
-    publicada até o próximo `--publicar` ainda o manda por este gesto, e o pacote o atende como
-    a chave da porta; quem prova a chave é `test_o_aparelho_se_corrige_onde_se_clica`.)
+    (O «Extensor» deixou de ser uma resposta de «O que tem aqui» em 04/10/2026, e desde a
+    publicação de 05/10 a página o manda pela chave da entrada, `entrada-extensor`.)
     """
     from tests.conftest import exigir_gi_real
 
@@ -762,11 +777,11 @@ def test_o_hub_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> Non
     _, mensagens = _na_pagina([
         _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="3"]'),
-        _clicar('#edita [data-liga="extensor"]'),
+        _clicar('#edita [data-extensor="3"]'),
     ])
-    assert levar_ao_disco(mensagens) == [("entrada-o-que-tem", "3")]
+    assert levar_ao_disco(mensagens) == [("entrada-extensor", "3")]
     assert carregar_maquina().mapa.portas["3"].extensor is True, (
-        "o «Extensor» da página de antes não virou a chave da porta")
+        "a chave «Extensor» da entrada 3 não gravou")
     lidas, mensagens = _na_pagina([
         _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="4"]'),
