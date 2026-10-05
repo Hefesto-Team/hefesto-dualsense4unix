@@ -214,6 +214,11 @@ POR_PREF = {c["pref"]: c for c in MESA}
 CAMPO_DAS_DICAS = "dicas"
 
 
+#: o controle conhecido que pede para parear no desenho (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01):
+#: o «Roxo», ouvido pelo primeiro adaptador do desenho
+PEDIDO_DO_DESENHO = {"aparelho": "AABBCC0000F7", "lugar": "L1", "nome": "Roxo"}
+
+
 def _dicas_da_cena():
     """As dicas da bancada, pelas MESMAS funções do produto (`a08_conexoes._html_das_dicas`).
 
@@ -234,6 +239,8 @@ def _dicas_da_cena():
         por_que_importa=fala_melhor, ganho_esperado=frase, destino="9")
     painel = _dicas.montar(
         [
+            _dicas.dica_do_pedido(PEDIDO_DO_DESENHO["aparelho"], PEDIDO_DO_DESENHO["nome"],
+                                  "da Entrada 4", PEDIDO_DO_DESENHO["lugar"]),
             _dicas.dica_do_movimento(_dicas.Movimento(
                 controle="p2", jogador=2, nome_do_controle="o controle", de_id="meio",
                 de_nome="Meio", para_id="direita", para_nome="Direita", controles_no_de=3,
@@ -246,7 +253,7 @@ def _dicas_da_cena():
                 "A entrada 12 entrega menos corrente do que o aparelho pede."),
         ],
         ["Suporte ao controle", "Pareamentos salvos"])
-    return _aba_conexoes.html_das_dicas(painel, _pacote08._ic)
+    return _aba_conexoes.html_das_dicas(painel, _pacote08.icone_da_dica)
 
 
 def tem_mic_pelo_radio(c):
@@ -1795,6 +1802,14 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-selo.sem{background:transparent;box-shadow:none;border:2px solid var(--comment)}
   .radio .ar-selo.sem.apertada{border-color:var(--orange)}
   .radio .ar-selo.sofrendo.sem{border-color:var(--red)}
+  /* o controle conhecido que pede para parear: o ponto verde que pulsa (05/10/2026) */
+  .cd-pulso,.radio .ar-pulso{display:inline-block;width:10px;height:10px;border-radius:50%;
+             background:var(--green);box-shadow:0 0 0 0 rgba(80,250,123,.55);
+             animation:pulso-pede 1.4s infinite}
+  .radio .ar-pulso{margin-left:7px;vertical-align:middle}
+  @keyframes pulso-pede{70%{box-shadow:0 0 0 8px rgba(80,250,123,0)}
+                        100%{box-shadow:0 0 0 0 rgba(80,250,123,0)}}
+  @media (prefers-reduced-motion:reduce){.cd-pulso,.radio .ar-pulso{animation:none}}
   .radio button.ar-selo{cursor:pointer;min-height:0;height:10px}
   .radio button.ar-selo.sem:hover{border-color:var(--green)}
   .radio .ar-legenda{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
@@ -2015,6 +2030,7 @@ def _cena_do_desenho() -> dict:
         "proposta": {"controle": quem_sai["id"], "destino": vazio["id"]},
         "ocupado": False, "aberto": None, "perto": perto,
         "destino_do_conectar": vazio["id"],
+        "pedindo": [dict(PEDIDO_DO_DESENHO)],
     }
     cena["procurando"] = (_pacote08.PROCURAR_LIGADO
                           if any(lg.get("conectando") for lg in lugares)
@@ -2148,7 +2164,9 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var aberta = todos('.radio .sala .lugar').length > 1 ? um('.radio .sala .lugar.aberto') : null;
       var id = aberta ? aberta.getAttribute('data-id') : '';
       todos('.ar > .ar-grupo, .ar > .ar-do', p).forEach(function(e){
-        var dele = e.classList.contains('ar-do') && e.getAttribute('data-do') === id;
+        // o grupo da caixa aberta só fica quando pulsa: o controle que pede para parear ali
+        var dele = (e.classList.contains('ar-do') && e.getAttribute('data-do') === id)
+          || (e.getAttribute('data-grupo') === id && !!e.querySelector('.ar-pulso'));
         e.classList.toggle('fora-do-foco', !!id && !dele);
       });
     }

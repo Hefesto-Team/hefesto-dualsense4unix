@@ -746,6 +746,26 @@ def _o_movimento_da_central(cena: dict[str, Any] | None) -> Any:
         and ar_do_adaptador.nivel_dos_canais(bons) == ar_do_adaptador.NIVEL_ENGASGA)
 
 
+def _perto_de(lug: dict[str, Any]) -> str:
+    """«da Entrada 4» pela entrada da caixa; sem entrada numerada, «do adaptador Meio»."""
+    entrada = str(lug.get("entrada") or "")
+    if entrada.startswith("Entrada "):
+        return f"da {entrada}"
+    nome = _titulo_do_lugar(lug)
+    return f"do adaptador {nome}" if nome and nome != DENTRO_DA_MAQUINA else ""
+
+
+def _as_dicas_do_pedido(cena: dict[str, Any] | None) -> list[Any]:
+    """Um cartão por controle conhecido que pede para parear (``cena["pedindo"]``)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import dicas_da_conexao
+
+    lugares = {str(lug.get("id")): lug for lug in (cena or {}).get("lugares") or ()}
+    return [dicas_da_conexao.dica_do_pedido(
+        str(x["aparelho"]), str(x["nome"]), _perto_de(lugares[str(x["lugar"])]), str(x["lugar"]))
+        for x in (cena or {}).get("pedindo") or () if str(x.get("lugar")) in lugares]
+
+
 def _a_dica_do_wifi(cena: dict[str, Any] | None) -> list[Any]:
     """O Wi-Fi que o diário do kernel viu cair: um cartão por rede, com a causa se for conhecida."""
     perfil._com_o_src()
@@ -800,7 +820,7 @@ def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 
-    cartoes: list[Any] = []
+    cartoes: list[Any] = list(_as_dicas_do_pedido(cena))
     certos: list[str] = []
     movimento = _o_movimento_da_central(cena)
     if movimento is not None:
@@ -836,7 +856,7 @@ def _html_das_dicas(vivos: list[Any] | None = None, cena: dict[str, Any] | None 
 
     if vivos is None:
         vivos = [_ItemDeOrdem(o) for o in _ORDENS_NA_TELA if o is not None]
-    return html_das_dicas(_o_painel_das_dicas(vivos, cena), _ic)
+    return html_das_dicas(_o_painel_das_dicas(vivos, cena), icone_da_dica)
 
 
 @_dataclasses.dataclass(frozen=True)
@@ -3053,6 +3073,22 @@ def _ic(nome: str, classe: str = "") -> str:
     return f'<svg class="i{extra}" aria-hidden="true"><use href="#rd-{nome}"/></svg>'
 
 
+#: o tooltip do ponto que pulsa (desenho aprovado de 05/10/2026)
+PEDINDO_PARA_PAREAR = "Pedindo para parear"
+#: o nome do controle que pede para parear quando ele só anuncia o nome de fábrica
+CONTROLE_SEM_NOME = "Controle"
+
+
+def icone_da_dica(nome: str) -> str:
+    """O símbolo de um cartão: o do sprite, ou o ponto verde que pulsa do controle que pede."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.dicas_da_conexao import ICONE_PULSO
+
+    if nome == ICONE_PULSO:
+        return '<span class="cd-pulso" aria-hidden="true"></span>'
+    return _ic(nome)
+
+
 def _silhueta(ap: dict[str, Any], classe: str = "ds") -> str:
     """O DualSense na cor do plástico dele, pelo `color` (o sprite é `currentColor`).
 
@@ -4255,14 +4291,19 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
     for linha in regua.outros:
         cores[linha.id], nomes[linha.id] = _cor_na_regua(linha.tipo), linha.nome
     saida = []
+    pede = {str(x.get("lugar")) for x in cena.get("pedindo") or ()}
+    pulso = (f'<span class="ar-pulso" role="img" title="{PEDINDO_PARA_PAREAR}" '
+             f'aria-label="{PEDINDO_PARA_PAREAR}"></span>')
     for ad, linhas in regua.grupos:
-        if not linhas:
+        if not linhas and ad.id not in pede:
             continue
         saida.append(f'<div class="ar-grupo cor-{_x(ad.cor)}" data-grupo="{_x(ad.id)}">'
-                     f'{_ic("radio", "glifo-do-grupo")}<b>{_x(ad.nome)}</b></div>')
-        saida += [f'<div class="ar-do" data-do="{_x(ad.id)}">' + "".join(_em_colunas(
-            [_a_linha_do_ar(ln, _o_rotulo_do_aparelho(ln), cores, nomes) for ln in linhas]))
-            + "</div>"]
+                     f'{_ic("radio", "glifo-do-grupo")}<b>{_x(ad.nome)}</b>'
+                     f'{pulso if ad.id in pede else ""}</div>')
+        if linhas:
+            saida += [f'<div class="ar-do" data-do="{_x(ad.id)}">' + "".join(_em_colunas(
+                [_a_linha_do_ar(ln, _o_rotulo_do_aparelho(ln), cores, nomes) for ln in linhas]))
+                + "</div>"]
     outros = [ln for ln in regua.outros if ln.sem_faixa != faixas_do_ar.FORA_DA_FAIXA]
     if outros:
         saida.append(f'<div class="ar-grupo outros">{OUTROS_SEM_FIO}</div>'
@@ -4688,6 +4729,30 @@ def _e_nome_de_fabrica(nome: str) -> bool:
 _ALIAS_QUE_E_ENDERECO = re.compile(r"[0-9A-Fa-f]{2}([-:_][0-9A-Fa-f]{2}){5}")
 
 
+def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]],
+                           aparelhos_bz: tuple[Any, ...]) -> list[dict[str, str]]:
+    """Os controles conhecidos que pedem para parear (``radio_central.pedindo``), na tela.
+
+    O dono do sinal é a central (conhecido + desconectado + ouvido na varredura); aqui só se
+    dá o nome dela e o adaptador que o ouve. O nome de fábrica vira «Controle».
+    """
+    ids = {str(lug["id"]) for lug in lugares}
+    nomes = _nomes_por_endereco(aparelhos_bz)
+    saida = []
+    for x in central.get("pedindo") or ():
+        if not isinstance(x, dict):
+            continue
+        aparelho, lugar = _mac(x.get("aparelho")), _mac(x.get("adaptador"))
+        if not aparelho or lugar not in ids:
+            continue
+        alias = str(x.get("nome") or "").strip()
+        dado = nomes.get(aparelho) or (
+            nome_dado(alias) if alias and not _e_nome_de_fabrica(alias)
+            and not _ALIAS_QUE_E_ENDERECO.fullmatch(alias) else "")
+        saida.append({"aparelho": aparelho, "lugar": lugar, "nome": dado or CONTROLE_SEM_NOME})
+    return saida
+
+
 def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
     """O nome que ela deu a cada controle, pelo ENDEREÇO — um só por aparelho."""
     nomes: dict[str, str] = {}
@@ -4864,6 +4929,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         quem = str(pedido["uniq"])
         dono = next((a for a in aparelhos if _so_hex(str(a["id"])) == _so_hex(quem)), None)
         pedido["uniq"] = str(dono["id"]) if dono else quem
+    pedindo = _quem_pede_para_parear(central, lugares, aparelhos_bz)
     proposta = central.get("proposta") if isinstance(central.get("proposta"), dict) else None
     if proposta:
         dono = next((a for a in aparelhos
@@ -4882,6 +4948,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "descobrindo_ausente": _o_receptor_tirado(vizinhos),
         "wifi": wifi,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
+        "pedindo": pedindo,
         "passo_da_espera": next((str(m.get("passo") or "") for m in esperando), ""),
         "procurando": (TRAVESSAO_DO_PROCURAR if not isinstance(st.get("radio_central"), dict)
                        else PROCURAR_LIGADO if busca_em else PROCURAR_DESLIGADO),
@@ -5720,6 +5787,21 @@ def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         _pedir_ao_radio(p, str(linha["aparelho"]), lid)
     _abrir_na_tela(lid)
     return {"armou": True}
+
+
+@gesto("08-conexoes.html", "parear-o-pedido", grava="radio.mover")
+def parear_o_pedido(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O «Parear» do cartão do controle que pede para parear: o mesmo ``radio.mover`` do
+    «Mover», no adaptador que o ouve — a central tira o par velho do destino, espera o
+    controle (ele já está em modo de parear), pareia, confere e esquece a origem."""
+    alvo, destino = _mac(o.get("alvo")), _mac(o.get("destino"))
+    pedido = next((x for x in _CENA_NA_TELA.get("pedindo") or ()
+                   if x.get("aparelho") == alvo and x.get("lugar") == destino), None)
+    if pedido is None:
+        raise ValueError("este controle não está mais pedindo para parear aqui")
+    feito = _mover(p, _com_dois_pontos(alvo), destino)
+    _abrir_na_tela(destino)
+    return feito
 
 
 def _tirar_a_linha(p: Any, ap: dict[str, Any]) -> dict[str, Any]:

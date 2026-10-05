@@ -126,6 +126,7 @@ CAMADA: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "novo-hub"): _C,
     ("08-conexoes.html", "parear-aparelho"): _A,
     ("08-conexoes.html", "parear-de-novo"): _A,
+    ("08-conexoes.html", "parear-o-pedido"): _A,
     ("08-conexoes.html", "perfil-do-controle"): _T,
     ("08-conexoes.html", "radio-procurar"): _A,
     ("08-conexoes.html", "receptor-descobrir"): _A,

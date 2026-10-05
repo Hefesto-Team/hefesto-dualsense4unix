@@ -46,16 +46,20 @@ ICONE_WIFI = "wifi"
 ICONE_TECLADO = "teclado"
 ICONE_ENTRADA = "hub"
 ICONE_AJUDA = "ajuda"
+#: o controle que pede para parear: um ponto verde que pulsa no lugar do ícone
+ICONE_PULSO = "pulso"
 
 # O que o botão faz.
 MOVER = "mover"
 MAPA = "mapa"
+PAREAR = "parear"
 IGNORAR = "ignorar"
 VOLTAR_A_MOSTRAR = "voltar-a-mostrar"
 
 PAGINA_DO_MAPA = "mapa-das-portas.html"
 GESTO_DE_MOVER = "aceitar-sugestao"
 GESTO_DE_IGNORAR = "ignorar"
+GESTO_DE_PAREAR_O_PEDIDO = "parear-o-pedido"
 
 ROTULO_VER_NO_MAPA = "Ver no mapa"
 ROTULO_IGNORAR = "Ignorar"
@@ -127,6 +131,8 @@ class Dica:
     detalhe: str = ""
     ignorar: Acao | None = None
     calada: bool = False
+    #: vem antes de todos os que falam (o controle que pede para parear: ela está esperando)
+    primeiro: bool = False
 
     @property
     def peso(self) -> int:
@@ -289,12 +295,36 @@ def dica_do_receptor(tipo: str, texto: str, quando: str) -> Dica:
         detalhe=f"{texto} {quando}".strip())
 
 
+TITULO_DO_PEDIDO = "{nome} quer conectar"
+PERTO_DE = "Perto {de}"
+PORQUE_DO_PEDIDO = ("Ele está em modo de parear e perdeu a chave que este computador guarda: "
+                    "o par velho sai e o novo se faz aqui.")
+DICA_DO_PAREAR_O_PEDIDO = "Esquece o par velho e pareia de novo neste adaptador"
+
+
+def dica_do_pedido(aparelho: str, nome: str, perto: str, destino: str) -> Dica:
+    """O controle conhecido que pede para parear (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01).
+
+    O desenho aprovado de 05/10/2026: o ponto verde que pulsa no lugar do ícone, «Roxo quer
+    conectar», «Perto da Entrada 4» e UM botão, «Parear». ``perto`` já vem com a preposição
+    («da Entrada 4», «do Meio»).
+    """
+    return Dica(
+        chave=f"pedido:{aparelho}", icone=ICONE_PULSO,
+        titulo=limitar_o_titulo(TITULO_DO_PEDIDO.format(nome=nome)), nivel=AJUSTE,
+        acao=Acao(PAREAR, ROTULO_PAREAR, GESTO_DE_PAREAR_O_PEDIDO,
+                  dados=(("alvo", aparelho), ("destino", destino)),
+                  titulo=DICA_DO_PAREAR_O_PEDIDO),
+        porque=uma_frase(PORQUE_DO_PEDIDO), detalhe=PERTO_DE.format(de=perto) if perto else "",
+        primeiro=True)
+
+
 def montar(dicas: Iterable[Dica], certos: Sequence[str] = ()) -> Painel:
     """Os que mais pesam primeiro (o nível, depois a ordem em que chegaram); as caladas no fim."""
     todas = list(dicas)
     ordenadas = sorted(
         range(len(todas)),
-        key=lambda i: (todas[i].calada, -todas[i].peso, i))
+        key=lambda i: (todas[i].calada, not todas[i].primeiro, -todas[i].peso, i))
     pela_ordem = [todas[i] for i in ordenadas]
     return Painel(
         visiveis=tuple(pela_ordem[:CARTOES_VISIVEIS]), demais=tuple(pela_ordem[CARTOES_VISIVEIS:]),
@@ -319,6 +349,7 @@ __all__ = [
     "dica_da_conferencia",
     "dica_da_ordem",
     "dica_do_movimento",
+    "dica_do_pedido",
     "dica_do_receptor",
     "dica_do_wifi",
     "limitar_o_titulo",

@@ -566,7 +566,7 @@ def test_duas_mais_duas_nao_propoe_nada(
     assert central.propor(mesa) is None
     publicado = central.publicar(mesa)
     assert publicado == {"movimentos": [], "em_curso": False, "proposta": None,
-                         "busca": None}
+                         "busca": None, "pedindo": []}
     dono.fechar()
 
 
@@ -744,7 +744,7 @@ async def test_o_state_full_publica_a_central(
     payload = await handlers._handle_daemon_state_full({})
 
     assert payload["radio_central"] == {"movimentos": [], "em_curso": False, "proposta": None,
-                                        "busca": None}
+                                        "busca": None, "pedindo": []}
 
 
 @pytest.mark.asyncio

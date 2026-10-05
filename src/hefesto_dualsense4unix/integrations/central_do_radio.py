@@ -511,6 +511,67 @@ def _alias_de(objeto: bluez_dbus.AparelhoDoBluez) -> str:
     return str(objeto.nome or "").strip()
 
 
+@dataclass(frozen=True)
+class PedidoDePareamento:
+    """Um controle CONHECIDO que pede um par novo (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01).
+
+    Medido em 05/10/2026: ela segurou PS + Create no «vermelho», e o BlueZ o tinha no ar no
+    adaptador da Esquerda (RSSI de -56 a -62) com ``Paired``/``Bonded`` verdadeiros e
+    ``Connected`` falso. O controle em modo de parear perdeu a chave; o BlueZ guarda a dele;
+    nenhum dos dois conecta. O sinal é esse: conhecido + desconectado + ouvido na varredura.
+    """
+
+    aparelho: str
+    #: o adaptador que o ouve mais forte, onde o par novo se faz
+    adaptador: str
+    rssi: int
+    #: todos os adaptadores que o ouvem agora
+    ouvido_por: tuple[str, ...]
+    #: os adaptadores onde mora o par velho
+    par_velho: tuple[str, ...]
+    nome: str = ""
+
+    def publicar(self) -> dict[str, Any]:
+        return {"aparelho": self.aparelho, "adaptador": self.adaptador, "rssi": self.rssi,
+                "ouvido_por": list(self.ouvido_por), "par_velho": list(self.par_velho),
+                "nome": self.nome}
+
+
+def pedidos_de_pareamento(
+    adaptadores: Iterable[bluez_dbus.AdaptadorDoBluez],
+    aparelhos: Iterable[bluez_dbus.AparelhoDoBluez],
+    *,
+    fora: Iterable[str] = (),
+) -> tuple[PedidoDePareamento, ...]:
+    """Os controles conhecidos que pedem para parear, pela foto do BlueZ.
+
+    Conhecido = pareado em algum adaptador; desconectado em todos; e com ``RSSI`` em ao
+    menos um (o BlueZ só o tem enquanto a varredura ouve o aparelho). Sem o ``RSSI`` é o
+    controle desligado, e ele não aparece. ``fora`` são os que a central já está movendo.
+    """
+    por_caminho = {a.caminho: a.endereco for a in adaptadores}
+    excluidos = {endereco_de(e) for e in fora}
+    pedidos = []
+    for endereco, objetos in _controles_pelo_endereco(aparelhos).items():
+        daqui = [o for o in objetos if o.adaptador in por_caminho]
+        if endereco_de(endereco) in excluidos or not daqui:
+            continue
+        if any(o.conectado is True for o in daqui):
+            continue
+        velhos = tuple(sorted(por_caminho[o.adaptador] for o in daqui if o.pareado is True))
+        ouvidos = sorted((o for o in daqui if o.rssi is not None),
+                         key=lambda o: -(o.rssi or 0))
+        if not velhos or not ouvidos:
+            continue
+        nome = next((_alias_de(o) for o in daqui if _alias_de(o)), "")
+        pedidos.append(PedidoDePareamento(
+            aparelho=endereco, adaptador=por_caminho[ouvidos[0].adaptador],
+            rssi=int(ouvidos[0].rssi or 0),
+            ouvido_por=tuple(por_caminho[o.adaptador] for o in ouvidos),
+            par_velho=velhos, nome=nome))
+    return tuple(pedidos)
+
+
 class CentralDoRadio:
     """O motor do mover, do parear e do «Equilibrar». Um por processo (o daemon)."""
 
@@ -576,6 +637,8 @@ class CentralDoRadio:
         self._lembrancas: dict[str, tuple[str, frozenset[tuple[str, int]]]] = {}
         self._saidas_de_fora: list[tuple[str, str, float, str]] = []
         self._sem_lapide_dito: set[tuple[str, str]] = set()
+        #: o controle que a janela escolheu sozinha por pedir para parear (o par se refaz)
+        self._pedido_da_janela = ""
         self._ouvindo: object | None = None
         if dono is not None:
             self._ouvir(dono)
@@ -737,7 +800,50 @@ class CentralDoRadio:
             "em_curso": self.em_curso,
             "proposta": proposta,
             "busca": self._busca_publicada(),
+            "pedindo": [p.publicar() for p in self._pedidos_publicados()],
         }
+
+    def _pedidos_publicados(self) -> tuple[PedidoDePareamento, ...]:
+        """Os controles que pedem para parear, pela foto do dono vivo (memória, sem D-Bus).
+
+        Pelo caminho de reserva a foto custaria subprocessos no tique: ali não há pedido.
+        """
+        vivo = self._dono_sem_abrir()
+        if vivo is None or not vivo.atende_o_proprio_pareamento:
+            return ()
+        with contextlib.suppress(Exception):
+            adaptadores, aparelhos = vivo.adaptadores(), vivo.aparelhos()
+            if adaptadores is not None and aparelhos is not None:
+                with self._tranca:
+                    movendo = [m.aparelho for m in self._movimentos.values() if m.em_curso]
+                return pedidos_de_pareamento(adaptadores, aparelhos, fora=movendo)
+        return ()
+
+    def _quem_pede_aqui(self, dono: bluez_dbus.LeitorDoBluez, destino: str) -> str:
+        """O controle conhecido que pede para parear e que o ``destino`` ouve agora, ou ``""``."""
+        adaptadores, aparelhos = dono.adaptadores(), dono.aparelhos()
+        if adaptadores is None or aparelhos is None:
+            return ""
+        return next((p.aparelho for p in pedidos_de_pareamento(adaptadores, aparelhos)
+                     if destino in p.ouvido_por), "")
+
+    def _refazer_o_par_no_destino(
+        self, dono: bluez_dbus.LeitorDoBluez, aparelho: str, destino: str
+    ) -> None:
+        """O par velho NO destino sai, e espera o controle voltar a aparecer na varredura.
+
+        Sem isto o ``Pair`` responde «já pareado» sobre a chave que o controle perdeu.
+        """
+        foto = _ler(dono, aparelho)
+        velho = foto.do_aparelho.get(destino) if foto is not None else None
+        if velho is None or velho.pareado is not True:
+            return
+        self._tirar_o_velho_do_destino(dono, aparelho, destino, velho)
+        fim = self._relogio() + CONFERIR_S
+        while self._relogio() < fim and not self._parar.is_set():
+            if dono.caminho_do_aparelho(aparelho, adaptador=destino) is not None:
+                return
+            self._dormir(PASSO_S)
 
     def _busca_publicada(self) -> dict[str, Any] | None:
         """A busca do «Procurar» como a tela a lê, ou ``None``: com o chip dela"""
@@ -1433,7 +1539,8 @@ class CentralDoRadio:
                     self._aberturas += 1
                     self._ultima_busca = dict(self._busca)
                 achado = self._esperar_a_escolha_dela(janela, dono, ligados_antes,
-                                                      comeco=comeco, segundos=segundos)
+                                                      comeco=comeco, segundos=segundos,
+                                                      destino=adaptador.endereco)
                 if achado is None:
                     fim = self._sem_gesto(movimento, janela, comeco, segundos)
                     segue = fim is None
@@ -1451,6 +1558,9 @@ class CentralDoRadio:
             if pareando is None:
                 return None
             movimento = pareando
+            if conectar and self._pedido_da_janela == movimento.aparelho:
+                # o controle conhecido que pediu um par novo: o velho no destino sai antes
+                self._refazer_o_par_no_destino(dono, movimento.aparelho, movimento.destino)
             resultado = janela.parear(movimento.aparelho)
             if resultado.estado not in (ESTADO_PAREOU, ESTADO_JA_PAREADO):
                 return self._acabou(movimento, NAO_CHEGOU, MOTIVO_NAO_PAREOU)
@@ -1463,6 +1573,7 @@ class CentralDoRadio:
             with self._tranca:
                 self._escolha, self._vistos_na_janela = None, frozenset()
                 self._janela_da_busca, self._desligar = None, False
+                self._pedido_da_janela = ""
                 if not segue:
                     self._busca = None
             janela.fechar()
@@ -1630,8 +1741,14 @@ class CentralDoRadio:
         *,
         comeco: float,
         segundos: float,
+        destino: str = "",
     ) -> tuple[str, bool] | None:
-        """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho dela, ou ``None``."""
+        """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho dela, ou ``None``.
+
+        Com a janela aberta por ela, o controle CONHECIDO que pede para parear no destino é a
+        escolha dela (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01): ela já disse o que quer ao apertar
+        PS + Create e abrir a janela, e outro clique seria custo para quem joga.
+        """
         fim = comeco + segundos
         while True:
             vistos = frozenset(str(getattr(c, "endereco", "") or "")
@@ -1641,6 +1758,13 @@ class CentralDoRadio:
                 escolha = self._escolha
             if escolha is not None and escolha in vistos:
                 return escolha, False
+            pede = self._quem_pede_aqui(dono, destino) if destino and escolha is None else ""
+            if pede:
+                logger.info("central_conectar_quem_pede_para_parear", aparelho=mascarar(pede),
+                            adaptador=mascarar(destino))
+                with self._tranca:
+                    self._pedido_da_janela = pede
+                return pede, False
             voltou = self._quem_voltou_sozinho(dono, ligados_antes)
             if voltou:
                 return voltou, True
@@ -2411,6 +2535,8 @@ __all__ = [
     "GuardaDosNomes",
     "Movimento",
     "NomesNaMaquina",
+    "PedidoDePareamento",
     "endereco_de",
     "esquecer_pela_ponte",
+    "pedidos_de_pareamento",
 ]

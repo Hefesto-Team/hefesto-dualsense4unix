@@ -494,7 +494,7 @@ class JanelaDeBusca:
             logger.info("pareamento_fora_da_janela", endereco=mascara)
             return Resultado(ESTADO_JANELA_FECHADA, FRASE_JANELA_FECHADA)
         for achado in self.candidatos():
-            if achado.endereco == alvo and achado.ja_pareado:
+            if achado.endereco == alvo and achado.ja_pareado and self._ainda_pareado(alvo):
                 logger.info("pareamento_ja_estava", endereco=mascara)
                 return Resultado(ESTADO_JA_PAREADO, FRASE_JA_PAREADO)
         if self._dono is not None:
@@ -515,6 +515,20 @@ class JanelaDeBusca:
             return Resultado(ESTADO_PAREOU, FRASE_PAREOU)
         logger.warning("pareamento_nao_deu", endereco=mascara, motivo=erro[:200])
         return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)
+
+    def _ainda_pareado(self, alvo: str) -> bool:
+        """O ``Paired`` de AGORA, pelo dono; sem dono, o que a colheita viu.
+
+        A colheita é uma foto do começo da janela: o controle que pediu um par novo tem o par
+        velho tirado no meio dela (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01) e volta como novo.
+        """
+        dono = self._dono
+        if dono is None:
+            return True
+        no = dono.caminho_do_aparelho(alvo, adaptador=self.adaptador)
+        if no is None:
+            return False
+        return bluez_dbus.como_booleano(dono.propriedade(no, bluez_dbus.APARELHO, "Paired")) is True
 
     def _parear_pelo_dono(
         self, dono: bluez_dbus.LeitorDoBluez, alvo: str, mascara: str

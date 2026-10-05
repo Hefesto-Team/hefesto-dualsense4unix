@@ -438,7 +438,7 @@ def test_o_publicar_nao_abre_o_dono_antes_de_ligar(
     central = cr.CentralDoRadio()
 
     assert central.publicar([]) == {"movimentos": [], "em_curso": False, "proposta": None,
-                                    "busca": None}
+                                    "busca": None, "pedindo": []}
     assert not _esperar(lambda: bool(pedidos), teto=0.3), "o state_full abriu o dono do BlueZ"
 
 
