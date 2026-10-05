@@ -197,6 +197,17 @@ def _linha_do_aparelho(
         briga=tuple(dict.fromkeys((*donos, *outros))))
 
 
+def linha_do_adaptador(adaptador: Adaptador, ocupantes: Iterable[Ocupante]) -> Linha:
+    """A faixa do PRÓPRIO adaptador (o que ele evita), com os donos dos canais perdidos.
+
+    É o que o painel do aparelho no mapa das portas mostra quando o aparelho clicado é o rádio:
+    a mesma conta da linha de um aparelho dele, sem o enlace de ninguém.
+    """
+    como_aparelho = AparelhoNoAdaptador(id=adaptador.id, tipo="adaptador", nome=adaptador.nome,
+                                        cor=adaptador.cor)
+    return _linha_do_aparelho(adaptador, como_aparelho, (), tuple(ocupantes))
+
+
 def _selo_de_quem_ocupa(tipo: str, vitimas: int) -> Selo:
     """O Wi-Fi conectado tira canais (a rede anuncia a banda); um receptor 2.4G só «briga
     com»: a banda dele saiu de uma comparação, e a causa nunca é dada como confirmada."""
@@ -282,5 +293,6 @@ __all__ = [
     "Regua",
     "Selo",
     "banda_do_intervalo",
+    "linha_do_adaptador",
     "montar",
 ]

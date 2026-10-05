@@ -62,12 +62,21 @@ def _a_entrada(o: dict[str, Any]) -> str:
     return numero
 
 
-def _gravou(recibo: Any) -> dict[str, Any]:
+def _as_faixas(ctx: Contexto | None) -> Any:
+    """A fonte das faixas do painel (a conta da aba 08), ou `None` sem contexto."""
+    if ctx is None:
+        return None
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    return lambda: a08_conexoes.faixas_para_o_mapa(ctx)
+
+
+def _gravou(recibo: Any, ctx: Contexto | None = None) -> dict[str, Any]:
     """A gravação aconteceu, e a página recebe o arranjo RELIDO do disco."""
     if not getattr(recibo, "gravou", False):
         raise RuntimeError(f"não gravei no mapa desta máquina ({recibo.motivo})")
     _o_rascunho_da_08_caducou()
-    dado = arranjo_desta_maquina.depois_de_gravar()
+    dado = arranjo_desta_maquina.depois_de_gravar(faixas=_as_faixas(ctx))
     return {} if dado is None else {arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR: dado}
 
 
@@ -91,10 +100,10 @@ def entrada_o_que_tem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     """
     liga = str(o.get("liga") or "")
     if liga == EXTENSOR_DE_ANTES:
-        return _gravou(ee.declarar_o_extensor(_a_entrada(o), True))
+        return _gravou(ee.declarar_o_extensor(_a_entrada(o), True), ctx)
     if liga != DIRETO and liga not in ee.LIGACOES_DECLARAVEIS:
         raise ValueError(f"o clique não disse o que tem na entrada ({liga!r})")
-    return _gravou(ee.declarar_a_ligacao(_a_entrada(o), None if liga == DIRETO else liga))
+    return _gravou(ee.declarar_a_ligacao(_a_entrada(o), None if liga == DIRETO else liga), ctx)
 
 
 @gesto(PAGINA, "entrada-extensor", grava="declarar_o_extensor")
@@ -103,7 +112,7 @@ def entrada_extensor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     ligado = str(o.get("ligado") or "").lower()
     if ligado not in ("true", "false"):
         raise ValueError("o clique não disse se o extensor liga ou desliga")
-    return _gravou(ee.declarar_o_extensor(_a_entrada(o), ligado == "true"))
+    return _gravou(ee.declarar_o_extensor(_a_entrada(o), ligado == "true"), ctx)
 
 
 @gesto(PAGINA, "entrada-lugar", grava="declarar_o_lugar_da_entrada")
@@ -114,7 +123,7 @@ def entrada_lugar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     face = str(o.get("valor") or "").strip()
     if not face:
         return None
-    return _gravou(ee.declarar_o_lugar_da_entrada(_a_entrada(o), face))
+    return _gravou(ee.declarar_o_lugar_da_entrada(_a_entrada(o), face), ctx)
 
 
 def _o_modelo(o: dict[str, Any]) -> str:
@@ -127,7 +136,7 @@ def _o_modelo(o: dict[str, Any]) -> str:
 @gesto(PAGINA, "aparelho-tipo", grava="declarar_o_aparelho")
 def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O tipo que ela dá ao aparelho (o que a máquina não mede) — pelo ``vid:pid`` dele."""
-    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), tipo=str(o.get("tipodito") or "")))
+    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), tipo=str(o.get("tipodito") or "")), ctx)
 
 
 @gesto(PAGINA, "aparelho-nome", grava="declarar_o_aparelho")
@@ -135,7 +144,7 @@ def aparelho_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O nome que ela dá ao aparelho — pelo ``vid:pid`` dele; vazio apaga."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
-    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), apelido=str(o.get("valor") or "")))
+    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), apelido=str(o.get("valor") or "")), ctx)
 
 
 @gesto(PAGINA, "voltar-ao-automatico", grava="voltar_ao_automatico")
@@ -143,7 +152,7 @@ def voltar_ao_automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     """«Voltar ao automático»: tira o que ela disse do aparelho (tipo, nome) e da entrada."""
     modelo = str(o.get("modelo") or "").strip() or None
     entrada = str(o.get("entrada") or "").strip() or None
-    return _gravou(ee.voltar_ao_automatico(numero=entrada, modelo=modelo))
+    return _gravou(ee.voltar_ao_automatico(numero=entrada, modelo=modelo), ctx)
 
 
 @gesto(PAGINA, "entrada-velocidade", grava="declarar_a_velocidade")
@@ -153,7 +162,7 @@ def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
         usb = int(str(o.get("usb") or ""))
     except ValueError:
         raise ValueError("o clique não disse a velocidade") from None
-    return _gravou(ee.declarar_a_velocidade(_a_entrada(o), usb))
+    return _gravou(ee.declarar_a_velocidade(_a_entrada(o), usb), ctx)
 
 
 @gesto(PAGINA, "entrada-nome", grava="dar_nome_a_entrada")
@@ -161,7 +170,7 @@ def entrada_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O nome que ela dá à entrada — da POSIÇÃO, no `maquina.json` dela."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
-    return _gravou(ee.dar_nome_a_entrada(_a_entrada(o), str(o.get("valor") or "")))
+    return _gravou(ee.dar_nome_a_entrada(_a_entrada(o), str(o.get("valor") or "")), ctx)
 
 
 @gesto(PAGINA, "entrada-trocar", grava="trocar_as_entradas")
@@ -172,7 +181,7 @@ def entrada_trocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     outra = str(o.get("valor") or "").strip()
     if not outra:
         return None
-    return _gravou(ee.trocar_as_entradas(_a_entrada(o), outra))
+    return _gravou(ee.trocar_as_entradas(_a_entrada(o), outra), ctx)
 
 
 @gesto(PAGINA, "entrada-ensinar", grava="ensinar_a_entrada")
@@ -181,13 +190,13 @@ def entrada_ensinar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     caminho = str(o.get("caminho") or "").strip()
     if not caminho:
         raise ValueError("o clique não disse qual aparelho")
-    return _gravou(ee.ensinar_a_entrada(_a_entrada(o), caminho))
+    return _gravou(ee.ensinar_a_entrada(_a_entrada(o), caminho), ctx)
 
 
 @gesto(PAGINA, "reexaminar")
 def reexaminar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Examinar»: relê a máquina e devolve o arranjo novo para a página."""
-    dado = arranjo_desta_maquina.reexaminar()
+    dado = arranjo_desta_maquina.reexaminar(faixas=_as_faixas(ctx))
     if dado is None:
         raise RuntimeError("não li o mapa deste computador de novo")
     return {arranjo_desta_maquina.CHAVE_DA_ENTREGA: dado}

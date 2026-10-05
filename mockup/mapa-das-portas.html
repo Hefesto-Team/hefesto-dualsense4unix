@@ -374,6 +374,17 @@
   .edita .etq { padding: .12rem .45rem; font-family: var(--font-dado); font-size: .6875rem;
                 border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
   .edita .etq.medida { border-style: dashed; }
+  /* A FAIXA DELE (desenho 2): pintado é o canal bom; vazio, com a marca de quem o tomou */
+  .edita .faixa-dele { display: grid; grid-template-columns: repeat(79, 1fr); gap: 1px;
+                       height: .75rem; }
+  .edita .faixa-dele i { display: block; border-radius: 1px; background: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-rule) 60%, transparent); }
+  .edita .faixa-dele i.b, .edita .faixa-dele i.o {
+    background: var(--cor-faixa, var(--color-ink)); box-shadow: none; }
+  .edita .faixa-dele i.p { box-shadow: inset 0 -3px 0 var(--marca, var(--color-rule)); }
+  .edita .faixa-dele i.o { box-shadow: inset 0 -3px 0 var(--marca, transparent); }
+  .edita .faixa-dele-txt { display: block; margin-top: .25rem; font-family: var(--font-dado);
+                           font-size: .6875rem; text-transform: none; }
   .edita .onde { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
                  font-size: var(--text-sm); }
   .edita .chave { display: inline-flex; align-items: center; gap: .4rem; font: inherit;
@@ -1624,6 +1635,23 @@
     if (et.length) {
       h += '<div class="edita-linha"><span>O que a máquina vê</span><div class="etqs">'
         + et.map(function (e) { return '<span class="etq">' + emAtributo(e) + "</span>"; }).join("") + "</div></div>";
+    }
+    /* A FAIXA DELE: a mesma conta da aba Conexões; sem leitura não há linha */
+    var fx = quem.faixa;
+    if (fx && fx.celulas && fx.celulas.length) {
+      h += '<div class="edita-linha"><span>A faixa dele</span><div>'
+        + '<div class="faixa-dele" role="img" aria-label="' + emAtributo(fx.texto || "A faixa dele") + '"'
+        + ' style="--cor-faixa:' + emAtributo(fx.cor || "") + '">'
+        + fx.celulas.map(function (c, k) {
+            var onde = "Canal " + k + " · " + (2402 + k) + " MHz";
+            var dito = c[0] === "p" ? " · perdido para " + c[2]
+              : c[0] === "o" ? " · ocupado" + (c[2] ? ", perde " + c[2] : "")
+              : c[0] === "b" ? " · bom" : "";
+            return '<i class="' + c[0] + '"' + (c[1] ? ' style="--marca:' + emAtributo(c[1]) + '"' : "")
+              + ' title="' + emAtributo(onde + dito) + '"></i>';
+          }).join("") + "</div>"
+        + (fx.texto ? '<span class="faixa-dele-txt">' + emAtributo(fx.texto) + "</span>" : "")
+        + "</div></div>";
     }
     h += oQueFazer(n, quem);
 

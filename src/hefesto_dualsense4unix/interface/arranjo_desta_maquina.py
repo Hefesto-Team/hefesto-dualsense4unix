@@ -68,6 +68,7 @@ def _ler_a_maquina(
     *,
     antes: Mapping[str, tuple[str, str]] | None = None,
     ler_o_serial: Callable[[str], str] | None = None,
+    faixas: Callable[[], Mapping[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], Lida] | None:
     """O :func:`arranjo` e a :data:`Lida` dele, que o reexame seguinte confere."""
     try:
@@ -99,6 +100,10 @@ def _ler_a_maquina(
     except Exception:
         return None
 
+    try:
+        das_faixas = dict(faixas()) if faixas is not None else {}
+    except Exception:  # a faixa é um extra: sem ela o painel só não a mostra
+        das_faixas = {}
     mesa = bancada.mesa
     pelo_caminho = {a.nome_do_kernel: a for a in conectados}
     sem_lugar = _a_fileira_sem_lugar(declarado, censo, mapa_das_portas)
@@ -125,7 +130,7 @@ def _ler_a_maquina(
         "quando": QUANDO_DE_AGORA.format(quando=quando),
         "aparelhos": [
             _aparelho(a, ids.get(a.id, a.id), pelo_caminho.get(a.id), tipos,
-                      _apelidos(documento), censo)
+                      _apelidos(documento), censo, das_faixas)
             for a in mesa.aparelhos
         ],
         "faces": faces,
@@ -340,6 +345,7 @@ def _aparelho(
     tipos: Mapping[str, str] | None = None,
     apelidos: Mapping[str, str] | None = None,
     censo: Any = None,
+    faixas: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Um aparelho do motor nos campos que a página LÊ, com o que o painel dele diz.
 
@@ -368,6 +374,8 @@ def _aparelho(
     corpo["etiquetas"] = _etiquetas_do_aparelho(do_censo, censo)
     if getattr(do_censo, "receptor", False):
         corpo["receptor"] = True
+    if (faixas or {}).get(modelo):
+        corpo["faixa"] = faixas[modelo]  # type: ignore[index]
     return corpo
 
 

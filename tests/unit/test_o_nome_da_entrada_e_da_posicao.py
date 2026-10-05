@@ -236,7 +236,7 @@ def test_o_gesto_do_nome_arma_no_clique_e_grava_no_change(
     from hefesto_dualsense4unix.interface import arranjo_desta_maquina
     from hefesto_dualsense4unix.interface.pacotes import a12_mapa_das_portas as a12
 
-    monkeypatch.setattr(arranjo_desta_maquina, "depois_de_gravar", lambda: {"ok": True})
+    monkeypatch.setattr(arranjo_desta_maquina, "depois_de_gravar", lambda **_fontes: {"ok": True})
     assert a12.entrada_nome(None, {"evento": "click", "entrada": "2"}, None) == {"armou": True}
     assert carregar_maquina().mapa.portas["2"].nome is None, "o clique gravou"
     volta = a12.entrada_nome(None, {"evento": "change", "entrada": "2", "valor": "Canto"}, None)

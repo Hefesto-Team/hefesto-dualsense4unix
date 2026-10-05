@@ -2946,11 +2946,20 @@ class Piloto:
         pagina = self.pagina
 
         def ler() -> None:
-            dado = arranjo_desta_maquina.para_a_pagina()
+            dado = arranjo_desta_maquina.para_a_pagina(faixas=self._as_faixas_do_mapa)
             if dado is not None:
                 GLib.idle_add(lambda: self._entregar(pagina, dado, reexame=False))
 
         threading.Thread(target=ler, name="arranjo-desta-maquina", daemon=True).start()
+
+    def _as_faixas_do_mapa(self) -> dict[str, Any]:
+        """A faixa de cada rádio, pela MESMA conta da aba Conexões, com o estado do último tique."""
+        ctx = getattr(self, "_ctx_de_agora", None)
+        if ctx is None:
+            return {}
+        from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+        return a08_conexoes.faixas_para_o_mapa(ctx)
 
     def _entregar(self, pagina: str, dado: Any, *, reexame: bool = False,
                   como: str = "") -> bool:

@@ -4232,6 +4232,76 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
     return '<div class="ar">' + "".join(saida) + "</div>"
 
 
+#: A cor de cada tipo na mini-faixa do painel do aparelho (a página do mapa tem a paleta dela).
+COR_DA_FAIXA_NO_MAPA = {
+    "controle": "#f8f8f2", "celular": "#ff9a8b", "relogio": "#8fa8ff", "fone": "#8be9fd",
+    "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
+    "ruido": "#8a8fa3", "outro": "#9a9eb8", "adaptador": "#6272a4",
+}
+
+
+def _a_faixa_do_painel(linha: Any, cor_do: dict[str, str], nomes: dict[str, str]) -> dict[str, Any]:
+    """A linha da régua na forma do painel: 79 `[estado, cor da marca, nome]` e a frase.
+
+    ``estado``: ``b`` canal bom (pintado), ``p`` perdido (vazio, com a marca de quem o tomou),
+    ``o`` ocupado por este aparelho (pintado, com a marca de quem perde ali) e ``l`` livre.
+    """
+    celulas = []
+    for c in linha.celulas:
+        if c.estado == faixas_do_ar.PERDIDO:
+            celulas.append(["p", cor_do.get(c.dono, cor_do[faixas_do_ar.RUIDO]),
+                            nomes.get(c.dono, faixas_do_ar.NOME_DO_RUIDO)])
+        elif c.estado == faixas_do_ar.OCUPADO:
+            celulas.append(["o", cor_do.get(c.marca, ""), nomes.get(c.marca, "")])
+        else:
+            celulas.append(["b" if c.estado == faixas_do_ar.BOM else "l", "", ""])
+    perde = [n for _t, n in linha.quem]
+    briga = [nomes[i] for i in linha.briga if i in nomes]
+    partes = []
+    if linha.bons is not None and perde:
+        partes.append("perde para " + " · ".join(perde))
+    elif briga:
+        ocupados = [c.canal for c in linha.celulas if c.estado == faixas_do_ar.OCUPADO]
+        onde = f" nos canais {min(ocupados)}-{max(ocupados)}" if ocupados else ""
+        partes.append("briga com " + " · ".join(briga) + onde)
+    if linha.selo is not None:
+        partes.append(" ".join(t for t in (linha.selo.texto, linha.nota) if t))
+    return {"celulas": celulas, "texto": " · ".join(p for p in partes if p),
+            "cor": cor_do.get(linha.id, cor_do.get(linha.tipo, ""))}
+
+
+def faixas_para_o_mapa(ctx: Contexto) -> dict[str, dict[str, Any]]:
+    """`{vid:pid: faixa}` dos aparelhos do mapa das portas que têm faixa na régua: o rádio
+    Bluetooth (o que ele evita) e o receptor ou a placa Wi-Fi (a banda em que ele fala).
+
+    É a MESMA conta da aba 08 (:func:`cena_do_radio` e `faixas_do_ar.montar`): uma faixa só, dita
+    nos dois lugares. Sem leitura, o aparelho não ganha faixa — ausência é resposta.
+    """
+    cena = cena_do_radio(ctx)
+    adaptadores = _a_regua_dos_adaptadores(cena)
+    ocupantes = [o for o, _r in _os_outros_radios(cena)]
+    regua = faixas_do_ar.montar(adaptadores, ocupantes)
+    cor_do = dict(COR_DA_FAIXA_NO_MAPA)
+    nomes = {faixas_do_ar.RUIDO: faixas_do_ar.NOME_DO_RUIDO}
+    for linha in regua.todas():
+        cor_do[linha.id] = COR_DA_FAIXA_NO_MAPA.get(linha.tipo, COR_DA_FAIXA_NO_MAPA["outro"])
+        nomes[linha.id] = linha.nome
+    cor_do[faixas_do_ar.RUIDO] = COR_DA_FAIXA_NO_MAPA["ruido"]
+    saida: dict[str, dict[str, Any]] = {}
+    for linha in regua.outros:
+        if linha.celulas:
+            saida[linha.id] = _a_faixa_do_painel(linha, cor_do, nomes)
+    por_lugar = {str(lug["id"]): str(lug.get("modelo") or "") for lug in cena.get("lugares") or ()}
+    for adaptador in adaptadores:
+        modelo = por_lugar.get(adaptador.id, "")
+        propria = faixas_do_ar.linha_do_adaptador(adaptador, ocupantes)
+        if modelo and propria.celulas:
+            faixa = _a_faixa_do_painel(propria, cor_do, nomes)
+            faixa["cor"] = COR_DA_FAIXA_NO_MAPA["controle"]
+            saida.setdefault(modelo, faixa)
+    return saida
+
+
 def html_da_conta_do_radio(cena: dict[str, Any]) -> str:
     if not cena.get("lugares") and not cena.get("lido", True):
         return str(_monta().NADA_A_DIZER)
@@ -4585,6 +4655,12 @@ def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
     return nomes
 
 
+def _modelo_do_radio(radio: Any) -> str:
+    """`vid:pid` do rádio USB (a chave do que o mapa das portas sabe dele), ou `""`."""
+    vid, pid = str(getattr(radio, "vid", "") or ""), str(getattr(radio, "pid", "") or "")
+    return f"{vid}:{pid}" if vid or pid else ""
+
+
 def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     """A cena da seção pela máquina dela — os donos, e nada estimado (R10)."""
     perfil._com_o_src()
@@ -4660,6 +4736,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             "hub": bool(getattr(mz, "atras_de_hub", False)),
             "varrendo": bool(getattr(bz, "varrendo", False)) and end != busca_em,
             "junto": junto, "usb3": False,
+            "modelo": _modelo_do_radio(mz),
             "conectando": bool(busca_em) and end == busca_em,
             "chegou": [str(m.get("aparelho") or "") for m in movimentos
                        if m.get("estado") == "chegou" and _mac(m.get("destino")) == end],

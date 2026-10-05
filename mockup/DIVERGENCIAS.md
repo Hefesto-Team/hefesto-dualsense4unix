@@ -45,6 +45,10 @@ seção daqui**: a aba deixou de estar em trabalho.
   de «O que tem na entrada») e o pacote já atende os dois gestos; a integração não é instalada antes.
 - **05/10/2026** — o «Descobrir a faixa» no painel do receptor 2.4G (um link para a faixa dele na aba
   Conexões): o produto recebe com o mesmo `--publicar mapa-das-portas`.
+- **05/10/2026** — «A faixa dele» no painel do aparelho (os 79 canais, pintado o bom, vazio o perdido
+  com a marca de quem o tomou, e «perde para…» ou «briga com…», do desenho 2), pela mesma conta da aba
+  Conexões; o «Descobrir a faixa» passa a andar sozinho pelo censo, sem o «já tirei»: o produto recebe
+  com o mesmo `--publicar mapa-das-portas`.
 
 ## mapa-do-controle.html
 - **05/10/2026** — a háptica passa da seção Áudio para a seção Vibração, antes dos dois motores (o dono é

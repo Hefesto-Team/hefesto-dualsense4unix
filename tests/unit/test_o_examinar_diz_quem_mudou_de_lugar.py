@@ -314,7 +314,7 @@ def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPa
     leu = threading.Event()
     dado = {"quando": "x", "aparelhos": [], "faces": [], "mapa": {}, "leituras": {}}
 
-    def para_a_pagina() -> dict[str, Any]:
+    def para_a_pagina(**_fontes: Any) -> dict[str, Any]:
         quem_leu.append(threading.current_thread())
         leu.set()
         return dado
@@ -329,6 +329,7 @@ def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPa
     class _Piloto:
         _arranjo_entregue = hefesto_vivo.Piloto._arranjo_entregue
         _entregar = hefesto_vivo.Piloto._entregar
+        _as_faixas_do_mapa = hefesto_vivo.Piloto._as_faixas_do_mapa
 
         def __init__(self) -> None:
             self.pagina = arranjo_desta_maquina.PAGINA
