@@ -247,30 +247,42 @@ def test_as_sete_paginas_com_um_controle_no_p2(pagina: str) -> None:
 
 
 PONTO = pacotes.PONTO_DO_ROTULO
-VAZIO_DA_08 = "Desconectado"
+#: O desenho aprovado de 05/10: o lugar vazio mostra só o número («P3»), sem
+#: «Player N • Desconectado» — o nome fica em branco e o número é o `gc-num`.
+VAZIO_DA_08 = ""
 
 
-def test_os_quatro_cartoes_da_08_dizem_player_n_desconectado() -> None:
-    """«Player N • Desconectado» nos quatro, e nenhuma barra acesa."""
+def _o_numero_do_lugar(texto: str, n: int) -> str:
+    """O texto do `gc-num` do lugar ``pN`` na página publicada."""
+    achado = re.search(
+        r'data-controle="p' + str(n) + r'".*?<label class="gc-num"[^>]*>([^<]*)</label>',
+        texto, re.S)
+    return achado.group(1).strip() if achado else ""
+
+
+def test_os_quatro_cartoes_da_08_dizem_so_o_numero() -> None:
+    """Só «PN» nos quatro, o nome em branco e nenhuma barra acesa."""
     pagina = "08-conexoes.html"
     carga = _carga(pagina, [])
-    cravados, (vivos,), _ = _a_tela(pagina, [carga])
+    cravados, (vivos,), texto = _a_tela(pagina, [carga])
     for n in range(1, 5):
         pref = f"p{n}"
+        assert _o_numero_do_lugar(texto, n) == f"P{n}", (
+            f"{pref}: o lugar vazio perdeu o número, a única coisa que ele diz")
         assert _o_que_diz(cravados, vivos, pref, "nome") == [
             VAZIO_DA_08], pref
         assert _o_que_diz(cravados, vivos, pref, "plastico") == [""], (
             f"{pref}: a barra ficou acesa com zero controles na mesa")
 
 
-def test_o_p2_sai_e_volta_a_desconectado_no_tique_seguinte() -> None:
+def test_o_p2_sai_e_volta_ao_lugar_vazio_no_tique_seguinte() -> None:
     """O P2 cheio, depois a mesa vazia: UM tique basta, sem recarregar a página."""
     pagina = "08-conexoes.html"
     cheio, vazio = _carga(pagina, [NO_P2]), _carga(pagina, [])
     cravados, (com, sem), texto = _a_tela(pagina, [cheio, vazio])
     assert cheio["vazios"] == ["p1", "p3", "p4"], cheio["vazios"]
     nome_cheio = _o_que_diz(cravados, com, "p2", "nome")
-    assert nome_cheio and "Desconectado" not in nome_cheio[0], nome_cheio
+    assert nome_cheio and nome_cheio[0] != VAZIO_DA_08, nome_cheio
     for n in (1, 3, 4):
         assert _o_que_diz(cravados, com, f"p{n}", "nome") == [
             VAZIO_DA_08]
