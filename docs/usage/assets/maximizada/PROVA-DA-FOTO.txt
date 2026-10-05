@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-04 06:54
+ensaio:  2026-10-05 08:52
 abas:    10
 modo:    --todas --publicado --doc --vista 1918x840
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -18,12 +18,12 @@ vista:   1918x840
 
 # soma sha256 de cada foto, em ordem alfabética
 d82f6b3bf813bb913e5b5a047dfa61a161c6cd18194d2a28eb2744249c2c1456  aba-01-jogar.png
-cbdfb6eff987969d66a87066d5780a48fdd2b67c510168660aa61e32d9085d37  aba-02-controles.png
+41368b95f78fb50e254c58d77aa3208158e9e3b92f3f06432e8b17c5f874438f  aba-02-controles.png
 7335c7969a465ada8330cd606df3881ae5adf88953c27c9eb4802db123edb46d  aba-03-gatilhos.png
-9cf2b845478b1f009ee24648e39ef5be83225682739c1db63b94657d933d9632  aba-04-iluminacao.png
-8ab1dff523cd2af3990641e555b72650e9dfad3d8e1961b47c57b5eb5740c0fb  aba-05-vibracao.png
+0f2474a53848fb6978e920647efa20472ea87adc0fc3b08c4d8cc358f9eedfde  aba-04-iluminacao.png
+63ea382c0a862f72f39e9920f69bf4c623080d8c8b0de61ded5a974da84e9e28  aba-05-vibracao.png
 c2027f7bffa16194d62ba2776ae71d1e5a6a390d496000bde9c2ded8bcb0f7eb  aba-06-navegacao.png
 7290dd9c26624b5722e327880b7591a8933607f2d3016dff621ca39991e410a6  aba-07-lancadores.png
-bdac257e3ae85decbe0c0cea7cd168d7f7b765d7cd07c438ab0c79d61488679a  aba-08-conexoes.png
+222d8c7ea967d64d6c8c5152adcbb2d5d590852ac9522aa4502b82ec4b52f03a  aba-08-conexoes.png
 2675d73ae568b3f59142293e92e52242752432b14b8c7bed3f67b6c391fc19e7  aba-09-sistema.png
 4aeb92a2d32c9a4ed48fa5d0f31b3f699633bd8803216d0639a60f7d6df8c9ad  aba-10-perfis.png
