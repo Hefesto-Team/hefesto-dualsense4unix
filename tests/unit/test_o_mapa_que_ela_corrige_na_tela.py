@@ -255,13 +255,15 @@ def _o_botao(seletor: str) -> str:
             f" voo: b.getAttribute('data-hef-voo') || ''}});}})()")
 
 
+#: Desde o desenho aprovado de 05/10 a entrada e o aparelho abrem o MESMO painel (o
+#: `painel-unico`), com o cabeçalho em `.cab`: a bolinha, o nome, «Entrada N · Lugar» e o «Fechar».
 _O_EDITOR = r"""
 (function(){
   const ed = document.getElementById('edita');
   if (!ed || ed.hidden) return JSON.stringify({aberto: false});
   return JSON.stringify({
     aberto: true,
-    cabecalho: (ed.querySelector('.edita-cab') || {innerText: ''}).innerText
+    cabecalho: (ed.querySelector('.cab') || {innerText: ''}).innerText
       .replace(/\s+/g, ' ').trim(),
     texto: ed.innerText.replace(/\s+/g, ' ').trim(),
     apertados: [...ed.querySelectorAll('button[aria-pressed="true"]')].map(
@@ -271,16 +273,16 @@ _O_EDITOR = r"""
 """
 
 
-#: O PAINEL DO APARELHO (desenho aprovado de 04/10/2026, d2): a entrada com um aparelho abre o
-#: painel DELE — o nome do aparelho no alto, «Onde está» com o nome da entrada, e o que é da
-#: entrada (o nome dela, o lugar, o «Mover para…») em «Mais desta entrada».
+#: O PAINEL ÚNICO (desenho aprovado de 05/10/2026): a entrada com um aparelho abre o painel com
+#: a coluna «Aparelho» (o nome dele) e a coluna «Entrada» (o nome dela), e o cabeçalho diz
+#: «Entrada N · Lugar» — com o nome que ela deu à entrada no lugar de «Entrada N».
 _O_PAINEL = r"""
 (function(){
   const ed = document.getElementById('edita');
   if (!ed || ed.hidden) return JSON.stringify({aberto: false});
-  const nome = ed.querySelector('.ap-cab input.campo-nome');
-  const onde = ed.querySelector('.onde > span');
-  const daEntrada = ed.querySelector('details.mais [data-nome]');
+  const nome = ed.querySelector('input.campo-nome[data-nome-do-aparelho]');
+  const onde = ed.querySelector('.cab .onde');
+  const daEntrada = ed.querySelector('input.campo-nome[data-gesto="entrada-nome"]');
   return JSON.stringify({
     aberto: true,
     doAparelho: !!nome,
@@ -504,9 +506,9 @@ _O_PLUGUE_1 = r"""
 def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
     """Com «Canto da mesa» na 1: o plugue diz o nome (com reticências, e o nome
 
-    A 1 tem o teclado: o painel dele diz o nome da entrada em «Onde está» e o guarda no campo
-    de «Mais desta entrada». A 3, vazia e batizada, abre o editor da entrada com o nome no
-    cabeçalho.
+    A 1 tem o teclado: o painel dele diz o nome da entrada no cabeçalho e o guarda no campo
+    «Nome» da coluna «Entrada». A 3, vazia e batizada, abre o painel com o nome no cabeçalho.
+    Desde o desenho aprovado de 05/10 o nome sai em frase, e não em Título Em Toda Palavra.
     """
     assert ee.dar_nome_a_entrada("1", "Canto da mesa").gravou
     assert ee.dar_nome_a_entrada("3", "Canto de trás").gravou
@@ -520,56 +522,54 @@ def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
     ])
     plugue, painel, editor = lidas[1], lidas[3], lidas[5]
     assert (plugue["nome"], plugue["dica"], plugue["num"]) == (
-        "Canto da Mesa", "Canto da mesa", "1"), plugue
+        "Canto da mesa", "Canto da mesa", "1"), plugue
     assert plugue["corta"] == "ellipsis"
     assert plugue["dicaDoVazio"].startswith("Entrada 2"), plugue
     assert painel["aberto"] and painel["doAparelho"], painel
-    assert painel["onde"].startswith("Canto da Mesa"), painel
+    assert painel["onde"].startswith("Canto da mesa"), painel
     assert painel["nomeDaEntrada"] == "Canto da mesa", painel
-    assert editor["cabecalho"].startswith("Canto de Trás"), editor
+    assert editor["cabecalho"].startswith("Canto de trás"), editor
 
 
-_A_TROCA = '#edita select.troca[data-gesto="entrada-trocar"]'
+def _arrastar(de: str, para: str) -> str:
+    """Arrasta o aparelho da entrada ``de`` e o solta no soquete ``para``, como a mão."""
+    return ("(function(){"
+            f"const b=document.querySelector('.ap-btn[data-ap-abre=\"{de}\"]');"
+            f"const s=document.querySelector('.soquete[data-soquete=\"{para}\"]');"
+            "if(!b||!s) return 'sem o aparelho ou o soquete';"
+            "const dt=new DataTransfer();"
+            "b.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));"
+            "s.dispatchEvent(new DragEvent('dragover',"
+            "{bubbles:true,cancelable:true,dataTransfer:dt}));"
+            "const alvo=s.classList.contains('alvo-do-arrasto');"
+            "s.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));"
+            "return alvo ? 'soltou' : 'o soquete não virou alvo';})()")
 
 
-def _a_lista_da_troca() -> str:
-    alvo = json.dumps(_A_TROCA)
-    return (f"(function(){{const t=document.querySelector({alvo});"
-            f"if(!t) return JSON.stringify({{existe: false}});"
-            f"const c=getComputedStyle(t);"
-            f"return JSON.stringify({{existe: true, entrada: t.getAttribute('data-entrada'),"
-            f" itens: [...t.options].map(o => [o.value, o.textContent]),"
-            f" fundo: c.backgroundColor, cor: c.color}});}})()")
+def test_arrastar_para_outra_entrada_grava_e_o_painel_diz_o_lugar_novo(disco: Path) -> None:
+    """O mouse (na 5) arrastado para a 2, vazia: o buraco do mouse passa a ser a 2.
 
-
-def test_trocar_com_grava_e_o_editor_fica_aberto(disco: Path) -> None:
-    """A 2 (vazia) trocada com a 5 (o mouse): o buraco do mouse passa a ser a 2,
-
-    Desde o desenho aprovado de 04/10/2026 (d3) o ato se chama «Mover para…», e a volta da
-    gravação deixa aberto o painel do mouse, que agora está na 2.
+    Até 04/10/2026 o ato era a lista «Mover para…» do painel. O painel único do desenho
+    aprovado de 05/10 não tem a lista: trocar de entrada é arrastar o aparelho para o outro
+    soquete, e o gesto é o mesmo `entrada-trocar`. Depois da gravação, o painel da 2 é o do
+    mouse, sem o «Mudar de Entrada» antigo.
     """
     lidas, _ = _na_pagina([
         _js(_aberta()),
-        _clicar('.plug[data-porta="2"]'),
-        _a_lista_da_troca(),
-        "String(!!document.querySelector('#edita [data-tirar]'))",
-        _mudar(_A_TROCA, "5"),
+        _arrastar("5", "2"),
         _o_piloto_responde("entrada-trocar", evento="change"),
+        _clicar('.plug[data-porta="2"]'),
         _O_PAINEL,
+        "String(!!document.querySelector('#edita [data-tirar], #edita select.troca'))",
     ])
-    lista, tirar, painel = lidas[2], lidas[3], lidas[6]
-    assert lista["existe"] and lista["entrada"] == "2", lista
-    valores = [v for v, _t in lista["itens"]]
-    assert valores == ["", "1", "3", "4", "5", "6"], lista["itens"]
-    assert lista["itens"][0][1] == "Mover para…"
-    assert "Mouse" in lista["itens"][4][1] and "Entrada 5" in lista["itens"][4][1]
-    assert lista["fundo"] != "rgb(192, 192, 192)", "a lista nasceu cinza no WebKitGTK"
-    assert tirar == "false", "o «Mudar de Entrada» voltou"
-    assert painel["aberto"] and painel["doAparelho"], painel
-    assert painel["nome"] == "Mouse" and painel["onde"].startswith("Entrada 2"), painel
+    soltou, painel, sobra = lidas[1], lidas[4], lidas[5]
+    assert soltou == "soltou", soltou
     documento = carregar_maquina()
     assert (documento.mapa.portas["2"].caminho, documento.mapa.portas["5"].caminho) == (
-        "9-5", "9-2")
+        "9-5", "9-2"), "o arrasto não gravou a troca"
+    assert painel["aberto"] and painel["doAparelho"], painel
+    assert painel["nome"] == "Mouse" and painel["onde"].startswith("Entrada 2"), painel
+    assert sobra == "false", "o «Mudar de Entrada» ou o «Mover para…» voltou ao painel"
 
 
 def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) -> None:
@@ -590,47 +590,27 @@ def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) 
     assert lidas[3] == "false", "o chip pôs o aparelho na mão"
 
 
-_A_GEOMETRIA_DO_EDITOR = r"""
-(function(){
-  const ed = document.getElementById('edita');
-  if (!ed || ed.hidden) return JSON.stringify({aberto: false});
-  const cab = ed.querySelector('.edita-cab');
-  const nome = cab.querySelector('b'), face = cab.querySelector('span');
-  const fecha = cab.querySelector('.fecha');
-  const r = e => e.getBoundingClientRect();
-  const letra = parseFloat(getComputedStyle(face).fontSize);
-  return JSON.stringify({
-    aberto: true,
-    largura: Math.round(r(ed).width),
-    cabeNaJanela: r(ed).left >= 0 && r(ed).right <= innerWidth,
-    janela: [innerWidth, innerHeight],
-    paginaTransborda: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    cinza: [...ed.querySelectorAll('button,select,input')].filter(
-      c => getComputedStyle(c).backgroundColor === 'rgb(192, 192, 192)').map(
-      c => c.outerHTML.slice(0, 60)),
-    faceDesceu: r(face).top >= r(nome).bottom - 1,
-    faceNumaLinha: r(face).height < 2 * letra,
-    fechaNoCanto: r(fecha).top < r(nome).bottom && r(fecha).right <= r(ed).right,
-    fechaSobreONome: r(fecha).left < r(nome).right && r(fecha).bottom > r(nome).top,
-  });
-})()
-"""
-
-
+#: O painel único do desenho aprovado de 05/10: o mesmo para a entrada vazia e para o
+#: aparelho, com o cabeçalho numa linha só (nome, «Entrada N · Lugar», «Fechar»).
 _A_GEOMETRIA_DO_PAINEL = r"""
 (function(){
   const ed = document.getElementById('edita');
-  if (!ed || ed.hidden || !ed.querySelector('.ap-cab')) return JSON.stringify({aberto: false});
-  const nome = ed.querySelector('.ap-cab input'), fecha = ed.querySelector('.ap-cab .fecha');
+  if (!ed || ed.hidden) return JSON.stringify({aberto: false});
+  const cab = ed.querySelector('.cab');
+  const nome = cab.querySelector('b'), face = cab.querySelector('.onde');
+  const fecha = cab.querySelector('.fecha');
   const r = e => e.getBoundingClientRect();
   return JSON.stringify({
     aberto: true,
+    unico: ed.classList.contains('painel-unico'),
     largura: Math.round(r(ed).width),
     cabeNaJanela: r(ed).left >= 0 && r(ed).right <= innerWidth,
     paginaTransborda: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     cinza: [...ed.querySelectorAll('button,select,input')].filter(
       c => getComputedStyle(c).backgroundColor === 'rgb(192, 192, 192)').map(
       c => c.outerHTML.slice(0, 60)),
+    numaLinha: r(face).top < r(nome).bottom && r(face).left >= r(nome).right,
+    faceAntesDoFecha: r(face).right <= r(fecha).left,
     fechaNoCanto: r(fecha).top < r(nome).bottom && r(fecha).right <= r(ed).right,
     fechaSobreONome: r(fecha).left < r(nome).right && r(fecha).bottom > r(nome).top,
   });
@@ -638,35 +618,36 @@ _A_GEOMETRIA_DO_PAINEL = r"""
 """
 
 
-def test_o_editor_cabe_a_1212_e_a_face_desce_com_o_nome_comprido(disco: Path) -> None:
-    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01, no WebKit à largura do"""
+def test_o_painel_cabe_a_1212_e_o_cabecalho_cabe_com_o_nome_comprido(disco: Path) -> None:
+    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01, no WebKit à largura do notebook dela.
+
+    Até 04/10/2026 o editor da entrada tinha 300 px e a face descia com o nome de 24. O painel
+    único do desenho aprovado de 05/10 é um só para a entrada e o aparelho, largo o bastante
+    para o cabeçalho caber numa linha: a medida passa a ser o mesmo painel nos três cliques,
+    dentro da janela, sem cinza do WebKitGTK, e o nome de 24 sem encostar no «Fechar».
+    """
     mapa = _mapa()
     mapa.faces[0].nome = ee.FACE_FRENTE
     mapa.faces[1].nome = ee.FACE_ATRAS
     assert gravar_maquina({"mapa": mapa.model_dump(mode="json")})
-    # a 1 tem o teclado e abre o painel dele (d2, 04/10/2026): o nome comprido vai à 2, vazia
     assert ee.dar_nome_a_entrada("2", "Traseira de cima do meio").gravou
     lidas, _ = _na_pagina([
         _js(_aberta()),
         _clicar('.plug[data-porta="2"]'),
-        _A_GEOMETRIA_DO_EDITOR,
+        _A_GEOMETRIA_DO_PAINEL,
         _clicar('.plug[data-porta="3"]'),
-        _A_GEOMETRIA_DO_EDITOR,
+        _A_GEOMETRIA_DO_PAINEL,
         _clicar('.plug[data-porta="1"]'),
         _A_GEOMETRIA_DO_PAINEL,
     ], tamanho=(1212, 809))
-    comprido, curto, painel = lidas[2], lidas[4], lidas[6]
-    for editor in (comprido, curto):
-        assert editor["aberto"], editor
-        assert editor["largura"] == 300 and editor["cabeNaJanela"], editor
-        assert not editor["paginaTransborda"], editor
-        assert editor["cinza"] == [], f"nasceu cinza no WebKitGTK: {editor['cinza']}"
-        assert editor["faceNumaLinha"], editor
-        assert editor["fechaNoCanto"] and not editor["fechaSobreONome"], editor
-    assert painel["aberto"], painel
-    assert painel["largura"] == 300 and painel["cabeNaJanela"], painel
-    assert not painel["paginaTransborda"], painel
-    assert painel["cinza"] == [], f"nasceu cinza no WebKitGTK: {painel['cinza']}"
-    assert painel["fechaNoCanto"] and not painel["fechaSobreONome"], painel
-    assert comprido["faceDesceu"], f"a face não desceu com o nome de 24: {comprido}"
-    assert not curto["faceDesceu"], f"a face desceu com o nome curto: {curto}"
+    comprido, curto, do_teclado = lidas[2], lidas[4], lidas[6]
+    for painel in (comprido, curto, do_teclado):
+        assert painel["aberto"] and painel["unico"], painel
+        assert painel["cabeNaJanela"], painel
+        assert not painel["paginaTransborda"], painel
+        assert painel["cinza"] == [], f"nasceu cinza no WebKitGTK: {painel['cinza']}"
+        assert painel["numaLinha"] and painel["faceAntesDoFecha"], painel
+        assert painel["fechaNoCanto"] and not painel["fechaSobreONome"], painel
+    assert comprido["largura"] == curto["largura"] == do_teclado["largura"], (
+        "a entrada e o aparelho abriram painéis de larguras diferentes: "
+        f"{comprido['largura']}, {curto['largura']}, {do_teclado['largura']}")
