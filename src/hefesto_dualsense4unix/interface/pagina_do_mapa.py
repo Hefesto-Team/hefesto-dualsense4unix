@@ -4300,26 +4300,6 @@ EDICOES: tuple[Edicao, ...] = (
             ' (`test_o_examinar_diz_quem_mudou_de_lugar`, os testes do hub).'
         ),
     ),
-)
-
-
-
-#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
-#:
-#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
-#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
-#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
-#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
-#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
-#: enquanto o desenho espera por ela.
-#:
-#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
-#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
-#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
-#: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10 e 05/10: as do
-#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as do conjunto «Conexões 2»
-#: foram publicadas e entraram no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
     Edicao(
         antes=(
             '  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════'
@@ -6129,6 +6109,25 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
         ),
     ),
 )
+
+
+
+#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
+#:
+#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
+#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
+#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
+#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
+#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
+#: enquanto o desenho espera por ela.
+#:
+#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
+#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
+#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
+#: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10 e 05/10: as do
+#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as dos conjuntos «Conexões 2» e
+#: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

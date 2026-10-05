@@ -265,18 +265,23 @@ def test_na_janela_ladrilhada_sobra_no_maximo_uma_linha_de_chapa() -> None:
 @pytest.mark.parametrize("vista", ["foto-3", "dela", "ladrilhada"])
 def test_atualmente_conectado_acaba_no_fim_do_hub_e_rola(vista: str) -> None:
     atual = _medido(vista)["atual"]
-    assert atual["titulo_da_bandeja"].lower() == "atualmente conectado"
-    assert abs(atual["bandeja_bottom"] - atual["faces_bottom"]) < 2, (
-        f"({QUAL}) a bandeja acaba em {atual['bandeja_bottom']:.0f} e a última face em "
-        f"{atual['faces_bottom']:.0f}")
+    # O desenho aprovado de 05/10 («Conexões 3») diz «Conectado agora».
+    assert atual["titulo_da_bandeja"].lower() == "conectado agora"
+    # Desde 05/10 a bandeja não estica até o fim do hub (o desenho aprovado: ela mede o que
+    # tem); o que se cobra é que ela acabe dentro da vista.
+    assert atual["bandeja_bottom"] <= atual["corpo_bottom"] + 1, (
+        f"({QUAL}) a bandeja acaba em {atual['bandeja_bottom']:.0f}, fora da vista "
+        f"({atual['corpo_bottom']:.0f})")
+    # Desde 05/10 é uma linha por aparelho e a lista só rola quando não cabe: a régua cobra
+    # a altura e que nada fique escondido sem rolagem.
     conteudo, altura = atual["lista"]
-    assert conteudo > altura > 0, f"({QUAL}) a lista não rola por dentro: {atual['lista']}"
+    assert altura > 0 and conteudo >= altura, f"({QUAL}) a lista sem altura: {atual['lista']}"
 
 
 def test_com_o_palco_numa_coluna_a_lista_tem_altura_e_rola() -> None:
     """MORDIDA: tire o ``@media (min-width: 901px)`` (a regra vale em toda"""
     conteudo, altura = _medido("estreita")["atual"]["lista"]
-    assert conteudo > altura > 0, f"({QUAL}) a 860 px a lista mede {altura} de {conteudo}"
+    assert altura > 0 and conteudo >= altura, f"({QUAL}) a 860 px a lista mede {altura} de {conteudo}"
 
 
 def test_as_entradas_se_arrumam_em_quantas_colunas_couberem() -> None:
@@ -320,8 +325,10 @@ def test_o_sugestoes_fala_menos_e_o_mapa_comeca_na_vista(vista: str) -> None:
     assert not sug["nao_presumo"], f"({QUAL}) o parágrafo «Eu não presumo» voltou"
     assert sug["palavras"] <= PALAVRAS_DO_SUGESTOES, (
         f"({QUAL}) o Sugestões tem {sug['palavras']} palavras: {sug['texto']}")
-    assert "não foi medido nesta máquina" in sug["texto"].lower(), (
-        "a linha do ganho não medido saiu (D-LINHA-DO-GANHO-NAO-MEDIDO: sempre visível)")
+    # O desenho aprovado de 05/10 tirou a linha solta do Sugestões («muito texto», ela): o
+    # ganho não medido continua dito no «?» da troca (D-0110-AS-RAZOES-NO-INTERROGACAO).
+    assert "não foi medido nesta máquina" not in sug["texto"].lower(), (
+        f"({QUAL}) a linha solta do ganho não medido voltou ao Sugestões")
     assert sug["primeira_chapa_top"] < sug["corpo_bottom"], (
         f"({QUAL}) o mapa do Sugestões começa em {sug['primeira_chapa_top']:.0f}, "
         f"fora da vista (que acaba em {sug['corpo_bottom']:.0f})")
@@ -350,7 +357,7 @@ def test_a_razao_de_cada_movimento_mora_no_interrogacao() -> None:
 
 def test_o_adicionar_e_uma_linha_com_a_pergunta_dela() -> None:
     mao = _medido("dela")["adicionar"]
-    assert mao["pergunta"] and mao["pergunta"].lower() == "o que você pretende conectar?", mao
+    assert mao["pergunta"] and mao["pergunta"].lower() == "o que vai conectar?", mao
     topo_p, topo_e, fim_p, fim_e = mao["pergunta_e_escolhas"]
     assert topo_e < fim_p and topo_p < fim_e, (
         f"({QUAL}) a pergunta e as escolhas não estão na mesma linha: {mao['pergunta_e_escolhas']}")

@@ -21,8 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 08-conexoes.html
-- **05/10/2026** — o desenho aprovado do conjunto «Conexões 3» (`docs/process/estudos/2026-10-05-a-conexoes-enxuta/DESENHO-APROVADO.md`): as dicas em até quatro cartões da mesma altura, «Tudo certo», o lugar vazio só com o número, as ferramentas embaixo, o Rádio com ícone · faixa · ponto, as caixas fechadas e a primeira maiúscula. Espera o `--publicar` de quem coordena, no fecho. Até publicar, o produto continua com a página de 04/10 e o pacote novo pinta nela (as dicas sem «mais N», as linhas do ar só com ícone e ponto, o cartão do pedido) sem a folha nova: por isso o `--publicar 08` vai no MESMO fecho, antes do merge no `dev`.
-
-## mapa-das-portas.html
-- **05/10/2026** — o desenho aprovado do conjunto «Conexões 3»: o painel único da entrada e do aparelho, as trocas em cartões, o USB 2.0 cinza e as frases sem maiúscula em toda palavra nem primeira pessoa. As edições moram em `EDICOES_ESPERANDO_A_SESSAO_DELA` até o `--publicar`. Até publicar, o produto continua com o Mapa de 04/10 inteiro: do pacote só mudou o `aparelho-tipo`, que lê o tipo pelo `valor` da lista nova ou pelo `tipodito` do botão velho, e os dois chegam.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
