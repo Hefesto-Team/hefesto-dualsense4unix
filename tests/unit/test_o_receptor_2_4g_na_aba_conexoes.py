@@ -348,7 +348,11 @@ def test_o_painel_diz_receptor_24g_como_primeira_etiqueta() -> None:
 def test_o_gesto_esta_registrado_e_diz_porque_nao_tem_eco() -> None:
     from hefesto_dualsense4unix.interface.pacotes import gesto_da_pagina
 
-    assert gesto_da_pagina("08-conexoes.html", "receptor-descobrir") is a08.receptor_descobrir
+    # pelo nome, e não por identidade: a suíte importa os pacotes também como `pacotes` (o
+    # caminho do piloto), e o registro fica com a função da última importação.
+    fn = gesto_da_pagina("08-conexoes.html", "receptor-descobrir")
+    assert fn is not None and fn.__name__ == "receptor_descobrir", fn
+    assert fn.__module__.rsplit(".", 1)[-1] == "a08_conexoes", fn.__module__
     assert "receptor-descobrir" in a08.RAZAO_DO_SEM_ECO
 
 
