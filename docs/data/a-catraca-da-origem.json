@@ -198,17 +198,17 @@
       "universo": 354
     },
     "tamanho": {
-      "data": "2026-10-04",
+      "data": "2026-10-05",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 921053,
+      "piso": 928712,
       "por_item": {
-        "docs": 57757,
-        "scripts": 95549,
-        "src": 274611,
-        "tests": 493136
+        "docs": 57788,
+        "scripts": 95561,
+        "src": 278607,
+        "tests": 496756
       },
-      "razao": "crescimento da leva 1.5 já pago por Origem na integra/0110 (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, D-O-AVISO-DE-PORQUE-O-PERFIL-NAO-ENTRA, vibracao.haptics_vcm) que desceu ao dev em fed3f6f90",
+      "razao": "o crescimento do conjunto «Conexões 2» (oito sprints, curas do fecho e réguas) desceu ao dev em 05/10 com as D-0510 no CSV",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -239,10 +239,16 @@
           "de": 914558,
           "para": 921053,
           "razao": "crescimento da leva 1.5 já pago por Origem na integra/0110 (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, D-O-AVISO-DE-PORQUE-O-PERFIL-NAO-ENTRA, vibracao.haptics_vcm) que desceu ao dev em fed3f6f90"
+        },
+        {
+          "data": "2026-10-05",
+          "de": 921053,
+          "para": 928712,
+          "razao": "o crescimento do conjunto «Conexões 2» (oito sprints, curas do fecho e réguas) desceu ao dev em 05/10 com as D-0510 no CSV"
         }
       ],
       "unidade": "linhas",
-      "universo": 2418
+      "universo": 2435
     }
   }
 }
