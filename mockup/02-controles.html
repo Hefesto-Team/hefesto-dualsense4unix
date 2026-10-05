@@ -1855,6 +1855,18 @@
      6px que saem daqui saem do cartão duas vezes, uma por moldura de som.
      O `line-height` desce junto (14 = 16 menos as duas bordas de 1px), senão o
      glifo desencosta do meio e o ♪ nasce colado na borda de baixo. */
+  /* O BOTÃO «PADRÃO» DO VOLUME — 04/10/2026. Mesma altura do ♪ (16px), para a linha não crescer. Ligado
+     (`.on`), a barra do MESMO cartão fica inteira verde e travada: o `<input>` some da tela
+     (`display:none` tira o arrasto E o teclado: `visibility:hidden` ainda deixava o foco entrar) e a palavra ocupa o lugar do número. */
+  .padrao-i{height:16px;flex:0 0 auto;border-radius:5px;cursor:pointer;padding:0 6px;
+            border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
+            font-size:10px;line-height:14px;font-family:inherit}
+  .padrao-i.on{border-color:var(--green);color:var(--green)}
+  .moldura:has(.padrao-i.on) .puxa-vol{display:none}
+  .moldura:has(.padrao-i.on) .vol .cheio{background:var(--green);
+    width:100% !important}
+  .moldura:has(.padrao-i.on) .vol .cheio::after{display:none}
+  .moldura:has(.padrao-i.on) .vol .n{flex:0 0 auto;color:var(--green)}
   .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
           font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
@@ -3168,6 +3180,7 @@
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
             <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">100</span>
@@ -3697,6 +3710,7 @@
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
             <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">70</span>
@@ -4226,6 +4240,7 @@
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
             <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:55%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="55" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">—</span>
@@ -4755,6 +4770,7 @@
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
             <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">—</span>

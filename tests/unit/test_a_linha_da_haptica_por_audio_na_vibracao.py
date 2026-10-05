@@ -194,10 +194,10 @@ class TestAPintura:
     def test_em_padrao_o_numero_vira_a_palavra_e_a_barra_trava(self) -> None:
         """04/10/2026: em Padrão as barras ficam travadas, com «Padrão» no lugar do número."""
         coluna = _coluna(haptica=180, alcanca=True, politica="balanceado")
-        assert coluna["barra-h-pct"] == "Padrão" and coluna["padrao"] == "1"
+        assert coluna["barra-h-pct"] == "Padrão" and coluna["padrao"] == "1"  # (noqa-acento) campo
         assert coluna["barra-e-pct"] == "Padrão" and coluna["barra-d-pct"] == "Padrão"
         fora = _coluna(haptica=180, alcanca=True, politica="max")
-        assert fora["barra-h-pct"] == "180" and fora["padrao"] == ""
+        assert fora["barra-h-pct"] == "180" and fora["padrao"] == ""  # (noqa-acento) campo
 
     def test_sem_o_numero_vale_o_padrao_publicado(self) -> None:
         coluna = _coluna(padrao=HAPTICA_PCT_PADRAO)

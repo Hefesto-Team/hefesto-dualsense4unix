@@ -10,7 +10,7 @@ A página sob prova é a da BANCADA (``mockup/05-vibracao.html``), no WebKit for
 BOOTSTRAP do piloto: o pintor de verdade acende a classe, e a folha de estilo de verdade trava.
 
 MORDIDAS: a regra ``.forca.padrao ~ .motor .trilho.arrasta{display:none}`` (a barra de arrasto
-continua na tela), o ``padrao`` do plano em ``a05_vibracao.pacote``, o rótulo «Padrão» do degrau.
+continua na tela), o campo do plano em ``a05_vibracao.pacote``, o rótulo «Padrão» do degrau.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ LER = r"""
 
 
 def _pintar(padrao: bool, numeros: dict[str, str]) -> str:
-    plano = {"padrao": "1" if padrao else "", **numeros}
+    plano = {"padrao": "1" if padrao else "", **numeros}  # (noqa-acento) campo
     return ("window.__hef.pintar(" + json.dumps({"colunas": {"p1": plano}, "mesa": {}}) + ")")
 
 
@@ -145,9 +145,10 @@ def test_em_padrao_as_tres_barras_ficam_verdes_travadas_e_sem_teclado() -> None:
         LER,
     ])
     antes, _n, depois = lidas
-    assert "padrao" not in antes["classe_forca"]
+    assert "padrao" not in antes["classe_forca"]  # (noqa-acento) campo
     assert all(x["arrasto_visivel"] and not x["trava_visivel"] for x in antes["linhas"]), antes
-    assert "padrao" in depois["classe_forca"].split(), "o pintor não acendeu o Padrão"
+    acesa = "padrao" in depois["classe_forca"].split()  # (noqa-acento) campo
+    assert acesa, "o pintor não acendeu o Padrão"
     assert len(depois["linhas"]) == 3, "o Sensor Háptico e os dois motores"
     for linha in depois["linhas"]:
         assert not linha["arrasto_visivel"], f"a barra ainda aceita arrasto: {linha}"
@@ -165,7 +166,7 @@ def test_economia_e_maximo_destravam_e_o_numero_guardado_volta() -> None:
         LER,
     ])
     depois = lidas[-1]
-    assert "padrao" not in depois["classe_forca"].split()
+    assert "padrao" not in depois["classe_forca"].split()  # (noqa-acento) campo
     esquerdo = next(x for x in depois["linhas"] if x["campo"] == "barra-e")
     assert esquerdo["arrasto_visivel"] and not esquerdo["trava_visivel"], esquerdo
     assert esquerdo["num"] == "50", "o 50% que ela guardou volta ao destravar"

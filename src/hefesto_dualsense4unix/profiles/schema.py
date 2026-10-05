@@ -549,6 +549,13 @@ class ProfileSpeakerConfig(BaseModel):
     #: com ``None``, que é **não mexer** — o nó daquele controle segue o padrão
     #: da casa, que é ``sfx`` por decisão dela
     fonte: Literal["mix", "sfx"] | None = None
+    #: O BOTÃO «PADRÃO» DO VOLUME (04/10/2026, desenho aprovado em `docs/process/estudos/
+    #: 2026-10-04-o-jogo-decide/`): ligado, o volume do alto-falante deste controle é o do JOGO
+    #: (100% do registrador, sem ajuste do Hefesto) e a barra fica travada; o ``volume`` guardado
+    #: espera e volta quando ela desliga o botão. ``None`` e ``False`` não mudam o que o perfil
+    #: já fazia: quem tinha um volume escolhido segue com ele. O perfil SEM a seção também é Padrão
+    #: (não opina; a adoção põe o controle em 100%), e é assim que o perfil novo nasce.
+    volume_padrao: bool | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -580,7 +587,7 @@ class ProfileSpeakerConfig(BaseModel):
         dados = handler(self)
         if not isinstance(dados, dict):
             return dados
-        for sem_opiniao in ("rota", "fonte"):
+        for sem_opiniao in ("rota", "fonte", "volume_padrao"):
             if dados.get(sem_opiniao) is None:
                 dados.pop(sem_opiniao, None)
         return dados
@@ -1980,6 +1987,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "firmware cai no fone vazio. O controle passou a nascer em "
         "`ROTA_PADRAO_DO_SOM` na adoção, e o perfil calado herda isso.",
         dono="hefesto_dualsense4unix.core.backend_pydualsense:ROTA_PADRAO_DO_SOM",
+    ),
+    "ProfileSpeakerConfig.volume_padrao": Nascimento(
+        NASCE_NA_ADOCAO,
+        "O botão «Padrão» do volume (04/10/2026): ausente, vale o volume que o perfil escolheu, "
+        "como antes; o perfil sem a seção também é Padrão, e o controle nasce nos 100% de "
+        "sempre na adoção. Ligado, o perfil aplica esses 100% e guarda o `volume` dela.",
+        dono="hefesto_dualsense4unix.core.backend_pydualsense:VOLUME_PADRAO_DO_SOM",
     ),
     "ProfileSpeakerConfig.fonte": Nascimento(
         NASCE_NO_LEITOR,

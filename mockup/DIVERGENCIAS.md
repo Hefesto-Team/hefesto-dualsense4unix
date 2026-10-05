@@ -63,3 +63,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   aprovado em `docs/process/estudos/2026-10-04-o-jogo-decide/`): o produto recebe com o
   `--publicar 05` do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue com «Balanceado»
   e as barras livres, e o daemon já ignora as barras em Padrão.
+
+## 02-controles.html
+- **05/10/2026** — o botão «Padrão» ao lado da barra do volume do alto-falante (decisão dela de 04/10,
+  desenho aprovado em `docs/process/estudos/2026-10-04-o-jogo-decide/`): ligado, a barra fica verde e
+  travada, a palavra «Padrão» ocupa o lugar do número e o volume é o do jogo; desligado, ela ajusta e o
+  volume que tinha escolhido volta. O microfone fica de fora. O produto recebe com o `--publicar 02`
+  do fecho do conjunto «Conexões 2»; até lá o pacote só emite o campo `alto-padrao` quando a página
+  publicada o tem, e a tela dela segue a de hoje.

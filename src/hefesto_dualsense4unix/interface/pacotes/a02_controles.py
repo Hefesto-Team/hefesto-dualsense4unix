@@ -1333,6 +1333,28 @@ def _enderecos_da_pagina() -> frozenset[str]:
     return _ENDERECOS
 
 
+PALAVRA_DO_PADRAO = "Padrão"
+
+
+def volume_em_padrao(ctx: Contexto, uniq: str, lido: tuple[int, bool | None] | None) -> bool:
+    """O alto-falante deste controle está em «Padrão»: o volume é o do jogo, sem ajuste nosso?
+
+    04/10/2026, desenho aprovado (`docs/process/estudos/2026-10-04-o-jogo-decide/`, item 2). A
+    resposta é do PERFIL que vale, peça por peça (`speaker.volume_padrao`), e o perfil SEM a seção
+    também é Padrão — não opina, e a adoção põe o controle nos 100% de sempre — **desde que o
+    aparelho esteja mesmo nos 100%**: um volume que ela arrastou sem perfil ativo não é Padrão, e
+    sem leitura do volume (``lido`` é ``None``: ninguém o escreveu ainda) a tela não afirma nada.
+    ``lido`` é o par `(registrador, mudo)` do daemon.
+    """
+    chave = norm_mac(str(uniq or "").strip()) or ""
+    perfil = _perfil.ativo_que_vale(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
+    secao = ((perfil.get("controllers") or {}).get(chave) or {}).get("speaker") \
+        or perfil.get("speaker")
+    if isinstance(secao, dict):
+        return secao.get("volume_padrao") is True
+    return lido is not None and percentual_do_volume(lido[0]) >= 100
+
+
 def _so_se_a_pagina_tiver(campos: dict[str, Any]) -> dict[str, Any]:
     """Dos `campos`, só os que a página publicada tem onde pôr."""
     tem = _enderecos_da_pagina()
@@ -1375,6 +1397,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         mic_ganho = ganho_do_microfone(uniq)
         #      de onde o dado mora"* (`controller_card.py:1121`). Medido na mesa
         sp_lido = speaker_do_entry(c)
+        # o botão «Padrão» só existe na página que o tem: antes do `--publicar`, a tela é a de hoje
+        alto_em_padrao = ("alto-padrao" in _enderecos_da_pagina()
+                          and volume_em_padrao(ctx, uniq, sp_lido))
         # `# type: ignore[arg-type]` na chamada). Sem esta guarda, a primeira
         # `rotulo_lightbar` já trata.
         rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
@@ -1467,12 +1492,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     sp_lido is not None and sp_lido[1] is not None,
                 ),
                 "alto-num": (
-                    percentual_do_volume(sp_lido[0]) if sp_lido is not None
+                    PALAVRA_DO_PADRAO if alto_em_padrao
+                    else percentual_do_volume(sp_lido[0]) if sp_lido is not None
                     else mesa_viva.SEM_LEITOR
                 ),
                 "alto-barra": (
-                    percentual_do_volume(sp_lido[0]) if sp_lido is not None else 0
+                    100 if alto_em_padrao
+                    else percentual_do_volume(sp_lido[0]) if sp_lido is not None else 0
                 ),
+                **_so_se_a_pagina_tiver({"alto-padrao": "1" if alto_em_padrao else ""}),
                 **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
                 **_so_se_a_pagina_tiver({
                     campo_da_onda_calada(LADO_MIC): (
@@ -2586,6 +2614,49 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     raise ValueError(f"volume: não sei ajustar {qual!r} — a página manda "
                      f"'microfone' ou 'alto-falante'")
+
+
+@gesto("02-controles.html", "volume-padrao", grava="gravar_pelo_gesto")
+def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O botão «Padrão» do volume do alto-falante: um interruptor, como o ♪ ao lado.
+
+    04/10/2026, desenho aprovado. Ligado, o volume é o do JOGO (os 100% de sempre, sem ajuste do
+    Hefesto) e a barra fica verde e travada; desligado, ela ajusta, e o volume que tinha escolhido
+    volta. O microfone fica de fora: o jogo não manda nada a ele.
+
+    **ALTERNA PELO QUE O PERFIL DIZ AGORA** (`volume_em_padrao`), nunca por memória da tela. O que
+    ela tinha escolhido FICA no perfil (`speaker.volume`) enquanto o botão está ligado: ligar manda
+    ao aparelho os 100% e grava só o botão; desligar devolve o guardado.
+    """
+    from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual as _reg
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("volume-padrao: o clique não disse em qual controle")
+    if (str(o.get("tipo") or "").lower() == "input"
+            and str(o.get("evento") or "").lower() == "click"):
+        return
+    lido = speaker_do_entry(ctx.por_uniq(uniq))
+    estava = volume_em_padrao(ctx, uniq, lido)
+    padrao = _reg(100)
+    chave = norm_mac(uniq) or ""
+    perfil = _perfil.ativo_que_vale(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
+    secao = ((perfil.get("controllers") or {}).get(chave) or {}).get("speaker") \
+        or perfil.get("speaker")
+    guardado = (int(secao["volume"]) if isinstance(secao, dict)
+                and secao.get("volume") is not None
+                else lido[0] if lido is not None else padrao)
+    if estava:
+        # desliga: o aparelho volta ao que ela tinha escolhido
+        alvo, lembrar = guardado, {"volume_padrao": False, "volume": guardado}
+    else:
+        alvo, lembrar = padrao, {"volume_padrao": True, "volume": guardado}
+    if not p.speaker_set(volume=alvo, uniq=uniq):
+        raise RuntimeError(
+            "o Hefesto não confirmou o volume do alto-falante: ou ele parou, ou este controle "
+            "se desligou")
+    _confirmar_com_som(ctx, uniq)
+    _lembrar_do_som(ctx, uniq, speaker=lembrar)
 
 
 PONTE = {"mic_canal_set_detalhado", "speaker_set",

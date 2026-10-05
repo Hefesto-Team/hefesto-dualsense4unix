@@ -583,7 +583,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "degrau-herdado": "1" if politica and not propria else "",
             "mult-teto": _no_teto(pct),
             "em-teste": "1" if uniq and uniq in em_teste() else "",
-            "padrao": "1" if padrao else "",
+            "padrao": "1" if padrao else "",  # (noqa-acento) campo
         }
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")

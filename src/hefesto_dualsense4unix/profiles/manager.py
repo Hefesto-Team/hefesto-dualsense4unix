@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.core.led_control import (
     cor_escolhida,
     degrau_do_brilho_das_luzes,
 )
+from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import (
@@ -1109,7 +1110,10 @@ class ProfileManager:
         try:
             estado = _estado_da_secao(
                 self.speaker_applier(
-                    int(secao.volume),
+                    # «Padrão» (04/10/2026): o volume é o do jogo, 100% do registrador; o
+                    # `volume` guardado espera o botão desligar.
+                    VOLUME_DO_PADRAO if getattr(secao, "volume_padrao", None) is True
+                    else int(secao.volume),
                     bool(secao.muted),
                     uniq=uniq,
                     origin=origin,
@@ -2225,6 +2229,10 @@ def _controllers_to_led_scales(
 #: por unidade num perfil sem seção `rumble.policy` própria: sem opinião
 #: global, o que o hardware recebe é o "balanceado" do daemon.
 _RUMBLE_POLICY_PADRAO = "balanceado"
+
+#: O volume do alto-falante em «Padrão» (04/10/2026): os 100% de sempre, que o controle já ganha na
+#: adoção (`backend_pydualsense.VOLUME_PADRAO_DO_SOM`); o jogo decide o quanto toca.
+VOLUME_DO_PADRAO = volume_do_percentual(100)
 
 
 def _mult_da_politica(policy: str | None, custom_mult: float | None) -> float | None:

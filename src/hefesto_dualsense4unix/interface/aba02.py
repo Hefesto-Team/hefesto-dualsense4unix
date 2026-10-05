@@ -863,6 +863,18 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      6px que saem daqui saem do cartão duas vezes, uma por moldura de som.
      O `line-height` desce junto (14 = 16 menos as duas bordas de 1px), senão o
      glifo desencosta do meio e o ♪ nasce colado na borda de baixo. */
+  /* O BOTÃO «PADRÃO» DO VOLUME — 04/10/2026. Mesma altura do ♪ (16px), para a linha não crescer. Ligado
+     (`.on`), a barra do MESMO cartão fica inteira verde e travada: o `<input>` some da tela
+     (`display:none` tira o arrasto E o teclado: `visibility:hidden` ainda deixava o foco entrar) e a palavra ocupa o lugar do número. */
+  .padrao-i{height:16px;flex:0 0 auto;border-radius:5px;cursor:pointer;padding:0 6px;
+            border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
+            font-size:10px;line-height:14px;font-family:inherit}
+  .padrao-i.on{border-color:var(--green);color:var(--green)}
+  .moldura:has(.padrao-i.on) .puxa-vol{display:none}
+  .moldura:has(.padrao-i.on) .vol .cheio{background:var(--green);
+    width:100% !important}
+  .moldura:has(.padrao-i.on) .vol .cheio::after{display:none}
+  .moldura:has(.padrao-i.on) .vol .n{flex:0 0 auto;color:var(--green)}
   .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
           font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
@@ -1783,6 +1795,13 @@ DICA_TUDO_NO_CONTROLE = (
     "silêncio. Vale para um controle por vez. O microfone e a vibração não "
     "mudam.")
 
+# O BOTÃO «PADRÃO» DO VOLUME — 04/10/2026, desenho aprovado em
+# `docs/process/estudos/2026-10-04-o-jogo-decide/` (item 2). Ligado, o volume do alto-falante é o
+# do jogo, a barra fica verde e travada e a palavra ocupa o lugar do número; desligado, ela ajusta.
+# O microfone fica de fora: o jogo não manda nada ao microfone do controle.
+ROTULO_PADRAO = "Padrão"
+DICA_ALTO_PADRAO = ("Ligado: o volume é o do jogo, sem ajuste. "
+                    "Desligado: você escolhe o volume deste alto-falante.")
 DICA_ALTO_MUDO = ("Cala o alto-falante do controle, sem perder o volume "
                   "guardado. A partir daqui quem guarda esse volume é o "
                   "Hefesto.")
@@ -2197,6 +2216,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             </div>
             {onda(alto_v, lado="alto")}
             {linha_de_volume("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="{DICA_ALTO_PADRAO}">{ROTULO_PADRAO}</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" title="{DICA_VOL_ALTO}"></span>
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>

@@ -198,6 +198,9 @@ class SpeakerDraft(BaseModel):
     #: Perfil" reescrevia a seção do som sem ele. É a família exata do item 13
     #: do laudo de 05/09 — *"o Salvar DESTRUÍA o que a aba tinha gravado"*.
     fonte: Literal["mix", "sfx"] | None = None
+    #: o botão «Padrão» do volume (`ProfileSpeakerConfig.volume_padrao`): sem o campo aqui, todo
+    #: «Salvar Perfil» o apagaria, que é a família do `fonte` logo acima.
+    volume_padrao: bool | None = None
     dirty: bool = False
     in_profile: bool = False
 
@@ -438,6 +441,7 @@ class DraftConfig(BaseModel):
                 muted=profile.speaker.muted,
                 rota=getattr(profile.speaker, "rota", None),
                 fonte=getattr(profile.speaker, "fonte", None),
+                volume_padrao=getattr(profile.speaker, "volume_padrao", None),
                 dirty=False,
                 in_profile=True,
             )
@@ -546,6 +550,7 @@ class DraftConfig(BaseModel):
                 muted=self.speaker.muted,
                 rota=self.speaker.rota,
                 fonte=self.speaker.fonte,
+                volume_padrao=self.speaker.volume_padrao,
             )
             if (
                 self.speaker.volume is not None
@@ -657,6 +662,7 @@ class DraftConfig(BaseModel):
             muted=bool(cfg.muted),
             rota=getattr(cfg, "rota", None),
             fonte=getattr(cfg, "fonte", None),
+            volume_padrao=getattr(cfg, "volume_padrao", None),
             dirty=self.speaker.dirty,
             in_profile=True,
         )
@@ -670,10 +676,11 @@ class DraftConfig(BaseModel):
             and speaker.muted == self.speaker.muted
             and speaker.rota == self.speaker.rota
             and speaker.fonte == self.speaker.fonte
+            and speaker.volume_padrao == self.speaker.volume_padrao
         )
         if speaker.volume is None or igual_ao_global:
             return self.with_controller_fields_cleared(
-                uniq, "speaker", {"volume", "muted", "rota", "fonte"}
+                uniq, "speaker", {"volume", "muted", "rota", "fonte", "volume_padrao"}
             )
         return self._with_override_section(
             uniq,
@@ -683,6 +690,7 @@ class DraftConfig(BaseModel):
                 muted=bool(speaker.muted),
                 rota=speaker.rota,
                 fonte=speaker.fonte,
+                volume_padrao=speaker.volume_padrao,
             ),
         )
 
