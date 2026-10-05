@@ -3972,6 +3972,8 @@ def _a_saude_do_wifi(rede: dict[str, Any], usb3: bool) -> tuple[Any, str, str]:
 
 
 _DESCOBERTA = receptor_sem_fio.Descoberta()
+#: de quanto em quanto a porta se relê enquanto o «Descobrir a faixa» anda (só então).
+RELER_A_PORTA_NO_GESTO_S = 2.0
 #: o último vizinho que o gesto viu na porta: com o receptor TIRADO a linha dele some do censo, e
 #: é nela que o passo («Medindo sem ele…», «Ponha o receptor de volta») se diz.
 _VISTO_NO_GESTO: dict[str, dict[str, Any]] = {}
@@ -4676,6 +4678,12 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     wifi = _o_wifi_com_as_quedas(_em_fundo("wifi", _ler_o_wifi, 10.0) or [],
                                  _em_fundo("wifi-quedas", _ler_as_quedas, 30.0))
     maquina, controladores = lida if lida else (None, {})
+    if _DESCOBERTA.ativa:
+        # o «Descobrir a faixa» anda pelo censo, e o censo da porta é lido uma vez e no
+        # «Examinar»: com o gesto em curso ele se relê no fundo, senão o receptor tirado
+        # continuaria «na porta» até o gesto se desfazer sozinho
+        _em_fundo("mesa-do-gesto", lambda: _mesa_do_radio(recarregar=True),
+                  RELER_A_PORTA_NO_GESTO_S)
     mesa = _mesa_do_radio()
     adaptadores_bz, aparelhos_bz = bluez if bluez else ((), ())
 

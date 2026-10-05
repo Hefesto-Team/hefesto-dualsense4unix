@@ -200,6 +200,52 @@ def test_a_cena_inteira_anda_o_gesto_pelo_censo_e_guarda_a_linha_do_receptor_tir
     assert a08._DESCOBERTA.passo == rx.PASSO_TIRE and cena["descobrindo_ausente"] is None
 
 
+def test_o_censo_da_porta_se_rele_so_enquanto_o_gesto_anda(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Com a leitura de VERDADE (`_mesa_do_radio`, lida uma vez e no «Examinar»): o gesto em curso
+    relê a porta, e o receptor tirado faz o passo andar; sem gesto, nenhuma releitura a mais."""
+    from hefesto_dualsense4unix.integrations import mesa_de_radio
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa, RadioUsb
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
+        monkeypatch.setattr(a08, nome, {})
+    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(a08, "RELER_A_PORTA_NO_GESTO_S", 0.0)
+    monkeypatch.setattr(a08, "_MESA_DO_RADIO", None)
+    receptor = RadioUsb(no="3-1.4", vid="aaaa", pid="bbbb", busnum=3, devpath="1.4")
+    na_porta: dict[str, Any] = {"mesa": Mesa(radios=(receptor,)), "leituras": 0}
+
+    def ler_a_mesa(**_k: Any) -> Any:
+        na_porta["leituras"] += 1
+        return na_porta["mesa"]
+
+    monkeypatch.setattr(mesa_de_radio, "ler_a_mesa", ler_a_mesa)
+    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((), ()))
+    monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
+    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
+    monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
+    monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
+
+    def _cena_agora() -> dict[str, Any]:
+        contexto = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[])
+        return a08.cena_do_radio(contexto)
+
+    a08._DESCOBERTA.cancelar()
+    _cena_agora()
+    _cena_agora()
+    assert na_porta["leituras"] == 1, "sem gesto, a porta é lida uma vez (o «Examinar» relê)"
+    a08._DESCOBERTA.iniciar("aaaa:bbbb", time.monotonic())
+    _cena_agora()
+    assert a08._DESCOBERTA.passo == rx.PASSO_TIRE
+    na_porta["mesa"] = Mesa()  # ela tirou o receptor
+    _cena_agora()
+    assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM, (
+        "a porta lida uma vez não viu o receptor sair: o gesto ficaria no «Tire» até se desfazer")
+    a08._DESCOBERTA.cancelar()
+
+
 def test_so_o_receptor_que_esta_na_tela_se_descobre() -> None:
     a08._CENA_NA_TELA.clear()
     a08._CENA_NA_TELA.update(_cena([_receptor("aaaa:bbbb", "mouse")]))
