@@ -3260,6 +3260,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '  .rotulo .ap-btn:focus-visible { outline: 2px solid var(-'
             '-color-accent); outline-offset: 2px; }\n'
             '  .rotulo .ap-btn[draggable="true"] { cursor: grab; }\n'
+            '  .edita .acoes-do-aparelho a.btn { display: inline-block; text-decoration: none; }\n'
             '  .soquete.alvo-do-arrasto { outline: 2px dashed var(--col'
             'or-ok); outline-offset: 3px; border-radius: var(--radius-s'
             'm); }\n'
@@ -3713,6 +3714,8 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '      + (podeGravar(n) ? \' data-entrada="\' + n + \'"\' : "")'
             ';\n'
             '    h += \'<div class="edita-linha acoes-do-aparelho">\'\n'
+            '      + (quem.receptor ? \'<a class="btn" id="descobrir-a-faixa" '
+            'href="08-conexoes.html">Descobrir a faixa</a>\' : "")\n'
             '      + (identificavel(quem) ? \'<button class="btn" id="id'
             'entificar">Identificar</button>\' : "")\n'
             '      + \'<button class="btn" id="voltar-ao-automatico"\' + '
@@ -4233,36 +4236,6 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '04/10/2026, AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 — o apa'
             'relho que o plano não sabe arrumar fica onde está (a gêm'
             'ea JS do arranjo_da_mesa).'
-        ),
-    ),
-    Edicao(
-        antes=(
-            '  .rotulo .ap-btn[draggable="true"] { cursor: grab; }\n'
-        ),
-        depois=(
-            '  .rotulo .ap-btn[draggable="true"] { cursor: grab; }\n'
-            '  .edita .acoes-do-aparelho a.btn { display: inline-block; text-decoration: none; }\n'
-        ),
-        porque=(
-            '05/10/2026, O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01 — o «Descobrir a '
-            'faixa» do painel é um link para a faixa dele, e um link não nasce com cara de botão.'
-        ),
-    ),
-    Edicao(
-        antes=(
-            '      + (identificavel(quem) ? \'<button class="btn" id="identificar">Identificar'
-            '</button>\' : "")\n'
-        ),
-        depois=(
-            '      + (quem.receptor ? \'<a class="btn" id="descobrir-a-faixa" '
-            'href="08-conexoes.html">Descobrir a faixa</a>\' : "")\n'
-            '      + (identificavel(quem) ? \'<button class="btn" id="identificar">Identificar'
-            '</button>\' : "")\n'
-        ),
-        porque=(
-            '05/10/2026, O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01 — o receptor 2.4G '
-            'ganha «Descobrir a faixa» no painel: o gesto guiado mora na faixa dele, na aba '
-            'Conexões, e o link leva até lá.'
         ),
     ),
 )

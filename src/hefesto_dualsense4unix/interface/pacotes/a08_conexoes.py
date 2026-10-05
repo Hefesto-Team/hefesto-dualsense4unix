@@ -4018,10 +4018,8 @@ def _guardar_a_banda(chave: str, banda: tuple[int, int]) -> None:
 
 def _banda_declarada(declaracao: Any, chave: str) -> list[int] | None:
     """`[ini, fim)` que o «Descobrir» mediu para este `vid:pid`, ou `None`."""
-    try:
-        banda = declaracao.mesa.radios[chave].banda
-    except Exception:
-        return None
+    radios = getattr(getattr(declaracao, "mesa", None), "radios", None) or {}
+    banda = getattr(radios.get(chave), "banda", None)
     return [int(banda[0]), int(banda[1])] if banda else None
 
 
@@ -4156,12 +4154,13 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
         marca = "✓ " if fora else ""
         frase, botao = _o_botao_da_descoberta(linha)
         if frase:
-            # o receptor que ainda não foi descoberto: a faixa diz isso e traz o gesto (o botão
-            # não mora dentro de `role="img"`, que o leitor de tela leria como figura)
+            # o receptor que ainda não foi descoberto: a faixa diz isso e traz o gesto; é um
+            # grupo, não uma figura (`role="img"` faria o leitor de tela engolir o botão)
             descobrir = (f'<button class="btn ar-descobrir" type="button" '
                          f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}">'
                          f'{_x(botao)}</button>' if botao else "")
-            faixa = f'<div class="ar-faixa sem"><span>{_x(frase)}</span>{descobrir}</div>'
+            faixa = (f'<div class="ar-faixa sem" role="group" aria-label="{_x(frase)}">'
+                     f'<span>{_x(frase)}</span>{descobrir}</div>')
         else:
             faixa = (f'<div class="ar-faixa sem{fora}" role="img" '
                      f'aria-label="{_x(linha.sem_faixa)}">'

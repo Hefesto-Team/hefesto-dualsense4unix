@@ -79,8 +79,9 @@ def test_o_receptor_sem_faixa_diz_que_nao_foi_descoberto_e_traz_o_botao_descobri
                      r'data-gesto="receptor-descobrir" data-alvo="aaaa:bbbb">Descobrir</button>',
                      linha)
     assert "receptor 2.4G" in linha and "· descoberto" not in linha
-    assert 'role="img"' not in linha.split("ar-estado")[0], (
-        "o botão não mora dentro de uma figura: o leitor de tela o leria como imagem")
+    faixa = linha.split("ar-estado")[0]
+    assert 'role="img"' not in faixa and 'role="group" aria-label="a faixa dele' in faixa, (
+        "o botão não mora dentro de uma figura: o leitor de tela o engoliria")
 
 
 def test_o_receptor_com_a_faixa_medida_pinta_a_banda_e_diz_descoberto() -> None:

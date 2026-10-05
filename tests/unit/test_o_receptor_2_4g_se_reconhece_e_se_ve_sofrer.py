@@ -319,12 +319,16 @@ def test_o_botao_do_mouse_e_a_rolagem_nao_contam_como_tecla_nem_movimento(pipes:
     assert m.publicar()[CHAVE]["buracos"] == 0
 
 
-def test_sem_permissao_para_abrir_o_receptor_nao_publica_numero_nenhum(pipes: Pipes) -> None:
+def test_sem_permissao_para_abrir_o_receptor_publica_lendo_falso_e_sem_selo(
+    pipes: Pipes,
+) -> None:
     pipes.recusados = {MOUSE, TECLADO}
     m = _monitor(pipes)
     _volta(m)
-    # sem leitura não há número: «sem falhas» seria dizer o que não se mediu
-    assert m.publicar() == {}
+    # sem leitura não há número: sai com `lendo` falso e a tela não faz selo dele
+    assert m.publicar() == {CHAVE: {"teclas_presas": 0, "buracos": 0, "janela_s": rx.JANELA_S,
+                                    "lendo": False}}
+    assert rx.selo_da_saude(m.publicar()[CHAVE], "teclado") is None
 
 
 def test_o_receptor_que_sai_do_censo_sai_do_estado(pipes: Pipes) -> None:

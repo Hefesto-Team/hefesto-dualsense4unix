@@ -66,6 +66,8 @@ CORRIDA_MINIMA = 16
 INTERVALO_MAXIMO_DA_CORRIDA_S = 0.02
 #: mesma posição do mesmo report: o evdev os carimba com o mesmo instante.
 MESMO_REPORT_S = 0.0005
+#: quanto o ``parar`` espera a thread do monitor voltar.
+ESPERA_DO_FIO_S = 2.0
 #: teto de memória do que se conta (um enlace morrendo faz milhares por hora).
 TETO_DA_CONTAGEM = 5000
 
@@ -275,12 +277,14 @@ class MonitorDosReceptores:
                 self._soltar(fd)
         ja = set(self._abertos.values())
         for chave, caminho in sorted(queremos - ja):
-            try:
-                fd = self._abrir(caminho)
-            except OSError:
-                continue
             with self._trava:
                 self._contadores.setdefault(chave, ContadorDaSaude())
+            try:
+                fd = self._abrir(caminho)
+            except OSError as erro:
+                # sem o grupo `input` o receptor fica publicado com `lendo` falso
+                logger.debug("receptor_nao_abriu", erro=type(erro).__name__)
+                continue
             self._abertos[fd] = (chave, caminho)
         with self._trava:
             for chave in [c for c in self._contadores if c not in alvo]:
@@ -295,10 +299,9 @@ class MonitorDosReceptores:
         chave = self._abertos.get(fd, ("", ""))[0]
         try:
             dados = self._ler(fd)
-        except BlockingIOError:
-            return
-        except OSError:
-            self._soltar(fd)
+        except OSError as erro:
+            if not isinstance(erro, BlockingIOError):
+                self._soltar(fd)  # o nó sumiu (o receptor saiu da porta)
             return
         if not dados:
             self._soltar(fd)
@@ -339,7 +342,7 @@ class MonitorDosReceptores:
     def parar(self) -> None:
         self._parar.set()
         if self._fio is not None:
-            self._fio.join(timeout=2.0)
+            self._fio.join(timeout=ESPERA_DO_FIO_S)
         for fd in list(self._abertos):
             self._soltar(fd)
 

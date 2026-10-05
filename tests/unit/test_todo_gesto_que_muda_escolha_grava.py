@@ -116,6 +116,9 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "esquecer-aparelho"): _PERGUNTA_DO_RADIO,
     ("08-conexoes.html", "examinar-portas"):
         "leitura: refaz o exame das portas e a leitura do barramento",
+    ("08-conexoes.html", "receptor-descobrir"):
+        "ato: começa e anda o «Descobrir a faixa» (tirar, medir, pôr, medir); a banda achada "
+        "só vai ao `maquina.json` no tique que fecha a medida, e não é escolha dela",
     ("08-conexoes.html", "luz-nao-acende"):
         "ato: derruba este controle do rádio para ela apertar PS e a luz voltar",
     ("08-conexoes.html", "mapear-comecar"): _LACO_DO_MAPEAR,
