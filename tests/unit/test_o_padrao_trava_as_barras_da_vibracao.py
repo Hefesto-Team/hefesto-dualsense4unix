@@ -170,3 +170,36 @@ def test_economia_e_maximo_destravam_e_o_numero_guardado_volta() -> None:
     esquerdo = next(x for x in depois["linhas"] if x["campo"] == "barra-e")
     assert esquerdo["arrasto_visivel"] and not esquerdo["trava_visivel"], esquerdo
     assert esquerdo["num"] == "50", "o 50% que ela guardou volta ao destravar"
+
+
+#: quantas barras travadas aparecem em cada lugar
+TRAVAS_POR_LUGAR = r"""
+(function(){
+  const fora = {};
+  for (const pref of ['p1', 'p2']) {
+    const col = document.querySelector('[data-controle="' + pref + '"] [data-campo="padrao"]')
+      .closest('[data-controle]');
+    fora[pref] = [...col.querySelectorAll('.trilho.travada')]
+      .filter(e => getComputedStyle(e).display !== 'none' && e.offsetWidth > 0).length;
+  }
+  return JSON.stringify(fora);
+})()
+"""
+
+
+def test_o_controle_em_padrao_que_sai_nao_deixa_barra_verde_no_lugar_vazio() -> None:
+    """O P2 em Padrão desconecta: o lugar dele fica vazio (sem barra nenhuma), e o P1 em Máximo
+    nunca trava por causa do vizinho."""
+    def pinta(carga: dict[str, Any]) -> str:
+        return "window.__hef.pintar(" + json.dumps({"mesa": {}, **carga}) + ")"
+
+    lidas = _na_pagina([
+        pinta({"colunas": {"p1": {"padrao": ""}, "p2": {"padrao": "1"}},  # (noqa-acento) campo
+               "ocupados": ["p1", "p2"]}),
+        TRAVAS_POR_LUGAR,
+        pinta({"colunas": {"p1": {"padrao": ""}}, "ocupados": ["p1"],  # (noqa-acento) campo
+               "vazios": ["p2", "p3", "p4"]}),
+        TRAVAS_POR_LUGAR,
+    ])
+    assert lidas[1] == {"p1": 0, "p2": 3}, lidas[1]
+    assert lidas[3] == {"p1": 0, "p2": 0}, f"o lugar vazio ficou com a barra verde: {lidas[3]}"

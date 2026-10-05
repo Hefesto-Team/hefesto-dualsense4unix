@@ -1148,6 +1148,9 @@
   .vib .forca.padrao ~ .motor .lado ~ .num{grid-column:3 / span 2;
     font-size:10.5px;font-weight:600;font-family:inherit;color:var(--green)}
   .vib .forca.padrao ~ .motor .lado ~ .teto{font-size:0}
+  /* o controle em Padrão que SAI deixa a classe no lugar (o pintor não apaga o campo de quem
+     não está na carga): no lugar vazio a barra travada some como os outros filhos do motor */
+  .vib .ctrl[data-conectado="nao"] .forca.padrao ~ .motor .trilho.travada{display:none}
   .motor.haptica.fora{opacity:.45}
   .motor.haptica.fora .trilho.arrasta,.motor.haptica.fora .lado{pointer-events:none}
   /* a barra vertical entre blocos irmãos — pedido dela */
