@@ -29,7 +29,7 @@ from typing import Any
 
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
-from hefesto_dualsense4unix.core.rumble import vale_o_padrao
+from hefesto_dualsense4unix.core.rumble import POLITICA_PADRAO, vale_o_padrao
 
 from . import Contexto, registrar
 from . import perfil as _perfil
@@ -135,9 +135,10 @@ def degrau_da_faixa(policy: str, custom: Any) -> str:
     A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (a resposta [26]
     dela, 29/09/2026): *«qualquer valor acima disso é Máximo o botão ativo mas
     o valor real é o do slicer»*. <!-- noqa-acento: citação literal dela -->
-    De 150 a 200, o Máximo; de 100 a 149, o Balanceado; de 30 a 99, o Economia;
-    abaixo de 30, nenhum. A faixa entre os degraus é por delegação, a validar
-    por ela (a fala dela diz só a de cima). Os limites são os da escada do
+    De 150 a 200, o Máximo; de 30 a 99, o Economia; abaixo de 30, nenhum. De
+    100 a 149, nenhum: o «Padrão» (antes «Balanceado») só acende pelo nome, porque
+    desde 04/10/2026 ele trava as barras, e o trilho não. A faixa entre os
+    degraus é por delegação, a validar por ela (a fala dela diz só a de cima). Os limites são os da escada do
     produto (``app/telas/vibracao``), e não números daqui.
 
     O VALOR É O DO TRILHO: o mesmo pedido que o número ao lado mostra
@@ -154,6 +155,11 @@ def degrau_da_faixa(policy: str, custom: Any) -> str:
     for chave in _tela.degraus_da_forca():
         if valor >= round(escada[chave] * 100):
             aceso = chave
+    if aceso == POLITICA_PADRAO and policy != POLITICA_PADRAO:
+        # «Padrão» é um ESTADO, não uma faixa do trilho (04/10/2026): o sinal como o jogo
+        # mandou, com as barras travadas. O trilho entre 100 e 149 multiplica e destrava as
+        # barras, e acender «Padrão» ali diria na tela o que o aparelho não faz.
+        return ""
     return aceso
 
 

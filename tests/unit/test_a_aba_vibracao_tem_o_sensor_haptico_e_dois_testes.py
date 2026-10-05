@@ -146,9 +146,14 @@ def _coluna(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _esperado(valor: int) -> str:
-    """O MAIOR degrau que o valor alcança, pela escada do produto — nada digitado."""
+    """O MAIOR degrau que o valor alcança, pela escada do produto — nada digitado.
+
+    O «Padrão» (``balanceado``) fica de fora: desde 04/10/2026 ele trava as barras, e o trilho
+    personalizado entre 100 e 149 multiplica e destrava; acendê-lo ali mentiria.
+    """
     alcancados = [k for k, m in RUMBLE_POLICY_MULT.items() if valor >= round(m * 100)]
-    return max(alcancados, key=lambda k: RUMBLE_POLICY_MULT[k]) if alcancados else ""
+    maior = max(alcancados, key=lambda k: RUMBLE_POLICY_MULT[k]) if alcancados else ""
+    return "" if maior == "balanceado" else maior
 
 
 @pytest.mark.parametrize("valor", [180, 130, 120, 70, 50, 10])
@@ -160,8 +165,9 @@ def test_o_degrau_aceso_e_o_maior_que_o_trilho_alcanca(valor: int) -> None:
 
 
 def test_a_escada_da_regua_e_a_da_sprint() -> None:
-    """A régua 2 com os números da sprint: 180 Máximo, 130 Padrão, 70 Economia, 10 nada."""
-    assert [_esperado(v) for v in (180, 130, 70, 10)] == ["max", "balanceado", "economia", ""]
+    """A régua 2 com os números da sprint: 180 Máximo, 70 Economia, 10 nada; e 130, que era
+    Balanceado, não acende o Padrão (ele trava as barras desde 04/10/2026, e o trilho não)."""
+    assert [_esperado(v) for v in (180, 130, 70, 10)] == ["max", "", "economia", ""]
 
 
 @pytest.mark.parametrize("degrau", sorted(RUMBLE_POLICY_MULT))
