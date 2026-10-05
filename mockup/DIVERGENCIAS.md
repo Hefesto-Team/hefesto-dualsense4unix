@@ -21,22 +21,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 08-conexoes.html
-- **04/10/2026** — o desenho 1 das Conexões que ela aprovou (uma faixa por aparelho, a marca de quem
-  briga, a legenda no título, o celular e o relógio na régua): o produto recebe com o `--publicar 08`
-  do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue a de hoje (uma pista por adaptador e a
-  fileira das portas) e a integração não é instalada antes: o pacote já fala o desenho novo, e a página
-  nova entra junto, no mesmo fecho.
-- **04/10/2026** — as dicas em cartões (a «Sugestão de Conexão» e o exame de cinco frases viraram uma
-  fileira: três à vista, «mais N», o porquê atrás do ⓘ e um botão só por cartão): o produto recebe com
-  o mesmo `--publicar 08`. Até publicar, a tela dela segue a caixa e o exame de hoje; o pacote já
-  entrega o campo `dicas` e a página nova o lê. O plano que deixa o aparelho sem classe onde está
-  também espera o `--publicar mapa-das-portas`.
-- **05/10/2026** — o receptor 2.4G (a faixa descoberta, o selo «3 teclas presas» ou «sem falhas», o
-  «Descobrir» com os passos tire/ponha, o cartão «Teclado errando»): o produto recebe com o mesmo
-  `--publicar 08`. Até publicar, a linha do teclado e do mouse segue sem a leitura do evdev; o daemon já
-  publica `radio_receptores` e o pacote já a lê.
-
 ## mapa-das-portas.html
 - **04/10/2026** — o painel do aparelho que abre ao clicar nele (nome, tipo, chave Extensor, o que a
   máquina vê, Identificar, Voltar ao automático), o arrastar para trocar de entrada, o aviso de uma
@@ -49,33 +33,3 @@ seção daqui**: a aba deixou de estar em trabalho.
   com a marca de quem o tomou, e «perde para…» ou «briga com…», do desenho 2), pela mesma conta da aba
   Conexões; o «Descobrir a faixa» passa a andar sozinho pelo censo, sem o «já tirei»: o produto recebe
   com o mesmo `--publicar mapa-das-portas`.
-
-## mapa-do-controle.html
-- **05/10/2026** — a háptica passa da seção Áudio para a seção Vibração, antes dos dois motores (o dono é
-  `docs/data/pecas-do-dualsense.csv`, coluna `regiao`): o produto recebe com o
-  `--publicar mapa-do-controle` do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue com a
-  háptica na seção Áudio, e o pacote a acende do mesmo jeito (o campo `feat-haptica` não muda).
-
-## 05-vibracao.html
-- **05/10/2026** — o degrau «Balanceado» passa a se chamar «Padrão» (a chave, a CLI e o perfil seguem
-  `balanceado`), e com ele as três barras do controle (Sensor Háptico, Motor esquerdo, Motor direito)
-  ficam inteiras verdes e travadas, com a palavra no lugar do número (decisão dela de 04/10, desenho
-  aprovado em `docs/process/estudos/2026-10-04-o-jogo-decide/`): o produto recebe com o
-  `--publicar 05` do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue com «Balanceado»
-  e as barras livres, e o daemon já ignora as barras em Padrão.
-
-## 02-controles.html
-- **05/10/2026** — o botão «Padrão» ao lado da barra do volume do alto-falante (decisão dela de 04/10,
-  desenho aprovado em `docs/process/estudos/2026-10-04-o-jogo-decide/`): ligado, a barra fica verde e
-  travada, a palavra «Padrão» ocupa o lugar do número e o volume é o do jogo; desligado, ela ajusta e o
-  volume que tinha escolhido volta. O microfone fica de fora. O produto recebe com o `--publicar 02`
-  do fecho do conjunto «Conexões 2»; até lá o pacote só emite o campo `alto-padrao` quando a página
-  publicada o tem, e a tela dela segue a de hoje.
-
-## 04-iluminacao.html
-- **05/10/2026** — uma linha curta embaixo das cores: «O jogo pinta por cima; sem jogo, a sua cor.»,
-  e, com o jogo pintando a barra agora, «Agora: a cor do jogo» (com «no P2» se for só parte dos
-  controles). Nenhum botão novo (decisão dela de 04/10, desenho aprovado em
-  `docs/process/estudos/2026-10-04-o-jogo-decide/`). O sinal vem do `luz_do_jogo` do `state_full`. O
-  produto recebe com o `--publicar 04` do fecho do conjunto «Conexões 2»; até lá o pacote só emite o
-  campo `luz-do-jogo` quando a página publicada o tem, e a tela dela segue a de hoje.
