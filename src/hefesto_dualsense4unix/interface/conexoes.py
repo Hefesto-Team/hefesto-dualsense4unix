@@ -368,7 +368,7 @@ def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
     quem = f"dica-{n}"
     detalhe = f'<p class="cd-detalhe">{_e(dica.detalhe)}</p>' if dica.detalhe else ""
     desenho = (
-        f'<p class="cd-pic" aria-label="de {_e(dica.de)} para {_e(dica.para)}">'
+        f'<p class="cd-pic" aria-label="De {_e(dica.de)} para {_e(dica.para)}">'
         f'<span>{_e(dica.de)}</span><i aria-hidden="true">→</i><span>{_e(dica.para)}</span></p>'
         if dica.de and dica.para else "")
     ignora = (_o_botao_da_dica(dica.ignorar, "cd-ignora")

@@ -44,11 +44,11 @@ PALAVRA_DO_NIVEL = {NIVEL_LISO: "boa", NIVEL_ENGASGA: "sofrendo"}
 PALAVRA_DO_MEIO = "apertada"
 NIVEL_DA_PALAVRA = {"boa": "boa", "apertada": "apertada", "sofrendo": "sofrendo"}
 
-DIVIDE_O_RADIO = "divide o rádio do adaptador dele"
-NAO_SE_MEDE = "não se mede agora"
-FORA_DA_FAIXA = "fora da faixa dos controles"
-SEM_REDE = "sem rede conectada"
-NAO_DESCOBERTA = "a faixa dele ainda não foi descoberta"
+DIVIDE_O_RADIO = "Divide o rádio do adaptador dele"
+NAO_SE_MEDE = "Não se mede agora"
+FORA_DA_FAIXA = "Fora da faixa dos controles"
+SEM_REDE = "Sem rede conectada"
+NAO_DESCOBERTA = "A faixa dele ainda não foi descoberta"
 
 
 @dataclass(frozen=True)

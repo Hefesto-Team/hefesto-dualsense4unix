@@ -3072,6 +3072,18 @@ def _maiuscula(frase: str) -> str:
     return frase[:1].upper() + frase[1:]
 
 
+def nome_dado(nome: str) -> str:
+    """O nome que ela deu (controle ou adaptador), com a primeira letra maiúscula.
+
+    Ordem dela de 05/10/2026, 13h: *«Nome que o user colocar pra controle mesmo se ele colocar
+    minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o resto
+    fica como ela escreveu. Vale ao gravar e ao ler o que já estava gravado em minúscula.
+    <!-- noqa-acento: citação literal dela -->
+    """
+    nome = str(nome or "").strip()
+    return _maiuscula(nome)
+
+
 def _cor_de(ap: dict[str, Any]) -> str:
     return str(ap.get("cor") or COR_DO_TIPO.get(str(ap.get("tipo")), "var(--texto-mudo)"))
 
@@ -4028,8 +4040,8 @@ def _o_botao_da_descoberta(linha: Any) -> tuple[str, str]:
     if passo in (receptor_sem_fio.PASSO_TIRE, receptor_sem_fio.PASSO_PONHA,
                  receptor_sem_fio.PASSO_MEDINDO_SEM, receptor_sem_fio.PASSO_MEDINDO_COM):
         return receptor_sem_fio.FRASE_DO_PASSO[passo], ""
-    frase = (receptor_sem_fio.FRASE_DO_PASSO[passo]
-             if passo == receptor_sem_fio.PASSO_NADA else linha.sem_faixa)
+    # a frase do passo que não achou é da descoberta («Não achei…»); a tela diz sem primeira pessoa
+    frase = FAIXA_NAO_ENCONTRADA if passo == receptor_sem_fio.PASSO_NADA else linha.sem_faixa
     return frase, receptor_sem_fio.BOTAO_DE_COMECAR
 
 
@@ -4143,7 +4155,8 @@ def _o_selo(selo: Any, titulo: str = "") -> str:
 #: o tooltip do ponto verde e do vazado (desenho aprovado de 05/10/2026: o verde já diz «bom»).
 TUDO_CERTO = "Tudo certo"
 FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
-FAIXA_NAO_ACHADA = "Faixa não encontrada · clique para tentar de novo"
+FAIXA_NAO_ENCONTRADA = "Faixa não encontrada"
+FAIXA_NAO_ACHADA = f"{FAIXA_NAO_ENCONTRADA} · clique para tentar de novo"
 
 
 def _o_ponto(linha: Any, descobrir: str, vazado: str = FAIXA_NAO_DESCOBERTA) -> str:
@@ -4683,7 +4696,7 @@ def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
         endereco = _mac(getattr(a, "endereco", ""))
         if (nome and endereco and not _e_nome_de_fabrica(nome)
                 and not _ALIAS_QUE_E_ENDERECO.fullmatch(nome) and endereco not in nomes):
-            nomes[endereco] = nome
+            nomes[endereco] = nome_dado(nome) if _e_controle_do_bluez(a) else nome
     return nomes
 
 
@@ -4767,7 +4780,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             junto = "colado em outro rádio"
         lugares.append({
             "id": end, "lugar": lugar,
-            "nome": nome_dado_ao_adaptador(maquina, end),
+            "nome": nome_dado(nome_dado_ao_adaptador(maquina, end)),
             "entrada": entrada or (DENTRO_DA_MAQUINA if bz is not None else ""),
             "sabido": bz is not None and maquina is not None,
             "face": face or "",
@@ -5496,7 +5509,7 @@ def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     if _so_o_foco(o):
         return {"armou": True}
     lug = _lugar_na_tela(o)
-    novo = str(o.get("valor") or "").strip()
+    novo = nome_dado(str(o.get("valor") or ""))
     if novo == str(lug.get("nome") or ""):
         return None
     feito = _gravar_o_nome(str(lug["id"]), novo)
@@ -5538,6 +5551,8 @@ def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         return {"armou": True}
     ap = _aparelho_na_tela(str(o.get("alvo") or ""))
     novo = str(o.get("valor") or "").strip()
+    if ap.get("tipo") == "controle":
+        novo = nome_dado(novo)
     if novo == str(ap.get("nome") or ""):
         return None
     endereco = norm_mac(str(ap["id"])) or ""
@@ -6141,7 +6156,7 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("dono-renomear: o clique não disse em qual controle")
-    novo = str(o.get("valor") or "").strip()
+    novo = nome_dado(str(o.get("valor") or ""))
     if _SO_O_NUMERO.fullmatch(novo):
         novo = ""
     if novo == _nomes_dos_donos().get(_mac(uniq), ""):

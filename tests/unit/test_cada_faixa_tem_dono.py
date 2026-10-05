@@ -427,7 +427,7 @@ def test_adaptador_sem_mapa_diz_que_nao_se_mede_e_nunca_zero_evitados() -> None:
     cena["evitados"] = [v for v in cena["evitados"] if v["lugar"] != "L2"]
     cena["canais_medidos"]["L2"] = False
     linhas = _linhas(cena)
-    assert a08.faixas_do_ar.NAO_SE_MEDE in _fala(linhas["c3"]).lower()
+    assert a08.faixas_do_ar.NAO_SE_MEDE in _fala(linhas["c3"])
     assert "/79" not in _fala(linhas["c3"]) and not _celulas(linhas["c3"])
     assert "/79" in _fala(linhas["c1"])
 
@@ -454,4 +454,4 @@ def test_adaptador_medido_sem_canal_evitado_tem_a_faixa_inteira_boa() -> None:
     linhas = _linhas(cena)
     assert _selo(linhas["c3"]) == ("Boa 79/79", "boa")
     assert _perdidos(linhas["c3"]) == set()
-    assert a08.faixas_do_ar.NAO_SE_MEDE not in _fala(linhas["c3"]).lower()
+    assert a08.faixas_do_ar.NAO_SE_MEDE not in _fala(linhas["c3"])

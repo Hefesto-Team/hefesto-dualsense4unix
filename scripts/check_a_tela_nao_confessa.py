@@ -64,6 +64,9 @@ FATOS: dict[str, str] = {
     "a faixa dele ainda não foi descoberta":
         "o sujeito é A FAIXA do receptor 2.4G. Estado de agora: o «desliga-e-compara» "
         "ainda não rodou para ele, e a linha traz o gesto que descobre — 04/10/2026",
+    "Faixa ainda não descoberta":
+        "a mesma faixa de cima, dita no tooltip do ponto vazado (o desenho aprovado do "
+        "conjunto «Conexões 3»): o ponto é o próprio gesto que descobre — 05/10/2026",
 
     "o Hefesto não confirmou":
         "ESTADO DO ATO: o pedido saiu e a confirmação não voltou. A frase diz "
