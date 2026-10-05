@@ -423,6 +423,29 @@ CAIXA_DA_JANELA = (
 )
 
 
+#: OS DADOS QUE O PAINEL DO APARELHO LÊ, escritos na página pelo gerador: os tipos que ela
+#: pode dizer (a régua confere os ids com o dono, `entrada_a_entrada`), a cor de cada um e os
+#: lugares do gabinete que o Mapear já oferece.
+TIPOS_DO_APARELHO_NA_PAGINA: tuple[tuple[str, str], ...] = (
+    ("teclado", "Teclado"), ("mouse", "Mouse"), ("wifi", "Wi-Fi"), ("webcam", "Webcam"),
+    ("caixa_de_som", "Caixa de som"), ("outro", "Outro"),
+)
+
+
+def _com_os_dados(js: str) -> str:
+    """O JavaScript do painel com os tipos, as cores e os lugares do dono no lugar."""
+    cores = {**CORES_POR_CLASSE, **COR_POR_TIPO_DECLARADO}
+    dados = {
+        "__TIPOS_DO_APARELHO__": json.dumps(TIPOS_DO_APARELHO_NA_PAGINA, ensure_ascii=False),
+        "__COR_DO_TIPO__": json.dumps(
+            {t: cores.get(t, COR_SEM_CLASSE) for t, _ in TIPOS_DO_APARELHO_NA_PAGINA}),
+        "__LUGARES_DA_ENTRADA__": json.dumps(list(LUGARES_DA_PORTA), ensure_ascii=False),
+    }
+    for chave, valor in dados.items():
+        js = js.replace(chave, valor)
+    return js
+
+
 EDICOES: tuple[Edicao, ...] = (
     Edicao(
         antes="<title>Onde eu ponho isto?</title>",
@@ -3196,49 +3219,6 @@ EDICOES: tuple[Edicao, ...] = (
             ' Sugestões cada entrada diz só o veredito (pedido f).'
         ),
     ),
-)
-
-
-
-#: OS DADOS QUE O PAINEL DO APARELHO LÊ, escritos na página pelo gerador: os tipos que ela
-#: pode dizer (a régua confere os ids com o dono, `entrada_a_entrada`), a cor de cada um e os
-#: lugares do gabinete que o Mapear já oferece.
-TIPOS_DO_APARELHO_NA_PAGINA: tuple[tuple[str, str], ...] = (
-    ("teclado", "Teclado"), ("mouse", "Mouse"), ("wifi", "Wi-Fi"), ("webcam", "Webcam"),
-    ("caixa_de_som", "Caixa de som"), ("outro", "Outro"),
-)
-
-
-def _com_os_dados(js: str) -> str:
-    """O JavaScript do painel com os tipos, as cores e os lugares do dono no lugar."""
-    cores = {**CORES_POR_CLASSE, **COR_POR_TIPO_DECLARADO}
-    dados = {
-        "__TIPOS_DO_APARELHO__": json.dumps(TIPOS_DO_APARELHO_NA_PAGINA, ensure_ascii=False),
-        "__COR_DO_TIPO__": json.dumps(
-            {t: cores.get(t, COR_SEM_CLASSE) for t, _ in TIPOS_DO_APARELHO_NA_PAGINA}),
-        "__LUGARES_DA_ENTRADA__": json.dumps(list(LUGARES_DA_PORTA), ensure_ascii=False),
-    }
-    for chave, valor in dados.items():
-        js = js.replace(chave, valor)
-    return js
-
-
-#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
-#:
-#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
-#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
-#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
-#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
-#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
-#: enquanto o desenho espera por ela.
-#:
-#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
-#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
-#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
-#: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10: as onze
-#: do O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 foram publicadas e entraram
-#: no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
     Edicao(
         antes=(
             '  .edita-cab .fecha { position: absolute; top: 0; right: 0'
@@ -4290,6 +4270,25 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
         ),
     ),
 )
+
+
+
+#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
+#:
+#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
+#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
+#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
+#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
+#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
+#: enquanto o desenho espera por ela.
+#:
+#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
+#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
+#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
+#: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10 e 05/10: as do
+#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as do conjunto «Conexões 2»
+#: foram publicadas e entraram no fim de `EDICOES`.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
