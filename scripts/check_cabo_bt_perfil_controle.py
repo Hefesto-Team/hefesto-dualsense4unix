@@ -118,7 +118,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "sugerir-alocacao": "mostra a sugestão da central para um adaptador — é da tela",
     "aceitar-sugestao": "abre a pergunta de mover a partir do balão — é da tela; "
                         "quem move é o `confirmar-mudanca`",
-    "trazer-para-ca": "abre a lista de quem pode vir para este adaptador — é da tela",
     "cancelar-mudanca": "fecha a pergunta de mover — é da tela",
     "escolher-adaptador": "escolhe o adaptador do próximo «Conectar» — é da tela",
     "equilibrar-radio": "abre a proposta da central de rádio — é da tela",
@@ -127,6 +126,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "conectar-aparelho": "abre o painel do «Conectar» (sem alvo, nada vai ao rádio); "
                          "com alvo, conecta um aparelho conhecido — é o rádio da máquina",
     "parear-aparelho": "pareia um aparelho achado num adaptador — é o rádio da máquina",
+    "parear-o-pedido": "leva o controle conhecido que pede para parear ao adaptador que o ouve "
+                       "(`radio.mover`) — é o rádio da máquina, para P1–P4",
     "tentar-de-novo": "liga a busca no mesmo adaptador da linha que não chegou "
                       "(`radio.busca.set`), ou refaz o mover do aparelho que não é "
                       "controle — é o rádio da máquina",

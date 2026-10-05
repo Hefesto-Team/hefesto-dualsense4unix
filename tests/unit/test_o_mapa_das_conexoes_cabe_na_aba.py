@@ -281,7 +281,8 @@ def test_atualmente_conectado_acaba_no_fim_do_hub_e_rola(vista: str) -> None:
 def test_com_o_palco_numa_coluna_a_lista_tem_altura_e_rola() -> None:
     """MORDIDA: tire o ``@media (min-width: 901px)`` (a regra vale em toda"""
     conteudo, altura = _medido("estreita")["atual"]["lista"]
-    assert altura > 0 and conteudo >= altura, f"({QUAL}) a 860 px a lista mede {altura} de {conteudo}"
+    assert altura > 0 and conteudo >= altura, (
+        f"({QUAL}) a 860 px a lista mede {altura} de {conteudo}")
 
 
 def test_as_entradas_se_arrumam_em_quantas_colunas_couberem() -> None:
