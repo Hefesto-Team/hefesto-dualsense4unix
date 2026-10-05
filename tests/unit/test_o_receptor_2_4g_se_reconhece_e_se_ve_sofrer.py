@@ -145,8 +145,8 @@ def test_o_controle_hid_se_conhece_pelo_botao_sul_mesmo_sob_o_filho_hid(tmp_path
 
 # O censo passou a achar o BTN_SOUTH sob o filho HID. MEDIDO em fixtures de sysfs (05/10/2026), o
 # que isso muda em cada tipo de controle por cabo é só `ligado_como`; a PALAVRA (`especie`, `grau`)
-# e a classe do motor só mudam onde a interface 0 não dizia nada (`ef`, `ff`, `fe`), e ali a nova é a
-# certa. Esta régua fixa a medida: uma classe que a tripla JÁ dizia certa nunca é reescrita.
+# e a classe do motor só mudam onde a interface 0 não dizia nada (`ef`, `ff`, `fe`), e ali a
+# nova é a certa. Esta régua fixa a medida: classe que a tripla JÁ dizia certa não se reescreve.
 BOTAO_SUL = f"{1 << 48:x} 0 0 0 0\n"
 SO_TECLAS = "0 0 0 0 0\n"
 
@@ -193,7 +193,8 @@ def test_o_controle_hid_por_cabo_nao_muda_de_classe_onde_a_tripla_ja_dizia(
 
 
 @pytest.mark.parametrize("tripla", [("03", "01", "01"), ("03", "01", "02")])
-def test_teclado_e_mouse_hid_nao_viram_controle(tmp_path: Path, tripla: tuple[str, str, str]) -> None:
+def test_teclado_e_mouse_hid_nao_viram_controle(
+        tmp_path: Path, tripla: tuple[str, str, str]) -> None:
     """Sem o BTN_SOUTH (0x130) a palavra é a da tripla de arranque, sob o filho ou não."""
     a = _no_de_controle(tmp_path, "1-3", tripla, sob_o_filho=True, teclas=SO_TECLAS)
     assert a.ligado_como == "" and a.especie in ("Teclado", "Mouse")
