@@ -125,8 +125,6 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "mapear-parar"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "sugerir-alocacao"):
         "leitura: a proposta da central do rádio para este adaptador",
-    ("08-conexoes.html", "trazer-para-ca"):
-        "tela: a lista de quem pode vir para este adaptador",
     ("09-sistema.html", "atualizar"):
         "ato: o serviço relê a configuração (`daemon.reload`) e confere",
     ("10-perfis.html", "ativar"):

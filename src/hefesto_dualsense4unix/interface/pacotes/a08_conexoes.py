@@ -5928,15 +5928,6 @@ def cancelar_mudanca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     return _so_abre()
 
 
-@gesto("08-conexoes.html", "trazer-para-ca")
-def trazer_para_ca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Arraste para cá» clicado: a lista de quem pode vir (a página a abre)."""
-    _lugar_na_tela(o)
-    if _CENA_NA_TELA.get("ocupado"):
-        raise RuntimeError("esperando um controle chegar")
-    return _so_abre()
-
-
 @gesto("08-conexoes.html", "sugerir-alocacao")
 def sugerir_alocacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """A lâmpada: a proposta da central para este adaptador (a página a mostra)."""
