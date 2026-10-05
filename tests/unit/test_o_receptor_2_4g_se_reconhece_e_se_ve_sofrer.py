@@ -172,7 +172,7 @@ def test_o_solta_que_encerra_a_repeticao_nao_desconta_a_presa() -> None:
     assert c.saude(101.6).teclas_presas == 1
     c.tecla(0, CODIGO_DA_TECLA, 101.8)
     assert c.saude(102.0).teclas_presas == 1, "o solta encerra a repetição, não a apaga da conta"
-    assert CODIGO_DA_TECLA not in c._apertadas and not c._apertadas, "e a tecla sai do acompanhamento"
+    assert not c._apertadas, "e a tecla sai do acompanhamento"
     # a mesma tecla apertada de novo e solta sem repetir além de 1 s não soma
     c.tecla(1, CODIGO_DA_TECLA, 103.0)
     c.tecla(2, CODIGO_DA_TECLA, 103.5)
@@ -457,33 +457,71 @@ def _evitados(estado: dict[str, Any]) -> Any:
     return lambda: estado["agora"]
 
 
-def test_o_gesto_guiado_tire_mede_ponha_mede_e_acha_a_faixa() -> None:
+def test_o_gesto_guiado_anda_sozinho_pelo_censo_e_acha_a_faixa() -> None:
+    """Sem clique de «já tirei»: o receptor some → mede sem; volta → mede com."""
     d = rx.Descoberta()
     estado: dict[str, Any] = {"agora": {"L1": tuple(range(49, 71))}}
     d.iniciar(CHAVE, 0.0)
     assert d.passo == rx.PASSO_TIRE and d.ativa
-    d.andar(100.0, _evitados(estado))
-    assert d.passo == rx.PASSO_TIRE, "o gesto dela é quem anda aqui"
-    d.avancar(10.0)
-    assert d.passo == rx.PASSO_MEDINDO_SEM
-    d.andar(10.0 + rx.ESPERA_DA_MEDIDA_S - 1, _evitados(estado))
+    d.andar(10.0, _evitados(estado), presente=True)
+    assert d.passo == rx.PASSO_TIRE, "o receptor ainda está na porta: o passo espera"
+    d.andar(20.0, _evitados(estado), presente=False)
+    assert d.passo == rx.PASSO_MEDINDO_SEM, "o receptor sumiu do censo: mede, sem pedir clique"
+    d.andar(20.0 + rx.ESPERA_DA_MEDIDA_S - 1, _evitados(estado), presente=False)
     assert d.passo == rx.PASSO_MEDINDO_SEM, "o adaptador ainda está aprendendo"
-    d.andar(10.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado))
+    d.andar(20.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado), presente=False)
     assert d.passo == rx.PASSO_PONHA
-    d.avancar(60.0)
+    d.andar(60.0, _evitados(estado), presente=False)
+    assert d.passo == rx.PASSO_PONHA, "ele ainda não voltou"
+    d.andar(70.0, _evitados(estado), presente=True)
+    assert d.passo == rx.PASSO_MEDINDO_COM, "voltou ao censo: mede, sem pedir clique"
     estado["agora"] = {"L1": tuple(range(49, 71)) + tuple(range(18, 35))}
-    d.andar(60.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado))
+    d.andar(70.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado), presente=True)
     assert (d.passo, d.banda, d.ativa) == (rx.PASSO_ACHOU, (18, 35), False)
+
+
+def test_o_gesto_nao_tem_mais_o_clique_de_ja_tirei() -> None:
+    assert not hasattr(rx, "BOTAO_DO_PASSO") and not hasattr(rx.Descoberta, "avancar")
+
+
+def test_o_receptor_que_volta_no_meio_da_medida_sem_ele_refaz_o_tire() -> None:
+    d = rx.Descoberta()
+    estado: dict[str, Any] = {"agora": {"L1": ()}}
+    d.iniciar(CHAVE, 0.0)
+    d.andar(1.0, _evitados(estado), presente=False)
+    d.andar(5.0, _evitados(estado), presente=True)
+    assert d.passo == rx.PASSO_TIRE, "a medida «sem ele» com ele na porta não vale"
+
+
+def test_o_receptor_que_sai_no_meio_da_medida_com_ele_refaz_o_ponha() -> None:
+    d = rx.Descoberta()
+    estado: dict[str, Any] = {"agora": {"L1": ()}}
+    d.iniciar(CHAVE, 0.0)
+    d.andar(1.0, _evitados(estado), presente=False)
+    d.andar(1.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado), presente=False)
+    d.andar(40.0, _evitados(estado), presente=True)
+    assert d.passo == rx.PASSO_MEDINDO_COM
+    d.andar(45.0, _evitados(estado), presente=False)
+    assert d.passo == rx.PASSO_PONHA
+
+
+def test_o_censo_que_nao_leu_nao_anda_o_passo_e_o_gesto_esquecido_se_desfaz() -> None:
+    d = rx.Descoberta()
+    d.iniciar(CHAVE, 0.0)
+    d.andar(rx.ESPERA_DO_GESTO_S - 1, _evitados({"agora": {}}), presente=None)
+    assert d.passo == rx.PASSO_TIRE and d.ativa
+    d.andar(rx.ESPERA_DO_GESTO_S, _evitados({"agora": {}}), presente=None)
+    assert not d.ativa and d.passo == ""
 
 
 def test_o_gesto_que_nao_acha_diz_que_nao_achou() -> None:
     d = rx.Descoberta()
     estado: dict[str, Any] = {"agora": {"L1": ()}}
     d.iniciar(CHAVE, 0.0)
-    d.avancar(1.0)
-    d.andar(1.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado))
-    d.avancar(50.0)
-    d.andar(50.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado))
+    d.andar(1.0, _evitados(estado), presente=False)
+    d.andar(1.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado), presente=False)
+    d.andar(50.0, _evitados(estado), presente=True)
+    d.andar(50.0 + rx.ESPERA_DA_MEDIDA_S, _evitados(estado), presente=True)
     assert (d.passo, d.banda) == (rx.PASSO_NADA, None)
 
 

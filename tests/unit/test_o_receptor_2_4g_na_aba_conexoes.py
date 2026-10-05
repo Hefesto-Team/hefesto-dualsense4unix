@@ -10,6 +10,7 @@ do gesto; a gravação da banda achada; o cartão «Teclado errando»; a etiquet
 from __future__ import annotations
 
 import re
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -121,17 +122,82 @@ def _clicar(chave: str = "aaaa:bbbb") -> None:
     a08.receptor_descobrir(SimpleNamespace(), {"alvo": chave}, None)  # type: ignore[arg-type]
 
 
-def test_o_gesto_anda_pelos_passos_e_a_linha_diz_o_que_fazer_em_cada_um() -> None:
-    cena = _cena([_receptor("aaaa:bbbb", "mouse")])
+def _na_tela(*receptores: dict[str, Any], tirado: dict[str, Any] | None = None) -> dict[str, Any]:
+    cena = _cena(list(receptores))
+    cena["descobrindo_ausente"] = tirado
     a08._CENA_NA_TELA.clear()
     a08._CENA_NA_TELA.update(cena)
+    return cena
+
+
+def test_o_gesto_anda_pelo_censo_e_a_linha_fica_na_tela_com_o_receptor_tirado() -> None:
+    """O único clique é o «Descobrir»: tirar e pôr o receptor é o que anda os passos."""
+    mouse = _receptor("aaaa:bbbb", "mouse")
+    cena = _na_tela(mouse)
     _clicar()
     html = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
-    assert "Tire o receptor da porta" in html and ">Já tirei<" in html
-    _clicar()
-    html = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
-    assert "Medindo sem ele…" in html and "ar-descobrir" not in html
+    assert "Tire o receptor da porta" in html and "Já tirei" not in html
+    assert "ar-descobrir" not in html
+    _clicar()  # segundo clique: não anda nada
+    assert a08._DESCOBERTA.passo == rx.PASSO_TIRE
+    # o receptor SAIU: a linha dele some do censo, e o gesto a mantém para dizer o passo
+    a08._andar_a_descoberta({}, time.monotonic(), False)
     assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM
+    fora = _cena([])
+    fora["descobrindo_ausente"] = mouse
+    html = _linha(a08.html_dos_canais(fora), "aaaa:bbbb")
+    assert "Medindo sem ele…" in html and "ar-descobrir" not in html
+    a08._andar_a_descoberta({}, a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, False)
+    assert a08._DESCOBERTA.passo == rx.PASSO_PONHA
+    html = _linha(a08.html_dos_canais(fora), "aaaa:bbbb")
+    assert "Ponha o receptor de volta" in html and "Já pus" not in html
+    a08._andar_a_descoberta({}, a08._DESCOBERTA.desde + 1, True)
+    assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_COM
+
+
+def test_a_linha_do_receptor_tirado_so_existe_enquanto_o_gesto_esta_em_curso() -> None:
+    a08._DESCOBERTA.cancelar()
+    assert a08._o_receptor_tirado([]) is None
+    a08._VISTO_NO_GESTO["aaaa:bbbb"] = _receptor("aaaa:bbbb", "mouse")
+    a08._DESCOBERTA.iniciar("aaaa:bbbb", 0.0)
+    assert a08._o_receptor_tirado([])["id"] == "aaaa:bbbb"  # type: ignore[index]
+    assert a08._o_receptor_tirado([_receptor("aaaa:bbbb", "mouse")]) is None
+
+
+def test_a_cena_inteira_anda_o_gesto_pelo_censo_e_guarda_a_linha_do_receptor_tirado(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Do censo de mentira até a linha: o receptor sai da mesa e o gesto o segue sem clique."""
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa, RadioUsb
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+    from hefesto_dualsense4unix.interface import pacotes
+
+    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
+        monkeypatch.setattr(a08, nome, {})
+    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    receptor = RadioUsb(no="3-1.4", vid="aaaa", pid="bbbb", busnum=3, devpath="1.4")
+    na_mesa: dict[str, Any] = {"mesa": Mesa(radios=(receptor,))}
+    monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: na_mesa["mesa"])
+    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((), ()))
+    monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
+    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
+    monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
+    monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
+
+    def _cena_agora() -> dict[str, Any]:
+        contexto = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[])
+        return a08.cena_do_radio(contexto)
+
+    a08._DESCOBERTA.iniciar("aaaa:bbbb", time.monotonic())
+    cena = _cena_agora()
+    assert a08._DESCOBERTA.passo == rx.PASSO_TIRE and cena["descobrindo_ausente"] is None
+    na_mesa["mesa"] = Mesa()  # o receptor saiu da porta
+    cena = _cena_agora()
+    assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM, "o censo anda o passo, sem clique"
+    assert cena["descobrindo_ausente"]["id"] == "aaaa:bbbb"
+    assert [o.id for o, _r in a08._os_outros_radios(cena)] == ["aaaa:bbbb"], "a linha segue na tela"
+    na_mesa["mesa"] = Mesa(radios=(receptor,))  # voltou antes de a medida acabar
+    cena = _cena_agora()
+    assert a08._DESCOBERTA.passo == rx.PASSO_TIRE and cena["descobrindo_ausente"] is None
 
 
 def test_so_o_receptor_que_esta_na_tela_se_descobre() -> None:
@@ -149,19 +215,18 @@ def _evitados(*canais: int) -> dict[str, Any]:
 
 
 def test_a_banda_achada_e_guardada_uma_vez_com_o_dia(_descoberta_limpa: list[Any]) -> None:
-    a08._CENA_NA_TELA.clear()
-    a08._CENA_NA_TELA.update(_cena([_receptor("aaaa:bbbb", "mouse")]))
+    _na_tela(_receptor("aaaa:bbbb", "mouse"))
     _clicar()  # tire
-    _clicar()  # já tirei: mede sem ele
+    a08._andar_a_descoberta({}, 1.0, False)  # o receptor saiu: mede sem ele
     desde = a08._DESCOBERTA.desde
     sem = _evitados(*range(49, 71))
-    a08._andar_a_descoberta(sem, desde + rx.ESPERA_DA_MEDIDA_S)
+    a08._andar_a_descoberta(sem, desde + rx.ESPERA_DA_MEDIDA_S, False)
     assert a08._DESCOBERTA.passo == rx.PASSO_PONHA
-    _clicar()  # já pus: mede com ele
+    a08._andar_a_descoberta(sem, desde + rx.ESPERA_DA_MEDIDA_S + 1, True)  # voltou: mede com ele
     desde = a08._DESCOBERTA.desde
     com = _evitados(*range(49, 71), *range(18, 35))
-    a08._andar_a_descoberta(com, desde + rx.ESPERA_DA_MEDIDA_S)
-    a08._andar_a_descoberta(com, desde + rx.ESPERA_DA_MEDIDA_S + 2)
+    a08._andar_a_descoberta(com, desde + rx.ESPERA_DA_MEDIDA_S, True)
+    a08._andar_a_descoberta(com, desde + rx.ESPERA_DA_MEDIDA_S + 2, True)
     assert a08._DESCOBERTA.passo == rx.PASSO_ACHOU
     assert len(_descoberta_limpa) == 1, "guarda uma vez só"
     (declaracao,) = _descoberta_limpa
@@ -171,14 +236,12 @@ def test_a_banda_achada_e_guardada_uma_vez_com_o_dia(_descoberta_limpa: list[Any
 
 def test_nao_achar_a_faixa_nao_grava_nada_e_a_linha_oferece_de_novo(
         _descoberta_limpa: list[Any]) -> None:
-    cena = _cena([_receptor("aaaa:bbbb", "mouse")])
-    a08._CENA_NA_TELA.clear()
-    a08._CENA_NA_TELA.update(cena)
+    cena = _na_tela(_receptor("aaaa:bbbb", "mouse"))
     _clicar()
-    _clicar()
-    a08._andar_a_descoberta(_evitados(), a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S)
-    _clicar()
-    a08._andar_a_descoberta(_evitados(), a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S)
+    a08._andar_a_descoberta({}, 1.0, False)
+    a08._andar_a_descoberta(_evitados(), a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, False)
+    a08._andar_a_descoberta(_evitados(), a08._DESCOBERTA.desde + 1, True)
+    a08._andar_a_descoberta(_evitados(), a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, True)
     assert a08._DESCOBERTA.passo == rx.PASSO_NADA and _descoberta_limpa == []
     linha = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
     assert "Não achei a faixa dele" in linha and ">Descobrir<" in linha

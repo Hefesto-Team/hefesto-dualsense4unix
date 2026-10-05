@@ -13,9 +13,9 @@ documentação, e escrever neles às cegas é risco. Por isso há três coisas, 
   nome. Qualquer marca; um mouse com fio tem uma interface só.
 * **Ver sofrer** (:class:`ContadorDaSaude`, :class:`MonitorDosReceptores`): o evdev, só leitura e
   sem ``grab``. Conta DURAÇÕES: quantas vezes uma tecla repetiu (autorepeat) por mais de
-  :data:`PRESA_APOS_S` (o «digita sozinho»; o «solta» que encerra a repetição não a desconta), e quantos buracos de movimento do mouse
-  passaram do que o próprio mouse entrega. Nunca o código da tecla nem o texto: é um app de
-  acessibilidade, não um registrador de teclas.
+  :data:`PRESA_APOS_S` (o «digita sozinho»; o «solta» que encerra a repetição não a desconta), e
+  quantos buracos de movimento do mouse passaram do que o próprio mouse entrega. Nunca o código
+  da tecla nem o texto: é um app de acessibilidade, não um registrador de teclas.
 * **Achar a faixa por eliminação** (:class:`Descoberta`): o rádio dele não se lê, mas os adaptadores
   Bluetooth evitam os canais em que ele fala. Com ele fora e depois dentro, a diferença dos canais
   evitados é a banda dele. Medida, nunca causa confirmada.
@@ -393,6 +393,8 @@ PASSO_NADA = "nada"
 ESPERA_DA_MEDIDA_S = 25.0
 #: a banda mais estreita que vale: uma sobra de um canal só é o AFH mexendo sozinho.
 CANAIS_MINIMOS_DA_BANDA = 3
+#: quanto o gesto espera a pessoa tirar ou pôr o receptor antes de se desfazer sozinho.
+ESPERA_DO_GESTO_S = 300.0
 CANAIS_DA_REGUA = 79
 
 
@@ -428,9 +430,11 @@ def banda_por_eliminacao(
 class Descoberta:
     """O gesto guiado «Descobrir a faixa», de UM receptor por vez, sem tocar em nada.
 
-    ``tire`` → (o gesto) → ``medindo-sem`` → ``ponha`` → (o gesto) → ``medindo-com`` → ``achou`` ou
-    ``nada``. Quem chama entrega ``evitados()`` (o que os adaptadores evitam AGORA, vindo do
-    daemon) e o relógio; o tique chama :meth:`andar`, e o gesto, :meth:`avancar`.
+    ``tire`` → ``medindo-sem`` → ``ponha`` → ``medindo-com`` → ``achou`` ou ``nada``. O ÚNICO
+    clique é o que começa: quem acabou de tirar o próprio teclado e mouse da porta não tem a mão
+    livre para um «já tirei». Quem anda os passos é o CENSO: o receptor some → mede; volta → mede.
+    Quem chama entrega a cada tique ``evitados()`` (o que os adaptadores evitam AGORA, vindo do
+    daemon), o relógio e se o receptor ESTÁ na porta agora (``presente``).
     """
 
     chave: str = ""
@@ -450,18 +454,34 @@ class Descoberta:
         self.chave, self.passo, self.desde = chave, PASSO_TIRE, agora
         self.sem, self.com, self.banda, self.guardada = {}, {}, None, False
 
-    def avancar(self, agora: float) -> None:
-        """O gesto dela: «já tirei» ou «já pus». Nos passos de medida e nos finais não faz nada."""
-        if self.passo == PASSO_TIRE:
-            self.passo, self.desde = PASSO_MEDINDO_SEM, agora
-        elif self.passo == PASSO_PONHA:
-            self.passo, self.desde = PASSO_MEDINDO_COM, agora
-
     def andar(
-        self, agora: float, evitados: Callable[[], Mapping[str, Iterable[int] | None]]
+        self,
+        agora: float,
+        evitados: Callable[[], Mapping[str, Iterable[int] | None]],
+        presente: bool | None = None,
     ) -> None:
-        """O tique: fecha a medida quando a espera passou."""
-        if self.passo not in (PASSO_MEDINDO_SEM, PASSO_MEDINDO_COM):
+        """O tique: o censo anda os passos de tirar e pôr, e a espera fecha as medidas.
+
+        ``presente`` é se o receptor está na porta agora; ``None`` é «o censo não leu»: nada se
+        conclui dele (o passo espera, e passado :data:`ESPERA_DO_GESTO_S` o gesto se desfaz).
+        """
+        if not self.ativa:
+            return
+        if self.passo in (PASSO_TIRE, PASSO_PONHA):
+            # tirar espera o receptor SUMIR; pôr espera ele VOLTAR (``None`` não conclui nada)
+            esperado = self.passo == PASSO_PONHA
+            if presente is not None and presente == esperado:
+                self.passo = PASSO_MEDINDO_COM if esperado else PASSO_MEDINDO_SEM
+                self.desde = agora
+            elif agora - self.desde >= ESPERA_DO_GESTO_S:
+                self.cancelar()
+            return
+        # o receptor mexeu no meio da medida: ela não vale mais, e o passo anterior se refaz
+        if self.passo == PASSO_MEDINDO_SEM and presente is True:
+            self.passo, self.desde = PASSO_TIRE, agora
+            return
+        if self.passo == PASSO_MEDINDO_COM and presente is False:
+            self.passo, self.desde = PASSO_PONHA, agora
             return
         if agora - self.desde < ESPERA_DA_MEDIDA_S:
             return
@@ -478,7 +498,7 @@ class Descoberta:
         self.chave, self.passo, self.banda = "", "", None
 
 
-#: o texto de cada passo (o que a tela diz) e o rótulo do botão que o faz andar.
+#: o texto de cada passo (o que a tela diz); só o começo tem botão.
 FRASE_DO_PASSO = {
     PASSO_TIRE: "Tire o receptor da porta",
     PASSO_MEDINDO_SEM: "Medindo sem ele…",
@@ -486,13 +506,11 @@ FRASE_DO_PASSO = {
     PASSO_MEDINDO_COM: "Medindo com ele…",
     PASSO_NADA: "Não achei a faixa dele",
 }
-BOTAO_DO_PASSO = {PASSO_TIRE: "Já tirei", PASSO_PONHA: "Já pus"}
 BOTAO_DE_COMECAR = "Descobrir"
 
 
 __all__ = [
     "BOTAO_DE_COMECAR",
-    "BOTAO_DO_PASSO",
     "BURACOS_QUE_SOFREM",
     "ESPECIE",
     "FRASE_DO_PASSO",

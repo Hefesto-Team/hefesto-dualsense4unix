@@ -2453,22 +2453,21 @@ def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
 
 @gesto("08-conexoes.html", "receptor-descobrir")
 def receptor_descobrir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Descobrir» a faixa de um receptor 2.4G: o primeiro toque começa, os seguintes andam.
+    """«Descobrir» a faixa de um receptor 2.4G: o único clique é o que COMEÇA.
 
-    O passo da vez mora em :data:`_DESCOBERTA`: «Descobrir» pede para tirar o receptor, «Já
-    tirei» mede os adaptadores sem ele, «Já pus» mede com ele de volta, e a diferença dos canais
-    que os adaptadores evitam é a banda dele. Nada é escrito no aparelho nem no rádio.
+    O passo da vez mora em :data:`_DESCOBERTA` e quem o anda é o censo no tique
+    (:func:`_andar_a_descoberta`): o receptor some da porta → mede os adaptadores sem ele; volta
+    → mede com ele, e a diferença dos canais que os adaptadores evitam é a banda dele. Ninguém
+    pede «já tirei» a quem acabou de tirar o próprio teclado e mouse. Nada é escrito no aparelho
+    nem no rádio.
     """
     chave = str(o.get("alvo") or "")
     receptores = {str(v["id"]) for v in _CENA_NA_TELA.get("vizinhos", ()) if v.get("receptor")}
     if chave not in receptores:
         raise ValueError(f"receptor-descobrir: {chave!r} não é um receptor que está na tela")
-    agora = time.monotonic()
-    d = _DESCOBERTA
-    if d.chave == chave and d.ativa:
-        d.avancar(agora)
-    else:
-        d.iniciar(chave, agora)
+    if _DESCOBERTA.chave == chave and _DESCOBERTA.ativa:
+        return
+    _DESCOBERTA.iniciar(chave, time.monotonic())
 
 
 @gesto("08-conexoes.html", "examinar-portas")
@@ -3973,6 +3972,9 @@ def _a_saude_do_wifi(rede: dict[str, Any], usb3: bool) -> tuple[Any, str, str]:
 
 
 _DESCOBERTA = receptor_sem_fio.Descoberta()
+#: o último vizinho que o gesto viu na porta: com o receptor TIRADO a linha dele some do censo, e
+#: é nela que o passo («Medindo sem ele…», «Ponha o receptor de volta») se diz.
+_VISTO_NO_GESTO: dict[str, dict[str, Any]] = {}
 #: quem guarda a banda achada em disco (a régua injeta o dela: nenhum teste escreve no config).
 _GRAVAR_A_BANDA: Callable[[Any], Any] | None = None
 
@@ -3991,12 +3993,21 @@ def _evitados_dos_adaptadores(ar: dict[str, Any]) -> dict[str, tuple[int, ...] |
     return saida
 
 
-def _andar_a_descoberta(ar: dict[str, Any], agora: float) -> None:
-    """O tique do «Descobrir a faixa»: fecha a medida e, achada a banda, guarda-a."""
+def _o_receptor_tirado(vizinhos: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """O vizinho do gesto em curso quando ele não está na porta agora; senão, `None`."""
+    d = _DESCOBERTA
+    if not d.ativa or any(v["id"] == d.chave for v in vizinhos):
+        return None
+    return _VISTO_NO_GESTO.get(d.chave)
+
+
+def _andar_a_descoberta(ar: dict[str, Any], agora: float, presente: bool | None = None) -> None:
+    """O tique do «Descobrir a faixa»: o censo anda os passos (``presente``: o receptor está na
+    porta agora; ``None``: o censo não leu), fecha a medida e, achada a banda, guarda-a."""
     d = _DESCOBERTA
     if not d.ativa:
         return
-    d.andar(agora, lambda: _evitados_dos_adaptadores(ar))
+    d.andar(agora, lambda: _evitados_dos_adaptadores(ar), presente)
     if d.passo == receptor_sem_fio.PASSO_ACHOU and d.banda is not None and not d.guardada:
         d.guardada = True
         _guardar_a_banda(d.chave, d.banda)
@@ -4034,9 +4045,8 @@ def _o_botao_da_descoberta(linha: Any) -> tuple[str, str]:
     if linha.sem_faixa != faixas_do_ar.NAO_DESCOBERTA:
         return "", ""
     passo = _passo_da_linha(linha.id)
-    if passo in (receptor_sem_fio.PASSO_TIRE, receptor_sem_fio.PASSO_PONHA):
-        return (receptor_sem_fio.FRASE_DO_PASSO[passo], receptor_sem_fio.BOTAO_DO_PASSO[passo])
-    if passo in (receptor_sem_fio.PASSO_MEDINDO_SEM, receptor_sem_fio.PASSO_MEDINDO_COM):
+    if passo in (receptor_sem_fio.PASSO_TIRE, receptor_sem_fio.PASSO_PONHA,
+                 receptor_sem_fio.PASSO_MEDINDO_SEM, receptor_sem_fio.PASSO_MEDINDO_COM):
         return receptor_sem_fio.FRASE_DO_PASSO[passo], ""
     frase = (receptor_sem_fio.FRASE_DO_PASSO[passo]
              if passo == receptor_sem_fio.PASSO_NADA else linha.sem_faixa)
@@ -4048,6 +4058,7 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
     vizinhos = list(cena.get("vizinhos") or ())
     saida: list[tuple[Any, str]] = []
     da_rede: set[str] = set()
+    tirado = cena.get("descobrindo_ausente")
     for i, rede in enumerate(cena.get("wifi") or ()):
         viz = _o_vizinho_da_rede(rede, vizinhos)
         quem = _id_da_rede(rede, viz, i)
@@ -4063,7 +4074,7 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
             id=quem, tipo="wifi", nome=NOME_DO_WIFI, sub=sub, banda=banda,
             sem_faixa=faixas_do_ar.FORA_DA_FAIXA, selo=selo, nota=nota, dica=dica),
             _rotulo_do_ocupante(NOME_DO_WIFI, "wifi", sub)))
-    for viz in vizinhos:
+    for viz in [*vizinhos, *([tirado] if tirado else [])]:
         if str(viz["id"]) in da_rede:
             continue
         nome, procedencia, glifo = nome_do_grupo(viz)
@@ -4687,7 +4698,10 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     declarados = _radios_declarados(declaracao_viva)
     para_id, rotulo_do_tipo = _tipos_de_radio()
     receptores = _dicionario(st.get("radio_receptores"))
-    _andar_a_descoberta(ar, time.monotonic())
+    na_porta = (None if mesa is None else
+                any(_chave_do_radio(r) == _DESCOBERTA.chave
+                    for r in getattr(mesa, "radios", ()) or ()))
+    _andar_a_descoberta(ar, time.monotonic(), na_porta)
     vizinhos = []
     for r in getattr(mesa, "radios", ()) or ():
         chave = _chave_do_radio(r)
@@ -4706,6 +4720,10 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                            "usb": "3.0" if getattr(r, "usb3", False) else "2.0",
                            "ocupa": chave, "grupo": _grupo_da_porta(str(r.caminho)),
                            "rotulo": str(r.caminho)})
+    if _DESCOBERTA.ativa:
+        visto = next((v for v in vizinhos if v["id"] == _DESCOBERTA.chave), None)
+        if visto is not None:
+            _VISTO_NO_GESTO.update({_DESCOBERTA.chave: visto})
     pedido = None
     for end, publicado in governador.items():
         for p in (publicado or {}).get("pedidos") or ():
@@ -4733,6 +4751,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "lido": bluez is not None or bool(ar) or bool(governador),
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "enlaces": enlaces, "vizinhos": vizinhos,
+        "descobrindo_ausente": _o_receptor_tirado(vizinhos),
         "wifi": wifi,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
         "passo_da_espera": next((str(m.get("passo") or "") for m in esperando), ""),
