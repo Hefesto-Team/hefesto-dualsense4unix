@@ -160,7 +160,9 @@ def _medir() -> str:
     p => !p.hidden && p.offsetParent);
   const porqueFora = abertos.map(p => p.getBoundingClientRect().top + 1
     >= p.closest('.cartao-dica').getBoundingClientRect().bottom);
-  return JSON.stringify({rola: r, corta: corta, alturas: alturas, porqueFora: porqueFora});
+  const aberta = [...document.querySelectorAll('.radio .sala .lugar.aberto')].length;
+  return JSON.stringify({rola: r, corta: corta, alturas: alturas, porqueFora: porqueFora,
+                         aberta: aberta});
 })()"""
 
 
@@ -272,6 +274,10 @@ def _vistas(largura: int) -> dict[str, Any]:
 def test_nenhuma_vista_rola_na_vertical_nem_corta_texto(largura: int) -> None:
     """As 21 vistas do ``medir_ajustado.py`` (sete por largura e o ⓘ aberto), sem rolagem."""
     vistas = _vistas(largura)
+    # a vista do adaptador aberto só mede alguma coisa se a caixa abriu de fato: sem isto, um
+    # clique que não abre deixa medir o Rádio fechado duas vezes, e o verde não diz nada
+    assert vistas["radio"]["aberta"] == 0, "uma caixa nasceu aberta: o desenho as quer fechadas"
+    assert vistas["adaptador"]["aberta"] == 1, "o clique não abriu a caixa do adaptador"
     rolam = {nome: v["rola"] for nome, v in vistas.items() if v["rola"]}
     assert not rolam, f"a {largura} px rolam: {rolam}"
     cortam = {nome: v["corta"] for nome, v in vistas.items() if v["corta"]}

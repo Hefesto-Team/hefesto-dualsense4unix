@@ -297,8 +297,6 @@ def dica_do_receptor(tipo: str, texto: str, quando: str) -> Dica:
 
 TITULO_DO_PEDIDO = "{nome} quer conectar"
 PERTO_DE = "Perto {de}"
-PORQUE_DO_PEDIDO = ("Ele está em modo de parear e perdeu a chave que este computador guarda: "
-                    "o par velho sai e o novo se faz aqui.")
 DICA_DO_PAREAR_O_PEDIDO = "Esquece o par velho e pareia de novo neste adaptador"
 
 
@@ -306,8 +304,8 @@ def dica_do_pedido(aparelho: str, nome: str, perto: str, destino: str) -> Dica:
     """O controle conhecido que pede para parear (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01).
 
     O desenho aprovado de 05/10/2026: o ponto verde que pulsa no lugar do ícone, «Roxo quer
-    conectar», «Perto da Entrada 4» e UM botão, «Parear». ``perto`` já vem com a preposição
-    («da Entrada 4», «do Meio»).
+    conectar», «Perto da Entrada 4» e UM botão, «Parear», sem ⓘ: o título já diz o que ele quer, e
+    o porquê seria texto a mais. ``perto`` já vem com a preposição («da Entrada 4», «do Meio»).
     """
     return Dica(
         chave=f"pedido:{aparelho}", icone=ICONE_PULSO,
@@ -315,7 +313,7 @@ def dica_do_pedido(aparelho: str, nome: str, perto: str, destino: str) -> Dica:
         acao=Acao(PAREAR, ROTULO_PAREAR, GESTO_DE_PAREAR_O_PEDIDO,
                   dados=(("alvo", aparelho), ("destino", destino)),
                   titulo=DICA_DO_PAREAR_O_PEDIDO),
-        porque=uma_frase(PORQUE_DO_PEDIDO), detalhe=PERTO_DE.format(de=perto) if perto else "",
+        detalhe=PERTO_DE.format(de=perto) if perto else "",
         primeiro=True)
 
 

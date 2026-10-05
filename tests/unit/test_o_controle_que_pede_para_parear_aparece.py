@@ -202,6 +202,8 @@ def test_o_cartao_vem_primeiro_com_o_ponto_que_pulsa_e_o_parear(nomes: tuple[str
     primeiro = cartoes[0]
     assert 'class="cd-pulso"' in primeiro and "Roxo quer conectar" in primeiro
     assert "Perto da Entrada 4" in primeiro
+    assert 'class="cd-info"' not in primeiro and "cd-porque" not in primeiro, (
+        "o cartão do pedido ganhou o ⓘ: o desenho aprovado é título, onde e «Parear»")
     botao = re.search(r'<button class="btn cd-botao"[^>]*>Parear</button>', primeiro)
     assert botao, primeiro
     assert 'data-gesto="parear-o-pedido"' in botao.group(0)
