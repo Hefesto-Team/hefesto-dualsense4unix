@@ -44,7 +44,9 @@ _LINHAS = [
     l for l in csv.DictReader(
         x for x in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
          if not x.startswith("#"))
-    if l["regiao"] == "vibracao"
+    # os MOTORES: as peças de vibração que o desenho do controle tem corpo para destacar; a háptica
+    # mora na mesma seção (04/10/2026) mas é marcador de região, sem caixa, e não é um motor
+    if l["regiao"] == "vibracao" and l["no_svg"] != "falta"
 ]
 if len(_LINHAS) != 2:
     raise SystemExit(f"ERRO: o mapa tem {len(_LINHAS)} peça(s) de vibração, e a aba "

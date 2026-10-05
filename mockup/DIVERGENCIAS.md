@@ -32,6 +32,10 @@ seção daqui**: a aba deixou de estar em trabalho.
   o mesmo `--publicar 08`. Até publicar, a tela dela segue a caixa e o exame de hoje; o pacote já
   entrega o campo `dicas` e a página nova o lê. O plano que deixa o aparelho sem classe onde está
   também espera o `--publicar mapa-das-portas`.
+- **05/10/2026** — o receptor 2.4G (a faixa descoberta, o selo «3 teclas presas» ou «sem falhas», o
+  «Descobrir» com os passos tire/ponha, o cartão «Teclado errando»): o produto recebe com o mesmo
+  `--publicar 08`. Até publicar, a linha do teclado e do mouse segue sem a leitura do evdev; o daemon já
+  publica `radio_receptores` e o pacote já a lê.
 
 ## mapa-das-portas.html
 - **04/10/2026** — o painel do aparelho que abre ao clicar nele (nome, tipo, chave Extensor, o que a
@@ -39,3 +43,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   linha do «Examinar» e a fileira «Sem Lugar»: o produto recebe com o `--publicar mapa-das-portas` do
   fecho do conjunto «Conexões 2». Até publicar, a tela dela segue a de hoje (o extensor como resposta
   de «O que tem na entrada») e o pacote já atende os dois gestos; a integração não é instalada antes.
+- **05/10/2026** — o «Descobrir a faixa» no painel do receptor 2.4G (um link para a faixa dele na aba
+  Conexões): o produto recebe com o mesmo `--publicar mapa-das-portas`.
+
+## mapa-do-controle.html
+- **05/10/2026** — a háptica passa da seção Áudio para a seção Vibração, antes dos dois motores (o dono é
+  `docs/data/pecas-do-dualsense.csv`, coluna `regiao`): o produto recebe com o
+  `--publicar mapa-do-controle` do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue com a
+  háptica na seção Áudio, e o pacote a acende do mesmo jeito (o campo `feat-haptica` não muda).
