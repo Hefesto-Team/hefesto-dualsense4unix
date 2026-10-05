@@ -1003,8 +1003,10 @@ def _o_extensor_vira_a_chave(portas: dict[str, Any]) -> None:
     O extensor deixou de ser «o que tem na entrada» (04/10/2026): é uma chave da porta, e o
     aparelho que está nela continua dito nela. A entrada-filha que o desenho antigo criava
     para a ponta (``Na``, ``filha_de = N``) não tem mais o que guardar: o aparelho enumera no
-    buraco da ``N``, então os nós, o lugar e a velocidade que só a ponta tinha passam para a
-    ``N`` quando ela não os tem, e a ponta sai (o nome dela fica na cópia de antes). Idempotente.
+    buraco da ``N``, então os nós, o lugar, a velocidade, o hub e o nome que só a ponta tinha
+    passam para a ``N`` quando ela não os tem, quem pendia da ponta passa a pender da ``N``, e
+    a ponta sai. Nada fica só na cópia de antes, que não se refaz se outra migração já a
+    escreveu. Idempotente.
     """
     for numero, porta in list(portas.items()):
         if not isinstance(porta, dict) or porta.get("liga") != "extensor":
@@ -1014,9 +1016,12 @@ def _o_extensor_vira_a_chave(portas: dict[str, Any]) -> None:
         ponta = portas.get(f"{numero}a")
         if not isinstance(ponta, dict) or ponta.get("filha_de") != numero:
             continue
-        for campo in ("nos", "usb", "lugar"):
+        for campo in ("nos", "usb", "lugar", "liga", "nome"):
             if ponta.get(campo) and not porta.get(campo):
                 porta[campo] = ponta[campo]
+        for outra in portas.values():
+            if isinstance(outra, dict) and outra.get("filha_de") == f"{numero}a":
+                outra["filha_de"] = numero
         del portas[f"{numero}a"]
 
 

@@ -110,6 +110,24 @@ def test_o_disco_antigo_com_liga_extensor_e_a_ponta_vira_a_chave(disco: Path) ->
     assert carregar_maquina().mapa.portas["1"].extensor is True
 
 
+def test_o_hub_e_o_nome_da_ponta_antiga_passam_para_a_entrada(disco: Path) -> None:
+    """A ponta que tinha um hub e um nome não os perde na migração.
+
+    A cópia de antes (``.com-os-lugares``) só se escreve uma vez, e quem migrou os lugares em
+    26/09 já a tem: o que a ponta sabia e a ``N`` não, ou passa para a ``N``, ou some. MORDE:
+    tirar ``liga`` e ``nome`` dos campos que a migração leva reprova.
+    """
+    bruto = json.loads(disco.read_text(encoding="utf-8"))
+    bruto["mapa"]["portas"]["1"]["liga"] = "extensor"
+    bruto["mapa"]["portas"]["1a"] = {"filha_de": "1", "liga": "hub", "nome": "Mesa"}
+    disco.write_text(json.dumps(bruto), encoding="utf-8")
+
+    porta = carregar_maquina().mapa.portas["1"]
+    assert porta.extensor is True
+    assert porta.liga == "hub", "o hub que estava na ponta do extensor se perdeu"
+    assert porta.nome == "Mesa", "o nome que ela deu à ponta se perdeu"
+
+
 def test_o_extensor_convive_com_o_hub_e_cada_um_se_desliga_sozinho(disco: Path) -> None:
     """Marcar Extensor não tira o Hub (e vice-versa): são duas respostas."""
     assert ee.declarar_a_ligacao("5", "hub").gravou
