@@ -209,8 +209,16 @@ class TestPlayerPorControle:
     """
 
     @pytest.mark.asyncio
-    async def test_controllers_ganham_o_campo_player(self, running_server: Any) -> None:
+    async def test_controllers_ganham_o_campo_player(
+        self, running_server: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         _server, socket_path, fc, _store, daemon = running_server
+        # O ganho da háptica é um singleton do processo: o degrau global que um teste anterior
+        # leu (o Padrão vale 100) vazava para cá e o `haptica_vale_pct` saía 100 só no lote.
+        # Aqui ninguém leu degrau nenhum, e é isso que o contrato mede.
+        from hefesto_dualsense4unix.daemon import ganho_da_haptica
+
+        monkeypatch.setattr(ganho_da_haptica, "GANHO", ganho_da_haptica.GanhoDaHaptica())
         fc.describe_controllers = lambda: [  # type: ignore[attr-defined]
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100"},
