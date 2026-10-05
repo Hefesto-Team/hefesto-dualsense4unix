@@ -391,25 +391,17 @@ def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
 
 
 def html_das_dicas(painel: Any, icone: Callable[[str], str] = lambda _nome: "") -> str:
-    """As dicas da aba Conexões: os cartões que pesam, «mais N» e a linha do que está certo.
+    """As dicas da aba Conexões: os cartões que pesam, numa fileira só; sem dica, «Tudo certo».
 
-    ``icone`` desenha o símbolo de um cartão (o sprite é da página; este módulo não o conhece).
+    Sem «mais N» e sem a linha dos ✓ (desenho aprovado de 05/10/2026): o próximo cartão entra
+    quando ela ignora ou resolve um. ``icone`` desenha o símbolo de um cartão (o sprite é da
+    página; este módulo não o conhece).
     """
-    if painel.vazio:
-        corpo = f'<p class="nada-a-mudar">{_e(NADA_A_MUDAR)}</p>'
+    if not painel.visiveis:
+        corpo = f'<p class="nada-a-mudar"><i aria-hidden="true"></i>{_e(NADA_A_MUDAR)}</p>'
     else:
         corpo = '<div class="dicas-fileira">' + "".join(
             _o_cartao_da_dica(d, n, icone) for n, d in enumerate(painel.visiveis)) + "</div>"
-    if painel.demais:
-        base = len(painel.visiveis)
-        corpo += (
-            f'<details class="mais-dicas"><summary>mais {len(painel.demais)}</summary>'
-            '<div class="dicas-fileira">' + "".join(
-                _o_cartao_da_dica(d, base + n, icone) for n, d in enumerate(painel.demais))
-            + "</div></details>")
-    if painel.certos:
-        corpo += '<p class="dicas-certas">' + " · ".join(
-            f"<span>✓ {_e(c)}</span>" for c in painel.certos) + "</p>"
     return f'<div class="dicas">{corpo}</div>'
 
 

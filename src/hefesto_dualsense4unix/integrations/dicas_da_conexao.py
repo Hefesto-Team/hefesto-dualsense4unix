@@ -8,8 +8,9 @@ quadro «Sugestão de Conexão» viram uma fileira de cartões:
 * **o pictograma do que muda** (`P2 · Meio → Direita`) quando há destino;
 * **um botão de ação** por cartão, e só um;
 * **o porquê numa frase só**, atrás do ⓘ;
-* os **três que mais pesam** aparecem, o resto fica em «mais N»; o que está certo vira uma linha
-  discreta no fim.
+* os **quatro que mais pesam** aparecem, numa fileira de cartões da mesma altura; o próximo entra
+  quando ela ignora ou resolve um (sem «mais N», desenho aprovado de 05/10/2026). O que está certo
+  não ganha linha: sem dica nenhuma, a aba diz só «Tudo certo».
 
 Este módulo é puro: entram fatos já lidos (as ordens do exame, a proposta da central, as quedas do
 Wi-Fi), sai o :class:`Painel`. Quem desenha é ``interface.conexoes.html_das_dicas``; quem lê os
@@ -26,7 +27,9 @@ from dataclasses import dataclass, field
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 
 PALAVRAS_NO_TITULO = 5
-CARTOES_VISIVEIS = 3
+CARTOES_VISIVEIS = 4
+#: o gesto do cartão, em até duas palavras (desenho aprovado de 05/10/2026).
+PALAVRAS_NO_GESTO = 2
 #: a frase do ⓘ, em caracteres — o resto é o que a ordem já diz na tela de detalhe.
 LIMITE_DA_FRASE = 160
 
@@ -54,25 +57,24 @@ PAGINA_DO_MAPA = "mapa-das-portas.html"
 GESTO_DE_MOVER = "aceitar-sugestao"
 GESTO_DE_IGNORAR = "ignorar"
 
-ROTULO_MOSTRAR_ONDE_LIGAR = "Mostrar onde ligar"
-ROTULO_MOSTRAR_A_ENTRADA_BOA = "Mostrar a entrada boa"
 ROTULO_VER_NO_MAPA = "Ver no mapa"
-ROTULO_IGNORAR = "Ignorar esta dica"
-ROTULO_VOLTAR_A_MOSTRAR = "Voltar a mostrar"
+ROTULO_IGNORAR = "Ignorar"
+ROTULO_VOLTAR_A_MOSTRAR = "Mostrar"
+ROTULO_PAREAR = "Parear"
 
-NADA_A_MUDAR = "Nada a mudar agora."
+NADA_A_MUDAR = "Tudo certo"
 SEM_CAUSA_DA_QUEDA = "A placa saiu do barramento e voltou; o diário do kernel não diz a causa."
 
 #: título, ícone e rótulo do botão de cada ordem do catálogo (``ordens_da_mesa``).
 DA_ORDEM: dict[str, tuple[str, str, str]] = {
     ordens.R1_RADIO_LARGO_NO_MESMO_HUB: (
-        ICONE_WIFI, "Wi-Fi colado nos rádios", ROTULO_MOSTRAR_ONDE_LIGAR),
+        ICONE_WIFI, "Wi-Fi colado nos rádios", ROTULO_VER_NO_MAPA),
     ordens.R2_DOIS_RADIOS_COLADOS: (
-        ICONE_RADIO, "Dois rádios colados", ROTULO_MOSTRAR_A_ENTRADA_BOA),
+        ICONE_RADIO, "Dois rádios colados", ROTULO_VER_NO_MAPA),
     ordens.R3_DONGLE_ATRAS_DE_HUB: (
-        ICONE_RADIO, "Bluetooth atrás de hub", ROTULO_MOSTRAR_A_ENTRADA_BOA),
+        ICONE_RADIO, "Bluetooth atrás de hub", ROTULO_VER_NO_MAPA),
     ordens.R4_TECLADO_SO_NO_HUB: (
-        ICONE_TECLADO, "Teclado só no hub", ROTULO_MOSTRAR_A_ENTRADA_BOA),
+        ICONE_TECLADO, "Teclado só no hub", ROTULO_VER_NO_MAPA),
     ordens.R5_DONGLE_DORME: (
         ICONE_RADIO, "Bluetooth pode dormir", ROTULO_VER_NO_MAPA),
     ordens.R6_ENTRADA_RECLAMOU_DE_CORRENTE: (
@@ -185,8 +187,6 @@ def dica_da_ordem(
     icone, titulo, rotulo = DA_ORDEM.get(chave, (
         ICONE_AJUDA, str(getattr(ordem, "acao", "") or ""),  # (noqa-acento): campo
         ROTULO_VER_NO_MAPA))
-    if destino and rotulo == ROTULO_VER_NO_MAPA:
-        rotulo = ROTULO_MOSTRAR_A_ENTRADA_BOA
     por_que = getattr(getattr(ordem, "por_que_importa", None), "texto", "")
     return Dica(
         chave=chave, icone=icone, titulo=limitar_o_titulo(titulo),
@@ -253,7 +253,7 @@ def dica_do_movimento(m: Movimento) -> Dica:
     return Dica(
         chave=f"mover:{m.controle}", icone=ICONE_RADIO, titulo=limitar_o_titulo(titulo),
         nivel=nivel,
-        acao=Acao(MOVER, f"Levar {quem} para o {m.para_nome}", GESTO_DE_MOVER,
+        acao=Acao(MOVER, f"Mover {quem}", GESTO_DE_MOVER,
                   dados=(("alvo", m.controle), ("destino", m.para_id))),
         porque=uma_frase(porque), de=f"{quem} · {m.de_nome}", para=m.para_nome)
 
@@ -263,7 +263,7 @@ def dica_do_wifi(em_palavras: str, usb3_no_2_4: bool, causa_conhecida: str, nive
     return Dica(
         chave="wifi-caindo", icone=ICONE_WIFI,
         titulo="Wi-Fi caindo" if nivel == AJUSTE else "Wi-Fi apertado", nivel=nivel,
-        acao=Acao(MAPA, ROTULO_MOSTRAR_ONDE_LIGAR, href=PAGINA_DO_MAPA),
+        acao=Acao(MAPA, ROTULO_VER_NO_MAPA, href=PAGINA_DO_MAPA),
         porque=uma_frase(causa_conhecida if usb3_no_2_4 else SEM_CAUSA_DA_QUEDA),
         detalhe=em_palavras)
 
@@ -284,7 +284,7 @@ def dica_do_receptor(tipo: str, texto: str, quando: str) -> Dica:
         chave=f"receptor-sofrendo:{tipo}", icone=ICONE_TECLADO,
         titulo=limitar_o_titulo(TITULO_DO_RECEPTOR.get(tipo, TITULO_DO_RECEPTOR_SEM_TIPO)),
         nivel=AJUSTE,
-        acao=Acao(MAPA, ROTULO_MOSTRAR_A_ENTRADA_BOA, href=PAGINA_DO_MAPA),
+        acao=Acao(MAPA, ROTULO_VER_NO_MAPA, href=PAGINA_DO_MAPA),
         porque=uma_frase(PORQUE_DO_RECEPTOR.get(tipo, PORQUE_DO_RECEPTOR_SEM_TIPO)),
         detalhe=f"{texto} {quando}".strip())
 

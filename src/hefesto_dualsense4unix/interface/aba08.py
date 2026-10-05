@@ -331,6 +331,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
          tique em que o piloto tira o `off`. */
   .gc-item.off .gc-nome{color:var(--comment)}
   .gc-item.off{cursor:default;border-style:dashed}
+  .gc-item.off .gc-cabeca{border-bottom:0}
   .gc-item.off .gc-resumo,
   .gc-item.off .gc-corpo{display:none}
   .gc-item.off .gc-dono{visibility:hidden}
@@ -367,10 +368,14 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que ela aprovou. Cor nunca
      sozinha: o nível tem borda E uma palavra para o leitor de tela (o nome da região), o desenho de
      cada tipo vai no ícone, e a ordem de leitura é título, de→para, botão. A fileira usa a grade
-     dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá. */
-  .dicas{display:flex;flex-direction:column;gap:8px}
-  .dicas-fileira{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-  .cartao-dica{display:flex;flex-direction:column;gap:6px;min-width:0;padding:9px 11px;
+     dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá.
+     05/10/2026, o desenho aprovado: até quatro, todos da MESMA altura, e o porquê abre POR CIMA
+     (não estica os vizinhos); o gesto, curto, à direita. */
+  .dicas{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .dicas-fileira{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  @media (max-width:1180px){.dicas-fileira{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .cartao-dica{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;
+        height:96px;box-sizing:border-box;padding:9px 11px;
         border:1px solid var(--border-forte);border-left-width:3px;border-radius:7px;
         background:var(--app-bg)}
   .cartao-dica.nivel-grave{border-left-color:var(--red)}
@@ -395,22 +400,23 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .cartao-dica .cd-pic{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;
              font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo)}
   .cartao-dica .cd-pic i{font-style:normal;color:var(--green)}
-  .cd-porque{font-size:11.5px;line-height:1.4;color:var(--texto-suave)}
+  .cd-porque{position:absolute;left:-1px;right:-1px;top:calc(100% + 4px);z-index:30;
+             padding:10px 12px;border:1px solid var(--border-forte);border-radius:8px;
+             background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.6);
+             font-size:11.5px;line-height:1.4;color:var(--texto-suave)}
   .cd-porque p{margin:0 0 6px}
-  .cartao-dica .cd-ignora{padding:2px 8px;font-size:10.5px}
-  .cd-acao{margin-top:auto}
-  .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:100%;
-              box-sizing:border-box;min-height:26px;text-align:center;text-decoration:none;
-              border-color:var(--green);color:var(--green)}
+  .cartao-dica .cd-ignora{background:none;border:0;padding:0;min-height:0;height:auto;
+             font-size:11.5px;color:var(--texto-mudo);text-decoration:underline;cursor:pointer}
+  .cartao-dica .cd-ignora:hover{color:var(--fg)}
+  .cd-acao{margin-top:auto;display:flex;justify-content:flex-end}
+  .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:auto;
+              box-sizing:border-box;min-height:28px;padding:0 12px;text-align:center;
+              text-decoration:none;border-color:var(--green);color:var(--green)}
   .cartao-dica .cd-botao:hover{background:rgba(80,250,123,.09)}
   /* a dica que ela mandou calar fica no fim, apagada: o achado esmaece, o caminho de volta não */
   .cartao-dica.calada .cd-cab,.cartao-dica.calada .cd-pic,.cartao-dica.calada .cd-detalhe{opacity:.45}
-  .mais-dicas summary{cursor:pointer;font-size:11.5px;color:var(--texto-suave);padding:2px 0}
-  .mais-dicas[open] summary{margin-bottom:8px}
-  .dicas-certas{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
-                color:var(--texto-mudo)}
-  .dicas-certas span{white-space:nowrap}
-  .nada-a-mudar{margin:0;font-size:12.5px;font-weight:600;color:var(--green)}
+  .nada-a-mudar{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--green)}
+  .nada-a-mudar i{width:9px;height:9px;border-radius:50%;background:currentColor}
 
   /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305 do
      CSV da paridade) e a escolha DELA no mesmo dia: **no mesmo frame dos
@@ -608,7 +614,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      para todo grupo (273×4 na Jogar, 173×6 na Perfis). O mapa das entradas
      ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
   .ferramentas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
-               margin:10px 0 12px}
+               margin:10px 0 0}
   .ferramentas .btn{width:100%;height:28px;display:flex;align-items:center;justify-content:center;
                     gap:7px;padding:0 10px;white-space:nowrap}
   .ferramentas .i.ds{width:21px}
@@ -976,10 +982,10 @@ VER_IGNORADAS = "Ver as ordens ignoradas"
 ORDEM_IGNORADA_VOLTA = _pacote08.ORDEM_IGNORADA_VOLTA
 
 
-MAPEAR_ENTRADAS = "Mapear Entradas"
+MAPEAR_ENTRADAS = "Mapear entradas"
 MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 
-EXAMINAR_PORTAS = "Examinar Entradas"
+EXAMINAR_PORTAS = "Examinar entradas"
 
 RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
@@ -1069,8 +1075,8 @@ def desenho_do_controle(c, luz):
 
 #: `<span data-campo="nome" data-hef-alvo="html">` que no lugar cheio traz o
 def nome_do_lugar_vazio(c):
-    """O rótulo do lugar sem aparelho. O «P N» dele é o campo do dono, ao lado."""
-    return "Desconectado"
+    """O rótulo do lugar sem aparelho: nenhum (desenho aprovado de 05/10/2026, só o «P N»)."""
+    return ""
 
 
 #: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
@@ -2835,16 +2841,6 @@ MIOLO = f'''
              svg ou glifos»*. O «Atualizar» entrou no «Examinar Entradas» (um clique
              refaz o exame e relê os controles), e as quatro colunas são as dos
              cartões embaixo: cada botão fica em cima de um cartão. -->
-        <div class="ferramentas">
-          <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez; o nome e o lugar são opcionais">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
-          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
-            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
-          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
-            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
-          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
-            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
-        </div>
         <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
              `CONEXOES-LIGAR-TUDO-01`. Os {len(MESA) + 1} rádios são o alvo de
              saída do daemon (`output_target_index`), e até hoje o `checked`
@@ -2906,6 +2902,17 @@ MIOLO = f'''
                ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
                mapa do gabinete: quantos existem é o que a máquina responde. -->
           <div class="ext-vaga" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
+        </div>
+        <!-- 05/10/2026, o desenho aprovado: as quatro ferramentas descem para baixo dos cartões. -->
+        <div class="ferramentas">
+          <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez; o nome e o lugar são opcionais">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
+          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
+            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
+          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
+            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
+          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
+            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
         </div>
       </div>
     </div>
@@ -3003,7 +3010,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Uma seção só</b>: as <b>dicas</b> (um cartão por ajuste, com o botão dele; as três que mais pesam, o resto em «mais N») em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Perfil Máximo, Perfil Econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Perfil Máximo, Perfil Econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, só com o «P N».</li>
     <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
@@ -3171,9 +3178,9 @@ if __name__ == "__main__":
             f"as dicas têm {_DICAS} endereços e o produto repinta UM — o exame de frases e a "
             "«Sugestão de Conexão» saíram, e o cartão que ficar fora do campo nunca é pintado")
     _CARTOES = _HTML.count('<section class="cartao-dica ')
-    _exigir(_CARTOES <= _dicas.CARTOES_VISIVEIS + 2,
-            f"o desenho tem {_CARTOES} cartões de dica; a fileira mostra {_dicas.CARTOES_VISIVEIS} "
-            "e o resto vai para «mais N»")
+    _exigir(_CARTOES <= _dicas.CARTOES_VISIVEIS,
+            f"o desenho tem {_CARTOES} cartões de dica; a fileira mostra {_dicas.CARTOES_VISIVEIS}, "
+            "sem «mais N»")
 
     _MARCADOS = _HTML.count('data-campo="alvo-aberto" data-hef-alvo="marcado"')
     _exigir(len(MESA) + 1 == _MARCADOS,
@@ -3211,8 +3218,8 @@ if __name__ == "__main__":
             "1px contra os 12 de cima, que é o que ela viu nas duas fotos")
 
     _FORA = [c for c in MESA if not c.get("conectado", True)]
-    _exigir(_HTML.count("Desconectado</span>") == len(_FORA),
-            f"não são {len(_FORA)} lugares 'Desconectado' na Gestão de Controles")
+    _exigir("Desconectado</span>" not in _HTML,
+            "o lugar vazio da Gestão voltou a dizer «Desconectado»: o desenho de 05/10 é só o «P N»")
     for _c in _FORA:
         _exigir(rotulo(_c) not in _HTML,
                 f"o rótulo de mesa do Player {_c['jogador']} continua na tela — ele não está na mesa")

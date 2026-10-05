@@ -1155,6 +1155,7 @@
          tique em que o piloto tira o `off`. */
   .gc-item.off .gc-nome{color:var(--comment)}
   .gc-item.off{cursor:default;border-style:dashed}
+  .gc-item.off .gc-cabeca{border-bottom:0}
   .gc-item.off .gc-resumo,
   .gc-item.off .gc-corpo{display:none}
   .gc-item.off .gc-dono{visibility:hidden}
@@ -1191,10 +1192,14 @@
      AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que ela aprovou. Cor nunca
      sozinha: o nível tem borda E uma palavra para o leitor de tela (o nome da região), o desenho de
      cada tipo vai no ícone, e a ordem de leitura é título, de→para, botão. A fileira usa a grade
-     dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá. */
-  .dicas{display:flex;flex-direction:column;gap:8px}
-  .dicas-fileira{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-  .cartao-dica{display:flex;flex-direction:column;gap:6px;min-width:0;padding:9px 11px;
+     dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá.
+     05/10/2026, o desenho aprovado: até quatro, todos da MESMA altura, e o porquê abre POR CIMA
+     (não estica os vizinhos); o gesto, curto, à direita. */
+  .dicas{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .dicas-fileira{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  @media (max-width:1180px){.dicas-fileira{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .cartao-dica{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;
+        height:96px;box-sizing:border-box;padding:9px 11px;
         border:1px solid var(--border-forte);border-left-width:3px;border-radius:7px;
         background:var(--app-bg)}
   .cartao-dica.nivel-grave{border-left-color:var(--red)}
@@ -1219,22 +1224,23 @@
   .cartao-dica .cd-pic{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;
              font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo)}
   .cartao-dica .cd-pic i{font-style:normal;color:var(--green)}
-  .cd-porque{font-size:11.5px;line-height:1.4;color:var(--texto-suave)}
+  .cd-porque{position:absolute;left:-1px;right:-1px;top:calc(100% + 4px);z-index:30;
+             padding:10px 12px;border:1px solid var(--border-forte);border-radius:8px;
+             background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.6);
+             font-size:11.5px;line-height:1.4;color:var(--texto-suave)}
   .cd-porque p{margin:0 0 6px}
-  .cartao-dica .cd-ignora{padding:2px 8px;font-size:10.5px}
-  .cd-acao{margin-top:auto}
-  .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:100%;
-              box-sizing:border-box;min-height:26px;text-align:center;text-decoration:none;
-              border-color:var(--green);color:var(--green)}
+  .cartao-dica .cd-ignora{background:none;border:0;padding:0;min-height:0;height:auto;
+             font-size:11.5px;color:var(--texto-mudo);text-decoration:underline;cursor:pointer}
+  .cartao-dica .cd-ignora:hover{color:var(--fg)}
+  .cd-acao{margin-top:auto;display:flex;justify-content:flex-end}
+  .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:auto;
+              box-sizing:border-box;min-height:28px;padding:0 12px;text-align:center;
+              text-decoration:none;border-color:var(--green);color:var(--green)}
   .cartao-dica .cd-botao:hover{background:rgba(80,250,123,.09)}
   /* a dica que ela mandou calar fica no fim, apagada: o achado esmaece, o caminho de volta não */
   .cartao-dica.calada .cd-cab,.cartao-dica.calada .cd-pic,.cartao-dica.calada .cd-detalhe{opacity:.45}
-  .mais-dicas summary{cursor:pointer;font-size:11.5px;color:var(--texto-suave);padding:2px 0}
-  .mais-dicas[open] summary{margin-bottom:8px}
-  .dicas-certas{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
-                color:var(--texto-mudo)}
-  .dicas-certas span{white-space:nowrap}
-  .nada-a-mudar{margin:0;font-size:12.5px;font-weight:600;color:var(--green)}
+  .nada-a-mudar{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--green)}
+  .nada-a-mudar i{width:9px;height:9px;border-radius:50%;background:currentColor}
 
   /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305 do
      CSV da paridade) e a escolha DELA no mesmo dia: **no mesmo frame dos
@@ -1432,7 +1438,7 @@
      para todo grupo (273×4 na Jogar, 173×6 na Perfis). O mapa das entradas
      ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
   .ferramentas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
-               margin:10px 0 12px}
+               margin:10px 0 0}
   .ferramentas .btn{width:100%;height:28px;display:flex;align-items:center;justify-content:center;
                     gap:7px;padding:0 10px;white-space:nowrap}
   .ferramentas .i.ds{width:21px}
@@ -2778,7 +2784,7 @@
              está certo vira uma linha no fim. É UM endereço com alvo `html`: o produto repinta a
              fileira inteira, e o desenho mostra os mesmos cartões, montados pelas mesmas funções
              (`a08_conexoes._html_das_dicas`). -->
-        <div class="dicas-da-conexao" data-campo="dicas" data-hef-alvo="html"><div class="dicas"><div class="dicas-fileira"><section class="cartao-dica nivel-grave" role="region" aria-label="Urgente: Meio sufocado" data-dica="mover:p2"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg></span><h4 id="dica-0-t"><span class="t">Meio sufocado</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-0-p" aria-label="Por quê: Meio sufocado"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><p class="cd-pic" aria-label="de P2 · Meio para Direita"><span>P2 · Meio</span><i aria-hidden="true">→</i><span>Direita</span></p><div class="cd-porque" id="dica-0-p" hidden><p>Ele usa só 20 dos 79 canais: está colado no Wi-Fi e nos receptores.</p></div><div class="cd-acao"><button class="btn cd-botao" type="button" data-gesto="aceitar-sugestao" data-alvo="p2" data-destino="direita">Levar P2 para o Direita</button></div></section><section class="cartao-dica nivel-ajuste" role="region" aria-label="Ajuste: Wi-Fi colado nos rádios" data-dica="radio_largo_no_mesmo_hub"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg></span><h4 id="dica-1-t"><span class="t">Wi-Fi colado nos rádios</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-1-p" aria-label="Por quê: Wi-Fi colado nos rádios"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><div class="cd-porque" id="dica-1-p" hidden><p>Ele emite ruído em cima da faixa dos controles.</p><button class="btn cd-ignora" type="button" data-gesto="ignorar" data-v="0" title="Ignora este conselho. Ele fica em cinza na lista e volta sozinho se você mudar os cabos.">Ignorar esta dica</button></div><div class="cd-acao"><a class="btn cd-botao" href="mapa-das-portas.html">Mostrar onde ligar</a></div></section><section class="cartao-dica nivel-ajuste" role="region" aria-label="Ajuste: Teclado só no hub" data-dica="teclado_so_no_hub"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg></span><h4 id="dica-2-t"><span class="t">Teclado só no hub</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-2-p" aria-label="Por quê: Teclado só no hub"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><p class="cd-pic" aria-label="de Entrada 4 para Entrada 9"><span>Entrada 4</span><i aria-hidden="true">→</i><span>Entrada 9</span></p><div class="cd-porque" id="dica-2-p" hidden><p>O receptor atrás de um hub perde sinal; direto no gabinete ele fala melhor.</p><button class="btn cd-ignora" type="button" data-gesto="ignorar" data-v="1" title="Ignora este conselho. Ele fica em cinza na lista e volta sozinho se você mudar os cabos.">Ignorar esta dica</button></div><div class="cd-acao"><a class="btn cd-botao" href="mapa-das-portas.html">Mostrar a entrada boa</a></div></section></div><details class="mais-dicas"><summary>mais 1</summary><div class="dicas-fileira"><section class="cartao-dica nivel-ajuste" role="region" aria-label="Ajuste: Entrada com pouca energia" data-dica="energia_das_portas"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg></span><h4 id="dica-3-t"><span class="t">Entrada com pouca energia</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-3-p" aria-label="Por quê: Entrada com pouca energia"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><div class="cd-porque" id="dica-3-p" hidden><p>A entrada 12 entrega menos corrente do que o aparelho pede.</p></div><div class="cd-acao"><a class="btn cd-botao" href="mapa-das-portas.html">Ver no mapa</a></div></section></div></details><p class="dicas-certas"><span>✓ Suporte ao controle</span> · <span>✓ Pareamentos salvos</span></p></div></div>
+        <div class="dicas-da-conexao" data-campo="dicas" data-hef-alvo="html"><div class="dicas"><div class="dicas-fileira"><section class="cartao-dica nivel-grave" role="region" aria-label="Urgente: Meio sufocado" data-dica="mover:p2"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg></span><h4 id="dica-0-t"><span class="t">Meio sufocado</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-0-p" aria-label="Por quê: Meio sufocado"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><p class="cd-pic" aria-label="de P2 · Meio para Direita"><span>P2 · Meio</span><i aria-hidden="true">→</i><span>Direita</span></p><div class="cd-porque" id="dica-0-p" hidden><p>Ele usa só 20 dos 79 canais: está colado no Wi-Fi e nos receptores.</p></div><div class="cd-acao"><button class="btn cd-botao" type="button" data-gesto="aceitar-sugestao" data-alvo="p2" data-destino="direita">Mover P2</button></div></section><section class="cartao-dica nivel-ajuste" role="region" aria-label="Ajuste: Wi-Fi colado nos rádios" data-dica="radio_largo_no_mesmo_hub"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg></span><h4 id="dica-1-t"><span class="t">Wi-Fi colado nos rádios</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-1-p" aria-label="Por quê: Wi-Fi colado nos rádios"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><div class="cd-porque" id="dica-1-p" hidden><p>Ele emite ruído em cima da faixa dos controles.</p><button class="btn cd-ignora" type="button" data-gesto="ignorar" data-v="0" title="Ignora este conselho. Ele fica em cinza na lista e volta sozinho se você mudar os cabos.">Ignorar</button></div><div class="cd-acao"><a class="btn cd-botao" href="mapa-das-portas.html">Ver no mapa</a></div></section><section class="cartao-dica nivel-ajuste" role="region" aria-label="Ajuste: Teclado só no hub" data-dica="teclado_so_no_hub"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg></span><h4 id="dica-2-t"><span class="t">Teclado só no hub</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-2-p" aria-label="Por quê: Teclado só no hub"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><p class="cd-pic" aria-label="de Entrada 4 para Entrada 9"><span>Entrada 4</span><i aria-hidden="true">→</i><span>Entrada 9</span></p><div class="cd-porque" id="dica-2-p" hidden><p>O receptor atrás de um hub perde sinal; direto no gabinete ele fala melhor.</p><button class="btn cd-ignora" type="button" data-gesto="ignorar" data-v="1" title="Ignora este conselho. Ele fica em cinza na lista e volta sozinho se você mudar os cabos.">Ignorar</button></div><div class="cd-acao"><a class="btn cd-botao" href="mapa-das-portas.html">Ver no mapa</a></div></section><section class="cartao-dica nivel-ajuste" role="region" aria-label="Ajuste: Entrada com pouca energia" data-dica="energia_das_portas"><div class="cd-cab"><span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg></span><h4 id="dica-3-t"><span class="t">Entrada com pouca energia</span></h4><button class="cd-info" type="button" aria-expanded="false" aria-controls="dica-3-p" aria-label="Por quê: Entrada com pouca energia"><svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg></button></div><div class="cd-porque" id="dica-3-p" hidden><p>A entrada 12 entrega menos corrente do que o aparelho pede.</p></div><div class="cd-acao"><a class="btn cd-botao" href="mapa-das-portas.html">Ver no mapa</a></div></section></div></div></div>
 
         <!-- OS QUATRO BOTÕES SAÍRAM — 31/08/2026, e cada um por um motivo dela.
 
@@ -2801,16 +2807,6 @@
              svg ou glifos»*. O «Atualizar» entrou no «Examinar Entradas» (um clique
              refaz o exame e relê os controles), e as quatro colunas são as dos
              cartões embaixo: cada botão fica em cima de um cartão. -->
-        <div class="ferramentas">
-          <a class="btn" href="#mapear-portas" title="Mapear Entradas — ligue o DualSense em cada entrada, uma por vez; o nome e o lugar são opcionais">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> Mapear Entradas</a>
-          <button class="btn" data-gesto="examinar-portas" title="Examinar Entradas — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
-            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar Entradas</button>
-          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
-            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
-          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
-            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
-        </div>
         <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
              `CONEXOES-LIGAR-TUDO-01`. Os 5 rádios são o alvo de
              saída do daemon (`output_target_index`), e até hoje o `checked`
@@ -3791,7 +3787,7 @@
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html"></span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -4109,7 +4105,7 @@
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html"></span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -4148,6 +4144,17 @@
                ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
                mapa do gabinete: quantos existem é o que a máquina responde. -->
           <div class="ext-vaga" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
+        </div>
+        <!-- 05/10/2026, o desenho aprovado: as quatro ferramentas descem para baixo dos cartões. -->
+        <div class="ferramentas">
+          <a class="btn" href="#mapear-portas" title="Mapear entradas — ligue o DualSense em cada entrada, uma por vez; o nome e o lugar são opcionais">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> Mapear entradas</a>
+          <button class="btn" data-gesto="examinar-portas" title="Examinar entradas — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
+            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar entradas</button>
+          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
+            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
+          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
+            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
         </div>
       </div>
     </div>
@@ -4902,7 +4909,7 @@ document.addEventListener("click", function (ev) {
 <div class="tela-nova" id="mapear-entradas">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Mapear Entradas</span>
+      <span class="tn-tit">Mapear entradas</span>
       <span class="ajuda">?<span class="dica">O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde estava, no mesmo gesto.<br><br>Enquanto há um aparelho escolhido, <b>todo quadrado publica o juízo</b> para <i>ele</i>: sem sujeito a pergunta “aqui serve?” não existe, e a tela cala.<br><br>As duas perguntas do fim <b>mudaram-se da aba para cá</b> em 28/08, e aqui elas preenchem um vazio real: esta janela não guardava um único fato que só você tem. <b>Sem resposta</b> não é o mesmo que <b>“Não sei”</b>.<br><br><b>O que eu não consegui conferir neste desenho:</b><br>· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.<br>· quais entradas são azuis. Enquanto você não passar por &quot;Mapear Entrada a Entrada&quot;, eu trato todas como pretas.<br>· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
@@ -5055,7 +5062,7 @@ document.addEventListener("click", function (ev) {
 <div class="tela-nova" id="mapear-portas">
   <div class="tn-cx mp-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Mapear Entradas</span>
+      <span class="tn-tit">Mapear entradas</span>
       <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. Depois passe o cabo para a próxima. O nome e o lugar aparecem na <b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
