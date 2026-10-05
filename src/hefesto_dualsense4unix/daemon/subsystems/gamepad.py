@@ -493,16 +493,70 @@ def _selo_da_maquina_a_cada_segundo() -> Any:
     return selo
 
 
+def _politicas_do_perfil_ativo(daemon: Any) -> dict[str, str]:
+    """`{uniq: degrau}` das peças do perfil ATIVO que escolheram o degrau, memoizado."""
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    if not isinstance(nome, str) or not nome:
+        nome = None
+    selo = _selo_da_maquina_a_cada_segundo()
+    cache = getattr(daemon, "_rumble_politicas", None)
+    if (isinstance(cache, tuple) and len(cache) == 3 and cache[0] == nome
+            and cache[2] == selo and isinstance(cache[1], dict)):
+        return cache[1]
+    mapa: dict[str, str] = {}
+    try:
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_computador,
+            o_que_vale,
+        )
+        from hefesto_dualsense4unix.profiles.schema import politicas_dos_controles
+
+        controles = (
+            o_que_vale(load_profile(nome)).controllers
+            if nome is not None else o_computador().controles or None
+        )
+        mapa = {
+            chave: politica
+            for uniq, politica in politicas_dos_controles(controles).items()
+            if (chave := _chave_da_peca(uniq)) is not None
+        }
+    except Exception:
+        logger.debug("rumble_politicas_perfil_ilegivel", exc_info=True)
+        mapa = {}
+    with contextlib.suppress(Exception):
+        daemon._rumble_politicas = (nome, mapa, selo)
+    return mapa
+
+
+def _degrau_da_peca(daemon: Any, target_uniq: str | None) -> str | None:
+    """O degrau que vale para a peça: o que ELA escolheu, ou o global do daemon."""
+    chave = _chave_da_peca(target_uniq)
+    propria = _politicas_do_perfil_ativo(daemon).get(chave) if chave else None
+    if propria:
+        return propria
+    politica = getattr(getattr(daemon, "config", None), "rumble_policy", None)
+    return politica if isinstance(politica, str) else None
+
+
 def esquecer_motores_do_perfil(daemon: Any) -> None:
     """Derruba o mapa memoizado das barras — **a linha que faz a barra valer AGORA**."""
     with contextlib.suppress(Exception):
         daemon._rumble_motores_pct = None
+        daemon._rumble_politicas = None
 
 
 def _pcts_dos_motores(daemon: Any, target_uniq: str | None) -> tuple[int, int]:
-    """`(forte_pct, fraco_pct)` da peça mirada — `(100, 100)` sem opinião."""
+    """`(forte_pct, fraco_pct)` da peça mirada — `(100, 100)` sem opinião.
+
+    **Em Padrão as barras não se aplicam** (04/10/2026): o jogo chega como
+    mandou, e o que ela guardou nas barras fica no perfil, esperando o dia em
+    que ela escolher Economia ou Máximo.
+    """
+    from hefesto_dualsense4unix.core.rumble import vale_o_padrao
+
     chave = _chave_da_peca(target_uniq)
-    if chave is None:
+    if chave is None or vale_o_padrao(_degrau_da_peca(daemon, target_uniq)):
         return (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO)
     par = _motores_do_perfil_ativo(daemon).get(chave)
     if par is None:

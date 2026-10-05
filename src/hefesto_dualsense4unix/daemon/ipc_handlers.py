@@ -5889,7 +5889,7 @@ class IpcHandlersMixin:
             entry["sinal_dbm"] = (
                 (self._sinal_dos_enlaces or {}).get(chave(uniq)) if radio and uniq else None
             )
-            entry["haptica_pct"] = GANHO.pct(uniq)
+            entry["haptica_pct"] = GANHO.pct_guardado(uniq)
             entry["haptica_alcanca"] = not (radio and nativo and modo is None)
             entry["haptica_vale_pct"] = GANHO.pct_que_vale(uniq)
             no_ar = False

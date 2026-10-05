@@ -70,7 +70,7 @@ ESQ, DIR = MOTORES
 # (`a05_vibracao._aplicar_a_forca`, desfecho 3, medido em 04/09). Um botão a
 # bem. `a05_vibracao._pct_da_coluna` chama `_pedido_da_politica`, que faz
 # (`rumble_actions:414`, silêncio 3), e é mais honesto que acender um botão que
-FORCA = [("Economia", "economia"), ("Balanceado", "balanceado"),
+FORCA = [("Economia", "economia"), ("Padrão", "balanceado"),
          ("Máximo", "max")]
 
 if tuple(chave for _, chave in FORCA) != degraus_da_forca():
@@ -242,6 +242,28 @@ CSS = """
     background:linear-gradient(to right,transparent calc(50% - 1px),
       var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
       transparent calc(50% + 1px)),var(--border-forte)}
+  /* O PADRÃO TRAVA AS BARRAS — 04/10/2026, ela: «se balanceado é o original.
+     então não tem pq ter original». Com o degrau Padrão (`.forca.padrao`), o
+     Sensor Háptico e os dois motores ficam inteiros verdes e travados, com a
+     palavra no lugar do número: o sinal chega como o jogo mandou e o que ela
+     guardou fica esperando a Economia ou o Máximo. Travar é TROCAR DE ELEMENTO
+     (o `<input>` some, a barra verde aparece): seta e foco não alcançam quem
+     não está na tela. A palavra do zero («Desligado») usa o mesmo vão, porque
+     o `<span class="lado">` sem `on` é exatamente o motor em zero. */
+  .vib .forca ~ .motor .trilho.travada{display:none}
+  .vib .forca.padrao ~ .motor .trilho.arrasta{display:none}
+  .vib .forca.padrao ~ .motor .trilho.travada{display:block;background:var(--green);
+    opacity:.85;cursor:not-allowed}
+  .vib .forca.padrao ~ .motor .lado{pointer-events:none}
+  .vib .forca ~ .motor .teto{grid-column:4;grid-row:1}
+  .vib .forca ~ .motor .num{grid-row:1;grid-column:3;display:flex;
+    justify-content:flex-end;white-space:nowrap}
+  .vib .forca ~ .motor .lado:not(.on) ~ .num{grid-column:3 / span 2;
+    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--comment)}
+  .vib .forca ~ .motor .lado:not(.on) ~ .teto{font-size:0}
+  .vib .forca.padrao ~ .motor .lado ~ .num{grid-column:3 / span 2;
+    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--green)}
+  .vib .forca.padrao ~ .motor .lado ~ .teto{font-size:0}
   .motor.haptica.fora{opacity:.45}
   .motor.haptica.fora .trilho.arrasta,.motor.haptica.fora .lado{pointer-events:none}
   /* a barra vertical entre blocos irmãos — pedido dela */
@@ -897,6 +919,17 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
             f'{cauda}</div>')
 
 
+def _trilho_travado():
+    """A barra travada do Padrão: inteira verde, sem arrasto e sem teclado.
+
+    Vive ao lado do `<input>`, e a folha mostra um ou o outro (`.forca.padrao ~
+    .motor`): travar é trocar de elemento, porque um `<input>` escondido não
+    recebe seta nem foco, e um desabilitado cinza o que devia ficar verde.
+    """
+    return ('<span class="trilho travada" role="img" aria-disabled="true"'
+            ' aria-label="Padrão: o sinal do jogo, sem ajuste"></span>')
+
+
 def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     """A linha de UM motor: interruptor · barra que arrasta · número · `%`.
 
@@ -962,7 +995,7 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     return (f'<div class="motor mult{"" if ligado else " off"}"'
             f' data-campo="motor-{sigla}-pedido" data-hef-alvo="atributo"'
             f' data-hef-atributo="title">'
-            f'{botao}{trilho}'
+            f'{botao}{trilho}{_trilho_travado()}'
             f'<span class="num" data-campo="{campo}-pct">'
             f'{VAZIO if vazio else valor}</span>'
             f'<span class="teto">%</span></div>')
@@ -997,7 +1030,7 @@ def _linha_da_haptica(valor, ligado, vazio=False):
     return (f'<div class="motor mult haptica"'
             f' data-campo="haptica-fora" data-hef-alvo="classe"'
             f' data-hef-classe="fora">'
-            f'{botao}{trilho}'
+            f'{botao}{trilho}{_trilho_travado()}'
             f'<span class="num" data-campo="barra-h-pct">'
             f'{VAZIO if vazio else valor}</span>'
             f'<span class="teto no-ar" data-campo="haptica-no-ar"'
@@ -1211,7 +1244,8 @@ def _coluna(c, e=None, conectado=None):
             <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico"{tinta}>{desenho}</div>
             <div class="rot-ctrl" data-hef="identidade">{rotulo}
-            <div class="forca">
+            <div class="forca" data-campo="padrao" data-hef-alvo="classe"
+                 data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado">{degraus}</div>
               {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
@@ -1301,8 +1335,11 @@ MIOLO = f'''
             <div><span class="sec-rot">Força da vibração
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
-                <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
+                <b>Economia</b> 30% · <b>Padrão</b> 100%, o sinal como o jogo mandou ·
                 <b>Máximo</b> 150%, mais forte.<br><br>
+                No Padrão as barras do sensor e dos motores ficam verdes e
+                travadas: o sinal chega como veio, e o que você guardou volta
+                com a Economia ou o Máximo.<br><br>
                 O trilho embaixo vai de 0 a {TETO}%, e o valor que vale é o dele:
                 acende o maior degrau que ele alcança.<br><br>
                 {DICA_DO_TETO_DA_MESA}<br><br>

@@ -47,7 +47,7 @@ _POLICY_MULT: dict[str, float] = {
 
 _POLICY_LABEL: dict[str, str] = {
     "economia": "Economia",
-    "balanceado": "Balanceado",
+    "balanceado": "Padrão",
     "max": "Máximo",
     "auto": "Auto",
 }

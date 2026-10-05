@@ -29,6 +29,7 @@ from typing import Any
 
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
+from hefesto_dualsense4unix.core.rumble import vale_o_padrao
 
 from . import Contexto, registrar
 from . import perfil as _perfil
@@ -307,6 +308,20 @@ def _quanto_multiplica(pct: dict[str, Any], barra: int | None) -> str:
             f"{_n(efetivo)}% do que o jogo pedir.")
 
 
+PALAVRA_DO_PADRAO = "Padrão"
+
+PALAVRA_DO_ZERO = "Desligado"
+
+FRASE_DO_PADRAO = "Padrão: o sinal chega como o jogo mandou. Escolha Economia ou Máximo para ajustar."
+
+
+def _texto_da_barra(valor: int, padrao: bool) -> str:
+    """O que o número da barra diz: «Padrão» travado, «Desligado» no zero, ou o valor."""
+    if padrao:
+        return PALAVRA_DO_PADRAO
+    return PALAVRA_DO_ZERO if int(valor) <= 0 else str(valor)
+
+
 def _barras_dos_motores(state: dict[str, Any], uniq: str) -> dict[str, int]:
     """``{"e": forte_pct, "d": fraco_pct}`` DESTE controle, do `state_full`.
 
@@ -553,6 +568,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         politica, custom, propria = _forca_em_vigor(overrides, uniq, ctx.state)
         pct = _pct_da_coluna(politica, custom)
         barras = _barras_dos_motores(ctx.state, uniq)
+        padrao = vale_o_padrao(politica)
         plano = {
             "identidade": _sem_marcacao(col.get("identidade", "")),
             # variável em vez de inventar um tom.
@@ -566,6 +582,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "degrau-herdado": "1" if politica and not propria else "",
             "mult-teto": _no_teto(pct),
             "em-teste": "1" if uniq and uniq in em_teste() else "",
+            "padrao": "1" if padrao else "",
         }
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")
@@ -574,14 +591,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # `state_full.rumble_motores`, o MESMO mapa que
             plano[f"motor-{lado}-pedido"] = (
                 f'O jogo pediu {m.get("n")} de 255 neste motor agora.'
-                if m.get("sabe") else _quanto_multiplica(pct, barras.get(lado)))
+                if m.get("sabe") else FRASE_DO_PADRAO if padrao
+                else _quanto_multiplica(pct, barras.get(lado)))
             plano[f"barra-{lado}"] = str(barras[lado])
-            plano[f"barra-{lado}-pct"] = str(barras[lado])
+            plano[f"barra-{lado}-pct"] = _texto_da_barra(barras[lado], padrao)
             # ELE NÃO TEM VALOR PRÓPRIO, e é isso que o deixa nascer sem campo
             plano[f"lado-{lado}"] = "1" if barras[lado] > 0 else ""
         haptica, alcanca = _haptica_do_controle(ctx.state, uniq)
         plano["barra-h"] = str(haptica)
-        plano["barra-h-pct"] = str(haptica)
+        plano["barra-h-pct"] = _texto_da_barra(haptica, padrao)
         plano["lado-h"] = "1" if haptica > 0 else ""
         plano["haptica-fora"] = "" if alcanca else "1"
         # chegando a ESTE controle agora, do `state_full` (`haptica_no_ar`).
@@ -822,12 +840,17 @@ def _par_das_barras(
     sentir o valor de antes do arraste — o "ao vivo" atrasado em um tique. Quem
     grava sabe o que gravou e diz.
     """
+    weak, strong = PAR_DE_TESTE
+    perfil = _perfil_ativo(ctx).get("controllers")
+    politica, _, _ = _forca_em_vigor(perfil if isinstance(perfil, dict) else {}, uniq, ctx.state)
+    if vale_o_padrao(politica):
+        # Em Padrão as barras não se aplicam, e o Testar sente o mesmo que o jogo.
+        return (weak, strong)
     barras = dict(_barras_dos_motores(ctx.state, uniq))
     if acabou_de_gravar is not None:
         lado, pontos = acabou_de_gravar
         if lado in barras:
             barras[lado] = pontos
-    weak, strong = PAR_DE_TESTE
     return (
         _reduzido_pela_barra(weak, barras["d"]),
         _reduzido_pela_barra(strong, barras["e"]),

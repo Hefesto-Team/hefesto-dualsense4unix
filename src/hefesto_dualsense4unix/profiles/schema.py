@@ -749,6 +749,20 @@ def motores_dos_controles(
     return fora
 
 
+def politicas_dos_controles(
+    controllers: dict[str, ControllerOverrides] | None,
+) -> dict[str, str]:
+    """``{uniq: policy}`` de toda peça do perfil que ESCOLHEU o degrau da força."""
+    fora: dict[str, str] = {}
+    for uniq, cfg in (controllers or {}).items():
+        rumble = getattr(cfg, "rumble", None)
+        if rumble is None or "policy" not in rumble.model_fields_set:
+            continue
+        if rumble.policy is not None:
+            fora[uniq] = rumble.policy
+    return fora
+
+
 class ControllerRumbleOverride(BaseModel):
     """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08)."""
 

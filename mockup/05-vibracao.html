@@ -1126,6 +1126,28 @@
     background:linear-gradient(to right,transparent calc(50% - 1px),
       var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
       transparent calc(50% + 1px)),var(--border-forte)}
+  /* O PADRÃO TRAVA AS BARRAS — 04/10/2026, ela: «se balanceado é o original.
+     então não tem pq ter original». Com o degrau Padrão (`.forca.padrao`), o
+     Sensor Háptico e os dois motores ficam inteiros verdes e travados, com a
+     palavra no lugar do número: o sinal chega como o jogo mandou e o que ela
+     guardou fica esperando a Economia ou o Máximo. Travar é TROCAR DE ELEMENTO
+     (o `<input>` some, a barra verde aparece): seta e foco não alcançam quem
+     não está na tela. A palavra do zero («Desligado») usa o mesmo vão, porque
+     o `<span class="lado">` sem `on` é exatamente o motor em zero. */
+  .vib .forca ~ .motor .trilho.travada{display:none}
+  .vib .forca.padrao ~ .motor .trilho.arrasta{display:none}
+  .vib .forca.padrao ~ .motor .trilho.travada{display:block;background:var(--green);
+    opacity:.85;cursor:not-allowed}
+  .vib .forca.padrao ~ .motor .lado{pointer-events:none}
+  .vib .forca ~ .motor .teto{grid-column:4;grid-row:1}
+  .vib .forca ~ .motor .num{grid-row:1;grid-column:3;display:flex;
+    justify-content:flex-end;white-space:nowrap}
+  .vib .forca ~ .motor .lado:not(.on) ~ .num{grid-column:3 / span 2;
+    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--comment)}
+  .vib .forca ~ .motor .lado:not(.on) ~ .teto{font-size:0}
+  .vib .forca.padrao ~ .motor .lado ~ .num{grid-column:3 / span 2;
+    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--green)}
+  .vib .forca.padrao ~ .motor .lado ~ .teto{font-size:0}
   .motor.haptica.fora{opacity:.45}
   .motor.haptica.fora .trilho.arrasta,.motor.haptica.fora .lado{pointer-events:none}
   /* a barra vertical entre blocos irmãos — pedido dela */
@@ -2220,8 +2242,11 @@
             <div><span class="sec-rot">Força da vibração
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
-                <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
+                <b>Economia</b> 30% · <b>Padrão</b> 100%, o sinal como o jogo mandou ·
                 <b>Máximo</b> 150%, mais forte.<br><br>
+                No Padrão as barras do sensor e dos motores ficam verdes e
+                travadas: o sinal chega como veio, e o que você guardou volta
+                com a Economia ou o Máximo.<br><br>
                 O trilho embaixo vai de 0 a 200%, e o valor que vale é o dele:
                 acende o maior degrau que ele alcança.<br><br>
                 O Perfil de Bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
@@ -2619,9 +2644,10 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Cosmic Red
               <span class="pt">•</span> USB</div>
-            <div class="forca">
+            <div class="forca" data-campo="padrao" data-hef-alvo="classe"
+                 data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
-                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
@@ -2629,21 +2655,21 @@
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="50" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">50</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="50" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">50</span><span class="teto">%</span></div>
             <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -2986,9 +3012,10 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue
               <span class="pt">•</span> BT</div>
-            <div class="forca">
+            <div class="forca" data-campo="padrao" data-hef-alvo="classe"
+                 data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
-                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
@@ -2996,21 +3023,21 @@
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">0</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">0</span><span class="teto">%</span></div>
             <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3352,9 +3379,10 @@
     </g>
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P3 <span class="pt">•</span> Desconectado</div>
-            <div class="forca">
+            <div class="forca" data-campo="padrao" data-hef-alvo="classe"
+                 data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
-                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
@@ -3362,21 +3390,21 @@
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
             <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3718,9 +3746,10 @@
     </g>
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P4 <span class="pt">•</span> Desconectado</div>
-            <div class="forca">
+            <div class="forca" data-campo="padrao" data-hef-alvo="classe"
+                 data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
-                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+                   data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
               <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
@@ -3728,21 +3757,21 @@
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
             <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.

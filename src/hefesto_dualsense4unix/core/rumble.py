@@ -13,6 +13,21 @@ logger = get_logger(__name__)
 
 _ORCAMENTO_COM_TETO = "economia"
 
+#: O degrau que a tela chama de «Padrão» (04/10/2026, ela: «se balanceado é o
+#: original. então não tem pq ter original»): a chave, a CLI e o perfil seguem
+#: `balanceado`, e o multiplicador dele é 1,0 em `RUMBLE_POLICY_MULT`.
+POLITICA_PADRAO = "balanceado"
+
+
+def vale_o_padrao(politica: str | None) -> bool:
+    """``True`` quando o degrau que vale é o Padrão: o jogo chega como mandou.
+
+    **É A ÚNICA PERGUNTA** que as barras por canal (os dois motores e o ganho da
+    háptica) fazem antes de se aplicar: em Padrão elas ficam guardadas e não
+    multiplicam nada; em Economia, Máximo ou Personalizado elas voltam.
+    """
+    return politica == POLITICA_PADRAO
+
 
 SEM_TETO = "Sem teto"
 

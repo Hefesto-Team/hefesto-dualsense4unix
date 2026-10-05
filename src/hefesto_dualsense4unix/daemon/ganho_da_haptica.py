@@ -14,6 +14,9 @@ VOLUME_NORMAL = 65536
 
 TOLERANCIA_PCT = 1.0
 
+#: Em Padrão a háptica chega como o jogo mandou: 100 %, sem o ganho guardado.
+PCT_DO_JOGO = 100
+
 Rodar = Callable[[list[str]], "str | None"]
 
 
@@ -52,18 +55,29 @@ class GanhoDaHaptica:
         self._pelo_carregador: str | None = None
         self._teto: float | None = None
         self._em_economia: frozenset[str] = frozenset()
+        self._politicas: dict[str, str] = {}
+        self._politica_global: str | None = None
 
     def ler_do_perfil(self, controllers: Any) -> None:
         """Troca o mapa pelo ``controllers`` de um perfil (``None`` = ninguém opinou)."""
-        from hefesto_dualsense4unix.profiles.schema import pcts_da_haptica_dos_controles
+        from hefesto_dualsense4unix.profiles.schema import (
+            pcts_da_haptica_dos_controles,
+            politicas_dos_controles,
+        )
 
         mapa: dict[str, int] = {}
+        politicas: dict[str, str] = {}
         with contextlib.suppress(Exception):
             for uniq, pct in pcts_da_haptica_dos_controles(controllers).items():
                 chave = _chave(uniq)
                 if chave is not None:
                     mapa[chave] = pct
+            for uniq, politica in politicas_dos_controles(controllers).items():
+                chave = _chave(uniq)
+                if chave is not None:
+                    politicas[chave] = politica
         self._escritos = mapa
+        self._politicas = politicas
 
     def ler_do_daemon(self, daemon: Any, *, forcar: bool = False) -> None:
         """Relê o perfil que vale agora, pelo mesmo resolvedor dos gravadores."""
@@ -105,6 +119,8 @@ class GanhoDaHaptica:
 
             teto = teto_do_orcamento(_orcamento_declarado(getattr(daemon, "config", None)))
         self._teto = teto
+        politica = getattr(getattr(daemon, "config", None), "rumble_policy", None)
+        self._politica_global = politica if isinstance(politica, str) else None
         ligados: frozenset[str] = frozenset()
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.profiles.schema import controles_em_economia
@@ -123,7 +139,15 @@ class GanhoDaHaptica:
 
         return teto_do_orcamento(_ORCAMENTO_COM_TETO)
 
-    def pct(self, uniq: str | None) -> int:
+    def _vale_o_padrao(self, uniq: str | None) -> bool:
+        """O degrau deste controle é o Padrão (o dele, ou o global)?"""
+        from hefesto_dualsense4unix.core.rumble import vale_o_padrao
+
+        chave = _chave(uniq)
+        propria = self._politicas.get(chave) if chave is not None else None
+        return vale_o_padrao(propria or self._politica_global)
+
+    def pct_guardado(self, uniq: str | None) -> int:
         """O ganho que ela escolheu para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
         from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 
@@ -131,6 +155,16 @@ class GanhoDaHaptica:
         if chave is None:
             return HAPTICA_PCT_PADRAO
         return self._escritos.get(chave, HAPTICA_PCT_PADRAO)
+
+    def pct(self, uniq: str | None) -> int:
+        """O ganho que VALE antes do teto, em %: o guardado, ou 100 em Padrão.
+
+        Em Padrão o ganho guardado não se aplica (04/10/2026): o sinal chega
+        como o jogo mandou, e o guardado volta com a Economia ou o Máximo.
+        """
+        if self._vale_o_padrao(uniq):
+            return PCT_DO_JOGO
+        return self.pct_guardado(uniq)
 
     def fator(self, uniq: str | None) -> float:
         """O ganho que VALE em fator linear de amplitude (150 % → 1,5; na Economia, 0,3)."""
