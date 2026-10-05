@@ -115,7 +115,7 @@ ABRIR_A_CAIXA = ("(function(){{const l=[...document.querySelectorAll('.lugar .ab
 
 #: o que ficou para a dona da página, com a razão: ``{aba: (achado, dona e cura)}``
 PENDENTES: dict[str, tuple[str, str]] = {
-    "06-navegacao": (
+    "06-navegacao": (  # sai com: TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01
         "title div.fita-linha>div.fita>label.chip: a borda é a cor do plástico",
         "a dica da fita em pacotes/a06_navegacao.py, que as sprints abertas da aba Navegação "
         "reivindicam (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-…); a cura é «A borda…» — 05/10/2026"),

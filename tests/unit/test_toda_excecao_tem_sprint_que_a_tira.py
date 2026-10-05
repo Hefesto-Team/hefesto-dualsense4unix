@@ -221,6 +221,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 3,
     "tests/unit/test_toda_fala_declarada_chega_a_tela.py::_FALA_SEM_TELA_HOJE": 0,
     "tests/unit/test_todo_campo_do_caderno_tem_consumidor.py::ISENTOS": 5,
+    "tests/unit/test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula.py::PENDENTES": 1,
 }
 
 _A_PROPRIA_REGUA = "o próprio arquivo da régua, a cura ou a mordida: eles escrevem o que ela caça"
