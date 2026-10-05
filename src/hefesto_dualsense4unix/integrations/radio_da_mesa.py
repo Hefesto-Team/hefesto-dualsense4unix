@@ -518,6 +518,10 @@ class OrcamentoDoAdaptador:
     saida_por_s: float | None = None
     canais_evitados: tuple[int, ...] | None = None
     motivo_do_ar: str = ""
+    #: ``{aparelho (12 hex): {le, canais_evitados, qualidade, rssi}}`` de TODO enlace lido do
+    #: adaptador, o aparelho que for (celular, relógio, fone, controle): a faixa de cada
+    #: linha da seção «Dispositivos Conectados». ``None`` em campo = não sei.
+    enlaces: Mapping[str, Mapping[str, Any]] | None = None
 
     @property
     def pontes(self) -> tuple[tuple[str, str], ...]:
@@ -551,6 +555,7 @@ class OrcamentoDoAdaptador:
                 list(self.canais_evitados) if self.canais_evitados is not None else None
             ),
             "motivo_do_ar": self.motivo_do_ar,
+            "enlaces": {k: dict(v) for k, v in (self.enlaces or {}).items()},
         }
 
 
@@ -565,6 +570,8 @@ def orcamento_por_adaptador(
     *,
     ar: Mapping[str, Any] | None = None,
     canais_evitados: Mapping[str, tuple[int, ...] | None] | None = None,
+    enlaces: Mapping[str, Mapping[str, Any]] | None = None,
+    sinais: Mapping[str, int | None] | None = None,
     n_max: int = N_MAX_PONTES,
     raiz: str = "/sys/class/hidraw",
     listar: Callable[[str], list[str]] = os.listdir,
@@ -599,7 +606,10 @@ def orcamento_por_adaptador(
         )
     medidos = dict(ar or {})
     evitados = dict(canais_evitados or {})
-    enderecos = set(por_adaptador) | {e for e in medidos if e} | {e for e in evitados if e}
+    lidos = dict(enlaces or {})
+    sinais_lidos = dict(sinais or {})
+    enderecos = (set(por_adaptador) | {e for e in medidos if e} | {e for e in evitados if e}
+                 | {e for e in lidos if e})
     saida: dict[str, OrcamentoDoAdaptador] = {}
     for endereco in sorted(enderecos):
         leitura = medidos.get(endereco)
@@ -610,12 +620,31 @@ def orcamento_por_adaptador(
             entrada_por_s=_numero_ou_none(getattr(leitura, "entrada_por_s", None)),
             saida_por_s=_numero_ou_none(getattr(leitura, "saida_por_s", None)),
             canais_evitados=evitados.get(endereco),
+            enlaces=_enlaces_publicaveis(lidos.get(endereco), sinais_lidos),
             motivo_do_ar=(
                 str(getattr(leitura, "motivo", "") or "")
                 if leitura is not None
                 else ("" if endereco == SEM_ADAPTADOR else "o medidor não leu este adaptador")
             ),
         )
+    return saida
+
+
+def _enlaces_publicaveis(
+    lidos: Mapping[str, Any] | None, sinais: Mapping[str, int | None]
+) -> dict[str, dict[str, Any]]:
+    """Cada enlace lido do adaptador, só com tipos de JSON, e com o RSSI que o sinal mediu."""
+    saida: dict[str, dict[str, Any]] = {}
+    for aparelho, lido in (lidos or {}).items():
+        evitados = getattr(lido, "canais_evitados", None)
+        qualidade = getattr(lido, "qualidade", None)
+        rssi = sinais.get(_hex(aparelho))
+        saida[_hex(aparelho)] = {
+            "le": bool(getattr(lido, "le", False)),
+            "canais_evitados": list(evitados) if evitados is not None else None,
+            "qualidade": qualidade if isinstance(qualidade, int) else None,
+            "rssi": rssi if isinstance(rssi, int) and not isinstance(rssi, bool) else None,
+        }
     return saida
 
 

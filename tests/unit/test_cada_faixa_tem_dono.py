@@ -1,4 +1,4 @@
-"""Cada faixa tem dono — CADA-FAIXA-TEM-DONO-01.
+"""Cada faixa tem dono — CADA-FAIXA-TEM-DONO-01, na régua por aparelho do desenho 1.
 
 Nenhuma régua confere a saída contra ela mesma: a entrada é uma cena de mentira, e o
 esperado sai da entrada (dos evitados de cada adaptador, do padrão de frequências, das
@@ -20,7 +20,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.integrations import faixa_do_wifi as fw
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.utils import maquina
 
@@ -146,63 +145,70 @@ def _viz(ident: str, **campos: Any) -> dict[str, Any]:
             "lido": "", "produto": "", "no": f"/sys/forjado/{ident}", **campos}
 
 
-def _pistas(cena: dict[str, Any]) -> dict[str, No]:
+def _linhas(cena: dict[str, Any]) -> dict[str, No]:
+    """As linhas da régua, por `data-id`: um aparelho (ou rádio da casa) por linha."""
     arvore = _ler(a08.html_dos_canais(cena))
-    return {p.attrs["data-grupo"]: p for p in arvore.achar("div", "pista")}
+    return {p.attrs["data-id"]: p for p in arvore.achar("div", "ar-linha")}
 
 
-def _canais_do_trilho(pista: No, classe: str) -> list[tuple[int, int]]:
-    achados = []
-    for peca in pista.achar("div", classe):
-        m = re.fullmatch(r"left:([\d.e+-]+)%;width:([\d.e+-]+)%", peca.attrs["style"])
-        assert m, peca.attrs
-        ini = round(float(m.group(1)) * 79 / 100)
-        achados.append((ini, round((float(m.group(1)) + float(m.group(2))) * 79 / 100)))
+def _celulas(linha: No) -> list[No]:
+    return [c for c in linha.achar("i") if c.pai is not None and "ar-faixa" in c.pai.classes()]
+
+
+def _perdidos(linha: No) -> set[int]:
+    """Os canais perdidos de uma linha, lidos do `title` de cada célula."""
+    achados = set()
+    for c in _celulas(linha):
+        m = re.match(r"Canal (\d+) .* perdido para", c.attrs.get("title", ""))
+        if m:
+            achados.add(int(m.group(1)))
     return achados
 
 
-def test_uma_pista_por_adaptador_com_os_canais_dele() -> None:
-    pistas = _pistas(_cena())
-    assert list(pistas) == ["L1", "L2", "L3"]
-    for lid, (ini, fim) in ((i, EVITADOS[i]) for i in ("L1", "L2", "L3")):
-        assert _canais_do_trilho(pistas[lid], "evitado") == [(ini, fim)], lid
-    ditos = {lid: p.achar("span", "no-ar-dele")[0].dito() for lid, p in pistas.items()}
-    assert ditos == {"L1": "2 no ar", "L2": "1 no ar", "L3": "1 no ar"}
-    todo = "".join(p.dito() for p in pistas.values())
-    assert "4 no ar" not in todo
+def test_uma_linha_por_aparelho_com_os_canais_dele() -> None:
+    linhas = _linhas(_cena())
+    assert list(linhas) == ["c1", "c2", "c3", "c4"]
+    for ident, lid in (("c1", "L1"), ("c2", "L1"), ("c3", "L2"), ("c4", "L3")):
+        ini, fim = EVITADOS[lid]
+        assert _perdidos(linhas[ident]) == set(range(ini, fim)), ident
+        assert len(_celulas(linhas[ident])) == a08.CANAIS_DO_BT == 79
+    grupos = {g.attrs["data-grupo"]: g.dito() for g in _ler(a08.html_dos_canais(_cena())).achar(
+        "div", "ar-grupo") if "data-grupo" in g.attrs}
+    assert "2 aparelhos dividem o tempo deste rádio" in grupos["L1"]
+    assert "só 1 aparelho neste rádio" in grupos["L2"]
 
 
-def test_o_salto_de_cada_pista_e_da_lista_dela_e_nao_da_uniao() -> None:
-    pistas = _pistas(_cena())
-    livres = {i: [c for c in range(79) if not EVITADOS[i][0] <= c < EVITADOS[i][1]]
-              for i in ("L1", "L2", "L3")}
-    for lid, p in pistas.items():
-        cobertos = {c for a, b in _canais_do_trilho(p, "salto") for c in range(a, b)}
-        assert cobertos == set(livres[lid]), lid
+def _selo(linha: No) -> tuple[str, str]:
+    s = linha.achar("span", "ar-selo")
+    assert len(s) == 1
+    return s[0].dito().strip(), next(c for c in s[0].classes() if c != "ar-selo")
 
 
-def _conta(no: No) -> tuple[str, str]:
-    c = no.achar("span", "canais-do-lugar")
-    assert len(c) == 1
-    return c[0].dito().strip(), c[0].attrs["data-nivel"]
-
-
-def test_o_numero_da_pista_e_o_da_caixa() -> None:
+def test_o_numero_da_linha_e_o_da_caixa() -> None:
     cena = _cena()
-    pistas = _pistas(cena)
+    linhas = _linhas(cena)
     sala = _ler(a08.html_da_sala(cena))
     caixas = {c.attrs["data-id"]: c for c in sala.achar("div", "lugar")}
-    for lid in ("L1", "L2", "L3"):
-        da_pista = _conta(pistas[lid].achar("div", "rotulo")[0])
-        da_caixa = [(c.dito().strip(), c.attrs["data-nivel"])
-                    for c in caixas[lid].achar("span", "canais-do-lugar")
+    for ident, lid in (("c1", "L1"), ("c3", "L2"), ("c4", "L3")):
+        da_caixa = [c.dito().strip() for c in caixas[lid].achar("span", "canais-do-lugar")
                     if "data-nivel" in c.attrs]
-        assert da_caixa == [da_pista], lid
-    assert _conta(pistas["L2"])[0] == f"{79 - 10}/79"
+        assert da_caixa == [re.search(r"\d+/79", _selo(linhas[ident])[0]).group(0)], lid
+    assert _selo(linhas["c3"])[0] == f"boa {79 - 10}/79"
+    campo = a08.campos_da_secao(cena)["espectro-canais"]
     nas_caixas = {s.dito().strip() for c in caixas.values()
                   for s in c.achar("span", "canais-do-lugar") if "data-nivel" in s.attrs}
-    campo = a08.campos_da_secao(cena)["espectro-canais"]
     assert set(re.findall(r"\d+/79", _ler(campo).dito())) <= nas_caixas
+
+
+def test_o_selo_diz_a_palavra_pelo_mesmo_piso_do_adaptador() -> None:
+    """Liso, médio e engasga do `nivel_dos_canais` viram boa, apertada e sofrendo."""
+    cena = _cena()
+    cena["evitados"] = [{"lugar": "L1", "ini": 0, "fim": 5}, {"lugar": "L2", "ini": 0, "fim": 25},
+                        {"lugar": "L3", "ini": 0, "fim": 70}]
+    linhas = _linhas(cena)
+    assert _selo(linhas["c1"]) == ("boa 74/79", "boa")
+    assert _selo(linhas["c3"]) == ("apertada 54/79", "apertada")
+    assert _selo(linhas["c4"]) == ("sofrendo 9/79", "sofrendo")
 
 
 def _cor(no: No) -> str:
@@ -211,43 +217,29 @@ def _cor(no: No) -> str:
     return cores[0]
 
 
-def _tres_cores(cena: dict[str, Any]) -> dict[str, tuple[str, str, str]]:
-    pistas = _pistas(cena)
+def _duas_cores(cena: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    cabecas = {g.attrs["data-grupo"]: g for g in _ler(a08.html_dos_canais(cena)).achar(
+        "div", "ar-grupo") if "data-grupo" in g.attrs}
     caixas = {c.attrs["data-id"]: c
               for c in _ler(a08.html_da_sala(cena)).achar("div", "lugar")}
-    portas = _ler(a08.html_das_portas(cena))
-    achado = {}
-    for lug in cena["lugares"]:
-        lid = lug["id"]
-        porta = next(b for b in portas.achar("button", "porta")
-                     if b.attrs["data-alvo"] == f"porta-{lid}")
-        glifo = porta.achar("svg")[0]
-        achado[lid] = (_cor(pistas[lid]), _cor(caixas[lid].achar("input", "lugar-nome")[0]),
-                       _cor(glifo))
-    return achado
+    return {lug["id"]: (_cor(cabecas[lug["id"]]),
+                        _cor(caixas[lug["id"]].achar("input", "lugar-nome")[0]))
+            for lug in cena["lugares"]}
 
 
 @pytest.mark.parametrize("ordem", [("L1", "L2", "L3"), ("L3", "L1", "L2"), ("L2", "L3", "L1")])
-def test_a_cor_segue_o_adaptador_nas_tres_pecas_e_a_posicao_dele(ordem: tuple[str, ...]) -> None:
-    achado = _tres_cores(_cena(ordem=ordem))
+def test_a_cor_segue_o_adaptador_na_cabeca_e_na_caixa_e_a_posicao_dele(
+        ordem: tuple[str, ...]) -> None:
+    achado = _duas_cores(_cena(ordem=ordem))
     for posicao, lid in enumerate(ordem):
         esperada = f"cor-{a08.CORES_DOS_ADAPTADORES[posicao]}"
-        assert achado[lid] == (esperada,) * 3, (lid, achado[lid])
+        assert achado[lid] == (esperada,) * 2, (lid, achado[lid])
 
 
 def test_o_quinto_adaptador_em_diante_fica_comment() -> None:
     cena = _cena(4)
     cena["lugares"].append({**cena["lugares"][0], "id": "L5", "nome": "Quinto"})
     assert a08.cor_do_adaptador(cena, "L5") == a08.COR_DO_QUINTO_EM_DIANTE == "comment"
-
-
-def _pares_de_glifo_e_nome(cena: dict[str, Any]) -> list[tuple[str, str]]:
-    html = re.sub(r'\scor-\w+|style="[^"]*"', "", a08.html_dos_canais(cena))
-    pares = []
-    for p in _ler(html).achar("div", "pista"):
-        rotulo = p.achar(None, "rotulo")[0]
-        pares.append((rotulo.achar("use")[0].attrs["href"], rotulo.achar("span", "nome")[0].dito()))
-    return pares
 
 
 def _cena_variada(n: int = 3) -> dict[str, Any]:
@@ -258,9 +250,14 @@ def _cena_variada(n: int = 3) -> dict[str, Any]:
     ], wifi=[{"no": "", "mhz": 5805, "largura": 80}])
 
 
-def test_a_cor_nao_e_o_unico_sinal_glifo_e_nome_separam_toda_pista() -> None:
-    pares = _pares_de_glifo_e_nome(_cena_variada())
-    assert len(pares) == len(set(pares)) == 7, pares
+def test_a_cor_nao_e_o_unico_sinal_toda_linha_tem_glifo_e_palavra() -> None:
+    linhas = _linhas(_cena_variada())
+    assert len(linhas) >= 7
+    for ident, linha in linhas.items():
+        rotulo = linha.achar(None, "ar-rot")[0]
+        assert rotulo.achar("use"), ident
+        assert rotulo.achar("span", "nome")[0].dito().strip(), ident
+        assert linha.achar("div", "ar-faixa")[0].attrs.get("aria-label"), ident
 
 
 def _usos_da_antena(html: str) -> list[No]:
@@ -270,25 +267,30 @@ def _usos_da_antena(html: str) -> list[No]:
 def test_a_antena_e_so_do_adaptador_em_todo_campo_que_a_secao_emite() -> None:
     cena = _cena_variada()
     campos = a08.campos_da_secao(cena)
-    portas_de_adaptador = {f"porta-{i}" for i in ("L1", "L2", "L3")}
     permitidos = 0
     for chave, valor in campos.items():
         if not isinstance(valor, str):
             continue
         for uso in _usos_da_antena(valor):
             quem = uso.ancestrais()
-            na_pista = any({"pista", "adaptador"} <= q.classes() for q in quem)
+            na_cabeca = any({"ar-grupo"} <= q.classes() and "data-grupo" in q.attrs for q in quem)
             na_conta = any("canais-do-lugar" in q.classes() for q in quem)
-            na_porta = any(q.tag == "button" and q.attrs.get("data-alvo") in portas_de_adaptador
-                           for q in quem)
-            assert na_pista or na_conta or na_porta, (chave, [q.attrs for q in quem[:3]])
+            assert na_cabeca or na_conta, (chave, [q.attrs for q in quem[:3]])
             permitidos += 1
-    assert permitidos >= 3 + 3 + 3, "a régua ficou cega: faltam as antenas dos adaptadores"
+    assert permitidos >= 3 + 3, "a régua ficou cega: faltam as antenas dos adaptadores"
     # o rádio sem tipo e o aparelho `outro` (no ar e desligado) levam o «?»
-    sala = campos["radio-sala"]
-    assert sala.count("#rd-ajuda") >= 2
-    assert not [u for u in _usos_da_antena(campos["vizinhanca-das-portas"])
-                if not any(q.attrs.get("data-alvo") in portas_de_adaptador for q in u.ancestrais())]
+    assert campos["radio-sala"].count("#rd-ajuda") >= 2
+
+
+def test_pintar_a_secao_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:
+    gravou: list[str] = []
+    for nome in ("_escrever", "gravar_maquina", "gravar_rascunho_da_mesa", "gravar_o_computador",
+                 "gravar_maquina_com_descartes"):
+        monkeypatch.setattr(maquina, nome, lambda *a, _n=nome, **k: gravou.append(_n) or True)
+    cena = _cena_variada()
+    a08.campos_da_secao(cena)
+    a08.html_dos_canais(cena)
+    assert gravou == []
 
 
 def _hex_de(token: str) -> str:
@@ -339,11 +341,12 @@ def _de(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
     return math.dist(_lab(a), _lab(b))
 
 
-def test_as_cores_se_separam_para_quem_nao_ve_cor() -> None:
-    pistas = _pistas(_cena(4, wifi=[{"no": "", "mhz": 2437, "largura": 20}]))
-    tokens = sorted({_cor(p).removeprefix("cor-") for p in pistas.values() if p.classes() & {
-        f"cor-{t}" for t in (*a08.CORES_DOS_ADAPTADORES, a08.COR_DO_WIFI)}})
-    assert len(tokens) == 5, tokens
+def test_as_cores_dos_adaptadores_se_separam_para_quem_nao_ve_cor() -> None:
+    cena = _cena(4)
+    cabecas = [g for g in _ler(a08.html_dos_canais(cena)).achar("div", "ar-grupo")
+               if "data-grupo" in g.attrs]
+    tokens = sorted({_cor(g).removeprefix("cor-") for g in cabecas})
+    assert len(tokens) == 4, tokens
     assert "green" not in tokens and "red" not in tokens
     hexes = {t: _hex_de(t) for t in tokens}
     for modo in MACHADO:
@@ -357,15 +360,15 @@ def test_o_lido_sai_com_o_selo_e_sem_interrogacao_e_o_dela_sem_selo() -> None:
     dela = _viz("25a7:fa07", tipo="teclado", nome="Teclado")
     camera = _viz("0c45:6366", sugestao="Webcam", sugestao_tipo="webcam", lido="Câmera")
     cena = _cena(vizinhos=[lido, dela, camera])
-    pistas = _pistas(cena)
-    r_lido = pistas["3554:fa09"].achar(None, "rotulo")[0]
+    linhas = _linhas(cena)
+    r_lido = linhas["3554:fa09"].achar(None, "rotulo")[0]
     assert r_lido.achar("span", "nome")[0].dito() == "Teclado"
     assert [s.dito() for s in r_lido.achar("span", "selo-lido")] == [a08.SELO_LIDO] == [LIDO]
     assert "?" not in r_lido.dito()
-    r_dela = pistas["25a7:fa07"].achar(None, "rotulo")[0]
+    r_dela = linhas["25a7:fa07"].achar(None, "rotulo")[0]
     assert not r_dela.achar("span", "selo-lido")
     assert r_dela.achar("span", "nome")[0].dito() == "Teclado"
-    r_cam = pistas["0c45:6366"].achar(None, "rotulo")[0]
+    r_cam = linhas["0c45:6366"].achar(None, "rotulo")[0]
     assert r_cam.achar("span", "nome")[0].dito() == "Webcam?"
     assert not r_cam.achar("span", "selo-lido")
     assert "lido pelo computador" in r_lido.attrs["title"]
@@ -374,86 +377,71 @@ def test_o_lido_sai_com_o_selo_e_sem_interrogacao_e_o_dela_sem_selo() -> None:
 def test_o_ff_com_produto_leva_o_produto_e_sem_produto_a_palavra_do_censo() -> None:
     com = _viz("2357:012d", produto="802.11ac NIC")
     sem = _viz("1234:5678")
-    pistas = _pistas(_cena(vizinhos=[com, sem]))
-    r_com = pistas["2357:012d"].achar(None, "rotulo")[0]
+    linhas = _linhas(_cena(vizinhos=[com, sem]))
+    r_com = linhas["2357:012d"].achar(None, "rotulo")[0]
     assert r_com.achar("span", "nome")[0].dito() == "802.11ac NIC"
     assert r_com.achar("use")[0].attrs["href"] == "#rd-ajuda"
-    r_sem = pistas["1234:5678"].achar(None, "rotulo")[0]
+    r_sem = linhas["1234:5678"].achar(None, "rotulo")[0]
     assert r_sem.achar("span", "nome")[0].dito() == a08.ESPECIE_DESCONHECIDA == "Não identificado"
     assert "Sem nome" not in a08.html_dos_canais(_cena(vizinhos=[com, sem]))
 
 
-def test_pintar_a_secao_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:
-    gravou: list[str] = []
-    for nome in ("_escrever", "gravar_maquina", "gravar_rascunho_da_mesa", "gravar_o_computador",
-                 "gravar_maquina_com_descartes"):
-        monkeypatch.setattr(maquina, nome, lambda *a, _n=nome, **k: gravou.append(_n) or True)
-    cena = _cena_variada()
-    a08.campos_da_secao(cena)
-    a08.grupos_do_ar(cena)
-    assert gravou == []
-
-
-def test_o_wifi_do_nm_e_o_vizinho_do_mesmo_no_sao_uma_pista_so() -> None:
+def test_o_wifi_do_nm_e_o_vizinho_do_mesmo_no_sao_uma_linha_so() -> None:
     no = ENDERECO_DO_TECLADO
     cena = _cena(vizinhos=[_viz("2357:012d", no=no)],
                  wifi=[{"no": no, "mhz": 5805, "largura": 80},
                        {"no": "", "mhz": 2437, "largura": 20}])
-    grupos = [g for g in a08.grupos_do_ar(cena) if g["tipo"] != "adaptador"]
-    assert [g["id"] for g in grupos] == ["2357:012d", "wifi-1"]
-    assert [g["nome"] for g in grupos] == [a08.NOME_DO_WIFI] * 2
-    assert grupos[0]["faixas"][0]["como"] == fw.FORA
-    assert (grupos[1]["faixas"][0]["ini"], grupos[1]["faixas"][0]["fim"]) == (25, 46)
-    pistas = _pistas(cena)
-    assert "5 GHz: fora desta faixa" in pistas["2357:012d"].dito()
-    assert f"25{a08.TRACO_CURTO}45" in pistas["wifi-1"].dito()
+    linhas = _linhas(cena)
+    outros = [i for i in linhas if i not in ("c1", "c2", "c3", "c4")]
+    assert outros == ["2357:012d", "wifi-1"]
+    assert [linhas[i].achar("span", "nome")[0].dito() for i in outros] == [a08.NOME_DO_WIFI] * 2
+    assert a08.faixas_do_ar.FORA_DA_FAIXA in linhas["2357:012d"].dito()
+    assert "5 GHz" in linhas["2357:012d"].dito() and "canal 161" in linhas["2357:012d"].dito()
+    banda = {int(m.group(1)) for c in _celulas(linhas["wifi-1"])
+             if (m := re.match(r"Canal (\d+) .* ocupado aqui", c.attrs.get("title", "")))}
+    assert (min(banda), max(banda) + 1) == (25, 46)
+    assert "2.4 GHz" in linhas["wifi-1"].dito() and "canal 6" in linhas["wifi-1"].dito()
 
 
-def test_o_receptor_e_o_wifi_sem_leitura_dizem_que_nao_se_le() -> None:
+def test_o_receptor_e_o_wifi_sem_leitura_dizem_a_verdade() -> None:
     cena = _cena(vizinhos=[_viz("3554:fa09", tipo="teclado", nome="Teclado"),
                            _viz("2357:012d", tipo="wifi", nome="Wi-Fi")])
-    pistas = _pistas(cena)
-    assert a08.CANAL_DO_RADIO_NAO_SE_LE in pistas["3554:fa09"].dito()
-    assert a08.FAIXA_DO_WIFI_NAO_SE_LE in pistas["2357:012d"].dito()
-    assert not pistas["3554:fa09"].achar("div", "evitado")
+    linhas = _linhas(cena)
+    assert a08.faixas_do_ar.NAO_DESCOBERTA in linhas["3554:fa09"].dito()
+    assert a08.faixas_do_ar.SEM_REDE in linhas["2357:012d"].dito()
+    assert not _celulas(linhas["3554:fa09"]) and not _celulas(linhas["2357:012d"])
 
 
 def test_adaptador_sem_mapa_diz_que_nao_se_mede_e_nunca_zero_evitados() -> None:
     cena = _cena(2)
     cena["evitados"] = [v for v in cena["evitados"] if v["lugar"] != "L2"]
     cena["canais_medidos"]["L2"] = False
-    pistas = _pistas(cena)
-    assert a08.SEM_MEDIDA in pistas["L2"].dito()
-    assert "/79" not in pistas["L2"].dito() and not pistas["L2"].achar("div", "evitado")
-    assert "sem-medida" in pistas["L2"].classes() and "sem-medida" not in pistas["L1"].classes()
-    # o mapa falta também com controle no ar (o medidor parado, o primeiro tique): a pista
-    # não pode negar o «N no ar» que o rótulo dela mesma diz
-    assert re.search(r"[1-9] no ar", pistas["L2"].dito()), pistas["L2"].dito()
-    assert "sem um controle" not in pistas["L2"].dito().lower()
+    linhas = _linhas(cena)
+    assert a08.faixas_do_ar.NAO_SE_MEDE in linhas["c3"].dito()
+    assert "/79" not in linhas["c3"].dito() and not _celulas(linhas["c3"])
+    assert "/79" in linhas["c1"].dito()
 
 
 def test_com_zero_adaptadores_nao_ha_regua() -> None:
     cena = _cena(3)
     cena["lugares"] = []
-    assert a08.html_dos_canais(cena) == "" and a08.grupos_do_ar(cena) == []
+    assert a08.html_dos_canais(cena) == ""
 
 
-def test_o_rotulo_de_vizinho_e_botao_e_o_de_adaptador_nao() -> None:
-    pistas = _pistas(_cena(vizinhos=[_viz("3554:fa09", sugestao="Teclado", lido="Teclado",
+def test_o_rotulo_de_vizinho_e_botao_e_o_de_aparelho_nao() -> None:
+    linhas = _linhas(_cena(vizinhos=[_viz("3554:fa09", sugestao="Teclado", lido="Teclado",
                                           sugestao_tipo="teclado")]))
-    assert pistas["L1"].achar("button") == []
-    botao = pistas["3554:fa09"].achar("button", "rotulo")[0]
+    assert linhas["c1"].achar("button") == []
+    botao = linhas["3554:fa09"].achar("button", "rotulo")[0]
     assert botao.attrs["data-gesto"] == "vizinho-o-que-e"
     assert botao.attrs["data-alvo"] == "3554:fa09"
 
 
-def test_adaptador_medido_sem_canal_evitado_tem_a_pista_inteira_livre() -> None:
+def test_adaptador_medido_sem_canal_evitado_tem_a_faixa_inteira_boa() -> None:
     """Medido e sem nenhum evitado (79/79) é um fato, e não «não se mede»."""
     cena = _cena(2)
     cena["evitados"] = [v for v in cena["evitados"] if v["lugar"] != "L2"]
-    pistas = _pistas(cena)
-    assert _conta(pistas["L2"].achar(None, "rotulo")[0])[0] == "79/79"
-    assert not pistas["L2"].achar("div", "evitado")
-    assert _canais_do_trilho(pistas["L2"], "salto") == [(0, 79)]
-    assert a08.SEM_MEDIDA not in pistas["L2"].dito()
-    assert "sem-medida" not in pistas["L2"].classes()
+    linhas = _linhas(cena)
+    assert _selo(linhas["c3"]) == ("boa 79/79", "boa")
+    assert _perdidos(linhas["c3"]) == set()
+    assert a08.faixas_do_ar.NAO_SE_MEDE not in linhas["c3"].dito()

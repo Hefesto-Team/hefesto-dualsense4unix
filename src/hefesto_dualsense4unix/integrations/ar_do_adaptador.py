@@ -78,6 +78,11 @@ MAX_CONEXOES = 20
 FLAG_HCI_UP = 0x01
 LINK_MODE_MESTRE = 0x0001
 TIPO_ACL = 0x01
+#: ``LE_LINK`` do kernel: o enlace de baixa energia (pulseira, relógio, fone novo). O
+#: ``Read AFH Channel Map`` é do enlace clássico; o equivalente LE (``LE Read Channel Map``,
+#: OGF 0x08 OCF 0x0015) NÃO passa pelo ``hci_sec_filter`` sem ``CAP_NET_RAW`` (a tabela do
+#: filtro acaba no OGF 5), então um enlace LE não tem faixa própria lida sem root.
+TIPO_LE = 0x80
 
 VOLTA_DO_CONTADOR = 1 << 32
 TETO_DE_PACOTES_POR_S = 20_000.0
@@ -89,6 +94,7 @@ JANELA_MAXIMA_S = 5.0
 
 OPCODE_LER_MAPA_AFH = (0x05 << 10) | 0x0006
 OPCODE_LER_RSSI = (0x05 << 10) | 0x0005
+OPCODE_LER_QUALIDADE = (0x05 << 10) | 0x0003
 CANAIS_DO_BT = 79
 CANAIS_MINIMOS_DO_AFH = 20
 CANAIS_CALMOS = 60
@@ -454,6 +460,18 @@ def rssi_da_resposta(evento: bytes, handle: int) -> int | None:
     return int(struct.unpack_from("<b", evento, 9)[0])
 
 
+def qualidade_da_resposta(evento: bytes, handle: int) -> int | None:
+    """O ``Command Complete`` do ``Read Link Quality`` → a qualidade do enlace (0 a 255)."""
+    if len(evento) < 10 or evento[0] != _HCI_EVENT_PKT or evento[1] != _EVT_CMD_COMPLETE:
+        return None
+    opcode = struct.unpack_from("<H", evento, 4)[0]
+    if opcode != OPCODE_LER_QUALIDADE or evento[6] != 0x00:
+        return None
+    if (struct.unpack_from("<H", evento, 7)[0] & 0x0FFF) != (handle & 0x0FFF):
+        return None
+    return int(evento[9])
+
+
 def _erro_do_comando(evento: bytes, opcode_esperado: int) -> int | None:
     """O status de erro do NOSSO comando (``Command Complete`` ou ``Status``)."""
     if len(evento) < 7 or evento[0] != _HCI_EVENT_PKT:
@@ -563,6 +581,62 @@ def ler_rssi(
     return achado if isinstance(achado, int) else None
 
 
+def ler_qualidade(
+    hci: int,
+    handle: int,
+    *,
+    prazo_s: float = PRAZO_DO_AFH_S,
+    abrir: Callable[[int], socket.socket] | None = None,
+    relogio: Callable[[], float] = time.monotonic,
+) -> int | None:
+    """A qualidade do enlace (``HCI_Read_Link_Quality``, sem root). ``None`` = não sei.
+
+    O comando é opcional no controlador: um chip que não o tem responde «Unknown HCI
+    Command», e isso volta como ``None`` (o mesmo «não sei» do AFH), sem pergunta à parte.
+    """
+    achado = _perguntar_ao_hci(
+        hci, handle, OPCODE_LER_QUALIDADE, lambda e: qualidade_da_resposta(e, handle),
+        prazo_s=prazo_s, abrir=abrir, relogio=relogio)
+    return achado if isinstance(achado, int) else None
+
+
+@dataclass(frozen=True)
+class EnlaceLido:
+    """O que se leu de UM enlace: o mapa dele (clássico), a qualidade, ou ``le``.
+
+    ``canais_evitados`` é ``None`` quando o mapa não veio (enlace LE, comando recusado ou o
+    primeiro tique): «não sei», nunca «nenhum evitado».
+    """
+
+    le: bool
+    canais_evitados: tuple[int, ...] | None = None
+    qualidade: int | None = None
+
+
+def enlaces_do_adaptador(
+    ar: ArDoAdaptador,
+    *,
+    ler_mapa: Callable[[int, int], MapaAFH | None] = ler_mapa_afh,
+    ler_qual: Callable[[int, int], int | None] = ler_qualidade,
+) -> dict[str, EnlaceLido]:
+    """``{endereço do aparelho: EnlaceLido}`` de TODO enlace do adaptador, o aparelho que for.
+
+    O enlace clássico (ACL) leva o mapa AFH e a qualidade; o LE só diz que é LE. Um aparelho
+    com os dois (um celular) fica com o clássico.
+    """
+    saida: dict[str, EnlaceLido] = {}
+    for conexao in ar.conexoes or ():
+        if conexao.tipo == TIPO_ACL:
+            mapa = ler_mapa(ar.hci, conexao.handle)
+            saida[conexao.endereco] = EnlaceLido(
+                le=False,
+                canais_evitados=mapa.evitados if mapa is not None else None,
+                qualidade=ler_qual(ar.hci, conexao.handle))
+        elif conexao.tipo == TIPO_LE:
+            saida.setdefault(conexao.endereco, EnlaceLido(le=True))
+    return saida
+
+
 def mapas_afh_do_adaptador(
     ar: ArDoAdaptador,
     *,
@@ -657,11 +731,14 @@ __all__ = [
     "NIVEL_LISO",
     "NIVEL_MEDIO",
     "OPCODE_LER_MAPA_AFH",
+    "OPCODE_LER_QUALIDADE",
     "PRIMEIRA_LEITURA",
     "SEM_BLUETOOTH",
+    "TIPO_LE",
     "ArDoAdaptador",
     "Contadores",
     "Enlace",
+    "EnlaceLido",
     "LeitorDoKernel",
     "LeituraDoAdaptador",
     "MapaAFH",
@@ -669,9 +746,12 @@ __all__ = [
     "canais_evitados_pelo_adaptador",
     "conferir",
     "endereco_do_kernel",
+    "enlaces_do_adaptador",
     "ler_mapa_afh",
+    "ler_qualidade",
     "main",
     "mapa_afh_da_resposta",
     "mapas_afh_do_adaptador",
     "nivel_dos_canais",
+    "qualidade_da_resposta",
 ]

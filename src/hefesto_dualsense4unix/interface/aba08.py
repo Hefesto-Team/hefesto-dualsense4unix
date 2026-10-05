@@ -2137,39 +2137,71 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                        font:inherit;text-align:left}
   .radio button.rotulo:hover{border-color:var(--purple);color:var(--fg)}
   .radio button.rotulo:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
-  /* CADA FAIXA TEM DONO (CADA-FAIXA-TEM-DONO-01): uma pista por adaptador, por rede e por
-     rádio vizinho, na mesma largura de 79 canais, e o rótulo da esquerda É a legenda.
-     A cor é a IDENTIDADE (de quem é); o nível do «N/79» é o que diz se está bom. */
-  .radio .pistas{display:flex;flex-direction:column;gap:4px}
-  .radio .pista{display:grid;grid-template-columns:minmax(270px,30%) 1fr;align-items:center;
-                gap:10px;min-height:24px}
-  .radio .pista .rotulo{display:flex;align-items:center;gap:6px;min-width:0;padding:1px 5px;
-                        font-size:12px;color:var(--texto-suave)}
-  .radio .pista .rotulo .nome{font-weight:600;color:var(--fg);overflow:hidden;
-                              text-overflow:ellipsis;white-space:nowrap}
-  .radio .pista .rotulo .i{font-size:14px;flex:none}
-  .radio .pista .rotulo .ds{width:20px;height:14px}
-  .radio .pista .glifo-do-grupo{color:var(--cor-do-grupo,var(--texto-suave))}
-  .radio .pista .no-ar-dele{display:inline-flex;align-items:center;gap:3px;white-space:nowrap;
-                            font-size:11px;color:var(--texto-mudo)}
-  .radio .pista .saiba,.radio .pista .selo-lido{font-size:10.5px;color:var(--texto-mudo);
+  /* UMA FAIXA POR APARELHO (AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01, o desenho 1):
+     os mesmos 79 canais em toda linha. Pintado é o canal bom, na cor do aparelho; o buraco é
+     o canal perdido, e nele a marca (embaixo) é a cor de quem briga ali, dos dois lados.
+     A cor é a IDENTIDADE; a palavra do selo é o que diz se está bom (cor nunca sozinha). */
+  .radio .espectro{--c-controle:#7eb8d4;--c-wifi:#c3e88d;--c-teclado:#ffb86c;--c-mouse:#f1fa8c;
+                 --c-celular:#f78c6c;--c-relogio:#82aaff;--c-ruido:#8a8fa8;--c-fone:#8be9fd;
+                 --c-caixa:#bd93f9;--c-outro:#9a9eb8;--vazio:#1b1c24}
+  .radio .ar{display:flex;flex-direction:column;gap:4px}
+  .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
+                   color:var(--texto-mudo);margin-top:8px;padding-top:6px;
+                   border-top:1px dashed var(--border-sutil)}
+  .radio .ar-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
+  .radio .ar-grupo b{font-weight:600;color:var(--cor-do-grupo,var(--fg))}
+  .radio .ar-grupo .glifo-do-grupo{color:var(--cor-do-grupo,var(--texto-suave));font-size:14px}
+  .radio .ar-linha,.radio .ar-regua{display:grid;align-items:center;column-gap:12px;
+                   grid-template-columns:minmax(150px,230px) minmax(0,1fr) minmax(130px,200px)}
+  .radio .ar-linha{transition:opacity .15s;border-radius:6px}
+  .radio .ar-linha:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+  .radio .pistas[data-foco] .ar-linha{opacity:.28}
+  .radio .pistas[data-foco] .ar-linha.acesa{opacity:1}
+  .radio .ar-rot{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px}
+  .radio .ar-rot > svg,.radio .ar-rot > button svg{flex:none;color:var(--cor)}
+  .radio .ar-rot .nome{display:block;color:var(--fg);overflow:hidden;
+                       text-overflow:ellipsis;white-space:nowrap}
+  .radio .ar-rot .sub{display:block;font-size:11px;color:var(--texto-mudo)}
+  .radio .ar-rot .i{font-size:14px;width:1em;height:1em}
+  .radio .ar-rot .ds{width:20px;height:14px}
+  .radio .ar-rot .selo-lido{font-size:10.5px;color:var(--texto-mudo);
                             font-family:var(--font-dado);white-space:nowrap}
-  .radio .pista .canais-do-lugar{margin-left:auto;font-size:11px}
-  .radio .pista .trilho{position:relative;height:22px;border-radius:7px;
-                        background:var(--app-bg);border:1px solid var(--linha);overflow:hidden}
-  .radio .pista.sem-medida .trilho{height:12px;border-style:dashed;border-radius:6px}
-  .radio .pista.sem-medida{min-height:16px}
-  .radio .pista .sem-faixa{position:absolute;inset:0;display:flex;align-items:center;
-                           padding:0 8px;font-size:9.5px;line-height:1;color:var(--texto-mudo);
-                           font-family:var(--font-dado);white-space:nowrap}
-  .radio .pista .salto{position:absolute;top:0;bottom:0;pointer-events:none;
-                       background:repeating-linear-gradient(90deg,var(--texto-mudo) 0 1px,
-                                                            transparent 1px 7px);opacity:.45}
-  .radio .pista .evitado{position:absolute;top:0;bottom:0;
-                         background:repeating-linear-gradient(45deg,var(--cor-do-grupo) 0 3px,
-                                                              transparent 3px 7px)}
-  .radio .pista .faixa{top:2px;bottom:2px;border-color:var(--cor-do-grupo);
-                       color:var(--cor-do-grupo);background:transparent}
+  .radio .ar-rot button.rotulo{display:flex;align-items:center;gap:8px;padding:1px 4px;
+                               min-width:0;font-size:13px;color:var(--fg)}
+  .radio .ar-faixa{display:grid;grid-template-columns:repeat(79,minmax(0,1fr));gap:1px;
+                   height:18px;min-width:0}
+  .radio .ar-faixa i{display:block;position:relative;background:var(--vazio);
+                     border-radius:1px}
+  .radio .ar-faixa i.b{background:var(--cor)}
+  .radio .ar-faixa u{position:absolute;left:0;right:0;bottom:0;height:4px;
+                     background:var(--m);text-decoration:none}
+  .radio .ar-faixa.sem{display:flex;align-items:center;justify-content:center;gap:8px;
+                       font-size:11px;color:var(--texto-mudo);
+                       border:1px dashed var(--border-forte);border-radius:4px}
+  .radio .ar-faixa.sem.fora{justify-content:flex-start;padding:0 8px;color:var(--green);
+                       background:rgba(80,250,123,.06);border:1px solid rgba(80,250,123,.25)}
+  .radio .ar-estado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;
+                    min-width:0}
+  .radio .ar-selo{font:600 11px var(--font-dado,monospace);padding:1px 6px;border-radius:5px;
+                  border:1px solid;white-space:nowrap}
+  .radio .ar-selo.boa{color:var(--green);border-color:rgba(80,250,123,.5)}
+  .radio .ar-selo.apertada{color:var(--yellow);border-color:rgba(241,250,140,.5)}
+  .radio .ar-selo.sofrendo{color:var(--red);border-color:rgba(255,85,85,.55)}
+  .radio .ar-quem{display:inline-flex;align-items:center;gap:3px;color:var(--texto-mudo);
+                  font-size:11px}
+  .radio .ar-quem i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .radio .ar-regua{margin-top:4px;font:10px var(--font-dado,monospace);color:var(--texto-mudo)}
+  .radio .ar-regua div{display:flex;justify-content:space-between}
+  .radio .ar-legenda{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .radio .ar-legenda button{display:flex;align-items:center;gap:5px;font-size:12px;font-family:inherit;
+                    background:var(--panel);border:1px solid var(--border-forte);
+                    color:var(--texto-suave);border-radius:7px;padding:3px 7px;cursor:pointer}
+  .radio .ar-legenda button i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .radio .ar-legenda button[aria-pressed="true"]{border-color:var(--fg);color:var(--fg)}
+  .radio .ar-legenda button:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
+  @media (max-width:900px){
+    .radio .ar-linha,.radio .ar-regua{grid-template-columns:120px minmax(0,1fr)}
+    .radio .ar-estado,.radio .ar-regua > :last-child{display:none}}
   /* O «Procurar» é do painel do «Conectar» e de mais nenhum: o do «⋮» tem o nome, uma
      frase e o botão. */
   .radio .painel:not([data-tipo="conectar"]) .cadeado{display:none}
@@ -2213,6 +2245,14 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
 """
 
 
+#: Os dois tipos que a régua ganhou e o desenho do rádio não tinha: o celular e o relógio.
+SIMBOLOS_DAS_FAIXAS = (
+    '  <symbol id="rd-celular" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" '
+    'rx="2"/><path d="M11 18h2"/></symbol>\n'
+    '  <symbol id="rd-relogio" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" '
+    'rx="3"/><path d="M9 7l1-5h4l1 5M9 17l1 5h4l1-5"/></symbol>')
+
+
 def _sprite_do_radio() -> str:
     """O sprite do desenho, com os ids em `rd-` e a silhueta sem os ids de dentro.
 
@@ -2236,7 +2276,7 @@ def _sprite_do_radio() -> str:
     corpo = re.sub(r'(<symbol id="i-ds"[^>]*>)(.*?)(</symbol>)', limpa_o_ds, corpo, flags=re.S)
     corpo = re.sub(r'<symbol id="i-', '<symbol id="rd-', corpo)
     corpo = "\n".join(linha for linha in corpo.splitlines() if linha.strip())
-    return abre + "\n" + corpo + "\n" + fecha
+    return abre + "\n" + corpo + "\n" + SIMBOLOS_DAS_FAIXAS + "\n" + fecha
 
 
 def _csv_do_desenho(ident: str) -> list[dict[str, str]]:
@@ -2341,9 +2381,16 @@ def _cena_do_desenho() -> dict:
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
     cheio["nao_conectou"] = True
-    vizinhos += [{"id": f"E{len(vizinhos) + 1 + i}", "tipo": "", "nome": "",
-                  "sugestao": s, "sugestao_tipo": s.lower(), "lido": s}
-                 for i, s in enumerate(("Teclado", "Mouse"))]
+    # O celular e o relógio que o BlueZ também lista no adaptador cheio (o desenho 1), e o teclado
+    # que o «Descobrir» já mediu (o mouse ainda não): as duas formas de um receptor.
+    aparelhos += [
+        {"id": f"celular-{cheio['id']}", "tipo": "celular", "lugar": cheio["id"],
+         "nome": "Celular", "rotulo": "Celular", "esperando": False, "fixo": False},
+        {"id": f"relogio-{cheio['id']}", "tipo": "relogio", "lugar": cheio["id"],
+         "nome": "Relógio", "rotulo": "Relógio", "esperando": False, "fixo": False}]
+    for _viz in vizinhos:
+        if _viz["tipo"] == "teclado":
+            _viz["banda"] = [18, 35]
     cena = {
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": {lg["id"]: True for lg in lugares},
@@ -2373,9 +2420,79 @@ SPRITE_DO_RADIO = _sprite_do_radio()
 
 ENCAIXE_CURTO = "Encaixe o DualSense numa entrada vazia."
 
-AJUDA_DO_AR = ("Cada linha é um rádio. O hachurado é onde cada adaptador parou de saltar; "
-               "a faixa do Wi-Fi é a que a rede anuncia. O canal de um teclado ou mouse "
-               "sem fio não se lê.")  # noqa-acento (texto de tela)
+AJUDA_DO_AR = ("Cada linha é um aparelho, nos mesmos 79 canais. Pintado é o canal bom; o vazio "
+               "é o canal perdido, e a marca embaixo é a cor de quem briga ali. Passe o mouse "
+               "numa linha: acendem ela e quem briga com ela.")  # noqa-acento (texto de tela)
+
+LEGENDA_DAS_FAIXAS = (
+    '<div class="ar-legenda" role="group" aria-label="Acender por tipo">'
+    + "".join(
+        f'<button type="button" aria-pressed="false" data-tipo-da-legenda="{tipo}">'
+        f'<i style="background:var(--c-{tipo})"></i>{rotulo}</button>'
+        for tipo, rotulo in _pacote08.LEGENDA_DAS_FAIXAS)
+    + "</div>")
+
+SCRIPT_DAS_FAIXAS = r"""
+  <script>
+  (function(){
+    'use strict';
+    if(window.__hefFaixas) return;
+    window.__hefFaixas = true;
+    // O que a pessoa aponta (a linha sob o mouse ou com o foco) e o tipo que ela escolheu na
+    // legenda. A linha vale mais que o tipo, e a faixa se repinta por dentro a cada tique:
+    // por isso o estado mora aqui, e o observador o reaplica depois de cada repintura.
+    var linhaAcesa = null, tipoAceso = null;
+    function pistas(){ return document.querySelector('.radio .pistas'); }
+    function aplicar(){
+      var p = pistas(); if(!p) return;
+      var linhas = Array.prototype.slice.call(p.querySelectorAll('.ar-linha'));
+      var acesas = null;
+      if(linhaAcesa){
+        var la = linhas.filter(function(l){ return l.getAttribute('data-id') === linhaAcesa; })[0];
+        if(la) acesas = [linhaAcesa].concat((la.getAttribute('data-briga') || '').split(' '));
+      } else if(tipoAceso){
+        acesas = linhas.filter(function(l){
+          return l.getAttribute('data-tipo') === tipoAceso ||
+            (' ' + (l.getAttribute('data-quem') || '') + ' ').indexOf(' ' + tipoAceso + ' ') >= 0;
+        }).map(function(l){ return l.getAttribute('data-id'); });
+      }
+      linhas.forEach(function(l){
+        l.classList.toggle('acesa', !!acesas && acesas.indexOf(l.getAttribute('data-id')) >= 0);
+      });
+      if(acesas) p.setAttribute('data-foco', '1'); else p.removeAttribute('data-foco');
+    }
+    function daLinha(ev){
+      return ev.target && ev.target.closest ? ev.target.closest('.radio .ar-linha') : null;
+    }
+    function apontar(ev){
+      var l = daLinha(ev);
+      linhaAcesa = l ? l.getAttribute('data-id') : null;
+      aplicar();
+    }
+    document.addEventListener('mouseover', apontar);
+    document.addEventListener('focusin', apontar);
+    document.addEventListener('mouseout', function(ev){
+      if(daLinha(ev) && !(ev.relatedTarget && ev.relatedTarget.closest &&
+                           ev.relatedTarget.closest('.radio .ar-linha'))){ apontar({target: null}); }
+    });
+    document.addEventListener('focusout', function(ev){
+      if(daLinha(ev)) apontar({target: null});
+    });
+    document.addEventListener('click', function(ev){
+      var b = ev.target && ev.target.closest ? ev.target.closest('.radio .ar-legenda button') : null;
+      if(!b) return;
+      var tipo = b.getAttribute('data-tipo-da-legenda');
+      tipoAceso = tipoAceso === tipo ? null : tipo;
+      Array.prototype.forEach.call(document.querySelectorAll('.radio .ar-legenda button'), function(x){
+        x.setAttribute('aria-pressed', x.getAttribute('data-tipo-da-legenda') === tipoAceso ? 'true' : 'false');
+      });
+      aplicar();
+    });
+    var p0 = pistas();
+    if(p0 && window.MutationObserver) new MutationObserver(aplicar).observe(p0, {childList: true});
+  })();
+  </script>
+"""
 
 SCRIPT_DA_SECAO_DO_RADIO = r"""
   <script>
@@ -3276,9 +3393,9 @@ MIOLO = f'''
           <div class="espectro-cab">
             Dispositivos Conectados
             <span class="ajuda" role="img" aria-label="{AJUDA_DO_AR}" title="{AJUDA_DO_AR}"><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
+            {LEGENDA_DAS_FAIXAS}
           </div>
           <div class="pistas" data-campo="espectro-canais" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-canais"]}</div>
-          <div class="portas" data-campo="vizinhanca-das-portas" data-hef-alvo="html">{CAMPOS_DO_RADIO["vizinhanca-das-portas"]}</div>
         </div>
 
         <div class="sala" data-campo="radio-sala" data-hef-alvo="html">{SALA_DO_DESENHO}</div>
@@ -3317,6 +3434,7 @@ MIOLO = f'''
     </div>
 {SPRITE_DO_RADIO}
 {SCRIPT_DA_SECAO_DO_RADIO}
+{SCRIPT_DAS_FAIXAS}
 <script>
 /* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026, SÓ NA BANCADA. No
    produto (onde o piloto pôs `window.__hef`) quem acende é o tique, pelo que

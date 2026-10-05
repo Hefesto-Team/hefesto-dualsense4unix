@@ -491,8 +491,11 @@ def test_o_pedido_do_governador_vira_a_janela_de_duas_saidas(mesa: Any) -> None:
     assert pedido[0]["data-alvo"] == U2 and pedido[0]["data-destino"] == I2
 
 
+#: o selo «sofrendo» da faixa de cada aparelho é o do desenho 1 que ela aprovou em 04/10
+#: (`docs/process/estudos/2026-10-04-o-desenho-das-conexoes/fotos/d1.png`), com a palavra junto.
 _O_VERMELHO_PEDIDO = ('.parte.movimento[data-nivel="engasga"]',
-                      '.canais-do-lugar[data-nivel="engasga"]')
+                      '.canais-do-lugar[data-nivel="engasga"]',
+                      '.ar-selo.sofrendo')
 
 
 def test_alem_do_limite_e_laranja_nunca_vermelho(mesa: Any) -> None:

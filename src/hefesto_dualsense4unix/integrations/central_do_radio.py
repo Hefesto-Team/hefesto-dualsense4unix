@@ -87,10 +87,8 @@ mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
 SEM O CLIQUE DELA (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
 30/09/2026, a validar por ela): a janela pareia o aparelho que
 ela escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
-e só um que a janela viu (a escolha do «Parear de Novo» pode chegar um passo
-antes de ele aparecer; o ``Pair`` espera o endereço dela ser visto). Até 30/09 ela
-pareava o primeiro controle que aparecesse, em meio segundo, antes de a tela o
-mostrar. E O CONTROLE QUE VOLTA PELO
+e só um que a janela viu (o «Parear de Novo» escolhe antes). Até 30/09 ela pareava o primeiro
+controle que aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO
 PAREAMENTO ANTIGO também chega (a foto 2 da lista dela de 25/09: *«conectou com
 algum mas não apareceu na lista»*): quem ela liga só com o PS reconecta no
 adaptador que já tinha a chave dele, sem passar pela janela. O controle que se

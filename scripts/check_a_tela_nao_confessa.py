@@ -64,6 +64,10 @@ FATOS: dict[str, str] = {
         "não nomeia, e a frase o diz na mesma linha",
 
 
+    "a faixa dele ainda não foi descoberta":
+        "o sujeito é A FAIXA do receptor 2.4G. Estado de agora: o «desliga-e-compara» "
+        "ainda não rodou para ele, e a linha traz o gesto que descobre — 04/10/2026",
+
     "o Hefesto não confirmou":
         "ESTADO DO ATO: o pedido saiu e a confirmação não voltou. A frase diz "
         "as duas causas na mesma oração (o serviço parou, ou o controle saiu "

@@ -467,6 +467,9 @@ class AparelhoDoBluez:
     classe: int | None = None
     modalias: str = ""
     icone: str = ""
+    #: ``Appearance`` (GAP, 16 bits) do aparelho LE: é por ela que um relógio ou uma
+    #: pulseira sem ``Icon`` e sem ``Class`` ganha o tipo dele.
+    aparencia: int | None = None
 
 
 def _inteiro(valor: object) -> int | None:
@@ -655,6 +658,7 @@ class LeitorDoBluez:
                     classe=_inteiro(self.propriedade(caminho, APARELHO, "Class")),
                     modalias=str(self.propriedade(caminho, APARELHO, "Modalias") or ""),
                     icone=str(self.propriedade(caminho, APARELHO, "Icon") or ""),
+                    aparencia=_inteiro(self.propriedade(caminho, APARELHO, "Appearance")),
                 )
             )
         return tuple(achados)

@@ -5751,6 +5751,8 @@ class IpcHandlersMixin:
     _medidor_de_ar: Any = None
     _adaptadores_em_cache: tuple[float, frozenset[str], dict[str, str]] | None = None
     _afh_evitados: dict[str, tuple[int, ...] | None] | None = None
+    _enlaces_lidos: dict[str, dict[str, Any]] | None = None
+    _ler_qualidade: Any = None
     _afh_lido_em: float = float("-inf")
     _afh_em_voo: bool = False
     _ler_afh: Any = None
@@ -5903,6 +5905,8 @@ class IpcHandlersMixin:
             entries,
             ar=ar,
             canais_evitados=dict(self._afh_evitados or {}),
+            enlaces=dict(self._enlaces_lidos or {}),
+            sinais=dict(self._sinal_dos_enlaces or {}),
         )
         return {endereco: o.publicar() for endereco, o in orcamento.items()}
 
@@ -5924,19 +5928,34 @@ class IpcHandlersMixin:
         self._afh_lido_em = agora
         leituras = dict(ar)
 
+        qualidade = self._ler_qualidade
+        if qualidade is None and self._ler_afh is not None:
+            # quem injeta o AFH (a régua) não pergunta ao rádio de verdade nem a qualidade
+            def qualidade(_hci: int, _handle: int) -> int | None:
+                return None
+        elif qualidade is None:
+            from hefesto_dualsense4unix.integrations.ar_do_adaptador import ler_qualidade
+
+            qualidade = ler_qualidade
+
         def perguntar() -> None:
             from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
-                canais_evitados_pelo_adaptador,
-                mapas_afh_do_adaptador,
+                enlaces_do_adaptador,
             )
 
             evitados: dict[str, tuple[int, ...] | None] = {}
+            enlaces: dict[str, dict[str, Any]] = {}
             try:
                 for endereco, leitura in leituras.items():
-                    evitados[endereco] = canais_evitados_pelo_adaptador(
-                        mapas_afh_do_adaptador(leitura, ler=ler)
+                    lidos = enlaces_do_adaptador(leitura, ler_mapa=ler, ler_qual=qualidade)
+                    enlaces[endereco] = lidos
+                    mapas = [m.canais_evitados for m in lidos.values()
+                             if m.canais_evitados is not None]
+                    evitados[endereco] = (
+                        tuple(sorted(set(mapas[0]).intersection(*mapas[1:]))) if mapas else None
                     )
                 self._afh_evitados = evitados
+                self._enlaces_lidos = enlaces
             except Exception:  # pragma: no cover - defensivo, jamais derruba o daemon
                 logger.debug("radio_afh_nao_lido", exc_info=True)
             finally:

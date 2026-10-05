@@ -21,4 +21,9 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **04/10/2026** — o desenho 1 das Conexões que ela aprovou (uma faixa por aparelho, a marca de quem
+  briga, a legenda no título, o celular e o relógio na régua): o produto recebe com o `--publicar 08`
+  do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue a de hoje (uma pista por adaptador e a
+  fileira das portas) e a integração não é instalada antes: o pacote já fala o desenho novo, e a página
+  nova entra junto, no mesmo fecho.

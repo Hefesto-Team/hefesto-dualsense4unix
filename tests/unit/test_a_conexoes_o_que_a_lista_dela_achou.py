@@ -539,10 +539,10 @@ def test_o_teclado_de_baixo_consumo_tem_o_desenho_do_teclado(
     assert "#rd-teclado" in _linha(a08, cena, TECLADO)
     perto = {a["id"]: a["tipo"] for a in cena["perto"]}
     assert perto[_id("aa:bb:cc:00:00:6d")] == "mouse"
-    assert perto[_id("aa:bb:cc:00:00:6e")] == "outro"
+    assert perto[_id("aa:bb:cc:00:00:6e")] == "celular"
     moldes = a08.html_dos_moldes(cena)
     painel = moldes[moldes.index('data-painel="conectar"'):]
-    assert "#rd-mouse" in painel and "#rd-ajuda" in painel
+    assert "#rd-mouse" in painel and "#rd-celular" in painel
     assert "#rd-radio" not in painel, "a antena é só do adaptador"
 
 
