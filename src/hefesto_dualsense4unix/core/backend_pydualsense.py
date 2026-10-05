@@ -4937,6 +4937,21 @@ class PyDualSenseController(IController):
                     return None
             return self._brilho_da_peca_locked(alvo)
 
+    def luz_do_jogo_para(self, uniq: str) -> bool:
+        """O JOGO está pintando a barra de `uniq` agora? (leitura pura)
+
+        A camada do jogo só recebe a cor que o merge ACEITOU (`set_game_output_for`: preto sem
+        prova é ausência, e a cor que o perfil escolheu e o jogo ainda não pintou vale), e ela
+        cai no fim da sessão (`end_game_session_for`). É o sinal que a aba Iluminação diz como
+        «Agora: a cor do jogo».
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            camada = self._game_output_by_uniq.get(alvo)
+            return bool(camada is not None and getattr(camada, "led", None) is not None)
+
     def brilho_das_luzes_para(self, uniq: str) -> int | None:
         """O degrau das luzes de número de `uniq`, RESOLVIDO (leitura pura)."""
         if self._key_to_uniq(uniq) is None:

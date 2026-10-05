@@ -2845,6 +2845,7 @@ class IpcHandlersMixin:
             entry["lightbar_disputada"] = self._lightbar_disputada(uniq, nos_por_uniq)
             entry["nascimento"] = self._nascimento_para(uniq)
             entry.update(self._brilhos_acesos(uniq))
+            entry["luz_do_jogo"] = self._luz_do_jogo(uniq)
 
             if entry.get("is_primary") and state is not None:
                 entry["inputs"] = self._inputs_from_state(state)
@@ -3287,6 +3288,20 @@ class IpcHandlersMixin:
                         (p for p, d in BRILHOS_DAS_LUZES.items() if d == degrau), None
                     )
         return saida
+
+    def _luz_do_jogo(self, uniq: str | None) -> bool:
+        """``True`` quando o JOGO pinta a barra deste controle agora (sempre publicado).
+
+        O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 3 (04/10/2026): a aba Iluminação diz «Agora: a cor
+        do jogo» só com isto. Quem decide é o dono do merge (`luz_do_jogo_para`); aqui só se lê, e
+        backend sem a leitura, ou controle sem endereço, é ``False`` — nunca um «talvez».
+        """
+        leitor = getattr(self.controller, "luz_do_jogo_para", None)
+        if uniq is None or not callable(leitor):
+            return False
+        with contextlib.suppress(Exception):
+            return leitor(uniq) is True
+        return False
 
     def _lightbar_disputada(
         self, uniq: str | None, nos_por_uniq: dict[str, str]

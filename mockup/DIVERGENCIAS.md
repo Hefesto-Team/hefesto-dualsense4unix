@@ -71,3 +71,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   volume que tinha escolhido volta. O microfone fica de fora. O produto recebe com o `--publicar 02`
   do fecho do conjunto «Conexões 2»; até lá o pacote só emite o campo `alto-padrao` quando a página
   publicada o tem, e a tela dela segue a de hoje.
+
+## 04-iluminacao.html
+- **05/10/2026** — uma linha curta embaixo das cores: «O jogo pinta por cima; sem jogo, a sua cor.»,
+  e, com o jogo pintando a barra agora, «Agora: a cor do jogo» (com «no P2» se for só parte dos
+  controles). Nenhum botão novo (decisão dela de 04/10, desenho aprovado em
+  `docs/process/estudos/2026-10-04-o-jogo-decide/`). O sinal vem do `luz_do_jogo` do `state_full`. O
+  produto recebe com o `--publicar 04` do fecho do conjunto «Conexões 2»; até lá o pacote só emite o
+  campo `luz-do-jogo` quando a página publicada o tem, e a tela dela segue a de hoje.

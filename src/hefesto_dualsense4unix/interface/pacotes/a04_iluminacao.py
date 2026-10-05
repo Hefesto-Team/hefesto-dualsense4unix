@@ -1034,6 +1034,52 @@ def fileira_de_brilhos_das_luzes(escolhido: str, recuo: str = "") -> str:
     return "\n".join(botoes)
 
 
+#: A LINHA DA LUZ DO JOGO — 04/10/2026, desenho aprovado em `docs/process/estudos/2026-10-04-o-jogo-
+#: decide/` (item 3, «Uma linha curta embaixo das cores», sem botão novo). A regra já vale no
+#: produto desde a 1.5: com o jogo pintando a barra, vale a cor do jogo; sem jogo, a do perfil.
+#: A tela só a diz.
+ENDERECO_DA_LUZ_DO_JOGO = "luz-do-jogo"
+
+FRASE_DA_LUZ_DO_JOGO = "O jogo pinta por cima; sem jogo, a sua cor."
+
+
+def frase_da_luz_do_jogo(pintando: list[int], conectados: int) -> str:
+    """A linha curta embaixo das cores, em HTML (alvo `html`).
+
+    ``pintando`` são os números de jogador dos controles em que o JOGO pinta a barra agora, lidos do
+    ``luz_do_jogo`` do `state_full`. Todos pintando: «Agora: a cor do jogo»; só alguns, e a frase
+    diz quais (a luz de um controle não é a luz dos outros). Ninguém pintando, só a regra. A luz
+    nunca sai preta: a regra vale com ou sem jogo, e é por isso que a linha não tem botão.
+    """
+    if not pintando:
+        return FRASE_DA_LUZ_DO_JOGO
+    numeros = sorted(set(pintando))
+    if len(numeros) >= max(1, conectados):
+        agora = "Agora: a cor do jogo"
+    else:
+        nomes = [f"P{n}" for n in numeros]
+        onde = nomes[0] if len(nomes) == 1 else ", ".join(nomes[:-1]) + " e " + nomes[-1]
+        agora = f"Agora: a cor do jogo {'no' if len(nomes) == 1 else 'nos'} {onde}"
+    return f"{FRASE_DA_LUZ_DO_JOGO} <b>{agora}</b>"
+
+
+_TEM_A_LINHA_DA_LUZ: bool | None = None
+
+
+def a_pagina_tem_a_linha_da_luz() -> bool:
+    """A página PUBLICADA tem onde pôr a linha da luz do jogo? Antes do `--publicar`, não."""
+    global _TEM_A_LINHA_DA_LUZ
+    if _TEM_A_LINHA_DA_LUZ is None:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            pagina = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            pagina = ""
+        _TEM_A_LINHA_DA_LUZ = f'data-campo="{ENDERECO_DA_LUZ_DO_JOGO}"' in pagina
+    return _TEM_A_LINHA_DA_LUZ
+
+
 _TEM_AS_PILULAS: bool | None = None
 
 
@@ -1535,6 +1581,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #: A LUZ DO DESENHO GRANDE, por LUGAR — ver `folha_da_luz`. Ela nasce vazia
     #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
     luz_do_desenho: dict[str, tuple[str, int | None]] = {}
+    jogo_pintando: list[int] = []
     for c, cor_dele in zip(ctx.conectados, cor_de, strict=True):
         uniq = str(c.get("uniq") or "")
         crua = cor_do_swatch(c)
@@ -1544,6 +1591,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         n = _numero(ctx, c)
         nome = str(casa.get("nome") or "—")
         via = str(casa.get("via") or (c.get("transport") or "").upper() or "—")
+        if c.get("luz_do_jogo") is True:
+            jogo_pintando.append(n)
         recado, base = rotulo_lightbar(c, ctx.state)
         #: `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base
         #: Ali a base volta preenchida **com `lightbar_on` falso**, porque a
@@ -1593,6 +1642,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: JavaScript, e o que se lê no HTML é um `--plastico` com endereço sem
         ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
         ENDERECO_DO_AUTOMATICO: "sim" if automatico_do_perfil(p) else "",
+        **({ENDERECO_DA_LUZ_DO_JOGO: frase_da_luz_do_jogo(jogo_pintando, len(ctx.conectados))}
+           if a_pagina_tem_a_linha_da_luz() else {}),
         #: `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),

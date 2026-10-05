@@ -250,6 +250,11 @@ quer dizer «não sei»: a aba Iluminação cai no perfil do disco. O `led.set`
 leva o `brightness` até o backend para isso, e a cor que chega sem ele (a CLI
 antiga) publica `null`.
 
+**O jogo pintando agora** (O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01): cada controle traz `luz_do_jogo`,
+sempre presente: `true` quando a camada do jogo tem a cor da barra deste controle (a que o merge
+aceitou, e que cai no fim da sessão), `false` em qualquer outro caso, inclusive backend sem a leitura.
+A aba Iluminação diz «Agora: a cor do jogo» só com ele.
+
 ### `rumble.motores.set` — a BARRA de cada motor (VIBRACAO-POR-MOTOR-01)
 
 | Método               | Parâmetros                                         | Retorno                                                        |

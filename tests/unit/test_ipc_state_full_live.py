@@ -230,6 +230,7 @@ class TestPlayerPorControle:
              "lightbar_source": "desconhecida", "lightbar_disputada": False,
              "nascimento": None,
              "brilho_da_barra": None, "brilho_das_luzes": None,
+             "luz_do_jogo": False,
              "inputs": None, "vpad_backend": None, "vpad_motivo": None,
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None, "sinal_dbm": None,

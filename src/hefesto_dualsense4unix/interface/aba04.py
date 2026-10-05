@@ -191,6 +191,10 @@ CSS = """
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
   .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+  /* A linha da luz do jogo: uma frase curta embaixo das cores, sem botão. Texto de apoio
+     (nunca vermelho), com o «Agora» em tinta cheia só quando o jogo está pintando. */
+  .luz-do-jogo{margin:6px 0 0;font-size:12px;line-height:1.3;color:var(--texto-mudo)}
+  .luz-do-jogo b{font-weight:600;color:var(--fg)}
 
   /* ---------- O LUGAR VAZIO ----------
      A mesma gramática da Jogar, da Controles e da Gatilhos: cor explícita e
@@ -1433,6 +1437,13 @@ MIOLO = f'''
 
         </div>
 
+        <!-- A LUZ DO JOGO — 04/10/2026, desenho aprovado em `docs/process/estudos/2026-10-04-o-jogo-
+             decide/` (item 3): nenhum botão novo, só uma linha curta embaixo das cores. A regra é a
+             da 1.5 (o jogo pinta por cima; sem jogo, a sua cor) e a luz nunca sai preta; com o jogo
+             pintando agora, a linha ganha «Agora: a cor do jogo». O sinal vem do `state_full`
+             (`luz_do_jogo`), e a frase, do pacote. -->
+        <div class="luz-do-jogo" data-campo="luz-do-jogo" data-hef-alvo="html">{_pacote04.FRASE_DA_LUZ_DO_JOGO}</div>
+
         <!-- A FOLHA VIVA DO PLÁSTICO — 03/09/2026, e ela fecha a maior
                identidade congelada desta aba: o DESENHO GRANDE.
 
@@ -1537,6 +1548,8 @@ def _conferir(doc):
 
     #    as outras. Com os quatro DualSense dela na mesa, ela não conseguia
     grade = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
+    #    A linha da luz do jogo é da página, não de um lugar: a régua das colunas não a conta.
+    grade = grade.split('<div class="luz-do-jogo"', 1)[0]
     #    `luzes`, `desenho-de` e `reenviar-desenho` —, e eles JÁ chegavam aos
     #    `apagar` e `reenviar` — são os do cartão, e são estes que a régua conta.
     gestos_por_lugar = {}
