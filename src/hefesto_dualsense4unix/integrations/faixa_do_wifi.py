@@ -17,13 +17,14 @@ ocupa de ``f - largura/2`` a ``f + largura/2``.
 from __future__ import annotations
 
 import atexit
+import hashlib
 import math
 import os
 import re
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from hefesto_dualsense4unix.integrations import bluez_dbus
@@ -47,6 +48,11 @@ PROVAVEL = "provavel"
 FORA = "fora"
 
 ESPERA_DE_CADA_PERGUNTA_S = 1.5
+#: Por quanto tempo o último valor BOM de uma rede se segura quando a leitura de agora falha: a
+#: placa que cai e volta passa uns segundos sem ponto ativo (``ActiveAccessPoint`` vira ``/``) ou
+#: some do NetworkManager e reaparece com outro nome (``wlan0`` → ``wlx…``) em outro nó. Mais
+#: que isto a linha some de verdade (ausência é resposta). O refresco da tela é de 10 s.
+SEGURA_O_ULTIMO_VALOR_S = 25.0
 
 _NO_DA_INTERFACE_USB = re.compile(r"\d+-[\d.]+:\d+\.\d+")
 
@@ -67,11 +73,17 @@ class _Barramento(Protocol):
 
 @dataclass(frozen=True)
 class RedeSemFio:
-    """Uma rede ativa: onde ela mora (``""`` = dentro da máquina) e o que ela anuncia."""
+    """Uma rede ativa: onde ela mora (``""`` = dentro da máquina) e o que ela anuncia.
+
+    ``chave`` é a identidade ESTÁVEL do aparelho (``usb:vid:pid`` ou ``pci:endereço``): nem o nó
+    USB nem o nome da interface servem, os dois mudam quando a placa cai e volta. Ela só
+    serve de memória dentro deste módulo e nunca sai dele (o ``wlx…`` carrega o endereço).
+    """
 
     no: str
     frequencia_mhz: int
     largura_mhz: int | None
+    chave: str = ""
 
 
 @dataclass(frozen=True)
@@ -145,53 +157,130 @@ def _no_usb_da_interface(
     return ""
 
 
+def _ler_arquivo(caminho: str) -> str:
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
+            return arquivo.read().strip()
+    except OSError:
+        return ""
+
+
+def _chave_do_aparelho(
+    interface: str,
+    no: str,
+    raiz_net: str,
+    real: Callable[[str], str],
+    ler: Callable[[str], str],
+) -> str:
+    """A identidade que sobrevive à queda: ``usb:vid:pid`` ou ``pci:endereço``.
+
+    O nó USB (``4-1.1.4`` → ``3-1.2``) e o nome da interface (``wlan0`` → ``wlx…``) mudam toda
+    vez que a placa cai e volta; o ``vid:pid`` e o endereço PCI, não.
+    """
+    if no:
+        vid, pid = ler(os.path.join(no, "idVendor")), ler(os.path.join(no, "idProduct"))
+        if vid and pid:
+            return f"usb:{vid.lower()}:{pid.lower()}"
+    dispositivo = os.path.basename(real(os.path.join(raiz_net, interface, "device")))
+    if re.fullmatch(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", dispositivo):
+        return f"pci:{dispositivo}"
+    # Sem vid:pid nem PCI, o nome é a última identidade — e ele carrega o endereço (``wlx…``):
+    # só o resumo dele serve de chave, e o nome nunca sai.
+    return "if:" + hashlib.sha1(interface.encode()).hexdigest()[:8]
+
+
+#: ``{chave: (instante, rede)}`` — a última leitura boa de cada aparelho, e só dentro do módulo.
+_ULTIMAS: dict[str, tuple[float, RedeSemFio]] = {}
+
+
+def _com_o_que_se_segura(
+    redes: list[RedeSemFio],
+    vistas: set[str],
+    memoria: dict[str, tuple[float, RedeSemFio]],
+    agora: float,
+    segura_s: float,
+) -> list[RedeSemFio]:
+    """Junta à leitura de agora o último valor bom de quem sumiu há pouco (a placa que voltou)."""
+    for chave in [c for c, (quando, _r) in memoria.items() if agora - quando > segura_s]:
+        del memoria[chave]
+    for chave, (_quando, rede) in memoria.items():
+        if chave not in vistas:
+            redes.append(rede)
+    return redes
+
+
 def ler_as_redes(
     barramento: _Barramento | None = None,
     *,
     raiz_net: str = "/sys/class/net",
     real: Callable[[str], str] = os.path.realpath,
+    ler: Callable[[str], str] = _ler_arquivo,
+    agora: Callable[[], float] = time.monotonic,
+    memoria: dict[str, tuple[float, RedeSemFio]] | None = None,
+    segura_s: float = SEGURA_O_ULTIMO_VALOR_S,
 ) -> list[RedeSemFio] | None:
     """As redes ativas, uma por interface sem fio; ``None`` quando nada se lê.
 
     Ausência é resposta: sem NetworkManager (iwd, systemd-networkd), sem
     permissão (Flatpak antigo), sem barramento (a suíte) ou sem rede ativa, é
     ``None`` — nunca a lista vazia, que diria «há zero redes» onde só não se sabe.
+
+    **O último valor bom se segura por alguns segundos** (:data:`SEGURA_O_ULTIMO_VALOR_S`): a
+    placa que cai do barramento e volta some do NetworkManager ou fica sem ponto ativo por
+    instantes, e a linha dela na tela não pode sumir e voltar por isso.
     """
-    ponte = barramento if barramento is not None else _barramento_do_sistema()
-    if ponte is None:
-        return None
-    listadas = ponte.chamar(
-        SERVICO, RAIZ_DO_GERENTE, INTERFACE_DO_GERENTE, "GetDevices", "", (),
-        espera=ESPERA_DE_CADA_PERGUNTA_S,
-    )
-    if not listadas.feita or not listadas.resposta:
-        return None
+    # A memória do módulo é do produto (barramento do sistema); um dublê injetado nasce limpo,
+    # para um teste nunca herdar a rede de outro.
+    guarda = memoria if memoria is not None else _ULTIMAS if barramento is None else {}
+    agora_s = agora()
+    vistas: set[str] = set()
     redes: list[RedeSemFio] = []
-    for caminho in listadas.resposta[0]:
-        if _pedir(ponte, caminho, INTERFACE_DO_DISPOSITIVO, "DeviceType") != TIPO_WIFI:
-            continue
-        ponto = _pedir(ponte, caminho, INTERFACE_SEM_FIO, "ActiveAccessPoint")
-        if not ponto or ponto == SEM_PONTO_ATIVO:
-            continue
-        frequencia = _pedir(ponte, str(ponto), INTERFACE_DO_PONTO, "Frequency")
-        if not isinstance(frequencia, int) or frequencia <= 0:
-            continue
-        largura = _pedir(ponte, str(ponto), INTERFACE_DO_PONTO, "Bandwidth")
-        interface = _pedir(ponte, caminho, INTERFACE_DO_DISPOSITIVO, "Interface")
-        no = _no_usb_da_interface(str(interface), raiz_net, real) if interface else ""
-        redes.append(
-            RedeSemFio(
-                no=no,
-                frequencia_mhz=frequencia,
-                largura_mhz=largura if isinstance(largura, int) and largura > 0 else None,
-            )
-        )
+    ponte = barramento if barramento is not None else _barramento_do_sistema()
+    listadas = (
+        ponte.chamar(SERVICO, RAIZ_DO_GERENTE, INTERFACE_DO_GERENTE, "GetDevices", "", (),
+                     espera=ESPERA_DE_CADA_PERGUNTA_S)
+        if ponte is not None else None)
+    if ponte is not None and listadas is not None and listadas.feita and listadas.resposta:
+        for caminho in listadas.resposta[0]:
+            if _pedir(ponte, caminho, INTERFACE_DO_DISPOSITIVO, "DeviceType") != TIPO_WIFI:
+                continue
+            interface = _pedir(ponte, caminho, INTERFACE_DO_DISPOSITIVO, "Interface")
+            no = _no_usb_da_interface(str(interface), raiz_net, real) if interface else ""
+            chave = _chave_do_aparelho(str(interface or ""), no, raiz_net, real, ler)
+            vistas.add(chave)
+            rede = _rede_do_dispositivo(ponte, caminho, no, chave)
+            if rede is not None:
+                guarda[chave] = (agora_s, rede)
+                redes.append(rede)
+            elif chave in guarda and agora_s - guarda[chave][0] <= segura_s:
+                redes.append(replace(guarda[chave][1], no=no or guarda[chave][1].no))
+    redes = _com_o_que_se_segura(redes, vistas, guarda, agora_s, segura_s)
     return redes or None
+
+
+def _rede_do_dispositivo(
+    ponte: _Barramento, caminho: str, no: str, chave: str
+) -> RedeSemFio | None:
+    """A rede ativa de UMA interface sem fio, ou ``None`` (sem ponto ativo, sem frequência)."""
+    ponto = _pedir(ponte, caminho, INTERFACE_SEM_FIO, "ActiveAccessPoint")
+    if not ponto or ponto == SEM_PONTO_ATIVO:
+        return None
+    frequencia = _pedir(ponte, str(ponto), INTERFACE_DO_PONTO, "Frequency")
+    if not isinstance(frequencia, int) or frequencia <= 0:
+        return None
+    largura = _pedir(ponte, str(ponto), INTERFACE_DO_PONTO, "Bandwidth")
+    return RedeSemFio(
+        no=no,
+        frequencia_mhz=frequencia,
+        largura_mhz=largura if isinstance(largura, int) and largura > 0 else None,
+        chave=chave,
+    )
 
 
 __all__ = [
     "FORA",
     "PROVAVEL",
+    "SEGURA_O_ULTIMO_VALOR_S",
     "SERVICO",
     "FaixaNoBluetooth",
     "RedeSemFio",

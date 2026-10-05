@@ -114,6 +114,34 @@ GRAU_DESCONHECIDO = "desconhecido"
 
 ESPECIE_DESCONHECIDA = "Não identificado"
 
+#: O que o KERNEL ligou nas interfaces do aparelho (``ligado_como``), na ordem em que a palavra
+#: vale quando há mais de uma: Wi-Fi vence Bluetooth (um combo é as duas coisas, e o que
+#: atrapalha o rádio dela é o Wi-Fi), e o resto vem depois.
+LIGADO_COMO_WIFI = "wifi"
+LIGADO_COMO_BLUETOOTH = "bluetooth"
+LIGADO_COMO_CONTROLE = "controle"
+LIGADO_COMO_CAMERA = "camera"
+LIGADO_COMO_REDE = "rede"
+_ESPECIE_DO_QUE_O_KERNEL_LIGOU = {
+    LIGADO_COMO_WIFI: "Wi-Fi",
+    LIGADO_COMO_BLUETOOTH: "Bluetooth",
+    LIGADO_COMO_CONTROLE: "Controle",
+    LIGADO_COMO_CAMERA: "Câmera",
+    LIGADO_COMO_REDE: "Rede",
+}
+_ORDEM_DO_QUE_O_KERNEL_LIGOU = tuple(_ESPECIE_DO_QUE_O_KERNEL_LIGOU)
+#: A pasta que o driver pendura na interface → o que ele ligou.
+_O_QUE_O_KERNEL_PENDURA = {
+    "ieee80211": LIGADO_COMO_WIFI,
+    "bluetooth": LIGADO_COMO_BLUETOOTH,
+    "video4linux": LIGADO_COMO_CAMERA,
+}
+#: ``BTN_SOUTH`` (0x130): o botão que todo controle de jogo tem e nenhum teclado tem.
+_BTN_SOUTH = 0x130
+#: As classes em que a tripla da interface NÃO diz o que o aparelho é (fabricante, «diversos»,
+#: específico do programa, sem fio sem a tripla do Bluetooth): ali a palavra é a do kernel.
+_CLASSES_QUE_NAO_DIZEM = frozenset({"", "ef", "fe", "ff", "e0", "02", "0a"})
+
 CLASSE_HUB = "09"
 
 _CLASSE_ENTRADA = "03"
@@ -190,6 +218,8 @@ class Aparelho:
     subclasse: str = ""
     protocolo: str = ""
     origem_da_classe: str = ""
+    #: o que o kernel ligou nas interfaces dele (:data:`LIGADO_COMO_WIFI`…), ou ``""``
+    ligado_como: str = ""
     especie: str = ESPECIE_DESCONHECIDA
     grau: str = GRAU_DESCONHECIDO
     e_hub: bool = False
@@ -250,7 +280,7 @@ def ler_o_barramento(
 
     brutos = {
         nome: _ler_um(
-            nome, caminho, raiz_usb, interfaces, leitor=leitor, real=real
+            nome, caminho, raiz_usb, interfaces, leitor=leitor, real=real, listar=listar
         )
         for nome, caminho in caminhos.items()
     }
@@ -330,6 +360,7 @@ class _Bruto:
     protocolo: str
     origem: str
     controlador_pci: str
+    ligado_como: str = ""
 
 
 def _ler_um(
@@ -340,6 +371,7 @@ def _ler_um(
     *,
     leitor: Callable[[str], str],
     real: Callable[[str], str],
+    listar: Callable[[str], list[str]],
 ) -> _Bruto:
     """Todos os atributos de um nó, mais a classe da interface 0."""
     campos = {
@@ -372,6 +404,9 @@ def _ler_um(
     if not classe:
         classe = campos["bDeviceClass"].lower()
         origem = "descritor do aparelho" if classe else ""
+    ligado = _o_que_o_kernel_ligou(
+        nome, campos["busnum"], campos["devpath"], raiz_usb, interfaces,
+        leitor=leitor, real=real, listar=listar)
     return _Bruto(
         nome=nome,
         caminho=caminho,
@@ -381,6 +416,7 @@ def _ler_um(
         protocolo=protocolo,
         origem=origem,
         controlador_pci=_controlador_pci(caminho),
+        ligado_como=ligado,
     )
 
 
@@ -396,6 +432,11 @@ def _montar(
     pai_nome = nome_por_caminho.get(os.path.dirname(bruto.caminho), "")
     pai = brutos.get(pai_nome)
     especie, grau = _especie(bruto.classe, bruto.subclasse, bruto.protocolo)
+    if bruto.ligado_como and (grau != GRAU_LIDO or bruto.classe in _CLASSES_QUE_NAO_DIZEM):
+        especie, grau = _ESPECIE_DO_QUE_O_KERNEL_LIGOU[bruto.ligado_como], GRAU_LIDO
+        origem = "o que o kernel ligou"
+    else:
+        origem = bruto.origem
     return Aparelho(
         no=bruto.caminho,
         nome_do_kernel=bruto.nome,
@@ -412,7 +453,8 @@ def _montar(
         classe=bruto.classe,
         subclasse=bruto.subclasse,
         protocolo=bruto.protocolo,
-        origem_da_classe=bruto.origem,
+        origem_da_classe=origem,
+        ligado_como=bruto.ligado_como,
         especie=especie,
         grau=grau,
         e_hub=bruto.classe == CLASSE_HUB,
@@ -462,6 +504,59 @@ def _classe_da_interface(
         _campo(caminho, "bInterfaceProtocol", leitor).lower(),
         "interface 0",
     )
+
+
+def _o_que_o_kernel_ligou(
+    nome: str,
+    busnum: str,
+    devpath: str,
+    raiz_usb: str,
+    interfaces: Iterable[str],
+    *,
+    leitor: Callable[[str], str],
+    real: Callable[[str], str],
+    listar: Callable[[str], list[str]],
+) -> str:
+    """Wi-Fi, Bluetooth, controle, câmera ou rede, pelo que o KERNEL ligou nas interfaces.
+
+    Quem classifica é o driver que casou, não o fabricante nem o nome do produto: o ``ff`` do
+    fabricante não diz nada, mas a interface em que o ``mac80211`` pendurou um ``ieee80211``
+    (ou uma ``net/<if>/wireless``) é Wi-Fi, de qualquer chip. Só leitura de ``/sys``.
+    """
+    prefixo = f"{busnum}-{devpath}:" if busnum and devpath else f"{nome}:"
+    achados: set[str] = set()
+    for interface in sorted(alvo for alvo in interfaces if alvo.startswith(prefixo)):
+        pasta = real(os.path.join(raiz_usb, interface))
+        dentro = _listar_sem_erro(listar, pasta)
+        achados |= {ligado for pasta_do_kernel, ligado in _O_QUE_O_KERNEL_PENDURA.items()
+                    if pasta_do_kernel in dentro}
+        for rede in _listar_sem_erro(listar, os.path.join(pasta, "net")):
+            sinais = _listar_sem_erro(listar, os.path.join(pasta, "net", rede))
+            achados.add(LIGADO_COMO_WIFI if {"wireless", "phy80211"} & set(sinais)
+                        else LIGADO_COMO_REDE)
+        for entrada in _listar_sem_erro(listar, os.path.join(pasta, "input")):
+            teclas = _campo(os.path.join(pasta, "input", entrada, "capabilities"), "key", leitor)
+            if _tem_a_tecla(teclas, _BTN_SOUTH):
+                achados.add(LIGADO_COMO_CONTROLE)
+    return next((c for c in _ORDEM_DO_QUE_O_KERNEL_LIGOU if c in achados), "")
+
+
+def _listar_sem_erro(listar: Callable[[str], list[str]], pasta: str) -> list[str]:
+    """O que há numa pasta do ``/sys``; vazio quando ela não existe (nem todo nó tem tudo)."""
+    try:
+        return list(listar(pasta))
+    except (OSError, KeyError):
+        return []
+
+
+def _tem_a_tecla(mapa: str, bit: int) -> bool:
+    """O ``bit`` do ``capabilities/key`` (palavras hex separadas por espaço)."""
+    palavras = mapa.split()
+    try:
+        inteiro = int("".join(f"{int(p, 16):016x}" for p in palavras), 16) if palavras else 0
+    except ValueError:
+        return False
+    return bool(inteiro >> bit & 1)
 
 
 def _especie(classe: str, subclasse: str, protocolo: str) -> tuple[str, str]:
@@ -558,6 +653,11 @@ __all__ = [
     "ESPECIE_DESCONHECIDA",
     "GRAU_DESCONHECIDO",
     "GRAU_LIDO",
+    "LIGADO_COMO_BLUETOOTH",
+    "LIGADO_COMO_CAMERA",
+    "LIGADO_COMO_CONTROLE",
+    "LIGADO_COMO_REDE",
+    "LIGADO_COMO_WIFI",
     "Aparelho",
     "Barramento",
     "Censo",

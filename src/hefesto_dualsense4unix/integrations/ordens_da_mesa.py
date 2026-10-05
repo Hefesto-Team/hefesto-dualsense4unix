@@ -698,14 +698,14 @@ def _bluetooth_do_censo(censo: Censo) -> tuple[Aparelho, ...]:
 
 
 def _irradia(leitura: Leitura, numero: str) -> bool:
-    """O que está NESTA entrada usa 2,4 GHz?"""
+    """O que está NESTA entrada usa 2,4 GHz? O Wi-Fi que o kernel ligou conta, declarado ou não."""
     caminho = leitura.ocupante_da_entrada.get(numero, "")
     if not caminho:
         return False
     for aparelho in leitura.censo.conectados():
         if aparelho.nome_do_kernel != caminho:
             continue
-        if _e_bluetooth(aparelho):
+        if _e_bluetooth(aparelho) or aparelho.ligado_como == "wifi":
             return True
         tipo = leitura.tipos_declarados.get(f"{aparelho.vid}:{aparelho.pid}", "")
         return bool(tipo) and tipo != "webcam"

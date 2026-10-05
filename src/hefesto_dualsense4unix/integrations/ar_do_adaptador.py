@@ -602,7 +602,7 @@ def ler_qualidade(
 
 @dataclass(frozen=True)
 class EnlaceLido:
-    """O que se leu de UM enlace: o mapa dele (clássico), a qualidade, ou ``le``.
+    """O que se leu de UM enlace: o mapa dele (clássico), a qualidade_do_enlace, ou ``le``.
 
     ``canais_evitados`` é ``None`` quando o mapa não veio (enlace LE, comando recusado ou o
     primeiro tique): «não sei», nunca «nenhum evitado».
@@ -610,7 +610,7 @@ class EnlaceLido:
 
     le: bool
     canais_evitados: tuple[int, ...] | None = None
-    qualidade: int | None = None
+    qualidade_do_enlace: int | None = None
 
 
 def enlaces_do_adaptador(
@@ -631,35 +631,26 @@ def enlaces_do_adaptador(
             saida[conexao.endereco] = EnlaceLido(
                 le=False,
                 canais_evitados=mapa.evitados if mapa is not None else None,
-                qualidade=ler_qual(ar.hci, conexao.handle))
+                qualidade_do_enlace=ler_qual(ar.hci, conexao.handle))
         elif conexao.tipo == TIPO_LE:
             saida.setdefault(conexao.endereco, EnlaceLido(le=True))
     return saida
 
 
-def mapas_afh_do_adaptador(
-    ar: ArDoAdaptador,
-    *,
-    ler: Callable[[int, int], MapaAFH | None] = ler_mapa_afh,
-) -> dict[str, MapaAFH | None]:
-    """``{endereço do aparelho: MapaAFH | None}`` de cada enlace ACL do adaptador."""
-    saida: dict[str, MapaAFH | None] = {}
-    for conexao in ar.conexoes or ():
-        if conexao.tipo == TIPO_ACL:
-            saida[conexao.endereco] = ler(ar.hci, conexao.handle)
-    return saida
-
-
 def canais_evitados_pelo_adaptador(
-    mapas: Mapping[str, MapaAFH | None],
+    enlaces: Mapping[str, EnlaceLido],
 ) -> tuple[int, ...] | None:
-    """Os canais que o adaptador evita em TODOS os enlaces dele."""
-    lidos = [m for m in mapas.values() if m is not None]
+    """Os canais que o adaptador evita em TODOS os enlaces dele que tiveram o mapa lido.
+
+    ``None`` = nenhum mapa lido (sem conexão clássica, ou o rádio não respondeu): adaptador
+    vazio não «evita zero canais».
+    """
+    lidos = [e.canais_evitados for e in enlaces.values() if e.canais_evitados is not None]
     if not lidos:
         return None
-    evitados = set(lidos[0].evitados)
-    for mapa in lidos[1:]:
-        evitados &= set(mapa.evitados)
+    evitados = set(lidos[0])
+    for canais in lidos[1:]:
+        evitados &= set(canais)
     return tuple(sorted(evitados))
 
 
@@ -751,7 +742,6 @@ __all__ = [
     "ler_qualidade",
     "main",
     "mapa_afh_da_resposta",
-    "mapas_afh_do_adaptador",
     "nivel_dos_canais",
     "qualidade_da_resposta",
 ]

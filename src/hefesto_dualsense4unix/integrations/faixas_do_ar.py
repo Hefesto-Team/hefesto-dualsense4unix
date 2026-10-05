@@ -86,9 +86,11 @@ class Linha:
     selo: Selo | None = None
     quem: tuple[tuple[str, str], ...] = ()
     briga: tuple[str, ...] = ()
-    qualidade: int | None = None
+    qualidade_do_enlace: int | None = None
     rssi: int | None = None
     tira_de: int = 0
+    nota: str = ""
+    dica: str = ""
 
 
 @dataclass(frozen=True)
@@ -102,7 +104,7 @@ class AparelhoNoAdaptador:
     cor: str = ""
     evitados: frozenset[int] | None = None
     le: bool = False
-    qualidade: int | None = None
+    qualidade_do_enlace: int | None = None
     rssi: int | None = None
 
 
@@ -123,7 +125,9 @@ class Ocupante:
     """Quem ocupa uma banda: o Wi-Fi em 2,4 GHz, um receptor 2.4G já descoberto.
 
     ``banda`` é ``None`` quando não se sabe onde ele mora; ``sem_faixa`` diz por quê, e
-    ``selo`` é o estado de saúde que outra leitura (o receptor) já mediu.
+    ``selo`` é o estado de saúde que outra leitura (as quedas do Wi-Fi, o receptor) já mediu;
+    ``nota`` é a palavra curta que fica ao lado do selo («USB 3.0 + 2.4 GHz») e ``dica`` a
+    explicação de uma frase que a tela dá ao passar o mouse nela.
     """
 
     id: str
@@ -134,6 +138,8 @@ class Ocupante:
     sem_faixa: str = ""
     selo: Selo | None = None
     quem: tuple[tuple[str, str], ...] = ()
+    nota: str = ""
+    dica: str = ""
 
 
 def banda_do_intervalo(ini: int, fim: int) -> frozenset[int]:
@@ -172,7 +178,7 @@ def _linha_do_aparelho(
     ocupantes: Sequence[Ocupante],
 ) -> Linha:
     linha = partial(Linha, ap.id, ap.tipo, ap.nome, ap.sub, ap.cor, adaptador.id,
-                    qualidade=ap.qualidade, rssi=ap.rssi)
+                    qualidade_do_enlace=ap.qualidade_do_enlace, rssi=ap.rssi)
     outros = tuple(i.id for i in irmaos if i.id != ap.id)
     if ap.le:
         return linha(sem_faixa=DIVIDE_O_RADIO, briga=outros)
@@ -205,7 +211,7 @@ def _linha_do_ocupante(
     o: Ocupante, vitimas_por_canal: Mapping[int, tuple[str, ...]],
     todos: Mapping[str, Linha],
 ) -> Linha:
-    linha = partial(Linha, o.id, o.tipo, o.nome, o.sub)
+    linha = partial(Linha, o.id, o.tipo, o.nome, o.sub, nota=o.nota, dica=o.dica)
     if o.banda is None:
         return linha(sem_faixa=o.sem_faixa, selo=o.selo, quem=o.quem)
     if not o.banda:

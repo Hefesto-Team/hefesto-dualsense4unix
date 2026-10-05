@@ -5928,18 +5928,19 @@ class IpcHandlersMixin:
         self._afh_lido_em = agora
         leituras = dict(ar)
 
-        qualidade = self._ler_qualidade
-        if qualidade is None and self._ler_afh is not None:
-            # quem injeta o AFH (a régua) não pergunta ao rádio de verdade nem a qualidade
-            def qualidade(_hci: int, _handle: int) -> int | None:
+        a_qualidade = self._ler_qualidade
+        if a_qualidade is None and self._ler_afh is not None:
+            # quem injeta o AFH (a régua) não pergunta ao rádio de verdade nem a qualidade do enlace
+            def a_qualidade(_hci: int, _handle: int) -> int | None:
                 return None
-        elif qualidade is None:
+        elif a_qualidade is None:
             from hefesto_dualsense4unix.integrations.ar_do_adaptador import ler_qualidade
 
-            qualidade = ler_qualidade
+            a_qualidade = ler_qualidade
 
         def perguntar() -> None:
             from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
+                canais_evitados_pelo_adaptador,
                 enlaces_do_adaptador,
             )
 
@@ -5947,13 +5948,9 @@ class IpcHandlersMixin:
             enlaces: dict[str, dict[str, Any]] = {}
             try:
                 for endereco, leitura in leituras.items():
-                    lidos = enlaces_do_adaptador(leitura, ler_mapa=ler, ler_qual=qualidade)
+                    lidos = enlaces_do_adaptador(leitura, ler_mapa=ler, ler_qual=a_qualidade)
                     enlaces[endereco] = lidos
-                    mapas = [m.canais_evitados for m in lidos.values()
-                             if m.canais_evitados is not None]
-                    evitados[endereco] = (
-                        tuple(sorted(set(mapas[0]).intersection(*mapas[1:]))) if mapas else None
-                    )
+                    evitados[endereco] = canais_evitados_pelo_adaptador(lidos)
                 self._afh_evitados = evitados
                 self._enlaces_lidos = enlaces
             except Exception:  # pragma: no cover - defensivo, jamais derruba o daemon

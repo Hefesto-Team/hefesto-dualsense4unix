@@ -518,7 +518,8 @@ class OrcamentoDoAdaptador:
     saida_por_s: float | None = None
     canais_evitados: tuple[int, ...] | None = None
     motivo_do_ar: str = ""
-    #: ``{aparelho (12 hex): {le, canais_evitados, qualidade, rssi}}`` de TODO enlace lido do
+    #: ``{aparelho (12 hex): {le, canais_evitados, qualidade_do_enlace,
+    #: rssi}}`` de TODO enlace lido do
     #: adaptador, o aparelho que for (celular, relógio, fone, controle): a faixa de cada
     #: linha da seção «Dispositivos Conectados». ``None`` em campo = não sei.
     enlaces: Mapping[str, Mapping[str, Any]] | None = None
@@ -637,12 +638,12 @@ def _enlaces_publicaveis(
     saida: dict[str, dict[str, Any]] = {}
     for aparelho, lido in (lidos or {}).items():
         evitados = getattr(lido, "canais_evitados", None)
-        qualidade = getattr(lido, "qualidade", None)
+        ligacao = getattr(lido, "qualidade_do_enlace", None)
         rssi = sinais.get(_hex(aparelho))
         saida[_hex(aparelho)] = {
             "le": bool(getattr(lido, "le", False)),
             "canais_evitados": list(evitados) if evitados is not None else None,
-            "qualidade": qualidade if isinstance(qualidade, int) else None,
+            "qualidade_do_enlace": ligacao if isinstance(ligacao, int) else None,
             "rssi": rssi if isinstance(rssi, int) and not isinstance(rssi, bool) else None,
         }
     return saida

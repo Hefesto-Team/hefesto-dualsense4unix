@@ -405,21 +405,23 @@ def test_no_modo_falso_o_afh_nunca_pergunta_ao_radio_de_verdade(
 
 
 def test_os_canais_que_o_adaptador_evita_sao_os_evitados_em_todos_os_enlaces() -> None:
-    um = ar.mapa_afh_da_resposta(_resposta_afh(1, {20, 21, 22}), 1)
-    outro = ar.mapa_afh_da_resposta(_resposta_afh(2, {21, 22, 40}), 2)
-    assert ar.canais_evitados_pelo_adaptador({CONTROLE_1: um, CONTROLE_2: outro}) == (
-        21, 22)
-    assert ar.canais_evitados_pelo_adaptador({CONTROLE_1: um, CONTROLE_2: None}) == (
+    um = ar.EnlaceLido(le=False, canais_evitados=(20, 21, 22))
+    outro = ar.EnlaceLido(le=False, canais_evitados=(21, 22, 40))
+    sem_mapa = ar.EnlaceLido(le=False, canais_evitados=None)
+    assert ar.canais_evitados_pelo_adaptador({CONTROLE_1: um, CONTROLE_2: outro}) == (21, 22)
+    assert ar.canais_evitados_pelo_adaptador({CONTROLE_1: um, CONTROLE_2: sem_mapa}) == (
         20, 21, 22)
 
 
 def test_sem_enlace_o_afh_e_nao_sei() -> None:
     """AFH só existe com conexão: adaptador vazio não «evita zero canais»."""
     assert ar.canais_evitados_pelo_adaptador({}) is None
-    assert ar.canais_evitados_pelo_adaptador({CONTROLE_1: None}) is None
+    assert ar.canais_evitados_pelo_adaptador({
+        CONTROLE_1: ar.EnlaceLido(le=False, canais_evitados=None),
+        CONTROLE_2: ar.EnlaceLido(le=True)}) is None
 
 
-def test_os_mapas_do_adaptador_so_perguntam_pelos_enlaces_acl() -> None:
+def test_os_enlaces_do_adaptador_so_perguntam_o_mapa_pelos_enlaces_acl() -> None:
     conexoes = (
         ar.Enlace(12, CONTROLE_1, ar.TIPO_ACL, True, 1, 7),
         ar.Enlace(40, CONTROLE_2, 0x02, True, 1, 7),
@@ -431,7 +433,8 @@ def test_os_mapas_do_adaptador_so_perguntam_pelos_enlaces_acl() -> None:
         return None
 
     ar_a = ar.ArDoAdaptador(hci=3, endereco=ADAPTADOR_A, conexoes=conexoes)
-    assert ar.mapas_afh_do_adaptador(ar_a, ler=ler) == {CONTROLE_1: None}
+    lidos = ar.enlaces_do_adaptador(ar_a, ler_mapa=ler, ler_qual=lambda _h, _n: None)
+    assert lidos == {CONTROLE_1: ar.EnlaceLido(le=False)}
     assert perguntados == [(3, 12)]
 
 

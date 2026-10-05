@@ -128,7 +128,9 @@ def test_a_rede_do_usb_casa_com_o_no_e_a_de_dentro_da_maquina_fica_sem_no(tmp_pa
     pci["dispositivo"][fw.INTERFACE_SEM_FIO]["ActiveAccessPoint"] = "/ponto2"
     barramento.dispositivos["/ponto2"] = pci["ponto"]
     redes = fw.ler_as_redes(barramento, raiz_net=raiz_net)
-    assert redes == [fw.RedeSemFio(no_usb, 5805, 80), fw.RedeSemFio("", 2437, None)]
+    assert redes is not None
+    assert [(r.no, r.frequencia_mhz, r.largura_mhz) for r in redes] == [
+        (no_usb, 5805, 80), ("", 2437, None)]
 
 
 def test_o_nome_da_interface_nao_sai_do_modulo(

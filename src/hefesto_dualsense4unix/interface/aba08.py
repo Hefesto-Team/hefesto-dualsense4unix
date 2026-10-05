@@ -2190,6 +2190,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-quem{display:inline-flex;align-items:center;gap:3px;color:var(--texto-mudo);
                   font-size:11px}
   .radio .ar-quem i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .radio .ar-nota{color:var(--texto-mudo);font-size:11px;white-space:nowrap}
   .radio .ar-regua{margin-top:4px;font:10px var(--font-dado,monospace);color:var(--texto-mudo)}
   .radio .ar-regua div{display:flex;justify-content:space-between}
   .radio .ar-legenda{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
@@ -2290,6 +2291,10 @@ def _csv_do_desenho(ident: str) -> list[dict[str, str]]:
 _FACES_DO_DESENHO = ("Frente do gabinete", "Traseira", "Num hub ou extensão", "Na escrivaninha")
 
 
+#: «caiu 12× em 24 min»: o que o diário do kernel contou na bancada de 04/10 (desenho 5).
+QUEDAS_DO_DESENHO_5 = {"n": 12, "min": 24}
+
+
 def _cena_do_desenho() -> dict:
     """A cena do desenho aprovado, na forma que o pacote pinta.
 
@@ -2351,10 +2356,15 @@ def _cena_do_desenho() -> dict:
     evitados.append({"lugar": lugares[0]["id"], "ini": 8, "fim": 16})
     wifi = [{"no": f"/sys/usb/{x['id']}", "mhz": 5805, "largura": 80}
             for x in linhas if x["tabela"] == "espectro" and x["a"] == "wifi"]
-    wifi.append({"no": "", "mhz": 2437, "largura": 20})
+    # O mesmo aparelho do desenho 5 na outra banda: 2,4 GHz, em USB 3.0, e as quedas que o diário
+    # do kernel contou (a placa que sai do barramento e volta; a «chave» é o vid:pid dela).
+    wifi.append({"no": "", "mhz": 2437, "largura": 20, "chave": "usb:2357:012d",
+                 "quedas": QUEDAS_DO_DESENHO_5})
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
                "grupo": re.sub(r"\bmesa\b", "escrivaninha", x["d"]), "rotulo": x["a"]}
               for x in linhas if x["tabela"] == "porta"]
+    portas.append({"id": "porta-wifi-2-4", "caminho": "3-1.2", "usb": "3.0",
+                   "ocupa": "wifi-usb-2357-012d", "grupo": "", "rotulo": "3-1.2"})
     cheio = max(lugares, key=lambda lg: sum(1 for a in aparelhos
                                             if a["lugar"] == lg["id"] and a["ponte"]))
     vazio = min(lugares, key=lambda lg: (sum(1 for a in aparelhos

@@ -2953,7 +2953,11 @@ from collections.abc import Callable  # noqa: E402
 from hefesto_dualsense4unix.integrations import (  # noqa: E402
     central_do_radio as _central_do_radio,
 )
-from hefesto_dualsense4unix.integrations import faixa_do_wifi, faixas_do_ar  # noqa: E402
+from hefesto_dualsense4unix.integrations import (  # noqa: E402
+    faixa_do_wifi,
+    faixas_do_ar,
+    queda_do_wifi,
+)
 from hefesto_dualsense4unix.integrations.ar_do_adaptador import (  # noqa: E402
     CANAIS_DO_BT,
     NIVEL_ENGASGA,
@@ -3907,7 +3911,7 @@ def _evitados_do_lugar(cena: dict[str, Any], lid: str) -> frozenset[int] | None:
 
 
 def _a_faixa_do_aparelho(cena: dict[str, Any], lid: str, ap: dict[str, Any]) -> Any:
-    """O aparelho como a régua o lê: o enlace dele (mapa, qualidade, LE) pelo endereço."""
+    """O aparelho como a régua o lê: o enlace dele (mapa, a qualidade, LE) pelo endereço."""
     lido = _dicionario(_dicionario(cena.get("enlaces")).get(lid)).get(_so_hex(str(ap["id"])))
     lido = _dicionario(lido)
     evitados = lido.get("canais_evitados")
@@ -3918,7 +3922,8 @@ def _a_faixa_do_aparelho(cena: dict[str, Any], lid: str, ap: dict[str, Any]) -> 
         id=str(ap["id"]), tipo=tipo, nome=nome,
         cor=str(ap.get("cor") or "") if tipo == "controle" else "",
         evitados=frozenset(evitados) if isinstance(evitados, list) else None,
-        le=bool(lido.get("le")), qualidade=lido.get("qualidade"), rssi=lido.get("rssi")
+        le=bool(lido.get("le")), qualidade_do_enlace=lido.get("qualidade_do_enlace"),
+        rssi=lido.get("rssi")
         if lido.get("rssi") is not None else ap.get("sinal"))
 
 
@@ -3962,8 +3967,50 @@ def _usb_da_porta(cena: dict[str, Any], quem: str) -> str:
 
 def _vizinhos_sem_rede(cena: dict[str, Any]) -> list[dict[str, Any]]:
     """Os rádios vizinhos que NÃO são uma rede Wi-Fi lida (essa tem a linha dela, sem botão)."""
-    nos = {str(r.get("no") or "") for r in cena.get("wifi") or ()} - {""}
-    return [v for v in cena.get("vizinhos") or () if str(v.get("no") or "") not in nos]
+    vizinhos = list(cena.get("vizinhos") or ())
+    das_redes = {str(v["id"]) for r in cena.get("wifi") or ()
+                 if (v := _o_vizinho_da_rede(r, vizinhos)) is not None}
+    return [v for v in vizinhos if str(v["id"]) not in das_redes]
+
+
+NOTA_DO_USB_3_NO_2_4 = "USB 3.0 + 2.4 GHz"
+DICA_DO_USB_3_NO_2_4 = (
+    "USB 3.0 e 2.4 GHz juntos: o link USB 3.0 fica colado na antena e costuma derrubar a "
+    "placa. Em 5 GHz ou numa porta USB 2.0 ela não cai.")
+
+
+def _o_vizinho_da_rede(
+    rede: dict[str, Any], vizinhos: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """O rádio vizinho que É esta rede: pelo `vid:pid` (que sobrevive à queda) e, sem ele,
+    pelo nó USB."""
+    chave = str(rede.get("chave") or "")
+    if chave.startswith("usb:"):
+        achado = next((v for v in vizinhos if str(v["id"]) == chave[4:]), None)
+        if achado is not None:
+            return achado
+    no = str(rede.get("no") or "")
+    return next((v for v in vizinhos if no and str(v.get("no") or "") == no), None)
+
+
+def _id_da_rede(rede: dict[str, Any], viz: dict[str, Any] | None, i: int) -> str:
+    """O id da linha: o do vizinho (`vid:pid`), senão o da chave; o nome da interface nunca."""
+    if viz is not None:
+        return str(viz["id"])
+    chave = re.sub(r"[^0-9a-z]+", "-", str(rede.get("chave") or "").lower()).strip("-")
+    return f"wifi-{chave}" if chave and not chave.startswith("if-") else f"wifi-{i}"
+
+
+def _a_saude_do_wifi(rede: dict[str, Any], usb3: bool) -> tuple[Any, str, str]:
+    """`(selo, nota, dica)` do Wi-Fi conectado: as quedas que o diário contou e a causa
+    conhecida (USB 3.0 colado no 2.4 GHz)."""
+    q = rede.get("quedas")
+    selo = None
+    if isinstance(q, dict) and int(q.get("n") or 0) > 0:
+        contadas = queda_do_wifi.Quedas(n=int(q["n"]), minutos=int(q.get("min") or 1))
+        selo = faixas_do_ar.Selo(queda_do_wifi.nivel(contadas), queda_do_wifi.em_palavras(contadas))
+    colado = usb3 and int(rede["mhz"]) < 2500
+    return selo, NOTA_DO_USB_3_NO_2_4 if colado else "", DICA_DO_USB_3_NO_2_4 if colado else ""
 
 
 def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
@@ -3972,20 +4019,19 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
     saida: list[tuple[Any, str]] = []
     da_rede: set[str] = set()
     for i, rede in enumerate(cena.get("wifi") or ()):
-        no = str(rede.get("no") or "")
-        viz = next((v for v in vizinhos if no and str(v.get("no") or "") == no), None)
-        quem = str(viz["id"]) if viz is not None else f"wifi-{i}"
+        viz = _o_vizinho_da_rede(rede, vizinhos)
+        quem = _id_da_rede(rede, viz, i)
         if viz is not None:
             da_rede.add(quem)
         faixa, _informada = _faixa_da_rede(rede)
         banda = (faixas_do_ar.banda_do_intervalo(faixa["ini"], faixa["fim"])
                  if faixa["como"] == faixa_do_wifi.PROVAVEL else frozenset())
-        sub = " · ".join(p for p in (
-            _canal_do_wifi(int(rede["mhz"])),
-            "USB 3.0" if _usb_da_porta(cena, quem) == "3.0" else "") if p)
+        usb3 = _usb_da_porta(cena, quem) == "3.0"
+        sub = _canal_do_wifi(int(rede["mhz"]))
+        selo, nota, dica = _a_saude_do_wifi(rede, usb3)
         saida.append((faixas_do_ar.Ocupante(
             id=quem, tipo="wifi", nome=NOME_DO_WIFI, sub=sub, banda=banda,
-            sem_faixa=faixas_do_ar.FORA_DA_FAIXA),
+            sem_faixa=faixas_do_ar.FORA_DA_FAIXA, selo=selo, nota=nota, dica=dica),
             _rotulo_do_ocupante(NOME_DO_WIFI, "wifi", sub)))
     for viz in vizinhos:
         if str(viz["id"]) in da_rede:
@@ -4073,17 +4119,24 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
         marca = "✓ " if fora else ""
         faixa = (f'<div class="ar-faixa sem{fora}" role="img" aria-label="{_x(linha.sem_faixa)}">'
                  f'<span>{marca}{_x(linha.sem_faixa)}</span></div>')
+    ja_dito = linha.selo is not None and "tira canais" in linha.selo.texto
+    tira = f"tira canais de {linha.tira_de}" if linha.tira_de and not ja_dito else ""
     dicas = [t for t in (
         f"sinal {linha.rssi} dBm" if isinstance(linha.rssi, int) else "",
-        f"qualidade {linha.qualidade}/255" if isinstance(linha.qualidade, int) else "") if t]
+        (f"qualidade do enlace {linha.qualidade_do_enlace}/255"
+         if isinstance(linha.qualidade_do_enlace, int) else ""),
+        tira, linha.dica) if t]
     quem = "".join(
         f'<span class="ar-quem"><i style="background:{_x(cor_do)}"></i>{_x(nome)}</span>'
         for cor_do, nome in ((_cor_na_regua(t), n) for t, n in linha.quem))
     donos = " ".join(dict.fromkeys(t for t, _n in linha.quem))
+    nota = (f'<span class="ar-nota" title="{_x(linha.dica)}">{_x(linha.nota)}</span>'
+            if linha.nota else "")
     return (f'<div class="ar-linha" data-id="{_x(linha.id)}" data-tipo="{_x(linha.tipo)}" '
             f'data-briga="{_x(" ".join(linha.briga))}" data-quem="{_x(donos)}" tabindex="0" '
             f'style="--cor:{_x(cor)}">{rot}{faixa}'
-            f'<div class="ar-estado">{_o_selo(linha.selo, " · ".join(dicas))}{quem}</div></div>')
+            f'<div class="ar-estado">{_o_selo(linha.selo, " · ".join(dicas))}'
+            f'{quem}{nota}</div></div>')
 
 
 def _o_rotulo_do_aparelho(linha: Any) -> str:
@@ -4313,7 +4366,26 @@ def _ler_o_wifi() -> list[dict[str, Any]] | None:
     redes = faixa_do_wifi.ler_as_redes()
     if redes is None:
         return None
-    return [{"no": r.no, "mhz": r.frequencia_mhz, "largura": r.largura_mhz} for r in redes]
+    return [{"no": r.no, "mhz": r.frequencia_mhz, "largura": r.largura_mhz,
+             "chave": r.chave} for r in redes]
+
+
+def _ler_as_quedas() -> dict[str, Any] | None:
+    """As quedas do barramento deste boot, por `usb:vid:pid` (o diário do kernel, em fundo)."""
+    perfil._com_o_src()
+    return queda_do_wifi.ler_as_quedas()
+
+
+def _o_wifi_com_as_quedas(
+    redes: list[dict[str, Any]], quedas: dict[str, Any] | None
+) -> list[dict[str, Any]]:
+    """Cada rede lida, com o que o diário diz da placa dela (`quedas`: `{n, min}`)."""
+    saida = []
+    for rede in redes:
+        q = (quedas or {}).get(str(rede.get("chave") or ""))
+        saida.append({**rede, "quedas": {"n": q.n, "min": q.minutos}} if q is not None
+                     else dict(rede))
+    return saida
 
 
 def _ler_a_maquina() -> tuple[Any, dict[int, str]]:
@@ -4468,7 +4540,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     central: dict[str, Any] = _dicionario(st.get("radio_central"))
     bluez = _em_fundo("bluez", _ler_o_bluez, 3.0)
     lida = _em_fundo("maquina", _ler_a_maquina, 5.0)
-    wifi = _em_fundo("wifi", _ler_o_wifi, 10.0) or []
+    wifi = _o_wifi_com_as_quedas(_em_fundo("wifi", _ler_o_wifi, 10.0) or [],
+                                 _em_fundo("wifi-quedas", _ler_as_quedas, 30.0))
     maquina, controladores = lida if lida else (None, {})
     mesa = _mesa_do_radio()
     adaptadores_bz, aparelhos_bz = bluez if bluez else ((), ())
