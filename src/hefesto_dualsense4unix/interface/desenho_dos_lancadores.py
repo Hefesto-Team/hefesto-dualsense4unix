@@ -59,12 +59,12 @@ from pathlib import Path
 
 #: O selo é o resumo de UMA palavra do corpo do cartão.
 #:
-#: `nao_sei` NASCEU DA MEDIÇÃO, e não do desenho: o produto tem `zero` função
-#: que examine Heroic, Lutris, RetroArch, Dolphin ou mGBA — as cinco só aparecem
-#: em COMENTÁRIO (`daemon/subsystems/hotkey.py:37`, `daemon/lifecycle.py:3866`). Sem
-#: este selo, o cartão do Heroic teria de
-#: escolher entre `CHEGAM` e `NÃO CHEGAM`, e as duas seriam afirmação sobre um
-#: lançador que o produto nunca olhou. **"Não sei" é resposta; palpite não é.**
+#: `nao_sei` NASCEU DA MEDIÇÃO, e não do desenho: quando ele nasceu, o produto
+#: não tinha função que examinasse Heroic, Lutris, RetroArch, Dolphin ou mGBA.
+#: Desde 09/09/2026 quem os lê é o `integrations.censo_dos_lancadores`
+#: (LANCADORES-ZERO-01), e o selo ficou para o que ainda não se leu. Sem
+#: este selo, o cartão teria de escolher entre `CHEGAM` e `NÃO CHEGAM`, e as duas
+#: seriam palpite sobre o que não se leu. **"Não sei" é resposta; palpite não é.**
 #: O `off` DIZ «NÃO LOCALIZADO» DESDE 08/09/2026 — palavra dela, olhando a aba
 #: com os quatro DualSense na mesa: *"ao invés de não achei. Deveria ter Não
 #: Localizado"*.

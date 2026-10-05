@@ -632,8 +632,8 @@ recusa (`ocupado`, com um «Mover» em curso; `sem_destino`; `sem_central`).
 
 Chave do `daemon.state_full`, sem método: `{ "usb:<vid>:<pid>": {teclas_presas, buracos, janela_s,
 lendo} }` para cada receptor 2.4G de teclado e mouse que o censo reconhece. `teclas_presas` conta
-as vezes, na última hora (`janela_s`, 3600), em que uma tecla ficou apertada repetindo por mais de
-1 s sem soltar; `buracos`, os vazios de 8 ms ou mais no meio de um movimento contínuo do mouse.
+as vezes, na última hora (`janela_s`, 3600), em que uma tecla repetiu por mais de 1 s, solte ou não
+depois; `buracos`, os vazios de 8 ms e 4× o intervalo do próprio mouse, ou mais, no movimento contínuo.
 `lendo` é falso quando o `/dev/input` dele não abriu (sem leitura não há número). **Nunca** leva o
 código de uma tecla nem texto: só contagens. A chave é `{}` sob a suíte e no modo falso.
 

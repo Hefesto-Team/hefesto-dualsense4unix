@@ -414,7 +414,7 @@ LEGENDA = f'''<div class="nota">
   <h2>A aba mudou de assunto inteiro</h2>
   <ul>
     <li><b>A antiga era "Emulação" de <i>gamepad</i></b> (<code>uinput</code>) — termo técnico que ninguém entende. O conteúdo dela foi para os donos certos: diagnóstico e "Testar o controle virtual" para a <b>Sistema</b>, os combos para a <b>Navegação</b>, o microfone para a <b>Conexões</b>, modo e máscara para a <b>Jogar</b> e os <b>Perfis</b>.</li>
-    <li><b>A nova é sobre de onde o jogo vem</b> — e existe para fechar uma lacuna medida: o produto tem <b>zero</b> menção a RetroArch, Dolphin ou mGBA no código, e o Orpheus depende de um emulador de GBC. Heroic e Lutris só aparecem em <b>comentário</b> (<code>hotkey.py:37</code>, <code>lifecycle.py:3866</code> — era <code>:2250</code>, e a linha andou).</li>
+    <li><b>A nova é sobre de onde o jogo vem</b> — e existe para fechar uma lacuna medida: quando ela nasceu, o produto não examinava RetroArch, Dolphin, mGBA, Heroic nem Lutris, e o Orpheus depende de um emulador de GBC. Desde 09/09/2026 quem os lê é o <code>censo_dos_lancadores</code>.</li>
     <li><b>A interface diz "Steam" 689 vezes</b> para um motor que já casa por <code>process_name</code> e <code>window_class</code>. É aqui que o jogo de fora da Steam ganha porta de entrada.</li>
   </ul>
 
