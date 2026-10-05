@@ -151,6 +151,13 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "decide, e a regra é a das sprints de byte: byte que o aparelho não "
         "obedece não ganha campo",
     ),
+    "volume-padrao": (
+        "médio",
+        "2026-10-03-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01.md",
+        "o «Padrão» do alto-falante escreve o volume nominal pelo mesmo caminho do "
+        "trilho (`audio.alto_falante.volume`, MONTOU nos dois transportes): falta a "
+        "orelha dela na bancada da 1.5, de P1 a P4, no cabo e no rádio",
+    ),
     "rota": (
         "grande",
         "2026-08-31-A-BANCADA-QUE-O-RADIO-PEDE-INDICE.md",
