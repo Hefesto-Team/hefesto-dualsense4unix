@@ -126,7 +126,7 @@ TEXTO_DO_SELO = {
 
 NAO_MEDI = "Não medi o ganho nesta máquina."
 
-NAO_DECLARADO = "Para eu dizer qual, use o «Mapear Entradas»."
+NAO_DECLARADO = "Para saber qual, use o «Mapear entradas»."
 
 SEM_DESTINO = "Não achei entrada livre para onde mandar."
 

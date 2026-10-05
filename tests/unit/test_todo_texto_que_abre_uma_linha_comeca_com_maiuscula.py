@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from types import SimpleNamespace
 from typing import Any
 
@@ -183,6 +184,16 @@ def test_o_receptor_que_nao_achou_a_faixa_nao_fala_em_primeira_pessoa(
     monkeypatch.setattr(a08, "_passo_da_linha", lambda _c: receptor_sem_fio.PASSO_NADA)
     html = a08.html_dos_canais(_cenas()[1])
     assert "Não achei" not in html and a08.FAIXA_NAO_ENCONTRADA in html
+
+
+def test_o_que_fazer_da_dica_chama_a_ferramenta_pelo_nome_do_botao_e_sem_primeira_pessoa() -> None:
+    """O «O que fazer» do porquê manda ao «Mapear entradas»: o nome que o botão da 08 tem desde
+    05/10, e sem o app falar em primeira pessoa («Para eu dizer qual…»)."""
+    from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
+    from hefesto_dualsense4unix.interface import aba08
+
+    assert f"«{aba08.MAPEAR_ENTRADAS}»" in ordens.NAO_DECLARADO
+    assert not re.search(r"\b(eu|me|meu|minha)\b", ordens.NAO_DECLARADO, re.I), ordens.NAO_DECLARADO
 
 
 # ───────────────────────── o nome que ela dá ─────────────────────────
