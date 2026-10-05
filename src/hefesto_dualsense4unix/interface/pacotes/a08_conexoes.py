@@ -2972,7 +2972,9 @@ _LARGURA_DA_PONTE = round((FATIAS_DA_PONTE + 1) * HZ_DA_PONTE, 1)
 
 #: grande, verborrágico e confuso"*.  (noqa-acento: citação literal dela)
 SEGURE = "Segure PS + Create"
-DE_UM_NOME = "Dê um nome a este adaptador"
+NOMEAR = "Nomear"
+#: o nome do adaptador na faixa quando ele não tem nome nem entrada lida.
+ADAPTADOR_SEM_NOME = "Adaptador"
 ONDE_FICA = "Onde fica?"
 MARCA_VARRENDO = ("Outro programa está procurando aparelhos por aqui. "
                   "Controle novo vai para outro adaptador.")
@@ -2985,9 +2987,9 @@ TRAVESSAO_DO_PROCURAR = "—"
 PROCURAR_RECUSA = "o rádio não ligou nem desligou a busca agora"
 TRACO_CURTO = "\u2013"
 
-NAO_CONECTOU = "Não Conectou"
-TENTAR_DE_NOVO = "Tentar de Novo"
-PAREAR_DE_NOVO = "Parear de Novo"
+NAO_CONECTOU = "Não conectou"
+PAREAR = "Parear"
+TIRAR_A_LINHA = "Tirar esta linha"
 DESLIGUE_O_PROCURAR = "desligue o Procurar para esquecer"
 ESQUECER_FAZ = "Tira o pareamento com este adaptador. Para voltar, use Conectar."
 DESLIGADO = "Desligado"
@@ -3068,16 +3070,6 @@ def _silhueta(ap: dict[str, Any], classe: str = "ds") -> str:
 
 def _maiuscula(frase: str) -> str:
     return frase[:1].upper() + frase[1:]
-
-
-_MIUDAS = frozenset({"a", "e", "o", "de", "da", "do", "das", "dos", "em", "na", "no"})
-
-
-def _em_titulo(rotulo: str) -> str:
-    """«Caixa de som» → «Caixa de Som»: a palavra da tela com a primeira letra"""
-    palavras = rotulo.split()
-    return " ".join(p if i and p.lower() in _MIUDAS else _maiuscula(p)
-                    for i, p in enumerate(palavras))
 
 
 def _cor_de(ap: dict[str, Any]) -> str:
@@ -3283,10 +3275,14 @@ def _vaga_de(ap: dict[str, Any], cena: dict[str, Any]) -> int:
 
 
 def _tem_menu(ap: dict[str, Any]) -> bool:
-    """Quem tem o «⋮» com o «Esquecer» (ESQUECER-E-LIMPAR-AS-CONEXOES-01,"""
-    if ap.get("esperando") or ap.get("nao_conectou") or ap.get("tipo") == "webcam":
-        return False
-    return ap.get("tipo") == "controle" or bool(ap.get("desligado")) or bool(ap.get("pareado"))
+    """Toda linha tem o «⋮» (desenho aprovado de 05/10/2026), menos a que espera o gesto."""
+    return not ap.get("esperando") and ap.get("tipo") != "webcam"
+
+
+def _pode_esquecer(ap: dict[str, Any]) -> bool:
+    """O «Esquecer» do «⋮» (ESQUECER-E-LIMPAR-AS-CONEXOES-01): a linha que não conectou só
+    se tira (o «Tirar esta linha» do mesmo menu)."""
+    return _tem_menu(ap) and not ap.get("nao_conectou")
 
 
 def _tem_x(ap: dict[str, Any]) -> bool:
@@ -3304,16 +3300,6 @@ def _o_menu(ap: dict[str, Any]) -> str:
             f'aria-haspopup="true" data-gesto="aparelho-menu" data-alvo="{_x(ap["id"])}" '
             f'data-lugar="{_x(ap.get("lugar") or "")}">'
             f'<span aria-hidden="true">{MENU_DA_LINHA}</span></button>')
-
-
-def _o_x(ap: dict[str, Any]) -> str:
-    """O X da linha «Não Conectou»: tira a linha, na central (``radio.dispensar``),"""
-    if not _tem_x(ap):
-        return ""
-    dica = "Tirar esta linha"
-    return (f'<button class="xis" title="{dica}" aria-label="{dica}" '
-            f'data-gesto="dispensar-linha" data-alvo="{_x(ap["id"])}" '
-            f'data-lugar="{_x(ap.get("lugar") or "")}">{_ic("sair")}</button>')
 
 
 def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False) -> str:
@@ -3361,12 +3347,12 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
         dica = ("Esquece o pareamento antigo e pareia de novo neste adaptador" if refaz
                 else "Conectar de novo neste adaptador")
         return (abre + desenho + fixo + '<div class="features">'
-                f'<span class="nao-conectou">{NAO_CONECTOU}</span>'
+                f'<span class="ar-selo sofrendo nao-conectou" role="img" title="{NAO_CONECTOU}" '
+                f'aria-label="{NAO_CONECTOU}"></span>'
                 f'<button class="btn tentar" title="{dica}" '
                 f'data-gesto="{gesto}" data-alvo="{_x(ap.get("lugar") or "")}" '
-                f'data-linha="{aid}"{abre_o_painel}>'
-                f'{PAREAR_DE_NOVO if refaz else TENTAR_DE_NOVO}</button></div>'
-                + vazia + _o_x(ap) + '</div>')
+                f'data-linha="{aid}"{abre_o_painel}>{PAREAR}</button></div>'
+                + vazia + _o_menu(ap) + '</div>')
     if ap.get("desligado"):
         fala, dica = ((USB, "Pareado neste adaptador, ligado no USB agora") if ap.get("usb")
                       else (DESLIGADO, "Pareado neste adaptador, fora do ar"))
@@ -3516,7 +3502,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         classes.append("aberto")
     ver = ("Esconder" if aberto else "Ver") + " os aparelhos deste adaptador"
     nome = str(lug.get("nome") or "")
-    largura = max(len(nome or DE_UM_NOME) + 2, 10)
+    largura = max(len(nome or NOMEAR) + 2, 10)
     sino = ""
     quedas = lug.get("quedas") or []
     if quedas:
@@ -3533,7 +3519,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
     topo = (
         f'<div class="lugar-topo"{arrasta}>' + seta
         + f'<input class="lugar-nome cor-{cor_do_adaptador(cena, str(lug["id"]))}" '
-        f'value="{_x(nome)}" placeholder="{DE_UM_NOME}" '
+        f'value="{_x(nome)}" placeholder="{NOMEAR}" '
         f'aria-label="Nome deste adaptador" style="width:{largura}ch" '
         f'data-gesto="adaptador-renomear" data-alvo="{lid}">'
         + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
@@ -3548,11 +3534,11 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         lampada = (f'<button class="lampada{apagado}" title="Quem funciona melhor aqui" '
                    f'aria-label="Quem funciona melhor aqui" data-gesto="sugerir-alocacao" '
                    f'data-alvo="{lid}">{_ic("lampada")}</button>')
-    soltar = ("Arraste outro para cá" if moradores else "Arraste um aparelho para cá")
-    corpo = (f'<div class="aparelhos" data-alvo="{lid}">{linhas}'
-             f'<div class="soltar-fila"><button class="soltar{apagado}" '
-             f'title="Trazer um aparelho para cá" data-gesto="trazer-para-ca" '
-             f'data-alvo="{lid}">{_ic("soltar")}{soltar}</button>{lampada}</div></div>')
+    # sem «Arraste outro para cá» (desenho aprovado de 05/10/2026): a linha se arrasta, e o
+    # Enter nela abre «Para onde vai»
+    fila = f'<div class="soltar-fila">{lampada}</div>' if lampada else ""
+    corpo = f'<div class="aparelhos" data-alvo="{lid}">{linhas}{fila}</div>'
+
     return (f'<div class="{" ".join(classes)}" data-id="{lid}" data-alvo="{lid}" '
             f'data-chegou="{chegou}" data-campo="radio-conectando" data-hef-alvo="classe" '
             f'data-hef-classe="buscando" data-hef-quando="sim">' + topo + corpo + "</div>")
@@ -3643,13 +3629,18 @@ def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
             continue
         alvo, lid = _x(ap["id"]), _x(lug["id"])
         titulo = _x(nome_na_conexoes(ap) or str(ap.get("rotulo") or ""))
+        esquece = _pode_esquecer(ap)
+        itens = ([("sair", ESQUECER, f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '
+                                     f'data-lugar="{lid}"')] if esquece else [])
+        if _tem_x(ap):
+            itens.append(("sair", TIRAR_A_LINHA, f'data-gesto="dispensar-linha" data-alvo="{alvo}" '
+                                                 f'data-lugar="{lid}"'))
         moldes.append(f'<template class="painel-molde" data-painel="menu" '
                       f'data-alvo="{alvo}|{lid}" data-titulo="{titulo}">'
-                      + f'<p class="explica">{ESQUECER_FAZ}</p>'
-                      + _botoes([("sair", ESQUECER,
-                                  f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '
-                                  f'data-lugar="{lid}"')])
-                      + '</template>')
+                      + (f'<p class="explica">{ESQUECER_FAZ}</p>' if esquece else "")
+                      + _botoes(itens) + '</template>')
+        if not esquece:
+            continue
         moldes.append(f'<template class="pergunta-molde" data-esquecer="1" '
                       f'data-alvo="{alvo}" data-destino="{lid}" '
                       f'data-sim="{ESQUECER}" data-gesto="confirmar-esquecer">'
@@ -3792,7 +3783,6 @@ def _molde_do_balao(cena: dict[str, Any]) -> str:
 
 CORES_DOS_ADAPTADORES = ("cyan", "purple", "pink", "yellow")
 COR_DO_QUINTO_EM_DIANTE = "comment"
-SELO_LIDO = "(lido)"
 NOME_DO_WIFI = "Wi-Fi"
 
 
@@ -3815,13 +3805,13 @@ def nome_do_grupo(viz: dict[str, Any]) -> tuple[str, str, str]:
     tipo = str(viz.get("tipo") or "")
     sugestao = str(viz.get("sugestao") or "")
     if tipo:
-        return (str(viz.get("nome") or _em_titulo(tipo.replace("_", " "))), "dela",
+        return (str(viz.get("nome") or _maiuscula(tipo.replace("_", " "))), "dela",
                 glifo_do_tipo(tipo))
     glifo = glifo_do_tipo(viz.get("sugestao_tipo"))
     if sugestao and sugestao == str(viz.get("lido") or ""):
-        return _em_titulo(sugestao), "lido", glifo
+        return _maiuscula(sugestao), "lido", glifo
     if sugestao:
-        return f"{_em_titulo(sugestao)}?", "equivale", glifo
+        return f"{_maiuscula(sugestao)}?", "equivale", glifo
     if viz.get("produto"):
         return str(viz["produto"]), "produto", "ajuda"
     return ESPECIE_DESCONHECIDA, "ninguem", "ajuda"
@@ -3857,7 +3847,6 @@ TIPOS_COM_COR_NA_REGUA = frozenset({
 LEGENDA_DAS_FAIXAS = (
     ("controle", "Controles"), ("celular", "Celular"), ("relogio", "Relógio"),
     ("wifi", "Wi-Fi"), ("teclado", "Teclado"), ("mouse", "Mouse"), ("ruido", "Ruído"))
-AS_REGUAS_DE_CIMA = ("2402 MHz", "canal 39", "2480 MHz")
 
 
 def _evitados_do_lugar(cena: dict[str, Any], lid: str) -> frozenset[int] | None:
@@ -3892,27 +3881,16 @@ def _a_regua_dos_adaptadores(cena: dict[str, Any]) -> list[Any]:
         aparelhos = tuple(_a_faixa_do_aparelho(cena, lid, a) for a in _moradores(cena, lid)
                           if a.get("tipo") != "webcam" and _no_ar(a))
         adaptadores.append(faixas_do_ar.Adaptador(
-            id=lid, nome=_titulo_do_lugar(lug) or DE_UM_NOME,
-            cor=cor_do_adaptador(cena, lid), sub=_sub_do_adaptador(lug, len(aparelhos)),
+            id=lid, nome=_titulo_do_lugar(lug) or ADAPTADOR_SEM_NOME,
+            cor=cor_do_adaptador(cena, lid),
             evitados=_evitados_do_lugar(cena, lid), aparelhos=aparelhos))
     return adaptadores
-
-
-def _sub_do_adaptador(lug: dict[str, Any], n: int) -> str:
-    """«Entrada 15 · extensor · 4 aparelhos dividem o tempo deste rádio»."""
-    quantos = ("nenhum aparelho no ar" if not n else "só 1 aparelho neste rádio" if n == 1
-               else f"{n} aparelhos dividem o tempo deste rádio")
-    # sem nome dela, o nome do adaptador JÁ É a entrada: dizê-la de novo é ruído
-    partes = [str(lug.get("entrada") or "") if lug.get("nome") else "",
-              "extensor" if lug.get("extensor") else "",
-              str(lug.get("junto") or ""), quantos]
-    return " · ".join(p for p in partes if p)
 
 
 def _canal_do_wifi(mhz: int) -> str:
     """«2.4 GHz · canal 11»: a banda e o canal, pela frequência que a rede anuncia."""
     if mhz < 2500:
-        return f"2.4 GHz · canal {14 if mhz == 2484 else (mhz - 2407) // 5}"
+        return f"2,4 GHz · canal {14 if mhz == 2484 else (mhz - 2407) // 5}"
     if mhz < 5925:
         return f"5 GHz · canal {(mhz - 5000) // 5}"
     return f"6 GHz · canal {(mhz - 5950) // 5}"
@@ -3931,9 +3909,9 @@ def _vizinhos_sem_rede(cena: dict[str, Any]) -> list[dict[str, Any]]:
     return [v for v in vizinhos if str(v["id"]) not in das_redes]
 
 
-NOTA_DO_USB_3_NO_2_4 = "USB 3.0 + 2.4 GHz"
+NOTA_DO_USB_3_NO_2_4 = "USB 3.0 + 2,4 GHz"
 DICA_DO_USB_3_NO_2_4 = (
-    "USB 3.0 e 2.4 GHz juntos: o link USB 3.0 fica colado na antena e costuma derrubar a "
+    "USB 3.0 e 2,4 GHz juntos: o link USB 3.0 fica colado na antena e costuma derrubar a "
     "placa. Em 5 GHz ou numa porta USB 2.0 ela não cai.")
 
 
@@ -4077,7 +4055,7 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
             sem_faixa=faixas_do_ar.FORA_DA_FAIXA, selo=selo, nota=nota, dica=dica),
             _rotulo_do_ocupante(NOME_DO_WIFI, "wifi", sub)))
     for viz in [*vizinhos, *([tirado] if tirado else [])]:
-        if str(viz["id"]) in da_rede:
+        if str(viz["id"]) in da_rede or _nao_e_sem_fio(viz):
             continue
         nome, procedencia, glifo = nome_do_grupo(viz)
         tipo = "wifi" if glifo == "wifi" else str(viz.get("tipo") or viz.get("sugestao_tipo")
@@ -4085,7 +4063,7 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
         banda = viz.get("banda")
         receptor = bool(viz.get("receptor")) or tipo in ("teclado", "mouse")
         sub = ("" if tipo == "wifi" else
-               ("receptor 2.4G · descoberto" if banda else "receptor 2.4G") if receptor else "")
+               ("Receptor 2,4G · descoberto" if banda else "Receptor 2,4G") if receptor else "")
         sem_faixa = (faixas_do_ar.SEM_REDE if tipo == "wifi" else
                      faixas_do_ar.NAO_DESCOBERTA if receptor
                      else faixas_do_ar.NAO_SE_MEDE)
@@ -4097,30 +4075,37 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
             sem_faixa=sem_faixa,
             selo=faixas_do_ar.Selo(selo[0], selo[1]) if selo else None,
             nota=selo[2] if selo else ""),
-            _rotulo_do_vizinho(viz, nome, procedencia, glifo, sub)))
+            _rotulo_do_vizinho(viz, nome, procedencia, glifo)))
     return saida
 
 
+#: o que é aparelho USB e não fala pelo ar: não ganha linha entre os sem fio (05/10/2026).
+NAO_SAO_SEM_FIO = frozenset({"webcam", "caixa_de_som", "caixa"})
+
+
+def _nao_e_sem_fio(viz: dict[str, Any]) -> bool:
+    """A webcam e a caixa de som no cabo dividem o barramento, não o ar."""
+    return str(viz.get("tipo") or viz.get("sugestao_tipo") or "") in NAO_SAO_SEM_FIO
+
+
 def _rotulo_do_ocupante(nome: str, tipo: str, sub: str) -> str:
-    return (f'<div class="ar-rot">{_ic(glifo_do_tipo(tipo))}<span><span class="nome">'
-            f'{_x(nome)}</span><span class="sub">{_x(sub)}</span></span></div>')
+    """Só o ícone; o nome (e a banda) no tooltip — desenho aprovado de 05/10/2026."""
+    dica = " · ".join(t for t in (nome, sub) if t)
+    return (f'<div class="ar-rot" title="{_x(dica)}" role="img" aria-label="{_x(dica)}">'
+            f'{_ic(glifo_do_tipo(tipo))}</div>')
 
 
-def _rotulo_do_vizinho(viz: dict[str, Any], nome: str, procedencia: str, glifo: str,
-                       sub: str) -> str:
-    selo = f'<span class="selo-lido">{SELO_LIDO}</span>' if procedencia == "lido" else ""
+def _rotulo_do_vizinho(viz: dict[str, Any], nome: str, procedencia: str, glifo: str) -> str:
+    """Só o ícone, que é o botão do «O que é?»; o nome mora no tooltip e no `aria-label`."""
     dica = _x({
         "dela": f"{nome}: canal que o sistema não diz. Toque para trocar.",
         "lido": f"{nome}, lido pelo computador. Toque para trocar.",
         "equivale": f"{nome} Toque para dizer o que é.",
         "produto": f"{nome}. Toque para dizer o que é.",
     }.get(procedencia, "Rádio sem nome. Toque para dizer o que é."))
-    # Sem `aria-label`: o nome escrito no botão já o nomeia, e a dica da casa leria o
-    # `title` por cima dele, duas vezes.
-    fala = f'<span class="sub">{_x(sub)}</span>' if sub else ""
     return (f'<div class="ar-rot"><button class="rotulo vizinho" title="{dica}" '
-            f'data-gesto="vizinho-o-que-e" data-alvo="{_x(viz["id"])}">'
-            f'{_ic(glifo)}<span class="nome">{_x(nome)}</span>{selo}</button>{fala}</div>')
+            f'aria-label="{_x(nome)}" data-gesto="vizinho-o-que-e" data-alvo="{_x(viz["id"])}">'
+            f'{_ic(glifo)}</button></div>')
 
 
 def _cor_na_regua(tipo: str, cor: str = "") -> str:
@@ -4155,59 +4140,79 @@ def _o_selo(selo: Any, titulo: str = "") -> str:
     return f'<span class="ar-selo {nivel}"{dica}>{_x(selo.texto)}</span>'
 
 
+#: o tooltip do ponto verde e do vazado (desenho aprovado de 05/10/2026: o verde já diz «bom»).
+TUDO_CERTO = "Tudo certo"
+FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
+
+
+def _o_ponto(linha: Any, descobrir: str) -> str:
+    """O estado da linha num ponto: verde = bom, vermelho = problema, vazado = sem faixa.
+
+    O texto do problema («caiu 12× em 24 min», «3 teclas presas em 1 h») vai só no tooltip;
+    o vazado do receptor ainda não descoberto é o próprio gesto de descobrir.
+    """
+    selo = linha.selo
+    ruim = selo is not None and selo.nivel != "boa"
+    nivel = _x(str(selo.nivel).replace(" ", "-")) if selo is not None else ""
+    texto = (_maiuscula(" ".join(t for t in (selo.texto, linha.nota) if t)) if ruim
+             else TUDO_CERTO if selo is not None else _maiuscula(linha.sem_faixa))
+    if descobrir:
+        dica = "\n".join(t for t in (texto if ruim else "", FAIXA_NAO_DESCOBERTA) if t)
+        return (f'<button class="ar-selo {nivel} sem" type="button" '
+                f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}" '
+                f'title="{_x(dica)}" aria-label="{_x(dica)}"></button>')
+    classe = nivel if selo is not None else "sem"
+    return (f'<span class="ar-selo {classe}" role="img" title="{_x(texto)}" '
+            f'aria-label="{_x(texto)}"></span>')
+
+
 def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str, str]) -> str:
     cor = cores[linha.id]
+    descobrir = ""
     if linha.celulas:
         resumo = (f"{nomes[linha.id]}: {linha.bons} dos {CANAIS_DO_BT} canais bons"
                   if linha.bons is not None else f"{nomes[linha.id]}: faixa ocupada")
         faixa = (f'<div class="ar-faixa" role="img" aria-label="{_x(resumo)}">'
                  + "".join(_o_canal(c, cores, nomes) for c in linha.celulas) + "</div>")
     else:
-        fora = " fora" if linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA else ""
-        marca = "✓ " if fora else ""
-        frase, botao = _o_botao_da_descoberta(linha)
-        if frase:
-            # o receptor que ainda não foi descoberto: a faixa diz isso e traz o gesto; é um
-            # grupo, não uma figura (`role="img"` faria o leitor de tela engolir o botão)
-            descobrir = (f'<button class="btn ar-descobrir" type="button" '
-                         f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}">'
-                         f'{_x(botao)}</button>' if botao else "")
-            faixa = (f'<div class="ar-faixa sem" role="group" aria-label="{_x(frase)}">'
-                     f'<span>{_x(frase)}</span>{descobrir}</div>')
-        else:
-            faixa = (f'<div class="ar-faixa sem{fora}" role="img" '
-                     f'aria-label="{_x(linha.sem_faixa)}">'
-                     f'<span>{marca}{_x(linha.sem_faixa)}</span></div>')
-    ja_dito = linha.selo is not None and "tira canais" in linha.selo.texto
-    tira = f"tira canais de {linha.tira_de}" if linha.tira_de and not ja_dito else ""
-    dicas = [t for t in (
-        f"sinal {linha.rssi} dBm" if isinstance(linha.rssi, int) else "",
-        (f"qualidade do enlace {linha.qualidade_do_enlace}/255"
-         if isinstance(linha.qualidade_do_enlace, int) else ""),
-        tira, linha.dica) if t]
-    quem = "".join(
-        f'<span class="ar-quem"><i style="background:{_x(cor_do)}"></i>{_x(nome)}</span>'
-        for cor_do, nome in ((_cor_na_regua(t), n) for t, n in linha.quem))
+        frase, descobrir = _o_botao_da_descoberta(linha)
+        # o passo do gesto guiado («Tire o receptor da porta») é a única frase que a faixa diz
+        passo = f"<span>{_x(frase)}</span>" if frase and not descobrir else ""
+        faixa = (f'<div class="ar-faixa sem" role="img" '
+                 f'aria-label="{_x(frase or linha.sem_faixa)}">{passo}</div>')
     donos = " ".join(dict.fromkeys(t for t, _n in linha.quem))
-    nota = (f'<span class="ar-nota" title="{_x(linha.dica)}">{_x(linha.nota)}</span>'
-            if linha.nota else "")
     return (f'<div class="ar-linha" data-id="{_x(linha.id)}" data-tipo="{_x(linha.tipo)}" '
             f'data-briga="{_x(" ".join(linha.briga))}" data-quem="{_x(donos)}" tabindex="0" '
             f'style="--cor:{_x(cor)}">{rot}{faixa}'
-            f'<div class="ar-estado">{_o_selo(linha.selo, " · ".join(dicas))}'
-            f'{quem}{nota}</div></div>')
+            f'<div class="ar-estado">{_o_ponto(linha, descobrir)}</div></div>')
 
 
 def _o_rotulo_do_aparelho(linha: Any) -> str:
     glifo = (_silhueta({"cor": linha.cor}, "ds") if linha.tipo == "controle"
              else _ic(glifo_do_tipo(linha.tipo)))
-    sub = f'<span class="sub">{_x(linha.sub)}</span>' if linha.sub else ""
-    return (f'<div class="ar-rot" title="{_x(linha.nome)}">{glifo}<span><span class="nome">'
-            f'{_x(linha.nome)}</span>{sub}</span></div>')
+    return (f'<div class="ar-rot" title="{_x(linha.nome)}" role="img" '
+            f'aria-label="{_x(linha.nome)}">{glifo}</div>')
+
+
+#: uma entrada com mais aparelhos que isto põe as linhas em duas colunas.
+LINHAS_NUMA_COLUNA = 3
+OUTROS_SEM_FIO = "Outros dispositivos sem fio"
+
+
+def _em_colunas(linhas: list[str]) -> list[str]:
+    """Até três linhas, uma coluna; mais, duas colunas com metade de cada lado."""
+    if len(linhas) <= LINHAS_NUMA_COLUNA:
+        return linhas
+    return [f'<div class="ar-duas" style="grid-template-rows:repeat({(len(linhas) + 1) // 2},auto)">'
+            + "".join(linhas) + "</div>"]
 
 
 def html_dos_canais(cena: dict[str, Any]) -> str:
-    """Uma faixa por aparelho, os mesmos 79 canais, e embaixo os outros rádios da casa."""
+    """Uma faixa por aparelho, os mesmos 79 canais, e embaixo os outros dispositivos sem fio.
+
+    Cada linha é ícone · faixa · ponto (desenho aprovado de 05/10/2026). A entrada sem aparelho
+    no ar não ganha linha, e o que fica fora da faixa dos controles (o Wi-Fi de 5 GHz) também não.
+    """
     if not cena.get("lugares"):
         return ""
     regua = faixas_do_ar.montar(_a_regua_dos_adaptadores(cena),
@@ -4221,17 +4226,21 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
         cores[linha.id], nomes[linha.id] = _cor_na_regua(linha.tipo), linha.nome
     saida = []
     for ad, linhas in regua.grupos:
+        if not linhas:
+            continue
         saida.append(f'<div class="ar-grupo cor-{_x(ad.cor)}" data-grupo="{_x(ad.id)}">'
-                     f'{_ic("radio", "glifo-do-grupo")}<b>{_x(ad.nome)}</b>'
-                     f'<span>{_x(ad.sub)}</span></div>')
-        saida += [_a_linha_do_ar(ln, _o_rotulo_do_aparelho(ln), cores, nomes) for ln in linhas]
-    if regua.outros:
-        saida.append('<div class="ar-grupo">Os outros rádios da casa</div>')
-        saida += [_a_linha_do_ar(ln, rotulos[ln.id], cores, nomes) for ln in regua.outros]
-    saida.append('<div class="ar-regua"><span></span><div>'
-                 + "".join(f"<span>{t}</span>" for t in AS_REGUAS_DE_CIMA)
-                 + "</div><span></span></div>")
+                     f'{_ic("radio", "glifo-do-grupo")}<b>{_x(ad.nome)}</b></div>')
+        saida += [f'<div class="ar-do" data-do="{_x(ad.id)}">' + "".join(_em_colunas(
+            [_a_linha_do_ar(ln, _o_rotulo_do_aparelho(ln), cores, nomes) for ln in linhas]))
+            + "</div>"]
+    outros = [ln for ln in regua.outros if ln.sem_faixa != faixas_do_ar.FORA_DA_FAIXA]
+    if outros:
+        saida.append(f'<div class="ar-grupo outros">{OUTROS_SEM_FIO}</div>'
+                     '<div class="ar-do">'
+                     + "".join(_a_linha_do_ar(ln, rotulos[ln.id], cores, nomes) for ln in outros)
+                     + "</div>")
     return '<div class="ar">' + "".join(saida) + "</div>"
+
 
 
 #: A cor de cada tipo na mini-faixa do painel do aparelho (a página do mapa tem a paleta dela).
@@ -4317,16 +4326,6 @@ def faixas_para_o_mapa(ctx: Contexto) -> dict[str, dict[str, Any]]:
             faixa["cor"] = COR_DA_FAIXA_NO_MAPA["controle"]
             saida.setdefault(modelo, faixa)
     return saida
-
-
-def html_da_conta_do_radio(cena: dict[str, Any]) -> str:
-    if not cena.get("lugares") and not cena.get("lido", True):
-        return str(_monta().NADA_A_DIZER)
-    controles = sum(1 for a in cena.get("aparelhos", ())
-                    if a.get("tipo") == "controle" and _no_ar(a))
-    lugares = len(cena.get("lugares", ()))
-    return (f"{controles} {'controle' if controles == 1 else 'controles'} · "
-            f"{lugares} {'adaptador' if lugares == 1 else 'adaptadores'}")
 
 
 _SALA_NA_TELA: dict[str, str] = {}
@@ -4427,7 +4426,6 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
     cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)},
             "dicas": {str(a["id"]): d for a, d in zip(controles, dicas, strict=True)}}
     return {
-        "conta-de-adaptadores": html_da_conta_do_radio(cena),
         "radio-sala": _sala_estavel(cena),
         "radio-varrendo": ["sim" if lug.get("varrendo") else "" for lug in lugares],
         "radio-conectando": ["sim" if lug.get("conectando") else "" for lug in lugares],
@@ -4882,12 +4880,9 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
     espera = _onde_espera(lugares, aparelhos)
     if espera:
         return espera
-    falhou = next((str(lug["id"]) for lug in lugares if lug.get("nao_conectou")), None)
-    if falhou:
-        return falhou
-    lampada = str((proposta or {}).get("destino") or "")
-    return _o_mais_cheio(lugares, aparelhos) or next(
-        (str(lug["id"]) for lug in lugares if str(lug["id"]) == lampada), None)
+    # as caixas nascem fechadas (desenho aprovado de 05/10/2026): abre a que ela clicar, ou a
+    # que pede atenção (o controle esperando, o que não conectou)
+    return next((str(lug["id"]) for lug in lugares if lug.get("nao_conectou")), None)
 
 
 def _chave_da_ordem(endereco: object) -> str:
@@ -4947,17 +4942,6 @@ def _a_ordem_de_antes(lugares: list[dict[str, Any]]) -> list[str]:
             if antiga and chave:
                 por_chave.setdefault(antiga, chave)
     return list(dict.fromkeys(por_chave[c] for c in de_antes if c in por_chave))
-
-
-def _o_mais_cheio(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
-    """O adaptador que mais passou do limite de pontes, ou nenhum."""
-    def pontes(lid: str) -> int:
-        return sum(1 for a in aparelhos if a.get("lugar") == lid
-                   and a.get("tipo") == "controle" and a.get("ponte"))
-    cheios = [lug for lug in lugares if pontes(str(lug["id"])) > PONTES_POR_ADAPTADOR]
-    if not cheios:
-        return None
-    return str(max(cheios, key=lambda lug: pontes(str(lug["id"])))["id"])
 
 
 def _faixas(canais: list[Any]) -> list[tuple[int, int]]:
@@ -5739,8 +5723,8 @@ def aparelho_menu(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «⋮» da linha: a página abre o menu (o «Esquecer»), e nada muda aqui."""
     ap = _linha_na_tela(o)
     if not _tem_menu(ap):
-        raise ValueError("esta linha não tem o que esquecer")
-    if not _o_adaptador_foi_descrito(ap):
+        raise ValueError("esta linha não tem menu")
+    if _pode_esquecer(ap) and not _o_adaptador_foi_descrito(ap):
         raise RuntimeError("esperando o Bluetooth do sistema descrever o adaptador")
     return _so_abre()
 
@@ -5749,7 +5733,7 @@ def aparelho_menu(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def esquecer_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «Esquecer» do menu «⋮»: a página abre a pergunta, e nada sai do rádio"""
     ap = _linha_na_tela(o)
-    if not _tem_menu(ap):
+    if not _pode_esquecer(ap):
         raise ValueError("esta linha não tem o que esquecer")
     return _so_abre()
 
@@ -5765,7 +5749,7 @@ def _por_que_o_radio_esta_ocupado() -> str:
 def confirmar_esquecer(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Esquecer» da pergunta do «⋮»: o pareamento DESTE aparelho NESTE adaptador"""
     ap = _linha_na_tela(o)
-    if not _tem_menu(ap):
+    if not _pode_esquecer(ap):
         raise ValueError("esta linha não tem o que esquecer")
     if _CENA_NA_TELA.get("ocupado"):
         raise RuntimeError(_por_que_o_radio_esta_ocupado())

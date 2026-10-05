@@ -1689,7 +1689,23 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
   .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
-  .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch 22px}
+  .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch 22px;min-height:0;height:30px;
+                padding-top:0;padding-bottom:0}
+  .radio .aparelhos{gap:6px;padding-top:6px;padding-bottom:8px}
+  .radio .aparelhos .linha > svg{height:20px;width:auto}
+  .radio .aparelhos .linha .vaga,.radio .aparelhos .linha .parte{min-height:0;height:22px}
+  .radio .linha .features{display:flex;align-items:center;gap:10px}
+  .radio .linha .features .ar-selo{flex:none}
+  .radio .aparelhos .faixa-do-aparelho:not(:has(.hz)){width:auto !important}
+  .radio .aparelhos .faixa-do-aparelho:not(:has(.hz)) .vaga{flex:0 0 auto !important;padding:0 14px}
+  .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
+  .radio .lugar-topo{min-height:26px}
+  .radio .lugar-nome,.radio .abre-lugar{height:24px;padding-top:0;padding-bottom:0}
+  #rd-secao > .quadro-topo{padding-top:6px;padding-bottom:6px}
+  #rd-secao .quadro-corpo{padding-top:0;padding-bottom:8px}
+  #rd-secao .espectro{margin-bottom:6px}
+  #rd-secao .espectro-cab{margin-bottom:0;padding-bottom:2px}
+  .miolo{padding-bottom:8px;row-gap:8px}
   .radio .linha .quem{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
   .radio .linha .quem .nome{flex:0 1 auto;min-width:4ch}
   .radio .linha .quem-resto{font-size:12.5px;color:var(--texto-suave);flex:none}
@@ -1708,9 +1724,8 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                           outline:2px solid var(--purple);outline-offset:2px}
   .radio .linha .nome-fixo{font-size:12.5px;color:var(--texto-suave);overflow:hidden;
                            text-overflow:ellipsis}
-  .radio .linha .features .nao-conectou{color:var(--orange);font-size:11.5px;margin-right:8px}
   .radio .linha .features .desligado{color:var(--texto-mudo);font-size:11.5px}
-  .radio .linha .btn.tentar{height:24px;padding:0 9px;display:inline-flex;align-items:center;
+  .radio .linha .btn.tentar{height:22px;min-height:0;padding:0 12px;display:inline-flex;align-items:center;
                             font-size:11.5px;border-color:var(--green);color:var(--green)}
   .radio .linha.nao-conectou .features,.radio .linha.desligado .features{display:flex;
                             align-items:center}
@@ -1735,59 +1750,51 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .espectro{--c-controle:#7eb8d4;--c-wifi:#c3e88d;--c-teclado:#ffb86c;--c-mouse:#f1fa8c;
                  --c-celular:#f78c6c;--c-relogio:#82aaff;--c-ruido:#8a8fa8;--c-fone:#8be9fd;
                  --c-caixa:#bd93f9;--c-outro:#9a9eb8;--vazio:#1b1c24}
-  .radio .ar{display:flex;flex-direction:column;gap:4px}
+  .radio .ar{display:flex;flex-direction:column;gap:7px}
   .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
-                   color:var(--texto-mudo);margin-top:8px;padding-top:6px;
+                   color:var(--texto-mudo);margin-top:6px;padding-top:6px;
                    border-top:1px dashed var(--border-sutil)}
+  .radio .ar-grupo.outros{color:var(--fg)}
   .radio .ar-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
   .radio .ar-grupo b{font-weight:600;color:var(--cor-do-grupo,var(--fg))}
   .radio .ar-grupo .glifo-do-grupo{color:var(--cor-do-grupo,var(--texto-suave));font-size:14px}
-  .radio .ar-linha,.radio .ar-regua{display:grid;align-items:center;column-gap:12px;
-                   grid-template-columns:minmax(150px,230px) minmax(0,1fr) minmax(130px,200px)}
+  /* 05/10/2026, o desenho aprovado: ícone · faixa · ponto. O nome e o estado moram no tooltip;
+     mais de três aparelhos numa entrada vão em duas colunas, metade de cada lado. */
+  .radio .ar-linha{display:grid;align-items:center;column-gap:12px;
+                   grid-template-columns:30px minmax(0,1fr) 12px}
+  .radio .ar-do{display:flex;flex-direction:column;gap:7px}
+  .radio .pistas .fora-do-foco{display:none}
+  .radio .ar-duas{display:grid;grid-auto-flow:column;grid-template-columns:1fr 1fr;
+                  column-gap:32px;row-gap:7px}
   .radio .ar-linha{transition:opacity .15s;border-radius:6px}
   .radio .ar-linha:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
   .radio .pistas[data-foco] .ar-linha{opacity:.28}
   .radio .pistas[data-foco] .ar-linha.acesa{opacity:1}
-  .radio .ar-rot{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px}
-  .radio .ar-rot > svg,.radio .ar-rot > button svg{flex:none;color:var(--cor)}
-  .radio .ar-rot .nome{display:block;color:var(--fg);overflow:hidden;
-                       text-overflow:ellipsis;white-space:nowrap}
-  .radio .ar-rot .sub{display:block;font-size:11px;color:var(--texto-mudo)}
-  .radio .ar-rot .i{font-size:14px;width:1em;height:1em}
-  .radio .ar-rot .ds{width:20px;height:14px}
-  .radio .ar-rot .selo-lido{font-size:10.5px;color:var(--texto-mudo);
-                            font-family:var(--font-dado);white-space:nowrap}
-  .radio .ar-rot button.rotulo{display:flex;align-items:center;gap:8px;padding:1px 4px;
-                               min-width:0;font-size:13px;color:var(--fg)}
+  .radio .ar-rot{display:flex;align-items:center;justify-content:center;width:30px;height:22px}
+  .radio .ar-rot svg{flex:none;color:var(--cor);width:20px;height:20px}
+  /* o desenho do controle é largo: na mesma altura visual dos outros, ele pede mais largura */
+  .radio .ar-rot svg.ds{width:28px;height:19px}
+  .radio .ar-rot button.rotulo{display:flex;align-items:center;justify-content:center;
+                               padding:0;width:30px;height:22px}
   .radio .ar-faixa{display:grid;grid-template-columns:repeat(79,minmax(0,1fr));gap:1px;
-                   height:18px;min-width:0}
+                   height:14px;min-width:0}
   .radio .ar-faixa i{display:block;position:relative;background:var(--vazio);
                      border-radius:1px}
   .radio .ar-faixa i.b{background:var(--cor)}
   .radio .ar-faixa u{position:absolute;left:0;right:0;bottom:0;height:4px;
                      background:var(--m);text-decoration:none}
-  .radio .ar-faixa.sem{display:flex;align-items:center;justify-content:center;gap:8px;
-                       font-size:11px;color:var(--texto-mudo);
-                       border:1px dashed var(--border-forte);border-radius:4px}
-  .radio .ar-faixa.sem .ar-descobrir{height:16px;padding:0 8px;font-size:11px;
-                       background:var(--panel);border:1px solid var(--border-forte);
-                       color:var(--fg);border-radius:5px;cursor:pointer}
-  .radio .ar-faixa.sem .ar-descobrir:hover{border-color:var(--green)}
-  .radio .ar-faixa.sem.fora{justify-content:flex-start;padding:0 8px;color:var(--green);
-                       background:rgba(80,250,123,.06);border:1px solid rgba(80,250,123,.25)}
-  .radio .ar-estado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;
-                    min-width:0}
-  .radio .ar-selo{font:600 11px var(--font-dado,monospace);padding:1px 6px;border-radius:5px;
-                  border:1px solid;white-space:nowrap}
-  .radio .ar-selo.boa{color:var(--green);border-color:rgba(80,250,123,.5)}
-  .radio .ar-selo.apertada{color:var(--yellow);border-color:rgba(241,250,140,.5)}
-  .radio .ar-selo.sofrendo{color:var(--red);border-color:rgba(255,85,85,.55)}
-  .radio .ar-quem{display:inline-flex;align-items:center;gap:3px;color:var(--texto-mudo);
-                  font-size:11px}
-  .radio .ar-quem i{width:8px;height:8px;border-radius:2px;display:inline-block}
-  .radio .ar-nota{color:var(--texto-mudo);font-size:11px;white-space:nowrap}
-  .radio .ar-regua{margin-top:4px;font:10px var(--font-dado,monospace);color:var(--texto-mudo)}
-  .radio .ar-regua div{display:flex;justify-content:space-between}
+  /* a faixa sem leitura é o trilho vazio, igual ao dos outros; só o passo do «Descobrir» fala */
+  .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
+                       background:repeating-linear-gradient(90deg,var(--vazio) 0 9px,transparent 9px 11px)}
+  .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
+  /* o estado é um ponto: verde = bom, vermelho = problema, vazado = faixa sem leitura */
+  .radio .ar-selo{display:inline-block;box-sizing:border-box;width:10px;height:10px;padding:0;
+                  border-radius:50%;border:0;background:var(--red);box-shadow:0 0 0 3px rgba(255,85,85,.2)}
+  .radio .ar-selo.boa{background:var(--green);box-shadow:none}
+  .radio .ar-selo.sem{background:transparent;box-shadow:none;border:2px solid var(--comment)}
+  .radio .ar-selo.sem.apertada,.radio .ar-selo.sem.sofrendo{border-color:var(--red)}
+  .radio button.ar-selo{cursor:pointer;min-height:0;height:10px}
+  .radio button.ar-selo.sem:hover{border-color:var(--green)}
   .radio .ar-legenda{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
   .radio .ar-legenda button{display:flex;align-items:center;gap:5px;font-size:12px;font-family:inherit;
                     background:var(--panel);border:1px solid var(--border-forte);
@@ -1795,9 +1802,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-legenda button i{width:10px;height:10px;border-radius:3px;display:inline-block}
   .radio .ar-legenda button[aria-pressed="true"]{border-color:var(--fg);color:var(--fg)}
   .radio .ar-legenda button:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
-  @media (max-width:900px){
-    .radio .ar-linha,.radio .ar-regua{grid-template-columns:120px minmax(0,1fr)}
-    .radio .ar-estado,.radio .ar-regua > :last-child{display:none}}
+
   /* O «Procurar» é do painel do «Conectar» e de mais nenhum: o do «⋮» tem o nome, uma
      frase e o botão. */
   .radio .painel:not([data-tipo="conectar"]) .cadeado{display:none}
@@ -2006,7 +2011,7 @@ def _cena_do_desenho() -> dict:
         "canais_medidos": {lg["id"]: True for lg in lugares},
         "vizinhos": vizinhos, "wifi": wifi, "portas": portas, "pedido": None,
         "proposta": {"controle": quem_sai["id"], "destino": vazio["id"]},
-        "ocupado": False, "aberto": cheio["id"], "perto": perto,
+        "ocupado": False, "aberto": None, "perto": perto,
         "destino_do_conectar": vazio["id"],
     }
     cena["procurando"] = (_pacote08.PROCURAR_LIGADO
@@ -2132,7 +2137,27 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         var a = um('.abre-lugar', l); if(a) a.setAttribute('aria-expanded', 'false');
       });
       if(abrindo){ card.classList.add('aberto'); b.setAttribute('aria-expanded', 'true'); }
+      focar();
     });
+    // ---- a caixa aberta põe a faixa em foco nela: só os aparelhos dela, sem o título ----
+    // (desenho aprovado de 05/10/2026). Com uma caixa só, ela vive aberta e nada se esconde.
+    function focar(){
+      var p = um('.radio .pistas'); if(!p) return;
+      var aberta = todos('.radio .sala .lugar').length > 1 ? um('.radio .sala .lugar.aberto') : null;
+      var id = aberta ? aberta.getAttribute('data-id') : '';
+      todos('.ar > .ar-grupo, .ar > .ar-do', p).forEach(function(e){
+        var dele = e.classList.contains('ar-do') && e.getAttribute('data-do') === id;
+        e.classList.toggle('fora-do-foco', !!id && !dele);
+      });
+    }
+    (function(){
+      var p = um('.radio .pistas'), sala = um('.radio .sala');
+      if(window.MutationObserver){
+        if(p) new MutationObserver(focar).observe(p, {childList: true});
+        if(sala) new MutationObserver(focar).observe(sala, {childList: true});
+      }
+      focar();
+    })();
     // ---- a largura do nome segue o texto ----
     document.addEventListener('input', function(ev){
       var n = perto(ev, '.radio .lugar-nome');
@@ -2379,6 +2404,11 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     // de mover abre a MESMA pergunta de todo mover (o molde é o do balão da lâmpada).
     document.addEventListener('click', function(ev){
       var info = perto(ev, '.dicas .cd-info');
+      todos('.dicas .cd-info[aria-expanded="true"]').forEach(function(x){
+        if(x === info || perto(ev, '.cd-porque')) return;
+        x.setAttribute('aria-expanded', 'false');
+        var p = document.getElementById(x.getAttribute('aria-controls')); if(p) p.hidden = true;
+      });
       if(info){
         var aberto = info.getAttribute('aria-expanded') === 'true';
         info.setAttribute('aria-expanded', aberto ? 'false' : 'true');
@@ -2933,7 +2963,6 @@ MIOLO = f'''
       <input class="abre" type="radio" name="cx8-secao" id="cx8-3">
       <div class="quadro-topo cab">
         <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
-        <span class="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html">{CAMPOS_DO_RADIO["conta-de-adaptadores"]}</span>
         <div class="direita">
           {INTERRUPTOR_PROCURAR}
           <button class="btn principal" id="rd-b-conectar" data-gesto="conectar-aparelho" title="Conectar um aparelho novo">
@@ -2945,7 +2974,7 @@ MIOLO = f'''
       <div class="quadro-corpo">
         <div class="espectro">
           <div class="espectro-cab">
-            Dispositivos Conectados
+            Dispositivos conectados
             <span class="ajuda" role="img" aria-label="{AJUDA_DO_AR}" title="{AJUDA_DO_AR}"><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
             {LEGENDA_DAS_FAIXAS}
           </div>
