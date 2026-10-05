@@ -299,8 +299,12 @@ _LER_A_PAGINA = r"""
       b => b.dataset.liga || b.dataset.usb),
     extensor: [...(ed && !ed.hidden ? ed.querySelectorAll('[data-extensor]') : [])].map(
       b => (b.dataset.gesto || '') + '@' + (b.dataset.entrada || '')),
-    origem: ed && !ed.hidden && ed.querySelector('.origem')
-      ? ed.querySelector('.origem').textContent.trim() : null,
+    // Desde o desenho aprovado de 05/10 a origem é o tooltip da escolha do USB; a linha
+    // `.origem` do editor velho continua lida enquanto existir.
+    origem: !ed || ed.hidden ? null
+      : ed.querySelector('.origem') ? ed.querySelector('.origem').textContent.trim()
+      : ([...ed.querySelectorAll('.seg')].find(g => g.querySelector('[data-usb]')) || {})
+          .title || null,
   });
 })()
 """
