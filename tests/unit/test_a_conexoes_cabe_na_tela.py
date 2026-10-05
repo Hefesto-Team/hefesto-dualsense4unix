@@ -8,10 +8,11 @@ na página que o produto renderiza depois do ``--publicar`` e, enquanto ele não
 TUDO É DE MENTIRA: as páginas num WebKit fora da tela, com o pintor do piloto; nada chega a daemon.
 
 AS MORDIDAS (feitas na sprint, uma de cada vez, com a cura devolvida e o md5 conferido):
-tirar o ``height:96px`` do ``.cartao-dica`` reprova a régua do ⓘ; devolver o «Mais N» (o corte do
-``html_das_dicas``) reprova a dos quatro cartões; devolver o ``_em_colunas`` a uma coluna reprova a
-rolagem do Rádio; tirar o ``_nao_e_sem_fio`` reprova a régua da webcam; devolver o ``emTitulo``
-ao Mapa reprova a das frases; tirar a folha das trocas em cartões reprova as Sugestões.
+tirar o ``position:absolute`` do ``.cd-porque`` reprova a régua do ⓘ; devolver o «Mais N» (o
+corte do ``html_das_dicas``) reprova a dos quatro cartões; ``LINHAS_NUMA_COLUNA`` sem limite (uma
+coluna só) reprova a das linhas do ar; tirar o ``_nao_e_sem_fio`` reprova a da webcam; devolver o
+``emTitulo`` ao fim da pintura do Mapa reprova a das frases; devolver a bandeja esticada
+(``align-self:start`` fora) reprova a rolagem das Sugestões a 1272 e 1512 px.
 """
 
 from __future__ import annotations
@@ -64,7 +65,7 @@ def test_o_gesto_do_cartao_tem_ate_duas_palavras() -> None:
                         de_nome="Meio", para_id="L2", para_nome="Direita", controles_no_de=4)
     rotulos = [dicas.dica_do_movimento(m).acao.rotulo, dicas.ROTULO_VER_NO_MAPA,
                dicas.ROTULO_IGNORAR, dicas.ROTULO_VOLTAR_A_MOSTRAR, dicas.ROTULO_PAREAR,
-               dicas.dica_do_wifi("caiu 2×", False, "", dicas.AJUSTE).acao.rotulo,
+               dicas.dica_do_wifi("caiu 2\u00d7", False, "", dicas.AJUSTE).acao.rotulo,
                dicas.dica_do_receptor("teclado", "3 teclas presas", "em 1 h").acao.rotulo]
     miudas = {"a", "o", "e", "de", "da", "do", "no", "na"}
     for rotulo in rotulos:
@@ -90,7 +91,8 @@ def _cena_do_ar() -> dict[str, Any]:
 
 
 def test_cada_linha_do_ar_e_icone_faixa_e_ponto_e_so_o_que_fala_pelo_ar() -> None:
-    """Um receptor é uma linha; a webcam e o Wi-Fi de 5 GHz não ganham linha; sem a frase do grupo."""
+    """Um receptor é uma linha; a webcam e o Wi-Fi de 5 GHz não ganham linha; sem a frase do
+    grupo."""
     html = a08.html_dos_canais(_cena_do_ar())
     linhas = re.findall(r'<div class="ar-linha" data-id="([^"]+)"', html)
     assert linhas.count("25a7:fa07") == 1, linhas
@@ -111,12 +113,26 @@ def test_cada_linha_do_ar_e_icone_faixa_e_ponto_e_so_o_que_fala_pelo_ar() -> Non
 
 
 def test_o_ponto_verde_diz_tudo_certo_e_o_vermelho_diz_o_problema_so_no_tooltip() -> None:
-    bom = faixas_do_ar.Linha(id="x", tipo="controle", nome="X", selo=faixas_do_ar.Selo("boa", "boa 70/79"))
+    bom = faixas_do_ar.Linha(id="x", tipo="controle", nome="X",
+                             selo=faixas_do_ar.Selo("boa", "boa 70/79"))
     ruim = faixas_do_ar.Linha(id="y", tipo="wifi", nome="Y", nota="em 24 min",
-                              selo=faixas_do_ar.Selo("sofrendo", "caiu 12×"))
-    assert 'class="ar-selo boa"' in a08._o_ponto(bom, "") and 'title="Tudo certo"' in a08._o_ponto(bom, "")
-    assert 'title="Caiu 12× em 24 min"' in a08._o_ponto(ruim, "")
+                              selo=faixas_do_ar.Selo("sofrendo", "caiu 12\u00d7"))
+    verde = a08._o_ponto(bom, "")
+    assert 'class="ar-selo boa"' in verde and 'title="Tudo certo"' in verde
+    assert 'title="Caiu 12\u00d7 em 24 min"' in a08._o_ponto(ruim, "")
     assert "></span>" in a08._o_ponto(ruim, ""), "o texto do problema virou letra na linha"
+
+
+def test_o_mapa_fala_em_frase_e_sem_primeira_pessoa() -> None:
+    """O Mapa da bancada não põe Maiúscula Em Toda Palavra no fim da pintura, e as frases que o
+    desenho aprovado reescreveu estão lá (o que o ``emTitulo`` desfaria na tela)."""
+    pagina = pagina_do_mapa.pagina()
+    assert 'emTitulo(document.querySelector(".pagina"))' not in pagina, (
+        "a pintura voltou a pôr maiúscula em toda palavra")
+    for frase in ("Leitura de exemplo", "Conectado agora", "Já mudei", "Desfazer"):
+        assert frase in pagina, frase
+    for velha in ("Atualmente Conectado", "Não achei", "Eu acho"):
+        assert f">{velha}" not in pagina, velha
 
 
 # ───────────────────────── as páginas (WebKit) ─────────────────────────
@@ -127,16 +143,24 @@ def _medir() -> str:
   const r = [];
   for (const e of document.querySelectorAll('*')) {
     const cs = getComputedStyle(e);
-    if (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 2 && e.clientHeight > 80)
-      r.push((String(e.className).split(' ')[0] || e.tagName) + ': ' + (e.scrollHeight - e.clientHeight));
+    if (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 2
+        && e.clientHeight > 80)
+      r.push((String(e.className).split(' ')[0] || e.tagName) + ': '
+             + (e.scrollHeight - e.clientHeight));
   }
   const d = document.documentElement;
   if (d.scrollHeight > innerHeight + 2) r.push('página: ' + (d.scrollHeight - innerHeight));
   const corta = [...document.querySelectorAll('button,span,b,label,a,h3,h4,p')].filter(e =>
-    e.offsetParent && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible'
+    e.offsetParent && e.scrollWidth > e.clientWidth + 1
+    && getComputedStyle(e).overflow !== 'visible'
     && e.children.length === 0 && e.textContent.trim()).map(e => e.textContent.trim().slice(0, 30));
-  const alturas = [...document.querySelectorAll('.cartao-dica')].map(c => Math.round(c.getBoundingClientRect().height));
-  return JSON.stringify({rola: r, corta: corta, alturas: alturas});
+  const alturas = [...document.querySelectorAll('.cartao-dica')].map(
+    c => Math.round(c.getBoundingClientRect().height));
+  const abertos = [...document.querySelectorAll('.cd-porque')].filter(
+    p => !p.hidden && p.offsetParent);
+  const porqueFora = abertos.map(p => p.getBoundingClientRect().top + 1
+    >= p.closest('.cartao-dica').getBoundingClientRect().bottom);
+  return JSON.stringify({rola: r, corta: corta, alturas: alturas, porqueFora: porqueFora});
 })()"""
 
 
@@ -260,4 +284,6 @@ def test_os_cartoes_tem_a_mesma_altura_e_o_porque_nao_estica_os_vizinhos(largura
     antes, depois = vistas["gestao"]["alturas"], vistas["porque"]["alturas"]
     assert antes and len(set(antes)) == 1, f"os cartões nascem de alturas diferentes: {antes}"
     assert antes == depois, f"abrir o ⓘ mudou a altura dos cartões: {antes} → {depois}"
+    assert vistas["porque"]["porqueFora"] == [True], (
+        f"o porquê aberto não flutua por baixo do cartão: {vistas['porque']['porqueFora']}")
     assert vistas["certo"]["alturas"] == [], "o «Tudo certo» ainda tem cartão"

@@ -2,7 +2,8 @@
 
 AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026). A caixa «Sugestão de Conexão» e o exame de
 cinco frases viraram uma fileira de cartões: no máximo três à vista, «mais N» para o resto, o
-porquê atrás do ⓘ e um botão só por cartão.
+porquê atrás do ⓘ e um botão só por cartão. Desde 05/10/2026 (conjunto «Conexões 3»), quatro à
+vista e sem «mais N».
 
 TUDO É DE MENTIRA: a bancada ``mockup/08-conexoes.html`` num WebKit fora da tela, com o pintor do
 piloto; o que a página «manda ao produto» fica numa lista, nada chega a daemon algum.
@@ -63,14 +64,14 @@ def _dica(chave: str, nivel: str, calada: bool = False) -> dicas.Dica:
                       calada=calada)
 
 
-def test_o_painel_poe_o_grave_primeiro_corta_em_tres_e_deixa_a_calada_por_ultimo() -> None:
+def test_o_painel_poe_o_grave_primeiro_corta_em_quatro_e_deixa_a_calada_por_ultimo() -> None:
     entrada = [_dica("n1", dicas.NOTA), _dica("a1", dicas.AJUSTE), _dica("c", dicas.GRAVE, True),
                _dica("g1", dicas.GRAVE), _dica("a2", dicas.AJUSTE), _dica("n2", dicas.NOTA)]
     painel = dicas.montar(entrada, certos=("x", "x", "y", ""))
-    assert [d.chave for d in painel.visiveis] == ["g1", "a1", "a2"]
-    assert [d.chave for d in painel.demais] == ["n1", "n2", "c"], "a calada vai depois de todas"
+    assert [d.chave for d in painel.visiveis] == ["g1", "a1", "a2", "n1"]
+    assert [d.chave for d in painel.demais] == ["n2", "c"], "a calada vai depois de todas"
     assert painel.certos == ("x", "y")
-    assert len(painel.visiveis) == dicas.CARTOES_VISIVEIS == 3
+    assert len(painel.visiveis) == dicas.CARTOES_VISIVEIS == 4
 
 
 # ───────────────────────── a página (WebKit, bancada) ─────────────────────────
@@ -130,7 +131,7 @@ def test_o_nivel_do_cartao_e_dito_no_nome_da_regiao_e_nao_em_texto_escondido() -
     """
     html = _html_de_cinco()
     secoes = re.findall(r'<section class="cartao-dica[^>]*>', html)
-    assert len(secoes) == 5, f"a bancada de cinco achados deu {len(secoes)} cartões"
+    assert len(secoes) == dicas.CARTOES_VISIVEIS, f"cinco achados deram {len(secoes)} cartões"
     palavras = tuple(f"{p}: " for p in dicas.PALAVRA_DO_NIVEL.values())
     for secao in secoes:
         nome = re.search(r'aria-label="([^"]*)"', secao)
@@ -244,24 +245,17 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
     return lidas, mensagens
 
 
-def test_cinco_achados_viram_tres_cartoes_a_vista_e_mais_dois() -> None:
+def test_cinco_achados_viram_quatro_cartoes_a_vista_sem_mais_n() -> None:
+    """Desenho aprovado de 05/10/2026: até quatro, sem «mais N» e sem a linha dos ✓; o quinto
+    entra quando ela ignora ou resolve um."""
     lidas, _ = _na_pagina([_LER, _pintar({"mesa": {"dicas": _html_de_cinco()}}), _LER])
     antes, _, depois = lidas
     assert antes["achou"] and not antes["sugestao"], "a bancada ainda tem a caixa velha"
-    assert depois["cartoes"] == 5, depois
+    assert depois["cartoes"] == dicas.CARTOES_VISIVEIS == 4, depois
     assert depois["aVista"] == dicas.CARTOES_VISIVEIS, f"à vista: {depois['aVista']}"
-    assert depois["mais"] == "mais 2" and depois["maisAberto"] is False, depois
-    assert depois["botoes"] == [1] * 5, f"cada cartão tem UM botão: {depois['botoes']}"
-    assert depois["certo"] == "✓ Suporte ao controle", depois["certo"]
-
-
-def test_o_mais_n_abre_e_mostra_os_outros_dois() -> None:
-    lidas, _ = _na_pagina([
-        _pintar({"mesa": {"dicas": _html_de_cinco()}}),
-        _clicar(".dicas details.mais-dicas summary"),
-        _LER,
-    ])
-    assert lidas[2]["maisAberto"] is True and lidas[2]["aVista"] == 5, lidas[2]
+    assert depois["mais"] is None, depois
+    assert depois["botoes"] == [1] * 4, f"cada cartão tem UM botão: {depois['botoes']}"
+    assert depois["certo"] == "", depois["certo"]
 
 
 def test_o_i_abre_e_fecha_o_porque_sem_mexer_no_botao() -> None:

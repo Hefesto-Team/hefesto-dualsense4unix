@@ -90,15 +90,17 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
         _com_a_central(bancada, monkeypatch, cr.Movimento(
             VERDE, destino, cr.ESPERANDO, cr.PASSO_GESTO, e_controle=True,
             quando=agora - (a08.ESPERA_NA_TELA_S + 1.0)))
-        sala = bancada.tique()["radio-sala"]
+        campos = bancada.tique()
+        sala = campos["radio-sala"]
         cena = dict(a08._CENA_NA_TELA)
         assert cena["ocupado"] is False, "a janela morta segurou a tela depois do prazo"
         (linha,) = _linhas(cena, destino, nao_conectou=True)
         assert linha["aparelho"] == id_da_tela(VERDE)
-        assert "Não Conectou" in sala
+        assert f'title="{a08.NAO_CONECTOU}"' in sala
         assert f'data-gesto="tentar-de-novo" data-alvo="{id_da_tela(destino)}"' in sala
+        # o X virou o «Tirar esta linha» do «⋮» (desenho aprovado de 05/10/2026)
         assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
-                f'data-lugar="{id_da_tela(destino)}"') in sala
+                f'data-lugar="{id_da_tela(destino)}"') in campos["radio-moldes"]
         assert cena["aberto"] == id_da_tela(destino), "a caixa de quem não chegou fechou"
 
         outro = next(e for e in (SALA, QUARTO, VARANDA) if e != destino)
@@ -608,7 +610,7 @@ def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
         assert linha["tipo"] != "controle" and linha["aparelho"] == id_da_tela(FONE)
         varanda = id_da_tela(VARANDA)
         assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
-                f'data-lugar="{varanda}"') in campos["radio-sala"]
+                f'data-lugar="{varanda}"') in campos["radio-moldes"]
         assert (f'data-esquecer="1" data-alvo="{linha["id"]}"'
                 not in campos["radio-moldes"]), "o X que só tira a linha ganhou pergunta"
         tentar = re.search(r'<button class="btn tentar"[^>]*>', campos["radio-sala"])
@@ -640,7 +642,7 @@ def test_todo_menu_na_tela_tem_o_esquecer_e_a_pergunta_dele(
         menus = re.findall(r'data-gesto="aparelho-menu" data-alvo="([^"]+)" '
                            r'data-lugar="([^"]+)"', campos["radio-sala"])
         xis = re.findall(r'data-gesto="dispensar-linha" data-alvo="([^"]+)" '
-                         r'data-lugar="([^"]+)"', campos["radio-sala"])
+                         r'data-lugar="([^"]+)"', campos["radio-moldes"])
         paineis = dict(re.findall(
             r'<template class="painel-molde" data-painel="menu" data-alvo="([^"]+)"'
             r'[^>]*>(.*?)</template>', campos["radio-moldes"]))
@@ -656,6 +658,9 @@ def test_todo_menu_na_tela_tem_o_esquecer_e_a_pergunta_dele(
         for alvo, lugar in menus:
             painel = paineis.get(f"{alvo}|{lugar}")
             assert painel is not None, f"o «⋮» de {(alvo, lugar)} não abre menu nenhum"
+            if (alvo, lugar) in xis:  # a linha «Não conectou»: só «Tirar esta linha»
+                assert 'data-gesto="esquecer-aparelho"' not in painel, (alvo, lugar)
+                continue
             assert (f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '
                     f'data-lugar="{lugar}"') in painel
             assert (alvo, lugar) in perguntas, f"o «Esquecer» de {(alvo, lugar)} não pergunta"

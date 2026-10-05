@@ -29,7 +29,6 @@ MOCKUP = RAIZ / "mockup/08-conexoes.html"
 ADAPTADORES = (("L1", "Direita"), ("L2", "Esquerda"), ("L3", "Meio"), ("L4", "Fundo"))
 EVITADOS = {"L1": (0, 10), "L2": (30, 40), "L3": (60, 79), "L4": (45, 50)}
 CORES_DOS_PLASTICOS = ("#ae335a", "#7eb8d4", "#e35b8c", "#74588e")
-LIDO = "(lido)"
 ENDERECO_DO_TECLADO = "/sys/forjado/3-1.1.4"
 
 
@@ -174,14 +173,30 @@ def test_uma_linha_por_aparelho_com_os_canais_dele() -> None:
         assert len(_celulas(linhas[ident])) == a08.CANAIS_DO_BT == 79
     grupos = {g.attrs["data-grupo"]: g.dito() for g in _ler(a08.html_dos_canais(_cena())).achar(
         "div", "ar-grupo") if "data-grupo" in g.attrs}
-    assert "2 aparelhos dividem o tempo deste rádio" in grupos["L1"]
-    assert "só 1 aparelho neste rádio" in grupos["L2"]
+    # sem a frase «N aparelhos dividem o tempo deste rádio» (desenho aprovado de 05/10/2026)
+    assert grupos["L1"].strip() and "dividem o tempo" not in grupos["L1"]
+    assert "aparelho neste rádio" not in grupos["L2"]
+
+
+def _fala(no: No) -> str:
+    """O que a linha diz a quem não vê a cor: o texto, os `aria-label` e os `title` dela."""
+    partes = [no.dito()]
+
+    def andar(n: No) -> None:
+        partes.extend(n.attrs.get(a, "") or "" for a in ("aria-label", "title"))
+        for f in n.filhos:
+            andar(f)
+
+    andar(no)
+    return " ".join(p for p in partes if p)
 
 
 def _selo(linha: No) -> tuple[str, str]:
-    s = linha.achar("span", "ar-selo")
+    """O ponto da linha: a palavra que ele diz ao leitor de tela e o nível (a classe)."""
+    s = linha.achar(None, "ar-selo")
     assert len(s) == 1
-    return s[0].dito().strip(), next(c for c in s[0].classes() if c != "ar-selo")
+    fala = s[0].attrs.get("aria-label", "").split(" · ")[0]
+    return fala, next(c for c in s[0].classes() if c not in ("ar-selo", "sem"))
 
 
 def test_o_numero_da_linha_e_o_da_caixa() -> None:
@@ -193,7 +208,7 @@ def test_o_numero_da_linha_e_o_da_caixa() -> None:
         da_caixa = [c.dito().strip() for c in caixas[lid].achar("span", "canais-do-lugar")
                     if "data-nivel" in c.attrs]
         assert da_caixa == [re.search(r"\d+/79", _selo(linhas[ident])[0]).group(0)], lid
-    assert _selo(linhas["c3"])[0] == f"boa {79 - 10}/79"
+    assert _selo(linhas["c3"])[0] == f"Boa {79 - 10}/79"
     campo = a08.campos_da_secao(cena)["espectro-canais"]
     nas_caixas = {s.dito().strip() for c in caixas.values()
                   for s in c.achar("span", "canais-do-lugar") if "data-nivel" in s.attrs}
@@ -206,9 +221,9 @@ def test_o_selo_diz_a_palavra_pelo_mesmo_piso_do_adaptador() -> None:
     cena["evitados"] = [{"lugar": "L1", "ini": 0, "fim": 5}, {"lugar": "L2", "ini": 0, "fim": 25},
                         {"lugar": "L3", "ini": 0, "fim": 70}]
     linhas = _linhas(cena)
-    assert _selo(linhas["c1"]) == ("boa 74/79", "boa")
-    assert _selo(linhas["c3"]) == ("apertada 54/79", "apertada")
-    assert _selo(linhas["c4"]) == ("sofrendo 9/79", "sofrendo")
+    assert _selo(linhas["c1"]) == ("Boa 74/79", "boa")
+    assert _selo(linhas["c3"]) == ("Apertada 54/79", "apertada")
+    assert _selo(linhas["c4"]) == ("Sofrendo 9/79", "sofrendo")
 
 
 def _cor(no: No) -> str:
@@ -256,7 +271,8 @@ def test_a_cor_nao_e_o_unico_sinal_toda_linha_tem_glifo_e_palavra() -> None:
     for ident, linha in linhas.items():
         rotulo = linha.achar(None, "ar-rot")[0]
         assert rotulo.achar("use"), ident
-        assert rotulo.achar("span", "nome")[0].dito().strip(), ident
+        # a palavra mora no tooltip e no `aria-label` do ícone (desenho aprovado de 05/10/2026)
+        assert _fala(rotulo).strip(), ident
         assert linha.achar("div", "ar-faixa")[0].attrs.get("aria-label"), ident
 
 
@@ -343,9 +359,7 @@ def _de(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
 
 def test_as_cores_dos_adaptadores_se_separam_para_quem_nao_ve_cor() -> None:
     cena = _cena(4)
-    cabecas = [g for g in _ler(a08.html_dos_canais(cena)).achar("div", "ar-grupo")
-               if "data-grupo" in g.attrs]
-    tokens = sorted({_cor(g).removeprefix("cor-") for g in cabecas})
+    tokens = sorted({a08.cor_do_adaptador(cena, lug["id"]) for lug in cena["lugares"]})
     assert len(tokens) == 4, tokens
     assert "green" not in tokens and "red" not in tokens
     hexes = {t: _hex_de(t) for t in tokens}
@@ -362,16 +376,13 @@ def test_o_lido_sai_com_o_selo_e_sem_interrogacao_e_o_dela_sem_selo() -> None:
     cena = _cena(vizinhos=[lido, dela, camera])
     linhas = _linhas(cena)
     r_lido = linhas["3554:fa09"].achar(None, "rotulo")[0]
-    assert r_lido.achar("span", "nome")[0].dito() == "Teclado"
-    assert [s.dito() for s in r_lido.achar("span", "selo-lido")] == [a08.SELO_LIDO] == [LIDO]
-    assert "?" not in r_lido.dito()
-    r_dela = linhas["25a7:fa07"].achar(None, "rotulo")[0]
-    assert not r_dela.achar("span", "selo-lido")
-    assert r_dela.achar("span", "nome")[0].dito() == "Teclado"
-    r_cam = linhas["0c45:6366"].achar(None, "rotulo")[0]
-    assert r_cam.achar("span", "nome")[0].dito() == "Webcam?"
-    assert not r_cam.achar("span", "selo-lido")
+    assert r_lido.attrs["aria-label"] == "Teclado" and "?" not in r_lido.attrs["aria-label"]
     assert "lido pelo computador" in r_lido.attrs["title"]
+    r_dela = linhas["25a7:fa07"].achar(None, "rotulo")[0]
+    assert r_dela.attrs["aria-label"] == "Teclado"
+    assert "lido pelo computador" not in r_dela.attrs["title"]
+    # a webcam não é rádio (desenho aprovado de 05/10/2026): não ganha linha entre os sem fio
+    assert "0c45:6366" not in linhas
 
 
 def test_o_ff_com_produto_leva_o_produto_e_sem_produto_a_palavra_do_censo() -> None:
@@ -379,10 +390,10 @@ def test_o_ff_com_produto_leva_o_produto_e_sem_produto_a_palavra_do_censo() -> N
     sem = _viz("1234:5678")
     linhas = _linhas(_cena(vizinhos=[com, sem]))
     r_com = linhas["2357:012d"].achar(None, "rotulo")[0]
-    assert r_com.achar("span", "nome")[0].dito() == "802.11ac NIC"
+    assert r_com.attrs["aria-label"] == "802.11ac NIC"
     assert r_com.achar("use")[0].attrs["href"] == "#rd-ajuda"
     r_sem = linhas["1234:5678"].achar(None, "rotulo")[0]
-    assert r_sem.achar("span", "nome")[0].dito() == a08.ESPECIE_DESCONHECIDA == "Não identificado"
+    assert r_sem.attrs["aria-label"] == a08.ESPECIE_DESCONHECIDA == "Não identificado"
     assert "Sem nome" not in a08.html_dos_canais(_cena(vizinhos=[com, sem]))
 
 
@@ -393,22 +404,21 @@ def test_o_wifi_do_nm_e_o_vizinho_do_mesmo_no_sao_uma_linha_so() -> None:
                        {"no": "", "mhz": 2437, "largura": 20}])
     linhas = _linhas(cena)
     outros = [i for i in linhas if i not in ("c1", "c2", "c3", "c4")]
-    assert outros == ["2357:012d", "wifi-1"]
-    assert [linhas[i].achar("span", "nome")[0].dito() for i in outros] == [a08.NOME_DO_WIFI] * 2
-    assert a08.faixas_do_ar.FORA_DA_FAIXA in linhas["2357:012d"].dito()
-    assert "5 GHz" in linhas["2357:012d"].dito() and "canal 161" in linhas["2357:012d"].dito()
+    # o Wi-Fi de 5 GHz fica fora da faixa e não atrapalha: sem linha (desenho de 05/10/2026)
+    assert outros == ["wifi-1"]
+    assert _fala(linhas["wifi-1"]).count(a08.NOME_DO_WIFI) >= 1
     banda = {int(m.group(1)) for c in _celulas(linhas["wifi-1"])
              if (m := re.match(r"Canal (\d+) .* ocupado aqui", c.attrs.get("title", "")))}
     assert (min(banda), max(banda) + 1) == (25, 46)
-    assert "2.4 GHz" in linhas["wifi-1"].dito() and "canal 6" in linhas["wifi-1"].dito()
+    assert "2,4 GHz" in _fala(linhas["wifi-1"]) and "canal 6" in _fala(linhas["wifi-1"])
 
 
 def test_o_receptor_e_o_wifi_sem_leitura_dizem_a_verdade() -> None:
     cena = _cena(vizinhos=[_viz("3554:fa09", tipo="teclado", nome="Teclado"),
                            _viz("2357:012d", tipo="wifi", nome="Wi-Fi")])
     linhas = _linhas(cena)
-    assert a08.faixas_do_ar.NAO_DESCOBERTA in linhas["3554:fa09"].dito()
-    assert a08.faixas_do_ar.SEM_REDE in linhas["2357:012d"].dito()
+    assert a08.faixas_do_ar.NAO_DESCOBERTA in _fala(linhas["3554:fa09"])
+    assert a08.faixas_do_ar.SEM_REDE in _fala(linhas["2357:012d"])
     assert not _celulas(linhas["3554:fa09"]) and not _celulas(linhas["2357:012d"])
 
 
@@ -417,9 +427,9 @@ def test_adaptador_sem_mapa_diz_que_nao_se_mede_e_nunca_zero_evitados() -> None:
     cena["evitados"] = [v for v in cena["evitados"] if v["lugar"] != "L2"]
     cena["canais_medidos"]["L2"] = False
     linhas = _linhas(cena)
-    assert a08.faixas_do_ar.NAO_SE_MEDE in linhas["c3"].dito()
-    assert "/79" not in linhas["c3"].dito() and not _celulas(linhas["c3"])
-    assert "/79" in linhas["c1"].dito()
+    assert a08.faixas_do_ar.NAO_SE_MEDE in _fala(linhas["c3"]).lower()
+    assert "/79" not in _fala(linhas["c3"]) and not _celulas(linhas["c3"])
+    assert "/79" in _fala(linhas["c1"])
 
 
 def test_com_zero_adaptadores_nao_ha_regua() -> None:
@@ -442,6 +452,6 @@ def test_adaptador_medido_sem_canal_evitado_tem_a_faixa_inteira_boa() -> None:
     cena = _cena(2)
     cena["evitados"] = [v for v in cena["evitados"] if v["lugar"] != "L2"]
     linhas = _linhas(cena)
-    assert _selo(linhas["c3"]) == ("boa 79/79", "boa")
+    assert _selo(linhas["c3"]) == ("Boa 79/79", "boa")
     assert _perdidos(linhas["c3"]) == set()
-    assert a08.faixas_do_ar.NAO_SE_MEDE not in linhas["c3"].dito()
+    assert a08.faixas_do_ar.NAO_SE_MEDE not in _fala(linhas["c3"]).lower()

@@ -269,8 +269,9 @@ def test_a_pagina_manda_os_dois_gestos_e_eles_tem_dono() -> None:
     pagina = pagina_do_mapa.pagina()
     produto = onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True)
     assert produto.read_text(encoding="utf-8") == pagina_do_mapa.pagina(com_as_que_esperam=False)
-    gestos = set(re.findall(r'gravaNaEntrada\(editando, "([a-z-]+)"\)', pagina))
-    assert gestos == {"entrada-o-que-tem", "entrada-velocidade"}, gestos
+    # o painel único (05/10/2026) chama pela entrada `n` dele
+    gestos = set(re.findall(r'gravaNaEntrada\((?:editando|n), "([a-z-]+)"\)', pagina))
+    assert {"entrada-o-que-tem", "entrada-velocidade"} <= gestos, gestos
     fonte = (Path(ee.__file__).parents[1] / "interface" / "pacotes"
              / "a12_mapa_das_portas.py").read_text(encoding="utf-8")
     for nome in gestos:
@@ -552,7 +553,7 @@ def test_as_frases_da_origem_cobrem_as_chaves_do_dono() -> None:
     assert set(frases) == chaves
     pagina = pagina_do_mapa.pagina()
     assert "function origemDaVelocidade(n)" in pagina
-    assert "+ origemDaVelocidade(editando) +" in pagina, "o editor não diz de onde veio"
+    assert 'FRASES_DA_ORIGEM[USB_DE[String(n)] || ""]' in pagina, "o painel não diz de onde veio"
     assert json.dumps(frases, ensure_ascii=False) in pagina
 
 

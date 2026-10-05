@@ -182,7 +182,8 @@ def test_a_busca_e_a_varredura_nao_trocam_a_sala(
     assert [t["radio-conectando"] for t in tiques] == [
         ["", "", ""], ["", "", ""], ["", "", ""], ["sim", "", ""], ["", "", ""]]
     assert [t["radio-ocupado"] for t in tiques] == ["", "", "", "sim", ""]
-    assert re.search(r'<button class="soltar[^"]*"[^>]*data-campo="radio-ocupado"', sala)
+    # o «Arraste outro para cá» saiu no desenho aprovado de 05/10/2026: a sala não traz o botão
+    assert 'class="soltar' not in sala
 
 
 def test_quem_espera_num_mover_continua_na_sala(

@@ -1789,10 +1789,12 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
   /* o estado é um ponto: verde = bom, vermelho = problema, vazado = faixa sem leitura */
   .radio .ar-selo{display:inline-block;box-sizing:border-box;width:10px;height:10px;padding:0;
-                  border-radius:50%;border:0;background:var(--red);box-shadow:0 0 0 3px rgba(255,85,85,.2)}
+                  border-radius:50%;border:0;background:var(--orange);box-shadow:0 0 0 3px rgba(255,184,108,.2)}
+  .radio .ar-selo.sofrendo{background:var(--red);box-shadow:0 0 0 3px rgba(255,85,85,.2)}
   .radio .ar-selo.boa{background:var(--green);box-shadow:none}
   .radio .ar-selo.sem{background:transparent;box-shadow:none;border:2px solid var(--comment)}
-  .radio .ar-selo.sem.apertada,.radio .ar-selo.sem.sofrendo{border-color:var(--red)}
+  .radio .ar-selo.sem.apertada{border-color:var(--orange)}
+  .radio .ar-selo.sofrendo.sem{border-color:var(--red)}
   .radio button.ar-selo{cursor:pointer;min-height:0;height:10px}
   .radio button.ar-selo.sem:hover{border-color:var(--green)}
   .radio .ar-legenda{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}

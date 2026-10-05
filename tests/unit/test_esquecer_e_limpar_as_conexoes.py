@@ -280,10 +280,11 @@ def test_o_x_dispensado_nao_volta_numa_janela_nova(
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         o_mover_que_nao_chega(casa, JOHNATHAN, VARANDA)
-        sala = casa.tique()["radio-sala"]
+        # o X virou item do «⋮» (desenho aprovado de 05/10/2026): mora no molde do menu
+        moldes = casa.tique()["radio-moldes"]
         x = re.search(r'data-gesto="dispensar-linha" data-alvo="([^"]+)" '
-                      r'data-lugar="([^"]+)"', sala)
-        assert x is not None, "a linha «Não Conectou» não tem o X"
+                      r'data-lugar="([^"]+)"', moldes)
+        assert x is not None, "o menu da linha «Não conectou» não tem o «Tirar esta linha»"
         assert casa.gesto("dispensar-linha", alvo=x.group(1), lugar=x.group(2)) == {
             "armou": True}
         assert nao_conectou(casa.cena()) == []
@@ -386,7 +387,7 @@ def test_todo_pareado_tem_o_esquecer_e_ele_tira_aquele_par(
 def test_a_linha_nao_conectou_nao_tem_esquecer(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O verde que não chegou à sala tem o X (que só tira a linha), e nem o"""
+    """O verde que não chegou à sala tem o «⋮» só com o «Tirar esta linha», e nem o"""
     casa = Casa(a08, monkeypatch, _a_caixa_cheia())
     try:
         casa.central._guardar(movimento(VERDE, SALA, motivo=cr.MOTIVO_NAO_PAREOU))
@@ -394,9 +395,9 @@ def test_a_linha_nao_conectou_nao_tem_esquecer(
         (linha,) = nao_conectou(dict(casa.a08._CENA_NA_TELA))
         assert linha["aparelho"] == id_da_tela(VERDE)
         par = f'data-alvo="{linha["id"]}" data-lugar="{linha["lugar"]}"'
-        assert f'data-gesto="dispensar-linha" {par}' in campos["radio-sala"]
-        assert f'data-gesto="aparelho-menu" {par}' not in campos["radio-sala"]
-        assert f'data-alvo="{linha["id"]}|' not in campos["radio-moldes"]
+        assert f'data-gesto="aparelho-menu" {par}' in campos["radio-sala"]
+        assert f'data-gesto="dispensar-linha" {par}' in campos["radio-moldes"]
+        assert f'data-gesto="esquecer-aparelho" {par}' not in campos["radio-moldes"]
         with pytest.raises(ValueError):
             casa.gesto("esquecer-aparelho", alvo=linha["id"], lugar=linha["lugar"])
     finally:

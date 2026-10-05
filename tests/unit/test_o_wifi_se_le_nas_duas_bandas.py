@@ -310,16 +310,17 @@ def test_em_5_ghz_a_linha_diz_fora_da_faixa_e_nunca_nao_identificado() -> None:
     assert ln.sem_faixa == fa.FORA_DA_FAIXA and ln.sub.startswith("5 GHz · canal 161")
     html = a08.html_dos_canais(_cena(rede))
     assert ESPECIE_DESCONHECIDA not in html and "Não identificado" not in html
-    assert "fora da faixa dos controles" in html
+    # fora da faixa dos controles, ele não atrapalha: sem linha (desenho aprovado de 05/10/2026)
+    assert 'data-id="2357:012d"' not in html
 
 
 def test_em_2_4_ghz_a_faixa_se_pinta_nos_canais_da_banda_e_o_usb3_e_dito() -> None:
     rede = {"no": "", "mhz": 2462, "largura": 20, "chave": "usb:2357:012d"}
     ln = _linhas(_cena(rede))["2357:012d"]
     assert ln.celulas and any(c.estado == fa.OCUPADO for c in ln.celulas)
-    assert ln.sub == "2.4 GHz · canal 11"
-    assert ln.nota == "USB 3.0 + 2.4 GHz"
-    assert "USB 3.0 e 2.4 GHz" in ln.dica and "5 GHz" in ln.dica
+    assert ln.sub == "2,4 GHz · canal 11"
+    assert ln.nota == "USB 3.0 + 2,4 GHz"
+    assert "USB 3.0 e 2,4 GHz" in ln.dica and "5 GHz" in ln.dica
     assert _linhas(_cena(rede, usb="2.0"))["2357:012d"].nota == ""
     assert _linhas(_cena({**rede, "mhz": 5805}))["2357:012d"].nota == ""
 
@@ -334,8 +335,8 @@ def test_o_selo_diz_quantas_vezes_a_placa_caiu_e_a_ausencia_nao_inventa() -> Non
     pouca = _linhas(_cena({**rede, "quedas": {"n": 1, "min": 40}}))["2357:012d"]
     assert pouca.selo and pouca.selo.nivel == "apertada"
     html = a08.html_dos_canais(_cena({**rede, "quedas": {"n": 12, "min": 24}}))
-    assert "caiu 12× em 24 min" in html and "USB 3.0 e 2.4 GHz" in html
-    assert '<span class="ar-nota"' in html and ">USB 3.0 + 2.4 GHz</span>" in html
+    assert "Caiu 12× em 24 min" in html and "USB 3.0 e 2,4 GHz" in html
+    assert "USB 3.0 + 2,4 GHz" in html, "a nota do USB 3.0 saiu do tooltip do ponto"
 
 
 def test_a_rede_sem_vizinho_ganha_id_pela_chave_e_nunca_pelo_nome_da_interface() -> None:

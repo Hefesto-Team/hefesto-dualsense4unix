@@ -4143,32 +4143,48 @@ def _o_selo(selo: Any, titulo: str = "") -> str:
 #: o tooltip do ponto verde e do vazado (desenho aprovado de 05/10/2026: o verde já diz «bom»).
 TUDO_CERTO = "Tudo certo"
 FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
+FAIXA_NAO_ACHADA = "Faixa não encontrada · clique para tentar de novo"
 
 
-def _o_ponto(linha: Any, descobrir: str) -> str:
-    """O estado da linha num ponto: verde = bom, vermelho = problema, vazado = sem faixa.
+def _o_ponto(linha: Any, descobrir: str, vazado: str = FAIXA_NAO_DESCOBERTA) -> str:
+    """O estado da linha num ponto: verde = bom, laranja ou vermelho = problema, vazado = sem faixa.
 
-    O texto do problema («3 teclas presas em 1 h») vai só no tooltip;
-    o vazado do receptor ainda não descoberto é o próprio gesto de descobrir.
+    O texto do problema («3 teclas presas em 1 h») vai só no tooltip; o verde diz «Tudo certo».
+    Para o leitor de tela o ponto diz a palavra inteira («Boa 74/79»): a cor nunca vai sozinha.
+    O vazado do receptor ainda não descoberto é o próprio gesto de descobrir.
     """
     selo = linha.selo
     ruim = selo is not None and selo.nivel != "boa"
     nivel = _x(str(selo.nivel).replace(" ", "-")) if selo is not None else ""
-    texto = (_maiuscula(" ".join(t for t in (selo.texto, linha.nota) if t)) if ruim
-             else TUDO_CERTO if selo is not None else _maiuscula(linha.sem_faixa))
+    junta = " " if linha.nota.startswith("em ") else " · "
+    dito = (_maiuscula(junta.join(t for t in (selo.texto, linha.nota) if t)) if selo is not None
+            else _maiuscula(linha.sem_faixa))
+    # o que se leu do enlace continua no tooltip, depois do estado
+    ja_dito = selo is not None and "tira canais" in selo.texto
+    extras = [t for t in (
+        f"sinal {linha.rssi} dBm" if isinstance(linha.rssi, int) else "",
+        (f"qualidade do enlace {linha.qualidade_do_enlace}/255"
+         if isinstance(linha.qualidade_do_enlace, int) else ""),
+        f"tira canais de {linha.tira_de}" if linha.tira_de and not ja_dito else "",
+        linha.dica) if t]
+    dica = " · ".join([TUDO_CERTO if selo is not None and not ruim else dito, *extras])
+    fala = " · ".join([dito, *extras])
     if descobrir:
-        dica = "\n".join(t for t in (texto if ruim else "", FAIXA_NAO_DESCOBERTA) if t)
+        dica = "\n".join(t for t in (dica if ruim else "", vazado) if t)
+        fala = " · ".join(t for t in (fala if selo is not None else "", vazado) if t)
         return (f'<button class="ar-selo {nivel} sem" type="button" '
                 f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}" '
-                f'title="{_x(dica)}" aria-label="{_x(dica)}"></button>')
+                f'title="{_x(dica)}" aria-label="{_x(fala)}"></button>')
     classe = nivel if selo is not None else "sem"
-    return (f'<span class="ar-selo {classe}" role="img" title="{_x(texto)}" '
-            f'aria-label="{_x(texto)}"></span>')
+    return (f'<span class="ar-selo {classe}" role="img" title="{_x(dica)}" '
+            f'aria-label="{_x(fala)}"></span>')
 
 
 def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str, str]) -> str:
     cor = cores[linha.id]
     descobrir = ""
+    vazado = (FAIXA_NAO_ACHADA if _passo_da_linha(linha.id) == receptor_sem_fio.PASSO_NADA
+              else FAIXA_NAO_DESCOBERTA)
     if linha.celulas:
         resumo = (f"{nomes[linha.id]}: {linha.bons} dos {CANAIS_DO_BT} canais bons"
                   if linha.bons is not None else f"{nomes[linha.id]}: faixa ocupada")
@@ -4184,7 +4200,7 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
     return (f'<div class="ar-linha" data-id="{_x(linha.id)}" data-tipo="{_x(linha.tipo)}" '
             f'data-briga="{_x(" ".join(linha.briga))}" data-quem="{_x(donos)}" tabindex="0" '
             f'style="--cor:{_x(cor)}">{rot}{faixa}'
-            f'<div class="ar-estado">{_o_ponto(linha, descobrir)}</div></div>')
+            f'<div class="ar-estado">{_o_ponto(linha, descobrir, vazado)}</div></div>')
 
 
 def _o_rotulo_do_aparelho(linha: Any) -> str:

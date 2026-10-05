@@ -1,4 +1,5 @@
-"""«A FAIXA DELE» no painel do aparelho (desenho 2 aprovado em 04/10/2026).
+"""«A FAIXA DELE» no painel do aparelho (desenho 2 aprovado em 04/10/2026; desde 05/10/2026 o
+painel único não a repete, e ela mora só na aba Conexões).
 
 O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, o defeito que o conferente achou: a mini-faixa do painel
 (os 79 canais, pintado é o bom, vazio com a marca de quem o tomou, e a frase «perde para…» ou
@@ -84,27 +85,20 @@ def test_o_dado_do_aparelho_leva_a_faixa_pelo_vid_pid(disco: Any) -> None:  # no
     assert all("faixa" not in a for a in dado["aparelhos"])
 
 
-def test_o_painel_do_aparelho_desenha_os_79_canais_com_a_marca_e_a_frase(disco: Any) -> None:  # noqa: F811
+def test_o_painel_unico_nao_repete_a_faixa_que_a_aba_08_desenha(disco: Any) -> None:  # noqa: F811
+    """Desenho aprovado de 05/10/2026 (conjunto «Conexões 3»): o painel único do Mapa traz Nome,
+    Tipo e uma linha de estado do aparelho; a faixa dele mora na aba Conexões, que a desenha com
+    a mesma conta. O dado continua chegando à página (o teste acima), só não se repete ali.
+
+    MORDIDA: devolva o bloco ``faixa-dele`` ao ``htmlDoPainelDoAparelho`` e a régua reprova."""
     dado = _ler(_teclado())
     for a in dado["aparelhos"]:
         if a.get("modelo") == "1111:0001":
             a["faixa"] = _faixa_de_mentira()
     lidas, _m = _na_pagina([_js(dado), _clicar(".ap-btn[data-ap-abre]"), LER_A_FAIXA])
     f = lidas[2]
-    assert f["aberto"] and f["celulas"] == 79, f
-    assert (f["bons"], f["perdidos"]) == (59, 20), "pintado é o bom; o perdido fica vazio"
-    # a frase é leitura da máquina, como as etiquetas: fica como frase (o desenho 2, «perde para»)
-    assert f["rotulo"] and f["texto"] == "perde para Wi-Fi", f
-    assert f["marca"] == "#c3e88d" and "perdido para Wi-Fi" in f["titulo"], f
-    assert f["aria"] == "perde para Wi-Fi", "a figura se diz em palavras, sem cor sozinha"
-    # o desenho 2: «perde para ■ Wi-Fi», a marca da cor ANTES do nome, a mesma da célula
-    assert f["marcas_txt"] == ["#c3e88d|Wi-Fi"] and f["marca_visivel"], f
-
-
-def test_sem_faixa_no_dado_o_painel_nao_inventa_a_linha(disco: Any) -> None:  # noqa: F811
-    lidas, _m = _na_pagina(
-        [_js(_ler(_teclado())), _clicar(".ap-btn[data-ap-abre]"), LER_A_FAIXA])
-    assert lidas[2]["aberto"] and lidas[2]["celulas"] == -1 and not lidas[2]["rotulo"]
+    assert f["aberto"], f
+    assert f["celulas"] == -1 and not f["rotulo"] and f["texto"] == "", f
 
 
 # --- a conta: a mesma da aba 08 ---------------------------------------------------------------

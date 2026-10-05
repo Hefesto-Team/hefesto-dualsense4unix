@@ -76,19 +76,17 @@ def test_o_receptor_sem_faixa_diz_que_nao_foi_descoberto_e_traz_o_botao_descobri
     html = a08.html_dos_canais(_cena([_receptor("aaaa:bbbb", "mouse")]))
     linha = _linha(html, "aaaa:bbbb")
     assert "ainda não foi descoberta" in linha
-    assert re.search(r'<button class="btn ar-descobrir" type="button" '
-                     r'data-gesto="receptor-descobrir" data-alvo="aaaa:bbbb">Descobrir</button>',
-                     linha)
-    assert "receptor 2.4G" in linha and "· descoberto" not in linha
-    faixa = linha.split("ar-estado")[0]
-    assert 'role="img"' not in faixa and 'role="group" aria-label="a faixa dele' in faixa, (
-        "o botão não mora dentro de uma figura: o leitor de tela o engoliria")
+    # o ponto vazado é o próprio «Descobrir» (desenho aprovado de 05/10/2026)
+    assert re.search(r'<button class="ar-selo  sem" type="button" '
+                     r'data-gesto="receptor-descobrir" data-alvo="aaaa:bbbb" '
+                     r'title="Faixa ainda não descoberta · clique para descobrir"', linha)
+    faixa = linha.split('class="ar-faixa')[1].split("ar-estado")[0]
+    assert "<button" not in faixa, "o gesto não mora dentro da figura da faixa"
 
 
 def test_o_receptor_com_a_faixa_medida_pinta_a_banda_e_diz_descoberto() -> None:
     html = a08.html_dos_canais(_cena([_receptor("aaaa:bbbb", "teclado", banda=[18, 35])]))
     linha = _linha(html, "aaaa:bbbb")
-    assert "receptor 2.4G · descoberto" in linha
     assert linha.count('class="b"') >= 17 and "receptor-descobrir" not in linha
 
 
@@ -99,7 +97,7 @@ def test_o_selo_do_teclado_diz_as_teclas_presas_e_o_do_mouse_diz_sem_falhas() ->
     teclado, mouse = _linha(html, "aaaa:bbbb"), _linha(html, "cccc:dddd")
     assert '<span class="ar-selo sofrendo"' in teclado and "3 teclas presas" in teclado
     assert "em 1 h" in teclado
-    assert '<span class="ar-selo boa"' in mouse and "sem falhas" in mouse
+    assert 'class="ar-selo boa sem"' in mouse and "Sem falhas" in mouse
 
 
 def test_sem_leitura_do_evdev_a_linha_nao_inventa_selo() -> None:
@@ -107,7 +105,7 @@ def test_sem_leitura_do_evdev_a_linha_nao_inventa_selo() -> None:
                   _receptor("cccc:dddd", "mouse", saude=_saude(lendo=False))])
     html = a08.html_dos_canais(cena)
     for ident in ("aaaa:bbbb", "cccc:dddd"):
-        assert "ar-selo" not in _linha(html, ident), ident
+        assert not re.search(r"ar-selo (boa|apertada|sofrendo)", _linha(html, ident)), ident
 
 
 def test_o_receptor_sem_tipo_declarado_tambem_ganha_o_descobrir() -> None:
@@ -290,7 +288,7 @@ def test_nao_achar_a_faixa_nao_grava_nada_e_a_linha_oferece_de_novo(
     a08._andar_a_descoberta(_evitados(), a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, True)
     assert a08._DESCOBERTA.passo == rx.PASSO_NADA and _descoberta_limpa == []
     linha = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
-    assert "Não achei a faixa dele" in linha and ">Descobrir<" in linha
+    assert a08.FAIXA_NAO_ACHADA in linha and 'data-gesto="receptor-descobrir"' in linha
 
 
 def test_a_banda_declarada_se_le_do_maquina_json() -> None:
@@ -376,5 +374,5 @@ def test_o_mockup_traz_o_exemplo_do_desenho_do_receptor() -> None:
     raiz = Path(__file__).resolve().parents[2]
     pagina = (raiz / "mockup/08-conexoes.html").read_text(encoding="utf-8")
     assert 'data-gesto="receptor-descobrir"' in pagina and "3 teclas presas" in pagina
-    mapa = (raiz / "mockup/mapa-das-portas.html").read_text(encoding="utf-8")
-    assert 'id="descobrir-a-faixa"' in mapa and 'href="08-conexoes.html"' in mapa
+    # o painel único do Mapa (05/10/2026) não traz mais o «Descobrir a faixa»: o ponto vazado
+    # da aba Conexões é o gesto

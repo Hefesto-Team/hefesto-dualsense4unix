@@ -464,7 +464,7 @@ def test_o_zumbi_que_o_vigia_nao_cura_vira_nao_conectou_na_caixa_dele(a08: Any) 
     assert cena["aberto"] == _na_tela(DONGLE_B), "a caixa de quem não chegou abre"
     html = a08.html_da_linha(linha, cena)
     assert a08.NAO_CONECTOU in html and 'data-gesto="tentar-de-novo"' in html
-    assert 'data-abre="conectar"' in html and "Tirar esta linha" in html
+    assert 'data-abre="conectar"' in html and 'data-gesto="aparelho-menu"' in html
     texto = re.sub(r"<[^>]+>", " ", html)
     assert ZUMBI.upper() not in texto.upper() and ZUMBI.replace(":", "") not in texto
 

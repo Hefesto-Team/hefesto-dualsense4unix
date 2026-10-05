@@ -122,16 +122,15 @@ def test_sem_resposta_a_sala_nao_diz_que_nao_ha(bancada: Any) -> None:
         "a sala afirmou alguma coisa sem que ninguém tivesse respondido: "
         f"{campos['radio-sala']!r}")
     assert _pacote().NENHUM_ADAPTADOR not in campos["radio-sala"]
-    assert campos["conta-de-adaptadores"] == nada, (
-        "a conta do topo disse «0 adaptadores» sobre uma leitura que não houve: "
-        f"{campos['conta-de-adaptadores']!r}")
+    # a conta do topo («4 controles · 3 adaptadores») saiu no desenho aprovado de 05/10/2026
+    assert "conta-de-adaptadores" not in campos
 
 
 def test_o_bluez_que_respondeu_zero_diz_que_nao_ha(bancada: Any) -> None:
     bancada([])
     campos = _secao(com_radio=False)
     assert _pacote().NENHUM_ADAPTADOR in campos["radio-sala"], campos["radio-sala"]
-    assert campos["conta-de-adaptadores"].endswith("0 adaptadores")
+    assert "conta-de-adaptadores" not in campos
 
 
 def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(bancada: Any) -> None:

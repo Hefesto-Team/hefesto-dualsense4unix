@@ -68,12 +68,12 @@ def test_cada_ajuste_do_exame_vira_um_cartao_e_o_certo_vira_a_linha_do_fim() -> 
     ]
     painel = a08._o_painel_das_dicas(vivos, None)
     assert _titulos(painel.visiveis) == [
-        "Entrada com pouca energia", "Bluetooth atrás de hub", "Teclado só no hub"], painel
-    assert _titulos(painel.demais) == ["Pareamento incompleto"], "a nota vai para «mais N»"
-    assert painel.certos == ("Suporte ao controle",)
+        "Entrada com pouca energia", "Bluetooth atrás de hub", "Teclado só no hub",
+        "Pareamento incompleto"], painel
+    assert painel.demais == (), "a fileira mostra quatro, sem «mais N»"
     html = a08._html_das_dicas(vivos, None)
-    assert html.count("<section ") == 4 and "mais 1" in html
-    assert "✓ Suporte ao controle" in html
+    assert html.count("<section ") == 4 and "mais-dicas" not in html
+    assert "✓ Suporte ao controle" not in html, "a linha dos ✓ saiu no desenho de 05/10"
     assert "O que fazer: Ligue o hub na tomada." in html, "a cura do dono sumiu do cartão"
     assert "Isto não entra no cartão" not in html, "só a primeira frase do porquê vai ao ⓘ"
     assert 'class="cd-pic"' not in html, "sem destino não há de→para"
@@ -88,7 +88,7 @@ def test_sem_ajuste_o_painel_diz_que_nao_ha_o_que_mudar() -> None:
         painel = a08._o_painel_das_dicas(vivos, None)
         assert painel.vazio
         assert NADA_A_MUDAR in a08._html_das_dicas(vivos, None)
-    assert NADA_A_MUDAR == "Nada a mudar agora."
+    assert NADA_A_MUDAR == "Tudo certo"
 
 
 def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_vai_para_o_fim(
@@ -108,7 +108,7 @@ def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_vai_para_o_fim(
                                       _item("p", ESTADO_ATENCAO, ordem=com)], None)
     assert _titulos((*painel.visiveis, *painel.demais)) == [
         "Bluetooth atrás de hub", "Dois rádios colados"]
-    assert painel.visiveis[1].calada and painel.visiveis[1].acao.rotulo == "Voltar a mostrar"
+    assert painel.visiveis[1].calada and painel.visiveis[1].acao.rotulo == "Mostrar"
     assert painel.visiveis[1].acao.dados == (("v", "0"),), "a linha do exame que o ignorar chama"
     assert painel.visiveis[0].para and painel.visiveis[0].de
     html = a08._html_das_dicas([_item("p", ESTADO_ATENCAO, ordem=com)], None)
@@ -158,7 +158,8 @@ def test_a_proposta_da_central_e_um_cartao_com_o_botao_de_mover(
     cartao = painel.visiveis[0]
     assert cartao.titulo == f"{nomes[de]} dividido em 2"
     assert (cartao.de, cartao.para) == (f"P{jogador} · {nomes[de]}", nomes[para])
-    assert cartao.acao.rotulo == f"Levar P{jogador} para o {nomes[para]}"
+    assert cartao.acao.rotulo == f"Mover P{jogador}"
+    assert cartao.para == nomes[para]
     assert cartao.acao.gesto == "aceitar-sugestao"
     assert dict(cartao.acao.dados) == {"alvo": "ap", "destino": para}
 

@@ -98,7 +98,7 @@ def test_o_pareado_fora_do_ar_aparece_com_conectar_e_o_novo_com_parear() -> None
     assert re.search(r'conectar-aparelho" data-alvo="[^"]+">Conectar</button>', html)
 
 
-# --- 2. a linha diz «Parear de Novo» quando o par velho ainda está aqui -------------------
+# --- 2. a linha pareia de novo quando o par velho ainda está aqui -------------------
 
 @pytest.mark.parametrize("controle", CONTROLES)
 @pytest.mark.parametrize("adaptador", list(ADAPTADORES))
@@ -110,15 +110,14 @@ def test_a_linha_do_pareado_que_nao_conectou_diz_parear_de_novo(
                                     frozenset({_par(adaptador, controle)}))
     assert linha["pareado_aqui"] is True
     html = a08.html_da_linha(linha, {"lugares": [], "aparelhos": [linha]})
-    assert f">{a08.PAREAR_DE_NOVO}<" in html and 'data-gesto="parear-de-novo"' in html
-    assert a08.TENTAR_DE_NOVO not in html
+    assert f">{a08.PAREAR}<" in html and 'data-gesto="parear-de-novo"' in html
+    assert 'data-gesto="tentar-de-novo"' not in html
 
 
-def test_o_botao_da_linha_fala_como_o_irmao_tentar_de_novo() -> None:
-    """Os dois botões moram no mesmo lugar da linha «Não Conectou» e se escrevem do mesmo
-    jeito: cada palavra com maiúscula, menos as miúdas («Tentar de Novo», «Parear de Novo»)."""
-    for rotulo in (a08.TENTAR_DE_NOVO, a08.PAREAR_DE_NOVO):
-        assert a08._em_titulo(rotulo) == rotulo, rotulo
+def test_o_botao_da_linha_e_o_mesmo_parear_nos_dois_casos() -> None:
+    """Desenho aprovado de 05/10/2026: a linha «Não conectou» é um ponto vermelho e o botão
+    «Parear», com o par velho aqui ou sem ele; o que muda é o gesto e a dica."""
+    assert a08.PAREAR == "Parear" and a08.NAO_CONECTOU == "Não conectou"
 
 
 def test_sem_par_velho_aqui_a_linha_continua_tentar_de_novo() -> None:
@@ -126,7 +125,7 @@ def test_sem_par_velho_aqui_a_linha_continua_tentar_de_novo() -> None:
                                     frozenset({_par("/org/bluez/hci1", CONTROLES[0])}))
     assert linha["pareado_aqui"] is False
     html = a08.html_da_linha(linha, {"lugares": [], "aparelhos": [linha]})
-    assert f">{a08.TENTAR_DE_NOVO}<" in html and 'data-gesto="tentar-de-novo"' in html
+    assert f">{a08.PAREAR}<" in html and 'data-gesto="tentar-de-novo"' in html
 
 
 @pytest.mark.parametrize("adaptador", list(ADAPTADORES))

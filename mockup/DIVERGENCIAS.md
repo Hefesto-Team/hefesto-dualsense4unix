@@ -21,4 +21,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **05/10/2026** — o desenho aprovado do conjunto «Conexões 3» (`docs/process/estudos/2026-10-05-a-conexoes-enxuta/DESENHO-APROVADO.md`): as dicas em até quatro cartões da mesma altura, «Tudo certo», o lugar vazio só com o número, as ferramentas embaixo, o Rádio com ícone · faixa · ponto, as caixas fechadas e a primeira maiúscula. Espera o `--publicar` de quem coordena, no fecho.
+
+## mapa-das-portas.html
+- **05/10/2026** — o desenho aprovado do conjunto «Conexões 3»: o painel único da entrada e do aparelho, as trocas em cartões, o USB 2.0 cinza e as frases sem maiúscula em toda palavra nem primeira pessoa. As edições moram em `EDICOES_ESPERANDO_A_SESSAO_DELA` até o `--publicar`.

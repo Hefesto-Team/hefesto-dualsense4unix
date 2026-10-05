@@ -338,7 +338,9 @@ def test_toda_faixa_tem_79_canais_do_mesmo_tamanho_e_a_legenda_esta_no_titulo(
         na_pagina: dict[str, Any]) -> None:
     assert na_pagina["faixas"] >= 6
     assert set(na_pagina["celulas"]) == {79}
-    assert len(set(na_pagina["larguras"])) == 1, na_pagina["larguras"]
+    # a entrada com mais de três aparelhos vai em duas colunas (desenho aprovado de 05/10/2026):
+    # a faixa inteira e a meia, e nada entre as duas
+    assert len(set(na_pagina["larguras"])) <= 2, na_pagina["larguras"]
     assert na_pagina["legenda_na_linha"] is True
 
 

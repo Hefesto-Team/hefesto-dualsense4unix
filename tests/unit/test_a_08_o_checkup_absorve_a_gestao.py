@@ -294,7 +294,7 @@ def test_o_cartao_da_ordem_diz_o_que_e_e_o_que_mover() -> None:
         pac._ORDENS_NA_TELA = antes
     assert "Bluetooth atrás de hub" in card, "o cartão não diz o que é"
     assert 'class="cd-pic"' in card and "→" in card, "o cartão não diz para onde mover"
-    assert "Mostrar a entrada boa" in card and 'href="mapa-das-portas.html"' in card
+    assert "Ver no mapa" in card and 'href="mapa-das-portas.html"' in card
 
 
 def test_o_examinar_tambem_rele_os_controles(monkeypatch: pytest.MonkeyPatch) -> None:

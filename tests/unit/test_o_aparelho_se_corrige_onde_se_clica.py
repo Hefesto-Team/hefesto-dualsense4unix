@@ -246,8 +246,8 @@ _LER = r"""
   return JSON.stringify({
     aberto: !!(ed && !ed.hidden),
     texto: ed && !ed.hidden ? ed.innerText.replace(/\s+/g, ' ').trim() : '',
-    tipos: q('.tipo-do-aparelho').map(
-      b => b.dataset.tipodito + ':' + b.getAttribute('aria-pressed')),
+    tipos: q('select.tipo-do-aparelho option').map(o => o.value + ':' + o.selected),
+    tipoTravado: q('select.tipo-do-aparelho').map(s => s.disabled),
     extensor: chave ? chave.getAttribute('aria-checked') : null,
     nome: (ed && ed.querySelector('.campo-nome') || {}).value,
     identificar: !!(ed && ed.querySelector('#identificar')),
@@ -334,12 +334,20 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
     return lidas, mensagens
 
 
+def _escolher(seletor: str, valor: str) -> str:
+    """Escolhe ``valor`` numa lista do painel, como a mão dela: muda e avisa a página."""
+    return (f"(function(){{const s=document.querySelector({json.dumps(seletor)});"
+            f"if(!s)return 'sem a lista';s.value={json.dumps(valor)};"
+            "s.dispatchEvent(new Event('change',{bubbles:true}));return 'ok';})()")
+
+
 def _js(dado: dict[str, Any], reexame: bool = False) -> str:
     return arranjo_desta_maquina.js_da_entrega(dado, reexame=reexame)
 
 
 def test_clicar_no_aparelho_abre_o_painel_no_exemplo() -> None:
-    """No exemplo (sem produto) o painel abre, mostra os seis tipos e a chave do extensor."""
+    """No exemplo (sem produto) o painel único abre, com a lista dos seis tipos, a chave do
+    extensor e o pé «Identificar» · «Automático» (desenho aprovado de 05/10/2026)."""
     lidas, mensagens = _na_pagina([
         _LER,
         _clicar(".ap-btn[data-ap-abre]"),
@@ -348,10 +356,11 @@ def test_clicar_no_aparelho_abre_o_painel_no_exemplo() -> None:
     antes, _, depois = lidas
     assert not antes["aberto"]
     assert depois["aberto"], "o clique no aparelho não abriu o painel"
-    assert len(depois["tipos"]) == 6, depois["tipos"]
+    assert len([t for t in depois["tipos"] if not t.startswith(":")]) == 6, depois["tipos"]
+    assert depois["tipoTravado"] == [False], "o tipo lido pela máquina se corrige no painel"
     assert depois["extensor"] in ("true", "false"), "o painel não tem a chave do extensor"
-    texto = depois["texto"].lower()  # a folha de estilo põe Maiúsculas Nas Palavras
-    assert "voltar ao automático" in texto and "mais desta entrada" in texto, texto
+    texto = depois["texto"].lower()
+    assert "automático" in texto and "mais desta entrada" not in texto, texto
     assert depois["identificar"]
     assert not [m for m in mensagens if m.get("gesto")], (
         f"o exemplo não grava nada: {mensagens}")
@@ -364,7 +373,7 @@ def test_o_painel_no_produto_manda_o_gesto_de_cada_clique(disco: Path) -> None:
         _js(dado),
         _clicar(".ap-btn[data-ap-abre]"),
         _LER,
-        _clicar('.tipo-do-aparelho[data-tipodito="webcam"]'),
+        _escolher("#edita select.tipo-do-aparelho", "webcam"),
         _clicar("[data-extensor]"),
         _clicar("#voltar-ao-automatico"),
     ])
@@ -374,7 +383,7 @@ def test_o_painel_no_produto_manda_o_gesto_de_cada_clique(disco: Path) -> None:
         f"o painel não marca o tipo que a máquina leu: {painel['tipos']}")
     gestos = [m for m in mensagens if m.get("gesto")]
     por_nome = {m["gesto"]: m for m in gestos}
-    assert por_nome["aparelho-tipo"]["tipodito"] == "webcam"
+    assert por_nome["aparelho-tipo"]["valor"] == "webcam"
     assert por_nome["aparelho-tipo"]["modelo"] == "1111:0001"
     assert por_nome["entrada-extensor"]["entrada"] == "1"
     assert por_nome["entrada-extensor"]["ligado"] == "true"
@@ -390,7 +399,7 @@ def test_identificar_so_pede_para_tirar_e_por_e_nao_mexe_no_aparelho(disco: Path
         _LER,
     ])
     texto = lidas[3]["texto"]
-    assert "tire o aparelho e ponha de novo" in texto.lower(), texto
+    assert "tire e ponha de novo" in texto.lower(), texto
     assert not [m for m in mensagens if m.get("gesto")], (
         f"«Identificar» mandou gesto ao aparelho: {mensagens}")
 
@@ -407,8 +416,8 @@ def test_o_aparelho_da_fileira_sem_lugar_fica_no_lugar_e_a_fileira_aparece(disco
     ])
     assert "Sem Lugar" in lidas[1]["semLugar"], lidas[1]["semLugar"]
     texto = lidas[3]["texto"].lower()
-    assert "sem lugar no gabinete" in texto, texto
-    assert "mostrar a entrada boa" not in texto, "o plano mandou sair da fileira sem lugar"
+    assert "· sem lugar" in texto, texto
+    assert "melhor na" not in texto, "o plano mandou sair da fileira sem lugar"
 
 
 _RELOGIO_DE_MENTIRA = """

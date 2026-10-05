@@ -113,13 +113,15 @@ def test_o_mais_n_cala_quando_tudo_cabe(pacote, cena) -> None:
     assert "mais-dicas" not in _coluna(pacote, tres)
 
 
-def test_o_mais_n_concorda_em_numero(pacote, cena) -> None:
-    """Os três que mais pesam aparecem; o resto entra em «mais N» (um, dois…)."""
+def test_os_quatro_que_mais_pesam_aparecem_e_o_resto_espera_sem_mais_n(pacote, cena) -> None:
+    """Os quatro que mais pesam aparecem; o próximo entra quando ela ignora ou resolve um
+    (desenho aprovado de 05/10/2026: sem «mais N»)."""
     nao_certos = [i for i in cena if i.estado != "certo"]
-    assert len(nao_certos) == 4, "a cena precisa de quatro achados para medir o «mais N»"
-    assert "mais 1" in _coluna(pacote, nao_certos)
+    assert len(nao_certos) == 4, "a cena precisa de quatro achados para medir a fileira"
     mais = [dataclasses.replace(i, chave=f"{i.chave}-2") for i in nao_certos]
-    assert "mais 5" in _coluna(pacote, [*nao_certos, *mais])
+    coluna = _coluna(pacote, [*nao_certos, *mais])
+    assert coluna.count('<section class="cartao-dica') == 4
+    assert "mais-dicas" not in coluna and "mais 4" not in coluna
 
 
 def test_a_coluna_sem_a_lista_continua_sendo_so_o_card(pacote) -> None:
@@ -390,7 +392,7 @@ def test_o_desenho_esmaece_a_dica_calada_e_o_botao_de_voltar_responde(pacote, ce
     coluna = _coluna(pacote, cena)
     calada = re.search(r'<section class="cartao-dica [^"]*calada.*?</section>', coluna, re.S)
     assert calada, "a ordem calada saiu da tela em vez de ficar apagada"
-    assert 'data-gesto="ignorar"' in calada.group(0) and "Voltar a mostrar" in calada.group(0)
+    assert 'data-gesto="ignorar"' in calada.group(0) and ">Mostrar</button>" in calada.group(0)
     assert f'title="{pacote.DICA_DO_DESFAZER}"' in calada.group(0)
 
 
