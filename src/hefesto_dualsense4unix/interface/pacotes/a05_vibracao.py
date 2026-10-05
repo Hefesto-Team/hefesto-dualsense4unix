@@ -138,8 +138,9 @@ def degrau_da_faixa(policy: str, custom: Any) -> str:
     De 150 a 200, o Máximo; de 30 a 99, o Economia; abaixo de 30, nenhum. De
     100 a 149, nenhum: o «Padrão» (antes «Balanceado») só acende pelo nome, porque
     desde 04/10/2026 ele trava as barras, e o trilho não. A faixa entre os
-    degraus é por delegação, a validar por ela (a fala dela diz só a de cima). Os limites são os da escada do
-    produto (``app/telas/vibracao``), e não números daqui.
+    degraus é por delegação, a validar por ela (a fala dela diz só a de cima).
+    Os limites são os da escada do produto (``app/telas/vibracao``), e não
+    números daqui.
 
     O VALOR É O DO TRILHO: o mesmo pedido que o número ao lado mostra
     (``_tela._pedido_da_politica``). Política fora da escada, ou personalizado

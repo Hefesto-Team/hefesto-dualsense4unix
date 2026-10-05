@@ -1654,7 +1654,7 @@
           }).join("") + "</div>"
         + (fx.texto ? '<span class="faixa-dele-txt">'
           + (fx.partes || [[fx.texto, ""]]).map(function (pt) {
-              return (pt[1] ? '<i class="marca-txt" aria-hidden="true" style="--marca:'
+              return (pt[1] ? '<i class="marca-txt" aria-hidden="true"' + ' style="--marca:'
                 + emAtributo(pt[1]) + '"></i>' : "") + emAtributo(pt[0]);
             }).join("") + "</span>" : "")
         + "</div></div>";
