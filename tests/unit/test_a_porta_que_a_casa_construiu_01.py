@@ -500,7 +500,7 @@ def test_sem_o_aviso_do_dono_o_exame_nao_toca_no_no(grab: str, emulando: bool) -
 
 
 def test_o_interrogacao_e_a_sugestao_sao_as_duas_metades_do_dono() -> None:
-    """O `?` leva o porquê e a Sugestão de Conexão leva o que fazer — as duas"""
+    """O `?` leva o porquê e o cartão da dica leva o que fazer — as duas"""
     from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_PORQUE
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -511,7 +511,8 @@ def test_o_interrogacao_e_a_sugestao_sao_as_duas_metades_do_dono() -> None:
     assert porque.rstrip(".") in AVISO_DE_GRAB_PORQUE and cura not in porque
     dica = a08_conexoes._dica_da_linha(item)
     assert porque.split(",")[0] in dica and dica.count(cura.split(",")[-1].strip()) == 1
-    assert a08_conexoes._sugestoes_do_exame([item]) == [(cura, None)]
+    cartao = a08_conexoes._o_painel_das_dicas([item], None).visiveis[0]
+    assert cartao.cura.endswith(cura), "o cartão perdeu o «o que fazer» do dono"
 
 
 def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(

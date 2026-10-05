@@ -270,21 +270,31 @@ def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(arquivo: pathlib.Path) -> No
         assert f'data-campo="{campo}"' in html, f"a página não tem onde pintar `{campo}`"
 
 
-def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
-    """MORDIDA: tire a instrução do `_card_da_ordem` → reprova."""
+def test_o_cartao_da_ordem_diz_o_que_e_e_o_que_mover() -> None:
+    """MORDIDA: tire o `destino` do `dica_da_ordem` → o de→para some e reprova."""
     pac = _pac()
-    from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+        R3_DONGLE_ATRAS_DE_HUB,
+        Identidade,
+        Linha,
+        Ordem,
+    )
 
-    vazio = Linha(texto="", selo="")
-    instrucao = "Mova o adaptador Bluetooth para a Entrada 9"
-    ordem = Ordem(chave="teste", acao=instrucao,  # (noqa-acento) campo da Ordem
-                  o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
-                  alvo=Identidade(caminho="3-1"), destino="Entrada 9")
-    card = pac._card_da_ordem(ordem)
-    assert "ordem-tit" not in card, "o título voltou para dentro da linha que o tique repinta"
-    assert ('<div class="faca"><span class="n">1</span>'
-            'Mova o adaptador Bluetooth para a Entrada 9</div>') in card
-    assert pac.TITULO_DA_ORDEM == "Sugestão de Conexão"
+    frase = Linha(texto="Tudo que passa pelo hub divide o caminho.", selo="")
+    ordem = Ordem(
+        chave=R3_DONGLE_ATRAS_DE_HUB,
+        acao="Mova o adaptador Bluetooth para a Entrada 9",  # (noqa-acento) campo da Ordem
+        o_que_eu_vi=frase, por_que_importa=frase, ganho_esperado=frase,
+        alvo=Identidade(caminho="3-1"), destino="9")
+    antes = pac._ORDENS_NA_TELA
+    try:
+        pac._ORDENS_NA_TELA = (ordem,)
+        card = pac._html_das_dicas()
+    finally:
+        pac._ORDENS_NA_TELA = antes
+    assert "Bluetooth atrás de hub" in card, "o cartão não diz o que é"
+    assert 'class="cd-pic"' in card and "→" in card, "o cartão não diz para onde mover"
+    assert "Mostrar a entrada boa" in card and 'href="mapa-das-portas.html"' in card
 
 
 def test_o_examinar_tambem_rele_os_controles(monkeypatch: pytest.MonkeyPatch) -> None:

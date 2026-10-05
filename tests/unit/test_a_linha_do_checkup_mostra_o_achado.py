@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """A LINHA DO CHECK-UP MOSTRA O ACHADO — e não o nome de quem o procurou.
 
+**04/10/2026:** a linha do exame saiu da aba Conexões (cada achado virou um cartão de dica,
+AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01). O que fica aqui é o dado da linha (`_linha`, o selo e a dica
+do dono), que a aba Jogar ainda lê pelo `_exame()`; as réguas dos endereços da página
+saíram com ela.
+
 **02/09/2026.** As cinco linhas do Check-up da aba Conexões têm três partes: o
 selo, a frase e o `?`. A frase e o selo já vinham do exame da mesa dela; as
 TRÊS estavam erradas, cada uma de um jeito, e as três têm dono no produto.
@@ -65,7 +70,6 @@ from __future__ import annotations
 
 import dataclasses
 import pathlib
-import re
 import sys
 
 import pytest
@@ -106,16 +110,6 @@ def test_a_frase_da_linha_e_a_medicao_e_nao_o_rotulo():
     assert linha["porque"] == it.porque
     assert linha["titulo"] == it.rotulo
     assert linha["porque"] != linha["titulo"]
-
-
-def test_o_pacote_emite_o_porque_na_chave_achado():
-    """A ponta que a foto mostra: a chave `achado` lê `porque`, não `titulo`."""
-    fonte = PACOTE.read_text(encoding="utf-8")
-    assert re.search(r'"achado":\s*\[i\["porque"\] for i in itens\]', fonte), (
-        "a chave `achado` do pacote deixou de emitir o `porque` do exame — a "
-        "linha do Check-up volta a mostrar o NOME da conferência no lugar do "
-        "que ela achou (o comentário da chave `achado` no pacote diz por quê)"
-    )
 
 
 @pytest.mark.parametrize(
@@ -165,99 +159,6 @@ def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
     assert quebrado["selo"] == so_podia_melhorar["selo"] == "AJUSTAR"
 
 
-def test_o_pacote_emite_o_estado_de_cada_selo():
-    """Sem a cor por estado, a pílula não tem como saber que ficou vermelha.
-
-    **A RÉGUA ENVELHECEU E FOI REESCRITA — 03/09/2026.** Ela procurava, com um
-    `re.search` na FONTE, a linha `"selo-estado": [i["estado"] for i in itens]`
-    — o endereço ÚNICO que carregava o estado cru. Essa linha morreu no mesmo
-    dia, e morreu por uma MELHORA: o pacote passou a emitir QUATRO endereços,
-    um por estado (:func:`a08._selos_por_estado`), porque um nó que pergunta
-    *"o estado desta linha é `problema`?"* só aceita `problema` ou o vazio como
-    resposta — mandar-lhe `certo` era o pacote respondendo a outra pergunta, e
-    a régua do mockup acusava três endereços mortos por isso.
-
-    Reprovar aqui seria reprovar a melhora em vez do defeito, que é o erro mais
-    caro desta casa. E a causa da fragilidade era a forma da régua: ela
-    **digitava** o texto de uma linha em vez de **ler** o que o pacote faz.
-
-    ENTÃO ELA PASSOU A CHAMAR A FUNÇÃO. `_selos_por_estado` é pura — não pede
-    daemon nem sysfs, ao contrário de `pacote()` —, então não há motivo para
-    ler fonte nenhuma: mede-se o comportamento.
-
-    O QUE ELA COBRA, e cada uma é a razão de um defeito real:
-      1. os QUATRO estados do `Item` têm endereço — sem isso um estado volta a
-         não ter cor;
-      2. `problema` continua em `selo-estado`, que é a pílula: é o único cuja
-         cor ACRESCENTA (`.selo.grave`) em vez de substituir, e mudá-lo de
-         endereço quebraria a metade que já funcionava;
-      3. cada endereço responde SÓ à sua pergunta — a linha `certo` manda
-         `certo` para `selo-certo` e VAZIO para os outros três.
-
-    MORDIDAS (três, e cada uma tem a sua frase): tire uma chave de
-    `ENDERECO_DO_ESTADO`; troque o endereço do `problema`; ou devolva o estado
-    cru a todos os endereços (`[i["estado"] for i in itens]`).
-    """
-    estados = ["certo", "atencao", "problema", "nao_sei"]  # (noqa-acento) chaves
-    itens = [a08._linha(_item(estado=e)) for e in estados]
-    saida = a08._selos_por_estado(itens)
-
-    assert set(a08.ENDERECO_DO_ESTADO) == set(estados), (
-        "o `Item` tem quatro estados e o mapa de endereços não os cobre — o "
-        "estado que sobrar chega à tela sem cor nenhuma"
-    )
-    assert a08.ENDERECO_DO_ESTADO["problema"] == "selo-estado", (
-        "o `problema` saiu da pílula. Ele é o único cujo vermelho ACRESCENTA "
-        "(`.selo.grave`) em vez de substituir; mudá-lo de endereço quebra a "
-        "única metade que já funcionava"
-    )
-    for estado, endereco in a08.ENDERECO_DO_ESTADO.items():
-        esperado = [e if e == estado else "" for e in estados]
-        assert saida[endereco] == esperado, (
-            f"o endereço `{endereco}` respondeu {saida[endereco]} para as "
-            f"linhas {estados}. Ele pergunta *'o estado é {estado}?'*, e as "
-            f"únicas respostas são `{estado}` e o vazio — qualquer outra é o "
-            f"pacote respondendo a outra pergunta, que é o que acendia a cor "
-            f"errada até 03/09/2026"
-        )
-
-
-def test_a_bancada_acende_o_quarto_selo_pelo_estado():
-    """As cinco pílulas do Check-up sabem virar `grave` quando o estado é `problema`."""
-    html = BANCADA.read_text(encoding="utf-8")
-    endereco = ('data-campo="selo-estado" data-hef-alvo="classe" '
-                'data-hef-classe="grave" data-hef-quando="problema"')
-    assert html.count(endereco) == 5, (
-        "as cinco pílulas do Check-up perderam o endereço do quarto selo — "
-        "regere com `python src/hefesto_dualsense4unix/interface/aba08.py`"
-    )
-    assert html.count('<span data-campo="selo">') == 5
-
-
-def test_a_bancada_tem_a_cor_do_quarto_selo_e_ela_vence_a_laranja():
-    """`.selo.grave` existe, é `--red`, e vem DEPOIS de `.selo.warn`.
-
-    A ordem é o que decide: a pílula nasce no HTML com a classe do desenho
-    (`warn`) e o produto ACRESCENTA `grave`. As duas têm a mesma
-    especificidade, então a última declarada é a que pinta. Escrita antes,
-    a regra existiria e não mudaria um pixel.
-    """
-    html = BANCADA.read_text(encoding="utf-8")
-    assert ".selo.grave{background:var(--red);color:var(--app-bg)}" in html
-    assert html.index(".selo.grave{") > html.index(".selo.warn{"), (
-        "a cor do quarto selo foi declarada ANTES da laranja — com a mesma "
-        "especificidade, a laranja volta a ganhar e a linha quebrada volta a "
-        "parecer com a que só podia estar melhor"
-    )
-
-
-def test_o_gerador_e_quem_escreve_o_endereco_do_quarto_selo():
-    """A bancada é gerada: quem o apagar do gerador some com ele no próximo `abaNN.py`."""
-    fonte = GERADOR.read_text(encoding="utf-8")
-    assert 'data-hef-classe="grave" data-hef-quando="problema"' in fonte
-    assert ".selo.grave{background:var(--red);color:var(--app-bg)}" in fonte
-
-
 def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
     """O `?` traz o "por que importa" e a cura — as duas frases do produto."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import (
@@ -301,27 +202,6 @@ def test_uma_linha_sem_cura_nao_inventa_o_que_fazer():
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
 
     assert PREFIXO_DA_CURA not in a08._linha(_item())["dica"]
-
-
-def test_o_desenho_da_bancada_endereca_o_ponto_de_interrogacao():
-    """Sem `data-campo`, o `?` fica sendo o do mockup ao lado do achado dela."""
-    html = BANCADA.read_text(encoding="utf-8")
-    assert html.count('data-campo="achado-explica" data-hef-alvo="html"') == 5, (
-        "as cinco linhas do Check-up da bancada perderam o endereço do `?` — "
-        "regere com `python src/hefesto_dualsense4unix/interface/aba08.py`"
-    )
-
-
-def test_o_gerador_e_quem_escreve_o_endereco_da_dica():
-    """A bancada é gerada: quem o apagar do gerador some com ele no próximo `abaNN.py`."""
-    fonte = GERADOR.read_text(encoding="utf-8")
-    assert 'data-campo="achado-explica" data-hef-alvo="html"' in fonte
-
-
-def test_o_pacote_emite_a_dica_da_linha():
-    """Emitir antes da publicação é o que faz a dica nascer certa no dia dela."""
-    fonte = PACOTE.read_text(encoding="utf-8")
-    assert '"achado-explica": [i["dica"] for i in itens]' in fonte
 
 
 def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():

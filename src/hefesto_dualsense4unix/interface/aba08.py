@@ -18,6 +18,8 @@ from onde import RAIZ as R  # noqa: E402
 from hefesto_dualsense4unix.interface import conexoes as _aba_conexoes  # noqa: E402
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
 
+from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas  # noqa: E402
+from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens  # noqa: E402
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
 
 def _valor(no, ja):
@@ -209,25 +211,43 @@ NO_CABO = [c for c in CONECTADOS if not e_radio(c)]
 NO_RADIO = [c for c in CONECTADOS if e_radio(c)]
 POR_PREF = {c["pref"]: c for c in MESA}
 
-CAMPO_DA_ORDEM = "ordem"
+CAMPO_DAS_DICAS = "dicas"
 
 
-def _sugestao_da_cena():
-    """A Sugestão de Conexão da bancada, pelas MESMAS funções do produto."""
-    ordem = SimpleNamespace(acao="Mova o adaptador Bluetooth para a Entrada 9",
-                            destino="9", alvo=SimpleNamespace(caminho="Entrada 3"),
-                            chave="bancada", arranjo="")
-    cena = {"proposta": {"controle": "p2", "destino": "direita"},
-            "lugares": [{"id": "meio", "nome": "Meio"}, {"id": "direita", "nome": "Direita"}],
-            "aparelhos": ([{"id": f"p{n}", "tipo": "controle", "lugar": "meio", "jogador": n}
-                           for n in (1, 2, 3)]
-                          + [{"id": "p4", "tipo": "controle", "lugar": "direita", "jogador": 4}])}
-    antes = _pacote08._ORDENS_NA_TELA
-    try:
-        _pacote08._ORDENS_NA_TELA = (ordem,)
-        return _pacote08._html_da_ordem(None, cena)
-    finally:
-        _pacote08._ORDENS_NA_TELA = antes
+def _dicas_da_cena():
+    """As dicas da bancada, pelas MESMAS funções do produto (`a08_conexoes._html_das_dicas`).
+
+    Os fatos são de mentira e dizem o que o desenho 4 mostra: um adaptador sufocado com o controle
+    que a central manda para outro, o Wi-Fi colado nos rádios, o teclado só no hub (com o de→para)
+    e uma conferência de energia, que cai em «mais 1».
+    """
+    frase = _ordens.Linha(texto="Ele emite ruído em cima da faixa dos controles.",
+                          selo=_ordens.DERIVADO_DA_CONTA)
+    fala_melhor = _ordens.Linha(
+        texto="O receptor atrás de um hub perde sinal; direto no gabinete ele fala melhor.",
+        selo=_ordens.DERIVADO_DA_CONTA)
+    wifi = _ordens.Ordem(
+        chave=_ordens.R1_RADIO_LARGO_NO_MESMO_HUB, acao="Mova o Wi-Fi", o_que_eu_vi=frase,
+        por_que_importa=frase, ganho_esperado=frase)
+    teclado = _ordens.Ordem(
+        chave=_ordens.R4_TECLADO_SO_NO_HUB, acao="Mova o teclado", o_que_eu_vi=frase,
+        por_que_importa=fala_melhor, ganho_esperado=frase, destino="9")
+    painel = _dicas.montar(
+        [
+            _dicas.dica_do_movimento(_dicas.Movimento(
+                controle="p2", jogador=2, nome_do_controle="o controle", de_id="meio",
+                de_nome="Meio", para_id="direita", para_nome="Direita", controles_no_de=3,
+                bons=20, sufocado=True)),
+            _dicas.dica_da_ordem(wifi, "atencao", slot=0, dica_de_ignorar=_pacote08.DICA_DO_IGNORAR),  # (noqa-acento): chave de máquina
+            _dicas.dica_da_ordem(teclado, "atencao", slot=1, de="Entrada 4", para="Entrada 9",  # (noqa-acento): chave de máquina
+                                 dica_de_ignorar=_pacote08.DICA_DO_IGNORAR),
+            _dicas.dica_da_conferencia(
+                "energia_das_portas", "Energia das entradas", "atencao",  # (noqa-acento): chave de máquina
+                "A entrada 12 entrega menos corrente do que o aparelho pede."),
+        ],
+        ["Suporte ao controle", "Pareamentos salvos"])
+    return _aba_conexoes.html_das_dicas(painel, _pacote08._ic)
+
 
 def tem_mic_pelo_radio(c):
     return e_radio(c)
@@ -268,21 +288,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      corpo vem logo embaixo e os dois respiros somavam 21px de faixa vazia. */
   .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
   .quadro:has(> input.abre:checked) > .quadro-corpo{padding-top:4px}
-
-  /* O GLIFO DE IGNORAR, um por linha do exame. Ele mora na ponta direita, depois
-     do `?`, e nasce apagado: é gesto de recusa, não de ação principal — aceso
-     como o `?` ele competiria com o selo, que é quem diz o que a linha achou. */
-  .exame .ignora{flex:0 0 17px;width:17px;height:17px;border-radius:50%;padding:0;
-    border:1px solid var(--linha);background:none;color:var(--texto-mudo);
-    font-size:11px;line-height:1;cursor:pointer}
-  .exame .ignora:hover{border-color:var(--orange);color:var(--orange)}
-
-  /* A DICA DAS LINHAS DO EXAME ABRE PARA A ESQUERDA — 31/08/2026, pedido dela:
-     *"jogar o tooltip pra alinhar a esquerda"*. A `.dica` do esqueleto nasce em
-     `left:22px`, crescendo para a DIREITA a partir do `?`. Aqui o `?` fica na
-     ponta direita da linha, a 30px da borda do quadro: 330px de dica crescendo
-     para lá saem da janela. Ancorada pela direita, ela cresce para dentro. */
-  .exame .ajuda .dica{left:22px;right:auto}
 
   /* O NOME DO ADAPTADOR É EDITÁVEL NO LUGAR — o botão `Renomear` saiu.
      `contenteditable` é o que o mockup faz sem JavaScript; o DUPLO clique que ela
@@ -358,364 +363,51 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .lado-d{padding-left:16px;border-left:1px solid var(--border-sutil)}
   .pilha{display:flex;flex-direction:column;gap:8px}
 
-  /* ---- O CHECK-UP FICA COM A PARTE MAIOR, E COM TUDO QUANDO NÃO HÁ ORDEM ----
-     CHECKUP-VAO-01, decisão dela de 19/09/2026:
-
-       *"falta deixarmos a área sempre disponível pra ocupar o espaço vazio do
-       checkup mesmo sem mostrar nada"*  ·  *"aumenta a largura aqui"*
-
-     A metade exata servia quando as duas colunas tinham dono. Medido na foto
-     dela: com UMA ordem de serviço, o achado mais longo do exame tem 121
-     caracteres e quebra em duas linhas a 690 px — e do outro lado sobra
-     moldura vazia. Das três saídas possíveis ela escolheu a que ninguém tinha
-     proposto: a largura volta para quem tem o que mostrar.
-
-     SÃO DUAS REGRAS, e a segunda é a que ela pediu por escrito:
-
-     1. com ordem de serviço, o exame fica com 63% (`1.7fr 1fr`) — o texto de
-        121 caracteres passa a caber numa linha só;
-     2. SEM ordem de serviço, o exame fica com a largura inteira e a coluna da
-        direita sai da conta.
-
-     `:has()` E NÃO UM `if` NO GERADOR: quem esvazia a coluna é o tique
-     (`data-hef-alvo="html"` no `.col-ordem`), e o gerador não está lá na hora.
-     Esta folha já usa `:has()` em `.quadro:has(> input.abre)` — o WebKitGTK
-     desta casa o entende, e é medido.
-
-     O ESCOPO É `:has(.col-exame)` porque `.duas-colunas` é gramática comum a
-     três abas: alargar todas mudaria a Navegação e a Gatilhos, que ninguém
-     mediu e ninguém pediu. */
-  /* A GRADE É A DOS CARTÕES — 26/09/2026, pedido dela: *«aumenta a largura
-     do bloco do canto superior direito»* e *«não existe alinhamento entre os
-     Elementos»*. Quatro colunas com o vão de 10px do `.gc`: o exame ocupa as
-     duas primeiras, a Sugestão de Conexão as duas últimas, e as bordas das
-     duas caem nas mesmas linhas verticais dos quatro botões e dos quatro
-     cartões embaixo. */
-  /* OS DOIS BLOCOS TÊM A MESMA ALTURA, E A SUGESTÃO ENCOSTA NO EXAME — pedido
-     dela, 26/09/2026: *«equipa a altura dos dois blocos e aumenta a largura do
-     bloco da direita até chegar ao lado do bloco da esquerda»*. O exame fica
-     com 46% e a Sugestão com o resto; os dois são caixas, e o `stretch` da
-     grade dá a mesma altura às duas. */
-  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,46%) minmax(0,1fr);
-                                column-gap:10px;align-items:stretch}
-  .duas-colunas:has(.col-exame) > .lado-e{padding:10px 12px;border:1px solid var(--border-sutil);
-                                border-radius:7px;background:var(--app-bg)}
-  .duas-colunas:has(.col-exame) > .lado-d{padding-left:0;border-left:none}
-  /* a sobra de altura se reparte entre as linhas do exame; margem `auto` e não
-     `space-evenly`, porque com a coluna rolando a margem vira zero e o
-     `space-evenly` cortaria a primeira linha */
-  .duas-colunas:has(.col-exame) .col-exame > .exame{margin:auto 0}
-  /* O WEBKIT DA JANELA MEDE O EXAME CURTO DEMAIS — 26/09/2026, foto dela com a
-     janela maximizada: *«ta dando duas linhas e o sugestões de conexão não tá
-     usando o espaço horizontral por completo»* (noqa-acento: citação literal
-     dela). Medido no WebKitGTK: com `fit-content` a coluna do exame parava em
-     421 px e três das cinco linhas quebravam (34 px contra 20), e a ordem
-     ocupava 289 px de uma caixa de 1029. O exame foi a 40% e, na foto
-     seguinte dela (*«ainda tá quebrando a linha no primeiro ajustar»*), a
-     46%, com as frases encurtadas para até ~65 caracteres; a ordem ocupa a
-     caixa. (noqa-acento: citação literal dela) */
-  .lado-d .sugestao .col-ordem > .ordem{align-items:stretch}
-  /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
-     que NUNCA DISPAROU na máquina dela.
-
-     `:empty` não casa um elemento que tem filho, e a coluna sem card não fica
-     vazia: `_html_da_ordem` devolve `monta.NADA_A_DIZER`, que é
-     `<i class="nada"></i>` — e ele vai ali de propósito, porque o `escrever()`
-     do piloto troca `''` por travessão antes de olhar o alvo. A coluna ficava
-     com um filho invisível, o `:empty` falhava, e a largura nunca voltava.
-
-     ELA FOTOGRAFOU O DEFEITO em 19/09, com a cura já instalada: oito achados à
-     esquerda e a metade direita do quadro em branco — *"tá vazio aqui ainda"*.
-     É o caso NORMAL desta bancada: as ordens dela (`dongle_atras_de_hub`,
-     `teclado_so_no_hub`) não têm DESTINO, e sem destino não há de→para a
-     desenhar. O `:empty` cobria só a coluna que o produto zera. */
-  /* A CAIXA NÃO SOME MAIS — 26/09/2026, pergunta dela olhando a tela sem
-     controle: *«pq sumiu a parte da caixinha no canto superior direito?»*.
-     As seis regras que a escondiam quando a ordem chegava vazia saíram: a
-     caixa tem título e fica, e quando não há o que mudar ela diz isso. */
-
-  /* AS DUAS FILEIRAS DE BOTÕES VIRARAM UMA SÓ, com os quatro, e ela mora FORA
-     das colunas — ordem escrita por ela em 28/08: *"Examinar de novo. / Já Movi
-     - Reexaminar. / Ignorar / Ver Ordens ignoradas."* Com um botão em cada
-     coluna nenhum arranjo dá essa ordem: a leitura de uma grade de duas colunas
-     é esquerda→direita, linha a linha, e "Ignorar" (que estava na direita) teria
-     de vir antes de "Ver as ordens ignoradas" (que estava na esquerda).
-     E NÃO CUSTA ALTURA: as duas fileiras já caíam na mesma linha por construção,
-     então juntá-las devolve os mesmos px — medido, 205 antes e 205 depois.
-     O que sobrou nas colunas é só o que reparte a SOBRA de altura entre os itens
-     de cada uma, para as duas terminarem juntas sem `space-between`. */
-  /* A ROLAGEM DA COLUNA — 19/09/2026, decisão dela: *"A lista rola, sem teto —
-     todo achado aparece; a coluna ganha rolagem quando passar da altura."*
-
-     O TETO É A TELA, E O NÚMERO SAIU DE MEDIÇÃO, não de escolha. Com a aba
-     PUBLICADA dirigida por Chrome a 1180x780, cada linha do exame mede 20px
-     firmes e a coluna cresce linearmente:
-
-         5 achados  → 122px, última linha em y=307
-        16 achados  → 342px, última linha em y=527
-
-     A aba tem folga: com DEZESSEIS achados nada é cortado, e a bancada dela
-     devolve SETE. Cravar um `max-height` em px faria a coluna rolar por uma
-     linha num quadro que ainda tinha 250px de sobra — rolagem dentro de tela
-     vazia é pior que crescer.
-
-     `60vh` É A REDE, e ela responde à pergunta que ELA fez em 19/09 olhando a
-     barra: *"será que minha resolução de tela impactando aqui em algo?"*. Numa
-     janela grande a coluna nunca chega lá e cresce livre; numa pequena ela
-     rola em vez de empurrar o resto da aba para fora. O teto acompanha a tela
-     de quem está usando, que é o único jeito de um número servir às duas.
-
-     `min-height:0` é o que autoriza um filho de flex a encolher abaixo do
-     conteúdo — sem ele o `overflow` nunca chega a valer. `auto` e não `scroll`:
-     a barra só nasce no dia em que sobra. */
-  .col-exame{flex:1;display:flex;flex-direction:column;min-height:0;
-              max-height:60vh;overflow-y:auto}
-  /* `flex:1 0 auto` reparte a SOBRA de altura entre as linhas; com a coluna
-     rolando ele passaria a esticar cada linha e a rolagem nunca chegaria. O
-     `0 0 auto` mantém cada linha do tamanho dela e deixa a sobra para o fim. */
-  .col-exame .exame{flex:0 0 auto}
-  .col-exame:not(:hover)::-webkit-scrollbar{width:0}
-  .col-exame::-webkit-scrollbar{width:6px}
-  .col-exame::-webkit-scrollbar-thumb{background:var(--comment);border-radius:3px}
-  .lado-d .col-ordem{flex:1;display:flex;flex-direction:column}
-  .lado-d .col-ordem > .ordem{flex:1;display:flex;flex-direction:column}
-  /* o de→para fica no MEIO da caixa: encostado no canto de cima ele deixava
-     a caixa inteira parecendo vazia. */
-  .lado-d .col-ordem > .ordem{justify-content:center;align-items:flex-start;
-                              border-color:rgba(255,184,108,.45)}
-  .ordem .receita:first-child{margin-top:0}
-  /* A CAIXA DIZ O QUE ELA É — 26/09/2026, a pergunta dela olhando o desenho:
-     *«o que é a área que marquei em vermelho?»*. Sem título e sem o aparelho,
-     o de→para era um par de endereços soltos. O título diz o que a caixa é,
-     na cor do AJUSTAR, e o nome é dela:
-     *«algo tipo sujestões de Conexão»*  (noqa-acento: citação literal dela)
-     A linha de baixo nomeia o aparelho. A instrução visível é escolha dela
-     também (26/09/2026, *«dá pra aceitar a instrução nisso»*), e ela abre uma
-     exceção à ordem de 13/09 só nesta caixa. */
-  .ordem-tit{font-size:12px;font-weight:600;color:var(--orange);margin-bottom:4px}
-  .sugestao{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;
-            border:1px solid rgba(255,184,108,.45);border-radius:7px;
-            background:var(--app-bg);padding:10px 12px}
-  .sugestao > .ordem-tit{margin:0}
-  .sugestao .col-ordem{flex:1;display:flex;flex-direction:column;gap:8px}
-  /* O DE→PARA À DIREITA DA LINHA — 26/09/2026, pedido dela: *«pode deixar
-     esses grafos a direita da linha? pra ganharmos espaço vertical»*. A
-     instrução e as duas caixas dividem a linha; sem largura, as caixas descem
-     (`wrap`) em vez de apertar a instrução. */
-  .sugestao .col-ordem > .ordem{border:none;padding:0;background:none;display:flex;
-                                flex-direction:row;flex-wrap:wrap;align-items:center;
-                                justify-content:flex-start;column-gap:12px;row-gap:6px}
-  .sugestao .col-ordem > .ordem > .faca{flex:1 1 auto;min-width:0}
-  .sugestao .col-ordem > .ordem + .ordem{margin-top:0;padding-top:8px;
-                                border-top:1px solid var(--border-sutil)}
-  .sugestao .col-ordem > .nada:only-child{display:none}
-  .sugestao .nada-a-mudar{margin:auto 0;font-size:12.5px;font-weight:600;color:var(--green)}
-  .sugestao .ordem .faca .n{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;
-                           align-items:center;justify-content:center;font-size:10.5px;
-                           background:rgba(255,184,108,.18);color:var(--orange)}
-  .sugestao .ordem .receita{flex:0 0 auto;margin:0 0 0 auto;padding-left:0}
-  /* 11px, e o número é MEDIDO, não escolhido: com os botões dentro das colunas o
-     vão nascia da sobra que os itens de cada coluna repartiam entre si, e não de
-     uma margem. 11 é o que devolve o quadro aos mesmos 204px e a fileira ao mesmo
-     y=575 de antes — com 12 o quadro ia a 205. */
-  .acoes.quatro{margin-top:11px}
-  /* e a sobra de altura do card é repartida entre as TRÊS linhas dele, como as
-     cinco linhas do exame repartem a da esquerda — nunca um buraco no meio */
-  .ordem .faca,.ordem .receita,.ordem .ganho{flex:1 0 auto}
-
-  /* ---- o exame: selo, fato, e o "por que importa" no ? ----
-     O selo é o MESMO da aba Lançadores, que ela aprovou (CHEGA / NÃO CHEGA / NÃO
-     ACHEI): 10px, mono, fundo cheio. As palavras vieram para o português —
-     "WARN" e "INFO" eram as duas únicas palavras em inglês da tela. */
-  .exame{display:flex;align-items:center;gap:9px;min-height:20px;font-size:12px;
-         color:var(--texto-suave)}
-  .exame .selo{flex:0 0 62px;text-align:center;font-size:10px;font-weight:600;
-               padding:2px 0;border-radius:4px;font-family:'JetBrains Mono',monospace}
-  .selo.ok{background:var(--green);color:var(--app-bg)}
-  .selo.warn{background:var(--orange);color:var(--app-bg)}
-  .selo.info{background:var(--comment);color:var(--app-bg)}
-  /* AS TRÊS DE CIMA VIRARAM RESERVA — 03/09/2026. Elas continuam cravadas na
-     pílula porque é o que o desenho ABERTO NO NAVEGADOR mostra (o mockup é
-     HTML estático e ninguém o pinta), e porque uma linha do exame que o
-     produto não preencheu tem de continuar parecendo o que ela parecia.
-
-     QUEM MANDA QUANDO O PRODUTO FALA são as três regras abaixo. O interruptor
-     é um `<i class="est">` invisível por estado, irmão da pílula, com
-     `data-campo` próprio (`a08_conexoes.ENDERECO_DO_ESTADO`) — e o combinador
-     `~` é o que deixa a cor do IRMÃO chegar à pílula sem que a pílula precise
-     de um segundo `data-campo`, que o vocabulário não permite.
-
-     POR QUE NÃO NA PRÓPRIA PÍLULA: o alvo `classe` acende UMA classe por
-     elemento. Com um endereço só, a pílula sabia dizer `problema` e mais nada
-     — e com os três achados `certo` da mesa dela a segunda linha mostrava a
-     palavra CERTO dentro da pílula LARANJA, que é a cor que o mockup cravou
-     naquela posição. A palavra era do produto; a cor, do desenho.
-
-     A ESPECIFICIDADE É O CONTRATO: `.exame .est-ok.on ~ .selo` tem quatro
-     classes e vence `.selo.ok`, que tem duas. */
-  .exame .est{display:none}
-  .exame .est-ok.on ~ .selo{background:var(--green);color:var(--app-bg)}
-  .exame .est-warn.on ~ .selo{background:var(--orange);color:var(--app-bg)}
-  .exame .est-info.on ~ .selo{background:var(--comment);color:var(--app-bg)}
-  /* O QUARTO SELO — decisão dela, 02/09/2026: *"o que está quebrado agora não
-     pode parecer igual ao que só podia estar melhor"*. O `Item` do exame tem
-     QUATRO estados (`certo`, `atencao`, `problema`, `nao_sei`) e esta tela  (noqa-acento: chaves de máquina)
-     tinha TRÊS cores: `atencao` e `problema` dividiam a pílula laranja.  (noqa-acento: idem)
-
-     A COR É A DA CASA, e não uma nova: `--red` (#ff5555) é o token do que está
-     quebrado — é ele que o `.btn.vermelho` do `topo.html` usa. A gramática é a
-     mesma das três de cima: fundo cheio no token, texto no `--app-bg`.
-
-     ELA VEM DEPOIS DAS OUTRAS TRÊS DE PROPÓSITO. A pílula nasce no HTML com a
-     classe do desenho (`ok`/`warn`/`info`) e o produto ACRESCENTA `grave`
-     quando o estado é `problema` — as duas classes convivem no elemento, e com
-     a mesma especificidade quem vem por último manda. Trocar a ordem devolveria
-     a pílula laranja sem uma linha de diferença no resto.
-
-     A PALAVRA AINDA É "AJUSTAR", e isso é espera DELA: `SELO_DO_ESTADO`
-     (`interface/conexoes.py`) manda os dois estados para a mesma palavra, e o
-     texto do quarto selo ela ainda não disse. Esta leva entrega a cor. */
-  .selo.grave{background:var(--red);color:var(--app-bg)}
-  /* O VERMELHO CONTINUA MANDANDO, e a regra abaixo é o que garante isso quando
-     um dos interruptores de estado estiver aceso. Ela não deveria correr nunca
-     — um achado tem UM estado, e o pacote emite o vazio nos outros três
-     endereços —, mas sem ela um instante com dois acesos deixaria o que está
-     QUEBRADO com a cor do que só podia estar melhor, que é exatamente a
-     confusão que ela mandou desfazer em 02/09. Cinco classes: vence as
-     quatro das regras de cima. */
-  .exame .est.on ~ .selo.grave{background:var(--red);color:var(--app-bg)}
-  /* O `?` ENCOSTA NO TEXTO E SÓ O IGNORAR FICA ISOLADO — 01/09/2026, decisão
-     dela: *"tem que alinhar as tooltip pra ficar do lado esquerdo encostando nas
-     palavras e só deixar o ignorar isolado."*
-
-     O `.txt` era `flex:1` e comia todo o espaço da linha, empurrando os DOIS
-     ícones para a borda direita. Ali eles liam como um par, e não são: o `?`
-     explica AQUELA frase — ele pertence a ela — e o `⊘` é uma ação sobre a
-     linha inteira. Colados, o ponteiro passa por um para chegar ao outro.
-
-     Agora o texto ocupa o que precisa, o `?` vem logo depois dele, e o
-     `margin-left:auto` do ignorar é o que abre o vão até a borda: uma regra, e o
-     espaço vazio passa a separar em vez de agrupar. */
-  /* E O `?` PRECISOU ENTRAR NO TEXTO PARA CONTINUAR ENCOSTANDO NELE —
-     19/09/2026, achado dela: *"aqui a interrogação do tooltip tá bugada"*.
-
-     A decisão de 01/09 acima continua valendo; o que mudou foi o texto. Como
-     IRMÃO do `.txt` num flex, o `?` vem depois da CAIXA dele — e a caixa de um
-     texto que quebra tem a largura da linha MAIS LONGA, não da última. Medido
-     na foto dela, com a janela larga e a frase em duas linhas: a última dizia
-     «próprio computador.» e o `?` boiava **190 px** adiante, no vazio ao lado.
-     Com cinco achados, cinco posições diferentes — enquanto o `⊘`, que tem
-     `margin-left:auto`, ficava na coluna. Era essa discordância que se via.
-
-     Agora os dois moram num `.dito`, e lá dentro o `?` é INLINE: ele segue a
-     última palavra, quebre o texto onde quebrar. O `.txt` continua sendo o
-     `data-campo` que o produto repinta — envolver, e não aninhar, é o que
-     impede o tique de apagar o `?` junto com a frase. */
-  .exame .dito{flex:0 1 auto;min-width:0}
-  .exame .txt{min-width:0}
-  .exame .dito .ajuda{display:inline-block;vertical-align:middle;margin-left:6px}
-  /* O ⊘ ENCOSTA NO `?` — 26/09/2026, pedido dela: *«aproxima o botão de
-     ignora pra deixar ele mais a esquerda»*. Na ponta da coluna ele ficava
-     a meia tela da frase que ele cala. */
-  .exame .ignora{margin-left:0}
-
-  /* ---- A ORDEM CALADA FICA NA LISTA, EM CINZA — 08-Q5 dela, 06/09/2026 ----
-     *"A recomendação calada continua no lugar dela, em cinza, e o mesmo botão
-     desfaz."* Antes desta regra o produto SUMIA com a linha, e não havia
-     caminho de volta em lugar nenhum desta aba.
-
-     NADA DE `display:none`, E É O PONTO INTEIRO: a linha continua ocupando a
-     fatia dela. Uma linha que some é uma tela que ESCONDE, e é o que a decisão
-     dela desfaz.
-
-     O ACHADO ESMAECE, O CAMINHO DE VOLTA NÃO. A opacidade cai no selo, no texto
-     e no `?` — as três metades que dizem o que a linha achou —, e o ⊘ fica
-     legível: ele é o único jeito de desfazer, e apagá-lo junto seria esconder a
-     porta de saída atrás da própria decisão. É a mesma família do `.apagado` do
-     botão cinza (D-03): cor esmaecida, e o clique continua respondendo.
-
-     A CLASSE VEM DO PRODUTO, pelo alvo `classe` do piloto — ver `exame()`. No
-     mockup ela não aparece: nenhuma linha do desenho nasce calada, porque uma
-     cena de bancada não tem decisão dela dentro. */
-  .exame.apagada .selo,
-  .exame.apagada .txt,
-  .exame.apagada .ajuda{opacity:.42}
-  .exame.apagada .ignora{color:var(--texto-suave);border-color:var(--texto-suave)}
-
-
-  /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
-  .ordem{border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
-         padding:10px 12px}
-  .ordem .faca{display:flex;align-items:center;gap:8px;
-               font-size:12.5px;color:var(--fg);font-weight:600;line-height:1.35}
-  .ordem .receita{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
-  .ordem .caixa{border:1px solid var(--border-forte);border-radius:5px;padding:3px 9px;
-                font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-mudo);
-                background:var(--panel)}
-  .ordem .caixa.alvo{border-color:var(--green);color:var(--green)}
-  /* BLOCO, não flex: em flex o espaço entre o rótulo e o texto é colapsado e saía
-     "Ganho esperado:saí do controlador" */
-  .ordem .ganho{margin-top:8px;font-size:11.5px;color:var(--green)}
-  .ordem .ganho span{color:var(--texto-mudo)}
-
-  /* ---- as TRÊS peças que a coluna da direita ganhou em 04/09/2026 ----
-     Decisões [03], [04] e [07] do PO, e as três nascem da mesma medição: a
-     coluna existia, ficava ociosa a maior parte do tempo, e o que não cabia
-     nela sumia sem a tela dizer.
-
-     ELAS SÃO PINTADAS PELO PRODUTO — `a08_conexoes._html_da_ordem` —, e não há
-     `data-campo` novo em nenhuma: a coluna inteira é UM endereço com alvo
-     `html`. É a razão de estas regras existirem sem elemento correspondente no
-     desenho estático desta página. */
-
-  /* O CARD DE CURA — [03]. Ele veste `.ordem` de propósito: é a única moldura
-     que a página PUBLICADA já sabe desenhar, e enquanto a folha não for
-     publicada o card de cura nasce com a moldura do card de ordem, que é o
-     parecido certo. O que `.cura` acrescenta é o que a distingue: sem receita,
-     sem selo, e um respiro entre um card e o de cima. */
-  .col-ordem > .ordem + .ordem{margin-top:8px}
-  .ordem.cura .faca{font-weight:500}
-  /* A PÍLULA DO CARD DE CURA É A MESMA DA LINHA DO EXAME, com a mesma palavra
-     e a mesma cor — e isso não é preguiça: o card fala do MESMO achado que a
-     linha da esquerda, e duas gramáticas para o mesmo estado é como o verde
-     volta a conviver com o vermelho.
-
-     ELA DEGRADA CERTO NA PÁGINA PUBLICADA. `.exame .selo` é escopado, então lá
-     a pílula sai sem largura fixa e sem respiro — mas `.selo.warn`/`.ok`/`.info`
-     são globais e já existem, então a COR e a PALAVRA chegam. O que falta é
-     tinta, nunca informação. */
-  .ordem.cura .faca .selo{flex:0 0 62px;text-align:center;font-size:10px;
-                          font-weight:600;padding:2px 0;border-radius:4px;
-                          font-family:'JetBrains Mono',monospace}
-  .ordem.cura .ganho{color:var(--texto-suave)}
-
-  /* O SELO DE PROCEDÊNCIA — [04]. Cinza e menor: ele QUALIFICA a frase, e uma
-     marca do mesmo peso viraria uma segunda afirmação ao lado da primeira. É a
-     mesma gramática de `secao_exame._linha_da_ordem`, que a pinta com
-     `foreground=COR_APAGADA size=small` na janela dela. */
-  .proc{color:var(--texto-mudo);font-size:10.5px;white-space:nowrap}
-
-  /* O `+N` — [07]. Ele não tem moldura: não é um card, é a confissão de que
-     falta card. E só nasce no dia em que sobra — sem sobra, o produto não
-     emite o elemento e a coluna fica exatamente como estava.
-
-     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:399` já
-     define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
-     solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
-     (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
-  .col-ordem .mais{margin-top:8px;font-size:11px;color:var(--texto-mudo);
-                   font-style:italic}
-  /* OS OUTROS DOIS `+N` VIAJAM DENTRO DE UMA `.ressalva` — 06/09/2026, 08-Q7.
-     A peça que sabe SUMIR quando não há o que dizer é a linha de ressalva
-     (`monta.ressalva`, com `:empty` e `:has(.nada)`), e o que o produto escreve
-     dentro dela é o mesmo `_sobraram` da coluna da ordem, que devolve um bloco
-     `.mais`. A cor e o tamanho já vêm da `.ressalva` do esqueleto; o que
-     falta é o itálico, para as TRÊS listas dizerem o mesmo fato do mesmo jeito.
-
-     ESCOPADO NA `.ressalva`, e não solto: `monta.py` já define `.gls .mais`
-     para o "+N" do glossário das dez páginas, e um `.mais` sem escopo aqui é o
-     vizinho de nome igual que esta aba já pagou três vezes. */
-  .ressalva .mais{font-style:italic}
+  /* ---- as dicas: cartões de poucas palavras, com UM botão ----
+     AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que ela aprovou. Cor nunca
+     sozinha: o nível tem borda E uma palavra para o leitor de tela (`.so-leitor`), o desenho de
+     cada tipo vai no ícone, e a ordem de leitura é título, de→para, botão. A fileira usa a grade
+     dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá. */
+  .dicas{display:flex;flex-direction:column;gap:8px}
+  .dicas-fileira{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+  .cartao-dica{display:flex;flex-direction:column;gap:6px;min-width:0;padding:9px 11px;
+        border:1px solid var(--border-forte);border-left-width:3px;border-radius:7px;
+        background:var(--app-bg)}
+  .cartao-dica.nivel-grave{border-left-color:var(--red)}
+  .cartao-dica.nivel-ajuste{border-left-color:var(--orange)}
+  .cartao-dica.nivel-nota{border-left-color:var(--yellow)}
+  .cd-cab{display:flex;align-items:center;gap:8px}
+  .cd-ic{flex:0 0 auto;display:inline-flex;color:var(--texto-suave)}
+  .cartao-dica .cd-ic svg.i{width:16px;height:16px;flex:0 0 16px}
+  .cartao-dica h4{flex:1;min-width:0;margin:0;font-size:12.5px;font-weight:600;color:var(--fg);
+           line-height:1.3}
+  .so-leitor{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);
+             white-space:nowrap}
+  .cartao-dica .cd-info{flex:0 0 18px;width:18px;height:18px;border-radius:50%;padding:0;
+              border:1px solid var(--linha);background:none;color:var(--texto-mudo);
+              font:italic 600 11px/1 serif;cursor:pointer}
+  .cartao-dica .cd-info:hover,.cartao-dica .cd-info[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}
+  .cd-detalhe{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
+              color:var(--texto-mudo)}
+  .cartao-dica .cd-pic{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;
+             font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo)}
+  .cartao-dica .cd-pic i{font-style:normal;color:var(--green)}
+  .cd-porque{font-size:11.5px;line-height:1.4;color:var(--texto-suave)}
+  .cd-porque p{margin:0 0 6px}
+  .cartao-dica .cd-ignora{padding:2px 8px;font-size:10.5px}
+  .cd-acao{margin-top:auto}
+  .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:100%;
+              box-sizing:border-box;min-height:26px;text-align:center;text-decoration:none;
+              border-color:var(--green);color:var(--green)}
+  .cartao-dica .cd-botao:hover{background:rgba(80,250,123,.09)}
+  /* a dica que ela mandou calar fica no fim, apagada: o achado esmaece, o caminho de volta não */
+  .cartao-dica.calada .cd-cab,.cartao-dica.calada .cd-pic,.cartao-dica.calada .cd-detalhe{opacity:.45}
+  .mais-dicas summary{cursor:pointer;font-size:11.5px;color:var(--texto-suave);padding:2px 0}
+  .mais-dicas[open] summary{margin-bottom:8px}
+  .dicas-certas{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
+                color:var(--texto-mudo)}
+  .dicas-certas span{white-space:nowrap}
+  .nada-a-mudar{margin:0;font-size:12.5px;font-weight:600;color:var(--green)}
 
   /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305 do
      CSV da paridade) e a escolha DELA no mesmo dia: **no mesmo frame dos
@@ -1290,116 +982,6 @@ RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
 #: contrato. O `validar-acentuacao.py` isenta a LINHA que traga `noqa-acento`, e
-_ATENCAO = "atencao"  # noqa-acento (chave de máquina do exame, ASCII por contrato)
-
-
-def exame(estado, txt, dica, linha=0):
-    """Uma linha do exame: o selo, o que ele achou, o `?` e o gesto de ignorar.
-
-    `estado` É O ESTADO DO EXAME, e não mais a classe CSS — 03/09/2026. A classe
-    e a palavra saem de `interface.conexoes.SELO_DO_ESTADO`, que é o dono do mapa e
-    já era quem o produto consultava; digitá-las aqui era a segunda grafia, a que
-    fica para trás no dia em que a primeira mudar. O desenho passa a dizer o que
-    a linha É, e a folha de estilo diz como isso se parece.
-
-    O IGNORAR SAIU DA FILEIRA E VIROU GLIFO NA LINHA — 31/08/2026, decisão dela:
-    *"ignorar e ver ordens ignoradas … são referentes ao check-up, então colocar
-    um botão pra ignorar no formato de glifo ali"*. E ela tem razão pelo que o
-    botão FAZIA: um `Ignorar` no rodapé do quadro não dizia O QUÊ ignorar — havia
-    cinco linhas e um botão só. Na linha, o gesto tem sujeito.
-
-    `linha` É O SUJEITO DO CLIQUE, e ele precisou existir em 01/09/2026 para o
-    ⊘ deixar de ser botão morto. O ouvinte do piloto manda `data-v` e o
-    `textContent` do que foi clicado; o `textContent` do ⊘ é "⊘" nas cinco
-    linhas, e o `closest('[data-controle],[data-uniq]')` não acha nada aqui —
-    então, sem este número, as cinco linhas mandavam **o mesmo clique**.
-    Ignorar a segunda calaria a que estivesse no lugar da primeira.
-
-    É a POSIÇÃO e não a chave da regra porque o HTML é estático: as cinco
-    linhas nascem com o achado do desenho e são repintadas a cada tique com o
-    exame da mesa dela (a pintura distribui a lista pelos elementos de mesmo
-    `data-campo`, na ordem). Quem sabe QUAL achado caiu na posição 2 é quem
-    pintou — `a08_conexoes.pacote()` —, e é lá que o número vira ordem de
-    serviço.
-
-    O `?` GANHOU ENDEREÇO em 02/09/2026, e ele era a metade MENTIROSA da linha.
-    O selo e o `<span class="txt">` já eram repintados com o exame da mesa
-    dela; a dica ao lado continuava sendo a do DESENHO. Fotografado nesta
-    bancada, com dois controles na mesa: a linha 1 dizia **"Economia de energia
-    desligada"** (achado dela) e o `?` ao lado explicava *"as entradas em uso
-    entregam 500 mA ou mais"* — a medição de OUTRO achado. E nas posições que o
-    exame não preencheu, o texto ficava `—` com o `?` ainda contando os quatro
-    rádios vizinhos do mockup.
-
-    O ALVO É `html`, e pela mesma razão do `teto-explica`: a dica do produto
-    traz `<b>` e `<br>`, e o `textContent` do ramo padrão escreveria os
-    marcadores como texto literal.
-
-    A PÍLULA GANHOU DOIS ENDEREÇOS, E SÃO DOIS ELEMENTOS — 02/09/2026, o quarto
-    selo dela. A palavra continua em `data-campo="selo"`; o ESTADO entrou em
-    `data-campo="selo-estado"`, com alvo `classe`. **Um elemento só não dava**:
-    o vocabulário é UM `data-campo` por nó, e a palavra e a cor são dois dados
-    diferentes do mesmo selo. Por isso a palavra desceu para um `<span>` filho
-    — inline e sem estilo próprio, então nada muda um pixel — e a pílula de
-    fora ficou com a classe.
-
-    `data-hef-quando="problema"` é o gatilho, e ele lê o ESTADO do exame, não a
-    classe CSS: quem traduz estado em cor é esta folha de estilo (`.selo.grave`,
-    acima), e é aqui que essa decisão tem de morar.
-
-    **O QUE ELE NÃO CURAVA, E AGORA CURA — 03/09/2026.** A frase que estava aqui
-    dizia que as três classes do desenho (`ok`/`warn`/`info`) continuavam
-    CRAVADAS por posição, e que isso *"pede um endereço por estado, não um"*. Ele
-    ganhou os endereços: os três `<i class="est">` invisíveis abaixo, um por
-    estado, com o `data-campo` que `a08_conexoes.ENDERECO_DO_ESTADO` nomeia. O
-    quarto continua na pílula, porque `problema` é ACRÉSCIMO de cor e não troca.
-
-    O DEFEITO QUE ELES FECHAM, fotografado na mesa dela: com os três achados
-    `certo` do exame de hoje, a segunda linha mostrava a palavra **CERTO** dentro
-    da pílula **laranja** — a cor que o mockup cravou naquela posição.
-
-    OS `<i>` NASCEM COM A COR DO DESENHO ACESA (`on` no que casa com `estado`),
-    e as classes cravadas da pílula FICAM: o mockup é HTML estático, ninguém o
-    pinta quando ela o abre no navegador, e uma linha que o produto não
-    preencheu tem de continuar parecendo o que parecia.
-
-    A LINHA CALADA FICA NA LISTA, EM CINZA — **08-Q5 dela, 06/09/2026**:
-    *"A recomendação calada continua no lugar dela, em cinza, e o mesmo botão
-    desfaz."* O `<div class="exame">` trocou `data-campo="exame"` pelo
-    `exame-calada`, com o alvo `classe` acendendo `apagada` quando o pacote
-    emitir `"sim"`. **A troca é segura porque aquele endereço nunca chegou à
-    tela:** o pacote emite `"exame": itens`, uma lista de DICIONÁRIOS, e o
-    `normalizar` a descarta antes do JS com a razão escrita — *"ela é estrutura,
-    e escrever `[object Object]` numa caixa é pior que nada"*. A chave `"exame"`
-    do pacote NÃO sai: ela segue emitida, e é o `normalizar` que a descarta.
-
-    **NADA DE `display:none`.** A linha ocupa a fatia dela — é o que a decisão
-    dela diz com todas as letras, e é a diferença entre uma tela que APAGA e uma
-    que ESCONDE.
-
-    O ⊘ TROCA DE VERBO, e por isso o `title` deixou de ser cravado: ele é
-    `data-campo="ignorar-dica"` com o alvo `atributo` sobre `title`
-    (`hefesto_vivo.ATRIBUTO_A_MAIS`). O que fica no arquivo é só o de PARTIDA
-    (`a08_conexoes.DICA_DO_IGNORAR`); depois do primeiro tique quem escreve é o
-    produto, com dois verbos — *"Ignora ESTE conselho…"* e *"Traz esta
-    recomendação de volta…"*. **Um botão que muda de sentido com uma dica que
-    não muda é a cicatriz da trava da luz, medida em 04/09.**
-    """
-    classe, palavra = _aba_conexoes.SELO_DO_ESTADO[estado]
-    interruptores = "".join(
-        f'<i class="est est-{_aba_conexoes.SELO_DO_ESTADO[e][0]}'
-        f'{" on" if e == estado else ""}" data-campo="{endereco}" '
-        f'data-hef-alvo="classe" data-hef-quando="{e}"></i>'
-        for e, endereco in _pacote08.ENDERECO_DO_ESTADO.items()
-        if endereco != "selo-estado")
-    return f'''          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
-            {interruptores}
-            <span class="selo {classe}" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">{palavra}</span></span>
-            <span class="dito"><span class="txt" data-campo="achado">{txt}</span><span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="{linha}" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{_pacote08.DICA_DO_IGNORAR}">⊘</button>
-          </div>'''
-
-
 BORDA_LIDA = ("A borda é a cor do plástico que o Hefesto <b>leu do aparelho</b>: este controle "
               "está no cabo, e pelo cabo ele pergunta e o aparelho responde.")
 BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não foi lida</b>. "
@@ -1510,7 +1092,7 @@ DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no cont
 from types import SimpleNamespace  # noqa: E402
 
 _DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
-SUGESTAO_DA_CENA = _sugestao_da_cena()
+DICAS_DA_CENA = _dicas_da_cena()
 
 
 def _estado_da_bancada(c):
@@ -2775,6 +2357,20 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         bal.remove(); return;
       }
     });
+    // AS DICAS (AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01): o ⓘ abre o porquê do cartão, e o botão
+    // de mover abre a MESMA pergunta de todo mover (o molde é o do balão da lâmpada).
+    document.addEventListener('click', function(ev){
+      var info = perto(ev, '.dicas .cd-info');
+      if(info){
+        var aberto = info.getAttribute('aria-expanded') === 'true';
+        info.setAttribute('aria-expanded', aberto ? 'false' : 'true');
+        var porque = document.getElementById(info.getAttribute('aria-controls'));
+        if(porque) porque.hidden = aberto;
+        return;
+      }
+      var mover = perto(ev, '.dicas .cd-botao[data-destino]');
+      if(mover) perguntar(moldeDe(mover.dataset.alvo, mover.dataset.destino));
+    });
     // o teclado: Enter numa linha abre «Para onde vai» — arrastar não é o único caminho
     document.addEventListener('keydown', function(ev){
       if(ev.key !== 'Enter' && ev.key !== ' ') return;
@@ -3186,10 +2782,9 @@ MIOLO = f'''
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-2">Gestão de Controles</label>
         <span class="ajuda">?<span class="dica">
-          Os seus controles e as entradas deles: o exame à esquerda, a Sugestão de
-          Conexão à direita, e embaixo um cartão por controle com o estado dele agora e o
-          Perfil de Desempenho dele. Nada muda sozinho: a sugestão diz o que mover para
-          onde.
+          Os seus controles e as entradas deles: as dicas em cima, cada uma com o seu botão,
+          e embaixo um cartão por controle com o estado dele agora e o Perfil de Desempenho
+          dele. Nada muda sozinho: a dica diz o que mover para onde, e o botão leva você até lá.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -3198,80 +2793,14 @@ MIOLO = f'''
              linha 3 mudanças recomendadas»*. Revoga a D-16 de 04/09 («Uma
              linha de veredito no topo»): a Sugestão de Conexão ao lado já
              numera cada mudança, e a contagem repetia a caixa. -->
-        <div class="duas-colunas">
-
-          <div class="lado-e">
-            <!-- O MOLDE QUE CLONA — 19/09/2026, decisão dela: *a lista rola,
-                 sem teto*. As duas linhas abaixo são o contrato inteiro: o
-                 seletor do bloco que se repete e a chave da lista que manda
-                 na contagem. Quem clona é o piloto (`hefesto_vivo.BOOTSTRAP`,
-                 `data-hef-molde`), e a razão de a peça morar LÁ e não aqui é
-                 que o exame não tem máximo: as conferências devolvem listas,
-                 uma porta problemática por item. O desenho continua com cinco
-                 blocos porque cinco é o que o MOCKUP mostra. -->
-            <div class="col-exame" data-hef-molde=".exame" data-hef-molde-conta="achado">
-{exame("certo",
-       f'As entradas dão energia para {"os" if len(NO_CABO) > 1 else "o"} {len(NO_CABO)} '
-       f'{_plural(len(NO_CABO), "controle", "controles")} no USB',
-       "<b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que "
-       "importa:</b> entrada fraca faz o controle cair do USB no meio da partida, e o sintoma "
-       "parece defeito do controle.", linha=0)}
-{exame(_ATENCAO, "Dois rádios da bancada estão em entradas vizinhas",
-       "<b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na "
-       "<b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de "
-       "serviço ao lado, e o <b>?</b> dela diz por que isso importa.", linha=1)}
-{exame("certo",
-       (f'Os {len(NO_CABO)} controles no USB têm uma entrada cada um' if len(NO_CABO) > 1
-        else 'O controle no USB tem uma entrada só para ele'),
-       f'<b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das '
-       f'entradas onde estão o {JOGADORES_NO_CABO}.', linha=2)}
-{exame("nao_sei",
-       f'{len(RADIOS_VIZINHOS)} rádios vizinhos ativos na faixa de 2,4 GHz',
-       f'<b>O que eu vi:</b> {len(RADIOS_VIZINHOS)} fontes de rádio perto. {len(JA_NOMEADOS)} você '
-       f'já nomeou; {len(POR_NOMEAR)} continuam por nomear, na tabela de '
-       f'<b>Rádio e adaptadores</b>.<br><br>'
-       f'<b>Por que importa:</b> {len(NO_RADIO)} dos seus {len(CONECTADOS)} controles falam nessa mesma '
-       f'faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe '
-       f'o que dá para desligar e o que não dá.', linha=3)}
-{exame(_ATENCAO, "O adaptador Meio tem 3 controles, e o Direita tem 1",
-       "<b>O que eu vi:</b> três controles dividem o mesmo adaptador, e o do lado atende um só."
-       "<br><br><b>O que fazer:</b> a Sugestão de Conexão ao lado diz qual controle parear de "
-       "novo, e onde.", linha=4)}
-          <!-- O `+N` DO EXAME — decisão 08-Q7 dela, 06/09/2026: *"Quando
-               sobra, a lista ganha uma última linha curta: '+1 recomendação
-               não coube aqui' — e só no dia em que sobra."*
-
-               A COLUNA TEM CINCO BLOCOS (`a08_conexoes.TETO_DO_EXAME`) e o
-               exame desta bancada devolve SETE itens: duas ordens e cinco
-               conferências. Sem esta linha as duas que sobram somem, e a
-               ordenação de `_itens_da_tela` — que já garante que o que
-               sobra seja o mais barato de perder — continuava sendo um
-               consolo, não uma resposta.
-
-               A PEÇA É A `monta.ressalva`, que já sabe NÃO OCUPAR NADA em
-               repouso (`.ressalva:has(.nada){{display:none}}`). O produto
-               manda `monta.NADA_A_DIZER` quando cabe tudo — mandar `""`
-               poria um travessão aqui todo dia, porque o `escrever()` do
-                   piloto troca vazio por `—` antes de olhar o alvo. -->
-          {monta_ressalva("exame-mais")}
-            </div>
-          </div>
-
-          <div class="lado-d">
-            <!-- A CAIXA TEM TÍTULO E NÃO SOME — 26/09/2026, pedido dela: *«aumenta a
-                 largura do bloco do canto superior direito. Ainda falta um título
-                 pra essa área.»* O título mora FORA do `.col-ordem`, que o produto
-                 repinta inteiro a cada tique: dentro, ele sumia com a ordem. E o que
-                 o mapa das conexões dizia dos controles no adaptador errado mora
-                 aqui agora (*«deveria ocupar o lugar no canto superior direito»*):
-                 uma sugestão por linha, numerada, com o de→para. -->
-            <div class="sugestao">
-              <div class="ordem-tit">{_pacote08.TITULO_DA_ORDEM}</div>
-              <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">{SUGESTAO_DA_CENA}</div>
-            </div>
-          </div>
-
-        </div>
+        <!-- AS DICAS SÃO CARTÕES COM UM GESTO — 04/10/2026, AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01
+             (o desenho 4 que ela aprovou). O exame de cinco frases e a «Sugestão de Conexão»
+             saíram: no lugar dos dois, uma fileira de cartões com três a cinco palavras, o de→para
+             e UM botão cada; os três que mais pesam aparecem, o resto fica em «mais N», e o que
+             está certo vira uma linha no fim. É UM endereço com alvo `html`: o produto repinta a
+             fileira inteira, e o desenho mostra os mesmos cartões, montados pelas mesmas funções
+             (`a08_conexoes._html_das_dicas`). -->
+        <div class="dicas-da-conexao" data-campo="{CAMPO_DAS_DICAS}" data-hef-alvo="html">{DICAS_DA_CENA}</div>
 
         <!-- OS QUATRO BOTÕES SAÍRAM — 31/08/2026, e cada um por um motivo dela.
 
@@ -3281,13 +2810,9 @@ MIOLO = f'''
              em lugar nenhum. Sobrou um, e ele desceu para a seção que fala das
              entradas, como ela mandou.
 
-             `Ignorar` virou glifo em cada linha do exame (ver `exame()`), que é
-             onde o gesto tem sujeito. E `{VER_IGNORADAS}` saiu com ele.
-
-             O QUE FICA EM ABERTO, e é dela: sem aquele botão, **não há hoje por
-             onde reabrir uma ordem ignorada**. O desenho precisa dizer para onde
-             a linha ignorada vai — apagada na própria lista é o caminho mais
-             curto, e é decisão dela. -->
+             `Ignorar` mora no ⓘ de cada cartão de dica (04/10/2026), e a ordem calada
+             fica no fim, apagada, com o botão «Voltar a mostrar». E `{VER_IGNORADAS}`
+             saiu com o glifo de cada linha (31/08), que era onde o gesto tinha sujeito. -->
         <!-- AS FERRAMENTAS MORAM NO CHECK-UP — 25/09/2026, pedido dela
              (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01). O «Mapear Entradas» é UM botão
              só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
@@ -3464,7 +2989,7 @@ document.addEventListener("click", function (ev) {{
 LEGENDA = f'''<div class="nota">
   <h2>A Gestão de Controles (25/09 e 26/09)</h2>
   <ul>
-    <li><b>Uma seção só</b>: o exame e a <b>Sugestão de Conexão</b> (um ajuste por linha, numerado) em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
+    <li><b>Uma seção só</b>: as <b>dicas</b> (um cartão por ajuste, com o botão dele; as três que mais pesam, o resto em «mais N») em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
     <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Perfil Máximo, Perfil Econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
     <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
@@ -3629,11 +3154,14 @@ if __name__ == "__main__":
             "os rádios das seções não dividem o mesmo `name` — sem isso o navegador "
             "não tem como fechar a outra")
 
-    _LINHAS_DO_EXAME = _HTML.count('data-campo="exame-calada"')
-    _exigir(_LINHAS_DO_EXAME == _pacote08.TETO_DO_EXAME,
-            f"o desenho tem {_LINHAS_DO_EXAME} linhas de exame e o `+N` conta sobre "
-            f"{_pacote08.TETO_DO_EXAME} — os dois números têm de sair do mesmo "
-            "lugar, senão a linha diz que sobrou o que coube")
+    _DICAS = _HTML.count('data-campo="dicas" data-hef-alvo="html"')
+    _exigir(_DICAS == 1,
+            f"as dicas têm {_DICAS} endereços e o produto repinta UM — o exame de frases e a "
+            "«Sugestão de Conexão» saíram, e o cartão que ficar fora do campo nunca é pintado")
+    _CARTOES = _HTML.count('<section class="cartao-dica ')
+    _exigir(_CARTOES <= _dicas.CARTOES_VISIVEIS + 2,
+            f"o desenho tem {_CARTOES} cartões de dica; a fileira mostra {_dicas.CARTOES_VISIVEIS} "
+            "e o resto vai para «mais N»")
 
     _MARCADOS = _HTML.count('data-campo="alvo-aberto" data-hef-alvo="marcado"')
     _exigir(len(MESA) + 1 == _MARCADOS,
@@ -3724,31 +3252,10 @@ if __name__ == "__main__":
                 f"{_LUGARES[0]} não tem. O conjunto é IGUAL, não maior: um campo "
                 "só num lugar é a segunda grafia do mesmo fato")
 
-    _na_mesa = [c for c in MESA if c.get("conectado", True)]
-    _cabo = len([c for c in _na_mesa if not e_radio(c)])
-    _radio = len([c for c in _na_mesa if e_radio(c)])
-
-
-    def _numero(padrao, onde_diz):
-        achado = re.search(padrao, _HTML)
-        if not achado:
-            _falhas.append(f"a régua não achou {onde_diz} no HTML — seletor cego é ERRO, "
-                           "não silêncio")
-            return None
-        return int(achado.group(1))
-
-
     _inicio_da_gestao = _HTML.index('id="cx8-2"')
     _topo_da_gestao = _HTML[_inicio_da_gestao:_HTML.index('class="quadro-corpo"', _inicio_da_gestao)]
     _exigir('class="conta"' not in _topo_da_gestao,
             "o cabeçalho da Gestão voltou a ter o carimbo ou a contagem no canto")
-    _exigir(_numero(r"energia para o?s? ?(\d+) ", "a frase da energia") == _cabo,
-            f"o Check-up não fala dos {_cabo} controle(s) no cabo — ele voltou a contar "
-            "quem não está na mesa")
-    _exigir(_numero(r"<b>Por que importa:</b> (\d+) ", "a frase do rádio") == _radio,
-            f"a frase do rádio não fala dos {_radio} controle(s) no rádio")
-    _exigir(_numero(r"dos seus (\d+) controles", "o total da frase do rádio") == len(_na_mesa),
-            f"a frase do rádio não fala dos seus {len(_na_mesa)} controles")
 
     _SECAO = _HTML[_HTML.index('id="rd-secao"'):_HTML.index("window.__hefRadio")]
     _EMITIDOS = set(_pacote08.campos_da_secao(CENA_DO_RADIO)) | {

@@ -4197,6 +4197,44 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             'ases.'
         ),
     ),
+    Edicao(
+        antes=(
+            '    var ordem = ["hub", "teclado", "wifi", "bt", "mouse"'
+            ', "webcam"];\n'
+            '    var jaPostos = [];\n'
+        ),
+        depois=(
+            '    var ordem = ["hub", "teclado", "wifi", "bt", "mouse"'
+            ', "webcam"];\n'
+            '    var jaPostos = [];\n'
+            '    /* O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE'
+            ' ESTÁ — 04/10/2026,\n'
+            '       AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01. Um aparelho'
+            ' de classe fora da\n'
+            '       ordem de decisão (um pendrive, uma placa que ning'
+            'uém classificou) nunca\n'
+            '       entra no plano; sem esta reserva a entrada dele v'  # (noqa-acento: JS)
+            'alia como livre, outro\n'
+            '       aparelho a recebia e o mapa dizia «sai daqui» sem'
+            ' destino. A entrada\n'
+            '       fica com ele, com o motivo «fica». É a gêmea de\n'
+            '       `arranjo_da_mesa._o_que_o_plano_nao_sabe_arrumar_'
+            'fica`. */\n'
+            '    APARELHOS.forEach(function (a) {\n'
+            '      if (ordem.indexOf(a.classe) !== -1) return;\n'
+            '      var hoje = portaDe(a.id);\n'
+            '      if (!hoje || plano[hoje]) return;\n'
+            '      plano[hoje] = a.id;\n'
+            '      motivo[a.id] = { razoes: [], peso: "melhora", ganh'
+            'o: 0, forcado: false, essencial: false };\n'
+            '    });\n'
+        ),
+        porque=(
+            '04/10/2026, AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 — o apa'
+            'relho que o plano não sabe arrumar fica onde está (a gêm'
+            'ea JS do arranjo_da_mesa).'
+        ),
+    ),
 )
 
 

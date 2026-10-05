@@ -564,6 +564,7 @@ def planejar(mesa: Mesa, op: Opcoes | None = None) -> Plano:
     motivo: dict[str, Motivo] = {}
     entradas = [e for e in todas_as_entradas(mesa.faces) if not proibida(e)]
     ja_postos: list[Entrada] = []
+    _o_que_o_plano_nao_sabe_arrumar_fica(mesa, plano, motivo, aloc)
 
     for classe in ORDEM_DE_DECISAO:
         for aparelho in [a for a in mesa.aparelhos if a.classe == classe]:
@@ -593,6 +594,30 @@ def planejar(mesa: Mesa, op: Opcoes | None = None) -> Plano:
     _intercambiaveis_ficam(mesa, plano, motivo, ja_postos, aloc)
     _o_mapa_so_move_o_que_a_receita_manda(mesa, plano, motivo, ja_postos, aloc, proibida)
     return Plano(plano=plano, motivo=motivo)
+
+
+def _o_que_o_plano_nao_sabe_arrumar_fica(
+    mesa: Mesa,
+    plano: dict[str, str],
+    motivo: dict[str, Motivo],
+    aloc: Mapping[str, str],
+) -> None:
+    """O aparelho de classe fora de ``ORDEM_DE_DECISAO`` fica onde está, e a entrada fica com ele.
+
+    AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026, pré-condição do botão de cada cartão): um
+    pendrive, uma placa de captura ou um Wi-Fi que a máquina não classificou nunca entra no
+    plano; sem esta reserva a entrada dele valia como livre, outro aparelho a recebia e o mapa
+    dizia «sai daqui» sem destino. Fica no plano com o motivo «fica» (``ganho`` zero).
+    """
+    for aparelho in mesa.aparelhos:
+        if aparelho.classe in ORDEM_DE_DECISAO:
+            continue
+        atual = entrada_de_em(aloc, aparelho.id)
+        if not atual or atual in plano:
+            continue
+        plano[atual] = aparelho.id
+        motivo[aparelho.id] = Motivo(
+            razoes=(), peso="melhora", ganho=0.0, forcado=False, essencial=False)
 
 
 _PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está hoje"

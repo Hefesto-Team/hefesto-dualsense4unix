@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import html
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
+
+from hefesto_dualsense4unix.integrations.dicas_da_conexao import NADA_A_MUDAR, PALAVRA_DO_NIVEL
 
 TRACO = "—"
 
@@ -343,27 +345,65 @@ SELO_DO_ESTADO = {
 }
 
 
-def html_da_ordem(ordem: Any | None) -> str:
-    """A ordem de serviço — o imperativo, o de→para e o ganho."""
-    if ordem is None:
-        return (
-            f'<div class="ordem">'
-            f'<div class="faca" data-v="{v("ordem", "acao")}">'  # (noqa-acento): endereço
-            f"Nenhuma mudança recomendada agora.</div></div>"
-        )
+def _o_botao_da_dica(acao: Any, classe: str) -> str:
+    """O botão de um cartão: âncora quando navega, botão quando faz gesto."""
+    rotulo = _e(acao.rotulo)
+    if acao.href:
+        return f'<a class="btn {classe}" href="{_e(acao.href)}">{rotulo}</a>'
+    dados = "".join(f' data-{_e(k)}="{_e(v)}"' for k, v in acao.dados)
+    dica = f' title="{_e(acao.titulo)}"' if acao.titulo else ""
+    return (f'<button class="btn {classe}" type="button" data-gesto="{_e(acao.gesto)}"'
+            f'{dados}{dica}>{rotulo}</button>')
+
+
+def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
+    """Um cartão: título, o de→para, UM botão, e o porquê atrás do ⓘ."""
+    quem = f"dica-{n}"
+    detalhe = f'<p class="cd-detalhe">{_e(dica.detalhe)}</p>' if dica.detalhe else ""
+    desenho = (
+        f'<p class="cd-pic" aria-label="de {_e(dica.de)} para {_e(dica.para)}">'
+        f'<span>{_e(dica.de)}</span><i aria-hidden="true">→</i><span>{_e(dica.para)}</span></p>'
+        if dica.de and dica.para else "")
+    ignora = (_o_botao_da_dica(dica.ignorar, "cd-ignora")
+              if dica.ignorar is not None and not dica.calada else "")
+    cura = f'<p class="cd-cura">{_e(dica.cura)}</p>' if dica.cura else ""
+    porque = (
+        f'<div class="cd-porque" id="{quem}-p" hidden><p>{_e(dica.porque)}</p>{cura}{ignora}</div>'
+        if dica.porque or cura or ignora else "")
+    info = (
+        f'<button class="cd-info" type="button" aria-expanded="false" aria-controls="{quem}-p" '
+        f'aria-label="Por quê: {_e(dica.titulo)}">i</button>' if porque else "")
     return (
-        f'<div class="ordem">'
-        f'<div class="faca" data-v="{v("ordem", "acao")}">'  # (noqa-acento): endereço
-        f"{_e(ordem.acao)}</div>"
-        f'<div class="receita">'
-        f'<span class="caixa" data-v="{v("ordem", "de")}">{_e(ordem.alvo.onde or TRACO)}</span>'
-        f'<span class="seta">→</span>'
-        f'<span class="caixa alvo" data-v="{v("ordem", "para")}">'
-        f"{_e(ordem.destino or TRACO)}</span></div>"
-        f'<div class="ganho"><span>Ganho esperado:</span> '
-        f'<span data-v="{v("ordem", "ganho")}">{_e(ordem.ganho_esperado.texto)}</span></div>'
-        f"</div>"
-    )
+        f'<section class="cartao-dica nivel-{_e(dica.nivel)}{" calada" if dica.calada else ""}" '
+        f'role="region" aria-labelledby="{quem}-t" data-dica="{_e(dica.chave)}">'
+        f'<div class="cd-cab"><span class="cd-ic">{icone(dica.icone)}</span>'
+        f'<h4 id="{quem}-t"><span class="so-leitor">{_e(PALAVRA_DO_NIVEL[dica.nivel])}: </span>'
+        f'<span class="t">{_e(dica.titulo)}</span></h4>{info}</div>'
+        f"{detalhe}{desenho}{porque}"
+        f'<div class="cd-acao">{_o_botao_da_dica(dica.acao, "cd-botao")}</div></section>')
+
+
+def html_das_dicas(painel: Any, icone: Callable[[str], str] = lambda _nome: "") -> str:
+    """As dicas da aba Conexões: os cartões que pesam, «mais N» e a linha do que está certo.
+
+    ``icone`` desenha o símbolo de um cartão (o sprite é da página; este módulo não o conhece).
+    """
+    if painel.vazio:
+        corpo = f'<p class="nada-a-mudar">{_e(NADA_A_MUDAR)}</p>'
+    else:
+        corpo = '<div class="dicas-fileira">' + "".join(
+            _o_cartao_da_dica(d, n, icone) for n, d in enumerate(painel.visiveis)) + "</div>"
+    if painel.demais:
+        base = len(painel.visiveis)
+        corpo += (
+            f'<details class="mais-dicas"><summary>mais {len(painel.demais)}</summary>'
+            '<div class="dicas-fileira">' + "".join(
+                _o_cartao_da_dica(d, base + n, icone) for n, d in enumerate(painel.demais))
+            + "</div></details>")
+    if painel.certos:
+        corpo += '<p class="dicas-certas">' + " · ".join(
+            f"<span>✓ {_e(c)}</span>" for c in painel.certos) + "</p>"
+    return f'<div class="dicas">{corpo}</div>'
 
 
 RESPOSTAS_DO_VIZINHO = (

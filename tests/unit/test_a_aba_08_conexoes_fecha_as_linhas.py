@@ -64,7 +64,7 @@ def cena():
 def _coluna(pacote, cena) -> str:
     """A coluna da direita como o produto a emite, com a cena na mão."""
     pacote._ORDENS_NA_TELA = tuple(i.ordem for i in cena)
-    return pacote._html_da_ordem(cena)
+    return pacote._html_das_dicas(cena, None)
 
 
 def _com_destino(cena, destino: str):  # type: ignore[no-untyped-def]
@@ -73,10 +73,8 @@ def _com_destino(cena, destino: str):  # type: ignore[no-untyped-def]
             if i.ordem is not None else i for i in cena]
 
 
-def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None:
-    """A cena tem cura, imperativo e frase derivada — e nada disso sai na coluna."""
-    from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
-
+def test_a_coluna_nao_traz_procedencia_nem_ganho(pacote, cena) -> None:
+    """A cena tem cura, ganho e frase derivada — a cura vai ao ⓘ, o resto não sai na coluna."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_CERTO
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
         MEDIDO_AQUI,
@@ -93,8 +91,7 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
         coluna = _coluna(pacote, _com_destino(cena, destino))
         assert 'class="ordem cura"' not in coluna and 'class="proc"' not in coluna
         assert all(c in coluna for c in curas), coluna
-        proibidas = [PREFIXO_DA_CURA,
-                     *(TEXTO_DO_SELO[s] for s in derivados),
+        proibidas = [*(TEXTO_DO_SELO[s] for s in derivados),
                      *(o.ganho_esperado.texto for o in ordens)]
         for frase in proibidas:
             assert frase not in coluna, (
@@ -110,22 +107,25 @@ def test_toda_ordem_aberta_tem_a_sua_linha(pacote, cena) -> None:
         assert 'class="mais"' not in coluna
 
 
-def test_o_mais_n_cala_quando_tudo_cabe(pacote) -> None:
-    """*"Só custa linha no dia em que sobra."* — e hoje ele não sobra."""
-    assert pacote._sobraram(1, 1, "cura", "curas") == ""
-    assert pacote._sobraram(0, 4, "cura", "curas") == ""
+def test_o_mais_n_cala_quando_tudo_cabe(pacote, cena) -> None:
+    """*"Só custa linha no dia em que sobra."* — com três cartões ou menos não há «mais N»."""
+    tres = [i for i in cena if i.estado != "certo"][:3]
+    assert "mais-dicas" not in _coluna(pacote, tres)
 
 
-def test_o_mais_n_concorda_em_numero(pacote) -> None:
-    """Uma coisa que não coube fala no singular; duas, no plural."""
-    assert "1 cura não coube" in pacote._sobraram(5, 4, "cura", "curas")
-    assert "2 curas não couberam" in pacote._sobraram(6, 4, "cura", "curas")
+def test_o_mais_n_concorda_em_numero(pacote, cena) -> None:
+    """Os três que mais pesam aparecem; o resto entra em «mais N» (um, dois…)."""
+    nao_certos = [i for i in cena if i.estado != "certo"]
+    assert len(nao_certos) == 4, "a cena precisa de quatro achados para medir o «mais N»"
+    assert "mais 1" in _coluna(pacote, nao_certos)
+    mais = [dataclasses.replace(i, chave=f"{i.chave}-2") for i in nao_certos]
+    assert "mais 5" in _coluna(pacote, [*nao_certos, *mais])
 
 
 def test_a_coluna_sem_a_lista_continua_sendo_so_o_card(pacote) -> None:
-    """O padrão não mudou: `_html_da_ordem()` sem cena é o que ela era."""
+    """`_html_das_dicas()` sem cena é o que ela era: só as ordens que o tique pintou."""
     pacote._ORDENS_NA_TELA = ()
-    assert "cura" not in pacote._html_da_ordem()
+    assert "cd-cura" not in pacote._html_das_dicas()
 
 
 def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
@@ -369,57 +369,41 @@ def test_a_linha_que_voltou_apaga_a_tinta(pacote, cena, mesa) -> None:
         f"e a tinta do tique anterior ficaria: {depois}")
 
 
-def test_o_desenho_tem_endereco_para_a_linha_apagada() -> None:
-    """Passo 4 — a régua LÊ a página, e cobra as três metades do alvo `classe`.
+def test_o_desenho_esmaece_a_dica_calada_e_o_botao_de_voltar_responde(pacote, cena, mesa) -> None:
+    """A ordem calada FICA no fim, apagada, e o caminho de volta não esmaece.
 
-    O alvo `classe` do piloto precisa de `data-campo` (o endereço),
-    `data-hef-alvo="classe"` (o alvo), `data-hef-classe` (que classe acender) e
-    `data-hef-quando` (com que valor). Faltando uma, o endereço existe e não
-    pinta — o silêncio que esta casa chama de endereço morto.
+    A folha tem de saber desenhar `.calada`, senão o cartão calado fica idêntico ao que fala; e o
+    botão do cartão calado é o MESMO gesto `ignorar` (que desfaz), com a dica do dono.
 
-    E A FOLHA TEM DE SABER DESENHAR A CLASSE, senão a linha calada fica
-    idêntica à que fala: endereço vivo pintando uma classe que ninguém estilizou
-    é a mesma tela de antes, com mais atributos.
-
-    MORDE: tire o `data-hef-classe="apagada"` do `<div>` e a primeira asserção
-    reprova; tire a regra `.exame.apagada` da folha e a última reprova.
+    MORDE: tire a regra `.cartao-dica.calada` da folha e a primeira asserção reprova; tire o
+    `calada=` do `dica_da_ordem` e a segunda reprova.
     """
     from hefesto_dualsense4unix.interface import onde
-    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    linhas = re.findall(r'<div class="exame"[^>]*>', html)
-    assert len(linhas) == p.TETO_DO_EXAME, (
-        f"o desenho tem {len(linhas)} linhas de exame e o teto do produto é "
-        f"{p.TETO_DO_EXAME} — seletor cego é ERRO, não silêncio")
-    for div in linhas:
-        assert 'data-campo="exame-calada"' in div, div
-        assert 'data-hef-alvo="classe"' in div, div
-        assert 'data-hef-classe="apagada"' in div, div
-        assert 'data-hef-quando="sim"' in div, div
-    assert re.search(r"\.exame\.apagada[^{]*\{[^}]*opacity", html), (
-        "a folha não ESMAECE a linha calada — o endereço pintaria uma classe "
-        "sem estilo, e a linha cinza ficaria igual à que fala. A régua cobra a "
-        "regra que dim, e não a presença do nome: uma folha que só troca a cor "
-        "do glifo passaria por ela sem apagar nada")
-    assert not re.search(r"\.exame\.apagada[^{]*\{[^}]*display:none", html), (
-        "a linha calada SOME em vez de esmaecer — a decisão dela diz que ela "
-        "*continua no lugar dela*, e uma linha que some é a tela que esconde")
+    assert re.search(r"\.cartao-dica\.calada[^{]*\{[^}]*opacity", html), (
+        "a folha não ESMAECE a dica calada — ela ficaria igual à que fala")
+    assert not re.search(r"\.cartao-dica\.calada[^{]*\{[^}]*display:none", html), (
+        "a dica calada SOME em vez de esmaecer — a decisão dela diz que ela "
+        "*continua no lugar dela*, e uma dica que some é a tela que esconde")
+    mesa(cena, _dispensa_a_primeira(cena))
+    coluna = _coluna(pacote, cena)
+    calada = re.search(r'<section class="cartao-dica [^"]*calada.*?</section>', coluna, re.S)
+    assert calada, "a ordem calada saiu da tela em vez de ficar apagada"
+    assert 'data-gesto="ignorar"' in calada.group(0) and "Voltar a mostrar" in calada.group(0)
+    assert f'title="{pacote.DICA_DO_DESFAZER}"' in calada.group(0)
 
 
 def test_a_dica_do_ignorar_vem_do_produto() -> None:
-    """Passo 4 — o ⊘ muda de sentido, e a dica tem de mudar com ele."""
+    """O ignorar muda de sentido (cala/desfaz), e a dica do botão vem do dono do verbo."""
     from hefesto_dualsense4unix.interface import onde
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    botoes = re.findall(r'<button class="ignora"[^>]*>', html)
-    assert len(botoes) == p.TETO_DO_EXAME, (
-        f"a régua achou {len(botoes)} glifos de ignorar — seletor cego é ERRO")
+    botoes = re.findall(r'<button class="btn cd-ignora"[^>]*>', html)
+    assert botoes, "a régua não achou o «Ignorar» de nenhum cartão — seletor cego é ERRO"
     for b in botoes:
-        assert 'data-campo="ignorar-dica"' in b, b
-        assert 'data-hef-alvo="atributo"' in b, b
-        assert 'data-hef-atributo="title"' in b, b
+        assert 'data-gesto="ignorar"' in b, b
         assert f'title="{p.DICA_DO_IGNORAR}"' in b, (
             f"o `title` de partida não é o do dono: {b}")
     assert "sai desta lista" not in html, (
@@ -506,37 +490,6 @@ def test_o_ignorar_numa_conferencia_continua_recusando_dizendo(pacote, cena, mes
     posicao = next(i for i, item in enumerate(cena) if item.ordem is None)
     with pytest.raises(RuntimeError):
         GESTOS[("08-conexoes.html", "ignorar")](None, {"v": str(posicao)}, None)
-
-
-def test_o_mais_n_do_exame_cala_sem_travessao(pacote) -> None:
-    """Passo 6 — quando cabe tudo, a linha não pode virar um `—` na tela dela."""
-    nada = pacote._monta().NADA_A_DIZER
-    fora = pacote._o_que_nao_coube([1] * pacote.TETO_DO_EXAME)
-    assert fora == {"exame-mais": nada}, fora
-
-
-def test_o_mais_n_do_exame_nao_conta_o_que_rola(pacote) -> None:
-    """Passo 6 — o `+N` do exame CALOU em 19/09/2026, e não é regressão."""
-    fora = pacote._o_que_nao_coube([1] * (pacote.TETO_DO_EXAME + 2))
-    assert fora["exame-mais"] == pacote._monta().NADA_A_DIZER, (
-        "o `+N` do exame voltou a falar. Se o teto voltou de propósito, esta "
-        "régua tem de voltar junto — e a decisão dela de 19/09 («a lista rola, "
-        "sem teto») precisa de uma nota datada dizendo o que caducou. "
-        f"veio: {fora}"
-    )
-
-
-def test_o_desenho_tem_onde_dizer_o_que_nao_coube() -> None:
-    """E o endereço tem de existir na página — senão a conta não chega."""
-    from hefesto_dualsense4unix.interface import onde
-
-    html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    achado = re.search(r'<div class="ressalva" data-campo="exame-mais"[^>]*>', html)
-    assert achado, "o desenho não tem onde dizer o `exame-mais`"
-    assert 'data-hef-alvo="html"' in achado.group(0), achado.group(0)
-    assert ".ressalva:has(.nada){display:none}" in html, (
-        "a folha perdeu a peça que esconde a linha sem conteúdo — o `+N` "
-        "passaria a ocupar altura todo dia")
 
 
 def test_o_veredito_continua_cego_para_a_calada(pacote, cena, mesa) -> None:

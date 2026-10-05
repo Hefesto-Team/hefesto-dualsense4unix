@@ -447,26 +447,6 @@ def _itens_da_tela() -> list[Any]:
 
 _SELO_DESCONHECIDO = ("info", "NOTA")
 
-#: UM ENDEREÇO DE PINTURA POR ESTADO, e é o que a `aba08.exame` prometia por
-#: ACRÉSCIMO (`.selo.grave`, o vermelho de 02/09) e não uma substituição, e
-ENDERECO_DO_ESTADO = {
-    "certo": "selo-certo",
-    "atencao": "selo-atencao",  # (noqa-acento) chave de máquina, ASCII por contrato
-    "problema": "selo-estado",
-    "nao_sei": "selo-nao-sei",
-}
-
-
-def _selos_por_estado(itens: list[dict[str, Any]]) -> dict[str, list[str]]:
-    """Uma lista por estado, e cada uma só responde à SUA pergunta."""
-    return {
-        endereco: [
-            (i["estado"] if i["estado"] == estado else "") for i in itens
-        ]
-        for estado, endereco in ENDERECO_DO_ESTADO.items()
-    }
-
-
 #: e `selo-nao-sei`, e a regra `.selo.grave` do vermelho. Aquela metade da S-09
 ENDERECO_DO_VEREDITO = {
     "certo": "veredito-certo",
@@ -698,41 +678,6 @@ def _dica_da_linha(item: Any) -> str:
         return ""
 
 
-def _dono_sabe_desenhar_a_ordem() -> bool:
-    """O `interface.conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade?"""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
-        DERIVADO_DA_CONTA,
-        Linha,
-        Ordem,
-    )
-    from hefesto_dualsense4unix.interface import conexoes as _tela
-
-    frase = Linha(texto="x", selo=DERIVADO_DA_CONTA)
-    prova = Ordem(chave="prova", acao="x", o_que_eu_vi=frase,
-                  por_que_importa=frase, ganho_esperado=frase)
-    try:
-        _tela.html_da_ordem(prova)
-    except AttributeError:
-        return False
-    return True
-
-
-def _linha_da_sugestao(n: int, faca: str, de: str = "", para: str = "",
-                       *, de_html: str = "", para_html: str = "") -> str:
-    """UMA linha da Sugestão de Conexão: o número, a instrução e o de→para."""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.interface.conexoes import _e
-
-    esquerda = de_html or _e(de)
-    direita = para_html or _e(para)
-    receita = (f'<div class="receita"><span class="caixa">{esquerda}</span>'
-               f'<span class="seta">→</span><span class="caixa alvo">{direita}</span></div>'
-               if esquerda and direita else "")
-    return (f'<div class="ordem"><div class="faca"><span class="n">{n}</span>'
-            f'{_e(faca)}</div>{receita}</div>')
-
-
 def _a_entrada_na_frase(numero: str, *, em: bool = False, maiuscula: bool = False) -> str:
     """«a Entrada 3», «na entrada Meio» — o nome pelo dono da leitura e a"""
     perfil._com_o_src()
@@ -745,63 +690,29 @@ def _a_entrada_na_frase(numero: str, *, em: bool = False, maiuscula: bool = Fals
     return com_artigo(na_frase(numero, nome), em=em, maiuscula=maiuscula)
 
 
-def _card_da_ordem(ordem: Any, n: int = 1) -> str:
-    """A linha de UMA ordem de serviço: a instrução, e o de→para quando há destino."""
+def _a_ordem_na_tela(ordem: Any) -> tuple[str, str]:
+    """``(de, para)`` de uma ordem com destino: «Entrada 3» e «Entrada 9», pelo dono do rótulo."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import mapa_das_portas
     from hefesto_dualsense4unix.integrations.entrada_a_entrada import rotulo_do_numero
     from hefesto_dualsense4unix.interface.conexoes import TRACO
 
     destino = str(getattr(ordem, "destino", "") or "")
-    caminho = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or "")
-    instrucao = str(getattr(ordem, "acao", "") or "")  # (noqa-acento) campo da Ordem
     if not destino:
-        return _linha_da_sugestao(n, instrucao)
+        return "", ""
+    caminho = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or "")
     declaracao = _declaracao()
     mapa = getattr(declaracao, "mapa", None)
     numero = mapa_das_portas.porta_de(mapa, caminho) if mapa is not None else None
     dela = declaracao if mapa is not None else None
     de = rotulo_do_numero(numero or "", maquina=dela) or caminho or TRACO
-    return _linha_da_sugestao(
-        n, instrucao, de, rotulo_do_numero(destino, maquina=dela) or destino)
+    return de, rotulo_do_numero(destino, maquina=dela) or destino
 
 
-TITULO_DA_ORDEM = "Sugestão de Conexão"
-
-NADA_A_MUDAR = "Nada a mudar agora."
-
-
-def _instrucao_do_item(item: Any) -> str:
-    """O «O que fazer» de uma linha AJUSTAR do exame, sem o prefixo do `?`."""
-    ordem = getattr(item, "ordem", None)
-    for texto in (getattr(ordem, "acao", None), getattr(item, "cura", None),  # (noqa-acento: Ordem)
-                  getattr(item, "porque", None)):
-        if str(texto or "").strip():
-            return str(texto).strip()
-    return ""
-
-
-def _sugestoes_do_exame(vivos: list[Any]) -> list[tuple[str, Any]]:
-    """``(instrução, ordem ou None)`` de cada AJUSTAR do exame que ela não calou.
-
-    AJUSTAR é a palavra do dono (`interface.conexoes.SELO_DO_ESTADO`), a mesma da
-    pílula à esquerda: a caixa diz o que fazer de cada linha que pede ajuste.
-    """
-    saida: list[tuple[str, Any]] = []
-    for item in vivos:
-        estado = str(getattr(item, "estado", "") or "")
-        if _selo_do_estado(estado)[1] != "AJUSTAR" or _calada(item):
-            continue
-        instrucao = _instrucao_do_item(item)
-        if instrucao:
-            saida.append((instrucao, getattr(item, "ordem", None)))
-    return saida
-
-
-def _sugestao_da_central(cena: dict[str, Any] | None) -> tuple[str, str, str] | None:
-    """A proposta da central (`radio_central.proposta`) como linha da caixa."""
+def _o_movimento_da_central(cena: dict[str, Any] | None) -> Any:
+    """A proposta da central (`radio_central.proposta`) como :class:`Movimento`, ou `None`."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.interface.conexoes import _e
+    from hefesto_dualsense4unix.integrations import ar_do_adaptador, dicas_da_conexao
 
     proposta = (cena or {}).get("proposta") or {}
     aparelhos = (cena or {}).get("aparelhos") or ()
@@ -809,27 +720,113 @@ def _sugestao_da_central(cena: dict[str, Any] | None) -> tuple[str, str, str] | 
                if lug.get("sabido", True)}
     ap = next((a for a in aparelhos if a.get("id") == proposta.get("controle")), None)
     para = lugares.get(str(proposta.get("destino") or ""))
-    if ap is None or para is None:
+    de = lugares.get(str(ap.get("lugar") or "")) if ap is not None else None
+    if ap is None or para is None or de is None:
         return None
-    de = lugares.get(str(ap.get("lugar") or ""))
-
-    def controles_em(lug: dict[str, Any]) -> int:
-        return sum(1 for a in aparelhos
-                   if a.get("lugar") == lug.get("id") and a.get("tipo") == "controle")
-
-    def caixa(lug: dict[str, Any]) -> str:
-        n = controles_em(lug)
-        return (f'{_e(_titulo_do_lugar(lug))} <span class="pt">•</span> '
-                f'{n} {"controle" if n == 1 else "controles"}')
-
+    evitados = _evitados_do_lugar(cena or {}, str(de["id"]))
+    bons = None if evitados is None else ar_do_adaptador.CANAIS_DO_BT - len(evitados)
     jogador = ap.get("jogador")
-    quem = (f"o P{jogador}" if isinstance(jogador, int) and not isinstance(jogador, bool)
-            else nome_na_conexoes(ap))
-    return (f"Pareie {quem} no adaptador {_titulo_do_lugar(para)}",
-            caixa(de) if de is not None else "", caixa(para))
+    return dicas_da_conexao.Movimento(
+        controle=str(ap["id"]),
+        jogador=jogador if isinstance(jogador, int) and not isinstance(jogador, bool) else None,
+        nome_do_controle=nome_na_conexoes(ap),
+        de_id=str(de["id"]), de_nome=_titulo_do_lugar(de),
+        para_id=str(para["id"]), para_nome=_titulo_do_lugar(para),
+        controles_no_de=sum(1 for a in aparelhos
+                            if a.get("lugar") == de.get("id") and a.get("tipo") == "controle"),
+        bons=bons,
+        sufocado=bons is not None
+        and ar_do_adaptador.nivel_dos_canais(bons) == ar_do_adaptador.NIVEL_ENGASGA)
 
 
-TETO_DO_EXAME = 5
+def _a_dica_do_wifi(cena: dict[str, Any] | None) -> list[Any]:
+    """O Wi-Fi que o diário do kernel viu cair: um cartão por rede, com a causa se for conhecida."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import dicas_da_conexao
+
+    saida = []
+    vizinhos = list((cena or {}).get("vizinhos") or ())
+    for i, rede in enumerate((cena or {}).get("wifi") or ()):
+        quem = _id_da_rede(rede, _o_vizinho_da_rede(rede, vizinhos), i)
+        usb3 = _usb_da_porta(cena or {}, quem) == "3.0"
+        selo, nota, _dica = _a_saude_do_wifi(rede, usb3)
+        if selo is None:
+            continue
+        nivel = (dicas_da_conexao.AJUSTE if selo.nivel == "sofrendo" else dicas_da_conexao.NOTA)
+        saida.append(dicas_da_conexao.dica_do_wifi(
+            selo.texto, bool(nota), DICA_DO_USB_3_NO_2_4, nivel))
+    return saida
+
+
+def _a_cura(texto: str) -> str:
+    """«O que fazer: …» pela frase do dono (`secao_exame.PREFIXO_DA_CURA`); vazio sem texto."""
+    if not texto.strip():
+        return ""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
+
+    return PREFIXO_DA_CURA + texto.strip()
+
+
+def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
+    """As dicas da aba: o movimento da central, o Wi-Fi que cai e cada achado do exame.
+
+    Cada ``Item`` do exame vira um cartão (ou, se deu certo, uma palavra da linha «✓ …»); a ordem
+    que ela calou continua, apagada e no fim, com o mesmo botão para voltar a mostrá-la.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
+
+    cartoes: list[Any] = []
+    certos: list[str] = []
+    movimento = _o_movimento_da_central(cena)
+    if movimento is not None:
+        cartoes.append(dicas.dica_do_movimento(movimento))
+    cartoes += _a_dica_do_wifi(cena)
+    for slot, item in enumerate(vivos):
+        estado = str(getattr(item, "estado", "") or "")
+        chave = str(getattr(item, "chave", "") or "")
+        ordem = getattr(item, "ordem", None)
+        if estado == "certo":
+            certos.append(dicas.o_que_esta_certo(chave, str(getattr(item, "rotulo", "") or "")))
+        elif ordem is not None:
+            de, para = _a_ordem_na_tela(ordem)
+            cartoes.append(dicas.dica_da_ordem(
+                ordem, estado, slot=slot, calada=_ordem_calada(ordem), de=de, para=para,
+                cura=_a_cura(str(getattr(ordem, "acao", "") or "")),  # (noqa-acento): campo
+                dica_de_ignorar=DICA_DO_IGNORAR, dica_de_voltar=DICA_DO_DESFAZER))
+        else:
+            cartoes.append(dicas.dica_da_conferencia(
+                chave, str(getattr(item, "rotulo", "") or ""), estado,
+                str(getattr(item, "porque", "") or ""),
+                cura=_a_cura(str(getattr(item, "cura", "") or ""))))
+    return dicas.montar(cartoes, certos)
+
+
+def _html_das_dicas(vivos: list[Any] | None = None, cena: dict[str, Any] | None = None) -> str:
+    """As dicas inteiras, em HTML: o que o ``data-campo="dicas"`` repinta a cada tique.
+
+    Sem ``vivos`` (a bancada, os testes) saem as ordens que o tique pintou por último.
+    """
+    from hefesto_dualsense4unix.interface.conexoes import html_das_dicas
+
+    if vivos is None:
+        vivos = [_ItemDeOrdem(o) for o in _ORDENS_NA_TELA if o is not None]
+    return html_das_dicas(_o_painel_das_dicas(vivos, cena), _ic)
+
+
+@_dataclasses.dataclass(frozen=True)
+class _ItemDeOrdem:
+    """Uma ordem sozinha na forma de ``Item`` — o que a bancada e as réguas entregam."""
+
+    ordem: Any
+    estado: str = "atencao"  # (noqa-acento): chave de máquina do exame
+    chave: str = ""
+    rotulo: str = ""
+    porque: str = ""
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "chave", str(getattr(self.ordem, "chave", "")))
 
 
 def _monta() -> Any:
@@ -842,73 +839,6 @@ def _monta() -> Any:
     from hefesto_dualsense4unix.interface import monta
 
     return monta
-
-
-_MAIS_N = "+{n} {coisa} não {coube} aqui"
-
-
-def _sobraram(quantos: int, cabem: int, um: str, muitos: str) -> str:
-    """A linha `+N` do fim de uma lista — decisão [07]. VAZIA quando cabe tudo."""
-    if quantos <= cabem:
-        return ""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.interface.conexoes import _e
-    from hefesto_dualsense4unix.utils.i18n import _
-
-    n = quantos - cabem
-    frase = _(_MAIS_N).format(
-        n=n, coisa=(um if n == 1 else muitos),
-        coube=("coube" if n == 1 else "couberam"))
-    return f'<div class="mais">{_e(frase)}</div>'
-
-
-def _o_que_nao_coube(itens: list[Any]) -> dict[str, str]:
-    """Os DOIS `+N` que faltavam nesta aba — decisão **08-Q7** dela, 06/09/2026."""
-    nada = _monta().NADA_A_DIZER
-    return {
-        # clona o molde da linha (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) e
-        "exame-mais": nada,
-    }
-
-
-def _html_da_ordem(vivos: list[Any] | None = None,
-                   cena: dict[str, Any] | None = None) -> str:
-    """A Sugestão de Conexão inteira: uma linha numerada por ajuste.
-
-    **A CAIXA DIZ CADA AJUSTE — 26/09/2026, A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01.**
-    Até aqui ela desenhava UMA ordem, e só se ela tinha destino; sem destino
-    mandava `monta.NADA_A_DIZER` e a caixa ficava vazia ao lado de três AJUSTAR
-    (a queixa dela: *«pq sumiu a parte da caixinha»*). Agora:
-
-    * uma linha por AJUSTAR do exame (`vivos`, a MESMA lista que pintou a tira
-      à esquerda), com o de→para quando a ordem tem destino e o «O que fazer»
-      quando não tem — o `?` da linha continua trazendo o porquê;
-    * uma linha pela proposta da central (`cena`, a do rádio deste tique): o
-      controle no adaptador errado;
-    * sem nada, :data:`NADA_A_MUDAR`. O título mora fora do campo.
-
-    Sem `vivos`, as linhas saem das ordens que o tique pintou (`_ORDENS_NA_TELA`).
-    """
-    if vivos is None:
-        itens = [(str(getattr(o, "acao", "") or ""), o)  # (noqa-acento) campo da Ordem
-                 for o in _ORDENS_NA_TELA if o is not None and not _ordem_calada(o)]
-        itens = [(t, o) for t, o in itens if t]
-    else:
-        itens = _sugestoes_do_exame(vivos)
-    linhas: list[str] = []
-    for instrucao, ordem in itens:
-        n = len(linhas) + 1
-        if ordem is not None and str(getattr(ordem, "destino", "") or ""):
-            linhas.append(_card_da_ordem(ordem, n))
-        else:
-            linhas.append(_linha_da_sugestao(n, instrucao))
-    central = _sugestao_da_central(cena)
-    if central is not None:
-        faca, de, para = central
-        linhas.append(_linha_da_sugestao(len(linhas) + 1, faca, de_html=de, para_html=para))
-    if not linhas:
-        return f'<div class="nada-a-mudar">{NADA_A_MUDAR}</div>'
-    return "".join(linhas)
 
 
 def _leitura_das_ordens_da_maquina(declaracao: Any) -> Any:
@@ -1895,7 +1825,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
     _pedir_o_exame_de_entrada()
     with medida.parte("exame"):
         vivos = _itens_da_tela()
-    itens = [_linha(i) for i in vivos]
     _ORDENS_NA_TELA = tuple(getattr(i, "ordem", None) for i in vivos)
 
     declaracao = _declaracao()
@@ -1972,27 +1901,12 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         "blocos": {".mm-faces": mapa},
         "aparelhos": _html_dos_aparelhos(),
         **confissao,
-        "ordem": _html_da_ordem(vivos, _CENA_NA_TELA),
+        "dicas": _html_das_dicas(vivos, _CENA_NA_TELA),
         # pelo «Examinar Entradas». (noqa-acento: citação literal dela)
         **_sala_na_tela(declaracao),
         "externos-lista": _html_dos_externos(ctx),
         "mic-escopo": escopo_do_botao_do_mic(st),
-        "selo": [i["selo"] for i in itens],
-        # QUATRO estados e a tela tinha TRÊS cores: `atencao` e  # (noqa-acento): nome de estado
-        # (`SELO_DO_ESTADO`).
-        # `data-hef-alvo="classe" data-hef-classe="grave"
-        **_selos_por_estado(itens),
-        # do produto. Ela nasceu no docstring de `interface.conexoes.html_do_exame`
-        # energia."* e *"A parte do sistema que fala com o DualSense está
-        "achado": [i["porque"] for i in itens],
-        "achado-explica": [i["dica"] for i in itens],
-        "exame-calada": [i["calada"] for i in itens],
-        "ignorar-dica": [i["dica-do-ignorar"] for i in itens],
-        **_o_que_nao_coube(itens),
         **radio,
-        "exame": itens,
-        "achados": len(itens),
-        "graves": sum(1 for i in itens if i["grave"]),
         "alvo-aberto": _alvo_de_saida(ctx),
         #
         # (`status_actions.texto_de_controle_nao_adotado`).
@@ -2001,7 +1915,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         "sem_dono": sem_dono,
         # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
         "cobertura": {"pintados": 1 + 2 + 5 + len(confissao)
-                      + len(itens) * 4 + 1 + 12
+                      + 1 + 12
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
     }

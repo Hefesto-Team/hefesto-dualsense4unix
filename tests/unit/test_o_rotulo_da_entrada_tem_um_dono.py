@@ -118,10 +118,10 @@ def test_o_ja_mapeadas_diz_o_nome_e_a_face(documento: MaquinaConfig) -> None:
     _limpo(lista)
 
 
-def test_a_sugestao_diz_as_duas_pontas_pelo_nome(
+def test_o_cartao_diz_as_duas_pontas_pelo_nome(
     documento: MaquinaConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A caixinha da Sugestão: «Meio → Entrada 2», pela declaração dela."""
+    """O de→para do cartão: «Meio → Entrada 2», pela declaração dela."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -134,10 +134,9 @@ def test_a_sugestao_diz_as_duas_pontas_pelo_nome(
         acao="Mova o adaptador Bluetooth para a Entrada 2",  # (noqa-acento) campo da Ordem
         o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
         alvo=ordens.Identidade(caminho="1-4"), destino="2")
-    card = a08_conexoes._card_da_ordem(ordem)
-    assert '<span class="caixa">Meio</span>' in card, card
-    assert '<span class="caixa alvo">Entrada 2</span>' in card, card
-    _limpo(card)
+    de, para = a08_conexoes._a_ordem_na_tela(ordem)
+    assert (de, para) == ("Meio", "Entrada 2"), (de, para)
+    _limpo(f"{de} {para}")
 
 
 def test_a_ordem_manda_para_a_entrada_pelo_nome() -> None:
@@ -182,7 +181,7 @@ def test_a_leitura_das_ordens_leva_o_nome_das_entradas(
     assert dict(lida.nomes_das_entradas) == {"1": "Meio"}, lida.nomes_das_entradas
 
 
-def test_o_nome_dado_no_mapa_chega_a_sugestao_e_a_ordem(
+def test_o_nome_dado_no_mapa_chega_ao_cartao_e_a_ordem(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """De ponta a ponta: o nome que ela dá no editor do mapa (``dar_nome_a_entrada``,"""
@@ -212,9 +211,8 @@ def test_o_nome_dado_no_mapa_chega_a_sugestao_e_a_ordem(
 
     monkeypatch.setattr(a08_conexoes, "_declaracao", lambda *_a, **_k: dela)
     vazio = ordens.Linha(texto="", selo="")
-    card = a08_conexoes._card_da_ordem(ordens.Ordem(
+    de, para = a08_conexoes._a_ordem_na_tela(ordens.Ordem(
         chave="teste", acao=ordem.acao, o_que_eu_vi=vazio, por_que_importa=vazio,
         ganho_esperado=vazio, alvo=ordens.Identidade(caminho="1-4"), destino="2"))
-    assert '<span class="caixa">Meio</span>' in card, card
-    assert '<span class="caixa alvo">Frente de cima</span>' in card, card
-    _limpo(card)
+    assert (de, para) == ("Meio", "Frente de cima"), (de, para)
+    _limpo(f"{de} {para}")

@@ -817,6 +817,20 @@
     /* ordem de decisão: quem tem exigência dura escolhe antes */
     var ordem = ["hub", "teclado", "wifi", "bt", "mouse", "webcam"];
     var jaPostos = [];
+    /* O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE ESTÁ — 04/10/2026,
+       AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01. Um aparelho de classe fora da
+       ordem de decisão (um pendrive, uma placa que ninguém classificou) nunca
+       entra no plano; sem esta reserva a entrada dele valia como livre, outro
+       aparelho a recebia e o mapa dizia «sai daqui» sem destino. A entrada
+       fica com ele, com o motivo «fica». É a gêmea de
+       `arranjo_da_mesa._o_que_o_plano_nao_sabe_arrumar_fica`. */
+    APARELHOS.forEach(function (a) {
+      if (ordem.indexOf(a.classe) !== -1) return;
+      var hoje = portaDe(a.id);
+      if (!hoje || plano[hoje]) return;
+      plano[hoje] = a.id;
+      motivo[a.id] = { razoes: [], peso: "melhora", ganho: 0, forcado: false, essencial: false };
+    });
 
     ordem.forEach(function (cl) {
       APARELHOS.filter(function (a) { return a.classe === cl && !aparelhoSemLugar(a.id); }).forEach(function (ap) {

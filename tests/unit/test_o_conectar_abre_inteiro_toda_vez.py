@@ -391,7 +391,7 @@ def test_a_linha_da_08_diz_a_parte_em_que_o_tique_gastou(
             ("_correr_as_esperas", lambda: None), ("_nomes_dos_donos", lambda: {}),
             ("_confissao_do_mapa", lambda: {}), ("campos_do_radio", lambda _ctx: {}),
             ("_html_do_mapa", mapa_lento), ("campos_do_mapear", lambda: {}),
-            ("_html_dos_aparelhos", lambda: ""), ("_html_da_ordem", lambda *_a: ""),
+            ("_html_dos_aparelhos", lambda: ""), ("_html_das_dicas", lambda *_a: ""),
             ("_sala_na_tela", lambda *_a: {}), ("_html_dos_externos", lambda _ctx: ""),
     ):
         monkeypatch.setattr(a08, nome, falso)

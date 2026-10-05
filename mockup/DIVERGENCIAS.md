@@ -27,6 +27,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue a de hoje (uma pista por adaptador e a
   fileira das portas) e a integração não é instalada antes: o pacote já fala o desenho novo, e a página
   nova entra junto, no mesmo fecho.
+- **04/10/2026** — as dicas em cartões (a «Sugestão de Conexão» e o exame de cinco frases viraram uma
+  fileira: três à vista, «mais N», o porquê atrás do ⓘ e um botão só por cartão): o produto recebe com
+  o mesmo `--publicar 08`. Até publicar, a tela dela segue a caixa e o exame de hoje; o pacote já
+  entrega o campo `dicas` e a página nova o lê. O plano que deixa o aparelho sem classe onde está
+  também espera o `--publicar mapa-das-portas`.
 
 ## mapa-das-portas.html
 - **04/10/2026** — o painel do aparelho que abre ao clicar nele (nome, tipo, chave Extensor, o que a

@@ -31,7 +31,7 @@ docstring dele.
 
 A MORDIDA, medida em 03/09/2026 (cada arranque foi devolvido por `cp`):
 
-* troque `_html_da_ordem` por `return ""` →
+* troque `_html_das_dicas` por `return ""` →
   `test_a_ordem_de_servico_e_da_maquina_dela` reprova;
 * devolva `_sala_na_tela` para `return {}` →
   `test_a_sala_pinta_o_que_ela_ja_declarou` reprova;
@@ -100,26 +100,25 @@ class _DeclaracaoFalsa:
 
 
 def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
-    """O card traz o de→para da ordem viva, e NADA do mockup."""
+    """O cartão traz o de→para da ordem viva, e NADA do mockup."""
     p = _pacote()
     ordem = _uma_ordem(destino="Entrada 9")
     antes = p._ORDENS_NA_TELA
     try:
         p._ORDENS_NA_TELA = (None, ordem, None)
-        card = p._html_da_ordem()
+        card = p._html_das_dicas()
     finally:
         p._ORDENS_NA_TELA = antes
 
     assert ordem.destino in card, (
-        f"o card não traz o destino da ordem viva. Saiu: {card[:200]!r}")
+        f"o cartão não traz o destino da ordem viva. Saiu: {card[:200]!r}")
     assert FRASE_DO_MOCKUP not in card, (
-        "a frase cravada no mockup voltou ao card — é uma INSTRUÇÃO para ela "
+        "a frase cravada no mockup voltou ao cartão — é uma INSTRUÇÃO para ela "
         "mexer no gabinete, sobre entradas que a máquina dela pode não ter")
     assert ordem.ganho_esperado.texto not in card, (
         f"{ordem.ganho_esperado.texto!r} voltou à coluna visível — ele mora no `?` "
         f"da linha do exame desde 13/09/2026")
-    assert ordem.acao in card, card  # (noqa-acento) campo da Ordem
-    assert p.TITULO_DA_ORDEM not in card, card
+    assert ordem.por_que_importa.texto in card, "o porquê (a primeira frase) mora atrás do ⓘ"
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
@@ -146,41 +145,40 @@ def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
         f"o `?` da linha perdeu o que fazer, que saiu do card: {dica!r}")
 
 
-def test_sem_destino_o_card_nao_desenha_um_de_para_de_travessoes() -> None:
+def test_sem_destino_o_cartao_nao_desenha_um_de_para_de_travessoes() -> None:
     """`destino=''` é o caso das DUAS ordens desta máquina — sem receita."""
     p = _pacote()
-    assert 'class="receita"' not in p._card_da_ordem(_uma_ordem(destino="")), (
-        "com destino vazio o card desenhou o de→para, e ele sai `— → —`: "
+    antes = p._ORDENS_NA_TELA
+    try:
+        p._ORDENS_NA_TELA = (_uma_ordem(destino=""),)
+        sem = p._html_das_dicas()
+        p._ORDENS_NA_TELA = (_uma_ordem(destino="Entrada 9"),)
+        com = p._html_das_dicas()
+    finally:
+        p._ORDENS_NA_TELA = antes
+    assert 'class="cd-pic"' not in sem, (
+        "com destino vazio o cartão desenhou o de→para, e ele sai `— → —`: "
         "ruído com cara de diagnóstico")
-    com_destino = p._card_da_ordem(_uma_ordem(destino="Entrada 9"))
-    assert 'class="receita"' in com_destino and "Entrada 9" in com_destino, (
-        "com destino o card TEM de mostrar para onde mandar")
+    assert 'class="cd-pic"' in com and "Entrada 9" in com, (
+        "com destino o cartão TEM de mostrar para onde mandar")
 
 
 def test_sem_ordem_a_coluna_diz_a_frase_do_produto() -> None:
     """Zero ordens tem texto próprio — nunca um quadro vazio.
 
-    A FRASE MUDOU DE DONO em 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01):
-    a Sugestão de Conexão nunca some e, sem ajuste, diz
-    `a08_conexoes.NADA_A_MUDAR` — «Nada a mudar agora.», a frase da sprint.
+    A frase é a da sprint (`dicas_da_conexao.NADA_A_MUDAR`, «Nada a mudar agora.»), desde a
+    A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01 de 26/09/2026.
     """
+    from hefesto_dualsense4unix.integrations.dicas_da_conexao import NADA_A_MUDAR
+
     p = _pacote()
     antes = p._ORDENS_NA_TELA
     try:
         p._ORDENS_NA_TELA = (None, None)
-        assert p._html_da_ordem() == f'<div class="nada-a-mudar">{p.NADA_A_MUDAR}</div>', (
+        assert NADA_A_MUDAR in p._html_das_dicas(), (
             "sem ordem, a coluna tem de dizer que não há o que mudar")
     finally:
         p._ORDENS_NA_TELA = antes
-
-
-def test_o_dono_ainda_nao_desenha_a_ordem_da_mesa() -> None:
-    """A CATRACA DA SEGUNDA GRAFIA — e ela fica VERMELHA quando o dono curar."""
-    p = _pacote()
-    assert not p._dono_sabe_desenhar_a_ordem(), (
-        "`interface.conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade. "
-        "ENTÃO APAGUE `a08_conexoes._card_da_ordem` e chame o dono em "
-        "`_html_da_ordem` — a segunda grafia existia só por causa do defeito.")
 
 
 def test_o_exame_de_entrada_nao_corre_na_thread_do_tique() -> None:
@@ -387,8 +385,8 @@ def test_o_pacote_liga_os_cinco_enderecos() -> None:
     p = _pacote()
     saiu = p.pacote(_ctx())
 
-    assert "ordem" in saiu, (
-        "o `pacote()` não emite `ordem` — o desenho tem o endereço e ninguém "
+    assert "dicas" in saiu, (
+        "o `pacote()` não emite `dicas` — o desenho tem o endereço e ninguém "
         "escreve nele")
     assert "conta-gestao" not in saiu, "a contagem voltou ao canto da Gestão"
 
@@ -422,7 +420,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     from monta import MESA
 
     html = BANCADA.read_text(encoding="utf-8")
-    esperado = {"ordem": 1, "sala-altura": 3, "sala-visada": 3,
+    esperado = {"dicas": 1, "sala-altura": 3, "sala-visada": 3,
                 "nome": len(MESA)}
     for campo, quantos in esperado.items():
         achados = html.count(f'data-campo="{campo}"')
@@ -432,7 +430,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
             "`achar()` do piloto escrever ZERO, calado — foi assim que `via`, "
             "`bateria`, `ponte` e `fragil` somaram à cobertura sem chegar à tela")
 
-    for campo in ("ordem",):
+    for campo in ("dicas",):
         assert re.search(rf'data-campo="{campo}" data-hef-alvo="html"', html), (
             f"`{campo}` troca um bloco INTEIRO e precisa do alvo `html`; sem "
             "ele o piloto escreveria a marcação como texto na tela")

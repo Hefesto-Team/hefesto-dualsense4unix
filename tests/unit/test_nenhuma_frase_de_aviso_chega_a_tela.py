@@ -9,7 +9,6 @@ import sys
 from html.parser import HTMLParser
 from typing import Any
 
-import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -147,23 +146,12 @@ class _ClassesDoCampo(HTMLParser):
             self.fundo -= 1
 
 
-def _campo_da_ordem() -> str:
+def _campo_das_dicas() -> str:
     """O endereço da coluna, lido do gerador da 08 sem importá-lo."""
     fonte = (INTERFACE / "aba08.py").read_text(encoding="utf-8")
-    achado = re.search(r'^CAMPO_DA_ORDEM = "([^"]+)"$', fonte, flags=re.M)
-    assert achado, "o gerador da 08 perdeu `CAMPO_DA_ORDEM`: a régua ficaria cega"
+    achado = re.search(r'^CAMPO_DAS_DICAS = "([^"]+)"$', fonte, flags=re.M)
+    assert achado, "o gerador da 08 perdeu `CAMPO_DAS_DICAS`: a régua ficaria cega"
     return achado.group(1)
 
 
-@pytest.mark.parametrize("arquivo", [p for p in _paginas() if p.name.startswith("08-")],
-                         ids=lambda p: f"{p.parent.name}/{p.name}")
-def test_a_coluna_da_ordem_cravada_na_08_nao_traz_imperativo_nem_ganho(
-        arquivo: pathlib.Path) -> None:
-    """A §D da sprint vale também para o que a página crava antes do primeiro tique."""
-    leitor = _ClassesDoCampo(_campo_da_ordem())
-    leitor.feed(arquivo.read_text(encoding="utf-8"))
-    assert leitor.achou and leitor.classes, (
-        f"{arquivo.parent.name}/{arquivo.name}: a régua não achou a coluna da ordem")
-    voltaram = sorted(CLASSES_QUE_SAIRAM_DA_COLUNA & set(leitor.classes))
-    assert not voltaram, (
-        f"{arquivo.parent.name}/{arquivo.name}: a coluna da ordem crava {voltaram}")
+CAMPO_DA_ORDEM_PUBLICADA = "ordem"
