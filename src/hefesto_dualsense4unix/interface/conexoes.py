@@ -375,10 +375,10 @@ def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
         f'aria-label="Por quê: {_e(dica.titulo)}">i</button>' if porque else "")
     return (
         f'<section class="cartao-dica nivel-{_e(dica.nivel)}{" calada" if dica.calada else ""}" '
-        f'role="region" aria-labelledby="{quem}-t" data-dica="{_e(dica.chave)}">'
-        f'<div class="cd-cab"><span class="cd-ic">{icone(dica.icone)}</span>'
-        f'<h4 id="{quem}-t"><span class="so-leitor">{_e(PALAVRA_DO_NIVEL[dica.nivel])}: </span>'
-        f'<span class="t">{_e(dica.titulo)}</span></h4>{info}</div>'
+        f'role="region" aria-label="{_e(PALAVRA_DO_NIVEL[dica.nivel])}: {_e(dica.titulo)}" '
+        f'data-dica="{_e(dica.chave)}"><div class="cd-cab"><span class="cd-ic">'
+        f'{icone(dica.icone)}</span><h4 id="{quem}-t"><span class="t">{_e(dica.titulo)}</span>'
+        f'</h4>{info}</div>'
         f"{detalhe}{desenho}{porque}"
         f'<div class="cd-acao">{_o_botao_da_dica(dica.acao, "cd-botao")}</div></section>')
 

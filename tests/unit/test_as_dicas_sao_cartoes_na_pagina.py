@@ -115,6 +115,25 @@ def _html_de_cinco() -> str:
     return str(a08_conexoes._html_das_dicas(vivos, cena))
 
 
+def test_o_nivel_do_cartao_e_dito_no_nome_da_regiao_e_nao_em_texto_escondido() -> None:
+    """Cor nunca sozinha: o leitor de tela ouve «Urgente: …», e nenhuma letra se esconde na tela.
+
+    A palavra do nível já foi um ``<span>`` recortado a 1 px dentro do título, e a régua da
+    janela estreita (``test_a_janela_estreita_nao_engole_o_desenho``) o lia, com razão, como
+    texto engolido na 08. MORDE: devolver o ``aria-labelledby`` ao título reprova a primeira
+    asserção; devolver o texto escondido reprova a segunda.
+    """
+    html = _html_de_cinco()
+    secoes = re.findall(r'<section class="cartao-dica[^>]*>', html)
+    assert len(secoes) == 5, f"a bancada de cinco achados deu {len(secoes)} cartões"
+    palavras = tuple(f"{p}: " for p in dicas.PALAVRA_DO_NIVEL.values())
+    for secao in secoes:
+        nome = re.search(r'aria-label="([^"]*)"', secao)
+        assert nome and nome.group(1).startswith(palavras), (
+            f"o cartão não diz o nível no nome da região: {secao}")
+    assert "so-leitor" not in html, "voltou o texto escondido dentro do cartão"
+
+
 _LER = r"""
 (function(){
   const raiz = document.querySelector('[data-campo="dicas"]');

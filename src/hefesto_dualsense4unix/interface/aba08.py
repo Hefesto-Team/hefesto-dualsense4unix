@@ -365,7 +365,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
 
   /* ---- as dicas: cartões de poucas palavras, com UM botão ----
      AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que ela aprovou. Cor nunca
-     sozinha: o nível tem borda E uma palavra para o leitor de tela (`.so-leitor`), o desenho de
+     sozinha: o nível tem borda E uma palavra para o leitor de tela (o nome da região), o desenho de
      cada tipo vai no ícone, e a ordem de leitura é título, de→para, botão. A fileira usa a grade
      dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá. */
   .dicas{display:flex;flex-direction:column;gap:8px}
@@ -381,8 +381,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .cartao-dica .cd-ic svg.i{width:16px;height:16px;flex:0 0 16px}
   .cartao-dica h4{flex:1;min-width:0;margin:0;font-size:12.5px;font-weight:600;color:var(--fg);
            line-height:1.3}
-  .so-leitor{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);
-             white-space:nowrap}
+  /* a palavra do nível mora no nome da região (`aria-label`), não num texto escondido: texto
+     recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu */
   .cartao-dica .cd-info{flex:0 0 18px;width:18px;height:18px;border-radius:50%;padding:0;
               border:1px solid var(--linha);background:none;color:var(--texto-mudo);
               font:italic 600 11px/1 serif;cursor:pointer}
