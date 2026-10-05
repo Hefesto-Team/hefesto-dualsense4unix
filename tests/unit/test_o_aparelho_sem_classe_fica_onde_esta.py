@@ -136,9 +136,9 @@ def test_o_motor_da_pagina_tambem_deixa_o_pendrive_e_concorda_com_o_python(
         assert not [t for t in do_js["receita"] if "endrive" in t or "rmazenamento" in t]
 
 
-def test_a_pagina_publicada_ainda_nao_tem_a_reserva() -> None:
-    """A cura do JavaScript espera o ``--publicar``: a bancada a tem, o produto ainda não."""
+def test_a_pagina_publicada_tem_a_reserva() -> None:
+    """Publicada em 05/10/2026: a bancada e o produto têm a mesma cura do JavaScript."""
     marca = "AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01"
     assert "O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE ESTÁ" in pagina_do_mapa.pagina()
-    assert "O APARELHO QUE O PLANO NÃO SABE ARRUMAR" not in pagina_do_mapa.pagina(
+    assert "O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE ESTÁ" in pagina_do_mapa.pagina(
         com_as_que_esperam=False), marca
