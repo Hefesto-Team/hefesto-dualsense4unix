@@ -59,9 +59,6 @@ FATOS: dict[str, str] = {
     "o Hefesto não volta a perguntar":
         "COMPORTAMENTO, nomeado por ela como legal em 07/09/2026 — a frase diz "
         "o que o botão faz",
-    "o Hefesto não consegue nomear o que o sistema não nomeia":
-        "LIMITE DO SISTEMA, nomeado por ela como legal em 07/09/2026 — o Linux "
-        "não nomeia, e a frase o diz na mesma linha",
 
 
     "a faixa dele ainda não foi descoberta":

@@ -163,6 +163,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "entrada-levantar": "passa a cerimônia para a fase em pé — é da tela",
     "entrada-nao-alcanco": "tira uma entrada da conta no `maquina.json` — é da máquina",
     "entrada-parar": "fecha a cerimônia — é da tela",
+    "receptor-descobrir": "descobre a faixa do receptor 2.4G por eliminação e a grava no "
+                          "`maquina.json` — é da máquina",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
@@ -171,6 +173,7 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mudo": ("audio.microfone.mudo",),
     "volume": ("audio.microfone.volume", "audio.alto_falante.volume"),
     "rota": ("audio.alto_falante.rota",),
+    "volume-padrao": ("audio.alto_falante.volume",),
     "sensor": ("movimento.giroscopio",),
     "cor": ("luz.lightbar.cor",),
     "brilho": ("luz.lightbar.cor",),
@@ -203,6 +206,7 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "volume": ("mic", "mic"),
     "ganho-mic": ("mic", "mic"),
     "rota": ("speaker", "speaker"),
+    "volume-padrao": ("speaker", "speaker"),
     "sensor": (None, "sensores"),
     "cor": ("leds", "leds"),
     "brilho": ("leds", "leds"),
