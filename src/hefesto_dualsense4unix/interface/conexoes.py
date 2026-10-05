@@ -356,6 +356,13 @@ def _o_botao_da_dica(acao: Any, classe: str) -> str:
             f'{dados}{dica}>{rotulo}</button>')
 
 
+#: O «i» do «Por quê» é um ÍCONE, desenhado, e não uma letra: o botão diz o nome dele no
+#: ``aria-label`` («Por quê: …»), e a regra dela da primeira letra maiúscula vale para palavra
+#: escrita num botão — um «i» minúsculo como texto era palavra para ela e para a régua.
+_O_I_DA_DICA = ('<svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true">'
+                '<path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg>')
+
+
 def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
     """Um cartão: título, o de→para, UM botão, e o porquê atrás do ⓘ."""
     quem = f"dica-{n}"
@@ -372,7 +379,7 @@ def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
         if dica.porque or cura or ignora else "")
     info = (
         f'<button class="cd-info" type="button" aria-expanded="false" aria-controls="{quem}-p" '
-        f'aria-label="Por quê: {_e(dica.titulo)}">i</button>' if porque else "")
+        f'aria-label="Por quê: {_e(dica.titulo)}">{_O_I_DA_DICA}</button>' if porque else "")
     return (
         f'<section class="cartao-dica nivel-{_e(dica.nivel)}{" calada" if dica.calada else ""}" '
         f'role="region" aria-label="{_e(PALAVRA_DO_NIVEL[dica.nivel])}: {_e(dica.titulo)}" '

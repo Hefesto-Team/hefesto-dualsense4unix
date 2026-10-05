@@ -385,7 +385,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu */
   .cartao-dica .cd-info{flex:0 0 18px;width:18px;height:18px;border-radius:50%;padding:0;
               border:1px solid var(--linha);background:none;color:var(--texto-mudo);
-              font:italic 600 11px/1 serif;cursor:pointer}
+              display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .cartao-dica .cd-info .cd-i{width:12px;height:12px;fill:none;stroke:currentColor;
+              stroke-width:2.6;stroke-linecap:round}
+  .cartao-dica .cd-info .cd-i circle{fill:currentColor;stroke:none}
   .cartao-dica .cd-info:hover,.cartao-dica .cd-info[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}
   .cd-detalhe{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
               color:var(--texto-mudo)}
