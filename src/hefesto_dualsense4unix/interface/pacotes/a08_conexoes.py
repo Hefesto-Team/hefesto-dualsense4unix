@@ -4148,7 +4148,7 @@ FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
 def _o_ponto(linha: Any, descobrir: str) -> str:
     """O estado da linha num ponto: verde = bom, vermelho = problema, vazado = sem faixa.
 
-    O texto do problema («caiu 12× em 24 min», «3 teclas presas em 1 h») vai só no tooltip;
+    O texto do problema («3 teclas presas em 1 h») vai só no tooltip;
     o vazado do receptor ainda não descoberto é o próprio gesto de descobrir.
     """
     selo = linha.selo
@@ -4203,7 +4203,8 @@ def _em_colunas(linhas: list[str]) -> list[str]:
     """Até três linhas, uma coluna; mais, duas colunas com metade de cada lado."""
     if len(linhas) <= LINHAS_NUMA_COLUNA:
         return linhas
-    return [f'<div class="ar-duas" style="grid-template-rows:repeat({(len(linhas) + 1) // 2},auto)">'
+    linhas_da_grade = (len(linhas) + 1) // 2
+    return [f'<div class="ar-duas" style="grid-template-rows:repeat({linhas_da_grade},auto)">'
             + "".join(linhas) + "</div>"]
 
 

@@ -135,8 +135,15 @@ def _o_modelo(o: dict[str, Any]) -> str:
 
 @gesto(PAGINA, "aparelho-tipo", grava="declarar_o_aparelho")
 def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O tipo que ela dá ao aparelho (o que a máquina não mede) — pelo ``vid:pid`` dele."""
-    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), tipo=str(o.get("tipodito") or "")), ctx)
+    """O tipo que ela dá ao aparelho (o que a máquina não mede) — pelo ``vid:pid`` dele.
+
+    Desde o painel único (05/10/2026) o tipo é uma lista: o valor chega em ``valor``, e o clique
+    que só abre a lista não grava nada.
+    """
+    if str(o.get("evento") or "") == "click":
+        return {"armou": True}
+    tipo = str(o.get("tipodito") or o.get("valor") or "")
+    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), tipo=tipo), ctx)
 
 
 @gesto(PAGINA, "aparelho-nome", grava="declarar_o_aparelho")

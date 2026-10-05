@@ -36,7 +36,7 @@
     --dur-fast: 120ms;
 
     --usb3: #2c5f9e;
-    --usb2: #1b1c24;
+    --usb2: #5b6072;
   }
 
   * { box-sizing: border-box; }
@@ -478,6 +478,65 @@
     .palco > .bandeja { margin-top: 0; position: static; }
     .pagina > .corpo > .legenda { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
   }
+
+  /* ══ 05/10/2026, conjunto «Conexões 3»: o desenho aprovado do Mapa ══ */
+  .pagina > .topo { padding-top: 6px; padding-bottom: 6px; margin-bottom: 6px; }
+  .painel { padding: 8px 14px; }
+  .palco { margin-top: 8px; }
+  .faces { gap: 4px; }
+  .face-cab { margin-top: 8px; margin-bottom: 4px; }
+  .chapa { padding-top: 6px; padding-bottom: 6px; row-gap: 4px; }
+  .chapa.coluna, .chapa.grade-tras, .chapa.fileira { grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); }
+  .por-confirmar { padding: 6px 12px; margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .por-confirmar > b { margin: 0; }
+  .pend-lista { margin: 0; }
+  .receita { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; margin: 6px 0; }
+  .receita > li { margin: 0; padding: 6px 10px; }
+  .receita h4 { font-size: 13.5px; margin: 0; }
+  .painel .acoes { margin-top: 6px; }
+  .palco > .bandeja .lista { overflow: visible; gap: 4px; }
+  .bandeja .chip { padding-top: 5px; padding-bottom: 5px; }
+  @media (min-width: 901px) { .palco > .bandeja { height: auto; } }
+  /* o painel único: o aparelho e a entrada, lado a lado */
+  #edita.painel-unico { position: fixed; z-index: 80; width: 540px; max-width: calc(100vw - 24px); padding: 0; gap: 0;
+                        background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: 14px;
+                        box-shadow: 0 18px 48px rgba(0,0,0,.6); }
+  .painel-unico .cab { display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px; }
+  .painel-unico .cab .bola { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .painel-unico .cab b { font-size: 16px; }
+  .painel-unico .cab .onde { font-size: 13px; }
+  .painel-unico .cab .fecha { margin-left: auto; background: none; border: 0; color: inherit; font-size: 20px;
+                              line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .painel-unico .colunas { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--color-rule); }
+  .painel-unico .col { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .painel-unico .col + .col { border-left: 1px solid var(--color-rule); }
+  .painel-unico h5 { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6272a4; }
+  .painel-unico .campo { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 10px; }
+  .painel-unico .campo > span { font-size: 13px; }
+  .painel-unico .seg { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-rule); border-radius: 8px;
+                       background: var(--color-paper); }
+  .painel-unico .seg .escolha { flex: 1; justify-content: center; border: 0; background: none; padding: 4px 6px; }
+  .painel-unico .seg .escolha[aria-pressed="true"] { background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+                                                     font-weight: 600; }
+  .painel-unico .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }
+  .painel-unico .sel { position: relative; display: flex; align-items: center; }
+  .painel-unico .sel i { position: absolute; left: 10px; width: 9px; height: 9px; border-radius: 50%; pointer-events: none; }
+  .painel-unico select { width: 100%; font: inherit; font-size: var(--text-sm); padding: 6px 10px 6px 26px;
+                         background: var(--color-paper); color: var(--color-ink); border: 1px solid var(--color-rule);
+                         border-radius: 8px; cursor: pointer; }
+  .painel-unico select option { background: var(--color-paper); color: var(--color-ink); }
+  .painel-unico .estado { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 10px;
+                          border-radius: 8px; min-height: 32px; box-sizing: border-box; }
+  .painel-unico .estado.bom { background: color-mix(in srgb, var(--color-ok) 9%, transparent); color: var(--color-ok); }
+  .painel-unico .estado.troca { background: color-mix(in srgb, var(--color-lacuna) 9%, transparent); color: var(--color-lacuna); }
+  .painel-unico .estado.troca .btn { margin-left: auto; padding: 3px 12px; }
+  .painel-unico .vazia { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center;
+                         min-height: 90px; padding: 0 10px; font-size: 13px; color: #6272a4;
+                         border: 1px dashed var(--color-rule); border-radius: 10px; }
+  .painel-unico .pe { display: flex; align-items: center; gap: 8px; justify-content: flex-end; padding: 12px 16px;
+                      border-top: 1px solid var(--color-rule); }
+  .painel-unico .pe .dica-id { margin-right: auto; font-size: var(--text-xs); }
+  .painel-unico .chave { justify-self: start; }
 </style>
 </head>
 <body>
@@ -495,7 +554,7 @@
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
     <h1>Mapa das <em>Conexões</em></h1>
-    <p class="quando" id="de-quando">leitura de exemplo · 24/08/2026</p>
+    <p class="quando" id="de-quando">Leitura de exemplo · 24/08/2026</p>
     <button class="btn examinar" id="reexaminar" title="Lê o computador de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
   </header>
 
@@ -504,10 +563,10 @@
   <section class="painel" id="painel"></section>
 
   <div class="palco">
-    <div class="edita" id="edita" hidden></div>
+    <div class="edita painel-unico" id="edita" hidden></div>
     <div class="faces" id="faces"></div>
     <aside class="bandeja">
-      <h3>Atualmente conectado</h3>
+      <h3>Conectado agora</h3>
       <p class="ajuda" id="ajuda-bandeja"></p>
       <div class="lista" id="bandeja"></div>
     </aside>
@@ -543,7 +602,7 @@
     "faces": [
       {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 3, "onde": "pc", "par": "2"}, {"n": "2", "usb": 3, "onde": "pc", "par": "1"}]},
       {"nome": "Traseira", "forma": "grade-tras", "regiao": "pc", "donaDaFaixaPc": true, "portas": [{"n": "3", "usb": 3, "onde": "pc", "par": "4"}, {"n": "4", "usb": 3, "onde": "pc", "par": "3"}, {"n": "5", "usb": 3, "onde": "pc", "par": "6"}, {"n": "6", "usb": 3, "onde": "pc", "par": "5"}, {"n": "7", "usb": 2, "onde": "pc", "par": "8"}, {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
-      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "extensor de 1 m, declarado por você"}}]}
+      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "Extensor de 1 m"}}]}
     ],
     "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
     "leituras": {"antes": {"rotulo": "20h15 — antes de você mexer", "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4", "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4"}}, "agora": {"rotulo": "22h50 — depois dos seus movimentos", "caminho": {"teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1", "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2"}}},
@@ -1003,9 +1062,7 @@
       });
       movs.push({
         essencial: !!m.essencial, ganho: m.ganho,
-        titulo: (function (r) { return de ? "Mova " + r.g + " " + r.n + " da " + naFraseDe(de) + " para a " + naFraseDe(para)
-                                     : "Ponha " + r.g + " " + r.n + " na " + naFraseDe(para); })(rot(a))
-                + (m.essencial ? "" : "  ·  melhora, não é urgente"),
+        titulo: emAtributo(rotuloDoAparelho(a)) + " → " + emAtributo(rotuloDe(para)),
         linhas: linhas
       });
     });
@@ -1038,14 +1095,15 @@
     var p = portaDe("wifi"); var pp = p && porNum(p);
     return !!(pp && pp.onde === "hub");
   }
+  function frase1(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
   function julgar(porta) {
     var oc = alocacao[porta.n];
-    if (oc) { var a = acha(oc); return { v: "cheia", txt: "ocupada", porque: a.tipo + " — clique para tirar" }; }
-    if (ocupada(alocacao, porta)) return { v: "cheia", txt: "indisponível", porque: porta.filho ? "o extensor está nela" : "a entrada-mãe está em uso" };
+    if (oc) { var a = acha(oc); return { v: "cheia", txt: "Ocupada", porque: a.tipo + " — clique para tirar" }; }
+    if (ocupada(alocacao, porta)) return { v: "cheia", txt: "Ocupada", porque: porta.filho ? "Com o extensor" : "A entrada-mãe está em uso" };
     if (segurando) {
       var reg = regiaoDoCaminho(leitura()[segurando]);
       var mesmaRegiao = reg === null || (reg === "hub" ? porta.onde === "hub" : porta.onde === "pc");
-      if (!mesmaRegiao) return { v: "fora", txt: "outra região",
+      if (!mesmaRegiao) return { v: "fora", txt: "Outra região",
         porque: reg === "hub" ? "este está no hub" : "este está direto no PC" };
     }
     if (!naMao) return null;
@@ -1055,32 +1113,32 @@
     var vzRadio = vz && ehRadio(vz.classe);
 
     if (naMao === "bt") {
-      if (noHub && superspeedNoHub()) return { v: "ruim", txt: "evite", porque: "o Wi-Fi usa o SuperSpeed deste mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
-      if (porta.esticada) return { v: "melhor", txt: "melhor lugar", porque: "na ponta do extensor: a antena mais longe das outras" };
-      if (noHub) return { v: "melhor", txt: "melhor lugar", porque: "no alto do rack, com a antena acima das cabeças" };
-      return { v: "serve", txt: "serve", porque: "entrada direta, mas na altura da escrivaninha" };
+      if (noHub && superspeedNoHub()) return { v: "ruim", txt: "Evite", porque: "o Wi-Fi usa o SuperSpeed deste mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      if (porta.esticada) return { v: "melhor", txt: "Melhor lugar", porque: "na ponta do extensor: a antena mais longe das outras" };
+      if (noHub) return { v: "melhor", txt: "Melhor lugar", porque: "no alto do rack, com a antena acima das cabeças" };
+      return { v: "serve", txt: "Serve", porque: "entrada direta, mas na altura da escrivaninha" };
     }
     if (naMao === "wifi") {
-      if (noHub) return { v: "ruim", txt: "evite", porque: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle" };
-      if (porta.usb !== 3) return { v: "evite", txt: "vale evitar", porque: "entrada preta — o Wi-Fi perde velocidade" };
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
-      return { v: "melhor", txt: "melhor lugar", porque: "azul, direta do PC e longe das antenas de rádio" };
+      if (noHub) return { v: "ruim", txt: "Evite", porque: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle" };
+      if (porta.usb !== 3) return { v: "evite", txt: "Vale evitar", porque: "entrada preta — o Wi-Fi perde velocidade" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      return { v: "melhor", txt: "Melhor lugar", porque: "azul, direta do PC e longe das antenas de rádio" };
     }
     if (naMao === "teclado") {
-      if (noHub) return { v: "ruim", txt: "evite", porque: "no hub você pode ficar sem teclado na BIOS" };
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
-      return { v: "melhor", txt: "melhor lugar", porque: "direta do PC — funciona na BIOS e na recuperação" };
+      if (noHub) return { v: "ruim", txt: "Evite", porque: "no hub você pode ficar sem teclado na BIOS" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      return { v: "melhor", txt: "Melhor lugar", porque: "direta do PC — funciona na BIOS e na recuperação" };
     }
     if (naMao === "mouse") {
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
-      if (noHub && superspeedNoHub()) return { v: "evite", txt: "vale evitar", porque: "hub com o tráfego do Wi-Fi ao lado" };
-      if (porta.usb === 3) return { v: "serve", txt: "serve", porque: "gasta uma entrada azul que ele não usa" };
-      return { v: "melhor", txt: "melhor lugar", porque: "entrada preta, longe de outro rádio" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      if (noHub && superspeedNoHub()) return { v: "evite", txt: "Vale evitar", porque: "hub com o tráfego do Wi-Fi ao lado" };
+      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que ele não usa" };
+      return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, longe de outro rádio" };
     }
     if (naMao === "webcam") {
-      if (porta.usb === 3) return { v: "serve", txt: "serve", porque: "gasta uma entrada azul que ela não precisa" };
-      return { v: "melhor", txt: "melhor lugar", porque: "entrada preta, que é o que ela pede" };
+      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que ela não precisa" };
+      return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, que é o que ela pede" };
     }
     return null;
   }
@@ -1091,13 +1149,13 @@
      Cada variante é a MESMA regra com uma restrição declarada, e a tela diz
      o que se perde em cada uma.                                            */
   var VARIANTES = [
-    { id: "melhor", rotulo: "O melhor no papel", op: {},
+    { id: "melhor", rotulo: "Ideal", op: {},
       desc: "Sem restrição: o arranjo que a regra escolhe quando tudo é possível." },
-    { id: "poucos", rotulo: "Mexendo o mínimo", op: { bonusParado: 45 },
+    { id: "poucos", rotulo: "Menos trocas", op: { bonusParado: 45 },
       desc: "Aceita um lugar pior para você mexer em menos coisas. Bom quando desmontar o arranjo custa caro." },
-    { id: "sem-ext", rotulo: "Sem o extensor", op: { proibir: function (p) { return !!p.esticada; } },
+    { id: "sem-ext", rotulo: "Sem extensor", op: { proibir: function (p) { return !!p.esticada; } },
       desc: "Para quando o cabo de extensão não alcança onde você queria, ou você não quer usá-lo." },
-    { id: "so-pc", rotulo: "Sem usar o hub", op: { proibir: function (p) { return p.onde === "hub"; } },
+    { id: "so-pc", rotulo: "Sem hub", op: { proibir: function (p) { return p.onde === "hub"; } },
       desc: "Só as entradas do gabinete. É o caso de quem não tem hub — e de notebook." }
   ];
   var variante = "melhor";
@@ -1149,17 +1207,14 @@
   function linhaDoAchado(m, reconhecido) {
     var abre = '<li><span class="selo derivado">derivado</span><span>';
     if (reconhecido) {
-      return abre + "Essa entrada está no seu mapa, então eu <b>já sei</b> onde ele está"
-           + " — você não precisa declarar nada.</span></li>";
+      return abre + "A entrada já está marcada no mapa.</span></li>";
     }
     var reg = regiaoDoCaminho(m.agora);
     var onde = (reg === "hub")
       ? "pende do hub, então ele <b>está no hub</b>"
       : "não pende do hub, então ele <b>está direto no gabinete</b>";
     return abre + "O caminho <code>" + m.agora + "</code> " + onde
-         + " — eu só não sei em qual entrada. Ele aparece na faixa tracejada da face certa,"
-         + " logo abaixo do desenho: clique nele e depois na entrada, e eu aprendo para sempre."
-         + "</span></li>";
+         + ". Falta marcar a entrada: clique nele e depois na entrada certa.</span></li>";
   }
 
   function reexame(de, para) {
@@ -1336,22 +1391,22 @@
       if (idPlano && idPlano !== idAgora) {
         /* SÓ O VEREDITO — 01/10/2026 (pedido f): de onde e para onde já estão
            na lista de cima. */
-        estado = "chega"; vered = "vem para cá";
+        estado = "chega";
       } else if (!idPlano && idAgora) {
-        ap = acha(idAgora); estado = "sai"; vered = "sai daqui";
-      } else if (idPlano) { estado = "fica"; vered = "fica"; }
+        ap = acha(idAgora); estado = "sai";
+      } else if (idPlano) { estado = "fica"; }
     } else {
       var id = alocacao[porta.n];
       ap = id ? acha(id) : null;
       var j = semLugar(porta) ? null : julgar(porta);
       if (ap) {
         estado = "cheia";
-        if (ap.classe === "wifi" && porta.onde === "hub") { problema = ' data-problema="1"'; vered = "mudar daqui"; }
-        if (ap.classe === "teclado" && porta.onde === "hub") { problema = ' data-problema="1"'; vered = "mudar daqui"; }
-      } else if (j) { estado = j.v; vered = j.txt; porque = j.porque; }
+        if (ap.classe === "wifi" && porta.onde === "hub") { problema = ' data-problema="1"'; vered = "Mudar daqui"; }
+        if (ap.classe === "teclado" && porta.onde === "hub") { problema = ' data-problema="1"'; vered = "Mudar daqui"; }
+      } else if (j) { estado = j.v; if (j.v !== "fora") { vered = j.txt; porque = j.porque; } }
     }
 
-    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + ", vazia";
+    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + " vazia";
     h += '<div class="soquete" data-soquete="' + porta.n + '"><span class="num">' + porta.n + "</span>"
       + '<button class="plug' + (porta.usb === 3 ? " v3" : "") + '" data-porta="' + porta.n + '"'
       + (estado ? ' data-v="' + estado + '"' : "") + problema
@@ -1370,13 +1425,13 @@
         + ' style="color:' + ap.cor + '" title="Abrir o painel de ' + emAtributo(rotuloDoAparelho(ap))
         + '">' + emAtributo(rotuloDoAparelho(ap)) + '</button><span class="caminho">' + (caminhoDe(ap.id) || "—") + "</span>";
       if (vered) h += '<span class="veredito ' + estado + '">' + vered + "</span>";
-      if (porque) h += '<span class="porque">' + porque + "</span>";
+      if (porque) h += '<span class="porque">' + frase1(porque) + "</span>";
     } else if (vered) {
-      h += '<span class="veredito ' + estado + '">' + vered + '</span><span class="porque">' + porque + "</span>";
+      h += '<span class="veredito ' + estado + '">' + vered + '</span><span class="porque">' + frase1(porque) + "</span>";
     } else {
-      h += '<span class="vazio">vazia</span>';
+      h += '<span class="vazio">Vazia</span>';
     }
-    if ((DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") || HUB_LIDO[porta.n]) h += '<span class="decl">hub</span>';
+    if ((DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") || HUB_LIDO[porta.n]) h += '<span class="decl">Hub</span>';
     h += "</span></div>";
     if (porta.filho) h += '<div class="filho"><div class="cabo">↳ ' + porta.filho.cabo + "</div>" + soqueteHTML(porta.filho, ctx) + "</div>";
     return h;
@@ -1550,7 +1605,7 @@
     var ligado = !!(DECLARADO[n] || {}).extensor;
     return '<button class="chave" role="switch" aria-checked="' + ligado + '" data-extensor="' + n + '"'
       + ' data-ligado="' + (!ligado) + '"' + gravaNaEntrada(n, "entrada-extensor")
-      + ' title="Há um cabo de extensão entre esta entrada e o aparelho"><i></i><span>Extensor</span></button>';
+      + ' title="Há um cabo de extensão entre esta entrada e o aparelho" aria-label="Extensor"><i></i></button>';
   }
   function linhaDoExtensor(n) {
     var c = chaveDoExtensor(n);
@@ -1580,137 +1635,137 @@
     return !!(pp && semLugar(pp));
   }
 
-  /* «O QUE FAZER»: uma linha, no máximo um botão. Fala o que o motor já diz (o plano). */
-  function oQueFazer(n, quem) {
-    if (!quem.classe && !quem.tipoDeclarado) {
-      return '<div class="faz"><span>Sem saber o que é, eu não sugiro lugar. Diga o tipo acima.</span></div>';
-    }
-    if (aparelhoSemLugar(quem.id)) {
-      return '<div class="faz"><span>Esta entrada está sem lugar no gabinete: diga o lugar dela para eu julgar.</span></div>';
-    }
+  function identificavel(quem) { return !/^054c:/.test(quem.modelo || ""); }
+
+  /* ══ O PAINEL ÚNICO — 05/10/2026, o desenho aprovado ══════════════════════════════
+     Clicar na entrada, no aparelho, na lista «Conectado agora» ou num aparelho sem entrada
+     abre o MESMO painel, perto do que foi clicado: o aparelho de um lado, a entrada do outro.
+     O que leva `data-gesto` o produto grava e a página espera o disco; no exemplo, muda só
+     na tela. Fecha no botão de fechar, no Esc ou com um clique fora. */
+  var editandoAp = null;
+  function faceDaPorta(p) {
+    return FACES.filter(function (f) {
+      return f.portas.some(function (x) { return x === p || x.filho === p; });
+    })[0];
+  }
+  function estadoDoAparelho(n, quem) {
+    if ((!quem.classe && !quem.tipoDeclarado) || aparelhoSemLugar(quem.id)) return "";
     var r = planejar({}), para = portaDeEm(r.plano, quem.id);
     var m = r.motivo[quem.id] || { razoes: [], essencial: false, ganho: 0 };
     if (receitaManda(n, para, m)) {
       var razao = m.razoes.length ? m.razoes[0].txt : "";
-      return '<div class="faz"><span>Melhor na ' + emAtributo(naFraseDe(para))
-        + (razao ? ": " + emAtributo(razao) : "") + '.</span>'
-        + '<button class="btn forte" id="ver-a-sugestao">Mostrar a entrada boa</button></div>';
+      return '<div class="estado troca"' + (razao ? ' title="' + emAtributo(frase1(razao)) + '"' : "")
+        + "><span>Melhor na " + emAtributo(naFraseDe(para)) + '</span><button class="btn" id="ver-a-sugestao">Ver</button></div>';
     }
-    return '<div class="faz bem"><span>✓ Está numa boa entrada.</span></div>';
+    return n ? '<div class="estado bom">✓ Boa entrada</div>' : "";
   }
-  /* no exemplo ninguém mediu nada: as etiquetas saem do que o desenho já diz */
-  function etiquetasDoExemplo(quem, p) {
-    var e = [];
-    if (quem.tipo) e.push(quem.tipo);
-    if (p) e.push(p.usb === 3 ? "USB 3.0" : "USB 2.0");
-    if (p && p.onde === "hub") e.push("atrás de 1 hub");
-    return e;
-  }
-  function identificavel(quem) { return !/^054c:/.test(quem.modelo || ""); }
-
-  function htmlDoPainelDoAparelho(n, quem, p, face) {
+  function colunaDoAparelho(n, quem, p) {
+    var h = "<h5>Aparelho</h5>";
+    if (!quem) {
+      return h + '<div class="vazia">' + (p && ocupada(alocacao, p) ? "Ocupada pelo extensor" : "Nada ligado aqui") + "</div>";
+    }
     var edita = editavelNoProduto(quem);
     var g = function (gesto) {
       return quem.modelo ? ' data-gesto="' + gesto + '" data-modelo="' + quem.modelo + '"' : "";
     };
-    var h = '<div class="edita-cab ap-cab"><input class="campo-nome titulo" type="text"'
+    h += '<label class="campo"><span>Nome</span><input class="campo-nome" type="text"'
       + ' data-nome-do-aparelho="' + emAtributo(quem.id) + '"' + g("aparelho-nome")
       + (edita ? "" : " disabled") + ' maxlength="' + MAXIMO_DO_NOME + '"'
       + ' value="' + emAtributo(quem.nomeDeclarado || "") + '"'
-      + ' placeholder="' + emAtributo(rotuloDoAparelho(quem)) + '" aria-label="Nome do aparelho">'
-      + '<button class="btn fecha" id="edita-fecha" aria-label="Fechar">&times;</button></div>';
-
-    h += '<div class="edita-linha"><span>O que é</span><div class="tipos">';
+      + ' placeholder="' + emAtributo(rotuloDoAparelho(quem)) + '" aria-label="Nome do aparelho"></label>';
+    /* o tipo que a máquina mede (o rádio Bluetooth, o hub) não se troca aqui */
     var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE[quem.classe] || "";
-    h += TIPOS_DO_APARELHO.map(function (t) {
-      return '<button class="escolha tipo-do-aparelho" data-tipodito="' + t[0] + '"' + g("aparelho-tipo")
-        + (edita ? "" : " disabled") + ' aria-pressed="' + (tipoAgora === t[0]) + '">'
-        + '<i style="background:' + (COR_DO_TIPO[t[0]] || "#9a9eb8") + '"></i>' + t[1] + "</button>";
-    }).join("");
-    h += "</div></div>";
-
-    h += '<div class="edita-linha"><span>Onde está</span><div class="onde"><span>'
-      + emAtributo(rotuloDe(n) + (face ? " · " + (face.titulo || face.nome) : "")) + "</span>"
-      + chaveDoExtensor(n) + "</div></div>";
-
-    var et = quem.etiquetas || etiquetasDoExemplo(quem, p);
-    if (et.length) {
-      h += '<div class="edita-linha"><span>O que a máquina vê</span><div class="etqs">'
-        + et.map(function (e) { return '<span class="etq">' + emAtributo(e) + "</span>"; }).join("") + "</div></div>";
-    }
-    /* A FAIXA DELE: a mesma conta da aba Conexões; sem leitura não há linha */
-    var fx = quem.faixa;
-    if (fx && fx.celulas && fx.celulas.length) {
-      h += '<div class="edita-linha"><span>A faixa dele</span><div>'
-        + '<div class="faixa-dele" role="img" aria-label="' + emAtributo(fx.texto || "A faixa dele") + '"'
-        + ' style="--cor-faixa:' + emAtributo(fx.cor || "") + '">'
-        + fx.celulas.map(function (c, k) {
-            var onde = "Canal " + k + " · " + (2402 + k) + " MHz";
-            var dito = c[0] === "p" ? " · perdido para " + c[2]
-              : c[0] === "o" ? " · ocupado" + (c[2] ? ", perde " + c[2] : "")
-              : c[0] === "b" ? " · bom" : "";
-            return '<i class="' + c[0] + '"' + (c[1] ? ' style="--marca:' + emAtributo(c[1]) + '"' : "")
-              + ' title="' + emAtributo(onde + dito) + '"></i>';
-          }).join("") + "</div>"
-        + (fx.texto ? '<span class="faixa-dele-txt">'
-          + (fx.partes || [[fx.texto, ""]]).map(function (pt) {
-              return (pt[1] ? '<i class="marca-txt" aria-hidden="true"' + ' style="--marca:'
-                + emAtributo(pt[1]) + '"></i>' : "") + emAtributo(pt[0]);
-            }).join("") + "</span>" : "")
-        + "</div></div>";
-    }
-    h += oQueFazer(n, quem);
-
-    var gVolta = ' data-gesto="voltar-ao-automatico"' + (quem.modelo ? ' data-modelo="' + quem.modelo + '"' : "")
-      + (podeGravar(n) ? ' data-entrada="' + n + '"' : "");
-    h += '<div class="edita-linha acoes-do-aparelho">'
-      + (quem.receptor ? '<a class="btn" id="descobrir-a-faixa" href="08-conexoes.html">Descobrir a faixa</a>' : "")
-      + (identificavel(quem) ? '<button class="btn" id="identificar">Identificar</button>' : "")
-      + '<button class="btn" id="voltar-ao-automatico"' + (doProduto() ? gVolta : "") + (edita ? "" : " disabled")
-      + ">Voltar ao automático</button></div>";
-    if (identificando === quem.id) {
-      h += '<p class="dica-id">Tire o aparelho e ponha de novo, depois clique «Examinar»: eu acendo a entrada em que ele estava.</p>';
-    }
-    var soNaTela = doProduto() && !podeGravar(n);
-    if (!soNaTela) {
-      h += '<details class="mais"><summary>Mais desta entrada</summary>' + linhaDoNome(n)
-        + linhaDoLugar(n) + linhaDaTroca(n) + "</details>";
-    }
-    return h;
+    var daMaquina = !tipoAgora && !!quem.classe;
+    var cor = tipoAgora ? (COR_DO_TIPO[tipoAgora] || quem.cor) : quem.cor;
+    var opcoes = daMaquina ? "<option selected>" + emAtributo(quem.tipo) + "</option>"
+      : (tipoAgora ? "" : '<option value="" selected></option>') + TIPOS_DO_APARELHO.map(function (t) {
+          return '<option value="' + t[0] + '"' + (t[0] === tipoAgora ? " selected" : "") + ">" + t[1] + "</option>";
+        }).join("");
+    h += '<label class="campo"><span>Tipo</span><span class="sel"><i style="background:' + emAtributo(cor) + '"></i>'
+      + '<select class="tipo-do-aparelho"' + (daMaquina ? "" : g("aparelho-tipo"))
+      + (edita && !daMaquina ? "" : " disabled") + ' aria-label="Tipo do aparelho">' + opcoes + "</select></span></label>";
+    return h + estadoDoAparelho(n, quem);
   }
-
-  function mostrarOPainelDoAparelho(ed, quem) {
-    var n = editando, p = porNum(n);
-    var plug = document.querySelector('.plug[data-porta="' + n + '"]');
-    var face = FACES.filter(function (f) {
-      return f.portas.some(function (x) { return x === p || x.filho === p; });
-    })[0];
-    ed.innerHTML = htmlDoPainelDoAparelho(n, quem, p, face);
-    ed.hidden = false;
-    var palco = ed.parentElement.getBoundingClientRect();
-    var chip = editandoDe === "lista" ? document.querySelector('.chip[data-ap="' + quem.id + '"]') : null;
-    if (chip) {
-      var c = chip.getBoundingClientRect();
-      ed.style.left = Math.max(0, c.left - palco.left - 308) + "px";
-      ed.style.top = Math.max(0, c.top - palco.top) + "px";
-    } else {
-      var r = plug.getBoundingClientRect();
-      ed.style.left = Math.max(0, Math.min(r.left - palco.left, palco.width - 310)) + "px";
-      ed.style.top = (r.bottom - palco.top + 8) + "px";
-    }
+  function colunaDaEntrada(n, p, quem) {
+    var h = "<h5>Entrada</h5>";
+    if (!p) return h + '<div class="vazia">Clique na entrada certa no mapa</div>';
+    var soNaTela = doProduto() && !podeGravar(n);
+    h += '<label class="campo"><span>Nome</span><input class="campo-nome" type="text" data-nome="' + n + '"'
+      + gravaNaEntrada(n, "entrada-nome") + (soNaTela ? " disabled" : "") + ' maxlength="' + MAXIMO_DO_NOME + '"'
+      + ' value="' + emAtributo(nomeDe(n)) + '" placeholder="' + emAtributo(PALAVRA_DA_ENTRADA + " " + n) + '"'
+      + ' aria-label="Nome da entrada"></label>';
+    var lido = !!HUB_LIDO[n];
+    var liga = (DECLARADO[n] || {}).liga || (lido || (quem && quem.classe === "hub") ? "hub" : "direto");
+    h += '<div class="campo"><span>Tipo</span><div class="seg">' + [["direto", "Direta"], ["hub", "Hub"]].map(function (o) {
+        /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB, e o «Direta» não cabe onde o
+           computador lê um hub: cinza, com a razão na dica (a D-03 dela), e o clique não declara. */
+        var razao = o[0] === "direto" && lido ? "O computador lê um hub nesta entrada"
+          : o[0] === "hub" && quem && quem.classe !== "hub" && !lido ? quem.tipo + " está direto nesta entrada" : "";
+        var trava = soNaTela || razao;
+        return '<button class="escolha' + (trava ? " apagado" : "") + '" data-liga="' + o[0] + '"'
+          + (trava ? ' aria-disabled="true"' : gravaNaEntrada(n, "entrada-o-que-tem"))
+          + (razao ? ' title="' + emAtributo(razao) + '"' : "")
+          + ' aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
+      }).join("") + "</div></div>";
+    var origem = doProduto() && podeGravar(n) ? FRASES_DA_ORIGEM[USB_DE[String(n)] || ""] || "" : "";
+    h += '<div class="campo"><span>USB</span><div class="seg"' + (origem ? ' title="' + emAtributo(origem) + '"' : "") + ">"
+      + [[3, "3.0"], [2, "2.0"]].map(function (o) {
+          return '<button class="escolha' + (soNaTela ? ' apagado" aria-disabled="true"' : '"') + ' data-usb="' + o[0] + '"'
+            + (soNaTela ? "" : gravaNaEntrada(n, "entrada-velocidade")) + ' aria-pressed="' + (p.usb === o[0]) + '"'
+            + ' aria-label="USB ' + o[1] + '">' + o[1] + "</button>";
+        }).join("") + "</div></div>";
+    var chave = chaveDoExtensor(n);
+    return h + (chave ? '<div class="campo"><span>Extensor</span>' + chave + "</div>" : "");
+  }
+  function peDoPainel(n, quem) {
+    if (!quem) return "";
+    var edita = editavelNoProduto(quem);
+    var gVolta = ' data-gesto="voltar-ao-automatico"' + (quem.modelo ? ' data-modelo="' + quem.modelo + '"' : "")
+      + (n && podeGravar(n) ? ' data-entrada="' + n + '"' : "");
+    return '<div class="pe">'
+      + (identificando === quem.id ? '<span class="dica-id">Tire e ponha de novo, depois clique em Examinar.</span>' : "")
+      + (identificavel(quem) ? '<button class="btn" id="identificar" title="Acende a entrada dele depois do Examinar">Identificar</button>' : "")
+      + '<button class="btn" id="voltar-ao-automatico" title="Esquece o nome e o tipo que você deu"'
+      + (doProduto() ? gVolta : "") + (edita ? "" : " disabled") + ">Automático</button></div>";
+  }
+  function htmlDoPainel(n, quem) {
+    var p = n ? porNum(n) : null, face = p ? faceDaPorta(p) : null;
+    var lugar = face ? (face.titulo || face.nome) : "";
+    var titulo = quem ? rotuloDoAparelho(quem) : rotuloDe(n);
+    var onde = quem ? (n ? rotuloDe(n) + (lugar ? " · " + lugar : "") : "Sem entrada marcada") : lugar;
+    return '<div class="cab"><span class="bola" style="background:' + emAtributo(quem ? quem.cor : "var(--color-rule)") + '"></span>'
+      + "<b>" + emAtributo(titulo) + '</b><span class="onde">' + emAtributo(onde) + "</span>"
+      + '<button class="fecha" id="edita-fecha" aria-label="Fechar">&times;</button></div>'
+      + '<div class="colunas"><div class="col">' + colunaDoAparelho(n, quem, p) + "</div>"
+      + '<div class="col">' + colunaDaEntrada(n, p, quem) + "</div></div>" + peDoPainel(n, quem);
+  }
+  function posicionar(ed, alvo) {
+    if (!alvo) return;
+    var r = alvo.getBoundingClientRect(), w = ed.offsetWidth, h = ed.offsetHeight;
+    var naLista = !!alvo.closest(".bandeja");
+    var x = naLista ? r.left - w - 8 : r.left, y = naLista ? r.top : r.bottom + 8;
+    if (x + w > innerWidth - 12) x = innerWidth - 12 - w;
+    if (y + h > innerHeight - 12) y = naLista ? innerHeight - 12 - h : r.top - 8 - h;
+    ed.style.left = Math.max(12, x) + "px";
+    ed.style.top = Math.max(12, y) + "px";
   }
 
   function mostrarEditor() {
     var ed = document.getElementById("edita");
     if (!ed) return;
-    var quem = editando && modo !== "ideal" && !segurando ? aparelhoDaEntrada(editando) : null;
-    var plug = editando && document.querySelector('.plug[data-porta="' + editando + '"]');
-    /* O HUB NÃO É UM APARELHO QUE SE BATIZA: ele é o que a entrada tem (a face «Hub na
-       Entrada N» desce dele), e a entrada dele abre o editor da entrada, com o «Hub»
-       que o computador lê e a velocidade. O painel do aparelho ofereceria «Teclado,
-       Mouse…» para um hub. */
-    if (quem && quem.classe !== "hub" && plug && porNum(editando)) mostrarOPainelDoAparelho(ed, quem);
-    else mostrarEditorDaEntrada();
+    var n = editandoAp ? null : editando;
+    var quem = editandoAp ? acha(editandoAp) : (n ? aparelhoDaEntrada(n) : null);
+    var plug = n && porNum(n) && document.querySelector('.plug[data-porta="' + n + '"]');
+    var soNaTela = n && doProduto() && !podeGravar(n);
+    if (modo === "ideal" || (!editandoAp && !plug) || (editandoAp && !quem) || (soNaTela && !quem)) {
+      ed.hidden = true; ed.innerHTML = ""; return;
+    }
+    ed.innerHTML = htmlDoPainel(n, quem);
+    ed.hidden = false;
+    var chip = (editandoAp || editandoDe === "lista") && quem
+      ? document.querySelector('.pend-lista .chip[data-ap="' + quem.id + '"]')
+        || document.querySelector('#bandeja .chip[data-ap="' + quem.id + '"]') : null;
+    posicionar(ed, chip || plug);
   }
 
   /* TROCAR DE LUGAR É ARRASTAR para a outra entrada, com «Mover para…» no painel para quem usa
@@ -1780,12 +1835,11 @@
     else if (mudou.length === 1) {
       var m = mudou[0], nome = String(m.ap.tipo || "aparelho").toLowerCase();
       frase = m.entradaAgora
-        ? "O " + nome + " mudou para a " + naFraseDe(m.entradaAgora) + ", e eu já sei onde ele está."
-        : "O " + nome + " mudou de lugar, e eu ainda não sei em qual entrada ele está.";
+        ? "O " + nome + " mudou para a " + naFraseDe(m.entradaAgora) + "."
+        : "O " + nome + " mudou de lugar; falta marcar a entrada.";
     } else {
       frase = mudou.length + " aparelhos mudaram de lugar"
-        + (sab === mudou.length ? ", e eu já sei onde estão."
-           : sab ? ", e eu sei onde " + sab + " estão." : ", e eu ainda não sei em quais entradas.");
+        + (sab === mudou.length ? "." : sab ? "; " + sab + " com a entrada marcada." : "; falta marcar as entradas.");
     }
     return '<p class="aviso-uma-linha" role="status"><span class="ok" aria-hidden="true">✓</span>'
       + "<span>" + emAtributo(frase) + "</span>"
@@ -1822,101 +1876,24 @@
     avisoAberto = false; avisoLeituras = null;
   }
 
-  function mostrarEditorDaEntrada() {
-    var ed = document.getElementById("edita");
-    if (!ed) return;
-    var p = editando && porNum(editando);
-    var plug = p && document.querySelector('.plug[data-porta="' + editando + '"]');
-    /* o editor escondido não guarda os botões da entrada de antes: um
-       clique neles levaria ao disco o gesto de outra entrada */
-    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; ed.innerHTML = ""; return; }
-    /* O COMPUTADOR LÊ UM HUB NESTA ENTRADA: «Hub» nasce apertado, e «Direto»
-       fica apagado com a razão na dica (o espelho da D-03). */
-    var lido = !!HUB_LIDO[editando];
-    var liga = (DECLARADO[editando] || {}).liga || (lido ? "hub" : "direto");
-    var face = FACES.filter(function (f) {
-      return f.portas.some(function (x) { return x === p || x.filho === p; });
-    })[0];
-    var quem = alocacao[editando] ? acha(alocacao[editando]) : null;
-    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. No produto, o que
-       ela declarasse numa entrada que não grava (as do hub desenhado)
-       sumiria ao reler, sem aviso: ali o editor só mostra quem está
-       nela, e sem ninguém ele não abre. No exemplo, tudo é só tela. */
-    var soNaTela = doProduto() && !podeGravar(editando);
-    if (soNaTela && !quem) { ed.hidden = true; ed.innerHTML = ""; return; }
-    ed.innerHTML = '<div class="edita-cab"><b>' + emAtributo(rotuloDe(editando)) + "</b><span>" + (face ? face.nome : "") + "</span>"
-      + '<button class="btn fecha" id="edita-fecha" aria-label="Fechar">&times;</button></div>'
-      + (soNaTela ? "" : linhaDoNome(editando))
-      + (soNaTela ? "" : '<div class="edita-linha"><span>O que tem aqui</span><div class="seg dois">'
-      + [["direto", "Direto"], ["hub", "Hub"]].map(function (o) {
-          /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB: cinza,
-             com a razão na dica (a D-03 dela), e o clique não declara. */
-          if (o[0] === "direto" && lido) {
-            return '<button class="escolha apagado" data-liga="direto" aria-disabled="true" aria-pressed="false"'
-              + ' title="O computador lê um hub nesta entrada">' + o[1] + "</button>";
-          }
-          if (o[0] === "hub" && quem && quem.classe !== "hub" && !lido) {
-            return '<button class="escolha apagado" data-liga="hub" aria-disabled="true" aria-pressed="' + (liga === "hub")
-              + '" title="' + quem.tipo + ' Está Direto Nesta Entrada">' + o[1] + "</button>";
-          }
-          return '<button class="escolha" data-liga="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-o-que-tem") + ' aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
-        }).join("")
-      + "</div>" + (lido ? '<span class="lido">O computador lê um hub nela.</span>' : "") + "</div>"
-      + linhaDoExtensor(editando)
-      + '<div class="edita-linha"><span>Velocidade</span><div class="seg dois">'
-      + [[3, "USB 3.0"], [2, "USB 2.0"]].map(function (o) {
-          return '<button class="escolha" data-usb="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-velocidade") + ' aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
-        }).join("")
-      + "</div>" + origemDaVelocidade(editando) + "</div>")
-      + (quem ? '<div class="edita-linha"><span>' + quem.tipo + ' está aqui</span></div>' : "")
-      + (soNaTela ? "" : linhaDoLugar(editando) + linhaDaTroca(editando));
-    ed.hidden = false;
-    var palco = ed.parentElement.getBoundingClientRect(), r = plug.getBoundingClientRect();
-    ed.style.left = Math.max(0, Math.min(r.left - palco.left, palco.width - 310)) + "px";
-    ed.style.top = (r.bottom - palco.top + 8) + "px";
-  }
-
   document.addEventListener("keydown", function (ev) {
-    if (ev.key === "Escape" && editando) { editando = null; pintar(); }
+    if (ev.key === "Escape" && (editando || editandoAp)) { editando = null; editandoAp = null; segurando = null; pintar(); }
   });
   /* O NOME, NO EXEMPLO — 26/09/2026. No produto o campo leva o gesto
      `entrada-nome`, e a página espera o disco; aqui, sem produto, o nome
      fica só na tela. */
   document.addEventListener("change", function (ev) {
+    var sel = ev.target.closest && ev.target.closest("#edita select.tipo-do-aparelho");
+    if (sel && !sel.hasAttribute("data-gesto")) {
+      var ap2 = editandoAp ? acha(editandoAp) : aparelhoDaEntrada(editando);
+      if (ap2 && sel.value) { ap2.tipoDeclarado = sel.value; ap2.cor = COR_DO_TIPO[sel.value] || ap2.cor; }
+      pintar(); return;
+    }
     var campo = ev.target.closest && ev.target.closest("#edita [data-nome]");
     if (!campo || campo.hasAttribute("data-gesto")) return;
     declarar(campo.getAttribute("data-nome"), "nome", campo.value.trim().slice(0, MAXIMO_DO_NOME));
     pintar();
   });
-
-  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════════════════════════
-     Pedido dela: «Todas as palavras Iniciam com a letra maiúscula». Os
-     conectivos ficam minúsculos no meio da frase, que é como ela mesma escreve
-     («Gestão de Controles», «Perfil de Desempenho»). Caminho de barramento,
-     número e código não mudam. Roda no fim de cada pintura, sobre a página
-     inteira, e é idempotente. */
-  var MINUSCULAS = ["a", "o", "as", "os", "e", "de", "da", "das", "do", "dos", "em", "no", "na",
-    "nos", "nas", "num", "numa", "um", "uma", "para", "pra", "por", "com", "ao", "à", "se", "ou"];
-  function emTitulo(raiz) {
-    if (!raiz) return;
-    var andar = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, null), nos = [];
-    while (andar.nextNode()) nos.push(andar.currentNode);
-    nos.forEach(function (no) {
-      var pai = no.parentElement;
-      if (!pai || pai.closest("code, script, style, .caminho, .chip .txt span, .aviso-uma-linha, .leitura-da-maquina, .faz, .dica-id, .etq, .faixa-dele-txt")) return;
-      var abre = !no.previousSibling;
-      var novo = no.nodeValue.replace(/[^\s—·,.;:()«»"→↳…]+/g, function (w, pos) {
-        if (!/^[A-Za-zÀ-ÿ]/.test(w)) return w;
-        /* começo de frase conta como primeira palavra: «Possíveis. O Melhor» */
-        var antes = no.nodeValue.slice(0, pos).trim();
-        var primeira = (abre && antes === "") || /[.!?]$/.test(antes);
-        if (!primeira && MINUSCULAS.indexOf(w.toLowerCase()) !== -1) return w.toLowerCase();
-        /* cada pedaço de um nome com hífen: «Wi-Fi», «Entrada-Filha» */
-        return w.split("-").map(function (s) { return s.charAt(0).toUpperCase() + s.slice(1); }).join("-");
-      });
-      if (novo !== no.nodeValue) no.nodeValue = novo;
-    });
-  }
 
   function pintar() {
     /* o hub nasce com o cinza da paleta (#6272a4), e o cinza da letra saiu */
@@ -1940,7 +1917,7 @@
       /* O SUGESTÕES FALA MENOS — 01/10/2026 (pedido f): os botões dizem só o
          arranjo, cada movimento é uma linha com as razões no «?», e da conta do
          fim fica a linha do ganho não medido (D-LINHA-DO-GANHO-NAO-MEDIDO). */
-      html += '<div class="escolhas" style="margin-bottom:.9rem">'
+      html += '<div class="escolhas" style="margin-bottom:.4rem">'
         + VARIANTES.map(function (v) {
             return '<button class="escolha" data-var="' + v.id + '" aria-pressed="' + (variante === v.id) + '">'
               + "<b>" + v.rotulo + "</b></button>";
@@ -1949,16 +1926,15 @@
         + (function () {
             var c = consequencias(op), base = consequencias({});
             var novas = c.filter(function (x) { return base.indexOf(x) === -1; });
-            return novas.length ? '<p style="margin:-.4rem 0 .9rem;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
+            return novas.length ? '<p style="margin:0 0 .4rem;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
               + '<b style="color:var(--color-lacuna)">O que se perde:</b> ' + novas.join("; ") + ".</p>" : "";
           })();
       var movs = receita(op);
       var reais = movs.filter(function (m) { return !m.semNumero; });
       if (!reais.length) {
-        html += '<div class="nada-a-fazer"><b>Nada a mover.</b> Cada aparelho já está na entrada que eu escolheria: '
-             + "o teclado numa entrada direta, o Wi-Fi longe dos dongles, e os três dongles no alto e separados.</div>";
+        html += '<div class="nada-a-fazer"><b>Nada a mover.</b></div>';
       } else {
-        html += '<p class="chamada"><span class="grande">' + reais.length + " movimento" + (reais.length > 1 ? "s" : "") + "</span></p>"
+        html += '<p class="chamada"><span class="grande">' + reais.length + " troca" + (reais.length > 1 ? "s" : "") + "</span></p>"
              + '<ol class="receita">'
              + reais.map(function (m) {
                  return "<li><div><h4>" + m.titulo + '<span class="ajuda" tabindex="0">?<span class="dica">'
@@ -1966,25 +1942,19 @@
                    + "</span></span></h4></div></li>";
                }).join("")
              + "</ol>";
-        var fim = movs.filter(function (m) { return m.semNumero; })[0];
-        var ganho = fim ? fim.linhas.filter(function (l) { return /^<b>/.test(l.t); })[0] : null;
-        if (ganho) html += '<p class="ganho"><span class="selo ' + ganho.s + '">' + ganho.s + "</span><span>"
-          + ganho.t.replace(/<\/b>[\s\S]*$/, "</b>") + "</span></p>";
-        html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já movi — veja o que mudou</button>'
-             +  '<button class="btn" id="voltar">Desfazer o que eu declarei</button></div>';
+        html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já mudei</button>'
+             +  '<button class="btn" id="voltar">Desfazer</button></div>';
       }
     } else if (modo === "reexame") {
       var mudou = reexame(leituraAnterior, leituraAtual);
       if (!mudou.length) {
-        html = '<div class="nada-a-fazer"><b>Nada mudou de lugar.</b> Nenhum aparelho mudou de lugar desde a última vez que eu olhei.</div>';
+        html = '<div class="nada-a-fazer"><b>Nada mudou de lugar.</b></div>';
       } else {
         var sabidos = mudou.filter(function (m) { return m.entradaAgora; });
         var novos = mudou.filter(function (m) { return !m.entradaAgora; });
-        html = '<p class="chamada">Reexaminei e <span class="grande">' + mudou.length
+        html = '<p class="chamada"><span class="grande">' + mudou.length
           + "</span> aparelho" + (mudou.length > 1 ? "s mudaram" : " mudou") + " de lugar."
-          + (sabidos.length ? " Reconheci " + sabidos.length + " sozinho." : "") + "</p>"
-          + '<p style="margin:-.3rem 0 .8rem;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
-          + "O caminho de barramento de quem você moveu é outro; o <b>serial</b> não. É por ele que eu sei quem foi para onde.</p>"
+          + (sabidos.length ? " " + sabidos.length + " com a entrada já marcada." : "") + "</p>"
           + '<ol class="receita">'
           + mudou.map(function (m) {
               var reconhecido = !!m.entradaAgora;
@@ -2002,20 +1972,17 @@
           + "</ol>";
         if (novos.length) {
           html += '<div class="nada-a-fazer" style="margin-top:.6rem;border-left-color:var(--color-lacuna)">'
-            + '<b style="color:var(--color-lacuna)">Por que ' + novos.length
-            + (novos.length > 1 ? " ficaram" : " ficou") + " sem entrada</b>"
+            + '<b style="color:var(--color-lacuna)">' + novos.length + " sem entrada marcada</b>"
             + '<p style="margin:.3rem 0 0;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
-            + "Você declarou " + Object.keys(MAPA).length + " das " + todasPortas().length
-            + " entradas — só as que tinham algo no dia. Quando você move um aparelho para uma entrada"
-            + " que nunca foi declarada, eu vejo o aparelho e não sei onde ele está."
-            + " <b>Declarar as entradas vazias também</b> é o que faz este reconhecimento nunca mais falhar.</p></div>";
+            + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas marcadas."
+            + " Marcar as vazias também faz o reconhecimento não falhar.</p></div>";
         }
       }
       html += '<div class="acoes"><button class="btn" id="voltar-leitura">Fechar</button>'
         + '<button class="btn" id="ver-antes">Ver como o arranjo estava ' + (leituraAtual === "agora" ? "antes" : "agora") + "</button></div>";
       html = oAvisoDeUmaLinha(mudou, html);
     } else if (modo === "mao") {
-      html = '<p class="chamada" id="chamada-mao">O que você pretende conectar?</p><div class="escolhas">'
+      html = '<p class="chamada" id="chamada-mao">O que vai conectar?</p><div class="escolhas">'
         + NA_MAO.map(function (m) { return '<button class="escolha" data-mao="' + m.id + '" aria-pressed="' + (naMao === m.id) + '"><i style="background:' + m.cor + '"></i>' + m.rotulo + "</button>"; }).join("")
         + "</div>";
       if (naMao && LICOES[naMao]) {
@@ -2035,7 +2002,7 @@
         + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
         + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
             + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
-        + (pend ? ' · clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
+        + (pend ? ' · Clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
         + "</span></p>";
     }
     painel.innerHTML = html;
@@ -2056,9 +2023,7 @@
       var faixa = "";
       if (pend.length) {
         faixa = '<div class="por-confirmar">'
-          + "<b>" + pend.length + " aparelho" + (pend.length > 1 ? "s estão" : " está")
-          + (reg === "hub" ? " no hub" : " numa entrada direta do PC")
-          + ", e eu não sei em qual entrada</b>"
+          + "<b>" + pend.length + (reg === "hub" ? " no hub" : " no PC") + " sem entrada marcada</b>"
           + '<div class="pend-lista">'
           + pend.map(function (x) {
               return '<button class="chip pend" data-ap="' + x.ap.id + '"'
@@ -2067,7 +2032,6 @@
                 + '<span class="txt"><b>' + x.ap.tipo + "</b><span>" + x.caminho + "</span></span></button>";
             }).join("")
           + "</div>"
-          + '<span class="pend-ajuda">Clique o aparelho e depois a entrada onde ele está — as candidatas acendem. Eu aprendo de uma vez.</span>'
           + "</div>";
       }
       /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-ENTRADA): o
@@ -2085,38 +2049,36 @@
     document.getElementById("bandeja").innerHTML = APARELHOS.map(function (a) {
       var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
       return '<button class="chip" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
+        + ' title="' + emAtributo(a.nome + " · " + (caminhoDe(a.id) || "não está plugado")) + '"'
         + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
         + '<i class="marca" style="background:' + a.cor + '"></i>'
-        + '<span class="txt"><b>' + emAtributo(rotuloDoAparelho(a)) + "</b><span>" + a.nome + " · " + (caminhoDe(a.id) || "não está plugado") + "</span></span>"
+        + '<span class="txt"><b>' + emAtributo(rotuloDoAparelho(a)) + "</b></span>"
         + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
     }).join("");
     /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela
        dizia, e ela nunca o achou. Quantos estão sem lugar já está no
        painel («fora do mapa»). */
-    document.getElementById("ajuda-bandeja").textContent = segurando
-      ? "Na mão: " + acha(segurando).tipo + ". Clique a entrada em que ele vai."
-      : "";
+    document.getElementById("ajuda-bandeja").textContent = "";
 
     /* legenda */
     document.getElementById("legenda").innerHTML = modo === "ideal"
-      ? '<span><i class="amostra r-ok"></i> vem para cá</span><span><i class="amostra r-ru"></i> sai daqui</span>'
+      ? '<span><i class="amostra r-ok"></i> Entra aqui</span><span><i class="amostra r-ru"></i> Sai daqui</span>'
         + '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
       : modo === "mao"
-      ? '<span><i class="amostra r-ok"></i> melhor lugar</span><span><i class="amostra r-ev"></i> vale evitar</span>'
-        + '<span><i class="amostra r-ru"></i> evite</span><span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
+      ? '<span><i class="amostra r-ok"></i> Melhor lugar</span><span><i class="amostra r-ev"></i> Vale evitar</span>'
+        + '<span><i class="amostra r-ru"></i> Evite</span><span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
       : '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
-        + '<span><i class="amostra r-ru"></i> está num lugar ruim</span>';
+        + '<span><i class="amostra r-ru"></i> Lugar ruim</span>';
 
     mostrarEditor();
-    emTitulo(document.querySelector(".pagina"));
   }
 
   /* ══ 7. INTERAÇÃO ════════════════════════════════════════════════════ */
   document.addEventListener("click", function (ev) {
     /* O EDITOR DA ENTRADA — 26/09/2026. Os gestos dele vêm antes de todos:
        um botão dentro do editor não pode cair no clique do plugue embaixo. */
-    if (ev.target.closest(".modo[data-modo]")) editando = null;
-    if (ev.target.id === "edita-fecha") { editando = null; pintar(); return; }
+    if (ev.target.closest(".modo[data-modo]")) { editando = null; editandoAp = null; segurando = null; }
+    if (ev.target.id === "edita-fecha") { editando = null; editandoAp = null; segurando = null; pintar(); return; }
     var lg = ev.target.closest("#edita [data-liga]");
     /* A TELA ESPERA O DISCO — 26/09/2026, D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO.
        O botão que leva o gesto ao disco não pinta nada aqui: ele fica
@@ -2134,7 +2096,7 @@
        espera o disco; o que não leva (o exemplo) muda só na tela. */
     var abre = ev.target.closest("[data-ap-abre]");
     if (abre) {
-      achado = null; editandoDe = "mapa";
+      achado = null; editandoDe = "mapa"; editandoAp = null; segurando = null;
       editando = abre.getAttribute("data-ap-abre"); if (modo === "ideal") modo = "mesa";
       pintar(); return;
     }
@@ -2167,14 +2129,18 @@
     if (ev.target.closest("#edita #identificar")) {
       identificando = alocacao[editando] || null; pintar(); return;
     }
-    if (ev.target.id === "ver-a-sugestao") { editando = null; modo = "ideal"; pintar(); return; }
+    if (ev.target.id === "ver-a-sugestao") { editando = null; editandoAp = null; segurando = null; modo = "ideal"; pintar(); return; }
     if (ev.target.id === "aviso-ver") { avisoAberto = true; pintar(); return; }
     if (ev.target.id === "aviso-fecha") { modo = "mesa"; pintar(); return; }
     var ub = ev.target.closest("#edita [data-usb]");
     if (ub && ub.hasAttribute("data-gesto")) return;
-    if (ub) { declarar(editando, "usb", parseInt(ub.getAttribute("data-usb"), 10)); pintar(); return; }
-    if (editando && !ev.target.closest("#edita") && !ev.target.closest(".plug[data-porta]")) {
-      editando = null; pintar();
+    if (ub) {
+      if (ub.getAttribute("aria-disabled") !== "true") declarar(editando, "usb", parseInt(ub.getAttribute("data-usb"), 10));
+      pintar(); return;
+    }
+    if ((editando || editandoAp) && !ev.target.closest("#edita") && !ev.target.closest(".plug[data-porta]")
+        && !ev.target.closest(".chip[data-ap]")) {
+      editando = null; editandoAp = null; segurando = null; pintar();
     }
     var m = ev.target.closest(".modo[data-modo]");
     if (m) { modo = m.getAttribute("data-modo"); if (modo !== "mao") { naMao = null; segurando = null; } pintar(); return; }
@@ -2218,16 +2184,15 @@
        corrige ali é o «Trocar com…» (um ato por porta). O que não está em
        entrada nenhuma continua indo para a mão, para ser ensinado. */
     if (chip && portaDe(chip.getAttribute("data-ap"))) {
-      achado = null; editandoDe = "lista";
+      achado = null; editandoDe = "lista"; editandoAp = null;
       editando = portaDe(chip.getAttribute("data-ap")); modo = "mesa";
       segurando = null; naMao = null; pintar(); return;
     }
     if (chip) {
-      modo = "mao";
+      /* o aparelho sem entrada: o painel abre perto dele e diz o passo; o clique na entrada certa
+         marca o lugar dele (as candidatas acendem) */
       var ap = acha(chip.getAttribute("data-ap"));
-      var atual = portaDe(ap.id); if (atual) delete alocacao[atual];
-      segurando = ap.id;
-      naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mouse: "mouse", webcam: "webcam" })[ap.classe] || null;
+      achado = null; editando = null; editandoAp = ap.id; segurando = ap.id; naMao = null; modo = "mesa";
       pintar(); return;
     }
 
@@ -2248,7 +2213,7 @@
           Object.keys(MAPA).forEach(function (k) { if (MAPA[k] === c) delete MAPA[k]; });
           MAPA[n] = c;
         }
-        segurando = null; naMao = null; modo = "mesa";
+        segurando = null; naMao = null; editandoAp = null; modo = "mesa"; editando = n;
       } else {
         /* o plugue abre o editor dela: o que tem nesta entrada, e a velocidade */
         editando = n;

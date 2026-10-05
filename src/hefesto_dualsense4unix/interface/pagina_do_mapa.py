@@ -4319,7 +4319,1814 @@ EDICOES: tuple[Edicao, ...] = (
 #: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10 e 05/10: as do
 #: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as do conjunto «Conexões 2»
 #: foram publicadas e entraram no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════'
+            '════════════════════\n'
+            '     Pedido dela: «Todas as palavras Iniciam com a letra'
+            ' maiúscula». Os\n'
+            '     conectivos ficam minúsculos no meio da frase, que é'
+            ' como ela mesma escreve\n'
+            '     («Gestão de Controles», «Perfil de Desempenho»). Ca'
+            'minho de barramento,\n'
+            '     número e código não mudam. Roda no fim de cada pint'
+            'ura, sobre a página\n'
+            '     inteira, e é idempotente. */\n'
+            '  var MINUSCULAS = ["a", "o", "as", "os", "e", "de", "da'
+            '", "das", "do", "dos", "em", "no", "na",\n'
+            '    "nos", "nas", "num", "numa", "um", "uma", "para", "p'
+            'ra", "por", "com", "ao", "à", "se", "ou"];\n'
+            '  function emTitulo(raiz) {\n'
+            '    if (!raiz) return;\n'
+            '    var andar = document.createTreeWalker(raiz, NodeFilt'
+            'er.SHOW_TEXT, null), nos = [];\n'
+            '    while (andar.nextNode()) nos.push(andar.currentNode)'
+            ';\n'
+            '    nos.forEach(function (no) {\n'
+            '      var pai = no.parentElement;\n'
+            '      if (!pai || pai.closest("code, script, style, .cam'
+            'inho, .chip .txt span, .aviso-uma-linha, .leitura-da-maq'
+            'uina, .faz, .dica-id, .etq, .faixa-dele-txt")) return;\n'
+            '      var abre = !no.previousSibling;\n'
+            '      var novo = no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳'
+            '…]+/g, function (w, pos) {\n'
+            '        if (!/^[A-Za-zÀ-ÿ]/.test(w)) return w;\n'
+            '        /* começo de frase conta como primeira palavra: '
+            '«Possíveis. O Melhor» */\n'
+            '        var antes = no.nodeValue.slice(0, pos).trim();\n'
+            '        var primeira = (abre && antes === "") || /[.!?]$'
+            '/.test(antes);\n'
+            '        if (!primeira && MINUSCULAS.indexOf(w.toLowerCas'
+            'e()) !== -1) return w.toLowerCase();\n'
+            '        /* cada pedaço de um nome com hífen: «Wi-Fi», «E'
+            'ntrada-Filha» */\n'
+            '        return w.split("-").map(function (s) { return s.'
+            'charAt(0).toUpperCase() + s.slice(1); }).join("-");\n'
+            '      });\n'
+            '      if (novo !== no.nodeValue) no.nodeValue = novo;\n'
+            '    });\n'
+            '  }\n'
+            '\n'
+        ),
+        depois=(
+            ''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a página deixa de pôr maiúscula em toda palavra'
+            ': a regra dela de 05/10 é a primeira letra da linha, e c'
+            'ada frase nasce assim'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    mostrarEditor();\n'
+            '    emTitulo(document.querySelector(".pagina"));\n'
+            '  }'
+        ),
+        depois=(
+            '    mostrarEditor();\n'
+            '  }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem o «emTitulo» no fim da pintura'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '<p class="quando" id="de-quando">leitura de exemplo · 24'
+            '/08/2026</p>'
+        ),
+        depois=(
+            '<p class="quando" id="de-quando">Leitura de exemplo · 24'
+            '/08/2026</p>'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira maiúscula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      <h3>Atualmente conectado</h3>'
+        ),
+        depois=(
+            '      <h3>Conectado agora</h3>'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — «Conectado agora»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '"cabo": "extensor de 1 m, declarado por você"'
+        ),
+        depois=(
+            '"cabo": "Extensor de 1 m"'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o cabo do exemplo, curto e com a primeira maiús'
+            'cula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            "(pend ? ' · clique em <b"
+        ),
+        depois=(
+            "(pend ? ' · Clique em <b"
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira maiúscula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '          + "<b>" + pend.length + " aparelho" + (pend.le'
+            'ngth > 1 ? "s estão" : " está")\n'
+            '          + (reg === "hub" ? " no hub" : " numa entrada '
+            'direta do PC")\n'
+            '          + ", e eu não sei em qual entrada</b>"'
+        ),
+        depois=(
+            '          + "<b>" + pend.length + (reg === "hub" ? " no '
+            'hub" : " no PC") + " sem entrada marcada</b>"'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — «3 no PC sem entrada marcada», sem primeira pes'
+            'soa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '          + \'<span class="pend-ajuda">Clique o aparelho '
+            'e depois a entrada onde ele está — as candidatas acendem'
+            ". Eu aprendo de uma vez.</span>'\n"
+        ),
+        depois=(
+            ''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sai a ajuda «Clique o aparelho…»: o painel diz '
+            'o passo'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      return \'<button class="chip" data-ap="\' + a.id + \''
+            '"\' + (p ? \' data-alocado="1"\' : "")'
+        ),
+        depois=(
+            '      return \'<button class="chip" data-ap="\' + a.id + \''
+            '"\' + (p ? \' data-alocado="1"\' : "")\n'
+            '        + \' title="\' + emAtributo(a.nome + " · " + (cami'
+            'nhoDe(a.id) || "não está plugado")) + \'"\''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o modelo e o caminho vão para o tooltip'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        + \'<span class="txt"><b>\' + emAtributo(rotuloDoA'
+            'parelho(a)) + "</b><span>" + a.nome + " · " + (caminhoDe'
+            '(a.id) || "não está plugado") + "</span></span>"'
+        ),
+        depois=(
+            '        + \'<span class="txt"><b>\' + emAtributo(rotuloDoA'
+            'parelho(a)) + "</b></span>"'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — uma linha por aparelho'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    document.getElementById("ajuda-bandeja").textContent'
+            ' = segurando\n'
+            '      ? "Na mão: " + acha(segurando).tipo + ". Clique a '
+            'entrada em que ele vai."\n'
+            '      : "";'
+        ),
+        depois=(
+            '    document.getElementById("ajuda-bandeja").textContent'
+            ' = "";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o passo de quem está sem entrada mora no painel'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      ? \'<span><i class="amostra r-ok"></i> vem para cá<'
+            '/span><span><i class="amostra r-ru"></i> sai daqui</span'
+            ">'\n"
+            '        + \'<span><i class="amostra v3"></i> USB 3.0</spa'
+            'n><span><i class="amostra v2"></i> USB 2.0</span>\'\n'
+            '      : modo === "mao"\n'  # (noqa-acento)
+            '      ? \'<span><i class="amostra r-ok"></i> melhor lugar'
+            '</span><span><i class="amostra r-ev"></i> vale evitar</s'
+            "pan>'\n"
+            '        + \'<span><i class="amostra r-ru"></i> evite</spa'
+            'n><span><i class="amostra v3"></i> USB 3.0</span><span><'
+            'i class="amostra v2"></i> USB 2.0</span>\'\n'
+            '      : \'<span><i class="amostra v3"></i> USB 3.0</span>'
+            '<span><i class="amostra v2"></i> USB 2.0</span>\'\n'
+            '        + \'<span><i class="amostra r-ru"></i> está num l'
+            "ugar ruim</span>';"
+        ),
+        depois=(
+            '      ? \'<span><i class="amostra r-ok"></i> Entra aqui</'
+            'span><span><i class="amostra r-ru"></i> Sai daqui</span>'
+            "'\n"
+            '        + \'<span><i class="amostra v3"></i> USB 3.0</spa'
+            'n><span><i class="amostra v2"></i> USB 2.0</span>\'\n'
+            '      : modo === "mao"\n'  # (noqa-acento)
+            '      ? \'<span><i class="amostra r-ok"></i> Melhor lugar'
+            '</span><span><i class="amostra r-ev"></i> Vale evitar</s'
+            "pan>'\n"
+            '        + \'<span><i class="amostra r-ru"></i> Evite</spa'
+            'n><span><i class="amostra v3"></i> USB 3.0</span><span><'
+            'i class="amostra v2"></i> USB 2.0</span>\'\n'
+            '      : \'<span><i class="amostra v3"></i> USB 3.0</span>'
+            '<span><i class="amostra v2"></i> USB 2.0</span>\'\n'
+            '        + \'<span><i class="amostra r-ru"></i> Lugar ruim'
+            "</span>';"
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a legenda curta, com a primeira maiúscula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    --usb2: #1b1c24;'
+        ),
+        depois=(
+            '    --usb2: #5b6072;'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o USB 2.0 cinza, visível na legenda e nas entra'
+            'das'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        estado = "chega"; vered = "vem para cá";\n'
+            '      } else if (!idPlano && idAgora) {\n'
+            '        ap = acha(idAgora); estado = "sai"; vered = "sai'
+            ' daqui";\n'
+            '      } else if (idPlano) { estado = "fica"; vered = "fi'
+            'ca"; }'
+        ),
+        depois=(
+            '        estado = "chega";\n'
+            '      } else if (!idPlano && idAgora) {\n'
+            '        ap = acha(idAgora); estado = "sai";\n'
+            '      } else if (idPlano) { estado = "fica"; }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — nas Sugestões a borda diz «entra» e «sai»; a pa'
+            'lavra embaixo sai'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        if (ap.classe === "wifi" && porta.onde === "hub"'
+            ') { problema = \' data-problema="1"\'; vered = "mudar daqu'
+            'i"; }\n'
+            '        if (ap.classe === "teclado" && porta.onde === "h'
+            'ub") { problema = \' data-problema="1"\'; vered = "mudar d'
+            'aqui"; }'
+        ),
+        depois=(
+            '        if (ap.classe === "wifi" && porta.onde === "hub"'
+            ') { problema = \' data-problema="1"\'; vered = "Mudar daqu'
+            'i"; }\n'
+            '        if (ap.classe === "teclado" && porta.onde === "h'
+            'ub") { problema = \' data-problema="1"\'; vered = "Mudar d'
+            'aqui"; }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira maiúscula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var titulo = ap ? ap.tipo + " — " + ap.nome : rotulo'
+            'De(porta.n) + ", vazia";'
+        ),
+        depois=(
+            '    var titulo = ap ? ap.tipo + " — " + ap.nome : rotulo'
+            'De(porta.n) + " vazia";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o nome da entrada vazia'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      h += \'<span class="vazio">vazia</span>\';'
+        ),
+        depois=(
+            '      h += \'<span class="vazio">Vazia</span>\';'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira maiúscula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            'HUB_LIDO[porta.n]) h += \'<span class="decl">hub</span>\';'
+        ),
+        depois=(
+            'HUB_LIDO[porta.n]) h += \'<span class="decl">Hub</span>\';'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira maiúscula'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function julgar(porta) {\n'
+            '    var oc = alocacao[porta.n];\n'  # (noqa-acento)
+            '    if (oc) { var a = acha(oc); return { v: "cheia", txt'
+            ': "ocupada", porque: a.tipo + " — clique para tirar" }; '
+            '}\n'
+            '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento)
+            'xt: "indisponível", porque: porta.filho ? "o extensor es'
+            'tá nela" : "a entrada-mãe está em uso" };\n'
+            '    if (segurando) {\n'
+            '      var reg = regiaoDoCaminho(leitura()[segurando]);\n'
+            '      var mesmaRegiao = reg === null || (reg === "hub" ?'
+            ' porta.onde === "hub" : porta.onde === "pc");\n'
+            '      if (!mesmaRegiao) return { v: "fora", txt: "outra '
+            'região",\n'
+            '        porque: reg === "hub" ? "este está no hub" : "es'
+            'te está direto no PC" };\n'
+            '    }\n'
+            '    if (!naMao) return null;\n'
+            '\n'
+            '    var noHub = porta.onde === "hub";\n'
+            '    var vz = porta.par ? acha(alocacao[porta.par]) : nul'  # (noqa-acento)
+            'l;\n'
+            '    var vzRadio = vz && ehRadio(vz.classe);\n'
+            '\n'
+            '    if (naMao === "bt") {\n'
+            '      if (noHub && superspeedNoHub()) return { v: "ruim"'
+            ', txt: "evite", porque: "o Wi-Fi usa o SuperSpeed deste '
+            'mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };\n'
+            '      if (vzRadio) return { v: "evite", txt: "vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      if (porta.esticada) return { v: "melhor", txt: "me'
+            'lhor lugar", porque: "na ponta do extensor: a antena mai'
+            's longe das outras" };\n'
+            '      if (noHub) return { v: "melhor", txt: "melhor luga'
+            'r", porque: "no alto do rack, com a antena acima das cab'
+            'eças" };\n'
+            '      return { v: "serve", txt: "serve", porque: "entrad'
+            'a direta, mas na altura da escrivaninha" };\n'
+            '    }\n'
+            '    if (naMao === "wifi") {\n'
+            '      if (noHub) return { v: "ruim", txt: "evite", porqu'
+            'e: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongl'
+            'es do controle" };\n'
+            '      if (porta.usb !== 3) return { v: "evite", txt: "va'
+            'le evitar", porque: "entrada preta — o Wi-Fi perde veloc'
+            'idade" };\n'
+            '      if (vzRadio) return { v: "evite", txt: "vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque:'
+            ' "azul, direta do PC e longe das antenas de rádio" };\n'
+            '    }\n'
+            '    if (naMao === "teclado") {\n'
+            '      if (noHub) return { v: "ruim", txt: "evite", porqu'
+            'e: "no hub você pode ficar sem teclado na BIOS" };\n'
+            '      if (vzRadio) return { v: "evite", txt: "vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque:'
+            ' "direta do PC — funciona na BIOS e na recuperação" };\n'
+            '    }\n'
+            '    if (naMao === "mouse") {\n'
+            '      if (vzRadio) return { v: "evite", txt: "vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      if (noHub && superspeedNoHub()) return { v: "evite'
+            '", txt: "vale evitar", porque: "hub com o tráfego do Wi-'
+            'Fi ao lado" };\n'
+            '      if (porta.usb === 3) return { v: "serve", txt: "se'
+            'rve", porque: "gasta uma entrada azul que ele não usa" }'
+            ';\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque:'
+            ' "entrada preta, longe de outro rádio" };\n'
+            '    }\n'
+            '    if (naMao === "webcam") {\n'
+            '      if (porta.usb === 3) return { v: "serve", txt: "se'
+            'rve", porque: "gasta uma entrada azul que ela não precis'
+            'a" };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque:'
+            ' "entrada preta, que é o que ela pede" };\n'
+            '    }\n'
+            '    return null;\n'
+            '  }\n'
+        ),
+        depois=(
+            '  function frase1(t) { t = String(t || ""); return t.cha'
+            'rAt(0).toUpperCase() + t.slice(1); }\n'
+            '  function julgar(porta) {\n'
+            '    var oc = alocacao[porta.n];\n'  # (noqa-acento)
+            '    if (oc) { var a = acha(oc); return { v: "cheia", txt'
+            ': "Ocupada", porque: a.tipo + " — clique para tirar" }; '
+            '}\n'
+            '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento)
+            'xt: "Ocupada", porque: porta.filho ? "Com o extensor" : '
+            '"A entrada-mãe está em uso" };\n'
+            '    if (segurando) {\n'
+            '      var reg = regiaoDoCaminho(leitura()[segurando]);\n'
+            '      var mesmaRegiao = reg === null || (reg === "hub" ?'
+            ' porta.onde === "hub" : porta.onde === "pc");\n'
+            '      if (!mesmaRegiao) return { v: "fora", txt: "Outra '
+            'região",\n'
+            '        porque: reg === "hub" ? "este está no hub" : "es'
+            'te está direto no PC" };\n'
+            '    }\n'
+            '    if (!naMao) return null;\n'
+            '\n'
+            '    var noHub = porta.onde === "hub";\n'
+            '    var vz = porta.par ? acha(alocacao[porta.par]) : nul'  # (noqa-acento)
+            'l;\n'
+            '    var vzRadio = vz && ehRadio(vz.classe);\n'
+            '\n'
+            '    if (naMao === "bt") {\n'
+            '      if (noHub && superspeedNoHub()) return { v: "ruim"'
+            ', txt: "Evite", porque: "o Wi-Fi usa o SuperSpeed deste '
+            'mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };\n'
+            '      if (vzRadio) return { v: "evite", txt: "Vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      if (porta.esticada) return { v: "melhor", txt: "Me'
+            'lhor lugar", porque: "na ponta do extensor: a antena mai'
+            's longe das outras" };\n'
+            '      if (noHub) return { v: "melhor", txt: "Melhor luga'
+            'r", porque: "no alto do rack, com a antena acima das cab'
+            'eças" };\n'
+            '      return { v: "serve", txt: "Serve", porque: "entrad'
+            'a direta, mas na altura da escrivaninha" };\n'
+            '    }\n'
+            '    if (naMao === "wifi") {\n'
+            '      if (noHub) return { v: "ruim", txt: "Evite", porqu'
+            'e: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongl'
+            'es do controle" };\n'
+            '      if (porta.usb !== 3) return { v: "evite", txt: "Va'
+            'le evitar", porque: "entrada preta — o Wi-Fi perde veloc'
+            'idade" };\n'
+            '      if (vzRadio) return { v: "evite", txt: "Vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      return { v: "melhor", txt: "Melhor lugar", porque:'
+            ' "azul, direta do PC e longe das antenas de rádio" };\n'
+            '    }\n'
+            '    if (naMao === "teclado") {\n'
+            '      if (noHub) return { v: "ruim", txt: "Evite", porqu'
+            'e: "no hub você pode ficar sem teclado na BIOS" };\n'
+            '      if (vzRadio) return { v: "evite", txt: "Vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      return { v: "melhor", txt: "Melhor lugar", porque:'
+            ' "direta do PC — funciona na BIOS e na recuperação" };\n'
+            '    }\n'
+            '    if (naMao === "mouse") {\n'
+            '      if (vzRadio) return { v: "evite", txt: "Vale evita'
+            'r", porque: "colada no " + vz.tipo + ", na " + naFraseDe'
+            '(porta.par) };\n'
+            '      if (noHub && superspeedNoHub()) return { v: "evite'
+            '", txt: "Vale evitar", porque: "hub com o tráfego do Wi-'
+            'Fi ao lado" };\n'
+            '      if (porta.usb === 3) return { v: "serve", txt: "Se'
+            'rve", porque: "gasta uma entrada azul que ele não usa" }'
+            ';\n'
+            '      return { v: "melhor", txt: "Melhor lugar", porque:'
+            ' "entrada preta, longe de outro rádio" };\n'
+            '    }\n'
+            '    if (naMao === "webcam") {\n'
+            '      if (porta.usb === 3) return { v: "serve", txt: "Se'
+            'rve", porque: "gasta uma entrada azul que ela não precis'
+            'a" };\n'
+            '      return { v: "melhor", txt: "Melhor lugar", porque:'
+            ' "entrada preta, que é o que ela pede" };\n'
+            '    }\n'
+            '    return null;\n'
+            '  }\n'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o veredito de cada entrada com a primeira maiús'
+            'cula: «Ocupada · Com o extensor»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      h += \'<span class="veredito \' + estado + \'">\' + ve'
+            'red + \'</span><span class="porque">\' + porque + "</span>'
+            '";'
+        ),
+        depois=(
+            '      h += \'<span class="veredito \' + estado + \'">\' + ve'
+            'red + \'</span><span class="porque">\' + frase1(porque) + '
+            '"</span>";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira letra do porquê'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (porque) h += \'<span class="porque">\' + porque '
+            '+ "</span>";'
+        ),
+        depois=(
+            '      if (porque) h += \'<span class="porque">\' + frase1('
+            'porque) + "</span>";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a primeira letra do porquê'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      } else if (j) { estado = j.v; vered = j.txt; porqu'
+            'e = j.porque; }'
+        ),
+        depois=(
+            '      } else if (j) { estado = j.v; if (j.v !== "fora") '
+            '{ vered = j.txt; porque = j.porque; } }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a entrada de outra região só apaga: a palavra e'
+            'mbaixo dela sai'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '{ id: "melhor", rotulo: "O melhor no papel", op: {},'
+        ),
+        depois=(
+            '{ id: "melhor", rotulo: "Ideal", op: {},'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — os modos curtos'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '{ id: "poucos", rotulo: "Mexendo o mínimo", op: { bonusP'
+            'arado: 45 },'
+        ),
+        depois=(
+            '{ id: "poucos", rotulo: "Menos trocas", op: { bonusParad'
+            'o: 45 },'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — os modos curtos'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '{ id: "sem-ext", rotulo: "Sem o extensor", op:'
+        ),
+        depois=(
+            '{ id: "sem-ext", rotulo: "Sem extensor", op:'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — os modos curtos'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '{ id: "so-pc", rotulo: "Sem usar o hub", op:'
+        ),
+        depois=(
+            '{ id: "so-pc", rotulo: "Sem hub", op:'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — os modos curtos'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        titulo: (function (r) { return de ? "Mova " + r.'
+            'g + " " + r.n + " da " + naFraseDe(de) + " para a " + na'
+            'FraseDe(para)\n'
+            '                                     : "Ponha " + r.g + '
+            '" " + r.n + " na " + naFraseDe(para); })(rot(a))\n'
+            '                + (m.essencial ? "" : "  ·  melhora, não'
+            ' é urgente"),'
+        ),
+        depois=(
+            '        titulo: emAtributo(rotuloDoAparelho(a)) + " → " '
+            '+ emAtributo(rotuloDe(para)),'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — cada troca num cartão baixo: «Bluetooth → Entra'
+            'da 13»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        html += \'<div class="nada-a-fazer"><b>Nada a mov'
+            'er.</b> Cada aparelho já está na entrada que eu escolher'
+            "ia: '\n"
+            '             + "o teclado numa entrada direta, o Wi-Fi l'
+            'onge dos dongles, e os três dongles no alto e separados.'
+            '</div>";'
+        ),
+        depois=(
+            '        html += \'<div class="nada-a-fazer"><b>Nada a mov'
+            "er.</b></div>';"
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        html += \'<p class="chamada"><span class="grande"'
+            '>\' + reais.length + " movimento" + (reais.length > 1 ? "'
+            's" : "") + "</span></p>"'
+        ),
+        depois=(
+            '        html += \'<p class="chamada"><span class="grande"'
+            '>\' + reais.length + " troca" + (reais.length > 1 ? "s" :'
+            ' "") + "</span></p>"'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — «4 trocas»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        var fim = movs.filter(function (m) { return m.se'
+            'mNumero; })[0];\n'
+            '        var ganho = fim ? fim.linhas.filter(function (l)'
+            ' { return /^<b>/.test(l.t); })[0] : null;\n'
+            '        if (ganho) html += \'<p class="ganho"><span class'
+            '="selo \' + ganho.s + \'">\' + ganho.s + "</span><span>"\n'
+            '          + ganho.t.replace(/<\\/b>[\\s\\S]*$/, "</b>") + "'
+            '</span></p>";\n'
+        ),
+        depois=(
+            ''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem a linha «DERIVADO…»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        html += \'<div class="acoes"><button class="btn f'
+            'orte ja-movi"\' + examinaNoProduto() + \'>Já movi — veja o'
+            " que mudou</button>'\n"
+            '             +  \'<button class="btn" id="voltar">Desfaze'
+            "r o que eu declarei</button></div>';"
+        ),
+        depois=(
+            '        html += \'<div class="acoes"><button class="btn f'
+            'orte ja-movi"\' + examinaNoProduto() + \'>Já mudei</button'
+            ">'\n"
+            '             +  \'<button class="btn" id="voltar">Desfaze'
+            "r</button></div>';"
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — «Já mudei» e «Desfazer»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '            return novas.length ? \'<p style="margin:-.4r'
+            'em 0 .9rem;font-size:var(--text-sm);color:var(--color-in'
+            'k-quiet)">\''
+        ),
+        depois=(
+            '            return novas.length ? \'<p style="margin:0 0 '
+            '.4rem;font-size:var(--text-sm);color:var(--color-ink-qui'
+            'et)">\''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o respiro da linha do que se perde'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      html += \'<div class="escolhas" style="margin-botto'
+            'm:.9rem">\''
+        ),
+        depois=(
+            '      html += \'<div class="escolhas" style="margin-botto'
+            'm:.4rem">\''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o respiro dos modos'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        html = \'<div class="nada-a-fazer"><b>Nada mudou '
+            'de lugar.</b> Nenhum aparelho mudou de lugar desde a últ'
+            "ima vez que eu olhei.</div>';"
+        ),
+        depois=(
+            '        html = \'<div class="nada-a-fazer"><b>Nada mudou '
+            "de lugar.</b></div>';"
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        html = \'<p class="chamada">Reexaminei e <span cl'
+            'ass="grande">\' + mudou.length\n'
+            '          + "</span> aparelho" + (mudou.length > 1 ? "s '
+            'mudaram" : " mudou") + " de lugar."\n'
+            '          + (sabidos.length ? " Reconheci " + sabidos.le'
+            'ngth + " sozinho." : "") + "</p>"\n'
+            '          + \'<p style="margin:-.3rem 0 .8rem;font-size:v'
+            'ar(--text-sm);color:var(--color-ink-quiet)">\'\n'
+            '          + "O caminho de barramento de quem você moveu '
+            'é outro; o <b>serial</b> não. É por ele que eu sei quem '
+            'foi para onde.</p>"'
+        ),
+        depois=(
+            '        html = \'<p class="chamada"><span class="grande">'
+            "' + mudou.length\n"
+            '          + "</span> aparelho" + (mudou.length > 1 ? "s '
+            'mudaram" : " mudou") + " de lugar."\n'
+            '          + (sabidos.length ? " " + sabidos.length + " c'
+            'om a entrada já marcada." : "") + "</p>"'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa e sem explicar o serial'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '            + \'<b style="color:var(--color-lacuna)">Por '
+            "que ' + novos.length\n"
+            '            + (novos.length > 1 ? " ficaram" : " ficou")'
+            ' + " sem entrada</b>"\n'
+            '            + \'<p style="margin:.3rem 0 0;font-size:var('
+            '--text-sm);color:var(--color-ink-quiet)">\'\n'
+            '            + "Você declarou " + Object.keys(MAPA).lengt'
+            'h + " das " + todasPortas().length\n'
+            '            + " entradas — só as que tinham algo no dia.'
+            ' Quando você move um aparelho para uma entrada"\n'
+            '            + " que nunca foi declarada, eu vejo o apare'
+            'lho e não sei onde ele está."\n'
+            '            + " <b>Declarar as entradas vazias também</b'
+            '> é o que faz este reconhecimento nunca mais falhar.</p>'
+            '</div>";'
+        ),
+        depois=(
+            '            + \'<b style="color:var(--color-lacuna)">\' + '
+            'novos.length + " sem entrada marcada</b>"\n'
+            '            + \'<p style="margin:.3rem 0 0;font-size:var('
+            '--text-sm);color:var(--color-ink-quiet)">\'\n'
+            '            + Object.keys(MAPA).length + " de " + todasP'
+            'ortas().length + " entradas marcadas."\n'
+            '            + " Marcar as vazias também faz o reconhecim'
+            'ento não falhar.</p></div>";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      return abre + "Essa entrada está no seu mapa, entã'
+            'o eu <b>já sei</b> onde ele está"\n'
+            '           + " — você não precisa declarar nada.</span><'
+            '/li>";'
+        ),
+        depois=(
+            '      return abre + "A entrada já está marcada no mapa.<'
+            '/span></li>";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    return abre + "O caminho <code>" + m.agora + "</code'
+            '> " + onde\n'
+            '         + " — eu só não sei em qual entrada. Ele aparec'
+            'e na faixa tracejada da face certa,"\n'
+            '         + " logo abaixo do desenho: clique nele e depoi'
+            's na entrada, e eu aprendo para sempre."\n'
+            '         + "</span></li>";'
+        ),
+        depois=(
+            '    return abre + "O caminho <code>" + m.agora + "</code'
+            '> " + onde\n'
+            '         + ". Falta marcar a entrada: clique nele e depo'
+            'is na entrada certa.</span></li>";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        ? "O " + nome + " mudou para a " + naFraseDe(m.e'
+            'ntradaAgora) + ", e eu já sei onde ele está."\n'
+            '        : "O " + nome + " mudou de lugar, e eu ainda não'
+            ' sei em qual entrada ele está.";'
+        ),
+        depois=(
+            '        ? "O " + nome + " mudou para a " + naFraseDe(m.e'
+            'ntradaAgora) + "."\n'
+            '        : "O " + nome + " mudou de lugar; falta marcar a'
+            ' entrada.";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        + (sab === mudou.length ? ", e eu já sei onde es'
+            'tão."\n'
+            '           : sab ? ", e eu sei onde " + sab + " estão." '
+            ': ", e eu ainda não sei em quais entradas.");'
+        ),
+        depois=(
+            '        + (sab === mudou.length ? "." : sab ? "; " + sab'
+            ' + " com a entrada marcada." : "; falta marcar as entrad'
+            'as.");'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sem primeira pessoa'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      html = \'<p class="chamada" id="chamada-mao">O que '
+            'você pretende conectar?</p><div class="escolhas">\''
+        ),
+        depois=(
+            '      html = \'<p class="chamada" id="chamada-mao">O que '
+            'vai conectar?</p><div class="escolhas">\''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — «O que vai conectar?»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function htmlDoPainelDoAparelho(n, quem, p, face) {\n'
+            '    var edita = editavelNoProduto(quem);\n'
+            '    var g = function (gesto) {\n'
+            '      return quem.modelo ? \' data-gesto="\' + gesto + \'" '
+            'data-modelo="\' + quem.modelo + \'"\' : "";\n'
+            '    };\n'
+            '    var h = \'<div class="edita-cab ap-cab"><input class='
+            '"campo-nome titulo" type="text"\'\n'
+            '      + \' data-nome-do-aparelho="\' + emAtributo(quem.id)'
+            ' + \'"\' + g("aparelho-nome")\n'
+            '      + (edita ? "" : " disabled") + \' maxlength="\' + MA'
+            'XIMO_DO_NOME + \'"\'\n'
+            '      + \' value="\' + emAtributo(quem.nomeDeclarado || ""'
+            ') + \'"\'\n'
+            '      + \' placeholder="\' + emAtributo(rotuloDoAparelho(q'
+            'uem)) + \'" aria-label="Nome do aparelho">\'\n'
+            '      + \'<button class="btn fecha" id="edita-fecha" aria'
+            '-label="Fechar">&times;</button></div>\';\n'
+            '\n'
+            '    h += \'<div class="edita-linha"><span>O que é</span><'
+            'div class="tipos">\';\n'
+            '    var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE'
+            '[quem.classe] || "";\n'
+            '    h += TIPOS_DO_APARELHO.map(function (t) {\n'
+            '      return \'<button class="escolha tipo-do-aparelho" d'
+            'ata-tipodito="\' + t[0] + \'"\' + g("aparelho-tipo")\n'
+            '        + (edita ? "" : " disabled") + \' aria-pressed="\''
+            ' + (tipoAgora === t[0]) + \'">\'\n'
+            '        + \'<i style="background:\' + (COR_DO_TIPO[t[0]] |'
+            '| "#9a9eb8") + \'"></i>\' + t[1] + "</button>";\n'
+            '    }).join("");\n'
+            '    h += "</div></div>";\n'
+            '\n'
+            '    h += \'<div class="edita-linha"><span>Onde está</span'
+            '><div class="onde"><span>\'\n'
+            '      + emAtributo(rotuloDe(n) + (face ? " · " + (face.t'
+            'itulo || face.nome) : "")) + "</span>"\n'
+            '      + chaveDoExtensor(n) + "</div></div>";\n'
+            '\n'
+            '    var et = quem.etiquetas || etiquetasDoExemplo(quem, '
+            'p);\n'
+            '    if (et.length) {\n'
+            '      h += \'<div class="edita-linha"><span>O que a máqui'
+            'na vê</span><div class="etqs">\'\n'
+            '        + et.map(function (e) { return \'<span class="etq'
+            '">\' + emAtributo(e) + "</span>"; }).join("") + "</div></'
+            'div>";\n'
+            '    }\n'
+            '    /* A FAIXA DELE: a mesma conta da aba Conexões; sem '
+            'leitura não há linha */\n'
+            '    var fx = quem.faixa;\n'
+            '    if (fx && fx.celulas && fx.celulas.length) {\n'
+            '      h += \'<div class="edita-linha"><span>A faixa dele<'
+            "/span><div>'\n"
+            '        + \'<div class="faixa-dele" role="img" aria-label'
+            '="\' + emAtributo(fx.texto || "A faixa dele") + \'"\'\n'
+            '        + \' style="--cor-faixa:\' + emAtributo(fx.cor || '
+            '"") + \'">\'\n'
+            '        + fx.celulas.map(function (c, k) {\n'
+            '            var onde = "Canal " + k + " · " + (2402 + k)'
+            ' + " MHz";\n'
+            '            var dito = c[0] === "p" ? " · perdido para "'
+            ' + c[2]\n'
+            '              : c[0] === "o" ? " · ocupado" + (c[2] ? ",'
+            ' perde " + c[2] : "")\n'
+            '              : c[0] === "b" ? " · bom" : "";\n'
+            '            return \'<i class="\' + c[0] + \'"\' + (c[1] ? \''
+            ' style="--marca:\' + emAtributo(c[1]) + \'"\' : "")\n'
+            '              + \' title="\' + emAtributo(onde + dito) + \''
+            '"></i>\';\n'
+            '          }).join("") + "</div>"\n'
+            '        + (fx.texto ? \'<span class="faixa-dele-txt">\'\n'
+            '          + (fx.partes || [[fx.texto, ""]]).map(function'
+            ' (pt) {\n'
+            '              return (pt[1] ? \'<i class="marca-txt" aria'
+            '-hidden="true"\' + \' style="--marca:\'\n'
+            '                + emAtributo(pt[1]) + \'"></i>\' : "") + e'
+            'mAtributo(pt[0]);\n'
+            '            }).join("") + "</span>" : "")\n'
+            '        + "</div></div>";\n'
+            '    }\n'
+            '    h += oQueFazer(n, quem);\n'
+            '\n'
+            '    var gVolta = \' data-gesto="voltar-ao-automatico"\' + '
+            '(quem.modelo ? \' data-modelo="\' + quem.modelo + \'"\' : ""'
+            ')\n'
+            '      + (podeGravar(n) ? \' data-entrada="\' + n + \'"\' : "'
+            '");\n'
+            '    h += \'<div class="edita-linha acoes-do-aparelho">\'\n'
+            '      + (quem.receptor ? \'<a class="btn" id="descobrir-a'
+            '-faixa" href="08-conexoes.html">Descobrir a faixa</a>\' :'
+            ' "")\n'
+            '      + (identificavel(quem) ? \'<button class="btn" id="'
+            'identificar">Identificar</button>\' : "")\n'
+            '      + \'<button class="btn" id="voltar-ao-automatico"\' '
+            '+ (doProduto() ? gVolta : "") + (edita ? "" : " disabled'
+            '")\n'
+            '      + ">Voltar ao automático</button></div>";\n'
+            '    if (identificando === quem.id) {\n'
+            '      h += \'<p class="dica-id">Tire o aparelho e ponha d'
+            'e novo, depois clique «Examinar»: eu acendo a entrada em'
+            " que ele estava.</p>';\n"
+            '    }\n'
+            '    var soNaTela = doProduto() && !podeGravar(n);\n'
+            '    if (!soNaTela) {\n'
+            '      h += \'<details class="mais"><summary>Mais desta en'
+            "trada</summary>' + linhaDoNome(n)\n"
+            '        + linhaDoLugar(n) + linhaDaTroca(n) + "</details'
+            '>";\n'
+            '    }\n'
+            '    return h;\n'
+            '  }\n'
+            '\n'
+            '  function mostrarOPainelDoAparelho(ed, quem) {\n'
+            '    var n = editando, p = porNum(n);\n'
+            "    var plug = document.querySelector('.plug[data-porta="
+            '"\' + n + \'"]\');\n'
+            '    var face = FACES.filter(function (f) {\n'
+            '      return f.portas.some(function (x) { return x === p'
+            ' || x.filho === p; });\n'
+            '    })[0];\n'
+            '    ed.innerHTML = htmlDoPainelDoAparelho(n, quem, p, fa'
+            'ce);\n'
+            '    ed.hidden = false;\n'
+            '    var palco = ed.parentElement.getBoundingClientRect()'
+            ';\n'
+            '    var chip = editandoDe === "lista" ? document.querySe'
+            'lector(\'.chip[data-ap="\' + quem.id + \'"]\') : null;\n'
+            '    if (chip) {\n'
+            '      var c = chip.getBoundingClientRect();\n'
+            '      ed.style.left = Math.max(0, c.left - palco.left - '
+            '308) + "px";\n'
+            '      ed.style.top = Math.max(0, c.top - palco.top) + "p'
+            'x";\n'
+            '    } else {\n'
+            '      var r = plug.getBoundingClientRect();\n'
+            '      ed.style.left = Math.max(0, Math.min(r.left - palc'
+            'o.left, palco.width - 310)) + "px";\n'
+            '      ed.style.top = (r.bottom - palco.top + 8) + "px";\n'
+            '    }\n'
+            '  }\n'
+            '\n'
+            '  function mostrarEditor() {\n'
+            '    var ed = document.getElementById("edita");\n'
+            '    if (!ed) return;\n'
+            '    var quem = editando && modo !== "ideal" && !segurand'
+            'o ? aparelhoDaEntrada(editando) : null;\n'
+            "    var plug = editando && document.querySelector('.plug"
+            '[data-porta="\' + editando + \'"]\');\n'
+            '    /* O HUB NÃO É UM APARELHO QUE SE BATIZA: ele é o qu'
+            'e a entrada tem (a face «Hub na\n'
+            '       Entrada N» desce dele), e a entrada dele abre o e'
+            'ditor da entrada, com o «Hub»\n'
+            '       que o computador lê e a velocidade. O painel do a'
+            'parelho ofereceria «Teclado,\n'
+            '       Mouse…» para um hub. */\n'
+            '    if (quem && quem.classe !== "hub" && plug && porNum('
+            'editando)) mostrarOPainelDoAparelho(ed, quem);\n'
+            '    else mostrarEditorDaEntrada();\n'
+            '  }\n'
+        ),
+        depois=(
+            '  /* ══ O PAINEL ÚNICO — 05/10/2026, o desenho aprovado '
+            '══════════════════════════════\n'
+            '     Clicar na entrada, no aparelho, na lista «Conectado'
+            ' agora» ou num aparelho sem entrada\n'
+            '     abre o MESMO painel, perto do que foi clicado: o ap'
+            'arelho de um lado, a entrada do outro.\n'
+            '     O que leva `data-gesto` o produto grava e a página '
+            'espera o disco; no exemplo, muda só\n'
+            '     na tela. Fecha no botão de fechar, no Esc ou com um'
+            ' clique fora. */\n'
+            '  var editandoAp = null;\n'
+            '  function faceDaPorta(p) {\n'
+            '    return FACES.filter(function (f) {\n'
+            '      return f.portas.some(function (x) { return x === p'
+            ' || x.filho === p; });\n'
+            '    })[0];\n'
+            '  }\n'
+            '  function estadoDoAparelho(n, quem) {\n'
+            '    if ((!quem.classe && !quem.tipoDeclarado) || aparelh'
+            'oSemLugar(quem.id)) return "";\n'
+            '    var r = planejar({}), para = portaDeEm(r.plano, quem'
+            '.id);\n'
+            '    var m = r.motivo[quem.id] || { razoes: [], essencial'
+            ': false, ganho: 0 };\n'
+            '    if (receitaManda(n, para, m)) {\n'
+            '      var razao = m.razoes.length ? m.razoes[0].txt : ""'
+            ';\n'
+            '      return \'<div class="estado troca"\' + (razao ? \' ti'
+            'tle="\' + emAtributo(frase1(razao)) + \'"\' : "")\n'
+            '        + "><span>Melhor na " + emAtributo(naFraseDe(par'
+            'a)) + \'</span><button class="btn" id="ver-a-sugestao">Ve'
+            "r</button></div>';\n"
+            '    }\n'
+            '    return n ? \'<div class="estado bom">✓ Boa entrada</d'
+            'iv>\' : "";\n'
+            '  }\n'
+            '  function colunaDoAparelho(n, quem, p) {\n'
+            '    var h = "<h5>Aparelho</h5>";\n'
+            '    if (!quem) {\n'
+            '      return h + \'<div class="vazia">\' + (p && ocupada(a'
+            'locacao, p) ? "Ocupada pelo extensor" : "Nada ligado aqu'
+            'i") + "</div>";\n'
+            '    }\n'
+            '    var edita = editavelNoProduto(quem);\n'
+            '    var g = function (gesto) {\n'
+            '      return quem.modelo ? \' data-gesto="\' + gesto + \'" '
+            'data-modelo="\' + quem.modelo + \'"\' : "";\n'
+            '    };\n'
+            '    h += \'<label class="campo"><span>Nome</span><input c'
+            'lass="campo-nome" type="text"\'\n'
+            '      + \' data-nome-do-aparelho="\' + emAtributo(quem.id)'
+            ' + \'"\' + g("aparelho-nome")\n'
+            '      + (edita ? "" : " disabled") + \' maxlength="\' + MA'
+            'XIMO_DO_NOME + \'"\'\n'
+            '      + \' value="\' + emAtributo(quem.nomeDeclarado || ""'
+            ') + \'"\'\n'
+            '      + \' placeholder="\' + emAtributo(rotuloDoAparelho(q'
+            'uem)) + \'" aria-label="Nome do aparelho"></label>\';\n'
+            '    /* o tipo que a máquina mede (o rádio Bluetooth, o h'
+            'ub) não se troca aqui */\n'
+            '    var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE'
+            '[quem.classe] || "";\n'
+            '    var daMaquina = !tipoAgora && !!quem.classe;\n'
+            '    var cor = tipoAgora ? (COR_DO_TIPO[tipoAgora] || que'
+            'm.cor) : quem.cor;\n'
+            '    var opcoes = daMaquina ? "<option selected>" + emAtr'  # (noqa-acento)
+            'ibuto(quem.tipo) + "</option>"\n'
+            '      : (tipoAgora ? "" : \'<option value="" selected></o'
+            "ption>') + TIPOS_DO_APARELHO.map(function (t) {\n"
+            '          return \'<option value="\' + t[0] + \'"\' + (t[0] '
+            '=== tipoAgora ? " selected" : "") + ">" + t[1] + "</opti'
+            'on>";\n'
+            '        }).join("");\n'
+            '    h += \'<label class="campo"><span>Tipo</span><span cl'
+            'ass="sel"><i style="background:\' + emAtributo(cor) + \'">'
+            "</i>'\n"
+            '      + \'<select class="tipo-do-aparelho"\' + (daMaquina '
+            '? "" : g("aparelho-tipo"))\n'
+            '      + (edita && !daMaquina ? "" : " disabled") + \' ari'
+            'a-label="Tipo do aparelho">\' + opcoes + "</select></span'  # (noqa-acento)
+            '></label>";\n'
+            '    return h + estadoDoAparelho(n, quem);\n'
+            '  }\n'
+            '  function colunaDaEntrada(n, p, quem) {\n'
+            '    var h = "<h5>Entrada</h5>";\n'
+            '    if (!p) return h + \'<div class="vazia">Clique na ent'
+            "rada certa no mapa</div>';\n"
+            '    var soNaTela = doProduto() && !podeGravar(n);\n'
+            '    h += \'<label class="campo"><span>Nome</span><input c'
+            'lass="campo-nome" type="text" data-nome="\' + n + \'"\'\n'
+            '      + gravaNaEntrada(n, "entrada-nome") + (soNaTela ? '
+            '" disabled" : "") + \' maxlength="\' + MAXIMO_DO_NOME + \'"'
+            "'\n"
+            '      + \' value="\' + emAtributo(nomeDe(n)) + \'" placehol'
+            'der="\' + emAtributo(PALAVRA_DA_ENTRADA + " " + n) + \'"\'\n'
+            '      + \' aria-label="Nome da entrada"></label>\';\n'
+            '    var lido = !!HUB_LIDO[n];\n'
+            '    var liga = (DECLARADO[n] || {}).liga || (lido || (qu'
+            'em && quem.classe === "hub") ? "hub" : "direto");\n'
+            '    h += \'<div class="campo"><span>Tipo</span><div class'
+            '="seg">\' + [["direto", "Direta"], ["hub", "Hub"]].map(fu'
+            'nction (o) {\n'
+            '        /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE'
+            ' NÃO É HUB, e o «Direta» não cabe onde o\n'
+            '           computador lê um hub: cinza, com a razão na d'
+            'ica (a D-03 dela), e o clique não declara. */\n'
+            '        var razao = o[0] === "direto" && lido ? "O compu'
+            'tador lê um hub nesta entrada"\n'
+            '          : o[0] === "hub" && quem && quem.classe !== "h'
+            'ub" && !lido ? quem.tipo + " está direto nesta entrada" '
+            ': "";\n'
+            '        var trava = soNaTela || razao;\n'
+            '        return \'<button class="escolha\' + (trava ? " apa'
+            'gado" : "") + \'" data-liga="\' + o[0] + \'"\'\n'
+            '          + (trava ? \' aria-disabled="true"\' : gravaNaEn'
+            'trada(n, "entrada-o-que-tem"))\n'
+            '          + (razao ? \' title="\' + emAtributo(razao) + \'"'
+            '\' : "")\n'
+            '          + \' aria-pressed="\' + (liga === o[0]) + \'">\' +'
+            ' o[1] + "</button>";\n'
+            '      }).join("") + "</div></div>";\n'
+            '    var origem = doProduto() && podeGravar(n) ? FRASES_D'
+            'A_ORIGEM[USB_DE[String(n)] || ""] || "" : "";\n'
+            '    h += \'<div class="campo"><span>USB</span><div class='
+            '"seg"\' + (origem ? \' title="\' + emAtributo(origem) + \'"\''
+            ' : "") + ">"\n'
+            '      + [[3, "3.0"], [2, "2.0"]].map(function (o) {\n'
+            '          return \'<button class="escolha\' + (soNaTela ? '
+            '\' apagado" aria-disabled="true"\' : \'"\') + \' data-usb="\' '
+            '+ o[0] + \'"\'\n'
+            '            + (soNaTela ? "" : gravaNaEntrada(n, "entrad'
+            'a-velocidade")) + \' aria-pressed="\' + (p.usb === o[0]) +'
+            ' \'"\'\n'
+            '            + \' aria-label="USB \' + o[1] + \'">\' + o[1] +'
+            ' "</button>";\n'
+            '        }).join("") + "</div></div>";\n'
+            '    var chave = chaveDoExtensor(n);\n'
+            '    return h + (chave ? \'<div class="campo"><span>Extens'
+            'or</span>\' + chave + "</div>" : "");\n'
+            '  }\n'
+            '  function peDoPainel(n, quem) {\n'
+            '    if (!quem) return "";\n'
+            '    var edita = editavelNoProduto(quem);\n'
+            '    var gVolta = \' data-gesto="voltar-ao-automatico"\' + '
+            '(quem.modelo ? \' data-modelo="\' + quem.modelo + \'"\' : ""'
+            ')\n'
+            '      + (n && podeGravar(n) ? \' data-entrada="\' + n + \'"'
+            '\' : "");\n'
+            '    return \'<div class="pe">\'\n'
+            '      + (identificando === quem.id ? \'<span class="dica-'
+            'id">Tire e ponha de novo, depois clique em Examinar.</sp'
+            'an>\' : "")\n'
+            '      + (identificavel(quem) ? \'<button class="btn" id="'
+            'identificar" title="Acende a entrada dele depois do Exam'
+            'inar">Identificar</button>\' : "")\n'
+            '      + \'<button class="btn" id="voltar-ao-automatico" t'
+            'itle="Esquece o nome e o tipo que você deu"\'\n'
+            '      + (doProduto() ? gVolta : "") + (edita ? "" : " di'
+            'sabled") + ">Automático</button></div>";\n'
+            '  }\n'
+            '  function htmlDoPainel(n, quem) {\n'
+            '    var p = n ? porNum(n) : null, face = p ? faceDaPorta'
+            '(p) : null;\n'
+            '    var lugar = face ? (face.titulo || face.nome) : "";\n'
+            '    var titulo = quem ? rotuloDoAparelho(quem) : rotuloD'
+            'e(n);\n'
+            '    var onde = quem ? (n ? rotuloDe(n) + (lugar ? " · " '
+            '+ lugar : "") : "Sem entrada marcada") : lugar;\n'
+            '    return \'<div class="cab"><span class="bola" style="b'
+            'ackground:\' + emAtributo(quem ? quem.cor : "var(--color-'
+            'rule)") + \'"></span>\'\n'
+            '      + "<b>" + emAtributo(titulo) + \'</b><span class="o'
+            'nde">\' + emAtributo(onde) + "</span>"\n'
+            '      + \'<button class="fecha" id="edita-fecha" aria-lab'
+            'el="Fechar">&times;</button></div>\'\n'
+            '      + \'<div class="colunas"><div class="col">\' + colun'
+            'aDoAparelho(n, quem, p) + "</div>"\n'
+            '      + \'<div class="col">\' + colunaDaEntrada(n, p, quem'
+            ') + "</div></div>" + peDoPainel(n, quem);\n'
+            '  }\n'
+            '  function posicionar(ed, alvo) {\n'
+            '    if (!alvo) return;\n'
+            '    var r = alvo.getBoundingClientRect(), w = ed.offsetW'
+            'idth, h = ed.offsetHeight;\n'
+            '    var naLista = !!alvo.closest(".bandeja");\n'
+            '    var x = naLista ? r.left - w - 8 : r.left, y = naLis'
+            'ta ? r.top : r.bottom + 8;\n'
+            '    if (x + w > innerWidth - 12) x = innerWidth - 12 - w'
+            ';\n'
+            '    if (y + h > innerHeight - 12) y = naLista ? innerHei'
+            'ght - 12 - h : r.top - 8 - h;\n'
+            '    ed.style.left = Math.max(12, x) + "px";\n'
+            '    ed.style.top = Math.max(12, y) + "px";\n'
+            '  }\n'
+            '\n'
+            '  function mostrarEditor() {\n'
+            '    var ed = document.getElementById("edita");\n'
+            '    if (!ed) return;\n'
+            '    var n = editandoAp ? null : editando;\n'
+            '    var quem = editandoAp ? acha(editandoAp) : (n ? apar'
+            'elhoDaEntrada(n) : null);\n'
+            '    var plug = n && porNum(n) && document.querySelector('
+            '\'.plug[data-porta="\' + n + \'"]\');\n'
+            '    var soNaTela = n && doProduto() && !podeGravar(n);\n'
+            '    if (modo === "ideal" || (!editandoAp && !plug) || (e'
+            'ditandoAp && !quem) || (soNaTela && !quem)) {\n'
+            '      ed.hidden = true; ed.innerHTML = ""; return;\n'
+            '    }\n'
+            '    ed.innerHTML = htmlDoPainel(n, quem);\n'
+            '    ed.hidden = false;\n'
+            '    var chip = (editandoAp || editandoDe === "lista") &&'
+            ' quem\n'
+            "      ? document.querySelector('.pend-lista .chip[data-a"
+            'p="\' + quem.id + \'"]\')\n'
+            "        || document.querySelector('#bandeja .chip[data-a"
+            'p="\' + quem.id + \'"]\') : null;\n'
+            '    posicionar(ed, chip || plug);\n'
+            '  }\n'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — um painel só para a entrada e o aparelho, perto'
+            ' do que foi clicado'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function mostrarEditorDaEntrada() {\n'
+            '    var ed = document.getElementById("edita");\n'
+            '    if (!ed) return;\n'
+            '    var p = editando && porNum(editando);\n'
+            "    var plug = p && document.querySelector('.plug[data-p"
+            'orta="\' + editando + \'"]\');\n'
+            '    /* o editor escondido não guarda os botões da entrad'
+            'a de antes: um\n'
+            '       clique neles levaria ao disco o gesto de outra en'
+            'trada */\n'
+            '    if (!p || !plug || modo === "ideal" || segurando) { '
+            'ed.hidden = true; ed.innerHTML = ""; return; }\n'
+            '    /* O COMPUTADOR LÊ UM HUB NESTA ENTRADA: «Hub» nasce'
+            ' apertado, e «Direto»\n'
+            '       fica apagado com a razão na dica (o espelho da D-'
+            '03). */\n'
+            '    var lido = !!HUB_LIDO[editando];\n'
+            '    var liga = (DECLARADO[editando] || {}).liga || (lido'
+            ' ? "hub" : "direto");\n'
+            '    var face = FACES.filter(function (f) {\n'
+            '      return f.portas.some(function (x) { return x === p'
+            ' || x.filho === p; });\n'
+            '    })[0];\n'
+            '    var quem = alocacao[editando] ? acha(alocacao[editan'  # (noqa-acento)
+            'do]) : null;\n'
+            '    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. '
+            'No produto, o que\n'
+            '       ela declarasse numa entrada que não grava (as do '
+            'hub desenhado)\n'
+            '       sumiria ao reler, sem aviso: ali o editor só most'
+            'ra quem está\n'
+            '       nela, e sem ninguém ele não abre. No exemplo, tud'
+            'o é só tela. */\n'
+            '    var soNaTela = doProduto() && !podeGravar(editando);'
+            '\n'
+            '    if (soNaTela && !quem) { ed.hidden = true; ed.innerH'
+            'TML = ""; return; }\n'
+            '    ed.innerHTML = \'<div class="edita-cab"><b>\' + emAtri'
+            'buto(rotuloDe(editando)) + "</b><span>" + (face ? face.n'
+            'ome : "") + "</span>"\n'
+            '      + \'<button class="btn fecha" id="edita-fecha" aria'
+            '-label="Fechar">&times;</button></div>\'\n'
+            '      + (soNaTela ? "" : linhaDoNome(editando))\n'
+            '      + (soNaTela ? "" : \'<div class="edita-linha"><span'
+            '>O que tem aqui</span><div class="seg dois">\'\n'
+            '      + [["direto", "Direto"], ["hub", "Hub"]].map(funct'
+            'ion (o) {\n'
+            '          /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO Q'
+            'UE NÃO É HUB: cinza,\n'
+            '             com a razão na dica (a D-03 dela), e o cliq'
+            'ue não declara. */\n'
+            '          if (o[0] === "direto" && lido) {\n'
+            '            return \'<button class="escolha apagado" data'
+            '-liga="direto" aria-disabled="true" aria-pressed="false"'
+            "'\n"
+            '              + \' title="O computador lê um hub nesta en'
+            'trada">\' + o[1] + "</button>";\n'
+            '          }\n'
+            '          if (o[0] === "hub" && quem && quem.classe !== '
+            '"hub" && !lido) {\n'
+            '            return \'<button class="escolha apagado" data'
+            '-liga="hub" aria-disabled="true" aria-pressed="\' + (liga'
+            ' === "hub")\n'
+            '              + \'" title="\' + quem.tipo + \' Está Direto '
+            'Nesta Entrada">\' + o[1] + "</button>";\n'
+            '          }\n'
+            '          return \'<button class="escolha" data-liga="\' +'
+            ' o[0] + \'"\' + gravaNaEntrada(editando, "entrada-o-que-te'
+            'm") + \' aria-pressed="\' + (liga === o[0]) + \'">\' + o[1] '
+            '+ "</button>";\n'
+            '        }).join("")\n'
+            '      + "</div>" + (lido ? \'<span class="lido">O computa'
+            'dor lê um hub nela.</span>\' : "") + "</div>"\n'
+            '      + linhaDoExtensor(editando)\n'
+            '      + \'<div class="edita-linha"><span>Velocidade</span'
+            '><div class="seg dois">\'\n'
+            '      + [[3, "USB 3.0"], [2, "USB 2.0"]].map(function (o'
+            ') {\n'
+            '          return \'<button class="escolha" data-usb="\' + '
+            'o[0] + \'"\' + gravaNaEntrada(editando, "entrada-velocidad'
+            'e") + \' aria-pressed="\' + (p.usb === o[0]) + \'">\' + o[1]'
+            ' + "</button>";\n'
+            '        }).join("")\n'
+            '      + "</div>" + origemDaVelocidade(editando) + "</div'
+            '>")\n'
+            '      + (quem ? \'<div class="edita-linha"><span>\' + quem'
+            '.tipo + \' está aqui</span></div>\' : "")\n'
+            '      + (soNaTela ? "" : linhaDoLugar(editando) + linhaD'
+            'aTroca(editando));\n'
+            '    ed.hidden = false;\n'
+            '    var palco = ed.parentElement.getBoundingClientRect()'
+            ', r = plug.getBoundingClientRect();\n'
+            '    ed.style.left = Math.max(0, Math.min(r.left - palco.'
+            'left, palco.width - 310)) + "px";\n'
+            '    ed.style.top = (r.bottom - palco.top + 8) + "px";\n'
+            '  }\n'
+            '\n'
+        ),
+        depois=(
+            ''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o editor da entrada entrou no painel único'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  /* «O QUE FAZER»: uma linha, no máximo um botão. Fala '
+            'o que o motor já diz (o plano). */\n'
+            '  function oQueFazer(n, quem) {\n'
+            '    if (!quem.classe && !quem.tipoDeclarado) {\n'
+            '      return \'<div class="faz"><span>Sem saber o que é, '
+            "eu não sugiro lugar. Diga o tipo acima.</span></div>';\n"
+            '    }\n'
+            '    if (aparelhoSemLugar(quem.id)) {\n'
+            '      return \'<div class="faz"><span>Esta entrada está s'
+            'em lugar no gabinete: diga o lugar dela para eu julgar.<'
+            "/span></div>';\n"
+            '    }\n'
+            '    var r = planejar({}), para = portaDeEm(r.plano, quem'
+            '.id);\n'
+            '    var m = r.motivo[quem.id] || { razoes: [], essencial'
+            ': false, ganho: 0 };\n'
+            '    if (receitaManda(n, para, m)) {\n'
+            '      var razao = m.razoes.length ? m.razoes[0].txt : ""'
+            ';\n'
+            '      return \'<div class="faz"><span>Melhor na \' + emAtr'
+            'ibuto(naFraseDe(para))\n'
+            '        + (razao ? ": " + emAtributo(razao) : "") + \'.</'
+            "span>'\n"
+            '        + \'<button class="btn forte" id="ver-a-sugestao"'
+            ">Mostrar a entrada boa</button></div>';\n"
+            '    }\n'
+            '    return \'<div class="faz bem"><span>✓ Está numa boa e'
+            "ntrada.</span></div>';\n"
+            '  }\n'
+        ),
+        depois=(
+            ''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o «O que fazer» virou o estado do painel («✓ Bo'
+            'a entrada» ou «Melhor na Entrada 7»)'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  /* no exemplo ninguém mediu nada: as etiquetas saem do'
+            ' que o desenho já diz */\n'
+            '  function etiquetasDoExemplo(quem, p) {\n'
+            '    var e = [];\n'
+            '    if (quem.tipo) e.push(quem.tipo);\n'
+            '    if (p) e.push(p.usb === 3 ? "USB 3.0" : "USB 2.0");\n'
+            '    if (p && p.onde === "hub") e.push("atrás de 1 hub");'
+            '\n'
+            '    return e;\n'
+            '  }\n'
+        ),
+        depois=(
+            ''
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — sai «O que a máquina vê»'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + \' title="Há um cabo de extensão entre esta entra'
+            'da e o aparelho"><i></i><span>Extensor</span></button>\';'
+        ),
+        depois=(
+            '      + \' title="Há um cabo de extensão entre esta entra'
+            'da e o aparelho" aria-label="Extensor"><i></i></button>\''
+            ';'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a chave do extensor sem a palavra repetida: o r'
+            'ótulo do campo já a diz'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '<div class="edita" id="edita" hidden></div>'
+        ),
+        depois=(
+            '<div class="edita painel-unico" id="edita" hidden></div>'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o painel único'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ev.key === "Escape" && editando) { editando = nu'
+            'll; pintar(); }'
+        ),
+        depois=(
+            '    if (ev.key === "Escape" && (editando || editandoAp))'
+            ' { editando = null; editandoAp = null; segurando = null;'
+            ' pintar(); }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o Esc fecha o painel'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var campo = ev.target.closest && ev.target.closest("'
+            '#edita [data-nome]");\n'
+            '    if (!campo || campo.hasAttribute("data-gesto")) retu'
+            'rn;'
+        ),
+        depois=(
+            '    var sel = ev.target.closest && ev.target.closest("#e'
+            'dita select.tipo-do-aparelho");\n'
+            '    if (sel && !sel.hasAttribute("data-gesto")) {\n'
+            '      var ap2 = editandoAp ? acha(editandoAp) : aparelho'
+            'DaEntrada(editando);\n'
+            '      if (ap2 && sel.value) { ap2.tipoDeclarado = sel.va'
+            'lue; ap2.cor = COR_DO_TIPO[sel.value] || ap2.cor; }\n'
+            '      pintar(); return;\n'
+            '    }\n'
+            '    var campo = ev.target.closest && ev.target.closest("'
+            '#edita [data-nome]");\n'
+            '    if (!campo || campo.hasAttribute("data-gesto")) retu'
+            'rn;'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o tipo do aparelho numa lista, no exemplo'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ev.target.closest(".modo[data-modo]")) editando '
+            '= null;\n'
+            '    if (ev.target.id === "edita-fecha") { editando = nul'
+            'l; pintar(); return; }'
+        ),
+        depois=(
+            '    if (ev.target.closest(".modo[data-modo]")) { editand'
+            'o = null; editandoAp = null; segurando = null; }\n'
+            '    if (ev.target.id === "edita-fecha") { editando = nul'
+            'l; editandoAp = null; segurando = null; pintar(); return'
+            '; }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — fechar o painel larga o aparelho sem entrada'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      achado = null; editandoDe = "mapa";\n'
+            '      editando = abre.getAttribute("data-ap-abre"); if ('
+            'modo === "ideal") modo = "mesa";'
+        ),
+        depois=(
+            '      achado = null; editandoDe = "mapa"; editandoAp = n'
+            'ull; segurando = null;\n'
+            '      editando = abre.getAttribute("data-ap-abre"); if ('
+            'modo === "ideal") modo = "mesa";'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o painel da entrada'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ub) { declarar(editando, "usb", parseInt(ub.getA'
+            'ttribute("data-usb"), 10)); pintar(); return; }\n'
+            '    if (editando && !ev.target.closest("#edita") && !ev.'
+            'target.closest(".plug[data-porta]")) {\n'
+            '      editando = null; pintar();\n'
+            '    }'
+        ),
+        depois=(
+            '    if (ub) {\n'
+            '      if (ub.getAttribute("aria-disabled") !== "true") d'
+            'eclarar(editando, "usb", parseInt(ub.getAttribute("data-'
+            'usb"), 10));\n'
+            '      pintar(); return;\n'
+            '    }\n'
+            '    if ((editando || editandoAp) && !ev.target.closest("'
+            '#edita") && !ev.target.closest(".plug[data-porta]")\n'
+            '        && !ev.target.closest(".chip[data-ap]")) {\n'
+            '      editando = null; editandoAp = null; segurando = nu'
+            'll; pintar();\n'
+            '    }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — um clique fora fecha o painel'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ev.target.id === "ver-a-sugestao") { editando = '
+            'null; modo = "ideal"; pintar(); return; }'
+        ),
+        depois=(
+            '    if (ev.target.id === "ver-a-sugestao") { editando = '
+            'null; editandoAp = null; segurando = null; modo = "ideal'
+            '"; pintar(); return; }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o «Ver» abre as Sugestões'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      achado = null; editandoDe = "lista";\n'
+            '      editando = portaDe(chip.getAttribute("data-ap")); '
+            'modo = "mesa";\n'
+            '      segurando = null; naMao = null; pintar(); return;\n'
+            '    }\n'
+            '    if (chip) {\n'
+            '      modo = "mao";\n'  # (noqa-acento)
+            '      var ap = acha(chip.getAttribute("data-ap"));\n'
+            '      var atual = portaDe(ap.id); if (atual) delete aloc'
+            'acao[atual];\n'  # (noqa-acento)
+            '      segurando = ap.id;\n'
+            '      naMao = ({ bt: "bt", wifi: "wifi", teclado: "tecla'
+            'do", mouse: "mouse", webcam: "webcam" })[ap.classe] || n'
+            'ull;\n'
+            '      pintar(); return;\n'
+            '    }'
+        ),
+        depois=(
+            '      achado = null; editandoDe = "lista"; editandoAp = '
+            'null;\n'
+            '      editando = portaDe(chip.getAttribute("data-ap")); '
+            'modo = "mesa";\n'
+            '      segurando = null; naMao = null; pintar(); return;\n'
+            '    }\n'
+            '    if (chip) {\n'
+            '      /* o aparelho sem entrada: o painel abre perto del'
+            'e e diz o passo; o clique na entrada certa\n'
+            '         marca o lugar dele (as candidatas acendem) */\n'
+            '      var ap = acha(chip.getAttribute("data-ap"));\n'
+            '      achado = null; editando = null; editandoAp = ap.id'
+            '; segurando = ap.id; naMao = null; modo = "mesa";\n'
+            '      pintar(); return;\n'
+            '    }'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — o aparelho sem entrada abre o mesmo painel'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        segurando = null; naMao = null; modo = "mesa";\n'
+            '      } else {'
+        ),
+        depois=(
+            '        segurando = null; naMao = null; editandoAp = nul'
+            'l; modo = "mesa"; editando = n;\n'
+            '      } else {'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — marcada a entrada, o painel passa a ser dela'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    .pagina > .corpo > .legenda { grid-column: 1 / -1; g'
+            'rid-row: auto; justify-self: start; }\n'
+            '  }\n'
+            '</style>'
+        ),
+        depois=(
+            '    .pagina > .corpo > .legenda { grid-column: 1 / -1; g'
+            'rid-row: auto; justify-self: start; }\n'
+            '  }\n'
+            '\n'
+            '  /* ══ 05/10/2026, conjunto «Conexões 3»: o desenho apr'
+            'ovado do Mapa ══ */\n'
+            '  .pagina > .topo { padding-top: 6px; padding-bottom: 6p'
+            'x; margin-bottom: 6px; }\n'
+            '  .painel { padding: 8px 14px; }\n'
+            '  .palco { margin-top: 8px; }\n'
+            '  .faces { gap: 4px; }\n'
+            '  .face-cab { margin-top: 8px; margin-bottom: 4px; }\n'
+            '  .chapa { padding-top: 6px; padding-bottom: 6px; row-ga'
+            'p: 4px; }\n'
+            '  .chapa.coluna, .chapa.grade-tras, .chapa.fileira { gri'
+            'd-template-columns: repeat(auto-fill, minmax(205px, 1fr)'
+            '); }\n'
+            '  .por-confirmar { padding: 6px 12px; margin-top: 6px; d'
+            'isplay: flex; flex-wrap: wrap; align-items: center; gap:'
+            ' 6px 10px; }\n'
+            '  .por-confirmar > b { margin: 0; }\n'
+            '  .pend-lista { margin: 0; }\n'
+            '  .receita { display: grid; grid-template-columns: repea'
+            't(auto-fill, minmax(250px, 1fr)); gap: 6px; margin: 6px '
+            '0; }\n'
+            '  .receita > li { margin: 0; padding: 6px 10px; }\n'
+            '  .receita h4 { font-size: 13.5px; margin: 0; }\n'
+            '  .painel .acoes { margin-top: 6px; }\n'
+            '  .palco > .bandeja .lista { overflow: visible; gap: 4px'
+            '; }\n'
+            '  .bandeja .chip { padding-top: 5px; padding-bottom: 5px'
+            '; }\n'
+            '  @media (min-width: 901px) { .palco > .bandeja { height'
+            ': auto; } }\n'
+            '  /* o painel único: o aparelho e a entrada, lado a lado'
+            ' */\n'
+            '  #edita.painel-unico { position: fixed; z-index: 80; wi'
+            'dth: 540px; max-width: calc(100vw - 24px); padding: 0; g'
+            'ap: 0;\n'
+            '                        background: var(--color-paper-2)'
+            '; border: 1px solid var(--color-rule); border-radius: 14'
+            'px;\n'
+            '                        box-shadow: 0 18px 48px rgba(0,0'
+            ',0,.6); }\n'
+            '  .painel-unico .cab { display: flex; align-items: cente'
+            'r; gap: 10px; padding: 14px 16px 12px; }\n'
+            '  .painel-unico .cab .bola { width: 12px; height: 12px; '
+            'border-radius: 50%; flex: none; }\n'
+            '  .painel-unico .cab b { font-size: 16px; }\n'
+            '  .painel-unico .cab .onde { font-size: 13px; }\n'
+            '  .painel-unico .cab .fecha { margin-left: auto; backgro'
+            'und: none; border: 0; color: inherit; font-size: 20px;\n'
+            '                              line-height: 1; cursor: po'
+            'inter; padding: 2px 6px; border-radius: 6px; }\n'
+            '  .painel-unico .colunas { display: grid; grid-template-'
+            'columns: 1fr 1fr; border-top: 1px solid var(--color-rule'
+            '); }\n'
+            '  .painel-unico .col { padding: 14px 16px; display: flex'
+            '; flex-direction: column; gap: 12px; min-width: 0; }\n'
+            '  .painel-unico .col + .col { border-left: 1px solid var'
+            '(--color-rule); }\n'
+            '  .painel-unico h5 { margin: 0; font-size: 11px; letter-'
+            'spacing: .08em; text-transform: uppercase; color: #6272a'
+            '4; }\n'
+            '  .painel-unico .campo { display: grid; grid-template-co'
+            'lumns: 72px minmax(0, 1fr); align-items: center; gap: 10'
+            'px; }\n'
+            '  .painel-unico .campo > span { font-size: 13px; }\n'
+            '  .painel-unico .seg { display: flex; gap: 2px; padding:'
+            ' 2px; border: 1px solid var(--color-rule); border-radius'
+            ': 8px;\n'
+            '                       background: var(--color-paper); }'
+            '\n'
+            '  .painel-unico .seg .escolha { flex: 1; justify-content'
+            ': center; border: 0; background: none; padding: 4px 6px;'
+            ' }\n'
+            '  .painel-unico .seg .escolha[aria-pressed="true"] { bac'
+            'kground: color-mix(in srgb, var(--color-accent) 20%, tra'
+            'nsparent);\n'
+            '                                                     fon'
+            't-weight: 600; }\n'
+            '  .painel-unico .seg .escolha.apagado { opacity: .45; cu'
+            'rsor: not-allowed; }\n'
+            '  .painel-unico .sel { position: relative; display: flex'
+            '; align-items: center; }\n'
+            '  .painel-unico .sel i { position: absolute; left: 10px;'
+            ' width: 9px; height: 9px; border-radius: 50%; pointer-ev'
+            'ents: none; }\n'
+            '  .painel-unico select { width: 100%; font: inherit; fon'
+            't-size: var(--text-sm); padding: 6px 10px 6px 26px;\n'
+            '                         background: var(--color-paper);'
+            ' color: var(--color-ink); border: 1px solid var(--color-'
+            'rule);\n'
+            '                         border-radius: 8px; cursor: poi'
+            'nter; }\n'
+            '  .painel-unico select option { background: var(--color-'
+            'paper); color: var(--color-ink); }\n'
+            '  .painel-unico .estado { display: flex; align-items: ce'
+            'nter; gap: 8px; font-size: 13px; padding: 6px 10px;\n'
+            '                          border-radius: 8px; min-height'
+            ': 32px; box-sizing: border-box; }\n'
+            '  .painel-unico .estado.bom { background: color-mix(in s'
+            'rgb, var(--color-ok) 9%, transparent); color: var(--colo'
+            'r-ok); }\n'
+            '  .painel-unico .estado.troca { background: color-mix(in'
+            ' srgb, var(--color-lacuna) 9%, transparent); color: var('
+            '--color-lacuna); }\n'
+            '  .painel-unico .estado.troca .btn { margin-left: auto; '
+            'padding: 3px 12px; }\n'
+            '  .painel-unico .vazia { flex: 1; display: flex; align-i'
+            'tems: center; justify-content: center; text-align: cente'
+            'r;\n'
+            '                         min-height: 90px; padding: 0 10'
+            'px; font-size: 13px; color: #6272a4;\n'
+            '                         border: 1px dashed var(--color-'
+            'rule); border-radius: 10px; }\n'
+            '  .painel-unico .pe { display: flex; align-items: center'
+            '; gap: 8px; justify-content: flex-end; padding: 12px 16p'
+            'x;\n'
+            '                      border-top: 1px solid var(--color-'
+            'rule); }\n'
+            '  .painel-unico .pe .dica-id { margin-right: auto; font-'
+            'size: var(--text-xs); }\n'
+            '  .painel-unico .chave { justify-self: start; }\n'
+            '</style>'
+        ),
+        porque=(
+            '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
+            ' Mapa) — a folha do desenho aprovado: o painel único, as'
+            ' trocas em cartões e a página sem rolar'
+        ),
+    ),
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
