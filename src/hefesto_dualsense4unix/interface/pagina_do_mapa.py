@@ -3306,6 +3306,8 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '  .edita .faixa-dele-txt { display: block; margin-top: .25rem; fon'
             't-family: var(--font-dado);\n'
             '                           font-size: .6875rem; text-transform: none; }\n'
+            '  .edita .faixa-dele-txt .marca-txt { display: inline-block; width: .5rem; height: .5rem;\n'
+            '    margin-right: .25rem; border-radius: 1px; background: var(--marca); }\n'
             '  .edita .onde { display: flex; align-items: center; justi'
             'fy-content: space-between; gap: .5rem;\n'
             '                 font-size: var(--text-sm); }\n'
@@ -3747,8 +3749,11 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             'marca:\' + emAtributo(c[1]) + \'"\' : "")\n'
             '              + \' title="\' + emAtributo(onde + dito) + \'"></i>\';\n'
             '          }).join("") + "</div>"\n'
-            '        + (fx.texto ? \'<span class="faixa-dele-txt">\' + emAtributo'
-            '(fx.texto) + "</span>" : "")\n'
+            '        + (fx.texto ? \'<span class="faixa-dele-txt">\'\n'
+            '          + (fx.partes || [[fx.texto, ""]]).map(function (pt) {\n'
+            '              return (pt[1] ? \'<i class="marca-txt" aria-hidden="true" style="--marca:\'\n'
+            '                + emAtributo(pt[1]) + \'"></i>\' : "") + emAtributo(pt[0]);\n'
+            '            }).join("") + "</span>" : "")\n'
             '        + "</div></div>";\n'
             '    }\n'
             '    h += oQueFazer(n, quem);\n'
@@ -4236,12 +4241,12 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
         depois=(
             '      if (!pai || pai.closest("code, script, style, .camin'
             'ho, .chip .txt span, .aviso-uma-linha, .leitura-da-maquina'
-            ', .faz, .dica-id, .etq")) return;'
+            ', .faz, .dica-id, .etq, .faixa-dele-txt")) return;'
         ),
         porque=(
             '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — as fr'
-            'ases do aviso, da leitura e do «o que fazer» ficam como fr'
-            'ases.'
+            'ases do aviso, da leitura, do «o que fazer» e da faixa del'
+            'e ficam como frases.'
         ),
     ),
     Edicao(

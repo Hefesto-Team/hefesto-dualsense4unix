@@ -45,6 +45,10 @@ LER_A_FAIXA = r"""
       ? f.querySelector('i.p').style.getPropertyValue('--marca') : '',
     titulo: f && f.querySelector('i.p') ? f.querySelector('i.p').title : '',
     texto: (ed && ed.querySelector('.faixa-dele-txt') || {innerText: ''}).innerText,
+    marcas_txt: ed ? [...ed.querySelectorAll('.faixa-dele-txt i.marca-txt')].map(
+      i => i.style.getPropertyValue('--marca') + '|' + (i.nextSibling || {}).textContent) : [],
+    marca_visivel: ed && ed.querySelector('.faixa-dele-txt i.marca-txt')
+      ? ed.querySelector('.faixa-dele-txt i.marca-txt').offsetWidth > 0 : false,
     rotulo: ed ? ed.innerText.toLowerCase().includes('a faixa dele') : false,
     aria: f ? f.getAttribute('aria-label') : '',
   });
@@ -54,7 +58,8 @@ LER_A_FAIXA = r"""
 
 def _faixa_de_mentira() -> dict[str, Any]:
     celulas = [["b", "", ""]] * 40 + [["p", "#c3e88d", "Wi-Fi"]] * 20 + [["b", "", ""]] * 19
-    return {"celulas": celulas, "cor": "#f8f8f2", "texto": "perde para Wi-Fi"}
+    return {"celulas": celulas, "cor": "#f8f8f2", "texto": "perde para Wi-Fi",
+            "partes": [["perde para ", ""], ["Wi-Fi", "#c3e88d"]]}
 
 
 def test_o_dado_do_aparelho_leva_a_faixa_pelo_vid_pid(disco: Any) -> None:  # noqa: F811
@@ -88,10 +93,12 @@ def test_o_painel_do_aparelho_desenha_os_79_canais_com_a_marca_e_a_frase(disco: 
     f = lidas[2]
     assert f["aberto"] and f["celulas"] == 79, f
     assert (f["bons"], f["perdidos"]) == (59, 20), "pintado é o bom; o perdido fica vazio"
-    # a casa põe a primeira letra em maiúscula
-    assert f["rotulo"] and f["texto"].lower() == "perde para wi-fi", f
+    # a frase é leitura da máquina, como as etiquetas: fica como frase (o desenho 2, «perde para»)
+    assert f["rotulo"] and f["texto"] == "perde para Wi-Fi", f
     assert f["marca"] == "#c3e88d" and "perdido para Wi-Fi" in f["titulo"], f
     assert f["aria"] == "perde para Wi-Fi", "a figura se diz em palavras, sem cor sozinha"
+    # o desenho 2: «perde para ■ Wi-Fi», a marca da cor ANTES do nome, a mesma da célula
+    assert f["marcas_txt"] == ["#c3e88d|Wi-Fi"] and f["marca_visivel"], f
 
 
 def test_sem_faixa_no_dado_o_painel_nao_inventa_a_linha(disco: Any) -> None:  # noqa: F811
@@ -134,6 +141,9 @@ def test_a_faixa_do_radio_e_a_do_receptor_saem_da_conta_da_aba_08(
     ocupados = [k for k, c in enumerate(teclado["celulas"]) if c[0] == "o"]
     assert ocupados == list(range(18, 35))
     assert "3 teclas presas" in teclado["texto"], teclado["texto"]
+    assert ["Teclado", a08.COR_DA_FAIXA_NO_MAPA["teclado"]] in radio["partes"], radio["partes"]
+    for faixa in (radio, teclado):
+        assert "".join(t for t, _c in faixa["partes"]) == faixa["texto"], faixa
     json.dumps(faixas)  # vai à página: tem de ser JSON
 
 
@@ -150,7 +160,13 @@ def test_a_marca_de_quem_perde_aparece_no_canal_ocupado_do_receptor(
     teclado = faixas["1111:0001"]["celulas"]
     com_marca = [k for k, c in enumerate(teclado) if c[0] == "o" and c[1]]
     assert com_marca, "o teclado não leva a marca de quem perde nos canais dele"
-    assert "briga com" in faixas["1111:0001"]["texto"]
+    texto = faixas["1111:0001"]["texto"]
+    assert texto.startswith("briga com Controle"), texto
+    assert ["Controle", a08.COR_DA_FAIXA_NO_MAPA["controle"]] in faixas["1111:0001"]["partes"]
+    # sem a saúde lida, o selo é o genérico de quem ocupa («briga com 1»): a frase não se repete
+    cena["vizinhos"][0].pop("saude")
+    texto = a08.faixas_para_o_mapa(object())["1111:0001"]["texto"]  # type: ignore[arg-type]
+    assert texto.count("briga com") == 1, texto
 
 
 def test_a_cena_inteira_diz_de_que_dongle_e_cada_adaptador(

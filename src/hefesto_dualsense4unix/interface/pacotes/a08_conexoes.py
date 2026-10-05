@@ -4257,18 +4257,33 @@ def _a_faixa_do_painel(linha: Any, cor_do: dict[str, str], nomes: dict[str, str]
             celulas.append(["o", cor_do.get(c.marca, ""), nomes.get(c.marca, "")])
         else:
             celulas.append(["b" if c.estado == faixas_do_ar.BOM else "l", "", ""])
-    perde = [n for _t, n in linha.quem]
-    briga = [nomes[i] for i in linha.briga if i in nomes]
-    partes = []
+    outro = COR_DA_FAIXA_NO_MAPA["outro"]
+    perde = [(n, COR_DA_FAIXA_NO_MAPA.get(t, outro)) for t, n in linha.quem]
+    briga = [(nomes[i], cor_do.get(i, outro)) for i in linha.briga if i in nomes]
+    # `pedacos`: a frase em `[texto, cor]`, e cada nome leva antes a marca da cor dele, a mesma da
+    # célula (o desenho 2: «perde para ■ Wi-Fi · ■ teclado»); a cor nunca vai sozinha, o nome fica
+    pedacos: list[list[str]] = []
+
+    def _nomeados(prefixo: str, quem: list[tuple[str, str]], sufixo: str = "") -> None:
+        pedacos.append([prefixo, ""])
+        for k, (nome, cor) in enumerate(quem):
+            pedacos.extend([[" · ", ""]] if k else [])
+            pedacos.append([nome, cor])
+        if sufixo:
+            pedacos.append([sufixo, ""])
+
     if linha.bons is not None and perde:
-        partes.append("perde para " + " · ".join(perde))
+        _nomeados("perde para ", perde)
     elif briga:
         ocupados = [c.canal for c in linha.celulas if c.estado == faixas_do_ar.OCUPADO]
-        onde = f" nos canais {min(ocupados)}-{max(ocupados)}" if ocupados else ""
-        partes.append("briga com " + " · ".join(briga) + onde)
+        _nomeados("briga com ", briga,
+                  f" nos canais {min(ocupados)}-{max(ocupados)}" if ocupados else "")
     if linha.selo is not None:
-        partes.append(" ".join(t for t in (linha.selo.texto, linha.nota) if t))
-    return {"celulas": celulas, "texto": " · ".join(p for p in partes if p),
+        selo = " ".join(t for t in (linha.selo.texto, linha.nota) if t)
+        # o selo genérico de quem ocupa («briga com N») repetiria a frase que já diz com quem
+        if selo and not (briga and linha.bons is None and selo.startswith("briga com")):
+            pedacos.append([(" · " if pedacos else "") + selo, ""])
+    return {"celulas": celulas, "texto": "".join(t for t, _c in pedacos), "partes": pedacos,
             "cor": cor_do.get(linha.id, cor_do.get(linha.tipo, ""))}
 
 

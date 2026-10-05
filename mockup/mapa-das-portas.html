@@ -385,6 +385,8 @@
   .edita .faixa-dele i.o { box-shadow: inset 0 -3px 0 var(--marca, transparent); }
   .edita .faixa-dele-txt { display: block; margin-top: .25rem; font-family: var(--font-dado);
                            font-size: .6875rem; text-transform: none; }
+  .edita .faixa-dele-txt .marca-txt { display: inline-block; width: .5rem; height: .5rem;
+    margin-right: .25rem; border-radius: 1px; background: var(--marca); }
   .edita .onde { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
                  font-size: var(--text-sm); }
   .edita .chave { display: inline-flex; align-items: center; gap: .4rem; font: inherit;
@@ -1650,7 +1652,11 @@
             return '<i class="' + c[0] + '"' + (c[1] ? ' style="--marca:' + emAtributo(c[1]) + '"' : "")
               + ' title="' + emAtributo(onde + dito) + '"></i>';
           }).join("") + "</div>"
-        + (fx.texto ? '<span class="faixa-dele-txt">' + emAtributo(fx.texto) + "</span>" : "")
+        + (fx.texto ? '<span class="faixa-dele-txt">'
+          + (fx.partes || [[fx.texto, ""]]).map(function (pt) {
+              return (pt[1] ? '<i class="marca-txt" aria-hidden="true" style="--marca:'
+                + emAtributo(pt[1]) + '"></i>' : "") + emAtributo(pt[0]);
+            }).join("") + "</span>" : "")
         + "</div></div>";
     }
     h += oQueFazer(n, quem);
@@ -1893,7 +1899,7 @@
     while (andar.nextNode()) nos.push(andar.currentNode);
     nos.forEach(function (no) {
       var pai = no.parentElement;
-      if (!pai || pai.closest("code, script, style, .caminho, .chip .txt span, .aviso-uma-linha, .leitura-da-maquina, .faz, .dica-id, .etq")) return;
+      if (!pai || pai.closest("code, script, style, .caminho, .chip .txt span, .aviso-uma-linha, .leitura-da-maquina, .faz, .dica-id, .etq, .faixa-dele-txt")) return;
       var abre = !no.previousSibling;
       var novo = no.nodeValue.replace(/[^\s—·,.;:()«»"→↳…]+/g, function (w, pos) {
         if (!/^[A-Za-zÀ-ÿ]/.test(w)) return w;
