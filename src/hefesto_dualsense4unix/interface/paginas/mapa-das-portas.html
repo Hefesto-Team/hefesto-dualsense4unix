@@ -352,7 +352,7 @@
   .edita-cab span { white-space: nowrap; }
   .edita-cab .fecha { position: absolute; top: 0; right: 0; }
   /* O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 */
-  .rotulo .ap-btn { display: inline-block; max-width: 100%; margin: 0; padding: .12rem .45rem;
+  .rotulo .ap-btn { display: inline-block; max-width: 100%; margin: 0; padding: .06rem .45rem;
                     font: inherit; font-weight: 600; text-align: left; cursor: pointer;
                     background: var(--color-paper-3); border: 1px solid var(--color-rule);
                     border-radius: var(--radius-sm); }
@@ -1705,7 +1705,11 @@
     if (!ed) return;
     var quem = editando && modo !== "ideal" && !segurando ? aparelhoDaEntrada(editando) : null;
     var plug = editando && document.querySelector('.plug[data-porta="' + editando + '"]');
-    if (quem && plug && porNum(editando)) mostrarOPainelDoAparelho(ed, quem);
+    /* O HUB NÃO É UM APARELHO QUE SE BATIZA: ele é o que a entrada tem (a face «Hub na
+       Entrada N» desce dele), e a entrada dele abre o editor da entrada, com o «Hub»
+       que o computador lê e a velocidade. O painel do aparelho ofereceria «Teclado,
+       Mouse…» para um hub. */
+    if (quem && quem.classe !== "hub" && plug && porNum(editando)) mostrarOPainelDoAparelho(ed, quem);
     else mostrarEditorDaEntrada();
   }
 

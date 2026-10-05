@@ -4269,6 +4269,31 @@ EDICOES: tuple[Edicao, ...] = (
             'ea JS do arranjo_da_mesa).'
         ),
     ),
+    Edicao(
+        antes="  .rotulo .ap-btn { display: inline-block; max-width: 100%; margin: 0; padding: .12rem .45rem;",
+        depois="  .rotulo .ap-btn { display: inline-block; max-width: 100%; margin: 0; padding: .06rem .45rem;",
+        porque=(
+            '05/10/2026, fecho do conjunto «Conexões 2» — o aparelho com cara de botão cabe na'
+            ' altura da linha: com .12rem em cima e embaixo, cada entrada cheia crescia e a'
+            ' janela ladrilhada (1212×809) rolava 62 px no Atual, mais que uma linha de chapa'
+            ' (teto 60, `test_o_mapa_das_conexoes_cabe_na_aba`); com .06rem rola 53.'
+        ),
+    ),
+    Edicao(
+        antes="    if (quem && plug && porNum(editando)) mostrarOPainelDoAparelho(ed, quem);\n",
+        depois=(
+            "    /* O HUB NÃO É UM APARELHO QUE SE BATIZA: ele é o que a entrada tem (a face «Hub na\n"
+            "       Entrada N» desce dele), e a entrada dele abre o editor da entrada, com o «Hub»\n"
+            "       que o computador lê e a velocidade. O painel do aparelho ofereceria «Teclado,\n"
+            "       Mouse…» para um hub. */\n"
+            "    if (quem && quem.classe !== \"hub\" && plug && porNum(editando)) mostrarOPainelDoAparelho(ed, quem);\n"
+        ),
+        porque=(
+            '05/10/2026, fecho do conjunto «Conexões 2» — clicar na entrada de um hub de verdade'
+            ' abria o painel do aparelho, sem o «Hub» nem a velocidade da entrada'
+            ' (`test_o_examinar_diz_quem_mudou_de_lugar`, os testes do hub).'
+        ),
+    ),
 )
 
 
