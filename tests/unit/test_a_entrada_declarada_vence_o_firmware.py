@@ -296,6 +296,8 @@ _LER_A_PAGINA = r"""
       b => b.dataset.gesto + ':' + (b.dataset.liga || b.dataset.usb) + '@' + b.dataset.entrada),
     apertados: botoes.filter(b => b.getAttribute('aria-pressed') === 'true').map(
       b => b.dataset.liga || b.dataset.usb),
+    extensor: [...(ed && !ed.hidden ? ed.querySelectorAll('[data-extensor]') : [])].map(
+      b => (b.dataset.gesto || '') + '@' + (b.dataset.entrada || '')),
     origem: ed && !ed.hidden && ed.querySelector('.origem')
       ? ed.querySelector('.origem').textContent.trim() : null,
   });
@@ -398,9 +400,10 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert entregue["v3"]["1"] is False, "o firmware de mentira diz USB 2.0 na frente"
     assert sorted(editor_na_5["gestos"]) == sorted([
         "entrada-o-que-tem:direto@5", "entrada-o-que-tem:hub@5",
-        "entrada-o-que-tem:extensor@5", "entrada-velocidade:3@5",
-        "entrada-velocidade:2@5"]), (
+        "entrada-velocidade:3@5", "entrada-velocidade:2@5"]), (
         f"a entrada do mapa dela não leva o gesto ao disco: {editor_na_5['gestos']}")
+    # desde 04/10/2026 o extensor é a chave da porta, e não uma resposta de «O que tem aqui»
+    assert editor_na_5["extensor"] == ["entrada-extensor@5"], editor_na_5["extensor"]
     assert len(sem_esperar["faces"]) == len(entregue["faces"]), (
         f"a página desenhou o hub antes do disco: {sem_esperar['faces']}")
 
@@ -421,7 +424,7 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         _LER_A_PAGINA,
         _clicar('.plug[data-porta="5.1"]'),
         _LER_A_PAGINA,
-        _clicar('#edita [data-liga="extensor"]'),
+        _clicar('#edita [data-extensor]'),
         _clicar('.plug[data-porta="5"]'),
         _LER_A_PAGINA,
         _clicar('.plug[data-porta="7"]'),
