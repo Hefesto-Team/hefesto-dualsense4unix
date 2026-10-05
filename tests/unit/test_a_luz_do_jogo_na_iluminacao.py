@@ -141,3 +141,30 @@ class TestODesenho:
         grade, resto = html.split('<div class="luz-do-jogo"', 1)
         assert "luz-grade" in grade and grade.rstrip().endswith("-->")
         assert "<button" not in resto.split("</div>", 1)[0]
+
+
+class TestATelaPintaAFrase:
+    """No WebKit de verdade: o piloto escreve a frase no lugar dela, e o «Agora» aparece."""
+
+    def test_o_pintor_escreve_a_regra_e_depois_o_agora(self, monkeypatch) -> None:
+        import json
+
+        from pacotes import a04_iluminacao as a04
+        from tests.unit import test_o_padrao_trava_as_barras_da_vibracao as base
+
+        monkeypatch.setattr(base, "PAGINA", "04-iluminacao.html")
+        ler = ("JSON.stringify({t: document.querySelector('[data-campo=\"luz-do-jogo\"]')"
+               ".textContent.trim(), b: document.querySelectorAll("
+               "'[data-campo=\"luz-do-jogo\"] b').length})")
+
+        def pintar(frase: str) -> str:
+            return "window.__hef.pintar(" + json.dumps(
+                {"colunas": {}, "mesa": {a04.ENDERECO_DA_LUZ_DO_JOGO: frase}}) + ")"
+
+        a_regra = a04.frase_da_luz_do_jogo([], 2)
+        agora = a04.frase_da_luz_do_jogo([2], 2)
+        r = base._na_pagina([ler, pintar(agora), ler, pintar(a_regra), ler])
+        assert r[0] == {"t": a04.FRASE_DA_LUZ_DO_JOGO, "b": 0}
+        assert r[2]["t"].endswith("Agora: a cor do jogo no P2")
+        assert r[2]["b"] == 1
+        assert r[4] == {"t": a04.FRASE_DA_LUZ_DO_JOGO, "b": 0}
