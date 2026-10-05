@@ -144,10 +144,6 @@ class Painel:
         return not self.visiveis and not self.demais
 
 
-def palavras(texto: str) -> int:
-    return len(texto.split())
-
-
 def limitar_o_titulo(titulo: str) -> str:
     """Corta no limite de palavras, sem reticências (passar do limite é erro de quem escreveu)."""
     return " ".join(titulo.split()[:PALAVRAS_NO_TITULO])
@@ -328,6 +324,5 @@ __all__ = [
     "limitar_o_titulo",
     "montar",
     "o_que_esta_certo",
-    "palavras",
     "uma_frase",
 ]

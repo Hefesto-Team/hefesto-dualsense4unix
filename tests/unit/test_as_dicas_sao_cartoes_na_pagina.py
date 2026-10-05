@@ -32,6 +32,11 @@ PALAVRAS = re.compile(r"\w+", re.UNICODE)
 # ───────────────────────── a tabela e o painel (sem página) ─────────────────────────
 
 
+def _palavras(texto: str) -> int:
+    """A conta da régua dos títulos (o produto não conta palavras: ele corta no limite)."""
+    return len(texto.split())
+
+
 def test_todo_titulo_da_tabela_tem_de_duas_a_cinco_palavras() -> None:
     """O título é a dica: curto para ler de relance, longo o bastante para dizer o quê."""
     todos = {chave: titulo for chave, (_i, titulo, _c) in dicas.DA_ORDEM.items()}
@@ -39,10 +44,10 @@ def test_todo_titulo_da_tabela_tem_de_duas_a_cinco_palavras() -> None:
     todos["sem verbete"] = dicas.TITULO_SEM_VERBETE
     assert len(todos) > 8, "a tabela encolheu: a régua ficou cega"
     for chave, titulo in todos.items():
-        n = dicas.palavras(titulo)
+        n = _palavras(titulo)
         assert 2 <= n <= dicas.PALAVRAS_NO_TITULO, f"{chave}: «{titulo}» tem {n} palavras"
     longo = "Um título comprido demais para caber num cartão de dica"
-    assert dicas.palavras(dicas.limitar_o_titulo(longo)) <= dicas.PALAVRAS_NO_TITULO
+    assert _palavras(dicas.limitar_o_titulo(longo)) <= dicas.PALAVRAS_NO_TITULO
 
 
 def test_o_porque_e_uma_frase_so_e_nunca_traz_tag() -> None:

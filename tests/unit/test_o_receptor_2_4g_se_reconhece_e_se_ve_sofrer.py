@@ -53,6 +53,12 @@ def test_o_receptor_se_reconhece_pelas_duas_interfaces_de_arranque_o_full_speed_
     assert rx.e_receptor(interfaces, velocidade, textos) is esperado
 
 
+def _empacotar_evento(tipo: int, codigo: int, valor: int, instante: float) -> bytes:
+    """O inverso de `rx.eventos_do_fluxo`, no formato do produto: o que a régua escreve no nó."""
+    seg = int(instante)
+    return rx._EVENTO.pack(seg, round((instante - seg) * 1_000_000), tipo, codigo, valor)
+
+
 def _no_usb(raiz: Path, nome: str, atributos: dict[str, str],
             interfaces: dict[str, tuple[str, str, str, list[str]]]) -> None:
     """Um nó USB e as interfaces dele em ``devices/``; o link em ``bus/usb/devices``.
@@ -338,7 +344,7 @@ class Pipes:
 
     def escrever(self, caminho: str, *eventos: tuple[int, int, int, float]) -> None:
         os.write(self.por_caminho[caminho][1],
-                 b"".join(rx.empacotar_evento(*e) for e in eventos))
+                 b"".join(_empacotar_evento(*e) for e in eventos))
 
     def fechar_tudo(self) -> None:
         for r, w in self.por_caminho.values():

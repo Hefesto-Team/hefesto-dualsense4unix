@@ -210,12 +210,6 @@ def eventos_do_fluxo(dados: bytes) -> list[tuple[int, int, int, float]]:
     return saida
 
 
-def empacotar_evento(tipo: int, codigo: int, valor: int, instante: float) -> bytes:
-    """O inverso de :func:`eventos_do_fluxo` — a forma que a régua alimenta o monitor."""
-    seg = int(instante)
-    return _EVENTO.pack(seg, round((instante - seg) * 1_000_000), tipo, codigo, valor)
-
-
 class MonitorDosReceptores:
     """Lê o evdev dos receptores (só leitura) e mantém um :class:`ContadorDaSaude` por ``vid:pid``.
 
@@ -529,7 +523,6 @@ __all__ = [
     "banda_por_eliminacao",
     "chave_do_aparelho",
     "e_receptor",
-    "empacotar_evento",
     "eventos_do_fluxo",
     "selo_da_saude",
 ]
