@@ -143,6 +143,62 @@ def test_o_controle_hid_se_conhece_pelo_botao_sul_mesmo_sob_o_filho_hid(tmp_path
     assert a.ligado_como == "controle"
 
 
+# O censo passou a achar o BTN_SOUTH sob o filho HID. MEDIDO em fixtures de sysfs (05/10/2026), o
+# que isso muda em cada tipo de controle por cabo é só `ligado_como`; a PALAVRA (`especie`, `grau`)
+# e a classe do motor só mudam onde a interface 0 não dizia nada (`ef`, `ff`, `fe`), e ali a nova é a
+# certa. Esta régua fixa a medida: uma classe que a tripla JÁ dizia certa nunca é reescrita.
+BOTAO_SUL = f"{1 << 48:x} 0 0 0 0\n"
+SO_TECLAS = "0 0 0 0 0\n"
+
+
+def _no_de_controle(raiz: Path, nome: str, classe: tuple[str, str, str], *, sob_o_filho: bool,
+                    teclas: str, bdevice: str = "00", speed: str = "12") -> Any:
+    iface = raiz / "devices" / "usb1" / nome / f"{nome}:1.0"
+    _no_usb(raiz, nome, {"idVendor": "cccc", "idProduct": "dddd", "speed": speed, "busnum": "1",
+                         "devpath": nome.split("-")[1], "bDeviceClass": bdevice},
+            {"1.0": (*classe, [])})
+    pai = iface / "0003:CCCC:DDDD.0001" if sob_o_filho else iface
+    caps = pai / "input" / "input1" / "capabilities"
+    caps.mkdir(parents=True)
+    (caps / "key").write_text(teclas)
+    (pai / "input" / "input1" / "event3").mkdir()
+    (a,) = [x for x in _censo(raiz).aparelhos if x.nome_do_kernel == nome]
+    return a
+
+
+@pytest.mark.parametrize(
+    ("rotulo", "tripla", "sob_o_filho", "especie", "classe_do_motor"),
+    [
+        # DualSense com hid-playstation: HID 03/00/00, o input mora no filho HID
+        ("dualsense", ("03", "00", "00"), True, "Aparelho de entrada", ""),
+        # 8BitDo / pad genérico em modo HID (D-input)
+        ("8bitdo-hid", ("03", "00", "00"), True, "Aparelho de entrada", ""),
+        # Xbox com xpad: classe do fabricante, o input mora na própria interface
+        ("xbox", ("ff", "5d", "01"), False, "Controle", ""),
+        # pad composto que a classe do dispositivo chama de «diversos»
+        ("composto", ("ef", "00", "00"), True, "Controle", ""),
+    ],
+)
+def test_o_controle_hid_por_cabo_nao_muda_de_classe_onde_a_tripla_ja_dizia(
+    tmp_path: Path, rotulo: str, tripla: tuple[str, str, str], sob_o_filho: bool,
+    especie: str, classe_do_motor: str,
+) -> None:
+    from hefesto_dualsense4unix.integrations.mapa_das_portas import _classe_do_motor
+
+    a = _no_de_controle(tmp_path, "1-3", tripla, sob_o_filho=sob_o_filho, teclas=BOTAO_SUL)
+    assert a.ligado_como == "controle", rotulo
+    assert a.especie == especie, rotulo
+    assert _classe_do_motor(a) == classe_do_motor, rotulo
+    assert not a.receptor, rotulo
+
+
+@pytest.mark.parametrize("tripla", [("03", "01", "01"), ("03", "01", "02")])
+def test_teclado_e_mouse_hid_nao_viram_controle(tmp_path: Path, tripla: tuple[str, str, str]) -> None:
+    """Sem o BTN_SOUTH (0x130) a palavra é a da tripla de arranque, sob o filho ou não."""
+    a = _no_de_controle(tmp_path, "1-3", tripla, sob_o_filho=True, teclas=SO_TECLAS)
+    assert a.ligado_como == "" and a.especie in ("Teclado", "Mouse")
+
+
 # --- 2. a saúde: tecla presa e buraco no movimento -------------------------------------------
 
 CODIGO_DA_TECLA = 30
