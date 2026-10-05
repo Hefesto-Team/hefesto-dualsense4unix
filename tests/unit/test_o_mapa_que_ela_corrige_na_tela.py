@@ -271,6 +271,28 @@ _O_EDITOR = r"""
 """
 
 
+#: O PAINEL DO APARELHO (desenho aprovado de 04/10/2026, d2): a entrada com um aparelho abre o
+#: painel DELE — o nome do aparelho no alto, «Onde está» com o nome da entrada, e o que é da
+#: entrada (o nome dela, o lugar, o «Mover para…») em «Mais desta entrada».
+_O_PAINEL = r"""
+(function(){
+  const ed = document.getElementById('edita');
+  if (!ed || ed.hidden) return JSON.stringify({aberto: false});
+  const nome = ed.querySelector('.ap-cab input.campo-nome');
+  const onde = ed.querySelector('.onde > span');
+  const daEntrada = ed.querySelector('details.mais [data-nome]');
+  return JSON.stringify({
+    aberto: true,
+    doAparelho: !!nome,
+    quem: nome ? nome.getAttribute('data-nome-do-aparelho') : null,
+    nome: nome ? (nome.value || nome.placeholder) : null,
+    onde: onde ? onde.textContent.replace(/\s+/g, ' ').trim() : null,
+    nomeDaEntrada: daEntrada ? daEntrada.value : null,
+  });
+})()
+"""
+
+
 def test_a_recusa_nao_aperta_o_botao_e_pisca_nele(
     disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -480,20 +502,31 @@ _O_PLUGUE_1 = r"""
 
 
 def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
-    """Com «Canto da mesa» na 1: o plugue diz o nome (com reticências, e o nome"""
+    """Com «Canto da mesa» na 1: o plugue diz o nome (com reticências, e o nome
+
+    A 1 tem o teclado: o painel dele diz o nome da entrada em «Onde está» e o guarda no campo
+    de «Mais desta entrada». A 3, vazia e batizada, abre o editor da entrada com o nome no
+    cabeçalho.
+    """
     assert ee.dar_nome_a_entrada("1", "Canto da mesa").gravou
+    assert ee.dar_nome_a_entrada("3", "Canto de trás").gravou
     lidas, _ = _na_pagina([
         _js(_aberta()),
         _O_PLUGUE_1,
         _clicar('.plug[data-porta="1"]'),
+        _O_PAINEL,
+        _clicar('.plug[data-porta="3"]'),
         _O_EDITOR,
     ])
-    plugue, editor = lidas[1], lidas[3]
+    plugue, painel, editor = lidas[1], lidas[3], lidas[5]
     assert (plugue["nome"], plugue["dica"], plugue["num"]) == (
         "Canto da Mesa", "Canto da mesa", "1"), plugue
     assert plugue["corta"] == "ellipsis"
     assert plugue["dicaDoVazio"].startswith("Entrada 2"), plugue
-    assert editor["cabecalho"].startswith("Canto da Mesa"), editor
+    assert painel["aberto"] and painel["doAparelho"], painel
+    assert painel["onde"].startswith("Canto da Mesa"), painel
+    assert painel["nomeDaEntrada"] == "Canto da mesa", painel
+    assert editor["cabecalho"].startswith("Canto de Trás"), editor
 
 
 _A_TROCA = '#edita select.troca[data-gesto="entrada-trocar"]'
@@ -510,7 +543,11 @@ def _a_lista_da_troca() -> str:
 
 
 def test_trocar_com_grava_e_o_editor_fica_aberto(disco: Path) -> None:
-    """A 2 (vazia) trocada com a 5 (o mouse): o buraco do mouse passa a ser a 2,"""
+    """A 2 (vazia) trocada com a 5 (o mouse): o buraco do mouse passa a ser a 2,
+
+    Desde o desenho aprovado de 04/10/2026 (d3) o ato se chama «Mover para…», e a volta da
+    gravação deixa aberto o painel do mouse, que agora está na 2.
+    """
     lidas, _ = _na_pagina([
         _js(_aberta()),
         _clicar('.plug[data-porta="2"]'),
@@ -518,36 +555,38 @@ def test_trocar_com_grava_e_o_editor_fica_aberto(disco: Path) -> None:
         "String(!!document.querySelector('#edita [data-tirar]'))",
         _mudar(_A_TROCA, "5"),
         _o_piloto_responde("entrada-trocar", evento="change"),
-        _O_EDITOR,
+        _O_PAINEL,
     ])
-    lista, tirar, editor = lidas[2], lidas[3], lidas[6]
+    lista, tirar, painel = lidas[2], lidas[3], lidas[6]
     assert lista["existe"] and lista["entrada"] == "2", lista
     valores = [v for v, _t in lista["itens"]]
     assert valores == ["", "1", "3", "4", "5", "6"], lista["itens"]
-    assert lista["itens"][0][1] == "Trocar com…"
+    assert lista["itens"][0][1] == "Mover para…"
     assert "Mouse" in lista["itens"][4][1] and "Entrada 5" in lista["itens"][4][1]
     assert lista["fundo"] != "rgb(192, 192, 192)", "a lista nasceu cinza no WebKitGTK"
     assert tirar == "false", "o «Mudar de Entrada» voltou"
-    assert editor["aberto"] and editor["cabecalho"].startswith("Entrada 2"), editor
-    assert "Mouse Está Aqui" in editor["texto"], editor
+    assert painel["aberto"] and painel["doAparelho"], painel
+    assert painel["nome"] == "Mouse" and painel["onde"].startswith("Entrada 2"), painel
     documento = carregar_maquina()
     assert (documento.mapa.portas["2"].caminho, documento.mapa.portas["5"].caminho) == (
         "9-5", "9-2")
 
 
 def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) -> None:
-    """O teclado está na 1: o chip dele abre o editor da 1, e não o põe na mão."""
+    """O teclado está na 1: o chip dele abre o painel dele, na 1, e não o põe na mão."""
     lidas, _ = _na_pagina([
         _js(_aberta()),
         "(function(){const c=[...document.querySelectorAll('.chip[data-ap]')]"
         ".find(x => x.dataset.alocado === '1'); if(!c) return 'sem chip'; c.click();"
-        " return 'clicou';})()",
-        _O_EDITOR,
+        " return c.dataset.ap;})()",
+        _O_PAINEL,
         "String(document.querySelector('.modo[data-modo=\"mao\"]')"  # (noqa-acento: JS)
         ".getAttribute('aria-pressed'))",
     ])
-    assert lidas[1] == "clicou"
-    assert lidas[2]["aberto"] and lidas[2]["cabecalho"].startswith("Entrada 1"), lidas[2]
+    assert lidas[1].startswith("ap-"), lidas[1]
+    painel = lidas[2]
+    assert painel["aberto"] and painel["quem"] == lidas[1], painel
+    assert painel["nome"] == "Teclado" and painel["onde"].startswith("Entrada 1"), painel
     assert lidas[3] == "false", "o chip pôs o aparelho na mão"
 
 
@@ -578,21 +617,45 @@ _A_GEOMETRIA_DO_EDITOR = r"""
 """
 
 
+_A_GEOMETRIA_DO_PAINEL = r"""
+(function(){
+  const ed = document.getElementById('edita');
+  if (!ed || ed.hidden || !ed.querySelector('.ap-cab')) return JSON.stringify({aberto: false});
+  const nome = ed.querySelector('.ap-cab input'), fecha = ed.querySelector('.ap-cab .fecha');
+  const r = e => e.getBoundingClientRect();
+  return JSON.stringify({
+    aberto: true,
+    largura: Math.round(r(ed).width),
+    cabeNaJanela: r(ed).left >= 0 && r(ed).right <= innerWidth,
+    paginaTransborda: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    cinza: [...ed.querySelectorAll('button,select,input')].filter(
+      c => getComputedStyle(c).backgroundColor === 'rgb(192, 192, 192)').map(
+      c => c.outerHTML.slice(0, 60)),
+    fechaNoCanto: r(fecha).top < r(nome).bottom && r(fecha).right <= r(ed).right,
+    fechaSobreONome: r(fecha).left < r(nome).right && r(fecha).bottom > r(nome).top,
+  });
+})()
+"""
+
+
 def test_o_editor_cabe_a_1212_e_a_face_desce_com_o_nome_comprido(disco: Path) -> None:
     """A conferência da O-MAPA-QUE-ELA-CORRIGE-01, no WebKit à largura do"""
     mapa = _mapa()
     mapa.faces[0].nome = ee.FACE_FRENTE
     mapa.faces[1].nome = ee.FACE_ATRAS
     assert gravar_maquina({"mapa": mapa.model_dump(mode="json")})
-    assert ee.dar_nome_a_entrada("1", "Traseira de cima do meio").gravou
+    # a 1 tem o teclado e abre o painel dele (d2, 04/10/2026): o nome comprido vai à 2, vazia
+    assert ee.dar_nome_a_entrada("2", "Traseira de cima do meio").gravou
     lidas, _ = _na_pagina([
         _js(_aberta()),
-        _clicar('.plug[data-porta="1"]'),
+        _clicar('.plug[data-porta="2"]'),
         _A_GEOMETRIA_DO_EDITOR,
         _clicar('.plug[data-porta="3"]'),
         _A_GEOMETRIA_DO_EDITOR,
+        _clicar('.plug[data-porta="1"]'),
+        _A_GEOMETRIA_DO_PAINEL,
     ], tamanho=(1212, 809))
-    comprido, curto = lidas[2], lidas[4]
+    comprido, curto, painel = lidas[2], lidas[4], lidas[6]
     for editor in (comprido, curto):
         assert editor["aberto"], editor
         assert editor["largura"] == 300 and editor["cabeNaJanela"], editor
@@ -600,5 +663,10 @@ def test_o_editor_cabe_a_1212_e_a_face_desce_com_o_nome_comprido(disco: Path) ->
         assert editor["cinza"] == [], f"nasceu cinza no WebKitGTK: {editor['cinza']}"
         assert editor["faceNumaLinha"], editor
         assert editor["fechaNoCanto"] and not editor["fechaSobreONome"], editor
+    assert painel["aberto"], painel
+    assert painel["largura"] == 300 and painel["cabeNaJanela"], painel
+    assert not painel["paginaTransborda"], painel
+    assert painel["cinza"] == [], f"nasceu cinza no WebKitGTK: {painel['cinza']}"
+    assert painel["fechaNoCanto"] and not painel["fechaSobreONome"], painel
     assert comprido["faceDesceu"], f"a face não desceu com o nome de 24: {comprido}"
     assert not curto["faceDesceu"], f"a face desceu com o nome curto: {curto}"
