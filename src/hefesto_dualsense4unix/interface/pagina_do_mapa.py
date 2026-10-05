@@ -53,6 +53,7 @@ import json
 import sys
 from typing import Any, NamedTuple
 
+from hefesto_dualsense4unix.integrations.entrada_a_entrada import LUGARES_DA_PORTA
 from hefesto_dualsense4unix.interface import caixa_da_janela, onde
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     FACE_DO_HUB_DECLARADO,
@@ -178,6 +179,14 @@ CENSO_DE_EXEMPLO: dict[str, Any] = {
 #: chama de segunda verdade.
 CORES_POR_CLASSE: dict[str, str] = {
     str(a["classe"]): str(a["cor"]) for a in CENSO_DE_EXEMPLO["aparelhos"]
+}
+
+#: A COR DO TIPO QUE ELA DECLAROU (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01): o tipo decide a cor
+#: em todo o app, e as de teclado, mouse, Wi-Fi e caixa de som são as da régua da aba 08
+#: (``aba08`` ``--c-<tipo>``). A webcam leva a da classe.
+COR_POR_TIPO_DECLARADO: dict[str, str] = {
+    "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
+    "caixa_de_som": "#bd93f9", "outro": "#9a9eb8",
 }
 
 #: A cor de quem não tem espécie, e ela não é enfeite: o Archer T3U desta
@@ -3191,6 +3200,29 @@ EDICOES: tuple[Edicao, ...] = (
 
 
 
+#: OS DADOS QUE O PAINEL DO APARELHO LÊ, escritos na página pelo gerador: os tipos que ela
+#: pode dizer (a régua confere os ids com o dono, `entrada_a_entrada`), a cor de cada um e os
+#: lugares do gabinete que o Mapear já oferece.
+TIPOS_DO_APARELHO_NA_PAGINA: tuple[tuple[str, str], ...] = (
+    ("teclado", "Teclado"), ("mouse", "Mouse"), ("wifi", "Wi-Fi"), ("webcam", "Webcam"),
+    ("caixa_de_som", "Caixa de som"), ("outro", "Outro"),
+)
+
+
+def _com_os_dados(js: str) -> str:
+    """O JavaScript do painel com os tipos, as cores e os lugares do dono no lugar."""
+    cores = {**CORES_POR_CLASSE, **COR_POR_TIPO_DECLARADO}
+    dados = {
+        "__TIPOS_DO_APARELHO__": json.dumps(TIPOS_DO_APARELHO_NA_PAGINA, ensure_ascii=False),
+        "__COR_DO_TIPO__": json.dumps(
+            {t: cores.get(t, COR_SEM_CLASSE) for t, _ in TIPOS_DO_APARELHO_NA_PAGINA}),
+        "__LUGARES_DA_ENTRADA__": json.dumps(list(LUGARES_DA_PORTA), ensure_ascii=False),
+    }
+    for chave, valor in dados.items():
+        js = js.replace(chave, valor)
+    return js
+
+
 #: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
 #:
 #: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
@@ -3206,7 +3238,966 @@ EDICOES: tuple[Edicao, ...] = (
 #: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10: as onze
 #: do O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 foram publicadas e entraram
 #: no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '  .edita-cab .fecha { position: absolute; top: 0; right: 0'
+            '; }\n'
+        ),
+        depois=(
+            '  .edita-cab .fecha { position: absolute; top: 0; right: 0'
+            '; }\n'
+            '  /* O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORR'
+            'IGE-ONDE-SE-CLICA-01 */\n'
+            '  .rotulo .ap-btn { display: inline-block; max-width: 100%'
+            '; margin: 0; padding: .12rem .45rem;\n'
+            '                    font: inherit; font-weight: 600; text-'
+            'align: left; cursor: pointer;\n'
+            '                    background: var(--color-paper-3); bord'
+            'er: 1px solid var(--color-rule);\n'
+            '                    border-radius: var(--radius-sm); }\n'
+            '  .rotulo .ap-btn:hover { border-color: #6272a4; }\n'
+            '  .rotulo .ap-btn:focus-visible { outline: 2px solid var(-'
+            '-color-accent); outline-offset: 2px; }\n'
+            '  .rotulo .ap-btn[draggable="true"] { cursor: grab; }\n'
+            '  .soquete.alvo-do-arrasto { outline: 2px dashed var(--col'
+            'or-ok); outline-offset: 3px; border-radius: var(--radius-s'
+            'm); }\n'
+            '  body.arrastando .soquete[data-soquete] { cursor: copy; }'
+            '\n'
+            '  .edita .ap-cab { padding-right: 2.2rem; }\n'
+            '  .edita .campo-nome.titulo { font-weight: 700; font-size:'
+            ' var(--text-base); background: transparent;\n'
+            '                              border: 0; border-bottom: 1p'
+            'x dashed var(--color-rule); border-radius: 0;\n'
+            '                              padding: .15rem 0; }\n'
+            '  .edita .tipos, .edita .etqs { display: flex; flex-wrap: '
+            'wrap; gap: .3rem; }\n'
+            '  .edita .tipos .escolha { display: inline-flex; align-ite'
+            'ms: center; gap: .3rem; padding: .2rem .5rem; }\n'
+            '  .edita .tipos .escolha i { width: .55rem; height: .55rem'
+            '; border-radius: 50%; display: inline-block; }\n'
+            '  .edita .tipos .escolha[aria-pressed="true"] { border-col'
+            'or: var(--color-accent);\n'
+            '                    background: color-mix(in srgb, var(--c'
+            'olor-accent) 18%, var(--color-paper-3)); }\n'
+            '  .edita .etq { padding: .12rem .45rem; font-family: var(-'
+            '-font-dado); font-size: .6875rem;\n'
+            '                border: 1px solid var(--color-rule); borde'
+            'r-radius: var(--radius-sm); }\n'
+            '  .edita .etq.medida { border-style: dashed; }\n'
+            '  .edita .onde { display: flex; align-items: center; justi'
+            'fy-content: space-between; gap: .5rem;\n'
+            '                 font-size: var(--text-sm); }\n'
+            '  .edita .chave { display: inline-flex; align-items: cente'
+            'r; gap: .4rem; font: inherit;\n'
+            '                  font-size: var(--text-xs); color: var(--'
+            'color-ink); cursor: pointer;\n'
+            '                  background: transparent; border: 0; padd'
+            'ing: .1rem; }\n'
+            '  .edita .chave i { position: relative; width: 2rem; heigh'
+            't: 1.1rem; border-radius: 1rem;\n'
+            '                    background: var(--color-paper-3); bord'
+            'er: 1px solid var(--color-rule); }\n'
+            '  .edita .chave i::after { content: ""; position: absolute'
+            '; top: 1px; left: 1px; width: .85rem; height: .85rem;\n'
+            '                           border-radius: 50%; background:'
+            ' var(--color-ink); transition: transform .15s; }\n'
+            '  .edita .chave[aria-checked="true"] i { background: var(-'
+            '-color-accent); border-color: var(--color-accent); }\n'
+            '  .edita .chave[aria-checked="true"] i::after { transform:'
+            ' translateX(.9rem); }\n'
+            '  .edita .chave:focus-visible { outline: 2px solid var(--c'
+            'olor-accent); outline-offset: 2px; }\n'
+            '  .edita .faz { display: flex; align-items: center; justif'
+            'y-content: space-between; gap: .5rem;\n'
+            '                padding: .45rem .55rem; border: 1px solid '
+            'color-mix(in srgb, var(--color-ok) 45%, transparent);\n'
+            '                border-radius: var(--radius-sm); font-size'
+            ': var(--text-sm);\n'
+            '                background: color-mix(in srgb, var(--color'
+            '-ok) 8%, var(--color-paper-2)); }\n'
+            '  .edita .acoes-do-aparelho { flex-direction: row; flex-wr'
+            'ap: wrap; gap: .4rem; }\n'
+            '  .edita .dica-id { margin: 0; font-size: var(--text-xs); '
+            '}\n'
+            '  .edita .mais summary { cursor: pointer; font-size: var(-'
+            '-text-xs); font-weight: 600; }\n'
+            '  .edita .mais[open] { display: flex; flex-direction: colu'
+            'mn; gap: .6rem; }\n'
+            '  .plug[data-achado="1"] { box-shadow: 0 0 0 3px var(--col'
+            'or-accent), 0 0 18px 3px rgba(189,147,249,.55); }\n'
+            '  .aviso-uma-linha { display: flex; align-items: center; g'
+            'ap: .6rem; margin: 0;\n'
+            '                     padding: .45rem .7rem; border: 1px so'
+            'lid color-mix(in srgb, var(--color-ok) 55%, transparent);\n'
+            '                     border-radius: var(--radius-sm); font'
+            '-size: var(--text-sm);\n'
+            '                     background: color-mix(in srgb, var(--'
+            'color-ok) 10%, var(--color-paper-2)); }\n'
+            '  .aviso-uma-linha .ok { color: var(--color-ok); font-weig'
+            'ht: 700; }\n'
+            '  .aviso-uma-linha .btn.pequeno { padding: .1rem .5rem; fo'
+            'nt-size: var(--text-xs); }\n'
+            '  .aviso-uma-linha .aviso-fecha { margin-left: auto; min-w'
+            'idth: 0; width: 1.8rem; height: 1.8rem; padding: 0; }\n'
+            '  .aviso-detalhe { margin-top: .6rem; }\n'
+            '  .leitura-da-maquina { margin: .5rem 0 0; font-size: var('
+            '--text-xs); line-height: 1.5; }\n'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o est'
+            'ilo do painel do aparelho, da chave do extensor, do aviso '
+            'de uma linha e da leitura da máquina.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      : "Clique numa entrada para dar nome, corrigir ou tr'
+            'ocar.";'
+        ),
+        depois=(
+            '      : "";'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — sai o'
+            ' «Clique numa Entrada…»: o clique se mostra pela forma (o '
+            'aparelho tem cara de botão), não por instrução (decisão 10'
+            ' dela).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      h += \'<b class="nome" style="color:\' + ap.cor + \'">\''
+            ' + ap.tipo + \'</b><span class="caminho">\' + (caminhoDe(ap.'
+            'id) || "—") + "</span>";'
+        ),
+        depois=(
+            '      h += \'<button class="ap-btn nome" data-ap-abre="\' + '
+            'porta.n + \'"\'\n'
+            '        + ((doProduto() ? GRAVA.indexOf(String(porta.n)) !'
+            '== -1 : true) ? \' draggable="true"\' : "")\n'
+            '        + \' style="color:\' + ap.cor + \'" title="Abrir o pa'
+            "inel de ' + emAtributo(rotuloDoAparelho(ap))\n"
+            '        + \'">\' + emAtributo(rotuloDoAparelho(ap)) + \'</but'
+            'ton><span class="caminho">\' + (caminhoDe(ap.id) || "—") + '
+            '"</span>";'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o apa'
+            'relho no mapa é um botão: clicar abre o painel dele, e arr'
+            'astar leva para outra entrada.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    h += \'<div class="soquete"><span class="num">\' + porta'
+            '.n + "</span>"'
+        ),
+        depois=(
+            '    h += \'<div class="soquete" data-soquete="\' + porta.n +'
+            ' \'"><span class="num">\' + porta.n + "</span>"'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — a ent'
+            'rada é o alvo do arrastar.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        + \'<span class="txt"><b>\' + a.tipo + "</b><span>" '
+            '+ a.nome + " · " + (caminhoDe(a.id) || "não está plugado")'
+            ' + "</span></span>"'
+        ),
+        depois=(
+            '        + \'<span class="txt"><b>\' + emAtributo(rotuloDoApa'
+            'relho(a)) + "</b><span>" + a.nome + " · " + (caminhoDe(a.i'
+            'd) || "não está plugado") + "</span></span>"'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o car'
+            'tão da lista diz o nome que ela deu (ou o tipo que ela dis'
+            'se) antes do que a máquina leu.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (chip && doProduto() && portaDe(chip.getAttribute("'
+            'data-ap"))) {\n'
+            '      editando = portaDe(chip.getAttribute("data-ap")); mo'
+            'do = "mesa";'
+        ),
+        depois=(
+            '    if (chip && portaDe(chip.getAttribute("data-ap"))) {\n'
+            '      achado = null; editandoDe = "lista";\n'
+            '      editando = portaDe(chip.getAttribute("data-ap")); mo'
+            'do = "mesa";'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — clica'
+            'r em qualquer aparelho da lista abre o painel dele, ao lad'
+            'o do cartão, no exemplo e no produto.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var ub = ev.target.closest("#edita [data-usb]");'
+        ),
+        depois=(
+            '    /* O PAINEL DO APARELHO — 04/10/2026. O que leva `data'
+            '-gesto` o produto grava e a página\n'
+            '       espera o disco; o que não leva (o exemplo) muda só '
+            'na tela. */\n'
+            '    var abre = ev.target.closest("[data-ap-abre]");\n'
+            '    if (abre) {\n'
+            '      achado = null; editandoDe = "mapa";\n'
+            '      editando = abre.getAttribute("data-ap-abre"); if (mo'
+            'do === "ideal") modo = "mesa";\n'
+            '      pintar(); return;\n'
+            '    }\n'
+            '    var ext = ev.target.closest("#edita [data-extensor]");'
+            '\n'
+            '    if (ext && ext.hasAttribute("data-gesto")) return;\n'
+            '    if (ext) {\n'
+            '      var liga = ext.getAttribute("data-ligado") === "true'
+            '", pe = porNum(editando);\n'
+            '      declarar(editando, "extensor", liga); if (pe) pe.est'
+            'icada = liga;\n'
+            '      pintar(); return;\n'
+            '    }\n'
+            '    var tp = ev.target.closest("#edita [data-tipodito]");\n'
+            '    if (tp && (tp.hasAttribute("data-gesto") || tp.disable'
+            'd)) return;\n'
+            '    if (tp) {\n'
+            '      var ap0 = aparelhoDaEntrada(editando);\n'
+            '      if (ap0) {\n'
+            '        ap0.tipoDeclarado = tp.getAttribute("data-tipodito'
+            '");\n'
+            '        ap0.cor = COR_DO_TIPO[ap0.tipoDeclarado] || ap0.co'
+            'r;\n'
+            '      }\n'
+            '      pintar(); return;\n'
+            '    }\n'
+            '    var vauto = ev.target.closest("#edita #voltar-ao-autom'
+            'atico");\n'
+            '    if (vauto && (vauto.hasAttribute("data-gesto") || vaut'
+            'o.disabled)) return;\n'
+            '    if (vauto) {\n'
+            '      var ap1 = aparelhoDaEntrada(editando);\n'
+            '      if (ap1) { delete ap1.tipoDeclarado; delete ap1.nome'
+            'Declarado; ap1.cor = ap1.corDaMaquina || ap1.cor; }\n'
+            '      if (DECLARADO[editando]) delete DECLARADO[editando].'
+            'extensor;\n'
+            '      var pv = porNum(editando); if (pv) pv.esticada = fal'
+            'se;\n'
+            '      pintar(); return;\n'
+            '    }\n'
+            '    if (ev.target.closest("#edita #identificar")) {\n'
+            '      identificando = alocacao[editando] || null; pintar()'  # (noqa-acento: JS)
+            '; return;\n'
+            '    }\n'
+            '    if (ev.target.id === "ver-a-sugestao") { editando = nu'
+            'll; modo = "ideal"; pintar(); return; }\n'
+            '    if (ev.target.id === "aviso-ver") { avisoAberto = true'
+            '; pintar(); return; }\n'
+            '    if (ev.target.id === "aviso-fecha") { modo = "mesa"; p'
+            'intar(); return; }\n'
+            '    var ub = ev.target.closest("#edita [data-usb]");'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — os ge'
+            'stos do painel: a chave do extensor, o tipo, «Voltar ao au'
+            'tomático», «Identificar», «Mostrar a entrada boa» e o avis'
+            'o de uma linha.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function mostrarEditor() {\n'
+            '    var ed = document.getElementById("edita");\n'
+            '    if (!ed) return;\n'
+        ),
+        depois=_com_os_dados(
+            '  /* ══ O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-C'
+            'ORRIGE-ONDE-SE-CLICA-01 ═══════\n'
+            '     Pedido dela: «clicar num dispositivo não oferece modi'
+            'ficá-lo ou identificá-lo, nem no\n'
+            '     mapa nem em Atualmente Conectado». Clicar em QUALQUER'
+            ' aparelho (o botão com o nome dele\n'
+            '     no mapa, ou o cartão da lista) abre este painel, flut'
+            'uando ao lado dele. Em cima, o que\n'
+            '     ela corrige: o nome, o tipo (o tipo decide a cor em t'
+            'odo o app) e a chave «Extensor».\n'
+            '     No meio, o que a máquina vê, em etiquetas sem botão. '
+            'Embaixo, uma linha só: o que fazer.\n'
+            '     QUEM VENCE: a máquina no que mede (o chip, a velocida'
+            'de, os hubs: etiquetas sem botão), a\n'
+            '     pessoa no resto (o nome, o tipo, o extensor). O tipo '
+            'que ela diz decide a cor e o nome em\n'
+            '     todo o app; no motor ele só pesa quando a máquina não'
+            ' leu a classe do aparelho. */\n'
+            '  var TIPOS_DO_APARELHO = __TIPOS_DO_APARELHO__;\n'
+            '  var COR_DO_TIPO = __COR_DO_TIPO__;\n'
+            '  var LUGARES_DA_ENTRADA = __LUGARES_DA_ENTRADA__;\n'
+            '  var TIPO_DA_CLASSE = { teclado: "teclado", mouse: "mouse'
+            '", wifi: "wifi", webcam: "webcam" };\n'
+            '  var AVISO_SOME_EM_MS = 10000;\n'
+            '  var editandoDe = "mapa", identificando = null, achado = '
+            'null;\n'
+            '  var avisoTimer = null, avisoAberto = false, arrastando ='
+            ' null;\n'
+            '\n'
+            '  function aparelhoDaEntrada(n) { return alocacao[n] ? ach'  # (noqa-acento: JS)
+            'a(alocacao[n]) : null; }\n'  # (noqa-acento: JS)
+            '  function rotuloDoTipo(t) {\n'
+            '    for (var i = 0; i < TIPOS_DO_APARELHO.length; i++) if '
+            '(TIPOS_DO_APARELHO[i][0] === t) return TIPOS_DO_APARELHO[i'
+            '][1];\n'
+            '    return t;\n'
+            '  }\n'
+            '  /* o nome que ela deu vence; depois o tipo que ela disse'
+            '; depois o que a máquina leu */\n'
+            '  function rotuloDoAparelho(a) {\n'
+            '    return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoT'
+            'ipo(a.tipoDeclarado) : a.tipo);\n'
+            '  }\n'
+            '  function editavelNoProduto(quem) { return !doProduto() |'
+            '| !!quem.modelo; }\n'
+            '\n'
+            '  /* A CHAVE «EXTENSOR» — é da porta, separada do que está'
+            ' ligado nela (hub, aparelho): ligada,\n'
+            '     o aparelho continua dito na entrada e o motor lê a en'
+            'trada como esticada. */\n'
+            '  function chaveDoExtensor(n) {\n'
+            '    var soNaTela = doProduto() && !podeGravar(n);\n'
+            '    if (soNaTela) return "";\n'
+            '    var ligado = !!(DECLARADO[n] || {}).extensor;\n'
+            '    return \'<button class="chave" role="switch" aria-check'
+            'ed="\' + ligado + \'" data-extensor="\' + n + \'"\'\n'
+            '      + \' data-ligado="\' + (!ligado) + \'"\' + gravaNaEntrad'
+            'a(n, "entrada-extensor")\n'
+            '      + \' title="Há um cabo de extensão entre esta entrada'
+            ' e o aparelho"><i></i><span>Extensor</span></button>\';\n'
+            '  }\n'
+            '  function linhaDoExtensor(n) {\n'
+            '    var c = chaveDoExtensor(n);\n'
+            '    return c ? \'<div class="edita-linha"><span>Extensor</s'
+            'pan><div class="onde">\'\n'
+            "      + '<span>Tem um cabo de extensão nesta entrada?</spa"
+            'n>\' + c + "</div></div>" : "";\n'
+            '  }\n'
+            '  /* O «LUGAR» — a face do gabinete (o campo do Mapear, no'
+            ' mesmo dono). Só no produto, onde a\n'
+            '     entrada grava: no exemplo ninguém guarda nada. */\n'
+            '  function linhaDoLugar(n) {\n'
+            '    if (!doProduto() || !podeGravar(n) || !/^[0-9]{1,3}$/.'
+            'test(String(n))) return "";\n'
+            '    var atual = faceDe(n), nomes = LUGARES_DA_ENTRADA.slic'
+            'e();\n'
+            '    FACES.forEach(function (f) { if (!f.semLugar && !f.daE'
+            'ntrada && nomes.indexOf(f.nome) === -1) nomes.push(f.nome)'
+            '; });\n'
+            '    return \'<div class="edita-linha"><span>Lugar</span><se'
+            'lect class="troca" data-gesto="entrada-lugar"\'\n'
+            '      + \' data-entrada="\' + n + \'" aria-label="Lugar">\'\n'
+            '      + (atual && nomes.indexOf(atual) !== -1 ? "" : \'<opt'
+            'ion value="" selected>Sem lugar</option>\')\n'
+            '      + nomes.map(function (nome) {\n'
+            '          return \'<option value="\' + emAtributo(nome) + \'"'
+            '\' + (nome === atual ? " selected" : "") + ">"\n'
+            '            + emAtributo(nome) + "</option>";\n'
+            '        }).join("")\n'
+            '      + "</select></div>";\n'
+            '  }\n'
+            '  function semLugar(p) {\n'
+            '    return FACES.some(function (f) { return !!f.semLugar &'
+            '& f.portas.indexOf(p) !== -1; });\n'
+            '  }\n'
+            '  function aparelhoSemLugar(id) {\n'
+            '    var p = portaDe(id), pp = p && porNum(p);\n'
+            '    return !!(pp && semLugar(pp));\n'
+            '  }\n'
+            '\n'
+            '  /* «O QUE FAZER»: uma linha, no máximo um botão. Fala o '
+            'que o motor já diz (o plano). */\n'
+            '  function oQueFazer(n, quem) {\n'
+            '    if (!quem.classe && !quem.tipoDeclarado) {\n'
+            '      return \'<div class="faz"><span>Sem saber o que é, eu'
+            " não sugiro lugar. Diga o tipo acima.</span></div>';\n"
+            '    }\n'
+            '    if (aparelhoSemLugar(quem.id)) {\n'
+            '      return \'<div class="faz"><span>Esta entrada está sem'
+            ' lugar no gabinete: diga o lugar dela para eu julgar.</spa'
+            "n></div>';\n"
+            '    }\n'
+            '    var r = planejar({}), para = portaDeEm(r.plano, quem.i'
+            'd);\n'
+            '    var m = r.motivo[quem.id] || { razoes: [], essencial: '
+            'false, ganho: 0 };\n'
+            '    if (receitaManda(n, para, m)) {\n'
+            '      var razao = m.razoes.length ? m.razoes[0].txt : "";\n'
+            '      return \'<div class="faz"><span>Melhor na \' + emAtrib'
+            'uto(naFraseDe(para))\n'
+            '        + (razao ? ": " + emAtributo(razao) : "") + \'.</sp'
+            "an>'\n"
+            '        + \'<button class="btn forte" id="ver-a-sugestao">M'
+            "ostrar a entrada boa</button></div>';\n"
+            '    }\n'
+            '    return \'<div class="faz bem"><span>✓ Está numa boa ent'
+            "rada.</span></div>';\n"
+            '  }\n'
+            '  /* no exemplo ninguém mediu nada: as etiquetas saem do q'
+            'ue o desenho já diz */\n'
+            '  function etiquetasDoExemplo(quem, p) {\n'
+            '    var e = [];\n'
+            '    if (quem.tipo) e.push(quem.tipo);\n'
+            '    if (p) e.push(p.usb === 3 ? "USB 3.0" : "USB 2.0");\n'
+            '    if (p && p.onde === "hub") e.push("atrás de 1 hub");\n'
+            '    return e;\n'
+            '  }\n'
+            '  function identificavel(quem) { return !/^054c:/.test(que'
+            'm.modelo || ""); }\n'
+            '\n'
+            '  function htmlDoPainelDoAparelho(n, quem, p, face) {\n'
+            '    var edita = editavelNoProduto(quem);\n'
+            '    var g = function (gesto) {\n'
+            '      return quem.modelo ? \' data-gesto="\' + gesto + \'" da'
+            'ta-modelo="\' + quem.modelo + \'"\' : "";\n'
+            '    };\n'
+            '    var h = \'<div class="edita-cab ap-cab"><input class="c'
+            'ampo-nome titulo" type="text"\'\n'
+            '      + \' data-nome-do-aparelho="\' + emAtributo(quem.id) +'
+            ' \'"\' + g("aparelho-nome")\n'
+            '      + (edita ? "" : " disabled") + \' maxlength="\' + MAXI'
+            'MO_DO_NOME + \'"\'\n'
+            '      + \' value="\' + emAtributo(quem.nomeDeclarado || "") '
+            '+ \'"\'\n'
+            '      + \' placeholder="\' + emAtributo(rotuloDoAparelho(que'
+            'm)) + \'" aria-label="Nome do aparelho">\'\n'
+            '      + \'<button class="btn fecha" id="edita-fecha" aria-l'
+            'abel="Fechar">&times;</button></div>\';\n'
+            '\n'
+            '    h += \'<div class="edita-linha"><span>O que é</span><di'
+            'v class="tipos">\';\n'
+            '    var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE[q'
+            'uem.classe] || "";\n'
+            '    h += TIPOS_DO_APARELHO.map(function (t) {\n'
+            '      return \'<button class="escolha tipo-do-aparelho" dat'
+            'a-tipodito="\' + t[0] + \'"\' + g("aparelho-tipo")\n'
+            '        + (edita ? "" : " disabled") + \' aria-pressed="\' +'
+            ' (tipoAgora === t[0]) + \'">\'\n'
+            '        + \'<i style="background:\' + (COR_DO_TIPO[t[0]] || '
+            '"#9a9eb8") + \'"></i>\' + t[1] + "</button>";\n'
+            '    }).join("");\n'
+            '    h += "</div></div>";\n'
+            '\n'
+            '    h += \'<div class="edita-linha"><span>Onde está</span><'
+            'div class="onde"><span>\'\n'
+            '      + emAtributo(rotuloDe(n) + (face ? " · " + (face.tit'
+            'ulo || face.nome) : "")) + "</span>"\n'
+            '      + chaveDoExtensor(n) + "</div></div>";\n'
+            '\n'
+            '    var et = quem.etiquetas || etiquetasDoExemplo(quem, p)'
+            ';\n'
+            '    if (et.length) {\n'
+            '      h += \'<div class="edita-linha"><span>O que a máquina'
+            ' vê</span><div class="etqs">\'\n'
+            '        + et.map(function (e) { return \'<span class="etq">'
+            '\' + emAtributo(e) + "</span>"; }).join("") + "</div></div>'
+            '";\n'
+            '    }\n'
+            '    h += oQueFazer(n, quem);\n'
+            '\n'
+            '    var gVolta = \' data-gesto="voltar-ao-automatico"\' + (q'
+            'uem.modelo ? \' data-modelo="\' + quem.modelo + \'"\' : "")\n'
+            '      + (podeGravar(n) ? \' data-entrada="\' + n + \'"\' : "")'
+            ';\n'
+            '    h += \'<div class="edita-linha acoes-do-aparelho">\'\n'
+            '      + (identificavel(quem) ? \'<button class="btn" id="id'
+            'entificar">Identificar</button>\' : "")\n'
+            '      + \'<button class="btn" id="voltar-ao-automatico"\' + '
+            '(doProduto() ? gVolta : "") + (edita ? "" : " disabled")\n'
+            '      + ">Voltar ao automático</button></div>";\n'
+            '    if (identificando === quem.id) {\n'
+            '      h += \'<p class="dica-id">Tire o aparelho e ponha de '
+            'novo, depois clique «Examinar»: eu acendo a entrada em que'
+            " ele estava.</p>';\n"
+            '    }\n'
+            '    var soNaTela = doProduto() && !podeGravar(n);\n'
+            '    if (!soNaTela) {\n'
+            '      h += \'<details class="mais"><summary>Mais desta entr'
+            "ada</summary>' + linhaDoNome(n)\n"
+            '        + linhaDoLugar(n) + linhaDaTroca(n) + "</details>"'
+            ';\n'
+            '    }\n'
+            '    return h;\n'
+            '  }\n'
+            '\n'
+            '  function mostrarOPainelDoAparelho(ed, quem) {\n'
+            '    var n = editando, p = porNum(n);\n'
+            '    var plug = document.querySelector(\'.plug[data-porta="\''
+            ' + n + \'"]\');\n'
+            '    var face = FACES.filter(function (f) {\n'
+            '      return f.portas.some(function (x) { return x === p |'
+            '| x.filho === p; });\n'
+            '    })[0];\n'
+            '    ed.innerHTML = htmlDoPainelDoAparelho(n, quem, p, face'
+            ');\n'
+            '    ed.hidden = false;\n'
+            '    var palco = ed.parentElement.getBoundingClientRect();\n'
+            '    var chip = editandoDe === "lista" ? document.querySele'
+            'ctor(\'.chip[data-ap="\' + quem.id + \'"]\') : null;\n'
+            '    if (chip) {\n'
+            '      var c = chip.getBoundingClientRect();\n'
+            '      ed.style.left = Math.max(0, c.left - palco.left - 30'
+            '8) + "px";\n'
+            '      ed.style.top = Math.max(0, c.top - palco.top) + "px"'
+            ';\n'
+            '    } else {\n'
+            '      var r = plug.getBoundingClientRect();\n'
+            '      ed.style.left = Math.max(0, Math.min(r.left - palco.'
+            'left, palco.width - 310)) + "px";\n'
+            '      ed.style.top = (r.bottom - palco.top + 8) + "px";\n'
+            '    }\n'
+            '  }\n'
+            '\n'
+            '  function mostrarEditor() {\n'
+            '    var ed = document.getElementById("edita");\n'
+            '    if (!ed) return;\n'
+            '    var quem = editando && modo !== "ideal" && !segurando '
+            '? aparelhoDaEntrada(editando) : null;\n'
+            "    var plug = editando && document.querySelector('.plug[d"
+            'ata-porta="\' + editando + \'"]\');\n'
+            '    if (quem && plug && porNum(editando)) mostrarOPainelDo'
+            'Aparelho(ed, quem);\n'
+            '    else mostrarEditorDaEntrada();\n'
+            '  }\n'
+            '\n'
+            '  /* TROCAR DE LUGAR É ARRASTAR para a outra entrada, com '
+            '«Mover para…» no painel para quem usa\n'
+            '     teclado ou leitor de tela. No produto o gesto é o `en'
+            'trada-trocar` (o mesmo do «Mover\n'
+            '     para…»); no exemplo a troca é só na tela. */\n'
+            '  function podeMover(de, para) {\n'
+            '    if (de === para) return false;\n'
+            '    if (doProduto()) return GRAVA.indexOf(String(de)) !== '
+            '-1 && GRAVA.indexOf(String(para)) !== -1\n'
+            '      && /^[0-9]{1,3}$/.test(String(de)) && /^[0-9]{1,3}$/'
+            '.test(String(para));\n'
+            '    return !!porNum(de) && !!porNum(para);\n'
+            '  }\n'
+            '  function moverPara(de, para) {\n'
+            '    if (!podeMover(de, para)) return;\n'
+            '    if (doProduto()) {\n'
+            '      var sel = document.createElement("select");\n'
+            '      sel.hidden = true;\n'
+            '      sel.setAttribute("data-gesto", "entrada-trocar");\n'
+            '      sel.setAttribute("data-entrada", de);\n'
+            '      sel.innerHTML = \'<option value="\' + para + \'" select'
+            'ed>\' + para + "</option>";\n'
+            '      document.body.appendChild(sel);\n'
+            '      sel.dispatchEvent(new Event("change", { bubbles: tru'
+            'e }));\n'
+            '      document.body.removeChild(sel);\n'
+            '      return;\n'
+            '    }\n'
+            '    var cd = MAPA[de], cp = MAPA[para];\n'
+            '    if (cd) MAPA[para] = cd; else delete MAPA[para];\n'
+            '    if (cp) MAPA[de] = cp; else delete MAPA[de];\n'
+            '    editando = null;\n'
+            '    pintar();\n'
+            '  }\n'
+            '  document.addEventListener("dragstart", function (ev) {\n'
+            '    var b = ev.target.closest && ev.target.closest(".ap-bt'
+            'n[data-ap-abre]");\n'
+            '    if (!b || !ev.dataTransfer) return;\n'
+            '    arrastando = b.getAttribute("data-ap-abre");\n'
+            '    ev.dataTransfer.setData("text/plain", arrastando);\n'
+            '    ev.dataTransfer.effectAllowed = "move";\n'
+            '    document.body.classList.add("arrastando");\n'
+            '  });\n'
+            '  function limparOsAlvos() {\n'
+            '    var alvos = document.querySelectorAll(".soquete.alvo-d'
+            'o-arrasto");\n'
+            '    for (var i = 0; i < alvos.length; i++) alvos[i].classL'
+            'ist.remove("alvo-do-arrasto");\n'
+            '  }\n'
+            '  document.addEventListener("dragend", function () {\n'
+            '    arrastando = null; document.body.classList.remove("arr'
+            'astando"); limparOsAlvos();\n'
+            '  });\n'
+            '  document.addEventListener("dragover", function (ev) {\n'
+            '    var s = arrastando && ev.target.closest && ev.target.c'
+            'losest(".soquete[data-soquete]");\n'
+            '    if (!s || !podeMover(arrastando, s.getAttribute("data-'
+            'soquete"))) return;\n'
+            '    ev.preventDefault();\n'
+            '    limparOsAlvos();\n'
+            '    s.classList.add("alvo-do-arrasto");\n'
+            '  });\n'
+            '  document.addEventListener("drop", function (ev) {\n'
+            '    var s = arrastando && ev.target.closest && ev.target.c'
+            'losest(".soquete[data-soquete]");\n'
+            '    if (!s) return;\n'
+            '    ev.preventDefault();\n'
+            '    var de = arrastando;\n'
+            '    arrastando = null; document.body.classList.remove("arr'
+            'astando"); limparOsAlvos();\n'
+            '    moverPara(de, s.getAttribute("data-soquete"));\n'
+            '  });\n'
+            '\n'
+            '  /* O AVISO DE «MUDOU DE LUGAR» é uma linha com ✓ que som'
+            'e sozinha em 10 s: «Ver» abre o\n'
+            '     detalhe (e o segura até ela fechar) e o ✕ fecha na ho'
+            'ra. */\n'
+            '  function oAvisoDeUmaLinha(mudou, detalhe) {\n'
+            '    var frase, sab = mudou.filter(function (m) { return m.'
+            'entradaAgora; }).length;\n'
+            '    if (!mudou.length) frase = "Nada mudou de lugar.";\n'
+            '    else if (mudou.length === 1) {\n'
+            '      var m = mudou[0], nome = String(m.ap.tipo || "aparel'
+            'ho").toLowerCase();\n'
+            '      frase = m.entradaAgora\n'
+            '        ? "O " + nome + " mudou para a " + naFraseDe(m.ent'
+            'radaAgora) + ", e eu já sei onde ele está."\n'
+            '        : "O " + nome + " mudou de lugar, e eu ainda não s'
+            'ei em qual entrada ele está.";\n'
+            '    } else {\n'
+            '      frase = mudou.length + " aparelhos mudaram de lugar"'
+            '\n'
+            '        + (sab === mudou.length ? ", e eu já sei onde estã'
+            'o."\n'
+            '           : sab ? ", e eu sei onde " + sab + " estão." : '
+            '", e eu ainda não sei em quais entradas.");\n'
+            '    }\n'
+            '    return \'<p class="aviso-uma-linha" role="status"><span'
+            ' class="ok" aria-hidden="true">✓</span>\'\n'
+            '      + "<span>" + emAtributo(frase) + "</span>"\n'
+            '      + (mudou.length ? \'<button class="btn pequeno" id="a'
+            'viso-ver" aria-expanded="\' + avisoAberto + \'">Ver</button>'
+            '\' : "")\n'
+            '      + \'<button class="btn aviso-fecha" id="aviso-fecha" '
+            'aria-label="Fechar o aviso">&times;</button></p>\'\n'
+            '      + (avisoAberto ? \'<div class="aviso-detalhe">\' + det'
+            'alhe + "</div>" : "");\n'
+            '  }\n'
+            '  var avisoLeituras = null;\n'
+            '  function acharOIdentificado() {\n'
+            '    if (!identificando) return;\n'
+            '    if (reexame(leituraAnterior, leituraAtual).some(functi'
+            'on (m) { return m.ap.id === identificando; })) {\n'
+            '      achado = identificando;\n'
+            '    }\n'
+            '    identificando = null;\n'
+            '  }\n'
+            '  function cuidarDoAviso() {\n'
+            '    if (modo !== "reexame") {\n'
+            '      if (avisoTimer) { clearTimeout(avisoTimer); avisoTim'
+            'er = null; }\n'
+            '      avisoAberto = false; avisoLeituras = null;\n'
+            '      return;\n'
+            '    }\n'
+            '    /* uma leitura nova (outro `Examinar`) recomeça os 10 '
+            's */\n'
+            '    if (avisoLeituras !== LEITURAS) {\n'
+            '      recomecarOAviso(); avisoLeituras = LEITURAS; acharOI'
+            'dentificado();\n'
+            '    }\n'
+            '    if (avisoTimer || avisoAberto) return;\n'
+            '    avisoTimer = setTimeout(function () {\n'
+            '      avisoTimer = null;\n'
+            '      if (modo === "reexame" && !avisoAberto) { modo = "me'
+            'sa"; pintar(); }\n'
+            '    }, AVISO_SOME_EM_MS);\n'
+            '  }\n'
+            '  function recomecarOAviso() {\n'
+            '    if (avisoTimer) { clearTimeout(avisoTimer); avisoTimer'
+            ' = null; }\n'
+            '    avisoAberto = false; avisoLeituras = null;\n'
+            '  }\n'
+            '\n'
+            '  function mostrarEditorDaEntrada() {\n'
+            '    var ed = document.getElementById("edita");\n'
+            '    if (!ed) return;\n'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o pai'
+            'nel do aparelho e o arrastar; o editor antigo vira o da EN'
+            'TRADA VAZIA e o `mostrarEditor` escolhe um dos dois.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '[["direto", "Direto"], ["hub", "Hub"], ["extensor", "Exten'
+            'sor"]].map'
+        ),
+        depois=(
+            '[["direto", "Direto"], ["hub", "Hub"]].map'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o ext'
+            'ensor deixa de ser «o que tem aqui»: é a chave da porta, s'
+            'eparada do que está ligado nela.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '<div class="edita-linha"><span>O que tem aqui</span><div c'
+            'lass="seg">\''
+        ),
+        depois=(
+            '<div class="edita-linha"><span>O que tem aqui</span><div c'
+            'lass="seg dois">\''
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — duas '
+            'respostas, duas colunas.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + "</div>" + (lido ? \'<span class="lido">O computado'
+            'r lê um hub nela.</span>\' : "") + "</div>"'
+        ),
+        depois=(
+            '      + "</div>" + (lido ? \'<span class="lido">O computado'
+            'r lê um hub nela.</span>\' : "") + "</div>"\n'
+            '      + linhaDoExtensor(editando)'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — a cha'
+            've «Extensor» na entrada vazia.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + (soNaTela ? "" : linhaDaTroca(editando));'
+        ),
+        depois=(
+            '      + (soNaTela ? "" : linhaDoLugar(editando) + linhaDaT'
+            'roca(editando));'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o cam'
+            'po «Lugar» (absorvido da A-ENTRADA-SEM-LUGAR-APARECE-NO-MA'
+            'PA-01) no editor da entrada.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    return \'<div class="edita-linha"><span>Trocar de lugar'
+            "</span>'"
+        ),
+        depois=(
+            '    return \'<div class="edita-linha"><span>Mover para…</sp'
+            "an>'"
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — «Move'
+            'r para…», o nome do botão para quem usa teclado ou leitor '
+            'de tela.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + \'<option value="">Trocar com…</option>\''
+        ),
+        depois=(
+            '      + \'<option value="">Mover para…</option>\''
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — a pri'
+            'meira opção diz o mesmo que o rótulo.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    return \'<div class="edita-linha"><span>Nome</span><inp'
+            'ut class="campo-nome" type="text"'
+        ),
+        depois=(
+            '    return \'<div class="edita-linha"><span>Nome da entrada'
+            '</span><input class="campo-nome" type="text"'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — com o'
+            ' nome do aparelho no painel, o campo da entrada diz de que'
+            'm é o nome.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var plano = {}, motivo = {};\n'
+            '    var portas = todasPortas()'
+        ),
+        depois=(
+            '    var plano = {}, motivo = {};\n'
+            '    /* A FILEIRA «SEM LUGAR» NÃO ENTRA NO PLANO — 04/10/20'
+            '26: sem o lugar (a face) o motor não\n'
+            '       tem o que julgar, então quem está nela fica onde es'
+            'tá e ninguém é mandado para lá. */\n'
+            '    APARELHOS.forEach(function (a) { if (aparelhoSemLugar('
+            'a.id)) plano[portaDe(a.id)] = a.id; });\n'
+            '    var portas = todasPortas()'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — quem '
+            'mora na fileira «Sem Lugar» fica onde está no plano.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      APARELHOS.filter(function (a) { return a.classe === '
+            'cl; }).forEach(function (ap) {'
+        ),
+        depois=(
+            '      APARELHOS.filter(function (a) { return a.classe === '
+            'cl && !aparelhoSemLugar(a.id); }).forEach(function (ap) {'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o pla'
+            'no não reescolhe quem está sem lugar.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var portas = todasPortas().filter(function (p) { retur'
+            'n !proibida(p) && !doHubDesenhado(p); });'
+        ),
+        depois=(
+            '    var portas = todasPortas().filter(function (p) { retur'
+            'n !proibida(p) && !doHubDesenhado(p) && !semLugar(p); });'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — ningu'
+            'ém é mandado para a fileira «Sem Lugar».'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ctx.modo === "ideal") {\n'
+            '      var idPlano'
+        ),
+        depois=(
+            '    if (ctx.modo === "ideal" && !semLugar(porta)) {\n'
+            '      var idPlano'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — no «S'
+            'ugestões» a fileira «Sem Lugar» segue como está: sem vered'
+            'ito.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      var j = julgar(porta);\n'
+            '      if (ap) {'
+        ),
+        depois=(
+            '      var j = semLugar(porta) ? null : julgar(porta);\n'
+            '      if (ap) {'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — a ent'
+            'rada sem lugar não leva veredito de lugar.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + ensinaNaEntrada(porta)\n'
+        ),
+        depois=(
+            '      + ensinaNaEntrada(porta)\n'
+            "      + (achado && alocacao[porta.n] === achado ? ' data-a"  # (noqa-acento: JS)
+            'chado="1"\' : "")\n'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — «Iden'
+            'tificar» (tire e ponha): depois do «Examinar» a entrada em'
+            ' que o aparelho estava acende.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        + faixa + "</div>";\n'
+            '    }).join("");'
+        ),
+        depois=(
+            '        + (f.leitura && modo !== "ideal"\n'
+            '            ? \'<p class="leitura-da-maquina">\' + f.leitura'
+            '.map(emAtributo).join(" · ") + "</p>" : "")\n'
+            '        + faixa + "</div>";\n'
+            '    }).join("");'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — a lei'
+            'tura da máquina em palavras curtas, embaixo do hub.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        + \'<button class="btn" id="ver-antes">Ver como o a'
+            'rranjo estava \' + (leituraAtual === "agora" ? "antes" : "a'
+            'gora") + "</button></div>";\n'
+            '    } else if (modo === "mao") {'  # (noqa-acento: JS)
+        ),
+        depois=(
+            '        + \'<button class="btn" id="ver-antes">Ver como o a'
+            'rranjo estava \' + (leituraAtual === "agora" ? "antes" : "a'
+            'gora") + "</button></div>";\n'
+            '      html = oAvisoDeUmaLinha(mudou, html);\n'
+            '    } else if (modo === "mao") {'  # (noqa-acento: JS)
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o avi'
+            'so de «mudou de lugar» vira uma linha com ✓, «Ver» e ✕; o '
+            'detalhe de antes só abre no «Ver».'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    painel.innerHTML = html;\n'
+        ),
+        depois=(
+            '    painel.innerHTML = html;\n'
+            '    cuidarDoAviso();\n'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o avi'
+            'so some sozinho em 10 s.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      modo = "reexame"; segurando = null; naMao = null; pi'
+            'ntar(); return;'
+        ),
+        depois=(
+            '      recomecarOAviso(); modo = "reexame"; segurando = nul'
+            'l; naMao = null; pintar(); return;'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — cada '
+            '«Examinar» recomeça os 10 s do aviso.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (!pai || pai.closest("code, script, style, .camin'
+            'ho, .chip .txt span")) return;'
+        ),
+        depois=(
+            '      if (!pai || pai.closest("code, script, style, .camin'
+            'ho, .chip .txt span, .aviso-uma-linha, .leitura-da-maquina'
+            ', .faz, .dica-id, .etq")) return;'
+        ),
+        porque=(
+            '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — as fr'
+            'ases do aviso, da leitura e do «o que fazer» ficam como fr'
+            'ases.'
+        ),
+    ),
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

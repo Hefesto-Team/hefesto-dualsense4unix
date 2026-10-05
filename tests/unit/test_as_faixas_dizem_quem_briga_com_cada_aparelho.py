@@ -212,17 +212,17 @@ def test_o_canal_perdido_leva_a_marca_do_wifi_e_o_wifi_leva_a_do_controle() -> N
 
 
 def test_o_celular_conectado_aparece_com_o_mapa_dele_e_o_relogio_le_divide_o_radio() -> None:
-    enlaces = {"L1": {"cc0000000001": {"le": False, "canais_evitados": [7, 8],
+    enlaces = {"L1": {"aabbcc000001": {"le": False, "canais_evitados": [7, 8],
                                        "qualidade_do_enlace": 200, "rssi": -55},
-                      "cc0000000002": {"le": True, "canais_evitados": None,
+                      "aabbcc000002": {"le": True, "canais_evitados": None,
                                        "qualidade_do_enlace": None, "rssi": None}}}
-    cena = _cena(aparelhos=[_ap("CC0000000001", "celular"), _ap("CC0000000002", "relogio")],
+    cena = _cena(aparelhos=[_ap("AABBCC000001", "celular"), _ap("AABBCC000002", "relogio")],
                  enlaces=enlaces, evitados=[(30, 32)])
     html = a08.html_dos_canais(cena)
-    celular = re.search(r'data-id="CC0000000001".*?</div></div>', html, re.S).group(0)
+    celular = re.search(r'data-id="AABBCC000001".*?</div></div>', html, re.S).group(0)
     assert re.findall(r'title="Canal (\d+) [^"]*perdido', celular) == ["7", "8"]
     assert "sinal -55 dBm" in celular and "qualidade do enlace 200/255" in celular
-    relogio = re.search(r'data-id="CC0000000002".*?</div></div>', html, re.S).group(0)
+    relogio = re.search(r'data-id="AABBCC000002".*?</div></div>', html, re.S).group(0)
     assert fx.DIVIDE_O_RADIO in relogio and "<i " not in relogio.split("ar-estado")[0].split(
         'class="ar-faixa')[1]
 

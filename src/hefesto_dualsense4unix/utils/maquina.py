@@ -264,10 +264,26 @@ class PortaDeclarada(BaseModel):
     lugar: str | None = None
     filha_de: str | None = None
     nos: list[str] = Field(default_factory=list)
-    liga: Literal["hub", "extensor"] | None = None
+    liga: Literal["hub"] | None = None
+    #: A CHAVE DA PORTA (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, 04/10/2026): há um cabo de
+    #: extensão entre este buraco e o aparelho. É da porta, separada do que está ligado nela
+    #: (``liga``), e pesa no arranjo: o motor lê a entrada como esticada. Cabo passivo não tem
+    #: descritor USB, e nenhuma leitura do ``/sys`` o vê — quem sabe é a pessoa.
+    extensor: bool | None = None
     usb: Literal[2, 3] | None = None
     #: escreve na tela é ``utils/rotulo_da_entrada``. É o único lugar do nome
     nome: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _o_extensor_de_antes_e_a_chave(cls, valor: Any) -> Any:
+        """``liga: extensor`` (até 04/10/2026) é a chave ``extensor`` — a leitura aceita as duas."""
+        if not isinstance(valor, Mapping) or valor.get("liga") != "extensor":
+            return valor
+        corpo = dict(valor)
+        corpo["liga"] = None
+        corpo["extensor"] = True
+        return corpo
 
     @model_validator(mode="before")
     @classmethod
@@ -957,7 +973,31 @@ def migrar_o_documento(bruto: Mapping[str, Any]) -> dict[str, Any]:
         for numero, porta in mapa["portas"].items():
             if isinstance(porta, dict) and "caminho" in porta:
                 _o_caminho_vira_no(numero, porta)
+        _o_extensor_vira_a_chave(mapa["portas"])
     return documento
+
+
+def _o_extensor_vira_a_chave(portas: dict[str, Any]) -> None:
+    """``liga: extensor`` vira ``extensor: true``, e a ponta antiga se funde na entrada.
+
+    O extensor deixou de ser «o que tem na entrada» (04/10/2026): é uma chave da porta, e o
+    aparelho que está nela continua dito nela. A entrada-filha que o desenho antigo criava
+    para a ponta (``Na``, ``filha_de = N``) não tem mais o que guardar: o aparelho enumera no
+    buraco da ``N``, então os nós, o lugar e a velocidade que só a ponta tinha passam para a
+    ``N`` quando ela não os tem, e a ponta sai (o nome dela fica na cópia de antes). Idempotente.
+    """
+    for numero, porta in list(portas.items()):
+        if not isinstance(porta, dict) or porta.get("liga") != "extensor":
+            continue
+        porta.pop("liga")
+        porta["extensor"] = True
+        ponta = portas.get(f"{numero}a")
+        if not isinstance(ponta, dict) or ponta.get("filha_de") != numero:
+            continue
+        for campo in ("nos", "usb", "lugar"):
+            if ponta.get(campo) and not porta.get(campo):
+                porta[campo] = ponta[campo]
+        del portas[f"{numero}a"]
 
 
 def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> dict[str, Any]:

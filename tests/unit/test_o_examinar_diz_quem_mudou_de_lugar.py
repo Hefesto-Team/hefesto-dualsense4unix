@@ -27,6 +27,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     caminho_da_maquina,
     carregar_maquina,
     gravar_maquina,
+    gravar_maquina_com_descartes,
 )
 
 
@@ -235,7 +236,9 @@ def test_o_gesto_reexaminar_devolve_o_arranjo_na_chave_da_entrega(
     dado = resposta[arranjo_desta_maquina.CHAVE_DA_ENTREGA]
     assert dado["aparelhos"] and dado["leituras"]["agora"]["caminho"]
 
-    assert gravar_maquina({"mapa": {"faces": []}})
+    # o mapa SUMIU do disco: com entrada numerada o arranjo vale mesmo sem face (04/10/2026,
+    # A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01), então a régua apaga o mapa INTEIRO
+    assert gravar_maquina_com_descartes({"mapa": {}}, substituir=("mapa",)).gravou
     with pytest.raises(RuntimeError):
         reexaminar(None, {}, None)
 
@@ -351,55 +354,52 @@ _A_VOLTA_DO_GESTO = re.compile(
     r"self\._o_arranjo_relido\(pagina, r\)\)")  # noqa-acento: código do piloto
 
 
-def test_a_ponta_do_extensor_grava_como_a_entrada_filha(disco: Path) -> None:
-    with pytest.raises(ValueError):
-        ee.declarar_a_velocidade("3a", 2)
-    assert ee.declarar_a_ligacao("3", "extensor").gravou
-    assert ee.declarar_a_velocidade("3a", 2).gravou
-    assert ee.declarar_a_ligacao("3a", "hub").gravou
-    ponta = carregar_maquina().mapa.portas["3a"]
-    assert (ponta.filha_de, ponta.usb, ponta.liga) == ("3", 2, "hub")
+def test_o_extensor_grava_como_a_chave_da_entrada(disco: Path) -> None:
+    assert ee.declarar_o_extensor("3", True).gravou
+    assert ee.declarar_a_velocidade("3", 2).gravou
+    assert ee.declarar_a_ligacao("3", "hub").gravou
+    porta = carregar_maquina().mapa.portas["3"]
+    assert (porta.extensor, porta.usb, porta.liga) == (True, 2, "hub"), (
+        "o extensor e o hub moram juntos na entrada")
 
     dado = _ler(_teclado("9-1"))
-    assert dado["declarado"]["3a"] == {"liga": "hub", "usb": 2}
+    assert dado["declarado"]["3"] == {"liga": "hub", "extensor": True, "usb": 2}
     traseira = next(f for f in dado["faces"] if f["nome"] == "Traseira")
     tres = next(p for p in traseira["portas"] if p["n"] == "3")
-    assert tres["filho"]["n"] == "3a" and tres["filho"]["usb"] == 2
-    hub = ee.FACE_DO_HUB_DECLARADO.format(numero="3a")
-    assert hub in {f["nome"] for f in dado["faces"]}, "o hub na ponta não voltou ao reler"
+    assert tres["extensor"] is True and "filho" not in tres
+    hub = ee.FACE_DO_HUB_DECLARADO.format(numero="3")
+    assert hub in {f["nome"] for f in dado["faces"]}, "o hub na entrada com extensor não voltou"
 
     for numero in ("3aa", "5.1", "3a.1"):
         with pytest.raises(ValueError):
             ee.declarar_a_velocidade(numero, 3)
 
-    assert ee.declarar_a_ligacao("3", None).gravou
-    assert "3a" not in carregar_maquina().mapa.portas
-    dado = _ler(_teclado("9-1"))
-    assert "3a" not in dado["declarado"]
-    assert hub not in {f["nome"] for f in dado["faces"]}
+    assert ee.declarar_o_extensor("3", False).gravou
+    assert carregar_maquina().mapa.portas["3"].extensor is None
+    assert carregar_maquina().mapa.portas["3"].liga == "hub", "desligar o extensor tirou o hub"
+    assert "extensor" not in _ler(_teclado("9-1"))["declarado"]["3"]
 
 
-def test_a_ponta_herda_a_velocidade_de_quem_a_hospeda(disco: Path) -> None:
-    """Declarar só o «Hub» na ponta não a pinta de USB 2.0 ao reler."""
+def test_o_extensor_nao_muda_a_velocidade_da_entrada(disco: Path) -> None:
+    """A velocidade é da entrada; o extensor só diz que há um cabo entre ela e o aparelho."""
     assert ee.declarar_a_velocidade("3", 3).gravou
-    assert ee.declarar_a_ligacao("3", "extensor").gravou
     antes = _ler()
-    assert ee.declarar_a_ligacao("3a", "hub").gravou
+    assert ee.declarar_o_extensor("3", True).gravou
     depois = _ler()
 
-    def ponta(dado: dict[str, Any]) -> int:
+    def usb(dado: dict[str, Any]) -> int:
         traseira = next(f for f in dado["faces"] if f["nome"] == "Traseira")
-        return next(p for p in traseira["portas"] if p["n"] == "3")["filho"]["usb"]
+        return next(p for p in traseira["portas"] if p["n"] == "3")["usb"]
 
-    assert ponta(antes) == ponta(depois) == 3
+    assert usb(antes) == usb(depois) == 3
 
 
-def test_a_ponta_com_aparelho_mapeado_nao_sai_com_o_direto(disco: Path) -> None:
+def test_a_ponta_com_aparelho_mapeado_nao_sai_ao_desligar_o_extensor(disco: Path) -> None:
     """A filha que o Mapear amarrou (caminho) é dado do Mapear, e fica."""
-    mapa = _mapa(e3={"liga": "extensor"})
+    mapa = _mapa(e3={"extensor": True})
     mapa.portas["3a"] = PortaDeclarada(caminho="9-7", filha_de="3")
     assert gravar_maquina({"mapa": mapa.model_dump(mode="json")})
-    assert ee.declarar_a_ligacao("3", None).gravou
+    assert ee.declarar_o_extensor("3", False).gravou
     assert carregar_maquina().mapa.portas["3a"].caminho == "9-7"
 
 
@@ -736,8 +736,13 @@ def test_a_sugestao_nunca_manda_para_dentro_do_hub_desenhado(disco: Path) -> Non
         "a Sugestão mandou um aparelho para dentro do hub desenhado: " + sugestoes)
 
 
-def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> None:
-    """Extensor na 3 → a ponta 3a leva o gesto; hub na 4 → a 4.1 não edita."""
+def test_o_hub_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> None:
+    """Hub na 4 grava pelo gesto da entrada; a 4.1, desenhada, não edita.
+
+    (O «Extensor» deixou de ser uma resposta de «O que tem aqui» em 04/10/2026: a página
+    publicada até o próximo `--publicar` ainda o manda por este gesto, e o pacote o atende como
+    a chave da porta; quem prova a chave é `test_o_aparelho_se_corrige_onde_se_clica`.)
+    """
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -759,32 +764,17 @@ def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> N
         _clicar('#edita [data-liga="extensor"]'),
     ])
     assert levar_ao_disco(mensagens) == [("entrada-o-que-tem", "3")]
+    assert carregar_maquina().mapa.portas["3"].extensor is True, (
+        "o «Extensor» da página de antes não virou a chave da porta")
     lidas, mensagens = _na_pagina([
         _js(_ler(_teclado("9-1"))),
-        _clicar('.plug[data-porta="3a"]'),
-        _LER,
-        _clicar('#edita [data-usb="3"]'),
         _clicar('.plug[data-porta="4"]'),
         _clicar('#edita [data-liga="hub"]'),
     ])
-    na_ponta = lidas[2]
-    assert "entrada-velocidade:3@3a" in na_ponta["gestos"], na_ponta["gestos"]
-    assert na_ponta["v3"]["3a"] is False, "a ponta de uma entrada USB 2.0 nasceu azul"
-    assert levar_ao_disco(mensagens) == [
-        ("entrada-velocidade", "3a"), ("entrada-o-que-tem", "4")]
-    assert carregar_maquina().mapa.portas["3a"].usb == 3
+    assert levar_ao_disco(mensagens) == [("entrada-o-que-tem", "4")]
     lidas, mensagens = _na_pagina([
         _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="4.1"]'),
         _LER,
     ])
     assert lidas[2]["editor"] is False, "a entrada do hub desenhado abriu o editor sem gravar"
-
-    relida, _ = _na_pagina([
-        _js(_ler(_teclado("9-1"))),
-        _clicar('.plug[data-porta="3a"]'),
-        _LER,
-    ])
-    assert relida[2]["v3"]["3a"] is True, "a ponta relida não é azul, e ela disse USB 3.0"
-    assert relida[2]["v3"]["3"] is False, "a mãe mudou de velocidade junto com a ponta"
-    assert "3" in relida[2]["apertados"], relida[2]

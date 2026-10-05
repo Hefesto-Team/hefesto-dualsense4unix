@@ -169,16 +169,17 @@ def test_declarar_hub_grava_e_a_face_do_hub_volta_ao_reler(disco: Path) -> None:
     assert carregar_maquina().mapa.portas["5"].nos == _NOS["5"]
 
 
-def test_o_extensor_declarado_vira_a_entrada_filha(disco: Path) -> None:
-    assert ee.declarar_a_ligacao("1", "extensor").gravou
+def test_o_extensor_declarado_e_a_chave_da_entrada_e_nao_uma_filha(disco: Path) -> None:
+    """Desde 04/10/2026 o extensor é da porta: a entrada fica esticada e dita."""
+    assert ee.declarar_o_extensor("1", True).gravou
     veio = arranjo_desta_maquina.arranjo(
         carregar=carregar_maquina, ler_o_barramento=_censo)
     assert veio is not None
     frente = next(f for f in veio["faces"] if f["nome"] == "Frente")
-    filho = frente["portas"][0].get("filho")
-    assert filho is not None, "o extensor declarado não virou entrada-filha"
-    assert filho["n"] == "1a" and filho["esticada"] is True
-    assert filho["cabo"] == arranjo_desta_maquina.CABO_DECLARADO
+    primeira = frente["portas"][0]
+    assert "filho" not in primeira, "o extensor ainda desenha uma entrada-filha"
+    assert primeira["extensor"] is True and primeira["esticada"] is True
+    assert veio["declarado"]["1"]["extensor"] is True
 
 
 def test_a_entrada_fora_do_mapa_nao_grava(disco: Path) -> None:

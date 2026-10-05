@@ -12,6 +12,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.censo_do_barramento import ESPECIE_DESCONHECIDA
 from hefesto_dualsense4unix.interface import pagina_do_mapa
 
 PAGINA = "mapa-das-portas.html"
@@ -85,10 +86,11 @@ def _ler_a_maquina(
     try:
         documento = (carregar or carregar_maquina)()
         declarado = getattr(documento, "mapa", None)
-        if declarado is None or not declarado.faces:
+        if declarado is None or not (declarado.faces or _numeradas(declarado)):
             return None
         censo = (ler_o_barramento or _ler)()
-        bancada = mapa_das_portas.mesa_do_motor(declarado, censo)
+        tipos = mapa_das_portas.tipos_declarados(documento)
+        bancada = mapa_das_portas.mesa_do_motor(declarado, censo, tipos)
         conectados = censo.conectados()
         ids = identidades(
             conectados, ler_o_serial or mapa_das_portas.serial_do_no, antes,
@@ -98,7 +100,9 @@ def _ler_a_maquina(
         return None
 
     mesa = bancada.mesa
-    if not mesa.faces:
+    pelo_caminho = {a.nome_do_kernel: a for a in conectados}
+    sem_lugar = _a_fileira_sem_lugar(declarado, censo, mapa_das_portas)
+    if not mesa.faces and sem_lugar is None:
         return None
 
     quando = (agora or _dt.datetime.now()).strftime("%d/%m/%Y %Hh%M")
@@ -106,6 +110,9 @@ def _ler_a_maquina(
     faces = _faces(mesa.faces)
     hub_lido = _o_que_ela_declarou_nas_entradas(
         faces, declarado, lambda numero: nome_da_entrada(numero, maquina=documento))
+    if sem_lugar is not None:
+        faces.append(sem_lugar)
+    _a_leitura_da_maquina(faces, declarado, censo, mapa_das_portas)
     anterior = (
         {"rotulo": ROTULO_DE_ANTES, "caminho": dict(caminhos)}
         if antes is None
@@ -116,7 +123,11 @@ def _ler_a_maquina(
             for a in mesa.aparelhos}
     return {
         "quando": QUANDO_DE_AGORA.format(quando=quando),
-        "aparelhos": [_aparelho(a, ids.get(a.id, a.id)) for a in mesa.aparelhos],
+        "aparelhos": [
+            _aparelho(a, ids.get(a.id, a.id), pelo_caminho.get(a.id), tipos,
+                      _apelidos(documento), censo)
+            for a in mesa.aparelhos
+        ],
         "faces": faces,
         "mapa": dict(mesa.mapa),
         "leituras": {
@@ -253,6 +264,8 @@ def _declarado(
         dito: dict[str, Any] = {}
         if porta is not None and porta.liga:
             dito["liga"] = porta.liga
+        if porta is not None and porta.extensor:
+            dito["extensor"] = True
         if porta is not None and porta.usb:
             dito["usb"] = porta.usb
         nome = nome_de(numero) if nome_de is not None else None
@@ -314,21 +327,26 @@ def _o_que_ela_declarou_nas_entradas(
         })
     for numero, entrada in por_numero.items():
         porta = mapa.portas.get(numero)
-        if porta is None or porta.liga != "extensor" or "filho" in entrada:
-            continue
-        entrada["filho"] = {
-            "n": f"{numero}a",
-            "usb": entrada["usb"],
-            "onde": entrada["onde"],
-            "esticada": True,
-            "cabo": CABO_DECLARADO,
-        }
+        if porta is not None and porta.extensor:
+            # a chave da porta (04/10/2026): o aparelho continua dito na entrada, e ela é esticada
+            entrada["extensor"] = True
     return hub_lido
 
 
-def _aparelho(aparelho: Any, identidade: str) -> dict[str, Any]:
-    """Um aparelho do motor nos cinco campos que a página LÊ."""
-    return {
+def _aparelho(
+    aparelho: Any,
+    identidade: str,
+    do_censo: Any = None,
+    tipos: Mapping[str, str] | None = None,
+    apelidos: Mapping[str, str] | None = None,
+    censo: Any = None,
+) -> dict[str, Any]:
+    """Um aparelho do motor nos campos que a página LÊ, com o que o painel dele diz.
+
+    ``modelo`` é o ``vid:pid`` (a chave do que ela declara do aparelho) e ``etiquetas`` é «o que
+    a máquina vê», em palavras, sem botão.
+    """
+    corpo: dict[str, Any] = {
         "id": identidade,
         "tipo": aparelho.tipo,
         "nome": aparelho.nome,
@@ -336,6 +354,97 @@ def _aparelho(aparelho: Any, identidade: str) -> dict[str, Any]:
         "cor": pagina_do_mapa.CORES_POR_CLASSE.get(
             aparelho.classe, pagina_do_mapa.COR_SEM_CLASSE),
     }
+    if do_censo is None:
+        return corpo
+    modelo = f"{do_censo.vid}:{do_censo.pid}" if do_censo.vid or do_censo.pid else ""
+    corpo["modelo"] = modelo
+    declarado = (tipos or {}).get(modelo, "")
+    if declarado:
+        corpo["tipoDeclarado"] = declarado
+        corpo["cor"] = pagina_do_mapa.COR_POR_TIPO_DECLARADO.get(
+            declarado, pagina_do_mapa.CORES_POR_CLASSE.get(declarado, corpo["cor"]))
+    if (apelidos or {}).get(modelo):
+        corpo["nomeDeclarado"] = (apelidos or {})[modelo]
+    corpo["etiquetas"] = _etiquetas_do_aparelho(do_censo, censo)
+    return corpo
+
+
+def _apelidos(documento: Any) -> dict[str, str]:
+    """``{vid:pid: apelido}`` do que ela chamou cada aparelho."""
+    radios = getattr(getattr(documento, "mesa", None), "radios", None) or {}
+    return {chave: radio.apelido for chave, radio in radios.items() if radio.apelido}
+
+
+_VELOCIDADE_SUPERSPEED_MBPS = 5000
+
+
+def _etiquetas_do_aparelho(aparelho: Any, censo: Any) -> list[str]:
+    """O que a máquina vê do aparelho: o chip, a velocidade, os hubs e quem divide o hub."""
+    from hefesto_dualsense4unix.integrations.censo_do_barramento import cadeia_de_hubs
+
+    etiquetas: list[str] = []
+    if aparelho.especie and aparelho.especie != ESPECIE_DESCONHECIDA:
+        etiquetas.append(aparelho.especie)
+    if aparelho.velocidade_mbps > 0:
+        etiquetas.append(
+            "USB 3.0" if aparelho.velocidade_mbps >= _VELOCIDADE_SUPERSPEED_MBPS else "USB 2.0")
+    cadeia = cadeia_de_hubs(censo, aparelho.no) if censo is not None else ()
+    if cadeia:
+        etiquetas.append(f"atrás de {len(cadeia)} hub" + ("s" if len(cadeia) > 1 else ""))
+        vizinhos = [
+            outro for outro in censo.conectados()
+            if outro.no != aparelho.no and cadeia[0] in cadeia_de_hubs(censo, outro.no)
+            and not outro.e_hub
+        ]
+        if any(v.velocidade_mbps >= _VELOCIDADE_SUPERSPEED_MBPS for v in vizinhos):
+            etiquetas.append("USB 3.0 no mesmo hub")
+        elif len(vizinhos) >= 2:
+            etiquetas.append("outros rádios no mesmo hub")
+    return etiquetas
+
+
+def _numeradas(mapa: Any) -> list[str]:
+    """As entradas numeradas do mapa que não são ponta de extensão e não estão em face."""
+    nas_faces = {numero for face in mapa.faces for numero in face.portas}
+    return sorted(
+        (n for n, porta in mapa.portas.items()
+         if n not in nas_faces and not porta.filha_de and n.isdigit()),
+        key=int,
+    )
+
+
+SEM_LUGAR = "Sem Lugar"
+
+
+def _a_fileira_sem_lugar(mapa: Any, censo: Any, mapa_das_portas: Any) -> dict[str, Any] | None:
+    """A fileira das entradas numeradas que nenhuma face tem — fora do plano.
+
+    A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01 (absorvida em 04/10/2026): o «Salvar» do Mapear com o
+    lugar vazio numera a entrada e ela nasce fora de toda face. O motor não a vê (ela não é face:
+    as sugestões nunca mandam ninguém para lá); a página a desenha depois das faces.
+    """
+    numeros = _numeradas(mapa)
+    if not numeros:
+        return None
+    return {
+        "nome": SEM_LUGAR,
+        "titulo": SEM_LUGAR,
+        "forma": _COLUNA_CURTA if len(numeros) <= _TETO_DA_COLUNA else _GRADE,
+        "regiao": "pc",
+        "semLugar": True,
+        "portas": [_entrada(e) for e in mapa_das_portas.entradas_sem_lugar(mapa, censo, numeros)],
+    }
+
+
+def _a_leitura_da_maquina(
+    faces: list[dict[str, Any]], mapa: Any, censo: Any, mapa_das_portas: Any
+) -> None:
+    """A leitura da máquina em palavras curtas, embaixo da face do hub (ou da última face)."""
+    frases = mapa_das_portas.leitura_da_maquina(mapa, censo)
+    if not frases or not faces:
+        return
+    alvo = next((f for f in faces if f.get("regiao") == "hub"), faces[-1])
+    alvo["leitura"] = frases
 
 
 def _faces(faces: Any) -> list[dict[str, Any]]:

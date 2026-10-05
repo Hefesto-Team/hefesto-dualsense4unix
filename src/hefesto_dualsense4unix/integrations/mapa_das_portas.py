@@ -20,6 +20,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     caminho_da_porta,
     caminhos_da_porta,
 )
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import na_frase
 
 _ARQUIVO_DO_SERIAL = "serial"
 
@@ -179,12 +180,19 @@ class Bancada:
     usb_de: Mapping[str, str] = field(default_factory=dict)
 
 
-def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
-    """O desenho dela mais a leitura de agora, na forma que o motor entende."""
+def mesa_do_motor(
+    mapa: MapaDaMesa, censo: Censo, tipos: Mapping[str, str] | None = None
+) -> Bancada:
+    """O desenho dela mais a leitura de agora, na forma que o motor entende.
+
+    ``tipos`` é o que ela declarou de cada modelo (``vid:pid`` → tipo, o ``mesa.radios`` do
+    ``maquina.json``): pesa quando a máquina não mede a classe do aparelho
+    (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, passo 2 absorvido da O-WIFI-E-TODO-DISPOSITIVO).
+    """
     controladores = controladores_do_censo(censo)
     leitura, fora = _leitura_pelas_entradas(mapa, censo.conectados(), controladores)
     aparelhos = tuple(
-        _aparelho_do_motor(a) for a in censo.conectados() if a.nome_do_kernel not in fora
+        _aparelho_do_motor(a, tipos) for a in censo.conectados() if a.nome_do_kernel not in fora
     )
     leitura = {aparelho.id: leitura[aparelho.id] for aparelho in aparelhos}
     declarado = {
@@ -215,6 +223,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
         lacunas.add(LACUNA_POSICAO)
 
     faces: list[motor.Face] = []
+    presentes_no_censo = _caminhos_do_censo(censo)
     for face in mapa.faces:
         numeros = _entradas_da_fileira_da_face(mapa, face.portas)
         regioes: dict[str, str | None] = {}
@@ -238,7 +247,10 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
                 velocidades=velocidades,
                 aparelhos=aparelhos_medidos,
                 lacunas=lacunas,
+                esticada=bool(mapa.portas.get(numero) and mapa.portas[numero].extensor),
                 origens=origens,
+                ocupada=bool(
+                    _caminho_presente(mapa, numero, presentes_no_censo, controladores)),
             )
             filhas = filhas_de(mapa, numero)
             if filhas:
@@ -279,6 +291,88 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
     )
 
 
+def entradas_sem_lugar(
+    mapa: MapaDaMesa, censo: Censo, numeros: Sequence[str]
+) -> tuple[motor.Entrada, ...]:
+    """As entradas numeradas que nenhuma face tem, na forma do motor — fora do plano.
+
+    A velocidade e o extensor valem como nas faces; a região é a do PC (sem lugar não há como
+    saber), e o motor nunca recebe estas: quem as desenha é a página, depois das faces.
+    """
+    velocidades = _velocidade_por_hub(censo)
+    medidos = velocidades_dos_aparelhos(censo)
+    presentes = _caminhos_do_censo(censo)
+    controladores = controladores_do_censo(censo)
+    return tuple(
+        _entrada_do_motor(
+            mapa, numero, pares={}, regiao="pc", velocidades=velocidades, aparelhos=medidos,
+            lacunas=set(), esticada=bool(mapa.portas.get(numero) and mapa.portas[numero].extensor),
+            ocupada=bool(_caminho_presente(mapa, numero, presentes, controladores)),
+        )
+        for numero in numeros
+    )
+
+
+#: as classes do motor (``arranjo_da_mesa``), não o transporte do controle
+CLASSE_WIFI = "wifi"
+CLASSE_BT = "bt"
+_RADIOS_DO_MOTOR = frozenset({CLASSE_BT, CLASSE_WIFI, "teclado", "mouse"})
+#: o par de vizinhas que briga: um Wi-Fi em USB 3.0 colado num BT
+_PAR_QUE_BRIGA = frozenset({CLASSE_WIFI, CLASSE_BT})
+#: Quantos rádios colados em fileira a leitura da máquina já chama de «colados».
+RADIOS_COLADOS_A_PARTIR_DE = 3
+
+
+def leitura_da_maquina(mapa: MapaDaMesa, censo: Censo) -> list[str]:
+    """O que a máquina vê do gabinete, em palavras curtas — as frases embaixo do hub.
+
+    «5 rádios colados nas entradas 9 a 13», «Wi-Fi em USB 3.0 encostado na entrada 13». Só o que
+    se mede: quem está em qual entrada (o mapa dela e o censo), a classe e a velocidade de cada
+    aparelho. Posição física entre entradas não se lê, então nada aqui diz «longe um do outro».
+    """
+    controladores = controladores_do_censo(censo)
+    por_numero: dict[str, Aparelho] = {}
+    for aparelho in censo.conectados():
+        numero = porta_de(mapa, aparelho.nome_do_kernel, controladores)
+        if numero is not None:
+            por_numero[numero] = aparelho
+    frases: list[str] = []
+    for face in mapa.faces:
+        corrida: list[str] = []
+        corridas: list[list[str]] = []
+        for numero in [*face.portas, ""]:
+            achado = por_numero.get(numero)
+            if achado is not None and _classe_do_motor(achado) in _RADIOS_DO_MOTOR:
+                corrida.append(numero)
+                continue
+            if len(corrida) >= RADIOS_COLADOS_A_PARTIR_DE:
+                corridas.append(corrida)
+            corrida = []
+        for colados in corridas:
+            primeira, ultima = colados[0], colados[-1]
+            frases.append(f"{len(colados)} rádios colados nas entradas {primeira} a {ultima}")
+        for ant, seg in itertools.pairwise(face.portas):
+            vizinhas = {
+                _classe_do_motor(achado): (achado, numero)
+                for achado, numero in ((por_numero.get(ant), ant), (por_numero.get(seg), seg))
+                if achado is not None
+            }
+            if not vizinhas.keys() >= _PAR_QUE_BRIGA:
+                continue
+            wifi, _ = vizinhas[CLASSE_WIFI]
+            _, onde = vizinhas[CLASSE_BT]
+            if wifi.velocidade_mbps >= VELOCIDADE_SUPERSPEED_MBPS:
+                nome = mapa.portas[onde].nome if onde in mapa.portas else None
+                frases.append(f"Wi-Fi em USB 3.0 encostado na {na_frase(onde, nome)}")
+    return list(dict.fromkeys(frases))
+
+
+def tipos_declarados(maquina: object) -> dict[str, str]:
+    """``{vid:pid: tipo}`` do que ela declarou dos aparelhos (o ``mesa.radios`` do disco)."""
+    radios = getattr(getattr(maquina, "mesa", None), "radios", None) or {}
+    return {chave: radio.tipo for chave, radio in radios.items() if radio.tipo}
+
+
 def _leitura_pelas_entradas(
     mapa: MapaDaMesa,
     conectados: Sequence[Aparelho],
@@ -310,17 +404,27 @@ def _leitura_pelas_entradas(
     return leitura, frozenset(fora)
 
 
-def _aparelho_do_motor(aparelho: Aparelho) -> motor.Aparelho:
+def _aparelho_do_motor(
+    aparelho: Aparelho, tipos: Mapping[str, str] | None = None
+) -> motor.Aparelho:
     """Um aparelho do censo na forma do motor — sem inventar o que falta."""
     return motor.Aparelho(
         id=aparelho.nome_do_kernel,
         tipo=aparelho.especie,
         nome=aparelho.produto.strip() or aparelho.especie,
-        classe=_classe_do_motor(aparelho),
+        classe=_classe_do_motor(aparelho, tipos),
     )
 
 
-def _classe_do_motor(aparelho: Aparelho) -> str:
+#: O que o kernel LIGOU na interface do aparelho (``censo.ligado_como``) na classe do motor.
+_CLASSE_DO_QUE_O_KERNEL_LIGOU = {"wifi": "wifi", "bluetooth": "bt", "camera": "webcam"}
+#: O tipo que ela declara, na classe do motor — os que o motor não julga ficam sem classe.
+_CLASSE_DO_TIPO_DECLARADO = {
+    "wifi": "wifi", "teclado": "teclado", "mouse": "mouse", "webcam": "webcam",
+}
+
+
+def _classe_do_motor(aparelho: Aparelho, tipos: Mapping[str, str] | None = None) -> str:
     """A classe que o motor julga, ou ``""`` quando o kernel não disse.
 
     ``""`` é resposta, e é a resposta certa para o Archer T3U (``ff/ff/ff``) e
@@ -335,7 +439,14 @@ def _classe_do_motor(aparelho: Aparelho) -> str:
     )
     if achada:
         return achada
-    return "webcam" if aparelho.classe == _CLASSE_DE_VIDEO else ""
+    do_kernel = _CLASSE_DO_QUE_O_KERNEL_LIGOU.get(aparelho.ligado_como)
+    if do_kernel:
+        return do_kernel
+    if aparelho.classe == _CLASSE_DE_VIDEO:
+        return "webcam"
+    # a máquina não mediu: vale o que ela disse (QUEM VENCE: a máquina no que mede)
+    declarado = (tipos or {}).get(f"{aparelho.vid}:{aparelho.pid}", "")
+    return _CLASSE_DO_TIPO_DECLARADO.get(declarado, "")
 
 
 def _entrada_do_motor(
@@ -352,16 +463,21 @@ def _entrada_do_motor(
     usb_de_quem_hospeda: int | None = None,
     origens: dict[str, str] | None = None,
     origem_de_quem_hospeda: str = "",
+    ocupada: bool = False,
 ) -> motor.Entrada:
     """Uma entrada do desenho na forma do motor, anotando o que faltou."""
     par = pares.get(numero)
     if par is None and not esticada:
         lacunas.add(LACUNA_PAR)
     declarada = mapa.portas.get(numero)
+    # QUEM VENCE (04/10/2026): a máquina no que mede. Com aparelho na entrada, a velocidade é a
+    # medida (o aparelho, depois a placa); a que ela declarou só vale na entrada VAZIA, onde a
+    # máquina não tem como saber.
+    dita = None if declarada is None or ocupada else declarada.usb
     rapido, origem = _velocidade_do_no(
         () if declarada is None else declarada.nos,
         velocidades,
-        None if declarada is None else declarada.usb,
+        dita,
         aparelhos,
     )
     if rapido is None and usb_de_quem_hospeda is not None:
@@ -684,13 +800,16 @@ __all__ = [
     "FatosDoBuraco",
     "aparelho_usb3_na_entrada",
     "caminho_de",
+    "entradas_sem_lugar",
     "fatos_do_buraco",
     "filhas_de",
     "irmas_de",
+    "leitura_da_maquina",
     "mesa_do_motor",
     "porta_de",
     "portas_livres",
     "serial_do_no",
+    "tipos_declarados",
     "velocidade_da_entrada",
     "velocidades_dos_aparelhos",
     "vizinhas_de_verdade",

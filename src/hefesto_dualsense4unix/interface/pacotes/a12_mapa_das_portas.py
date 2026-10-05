@@ -12,7 +12,8 @@ Os dois pedidos dela que isto atende:
 * a velocidade da entrada, porque o par SuperSpeed que o firmware da placa
   publica (``peer``) não prova o conector: na mesa em que isto nasceu, as duas
   USB 2.0 pretas de trás têm o par, e a frente que o gabinete chama de 3.0
-  está num conector 2.0 da placa — «Velocidade»: USB 3.0 ou 2.0.
+  está num conector 2.0 da placa — «Velocidade»: USB 3.0 ou 2.0 (desde 04/10/2026
+  só na entrada VAZIA: com aparelho nela, a máquina mede e a medida vence).
 
 <!-- noqa-acento: citação literal dela -->
 
@@ -77,13 +78,72 @@ def _o_rascunho_da_08_caducou() -> None:
     a08_conexoes.esquecer_o_rascunho_do_mapa()
 
 
+EXTENSOR_DE_ANTES = "extensor"
+
+
 @gesto(PAGINA, "entrada-o-que-tem", grava="declarar_a_ligacao")
 def entrada_o_que_tem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Direto», «Hub» ou «Extensor» na entrada — no `maquina.json` dela."""
+    """«Direto» ou «Hub» na entrada — no `maquina.json` dela.
+
+    O «Extensor» deixou de ser uma resposta daqui (04/10/2026): é a chave da porta, o gesto
+    ``entrada-extensor``. A página publicada até o próximo ``--publicar`` ainda o manda por
+    este gesto, e ele é atendido como a chave.
+    """
     liga = str(o.get("liga") or "")
+    if liga == EXTENSOR_DE_ANTES:
+        return _gravou(ee.declarar_o_extensor(_a_entrada(o), True))
     if liga != DIRETO and liga not in ee.LIGACOES_DECLARAVEIS:
         raise ValueError(f"o clique não disse o que tem na entrada ({liga!r})")
     return _gravou(ee.declarar_a_ligacao(_a_entrada(o), None if liga == DIRETO else liga))
+
+
+@gesto(PAGINA, "entrada-extensor", grava="declarar_o_extensor")
+def entrada_extensor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """A chave «Extensor» da entrada: há um cabo de extensão entre o buraco e o aparelho."""
+    ligado = str(o.get("ligado") or "").lower()
+    if ligado not in ("true", "false"):
+        raise ValueError("o clique não disse se o extensor liga ou desliga")
+    return _gravou(ee.declarar_o_extensor(_a_entrada(o), ligado == "true"))
+
+
+@gesto(PAGINA, "entrada-lugar", grava="declarar_o_lugar_da_entrada")
+def entrada_lugar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O «Lugar» da entrada: a face do gabinete em que ela está (a do Mapear, no mesmo dono)."""
+    if str(o.get("evento") or "") == "click":
+        return {"armou": True}
+    face = str(o.get("valor") or "").strip()
+    if not face:
+        return None
+    return _gravou(ee.declarar_o_lugar_da_entrada(_a_entrada(o), face))
+
+
+def _o_modelo(o: dict[str, Any]) -> str:
+    modelo = str(o.get("modelo") or "").strip()
+    if not modelo:
+        raise ValueError("o clique não disse qual aparelho")
+    return modelo
+
+
+@gesto(PAGINA, "aparelho-tipo", grava="declarar_o_aparelho")
+def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O tipo que ela dá ao aparelho (o que a máquina não mede) — pelo ``vid:pid`` dele."""
+    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), tipo=str(o.get("tipodito") or "")))
+
+
+@gesto(PAGINA, "aparelho-nome", grava="declarar_o_aparelho")
+def aparelho_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O nome que ela dá ao aparelho — pelo ``vid:pid`` dele; vazio apaga."""
+    if str(o.get("evento") or "") == "click":
+        return {"armou": True}
+    return _gravou(ee.declarar_o_aparelho(_o_modelo(o), apelido=str(o.get("valor") or "")))
+
+
+@gesto(PAGINA, "voltar-ao-automatico", grava="voltar_ao_automatico")
+def voltar_ao_automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Voltar ao automático»: tira o que ela disse do aparelho (tipo, nome) e da entrada."""
+    modelo = str(o.get("modelo") or "").strip() or None
+    entrada = str(o.get("entrada") or "").strip() or None
+    return _gravou(ee.voltar_ao_automatico(numero=entrada, modelo=modelo))
 
 
 @gesto(PAGINA, "entrada-velocidade", grava="declarar_a_velocidade")

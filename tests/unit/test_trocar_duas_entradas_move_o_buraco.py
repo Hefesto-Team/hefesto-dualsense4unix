@@ -26,11 +26,16 @@ _L8 = lugar_de(PCI_A, "6")
 
 
 def _com_o_que_ela_disse() -> dict[str, Any]:
-    """A máquina dela, com nome, velocidade, hub e extensor nas entradas da troca."""
+    """A máquina dela, com nome, velocidade, hub e extensor nas entradas da troca.
+
+    O extensor é a chave da porta (``extensor: true``, desde 04/10/2026) e a ponta ``8a`` é a
+    entrada-filha que o Mapear grava; as duas vão com o buraco. O documento no jeito de ANTES
+    (``liga: extensor``) é de ``test_o_extensor_e_a_chave_da_porta``.
+    """
     documento = _a_maquina_dela()
     portas = documento["mapa"]["portas"]
     portas["7"].update({"usb": 2, "nome": "Sete"})
-    portas["8"].update({"usb": 3, "liga": "extensor", "nome": "Oito"})
+    portas["8"].update({"usb": 3, "extensor": True, "nome": "Oito"})
     portas["8a"] = {"filha_de": "8", "nome": "Ponta do cabo", "usb": 3}
     documento["lugares"][_L8]["fora"] = True
     return documento
@@ -57,7 +62,8 @@ def test_trocar_7_com_8_leva_o_buraco_e_deixa_o_nome(disco: Path) -> None:
     assert (sete.nos, oito.nos) == (a8.nos, a7.nos), "os nós não foram com o lugar"
     assert (sete.caminho, oito.caminho) == (a8.caminho, a7.caminho)
     assert (sete.usb, oito.usb) == (3, 2), "a velocidade não foi com o buraco"
-    assert (sete.liga, oito.liga) == ("extensor", None), "o extensor não foi com o buraco"
+    assert (sete.extensor, oito.extensor) == (True, None), "o extensor não foi com o buraco"
+    assert (sete.liga, oito.liga) == (None, None)
     assert (sete.nome, oito.nome) == ("Sete", "Oito"), "o nome saiu da posição"
     assert "8a" not in depois.mapa.portas and depois.mapa.portas["7a"].filha_de == "7"
     assert depois.mapa.portas["7a"].nome == "Ponta do cabo", "a ponta não foi inteira"

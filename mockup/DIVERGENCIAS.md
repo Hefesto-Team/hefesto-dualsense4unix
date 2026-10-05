@@ -27,3 +27,10 @@ seção daqui**: a aba deixou de estar em trabalho.
   do fecho do conjunto «Conexões 2». Até publicar, a tela dela segue a de hoje (uma pista por adaptador e a
   fileira das portas) e a integração não é instalada antes: o pacote já fala o desenho novo, e a página
   nova entra junto, no mesmo fecho.
+
+## mapa-das-portas.html
+- **04/10/2026** — o painel do aparelho que abre ao clicar nele (nome, tipo, chave Extensor, o que a
+  máquina vê, Identificar, Voltar ao automático), o arrastar para trocar de entrada, o aviso de uma
+  linha do «Examinar» e a fileira «Sem Lugar»: o produto recebe com o `--publicar mapa-das-portas` do
+  fecho do conjunto «Conexões 2». Até publicar, a tela dela segue a de hoje (o extensor como resposta
+  de «O que tem na entrada») e o pacote já atende os dois gestos; a integração não é instalada antes.

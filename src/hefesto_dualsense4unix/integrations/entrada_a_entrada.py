@@ -208,7 +208,18 @@ FACE_EM_PE = FACE_ATRAS
 
 # ``utils/rotulo_da_entrada`` e são reexportadas no topo deste arquivo.
 
-LIGACOES_DECLARAVEIS = ("hub", "extensor")
+LIGACOES_DECLARAVEIS = ("hub",)
+#: O que a pessoa diz de um aparelho que a máquina não identifica sozinha (O-APARELHO-SE-CORRIGE-
+#: ONDE-SE-CLICA-01): as respostas de ``RadioDeclarado.tipo`` (o catálogo da v1 do ``maquina.json``,
+#: que não se alarga sem bump), as mesmas do painel do aparelho no mapa. Controle, celular e
+#: relógio são aparelhos do BlueZ, da aba 08, e não entram no mapa das entradas USB.
+TIPOS_DECLARAVEIS_DO_APARELHO = (
+    "teclado", "mouse", "wifi", "webcam", "caixa_de_som", "outro",
+)
+_CHAVE_DO_MODELO = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
+RECUSA_O_MODELO = "Este aparelho não diz o modelo."
+RECUSA_O_TIPO = "Este tipo não é uma das respostas."
+RECUSA_A_FACE = "Este lugar não é uma das respostas."
 VELOCIDADES_DECLARAVEIS = (2, 3)
 
 LETRA_DA_PONTA = "a"
@@ -1206,6 +1217,119 @@ def declarar_a_ligacao(
     return _declarar_na_entrada(numero, {"liga": liga}, maquina=maquina, gravar=gravar)
 
 
+def declarar_o_extensor(
+    numero: str,
+    ligado: bool,
+    *,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """A chave «Extensor» da entrada ``numero``: separada do que está ligado nela.
+
+    O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026): *«marcar Extensor impede dizer que há
+    um dispositivo BT ali»*. O extensor é da porta (há um cabo entre o buraco e o aparelho) e o
+    kernel não o vê; quem sabe é ela. Ligado, pesa no arranjo (a entrada vira esticada para o
+    motor); desligado, apaga a chave e a ponta que o desenho antigo guardava.
+    """
+    return _declarar_na_entrada(
+        numero, {"extensor": True if ligado else None}, maquina=maquina, gravar=gravar)
+
+
+def declarar_o_aparelho(
+    modelo: str,
+    *,
+    tipo: str | None = None,
+    apelido: str | None = None,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """O tipo e o nome que ela dá a um aparelho — pelo ``vid:pid``, o que sobrevive a replugar.
+
+    O que a máquina mede (hub, velocidade, chip) não se edita; o que ela não vê é da pessoa
+    (D-0410-QUEM-VENCE). ``None`` não diz nada; para apagar, :func:`voltar_ao_automatico`.
+    """
+    _ = maquina
+    chave = modelo.strip().lower()
+    if not _CHAVE_DO_MODELO.match(chave):
+        raise ValueError(RECUSA_O_MODELO)
+    campos: dict[str, Any] = {}
+    if tipo is not None:
+        if tipo not in TIPOS_DECLARAVEIS_DO_APARELHO:
+            raise ValueError(RECUSA_O_TIPO)
+        campos["tipo"] = tipo
+    if apelido is not None:
+        limpo = apelido.strip()
+        if len(limpo) > MAXIMO_DO_NOME_DA_ENTRADA:
+            raise ValueError(f"{FRASE_DO_NOME_COMPRIDO} ({len(limpo)} caracteres)")
+        campos["apelido"] = limpo or None
+    recibo = _gravar_no_mapa(gravar, {"mesa": {"radios": {chave: campos}}})
+    if not recibo.gravou:
+        logger.warning("aparelho_declarado_nao_gravou", motivo=recibo.motivo)
+    return recibo
+
+
+def voltar_ao_automatico(
+    *,
+    numero: str | None = None,
+    modelo: str | None = None,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """«Voltar ao automático»: tira o que ela disse do aparelho e da entrada dele.
+
+    Do aparelho: o tipo e o nome (``mesa.radios``). Da entrada: a chave do extensor e o nome
+    da entrada. A ligação (hub) e a velocidade ficam: são da porta, não do aparelho, e têm o
+    botão delas.
+    """
+    declaracao: dict[str, Any] = {}
+    if modelo:
+        chave = modelo.strip().lower()
+        if not _CHAVE_DO_MODELO.match(chave):
+            raise ValueError(RECUSA_O_MODELO)
+        declaracao["mesa"] = {"radios": {chave: {"tipo": None, "apelido": None}}}
+    if numero:
+        documento = maquina if maquina is not None else carregar_maquina()
+        if numero not in entradas_do_mapa(documento.mapa):
+            raise ValueError(RECUSA_FORA_DO_MAPA)
+        declaracao["mapa"] = {"portas": {numero: {"extensor": None, "nome": None}}}
+    if not declaracao:
+        raise ValueError(RECUSA_FORA_DO_MAPA)
+    recibo = _gravar_no_mapa(gravar, declaracao)
+    if not recibo.gravou:
+        logger.warning("voltar_ao_automatico_nao_gravou", motivo=recibo.motivo)
+    return recibo
+
+
+def declarar_o_lugar_da_entrada(
+    numero: str,
+    face: str,
+    *,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """O «Lugar» de uma entrada que já existe: o número sai de toda outra face e entra nesta.
+
+    A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01 (absorvida em 04/10/2026): o mesmo campo do Mapear,
+    pelo mesmo dono (``_por_na_face``). Uma face fora das respostas do produto e das que ela
+    já tem recusa, como no Mapear.
+    """
+    documento = maquina if maquina is not None else carregar_maquina()
+    mapa = documento.mapa
+    if numero not in entradas_do_mapa(mapa):
+        raise ValueError(RECUSA_FORA_DO_MAPA)
+    declarada = mapa.portas.get(numero)
+    if declarada is not None and declarada.filha_de:
+        raise ValueError(RECUSA_FORA_DO_MAPA)
+    if not _face_aceita(face, documento):
+        raise ValueError(RECUSA_A_FACE)
+    faces = [f.model_dump(mode="json") for f in mapa.faces]
+    _por_na_face(faces, face, numero)
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"faces": faces}})
+    if not recibo.gravou:
+        logger.warning("lugar_da_entrada_nao_gravou", motivo=recibo.motivo)
+    return recibo
+
+
 def declarar_a_velocidade(
     numero: str,
     usb: int,
@@ -1330,9 +1454,9 @@ def ensinar_a_entrada(
 def _o_buraco(porta: PortaDeclarada | None) -> dict[str, Any]:
     """O que é do buraco físico numa entrada — o que a troca leva junto."""
     if porta is None:
-        return {"lugar": None, "nos": [], "liga": None, "usb": None}
+        return {"lugar": None, "nos": [], "liga": None, "extensor": None, "usb": None}
     return {"lugar": porta.lugar, "nos": list(porta.nos), "liga": porta.liga,
-            "usb": porta.usb}
+            "extensor": porta.extensor, "usb": porta.usb}
 
 
 def _a_ponta_de(mapa: MapaDaMesa, ponta: str, numero: str) -> PortaDeclarada | None:
@@ -1384,14 +1508,14 @@ def _declarar_na_entrada(
     dela = mapa.portas.get(ponta) if ponta else None
     if (
         ponta
-        and "liga" in campos
-        and campos["liga"] != "extensor"
+        and "extensor" in campos
+        and campos["extensor"] is None
         and dela is not None
         and dela.filha_de == numero
         and not dela.lugar
         and not dela.nos
     ):
-        declaracao[ponta] = {"filha_de": None, "liga": None, "usb": None}
+        declaracao[ponta] = {"filha_de": None, "liga": None, "extensor": None, "usb": None}
     recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": declaracao}})
     if not recibo.gravou:
         logger.warning("entrada_declarada_nao_gravou", motivo=recibo.motivo)
@@ -1407,7 +1531,7 @@ def _mae_da_ponta(mapa: MapaDaMesa, numero: str) -> str | None:
     """A entrada do mapa com extensor declarado cuja ponta é ``numero``."""
     for mae in entradas_do_mapa(mapa):
         porta = mapa.portas.get(mae)
-        if porta is not None and porta.liga == "extensor" and ponta_do_extensor(mae) == numero:
+        if porta is not None and porta.extensor and ponta_do_extensor(mae) == numero:
             return mae
     return None
 
@@ -2419,6 +2543,7 @@ __all__ = [
     "RECUSA_O_APARELHO_SAIU",
     "SENTADA",
     "TELAS",
+    "TIPOS_DECLARAVEIS_DO_APARELHO",
     "VELOCIDADES_DECLARAVEIS",
     "Gravacao",
     "LacoDaEntrada",
@@ -2435,6 +2560,9 @@ __all__ = [
     "de_quem_pende",
     "declarar_a_ligacao",
     "declarar_a_velocidade",
+    "declarar_o_aparelho",
+    "declarar_o_extensor",
+    "declarar_o_lugar_da_entrada",
     "ensinar_a_entrada",
     "face_do_lugar",
     "faces_dos_hubs",
@@ -2449,4 +2577,5 @@ __all__ = [
     "rotulo_do_numero",
     "rotulos_das_entradas",
     "trocar_as_entradas",
+    "voltar_ao_automatico",
 ]
