@@ -28,7 +28,7 @@ from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 
 PALAVRAS_NO_TITULO = 5
 CARTOES_VISIVEIS = 4
-#: o gesto do cartão, em até duas palavras (desenho aprovado de 05/10/2026).
+#: o gesto do cartão, em até duas palavras fora os conectivos («Ver no mapa», «Mover P2»).
 PALAVRAS_NO_GESTO = 2
 #: a frase do ⓘ, em caracteres — o resto é o que a ordem já diz na tela de detalhe.
 LIMITE_DA_FRASE = 160

@@ -494,9 +494,10 @@
   .receita > li { margin: 0; padding: 6px 10px; }
   .receita h4 { font-size: 13.5px; margin: 0; }
   .painel .acoes { margin-top: 6px; }
-  .palco > .bandeja .lista { overflow: visible; gap: 4px; }
-  .bandeja .chip { padding-top: 5px; padding-bottom: 5px; }
-  @media (min-width: 901px) { .palco > .bandeja { height: auto; } }
+  .palco > .bandeja .lista { overflow: visible; gap: 4px; flex: none; }
+  .bandeja .chip { padding-top: 4px; padding-bottom: 4px; }
+  .bandeja .chip .num { height: 1.2rem; min-width: 1.2rem; margin-top: 0; }
+  @media (min-width: 901px) { .palco > .bandeja { height: auto; min-height: 0; align-self: start; } }
   /* o painel único: o aparelho e a entrada, lado a lado */
   #edita.painel-unico { position: fixed; z-index: 80; width: 540px; max-width: calc(100vw - 24px); padding: 0; gap: 0;
                         background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: 14px;
