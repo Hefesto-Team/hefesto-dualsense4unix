@@ -4235,6 +4235,36 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             'ea JS do arranjo_da_mesa).'
         ),
     ),
+    Edicao(
+        antes=(
+            '  .rotulo .ap-btn[draggable="true"] { cursor: grab; }\n'
+        ),
+        depois=(
+            '  .rotulo .ap-btn[draggable="true"] { cursor: grab; }\n'
+            '  .edita .acoes-do-aparelho a.btn { display: inline-block; text-decoration: none; }\n'
+        ),
+        porque=(
+            '05/10/2026, O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01 — o «Descobrir a '
+            'faixa» do painel é um link para a faixa dele, e um link não nasce com cara de botão.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + (identificavel(quem) ? \'<button class="btn" id="identificar">Identificar'
+            '</button>\' : "")\n'
+        ),
+        depois=(
+            '      + (quem.receptor ? \'<a class="btn" id="descobrir-a-faixa" '
+            'href="08-conexoes.html">Descobrir a faixa</a>\' : "")\n'
+            '      + (identificavel(quem) ? \'<button class="btn" id="identificar">Identificar'
+            '</button>\' : "")\n'
+        ),
+        porque=(
+            '05/10/2026, O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01 — o receptor 2.4G '
+            'ganha «Descobrir a faixa» no painel: o gesto guiado mora na faixa dele, na aba '
+            'Conexões, e o link leva até lá.'
+        ),
+    ),
 )
 
 

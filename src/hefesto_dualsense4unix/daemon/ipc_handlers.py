@@ -5760,6 +5760,8 @@ class IpcHandlersMixin:
     _sinal_lido_em: float = float("-inf")
     _sinal_em_voo: bool = False
     _ler_sinal: Any = None
+    _monitor_de_receptores: Any = None
+    _varrer_os_receptores: Any = None
 
     def _enriquecer_e_medir_o_ar(
         self, result: dict[str, Any], entries: list[dict[str, Any]], state: Any
@@ -5770,6 +5772,8 @@ class IpcHandlersMixin:
         with contextlib.suppress(Exception):
             self._merge_radio(entries)
             result["radio_ar"] = self._ar_por_adaptador(entries)
+        with contextlib.suppress(Exception):
+            result["radio_receptores"] = self._os_receptores_publicam()
         from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 
         result["haptica_pct_padrao"] = HAPTICA_PCT_PADRAO
@@ -5779,6 +5783,43 @@ class IpcHandlersMixin:
             result["radio_central"] = self._a_central_publica(entries)
         with contextlib.suppress(Exception):
             self._merge_mira(entries)
+
+    def _os_receptores_publicam(self) -> dict[str, Any]:
+        """``state_full["radio_receptores"]``: a saúde de cada receptor 2.4G (a última hora).
+
+        Só números: teclas que ficaram apertadas repetindo e buracos no movimento do mouse, por
+        ``usb:vid:pid``; nunca o código de uma tecla (``integrations/receptor_sem_fio``). O
+        monitor nasce na primeira pergunta e lê o evdev numa thread. Sob a suíte e no modo falso
+        não há nó de verdade: nada abre e a chave sai vazia, salvo a régua que injeta o dela.
+        """
+        monitor = self._monitor_de_receptores
+        if monitor is None:
+            from hefesto_dualsense4unix.integrations import bluez_dbus, receptor_sem_fio
+            from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+            varrer = self._varrer_os_receptores
+            if varrer is None:
+                if bluez_dbus.a_suite_esta_rodando() or fake_mode_enabled():
+                    return {}
+                varrer = self._receptores_do_censo
+            monitor = receptor_sem_fio.MonitorDosReceptores(varrer)
+            self._monitor_de_receptores = monitor
+            monitor.iniciar()
+        publicado: dict[str, Any] = monitor.publicar()
+        return publicado
+
+    @staticmethod
+    def _receptores_do_censo() -> dict[str, tuple[str, ...]]:
+        """``{usb:vid:pid: (/dev/input/eventN, …)}`` dos receptores que o censo reconheceu."""
+        from hefesto_dualsense4unix.integrations import receptor_sem_fio
+        from hefesto_dualsense4unix.integrations.censo_do_barramento import ler_o_barramento
+
+        achados: dict[str, tuple[str, ...]] = {}
+        for a in ler_o_barramento().conectados():
+            if a.receptor and a.eventos:
+                chave = receptor_sem_fio.chave_do_aparelho(a.vid, a.pid)
+                achados[chave] = (*achados.get(chave, ()), *(f"/dev/input/{e}" for e in a.eventos))
+        return achados
 
     @staticmethod
     def _hz_ou_none(valor: Any) -> float | None:

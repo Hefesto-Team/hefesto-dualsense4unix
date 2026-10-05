@@ -359,6 +359,7 @@
   .rotulo .ap-btn:hover { border-color: #6272a4; }
   .rotulo .ap-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .rotulo .ap-btn[draggable="true"] { cursor: grab; }
+  .edita .acoes-do-aparelho a.btn { display: inline-block; text-decoration: none; }
   .soquete.alvo-do-arrasto { outline: 2px dashed var(--color-ok); outline-offset: 3px; border-radius: var(--radius-sm); }
   body.arrastando .soquete[data-soquete] { cursor: copy; }
   .edita .ap-cab { padding-right: 2.2rem; }
@@ -1629,6 +1630,7 @@
     var gVolta = ' data-gesto="voltar-ao-automatico"' + (quem.modelo ? ' data-modelo="' + quem.modelo + '"' : "")
       + (podeGravar(n) ? ' data-entrada="' + n + '"' : "");
     h += '<div class="edita-linha acoes-do-aparelho">'
+      + (quem.receptor ? '<a class="btn" id="descobrir-a-faixa" href="08-conexoes.html">Descobrir a faixa</a>' : "")
       + (identificavel(quem) ? '<button class="btn" id="identificar">Identificar</button>' : "")
       + '<button class="btn" id="voltar-ao-automatico"' + (doProduto() ? gVolta : "") + (edita ? "" : " disabled")
       + ">Voltar ao automático</button></div>";

@@ -272,6 +272,27 @@ def dica_do_wifi(em_palavras: str, usb3_no_2_4: bool, causa_conhecida: str, nive
         detalhe=em_palavras)
 
 
+#: o título e o porquê do cartão do receptor 2.4G que sofre; a causa é «possível», nunca confirmada.
+TITULO_DO_RECEPTOR = {"teclado": "Teclado errando", "mouse": "Mouse engasgando"}
+TITULO_DO_RECEPTOR_SEM_TIPO = "Receptor sofrendo"
+PORQUE_DO_RECEPTOR = {
+    "teclado": "Teclas ficaram apertadas sozinhas: possível interferência no receptor 2.4G.",
+    "mouse": "O mouse falhou no meio do movimento: possível interferência no receptor 2.4G.",
+}
+PORQUE_DO_RECEPTOR_SEM_TIPO = "O receptor 2.4G falhou: possível interferência."
+
+
+def dica_do_receptor(tipo: str, texto: str, quando: str) -> Dica:
+    """O receptor 2.4G que sofre («3 teclas presas em 1 h»): o mesmo botão do teclado no hub."""
+    return Dica(
+        chave=f"receptor-sofrendo:{tipo}", icone=ICONE_TECLADO,
+        titulo=limitar_o_titulo(TITULO_DO_RECEPTOR.get(tipo, TITULO_DO_RECEPTOR_SEM_TIPO)),
+        nivel=AJUSTE,
+        acao=Acao(MAPA, ROTULO_MOSTRAR_A_ENTRADA_BOA, href=PAGINA_DO_MAPA),
+        porque=uma_frase(PORQUE_DO_RECEPTOR.get(tipo, PORQUE_DO_RECEPTOR_SEM_TIPO)),
+        detalhe=f"{texto} {quando}".strip())
+
+
 def montar(dicas: Iterable[Dica], certos: Sequence[str] = ()) -> Painel:
     """Os que mais pesam primeiro (o nível, depois a ordem em que chegaram); as caladas no fim."""
     todas = list(dicas)
@@ -302,6 +323,7 @@ __all__ = [
     "dica_da_conferencia",
     "dica_da_ordem",
     "dica_do_movimento",
+    "dica_do_receptor",
     "dica_do_wifi",
     "limitar_o_titulo",
     "montar",

@@ -623,6 +623,15 @@ Conectou» dele). Pedir o estado que já vale responde `ok` sem tocar no rádio.
 resposta traz a `busca` que ficou valendo; `status` diferente de `ok` é a
 recusa (`ocupado`, com um «Mover» em curso; `sem_destino`; `sem_central`).
 
+### `radio_receptores` — a saúde do receptor 2.4G (O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01)
+
+Chave do `daemon.state_full`, sem método: `{ "usb:<vid>:<pid>": {teclas_presas, buracos, janela_s,
+lendo} }` para cada receptor 2.4G de teclado e mouse que o censo reconhece. `teclas_presas` conta
+as vezes, na última hora (`janela_s`, 3600), em que uma tecla ficou apertada repetindo por mais de
+1 s sem soltar; `buracos`, os vazios de 8 ms ou mais no meio de um movimento contínuo do mouse.
+`lendo` é falso quando o `/dev/input` dele não abriu (sem leitura não há número). **Nunca** leva o
+código de uma tecla nem texto: só contagens. A chave é `{}` sob a suíte e no modo falso.
+
 ### `mira.set` — o chip «Mira Virtual», por controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01)
 
 A palavra dela, 23/09/2026: um botão «Mira Virtual» ao lado de Giroscópio e

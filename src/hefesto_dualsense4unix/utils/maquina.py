@@ -100,6 +100,26 @@ class RadioDeclarado(BaseModel):
         Literal["wifi", "teclado", "mouse", "webcam", "caixa_de_som", "outro"] | None
     ) = None
     apelido: str | None = None
+    #: A faixa que o «Descobrir a faixa» MEDIU (``[ini, fim)`` nos 79 canais do Bluetooth) e o dia
+    #: em que mediu. É medida, não declaração: ``voltar_ao_automatico`` não a apaga.
+    banda: list[int] | None = None
+    banda_em: str = ""
+
+    @field_validator("banda")
+    @classmethod
+    def _banda_dentro_da_regua(cls, valor: list[int] | None) -> list[int] | None:
+        if valor is None:
+            return None
+        if len(valor) != 2 or not 0 <= valor[0] < valor[1] <= 79:
+            raise ValueError("banda é [ini, fim) dentro dos 79 canais")
+        return valor
+
+    @field_validator("banda_em")
+    @classmethod
+    def _banda_em_so_a_data(cls, valor: str) -> str:
+        if valor and not _DATA_ISO.match(valor):
+            raise ValueError(f"data {valor!r} não é AAAA-MM-DD")
+        return valor
 
 
 class OrdemDispensada(BaseModel):

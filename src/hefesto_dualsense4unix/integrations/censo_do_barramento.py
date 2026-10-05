@@ -109,6 +109,8 @@ import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
+from hefesto_dualsense4unix.integrations import receptor_sem_fio as _receptor_sem_fio
+
 GRAU_LIDO = "lido"
 GRAU_DESCONHECIDO = "desconhecido"
 
@@ -130,6 +132,9 @@ _ESPECIE_DO_QUE_O_KERNEL_LIGOU = {
     LIGADO_COMO_REDE: "Rede",
 }
 _ORDEM_DO_QUE_O_KERNEL_LIGOU = tuple(_ESPECIE_DO_QUE_O_KERNEL_LIGOU)
+#: A interface 0 de um receptor já diz «Teclado» ou «Mouse» (a tripla de arranque): essa palavra
+#: fica, é a sugestão de tipo da tela; ``Aparelho.receptor`` é quem diz que ele é um receptor.
+_ESPECIES_QUE_O_RECEPTOR_JA_DIZ = frozenset({"Teclado", "Mouse"})
 #: A pasta que o driver pendura na interface → o que ele ligou.
 _O_QUE_O_KERNEL_PENDURA = {
     "ieee80211": LIGADO_COMO_WIFI,
@@ -156,6 +161,10 @@ _BIT_AUTOALIMENTADO = 0x40
 _CONTROLADOR_PCI = re.compile(r"0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
 
 _CORRENTE = re.compile(r"^([0-9]+)")
+
+#: O filho HID que o kernel pendura na interface: ``0003:25A7:FA07.0003``.
+_FILHO_HID = re.compile(r"^[0-9a-fA-F]{4}:[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\.[0-9a-fA-F]{4}$")
+_EVENTO = re.compile(r"^event[0-9]+$")
 
 _ESPECIE_POR_CLASSE: dict[str, str] = {
     "01": "Áudio",
@@ -220,6 +229,12 @@ class Aparelho:
     origem_da_classe: str = ""
     #: o que o kernel ligou nas interfaces dele (:data:`LIGADO_COMO_WIFI`…), ou ``""``
     ligado_como: str = ""
+    #: a tripla (classe, subclasse, protocolo) de CADA interface, como ``"030101"``
+    interfaces: tuple[str, ...] = ()
+    #: os nós ``/dev/input/eventN`` que as interfaces dele criaram (só o nome: ``event8``)
+    eventos: tuple[str, ...] = ()
+    #: receptor 2.4G de teclado e mouse (:mod:`receptor_sem_fio`), reconhecido de forma genérica
+    receptor: bool = False
     especie: str = ESPECIE_DESCONHECIDA
     grau: str = GRAU_DESCONHECIDO
     e_hub: bool = False
@@ -361,6 +376,8 @@ class _Bruto:
     origem: str
     controlador_pci: str
     ligado_como: str = ""
+    interfaces: tuple[str, ...] = ()
+    eventos: tuple[str, ...] = ()
 
 
 def _ler_um(
@@ -407,6 +424,9 @@ def _ler_um(
     ligado = _o_que_o_kernel_ligou(
         nome, campos["busnum"], campos["devpath"], raiz_usb, interfaces,
         leitor=leitor, real=real, listar=listar)
+    triplas, eventos = _interfaces_e_eventos(
+        nome, campos["busnum"], campos["devpath"], raiz_usb, interfaces,
+        leitor=leitor, real=real, listar=listar)
     return _Bruto(
         nome=nome,
         caminho=caminho,
@@ -417,6 +437,8 @@ def _ler_um(
         origem=origem,
         controlador_pci=_controlador_pci(caminho),
         ligado_como=ligado,
+        interfaces=triplas,
+        eventos=eventos,
     )
 
 
@@ -437,6 +459,14 @@ def _montar(
         origem = "o que o kernel ligou"
     else:
         origem = bruto.origem
+    receptor = _receptor_sem_fio.e_receptor(
+        bruto.interfaces, _decimal(campos["speed"]),
+        (campos["product"], campos["manufacturer"]))
+    if receptor and especie not in _ESPECIES_QUE_O_RECEPTOR_JA_DIZ:
+        # a interface 0 não disse teclado nem mouse («Aparelho de entrada», classe do
+        # fabricante…): as duas interfaces de arranque dizem o que ela não disse
+        especie, grau = _receptor_sem_fio.ESPECIE, GRAU_LIDO
+        origem = "as interfaces de teclado e mouse"
     return Aparelho(
         no=bruto.caminho,
         nome_do_kernel=bruto.nome,
@@ -455,6 +485,9 @@ def _montar(
         protocolo=bruto.protocolo,
         origem_da_classe=origem,
         ligado_como=bruto.ligado_como,
+        interfaces=bruto.interfaces,
+        eventos=bruto.eventos,
+        receptor=receptor,
         especie=especie,
         grau=grau,
         e_hub=bruto.classe == CLASSE_HUB,
@@ -534,11 +567,54 @@ def _o_que_o_kernel_ligou(
             sinais = _listar_sem_erro(listar, os.path.join(pasta, "net", rede))
             achados.add(LIGADO_COMO_WIFI if {"wireless", "phy80211"} & set(sinais)
                         else LIGADO_COMO_REDE)
-        for entrada in _listar_sem_erro(listar, os.path.join(pasta, "input")):
-            teclas = _campo(os.path.join(pasta, "input", entrada, "capabilities"), "key", leitor)
+        for no_de_input in _nos_de_input(pasta, listar):
+            teclas = _campo(os.path.join(no_de_input, "capabilities"), "key", leitor)
             if _tem_a_tecla(teclas, _BTN_SOUTH):
                 achados.add(LIGADO_COMO_CONTROLE)
     return next((c for c in _ORDEM_DO_QUE_O_KERNEL_LIGOU if c in achados), "")
+
+
+def _nos_de_input(pasta: str, listar: Callable[[str], list[str]]) -> list[str]:
+    """Os ``inputN`` de uma interface USB: direto nela (``xpad``) ou sob o filho HID.
+
+    Medido em 05/10/2026: num aparelho HID o kernel pendura o filho
+    ``0003:VVVV:PPPP.NNNN`` na interface e o ``input/inputN`` mora DENTRO dele; só o driver que
+    se liga direto à interface (``xpad``) cria ``input/`` na própria interface.
+    """
+    pais = [pasta]
+    pais += [os.path.join(pasta, filho) for filho in _listar_sem_erro(listar, pasta)
+             if _FILHO_HID.match(filho)]
+    return [os.path.join(pai, "input", no)
+            for pai in pais
+            for no in sorted(_listar_sem_erro(listar, os.path.join(pai, "input")))]
+
+
+def _interfaces_e_eventos(
+    nome: str,
+    busnum: str,
+    devpath: str,
+    raiz_usb: str,
+    interfaces: Iterable[str],
+    *,
+    leitor: Callable[[str], str],
+    real: Callable[[str], str],
+    listar: Callable[[str], list[str]],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """``(triplas, eventos)``: a tripla de CADA interface e os ``eventN`` que elas criaram."""
+    prefixo = f"{busnum}-{devpath}:" if busnum and devpath else f"{nome}:"
+    triplas: list[str] = []
+    eventos: list[str] = []
+    for interface in sorted(alvo for alvo in interfaces if alvo.startswith(prefixo)):
+        pasta = real(os.path.join(raiz_usb, interface))
+        tripla = "".join(
+            _campo(pasta, atributo, leitor).lower()
+            for atributo in ("bInterfaceClass", "bInterfaceSubClass", "bInterfaceProtocol"))
+        if len(tripla) == 6:
+            triplas.append(tripla)
+        for no_de_input in _nos_de_input(pasta, listar):
+            eventos += [e for e in sorted(_listar_sem_erro(listar, no_de_input))
+                        if _EVENTO.match(e)]
+    return tuple(triplas), tuple(eventos)
 
 
 def _listar_sem_erro(listar: Callable[[str], list[str]], pasta: str) -> list[str]:

@@ -220,6 +220,13 @@ def _produto_do_no(no: str) -> str:
     return str(getattr(aparelho, "produto", "") or "").strip()
 
 
+def _e_um_receptor(no: str) -> bool:
+    """O censo reconheceu este nó como receptor 2.4G de teclado e mouse?"""
+    censo = _censo()
+    aparelho = censo.aparelho(no) if censo is not None and no else None
+    return bool(getattr(aparelho, "receptor", False))
+
+
 def _sugestao_do_vizinho(no: str, rotulos: Any) -> str:
     """A palavra da LISTA DELA que o kernel sugere para este rádio, ou `""`."""
     lido = _lido_do_kernel(no)
@@ -758,6 +765,22 @@ def _a_dica_do_wifi(cena: dict[str, Any] | None) -> list[Any]:
     return saida
 
 
+def _a_dica_do_receptor(cena: dict[str, Any] | None) -> list[Any]:
+    """O receptor 2.4G que sofre: um cartão por receptor cuja saúde passou do aperto."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import dicas_da_conexao
+
+    saida = []
+    for viz in (cena or {}).get("vizinhos") or ():
+        if not viz.get("receptor"):
+            continue
+        tipo = str(viz.get("tipo") or viz.get("sugestao_tipo") or "")
+        selo = receptor_sem_fio.selo_da_saude(viz.get("saude"), tipo)
+        if selo is not None and selo[0] == "sofrendo":
+            saida.append(dicas_da_conexao.dica_do_receptor(tipo, selo[1], selo[2]))
+    return saida
+
+
 def _a_cura(texto: str) -> str:
     """«O que fazer: …» pela frase do dono (`secao_exame.PREFIXO_DA_CURA`); vazio sem texto."""
     if not texto.strip():
@@ -783,6 +806,7 @@ def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
     if movimento is not None:
         cartoes.append(dicas.dica_do_movimento(movimento))
     cartoes += _a_dica_do_wifi(cena)
+    cartoes += _a_dica_do_receptor(cena)
     for slot, item in enumerate(vivos):
         estado = str(getattr(item, "estado", "") or "")
         chave = str(getattr(item, "chave", "") or "")
@@ -2427,6 +2451,26 @@ def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     return None
 
 
+@gesto("08-conexoes.html", "receptor-descobrir")
+def receptor_descobrir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Descobrir» a faixa de um receptor 2.4G: o primeiro toque começa, os seguintes andam.
+
+    O passo da vez mora em :data:`_DESCOBERTA`: «Descobrir» pede para tirar o receptor, «Já
+    tirei» mede os adaptadores sem ele, «Já pus» mede com ele de volta, e a diferença dos canais
+    que os adaptadores evitam é a banda dele. Nada é escrito no aparelho nem no rádio.
+    """
+    chave = str(o.get("alvo") or "")
+    receptores = {str(v["id"]) for v in _CENA_NA_TELA.get("vizinhos", ()) if v.get("receptor")}
+    if chave not in receptores:
+        raise ValueError(f"receptor-descobrir: {chave!r} não é um receptor que está na tela")
+    agora = time.monotonic()
+    d = _DESCOBERTA
+    if d.chave == chave and d.ativa:
+        d.avancar(agora)
+    else:
+        d.iniciar(chave, agora)
+
+
 @gesto("08-conexoes.html", "examinar-portas")
 def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Examinar Portas": refaz o exame INTEIRO e a leitura do barramento.
@@ -2871,6 +2915,7 @@ from hefesto_dualsense4unix.integrations import (  # noqa: E402
     faixa_do_wifi,
     faixas_do_ar,
     queda_do_wifi,
+    receptor_sem_fio,
 )
 from hefesto_dualsense4unix.integrations.ar_do_adaptador import (  # noqa: E402
     CANAIS_DO_BT,
@@ -3927,6 +3972,79 @@ def _a_saude_do_wifi(rede: dict[str, Any], usb3: bool) -> tuple[Any, str, str]:
     return selo, NOTA_DO_USB_3_NO_2_4 if colado else "", DICA_DO_USB_3_NO_2_4 if colado else ""
 
 
+_DESCOBERTA = receptor_sem_fio.Descoberta()
+#: quem guarda a banda achada em disco (a régua injeta o dela: nenhum teste escreve no config).
+_GRAVAR_A_BANDA: Callable[[Any], Any] | None = None
+
+
+def _a_descoberta() -> Any:
+    return _DESCOBERTA
+
+
+def _evitados_dos_adaptadores(ar: dict[str, Any]) -> dict[str, tuple[int, ...] | None]:
+    """`{adaptador: canais que ele evita agora}`; `None` quando o adaptador não mede."""
+    saida: dict[str, tuple[int, ...] | None] = {}
+    for fim, publicado in ar.items():
+        lista = publicado.get("canais_evitados") if isinstance(publicado, dict) else None
+        saida[_mac(fim) or str(fim)] = (
+            tuple(int(c) for c in lista) if isinstance(lista, list) else None)
+    return saida
+
+
+def _andar_a_descoberta(ar: dict[str, Any], agora: float) -> None:
+    """O tique do «Descobrir a faixa»: fecha a medida e, achada a banda, guarda-a."""
+    d = _DESCOBERTA
+    if not d.ativa:
+        return
+    d.andar(agora, lambda: _evitados_dos_adaptadores(ar))
+    if d.passo == receptor_sem_fio.PASSO_ACHOU and d.banda is not None and not d.guardada:
+        d.guardada = True
+        _guardar_a_banda(d.chave, d.banda)
+
+
+def _guardar_a_banda(chave: str, banda: tuple[int, int]) -> None:
+    """A faixa medida vai ao `maquina.json`, com o dia: é o que a pinta nas próximas vezes."""
+    declaracao = {"radios": {chave: {"banda": [banda[0], banda[1]],
+                                     "banda_em": time.strftime("%Y-%m-%d")}}}
+    perfil._com_o_src()
+    gravar = _GRAVAR_A_BANDA
+    if gravar is None:
+        from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_mesa
+
+        gravar = declarar_a_mesa
+    gravar(declaracao)
+    _reler_a_declaracao()
+
+
+def _banda_declarada(declaracao: Any, chave: str) -> list[int] | None:
+    """`[ini, fim)` que o «Descobrir» mediu para este `vid:pid`, ou `None`."""
+    try:
+        banda = declaracao.mesa.radios[chave].banda
+    except Exception:
+        return None
+    return [int(banda[0]), int(banda[1])] if banda else None
+
+
+def _passo_da_linha(chave: str) -> str:
+    """O passo do «Descobrir» DESTE receptor, ou `""` quando ele não está em curso."""
+    d = _DESCOBERTA
+    return d.passo if d.chave == chave else ""
+
+
+def _o_botao_da_descoberta(linha: Any) -> tuple[str, str]:
+    """`(texto, rótulo do botão)` da linha sem faixa de um receptor; `("", "")` se não é dele."""
+    if linha.sem_faixa != faixas_do_ar.NAO_DESCOBERTA:
+        return "", ""
+    passo = _passo_da_linha(linha.id)
+    if passo in (receptor_sem_fio.PASSO_TIRE, receptor_sem_fio.PASSO_PONHA):
+        return (receptor_sem_fio.FRASE_DO_PASSO[passo], receptor_sem_fio.BOTAO_DO_PASSO[passo])
+    if passo in (receptor_sem_fio.PASSO_MEDINDO_SEM, receptor_sem_fio.PASSO_MEDINDO_COM):
+        return receptor_sem_fio.FRASE_DO_PASSO[passo], ""
+    frase = (receptor_sem_fio.FRASE_DO_PASSO[passo]
+             if passo == receptor_sem_fio.PASSO_NADA else linha.sem_faixa)
+    return frase, receptor_sem_fio.BOTAO_DE_COMECAR
+
+
 def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
     """`(ocupante, rótulo html)` do Wi-Fi conectado e de cada rádio vizinho, na ordem da tela."""
     vizinhos = list(cena.get("vizinhos") or ())
@@ -3954,15 +4072,20 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
         tipo = "wifi" if glifo == "wifi" else str(viz.get("tipo") or viz.get("sugestao_tipo")
                                                   or "outro")
         banda = viz.get("banda")
-        sub = "" if tipo == "wifi" else "receptor 2.4G" if tipo in ("teclado", "mouse") else ""
+        receptor = bool(viz.get("receptor")) or tipo in ("teclado", "mouse")
+        sub = ("" if tipo == "wifi" else
+               ("receptor 2.4G · descoberto" if banda else "receptor 2.4G") if receptor else "")
         sem_faixa = (faixas_do_ar.SEM_REDE if tipo == "wifi" else
-                     faixas_do_ar.NAO_DESCOBERTA if tipo in ("teclado", "mouse")
+                     faixas_do_ar.NAO_DESCOBERTA if receptor
                      else faixas_do_ar.NAO_SE_MEDE)
+        selo = receptor_sem_fio.selo_da_saude(viz.get("saude"), tipo) if receptor else None
         saida.append((faixas_do_ar.Ocupante(
             id=str(viz["id"]), tipo=tipo, nome=nome, sub=sub,
             banda=(frozenset(range(int(banda[0]), int(banda[1])))
                    if isinstance(banda, (list, tuple)) and len(banda) == 2 else None),
-            sem_faixa=sem_faixa),
+            sem_faixa=sem_faixa,
+            selo=faixas_do_ar.Selo(selo[0], selo[1]) if selo else None,
+            nota=selo[2] if selo else ""),
             _rotulo_do_vizinho(viz, nome, procedencia, glifo, sub)))
     return saida
 
@@ -4031,8 +4154,18 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
     else:
         fora = " fora" if linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA else ""
         marca = "✓ " if fora else ""
-        faixa = (f'<div class="ar-faixa sem{fora}" role="img" aria-label="{_x(linha.sem_faixa)}">'
-                 f'<span>{marca}{_x(linha.sem_faixa)}</span></div>')
+        frase, botao = _o_botao_da_descoberta(linha)
+        if frase:
+            # o receptor que ainda não foi descoberto: a faixa diz isso e traz o gesto (o botão
+            # não mora dentro de `role="img"`, que o leitor de tela leria como figura)
+            descobrir = (f'<button class="btn ar-descobrir" type="button" '
+                         f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}">'
+                         f'{_x(botao)}</button>' if botao else "")
+            faixa = f'<div class="ar-faixa sem"><span>{_x(frase)}</span>{descobrir}</div>'
+        else:
+            faixa = (f'<div class="ar-faixa sem{fora}" role="img" '
+                     f'aria-label="{_x(linha.sem_faixa)}">'
+                     f'<span>{marca}{_x(linha.sem_faixa)}</span></div>')
     ja_dito = linha.selo is not None and "tira canais" in linha.selo.texto
     tira = f"tira canais de {linha.tira_de}" if linha.tira_de and not ja_dito else ""
     dicas = [t for t in (
@@ -4551,8 +4684,11 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos, no_usb)
     for lug in lugares:
         lug["nao_conectou"] = any(f["lugar"] == lug["id"] for f in falhas)
-    declarados = _radios_declarados(_declaracao())
+    declaracao_viva = _declaracao()
+    declarados = _radios_declarados(declaracao_viva)
     para_id, rotulo_do_tipo = _tipos_de_radio()
+    receptores = _dicionario(st.get("radio_receptores"))
+    _andar_a_descoberta(ar, time.monotonic())
     vizinhos = []
     for r in getattr(mesa, "radios", ()) or ():
         chave = _chave_do_radio(r)
@@ -4562,7 +4698,10 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         vizinhos.append({"id": chave, "tipo": tipo, "nome": rotulo_do_tipo.get(tipo, ""),
                          "sugestao": sugestao, "sugestao_tipo": para_id.get(sugestao, ""),
                          "no": no_do_radio, "lido": "" if tipo else _lido_do_kernel(no_do_radio),
-                         "produto": "" if tipo else _produto_do_no(no_do_radio)})
+                         "produto": "" if tipo else _produto_do_no(no_do_radio),
+                         "receptor": _e_um_receptor(no_do_radio),
+                         "banda": _banda_declarada(declaracao_viva, chave),
+                         "saude": receptores.get(f"usb:{chave}")})
         if getattr(r, "caminho", ""):
             portas.append({"id": f"porta-{chave}", "caminho": str(r.caminho),
                            "usb": "3.0" if getattr(r, "usb3", False) else "2.0",
@@ -5697,6 +5836,8 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
     "mic-existe": "grava no `maquina.json` e sobe ou desce o `bt_mic` no mesmo pedido: "
                   "tem efeito vivo, não tem eco",
     "vizinho-o-que-e": _NO_MAQUINA,
+    "receptor-descobrir": "guarda o passo na tela; a banda achada vai ao `maquina.json` no tique "
+                          "que fecha a medida, e o `state_full` não a republica",
     "ignorar": "a dispensa de uma ordem vai ao `maquina.json`; o `state_full` não a publica",
     "examinar-portas": "não toca o daemon: muda a tira do Check-up no tique seguinte",
     "teto-da-vibracao": "grava no perfil; o efeito vivo vem do `profile.switch`, e o "

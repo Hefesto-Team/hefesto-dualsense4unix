@@ -1760,6 +1760,10 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-faixa.sem{display:flex;align-items:center;justify-content:center;gap:8px;
                        font-size:11px;color:var(--texto-mudo);
                        border:1px dashed var(--border-forte);border-radius:4px}
+  .radio .ar-faixa.sem .ar-descobrir{height:16px;padding:0 8px;font-size:11px;
+                       background:var(--panel);border:1px solid var(--border-forte);
+                       color:var(--fg);border-radius:5px;cursor:pointer}
+  .radio .ar-faixa.sem .ar-descobrir:hover{border-color:var(--green)}
   .radio .ar-faixa.sem.fora{justify-content:flex-start;padding:0 8px;color:var(--green);
                        background:rgba(80,250,123,.06);border:1px solid rgba(80,250,123,.25)}
   .radio .ar-estado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;
@@ -1981,8 +1985,13 @@ def _cena_do_desenho() -> dict:
         {"id": f"relogio-{cheio['id']}", "tipo": "relogio", "lugar": cheio["id"],
          "nome": "Relógio", "rotulo": "Relógio", "esperando": False, "fixo": False}]
     for _viz in vizinhos:
+        if _viz["tipo"] in ("teclado", "mouse"):
+            _viz["receptor"] = True
         if _viz["tipo"] == "teclado":
             _viz["banda"] = [18, 35]
+            _viz["saude"] = {"teclas_presas": 3, "buracos": 0, "janela_s": 3600, "lendo": True}
+        elif _viz["tipo"] == "mouse":
+            _viz["saude"] = {"teclas_presas": 0, "buracos": 0, "janela_s": 3600, "lendo": True}
     cena = {
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": {lg["id"]: True for lg in lugares},

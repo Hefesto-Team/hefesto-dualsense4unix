@@ -366,6 +366,8 @@ def _aparelho(
     if (apelidos or {}).get(modelo):
         corpo["nomeDeclarado"] = (apelidos or {})[modelo]
     corpo["etiquetas"] = _etiquetas_do_aparelho(do_censo, censo)
+    if getattr(do_censo, "receptor", False):
+        corpo["receptor"] = True
     return corpo
 
 
@@ -383,7 +385,9 @@ def _etiquetas_do_aparelho(aparelho: Any, censo: Any) -> list[str]:
     from hefesto_dualsense4unix.integrations.censo_do_barramento import cadeia_de_hubs
 
     etiquetas: list[str] = []
-    if aparelho.especie and aparelho.especie != ESPECIE_DESCONHECIDA:
+    if getattr(aparelho, "receptor", False):
+        etiquetas.append("receptor 2.4G")
+    elif aparelho.especie and aparelho.especie != ESPECIE_DESCONHECIDA:
         etiquetas.append(aparelho.especie)
     if aparelho.velocidade_mbps > 0:
         etiquetas.append(
