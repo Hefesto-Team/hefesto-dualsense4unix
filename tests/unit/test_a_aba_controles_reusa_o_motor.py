@@ -124,16 +124,22 @@ BASE: dict[str, Any] = {
 # O `alto-estado` era um `<span class="mudo" data-campo="alto-estado" hidden>` —
 
 
-def test_o_volume_nao_e_o_registrador_cru_com_por_cento(pac, a02):
+def test_o_volume_nao_e_o_registrador_cru_com_por_cento(pac, a02, monkeypatch):
     """102 no registrador é **100 %** no campo, e nunca "102%"."""
+    # o número, não a palavra: nos 100% sem perfil a página publicada diz «Padrão» (05/10/2026),
+    # e essa regra tem régua própria em test_o_volume_do_alto_falante_tem_o_botao_padrao.py
+    monkeypatch.setattr(a02, "volume_em_padrao", lambda *_: False)
     d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
     assert d["alto-num"] == 100
     assert d["alto-num"] != VOLUME_VIVO, (
         "a tela escreveu o registrador cru do protocolo como se fosse por cento")
 
 
-def test_o_talo_do_registrador_nao_vira_duzentos_e_cinquenta_e_cinco_por_cento(pac, a02):
+def test_o_talo_do_registrador_nao_vira_duzentos_e_cinquenta_e_cinco_por_cento(
+    pac, a02, monkeypatch
+):
     """255 é o talo da escala do protocolo, e o talo da tela é 100 %."""
+    monkeypatch.setattr(a02, "volume_em_padrao", lambda *_: False)  # o número, não a palavra
     talo = _card(pac, a02, {**BASE, "speaker": {"volume": 255, "muted": False}})
     meio = _card(pac, a02, {**BASE, "speaker": {"volume": 128, "muted": False}})
     assert talo["alto-num"] == 100
