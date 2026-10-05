@@ -439,7 +439,7 @@ def _motores_do_perfil_ativo(daemon: Any) -> dict[str, tuple[int, int]]:
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     if not isinstance(nome, str) or not nome:
         nome = None
-    selo = _selo_da_maquina_a_cada_segundo()
+    selo = _selo_do_que_vale(nome)
     cache = getattr(daemon, "_rumble_motores_pct", None)
     if (isinstance(cache, tuple) and len(cache) == 3 and cache[0] == nome
             and cache[2] == selo):
@@ -498,7 +498,7 @@ def _politicas_do_perfil_ativo(daemon: Any) -> dict[str, str]:
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     if not isinstance(nome, str) or not nome:
         nome = None
-    selo = _selo_da_maquina_a_cada_segundo()
+    selo = _selo_do_que_vale(nome)
     cache = getattr(daemon, "_rumble_politicas", None)
     if (isinstance(cache, tuple) and len(cache) == 3 and cache[0] == nome
             and cache[2] == selo and isinstance(cache[1], dict)):
@@ -2258,6 +2258,37 @@ def _apertos_do_primario(
     except Exception as exc:
         logger.debug("apertos_do_primario_falhou", err=str(exc))
         return buttons_pressed, frozenset()
+
+
+_SELOS_DOS_PERFIS: dict[str, tuple[float, Any]] = {}
+
+
+def _selo_do_que_vale(nome: str | None) -> Any:
+    """A chave dos mapas memoizados das barras e dos degraus: o ``maquina.json`` e o PERFIL.
+
+    :func:`_motores_do_perfil_ativo` e :func:`_politicas_do_perfil_ativo` se chaveiam pelo nome
+    do perfil ativo e por este selo. Só o da máquina não bastava: o degrau que ela clica numa
+    coluna da aba 05 grava no perfil ATIVO, que segue com o mesmo nome, e o «Aplicar» não passa
+    por :func:`esquecer_motores_do_perfil`; a tela dizia Máximo e o motor seguia em Padrão até
+    o daemon reiniciar. O arquivo do perfil é relido no máximo uma vez por segundo, como o da
+    máquina: o FF do jogo chega a centenas de Hz. Nunca levanta.
+    """
+    maquina = _selo_da_maquina_a_cada_segundo()
+    if nome is None:
+        return (maquina, None)
+    agora = time.monotonic()
+    quando, selo = _SELOS_DOS_PERFIS.get(nome, (float("-inf"), None))
+    if agora - quando >= 1.0:
+        selo = None
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.profiles.loader import arquivo_do_perfil
+
+            alvo = arquivo_do_perfil(nome)
+            if alvo is not None:
+                st = alvo.stat()
+                selo = (st.st_ino, st.st_mtime_ns, st.st_size)
+        _SELOS_DOS_PERFIS[nome] = (agora, selo)
+    return (maquina, selo)
 
 
 __all__ = [

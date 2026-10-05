@@ -208,6 +208,40 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
             gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
             assert backend.rumbles == [(BRANCO, *esperado)], (degrau_dela, global_)
 
+    def test_o_degrau_clicado_na_coluna_chega_ao_motor_no_segundo_seguinte(
+        self, perfis: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O clique num degrau da coluna (aba 05) grava no perfil ATIVO, que segue com o mesmo
+        nome, e o «Aplicar» que vem depois não passa por `esquecer_motores_do_perfil`. Sem o selo
+        do arquivo do perfil na chave dos mapas memoizados, a tela dizia Máximo e o motor seguia
+        em Padrão (e vice-versa) até o daemon reiniciar.
+
+        MORDIDA: tirar o selo do perfil de `_selo_do_que_vale` reprova (o segundo par sai igual
+        ao primeiro).
+        """
+        relogio = [1.0e9]
+        monkeypatch.setattr(gp_mod, "time", SimpleNamespace(monotonic=lambda: relogio[0]))
+
+        def _degrau_dela(degrau: str) -> None:
+            save_profile(Profile(
+                name="Bancada", match=MatchAny(),
+                controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
+                    policy=degrau, motor_forte_pct=50))}))
+
+        _degrau_dela("balanceado")
+        backend = _Backend()
+        d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+        _degrau_dela("max")
+        relogio[0] += 2.0
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+        _degrau_dela("balanceado")
+        relogio[0] += 2.0
+        gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
+        assert backend.rumbles == [
+            (BRANCO, 100, 100), (BRANCO, 100, 50), (BRANCO, 100, 100)], (
+            "o degrau novo da coluna não chegou ao motor")
+
     def test_esquecer_os_motores_derruba_tambem_o_degrau_memoizado(self, perfis: Path) -> None:
         save_profile(Profile(
             name="Bancada", match=MatchAny(),
