@@ -12,8 +12,8 @@ documentação, e escrever neles às cegas é risco. Por isso há três coisas, 
   mouse ``030102``) no MESMO aparelho USB, full-speed, com «2.4G», «Wireless» ou «Receiver» no
   nome. Qualquer marca; um mouse com fio tem uma interface só.
 * **Ver sofrer** (:class:`ContadorDaSaude`, :class:`MonitorDosReceptores`): o evdev, só leitura e
-  sem ``grab``. Conta DURAÇÕES: quantas vezes uma tecla ficou apertada, repetindo, por mais de
-  :data:`PRESA_APOS_S` sem soltar (o «digita sozinho»), e quantos buracos de movimento do mouse
+  sem ``grab``. Conta DURAÇÕES: quantas vezes uma tecla repetiu (autorepeat) por mais de
+  :data:`PRESA_APOS_S` (o «digita sozinho»; o «solta» que encerra a repetição não a desconta), e quantos buracos de movimento do mouse
   passaram do que o próprio mouse entrega. Nunca o código da tecla nem o texto: é um app de
   acessibilidade, não um registrador de teclas.
 * **Achar a faixa por eliminação** (:class:`Descoberta`): o rádio dele não se lê, mas os adaptadores
@@ -50,7 +50,7 @@ MOUSE_DE_ARRANQUE = "030102"
 VELOCIDADE_MAXIMA_MBPS = 12.0
 _NOME_DE_RECEPTOR = re.compile(r"2[.,]4\s*g|wireless|receiver", re.IGNORECASE)
 
-#: Uma tecla apertada, repetindo, por mais disto sem soltar, é «presa».
+#: Uma tecla que repete (autorepeat) por mais disto é «presa», solte ela depois ou não.
 PRESA_APOS_S = 1.0
 #: A janela de contagem: a última hora.
 JANELA_S = 3600
@@ -129,7 +129,7 @@ class _Aperto:
     """Uma tecla apertada agora. Só o instante: o código vira um token sem volta."""
 
     inicio: float
-    contada_em: float | None = None
+    contada: bool = False
 
 
 class ContadorDaSaude:
@@ -155,16 +155,16 @@ class ContadorDaSaude:
             self._apertadas[token] = _Aperto(inicio=t)
         elif valor == 2:
             aperto = self._apertadas.get(token)
-            if aperto is not None and aperto.contada_em is None \
+            if aperto is not None and not aperto.contada \
                     and t - aperto.inicio >= PRESA_APOS_S:
-                aperto.contada_em = t
+                aperto.contada = True
                 self._presas.append(t)
         elif valor == 0:
-            aperto = self._apertadas.pop(token, None)
-            if aperto is not None and aperto.contada_em is not None:
-                # soltou pelo próprio «solta»: era a mão segurando, não o rádio perdendo
-                with contextlib.suppress(ValueError):
-                    self._presas.remove(aperto.contada_em)
+            # O «solta» NÃO desfaz a conta: o «digita sozinho» num teclado HID termina sempre
+            # num solta (o rádio volta e entrega o key up que perdeu), então descontá-lo faria a
+            # métrica tender a zero justamente no sintoma. A tecla presa mede-se pela REPETIÇÃO
+            # que passou de PRESA_APOS_S; o solta só encerra o acompanhamento dela.
+            self._apertadas.pop(token, None)
 
     def movimento(self, t: float) -> None:
         """Uma posição do mouse (``REL_X``/``REL_Y``) no instante ``t``."""

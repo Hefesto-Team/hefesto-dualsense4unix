@@ -8,7 +8,7 @@ no kernel de verdade), pipes no lugar do ``/dev/input`` e relógio de mentira. N
 evdev, hidraw nem barramento de verdade; faixa forjada nos endereços.
 
 MORDIDAS, uma por vez: a segunda interface de arranque (``e_receptor``); o ``speed`` do receptor;
-o «solta» que desfaz a tecla presa; o limite relativo do buraco; o filho HID da busca de nós de
+o «solta» que NÃO desfaz a tecla presa; o limite relativo do buraco; o filho HID da busca de nós de
 input; o ``diff`` da banda por eliminação.
 """
 
@@ -152,7 +152,7 @@ def _contador() -> rx.ContadorDaSaude:
     return rx.ContadorDaSaude(sal=7)
 
 
-def test_tecla_apertada_repetindo_sem_soltar_por_mais_de_um_segundo_e_uma_presa() -> None:
+def test_tecla_repetindo_por_mais_de_um_segundo_e_uma_presa() -> None:
     c = _contador()
     c.tecla(1, CODIGO_DA_TECLA, 100.0)
     for t in (100.5, 100.9):
@@ -164,13 +164,30 @@ def test_tecla_apertada_repetindo_sem_soltar_por_mais_de_um_segundo_e_uma_presa(
     assert c.saude(101.7).teclas_presas == 1, "a mesma tecla conta uma vez só"
 
 
-def test_a_tecla_que_solta_pelo_proprio_solta_nao_e_presa() -> None:
+def test_o_solta_que_encerra_a_repeticao_nao_desconta_a_presa() -> None:
+    """O «digita sozinho» num teclado HID termina num key up: descontá-lo zera o sintoma."""
     c = _contador()
     c.tecla(1, CODIGO_DA_TECLA, 100.0)
     c.tecla(2, CODIGO_DA_TECLA, 101.5)
     assert c.saude(101.6).teclas_presas == 1
     c.tecla(0, CODIGO_DA_TECLA, 101.8)
-    assert c.saude(102.0).teclas_presas == 0, "soltou: era a mão, e a conta se desfaz"
+    assert c.saude(102.0).teclas_presas == 1, "o solta encerra a repetição, não a apaga da conta"
+    assert CODIGO_DA_TECLA not in c._apertadas and not c._apertadas, "e a tecla sai do acompanhamento"
+    # a mesma tecla apertada de novo e solta sem repetir além de 1 s não soma
+    c.tecla(1, CODIGO_DA_TECLA, 103.0)
+    c.tecla(2, CODIGO_DA_TECLA, 103.5)
+    c.tecla(0, CODIGO_DA_TECLA, 103.8)
+    assert c.saude(104.0).teclas_presas == 1
+
+
+def test_a_repeticao_que_termina_num_solta_conta_uma_vez_e_a_proxima_conta_outra() -> None:
+    c = _contador()
+    for t0 in (100.0, 200.0):
+        c.tecla(1, CODIGO_DA_TECLA, t0)
+        c.tecla(2, CODIGO_DA_TECLA, t0 + 1.2)
+        c.tecla(2, CODIGO_DA_TECLA, t0 + 1.4)
+        c.tecla(0, CODIGO_DA_TECLA, t0 + 1.6)
+    assert c.saude(300.0).teclas_presas == 2
 
 
 def test_duas_teclas_presas_sao_duas_e_a_hora_passa() -> None:
@@ -299,7 +316,8 @@ def _volta(m: rx.MonitorDosReceptores, n: int = 3) -> None:
 def test_o_monitor_conta_a_tecla_presa_e_o_buraco_lidos_do_evdev(pipes: Pipes) -> None:
     m = _monitor(pipes)
     _volta(m, 1)
-    pipes.escrever(TECLADO, (rx.EV_KEY, 30, 1, 100.0), (rx.EV_KEY, 30, 2, 101.5))
+    pipes.escrever(TECLADO, (rx.EV_KEY, 30, 1, 100.0), (rx.EV_KEY, 30, 2, 101.5),
+                   (rx.EV_KEY, 30, 0, 101.8))  # o solta que encerra a repetição não a desconta
     pipes.escrever(MOUSE, *[(rx.EV_REL, rx.REL_X, 1, 200.0 + k * 0.001) for k in range(40)],
                    (rx.EV_REL, rx.REL_X, 1, 200.0 + 39 * 0.001 + 0.015))
     _volta(m)
@@ -363,7 +381,8 @@ def test_o_state_full_publica_a_saude_pela_chave_radio_receptores(
     handlers = _handlers(monkeypatch)[1]
     handlers._monitor_de_receptores = _monitor(pipes)  # type: ignore[attr-defined]
     handlers._monitor_de_receptores.passo(0.01)  # type: ignore[attr-defined]
-    pipes.escrever(TECLADO, (rx.EV_KEY, 30, 1, 100.0), (rx.EV_KEY, 30, 2, 101.5))
+    pipes.escrever(TECLADO, (rx.EV_KEY, 30, 1, 100.0), (rx.EV_KEY, 30, 2, 101.5),
+                   (rx.EV_KEY, 30, 0, 101.8))  # o solta que encerra a repetição não a desconta
     handlers._monitor_de_receptores.passo(0.01)  # type: ignore[attr-defined]
     publicado = handlers._os_receptores_publicam()  # type: ignore[attr-defined]
     assert publicado[CHAVE]["teclas_presas"] == 1
