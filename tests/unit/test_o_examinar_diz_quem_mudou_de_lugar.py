@@ -432,7 +432,8 @@ _LER = r"""
     examinar: (document.querySelector('.topo #reexaminar') || {dataset: {}}).dataset.gesto || '',
     aviso: (document.querySelector('#painel .aviso-uma-linha') || {innerText: ''}).innerText
       .replace(/\s+/g, ' ').trim(),
-    painelDoAparelho: !!(ed && !ed.hidden && ed.querySelector('.ap-cab')),
+    // O painel único do desenho aprovado de 05/10: a coluna «Aparelho» com o nome dele.
+    painelDoAparelho: !!(ed && !ed.hidden && ed.querySelector('[data-nome-do-aparelho]')),
   });
 })()
 """
@@ -536,7 +537,8 @@ def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
     """O teclado sai da 1 e vai para a 2, e uma webcam chega no hub.
 
     Desde o desenho aprovado de 04/10/2026 (d3) o reexame é uma linha com ✓, em frase (fora do
-    «toda palavra com maiúscula»), e o «Ver» abre o detalhe de quem foi para onde.
+    «toda palavra com maiúscula»), e o «Ver» abre o detalhe de quem foi para onde. O desenho
+    aprovado de 05/10 tirou a primeira pessoa e o Título Em Toda Palavra do detalhe também.
     """
     aberta = _ler(_teclado("9-1"), _dongle("9-5"), _hub("9-3"))
     relida = _ler(_teclado("9-2"), _dongle("9-5"), _hub("9-3"), _webcam("9-3.1"),
@@ -557,19 +559,20 @@ def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
     assert entregue["examinar"] == "reexaminar", "o «Examinar» do produto não leva o gesto"
     pedidos = [m for m in mensagens if m.get("gesto") == "reexaminar"]
     assert len(pedidos) == 1, f"o clique não chegou ao piloto: {mensagens}"
-    assert no_clique["modo"] != "reexame" and "Nada Mudou" not in no_clique["painel"], (
+    assert no_clique["modo"] != "reexame" and "nada mudou" not in no_clique["painel"].lower(), (
         "a página pintou o reexame antes de a leitura nova chegar: " + no_clique["painel"])
     assert entrega == "ok", entrega
-    assert linha["aviso"].startswith("✓ 2 aparelhos mudaram de lugar, e eu sei onde 1"), linha
+    assert linha["aviso"].startswith("✓ 2 aparelhos mudaram de lugar; 1 com a entrada marcada"), (
+        linha)
     assert "Estava em" not in linha["painel"], "o detalhe nasceu aberto: " + linha["painel"]
     assert ver == "clicou", ver
     texto = depois["painel"]
-    assert "2 Aparelhos Mudaram de Lugar" in texto and "Nada Mudou" not in texto, texto
-    assert re.search(r"Estava em 9-1 \(Entrada 1\), Agora Está em 9-2 \(Entrada 2\)", texto), texto
+    assert "2 aparelhos mudaram de lugar" in texto and "nada mudou" not in texto.lower(), texto
+    assert re.search(r"Estava em 9-1 \(entrada 1\), agora está em 9-2 \(entrada 2\)", texto), texto
     assert "undefined" not in texto.lower(), texto
-    assert "Agora Está em 9-3.1" in texto, texto
-    assert "Por Que 1 Ficou Sem Entrada" in texto, texto
-    assert "Está no Hub" in texto and "Direto no Gabinete" not in texto, (
+    assert "Agora está em 9-3.1" in texto, texto
+    assert "1 sem entrada marcada" in texto, texto
+    assert "está no hub" in texto and "direto no gabinete" not in texto.lower(), (
         "a webcam está no hub, e o reexame a põe direto no gabinete: " + texto)
     assert "Dongle" not in texto, "o dongle não saiu da 5, e o reexame o acusa"
 
@@ -589,7 +592,7 @@ def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
         f"no produto o «Já movi» não leva o gesto, e fica morto: {ja_movi!r}")
     assert [m for m in mensagens if m.get("gesto") == "reexaminar"], (
         f"o clique no «Já movi» não chegou ao piloto: {mensagens}")
-    assert depois["modo"] == "ideal" and "Nada Mudou" not in depois["painel"], (
+    assert depois["modo"] == "ideal" and "nada mudou" not in depois["painel"].lower(), (
         "o «Já movi» pintou o reexame antes de a leitura nova chegar")
 
 
@@ -634,12 +637,12 @@ def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(
         _LER,
     ])
     ensinado, reexame, fechado = lidas[1], lidas[3], lidas[5]
-    assert "4 de 5 Entradas Mapeadas" in ensinado["painel"], ensinado["painel"]
+    assert "4 de 5 entradas mapeadas" in ensinado["painel"], ensinado["painel"]
     assert "Webcam" not in reexame["painel"], (
         "a webcam não saiu da 4, e o reexame a lista: " + reexame["painel"])
-    assert "4 de 5 Entradas Mapeadas" in fechado["painel"], (
+    assert "4 de 5 entradas mapeadas" in fechado["painel"], (
         "o «Examinar» jogou fora o que ela ensinou nesta tela: " + fechado["painel"])
-    assert "Fora do Mapa" not in fechado["painel"], fechado["painel"]
+    assert "fora do mapa" not in fechado["painel"].lower(), fechado["painel"]
 
 
 def test_o_hub_de_verdade_na_entrada_nao_apaga_o_hub(disco: Path) -> None:
@@ -711,9 +714,10 @@ def test_o_examinar_do_exemplo_continua_na_pagina() -> None:
 def test_o_hub_fica_cinza_onde_ha_um_aparelho_direto(disco: Path) -> None:
     """Dongle direto na 5: ali não se declara hub, e nada grava.
 
-    Até 04/10/2026 a 5 abria o editor da entrada com o «Hub» cinza («Bluetooth Está Direto
-    Nesta Entrada»). No desenho aprovado (d2) clicar na entrada de um aparelho abre o painel
-    DELE, que não oferece «Hub» nenhum: a máquina vence no que mede (DECISOES 6).
+    No desenho aprovado de 05/10 clicar na entrada de um aparelho abre o painel único: a
+    coluna «Aparelho» dele e a coluna «Entrada», com o «Tipo» Direta|Hub. Ali o «Hub» fica
+    cinza, com o porquê no tooltip, e o clique nele não leva gesto: a máquina vence no que
+    mede (DECISOES 6).
     """
     aberta = _ler(_teclado("9-1"), _dongle("9-5"))
     lidas, mensagens = _na_pagina([
@@ -727,8 +731,11 @@ def test_o_hub_fica_cinza_onde_ha_um_aparelho_direto(disco: Path) -> None:
     ])
     _, _, na_5, clique, depois, _, na_3 = lidas
     assert na_5["editor"] and na_5["painelDoAparelho"], na_5
-    assert na_5["hub"] is None, f"o painel do dongle oferece «Hub»: {na_5['hub']}"
-    assert clique.startswith("sem "), clique
+    hub_5 = na_5["hub"]
+    assert hub_5 is not None and hub_5["cinza"] == "true" and not hub_5["gesto"], (
+        f"o «Hub» da entrada do dongle não está cinza: {hub_5}")
+    assert "direto nesta entrada" in (hub_5["dica"] or ""), hub_5
+    assert clique == "clicou", clique
     assert not [m for m in mensagens if m.get("liga") == "hub"], mensagens
     assert ee.FACE_DO_HUB_DECLARADO.format(numero="5") not in depois["faces"]
     assert carregar_maquina().mapa.portas["5"].liga is None
