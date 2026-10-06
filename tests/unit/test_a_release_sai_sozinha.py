@@ -1509,3 +1509,58 @@ def test_o_publicar_nao_importa_o_que_nao_usa() -> None:
             m = re.match(r"^\s*(?:import|from)\s+([A-Za-z_][A-Za-z0-9_]*)", ln)
             if m:
                 assert m.group(1) in permitidos, f"{arq.name}: {ln.strip()}"
+
+
+# ---------------------------------------------------------------------------
+# 10. A triagem da issue aceita: o outro lado do ciclo da sprint
+# ---------------------------------------------------------------------------
+
+TRIAGEM_YML = RAIZ / ".github" / "workflows" / "triagem.yml"
+ROTULOS_YML = RAIZ / ".github" / "workflows" / "rotulos.yml"
+
+
+def _eventos(arquivo: Path) -> set[tuple[str, str]]:
+    dados = yaml.safe_load(arquivo.read_text(encoding="utf-8"))
+    gatilho = dados.get("on", dados.get(True))  # o YAML 1.1 lê `on` como verdadeiro
+    return {
+        (evento, tipo)
+        for evento, cfg in gatilho.items()
+        for tipo in (cfg or {}).get("types", ["*"])
+    }
+
+
+def test_a_triagem_ouve_so_o_rotulo_aceito_e_o_rotulos_yml_ouve_outros_eventos() -> None:
+    triagem = _eventos(TRIAGEM_YML)
+    assert triagem == {("issues", "labeled")}
+    # o dono de cada coisa: o que acontece quando a issue ABRE ou é EDITADA é do `rotulos.yml`, e o que
+    # acontece quando ela é ACEITA é da triagem; nenhum evento é dos dois
+    assert triagem.isdisjoint(_eventos(ROTULOS_YML))
+    job = yaml.safe_load(TRIAGEM_YML.read_text(encoding="utf-8"))["jobs"]["aceita"]
+    assert job["if"] == "github.event.label.name == 'aceito'"
+    assert job["permissions"] == {"contents": "read", "issues": "write"}
+
+
+def test_a_triagem_nao_refaz_o_que_o_rotulos_yml_ja_faz() -> None:
+    texto = TRIAGEM_YML.read_text(encoding="utf-8")
+    for dele in ("add-to-project", "actions/labeler", "triagem.py", "precisa do doctor"):
+        assert dele not in texto, f"«{dele}» é do rotulos.yml: dois donos para a mesma coisa"
+    assert "add-to-project" in ROTULOS_YML.read_text(encoding="utf-8")
+
+
+def test_o_rotulo_aceito_e_um_dos_do_arquivo_do_repositorio_e_a_lista_e_uma_so() -> None:
+    assert "aceito" in _rotulos_do_repositorio()
+    # nenhum fluxo cria rótulo: `gh issue create --label` de nome que não existe o cria calado
+    for fluxo in (TRIAGEM_YML, ROTULOS_YML):
+        assert "gh label create" not in fluxo.read_text(encoding="utf-8")
+
+
+def test_a_triagem_avisa_uma_vez_e_nenhum_dado_do_evento_entra_no_shell() -> None:
+    dados = yaml.safe_load(TRIAGEM_YML.read_text(encoding="utf-8"))
+    passo = dados["jobs"]["aceita"]["steps"][0]
+    assert "${{" not in passo["run"], "o dado do evento chega pelo env, nunca dentro do script"
+    assert set(passo["env"]) == {"GH_TOKEN", "NUMERO", "REPO"}
+    assert "grep -qF '<!-- aceito -->'" in passo["run"] and "exit 0" in passo["run"]
+    corpo = passo["run"].split("<<'AVISO'")[1]
+    assert corpo.lstrip().startswith("<!-- aceito -->"), (
+        "o aviso carrega a marca que a conferência procura"
+    )

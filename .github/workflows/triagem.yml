@@ -1,0 +1,40 @@
+name: Triagem
+
+# A issue que quem mantém marca com «aceito» entra na fila de trabalho, e a pessoa que a abriu é avisada
+# (uma vez só). É o único trabalho deste fluxo. O que acontece quando a issue ABRE ou é EDITADA (o rótulo
+# da área do PR, a saída do `doctor` e a entrada no quadro Roteiro) é do `rotulos.yml`: os dois fluxos
+# ouvem eventos diferentes (`opened` e `edited` lá, `labeled` aqui) e nenhum deles faz o que o outro faz.
+# O rótulo «aceito» é um dos de `.github/repositorio.yml`: a lista é uma só.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  aceita:
+    name: Issue aceita
+    if: github.event.label.name == 'aceito'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Avisar a pessoa que abriu a issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMERO: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Idempotente: rotular de novo, ou tirar e pôr o rótulo, não repete o aviso.
+          if gh api "repos/${REPO}/issues/${NUMERO}/comments" --paginate --jq '.[].body' | grep -qF '<!-- aceito -->'; then
+            echo "A issue ${NUMERO} já foi avisada."
+            exit 0
+          fi
+          gh issue comment "${NUMERO}" --repo "${REPO}" --body-file - <<'AVISO'
+          <!-- aceito -->
+          Quem mantém o Hefesto aceitou esta issue: ela entra na fila de trabalho. O andamento aparece aqui e no
+          quadro Roteiro, e esta conversa avisa quando a mudança sair numa versão.
+          AVISO
