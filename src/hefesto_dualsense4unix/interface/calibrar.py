@@ -553,11 +553,9 @@ def lugar(n):
 
 
 def _numero(c):
-    """O número do jogador como inteiro, ou `None` quando a bancada não o leu."""
-    try:
-        return int(c.get("jogador"))
-    except (TypeError, ValueError):
-        return None
+    """O número do jogador, ou `None` quando a bancada não o leu (`mesa_viva` o dá inteiro)."""
+    n = c.get("jogador")
+    return n if isinstance(n, int) else None
 
 
 def controles(quem):
