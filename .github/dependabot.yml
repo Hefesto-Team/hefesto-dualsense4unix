@@ -1,7 +1,9 @@
+# Só o alerta de segurança fica: a atualização das dependências se faz à mão.
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
+    open-pull-requests-limit: 0
     schedule:
       interval: "weekly"
     labels:
@@ -9,6 +11,7 @@ updates:
       - "status:ready"
   - package-ecosystem: "github-actions"
     directory: "/"
+    open-pull-requests-limit: 0
     schedule:
       interval: "monthly"
     labels:

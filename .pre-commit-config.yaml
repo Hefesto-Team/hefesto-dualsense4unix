@@ -44,7 +44,7 @@ repos:
         types: [text]
         exclude: '^(tests/fixtures/|tests/unit/test_validar_glifos\.py$|docs/history/|docs/research/|scripts/validar-glifos\.py$|CHANGELOG\.md$)'
       - id: anonimato
-        name: Anonimato (sem menção a IA)
+        name: Anonimato
         entry: bash scripts/check_anonymity.sh
         language: system
         pass_filenames: false

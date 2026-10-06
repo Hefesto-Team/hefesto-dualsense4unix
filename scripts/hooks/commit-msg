@@ -13,9 +13,9 @@
 #   2. um gancho global mora em UMA máquina. Ele não viaja com o repositório,
 #      então não protege quem clona.
 #
-# Este arquivo cura a (2). A (1) é curada pelo portão `historia-sem-ia`
-# (`scripts/check_a_historia_nao_tem_ia.py`), que varre a história inteira toda
-# vez que alguém roda `bash scripts/portoes.sh` — e essa é a trava de verdade.
+# Este arquivo cura a (2). A (1) é curada pelo portão `autoria-historia`
+# (`scripts/check_autoria.py`), que varre a história inteira toda vez que
+# alguém roda `bash scripts/portoes.sh` — e essa é a trava de verdade.
 #
 # ELE CORRIGE EM VEZ DE BLOQUEAR, no corpo: a linha sai e o commit segue. No
 # ASSUNTO ele bloqueia, porque assunto é escolha deliberada de quem escreve.
@@ -39,9 +39,8 @@ PESSOAS='vitoriamaria\.sds@gmail\.com|andre\.dsbf@gmail\.com'
 
 ASSUNTO="$(head -1 "$MSG_FILE")"
 if printf '%s' "$ASSUNTO" | grep -qiE "$FERRAMENTA"; then
-    echo "commit-msg: o ASSUNTO nomeia uma ferramenta. Reescreva-o." >&2
-    echo "  Regra desta casa: nenhuma mensagem do repositório nomeia" >&2
-    echo "  assistente, fornecedor ou modelo." >&2
+    echo "commit-msg: o ASSUNTO traz atribuição a quem não assina o projeto. Reescreva-o." >&2
+    echo "  Regra desta casa: só as pessoas do .mailmap assinam." >&2
     exit 1
 fi
 

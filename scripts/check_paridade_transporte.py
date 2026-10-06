@@ -2488,8 +2488,8 @@ def main(argv: list[str] | None = None) -> int:
         default="HEAD~1",
         help=(
             "ref git para a regra 17 comparar (padrão HEAD~1, só para uso "
-            "local — o CI passa a base do evento, nunca HEAD~1: ver "
-            "anonymity-check.yml)"
+            "local — o CI passa a base do evento, nunca HEAD~1: ver o passo "
+            "«Definir ref de comparação» do ci.yml)"
         ),
     )
     parser.add_argument(
