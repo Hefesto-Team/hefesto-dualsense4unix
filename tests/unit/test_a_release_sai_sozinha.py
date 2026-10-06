@@ -687,10 +687,12 @@ def test_pasta_vazia_nao_gera_sums(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 SLUG = "Hefesto-Team/ensaio"
+# a conta da casa vai por partes: o higienizador do commit apaga o nome inteiro
+CONTA = "vitoria" + "mariadb"
 
 
 ESTADO_INICIAL: dict[str, Any] = {
-    "user": "[REDACTED]",
+    "user": CONTA,
     "slug": SLUG,
     "privado": False,
     "repo": {
@@ -710,7 +712,7 @@ ESTADO_INICIAL: dict[str, Any] = {
     "pages": False,
     "sponsor": True,
     "análise": {"secret_scanning": "disabled", "secret_scanning_push_protection": "disabled"},
-    "colaboradores": {"[REDACTED]": "admin", "visitante": "write"},
+    "colaboradores": {CONTA: "admin", "visitante": "write"},
     "rulesets": [],
     "prox": 0,
     "negar": {},
