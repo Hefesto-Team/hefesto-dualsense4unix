@@ -2251,7 +2251,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:5654`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:5669`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -2759,7 +2759,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:5654`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:5669`) → `maquina.json`, e
 
 
 def _gravar_o_mapa(p: Any) -> None:
