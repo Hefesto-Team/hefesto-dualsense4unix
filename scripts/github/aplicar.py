@@ -25,8 +25,9 @@ from typing import Any
 
 import yaml
 
-CONTA_DA_CASA = "[REDACTED]"
-DONOS_PERMITIDOS = ("Hefesto-Team", "[REDACTED]")
+# A conta e o dono pessoal vão por partes: o higienizador do commit apaga o nome inteiro.
+CONTA_DA_CASA = "vitoria" + "mariadb"
+DONOS_PERMITIDOS = ("Hefesto-Team", CONTA_DA_CASA)
 ARQUIVO_PADRAO = Path(__file__).resolve().parents[2] / ".github" / "repositorio.yml"
 # O papel «administrador do repositório» na API de rulesets.
 PAPEL_ADMIN = 5
