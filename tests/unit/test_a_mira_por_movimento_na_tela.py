@@ -706,12 +706,13 @@ def test_o_metodo_esta_no_dispatcher() -> None:
 _RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
-#: 06/10/2026, leva 1.7 (desenho-navegacao, item 12): a frase dela de 24/09
+#: 06/10/2026, leva 1.7 (desenho-navegacao, item 12): a frase dela de 23/09
+#: (`D-2309-A-MIRA-VIRTUAL`)
 #: perdeu o «como mira (analógico R)», porque o lado agora se escolhe embaixo de
 #: cada analógico, e o chip passou a se chamar «Analógico Virtual».
 _DICA_DELA = ("Usar os movimentos do controle como um analógico, para "
-              "pessoas com deficiência motora. Qual dos dois se escolhe "
-              "embaixo de cada analógico.")
+              "pessoas com deficiência motora. O lado se escolhe embaixo "
+              "de cada analógico.")
 
 
 def _cartoes_da_bancada() -> list[tuple[str, str]]:

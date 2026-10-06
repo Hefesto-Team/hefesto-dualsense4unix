@@ -1495,8 +1495,8 @@ LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 #: chip do cabeçalho apagado, os dois de baixo ficam cinza (`.ctl:has(...)`).
 ROTULO_DA_MIRA_VIRTUAL = "Analógico Virtual"
 DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como um analógico, para "
-                        "pessoas com deficiência motora. Qual dos dois se escolhe "
-                        "embaixo de cada analógico.")
+                        "pessoas com deficiência motora. O lado se escolhe embaixo "
+                        "de cada analógico.")
 
 ROTULO_DA_INCLINACAO = "Usar como analógico virtual"
 DICA_DA_INCLINACAO = {
