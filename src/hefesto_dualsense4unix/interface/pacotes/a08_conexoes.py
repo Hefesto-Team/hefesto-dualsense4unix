@@ -4201,7 +4201,7 @@ TENTAR_DE_NOVO = f"{FAIXA_NAO_ENCONTRADA} · Tentar de novo"
 
 
 def _o_ponto(linha: Any) -> str:
-    """O estado da linha num ponto: verde = bom, laranja ou vermelho = problema, vazado = sem leitura.
+    """O estado da linha num ponto: verde = bom, laranja ou vermelho = problema, vazado = sem selo.
 
     O texto do problema («3 teclas presas em 1 h») vai só no tooltip; o verde diz «Tudo certo».
     Para o leitor de tela o ponto diz a palavra inteira («Boa 74/79»): a cor nunca vai sozinha.

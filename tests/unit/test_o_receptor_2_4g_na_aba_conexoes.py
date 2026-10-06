@@ -295,7 +295,7 @@ def test_nao_achar_a_faixa_nao_grava_nada_e_a_linha_oferece_de_novo(
     linha = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
     assert a08.FAIXA_NAO_ACHADA in linha and 'data-gesto="receptor-descobrir"' in linha
     assert f"<span>{a08.TENTAR_DE_NOVO}</span>" in linha
-    assert f'aria-label="{a08.TENTAR_DE_NOVO} · ' in linha, "o nome acessível perdeu o rótulo à vista"
+    assert f'aria-label="{a08.TENTAR_DE_NOVO} · ' in linha, "o nome perdeu o rótulo"
 
 
 def test_a_banda_declarada_se_le_do_maquina_json() -> None:
