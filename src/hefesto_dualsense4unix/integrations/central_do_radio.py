@@ -215,6 +215,10 @@ PASSO_S = 0.5
 
 PRAZO_DO_PENDENTE_S = 60.0
 
+#: A chave que o movimento acabou de fazer e que ainda não conectou recebe ``Trusted`` e
+#: ``Connect`` de novo a cada tanto, até o prazo (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-…-01).
+REPROVOCAR_S = 5.0
+
 ESPERA_DO_SUMICO_S = 2.0
 
 ESPERA_DO_DESLIGAR_S = 3.0
@@ -261,10 +265,19 @@ class Movimento:
     nome: str = ""
     comecou: float = 0.0
     quando: float = field(default_factory=time.time)
+    #: o relógio da central e a hora de parede do ``Pair`` que deu; 0 = ainda não pareou
+    pareou_em: float = 0.0
+    pareou_quando: float = 0.0
 
     @property
     def em_curso(self) -> bool:
         return self.estado == ESPERANDO
+
+    @property
+    def prazo_desde(self) -> float:
+        """O prazo da chave nova conta do ``Pair``, não da janela: no diário de 06/10 ela segurou
+        PS + Create 16 s depois de a janela abrir, e a chave viveu só os 42 s que sobravam."""
+        return self.pareou_em or self.comecou
 
     def publicar(self) -> dict[str, Any]:
         """O que viaja no ``state_full`` — só tipos de JSON."""
@@ -281,6 +294,7 @@ class Movimento:
             "icone": self.icone,
             "nome": self.nome,
             "quando": round(self.quando, 3),
+            "prazo_desde": round(self.pareou_quando or self.quando, 3),
         }
 
 
@@ -635,6 +649,7 @@ class CentralDoRadio:
         self._limpeza_pedida = threading.Event()
         self._por_que_limpar = ""
         self._lembrancas: dict[str, tuple[str, frozenset[tuple[str, int]]]] = {}
+        self._provocado_em: dict[str, float] = {}
         self._saidas_de_fora: list[tuple[str, str, float, str]] = []
         self._sem_lapide_dito: set[tuple[str, str]] = set()
         #: o controle que a janela escolheu sozinha por pedir para parear (o par se refaz)
@@ -1091,7 +1106,7 @@ class CentralDoRadio:
         agora = self._relogio()
         for movimento in self.movimentos():
             if (movimento.em_curso and movimento.passo == PASSO_CONFERINDO
-                    and agora - movimento.comecou >= self._prazo_do_pendente_s):
+                    and agora - movimento.prazo_desde >= self._prazo_do_pendente_s):
                 try:
                     self._vigiar_um(movimento)
                 except Exception:
@@ -1502,7 +1517,7 @@ class CentralDoRadio:
         if not self._conferir(movimento, dono):
             logger.info("central_mover_sem_confirmacao", aparelho=mascarar(movimento.aparelho))
             pendente = self._guardar(replace(movimento, motivo=MOTIVO_SEM_CONFIRMACAO))
-            if self._relogio() - pendente.comecou >= self._prazo_do_pendente_s:
+            if self._relogio() - pendente.prazo_desde >= self._prazo_do_pendente_s:
                 return self._fechar_sem_chegar(pendente, MOTIVO_PRAZO, dono)
             return pendente
         return self._esquecer_as_origens(movimento, dono)
@@ -1564,7 +1579,15 @@ class CentralDoRadio:
             resultado = janela.parear(movimento.aparelho)
             if resultado.estado not in (ESTADO_PAREOU, ESTADO_JA_PAREADO):
                 return self._acabou(movimento, NAO_CHEGOU, MOTIVO_NAO_PAREOU)
-            movimento = self._guardar(replace(movimento, pareou_no_destino=True))
+            # a busca sai do destino ANTES do ``Connect``: no diário de 06/10 o ``Connect`` correu
+            # com a varredura de pé no mesmo adaptador e voltou ``Failed`` duas vezes
+            janela.fechar()
+            agora = self._relogio()
+            movimento = self._guardar(replace(
+                movimento, pareou_no_destino=True, pareou_em=agora,
+                pareou_quando=movimento.quando + (agora - movimento.comecou)))
+            with self._tranca:
+                self._provocado_em[movimento.aparelho] = self._relogio()
             self._dar_o_nome(dono, movimento)
             self._lembrar_o_alias(dono, movimento.aparelho, movimento.destino)
             self._conectar(dono, movimento.aparelho, movimento.destino)
@@ -1799,6 +1822,39 @@ class CentralDoRadio:
         if conectado is not True:
             dono.conectar(no, quem=QUEM)
 
+    def _provocar_a_chave_nova(
+        self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez
+    ) -> None:
+        """A chave que ESTE movimento fez no destino e que ainda não conectou: ``Trusted`` e
+        ``Connect`` de novo, a cada :data:`REPROVOCAR_S`, até o prazo. Quem está no ar noutro
+        adaptador não é chamado: o ``Connect`` dele não é desta chave."""
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        if not movimento.pareou_no_destino or not movimento.destino:
+            return
+        agora = self._relogio()
+        with self._tranca:
+            if agora - self._provocado_em.get(movimento.aparelho, 0.0) < REPROVOCAR_S:
+                return
+            self._provocado_em[movimento.aparelho] = agora
+        if self._onde_esta(_hex12(movimento.aparelho)):
+            return
+        with contextlib.suppress(TravaOcupadaError), bluez_dbus.na_trava(
+            QUEM, prazo_s=self._prazo_da_trava_s
+        ):
+            if self.movimento_de(movimento.aparelho) != movimento:
+                return
+            no = dono.caminho_do_aparelho(movimento.aparelho, adaptador=movimento.destino)
+            if no is None or bluez_dbus.como_booleano(
+                    dono.propriedade(no, bluez_dbus.APARELHO, "Paired")) is not True:
+                return
+            if bluez_dbus.como_booleano(
+                    dono.propriedade(no, bluez_dbus.APARELHO, "Trusted")) is not True:
+                dono.confiar(no, quem=QUEM)
+            logger.info("central_chama_a_chave_nova", aparelho=mascarar(movimento.aparelho),
+                        adaptador=mascarar(movimento.destino))
+            self._conectar(dono, movimento.aparelho, movimento.destino)
+
     def _chegou(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
         """A pergunta do CONFERIR, UMA vez. Controle: ``HID_PHYS`` no destino E o"""
         if movimento.e_controle:
@@ -1821,7 +1877,7 @@ class CentralDoRadio:
     def _conferir(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
         """Até :data:`CONFERIR_S` perguntando — e nunca além do"""
         fim = min(self._relogio() + self._conferir_s,
-                  movimento.comecou + self._prazo_do_pendente_s)
+                  movimento.prazo_desde + self._prazo_do_pendente_s)
         while True:
             if self._chegou(movimento, dono):
                 return True
@@ -2066,7 +2122,7 @@ class CentralDoRadio:
                     "central_vigia_levantou", aparelho=mascarar(movimento.aparelho), exc_info=True
                 )
                 if (
-                    self._relogio() - movimento.comecou >= self._prazo_do_pendente_s
+                    self._relogio() - movimento.prazo_desde >= self._prazo_do_pendente_s
                     and self.movimento_de(movimento.aparelho) == movimento
                 ):
                     self._acabou(movimento, NAO_CHEGOU, MOTIVO_PRAZO)
@@ -2087,8 +2143,10 @@ class CentralDoRadio:
             if onde and onde in movimento.origens:
                 self._fechar_sem_chegar(movimento, MOTIVO_VOLTOU, dono)
                 return
-        if self._relogio() - movimento.comecou >= self._prazo_do_pendente_s:
+        if self._relogio() - movimento.prazo_desde >= self._prazo_do_pendente_s:
             self._fechar_sem_chegar(movimento, MOTIVO_PRAZO, dono)
+            return
+        self._provocar_a_chave_nova(movimento, dono)
 
     def _vigiar_ate_resolver(self, alvo: str) -> None:
         """O fio do gesto, depois do mover: vigia o «esperando» até resolver."""

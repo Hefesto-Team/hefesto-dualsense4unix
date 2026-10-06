@@ -444,7 +444,7 @@ def test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou(
             cr.ESPERANDO, cr.PASSO_CONFERINDO, VERDE)
         assert mundo.objeto(destino, VERDE)["Paired"] is True, "o BlueZ disse que deu"
 
-        relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+        relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
         central.vigiar()
         fim = central.movimento_de(VERDE)
         assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
@@ -467,10 +467,11 @@ def test_o_prazo_que_vence_na_conferencia_fecha_na_hora(diario: Path) -> None:
     central, dono = _central_sem_tela(mundo, relogio, prazo_do_pendente_s=prazo)
     try:
         rm.ela_pareia(relogio, mundo, central, VERDE)
-        comeco = relogio.agora
         feito = central.conectar(QUARTO)
         assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
-        assert relogio.agora - comeco <= prazo + cr.PASSO_S, "a conferência passou do prazo"
+        # o prazo da chave nova conta do ``Pair`` (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-…-01)
+        assert relogio.agora - feito.prazo_desde <= prazo + cr.PASSO_S, (
+            "a conferência passou do prazo")
         assert mundo.objeto(QUARTO, VERDE) is None and mundo.lapides == [(QUARTO, VERDE)]
     finally:
         central.fechar(espera=5.0)
@@ -564,7 +565,7 @@ def test_no_nao_chegou_quem_esta_no_ar_no_destino_nao_perde_a_chave(
             mundo.fisicos[VERDE].conectado_em = destino
             mundo.fisicos[VERDE].hz = 0.0
 
-        relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+        relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
         central.vigiar()
         fim = central.movimento_de(VERDE)
         assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)

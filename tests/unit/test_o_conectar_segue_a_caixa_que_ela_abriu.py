@@ -513,7 +513,7 @@ def test_o_nao_chegou_sem_a_trava_deve_a_meia_chave_e_ela_sai_na_faxina(
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, destino)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
 
     _sem_a_trava(mesa.central.vigiar)
     fim = mesa.de(VERDE)
@@ -546,7 +546,7 @@ def test_o_fio_da_faxina_paga_a_meia_chave_devida_sozinho(
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2, nomes=NomesEmMemoria())
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, VARANDA)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
     _sem_a_trava(mesa.central.vigiar)
     assert mesa.mundo.objeto(VARANDA, VERDE) is not None
 
@@ -566,7 +566,7 @@ def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, destino)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
     _sem_a_trava(mesa.central.vigiar)
     assert mesa.de(VERDE).estado == cr.NAO_CHEGOU
 
@@ -610,7 +610,7 @@ def test_a_vigia_que_levanta_no_prazo_deve_a_meia_chave(
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
 
     def quebrou(*_a: Any, **_k: Any) -> bool:
         raise RuntimeError("o BlueZ caiu no meio")
@@ -630,7 +630,7 @@ def test_a_chave_devida_de_quem_conectou_depois_nao_sai(
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
     _sem_a_trava(mesa.central.vigiar)
 
     mesa.mundo.fisicos[VERDE].host = QUARTO
@@ -822,7 +822,7 @@ def test_nao_sei_do_radio_nao_paga_a_meia_chave(
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
     if quando_cala == "no_veredito":
         _o_bluetoothd_sai(mesa.mundo)
         mesa.central.vigiar()
@@ -847,7 +847,7 @@ def test_a_chave_que_nao_sumiu_nao_conta_como_paga(
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
-    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    mesa.relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S
     _sem_a_trava(mesa.central.vigiar)
 
     mesa.central._esquecer = lambda _dono, _adaptador, _aparelho: False  # type: ignore[method-assign,assignment]

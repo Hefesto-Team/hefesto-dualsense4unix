@@ -184,7 +184,7 @@ def test_o_esperando_que_passa_do_prazo_nao_chegou(
     central = _central(dono, mundo, relogio)
     feito = _aplicar_que_falha(mundo, relogio, central)
 
-    relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S - 1
+    relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S - 1
     central.vigiar()
     assert central.movimento_de(VERMELHO).estado == cr.ESPERANDO
 
@@ -360,7 +360,7 @@ def test_um_erro_na_vigia_nao_segura_o_esperando_alem_do_prazo(
     assert feito.estado == cr.ESPERANDO
 
     quebrado["sim"] = True
-    relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S + 1
+    relogio.agora = feito.prazo_desde + cr.PRAZO_DO_PENDENTE_S + 1
     central.vigiar()
 
     feito = central.movimento_de(VERMELHO)
@@ -401,7 +401,7 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     for movimento in publicado["movimentos"]:
         assert set(movimento) == {
             "aparelho", "destino", "estado", "passo", "motivo", "origens", "e_controle",
-            "classe", "modalias", "icone", "nome", "quando",
+            "classe", "modalias", "icone", "nome", "quando", "prazo_desde",
         }
 
 

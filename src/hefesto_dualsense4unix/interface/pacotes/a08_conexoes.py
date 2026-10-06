@@ -5098,7 +5098,12 @@ def _ainda_espera(m: dict[str, Any], agora: float, busca_em: str = "") -> bool:
         return False
     if not m.get("aparelho") and busca_em:
         return True
-    return agora - float(m.get("quando") or 0.0) <= ESPERA_NA_TELA_S
+    return agora - _prazo_desde(m) <= ESPERA_NA_TELA_S
+
+
+def _prazo_desde(m: dict[str, Any]) -> float:
+    """O começo do prazo, o mesmo da central: o ``Pair`` que deu, senão o começo do movimento."""
+    return float(m.get("prazo_desde") or m.get("quando") or 0.0)
 
 
 _NAO_CHEGOU_NA_CENTRAL = "nao_chegou"  # (noqa-acento): chave de máquina da central
@@ -5148,7 +5153,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
         motivo = str(m.get("motivo") or "")
         falhou = ((estado == _NAO_CHEGOU_NA_CENTRAL
                    and motivo not in (_RECUSA_DA_CENTRAL, _central_do_radio.MOTIVO_DESLIGADA))
-                  or (estado == "esperando" and idade > ESPERA_NA_TELA_S))
+                  or (estado == "esperando" and agora - _prazo_desde(m) > ESPERA_NA_TELA_S))
         if not falhou or idade > LEMBRA_O_NAO_CONECTOU_S:
             continue
         eu = da_mesa.get(_so_hex(aparelho), {})
