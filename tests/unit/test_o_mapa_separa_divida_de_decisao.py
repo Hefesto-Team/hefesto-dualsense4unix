@@ -523,7 +523,7 @@ def _decisoes_com_o_estado(destino: Path, ident: str, estado: str) -> Path:
 
 @pytest.mark.parametrize("estado", ["implementada", "feita", "no ar"])
 def test_a_decisao_que_sobe_a_escada_continua_respondida(estado: str) -> None:
-    """DECISAO-SEM-DONO-01: subir a `feita` não desfaz a resposta dela, e voltar a `aberta` desfaz."""
+    """DECISAO-SEM-DONO-01: subir a `feita` não desfaz a resposta dela; voltar a `aberta`, sim."""
     import tempfile
 
     decisao = next(iter(RESPONDIDAS_POR_ELA.values()))
