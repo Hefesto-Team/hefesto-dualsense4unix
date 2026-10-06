@@ -5,8 +5,15 @@ O painel do «Conectar» é absoluto e seguia a altura da seção: com as entrad
 embaixo (fotos 3 e 4 dela). A régua abre o mockup no WebKit, na janela do piloto (1212 por 809), com
 as entradas fechadas e oito, três e vinte aparelhos perto, e mede o painel e a seção.
 
-MORDIDA (o último teste): a MESMA página com a conta da seção desligada (`return` no topo de
+MORDIDA: a MESMA página com a conta da seção desligada (`return` no topo de
 `aSecaoCabeOPainel`) volta a cortar a lista.
+
+A pergunta 1 (opção A, 06/10/2026): a linha de quem está fora da faixa (o Wi-Fi em 5 GHz) custa
+29 px; quando com ela a seção não cabe no miolo, ela sobe para o título «Outros dispositivos sem
+fio» como selo. A régua mede, com as linhas da cena do desenho, que a linha sobe a 1212 por 809 e
+fica a 1512 por 860, e que o miolo rola, no máximo, o que rolaria sem linha nenhuma do Wi-Fi.
+MORDIDA: a página sem a troca (`oQueEstaForaDaFaixaCabe` nunca liga o atributo) volta a rolar a
+linha.
 """
 
 from __future__ import annotations
@@ -65,7 +72,39 @@ MEDE = r"""
 """
 
 
-def _no_webkit(pagina: Path, achados: int) -> dict[str, Any]:
+SELO_NO_TITULO = "if(precisa) pistas.setAttribute('data-fora-no-titulo', '');"
+
+PREPARA_O_AR = r"""
+(function(){
+  const r = document.getElementById('cx8-3');
+  r.checked = true;
+  r.dispatchEvent(new Event('change', {bubbles: true}));
+  return 'ok';
+})()
+"""
+
+MEDE_O_AR = r"""
+(function(){
+  const m = document.querySelector('.miolo'), p = document.querySelector('.radio .pistas');
+  const linha = p.querySelector('.ar-linha[data-fora-da-faixa]');
+  const selo = p.querySelector('.ar-no-titulo');
+  const fora = {
+    linha_visivel: !!(linha && linha.offsetParent),
+    selo_visivel: !!(selo && selo.offsetParent),
+    selo: selo ? selo.textContent : '',
+    selo_altura: selo ? Math.round(selo.getBoundingClientRect().height) : -1,
+    titulo_altura: Math.round(p.querySelector('.ar-grupo.outros').getBoundingClientRect().height),
+    miolo_rola: m.scrollHeight - m.clientHeight,
+  };
+  linha.remove(); selo.remove();
+  fora.sem_o_wifi = m.scrollHeight - m.clientHeight;
+  return JSON.stringify(fora);
+})()
+"""
+
+
+def _no_webkit(pagina: Path, achados: int, *, prepara: str = PREPARA, mede: str = MEDE,
+               tamanho: tuple[int, int] = (1212, 809)) -> dict[str, Any]:
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -75,7 +114,7 @@ def _no_webkit(pagina: Path, achados: int) -> dict[str, Any]:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
     saiu: list[str] = []
     janela = Gtk.OffscreenWindow()
-    janela.set_default_size(1212, 809)
+    janela.set_default_size(*tamanho)
     view = WebKit2.WebView()
     janela.add(view)
     janela.show_all()
@@ -96,12 +135,12 @@ def _no_webkit(pagina: Path, achados: int) -> dict[str, Any]:
             return
         # a lista cresceu depois de aberto: quem refaz a conta é o observador de tamanho
         GLib.timeout_add(600, lambda: (v.evaluate_javascript(
-            MEDE, -1, None, None, None, mediu), False)[1])
+            mede, -1, None, None, None, mediu), False)[1])
 
     def carregou(v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
             GLib.timeout_add(300, lambda: (v.evaluate_javascript(
-                PREPARA.replace("ACHADOS", str(achados)), -1, None, None, None, preparou),
+                prepara.replace("ACHADOS", str(achados)), -1, None, None, None, preparou),
                 False)[1])
 
     view.connect("load-changed", carregou)
@@ -141,3 +180,26 @@ def test_mordida_sem_a_conta_a_lista_volta_a_ser_cortada(tmp_path: Path) -> None
     cega.write_text(pagina.replace(CONTA, CONTA + " return;"), encoding="utf-8")
     f = _no_webkit(cega, 8)
     assert f["painel_rola"] > 0 and f["ultimo_visivel"] is False, f
+
+
+def test_a_1212_a_linha_do_5ghz_sobe_para_o_titulo_e_nao_custa_rolagem() -> None:
+    f = _no_webkit(MOCKUP, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR)
+    assert f["selo_visivel"] is True and f["linha_visivel"] is False, f
+    assert f["selo"] == "Wi-Fi · 5 GHz · canal 161", f
+    assert f["selo_altura"] <= f["titulo_altura"], "o selo engordou o título"
+    assert f["miolo_rola"] <= f["sem_o_wifi"], f"a linha do Wi-Fi ainda custa rolagem: {f}"
+
+
+def test_onde_cabe_a_linha_do_5ghz_fica_na_faixa_e_o_titulo_nao_repete() -> None:
+    f = _no_webkit(MOCKUP, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR, tamanho=(1512, 860))
+    assert f["linha_visivel"] is True and f["selo_visivel"] is False, f
+    assert f["miolo_rola"] <= 0, f
+
+
+def test_mordida_sem_a_troca_a_linha_do_5ghz_volta_a_custar_rolagem(tmp_path: Path) -> None:
+    pagina = MOCKUP.read_text(encoding="utf-8")
+    assert pagina.count(SELO_NO_TITULO) == 1
+    cega = tmp_path / "08-sem-o-selo.html"
+    cega.write_text(pagina.replace(SELO_NO_TITULO, ""), encoding="utf-8")
+    f = _no_webkit(cega, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR)
+    assert f["linha_visivel"] is True and f["miolo_rola"] > f["sem_o_wifi"], f

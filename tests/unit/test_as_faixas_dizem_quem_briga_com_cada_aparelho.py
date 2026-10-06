@@ -211,6 +211,39 @@ def test_o_canal_perdido_leva_a_marca_do_wifi_e_o_wifi_leva_a_do_controle() -> N
     assert 'data-briga="wifi-0"' in html and 'data-briga="c1"' in html
 
 
+def _receptor(ident: str, tipo: str, banda: list[int]) -> dict[str, Any]:
+    return {"id": ident, "tipo": tipo, "nome": tipo.capitalize(), "sugestao": "",
+            "sugestao_tipo": "", "no": "", "lido": "", "produto": "", "receptor": True,
+            "banda": banda, "saude": None}
+
+
+def test_a_faixa_medida_do_mouse_do_teclado_e_do_wifi_briga_com_a_do_controle() -> None:
+    """O acréscimo dela de 06/10/2026: o receptor do mouse, o do teclado e o Wi-Fi em 2,4 GHz
+    mostram a faixa MEDIDA no mesmo trilho dos controles, e a briga se cruza canal a canal: o
+    controle leva a marca de quem tomou cada canal, e cada um deles leva a do controle."""
+    cena = _cena(aparelhos=[_ap("c1", "controle")], evitados=[(10, 16), (40, 46), (60, 70)],
+                 wifi=[{"no": "", "mhz": 2462, "largura": 20}])
+    cena["vizinhos"] = [_receptor("aaaa:bbbb", "mouse", [8, 18]),
+                        _receptor("cccc:dddd", "teclado", [38, 48])]
+    html = a08.html_dos_canais(cena)
+    do_controle = _celulas_com_marca(html, "c1")
+    esperado = {**{n: "var(--c-mouse)" for n in range(10, 16)},
+                **{n: "var(--c-teclado)" for n in range(40, 46)},
+                **{n: "var(--c-wifi)" for n in range(60, 70)}}
+    assert do_controle == esperado
+    for ident, banda, briga in (("aaaa:bbbb", range(8, 18), range(10, 16)),
+                                ("cccc:dddd", range(38, 48), range(40, 46)),
+                                ("wifi-0", range(50, 72), range(60, 70))):
+        linha = re.search(rf'<div class="ar-linha" data-id="{ident}".*?</div></div>', html, re.S)
+        assert linha, ident
+        pintados = {int(c) for c in re.findall(r'<i class="[bp]" title="Canal (\d+)',
+                                                linha.group(0))}
+        assert set(briga) <= pintados <= set(banda), (ident, sorted(pintados))
+        assert set(_celulas_com_marca(html, ident)) == set(briga), ident
+        assert linha.group(0).count("<i ") == 79, "a faixa dele não tem o tamanho da dos controles"
+        assert 'data-briga="c1"' in linha.group(0), ident
+
+
 def test_o_celular_conectado_aparece_com_o_mapa_dele_e_o_relogio_le_divide_o_radio() -> None:
     enlaces = {"L1": {"aabbcc000001": {"le": False, "canais_evitados": [7, 8],
                                        "qualidade_do_enlace": 200, "rssi": -55},

@@ -4229,6 +4229,23 @@ def _o_ponto(linha: Any) -> str:
             f'aria-label="{_x(fala)}"></span>')
 
 
+def _e_fora_da_faixa(linha: Any) -> bool:
+    """A linha que não divide a faixa dos controles (o Wi-Fi em 5 GHz): não tem célula nenhuma."""
+    return not linha.celulas and linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA
+
+
+def _o_fora_no_titulo(linha: Any) -> str:
+    """O selo «Wi-Fi · 5 GHz · canal 161 ●» que mora no título «Outros dispositivos sem fio».
+
+    Escondido de saída: a página o mostra no lugar da linha só quando a seção não cabe no miolo
+    (``oQueEstaForaDaFaixaCabe``, desenho de 06/10/2026, pergunta 1, opção A). O ponto é o mesmo
+    da linha, e o texto é o que a linha diz.
+    """
+    texto = " · ".join(t for t in (linha.nome, linha.sub) if t)
+    return (f'<span class="ar-no-titulo" data-linha="{_x(linha.id)}">{_x(texto)}'
+            f'{_o_ponto(linha)}</span>')
+
+
 def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str, str]) -> str:
     cor = cores[linha.id]
     nada = _passo_da_linha(linha.id) == receptor_sem_fio.PASSO_NADA
@@ -4260,9 +4277,10 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
             faixa = (f'<div class="ar-faixa sem" role="img" '
                      f'aria-label="{_x(frase or linha.sem_faixa)}">{passo}</div>')
     donos = " ".join(dict.fromkeys(t for t, _n in linha.quem))
+    fora = " data-fora-da-faixa" if _e_fora_da_faixa(linha) else ""
     return (f'<div class="ar-linha" data-id="{_x(linha.id)}" data-tipo="{_x(linha.tipo)}" '
             f'data-briga="{_x(" ".join(linha.briga))}" data-quem="{_x(donos)}" tabindex="0" '
-            f'style="--cor:{_x(cor)}">{rot}{faixa}'
+            f'style="--cor:{_x(cor)}"{fora}>{rot}{faixa}'
             f'<div class="ar-estado">{_o_ponto(linha)}</div></div>')
 
 
@@ -4292,7 +4310,8 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
 
     Cada linha é ícone · faixa · ponto (desenho aprovado de 05/10/2026). A entrada sem aparelho
     no ar não ganha linha. O Wi-Fi conectado tem linha sempre, também em 5 GHz, com o trilho
-    dizendo a banda e o canal (desenho de 06/10/2026, item 1).
+    dizendo a banda e o canal (desenho de 06/10/2026, item 1); quando a seção não cabe no miolo,
+    essa linha vira um selo no título do grupo (pergunta 1, opção A).
     """
     if not cena.get("lugares"):
         return ""
@@ -4321,7 +4340,8 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
                 + "</div>"]
     outros = list(regua.outros)
     if outros:
-        saida.append(f'<div class="ar-grupo outros">{OUTROS_SEM_FIO}</div>'
+        no_titulo = "".join(_o_fora_no_titulo(ln) for ln in outros if _e_fora_da_faixa(ln))
+        saida.append(f'<div class="ar-grupo outros">{OUTROS_SEM_FIO}{no_titulo}</div>'
                      '<div class="ar-do">'
                      + "".join(_a_linha_do_ar(ln, rotulos[ln.id], cores, nomes) for ln in outros)
                      + "</div>")

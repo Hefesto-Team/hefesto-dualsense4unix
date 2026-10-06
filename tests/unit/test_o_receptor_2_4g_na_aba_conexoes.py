@@ -25,6 +25,8 @@ from hefesto_dualsense4unix.integrations import receptor_sem_fio as rx
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
 ADAPTADOR = "AA:BB:CC:00:00:0A"
+#: o releitor de verdade, antes de a fixture o trocar (a régua de ponta a ponta precisa dele)
+_RELER_DE_VERDADE = a08._reler_a_declaracao
 
 
 def _cena(vizinhos: list[dict[str, Any]]) -> dict[str, Any]:
@@ -296,6 +298,56 @@ def test_nao_achar_a_faixa_nao_grava_nada_e_a_linha_oferece_de_novo(
     assert a08.FAIXA_NAO_ACHADA in linha and 'data-gesto="receptor-descobrir"' in linha
     assert f"<span>{a08.TENTAR_DE_NOVO}</span>" in linha
     assert f'aria-label="{a08.TENTAR_DE_NOVO} · ' in linha, "o nome perdeu o rótulo"
+
+
+def test_a_faixa_medida_vai_ao_maquina_json_e_volta_pintada_na_linha_do_receptor(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """De ponta a ponta, com o `maquina.json` de verdade (no lar isolado da suíte): o «Descobrir»
+    mede a faixa por eliminação, grava, e a cena seguinte pinta a linha do receptor com os canais
+    medidos, no mesmo trilho dos controles (o acréscimo dela de 06/10/2026)."""
+    import json
+
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa, RadioUsb
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
+    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
+        monkeypatch.setattr(a08, nome, {})
+    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(a08, "_GRAVAR_A_BANDA", None)
+    monkeypatch.setattr(a08, "_reler_a_declaracao", _RELER_DE_VERDADE)
+    monkeypatch.setattr(a08, "_DECLARACAO", None)
+    receptor = RadioUsb(no="3-1.4", vid="aaaa", pid="bbbb", busnum=3, devpath="1.4")
+    monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: Mesa(radios=(receptor,)))
+    monkeypatch.setattr(a08, "_e_um_receptor", lambda no: True)
+    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((), ()))
+    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
+    monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
+    monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
+
+    def _a_linha_agora() -> str:
+        contexto = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[])
+        vizinhos = a08.cena_do_radio(contexto)["vizinhos"]  # sem adaptador, a faixa não se desenha
+        return _linha(a08.html_dos_canais(_cena(vizinhos)), "aaaa:bbbb")
+
+    antes = _a_linha_agora()
+    assert "receptor-descobrir" in antes and 'class="b"' not in antes
+    a08._DESCOBERTA.iniciar("aaaa:bbbb", 0.0)
+    a08._andar_a_descoberta({}, 1.0, False)  # tirou
+    sem = _evitados(*range(49, 71))
+    a08._andar_a_descoberta(sem, a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, False)
+    a08._andar_a_descoberta(sem, a08._DESCOBERTA.desde + 1, True)  # pôs de volta
+    com = _evitados(*range(49, 71), *range(18, 35))
+    a08._andar_a_descoberta(com, a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, True)
+    a08._andar_a_descoberta(com, a08._DESCOBERTA.desde + 2, True)
+    assert a08._DESCOBERTA.passo == rx.PASSO_ACHOU
+    gravado = json.loads(caminho_da_maquina().read_text(encoding="utf-8"))
+    assert gravado["mesa"]["radios"]["aaaa:bbbb"]["banda"] == [18, 35]
+    a08._DESCOBERTA.cancelar()
+    depois = _a_linha_agora()
+    canais = [int(c) for c in re.findall(r'<i class="b" title="Canal (\d+)', depois)]
+    assert canais == list(range(18, 35)), canais
+    assert "receptor-descobrir" not in depois and a08.FAIXA_NAO_DESCOBERTA not in depois
 
 
 def test_a_banda_declarada_se_le_do_maquina_json() -> None:

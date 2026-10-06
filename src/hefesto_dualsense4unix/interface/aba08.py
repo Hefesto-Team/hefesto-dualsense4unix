@@ -1804,6 +1804,12 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
                        background:linear-gradient(var(--vazio),var(--vazio)) center/100% 2px no-repeat}
   .radio .ar-faixa.fora span{background:var(--panel);padding:0 8px 0 0}
+  /* 06/10/2026, pergunta 1 (A): quando a seção não cabe, a linha de quem está fora da faixa
+     (o Wi-Fi em 5 GHz) sobe para o título do grupo como selo, e a tela não rola por ela */
+  .radio .ar-no-titulo{display:none;align-items:center;gap:6px;margin-left:10px;font-size:11px;
+                       color:var(--texto-mudo)}
+  .radio .pistas[data-fora-no-titulo] .ar-no-titulo{display:inline-flex}
+  .radio .pistas[data-fora-no-titulo] .ar-linha[data-fora-da-faixa]{display:none}
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
   /* o estado é um ponto: verde = bom, vermelho = problema, vazado = sem leitura */
   .radio .ar-selo{display:inline-block;box-sizing:border-box;width:10px;height:10px;padding:0;
@@ -2365,8 +2371,30 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var alvo = Math.floor(Math.min(precisa, teto));
       if(alvo > s.offsetHeight) s.style.minHeight = alvo + 'px';
     }
+    // O QUE ESTÁ FORA DA FAIXA CABE (06/10/2026, pergunta 1, opção A). A linha do Wi-Fi em 5 GHz
+    // custa 29 px; quando com ela a seção não cabe no miolo, ela vira o selo do título «Outros
+    // dispositivos sem fio». A conta tira o selo, mede e o devolve no mesmo quadro (sem piscar).
+    function oQueEstaForaDaFaixaCabe(){
+      var pistas = um('.radio .pistas'), miolo = pistas && pistas.closest('.miolo');
+      if(!miolo) return;
+      pistas.removeAttribute('data-fora-no-titulo');
+      var precisa = !!um('.ar-linha[data-fora-da-faixa]', pistas) && miolo.scrollHeight > miolo.clientHeight;
+      if(precisa) pistas.setAttribute('data-fora-no-titulo', '');
+    }
     window.addEventListener('resize', aSecaoCabeOPainel);
+    window.addEventListener('resize', oQueEstaForaDaFaixaCabe);
+    document.addEventListener('change', function(ev){
+      if(ev.target && ev.target.name === 'cx8-secao') oQueEstaForaDaFaixaCabe();
+    });
+    // o tique repinta as linhas por dentro da faixa: a linha de fora pode chegar ou sair (a rede
+    // trocou de banda), e a conta se refaz
+    var pistasDoAr = um('.radio .pistas');
+    if(pistasDoAr && window.MutationObserver){
+      new MutationObserver(oQueEstaForaDaFaixaCabe).observe(pistasDoAr, {childList: true});
+    }
     if(window.ResizeObserver){
+      var olhoDoMiolo = new ResizeObserver(function(){ oQueEstaForaDaFaixaCabe(); });
+      todos('.miolo > *').forEach(function(q){ olhoDoMiolo.observe(q); });
       var olhoDoPainel = new ResizeObserver(function(){ aSecaoCabeOPainel(); });
       var corpoDoPainel = document.getElementById('rd-painel-corpo');
       if(corpoDoPainel) olhoDoPainel.observe(corpoDoPainel);
