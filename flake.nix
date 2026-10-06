@@ -57,5 +57,10 @@
             echo "Run baseline: pytest tests/unit -q"
           '';
         };
-      });
+      })
+    // {
+      # O módulo NixOS (O-NIX-LEVA-AS-REGRAS-DO-HOST-01): as regras udev, os alvos
+      # delas e o snapshot dos bonds no host. Não depende do sistema da máquina.
+      nixosModules.default = import ./packaging/nix/module.nix;
+    };
 }

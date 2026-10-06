@@ -3,16 +3,6 @@
 Pacote Nix oficial para usuários NixOS / nix-darwin / nix em qualquer
 distro Linux (comunitario, mantido junto ao source do projeto).
 
-## Antes de rodar qualquer comando desta página
-
-O `sha256` do `pydualsense` ainda é o placeholder `lib.fakeSha256` em
-`packaging/nix/package.nix`, então **todo comando abaixo falha com
-hash-mismatch** até alguém gravar o hash real: rode
-`nix-prefetch-url https://pypi.org/packages/source/p/pydualsense/pydualsense-0.7.5.tar.gz`
-numa máquina com nix e substitua o `lib.fakeSha256` pelo hash impresso (o
-próprio erro do primeiro build também diz qual é). Sem isso não há caminho que
-funcione — nem `nix run`, que não tem árvore local para corrigir.
-
 ## Uso rapido
 
 ```bash
@@ -72,6 +62,8 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
             hefesto.packages.${pkgs.system}.default
           ];
           boot.kernelModules = [ "uinput" ];
+          # (o módulo da seção seguinte faz isto e mais: leva os alvos das regras
+          # 82 e 83 e o snapshot dos bonds do Bluetooth)
 
           # Habilita o servico systemd user.
           systemd.user.services.hefesto-dualsense4unix = {
@@ -88,6 +80,34 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
   };
 }
 ```
+
+## NixOS — o módulo (regras udev, alvos delas e snapshot dos bonds)
+
+As regras udev 82 e 83 chamam alvos no host (`/usr/local/lib/hefesto-dualsense4unix/…`
+e `/usr/bin/systemctl`) que o Nix não tem. O pacote leva os alvos dentro do
+store e reescreve o caminho das regras para eles; o módulo liga o que o NixOS
+precisa para valer na máquina:
+
+```nix
+{
+  inputs.hefesto.url = "github:Hefesto-Team/hefesto-dualsense4unix";
+
+  outputs = { self, nixpkgs, hefesto, ... }: {
+    nixosConfigurations.minha-maquina = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        hefesto.nixosModules.default
+        { services.hefesto-dualsense4unix.enable = true; }
+      ];
+    };
+  };
+}
+```
+
+O módulo registra as regras (`services.udev.packages`), a unidade do snapshot dos
+bonds e o timer dela (`systemd.packages`), os módulos `uinput` e `uhid` e o
+diretório `/var/lib/hefesto-dualsense4unix`. O daemon e a interface seguem sendo
+do perfil de quem usa.
 
 ## home-manager — configuração do usuário
 
@@ -121,7 +141,7 @@ Resolvidas automaticamente pela deriv (`packaging/nix/package.nix`):
 | `hidapi` | I/O hidraw |
 | `libnotify` | D-Bus notifications |
 | `gettext` | Compila .mo no preBuild |
-| `wrapGAppsHook` + `gobject-introspection` | wrap binário com GI_TYPELIB_PATH |
+| `wrapGAppsHook3` + `gobject-introspection` | wrap binário com GI_TYPELIB_PATH |
 
 `pydualsense` (sem pacote em nixpkgs) eh declarado inline na deriv
 via `python3Packages.buildPythonPackage` + `fetchPypi`.
@@ -129,16 +149,13 @@ via `python3Packages.buildPythonPackage` + `fetchPypi`.
 ## Atualização de versão
 
 1. Bump `version = "3.4.0"` em `packaging/nix/package.nix`.
-2. Se mudou hash do `pydualsense` no PyPI, atualizar `sha256`:
-   ```bash
-   nix-prefetch-url https://pypi.org/packages/source/p/pydualsense/pydualsense-0.x.y.tar.gz
-   ```
+2. Se mudou a versão do `pydualsense` no PyPI, atualizar o `hash` (o PyPI publica o
+   sha256 em hexa de cada arquivo; `nix hash convert --hash-algo sha256 --to sri <hexa>`
+   o põe na forma que o `package.nix` usa).
 3. Commit + push.
 
 ## Limitações conhecidas
 
-- O `sha256` placeholder do `pydualsense` está na seção do topo — é a que
-  impede qualquer comando desta página de funcionar.
 - Sem submissao a nixpkgs oficial ainda; aguarda saida de Alpha (v4.0).
 - Wayland backend `wlrctl` não bundlado; usuário instala via
   `environment.systemPackages = [ pkgs.wlrctl ];`.

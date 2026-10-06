@@ -26,9 +26,19 @@
 , librsvg
 , gettext
 , gobject-introspection
-, wrapGAppsHook
+, wrapGAppsHook3
 , glib
 , makeWrapper
+# O-NIX-LEVA-AS-REGRAS-DO-HOST-01 (06/10/2026): o que os alvos das regras 82 e 83
+# precisam no PATH quando o udev (ou o systemd) os roda, e o `systemctl` que a
+# regra 83 chama. O `bluez` (o `hcitool` do no-sniff) e opcional: sem ele o
+# `bt_nosniff_now.sh` registra que nao aplicou, e nao quebra.
+, coreutils
+, findutils
+, gawk
+, util-linux
+, systemd
+, bluez ? null
 # TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre. Vem
 # como argumento com default `null` de proposito — `callPackage` passa
 # `pkgs.wvkbd` quando o atributo existe (nixpkgs by-name/wv/wvkbd) e cai no
@@ -51,7 +61,7 @@ python3Packages.buildPythonApplication rec {
   ];
 
   nativeBuildInputs = [
-    wrapGAppsHook
+    wrapGAppsHook3
     gobject-introspection
     gettext
     makeWrapper
@@ -97,9 +107,10 @@ python3Packages.buildPythonApplication rec {
       pyproject = true;
       src = python3Packages.fetchPypi {
         inherit pname version;
-        # Hash placeholder — substituir por sha256 real (gerar com
-        # `nix-prefetch-url ...` ou deixar Nix calcular no primeiro build).
-        sha256 = lib.fakeSha256;
+        # O sdist de 0.7.5 no PyPI, 101042 bytes. O sha256 em hexa
+        # (6205fc00…702a0b) e o que o proprio PyPI publica para o arquivo, e foi
+        # conferido contra o download em 06/10/2026.
+        hash = "sha256-YgX8AJE4f8p7geKT3xlCD0Mlh1GcyHpBz4rEIqdwKgs=";
       };
       build-system = with python3Packages; [ setuptools ];
       dependencies = with python3Packages; [ hidapi ];
@@ -169,6 +180,39 @@ python3Packages.buildPythonApplication rec {
         $out/lib/udev/rules.d/85-hefesto-o-cabo-assume.rules
     install -Dm644 assets/hefesto-dualsense4unix.conf \
         $out/lib/modules-load.d/hefesto-dualsense4unix.conf
+
+    # OS ALVOS DAS REGRAS 82 E 83 (O-NIX-LEVA-AS-REGRAS-DO-HOST-01, 06/10/2026).
+    # As duas regras chamam, com `TEST==`, `/usr/local/lib/hefesto-dualsense4unix/…`
+    # e `/usr/bin/systemctl`, caminhos de HOST que o Nix nao tem: sem os alvos a
+    # regra vira inercia silenciosa (o `TEST==` a deixa calada). O jeito do Nix e
+    # levar os alvos DENTRO do $out e reescrever o caminho da regra para ele, que
+    # e o que o `services.udev.packages` do modulo NixOS (packaging/nix/module.nix)
+    # carrega. `--replace-fail` de proposito: se a regra mudar de caminho, o build
+    # reprova em vez de entregar a regra apontando para o nada.
+    install -Dm755 scripts/bt_nosniff_now.sh \
+        $out/libexec/hefesto-dualsense4unix/bt_nosniff_now.sh
+    install -Dm755 scripts/bt_bonds_snapshot.sh \
+        $out/libexec/hefesto-dualsense4unix/bt_bonds_snapshot.sh
+    install -Dm644 assets/systemd/hefesto-bt-bonds-snapshot.service \
+        $out/lib/systemd/system/hefesto-bt-bonds-snapshot.service
+    install -Dm644 assets/systemd/hefesto-bt-bonds-snapshot.timer \
+        $out/lib/systemd/system/hefesto-bt-bonds-snapshot.timer
+    substituteInPlace $out/lib/udev/rules.d/82-nintendo-pro-nosniff.rules \
+        --replace-fail /usr/local/lib/hefesto-dualsense4unix \
+                       $out/libexec/hefesto-dualsense4unix
+    substituteInPlace $out/lib/udev/rules.d/83-hefesto-bond-snapshot.rules \
+        --replace-fail /usr/local/lib/hefesto-dualsense4unix \
+                       $out/libexec/hefesto-dualsense4unix \
+        --replace-fail /usr/bin/systemctl ${systemd}/bin/systemctl
+    substituteInPlace $out/lib/systemd/system/hefesto-bt-bonds-snapshot.service \
+        --replace-fail /usr/local/lib/hefesto-dualsense4unix \
+                       $out/libexec/hefesto-dualsense4unix
+    # O udev e o systemd rodam o alvo com o PATH deles, que nao tem `find`,
+    # `flock` nem `logger`: o wrapper entrega o que o script chama.
+    wrapProgram $out/libexec/hefesto-dualsense4unix/bt_nosniff_now.sh \
+        --prefix PATH : ${lib.makeBinPath ([ coreutils util-linux ] ++ lib.optional (bluez != null) bluez)}
+    wrapProgram $out/libexec/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
+        --prefix PATH : ${lib.makeBinPath [ coreutils findutils gawk util-linux ]}
 
     # Systemd user units (NixOS users carregam manualmente; non-NixOS
     # users wireiam via home-manager).
