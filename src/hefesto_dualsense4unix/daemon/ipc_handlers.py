@@ -1204,7 +1204,9 @@ class IpcHandlersMixin:
                 desconhecida é recusada ali, com a lista das três.
             uniq: o MAC do controle. Presente = SÓ nele (a camada da usuária,
                 pela mesma porta do ``led.player_set``); ausente = «Todos»: o
-                padrão de quem chegar depois E cada conectado.
+                padrão de quem chegar depois E cada conectado, salvo se o
+                seletor de saída do backend mira UM controle (vale só nele) ou
+                um controle fora da mesa (fica guardado, ninguém recebe).
 
         Nos dois casos o brilho sai pelos caminhos do número, nos dois
         transportes — ver ``PyDualSenseController._levar_o_brilho_das_luzes``.
@@ -1221,11 +1223,24 @@ class IpcHandlersMixin:
                 f"led.player_brightness_set: 'brilho' precisa ser um de: {palavras}"
             )
         degrau = degrau_do_brilho_das_luzes(brilho)
-        resultado = self._apply_por_uniq(params, player_led_brightness=degrau)
+        # BROADCAST-PROIBIDO-01: o «Todos» sem `uniq` pergunta o seletor antes de
+        # escrever, como o `led.set` e o `led.player_set`. Seletor num controle:
+        # o pedido vai só nele. Alvo escolhido e fora da mesa: nada vai aos
+        # presentes, e o valor fica guardado no override do ausente.
+        pedido = params
+        if not params.get("uniq"):
+            alvo_fn = getattr(self.controller, "get_output_target_uniq", None)
+            ausente_fn = getattr(self.controller, "alvo_de_output_ausente", None)
+            escolhido = alvo_fn() if callable(alvo_fn) else None
+            if not (isinstance(escolhido, str) and escolhido):
+                escolhido = ausente_fn() if callable(ausente_fn) else None
+            if isinstance(escolhido, str) and escolhido:
+                pedido = {**params, "uniq": escolhido}
+        resultado = self._apply_por_uniq(pedido, player_led_brightness=degrau)
         guardado_em: list[str] = []
         if resultado is not None:
             aplicado_em, guardado_em = self._destinos_por_uniq(
-                resultado, str(params["uniq"])
+                resultado, str(pedido["uniq"])
             )
         else:
             from hefesto_dualsense4unix.core.controller import OutputSpec

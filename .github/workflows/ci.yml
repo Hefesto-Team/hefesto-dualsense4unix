@@ -435,6 +435,10 @@ jobs:
       # função de teste que a cite (ou sem a marca `processo`) reprova nomeada; o piso só desce.
       - name: Cada decisão decidida tem prova
         run: python3 scripts/check_a_decisao_tem_prova.py
+      # BROADCAST PROIBIDO (06/10/2026, OS-PORTOES-QUE-NINGUEM-CHAMA-01): rota de saída que
+      # escreve em todo controle conectado sem perguntar o seletor reprova nomeada.
+      - name: Nenhuma rota de saída escreve em todos sem escopo
+        run: python3 scripts/check_broadcast_proibido.py
       # NADA NOVO APONTA PARA A JANELA (06/09/2026, sprint GTK-1). Decisão dela
       # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no
       # gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK sai em

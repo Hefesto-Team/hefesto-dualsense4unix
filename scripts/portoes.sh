@@ -25,7 +25,7 @@
 #
 # Uso:
 #   scripts/portoes.sh              a leva inteira (rápidos + completos)
-#   scripts/portoes.sh --rapido     só a camada rápida (49 portões: 69 a 82 s em série, 19 a 29 s em paralelo)
+#   scripts/portoes.sh --rapido     só a camada rápida (50 portões: 69 a 82 s em série, 19 a 29 s em paralelo)
 #   scripts/portoes.sh --suite      acrescenta a suíte de testes
 #   scripts/portoes.sh --listar     a tabela crua, que é o que o portão do portão lê
 #   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
@@ -71,8 +71,8 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
 # O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
 # isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
-# enquanto a tabela tinha o dobro. Medida em 06/10/2026: **49 `rapido` e 19
-# `completo`** (68 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# enquanto a tabela tinha o dobro. Medida em 06/10/2026: **50 `rapido` e 19
+# `completo`** (69 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
 # aqui conta de novo, e o comando é o dono da resposta:
 #   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
@@ -159,6 +159,10 @@ rapido|a-origem|py|scripts/check_a_origem.py|@sempre
 # a marca `processo`) reprova nomeada, e o piso das antigas só desce. O portão mede que a prova
 # EXISTE, não que ela morde: a mordida é de quem sobe a decisão a `implementada`.
 rapido|decisao-tem-prova|py|scripts/check_a_decisao_tem_prova.py|docs/data/decisoes-dela.csv docs/data/decisoes-sem-prova.txt tests/**
+# BROADCAST PROIBIDO — 06/10/2026, OS-PORTOES-QUE-NINGUEM-CHAMA-01. Nasceu em 25/08, verde, e ficou 42 dias
+# sem chamador: nesse tempo entrou uma rota de saída que escrevia em todo controle conectado sem perguntar
+# o seletor (o brilho das luzes de número). Reprova função de `src/` com fan-out sem escopo, nomeando-a.
+rapido|broadcast-proibido|py|scripts/check_broadcast_proibido.py|src/**
 # NADA NOVO APONTA PARA A JANELA — 06/09/2026, sprint GTK-1. Decisão dela
 # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no gtk e
 # não apontar nada mais pra lá mas pro html"*. A janela GTK sai em três sprints

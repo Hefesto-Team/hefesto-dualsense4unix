@@ -7,11 +7,12 @@ O DEFEITO, e ele é medido duas vezes:
    que quatro MACs de fixture moraram no `controllers.json` **vivo** dela desde
    22/08/2026, empurrando os DualSense reais para os postos 6, 7 e 8. O portão
    existia o tempo todo. Ninguém o chamava. Curado em 25/08/2026.
-2. **`scripts/check_broadcast_proibido.py` está no MESMO estado agora**
-   (medido em 25/08/2026, AUDITORIA-DE-PERDA-01/C2): nasceu em `826ee18`, roda
-   verde, e a única menção a ele em toda a árvore está no documento de sprint
-   que o PROPÔS — marcada `ref-externa` porque, quando aquele texto foi
-   escrito, o arquivo ainda não existia. Ver `_SEM_CHAMADOR_HOJE`.
+2. **`scripts/check_broadcast_proibido.py` esteve no MESMO estado**
+   (medido em 25/08/2026, AUDITORIA-DE-PERDA-01/C2): nasceu em `826ee18` e
+   ninguém o chamou por 42 dias. Nesse tempo entrou uma rota de fan-out sem
+   escopo (`_handle_led_player_brightness_set`, 25/09), que ele teria pego.
+   Curado em 06/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): a rota passou a
+   perguntar o seletor, e o portão tem linha no `portoes.sh` e passo no `ci.yml`.
 
 POR QUE ESTE PORTÃO NÃO É REDUNDANTE COM O `test_portao_a_lista_de_portoes_e_
 uma_so.py`, e a diferença é estrutural: aquele compara **duas listas entre si**
@@ -88,7 +89,7 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "Ele fecha quando as três linhas da direita fecharem E existir bancada "
         "automatizada — a segunda condição é que não existe hoje."
     ),
-    # sai com: OS-PORTOES-QUE-NINGUEM-CHAMA-01
+    # fica: mede o degrau, não o commit; entra na camada `completo` quando as quatro zerarem
     "scripts/check_bancada_de_bt.py": (
         "MEDIDO em 01/09/2026, e ele NASCEU sem chamador de propósito. A escada "
         "de releases (`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`, degrau "
@@ -110,35 +111,11 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "REMEDIDO em 01/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): exit=1, "
         "R1=18, R2=27, R3=7, R4=114 — 166 pendências (eram 183). As quatro "
         "não zeraram, e a decisão de 01/09 fica: ele mede o DEGRAU, e entra "
-        "na camada `completo` no commit em que elas zerarem."
-    ),
-    "scripts/check_broadcast_proibido.py": (
-        "MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01/C2). Nasceu em `826ee18` "
-        "(ONDA0-Z3-8) e nenhum runner o chama: não está na tabela de "
-        "`scripts/portoes.sh`, nem em `.github/workflows/`, nem no gancho, nem "
-        "no `.pre-commit-config.yaml` — a única menção em toda a árvore está no "
-        "documento de sprint que o propôs, marcada `ref-externa`. RODA VERDE "
-        "hoje: `python scripts/check_broadcast_proibido.py` -> exit=0, 'nenhuma "
-        "rota de saída com fan-out sem escopo'. O QUE A FECHA: uma linha na "
-        "tabela de `scripts/portoes.sh` — "
-        "`rapido|broadcast-proibido|py|scripts/check_broadcast_proibido.py` — e "
-        "o passo correspondente no `ci.yml`. NÃO foi feito aqui porque nenhum "
-        "dos dois arquivos é posse desta frente na leva de 25/08 (o "
-        "`portoes.sh` nasceu esta noite noutra frente, e o `ci.yml` é a "
-        "superfície de integração com nove frentes em voo). É DÍVIDA "
-        "DECLARADA, não ausência calada.\n"
-        "REMEDIDO em 01/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01), e a frase "
-        "«RODA VERDE» caiu: exit=1, com UMA rota de fan-out sem escopo, "
-        "`daemon/ipc_handlers.py::_handle_led_player_brightness_set` (o brilho "
-        "das luzes de número, nascido em `9a3738a2e`, 25/09): o «Todos» escreve "
-        "em cada conectado sem perguntar `get_output_target_uniq`/"
-        "`alvo_de_output_ausente`, que os irmãos `led.set` e `led.player_set` "
-        "perguntam pelo `_registrar_em_todos`. Ninguém o viu em seis dias porque "
-        "ninguém chama o portão desde 25/08, que é a razão desta entrada. Ligá-lo "
-        "agora reprovaria toda leva por um defeito que ela não criou; ele liga "
-        "no MESMO commit que fechar aquela rota (a cura no handler, ou a "
-        "exceção deliberada no `_EXCECOES_DELIBERADAS` do script, com a razão "
-        "escrita), e esse commit é de quem tem o `ipc_handlers.py` na posse."
+        "na camada `completo` no commit em que elas zerarem.\n"
+        "REMEDIDO em 06/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): exit=1, os "
+        "mesmos R1=18, R2=27, R3=7, R4=114 — 166 pendências. Ele fica fora por "
+        "honestidade: ligá-lo agora reprovaria toda leva por pendência de rádio "
+        "que ela não criou."
     ),
 }
 
