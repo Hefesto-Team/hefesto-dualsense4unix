@@ -542,7 +542,7 @@ def controle(c):
 
 def lugares_vazios(quem):
     """Os números dos lugares sem controle, até o P4, em ordem."""
-    tomados = {c.get("jogador") for c in quem}
+    tomados = {_numero(c) for c in quem}
     livres = [n for n in range(1, LUGARES + 1) if n not in tomados]
     return livres[:max(0, LUGARES - len(quem))]
 
@@ -552,11 +552,32 @@ def lugar(n):
     return f'          <div class="lugar" aria-label="Lugar vazio do Player {n}">P{n}</div>'
 
 
+def _numero(c):
+    """O número do jogador como inteiro, ou `None` quando a bancada não o leu."""
+    try:
+        return int(c.get("jogador"))
+    except (TypeError, ValueError):
+        return None
+
+
 def controles(quem):
-    """O miolo do bloco `[data-bloco="controles"]`: os cartões e os lugares vazios, ou a frase."""
+    """O miolo do bloco `[data-bloco="controles"]`: os cartões e os lugares vazios, ou a frase.
+
+    O LUGAR VAZIO ENTRA NA POSIÇÃO DO NÚMERO DELE. Com o P2 fora e o P1 e o P3
+    conectados, a fila é P1, P2 vazio, P3, P4 vazio, como nas abas. Os cartões
+    não mudam de ordem (a das miras é a mesma, e a grade põe cada mira embaixo do
+    cartão do mesmo controle); só os lugares se intercalam.
+    """
     if not quem:
         return f'          <p class="vazio">{SEM_CONTROLE}</p>'
-    return "\n".join([controle(c) for c in quem] + [lugar(n) for n in lugares_vazios(quem)])
+    livres = lugares_vazios(quem)
+    partes = []
+    for c in quem:
+        n = _numero(c)
+        while livres and n is not None and livres[0] < n:
+            partes.append(lugar(livres.pop(0)))
+        partes.append(controle(c))
+    return "\n".join(partes + [lugar(n) for n in livres])
 
 
 def _deslizante(gesto, rotulo, faixa, campo, unidade=""):

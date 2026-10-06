@@ -209,3 +209,38 @@ def test_o_arquivo_publicado_nao_carrega_leitura_inventada():
         assert bloco == "—", f"o arquivo carrega a leitura {bloco!r}"
     assert not re.search(r"^REPOUSO\s*=", (INTERFACE / "calibrar.py").read_text(
         encoding="utf-8"), re.M), "a constante das leituras inventadas voltou"
+
+
+def test_o_lugar_vazio_entra_na_posicao_do_numero_dele(calibrar_mod):
+    """Com o P2 fora, a fila é P1, P2 vazio, P3, P4 vazio — como nas abas.
+
+    06/10/2026, conferência da leva 1.7. O gerador punha os lugares vazios
+    DEPOIS de todos os cartões (P1, P3, P2, P4). MORDIDA: volte o `controles`
+    a `[controle(c) for c in quem] + [lugar(n) for n in ...]` e reprova.
+    """
+    quem = [{"pref": "p1", "uniq": _uniq(0), "jogador": 1},
+            {"pref": "p3", "uniq": _uniq(2), "jogador": 3}]
+    fila = [a or b for a, b in re.findall(
+        r'<div class="ctr"[^>]*data-controle="(p\d)"|>P(\d)</div>',
+        calibrar_mod.controles(quem))]
+    assert fila == ["p1", "2", "p3", "4"], fila
+    miras = re.findall(r'<div class="mira"[^>]*data-controle="(p\d)"',
+                       calibrar_mod.miras(quem))
+    assert miras == ["p1", "p3"], (
+        f"a mira de cada controle mora embaixo do cartão dele: {miras}")
+
+
+def test_o_topo_mostra_o_perfil_ativo_que_o_piloto_pinta(pacotes_mod, calibrar_mod):
+    """Os números da mira são do perfil que vale, e o topo diz qual é.
+
+    MORDIDA: tire a classe `perfil-ativo` (a que lhe dá a moldura e o lugar
+    à direita) do topo do gerador, e reprova.
+    """
+    doc = calibrar_mod.documento([])
+    topo = doc.split('<div class="topo">', 1)[1].split('<div class="corpo">', 1)[0]
+    assert re.search(r'<div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span>'
+                     r'<span class="pa-nome" data-campo="perfil">', topo), topo
+    mesa, conectados = _bancada(1)
+    ctx = pacotes_mod.Contexto(state={"active_profile": "x"}, mesa=mesa,
+                               conectados=conectados, estados={})
+    assert "perfil" in pacotes_mod.topo(ctx), "ninguém pinta o nome do perfil"
