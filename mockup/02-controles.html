@@ -2289,8 +2289,11 @@
      fechados. O `margin-left:auto` é dele agora, e saiu do `.bat`: com os dois
      pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em
      quatro lugares diferentes. */
+  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual», e as três pastilhas
+     têm a largura da maior. O vão e o enchimento encolheram para a frase do giroscópio no cartão aberto
+     continuar inteira no tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`). */
   .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
-                 gap:8px;margin-left:auto}
+                 gap:6px;margin-left:auto}
   .sensores-peca .sw{
     /* 17px E NÃO 26 — 20/09/2026. A pastilha continua cabendo nos 30px de
        dentro da linha fechada, e o que ela devolve é altura na coluna dos
@@ -2300,7 +2303,7 @@
     height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
 
     border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
-    display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 7px;
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
