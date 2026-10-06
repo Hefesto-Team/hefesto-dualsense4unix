@@ -15,6 +15,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 import yaml
 
@@ -23,7 +25,7 @@ SCRIPT = RAIZ / "scripts" / "check_a_coleta_sem_gtk.py"
 CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
-def _carregar():  # type: ignore[no-untyped-def]
+def _carregar() -> ModuleType:
     especificacao = importlib.util.spec_from_file_location("censo_de_coleta_sob_teste", SCRIPT)
     assert especificacao and especificacao.loader
     modulo = importlib.util.module_from_spec(especificacao)
@@ -128,11 +130,12 @@ def test_o_julgamento_so_olha_o_que_o_git_versiona() -> None:
 # --- o passo do ci.yml ---------------------------------------------------------------------------
 
 
-def _passo_do_censo() -> dict:
+def _passo_do_censo() -> dict[str, Any]:
     jobs = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
     achados = [p for p in jobs["lint-test"]["steps"] if "Censo de coleta" in str(p.get("name", ""))]
     assert len(achados) == 1, "o lint-test tem de ter UM passo «Censo de coleta»"
-    return achados[0]
+    passo: dict[str, Any] = achados[0]
+    return passo
 
 
 def test_o_ci_chama_o_dono_do_julgamento_e_nao_tem_numero() -> None:

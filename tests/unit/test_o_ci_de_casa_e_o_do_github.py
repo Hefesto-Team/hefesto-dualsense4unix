@@ -18,6 +18,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -60,8 +61,8 @@ RUNNERS_QUE_O_ACT_MAPEIA = {"ubuntu-latest", "ubuntu-24.04"}
 # --- a tabela contra os workflows ------------------------------------------------------------
 
 
-def _jobs_dos_workflows() -> dict[str, dict]:
-    jobs: dict[str, dict] = {}
+def _jobs_dos_workflows() -> dict[str, dict[str, Any]]:
+    jobs: dict[str, dict[str, Any]] = {}
     for caminho in sorted(WORKFLOWS.glob("*.yml")):
         dados = yaml.safe_load(caminho.read_text(encoding="utf-8")) or {}
         for nome, job in (dados.get("jobs") or {}).items():
@@ -450,8 +451,9 @@ def test_o_job_avulso_roda_o_yaml_inteiro_e_so_tira_o_que_mandam(mundo: Mundo) -
     assert "Pytest unit" not in passos and "Pytest core" in passos
 
 
-def _yaml_do_log(log: str) -> dict:
-    return yaml.safe_load(log.split("---YAML---\n", 1)[1].split("---FIM---", 1)[0])
+def _yaml_do_log(log: str) -> dict[str, Any]:
+    dados: dict[str, Any] = yaml.safe_load(log.split("---YAML---\n", 1)[1].split("---FIM---", 1)[0])
+    return dados
 
 
 def test_sem_needs_tira_so_a_dependencia_que_a_tabela_manda(mundo: Mundo) -> None:
