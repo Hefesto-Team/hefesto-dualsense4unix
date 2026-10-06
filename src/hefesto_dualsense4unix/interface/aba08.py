@@ -1793,15 +1793,24 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   /* a faixa sem leitura é o trilho vazio, igual ao dos outros; só o passo do «Descobrir» fala */
   .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
                        background:repeating-linear-gradient(90deg,var(--vazio) 0 9px,transparent 9px 11px)}
+  /* 06/10/2026, item 1: a faixa por descobrir é o botão, à vista; o Wi-Fi em 5 GHz diz onde está */
+  .radio button.ar-faixa.descobrir{justify-content:center;height:18px;padding:0;cursor:pointer;
+                       background:transparent;
+                       font:inherit;font-size:11.5px;color:var(--texto-suave);
+                       border:1px dashed var(--comment);border-radius:5px}
+  .radio button.ar-faixa.descobrir span{background:var(--panel);padding:0 8px;border-radius:4px}
+  .radio button.ar-faixa.descobrir:hover,.radio button.ar-faixa.descobrir:focus-visible{
+                       border-color:var(--green);color:var(--green);outline:none}
+  .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
+                       background:linear-gradient(var(--vazio),var(--vazio)) center/100% 2px no-repeat}
+  .radio .ar-faixa.fora span{background:var(--panel);padding:0 8px 0 0}
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
-  /* o estado é um ponto: verde = bom, vermelho = problema, vazado = faixa sem leitura */
+  /* o estado é um ponto: verde = bom, vermelho = problema, vazado = sem leitura */
   .radio .ar-selo{display:inline-block;box-sizing:border-box;width:10px;height:10px;padding:0;
                   border-radius:50%;border:0;background:var(--orange);box-shadow:0 0 0 3px rgba(255,184,108,.2)}
   .radio .ar-selo.sofrendo{background:var(--red);box-shadow:0 0 0 3px rgba(255,85,85,.2)}
   .radio .ar-selo.boa{background:var(--green);box-shadow:none}
   .radio .ar-selo.sem{background:transparent;box-shadow:none;border:2px solid var(--comment)}
-  .radio .ar-selo.sem.apertada{border-color:var(--orange)}
-  .radio .ar-selo.sofrendo.sem{border-color:var(--red)}
   /* o controle conhecido que pede para parear: o ponto verde que pulsa (05/10/2026) */
   .cd-pulso,.radio .ar-pulso{display:inline-block;width:10px;height:10px;border-radius:50%;
              background:var(--green);box-shadow:0 0 0 0 rgba(80,250,123,.55);
@@ -1810,8 +1819,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   @keyframes pulso-pede{70%{box-shadow:0 0 0 8px rgba(80,250,123,0)}
                         100%{box-shadow:0 0 0 0 rgba(80,250,123,0)}}
   @media (prefers-reduced-motion:reduce){.cd-pulso,.radio .ar-pulso{animation:none}}
-  .radio button.ar-selo{cursor:pointer;min-height:0;height:10px}
-  .radio button.ar-selo.sem:hover{border-color:var(--green)}
   .radio .ar-legenda{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
   .radio .ar-legenda button{display:flex;align-items:center;gap:5px;font-size:12px;font-family:inherit;
                     background:var(--panel);border:1px solid var(--border-forte);

@@ -95,13 +95,15 @@ def _cena_do_ar() -> dict[str, Any]:
 
 
 def test_cada_linha_do_ar_e_icone_faixa_e_ponto_e_so_o_que_fala_pelo_ar() -> None:
-    """Um receptor é uma linha; a webcam e o Wi-Fi de 5 GHz não ganham linha; sem a frase do
-    grupo."""
+    """Um receptor é uma linha; a webcam não ganha linha; o Wi-Fi de 5 GHz tem linha, com o trilho
+    que diz a banda (desenho de 06/10/2026); sem a frase do grupo."""
     html = a08.html_dos_canais(_cena_do_ar())
     linhas = re.findall(r'<div class="ar-linha" data-id="([^"]+)"', html)
     assert linhas.count("25a7:fa07") == 1, linhas
     assert "046d:0825" not in linhas, "a webcam não é rádio"
-    assert not [x for x in linhas if x.startswith("wifi")], "o Wi-Fi de 5 GHz não atrapalha"
+    wifi = [x for x in linhas if x.startswith("wifi")]
+    assert len(wifi) == 1, "o Wi-Fi conectado tem linha também em 5 GHz"
+    assert re.search(rf'data-id="{wifi[0]}".*?class="ar-faixa fora".*?<span>5 GHz', html, re.S)
     assert a08.OUTROS_SEM_FIO in html and "Os outros rádios da casa" not in html
     assert "dividem o tempo" not in html and "nenhum aparelho no ar" not in html
     assert 'data-grupo="L2"' not in html, "o adaptador sem ninguém no ar ganhou linha"
@@ -121,10 +123,10 @@ def test_o_ponto_verde_diz_tudo_certo_e_o_vermelho_diz_o_problema_so_no_tooltip(
                              selo=faixas_do_ar.Selo("boa", "boa 70/79"))
     ruim = faixas_do_ar.Linha(id="y", tipo="wifi", nome="Y", nota="em 24 min",
                               selo=faixas_do_ar.Selo("sofrendo", "caiu 12\u00d7"))
-    verde = a08._o_ponto(bom, "")
+    verde = a08._o_ponto(bom)
     assert 'class="ar-selo boa"' in verde and 'title="Tudo certo"' in verde
-    assert 'title="Caiu 12\u00d7 em 24 min"' in a08._o_ponto(ruim, "")
-    assert "></span>" in a08._o_ponto(ruim, ""), "o texto do problema virou letra na linha"
+    assert 'title="Caiu 12\u00d7 em 24 min"' in a08._o_ponto(ruim)
+    assert "></span>" in a08._o_ponto(ruim), "o texto do problema virou letra na linha"
 
 
 def test_o_mapa_fala_em_frase_e_sem_primeira_pessoa() -> None:

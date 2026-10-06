@@ -310,8 +310,9 @@ def test_em_5_ghz_a_linha_diz_fora_da_faixa_e_nunca_nao_identificado() -> None:
     assert ln.sem_faixa == fa.FORA_DA_FAIXA and ln.sub.startswith("5 GHz · canal 161")
     html = a08.html_dos_canais(_cena(rede))
     assert ESPECIE_DESCONHECIDA not in html and "Não identificado" not in html
-    # fora da faixa dos controles, ele não atrapalha: sem linha (desenho aprovado de 05/10/2026)
-    assert 'data-id="2357:012d"' not in html
+    # fora da faixa dos controles, a linha fica e o trilho diz a banda (desenho de 06/10/2026)
+    linha = html.split('data-id="2357:012d"')[1].split('class="ar-estado"')[0]
+    assert 'class="ar-faixa fora"' in linha and "<span>5 GHz · canal 161</span>" in linha
 
 
 def test_em_2_4_ghz_a_faixa_se_pinta_nos_canais_da_banda_e_o_usb3_e_dito() -> None:

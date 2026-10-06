@@ -4194,14 +4194,19 @@ TUDO_CERTO = "Tudo certo"
 FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
 FAIXA_NAO_ENCONTRADA = "Faixa não encontrada"
 FAIXA_NAO_ACHADA = f"{FAIXA_NAO_ENCONTRADA} · clique para tentar de novo"
+#: o rótulo do botão que a faixa vazia do receptor vira (desenho de 06/10/2026, item 1): o gesto
+#: mora à vista, no lugar dos canais que faltam, e não num ponto de 10 px explicado só no tooltip.
+DESCOBRIR_A_FAIXA = "Descobrir a faixa"
+TENTAR_DE_NOVO = f"{FAIXA_NAO_ENCONTRADA} · Tentar de novo"
 
 
-def _o_ponto(linha: Any, descobrir: str, vazado: str = FAIXA_NAO_DESCOBERTA) -> str:
+def _o_ponto(linha: Any) -> str:
     """O estado da linha num ponto: verde = bom, laranja ou vermelho = problema, vazado = sem faixa.
 
     O texto do problema («3 teclas presas em 1 h») vai só no tooltip; o verde diz «Tudo certo».
     Para o leitor de tela o ponto diz a palavra inteira («Boa 74/79»): a cor nunca vai sozinha.
-    O vazado do receptor ainda não descoberto é o próprio gesto de descobrir.
+    O ponto é sempre o estado (no receptor, as falhas lidas); o «Descobrir» mora na faixa
+    (desenho de 06/10/2026: o vazado que era botão escondia o «sem falhas» do mouse e do teclado).
     """
     selo = linha.selo
     ruim = selo is not None and selo.nivel != "boa"
@@ -4219,12 +4224,6 @@ def _o_ponto(linha: Any, descobrir: str, vazado: str = FAIXA_NAO_DESCOBERTA) -> 
         linha.dica) if t]
     dica = " · ".join([TUDO_CERTO if selo is not None and not ruim else dito, *extras])
     fala = " · ".join([dito, *extras])
-    if descobrir:
-        dica = "\n".join(t for t in (dica if ruim else "", vazado) if t)
-        fala = " · ".join(t for t in (fala if selo is not None else "", vazado) if t)
-        return (f'<button class="ar-selo {nivel} sem" type="button" '
-                f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}" '
-                f'title="{_x(dica)}" aria-label="{_x(fala)}"></button>')
     classe = nivel if selo is not None else "sem"
     return (f'<span class="ar-selo {classe}" role="img" title="{_x(dica)}" '
             f'aria-label="{_x(fala)}"></span>')
@@ -4232,25 +4231,36 @@ def _o_ponto(linha: Any, descobrir: str, vazado: str = FAIXA_NAO_DESCOBERTA) -> 
 
 def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str, str]) -> str:
     cor = cores[linha.id]
-    descobrir = ""
-    vazado = (FAIXA_NAO_ACHADA if _passo_da_linha(linha.id) == receptor_sem_fio.PASSO_NADA
-              else FAIXA_NAO_DESCOBERTA)
+    nada = _passo_da_linha(linha.id) == receptor_sem_fio.PASSO_NADA
     if linha.celulas:
         resumo = (f"{nomes[linha.id]}: {linha.bons} dos {CANAIS_DO_BT} canais bons"
                   if linha.bons is not None else f"{nomes[linha.id]}: faixa ocupada")
         faixa = (f'<div class="ar-faixa" role="img" aria-label="{_x(resumo)}">'
                  + "".join(_o_canal(c, cores, nomes) for c in linha.celulas) + "</div>")
+    elif linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA:
+        # o Wi-Fi em 5 GHz: a linha fica, e o trilho diz onde ele está (desenho de 06/10/2026)
+        faixa = (f'<div class="ar-faixa fora" role="img" title="{_x(linha.sem_faixa)}" '
+                 f'aria-label="{_x(f"{linha.sub}: {linha.sem_faixa}")}">'
+                 f'<span>{_x(linha.sub)}</span></div>')
     else:
         frase, descobrir = _o_botao_da_descoberta(linha)
-        # o passo do gesto guiado («Tire o receptor da porta») é a única frase que a faixa diz
-        passo = f"<span>{_x(frase)}</span>" if frase and not descobrir else ""
-        faixa = (f'<div class="ar-faixa sem" role="img" '
-                 f'aria-label="{_x(frase or linha.sem_faixa)}">{passo}</div>')
+        if descobrir:
+            # a faixa por descobrir É o botão «Descobrir a faixa», à vista (desenho de 06/10/2026)
+            dica = FAIXA_NAO_ACHADA if nada else FAIXA_NAO_DESCOBERTA
+            faixa = (f'<button class="ar-faixa sem descobrir" type="button" '
+                     f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}" '
+                     f'title="{_x(dica)}" aria-label="{_x(f"{nomes[linha.id]}: {dica}")}">'
+                     f'<span>{TENTAR_DE_NOVO if nada else DESCOBRIR_A_FAIXA}</span></button>')
+        else:
+            # o passo do gesto guiado («Tire o receptor da porta») é a única frase que a faixa diz
+            passo = f"<span>{_x(frase)}</span>" if frase else ""
+            faixa = (f'<div class="ar-faixa sem" role="img" '
+                     f'aria-label="{_x(frase or linha.sem_faixa)}">{passo}</div>')
     donos = " ".join(dict.fromkeys(t for t, _n in linha.quem))
     return (f'<div class="ar-linha" data-id="{_x(linha.id)}" data-tipo="{_x(linha.tipo)}" '
             f'data-briga="{_x(" ".join(linha.briga))}" data-quem="{_x(donos)}" tabindex="0" '
             f'style="--cor:{_x(cor)}">{rot}{faixa}'
-            f'<div class="ar-estado">{_o_ponto(linha, descobrir, vazado)}</div></div>')
+            f'<div class="ar-estado">{_o_ponto(linha)}</div></div>')
 
 
 def _o_rotulo_do_aparelho(linha: Any) -> str:
@@ -4278,7 +4288,8 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
     """Uma faixa por aparelho, os mesmos 79 canais, e embaixo os outros dispositivos sem fio.
 
     Cada linha é ícone · faixa · ponto (desenho aprovado de 05/10/2026). A entrada sem aparelho
-    no ar não ganha linha, e o que fica fora da faixa dos controles (o Wi-Fi de 5 GHz) também não.
+    no ar não ganha linha. O Wi-Fi conectado tem linha sempre, também em 5 GHz, com o trilho
+    dizendo a banda e o canal (desenho de 06/10/2026, item 1).
     """
     if not cena.get("lugares"):
         return ""
@@ -4305,7 +4316,7 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
             saida += [f'<div class="ar-do" data-do="{_x(ad.id)}">' + "".join(_em_colunas(
                 [_a_linha_do_ar(ln, _o_rotulo_do_aparelho(ln), cores, nomes) for ln in linhas]))
                 + "</div>"]
-    outros = [ln for ln in regua.outros if ln.sem_faixa != faixas_do_ar.FORA_DA_FAIXA]
+    outros = list(regua.outros)
     if outros:
         saida.append(f'<div class="ar-grupo outros">{OUTROS_SEM_FIO}</div>'
                      '<div class="ar-do">'

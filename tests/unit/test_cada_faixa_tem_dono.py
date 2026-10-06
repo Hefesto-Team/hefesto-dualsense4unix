@@ -273,7 +273,7 @@ def test_a_cor_nao_e_o_unico_sinal_toda_linha_tem_glifo_e_palavra() -> None:
         assert rotulo.achar("use"), ident
         # a palavra mora no tooltip e no `aria-label` do ícone (desenho aprovado de 05/10/2026)
         assert _fala(rotulo).strip(), ident
-        assert linha.achar("div", "ar-faixa")[0].attrs.get("aria-label"), ident
+        assert linha.achar(None, "ar-faixa")[0].attrs.get("aria-label"), ident
 
 
 def _usos_da_antena(html: str) -> list[No]:
@@ -404,8 +404,8 @@ def test_o_wifi_do_nm_e_o_vizinho_do_mesmo_no_sao_uma_linha_so() -> None:
                        {"no": "", "mhz": 2437, "largura": 20}])
     linhas = _linhas(cena)
     outros = [i for i in linhas if i not in ("c1", "c2", "c3", "c4")]
-    # o Wi-Fi de 5 GHz fica fora da faixa e não atrapalha: sem linha (desenho de 05/10/2026)
-    assert outros == ["wifi-1"]
+    # o Wi-Fi de 5 GHz fica fora da faixa e tem linha, com o trilho que diz a banda (06/10/2026)
+    assert outros == ["2357:012d", "wifi-1"]
     assert _fala(linhas["wifi-1"]).count(a08.NOME_DO_WIFI) >= 1
     banda = {int(m.group(1)) for c in _celulas(linhas["wifi-1"])
              if (m := re.match(r"Canal (\d+) .* ocupado aqui", c.attrs.get("title", "")))}

@@ -76,12 +76,13 @@ def test_o_receptor_sem_faixa_diz_que_nao_foi_descoberto_e_traz_o_botao_descobri
     html = a08.html_dos_canais(_cena([_receptor("aaaa:bbbb", "mouse")]))
     linha = _linha(html, "aaaa:bbbb")
     assert "ainda não foi descoberta" in linha
-    # o ponto vazado é o próprio «Descobrir» (desenho aprovado de 05/10/2026)
-    assert re.search(r'<button class="ar-selo  sem" type="button" '
+    # a faixa por descobrir É o botão, à vista, e o ponto é só o estado (desenho de 06/10/2026)
+    assert re.search(r'<button class="ar-faixa sem descobrir" type="button" '
                      r'data-gesto="receptor-descobrir" data-alvo="aaaa:bbbb" '
                      r'title="Faixa ainda não descoberta · clique para descobrir"', linha)
-    faixa = linha.split('class="ar-faixa')[1].split("ar-estado")[0]
-    assert "<button" not in faixa, "o gesto não mora dentro da figura da faixa"
+    assert f"<span>{a08.DESCOBRIR_A_FAIXA}</span>" in linha
+    ponto = linha.split('class="ar-estado"')[1]
+    assert "<button" not in ponto and "data-gesto" not in ponto, "o ponto voltou a ser o gesto"
 
 
 def test_o_receptor_com_a_faixa_medida_pinta_a_banda_e_diz_descoberto() -> None:
@@ -97,7 +98,9 @@ def test_o_selo_do_teclado_diz_as_teclas_presas_e_o_do_mouse_diz_sem_falhas() ->
     teclado, mouse = _linha(html, "aaaa:bbbb"), _linha(html, "cccc:dddd")
     assert '<span class="ar-selo sofrendo"' in teclado and "3 teclas presas" in teclado
     assert "em 1 h" in teclado
-    assert 'class="ar-selo boa sem"' in mouse and "Sem falhas" in mouse
+    # o «sem falhas» do mouse é o ponto verde, mesmo com a faixa por descobrir (06/10/2026)
+    assert '<span class="ar-selo boa"' in mouse and "Sem falhas" in mouse
+    assert "receptor-descobrir" in mouse
 
 
 def test_sem_leitura_do_evdev_a_linha_nao_inventa_selo() -> None:

@@ -258,7 +258,7 @@ SONDA = r"""
   const leg = cab.querySelector('.ar-legenda');
   const rc = cab.getBoundingClientRect(), rl = leg.getBoundingClientRect();
   fora.legenda_na_linha = rl.top >= rc.top - 2 && rl.bottom <= rc.bottom + 2 && rc.height < 44;
-  const faixas = [...document.querySelectorAll('.radio .ar-faixa:not(.sem)')];
+  const faixas = [...document.querySelectorAll('.radio .ar-faixa:not(.sem):not(.fora)')];
   fora.faixas = faixas.length;
   fora.celulas = faixas.map(f => f.children.length);
   fora.larguras = faixas.map(f => Math.round(f.getBoundingClientRect().width));
