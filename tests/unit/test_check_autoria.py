@@ -514,3 +514,140 @@ def test_uso_errado_sai_2(repo: Path) -> None:
     assert rodar(repo).returncode == 2
     assert rodar(repo, "diff", "so-um").returncode == 2
     assert rodar(repo, "inexistente").returncode == 2
+
+
+# ---------------------------------------------------------------------------
+# O instalador e o gancho de pre-push, de ponta a ponta
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def casa(repo: Path, tmp_path: Path) -> Path:
+    """O repositório de brinquedo com a régua, os ganchos e o instalador copiados."""
+    import shutil
+
+    (repo / "scripts").mkdir()
+    shutil.copy2(REGUA, repo / "scripts" / "check_autoria.py")
+    shutil.copy2(RAIZ / "scripts" / "instalar-hooks.sh", repo / "scripts" / "instalar-hooks.sh")
+    shutil.copytree(RAIZ / "scripts" / "hooks", repo / "scripts" / "hooks")
+    git(repo, "add", "scripts")
+    commitar(repo, "chore: a régua e os ganchos")
+    return repo
+
+
+def instalar(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    env = _ambiente({"HOME": str(repo.parent)})
+    return subprocess.run(
+        ["bash", "scripts/instalar-hooks.sh", *args],
+        cwd=repo, env=env, capture_output=True, text=True,
+    )
+
+
+def git_vivo(repo: Path, *args: str, lista: str | None = LISTA) -> subprocess.CompletedProcess[str]:
+    """git COM os ganchos do repositório ligados, como na máquina de quem empurra."""
+    extra = {"AUTORIA_VEDADOS": lista} if lista is not None else {}
+    return subprocess.run(
+        ["git", *args], cwd=repo, env=_ambiente(extra), capture_output=True, text=True,
+    )
+
+
+def test_o_instalador_copia_o_pre_push_e_grava_a_politica(casa: Path) -> None:
+    p = instalar(casa)
+    assert p.returncode == 0, saida(p)
+    gancho = casa / ".git" / "hooks" / "pre-push"
+    assert gancho.is_file() and not gancho.is_symlink()
+    assert os.access(gancho, os.X_OK)
+    assert gancho.read_bytes() == (casa / "scripts" / "hooks" / "pre-push").read_bytes()
+    assert git(casa, "config", "--get", "autoria.politica") == "scripts/check_autoria.py"
+
+
+def test_o_instalador_e_idempotente_e_o_conferir_diz_o_que_faria(casa: Path) -> None:
+    antes = instalar(casa, "--conferir")
+    assert antes.returncode == 1 and "faria" in antes.stdout
+    assert not (casa / ".git" / "hooks" / "pre-push").exists(), "o --conferir mexeu"
+    assert instalar(casa).returncode == 0
+    depois = instalar(casa, "--conferir")
+    assert depois.returncode == 0, saida(depois)
+    assert "nada a fazer" in depois.stdout
+    assert instalar(casa).returncode == 0
+
+
+def test_numa_worktree_o_gancho_vai_para_o_diretorio_comum(casa: Path, tmp_path: Path) -> None:
+    arvore = tmp_path / "voo"
+    git(casa, "worktree", "add", "-q", "-b", "voo/x", str(arvore))
+    p = instalar(arvore)
+    assert p.returncode == 0, saida(p)
+    assert (casa / ".git" / "hooks" / "pre-push").is_file()
+    assert git(arvore, "config", "--get", "autoria.politica") == "scripts/check_autoria.py"
+
+
+def test_com_core_hooks_path_so_grava_a_politica_e_nao_escreve_no_caminho_global(
+    casa: Path, tmp_path: Path,
+) -> None:
+    global_ = tmp_path / "ganchos-globais"
+    global_.mkdir()
+    git(casa, "config", "core.hooksPath", str(global_))
+    p = instalar(casa)
+    assert p.returncode == 0, saida(p)
+    assert list(global_.iterdir()) == [], "o instalador escreveu no caminho global"
+    assert not (casa / ".git" / "hooks" / "pre-push").exists()
+    assert git(casa, "config", "--get", "autoria.politica") == "scripts/check_autoria.py"
+
+
+def test_gancho_de_outra_autoria_nao_e_sobrescrito(casa: Path) -> None:
+    alheio = casa / ".git" / "hooks" / "pre-push"
+    alheio.write_text("#!/bin/sh\necho meu\n", encoding="utf-8")
+    p = instalar(casa)
+    assert p.returncode == 1 and "RECUSADO" in p.stderr
+    assert alheio.read_text(encoding="utf-8") == "#!/bin/sh\necho meu\n"
+
+
+def test_link_morto_no_lugar_do_gancho_e_trocado_por_copia(casa: Path) -> None:
+    gancho = casa / ".git" / "hooks" / "pre-push"
+    gancho.symlink_to("/nao/existe/mais/pre-push")
+    assert instalar(casa).returncode == 0
+    assert gancho.is_file() and not gancho.is_symlink()
+
+
+def _com_servidor(casa: Path, tmp_path: Path) -> Path:
+    nu = tmp_path / "nu.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(nu)], check=True, env=_ambiente())
+    git(casa, "remote", "add", "origin", str(nu))
+    return nu
+
+
+def test_o_gancho_instalado_barra_e_libera_o_push_de_verdade(casa: Path, tmp_path: Path) -> None:
+    _com_servidor(casa, tmp_path)
+    assert instalar(casa).returncode == 0
+    commitar(casa, "feat: limpo")
+    liberado = git_vivo(casa, "push", "origin", "dev:refs/heads/fecho/2026-09-28")
+    assert liberado.returncode == 0, saida(liberado)
+    fora = git_vivo(casa, "push", "origin", "dev:refs/heads/voo/x")
+    assert fora.returncode != 0 and "fora da lista de publicáveis" in saida(fora)
+    commitar(casa, f"feat: {CANARIO}")
+    sujo = git_vivo(casa, "push", "origin", "dev:refs/heads/fecho/outro")
+    assert sujo.returncode != 0 and CANARIO not in saida(sujo)
+
+
+def test_o_gancho_copiado_sobrevive_ao_desaparecimento_da_arvore_que_o_instalou(
+    casa: Path, tmp_path: Path,
+) -> None:
+    """Um link para `scripts/hooks/` desligaria a política calado; a cópia não."""
+    import shutil
+
+    _com_servidor(casa, tmp_path)
+    assert instalar(casa).returncode == 0
+    shutil.rmtree(casa / "scripts" / "hooks")
+    commitar(casa, f"feat: {CANARIO}")
+    p = git_vivo(casa, "push", "origin", "dev:refs/heads/fecho/x")
+    assert p.returncode != 0, "a política se desligou calada sem a pasta de ganchos"
+
+
+def test_o_gancho_sem_a_regua_na_arvore_reprova_e_nao_passa(casa: Path, tmp_path: Path) -> None:
+    _com_servidor(casa, tmp_path)
+    assert instalar(casa).returncode == 0
+    (casa / "scripts" / "check_autoria.py").unlink()
+    commitar(casa, "feat: limpo")
+    p = git_vivo(casa, "push", "origin", "dev:refs/heads/fecho/x")
+    assert p.returncode != 0
+    assert "política não medida" in saida(p)

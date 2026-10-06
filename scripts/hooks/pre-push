@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# pre-push do repositório: delega à régua única de autoria.
+# O stdin do git (uma linha por referência empurrada) passa inteiro.
+set -uo pipefail
+raiz="$(git rev-parse --show-toplevel)" || exit 1
+if [ ! -f "$raiz/scripts/check_autoria.py" ]; then
+    echo "pre-push: política não medida (scripts/check_autoria.py ausente nesta árvore)." >&2
+    exit 1
+fi
+exec python3 "$raiz/scripts/check_autoria.py" pre-push "$@"
