@@ -30,6 +30,7 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _comum
@@ -86,7 +87,7 @@ def subir(partida: str, serie: str, nivel: str) -> str:
     return ".".join(str(p) for p in partes)
 
 
-def proposta(raiz: Path, desde: str | None = None) -> dict[str, object]:
+def proposta(raiz: Path, desde: str | None = None) -> dict[str, Any]:
     serie = _comum.serie_do_arquivo(raiz)
     tags = _comum.tags_da_serie(raiz, serie)
     base = desde[1:] if desde and desde.startswith("v") else None
@@ -126,7 +127,7 @@ def resumo_do_changelog(raiz: Path, numero: str) -> str | None:
     arq = raiz / "CHANGELOG.md"
     if not arq.is_file():
         return None
-    corpo = None
+    corpo: list[str] | None = None
     for linha in arq.read_text(encoding="utf-8").splitlines():
         if re.match(rf"^##\s*\[{re.escape(numero)}\]", linha):
             corpo = []
@@ -201,9 +202,9 @@ def cmd_proxima(a: argparse.Namespace, raiz: Path) -> int:
 def cmd_gravar(a: argparse.Namespace, raiz: Path) -> int:
     numero = a.numero
     if numero is None:
-        numero = proposta(raiz)["seguinte"]  # type: ignore[assignment]
+        numero = proposta(raiz)["seguinte"]
         if numero is None:
-            return _comum.encerrar("numero", raiz, 0, "versao.py gravar: nada a lançar; nada gravado", [], a.detalhe)
+            return _comum.encerrar("versao_gravar", raiz, 0, "versao.py gravar: nada a lançar; nada gravado", [], a.detalhe)
     numero = numero[1:] if numero.startswith("v") else numero
     if not VALIDA.match(numero):
         print(f"versao.py gravar: «{numero}» não é uma versão (X.Y.Z ou X.Y.Z.W)")
@@ -216,12 +217,12 @@ def cmd_gravar(a: argparse.Namespace, raiz: Path) -> int:
     plano = plano_de_gravacao(raiz, numero, data)
     detalhe = [f"{'mudaria' if a.conferir else 'gravou'}: {rel}" for rel, _a, _n in plano]
     if not plano:
-        return _comum.encerrar("numero", raiz, 0, f"versao.py gravar: {numero} já está em todos os alvos", [], a.detalhe)
+        return _comum.encerrar("versao_gravar", raiz, 0, f"versao.py gravar: {numero} já está em todos os alvos", [], a.detalhe)
     if a.conferir:
-        return _comum.encerrar("numero", raiz, 1, f"versao.py gravar: {numero} mudaria {len(plano)} arquivo(s)", detalhe, a.detalhe)
+        return _comum.encerrar("versao_gravar", raiz, 1, f"versao.py gravar: {numero} mudaria {len(plano)} arquivo(s)", detalhe, a.detalhe)
     for rel, _atual, novo in plano:
         (raiz / rel).write_text(novo, encoding="utf-8")
-    return _comum.encerrar("numero", raiz, 0, f"versao.py gravar: {numero} gravada em {len(plano)} arquivo(s)", detalhe, a.detalhe)
+    return _comum.encerrar("versao_gravar", raiz, 0, f"versao.py gravar: {numero} gravada em {len(plano)} arquivo(s)", detalhe, a.detalhe)
 
 
 def cmd_conferir_tag(a: argparse.Namespace, raiz: Path) -> int:

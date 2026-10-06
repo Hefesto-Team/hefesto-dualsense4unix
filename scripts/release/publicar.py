@@ -29,6 +29,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sums
@@ -43,18 +44,18 @@ def gh(*args: str, ok: bool = False) -> subprocess.CompletedProcess[str]:
     return r
 
 
-def release_do_servidor(repo: str, tag: str) -> dict[str, object] | None:
+def release_do_servidor(repo: str, tag: str) -> dict[str, Any] | None:
     r = gh("release", "view", tag, "--repo", repo, "--json", "isDraft,assets", ok=True)
     if r.returncode != 0:
         if "not found" in (r.stderr + r.stdout).lower():
             return None
         raise SystemExit(f"publicar.py: não consegui ler a release {tag}: {(r.stderr or r.stdout).strip()[:300]}")
-    dados: dict[str, object] = json.loads(r.stdout)
+    dados: dict[str, Any] = json.loads(r.stdout)
     return dados
 
 
-def arquivos_do_servidor(release: dict[str, object]) -> dict[str, str | None]:
-    return {a["name"]: a.get("digest") for a in release.get("assets", [])}  # type: ignore[union-attr]
+def arquivos_do_servidor(release: dict[str, Any]) -> dict[str, str | None]:
+    return {a["name"]: a.get("digest") for a in release.get("assets", [])}
 
 
 def principal(a: argparse.Namespace) -> int:
