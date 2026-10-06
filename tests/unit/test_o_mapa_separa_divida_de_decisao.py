@@ -182,6 +182,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
+from check_a_decisao_tem_prova import RESPONDIDAS as _RESPONDIDAS
 from check_paridade_transporte import DOMINIO_POR_SUFIXO as _DOMINIO_DO_PORTAO
 
 LADOS = ("cabo", "radio")
@@ -451,14 +452,16 @@ def respostas_que_voltaram(
     decididas = {
         _celula(linha, "id")
         for linha in _linhas(decisoes)
-        if _celula(linha, "estado") == "decidida"
+        if _celula(linha, "estado") in _RESPONDIDAS
     }
     achados: list[str] = []
     if respondidas is None:
         respondidas = RESPONDIDAS_POR_ELA
     for ident, decisao in respondidas.items():
         if decisao not in decididas:
-            achados.append(f"{ident}: `{decisao}` não está `decidida` em {Path(decisoes).name}")
+            achados.append(
+                f"{ident}: `{decisao}` não está `decidida` (nem acima, na escada) "
+                f"em {Path(decisoes).name}")
         linha = linhas.get(ident)
         if linha is None:
             achados.append(f"{ident}: a linha sumiu do mapa")
@@ -502,6 +505,33 @@ def test_a_regua_das_respostas_ve_uma_que_volta() -> None:
         voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
     assert any(achado.startswith(f"{alvo[0]} ({alvo[1]})") for achado in voltaram), voltaram
     assert any(SO_ELA_DECIDE in achado for achado in voltaram), voltaram
+
+
+def _decisoes_com_o_estado(destino: Path, ident: str, estado: str) -> Path:
+    """Uma cópia do registro dela com o `estado` de UMA decisão trocado."""
+    linhas = list(csv.DictReader(io.StringIO(DECISOES_DELA.read_text(encoding="utf-8"))))
+    for linha in linhas:
+        if linha["id"] == ident:
+            linha["estado"] = estado
+    buffer = io.StringIO()
+    escritor = csv.DictWriter(buffer, fieldnames=list(linhas[0]), lineterminator="\n")
+    escritor.writeheader()
+    escritor.writerows(linhas)
+    destino.write_text(buffer.getvalue(), encoding="utf-8")
+    return destino
+
+
+@pytest.mark.parametrize("estado", ["implementada", "feita", "no ar"])
+def test_a_decisao_que_sobe_a_escada_continua_respondida(estado: str) -> None:
+    """DECISAO-SEM-DONO-01: subir a `feita` não desfaz a resposta dela, e voltar a `aberta` desfaz."""
+    import tempfile
+
+    decisao = next(iter(RESPONDIDAS_POR_ELA.values()))
+    with tempfile.TemporaryDirectory() as pasta:
+        subiu = _decisoes_com_o_estado(Path(pasta) / "subiu.csv", decisao, estado)
+        assert respostas_que_voltaram(MAPA, subiu) == respostas_que_voltaram(MAPA, DECISOES_DELA)
+        reaberta = _decisoes_com_o_estado(Path(pasta) / "reaberta.csv", decisao, "aberta")
+        assert any(decisao in achado for achado in respostas_que_voltaram(MAPA, reaberta))
 
 
 def _mapa_com_a_linha_mexida(destino: Path, ident: str, colunas: dict[str, str]) -> Path:

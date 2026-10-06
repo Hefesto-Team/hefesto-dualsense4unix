@@ -156,11 +156,17 @@ def test_o_registro_tem_as_colunas_que_mordem() -> None:
 def test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado() -> None:
     """Uma decisão sem preço é uma pergunta sem contexto.
 
-    `decidida` e `caduca` já foram respondidas por ela (a caduca, substituída por
-    outra fala dela); cobrar o preço delas castiga quem fez a correção certa.
+    `decidida` (e os degraus acima dela na escada: `implementada`, `feita`, `no ar`)
+    e `caduca` já foram respondidas por ela (a caduca, substituída por outra fala
+    dela); cobrar o preço delas castiga quem fez a correção certa.
     MORDE: esvaziar o `preco_do_outro_lado` de uma linha que espera a palavra dela.
     """
-    ja_respondidas = {"decidida", "caduca"}
+    import sys
+
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    from check_a_decisao_tem_prova import RESPONDIDAS
+
+    ja_respondidas = {*RESPONDIDAS, "caduca"}
     for d in _linhas():
         if (d.get("estado") or "").strip() in ja_respondidas:
             continue

@@ -58,6 +58,11 @@ PISO = Path("docs/data/decisoes-sem-prova.txt")
 
 ESTADOS = ("aberta", "decidida", "implementada", "feita", "no ar", "caduca")
 DEGRAUS_QUE_EXIGEM_PROVA = ("implementada", "feita", "no ar")
+#: Os degraus em que ELA JÁ RESPONDEU. O resto da escada diz até onde o código chegou, e
+#: a decisão que sobe a `feita` continua decidida por ela: quem pergunta «ela decidiu?»
+#: (as réguas do registro, do mapa e da trava do jogo aberto) lê este conjunto, nunca a
+#: palavra `decidida` sozinha. Senão a primeira decisão promovida some dessas réguas.
+RESPONDIDAS = ("decidida", *DEGRAUS_QUE_EXIGEM_PROVA)
 MARCAS = ("", "processo")
 COLUNAS_NOVAS = ("prova", "marca")
 SEPARADOR_DE_PROVAS = " | "

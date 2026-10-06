@@ -397,6 +397,16 @@ def test_o_ciclo_forcado_do_co_op_tem_os_chamadores_de_hoje() -> None:
     assert achados == SYNC_FORCADO
 
 
+def _respondidas() -> tuple[str, ...]:
+    """Os degraus da escada em que ela já respondeu (o dono é o portão das decisões)."""
+    import sys
+
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    from check_a_decisao_tem_prova import RESPONDIDAS
+
+    return tuple(RESPONDIDAS)
+
+
 def _decisoes_dela() -> dict[str, dict[str, str]]:
     with (RAIZ / "docs" / "data" / "decisoes-dela.csv").open(encoding="utf-8") as fh:
         return {linha["id"]: linha for linha in csv.DictReader(fh)}
@@ -408,7 +418,7 @@ def test_toda_origem_que_passa_aponta_uma_decisao_dela() -> None:
     for origem, decisao in gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.items():
         linha = decisoes.get(decisao)
         assert linha is not None, f"{origem}: {decisao} não está no CSV"
-        assert (linha["estado"], linha["quem_decidiu"]) == ("decidida", "ela"), (
+        assert linha["estado"] in _respondidas() and linha["quem_decidiu"] == "ela", (
             f"{origem}: {decisao} não é decisão dela ({linha['estado']}, {linha['quem_decidiu']})")
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO) == {"manual", "gesto_de_perfil", "ordem_do_coop"}
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.values()) == {DO_GESTO, DA_ORDEM}
