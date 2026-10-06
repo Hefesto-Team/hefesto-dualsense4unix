@@ -337,7 +337,8 @@ def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
 MOCKUP_08 = Path(__file__).resolve().parents[2] / "mockup/08-conexoes.html"
 A_CAIXA_ESCOLHE = "      if(aCaixaEscolhe(ev)) return;\n"
 A_GAVETA_NA_LINHA = "      aGavetaNaLinha(p);\n"
-O_PAINEL_DEIXA_OS_MENUS = "      p.style.right = Math.max(0, Math.round(base.right - esquerda + 6)) + 'px';\n"
+O_PAINEL_DEIXA_OS_MENUS = (
+    "      p.style.right = Math.max(0, Math.round(base.right - esquerda + 6)) + 'px';\n")
 
 ABRE_A_GAVETA = r"""
 (function(){
