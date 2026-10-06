@@ -2420,7 +2420,7 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     o jogador cujo grab foi recusado ou cujo vpad morreu sem que `/dev/input`
     mudasse: o ciclo normal do poll loop só reenumera quando `/dev/input` muda,
     e um vpad morto pode esperar o próximo hotplug para sempre
-    (`ipc_handlers.py:3851`).
+    (`ipc_handlers.py:5623`).
 
     PASSO 2 — `identity.renumber`: compacta a numeração preservando a ordem
     relativa. **A ORDEM É A ENTREGA** e está escrita no botão antigo

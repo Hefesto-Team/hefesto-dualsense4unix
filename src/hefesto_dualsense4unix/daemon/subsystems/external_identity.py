@@ -171,7 +171,7 @@ LED_MIN_INTERVAL_SEC = 2.0
 #: EXATAMENTE como ficaria com o Hefesto desinstalado — e isso é falseável:
 #: pare o daemon e a luz não muda. Três razões a mais: o rádio fica sem tráfego
 #: de LED na direção do firmware mais frágil da mesa (o clone do 8BitDo morre
-#: sob bombardeio — `daemon/ipc_handlers.py:227-232`); o precedente MEDIDO desta
+#: sob bombardeio — `daemon/ipc_handlers.py:589-591`); o precedente MEDIDO desta
 #: casa já traduz "parar de afirmar" como *"zero escritas, sem apagar
 #: ativamente"* (o gate ``auto_numbers`` logo abaixo, R-14/NUMA-03c), e ter duas
 #: doutrinas para a mesma frase é como se perde uma; e o custo de voltar é uma
