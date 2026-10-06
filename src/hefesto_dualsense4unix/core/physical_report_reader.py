@@ -337,11 +337,6 @@ def _struct_base(report: bytes) -> int | None:
     return None
 
 
-def eh_report_de_estado(report: bytes) -> bool:
-    """Este report cru é ESTADO DE INPUT? — a porta pública do `_struct_base`."""
-    return _struct_base(report) is not None
-
-
 # Na bancada — quatro DualSense por rádio, ~2.400 relatórios/s no total
 # aparelho do usuário. O portão que trava a economia é
 
@@ -942,7 +937,6 @@ __all__ = [
     "TOUCHPAD_CLICK_BIT",
     "PhysicalReportReader",
     "decodificar_bateria",
-    "eh_report_de_estado",
     "extract_battery_status",
     "extract_estado_do_mic",
     "extract_jack_status",

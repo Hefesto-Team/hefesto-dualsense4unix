@@ -293,13 +293,6 @@ def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
     return Plano(chave, estradas, ambiente, "", nome, pasta_do_ambiente)
 
 
-def tem_estrada(chave: str, atalhos: tuple[str, ...],
-                lar: Path | None = None,
-                raiz_sistema: Path | None = None) -> bool:
-    """Há botão a oferecer neste cartão? — a pergunta da VIGIA."""
-    return bool(estradas_do_cartao(chave, atalhos, lar, raiz_sistema))
-
-
 def _modo_de_nascimento(pasta: Path) -> int:
     """O modo de um arquivo que NASCE nesta pasta — herdado dela."""
     try:

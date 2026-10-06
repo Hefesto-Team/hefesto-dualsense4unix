@@ -1268,7 +1268,7 @@ class DoDisco:
     #: guardava as chaves que TÊM por onde receber o ambiente, e existia para
     #: UMA coisa: decidir o botão «Consertar» do cartão LOCALIZADO. O botão saiu
     #: por palavra de produto, e um campo que ninguém lê é a segunda leitura de disco
-    #: que a :class:`DoDisco` inteira existe para não pagar — `tem_estrada` abre
+    #: que a :class:`DoDisco` inteira existe para não pagar — `estradas_do_cartao` abre
     #: o `config.json` do Heroic e as caixas do Flatpak a cada volta da vigia.
 
     #: ONDE O AMBIENTE DO HEFESTO FALTA, por cartão: `(chave, onde)` —

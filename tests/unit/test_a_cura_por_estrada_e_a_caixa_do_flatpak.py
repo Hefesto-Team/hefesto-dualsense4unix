@@ -209,7 +209,6 @@ def test_o_cartao_duplo_ganha_uma_estrada_por_programa(tmp_path) -> None:
 def test_quem_nao_tem_estrada_nao_ganha_botao(chave, tmp_path) -> None:
     """O «Flatpak» é o runtime dos outros e a Steam tem o atalho dela."""
     assert cura.estradas_do_cartao(chave, ("flatpak",), **_lar_de_mentira(tmp_path)) == ()
-    assert not cura.tem_estrada(chave, ("flatpak",), **_lar_de_mentira(tmp_path))
 
 
 def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_dela(tmp_path) -> None:

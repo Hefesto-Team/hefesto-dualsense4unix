@@ -666,22 +666,8 @@ _EM_CRASE = re.compile(r"``?([^`\n]+?)``?")
 
 _JANELA = 3
 
-#: sai com: O-CODIGO-SEM-NARRADOR-01
-_CITACOES_PENDENTES: frozenset[str] = frozenset({
-    # `a10_perfis.py::rodape.py:101` SAIU DAQUI NO MESMO DIA (13/09/2026): a
-    # reapontou o docstring de `editor_nome` pelo SÍMBOLO, `rodape._draft_do_ativo`.
-    # A DE `a06_navegacao.py` -> `core/acoes_de_botao.py:203` SAIU DAQUI EM
-    # `acoes_de_botao.py` e a pendência passou a "conferir" por acaso. O
-    # comentário agora nomeia o símbolo (`core/acoes_de_botao.resolver`).
-    #   rumble_actions.py:330  `profiles/manager.py:924-935` — REAPONTADA em
-    # porque foram corrigidas no lugar (`core/acoes_de_botao.py`, as citações de
-    # antes do `_fita` e de **+297** antes do `_recusou_dizendo`. As três moram
-    #   a06_navegacao.py:1882 `hefesto_vivo.py:2018` -> `:2585` (`_recusou_dizendo`)
-    #   a10_perfis.py:676    `hefesto_vivo.py:2018` -> `:2585` (`_recusou_dizendo`)
-    #   a06_navegacao.py:1882 `hefesto_vivo.py:2476`          -> `:3307` (`_recusou_dizendo`)
-    # reapontou cada uma pelo símbolo (`_fita`, `_recusou_dizendo`,
-    # (endereço deslocado): o `_recusou_dizendo` que ela cita desceu com o
-})
+#: Vazia: nenhuma citação de linha em `src/` está pendente (a catraca `DIVIDAS` mede 0).
+_CITACOES_PENDENTES: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)

@@ -1103,31 +1103,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "integrations/cura_por_estrada.py::tem_estrada":
-        "O BOTÃO «Consertar» DOS CARTÕES SEM CENSO SAIU EM 10/09/2026 "
-        "(LANCADOR-LOCALIZAR-01), por palavra dela — 'se tenho tudo "
-        "instalado e tá pra ser identificado não tem pq ter o botão de "
-        "consertar' —, e com ele o gesto "
-        "`a07_lancadores.consertar_lancador` e a consulta de "
-        "`desenho_dos_lancadores.medir_no_disco`. O que caiu foi o VASO, "
-        "não a cura: o módulo e as 26 provas ficam. a pergunta de sim/não "
-        "que decidia o botão. ONDE O CAMINHO SE PERDE, e é UM ponto: "
-        "`assets/hefesto-launch.sh` só age com `SteamAppId`, e nenhum jogo "
-        "do Heroic, do Lutris, do RetroArch, do Dolphin ou do mGBA tem um — "
-        "este módulo é o ÚNICO código desta casa que entrega o ambiente da "
-        "ponte a um lançador que não é a Steam (a carona, nas cópias de "
-        "cada jogo do Heroic desde 01/10/2026; o `tem_estrada` segue sem "
-        "chamador). "
-        "O que FECHA: a LANCADOR-CARONA-01, que põe a cura na CARONA em vez "
-        "de num botão — palavra dela de 16/08/2026 "
-        "(`app/actions/carona_do_wrapper.py:7`), o mesmo lugar em que "
-        "`interface/pacotes/perfil.com_a_carona()` já repõe o atalho da "
-        "Steam ao Salvar e ao Aplicar. `perfil.py` e o rodapé são de outra "
-        "posse, e a cura escreve em arquivo de OUTRO programa — o que "
-        "merece a palavra dela sobre 'sem botão, no Salvar' antes de "
-        "qualquer linha. No dia em que ela nascer, este portão cobra que "
-        "estas entradas sejam APAGADAS. 10/09/2026.",
 
 
     # pintando a volta com `state_full["rumble_motores"]`". A ONDA2-05 fez as
@@ -1152,18 +1127,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `daemon.reload` que não chega ao serviço fazia a tela dizer **"Pronto."**
     # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
     #     por ela é o DESPACHO do daemon, não a janela.
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "core/physical_report_reader.py::eh_report_de_estado": (
-        "MEDIDO em 29/09/2026: a porta pública do `_struct_base` (BATERIA-QUE-PULA-01) "
-        "perdeu o único chamador de produção com a O-BOTAO-DO-MIC-CHEGA-NA-HORA-01. "
-        "O `_consumir_lote` do `core/backend_pydualsense` usa como guarda a resposta "
-        "do `_captura_status_audio`, que roda o `extract_estado_do_mic` — o MESMO "
-        "`_struct_base` —, e cada report paga uma conferência de CRC, e não duas. "
-        "Só as réguas a chamam (`test_bateria_que_pula_01_a_voz_nao_e_a_carga.py` "
-        "e `test_o_botao_do_mic_chega_na_hora.py`). O QUE A FECHA: ela sai, com as "
-        "réguas passando ao dono que o laço chama (a forma que a sprint dá ao "
-        "`extract_motion_window`), ou o laço volta a chamá-la."
-    ),
     # "A mesa" (`app/actions/config/secao_mesa.py::_frase_do_hub_em_comum`) a
     # fica: a decisão D-COSTURA-BLUEZ (25/08) deixa o script dono do alias,
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (

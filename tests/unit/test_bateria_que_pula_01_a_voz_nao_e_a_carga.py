@@ -72,41 +72,35 @@ def _bt_de_audio() -> bytes:
     return bytes(corpo) + crc.to_bytes(4, "little")
 
 
+def _e_estado(report: bytes) -> bool:
+    """O `_struct_base` aceitou este report cru como ESTADO de input?"""
+    return prr._struct_base(report) is not None
+
+
 class TestARegua:
     def test_o_report_de_estado_passa(self) -> None:
-        assert prr.eh_report_de_estado(_bt_valido()) is True
+        assert _e_estado(_bt_valido()) is True
 
     def test_o_report_de_audio_e_recusado(self) -> None:
         """**O CASO QUE ORIGINOU TUDO.**"""
-        assert prr.eh_report_de_estado(_bt_de_audio()) is False
+        assert _e_estado(_bt_de_audio()) is False
 
     def test_o_crc_quebrado_e_recusado(self) -> None:
         mau = bytearray(_bt_valido())
         mau[-1] ^= 0xFF
-        assert prr.eh_report_de_estado(bytes(mau)) is False
+        assert _e_estado(bytes(mau)) is False
 
     def test_o_tamanho_errado_e_recusado_no_radio(self) -> None:
-        assert prr.eh_report_de_estado(bytes([prr.INPUT_REPORT_BT]) + bytes(9)) is False
+        assert _e_estado(bytes([prr.INPUT_REPORT_BT]) + bytes(9)) is False
 
     def test_o_tamanho_errado_e_recusado_tambem_no_cabo(self) -> None:
         """O furo que o juiz do desenho achou, e ele era real."""
-        assert prr.eh_report_de_estado(bytes([prr.INPUT_REPORT_USB]) + bytes(9)) is False
-        assert prr.eh_report_de_estado(bytes([prr.INPUT_REPORT_USB]) + bytes(59)) is True
+        assert _e_estado(bytes([prr.INPUT_REPORT_USB]) + bytes(9)) is False
+        assert _e_estado(bytes([prr.INPUT_REPORT_USB]) + bytes(59)) is True
 
     def test_vazio_e_id_desconhecido_sao_recusados(self) -> None:
-        assert prr.eh_report_de_estado(b"") is False
-        assert prr.eh_report_de_estado(bytes([0x99]) + bytes(77)) is False
-
-    def test_a_porta_nao_e_uma_segunda_regua(self) -> None:
-        """Ela delega ao `_struct_base`, e é isso que impede as duas de divergirem."""
-        import inspect
-
-        corpo = inspect.getsource(prr.eh_report_de_estado)
-        assert "_struct_base(report) is not None" in corpo
-        for proibido in ("INPUT_FLAG_AUDIO", "bt_crc32", "INPUT_REPORT_BT_SIZE"):
-            assert proibido not in corpo.split('"""')[-1], (
-                f"a porta copiou `{proibido}` — virou a segunda régua"
-            )
+        assert _e_estado(b"") is False
+        assert _e_estado(bytes([0x99]) + bytes(77)) is False
 
 
 class _Espiao(_PinnedPyDualSense):

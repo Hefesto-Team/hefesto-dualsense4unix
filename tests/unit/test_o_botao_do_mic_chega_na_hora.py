@@ -190,7 +190,7 @@ class _CDoHidapi:
         aparelho.filas_vistas.append(len(aparelho.fila))
         i, _t, quadro = aparelho.fila.popleft()
         aparelho.lidos += 1
-        if prr.eh_report_de_estado(quadro):
+        if prr._struct_base(quadro) is not None:
             base = 1 if quadro[0] == prr.INPUT_REPORT_USB else 2
             aparelho.ultimo_estado_lido = (i, quadro[base + prr.BATTERY_STATUS_OFFSET] & 0x0F)
         n = min(length, len(quadro))
