@@ -212,13 +212,42 @@ mkdir -p "$cache/actions-novo@v1" && echo x > "$cache/actions-novo@v1/x"
 echo "---YAML---"
 cat "$yml"
 echo "---FIM---"
+RUN=$'\xe2\xad\x90 Run'; FALHA=$'\xe2\x9d\x8c  Failure -'; OK=$'\xe2\x9c\x85  Success -'
 TEXTO="Temporary failure resolving 'archive.ubuntu.com'"
-# a rede caída como o apt a escreve, na saída de um passo (`[job]   | texto`)
+# a rede caída como o apt a escreve, na saída do passo que reprovou (`[job]   | texto`)
 case ",${FAKE_REDE:-}," in *",$job,"*)
+  echo "[CI/$job] $RUN Main Instalar deps do sistema"
   echo "[CI/$job]   | W: Failed to fetch http://archive.ubuntu.com/InRelease  $TEXTO"
+  echo "[CI/$job]   $FALHA Main Instalar deps do sistema [1s]"
+  exit 1 ;; esac
+# o pip que tentou de novo e conseguiu deixa a linha da rede num passo VERDE;
+# o vermelho é de outro passo
+PIP="WARNING: Retrying (Retry(total=4)) after connection broken by"
+PIP="$PIP 'NewConnectionError(': Failed to establish a new connection: [Errno -3]"
+PIP="$PIP Temporary failure in name resolution')': /simple/pytest/"
+case ",${FAKE_PIP_E_FALHA:-}," in *",$job,"*)
+  echo "[CI/$job-1] $RUN Main Instalar"
+  echo "[CI/$job-1]   | $PIP"
+  echo "[CI/$job-1]   $OK Main Instalar [9s]"
+  echo "[CI/$job-1] $RUN Main Ruff"
+  echo "[CI/$job-1]   $FALHA Main Ruff [1s]"
+  exit 1 ;; esac
+# uma perna da matriz cai pela rede e a outra reprova de verdade
+case ",${FAKE_PERNAS:-}," in *",$job,"*)
+  echo "[CI/$job-1] $RUN Main Instalar"
+  echo "[CI/$job-2] $RUN Main Ruff"
+  echo "[CI/$job-1]   | $PIP"
+  echo "[CI/$job-2]   $FALHA Main Ruff [1s]"
+  echo "[CI/$job-1]   $FALHA Main Instalar [9s]"
   exit 1 ;; esac
 # o docker que não respondeu ao limpar o container de um job que passou
 case ",${FAKE_DOCKER:-}," in *",$job,"*)
+  echo "[CI/$job] failed to remove container: Delete http://x: context deadline exceeded"
+  echo "Error: Error occurred running finally: context deadline exceeded"; exit 1 ;; esac
+# o mesmo docker lento, num job que JÁ tinha reprovado num passo
+case ",${FAKE_DOCKER_E_FALHA:-}," in *",$job,"*)
+  echo "[CI/$job] $RUN Main Ruff"
+  echo "[CI/$job]   $FALHA Main Ruff [1s]"
   echo "[CI/$job] failed to remove container: Delete http://x: context deadline exceeded"
   echo "Error: Error occurred running finally: context deadline exceeded"; exit 1 ;; esac
 # o mesmo texto CITADO (uma linha de teste, com número de linha): reprova, mas não é a rede
@@ -405,6 +434,47 @@ def test_vermelho_vale_mais_que_nao_rodado_no_codigo_de_saida(mundo: Mundo) -> N
     r = mundo.rodar("--rapido", FAKE_FALHA="glifos", FAKE_REDE="pre-commit")
     assert r.returncode == 1
     assert "[glifos]" in r.stdout and "[pre-commit]" in r.stdout
+
+
+def test_a_linha_da_rede_num_passo_verde_nao_esconde_o_vermelho(mundo: Mundo) -> None:
+    """O pip que tentou de novo e conseguiu não faz o vermelho de outro passo virar «rede»."""
+    r = mundo.rodar("--rapido", FAKE_PIP_E_FALHA="lint-test")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "1 vermelho(s) [lint-test]" in r.stdout and "0 não rodado(s)" in r.stdout
+
+
+def test_a_perna_que_caiu_pela_rede_nao_esconde_a_perna_vermelha(mundo: Mundo) -> None:
+    r = mundo.rodar("--rapido", FAKE_PERNAS="lint-test")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "1 vermelho(s) [lint-test]" in r.stdout and "0 não rodado(s)" in r.stdout
+
+
+def test_o_docker_lento_nao_esconde_o_passo_que_reprovou(mundo: Mundo) -> None:
+    r = mundo.rodar("--rapido", FAKE_DOCKER_E_FALHA="glifos")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "1 vermelho(s) [glifos]" in r.stdout and "0 não rodado(s)" in r.stdout
+
+
+def test_cada_job_da_corrida_tem_a_sua_porta_de_artefato(mundo: Mundo) -> None:
+    """Duas chamadas na mesma porta: a segunda morre (`bind: address already in use`), vermelha."""
+    mundo.rodar("--completo")
+    portas = []
+    for log in sorted(mundo.saida.glob("*.log")):
+        for ln in log.read_text(encoding="utf-8").splitlines():
+            if ln.startswith("ARGS:"):
+                args = ln.split()
+                portas.append((log.stem, args[args.index("--artifact-server-port") + 1]))
+    jobs_por_porta: dict[str, set[str]] = {}
+    for job, porta in portas:
+        jobs_por_porta.setdefault(porta, set()).add(job)
+    repetidas = {p: j for p, j in jobs_por_porta.items() if len(j) > 1}
+    assert len(portas) > 10 and not repetidas, repetidas
+
+
+def test_a_tabela_e_so_a_do_jobs_txt(mundo: Mundo) -> None:
+    """Uma variável de ambiente não troca a decisão da casa."""
+    r = mundo.rodar("--listar", TABELA="ROLA|glifos|rapido")
+    assert r.returncode == 0 and "pypi" in r.stdout, r.stdout + r.stderr
 
 
 def test_o_act_roda_a_arvore_do_indice_e_nao_o_disco(mundo: Mundo) -> None:

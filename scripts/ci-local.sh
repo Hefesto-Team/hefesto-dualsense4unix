@@ -93,7 +93,7 @@ done
 # EM-TAG|workflow.yml|motivo   o workflow dispara em tag: o act roda o evento `push` com `ref: refs/tags/v<versão do pyproject>`
 # FORA-DE-CASA|job|motivo      não roda em casa, com o motivo medido
 linhas() {
-  if [ -n "${TABELA:-}" ]; then printf '%s\n' "$TABELA"; else cat "$JOBS_TXT" 2>/dev/null; fi | grep -vE '^\s*(#|$)'
+  cat "$JOBS_TXT" 2>/dev/null | grep -vE '^\s*(#|$)'
 }
 campo() { linhas | awk -F'|' -v t="$1" -v j="$2" -v n="$3" '$1==t && $2==j {print $n}'; }
 
@@ -343,12 +343,34 @@ chamar_act() { # job yml log porta [rótulo do runner da matriz]
   return "$rc"
 }
 
+# A rede só explica o vermelho quando TODO passo que reprovou (a linha `Failure - …` do act) teve, na saída dele
+# (entre o `Run` daquele passo e a falha, na mesma perna), a linha da rede. O `pip` que tentou de novo e conseguiu deixa
+# a mesma linha num passo verde, e uma perna da matriz pode cair pela rede enquanto a outra reprova de verdade:
+# nos dois casos o vermelho é do job, e vermelho vale mais que não rodado. Sem passo reprovado nenhum, vale a linha
+# do próprio act (a imagem que não baixou).
+# As marcas do act vão por byte: o portão dos glifos não aceita o caractere no código.
+INICIO_DO_PASSO=$'\xe2\xad\x90 Run '
+FALHA_DO_PASSO=$'\xe2\x9d\x8c  Failure - '
+so_a_rede_reprovou() { # log -> 0 se só a rede explica a reprovação
+  local log="$1" redes act_rede=0
+  redes="$(grep -nE -e "$REDE_PASSO" "$log" | cut -d: -f1 | tr '\n' ' ')"
+  grep -qE "$REDE_ACT" "$log" && act_rede=1
+  awk -v redes="$redes" -v act="$act_rede" -v run="$INICIO_DO_PASSO" -v falha="$FALHA_DO_PASSO" '
+    BEGIN { n = split(redes, r, " "); for (i = 1; i <= n; i++) eh[r[i]] = 1 }
+    { p = ""; if (match($0, /^\[[^]]*\]/)) p = substr($0, 1, RLENGTH) }
+    p != "" && index($0, run) { rede[p] = 0 }
+    p != "" && (NR in eh) { rede[p] = 1 }
+    p != "" && index($0, falha) { f++; if (rede[p] || (act && index($0, "Set up job"))) fr++ }
+    END { exit !((f > 0 && f == fr) || (f == 0 && (n > 0 || act))) }' "$log"
+}
+
 rodar_job() { # job índice
   local job="$1" i="$2" yml log rc=0 r ini porta rot arquivo_do_yaml numero rotulos=("")
   log="$SAIDA/$job.log"
   ini=$(date +%s)
   yml="$(yaml_de "$job")" || { echo "ci-local: o job '$job' não está em workflow nenhum" > "$log"; echo 2 > "$SAIDA/$job.rc"; return 2; }
-  porta=$((30000 + ($$ % 3000) * 10 + i % 10))
+  # uma porta por job da corrida (são menos de 40): duas chamadas na mesma porta derrubam o act da segunda
+  porta=$((20000 + ($$ % 1000) * 40 + i % 40))
   arquivo_do_yaml="$(arquivo_do_job "$job")"
   if [ -n "$(campo EM-TAG "$arquivo_do_yaml" 3)" ]; then
     numero="$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$ARV/pyproject.toml" 2>/dev/null | head -1)"
@@ -368,10 +390,10 @@ rodar_job() { # job índice
     if [ "$r" != 0 ]; then case "$rc" in 0 | 2) rc=$r ;; esac; fi
   done
   # Reprovou porque a rede caiu: não é defeito do job, e não rodar não é verde.
-  if [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE -e "$REDE_PASSO" -e "$REDE_ACT" "$log"; then
+  if [ "$rc" != 0 ] && [ "$rc" != 2 ] && so_a_rede_reprovou "$log"; then
     echo "ci-local: a rede caiu no meio deste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
     echo rede > "$SAIDA/$job.motivo"; rc=2
-  elif [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE "$DOCKER_CAIDO" "$log"; then
+  elif [ "$rc" != 0 ] && [ "$rc" != 2 ] && ! grep -qF "$FALHA_DO_PASSO" "$log" && grep -qE "$DOCKER_CAIDO" "$log"; then
     echo "ci-local: o docker não respondeu a tempo neste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
     echo docker > "$SAIDA/$job.motivo"; rc=2
   fi
