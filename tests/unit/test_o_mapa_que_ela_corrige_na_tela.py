@@ -602,7 +602,7 @@ _A_GEOMETRIA_DO_PAINEL = r"""
   const r = e => e.getBoundingClientRect();
   return JSON.stringify({
     aberto: true,
-    unico: ed.classList.contains('painel-unico'),
+    so_um: ed.classList.contains('painel-unico'),
     largura: Math.round(r(ed).width),
     cabeNaJanela: r(ed).left >= 0 && r(ed).right <= innerWidth,
     paginaTransborda: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -642,7 +642,7 @@ def test_o_painel_cabe_a_1212_e_o_cabecalho_cabe_com_o_nome_comprido(disco: Path
     ], tamanho=(1212, 809))
     comprido, curto, do_teclado = lidas[2], lidas[4], lidas[6]
     for painel in (comprido, curto, do_teclado):
-        assert painel["aberto"] and painel["unico"], painel
+        assert painel["aberto"] and painel["so_um"], painel
         assert painel["cabeNaJanela"], painel
         assert not painel["paginaTransborda"], painel
         assert painel["cinza"] == [], f"nasceu cinza no WebKitGTK: {painel['cinza']}"
