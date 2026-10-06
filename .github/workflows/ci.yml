@@ -651,7 +651,7 @@ jobs:
       - name: A tabela de curvas próprias reflete o catálogo
         run: python3 scripts/gerar-tabela-de-curvas.py --check
       # O CENSO DE COLETA (O-CENSO-DE-COLETA-SEGUE-A-ARVORE-01, 06/10/2026). Um módulo que some da coleta
-      # some CALADO (GUARDA-GI-REAL-01). O passo media a coleta contra um número escrito num dia (o `PISO`,
+      # some CALADO (GUARDA-GI-REAL-01). O passo comparava a coleta com um número escrito num dia (o `PISO`,
       # 8100 em 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65% abaixo dela, sem guardar
       # nada. Quem julga agora é `scripts/check_a_coleta_sem_gtk.py`, módulo a módulo: todo `test_*.py`
       # versionado dá ao menos um nó ou aparece pulado com motivo. O mesmo julgamento roda em casa, no

@@ -6,7 +6,8 @@
 #                                   `imagem` (opcional) = ubuntu-22.04: baixa a imagem do runner 22.04.
 #   PULA-NO-RAPIDO|job|passo        no --rapido o passo de nome exato sai da cópia do YAML. A suíte inteira tem a
 #                                   casa dela (`scripts/rodar-a-suite.sh`, no fecho); o --completo a roda aqui também.
-#   SEM-NEEDS|job|motivo            o `needs:` sai da cópia: o act o seguiria e rodaria também o job de que ele depende.
+#   SEM-NEEDS|job|dep,dep|motivo    as dependências citadas saem do `needs:` na cópia: o act o seguiria e rodaria, antes do job,
+#                                   o job de que ele depende (a suíte inteira, no caso do `lint-test` e do `build`).
 #   FORA-DE-CASA|job|motivo         não roda em casa. O motivo é medida, com o comando e o que ele respondeu.
 #
 # O que se mede aqui NÃO é o runner do GitHub: é o `catthehacker/ubuntu:act-24.04` + scripts/ci-local/Dockerfile.
@@ -33,21 +34,23 @@ ROLA|gtk-real|rapido
 PULA-NO-RAPIDO|gtk-real|A suíte inteira sob Xvfb, com o GTK real
 PULA-NO-RAPIDO|gtk-real|A cobertura da suíte inteira
 ROLA|runtime-smoke|completo
-SEM-NEEDS|runtime-smoke|o needs: lint-test mandaria o act rodar a suíte inteira antes dele
+SEM-NEEDS|runtime-smoke|lint-test|o needs: lint-test mandaria o act rodar a suíte inteira antes dele; o lint-test é job desta tabela
 ROLA|build-wheel|completo
-ROLA|smoke-multi-distro|completo
-FORA-DE-CASA|install-multi-distro|A CONFERIR
+FORA-DE-CASA|smoke-multi-distro|`container: image:` com a imagem da distro (debian:12, fedora:42, archlinux, ubuntu:24.04): o passo `actions/download-artifact@v4` é JavaScript e o act não leva o node para dentro da imagem do job (o runner do GitHub leva). Medido em 06/10/2026 com o act 0.2.89: `OCI runtime exec failed: exec: "node": executable file not found in $PATH` nas quatro pernas, depois de 4 a 6 minutos de apt, dnf e pacman; `docker run --rm <imagem> sh -c 'command -v node'` não acha o node em nenhuma das quatro. O wheel que ele instalaria sai do `build-wheel`, que roda.
+FORA-DE-CASA|install-multi-distro|o mesmo desenho do `smoke-multi-distro` (`container: image:` e o passo final `actions/upload-artifact@v4`, JavaScript): sem node na imagem da distro o passo reprova (medido no irmão em 06/10/2026: `exec: "node": executable file not found in $PATH`; as quatro imagens não têm node). E o `install.sh` desta casa não roda em casa: grava em /etc, roda `dkms build -k` e baixa 492 MB de Proton por perna.
 # --- autoria.yml --------------------------------------------------------------------------------
-FORA-DE-CASA|autoria|A CONFERIR
+FORA-DE-CASA|autoria|o passo «A história publicada» pede o segredo `AUTORIA_VEDADOS`, que só o repositório tem (medido em 06/10/2026: `autoria: NÃO MEDIDO: a lista de termos não chegou`, rc=1), e os passos de `origin/dev`, `origin/main` e `ls-remote origin` perguntam ao servidor. A mesma régua (`scripts/check_autoria.py`) roda em casa nos portões `autoria-historia` e `autoria-arvore` (scripts/portoes.sh), com a lista de `git config autoria.vedados`.
 # --- flatpak.yml --------------------------------------------------------------------------------
 ROLA|validate-manifest|rapido
-FORA-DE-CASA|build-flatpak|A CONFERIR
+FORA-DE-CASA|build-flatpak|o flatpak-builder constrói dentro do bubblewrap, que pede user namespace, e o container do act não o dá sem `--privileged`. Medido em 06/10/2026: `unshare --user --map-root-user true` no container do runner: `unshare failed: Operation not permitted`. Rodar com `--privileged` entrega o kernel da máquina ao container, e esta casa não entrega. Além disso `flatpak install` baixa o runtime GNOME//47 inteiro do Flathub.
 # --- release.yml --------------------------------------------------------------------------------
-FORA-DE-CASA|build|A CONFERIR
-FORA-DE-CASA|appimage|A CONFERIR
-FORA-DE-CASA|deb|A CONFERIR
-FORA-DE-CASA|deb-install-smoke|A CONFERIR
-FORA-DE-CASA|flatpak|A CONFERIR
-FORA-DE-CASA|guarda-ci|A CONFERIR
-FORA-DE-CASA|github-release|A CONFERIR
-FORA-DE-CASA|pypi|A CONFERIR
+ROLA|build|completo
+SEM-NEEDS|deb|build|o needs: build mandaria o act rodar a suíte inteira de novo antes dele; o `build` é job desta tabela
+ROLA|deb|completo|ubuntu-22.04
+SEM-NEEDS|deb-install-smoke|build|o needs: build mandaria o act rodar a suíte inteira de novo antes dele; o `build` é job desta tabela
+ROLA|deb-install-smoke|completo|ubuntu-22.04
+FORA-DE-CASA|appimage|o passo «Smoke AppImage» executa o AppImage, que monta a si mesmo por FUSE, e o container do act não tem `/dev/fuse` (medido em 06/10/2026: `ls /dev/fuse` no container do runner: «No such file or directory»); liberar o dispositivo pede `--privileged` ou `--device`, e esta casa não entrega o kernel da máquina ao container.
+FORA-DE-CASA|flatpak|o mesmo do `build-flatpak` (flatpak-builder dentro do bubblewrap; `unshare --user` negado no container: `Operation not permitted`, medido em 06/10/2026), com o runtime GNOME//47 baixado do Flathub.
+FORA-DE-CASA|guarda-ci|o passo «Exigir conclusão success do ci.yml na mesma SHA» consulta `gh api repos/<repo>/actions/workflows/ci.yml/runs?head_sha=<SHA>` até 45 minutos. Em casa não há corrida do GitHub para a SHA (o CI online está desligado) e o act não tem `github.token`; o `--completo` de casa É essa guarda.
+FORA-DE-CASA|github-release|publica: `gh release create` e `gh release delete` no servidor. Nada sai desta casa para o GitHub.
+FORA-DE-CASA|pypi|publica no PyPI pelo `pypa/gh-action-pypi-publish` (OIDC do servidor, `environment: pypi`). Nada sai desta casa para o PyPI.

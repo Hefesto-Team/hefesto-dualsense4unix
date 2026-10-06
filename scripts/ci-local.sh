@@ -77,7 +77,8 @@ done
 # ROLA|job|rapido|imagem       roda no act; `rapido` entra nos dois modos, `completo` só no completo;
 #                              `imagem` (opcional) = ubuntu-22.04 manda baixar a imagem do runner 22.04
 # PULA-NO-RAPIDO|job|passo     no --rapido o passo de nome exato sai da cópia do YAML
-# SEM-NEEDS|job|motivo         o `needs:` do job sai da cópia (o act o seguiria e rodaria o job de que ele depende)
+# SEM-NEEDS|job|dep,dep|motivo  as dependências citadas saem do `needs:` do job, na cópia (o act seguiria o `needs:` e rodaria
+#                              de novo, antes dele, o job de que ele depende); o `needs:` que sobra continua valendo
 # FORA-DE-CASA|job|motivo      não roda em casa, com o motivo medido
 linhas() {
   if [ -n "${TABELA:-}" ]; then printf '%s\n' "$TABELA"; else cat "$JOBS_TXT" 2>/dev/null; fi | grep -vE '^\s*(#|$)'
@@ -119,7 +120,9 @@ conferir_tabela() {
       ROLA) case "$resto" in rapido|completo) ;; *) echo "ci-local: ROLA|$j|$resto: o modo é rapido ou completo" >&2; erros=1 ;; esac ;;
       FORA-DE-CASA) [ -n "$resto" ] || { echo "ci-local: FORA-DE-CASA|$j sem motivo" >&2; erros=1; } ;;
       PULA-NO-RAPIDO) passo_existe "$j" "$resto" || { echo "ci-local: PULA-NO-RAPIDO|$j|$resto: o job não tem esse passo" >&2; erros=1; } ;;
-      SEM-NEEDS) [ -n "$resto" ] || { echo "ci-local: SEM-NEEDS|$j sem motivo" >&2; erros=1; } ;;
+      SEM-NEEDS)
+        [ -n "$resto" ] || { echo "ci-local: SEM-NEEDS|$j sem a lista de dependências" >&2; erros=1; }
+        [ -n "$(linhas | awk -F'|' -v j="$j" '$1=="SEM-NEEDS" && $2==j {print $4}')" ] || { echo "ci-local: SEM-NEEDS|$j sem motivo" >&2; erros=1; } ;;
       *) echo "ci-local: linha de tipo desconhecido: $tipo|$j" >&2; erros=1 ;;
     esac
   done < <(linhas)
@@ -152,7 +155,8 @@ if [ "$listar" = 1 ]; then
   echo "roda no act:"
   linhas | awk -F'|' '$1=="ROLA" {printf "  %-22s %s\n", $2, $3}'
   echo "fora de casa:"
-  linhas | awk -F'|' '$1=="FORA-DE-CASA" {printf "  %-22s %s\n", $2, $3}'
+  linhas | awk -F'|' '$1=="FORA-DE-CASA" {m = $3; for (i = 4; i <= NF; i++) m = m "|" $i; printf "  %-22s %s\n", $2, (length(m) > 110 ? substr(m, 1, 110) "…" : m)}'
+  echo "(o motivo inteiro está em scripts/ci-local/jobs.txt)"
   exit 0
 fi
 [ -n "$modo" ] || { echo "ci-local: diga --rapido, --completo ou --job NOME (--ajuda)" >&2; exit 2; }
@@ -236,25 +240,42 @@ tirar_passo() { # arquivo job passo
     atual==job && $0 == "      - name: " passo {pula=1}
     !pula {print}' "$1" > "$1.n" && mv "$1.n" "$1"
 }
-tirar_needs() { # arquivo job
-  awk -v job="$2" '
+tirar_needs() { # arquivo job deps(vírgulas): tira só estas do `needs:` do job (uma linha, `a` ou `[a, b]`)
+  awk -v job="$2" -v tirar="$3" '
+    BEGIN {n = split(tirar, t, ","); for (i = 1; i <= n; i++) fora[t[i]] = 1}
     /^jobs:/ {emjobs=1}
     emjobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {atual=$1; sub(/:$/, "", atual)}
-    atual==job && /^    needs:/ {next}
+    atual==job && /^    needs:/ {
+      v = $0; sub(/^    needs:[[:space:]]*/, "", v); gsub(/[\[\]]/, "", v)
+      m = split(v, d, /[[:space:]]*,[[:space:]]*/); resto = ""
+      for (i = 1; i <= m; i++) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", d[i]); if (d[i] != "" && !(d[i] in fora)) resto = resto (resto == "" ? "" : ", ") d[i] }
+      if (resto != "") print "    needs: [" resto "]"
+      next
+    }
     {print}' "$1" > "$1.n" && mv "$1.n" "$1"
 }
+# O `act` só troca o `actions/checkout` pela árvore local quando o passo NÃO pede `ref:`. Com `ref:` (o
+# release.yml pede a tag) ele roda o checkout de verdade, e o checkout de verdade busca no servidor um
+# repositório que o act não sabe qual é (medido em 06/10/2026: clonou o próprio `actions/checkout` e
+# fez checkout do `master` dele). A cópia troca a linha por `lfs: false`, que o act deixa passar.
+REF_DO_RELEASE='^( +)ref: \$\{\{ github\.event\.inputs\.tag \|\| github\.ref \}\}[[:space:]]*$'
+tirar_ref() { sed -E "s/$REF_DO_RELEASE/\1lfs: false/" "$1" > "$1.n" && mv "$1.n" "$1"; }
 yaml_de() { # job -> caminho do YAML (o original, ou a cópia filtrada)
   local job="$1" f copia="$TMP/$1.yml" mudou=0 p
   f="$(arquivo_do_job "$job")"; [ -n "$f" ] || return 1
   f="$ARV/.github/workflows/$f"
   cp "$f" "$copia"
+  if grep -qE "$REF_DO_RELEASE" "$copia"; then tirar_ref "$copia"; mudou=1; fi
   if [ "$modo" = rapido ]; then
     while IFS= read -r p; do [ -n "$p" ] && { tirar_passo "$copia" "$job" "$p"; mudou=1; }; done < <(campo PULA-NO-RAPIDO "$job" 3)
   fi
   for p in "${SEM_PASSO[@]:-}"; do
     [ -n "$p" ] && [ "${p%%|*}" = "$job" ] && { tirar_passo "$copia" "$job" "${p#*|}"; mudou=1; }
   done
-  if [ -n "$(campo SEM-NEEDS "$job" 2)" ]; then tirar_needs "$copia" "$job"; mudou=1; fi
+  # todos os SEM-NEEDS da tabela valem na cópia (o act segue o `needs:` dos jobs de que este depende)
+  while IFS='|' read -r _ o_job deps _; do
+    [ -n "$o_job" ] && { tirar_needs "$copia" "$o_job" "$deps"; mudou=1; }
+  done < <(linhas | awk -F'|' '$1=="SEM-NEEDS"')
   if [ "$mudou" = 1 ]; then echo "$copia"; else echo "$f"; fi
 }
 
@@ -294,11 +315,21 @@ rodar_job() { # job índice
 }
 
 # As actions (`setup-python`…) o `act` clona em ~/.cache/act; dois `act` clonando juntos se pisam
-# («Unable to reset to <sha>: EOF»). Com a cópia já ali, `--action-offline-mode` não baixa de
-# novo (e a corrida sai rápida e sem rede); sem ela, um job de cada vez até a cópia existir.
+# («Unable to reset to <sha>: EOF»). Com todas as cópias já ali, `--action-offline-mode` não baixa
+# de novo (e a corrida sai rápida e sem rede); faltando alguma, um job de cada vez até ela existir.
+acoes_em_falta() { # as actions (fora o checkout, que o act troca pela árvore) dos workflows dos jobs a rodar, sem cópia local
+  local j f u ref
+  for j in "${JOBS[@]}"; do
+    f="$(arquivo_do_job "$j")"; [ -n "$f" ] || continue
+    grep -hoE 'uses: *[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+[^ ]*@[^ ]+' "$ARV/.github/workflows/$f"
+  done | sed -E 's/^uses: *//' | sort -u | while read -r u; do
+    case "$u" in actions/checkout@*) continue ;; esac
+    ref="${u#*@}"; u="${u%%@*}"
+    [ -d "$HOME/.cache/act/$(echo "$u" | cut -d/ -f1,2 | tr / -)@${ref//\//-}" ] || echo "$u@$ref"
+  done
+}
 OFFLINE=()
-if [ -d "$HOME/.cache/act/actions-setup-python@v5" ]; then OFFLINE=(--action-offline-mode)
-else EM_PARALELO=1; fi
+if [ -z "$(acoes_em_falta)" ]; then OFFLINE=(--action-offline-mode); else EM_PARALELO=1; fi
 
 INI=$(date +%s)
 i=0
