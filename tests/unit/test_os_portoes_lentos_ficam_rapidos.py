@@ -6,7 +6,7 @@ guarda as duas metades da cura:
 * **Os três portões de página não dependem da rede.** As páginas pedem a fonte ao
   Google; com a rede fora o ``goto`` esperava o ``load`` por 30 s e REPROVAVA. O ponto
   comum ``scripts/chrome_sem_rede.py`` recusa o que não é local. A régua prova (1) que
-  a página abre depressa com uma rede que NUNCA responde, (2) que o instrumento morde
+  a página abre com uma rede que NUNCA responde, (2) que o instrumento morde
   (sem o bloqueio, a mesma rede pendura de verdade), (3) que o veredito de página
   aberta sem rede é o de página aberta com a rede respondendo, e (4) que os três
   portões passam por esse ponto comum.
@@ -23,7 +23,6 @@ import importlib.util
 import pathlib
 import re
 import sys
-import time
 from typing import Any
 
 import pytest
@@ -45,6 +44,10 @@ _PAGINA_COM_FONTE_DE_FORA = f"""<!doctype html><html><head><meta charset="utf-8"
 <body><div id="caixa">oi</div></body></html>"""
 
 _LARGURA_DA_CAIXA = "document.getElementById('caixa').getBoundingClientRect().width"
+
+#: o prazo do ``goto`` diante da rede que nunca responde: folgado para a carga da máquina
+#: (a página abre em décimos de segundo), e ainda assim finito diante de uma espera infinita.
+_PRAZO_FOLGADO_MS = 20_000
 
 pytestmark = pytest.mark.skipif(
     not CHROME.exists(), reason="sem o Chrome do sistema — a régua não tem motor")
@@ -85,19 +88,30 @@ def _rede_que_nunca_responde(contexto: Any) -> list[str]:
 
 
 class TestAPaginaNaoPedeARede:
-    def test_com_a_rede_fora_a_pagina_abre_depressa_e_o_externo_e_recusado(
+    def test_com_a_rede_fora_a_pagina_abre_e_o_externo_e_recusado(
         self, pagina_com_fonte_de_fora: pathlib.Path
     ) -> None:
-        with _playwright().sync_playwright() as pw:
+        """A rede que nunca responde pendura para SEMPRE: abrir dentro do prazo é a prova.
+
+        A prova não é um teto de segundos no relógio (um teto de 5 s reprovou uma vez
+        em 06/10 com a carga da máquina em 18, sem rede nenhuma envolvida): sem o
+        bloqueio, o ``load`` espera um pedido que não termina nunca e o ``goto`` estoura
+        o prazo, por mais folgado que ele seja. O prazo folgado só tira a carga da conta.
+        """
+        playwright = _playwright()
+        with playwright.sync_playwright() as pw:
             navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
             try:
                 contexto = navegador.new_context()
                 pendurados = _rede_que_nunca_responde(contexto)
-                inicio = time.monotonic()
-                pagina, recusadas = chrome_sem_rede.abrir_sem_rede(
-                    contexto, pagina_com_fonte_de_fora.as_uri(),
-                    largura=800, altura=600, espera_ms=8_000)
-                gasto = time.monotonic() - inicio
+                try:
+                    pagina, recusadas = chrome_sem_rede.abrir_sem_rede(
+                        contexto, pagina_com_fonte_de_fora.as_uri(),
+                        largura=800, altura=600, espera_ms=_PRAZO_FOLGADO_MS)
+                except playwright.TimeoutError:
+                    pytest.fail(
+                        "a página esperou a rede que nunca responde até estourar o prazo: "
+                        "o portão voltou a depender da rede para medir a página")
                 largura = pagina.evaluate(_LARGURA_DA_CAIXA)
             finally:
                 navegador.close()
@@ -107,9 +121,6 @@ class TestAPaginaNaoPedeARede:
             f"o pedido externo chegou à rede ({pendurados}): o bloqueio não o segurou "
             "antes de sair da máquina")
         assert largura == 200, f"a página não foi medida inteira: {largura}"
-        assert gasto < 5, (
-            f"a página levou {gasto:.1f} s com uma rede que nunca responde: o portão "
-            "voltou a esperar a rede para medir a página")
 
     def test_sem_o_bloqueio_a_mesma_rede_pendura_de_verdade(
         self, pagina_com_fonte_de_fora: pathlib.Path
