@@ -14,7 +14,8 @@
 #     bash scripts/ci-local.sh --job NOME[,NOME] # só estes, para triar (o `PULA-NO-RAPIDO` não vale)
 #     bash scripts/ci-local.sh --listar          # o que roda, o que fica fora e por quê
 #     bash scripts/ci-local.sh --conferir        # diz o que rodaria e sai 1 se rodaria alguma coisa
-#   para triar, com --job:  --sem-passo 'job|nome do passo' (repetível) tira um passo da cópia do YAML
+#   para triar, com --job:  --sem-passo 'job|nome do passo' (repetível) tira um passo da cópia do YAML;
+#                           --perna ubuntu-22.04 roda só essa perna da matriz de runners
 #
 # O QUE RODA: a ÁRVORE DO ÍNDICE (`git checkout-index`, só arquivo versionado), exportada
 # para uma pasta de /tmp. É o que o runner do GitHub vê depois do `actions/checkout`: arquivo
@@ -66,16 +67,17 @@ REDE_ACT='^Error: .*(no such host|dial tcp|Temporary failure in name resolution)
 # medido em 06/10/2026 com a máquina cheia): também não é defeito do job.
 DOCKER_CAIDO='^(Error: |\[[^]]*\] +(failed to remove container|Error while stop job container)).*(context deadline exceeded|Cannot connect to the Docker daemon)'
 
-modo=""; alvo=""; conferir=0; listar=0; SEM_PASSO=()
+modo=""; alvo=""; conferir=0; listar=0; SEM_PASSO=(); SO_PERNA=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --rapido) modo=rapido ;;
     --completo) modo=completo ;;
     --job) shift; alvo="${1:-}"; modo=job ;;
     --sem-passo) shift; SEM_PASSO+=("${1:-}") ;;
+    --perna) shift; SO_PERNA="${1:-}" ;;
     --listar) listar=1 ;;
     --conferir) conferir=1 ;;
-    -h|--ajuda) sed -n '2,36p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--ajuda) awk 'NR > 1 && /^#/ {sub(/^# ?/, ""); print} /^set -uo/ {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "ci-local: argumento desconhecido: $1" >&2; exit 2 ;;
   esac
   shift
@@ -341,6 +343,7 @@ rodar_job() { # job índice
     printf '{"ref": "refs/tags/v%s"}\n' "${versao:-0.0.0-local}" > "$TMP/tag-$job.json"
   fi
   [ "$(campo ROLA "$job" 4)" = ubuntu-22.04 ] && rotulos=(ubuntu-24.04 ubuntu-22.04)
+  [ -n "$SO_PERNA" ] && [ "${#rotulos[@]}" -gt 1 ] && rotulos=("$SO_PERNA")
   : > "$log"
   for rot in "${rotulos[@]}"; do
     if [ -z "$rot" ]; then

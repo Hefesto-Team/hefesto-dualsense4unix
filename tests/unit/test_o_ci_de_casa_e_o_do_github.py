@@ -509,6 +509,13 @@ def test_a_matriz_de_runners_roda_uma_perna_por_chamada_com_a_imagem_dela(mundo:
     assert "ubuntu-22.04=catthehacker/ubuntu:act-22.04" in chamadas[1]
 
 
+def test_a_perna_pedida_e_a_unica_que_roda(mundo: Mundo) -> None:
+    mundo.rodar("--job", "deb", "--perna", "ubuntu-22.04")
+    log = mundo.log("deb")
+    assert len([ln for ln in log.splitlines() if ln.startswith("ARGS:")]) == 1
+    assert "--matrix os:ubuntu-22.04" in log and "=== a perna ubuntu-24.04" not in log
+
+
 def test_o_job_sem_matriz_de_runners_roda_numa_chamada_so(mundo: Mundo) -> None:
     mundo.rodar("--job", "glifos")
     log = mundo.log("glifos")
