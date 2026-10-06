@@ -205,7 +205,7 @@ def test_trocar_o_alvo_do_link_conta_como_mudanca(
 ) -> None:
     """O link entra pelo `lstat` com o alvo no lugar do resumo."""
     lar = _lar_falso(tmp_path, monkeypatch)
-    um, dois = tmp_path / "um", tmp_path / "dois"
+    um, dois = tmp_path / "aaa", tmp_path / "bbb"
     um.mkdir()
     dois.mkdir()
     ligacao = _estado(lar) / "casa"
