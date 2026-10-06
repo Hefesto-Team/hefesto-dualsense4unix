@@ -74,7 +74,11 @@ def funções_declaradas(dados: dict[str, Any]) -> list[str]:
     if "about" in dados:
         nomes.append("about")
     nomes += [f"funções.{n}" for n in (dados.get("funções") or {})]
-    nomes += [f"seguranca.{n}" for n in (dados.get("seguranca") or {})]
+    # Na ordem de SEGURANCA, não na do arquivo: as atualizações de segurança só ligam com os
+    # alertas já ligados, e o servidor recusa a ordem inversa.
+    seg = dados.get("seguranca") or {}
+    nomes += [f"seguranca.{n}" for n in SEGURANCA if n in seg]
+    nomes += [f"seguranca.{n}" for n in seg if n not in SEGURANCA]
     if "mantenedores" in dados:
         nomes.append("mantenedores")
     if "rulesets" in dados:
@@ -468,7 +472,9 @@ def contem(real: Any, quer: Any) -> bool:
 
 
 def planejar_rulesets(c: Contexto) -> list[Acao]:
-    _, lista = c.gh.ler(f"repos/{c.repo}/rulesets")
+    # Só os do repositório: os da organização vêm na mesma lista por padrão, e um homônimo dela
+    # seria lido como o nosso (e o PUT iria a um id que o repositório não edita).
+    _, lista = c.gh.ler(f"repos/{c.repo}/rulesets?includes_parents=false")
     por_nome = {x["name"]: x["id"] for x in lista}
     acoes: list[Acao] = []
     for r in c.dados["rulesets"]:

@@ -41,6 +41,10 @@ funções:
     ligada: false
     depois: "depois da release 1"
 
+# O PR de segurança que o robô do Dependabot abre sai vermelho no check `autoria` (o autor dele não está
+# no `.mailmap`), e não se mescla, nem pela exceção de administrador: qualquer jeito de mesclar põe o
+# robô como autor na história do `dev`, e a história fica vermelha até a próxima reescrita. Quem mantém
+# refaz a mesma atualização num commit seu, e o robô fecha o PR sozinho.
 seguranca:
   relato_privado: true
   alertas_do_dependabot: true
@@ -59,15 +63,17 @@ mantenedores:
 # `checks` são os nomes que o GitHub mostra (o `name` do job, ou o id dele; o job com matriz
 # leva o valor entre parênteses) e cada um tem de existir em `.github/workflows/`.
 # Os administradores passam pelo ruleset «a porta» (o trabalho do dia entra por push direto no `dev`);
-# o ruleset «a história» não tem exceção para ninguém.
+# o ruleset «a história» não tem exceção para ninguém. O histórico linear mora na porta, e não na
+# história: a história do `dev` já traz centenas de merges que o `main` ainda não tem, e sem exceção
+# a regra barraria o primeiro push do repositório recriado e o avanço do `main` na release.
 rulesets:
   - nome: "A história do dev e do main não se reescreve"
     ramos: [dev, main]
     sem_apagar: true
     sem_push_forcado: true
-    historico_linear: true
   - nome: "O que entra no dev e no main passa pelos checks e pela revisão"
     ramos: [dev, main]
+    historico_linear: true
     revisão:
       aprovacoes: 1
     checks:

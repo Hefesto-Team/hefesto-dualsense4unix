@@ -70,6 +70,31 @@ def test_o_ruleset_exige_o_check_de_autoria_e_o_lint_test() -> None:
     assert {r["nome"] for r in _dados()["rulesets"] if r.get("sem_push_forcado")}
 
 
+def regras_que_barram_a_historia(dados: dict[str, Any]) -> list[str]:
+    """Os rulesets sem exceção que barram commit que a história já tem.
+
+    O histórico linear olha cada commit que o push acrescenta ao ramo, inclusive os antigos: a
+    história do `dev` tem centenas de merges que o `main` não tem (`git rev-list --merges`). Num
+    ruleset sem exceção, a regra barraria o primeiro push do repositório recriado e o avanço do
+    `main` na release, e nada a desligaria senão mudar o arquivo no meio da janela.
+    """
+    return [r["nome"] for r in dados["rulesets"]
+            if r.get("historico_linear") and r.get("excecao") is None]
+
+
+def test_a_regra_sem_excecao_nao_barra_a_historia_que_ja_existe() -> None:
+    assert regras_que_barram_a_historia(_dados()) == []
+    porta = next(r for r in _dados()["rulesets"] if "checks" in r)
+    assert porta.get("historico_linear") is True, "o PR de quem não mantém entra em linha reta"
+
+
+def test_mordida_historico_linear_sem_excecao_reprova() -> None:
+    dados = _dados()
+    historia = next(r for r in dados["rulesets"] if r.get("excecao") is None)
+    historia["historico_linear"] = True
+    assert regras_que_barram_a_historia(dados) == [historia["nome"]]
+
+
 def funcoes_sem_aplicador(dados: dict[str, Any], aplicadores: dict[str, Any]) -> list[str]:
     return [f for f in aplicar.funções_declaradas(dados) if f not in aplicadores]
 
@@ -134,6 +159,47 @@ def test_mordida_o_esquema_reprova_o_arquivo_estragado(estraga: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _combinacoes(job: dict[str, Any]) -> list[dict[str, Any]]:
+    """Cada combinação da matriz do job (as dimensões cruzadas, mais as do `include`)."""
+    matriz = (job.get("strategy") or {}).get("matrix") or {}
+    dims = {k: v for k, v in matriz.items() if k not in ("include", "exclude")}
+    combos = [dict(zip(dims, c, strict=True)) for c in itertools.product(*dims.values())]
+    if not dims:
+        combos = []
+    for extra in matriz.get("include") or []:
+        # sem dimensões, cada `include` é uma combinação própria
+        casou = [c for c in combos
+                 if dims and all(c[k] == v for k, v in extra.items() if k in dims)]
+        if casou:
+            for c in casou:
+                c.update({k: v for k, v in extra.items() if k not in dims})
+        else:
+            combos.append(dict(extra))
+    return combos
+
+
+def _nome_do_check(nome: str, valores: dict[str, Any]) -> str:
+    """O nome que o GitHub mostra: o `name` com a matriz expandida; sem `${{ matrix.* }}` no
+    nome, ele acrescenta os valores entre parênteses (com `name` ou sem)."""
+    if "${{ matrix." in nome:
+        for k, v in valores.items():
+            nome = nome.replace("${{ matrix." + k + " }}", str(v))
+        return nome
+    return f"{nome} ({', '.join(str(v) for v in valores.values())})"
+
+
+def test_o_nome_do_check_segue_a_regra_do_github() -> None:
+    sem_nome = {"strategy": {"matrix": {"python": ["3.10", "3.12"]}}}
+    assert [_nome_do_check("lint-test", v) for v in _combinacoes(sem_nome)] == [
+        "lint-test (3.10)", "lint-test (3.12)"]
+    # com `name` e sem a matriz nele, o GitHub acrescenta os valores do mesmo jeito
+    com_nome = {"strategy": {"matrix": {"os": ["a"]}}}
+    assert [_nome_do_check("Smoke", v) for v in _combinacoes(com_nome)] == ["Smoke (a)"]
+    so_include = {"strategy": {"matrix": {"include": [{"distro": "fedora"}, {"distro": "arch"}]}}}
+    assert [_nome_do_check("Smoke ${{ matrix.distro }}", v) for v in _combinacoes(so_include)] == [
+        "Smoke fedora", "Smoke arch"]
+
+
 def contextos(raiz: Path) -> dict[str, dict[str, Any]]:
     """Cada nome de check que os workflows de `raiz` produzem, e se o workflow roda em PR."""
     achados: dict[str, dict[str, Any]] = {}
@@ -143,23 +209,7 @@ def contextos(raiz: Path) -> dict[str, dict[str, Any]]:
         em_pr = "pull_request" in (gatilhos if isinstance(gatilhos, (dict, list)) else [gatilhos])
         for ident, job in (wf.get("jobs") or {}).items():
             nome = str(job.get("name", ident))
-            matriz = (job.get("strategy") or {}).get("matrix") or {}
-            dims = {k: v for k, v in matriz.items() if k not in ("include", "exclude")}
-            if not dims:
-                nomes = [nome]
-            else:
-                nomes = []
-                for combo in itertools.product(*dims.values()):
-                    valores = dict(zip(dims, combo, strict=True))
-                    if "${{ matrix." in nome:
-                        n = nome
-                        for k, v in valores.items():
-                            n = n.replace("${{ matrix." + k + " }}", str(v))
-                        nomes.append(n)
-                    elif "name" in job:
-                        nomes.append(nome)
-                    else:
-                        nomes.append(f"{nome} ({', '.join(str(v) for v in combo)})")
+            nomes = [_nome_do_check(nome, v) for v in _combinacoes(job)] or [nome]
             for n in nomes:
                 achados[n] = {"arquivo": arq.name, "pr": em_pr}
     return achados
@@ -323,15 +373,20 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
     assert [r["name"] for r in e["rulesets"]] == [r["nome"] for r in d["rulesets"]]
     porta = next(r for r in e["rulesets"] if "revisão" in r["name"] or "checks" in r["name"])
     tipos = {x["type"] for x in porta["rules"]}
-    assert tipos == {"pull_request", "required_status_checks"}
+    assert tipos == {"pull_request", "required_status_checks", "required_linear_history"}
     contextos_ = [c["context"] for x in porta["rules"] if x["type"] == "required_status_checks"
                   for c in x["parameters"]["required_status_checks"]]
     assert "autoria" in contextos_
+    # O `.mailmap` é lido do topo do PR, e o próprio PR pode acrescentar quem o fez: a aprovação
+    # só vale depois do último push, e um push novo a derruba.
+    revisao = next(x["parameters"] for x in porta["rules"] if x["type"] == "pull_request")
+    assert revisao["require_last_push_approval"] is True
+    assert revisao["dismiss_stale_reviews_on_push"] is True
+    assert revisao["required_approving_review_count"] >= 1
     assert porta["bypass_actors"] == [
         {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]
     historia = next(r for r in e["rulesets"] if r["name"].startswith("A história"))
-    assert {x["type"] for x in historia["rules"]} == {
-        "deletion", "non_fast_forward", "required_linear_history"}
+    assert {x["type"] for x in historia["rules"]} == {"deletion", "non_fast_forward"}
     assert historia["bypass_actors"] == []
 
 
@@ -407,6 +462,32 @@ def test_o_que_o_servidor_acrescenta_nao_e_deriva(gh: Mentira) -> None:
     # o servidor devolve campos que nunca mandamos; e o campo mandado tem de ser lido de volta
     assert "allowed_merge_methods" in json.dumps(e["rulesets"])
     assert rodar("--conferir") == 0
+
+
+def test_o_ruleset_homonimo_da_organizacao_nao_se_confunde_com_o_nosso(gh: Mentira) -> None:
+    # A lista da API traz os da organização junto, por padrão; o id deles não se edita pelo
+    # repositório. O aplicador lê só os do repositório.
+    nome = _dados()["rulesets"][0]["nome"]
+    gh.mudar(rulesets_da_org=[{"id": 900, "name": nome, "target": "branch", "enforcement": "active",
+                               "source_type": "Organization", "source": "Hefesto-Team"}])
+    assert rodar("--aplicar") == 0
+    assert [r["name"] for r in gh.estado["rulesets"]] == [r["nome"] for r in _dados()["rulesets"]]
+    assert rodar("--conferir") == 0
+
+
+def test_a_ordem_da_seguranca_no_arquivo_nao_muda_o_resultado(
+    gh: Mentira, tmp_path: Path
+) -> None:
+    # As atualizações de segurança só ligam depois dos alertas; o arquivo pode listar ao contrário.
+    dados = _dados()
+    dados["seguranca"] = dict(reversed(list(dados["seguranca"].items())))
+    invertido = tmp_path / "invertido.yml"
+    invertido.write_text(
+        yaml.safe_dump(dados, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    primeira = next(iter(yaml.safe_load(invertido.read_text())["seguranca"]))
+    assert primeira == "protecao_de_push_de_segredo"
+    assert rodar("--aplicar", arquivo=invertido) == 0
+    assert (gh.estado["alertas"], gh.estado["fixes"]) == (True, True)
 
 
 def test_a_guarda_recusa_conta_errada_e_nao_escreve(gh: Mentira, capsys: Capsys) -> None:

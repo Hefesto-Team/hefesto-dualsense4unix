@@ -24,6 +24,7 @@ a = sys.argv[1:]
 if a[:2] != ["api", "-i"] or a[2] != "-X":
     sys.stderr.write("o gh de mentira só fala `gh api -i -X MÉTODO caminho`\n"); sys.exit(2)
 metodo, caminho = a[3], a[4].lstrip("/")
+caminho, _, consulta = caminho.partition("?")
 resto = a[5:]
 corpo, campos = None, {}
 i = 0
@@ -203,8 +204,11 @@ if sub == "rulesets":
     if st["privado"]:
         saida(403, msg="Upgrade to GitHub Pro or make this repository public to enable this feature.")
     if metodo == "GET":
-        saida(200, [{"id": x["id"], "name": x["name"], "target": x["target"], "enforcement": x["enforcement"]}
-                    for x in st["rulesets"]])
+        # como a API real: sem `includes_parents=false`, os da organização vêm junto
+        da_org = [] if "includes_parents=false" in consulta else st.get("rulesets_da_org", [])
+        saida(200, [{"id": x["id"], "name": x["name"], "target": x["target"], "enforcement": x["enforcement"],
+                     "source_type": x["source_type"], "source": x["source"]}
+                    for x in st["rulesets"] + da_org])
     if metodo == "POST":
         valida(corpo)
         if any(x["name"] == corpo["name"] for x in st["rulesets"]):
