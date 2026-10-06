@@ -373,7 +373,7 @@ def _colunas_da_mira() -> list[str]:
     import re
 
     doc = _bancada_calibrar()
-    return re.findall(r'<div class="mira" data-controle="p\d">(.*?)\n          </div>',
+    return re.findall(r'<div class="mira"[^>]* data-controle="p\d">(.*?)\n          </div>',
                       doc, re.S)
 
 

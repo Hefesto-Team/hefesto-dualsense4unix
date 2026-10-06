@@ -791,7 +791,7 @@ def test_a_calibrar_tem_os_dois_deslizantes_de_cada_controle() -> None:
 
     doc = (_RAIZ / "mockup/calibrar-sensores.html").read_text(encoding="utf-8")
     cartoes = re.findall(r'<div class="ctr"[^>]*\s+data-controle="(p\d)"', doc)
-    colunas = re.findall(r'<div class="mira" data-controle="(p\d)">', doc)
+    colunas = re.findall(r'<div class="mira"[^>]* data-controle="(p\d)">', doc)
     assert cartoes and colunas == cartoes, (cartoes, colunas)
     for gesto, (minimo, maximo, nasce) in (("mira-sensibilidade", calibrar.SENSIBILIDADE),
                                            ("mira-tremor", calibrar.TREMOR)):

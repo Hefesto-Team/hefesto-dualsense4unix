@@ -86,6 +86,30 @@ DE_ONDE_VEM_A_MIRA = ("Valem para o controle com a Mira Virtual acesa, na aba "
                       "Controles. A Inclinação usa todos menos o tremor, e o "
                       "Cursor do touchpad, só o quanto um gesto anda.")
 
+#: A CALIBRAR COM POUCO TEXTO — 06/10/2026, leva 1.7 (desenho-navegacao, item
+#: 11). Ela: *«Tem muito texto aqui. botões tão sem padrão. E ela precisa ficar
+#: bonita de verdade»*. O subtítulo, as três frases dos passos, a frase da mira
+#: e o aviso do pé saíram da tela para o `?` do título e para o `title` de cada
+#: passo. E o passo 3 dizia que o zero «fica gravado no controle», o que é
+#: falso: o firmware não aceita escrita de calibração por nós (a família de
+#: fábrica, sem desfazer, `dualsense-referencia-canonica.md`), e quem guarda o
+#: zero é o Hefesto, por controle.
+AJUDA_DA_PAGINA = ("O giroscópio e o acelerômetro de todos os controles "
+                   "conectados, de uma vez. A calibração não muda os seus "
+                   "ajustes: ela mede o zero de cada controle parado, e o Hefesto "
+                   "o guarda para aquele controle. Se o cursor anda sozinho com o "
+                   "controle parado, é isto que resolve.")
+PASSOS = (
+    ("e-parado", "Deixe parados",
+     "Numa superfície plana, com os analógicos livres. Não precisa desconectar nada."),
+    ("e-medindo", f"Medindo {SEGUNDOS} s",
+     "Não toque neles. Encostar no controle recomeça a conta dele."),
+    ("e-pronto", "Pronto",
+     "O zero de cada controle fica guardado no Hefesto e vale para todo jogo."),
+)
+#: Os lugares vazios mostram até o P4, como as abas: o desenho é para quatro.
+LUGARES = 4
+
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     REMAPEAVEIS,
 )
@@ -193,9 +217,19 @@ CSS = """
       display:flex;flex-direction:column}
   .topo{padding:15px 20px;border-bottom:1px solid var(--border-sutil);
         position:relative;padding-left:132px;flex:0 0 auto}
-  h1{font-size:18px;font-weight:700}
+  h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px}
   h1 .p{color:var(--pink)}
-  .sub{font-size:12.5px;color:var(--texto-mudo);margin-top:3px}
+  /* O `?` É CÓPIA DECLARADA DO `.ajuda` DA FOLHA DA CASA (`topo.html`): esta
+     página tem folha própria, e um `?` com outra cara seria outro vocabulário. */
+  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;font-weight:400;
+         border:1px solid var(--linha);color:var(--texto-mudo);font-size:11px;
+         line-height:15px;text-align:center;cursor:help;position:relative}
+  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda .dica{display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
+         background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
+         padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
+         text-align:left}
+  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
   /* O PERFIL ATIVO, no canto do topo: cópia do `.perfil-ativo` do `topo.html` (a Calibrar é página
      avulsa e não tem a fita). Os ajustes da Mira caem no perfil que vale, e este chip diz qual. */
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
@@ -218,15 +252,16 @@ CSS = """
      documenta, e a mesma cura. */
   .et{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
 
+  /* OS TRÊS PASSOS VIRARAM UMA FITA — 06/10/2026. Uma linha de 32px no lugar
+     de três cartões de 87px com duas frases cada; a frase mora no `title`. */
   .passos{display:flex;gap:9px}
-  .passo{flex:1;display:flex;gap:10px;align-items:flex-start;
-         padding:11px 13px;border-radius:9px;border:1px solid var(--border-sutil);
+  .passo{flex:1;display:flex;gap:9px;align-items:center;height:32px;
+         padding:0 12px;border-radius:8px;border:1px solid var(--border-sutil);
          background:var(--panel);cursor:pointer}
-  .passo .n{flex:0 0 22px;height:22px;border-radius:50%;display:flex;
+  .passo .n{flex:0 0 20px;height:20px;border-radius:50%;display:flex;
             align-items:center;justify-content:center;font-family:var(--m);
             font-size:11px;border:1px solid var(--border-forte);color:var(--texto-mudo)}
-  .passo b{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
-  .passo span.d{font-size:12px;color:var(--texto-mudo);line-height:16px}
+  .passo b{font-size:12.5px;font-weight:600}
   /* O PASSO EM QUE ELA ESTÁ. Cor explícita, nada de `opacity` — a lição medida
      da `.fita.inerte`: a opacidade tira contraste E peso do traço ao mesmo
      tempo, e o que sobra deixa de comunicar o que foi desenhado. */
@@ -244,13 +279,25 @@ CSS = """
      bloco passou a ser o alvo que o produto TROCA a cada mudança de bancada, e
      o seletor vive escrito no pacote: `[data-bloco="controles"]`. Um endereço
      novo nasce na língua de hoje. */
-  .controles{display:flex;gap:11px}
+  /* UM CARTÃO POR JOGADOR — 06/10/2026. Os dois blocos que o tique remonta
+     (`controles` e `miras`) somem da grade (`display:contents`) e os filhos
+     deles caem numa grade de quatro colunas: na primeira linha o controle, na
+     segunda a mira DELE, colada embaixo e com a mesma borda do plástico. Os
+     lugares vazios ocupam as duas linhas. O endereço dos dois blocos não muda,
+     e o pacote continua trocando cada um pelo gerador. */
+  .grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:11px;
+         grid-template-rows:auto minmax(0,1fr);flex:1 0 auto}
+  .controles,.mira-cx{display:contents}
+  .lugar{grid-row:span 2;border:1px dashed var(--border-forte);border-radius:9px;
+         display:flex;align-items:center;justify-content:center;
+         font-family:var(--m);font-size:22px;color:var(--border-forte)}
   /* SEM CONTROLE NENHUM não é cartão vazio: é uma frase. Ver `SEM_CONTROLE`. */
-  .vazio{flex:1;padding:22px 14px;text-align:center;border-radius:9px;
+  .vazio{grid-column:1 / -1;padding:22px 14px;text-align:center;border-radius:9px;
          border:1px dashed var(--border-forte);background:var(--panel);
          color:var(--texto-mudo);font-size:13px;line-height:19px}
-  .ctr{flex:1;border:2px solid var(--plastico,var(--border-forte));border-radius:9px;
-       background:var(--panel);padding:11px 12px 12px;display:flex;
+  .ctr{border:2px solid var(--plastico,var(--border-forte));border-bottom:0;
+       border-radius:9px 9px 0 0;
+       background:var(--panel);padding:11px 12px 10px;display:flex;
        flex-direction:column;gap:8px;min-width:0}
   .ctr-topo{display:flex;align-items:center;gap:9px;min-width:0}
   .ctr .nome{font-size:12.5px;color:var(--texto-mudo);line-height:15px;white-space:nowrap;
@@ -267,7 +314,7 @@ CSS = """
      estica o cartão inteiro. Medido: cada cartão saía com ~900px de vazio.
      As dez abas não sofrem disto porque o `topo.html` traz a regra no esqueleto
      comum; esta página tem folha própria, e por isso precisa dizê-la. */
-  .ds-svg{width:74px;height:auto;flex:0 0 74px}
+  .ds-svg{width:60px;height:auto;flex:0 0 60px}
   .selo{margin-left:auto;flex:0 0 auto;font-size:11px;padding:2px 8px;border-radius:6px;
         border:1px solid var(--border-forte);color:var(--texto-mudo);white-space:nowrap}
   #e-medindo:checked ~ .controles .selo{border-color:var(--orange);color:var(--orange)}
@@ -280,10 +327,10 @@ CSS = """
   #e-medindo:checked ~ .controles .selo .t2,
   #e-pronto:checked  ~ .controles .selo .t3{display:inline}
 
-  .leitura{border-top:1px solid var(--border-sutil);padding-top:7px;
-           display:flex;flex-direction:column;gap:5px}
+  .leitura{border-top:1px solid var(--border-sutil);padding-top:9px;
+           display:flex;flex-direction:column;gap:8px}
   .lin{display:flex;align-items:center;gap:7px;font-family:var(--m);font-size:11px}
-  .lin > .r{flex:0 0 80px;color:var(--texto-mudo)}
+  .lin > .r{flex:0 0 74px;color:var(--texto-mudo)}
   .lin > .v{flex:0 0 52px;text-align:right;color:var(--texto-suave)}
   .lin > .g{flex:1;height:4px;border-radius:2px;background:var(--border-sutil);
             position:relative;overflow:hidden;color:var(--border-forte)}
@@ -316,17 +363,24 @@ CSS = """
   /* O RODAPÉ DESCE PARA O FIM DA CAIXA, como o das abas: a altura que sobra
      vira vão ENTRE os cartões e os botões, nunca abaixo do aviso. */
   .rodape{display:flex;align-items:center;gap:13px;margin-top:auto}
+  .rodape .acoes{display:flex;gap:9px}
   .rodape .barra{flex:1}
   /* A CONTA DE QUEM ESTÁ AQUI, e ela fica ao lado do botão de propósito: é a
      última coisa que a tela diz antes de ela apertar «Começar». Ver
      `contagem()` — com zero controles esta linha fica VAZIA, e quem fala é o
      lugar dos cartões. */
   .quantos{font-size:12px;color:var(--texto-mudo);white-space:nowrap}
-  .btn{height:34px;padding:0 15px;border-radius:8px;font-size:13px;cursor:pointer;
+  /* OS DOIS BOTÕES DO PÉ SÃO UM GRUPO — 06/10/2026: a mesma largura e a mesma
+     altura, lado a lado, e o «Começar» é o verde cheio do «Aplicar» das abas
+     (`topo.html`, `.r-aplicar`). */
+  .btn{height:34px;width:150px;padding:0 15px;border-radius:8px;font-size:13px;cursor:pointer;
        border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);
-       display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
+       display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
+       white-space:nowrap;font-family:inherit}
   .btn:hover{border-color:var(--comment);color:var(--fg)}
-  .btn.fazer{border-color:var(--green);color:var(--green)}
+  .btn.fazer{border-color:var(--green);background:var(--green);color:var(--app-bg);
+             font-weight:600}
+  .btn.fazer:hover{color:var(--app-bg);filter:brightness(1.08)}
   .btn .t2,.btn .t3{display:none}
   #e-medindo:checked ~ .rodape .btn.fazer .t1,
   #e-medindo:checked ~ .rodape .btn.fazer .t3,
@@ -334,21 +388,20 @@ CSS = """
   #e-pronto:checked  ~ .rodape .btn.fazer .t2{display:none}
   #e-medindo:checked ~ .rodape .btn.fazer .t2,
   #e-pronto:checked  ~ .rodape .btn.fazer .t3{display:inline}
-  #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);color:var(--orange)}
+  #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);background:var(--orange)}
 
   /* A MIRA VIRTUAL — 24/09/2026. As colunas repetem o `gap` e o `flex:1` dos
      cartões, e por isso cada uma cai embaixo do cartão do mesmo controle. */
-  .mira-cx{border-top:1px solid var(--border-sutil);padding-top:11px;
-           display:flex;flex-direction:column;gap:8px}
-  .mira-cx:empty{display:none}
-  .mira-topo{font-size:13px}
+  .mira{min-width:0;display:flex;flex-direction:column;gap:13px;
+        padding:9px 12px 12px;border-radius:0 0 9px 9px;
+        border:2px solid var(--plastico,var(--border-forte));border-top:0;
+        background:var(--panel);position:relative}
+  /* O FIO ENTRE AS DUAS METADES DO CARTÃO: o controle em cima, a mira dele
+     embaixo, separados como a `.leitura` se separa do topo. */
+  .mira::before{content:"";position:absolute;left:12px;right:12px;top:0;
+                border-top:1px solid var(--border-sutil)}
+  .mira-topo{display:flex;align-items:center;gap:7px;font-size:12.5px;min-height:20px}
   .mira-topo b{font-weight:600}
-  .mira-topo .d{font-size:12px;color:var(--texto-mudo);margin-left:6px}
-  .miras{display:flex;gap:11px}
-  .mira{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;
-        padding:9px 12px;border-radius:9px;border:1px solid var(--border-sutil);
-        background:var(--panel)}
-  .mira .quem{font-size:11px;color:var(--texto-mudo)}
   /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
      coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
      ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
@@ -386,8 +439,6 @@ CSS = """
   .inverter .sw.off{border-color:var(--border-forte);background:var(--app-bg);
     color:var(--texto-mudo)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
-  .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
-  .aviso b{color:var(--texto-suave);font-weight:600}
 """
 
 
@@ -461,11 +512,23 @@ def controle(c):
           </div>'''
 
 
+def lugares_vazios(quem):
+    """Os números dos lugares sem controle, até o P4, em ordem."""
+    tomados = {c.get("jogador") for c in quem}
+    livres = [n for n in range(1, LUGARES + 1) if n not in tomados]
+    return livres[:max(0, LUGARES - len(quem))]
+
+
+def lugar(n):
+    """O lugar vazio de um jogador: o número, e nada mais, como nas abas."""
+    return f'          <div class="lugar" aria-label="Lugar vazio do Player {n}">P{n}</div>'
+
+
 def controles(quem):
-    """O miolo do bloco `[data-bloco="controles"]`: os cartões, ou a frase."""
+    """O miolo do bloco `[data-bloco="controles"]`: os cartões e os lugares vazios, ou a frase."""
     if not quem:
         return f'          <p class="vazio">{SEM_CONTROLE}</p>'
-    return "\n".join(controle(c) for c in quem)
+    return "\n".join([controle(c) for c in quem] + [lugar(n) for n in lugares_vazios(quem)])
 
 
 def _deslizante(gesto, rotulo, faixa, campo, unidade=""):
@@ -506,8 +569,12 @@ def _inverter():
 
 def mira(c):
     """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu"""
-    return (f'          <div class="mira" data-controle="{c.get("pref") or ""}">\n'
+    return (f'          <div class="mira" style="--plastico:{_plastico(c)}"'
+            f' data-controle="{c.get("pref") or ""}">\n'
             f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
+            f'            <div class="mira-topo"><b>{ROTULO_DA_MIRA}</b>'
+            f'<span class="ajuda" tabindex="0">?<span class="dica">{DE_ONDE_VEM_A_MIRA}'
+            f'</span></span></div>\n'
             f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'
             f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
             f'{_segurar()}\n'
@@ -520,9 +587,15 @@ def miras(quem):
     if not quem:
         return ""
     colunas = "\n".join(mira(c) for c in quem)
-    return (f'\n      <div class="mira-topo"><b>{ROTULO_DA_MIRA}</b>'
-            f' <span class="d">{DE_ONDE_VEM_A_MIRA}</span></div>\n'
-            f'      <div class="miras">\n{colunas}\n      </div>\n    ')
+    return f'\n{colunas}\n    '
+
+
+def _passos():
+    """A fita dos três passos: o número e o nome, com a frase no `title`."""
+    return "\n".join(
+        f'      <label class="passo" for="{rid}" title="{dica}">'
+        f'<span class="n">{n}</span><b>{rot}</b></label>'
+        for n, (rid, rot, dica) in enumerate(PASSOS, 1))
 
 
 def documento(quem):
@@ -542,8 +615,7 @@ def documento(quem):
          abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
          o mesmo do mapa do controle. -->
     {caixa_da_janela.voltar("02-controles.html")}
-    <h1><span class="p">Calibrar sensores de movimento</span></h1>
-    <div class="sub">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez.</div>
+    <h1><span class="p">Calibrar sensores de movimento</span><span class="ajuda" tabindex="0">?<span class="dica">{AJUDA_DA_PAGINA}</span></span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
 
@@ -556,26 +628,13 @@ def documento(quem):
     <input class="et" type="radio" name="etapa" id="e-pronto">
 
     <div class="passos">
-      <label class="passo" for="e-parado">
-        <span class="n">1</span>
-        <span><b>Deixe os controles parados</b>
-          <span class="d">Numa superfície plana, com os analógicos livres. Não precisa desconectar nada.</span></span>
-      </label>
-      <label class="passo" for="e-medindo">
-        <span class="n">2</span>
-        <span><b>Não toque neles</b>
-          <span class="d">São {SEGUNDOS} segundos de leitura. Encostar no controle recomeça a conta dele.</span></span>
-      </label>
-      <label class="passo" for="e-pronto">
-        <span class="n">3</span>
-        <span><b>Pronto</b>
-          <span class="d">O zero de cada eixo fica gravado no controle e vale para todo jogo.</span></span>
-      </label>
+{_passos()}
     </div>
 
     <!-- OS CONTROLES DE QUEM ABRE, e o bloco inteiro tem endereço: o tique o
          remonta a cada mudança de bancada, pelo MESMO gerador que escreveu
          isto aqui. Ver `pacotes/a11_calibrar_sensores.py`. -->
+    <div class="grade">
     <div class="controles" data-bloco="controles">
 {controles(quem)}
     </div>
@@ -584,9 +643,9 @@ def documento(quem):
          bloco `A MIRA VIRTUAL` no topo deste arquivo. O bloco é outro de
          propósito: o dos cartões o produto remonta a cada tique. -->
     <div class="mira-cx" data-bloco="miras">{miras(quem)}</div>
+    </div>
 
     <div class="rodape">
-      <button class="btn fazer"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
       <div class="barra"><i></i></div>
       <!-- O ALVO É `html` E NÃO O TEXTO, e a razão é medida NESTA tela: com
            zero controles a `contagem()` devolve vazio, e o alvo padrão escreve
@@ -595,15 +654,10 @@ def documento(quem):
            propósito. É o mesmo defeito que a aba Lançadores mediu em 11/09, e
            a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
       <span class="quantos" data-campo="quantos" data-hef-alvo="html">{contagem(len(quem))}</span>
-      <a class="btn" href="02-controles.html">Fechar</a>
-    </div>
-
-    <!-- O QUE ELA PRECISA SABER, E SÓ ISSO. A calibração não muda ajuste nenhum
-         do perfil: ela zera a leitura de repouso do aparelho. Escrever mais que
-         isto seria a mesma prosa que o usuário mandou cortar dos tooltips. -->
-    <div class="aviso">
-      A calibração <b>não muda os seus ajustes</b> — ela só ensina ao controle qual é o zero dele.
-      Se o cursor anda sozinho com o controle parado, é isto que resolve.
+      <span class="acoes">
+        <button class="btn fazer"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
+        <a class="btn" href="02-controles.html">Fechar</a>
+      </span>
     </div>
 
   </div>
