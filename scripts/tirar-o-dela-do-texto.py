@@ -126,7 +126,7 @@ REGRAS_DE_FALA: list[tuple[re.Pattern[str], str]] = [
 
 # A voz crua do usuário (abreviação, primeira pessoa) é fala literal: o porquê técnico fica, a fala sai.
 _VOZ = re.compile(
-    r"(?<![\w-])(pq|tá|tô|vc|vcs|pra|né|nao|mto|tbm|ta|q|eu|meu|minha|minhas|mim|me|vou|quero|queria|tenho|acho|"
+    r"(?<![\w-])(pq|tá|tô|vc|vcs|pra|né|n[a]o|mto|tbm|ta|q|eu|meu|minha|minhas|mim|me|vou|quero|queria|tenho|acho|"
     r"vamos|temos|podemos|nosso|nossa|nossos)(?![\w-])", re.I)
 _NL = r"(?:\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?(?![ \t]))"          # quebra de linha dentro de comentário ou docstring
 _MIOLO = r"(?:[^\"”»\n]|" + _NL + r"){12,600}?"
@@ -142,7 +142,7 @@ _AMARRAS = [
 
 
 _VOZ_FORTE = re.compile(
-    r"(?<![\w-])(pq|tá|tô|vc|vcs|pra|né|nao|mto|tbm|ta|eu|meu|minha|minhas|mim|quero|queria|acho|vamos|"
+    r"(?<![\w-])(pq|tá|tô|vc|vcs|pra|né|n[a]o|mto|tbm|ta|eu|meu|minha|minhas|mim|quero|queria|acho|vamos|"
     r"imagina|seto|setar|clico|clicar)(?![\w-])", re.I)
 #: citação em aspas simples-duplas, em várias linhas, escrita na voz crua do usuário (minúscula ou CAIXA ALTA)
 _PLANA = re.compile(r'(?<![\w`"])"(?P<fala>(?:[^"\n]|' + _NL + r'){40,900}?)"' + _MARCA + r'(?![\w`"])')
