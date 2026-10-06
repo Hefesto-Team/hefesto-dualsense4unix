@@ -30,6 +30,7 @@ import subprocess
 import sys
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 A = "á"
 E = "é"
@@ -479,14 +480,14 @@ def _como_arvore_de_prefixos(palavras: Iterable[str]) -> str:
     bordas ``(?<!…)`` e ``(?!…)`` em volta continuam exigindo a palavra inteira,
     então no máximo uma palavra casa em cada ponto, na árvore ou na lista.
     """
-    raiz: dict[str, dict] = {}
+    raiz: dict[str, Any] = {}
     for palavra in palavras:
         no = raiz
         for letra in palavra:
             no = no.setdefault(letra, {})
         no[""] = {}
 
-    def escreve(no: dict[str, dict]) -> str:
+    def escreve(no: dict[str, Any]) -> str:
         ramos = [re.escape(letra) + escreve(sub) for letra, sub in sorted(no.items()) if letra]
         if not ramos:
             return ""

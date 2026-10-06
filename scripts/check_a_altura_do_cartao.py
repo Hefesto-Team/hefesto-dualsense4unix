@@ -2,6 +2,7 @@
 """PORTÃO — o cartão de controle cabe na caixa, e o texto dele não é cortado."""
 import pathlib
 import sys
+from typing import Any
 
 from playwright.sync_api import sync_playwright
 
@@ -60,7 +61,7 @@ _MEDIR = r"""() => {
 }"""
 
 
-def medir(caminho: pathlib.Path, larguras: tuple[int, ...] | int) -> dict:
+def medir(caminho: pathlib.Path, larguras: tuple[int, ...] | int) -> Any:
     """Abre a página em cada largura e devolve o que o navegador viu.
 
     Um navegador para as três larguras (o lançamento do Chrome era o grosso do
@@ -69,7 +70,7 @@ def medir(caminho: pathlib.Path, larguras: tuple[int, ...] | int) -> dict:
     """
     uma = isinstance(larguras, int)
     lista = (larguras,) if isinstance(larguras, int) else larguras
-    saida: dict = {}
+    saida: dict[int, Any] = {}
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
         try:
