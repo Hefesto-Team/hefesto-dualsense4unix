@@ -559,6 +559,72 @@ def test_morde_a_memoria_que_ignora_o_proprio_portao(tmp_path: Path) -> None:
     )
 
 
+# O PORTÃO QUE LÊ O ÍNDICE (`git ls-files`, `git show :caminho`) é cego ao arquivo novo antes do
+# `git add`, e a memória não pode piorar isso: o mesmo arquivo, com os mesmos bytes, agora no índice, é
+# outra pergunta. A chave tem de ver o índice, não só o disco.
+
+_PY_INDICE = textwrap.dedent("""\
+    import subprocess, sys
+    rastreados = subprocess.run(["git", "ls-files"], capture_output=True, text=True).stdout
+    sys.exit(1 if "dados/proibido.txt" in rastreados.splitlines() else 0)
+    """)
+_PY_ENCENADO = textwrap.dedent("""\
+    import subprocess, sys
+    encenado = subprocess.run(["git", "show", ":dados/a/x.txt"], capture_output=True, text=True).stdout
+    sys.exit(1 if "MORDIDA" in encenado else 0)
+    """)
+TABELA_DO_INDICE = """
+rapido|indice|py|scripts/g_indice.py
+rapido|encenado|py|scripts/g_encenado.py
+"""
+
+
+def _mexer_no_indice(repo: Path, como: str) -> list[dict[str, str]]:
+    """Corre na árvore limpa, muda o DISCO, corre, dá o `git add`, corre: devolve as duas últimas."""
+    assert set(_status(_corre(repo, "--rapido").stdout).values()) == {"ok"}
+    if como == "arquivo-novo":
+        (repo / "dados/proibido.txt").write_text("novo\n", encoding="utf-8")
+        caminho = "dados/proibido.txt"
+    else:
+        (repo / "dados/a/x.txt").write_text("MORDIDA\n", encoding="utf-8")
+        caminho = "dados/a/x.txt"
+    antes_do_add = _status(_corre(repo, "--rapido").stdout)
+    _git(repo, "add", "--", caminho)
+    return [antes_do_add, _status(_corre(repo, "--rapido").stdout)]
+
+
+def _repo_do_indice(tmp_path: Path, **kw: str) -> Path:
+    return _monta(
+        tmp_path,
+        TABELA_DO_INDICE,
+        arquivos={"scripts/g_indice.py": _PY_INDICE, "scripts/g_encenado.py": _PY_ENCENADO},
+        **kw,
+    )
+
+
+@pytest.mark.parametrize(("como", "portao"), [("arquivo-novo", "indice"), ("encenado", "encenado")])
+def test_o_git_add_faz_o_portao_que_le_o_indice_rodar_de_novo(
+    tmp_path: Path, como: str, portao: str
+) -> None:
+    antes_do_add, depois_do_add = _mexer_no_indice(_repo_do_indice(tmp_path), como)
+    assert antes_do_add[portao] == "ok", antes_do_add
+    assert depois_do_add[portao] == "VERMELHO", (
+        "o mesmo disco com outro índice ficou «lembrado»: a memória piorou a cegueira do `git add`",
+        depois_do_add,
+    )
+
+
+def test_morde_a_memoria_que_ignora_o_indice(tmp_path: Path) -> None:
+    texto = RECIBO.read_text(encoding="utf-8")
+    velho = 'h.update(f"{rel}\\0{ent.sha(rel)}\\0{ent.no_indice(rel)}\\n".encode())'
+    assert texto.count(velho) == 1, "a memória mudou: a mordida precisa apontar para a linha do índice"
+    mutante = texto.replace(velho, 'h.update(f"{rel}\\0{ent.sha(rel)}\\n".encode())')
+    _, depois_do_add = _mexer_no_indice(_repo_do_indice(tmp_path, recibo=mutante), "arquivo-novo")
+    assert depois_do_add["indice"] == "lembrado", (
+        "a mordida não pegou: a régua não distingue o índice do disco"
+    )
+
+
 def test_vermelho_nao_e_lembrado(tmp_path: Path) -> None:
     repo = _monta(
         tmp_path, "rapido|py-marca|py|scripts/g_marca.py", arquivos=_MORDIDAS["mordida-no-py"]

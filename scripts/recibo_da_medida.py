@@ -188,10 +188,10 @@ def fechar(nome: str, rc: str, corrida: Path, raiz: Path, contagem: str,
 # --- A MEMÓRIA DO VERDE ---------------------------------------------------------------------------
 #
 # Um portão que passou sobre os mesmos bytes que leu não precisa passar de novo. A chave de um portão é o
-# hash do que ELE lê: por padrão a árvore INTEIRA (o rastreado, como está no disco, mais o que é novo e não
-# é ignorado, mais o ignorado de `scripts/`: quatro portões abrem lá os dispositivos de trabalho que o git
-# não leva, medido em 06/10/2026 por `strace`), a linha do portão, o arquivo que ele chama, o Python e o
-# Chrome. Sem a quinta coluna da lista, vale o lado seguro: qualquer byte mudado roda o portão de novo.
+# hash do que ELE lê: por padrão a árvore INTEIRA (o rastreado, como está no disco E no índice, mais o
+# que é novo e não é ignorado, mais o ignorado de `scripts/`: quatro portões abrem lá os dispositivos de
+# trabalho que o git não leva, medido em 06/10/2026 por `strace`), a linha do portão, o arquivo que ele
+# chama, o Python, o PYTHONPATH e o Chrome. Sem a quinta coluna da lista, vale o lado seguro: qualquer byte mudado roda o portão de novo.
 #
 # A quinta coluna estreita (globs, que alcançam também o ignorado) ou declara o que a árvore não guarda:
 #   @sempre  o portão lê a máquina ou a história do git, e nunca é lembrado;
@@ -200,7 +200,7 @@ def fechar(nome: str, rc: str, corrida: Path, raiz: Path, contagem: str,
 # Glob que não casa arquivo nenhum é erro de digitação, e erro de digitação não vira memória: o portão roda.
 
 MEMORIA = "hefesto-memoria"
-_VERSAO_DA_CHAVE = "1"
+_VERSAO_DA_CHAVE = "2"
 _GUARDA = 3
 _VALIDADE = 30 * 86400
 _SINAIS = {"@sempre", "@dia", "@head"}
@@ -232,12 +232,14 @@ def _stat_de(caminho: str) -> str:
 
 
 def _ambiente_da_chave() -> str:
-    """O que, fora da árvore, muda o veredito: o Python, o que ele tem instalado e o Chrome."""
+    """O que, fora da árvore, muda o veredito: o Python, o que ele tem instalado, de onde ele importa e
+    o Chrome."""
     try:
         instalado = _stat_de(sysconfig.get_paths()["purelib"])
     except (KeyError, OSError):
         instalado = "?"
-    return "|".join((_VERSAO_DA_CHAVE, sys.version, sys.prefix, instalado, _stat_de(_CHROME)))
+    return "|".join((_VERSAO_DA_CHAVE, sys.version, sys.prefix, instalado,
+                     os.environ.get("PYTHONPATH", ""), _stat_de(_CHROME)))
 
 
 class Entradas:
@@ -248,6 +250,7 @@ class Entradas:
         self._sha: dict[str, str] = {}
         self._base: set[str] | None = None
         self._globs: dict[str, set[str]] = {}
+        self._indice: dict[str, str] | None = None
 
     def _lista(self, *args: str) -> set[str]:
         return set(_lista_z(_git(self.raiz, "ls-files", "-z", *args)))
@@ -267,6 +270,18 @@ class Entradas:
             achados |= self._lista("--others", "--ignored", "--exclude-standard", "--", pathspec)
             self._globs[padrao] = achados
         return self._globs[padrao]
+
+    def no_indice(self, rel: str) -> str:
+        """O que o ÍNDICE diz do arquivo (modo, blob e estágio), ou `-` fora dele. O disco sozinho não basta:
+        o mesmo arquivo, com os mesmos bytes, antes e depois do `git add` é outra pergunta para o portão que
+        lê o índice (`git ls-files`, `git show :caminho`), e o verde de antes do `git add` não vale depois."""
+        if self._indice is None:
+            self._indice = {}
+            for entrada in _lista_z(_git(self.raiz, "ls-files", "-s", "-z")):
+                ficha, _, caminho = entrada.partition("\t")
+                anterior = self._indice.get(caminho)
+                self._indice[caminho] = f"{anterior},{ficha}" if anterior else ficha
+        return self._indice.get(rel, "-")
 
     def sha(self, rel: str) -> str:
         if rel not in self._sha:
@@ -319,7 +334,7 @@ def chave_do_portao(ent: Entradas, ambiente: str, ficha: str, runner: str, argv:
         except SemRetrato:
             return None
     for rel in sorted(arquivos):
-        h.update(f"{rel}\0{ent.sha(rel)}\n".encode())
+        h.update(f"{rel}\0{ent.sha(rel)}\0{ent.no_indice(rel)}\n".encode())
     return h.hexdigest()[:32]
 
 
