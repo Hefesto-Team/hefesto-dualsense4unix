@@ -7,8 +7,7 @@ versão: 1
 
 about:
   descrição: "O DualSense completo no Linux: gatilhos adaptativos, luz, vibração, giroscópio, áudio e até quatro jogadores."
-  # Sem endereço próprio por enquanto: a página do produto nasce com as Pages, depois da release 1.
-  site: ""
+  site: "https://hefesto-team.github.io/hefesto-dualsense4unix/"
   topicos:
     - dualsense
     - ps5
@@ -21,36 +20,57 @@ about:
     - accessibility
     - python
 
+# A mesclagem de PR em linha reta: o histórico do `dev` e do `main` não ganha commit de merge feito
+# pelo botão do GitHub (a porta, abaixo, também exige histórico linear de quem não mantém).
+configuracao:
+  mesclagem:
+    merge_commit: false
+    squash: true
+    rebase: true
+    apagar_ramo: true
+    atualizar_ramo: true
+
 # `ligada: false` precisa de `depois`: o que está desligado hoje e quando volta a ser considerado.
+# As Pages saem do fluxo `paginas.yml`; a Wiki nasce vazia e é preenchida por quem mantém.
 funções:
   issues:
     ligada: true
   wiki:
-    ligada: false
-    depois: "depois da release 1"
+    ligada: true
   pages:
-    ligada: false
-    depois: "depois da release 1"
+    ligada: true
   projects:
-    ligada: false
-    depois: "depois da release 1"
+    ligada: true
   discussions:
-    ligada: false
-    depois: "depois da release 1"
+    ligada: true
   sponsor:
     ligada: false
-    depois: "depois da release 1"
+    depois: "quando quem mantém decidir quem recebe as doações (o botão Sponsor já aparece pelo FUNDING.yml)"
 
-# O PR de segurança que o robô do Dependabot abre sai vermelho no check `autoria` (o autor dele não está
-# no `.mailmap`), e não se mescla, nem pela exceção de administrador: qualquer jeito de mesclar põe o
-# robô como autor na história do `dev`, e a história fica vermelha até a próxima reescrita. Quem mantém
-# refaz a mesma atualização num commit seu, e o robô fecha o PR sozinho.
+# Só o alerta do Dependabot fica: ele avisa da dependência com falha conhecida, e a atualização se faz
+# num commit de quem mantém. O PR de segurança do robô sairia vermelho no check `autoria` (o autor
+# dele não está no `.mailmap`) e não se mescla, nem pela exceção de administrador: qualquer jeito de
+# mesclar põe o robô como autor na história do `dev`.
 seguranca:
   relato_privado: true
   alertas_do_dependabot: true
-  atualizacoes_de_seguranca: true
+  atualizacoes_de_seguranca: false
   varredura_de_segredo: true
   protecao_de_push_de_segredo: true
+  varredura_de_codigo: true
+  linguagens_da_varredura: [python, actions]
+  grafo_de_dependencias: true
+  # A release de hoje apaga e recria a versão (`gh release delete` e `gh release create` no
+  # release.yml), o que a release imutável não deixa: o GitHub nunca reaproveita a tag.
+  releases_imutaveis:
+    ligada: false
+    depois: "quando a release deixar de apagar e recriar a versão publicada"
+
+# Só o fluxo mais restrito: o `GITHUB_TOKEN` lê, e o PR de gente de fora espera a aprovação de quem mantém.
+acoes:
+  permissao_do_fluxo: leitura
+  fluxo_aprova_pr: false
+  aprovacao_de_fork: todos_de_fora
 
 # Quem mantém: as duas contas do `.mailmap`.
 mantenedores:
@@ -59,18 +79,120 @@ mantenedores:
   - conta: AndreBFarias
     função: admin
 
+# A equipe que o `CODEOWNERS` chama para revisar. Existe só em organização.
+equipes:
+  - nome: mantenedores
+    descrição: "Quem mantém o Hefesto e a Forja."
+    acesso: maintain
+    membros:
+      - conta: vitoriamariadb
+        função: maintainer
+      - conta: AndreBFarias
+        função: maintainer
+
+# O arquivo é a lista dos rótulos de triagem. Os nove que o GitHub cria sozinho entram aqui com a
+# descrição em português, e o que não está no arquivo fica como está (apagar rótulo solta ele das issues).
+rotulos:
+  exclusivos: false
+  lista:
+    - {nome: "bug", cor: "d73a4a", descrição: "Algo não funciona como deveria"}
+    - {nome: "enhancement", cor: "a2eeef", descrição: "Uma ideia nova ou uma melhoria"}
+    - {nome: "question", cor: "d876e3", descrição: "Uma dúvida de uso ou de configuração"}
+    - {nome: "documentation", cor: "0075ca", descrição: "O guia, o README ou as páginas"}
+    - {nome: "duplicate", cor: "cfd3d7", descrição: "Já existe uma issue sobre isto"}
+    - {nome: "invalid", cor: "e4e669", descrição: "Não é um defeito do projeto"}
+    - {nome: "wontfix", cor: "ffffff", descrição: "Não vai ser feito; o motivo fica na conversa"}
+    - {nome: "good first issue", cor: "7057ff", descrição: "Boa para quem está chegando"}
+    - {nome: "help wanted", cor: "008672", descrição: "Ajuda é bem-vinda"}
+    - {nome: "jogo ou emulador", cor: "1d76db", descrição: "Um jogo ou emulador que não reconhece o controle"}
+    - {nome: "precisa do doctor", cor: "fbca04", descrição: "Falta a saída do comando hefesto-dualsense4unix doctor"}
+    - {nome: "dependências", cor: "0366d6", descrição: "Atualização de uma dependência"}
+    - {nome: "área: tela", cor: "c5def5", descrição: "A janela e as dez abas"}
+    - {nome: "área: rádio", cor: "c5def5", descrição: "Pareamento, adaptadores e conexão por Bluetooth"}
+    - {nome: "área: som", cor: "c5def5", descrição: "Microfone e alto-falante do controle"}
+    - {nome: "área: háptica", cor: "c5def5", descrição: "Vibração e vibração fina"}
+    - {nome: "área: gatilhos", cor: "c5def5", descrição: "Gatilhos adaptativos"}
+    - {nome: "área: lançadores", cor: "c5def5", descrição: "Steam, Heroic, Lutris, RetroArch e perfis por jogo"}
+    - {nome: "área: instalação", cor: "c5def5", descrição: "Pacotes, instalador e as distribuições"}
+    - {nome: "transporte: cabo", cor: "bfd4f2", descrição: "Só acontece com o controle no cabo"}
+    - {nome: "transporte: Bluetooth", cor: "bfd4f2", descrição: "Só acontece com o controle por Bluetooth"}
+    - {nome: "distro: Fedora", cor: "ededed", descrição: "Medido no Fedora"}
+    - {nome: "distro: Arch", cor: "ededed", descrição: "Medido no Arch"}
+    - {nome: "distro: Debian", cor: "ededed", descrição: "Medido no Debian"}
+    - {nome: "distro: Ubuntu", cor: "ededed", descrição: "Medido no Ubuntu e derivadas, como o Pop!_OS"}
+    - {nome: "prioridade: alta", cor: "b60205", descrição: "Impede de jogar"}
+    - {nome: "prioridade: média", cor: "fbca04", descrição: "Atrapalha, mas dá para jogar"}
+    - {nome: "prioridade: baixa", cor: "0e8a16", descrição: "Pode esperar"}
+
+# As datas ficam em branco até quem mantém decidir; o título diz o que cabe em cada marco.
+milestones:
+  - titulo: "Primeira versão pública"
+    descrição: "O que entra na primeira versão pública do Hefesto."
+  - titulo: "Depois da primeira versão"
+    descrição: "O que fica para as versões seguintes."
+
+# Os tipos de issue são da organização; os formulários de `ISSUE_TEMPLATE/` os escolhem pelo nome.
+tipos_de_issue:
+  - {nome: "Bug", descrição: "Algo não funciona como deveria", cor: "red"}
+  - {nome: "Ideia", descrição: "Uma funcionalidade nova ou uma melhoria", cor: "blue"}
+  - {nome: "Jogo ou emulador", descrição: "Um jogo ou emulador que não reconhece o controle", cor: "purple"}
+
+# A publicação só segue com a aprovação de quem mantém, e só a partir de uma tag de versão. O segredo
+# de publicação não existe: a publicação no PyPI usa o publicador de confiança (OIDC) do `release.yml`.
+ambientes:
+  - nome: pypi
+    revisores: [vitoriamariadb, AndreBFarias]
+    impedir_autoaprovacao: false
+    tags: ["v*"]
+  - nome: release
+    revisores: [vitoriamariadb, AndreBFarias]
+    impedir_autoaprovacao: false
+    tags: ["v*"]
+
+# As categorias nascem com as Discussions e a API do GitHub não cria nem renomeia categoria: aqui só se mede.
+# Os modelos de `DISCUSSION_TEMPLATE/` têm o nome destes endereços.
+discussoes:
+  categorias:
+    - {slug: announcements, responsável: false}
+    - {slug: q-a, responsável: true}
+    - {slug: ideas, responsável: false}
+    - {slug: show-and-tell, responsável: false}
+
+# O quadro «Roteiro» é da organização e serve ao Hefesto e à Forja. As issues entram nele pelo fluxo
+# `rotulos.yml` (o GitHub não deixa ligar a entrada automática por API).
+projetos:
+  - título: "Roteiro"
+    descrição: "O que vem a seguir no Hefesto e na Forja, por etapa e por versão."
+    público: true
+    ligado_a:
+      - Hefesto-Team/hefesto-dualsense4unix
+      - Hefesto-Team/Forja
+    etapas:
+      - {nome: "Ideia", cor: GRAY}
+      - {nome: "Planejado", cor: BLUE}
+      - {nome: "Em andamento", cor: YELLOW}
+      - {nome: "Feito", cor: GREEN}
+    vistas:
+      - {nome: "Quadro", formato: board}
+      - {nome: "Por versão", formato: table, agrupar_por: Milestone}
+      - {nome: "Bugs por área", formato: table, filtro: "label:bug", agrupar_por: Labels}
+
 # Cada regra é uma chave com um aplicador em `scripts/github/aplicar.py`.
 # `checks` são os nomes que o GitHub mostra (o `name` do job, ou o id dele; o job com matriz
 # leva o valor entre parênteses) e cada um tem de existir em `.github/workflows/`.
 # Os administradores passam pelo ruleset «a porta» (o trabalho do dia entra por push direto no `dev`);
-# o ruleset «a história» não tem exceção para ninguém. O histórico linear mora na porta, e não na
+# o ruleset «a história» não tem exceção para ninguém, e é nele que mora a assinatura: uma exceção
+# anularia a regra para quem mais empurra commit. O histórico linear mora na porta, e não na
 # história: a história do `dev` já traz centenas de merges que o `main` ainda não tem, e sem exceção
 # a regra barraria o primeiro push do repositório recriado e o avanço do `main` na release.
+# A assinatura (SSH, o selo «Verified») só se aplica depois do push da história: a que já existe
+# não é assinada.
 rulesets:
-  - nome: "A história do dev e do main não se reescreve"
+  - nome: "A história do dev e do main não se reescreve e vem assinada"
     ramos: [dev, main]
     sem_apagar: true
     sem_push_forcado: true
+    assinatura: exigida
   - nome: "O que entra no dev e no main passa pelos checks e pela revisão"
     ramos: [dev, main]
     historico_linear: true
@@ -82,3 +204,21 @@ rulesets:
       - "lint-test (3.11)"
       - "lint-test (3.12)"
     excecao: administradores
+  - nome: "As versões publicadas não se apagam nem se reescrevem"
+    tags: ["v*"]
+    sem_apagar: true
+    sem_push_forcado: true
+    sem_atualizar: true
+
+# O perfil da comunidade do GitHub (README, licença, conduta, como contribuir, segurança e os
+# modelos de issue e de PR) em 100%.
+comunidade:
+  saude_minima: 100
+
+# O que o GitHub oferece e a casa deixa de fora, cada um com o motivo medido em 06/10/2026.
+de_fora:
+  lfs: "o maior arquivo versionado tem 2,3 MB (`git ls-files` com `stat`); o limite do GitHub é 100 MB por arquivo"
+  merge_queue: "o trabalho do dia entra por push direto de quem mantém no `dev`; a fila serve a quem mescla PR de muita gente"
+  codespaces: "o produto pede o aparelho (hidraw, uinput, Bluetooth) e uma sessão gráfica, que um contêiner na nuvem não tem"
+  autolinks: "o prefixo `D-` das decisões casa com «D-pad», que 47 arquivos do repositório escrevem (`grep -rli`), e os identificadores das tarefas internas não aparecem no texto público"
+  imagem_de_previa_social: "a API do GitHub não tem endpoint para a imagem (nenhum caminho de «social preview» na descrição OpenAPI de 06/10/2026); sobe-se pela interface, em Settings"

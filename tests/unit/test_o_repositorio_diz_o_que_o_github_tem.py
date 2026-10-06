@@ -57,9 +57,9 @@ def test_o_arquivo_do_repositorio_vale() -> None:
 def test_as_funcoes_desligadas_dizem_quando_voltam() -> None:
     funcoes = _dados()["funções"]
     desligadas = [n for n, v in funcoes.items() if not v["ligada"]]
-    assert set(desligadas) >= {"wiki", "pages", "projects", "discussions", "sponsor"}
-    assert funcoes["issues"]["ligada"] is True
-    assert all(funcoes[n]["depois"] == "depois da release 1" for n in desligadas)
+    assert desligadas == ["sponsor"], "tudo o que o GitHub oferece está ligado, menos o que depende de quem recebe"
+    assert str(funcoes["sponsor"]["depois"]).strip()
+    assert all(funcoes[n]["ligada"] is True for n in ("issues", "wiki", "pages", "projects", "discussions"))
 
 
 def test_o_ruleset_exige_o_check_de_autoria_e_o_lint_test() -> None:
@@ -114,6 +114,8 @@ def test_toda_regra_de_ruleset_declarada_tem_quem_a_monte() -> None:
             r[chave] = {"aprovacoes": 1}
         if chave == "checks":
             r[chave] = ["autoria"]
+        if chave == "assinatura":
+            r[chave] = "exigida"
         tipos = [x["type"] for x in aplicar.corpo_do_ruleset(r)["rules"]]
         assert tipos == [tipo], chave
 
@@ -132,9 +134,23 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
 @pytest.mark.parametrize(
     "estraga",
     [
-        lambda d: d["funções"]["wiki"].pop("depois"),
+        lambda d: d["funções"]["sponsor"].pop("depois"),
         lambda d: d["funções"].pop("sponsor"),
-        lambda d: d["funções"]["pages"].update(ligada=True),
+        lambda d: d["seguranca"]["releases_imutaveis"].pop("depois"),
+        lambda d: d["seguranca"].pop("linguagens_da_varredura"),
+        lambda d: d["seguranca"].update(grafo_de_dependencias=False),
+        lambda d: d["rotulos"]["lista"][0].update(cor="#d73a4a"),
+        lambda d: d["rotulos"]["lista"].append(dict(d["rotulos"]["lista"][0])),
+        lambda d: d["acoes"].update(aprovacao_de_fork="ninguem"),
+        lambda d: d["ambientes"][0].update(revisores=[]),
+        lambda d: d["ambientes"][0].update(tags=[], ramos=[]),
+        lambda d: d["equipes"][0].update(nome="Mantenedores Da Casa"),
+        lambda d: d["projetos"][0]["etapas"][0].update(cor="VERDE"),
+        lambda d: d["discussoes"]["categorias"][0].update(slug="Anúncios"),
+        lambda d: d["rulesets"][0].update(assinatura="opcional"),
+        lambda d: d["rulesets"][2].update(ramos=["dev"]),
+        lambda d: d["de_fora"].pop("lfs"),
+        lambda d: d["de_fora"].update(codespaces=""),
         lambda d: d["about"].update(topicos=["Linux Ruim"]),
         lambda d: d["about"].update(topicos=[f"t{i}" for i in range(21)]),
         lambda d: d["mantenedores"][0].update(função="dono"),
@@ -290,6 +306,7 @@ ESTADO_INICIAL: dict[str, Any] = {
         "has_discussions": False,
     },
     "topics": [],
+    "repos_extras": {"Hefesto-Team/hefesto-dualsense4unix": "R_h", "Hefesto-Team/Forja": "R_f"},
     "alertas": False,
     "fixes": False,
     "relato": False,
@@ -363,15 +380,15 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
     assert rodar("--aplicar") == 0
     e, d = gh.estado, _dados()
     assert e["repo"]["description"] == d["about"]["descrição"]
-    assert e["repo"]["homepage"] == ""
+    assert e["repo"]["homepage"] == d["about"]["site"]
     assert sorted(e["topics"]) == sorted(d["about"]["topicos"])
     assert (e["repo"]["has_issues"], e["repo"]["has_wiki"], e["repo"]["has_projects"],
-            e["repo"]["has_discussions"], e["sponsor"]) == (True, False, False, False, False)
-    assert (e["alertas"], e["fixes"], e["relato"]) == (True, True, True)
+            e["repo"]["has_discussions"], e["sponsor"]) == (True, True, True, True, False)
+    assert (e["alertas"], e["fixes"], e["relato"]) == (True, False, True), "o Dependabot fica só no alerta"
     assert set(e["análise"].values()) == {"enabled"}
     assert e["colaboradores"] == {aplicar.CONTA_DA_CASA: "admin", "AndreBFarias": "admin"}
     assert [r["name"] for r in e["rulesets"]] == [r["nome"] for r in d["rulesets"]]
-    porta = next(r for r in e["rulesets"] if "revisão" in r["name"] or "checks" in r["name"])
+    porta = next(r for r in e["rulesets"] if any(x["type"] == "pull_request" for x in r["rules"]))
     tipos = {x["type"] for x in porta["rules"]}
     assert tipos == {"pull_request", "required_status_checks", "required_linear_history"}
     contextos_ = [c["context"] for x in porta["rules"] if x["type"] == "required_status_checks"
@@ -386,8 +403,12 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
     assert porta["bypass_actors"] == [
         {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]
     historia = next(r for r in e["rulesets"] if r["name"].startswith("A história"))
-    assert {x["type"] for x in historia["rules"]} == {"deletion", "non_fast_forward"}
+    assert {x["type"] for x in historia["rules"]} == {
+        "deletion", "non_fast_forward", "required_signatures"}
     assert historia["bypass_actors"] == []
+    versoes = next(r for r in e["rulesets"] if r["target"] == "tag")
+    assert {x["type"] for x in versoes["rules"]} == {"deletion", "non_fast_forward", "update"}
+    assert versoes["conditions"]["ref_name"]["include"] == ["refs/tags/v*"]
 
 
 def test_rodar_de_novo_nao_muda_nada(gh: Mentira) -> None:
@@ -480,12 +501,13 @@ def test_a_ordem_da_seguranca_no_arquivo_nao_muda_o_resultado(
 ) -> None:
     # As atualizações de segurança só ligam depois dos alertas; o arquivo pode listar ao contrário.
     dados = _dados()
+    dados["seguranca"]["atualizacoes_de_seguranca"] = True
     dados["seguranca"] = dict(reversed(list(dados["seguranca"].items())))
     invertido = tmp_path / "invertido.yml"
     invertido.write_text(
         yaml.safe_dump(dados, allow_unicode=True, sort_keys=False), encoding="utf-8")
     primeira = next(iter(yaml.safe_load(invertido.read_text())["seguranca"]))
-    assert primeira == "protecao_de_push_de_segredo"
+    assert primeira == "releases_imutaveis"
     assert rodar("--aplicar", arquivo=invertido) == 0
     assert (gh.estado["alertas"], gh.estado["fixes"]) == (True, True)
 
@@ -519,7 +541,7 @@ def test_sem_rulesets_deixa_os_rulesets_para_depois_do_push(gh: Mentira) -> None
     assert gh.estado["rulesets"] == []
     assert rodar("--conferir") == 1  # o todo ainda tem diferença
     assert rodar("--aplicar") == 0
-    assert len(gh.estado["rulesets"]) == 2
+    assert len(gh.estado["rulesets"]) == 3
 
 
 def test_falha_de_escrita_aparece_e_nao_vira_verde(gh: Mentira, capsys: Capsys) -> None:
@@ -531,7 +553,7 @@ def test_falha_de_escrita_aparece_e_nao_vira_verde(gh: Mentira, capsys: Capsys) 
 
 def test_o_arquivo_estragado_nao_chega_ao_servidor(gh: Mentira, tmp_path: Path) -> None:
     dados = _dados()
-    del dados["funções"]["wiki"]["depois"]
+    del dados["funções"]["sponsor"]["depois"]
     ruim = tmp_path / "ruim.yml"
     ruim.write_text(yaml.safe_dump(dados, allow_unicode=True), encoding="utf-8")
     assert rodar("--aplicar", arquivo=ruim) == 2
