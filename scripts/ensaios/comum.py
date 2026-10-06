@@ -34,7 +34,7 @@ cabeçalho, ao lado da biblioteca.**
 
 E um andar abaixo, o mesmo modo de falha: o co-op faz `EVIOCGRAB` no evdev
 físico, e um instrumento ingênuo lê zero evento e conclui que o aparelho está
-calado. *"O controle não emitiu"* e  têm de sair diferentes
+calado. *"O controle não emitiu"* e *"eu não posso ler"* têm de sair diferentes
 na tela — é o que `estado_do_grab` e `leitura_de_zero` existem para garantir.
 
 O QUE ESTES INSTRUMENTOS NUNCA FAZEM
@@ -478,7 +478,7 @@ def censo_da_mesa(aparelhos: list[Aparelho]) -> str:
     return f"mesa com {len(reais)} controle(s): {desenho} — os dois transportes presentes."
 
 
-# **.  # noqa-acento: citação literal
+# *"fora que nao deu pra ler nada nos botoes"*.  # noqa-acento: citação literal
 
 
 def o_tema_e_escuro() -> bool:
@@ -508,7 +508,7 @@ def o_tema_e_escuro() -> bool:
 
 
 def pintar_fundo_solido(janela: object) -> None:
-    """Um fundo SÓLIDO e LEGÍVEL para a folha — razão dela."""
+    """Um fundo SÓLIDO e LEGÍVEL para a folha — razão dela: *"o fundo tá muito transparente"*."""
     import gi
 
     gi.require_version("Gtk", "3.0")

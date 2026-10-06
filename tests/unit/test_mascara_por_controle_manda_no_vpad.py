@@ -1,6 +1,7 @@
 """A MÁSCARA POR CONTROLE CHEGOU AO VPAD — a corrente ligada, medida ponta a ponta.
 
-Decisão, 29/08/2026: ``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`` — **.
+Decisão, 29/08/2026: ``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`` — *"a
+máscara por controle vale ao clicar em Aplicar, mesmo com jogo aberto"*.
 
 O registro por aparelho existe desde 15/08 (``daemon/subsystems/external_mask.py``,
 arquivo próprio ``controller_masks.json``) e os DOIS backends de vpad já sabiam

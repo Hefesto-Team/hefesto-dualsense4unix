@@ -472,7 +472,9 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         lightbar e no journal — ver `pulados` no corpo.
 
     E O GESTO SE COMPORTA IGUAL EM TODO JOGO (30/08/2026,
-    `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`).
+    `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`). Decisão de produto:
+    *"pera, pq isso tá sob a identidade de um jogo específico? Isso deveria ser
+    universal — não é produto, é gambiarra!"*
 
     Até esta data o gesto dependia de o jogo ter carimbo. Com carimbo a escada
     não roda e todo aperto anda o `CICLO_DE_PONTES`; sem carimbo, o 2º aperto
@@ -863,7 +865,10 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
 
     MIC-DA-MESA-ELEICAO-01 (01/09/2026) — ESTE LAÇO MUDOU DE DONO E DE EIXO.
 
-    Decisão de produto, com as palavras de produto
+    Decisão de produto, com as palavras do usuário: *"Se eu apertar o botão físico mic do
+    controle e ele acender, significa que eu quero que o canal de áudio do
+    microfone seja o controle. O botão de silenciar é confuso e mexendo com
+    ambos os canais de áudio é péssimo."*
 
     O QUE SAIU, e as três medições que mandaram sair:
 
@@ -888,7 +893,7 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
         endereço vem de `daemon/subsystems/mic_da_mesa.py`.
 
     O QUE FICOU: `mic_button_toggles_system` continua sendo o interruptor de
-    , consultado A CADA borda (e não no boot), para que a
+    *"o botão é nosso"*, consultado A CADA borda (e não no boot), para que a
     seção `mic` do perfil valha no próximo toque sem restart. Desligado, não
     elegemos nada e o kernel segue dono do mudo e da luz.
 
@@ -1005,7 +1010,10 @@ class AtoDoMicrofone:
 
     O CONCEITO É DO USUÁRIO, e ele derrubou a pergunta anterior. O microfone foi levado
     como *"duas camadas se contradizem"* e foram oferecidos três arranjos
-    que GUARDAVAM a contradição; ela recusou os três
+    que GUARDAVAM a contradição; ela recusou os três:
+
+        *"tá errado o conceito da coisa. o botão é pra ligar o microfone e ele
+        ser ouvido no canal específico dele."*
 
     E ao meio-dia de 04/09 acrescentou as duas regras que faltavam, com todas
     as letras:
@@ -1126,7 +1134,7 @@ async def _metade_do_canal(
     microfone do controle no ar seguia só o estado da source. Como o ato ELEGE
     o canal como fonte padrão, e eleger não põe nó nenhum em ``RUNNING``, a
     source ficava ``SUSPENDED`` e o `0x32` saía DESLIGADO: medido no journal
-    do usuário em 07/09/2026, quase três minutos de botão apertado com a ponte em
+    da bancada em 07/09/2026, quase três minutos de botão apertado com a ponte em
     `bt_mic_pedido ligar=False`. O ato respondia `feito=True` sobre um
     microfone mudo no ar.
 
@@ -1134,7 +1142,7 @@ async def _metade_do_canal(
     os DOIS chamadores de `ligar_o_microfone` — o 🎙 da tela e a borda do botão
     do plástico. Costurar isto no `ipc_handlers` deixaria o plástico de fora,
     com a suíte verde, e a regra de produto é explícita:
-    *"o botão fisico do mic se ligado no microfone ele fica ligado tambem.  # (noqa-acento) dela
+    *"o botão fisico do mic se ligado no microfone ele fica ligado tambem.  # (noqa-acento: citação literal)
     indepente se nativo ou virtual"*.
 
     **ANTES da eleição** porque ligar pode PRECISAR da ponte subir: com a
@@ -1598,7 +1606,7 @@ class MicrofonesNoAr:
         `None` é *"não sei"* e não conta para nada — nem para sair, nem para
         zerar a conta de quem já faltou uma vez.
 
-        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal do usuário,
+        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal da bancada,
         com dois DualSense no rádio: o P2 nasceu no ar às 13:51:53, este laço
         contou duas faltas e o tirou às 13:51:56, e o canal dele só foi
         publicado às 13:52:01. O nascimento (`nascer_no_ar`) põe o controle
@@ -1633,8 +1641,8 @@ def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
     return no_ar
 
 
-#     ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
-#     ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
+#     ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento: citação literal)
+#     ativado por padrao"*  # (noqa-acento: citação literal), 17/09/2026
 # `interface/cartao_do_controle.acao_mic` são LEITURA pura do que o `state_full`
 
 

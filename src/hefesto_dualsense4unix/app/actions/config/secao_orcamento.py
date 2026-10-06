@@ -8,8 +8,8 @@ crescem sem se pisarem.
 A SEÇÃO RESPONDE DUAS PERGUNTAS, E SÓ AGORA A SEGUNDA
 ------------------------------------------------------
 
-1.  — o **perfil de desempenho**;
-2.  — a **conta de fatias por adaptador**, que é
+1. *"o que eu quero que fique ligado?"* — o **perfil de desempenho**;
+2. *"cabe o que eu quero fazer?"* — a **conta de fatias por adaptador**, que é
    a pergunta que decide o produto (*cabem quatro controles com todas as
    features no rádio, nesta máquina?*) e que a seção nunca soube fazer.
 

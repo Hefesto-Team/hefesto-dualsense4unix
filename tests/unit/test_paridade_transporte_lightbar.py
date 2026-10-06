@@ -23,7 +23,8 @@ MORDIDA PROVADA (11/08/2026, com o `src/` COPIADO para fora da árvore e o
   `[bt]`. Antes desta camada a mesma mutação reprovava **0** na suíte inteira;
 - zerando `common[44..46]` só quando `conType == BT`, reprovam **7**: os seis
   `[bt]` e o caso que compara os dois lados. Os `[usb]` seguem verdes, que é
-  exatamente o defeito que a dona descreveu.
+  exatamente o defeito que a dona descreveu — *"tínhamos algo para o cabo e na
+  hora do vamos ver a versão de BT não funcionava"*.
 """
 from __future__ import annotations
 

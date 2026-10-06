@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """o_brilho_de_hardware_da_barra.py — o byte que nem o kernel escreve, no olho de quem confere.
 
-A PERGUNTA QUE ELE DECIDE (BRILHO-DE-HARDWARE-01, )
+A PERGUNTA QUE ELE DECIDE (BRILHO-DE-HARDWARE-01, decisão de 09/09/2026: *"2b"*)
 ------------------------------------------------------------------------------------
 A barra do DualSense tem DOIS brilhos, e a casa os confundia até 08/09:
 

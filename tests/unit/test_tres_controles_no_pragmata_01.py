@@ -2,7 +2,8 @@
 
 O QUE O USUÁRIO VIU, EM 10/08/2026
 ============================
-** — com a caixinha marcada, com a exceção armada e
+*"ok inputs ainda tão duplicado na hora do pragmata mesmo clicando lá em
+entregar o controle pra steam"* — com a caixinha marcada, com a exceção armada e
 com o físico escondido, o controle continuava dobrado.
 
 O QUE O `/dev/input` DO USUÁRIO TINHA, MEDIDO COM O JOGO ABERTO
@@ -38,8 +39,9 @@ allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*.
 O QUE **NÃO** SE FEZ, E POR QUÊ
 ===============================
 A saída elegante seria ``SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT`` ("aceite só
-o nosso vpad"). Ela está ERRADA aqui, e o motivo é uma exigência dela. Os externos são read-only
-por decisão de produto — numeramos e
+o nosso vpad"). Ela está ERRADA aqui, e o motivo é de produto: tem de ser universal, com quatro
+DualSense ou quatro controles de outra marca. Os externos são read-only por decisão de produto —
+numeramos e
 acendemos o LED, não os adotamos —, então eles chegam ao jogo POR SI, e um
 `_EXCEPT` os apagaria todos. Ver `test_o_except_mataria_os_externos_dela`.
 """

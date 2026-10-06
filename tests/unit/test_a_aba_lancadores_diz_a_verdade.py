@@ -1789,7 +1789,8 @@ def test_os_selos_de_uma_mesma_moldura_tem_a_mesma_cor(desenho):
 
 
 def test_a_lista_vazia_da_steam_nao_ocupa_um_pixel(desenho):
-    """** — ela, 22/09/2026.
+    """*"isso na steam essa frase tem que sumir pra nivelarmos a altura do bloco
+    da styeam com demais."* — ela, 22/09/2026.
 
     A lista vazia era a frase «Nada pendente, e você não tirou nem dispensou
     nenhum jogo.» embaixo de uma linha, e só o cartão da Steam pagava os 28 px.

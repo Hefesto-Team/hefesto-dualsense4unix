@@ -120,7 +120,7 @@ SELOS = {
     #:
     #: O DEFEITO QUE ELE MATA: cinco lançadores INSTALADOS recebiam `NÃO SEI`,
     #: porque o selo respondia *"sei ler a biblioteca dele?"*. Ela leu isso
-    #: como  — e estava  # noqa-acento: citação
+    #: como *"a aba lançadores tá identificando nada"* — e estava  # noqa-acento: citação
     #: certa: um selo grande e negativo sobre um programa instalado não diz
     #: outra coisa.
     #:
@@ -322,7 +322,8 @@ def sem_o_ambiente_html(chave: str, onde: tuple[str, ...]) -> str:
 def contador_html(pontes: int) -> str:
     """O contador do corpo do cartão — o MESMO nos oito, zero inclusive.
 
-    21/09/2026,  Ele era o carimbo da fileira da
+    21/09/2026, palavra de produto: *"falta o mesmo textinho de contador da steam pros
+    demais. (…) todos tem que serem iguais."* Ele era o carimbo da fileira da
     Steam, e só ela o tinha. Agora abre o corpo de todo cartão LOCALIZADO — onde
     os outros sete tinham espaço vazio, então ele não custa altura a eles.
 
@@ -794,7 +795,7 @@ class SemCenso:
 #: **NÃO HÁ CARTÃO DA EPIC, E A DECISÃO É DE PRODUTO — 08/09/2026.** O usuário pediu um
 #: (*"Seria interessante termos o da Epic Games Aqui também não?"*), ele foi
 #: feito, o usuário viu e desfez — a grafia é a dela, e fica:
-#: *"melhor deixar só heróic e tirar epic games não?"*  # noqa-acento: dela
+#: *"melhor deixar só heróic e tirar epic games não?"*  # noqa-acento: citação literal
 #:
 #: A SEGUNDA PALAVRA É A QUE VALE, e o argumento dela fecha o caso melhor que o
 #: cartão fechava: **quem entrega o jogo da Epic nesta máquina é o Heroic**, e o
@@ -803,7 +804,7 @@ class SemCenso:
 #: máquina onde os jogos da Epic abrem — ou seja, **dois cartões da mesma tela
 #: procurando o mesmo programa em disco**, e o segundo existindo só para repetir
 #: a resposta do primeiro.
-#:   # noqa-acento: dela
+#: Ela: *"Epic e gog ficam dentro do heróic. Melhor mesmo seu ponto"*.  # noqa-acento: citação literal
 #:
 #: **O RÓTULO DO HEROIC NÃO MUDA**, e agora ele carrega mais do que carregava:
 #: com o cartão fora, o «(Epic · GOG)» é o ÚNICO lugar da tela onde a Epic
@@ -874,8 +875,8 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
     **CHAVE REPETIDA NÃO VIRA SEGUNDO CARTÃO — ela ENSINA o primeiro.** Se ela
     declarar `retroarch` (o botão de localizar do cartão que não achou
     manda a chave do cartão), o que entra são os `atalhos` e `comandos` dela
-    SOMADOS aos de fábrica, no mesmo cartão. É o sentido literal do botão:  — não *"faça um cartão
-    novo com o mesmo
+    SOMADOS aos de fábrica, no mesmo cartão. É o sentido literal do botão: mostrar onde ele já
+    está, e não *"faça um cartão novo com o mesmo
     nome"*. Dois cartões com a mesma `chave` seriam pior que inútil: os
     endereços do desenho levam a chave como prefixo (`data-campo="retroarch-selo"`),
     e o piloto pintaria o valor de um nos DOIS.
@@ -992,7 +993,7 @@ ADICIONAR = "adicionar-lancador"
 #: A PALAVRA DE PRODUTO VEIO EM DUAS ETAPAS, e a segunda corrigiu a primeira. Em
 #: 08/09/2026 o usuário disse *"o Botão Abrir o Lançador deveria ser o Adicionar
 #: Launcher"*, e o rótulo nasceu em inglês e igual ao do botão global. Olhando a
-#: aba, ela voltou:  —
+#: aba, ela voltou: *"Adicionar novo Lançador? Seria legal um sinônimo né?"* —
 #: três pedidos numa frase, e os três estão atendidos aqui: **português**,
 #: **"novo" no que é novo**, e **os dois botões falando palavras diferentes**.
 #:
@@ -1004,7 +1005,7 @@ ADICIONAR = "adicionar-lancador"
 #: **ELE NÃO INSTALA NADA, e é o próprio cartão que diz por quê:** a frase do
 #: estado NÃO LOCALIZADO termina em *"Instalado de outro jeito (um AppImage
 #: solto, por exemplo) ele não aparece aqui"*. Então «Localizar este Lançador»
-#: quer dizer ** — ela aponta o caminho e o
+#: quer dizer **"ele está aqui, eu te mostro onde"** — ela aponta o caminho e o
 #: cartão passa a acender. O botão do cartão que ACHOU continua sendo «Abrir o
 #: lançador»: são dois estados, dois botões, e trocar o rótulo dos dois faria o
 #: cartão aceso oferecer um registro que já existe.
@@ -1100,6 +1101,7 @@ ADICIONAR_NOVO_ROTULO = "Adicionar um lançador"
 # ---------------------------------------------------------------------------
 # O SELETOR DO SISTEMA — LANCADOR-LOCALIZAR-01, 10/09/2026, decisão de produto
 #
+#     "aí eu mesmo abro a tela e procuro o .desktop"   # noqa-acento: citação
 #                                                      # literal
 #
 # O usuário escolheu a opção (C) — **campo + botão que abre o seletor**, e o campo de
@@ -1119,12 +1121,12 @@ PROCURAR_O_ARQUIVO = "procurar-o-arquivo"
 #: O RÓTULO, e ele NÃO diz «Procurar…» de propósito — foi medido nesta aba.
 #: «Procurar de novo» já é o botão do topo do quadro, e ele quer dizer *"varra a
 #: máquina outra vez"*: é a busca automática, sobre os SEIS cartões. Este quer
-#: dizer , sobre UM. Duas palavras iguais para dois
+#: dizer *"eu te mostro o arquivo"*, sobre UM. Duas palavras iguais para dois
 #: atos diferentes na mesma tela é a quebra de "mesma família, mesma coisa" que
 #: esta aba já pagou uma vez (o `.lanc .btn` que encolhia).
 #:
 #: **É TEXTO DE TELA, e por isso está escrito para ela conferir na bancada.**
-#: Se ela preferir a  —, é trocar esta
+#: Se ela preferir a palavra de produto — *"procuro o .desktop"* —, é trocar esta
 #: linha: o gesto, a recusa e a régua não dependem do rótulo.
 PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 
@@ -1493,8 +1495,8 @@ def lista_de_jogos(lida: Leitura) -> str:
     listas: ali não há gesto que mude nada; aqui há.
 
     A LISTA É OUTRA, e não a mesma dos recusados: `jogos_sem_wrapper.txt` diz
-    *"não ponha o atalho neste jogo"* e o dispensado diz . Um jogo pode estar num, no outro, ou nos
-    dois — juntá-las numa só
+    *"não ponha o atalho neste jogo"* e o dispensado diz *"não me lembre deste
+    jogo"*. Um jogo pode estar num, no outro, ou nos dois — juntá-las numa só
     apagaria a diferença que faz a pessoa entender o que ela mesma pediu.
     """
     itens = [
@@ -2116,7 +2118,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     #:
     #: **ELE VEM DEPOIS DO «ABRIR», e a ordem é o que cada um responde:** o
     #: cartão está localizado, então o ato normal é abrir; localizar de novo é o
-    #: ato CORRETIVO —  —, e ato
+    #: ato CORRETIVO — *"o que ele achou não é o que eu quero"* —, e ato
     #: corretivo não disputa a primeira posição com o ato normal. É a mesma
     #: leitura de cima para baixo que fez o selo e o botão falarem a mesma
     #: palavra em :data:`ADICIONAR_ROTULO`.
@@ -2191,7 +2193,8 @@ class Quadro:
         """Quantos lançadores o produto ACHOU nesta máquina.
 
         LIA O SELO, E O SELO É OUTRA PERGUNTA. Até 02/09 esta conta somava
-        `ok` e `warn` — o que respondia **, e não *"quantos lançadores estão aqui?"*, que é
+        `ok` e `warn` — o que respondia *"em quantos lançadores eu sei dizer se
+        os controles chegam?"*, e não *"quantos lançadores estão aqui?"*, que é
         o que a palavra **encontrados** promete a quem lê a tela. Enquanto o
         produto não olhava a presença, as duas contas davam o mesmo número e a
         diferença ficou escondida; assim que ele passou a olhar, um lançador

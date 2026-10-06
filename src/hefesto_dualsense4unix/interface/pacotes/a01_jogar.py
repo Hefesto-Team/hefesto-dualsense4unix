@@ -249,7 +249,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         via = palavra_do_transporte(casa.get("transporte") or c.get("transport"))
         cartoes[uniq] = {
             "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
-            # **.
+            # *"os svgs do dualsense (…) não são os que o meu mapa cataloga"*.
             # `""` QUANDO A COR NÃO É PINTÁVEL, pela mesma régua da borda: o
             "desenho": _colorway_do_desenho(str(casa.get("cor") or "")),
             # abaixo, mostrava com o botão 2 ACESO. O dono lê `player_slot`
@@ -371,7 +371,8 @@ def _do_exame() -> list[dict[str, Any]]:
 def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     """As onze fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
 
-    **ELE PERDEU A TELA EM 07/09/2026, E NÃO PERDEU AS FONTES.**  A coluna **Atenção** da aba Jogar
+    **ELE PERDEU A TELA EM 07/09/2026, E NÃO PERDEU AS FONTES.** Ordem de produto: a seção
+    Atenção sai da aba Jogar e fica só o Reconectar controles. A coluna **Atenção** da aba Jogar
     era o ÚNICO lugar
     publicado onde estas linhas pousavam, e ela saiu — os quatro endereços
     (`atencao-conta`, `aviso-selo`, `aviso-texto`, `aviso-vivo`) saíram de
@@ -680,7 +681,8 @@ def _aviso_da_divergencia_de_mascara(state: dict[str, Any]) -> dict[str, str] | 
 def _aviso_da_cura_do_travamento() -> dict[str, str] | None:
     """A linha da **cura do travamento do USB**, e só quando ela pede ação.
 
-    **A PALAVRA, 05/09/2026**, sobre o aviso do Modo Nativo:  —
+    **A PALAVRA, 05/09/2026**, sobre o aviso do Modo Nativo: *"Não me
+    lembro disso acontecer. E não deveria. Mas caso ocorra na coluna atenção"* —
     e a medição diz que ela tem razão nas três. O Hefesto **conserta** a causa
     desde a SPRINT-GAME-RUMBLE-01 (o quirk `054c:0ce6:…ignore_ctl_error` do
     `snd_usb_audio`, que torna o probe do mixer UAC tolerante e para de martelar
@@ -898,7 +900,7 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
     régua (`test_a01_a_mascara_vale_sempre_que_pode`): `gamepad.mask.set` grava
     sem gate de modo, e o chip do CARTÃO acende a escolha pelo `por_aparelho`
     do daemon (`ipc_handlers._mascaras_por_aparelho`). O argumento abaixo,
-    **, era de antes de o chip ser por
+    *"esta tela deixava clicar e ficava calada"*, era de antes de o chip ser por
     controle (03/09): hoje é o chip que responde ao clique.
 
     ELA CONTINUA SENDO A DONA DA LINHA, e não um literal no `pacote()`: o
@@ -952,8 +954,9 @@ class LinhaDaFileira(NamedTuple):
 def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
     """A TABELA DA FILEIRA — o dono único do que cada um dos quatro chips faz.
 
-    O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela regra de produto: ** A fileira é um
-    grupo de rádio: clicar em qualquer chip deixa
+    O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela regra de produto: qualquer modo se
+    escolhe a qualquer momento, sem ordem. A fileira é um grupo de rádio:
+    clicar em qualquer chip deixa
     AQUELE aceso, vindo de qualquer outro, e clicar no aceso REAPLICA.
 
     | chip | modo | caminho | o jogo da vez no Steam Input |
@@ -1119,7 +1122,8 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     E O QUARTO NÃO É BURACO: acender um chip por padrão seria afirmar uma
     escolha que ninguém fez.
 
-    A ESCOLHA É **POR JOGO**, e é  A chave da Steam é indexada por
+    A ESCOLHA É **POR JOGO**, e é ordem de produto: *"setar o jogo pra funcionar
+    usando os controladores da própria steam"*. A chave da Steam é indexada por
     appid (`UseSteamControllerConfig`), então um chip que acendesse para a
     MÁQUINA mentiria em 15 dos 16 jogos do usuário.
     """
@@ -1625,11 +1629,15 @@ def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     endereço para ler e outro para escrever.
 
     **"Desligado" É O MODO NATIVO, e não "parar o Hefesto"** — decisão,
-    31/08/2026: ** **Parar** o serviço
+    31/08/2026: *"o modo nativo já existe ali (…) e se eu quiser desligar modo
+    hefesto clico em desligado e o modo nativo fica online."* **Parar** o serviço
     continua sendo só a aba Sistema: este gesto nunca chama `daemon.pause` nem
     manda `stop` a coisa nenhuma.
 
     **LIGADO PASSOU A LIGAR O SERVIÇO TAMBÉM — decisão, 03/09/2026:**
+    *"Adiciona essa função extra quando clicar em ligar. E em sistema um
+    específico pra parar o Daemon E Ativar o Daemon (sendo que em jogar também
+    consegue isso)."*
 
     E ELE VEM ANTES DO PLANO, não depois, porque sem o daemon de pé não há a
     quem mandar: os três IPCs deste gesto atravessam a ponte, e com o serviço
@@ -1895,7 +1903,7 @@ def _reconciliar_o_vdf(alvo: str, ligar: bool) -> str:
     **ESTA FUNÇÃO NUNCA FECHA A STEAM DO USUÁRIO.** Com a Steam aberta o dono ADIA, e
     quem pode fechá-la é só o segundo clique no chip, já armado
     (:func:`_fechar_a_steam_e_ligar`). Sem ele, o produto completa sozinho:
-    `hefesto-steam-input-guard.path` (**active** e **enabled** na máquina do usuário
+    `hefesto-steam-input-guard.path` (**active** e **enabled** na bancada
     em 20/09/2026, `PathChanged=%h/.steam/steam/userdata`) acorda quando a
     Steam acaba de sair, que é o único instante em que a escrita sobrevive, e
     roda `disable_steam_input.sh --apply-quiet`: ele zera o
@@ -1950,7 +1958,8 @@ GESTO_DO_STEAM_INPUT = "modo-steam"
 def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Steam Input": a Steam entrega a ENTRADA **daquele jogo**, e só dele.
 
-    O ESCOPO É POR JOGO, e é  A chave da Steam é indexada por appid
+    O ESCOPO É POR JOGO, e é ordem de produto: *"setar **o jogo** pra funcionar usando
+    os controladores da própria steam"*. A chave da Steam é indexada por appid
     (`UseSteamControllerConfig`, `steam_input_ponte:137`), e um chip que
     escrevesse para a MÁQUINA aplicaria silenciosamente ao jogo que por acaso
     estivesse aberto — que é a `CAMINHO-CONTAGIO-01` repetida com outro campo.
@@ -2264,7 +2273,9 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     não daqui.
 
     O TERCEIRO PASSO TROCOU DE FONTE — POINT-AND-CLICK-01, 17/09/2026, pela
-     Era `mouse.emulation.restore`, que lê a flag de sessão
+    ordem de produto: *"o modo point and click é o modo navegação e o modo que nós
+    mesmos podemos usar e configurar na aba navegação. **Ele ativa o modo
+    configurado lá.**"* Era `mouse.emulation.restore`, que lê a flag de sessão
     da MÁQUINA; é `desktop.arranjo.apply`, que lê o PERFIL ATIVO — mouse,
     `key_bindings`, `button_actions`, `teclado_emulado` e a queda da supressão.
     As cinco coisas que a aba Navegação grava chegavam ao disco e não voltavam,
@@ -2400,7 +2411,8 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     exatamente estes dois passos, encadeados.
 
     **NÃO É O `Connect` DO BLUEZ, e isso é decisão de produto.** O
-    `integrations/gesto_de_reconexao.py` diz com todas as letras:  O que este botão traz de volta é
+    `integrations/gesto_de_reconexao.py` diz com todas as letras: não reconectar é decisão de
+    produto e é o contrato daquele módulo; o botão PS é do usuário. O que este botão traz de volta é
     o JOGADOR, não o rádio.
 
     PASSO 1 — `coop.sync`: um ciclo FORÇADO de reconciliação

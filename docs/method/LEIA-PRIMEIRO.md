@@ -52,7 +52,8 @@ prosa não quebra clone nenhum. Quem quebrava era um punhado de sete arquivos.
 Os dois últimos são a razão de a sprint existir. Eles foram arquivados junto
 com 732 sprints fechadas, `_gesto_do_arquivo` devolveu `{}` **em silêncio**, e
 as 199 células da mesa de medição voltaram a mostrar a procedência repetida —
-o defeito que o usuário apontou em 07/09 olhando a linha 10. Sete réguas ficaram vermelhas e
+o defeito que o usuário apontou em 07/09 olhando a linha 10: *"sinceramente não
+entendi o que diabos é pra fazer aqui"*. Sete réguas ficaram vermelhas e
 nenhuma sabia dizer por quê.
 
 ## AS RÉGUAS QUE SEGURAM ISTO

@@ -6,7 +6,7 @@ lançadores (`cura_por_estrada.curar_todas_as_estradas`: o Heroic, o Lutris e
 as caixas dos emuladores, sem fechar nada) e só depois fecha a Steam. A
 pergunta do primeiro clique, o corpo do dono que o painel lê palavra por
 palavra (`DaemonActionsMixin._STEAM_APPLY_CORPO`), falava só da Steam e
-prometia  — com um jogo aberto, a
+prometia *«Com um jogo aberto eu não mexo em nada»* — com um jogo aberto, a
 carona já tinha escrito nos outros quando a Steam recusava.
 
 AS RÉGUAS, e nenhuma digita a lista de lançadores: o que a pergunta

@@ -1,6 +1,6 @@
 """BROADCAST-QUE-NAO-MENTE-01 (02/08) — `led.set` sem `uniq` APLICAVA NADA.
 
-Defeito medido na máquina do usuário, com dois DualSense na mesa e a paleta
+Defeito medido na bancada, com dois DualSense na mesa e a paleta
 automática ligada: um ``led.set`` com ``rgb=[0,255,0]`` e SEM ``uniq``
 respondia ``{"status": "ok"}`` e o sysfs não mudava — os controles seguiam
 azul (slot 1) e vermelho (slot 2). O MESMO pedido COM ``uniq`` nos dois MACs

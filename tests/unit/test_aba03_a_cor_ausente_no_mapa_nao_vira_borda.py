@@ -2,6 +2,8 @@
 
 A LEI, e é do usuário (03/09/2026)::
 
+    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
+     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho"
 
 O DEFEITO QUE ESTA RÉGUA MORDE, e ele estava vivo até hoje: o chip da coluna
 escrevia no `--plastico` **o que quer que `monta.cor_da_zona` devolvesse**. Em

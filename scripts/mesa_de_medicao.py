@@ -34,7 +34,7 @@ serve para depurar rádio."* A dívida do `playwright`, que não está no
 `pyproject.toml` e deixa toda árvore nova com dois portões vermelhos, já ensinou
 o preço de acrescentar uma.
 
-A PÁGINA NÃO ACIONA O APARELHO ().
+A PÁGINA NÃO ACIONA O APARELHO (decisão de produto: *"ok mas é essa a ideia mesmo"*).
 Ela diz o que fazer, conta o tempo, mostra os quatro desenhos e GRAVA. Quem faz
 é ela, no produto.
 
@@ -627,7 +627,9 @@ def pelo_sysfs() -> list[dict[str, Any]]:
     """Quem está na mesa AGORA, lido do `sysfs` — sem daemon e sem escrever.
 
     NASCEU DE UMA QUEIXA, 07/09/2026, com quatro DualSense na mesa e o
-    daemon parado. Ela estava
+    daemon parado: *"não estamos usando o nosso mapa? pq até agora ele não
+    entendeu qual player deveria aparecer, nem qual controle (…) nem o modo de
+    conexão (qual é bt e qual é cabo) se tá ou não carregando"*. Ela estava
     certa: a página só sabia perguntar ao daemon, e com ele parado punha
     travessão em tudo — como se não houvesse controle nenhum, tendo QUATRO.
 
@@ -1133,7 +1135,8 @@ main{max-width:1240px;margin:0 auto;padding:var(--space-sm)}
   border-radius:var(--radius-md);padding:var(--space-md);margin:0 0 var(--space-sm)}
 
 /* ---------------------------------------------------------------------
-   O TOPO EXPLICA, e é a primeira coisa da página
+   O TOPO EXPLICA, e é a primeira coisa da página — pedido:
+   *"começa na parte superior explicando o que está sendo testado e afins"*.
    Antes, o título vinha sozinho e o "o que vai acontecer" ficava DEPOIS dos
    quatro desenhos: ela via os controles antes de saber para quê.
    --------------------------------------------------------------------- */
@@ -1156,7 +1159,8 @@ p{margin:0 0 var(--space-2xs)}
 
 /* ---------------------------------------------------------------------
    OS QUATRO. Cada coluna é UMA pilha: desenho, quem é, o que responder, o
-   campo extra e o veredito.
+   campo extra e o veredito. Pedido: *"coloca em baixo de cada controle
+   as opções do que selecionar e um campo extra"*.
    --------------------------------------------------------------------- */
 .quatro{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-xs)}
 @media (max-width:940px){.quatro{grid-template-columns:repeat(2,1fr)}}
@@ -1187,7 +1191,8 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
   fill:var(--realce,var(--color-pink)) !important;
   stroke:var(--realce,var(--color-pink)) !important}
 
-/* O FOCO É O DO MAPA DO CONTROLE — dela. Lá a
+/* O FOCO É O DO MAPA DO CONTROLE — dela: *"as bordas ou coisas a serem
+   observadas ficam com o foco o mesmo que temos no mapa dos controles"*. Lá a
    peça em foco acende em `--pink`, e o rosa é o que ela já associa a "olhe
    aqui" em toda a casa. A mesa usava três cores por papel, e o papel já é dito
    pela moldura, pelo rótulo e pelo texto do que observar — a peça acesa só
@@ -1202,7 +1207,8 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
 .ctl.papel-calado{opacity:.8}
 /* O DESENHO É DE LINHA, E A LINHA NÃO PODE ENCOLHER COM ELE.
    -----------------------------------------------------------------------
-   ** — 07/09/2026. E o contorno ESTAVA pintado: medido, `stroke`
+   *"e cara o contorno não tá pintado (…) falta a parte superior do
+   touchpad"* — 07/09/2026. E o contorno ESTAVA pintado: medido, `stroke`
    `rgb(228,224,216)` nos quatro, a mesma cor do mapa. O que faltava era
    ESPESSURA.
 
@@ -1412,7 +1418,10 @@ body[data-tempo="3"] .condicao, body[data-tempo="3"] .condicao-rot{
 /* ---------------------------------------------------------------------
    UM CONTROLE DE CADA VEZ — vibração, som, microfone.
 
-   Dela, 07/09/2026.
+   Dela, 07/09/2026: *"coisas que eu precisa fazer todos separados um por vez.
+   eu só vou pro próximo controle depois de responder o primeiro e no segundo
+   coloca um timer explicando o que fazer e o que observar. afinal podemos ter
+   4 controles mas só tenho um par de mãos"*.
 
    Os quatro CONTINUAM na tela — ela precisa ver a fila e o que já respondeu —,
    mas só o da vez recebe clique. Esconder os outros tiraria a única coisa que
@@ -1457,7 +1466,8 @@ a{color:inherit}
 
 _JS = r"""
 /* TODOS os testes existem sempre; TESTES é a FATIA que o filtro mostra.
-   A página abre em "o que falta" — dela. Com os 199 numa
+   A página abre em "o que falta" — dela: *"a ideia é ficar fácil pra validarmos
+   as teses, a grande maioria ali já foi validada uns 80%"*. Com os 199 numa
    lista só, o que ninguém mediu ficava no meio dos que já estão de pé. */
 const TODOS = window.__TESTES__;
 const CONFERE = window.__CONFERE__;  // gerada por `confere()`; o JS não a reimplementa
@@ -1622,7 +1632,8 @@ async function desenhar() {
 }
 
 /* A VEZ, a fila e o texto do que fazer AGORA — só nos testes de um por vez.
-   Dela. */
+   Dela: *"eu só vou pro próximo controle depois de responder o primeiro e no
+   segundo coloca um timer explicando o que fazer e o que observar"*. */
 function respondeu(posto) {
   return !!$(`input[name="r-${posto}"]:checked`);
 }
@@ -1695,7 +1706,7 @@ function pintar() {
   // O COMO VEM PRONTO, e é pintado AQUI e não no `desenhar()`: aquele só roda
   // quando o teste muda, e este campo é reescrito a cada tempo. Medido
   // navegando com o Playwright em 07/09/2026: ele chegava VAZIO ao TEMPO 3, e
-  // ela veria de novo a cobrança que a fez dizer .
+  // ela veria de novo a cobrança que a fez dizer *"isso aqui me quebra"*.
   // O que o usuário escreveu ganha de tudo; o do arquivo só preenche o vazio.
   if (!$('#gesto').value.trim()) { $('#gesto').value = comoDoArquivo(t); }
   $('#selo').classList.toggle('vazio', !t.ja_medido);
@@ -1719,7 +1730,9 @@ function pintar() {
        -------------------------------------------------------------------
        De manhã o gesto estava ESCONDIDO numa gaveta e ela não o achou. À
        noite eu o pus inteiro na tela — os sete campos, sete parágrafos — e
-       o usuário escreveu.
+       o usuário escreveu: *"mds quanto texto não entendi nada dos testes (…)
+       extremamente complexos, cheios de texto, milhares de etapas manuais
+       (…) tá impossível ler ou fazer algo aqui"*.
 
        Os dois são o mesmo erro medido pelos dois lados: **quem executa lê
        uma coisa de cada vez**. Uma parede de texto não é mais informação
@@ -1839,7 +1852,8 @@ function iniciar() {
   contar(TESTES[atual].segundos);
 }
 
-/* O VERIFICAR
+/* O VERIFICAR — pedido: *"após responder e clicar em verificar ele mostra
+   se deu certo ou errado pra cada controle"*.
 
    A REGRA NÃO MORA AQUI. Ela é de `confere()` em `mesa_de_medicao.py`, e chega
    como DADO em `window.__CONFERE__`. Reimplementá-la em JavaScript daria duas
@@ -1997,7 +2011,8 @@ function montarSecoes() {
 
      Duas coisas resolvem, e as duas são de leitura, não de dado: os `optgroup`
      nomeiam os dois blocos, e a segunda linha do seletor fecha as 21 num corte
-     só — que é o que o usuário pediu quando disse **. */
+     só — que é o que o usuário pediu quando disse *"o prioritários são os 16 eu acho
+     que vc falou. faço eles e na sequência vou fazendo os demais"*. */
   const doRoteiro = ordem.filter((s) => s.startsWith('O roteiro'));
   const doMapa = ordem.filter((s) => !s.startsWith('O roteiro'));
   const quantasNoRoteiro = doRoteiro.reduce((n, s) => n + conta.get(s), 0);
@@ -2142,7 +2157,8 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     <button id="f-medido">já medido</button>
     <button id="f-tudo">tudo</button>
   </span>
-  <!-- O SELETOR DE SEÇÃO — 07/09/2026, dela. Uma fila de 148 não se ataca de
+  <!-- O SELETOR DE SEÇÃO — 07/09/2026, dela: *"o prioritários (…) faço eles e
+       na sequência vou fazendo os demais"*. Uma fila de 148 não se ataca de
        uma vez; ela escolhe uma seção, fecha, e vai para a próxima. O roteiro
        vem primeiro na lista porque é a ACEITAÇÃO do produto, não uma seção
        qualquer do mapa. -->
@@ -2179,7 +2195,8 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
 <main>
   <div class="cartao">
 
-    <!-- O TOPO EXPLICA O QUE ESTÁ SENDO TESTADO, e vem ANTES de tudo —  Até 06/09/2026 o título vinha sozinho e o "o que vai
+    <!-- O TOPO EXPLICA O QUE ESTÁ SENDO TESTADO, e vem ANTES de tudo — pedido: *"começa na parte superior explicando o que está sendo testado e
+         afins"*. Até 06/09/2026 o título vinha sozinho e o "o que vai
          acontecer" ficava DEPOIS dos quatro desenhos, dentro da seção do
          TEMPO 1: ela via os controles antes de saber para quê, e no TEMPO 3 a
          explicação sumia da tela justamente quando ela ia julgar. Agora a capa
@@ -2202,7 +2219,9 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
       </div>
     </div>
 
-    <!-- OS QUATRO DESENHOS FICAM FORA DAS TRÊS SEÇÕES, e é o  Eles
+    <!-- OS QUATRO DESENHOS FICAM FORA DAS TRÊS SEÇÕES, e é o pedido:
+         *"em cada controle eu devo observar algo. Faça os svgs brilharem
+         mostrando o que observar de cada controle em cada rodada"*. Eles
          nasceram dentro do TEMPO 3, e ali chegavam TARDE: ela lia o que fazer,
          apertava INICIAR e ia mexer no aparelho SEM NUNCA TER VISTO onde
          olhar. O desenho é a instrução, não o recibo — por isso ele está no
@@ -2222,7 +2241,7 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
            fecha, e o COMO que o arquivo já publica": o que ela precisa para
            executar estava a um clique de distância, atrás de uma frase que não
            dizia que ali estava o que fazer. Ela abriu a linha 10 e escreveu
-           ** — e a
+           *"sinceramente não entendi o que diabos é pra fazer aqui"* — e a
            resposta estava na tela, dobrada.
 
            O que fica na gaveta agora é a PROCEDÊNCIA: a célula que a linha
@@ -2241,7 +2260,8 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     </section>
 
     <!-- DUAS ESPERAS, E ELAS NÃO SÃO A MESMA COISA — 07/09/2026, ela olhando
-         a linha 10. A tela mostrava 19:55 correndo e mandava "tirar os olhos da
+         a linha 10: *"sinceramente não entendi o que diabos é pra fazer
+         aqui"*. A tela mostrava 19:55 correndo e mandava "tirar os olhos da
          tela": vinte minutos parada diante de um cronômetro. O curto é para
          ela OLHAR o aparelho enquanto o gesto acontece; o longo é para ela
          SAIR e voltar. Um relógio gigante serve ao primeiro e insulta o
@@ -2254,7 +2274,10 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     </section>
 
     <section id="depois" hidden>
-      <!-- O CAMPO "no conjunto" SAIU — 07/09/2026
+      <!-- O CAMPO "no conjunto" SAIU — 07/09/2026, palavra de produto: *"esse
+           segundo campo não é eu quem deve responder. O que eu vi no conjunto
+           não deve existir assim, demos 4 opções pra cada controle uma 5
+           deveria ser um campo pra eu descrever por controle o que ocorreu"*.
            Ele pedia dela uma síntese dos quatro que a mesa já tem — as quatro
            respostas somadas SÃO o conjunto —, e cobrar de novo em prosa é
            trabalho dobrado. O que ela escreve fica no campo de cada controle,

@@ -17,7 +17,7 @@ Lá ela ficou em **200** por catorze dias depois da medição, com um comentári
 dizendo espelhar o drop-in 51 — espelhando a versão de 25/07, que rebaixava
 para 50 e foi substituída.
 
-MEDIDO NA MÁQUINA DO USUÁRIO EM 03/09/2026, com um DualSense no cabo e a webcam
+MEDIDO NA BANCADA EM 03/09/2026, com um DualSense no cabo e a webcam
 plugada (``LC_ALL=C pactl list sources``)::
 
     alsa_output.pci-…hdmi-stereo.monitor                  696

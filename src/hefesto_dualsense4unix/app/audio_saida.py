@@ -377,7 +377,8 @@ def tocar_confirmacao(
     Nenhum caminho devolve "deu certo" sem ter tocado, e nenhum falha calado:
     todo motivo que não seja escolha do usuário carrega um recado para a tela.
 
-    REGRESSÃO-DO-BIPE-01, 16/08/2026, tendo saído antes. **O passo 6.5 é a cura**: com o
+    REGRESSÃO-DO-BIPE-01, 16/08/2026 — *"hoje em dia na interface nem por cabo
+    esse bip tá saindo"*, tendo saído antes. **O passo 6.5 é a cura**: com o
     sink DORMINDO, este som não tinha como sair.
 
     Os degraus 1 a 7 conferiam tudo menos o único estado do sistema que

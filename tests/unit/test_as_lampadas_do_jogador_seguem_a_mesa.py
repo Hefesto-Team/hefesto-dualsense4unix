@@ -1,6 +1,9 @@
 """As cinco lâmpadas do LED do jogador seguem o assento vivo, não o mockup.
 
-QUEIXA, 14/09/2026, com os dois controles na mesa
+QUEIXA, 14/09/2026, com os dois controles na mesa:
+
+    *"a interface tá dessincronizada com os controles reais. (o player do
+     controle , o led indicativo do player)"*  (noqa-acento: citação)
 
 O QUE ESTAVA QUEBRADO: o `<div class="lampadas">` da aba Controles não tinha
 `data-campo`. Sem endereço, o `achar()` do piloto passa ao largo dele — o HTML

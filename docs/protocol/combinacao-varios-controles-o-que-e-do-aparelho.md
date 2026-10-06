@@ -1,7 +1,9 @@
 # Vários controles na mesa — o que é canal do aparelho e o que é do host
 
 > Escrito em 03/09/2026, na frente **COMBINAÇÃO** da leva que ela encomendou:
-> **.
+> *"lançar novo workflow pra agentes procurarem no GitHub tais canais ou tais
+> id (…) como é só informação eles trouxeram e me ajudaram no mapa do
+> controle"*.
 >
 > **Nada aqui foi ao aparelho.** Esta página traz FATO LIDO — em fonte de
 > driver, em fonte de biblioteca pública e em relato de terceiro — com o

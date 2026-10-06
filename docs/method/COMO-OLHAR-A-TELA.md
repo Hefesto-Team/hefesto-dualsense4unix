@@ -4,7 +4,10 @@
 
 Pedido, literal, em 01/08/2026:
 
-> **
+> *"se tiver outro conhecimento desatualizado no repositório, ou que você usou
+> e não funcionou e você descobriu a forma certa, isso deve ser materializado
+> como conhecimento perpétuo pra evitar perdermos tempo reaprendendo sempre sem
+> necessidade."*
 
 Este arquivo é isso. Cada linha aqui custou tempo de alguém.
 
@@ -532,13 +535,14 @@ Escrito em 25/08/2026, depois de duas rodadas de mockup jogadas fora por não
 haver regra escrita.
 
 **Quando vale.** Quando a tela vai mudar de forma, não de detalhe — e quando a
-pergunta é , que ela responde **vendo**, nunca
+pergunta é *"isso resolve o que eu preciso?"*, que ela responde **vendo**, nunca
 lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 
 **As cinco regras, e cada uma nasceu de um defeito da mesma noite:**
 
 1. **HTML standalone, aberto por duplo clique.** Sem rede, sem servidor, sem
-   fonte web. Ela recusou o artefato publicado com uma  É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
+   fonte web. Ela recusou o artefato publicado com uma frase: *"html standalone
+   por favor"*. É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
    que só funciona com rede não serve para depurar rádio.
 2. **A paleta tem dono único: `scripts/paleta_da_casa.py`**, copiada byte a byte.
    *"O artefato tem de parecer parte do Hefesto, não um site sobre ele."*

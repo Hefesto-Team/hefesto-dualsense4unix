@@ -4,7 +4,10 @@
 quatro DualSense e re-parear um a um, na ordem **vermelho, azul, branco,
 roxo**:
 
-> **
+> *"deve ser lembrado por ordem de conexão naquele momento apenas. Não uma
+> imagem fixa salva por mec (…) Vermelho, deveria ser o player 1, azul, o
+> player 2, branco o player 3, roxo o player 4. mas tá agora, vermelho 1,
+> branco 2, roxo 3, azul 4"*
 
 O que o usuário viu — `vermelho 1, branco 2, roxo 3, azul 4` — é o `controllers.json`
 dela sendo obedecido à risca: a fila GRAVADA tinha essa ordem, de um dia

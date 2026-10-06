@@ -14,7 +14,8 @@ linha — e a dica do quadro Navegação já citava *"a linha de estado abaixo"*
 desde 27/08, para uma linha que não existia.
 
 O QUE ESTA RÉGUA COBRA, e é o inverso do que parece: **que esta aba NÃO tenha
-frase própria.** A LEI 0 desta empreitada é do usuário —  —, e a forma de
+frase própria.** A LEI 0 desta empreitada é do usuário — *"Não temos que recriar nada.
+só aproveitar o que foi feito e integrar ao novo desenho"* —, e a forma de
 quebrá-la aqui seria reescrever as frases da GTK em português "melhor". Então
 cada linha abaixo compara o que a tela recebe com o que a função do produto
 devolve, chamando as duas.

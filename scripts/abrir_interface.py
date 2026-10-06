@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Abre a interface nova COM identidade — a logo na dock, o nome na barra.
 
-Pedido, 29/08/2026.
+Pedido, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na
+dock"*.
 
 POR QUE ESTE ARQUIVO EXISTE, EM VEZ DE DUAS LINHAS NO PILOTO
 ------------------------------------------------------------

@@ -143,7 +143,7 @@ para isso ficar velho.
 
 **Subir um degrau sozinho com o jogo aberto.** Cada degrau ao vivo recria o
 vpad, e recriar o vpad com o jogo aberto arranca o controle da mão do usuário (R-04,
-medido em 23/07/2026; medido DE NOVO em 19/08 no journal do usuário). O gate
+medido em 23/07/2026; medido DE NOVO em 19/08 no journal da bancada). O gate
 `_recriacao_bloqueada_por_jogo` já implementa a metade defensiva disto: origem
 automática é barrada, origem que é gesto do usuário nunca é. Este módulo declara a
 outra metade — `como_subir` NUNCA responde "agora" com o jogo vivo.
@@ -341,7 +341,7 @@ def divergencia_com_o_carimbo(
     ``None`` quando não discordam, **ou quando não há o que comparar**, que é o
     caso que esta função nasceu para separar.
 
-    O DEFEITO QUE ELA CURA, medido no journal do usuário em 17/09/2026 às 10:45:02:
+    O DEFEITO QUE ELA CURA, medido no journal da bancada em 17/09/2026 às 10:45:02:
 
         ``ponte_confirmada_diverge_do_perfil ponte_do_perfil=gamepad/xbox
         ponte_gravada=gamepad/dualsense``

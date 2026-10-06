@@ -895,7 +895,8 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     situação que a madrugada de 16/08 mediu. Dois eventos entram aqui, e cada
     um responde a uma metade da medição:
 
-    - ``pintura_com_escritor_cru``. O produto pintou (contador do `_pintar_por_hidraw_bt`) e
+    - ``pintura_com_escritor_cru`` — *"a barra fica APAGADA depois de cada
+      comando nosso"*. O produto pintou (contador do `_pintar_por_hidraw_bt`) e
       há um escritor cru segurando o nó: quem escrever por ÚLTIMO ganha, e
       hoje é ela. O gatilho reafirma 1,5 s depois que a sequência de comandos
       sossega — uma escrita por rajada, não uma por comando;
@@ -904,8 +905,9 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
       exatamente quando ela repinta tudo o que enxerga (medido em 12/08:
       98 reports de saída numa probe com ela viva, contra 6 sem ela).
 
-    **Modo Nativo é no-op TOTAL — nem sonda.** Regra de produto, literal. Ali o dono do hidraw é o
-    jogo, e um escritor cru não
+    **Modo Nativo é no-op TOTAL — nem sonda.** Regra de produto: no Nativo (e na Conexão) o
+    controle volta à Steam, e todo o resto é do Hefesto. Ali o dono do hidraw é o jogo, e um
+    escritor cru não
     é intruso: é o dono. Sondar seria gastar `pgrep` para concluir que sim, o
     jogo está lá. 24/09/2026 (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-
     HEFESTO`): a barra e o número passaram a ser do Hefesto no Nativo também, e

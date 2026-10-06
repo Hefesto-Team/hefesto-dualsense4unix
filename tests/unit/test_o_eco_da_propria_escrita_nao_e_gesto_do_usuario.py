@@ -10,7 +10,7 @@ DualSense do rádio na mesa::
     5. `mic_da_mesa_loop` lia isso como "o usuário apertou o botão do microfone"
     6. o daemon DESLIGAVA o microfone
 
-No journal do usuário::
+No journal da bancada::
 
     02:11:15.541  bt_mic_palavra_dela   ligado=True
     02:11:15.547  bt_mic_pedido         ligar=True  seq=4

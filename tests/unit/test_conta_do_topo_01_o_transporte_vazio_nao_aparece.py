@@ -2,6 +2,8 @@
 
 **Decisão, 17/09/2026**, com um controle só no rádio na mesa:
 
+    "só tem 1 controle conectado ainda assim aparece no canto superior direito
+     0 usb  1 bt deveria mostrar só o que tá conectado que é 1 bt nesse caso"
 
 Ela REFINA a decisão de 06/09 e não a contradiz. Aquela escolheu a PALAVRA —
 ``USB``/``BT`` em vez de ``cabo``/``rádio``, porque *"2 cabo · 0 rádio"* não é

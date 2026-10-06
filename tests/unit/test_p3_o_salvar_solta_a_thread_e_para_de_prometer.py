@@ -5,7 +5,7 @@ mesma linha de código, e o botão VIZINHO já tinha os dois curados:
 
 **A thread.** `on_profile_save` chamava `profile_switch()` — síncrono — na
 thread do GTK. O handler `profile.switch` levou **~1,2 s MEDIDOS no journal
-do usuário**, número escrito no comentário de `on_profile_activate`, e foi por ele
+da bancada**, número escrito no comentário de `on_profile_activate`, e foi por ele
 que o **Ativar** virou `call_async` na ATIVAR-NAO-MENTE-01. O Salvar ficou.
 
 **A promessa.** `profile_switch()` devolve um booleano cujo significado a

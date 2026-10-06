@@ -8,7 +8,8 @@ A PERGUNTA QUE ELE RESPONDE
 `inferido-do-codigo` desde que o mapa nasceu, e o motivo estava escrito:
 **nunca houve controle no cabo para medir**. A mesa 2+2 de 15/08/2026 pôs dois,
 e o braço do rádio já foi medido em 14/08 (0,9945 g e 0,9823 g) — então dá para
-fechar o par no MESMO minuto, que é o
+fechar o par no MESMO minuto, que é o pedido: *"giroscópio, acelerômetro
+também. todos via cabo e bt"*.
 
 A RÉGUA É ABSOLUTA, E É POR ISSO QUE NINGUÉM PRECISA MEXER NO CONTROLE
 ----------------------------------------------------------------------

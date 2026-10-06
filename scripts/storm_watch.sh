@@ -73,7 +73,7 @@
 #      que cabem no lugar guardado de quem saiu (30 s): o controle volta com o
 #      número dele — e o aviso de OUTRO controle que chega no meio do trabalho
 #      ganha mais uma volta das três (`religar_em_fundo`). O tique do watchdog
-#      passa de 2 em 2 min (medido no journal do usuário: mediana 120 s), e religado
+#      passa de 2 em 2 min (medido no journal da bancada: mediana 120 s), e religado
 #      só ali ele voltava fora do prazo em mais de 3 de cada 4 quedas. Sem a
 #      regra do sudo (o install sem senha, o Flatpak), nada muda: o tique
 #      continua religando, como antes.

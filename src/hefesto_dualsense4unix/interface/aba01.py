@@ -300,7 +300,8 @@ CSS = """
      E ELA PASSOU A TER DONO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01. A cor
      vinha de `--plastico`, escrito no `style=` do cartão pelo gerador, e o
      gerador só conhece o mockup: com o controle do usuário no cabo (White), a borda
-     continuava Cosmic Red. A lei é do usuário
+     continuava Cosmic Red. A lei é do usuário: *"se no topo tá mostrando controle
+     white player 1, então cada aba vai usar os controles lá de cima."*
 
      POR QUE UMA VARIÁVEL DE CSS NÃO SERVIA, e é o que decidiu a forma: o
      `escrever()` do piloto tem SETE alvos — texto, largura, fundo, valor, html,
@@ -367,7 +368,9 @@ CSS = """
      Ela mora no quadro Modo, fora das duas seções do interruptor — a troca de
      perfil vale ligado e desligado.
 
-     ELE SAIU DO RODAPÉ DO QUADRO E SUBIU PARA A LINHA DO TÍTULO, a  Embaixo dos modos ele lia como um QUINTO modo.
+     ELE SAIU DO RODAPÉ DO QUADRO E SUBIU PARA A LINHA DO TÍTULO, a pedido:
+     *"Pode colocar ele no canto superior direito do bloco tipo esse banco de
+     provas na guia navegação."* Embaixo dos modos ele lia como um QUINTO modo.
 
      A GRAMÁTICA PASSOU A SER A DA `.porta` DA NAVEGAÇÃO (`aba06.py`), que é o
      modelo que o usuário apontou — e com ela vêm três medidas que não são gosto:
@@ -389,7 +392,8 @@ CSS = """
      quebrar em duas linhas quando a janela encolhe para o piso de 1212px — e
      duas linhas aqui estouram os 17px e derrubam a conta acima. */
   /* A CAIXA VIROU PÍLULA — 19/09/2026, `TRAVA-PILULA-01`, pedido com as
-     duas abas abertas lado a lado
+     duas abas abertas lado a lado: *"vê os botões do giroscopio e acelerometro
+     queria esse tipo de botão ali no Trava o perfil Ativo."*
 
      O MODELO É O `.sensores-peca .sw` DA ABA CONTROLES, e as cores vêm dele
      inteiras: borda e texto no `--green`, fundo em 9% dele, e a bolinha `.p`
@@ -421,13 +425,15 @@ CSS = """
      O PADDING ENCOLHE COM A ALTURA: o `.sw` usa `0 10px` numa caixa de 26px;
      aqui são `0 8px` em 17px, que é o que mantém a pílula com a mesma
      proporção sem estourar a linha do título. */
-  /* O «MODO FREESTYLE» — 24/09/2026, O-MODO-FREESTYLE-01,  A pílula e a polaridade ficam; mudam a letra e a altura,
+  /* O «MODO FREESTYLE» — 24/09/2026, O-MODO-FREESTYLE-01, pedido:
+     *"Vira Modo Freestyle o botão. E a fonte dele aumenta e a altura do botão
+     aumenta também"*. A pílula e a polaridade ficam; mudam a letra e a altura,
      e nenhuma das duas é medida nova:
 
        `12.5px`  a letra de todo botão desta casa (`.btn`, o rodapé, os chips
                  dos modos logo abaixo). Era 10,5.
        `26px`    a altura do `.sw` da aba Controles no dia em que ela o apontou
-                 como modelo (19/09). Era 17. Os
+                 como modelo (19/09, *"queria esse tipo de botão"*). Era 17. Os
                  36 dos chips de modo ficam de fora de propósito: com a mesma
                  altura deles o botão voltaria a ler como um quinto modo, que
                  foi o motivo de ele subir para este canto em 08/09.
@@ -494,7 +500,8 @@ CSS = """
      quebra em duas linhas e o chip vai de 28 para 44px. */
   .mascara{display:grid;grid-template-columns:1fr 1fr;gap:4px}
   /* O DUALSENSE OCUPA A LINHA INTEIRA, e os outros dois dividem a de baixo.
-     Era o contrário, e o usuário viu na hora. Estava certa — na primeira versão do 2+1
+     Era o contrário, e o usuário viu na hora: *"o DualSense é o foco do app e o
+     Nintendo Pro tá roubando a cena"*. Estava certa — na primeira versão do 2+1
      o terceiro chip era esticado só porque "Nintendo Pro" é o rótulo mais
      largo, e com isso o menos importante ganhava o maior pedaço da tela.
      Cabe: "Xbox 360" e "Nintendo Pro" medem 47 e 74px de texto, e cada metade
@@ -676,7 +683,9 @@ CSS = """
      a única — que é o que ela já era antes desta aba a redefinir. */
 
   /* A FAIXA FINAL VOLTOU AO `flex` DO `topo.html` — 30/08/2026, e são DOIS
-     pedidos numa cura só. A base continua sendo a do `topo.html`:
+     pedidos numa cura só: *"o reconectar controles vai pra direita enquanto
+     o 'Vai mudar para Conexão Nativa (Sony)…' extendo pra chegar ao reconectar
+     controles"*. A base continua sendo a do `topo.html`:
          .faixa-final{display:flex;align-items:center;gap:12px}
 
      O LUGAR DO BOTÃO NÃO DEPENDE DE VIZINHO — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01.
@@ -698,7 +707,8 @@ CSS = """
   .faixa-final .pendente{flex:1 1 0;min-width:0;overflow:hidden}
   .faixa-final > .btn{flex:none;white-space:nowrap;margin-left:auto;
                       order:1;align-self:flex-start}
-  /* A ATENÇÃO SAIU — 07/09/2026
+  /* A ATENÇÃO SAIU — 07/09/2026, ordem de produto: *"em jogar remover essa seção do
+     atenção, nenhum aviso esse — deixar só o reconectar controles."*
      Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
      (*"esse atenção desce"*) e a coluna de zero a N de 03/09. As duas saíram
      inteiras com o bloco, e o que ficou entre os cartões e o botão é UMA
@@ -1064,7 +1074,7 @@ MIOLO = f'''
     <!-- ---------- O INTERRUPTOR DO HEFESTO — FORA DE TUDO ----------
          DOIS NÍVEIS desde 31/08/2026 (manhã), decisão de produto: em cima o
          interruptor do Hefesto, e o que ele abre embaixo. A pergunta que o
-         motivou é do usuário — ** — e a
+         motivou é do usuário — *"qual a diferença de nativo pra dualsense?"* — e a
          resposta é estrutural: Nativo é o Hefesto FORA do meio, e os outros são
          jeitos de ele estar no meio. Numa fileira só, os dois liam como irmãos.
 
@@ -1307,7 +1317,9 @@ MIOLO = f'''
             </div>
           </div>
 
-        <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026,  Era a `.col-atencao`: o cabeçalho laranja,
+        <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026, ordem de produto: *"em jogar
+             remover essa seção do atenção, nenhum aviso esse — deixar só o
+             reconectar controles."* Era a `.col-atencao`: o cabeçalho laranja,
              as linhas de `aviso-vivo`/`aviso-selo`/`aviso-texto` e a conta
              `atencao-conta`.
 
@@ -1737,7 +1749,7 @@ def _conferir(doc):
 
     exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
     exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
-    # saiu por pedido,  # (noqa-acento): dela
+    # saiu por pedido (*"cai fora pra ganharmos espaçço Lateral"*),  # (noqa-acento: citação literal)
     exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
            "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
     from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva_

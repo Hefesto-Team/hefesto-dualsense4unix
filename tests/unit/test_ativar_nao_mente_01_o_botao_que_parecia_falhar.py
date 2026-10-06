@@ -1,6 +1,6 @@
 """ATIVAR-NAO-MENTE-01 — o botão "Ativar" parecia falhar, e não refazia nada.
 
-Três defeitos do MESMO clique, medidos em 05/08 no journal do usuário:
+Três defeitos do MESMO clique, medidos em 05/08 no journal da bancada:
 
 1. **O timeout.** `on_profile_activate` chamava `call_async` sem `timeout_s`, e
    o default da ponte é o de LEITURA: 250 ms. O handler `profile.switch` do
@@ -14,7 +14,8 @@ Três defeitos do MESMO clique, medidos em 05/08 no journal do usuário:
    nenhum. As abas só acompanhavam pelo tique de 2 Hz, e esse caminho
    (`_reconciliar_draft_com_perfil_ativo`) DESISTE quando há edição pendente:
    com uma cor mexida e não salva, a ativação explícita dela não mudava a tela
-   nunca.
+   nunca. Queixa literal: *"o perfil que eu ativei não aplica imediatamente as
+   features das abas"*.
 
 3. **O relatório do daemon ia para o lixo.** A resposta do `profile.switch`
    conta a verdade desde a R-03 (`secoes`), e o callback era
@@ -219,7 +220,7 @@ class TestAJanelaLeORelatorio:
             )
 
     def test_secao_adiada_aparece_com_o_nome_que_ela_le(self) -> None:
-        """O caso do journal do usuário: o modo ficou de fora e o toast dizia "ativado"."""
+        """O caso do journal da bancada: o modo ficou de fora e o toast dizia "ativado"."""
         msg = pa.mensagem_de_ativacao("vitoria", RESPOSTA_COM_MODO_ADIADO)
 
         assert msg != "Perfil ativado: vitoria", (

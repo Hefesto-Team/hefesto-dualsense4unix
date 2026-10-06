@@ -333,7 +333,7 @@ def test_o_subsystem_esta_nas_tres_pontas() -> None:
 
 
 def test_o_vigia_nasce_ligado_e_a_chave_desliga(monkeypatch: Any) -> None:
-    """Ligado por default — """
+    """Ligado por default — ordem de produto: *"o produto precisa ser inteligente"*."""
     vigia = ConexoesSubsystem()
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI", raising=False)
     assert vigia.is_enabled(object()) is True  # type: ignore[arg-type]

@@ -407,7 +407,9 @@ foi número, offset, ordem e endereço — que é informação, não obra.
 
 ## O método, para a próxima leva repetir
 
-O usuário pediu um jeito de preencher a lacuna da Sony sem bancada
+O usuário pediu um jeito de preencher a lacuna da Sony sem bancada:
+*"lançar novo workflow pra agentes procurarem no Github tais canais ou tais id.
+(…) como é só informação eles trouxeram e me ajudaram no mapa do controle."*
 <!-- noqa-acento: citação literal -->
 
 O que funcionou, na ordem:

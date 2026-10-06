@@ -88,7 +88,8 @@
        essas é apagar o dado, não o enfeite.
        --------------------------------------------------------------- */
     --linha:#53576f;
-    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO.  / *"as linhas horizontais deveriam separar os campos em linhas"*
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
        e, quando a viu: *"as linhas divisórias em todas as páginas tão
        invisíveis (…) a primeira coluna serve como nome da linha e a divisória
        entre eles tem que estar clara"*.
@@ -133,7 +134,8 @@
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 
-     A recomendação foi levada a ela e o usuário aprovou: ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
+     A recomendação foi levada ao usuário e o usuário aprovou (*"eu confio em vc, manda
+     ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
      ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
      ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
      espremidas; e o teto protege a leitura, porque esticar sem limite alonga a
@@ -171,7 +173,7 @@
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
      DE ONDE SAI O 710, e por que não é a altura da tela. A primeira tentativa
-     foi 1048 — o teto da TV do usuário — para que nenhuma aba precisasse rolar. Deu
+     foi 1048 — o teto da TV da bancada — para que nenhuma aba precisasse rolar. Deu
      errado: o conteúdo das dez vai de 281px (Iluminação) a 783px (Conexões), e
      com 1048 a Iluminação ficava com 518px de quadro vazio. Ela: "iluminação,
      jogar e outras abas tão muito ruins com esse super espaço vazio na parte
@@ -526,7 +528,8 @@
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
      ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
      `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
@@ -632,6 +635,8 @@
      variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
      Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
      dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
      NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
      ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
      saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
@@ -790,7 +795,8 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    /* 777 DESDE 31/08/2026, e os 20px a mais são o
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
        Ela estava certa, e o número diz por quê: o card aberto da Controles
        ESTICA para preencher o corpo, então a folga de verdade é
        `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
@@ -802,9 +808,11 @@
        vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar.
 
        O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão de produto
-       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV.
+       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV:
+       *"ainda joga pra baixo e abre a barra de navegação. tem espaço vertical  <!-- noqa-acento: citação literal -->
+       pra aproveitar aqui"*.
 
-       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV do usuário
+       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV da bancada
        mede **840** px e a página pedia **809** (16 + 777 + 16). Os 31 px que
        sobravam não iam para aba nenhuma — morriam entre a moldura da `.janela`
        e a borda da janela do sistema. Cresça a janela quanto quiser: com a
@@ -823,9 +831,9 @@
          teto 855   a maior vista que este desenho promete PREENCHER. Acima
                     dela o que sobra viraria vão, e vão vazio é queixa de uso
                     (*"iluminação, jogar e outras abas tão muito ruins com esse
-                    super espaço vazio na parte inferior"*). Na TV do usuário o teto
+                    super espaço vazio na parte inferior"*). Na TV da bancada o teto
                     nunca é alcançado: 840 − 32 = 808. Numa tela 4K — e a TV
-                    do usuário tem o modo 3840x2160 — sem teto a Navegação ficaria com
+                    da bancada tem o modo 3840x2160 — sem teto a Navegação ficaria com
                     mais de mil pixels de vão.
 
        QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
@@ -871,7 +879,8 @@
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
   /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA, 05/09/2026
+     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
      a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
@@ -879,7 +888,8 @@
      A 05 mostrava até um interruptor de motor ACESO em laranja.
 
      POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
+     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
+     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
      entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
@@ -1056,7 +1066,7 @@
      de verdade, ou no produto — onde quem desenha é o GTK, cuja barra é sólida.
 
      POR QUE ISSO IMPORTA: a `#mapear-entradas` esconde 140px, e entre eles está
-     a confissão inteira. Uma
+     a confissão inteira ("o que eu não consegui conferir neste desenho"). Uma
      tela que parece completa e não está é a classe de defeito que esta casa
      mais paga. O número está na mesa; encolher o conteúdo é decisão de produto. */
   .tn-corpo > .moldura{scrollbar-width:thin;
@@ -1095,7 +1105,9 @@
      outras doze páginas). Quando o esqueleto descongelar, ela sobe para lá e
      esta some. */
   .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
-  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026,  (noqa-acento: citação literal).
+  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026, pedido: *«tem uma linha
+     abaixo do gestão de controles que não tá sendo usada. Deveriamos subir os
+     blocos de seção pra ocupar ali de cima tambem»* (noqa-acento: citação literal).
      O respiro de baixo do rótulo (11px) é do acordeão FECHADO; aberto, o
      corpo vem logo embaixo e os dois respiros somavam 21px de faixa vazia. */
   .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
@@ -1294,7 +1306,8 @@
 
   /* ================= os cartões da Gestão de Controles =================
      A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026 — o desenho de quem
-     coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up. A linha que abria e fechava virou UM CARTÃO POR
+     coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up:
+     *«tá quebradíssima a 8»*. A linha que abria e fechava virou UM CARTÃO POR
      LUGAR, os quatro lado a lado — a mesa desta aba é de quatro —, e nada mais
      abre nem fecha: o que era o corpo escondido fica à vista. O rádio `gc-*`
      continua sendo o ALVO de saída (a fita e o cartão marcado), e só isso.
@@ -1370,7 +1383,8 @@
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026,  e *«perfil do
+  /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido: *«Modo
+     Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
      desempenho deveria aparecer por controle»*. Os três botões do mapa das
      conexões desceram para cada cartão; o aceso é o deste controle. */
   .gc-perfil{display:flex;flex-direction:column;gap:5px}
@@ -1392,7 +1406,8 @@
                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
                           color:var(--fg);font-weight:600}
-  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026,  Era link pontilhado.
+  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido: *«A luz não
+     acende isso deveria ser um botão»*. Era link pontilhado.
      O TEXTO ABAIXO É DE 25/09. «A LUZ NÃO ACENDE» ERA UM LINK DISCRETO, e não um botão do tamanho da
      economia: é o conserto de um caso raro. A trava continua IRMÃ e colada
      antes do botão (`></i><button`), porque o `~` só alcança irmãos
@@ -2087,7 +2102,7 @@
   .radio .linha.desligado .ds{opacity:.55}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
   /* O RÓTULO DA PISTA QUE É BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
-     dela.
+     dela: *«nessa região o svg continua em branco não dá pra entender»*.
      Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
      baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
      o do texto, e todo rótulo diz uma palavra ao lado do ícone.
@@ -2733,17 +2748,21 @@
   </svg>
 
     <!-- ======== 1. CHECK-UP — juízo à esquerda, conserto à direita ========
-         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026,  Faz sentido de leitura: quem abre a
+         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026, pedido:
+         *"a parte 'Está tudo certo' aparece como primeiro bloco na página e
+         mudamos o nome pra Check-up"*. Faz sentido de leitura: quem abre a
          Conexões quer primeiro saber se há algo errado, e só depois a lista
          de quem está na mesa. E "Check-up" é substantivo — nomeia a seção;
          "Está tudo certo?" era pergunta, e título que pergunta faz a pessoa
          procurar a resposta em vez de ler o que está embaixo. ======== -->
     <div class="quadro">
-      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026,  Faz sentido de uso: quem
+      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026, pedido: *"inicia as
+           demais abas de gestão e rádio minimizadas"*. Faz sentido de uso: quem
            abre a Conexões quer primeiro saber se há algo errado; a lista da mesa
            e o inventário de rádios são consulta, não alerta. E resolve, de
            quebra, os 208px que o quadro de baixo perdia por não caber. -->
-      <!-- ABRIR UMA MINIMIZA AS OUTRAS — 31/08/2026
+      <!-- ABRIR UMA MINIMIZA AS OUTRAS — 31/08/2026, pedido: *"abrir uma
+           expansão minimiza a outra"*.
 
            `type="radio"` COM O MESMO `name`, e não JavaScript: é a gramática que
            esta casa já usa no interruptor da aba Jogar e nos três estados da
@@ -2769,7 +2788,8 @@
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido com a janela
-             maximizada. Revoga a D-16 de 04/09 («Uma
+             maximizada: *«precisamos ganhar espaço vertical. vamos remover a
+             linha 3 mudanças recomendadas»*. Revoga a D-16 de 04/09 («Uma
              linha de veredito no topo»): a Sugestão de Conexão ao lado já
              numera cada mudança, e a contagem repetia a caixa. -->
         <!-- AS DICAS SÃO CARTÕES COM UM GESTO — 04/10/2026, AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01
@@ -2797,7 +2817,8 @@
              só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
              que chama o dono do mapa (`entrada_a_entrada.o_mapa()`). A âncora
              não é gesto (a §P4): quem começa o fluxo é o `#mp-comecar`. -->
-        <!-- QUATRO FERRAMENTAS, TODAS COM ÍCONE — 26/09/2026,  e *«falta os
+        <!-- QUATRO FERRAMENTAS, TODAS COM ÍCONE — 26/09/2026, pedido: *«não
+             existe diferença entre o examinar entradas e atualizar»* e *«falta os
              svg ou glifos»*. O «Atualizar» entrou no «Examinar Entradas» (um clique
              refaz o exame e relê os controles), e as quatro colunas são as dos
              cartões embaixo: cada botão fica em cima de um cartão. -->
@@ -4871,7 +4892,10 @@ document.addEventListener("click", function (ev) {
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
 
          ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
          já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então

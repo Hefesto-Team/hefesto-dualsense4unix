@@ -566,7 +566,9 @@ def main():
   h1 .p{{color:var(--pink)}}
   .sub{{font-family:var(--m);font-size:11.5px;color:var(--comment);margin-top:3px}}
 
-  /* A LISTA GANHOU 140px E UMA TERCEIRA COLUNA — 01/09/2026
+  /* A LISTA GANHOU 140px E UMA TERCEIRA COLUNA — 01/09/2026, pedido:
+     *"o que eu não quero na mapa é barra de rolagem nem pra esquerda nem
+     vertical; pode ir realocando os elementos pra terem mais harmonia."*
 
      MEDIDO ANTES: a página pedia 1042px numa janela de 800 — 242px de rolagem
      vertical. O culpado era a LISTA, com 832px fixos, enquanto o desenho ao lado
@@ -586,7 +588,8 @@ def main():
      curva vira. */
   .mapa{{display:grid;grid-template-columns:minmax(0,1fr) 920px;gap:0;align-items:stretch}}
   .lado-ds{{padding:20px 24px;display:flex;align-items:center;justify-content:center}}
-  /* A LISTA NÃO ROLA DE LADO — 31/08/2026
+  /* A LISTA NÃO ROLA DE LADO — 31/08/2026, pedido: *"a página de mapa do
+     dualsense tem uma barra horizontal desnecessária."*
 
      A CAUSA eram três regras que se contradiziam: `column-width` deixa o
      navegador criar QUANTAS colunas couberem na largura, `max-height` limita a
@@ -722,7 +725,9 @@ def main():
      conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
      com ZERO de rolagem (era 12 px). */
   .grupo + .grupo{{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}}
-  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026) (noqa-acento: citação). A cor fica no desenho;
+  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026: *«colocar essas
+     fontes com cores em branco. pra ser visível. pq a tela inteira tá meio
+     dificil de ser lida»*) (noqa-acento: citação). A cor fica no desenho;
      o texto lê-se. */
   .grupo-rot{{font-size:10.5px;color:var(--branco);
               letter-spacing:.6px;margin-bottom:6px}}
@@ -796,7 +801,8 @@ def main():
   .prova-nota{{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
                font-size:11px;line-height:1.45;color:var(--branco)}}
 
-  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto. Não havia: `grep href` no mapa gerado
+  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: *"ok temos um botão pra vir
+     pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
      devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
      mockup abre como ARQUIVO, onde nem sempre há um.
      O destino é a aba de onde ela veio (o dono é o `caixa_da_janela.voltar`). */

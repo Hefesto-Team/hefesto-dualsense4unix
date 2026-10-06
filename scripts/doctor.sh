@@ -898,7 +898,7 @@ check_hid_playstation() {
 # ---------------------------------------------------------------------------
 # check_hid_playstation (acima) só conferia se o MÓDULO carregou. Módulo
 # carregado e controle invisível são compatíveis, e foi o que aconteceu 6x na
-# máquina do usuário em 08/08/2026: o controle conecta no Bluetooth, acende a luz do
+# máquina da bancada em 08/08/2026: o controle conecta no Bluetooth, acende a luz do
 # PRÓPRIO firmware e não existe para o sistema — sem hidraw, sem input, sem nó
 # de LED, sem bateria. A dona tinha dois controles ligados, a janela mostrava
 # um, e nada em lugar nenhum do produto sabia dizer por quê.
@@ -972,7 +972,7 @@ _hid_playstation_orfaos_agora() {
 # indistinguível de "não houve nada". Esta casa já pagou quatro medições
 # falsas por essa armadilha (índice de 08/08, §8).
 #
-# O TAMANHO da janela foi MEDIDO na máquina do usuário em 09/08, e a primeira
+# O TAMANHO da janela foi MEDIDO na bancada em 09/08, e a primeira
 # escolha estava errada: com 24 h a mesma consulta via 1 dos 6 abortos de
 # 08/08 (o boot dela é mais velho que um dia), e com 3 dias via os 6. Como o
 # aborto recuperado é só `info`, uma janela larga custa pouco ruído e devolve

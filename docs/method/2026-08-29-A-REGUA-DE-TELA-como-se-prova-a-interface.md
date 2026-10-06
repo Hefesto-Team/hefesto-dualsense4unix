@@ -6,7 +6,9 @@ cria: nenhum módulo — este documento ensina a usar dois instrumentos que já 
 
 **29/08/2026.** Pedido, com todas as letras:
 
-> **
+> *"materializa isso, e temos que ter no nosso hook do novo dev algo que induza
+> a construção de validações via interface pra ver se tal problema foi resolvido
+> ou se tal coisa traz regressão. E os testes automáticos funcionam."*
 
 **Este arquivo é para quem for escrever a PRÓXIMA validação de interface** —
 pessoa ou agente. Ele não narra o dia: ele ensina o vocabulário, diz qual dos

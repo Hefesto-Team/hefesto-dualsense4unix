@@ -841,7 +841,7 @@ class AgendaDaPergunta:
     (``interface/mesa_viva.LeitorDeCor``) e o daemon
     (``daemon/ipc_handlers._identidade_de_fabrica``) guardavam a primeira
     resposta PARA SEMPRE, e a falha de um instante virava «este controle não
-    tem cor». Medido no ``interface.log`` e no journal do usuário: a janela das 23:36
+    tem cor». Medido no ``interface.log`` e no journal da bancada: a janela das 23:36
     abriu 28 s depois do segundo controle entrar pelo rádio, no meio de um
     engasgo de 5 s em que o daemon perdia um terceiro nó (``ENODEV``). O broker
     serviu um descritor na hora, e a pergunta por ele não trouxe cor; serviu o

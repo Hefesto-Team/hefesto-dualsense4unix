@@ -368,7 +368,7 @@ def test_o_sucesso_pleno_nao_manda_recado(
     cartão, como a recusa"*. Em 05/09 ela respondeu a `03-Q4` vendo as quatro
     formas lado a lado e escolheu **"O campo pisca em verde"**, recusando
     explicitamente a tarja verde no cartão, descrita na opção com a frase viva
-    desta aba. A
+    desta aba. A palavra de produto: *"nenhuma palavra nova entra na tela"*.
 
     **O DEFEITO QUE A VERSÃO ANTIGA GUARDAVA CONTINUA GUARDADO** — *o gesto dá
     certo e a tela não diz nada* —, e quem o guarda agora é a piscada, medida

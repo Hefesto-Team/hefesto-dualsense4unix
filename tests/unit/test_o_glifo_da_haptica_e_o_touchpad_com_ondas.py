@@ -1,8 +1,8 @@
 """A háptica tem glifo PRÓPRIO: a área do touchpad com ondinhas na borda de cima.
 
 Ela, 03/10/2026 (A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01):
-*«precisamos de um svg específico pro hático»* e, sobre o desenho,  Até aqui a linha «Sensor
-Háptico» usava o desenho do
+*«precisamos de um svg específico pro hático»* e, sobre o desenho, a área do touchpad com ondas
+na parte superior. Até aqui a linha «Sensor Háptico» usava o desenho do
 motor esquerdo.
 
 AS MORDIDAS:

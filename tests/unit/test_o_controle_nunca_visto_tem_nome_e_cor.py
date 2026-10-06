@@ -1,6 +1,9 @@
 """O controle que o produto nunca viu tem nome e cor — O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01.
 
-A cena dela, 25/09/2026, e ela é o aceite desta régua: : dela
+A cena dela, 25/09/2026, e ela é o aceite desta régua: *«imagina que eu quero
+mostrar pra um user que tem um controle desses edição limitada do dualsense. E
+quero mostrar que o app reconhece de primeira. aí ele pluga o controle dele e o
+app não funciona pq ele tá todo setado pra funcionar só no meu pc.»*  (noqa-acento: citação literal)
 
 O QUE ESTAVA ERRADO, medido antes da cura com o código real (o leitor do
 serial, a mesa e os pacotes das dez páginas):

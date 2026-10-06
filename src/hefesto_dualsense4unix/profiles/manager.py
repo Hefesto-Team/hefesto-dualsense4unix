@@ -1208,7 +1208,7 @@ class ProfileManager:
         defeito que a E4 inteira existe para não cometer. Sem perfil ativo, sem
         opinião nenhuma ou sem applier: devolve `None` e não escreve nada. Com
         a trava manual de áudio armada devolve `"ignorado_trava_manual"` (e
-        também não escreve): se o usuário mexeu no volume na mão, quem manda é ela —
+        também não escreve): se o usuário mexeu no volume na mão, quem manda é ele —
         a reconexão não é ocasião para o perfil retomar o campo.
 
         **"A SEÇÃO" ERA SÓ A GLOBAL, E ISSO ERA O DEFEITO — SOM-ROTA-03,
@@ -1779,7 +1779,8 @@ def gravar_o_modo_no_perfil_ativo(
 ) -> Profile | None:
     """O modo escolhido vai ao perfil ATIVO, na hora. None = não gravou.
 
-    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela  Até aqui o gesto só deixava rastro
+    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela palavra de produto: *"inclusive o
+    ps +r3 e isso fica setado no perfil"*. Até aqui o gesto só deixava rastro
     depois de 180 s de jogo aberto, e no perfil do JOGO; agora ele grava no
     perfil que está valendo logo que o aparelho confirma, sem esperar e sem
     precisar de jogo.

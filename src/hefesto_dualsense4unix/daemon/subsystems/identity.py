@@ -1169,8 +1169,8 @@ class ControllerIdentityRegistry:
         caminho de output do backend. Enquanto ele não rodava, o registro
         ficava vazio e o piso lido pelos externos (``_ds_reserve``) valia 0 —
         o Pro Nintendo USB tomava o slot 1 no primeiro tick de externo e os
-        dois DualSense herdavam 2 e 3 (o "não existe Controle 1" medido na
-        máquina do usuário). O lifecycle chama ESTE método ANTES de agendar o tick
+        dois DualSense herdavam 2 e 3 (o "não existe Controle 1" medido
+        na bancada). O lifecycle chama ESTE método ANTES de agendar o tick
         dos externos no MESMO ciclo do poll loop, então quem está na mesa
         ocupa 1..N primeiro. A ORDEM do iterável é significativa (o
         lifecycle entrega em ordem de ``describe_controllers``, primário

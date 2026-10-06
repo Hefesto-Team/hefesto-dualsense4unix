@@ -3,6 +3,10 @@
 
 A LEI, e é do usuário (03/09/2026)
 ---------------------------------
+    "se no topo tá mostrando controle white player 1, então cada aba vai usar
+    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
+    faz referencia ao controle conectado. Por isso temos o mapa pra servir como  # noqa-acento: citação literal
+    variável de identificação"
 
 A fita do topo lê do aparelho. Toda aba abaixo dela tem de usar AQUELE controle.
 Um nome de cor ou um `--plastico` escrito à mão dentro da página é o mockup

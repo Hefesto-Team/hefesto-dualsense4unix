@@ -260,7 +260,8 @@ def test_sair_do_steam_input_desliga_o_jogo_e_so_ele(lar) -> None:
     """Clique no «Steam Input», clique no «Sony DualSense»: o appid sai e o vdf volta a `"0"`.
 
     FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela
-    regra de produto. Esta régua tratava o chip como INTERRUPTOR: o segundo
+    regra de produto (*"a idea é eu poder escolher qualquer que seja o modo
+    independnete da ordem"*). Esta régua tratava o chip como INTERRUPTOR: o segundo
     clique nele desligava. Na fileira que é grupo de rádio o segundo clique
     REAPLICA, e quem tira o jogo da lista é clicar em qualquer um dos outros
     três (`a01_jogar.o_que_o_chip_faz`). A primeira metade abaixo mede isso; o
@@ -323,7 +324,7 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
 
     **A VONTADE FICA, e é a metade que faz o clique valer.** O usuário clicou; o
     produto anota. Quem completa é o `hefesto-steam-input-guard.path`, medido
-    **active** e **enabled** na máquina do usuário em 20/09/2026, com
+    **active** e **enabled** na bancada em 20/09/2026, com
     `PathChanged=%h/.steam/steam/userdata` — ele acorda quando a Steam acaba de
     sair e roda `disable_steam_input.sh --apply-quiet`, que liga os jogos da
     lista e desliga os de fora.

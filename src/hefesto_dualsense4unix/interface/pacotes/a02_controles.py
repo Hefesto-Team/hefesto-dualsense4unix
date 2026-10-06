@@ -1223,7 +1223,7 @@ A_PAGINA_TEM_O_GANHO = _a_pagina_tem_o_ganho()
 
 
 def texto_da_bateria(pct: int | None) -> str:
-    """A carga na grafia da GTK, PERGUNTADA a ela — as duas frases.
+    """A carga na grafia da GTK, PERGUNTADA ao usuário — as duas frases.
 
     DECISÃO, 03/09/2026, sobre a bateria desconhecida: **"— %", como a
     janela antiga** — paridade literal com a GTK.
@@ -1259,7 +1259,7 @@ def texto_da_bateria(pct: int | None) -> str:
         {} if pct is None else {"battery_pct": pct})[1]
 
 
-#
+#     "icone mas no radio ele pode tá carregando tambem."  # noqa-acento: citação literal
 #
 # coisa do cabo e o rádio fosse sempre descarregar. **Não é**: um DualSense
 _NA_TELA_POR_CARGA: dict[str, str] = {
@@ -1559,7 +1559,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "mic-apagado": microfone_apagado(c),
                 "card-vpad": dica_do_titulo(c, getattr(ctx, "state", None) or {}) or "",
                 "alto-selo": selo_do_som(saida_muda_do_entry(c)) or NADA_A_DIZER,
-                # seria melhor que dormindo?"*  <!-- noqa-acento: dela -->
+                # seria melhor que dormindo?"*  <!-- noqa-acento: citação literal -->
                 "alto-canal": (mesa_viva.selo_do_alto_falante(
                     bool(sp_lido and sp_lido[1]),
                     True,
@@ -2044,7 +2044,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ONDE AS RECUSAS DESTE GESTO POUSAM, e a resposta mudou em 02/09/2026: no
     CARTÃO daquele controle, por `Piloto._recusou_dizendo`, que deposita todo
     `RuntimeError` em `_recados` e o repinta na hora; a frase vence em 30 s
-    (). Até esse dia ela saía no `stderr`
+    (decisão de produto: *"é aviso, não estado"*). Até esse dia ela saía no `stderr`
     do processo, e quem clica na janela não lê o terminal de quem a lançou —
     então "recusar dizendo" era verdade no código e mentira na tela. Medido
     aqui com o P1 SEM a chave `audio`: o clique no 🎙 não chamou `mic.set`, e a
@@ -2373,7 +2373,7 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
        «Ignorar tremor até» são da tela Calibrar sensores, e mandar os três
        aqui reafirmaria os números dela a cada clique;
     3. **NO MODO NATIVO NÃO PEDE NADA** — A-MIRA-POR-MOVIMENTO-NA-TELA-02,
-        O
+       palavra de 24/09/2026: *"fica cinza no Nativo, sem gravar"*. O
        chip está cinza (`mira-fora`), e o clique recusa ANTES da ponte com
        :data:`MIRA_CINZA_NO_NATIVO`. O daemon tem a MESMA guarda
        (`status: "nativo"`), porque o estado que esta tela leu é de um tique
@@ -2542,7 +2542,7 @@ def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os DOIS deslizantes — o do microfone e o do alto-falante (D-08).
 
-     Até 04/09/2026 os dois volumes eram
+    DECISÃO DE PRODUTO: *"Deslizante nos dois."* Até 04/09/2026 os dois volumes eram
     PINTURA: `type="range"` aparecia zero vez nas dez páginas, e o que havia era
     `<span class="trilho"><span class="cheio" style="width:N%">`.
 

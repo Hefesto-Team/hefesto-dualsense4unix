@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """A RÉGUA DA D2 NOS GATILHOS: o que ela aplicou no clique VAI PARA O DISCO.
 
-O usuário pediu, com estas palavras, em 05/09/2026
+O usuário pediu, com estas palavras, em 05/09/2026:
+
+    *"ao pular e sair configurando de aba em aba o perfil vai se lembrando de
+    cada config de cada aba pra cada controle. aí aplicar aplica todas as
+    configs naquele perfil e salvar se lembra disso quando eu for jogar o jogo e
+    no dia seguinte e por diante."*
 
 A decisão que a atende é a **D2** —
 o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026:

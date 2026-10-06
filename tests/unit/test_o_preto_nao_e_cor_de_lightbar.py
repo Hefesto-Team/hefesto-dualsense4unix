@@ -1,6 +1,8 @@
 """O PRETO É BANIDO COMO COR DE LIGHTBAR — ordem, 22/09/2026.
 
-**A QUEIXA, com as palavras de produto:** **.
+**A QUEIXA, com as palavras do usuário:** *"pq o lightbar do starlight blue sempre
+desliga após conectar? mesmo o perfil atual não mandando ele desligar e ter
+cor? isso é só com ele, independente da ordem"*.
 
 **O PERFIL MANDAVA.** Medido no disco do usuário no mesmo minuto: a peça daquele
 controle tinha `leds.lightbar: [0, 0, 0]`, escrita por um "Salvar Perfil" às
@@ -8,7 +10,8 @@ controle tinha `leds.lightbar: [0, 0, 0]`, escrita por um "Salvar Perfil" às
 gravou PRETO. E não era um controle só: **sete dos 29 perfis do usuário** guardam o
 preto na seção GLOBAL, e neles abrir o jogo apagava a barra dos quatro.
 
-**A ORDEM:** **. <!-- noqa-acento: citação literal -->
+**A ORDEM:** *"vamos banir esse preto de aparecer independente do controle
+tambem"*. <!-- noqa-acento: citação literal -->
 
 O QUE ESTA RÉGUA COBRA, nos cinco pontos do caminho:
 

@@ -16,7 +16,7 @@ O DESENHO É DO USUÁRIO, de 15/08/2026, e a sacada está nos DOIS TIMBRES:
 Um tom só, tocado duas vezes, produz o relato ambíguo "ouvi" — que não diz de
 onde nem qual. Com dois timbres opostos, o relato dela JÁ carrega a resposta:
 o usuário disse *"tuc hmmmmmm no controle"* e *"bep bep bep"*, e nenhuma das duas
-frases cabe no outro caso. Nas palavras de produto: *"som da tv tipo AAAAAA e no
+frases cabe no outro caso. Nas palavras do usuário: *"som da tv tipo AAAAAA e no
 controle apenas um BBêeee. Sons diferentes."*
 
 OS TRÊS CASOS, e o terceiro é o que fecha

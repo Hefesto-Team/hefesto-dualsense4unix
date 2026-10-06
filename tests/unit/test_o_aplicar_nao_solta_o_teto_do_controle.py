@@ -50,7 +50,8 @@ do rodapé manda `profile.reaplicar`, e o daemon roda a cadeia da ativação; o
 `profile.apply_draft` e o `DraftApplier` saíram do código em 06/10/2026, com as
 seções que os chamavam direto.
 
-A régua dela, a de toda  <!-- noqa-acento: citação literal -->
+A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
+de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal -->
 — P1 a P4, cabo e rádio.
 
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o perfil e o

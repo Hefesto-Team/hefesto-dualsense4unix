@@ -28,7 +28,8 @@ Havia um opt-in: a variável de ambiente
 `HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1`. Pela regra desta casa — *"tudo
 tem que focar em funcionar na interface do app e no install"* — opt-in que só se
 alcança exportando env não é opt-in dela; é opt-in de quem lê o código. O usuário
-disse, com todas as letras, que quer o microfone do controle.
+disse, com todas as letras, que quer o microfone do controle: *"sobre o microfone
+tem que gravar minha voz"*.
 
 O promotor no disco, esse sim, é gesto do usuário: só existe se o install rodou sem
 `--keep-dualsense-mic`, ou se o usuário clicou "Ligar" na aba Emulação.

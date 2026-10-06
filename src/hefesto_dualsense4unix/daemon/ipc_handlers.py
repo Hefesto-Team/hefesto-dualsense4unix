@@ -235,7 +235,7 @@ _WRAPPER_MARKER_TTL_SEC = 2.0
 _PONTES_CONFIRMADAS_TTL_SEC = 5.0
 
 
-# Medido na máquina do usuário em 09/08: dois DualSense ligados e pareados, e a
+# Medido na bancada em 09/08: dois DualSense ligados e pareados, e a
 
 _HID_DEVICES_DIR = "/sys/bus/hid/devices"
 
@@ -2127,7 +2127,9 @@ class IpcHandlersMixin:
         """Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar.
 
         O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), no lugar do `autoswitch.lock`
-        (o cadeado de 23/07, que cedia a todo perfil de jogo). A   (noqa-acento: citação)
+        (o cadeado de 23/07, que cedia a todo perfil de jogo). A palavra de produto:
+        *«Aperto o botão do freestyle e o jogo que eu tiver jogando vai ter essa
+        config independente do perfil do jogo.»*  (noqa-acento: citação)
 
         `ligado` opcional: ausente → inverte.
 
@@ -5085,7 +5087,9 @@ class IpcHandlersMixin:
         Somar os dois num método só faria a interface prometer uma coisa e
         entregar outra.
 
-        **Por que ele é universal**, que era o : o que existe nos dois transportes é uma fonte de
+        **Por que ele é universal**, que era o pedido — *"independente de
+        saber se tá via bt ou via cabo, o app deve ser inteligente pra saber
+        qual caminho usar"*: o que existe nos dois transportes é uma fonte de
         captura no sistema, e quem a encontra é
         `integrations/audio_control.fonte_de_captura_do_controle` — no cabo, o
         source ALSA do controle; no rádio, o source publicado pela ponte de
@@ -5450,7 +5454,7 @@ class IpcHandlersMixin:
         em `src/`.
 
         **O GESTO GRAVA NO PERFIL DESDE 08/09/2026** (MASCARA-NO-PERFIL-01,
-        ). A forma do gesto **não mudou** — o
+        decisão de produto: *"pode entrar sim"*). A forma do gesto **não mudou** — o
         chip do cartão continua chamando `gamepad.mask.set {uniq, flavor}` —, e
         o que mudou é onde a escolha para: `controllers[uniq].mascara` do perfil
         ATIVO, que é a mesma estrada que o `rumble.motores.set` já usava. Não

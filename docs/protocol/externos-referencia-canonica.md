@@ -45,7 +45,7 @@ decisão errada por confundir "documentação de comunidade" com "fato".
 | grau | significa |
 |---|---|
 | **ALTA** | está no código do driver que **esta máquina carrega**, ou em duas engenharias reversas independentes que concordam |
-| **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida na máquina do usuário** |
+| **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida na bancada** |
 | **BAIXA** | inferência, ou fonte única, ou derivação de duas medições que não se tocam |
 | **MEDIDO AQUI** | conferido nesta máquina na varredura de 07/08, com o comando citado |
 | **MEDIDO 11/08** | conferido nesta máquina em 11/08/2026, com o 8BitDo pelo **cabo** em modo Switch e o Pro genuíno no rádio. Vale o mesmo que MEDIDO AQUI; a data está no rótulo porque a **mesa era outra**, e transporte não atravessa |
@@ -801,7 +801,7 @@ D-input, LED2 X-input, LED3 macOS, rotativo = Switch ou pareamento). GRAU:
 nunca foi olhada nesta casa**. Fecha com cinco segundos de olho de quem confere.
 
 > **NOTA DATADA — 07/08/2026 21h06: o usuário olhou, e a metade física da `P-4` está
-> respondida.** Nas palavras de produto, sobre o aparelho na mão: *"não há lightbar
+> respondida.** Nas palavras do usuário, sobre o aparelho na mão: *"não há lightbar
 > mas existe led de identificação de player nele também, igual o pro
 > controller"*.
 >

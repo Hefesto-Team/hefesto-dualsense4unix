@@ -136,7 +136,8 @@ def _o_que_o_aparelho_diz(piloto: hefesto_vivo.Piloto) -> dict[str, dict]:
     comparar o produto com ele mesmo: ele erraria o desenho e a resposta do
     mesmo jeito, e a régua concordaria com o erro.
 
-    A REGRA QUE SE COBRA É DO USUÁRIO. Com ressalva, o desenho não pode acender cor nenhuma;
+    A REGRA QUE SE COBRA É DO USUÁRIO: *"se não tá mostrando agora, não tem info pra
+    mostrar no produto"*. Com ressalva, o desenho não pode acender cor nenhuma;
     sem ressalva, ele tem de acender exatamente a cor base.
 
     O `_ctx_de_agora` é a mesa do último tique — o piloto a guarda para resolver

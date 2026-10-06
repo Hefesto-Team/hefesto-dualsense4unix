@@ -31,7 +31,7 @@ def _escrever(caminho: pathlib.Path, dado: object) -> None:
 
 
 def test_lancador_nunca_aberto_diz_o_que_fazer(tmp_path: pathlib.Path) -> None:
-    """ — §3 da sprint."""
+    """*"Abra o Lutris uma vez e eu leio a biblioteca"* — §3 da sprint."""
     b = censo.biblioteca_de("Lutris", lar=tmp_path)
 
     assert b.estado == censo.NUNCA_ABERTO

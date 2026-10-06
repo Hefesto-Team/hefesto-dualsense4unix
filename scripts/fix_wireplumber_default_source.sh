@@ -51,7 +51,7 @@
 # (FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01, BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01, ADR-019.)
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — MEDIDO na máquina do usuário, num
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — MEDIDO na bancada, num
 # `install.sh` completo, e a contradição estava no mesmo terminal:
 #
 #   passo 10/11 do install:  OK: microfone padrão ativo = alsa_output.pci-…
@@ -228,7 +228,7 @@ pick_target_source_id() {
 #
 # INSTALADOR-QUE-APROVOU-O-MONITOR-01. O `pick_target_source_id` acima escolhe a
 # primeira fonte não-DualSense do `wpctl status` e pronto — sem o filtro de porta
-# que a cura do doctor aplica desde a RECEITA-ERRADA-01. Medido na máquina do usuário:
+# que a cura do doctor aplica desde a RECEITA-ERRADA-01. Medido na bancada:
 # isso elegia `alsa_input.pci-…analog-stereo`, cujas TRÊS portas de captura estão
 # `not available`; o `pactl`/`wpctl` aceita, o WirePlumber não consegue honrar um
 # nó sem porta usável, reelege sozinho, e o `.monitor` do sink volta. O estrago é

@@ -42,7 +42,7 @@ MINUTOS_ENTRE_TENTATIVAS = 2
 def texto_de_controle_nao_adotado(state: dict[str, Any] | None) -> str:
     """Aviso de que há controle LIGADO que o sistema não entregou ao Hefesto.
 
-    CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026). Medido na máquina do usuário: dois
+    CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026). Medido na bancada: dois
     DualSense ligados e pareados, e a janela mostrava UM — sem, em lugar
     nenhum do produto, uma pista do porquê. O driver do kernel havia abortado
     o segundo na probe; ele conecta no rádio, acende a luz do próprio firmware

@@ -181,7 +181,8 @@ def cor_de_css(colorway: str, zona: str = "casca-solida") -> str:
     no HTML congelado. Resultado: com um Grey Camouflage na mesa, o desenho
     dizia `grey-camouflage` e a pele três centímetros ao lado dizia Cosmic Red.
 
-    **É a queixa de uso literal, com os donos trocados** — ** —, e é pior do que
+    **É a queixa de uso literal, com os donos trocados** — *"os svgs mudam de
+    acordo com o controle identificado (…) isso tá errado"* —, e é pior do que
     não pintar: não pintar é uma lacuna, pintar OUTRO MODELO é uma afirmação
     falsa. São 8 de 28, 29% do mapa dela.
 
@@ -342,7 +343,7 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     censo da Conexões.
 
     **E ELE VOLTOU EM 02/09/2026, por defeitos que moram AQUI.** O usuário viu e
-    disse. Medido
+    disse: *"o controle identificado em todas ta completamente errado"*. Medido
     com os dois controles do usuário na mesa (um `usb`, um `bt`), o daemon
     respondendo em 1 ms:
 
@@ -362,7 +363,8 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
        `identidade.cor_do_aparelho`, `radio_aciona = não`). Com um controle no
        BT, a fita viva morria a cada tique e a tela ficava com os dois chips do
        mockup para sempre. Sem cor lida o chip perde a borda colorida — é a
-       regra de produto. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
+       regra de produto: *"se não tá mostrando agora, não tem info pra mostrar no
+       produto"*. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
 
     O TEXTO DO CHIP SAI DE `rotulo(c, "curta")`, e não de um f-string próprio:
     a gramática do rótulo já tinha dono, e ter uma segunda cópia aqui é
@@ -412,7 +414,7 @@ def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     **A TRADUÇÃO DE UMA CHAVE, e ela é a única lógica daqui:** `identidade_de`
     lê `transport` (o nome CRU do daemon) e o item da mesa guarda o mesmo fato
     como `transporte` (`mesa_viva.mesa_do_estado:328`). Sem esta linha o último
-    degrau da  — cai no travessão, e o controle
+    degrau da ordem — *"o transporte sozinho"* — cai no travessão, e o controle
     do rádio aparece como `P2 • — • BT` quando podia dizer `P2 • BT • BT`.
     O certo é `identidade_de` aprender as duas grafias, ou a mesa publicar a do
     daemon; enquanto isso não acontece, a tradução mora aqui, à vista.
@@ -544,7 +546,7 @@ CSS_POPUP = """
      de verdade, ou no produto — onde quem desenha é o GTK, cuja barra é sólida.
 
      POR QUE ISSO IMPORTA: a `#mapear-entradas` esconde 140px, e entre eles está
-     a confissão inteira. Uma
+     a confissão inteira ("o que eu não consegui conferir neste desenho"). Uma
      tela que parece completa e não está é a classe de defeito que esta casa
      mais paga. O número está na mesa; encolher o conteúdo é decisão de produto. */
   .tn-corpo > .moldura{scrollbar-width:thin;
@@ -571,7 +573,8 @@ CSS_FOLHA = """
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
   /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA, 05/09/2026
+     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
      a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
@@ -579,7 +582,8 @@ CSS_FOLHA = """
      A 05 mostrava até um interruptor de motor ACESO em laranja.
 
      POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
+     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
+     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
      entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os

@@ -163,7 +163,7 @@ def test_a_rota_traz_o_estado_de_todos_os_canais_numa_leitura_so() -> None:
 
 
 def test_o_som_de_confirmacao_acorda_o_canal_antes_de_tocar() -> None:
-    """** (dela).
+    """*"hoje em dia na interface nem por cabo esse bip tá saindo"* (dela).
 
     Os dois lados da conta são medidos, cada um do seu lado: o arquivo escolhido
     tem **0,067 s** (o mais curto dos candidatos, escolha registrada em

@@ -2,7 +2,8 @@
 
 A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e é do usuário
 ================================================
-    **
+    *"joguei um jogo com controle por movimento e na hora do vamos ver o
+    controle não deu resposta (pragmata)"*
 
 O `pragmata.json` **não tem** a chave `caminho` — lido no disco do usuário. Ele herdou
 o `config.gamepad_caminho` que o jogo anterior deixou de pé (o usuário escolheu Xbox
@@ -238,7 +239,7 @@ class TestOJournalNomeiaAsDez:
     def test_o_evento_sai_com_as_dez_linhas_nominadas(
         self, borda: _RegistroDeLog
     ) -> None:
-        """A entrega desta frente, vista do journal do usuário."""
+        """A entrega desta frente, vista do journal da bancada."""
         _materializar(_DaemonFalso())
 
         avisos = borda.avisos(sem_imu.EVENTO)
@@ -450,7 +451,7 @@ def _perfil(*, caminho: str | None, mascara: str, carimbo: str | None) -> Profil
 
 class TestOAlarmeSoComparaTermoComTermo:
     def test_perfil_sem_caminho_nao_diverge_de_carimbo_nenhum(self) -> None:
-        """O ALARME FALSO DAS 10:45:02, medido no journal do usuário em 17/09/2026."""
+        """O ALARME FALSO DAS 10:45:02, medido no journal da bancada em 17/09/2026."""
         perfil = _perfil(caminho=None, mascara="xbox", carimbo="dualsense")
 
         assert (

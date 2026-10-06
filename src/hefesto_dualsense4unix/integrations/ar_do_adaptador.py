@@ -19,7 +19,7 @@ Três leituras, as três como uid 1000, sem subprocesso:
   hci_sock.c``: a linha ``OGF_STATUS_PARAM`` é ``0x000000ea``, e o bit 6 (OCF
   0x0006) está ligado. O mesmo filtro deixa o evento ``Command Complete``
   (0x0E) chegar ao socket sem privilégio (``event_mask[0]`` = ``0x1000d9fe``,
-  bit 14). Conferido no fonte em 23/09/2026 e MEDIDO na máquina do usuário no mesmo
+  bit 14). Conferido no fonte em 23/09/2026 e MEDIDO na bancada no mesmo
   dia — ver ``docs/data/orcamento-de-ar.csv``.
 
 AUSÊNCIA É RESPOSTA — o contrato do ``varredura_do_radio.py``

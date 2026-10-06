@@ -11,7 +11,11 @@ concedido a um caminho que ninguém usa.
 
 POR QUE ISTO É A PEÇA CENTRAL, E NÃO UM BOTÃO A MAIS
 ====================================================
-A pergunta de produto foi
+A pergunta de produto foi:
+
+    *"a ideia nesse caso não é darmos prioridade pro hefesto? e garantirmos a
+    conexão por lá e controlar a conexão melhor que o gerenciador padrão que
+    temos no cosmic?"*
 
 Se ela parear um controle **por aqui**, ela nunca abre a tela de Bluetooth do
 COSMIC para um controle — e a varredura de terceiro, que custa de 32% a 43% dos

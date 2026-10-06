@@ -94,7 +94,7 @@ CSS = CSS_GLIFO + """
   /* UM FUNDO SÓ, com os dois blocos dentro. Eles continuam sendo dois — mesma
      largura, mesma altura, cada um com o seu título e os seus três botões — mas
      a moldura é uma, e o vão entre eles vira uma divisória fina. Pedido em
-     27/08. */
+     27/08: "deixa um só, pra causar a ilusão de um único bloco". */
   /* A CORRENTE DA ALTURA: o quadro `estica` cresce até o rodapé, e daí para baixo
      cada elo precisa passar a altura adiante — corpo, grade, coluna, moldura,
      lista. Faltando um elo, a lista volta a parar no tamanho do conteúdo.
@@ -198,7 +198,8 @@ CSS = CSS_GLIFO + """
   .tab tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
   .tab tbody tr:last-child td{border-bottom:none}
   /* OS TRÊS ESTADOS DA LINHA, e são TRÊS porque são duas verdades diferentes —
-     queixa, 04/09/2026.
+     queixa, 04/09/2026: *"quando clica em algum nome do perfis salvos nada
+     indica que tal coisa tá selecionado"*.
 
        VALENDO       o perfil que o daemon está aplicando agora  → `class="ativo"`
        ABERTO        a linha em que o editor ao lado está aberto → `aria-selected`
@@ -229,7 +230,9 @@ CSS = CSS_GLIFO + """
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
   /* O REALCE DA ESCOLHIDA NÃO PODE SER A COR DO `:hover` — 05/09/2026, e a
-     queixa é do usuário.
+     queixa é do usuário: *"caso eu clicasse em outro perfil dos disponíveis ele não
+     tinha nada selecionado em termo visual pra divergir dos demais e do
+     ativo"*.
 
      MEDIDO: o dado estava CERTO. O produto escreve `aria-selected="true"` na
      linha clicada e `false` nas outras — conferido chamando `selecionar` e
@@ -286,7 +289,8 @@ CSS = CSS_GLIFO + """
   .icone-rot:hover{background:rgba(255,255,255,.09)}
   .icone-rot:active{background:rgba(255,255,255,.15)}
   .icone-rot.on{background:var(--sel-bg,rgba(189,147,249,.30))}
-  /* O CAMPO DA LUPA NASCE FECHADO — decisão de produto em uma  Um campo de busca sempre visível ACRESCENTA  (noqa-acento) citação
+  /* O CAMPO DA LUPA NASCE FECHADO — decisão de produto em uma frase: *"Temos que  (noqa-acento) citação
+     deixar o layout mais limpo"*. Um campo de busca sempre visível ACRESCENTA  (noqa-acento) citação
      uma linha ao bloco em vez de tirar; ele nasce do clique na lupa e some no
      clique seguinte. `width:0` em vez de `display:none` para a abertura ter
      movimento — e `padding:0` junto, senão o campo fechado continua com 12px
@@ -423,13 +427,16 @@ CSS = CSS_GLIFO + """
   /* `flex-start` e não `center`: com a lista limitada a 236px o bloco era baixo e
      centrar não aparecia. Solto o teto, os campos passaram a flutuar no meio, com
      um vão em cima e a lista da esquerda começando bem mais acima. */
-  /* O RÓTULO ALINHA À ESQUERDA — 31/08/2026, pedido olhando a aba.
+  /* O RÓTULO ALINHA À ESQUERDA — 31/08/2026, pedido olhando a aba:
+     *"alinha os nomes a esquerda e trás os slicers pra iniciarem deles"*.
      Ele alinhava à direita, como nas outras nove; aqui não alinha mais, e a
      divergência é a que o usuário pediu.
      `nowrap` porque a coluna passou a ser JUSTA: sem ele um rótulo que crescer
      vira duas linhas e estoura a altura do campo, que nesta aba é medida contra
      o `overflow` do quadro. */
-  /* MENOS VERDE — 31/08/2026, pedido olhando a aba.
+  /* MENOS VERDE — 31/08/2026, pedido olhando a aba: *"acho que tem muito
+     verde na página. Talvez alterar com um branco com negrito ativado em alguns
+     cantos"*.
      A REGRA QUE ESCOLHI, e ela é o que decide QUAIS cantos: **o verde fica onde
      significa ESTADO; o que só NOMEIA vira branco em negrito.** Havia 20 pedaços
      verdes na janela e a maior parte só dava nome a uma coisa — cabeçalho de
@@ -458,7 +465,9 @@ CSS = CSS_GLIFO + """
 
   /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido olhando a aba:
      *"remove as linhas horizontais desse trecho"*.
-     Elas nasceram de um  — e esse pedido CONTINUA
+     Elas nasceram de um pedido de 30/08 — *"as linhas divisórias em todas
+     as páginas (…) a primeira coluna serve como nome da linha e a divisória
+     entre eles tem que estar clara. pra todas as abas"* — e esse pedido CONTINUA
      valendo nas outras nove: o molde está no `aba04.py`, com a razão escrita lá.
      O que mudou foi o TRABALHO da divisória. Ela separava duas colunas distantes:
      o rótulo terminava a 22px do campo, alinhado à direita. Com o rótulo à
@@ -503,7 +512,8 @@ CSS = CSS_GLIFO + """
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
   /* ---------- O QUADRO "MODO" NÃO MORA MAIS AQUI ----------
-     11/09/2026,  Saíram com ele as três regras que a PERFIL-MODO-01
+     11/09/2026, ordem de produto: *"em perfis ainda aparece modo. Isso deve aparecer
+     só na aba jogar."* Saíram com ele as três regras que a PERFIL-MODO-01
      escrevera em 06/09 para a fileira dos quatro botões — a altura solta, a
      fileira que não quebra, e os 11,5px do rótulo em duas linhas dentro do
      botão.
@@ -757,7 +767,9 @@ CSS = CSS_GLIFO + """
      contra o `overflow` do quadro, não escolhido. */
   .tab.miuda thead th{padding:5px 8px;background-color:var(--panel);border-bottom:1px solid var(--linha)}
 
-  /* UM FUNDO POR COLUNA — 31/08/2026
+  /* UM FUNDO POR COLUNA — 31/08/2026, pedido: *"deixa o background do nome
+     das 3 colunas com outras cores, pra diferenciar e ajudar no suspiro ali
+     dessa seção"*.
      AS DUAS TABELAS DESTA ABA TÊM TRÊS COLUNAS e são lidas juntas, então as duas
      recebem a mesma escala: 1ª cyan · 2ª roxo · 3ª laranja. Dar a uma só faria a
      outra parecer quebrada — a mesma cicatriz da aba que nasceu sem `Gtk.Frame`
@@ -886,7 +898,7 @@ CSS = CSS_GLIFO + """
      INVISÍVEL — e um estado que não se vê não comunica estado nenhum, só
      ausência. #8896c4 dá 4,89:1 e continua nitidamente mais fosco que o
      aceso (roxo #bd93f9 com o halo do `drop-shadow`), que é o que separa os
-     dois.  */
+     dois. Ela: *"sobe também"*. */
   .gr{display:inline-flex;align-items:center;gap:2px;color:var(--comment)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
@@ -966,6 +978,7 @@ RECARREGA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
              'stroke-width="1.3" stroke-linecap="round" '
              'stroke-linejoin="round"/></svg>')
 
+#     "e o botao atualizar tá aparecendo duplicado na interface"  # (noqa-acento) citação literal
 
 
 def icone_do_rotulo(gesto: str, desenho: str, dica: str) -> str:
@@ -1168,7 +1181,8 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
     a segunda verdade que esta casa persegue.
 
     `escolhido` É A LINHA ABERTA NO EDITOR, e não o perfil que está valendo —
-    04/09/2026, queixa de uso. Ele sai em `aria-selected` e não numa
+    04/09/2026, queixa de uso: *"quando clica em algum nome do perfis salvos nada
+    indica que tal coisa tá selecionado"*. Ele sai em `aria-selected` e não numa
     segunda classe; a razão inteira está no CSS, junto das três regras que o
     leem.
 
@@ -1350,7 +1364,9 @@ MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo">Perfis</span>
-        <!-- A DICA DO QUADRO ENCOLHEU — 30/08/2026,  Ela estava certa por dois motivos: o bloco tinha quatro
+        <!-- A DICA DO QUADRO ENCOLHEU — 30/08/2026, pedido: *"olha esse tooltip
+             quilométrico. ao invés de estar tudo em Perfis deveria estar em cada
+             seção"*. Ela estava certa por dois motivos: o bloco tinha quatro
              parágrafos e cobria meia tela ao abrir, e cada assunto dele JÁ tinha
              dono na tela — Prioridade, Estilo de Jogo e a tabela por controle têm
              `title` próprio, a poucos pixels de onde a pessoa está olhando.
@@ -1557,7 +1573,8 @@ MIOLO = f'''
               <!-- OS TRÊS VIRARAM UM — 11/09/2026, ordem de produto. O `Recarregar` foi
                    para o rótulo `Perfis salvos` (ele relê a LISTA, e a lista é a
                    tabela da esquerda) e o `Voltar à de ontem` para o rótulo
-                   `Editar`. Sobrou UM botão neste canto, e  (noqa-acento) citação
+                   `Editar` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
+                   invés de botão como os demais"*. Sobrou UM botão neste canto, e  (noqa-acento) citação
                    a classe `um-so` o faz ocupar a largura inteira em vez de um
                    terço com dois vãos vazios ao lado.
 

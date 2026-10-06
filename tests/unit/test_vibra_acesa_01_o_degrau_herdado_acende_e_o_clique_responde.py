@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A ABA VIBRAÇÃO NO PERFIL DO USUÁRIO: o degrau herdado acende, e o clique responde.
 
-**QUEIXA, 17/09/2026, com a foto da aba aberta:** .
+**QUEIXA, 17/09/2026, com a foto da aba aberta:** *"o botão não tá ativo"*.
 Nenhum dos três — Economia, Balanceado, Máximo — aceso, e a coluna ao lado
 marcando **150%**. A tela negando a força que a mão do usuário sentia.
 
@@ -26,7 +26,7 @@ não casa com nenhum `data-hef-quando`.
 Era **meia decisão**. A [05] dela, de 04/09, mandava a coluna sem ajuste próprio
 não acender *"e passar a apontar para essa linha"* — a LINHA DE MESA, que diria
 o degrau em vigor. A linha de mesa foi apagada **um dia depois**, em 05/09, por
-outra decisão de produto. O contrapeso
+outra decisão de produto (*"não é pra ter mesa em nada da interface"*). O contrapeso
 saiu, o vazio ficou, e o estado herdado deixou de ter lugar na tela.
 
 A cura devolve a procedência ao lugar que sobrou — o próprio botão: ele acende

@@ -2,7 +2,7 @@
 
 CONEXAO-ZUMBI-01 (18/09/2026). Ela abriu o produto com dois DualSense ligados e
 disse quatro coisas: *"com dois ou mais controles conectados a interface do app
-para de funcionar"*, , *"a mudança dos leds e
+para de funcionar"*, *"o lightbar tá sem a solução"*, *"a mudança dos leds e
 afins não foram aplicadas pros demais controles"*, *"ambos conectados, ambos
 como player 1 e ambos com lightbar azul"*.
 
@@ -18,7 +18,11 @@ microfone, sem placa de som. O controle fica no padrão de fábrica — barra az
 e jogador 1 —, que é exatamente o que ela descreveu. E a interface estava viva
 (250 voltas em 25 s): o que morreu foi o CONTROLE.
 
-A ordem de produto é o que este módulo existe para cumprir
+A ordem de produto é o que este módulo existe para cumprir:
+
+    *"apresentei um sintoma de algo que deve ser tratado na origem como produto
+    como um todo. isso não é a ação esperada e o produto precisa ser inteligente
+    pra evitar problemas como esse."*
 
 AS TRÊS CONDIÇÕES, E AS TRÊS SÃO NECESSÁRIAS
 ---------------------------------------------

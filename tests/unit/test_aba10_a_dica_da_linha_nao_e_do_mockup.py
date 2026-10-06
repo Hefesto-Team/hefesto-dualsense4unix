@@ -1,6 +1,12 @@
 """ABA 10 — a DICA da linha por controle não pode nomear o aparelho.
 
-A LEI, e é do usuário (03/09/2026)
+A LEI, e é do usuário (03/09/2026):
+
+    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
+    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
+    entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada
+    user ao usar seu controle se toque disso que o app se adaptou ao controle
+    dele"*  (noqa-acento: citação literal)
 
 O IRMÃO DESTA RÉGUA é ``test_aba10_a_identidade_vem_de_cima.py``, que cobra a
 BARRA de 3px. Ele fechou o lugar onde a cor do mockup sobrevivia; este fecha o
@@ -37,7 +43,8 @@ cursor toca (``guarda.nome``, vivo) e a conta está na coluna ao lado
 (``guarda.proprio``, o ponto embaixo de cada glifo, alvo ``classe``, vivo; até
 02/10/2026 era o próprio glifo, ``guarda.secao``, que desde então diz o
 controle agora). É a decisão nº4 dela deste mesmo dia, sobre esta mesma
-tabela
+tabela: *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho é
+gatilho."*
 
 A CÉLULA GANHOU DICA EM 02/10/2026, e não é a volta das oito: ela só existe
 onde há o que dizer (*"O controle não diz."* e a máscara que não é a

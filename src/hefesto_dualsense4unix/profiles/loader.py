@@ -1926,7 +1926,7 @@ def restaurar_do_historico(
 
     PERFIL-SEM-RASTRO-01. Sem `carimbo`, restaura a MAIS RECENTE — que é a
     versão de antes da última gravação, e portanto a resposta certa para
-    .
+    "desfaça o que a janela acabou de fazer com meu perfil".
 
     Escreve os BYTES ORIGINAIS, não uma reserialização: a restauração tem de
     ser idêntica ao que foi guardado, inclusive na formatação, senão comparar

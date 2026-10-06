@@ -28,8 +28,8 @@ Os três buracos de 29/08/2026 — e o que os fechou em 31/08/2026
 ---------------------------------------------------------------
 
 Os três eram perguntas para ELA, e ela as respondeu de uma vez ao redesenhar o
-**Modo de conexão** em 31/08/2026, depois de perguntar **. A forma aprovada é o interruptor
-**HEFESTO
+**Modo de conexão** em 31/08/2026, depois de perguntar a diferença entre o Nativo e o
+DualSense. A forma aprovada é o interruptor **HEFESTO
 Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
 
 1. **O quarto botão de modo, "Desligado".** Ele não tinha leitor:
@@ -62,7 +62,9 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
 O QUE CONTINUA EM ABERTO, e é honesto dizer
 -------------------------------------------
 
-* **Point And Click FECHOU** — POINT-AND-CLICK-01, 17/09/2026, pela  Ele
+* **Point And Click FECHOU** — POINT-AND-CLICK-01, 17/09/2026, pela ordem de produto:
+  *"o modo point and click é o modo navegação e o modo que nós mesmos podemos
+  usar e configurar na aba navegação. Ele ativa o modo configurado lá."* Ele
   nunca foi um botão órfão: é o ``kind="desktop"`` do perfil, com chip na tela
   chamado **Navegação**, gesto no terceiro degrau do PS + R3 e uma aba inteira
   configurando-o. **O que faltava era o fio** entre o que ela configura e o que
@@ -482,7 +484,7 @@ def recado_do_radio(voltaram: int, esperam_o_ps: int) -> str:
 
     **SEM NOTÍCIA, SEM FRASE** — a mesma regra do `recibo_do_reconectar` acima,
     e pela razão dela de 09/09, na grafia dela: *"remover essa frase que
-    aparece tambem ao clciar em reconectar controles"*.  # (noqa-acento): dela
+    aparece tambem ao clciar em reconectar controles"*.  # (noqa-acento: citação literal)
     """
     partes = []
     if voltaram > 0:

@@ -311,7 +311,8 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     pintura — logo o tique seguinte não briga, sobrescreve com o mesmo valor.
 
     POR QUE NA HORA E NÃO NO TIQUE, e o argumento é o do piloto, palavra por
-     Meio segundo é o tique desta aba.
+    palavra: *"Meio segundo entre o clique e a resposta basta para ela clicar de
+    novo achando que o primeiro não pegou"*. Meio segundo é o tique desta aba.
 
     **O `mesa:` NÃO É ENFEITE.** O `_deu_certo` entrega a carga CRUA ao
     `window.__hef.pintar`, que lê `p.blocos`, `p.mesa`, `p.colunas` e
@@ -451,8 +452,8 @@ def _rotulo_curto(controle: dict[str, Any]) -> str:
 def _plastico(controle: dict[str, Any]) -> str:
     """O hexadecimal da casca daquele controle, **pelo dono da cor**.
 
-    A LEI É DO USUÁRIO, 03/09/2026: ** A barra de 3px da linha era `--plastico` cravado no `<tr>`
-    pelo
+    A LEI É DO USUÁRIO, 03/09/2026: cada aba usa os controles que o topo mostra, nunca a
+    informação do mockup. A barra de 3px da linha era `--plastico` cravado no `<tr>` pelo
     gerador — a cor do controle do DESENHO —, e ficava lá enquanto o
     `guarda.nome` ao lado já vinha do aparelho: a linha dizia `P1 • White • USB`
     com a barra vermelha do mockup.
@@ -601,8 +602,8 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
 
     A ÚNICA DIVERGÊNCIA DECLARADA É O ESCAPE — ver `_texto` e `_atr`.
 
-    `escolhido` É A LINHA ABERTA NO EDITOR — 04/09/2026, queixa de uso. O valor já existia
-    (`_escolhido`, no alto deste arquivo) e
+    `escolhido` É A LINHA ABERTA NO EDITOR — 04/09/2026, queixa de uso: clicar num perfil salvo
+    não indicava a seleção. O valor já existia (`_escolhido`, no alto deste arquivo) e
     alimentava só o texto do botão Remover e os gestos; ele não chegava à LINHA,
     e a tela ficava calada sobre o alvo de nove botões.
 
@@ -1196,7 +1197,8 @@ def _com_os_lugares_vazios(
 ) -> list[Any]:
     """A lista da mesa completada até os quatro lugares do desenho.
 
-    NASCEU EM 05/09/2026, da  Antes disto o pacote mandava só as linhas
+    NASCEU EM 05/09/2026, da palavra de produto — *"os svgs não deveriam aparecer prós
+    demais controles desconectados"*. Antes disto o pacote mandava só as linhas
     da mesa e o `forEach` do bootstrap escrevia `''` no que sobrava. `''` serve
     para APAGAR (uma classe, uma cor, um texto) e nunca para ACENDER — e o
     lugar vazio precisa acender uma classe (`fora`) e escrever um rótulo
@@ -1750,7 +1752,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     único evento que um campo de texto dispara com o valor novo.
 
     POR QUE RENOMEAR NA HORA, e não guardar num rascunho: decisão de
-    01/09 — ** —, e esta aba
+    01/09 — *"clicar na cor já deveria aplicar a cor no controle"* —, e esta aba
     não tem "Salvar" próprio (o do rodapé regrava o perfil ATIVO como o disco
     o tem, `rodape._draft_do_ativo`, e nem olha para este campo). Um
     campo que aceita texto e não guarda nada é o botão que responde calado.
@@ -1957,7 +1959,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     {})` devolve exatamente o padrão de cada modo. É a mesma porta que a aba
     Gatilhos usa (`a03_gatilhos._padroes`).
 
-    A LUZ É POR UNIDADE PORQUE A LEI É DO USUÁRIO, verbatim: ** Quem garante isso, medindo, é
+    A LUZ É POR UNIDADE PORQUE A LEI É DO USUÁRIO: dois controles nunca têm a mesma cor, nem no
+    mesmo perfil e estilo de jogo; a paleta varia por unidade. Quem garante isso, medindo, é
     `estilos_de_jogo.as_quatro` — e
     por isso a cor sai de `cor_da_unidade(estilo, jogador)`, nunca de uma cor
     escrita aqui. **O global `leds` NÃO é tocado**: uma cor no global é a cor
@@ -2039,7 +2042,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     **ELE GANHOU MOTOR EM 03/09/2026, e a decisão de construí-lo é do usuário.**
     Perguntada se o motor devia existir, respondeu *"Construir o motor"*, e
     escolheu o alcance: **gatilho + vibração + luz**. As receitas estão
-    em `profiles/estilos_de_jogo.py` —  —, e é de lá que
+    em `profiles/estilos_de_jogo.py` — *"o resto ta aprovado"* —, e é de lá que
     saem tanto os rótulos do `<select>` (`aba10.ESTILOS`) quanto o que cada um
     faz. **Não há tabela de estilo neste arquivo**, e não pode haver: uma
     segunda cópia da receita divergiria no dia em que ela mudasse uma.
@@ -2064,7 +2067,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     estilo depois do clique seria a tela dizendo que guardou o que não guardou.
 
     "PERSONALIZADO" NÃO MEXE EM NADA, e é o único que responde sem gravar. Ele é
-    o estilo que diz  — `as_quatro()` levanta de propósito se
+    o estilo que diz *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se
     alguém lhe pedir a cor. A resposta é um DESFECHO (a tira do rodapé), não uma
     tarja de recusa: escolher "Personalizado" é uma escolha legítima, e recusar
     dizendo faria a tela tratar de erro o que é o comportamento pedido.

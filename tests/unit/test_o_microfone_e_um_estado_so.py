@@ -29,6 +29,7 @@ AS QUATRO MORDIDAS QUE ESTE ARQUIVO EXERCE
    `test_o_eco_da_nossa_escrita_nao_executa_o_ato_de_novo`;
 4. **tirar a guarda de idempotência da metade do firmware** — reprova
    `test_o_botao_do_plastico_nao_toma_a_posse_do_byte`, que é a régua da
+   decisão de 30/08: *"o botão do Controle sempre controla a interface"*.
 
 E O DUBLÊ É TÃO ESTRITO QUANTO A PONTE REAL, que é a cicatriz de 04/09: a
 máscara **nunca gravou um byte** e a régua passou verde porque o dublê aceitava

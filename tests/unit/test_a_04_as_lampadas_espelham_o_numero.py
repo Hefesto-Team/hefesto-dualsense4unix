@@ -163,6 +163,9 @@ def _clique(**extra) -> dict:
 def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
     """O usuário mandou tirar os três cantos que falavam de automático — 07/09/2026.
 
+        *"Olha na real sai todos. Deixa só lá o de cima mesmo o tongle. E aí vai
+         servir pra dizer. O jogo é que escolhe quais serão as cores de todos os
+         controles."*
 
     OS DOIS TESTES QUE MORAVAM AQUI mediam o gesto de escopo GLOBAL da faixa do
     título, campo a campo contra o gêmeo da janela estável, e o `profile_switch`
@@ -328,7 +331,7 @@ def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():
-    """** — 07/09/2026."""
+    """*"o que eu não quero é frase da steam ou outras"* — 07/09/2026."""
     import re
 
     from hefesto_dualsense4unix.interface import onde

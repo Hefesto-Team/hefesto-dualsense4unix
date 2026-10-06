@@ -1,6 +1,8 @@
 """Fechar e reabrir o lançador que estava aberto — REPOR-O-LANCADOR-01.
 
-**Por que isto existe, e o pedido é de produto (21/09/2026):** **
+**Por que isto existe, e o pedido é de produto (21/09/2026):** *"tenho pensando sobre
+o botão de reiniciar daemon. Acho que além do que ele já faz seria importante
+ele fechar e reabrir o launcher, seja steam, epic, heroic ou qualquer outro."*
 <!-- noqa-acento: citação literal -->
 E, quando lhe foram postas três formas: *"Faz automático mesmo"*.
 

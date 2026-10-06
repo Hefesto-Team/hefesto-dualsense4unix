@@ -1,6 +1,7 @@
 """A vibração medida nos TRÊS modos — e os instrumentos que mentiam em dois.
 
-Escrito em 09/08/2026, a
+Escrito em 09/08/2026, a pedido: *"investigar a vibração no modo nativo,
+modo xbox e modo dualsense e fazer funcionar em todos"*.
 
 A medição que abriu a investigação, tirada do `state_full` VIVO da máquina
 do usuário, com a máscara DualSense e o jogo aberto::

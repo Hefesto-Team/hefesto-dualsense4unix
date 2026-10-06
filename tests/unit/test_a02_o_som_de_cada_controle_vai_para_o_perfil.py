@@ -1,6 +1,12 @@
 """A aba Controles passa a GRAVAR o som de CADA controle no perfil.
 
-PEDIDO, 05/09/2026, e ele é sobre AMANHÃ
+PEDIDO, 05/09/2026, e ele é sobre AMANHÃ:
+
+    *"ao pular e sair configurando de aba em aba o perfil vai se lembrando de
+    cada config de cada aba pra cada controle. aí aplicar aplica todas as
+    configs naquele perfil e salvar se lembra disso quando eu for jogar o jogo
+    e no dia seguinte e por diante. pra cada perfil e dentro dele cada config
+    pra cada comtrole"*
 
 O QUE ESTAVA MEDIDO, nesta árvore, com o ciclo inteiro — perfil no disco → os
 cinco gestos de som da aba 02 → reler o arquivo::
@@ -297,7 +303,7 @@ def test_o_pedido_recusado_nao_chega_ao_disco(casa: Any) -> None:
 
 
 def test_o_som_de_um_controle_nao_mexe_no_do_outro(casa: Any) -> None:
-    """**.
+    """*"pra cada perfil e dentro dele cada config pra cada comtrole"*.
 
     Com dois DualSense na mesa, o volume do P2 é do P2. Esta é a metade do
     pedido que nenhum campo global sabe cumprir.

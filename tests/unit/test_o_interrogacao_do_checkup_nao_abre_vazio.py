@@ -18,7 +18,7 @@ outras duas ficou sem nenhuma.
 
 A CURA É REUSO, e as frases já existiam há muito: uma `Ordem` traz TRÊS linhas
 (`ordens_da_mesa.Ordem.linhas`), com os rótulos de
-`exame_da_mesa.ROTULOS_DA_ORDEM`, *"Por que importa"*,
+`exame_da_mesa.ROTULOS_DA_ORDEM` — *"O que eu vi aqui"*, *"Por que importa"*,
 *"Ganho esperado"*. A primeira é o `porque` que a linha já mostra; as outras
 duas são exatamente o que o `?` promete, e as três telas do produto já as
 escreviam — o card do GTK (`secao_exame._linha_da_ordem`) e o `--exame` no

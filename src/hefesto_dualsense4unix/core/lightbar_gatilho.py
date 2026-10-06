@@ -5,7 +5,8 @@
   luz.lightbar.cor@dualsense``), e as três que sustentam este arquivo são
   ``btmon-a-rajada-tem-hora``, ``gatilho-1500ms-por-controle`` e
   ``gatilho-escrever-no-silencio``.
-- **A formulação é do usuário:** **
+- **A formulação é do usuário:** *"não podemos colocar um gatilho pra sempre que a
+  steam aloprar em sequência algo ativa a sobrescrição automática?"*
 
 O DEFEITO
 =========
@@ -42,7 +43,8 @@ O ERRO QUE ENSINOU O DESENHO
 ============================
 A primeira versão do gatilho esperava 1,5 s **depois de cada controle** e
 escrevia só naquele. Falhou: três conexões em três segundos, e só o ÚLTIMO
-ficou magenta (ensaio ``gatilho-1500ms-por-controle``; literal). O último
+ficou magenta (ensaio ``gatilho-1500ms-por-controle``; literal: *"só o
+player 4 que é o controle azul o resto tá no padrão da steam"*). O último
 sobreviveu apenas porque ninguém conectou depois dele.
 
 Por isso o disparo é no **fim da sequência**, nunca por controle: cada evento

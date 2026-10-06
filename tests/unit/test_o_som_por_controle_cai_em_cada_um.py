@@ -1,6 +1,8 @@
 """SOM-POR-CONTROLE-01 — o mix ou o SFX, caindo em CADA controle.
 
-**O pedido, 08/09/2026, à noite:** **  <!-- noqa-acento: citação -->
+**O pedido, 08/09/2026, à noite:** *"o lance dos 4 mic virtuais via bt pra
+cada controle e cavbo e os somns seja hdmi completo seja o canal do sfx caindo
+pra cada controle. nao esquece disso."*  <!-- noqa-acento: citação -->
 
 O QUE ESTE ARQUIVO MEDE, e o que ele NÃO mede
 ----------------------------------------------

@@ -2,7 +2,7 @@
 """A TELA NÃO SAMBA — a interface parada não pode mexer no DOM.
 
 **A palavra, 06/09/2026, com o produto aberto e um DualSense no cabo:**
- — e quatro sintomas: pisca/repinta sem
+*"a interface inteira tá sambando"* — e quatro sintomas: pisca/repinta sem
 parar, cliques não aplicam ou atrasam, trava por instantes, e *"botões não
 funcionam, algo ativa o tooltip mas ele se desativa"*.
 

@@ -159,7 +159,7 @@ class TriggerConfig(BaseModel):
         return bool(self.params) and isinstance(self.params[0], list)
 
 
-#: rigidos e os controles com tudo ativado por default"*  # (noqa-acento) dela
+#: rigidos e os controles com tudo ativado por default"*  # (noqa-acento: citação literal)
 MODO_DE_NASCIMENTO_DO_GATILHO = "Rigid"
 PARAMS_DE_NASCIMENTO_DO_GATILHO: list[int] = [5, 200]
 
@@ -382,7 +382,9 @@ class ProfileMicConfig(BaseModel):
 
     O VOLUME E O MUDO (MIC-VOLUME-01, 16/08/2026)
     ----------------------------------------------
-    Pedido, olhando a aba Status: ** — e,
+    Pedido, olhando a aba Status: *"dá espaço a um slider de microfone pra
+    definir o volume do microfone real (independente de saber se tá via bt ou
+    via cabo), o app deve ser inteligente pra saber qual caminho usar"* — e,
     sobre gravar: *"ao clicarmos em salvar perfil ou aplicar no perfil ativo ele
     de fato o faz e na próxima sessão lembra disso"*.
 
@@ -394,13 +396,14 @@ class ProfileMicConfig(BaseModel):
     **Os dois campos são opcionais, e `None` é "sem opinião".** É o mesmo
     contrato do `mouse` e do `speaker`, e ele importa aqui pelo motivo de
     sempre: um perfil que não pediu nada não pode impor nada. A queixa que
-    originou essa regra — ** — vale
+    originou essa regra — *"a config que eu deixo nunca é respeitada"* — vale
     nos dois sentidos.
 
     **ATIVAR UM PERFIL APLICA O MICROFONE (18/08/2026).** Esta docstring dizia
     que a seção era só lembrança, e que ativar o perfil não tocava no
-    microfone. Isso caducou, e foi ELA quem o derrubou:  — e, sobre o contrato antigo: ** Quem
-    aplica é `ProfileManager.apply_mic`.
+    microfone. Isso caducou por decisão de produto: microfone, som, touchpad, acelerômetro e
+    giroscópio se salvam sempre no perfil, e o contrato antigo era de quando o perfil não tinha
+    microfone. Quem aplica é `ProfileManager.apply_mic`.
 
     **O MUDO NÃO É DO PERFIL — O-MUDO-E-DO-CONTROLE-01.** Os dois campos NÃO
     custam a mesma coisa, e por isso não atravessam pelos mesmos caminhos:
@@ -420,7 +423,8 @@ class ProfileMicConfig(BaseModel):
 
     **`volume` é do CAMINHO, e desde 09/09/2026 também do aparelho.** Ele é o
     volume da fonte de captura no sistema (o source do PipeWire), e por isso
-    funciona igual no cabo e no rádio — que é exatamente o  do pedido. O segundo degrau é o
+    funciona igual no cabo e no rádio — que é exatamente o "independente de
+    saber se tá via bt ou via cabo" do pedido. O segundo degrau é o
     `common[6]` do controle, o ganho de captura do firmware, pela régua única
     `core/backend_pydualsense.byte_do_volume_do_microfone` (MIC-VOLUME-02,
     D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO). Fato errado substituído
@@ -450,7 +454,7 @@ class ProfileSpeakerConfig(BaseModel):
     para a AUSÊNCIA da seção nos três. Perfil COM seção aplica — inclusive o
     `mic`, desde 18/08/2026.) Tomar posse
     por um perfil que não pediu nada é exatamente o hábito que produziu a
-    queixa .
+    queixa "a config que eu deixo nunca é respeitada".
 
     POR QUE ``volume`` É OBRIGATÓRIO (e ``muted`` sozinho é recusado aqui).
     Medido na SOM-02 (armadilha 1) com o `set_speaker_volume` real: uma
@@ -858,7 +862,8 @@ class ControllerMicOverride(BaseModel):
     Decisão, 03/09/2026 — o microfone vira o QUINTO ajuste por controle:
     é o `Virtual` que faz o mic soar igual no cabo e no rádio, ou seja, é o
     ajuste que faz o CANAL daquele controle funcionar; e com
-    ``CANAL-POR-CONTROLE-01`` —  —
+    ``CANAL-POR-CONTROLE-01`` — *"4 controles os 4 tem que ter canais de
+    entrada unico pra cada qual"* (noqa-acento: citação literal) —
     um controle no cabo e outro no rádio precisam poder ter tratamentos
     diferentes.
 
@@ -1057,8 +1062,8 @@ class ControllerOverrides(BaseModel):
       ``apply_profile_mic(uniq=...)`` → ``set_microphone_mute(uniq=...)``. É um
       subconjunto — só o ``muted`` —, e ``ControllerMicOverride`` diz por
       medição o que ficou de fora e o que cada um espera;
-    - ``mascara``, desde MASCARA-NO-PERFIL-01 (08/09/2026, ): ``manager.apply_controller_mascaras``
-      escreve a máscara
+    - ``mascara``, desde MASCARA-NO-PERFIL-01 (08/09/2026, decisão de produto):
+      ``manager.apply_controller_mascaras`` escreve a máscara
       daquela peça no registro que ``external_mask.mascara_efetiva`` consulta na
       criação de cada gamepad virtual, e é o perfil que passa a mandar (ver o
       item 3 da fila abaixo, que dizia o contrário até 08/09).
@@ -1207,7 +1212,7 @@ class ControllerOverrides(BaseModel):
     mic: ControllerMicOverride | None = None
     sensores: ControllerSensoresOverride | None = None
     #: *"Como este controle aparece nos jogos"*, SÓ desta peça — MASCARA-NO-
-    #: PERFIL-01 (08/09/2026, ).
+    #: PERFIL-01 (08/09/2026, decisão de produto: *"pode entrar sim"*).
     #:
     #: ``None`` = **volte ao padrão**, e esta é a ÚNICA seção desta classe em
     #: que ``None`` não quer dizer *"sem opinião"*. É decisão, 09/09/2026:

@@ -27,7 +27,8 @@ na aba Controle (`interface/pacotes/a02_controles.py`, campo `mic-ressalva`).
 
 **A LUZ INVERTE O KERNEL, e isso é o ponto inteiro.** O `hid-playstation`
 escreve `mute_button_led = ds->mic_muted` (`hid-playstation.c:1538-1540`): para
-ele, luz ACESA quer dizer MUDO. Aqui é o contrário —  Enquanto a posse do byte for
+ele, luz ACESA quer dizer MUDO. Aqui é o contrário — palavra de produto: *"confuso
+mudo e apagado tem que ser sinonimos aqui"*. Enquanto a posse do byte for
 nossa, o firmware obedece a nós e o kernel não pinta nada; por isso a devolução
 da posse tem de REPINTAR na língua do KERNEL antes de soltar (ver
 `_devolver`), senão a luz fica presa no nosso vocabulário sobre um byte que

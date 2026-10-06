@@ -1,6 +1,11 @@
 """ABA 10 — a identidade do controle vem da FITA DO TOPO, nunca do mockup.
 
-A LEI, e é do usuário (03/09/2026)
+A LEI, e é do usuário (03/09/2026):
+
+    *"se no topo tá mostrando controle white player 1, então cada aba vai usar
+    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
+    faz referencia ao controle conectado. Por isso temos o mapa pra servir como  (noqa-acento)
+    variável de identificação"*
 
 (A marca acima é a isenção da casa para **citação literal**: as palavras
 de produto não se corrigem, e o portão de acentuação pula a linha que a carrega.)

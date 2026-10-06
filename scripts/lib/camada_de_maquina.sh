@@ -4,7 +4,7 @@
 # POR QUE ESTE ARQUIVO NASCEU (31/08/2026)
 # ========================================
 # Ela desinstalou o Hefesto estável e decidiu ficar só com o de
-# desenvolvimento.
+# desenvolvimento: *"eu desinstalei a versão antiga e vamos deixar só a dev"*.
 # No mesmo instante o app de dev parou de funcionar — e o motivo estava escrito
 # no cabeçalho do `install-dev.sh` desde que ele nasceu, em 29/08:
 #
@@ -808,7 +808,7 @@ install_placa_acordada_host() {
 #   - a identificação da placa (`/sys/class/dmi/id/`, legível por todo mundo);
 #   - e a CONTAGEM da tabela 8, que sai do `ls` do diretório mesmo com o `raw`
 #     ilegível. É ela que separa *"a sua placa não tem tabela de conectores"* de
-#     ** — duas frases que mandam
+#     *"tem 18 entradas e eu não tive root para lê-las"* — duas frases que mandam
 #     a pessoa fazer coisas diferentes.
 #
 # Sem root o `gabinete.json` sai com `tabela_8_respondeu: false` e a aba abre

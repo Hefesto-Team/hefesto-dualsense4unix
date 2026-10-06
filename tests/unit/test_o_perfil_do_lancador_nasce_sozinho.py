@@ -323,7 +323,7 @@ def test_a_classe_declarada_sobrevive_ao_jogo_ja_semeado(tmp_path: Path) -> None
 def test_criar_a_mao_um_segundo_perfil_para_o_mesmo_jogo_nao_e_recusado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """**."""
+    """*"eu posso criar ou criar um perfil duplicado do mesmo jogo"*."""
     destino = tmp_path / "perfis"
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
     loader.semear_perfis_dos_jogos(

@@ -423,7 +423,9 @@ jogadores estava de pé, num jogo com exceção de Steam Input ativa — que é
 exatamente o que `docs/usage/jogos-e-mascaras.md` afirmava ser impossível até
 ser corrigido no mesmo dia.
 
-**5. O ACEITE DE PRODUTO, no mesmo jogo, e é o que decide.** Palavras de produto. Quatro controles, cada um com o seu número, a sua vibração e o resto —
+**5. O ACEITE DE PRODUTO, no mesmo jogo, e é o que decide.** Palavras de produto: *"na hora
+do vamos ver os 4 conectaram certinho. cada qual com seu player rumble e
+afins"*. Quatro controles, cada um com o seu número, a sua vibração e o resto —
 com a exceção de Steam Input ativa naquele appid.
 
 Isso fecha o par que este documento vinha perseguindo. A leitura do fonte
@@ -902,7 +904,9 @@ MEDIDO**.
 
 ## 5-ter. O caminho do PROTON para a IMU — medido com o jogo do usuário (17/09/2026)
 
-**Acrescentada em 17/09/2026**, depois da queixa de uso.
+**Acrescentada em 17/09/2026**, depois da queixa de uso: *"joguei um jogo com
+controle por movimento e na hora do vamos ver o controle não deu resposta
+(pragmata)"*.
 
 A 5-bis mede o **SDL do host**. O PRAGMATA não carrega SDL nenhum — não há
 `SDL2.dll` nem `SDL3.dll` na pasta do jogo e nenhuma cadeia `SDL_Joystick` no
@@ -1073,7 +1077,7 @@ E o canal não sai só da máscara: sai do PAR. `quer_uhid`
 `dualsense`. Com o caminho `xbox`, a máscara `dualsense` **também** cai no
 `uinput` — e o `state_full` não chama isso de degradado, porque é escolha.
 
-**Medido na máquina do usuário, 17/09/2026:** entre `01:54:48` e `03:32:23` o journal
+**Medido na bancada, 17/09/2026:** entre `01:54:48` e `03:32:23` o journal
 registra `gamepad_emulation_started caminho=xbox` — **1 h 37 min** em que
 nenhum jogo teria recebido giroscópio, e nada na tela diz isso. E o disco
 guarda a escolha: `~/.config/hefesto-dualsense4unix/gamepad_caminho.flag`
@@ -1439,7 +1443,8 @@ janela.
 
 **E a rajada não é por controle — é por EVENTO.** Um protótipo que escrevia
 1,5 s depois de **cada** conexão nova perdeu dois dos três: só o último ficou
-com a cor pedida. **Cada conexão nova faz a Steam repintar todos os controles**, não só
+com a cor pedida (*"só o player 4 que é o controle azul o resto tá no padrão da
+steam"*). **Cada conexão nova faz a Steam repintar todos os controles**, não só
 o que chegou.
 
 ### 6-bis.4 Em regime ela repinta, não apaga
@@ -1468,13 +1473,16 @@ e por rádio o `sysfs` é a **única** rota que sobra — justamente a que perde
 a Steam.
 
 **E a vitória não encerra a disputa.** O magenta pegou nos três no instante, mas
-**não durou nos três**: ** — vermelho é a cor de jogador 2 da Steam, ou seja, ela
+**não durou nos três**: *"dois dos controles ficaram magenta e o branco tá
+vermelho no player 2"* — vermelho é a cor de jogador 2 da Steam, ou seja, ela
 repintou **um** e não os outros dois. **O que decide qual controle a Steam
 repinta não foi medido.**
 
 ### 6-bis.6 O que isto compra, e a ressalva de produto
 
-O desenho que sai daqui é o que ela formulou — ** — e ele **arma a cada conexão e só dispara quando o rádio
+O desenho que sai daqui é o que ela formulou — *"não podemos colocar um gatilho
+pra sempre que a steam aloprar em sequência algo ativa a sobrescrição
+automática?"* — e ele **arma a cada conexão e só dispara quando o rádio
 sossega**, escrevendo então em **todos** os controles pela rota `hidraw`. Com a
 sequência de conexões encerrada havia cerca de um minuto, uma escrita em cada um
 pintou os três, e o aceite de produto foi *"perfeito"*.
@@ -1486,7 +1494,8 @@ desde 17/07**. Quem for mexer aqui responde antes o que derrubou a conclusão
 anterior — senão é o mesmo erro das quatro vezes passadas, com data nova.
 
 **E há uma regra de produto, também dela, que decide QUANDO esse gatilho pode
-agir** (12/08/2026). Em **Conexão Nativa (Sony)** e no
+agir** (12/08/2026): *"no modo nativo devolvemos o controle pra steam e no modo
+conexão também, todo o resto é o hefesto"*. Em **Conexão Nativa (Sony)** e no
 modo em que a entrada é da Steam, o controle é de quem está jogando e o Hefesto
 **não** repinta; em todo o resto, quem manda é o Hefesto. É a mesma cerca do
 `FEAT-NATIVE-OUTPUT-MUTE-01`, agora aplicada à cor.

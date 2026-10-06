@@ -1,6 +1,10 @@
 """O-NO-NASCE-FECHADO-01 — o nó nasce `0600 root` e o Hefesto abre sob pedido.
 
-Decisão, 20/09/2026, e ela tem três partes
+Decisão, 20/09/2026, e ela tem três partes:
+
+    «Nossa udev não deveria garantir isso? Por mim caminho um e lembrando que
+     o Hefesto tem que ter prioridade em tudo e isso deveria estar no install
+     por default»
 
 O DEFEITO que isto fecha: a Steam aberta ANTES de o controle conectar pelo
 rádio abre o `/dev/hidraw` do FÍSICO na janela em que o udev deu `uaccess` e o

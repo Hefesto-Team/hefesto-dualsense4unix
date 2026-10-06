@@ -1,6 +1,8 @@
 """AUTO-01 (sprint 25/07) — um clique em vez de dez.
 
-O
+O pedido: *"ao clicar em tal coisa, ele não precisar alterar 10 coisas em
+abas, fechar a Steam, abrir, aplicar x, y e z, tudo de forma manual mas de forma
+automática, o máximo que der."*
 
 Este arquivo trava os três itens que impediam **os quatro jogadores**:
 
@@ -14,7 +16,9 @@ Este arquivo trava os três itens que impediam **os quatro jogadores**:
     jogo + co-op + renumeração.
     **NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01:** esse botão SAIU, e a
     entrega da AUTO-01.2 não foi desfeita: ela foi ao limite. Decisão de produto,
-    tomada mais de uma vez. Preparar o co-op
+    tomada mais de uma vez: *"todos e tudo no Hefesto tem que tá com o permitir
+    co-op ligado (…) se eu conecto 4 controles no PC eu espero, com 4 pessoas
+    jogando, que cada um controle o próprio personagem"*. Preparar o co-op
     deixou de ser gesto porque o co-op deixou de ser opção — o piso do daemon
     nasce ligado. O que a AUTO-01.2 tinha de insubstituível (o ciclo FORÇADO,
     que alcançava de carona no ``coop.set``) mudou de dono ANTES da remoção:

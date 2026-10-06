@@ -13,7 +13,8 @@ a rota É escolher o fone. O volume ia inteiro para lugar nenhum:
     rota=None, volume=102, tom de 880 Hz no sink do controle ... ela: nada
     `speaker.set {"rota": 3}`, o MESMO tom .................... ela: "Saiu som"
 
-Efeito por inteiro: a  — nunca se cumpriu. Cem por cento mandados para
+Efeito por inteiro: a decisão de 16/08 — *"precisamos setar o som sempre em
+todos os controles no 100%"* — nunca se cumpriu. Cem por cento mandados para
 lugar nenhum é silêncio. **Cura que cobre metade do par não cura.**
 
 O VALOR é decisão, 16/09/2026, entre os três botões da aba Controles:

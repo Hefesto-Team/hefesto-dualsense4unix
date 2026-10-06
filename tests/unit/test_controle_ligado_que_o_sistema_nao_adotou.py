@@ -1,6 +1,6 @@
 """CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026) — a janela mentia sobre um controle.
 
-Medido na máquina do usuário: **dois** DualSense ligados e pareados, e a janela
+Medido na bancada: **dois** DualSense ligados e pareados, e a janela
 mostrava **um**. Em lugar nenhum do produto havia uma pista do porquê — a aba
 Início chegava a escrever *"Nenhum controle conectado."* para um controle que
 estava ligado, pareado e falando com o rádio.

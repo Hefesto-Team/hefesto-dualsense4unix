@@ -134,7 +134,7 @@ class StateStore:
             atual = self._udp_trigger_thresholds
             return (atual["left"], atual["right"])
 
-    #
+    # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
 
     def set_window_detect_backend(self, backend: str | None, healthy: bool) -> None:
         """Semeia o diagnóstico do detector na partida do autoswitch."""

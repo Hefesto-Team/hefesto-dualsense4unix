@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """O alvo ``atributo``: o desenho do controle passa a seguir o APARELHO.
 
-A LEI, e é do usuário — 03/09/2026
+A LEI, e é do usuário — 03/09/2026:
+
+    *"os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
+    players com cada controle — tudo isso muda de acordo com o controle
+    identificado no canto superior. É white no p1, mas a borda de tudo é cosmic
+    red e os svgs não são os que o meu mapa cataloga. Isso tá errado."*
 
 O SVG escolhe a cor por ATRIBUTO: ``monta.svg()`` grava
 ``<svg data-colorway="cosmic-red">`` e a folha embutida pinta as dez zonas com

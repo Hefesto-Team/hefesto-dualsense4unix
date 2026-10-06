@@ -7,7 +7,8 @@ CLI (`mic bt`), pela GUI ou por aqui.
 
 AS DUAS TRAVAS, LIDAS ANTES DE MEXER (CANAL-POR-CONTROLE-01, 03/09/2026)
 ------------------------------------------------------------------------
-Decisão de produto, com as palavras de produto e sem corrigi-las
+Decisão de produto, com as palavras do usuário e sem corrigi-las:
+*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
 
 Medido com os dois controles na mesa: existia **UM** canal, o do cabo.
 O do rádio não publicava fonte nenhuma, e quem recusava eram duas travas
@@ -20,7 +21,8 @@ trava                  de onde veio               o que protegia
 `habilitado_por_env`   `d6f9d331`, 25/07/2026     privacidade + banda do rádio
 `uniqs_declarados`     `c59dd346`, 23/08/2026,    a mesma razão, mais o *"por
                        QUATRO-MICROFONES-01/E1    controle"* que o usuário pediu. Não
-                       ()                INTERRUPTOR dela
+                       (decisão de produto: *"por       é precaução nossa: é o
+                       controle"*)                INTERRUPTOR dela
 =====================  =========================  =============================
 
 **As duas são a MESMA razão em duas roupas**, e ela está escrita abaixo: a
@@ -40,7 +42,7 @@ enquanto ninguém o abre. Ele não paga privacidade nem banda por existir.
 controle transmite áudio o tempo todo, ouvido ou não. Era verdade e deixou de
 ser: o pedido agora SEGUE o estado da source — `RUNNING` (tem app gravando)
 liga, qualquer outro desliga —, que é a mesma coisa que o cabo faz de graça.
-Medido na máquina do usuário no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
+Medido na bancada no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
 gravando `RUNNING`, e `IDLE` depois que ele sai (`integrations/
 dualsense_bt_audio.ESTADO_COM_OUVINTE`).
 
@@ -53,7 +55,7 @@ rádio pode existir sem capturar, como o do cabo.
 **Então a trava NÃO SAI: ela vira automática, e o critério explícito é o do
 cabo — PROCURA.** A ponte sobe para o controle cujo canal alguém está tentando
 usar, e o gesto que diz isso já existe e já é do usuário: o botão do microfone, que
-desde 01/09 quer dizer
+desde 01/09 quer dizer *"eu falo por este controle"*
 (`integrations/eleicao_de_microfone.py`). A exigência que MORRE é a de declarar
 cada `uniq` à mão no `maquina.json` antes que ele possa ter canal.
 
@@ -68,9 +70,13 @@ estava escrito, no presente, *"por que ele não sobe SOZINHO, e a razão continu
 de pé"* — privacidade e banda, as duas abaixo. **Ela revogou as duas em
 25/08/2026, por escrito**, em `docs/data/decisoes-de-produto.csv`: a id 37
 (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
-com as palavras de produto — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
+com as palavras do usuário — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
 O PREÇO… o que caduca é o padrão desligado"*. A decisão nunca foi implementada,
-e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez
+e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez:
+
+    *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
+    ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento: citação literal)
+    ativado por padrao"*  # (noqa-acento: citação literal), 17/09/2026
 
 **O QUE MUDOU, E O QUE NÃO MUDOU.** Quem diz a palavra na CHEGADA do controle é
 `daemon/subsystems/hotkey.nascer_no_ar`, chamado pelo gancho de conexão
@@ -141,7 +147,8 @@ Três razões, e a terceira é a que fecha a escolha:
   desligou). Até aqui havia um só, e o comentário nesta linha dizia que um
   `false` gravado *"é um valor de catálogo para o silêncio, e é por essa porta
   que o default entra disfarçado de escolha do usuário"*. Isso valia com o default
-  sendo o silêncio; com a  — o `false` virou a ÚNICA forma de ela dizer
+  sendo o silêncio; com a ordem de produto — *"todos os controles tem que nascer com
+  tudo mic, giroscopio e afins"* — o `false` virou a ÚNICA forma de ela dizer
   não, e não gravá-lo é que deixaria o produto decidir por cima dela;
 * a fonte é **chamável**, nunca uma cópia: o `machine.declare` relê o
   `maquina.json` e REBINDA `daemon._maquina` no "Aplicar" (`ipc_handlers.py`),

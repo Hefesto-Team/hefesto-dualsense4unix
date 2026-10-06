@@ -8,7 +8,7 @@ da saída de som aceso, e um tom contínuo no sink padrão saiu **só na TV**:
     (as quatro pontes `hefesto_som_*`, os quatro endpoints de háptica,
      o sink USB do controle no cabo: 0,000000)
 
-
+Palavra de produto: *"so saiu na tv."*
 
 A CAUSA NÃO ERA O APARELHO. O botão gravava `speaker.fonte = "mix"` no PERFIL,
 e o único leitor daquela escolha no daemon é

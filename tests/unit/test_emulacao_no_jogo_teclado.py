@@ -12,7 +12,7 @@ MOUSE. O teclado emulado não tinha interruptor nenhum (sem gate de criação, s
 flag em disco, sem IPC, sem chave no `state_full`), e a exclusão mútua do poll
 loop era `if not gamepad_dispatched:` — a AUSÊNCIA do vpad lida como PERMISSÃO
 para o desktop entrar, justamente quando a exceção do Steam Input derruba o vpad
-DE PROPÓSITO para o jogo assumir. Medição do journal do usuário: 9 de 9 pressionamentos
+DE PROPÓSITO para o jogo assumir. Medição do journal da bancada: 9 de 9 pressionamentos
 de R1 em 7 dias caíram dentro de `steam_input_vpad_suspenso`, zero fora.
 
 Cada teste aqui MORDE: existe um par "com a cura" / "sem a cura" (ou uma asserção

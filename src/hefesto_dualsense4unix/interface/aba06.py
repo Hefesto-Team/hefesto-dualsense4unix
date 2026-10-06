@@ -136,7 +136,9 @@ def _tem_tinta(pid):
 
 CSS = CSS_GLIFO + """
   /* ---------- Navegação ----------
-     A RODADA DOS QUATRO CONTROLES (27/08/2026). Ela
+     A RODADA DOS QUATRO CONTROLES (27/08/2026). Ela: "precisamos que cada aba
+     dessa do nosso mockup seja reescrita pra 4 controles conectados (…)
+     considerando o nosso mapa. e o sistema de fitas."
 
      O que mudou aqui, e por quê:
 
@@ -155,9 +157,11 @@ CSS = CSS_GLIFO + """
 
      As correções anteriores dela, que continuam valendo:
 
-     [56]
+     [56] "ativar mouse e emulação somem. aquela parte de roda dos pontos some
+     também. nesse espaço era pra termos as opções de ativação que conversamos."
 
-     [57]
+     [57] "todos os campos (coluna da direita das três tabelas ali, pra cada
+     valor de cada linha) e arrumar a largura e disposição dos elementos."
 
      [51] "no navegação faltou usar os svgs que já usamos em status."
      ------------------------------------------------------------------- */
@@ -220,7 +224,9 @@ CSS = CSS_GLIFO + """
      medido no tamanho em que é desenhado. */
   /* AS DUAS PALAVRAS PARA O MESMO ESTADO FINALMENTE SE ENCONTRAM — 17/09/2026.
 
-     Queixa de uso, com a foto da Navegação.
+     Queixa de uso, com a foto da Navegação: *"vê que o campo de p2 de desativado
+     é diferente do campo p3 e p4? eu preciso que todos os campos desativados
+     fiquem iguais pra todos"*.
 
      A causa estava NOMEADA nesta casa desde 04/09, no `a06_navegacao.py`: o P3
      e o P4 nascem `class="nav-ctl vazia"` no esqueleto; o P2 nasce OCUPADO (é
@@ -331,7 +337,7 @@ CSS = CSS_GLIFO + """
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
   /* O RESPIRO DO TÍTULO: `sec-alta` estava escrita no HTML desde 27/08 e não
      tinha uma linha de CSS — o título nascia colado no pé do bloco de cima.
-     Ela. */
+     Ela: "desce mais um pouco o título pra separar ele do bloco". */
   .sec-alta{margin-top:16px}
   /* o bloco dos três botões não tem título: o vão que o título ocuparia vira
      margem, senão ele encosta no bloco das opções. */
@@ -396,7 +402,10 @@ CSS = CSS_GLIFO + """
   .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 2px}
   .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
      A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
      moldura do quadro já existe. */
   .at-col > .at-linha{border-bottom:1px solid var(--rot-linha)}
@@ -540,7 +549,8 @@ CSS = CSS_GLIFO + """
          cursor:pointer;line-height:1;padding:0}
   .passo:hover{border-color:var(--purple);color:var(--purple)}
 
-  /* AS DUAS VELOCIDADES ARRASTAM — decisão, 05/09/2026. O molde é o da aba
+  /* AS DUAS VELOCIDADES ARRASTAM — decisão, 05/09/2026: *"velocidade do
+     cursor e da rolagem coloca um slicer pra cada"*. O molde é o da aba
      Vibração (`aba05._trilho`), e a aparência é copiada dela de propósito:
      `appearance:none` desliga o controle nativo do WebKit — que traria a cor e
      a altura do tema do sistema para dentro de uma tela que o usuário aprovou — e as
@@ -667,7 +677,8 @@ CSS = CSS_GLIFO + """
     display:inline-flex;align-items:center;justify-content:center}
   .btn-conf.vermelho{border-color:var(--red);color:var(--red)}
   /* O POP-UP ABRE NO CLIQUE E SÓ FECHA NA OPÇÃO OU FORA — decisão,
-     31/08/2026
+     31/08/2026: *"voltar ao padrão tem que ficar aquele pop up ativo e só
+     desativar se eu clicar na opção ou fora dela."*
 
      ERA `:hover`, e o hover é o gatilho errado para uma pergunta que espera
      resposta: ela sumia assim que o ponteiro saía do caminho entre o botão e o
@@ -694,7 +705,9 @@ CSS = CSS_GLIFO + """
   .estado .verde{color:var(--green)} .estado .laranja{color:var(--orange)}
   .estado .valor{color:var(--fg);font-weight:600}
 
-  /* AS TRÊS LINHAS DE ESTADO NASCEM VAZIAS, E É REGRA DE PRODUTO — 30/08/2026. Elas são o que a GTK mostra e esta
+  /* AS TRÊS LINHAS DE ESTADO NASCEM VAZIAS, E É REGRA DE PRODUTO — 30/08/2026:
+     *"se não tá mostrando agora, não tem info pra mostrar no produto; mas
+     quando tiver, aparece a info correta"*. Elas são o que a GTK mostra e esta
      aba calava — a dica do quadro Navegação já cita "a linha de estado abaixo"
      desde 27/08, e até hoje a linha que ela cita não existia.
 
@@ -723,7 +736,8 @@ CSS = CSS_GLIFO + """
   .estado tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
 
   /* ---------- A FRASE DO PRODUTO DENTRO DO `?` ----------
-     07/09/2026,  As três desceram para o `?` do campo de que
+     07/09/2026, ordem de produto: *"navegacao tem essas 3 frases aqui na parte de
+     baixo que quebram o layout"*. As três desceram para o `?` do campo de que
      falam (`ajuda(..., vivas=…)`), e continuam sendo escritas pelo pacote a
      cada tique — o que muda é o LUGAR, nunca o dono.
 
@@ -922,7 +936,8 @@ CSS = CSS_GLIFO + """
 
   /* ---------- A MARCA DE "NÃO DISPARA" NA COLUNA DO NOME ----------
      Decisão do PO, 04/09/2026 (§2 `06[02]`): as três regiões do touchpad
-     **ficam** — é a D-15 dela, ** — **com a marca de que não disparam**. A marca nasce FIXA: a
+     **ficam** — é a D-15 dela, *"pedi pra tirar o texto não o touch mostrando
+     os toques"* — **com a marca de que não disparam**. A marca nasce FIXA: a
      marca VIVA (que acende só quando o touchpad é o ponteiro do sistema)
      espera o daemon publicar esse dado, e isso é sprint própria.
 
@@ -1135,7 +1150,8 @@ def bignum(*pares):
 def trilho(valor, minimo, maximo, gesto, campo, titulo):
     """Uma velocidade como barra arrastável, com o número ao lado.
 
-    DECISÃO, 05/09/2026. Ela substitui o :func:`bignum` de `−`/`+` nas duas linhas
+    DECISÃO, 05/09/2026: *"velocidade do cursor e da rolagem coloca um
+    slicer pra cada"*. Ela substitui o :func:`bignum` de `−`/`+` nas duas linhas
     das "opções de ativação" — e o par de botões saiu junto com os quatro gestos
     de passo que o atendiam, para não deixar endereço sem campo na página.
 
@@ -1269,7 +1285,8 @@ def desenho(c, **kw):
       (ver `folha_das_cores`). Mantê-la seria a mesma tabela quatro vezes, e a
       podada é justamente a que impede o desenho de virar outro aparelho;
     * o `<svg>` ganha `ENDERECO_DO_DESENHO`. Sem ele o `data-colorway` fica
-      sendo o do MOCKUP para sempre — era o defeito que o usuário nomeou.
+      sendo o do MOCKUP para sempre — era o defeito que o usuário nomeou: *"é white
+      no p1, mas (…) os svgs não são os que o meu mapa cataloga"*.
 
     AS DUAS ÂNCORAS PARAM A GERAÇÃO se sumirem. Uma `str.replace` que não casa
     devolve o texto intacto e não avisa — foi assim que a fita viva morreu em
@@ -1378,7 +1395,10 @@ def controle(c):
     `.nav-ctl.vazia .ds-svg` já pintam.
 
     O `data-controle` do lugar vazio é decisão, 03/09/2026, e ela a
-    enunciou assim:  — o `data-controle` chegou naquele
+    enunciou assim: *"tem que aparecer desligado enquanto não tem nenhum
+    controle. A partir do momento que tiver, ele aparece o controle devidamente
+    conectado. Se isso não ocorre com os 4 controles em cada aba, então temos
+    que construir isso e garantir isso."* — o `data-controle` chegou naquele
     dia; os campos DE DENTRO chegam hoje, e sem eles a segunda metade da frase
     de produto não acontecia.
     """
@@ -1950,7 +1970,8 @@ MIOLO = f'''
             </div>
           </div>
           <!-- ---------- A RESSALVA DA D3 SAIU DA MOLDURA ----------
-               07/09/2026,  — e ela era a primeira das
+               07/09/2026, ordem de produto: *"navegacao tem essas 3 frases aqui na
+               parte de baixo que quebram o layout"* — e ela era a primeira das
                três, 17,25px logo abaixo da grade das sete linhas.
 
                A DECISÃO D3 CONTINUA CUMPRIDA, e é o que importa: `mouse`,

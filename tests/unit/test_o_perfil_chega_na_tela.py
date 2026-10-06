@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """A RÉGUA DA CURA DE 01/09/2026: o que está no perfil chega à tela.
 
-POR QUE ELA EXISTE, e a pergunta de produto é o
+POR QUE ELA EXISTE, e a pergunta de produto é o enunciado: *"vc tá corrigindo na
+origem esses problemas que tá relatando né?"*
 
 Não estava. Dezessete valores desta interface mostravam travessão com uma frase
 dizendo que o produto não sabia aquilo. **Doze tinham dono** — o perfil no disco
@@ -210,7 +211,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         (`_onde_estao_os_lancadores`) mas não LÊ a biblioteca de nenhum deles;
       * `plugins` — o IPC `plugin.list` existe e **só a CLI o chama**.
 
-    O `sem_dono` é o oposto de esconder: é a tela dizendo
+    O `sem_dono` é o oposto de esconder: é a tela dizendo *"isto eu não sei"*
     em vez de mostrar o desenho como se fosse dado.
 
     **A RÉGUA MORDE NOS DOIS SENTIDOS, e é por isso que a igualdade é exata:**

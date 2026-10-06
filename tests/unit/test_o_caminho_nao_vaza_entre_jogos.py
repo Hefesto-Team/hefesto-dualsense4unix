@@ -1,8 +1,10 @@
 """O CAMINHO DE UM JOGO NÃO VAZA PARA O SEGUINTE — O-CAMINHO-NAO-VAZA-01.
 
-Decisão, 17/09/2026, ao ver a causa.
+Decisão, 17/09/2026, ao ver a causa: *"puts aqui é fogo kkkkkkkkkkk,
+deveria ficar só pra aquele jogo do perfil não? mas ótima descoberta"*.
 
-A QUEIXA, e ela é de quem estava jogando.
+A QUEIXA, e ela é de quem estava jogando: *"joguei um jogo com controle por
+movimento e na hora do vamos ver o controle não deu resposta (pragmata)"*.
 
 O DEFEITO, medido no disco do usuário em 17/09/2026 — três perfis opinam um caminho
 (`dont_scream.json` e `future_knight.json` pedem `"xbox"`,
@@ -264,7 +266,10 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança e o vazamento voltou por
         outra porta, porque o arquivo global é escrito por TODO gesto manual.
 
-        A decisão de produto, ao ver a causa
+        A decisão de produto, ao ver a causa:
+
+            *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
+            esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
 
         Enquanto um start sem opinião herdar de QUALQUER lugar, existe um lugar
         a envenenar. O caminho DualSense é o que tem todas as features, e é o

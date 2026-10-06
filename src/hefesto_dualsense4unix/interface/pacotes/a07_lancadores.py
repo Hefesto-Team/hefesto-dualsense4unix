@@ -3,9 +3,12 @@
 
 A DECISÃO DE PRODUTO QUE ABRIU ESTA ABA, e ela CADUCOU outra, de um dia antes:
 
-    01/09/2026
+    01/09/2026 — *"a única que não faremos, só deixamos o botão levando pra
+    ela, é a de lançadores."*
 
-    02/09/2026
+    02/09/2026 — *"não daria para incluir G e F aqui? (…) temos um mapa
+    funcional disso no gtk. a estrutura sim, validar de fato eu poderia
+    somente juntos com ele."*   <!-- noqa-acento: citação literal -->
 
 A `F` é esta aba (o registro «ROTA-F-a-aba-lancadores» de 02/09/2026).
 A segunda decisão vale, e ela traz a razão: **o GTK tem o mapa funcional** —
@@ -100,7 +103,8 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     daemon/launch_env.launch_session_appid               1º degrau da escada
     daemon/launch_env.read_last_run_marker               3º degrau da escada
 
-O REPARO SAIU DESTA ABA — 21/09/2026,  O «Consertar», o «Ver o que
+O REPARO SAIU DESTA ABA — 21/09/2026, palavra de produto: *"a ideia é termos os
+mesmos botões pra todos os lançadores. sempre."* O «Consertar», o «Ver o que
 impede», o «Posso fechar a Steam», o «Não perguntar», o «Copiar a linha» e os
 dois do Steam Input saíram, e com eles a vigia de dentro da aba
 (`_VigiaDaSteam`) e os portões do censo. Quem repõe o atalho é o vigia de fora
@@ -125,7 +129,7 @@ desde 03/09/2026, a :class:`_VigiaDaSteam` que esse gesto arma quando é adiado
 — nunca a pintura, e nunca sem um clique do usuário antes.
 
 E ELA FOI A ÚLTIMA METADE QUE FALTAVA: com a Steam aberta o `Consertar` recusa
-dizendo , e até 03/09 **nada reperguntava** — a
+dizendo *"Feche a Steam e eu reponho"*, e até 03/09 **nada reperguntava** — a
 tela prometia e ela é que tinha de lembrar. A janela velha cumpre essa frase
 desde 16/08 com um tique de `INTERVALO_DA_VIGIA_S`; a página cumpre agora com o
 mesmo tique, a mesma frase e o mesmo desligador.
@@ -340,7 +344,8 @@ def _onde_estao_os_lancadores(
 
     O `onde` É O CAMINHO INTEIRO, e isso é o que a frase prometia. A docstring
     do `DIZ_ACHEI` (a frase saiu da tela em 11/09 e o nome em 21/09/2026) dizia
-    que dizer ONDE ** — e o código tinha
+    que dizer ONDE *"é o que deixa ela conferir a resposta sem acreditar em
+    mim"* — e o código tinha
     o caminho na mão e o jogava fora: `shutil.which` já devolve
     `/usr/bin/flatpak` e a linha o trocava por `PATH/flatpak`, uma notação que
     ela não pode `ls`. O mesmo no laço das pastas: ele sabe em QUAL das quatro
@@ -548,8 +553,8 @@ def aviso_do_jogo_aberto(
     dele toda vez que ele abrisse. **Um aviso que sobrevive à resposta de produto
     ensina que o botão não obedece.**
 
-    E AS DUAS SÃO A MESMA FRASE DE PRODUTO, dita de dois jeitos. O desfazer de cada uma já está na
-    lista do cartão — *"Voltar a
+    E AS DUAS SÃO A MESMA FRASE DE PRODUTO, dita de dois jeitos: *"eu sei, deixa
+    assim"*. O desfazer de cada uma já está na lista do cartão — *"Voltar a
     usar"* e *"Voltar a perguntar"* —, e é o que impede o silêncio por engano
     de ser um caminho só de ida.
 
@@ -642,7 +647,8 @@ def com_o_que_o_daemon_diz(
     `home_actions.wrapper_banner_text`, e o texto é
     :data:`JOGO_ABERTO_SEM_O_ATALHO` (ver :func:`aviso_do_jogo_aberto`).
 
-    OS BOTÕES SAÍRAM DAQUI — 21/09/2026,  Esta função pendurava no
+    OS BOTÕES SAÍRAM DAQUI — 21/09/2026, palavra de produto: *"a ideia é termos os
+    mesmos botões pra todos os lançadores. sempre."* Esta função pendurava no
     cartão da Steam o «Não perguntar para este jogo», o «Posso fechar a Steam
     por uns 20 segundos?», o «Desligar o Steam Input» e o «Deixar tudo
     pronto» — botões que só ela tinha, e que faziam à mão o que o produto já faz
@@ -783,7 +789,8 @@ def com_a_exclusao(
     O PÉ DO CARTÃO diz os jogos DAQUELE lançador que estão na lista, cada um com
     o seu «Tirar da lista». Só onde há o botão de excluir (um cartão que não
     achou o lançador não tem o que excluir), e SÓ COM JOGO NA LISTA: a frase do
-    vazio saiu em 21/09/2026
+    vazio saiu em 21/09/2026, palavra de produto — *"é um espaço vertical que
+    ganhamos ao remover"*.
 
     A LISTA DA STEAM PERDE OS EXCLUÍDOS. A exclusão escreve no
     `jogos_sem_wrapper.txt`, e a lista do cartão mostra esse arquivo como
@@ -1436,7 +1443,8 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
                        ) -> dict[str, Any] | None:
     """«Escolher o arquivo…» — ela aponta o `.desktop` com o mouse.
 
-    **DECISÃO, 09/09/2026, a opção (C):**  — o campo de
+    **DECISÃO, 09/09/2026, a opção (C):** *"Ou no Máximo Localizar o
+    lançador. aí eu mesmo abro a tela e procuro o .desktop."* — o campo de
     texto FICA (é o único caminho para um AppImage solto, que não tem
     `.desktop`) e ganha ao lado o botão que abre o seletor do sistema.
 

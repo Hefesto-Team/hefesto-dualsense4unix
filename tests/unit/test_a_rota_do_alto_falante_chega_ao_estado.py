@@ -15,7 +15,7 @@ quem trocasse a saída do alto-falante pelo botão não conseguia ler de volta q
 ficou valendo — o botão mudava algo que a interface não tinha como mostrar, e
 uma régua que medisse pelo estado diria "SEM EFEITO" sobre um botão que funciona.
 
-Achada quando o usuário pediu a validação botão a botão no aparelho: ** O gesto `rota` da aba
+Achada quando o usuário pediu a validação botão a botão no aparelho. O gesto `rota` da aba
 Controles era o único
 que o daemon aceitava e o estado não confirmava.
 

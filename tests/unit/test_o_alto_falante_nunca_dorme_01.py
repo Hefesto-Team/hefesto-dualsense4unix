@@ -1,6 +1,7 @@
 """SOM-QUE-NAO-DORME-01 — o alto-falante do controle nunca dorme.
 
-A DECISÃO DE PRODUTO, textual (16/08/2026, 00h): **. Este arquivo
+A DECISÃO DE PRODUTO, textual (16/08/2026, 00h): *"precisamos setar o som sempre em
+todos os controles no 100% e garantir que sempre fique acordado"*. Este arquivo
 trava a metade do "sempre acordado".
 
 O DEFEITO, MEDIDO NA ORELHA DO USUÁRIO

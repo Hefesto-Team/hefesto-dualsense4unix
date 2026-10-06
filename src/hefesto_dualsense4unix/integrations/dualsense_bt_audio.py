@@ -157,9 +157,8 @@ o mesmo instrumento na mesma duração::
             (o contador de bordas do daemon subindo ~28/s, sozinho)
     DEPOIS  UMA permanência — o bit PARADO por 152 s, zero bordas no journal
 
-Com o microfone no ar e ela falando, a palavra de produto:  # (noqa-acento: a citação literal vem
-abaixo)
-.  # (noqa-acento: verbo/citação)
+Com o microfone no ar e alguém falando, o veredito foi que o controle não enlouqueceu
+e o microfone não desligou.
 O que restava provar era a queda do número, e ela caiu.
 
 O que a seção media, e continua valendo como medição  # (noqa-acento: verbo/citação)
@@ -553,7 +552,7 @@ def versao_libopus() -> str | None:
 #: `systemctl --user status wireplumber`, não o DualSense.
 _MODULO_PIPE_SOURCE = "module-pipe-source"
 
-#: MEDIDO NA MÁQUINA DO USUÁRIO EM 03/09/2026, com um DualSense no cabo e a webcam
+#: MEDIDO NA BANCADA EM 03/09/2026, com um DualSense no cabo e a webcam
 #:     alsa_output…DualSense…analog-surround-40.monitor     1109
 #:     alsa_input…DualSense…iec958-stereo   (o CABO)        1500   ← o drop-in 51
 #: O QUE ISTO **NÃO** DECIDE: quem, entre dois DualSense, é o microfone padrão.
@@ -687,7 +686,7 @@ def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
     vem entre aspas duplas — e este argumento tem três propriedades separadas
     por espaço, então só a primeira chegava, pela metade.
 
-    MEDIDO na máquina do usuário em 06/09/2026 (PipeWire 1.6.8), carregando os dois
+    MEDIDO na bancada em 06/09/2026 (PipeWire 1.6.8), carregando os dois
     nós lado a lado e LENDO O NÓ com `pactl list sources`::
 
         A) como a ponte montava até hoje (sem aspas):
@@ -779,7 +778,7 @@ class SourceVirtualPipeWire:
         ficou no SERVIDOR quando o processo anterior morreu (ou quando quem
         subiu foi outro: o daemon e o `mic bt` do CLI publicam o mesmo nome).
 
-        **Medido na máquina do usuário em 07/09/2026, com um DualSense no rádio**, e o
+        **Medido na bancada em 07/09/2026, com um DualSense no rádio**, e o
         modo de falha é o pior que existe — silêncio sem uma linha de log::
 
             módulo órfão de pé  →  escritas ok: 8 · descartes: 1342 · 100,00% de zeros

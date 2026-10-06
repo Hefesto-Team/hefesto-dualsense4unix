@@ -612,7 +612,7 @@ class TestCuraDaFontePadrao:
         estava certo e a afirmação, errada: o teste exigia que a cura elegesse a
         ONBOARD.
 
-        Provado na máquina do usuário em 30/07, depois de um `uninstall` + `install`
+        Provado na bancada em 30/07, depois de um `uninstall` + `install`
         limpos: eleger a onboard não gruda. O `pactl set-default-source` aceita,
         o WirePlumber não consegue honrar um nó sem porta usável, reelege
         sozinho e volta para o MONITOR em segundos — com a cura tendo impresso

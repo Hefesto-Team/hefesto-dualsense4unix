@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """A PONTE PARA O PRODUTO — o que os gestos usam para agir. Nada se reescreve.
 
-PERGUNTA, 01/09/2026, e ela mudou esta camada: ** — seguida de .
+PERGUNTA, 01/09/2026, e ela mudou esta camada: *"mas vc comparou com o
+produto estável? tipo não estamos refazendo do zero né?"* — seguida de *"em
+todas as abas temos praticamente tudo pronto"*.
 
 Não estávamos refazendo o motor, mas estávamos reescrevendo a camada de cima: os
 primeiros gestos chamavam o socket CRU, montando o payload à mão. Isso perde o

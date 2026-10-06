@@ -190,7 +190,7 @@ def has_poison(value: str) -> bool:
 
     **A PERGUNTA ERA ESTREITA E FICOU LARGA — 06/09/2026, ONDA5-07-01.** Até
     aqui ela cobrava a `IGNORE_SIGNATURE` como TOKEN COMPLETO, o que na prática
-    quer dizer . A assinatura
+    quer dizer *"a atribuição tem o nosso par SOZINHO na lista"*. A assinatura
     cola `VAR=` ao par, e daí saía um ponto cego estrutural: numa linha
     `VAR=0x057e/0x2009,0x054c/0x0ce6` — o nosso par em SEGUNDO — a substring
     nem aparece.

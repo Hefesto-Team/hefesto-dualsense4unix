@@ -15,7 +15,7 @@ com endereço, e é nossa:
 4. o daemon desliga o microfone — e sem o `0x32` o firmware para de oscilar,
    então nunca mais nasce borda e o mic não volta.
 
-No journal do usuário, hoje às 09:42, a assinatura exata::
+No journal da bancada, hoje às 09:42, a assinatura exata::
 
     mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
     bt_mic_palavra_dela  ligado=False

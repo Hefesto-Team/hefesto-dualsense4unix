@@ -6,7 +6,8 @@ o registro «A-ESCADA-DE-RELEASES» de 24/08/2026, seção *0.9.5 — o rádio p
 de mentir*, declarava *"arquivo a nascer: `scripts/check_bancada_de_bt.py`"*.
 Sem ele, o degrau dela não tinha como ser conferido por ninguém — só descrito.
 
-O DEGRAU É DO USUÁRIO, na  E o que ele exige NÃO é construir canal nenhum. A escada é explícita:
+O DEGRAU É DO USUÁRIO, na palavra de produto: *"quando terminarmos a bancada do specs em
+bt"*. E o que ele exige NÃO é construir canal nenhum. A escada é explícita:
 
     "Este degrau não manda construir canal nenhum — manda PARAR DE AFIRMAR o que
      não se mediu. Preencher `radio_por_que_nao_aciona` com `decisao-tomada`

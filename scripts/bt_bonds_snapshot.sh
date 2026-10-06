@@ -202,7 +202,7 @@ log "snapshot de bonds gravado em ${DST} (${#INFOS[@]} bond(s))"
 # BONDS-QUE-SOBREVIVEM-01/E2 (04/08/2026) — MEDIDO, e é o defeito que esvazia o
 # salva-vidas por dentro: a poda era só por IDADE, e um `bluetoothd` que cai em
 # série grava uma fila de snapshots POBRES (1, 2 bonds) que empurra para fora o
-# snapshot RICO. Medido na máquina do usuário às 03:04 de 04/08: o snapshot de
+# snapshot RICO. Medido na bancada às 03:04 de 04/08: o snapshot de
 # 23:51:44 com os QUATRO controles já tinha sido podado por doze snapshots de
 # um bond — o acervo estava cheio e não servia para nada.
 #

@@ -88,7 +88,8 @@
        essas é apagar o dado, não o enfeite.
        --------------------------------------------------------------- */
     --linha:#53576f;
-    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO.  / *"as linhas horizontais deveriam separar os campos em linhas"*
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
        e, quando a viu: *"as linhas divisórias em todas as páginas tão
        invisíveis (…) a primeira coluna serve como nome da linha e a divisória
        entre eles tem que estar clara"*.
@@ -133,7 +134,8 @@
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 
-     A recomendação foi levada a ela e o usuário aprovou: ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
+     A recomendação foi levada ao usuário e o usuário aprovou (*"eu confio em vc, manda
+     ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
      ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
      ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
      espremidas; e o teto protege a leitura, porque esticar sem limite alonga a
@@ -171,7 +173,7 @@
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
      DE ONDE SAI O 710, e por que não é a altura da tela. A primeira tentativa
-     foi 1048 — o teto da TV do usuário — para que nenhuma aba precisasse rolar. Deu
+     foi 1048 — o teto da TV da bancada — para que nenhuma aba precisasse rolar. Deu
      errado: o conteúdo das dez vai de 281px (Iluminação) a 783px (Conexões), e
      com 1048 a Iluminação ficava com 518px de quadro vazio. Ela: "iluminação,
      jogar e outras abas tão muito ruins com esse super espaço vazio na parte
@@ -526,7 +528,8 @@
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
      ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
      `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
@@ -632,6 +635,8 @@
      variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
      Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
      dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
      NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
      ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
      saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
@@ -790,7 +795,8 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    /* 777 DESDE 31/08/2026, e os 20px a mais são o
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
        Ela estava certa, e o número diz por quê: o card aberto da Controles
        ESTICA para preencher o corpo, então a folga de verdade é
        `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
@@ -802,9 +808,11 @@
        vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar.
 
        O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão de produto
-       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV.
+       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV:
+       *"ainda joga pra baixo e abre a barra de navegação. tem espaço vertical  <!-- noqa-acento: citação literal -->
+       pra aproveitar aqui"*.
 
-       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV do usuário
+       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV da bancada
        mede **840** px e a página pedia **809** (16 + 777 + 16). Os 31 px que
        sobravam não iam para aba nenhuma — morriam entre a moldura da `.janela`
        e a borda da janela do sistema. Cresça a janela quanto quiser: com a
@@ -823,9 +831,9 @@
          teto 855   a maior vista que este desenho promete PREENCHER. Acima
                     dela o que sobra viraria vão, e vão vazio é queixa de uso
                     (*"iluminação, jogar e outras abas tão muito ruins com esse
-                    super espaço vazio na parte inferior"*). Na TV do usuário o teto
+                    super espaço vazio na parte inferior"*). Na TV da bancada o teto
                     nunca é alcançado: 840 − 32 = 808. Numa tela 4K — e a TV
-                    do usuário tem o modo 3840x2160 — sem teto a Navegação ficaria com
+                    da bancada tem o modo 3840x2160 — sem teto a Navegação ficaria com
                     mais de mil pixels de vão.
 
        QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
@@ -871,7 +879,8 @@
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
   /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA, 05/09/2026
+     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
      a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
@@ -879,7 +888,8 @@
      A 05 mostrava até um interruptor de motor ACESO em laranja.
 
      POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
+     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
+     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
      entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
@@ -1013,7 +1023,8 @@
      existe. O teto sai da MEDIÇÃO, não de uma conta: o `.miolo` dá 564px de
      caixa, 34 vão nos paddings dele e 54 no cromo do quadro (as duas bordas,
      os 17px da faixa do título com o seu padding, e os 24 do corpo). */
-  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026
+  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido: *"as linhas
+     horizontais (…) precisam melhorar ali"*.
 
      Elas já atravessavam as cinco colunas, no mesmo y — mas o `gap:16px` do grid
      abria um buraco entre cada duas, e o olho lia CINCO TRACINHOS em vez de uma
@@ -1063,7 +1074,8 @@
        ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
        72 — a coluna continua em 472 e o teto de 476 não é tocado. */
     --r-player:52px;--r-leds:64px;--r-acoes:64px;
-    /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026,  É a mesma
+    /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido:
+       *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
        Vibração: 5.
        MEDIDO ANTES: o passo era 8 e a divisória ficava em `top:0` — encostada no
@@ -1294,7 +1306,8 @@
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido:
+     *"com linha abaixo de cada campo"*.
      POR QUE NA CÉLULA E NÃO NA GRADE: `.luz-grade` é um grid de 5 colunas, mas
      as LINHAS não são dele — cada coluna é um grid próprio com as mesmas sete
      alturas (`--r-des` … `--r-acoes`). Não existe "linha da grade" onde pendurar
@@ -1339,7 +1352,8 @@
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */
   .luz-grade .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026,  Encostado na divisa, o rótulo fica
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
@@ -1576,14 +1590,19 @@
     content:"";position:absolute;left:-1px;right:-1px;
     top:calc(100% + 3px);height:2px;border-radius:1px;background:var(--dono);
   }
-  /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão de produto: . <!-- noqa-acento: citação literal -->
+  /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão de produto: "um X na cor
+     selecionada por mim de forma que me impeça de setar alguma cor de um
+     coleguinha". <!-- noqa-acento: citação literal -->
 
      ELE É DESENHADO, e não um caractere: um `×` de texto herda a fonte, muda
      de tamanho com ela e o traço fino some sobre um tom claro. Dois gradientes
      cruzados desenham as duas hastes, e uma sombra os contorna.
 
      A COR DO X É PRETA COM BORDA BRANCA — decisão, 09/09/2026, com os
-     quatro na mesa
+     quatro na mesa: *"deixa o nosso x preto com borda branca pra destacar.
+     Falo isso pois ficou perfeito o nosso x, o complicado é que são tons
+     pasteis e o controle branco por exemplo não ajuda nisso o x dele fica
+     invisível."* <!-- noqa-acento: citação literal -->
 
      ELE ERA `var(--dono)` — a cor do PLÁSTICO de quem tem o tom —, e a ideia
      vinha da mesma regra que pinta a borda da coluna
@@ -1620,7 +1639,7 @@
      `WebKit2.WebView`, na página publicada, com dois controles pintados:
 
          vista 1212x809 (como a janela abre)  .tom 16,5 x 26  X  4,5 x 14
-         vista 1918x840 (a TV do usuário)           .tom 26,1 x 26  X 14,0 x 14
+         vista 1918x840 (a TV da bancada)           .tom 26,1 x 26  X 14,0 x 14
 
      A LARGURA TEM TETO DE 12 PX, e o `100% - 2px` impede o X e o contorno
      branco de vazarem da pílula se ela encolher. A ALTURA VEM DE
@@ -1803,7 +1822,8 @@
      touchpad, porque o contorno É o desenho dele. */
   /* A CÉLULA DOS LEDs VOLTOU A TER UM ANDAR SÓ — 07/09/2026. Ela teve DOIS
      entre 04/09 e hoje: a tira em cima e a RESSALVA embaixo (D-02, pergunta
-     [01] desta aba). A linha de ressalva saiu por  —, e com ela saíram as duas regras que a
+     [01] desta aba). A linha de ressalva saiu por ordem de produto — *"o que eu não
+     quero é frase da steam ou outras"* —, e com ela saíram as duas regras que a
      vestiam (`.cel-leds .ressalva` e a que a escondia no lugar sem dono).
 
      A COLUNA DE FLEX FICA, e não é sobra: é ela que dá à célula o
@@ -1902,7 +1922,8 @@
      quem manda. */
   .tira-luz.incerta{border:1px dashed var(--comment)}
   /* ---------- O INDICADOR VOLTOU A SER INDICADOR (07/09/2026) ----------
-     A BOTOEIRA DA LUZES-01 SAIU INTEIRA, por  Saíram com ela as
+     A BOTOEIRA DA LUZES-01 SAIU INTEIRA, por ordem de produto: *"só olhar a linha de
+     cima da seleção de player e replicar o que tem lá."* Saíram com ela as
      cinco `.pad .lamp`, que eram botões de gesto, mais as seis `.desenhos .dz`
      e o `.pad.reenvia`.
 
@@ -2525,7 +2546,8 @@
           você sabe de quem é cada controle.<br><br>
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
-        <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13
+        <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13, decisão de 04/09/2026:
+             *"Um interruptor no topo da aba Iluminação."*
 
              O QUE ELE GOVERNA não é o botão "Automático" da célula Opções: são
              coisas diferentes com a mesma palavra. Aquele é POR CONTROLE e é um
@@ -2581,12 +2603,15 @@
                   Cada coluna é um controle: a fita do topo não escolhe nada aqui.
                 </span></span></div>
             </div>
-            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026,  Esta célula existia vazia só para
+            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido:
+                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
+                 coluna serve como nome da linha"*. Esta célula existia vazia só para
                  ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
                  nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
             <div>
-              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026,  Eram
+              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026, pedido: *"os svg do lado
+                   esquerdo dos nomes pode remover, eles tão diferentes demais"*. Eram
                    três desenhos de origens diferentes (`lightbar`, `led-jogador`, `l2`/`r2`)
                    ao lado de rótulos que os outros cinco não tinham — a coluna lia como
                    duas gramáticas. O glifo continua no DESENHO do controle, que é onde
@@ -2991,7 +3016,8 @@
               <span class="pad" title="Cosmic Red (USB)"><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
               <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
             </div>
-            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026,  Ela
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem de produto: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
                  nasceu em 04/09 (D-02) para responder QUAL das três causas
                  apagou a barra sem exigir o rato; o que ela mostrava era, entre
                  outras, a frase da Steam, e é exatamente essa que o usuário mandou
@@ -3389,7 +3415,8 @@
               <span class="pad" title="Starlight Blue (BT)"><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
               <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
             </div>
-            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026,  Ela
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem de produto: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
                  nasceu em 04/09 (D-02) para responder QUAL das três causas
                  apagou a barra sem exigir o rato; o que ela mostrava era, entre
                  outras, a frase da Steam, e é exatamente essa que o usuário mandou
@@ -3766,7 +3793,8 @@
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
               <span class="nada">—</span>
             </div>
-            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026,  Ela
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem de produto: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
                  nasceu em 04/09 (D-02) para responder QUAL das três causas
                  apagou a barra sem exigir o rato; o que ela mostrava era, entre
                  outras, a frase da Steam, e é exatamente essa que o usuário mandou
@@ -4141,7 +4169,8 @@
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
               <span class="nada">—</span>
             </div>
-            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026,  Ela
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem de produto: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
                  nasceu em 04/09 (D-02) para responder QUAL das três causas
                  apagou a barra sem exigir o rato; o que ela mostrava era, entre
                  outras, a frase da Steam, e é exatamente essa que o usuário mandou
@@ -4236,7 +4265,10 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
 
          ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
          já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então

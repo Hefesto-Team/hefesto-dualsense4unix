@@ -227,7 +227,7 @@ completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 # que alguém roda os portões, porque o gancho de commit-msg não roda em
 # cherry-pick, rebase, merge --no-edit nem sob --no-verify, e esta casa integra
 # leva por cherry-pick. O `.mailmap` nasceu da palavra de 15/09/2026:
-# **
+# *"o emaillist lá deveria ser o meu e o do andre apenas."*
 rapido|autoria-historia|py|scripts/check_autoria.py historia|@sempre
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
@@ -325,7 +325,7 @@ rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
 # próxima altura a crescer apareceria na tela do usuário, não aqui. ~4 s.
 rapido|altura-do-cartao|py|scripts/check_a_altura_do_cartao.py
 rapido|regua-de-tela|py|scripts/check_regua_de_tela.py|@sempre
-# A ORDEM, 07/09/2026:  Este
+# A ORDEM, 07/09/2026: *"o layout não informa os nossos defeitos."* Este
 # portão lê as dez páginas dos DOIS lados (bancada e publicado) e todo `Fala`
 # de `src/`, e obriga a DECLARAR toda frase com forma de confissão: de quem é o
 # sujeito, e desde quando. Ele não decide sozinho de propósito — nenhuma
@@ -554,7 +554,7 @@ echo
 
 # --- O LAR DE MENTIRA DO RUNNER `pytest` -----------------------------------
 #
-# MEDIDO na máquina do usuário em 21/09/2026, com o daemon VIVO: `bash
+# MEDIDO na bancada em 21/09/2026, com o daemon VIVO: `bash
 # scripts/portoes.sh` sem argumento fez o portão `casa-sabe` (42 testes)
 # ESCREVER no `~/.config/hefesto-dualsense4unix` real — `controller_masks.json`
 # zerado (78 -> 27 B), o perfil do jogo regravado, e o autoswitch trocou o

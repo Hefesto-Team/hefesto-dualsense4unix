@@ -16,7 +16,9 @@ ZERO em todo report"* desde 25/07 sem que ninguém o tivesse ligado ao silêncio
 "A casa sabe e o produto não faz", de novo, e agora na mesma família do
 keepalive que cancelava o rumble pelos BYTES.
 
-A decisão de produto, textual (16/08/2026, 00h): **
+A decisão de produto, textual (16/08/2026, 00h): *"precisamos setar o som sempre em
+todos os controles no 100% e garantir que sempre fique acordado e ligar isso a
+interface na aba de status (config default)."*
 
 O que estes testes travam:
 

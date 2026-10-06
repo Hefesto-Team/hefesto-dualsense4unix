@@ -143,7 +143,7 @@ def gesto(pagina: str, nome: str, *,
     return dentro
 
 
-#: teste naquele momento isso nao interfere in game (noqa-acento: dela). (…)
+#: teste naquele momento isso nao interfere in game (noqa-acento: citação literal). (…)
 #: `rumble_passthrough=False` para sempre, e o jogo ficava mudo sem que nada na
 #: o dono das DEZ abas e não conhece o assunto de nenhuma. Uma segunda aba que
 CORACOES: list[Callable[[Contexto, Any], None]] = []
@@ -695,7 +695,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
     return {
-        # .  # (noqa-acento): dela
+        # *"Esse x controles cai fora pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
         "rodape.salvar": _dica_do_salvar(do_rodape),

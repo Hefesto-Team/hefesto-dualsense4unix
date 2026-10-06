@@ -288,7 +288,9 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      outras doze páginas). Quando o esqueleto descongelar, ela sobe para lá e
      esta some. */
   .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
-  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026,  (noqa-acento: citação literal).
+  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026, pedido: *«tem uma linha
+     abaixo do gestão de controles que não tá sendo usada. Deveriamos subir os
+     blocos de seção pra ocupar ali de cima tambem»* (noqa-acento: citação literal).
      O respiro de baixo do rótulo (11px) é do acordeão FECHADO; aberto, o
      corpo vem logo embaixo e os dois respiros somavam 21px de faixa vazia. */
   .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
@@ -487,7 +489,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
 
   /* ================= os cartões da Gestão de Controles =================
      A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026 — o desenho de quem
-     coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up. A linha que abria e fechava virou UM CARTÃO POR
+     coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up:
+     *«tá quebradíssima a 8»*. A linha que abria e fechava virou UM CARTÃO POR
      LUGAR, os quatro lado a lado — a mesa desta aba é de quatro —, e nada mais
      abre nem fecha: o que era o corpo escondido fica à vista. O rádio `gc-*`
      continua sendo o ALVO de saída (a fita e o cartão marcado), e só isso.
@@ -563,7 +566,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026,  e *«perfil do
+  /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido: *«Modo
+     Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
      desempenho deveria aparecer por controle»*. Os três botões do mapa das
      conexões desceram para cada cartão; o aceso é o deste controle. */
   .gc-perfil{display:flex;flex-direction:column;gap:5px}
@@ -585,7 +589,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
                           color:var(--fg);font-weight:600}
-  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026,  Era link pontilhado.
+  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido: *«A luz não
+     acende isso deveria ser um botão»*. Era link pontilhado.
      O TEXTO ABAIXO É DE 25/09. «A LUZ NÃO ACENDE» ERA UM LINK DISCRETO, e não um botão do tamanho da
      economia: é o conserto de um caso raro. A trava continua IRMÃ e colada
      antes do botão (`></i><button`), porque o `~` só alcança irmãos
@@ -1735,7 +1740,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha.desligado .ds{opacity:.55}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
   /* O RÓTULO DA PISTA QUE É BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
-     dela.
+     dela: *«nessa região o svg continua em branco não dá pra entender»*.
      Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
      baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
      o do texto, e todo rótulo diz uma palavra ao lado do ícone.
@@ -2812,17 +2817,21 @@ MIOLO = f'''
 {TABELA_DAS_CORES}
 
     <!-- ======== 1. CHECK-UP — juízo à esquerda, conserto à direita ========
-         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026,  Faz sentido de leitura: quem abre a
+         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026, pedido:
+         *"a parte 'Está tudo certo' aparece como primeiro bloco na página e
+         mudamos o nome pra Check-up"*. Faz sentido de leitura: quem abre a
          Conexões quer primeiro saber se há algo errado, e só depois a lista
          de quem está na mesa. E "Check-up" é substantivo — nomeia a seção;
          "Está tudo certo?" era pergunta, e título que pergunta faz a pessoa
          procurar a resposta em vez de ler o que está embaixo. ======== -->
     <div class="quadro">
-      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026,  Faz sentido de uso: quem
+      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026, pedido: *"inicia as
+           demais abas de gestão e rádio minimizadas"*. Faz sentido de uso: quem
            abre a Conexões quer primeiro saber se há algo errado; a lista da mesa
            e o inventário de rádios são consulta, não alerta. E resolve, de
            quebra, os 208px que o quadro de baixo perdia por não caber. -->
-      <!-- ABRIR UMA MINIMIZA AS OUTRAS — 31/08/2026
+      <!-- ABRIR UMA MINIMIZA AS OUTRAS — 31/08/2026, pedido: *"abrir uma
+           expansão minimiza a outra"*.
 
            `type="radio"` COM O MESMO `name`, e não JavaScript: é a gramática que
            esta casa já usa no interruptor da aba Jogar e nos três estados da
@@ -2848,7 +2857,8 @@ MIOLO = f'''
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido com a janela
-             maximizada. Revoga a D-16 de 04/09 («Uma
+             maximizada: *«precisamos ganhar espaço vertical. vamos remover a
+             linha 3 mudanças recomendadas»*. Revoga a D-16 de 04/09 («Uma
              linha de veredito no topo»): a Sugestão de Conexão ao lado já
              numera cada mudança, e a contagem repetia a caixa. -->
         <!-- AS DICAS SÃO CARTÕES COM UM GESTO — 04/10/2026, AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01
@@ -2876,7 +2886,8 @@ MIOLO = f'''
              só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
              que chama o dono do mapa (`entrada_a_entrada.o_mapa()`). A âncora
              não é gesto (a §P4): quem começa o fluxo é o `#mp-comecar`. -->
-        <!-- QUATRO FERRAMENTAS, TODAS COM ÍCONE — 26/09/2026,  e *«falta os
+        <!-- QUATRO FERRAMENTAS, TODAS COM ÍCONE — 26/09/2026, pedido: *«não
+             existe diferença entre o examinar entradas e atualizar»* e *«falta os
              svg ou glifos»*. O «Atualizar» entrou no «Examinar Entradas» (um clique
              refaz o exame e relê os controles), e as quatro colunas são as dos
              cartões embaixo: cada botão fica em cima de um cartão. -->

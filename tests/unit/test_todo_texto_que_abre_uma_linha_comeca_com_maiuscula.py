@@ -12,7 +12,8 @@ caixa por caixa aberta. Exceções, só estas e declaradas: o que não começa p
 unidade, «·», «—», aspas), a unidade e a marca escritas assim (``_MARCAS``) e o glifo de uma
 letra só (o «i» da informação no selo da aba Sistema).
 
-O NOME: ordem de 05/10/2026, 13h. Só a primeira letra; o
+O NOME: ordem de 05/10/2026, 13h — *«Nome que o user colocar pra controle mesmo se ele
+colocar minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o
 resto como o usuário escreveu; ao gravar e ao ler o que já estava gravado.
 <!-- noqa-acento: citação literal -->
 

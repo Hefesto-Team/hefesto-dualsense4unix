@@ -29,7 +29,7 @@ invertido, não apagado.** A palavra, de 08/08: *"a allowlist do Steam Input
 NÃO tira o Hefesto da frente"*. O que a matou é uma medição, não uma
 preferência: suspender os gamepads virtuais para curar o controle dobrado
 derruba o jogador 2 junto, porque **o jogador 2 é um gamepad virtual** —
-`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências no journal do usuário em
+`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências no journal da bancada em
 08/08.
 
 A marca passou a significar *"esconda o controle FÍSICO neste jogo"*. Então:

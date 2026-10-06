@@ -2,7 +2,9 @@
 
 - **Levantado em:** 03/08/2026, por quatro agentes com verificação adversarial,
   e **medido no hardware dela** na mesma sessão
-- **Por que existe:** o usuário definiu o requisito em uma  Este documento é a régua desse
+- **Por que existe:** o usuário definiu o requisito em uma frase — *"deixar o projeto
+  robusto de tal forma que eu não note que estou no bt ou cabo, a ideia é termos
+  tudo funcionando via bt principalmente"*. Este documento é a régua desse
   requisito
 - **Regra de uso:** quando este documento e outro discordarem sobre o que
   funciona por Bluetooth, **este vence nas linhas MEDIDO AO VIVO** — as outras

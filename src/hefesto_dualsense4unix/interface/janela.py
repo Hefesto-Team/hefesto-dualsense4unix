@@ -391,7 +391,7 @@ class JanelaDaAba:
                 titulo, subtitulo or "", self._gesto_da_barra
             )
             self.janela.set_titlebar(barra)
-            # do print arruma automaticamente"*  <!-- noqa-acento: dela -->
+            # do print arruma automaticamente"*  <!-- noqa-acento: citação literal -->
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
             self.janela.connect("destroy", Gtk.main_quit)
         self.janela.add(self.view)

@@ -574,7 +574,7 @@ fi
 # casa ZERO dispositivos em toda máquina: o `--attr-match` só olha os sysattrs
 # do PRÓPRIO nó, e um `hidraw` não tem `idVendor` — ele mora no pai USB, e no
 # Bluetooth não existe pai USB (o BlueZ cria o HID por `uhid`). Medido na
-# máquina do usuário em 12/08: 8 dispositivos sem o filtro, 0 com ele.
+# máquina da bancada em 12/08: 8 dispositivos sem o filtro, 0 com ele.
 #
 # O que isso custava: numa instalação limpa com o DualSense já conectado no
 # rádio, a regra 70 (MODE 0660 + TAG uaccess) não era reaplicada ao nó que já

@@ -102,7 +102,7 @@ carimbo em jogo nenhum, tinha o comportamento pior em TODOS eles.
 DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026)
 ----------------------------------------------------
 O parar acima custava DUAS coisas, e as duas foram medidas três vezes no
-journal do usuário (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
+journal da bancada (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
 03:19:14), sempre na mesma sequência de quatro linhas:
 
     ponte_escada_parou_no_degrau_caro  de=gamepad/xbox proximo=native/- ...

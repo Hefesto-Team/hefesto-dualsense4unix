@@ -7,7 +7,7 @@
 # token `__TOGGLE_OSK__` (era `__OPEN_OSK__` até 02/09/2026, quando o L3 virou
 # alternador por decisão de produto), e o daemon (`daemon/subsystems/keyboard.py`) o
 # cumpre abrindo — e fechando — um teclado na tela DO SISTEMA. Medido na
-# máquina do usuário em 09/08/2026:
+# máquina da bancada em 09/08/2026:
 #
 #     command -v onboard wvkbd-mobintl   ->  NENHUM DOS DOIS
 #     grep -c onboard install.sh         ->  0

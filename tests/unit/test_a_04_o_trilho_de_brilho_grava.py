@@ -11,7 +11,8 @@ com a contagem: `publicado = cor(16) apagar(2) auto(2) player(8)`; nenhum de
 brilho em lugar nenhum.
 
 POR QUE GRAVAR É A ÚNICA SAÍDA COERENTE, e está medido: esta interface NÃO TEM
-RASCUNHO (), e o número que a coluna imprime é lido do PERFIL EM DISCO por
+RASCUNHO (decisão de 01/09 — *"clicar na cor já deveria aplicar a cor no
+controle"*), e o número que a coluna imprime é lido do PERFIL EM DISCO por
 `brilho_do_controle`. Sem gravar, o valor voltaria sozinho ao velho no tique
 seguinte — mais um botão que aceita o toque e não age.
 

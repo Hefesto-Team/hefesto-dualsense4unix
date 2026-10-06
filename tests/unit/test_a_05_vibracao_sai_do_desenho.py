@@ -286,7 +286,7 @@ def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
 def test_o_teto_do_multiplicador_sai_do_produto():
     """`_no_teto` pergunta o teto a quem é dono dele, e não sabe o que é `—`.
 
-    O DONO TROCOU EM 03/09/2026,  A barra deixou de
+    O DONO TROCOU EM 03/09/2026, decisão de produto: *"0 a 200%"*. A barra deixou de
     parar no degrau `Máximo` (`app/telas/vibracao.teto_da_barra`, 150) e vai até
     onde ela pode ARRASTAR — `a05_vibracao.teto_da_barra`, que sai do
     `RUMBLE_CUSTOM_MULT_MAX` do esquema. A régua continua PERGUNTANDO; o que

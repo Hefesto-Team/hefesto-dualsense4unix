@@ -3,6 +3,10 @@
 
 A LEI, e é do usuário (03/09/2026):
 
+    "se no topo tá mostrando controle white player 1, então cada aba vai usar
+    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
+    faz referencia ao controle conectado.   <!-- noqa-acento: citação -->
+    Por isso temos o mapa pra servir como variável de identificação"
 
 O QUE ESTAVA NA TELA, medido em 03/09/2026 com os DOIS controles do usuário na mesa
 (um no cabo, um no rádio), na foto da `07-lancadores`:

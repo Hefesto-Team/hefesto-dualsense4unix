@@ -45,7 +45,7 @@ de tela: o rótulo, a cor da palavra e o selo de procedência.
 A COLUNA "O QUE É" É LIDA, E ELA SÓ CORRIGE (22/08/2026)
 ---------------------------------------------------------
 
- Até aqui a coluna
+Decisão de produto: *"classifica sozinho, você só corrige"*. Até aqui a coluna
 oferecia SETE botões por linha e perguntava à mão o que o kernel já responde:
 `bInterfaceClass/SubClass/Protocol` da interface 0 distingue mouse de teclado
 (`03/01/02` contra `03/01/01`) e Bluetooth de "sem fio" (`e0/01/01`). Quem lê
@@ -69,7 +69,7 @@ declarou e que se repete quando há duas unidades do mesmo aparelho.
 O NOME DE CADA ADAPTADOR (22/08/2026)
 --------------------------------------
 
- Três adaptadores
+Decisão de produto: *"você escreve, o produto protege o prefixo"*. Três adaptadores
 `2357:0604` idênticos no barramento, e a única coisa que os separa é o BD
 Address — que não é nome. Quem lê e escreve o `org.bluez.Adapter1.Alias` é
 `integrations/apelido_do_dongle`, o segundo módulo que estava sem consumidor.

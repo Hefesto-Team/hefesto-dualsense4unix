@@ -34,10 +34,14 @@ folha cobra — e a régua acha a seção pelo TÍTULO, nunca pelo número de li
 | 20 | Mudo no rádio: o botão do microfone do P3 | P1: não pode mudar · P2: não pode mudar · P3: é ESTE que muta, pelo rádio · P4: não pode mudar | o mudo obedece e o cartão diz | MIC-BT-DONO-01 |
 | 21 | Luz no rádio: uma cor no P4 | P1: não pode mudar de cor · P2: não pode mudar de cor · P3: não pode mudar de cor · P4: é ESTE que muda, pelo rádio | obedece | LUZ-NO-RADIO-01 |
 
-**A COLUNA "o que cada controle faz" NASCEU EM 07/09/2026**, e é do usuário: ** Cada linha do roteiro deixou de ser UM gesto repetido quatro vezes e passou a ser **quatro condições do mesmo experimento**, medidas lado a lado — é o que faz uma diferença entre cabo e rádio aparecer sem ninguém repetir o teste. A mesa de medição lê esta coluna.
+**A COLUNA "o que cada controle faz" NASCEU EM 07/09/2026**, e é do usuário: *"cada controle sirva para testarmos variações daquilo e o esperado. vou dar um exemplo do lightbar. Controle A, não liga, o b cor azul. o c, tá conectado no rosa, o y vai conectar azul (…) por isso dois controles dois bt e dois no cabo. Pra batermos de vez o controle que temos do hardware."* Cada linha do roteiro deixou de ser UM gesto repetido quatro vezes e passou a ser **quatro condições do mesmo experimento**, medidas lado a lado — é o que faz uma diferença entre cabo e rádio aparecer sem ninguém repetir o teste. A mesa de medição lê esta coluna.
 
 **As linhas 13-21 são a ACEITAÇÃO DO PRODUTO** (06/09, arrumação da leva): a
-definição de pronto dela — ** — dita em
+definição de pronto dela — *"migrar tudo do gtk pro html, adaptando o html pra
+funcionar pra 4 controles, cada perfil vivo, todas as features funcionando pra
+cabo e radio, e cada aba se lembrando das configs de cada controle dentro do
+perfil sem que eu precise aplicar ou salvar em cada aba e por fim tudo
+funcionando (incluindo a aba de lançadores), de conexão e afins"* — dita em
 gestos do usuário, um por sprint das ondas G-J. Cada sprint dessas constrói com dublê
 e deixa AQUI a sua linha de prova (`D-0609-A-BANCADA-PROVA-NAO-BLOQUEIA`).
 

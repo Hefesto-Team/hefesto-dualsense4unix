@@ -54,7 +54,7 @@ produziu leitura. As seis mudanças desta rodada, todas medidas na tela do usuá
   "Estado"; com 2+, quem fala é cada card.
 
 SOM-01 é a terceira rodada, e vem dos três pedidos que ela fez olhando a v2
-("quase perfeito"),
+("quase perfeito"): *"dava pra colocar o auto falante abaixo do microfone"*,
 *"aumentar e espaçar mais os botões do controle tipo x quadrado bola e
 triângulo e afins"* e *"permitir a expansão da janela"*. As três mudanças:
 
@@ -469,7 +469,7 @@ def motores_no_fisico(item: Any) -> tuple[int, int] | None:
       que esta tela existe para não contar.
 
     O par ``(0, 0)`` fresco também some: ele é o jogo mandando PARAR, e a
-    parada não é o número que responde .
+    parada não é o número que responde *"a vibração saiu do nosso lado?"*.
     """
     if not isinstance(item, dict):
         return None

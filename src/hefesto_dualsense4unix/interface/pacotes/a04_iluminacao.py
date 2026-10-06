@@ -364,7 +364,8 @@ def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
       não cobrem e :data:`FORA_DA_GUIA` não tirou.
 
     ERA OITO ATÉ 09/09/2026, CATORZE ATÉ 11/09/2026. A primeira mudança foi
-    decisão de produto na bancada; a segunda é a poda de :data:`FORA_DA_GUIA`, e a razão dela é
+    decisão de produto na bancada (*"adicionamos os tons faltantes pra cada
+    controle"*); a segunda é a poda de :data:`FORA_DA_GUIA`, e a razão dela é
     de espaço.
 
     QUEM FILTRA É ESTA FUNÇÃO, E NÃO O DONO DOS TONS. `monta.TOM_DA_CASA`
@@ -531,7 +532,10 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
                     recuo: str = "", *, ligado: bool = True) -> str:
     """Os onze tons de uma coluna, em HTML — o miolo da `.guia`.
 
-    **COR-X-01, decisão de 09/09/2026:** ** <!-- noqa-acento: citação literal -->
+    **COR-X-01, decisão de 09/09/2026:** *"onde eu escolher uma cor, em
+    volta dela fica a borda da cor do plastico do controle e um X na cor
+    selecionada por mim de forma que me impeça de setar alguma cor de um
+    coleguinha"* <!-- noqa-acento: citação literal -->
 
     A BORDA VIROU LINHA — D-2909-A-LINHA-DA-COR-DO-DONO, 29/09/2026, pedido na bancada (*«talvez
     uma linha abaixo do quadradinho de cada cor
@@ -800,7 +804,7 @@ def dica_da_luz(nome: str, via: str, recado: str) -> str:
     DUAS DECISÕES, de 02/09/2026, e esta função é as duas::
 
         7. "a palavra ACESO sai do texto"
-        8.
+        8. "a interface mostra o que tá conectado e não o controle do mockup"
 
     O que estava cravado no desenho — e portanto na tela do usuário — era::
 
@@ -841,7 +845,8 @@ def dica_da_luz(nome: str, via: str, recado: str) -> str:
         [T,F,F,F,T]         [T,F,F,F,T]              desenho do P2 — automático
 
     A segunda linha é a tela afirmando o contrário do que sai no fio. Vale a
-    regra de produto: ** — campo sem informação **não mostra nada**.
+    regra de produto: *"se não tá mostrando agora, não tem info pra mostrar no
+    produto"* — campo sem informação **não mostra nada**.
 
     O QUE SOBRA É O QUE SE MEDE, e a frase continua tendo dono no motor: a
     da BARRA é o primeiro retorno de `controller_card.rotulo_lightbar` — a
@@ -1318,7 +1323,8 @@ def folha_da_luz(luzes: dict[str, tuple[str, int | None]],
     `!important`, então quem vem por último ganha — escrever na ordem inversa
     apagaria a lâmpada que acabou de acender.
 
-    SEM COR A AFIRMAR, A BARRA APAGA. É a regra de produto — ** — e ela vale para os quatro
+    SEM COR A AFIRMAR, A BARRA APAGA. É a regra de produto — *"se não tá mostrando
+    agora, não tem info pra mostrar no produto"* — e ela vale para os quatro
     lugares: um lugar sem controle recebe as regras de apagado do mesmo jeito,
     senão o `--luz` do mockup fica aceso num lugar que diz "Desconectado".
 
@@ -1433,9 +1439,10 @@ def cores_da_troca(mesa: list[dict[str, Any]]) -> list[str]:
 def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
     """A seção "Trocar o número" inteira, com a mesa que lhe derem.
 
-    POR QUE ELA DEIXOU DE SER TEXTO FIXO — 03/09/2026, a lei de produto: ** Esta seção é o exemplo
-    do
-    caso REAL dela, de 26/08 — e o exemplo estava escrito
+    POR QUE ELA DEIXOU DE SER TEXTO FIXO — 03/09/2026, a lei de produto: cada aba usa os
+    controles que o topo mostra, nunca a informação do mockup. Esta seção é o exemplo do
+    caso REAL da bancada, de 26/08 (o controle azul era o player 2 e precisava ser o 1 antes
+    do jogo) — e o exemplo estava escrito
     com os dois controles do DESENHO, num rodapé que o produto renderiza.
 
     UM DONO, DOIS CHAMADORES, como a fileira de players e o desenho da luz: o
@@ -1960,7 +1967,7 @@ def _guardar_o_apagado_no_perfil(ctx: Contexto, uniq: str) -> None:
 
     A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. Ele gravava o preto como a
     COR do controle, e desde 22/09 o preto não é cor (`led_control.cor_escolhida`,
-    a ): o perfil
+    a ordem de produto: *"vamos banir esse preto de aparecer"*): o perfil
     reaplicado lia «não opinou» e acendia a barra de novo. Medido na mesa de
     quatro real: o P2 apagado voltava vermelho na troca manual, no boot e no
     «Salvar Perfil» — e o preto tinha apagado do disco o laranja que ela
@@ -1985,7 +1992,9 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     """A cor que o usuário ESCOLHEU vai ao disco, no override daquele controle.
 
     **O DEFEITO QUE ISTO MATA, medido na bancada em 09/09/2026**, e ele
-    tinha duas caras que o usuário viu como uma só — **:  # noqa-acento: citação literal
+    tinha duas caras que o usuário viu como uma só — *"o controle branco fica
+    oscilando entre a cor que eu seleciono e a cor azul. fora que o slicer tá
+    estranho ainda"*:  # noqa-acento: citação literal
 
         no disco, o override do branco  {"leds": {"lightbar_brightness": 0.49}}
         a cor que o usuário escolheu           em lugar NENHUM
@@ -2146,7 +2155,8 @@ def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
 def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O usuário clicou num tom. A cor vai AO CONTROLE NA HORA.
 
-    DECISÃO, 01/09/2026: ** Isso decide o modelo da interface inteira, e não só deste botão:
+    DECISÃO, 01/09/2026: *"clicar na cor já deveria aplicar a cor no
+    controle."* Isso decide o modelo da interface inteira, e não só deste botão:
     **o gesto age na hora**, e não junta mudanças num rascunho à espera de um
     "Aplicar".
 
@@ -2464,7 +2474,8 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     `docs/data/paridade-gtk-html.csv` a chamava de *"a maior falta desta aba"*.
 
     POR QUE GRAVAR É A ÚNICA SAÍDA COERENTE, e a razão é medida: esta interface
-    NÃO TEM RASCUNHO (), e o disco é o que a troca de perfil reaplica. Sem
+    NÃO TEM RASCUNHO (decisão de 01/09 — *"clicar na cor já deveria aplicar
+    a cor no controle"*), e o disco é o que a troca de perfil reaplica. Sem
     gravar, o valor voltaria sozinho ao velho no primeiro perfil aplicado de
     novo, e o gesto seria mais um botão que aceita o toque e não age — a
     família de defeito que o mapa desta casa nomeia dezesseis vezes. (O número
@@ -2626,7 +2637,8 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     inventaria uma cor que ninguém escolheu.
 
     ELA É O DONO DA MARCA DA FILEIRA — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
-    Queixa de uso. <!-- noqa-acento: citação literal -->
+    Queixa de uso: *"quando eu abaixo o volume do lightbar,. o X não permanece
+    no seletor dos demais controles"*. <!-- noqa-acento: citação literal -->
     A borda na fileira do controle, o X nas fileiras dos outros, a recusa do
     tom tomado e a cor que o trilho reenvia saem TODOS daqui, e a escada é:
 

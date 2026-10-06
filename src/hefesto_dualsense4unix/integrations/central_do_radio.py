@@ -1,6 +1,9 @@
 """central_do_radio.py — mover, parear, equilibrar e conferir (MOVER-UM-POR-VEZ-01).
 
-A palavra, 23/09/2026, e é a especificação
+A palavra, 23/09/2026, e é a especificação: *"moveriamos por exemplo 1
+controle por vez. Apagaria esse um controle, o user, aperta os botões do
+controle pra sincronizar aquele controle e ele estaria no novo dispositivo. E
+não apagar tudo."* <!-- noqa-acento: citação literal -->
 
 O QUE O ESTUDO DE 23/09 DERRUBOU, e por isso o mover é este
 ===========================================================
@@ -1743,9 +1746,8 @@ class CentralDoRadio:
     ) -> tuple[str, bool] | None:
         """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho do usuário, ou ``None``.
 
-        Com a janela aberta por ela, o controle CONHECIDO que pede para parear no destino é a
-        escolha do usuário (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01): ela já disse o que quer ao
-        apertar
+        Com a janela aberta pelo usuário, o controle CONHECIDO que pede para parear no destino é
+        a escolha dele (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01): ele já disse o que quer ao apertar
         PS + Create e abrir a janela, e outro clique seria custo para quem joga.
         """
         fim = comeco + segundos

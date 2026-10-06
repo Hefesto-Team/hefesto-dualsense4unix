@@ -444,7 +444,7 @@ def _lutris(pasta: Path, lar: Path | None = None, *,
 
     O `games/*.yml` só nasce para jogo com configuração PRÓPRIA; a biblioteca
     é a tabela. Com a pasta vazia o cartão dizia `LIDO · 0 jogos` — que se lê
-    como *"o Lutris está vazio"* e não como .
+    como *"o Lutris está vazio"* e não como *"eu olhei no lugar errado"*.
 
     **E O `.yml` NÃO DAVA A ETIQUETA.** Um `stem` (`sea-of-stars`) não é a
     `wm_class` que a janela anuncia, e é a etiqueta que esta sprint precisa —

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """A COR DO PLÁSTICO DA ABA 02 É A DO APARELHO, EM TODOS OS ASSENTOS — 03/09/2026.
 
-A LEI É DO USUÁRIO
+A LEI É DO USUÁRIO:
+
+    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
+    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
+    entende? nada hardcoded. (…) eu quero que cada user ao usar seu controle se
+    toque disso que o app se adaptou ao controle dele"*
 
 O DEFEITO QUE ESTE ARQUIVO FECHA NÃO É "a cor está cravada" — esse já tinha sido
 curado em 03/09 às 01h31, e o teste irmão

@@ -1,6 +1,6 @@
 """JOGO-COMPLETO-01 / E4: o `--apply` do CLI e o passo do install SEM FLAG.
 
-
+Pedido literal: *"isso deveria estar no install sem flag"*.
 
 O buraco medido em 02/08, com o install inteiro já rodado nesta máquina: o
 `--status` dizia **"veneno estático: 0 / chamadas do wrapper: 0"** e o doctor

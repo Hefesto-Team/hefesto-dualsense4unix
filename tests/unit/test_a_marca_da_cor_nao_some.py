@@ -1,6 +1,8 @@
 """A MARCA DA COR NÃO SOME — a borda e o X de cada controle vêm da cor DELE.
 
-**A QUEIXA, 24/09/2026:** **   # noqa-acento: citação literal
+**A QUEIXA, 24/09/2026:** *"quando eu abaixo o volume do lightbar,. o X
+não permanece no seletor dos demais controles. isso é um erro que me
+incomoda."*   # noqa-acento: citação literal
 
 «Volume do lightbar» é o trilho «Brilho» da aba Iluminação; «o X» é a casa
 `tomado` da fileira de tons, que marca a cor que OUTRO controle tem. A borda

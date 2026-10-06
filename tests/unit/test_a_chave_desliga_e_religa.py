@@ -125,7 +125,7 @@ def test_a_regua_do_popen_morde_o_argv_do_fallback_antigo():
 
 
 def test_o_script_da_chave_usa_os_nomes_de_unit_que_existem():
-    """Conferidos na máquina do usuário em 29/08 com `systemctl --user"""
+    """Conferidos na bancada em 29/08 com `systemctl --user"""
     script = (RAIZ / "scripts" / "hefesto-chave.sh").read_text(encoding="utf-8")
     for unit in (
         "hefesto-dualsense4unix.service",

@@ -147,7 +147,8 @@ svg_para_editar().write_text(
 f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- ===========================================================================
      DualSense — o controle para EDITAR.
-     Gerado em 27/08/2026 a pedido: , "com os nomes de cada elemento descritos nas layers e objetos".
+     Gerado em 27/08/2026 a pedido: "converter o controle inteiro pra svg que
+     arrumo agora", "com os nomes de cada elemento descritos nas layers e objetos".
 
      COMO USAR
        1. Abra este arquivo no seu editor (Boxy SVG, Figma, Inkscape).

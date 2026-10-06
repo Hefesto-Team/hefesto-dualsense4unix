@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """o_byte_do_microfone_muda_a_captura.py — o ganho do aparelho, medido no PICO da voz do usuário.
 
-A PERGUNTA QUE ELE DECIDE (MIC-VOLUME-02, )
+A PERGUNTA QUE ELE DECIDE (MIC-VOLUME-02, decisão de 09/09/2026: *"3-c"*)
 --------------------------------------------------------------------------------
 O campo `ControllerMicOverride.volume` já TEM ato: `mic.volume.set` mexe no
 ganho da FONTE no PipeWire (MIC-VOLUME-01), e a docstring dele afirma que *"o

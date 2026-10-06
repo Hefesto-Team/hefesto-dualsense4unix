@@ -298,7 +298,7 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     if not pares:
         _lembrar_dono_vibrando(cfg, None)
         return
-    # naquele momento isso nao interfere in game (noqa-acento: dela). (…) clicar
+    # naquele momento isso nao interfere in game (noqa-acento: citação literal). (…) clicar
     # M2 (`lifecycle.apply_profile_rumble_passthrough`) preserva o silêncio
     vivos = []
     for dono, par, carimbo in pares:

@@ -5,7 +5,7 @@ A QUEIXA, 16/09/2026, com o DualSense no rádio
 *"o canal de som não mostra os canais de entrada e saída"* — e, na mesma
 frase, o jogo que não a ouvia: *"é como se ele tivesse mutado digitalmente"*.
 
-O QUE FOI MEDIDO NA MÁQUINA DO USUÁRIO
+O QUE FOI MEDIDO NA BANCADA
 ---------------------------------
 Duas leituras do mesmo servidor, a minutos de distância::
 

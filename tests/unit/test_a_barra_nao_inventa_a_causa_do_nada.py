@@ -16,7 +16,8 @@ O DEFEITO, E ELE ERA UMA REGRESSÃO
  5   alvo sem ``uniq`` estável (:1183)                     não
 ===  ====================================================  ==================
 
-Até 25/08/2026 a barra respondia a **todas as cinco** com a mesma  Nas quatro últimas isso
+Até 25/08/2026 a barra respondia a **todas as cinco** com a mesma frase:
+*"nenhum controle recebeu — não há controle na mesa"*. Nas quatro últimas isso
 é falso, e no caso 2 era **regressão**: o código anterior a ``41541a7`` dizia
 *"guardado; em Modo Nativo quem manda no controle é o jogo"*, que é a verdade.
 

@@ -166,6 +166,7 @@ def impoe(perfil):
 
 CSS = """
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
+     Pedido: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
      1. Status (três colunas: o Status e o exame em duas);
      2. Configurações Avançadas (quatro colunas de botões);
      3. os Detalhes técnicos, com a altura que sobra.
@@ -204,7 +205,9 @@ CSS = """
   .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
-  /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA —  25,5px por linha, e quatro linhas em cada uma das três colunas:
+  /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido: *«no MESMO
+     estilo das linhas do O exame de hoje (a pílula à esquerda e o texto
+     curto)»*. 25,5px por linha, e quatro linhas em cada uma das três colunas:
      elas acabam no mesmo y. */
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
          color:var(--texto-suave);border-bottom:1px solid var(--border-sutil);
@@ -272,7 +275,8 @@ CSS = """
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
 
-  /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA
+  /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido: *«ganhar altura pra
+     ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
      A seção cresce com o quadro (`estica`), e a caixa é ABSOLUTA dentro dela:
      um filho absoluto não conta para a altura do pai, então o registro vivo,
      com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página

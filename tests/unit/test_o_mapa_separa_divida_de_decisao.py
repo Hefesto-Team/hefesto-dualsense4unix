@@ -128,8 +128,8 @@ O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
 20 `nada-a-acionar`, 2 `so-ela-decide`.
 
 Em 29/08/2026 as duas `so-ela-decide` saíram — eram o acelerômetro do DualSense
-no cabo e no rádio, e a pergunta foi respondida por ela com **. A palavra continua no domínio, sem
-uso e com a
+no cabo e no rádio, e a decisão de produto foi que ele não sai: ele tem de FUNCIONAR. A palavra
+continua no domínio, sem uso e com a
 razão escrita, em `RESERVADOS`: o estado que ela nomeia não morreu com a linha
 que a usava.
 

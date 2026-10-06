@@ -113,7 +113,7 @@ def pedir_a_variante_escura() -> bool:
     """Pede ao GTK a variante ESCURA do tema do sistema. Devolve se conseguiu.
 
     BUG-GUI-COSMIC-WIDGET-CONTRAST-01: em COSMIC a sessão **não** aplica a
-    variante escura do tema GTK por padrão — medido na máquina do usuário em
+    variante escura do tema GTK por padrão — medido na bancada em
     04/09/2026, com a sessão inteira em escuro:
 
         gsettings org.gnome.desktop.interface color-scheme = 'prefer-dark'

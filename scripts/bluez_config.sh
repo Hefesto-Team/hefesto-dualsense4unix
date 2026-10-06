@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------
 # A lógica morava dentro do `install.sh` e do `uninstall.sh`, e por isso NUNCA
 # foi testada: todo portão da suíte lia os dois scripts como TEXTO. O defeito
-# que isso escondeu foi MEDIDO na máquina do usuário em 06/08/2026:
+# que isso escondeu foi MEDIDO na bancada em 06/08/2026:
 #
 #   /etc/bluetooth/main.conf:25 = `JustWorksRepairing=always`
 #

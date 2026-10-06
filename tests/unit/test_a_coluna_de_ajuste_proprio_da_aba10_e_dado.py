@@ -32,7 +32,8 @@ ela), o pacote passou a ler o dicionário POR NOME, e ``guarda.secao`` saiu de
 
 AS DUAS DECISÕES DE PRODUTO QUE ESTE ARQUIVO SEGURA — 03/09/2026
 -----------------------------------------------------------
-- **nº4, as oito dicas das células SAEM.**  Eram quatro pares (um texto
+- **nº4, as oito dicas das células SAEM.** *"Meu Deus melhor nenhuma assim.
+  Auto falante é auto falante, gatilho é gatilho."* Eram quatro pares (um texto
   por estado) que repetiam a dica do cabeçalho e ainda re-explicavam o que cada
   peça é. A régua olha o ELEMENTO, não a frase: proibir os oito textos deixaria
   o nono entrar livre.

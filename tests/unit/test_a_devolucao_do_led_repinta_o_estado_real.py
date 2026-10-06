@@ -2,7 +2,7 @@
 
 O defeito, medido no aparelho em 02/09/2026 com dois controles na mesa e o olho
 de quem confere: **devolver a posse deixa a luz presa no último valor que escrevemos.**
-
+Palavra de produto: *"ambos tão ligados. e ficaram."*
 
 A causa está no contrato do kernel: o `hid-playstation` escreve
 `mute_button_led = ds->mic_muted` **na borda do botão físico**, dentro de

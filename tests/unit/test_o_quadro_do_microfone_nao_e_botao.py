@@ -21,7 +21,8 @@ hid-playstation.c`, lido no fonte desta árvore):
 * os eixos e os botões recebem valores de áudio, e o cursor e o teclado do usuário se
   mexem sozinhos.
 
-**A segunda consequência é a entrada fantasma que ela relatou duas vezes**. E a medição de 10/09
+**A segunda consequência é a entrada fantasma que ela relatou duas vezes**
+(*"o teclado fica se mexendo quando vc dá o comando"*). E a medição de 10/09
 que deu ZERO em 120 s não a derruba: naquela corrida **o microfone não estava
 no ar**, logo não havia quadro de áudio a ser lido como botão.
 

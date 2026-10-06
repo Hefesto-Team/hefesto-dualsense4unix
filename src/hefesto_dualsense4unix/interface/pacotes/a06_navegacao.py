@@ -64,7 +64,8 @@ reescrevia o valor do perfil por cima. Enquanto isso valeu, **o "Guardar" nunca
 recebeu uma forma diferente do perfil**, e a recusa dele mandava trocar a linha
 antes de clicar, um caminho que este mesmo arquivo declarava não existir.
 
-A cura é a  O gerador passou a marcar as 21 linhas com
+A cura é a decisão de produto: *"as 21 listas param de ser repintadas enquanto ela
+está mexendo, até guardar ou sair"*. O gerador passou a marcar as 21 linhas com
 `data-gesto` (`aba06.LINHA_DE_BOTAO`), o gesto `linha-de-botao` anota a escolha
 em `_MEXENDO`, e a pintura passa a CONCORDAR com a tela em vez de reescrevê-la.
 Ver `_o_que_a_tabela_mostra`.
@@ -1979,7 +1980,8 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade de cursor, arrastada. `mouse_emulation.speed`.
 
-    DECISÃO, 05/09/2026. Até aqui a linha era um par de botões `-`/`+`, e os dois
+    DECISÃO, 05/09/2026: *"velocidade do cursor e da rolagem coloca um
+    slicer pra cada"*. Até aqui a linha era um par de botões `-`/`+`, e os dois
     gestos que os atendiam (`vel-cursor-menos`/`-mais`) somavam ±1 ao número do
     ÚLTIMO TIQUE. Os dois saíram com os botões: uma barra manda o número
     INTEIRO, e não uma direção — não há de onde partir, e por isso não há passo
@@ -2473,7 +2475,8 @@ def _em_quem(onde: str, nome: str) -> str:
 def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Guardar" das 21 linhas de *o que cada botão faz*. `Profile.button_actions`.
 
-    ELE PASSOU A TER DONO EM 01/09/2026, por  O
+    ELE PASSOU A TER DONO EM 01/09/2026, por decisão de produto: *"ganha campo. essa é
+    a parte das features que precisam ou serem ajustadas ou desenvolvidas."* O
     que o segurava era medido e verdadeiro — a tela deixava escolher 21 linhas e
     o perfil alcançava 9 —, e a cura foi o campo nascer, não o botão fingir.
 

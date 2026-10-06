@@ -1074,7 +1074,7 @@ class TocadorDoRumble:
         return not vista
 
     def _conferir_o_destino(self, proc: Any, sink: str) -> None:
-        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV do usuário."""
+        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV da bancada."""
         for espera in ESPERAS_DA_CONFERENCIA_S:
             if self._fim.wait(espera) or proc.poll() is not None:
                 return

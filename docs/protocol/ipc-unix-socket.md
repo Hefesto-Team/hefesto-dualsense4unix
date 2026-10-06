@@ -360,7 +360,8 @@ funcionar.
 
 **`mic.led.set` é o BYTE VIZINHO, e acender NÃO muta** (MIC-DA-MESA-ELEICAO-01,
 01/09/2026). `common[8]` e `common[9]` têm bits de autorização diferentes, e é
-por isso que a inversão que o usuário pediu — ** — cabe sem escrever uma linha no byte do mudo.
+por isso que a inversão que o usuário pediu — *"as pessoas precisam ter um aviso
+visual que o mic tá funcionando"* — cabe sem escrever uma linha no byte do mudo.
 **Nesta casa, ACESO = este microfone está VIVO**, ao contrário da convenção da
 Sony; o contrato do byte não inverteu, quem decide o argumento é o chamador.
 
@@ -496,7 +497,8 @@ no renumber, para a interface não anunciar sucesso de um no-op.
 
 **COOP-SEM-INTERRUPTOR-01 (06/08/2026, decisão da mantenedora):** o co-op local
 não é mais uma opção — cada controle conectado é um jogador, sempre. Palavra
-de produto.
+de produto: *"se eu conecto 4 controles no PC eu espero, com 4 pessoas jogando, que
+cada um controle o próprio personagem"*.
 
 - `coop.set {enabled: true}` continua ligando/reconciliando e **persiste** o
   gesto manual (é gesto do usuário: toma a posse do eixo `mode`).

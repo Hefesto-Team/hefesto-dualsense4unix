@@ -6,7 +6,8 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
 `2026-09-04-ONDA2-04-ILUMINACAO-01-o-interruptor-de-verdade-e-a-cor-que-se-grava-ao-desligar`:
 
     [01] a razão do tracejado    uma linha só quando há ressalva          (D-02)
-         ↑ CADUCOU EM 07/09/2026, por  A linha saiu da célula `LEDs`, e as cinco
+         ↑ CADUCOU EM 07/09/2026, por ordem de produto: *"o que eu não quero é frase
+           da steam ou outras"*. A linha saiu da célula `LEDs`, e as cinco
            réguas que a mediam saíram com ela — ver
            `test_a_04_as_lampadas_espelham_o_numero`, que guarda a AUSÊNCIA.
            A razão do tracejado continua no `title` das duas tiras.

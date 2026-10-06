@@ -36,7 +36,7 @@ set -euo pipefail
 
 APLICATIVOS="${HOME}/.local/share/applications"
 
-# As units de USUÁRIO do app. Conferidas na máquina do usuário em 29/08 com
+# As units de USUÁRIO do app. Conferidas na bancada em 29/08 com
 # `systemctl --user list-unit-files`: o vigia da Steam chama-se
 # `hefesto-steam-input-guard.*`, e NÃO `hefesto-dualsense4unix-steam-input-*`
 # — errar o nome faria o `stop` devolver sucesso sem parar coisa nenhuma.

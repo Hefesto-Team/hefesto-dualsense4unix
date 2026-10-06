@@ -60,7 +60,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
 
   /* ---------- O ACORDEÃO, E ELE É CSS PURO ----------
      Decisão, 28/08/2026: "clicar num abre e fecha os outros", "CSS puro,
-     sem JavaScript", ,
+     sem JavaScript", "o da fita já vem aberto, e clicar num card muda a fita",
      "o chip Todos abre os quatro", "a linha fechada mantém o resumo de hoje".
 
      COMO, SEM UMA LINHA DE JS: um rádio por controle, todos com o mesmo `name`.
@@ -118,7 +118,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
        position:relative}
 
   /* ---------- A BORDA DO CARTÃO É O PLÁSTICO, E SÓ ELE ----------
-     Ela, 03/10/2026, olhando a foto dos quatro controles Bluetooth: ** — e a lista de
+     Ela, 03/10/2026, olhando a foto dos quatro controles Bluetooth: *"as borda
+     tá nas cores do lightbar e não do plastico ainda né?"* — e a lista de
      sprints pediu a borda de cada cartão, aberto e fechado, com a cor do
      plástico. Medido no DOM: o `borderTopColor` do `.ctl` JÁ era o plástico
      (2px); o que parecia a borda verde era o anel de 1px da barra de luz, por
@@ -135,7 +136,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .ctl:hover{background:rgba(255,255,255,.03)}
 
   /* ---------- O LUGAR VAZIO ----------
-     Decisão, 31/08/2026:  — e, no mesmo turno,
+     Decisão, 31/08/2026: *"Deixa os outros espaços dos 4 controles a mostra
+     ainda mas cinza igual vc fez na aba jogar."* — e, no mesmo turno,
      *"tiramos o modo p3. p4 (seções expandidas não aparecem)"*.
 
      A GRAMÁTICA É A MESMA DA JOGAR, de propósito: cor explícita e nada de
@@ -213,7 +215,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
     background:var(--border-forte);box-shadow:none}
 
   /* ---------- OS DOIS BOTÕES DO FIM ----------
-     Ela, 31/08:  Eles são `<a>`, e não
+     Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
      `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
      formas, e um link que se veste de botão continua sendo um link para quem
      usa teclado e leitor de tela. */
@@ -484,7 +486,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   /* O BLOCO DOS SENSORES PEDE A ALTURA QUE ELE TEM, e os Gatilhos absorvem a
      sobra. Com `flex:1 1 0%` nos dois o flex reparte a coluna em partes IGUAIS
      (111 e 111) — e os sensores precisam de 143. O resultado era o bloco
-     cortado no meio do acelerômetro: o usuário viu e disse .
+     cortado no meio do acelerômetro: o usuário viu e disse *"tá muito quebrado"*.
      `flex:0 0 auto` aqui, `flex:1 1 auto` nos Gatilhos: cada um pede o que
      precisa e quem estica é o que tem folga. */
   /* A CLASSE SE CHAMA `leituras`, E NÃO `sensores` — 31/08/2026, e é a cicatriz
@@ -558,7 +560,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
      ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
      `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);margin-bottom:5px}
@@ -727,6 +730,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
      é o que torna a cor honesta nos TRÊS estados.
 
+     DECISÃO DE PRODUTO: *"Cor + ícone. Redundante de propósito — quem lê rápido pega
+     pela cor, quem não distingue cor pega pelo risco."*
 
      POR QUE INVERTER, e não só acrescentar o risco: o alvo `classe` do piloto
      casa UM valor (`data-hef-quando`). Com a classe `off` acesa em `MUDO`, o
@@ -790,7 +795,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:var(--fg)}
   /* ---------- O TRILHO DO GANHO DE ENTRADA (O-GANHO-DO-MIC-TEM-DONO-01) -----
-     20/09/2026,  <!-- noqa-acento: dela -->
+     20/09/2026, decisão de produto: *"deixa o slicer 2 dele na telka"*. <!-- noqa-acento: citação literal -->
 
      ELE MORA NA LINHA DO RÓTULO, e isso é ORÇAMENTO, não estética. Os quatro
      arranjos foram medidos no DOM a 1120, 1180 e 1440px, e o cartão tem
@@ -949,7 +954,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
 
      O SUFIXO VIROU CHIP EM 17/09/2026, POR ORDEM DE PRODUTO, e a decisão de cima
      continua de pé: quem existe só no estado ruim é o ALARME, e ele continua
-     assim. O que mudou é a CARA do sufixo. Ele era três declarações (peso 400,
+     assim. O que mudou é a CARA do sufixo — *"deixar esse acordado com o mesmo
+     estilo do botão que tá MUDO acima"*. Ele era três declarações (peso 400,
      cinza, uma margem) ao lado de um chip, no mesmo rótulo, e lia como sobra de
      texto. Agora veste a mesma pílula do selo do microfone, pela declaração
      agrupada lá de cima.
@@ -958,7 +964,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      ANTES. A primeira tentativa desta leva pôs `text-transform` no chip do
      canal, para o par ficar idêntico ao chip do microfone — que diz a palavra
      dele em caixa alta. O portão `maiuscula-decorativa` reprovou, e ele carrega
-     a palavra de 11/09/2026, que cita ESTA palavra pelo nome
+     a palavra de 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o
+     cabo e acordado (ambos minusculo sem iniciar de forma capitular). Esse
+     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal -->
 
      AS DUAS ORDENS NÃO SE CONTRADIZEM, e é o que resolve o caso: o que o usuário
      pediu hoje foi o ESTILO — a pílula —, e a caixa do chip do microfone não é
@@ -1241,7 +1249,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .glifos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:stretch}
   .gb{width:100%;height:100%;min-height:46px;display:flex;align-items:center;
       justify-content:center;color:var(--texto-suave);min-width:0}
-  /* O GLIFO ENCOLHE COM A COLUNA — 19/09/2026,  <!-- noqa-acento: dela -->
+  /* O GLIFO ENCOLHE COM A COLUNA — 19/09/2026, pedido: *"queria que os
+     svgs da aba controles ficassem menores a medida que a largura da página
+     horizontal diminua pra comportar ali"*. <!-- noqa-acento: citação literal -->
 
      O `glifo()` emite `width="38" height="38"` no `<svg>`, e a grade é
      `repeat(4,1fr)`: as colunas encolhem, o desenho não. Na foto dela, com a
@@ -1522,7 +1532,8 @@ def identidade(c, *, bat, carga=None, meio=""):
     plástico.
 
     O QUE SAIU DAQUI EM 28/08, E POR QUE SÓ DUAS DAS TRÊS QUE ELA CITOU.
-     — e o espaço apertou mesmo, porque os dois
+    Palavra de produto: *"se der problema de espaço remover Giroscópio, Hefesto e vê
+    como (na real remove eles)"* — e o espaço apertou mesmo, porque os dois
     interruptores de sensor desceram para esta linha. Saíram as duas LEITURAS:
     `Hefesto on` (71px, e dizia a mesma coisa nas quatro linhas) e
     `Giroscópio NNN Hz` (114,6px no cabo, 148,1 no rádio — o número vive agora
@@ -1862,7 +1873,7 @@ GANHO_TOPO_DB = 48
 GANHO_PADRAO_PCT = 100
 
 ROTULO_GANHO_MIC = "Ganho de entrada do microfone deste controle, em decibéis"
-#      versao  # noqa-acento: citação literal, e a digitação dela
+#      versao  # noqa-acento: citação literal, com a digitação original
 ROTULO_LINHA_VOLUME = "Volume"
 ROTULO_LINHA_GANHO = "Ganho"
 
@@ -2026,7 +2037,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           </div>
           <div class="moldura led" style="margin-top:9px" title="{DICA_LED_JOGADOR}">
             <div class="rot rot-linha">LED do jogador</div>
-            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso.
+            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso:
+                 *"a interface tá dessincronizada com os controles reais (o
+                 player do controle, o led indicativo do player)"*.
 
                  ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
                  `jogador` da CENA do mockup, e nenhum tique as visitava: o
@@ -2103,7 +2116,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 <br><br>
                 {DICA_GANHO_MIC}
               </span></span>
-              <!-- O MODO DO MICROFONE — pedido, 30/08.
+              <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
+                   Mic: Virtual, Desativado e Nativo"*.
 
                    ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
                    Como fileira própria embaixo ele custava 42px (36 da altura de
@@ -2243,7 +2257,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
         <div>
           <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
 
-               O acelerômetro entrou por decisão de produto, e como MOLDURA PRÓPRIA ele não cabia: medido,
+               O acelerômetro entrou por decisão de produto (*"não era pra ele sair, era
+               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
                a coluna dos sensores passava de 190 para 278px de conteúdo natural,
                contra os **232** que as cinco colunas compartilham (a conta está no
                `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
@@ -2644,7 +2659,10 @@ CSS += f"""
   .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_ATIVO}"]{{border-color:var(--green);color:var(--green)}}
   .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_MUDO}"]{{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}}
-  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido, 10/09/2026 ---------.
+  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido, 10/09/2026 ----------
+     *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
+     vai ficar no estado de piscando (guia visual pro leigo que pegar o
+     controle de primeira)"*.
 
      A INVERSÃO É O PEDIDO: o botão falava a língua de quem programa (`mudo-i`,
      "calar") e passa a falar a de quem pega o controle pela primeira vez —
@@ -2716,7 +2734,9 @@ MIOLO = f'''
         <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
              Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
              superior direito."*); o «Mapa do controle» ganhou a casa na aba
-             Conexões em 25/09 e saiu desta em 29/09, por  A classe `.sensores` continua a alinhá-lo à direita. -->
+             Conexões em 25/09 e saiu desta em 29/09, por ordem de produto: *"mapa do
+             controle deveria ter saído da guia de Controles e ter ficado só na
+             guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
           <a class="btn" href="calibrar-sensores.html"
              title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>

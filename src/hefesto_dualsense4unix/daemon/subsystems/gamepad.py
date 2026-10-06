@@ -37,7 +37,7 @@ Política:
     os gamepads virtuais** (`suspend_vpads_for_steam_input`). Curava o duplicado
     com UM controle e derrubava o jogador 2 junto, porque o jogador 2 **é** um
     gamepad virtual — `coop_derrubado_pela_excecao_steam_input`, vinte
-    ocorrências no journal do usuário em 08/08. O raciocínio antigo não estava errado
+    ocorrências no journal da bancada em 08/08. O raciocínio antigo não estava errado
     sobre o duplicado; estava errado sobre o preço, que ninguém tinha declarado.
     As funções da suspensão saíram em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01):
     sem chamador desde 09/08, o flag que elas armavam nunca podia ser verdade.
@@ -281,7 +281,7 @@ def sync_steam_input_exception(
       Mullet Mad Jack enumerava js0=vpad e js2=físico e repartia os dois entre
       dois jogadores. Daí a suspensão do vpad.
 
-    O que ninguém tinha declarado é o preço, e ele foi MEDIDO na máquina do usuário em
+    O que ninguém tinha declarado é o preço, e ele foi MEDIDO na bancada em
     08/08: **o jogador 2 é um gamepad virtual.** Derrubar os virtuais para curar
     o duplicado do jogador 1 derruba o jogador 2 junto —
     `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia.
@@ -1314,14 +1314,18 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     ficava lá e virava lei sobre os 29 perfis que não opinam. O PRAGMATA, que
     não tem sequer seção `mode`, abria em uinput, e com ele iam embora as dez
     linhas do mapa que só existem no caminho DualSense — a IMU entre elas. A
-    queixa de uso.
+    queixa de uso: *"joguei um jogo com controle por movimento e na hora do vamos
+    ver o controle não deu resposta"*.
 
     É função nomeada, e não uma linha embutida, para a régua poder MORDER o
     ponto exato: `test_o_caminho_nao_vaza_entre_jogos` repõe aqui a leitura
     velha e o laço de produção inteiro roda por cima dela.
 
     E AGORA NÃO HERDA DE LUGAR NENHUM — CAMINHO-CONTAGIO-01, ponto 2 do escopo
-    de 19/09/2026, e é   <!-- noqa-acento: citação literal -->
+    de 19/09/2026, e é ordem de produto:
+
+        *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
+        esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
 
     A O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança — do slot da sessão para a
     escolha do usuário — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
@@ -1638,7 +1642,7 @@ def start_gamepad_emulation_desfecho(
                 save_gamepad_emulation,
             )
 
-            # medido na máquina do usuário: o gesto com que ela diz «Sony DualSense»
+            # medido na bancada: o gesto com que ela diz «Sony DualSense»
             # `gamepad.mask.set`, que grava no registro por aparelho.
             if flavor is not None:
                 save_gamepad_emulation(True, key)

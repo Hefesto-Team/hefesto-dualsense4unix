@@ -114,7 +114,8 @@ CSS = """
      existe. O teto sai da MEDIÇÃO, não de uma conta: o `.miolo` dá 564px de
      caixa, 34 vão nos paddings dele e 54 no cromo do quadro (as duas bordas,
      os 17px da faixa do título com o seu padding, e os 24 do corpo). */
-  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026
+  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido: *"as linhas
+     horizontais (…) precisam melhorar ali"*.
 
      Elas já atravessavam as cinco colunas, no mesmo y — mas o `gap:16px` do grid
      abria um buraco entre cada duas, e o olho lia CINCO TRACINHOS em vez de uma
@@ -164,7 +165,8 @@ CSS = """
        ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
        72 — a coluna continua em 472 e o teto de 476 não é tocado. */
     --r-player:52px;--r-leds:64px;--r-acoes:64px;
-    /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026,  É a mesma
+    /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido:
+       *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
        Vibração: 5.
        MEDIDO ANTES: o passo era 8 e a divisória ficava em `top:0` — encostada no
@@ -395,7 +397,8 @@ CSS = """
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido:
+     *"com linha abaixo de cada campo"*.
      POR QUE NA CÉLULA E NÃO NA GRADE: `.luz-grade` é um grid de 5 colunas, mas
      as LINHAS não são dele — cada coluna é um grid próprio com as mesmas sete
      alturas (`--r-des` … `--r-acoes`). Não existe "linha da grade" onde pendurar
@@ -440,7 +443,8 @@ CSS = """
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */
   .luz-grade .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026,  Encostado na divisa, o rótulo fica
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
@@ -677,14 +681,19 @@ CSS = """
     content:"";position:absolute;left:-1px;right:-1px;
     top:calc(100% + 3px);height:2px;border-radius:1px;background:var(--dono);
   }
-  /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão de produto: . <!-- noqa-acento: citação literal -->
+  /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão de produto: "um X na cor
+     selecionada por mim de forma que me impeça de setar alguma cor de um
+     coleguinha". <!-- noqa-acento: citação literal -->
 
      ELE É DESENHADO, e não um caractere: um `×` de texto herda a fonte, muda
      de tamanho com ela e o traço fino some sobre um tom claro. Dois gradientes
      cruzados desenham as duas hastes, e uma sombra os contorna.
 
      A COR DO X É PRETA COM BORDA BRANCA — decisão, 09/09/2026, com os
-     quatro na mesa
+     quatro na mesa: *"deixa o nosso x preto com borda branca pra destacar.
+     Falo isso pois ficou perfeito o nosso x, o complicado é que são tons
+     pasteis e o controle branco por exemplo não ajuda nisso o x dele fica
+     invisível."* <!-- noqa-acento: citação literal -->
 
      ELE ERA `var(--dono)` — a cor do PLÁSTICO de quem tem o tom —, e a ideia
      vinha da mesma regra que pinta a borda da coluna
@@ -721,7 +730,7 @@ CSS = """
      `WebKit2.WebView`, na página publicada, com dois controles pintados:
 
          vista 1212x809 (como a janela abre)  .tom 16,5 x 26  X  4,5 x 14
-         vista 1918x840 (a TV do usuário)           .tom 26,1 x 26  X 14,0 x 14
+         vista 1918x840 (a TV da bancada)           .tom 26,1 x 26  X 14,0 x 14
 
      A LARGURA TEM TETO DE 12 PX, e o `100% - 2px` impede o X e o contorno
      branco de vazarem da pílula se ela encolher. A ALTURA VEM DE
@@ -904,7 +913,8 @@ CSS = """
      touchpad, porque o contorno É o desenho dele. */
   /* A CÉLULA DOS LEDs VOLTOU A TER UM ANDAR SÓ — 07/09/2026. Ela teve DOIS
      entre 04/09 e hoje: a tira em cima e a RESSALVA embaixo (D-02, pergunta
-     [01] desta aba). A linha de ressalva saiu por  —, e com ela saíram as duas regras que a
+     [01] desta aba). A linha de ressalva saiu por ordem de produto — *"o que eu não
+     quero é frase da steam ou outras"* —, e com ela saíram as duas regras que a
      vestiam (`.cel-leds .ressalva` e a que a escondia no lugar sem dono).
 
      A COLUNA DE FLEX FICA, e não é sobra: é ela que dá à célula o
@@ -1003,7 +1013,8 @@ CSS = """
      quem manda. */
   .tira-luz.incerta{border:1px dashed var(--comment)}
   /* ---------- O INDICADOR VOLTOU A SER INDICADOR (07/09/2026) ----------
-     A BOTOEIRA DA LUZES-01 SAIU INTEIRA, por  Saíram com ela as
+     A BOTOEIRA DA LUZES-01 SAIU INTEIRA, por ordem de produto: *"só olhar a linha de
+     cima da seleção de player e replicar o que tem lá."* Saíram com ela as
      cinco `.pad .lamp`, que eram botões de gesto, mais as seis `.desenhos .dz`
      e o `.pad.reenvia`.
 
@@ -1097,7 +1108,10 @@ def coluna(c):
     dizendo "P3 · Desconectado" com travessão em tudo.
 
     O ENDEREÇO DO BLOCO JÁ TINHA SIDO CURADO EM 03/09 — o `data-controle` no
-    lugar vazio,  Faltava a outra metade:
+    lugar vazio, decisão de produto: *"tem que aparecer desligado enquanto não tem
+    nenhum controle. A partir do momento que tiver, ele aparece o controle
+    devidamente conectado. Se isso não ocorre com os 4 controles em cada aba,
+    então temos que construir isso e garantir isso."* Faltava a outra metade:
     o endereço do bloco diz ONDE, e o `data-campo` diz O QUÊ. Sem os dois o
     piloto acha a coluna e não acha um só campo dentro dela.
 
@@ -1235,7 +1249,8 @@ def coluna(c):
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
 {miolo_da_luz}
             </div>
-            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026,  Ela
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem de produto: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
                  nasceu em 04/09 (D-02) para responder QUAL das três causas
                  apagou a barra sem exigir o rato; o que ela mostrava era, entre
                  outras, a frase da Steam, e é exatamente essa que o usuário mandou
@@ -1280,7 +1295,7 @@ def coluna(c):
           {_marca.bloco("luz")}
         </div>'''
 
-# dela.  # noqa-acento: citação literal
+# dela: *"ainda temos 3 cantos falando sobre o automatico"*.  # noqa-acento: citação literal
 # `noqa-acento` num comentário HTML aninhado — e **comentário HTML NÃO
 # A REGRA QUE SOBRA: `# noqa-…` só comenta em Python. Prosa de projeto que
 # precise de um `noqa` sai do HTML e vem para cá.
@@ -1299,7 +1314,8 @@ MIOLO = f'''
           você sabe de quem é cada controle.<br><br>
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
-        <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13
+        <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13, decisão de 04/09/2026:
+             *"Um interruptor no topo da aba Iluminação."*
 
              O QUE ELE GOVERNA não é o botão "Automático" da célula Opções: são
              coisas diferentes com a mesma palavra. Aquele é POR CONTROLE e é um
@@ -1355,12 +1371,15 @@ MIOLO = f'''
                   Cada coluna é um controle: a fita do topo não escolhe nada aqui.
                 </span></span></div>
             </div>
-            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026,  Esta célula existia vazia só para
+            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido:
+                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
+                 coluna serve como nome da linha"*. Esta célula existia vazia só para
                  ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
                  nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
             <div>
-              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026,  Eram
+              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026, pedido: *"os svg do lado
+                   esquerdo dos nomes pode remover, eles tão diferentes demais"*. Eram
                    três desenhos de origens diferentes (`lightbar`, `led-jogador`, `l2`/`r2`)
                    ao lado de rótulos que os outros cinco não tinham — a coluna lia como
                    duas gramáticas. O glifo continua no DESENHO do controle, que é onde

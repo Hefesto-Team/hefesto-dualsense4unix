@@ -22,7 +22,7 @@ borda. **A identidade vem do fd, não do report** — e é isso que
 `status[1]`, a CONSEQUÊNCIA de um aperto — e esse bit vira com qualquer um que
 escreva o mudo no firmware. Na sessão do usuário de 28/09 o branco teve três bordas
 que ninguém deu, e cada uma elegeu o microfone da máquina e gravou o perfil
-do usuário. O porquê inteiro está em
+do usuário (*«eu não apertei o botão do Mic»*). O porquê inteiro está em
 `core/backend_pydualsense._registrar_borda_do_mic`.
 
 AS DUAS GUARDAS SÃO REUSADAS, NÃO REINVENTADAS. O sossego

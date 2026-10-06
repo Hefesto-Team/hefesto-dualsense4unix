@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """A BORDA DA ABA 02 VESTE O CONTROLE DELE — no WebKit, e não só em Python.
 
-A LEI É DO USUÁRIO, 03/09/2026
+A LEI É DO USUÁRIO, 03/09/2026:
+
+    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
+    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho.
+    nada hardcoded. eu quero que cada user ao usar seu controle se toque disso
+    que o app se adaptou ao controle dele"*
 
 O TESTE QUE PROVA A LEI não é "os dois controles do usuário pintam certo" — os dois
 estão no desenho, e uma cura falsa passaria neles. É **um modelo que o desenho

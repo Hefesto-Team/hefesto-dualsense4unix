@@ -2068,8 +2068,8 @@ def _mascara_do_primario(daemon: Any, cfg: Any) -> str:
     """A máscara que o jogador 1 VESTE — a que o jogo vê.
 
     Esta env lia `config.gamepad_flavor`, a máscara da SESSÃO, e o jogo vê a do
-    CARTÃO quando há uma (`external_mask.mascara_efetiva`). Medido na máquina
-    do usuário em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
+    CARTÃO quando há uma (`external_mask.mascara_efetiva`). Medido
+    na bancada em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
     `mascara_viva=xbox` com o vpad vestindo DualSense, e a env do Sony DualSense
     saindo com o `SDL_JOYSTICK_HIDAPI=0` do Xbox.
 
@@ -2168,7 +2168,7 @@ def modo_do_estado_vivo(
     DISABLE, e o jogo aberto assim via o DualSense de plástico. Como a env é lida
     UMA vez no `exec`, o PS + R3 dentro do jogo não a alcança: o físico morre
     grabado e o vpad chega como segundo controle. Era o defeito medido no Future
-    Knight — e o Future Knight só era o jogo com perfil próprio. Na máquina do usuário,
+    Knight — e o Future Knight só era o jogo com perfil próprio. Na bancada,
     em 14/09, 1 dos 30 perfis tinha `mode`: os outros 29 jogos liam este arquivo.
 
     DECISÃO DE PRODUTO (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL): fora do Modo

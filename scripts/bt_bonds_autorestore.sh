@@ -150,7 +150,7 @@ done
 # O log em produção é o que conta a história quando o bond volta DE VERDADE, e
 # não pode sumir. O que não pode existir é a linha que descreve um evento que
 # nunca houve: a suíte roda este script de verdade, e por isso gravava
-# "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal do usuário — 36
+# "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal da bancada — 36
 # vezes em 15/08, oito delas entre 18h29 e 21h38. Vinte minutos de caçada foram
 # atrás de uma morte que o `systemctl` desmentia (Result=success, ativo desde
 # as 14:14). Os DADOS do teste já eram isolados; o LOG não era.

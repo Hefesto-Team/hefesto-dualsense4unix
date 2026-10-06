@@ -1,6 +1,8 @@
 """O Nintendo Pro no mapa de canais — plataforma, combinação e identidade.
 
-Nasceu em 03/09/2026 (ONDA-PRO-PLATAFORMA-01), da pergunta de produto.
+Nasceu em 03/09/2026 (ONDA-PRO-PLATAFORMA-01), da pergunta de produto: *"a ideia é
+mapa tanto pra USB quanto rádio estarem conectadas no projeto inteiro e lá ser
+nosso hub central"*.
 
 O que este arquivo guarda são DOZE linhas `@pro` que estavam com o veredito
 (`aciona`) MUDO em pelo menos um transporte e agora dizem SIM ou NÃO, lendo o

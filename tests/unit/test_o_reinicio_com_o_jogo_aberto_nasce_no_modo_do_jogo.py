@@ -8,8 +8,7 @@ ela passou a proteger um modo que ninguém escolheu para aquele jogo. Ela
 resolveu na mão às 03:07:09, com o PS + R3.
 
 A cura (`D-3009-O-REINICIO-COM-O-JOGO-ABERTO-NASCE-NO-PERFIL-DO-JOGO`, a
-validar
-pelo usuário): o sinal nasce e é avaliado antes do primeiro pad, e o boot
+validar pelo usuário): o sinal nasce e é avaliado antes do primeiro pad, e o boot
 pergunta pelo jogo em cena antes da escolha do usuário — o pad, o perfil ativo e a
 tela nascem do mesmo perfil.
 

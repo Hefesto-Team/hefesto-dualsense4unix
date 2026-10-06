@@ -120,7 +120,10 @@ CSS = CSS_GLIFO + """
                        var(--r-modo) var(--r-pronto)
                        var(--t-aj-d) var(--r-acao)}
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
      A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
      moldura do quadro já existe. */
   /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
@@ -138,7 +141,9 @@ CSS = CSS_GLIFO + """
      24px antes da divisa. A célula de baixo não recorta nada, e o traço
      cai no mesmo lugar: entre uma linha e a outra. */
   /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026, e é a cura que
-     a Vibração já tinha e esta aba não.
+     a Vibração já tinha e esta aba não. Pedido: *"lá precisa de respiro em
+     tudo (…) as bordas das 3 páginas tão sobrando de um jeito feio e tão sem dar
+     respiro."*
 
      MEDIDO ANTES DA CURA: o respiro das células desta aba era **0px/0px**, e a
      divisória ficava em `top:0` — encostada no conteúdo de cima, com o vão
@@ -172,7 +177,8 @@ CSS = CSS_GLIFO + """
      dentro dele. Sem isto o rótulo da última linha acaba acima dos botões que
      ele nomeia, e a régua lê — com razão — um vão entre as colunas. */
   .duas-colunas .rotulos > *{display:flex;flex-direction:column;justify-content:center}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026,  Encostado na divisa, o rótulo fica
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
@@ -200,7 +206,8 @@ CSS = CSS_GLIFO + """
   .duas-colunas .rotulos > .rot-r2-1{grid-area:6/2}
   .duas-colunas .rotulos > .rot-r2-2{grid-area:7/2}
   .duas-colunas .rotulos > .rot-r2-3{grid-area:8/2}
-  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão, 31/08/2026
+  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão, 31/08/2026: *"o l2 e o r2 tem
+     que tá centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
 
      O desenho anterior prendia o glifo à primeira linha, no argumento de que
      cabeçalho encosta no que titula. A foto mostrou o contrário: um glifo que
@@ -279,7 +286,8 @@ CSS = CSS_GLIFO + """
      ABAIXO da última barra do P3 — nomeava de baixo uma lista que começa em
      cima. Os 5px são o que põe a linha de 11px no centro da primeira barra
      (82px / 4 = 20,5px de altura por barra). */
-  /* O `.no-topo` SAIU — 30/08/2026,  Ele prendia "Ajustes" no alto de
+  /* O `.no-topo` SAIU — 30/08/2026, pedido: *"centraliza os nomes dentro
+     das distâncias verticais de cada linha"*. Ele prendia "Ajustes" no alto de
      uma célula de 92px, e o nome ficava a 40px do conteúdo que nomeia. Com o
      centro, ele cai na altura do bloco — e é a mesma regra que as outras seis
      linhas da coluna já seguiam. */
@@ -299,7 +307,9 @@ CSS = CSS_GLIFO + """
   /* O CHIP DO CONTROLE é o mesmo chip da fita, com a borda na cor do plástico —
      é como ela sabe de quem é a coluna (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Ele
      NÃO acende: aqui ele não é escolha, é cabeçalho. */
-  /* O NOME DA COLUNA FICA CENTRADO — decisão, 31/08/2026
+  /* O NOME DA COLUNA FICA CENTRADO — decisão, 31/08/2026: *"temos que
+     centralizar o nome das colunas dos controles, ou então colocarmos os SVG de
+     cada controle ao lado direito do nome."*
 
      ESCOLHI CENTRALIZAR, e a razão é orçamento: o chip mede 126px numa coluna de
      232, então centrá-lo custa ZERO. O SVG ao lado pediria altura que a linha do
@@ -325,7 +335,8 @@ CSS = CSS_GLIFO + """
   /* O SELETOR DOS 19 MODOS. Era uma grade de 19 botões de 172px, e com quatro
      controles na tela ela não existe mais: a coluna de um controle mede 220px de
      conteúdo, e a grade pediria 19 fileiras — 566px numa coluna que tem 447px
-     inteiros. Vira o mesmo `<select>` que a Navegação usa nos campos dela, com as
+     inteiros. Vira o mesmo `<select>` que a Navegação usa nos campos dela
+     ("quando eu falei de drop in eu tava falando de todos os campos"), com as
      19 descrições no `title` de cada opção: nenhum modo e nenhuma frase saiu. */
   select.modo,select.pronto{
     width:100%;padding:0 9px;border-radius:6px;font-size:11.5px;
@@ -355,7 +366,10 @@ CSS = CSS_GLIFO + """
   .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
 
   /* ---------- O ACORDEÃO DOS AJUSTES — ROLAGEM-01, 09/09/2026 ----------
-     Proposta DO USUÁRIO, 08/09, olhando o produto instalado e maximizado
+     Proposta DO USUÁRIO, 08/09, olhando o produto instalado e maximizado: *"E tava
+     pensando pra gatilhos talvez fosse interessante colocar a seção do r2 e l2
+     dentros de blocos de expansão igual fizemos na aba controles o que vc
+     acha?"*  <!-- noqa-acento: citação literal, palavra por palavra -->
 
      A CAUSA ESTÁ MEDIDA, e não era a `.janela` (775/775 nas dez): era o
      `DIV.miolo`, 863 contra uma caixa de 564. Com os quatro na mesa e o dado
@@ -411,7 +425,7 @@ CSS = CSS_GLIFO + """
   body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3::before{display:none}
 
   /* O GLIFO DA SEÇÃO É O QUE SE CLICA. Ele já era o cabeçalho das três linhas
-     () — agora
+     (decisão de 31/08: *"o L2 e o R2 deveriam controlar a seção"*) — agora
      ele controla mesmo. São DOIS `<label>` sobrepostos, e só um está visível:
      o de abrir aponta para o rádio da seção, o de fechar aponta para o rádio
      `#dobra-nenhum`. Com um `<label>` só não haveria como FECHAR sem abrir o
@@ -516,7 +530,9 @@ CSS = CSS_GLIFO + """
      escreveu. Aqui ele fica na coluna de quem ele guarda. */
   .duas-colunas .ctrl .btn{width:100%;font-size:11.5px;padding:0 6px}
 
-  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ---------
+  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ----------
+     *"Isso é pra quando o user salva algum efeito. É assim que tem que
+     aparecer. O nome que o user deixar lá. Ali é só exemplo."*
 
      "Meus efeitos" existia no campo de escolha com dois nomes de exemplo e sem
      dono nenhum — não havia, em todo o `src/`, onde guardar um efeito com nome.

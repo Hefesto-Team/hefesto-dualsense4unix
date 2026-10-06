@@ -23,7 +23,7 @@ sysattrs do PRÓPRIO nó, e um `hidraw` não tem `idVendor`: esse atributo mora 
 pai USB — e no Bluetooth não existe pai USB nenhum, porque o BlueZ cria o HID
 por `uhid` (`/sys/devices/virtual/misc/uhid/0005:054C:0CE6.*`).
 
-Medido na máquina do usuário em 12/08/2026, três DualSense no rádio e um no cabo:
+Medido na bancada em 12/08/2026, três DualSense no rádio e um no cabo:
 
     udevadm trigger --dry-run --verbose --subsystem-match=hidraw       -> 8
     ... o mesmo + --attr-match=idVendor=054c                           -> 0

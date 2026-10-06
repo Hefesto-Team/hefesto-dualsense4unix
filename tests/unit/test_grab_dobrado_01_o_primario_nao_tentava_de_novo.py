@@ -1,6 +1,6 @@
 """GRAB-DOBRADO-01 — o `EVIOCGRAB` do P1 falhava e NINGUÉM tentava de novo.
 
-O DEFEITO, medido no journal do usuário
+O DEFEITO, medido no journal da bancada
 =================================
 14/08/2026, 15:54:58 — o primário trocou de controle::
 

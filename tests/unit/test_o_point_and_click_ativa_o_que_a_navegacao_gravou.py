@@ -1,6 +1,10 @@
 """POINT-AND-CLICK-01 — o modo Navegação carregando o PERFIL, e não a sessão.
 
-A ordem, 17/09/2026, olhando a aba principal do produto aberto
+A ordem, 17/09/2026, olhando a aba principal do produto aberto:
+
+    *"E o modo point and click é o modo navegação e o modo que nós mesmos
+    podemos usar e configurar na aba navegação. **Ele ativa o modo configurado
+    lá.**"*
 
 A primeira metade já existia. A segunda era o defeito: o terceiro passo da
 transição para o `MODE_DESKTOP` era `mouse.emulation.restore`, que lê a **flag

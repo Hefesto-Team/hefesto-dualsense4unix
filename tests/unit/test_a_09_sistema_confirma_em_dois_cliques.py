@@ -230,7 +230,7 @@ def test_os_rotulos_saem_da_pagina_e_nao_de_uma_lista_aqui(a09):
 
 
 def test_com_o_servico_parado_o_botao_oferece_ligar(a09, ctx_parado, janela):
-    """** — um botão, duas caras."""
+    """*"um específico pra parar o Daemon E Ativar o Daemon"* — um botão, duas caras."""
     janela.status = "offline"
     a09._LENTO.clear()
 

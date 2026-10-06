@@ -165,7 +165,8 @@ class TestOGate:
     microfone caía no vazio. Agora `is_enabled` é sempre `True` — o supervisor
     tem de estar de pé para atender o pedido.
 
-    **E O GATE VIROU DE LADO EM 18/09/2026**, por  Até aqui
+    **E O GATE VIROU DE LADO EM 18/09/2026**, por ordem de produto: *"todos os
+    controles tem que nascer com tudo mic, giroscopio e afins"*. Até aqui
     `alvos()` respondia `[]` para quem não tinha declaração, e era ele que
     guardava a privacidade. MEDIDO na bancada no mesmo dia: dos quatro
     DualSense ligados, DOIS tinham microfone — os outros dois nunca haviam sido

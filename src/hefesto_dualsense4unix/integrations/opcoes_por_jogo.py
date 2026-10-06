@@ -17,7 +17,8 @@ o jogo na janela errada jogava sem controle. *Duas ferramentas escrevendo a
 mesma linha não é configuração; é sorteio.*
 
 A DECISÃO É `D-2109-AS-OPCOES-POR-JOGO-TEM-UM-DONO-SO`, e a ordem, de
-21/09/2026, é esta:   <!-- noqa-acento: citação literal, a
+21/09/2026, é esta: *"PODE CORRIGIR E INTEGRAR ELE AO NOSSO APP.
+DESATIVA O ORIGINAL ENTÃAO."*  <!-- noqa-acento: citação literal, a
 digitação é a dela -->
 
 O QUE ESTE MÓDULO FAZ

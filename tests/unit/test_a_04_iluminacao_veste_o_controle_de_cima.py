@@ -2,10 +2,15 @@
 
 A LEI, e é do usuário (03/09/2026)::
 
+    "se no topo tá mostrando controle white player 1, então cada aba vai usar os
+    controles lá de cima. Não mistura com a info dos mockups. Cada feature faz
+    referencia ao controle conectado. Por isso temos o mapa pra servir como  (noqa-acento)
+    variável de identificação"
 
     (A frase é do usuário, palavra por palavra: citação não se corrige.)
 
-E, sobre a COR
+E, sobre a COR: *"se identificou o controle como modelo White a cor do card em
+volta tem que ser branco. Temos isso no mapa."*
 
 O QUE ESTAVA NA TELA DO USUÁRIO, fotografado em 03/09/2026 com dois controles na mesa
 (um White no cabo, um por rádio sem cor lida)::

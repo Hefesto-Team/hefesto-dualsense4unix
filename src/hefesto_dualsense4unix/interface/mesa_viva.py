@@ -632,7 +632,7 @@ def selo_do_alto_falante(mudo: bool, sabemos: bool) -> str:
 
 BOTAO_MIC_RETORNO = "retorno"
 
-#:      tambem.  <!-- noqa-acento: a digitação dela não se limpa -->
+#:      tambem.  <!-- noqa-acento: citação literal, a digitação não se limpa -->
 NINGUEM_TE_OUVE = ""
 
 LIMITE_DA_LINHA_DE_QUEM_OUVE = 46

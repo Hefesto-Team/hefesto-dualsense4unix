@@ -92,7 +92,7 @@ def test_o_perfil_aplica_gatilho_e_luz_em_toda_origem(origem: str) -> None:
     assert spec.trigger_left is not None and spec.trigger_right is not None, (
         f"a seção `triggers` do perfil não chegou ao controle na origem {origem!r}: "
         f"é o `ignorado_trava_manual` de volta, e é a queixa dela de 14/09 — "
-        f"*«os gatilhos tambem nao tao aplicando»*"  # (noqa-acento): dela
+        f"*«os gatilhos tambem nao tao aplicando»*"  # (noqa-acento: citação literal)
     )
     assert spec.led is not None, (
         f"a seção `leds` do perfil não chegou ao controle na origem {origem!r}"
@@ -135,7 +135,7 @@ def test_nenhuma_linha_de_producao_arma_a_trava() -> None:
         "a trava manual voltou ao código de produção:\n"
         + "\n".join(achados)
         + "\n\nEla saiu inteira em 14/09/2026 por decisão dela — *«e pra qualquer "
-          "outro jogo»*, *«isso nao faz sentido mais»*. "  # (noqa-acento): dela
+          "outro jogo»*, *«isso nao faz sentido mais»*. "  # (noqa-acento: citação literal)
           "Se um caminho novo precisa "
           "proteger um ajuste dela contra o perfil, a pergunta a fazer é outra: "
           "por que o ajuste não está NO perfil?"

@@ -5,7 +5,8 @@ Este arquivo existe por causa de um ensaio que FALHOU, e o modo como ele falhou
 
 12/08/2026, bancada, três DualSense no rádio, Steam viva. A primeira versão do
 gatilho esperava 1,5 s depois de CADA conexão e escrevia só naquele controle:
-`.0034` às 23:55:53, `.0035` às 23:55:54, `.0036` às 23:55:56. Resultado, literal.
+`.0034` às 23:55:53, `.0035` às 23:55:54, `.0036` às 23:55:56. Resultado: só o player 4 (o
+controle azul) ficou com a cor; o resto ficou no padrão da Steam.
 
 A leitura (ensaio `gatilho-1500ms-por-controle` em `docs/data/ensaios.csv`): a
 rajada da Steam **não é por controle, é por evento** — cada conexão nova faz ela

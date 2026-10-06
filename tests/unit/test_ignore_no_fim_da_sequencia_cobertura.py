@@ -1,6 +1,6 @@
 """IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) — a decisão do IGNORE espera a mesa.
 
-O defeito, medido no journal do usuário com quatro DualSense e o Sackboy aberto: o
+O defeito, medido no journal da bancada com quatro DualSense e o Sackboy aberto: o
 produto decidia o `SDL_GAMECONTROLLER_IGNORE_DEVICES` **durante** a subida dos
 gamepads virtuais, uma vez por borda, e nada reavaliava a decisão quando a
 subida terminava.

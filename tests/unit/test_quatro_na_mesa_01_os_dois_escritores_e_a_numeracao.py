@@ -26,7 +26,8 @@ marcado ausente pelo tique** — uma única leitura de cor do ausente:
 
 O quarto foi de **3 para 4** e a lightbar dele de **verde para rosa** por
 causa de uma consulta — e o tique o traz de volta a 3 dois segundos depois,
-sem parar, enquanto o controle bounça no rádio. É a
+sem parar, enquanto o controle bounça no rádio. É a frase de produto: *"quando um
+controle pisca, os outros trocam de cor e de número sozinhos, e voltam"*.
 
 A cura NÃO é chamar ``mark_disconnected`` (ele está sem chamador de produção
 **de propósito** — R-15/D2: o lugar na fila sobrevive ao disconnect). O
@@ -366,7 +367,7 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
     def test_a_geometria_de_27_08_nao_colide_mais_por_construcao(
         self, config_isolado: Path
     ) -> None:
-        """A cena do journal do usuário, e é a única que produz a colisão."""
+        """A cena do journal da bancada, e é a única que produz a colisão."""
         reg = mesa_de_quatro(Relogio())
         inst = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))

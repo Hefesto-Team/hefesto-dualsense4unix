@@ -3,7 +3,7 @@
 O DEFEITO, medido na sessão do usuário de 28/09/2026 (00h15 a 00h52)
 --------------------------------------------------------------
 Três bordas do botão do microfone do branco que ela não deu (00:18:40,
-00:22:15 e 00:22:17).  Cada uma
+00:22:15 e 00:22:17). Ela: *«eu não apertei o botão do Mic»*. Cada uma
 elegeu o microfone da máquina e **gravou o perfil do usuário**.
 
 A causa estava escrita no leitor: a borda era contada pelo bit `MIC_MUTE` de

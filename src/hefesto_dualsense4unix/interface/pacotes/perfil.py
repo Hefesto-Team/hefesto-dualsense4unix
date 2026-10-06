@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """O PERFIL ATIVO, lido de quem já é dono dele — `profiles/loader.py`.
 
-POR QUE ESTE ARQUIVO EXISTE: ele nasceu de um erro apanhado em
-01/09/2026 com uma pergunta só
+POR QUE ESTE ARQUIVO EXISTE: ele nasceu de um erro apanhado em 01/09/2026 com uma
+pergunta só — se os problemas relatados estavam sendo corrigidos na origem.
 
 A resposta era NÃO. O pacote trazia dezessete valores `sem_dono` — travessões
 na tela, com uma frase explicando que o produto não sabia aquilo. **Doze deles
@@ -442,7 +442,7 @@ def com_a_carona(frase: str = "") -> str:
     qualquer coisa escrita nela substitui a chamada do `hefesto-launch` em
     silêncio. Sem o atalho, o `launch_env` que o daemon materializa nunca é
     lido — o jogo é instruído a ignorar o vpad que nós criamos para ele. Nas
-    palavras de produto: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
+    palavras do usuário: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
     no controle com tudo funcionando"*.
 
     POR QUE AQUI, E NÃO NO PACOTE DE UMA ABA — 06/09/2026, ONDA5-07-02

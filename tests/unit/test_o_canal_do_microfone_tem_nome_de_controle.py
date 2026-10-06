@@ -531,7 +531,7 @@ def test_a_regra_0_cobre_os_quatro_chamadores_de_uma_vez() -> None:
 
 
 def test_o_canal_nasce_mudo_e_o_produto_desmuta() -> None:
-    """MEDIDO na máquina do usuário em 06/09/2026, com PipeWire 1.6.8::"""
+    """MEDIDO na bancada em 06/09/2026, com PipeWire 1.6.8::"""
     source = canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
     assert source is not None
     assert ["pactl", "set-source-mute", canal.nome_do_canal(P1), "0"] in PACTL_PEDIDO, (

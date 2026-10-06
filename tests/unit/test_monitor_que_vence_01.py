@@ -1,6 +1,6 @@
 """Um microfone de verdade nunca perde para um monitor.
 
-MONITOR-QUE-VENCE-01 (08/08/2026). MEDIDO na máquina do usuário, com o drop-in
+MONITOR-QUE-VENCE-01 (08/08/2026). MEDIDO na bancada, com o drop-in
 instalado pelo `install.sh`:
 
     alsa_output…DualSense…analog-surround-40.monitor   priority.session = 1109

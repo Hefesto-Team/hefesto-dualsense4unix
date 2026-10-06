@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """A RÉGUA DO REUSO NA ABA CONTROLES — e das três regras que ela reescrevia errado.
 
-POR QUE ELA EXISTE. LEI 0 da migração, palavra em 02/09/2026
+POR QUE ELA EXISTE. LEI 0 da migração, palavra em 02/09/2026:
+
+    *"no gtk eu já deixei praticamente tudo pronto, estamos adaptando e migrando
+    o que fizemos na versão estável pra ela funcionar no html. Não temos que
+    recriar nada."*
 
 `interface/cartao_do_controle.py` tem **26 funções públicas de módulo** — 5.951
 linhas de texto de tela que a GTK já provou. Medido em 02/09/2026, a interface
@@ -28,7 +32,8 @@ O QUE CADA UMA CUSTAVA, medido com os DOIS controles do usuário na mesa (um `us
    transformava AUSÊNCIA em zero. O daemon só publica `speaker` depois do
    primeiro `speaker.set` (`ipc_handlers.py:3288`).
 3. **`#000000` sobre uma cor desconhecida.** O motor diz por que é mentira, com
-   todas as letras:  (`controller_card.rotulo_lightbar`).
+   todas as letras: *"o 0,0,0 do sysfs sem escrita nossa pode ser o azul-kernel
+   brilhando neste exato momento"* (`controller_card.rotulo_lightbar`).
 4. **um ramo inteiro que só sabia devolver `—`.** A máscara caía em
    `NOME_DA_MASCARA.get(vpad_backend, "—")`, e `NOME_DA_MASCARA` é indexada por
    MÁSCARA (`dualsense`, `xbox`) enquanto `vpad_backend` vale `uhid`/`uinput`/
@@ -212,7 +217,8 @@ def test_sem_leitura_de_audio_o_microfone_nao_chuta(pac, a02):
     `bool(None)` → `False` → `mic_set(True)`: o clique CALAVA um microfone que
     ninguém sabia se estava calado.
 
-    A regra é a do motor, palavra por  (`controller_card.acao_mic`), e
+    A regra é a do motor, palavra por palavra: *"mandar um pedido sem saber o
+    estado atual seria chutar qual é o oposto"* (`controller_card.acao_mic`), e
     a frase que sobe à tela é a dele (`DICA_MIC_SEM_LEITURA`).
 
     MORDE: apagar a guarda faz `chamadas` virar `[("mic_set", (True,), ...)]`.
@@ -241,7 +247,9 @@ def test_a_cor_de_fonte_desconhecida_nao_vira_preto(pac, a02):
     """`lightbar_source == "desconhecida"` é "não sei", e não "apagada".
 
     O dono da regra é `controller_card.rotulo_lightbar`, e ele devolve `None`
-    como cor-base exatamente aqui. A frase dele.
+    como cor-base exatamente aqui. A frase dele: *"NUNCA 'apagada': o 0,0,0 do
+    sysfs sem escrita nossa pode ser o azul-kernel brilhando neste exato
+    momento"*.
 
     **A PALAVRA MUDOU EM 04/09/2026 — decisão [02] dela**, e o que esta régua
     mede não: *"palavra curta no lugar do travessão, frase inteira no hover"*.

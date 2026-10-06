@@ -1,7 +1,7 @@
 """CONTAGEM-E-COOP-01 (E2) — a aba Emulação conta APARELHO, não nó.
 
 O campo "Gamepads:" dizia ``len(glob("/dev/input/js*"))`` e chamava aquilo de
-"controles detectados pelo sistema". Medido na máquina do usuário em 31/07/2026, com
+"controles detectados pelo sistema". Medido na bancada em 31/07/2026, com
 UM DualSense no cabo, o vpad do Hefesto de pé e a Steam aberta, ele dizia
 **SEIS**::
 

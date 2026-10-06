@@ -28,7 +28,7 @@ bancada em 22/08/2026::
     4-1        2357:012d   ff/ff/ff   do fabricante — o kernel NÃO nomeia
     4-3        05e3:0626   09/00/00   hub
 
-Por isso o grau. ``GRAU_LIDO`` é ;
+Por isso o grau. ``GRAU_LIDO`` é *"o kernel disse, e temos palavra para isso"*;
 ``GRAU_DESCONHECIDO`` é *"ninguém disse"* — a classe ``ff``, em que o fabricante
 declinou de classificar, e qualquer código que este módulo não saiba nomear. Os
 dois casos guardam o código cru em ``classe`` para a tela mostrar, e nos dois a

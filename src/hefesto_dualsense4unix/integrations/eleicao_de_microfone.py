@@ -1,9 +1,13 @@
 """Elege o microfone do sistema POR CONTROLE — e sabe voltar atrás.
 
-MIC-DA-MESA-ELEICAO-01 (01/09/2026). Decisão de produto, com as palavras de produto
+MIC-DA-MESA-ELEICAO-01 (01/09/2026). Decisão de produto, com as palavras do usuário:
+
+    *"Se eu apertar o botão físico mic do controle e ele acender, significa que
+    eu quero que o canal de áudio do microfone seja o controle. O botão de
+    silenciar é confuso e mexendo com ambos os canais de áudio é péssimo."*
 
 O botão do mic deixa de ser "mudo" e passa a ser **ELEIÇÃO**: apertar quer
-dizer , e o canal de captura DAQUELE controle vira
+dizer *"eu falo por este controle"*, e o canal de captura DAQUELE controle vira
 o microfone que o sistema usa.
 
 O QUE ESTE MÓDULO NÃO FAZ, e cada linha é uma medição:
@@ -38,7 +42,8 @@ o microfone real dela quatro degraus para baixo, caladas.
 
 A ELEIÇÃO ENCOLHEU — CANAL-POR-CONTROLE-01, 03/09/2026
 -------------------------------------------------------
-Decisão de produto, com as palavras de produto e sem corrigi-las
+Decisão de produto, com as palavras do usuário e sem corrigi-las:
+*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
 
 Duas coisas que este módulo tratava como uma passam a ser duas:
 
@@ -159,7 +164,7 @@ def palavra_no_ar(uniq: str) -> bool | None:
 
 
 def dizer_no_ar(uniq: str, ligado: bool) -> bool:
-    """. False = ninguém atendeu."""
+    """*"Quero/não quero este microfone no ar"*. False = ninguém atendeu."""
     dizedor = _DIZEDOR_DO_NO_AR
     if dizedor is None:
         return False

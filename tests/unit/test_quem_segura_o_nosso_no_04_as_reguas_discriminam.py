@@ -71,7 +71,8 @@ A régua 2 não CONFUNDE o espelho com o nosso vpad: ela o deixa de fora, e há
 teste que morde. Mas ela também não tem NOME para ele. Um jogo que segure só o
 espelho do nosso vpad — que é o caminho normal quando o Steam Input está
 ligado, e a entrada DELE somos nós, lavada pela Steam — cai no veredito
-`NENHUM`, cujo texto é
+`NENHUM`, cujo texto é *"o censo FECHOU (...) e nenhum deles segura o nosso nó
+nem o do físico. Isto é uma afirmação, não uma ausência de dado."*
 
 **É uma afirmação, e ela lê como "a nossa entrada não chegou ao jogo" quando a
 entrada chegou, um andar acima.** Curar isso é acrescentar uma classe de alvo e

@@ -87,7 +87,7 @@
 # `devnum`, e o orçamento recomeça, como no rádio.
 #
 # ─── O religar NA HORA (STORM-USB-02, 24/09/2026) ────────────────────────────
-# O tique do watchdog passa a cada 2 min (medido no journal do usuário: 5.671
+# O tique do watchdog passa a cada 2 min (medido no journal da bancada: 5.671
 # intervalos, mediana 120 s, o maior 126 s), e o lugar guardado de quem saiu
 # vale 30 s (`identity.prazo_do_lugar_guardado`). Religado no tique, o controle
 # volta depois do prazo em mais de 3 de cada 4 quedas, e os outros já trocaram

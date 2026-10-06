@@ -2,7 +2,10 @@
 
 O teste que a medição dela de **06/08/2026, 22h40** exigiu, e que não existia:
 
->
+> *"a `E0` ganha um critério a mais: não basta parar de afirmar o que não se
+> entrega — é preciso garantir que **dois aparelhos nunca acendam o mesmo
+> número**, inclusive quando um deles é o nosso próprio vpad. Um teste que
+> conte LEDs acesos por número fecha isso, e não existe hoje."*
 
 ## O que conta como "exibir um número"
 

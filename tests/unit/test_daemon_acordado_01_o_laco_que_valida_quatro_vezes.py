@@ -243,7 +243,7 @@ class TestOReportDeAudioNaoViraInput:
     com CRC válido — a única diferença é o bit `0x02` do byte 1. O laço novo
     sai ANTES dos quatro consumidores quando a base é `None`, e é aqui que se
     prova que ele continua saindo: um byte de Opus caindo sobre `buttons[2]`
-    foi o que prendeu os botões MIC e PS na máquina do usuário em 16/08.
+    foi o que prendeu os botões MIC e PS na bancada em 16/08.
     """
 
     def test_report_de_audio_nao_entrega_nada(self) -> None:

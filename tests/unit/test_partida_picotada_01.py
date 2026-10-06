@@ -1,6 +1,6 @@
 """Um tique CEGO não derruba a exceção de Steam Input no meio da partida.
 
-PARTIDA-PICOTADA-01 (08/08/2026). O defeito, MEDIDO no journal do usuário: entre
+PARTIDA-PICOTADA-01 (08/08/2026). O defeito, MEDIDO no journal da bancada: entre
 01:43 e 03:03, com o Sackboy aberto e dois DualSense no cabo, o gamepad virtual
 foi suspenso e retomado **oito vezes**. Cada retomada custa uma recriação de
 vpad, e cada recriação derruba o jogador 2 do co-op

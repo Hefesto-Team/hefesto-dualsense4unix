@@ -522,7 +522,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     Ela é MAIS COMPLETA que o que este pacote tinha: devolve a largura da barra
     já em `%` (`pct.w`), o número formatado, o `sabe` que distingue "zero" de
     "não sei", a cor do plástico e o `treme` por motor. Reescrever isso era a
-    duplicação que a pergunta de 01/09 pegou
+    duplicação que a pergunta de 01/09 pegou — *"não estamos refazendo do
+    zero né?"*
 
     O QUE SOBRA AQUI é o ACHATAMENTO: o produto devolve `{"pct": {"w": "66.7%"}}`
     e a tela endereça `data-campo="forca-pct"`. Traduzir a forma é da interface;
@@ -708,7 +709,8 @@ _BATEU_EM: dict[str, float] = {}
 def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
     """Diz ao daemon, a cada segundo, que a janela ainda segura os motores DE CADA teste.
 
-    NASCEU DA ORDEM, 15/09/2026. O
+    NASCEU DA ORDEM, 15/09/2026: *"o testar e parar é sobre o teste naquele
+    momento isso nao interfere in game"*  (noqa-acento: citação literal). O
     "Testar" tira os motores do jogo e os devolve no "Parar" — e fechar a
     janela, trocar de aba ou a janela morrer deixava o jogo mudo até ela voltar
     e clicar. O daemon solta o par que ninguém rebate
@@ -795,8 +797,9 @@ def _par_das_barras(
 ) -> tuple[int, int]:
     """`(weak, strong)` do teste DAQUELE controle, **reduzido pela barra de cada motor**.
 
-    **MEDIDO EM 09/09/2026 — VIBRA-MULT-01, e é a queixa de uso inteira.**  Duas coisas estavam
-    erradas, e a
+    **MEDIDO EM 09/09/2026 — VIBRA-MULT-01, e é a queixa de uso inteira:** na aba Vibração os
+    controles deslizantes não se multiplicavam (motor esquerdo vezes força, por controle). Duas
+    coisas estavam erradas, e a
     segunda é a razão de a primeira nunca ter aparecido:
 
     1. **Esta função lia duas chaves que o daemon não publica no bloco de onde
@@ -894,7 +897,8 @@ def _uniq(o: dict[str, Any]) -> str:
     faz este controle tremer até o Parar"*.
 
     **ELE PASSOU A SABER A DIFERENÇA ENTRE DOIS FATOS — 05/09/2026, e a decisão
-    é de produto na `05-Q6`:** . Até aqui ele devolvia `""` para os dois, e
+    é de produto na `05-Q6`:** *"Parece erro. Não deveria ocorrer ajuste de gambiarra
+    sobre falha de produto nosso"*. Até aqui ele devolvia `""` para os dois, e
     quem chamava escrevia a frase de UM — a do clique solto. O outro fato é o
     controle que caiu, e a tela acusava o clique do usuário por ele.
 
@@ -998,8 +1002,8 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
        `rumble_policy` da MESA (:func:`_forca_em_vigor`). Clicar "Auto" no P2
        apagava o `max` dele e acendia "Balanceado" um tique depois, calado — o
        botão que o usuário clicou não é o que fica aceso;
-    4. **o clique NÃO MUDOU NADA** — 17/09/2026, e é a queixa . O degrau que o usuário clicou já
-       era o que valia naquela coluna, o
+    4. **o clique NÃO MUDOU NADA** — 17/09/2026, e é a queixa de que o botão não ficava ativo.
+       O degrau que o usuário clicou já era o que valia naquela coluna, o
        perfil não recebeu um byte, e o produto não dizia uma palavra. São dois
        estados por baixo (a coluna HERDA o degrau, ou ele já é o override dela)
        e por isso duas frases — :data:`FRASE_DO_QUE_A_COLUNA_MOSTRA` e
@@ -1284,8 +1288,9 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
 def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Um dos quatro degraus, **daquele controle** — decisão, 03/09/2026.
 
-    **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** **. Era verdade enquanto o gesto
-    chamava `rumble.policy_set`, que não
+    **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** *"a política
+    é da MESA, não da coluna … clicar 'Economia' na coluna do P2 muda os
+    quatro"*. Era verdade enquanto o gesto chamava `rumble.policy_set`, que não
     aceita `uniq` (`daemon/ipc_handlers.py:3674`). O usuário decidiu **construir por
     controle**, e o caminho já existia inteiro pelo PERFIL — ver
     :func:`_gravar_a_forca`. O clique da coluna deixou de mexer nos vizinhos.
@@ -1494,11 +1499,15 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle começa a tremer e FICA tremendo até ela parar.
 
-    PEDIDO, 07/09/2026. Era um pulso de meio segundo, e o pulso não responde *"quanto é
+    PEDIDO, 07/09/2026: *"o botão Testar tem que ficar em estado de ligado
+    e ir refletindo os slicers ao vivo comigo. E se eu clicar em Parar ele para
+    de testar"*. Era um pulso de meio segundo, e o pulso não responde *"quanto é
     40%?"*: para isso a mão precisa estar no controle enquanto a outra arrasta a
     barra. `_refrescar_o_teste` reenvia o par a cada mudança de barra.
 
-    **UM TESTE POR CONTROLE — 03/10/2026, ela.** O pedido leva o `uniq` do controle
+    **UM TESTE POR CONTROLE — 03/10/2026, ela: *«vibração e háptico é por cada
+    controle e precisam funcionar em independente. hoje se eu clico em um o
+    outro controle para de ter o efeito»*.** O pedido leva o `uniq` do controle
     (`rumble_set_checked(..., uniq=...)`) e o serviço guarda um par por
     controle; esta aba não mira mais o seletor global (`controller.target.set`),
     que era o que fazia o serviço inteiro seguir o último clique. O «Testar» de

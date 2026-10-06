@@ -1,6 +1,9 @@
 """O estado de carga atravessa do byte até o payload — BATERIA-PARADA-01 (B1).
 
-A QUEIXA, e ela estava certa (26/08/2026)
+A QUEIXA, e ela estava certa (26/08/2026):
+
+    *"sinto que o percentual de bateria do controle inclusive nunca é
+    atualizado enquanto o controle tá conectado seja por cabo seja por bt"*
 
 O que estava congelado não era o número — era a AUSÊNCIA da outra metade. Três
 leituras do daemon vivo com sete segundos entre elas devolveram

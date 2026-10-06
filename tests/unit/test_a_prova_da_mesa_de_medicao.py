@@ -542,7 +542,9 @@ def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
 
 # O QUE O USUÁRIO PEDIU EM 07/09/2026, com quatro DualSense na mesa e o daemon parado
 def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
-    """**.
+    """*"não estamos usando o nosso mapa? pq até agora ele não entendeu qual
+    player deveria aparecer, nem qual controle (…) nem o modo de conexão (qual
+    é bt e qual é cabo) se tá ou não carregando"*.
 
     A página só sabia perguntar ao daemon, e com ele parado punha travessão em
     tudo — como se não houvesse controle nenhum, tendo QUATRO. Tudo isto o
@@ -891,7 +893,7 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
 
 
 def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
-    """** — 07/09/2026,"""
+    """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1400, "height": 1050})
         pg.goto(s.url)

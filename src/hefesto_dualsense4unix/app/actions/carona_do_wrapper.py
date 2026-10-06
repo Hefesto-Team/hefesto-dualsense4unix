@@ -21,7 +21,7 @@ daemon materializa nunca é lido, e vence a lista de IGNORE da própria Steam �
 que contém ``0x054c/0x0df2``, o PID do NOSSO vpad. O jogo é instruído a ignorar
 o controle que nós criamos para ele.
 
-O sintoma, nas palavras de produto: *"parou de ser reconhecido no jogo, mas o perfil
+O sintoma, nas palavras do usuário: *"parou de ser reconhecido no jogo, mas o perfil
 segue ativo no controle com tudo funcionando só não sendo reconhecido"*.
 Funciona no cabo, quebra no rádio, e SÓ o jogo não enxerga.
 
@@ -118,7 +118,7 @@ adiar (``adiado_steam_aberta`` / ``adiado_jogo_aberto``). A pergunta que sobra
 **ela não pode precisar lembrar de nada.** Então são as duas coisas:
 
 1. **avisa na hora**, uma vez (a frase da sentinela já nomeia o jogo e já diz
-   o que vai acontecer);
+   o que vai acontecer: *"Vou repor assim que o jogo e a Steam fecharem"*);
 2. **arma uma vigia** — um tique de :data:`INTERVALO_DA_VIGIA_S` segundos que
    refaz a passada até ela deixar de ser adiada. Quando ela fecha a Steam, o
    reparo simplesmente ACONTECE.

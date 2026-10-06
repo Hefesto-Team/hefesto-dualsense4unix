@@ -5,7 +5,7 @@ SENTINELA-WRAPPER-01 — 16/08/2026, defeito pego AO VIVO.
 O QUE ACONTECEU
 ---------------
 Ela jogou Pragmata (appid 3357650) no CABO e funcionou. Passou para o
-Bluetooth e, nas palavras de produto: *"no inicio travou alguns inputs mas logo em
+Bluetooth e, nas palavras do usuário: *"no inicio travou alguns inputs mas logo em
 sequencia ele parou de ser reconhecido no jogo, mas o perfil de pragmata segue
 ativo no controle com tudo funcionando só não sendo reconhecido"*.
 

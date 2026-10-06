@@ -2,9 +2,8 @@
 
 **A DECISÃO** (D-2909-O-MICROFONE-OBEDECE-AO-JOGO, por delegação, a
 validar pelo usuário; revoga a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO). O princípio é do usuário,
-de
-29/09, ~21h20: *«Garantir que o inpút do joogo chegue ao controle do  # (noqa-acento) dela
-jogador. Aí se o jogo (…) desliga e liga o microfone do user (…) aí o  # (noqa-acento) dela
+de 29/09, ~21h20: *«Garantir que o inpút do joogo chegue ao controle do  # (noqa-acento: citação literal)
+jogador. Aí se o jogo (…) desliga e liga o microfone do user (…) aí o  # (noqa-acento: citação literal)
 controle obedece»*.
 Com pad virtual DualSense, P1 a P4, cabo e rádio: a luz (`common[8]`) vai ao
 plástico literal; o mudo (`common[9]` 0x10) cala ou abre o microfone do

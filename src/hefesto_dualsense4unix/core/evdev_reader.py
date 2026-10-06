@@ -882,7 +882,7 @@ def discover_gamepads(
     `ESPECIE_EXTERNAL`, o nó que o sysfs diz ser de DualSense
     (`_no_de_dualsense_no_sysfs`) sai da volta ANTES de abrir, esteja ele
     aberto ou fechado (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01,
-    25/09/2026). Medido na máquina do usuário com os quatro controles: o inventário
+    25/09/2026). Medido na bancada com os quatro controles: o inventário
     dos externos abria pelo broker o nó de gamepad de cada DualSense a cada
     1,3 s (o tique de 2 s e a janela, a cada 4 s), só para ler a identidade e
     descartar — duas linhas por nó, uma em cada diário. Na dúvida (sysfs

@@ -14,7 +14,8 @@ janela estável diz isso desde 11/08/2026
 calada e a pessoa continuava clicando em "Máximo".
 
 **ERAM QUATRO ATÉ 07/09/2026, E HOJE SÃO TRÊS.** A primeira — a contagem de
-pedidos do jogo — saiu por  Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
+pedidos do jogo — saiu por ordem de produto: *"Vibração remove essa última frase
+também."* Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
 ``test_as_frases_sao_as_do_produto``, que segura a lista fora (uma frase a mais
 reprova). **A função do produto NÃO morreu** — a janela estável continua a chamar;
 o que esta aba deixou de fazer é perguntar.

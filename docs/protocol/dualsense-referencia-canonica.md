@@ -4,7 +4,10 @@
 
 - **Levantado em:** 01/08/2026, por duas frentes de pesquisa, e conferido contra
   o código desta árvore
-- **Por que este arquivo existe:** o usuário pediu, literal
+- **Por que este arquivo existe:** o usuário pediu, literal — *"pode documentar a
+  pesquisa dos agentes e salvar elas permanentemente no projeto como
+  documentação física? E atualizar as demais docs principais pra nunca mais
+  termos essa lacuna de conhecimento no repo?"*
 - **Regra de uso:** quando este documento e outro discordarem, **este vence** —
   mas só nas linhas marcadas ALTA. Ver "Como ler os graus de confiança"
 
@@ -348,7 +351,8 @@ aparelho ignora os bytes**.
 parado, um `EV_FF` pelo evdev ligou o motor **esquerdo**. Em seguida saiu **um
 único** report com os bits de vibração **desligados** (`flag0` `0x01|0x02`, a
 atenuação `0x40` do `flag1` e o `0x04` do `flag2`) pedindo `common[2] = 200`
-(direito) e `common[3] = 0` (esquerdo). Literal.
+(direito) e `common[3] = 0` (esquerdo). Literal: *"esquerda e senti que
+foi pra direita e lá morreu"*.
 
 **O tremor trocou de lado.** Logo o report agiu, e agiu **pelos bytes**. O lado
 que estava parado começou a vibrar e o que estava vibrando parou, sem que
@@ -597,7 +601,8 @@ funciona, e não há ponte.** Há um canal que responde.
 ATENÇÃO: **FALÁCIA DO CANAL QUE RESPONDE** — batizada aqui em 15/08/2026, e é a
 gêmea da *falácia do perfil ausente*. A primeira conclui **impossibilidade** a
 partir de **ausência de achado**; esta conclui **função** a partir de
-**resposta**. Um canal que executa um `common` de 47 bytes provou que executa um
+**resposta**: *"o canal aceitou o que mandei, logo ele faz o que eu esperava
+dele"*. Um canal que executa um `common` de 47 bytes provou que executa um
 `common` de 47 bytes. Nada além.
 
 **O ensaio que decide, e ele é o próximo:** mandar o mesmo degrau com **conteúdo
@@ -630,7 +635,11 @@ deixarmos.
 A palavra *"impossível"* caiu duas vezes no mesmo dia, e as duas vezes por causa
 dela. De manhã pelo argumento, literal:
 
-> **
+> *"se no PlayStation via BT tudo isso funciona e pq tem um meio físico pra isso
+> funcionar e ainda não descobrimos, pq a documentação oficial é focada no cabo.
+> mas muita coisa impossível de fazer acontecer nós fizemos já: lightbar no bt,
+> mic funcionando mesmo com processador AMD e kernel zuado. só falta mapear
+> cientificamente pra tirarmos os achismos nossos do projeto"*
 
 De madrugada pelo aparelho. E a mesa 2+2 — o instrumento sem o qual nenhuma
 linha desta seção existiria — **também foi decisão de produto**.
@@ -972,7 +981,7 @@ por disciplina desta casa, não por dúvida sobre o que ela ouviu.
 ### O microfone por rádio, e o driver que o desliga — 10/09/2026
 
 **GRAU: LIDO NO FONTE do driver que este produto instala**, mais a assinatura
-no journal do usuário.
+no journal da bancada.
 
 Um quadro de microfone por Bluetooth chega com o **mesmo `reportID` `0x31`, o
 mesmo tamanho de 78 bytes e um CRC-32 válido** que um report de estado de
@@ -1005,7 +1014,7 @@ reação do firmware.
 debounce de 1,0 s do daemon (`MIC_SOSSEGO_S`) engole as primeiras transições; a
 seguinte é aceita como o dedo do usuário no botão; o daemon desliga o microfone. Sem
 o `0x32` o firmware para de oscilar, então nunca mais nasce borda e ele não
-volta. No journal do usuário, às 09:42 de 10/09:
+volta. No journal da bancada, às 09:42 de 10/09:
 
 ```
 mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
@@ -1022,7 +1031,7 @@ bt_mic_palavra_dela  ligado=False
 | bordas contadas pelo daemon | ~28/s | **0** |
 | bit estável por | — | **152 segundos** |
 
-Com o microfone no ar e ela falando. <!-- (noqa-acento: citação literal) -->
+Com o microfone no ar e ela falando: *"nao ficou maluco e nao desligou"*. <!-- (noqa-acento: citação literal) -->
 
 **Isso prova a cadeia inteira.** O gating não era reação do firmware ao microfone
 ativo — era o **kernel** mutando e desmutando, a partir de bordas que ele
@@ -1278,7 +1287,7 @@ Gatilhos e a decodificação se confirmou: *"rígido e desligado sem diferença"
 E a medição trouxe DUAS correções ao que estava escrito aqui:
 
 1. **a previsão de que os cinco presets de `0x26` seriam idênticos ERROU.**
-    O motivo é instrutivo — os
+   Ela: *"eles são bem diferentes viu"*. O motivo é instrutivo — os
    `forces[0]`/`forces[1]` desta árvore caíam em cima do bitmask de zonas, e
    cada preset produzia um bitmask ACIDENTAL diferente. Os parâmetros chegam e
    surtem efeito nos modos não oficiais;
@@ -1287,7 +1296,8 @@ E a medição trouxe DUAS correções ao que estava escrito aqui:
    fez nada. Os modos oficiais VALIDAM os parâmetros; os legados e os não
    oficiais não.
 
-E o aceite de produto dela mudou o objetivo da correção. Os cinco que funcionam **não
+E o aceite de produto dela mudou o objetivo da correção: *"as duas temos nomes
+perfeitos, pq essa é a sensação de usar ambas"*. Os cinco que funcionam **não
 foram tocados** — os bytes deles viraram dado, travados em
 `tests/unit/test_trigger_canon_01.py`. Os sete que não faziam nada passaram a
 mandar o modo oficial correto COM o bitmask de zonas.
@@ -1328,7 +1338,8 @@ SÃO expressáveis.
 > Gatilhos, com o daemon vivo, e perguntar o que o dedo sente. Se
 > `weapon()` não resistir e `vibration()` não pulsar, é a mesma classe de
 > defeito já curada; se ela gostar do que sente, o nome é que está errado, e
-> a decisão em 01/08 já disse qual vence.
+> a decisão em 01/08 já disse qual vence — *"as duas temos nomes
+> perfeitos, pq essa é a sensação de usar ambas"*.
 
 ### Leitura de estado — recurso que ninguém usa aqui
 
@@ -1566,7 +1577,8 @@ declara. E o libinput vê o mesmo nó como touchpad de notebook —
 `Capabilities: pointer gesture`, `Size: 71x51mm`.
 
 **O GESTO DE TRÊS DEDOS NÃO EXISTE, e o de dois faz o trabalho dos dois.**
-Ela levantou a pergunta com a mão no aparelho — ** <!-- noqa-acento: citação literal --> —
+Ela levantou a pergunta com a mão no aparelho — *"SE EU USAR 3 DEDOS DOU ZOOM
+E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE"* <!-- noqa-acento: citação literal --> —
 e 45 s de gesto contra `libinput debug-events` devolveram:
 
 | evento do libinput | quantos | dedos |

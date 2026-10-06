@@ -4,6 +4,9 @@
 os três estados da LUZ DO PLÁSTICO no 🎙, pedido em 10/09. Em 21/09 ela
 trocou o ato do mesmo botão:
 
+    "SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE ASSIM
+     ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR DEFAULT
+     SEGUE DESLIGADO"
 
 Os dois não cabem num elemento só, e a aritmética é do usuário: o microfone nasce
 ATIVO (ordem de 18/09), então a luz deixaria o botão verde **sem ela ter
@@ -20,7 +23,10 @@ Quem mede a trava nova é `test_o_mic_alterna_e_fica.py`.
 
 O enunciado antigo, para quem for ler o histórico:
 
-**O pedido, 10/09/2026:** **.  <!-- noqa-acento: citação literal -->
+**O pedido, 10/09/2026:** *"vamos lá na interface invertemos o botão mic
+ele aceso (vai indicar que agora tá gravando audio, ele captando audio vai
+ficar no estado de piscando (guia visual pro leigo que pegar o controle de
+primeira))"*.  <!-- noqa-acento: citação literal -->
 
 ## O QUE ESTA RÉGUA TRAVA, e o principal não é o CSS
 

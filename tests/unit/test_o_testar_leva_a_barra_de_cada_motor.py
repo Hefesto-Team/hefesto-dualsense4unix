@@ -2,7 +2,11 @@
 """VIBRA-MULT-01 — o "Testar" da aba Vibração leva a barra de CADA motor.
 
 A QUEIXA É DO USUÁRIO, 08/09/2026
----------------------------
+----------------------------
+    *"na guia vibração os slicers não estão se multiplicando: motor esquerdo x
+    força de vibração (ou personalizado), motor direito x força de vibração ou
+    personalizado, pra cada controle — e funcionar dentro do jogo respeitando
+    isso."*
 
 A CONTA existia e estava certa desde 04/09 (`gamepad._mults_por_motor`, 55
 réguas em `test_cada_motor_tem_o_seu_multiplicador.py`). A TELA passou a dizer

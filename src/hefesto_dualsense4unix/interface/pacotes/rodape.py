@@ -5,7 +5,9 @@ Ele mora no `topo.html`, que é o esqueleto compartilhado — logo não pertence
 nenhum pacote de aba. Os gestos são registrados em `("*", nome)`, que o
 `gesto_da_pagina` resolve depois de não achar o da página.
 
-O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido:
+O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido
+(*"salvar exportar importar. dividir e ver se a feature do botão tá condizendo
+com o output seu"*):
 
     Aplicar   `profile.reaplicar`, a cadeia da ativação (desde 01/10/2026; o
               `profile.apply_draft` antigo saiu do daemon)
@@ -22,7 +24,8 @@ esconderia trabalho.
 O "APLICAR" NÃO É REDUNDANTE, mesmo com a decisão de produto de que clicar já aplica.
 O que ele carrega sozinho é o **depois**: modo e máscara, que o jogo só lê
 quando abre, e que por isso não podem ir na hora. Foi um defeito real de
-08/08/2026, na
+08/08/2026, na palavra de produto: *"quando eu clico ali no inferior no verde em
+aplicar, ele não aplica e não abre o pop up"*.
 
 A CARONA DO ATALHO DE INICIALIZAÇÃO — QUEM PEGA E QUEM NÃO PEGA (06/09/2026)
 ---------------------------------------------------------------------------

@@ -475,7 +475,8 @@ _TETO_DA_ORDEM_DOS_ADAPTADORES = 63
 class AdaptadorDeclarado(BaseModel):
     """Um adaptador Bluetooth pelo ENDEREÇO: o nome que ela deu a ele.
 
-    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026)
+    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido: *«temos
+    o nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
     Revoga a herança da D3: com o adaptador levando o nome da porta, as
     entradas que ela numerou no Mapear viraram adaptadores «15» e «13». O
     nome é do APARELHO e vai com ele de porta em porta; o da entrada fica em
@@ -488,7 +489,8 @@ class AdaptadorDeclarado(BaseModel):
     daqui), e saíram na migração (:func:`migrar_o_documento`).
 
     E A ORDEM DA CAIXA DELE também mora aqui desde então: a posição em que
-    ela o arrastou na Conexões (25/09/2026). Ela morava no
+    ela o arrastou na Conexões (25/09/2026, *«segurar a área do conector e
+    arrastar ela pra mudar de ordem entre eles»*). Ela morava no
     ``gui_preferences.json``, pela chave do LUGAR (a D3): o terceiro registro
     do mesmo adaptador, e uma chave que mudava quando ele mudava de porta.
     <!-- noqa-acento: citação literal -->
@@ -521,12 +523,13 @@ class ControleDeclarado(BaseModel):
     zero a cada abertura.
 
     ``microfone`` é a ponte de mic por Bluetooth DAQUELE controle
-    (``QUATRO-MICROFONES-01``, 22/08/2026, ). Mora
+    (``QUATRO-MICROFONES-01``, 22/08/2026, decisão de produto: *"por controle"*). Mora
     aqui, e não no perfil, pela razão do cabeçalho de
     ``daemon/subsystems/bt_mic.py``: um microfone que liga ao trocar de jogo é
     exatamente a surpresa que aquele módulo recusa.
 
-    **OS TRÊS VALORES MUDARAM DE SIGNIFICADO EM 18/09/2026**, por
+    **OS TRÊS VALORES MUDARAM DE SIGNIFICADO EM 18/09/2026**, por ordem de produto:
+    *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*.
 
     ==========  =====================================================
     ``None``    ninguém disse nada → **o microfone LIGA**. É um
@@ -537,7 +540,9 @@ class ControleDeclarado(BaseModel):
     ==========  =====================================================
 
     **FATO SUBSTITUÍDO, e a razão dele continua de pé com outro nome.** Esta
-    linha dizia . Era verdade
+    linha dizia *"Só ``True`` chega ao disco; desligar escreve ``None``, porque
+    'nunca pedi' e 'não quero' deixam a ponte no chão do mesmo jeito — e um
+    ``false`` gravado seria um valor de catálogo para o silêncio"*. Era verdade
     enquanto o default FOSSE o silêncio. Invertido o default, ``None`` deixou
     de ser um jeito de desligar: seria o botão que não desliga. O medo que a
     regra velha protegia — o default entrando disfarçado de escolha do usuário — hoje

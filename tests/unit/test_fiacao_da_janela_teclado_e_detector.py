@@ -11,7 +11,7 @@ Três queixas medidas, três portões:
    PS vem desligado de fábrica por decisão registrada. Ela seguiu a tela e o
    gesto não fez nada.
 3. **JANELA-CEGA-01.** O ``state_full`` publica o estado do detector de janela
-   desde 28/07 e nenhuma aba lia
+   desde 28/07 e nenhuma aba lia: "o perfil não troca quando eu abro o jogo"
    não tinha como ser distinguido de "o perfil está errado".
 
 Os portões de estrutura leem o XML do Glade e a árvore de sintaxe do Python —

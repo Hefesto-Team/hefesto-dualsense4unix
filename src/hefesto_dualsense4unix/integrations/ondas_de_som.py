@@ -35,7 +35,7 @@ DualSense, com os picos casando em 0,01 dB.
 
 E o fluxo daqui **não acende a luz do microfone por engano**, que era o risco
 real: a PEÇA A (``quem_ouve_o_microfone``) desconta todo ``source-output`` com
-``resample.peaks``,  — e o argv que usamos é o
+``resample.peaks``, *"seja nosso ou de estranho"* — e o argv que usamos é o
 mesmo, com as mesmas três marcas. Um fluxo em modo de pico recebe ``max|x|``
 por bloco, não áudio: ele não consegue ouvir ninguém.
 

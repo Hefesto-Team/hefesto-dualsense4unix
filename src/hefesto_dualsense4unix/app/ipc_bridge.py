@@ -958,6 +958,9 @@ def frase_do_ato_do_microfone(corpo: Any) -> str | None:
 def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
     """Volume da CAPTURA do microfone, no sistema (MIC-VOLUME-01, 16/08/2026).
 
+    Pedido: *"um slicer de microfone pra definir o volume do microfone
+    real (independente de saber se tá via bt ou via cabo), o app deve ser
+    inteligente pra saber qual caminho usar"*.
 
     **Não confundir com `mic_set`.** São camadas diferentes e não se substituem:
 

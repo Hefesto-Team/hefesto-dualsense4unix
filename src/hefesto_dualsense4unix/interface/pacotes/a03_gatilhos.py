@@ -1651,7 +1651,10 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     E ELE PASSOU A GRAVAR NO PERFIL — 05/09/2026, a **decisão D2**
     (o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
     *"persistência no clique em toda parte, com o rodapé como rede de
-    segurança"*. O usuário pediu, com estas palavras.
+    segurança"*. O usuário pediu, com estas palavras: *"ao pular e sair configurando
+    de aba em aba o perfil vai se lembrando de cada config de cada aba pra cada
+    controle … e salvar se lembra disso quando eu for jogar o jogo e no dia
+    seguinte"*.
 
     **O QUE FALTAVA, MEDIDO:** `controllers[uniq].triggers` não persistia por
     clique nenhum. O `_RASCUNHO` guardava o gatilho aplicado NESTA SESSÃO e o
@@ -2250,7 +2253,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     **ESCREVER GLOBAL AQUI NÃO É O `None` QUE O `alvo_de_edicao` PROÍBE.** Aquele
     módulo existe porque `None` carregava duas coisas — *"o usuário clicou em Todos"* e
-     —, e a segunda virava escrita global silenciosa.
+    *"eu não sei quem é o alvo"* —, e a segunda virava escrita global silenciosa.
     Este gesto é a PRIMEIRA: `EstadoDoAlvo.TODOS`, escolha deliberada, com um
     clique do usuário por trás. O que ele nunca faz é o segundo caso — sem coluna não
     há `forma`, e sem `forma` ele recusa dizendo.
@@ -2386,8 +2389,8 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     PERFIL-01: override parcial nunca apaga a cor global no replug)"*. Por isso
     este gesto só toca `triggers` do controle clicado e devolve o resto intacto.
 
-    E O NOME É O QUE FALTAVA — decisão 17 dela, 02/09/2026:  O campo ao lado do botão é opcional;
-    preenchido, o par L2+R2
+    E O NOME É O QUE FALTAVA — decisão de produto de 02/09/2026: o efeito salvo aparece com o
+    nome que o usuário deu. O campo ao lado do botão é opcional; preenchido, o par L2+R2
     entra em "Meus efeitos" com aquele nome e passa a aparecer nas quatro
     colunas. Vazio, este botão continua exatamente o que era.
 

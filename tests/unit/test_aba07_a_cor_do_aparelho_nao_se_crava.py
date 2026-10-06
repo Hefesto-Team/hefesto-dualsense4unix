@@ -2,7 +2,14 @@
 
 A LEI, e é do usuário (03/09/2026)::
 
+    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
+     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
+     entende? nada hardcoded."
 
+    "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
+     players com cada controle — tudo isso muda de acordo com o controle
+     identificado no canto superior. é white no p1, mas a borda de tudo é
+     cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
 
 O QUE ESTA ABA JÁ TINHA, e não se repete aqui:
 `scripts/check_identidade_vem_de_cima.py` e

@@ -6,7 +6,7 @@ transporte**. O contrato é o mesmo do vpad: o jogo escolhe um gamepad, não um
 transporte — aqui, quem escolhe a saída escolhe um CONTROLE, não um sink.
 
 **O nome é do usuário** (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`,
-): «Alto-falante do Controle N», par de «Microfone do
+palavra de produto: *"4a"*): «Alto-falante do Controle N», par de «Microfone do
 Controle N», com o sufixo da Sony desde 23/09/2026. O `sink_name` segue o
 APARELHO (`hefesto_som_<hex6>`), e por isso sobrevive à troca de assento tanto
 quanto à troca de cabo.
@@ -288,7 +288,7 @@ def test_sem_placa_de_som_no_cabo_o_no_nao_nasce_e_a_rota_diz_por_que(
 
 
 def test_no_radio_sem_ponte_a_rota_recusa_com_a_frase() -> None:
-    """A queixa histórica dela."""
+    """A queixa histórica dela: *"na hora do vamos ver a versão de BT não funcionava"*."""
     for ponte in (None, lambda: False):
         rota = af.rota_do_no(_UNIQ_P2, af.TRANSPORTE_RADIO, ponte_do_radio=ponte)
         assert rota.tem_rota is False

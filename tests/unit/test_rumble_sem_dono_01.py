@@ -24,7 +24,7 @@ Aqui se morde o que faltava: **os bytes que vão ao fio**, e quantas vezes.
 **Face 2 — o quadrante silencioso.** Sem gamepad virtual E sem Modo Nativo ao
 mesmo tempo, ninguém protege: o multiplicador de intensidade da GUI não age (ele
 mora no `rumble_sink` do vpad) e o output do daemon não é mutado (só o Modo
-Nativo o muta). O journal do usuário mostrava exatamente isso —
+Nativo o muta). O journal da bancada mostrava exatamente isso —
 `launch_env_materializado ... backends=[] emulacao=False ... native=False` — e o
 produto não contava a ninguém.
 

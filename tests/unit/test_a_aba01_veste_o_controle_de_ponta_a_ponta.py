@@ -196,7 +196,8 @@ def test_os_vinte_e_quatro_modelos_de_fora_do_mockup_pintam(
 def test_a_borda_e_o_desenho_nunca_discordam(medido: dict[str, Any]) -> None:
     """A queixa de uso era a DISTÂNCIA entre os dois, e ela tinha quatro pixels.
 
-        **
+        *"é white no p1, mas a borda de tudo é cosmic red e os svgs não são os
+        que o meu mapa cataloga. isso tá errado"*
 
     A borda (`--plastico`, pela pele) e o desenho (`data-colorway`) são pintados
     por alvos DIFERENTES, a partir de duas chaves diferentes do pacote. Nada os

@@ -15,7 +15,9 @@ O QUE ESTE ARQUIVO TRAVA, e cada item é uma medição
   pergunta em 12/08 — *"isso vai servir pro player e pro lightbar,
   certo?"*;
 - **o portão dos dois modos**: em Modo Nativo / Conexão Nativa (Sony) o dono é
-  o jogo, e o gatilho não escreve NADA. Regra de produto, literal;
+  o jogo, e o gatilho não escreve NADA. Regra de produto, literal: *"no modo nativo
+  devolvemos o controle pra steam e no modo conexão também, todo o resto é o
+  hefesto"*;
 - **o cabo fica de fora**: lá a barra obedece (ensaio `lightbar-usb-1`), e
   escrever seria trabalho sem defeito para curar;
 - **a escrita é INCONDICIONAL**: nada de consultar cache de nó sysfs. Medido em

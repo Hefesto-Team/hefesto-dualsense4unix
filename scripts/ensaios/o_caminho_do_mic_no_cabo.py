@@ -5,7 +5,8 @@ A QUEIXA, E É DO USUÁRIO — 17/09/2026:
 
     *"sobre o mic do cabo ficar limpo igual o do mic no bt"*  # noqa-acento: citação literal
 
-E o outro lado da mesma frase, do mesmo dia, sobre o RÁDIO.  # noqa-acento: citação literal
+E o outro lado da mesma frase, do mesmo dia, sobre o RÁDIO: *"o som do mic ta
+divino"*.  # noqa-acento: citação literal
 
 POR QUE ESTE INSTRUMENTO EXISTE, E POR QUE ELE NÃO CURA NADA
 =============================================================
@@ -155,7 +156,8 @@ ou sobre o ganho de captura vale nos DOIS transportes, com a mesma justificativa
 escrita. Ligar o bit3 só no cabo seria exatamente a cura por instância que ela
 vetou.
 
-E pela  — o que o passo 5 decidir deixa de ser um bit
+E pela ordem de 17/09 — *"os jogos e perfis tem que iniciar com todas as
+features ativadas por default"* — o que o passo 5 decidir deixa de ser um bit
 sem opinião e passa a ter um **default escrito e justificado**.
 
 AS ARMADILHAS DESTE CAMINHO, e as três já custaram

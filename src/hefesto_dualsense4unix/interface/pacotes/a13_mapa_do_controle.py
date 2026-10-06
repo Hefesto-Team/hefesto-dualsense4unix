@@ -2,7 +2,13 @@
 """O mapa do controle pisca, segue a troca de botões e diz qual controle mostra.
 
 `mapa-do-controle.html`, O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01. A
-fala do usuário, 29/09/2026, com os quatro DualSense na mesa
+fala do usuário, 29/09/2026, com os quatro DualSense na mesa:
+
+    «Mesmo Sistema que implementamos na aba Controles para cada botão piscar
+    quando apertarmos ele no controle fisico deve ser implementado no Mapa do  (noqa-acento: citação literal)
+    Controle. (…) imagina que fulano tenha alterado ele pra refletir o botão X
+    por questão de acessibilidade lá devemos mostrar isso (…) Falta um filtro
+    pro controle conectado que está sendo visto ali.»
 
 A CAUSA, medida antes: o mapa nasceu como página de REFERÊNCIA do desenho e
 nunca foi ligado ao produto (zero `data-campo`, nenhum pacote); o «Jogador»

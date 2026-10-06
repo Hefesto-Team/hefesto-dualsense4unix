@@ -215,7 +215,7 @@ class AutoSwitcher:
         `_activate` — e NADA o sincronizava com `store.active_profile`. Um
         `profile.switch` dela (janela, CLI, PS+D-pad) trocava o perfil de
         verdade e o autoswitch seguia acreditando no que ELE tinha ativado por
-        último. A prova está no journal do usuário: `profile_autoswitch from_=None
+        último. A prova está no journal da bancada: `profile_autoswitch from_=None
         to=sackboy_nativo` com outro perfil ativo havia horas — o autoswitch
         "entrando" num perfil que já era o ativo, reescrevendo gatilhos, LEDs,
         modo e política de rumble por cima do que ela tinha escolhido na mão.
@@ -696,7 +696,7 @@ class AutoSwitcher:
         ):
             return
         # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
-        #
+        # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
         if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info

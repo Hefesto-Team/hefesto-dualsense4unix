@@ -55,7 +55,7 @@ def plan_mode_transition(
     significa "automático", e automático NÃO fura o portão da allowlist do
     Steam Input.
 
-    MEDIDO na máquina do usuário, e o custo foi imediato: com o Sackboy marcado, o
+    MEDIDO na bancada, e o custo foi imediato: com o Sackboy marcado, o
     botão "Jogar pelo Hefesto" parou de funcionar — o clique chegava sem
     ``origin``, era lido como reconciliação e o daemon o recusava com
     ``gamepad_start_recusado_steam_input``. A cura tinha um contrapeso escrito

@@ -1,8 +1,12 @@
 """O Hz tem a cor do que chega — O-HZ-TEM-A-COR-DA-DISTANCIA-01.
 
 O que o usuário disse em 30/09/2026, ~02h, com a aba Conexões aberta e os quatro
-DualSense no rádio
-E às ~03h, sobre quais números:  — o Hz de cada
+DualSense no rádio:
+*«naquela sessão do hertz eles precisam ter os
+numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal -->
+branco e verde pra indicar o quão bom a sua
+distancia tá daquele conector.»* <!-- noqa-acento: citação literal -->
+E às ~03h, sobre quais números: *«isso. um pra cada conector»* — o Hz de cada
 controle e o «N/79» de cada adaptador.
 
 MEDIDO antes da cura (02/10, sobre ``474029fe6``, o mesmo instrumento antes e

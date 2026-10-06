@@ -9,7 +9,9 @@ motor"**, e escolheu o alcance: **gatilho + vibração + luz**.
 A REGRA QUE MANDA NA COR, e é do usuário, verbatim
 =================================================
 
-    **
+    *"nenhuma cor dos controles nunca pode ser a mesma, mesmo no mesmo perfil e
+    estilo de jogo. Dentro da paleta de fps tem que ter variações pra cada
+    unidade de controle."*
 
 **Isso não é preferência estética — é ENDEREÇO.** A barra de luz é a única
 maneira de saber, olhando para a mesa, qual controle é qual. Duas unidades com a
@@ -23,7 +25,8 @@ iguais. O `auto_player_colors` é o que a impede hoje, e ele é um interruptor q
 alguém pode desligar sem perceber o que perde.
 
 **Então o estilo nunca escolhe UMA cor: escolhe uma FAMÍLIA**, e cada unidade
-recebe uma variação dela. É a leitura literal do que o usuário pediu.
+recebe uma variação dela. É a leitura literal do que o usuário pediu — *"dentro da
+paleta de fps tem que ter variações pra cada unidade"*.
 
 COMO AS QUATRO VARIAÇÕES NASCEM, e por que não são digitadas
 --------------------------------------------------------------
@@ -47,7 +50,8 @@ legível. **Se ela preferir apagada mesmo, é uma palavra e uma linha.**
 
 O «CO-OP LOCAL» SAIU — 25/09/2026, O-CO-OP-LOCAL-SAI-01
 --------------------------------------------------------
-O pedido é de produto (`D-2409-O-CO-OP-LOCAL-SAI`):  O Hefesto dá um
+O pedido é de produto (`D-2409-O-CO-OP-LOCAL-SAI`): *"Temos que remover o perfil
+coop ou modo de jogo coop que não faz sentido inclusive."* O Hefesto dá um
 controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não é um modo
 que se escolhe — um Estilo com esse nome prometia ligar o que nunca desliga.
 O que ele fazia (gatilho `SimpleRigid`,

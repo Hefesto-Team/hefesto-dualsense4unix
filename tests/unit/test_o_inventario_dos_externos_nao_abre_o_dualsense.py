@@ -1,6 +1,6 @@
 """O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01 — quem procura externo não abre o DualSense.
 
-Medido na máquina do usuário em 25/09/2026, com os quatro DualSense ligados: o
+Medido na bancada em 25/09/2026, com os quatro DualSense ligados: o
 inventário dos externos abria pelo broker o nó de gamepad de cada controle a
 cada 1,3 s (o tique dos externos, 2 s, e a janela, `controller.list` a cada
 4 s), só para ler a identidade e descartar. Cada abertura é uma linha em cada

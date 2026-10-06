@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """O CHIP DO ALTO-FALANTE TEM A CARA DO CHIP DO MICROFONE — 17/09/2026.
 
-**A ORDEM DE PRODUTO, com um print da aba Controles na mão:** **. <!-- noqa-acento: citação literal
--->
+**A ORDEM DE PRODUTO, com um print da aba Controles na mão:** o chip «acordado» ganha o mesmo
+estilo do botão MUDO acima.
 
 Os dois moram no MESMO cartão de dispositivo, um debaixo do outro: o rótulo da
 moldura do Microfone termina num chip (`MUDO` / `ATIVO`, com ícone e risco) e o
@@ -197,7 +197,7 @@ class TestACaraDoChip:
     def test_o_chip_do_canal_tem_a_cara_que_os_dois_ja_tinham(
         self, pagina: str
     ) -> None:
-        """**."""
+        """*"deixar esse acordado com o mesmo estilo do botao que ta MUDO acima"*."""
         canal = _classe_do_campo(pagina, CAMPO_DO_CHIP_DO_CANAL)
         tem = _estilo(pagina, canal)
         falta = {p: v for p, v in _cara_de_chip(pagina).items()

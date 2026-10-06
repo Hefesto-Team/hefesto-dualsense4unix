@@ -288,7 +288,8 @@ só falta implementar, é sprint.
 **Pergunta:** existe um identificador que (a) distingue as unidades, (b) é
 legível nos **dois** transportes e (c) **não exige escrita nenhuma**?
 
-É a pergunta de 15/08/2026 — ** — traduzida para algo que uma máquina responde. Lê os
+É a pergunta de 15/08/2026 — *"nos 4 controles via cabo e bt vamos ter
+sempre identificado né?"* — traduzida para algo que uma máquina responde. Lê os
 candidatos (`0x05`, `0x09`, `0x0b`, `0x20`, `0x22`) em cada controle **duas
 vezes**, com intervalo, e julga cada um contra cinco critérios: legível nos dois
 transportes, distingue as unidades, estável entre leituras, ancorado no MAC, e

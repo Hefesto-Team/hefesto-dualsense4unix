@@ -1,7 +1,7 @@
 """As frases — e a PALAVRA — que o usuário mandou tirar da tela, num lugar só.
 
-ELA, 31/08/2026, sobre o aviso do Modo Nativo. A regra que sobrou é curta e vale para a interface
-inteira:
+A DECISÃO DE PRODUTO DE 31/08/2026, sobre o aviso do Modo Nativo. A regra que sobrou é curta e
+vale para a interface inteira:
 
     **NENHUM ALARME SEM MEDIÇÃO.**
 

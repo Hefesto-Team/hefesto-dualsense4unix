@@ -308,8 +308,8 @@ def _detect_steam_appid(match: Match) -> str | None:
     traduzido). O editor simples não tem como exprimir esse recorte, e mostrar
     o perfil como "Jogo da Steam <id>" seria mentir sobre o que ele faz.
 
-    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado por ela). A regra estrita também
-    recusava
+    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado na bancada). A regra estrita
+    também recusava
     ``process_name``, e ESSA metade caducou. O parágrafo acima continua
     valendo inteiro para ``window_title_regex``.
 
@@ -319,7 +319,7 @@ def _detect_steam_appid(match: Match) -> str | None:
        Trocar "3357650 E PRAGMATA.exe" por "Jogo da Steam 3357650" na tela não
        muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
        que o seletor "Aplica a" faz.
-    2. A precisão que a recusa dizia proteger não existia. No journal do usuário de
+    2. A precisão que a recusa dizia proteger não existia. No journal da bancada de
        10/08, com a janela ``steam_app_3357650`` em foco, o daemon registrou
        ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
        — o perfil ``Pragmata`` NÃO era candidato ao próprio jogo. Sob Proton o

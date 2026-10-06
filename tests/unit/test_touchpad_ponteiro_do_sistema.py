@@ -1,8 +1,9 @@
 """TOUCHPAD-DO-SISTEMA-01 — o touchpad volta a ser touchpad, em todos os modos.
 
-O PEDIDO, 09/08/2026, textual: ** E, quando o assunto
-desviou para a emulação de mouse pelo analógico: ** — o pedido é sobre o TOUCHPAD como ponteiro do
-sistema.
+O PEDIDO, 09/08/2026: antes do Hefesto, com o DualSense por cabo ou BT, o touchpad funciona como
+mouse do sistema; o Hefesto impedia isso em todos os modos, e ele tem de voltar a funcionar assim,
+no Nativo ou no DualSense. A emulação de mouse pelo analógico é outra coisa — o pedido é sobre o
+TOUCHPAD como ponteiro do sistema.
 
 A CAUSA, medida no controle do usuário (``/run/udev/data/c13:68``, DualSense por USB,
 09/08/2026): ``E:ID_INPUT_TOUCHPAD=1`` **e** ``E:LIBINPUT_IGNORE_DEVICE=1``. Uma

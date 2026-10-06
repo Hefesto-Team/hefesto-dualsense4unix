@@ -330,7 +330,7 @@ class DaemonConfig:
     #:
     #: Quem rebate é `interface/pacotes/a05_vibracao._bater_o_coracao_do_teste`,
     #: a cada 1 s enquanto a janela vive. A ordem de produto: *"o testar e parar é
-    #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: dela)
+    #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: citação literal)
     rumble_active_em: float | None = None
     #: O par fixado de CADA controle, `{dono: (weak, strong, carimbo)}` (o `None` é a mesa
     #: inteira). `rumble_active`, `rumble_active_uniq` e `rumble_active_em` são o resumo
@@ -374,7 +374,8 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
 
     MASCARA-CONTAGIO-01, ponto 3, 21/09/2026 — **irmã exata de
     :func:`_a_escolha_dela_sem_o_vazamento`, logo abaixo**, no outro eixo. A
-    ordem de 19/09 nomeava os dois.
+    ordem de 19/09 nomeava os dois: *"sim tudo dualsense, tudo ligado
+    mascara dualsense por default mas esse vazamento me preocupa"*.
     <!-- noqa-acento: citação literal -->
 
     O `gamepad_emulation.flag` da máquina do usuário diz `xbox` — e não por escolha

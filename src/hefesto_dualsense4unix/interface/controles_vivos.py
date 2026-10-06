@@ -37,7 +37,9 @@ E o resto:
 
 O QUE ESTE PROGRAMA ESCREVE, e é UMA COISA SÓ (31/08/2026)
 ----------------------------------------------------------
-Até 30/08 este arquivo não escrevia nada. Mudou por pedido, literal:  e **.
+Até 30/08 este arquivo não escrevia nada. Mudou por pedido, literal: *"Não
+sei se o botão de ativar ele na interface tá funcionando viu. não sei se segue
+desativado."* e *"eu quero é que **ele funcione na interface e se lembre**"*.
 
 O único gesto que APLICA é a **fileira de modos da aba Jogar** — os botões
 `[data-modo]` de "O que o controle faz agora". Ele sai daqui por

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01 — a fileira do Modo é um grupo de rádio.
 
-A QUEIXA, 22/09/2026
- A foto: dois DualSense no
+A QUEIXA, 22/09/2026:
+*"pq eu nao posso trocar os modos de conexão pela interface?"*  # noqa-acento: citação
+*"eu saio clicando mas não muda de fato."* A foto: dois DualSense no
 rádio, ninguém jogando, «Steam Input» aceso; ela clica «Sony DualSense» e
 «Xbox», e o «Steam Input» continua aceso.
 
-A REGRA, 23/09/2026, e é ela que decide o que esta régua cobra: ** A primeira cura desta sprint
-consertou a foto e deixou a fileira
+A REGRA, 23/09/2026, e é ela que decide o que esta régua cobra: qualquer modo se escolhe a
+qualquer momento, sem ordem. A primeira cura desta sprint consertou a foto e deixou a fileira
 DEPENDENTE DA ORDEM — o «Steam Input» clicado vindo do «Xbox» só mexia na lista,
 o «Xbox» só tirava o jogo da lista se o Steam Input estava aceso, o jogo da
 Steam aberto recusava o clique, e com o jogo fechado o «Steam Input» gravava e

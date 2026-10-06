@@ -11,7 +11,9 @@ bancada: true
 
 **Encomenda dela, 07/09/2026, verbatim:**
 
->
+> *"O COMO é obrigatório: escreva o gesto exato que foi aplicado. É isto que se
+> perdia quando a sessão morria. isso aqui me quebra. isso eu espero que o
+> [assistente] descreva."*
 
 <!-- A palavra entre colchetes é uma ELISÃO, não uma paráfrase: o usuário
      escreveu ali o nome de um fornecedor, e este arquivo passou a ser
@@ -22,7 +24,7 @@ bancada: true
 E o defeito que fez este arquivo nascer, apontado por ela olhando a linha 10 na
 tela:
 
-> **
+> *"sinceramente não entendi o que diabos é pra fazer aqui."*
 
 Ela estava certa. O COMO saía como `linha do roteiro: 10` mais `passa quando:
 mudaram` — o roteiro repetido, não o gesto. Um roteiro escrito em telegrama

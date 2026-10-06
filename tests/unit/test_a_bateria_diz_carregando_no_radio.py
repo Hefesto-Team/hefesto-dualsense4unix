@@ -4,7 +4,8 @@
 **A DECISÃO, 06/09/2026, verbatim, e ela recusou as três opções que lhe
 foram oferecidas:**
 
-    **  <!-- noqa-acento: fala do usuário, verbatim -->
+    *"icone mas no radio ele pode tá carregando
+     tambem."*  <!-- noqa-acento: fala do usuário, verbatim -->
 
 São DUAS coisas numa frase, e as duas viram régua aqui:
 

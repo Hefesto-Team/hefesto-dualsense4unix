@@ -356,7 +356,8 @@ CANAL embaixo dela só aciona num transporte. Os dois números concordavam consi
 mesmos, e ninguém perguntava ao outro.
 
 **Ele INFORMA, nunca VETA.** `D-0609-O-MAPA-INFORMA-NUNCA-VETA`, palavra em
-06/09/2026
+06/09/2026: *"Esse mapa é funcional e real. tá desatualizado no sentido de não
+ter sido medido. foi e tudo funciona."* <!-- noqa-acento: citação literal -->
 Uma célula `nao-medido` vira **AVISO impresso**, e o `rc` continua ZERO. Quem a
 remede é a bancada, com o relatório de quem passou por ela
 (SPECS-A-PROCEDENCIA-01).
@@ -502,7 +503,9 @@ leva de 11/09 tirou o quadro «Modo» do editor de Perfis por ordem de produto e
 declarou, em três lugares, uma **«perda de capacidade»**. Quem derrubou a
 declaração foi **ELA**, no mesmo dia:
 
-> **  <!-- noqa-acento: citação literal -->
+> *"a informação que eu selecionar no modo ou mascara na aba jogar ao salvar o*  <!-- noqa-acento: citação literal -->
+> *perfil faz a mesma função que o modo tinha na aba perfil isso foi*  <!-- noqa-acento: citação literal -->
+> *implementado desde o inicio mas voltou e não deVEria ter ocorrido"*  <!-- noqa-acento: citação literal -->
 
 E o código concorda: `a01_jogar._gravar_o_modo_do_chip` → `_gravar_o_modo` →
 `interface/pacotes/perfil.gravar_o_modo_no_ativo` grava a seção `mode` do perfil

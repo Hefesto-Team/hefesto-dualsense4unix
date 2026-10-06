@@ -258,7 +258,7 @@ def test_o_gatilho_gravado_e_construivel(disco: dict[str, Any]) -> None:
 
 
 def test_personalizado_nao_mexe_em_nada(disco: dict[str, Any]) -> None:
-    """"Personalizado" é o estilo que diz ."""
+    """"Personalizado" é o estilo que diz *"eu ajusto na mão"*."""
     era = disco["perfil"]
     resposta = a10_perfis.editor_estilo(
         _ctx(), {"valor": "Personalizado"}, PonteDeMentira())

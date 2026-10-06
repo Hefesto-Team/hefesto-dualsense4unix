@@ -13,7 +13,8 @@ documentação". Medido em 11/08/2026: não era. O `--check` do `gerar-mapa.py`
 existia e NINGUÉM o chamava — nem workflow, nem hook, nem teste. Pela régua da
 casa (PORTÃO-VIVO-01), um gate que ninguém roda não é gate, é arquivo.
 
-E o defeito que o mapa foi feito para pegar é o dela, textual. Uma célula
+E o defeito que o mapa foi feito para pegar é o dela, textual: *"tínhamos algo
+para o cabo e na hora do vamos ver a versão de BT não funcionava"*. Uma célula
 que diz `aciona = sim, medido` e não aponta um teste é exatamente essa
 promessa: se aquela feature quebrar naquele transporte, a suíte inteira
 continua verde e ninguém fica sabendo.

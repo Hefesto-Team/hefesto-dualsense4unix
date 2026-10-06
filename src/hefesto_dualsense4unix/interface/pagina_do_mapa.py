@@ -391,7 +391,7 @@ ABRE_A_PORTA = """\
 #: A palavra de produto, na página da sessão dos desenhos: *«Vira caixa da janela,
 #: rolando por dentro»*. Até aqui esta era uma página de DOCUMENTO — a
 #: `.pagina` com `max-width:1180px` (a largura das abas antes de 08/09) e a
-#: página inteira rolando: na TV do usuário, 1180 x 2195 ao lado de uma janela de
+#: página inteira rolando: na TV da bancada, 1180 x 2195 ao lado de uma janela de
 #: 1600 x 808. O recuo e o tamanho vêm do dono comum das três páginas avulsas
 #: (`caixa_da_janela.moldura`), lidos do esqueleto das abas.
 #:

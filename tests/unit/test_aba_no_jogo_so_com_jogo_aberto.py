@@ -2,7 +2,8 @@
 
 O PEDIDO, LITERAL (10/08/2026)
 ===================================
-    **
+    *"essa aba no jogo só deveria aparecer quando efetivamente eu tivesse com
+    um jogo steam aberto"*
 
 Hoje ela aparece sempre.
 

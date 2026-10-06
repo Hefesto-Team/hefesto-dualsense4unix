@@ -1,7 +1,10 @@
 """O BOTÃO DE LIGAR O HEFESTO NA TELA NOVA: ele funciona, e ele se lembra.
 
-Pedido, 31/08/2026, literal
-    **
+Pedido, 31/08/2026, literal:
+
+    *"Não sei se o botão de ativar ele na interface tá funcionando viu. não sei
+    se segue desativado."*
+    *"eu quero é que **ele funcione na interface e se lembre**."*
 
 O QUE FOI MEDIDO ANTES DE UMA LINHA SER ESCRITA
 -----------------------------------------------

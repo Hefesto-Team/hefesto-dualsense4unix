@@ -1,7 +1,11 @@
 """A cena dela, medida no daemon: 3 no rádio + 1 no cabo, cada um com o SEU som.
 
 A CENA, com as palavras (10/09/2026)
------------------------------------------
+------------------------------------------
+    *"imagina que estejam jogando um fps com 4 players local (3 por bt … + um
+    no cabo) … o canal de som sfx (a cada tiro dado o som do tiro efeito
+    sonoro sai pra cada controle), e cada controle com seu microfone
+    individual funcionando."*
 
 Esta régua mede a metade de SAÍDA dessa cena no produto: sobe um `Daemon` de
 verdade com quatro DualSense no sysfs, e olha o que chegou ao `pactl` e às

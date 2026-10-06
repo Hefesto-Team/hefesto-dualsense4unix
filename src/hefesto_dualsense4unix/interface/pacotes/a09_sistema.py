@@ -569,6 +569,8 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
 
     O NOME E O NÚMERO VÊM DE CIMA — 03/09/2026, e é a lei de produto:
 
+        "se no topo tá mostrando controle white player 1, então cada aba vai
+         usar os controles lá de cima. Não mistura com a info dos mockups."
 
     ESTA LINHA LIA SÓ O `modelo` DO `state_full`, e o `modelo` sai do serial —
     que o daemon **não publica para quem está no rádio** (ver
@@ -637,7 +639,8 @@ def _repouso_do_painel(state: dict[str, Any] | None,
     dono dela — nunca digitada, pela razão que `_autostart()` já pagou.
 
     E A IDENTIDADE DE FÁBRICA VEM POR ÚLTIMO, que é a decisão 10 dela. As duas
-    coisas cabem no mesmo painel porque as duas respondem à mesma pergunta.
+    coisas cabem no mesmo painel porque as duas respondem à mesma pergunta —
+    *"o que eu digo ao suporte?"*.
 
     A ORDEM FOI MEDIDA, NÃO ESCOLHIDA. O painel tem 110 px (seis linhas) e leva
     `data-hef-rolar="fim"`: ele SEMPRE mostra o fim do texto. E
@@ -1845,8 +1848,8 @@ def _confirmado(o: dict[str, Any], gesto_: str,
 def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O PAR que o usuário pediu, num botão só: **Parar o serviço** e **Ativar o serviço**.
 
-    DECISÃO, 03/09/2026, com estas palavras:  — **um** controle, os dois atos. E é o que a página
-    comporta: a
+    DECISÃO, 03/09/2026: na aba Sistema, um controle específico para parar e ativar o daemon
+    — **um** controle, os dois atos. E é o que a página comporta: a
     coluna de ações desta faixa tem quatro botões e o portão do gerador
     (`aba09.py`, o par de alturas) reprova o quinto, porque as duas colunas
     irmãs desta aba acabam no mesmo y. Um botão a mais abriria os 38px de vão
@@ -1907,7 +1910,8 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def ativar_o_servico() -> bool:
     """Liga o serviço se ele estiver PARADO. Devolve se ELE precisou ligar.
 
-    DONO ÚNICO DO ATO, e ele existe por causa da outra metade da  — o interruptor
+    DONO ÚNICO DO ATO, e ele existe por causa da outra metade da decisão de produto:
+    *"Adiciona essa função extra quando clicar em ligar"* — o interruptor
     **Ligado** da aba Jogar liga o serviço também, e é o mesmo ato que o "Ativar
     o serviço" desta aba faz. Escrito duas vezes, ele teria dois donos: uma
     cópia desarmaria o `_user_stopped_daemon` e a outra não, e o daemon voltaria

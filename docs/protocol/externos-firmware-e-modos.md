@@ -1005,7 +1005,8 @@ não com endereço.
 
 ### O remapeamento persistente não existe para este modelo
 
-Medição dela, no aparelho.
+Medição dela, no aparelho: *"8bitdo ultimate software não funciona nem a pau no
+meu controle"*.
 
 Bate com o que se sabe da linha: o **Ultimate Software** atende os aparelhos
 novos (Ultimate, Pro 2, e parte dos Pro+). O **SN30 Pro** de 2018 era servido
@@ -1038,7 +1039,7 @@ invertido.
 ### Os dois botões do meio, medidos — e não há o que trocar
 
 O usuário perguntou se dava para trocar, por firmware, o botão do coração pelo da
-estrela. Medido em 11/08/2026, no
+estrela, *"pra ele sempre funcionar nesse sentido"*. Medido em 11/08/2026, no
 aparelho do usuário, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
 
 | botão no plástico | evdev | code | o que faz |
@@ -1057,7 +1058,8 @@ isto entendeu errado na primeira leitura e chegou a anotar "não há o que
 corrigir": não há **defeito**, e há um **pedido**, que são coisas diferentes.
 
 **No Switch: não dá.** O mapeamento vive no firmware, e o SN30 Pro de 2018 não
-tem remapeamento persistente — medido por ela. O Ultimate Software atende os aparelhos
+tem remapeamento persistente — medido por ela: *"8bitdo ultimate software não
+funciona nem a pau no meu controle"*. O Ultimate Software atende os aparelhos
 novos (Ultimate, Pro 2, parte dos Pro+); este modelo era servido pela ferramenta
 antiga, que **atualiza firmware e não remapeia**. Some-se a isso que o `fwupd`
 recusa o aparelho fora do modo bootloader (medido acima), e o caminho de

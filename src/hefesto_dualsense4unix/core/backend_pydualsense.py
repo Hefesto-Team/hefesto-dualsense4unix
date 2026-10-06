@@ -1113,7 +1113,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             ),
         )
 
-    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal do usuário.
+    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal da bancada.
     #
     # O `close()` do upstream é, literalmente:
     #
@@ -3223,7 +3223,9 @@ class PyDualSenseController(IController):
         """Repinta a barra dos DualSense do CABO, ignorando o cache.
 
         LIGHTBAR-O-CABO-FICOU-DE-FORA-01, achado por ela na bancada de
-        07/09/2026 com os quatro na mesa.
+        07/09/2026 com os quatro na mesa: *"o lightbar azul tá nos dois
+        controles. p1 e p2. cada controle deve ter um lightbar da sua cor
+        apenas"*.
 
         O IRMÃO DESTE MÉTODO SÓ CONHECE O RÁDIO. `reescrever_lightbar_por_hidraw`
         filtra por `_detect_transport(handle) == "bt"` — e está certo em
@@ -3238,7 +3240,7 @@ class PyDualSenseController(IController):
         regra — o reassert periódico deixa de martelar o firmware. Mas ela
         mede a COR, não o NÚMERO: quando a mesa se renumera, a cor que este
         controle deve ter mudou sem que a cor que ele TEM mudasse, e o cache
-        acerta a pergunta errada. O journal do usuário mostrou exatamente isso:
+        acerta a pergunta errada. O journal da bancada mostrou exatamente isso:
         `lightbar_reassert_skip_cache rgb=(0, 0, 255)`.
 
         Devolve ``{key: repintado?}``. Vazio = nenhum DualSense no cabo —
@@ -3325,7 +3327,8 @@ class PyDualSenseController(IController):
         dois dos três no padrão da Steam (ensaio `gatilho-1500ms-por-controle`).
 
         **3. O Modo Nativo ESCREVE, desde 23/09/2026.** Até ali era no-op, pela
-        regra de produto **. A decisão
+        regra de produto *"no modo nativo devolvemos o controle pra steam e no modo
+        conexão também, todo o resto é o hefesto"*. A decisão
         `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01)
         revoga o «zero write» SÓ para a luz e o número: *"no Modo Nativo, o
         Hefesto escreve a barra e o número SEMPRE"* — e este report é
@@ -4185,7 +4188,8 @@ class PyDualSenseController(IController):
     def assumir_volume_padrao_na_adocao(self, key: str, handle: Any) -> bool:
         """Toma a posse do volume e o põe em 100% assim que o controle é ADOTADO.
 
-        SOM-SEMPRE-01 (16/08/2026). Decisão de produto, textual: **.
+        SOM-SEMPRE-01 (16/08/2026). Decisão de produto, textual: *"precisamos setar o
+        som sempre em todos os controles no 100%"*.
 
         **O DEFEITO QUE ISTO FECHA, medido na bancada em 15-16/08 com o
         controle na mão, no CABO, em teste CEGO** (`docs/data/ensaios.csv`,
@@ -4256,7 +4260,8 @@ class PyDualSenseController(IController):
         funciona"*, `folha-mic-volume-o-byte-age-cabo-0909`) e o usuário mandou ligá-lo
         (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`). Quem o liga é o
         CAMPO do microfone (`set_microphone_volume`), e não a adoção: nascer a
-        100 % é decisão de produto sobre o som que SAI (**), e tomar a posse do ganho de
+        100 % é decisão de produto sobre o som que SAI (*"precisamos setar o som
+        sempre em todos os controles no 100%"*), e tomar a posse do ganho de
         CAPTURA de todo controle adotado seria decidir por ela uma coisa que ela
         não pediu — com o preço de nunca mais o firmware mandar naquele byte.
 

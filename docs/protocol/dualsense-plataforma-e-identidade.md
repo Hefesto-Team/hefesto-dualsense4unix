@@ -3,7 +3,10 @@
 O que terceiros mapearam sobre **subir o controle** e **saber quem ele é**,
 levantado em 03/09/2026 numa leva que não tocou o aparelho.
 
-> O usuário pediu isto com todas as letras.
+> O usuário pediu isto com todas as letras: *"lançar novo workflow pra agentes
+> procurarem no Github tais canais ou tais id (…) peneiraram em vários repo e
+> acharam pessoas que nem a gnt que tinham mapeado parte do quebra cabeça e
+> **como é só informação eles trouxeram**"*.
 
 **Grau de tudo o que está aqui: `afirmado-no-doc` ou leitura de fonte.** Nenhum
 byte saiu para o aparelho nesta leva — os dois controles estavam na bancada.

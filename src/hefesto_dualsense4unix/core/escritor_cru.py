@@ -64,7 +64,7 @@ O QUE ELE NÃO VÊ, dito antes que alguém descubra do jeito caro
   fora do Steam, outro daemon de controle — passa despercebido. Varrer
   ``/proc/*/fd`` inteiro seria caro e indiscreto, e a Steam é o escritor que
   a bancada mediu;
-- **Não sabe QUANDO o usuário escreveu**, só que ela pode. Daí a rate-limit não vir
+- **Não sabe QUANDO a Steam escreveu**, só que ela pode. Daí a rate-limit não vir
   daqui: quem decide a frequência é o gatilho;
 - **Degrada em silêncio.** Sem ``/proc``, sem permissão, orçamento estourado —
   devolve o que juntou. Ausência de veredito é "não sondado", **nunca**

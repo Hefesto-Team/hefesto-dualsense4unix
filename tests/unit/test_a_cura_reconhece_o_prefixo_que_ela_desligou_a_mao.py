@@ -1,4 +1,4 @@
-"""O estado REAL da máquina do usuário em 23/08/2026, e a cura tem de conviver com ele."""
+"""O estado REAL da máquina da bancada em 23/08/2026, e a cura tem de conviver com ele."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real

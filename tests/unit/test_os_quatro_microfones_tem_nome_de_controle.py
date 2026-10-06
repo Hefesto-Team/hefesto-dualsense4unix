@@ -1,9 +1,10 @@
 """Os QUATRO microfones: um nó por controle, com o nome DO USUÁRIO — MIC-OS-QUATRO-01.
 
-A palavra, 08/09/2026 à noite.  <!-- noqa-acento: citação literal, palavra por palavra -->
+A palavra, 08/09/2026 à noite: *"o lance dos 4 mic virtuais via bt pra cada
+controle e cavbo"*.  <!-- noqa-acento: citação literal, palavra por palavra -->
 
 E o NOME é decisão de 09/09/2026 (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
-MICROFONE-DO-CONTROLE-N`, ): **«Microfone do Controle N»**,
+MICROFONE-DO-CONTROLE-N`, palavra de produto: *"4a"*): **«Microfone do Controle N»**,
 com o número do ASSENTO, como na tela.
 
 O QUE ESTE ARQUIVO MORDE, e os três são defeitos MEDIDOS nesta árvore

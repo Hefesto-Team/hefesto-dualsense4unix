@@ -88,7 +88,8 @@
        essas é apagar o dado, não o enfeite.
        --------------------------------------------------------------- */
     --linha:#53576f;
-    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO.  / *"as linhas horizontais deveriam separar os campos em linhas"*
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
        e, quando a viu: *"as linhas divisórias em todas as páginas tão
        invisíveis (…) a primeira coluna serve como nome da linha e a divisória
        entre eles tem que estar clara"*.
@@ -133,7 +134,8 @@
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 
-     A recomendação foi levada a ela e o usuário aprovou: ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
+     A recomendação foi levada ao usuário e o usuário aprovou (*"eu confio em vc, manda
+     ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
      ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
      ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
      espremidas; e o teto protege a leitura, porque esticar sem limite alonga a
@@ -171,7 +173,7 @@
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
      DE ONDE SAI O 710, e por que não é a altura da tela. A primeira tentativa
-     foi 1048 — o teto da TV do usuário — para que nenhuma aba precisasse rolar. Deu
+     foi 1048 — o teto da TV da bancada — para que nenhuma aba precisasse rolar. Deu
      errado: o conteúdo das dez vai de 281px (Iluminação) a 783px (Conexões), e
      com 1048 a Iluminação ficava com 518px de quadro vazio. Ela: "iluminação,
      jogar e outras abas tão muito ruins com esse super espaço vazio na parte
@@ -526,7 +528,8 @@
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
      ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
      `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
@@ -632,6 +635,8 @@
      variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
      Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
      dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
      NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
      ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
      saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
@@ -790,7 +795,8 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    /* 777 DESDE 31/08/2026, e os 20px a mais são o
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
        Ela estava certa, e o número diz por quê: o card aberto da Controles
        ESTICA para preencher o corpo, então a folga de verdade é
        `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
@@ -802,9 +808,11 @@
        vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar.
 
        O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão de produto
-       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV.
+       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV:
+       *"ainda joga pra baixo e abre a barra de navegação. tem espaço vertical  <!-- noqa-acento: citação literal -->
+       pra aproveitar aqui"*.
 
-       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV do usuário
+       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV da bancada
        mede **840** px e a página pedia **809** (16 + 777 + 16). Os 31 px que
        sobravam não iam para aba nenhuma — morriam entre a moldura da `.janela`
        e a borda da janela do sistema. Cresça a janela quanto quiser: com a
@@ -823,9 +831,9 @@
          teto 855   a maior vista que este desenho promete PREENCHER. Acima
                     dela o que sobra viraria vão, e vão vazio é queixa de uso
                     (*"iluminação, jogar e outras abas tão muito ruins com esse
-                    super espaço vazio na parte inferior"*). Na TV do usuário o teto
+                    super espaço vazio na parte inferior"*). Na TV da bancada o teto
                     nunca é alcançado: 840 − 32 = 808. Numa tela 4K — e a TV
-                    do usuário tem o modo 3840x2160 — sem teto a Navegação ficaria com
+                    da bancada tem o modo 3840x2160 — sem teto a Navegação ficaria com
                     mais de mil pixels de vão.
 
        QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
@@ -871,7 +879,8 @@
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
   /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA, 05/09/2026
+     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
      a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
@@ -879,7 +888,8 @@
      A 05 mostrava até um interruptor de motor ACESO em laranja.
 
      POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
+     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
+     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
      entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
@@ -1042,7 +1052,7 @@
 
   /* ---------- O ACORDEÃO, E ELE É CSS PURO ----------
      Decisão, 28/08/2026: "clicar num abre e fecha os outros", "CSS puro,
-     sem JavaScript", ,
+     sem JavaScript", "o da fita já vem aberto, e clicar num card muda a fita",
      "o chip Todos abre os quatro", "a linha fechada mantém o resumo de hoje".
 
      COMO, SEM UMA LINHA DE JS: um rádio por controle, todos com o mesmo `name`.
@@ -1100,7 +1110,8 @@
        position:relative}
 
   /* ---------- A BORDA DO CARTÃO É O PLÁSTICO, E SÓ ELE ----------
-     Ela, 03/10/2026, olhando a foto dos quatro controles Bluetooth: ** — e a lista de
+     Ela, 03/10/2026, olhando a foto dos quatro controles Bluetooth: *"as borda
+     tá nas cores do lightbar e não do plastico ainda né?"* — e a lista de
      sprints pediu a borda de cada cartão, aberto e fechado, com a cor do
      plástico. Medido no DOM: o `borderTopColor` do `.ctl` JÁ era o plástico
      (2px); o que parecia a borda verde era o anel de 1px da barra de luz, por
@@ -1117,7 +1128,8 @@
   .ctl:hover{background:rgba(255,255,255,.03)}
 
   /* ---------- O LUGAR VAZIO ----------
-     Decisão, 31/08/2026:  — e, no mesmo turno,
+     Decisão, 31/08/2026: *"Deixa os outros espaços dos 4 controles a mostra
+     ainda mas cinza igual vc fez na aba jogar."* — e, no mesmo turno,
      *"tiramos o modo p3. p4 (seções expandidas não aparecem)"*.
 
      A GRAMÁTICA É A MESMA DA JOGAR, de propósito: cor explícita e nada de
@@ -1195,7 +1207,7 @@
     background:var(--border-forte);box-shadow:none}
 
   /* ---------- OS DOIS BOTÕES DO FIM ----------
-     Ela, 31/08:  Eles são `<a>`, e não
+     Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
      `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
      formas, e um link que se veste de botão continua sendo um link para quem
      usa teclado e leitor de tela. */
@@ -1466,7 +1478,7 @@
   /* O BLOCO DOS SENSORES PEDE A ALTURA QUE ELE TEM, e os Gatilhos absorvem a
      sobra. Com `flex:1 1 0%` nos dois o flex reparte a coluna em partes IGUAIS
      (111 e 111) — e os sensores precisam de 143. O resultado era o bloco
-     cortado no meio do acelerômetro: o usuário viu e disse .
+     cortado no meio do acelerômetro: o usuário viu e disse *"tá muito quebrado"*.
      `flex:0 0 auto` aqui, `flex:1 1 auto` nos Gatilhos: cada um pede o que
      precisa e quem estica é o que tem folga. */
   /* A CLASSE SE CHAMA `leituras`, E NÃO `sensores` — 31/08/2026, e é a cicatriz
@@ -1540,7 +1552,8 @@
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
      ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
      `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);margin-bottom:5px}
@@ -1709,6 +1722,8 @@
   /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
      é o que torna a cor honesta nos TRÊS estados.
 
+     DECISÃO DE PRODUTO: *"Cor + ícone. Redundante de propósito — quem lê rápido pega
+     pela cor, quem não distingue cor pega pelo risco."*
 
      POR QUE INVERTER, e não só acrescentar o risco: o alvo `classe` do piloto
      casa UM valor (`data-hef-quando`). Com a classe `off` acesa em `MUDO`, o
@@ -1772,7 +1787,7 @@
   .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:var(--fg)}
   /* ---------- O TRILHO DO GANHO DE ENTRADA (O-GANHO-DO-MIC-TEM-DONO-01) -----
-     20/09/2026,  <!-- noqa-acento: dela -->
+     20/09/2026, decisão de produto: *"deixa o slicer 2 dele na telka"*. <!-- noqa-acento: citação literal -->
 
      ELE MORA NA LINHA DO RÓTULO, e isso é ORÇAMENTO, não estética. Os quatro
      arranjos foram medidos no DOM a 1120, 1180 e 1440px, e o cartão tem
@@ -1931,7 +1946,8 @@
 
      O SUFIXO VIROU CHIP EM 17/09/2026, POR ORDEM DE PRODUTO, e a decisão de cima
      continua de pé: quem existe só no estado ruim é o ALARME, e ele continua
-     assim. O que mudou é a CARA do sufixo. Ele era três declarações (peso 400,
+     assim. O que mudou é a CARA do sufixo — *"deixar esse acordado com o mesmo
+     estilo do botão que tá MUDO acima"*. Ele era três declarações (peso 400,
      cinza, uma margem) ao lado de um chip, no mesmo rótulo, e lia como sobra de
      texto. Agora veste a mesma pílula do selo do microfone, pela declaração
      agrupada lá de cima.
@@ -1940,7 +1956,9 @@
      ANTES. A primeira tentativa desta leva pôs `text-transform` no chip do
      canal, para o par ficar idêntico ao chip do microfone — que diz a palavra
      dele em caixa alta. O portão `maiuscula-decorativa` reprovou, e ele carrega
-     a palavra de 11/09/2026, que cita ESTA palavra pelo nome
+     a palavra de 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o
+     cabo e acordado (ambos minusculo sem iniciar de forma capitular). Esse
+     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal -->
 
      AS DUAS ORDENS NÃO SE CONTRADIZEM, e é o que resolve o caso: o que o usuário
      pediu hoje foi o ESTILO — a pílula —, e a caixa do chip do microfone não é
@@ -2223,7 +2241,9 @@
   .glifos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:stretch}
   .gb{width:100%;height:100%;min-height:46px;display:flex;align-items:center;
       justify-content:center;color:var(--texto-suave);min-width:0}
-  /* O GLIFO ENCOLHE COM A COLUNA — 19/09/2026,  <!-- noqa-acento: dela -->
+  /* O GLIFO ENCOLHE COM A COLUNA — 19/09/2026, pedido: *"queria que os
+     svgs da aba controles ficassem menores a medida que a largura da página
+     horizontal diminua pra comportar ali"*. <!-- noqa-acento: citação literal -->
 
      O `glifo()` emite `width="38" height="38"` no `<svg>`, e a grade é
      `repeat(4,1fr)`: as colunas encolhem, o desenho não. Na foto dela, com a
@@ -2485,7 +2505,10 @@
   .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
   .mudo-i[data-som="DESLIGADO"]{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}
-  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido, 10/09/2026 ---------.
+  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido, 10/09/2026 ----------
+     *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
+     vai ficar no estado de piscando (guia visual pro leigo que pegar o
+     controle de primeira)"*.
 
      A INVERSÃO É O PEDIDO: o botão falava a língua de quem programa (`mudo-i`,
      "calar") e passa a falar a de quem pega o controle pela primeira vez —
@@ -2749,7 +2772,9 @@
         <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
              Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
              superior direito."*); o «Mapa do controle» ganhou a casa na aba
-             Conexões em 25/09 e saiu desta em 29/09, por  A classe `.sensores` continua a alinhá-lo à direita. -->
+             Conexões em 25/09 e saiu desta em 29/09, por ordem de produto: *"mapa do
+             controle deveria ter saído da guia de Controles e ter ficado só na
+             guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
           <a class="btn" href="calibrar-sensores.html"
              title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
@@ -2916,7 +2941,9 @@
           </div>
           <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador: 1 no meio para o P1, as das pontas para o P2, e assim por diante.">
             <div class="rot rot-linha">LED do jogador</div>
-            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso.
+            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso:
+                 *"a interface tá dessincronizada com os controles reais (o
+                 player do controle, o led indicativo do player)"*.
 
                  ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
                  `jogador` da CENA do mockup, e nenhum tique as visitava: o
@@ -3074,7 +3101,8 @@
                 <br><br>
                 Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
               </span></span>
-              <!-- O MODO DO MICROFONE — pedido, 30/08.
+              <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
+                   Mic: Virtual, Desativado e Nativo"*.
 
                    ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
                    Como fileira própria embaixo ele custava 42px (36 da altura de
@@ -3214,7 +3242,8 @@
         <div>
           <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
 
-               O acelerômetro entrou por decisão de produto, e como MOLDURA PRÓPRIA ele não cabia: medido,
+               O acelerômetro entrou por decisão de produto (*"não era pra ele sair, era
+               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
                a coluna dos sensores passava de 190 para 278px de conteúdo natural,
                contra os **232** que as cinco colunas compartilham (a conta está no
                `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
@@ -3442,7 +3471,9 @@
           </div>
           <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador: 1 no meio para o P1, as das pontas para o P2, e assim por diante.">
             <div class="rot rot-linha">LED do jogador</div>
-            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso.
+            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso:
+                 *"a interface tá dessincronizada com os controles reais (o
+                 player do controle, o led indicativo do player)"*.
 
                  ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
                  `jogador` da CENA do mockup, e nenhum tique as visitava: o
@@ -3600,7 +3631,8 @@
                 <br><br>
                 Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
               </span></span>
-              <!-- O MODO DO MICROFONE — pedido, 30/08.
+              <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
+                   Mic: Virtual, Desativado e Nativo"*.
 
                    ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
                    Como fileira própria embaixo ele custava 42px (36 da altura de
@@ -3740,7 +3772,8 @@
         <div>
           <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
 
-               O acelerômetro entrou por decisão de produto, e como MOLDURA PRÓPRIA ele não cabia: medido,
+               O acelerômetro entrou por decisão de produto (*"não era pra ele sair, era
+               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
                a coluna dos sensores passava de 190 para 278px de conteúdo natural,
                contra os **232** que as cinco colunas compartilham (a conta está no
                `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
@@ -3968,7 +4001,9 @@
           </div>
           <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador: 1 no meio para o P1, as das pontas para o P2, e assim por diante.">
             <div class="rot rot-linha">LED do jogador</div>
-            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso.
+            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso:
+                 *"a interface tá dessincronizada com os controles reais (o
+                 player do controle, o led indicativo do player)"*.
 
                  ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
                  `jogador` da CENA do mockup, e nenhum tique as visitava: o
@@ -4126,7 +4161,8 @@
                 <br><br>
                 Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
               </span></span>
-              <!-- O MODO DO MICROFONE — pedido, 30/08.
+              <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
+                   Mic: Virtual, Desativado e Nativo"*.
 
                    ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
                    Como fileira própria embaixo ele custava 42px (36 da altura de
@@ -4266,7 +4302,8 @@
         <div>
           <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
 
-               O acelerômetro entrou por decisão de produto, e como MOLDURA PRÓPRIA ele não cabia: medido,
+               O acelerômetro entrou por decisão de produto (*"não era pra ele sair, era
+               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
                a coluna dos sensores passava de 190 para 278px de conteúdo natural,
                contra os **232** que as cinco colunas compartilham (a conta está no
                `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
@@ -4494,7 +4531,9 @@
           </div>
           <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador: 1 no meio para o P1, as das pontas para o P2, e assim por diante.">
             <div class="rot rot-linha">LED do jogador</div>
-            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso.
+            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso:
+                 *"a interface tá dessincronizada com os controles reais (o
+                 player do controle, o led indicativo do player)"*.
 
                  ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
                  `jogador` da CENA do mockup, e nenhum tique as visitava: o
@@ -4652,7 +4691,8 @@
                 <br><br>
                 Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
               </span></span>
-              <!-- O MODO DO MICROFONE — pedido, 30/08.
+              <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
+                   Mic: Virtual, Desativado e Nativo"*.
 
                    ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
                    Como fileira própria embaixo ele custava 42px (36 da altura de
@@ -4792,7 +4832,8 @@
         <div>
           <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
 
-               O acelerômetro entrou por decisão de produto, e como MOLDURA PRÓPRIA ele não cabia: medido,
+               O acelerômetro entrou por decisão de produto (*"não era pra ele sair, era
+               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
                a coluna dos sensores passava de 190 para 278px de conteúdo natural,
                contra os **232** que as cinco colunas compartilham (a conta está no
                `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
@@ -4868,7 +4909,10 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
 
          ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
          já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então

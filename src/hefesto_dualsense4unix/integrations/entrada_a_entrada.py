@@ -43,7 +43,8 @@ foi ao disco.
 SÓ O DUALSENSE MARCA UMA PORTA
 ------------------------------
 
-Palavra de produto na R9. Aceitar qualquer aparelho deixava uma re-enumeração espontânea — o
+Palavra de produto na R9: *«usarmos um dualsense e o USB pra sairmos de porta em
+porta»*. Aceitar qualquer aparelho deixava uma re-enumeração espontânea — o
 ``-71``, o reset de porta da ponte root — virar «a porta que ela plugou». Na
 fase em pé só um aparelho ``054c`` (:data:`_VID_DA_SONY`) confirma a entrada;
 o dongle que re-enumera numa vaga não marca nada.
@@ -1548,8 +1549,8 @@ class Pendencia:
 def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     """``nome da face -> Pendencia`` de cada face que pende de uma entrada.
 
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA).  Uma função pura sobre o ``mapa`` do
-    disco:
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA): identificar onde fica o hub. Uma
+    função pura sobre o ``mapa`` do disco:
     lê o que o Mapear gravou (os caminhos e os nós), e por isso vale com o hub
     desplugado e em qualquer máquina. <!-- noqa-acento: citação literal -->
 
@@ -1920,7 +1921,8 @@ class MapearAsPortas:
     que APARECEU: com dois controles já no cabo (a mesa de quatro), o que
     estava encaixado antes de ela começar não conta — só se for o único.
 
-    O TIQUE NÃO ESPERA O ``/sys`` (O-MAPEAR-NAO-CONGELA-A-JANELA-01, ). Trocar
+    O TIQUE NÃO ESPERA O ``/sys`` (O-MAPEAR-NAO-CONGELA-A-JANELA-01, queixa de 26/09: o Mapear
+    entradas fechava o app). Trocar
     o controle de entrada com a tela aberta fazia o kernel segurar o lock do
     aparelho enquanto enumerava, o censo esperava o lock no ``bMaxPower``, e a
     janela esperava o censo: 5, 10 e 15 s. Agora a leitura é de um fio próprio

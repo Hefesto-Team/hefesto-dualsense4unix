@@ -3,6 +3,9 @@
 
 A LEI É DO USUÁRIO, 03/09/2026:
 
+    "se no topo tá mostrando controle white player 1, então cada aba vai usar
+    os controles lá de cima. Não mistura com a info dos mockups. (…) Por isso
+    temos o mapa pra servir como variável de identificação"
 
 (A frase elidida — *"Cada feature faz referência ao controle conectado"* — está
 inteira em `docs/process/sprints/arquivados/`, na

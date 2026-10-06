@@ -241,7 +241,9 @@ def test_o_pacote_nao_emite_o_selo(a03):
 def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
     """Com UM controle na mesa, o P2 chega à tela dizendo, não com um traço.
 
-    A QUEIXA, 11/09/2026 — a digitação é dela e não se limpa
+    A QUEIXA, 11/09/2026 — a digitação é dela e não se limpa:
+    *"o p2 tá com - ao invés de P2 - Desconectado  # noqa-acento: citação
+    como os demais."*
 
     MEDIDO NO DOM VIVO no mesmo dia, um DualSense por rádio no P1, aba 03
     aberta no `WebKit2.WebView` com `--oculta`::

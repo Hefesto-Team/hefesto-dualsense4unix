@@ -1,6 +1,9 @@
 """A aba Navegação grava no PERFIL, e a tela para de prometer por-controle.
 
-O PEDIDO, 05/09/2026
+O PEDIDO, 05/09/2026: *"ao pular e sair configurando de aba em aba o perfil
+vai se lembrando de cada config de cada aba pra cada controle. aí aplicar aplica
+todas as configs naquele perfil e salvar se lembra disso quando eu for jogar o
+jogo e no dia seguinte e por diante."*
 
 O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
 → ela mexe na aba 06 → Salvar do rodapé → relê o disco), em `HOME` de mentira:
@@ -452,7 +455,7 @@ def test_a_ressalva_sai_no_pacote_em_todo_tique(pac, a06):
 
 
 def test_a_ressalva_nao_usa_a_palavra_que_ela_baniu(a06):
-    """ — ordem, 05/09/2026."""
+    """*"não é pra ter mesa em nada da interface"* — ordem, 05/09/2026."""
     assert "mesa" not in a06.RESSALVA_DOS_GLOBAIS.lower()
 
 

@@ -147,7 +147,8 @@ def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
     """A cor sai do ESTADO, e é ele que separa os dois — não a palavra.
 
     Enquanto o único canal era `SELO_DO_ESTADO`, os dois estados chegavam à
-    tela como a mesma pílula laranja e a mesma  que é a frase de produto.
+    tela como a mesma pílula laranja e a mesma palavra: *"o que está quebrado
+    agora parecia igual ao que só podia estar melhor"*, que é a frase de produto.
     """
     quebrado = a08._linha(_item(estado="problema"))
     so_podia_melhorar = a08._linha(_item(estado="atencao"))  # (noqa-acento) id

@@ -8,7 +8,7 @@ que o usuário viu hoje.
 
 O DEFEITO, MEDIDO NA BANCADA EM 29/08/2026
 --------------------------------------------
-
+Palavra de produto: *"fora que os controles lá em cima tão tudo Não sei ainda."*
 
 Os dois cards da aba Controles dizem "Não sei" no lugar da cor, e não é o
 aparelho que se cala. Medido, com o daemon rodando e sem parar nada::

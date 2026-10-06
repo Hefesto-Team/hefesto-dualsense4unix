@@ -285,7 +285,7 @@ sudo udevadm control --reload-rules
 # dispositivos — sempre, em toda máquina. O `--attr-match` só olha os sysattrs
 # do PRÓPRIO nó, e um `hidraw` não tem `idVendor`: esse atributo mora no pai
 # USB, e no Bluetooth não existe nem pai USB (o BlueZ cria o HID por `uhid`, em
-# /sys/devices/virtual/misc/uhid/). Medido na máquina do usuário em 12/08 com três
+# /sys/devices/virtual/misc/uhid/). Medido na bancada em 12/08 com três
 # DualSense no rádio e um no cabo:
 #
 #     udevadm trigger --dry-run --verbose --subsystem-match=hidraw

@@ -2,7 +2,9 @@
 
 **A QUEIXA É DO USUÁRIO, com os quatro DualSense na mesa, 18/09/2026:** *"NA
 INTERFACE NA ABA CONTROLES SÓ MOSTRA UM TOQUE NO DESENHO DO SVG APESAR DO
-TOUCH SER MULTITOQUE"* — e ela provou no mesmo minuto
+TOUCH SER MULTITOQUE"* — e ela provou no mesmo minuto: *"SE EU USAR 3 DEDOS
+DOU ZOOM E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE. COMO NUM
+NOTEBOOK."*  <!-- noqa-acento: citação literal -->
 
 **O QUE A MEDIÇÃO DEVOLVEU, com os dedos do usuário no controle azul:**
 

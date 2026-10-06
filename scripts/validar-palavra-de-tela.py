@@ -33,7 +33,8 @@ O ITEM 1 TROCOU DE CORPO EM 06/09/2026, e a conta está medida
 --------------------------------------------------------------
 
 Até este dia o item 1 era o `gui/main.glade`. A `GTK-3` o apagou por decisão
-de produto (`D-0609-GTK-LEVA-INTEIRA`), e um portão que perde o
+de produto (`D-0609-GTK-LEVA-INTEIRA`: *"a ideia sempre foi reaproveitar o que fiz no
+gtk e não apontar nada mais pra lá mas pro html"*), e um portão que perde o
 arquivo que lê não fica verde — ele reprova nomeando o que sumiu
 (`conferir_html` devolve "arquivo de interface não encontrado" do mesmo jeito
 que o antecessor devolvia). Trocar o corpo, e não só apagá-lo, é o que devolve

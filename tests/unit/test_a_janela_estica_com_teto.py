@@ -7,7 +7,7 @@ O que o usuário disse foi o sintoma: *"o background fica completamente preto"*.
 MEDIDO, NÃO ERA FALTA DE FUNDO. O `body` do `topo.html` já pinta `#11121a`; o
 que ela via era a cor da casa, só que MUITA — a `.janela` parava em 1180px
 enquanto a janela maximizada tem ~1900, deixando ~360px de casa de cada lado. A
-recomendação foi levada a ela e o usuário aprovou.
+recomendação foi levada ao usuário e o usuário aprovou: *"eu confio em vc, manda ver"*.
 
 O QUE ESTA RÉGUA GUARDA, e o que ela deliberadamente NÃO guarda
 ----------------------------------------------------------------

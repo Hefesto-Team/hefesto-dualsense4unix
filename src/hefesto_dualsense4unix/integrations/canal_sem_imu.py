@@ -1,7 +1,9 @@
 """CANAL-SEM-VOZ-01 (17/09/2026) — a amputação para de cair calada.
 
 A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e é do usuário
------------------------------------------------
+------------------------------------------------
+    *"joguei um jogo com controle por movimento e na hora do vamos ver o
+    controle não deu resposta (pragmata)"*
 
 O perfil do PRAGMATA não tem a chave ``caminho``. Ele herdou o
 ``config.gamepad_caminho`` que o jogo anterior deixou de pé, e o jogo anterior

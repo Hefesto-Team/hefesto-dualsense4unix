@@ -20,7 +20,7 @@ controles conectados. Nenhum toast, nenhuma recusa.
 **A causa é que ``None`` carregava duas coisas diferentes:**
 
 * *"o usuário clicou em Todos"* — escolha legítima e deliberada, que a R-16 protege;
-*  — ausência de informação.
+* *"eu não sei quem é o alvo"* — ausência de informação.
 
 Este módulo separa as duas em estados distintos, e é o único lugar que escreve
 o alvo. A regra da casa aplicada literalmente: **ausência de informação se

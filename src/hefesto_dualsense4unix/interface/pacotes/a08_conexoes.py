@@ -339,7 +339,8 @@ def _radios_declarados(declaracao: Any) -> dict[str, str]:
 def _mic_declarado(declaracao: Any, uniq: str) -> bool:
     """O microfone DESTE controle está ligado?
 
-    **A REGRA INVERTEU EM 18/09/2026** (). Antes só `True` contava, e
+    **A REGRA INVERTEU EM 18/09/2026** (ordem de produto: *"todos os controles tem
+    que nascer com tudo mic, giroscopio e afins"*). Antes só `True` contava, e
     ausência era silêncio; agora só `False` desliga, e a ausência LIGA — que é
     o que o daemon faz desde a mesma data (`bt_mic.uniqs_recusados`).
 
@@ -625,7 +626,7 @@ def _dica_da_linha(item: Any) -> str:
 
     A CURA É REUSO, e as frases já existiam: uma `Ordem` traz TRÊS linhas
     (`ordens_da_mesa.Ordem.linhas`) com os rótulos de
-    `exame_da_mesa.ROTULOS_DA_ORDEM`, *"Por que importa"*
+    `exame_da_mesa.ROTULOS_DA_ORDEM` — *"O que eu vi aqui"*, *"Por que importa"*
     e *"Ganho esperado"*. **A primeira é a que a linha já mostra** (é o
     `Item.porque`), então ela fica de fora e a decisão 9 continua valendo; as
     outras duas são exatamente o que o `?` promete. É o mesmo par que o card do
@@ -1024,13 +1025,14 @@ def _confissao_do_mapa() -> dict[str, str]:
 
     `confissao-nada` É O INTERRUPTOR DO SUMIÇO, e a regra é da GTK: lá a linha
     SOME quando o desenho responde por tudo (`confissao_do_desenho` devolve
-    vazio e o `_desenhar` não escreve nada). Sem ele, zero lacuna viraria  — uma frase que ocupa
+    vazio e o `_desenhar` não escreve nada). Sem ele, zero lacuna viraria *"O
+    que eu não consegui conferir neste desenho: nada."* — uma frase que ocupa
     espaço para não dizer nada.
 
     O DICIONÁRIO VAZIO É RESPOSTA, e é por isso que esta função não devolve
     tupla: sem censo o pacote não sabe quantas lacunas há, e emitir `""` seria
     PIOR que não emitir — o `escrever()` do piloto troca vazio por travessão, e
-    a tela diria . Não
+    a tela diria *"O que eu não consegui conferir neste desenho: —."*. Não
     emitir deixa a linha como o desenho a escreveu, que é o único estado
     honesto quando a leitura do barramento falhou.
     """
@@ -1479,7 +1481,7 @@ def escopo_do_botao_do_mic(estado: Any) -> str:
 
     A chave é `mic_button_toggles_system`, publicada pelo `state_full` desde o
     `MIC-EXPOSE-01` (*"o botão de mic deixa de ser campo secreto do lifecycle —
-    a GUI/CLI leem o estado efetivo daqui"*). Medido na máquina do usuário em
+    a GUI/CLI leem o estado efetivo daqui"*). Medido na bancada em
     04/09/2026: `True`.
 
     AUSÊNCIA DEVOLVE VAZIO, e não o padrão do `DaemonConfig`: um daemon que não
@@ -2256,7 +2258,8 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     **DESLIGAR GRAVA `False` — MUDOU EM 18/09/2026, e a razão é a inversão.**
     Até aqui gravava `None`, e a regra era boa enquanto o default fosse o
     silêncio: *"nunca pedi" e "não quero" deixam a ponte no chão do mesmo
-    jeito*. Com a  — a ausência passou a LIGAR, e aí `None` deixou de ser
+    jeito*. Com a ordem de produto — *"todos os controles tem que nascer com tudo mic,
+    giroscopio e afins"* — a ausência passou a LIGAR, e aí `None` deixou de ser
     um jeito de desligar: seria o botão que não desliga.
 
     O medo que a regra velha protegia continua real e agora tem outro nome: um
@@ -3108,7 +3111,8 @@ def _maiuscula(frase: str) -> str:
 def nome_dado(nome: str) -> str:
     """O nome que ela deu (controle ou adaptador), com a primeira letra maiúscula.
 
-    Ordem de 05/10/2026, 13h. Só a primeira letra; o resto
+    Ordem de 05/10/2026, 13h: *«Nome que o user colocar pra controle mesmo se ele colocar
+    minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o resto
     fica como o usuário escreveu. Vale ao gravar e ao ler o que já estava gravado em minúscula.
     <!-- noqa-acento: citação literal -->
     """
@@ -5525,7 +5529,8 @@ def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A ordem das caixas que ela arrastou — gravada, e a sala nasce nela.
 
-    Decisão, 25/09/2026. O roteiro da página solta a caixa no lugar e
+    Decisão, 25/09/2026: *«segurar a área do conector e arrastar ela pra
+    mudar de ordem entre eles»*. O roteiro da página solta a caixa no lugar e
     manda a ordem NOVA, de cima para baixo, pelos ``data-id`` das caixas (o
     endereço de cada adaptador), e ela vai para o adaptador, pelo endereço —
     o mesmo dono do nome dele (``utils/maquina.guardar_ordem_dos_adaptadores``,

@@ -7,8 +7,8 @@ O QUE ESTA FRENTE FECHOU, medido pela `PAGINAS-ESPECIAIS-B1` em 11/09/2026:
     `#point-and-click`       7 `<select>` · ZERO com endereço
     `#remapeamento`          22 `<select>` · ZERO com endereço
 
-A reação dela ao número é o dado desta sprint. E a ordem que ela deu na onda anterior é a régua do
-que cabe
+A reação da bancada ao número é o dado desta sprint. E a decisão de produto da onda anterior é a
+régua do que cabe
 aqui — *"A ideia não é adicionar mais nada em termos de feature ou interface,
 Mas é fazer o todo funcionar"*: estas telas já estão desenhadas e prometidas.
 

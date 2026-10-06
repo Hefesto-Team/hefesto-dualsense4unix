@@ -370,7 +370,8 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     Preto (`_APAGADA`) fica de fora nos dois sentidos: não é deslocado e não
     toma cor de ninguém — barra apagada é ausência de cor, não identidade.
 
-    A METADE QUE NÃO MORA AQUI é a recusa no GESTO. Lá se sabe que o alvo é UM
+    A METADE QUE NÃO MORA AQUI é a recusa no GESTO — *"mesmo que eu escolha
+    cor X, meu amigo não pode escolher a mesma"*. Lá se sabe que o alvo é UM
     controle e a tela pode dizer de quem é a cor; ver
     `interface/pacotes/a04_iluminacao.py::_sem_repetir_a_cor_do_vizinho`.
     """
@@ -474,18 +475,18 @@ PRETO: RGB = (0, 0, 0)
 def cor_escolhida(rgb: RGB | None) -> RGB | None:
     """A cor que a pessoa escolheu — ``None`` quando não houve escolha.
 
-    **O PRETO É BANIDO COMO COR — 22/09/2026, ordem de produto:** **. <!-- noqa-acento: citação
-    literal -->
+    **O PRETO É BANIDO COMO COR — 22/09/2026, ordem de produto:** o preto não aparece em
+    nenhum controle.
 
-    A QUEIXA QUE O REVELOU, e ela é de um controle só. O perfil MANDAVA: a peça daquele controle
-    tinha
+    A QUEIXA QUE O REVELOU, e ela é de um controle só: a barra de luz do Starlight Blue apagava
+    ao conectar, e o perfil parecia não mandar. O perfil MANDAVA: a peça daquele controle tinha
     `leds.lightbar: [0,0,0]`, escrita por um "Salvar Perfil" das 13:53 daquele
     dia, quando a cor lida veio vazia. Medido no mesmo disco: **sete dos 29
     perfis do usuário** guardam o preto na seção GLOBAL — neles, abrir o jogo apaga
     a barra dos QUATRO.
 
     A CAUSA É DE FORMA, e está no esquema: `LedsConfig.lightbar` nasce
-    `(0, 0, 0)`, então *"não opinou"* e  são o mesmo byte. Com
+    `(0, 0, 0)`, então *"não opinou"* e *"quero apagado"* são o mesmo byte. Com
     um valor só para as duas coisas, a leitura honesta é a que não apaga nada:
     preto vira `None`, e quem decide a cor passa a ser a paleta automática do
     número (`cores_sem_colisao`).

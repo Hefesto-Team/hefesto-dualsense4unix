@@ -289,7 +289,9 @@ def test_o_endereco_velho_do_motor_continua_sendo_emitido(a05) -> None:
 def test_a_faixa_de_estado_nao_existe_mais_no_desenho(bancada: str) -> None:
     """Nem a célula, nem o rótulo da coluna de rótulos, nem a faixa da grade.
 
-    **DECISÃO, 05/09/2026, verbatim:** **.
+    **DECISÃO, 05/09/2026, verbatim:** *"pq temos uma linha de estado se o
+    estado em vibração sempre vai ser o jogo mandando os input pro controle e a
+    gnt aumentando eles ou diminuindo? remove ela não faz sentido"*.
 
     **ELA TEM RAZÃO MEDIDA pelo caminho que ela usa**, e é por isso que esta
     régua guarda a remoção em vez de a lamentar. A faixa tinha três estados
@@ -359,7 +361,10 @@ def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
 def test_a_linha_de_mesa_nao_existe_mais() -> None:
     """A linha de mesa e o gesto do usuário saíram da aba — e não voltam calados.
 
-    **DECISÃO, 05/09/2026, verbatim:** **.
+    **DECISÃO, 05/09/2026, verbatim:** *"não é pra ter mesa em nada da
+    interface. (…) segue os três modos sempre. clicou em perfil de energia
+    econômico na aba sistema todos vão pra vibração manual. o resto é
+    desnecessário e só polui e deixa difícil entender"*.
 
     ELA TEM RAZÃO MEDIDA, e é por isso que esta régua guarda a remoção em vez de
     a lamentar: a economia de bateria JÁ tem dono — o Perfil de Bateria da aba

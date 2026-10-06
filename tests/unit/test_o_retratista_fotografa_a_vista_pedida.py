@@ -75,7 +75,7 @@ def test_o_main_recusa_a_vista_torta_em_vez_de_fotografar() -> None:
 
 
 def test_a_vista_dela_fecha_a_conta_das_parcelas() -> None:
-    """1918x840 não é número escolhido: é a TV do usuário menos o que o compositor come."""
+    """1918x840 não é número escolhido: é a TV da bancada menos o que o compositor come."""
     retrato = _retrato()
     tv_larg, tv_alt = 1920, 1080
     painel, doca, borda, barra = 82, 110, 1, 46

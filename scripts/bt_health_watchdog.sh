@@ -425,7 +425,7 @@ systemctl is-active --quiet bluetooth.service || { log "bluetooth.service inativ
 # órfão de bond martelou "unknown device" 8x/10min e o watchdog derrubou uma
 # sessão com 3 controles vivos por confundir isso com doença).
 # VIGIA-QUE-DERRUBA-01 (08/08/2026): a contagem é de APARELHOS DISTINTOS, não de
-# eventos. MEDIDO na máquina do usuário: às 00:56:26 a vigia registrou "estado doente
+# eventos. MEDIDO na bancada: às 00:56:26 a vigia registrou "estado doente
 # confirmado (9 recusas/10min, 0 conectados)" e REINICIOU o `bluetooth.service`.
 # As nove recusas eram de **um aparelho só** (o 8BitDo, `E4:17:…`), insistindo
 # depois que o crash do bluetoothd às 00:27:35 levou os quatro bonds embora.
@@ -585,7 +585,7 @@ vigia_rebind_orfaos
 # freio de 15 min e o que PARA depois de três reinícios sem cura) — aqui só se
 # chama, com a trava já na mão, e a cada tique: é o tique que deixa a ponte ver
 # o laço sumir e soltar o freio. A árvore de teste não chama: o verbo leria o
-# journal do usuário.
+# journal da bancada.
 vigia_adaptador_travado() {
     local _s
     [[ -z "${HEFESTO_BT_SRC:-}" ]] || return 0

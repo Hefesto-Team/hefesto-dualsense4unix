@@ -16,7 +16,8 @@ A HISTÓRIA DO NÓ, que mudou duas vezes: até 28/09 ele era um por controle no
 rádio, com o nome pelo rabo do endereço; de 28/09 a 02/10 foi um por LUGAR
 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01), com o rótulo fixo do lugar, e a
 renovação saiu; desde 02/10/2026 é um por APARELHO, nos dois transportes (a
-A-HAPTICA-E-POR-APARELHO-01, pela ), com o nome pela marca do aparelho, que não é
+A-HAPTICA-E-POR-APARELHO-01, pela palavra de 29/09: *«todas as features
+são um por aparelho. sempre.»*), com o nome pela marca do aparelho, que não é
 o endereço, e o rótulo que segue o número volta com as guardas de 24/09.
 
 O QUE O JOGO LÊ NÃO PODE MUDAR, e a medição está na seção 3: os casamentos do

@@ -563,7 +563,7 @@ def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> Non
     ]
 
 
-# forma de conexão se cabo ou se bt, ou só pro player 1."*  <!-- noqa-acento: dela -->
+# forma de conexão se cabo ou se bt, ou só pro player 1."*  <!-- noqa-acento: citação literal -->
 
 _GIRO = (0.0, 150.0, 0.0)
 

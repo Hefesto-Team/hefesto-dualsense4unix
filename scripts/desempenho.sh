@@ -139,7 +139,7 @@ _aplicar_perfil() {
     gerenciador="$(_gerenciador)"
     # O sucesso da unit é o ESTADO, não o código de saída do pedido: o
     # system76-power sai 1 quando uma peça do perfil falha (a política de link
-    # de uma porta SATA que não a aceita, medido na máquina do usuário em 03/10) mesmo
+    # de uma porta SATA que não a aceita, medido na bancada em 03/10) mesmo
     # com o perfil aplicado, e a unit ficaria falhada a cada boot. Pede, e
     # confere lendo o perfil de volta; o Restart= só volta a pedir se não pegou.
     if [[ "${gerenciador}" == "system76-power" ]]; then

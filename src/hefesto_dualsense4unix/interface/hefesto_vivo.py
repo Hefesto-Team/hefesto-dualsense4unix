@@ -330,7 +330,7 @@ BOOTSTRAP = r"""
     // escreve estilo e devolve 0 quando nada mudou, que é o que mantém o
     // contador de pinturas honesto.
     // NÃO SE PINTA O QUE ESTÁ SOB O DEDO DO USUÁRIO — 09/09/2026, e a queixa é do usuário:
-    // , *"oscila, aplica e não aplica"*.
+    // *"o slicer do brilho tá super estranho"*, *"oscila, aplica e não aplica"*.
     //
     // O DEFEITO, medido: o trilho do brilho carrega `data-campo="brilho-pct"`
     // com alvo `valor`, e o tique repinta `el.value` dez vezes por segundo com
@@ -3655,7 +3655,7 @@ class Piloto:
         if not alvo.exists():
             self.tela._morrer(f"não existe a página pedida: {alvo.name}")
             return False
-        # sobre o teste naquele momento isso nao interfere in game"*  # (noqa-acento): dela
+        # sobre o teste naquele momento isso nao interfere in game"*  # (noqa-acento: citação literal)
         pacotes.largar_o_que_as_abas_seguram(ponte)
         _soltar_as_ondas()
         self.view.load_uri(alvo.as_uri())

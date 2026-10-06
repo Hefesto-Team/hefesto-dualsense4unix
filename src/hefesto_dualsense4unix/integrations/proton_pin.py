@@ -876,7 +876,8 @@ def lock_games_to_pinned_proton(
     `appinfo.vdf` só precisa ser lido quando há jogo novo.
 
     ``todos=True`` alcança TODO jogo, inclusive o que aponta para uma
-    ferramenta que o Hefesto nunca escreveu —  Sem ele, a guarda `preservado`
+    ferramenta que o Hefesto nunca escreveu — ordem de 17/09/2026:
+    *"ele e todo o resto de agora em diante."* Sem ele, a guarda `preservado`
     continua valendo, e ela é o padrão da função de propósito: quem chamar sem
     pedir não atropela ninguém.
 

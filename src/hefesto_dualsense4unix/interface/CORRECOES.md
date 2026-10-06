@@ -18,7 +18,7 @@ Resposta dela em 27/08, perguntada onde ficam os três botões novos:
 E sobre as ondas sonoras:
 > "Era sobre a aba perfis. Mas aqui só ver a aba status instalada hoje."
 
-**Os botões que ela pediu**, da mensagem das 12 imagens (26/08):
+**Os botões que o usuário pediu**, da mensagem das 12 imagens (26/08):
 > "o botão ouvir no controle não deveria existir... Talvez no local de ouvir no
 > controle poderiamos colocar dois botões pra ativar giroscopio e acelerometro e
 > calibrar Sensores... obviamente tudo ativo por default em todos os perfis até

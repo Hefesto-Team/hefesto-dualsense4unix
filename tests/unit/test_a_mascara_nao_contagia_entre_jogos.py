@@ -1,8 +1,13 @@
 """**MASCARA-CONTAGIO-01, 21/09/2026 — o latch que se realimentava pelo gesto.**
 
-A queixa de uso, em caixa alta
+A queixa de uso, em caixa alta:
 
-O perfil ESTAVA salvando. Medido na máquina do usuário naquele dia, com os arquivos
+    *"POR EXEMPLO O PERFIL PRAGMATA ALGUMAS VEZES ALTEREI O MODO DE CONEXÃO DOS
+    CONTROLES E MÁSCARAS MAS ALGO O MUDA NOVAMENTE PRA XBOX SEMPRE QUE EU O
+    INICIO. OU O PERFIL NAO TA SALVANDO OU TEMOS ALGUM TESTE OU ALGO ALÉM QUE
+    TÁ ZUANDO ISSO."*
+
+O perfil ESTAVA salvando. Medido na bancada naquele dia, com os arquivos
 na mão:
 
     gamepad_emulation.flag ......... xbox   (o padrão da MÁQUINA)
@@ -18,7 +23,8 @@ desfazer nada. E o gesto que existia para desfazer — o chip «Sony DualSense»
 `flavor` desde MODO-DE-CONEXAO-01 e o daemon caía em `config.gamepad_flavor`.
 
 É a mesma classe do CAMINHO-CONTAGIO-01 (19/09), no outro eixo — e a ordem de produto
-daquele dia nomeava os dois.
+daquele dia nomeava os dois: *"sim tudo dualsense, tudo ligado mascara dualsense
+por default mas esse vazamento me preocupa"*.
 """
 
 from __future__ import annotations

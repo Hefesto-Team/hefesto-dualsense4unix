@@ -136,7 +136,9 @@ class MicDraft(BaseModel):
     ``volume`` (0-100, o por cento da FONTE de captura no sistema) e ``muted``
     (o mudo do FIRMWARE do controle) espelham os dois campos homônimos de
     ``ProfileMicConfig``. Eles entraram em 18/08/2026, a pedido — depois
-    de o microfone ficar mudo e o DON'T SCREAM não ouvir nada
+    de o microfone ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de
+    microfone e som, touch, acelerômetro, giroscópio e afins. cara, temos que
+    salvar isso no perfil sempre."*
 
     **NOTA DATADA — 18/08/2026.** Este parágrafo dizia que o mic não tinha
     escritor na janela e que a seção só nascia pela leitura do disco. Isso

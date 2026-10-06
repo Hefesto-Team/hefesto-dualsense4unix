@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Clica o chip de máscara nos QUATRO cartões da Jogar, dentro do WebKit dela.
 
-O PEDIDO É DE PRODUTO, 03/09/2026
+O PEDIDO É DE PRODUTO, 03/09/2026: *"É uma máscara por controle. (…) Se isso não
+ocorre com os 4 controles em cada aba, então temos que construir isso e garantir
+isso."*
 
 O QUE ESTE ENSAIO PROVA, e o teste de unidade não alcança: o teste conta
 atributos num arquivo. Este faz o caminho DO USUÁRIO — o dedo no chip, o evento

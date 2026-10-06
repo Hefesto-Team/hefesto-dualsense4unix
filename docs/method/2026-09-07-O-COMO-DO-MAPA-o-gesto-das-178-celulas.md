@@ -11,7 +11,8 @@ bancada: true
 
 **Ordem, 07/09/2026, depois de ver as 21 prontas:**
 
-> **
+> *"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra
+> remodelar os demais testes via agentes."*
 
 Isto é o modelo das 21 aplicado às 178 células do mapa de canais — as que
 sobram depois da bancada. Mesma forma, mesmos sete campos, mesma regra: o que
@@ -21,7 +22,8 @@ está aqui a página LÊ, e nada dela é digitado lá.
 
 **A variação por controle sai do TRANSPORTE.** As 21 trazem, na coluna do
 roteiro, o que cada um dos quatro faz — escrito por ela. As 178 não têm essa
-coluna, e a variação vem de onde ela sempre veio.
+coluna, e a variação vem de onde ela sempre veio: *"por isso dois controles
+dois bt e dois no cabo. Pra batermos de vez o controle que temos do hardware"*.
 Então numa célula do cabo quem reage é P1 e P2, e P3 e P4 são as TESTEMUNHAS —
 e testemunha não é enfeite: se a coisa acontecer nelas também, o comando pegou
 o transporte inteiro em vez do controle escolhido.

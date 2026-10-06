@@ -1,7 +1,7 @@
 """DROPIN-AMBIGUO-01 — a ausência do drop-in era indistinguível de escolha do usuário.
 
 O arquivo `~/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf`
-**não existia** na máquina do usuário em 04/08/2026. Sem ele o WirePlumber promoveu o
+**não existia** na bancada em 04/08/2026. Sem ele o WirePlumber promoveu o
 DualSense a microfone padrão do sistema, e daí saíram os sintomas que ela
 reportou como *"não funciona nem mic, nem os botões de sons do jogo"*.
 

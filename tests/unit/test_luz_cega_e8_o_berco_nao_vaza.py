@@ -1,6 +1,6 @@
 """LUZ-CEGA-01/E8 — o berço da suíte não vaza para o `config_dir()` real.
 
-O DEFEITO, medido em 25/08/2026 no journal do usuário. Quatro endereços da faixa de
+O DEFEITO, medido em 25/08/2026 no journal da bancada. Quatro endereços da faixa de
 fixture `aa:bb:cc:*` moram no `controllers.json` de produção dela e empurram os
 DualSense REAIS para os postos 6, 7 e 8. A escrita foi datada: até
 `2026-08-11T23:50` a fila gravada tinha os quatro DualSense do usuário; em

@@ -1,6 +1,10 @@
 """O interruptor de punho da aba Vibração acende com a barra, e o clique escreve.
 
-ORDEM, 14/09/2026, com os dois controles na mesa e a foto da aba na mão
+ORDEM, 14/09/2026, com os dois controles na mesa e a foto da aba na mão:
+
+    *"ao abrir o vibração o motor esquerdo do controle azul não fica ativado e
+     nem se eu clicar em máximo ele liga. ele deveria ligar se > 0 no slicer
+     dele."*  (noqa-acento: citação literal)
 
 O QUE ESTAVA QUEBRADO, e eram DUAS metades — as duas mentindo do mesmo jeito,
 medidas no daemon do usuário no mesmo dia:

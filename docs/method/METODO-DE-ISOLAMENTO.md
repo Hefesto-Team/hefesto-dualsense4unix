@@ -5,7 +5,8 @@
 - **Revisto em:** 13/08/2026, depois das bancadas de 12 e 13/08. O que a revisão
   trouxe tem um nome só: **o instrumento mentia, não o produto** — quatro formas
   do mesmo defeito, todas medidas, todas com hora e linha de código.
-- **Nasceu de:** **.
+- **Nasceu de:** *"a ideia é terminarmos aqui com uma to do list de método boa o
+  suficiente pra nunca errarmos"*.
 - **Para que serve:** um ciclo repetível para isolar qualquer feature de qualquer
   controle em qualquer canal — e, no fim, **encolher o produto**.
 
@@ -244,7 +245,9 @@ nenhum, porque dá sossego falso.
 
 ## O CHECKLIST — o padrão universal de validação de um elemento
 
-- **Acrescentado em:** 11/08/2026, a
+- **Acrescentado em:** 11/08/2026, a pedido: *"pra que esse padrão de agora
+  seja o padrão universal de validação de cada elemento, pra que tenhamos um
+  padrão de checklist nesse sentido"*.
 - **Nasceu de:** a sessão da mesa cheia — quatro DualSense, dois no cabo e dois
   no rádio — em que rumble, lightbar e gatilho foram validados pela mesma
   sequência, e a sequência se mostrou melhor que a soma das partes.
@@ -334,7 +337,8 @@ chute contamina tudo o que vier depois.
 - [ ] **E3. Amplitude máxima na primeira tentativa** (`METODO-01`, 01/08). 15%
       contra 100% quase reprovou uma entrega correta; 0 contra 255 a reabilitou
       em trinta segundos.
-- [ ] **E4. O desenho não pode ser AMBÍGUO** — regra, 12/08. Eu propus *"deixe os quatro na
+- [ ] **E4. O desenho não pode ser AMBÍGUO** — regra, 12/08:
+      *"nosso resultado não deve ser ambíguo"*. Eu propus *"deixe os quatro na
       mesa e veja qual para antes"*; ela recusou. O desenho que ficou:
       **dois controles, um em cada mão**, e os outros dois recebendo a mesma
       carga como lastro. Comparar duas mãos é resposta que o corpo dá sem

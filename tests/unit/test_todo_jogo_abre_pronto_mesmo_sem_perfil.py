@@ -1,6 +1,9 @@
 """TROCA-DENTRO-DO-JOGO-01 — a regra vale para TODO jogo, não só o que tem perfil.
 
-Ela leu a PS-L3-MASCARA-01 e cobrou, em 14/09/2026, com a grafia dela
+Ela leu a PS-L3-MASCARA-01 e cobrou, em 14/09/2026, com a grafia dela:
+
+    *"inclusive nao pode ter sido feita pensando  (noqa-acento: citação literal)
+    so num dos jogos. ele é o sintoma de algo maior não?"*
 
 Estava certa. O conserto de 14/09 alcançava só o `steam_app_<appid>.env`, e na
 máquina do usuário UM perfil tem `mode` (o do Future Knight): os outros 29 jogos leem o
