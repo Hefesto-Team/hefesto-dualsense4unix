@@ -485,7 +485,7 @@ EDICOES: tuple[Edicao, ...] = (
         depois=(
             '  <header class="topo" style="position:relative;padding-left:132px">\n'
             "    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: \"ok temos um botão pra"
-            "vir\n"
+            " vir\n"
             "         pra cá. Mas e o botão pra voltar?\". Não havia nenhum href de saída nesta\n"
             "         página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA\n"
             "         aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da\n"
