@@ -15,7 +15,7 @@ CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
 
 COLUNAS_QUE_A_MEDICAO_LE = ("id", "titulo", "estado", "decidida_em", "onde_mora")
 
-ESTADOS_CONHECIDOS = ("aberta", "decidida", "caduca")
+ESTADOS_CONHECIDOS = ("aberta", "decidida", "implementada", "feita", "no ar", "caduca")
 
 BALDE_DENTRO = "citada dentro de um teste"
 BALDE_CABECALHO = "citada só no cabeçalho"
@@ -125,9 +125,10 @@ def problemas_de_forma(linhas) -> list[str]:
                    - set(ESTADOS_CONHECIDOS))
     if novos:
         ruins.append(
-            "estado(s) fora do vocabulário declarado: " + ", ".join(novos)
-            + " — se é o degrau novo que a sprint pede, o nome é dela e entra "
-              "em ESTADOS_CONHECIDOS junto com a régua que o cobra")
+            "estado(s) fora da escada " + " -> ".join(ESTADOS_CONHECIDOS)
+            + ": " + ", ".join(novos)
+            + " — degrau novo entra em ESTADOS_CONHECIDOS junto com a régua "
+              "que o cobra (scripts/check_a_decisao_tem_prova.py)")
     return ruins
 
 

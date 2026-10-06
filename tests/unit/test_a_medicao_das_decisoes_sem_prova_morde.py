@@ -148,18 +148,19 @@ def test_coluna_que_some_para_a_medicao_em_vez_de_contar_zero(mi, tmp_path,
     assert "zero" in saida, "a saída tem de dizer POR QUE zero engana"
 
 
-def test_o_degrau_novo_nao_entra_calado(mi, tmp_path):
-    """O ``estado`` que a sprint pede — e cujo NOME é dela."""
+def test_o_degrau_fora_da_escada_nao_entra_calado(mi, tmp_path):
+    """A escada é `aberta`, `decidida`, `implementada`, `feita`, `no ar` e `caduca`."""
     alvo = _csv_de_mentira(tmp_path / "estado_novo.csv", [
         {"id": "D-UMA", "estado": "decidida"},
-        {"id": "D-OUTRA", "estado": "implementada"},
+        {"id": "D-DA-ESCADA", "estado": "implementada"},
+        {"id": "D-OUTRA", "estado": "quase-feita"},
     ])
     medida = mi.medir(raiz=tmp_path, csv_path=alvo)
     ruins = medida["problemas_de_forma"]
-    assert ruins, "o estado novo passou sem uma palavra"
-    assert any("implementada" in p for p in ruins)
-    assert any("dela" in p or "nome" in p for p in ruins), (
-        "o recado tem de lembrar que o nome do degrau é dela")
+    assert ruins, "o estado inventado passou sem uma palavra"
+    assert any("quase-feita" in p for p in ruins)
+    assert not any("implementada," in p or p.endswith("implementada") for p in ruins), (
+        "o degrau que ela aceitou em 23/09 não pode ser acusado como estranho")
 
 
 def test_decisao_do_piso_que_perde_a_regua_sai_nominal(mi, tmp_path, capsys):

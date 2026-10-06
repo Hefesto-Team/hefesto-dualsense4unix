@@ -431,6 +431,10 @@ jobs:
         env:
           BASE_DA_FAIXA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python3 scripts/check_a_origem.py ${BASE_DA_FAIXA:+--base "$BASE_DA_FAIXA"}
+      # A DECISÃO TEM PROVA (06/10/2026, DECISAO-SEM-DONO-01): decisão dela decidida e sem
+      # função de teste que a cite (ou sem a marca `processo`) reprova nomeada; o piso só desce.
+      - name: Cada decisão decidida tem prova
+        run: python3 scripts/check_a_decisao_tem_prova.py
       # NADA NOVO APONTA PARA A JANELA (06/09/2026, sprint GTK-1). Decisão dela
       # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no
       # gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK sai em
