@@ -369,6 +369,11 @@ rapido|grafia-do-nome-morde|pytest|tests/unit/test_portao_a_grafia_do_nome_morde
 # zonas, os 2.471 caminhos versionados e o AST de `app/actions/`.
 rapido|projeto-traduzivel|py|scripts/check_o_projeto_e_traduzivel.py
 rapido|projeto-traduzivel-morde|pytest|tests/unit/test_o_projeto_e_traduzivel_morde.py
+# OS PORTÕES DE PÁGINA NÃO DEPENDEM DA REDE — 06/10/2026, costura da irmã
+# (OS-PORTOES-LENTOS-FICAM-RAPIDOS-POR-DENTRO-01): a régua que prova que os portões que abrem uma página
+# a abrem pelo `scripts/chrome_sem_rede.py`, sem esperar fonte nem script de fora. A irmã a deixou fora
+# desta lista porque o `portoes.sh` não era posse dela. Camada RÁPIDA: ~20 s, e é ela que segura a cura.
+rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rapidos.py
 rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh|scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all
