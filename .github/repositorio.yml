@@ -199,19 +199,19 @@ projetos:
 # `checks` são os nomes que o GitHub mostra (o `name` do job, ou o id dele; o job com matriz
 # leva o valor entre parênteses) e cada um tem de existir em `.github/workflows/`.
 # Os administradores passam pelo ruleset «a porta» (o trabalho do dia entra por push direto no `dev`).
-# A assinatura (SSH, o selo «Verified») mora na regra da história, que no `dev` não tem exceção para
-# ninguém: uma exceção anularia a regra para quem mais empurra commit. No `main` a regra da história é
-# outra, com a exceção de quem administra: o `main` está milhares de commits atrás do `dev`, e nenhum
-# deles é assinado, então o primeiro avanço dele na release seria recusado pelos commits antigos sem a
-# exceção. O histórico linear mora na porta, e não na história, pelo mesmo motivo (o `dev` traz centenas
-# de merges que o `main` ainda não tem).
+# A história do `dev` e a do `main` não se apagam nem se reescrevem, sem exceção para ninguém.
+# A assinatura (SSH, o selo «Verified») mora num ruleset por ramo: no `dev` sem exceção, porque uma
+# exceção anularia a regra para quem mais empurra commit; no `main` com a exceção de quem administra,
+# porque o `main` está milhares de commits atrás do `dev`, nenhum deles assinado, e sem ela o primeiro
+# avanço dele na release seria recusado pelos commits antigos. A exceção vale para todas as regras do
+# ruleset em que está, por isso esse ruleset só tem a assinatura. O histórico linear mora na porta, e não
+# na história, pelo mesmo motivo (o `dev` traz centenas de merges que o `main` ainda não tem).
 # A assinatura só se aplica depois do push da história: a que já existe não é assinada.
 rulesets:
-  - nome: "A história do dev não se reescreve e vem assinada"
-    ramos: [dev]
+  - nome: "A história do dev e do main não se reescreve"
+    ramos: [dev, main]
     sem_apagar: true
     sem_push_forcado: true
-    assinatura: exigida
   - nome: "O que entra no dev e no main passa pelos checks e pela revisão"
     ramos: [dev, main]
     historico_linear: true
@@ -228,10 +228,11 @@ rulesets:
     sem_apagar: true
     sem_push_forcado: true
     sem_atualizar: true
-  - nome: "A história do main não se reescreve e vem assinada, e quem administra a avança"
+  - nome: "A história do dev vem assinada"
+    ramos: [dev]
+    assinatura: exigida
+  - nome: "A história do main vem assinada, e quem administra a avança"
     ramos: [main]
-    sem_apagar: true
-    sem_push_forcado: true
     assinatura: exigida
     excecao: administradores
 

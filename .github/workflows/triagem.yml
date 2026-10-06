@@ -28,13 +28,16 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          # Idempotente: rotular de novo, ou tirar e pôr o rótulo, não repete o aviso.
-          if gh api "repos/${REPO}/issues/${NUMERO}/comments" --paginate --jq '.[].body' | grep -qF '<!-- aceito -->'; then
+          # Idempotente: rotular de novo, ou tirar e pôr o rótulo, não repete o aviso. Os comentários são lidos
+          # inteiros antes da busca: num cano, o `grep -q` sai no primeiro achado, o `gh` morre escrevendo
+          # (SIGPIPE), o `pipefail` torna o achado em falha e o aviso se repetia. Leitura que falha derruba o job.
+          corpos="$(gh api "repos/${REPO}/issues/${NUMERO}/comments" --paginate --jq '.[].body')"
+          if grep -qF '<!-- aceito -->' <<<"${corpos}"; then
             echo "A issue ${NUMERO} já foi avisada."
             exit 0
           fi
           gh issue comment "${NUMERO}" --repo "${REPO}" --body-file - <<'AVISO'
           <!-- aceito -->
           Quem mantém o Hefesto aceitou esta issue: ela entra na fila de trabalho. O andamento aparece aqui e no
-          quadro Roteiro, e esta conversa avisa quando a mudança sair numa versão.
+          quadro Roteiro, e esta conversa diz em que versão a mudança sai.
           AVISO

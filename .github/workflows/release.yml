@@ -384,10 +384,12 @@ jobs:
   # O que se baixa se confere: o `SHA256SUMS` de todo arquivo da release e o atestado de procedência (de que
   # commit e de que fluxo cada um saiu). O atestado só existe no servidor (precisa do token OIDC); no `act`,
   # que não o tem, o passo é pulado e o resto roda de verdade, sobre os arquivos que o `act` consegue montar.
+  # O atestado de repositório público vai para o registro público de transparência (Sigstore) e não se
+  # apaga: ele espera o `guarda-ci` como todo job que entrega para fora.
   integridade:
     name: SHA256SUMS e atestado de procedência
     runs-on: ubuntu-latest
-    needs: [build, appimage, deb, flatpak]
+    needs: [build, appimage, deb, flatpak, guarda-ci]
     permissions:
       contents: read
       id-token: write
@@ -475,7 +477,7 @@ jobs:
       - name: Baixar o tarball da tag
         env:
           VERSION: ${{ needs.build.outputs.version }}
-        run: curl --fail --silent --show-error --location --output fonte.tar.gz "https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/v${VERSION}.tar.gz"
+        run: curl --fail --silent --show-error --location --output fonte.tar.gz "https://github.com/${GITHUB_REPOSITORY}/archive/v${VERSION}.tar.gz"
       - name: Preparar os arquivos de pacote
         env:
           VERSION: ${{ needs.build.outputs.version }}

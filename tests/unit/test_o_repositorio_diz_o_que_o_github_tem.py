@@ -460,12 +460,12 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
         {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}
     ]
     historia = next(r for r in e["rulesets"] if r["name"].startswith("A história"))
-    assert {x["type"] for x in historia["rules"]} == {
-        "deletion",
-        "non_fast_forward",
-        "required_signatures",
-    }
-    assert historia["bypass_actors"] == []
+    assert {x["type"] for x in historia["rules"]} == {"deletion", "non_fast_forward"}
+    assert sorted(historia["conditions"]["ref_name"]["include"]) == [
+        "refs/heads/dev",
+        "refs/heads/main",
+    ]
+    assert historia["bypass_actors"] == [], "nem quem administra apaga ou reescreve o dev e o main"
     versoes = next(r for r in e["rulesets"] if r["target"] == "tag")
     assert {x["type"] for x in versoes["rules"]} == {"deletion", "non_fast_forward", "update"}
     assert versoes["conditions"]["ref_name"]["include"] == ["refs/tags/v*"]
@@ -607,7 +607,7 @@ def test_sem_rulesets_deixa_os_rulesets_para_depois_do_push(gh: Mentira) -> None
     assert gh.estado["rulesets"] == []
     assert rodar("--conferir") == 1  # o todo ainda tem diferença
     assert rodar("--aplicar") == 0
-    assert len(gh.estado["rulesets"]) == 4
+    assert len(gh.estado["rulesets"]) == 5
 
 
 def test_falha_de_escrita_aparece_e_nao_vira_verde(gh: Mentira, capsys: Capsys) -> None:

@@ -7,7 +7,7 @@
 
 A versão dos quatro arquivos já foi gravada, no commit da release, pelo `versao.py gravar`: aqui ela só é
 CONFERIDA contra a tag (um arquivo de pacote com outra versão reprova). O que a tag ainda não tinha é o hash do
-tarball que o GitHub gera dela (`/archive/refs/tags/vV.tar.gz`, o mesmo que o `source=` do PKGBUILD baixa), e é
+tarball que o GitHub gera dela (`/archive/vV.tar.gz`, o mesmo endereço do `source=` do PKGBUILD), e é
 ele que `preparar` grava na cópia. O Nix compila da árvore local (`src = ../..`) e não leva hash de tarball.
 
 `abrir-pr` recebe uma lista `DONO/NOME[:distro]` separada por vírgula (a distro é arch, fedora, debian ou nix; o
@@ -123,7 +123,16 @@ def abrir_pr(a: argparse.Namespace) -> int:
                 continue
             _rodar("git", "-c", f"user.name={autor[0]}", "-c", f"user.email={autor[1]}", "commit", "-m",
                    f"Atualiza para a versão {a.numero}", cwd=clone)
-            _rodar("git", "push", "--force-with-lease", "origin", ramo, cwd=clone)
+            # O ramo é só desta ferramenta: a corrida de novo (o job re-executado) o substitui. O clone raso não
+            # tem o ramo remoto, e o `--force-with-lease` recusaria por «stale info». A credencial é a do `gh`
+            # (o GH_TOKEN do job), só neste comando, sem mexer na configuração do git de quem roda.
+            _rodar("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+                   "push", "--force", "origin", ramo, cwd=clone)
+            ja_aberto = _rodar("gh", "pr", "list", "--repo", repo, "--head", ramo, "--state", "open",
+                               "--json", "number", "--jq", "length", cwd=clone).strip()
+            if ja_aberto not in ("", "0"):
+                abertos.append(f"{repo} ({distro}): o PR de {ramo} já estava aberto e foi atualizado")
+                continue
             _rodar("gh", "pr", "create", "--repo", repo, "--head", ramo, "--title", f"Atualiza para a versão {a.numero}",
                    "--body", f"A versão {a.numero} do Hefesto saiu; os arquivos de pacote seguem a tag.", cwd=clone)
             abertos.append(f"{repo} ({distro}): PR aberto de {ramo}")

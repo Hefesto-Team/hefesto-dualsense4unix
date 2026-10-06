@@ -759,7 +759,9 @@ def corpo_da_issue(i):
     return {"number": i["number"], "node_id": i["node_id"], "title": i["title"], "body": i["body"], "state": i["state"],
             "state_reason": i["state_reason"], "labels": [{"name": n} for n in i["rotulos"]],
             "milestone": {"number": m["number"], "title": m["title"]} if m else None,
-            "html_url": f"https://github.com/{st['slug']}/issues/{i['number']}", "user": {"login": st["user"]}}
+            "html_url": f"https://github.com/{st['slug']}/issues/{i['number']}",
+            # quem ABRIU a issue (gravado no POST), nunca quem pergunta agora; a semeada pelo teste é de fora
+            "user": {"login": i.get("autor", "alguem-de-fora")}}
 
 
 def validar_issue(c, criando):
@@ -789,7 +791,7 @@ if sub == "issues":
         n = len(st["issues"]) + 1
         st["issues"].append({"number": n, "node_id": f"I_kwDO{n}", "title": corpo["title"], "body": corpo.get("body") or "",
                              "state": "open", "state_reason": None, "rotulos": list(corpo.get("labels", [])),
-                             "marco": corpo.get("milestone")})
+                             "marco": corpo.get("milestone"), "autor": st["user"]})
         saida(201, corpo_da_issue(st["issues"][-1]))
 mi = re.fullmatch(r"issues/(\d+)(?:/(comments))?", sub)
 if mi:

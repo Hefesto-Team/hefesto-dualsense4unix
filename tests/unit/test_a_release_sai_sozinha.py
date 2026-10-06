@@ -1028,6 +1028,9 @@ def test_a_integridade_espera_todos_os_arquivos_e_quem_publica_espera_a_integrid
     wf: dict[str, Any],
 ) -> None:
     assert {"build", "appimage", "deb", "flatpak"} <= set(_needs(wf, "integridade"))
+    # o atestado de repositório público entra no registro público de transparência e não se apaga:
+    # com o ci.yml vermelho, nada sai daqui
+    assert "guarda-ci" in _needs(wf, "integridade")
     assert "integridade" in _needs(wf, "github-release") and "integridade" in _needs(wf, "pypi")
     for antigo in ("deb-install-smoke", "guarda-ci"):
         assert antigo in _needs(wf, "github-release"), f"{antigo} continua barrando a publicação"
@@ -1064,6 +1067,22 @@ def test_os_pacotes_de_distro_seguem_a_versao_depois_da_publicacao(wf: dict[str,
     assert abrir["if"] == "${{ vars.PACOTES_REPOS != '' }}", (
         "sem repositório de pacote declarado, só prepara"
     )
+
+
+def test_o_tarball_que_o_job_pacotes_mede_e_o_que_o_pkgbuild_baixa(wf: dict[str, Any]) -> None:
+    """O hash gravado no PKGBUILD só vale se for o do mesmo endereço do `source=` dele."""
+    pkgbuild = (RAIZ / "packaging/arch/PKGBUILD").read_text(encoding="utf-8")
+    url = re.search(r"^url=['\"]?([^'\"\s]+)", pkgbuild, re.MULTILINE)
+    fonte = re.search(
+        r"^source=\(\"[^:]+::\$\{url\}(/archive/v\$\{pkgver\}\.tar\.gz)\"\)",
+        pkgbuild,
+        re.MULTILINE,
+    )
+    assert url and fonte, "o PKGBUILD baixa o tarball da tag pelo `url`"
+    assert url.group(1).endswith("/hefesto-dualsense4unix")
+    caminho = fonte.group(1).replace("${pkgver}", "${VERSION}")
+    esperado = "https://github.com/${GITHUB_REPOSITORY}" + caminho
+    assert esperado in _shell(wf, "pacotes")
 
 
 def test_todo_job_do_release_tem_decisao_no_ci_de_casa(wf: dict[str, Any]) -> None:
@@ -1180,6 +1199,31 @@ def test_o_main_avanca_por_quem_administra_e_e_recusado_para_quem_nao_administra
         and "Commits must have verified signatures" in recusado.stdout
     )
     assert gh.estado["ramos"]["main"] == "c0"
+
+
+def test_a_excecao_do_main_vale_so_para_a_assinatura_e_nem_quem_administra_reescreve_o_main(
+    repositorio_aplicado: Mentira,
+) -> None:
+    """A exceção do ruleset vale para todas as regras dele: com o push forçado ali, quem
+    administra reescreveria o `main`. A história do `main` não se reescreve, com ou sem a
+    exceção da assinatura."""
+    gh = repositorio_aplicado
+    _historia(gh, assinados=False)
+    e = gh.estado
+    # um commit que não descende do main de hoje
+    e["commits"]["x1"] = {"pai": "c0", "assinado": False}
+    gh.mudar(commits=e["commits"], ramos={"dev": "c3", "main": "c3"})
+    r = _avancar("main", "x1", force=True)
+    assert "HTTP/2.0 422" in r.stdout and "Cannot force-push" in r.stdout, r.stdout
+    assert gh.estado["ramos"]["main"] == "c3"
+    do_main = next(
+        x
+        for x in gh.estado["rulesets"]
+        if x["conditions"]["ref_name"]["include"] == ["refs/heads/main"]
+    )
+    assert {x["type"] for x in do_main["rules"]} == {"required_signatures"}, (
+        "o ruleset com a exceção só leva a assinatura"
+    )
 
 
 def test_no_dev_nem_quem_administra_empurra_commit_sem_assinatura(
@@ -1447,8 +1491,12 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     fachada = bin_ / "gh"
     fachada.write_text(
         "#!/bin/sh\n"
-        'if [ "$1 $2" = "repo clone" ]; then exec git clone -q ' + str(remoto) + ' "$4"; fi\n'
+        # o clone é raso como o do `gh repo clone ... -- --depth 1`: sem o ramo remoto de antes
+        'if [ "$1 $2" = "repo clone" ]; then '
+        f'exec git clone -q --depth 1 file://{remoto} "$4"; fi\n'
         'if [ "$1 $2" = "pr create" ]; then echo "$@" >> ' + str(prs) + "; exit 0; fi\n"
+        'if [ "$1 $2" = "pr list" ]; then '
+        f"if [ -s {prs} ]; then echo 1; else echo 0; fi; exit 0; fi\n"
         "exit 2\n",
         encoding="utf-8",
     )
@@ -1477,6 +1525,25 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     assert "pkgver=0.9.5" in conteúdo and "sha256sums=('" in conteúdo
     pedido = prs.read_text(encoding="utf-8")
     assert "--repo Hefesto-Team/pacote-arch" in pedido and "--head atualiza-0.9.5" in pedido
+    # o job re-executado (outro dia, outro commit): o ramo remoto já existe e o PR já está aberto;
+    # nada falha nem se duplica
+    outro_dia = {"GIT_AUTHOR_DATE": "2026-10-08T12:00:00+00:00"}
+    outro_dia["GIT_COMMITTER_DATE"] = outro_dia["GIT_AUTHOR_DATE"]
+    de_novo = rodar(
+        PACOTES,
+        "abrir-pr",
+        "--numero",
+        "0.9.5",
+        "--pasta",
+        str(saida),
+        "--repos",
+        "Hefesto-Team/pacote-arch:arch",
+        raiz=brinquedo,
+        env={**env, **outro_dia},
+    )
+    assert de_novo.returncode == 0, de_novo.stdout + de_novo.stderr
+    assert "já estava aberto" in de_novo.stdout
+    assert len(prs.read_text(encoding="utf-8").splitlines()) == 1, "um PR só"
     # distro que o artefato não tem: recusa antes de clonar
     ruim = rodar(
         PACOTES,
@@ -1564,3 +1631,63 @@ def test_a_triagem_avisa_uma_vez_e_nenhum_dado_do_evento_entra_no_shell() -> Non
     assert corpo.lstrip().startswith("<!-- aceito -->"), (
         "o aviso carrega a marca que a conferência procura"
     )
+
+
+GH_DA_TRIAGEM = """#!{py}
+import os, sys
+arq = os.environ["COMENTARIOS_DA_TRIAGEM"]
+if sys.argv[1:3] == ["api", "repos/Hefesto-Team/ensaio/issues/7/comments"]:
+    if os.environ.get("LEITURA_CAI"):
+        sys.stderr.write("HTTP 502\\n")
+        sys.exit(1)
+    texto = open(arq, encoding="utf-8").read() if os.path.exists(arq) else ""
+    sys.stdout.write(texto)
+    # muitos comentários depois do aviso: o `gh` ainda escreve quando a busca já achou
+    for n in range(60000):
+        sys.stdout.write(f"um comentário qualquer {{n}}\\n")
+    sys.exit(0)
+if sys.argv[1:3] == ["issue", "comment"]:
+    with open(arq, "a", encoding="utf-8") as f:
+        f.write(sys.stdin.read() + "\\n")
+    sys.exit(0)
+sys.exit(2)
+"""
+
+
+def _rodar_a_triagem(tmp_path: Path, **extra: str) -> subprocess.CompletedProcess[str]:
+    passo = yaml.safe_load(TRIAGEM_YML.read_text(encoding="utf-8"))["jobs"]["aceita"]["steps"][0]
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    gh_ = bin_ / "gh"
+    gh_.write_text(GH_DA_TRIAGEM.format(py=sys.executable), encoding="utf-8")
+    gh_.chmod(0o755)
+    env = {
+        **os.environ,
+        "PATH": f"{bin_}{os.pathsep}{os.environ['PATH']}",
+        "GH_TOKEN": "x",
+        "NUMERO": "7",
+        "REPO": "Hefesto-Team/ensaio",
+        "COMENTARIOS_DA_TRIAGEM": str(tmp_path / "comentarios.txt"),
+        **extra,
+    }
+    return subprocess.run(
+        ["bash", "-c", passo["run"]], env=env, capture_output=True, text=True, check=False
+    )
+
+
+def test_a_triagem_rodada_duas_vezes_avisa_uma_vez_e_a_leitura_que_cai_nao_avisa(
+    tmp_path: Path,
+) -> None:
+    """O passo do `triagem.yml`, rodado de verdade no bash contra um `gh` de fachada: a segunda vez
+    acha o aviso e não repete, mesmo com a issue cheia de comentários; a leitura que cai derruba o
+    job sem avisar (o aviso repetido era o efeito do cano com `grep -q` sob `pipefail`)."""
+    comentarios = tmp_path / "comentarios.txt"
+    primeira = _rodar_a_triagem(tmp_path)
+    assert primeira.returncode == 0, primeira.stderr
+    assert comentarios.read_text(encoding="utf-8").count("<!-- aceito -->") == 1
+    segunda = _rodar_a_triagem(tmp_path)
+    assert segunda.returncode == 0 and "já foi avisada" in segunda.stdout, segunda.stderr
+    assert comentarios.read_text(encoding="utf-8").count("<!-- aceito -->") == 1
+    comentarios.unlink()
+    caiu = _rodar_a_triagem(tmp_path, LEITURA_CAI="1")
+    assert caiu.returncode != 0 and not comentarios.exists(), "sem ler, não se avisa"
