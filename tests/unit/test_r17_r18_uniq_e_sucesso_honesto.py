@@ -1,4 +1,8 @@
-"""R-17 e R-18 (auditoria 23/07) — alvo certo e sucesso honesto."""
+"""R-17 (auditoria 23/07) — o alvo certo.
+
+O R-18 (o `status: ok` do `profile.apply_draft`) saiu com o handler, em 06/10/2026:
+o «Aplicar» é só o `profile.reaplicar`.
+"""
 
 from __future__ import annotations
 
@@ -20,13 +24,3 @@ class TestR17ApagarMandaOUniq:
             "uniq" in inspect.signature(ipc_bridge.led_set_detalhado).parameters
         )
 
-
-class TestR18SucessoHonesto:
-
-
-    def test_status_ok_foi_mantido_de_proposito(self) -> None:
-        """Trocar para "partial"/"failed" faria a GUI dizer "daemon offline?"."""
-        fonte = (
-            REPO / "src/hefesto_dualsense4unix/daemon/ipc_handlers.py"
-        ).read_text(encoding="utf-8")
-        assert '"status": "ok", "applied": applied' in fonte
