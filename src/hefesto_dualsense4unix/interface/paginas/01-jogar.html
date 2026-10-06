@@ -14,7 +14,7 @@
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
     /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
-       Ela apontou o sintoma três vezes, em três abas: *"os campos de importância
+       O usuário apontou o sintoma três vezes, em três abas: *"os campos de importância
        tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
        de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
        tem que ser visto infelizmente"*.
@@ -42,10 +42,10 @@
        O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
        `.quadro-titulo` de #bd93f9, sem exceção.
        Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
-       (ela pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
+       (o usuário pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
        exatamente como esta regra virou seis cópias divergentes.
 
-       VERDE, E NÃO ROXO — decisão dela, 30/08: *"deixa verde os nomes"*
+       VERDE, E NÃO ROXO — decisão, 30/08: *"deixa verde os nomes"*
        (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
        já pedira verde na Vibração horas antes; agora vale para as dez, e a
        exceção escopada em `.vib` some por ser redundante.
@@ -56,7 +56,7 @@
     /* ---------------------------------------------------------------
        A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
 
-       PEDIDO DELA, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
+       PEDIDO, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
        bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
        presentes e modernas de forma que não roube a atenção de forma
        negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
@@ -88,7 +88,7 @@
        essas é apagar o dado, não o enfeite.
        --------------------------------------------------------------- */
     --linha:#53576f;
-    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido dela: *"linha abaixo de cada
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido: *"linha abaixo de cada
        campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
        e, quando a viu: *"as linhas divisórias em todas as páginas tão
        invisíveis (…) a primeira coluna serve como nome da linha e a divisória
@@ -102,7 +102,7 @@
        escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
        chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
        controle — um traço que só separa duas células não precisa dele, e a esse
-       peso ele passou a competir com o que separa. Ela viu o resultado em três
+       peso ele passou a competir com o que separa. O usuário viu o resultado em três
        abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
        agora é a escala acima, e ela vale para as dez de uma vez. */
     --rot-linha:var(--linha);
@@ -126,7 +126,7 @@
   }
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
-  /* A LARGURA ESTICA, COM TETO — 08/09/2026, decisão dela.
+  /* A LARGURA ESTICA, COM TETO — 08/09/2026, decisão de produto.
 
      ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
      DualSense na mesa: *"o background fica completamente preto"*. Medido: não
@@ -134,7 +134,7 @@
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 
-     A recomendação foi levada a ela e ela aprovou (*"eu confio em vc, manda
+     A recomendação foi levada ao usuário e o usuário aprovou (*"eu confio em vc, manda
      ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
      ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
      ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
@@ -173,7 +173,7 @@
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
      DE ONDE SAI O 710, e por que não é a altura da tela. A primeira tentativa
-     foi 1048 — o teto da TV dela — para que nenhuma aba precisasse rolar. Deu
+     foi 1048 — o teto da TV da bancada — para que nenhuma aba precisasse rolar. Deu
      errado: o conteúdo das dez vai de 281px (Iluminação) a 783px (Conexões), e
      com 1048 a Iluminação ficava com 518px de quadro vazio. Ela: "iluminação,
      jogar e outras abas tão muito ruins com esse super espaço vazio na parte
@@ -190,7 +190,7 @@
      e o dia em que passar a janela continua do mesmo tamanho. */
   .janela{
     width:min(100%,1600px); height:var(--alt-janela); max-width:100%; background:var(--app-bg);
-    /* A JANELA NÃO PASSA DA TELA — 19/09/2026, e o defeito é dela: os quatro
+    /* A JANELA NÃO PASSA DA TELA — 19/09/2026, e o defeito é do usuário: os quatro
        botões do rodapé cortados ao meio pela borda de baixo, com a janela
        ladrilhada.  <!-- noqa-acento -->
 
@@ -222,7 +222,7 @@
   }
 
   /* ---------- a marca ----------
-     A FAIXA DE CABEÇALHO SAIU — 10/09/2026, decisão dela («1 + rodapé»,
+     A FAIXA DE CABEÇALHO SAIU — 10/09/2026, decisão de produto («1 + rodapé»,
      ALTURA-DA-VISTA-01). Eram 60 px em cada uma das dez abas: o logotipo de
      46, o `h1` «Hefesto — DualSense4Unix» e a linha «Gerenciador DualSense
      para Linux».
@@ -234,13 +234,13 @@
      faixa era a única parcela que REPETIA o que a moldura do sistema já diz.
 
      O QUE ELA CARREGAVA E NÃO ERA REPETIÇÃO desceu uma faixa: o logotipo
-     DELA, que continua na tela como marca de 24 px à esquerda da linha do
+     DO USUÁRIO, que continua na tela como marca de 24 px à esquerda da linha do
      alvo, e a contagem de controles, que é dado vivo do daemon e agora mora
      ao lado do perfil ativo. As duas mudanças estão em `.fita-linha`, logo
      abaixo.
 
      O LUGAR DA CONTAGEM (`x USB · y BT`) foi decidido em 13/09/2026, por
-     delegação dela, com a foto da tela na mão. É reversível: o que muda é
+     delegação de produto, com a foto da tela na mão. É reversível: o que muda é
      este bloco e a linha do alvo, no corpo da página. */
   /* 46/44 e não 24/22 desde 21/09/2026 — a conta está em `monta.MARCA_DA_LOGO`. */
   .logo{
@@ -294,7 +294,7 @@
      SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
      `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
      .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
-     (decisão dela, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
+     (decisão, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
      ESMAECIDA porque nada ali se ajusta por controle).
 
      A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
@@ -307,7 +307,7 @@
   /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
   .fita.inerte .chip.plastico{border-color:var(--border-sutil);--borda-do-chip:1px}
   /* O CHIP MARCADO FICA IGUAL AOS OUTROS QUANDO A FITA NÃO ESCOLHE NADA —
-     08/09/2026, pedido dela na aba Gatilhos: *"o player 1 tipo no caso cosmic
+     08/09/2026, pedido na aba Gatilhos: *"o player 1 tipo no caso cosmic
      red - cabo, fica sempre selecionado com borda diferente mesmo nas abas que
      cada player tem sua propria config. conseguimos deixar ele cinza como os
      demais?"* (a citação é palavra por palavra, inclusive onde falta acento).
@@ -347,7 +347,7 @@
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
-     Era a TELA-TRES-01 §3, pedido dela de 08/09: "cabo e rádio coloca
+     Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:
 
          fita   P1 • Cosmic Red • CABO
@@ -357,7 +357,7 @@
       capitular). Esse tipo de coisa não pode se repetir na interface."   (noqa-acento: citação literal)
 
      A REVOGAÇÃO É A LEITURA CERTA DE «coloca maiúsculo», e não humor: a regra
-     dela é de 30/08 — "a maiúscula a regra é sobre a primeira letra a ser   (noqa-acento: citação literal)
+     de produto é de 30/08 — "a maiúscula a regra é sobre a primeira letra a ser   (noqa-acento: citação literal)
      capitalizada, é o padrão do projeto" —, e foi por ela que a caixa alta
      saiu dos rótulos de seção no mesmo dia (`.sec-rot`, nos geradores). Subir
      a palavra INTEIRA nunca foi o que esse padrão diz.
@@ -390,7 +390,7 @@
      cabeçalho sair; remedido depois, com Chrome e com o piloto, é 1.
 
      A CURA ESCRITA NA SPRINT CAIU AO MEDIR: pôr 2 px na borda do chip inerte
-     devolve a espessura que ela mandou tirar em 08/09 («cinza como os demais»,
+     devolve a espessura que o usuário mandou tirar em 08/09 («cinza como os demais»,
      a regra logo abaixo) e deixa a 07 em 51, porque a fita de lá nasce só com
      o «Todos». Pelo rádio a cor não se lê e nenhum chip ganha a classe do
      plástico; com a pintura, a mesma aba muda de 51 para 52 no primeiro tique.
@@ -409,7 +409,7 @@
      cor no `style` do chip, lida do desenho. */
   .chip.plastico{border-color:var(--plastico, var(--border-forte))}
 
-  /* A LISTA ABERTA DE UM <select> — ela viu, 28/08: as opções somem quando o
+  /* A LISTA ABERTA DE UM <select> — o usuário viu, 28/08: as opções somem quando o
      dropdown abre. O popup do <select> é do SISTEMA, não da página: ele nasce com
      o fundo CLARO do tema do Chrome, e o `color` que a folha dá ao `select`
      (texto claro, para o nosso fundo escuro) é herdado pelas `option`. Claro
@@ -504,7 +504,7 @@
   .quadro-corpo{padding:10px 14px 14px}
 
   /* ---------- SEÇÃO QUE ABRE E FECHA ----------
-     Pedido dela, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
+     Pedido, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
      expansíveis igual fizemos em controles"*.
 
      MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
@@ -527,7 +527,7 @@
 
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
-     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
      viu o resultado: *"dá pra ver em todas as abas problemas que não foram
      corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
      ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
@@ -560,7 +560,7 @@
   .estado .laranja{color:var(--orange)}
 
   /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
-     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão dela
+     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão
      de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
      saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
      chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
@@ -610,7 +610,7 @@
   .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
 
-  /* ---------- controles: SÓ a contagem e a ponte (decisão dela) ---------- */
+  /* ---------- controles: SÓ a contagem e a ponte (decisão de produto) ---------- */
   .mesa{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .contagem{font-size:13px}
   .contagem .n{color:var(--cyan);font-weight:600;font-family:'JetBrains Mono',monospace}
@@ -668,12 +668,12 @@
 
   /* ---------- rodapé ----------
      O RECUO VERTICAL CAIU DE 12 PARA 6 — 10/09/2026, a metade «+ rodapé» da
-     decisão dela. A faixa media 59 px (12 + 34 do botão + 12 + 1 de borda) e
+     decisão de produto. A faixa media 59 px (12 + 34 do botão + 12 + 1 de borda) e
      passa a medir 47; os 12 px vão para o quadro, nas DEZ abas de uma vez,
      porque esta barra existe nas dez.
 
-     O QUE NÃO ENCOLHEU, e é a ressalva dela: *"nenhum dos quatro botões pode
-     ficar menor do que a mão dela alcança"*. O botão continua com
+     O QUE NÃO ENCOLHEU, e é a ressalva de produto: *"nenhum dos quatro botões pode
+     ficar menor do que a mão do usuário alcança"*. O botão continua com
      `height:var(--h-acao)` = 34 px, que é a escala de ação desta casa
      (`:root`, lá embaixo) — o que encolheu é o AR em volta dele. Encolher o
      botão seria trocar a barra de rolagem dela por um alvo de clique menor,
@@ -715,7 +715,7 @@
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
 
-  /* O LUGAR VAZIO NÃO DESENHA CONTROLE — 04/09/2026, e é decisão DELA:
+  /* O LUGAR VAZIO NÃO DESENHA CONTROLE — 04/09/2026, e é decisão de produto:
      "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
 
      ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
@@ -795,29 +795,29 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido: *"talvez
        estender mais verticalmente o Dispositivos Conectados faça caber."*
        Ela estava certa, e o número diz por quê: o card aberto da Controles
        ESTICA para preencher o corpo, então a folga de verdade é
        `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
        conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
-       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela do usuário.
        Com 777 a folga passa a 21px.
        O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
        vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
        vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar.
 
-       O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão dela
+       O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão de produto
        («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV:
        *"ainda joga pra baixo e abre a barra de navegação. tem espaço vertical  <!-- noqa-acento: citação literal -->
        pra aproveitar aqui"*.
 
-       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV dela
+       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV da bancada
        mede **840** px e a página pedia **809** (16 + 777 + 16). Os 31 px que
        sobravam não iam para aba nenhuma — morriam entre a moldura da `.janela`
        e a borda da janela do sistema. Cresça a janela quanto quiser: com a
        altura em pixel o `.miolo` ficava nos mesmos 564, e a barra de rolagem
-       que ela viu era a mesma que veria numa janela de 809.
+       que o usuário viu era a mesma que veria numa janela de 809.
 
        DE ONDE SAI CADA UM DOS TRÊS NÚMEROS:
 
@@ -825,15 +825,15 @@
          100dvh     a vista de verdade. Numa `WebView` embutida não há barra de
                     navegador que apareça e suma, então `dvh`, `svh`, `lvh` e
                     `vh` valem o mesmo — medido neste WebKit, os quatro dão 840
-                    na vista dela. `dvh` fica porque DIZ a intenção;
+                    na vista do usuário. `dvh` fica porque DIZ a intenção;
          menos 32   o recuo do `body`, que tem dono uma linha acima
                     (`--recuo-do-corpo`) e não se digita duas vezes;
          teto 855   a maior vista que este desenho promete PREENCHER. Acima
-                    dela o que sobra viraria vão, e vão vazio é queixa dela
+                    dela o que sobra viraria vão, e vão vazio é queixa de uso
                     (*"iluminação, jogar e outras abas tão muito ruins com esse
-                    super espaço vazio na parte inferior"*). Na TV dela o teto
+                    super espaço vazio na parte inferior"*). Na TV da bancada o teto
                     nunca é alcançado: 840 − 32 = 808. Numa tela 4K — e a TV
-                    dela tem o modo 3840x2160 — sem teto a Navegação ficaria com
+                    da bancada tem o modo 3840x2160 — sem teto a Navegação ficaria com
                     mais de mil pixels de vão.
 
        QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
@@ -860,13 +860,13 @@
   .campo .nome,.barra .nome{flex:0 0 var(--rot)}
 
   /* O RÓTULO DE UM CONTROLE, na janela inteira, é sempre o mesmo e nesta ordem:
-     player • cor do plástico • transporte. Decisão dela, 26/08/2026, com a MARCA
+     player • cor do plástico • transporte. Decisão, 26/08/2026, com a MARCA
      na frente; ela a tirou em 27/08 — "tira o Sony das outras abas também" —
      porque a marca se repetia em cada card e em cada chip da fita sem separar
      um controle do outro. O que resta é o que distingue.
      O separador é o ponto médio esmaecido — ele agrupa sem competir com o nome. */
-  /* O SEPARADOR É O QUE SUSTENTA A ORDEM DELA, e ele estava ilegível.
-     A ordem do rótulo de um controle é decisão dela, de 26/08:
+  /* O SEPARADOR É O QUE SUSTENTA A ORDEM DE PRODUTO, e ele estava ilegível.
+     A ordem do rótulo de um controle é decisão, de 26/08:
      **marca • player • plástico • transporte**. O `•` que a sustenta usava
      `var(--border-forte)` e media **1,73:1** contra o chip e **1,56:1** contra o
      quadro — o texto ao lado dele mede 4,96:1, três vezes mais. No chip ESCOLHIDO,
@@ -879,7 +879,7 @@
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
   /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA DELA, 05/09/2026: *"temos que entender se só tem um controle
+     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
      conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
@@ -888,7 +888,7 @@
      A 05 mostrava até um interruptor de motor ACESO em laranja.
 
      POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (decisão dela de 31/08 — *"deixa os outros espaços a mostra ainda mas
+     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
      cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
      entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
 
@@ -922,11 +922,11 @@
      cima de uma coluna sem aparelho. */
   [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
 
-  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é dela: *"os svgs não
+  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é de produto: *"os svgs não
      deveriam aparecer prós demais controles desconectados"*.
 
      A VERSÃO ANTERIOR DESTA REGRA PINTAVA o SVG de `var(--linha)` em vez de o
-     tirar. Era menos do que ela pediu e pior do que parecia: um controle
+     tirar. Era menos do que o usuário pediu e pior do que parecia: um controle
      cinza-chumbo continua sendo um CONTROLE desenhado, e a coluna vazia
      passava a mostrar um aparelho apagado ao lado de três travessões — a tela
      desenhando o que não está aqui. Sumir é a resposta honesta, e é a mesma
@@ -974,7 +974,7 @@
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
-     cobrando a altura da fonte, que é o preço que a regra dela de 30/08
+     cobrando a altura da fonte, que é o preço que a regra de 30/08
      (*"texto na interface é zero"*) não aceita pagar.
 
      A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
@@ -994,7 +994,7 @@
      sobre um chip morto é a mesma promessa vazia por outro meio.
 
      NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
-     aprovado compara o que se VÊ; a regra existe para o rato dela.
+     aprovado compara o que se VÊ; a regra existe para o rato do usuário.
 
      AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
      esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
@@ -1045,7 +1045,7 @@
      razão que sobreviveu à mudança de lugar. Um `linha-rot` por cima custa 22px;
      deitado custa zero, e é a forma que ela desenhou: `HEFESTO [ Ligado ● /
      Desligado ○ ]`, tudo numa linha. O orçamento hoje é outro (a subida do
-     interruptor DEVOLVEU 13px em vez de custar), mas a forma é dela. */
+     interruptor DEVOLVEU 13px em vez de custar), mas a forma é do usuário. */
   .hef-linha{display:flex;align-items:center;gap:8px}
   .hef-linha .ajuda{margin-left:2px}
   .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
@@ -1079,7 +1079,7 @@
      desenho brigando com o estado, e o desenho ganhando. A guarda diz o que se
      quer: **enquanto o produto não falou, o desenho manda; quando ele fala, ele
      manda.** Com a página aberta sozinha (o mockup, sem daemon) nada tem `.on`
-     e a regra do rádio segue valendo, byte a byte como ela aprovou. */
+     e a regra do rádio segue valendo, byte a byte como o usuário aprovou. */
   .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
   .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
   .hef-pos.on{border-color:var(--purple);background:var(--sel-bg);
@@ -1091,7 +1091,7 @@
   .hef-pos.desligado.on .pino{background:var(--texto-mudo);
                               border-color:var(--texto-mudo)}
 
-  /* AS DUAS SEÇÕES SÃO EXCLUSIVAS, e é isso que ela pediu: *"Modo Hefesto se
+  /* AS DUAS SEÇÕES SÃO EXCLUSIVAS, e é isso que o usuário pediu: *"Modo Hefesto se
      Ligado Abre as seções de Modo"*. Continua SEM UMA LINHA DE JAVASCRIPT.
 
      O COMBINADOR MUDOU DE `~` PARA `:has()`, e a troca é FORÇADA, não gosto.
@@ -1127,7 +1127,7 @@
   .hef-topo:has(.hef-pos.ligado.on) ~ .quadro .so-ligado{display:block}
   .hef-topo:has(.hef-pos.desligado.on) ~ .quadro .so-desligado{display:block}
   /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y — 180 contra 176 foi o que se
-     mediu quando divergiram, e "muda tudo ao clicar" é a queixa dela que fixou a
+     mediu quando divergiram, e "muda tudo ao clicar" é a queixa de uso que fixou a
      altura única das dez abas; ela vale dentro de uma aba também.
      A CAUSA ORIGINAL SUMIU E A TRAVA FICOU, de propósito: o `?` que só a seção
      do LIGADO tinha subiu para o topo do quadro (ele passou a ser a ajuda do
@@ -1139,7 +1139,7 @@
 
   /* O CHIP SEM DONO — a honestidade desta tela, e ela tem uma regra e uma ordem
      em cima. A regra é de 30/08 (*botão sem dono no produto não vai para a tela
-     como se funcionasse*); a ordem dela, de 31/08, é MANTER o Point And Click e
+     como se funcionasse*); a ordem, de 31/08, é MANTER o Point And Click e
      a Navegação. As duas convivem de um jeito só: eles aparecem e DIZEM que
      ainda não têm quem os atenda.
      NADA DE `opacity`, e a razão é medida (`topo.html`, a fita inerte): a
@@ -1165,7 +1165,7 @@
   .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 
   /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026) e a escolha
-     DELA no mesmo dia, olhando as duas maquetes: **no mesmo frame dos
+     do usuário no mesmo dia, olhando as duas maquetes: **no mesmo frame dos
      assentos**, como a janela GTK fazia, e não numa faixa à parte embaixo. A
      EXTERNOS-01 desenhou a faixa e PERGUNTOU; este bloco é a resposta.
 
@@ -1181,12 +1181,12 @@
      `<i class="nada">` vazio ainda seria UM item da grade, e abriria uma
      segunda fileira de altura zero com os 7px de vão. Em repouso — que é o
      estado desta bancada — a grade continua com os quatro itens de sempre, e a
-     cena que ela aprovou não muda um pixel.
+     cena que o usuário aprovou não muda um pixel.
 
      O CARTÃO CONTINUA NÃO SENDO `.cartao`, e a razão da EXTERNOS-01 não
      caducou: `.cartao` tem `data-controle`, entra em
      `apagar_os_lugares_sem_dono` e recebe o alvo de edição da fita. O que a
-     decisão dela mudou é o LUGAR, não a natureza — aqui se copia a CAIXA, e
+     decisão de produto mudou é o LUGAR, não a natureza — aqui se copia a CAIXA, e
      nunca a classe.
 
      QUEM O DISTINGUE É A MARCA, e é o que a janela GTK fazia: o cartão do
@@ -1199,7 +1199,7 @@
 
      ELE NÃO TEM COR DE PLÁSTICO NEM FILEIRA DE MÁSCARAS. A folha das 28 cores é
      dos DualSense, e máscara é escolha que o Hefesto escreve num aparelho que
-     ele ADOTOU. Campo sem informação não mostra nada, que é regra dela.
+     ele ADOTOU. Campo sem informação não mostra nada, que é regra de produto.
 
      A ALTURA É A DA FILEIRA, e isso é de graça: item de grade estica. É a mesma
      lei que o card da janela GTK pagava à mão (`interface/dados_do_controle.py`,
@@ -1217,7 +1217,7 @@
   .pecas .ext-via{color:var(--texto-mudo)}
   .pecas .ext-aviso{color:var(--orange)}
 
-  /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão dela: a máscara
+  /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão de produto: a máscara
      passou a ser POR CONTROLE, e o seletor dela mora aqui dentro. Em cima a
      peça (desenho + rótulo), embaixo as três máscaras.
      A BORDA É A COR DO PLÁSTICO, E ELA VEM DO DESENHO
@@ -1227,8 +1227,8 @@
 
      E ELA PASSOU A TER DONO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01. A cor
      vinha de `--plastico`, escrito no `style=` do cartão pelo gerador, e o
-     gerador só conhece o mockup: com o controle DELA no cabo (White), a borda
-     continuava Cosmic Red. A lei é dela: *"se no topo tá mostrando controle
+     gerador só conhece o mockup: com o controle do usuário no cabo (White), a borda
+     continuava Cosmic Red. A lei é do usuário: *"se no topo tá mostrando controle
      white player 1, então cada aba vai usar os controles lá de cima."*
 
      POR QUE UMA VARIÁVEL DE CSS NÃO SERVIA, e é o que decidiu a forma: o
@@ -1250,7 +1250,7 @@
      exatamente a borda que o cartão já tinha quando `--plastico` faltava. O
      pacote manda `""` enquanto a cor do plástico não chegou (ela vem do broker,
      em thread, e o primeiro tique de uma sessão nunca a tem), o `escrever`
-     devolve `style.color = ''` e a pele volta ao neutro. É a regra dela: campo
+     devolve `style.color = ''` e a pele volta ao neutro. É a regra de produto: campo
      sem informação não mostra nada. */
   .cartao{
     position:relative;
@@ -1279,7 +1279,7 @@
   /* O "PLAYER N" ESMAECIDO — 04/09/2026, decisão [02] desta aba: *"'Player N',
      esmaecido enquanto espera."* A palavra FICA (D-04 dela, contra a minha
      recomendação); o que sai é o cartão AFIRMAR um jogador que o jogo ainda não
-     recebeu. Medido em 02/09 na mesa dela: o controle do CABO estava com
+     recebeu. Medido em 02/09 na bancada: o controle do CABO estava com
      `player` nulo e o cartão dizia "Player 2" assim mesmo.
      A COR É A DO PRÓPRIO RÓTULO, e não uma terceira: `--texto-mudo` é o que as
      outras duas linhas do cartão já usam, e é ela que faz o número "voltar ao
@@ -1288,20 +1288,20 @@
      opacidade mora no ancestral e toda régua de contraste que lê `color` fica
      cega a ela.
      ZERO PIXEL: só `color` e `font-weight` mudam, e o peso volta ao do rótulo.
-     Nenhuma medida de caixa se move, então a cena que ela aprovou — os dois
+     Nenhuma medida de caixa se move, então a cena que o usuário aprovou — os dois
      controles numerados pelo jogo — continua idêntica. */
   .cartao .rotulo b.espera{color:var(--texto-mudo);font-weight:400}
   /* ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO — 08/09/2026 ----------
-     A caixa que ela pediu em 23/07 e que voltou para esta aba pela decisão [03].
+     A caixa que o usuário pediu em 23/07 e que voltou para esta aba pela decisão [03].
      Ela mora no quadro Modo, fora das duas seções do interruptor — a troca de
      perfil vale ligado e desligado.
 
-     ELE SAIU DO RODAPÉ DO QUADRO E SUBIU PARA A LINHA DO TÍTULO, a pedido dela:
+     ELE SAIU DO RODAPÉ DO QUADRO E SUBIU PARA A LINHA DO TÍTULO, a pedido:
      *"Pode colocar ele no canto superior direito do bloco tipo esse banco de
      provas na guia navegação."* Embaixo dos modos ele lia como um QUINTO modo.
 
      A GRAMÁTICA PASSOU A SER A DA `.porta` DA NAVEGAÇÃO (`aba06.py`), que é o
-     modelo que ela apontou — e com ela vêm três medidas que não são gosto:
+     modelo que o usuário apontou — e com ela vêm três medidas que não são gosto:
 
        `margin-left:auto`  o empurrão para o canto, dentro do `.quadro-topo`.
                            É o mesmo do `.sensores` da aba Controles; não é
@@ -1319,7 +1319,7 @@
      O `white-space:nowrap` + `flex:0 0 auto` são o par que impede o rótulo de
      quebrar em duas linhas quando a janela encolhe para o piso de 1212px — e
      duas linhas aqui estouram os 17px e derrubam a conta acima. */
-  /* A CAIXA VIROU PÍLULA — 19/09/2026, `TRAVA-PILULA-01`, pedido dela com as
+  /* A CAIXA VIROU PÍLULA — 19/09/2026, `TRAVA-PILULA-01`, pedido com as
      duas abas abertas lado a lado: *"vê os botões do giroscopio e acelerometro
      queria esse tipo de botão ali no Trava o perfil Ativo."*
 
@@ -1330,16 +1330,16 @@
 
      **MAS A POLARIDADE É INVERTIDA, e isso é medido, não estilo.** O `.sw`
      está ACESO em repouso e ganha `.off` quando desliga, porque o default dos
-     sensores é LIGADO — ordem dela de 17/09, *"tudo DualSense, tudo ligado"*.
+     sensores é LIGADO — ordem de 17/09, *"tudo DualSense, tudo ligado"*.
      O default desta trava é o oposto: **destravada**. Copiar a polaridade do
      modelo faria a pílula nascer verde, e o pior caso não é o default — é o
      TRAVESSÃO, quando o daemon não respondeu: com `.off` acendendo só no
      `DESLIGADO`, um estado que ninguém leu ficaria verde, e a tela afirmaria
-     uma escolha dela que ela não fez.
+     uma escolha do usuário que ela não fez.
 
      A nota do `a01_jogar._cadeado` já tinha decidido isso por escrito, para a
      caixa de antes: *"Marcar sobre um estado que ninguém leu seria a tela
-     afirmando uma escolha dela que ela não fez; o inverso apenas mostra o
+     afirmando uma escolha do usuário que ela não fez; o inverso apenas mostra o
      padrão do produto, que é destravado."* A classe `.ligada` (e não `.off`)
      é o que honra essa decisão: **só o `LIGADO` literal acende**, e tanto o
      `DESLIGADO` quanto o travessão mostram o padrão.
@@ -1353,7 +1353,7 @@
      O PADDING ENCOLHE COM A ALTURA: o `.sw` usa `0 10px` numa caixa de 26px;
      aqui são `0 8px` em 17px, que é o que mantém a pílula com a mesma
      proporção sem estourar a linha do título. */
-  /* O «MODO FREESTYLE» — 24/09/2026, O-MODO-FREESTYLE-01, pedido dela:
+  /* O «MODO FREESTYLE» — 24/09/2026, O-MODO-FREESTYLE-01, pedido:
      *"Vira Modo Freestyle o botão. E a fonte dele aumenta e a altura do botão
      aumenta também"*. A pílula e a polaridade ficam; mudam a letra e a altura,
      e nenhuma das duas é medida nova:
@@ -1388,7 +1388,7 @@
   /* o glifo da bateria é o MESMO arquivo da aba Controles: assets/glyphs/bateria.svg */
   .cartao .gl{display:inline-block;flex:0 0 auto}
   .cartao .ds-svg{width:62px;flex:0 0 62px}
-  /* AS CINCO LÂMPADAS DO JOGADOR NÃO EXISTEM NESTE CARTÃO — decisão dela, 28/08:
+  /* AS CINCO LÂMPADAS DO JOGADOR NÃO EXISTEM NESTE CARTÃO — decisão, 28/08:
      elas saem dos desenhos pequenos e ficam só nos grandes, da Iluminação. Aqui
      o desenho tem 62px e cada lâmpada media 1,06 × 0,36 px; passar de 1px de  # (noqa-acento)  (`media` é o verbo medir)
      altura pediria ~340px de desenho, um cartão de ~460px, e os quatro somariam
@@ -1401,7 +1401,7 @@
      é a mesma: as duas metades andam juntas. */
 
   /* ---------- A MÁSCARA, POR CONTROLE ----------
-     Decisão dela, 28/08/2026: a máscara vira por controle, na aba Jogar, com
+     Decisão, 28/08/2026: a máscara vira por controle, na aba Jogar, com
      TRÊS opções e **sem "Automático"** — DualSense · Xbox 360 · Nintendo Pro.
      Era um seletor único no quadro de cima, e ele saiu de lá.
 
@@ -1417,7 +1417,7 @@
   /* AS TRÊS MÁSCARAS EM 2+1 — 30/08/2026, e é PAGAMENTO DE ALTURA, não estética.
      Deitar a Atenção (acima) fez o quadro crescer 69px, e o miolo tinha 6px de
      folga: nasceu barra de rolagem por dentro, com o "Reconectar Controles" fora
-     da tela. Ela autorizou o ajuste com uma condição — *"desde que não percamos
+     da tela. O usuário autorizou o ajuste com uma condição — *"desde que não percamos
      as features"* —, então nenhuma máscara sai: elas mudam de arranjo.
 
      O QUE MUDOU DESDE O COMENTÁRIO ACIMA: ele diz que três lado a lado pediriam
@@ -1428,7 +1428,7 @@
      quebra em duas linhas e o chip vai de 28 para 44px. */
   .mascara{display:grid;grid-template-columns:1fr 1fr;gap:4px}
   /* O DUALSENSE OCUPA A LINHA INTEIRA, e os outros dois dividem a de baixo.
-     Era o contrário, e ela viu na hora: *"o DualSense é o foco do app e o
+     Era o contrário, e o usuário viu na hora: *"o DualSense é o foco do app e o
      Nintendo Pro tá roubando a cena"*. Estava certa — na primeira versão do 2+1
      o terceiro chip era esticado só porque "Nintendo Pro" é o rótulo mais
      largo, e com isso o menos importante ganhava o maior pedaço da tela.
@@ -1456,7 +1456,7 @@
   .cartao.alvo{background:var(--sel-bg)}
 
   /* ---------- O LUGAR VAZIO ----------
-     Decisão dela, 31/08/2026: *"deixa os outros dois controles desconectados,
+     Decisão, 31/08/2026: *"deixa os outros dois controles desconectados,
      só coloca algo como `-` nos campos que deveriam ter algo e escurece tudo."*
 
      NADA DE `opacity`, e a razão é medida — é a lição da `.fita.inerte`
@@ -1484,7 +1484,7 @@
      07/09/2026. O lugar vazio deixou de ser um segundo HTML e passou a ser o
      MESMO cartão com o texto de cada campo em travessão (ver `cartao`). Estas
      duas regras são o que faz essa unificação não mover um pixel do desenho que
-     ela aprovou — e as duas mordem pela classe `off`, que é a mesma que o
+     o usuário aprovou — e as duas mordem pela classe `off`, que é a mesma que o
      piloto tira no passo `1c` quando um controle ocupa o lugar. Logo elas
      desligam sozinhas, sem ninguém repintar nada.
 
@@ -1524,7 +1524,7 @@
   .cartao.off .ds-svg .miolo *{fill:var(--linha) !important}
   .cartao.off .ds-svg .corpo{stroke:var(--border-forte) !important}
   /* ---- O LUGAR SEM APARELHO NÃO OFERECE GESTO — 07/09/2026 ----
-     A DECISÃO É DELA, 31/08/2026, e é a mesma que a S-04 da folha das dez abas
+     A DECISÃO É DE PRODUTO, 31/08/2026, e é a mesma que a S-04 da folha das dez abas
      cumpre em `monta.py`: *um lugar sem aparelho não oferece gesto nenhum*. Um
      chip clicável numa coluna sem controle ou não faz nada — e mente — ou faz
      alguma coisa no controle errado, que é pior.
@@ -1567,7 +1567,7 @@
      A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
      cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
      e `1c` (`hefesto_vivo.py:1262` e `:1380`), e é a mesma chave da S-04. Com
-     os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
+     os quatro DualSense do usuário na mesa, o P3 chega, o passo `1c` escreve
      `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
      recarregar a página, porque quem os escondia era o seletor e não um nó
      removido. O piloto vira marca e escreve campo; ele NÃO materializa widget,
@@ -1611,7 +1611,7 @@
      a única — que é o que ela já era antes desta aba a redefinir. */
 
   /* A FAIXA FINAL VOLTOU AO `flex` DO `topo.html` — 30/08/2026, e são DOIS
-     pedidos dela numa cura só: *"o reconectar controles vai pra direita enquanto
+     pedidos numa cura só: *"o reconectar controles vai pra direita enquanto
      o 'Vai mudar para Conexão Nativa (Sony)…' extendo pra chegar ao reconectar
      controles"*. A base continua sendo a do `topo.html`:
          .faixa-final{display:flex;align-items:center;gap:12px}
@@ -1635,7 +1635,7 @@
   .faixa-final .pendente{flex:1 1 0;min-width:0;overflow:hidden}
   .faixa-final > .btn{flex:none;white-space:nowrap;margin-left:auto;
                       order:1;align-self:flex-start}
-  /* A ATENÇÃO SAIU — 07/09/2026, ordem dela: *"em jogar remover essa seção do
+  /* A ATENÇÃO SAIU — 07/09/2026, ordem de produto: *"em jogar remover essa seção do
      atenção, nenhum aviso esse — deixar só o reconectar controles."*
      Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
      (*"esse atenção desce"*) e a coluna de zero a N de 03/09. As duas saíram
@@ -1663,7 +1663,7 @@
      botão desce os 27 px do quinto controle: é o estado que mudou, e não o
      tique que samba.
 
-     A LINHA APAGADA continua `display:none`: nada dela existe na cena que ela
+     A LINHA APAGADA continua `display:none`: nada dela existe na cena que o usuário
      aprovou. Por cima, o fundo é o do quadro, para a borda dos cartões não
      cortar a frase. As duas linhas dividem o lugar: a ressalva da máscara sai
      vazia em todo modo desde a JOGAR-A-FAIXA-QUE-PULA-01, então só a da mesa
@@ -1692,7 +1692,7 @@
      ELE NÃO É A CLASSE `.cartao.alvo`, e a sprint avisa por quê: aquela existe
      e responde a OUTRA pergunta — qual controle os ajustes das outras abas vão
      tocar. Os dois podem ser aparelhos DIFERENTES (o primário é fato do
-     serviço, o alvo é escolha dela), e reusar a classe faria os dois
+     serviço, o alvo é escolha do usuário), e reusar a classe faria os dois
      significados brigarem no mesmo pixel. A regra abaixo é de um seletor
      próprio, e não toca em `.alvo`.
 
@@ -1700,7 +1700,7 @@
      gramática do `jogador-espera` acima: o `data-hef-alvo="classe"` é BOOLEANO,
      e o travessão que o piloto escreve num valor vazio conta como desligado.
      Uma palavra que viesse do produto sumiria da página parada, e o desenho
-     dela deixaria de mostrar o que ela aprovou. */
+     dela deixaria de mostrar o que o usuário aprovou. */
   .cartao .e-primario{display:none;color:var(--texto-mudo);cursor:help}
   .cartao .e-primario.ha{display:inline}
   /* ---------- A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026 ----------
@@ -1716,7 +1716,7 @@
      da aba 02. A régua é
      `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`. */
   /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
-     "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
+     "muda tudo ao clicar" é queixa de uso, e a legenda desta aba promete que o
      espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
      ficava com um travessão solto — o piloto escreve `—` no lugar de um valor
      vazio, e um traço laranja dentro de uma moldura de alerta lê-se como
@@ -1730,14 +1730,14 @@
 <div class="janela">
 
   <!-- ================= A LINHA DO ALVO =================
-       A FAIXA DE CABEÇALHO SAIU EM 10/09/2026, decisão dela («1 + rodapé»).
+       A FAIXA DE CABEÇALHO SAIU EM 10/09/2026, decisão de produto («1 + rodapé»).
        Eram 60 px repetindo o que a moldura do sistema já diz; a razão inteira,
        com o número, está no bloco `---------- a marca ----------` do `<style>`.
        O que ela carregava e NÃO era repetição desceu para esta linha: o
        logotipo dela, agora como marca de 24 px, e a contagem de controles, que
        é dado vivo do daemon.
 
-       A MARCA CONTINUA VINDO DO ARQUIVO DELA — 30/08/2026, e a razão está
+       A MARCA CONTINUA VINDO DO ARQUIVO DO USUÁRIO — 30/08/2026, e a razão está
        medida. Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a
        versão VELHA: ela redesenhou o logotipo em `assets/hefesto-logo.svg`
        (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
@@ -1901,7 +1901,7 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
-    <!-- AS 28 CORES DELA, PUBLICADAS UMA VEZ — ver `_tabela_das_cores`.
+    <!-- AS 28 CORES DO USUÁRIO, PUBLICADAS UMA VEZ — ver `_tabela_das_cores`.
          Sem esta tabela o alvo de atributo escreve um colorway que regra
          nenhuma casa, e o desenho fica cinza. -->
     <svg class="cores-do-dualsense" aria-hidden="true" focusable="false"
@@ -2240,13 +2240,13 @@
     </svg>
 
     <!-- ---------- O INTERRUPTOR DO HEFESTO — FORA DE TUDO ----------
-         DOIS NÍVEIS desde 31/08/2026 (manhã), decisão dela: em cima o
+         DOIS NÍVEIS desde 31/08/2026 (manhã), decisão de produto: em cima o
          interruptor do Hefesto, e o que ele abre embaixo. A pergunta que o
-         motivou é dela — *"qual a diferença de nativo pra dualsense?"* — e a
+         motivou é do usuário — *"qual a diferença de nativo pra dualsense?"* — e a
          resposta é estrutural: Nativo é o Hefesto FORA do meio, e os outros são
          jeitos de ele estar no meio. Numa fileira só, os dois liam como irmãos.
 
-         E ELE SUBIU PARA FORA DO QUADRO na mesma tarde, decisão dela ao ver a
+         E ELE SUBIU PARA FORA DO QUADRO na mesma tarde, decisão de produto ao ver a
          foto: dentro de "Quando o jogo abrir" o interruptor lia como *"ligar o
          Hefesto quando um jogo abrir"*, e não é isso — ligado ou desligado vale
          SEMPRE. O quadro fica com o que É decidido no lançamento: o modo.
@@ -2293,15 +2293,15 @@
           <b>PS + R3</b> pula para o próximo.
         </span></span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
-             08/09/2026, pedido dela olhando a aba: *"esse não trocar de perfil.
+             08/09/2026, pedido olhando a aba: *"esse não trocar de perfil.
              Pode colocar ele no canto superior direito do bloco tipo esse banco
              de provas na guia navegação."*
 
-             O QUE ELA VIU: a caixa ficava solta LOGO ABAIXO da fileira de modos,
+             O QUE O USUÁRIO VIU: a caixa ficava solta LOGO ABAIXO da fileira de modos,
              na coluna dos modos e no fluxo de leitura deles — e ali ela lia como
              um QUINTO modo. Não é modo nenhum: é uma trava sobre o perfil.
 
-             O MODELO É O QUE ELA APONTOU, `aba06.py:1738`, a `.porta` do *"Banco
+             O MODELO É O QUE O USUÁRIO APONTOU, `aba06.py:1738`, a `.porta` do *"Banco
              de provas: o mapa do controle ↗"*: **a coisa que pertence ao bloco
              mas não é o miolo dele mora no canto, na linha do título.**
 
@@ -2322,7 +2322,7 @@
              este preço medido — a primeira volta dela tinha 19px e 663 caixas
              da aba desceram 2px. Por isso o cadeado entra aqui com a mesma
              trava de 17px, e não com a altura de linha que ele tinha embaixo.
-             OS 17px CADUCARAM EM 24/09/2026, pedido dela: o botão virou «Modo
+             OS 17px CADUCARAM EM 24/09/2026, pedido: o botão virou «Modo
              Freestyle» com letra e altura maiores — a conta nova está na folha.
 
              A RESSALVA NÃO SOBE JUNTO, e está logo abaixo do bloco de modos: ela
@@ -2334,7 +2334,7 @@
       </div>
       <div class="quadro-corpo hef">
 
-        <!-- O SELETOR DE MÁSCARA SAIU DAQUI em 28/08. Decisão dela: a máscara é
+        <!-- O SELETOR DE MÁSCARA SAIU DAQUI em 28/08. Decisão de produto: a máscara é
              POR CONTROLE, e o seletor mora dentro do cartão de cada um, no quadro
              "Conectado agora". O que fica aqui é o que é da MÁQUINA INTEIRA: o
              modo é estado do processo — existe um só (`app/actions/mode_transition.py`),
@@ -2369,7 +2369,7 @@
         <!-- ---------- O CADEADO SUBIU PARA O CANTO — 08/09/2026 ----------
              Ele ficava AQUI, solto embaixo da fileira de modos, desde 04/09
              (decisão [03] do PO: *"Volta para a Jogar, embaixo de Modo."*, sobre
-             pedido nomeado dela de 23/07). Ela olhou a aba em 08/09 e mandou
+             pedido nomeado dela de 23/07). O usuário olhou a aba em 08/09 e mandou
              movê-lo para o canto superior direito do bloco; o `<label>` agora
              mora no `.quadro-topo`, na linha do título, e a razão inteira está
              escrita lá em cima.
@@ -2382,7 +2382,7 @@
 
              O RÓTULO E A DICA SÃO DA JANELA ANTIGA, palavra por palavra — o
              `Gtk.CheckButton` de `home_actions._build_home`. Texto novo de tela
-             é decisão dela; texto que ela já leu, não. Nada disso mudou.
+             é decisão de produto; texto que ela já leu, não. Nada disso mudou.
 
              `data-hef-alvo="marcado"` É O DÉCIMO ALVO, nascido em 04/09 na
              ONDA0-P. Ele é o único que escreve `el.checked` — os outros nove
@@ -2392,17 +2392,17 @@
              ACHADO POR CONFERÊNCIA, e é o buraco que a saída da coluna Atenção
              abriu. A caixa voltou para esta aba em 04/09 porque *esta era a
              única posição em que a frase que explica e o botão que resolve
-             ficavam na mesma tela*. A coluna saiu em 07/09 por ordem dela, e
+             ficavam na mesma tela*. A coluna saiu em 07/09 por ordem de produto, e
              levou a frase — o botão ficou sozinho, e a justificativa dele foi
              embora junto.
 
              O QUE SE PERDEU, medido: `home_actions.texto_do_cadeado_cego`,
              *"O Hefesto não está conseguindo ver qual programa está na frente,
              então o perfil não vai trocar sozinho de qualquer jeito — isto não
-             é escolha sua."* Ela estava VIVA na tela dela no instante da
+             é escolha sua."* Ela estava VIVA na tela do usuário no instante da
              medição, e era a única linha acesa da coluna.
 
-             POR QUE ISTO NÃO É DESFAZER A ORDEM DELA: ela mandou tirar a SEÇÃO
+             POR QUE ISTO NÃO É DESFAZER A ORDEM DE PRODUTO: o usuário mandou tirar a SEÇÃO
              Atenção — uma faixa fixa, com título e contagem, embaixo dos cartões
              (*"nenhum aviso esse"*). Isto aqui não é aquela faixa: é a
              `monta.ressalva` da D-02 dela, *"linha fixa só quando HÁ ressalva"*,
@@ -2429,7 +2429,7 @@
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">O controle é visto como:</span>
-        <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando ela mandou o rótulo
+        <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando o usuário mandou o rótulo
              "O jogo vê cada controle como:" subir para o título. Com o rótulo
              fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
              vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
@@ -2444,7 +2444,7 @@
 
         <div>
             <!-- ---------- AS DUAS LINHAS POR CIMA DOS LUGARES ----------
-                 04/09/2026. Nenhuma das duas ocupa um pixel na cena que ela
+                 04/09/2026. Nenhuma das duas ocupa um pixel na cena que o usuário
                  aprovou: as duas nascem SEM a classe `ha`, e `.mesa-notas
                  :not(.ha)` é `display:none`. Quando o produto tem o que dizer
                  e os quatro lugares estão apagados, a linha pousa POR CIMA da
@@ -3712,7 +3712,7 @@
                    lado de três cards noutra tela"*. A janela antiga fechou isso
                    em 25/08 (a `I5`); a tela nova nasceu com o defeito de volta.
 
-                   E ELE MORA DENTRO DA GRADE DOS ASSENTOS — escolha DELA,
+                   E ELE MORA DENTRO DA GRADE DOS ASSENTOS — escolha,
                    06/09/2026, entre duas maquetes: *no mesmo frame*, como a
                    janela GTK fazia. A EXTERNOS-01 entregou a faixa à parte e
                    perguntou; esta é a resposta, e ela move o endereço para
@@ -3724,13 +3724,13 @@
                    que ainda não nasceu — a mesma razão do mapa do gabinete e da
                    régua do rádio na aba 08. Em repouso a grade continua com os
                    quatro assentos e mais nada: nenhum aparelho de exemplo entra
-                   aqui, e a cena que ela aprovou continua igual até um externo
+                   aqui, e a cena que o usuário aprovou continua igual até um externo
                    ser ligado. -->
               <div class="ext-vaga" data-campo="externos" data-hef-alvo="html"><i class="nada"></i></div>
             </div>
           </div>
 
-        <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026, ordem dela: *"em jogar
+        <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026, ordem de produto: *"em jogar
              remover essa seção do atenção, nenhum aviso esse — deixar só o
              reconectar controles."* Era a `.col-atencao`: o cabeçalho laranja,
              as linhas de `aviso-vivo`/`aviso-selo`/`aviso-texto` e a conta
@@ -3744,12 +3744,12 @@
         <!-- O `pendente-ha` MORA AQUI, e não na `.pendente` — 03/09/2026. A
              caixa da pendência já tem `data-campo="pendente"` (a frase), e um
              elemento carrega UM endereço: o interruptor de existência dela
-             sobe um nível. A classe `ha` nasce escrita porque a cena que ela
+             sobe um nível. A classe `ha` nasce escrita porque a cena que o usuário
              aprovou TEM pendência; o produto a apaga quando não há. -->
         <div class="faixa-final ha" data-campo="pendente-ha" data-hef-alvo="classe" data-hef-classe="ha">
           <!-- MAIÚSCULA NO COMEÇO — 28/08/2026. A frase é uma linha inteira,
                isolada na caixa tracejada, e o `●` que vem antes é MARCADOR, não
-               palavra: a frase começa aqui. Era o mesmo defeito que ela apontou
+               palavra: a frase começa aqui. Era o mesmo defeito que o usuário apontou
                na Conexões ("• o rádio de cada adaptador, em fatias") e mandou
                procurar em todas as abas. O "quando você clicar em" continua
                minúsculo porque é meio da MESMA frase. -->
@@ -3775,7 +3775,7 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido dela:
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
          *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
@@ -3784,7 +3784,7 @@
          já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
          foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
          mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
-         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora ela disse
+         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora o usuário disse
          o destino com todas as letras, e o destino não é a barra.
 
          O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
@@ -3801,12 +3801,12 @@
 
          `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
          `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
-         num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
+         num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
          (`aba09.py`).
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
-         pela régua do mockup e nomeado pelo juiz da leva. O pedido dela trazia um
+         pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
          EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui

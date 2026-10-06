@@ -40,7 +40,7 @@
   }
 
   * { box-sizing: border-box; }
-  /* A CAIXA DA JANELA — 24/09/2026, decisão dela: «vira caixa da janela,
+  /* A CAIXA DA JANELA — 24/09/2026, decisão de produto: «vira caixa da janela,
      rolando por dentro». O recuo e o tamanho são os das abas (as três
      linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */
   body {
@@ -293,7 +293,7 @@
   .rolar { overflow-x: auto; }
 </style>
 <style>
-  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos dela olhando a página. */
+  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos olhando a página. */
   /* «a cor de fonte de qualquer cinza que tem na página muda pra branco» */
   :root { --color-ink-quiet: #f8f8f2; --color-ink-faint: #f8f8f2; }
   .pagina { --texto-suave: #f8f8f2; --texto-mudo: #f8f8f2; }
@@ -544,7 +544,7 @@
 <div class="pagina">
 
   <header class="topo" style="position:relative;padding-left:132px">
-    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: "ok temos um botão pra vir
+    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: "ok temos um botão pra vir
          pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
          página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
          aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
@@ -1439,10 +1439,10 @@
   }
 
   /* ══ O EDITOR DA ENTRADA — 26/09/2026 ══════════════════════════════════
-     Pedido dela: «ao clicar em um desses usb mapeados eu pudesse setar que tem
+     Pedido: «ao clicar em um desses usb mapeados eu pudesse setar que tem
      tal coisa lá. no caso o hub ou afins». E a velocidade é a outra metade: o
      kernel só sabe se a entrada é USB 3.0 pelo par que a placa-mãe declara, e
-     ela pode corrigir o que o firmware diz. `DECLARADO` é o que ela disse nesta
+     ela pode corrigir o que o firmware diz. `DECLARADO` é o que o usuário disse nesta
      página; gravar no `maquina.json` é do produto. */
   var DECLARADO = {};
   var editando = null;
@@ -1483,7 +1483,7 @@
     return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   }
   /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-
-     O-BURACO). Pedido dela: «trocar elas de lugar no mapeamento». Só nas
+     O-BURACO). Pedido: «trocar elas de lugar no mapeamento». Só nas
      entradas que gravam, sem as pontas; cada opção diz o nome, a face e o que
      está nela. O produto troca o buraco das duas, e a página repinta pelo
      disco. */
@@ -1571,7 +1571,7 @@
   }
 
   /* ══ O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 ═══════
-     Pedido dela: «clicar num dispositivo não oferece modificá-lo ou identificá-lo, nem no
+     Pedido: «clicar num dispositivo não oferece modificá-lo ou identificá-lo, nem no
      mapa nem em Atualmente Conectado». Clicar em QUALQUER aparelho (o botão com o nome dele
      no mapa, ou o cartão da lista) abre este painel, flutuando ao lado dele. Em cima, o que
      ela corrige: o nome, o tipo (o tipo decide a cor em todo o app) e a chave «Extensor».
@@ -1592,7 +1592,7 @@
     for (var i = 0; i < TIPOS_DO_APARELHO.length; i++) if (TIPOS_DO_APARELHO[i][0] === t) return TIPOS_DO_APARELHO[i][1];
     return t;
   }
-  /* o nome que ela deu vence; depois o tipo que ela disse; depois o que a máquina leu */
+  /* o nome que ela deu vence; depois o tipo que o usuário disse; depois o que a máquina leu */
   function rotuloDoAparelho(a) {
     return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoTipo(a.tipoDeclarado) : a.tipo);
   }
@@ -2265,10 +2265,10 @@
        ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
     HUB_LIDO = f.hubLido || {};
     /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
-       pintou o plugue (aparelho, depois o que ela disse, depois a placa). */
+       pintou o plugue (aparelho, depois o que o usuário disse, depois a placa). */
     USB_DE = f.usbDe || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
-       O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
+       O-MAPA-QUE-ELA-CORRIGE-01: o usuário clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */
     if (!manterOEditor) editando = null;
   }
@@ -2276,7 +2276,7 @@
   function dizerDeQuando() {
     /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
        mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
-       passava a dizer de quando era a leitura desta máquina, e ela pediu que
+       passava a dizer de quando era a leitura desta máquina, e o usuário pediu que
        isso saísse («essa info some»). A linha existe só para o exemplo se
        dizer exemplo; com a leitura de quem abre, ela sai da página. */
     var el = document.getElementById("de-quando");
