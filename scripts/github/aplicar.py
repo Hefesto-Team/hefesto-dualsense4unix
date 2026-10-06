@@ -447,8 +447,11 @@ def _validar_ambientes(ambientes: Any) -> list[str]:
             erros.append("ambientes: cada item tem `nome`")
             continue
         n = a["nome"]
-        if not _lista_de_textos(a.get("revisores")) or len(a["revisores"]) > 6:
-            erros.append(f"ambientes.{n}.revisores: de 1 a 6 contas")
+        # Sem revisor é um ambiente que só restringe o ramo (o `github-pages`, que publica a página).
+        revisores = a.get("revisores")
+        if not isinstance(revisores, list) or len(revisores) > 6 \
+                or not all(isinstance(x, str) and x for x in revisores):
+            erros.append(f"ambientes.{n}.revisores: lista de até 6 contas")
         if not isinstance(a.get("impedir_autoaprovacao"), bool):
             erros.append(f"ambientes.{n}.impedir_autoaprovacao: verdadeiro ou falso")
         ramos, tags = a.get("ramos", []), a.get("tags", [])
@@ -1033,16 +1036,22 @@ def planejar_ambientes(c: Contexto) -> list[Acao]:
                 c.gh.escrever("PUT", f"repos/{c.repo}/{caminho}", corpo)
 
             acoes.append(Acao(f"ambientes.{nome}: {'não existe' if status == 404 else 'difere'}", ajustar))
-        existentes: set[tuple[str, str]] = set()
+        existentes: dict[tuple[str, str], int] = {}
         if status == 200:
             _, pol = c.gh.ler(f"repos/{c.repo}/{caminho}/deployment-branch-policies")
-            existentes = {(p["name"], p["type"]) for p in pol.get("branch_policies", [])}
+            existentes = {(p["name"], p["type"]): int(p["id"]) for p in pol.get("branch_policies", [])}
         quer = [(n, "branch") for n in a.get("ramos", [])] + [(n, "tag") for n in a.get("tags", [])]
         for n, tipo in quer:
             if (n, tipo) not in existentes:
                 acoes.append(Acao(f"ambientes.{nome}: falta a regra de {tipo} «{n}»", _escrever_em(
                     c, "POST", f"repos/{c.repo}/{caminho}/deployment-branch-policies",
                     {"name": n, "type": tipo})))
+        # A regra que o arquivo não lista sai: o GitHub cria a do ramo padrão sozinho no `github-pages`,
+        # e com ela o `dev` publicaria a página que só o `main` publica.
+        for (n, tipo), ident in sorted(existentes.items()):
+            if (n, tipo) not in quer:
+                acoes.append(Acao(f"ambientes.{nome}: sobra a regra de {tipo} «{n}»", _escrever_em(
+                    c, "DELETE", f"repos/{c.repo}/{caminho}/deployment-branch-policies/{ident}", None)))
     return acoes
 
 
@@ -1400,20 +1409,27 @@ def principal(argv: list[str] | None = None, gh: Gh | None = None) -> int:
             return encerrar(1, f"{a.repo}: {len(acoes)} diferença(s); `--aplicar` resolve")
         return encerrar(0, f"{a.repo}: sem diferença")
 
+    # Grupo a grupo, na ordem de GRUPOS, e cada um medido de novo logo antes: o que um grupo
+    # aplica muda o que o seguinte encontra (ligar as Pages cria o ambiente `github-pages` com a
+    # regra de fábrica, que o grupo dos ambientes corrige na mesma rodada).
     falhas: list[str] = []
-    for x in acoes:
-        if x.a_mao:
-            continue
-        try:
-            x.executar()
-            detalhe.append(f"feito: {x.texto}")
-        except ErroDeServidor as e:
-            falhas.append(f"{x.texto}: {e}")
+    fazer: list[Acao] = []
+    for grupo in (g for g in GRUPOS if g in grupos):
+        c.esquecer()
+        plano, _ = planejar(c, {grupo})
+        for x in plano:
+            if x.a_mao:
+                continue
+            fazer.append(x)
+            try:
+                x.executar()
+                detalhe.append(f"feito: {x.texto}")
+            except ErroDeServidor as e:
+                falhas.append(f"{x.texto}: {e}")
     detalhe += [f"falhou: {f}" for f in falhas]
     c.esquecer()
     depois, sem_medida_depois = planejar(c, grupos)
     detalhe += [_linha(f"sobrou: {x.texto}", x) for x in depois]
-    fazer = [x for x in acoes if not x.a_mao]
     if falhas or depois or sem_medida or sem_medida_depois:
         sobram = len(falhas) + len(depois) + len(sem_medida_depois)
         codigo = 2 if (sem_medida or sem_medida_depois) else 1

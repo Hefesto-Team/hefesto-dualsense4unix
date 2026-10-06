@@ -22,7 +22,7 @@ for chave, padrao in {
                    {"slug": "show-and-tell", "name": "Show and tell", "isAnswerable": False}],
     "arquivos_da_comunidade": {"code_of_conduct": True, "contributing": True, "issue_template": True,
                                "pull_request_template": True, "license": True, "readme": True},
-    "prox_id": 100, "repos_extras": {}, "ligados": {},
+    "prox_id": 100, "repos_extras": {}, "ligados": {}, "ramo_padrao": "dev",
 }.items():
     st.setdefault(chave, padrao)
 
@@ -297,7 +297,7 @@ def corpo_do_repo():
     return {"id": 1, "node_id": repo["node_id"], "name": st["slug"].split("/")[1], "full_name": st["slug"],
             "private": st["privado"], "description": repo["description"], "homepage": repo["homepage"],
             **{k: repo.get(k, padrao) for k, padrao in BOOLS_DO_REPO.items()},
-            "has_pages": st["pages"], "security_and_analysis": sa, "default_branch": "main",
+            "has_pages": st["pages"], "security_and_analysis": sa, "default_branch": st["ramo_padrao"],
             "permissions": {"admin": True}}
 
 
@@ -427,6 +427,13 @@ if sub == "pages":
         if corpo["build_type"] == "legacy" and not corpo.get("source"):
             saida(422, msg="legacy pede source")
         st["pages"], st["pages_tipo"] = True, corpo["build_type"]
+        # Medido em 06/10/2026 (GET em repositórios públicos): o GitHub cria o ambiente `github-pages`
+        # com regra própria só para o ramo padrão; quem publica de outro ramo é recusado por ele.
+        if corpo["build_type"] == "workflow" and "github-pages" not in st["ambientes"]:
+            st["ambientes"]["github-pages"] = {
+                "revisores": [], "autoaprova": False,
+                "política": {"protected_branches": False, "custom_branch_policies": True},
+                "políticas": [{"id": novo_id(), "name": st["ramo_padrao"], "type": "branch"}]}
         saida(201, {"url": "x", "build_type": corpo["build_type"]})
     if metodo == "PUT":
         if not st["pages"]:
@@ -550,6 +557,12 @@ if me:
                 saida(409, msg="regra repetida")
             env["políticas"].append({"id": novo_id(), "name": corpo["name"], "type": corpo["type"]})
             saida(200, env["políticas"][-1])
+    mp = re.fullmatch(r"deployment-branch-policies/(\d+)", resto_)
+    if mp and metodo == "DELETE":
+        if env is None or not any(p["id"] == int(mp.group(1)) for p in env["políticas"]):
+            saida(404)
+        env["políticas"] = [p for p in env["políticas"] if p["id"] != int(mp.group(1))]
+        saida(204)
 
 # --- os rulesets -----------------------------------------------------------------------------
 

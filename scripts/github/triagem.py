@@ -28,7 +28,7 @@ SEM_RESPOSTA = {"", "_no response_", "n/a", "na", "nada", "-"}
 MINIMO_DE_LETRAS = 20
 COMENTARIO = (
     "Obrigado pelo relato. Para a gente conseguir repetir o problema, falta a saída do comando abaixo. "
-    "Rode no terminal e cole o resultado aqui, num comentário ou editando a issue:\n\n"
+    "Rode no terminal, edite a issue e cole o resultado no campo «Saída do doctor»:\n\n"
     "```\nhefesto-dualsense4unix doctor\n```\n"
 )
 

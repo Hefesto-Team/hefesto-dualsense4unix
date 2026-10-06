@@ -31,7 +31,8 @@ configuração:
     atualizar_ramo: true
 
 # `ligada: false` precisa de `depois`: o que está desligado hoje e quando volta a ser considerado.
-# As Pages saem do fluxo `paginas.yml`; a Wiki nasce vazia e é preenchida por quem mantém.
+# As Pages saem do fluxo `paginas.yml` (pelo ambiente `github-pages`, abaixo); a Wiki nasce vazia e é
+# preenchida por quem mantém.
 funções:
   issues:
     ligada: true
@@ -43,9 +44,10 @@ funções:
     ligada: true
   discussions:
     ligada: true
+  # O botão Sponsor mostra o que o FUNDING.yml lista; o GitHub Sponsors, o Ko-fi e o PIX entram lá
+  # quando quem mantém decidir quem recebe.
   sponsor:
-    ligada: false
-    depois: "quando quem mantém decidir quem recebe as doações (o botão Sponsor já aparece pelo FUNDING.yml)"
+    ligada: true
 
 # Só o alerta do Dependabot fica: ele avisa da dependência com falha conhecida, e a atualização se faz
 # num commit de quem mantém. O PR de segurança do robô sairia vermelho no check `autoria` (o autor
@@ -139,6 +141,9 @@ tipos_de_issue:
 
 # A publicação só segue com a aprovação de quem mantém, e só a partir de uma tag de versão. O segredo
 # de publicação não existe: a publicação no PyPI usa o publicador de confiança (OIDC) do `release.yml`.
+# Cada ambiente implanta só dos ramos e das tags listados: a regra que sobra sai. O `github-pages` nasce
+# com as Pages e com a regra do ramo padrão (o `dev`); a página publica do `main`, e sem esta linha a
+# publicação seria recusada.
 ambientes:
   - nome: pypi
     revisores: [vitoriamariadb, AndreBFarias]
@@ -148,6 +153,10 @@ ambientes:
     revisores: [vitoriamariadb, AndreBFarias]
     impedir_autoaprovacao: false
     tags: ["v*"]
+  - nome: github-pages
+    revisores: []
+    impedir_autoaprovacao: false
+    ramos: [main]
 
 # As categorias nascem com as Discussions e a API do GitHub não cria nem renomeia categoria: aqui só se mede.
 # Os modelos de `DISCUSSION_TEMPLATE/` têm o nome destes endereços.

@@ -63,7 +63,7 @@ footer {{ border-top: 1px solid var(--borda); color: var(--suave); text-align: c
 <main>
 """
 PE = """</main>
-<footer>Feito por pessoas, sem financiamento. Quer ajudar? Veja <a href="{repo}/blob/main/.github/CONTRIBUTING.md">como contribuir</a>.</footer>
+<footer>Quer ajudar? Veja <a href="{repo}/blob/main/.github/CONTRIBUTING.md">como contribuir</a>.</footer>
 </body>
 </html>
 """

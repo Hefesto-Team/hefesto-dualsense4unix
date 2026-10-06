@@ -68,16 +68,14 @@ def test_o_arquivo_do_repositorio_vale() -> None:
     assert aplicar.validar(_dados()) == []
 
 
-def test_as_funcoes_desligadas_dizem_quando_voltam() -> None:
+def test_tudo_o_que_o_github_oferece_esta_ligado() -> None:
     funcoes = _dados()["funções"]
-    desligadas = [n for n, v in funcoes.items() if not v["ligada"]]
-    assert desligadas == ["sponsor"], (
-        "tudo o que o GitHub oferece está ligado, menos o que depende de quem recebe"
-    )
-    assert str(funcoes["sponsor"]["depois"]).strip()
     assert all(
-        funcoes[n]["ligada"] is True for n in ("issues", "wiki", "pages", "projects", "discussions")
+        funcoes[n]["ligada"] is True
+        for n in ("issues", "wiki", "pages", "projects", "discussions", "sponsor")
     )
+    # O botão Sponsor ligado mostra o que o FUNDING.yml lista: sem chave ativa, nada a mostrar.
+    assert _yaml(GH_DIR / "FUNDING.yml"), "o botão Sponsor pede ao menos uma chave no FUNDING.yml"
 
 
 def test_o_ruleset_exige_o_check_de_autoria_e_o_lint_test() -> None:
@@ -155,7 +153,7 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
 @pytest.mark.parametrize(
     "estraga",
     [
-        lambda d: d["funções"]["sponsor"].pop("depois"),
+        lambda d: d["funções"]["wiki"].update(ligada=False),
         lambda d: d["funções"].pop("sponsor"),
         lambda d: d["seguranca"]["releases_imutaveis"].pop("depois"),
         lambda d: d["seguranca"].pop("linguagens_da_varredura"),
@@ -163,7 +161,8 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
         lambda d: d["rotulos"]["lista"][0].update(cor="#d73a4a"),
         lambda d: d["rotulos"]["lista"].append(dict(d["rotulos"]["lista"][0])),
         lambda d: d["ações"].update(aprovacao_de_fork="ninguem"),
-        lambda d: d["ambientes"][0].update(revisores=[]),
+        lambda d: d["ambientes"][0].update(revisores=[f"conta{i}" for i in range(7)]),
+        lambda d: d["ambientes"][0].update(revisores="[REDACTED]"),
         lambda d: d["ambientes"][0].update(tags=[], ramos=[]),
         lambda d: d["equipes"][0].update(nome="Mantenedores Da Casa"),
         lambda d: d["projetos"][0]["etapas"][0].update(cor="VERDE"),
@@ -434,7 +433,7 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
         e["repo"]["has_projects"],
         e["repo"]["has_discussions"],
         e["sponsor"],
-    ) == (True, True, True, True, False)
+    ) == (True, True, True, True, True)
     assert (e["alertas"], e["fixes"], e["relato"]) == (True, False, True), (
         "o Dependabot fica só no alerta"
     )
@@ -620,7 +619,7 @@ def test_falha_de_escrita_aparece_e_nao_vira_verde(gh: Mentira, capsys: Capsys) 
 
 def test_o_arquivo_estragado_nao_chega_ao_servidor(gh: Mentira, tmp_path: Path) -> None:
     dados = _dados()
-    del dados["funções"]["sponsor"]["depois"]
+    dados["funções"]["wiki"]["ligada"] = False  # desligada sem `depois`
     ruim = tmp_path / "ruim.yml"
     ruim.write_text(yaml.safe_dump(dados, allow_unicode=True), encoding="utf-8")
     assert rodar("--aplicar", arquivo=ruim) == 2
@@ -898,6 +897,28 @@ def test_os_ambientes_chegam_com_revisores_e_so_implantam_de_tag(gh: Mentira) ->
     assert rodar("--conferir", "--so", "ambientes") == 0
 
 
+def test_a_pagina_publica_do_main_e_a_regra_do_ramo_padrao_sai(gh: Mentira) -> None:
+    # O GitHub cria o `github-pages` com a regra do ramo padrão (o `dev`) quando as Pages ligam
+    # por fluxo; o `paginas.yml` publica do `main`, e com a regra de fábrica seria recusado.
+    assert rodar("--aplicar", "--so", "funções") == 0
+    criado = gh.estado["ambientes"]["github-pages"]
+    assert [(p["name"], p["type"]) for p in criado["políticas"]] == [("dev", "branch")]
+    assert rodar("--conferir", "--so", "ambientes") == 1
+    assert rodar("--aplicar", "--so", "ambientes") == 0
+    env = gh.estado["ambientes"]["github-pages"]
+    assert [(p["name"], p["type"]) for p in env["políticas"]] == [("main", "branch")]
+    assert env["revisores"] == [], "a página publica sem esperar aprovação"
+    assert rodar("--conferir", "--so", "ambientes") == 0
+    publicar = _workflow("paginas.yml")["jobs"]["publicar"]
+    ramos = _gatilhos(_workflow("paginas.yml"))["push"]["branches"]
+    quer = next(a for a in _dados()["ambientes"] if a["nome"] == publicar["environment"]["name"])
+    assert quer["ramos"] == ramos, "o ambiente da página aceita o ramo de que o fluxo publica"
+
+
+def _uma_regra_a_mais(e: dict[str, Any]) -> None:
+    e["ambientes"]["pypi"]["políticas"].append({"id": 999, "name": "dev", "type": "branch"})
+
+
 def _sem_um_revisor(e: dict[str, Any]) -> None:
     e["ambientes"]["pypi"]["revisores"].pop()
 
@@ -913,7 +934,8 @@ def _qualquer_ramo(e: dict[str, Any]) -> None:
     }
 
 
-@pytest.mark.parametrize("deriva", [_sem_um_revisor, _sem_a_regra_da_tag, _qualquer_ramo])
+@pytest.mark.parametrize(
+    "deriva", [_sem_um_revisor, _sem_a_regra_da_tag, _qualquer_ramo, _uma_regra_a_mais])
 def test_a_deriva_do_ambiente_volta_ao_arquivo(gh: Mentira, deriva: Any) -> None:
     assert rodar("--aplicar", "--so", "ambientes") == 0
     e = gh.estado
@@ -1508,6 +1530,11 @@ def test_a_issue_sem_a_saida_do_doctor_ganha_o_rotulo_e_o_comando() -> None:
         d = t.decidir(_corpo_de_issue(doctor), ["bug"], "opened")
         assert d == {"adicionar": [t.ROTULO], "remover": [], "comentar": True}, doctor
     assert "hefesto-dualsense4unix doctor" in t.COMENTARIO
+    # Só a issue editada passa pela triagem de novo (o fluxo não escuta comentário): o recado pede a
+    # edição, no campo que a régua lê, e nunca promete que um comentário tira o rótulo.
+    assert f"«{t.CAMPO}»" in t.COMENTARIO and "comentário" not in t.COMENTARIO
+    gatilhos = _gatilhos(_workflow("rotulos.yml"))
+    assert "issue_comment" not in gatilhos and gatilhos["issues"]["types"] == ["opened", "edited"]
 
 
 def test_a_issue_editada_nao_comenta_de_novo_e_a_completa_perde_o_rotulo() -> None:
