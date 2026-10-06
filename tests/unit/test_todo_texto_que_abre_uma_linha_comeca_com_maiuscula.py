@@ -15,7 +15,7 @@ letra só (o «i» da informação no selo da aba Sistema).
 O NOME: ordem dela de 05/10/2026, 13h — *«Nome que o user colocar pra controle mesmo se ele
 colocar minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o
 resto como ela escreveu; ao gravar e ao ler o que já estava gravado.
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 
 TUDO É DE MENTIRA: as páginas num WebKit fora da tela, com o pintor do piloto; o BlueZ e o
 ``maquina.json`` são dublês; nada chega a daemon nem ao aparelho.

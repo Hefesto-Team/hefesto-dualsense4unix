@@ -194,7 +194,7 @@ def test_o_card_do_radio_carregando_diz_o_icone() -> None:
     assert card["bateria-carga"] == "Carregando", (
         "um controle NO RÁDIO e carregando não anunciou o estado no card — é "
         "exatamente a premissa que ela corrigiu: 'no radio ele pode tá "
-        "carregando tambem'"  # noqa-acento: citação literal dela
+        "carregando tambem'"  # noqa-acento: citação literal
     )
 
 

@@ -7,7 +7,7 @@ tinha um ato cravado por gesto e nenhum lugar de onde ler outro: a lista
 aceitava o clique, mostrava a escolha e não mudava o controle. A pergunta dela
 (*«Essa aba tá integrada e realmente funciona?»*) teve a resposta medida: os
 seis gestos funcionavam, e a lista ao lado de cada um era desenho sem dono.
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 
 Aqui mora o que os três lados usam, e só isto:
 
@@ -83,7 +83,7 @@ PARAR_O_SERVICO = "parar_o_servico"
 SCRIPT = "script"
 NADA = "nada"
 
-#: o sentido de andar pelas abas. <!-- noqa-acento: citação literal dela -->
+#: o sentido de andar pelas abas. <!-- noqa-acento: citação literal -->
 GRUPO_PERFIL = "Perfil"
 GRUPO_MOUSE_E_TECLADO = "Mouse e teclado"
 GRUPO_MODO = "Modo"

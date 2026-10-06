@@ -102,7 +102,7 @@ nascer duas vezes.
   para a frente e separados por espaço, desde 16/08 e já empurrados; e
   `docs/data/ensaios-brutos/2026-08-15-IDENTIDADE-o-cracha-nos-dois-transportes.csv:4,14`
   expõe um terceiro endereço no byte 25 do 0x0b. Nenhum dos portões vê essa
-  forma: `scripts/check_o_endereco_dela_em_toda_forma.py` só aceita `[:-]` e a
+  forma: `scripts/check_o_endereco_em_toda_forma.py` só aceita `[:-]` e a
   ordem direta, e `tests/unit/test_docs_mac_anonimato.py` só lê a ordem
   direta. A `O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01`, marcada `feita`, não
   fecha.
@@ -276,7 +276,7 @@ endereçam o índice 0 (`daemon/udp_server.py:327-344`).
   algum × nos quatro). Regra que sai: relato que mede o que a sprint pede
   reescreve a sprint no mesmo dia.
 - **A conferência dela não mede o aparelho.**
-  `scripts/check_a_conferencia_dela.py` tem 7 linhas; seis leem HTML ou
+  `scripts/check_a_conferencia.py` tem 7 linhas; seis leem HTML ou
   código no processo, e a da cor lê a cor *pedida*. O socket é fixo em
   `/run/user/1000`. O `scripts/doctor.sh` tem 90 verificações de ambiente e
   só três por controle. Proposta: `O-BASICO-MEDIDO-01`, uma conferência do

@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 
 AUTO_DEBOUNCE_SEC = 5.0
 
-#: ligado"*  (noqa-acento: citação literal dela).
+#: ligado"*  (noqa-acento: citação literal).
 TETO_DO_RUMBLE_FIXADO_S = 3.0
 
 #:

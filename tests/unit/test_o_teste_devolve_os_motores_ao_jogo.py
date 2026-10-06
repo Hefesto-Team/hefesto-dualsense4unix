@@ -8,7 +8,7 @@ ORDEM DELA, 15/09/2026, com o controle na mão:
      momento e não mutar a vibração in game. em game se eu quiser desligar a
      vibração do motor esquerdo zero o slicer, no direito o mesmo e de forma
      geral eu zero no perfil max min e personalizado."*
-     (noqa-acento: citação literal dela)
+     (noqa-acento: citação literal)
 
 O QUE ESTAVA QUEBRADO, e foi medido antes de ser curado: o "Testar" tira os
 motores do jogo (`rumble.passthrough(False)`) e `parar_o_teste()` tinha DOIS

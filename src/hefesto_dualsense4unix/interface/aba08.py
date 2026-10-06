@@ -290,7 +290,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
   /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026, pedido dela: *«tem uma linha
      abaixo do gestão de controles que não tá sendo usada. Deveriamos subir os
-     blocos de seção pra ocupar ali de cima tambem»* (noqa-acento: citação literal dela).
+     blocos de seção pra ocupar ali de cima tambem»* (noqa-acento: citação literal).
      O respiro de baixo do rótulo (11px) é do acordeão FECHADO; aberto, o
      corpo vem logo embaixo e os dois respiros somavam 21px de faixa vazia. */
   .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
@@ -522,7 +522,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      numero do player e nome do player na mesma linha do nome do modelo e modo
      de conexão»*. O desenho à esquerda, e ao lado o «P N», o nome de quem joga e
      o modelo com o transporte; a linha de 38 px que o número tinha sozinho saiu.
-     (noqa-acento: citação literal dela) No cartão estreito (271 px no tamanho
+     (noqa-acento: citação literal) No cartão estreito (271 px no tamanho
      do desenho) o modelo DESCE para uma segunda linha dentro dos mesmos 62 px,
      em vez de virar reticências: o `flex-wrap` só quebra quando o dono não teria
      os 70 px dele. */
@@ -1744,7 +1744,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
      Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
      baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
      o do texto, e todo rótulo diz uma palavra ao lado do ícone.
-     (noqa-acento: citação literal dela) */
+     (noqa-acento: citação literal) */
   .radio button.rotulo{background:transparent;color:var(--texto-suave);line-height:1.3;
                        border:1px solid transparent;border-radius:6px;cursor:pointer;
                        font:inherit;text-align:left}
@@ -1992,7 +1992,7 @@ def _cena_do_desenho() -> dict:
              for x in _csv_do_desenho("perto")]
     quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
     # desenhava um «DualSense · Não Conectou» sem aparelho — a busca que
-    # de um controle de verdade, com nome e cor. <!-- noqa-acento: citação literal dela -->
+    # de um controle de verdade, com nome e cor. <!-- noqa-acento: citação literal -->
     aparelhos.append({"id": f"nao-conectou-{cheio['id']}-P5", "aparelho": "P5",
                       "tipo": "controle", "lugar": cheio["id"], "nome": "Lia",
                       "rotulo": "DualSense", "cor": "#7eb8d4", "cor_nome": "Starlight Blue",
@@ -2041,7 +2041,7 @@ def _cena_do_desenho() -> dict:
 CENA_DO_RADIO = _cena_do_desenho()
 CAMPOS_DO_RADIO = _pacote08.campos_da_secao(CENA_DO_RADIO)
 SALA_DO_DESENHO = _pacote08.html_da_sala(CENA_DO_RADIO, com_hz=True)
-#: pintor acende os dois. <!-- noqa-acento: citação literal dela -->
+#: pintor acende os dois. <!-- noqa-acento: citação literal -->
 INTERRUPTOR_PROCURAR = (
     '<button class="cadeado'
     + (" ligada" if CAMPOS_DO_RADIO["radio-procurando"] == _pacote08.PROCURAR_LIGADO else "")
@@ -2635,7 +2635,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
 
 
 
-# campos_do_mapear`), e o Salvar grava pelo dono. <!-- noqa-acento: citação literal dela -->
+# campos_do_mapear`), e o Salvar grava pelo dono. <!-- noqa-acento: citação literal -->
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _ee  # noqa: E402
 
 #: A CENA DO DESENHO é a do meio do fluxo: o DualSense acabou de chegar à

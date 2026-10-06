@@ -160,8 +160,8 @@ repos:
         pass_filenames: false
         always_run: true
       # A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01 (20/09/2026). A ordem
-      # dela: *"Um Hook que vá facilitando isso seria maravilhoso. Pois   # noqa-acento: citação literal dela
-      # organicamente deixaríamos fácil pra gente e pro outro"*.   # noqa-acento: citação literal dela
+      # dela: *"Um Hook que vá facilitando isso seria maravilhoso. Pois   # noqa-acento: citação literal
+      # organicamente deixaríamos fácil pra gente e pro outro"*.   # noqa-acento: citação literal
       #
       # `pass_filenames: false` e `always_run: true` pela mesma razão dos
       # outros três: a pergunta é sobre a ÁRVORE INTEIRA — quantos arquivos

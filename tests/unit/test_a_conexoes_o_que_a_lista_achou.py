@@ -204,7 +204,7 @@ def test_o_conectar_ainda_pareia_quem_segura_ps_create(mesa: Any, relogio: rm.Re
 def test_o_nome_que_ela_deu_vai_junto_no_mover(diario: Path, relogio: rm.Relogio) -> None:
     """O passo a2: *«O nome renomeado não aparece»*. O BlueZ guarda o ``Alias``
     POR OBJETO — um por adaptador —, e o mover criava um objeto novo com o nome
-    de fábrica. O nome dela vai junto. <!-- noqa-acento: citação literal dela -->
+    de fábrica. O nome dela vai junto. <!-- noqa-acento: citação literal -->
 
     MORDIDA: tire o ``_dar_o_nome`` do :meth:`_parear_e_conferir` — o quarto
     fica com «DualSense Wireless Controller» e esta régua reprova.
@@ -643,7 +643,7 @@ def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.Monk
     """*«segurar a área do conector e arrastar ela pra mudar de ordem entre
     eles»*: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
     dele, desde 28/09/2026 — antes era o ``gui_prefs``, pelo lugar), e a sala
-    nasce nela. <!-- noqa-acento: citação literal dela -->
+    nasce nela. <!-- noqa-acento: citação literal -->
 
     MORDIDA: tire o ``_na_ordem_dela`` do ``cena_do_radio`` — a sala volta à
     ordem do BlueZ e esta régua reprova.

@@ -1,6 +1,6 @@
 """FECHA-ILUMINACAO — a cor única, e a PROCEDÊNCIA que a fez parar de adivinhar.
 
-`D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (`docs/data/decisoes-dela.csv:56`) é
+`D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (`docs/data/decisoes-de-produto.csv:56`) é
 **regra do produto, sempre**, e até 08/09/2026 não existia uma linha dela em
 `src/`. A mesa dela provava: dois dos quatro DualSense guardavam no perfil as
 cores dos slots **1 e 2**, e hoje eles são o **2 e o 4** — o número de outro dia
@@ -734,7 +734,7 @@ def _comentarios_aninhados(html: str) -> list[int]:
 
 
 class TestAProsaQueVaiPararNaTela:
-    """*"Ainda temos 3 cantos falando sobre o automatico"* — palavra dela."""  # noqa-acento: citação literal dela
+    """*"Ainda temos 3 cantos falando sobre o automatico"* — palavra dela."""  # noqa-acento: citação literal
 
     @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
     def test_a_pagina_04_nao_fala_do_botao_que_saiu(self, pasta: Path) -> None:

@@ -8,7 +8,7 @@ A DECISÃO DELA QUE ABRIU ESTA ABA, e ela CADUCOU outra, de um dia antes:
 
     02/09/2026 — *"não daria para incluir G e F aqui? (…) temos um mapa
     funcional disso no gtk. a estrutura sim, validar de fato eu poderia
-    somente juntos com ele."*   <!-- noqa-acento: citação literal dela -->
+    somente juntos com ele."*   <!-- noqa-acento: citação literal -->
 
 A `F` é esta aba (o registro «ROTA-F-a-aba-lancadores» de 02/09/2026).
 A segunda decisão vale, e ela traz a razão: **o GTK tem o mapa funcional** —

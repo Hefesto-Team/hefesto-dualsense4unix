@@ -399,7 +399,7 @@ CSS = CSS_GLIFO + """
      vãos vazios ao lado — que é mais sujo do que os três eram. 11/09/2026. */
   .botoes.um-so{grid-template-columns:1fr}
   /* O «Ativar» É SÓLIDO COMO O «Aplicar» — ordem dela, 11/09/2026: *"deixa esse
-     botão verde do ativar igual o do aplicar"*.  (noqa-acento) citação literal dela
+     botão verde do ativar igual o do aplicar"*.  (noqa-acento) citação literal
      O `.btn.verde` da casa pinta só o TEXTO de verde, e é assim que o `Ativar`
      nasceu na fileira da esquerda, ao lado de dois irmãos de contorno. Sozinho
      no canto largo ele é a ação PRINCIPAL desta aba, e ela o leu como tal: a
@@ -481,7 +481,7 @@ CSS = CSS_GLIFO + """
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
   /* A PRIORIDADE É SLIDER — pedido dela em 27/08 (*"prioridade é slicer"*, em
-     CORRECOES-DELA.md) e reconfirmado em 03/09/2026: *"Slider, como você
+     CORRECOES.md) e reconfirmado em 03/09/2026: *"Slider, como você
      pediu"*. Até aqui o desenho tinha uma BARRA, que não se arrasta: era o
      único campo do editor sem nenhum caminho de escrita na interface nova.
 
@@ -961,10 +961,10 @@ CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
            'fill="currentColor"/></svg>')
 
 
-#     "Na tabela do perfil tem que terum svg dde lupa no titulo da tabela.  # (noqa-acento) citação literal dela
-#      Temos que remover esse botão voltar a de ontem ??? e o botão  # (noqa-acento) citação literal dela
-#      recarregar vira um svg clicável ao lado de Perfis Salvos que irá  # (noqa-acento) citação literal dela
-#      fazer essa função. Temos que deixar o layout mais limpo.."  # (noqa-acento) citação literal dela
+#     "Na tabela do perfil tem que terum svg dde lupa no titulo da tabela.  # (noqa-acento) citação literal
+#      Temos que remover esse botão voltar a de ontem ??? e o botão  # (noqa-acento) citação literal
+#      recarregar vira um svg clicável ao lado de Perfis Salvos que irá  # (noqa-acento) citação literal
+#      fazer essa função. Temos que deixar o layout mais limpo.."  # (noqa-acento) citação literal
 LUPA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
         '<circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" '
         'stroke-width="1.3"/>'
@@ -978,7 +978,7 @@ RECARREGA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
              'stroke-width="1.3" stroke-linecap="round" '
              'stroke-linejoin="round"/></svg>')
 
-#     "e o botao atualizar tá aparecendo duplicado na interface"  # (noqa-acento) citação literal dela
+#     "e o botao atualizar tá aparecendo duplicado na interface"  # (noqa-acento) citação literal
 
 
 def icone_do_rotulo(gesto: str, desenho: str, dica: str) -> str:

@@ -3292,7 +3292,7 @@ fi
 # clica: o `Exec=` abaixo e o lançador de `~/.local/bin`. O `run.sh` NÃO o
 # declara, de propósito: todo instrumento que chama `run.sh --gui` continua
 # desviado para uma tela de mentira. Há régua:
-# `tests/unit/test_o_lancador_dela_nasce_na_tela_dela.py`.
+# `tests/unit/test_o_lancador_nasce_na_tela.py`.
 #
 # Aqui havia `Exec=${ROOT_DIR}/run.sh` quando o `run.sh` abria a janela GTK
 # velha. O motor GTK não sumiu (os 74 handlers de `app/actions/` são o que a

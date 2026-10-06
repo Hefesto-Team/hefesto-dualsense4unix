@@ -34,7 +34,7 @@ de bateria numa escolha de privacidade feita pelas costas. A decisão é dela
 *"o mapa de canais registra que ele nasce desligado por privacidade e banda"*.
 Ele nasce LIGADO desde 17/09: a chegada do controle põe o microfone no ar
 (`daemon/subsystems/hotkey.nascer_no_ar`), que é a `D-O-MIC-LIGADO-VALE-NO-RADIO`
-(decisoes-dela.csv id 38) finalmente implementada. **A decisão de 24/08 não
+(decisoes-de-produto.csv id 38) finalmente implementada. **A decisão de 24/08 não
 depende disso** — ela é sobre o perfil não ser o dono do microfone, e isso vale
 igual com o microfone nascendo ligado. A condição que ela mesma pôs, sobre o
 preço que o `plano_de_radio` conta, foi: *"LIGADO SEMPRE… COM A TELA DIZENDO O PREÇO"*.
@@ -147,7 +147,7 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
 )
 
 #: que a tabela mostra, e o dia em que a barra de luz ganhar esse ponto ela
-#: gastando menos»* — a luz fica mais fraca e não apaga. <!-- noqa-acento: citação literal dela -->
+#: gastando menos»* — a luz fica mais fraca e não apaga. <!-- noqa-acento: citação literal -->
 def _dica_da_bateria_longa() -> str:
     """O que o perfil de bateria faz HOJE, e o que fica como está."""
     chave = TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]

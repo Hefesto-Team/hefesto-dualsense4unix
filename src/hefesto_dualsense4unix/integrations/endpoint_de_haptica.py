@@ -177,7 +177,7 @@ MAX_NOME = 127
 
 PRIORIDADE_DA_SESSAO = 0
 
-#: era pra tá assim eu acho"*.  <!-- noqa-acento: citação literal dela -->
+#: era pra tá assim eu acho"*.  <!-- noqa-acento: citação literal -->
 #: a vibração (a háptica do DualSense viaja como áudio nos traseiros); em zero,
 VOLUME_DOS_MOTORES = "100%"
 

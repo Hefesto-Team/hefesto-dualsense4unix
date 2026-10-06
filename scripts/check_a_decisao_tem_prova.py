@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_a_decisao_tem_prova.py — decidida não é feita, e agora alguém cobra.
 
-DECISAO-SEM-DONO-01. O `docs/data/decisoes-dela.csv` guarda a decisão e o dono
+DECISAO-SEM-DONO-01. O `docs/data/decisoes-de-produto.csv` guarda a decisão e o dono
 dela, e até aqui o registro parava no momento em que ela respondia: nada ligava
 a linha ao código. O microfone mudo de 17/09 era uma decisão de 25/08.
 
@@ -53,7 +53,7 @@ from typing import Any
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-CSV_DAS_DECISOES = Path("docs/data/decisoes-dela.csv")
+CSV_DAS_DECISOES = Path("docs/data/decisoes-de-produto.csv")
 PISO = Path("docs/data/decisoes-sem-prova.txt")
 
 ESTADOS = ("aberta", "decidida", "implementada", "feita", "no ar", "caduca")

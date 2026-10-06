@@ -10,7 +10,7 @@ por sua vez só é instalado com `./install.sh --uhid-contrapressao`.
 ## O defeito, medido
 
 A queixa dela, em 22/09/2026: *«4 controles conectados só um aparece na
-interface agora»*. <!-- noqa-acento: citação literal dela -->
+interface agora»*. <!-- noqa-acento: citação literal -->
 
 A ponte de áudio por rádio do Hefesto escrevia **100 reports de 334 B por
 segundo, por controle** — ~271 kbit/s de payload ACL cada, e com quatro

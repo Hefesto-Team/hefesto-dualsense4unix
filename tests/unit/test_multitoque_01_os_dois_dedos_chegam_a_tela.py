@@ -4,7 +4,7 @@
 INTERFACE NA ABA CONTROLES SÓ MOSTRA UM TOQUE NO DESENHO DO SVG APESAR DO
 TOUCH SER MULTITOQUE"* — e ela provou no mesmo minuto: *"SE EU USAR 3 DEDOS
 DOU ZOOM E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE. COMO NUM
-NOTEBOOK."*  <!-- noqa-acento: citação literal dela -->
+NOTEBOOK."*  <!-- noqa-acento: citação literal -->
 
 **O QUE A MEDIÇÃO DEVOLVEU, com os dedos dela no controle azul:**
 

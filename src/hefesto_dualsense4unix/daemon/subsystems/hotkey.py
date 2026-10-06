@@ -1468,7 +1468,7 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
 ) -> None:
     """O plástico de quem perdeu o microfone SEM TER TOCADO EM NADA."""
     # defeito é de FORMA, não de lógica. Medido na bancada dela com o DualSense
-    # (noqa-acento: a citação literal dela vem na linha seguinte)
+    # (noqa-acento: a citação literal vem na linha seguinte)
     antes = norm_mac(dono_antes) or dono_antes
     tocou = norm_mac(quem_tocou) or quem_tocou
     eleito_agora = norm_mac(eleitor.eleito) or eleitor.eleito

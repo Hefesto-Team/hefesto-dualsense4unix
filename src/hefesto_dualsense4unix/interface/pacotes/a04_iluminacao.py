@@ -536,11 +536,11 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
     **COR-X-01, decisão dela de 09/09/2026:** *"onde eu escolher uma cor, em
     volta dela fica a borda da cor do plastico do controle e um X na cor
     selecionada por mim de forma que me impeça de setar alguma cor de um
-    coleguinha"* <!-- noqa-acento: citação literal dela -->
+    coleguinha"* <!-- noqa-acento: citação literal -->
 
     A BORDA VIROU LINHA — D-2909-A-LINHA-DA-COR-DO-DONO, 29/09/2026, pedido
     dela na bancada (*«talvez uma linha abaixo do quadradinho de cada cor
-    contendo a cor do plástico daquele controle»*): <!-- noqa-acento: citação literal dela -->
+    contendo a cor do plástico daquele controle»*): <!-- noqa-acento: citação literal -->
     toda casa com dono ganha, embaixo, a linha do plástico de quem a usa, nas
     quatro colunas. A tinta vai na própria casa (`--dono`, ver
     `tinta_da_linha`). A borda da escolhida saiu: ela era a cor de texto do
@@ -1996,7 +1996,7 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     **O DEFEITO QUE ISTO MATA, medido na bancada dela em 09/09/2026**, e ele
     tinha duas caras que ela viu como uma só — *"o controle branco fica
     oscilando entre a cor que eu seleciono e a cor azul. fora que o slicer tá
-    estranho ainda"*:  # noqa-acento: citação literal dela
+    estranho ainda"*:  # noqa-acento: citação literal
 
         no disco, o override do branco  {"leds": {"lightbar_brightness": 0.49}}
         a cor que ela escolheu           em lugar NENHUM
@@ -2642,7 +2642,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
 
     ELA É O DONO DA MARCA DA FILEIRA — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
     Queixa dela: *"quando eu abaixo o volume do lightbar,. o X não permanece
-    no seletor dos demais controles"*. <!-- noqa-acento: citação literal dela -->
+    no seletor dos demais controles"*. <!-- noqa-acento: citação literal -->
     A borda na fileira do controle, o X nas fileiras dos outros, a recusa do
     tom tomado e a cor que o trilho reenvia saem TODOS daqui, e a escada é:
 

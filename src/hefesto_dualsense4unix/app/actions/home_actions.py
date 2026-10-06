@@ -752,7 +752,7 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     )
 
 
-#: minúsculo. Escreva: Cabo ou BT"*; <!-- noqa-acento: citação literal dela -->
+#: minúsculo. Escreva: Cabo ou BT"*; <!-- noqa-acento: citação literal -->
 #: existia para escolher uma. Ela escolheu.
 _PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
     "usb": "USB",

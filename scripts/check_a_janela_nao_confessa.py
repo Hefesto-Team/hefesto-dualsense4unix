@@ -14,7 +14,7 @@ equipe dizer que ele monta as dez abas de verdade. Registro de obra, vazando
 para a moldura do produto.
 
 **E ele atravessou incólume as duas réguas de tela desta casa.**
-``check_a_conferencia_dela.py`` e ``check_a_tela_nao_confessa.py`` medem o
+``check_a_conferencia.py`` e ``check_a_tela_nao_confessa.py`` medem o
 **corpo das dez páginas** — o HTML. A barra de título é GTK; o ``.desktop`` é
 INI; a unit é systemd. *A régua parava na borda da* ``<body>``\\ *, e a tela dela
 não para.* Enquanto as dez páginas eram varridas linha por linha, a primeira

@@ -140,7 +140,7 @@ TABELA_DAS_CORES = _RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 _ZONAS_DO_TOM = ("casca_esq", "casca_dir")
 
 #: *«aí ele pluga o controle dele e o app não funciona pq ele tá todo setado  (noqa-acento): dela
-#: pra funcionar só no meu pc»*.  (noqa-acento): citação literal dela
+#: pra funcionar só no meu pc»*.  (noqa-acento): citação literal
 MODELOS: dict[int, str] = {
     0x0CE6: "DualSense",
     0x0DF2: "DualSense Edge",

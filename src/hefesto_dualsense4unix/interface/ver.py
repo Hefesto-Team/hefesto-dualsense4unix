@@ -112,7 +112,7 @@ def main() -> int:
     barra = Gtk.HeaderBar()
     barra.set_show_close_button(True)
     # janela não conseguimos deixar Hefesto - DualSense4Unix ao invés de só
-    # hefesto?"*  (noqa-acento) citação literal dela
+    # hefesto?"*  (noqa-acento) citação literal
     # `utils/identidade.py` escrevia o `S` do DualSense em minúscula, em 427
     from hefesto_dualsense4unix.utils import identidade
 

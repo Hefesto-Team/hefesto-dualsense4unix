@@ -524,7 +524,7 @@ LEGENDA = '''<div class="nota">
   <h2>A aba Sistema em três seções — 25/09/2026</h2>
   <ul>
     <li><b>O pedido dela:</b> <i>"praticamente vamos só mudar de lugar as coisas dessa aba"</i>,
-      com menos texto e mais gesto. <!-- noqa-acento: citação literal dela --></li>
+      com menos texto e mais gesto. <!-- noqa-acento: citação literal --></li>
     <li><b>1. Status</b> — o antigo <i>O serviço</i> virou <b>Status</b>, com quatro linhas na
       forma do exame (a pílula e o texto curto): <b>Serviço</b> (LIGADO, PAUSADO ou PARADO — a
       pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e

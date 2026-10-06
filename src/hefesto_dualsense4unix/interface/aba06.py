@@ -1190,7 +1190,7 @@ def ajuda(txt, largura="", vivas=()):
     return (f'<span class="{cls}" tabindex="0">?'
             f'<span class="dica"{st}>{corpo}</span></span>')
 
-# aba navegAção."* <!-- noqa-acento: citação literal dela --> O PS + L3 anda
+# aba navegAção."* <!-- noqa-acento: citação literal --> O PS + L3 anda
 #: O de fábrica de cada linha sai do produto (`acoes_do_gesto.PADRAO`), e as
 COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO[g.chave]))
           for g in _acoes_do_gesto.GESTOS.values()]
@@ -1214,7 +1214,7 @@ CSS += "\n  /* ---- o desenho acompanha o combo apontado, sem uma linha de scrip
 CSS += REALCE + "\n"
 
 
-# meu trabalho (…) nada hardcoded."*  (noqa-acento: citação literal dela)
+# meu trabalho (…) nada hardcoded."*  (noqa-acento: citação literal)
 _FOLHA_NO_SVG = re.compile(
     r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
 

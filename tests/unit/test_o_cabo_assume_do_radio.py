@@ -3,7 +3,7 @@
 Ela, 25/09/2026: plugou no USB um controle que estava pelo rádio, e ele
 *«segue conectado no modo bt mas agora segue carregando»*. A decisão dela:
 **passa para o cabo**, com o mesmo número e sem o jogo perder o controle; tirou
-o cabo, volta pelo rádio. <!-- noqa-acento: citação literal dela -->
+o cabo, volta pelo rádio. <!-- noqa-acento: citação literal -->
 
 O QUE FOI MEDIDO ANTES DA CURA (e que esta régua reproduz)
 =========================================================

@@ -9,7 +9,7 @@ de volta acompanha a escrita nas DUAS camadas — ou só no byte do firmware?*
 POR QUE ELA IMPORTA, e a decisão é dela
 ----------------------------------------
 Decisão dela, 04/09/2026, meio-dia: *"sons do pc e sons do jogo. veja como
-fizemo no gtk."*  # noqa-acento: citação literal dela
+fizemo no gtk."*  # noqa-acento: citação literal
 
 São DOIS caminhos independentes, e a janela antiga já sabia disso
 (`interface/cartao_do_controle.CANAIS_DO_SPEAKER`):

@@ -178,7 +178,7 @@ def test_tem_razao_reconhece_as_duas_formas_da_casa() -> None:
     sem_razao = [
         f"print('x')  # {marca}",
         f"algo()  # ({marca})",
-        f"> uma citação literal dela <!-- {marca} -->",
+        f"> uma citação literal <!-- {marca} -->",
         f"@media (max-width: 640px) {{   /* {marca} */",
         "assert x  # noqa: acentuacao",
     ]

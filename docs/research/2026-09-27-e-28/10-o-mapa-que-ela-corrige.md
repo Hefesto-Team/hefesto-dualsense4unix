@@ -6,7 +6,7 @@ Legenda: **MEDIDO** (rodou-se e viu-se), **LIDO** (código ou disco), **INFERIDO
 
 ## O pedido
 
-*«me referi as portas renomear, trocar elas de lugar no meapemento identificar onde fica o hub e afins. corrigir quando for 2.0 e tal. até agora não entendi pq identificou errado.»* <!-- noqa-acento: citação literal dela -->
+*«me referi as portas renomear, trocar elas de lugar no meapemento identificar onde fica o hub e afins. corrigir quando for 2.0 e tal. até agora não entendi pq identificou errado.»* <!-- noqa-acento: citação literal -->
 
 Quatro atos numa entrada do mapa (renomear, trocar de lugar, dizer onde fica o hub, corrigir a velocidade) e uma explicação.
 
@@ -60,4 +60,4 @@ A conferência achou e curou três defeitos: o número de **outra** entrada vira
 6. **Dois riscos sem régua.** O ensinar não confere a amarra por lugar de outra entrada (INFERIDO). E uma janela da interface aberta desde antes de um install roda código velho: se ela gravar depois de o código novo gravar um `nome`, o mapa sai do disco e fica só no `maquina.json.invalido` (o descarte foi MEDIDO em laboratório). A rede protege do próximo campo, não do código já em memória; o fecho manda conferir, por PID, se sobrou janela de antes do install e reabri-la.
 7. **Fora da sprint.** Do censo, noutra sprint: o Wi-Fi «Não Identificado» (classe `ff/ff/ff`), e Mouse e Teclado deduzidos só pela interface 0 (`integrations/censo_do_barramento.py:20`), quando os dois receptores têm as duas. E ainda: o chip de dentro do hub listado como «Entrada 1.1» pelo `ler_o_mapa` (sem tela hoje), e o hub desenhado com quatro buracos, quando o `maxchild` do `/sys` daria sete (com a face ligada, isso deixa de aparecer na máquina dela).
 8. **O que só ela confirma no gabinete:** se o hub está na entrada 3 de trás, a cor da frente e das 7 e 8, a ordem 9 a 15 no plástico, se «Meio» é nome da entrada ou só do adaptador, e em que entrada aparece um aparelho USB 3 encaixado na frente.
-9. **As seis decisões** não estão em `docs/data/decisoes-dela.csv` desta árvore; a sprint manda gravá-las lá.
+9. **As seis decisões** não estão em `docs/data/decisoes-de-produto.csv` desta árvore; a sprint manda gravá-las lá.

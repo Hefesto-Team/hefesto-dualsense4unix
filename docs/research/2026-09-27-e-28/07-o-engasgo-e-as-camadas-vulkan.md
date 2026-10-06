@@ -140,8 +140,8 @@ deixou ligada; desligada desde 21/09 13:09:24. A sessão de 14/09, de 26,9 min c
 a camada desligada, não teve queixa de engasgo (ausência de queixa, não prova de
 cura), e as duas queixas (07/09 e 26/09) vieram com ela desligada:
 
-- 07/09, 12:39: *«a correção do vulcan não tá funcionando.»* <!-- noqa-acento: citação literal dela -->
-- 26/09, 14:33: *«tinhamos resolvido, ou perto disso com a descoberta da camada vulcan mas … parece que voltaram»* <!-- noqa-acento: citação literal dela -->
+- 07/09, 12:39: *«a correção do vulcan não tá funcionando.»* <!-- noqa-acento: citação literal -->
+- 26/09, 14:33: *«tinhamos resolvido, ou perto disso com a descoberta da camada vulcan mas … parece que voltaram»* <!-- noqa-acento: citação literal -->
 
 ## 4. Por que pareceu funcionar
 

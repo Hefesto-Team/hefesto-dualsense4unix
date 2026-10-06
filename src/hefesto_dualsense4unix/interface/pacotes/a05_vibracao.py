@@ -134,7 +134,7 @@ def degrau_da_faixa(policy: str, custom: Any) -> str:
 
     A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (a resposta [26]
     dela, 29/09/2026): *«qualquer valor acima disso é Máximo o botão ativo mas
-    o valor real é o do slicer»*. <!-- noqa-acento: citação literal dela -->
+    o valor real é o do slicer»*. <!-- noqa-acento: citação literal -->
     De 150 a 200, o Máximo; de 30 a 99, o Economia; abaixo de 30, nenhum. De
     100 a 149, nenhum: o «Padrão» (antes «Balanceado») só acende pelo nome, porque
     desde 04/10/2026 ele trava as barras, e o trilho não. A faixa entre os
@@ -713,7 +713,7 @@ def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
     """Diz ao daemon, a cada segundo, que a janela ainda segura os motores DE CADA teste.
 
     NASCEU DA ORDEM DELA, 15/09/2026: *"o testar e parar é sobre o teste naquele
-    momento isso nao interfere in game"*  (noqa-acento: citação literal dela). O
+    momento isso nao interfere in game"*  (noqa-acento: citação literal). O
     "Testar" tira os motores do jogo e os devolve no "Parar" — e fechar a
     janela, trocar de aba ou a janela morrer deixava o jogo mudo até ela voltar
     e clicar. O daemon solta o par que ninguém rebate

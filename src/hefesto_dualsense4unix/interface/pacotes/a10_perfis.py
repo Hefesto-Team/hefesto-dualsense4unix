@@ -334,7 +334,7 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
         frase = f"{frase} · {_CARONA_PENDENTE}" if frase else _CARONA_PENDENTE
         _CARONA_PENDENTE = ""
     _anotar(frase)
-    #  nao devia aparecer nunca"  # (noqa-acento) citação literal dela
+    #  nao devia aparecer nunca"  # (noqa-acento) citação literal
     return {"mesa": {"perfis.desfecho": "", **campos}, "relato": frase}
 
 

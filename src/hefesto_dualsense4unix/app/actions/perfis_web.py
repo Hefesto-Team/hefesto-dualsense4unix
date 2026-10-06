@@ -46,7 +46,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "editor.jogo": "o campo livre do editor simples; o texto sai de "
     "profiles/simple_match.simple_extra:305 e volta por from_simple_choice.",
     "salvar": "footer_actions.on_save_profile:838 — O ÚNICO Salvar, por ordem "
-    "dela (\"Salvar este perfil\" saiu da tela, CORRECOES-DELA.md). E ele NÃO "
+    "dela (\"Salvar este perfil\" saiu da tela, CORRECOES.md). E ele NÃO "
     "está ligado aqui: os dois Salvar miram alvos diferentes hoje (o do rodapé "
     "grava footer_actions._perfil_que_as_abas_editam:884; o do editor gravava o "
     "alvo memorizado), e fundir sem fechar a divergência é o caminho mais curto "

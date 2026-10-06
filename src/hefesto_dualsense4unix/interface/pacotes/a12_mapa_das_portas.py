@@ -15,7 +15,7 @@ Os dois pedidos dela que isto atende:
   está num conector 2.0 da placa — «Velocidade»: USB 3.0 ou 2.0 (desde 04/10/2026
   só na entrada VAZIA: com aparelho nela, a máquina mede e a medida vence).
 
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 
 Os dois vão ao `maquina.json` DELA, em `mapa.portas[N]`, pelo gravador único do
 Mapear (`integrations/entrada_a_entrada`), sem IPC: a declaração é dado de

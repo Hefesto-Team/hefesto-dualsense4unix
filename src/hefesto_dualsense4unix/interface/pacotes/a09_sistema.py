@@ -164,8 +164,8 @@ def _limpar_o_painel() -> None:
     _PERGUNTA.clear()
 
 
-#: aparecendo"*. <!-- noqa-acento: citação literal dela -->
-#: <!-- noqa-acento: citação literal dela -->
+#: aparecendo"*. <!-- noqa-acento: citação literal -->
+#: <!-- noqa-acento: citação literal -->
 RECIBO_QUE_FICA_NA_TELA = ("corrigir-vulkan",)
 
 
@@ -344,7 +344,7 @@ def linha_do_som_do_sistema(
     **O PEDIDO É DELA, 21/09/2026:** *"outra coisa que precisamos ter é
     sincronia com os canais de saida de som e entrada de som do sistema
     operacional. isso é importante."*
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
 
     **OS NOMES SÃO OS DO PAINEL DELA, e é o ponto inteiro.** Eles vêm da
     `Description` que o próprio servidor de som publica — as mesmas palavras
@@ -674,7 +674,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
         partes.append("")
         partes.append(ROTULO_DA_IDENTIDADE)
         partes += [f"  {_linha_de_identidade(c, mesa or [])}" for c in vivos]
-    # bug»*. <!-- noqa-acento: citação literal dela --> O painel rola até o
+    # bug»*. <!-- noqa-acento: citação literal --> O painel rola até o
     partes += ["", ROTULO_DO_DIARIO, _diario()]
     return "\n".join(partes).strip()
 
@@ -1307,7 +1307,7 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
             "</span></div>")
 
 
-#: ali. Pra ficar simples pro user.»* <!-- noqa-acento: citação literal dela -->
+#: ali. Pra ficar simples pro user.»* <!-- noqa-acento: citação literal -->
 CORTES_DA_CABECA = (" (", " — ", ". ")
 
 
@@ -1322,7 +1322,7 @@ def cabeca_da_frase(frase: str) -> str:
     return cabeca[:1].upper() + cabeca[1:] if cabeca else ""
 
 
-#: <!-- noqa-acento: citação literal dela -->, e o jargão não é simples.
+#: <!-- noqa-acento: citação literal -->, e o jargão não é simples.
 FRASES_CURTAS_DO_EXAME: tuple[tuple[str, str], ...] = (
     ("quirk anti-storm ativo", "Proteção do áudio USB ligada"),
     ("o cinto extra do áudio usb não está posto",
@@ -1659,7 +1659,7 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     heroic ou qualquer outro"*; posta entre três formas (automático · oferecido
     num segundo clique · botão separado), ela escolheu a primeira com estas
     palavras: *"Faz automático mesmo"*.
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
 
     **O QUE ISSO CURA, e é medido:** o lançador que subiu ANTES do daemon
     segura o controle FÍSICO (`STEAM-NO-FISICO-01`, medido quatro vezes) —

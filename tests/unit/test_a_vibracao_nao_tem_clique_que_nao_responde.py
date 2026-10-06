@@ -77,7 +77,7 @@ from hefesto_dualsense4unix.interface import regua_do_mockup as _regua
 
 PAGINA = "05-vibracao.html"
 
-#: clicar em máximo ele liga"*  (noqa-acento: citação literal dela). O botão
+#: clicar em máximo ele liga"*  (noqa-acento: citação literal). O botão
 ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade")
 
 

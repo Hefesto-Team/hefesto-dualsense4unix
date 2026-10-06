@@ -65,7 +65,7 @@ MOTORES = [
 ]
 ESQ, DIR = MOTORES
 
-#      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # noqa-acento: citação literal dela
+#      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # noqa-acento: citação literal
 # (`daemon/subsystems/rumble.py:20`). O `data-forca` do HTML carrega a CHAVE,
 # (`a05_vibracao._aplicar_a_forca`, desfecho 3, medido em 04/09). Um botão a
 # bem. `a05_vibracao._pct_da_coluna` chama `_pedido_da_politica`, que faz
@@ -546,7 +546,7 @@ CSS = """
      de cada adaptador, em fatias") e mandou caçar rótulo visível começando em
      minúscula em TODAS as abas. Este é o único caso desta aba, e foi a única
      coisa tocada aqui: a Vibração está FECHADA por elogio literal dela
-     (`CORRECOES-DELA.md:39`). O irmão "/255" fica como está — barra e dígito não
+     (`CORRECOES.md:39`). O irmão "/255" fica como está — barra e dígito não
      têm caixa. */
   .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace}
   /* O `Máx` SOME RESERVANDO O ESPAÇO — decisão 11 dela, 03/09/2026.
@@ -564,7 +564,7 @@ CSS = """
      é o `value` dele que o piloto lê no `change`.
 
      A APARÊNCIA NÃO MUDA UM PIXEL DE PROPÓSITO. A Vibração está FECHADA por
-     elogio literal dela (`CORRECOES-DELA.md:39`), e um controle nativo do
+     elogio literal dela (`CORRECOES.md:39`), e um controle nativo do
      WebKit ali dentro traria a cor e a altura do tema do sistema no meio de uma
      tela que ela aprovou. `appearance:none` desliga o desenho nativo e as duas
      regras abaixo reconstroem EXATAMENTE o que o `.trilho` + `.cheio` já eram:
@@ -866,7 +866,7 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     barra do motor fosse um comando (`rumble.set`). Ela decidiu em 04/09/2026 —
     fora das opções que eu ofereci — que a barra **não manda o par: ela é
     POLÍTICA que MULTIPLICA o degrau**, e as duas são independentes de propósito
-    (*"se so a do motor fraco tiver 100 e a outrqa 50% então será 150 em um e  # noqa-acento: citação literal dela
+    (*"se so a do motor fraco tiver 100 e a outrqa 50% então será 150 em um e  # noqa-acento: citação literal
     75% no outro"*). O método que grava uma barra sem a outra existe desde o
     mesmo dia (`rumble.motores.set`, campo omitido não mexe naquela barra).
 
@@ -1070,8 +1070,8 @@ def _endereca_o_tremor(desenho, pref):
     return desenho
 
 
-#     "eu mapeei as cores, glifos, controles, id e tudo mais. é pro projeto usar  # noqa-acento: citação literal dela
-#      canto superior. é white no p1, mas a borda de tudo é cosmic red e os svgs  # noqa-acento: citação literal dela
+#     "eu mapeei as cores, glifos, controles, id e tudo mais. é pro projeto usar  # noqa-acento: citação literal
+#      canto superior. é white no p1, mas a borda de tudo é cosmic red e os svgs  # noqa-acento: citação literal
 
 FOLHA_DOS_28 = re.sub(r"</?style[^>]*>", "", monta_.folha_das_cores())
 

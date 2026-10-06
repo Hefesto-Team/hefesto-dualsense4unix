@@ -11,7 +11,7 @@ computador lia o gabinete de outra pessoa — e a ordem dela de 11/09/2026 é
 justamente a contrária:
 
     "a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento)
-     mim mas pra qualquer outro user"   — citação literal dela, 11/09/2026
+     mim mas pra qualquer outro user"   — citação literal, 11/09/2026
 
 E a página não tinha gerador: era o único HTML desta casa escrito à mão, e já
 tinha divergido da origem congelada em treze pedaços sem ninguém ver.
@@ -2040,7 +2040,7 @@ EDICOES: tuple[Edicao, ...] = (
             "     dela: «me referi as portas renomear». O nome é da POSIÇÃO, e quem o\n"
             "     compõe é o Python (`utils/rotulo_da_entrada`): o produto entrega os\n"
             "     `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador\n"
-            "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"  # noqa-acento: citação literal dela
+            "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"  # noqa-acento: citação literal
             "  var PALAVRA_DA_ENTRADA = "
             + json.dumps(PALAVRA_DA_ENTRADA, ensure_ascii=False) + ";\n"
             "  var PALAVRA_NA_FRASE = "

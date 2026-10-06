@@ -68,7 +68,7 @@ repouso é uma varredura de sysfs a cada `RECONCILIA_S`.
 **ELE SOBE SOZINHO DESDE 17/09/2026, E A RAZÃO DE NÃO SUBIR CADUCOU.** Aqui
 estava escrito, no presente, *"por que ele não sobe SOZINHO, e a razão continua
 de pé"* — privacidade e banda, as duas abaixo. **Ela revogou as duas em
-25/08/2026, por escrito**, em `docs/data/decisoes-dela.csv`: a id 37
+25/08/2026, por escrito**, em `docs/data/decisoes-de-produto.csv`: a id 37
 (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
 com as palavras dela — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
 O PREÇO… o que caduca é o padrão desligado"*. A decisão nunca foi implementada,

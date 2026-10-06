@@ -1,6 +1,6 @@
 """A queixa 15 dela, em forma de régua — e ela é sobre uma frase INVERTIDA.
 
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  # noqa-acento: citação dela
 
 O aviso que ela leu na aba 02, disparado pelo botão "Virtual" do microfone:

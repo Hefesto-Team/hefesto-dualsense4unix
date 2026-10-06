@@ -69,7 +69,7 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 
 
 # Ela, 27/09 à tarde: *«O freestyle nao deveria se comportar como  (noqa-acento: citação)
-# jogo.»*  (noqa-acento: citação literal dela)
+# jogo.»*  (noqa-acento: citação literal)
 
 
 class OFreestyleMandaError(RuntimeError):

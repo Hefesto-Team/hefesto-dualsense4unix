@@ -543,7 +543,7 @@ class ProfileSpeakerConfig(BaseModel):
     #: aqui também, o *«HDMI completo»* dela) ou ``"sfx"`` (o nó fica livre para
     #: a corrente que o jogo mandar). Pedido dela, 08/09/2026: *"os somns seja
     #: hdmi completo seja o canal do sfx caindo pra cada controle"*.
-    #: <!-- noqa-acento: citação literal dela -->
+    #: <!-- noqa-acento: citação literal -->
     #:
     #: **ADITIVO e sem bump de versão**, como a ``rota``: perfil antigo carrega
     #: com ``None``, que é **não mexer** — o nó daquele controle segue o padrão
@@ -780,7 +780,7 @@ class ControllerRumbleOverride(BaseModel):
 
     motor_forte_pct: int | None = None
 
-    #: 50% então será 150 em um e 75% no outro"*. <!-- noqa-acento: citação literal dela -->
+    #: 50% então será 150 em um e 75% no outro"*. <!-- noqa-acento: citação literal -->
     motor_fraco_pct: int | None = None
 
     haptica_pct: int | None = None
@@ -866,7 +866,7 @@ class ControllerMicOverride(BaseModel):
     é o `Virtual` que faz o mic soar igual no cabo e no rádio, ou seja, é o
     ajuste que faz o CANAL daquele controle funcionar; e com
     ``CANAL-POR-CONTROLE-01`` — *"4 controles os 4 tem que ter canais de
-    entrada unico pra cada qual"* (noqa-acento: citação literal dela) —
+    entrada unico pra cada qual"* (noqa-acento: citação literal) —
     um controle no cabo e outro no rádio precisam poder ter tratamentos
     diferentes.
 
@@ -971,7 +971,7 @@ class ControllerSensoresOverride(BaseModel):
     saída barata (virar leitura, um selo "no ar / parado", zero linha nova):
 
         *"ele tem que funcionar de verdade. ambos independente do modo e da
-        mascara."* <!-- noqa-acento: citação literal dela -->
+        mascara."* <!-- noqa-acento: citação literal -->
 
     **DOIS campos e não um**, porque ela disse *"ambos"* e cada um por si —
     e porque o caminho do report sabe separá-los: giroscópio e acelerômetro
@@ -1504,7 +1504,7 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
     return profile.teclado_emulado
 
 
-# <!-- noqa-acento: citação literal dela -->
+# <!-- noqa-acento: citação literal -->
 
 
 BRILHO_DA_BARRA_NA_ECONOMIA = 0.3

@@ -49,7 +49,7 @@ HEFESTO_LIGADO = True
 #:     outros três também são o Hefesto. Vira **Sony DualSense**;
 #: esquecimento — ela é a gramática desta casa para *"botão que aparece e diz que
 #:   o DualSense dizia   "dez linhas do mapa-controles.csv só chegam ao jogo por aqui"
-#: do xbox tá errado aquilo é o texto da mascara do xbox"*. Como o jogo desenha  # (noqa-acento): citação literal dela
+#: do xbox tá errado aquilo é o texto da mascara do xbox"*. Como o jogo desenha  # (noqa-acento): citação literal
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
@@ -689,7 +689,7 @@ CSS = """
          .faixa-final{display:flex;align-items:center;gap:12px}
 
      O LUGAR DO BOTÃO NÃO DEPENDE DE VIZINHO — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01.
-     Duas fotos dela no mesmo minuto: *"botoes que mudam de lugar direto"*.  (noqa-acento: citação literal dela)
+     Duas fotos dela no mesmo minuto: *"botoes que mudam de lugar direto"*.  (noqa-acento: citação literal)
      MEDIDO NO PILOTO (WebKit), em 1212, 1228, 1282 e 1300 de largura: parado
      60 s o botão não se move, e acender ou apagar a pendência também não. O
      que o empurrava era o recibo do Reconectar pousando NESTA fileira vestido

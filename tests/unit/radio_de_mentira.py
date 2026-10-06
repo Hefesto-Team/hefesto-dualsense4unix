@@ -41,7 +41,7 @@ e até ela este dublê era MAIS FROUXO que o controle de verdade:
   lembra os hosts de antes (``Fisico.antigos``), e
   :meth:`RadioDeMentira.voltar_sozinho` o leva de volta ao primeiro que ainda
   tem a chave dele. Sem a chave lá, não há para onde voltar.
-  <!-- noqa-acento: citação literal dela -->
+  <!-- noqa-acento: citação literal -->
 
 O ``Alias`` nasce igual ao ``Name`` de fábrica, como no BlueZ; o nome que ela
 dá é o ``Alias`` diferente dele.

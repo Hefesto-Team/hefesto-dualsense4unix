@@ -1558,7 +1558,7 @@ BOOTSTRAP = r"""
 """
 
 
-#: paginas isso ocorre."*  <!-- noqa-acento: citação literal dela -->
+#: paginas isso ocorre."*  <!-- noqa-acento: citação literal -->
 #: Medido em 11/09/2026 nesta árvore, com o daemon vivo, um DualSense no cabo,
 DICA_DA_CASA = r"""
 (function(){
@@ -3014,7 +3014,7 @@ class Piloto:
             print(f"ERRO: o bootstrap não instalou em {self.pagina}: {erro}", file=sys.stderr)
             return
         self.pronto = True
-        # que é o defeito que ela relatou *"em todas as paginas"*.  # noqa-acento: citação literal dela
+        # que é o defeito que ela relatou *"em todas as paginas"*.  # noqa-acento: citação literal
         self.ponte.perguntar(DICA_DA_CASA, self._dica_instalada)
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 

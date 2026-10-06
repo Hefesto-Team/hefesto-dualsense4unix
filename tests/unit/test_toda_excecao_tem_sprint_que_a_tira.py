@@ -269,7 +269,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_MAO_FORA_DO_AMBIENTE": (
         "a mão de cada chave, declarada pelo nome e conferida pela própria régua"),
     "tests/unit/test_a_04_o_anel_do_dono_veste_o_aparelho.py::FORA_DO_DESENHO": _DADO_DE_TESTE,
-    "tests/unit/test_a_aba05_publica_os_hexes_do_mapa_dela.py::FORA_DO_DESENHO": _DADO_DE_TESTE,
+    "tests/unit/test_a_aba05_publica_os_hexes_do_mapa.py::FORA_DO_DESENHO": _DADO_DE_TESTE,
     "tests/unit/test_a_aba_10_perfis_fecha_as_linhas.py::FORMAS_FORA_DO_DICIONARIO": (
         "o vocabulário das formas que `from_simple_choice` escreve fora do dicionário"),
     "tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py::PISO_ATE_HOJE": (

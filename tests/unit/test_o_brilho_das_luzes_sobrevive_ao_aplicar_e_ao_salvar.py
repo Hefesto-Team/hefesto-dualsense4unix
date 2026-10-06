@@ -1,7 +1,7 @@
 """O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01 — a pílula, o «Aplicar» e o «Salvar».
 
 A queixa dela, 26/09/2026: *«tentei alterar a força dos leds
-fraco medio e forte <!-- noqa-acento: citação literal dela -->
+fraco medio e forte <!-- noqa-acento: citação literal -->
 e ao aplicar ele não aplicar e ao salvar ele não salva»*.
 
 **MEDIDO ANTES DA CURA**, na mesa de quatro da A-MARCA (o `IpcServer` real, o

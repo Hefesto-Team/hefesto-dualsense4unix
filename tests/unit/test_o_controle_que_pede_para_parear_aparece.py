@@ -36,7 +36,7 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from tests.unit import radio_de_mentira as rm
-from tests.unit import test_o_parear_espera_o_clique_dela as _base
+from tests.unit import test_o_parear_espera_o_clique as _base
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 
 #: as fixtures do dublê da escolha dela (o dono vivo e a central reais sobre o mundo de mentira)

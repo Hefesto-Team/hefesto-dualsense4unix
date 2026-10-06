@@ -163,7 +163,7 @@ def largada(fn: Callable[[Any], None]) -> Callable[[Any], None]:
     return fn
 
 
-#: afins."* <!-- noqa-acento: citação literal dela -->
+#: afins."* <!-- noqa-acento: citação literal -->
 #: começa com `if not na_mesa: return`, então com a mesa vazia a thread de
 PODAS: list[Callable[[frozenset[str]], None]] = []
 

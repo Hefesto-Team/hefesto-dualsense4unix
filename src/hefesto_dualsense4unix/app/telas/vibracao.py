@@ -2,7 +2,7 @@
 
 A página é ``src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html``, aprovada por ela com
 elogio literal
-(``_ferramentas/CORRECOES-DELA.md:39``). Este módulo é o outro lado dela: pega o
+(``_ferramentas/CORRECOES.md:39``). Este módulo é o outro lado dela: pega o
 ``daemon.state_full`` e devolve **um pacote por tique** — nunca uma chamada por
 valor. O gesto que a página manda é do pacote da aba
 (``interface/pacotes/a05_vibracao``), que usa as duas traduções daqui

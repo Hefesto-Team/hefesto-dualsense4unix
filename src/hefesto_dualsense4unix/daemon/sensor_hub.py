@@ -53,7 +53,7 @@ outra camada).
 
 **O reader de MOTION é a exceção, e ela nasceu deliberada em 04/09/2026**
 (SENSOR-DE-VERDADE-01, decisão dela: *"ele tem que funcionar de verdade.
-ambos independente do modo e da mascara"*). <!-- noqa-acento: citação literal dela -->
+ambos independente do modo e da mascara"*). <!-- noqa-acento: citação literal -->
 O node "Motion Sensors" é SEPARADO do node do controle: grabá-lo esconde o
 giro e o acelerômetro de quem lê evdev **sem tocar um único botão** — os
 gatilhos, os analógicos e o d-pad continuam chegando ao jogo pelo outro node.

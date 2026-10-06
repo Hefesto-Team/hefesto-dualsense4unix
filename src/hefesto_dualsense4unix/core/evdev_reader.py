@@ -1933,7 +1933,7 @@ class TouchState:
     Ela perguntou por que o desenho mostra UM dedo num touchpad que faz
     rolagem de dois e pinça: *"NA INTERFACE NA ABA CONTROLES SÓ MOSTRA UM
     TOQUE NO DESENHO DO SVG APESAR DO TOUCH SER MULTITOQUE"*.
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
     Medido no mesmo dia com os dedos dela no controle azul: o nó do kernel
     declara `ABS_MT_SLOT 0..1` — DOIS dedos, e o libinput emitiu 8 pinças e
     922 eventos de rolagem, todos com `2`. O terceiro dedo não existe para o

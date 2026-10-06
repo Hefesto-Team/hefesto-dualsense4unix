@@ -4,7 +4,7 @@
 SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão dela, 04/09/2026:
 
     *"ele tem que funcionar de verdade. ambos independente do modo e da
-    mascara."* <!-- noqa-acento: citação literal dela -->
+    mascara."* <!-- noqa-acento: citação literal -->
 
 **A DIFERENÇA QUE ESTE ENSAIO EXISTE PARA NÃO CONFUNDIR** é a mesma que
 derrubou quatro réguas em 04/09: *"a interface parou de mostrar"* e *"o jogo

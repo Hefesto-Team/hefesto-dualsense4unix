@@ -68,7 +68,7 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
     # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da mesa dela
-    "scripts/check_a_conferencia_dela.py": (
+    "scripts/check_a_conferencia.py": (
         "MEDIDO em 08/09/2026, e ele fica fora das duas listas POR DESENHO, não "
         "por esquecimento. Ele é a tabela que ELA escreveu — a coluna «✓ na "
         "árvore» contra a coluna «falta» — com a ordem dela junto: *\"se alguma "
@@ -84,7 +84,7 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "mediu o que isso custa — agente caçando régua quebrada em vez de "
         "defeito.\n"
         "A LINHA QUE O LIGARIA, se um dia a bancada virar CI: "
-        "`rapido|conferencia-dela|py|scripts/check_a_conferencia_dela.py` em "
+        "`rapido|conferencia-dela|py|scripts/check_a_conferencia.py` em "
         "`scripts/portoes.sh`, mais o passo gêmeo em `.github/workflows/ci.yml`. "
         "Ele fecha quando as três linhas da direita fecharem E existir bancada "
         "automatizada — a segunda condição é que não existe hoje."

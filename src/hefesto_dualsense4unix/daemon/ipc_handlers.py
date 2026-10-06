@@ -4435,7 +4435,7 @@ class IpcHandlersMixin:
         leitura:
 
             *"ele tem que funcionar de verdade. ambos independente do modo e
-            da mascara."* <!-- noqa-acento: citação literal dela -->
+            da mascara."* <!-- noqa-acento: citação literal -->
 
         O ATO INTEIRO SÃO TRÊS ESCRITAS, e a ordem é o contrato:
 

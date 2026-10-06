@@ -1,7 +1,7 @@
 """O jogo manda; na ausência dele, o perfil ganha — a decisão dela de 03/10/2026.
 
 *«o certo seria os controles obedecerem quando o jogo manda e na
-ausencia disso o perfil ganha.»* <!-- noqa-acento: citação literal dela -->
+ausencia disso o perfil ganha.»* <!-- noqa-acento: citação literal -->
 (ela, 03/10/2026 ~18h15, na bancada do Forja; revoga a PERFIL-MANDA-01 de
 16/09, «meu perfil manda»).
 

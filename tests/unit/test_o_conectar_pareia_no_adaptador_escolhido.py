@@ -5,7 +5,7 @@ Os relatos dela de 26/09/2026, com três DualSense e três adaptadores:
     *«controle conectado ainda cliquei na guia de conexão no botão
     correspondente a esquerda e ele ainda assim conectou no da direita. Não
     respeitaw nem a guia selecionada no radio e adaptadores e nem o botão
-    correspondente ao Conectar.»* <!-- noqa-acento: citação literal dela -->
+    correspondente ao Conectar.»* <!-- noqa-acento: citação literal -->
 
 E a decisão dela, às 04h: *«No adaptador aberto (a Esquerda)»*.
 

@@ -762,8 +762,8 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
             f"a dica do {nome} voltou a pôr uma linha de comando na tela — "
             f"a língua desta casa a proíbe em texto de tela: {dica!r}")
 
-    # proprio  # noqa-acento: citação literal dela
-    # controle já o faz e ele reflete isso"*.  <!-- noqa-acento: citação literal dela -->
+    # proprio  # noqa-acento: citação literal
+    # controle já o faz e ele reflete isso"*.  <!-- noqa-acento: citação literal -->
     assert "controle" in a02_gerador.DICA_MIC_TESTAR.lower(), (
         "a dica do 🎙 não diz mais onde se cala o microfone — o ato saiu da "
         "tela e quem lê precisa saber que ele está no plástico")

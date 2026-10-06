@@ -30,7 +30,7 @@ A fase sentada tem **fim próprio** — não é preâmbulo da outra (R31).
 O QUE ESTA JANELA APROVOU E O QUE ELA NÃO APROVOU
 --------------------------------------------------
 
-``docs/data/decisoes-dela.csv``, ``D-CALIBRAR-AS-ENTRADAS``: *"APROVADO POR ELA
+``docs/data/decisoes-de-produto.csv``, ``D-CALIBRAR-AS-ENTRADAS``: *"APROVADO POR ELA
 em 25/08/2026, às ~03h55, VENDO o mockup"*. O carimbo cobre nominalmente as
 duas fases, a pergunta única do hub, os dois relógios, o ``[Não alcanço]`` como
 saída de primeira classe, a marreta batendo UMA vez em 0,82 s e as quatro

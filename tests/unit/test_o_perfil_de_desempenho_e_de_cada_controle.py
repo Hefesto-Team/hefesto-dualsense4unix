@@ -24,7 +24,7 @@ O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o `maquina.json`
 e o perfil gravados aqui moram dentro dele.
 
 A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
-de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal dela -->
+de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal -->
 """
 from __future__ import annotations
 

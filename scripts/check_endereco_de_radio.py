@@ -20,7 +20,7 @@ EXCLUIR_SUFIXO = {
 EXCLUIR_CAMINHO = {
     "docs/usage/assets/PROVA-DA-FOTO.txt",
     "scripts/check_endereco_de_radio.py",
-    "scripts/check_o_endereco_dela_em_toda_forma.py",
+    "scripts/check_o_endereco_em_toda_forma.py",
     "poetry.lock", "package-lock.json", "flake.lock",
 }
 

@@ -26,7 +26,7 @@ O enunciado antigo, para quem for ler o histórico:
 **O pedido dela, 10/09/2026:** *"vamos lá na interface invertemos o botão mic
 ele aceso (vai indicar que agora tá gravando audio, ele captando audio vai
 ficar no estado de piscando (guia visual pro leigo que pegar o controle de
-primeira))"*.  <!-- noqa-acento: citação literal dela -->
+primeira))"*.  <!-- noqa-acento: citação literal -->
 
 ## O QUE ESTA RÉGUA TRAVA, e o principal não é o CSS
 

@@ -11,7 +11,7 @@ A LEI, e ela é dela (03/09/2026):
      players com cada controle — tudo isso muda de acordo com o controle
      identificado no canto superior. é white no p1, mas a borda de tudo é
      cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
-     (noqa-acento: citação literal dela)
+     (noqa-acento: citação literal)
 
 O DEFEITO ESTAVA FOTOGRAFADO antes desta régua existir. Com a mesa dela — um
 White no cabo e um Galactic Purple no rádio — a `04-iluminacao` mostrava, com

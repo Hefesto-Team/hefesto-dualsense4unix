@@ -6,8 +6,8 @@ O que se mediu e se desenhou na madrugada de 27/09/2026 para o Freestyle ficar �
 
 Duas falas dela, de 27/09, puxaram as duas rodadas:
 
-- «no freestyle a ideia é tudo estar no ultra até vibração e afins.» <!-- noqa-acento: citação literal dela -->
-- «no freestyle tem um problema que é. ao jogar qualquer que seja o jogo mesmo o botão ativado ele nunca tem prioridade. ter criado um perfil pra ele não foi a solução que eu havia pedido. a ideia é ele andar por cima do sistema de perfis. pq ao jogar qualquer jogo ele nunca fica ativado e sempre perde prioridade pra algum jogo (o que estpa certo.)» <!-- noqa-acento: citação literal dela -->
+- «no freestyle a ideia é tudo estar no ultra até vibração e afins.» <!-- noqa-acento: citação literal -->
+- «no freestyle tem um problema que é. ao jogar qualquer que seja o jogo mesmo o botão ativado ele nunca tem prioridade. ter criado um perfil pra ele não foi a solução que eu havia pedido. a ideia é ele andar por cima do sistema de perfis. pq ao jogar qualquer jogo ele nunca fica ativado e sempre perde prioridade pra algum jogo (o que estpa certo.)» <!-- noqa-acento: citação literal -->
 
 A segunda bate de frente com a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (o perfil próprio de um jogo entra por cima do Modo Freestyle, pela `LOCK-CEDE-01`, em `src/hefesto_dualsense4unix/profiles/autoswitch.py`).
 
@@ -69,7 +69,7 @@ Com isso, o asset no ultra e a decisão `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` pass
 ## O que ficou aberto
 
 - **Nada destas duas rodadas está no `dev`.** As duas foram interrompidas: a da tabela durante a conferência, que não devolveu nada, e a da camada ainda no estudo, sem sprint devolvida. Nem o módulo da tabela (`o_ultra`), nem o teste das réguas, nem as decisões `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` e `D-2709-O-FREESTYLE-ANDA-POR-CIMA` existem na árvore.
-- O desenho da camada também não durou. Na tarde de 27/09, `docs/data/decisoes-dela.csv` passou a trazer a `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (sprint `O-FREESTYLE-E-UMA-CAMADA-SO-01`), decidida por ela contra a camada fixa: o Freestyle é um perfil que ela ajusta nas abas, nasce com tudo no ultra e, ligado, o autoswitch não o troca por perfil de jogo nenhum. A decisão também revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
+- O desenho da camada também não durou. Na tarde de 27/09, `docs/data/decisoes-de-produto.csv` passou a trazer a `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (sprint `O-FREESTYLE-E-UMA-CAMADA-SO-01`), decidida por ela contra a camada fixa: o Freestyle é um perfil que ela ajusta nas abas, nasce com tudo no ultra e, ligado, o autoswitch não o troca por perfil de jogo nenhum. A decisão também revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
 - O volume de captura do microfone não tem valor por controle no nascimento.
 - A seção global de som não alcança os quatro controles na troca de perfil.
 - A háptica não tem campo de força no perfil.

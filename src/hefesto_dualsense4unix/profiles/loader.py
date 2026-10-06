@@ -267,7 +267,7 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
     return renomeado
 
 
-# isso."*  (noqa-acento: citação literal dela)
+# isso."*  (noqa-acento: citação literal)
 
 _PERSONALIZADO_VIROU_FREESTYLE_MARKER = ".personalizado_virou_freestyle"
 
@@ -449,7 +449,7 @@ def o_perfil_de_fora_do_jogo() -> str | None:
     return None
 
 
-# features ativadas por default."*  (noqa-acento: citação literal dela)
+# features ativadas por default."*  (noqa-acento: citação literal)
 _FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER = ".freestyle_de_fabrica_nasce_ligado"
 
 

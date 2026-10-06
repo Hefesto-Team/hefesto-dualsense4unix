@@ -269,7 +269,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         A decisão dela, ao ver a causa:
 
             *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
-            esse vazamento me preocupa"*  <!-- noqa-acento: citação literal dela -->
+            esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
 
         Enquanto um start sem opinião herdar de QUALQUER lugar, existe um lugar
         a envenenar. O caminho DualSense é o que tem todas as features, e é o

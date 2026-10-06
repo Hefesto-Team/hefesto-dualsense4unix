@@ -376,7 +376,7 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
     :func:`_a_escolha_dela_sem_o_vazamento`, logo abaixo**, no outro eixo. A
     ordem dela de 19/09 nomeava os dois: *"sim tudo dualsense, tudo ligado
     mascara dualsense por default mas esse vazamento me preocupa"*.
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
 
     O `gamepad_emulation.flag` da máquina dela diz `xbox` — e não por escolha
     dela para todos os jogos. Os pontos 1 e 2 desta sprint fecharam as DUAS

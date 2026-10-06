@@ -470,7 +470,7 @@ _NAO_CONFERIU = "Não consegui conferir a numeração dos controles."
 _NAO_COMPACTOU = "Não consegui ajustar a numeração dos controles."
 
 
-#: fora."* <!-- noqa-acento: citação literal dela -->
+#: fora."* <!-- noqa-acento: citação literal -->
 #: `integrations/gesto_de_reconexao.reconectar`.
 _VOLTARAM_PELO_RADIO = "{quantos} controle(s) voltaram pelo rádio."
 _ESPERAM_O_PS = (

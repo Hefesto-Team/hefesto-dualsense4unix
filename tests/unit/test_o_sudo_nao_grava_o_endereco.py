@@ -692,7 +692,7 @@ def test_o_adaptador_fora_da_mesa_sai_sem_endereco(mesa: Mesa) -> None:
 def _carregar_a_regua_da_maquina() -> ModuleType:
     nome = "_regua_da_maquina_do_sudo"
     spec = importlib.util.spec_from_file_location(
-        nome, RAIZ / "scripts" / "check_o_endereco_dela_em_toda_forma.py"
+        nome, RAIZ / "scripts" / "check_o_endereco_em_toda_forma.py"
     )
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)

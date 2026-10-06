@@ -1946,7 +1946,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         "aparelhos": _html_dos_aparelhos(),
         **confissao,
         "dicas": _html_das_dicas(vivos, _CENA_NA_TELA),
-        # pelo «Examinar Entradas». (noqa-acento: citação literal dela)
+        # pelo «Examinar Entradas». (noqa-acento: citação literal)
         **_sala_na_tela(declaracao),
         "externos-lista": _html_dos_externos(ctx),
         "mic-escopo": escopo_do_botao_do_mic(st),
@@ -2990,7 +2990,7 @@ _LARGURA_DA_ENTRADA = round(2 * HZ_INPUT_SEM_MIC, 1)
 _LARGURA_DO_MIC = round(2 * (HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC - HZ_INPUT_SEM_MIC), 1)
 _LARGURA_DA_PONTE = round((FATIAS_DA_PONTE + 1) * HZ_DA_PONTE, 1)
 
-#: grande, verborrágico e confuso"*.  (noqa-acento: citação literal dela)
+#: grande, verborrágico e confuso"*.  (noqa-acento: citação literal)
 SEGURE = "Segure PS + Create"
 NOMEAR = "Nomear"
 #: o nome do adaptador na faixa quando ele não tem nome nem entrada lida.
@@ -3114,7 +3114,7 @@ def nome_dado(nome: str) -> str:
     Ordem dela de 05/10/2026, 13h: *«Nome que o user colocar pra controle mesmo se ele colocar
     minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o resto
     fica como ela escreveu. Vale ao gravar e ao ler o que já estava gravado em minúscula.
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
     """
     nome = str(nome or "").strip()
     return _maiuscula(nome)
@@ -4995,7 +4995,7 @@ def _na_ordem_dela(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
     *«segurar a área do conector e arrastar ela pra mudar de ordem entre
     eles»*, e a ordem fica gravada no adaptador, pelo endereço
     (``utils/maquina.AdaptadorDeclarado.ordem``). Quem ela nunca arrastou vem
-    depois, na ordem de sempre. <!-- noqa-acento: citação literal dela -->
+    depois, na ordem de sempre. <!-- noqa-acento: citação literal -->
 
     A ordem que ela arrastou antes de 28/09/2026 morava no ``gui_prefs``, pela
     chave do lugar; ela vale, traduzida pelos adaptadores da tela, até ela
@@ -5094,7 +5094,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     aparece. Uma por aparelho, como a central guarda — o «Conectar» que vem
     depois no mesmo adaptador não apaga a linha de quem ficou sem casa. O fim
     da busca sem ninguém é dito onde a busca mora: no «Procurar».
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
 
     A MEIA CHAVE É DA CENTRAL, E A TELA SÓ MOSTRA (achado 8 da auditoria de
     26/09, A-CAIXA-FICA-ONDE-ELA-ABRIU-01). Quem tira a chave do ``Pair`` que
@@ -5536,7 +5536,7 @@ def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o mesmo dono do nome dele (``utils/maquina.guardar_ordem_dos_adaptadores``,
     desde 28/09/2026; antes ia para o ``gui_prefs``, pelo lugar, e a lista de
     lá sai aqui). Um id que não está na tela recusa: a ordem nunca inventa um
-    adaptador. <!-- noqa-acento: citação literal dela -->
+    adaptador. <!-- noqa-acento: citação literal -->
     """
     ids = str(o.get("valor") or "").split()
     na_tela = {str(lug["id"]): lug for lug in _CENA_NA_TELA.get("lugares") or ()}
@@ -5596,7 +5596,7 @@ def _alias_do_aparelho(endereco: str, nome: str) -> Any:
     vai para todos, e vale onde ele reconectar. Nome vazio devolve o de fábrica
     — o BlueZ faz isso com o ``Alias`` em branco, e a tela volta ao «Player N».
     Devolve a primeira escrita que deu, ou a primeira recusa quando nenhuma deu.
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import bluez_dbus
@@ -6075,7 +6075,7 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
 SEM_ECO = tuple(RAZAO_DO_SEM_ECO)
 
 
-# só leitura, com o ✓ de «tudo certo». <!-- noqa-acento: citação literal dela -->
+# só leitura, com o ✓ de «tudo certo». <!-- noqa-acento: citação literal -->
 CERTO = "✓"
 #: `native_mode` é do daemon (o jogo lê o DualSense de verdade); fora dele, o
 MODO_NATIVO = "Nativo"
@@ -6159,7 +6159,7 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
     visto = selo_do_estado("Visto como", str(eu.get("mascara") or TRAVESSAO_DA_LINHA), "")
 
     # (:func:`nome_com_a_bateria`); a queda do rádio aparece no exame e em
-    # Rádio e Adaptadores. (noqa-acento: citação literal dela)
+    # Rádio e Adaptadores. (noqa-acento: citação literal)
     return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto}
 
 
@@ -6268,7 +6268,7 @@ def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _reler_a_declaracao()
 
 
-# é o estado, e o tique a pinta. <!-- noqa-acento: citação literal dela -->
+# é o estado, e o tique a pinta. <!-- noqa-acento: citação literal -->
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
     "esperando": "Conecte o DualSense por USB numa entrada do computador.",

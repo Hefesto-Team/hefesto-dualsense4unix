@@ -5,13 +5,13 @@ A LEI, e ela é dela (03/09/2026)
 ---------------------------------
     "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada  # noqa-acento: citação literal dela
+    entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada  # noqa-acento: citação literal
     user ao usar seu controle se toque disso que o app se adaptou ao controle
     dele"
 
     "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
     players com cada controle — tudo isso muda de acordo com o controle
-    identificado no canto superior. é white no p1, mas a borda de tudo é cosmic  # noqa-acento: citação literal dela
+    identificado no canto superior. é white no p1, mas a borda de tudo é cosmic  # noqa-acento: citação literal
     red e os svgs não são os que o meu mapa cataloga. isso tá errado"
 
 Ela mapeou **28 modelos e 10 zonas** em ``docs/data/cores-do-dualsense.csv``. O

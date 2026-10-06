@@ -859,8 +859,8 @@ jobs:
           xvfb-run -a --server-args="-screen 0 1280x1024x24" \
             .venv/bin/python -m pytest -q \
               tests/unit/test_o_portao_declara_o_interpretador.py \
-              tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py \
-              tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py \
+              tests/unit/test_a_tela_nao_recebe_janela_de_teste.py \
+              tests/unit/test_o_instrumento_nao_abre_na_tela_do_usuario.py \
               tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py \
               tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py \
               tests/unit/test_a_suite_mede_esta_arvore.py

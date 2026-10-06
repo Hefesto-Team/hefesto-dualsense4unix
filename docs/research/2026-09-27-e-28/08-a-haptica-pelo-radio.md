@@ -50,7 +50,7 @@ Contar o `hidraw` curaria o caso de um controle e **devolveria o espelhado** com
 
 ## A cura: quem joga é quem mexeu desde que o jogo abriu
 
-Decisão **`D-2609-QUEM-JOGA-E-QUEM-MEXE`** (em `docs/data/decisoes-dela.csv`, por delegação), sprints `A-HAPTICA-QUEM-JOGA-01` e `A-HAPTICA-QUEM-JOGA-02`.
+Decisão **`D-2609-QUEM-JOGA-E-QUEM-MEXE`** (em `docs/data/decisoes-de-produto.csv`, por delegação), sprints `A-HAPTICA-QUEM-JOGA-01` e `A-HAPTICA-QUEM-JOGA-02`.
 
 - **O sinal:** o controle físico que teve entrada (botão, gatilho ou eixo fora da zona morta) desde que o jogo abriu. O daemon já lê essa entrada a cada tique para mandá-la ao vpad: o laço lê a do posto, `CoopManager.forward_all` lê a de cada secundário. A marca vive em `src/hefesto_dualsense4unix/daemon/subsystems/quem_mexe.py` e reusa essa leitura. Custo medido: 0,16 µs por tique sem jogo, no máximo 1,49 µs com jogo.
 - **A janela:** da abertura ao fechamento do jogo (o mesmo `pids_de_jogo` por `STEAM_COMPAT_DATA_PATH`); a marca zera nas duas pontas, e um conjunto de pids sem nada em comum com o anterior conta como outro jogo. A varredura de `/proc` custou 8 ms mais 15 ms com o jogo aberto.

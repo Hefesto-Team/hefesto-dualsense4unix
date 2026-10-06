@@ -6,7 +6,7 @@ ENTRADA-A-ENTRADA-01 (23/09/2026), a R9 das doze decisões dela do rádio:
     "A ideia é usarmos um dualsense e o USB pra sairmos de porta em porta
      mapeando conectando e removendo e falando qual entrada é qual ali. (…) E
      isso tem que ser interligado com o resto das features nossas."
-                                                  — citação literal dela
+                                                  — citação literal
 
 A cerimônia da aba 08 era eco: três telas por âncora, zero gesto, zero campo.
 Este módulo é o motor por trás delas. A fiação na página é da
@@ -80,7 +80,7 @@ que ela acabou de encaixar. A leitura de 8 ms virava 5, 10 e 15 s, a janela
 congelava e o COSMIC a derrubava: *«dá um crash feio»*. O tique pinta a última
 foto (``foto_sem_esperar``) e a próxima leitura sai num fio próprio
 (:class:`_VooDaLeitura`); a trava de cada dono guarda só a troca de estado,
-nunca uma leitura. <!-- noqa-acento: citação literal dela -->
+nunca uma leitura. <!-- noqa-acento: citação literal -->
 
 ONDE GRAVA — UM DONO, E ELE JÁ EXISTIA
 ---------------------------------------
@@ -103,7 +103,7 @@ O QUE ELE NÃO FAZ
 * **Não fala com o daemon, nem com o rádio, nem com o BlueZ.** O ``Alias`` tem
   UM escritor, o ``bt_active_mode.sh``, que lê o nome do lugar deste mesmo
   ``maquina.json`` no tique do watchdog (ENTRADA-A-ENTRADA-02; a
-  ``D-COSTURA-BLUEZ`` dela em ``docs/data/decisoes-dela.csv``).
+  ``D-COSTURA-BLUEZ`` dela em ``docs/data/decisoes-de-produto.csv``).
 * **O laço não inventa quinta resposta**: ele fica nas quatro; o fluxo único
   (``MapearAsPortas``) pergunta com os sete de :data:`LUGARES_DA_PORTA`.
 """
@@ -1201,7 +1201,7 @@ def dar_nome_ao_adaptador(
     return NomeDado(chave, limpo, recibo.gravou, recibo.motivo)
 
 
-# módulo. <!-- noqa-acento: citação literal dela -->
+# módulo. <!-- noqa-acento: citação literal -->
 
 
 def declarar_a_ligacao(
@@ -1552,7 +1552,7 @@ def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA). Pedido dela:
     *«identificar onde fica o hub»*. Uma função pura sobre o ``mapa`` do disco:
     lê o que o Mapear gravou (os caminhos e os nós), e por isso vale com o hub
-    desplugado e em qualquer máquina. <!-- noqa-acento: citação literal dela -->
+    desplugado e em qualquer máquina. <!-- noqa-acento: citação literal -->
 
     PELO BARRAMENTO, a face F pende da entrada E quando E não está em F, toda
     entrada de F que tem pontos DESCE de E (um ponto dela é um caminho de E, ou
@@ -1927,7 +1927,7 @@ class MapearAsPortas:
     aparelho enquanto enumerava, o censo esperava o lock no ``bMaxPower``, e a
     janela esperava o censo: 5, 10 e 15 s. Agora a leitura é de um fio próprio
     e a trava guarda só a troca de estado — um «Terminar» nunca espera o
-    ``/sys``. <!-- noqa-acento: citação literal dela -->
+    ``/sys``. <!-- noqa-acento: citação literal -->
     """
 
     def __init__(

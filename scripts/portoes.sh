@@ -159,7 +159,7 @@ rapido|a-origem|py|scripts/check_a_origem.py|@sempre
 # a marca `processo`) reprova nomeada, e o piso desce pelo `--aceitar` e só sobe à mão, no diff.
 # O portão mede que a prova EXISTE, não que ela morde: a mordida é de quem sobe a decisão a
 # `implementada`.
-rapido|decisao-tem-prova|py|scripts/check_a_decisao_tem_prova.py|docs/data/decisoes-dela.csv docs/data/decisoes-sem-prova.txt tests/**
+rapido|decisao-tem-prova|py|scripts/check_a_decisao_tem_prova.py|docs/data/decisoes-de-produto.csv docs/data/decisoes-sem-prova.txt tests/**
 # BROADCAST PROIBIDO — 06/10/2026, OS-PORTOES-QUE-NINGUEM-CHAMA-01. Nasceu em 25/08, verde, e ficou 42 dias
 # sem chamador: nesse tempo entrou uma rota de saída que escrevia em todo controle conectado sem perguntar
 # o seletor (o brilho das luzes de número). Reprova função de `src/` com fan-out sem escopo, nomeando-a.
@@ -182,7 +182,7 @@ rapido|broadcast-proibido|py|scripts/check_broadcast_proibido.py|src/**
 completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
-rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_dela_em_toda_forma.py|@sempre
+rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|@sempre
 # O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz
 # o portão pro número de série"*. O serial de fábrica identifica a unidade dela
 # tão bem quanto o MAC, e a regra desta casa é sobre ARQUIVO VERSIONADO, não
@@ -243,14 +243,14 @@ completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chama
 # SUÍTE, e a suíte roda no FIM -- entre o vazamento e a reprovação havia um dia
 # inteiro de trabalho. Custa ~1 s.
 completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py|@sempre
-completo|a-tela-dela|pytest|tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py
-completo|o-instrumento-e-a-tela|pytest|tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py
+completo|a-tela-dela|pytest|tests/unit/test_a_tela_nao_recebe_janela_de_teste.py
+completo|o-instrumento-e-a-tela|pytest|tests/unit/test_o_instrumento_nao_abre_na_tela_do_usuario.py
 completo|a-frase-banida|pytest|tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py
 completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py|@sempre
 completo|o-piloto-e-a-arvore|pytest|tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 # 07/09/2026 — ELA MEDIU O DEFEITO NA MESA: *"4 controles conectados mas as
-# infos dos dos outros 2 ultimos não aparecem (…) isso em todas as abas."* O  # noqa-acento: citação literal dela
+# infos dos dos outros 2 ultimos não aparecem (…) isso em todas as abas."* O  # noqa-acento: citação literal
 # dado chegava inteiro; o que faltava era ONDE POUSAR — o ramo do lugar vazio
 # emitia cartão sem um único `data-campo`, e o piloto procura o endereço DENTRO
 # do bloco `[data-controle="pN"]`. Sete das dez abas tinham o mesmo defeito, e
@@ -364,8 +364,8 @@ rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_deco
 rapido|grafia-do-nome|py|scripts/check_a_grafia_do_nome.py
 rapido|grafia-do-nome-morde|pytest|tests/unit/test_portao_a_grafia_do_nome_morde.py
 # A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01, 20/09/2026, e a ordem é dela:
-# *"Um Hook que vá facilitando isso seria maravilhoso. Pois organicamente   # noqa-acento: citação literal dela
-# deixaríamos fácil pra gente e pro outro"*.  # noqa-acento: citação literal dela
+# *"Um Hook que vá facilitando isso seria maravilhoso. Pois organicamente   # noqa-acento: citação literal
+# deixaríamos fácil pra gente e pro outro"*.  # noqa-acento: citação literal
 # Ele não traduz nada e não pede mutirão: impede TRÊS números de subirem, e
 # cobra só de quem escreve a linha nova. (1) arquivo que nenhuma regra de
 # `docs/data/zonas-de-lingua.toml` alcança, piso ZERO; (2) unidade de texto de
@@ -407,7 +407,7 @@ _DIVERGENCIAS() {
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/banco_de_prova/sonda.sh|06/10/2026, O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01 (parte 0): é a sonda do kernel do runner (carrega uhid e hid_playstation, cria um gadget USB e roda o install.sh com sudo), só em workflow_dispatch. Cria aparelho no kernel: na máquina dela mexeria no que ela usa.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
-FORA-DO-CI|scripts/check_o_endereco_dela_em_toda_forma.py|27/09/2026, O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01: pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
+FORA-DO-CI|scripts/check_o_endereco_em_toda_forma.py|27/09/2026, O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01: pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
 FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa ela roda no fecho, por quem coordena e com a máquina livre, depois dos portões (a lista «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
 DIV

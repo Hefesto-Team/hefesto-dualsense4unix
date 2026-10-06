@@ -11,7 +11,7 @@ gravou PRETO. E não era um controle só: **sete dos 29 perfis dela** guardam o
 preto na seção GLOBAL, e neles abrir o jogo apagava a barra dos quatro.
 
 **A ORDEM:** *"vamos banir esse preto de aparecer independente do controle
-tambem"*. <!-- noqa-acento: citação literal dela -->
+tambem"*. <!-- noqa-acento: citação literal -->
 
 O QUE ESTA RÉGUA COBRA, nos cinco pontos do caminho:
 

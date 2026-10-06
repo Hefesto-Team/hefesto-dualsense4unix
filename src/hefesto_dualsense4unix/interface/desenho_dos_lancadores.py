@@ -13,7 +13,7 @@ contradizê-los. Medido em 02/09/2026 na máquina dela, com o `censo_do_wrapper`
 Quatro números, quatro contradições. É a forma exata do defeito que ela mediu
 ao abrir o produto: *"basicamente todas as telas são mockups e estão com
 informações incorretas ou desatualizadas ou não integradas de fato."*
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 
 A CURA NÃO É APAGAR O DESENHO — é dar-lhe UMA fonte. Este módulo é o desenho;
 quem passa o dado é que muda:
@@ -92,7 +92,7 @@ from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
 #: era importada para uma pergunta só: *quem tem por onde receber o ambiente?*,
 #: que decidia o botão «Consertar» do cartão LOCALIZADO. O botão saiu por
 #: palavra dela — *"se tenho tudo instalado e tá pra ser identificado não tem
-#: pq ter o botão de consertar"* — e com ele a pergunta.  # noqa-acento: citação literal dela
+#: pq ter o botão de consertar"* — e com ele a pergunta.  # noqa-acento: citação literal
 #: O módulo FICA, com a dívida declarada em
 #: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: a lacuna que ele
 #: curava continua aberta, e quem a fecha é a LANCADOR-CARONA-01.
@@ -101,7 +101,7 @@ from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 SELOS = {
     "ok": "CHEGAM",
     #: **«COM IMPEDIMENTO» DESDE 11/09/2026 — A2-007, e ela aprovou**: *"ok
-    #: aprovadíssimo todas. Manda ver."*  # noqa-acento: citação literal dela
+    #: aprovadíssimo todas. Manda ver."*  # noqa-acento: citação literal
     #:
     #: ELE DIZIA «NÃO CHEGAM», e a contagem do topo (:func:`conta_html`) já
     #: chamava o mesmo fato de *"N com impedimentos"* — duas palavras para uma
@@ -117,7 +117,7 @@ SELOS = {
     "nao_sei": "NÃO SEI",
     #: **O POSITIVO DO PAR — 09/09/2026, LANCADORES-ZERO-01 §5.2**, e a palavra
     #: é dela (`D-0809-O-SELO-DOS-LANCADORES-DIZ-LOCALIZADO`): *"Deveria ter
-    #: Não Localizado"*.  # noqa-acento: citação literal dela
+    #: Não Localizado"*.  # noqa-acento: citação literal
     #:
     #: O DEFEITO QUE ELE MATA: cinco lançadores INSTALADOS recebiam `NÃO SEI`,
     #: porque o selo respondia *"sei ler a biblioteca dele?"*. Ela leu isso
@@ -974,7 +974,7 @@ ABRIR = "abrir-lancador"
 #
 #     "Pensei em outro botão pra Adicc ionar novo Emulador Ou novo lançador
 #      algo assim, pra devs mais experiementais e poermitir que o user
-#      adicione algo novo"  # (noqa-acento): citação literal dela, como ela
+#      adicione algo novo"  # (noqa-acento): citação literal, como ela
 #                           # escreveu — a versão anterior deste comentário
 #                           # corrigia a digitação dela, que é falsificar a
 #                           # citação. Nesta casa a fala dela não se limpa.
@@ -1019,7 +1019,7 @@ ADICIONAR = "adicionar-lancador"
 #: um lançador» em minúscula no título da tela de registro
 #: (:data:`TELA_DO_NOVO_TITULO`), e duas grafias para uma palavra é o que o item
 #: 4 da §2 do índice proíbe — *"Esse tipo de coisa não pode se repetir na
-#: interface."*  # noqa-acento: citação literal dela
+#: interface."*  # noqa-acento: citação literal
 ADICIONAR_ROTULO = "Localizar este lançador"
 
 #: O RÓTULO DO MESMO BOTÃO NO CARTÃO QUE JÁ FOI LOCALIZADO — 11/09/2026,
@@ -1579,7 +1579,7 @@ def acao_de_tirar(chave: str) -> Acao:
 # O pedido é dela, 21/09/2026: *"Todos os lançadores precisam ter os mesmos
 # botões e textos da steam adaptados pra eles"*, e o «Este jogo não funciona»
 # vira *"Adicionar jogo a lista de exclusão do Hefesto (cujo objetivo é
-# garantir que tal jogo não use nenhuma feature do hefesto)"*.  # noqa-acento: citação literal dela
+# garantir que tal jogo não use nenhuma feature do hefesto)"*.  # noqa-acento: citação literal
 # O desenho foi APROVADO por ela no mesmo dia (*"perfeito aprovadíssimo."*),
 # e está nas fotos «os-lancadores-iguais» de 21/09/2026.
 #

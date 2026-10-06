@@ -7,7 +7,7 @@ A LEI, e ela é dela (03/09/2026):
     faz referencia ao controle conectado. Por isso temos o mapa pra servir como  (noqa-acento)
     variável de identificação"*
 
-(A marca acima é a isenção da casa para **citação literal dela**: as palavras
+(A marca acima é a isenção da casa para **citação literal**: as palavras
 dela não se corrigem, e o portão de acentuação pula a linha que a carrega.)
 
 O QUE ELA VIU, e é o que originou a lei: a fita do topo dizendo

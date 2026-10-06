@@ -21,7 +21,7 @@ def _carregar(rel: str, nome: str) -> ModuleType:
 
 
 FORMA = _carregar("scripts/check_endereco_de_radio.py", "_regua_de_forma")
-DONO = _carregar("scripts/check_o_endereco_dela_em_toda_forma.py", "_regua_do_dono")
+DONO = _carregar("scripts/check_o_endereco_em_toda_forma.py", "_regua_do_dono")
 
 
 def _no(prefixo: str, octetos: tuple[str, ...]) -> str:

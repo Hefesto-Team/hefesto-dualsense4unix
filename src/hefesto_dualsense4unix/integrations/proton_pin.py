@@ -1566,7 +1566,7 @@ def jogos_sem_entrada_nova(
     return nativos
 
 
-# desinstalar as outras versoes nao usadas». (noqa-acento: citação literal dela)
+# desinstalar as outras versoes nao usadas». (noqa-acento: citação literal)
 
 _NOME_INTERNO_RE = re.compile(r'"(?P<nome>(?:\\.|[^"\\])+)"[^\n{]*\n\s*\{')
 

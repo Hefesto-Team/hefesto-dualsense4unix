@@ -21,7 +21,7 @@ FALA_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fala_do_mapa.py"
 FATOS_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fatos_do_mapa.py"
 MAPA_RELATIVO = "docs/data/mapa-controles.csv"
 
-#: errada."*  <!-- noqa-acento: citação literal dela -->
+#: errada."*  <!-- noqa-acento: citação literal -->
 RAIZES_DE_TELA: tuple[str, ...] = (APP_RELATIVO, INTERFACE_RELATIVO)
 
 NUMEROS_RELATIVO = "src/hefesto_dualsense4unix/integrations/radio_da_mesa.py"
@@ -669,7 +669,7 @@ def valida_abas_promovidas(raiz: Path) -> list[str]:
     return problemas
 
 
-# atrasada.  <!-- noqa-acento: citação literal dela -->
+# atrasada.  <!-- noqa-acento: citação literal -->
 
 # `falas` é 0: a única `Fala` da tela era a dica da cor no rádio do cartão GTK,
 # que saiu do pacote com a janela GTK; a interface nova não declara nenhuma.

@@ -21,7 +21,7 @@ DS   = (_F / "ds_limpo.svg").read_text()
 
 LOGO = (R / "assets/hefesto-logo.svg").read_text()
 
-#: logo? Ela tá piquetuxa em 30 apenas"*. <!-- noqa-acento: citação literal dela -->
+#: logo? Ela tá piquetuxa em 30 apenas"*. <!-- noqa-acento: citação literal -->
 MARCA_DA_LOGO = '<div class="logo"><!--LOGO--></div>'
 
 

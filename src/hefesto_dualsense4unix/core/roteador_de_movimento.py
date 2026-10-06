@@ -3,7 +3,7 @@
 MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026), primeira entrega da camada 2 da
 `ROTEADOR-DE-ENTRADA-01`. A tese é dela: *"universalizar todas as features do
 dualsense independente do modo escolhido (…) a máscara é só pra enganar o
-jogo"*.  <!-- noqa-acento: citação literal dela -->
+jogo"*.  <!-- noqa-acento: citação literal -->
 
 O QUE ESTE ARQUIVO É: a regra inteira, pura. Recebe número, devolve número.
 Sem I/O, sem thread, sem device. É o que deixa a régua exercitar a mira por
@@ -262,7 +262,7 @@ def ativo(dono: object) -> ArranjoDeMovimento | None:
     return None
 
 
-# migração: os campos são os mesmos"*. Entrou.  <!-- noqa-acento: citação literal dela -->
+# migração: os campos são os mesmos"*. Entrou.  <!-- noqa-acento: citação literal -->
 
 _ATRIBUTO_POR_PECA: Final = "_roteador_de_movimento_por_peca"
 

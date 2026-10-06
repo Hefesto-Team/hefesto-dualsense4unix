@@ -357,7 +357,7 @@ mesmos, e ninguém perguntava ao outro.
 
 **Ele INFORMA, nunca VETA.** `D-0609-O-MAPA-INFORMA-NUNCA-VETA`, palavra dela em
 06/09/2026: *"Esse mapa é funcional e real. tá desatualizado no sentido de não
-ter sido medido. foi e tudo funciona."* <!-- noqa-acento: citação literal dela -->
+ter sido medido. foi e tudo funciona."* <!-- noqa-acento: citação literal -->
 Uma célula `nao-medido` vira **AVISO impresso**, e o `rc` continua ZERO. Quem a
 remede é a bancada, com o relatório de quem passou por ela
 (SPECS-A-PROCEDENCIA-01).
@@ -503,9 +503,9 @@ leva de 11/09 tirou o quadro «Modo» do editor de Perfis por ordem dela e
 declarou, em três lugares, uma **«perda de capacidade»**. Quem derrubou a
 declaração foi **ELA**, no mesmo dia:
 
-> *"a informação que eu selecionar no modo ou mascara na aba jogar ao salvar o*  <!-- noqa-acento: citação literal dela -->
-> *perfil faz a mesma função que o modo tinha na aba perfil isso foi*  <!-- noqa-acento: citação literal dela -->
-> *implementado desde o inicio mas voltou e não deVEria ter ocorrido"*  <!-- noqa-acento: citação literal dela -->
+> *"a informação que eu selecionar no modo ou mascara na aba jogar ao salvar o*  <!-- noqa-acento: citação literal -->
+> *perfil faz a mesma função que o modo tinha na aba perfil isso foi*  <!-- noqa-acento: citação literal -->
+> *implementado desde o inicio mas voltou e não deVEria ter ocorrido"*  <!-- noqa-acento: citação literal -->
 
 E o código concorda: `a01_jogar._gravar_o_modo_do_chip` → `_gravar_o_modo` →
 `interface/pacotes/perfil.gravar_o_modo_no_ativo` grava a seção `mode` do perfil
@@ -537,7 +537,7 @@ de existir. A tabela acima foi **recontada do CSV**: `09-sistema` vai de
 `11 IGUAL · 7 SO_HTML · 29%` para `12 · 6 · 32%`, e `TODAS` de `143 · 59` para
 `144 · 58`.
 
-**A razão é decisão dela, e está escrita:** `docs/data/decisoes-dela.csv`, linha
+**A razão é decisão dela, e está escrita:** `docs/data/decisoes-de-produto.csv`, linha
 `D-OS-PLUGINS-APARECEM-ONDE-AGEM` (26/08/2026) — *os plugins não ganham seção
 própria; a infraestrutura se mostra pelo efeito, não pelo nome*. O `porque` da
 linha guarda o veredito de antes, com a data.
@@ -581,7 +581,7 @@ acima foi **recontada do CSV**: `01-jogar` vai de `14 IGUAL · 22 DIFER · 33%` 
 paridade desce um ponto, e é por decisão dela, não por defeito.**
 
 **A razão:** a regra dela de 13/09 (`D-1309-O-MODO-E-A-BASE-E-A-MASCARA-VEM-POR-CIMA`
-em `docs/data/decisoes-dela.csv`) separa as duas camadas. Os chips «Sony
+em `docs/data/decisoes-de-produto.csv`) separa as duas camadas. Os chips «Sony
 DualSense» e «Xbox» escolhem o CAMINHO (`mode.caminho`), e a máscara é do cartão
 de cada controle, por `gamepad.mask.set`. A GTK continua com UM seletor de máscara
 para a máquina. A resposta chega ao daemon dos dois lados por caminhos diferentes,
@@ -609,7 +609,7 @@ nas abas (o índice), e a
 marca era uma: o asterisco com o motivo da queda no `title`. No WebKit ele nunca
 acendia, porque a camada de dicas tira o `title` e `.degradou[title]` não casava.
 A decisão de 04/09 que o desenhou, `D-02C-DEGRADACAO-VPAD`, ficou `caduca` em
-`docs/data/decisoes-dela.csv`. A GTK continua mostrando a tarja. O sinal das duas
+`docs/data/decisoes-de-produto.csv`. A GTK continua mostrando a tarja. O sinal das duas
 linhas passou a ser o símbolo da GTK, `AUSENTE` do lado HTML, e as
 autoconferências de `aba01.py` e `aba02.py` recusam a marca de volta.
 

@@ -3,7 +3,7 @@
 **Por que isto existe, e o pedido é dela (21/09/2026):** *"tenho pensando sobre
 o botão de reiniciar daemon. Acho que além do que ele já faz seria importante
 ele fechar e reabrir o launcher, seja steam, epic, heroic ou qualquer outro."*
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 E, quando lhe foram postas três formas: *"Faz automático mesmo"*.
 
 **O QUE O REINÍCIO DEIXA PARA TRÁS, medido quatro vezes** (`STEAM-NO-FISICO-01`):

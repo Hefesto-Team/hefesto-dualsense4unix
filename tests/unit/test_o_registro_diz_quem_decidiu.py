@@ -5,7 +5,7 @@ import csv
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
-CSV_ = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+CSV_ = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 
 VALORES = {"ela", "delegacao", "indeterminado"}
 

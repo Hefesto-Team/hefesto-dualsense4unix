@@ -655,7 +655,7 @@ CSS = """
              cursor:pointer;padding:0;display:block;min-width:0;position:relative}
   /* A LINHA DO DONO — 29/09/2026, D-2909-A-LINHA-DA-COR-DO-DONO, pedido dela
      na bancada: *«talvez uma linha abaixo do quadradinho de cada cor contendo
-     a cor do plástico daquele controle.»* <!-- noqa-acento: citação literal dela -->
+     a cor do plástico daquele controle.»* <!-- noqa-acento: citação literal -->
      Toda casa com dono ganha a linha, nas quatro colunas: a linha diz de quem
      é, e o X diz que não é sua. A casa deste controle é a que tem a linha da
      cor da moldura e não tem X.
@@ -683,7 +683,7 @@ CSS = """
   }
   /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão dela: "um X na cor
      selecionada por mim de forma que me impeça de setar alguma cor de um
-     coleguinha". <!-- noqa-acento: citação literal dela -->
+     coleguinha". <!-- noqa-acento: citação literal -->
 
      ELE É DESENHADO, e não um caractere: um `×` de texto herda a fonte, muda
      de tamanho com ela e o traço fino some sobre um tom claro. Dois gradientes
@@ -693,7 +693,7 @@ CSS = """
      quatro na mesa: *"deixa o nosso x preto com borda branca pra destacar.
      Falo isso pois ficou perfeito o nosso x, o complicado é que são tons
      pasteis e o controle branco por exemplo não ajuda nisso o x dele fica
-     invisível."* <!-- noqa-acento: citação literal dela -->
+     invisível."* <!-- noqa-acento: citação literal -->
 
      ELE ERA `var(--dono)` — a cor do PLÁSTICO de quem tem o tom —, e a ideia
      vinha da mesma regra que pinta a borda da coluna
@@ -1295,7 +1295,7 @@ def coluna(c):
           {_marca.bloco("luz")}
         </div>'''
 
-# dela: *"ainda temos 3 cantos falando sobre o automatico"*.  # noqa-acento: citação literal dela
+# dela: *"ainda temos 3 cantos falando sobre o automatico"*.  # noqa-acento: citação literal
 # `noqa-acento` num comentário HTML aninhado — e **comentário HTML NÃO
 # A REGRA QUE SOBRA: `# noqa-…` só comenta em Python. Prosa de projeto que
 # precise de um `noqa` sai do HTML e vem para cá.
@@ -1780,9 +1780,9 @@ def _conferir(doc):
                f"o lugar {pref} tem endereço que o lugar cheio não tem "
                f"({sobram}) — o conjunto tem de ser IGUAL, não maior")
 
-    # 15. A PODA DA FILEIRA — 11/09/2026, ordem dela: *"remover esse botão que  <!-- noqa-acento: citação literal dela -->
-    #     o mouse tá (que abre outras cores.) remover um tom de azul. um tom de  <!-- noqa-acento: citação literal dela -->
-    #     rosa e o tom de preto de todas as cores pros 4 controles."*           <!-- noqa-acento: citação literal dela -->
+    # 15. A PODA DA FILEIRA — 11/09/2026, ordem dela: *"remover esse botão que  <!-- noqa-acento: citação literal -->
+    #     o mouse tá (que abre outras cores.) remover um tom de azul. um tom de  <!-- noqa-acento: citação literal -->
+    #     rosa e o tom de preto de todas as cores pros 4 controles."*           <!-- noqa-acento: citação literal -->
     os_tres_que_sairam = ("#0080FF", "#FF00FF", "#000000")
     exigir(tuple(_pacote04.FORA_DA_GUIA) == os_tres_que_sairam,
            f"a poda da guia mudou sem esta régua saber: o pacote tira "

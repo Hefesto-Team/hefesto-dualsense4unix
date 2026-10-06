@@ -1361,7 +1361,7 @@ install_wifi_usb_host() {
 # ---------------------------------------------------------------------------
 # A decisão dela, 02/10 ~21h: *«na real no nosso install por default deveriamos
 # ter uma flag perguntando pro user se ele gostaria de usar o pc dele no modo
-# performance e aproveitarmos e usarmos a mesma politica que usamos pra criarmos  # noqa-acento: citação literal dela
+# performance e aproveitarmos e usarmos a mesma politica que usamos pra criarmos  # noqa-acento: citação literal
 # soluções permanentes no pc da pc.»* O COSMIC e o system76-power são feitos para
 # notebook: a economia de bateria vem ligada de fábrica, e num computador de
 # mesa ela só custa latência.

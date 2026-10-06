@@ -493,7 +493,7 @@ class AdaptadorDeclarado(BaseModel):
     arrastar ela pra mudar de ordem entre eles»*). Ela morava no
     ``gui_preferences.json``, pela chave do LUGAR (a D3): o terceiro registro
     do mesmo adaptador, e uma chave que mudava quando ele mudava de porta.
-    <!-- noqa-acento: citação literal dela -->
+    <!-- noqa-acento: citação literal -->
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -558,7 +558,7 @@ class ControleDeclarado(BaseModel):
     microfone: bool | None = None
     economia: bool | None = None
     microfone_mudo: bool | None = None
-    #: <!-- noqa-acento: citação literal dela -->
+    #: <!-- noqa-acento: citação literal -->
     nome: str | None = None
 
     @field_validator("nome")

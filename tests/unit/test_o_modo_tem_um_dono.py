@@ -634,7 +634,7 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
 
     Sem opinião de caminho vale o de fábrica, e nunca o do perfil anterior
     (CAMINHO-CONTAGIO-01, a ordem dela de 19/09 em `gamepad._caminho_a_herdar`:
-    *«tudo ligado mascara dualsense por default»*).  <!-- noqa-acento: citação literal dela -->
+    *«tudo ligado mascara dualsense por default»*).  <!-- noqa-acento: citação literal -->
     As réguas daquela sprint chamavam o start direto; a ativação de verdade
     tinha um atalho: com a máscara igual, o `apply_profile_mode` não pedia
     nada, e o pad seguia no

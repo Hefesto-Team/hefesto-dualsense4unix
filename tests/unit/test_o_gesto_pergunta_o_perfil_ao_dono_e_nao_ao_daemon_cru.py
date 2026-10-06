@@ -1,7 +1,7 @@
 """O gesto de qualquer aba pergunta o perfil ativo ao DONO, não ao daemon cru.
 
 A QUEIXA QUE ISTO CURA — 19/09/2026: *"nessa aba o botão máximo economia e
-balanceado voltou a travar de novo"*.  <!-- noqa-acento: citação literal dela -->
+balanceado voltou a travar de novo"*.  <!-- noqa-acento: citação literal -->
 
 O DEFEITO, MEDIDO NO DIÁRIO DELA (`interface.log`, 19/09 por volta de 01:00)::
 

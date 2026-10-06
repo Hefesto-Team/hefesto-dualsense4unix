@@ -323,7 +323,7 @@ def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
     ERAM DUAS RÉGUAS: `test_ver_plugins_recusa_com_o_servico_desligado` e
     `test_ver_plugins_passa_com_o_servico_de_pe`, e mediam a trava do gesto. O
     gesto saiu pela decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
-    (`docs/data/decisoes-dela.csv`): plugin não ganha seção própria. O que se
+    (`docs/data/decisoes-de-produto.csv`): plugin não ganha seção própria. O que se
     cobra é a saída inteira — sem dono no pacote, sem trava e sem dono na
     camada do produto. A CLI e o IPC do daemon ficam.
 

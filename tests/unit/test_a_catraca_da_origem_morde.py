@@ -45,7 +45,7 @@ def arvore(tmp_path, monkeypatch):
         for e in _EIXOS)
     _escreve(tmp_path, "docs/data/donos-de-comportamento.csv", _CABECALHO + linhas)
     _escreve(tmp_path, "docs/data/mapa-controles.csv", "chave,x\naudio.alto_falante,1\n")
-    _escreve(tmp_path, "docs/data/decisoes-dela.csv", "id,x\nD-UMA-DECISAO,1\n")
+    _escreve(tmp_path, "docs/data/decisoes-de-produto.csv", "id,x\nD-UMA-DECISAO,1\n")
     _escreve(tmp_path, DONO, "class Dono:\n    pass\n")
     _escreve(tmp_path, FORA, "def f(x):\n    return x\n")
     mod = _modulo()

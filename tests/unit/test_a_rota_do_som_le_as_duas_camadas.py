@@ -1,7 +1,7 @@
 """"Todo o som do PC" só acende quando as DUAS camadas concordam.
 
 ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026). Decisão dela, meio-dia: *"sons do pc
-e sons do jogo. veja como fizemo no gtk."*  # noqa-acento: citação literal dela
+e sons do jogo. veja como fizemo no gtk."*  # noqa-acento: citação literal
 
 São dois caminhos independentes, e a janela antiga já sabia
 (`interface/cartao_do_controle.CANAIS_DO_SPEAKER`):

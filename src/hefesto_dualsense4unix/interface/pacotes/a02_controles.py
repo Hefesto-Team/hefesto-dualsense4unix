@@ -172,7 +172,7 @@ def dedos_do_controle(
     (`ABS_MT_SLOT 0..1`, medido no controle dela em 18/09/2026), e até esta
     data a tela mostrava um: não por erro de desenho, mas porque o payload
     trazia um — a queixa dela foi *"SÓ MOSTRA UM TOQUE NO DESENHO DO SVG
-    APESAR DO TOUCH SER MULTITOQUE"*.  <!-- noqa-acento: citação literal dela -->
+    APESAR DO TOUCH SER MULTITOQUE"*.  <!-- noqa-acento: citação literal -->
 
     A tupla tem SEMPRE `MAX_DEDOS` entradas, uma por bolinha do desenho, na
     ordem dos slots do kernel. Um slot sem dedo devolve `("", None)`: a
@@ -1259,7 +1259,7 @@ def texto_da_bateria(pct: int | None) -> str:
         {} if pct is None else {"battery_pct": pct})[1]
 
 
-#     "icone mas no radio ele pode tá carregando tambem."  # noqa-acento: citação literal dela
+#     "icone mas no radio ele pode tá carregando tambem."  # noqa-acento: citação literal
 #
 # coisa do cabo e o rádio fosse sempre descarregar. **Não é**: um DualSense
 _NA_TELA_POR_CARGA: dict[str, str] = {
@@ -1445,7 +1445,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "mic-selo": selo_composto(a),
             "mic-retorno": (mesa_viva.BOTAO_MIC_RETORNO
                             if monitor_do_microfone.esta_ligado(uniq) else ""),
-            # leigo)"*.  # noqa-acento: citação literal dela
+            # leigo)"*.  # noqa-acento: citação literal
             "mic-num": (
                 mic_volume if mic_volume is not None else mesa_viva.SEM_LEITOR
             ),
@@ -1474,7 +1474,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 ),
                 # 06/09/2026. O dado chegou à tela na BATERIA-PARADA-01 (o
                 # `battery_state` viaja no mesmo dicionário do `battery_pct`,
-                # tá carregando tambem"*.  # noqa-acento: citação literal dela
+                # tá carregando tambem"*.  # noqa-acento: citação literal
                 "bateria-carga": carga_na_tela(c.get("battery_state")),
                 "touch-ponto": toque_ponto,
                 "touch-ponto-2": toque_ponto2,
@@ -2272,7 +2272,7 @@ SEM_LEITURA_DE_SENSOR = (
 def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Giroscópio e Acelerômetro — **os quatro botões que respondiam calados**.
 
-    QUEIXA 8 DELA: *"nem giroscopio e acelerometro"*.  <!-- noqa-acento: citação literal dela -->
+    QUEIXA 8 DELA: *"nem giroscopio e acelerometro"*.  <!-- noqa-acento: citação literal -->
 
     O QUE ACONTECIA, medido: `<button class="sw" data-sensor="giroscopio">` não
     tinha `data-gesto`, e o ouvinte monta o nome como `d.gesto || d.hefGesto ||
@@ -2292,7 +2292,7 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A ONDA1-D3 fechou essa ausência à tarde, por decisão dela e contra a
     recomendação de virar leitura: *"ele tem que funcionar de verdade. ambos
-    independente do modo e da mascara."*  <!-- noqa-acento: citação literal dela -->
+    independente do modo e da mascara."*  <!-- noqa-acento: citação literal -->
     O daemon ganhou `sensor.set`, o registro vivo (`core/virtual_motion`) e o
     `EVIOCGRAB` do nó "Motion Sensors". **Quem mediu a queda foi a régua que a
     própria recusa deixou armada** — `test_o_daemon_continua_sem_metodo_de_sensor`
@@ -2362,7 +2362,7 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O chip «Mira Virtual» — o movimento DESTE controle vira o analógico R dele.
 
     Palavra dela, 23/09/2026: *"Cria um botão virtual ao lado de giroscopio e
-    acelerometro chamado Mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+    acelerometro chamado Mira Virtual"*.  <!-- noqa-acento: citação literal -->
 
     O QUE ESTE GESTO FAZ, na ordem do interruptor de sensor (`sensor`, acima):
 
@@ -2498,7 +2498,7 @@ def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     Ordem dela, 20/09/2026, olhando a tela instalada:
 
         "o slicer tá diferente da posição de onde ficaria o slicer da
-         versao  # noqa-acento: citação literal dela, e a digitação dela
+         versao  # noqa-acento: citação literal, e a digitação dela
                 não se limpa
          original que eu havia aprovado. além disso não tá funcionando"
 

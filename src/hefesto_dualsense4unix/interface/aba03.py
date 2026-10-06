@@ -369,7 +369,7 @@ CSS = CSS_GLIFO + """
      Proposta DELA, 08/09, olhando o produto instalado e maximizado: *"E tava
      pensando pra gatilhos talvez fosse interessante colocar a seção do r2 e l2
      dentros de blocos de expansão igual fizemos na aba controles o que vc
-     acha?"*  <!-- noqa-acento: citação literal dela, palavra por palavra -->
+     acha?"*  <!-- noqa-acento: citação literal, palavra por palavra -->
 
      A CAUSA ESTÁ MEDIDA, e não era a `.janela` (775/775 nas dez): era o
      `DIV.miolo`, 863 contra uma caixa de 564. Com os quatro na mesa e o dado
@@ -1103,7 +1103,7 @@ def _conferir(doc):
            f"os chips sem cor do plástico não são {len(vazios)}")
     exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
            "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
-    #    diferente. (…) nada hardcoded. eu quero que cada user ao usar seu  # noqa-acento: citação literal dela
+    #    diferente. (…) nada hardcoded. eu quero que cada user ao usar seu  # noqa-acento: citação literal
     #    * o do EMBRULHO (`data-campo="plastico"` + alvo `plastico`) é o da COR.
     #      É o único alvo do piloto que escreve `--plastico`, e ele vale para a
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == len(MESA),

@@ -1108,7 +1108,7 @@ def test_o_ensaio_tira_o_home_antes_do_dono(
 
 
 _DA_MAQUINA = ("06", "de", "ad", "21", "43", "5d")
-_REGUA_DO_DONO = RAIZ / "scripts/check_o_endereco_dela_em_toda_forma.py"
+_REGUA_DO_DONO = RAIZ / "scripts/check_o_endereco_em_toda_forma.py"
 
 
 def _carregar(caminho: Path, nome: str) -> Any:

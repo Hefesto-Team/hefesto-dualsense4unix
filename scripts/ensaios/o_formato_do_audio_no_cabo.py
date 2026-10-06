@@ -5,7 +5,7 @@ A PERGUNTA, E ELA É DELA — 10/09/2026, com os dois controles na mesa:
 
     *"manda antes pro controle com fio. eu quero saber se o mesmo teste
      funcionaria nele, pq o audio mesmo com cabo a gnt precisa tomar o
-     controle."*  # noqa-acento: citação literal dela
+     controle."*  # noqa-acento: citação literal
 
 **O que ela desenhou é o controle positivo que faltava, e ele separa duas coisas
 que esta casa vinha medindo juntas: o FORMATO e o TRANSPORTE.**

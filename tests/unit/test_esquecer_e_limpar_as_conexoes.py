@@ -2,9 +2,9 @@
 
 O que ela disse em 30/09/2026, ~01h30, com os quatro DualSense no rádio:
 *«opção esquecer ali. Esse dualsense fantasma ali não faz sentido.»*
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 E às ~03h, sobre o «Limpar Conexões»:
-*«limpar com frequencia a cada troca <!-- noqa-acento: citação literal dela -->
+*«limpar com frequencia a cada troca <!-- noqa-acento: citação literal -->
 ou ao desligar os controles, algo nessa linha»*.
 
 MEDIDO antes da cura (02/10, sobre ``2fd24c009``, o mesmo instrumento antes e

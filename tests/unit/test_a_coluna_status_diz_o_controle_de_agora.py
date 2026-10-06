@@ -3,7 +3,7 @@
 A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01 (02/10/2026). A queixa dela de 29/09,
 com os quatro DualSense na mesa: *«alguns estão acesos e outros não. E pora
 piorar não refletem o stauts real daquele momento do controle. parece
-aleatório.»* <!-- noqa-acento: citação literal dela -->
+aleatório.»* <!-- noqa-acento: citação literal -->
 
 O DEFEITO, MEDIDO: o glifo acendia com o que o PERFIL ABERTO NO EDITOR guarda
 só para aquele controle (`perfis_web._secoes_do_controle`), e nada na coluna

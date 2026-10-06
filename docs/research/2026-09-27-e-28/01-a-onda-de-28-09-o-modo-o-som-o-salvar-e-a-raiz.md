@@ -223,7 +223,7 @@ de ser o segundo escritor.
 **A decisão.** A linha `D-2709-O-SALVAR-LE-O-PERFIL`, revogando
 `D-2609-O-SALVAR-GRAVA-A-SECAO-DA-ABA`, é citada pelo código, pelas réguas e
 por `docs/data/paridade-gtk-html.csv`, mas ainda não está em
-`docs/data/decisoes-dela.csv`.
+`docs/data/decisoes-de-produto.csv`.
 
 ## 5. A raiz só com o produto (`A-RAIZ-SO-COM-O-PRODUTO-01`)
 

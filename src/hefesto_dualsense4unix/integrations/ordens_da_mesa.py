@@ -279,7 +279,7 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
                    leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
-                # layout»*. (noqa-acento: citação literal dela)
+                # layout»*. (noqa-acento: citação literal)
                 f"{_com_maiuscula(nome)} ({_velocidade(alvo.velocidade_mbps)}) "
                 "divide o hub com "
                 + _plural(

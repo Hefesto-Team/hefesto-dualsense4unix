@@ -5,7 +5,7 @@ controle como se o Hefesto não estivesse instalado.
 
 O pedido é dela, 21/09/2026, olhando a aba Lançadores: *"(...) Adicionar jogo a
 lista de exclusão do Hefesto (cujo objetivo é garantir que tal jogo não use
-nenhuma feature do hefesto)"*. <!-- noqa-acento: citação literal dela -->
+nenhuma feature do hefesto)"*. <!-- noqa-acento: citação literal -->
 
 ESTA LISTA É UM GUARDA-CHUVA, e não um nono leitor
 --------------------------------------------------

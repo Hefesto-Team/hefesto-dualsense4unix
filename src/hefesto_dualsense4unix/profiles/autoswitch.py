@@ -696,7 +696,7 @@ class AutoSwitcher:
         ):
             return
         # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
-        # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal dela
+        # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
         if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info

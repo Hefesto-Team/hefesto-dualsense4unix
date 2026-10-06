@@ -15,7 +15,7 @@ de sintoma, um projeto que só cresce.
 3. ``tamanho``: as linhas de ``src/``, ``tests/``, ``scripts/`` e ``docs/``
    versionados. Crescer só passa se algum commit da faixa trouxer
    ``Origem: <id>`` com o id de uma linha do ``mapa-controles.csv`` ou de uma
-   decisão do ``decisoes-dela.csv``.
+   decisão do ``decisoes-de-produto.csv``.
 
 Medido por AST, nunca por palavra no texto: comentário e string não contam.
 O teto mora em ``docs/data/a-catraca-da-origem.json`` e DESCE sozinho (o portão
@@ -55,7 +55,7 @@ PACOTE = Path("src") / "hefesto_dualsense4unix"
 CADERNO = Path("docs/data/a-catraca-da-origem.json")
 DONOS = Path("docs/data/donos-de-comportamento.csv")
 MAPA = Path("docs/data/mapa-controles.csv")
-DECISOES = Path("docs/data/decisoes-dela.csv")
+DECISOES = Path("docs/data/decisoes-de-produto.csv")
 
 VEREDITO_DE_EIXO = "EIXO"
 CASOS = "casos-especiais-fora-do-dono"

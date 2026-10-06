@@ -3,7 +3,7 @@
 A palavra dela, 23/09/2026, e é a especificação: *"moveriamos por exemplo 1
 controle por vez. Apagaria esse um controle, o user, aperta os botões do
 controle pra sincronizar aquele controle e ele estaria no novo dispositivo. E
-não apagar tudo."* <!-- noqa-acento: citação literal dela -->
+não apagar tudo."* <!-- noqa-acento: citação literal -->
 
 O QUE O ESTUDO DE 23/09 DERRUBOU, e por isso o mover é este
 ===========================================================
@@ -43,7 +43,7 @@ instrução "segure PS + Create" não faz sentido com ele ligado»* —, e o con
 que ainda tem a chave na origem volta para lá sozinho. O produto faz a parte
 dele antes de pedir o gesto: desliga o controle e esquece a origem. Um parear
 que falha deixa o controle sem casa, e o «Conectar» o traz de volta em qualquer
-adaptador, com o mesmo PS + Create. <!-- noqa-acento: citação literal dela -->
+adaptador, com o mesmo PS + Create. <!-- noqa-acento: citação literal -->
 
 OS TRÊS ESTADOS que a tela lê
 =============================
@@ -94,7 +94,7 @@ algum mas não apareceu na lista»*): quem ela liga só com o PS reconecta no
 adaptador que já tinha a chave dele, sem passar pela janela. O controle que se
 conecta durante a janela e não estava conectado quando ela abriu é o dela; o
 «Conectar» acaba «chegou» ONDE ele chegou (:data:`MOTIVO_PELO_PAREAMENTO_ANTIGO`),
-e a tela o mostra chegando. <!-- noqa-acento: citação literal dela -->
+e a tela o mostra chegando. <!-- noqa-acento: citação literal -->
 
 O «EQUILIBRAR» (R12) é :func:`plano_de_radio.ordem_de_redistribuicao` — dona
 desde 20/09. Esta central só a chama, e só quando nenhum movimento está
@@ -175,7 +175,7 @@ PASSO_FIM = "fim"
 PASSOS_EM_QUE_O_DESTINO_MUDA = frozenset({PASSO_PREPARANDO, PASSO_DESLIGANDO, PASSO_GESTO})
 
 
-#: dela: *«moveriamos por exemplo 1 controle por vez»*). <!-- noqa-acento: citação literal dela -->
+#: dela: *«moveriamos por exemplo 1 controle por vez»*). <!-- noqa-acento: citação literal -->
 MOTIVO_OCUPADO = "ocupado"
 MOTIVO_SEM_BLUEZ = "sem_bluez"
 MOTIVO_FORA_DO_RADIO = "fora_do_radio"
@@ -236,7 +236,7 @@ ESPERA_DA_LAPIDE_DE_FORA_S = 60.0
 
 PARES_POR_LIMPEZA = 32
 
-#: *«limpar com frequencia a cada troca <!-- noqa-acento: citação literal dela -->
+#: *«limpar com frequencia a cada troca <!-- noqa-acento: citação literal -->
 DEPOIS_DE_UMA_TROCA = "depois de uma troca"
 QUANDO_O_CONTROLE_DESLIGOU = "quando o controle desligou"
 NA_VOLTA_DA_FAXINA = "na volta da faxina"

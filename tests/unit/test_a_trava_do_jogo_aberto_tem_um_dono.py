@@ -408,7 +408,7 @@ def _respondidas() -> tuple[str, ...]:
 
 
 def _decisoes_dela() -> dict[str, dict[str, str]]:
-    with (RAIZ / "docs" / "data" / "decisoes-dela.csv").open(encoding="utf-8") as fh:
+    with (RAIZ / "docs" / "data" / "decisoes-de-produto.csv").open(encoding="utf-8") as fh:
         return {linha["id"]: linha for linha in csv.DictReader(fh)}
 
 

@@ -6,7 +6,7 @@ A LEI, e ela é dela (03/09/2026):
     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
     entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada
     user ao usar seu controle se toque disso que o app se adaptou ao controle
-    dele"*  (noqa-acento: citação literal dela)
+    dele"*  (noqa-acento: citação literal)
 
 O IRMÃO DESTA RÉGUA é ``test_aba10_a_identidade_vem_de_cima.py``, que cobra a
 BARRA de 3px. Ele fechou o lugar onde a cor do mockup sobrevivia; este fecha o

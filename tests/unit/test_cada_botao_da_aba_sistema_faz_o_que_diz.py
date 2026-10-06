@@ -375,7 +375,7 @@ def test_o_title_dos_consertos_nao_promete_o_que_nao_faz():
 
 @pytest.mark.parametrize("publicado", [True, False], ids=["publicado", "bancada"])
 def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
-    """D-OS-PLUGINS-APARECEM-ONDE-AGEM, dela, em `docs/data/decisoes-dela.csv`.
+    """D-OS-PLUGINS-APARECEM-ONDE-AGEM, dela, em `docs/data/decisoes-de-produto.csv`.
 
     MORDIDA: devolva o `item_cinza("Ver os plugins", …)` ao gerador e publique.
     """

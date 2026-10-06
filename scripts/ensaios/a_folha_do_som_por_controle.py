@@ -448,7 +448,7 @@ class Folha:
 
     def _fundo_opaco(self) -> None:
         """Um fundo SÓLIDO — razão dela, na folha irmã: *"o fundo tá muito transparente"*."""
-        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal dela)
+        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal)
         pintar_fundo_solido(self.janela)
 
     def _topo(self) -> Gtk.Widget:

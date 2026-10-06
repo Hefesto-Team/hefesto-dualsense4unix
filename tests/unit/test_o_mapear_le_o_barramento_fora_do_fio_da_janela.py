@@ -2,7 +2,7 @@
 
 A queixa dela: *«o mapear entradas toda hora tá fechando o app. dá um crash
 feio. acho que é se eu continuar nessa tela e trocar antes de fechar essa tela
-de mapear.»* <!-- noqa-acento: citação literal dela -->
+de mapear.»* <!-- noqa-acento: citação literal -->
 
 Medido: não era crash. O tique da aba 08 lia o ``/sys`` USB no fio da janela
 (o censo lê ``product`` e ``bMaxPower``, que o kernel serve sob o lock do

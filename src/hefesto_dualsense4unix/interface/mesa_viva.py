@@ -616,7 +616,7 @@ def selo_do_mic(mudo: bool, sabemos: bool) -> str:
     return DESLIGADO if mudo else ATIVO
 
 
-#: <!-- noqa-acento: citação literal dela -->
+#: <!-- noqa-acento: citação literal -->
 ATIVO = "ATIVO"
 DESLIGADO = "DESLIGADO"
 
@@ -628,7 +628,7 @@ def selo_do_alto_falante(mudo: bool, sabemos: bool) -> str:
     return DESLIGADO if mudo else ATIVO
 
 
-#: pegar o controle de primeira)"*.  <!-- noqa-acento: citação literal dela -->
+#: pegar o controle de primeira)"*.  <!-- noqa-acento: citação literal -->
 
 BOTAO_MIC_RETORNO = "retorno"
 

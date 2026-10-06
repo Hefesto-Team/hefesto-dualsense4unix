@@ -13,7 +13,7 @@ microfone aberto com o ganho no teto, as luzes no brilho mais forte, os sensores
 ligados. Na noite de 27/09 (a resposta 12): *«Quero testar algo diferente do
 padrão e jogar e salvar ele. Aperto o botão do freestyle e o jogo que eu tiver
 jogando vai ter essa config independente do perfil do jogo. Só isso. E lá se eu
-configurar te no ultra ok»* (noqa-acento: citação literal dela) — o Freestyle tem
+configurar te no ultra ok»* (noqa-acento: citação literal) — o Freestyle tem
 o que ela configurar, e o «ultra» vale **só como fábrica do arquivo novo**. Esta
 régua mede o arquivo novo.
 

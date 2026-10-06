@@ -1,6 +1,6 @@
 """DECISAO-SEM-DONO-01: o portão que cobra a decisão decidida tem de MORDER.
 
-`scripts/check_a_decisao_tem_prova.py` liga cada linha de `decisoes-dela.csv` a uma
+`scripts/check_a_decisao_tem_prova.py` liga cada linha de `decisoes-de-produto.csv` a uma
 função de teste que cita o id. Verde dele mede a EXISTÊNCIA da prova e a ligação
 com o id, nunca a qualidade: a mordida de cada regra está aqui, e cada teste
 monta a árvore mínima em que só aquela regra reprova.
@@ -42,7 +42,7 @@ def _modulo():
 
 
 def _escreve_csv(raiz: Path, linhas: list[dict[str, str]], colunas=COLUNAS) -> None:
-    destino = raiz / "docs" / "data" / "decisoes-dela.csv"
+    destino = raiz / "docs" / "data" / "decisoes-de-produto.csv"
     destino.parent.mkdir(parents=True, exist_ok=True)
     with destino.open("w", encoding="utf-8", newline="") as fp:
         w = csv.DictWriter(fp, fieldnames=list(colunas), lineterminator="\n")
@@ -89,7 +89,7 @@ def test_a_arvore_de_partida_passa(arvore, capsys):
 
 def test_decisao_nova_sem_prova_reprova_nomeada(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas.append({"id": "D-NOVA", "estado": "decidida"})
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 1
@@ -98,7 +98,7 @@ def test_decisao_nova_sem_prova_reprova_nomeada(arvore, capsys):
 
 def test_a_marca_processo_dispensa_a_prova(arvore):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas.append({"id": "D-NOVA", "estado": "decidida", "marca": "processo"})
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 0
@@ -106,7 +106,7 @@ def test_a_marca_processo_dispensa_a_prova(arvore):
 
 def test_marca_fora_do_vocabulario_reprova(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas.append({"id": "D-NOVA", "estado": "decidida", "marca": "tanto-faz"})
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 1
@@ -147,7 +147,7 @@ def test_o_id_dentro_da_funcao_so_conta_com_a_borda_do_id(arvore, capsys):
 
 def test_prova_fora_de_tests_ou_sem_a_forma_reprova(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas[0]["prova"] = "scripts/qualquer.py::test_a_cura_de_d_a"
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 1
@@ -156,7 +156,7 @@ def test_prova_fora_de_tests_ou_sem_a_forma_reprova(arvore, capsys):
 
 def test_o_degrau_implementada_exige_prova(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas[1]["estado"] = "implementada"
     linhas[1]["marca"] = "processo"
     _escreve_csv(raiz, linhas)
@@ -167,7 +167,7 @@ def test_o_degrau_implementada_exige_prova(arvore, capsys):
 @pytest.mark.parametrize("degrau", ["implementada", "feita", "no ar"])
 def test_cada_degrau_com_prova_que_abre_passa(arvore, degrau):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas[0]["estado"] = degrau
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 0
@@ -175,7 +175,7 @@ def test_cada_degrau_com_prova_que_abre_passa(arvore, degrau):
 
 def test_estado_fora_da_escada_reprova(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas[2]["estado"] = "quase-feita"
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 1
@@ -185,7 +185,7 @@ def test_estado_fora_da_escada_reprova(arvore, capsys):
 def test_piso_velho_reprova_e_o_aceitar_desce(arvore, capsys):
     """D-C ganhou prova: ela tem de sair do piso, senão a vaga serviria a uma decisão nova."""
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas[2]["prova"] = "tests/unit/test_a.py::test_a_cura_de_d_a"
     _escreve_csv(raiz, linhas)
     _escreve_teste(raiz, "test_a.py", UM_TESTE.replace("Mede a D-A.", "Mede a D-A e a D-C."))
@@ -198,7 +198,7 @@ def test_piso_velho_reprova_e_o_aceitar_desce(arvore, capsys):
 
 def test_o_aceitar_nao_sobe_o_piso(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas.append({"id": "D-NOVA", "estado": "decidida"})
     _escreve_csv(raiz, linhas)
     antes = (raiz / "docs/data/decisoes-sem-prova.txt").read_text()
@@ -233,7 +233,7 @@ def test_coluna_que_some_do_csv_reprova(arvore, capsys):
 
 def test_id_repetido_no_csv_reprova(arvore, capsys):
     raiz, mod = arvore
-    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    linhas = list(csv.DictReader((raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     linhas.append(dict(linhas[2]))
     _escreve_csv(raiz, linhas)
     assert _rodar(mod, raiz) == 1
@@ -247,7 +247,7 @@ def test_o_csv_de_verdade_passa(capsys):
 def test_a_prova_de_verdade_arrancada_reprova(tmp_path, capsys):
     """Mordida no registro real: a função que prova uma decisão some, e ele reprova nomeando-a."""
     mod = _modulo()
-    real = list(csv.DictReader((RAIZ / "docs/data/decisoes-dela.csv").open(encoding="utf-8")))
+    real = list(csv.DictReader((RAIZ / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
     com_prova = next(r for r in real if r["prova"] and r["estado"] == "decidida")
     rel, _, nome = com_prova["prova"].split(" | ")[0].partition("::")
     destino = tmp_path / rel
@@ -255,7 +255,7 @@ def test_a_prova_de_verdade_arrancada_reprova(tmp_path, capsys):
     shutil.copy(RAIZ / rel, destino)
     for pasta in ("docs/data",):
         (tmp_path / pasta).mkdir(parents=True, exist_ok=True)
-    for arquivo in ("decisoes-dela.csv", "decisoes-sem-prova.txt"):
+    for arquivo in ("decisoes-de-produto.csv", "decisoes-sem-prova.txt"):
         shutil.copy(RAIZ / "docs/data" / arquivo, tmp_path / "docs/data" / arquivo)
     for r in real:
         for parte in (r["prova"] or "").split(" | "):

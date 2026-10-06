@@ -7,7 +7,7 @@ regra de janela ou sem (a RESTORE-ESCOPO-01 saiu). Os achados 1 e 2 abaixo
 mudaram de propósito: o boot restaura a escolha dela, a máquina nova nasce com o
 botão aceso (e é ali que o Freestyle vale no boot), e o rodapé sem perfil age na
 escolha dela, e não no Freestyle. As réguas do contrato novo estão em
-`test_o_hefesto_abre_na_escolha_dela.py` e
+`test_o_hefesto_abre_na_escolha.py` e
 `test_o_freestyle_desligado_nunca_e_o_perfil_ativo.py`; os achados 3 a 5 seguem.
 
 A conferência da O-MODO-FREESTYLE-02 deixou cinco achados, e os cinco são do mesmo

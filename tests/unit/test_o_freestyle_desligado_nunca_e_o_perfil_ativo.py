@@ -233,7 +233,7 @@ def test_com_o_daemon_calado_o_chip_e_o_rodape_dizem_a_escolha(caso: str) -> Non
     assert perfil_do_rodape(None) == esperado
 
 
-# *«Lembrando que nao pode haver um perfil  <!-- noqa-acento: citação literal dela -->
+# *«Lembrando que nao pode haver um perfil  <!-- noqa-acento: citação literal -->
 
 ESTADOS_DO_BOTAO = ("apagado", "aceso", "daemon-calado")
 

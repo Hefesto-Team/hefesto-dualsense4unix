@@ -9,14 +9,14 @@ MESMA tela, a mesma palavra escrita de dois jeitos::
     fita    P1 • Cosmic Red • CABO
     card    Cosmic Red • cabo
 
-    "Leia o cabo e acordado (ambos minusculo sem iniciar de forma   (noqa-acento: citação literal dela)
-     capitular). Esse tipo de coisa não pode se repetir na interface."   (noqa-acento: citação literal dela)
+    "Leia o cabo e acordado (ambos minusculo sem iniciar de forma   (noqa-acento: citação literal)
+     capitular). Esse tipo de coisa não pode se repetir na interface."   (noqa-acento: citação literal)
 
 **A segunda frase é o que fez esta régua existir.** O caso dela foi curado no
 `topo.html` (ESQUELETO-C2); o que não pode é voltar — nem ali, nem em nenhuma
 das outras nove páginas.
 
-E A REGRA DA CASA SOBRE MAIÚSCULA É DELA, de 30/08/2026: *"a maiúscula a   (noqa-acento: citação literal dela)
+E A REGRA DA CASA SOBRE MAIÚSCULA É DELA, de 30/08/2026: *"a maiúscula a   (noqa-acento: citação literal)
 regra é sobre a primeira letra a ser capitalizada, é o padrão do projeto"*.
 Palavra INTEIRA em caixa alta não é ênfase nesta casa — é ruído, e é o que esta
 régua procura.

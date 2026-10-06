@@ -1325,7 +1325,7 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     de 19/09/2026, e é ordem dela:
 
         *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
-        esse vazamento me preocupa"*  <!-- noqa-acento: citação literal dela -->
+        esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
 
     A O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança — do slot da sessão para a
     escolha dela — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
@@ -1396,7 +1396,7 @@ def _guardar_o_caminho(
     escolhido = normalizar_caminho(caminho)
     if escolhido is None or origin != "manual":
         return
-    # vazamento."*  <!-- noqa-acento: citação literal dela -->
+    # vazamento."*  <!-- noqa-acento: citação literal -->
     if _ha_jogo_em_foco(daemon):
         logger.info(
             "caminho_do_gesto_ficou_no_jogo",

@@ -3,10 +3,10 @@
 
 A QUEIXA, E ELA É DELA — 17/09/2026:
 
-    *"sobre o mic do cabo ficar limpo igual o do mic no bt"*  # noqa-acento: citação literal dela
+    *"sobre o mic do cabo ficar limpo igual o do mic no bt"*  # noqa-acento: citação literal
 
 E o outro lado da mesma frase, do mesmo dia, sobre o RÁDIO: *"o som do mic ta
-divino"*.  # noqa-acento: citação literal dela
+divino"*.  # noqa-acento: citação literal
 
 POR QUE ESTE INSTRUMENTO EXISTE, E POR QUE ELE NÃO CURA NADA
 =============================================================

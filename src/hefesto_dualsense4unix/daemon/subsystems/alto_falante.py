@@ -24,7 +24,7 @@ dispositivo, não um transporte* (``integrations/virtual_pad.py``).
 AS TRÊS DECISÕES DELA, E ELAS SÃO CURTAS
 -----------------------------------------
 ``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE`` (06/09/2026, por delegação,
-reversível numa frase — ``docs/data/decisoes-dela.csv:213``):
+reversível numa frase — ``docs/data/decisoes-de-produto.csv:213``):
 
 1. **REVERTIDA POR ELA EM 08/09/2026.** Dizia *"o nó vive só enquanto há
    controle"* — decisão por DELEGAÇÃO, e declarada reversível numa frase. Ela

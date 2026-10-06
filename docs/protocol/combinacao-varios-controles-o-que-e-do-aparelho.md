@@ -332,7 +332,7 @@ O §6.2 fecha dizendo que o EAGAIN dos relatores é *pista para um ensaio de
 Hefesto.**
 
 A queixa dela foi *"4 controles conectados só um aparece na interface agora"*.
-<!-- noqa-acento: citação literal dela --> O que os diários disseram:
+<!-- noqa-acento: citação literal --> O que os diários disseram:
 
 | o que | quanto |
 | --- | --- |

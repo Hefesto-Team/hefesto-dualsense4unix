@@ -59,7 +59,7 @@ byte na bancada DELA e a premissa da sprint caiu junto — o `common[42]` obedec
 nos dois transportes, mas o que ele atenua são as **lâmpadas de numeração**, não
 a barra. Palavra dela, com os quatro na mão: *"o que o slicer altera não são as
 cores do lightbar mas os leds que indicam qual player é o dono daquele
-controle"*. <!-- noqa-acento: citação literal dela -->
+controle"*. <!-- noqa-acento: citação literal -->
 A célula subiu de `nao-medido` para `medido` e o `aciona = não` continua onde
 estava — agora por MEDIÇÃO, e não por falta de olhar. O mapa ganhou a chave
 `luz.led_jogador.brilho` para o dono verdadeiro do byte.
@@ -427,7 +427,7 @@ RESPONDIDAS_POR_ELA: dict[str, str] = {
     "vibracao.rumble.passthrough@sn30": VETO_DOS_EXTERNOS,
     "entrada.stick.calibracao@dualsense": NUNCA_GRAVA_A_CALIBRACAO,
 }
-DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 
 O_VETO_ALCANCA_O_PRO: dict[str, str] = {
     "plataforma.adocao@pro": VETO_DOS_EXTERNOS,

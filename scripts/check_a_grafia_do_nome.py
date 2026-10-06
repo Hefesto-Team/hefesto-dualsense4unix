@@ -57,7 +57,7 @@ mais paga.
 
 Ordem dela, 11/09/2026, e é ela que decide estas quatro:
 
-    *"a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento: citação literal dela)
+    *"a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento: citação literal)
     mim mas pra qualquer outro user"*
 
 Uma troca de grafia que quebre o reconhecimento de janela, o ``.desktop`` ou o

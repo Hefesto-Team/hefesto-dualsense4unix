@@ -1,7 +1,7 @@
 """Os QUATRO microfones: um nó por controle, com o nome DELA — MIC-OS-QUATRO-01.
 
 A palavra dela, 08/09/2026 à noite: *"o lance dos 4 mic virtuais via bt pra cada
-controle e cavbo"*.  <!-- noqa-acento: citação literal dela, palavra por palavra -->
+controle e cavbo"*.  <!-- noqa-acento: citação literal, palavra por palavra -->
 
 E o NOME é decisão dela de 09/09/2026 (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
 MICROFONE-DO-CONTROLE-N`, palavra dela: *"4a"*): **«Microfone do Controle N»**,

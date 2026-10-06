@@ -31,7 +31,7 @@ A MORDIDA, por seção:
 - devolva ao ``rodape.salvar`` o microfone do aparelho e §3 reprova no
   ``mic.muted``.
 
-Irmão deste arquivo: ``test_salvar_nao_apaga_a_cor_dela.py``.
+Irmão deste arquivo: ``test_salvar_nao_apaga_a_cor.py``.
 """
 
 from __future__ import annotations

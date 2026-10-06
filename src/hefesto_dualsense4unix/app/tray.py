@@ -71,7 +71,7 @@ SwitchProfileFn = Callable[[str], bool]
 #: Snapshot de `daemon.state_full` (ou None se offline) — usado para o tray
 StateFn = Callable[[], dict[str, Any] | None]
 
-#: <!-- noqa-acento: citação literal dela -->
+#: <!-- noqa-acento: citação literal -->
 ModoFn = Callable[[bool], bool]
 ReconectarFn = Callable[[], bool]
 ServicoFn = Callable[[str], bool]
@@ -263,7 +263,7 @@ class AppTray:
                 pass
             self._indicator = None
 
-    # coisa."* <!-- noqa-acento: citação literal dela -->
+    # coisa."* <!-- noqa-acento: citação literal -->
     def _montar_os_atos_do_jogo(self) -> None:
         """«Ligado/Desligado» e «Reconectar controles» — os da aba Jogar."""
         if self._menu is None:

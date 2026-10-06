@@ -4,7 +4,7 @@
 ELA MEDIU O DEFEITO NA PRÓPRIA MESA, 07/09/2026, com os quatro DualSense
 ligados e os quatro reconhecidos:
 
-    "4 controles conectados mas as infos dos dos outros 2 ultimos não  (noqa-acento: citação literal dela)
+    "4 controles conectados mas as infos dos dos outros 2 ultimos não  (noqa-acento: citação literal)
     aparecem (…) isso em todas as abas."
 
 A CAUSA NÃO ERA O DADO. Medido de ponta a ponta: o daemon publicava os quatro,

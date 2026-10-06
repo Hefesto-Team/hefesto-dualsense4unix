@@ -141,7 +141,7 @@ def test_coluna_que_some_para_a_medicao_em_vez_de_contar_zero(mi, tmp_path,
     try:
         assert mi.main(["--check"]) == 1
     finally:
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
     saida = capsys.readouterr().out
     assert "VERMELHO" in saida and "estado" in saida
@@ -193,7 +193,7 @@ def test_decisao_do_piso_que_perde_a_regua_sai_nominal(mi, tmp_path, capsys):
         assert "REGRESSÃO" in saida
     finally:
         mi.COM_REGUA_EM_20260920 = guarda
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
 
 
@@ -220,7 +220,7 @@ def test_o_piso_que_aponta_para_linha_que_nao_existe_reprova(mi, tmp_path,
         assert mi.main(["--check"]) == 1
     finally:
         mi.COM_REGUA_EM_20260920 = guarda
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
     assert "D-CADUCOU" in capsys.readouterr().out
 
@@ -254,7 +254,7 @@ def test_vocabulario_de_processo_que_engole_decisao_com_regua_reprova(
     finally:
         mi.COM_REGUA_EM_20260920 = guarda_piso
         mi.COLISOES_DECLARADAS = guarda_col
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
 
 
@@ -277,7 +277,7 @@ def test_a_declaracao_que_sobrevive_ao_proprio_caso_reprova(mi, tmp_path,
     finally:
         mi.COM_REGUA_EM_20260920 = guarda_piso
         mi.COLISOES_DECLARADAS = guarda_col
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
     assert "D-QUE-JA-PASSOU" in capsys.readouterr().out
 
@@ -350,7 +350,7 @@ def test_o_laudo_nomeia_cada_citada_so_no_cabecalho(mi, tmp_path, capsys):
         assert mi.main([]) == 0
         saida = capsys.readouterr().out
     finally:
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
     medicao_3 = saida[saida.index("MEDIÇÃO 3"):saida.index("O CUSTO DE CADA DEGRAU")]
     assert "D-SO-NO-CABECALHO" in medicao_3, (
@@ -459,7 +459,7 @@ def test_o_laudo_sem_bandeira_recusa_csv_de_forma_errada(mi, tmp_path, capsys):
         assert mi.main([]) == 1, (
             "o laudo seco contou sobre um CSV que já não sabe ler")
     finally:
-        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
         mi.RAIZ = RAIZ
     saida = capsys.readouterr().out
     assert "VERMELHO" in saida and "estado" in saida

@@ -26,7 +26,7 @@ _DUBLE = "sleep"
 _DUBLE_ARGV = [_DUBLE, "600"]
 
 _RAIZ = Path(__file__).resolve().parents[2]
-_DECISOES = _RAIZ / "docs" / "data" / "decisoes-dela.csv"
+_DECISOES = _RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 _ID_DA_DECISAO = "D-0609-A-FRASE-DO-TECLADO-NA-TELA"
 
 
@@ -174,7 +174,7 @@ def test_a_frase_e_a_que_ela_decidiu(mesa: dict[str, Any]) -> None:
     assert _texto(abertura[0]) == decidida, (
         f"o produto publica {_texto(abertura[0])!r} e a decisão dela diz "
         f"{decidida!r}. Texto de tela é dela: mude a linha do "
-        "`decisoes-dela.csv` COM a palavra dela, ou devolva a frase"
+        "`decisoes-de-produto.csv` COM a palavra dela, ou devolva a frase"
     )
 
 

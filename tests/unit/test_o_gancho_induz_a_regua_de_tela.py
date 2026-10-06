@@ -39,7 +39,7 @@ O_WIDGET = "src/hefesto_dualsense4unix/interface/cartao_do_controle.py"
 UMA_REGUA = "src/hefesto_dualsense4unix/interface/regua_popup.py"
 A_PONTE = "src/hefesto_dualsense4unix/interface/controles_vivos.py"
 UM_PYTEST = "tests/unit/test_o_gesto_chega.py"
-UMA_PROSA = "src/hefesto_dualsense4unix/interface/CORRECOES-DELA.md"
+UMA_PROSA = "src/hefesto_dualsense4unix/interface/CORRECOES.md"
 
 
 @pytest.mark.parametrize("de_tela", [UMA_ABA, UMA_PAGINA, O_WIDGET])

@@ -11,7 +11,7 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
-CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 
 COLUNAS_QUE_A_MEDICAO_LE = ("id", "titulo", "estado", "decidida_em", "onde_mora")
 

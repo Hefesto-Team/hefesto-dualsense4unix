@@ -4,7 +4,7 @@ SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão dela, 04/09/2026, depois de eu
 recomendar a saída barata (virar leitura, um selo "no ar / parado"):
 
     *"ele tem que funcionar de verdade. ambos independente do modo e da
-    mascara."* <!-- noqa-acento: citação literal dela -->
+    mascara."* <!-- noqa-acento: citação literal -->
 
 **Interruptor de verdade. Cada sensor por si. Em Nativo e em Virtual. Com ou
 sem máscara.** Este módulo é a metade que faz o JOGO parar de receber — a

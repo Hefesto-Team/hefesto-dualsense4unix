@@ -1031,7 +1031,7 @@ bt_mic_palavra_dela  ligado=False
 | bordas contadas pelo daemon | ~28/s | **0** |
 | bit estável por | — | **152 segundos** |
 
-Com o microfone no ar e ela falando: *"nao ficou maluco e nao desligou"*. <!-- (noqa-acento: citação literal dela) -->
+Com o microfone no ar e ela falando: *"nao ficou maluco e nao desligou"*. <!-- (noqa-acento: citação literal) -->
 
 **Isso prova a cadeia inteira.** O gating não era reação do firmware ao microfone
 ativo — era o **kernel** mutando e desmutando, a partir de bordas que ele
@@ -1578,7 +1578,7 @@ declara. E o libinput vê o mesmo nó como touchpad de notebook —
 
 **O GESTO DE TRÊS DEDOS NÃO EXISTE, e o de dois faz o trabalho dos dois.**
 Ela levantou a pergunta com a mão no aparelho — *"SE EU USAR 3 DEDOS DOU ZOOM
-E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE"* <!-- noqa-acento: citação literal dela --> —
+E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE"* <!-- noqa-acento: citação literal --> —
 e 45 s de gesto contra `libinput debug-events` devolveram:
 
 | evento do libinput | quantos | dedos |

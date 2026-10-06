@@ -10,7 +10,7 @@ o canal do microfone e o daemon o derrubava sozinho 49 ms depois::
 
 O sintoma que ela viu foi o nó `hefesto_mic_<hex6>` nascendo, sumindo e
 voltando — *"algo tava bugando"* —, e o microfone do rádio nunca ficava no ar.
-<!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal -->
 
 A CAUSA está numa linha do log, e ela se lê sozinha::
 

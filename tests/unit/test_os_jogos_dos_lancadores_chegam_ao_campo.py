@@ -223,7 +223,7 @@ def test_nenhum_lancador_instalado_e_lista_so_da_steam(
     assert jl.jogos_com_janela(lar=tmp_path, pastas=[tmp_path]) == []
 
 
-# (noqa-acento: citação literal dela, com a digitação dela)
+# (noqa-acento: citação literal, com a digitação dela)
 LUTRIS_ID = "net.lutris.Lutris"
 
 _ESQUEMA_LUTRIS = (

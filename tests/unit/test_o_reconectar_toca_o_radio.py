@@ -1,7 +1,7 @@
 """O «Reconectar controles» mexe no RÁDIO — ordem dela, 22/09/2026.
 
 **A PALAVRA DELA:** *"pera o reconectar deveria sim tocar no radio. não faz
-sentido ele ficar de fora."* <!-- noqa-acento: citação literal dela -->
+sentido ele ficar de fora."* <!-- noqa-acento: citação literal -->
 
 Ela revoga a regra de 12/08 que o módulo carregava — *"Não reconectar é decisão
 dela; o botão PS é dela"* —, e o dia mediu por quê: a mesa dela caiu num estado

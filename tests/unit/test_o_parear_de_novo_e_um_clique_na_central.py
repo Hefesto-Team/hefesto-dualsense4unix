@@ -17,7 +17,7 @@ from typing import Any
 from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VERDE, VERMELHO
-from tests.unit import test_o_parear_espera_o_clique_dela as _base
+from tests.unit import test_o_parear_espera_o_clique as _base
 
 #: as mesmas fixtures do dublê da escolha dela (o dono vivo e a central reais)
 diario, relogio, mesa = _base.diario, _base.relogio, _base.mesa

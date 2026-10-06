@@ -7,7 +7,7 @@ se separam.
 
 > **Vazio, e agora vazio de vez — nota datada de 29/08/2026, grau: DECISÃO DELA.**
 > Esta tabela seria preenchida pela corrente `CR-03 → CR-04 → CR-06`, e a corrente
-> **saiu do disco** (`docs/data/decisoes-dela.csv`, `D-A-CORRENTE-DO-CLEAN-ROOM-SAI`):
+> **saiu do disco** (`docs/data/decisoes-de-produto.csv`, `D-A-CORRENTE-DO-CLEAN-ROOM-SAI`):
 > sem a bancada de medir não há efeitos da casa, e sem eles não há o que devolver ao
 > ecossistema. O Hefesto vive com o catálogo de efeitos que já tem. Para onde foram
 > as três, veja

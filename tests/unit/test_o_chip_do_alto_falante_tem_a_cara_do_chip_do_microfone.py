@@ -2,7 +2,7 @@
 """O CHIP DO ALTO-FALANTE TEM A CARA DO CHIP DO MICROFONE — 17/09/2026.
 
 **A ORDEM DELA, com um print da aba Controles na mão:** *"deixar esse acordado
-com o mesmo estilo do botao que ta MUDO acima"*. <!-- noqa-acento: citação literal dela -->
+com o mesmo estilo do botao que ta MUDO acima"*. <!-- noqa-acento: citação literal -->
 
 Os dois moram no MESMO cartão de dispositivo, um debaixo do outro: o rótulo da
 moldura do Microfone termina num chip (`MUDO` / `ATIVO`, com ícone e risco) e o
@@ -28,7 +28,7 @@ que é exatamente a forma pela qual onze réguas desta casa já caíram. Então:
 desta frente subiu a caixa por CSS, para o par ficar idêntico ao do microfone. O
 portão `maiuscula-decorativa` reprovou — e ele carrega a palavra dela de
 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o cabo e acordado (ambos
-minusculo sem iniciar de forma capitular)."* <!-- noqa-acento: citação literal dela -->
+minusculo sem iniciar de forma capitular)."* <!-- noqa-acento: citação literal -->
 As duas ordens dela não brigam: o que ela pediu hoje foi o ESTILO, e a caixa do
 chip do microfone não é estilo — é o TEXTO que `mesa_viva.selo_do_mic` devolve.
 `TestACaixaNaoSobe` guarda o lado certo, para que ninguém "complete a

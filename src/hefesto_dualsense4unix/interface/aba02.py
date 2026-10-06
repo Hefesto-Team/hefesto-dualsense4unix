@@ -966,7 +966,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      dele em caixa alta. O portão `maiuscula-decorativa` reprovou, e ele carrega
      a palavra dela de 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o
      cabo e acordado (ambos minusculo sem iniciar de forma capitular). Esse
-     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal dela -->
+     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal -->
 
      AS DUAS ORDENS NÃO SE CONTRADIZEM, e é o que resolve o caso: o que ela
      pediu hoje foi o ESTILO — a pílula —, e a caixa do chip do microfone não é
@@ -1693,7 +1693,7 @@ MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 ATRIBUTO_DO_SOM = "data-som"
 
 # mesma (*o número ao lado não vale*), e o que os separa é a palavra do `title`.
-FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # noqa-acento: citação literal dela
+FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # noqa-acento: citação literal
 
 _RAIO = ('<svg class="g-raio" viewBox="0 0 24 24" width="11" height="11"'
          ' aria-hidden="true" focusable="false">'
@@ -1760,10 +1760,10 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
             f'>{SELO_MUDO if mic_mudo else SELO_ATIVO}</span></span>')
 
 
-# decisão dela (*"a versão antiga não segue disponivel"* — `pyproject.toml`).  # noqa-acento: citação literal dela
+# decisão dela (*"a versão antiga não segue disponivel"* — `pyproject.toml`).  # noqa-acento: citação literal
 # digitar nada.
-# interface pq o botão do proprio controle já o faz e ele reflete isso"*.  # noqa-acento: citação literal dela
-# falado"*.  <!-- noqa-acento: citação literal dela -->
+# interface pq o botão do proprio controle já o faz e ele reflete isso"*.  # noqa-acento: citação literal
+# falado"*.  <!-- noqa-acento: citação literal -->
 DICA_MIC_TESTAR = ("Liga o retorno: você se ouve enquanto ele estiver aceso, "
                    "com o volume e o ganho desta coluna já aplicados — é assim "
                    "que o jogo te ouve. Clique de novo para desligar. Para "
@@ -1774,8 +1774,8 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
                     "saindo no PC. Serve para jogar acompanhado: cada um ouve "
                     "no próprio controle.")
 
-#   <!-- noqa-acento: citação literal dela -->
-#: <!-- noqa-acento: citação literal dela -->
+#   <!-- noqa-acento: citação literal -->
+#: <!-- noqa-acento: citação literal -->
 ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo no Controle, Áudio do PC no PC"
 ROTULO_EFEITOS_MAIS_O_PC = "Efeitos do Jogo e Áudio do PC no Controle"
 
@@ -1786,7 +1786,7 @@ DICA_NADA_NO_CONTROLE = (
     "Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste "
     "controle para de tocar. O microfone e a vibração não mudam.")
 
-#:     <!-- noqa-acento: citação literal dela -->
+#:     <!-- noqa-acento: citação literal -->
 #: sistema mandada para este controle (`audio_saida.mandar_o_som_do_pc`). O
 ROTULO_TUDO_NO_CONTROLE = "Tudo no Controle e Nada no PC"
 
@@ -1873,7 +1873,7 @@ GANHO_TOPO_DB = 48
 GANHO_PADRAO_PCT = 100
 
 ROTULO_GANHO_MIC = "Ganho de entrada do microfone deste controle, em decibéis"
-#      versao  # noqa-acento: citação literal dela, e a digitação dela
+#      versao  # noqa-acento: citação literal, e a digitação dela
 ROTULO_LINHA_VOLUME = "Volume"
 ROTULO_LINHA_GANHO = "Ganho"
 
@@ -2753,7 +2753,7 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que mudou em 03/10</h2>
   <ul>
-    <li><b>Os botões «Virtual» e «Nativo» do Microfone saíram</b>, como você decidiu: <i>"deixariamos de ter a opção nativo ou virtual como escolha na interface"</i>. <!-- noqa-acento: citação literal dela --> Todo controle tem o microfone e o alto-falante dele, no cabo e no BT, e o microfone do computador (uma webcam, por exemplo) continua o padrão quando você não escolheu outro. O 🎙 continua ligando e calando.</li>
+    <li><b>Os botões «Virtual» e «Nativo» do Microfone saíram</b>, como você decidiu: <i>"deixariamos de ter a opção nativo ou virtual como escolha na interface"</i>. <!-- noqa-acento: citação literal --> Todo controle tem o microfone e o alto-falante dele, no cabo e no BT, e o microfone do computador (uma webcam, por exemplo) continua o padrão quando você não escolheu outro. O 🎙 continua ligando e calando.</li>
   </ul>
   <h2>O que mudou em 24/09</h2>
   <ul>
@@ -3076,7 +3076,7 @@ def _conferir(doc):
     exigir('.ctl[data-conectado="nao"] .barra-luz' in folha,
            "a barra de luz do lugar vazio voltou a acender com a cor do mockup")
 
-    #    iniciar de forma capitular"*).  <!-- noqa-acento: citação literal dela -->
+    #    iniciar de forma capitular"*).  <!-- noqa-acento: citação literal -->
     exigir(">Dispositivos conectados</span>" in corpo, "o título novo sumiu")
     exigir(">Conectados</span>" not in corpo, "o título antigo voltou")
 
@@ -3085,8 +3085,8 @@ def _conferir(doc):
     exigir('data-mic-modo="' not in corpo and 'data-gesto="mic-modo"' not in corpo,
            "o par «Virtual | Nativo» do microfone voltou — saiu em 02/10/2026")
 
-    #      o som do PC e Ouvir Juntos?"*  <!-- noqa-acento: citação literal dela -->
-    #      *"o sfx + todo o som que sai no outofalante do hmdmi"*,  <!-- noqa-acento: citação literal dela -->
+    #      o som do PC e Ouvir Juntos?"*  <!-- noqa-acento: citação literal -->
+    #      *"o sfx + todo o som que sai no outofalante do hmdmi"*,  <!-- noqa-acento: citação literal -->
     for rota, palavra_dela in (("jogo", "Efeitos do Jogo no Controle, Áudio do PC no PC"),
                                ("junto", "Efeitos do Jogo e Áudio do PC no Controle"),
                                ("nada", "Tudo no PC e Nada no Controle"),

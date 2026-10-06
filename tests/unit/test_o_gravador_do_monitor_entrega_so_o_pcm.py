@@ -2,7 +2,7 @@
 
 **A queixa dela, 01/10/2026**, depois de jogar com visitas (dois DualSense no
 Bluetooth): *«Háptica por áudio não funcionou, nem no bt e nem aumentou a
-intensidade durante o jogo.»* <!-- noqa-acento: citação literal dela -->
+intensidade durante o jogo.»* <!-- noqa-acento: citação literal -->
 
 **A causa, medida em 02/10/2026.** O ``pw-record`` sem ``--raw`` escreve um
 cabeçalho AU de 24 bytes antes do PCM. Medido num PipeWire 1.6.8 PRIVADO (o

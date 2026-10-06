@@ -16,7 +16,7 @@ aparelho, não escreve em LED nenhum.
 escrito: *"Não reconectar é decisão dela, e é o contrato deste módulo. O botão
 PS é dela; `reconectar` não existe aqui de propósito."* A palavra dela, no dia:
 *"pera o reconectar deveria sim tocar no radio. não faz sentido ele ficar de
-fora."* <!-- noqa-acento: citação literal dela -->
+fora."* <!-- noqa-acento: citação literal -->
 
 E O DIA MEDIU POR QUÊ. A mesa dela caiu num estado que o botão PS **não**
 resolve: o BlueZ dizendo ``Connected: true`` para quatro controles com o kernel

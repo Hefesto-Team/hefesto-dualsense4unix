@@ -120,7 +120,7 @@ Seis testes caíam no lint-test por quatro caminhos que
 
 | caminho | onde | sintoma no CI |
 |---|---|---|
-| processo filho | `test_os_dez_geradores_rodam.py` (aba01 a aba10), `test_os_leitores_do_glade_tem_dono.py` (aba05), `test_a_janela_nao_nasce_na_tela_dela.py` (o visor) | o pai só via `rc=1`, e o `AssertionError` não diz GTK |
+| processo filho | `test_os_dez_geradores_rodam.py` (aba01 a aba10), `test_os_leitores_do_glade_tem_dono.py` (aba05), `test_a_janela_nao_nasce_na_tela.py` (o visor) | o pai só via `rc=1`, e o `AssertionError` não diz GTK |
 | fixture emprestada de plugin que pulou | `test_o_botao_do_vulkan_diz_o_que_fez.py` (6 casos) | `fixture 'a09' not found`: o pytest descarta calado o plugin que pulou |
 | stub no lugar da classe | `test_status_o_modo_compacto_tem_dono.py` | lia a docstring do stub sem GTK do `controller_card.py` |
 | fallback de propósito | `test_a_06_nao_manda_para_o_vazio.py` | `_nome_do_botao` cai no id cru; só rodava por causa da poluição da coleta |
