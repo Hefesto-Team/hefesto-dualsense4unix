@@ -2,7 +2,7 @@
 
 O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01.
 
-A física do diário do rádio dela, 06/10/2026, 17:14 e 17:15, no adaptador que já tinha dois
+A física do diário do rádio do usuário, 06/10/2026, 17:14 e 17:15, no adaptador que já tinha dois
 controles no ar: o ``Pair`` do terceiro deu, o ``Connect`` correu com a varredura AINDA de pé no
 mesmo adaptador e voltou ``org.bluez.Error.Failed``, o ``StopDiscovery`` só veio depois, e
 ninguém chamou o controle de novo — aos 60 s da janela a central tirou a chave que tinha acabado
@@ -220,6 +220,7 @@ def test_o_prazo_da_chave_nova_conta_do_pair_e_nao_da_janela(
 
 
 def test_a_chave_que_nunca_atende_sai_aos_sessenta_segundos_do_pair(diario: Path) -> None:
+    # A decisão D-0610-CHAVE-NOVA-PRAZO-DO-PAIR.
     """O outro lado do contrato, que continua: a chave que o controle nunca atende sai como
     meia chave — mas só aos 60 s do ``Pair``, depois de chamada de novo a cada
     :data:`~central_do_radio.REPROVOCAR_S`. E nenhum ``Connect`` da volta espera além do prazo:
@@ -287,6 +288,7 @@ def _linhas_de(cena: dict[str, Any], aparelho: str, lugar: str) -> list[dict[str
 def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, mundo_de: Any,
 ) -> None:
+    # A decisão D-0610-TIRAR-LINHA-FECHA-O-VENCIDO.
     """A cura 2: o «Tirar esta linha» da gaveta tira a linha, e ela não volta em 10 s de tique.
 
     O caso medido: a tela e a central contam o mesmo prazo, mas quem fala primeiro é a tela (a
@@ -465,6 +467,7 @@ def test_com_o_conectar_aberto_a_caixa_de_outro_adaptador_muda_o_alvo(tmp_path: 
 
 
 def test_mordida_com_o_painel_na_borda_o_menu_da_linha_fica_por_baixo(tmp_path: Path) -> None:
+    # A decisão D-0610-O-CONECTAR-NAO-COBRE-OS-PONTOS.
     f = _no_webkit_08(_a_pagina(tmp_path, O_PAINEL_DEIXA_OS_MENUS), O_CONECTAR_E_OUTRA_CAIXA,
                       MEDE_O_ALVO)
     assert f["outra_linha"][0] == "conectar" and f["no_ponto_do_menu"] is False, f

@@ -164,6 +164,7 @@ def _o_disco(n: int) -> dict[str, Any]:
 
 
 def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
+    # A decisão D-0610-O-APLICAR-E-SO-O-REAPLICAR.
     """Nenhum `_with_*` no rodapé: a regra da cor é do `DraftConfig`."""
     fonte = pathlib.Path(rodape.__file__).read_text(encoding="utf-8")
     privados = sorted({
