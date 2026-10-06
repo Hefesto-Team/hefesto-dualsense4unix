@@ -2355,6 +2355,27 @@
     border-color:var(--border-sutil);background:var(--panel);color:var(--texto-mudo);
     font-weight:400;cursor:not-allowed}
   .touch .ponto{z-index:2}
+  /* A FAMÍLIA DOS BOTÕES DE FACE — o que ela declarou do controle
+     (`controles.botoes`, ou o modo da chave física) troca só o RÓTULO dos
+     quatro da face, pela posição. Sem `data-botoes` nada muda. */
+  .glifos[data-botoes] .gb[data-glifo]::before{font-weight:700;font-size:22px;
+    line-height:1}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="cross"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="cross"]::before{content:"A"}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="circle"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="circle"]::before{content:"B"}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="square"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="square"]::before{content:"X"}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="triangle"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="triangle"]::before{content:"Y"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="cross"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="cross"]::before{content:"B"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="circle"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="circle"]::before{content:"A"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="square"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="square"]::before{content:"Y"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="triangle"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="triangle"]::before{content:"X"}
 
   .bat .carga-i[data-carga="Carregando"] .g-raio{display:block;color:var(--green)}
   .bat .carga-i[data-carga="Cheio"] .g-cheio{display:block;color:var(--green)}
@@ -2971,7 +2992,7 @@
 
         <div>
           <div class="moldura">
-            <div class="glifos">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
             <span class="gb on" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -3501,7 +3522,7 @@
 
         <div>
           <div class="moldura">
-            <div class="glifos">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
             <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -4031,7 +4052,7 @@
 
         <div>
           <div class="moldura">
-            <div class="glifos">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
             <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -4561,7 +4582,7 @@
 
         <div>
           <div class="moldura">
-            <div class="glifos">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
             <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
