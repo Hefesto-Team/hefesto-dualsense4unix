@@ -62,6 +62,9 @@ SAIDA="${CI_LOCAL_SAIDA:-$CASA/ci-local/$DATA}"
 # que a citava fez dois jobs vermelhos de verdade passarem por «rede caída» (06/10/2026).
 REDE_PASSO='\]\s+\|\s+(W: Failed to fetch .*(Temporary failure resolving|Could not resolve)|Temporary failure resolving .|fatal: unable to access .*Could not resolve host|curl: \([67]\) |.*Failed to establish a new connection: \[Errno -[23]\]|(Error: )?getaddrinfo (EAI_AGAIN|ENOTFOUND))'
 REDE_ACT='^Error: .*(no such host|dial tcp|Temporary failure in name resolution)'
+# O docker que não respondeu a tempo (limpar o container de um job que passou: `context deadline exceeded`,
+# medido em 06/10/2026 com a máquina cheia): também não é defeito do job.
+DOCKER_CAIDO='^(Error: |\[[^]]*\] +(failed to remove container|Error while stop job container)).*(context deadline exceeded|Cannot connect to the Docker daemon)'
 
 modo=""; alvo=""; conferir=0; listar=0; SEM_PASSO=()
 while [ $# -gt 0 ]; do
@@ -353,6 +356,9 @@ rodar_job() { # job índice
   if [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE -e "$REDE_PASSO" -e "$REDE_ACT" "$log"; then
     echo "ci-local: a rede caiu no meio deste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
     echo rede > "$SAIDA/$job.motivo"; rc=2
+  elif [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE "$DOCKER_CAIDO" "$log"; then
+    echo "ci-local: o docker não respondeu a tempo neste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
+    echo docker > "$SAIDA/$job.motivo"; rc=2
   fi
   echo "$rc" > "$SAIDA/$job.rc"
   echo $(( $(date +%s) - ini )) > "$SAIDA/$job.seg"
@@ -397,7 +403,7 @@ for j in "${JOBS[@]}"; do
   while [ "$(jobs -rp | wc -l)" -ge "$EM_PARALELO" ]; do wait -n 2>/dev/null || true; done
   ( rodar_job "$j" "$i"; rc=$?
     if [ "$rc" = 0 ]; then echo "ci-local: $j verde ($(cat "$SAIDA/$j.seg")s)" >&2
-    elif [ "$rc" = 2 ]; then echo "ci-local: $j NÃO RODOU$([ -f "$SAIDA/$j.motivo" ] && echo " (rede)") (log $SAIDA/$j.log)" >&2
+    elif [ "$rc" = 2 ]; then echo "ci-local: $j NÃO RODOU$([ -f "$SAIDA/$j.motivo" ] && echo " ($(cat "$SAIDA/$j.motivo"))") (log $SAIDA/$j.log)" >&2
     else echo "ci-local: $j VERMELHO rc=$rc (log $SAIDA/$j.log)" >&2; fi ) &
   i=$((i + 1))
 done

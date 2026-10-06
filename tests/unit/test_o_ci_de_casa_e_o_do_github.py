@@ -212,6 +212,10 @@ TEXTO="Temporary failure resolving 'archive.ubuntu.com'"
 case ",${FAKE_REDE:-}," in *",$job,"*)
   echo "[CI/$job]   | W: Failed to fetch http://archive.ubuntu.com/InRelease  $TEXTO"
   exit 1 ;; esac
+# o docker que não respondeu ao limpar o container de um job que passou
+case ",${FAKE_DOCKER:-}," in *",$job,"*)
+  echo "[CI/$job] failed to remove container: Delete http://x: context deadline exceeded"
+  echo "Error: Error occurred running finally: context deadline exceeded"; exit 1 ;; esac
 # o mesmo texto CITADO (uma linha de teste, com número de linha): reprova, mas não é a rede
 case ",${FAKE_CITA:-}," in *",$job,"*)
   echo "[CI/$job]   | 163 | echo \"E: $TEXTO\"; exit 1"
@@ -376,6 +380,13 @@ def test_a_rede_caida_nao_e_verde_nem_vermelho_e_sai_2(mundo: Mundo) -> None:
     assert r.returncode == 2, r.stdout + r.stderr
     assert "0 vermelho(s)" in r.stdout and "1 não rodado(s) [pre-commit]" in r.stdout
     assert "a rede caiu" in mundo.log("pre-commit")
+
+
+def test_o_docker_que_nao_respondeu_nao_e_verde_nem_vermelho(mundo: Mundo) -> None:
+    r = mundo.rodar("--rapido", FAKE_DOCKER="glifos")
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "0 vermelho(s)" in r.stdout and "1 não rodado(s) [glifos]" in r.stdout
+    assert "o docker não respondeu" in mundo.log("glifos") and "NÃO RODOU (docker)" in r.stderr
 
 
 def test_o_texto_da_rede_citado_dentro_do_log_nao_e_rede(mundo: Mundo) -> None:
