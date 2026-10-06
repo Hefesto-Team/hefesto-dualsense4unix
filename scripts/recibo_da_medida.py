@@ -350,7 +350,7 @@ def chaves(raiz: Path, linhas: list[str]) -> int:
         for linha in linhas:
             if not linha.strip():
                 continue
-            campos = (linha.rstrip("\n").split("|", 3) + ["", "", "", ""])[:4]
+            campos = [*linha.rstrip("\n").split("|", 3), "", "", "", ""][:4]
             ficha, runner, argv, entradas = campos
             if not _NOME.match(ficha):
                 _avisa(f"ficha inválida {ficha!r}; o portão roda sempre")
