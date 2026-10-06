@@ -1366,6 +1366,17 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .pausa-da-inclinacao{display:contents}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
+  /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
+     coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
+     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza:
+     escolher o lado só vale com ele aceso. */
+  .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
+    padding:2px 8px;text-align:center;max-width:100%}
+  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
+  .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw .p{background:var(--border-sutil);box-shadow:none}
   /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
      «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
      dela: a coluna não tem altura para uma fileira embaixo (ver
@@ -1474,16 +1485,20 @@ ABRE_O_CARD = "Clique para abrir este controle — os outros fecham."
 LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 
 
-ROTULO_DA_MIRA_VIRTUAL = "Mira Virtual"
-DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como mira (analógico R), "
-                        "para pessoas com deficiência motora.")
+#: O ANALÓGICO VIRTUAL — 06/10/2026, leva 1.7 (desenho-navegacao, item 12). A
+#: «Mira Virtual» virou «Analógico Virtual» e o chip «Inclinação» de cada
+#: analógico virou «Usar como analógico virtual»: o chip do cabeçalho liga, o
+#: chip embaixo do analógico escolhe qual dos dois os movimentos movem. Com o
+#: chip do cabeçalho apagado, os dois de baixo ficam cinza (`.ctl:has(...)`).
+ROTULO_DA_MIRA_VIRTUAL = "Analógico Virtual"
+DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como um analógico, para "
+                        "pessoas com deficiência motora. Qual dos dois se escolhe "
+                        "embaixo de cada analógico.")
 
-ROTULO_DA_INCLINACAO = "Inclinação"
+ROTULO_DA_INCLINACAO = "Usar como analógico virtual"
 DICA_DA_INCLINACAO = {
-    "analogico_esquerdo": ("Inclinar o controle move o analógico esquerdo, para "
-                           "pessoas com deficiência motora."),
-    "analogico_direito": ("Inclinar o controle move o analógico direito, para "
-                          "pessoas com deficiência motora."),
+    "analogico_esquerdo": "Os movimentos do controle movem o analógico esquerdo.",
+    "analogico_direito": "Os movimentos do controle movem o analógico direito.",
 }
 ROTULO_DO_CURSOR = "Cursor"
 DICA_DO_CURSOR = ("Usar o touchpad deste controle como mouse no jogo; o clique "
@@ -2807,6 +2822,10 @@ MIOLO = f'''
 
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que muda em 06/10 (desenho)</h2>
+  <ul>
+    <li><b>«Mira Virtual» virou «{ROTULO_DA_MIRA_VIRTUAL}»</b>, e o chip embaixo de cada analógico virou <b>«{ROTULO_DA_INCLINACAO}»</b>: o do cabeçalho liga, o de baixo escolhe o analógico. Com o do cabeçalho apagado, os dois de baixo ficam cinza.</li>
+  </ul>
   <h2>O que mudou em 07/10</h2>
   <ul>
     <li><b>O título do cartão aberto diz quem joga</b>, como você escolheu: o <b>nome</b> que você deu ao controle na aba Conexões, e o <b>«P1»</b> só quando ele não tem nome (por exemplo, «Vitória • Galactic Purple • BT»). No «Todos», cada cartão diz o seu, na ordem dos jogadores. A tira fechada continua com o «P1 •» dela. O número, onde aparece, agora segue o do jogo: o cabeçalho, as lâmpadas e a fita dizem o mesmo.</li>

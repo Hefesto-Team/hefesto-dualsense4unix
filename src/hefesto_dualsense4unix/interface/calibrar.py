@@ -76,15 +76,21 @@ FAMILIAS = (("giro", "Giroscópio"), ("accel", "Acelerômetro"))
 SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
-ROTULO_DA_MIRA = "Mira Virtual"
+#: «MIRA VIRTUAL» VIROU «ANALÓGICO VIRTUAL» — 06/10/2026, leva 1.7
+#: (desenho-navegacao, item 12), pedido dela: *«Vamos Mudar para Analógico
+#: Virtual. E selecionar ele permite escolher entre (...) analógico esquerdo e
+#: Direito»*. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
+#: cabeçalho e os chips embaixo dos analógicos da aba Controles.
+ROTULO_DA_MIRA = "Analógico Virtual"
+LADOS = (("analogico_esquerdo", "Esquerdo"), ("analogico_direito", "Direito"))
 ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
 ROTULO_TREMOR = "Ignorar tremor até"
 UNIDADE_DO_TREMOR = "graus/s"
 SENSIBILIDADE = (1, 12, 6)
 TREMOR = (1, 60, 3)
-DE_ONDE_VEM_A_MIRA = ("Valem para o controle com a Mira Virtual acesa, na aba "
-                      "Controles. A Inclinação usa todos menos o tremor, e o "
-                      "Cursor do touchpad, só o quanto um gesto anda.")
+DE_ONDE_VEM_A_MIRA = ("Os movimentos deste controle movem o analógico escolhido, "
+                      "como na aba Controles. O Cursor do touchpad usa só o "
+                      "quanto um gesto anda.")
 
 #: A CALIBRAR COM POUCO TEXTO — 06/10/2026, leva 1.7 (desenho-navegacao, item
 #: 11). Ela: *«Tem muito texto aqui. botões tão sem padrão. E ela precisa ficar
@@ -402,6 +408,26 @@ CSS = """
                 border-top:1px solid var(--border-sutil)}
   .mira-topo{display:flex;align-items:center;gap:7px;font-size:12.5px;min-height:20px}
   .mira-topo b{font-weight:600}
+  /* O LIGA E O LADO DO ANALÓGICO VIRTUAL — 06/10/2026. A pastilha é a mesma
+     dos dois «Inverter» logo abaixo; o lado só vale com o liga aceso, e
+     apagado ele fica no cinza da casa (`.btn.apagado`), sem `opacity`. */
+  .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .av .sw{height:20px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    display:inline-flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap}
+  .av .sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
+  .av .liga:not(.off) > .sw,.av .lado.on > .sw{border-color:var(--green);
+    background:rgba(80,250,123,.09);color:var(--green)}
+  .av .liga:not(.off) > .sw .p,.av .lado.on > .sw .p{background:var(--green);
+    box-shadow:0 0 6px var(--green)}
+  .av .liga > .sw{font-weight:600;font-size:12px}
+  .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
+    background:var(--app-bg);cursor:not-allowed}
+  .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
+  .av > .ajuda{margin-left:auto}
+  /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
+  .av .lados{order:3;flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .av .lado > .sw{width:100%;justify-content:center}
   /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
      coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
      ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
@@ -429,7 +455,9 @@ CSS = """
      a mesma pastilha de 17px. É cópia declarada — esta página tem folha
      própria, como a paleta do topo —, e um interruptor com outra cara na
      mesma janela seria um segundo vocabulário para o mesmo ato. */
-  .inverter{display:flex;gap:6px;flex-wrap:wrap}
+  /* Os dois «Inverter» são um grupo: a mesma largura, lado a lado (06/10/2026). */
+  .inverter{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .inverter .sw{justify-content:center}
   .inverter .sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
     cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
     color:var(--green);display:inline-flex;align-items:center;gap:6px;padding:0 10px;
@@ -567,12 +595,32 @@ def _inverter():
             f'<span class="inverter">{botoes}</span></div>')
 
 
+def _analogico_virtual():
+    """O liga do Analógico Virtual e os dois lados, nascendo apagados.
+
+    Os endereços (`mira-ligada`, `mira-lado`) são os que o pacote vai pintar do
+    bloco `mira` do `daemon.state_full`; os dois gestos ainda não têm dono, e a
+    sprint `O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01` os liga.
+    """
+    lados = "".join(
+        f'<span class="lado" data-campo="mira-lado" data-hef-alvo="classe"'
+        f' data-hef-classe="on" data-hef-quando="{valor}">'
+        f'<button class="sw" data-gesto="analogico-lado" data-lado="{valor}">'
+        f'<span class="p"></span>{rotulo}</button></span>'
+        for valor, rotulo in LADOS)
+    return (f'<span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe"'
+            f' data-hef-classe="off" data-hef-quando="DESLIGADO">'
+            f'<button class="sw" data-gesto="analogico-virtual">'
+            f'<span class="p"></span>{ROTULO_DA_MIRA}</button></span>'
+            f'<span class="lados">{lados}</span>')
+
+
 def mira(c):
     """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu"""
     return (f'          <div class="mira" style="--plastico:{_plastico(c)}"'
             f' data-controle="{c.get("pref") or ""}">\n'
             f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
-            f'            <div class="mira-topo"><b>{ROTULO_DA_MIRA}</b>'
+            f'            <div class="mira-topo av">{_analogico_virtual()}'
             f'<span class="ajuda" tabindex="0">?<span class="dica">{DE_ONDE_VEM_A_MIRA}'
             f'</span></span></div>\n'
             f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'

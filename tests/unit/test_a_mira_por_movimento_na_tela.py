@@ -706,8 +706,12 @@ def test_o_metodo_esta_no_dispatcher() -> None:
 _RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
-_DICA_DELA = ("Usar os movimentos do controle como mira (analógico R), para "
-              "pessoas com deficiência motora.")
+#: 06/10/2026, leva 1.7 (desenho-navegacao, item 12): a frase dela de 24/09
+#: perdeu o «como mira (analógico R)», porque o lado agora se escolhe embaixo de
+#: cada analógico, e o chip passou a se chamar «Analógico Virtual».
+_DICA_DELA = ("Usar os movimentos do controle como um analógico, para "
+              "pessoas com deficiência motora. Qual dos dois se escolhe "
+              "embaixo de cada analógico.")
 
 
 def _cartoes_da_bancada() -> list[tuple[str, str]]:
@@ -727,7 +731,7 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
                            r'<span class="p"></span>([^<]*)</button></span>', miolo)
         assert len(chips) == 1, f"{abertura}: {len(chips)} chip(s) da mira"
         classe, involucro, atributos, rotulo = chips[0]
-        assert rotulo == "Mira Virtual", rotulo
+        assert rotulo == "Analógico Virtual", rotulo
         assert f'title="{_DICA_DELA}"' in atributos, atributos
         assert 'data-campo="mira-ligada"' in involucro
         assert 'data-hef-quando="DESLIGADO"' in involucro
