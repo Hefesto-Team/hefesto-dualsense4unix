@@ -92,8 +92,7 @@ e por isso ficam de fora da conta.
 | **lápide** · **nota datada** · **fato substituído** | decisão medida que caducou ganha data; número errado é trocado em todos os lugares |
 | **estado** de uma sprint | `aberta` (vale e se despacha) · `feita` (entrou, com prova) · `absorvida` (o que falta vive em outro lugar) · `caducou` (a premissa morreu). Está no frontmatter; `check_colisao_de_sprints.py --abertas` é a lista viva |
 | **sprint** · **onda** · **leva** · **costura** | uma posse de arquivos com passos e mordidas; sprints paralelas por posse; a leva é o dia; costurar é integrar em `onda/atual` |
-| **PO / orquestrador** · **agente** · **coordenador** | quem decide e despacha (o Opus, por delegação dela); quem executa UMA sprint numa worktree; quem costura e roda a suíte |
-| **a tela dela** | uma só. Toda janela de teste nasce `--oculta` ou no workspace `OS` |
+| **a tela do usuário** | uma só. Toda janela de teste nasce `--oculta` ou no workspace `OS` |
 
 ## 5. Como este arquivo se mantém
 

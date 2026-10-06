@@ -4051,7 +4051,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o comando que «devolve a barra» não faz nada na barra de um controle do cabo — no cabo não há barra tomada a devolver — e mede o preço já conhecido nas cinco lâmpadas.
 
-**Onde olhar.** No aparelho: a barra de luz (as duas tiras dos lados do touchpad) e as cinco lâmpadas entre o touchpad e o botão PS. Na tela não há mais onde mandar este comando: o botão de cada coluna que fazia isso saiu da aba Iluminação em 07/09, por ordem sua. O gesto que sobrou é um comando de terminal, e quem coordena digita por você: `hefesto-dualsense4unix lightbar-reset --uniq` seguido do endereço do controle. A aba Iluminação serve para pôr uma cor conhecida antes.
+**Onde olhar.** No aparelho: a barra de luz (as duas tiras dos lados do touchpad) e as cinco lâmpadas entre o touchpad e o botão PS. Na tela não há mais onde mandar este comando: o botão de cada coluna que fazia isso saiu da aba Iluminação em 07/09, por ordem sua. O gesto que sobrou é um comando de terminal, que você digita: `hefesto-dualsense4unix lightbar-reset --uniq` seguido do endereço do controle. A aba Iluminação serve para pôr uma cor conhecida antes.
 
 **Os passos.**
 
@@ -4086,7 +4086,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o comando que devolve a barra ao sistema, mandado a um controle do rádio já assentado, não deixa a barra dele travada — ela continua obedecendo às cores — e mede o preço conhecido nas cinco lâmpadas.
 
-**Onde olhar.** No aparelho: a barra de luz e as cinco lâmpadas entre o touchpad e o botão PS. Na tela não há mais onde mandar este comando: o botão de cada coluna que fazia isso saiu da aba Iluminação em 07/09, por ordem sua. O gesto que sobrou é o comando de terminal que quem coordena digita por você: `hefesto-dualsense4unix lightbar-reset --uniq` seguido do endereço do controle. A aba Iluminação serve para pôr uma cor conhecida antes e para conferir depois que a barra obedece.
+**Onde olhar.** No aparelho: a barra de luz e as cinco lâmpadas entre o touchpad e o botão PS. Na tela não há mais onde mandar este comando: o botão de cada coluna que fazia isso saiu da aba Iluminação em 07/09, por ordem sua. O gesto que sobrou é o comando de terminal: `hefesto-dualsense4unix lightbar-reset --uniq` seguido do endereço do controle. A aba Iluminação serve para pôr uma cor conhecida antes e para conferir depois que a barra obedece.
 
 **Os passos.**
 

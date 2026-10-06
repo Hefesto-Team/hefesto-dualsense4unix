@@ -107,7 +107,7 @@ def test_pin_e_chave_sao_recusados_e_o_que_so_mostra_passa(
 def test_o_agente_atende_sem_pedir_a_trava(
     barramento: bm.BarramentoDeMentira, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de quem coordena: o agente NUNCA pede a trava do rádio."""
+    """Decisão de produto: o agente NUNCA pede a trava do rádio."""
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.5)
     agente = _agente(barramento)
     tratador = barramento.exportados[CAMINHO_DO_AGENTE]
