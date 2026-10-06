@@ -7,13 +7,16 @@ from playwright.sync_api import sync_playwright
 
 R = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(R / "src"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import chrome_sem_rede as _rede
 
 from hefesto_dualsense4unix.interface import aba02 as _aba02
 from hefesto_dualsense4unix.interface import onde as _onde
 
 LARGURAS = (1120, 1180, 1440)
 
-CHROME = "/usr/bin/google-chrome"
+CHROME = _rede.CHROME
 
 FOLGA_DO_TEXTO = 0.5
 
@@ -57,18 +60,31 @@ _MEDIR = r"""() => {
 }"""
 
 
-def medir(caminho: pathlib.Path, largura: int) -> dict:
-    """Abre a página numa janela de `largura` e devolve o que o navegador viu."""
+def medir(caminho: pathlib.Path, larguras: tuple[int, ...] | int) -> dict:
+    """Abre a página em cada largura e devolve o que o navegador viu.
+
+    Um navegador para as três larguras (o lançamento do Chrome era o grosso do
+    custo), a rede recusada (`chrome_sem_rede`) e a espera pelo desenho assentado.
+    Com uma largura só devolve o resultado dela; com várias, `{largura: resultado}`.
+    """
+    uma = isinstance(larguras, int)
+    lista = (larguras,) if isinstance(larguras, int) else larguras
+    saida: dict = {}
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
-        pg = b.new_page(viewport={"width": largura, "height": 1080},
-                        device_scale_factor=1)
-        pg.goto(caminho.as_uri())
-        pg.wait_for_load_state("networkidle")
-        pg.wait_for_timeout(250)
-        visto = pg.evaluate(_MEDIR.replace("FOLGA", repr(FOLGA_DO_TEXTO)))
-        b.close()
-    return visto
+        try:
+            for largura in lista:
+                pg, _recusadas = _rede.abrir_sem_rede(
+                    b, caminho.as_uri(), largura=largura, altura=1080,
+                    device_scale_factor=1)
+                try:
+                    saida[largura] = pg.evaluate(
+                        _MEDIR.replace("FOLGA", repr(FOLGA_DO_TEXTO)))
+                finally:
+                    pg.close()
+        finally:
+            b.close()
+    return saida[lista[0]] if uma else saida
 
 
 def main(argv: list[str]) -> int:
@@ -82,8 +98,9 @@ def main(argv: list[str]) -> int:
     print(f"=== a altura do cartão · {pagina.name} "
           f"({'publicado' if publicado else 'bancada'}) · teto {teto}px ===")
     falhas: list[str] = []
+    vistos = medir(pagina, LARGURAS)
     for larg in LARGURAS:
-        visto = medir(pagina, larg)
+        visto = vistos[larg]
         cartoes = visto["cartoes"]
         if not cartoes:
             falhas.append(f"{larg}px: nenhum cartão aberto na página — o "

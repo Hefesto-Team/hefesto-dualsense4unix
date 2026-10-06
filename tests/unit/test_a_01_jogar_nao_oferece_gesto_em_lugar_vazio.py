@@ -77,9 +77,11 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
+for _caminho in (str(RAIZ / "src"), str(INTERFACE), str(RAIZ / "scripts")):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
+
+import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
@@ -161,24 +163,28 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
 """
 
 
+def abrir_e_medir(arquivo: pathlib.Path) -> dict:
+    """Abre a página SEM a rede e devolve o que o Chrome desenha nos três estados."""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(
+            executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg, _recusadas = chrome_sem_rede.abrir_sem_rede(
+                navegador, arquivo.as_uri(), largura=1280, altura=900)
+            saida = pg.evaluate(O_QUE_O_NAVEGADOR_DESENHA)
+        finally:
+            navegador.close()
+    return dict(saida)
+
+
 @pytest.fixture(scope="module")
 def medido(tmp_path_factory: pytest.TempPathFactory) -> dict:
     """O que o Chrome desenha, nos três estados — uma abertura para todos."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    from playwright.sync_api import sync_playwright
-
-    arquivo = _gerar(tmp_path_factory.mktemp("jogar"))
-    with sync_playwright() as pw:
-        navegador = pw.chromium.launch(
-            executable_path=str(CHROME), args=["--no-sandbox"])
-        try:
-            pg = navegador.new_page(viewport={"width": 1280, "height": 900})
-            pg.goto(arquivo.as_uri())
-            saida = pg.evaluate(O_QUE_O_NAVEGADOR_DESENHA)
-        finally:
-            navegador.close()
-    return dict(saida)
+    return abrir_e_medir(_gerar(tmp_path_factory.mktemp("jogar")))
 
 
 def _lugares(estado: dict, marca: str) -> dict:
