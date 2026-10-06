@@ -1521,9 +1521,13 @@ if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_T
         f"{sorted(set(ROTULOS_DA_TROCA) - _ROTULOS_DO_DESENHO)}; sem troca: "
         f"{SEM_TROCA!r} x {_SEM_TROCA_DO_PACOTE!r}")
 
+#: 06/10/2026, conferência da leva 1.7: «Vale para este perfil» era fato
+#: errado. O gesto grava `desktop.status.set`, que é da máquina
+#: (`a06_navegacao.py`, a nota dos globais), e a Interna é da janela
+#: (`D-2909-A-NAVEGACAO-INTERNA-E-DA-JANELA`): nenhum dos dois tipos é do perfil.
 D_QUANDO = ajuda(
-    "Liga o <b>tipo de navegação</b> escolhido logo abaixo. Vale para "
-    "<b>este perfil</b>. <b>Desligado</b>, o controle é só gamepad.",
+    "Liga e desliga o <b>tipo de navegação</b> escolhido logo abaixo, em "
+    "<b>todos os perfis</b>. <b>Desligado</b>, o controle é só gamepad.",
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
     "Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado "
