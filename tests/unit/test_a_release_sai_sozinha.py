@@ -1532,8 +1532,8 @@ def _eventos(arquivo: Path) -> set[tuple[str, str]]:
 def test_a_triagem_ouve_so_o_rotulo_aceito_e_o_rotulos_yml_ouve_outros_eventos() -> None:
     triagem = _eventos(TRIAGEM_YML)
     assert triagem == {("issues", "labeled")}
-    # o dono de cada coisa: o que acontece quando a issue ABRE ou é EDITADA é do `rotulos.yml`, e o que
-    # acontece quando ela é ACEITA é da triagem; nenhum evento é dos dois
+    # o dono de cada coisa: o que acontece quando a issue ABRE ou é EDITADA é do `rotulos.yml`, e
+    # o que acontece quando ela é ACEITA é da triagem; nenhum evento é dos dois
     assert triagem.isdisjoint(_eventos(ROTULOS_YML))
     job = yaml.safe_load(TRIAGEM_YML.read_text(encoding="utf-8"))["jobs"]["aceita"]
     assert job["if"] == "github.event.label.name == 'aceito'"
