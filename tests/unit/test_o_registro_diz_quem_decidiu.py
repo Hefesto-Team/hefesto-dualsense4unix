@@ -190,7 +190,9 @@ def test_a_regra_do_preco_morde_numa_copia(tmp_path, monkeypatch) -> None:
         test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado()
 
     sem_coluna = tmp_path / "sem-coluna.csv"
-    sem_coluna.write_text("id,titulo,a_pergunta,recomendacao,estado\nD-Y,t,p,r,aberta\n", encoding="utf-8")
+    sem_coluna.write_text(
+        "id,titulo,a_pergunta,recomendacao,estado\nD-Y,t,p,r,aberta\n", encoding="utf-8"
+    )
     monkeypatch.setattr(sys.modules[__name__], "CSV_", sem_coluna, raising=True)
     with pytest.raises(AssertionError, match="preco_do_outro_lado"):
         test_o_registro_tem_as_colunas_que_mordem()
