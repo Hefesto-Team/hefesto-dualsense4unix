@@ -1371,7 +1371,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza:
      escolher o lado só vale com ele aceso. */
   .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
-    padding:2px 8px;text-align:center;max-width:100%}
+    padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
   .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
