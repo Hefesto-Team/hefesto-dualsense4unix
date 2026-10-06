@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""renomear-o-dela.py — os nomes de arquivo versionados perdem a palavra «dela».
+"""neutralizar-os-nomes.py — os nomes de arquivo versionados perdem a palavra «dela».
 
 O projeto é de quem usa; um nome de arquivo não aponta para uma pessoa. Este
 script faz a parte mecânica, e só ela:
@@ -12,9 +12,9 @@ script faz a parte mecânica, e só ela:
 
 Uso::
 
-    python3 scripts/renomear-o-dela.py --conferir   # diz o que faria; rc=1 se faria algo
-    python3 scripts/renomear-o-dela.py --aplicar    # faz; rodar de novo não muda nada
-    python3 scripts/renomear-o-dela.py --tsv        # imprime a tabela (velho<TAB>novo)
+    python3 scripts/neutralizar-os-nomes.py --conferir   # diz o que faria; rc=1 se faria algo
+    python3 scripts/neutralizar-os-nomes.py --aplicar    # faz; rodar de novo não muda nada
+    python3 scripts/neutralizar-os-nomes.py --tsv        # imprime a tabela (velho<TAB>novo)
 
 Contrato das ferramentas da casa: idempotente, ``--conferir``, resumo em UMA linha
 (o detalhe vai para ``--detalhe ARQUIVO``). O que não é versionado (``docs/process/``
@@ -146,14 +146,14 @@ def main(argv: list[str] | None = None) -> int:
     a_mover = [(v, n) for v, n in TABELA.items() if v in presentes]
     colisoes = [n for _, n in a_mover if n in presentes]
     if colisoes:
-        print(f"renomear-o-dela: colisão de nome: {colisoes}", file=sys.stderr)
+        print(f"neutralizar-os-nomes: colisão de nome: {colisoes}", file=sys.stderr)
         return 2
     regras = pares_de_nome(TABELA)
     detalhe: list[str] = [f"mv {v} -> {n}" for v, n in a_mover]
 
     mudados: list[str] = []
     for rel in sorted(presentes):
-        if not _texto(rel) or rel.startswith("docs/process/") or rel == "scripts/renomear-o-dela.py":
+        if not _texto(rel) or rel.startswith("docs/process/") or rel == "scripts/neutralizar-os-nomes.py":
             continue
         caminho = RAIZ / rel
         if not caminho.is_file():
@@ -176,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.detalhe).write_text("\n".join(detalhe) + "\n", encoding="utf-8")
     faria = bool(a_mover or mudados)
     verbo = "feito" if args.aplicar else "faria"
-    print(f"renomear-o-dela: {verbo} {len(a_mover)} renomes e {len(mudados)} arquivos com referência trocada")
+    print(f"neutralizar-os-nomes: {verbo} {len(a_mover)} renomes e {len(mudados)} arquivos com referência trocada")
     return 1 if (faria and args.conferir) else 0
 
 

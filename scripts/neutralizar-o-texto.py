@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tirar-o-dela-do-texto.py — o «dela» que aponta para a pessoa sai de comentário e docstring.
+"""neutralizar-o-texto.py — o «dela» que aponta para a pessoa sai de comentário e docstring.
 
 O produto é para qualquer usuário, e um texto versionado não fala de quem o mantém
 na terceira pessoa. A troca é por padrão, e só no que é PROSA:
@@ -10,11 +10,13 @@ na terceira pessoa. A troca é por padrão, e só no que é PROSA:
 
 Nenhuma string de código (mensagem de teste, texto de tela, valor de dado) é tocada:
 a tela fica byte a byte igual. O que o padrão não reconhece fica como está e aparece
-em ``--sobra`` para revisão à mão.
+em ``--sobra`` para revisão à mão. A fala literal entre aspas também não é tocada: tirá-la
+pede reescrever a oração em volta, e a troca por padrão deixava a frase pela metade
+(«disse .», «palavra de produto: **.»).
 
-    python3 scripts/tirar-o-dela-do-texto.py --conferir   # rc=1 se mudaria algo
-    python3 scripts/tirar-o-dela-do-texto.py --aplicar    # idempotente
-    python3 scripts/tirar-o-dela-do-texto.py --sobra      # lista o «dela» que sobrou
+    python3 scripts/neutralizar-o-texto.py --conferir   # rc=1 se mudaria algo
+    python3 scripts/neutralizar-o-texto.py --aplicar    # idempotente
+    python3 scripts/neutralizar-o-texto.py --sobra      # lista o «dela» que sobrou
 
 Resumo numa linha; ``--detalhe ARQUIVO`` grava a lista de arquivos.
 """
@@ -40,8 +42,8 @@ PREFIXOS = (
 FORA = (
     "src/hefesto_dualsense4unix/interface/paginas/",
     "tests/fixtures/",
-    "scripts/tirar-o-dela-do-texto.py",
-    "scripts/renomear-o-dela.py",
+    "scripts/neutralizar-o-texto.py",
+    "scripts/neutralizar-os-nomes.py",
 )
 EXT_CODIGO = {".py": "py", ".sh": "sh", ".html": "html", ".css": "css", ".js": "js"}
 EXT_PROSA = {".md", ".txt"}
@@ -80,6 +82,14 @@ REGRAS: list[tuple[re.Pattern[str], str]] = [
     (_c(_E + r"(" + _NOMES_DE_DECISAO + r") dela" + _DATA, re.I), r"\1"),
     # a bancada é a bancada
     (_c(_E + r"(?:mesa|bancada) dela" + _D, re.I), "bancada"),
+    # a medição foi na bancada: a máquina, a TV e o diário em que se mediu são da bancada
+    (_c(_E + r"(medid[oa]s?|conferid[oa]s?|rodad[oa]s?|testad[oa]s?|observad[oa]s?|vist[oa]s?) na máquina dela" + _D, re.I), r"\1 na bancada"),
+    (_c(_E + r"na máquina dela(?=,? (?:em|às|de|no dia) \d)", re.I), "na bancada"),
+    (_c(_E + r"máquina dela(?=,? (?:em|às) \d)", re.I), "máquina da bancada"),
+    (_c(_E + r"(tv|journal) dela" + _D, re.I), r"\1 da bancada"),
+    # quem recebe a pergunta é o usuário
+    (_c(_E + r"(levad[oa]s?|mostrad[oa]s?|perguntad[oa]s?|explicad[oa]s?|apresentad[oa]s?|entregues?) a ela" + _D, re.I), r"\1 ao usuário"),
+    (_c(_E + r"(nas|com as|pelas) palavras dela" + _D, re.I), r"\1 palavras do usuário"),
     # o olho de quem confere
     (_c(_E + r"olho dela" + _D, re.I), "olho de quem confere"),
     # citação e literal: o «dela» some e a palavra fica
@@ -113,66 +123,6 @@ REGRAS: list[tuple[re.Pattern[str], str]] = [
         re.I), r"\g<cab>\2 do usuário"),
 ]
 
-# Fala dela entre aspas depois de uma etiqueta de citação: a etiqueta e a fala saem.
-_FALA = (r'\*["“«](?:[^"”»\n]|(?:\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?(?![ \t]))){1,600}?["”»]\*')
-REGRAS_DE_FALA: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(_E + r"Ela[:,]?\s*" + _FALA + r"[.;,]?"), ""),
-    (re.compile(
-        _E + r"(?:pedido|ordem|frase|palavra|queixa|resposta|decisão|escolha|cita[çc][ãa]o|enunciado)"
-        r"(?: literal| de produto)?(?: de \d{1,2}/\d{1,2}(?:/\d{2,4})?)?\s*[:—–-]\s*" + _FALA + r"[.;,]?",
-        re.I), ""),
-]
-
-
-# A voz crua do usuário (abreviação, primeira pessoa) é fala literal: o porquê técnico fica, a fala sai.
-_VOZ = re.compile(
-    r"(?<![\w-])(pq|tá|tô|vc|vcs|pra|né|n[a]o|mto|tbm|ta|q|eu|meu|minha|minhas|mim|me|vou|quero|queria|tenho|acho|"
-    r"vamos|temos|podemos|nosso|nossa|nossos)(?![\w-])", re.I)
-_NL = r"(?:\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?(?![ \t]))"          # quebra de linha dentro de comentário ou docstring
-_MIOLO = r"(?:[^\"”»\n]|" + _NL + r"){12,600}?"
-_QUOTE = (r'(?:\*["“«]' + _MIOLO + r'["”»]\*|«(?:[^»\n]|' + _NL + r'){25,600}?»|'
-          r'(?<![\w`])"[^"\n]{25,400}"(?![\w`]))')
-_MARCA = (r"(?:[ \t]*(?:<!--[ \t]*\(?noqa-acento[^\n]*?-->|#[ \t]*\(?noqa-acento[^\n]*|\(noqa-acento[^\n)]*\)))?")
-_QUOTE_RX = re.compile(_QUOTE)
-_AMARRAS = [
-    re.compile(r"\s*[:—–-]\s*(?:\*\*)?" + _QUOTE + _MARCA + r"(?=\s*(?:[.;,)\]]|$))", re.M),
-    re.compile(r"\s*\(\s*" + _QUOTE + r"\s*\)" + _MARCA),
-    re.compile(r"\s*,\s*" + _QUOTE + _MARCA + r"(?=\s*(?:[.;)]|$))", re.M),
-]
-
-
-_VOZ_FORTE = re.compile(
-    r"(?<![\w-])(pq|tá|tô|vc|vcs|pra|né|n[a]o|mto|tbm|ta|eu|meu|minha|minhas|mim|quero|queria|acho|vamos|"
-    r"imagina|seto|setar|clico|clicar)(?![\w-])", re.I)
-#: citação em aspas simples-duplas, em várias linhas, escrita na voz crua do usuário (minúscula ou CAIXA ALTA)
-_PLANA = re.compile(r'(?<![\w`"])"(?P<fala>(?:[^"\n]|' + _NL + r'){40,900}?)"' + _MARCA + r'(?![\w`"])')
-
-
-def _plana_crua(m: re.Match[str]) -> str:
-    fala = m.group("fala").lstrip()
-    if not _VOZ_FORTE.search(fala):
-        return m.group(0)
-    letras = [c for c in fala if c.isalpha()]
-    if fala[:1].islower() or (letras and all(c.isupper() for c in letras)):
-        return ""
-    return m.group(0)
-
-
-def tirar_fala_crua(texto: str) -> str:
-    """Tira a citação literal em voz crua; devolve o texto como veio se não houver."""
-    if not _QUOTE_RX.search(texto):
-        return texto
-
-    def so_se_crua(m: re.Match[str]) -> str:
-        return "" if _VOZ.search(m.group(0)) else m.group(0)
-
-    for amarra in _AMARRAS:
-        texto = amarra.sub(so_se_crua, texto)
-    texto = _PLANA.sub(_plana_crua, texto)
-    solta = re.compile(_QUOTE + _MARCA)
-    return solta.sub(lambda m: "" if _VOZ.search(m.group(0)) and m.group(0).startswith("*") else m.group(0), texto)
-
-
 def _adaptar(achado: str, troca: str) -> str:
     letras = [c for c in achado if c.isalpha()]
     if len(letras) > 1 and all(c.isupper() for c in letras):
@@ -182,29 +132,22 @@ def _adaptar(achado: str, troca: str) -> str:
     return troca
 
 
-_COM_FALA = True
-
 
 def reescrever_prosa(texto: str) -> str:
     """Aplica as regras a um pedaço de prosa."""
-    if "ela" not in texto.lower() and "*" not in texto and "«" not in texto and '"' not in texto:
+    if "ela" not in texto.lower():
         return texto
     for padrao, troca in REGRAS:
         def _sub(m: re.Match[str], troca: str = troca) -> str:
             novo = _adaptar(m.group(0), m.expand(troca))
             q = _QUEBRA.search(m.group(0))
             if q and "\n" in q.group(0):
-                if troca.startswith("o usuário "):
-                    i = novo.rfind(" ")
-                else:
-                    i = novo.find(" ")
+                i = novo.rfind(" ") if troca.startswith("o usuário ") else novo.find(" ")
                 if i > 0:
                     novo = novo[:i] + q.group(0) + novo[i + 1:]
             return novo
         texto = padrao.sub(_sub, texto)
-    for padrao, troca in REGRAS_DE_FALA:
-        texto = padrao.sub(troca, texto)
-    return tirar_fala_crua(texto) if _COM_FALA else texto
+    return texto
 
 
 # --------------------------------------------------------------------------
@@ -238,11 +181,11 @@ def _spans_py(texto: str) -> list[tuple[int, int]]:
         arvore = None
     if arvore is not None:
         for no in ast.walk(arvore):
-            if isinstance(no, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-                if no.body and isinstance(no.body[0], ast.Expr):
-                    v = no.body[0].value
-                    if isinstance(v, ast.Constant) and isinstance(v.value, str) and v.end_lineno:
-                        spans.append((linhas[v.lineno - 1] + v.col_offset, linhas[v.end_lineno - 1] + v.end_col_offset))
+            documentavel = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+            if isinstance(no, documentavel) and no.body and isinstance(no.body[0], ast.Expr):
+                v = no.body[0].value
+                if isinstance(v, ast.Constant) and isinstance(v.value, str) and v.end_lineno:
+                    spans.append((linhas[v.lineno - 1] + v.col_offset, linhas[v.end_lineno - 1] + v.end_col_offset))
     # comentário de HTML, CSS e JS só conta quando mora DENTRO de uma string do gerador
     strings: list[tuple[int, int]] = []
     if arvore is not None:
@@ -289,22 +232,15 @@ def _aparar(linha: str) -> str:
 
 
 def reescrever_arquivo(texto: str, tipo: str) -> str:
-    """Reescreve; em Python, o resultado tem de continuar compilando, senão tenta sem tirar a fala e, por fim, não toca."""
-    global _COM_FALA
-    for com_fala in (True, False):
-        _COM_FALA = com_fala
-        try:
-            novo = _reescrever_arquivo(texto, tipo)
-        finally:
-            _COM_FALA = True
-        if tipo != "py" or novo == texto:
-            return novo
-        try:
-            ast.parse(novo)
-            return novo
-        except SyntaxError:
-            continue
-    return texto
+    """Reescreve; em Python, o resultado tem de continuar compilando, senão o arquivo fica como está."""
+    novo = _reescrever_arquivo(texto, tipo)
+    if tipo != "py" or novo == texto:
+        return novo
+    try:
+        ast.parse(novo)
+    except SyntaxError:
+        return texto
+    return novo
 
 
 def _reescrever_arquivo(texto: str, tipo: str) -> str:
@@ -321,7 +257,7 @@ def _reescrever_arquivo(texto: str, tipo: str) -> str:
     antigas = texto.split("\n")
     saida = novo.split("\n")
     if len(antigas) == len(saida):
-        saida = [n if n == o else _aparar(n) for o, n in zip(antigas, saida)]
+        saida = [n if n == o else _aparar(n) for o, n in zip(antigas, saida, strict=True)]
         return "\n".join(saida)
     velhas = set(antigas)
     final: list[str] = []
@@ -390,10 +326,10 @@ def main(argv: list[str] | None = None) -> int:
         corpo = mudados if not args.sobra else linhas_da_sobra
         Path(args.detalhe).write_text("\n".join(corpo) + "\n", encoding="utf-8")
     if args.sobra:
-        print(f"tirar-o-dela-do-texto: sobram {sobra} linhas com «dela» em prosa")
+        print(f"neutralizar-o-texto: sobram {sobra} linhas com «dela» em prosa")
         return 0
     verbo = "feito" if args.aplicar else "faria"
-    print(f"tirar-o-dela-do-texto: {verbo} em {len(mudados)} arquivos")
+    print(f"neutralizar-o-texto: {verbo} em {len(mudados)} arquivos")
     return 1 if (mudados and args.conferir) else 0
 
 

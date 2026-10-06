@@ -6,7 +6,7 @@ que a decisão nasceu. Três réguas, e todas mordem:
 
 1. nenhum nome de arquivo versionado leva a palavra «dela»;
 2. nenhuma colocação de narrador ou de processo volta a texto versionado;
-3. as regras do ``scripts/tirar-o-dela-do-texto.py`` já não acham nada para trocar.
+3. as regras do ``scripts/neutralizar-o-texto.py`` já não acham nada para trocar.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-SCRIPT = RAIZ / "scripts" / "tirar-o-dela-do-texto.py"
+SCRIPT = RAIZ / "scripts" / "neutralizar-o-texto.py"
 
 #: As colocações são montadas por partes de propósito: o texto deste arquivo é versionado e
 #: a própria régua o leria. O «agente» do BlueZ não entra: é do produto
@@ -51,17 +51,13 @@ FORA = (
     "docs/data/paridade-gtk-html.csv",
     "docs/specs.html",  # gerado do mapa
     "docs/usage/assets/CONFERIDO-EM.txt",  # o razão das fotos: o texto de cada dia
-    "scripts/tirar-o-dela-do-texto.py",  # cita as colocações para trocá-las
-    "scripts/renomear-o-dela.py",
+    "scripts/neutralizar-o-texto.py",  # cita as colocações para trocá-las
+    "scripts/neutralizar-os-nomes.py",
     "tests/unit/test_o_codigo_nao_tem_narrador.py",  # este arquivo
     "tests/unit/test_check_autoria.py",  # a régua de autoria cita o vocabulário que veda
     "tests/unit/test_anonimato_workflow_fail_closed.py",
     "scripts/check_texto_publico.py",
 )
-
-#: As duas ferramentas citam a palavra no próprio nome, para trocá-la.
-NOMES_DA_FERRAMENTA = {"scripts/renomear-o-dela.py", "scripts/tirar-o-dela-do-texto.py"}
-
 
 def _versionados() -> list[str]:
     saida = subprocess.run(
@@ -76,8 +72,6 @@ def nomes_com_dela(caminhos: list[str]) -> list[str]:
     """Os caminhos em que algum nome de arquivo ou de pasta tem a palavra «dela»."""
     achados = []
     for caminho in caminhos:
-        if caminho in NOMES_DA_FERRAMENTA:
-            continue
         pedacos = re.split(r"[^A-Za-zÀ-ÿ]+", caminho)
         if "dela" in [p.lower() for p in pedacos]:
             achados.append(caminho)
@@ -124,13 +118,13 @@ def test_as_regras_do_script_nao_acham_mais_nada_para_trocar() -> None:
         check=False,
     )
     assert corrida.returncode == 0, (
-        "o «dela» que aponta para a pessoa voltou: rode `scripts/tirar-o-dela-do-texto.py "
+        "o «dela» que aponta para a pessoa voltou: rode `scripts/neutralizar-o-texto.py "
         f"--aplicar`. Saída: {corrida.stdout.strip()[-300:]}"
     )
 
 
 def _carregar_o_script() -> Any:
-    especificacao = importlib.util.spec_from_file_location("tirar_o_dela", SCRIPT)
+    especificacao = importlib.util.spec_from_file_location("neutralizar_o_texto", SCRIPT)
     assert especificacao and especificacao.loader
     modulo = importlib.util.module_from_spec(especificacao)
     especificacao.loader.exec_module(modulo)
