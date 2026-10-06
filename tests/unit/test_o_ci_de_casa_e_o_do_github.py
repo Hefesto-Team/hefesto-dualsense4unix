@@ -486,6 +486,30 @@ def test_o_checkout_com_ref_vira_o_da_arvore_local(mundo: Mundo) -> None:
     )
 
 
+def test_a_matriz_de_runners_roda_uma_perna_por_chamada_com_a_imagem_dela(mundo: Mundo) -> None:
+    """Com as duas imagens no mesmo `-P` o act dava a MESMA imagem às duas pernas, e ao acaso."""
+    mundo.rodar("--job", "deb")
+    log = mundo.log("deb")
+    assert "=== a perna ubuntu-24.04 (rc=0)" in log and "=== a perna ubuntu-22.04 (rc=0)" in log
+    chamadas = [ln for ln in log.splitlines() if ln.startswith("ARGS:")]
+    assert len(chamadas) == 2, chamadas
+    assert "--matrix os:ubuntu-24.04" in chamadas[0] and "ubuntu-22.04=" not in chamadas[0]
+    assert "--matrix os:ubuntu-22.04" in chamadas[1]
+    assert "ubuntu-22.04=catthehacker/ubuntu:act-22.04" in chamadas[1]
+
+
+def test_o_job_sem_matriz_de_runners_roda_numa_chamada_so(mundo: Mundo) -> None:
+    mundo.rodar("--job", "glifos")
+    log = mundo.log("glifos")
+    assert len([ln for ln in log.splitlines() if ln.startswith("ARGS:")]) == 1
+    assert "--matrix" not in log.split("---YAML---")[0]
+
+
+def test_uma_perna_vermelha_faz_o_job_vermelho(mundo: Mundo) -> None:
+    r = mundo.rodar("--job", "deb", FAKE_FALHA="deb")
+    assert r.returncode == 1 and "1 vermelho(s) [deb]" in r.stdout
+
+
 def test_job_que_fica_fora_de_casa_nao_roda_calado(mundo: Mundo) -> None:
     r = mundo.rodar("--job", "pypi")
     assert r.returncode == 2 and "não roda em casa" in r.stderr

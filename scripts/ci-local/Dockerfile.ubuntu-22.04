@@ -1,0 +1,7 @@
+# A imagem do `ci-local.sh` para os jobs que rodam no `ubuntu-22.04`: a do `act` para o Ubuntu 22.04 mais o
+# que o runner do GitHub traz e ela não. Cada linha nasce de uma falha medida, com o job que a mostrou:
+#   python3-dev     o job `deb` (perna 22.04): `Python.h: No such file` ao compilar o evdev do venv do .deb
+FROM catthehacker/ubuntu:act-22.04
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-dev \
+    && rm -rf /var/lib/apt/lists/*

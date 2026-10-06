@@ -209,11 +209,21 @@ if [ -z "$IMAGEM" ]; then
   fi
 fi
 IMAGEM_22=""
+DOCKERFILE_22="$RAIZ/scripts/ci-local/Dockerfile.ubuntu-22.04"
 for j in "${JOBS[@]}"; do
   [ "$(campo ROLA "$j" 4)" = ubuntu-22.04 ] || continue
-  docker image inspect "$BASE_22" >/dev/null 2>&1 || docker pull -q "$BASE_22" >/dev/null 2>&1 \
-    || { echo "ci-local: a imagem $BASE_22 (do job $j) não baixou (rede?); nada rodou" >&2; exit 2; }
-  IMAGEM_22="$BASE_22"
+  if [ -f "$DOCKERFILE_22" ]; then
+    IMAGEM_22="hefesto-ci-local-22:$(sha256sum "$DOCKERFILE_22" | cut -c1-10)"
+    if ! docker image inspect "$IMAGEM_22" >/dev/null 2>&1; then
+      echo "ci-local: montando a imagem $IMAGEM_22 sobre $BASE_22 (uma vez só)" >&2
+      docker build -q -t "$IMAGEM_22" -f "$DOCKERFILE_22" "$RAIZ/scripts/ci-local" >/dev/null 2>&1 \
+        || { echo "ci-local: a imagem $IMAGEM_22 (do job $j) não montou (rede?); nada rodou" >&2; exit 2; }
+    fi
+  else
+    docker image inspect "$BASE_22" >/dev/null 2>&1 || docker pull -q "$BASE_22" >/dev/null 2>&1 \
+      || { echo "ci-local: a imagem $BASE_22 (do job $j) não baixou (rede?); nada rodou" >&2; exit 2; }
+    IMAGEM_22="$BASE_22"
+  fi
 done
 
 mkdir -p "$SAIDA" "$CASA/ci-local/artefatos"
@@ -291,20 +301,16 @@ yaml_de() { # job -> caminho do YAML (o original, ou a cópia filtrada)
 SUJA=""
 if ! git -C "$RAIZ" diff --cached --quiet HEAD -- 2>/dev/null; then SUJA=" (índice com mudança não commitada)"; fi
 
-rodar_job() { # job índice
-  local job="$1" i="$2" yml log rc ini extras=() porta
-  log="$SAIDA/$job.log"
-  ini=$(date +%s)
-  yml="$(yaml_de "$job")" || { echo "ci-local: o job '$job' não está em workflow nenhum" > "$log"; echo 2 > "$SAIDA/$job.rc"; return 2; }
-  porta=$((30000 + ($$ % 3000) * 10 + i % 10))
-  local arquivo_do_yaml; arquivo_do_yaml="$(arquivo_do_job "$job")"
-  if [ -n "$(campo EM-TAG "$arquivo_do_yaml" 3)" ]; then
-    local versao; versao="$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$ARV/pyproject.toml" 2>/dev/null | head -1)"
-    printf '{"ref": "refs/tags/v%s"}\n' "${versao:-0.0.0-local}" > "$TMP/tag-$job.json"
-    extras+=(-e "$TMP/tag-$job.json")
+chamar_act() { # job yml log porta [rótulo do runner da matriz]
+  local job="$1" yml="$2" log="$3" porta="$4" rotulo="${5:-}" extras=()
+  [ -f "$TMP/tag-$job.json" ] && extras+=(-e "$TMP/tag-$job.json")
+  # A matriz de runners (`runs-on: ${{ matrix.os }}`) roda UMA perna por chamada: com as duas imagens no mesmo
+  # `-P`, o act dá a mesma imagem às duas pernas (a ordem do mapa muda de corrida para corrida: medido em
+  # 06/10/2026, o `deb` rodou as duas pernas no noble numa corrida e no jammy na outra).
+  if [ -n "$rotulo" ]; then
+    extras+=(--matrix "os:$rotulo")
+    [ "$rotulo" = ubuntu-22.04 ] && extras+=(-P "ubuntu-22.04=$IMAGEM_22")
   fi
-  [ -n "$IMAGEM_22" ] && extras+=(-P "ubuntu-22.04=$IMAGEM_22")
-  # shellcheck disable=SC2086
   (
     cd "$ARV" || exit 2
     "$ACT" push -W "$yml" -j "$job" \
@@ -318,7 +324,31 @@ rodar_job() { # job índice
       --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env 'GIT_CONFIG_VALUE_0=*' \
       "${OPCOES[@]}" ${CI_LOCAL_ACT_EXTRA:-} >"$log" 2>&1
   )
-  rc=$?
+}
+
+rodar_job() { # job índice
+  local job="$1" i="$2" yml log rc=0 r ini porta rot arquivo_do_yaml versao rotulos=("")
+  log="$SAIDA/$job.log"
+  ini=$(date +%s)
+  yml="$(yaml_de "$job")" || { echo "ci-local: o job '$job' não está em workflow nenhum" > "$log"; echo 2 > "$SAIDA/$job.rc"; return 2; }
+  porta=$((30000 + ($$ % 3000) * 10 + i % 10))
+  arquivo_do_yaml="$(arquivo_do_job "$job")"
+  if [ -n "$(campo EM-TAG "$arquivo_do_yaml" 3)" ]; then
+    versao="$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$ARV/pyproject.toml" 2>/dev/null | head -1)"
+    printf '{"ref": "refs/tags/v%s"}\n' "${versao:-0.0.0-local}" > "$TMP/tag-$job.json"
+  fi
+  [ "$(campo ROLA "$job" 4)" = ubuntu-22.04 ] && rotulos=(ubuntu-24.04 ubuntu-22.04)
+  : > "$log"
+  for rot in "${rotulos[@]}"; do
+    if [ -z "$rot" ]; then
+      chamar_act "$job" "$yml" "$log" "$porta"; r=$?
+    else
+      chamar_act "$job" "$yml" "$log.$rot" "$porta" "$rot"; r=$?
+      { echo "=== a perna $rot (rc=$r)"; cat "$log.$rot"; } >> "$log"; rm -f "$log.$rot"
+    fi
+    # vermelho vale mais que não rodado, que vale mais que verde
+    if [ "$r" != 0 ]; then case "$rc" in 0 | 2) rc=$r ;; esac; fi
+  done
   # Reprovou porque a rede caiu: não é defeito do job, e não rodar não é verde.
   if [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE -e "$REDE_PASSO" -e "$REDE_ACT" "$log"; then
     echo "ci-local: a rede caiu no meio deste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
@@ -328,23 +358,6 @@ rodar_job() { # job índice
   echo $(( $(date +%s) - ini )) > "$SAIDA/$job.seg"
   return "$rc"
 }
-
-# As actions (`setup-python`…) o `act` clona em ~/.cache/act; dois `act` clonando juntos se pisam
-# («Unable to reset to <sha>: EOF»). Com todas as cópias já ali, `--action-offline-mode` não baixa
-# de novo (e a corrida sai rápida e sem rede); faltando alguma, um job de cada vez até ela existir.
-acoes_em_falta() { # as actions (fora o checkout, que o act troca pela árvore) dos workflows dos jobs a rodar, sem cópia local
-  local j f u ref
-  for j in "${JOBS[@]}"; do
-    f="$(arquivo_do_job "$j")"; [ -n "$f" ] || continue
-    grep -hoE 'uses: *[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+[^ ]*@[^ ]+' "$ARV/.github/workflows/$f"
-  done | sed -E 's/^uses: *//' | sort -u | while read -r u; do
-    case "$u" in actions/checkout@*) continue ;; esac
-    ref="${u#*@}"; u="${u%%@*}"
-    [ -d "$HOME/.cache/act/$(echo "$u" | cut -d/ -f1,2 | tr / -)@${ref//\//-}" ] || echo "$u@$ref"
-  done
-}
-OFFLINE=()
-if [ -z "$(acoes_em_falta)" ]; then OFFLINE=(--action-offline-mode); else EM_PARALELO=1; fi
 
 INI=$(date +%s)
 i=0
