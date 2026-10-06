@@ -1544,6 +1544,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     c, getattr(ctx, "state", None) or {}) or "",
                 # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
                 **leitura_viva(c),
+                # A FAMÍLIA DOS BOTÕES DE FACE que ela declarou (`controles.botoes`
+                # ou o modo da chave física): vazia é o desenho do DualSense, e o
+                # alvo `atributo` apaga o `data-botoes` quando chega vazia.
+                **_so_se_a_pagina_tiver({"botoes": str(casa.get("botoes") or "")}),
                 # devolve. Ver `luz_porque`: com a cor conhecida ele volta a
                 "luz-porque": luz_porque(rotulo_da_luz, base_da_luz),
                 # o clique chega assim mesmo: `acao_mic` e `acao_speaker_mudo`

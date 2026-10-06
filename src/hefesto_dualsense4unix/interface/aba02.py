@@ -2088,7 +2088,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
 
         <div>
           <div class="moldura">
-            <div class="glifos">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
 {grade(glifos_on)}
             </div>
           </div>
@@ -2522,6 +2522,31 @@ CSS_DA_CARGA = "".join(
     for estado, classe in GLIFO_DA_CARGA.items()
     if carga_na_tela(estado)
 )
+
+def _css_da_familia_dos_botoes() -> str:
+    """Os quatro botões da face trocam o rótulo pela família que ELA declarou.
+
+    O dono da tabela é `mesa_viva.LETRAS_DA_FACE`; a página só tem o endereço
+    (`data-botoes` na grade, escrito pelo produto) e esta folha. Sem o atributo
+    é o desenho do DualSense, e o aceso (`.gb.on`) continua sendo a cor do
+    «apertado agora», porque a letra herda o `color` do botão.
+    """
+    regras = []
+    for familia, letras in mesa_viva.LETRAS_DA_FACE.items():
+        for botao, letra in letras.items():
+            alvo = f'.glifos[data-botoes="{familia}"] .gb[data-glifo="{botao}"]'
+            regras.append(f'  {alvo} svg{{display:none}}\n'
+                          f'  {alvo}::before{{content:"{letra}"}}\n')
+    return (
+        "  /* A FAMÍLIA DOS BOTÕES DE FACE — o que ela declarou do controle\n"
+        "     (`controles.botoes`, ou o modo da chave física) troca só o RÓTULO dos\n"
+        "     quatro da face, pela posição. Sem `data-botoes` nada muda. */\n"
+        '  .glifos[data-botoes] .gb[data-glifo]::before{font-weight:700;font-size:22px;\n'
+        "    line-height:1}\n" + "".join(regras)
+    )
+
+
+CSS += _css_da_familia_dos_botoes()
 
 CSS += f"""
 {CSS_DA_CARGA}  .faixa{{--larg-bateria:{LARG_BATERIA}px}}
@@ -3297,6 +3322,10 @@ def _conferir(doc):
            "a regra única da posição sumiu (ou se repetiu) — sem ela o pontinho "
            "não lê `--hef-x`/`--hef-y` e fica parado no canto")
     lugares = len(CONECTADOS) + VAZIOS
+    exigir(doc.count('data-campo="botoes" data-hef-alvo="atributo" '
+                     'data-hef-atributo="data-botoes"') == lugares,
+           "a grade dos glifos não tem o endereço da família dos botões nos "
+           f"{lugares} lugares — o produto não teria onde escrever o `data-botoes`")
     exigir(sum(1 for alvo in CAMPOS_DA_POSICAO if alvo.startswith("touch")) == MAX_DEDOS,
            f"o touchpad tem {MAX_DEDOS} dedos no aparelho e outro número de "
            "pontinhos com endereço de posição")

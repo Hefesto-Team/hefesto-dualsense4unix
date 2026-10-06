@@ -20,34 +20,19 @@ CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
     "orcamento.teto": "core/rumble.py:def _orcamento_declarado",
     "mesa.altura_da_antena": "integrations/exame_da_mesa.py:def vizinhanca_das_portas",
     "mesa.linha_de_visada": "integrations/exame_da_mesa.py:def vizinhanca_das_portas",
+    "mesa.radios": "interface/pacotes/a08_conexoes.py:def _radios_declarados",
+    "mesa.ordens_dispensadas": "interface/pacotes/a08_conexoes.py:def _dispensadas_do_disco",
+    "controles.cor": "interface/mesa_viva.py:def cor_declarada",
+    "controles.modo": "interface/mesa_viva.py:def familia_dos_botoes",
+    "controles.botoes": "interface/mesa_viva.py:def familia_dos_botoes",
 }
 
-#: sai com: AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01
-ISENTOS: dict[str, str] = {
-    "mesa.radios": (
-        "RadioDeclarado.tipo/apelido só repintam a própria seção "
-        "(secao_mesa.py:610, achado da CENTRAL-SEM-TELA-01) — sem "
-        "consumidor fora dela hoje"
-    ),
-    "controles.modo": (
-        "só repinta external_card.py:246 — se deveria trocar o glifo dos "
-        "botões em outras abas é pergunta dela (CONFIG-06, §9 desta sprint)"
-    ),
-    "controles.botoes": (
-        "só repinta external_card.py:262 — mesma pergunta aberta de "
-        "controles.modo"
-    ),
-    "controles.cor": (
-        "só repinta a borda do próprio card (secao_controles.py:496,803) — "
-        "achado NOVO da T11 desta sprint, fora do censo original da T1: a "
-        "cor declarada nunca chega a um consumidor fora da seção"
-    ),
-    "mesa.ordens_dispensadas": (
-        "o leitor existe e é testado (ordens_da_mesa.ordens_novas / "
-        "ordens_caladas) — falta a seção do exame chamá-lo, e essa metade "
-        "aguarda o olho dela (PROVA-DE-TELA-01)"
-    ),
-}
+#: Nenhuma isenção. As cinco que esperavam a palavra dela saíram em 06/10/2026
+#: (AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01): `mesa.radios` e
+#: `mesa.ordens_dispensadas` já tinham leitor na Conexões, e as respostas dela
+#: ligaram o resto (os glifos e a cor seguem o controle). Campo novo sem leitor
+#: não entra aqui: ou ganha consumidor, ou sai do esquema.
+ISENTOS: dict[str, str] = {}
 
 
 def _campos_do_caderno() -> list[str]:

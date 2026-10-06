@@ -279,6 +279,85 @@ NOME_DA_MASCARA = {
 }
 
 
+#: A FAMÍLIA DOS BOTÕES DE FACE que a tela escreve, e `""` é o desenho do DualSense
+#: (✕ ○ □ △). As duas outras trocam só o rótulo dos quatro botões da face, pela
+#: POSIÇÃO: sul, leste, oeste, norte.
+LETRAS_DA_FACE: dict[str, dict[str, str]] = {
+    "xbox": {"cross": "A", "circle": "B", "square": "X", "triangle": "Y"},
+    "nintendo": {"cross": "B", "circle": "A", "square": "Y", "triangle": "X"},
+}
+
+#: `ControleDeclarado.modo` (a chave física do controle genérico) -> família. O
+#: `dinput` fica de fora de propósito: a disposição dos botões nele varia de
+#: modelo para modelo, e o produto não sabe qual. Sem resposta, o desenho fica
+#: no do DualSense, que é «não sei».
+FAMILIA_DO_MODO: dict[str, str] = {"xinput": "xbox", "switch": "nintendo"}
+
+_DECLARACAO_DO_DISCO: tuple[tuple[int, int, int] | None, Any] | None = None
+
+
+def _declaracao_do_disco() -> Any:
+    """O `maquina.json` validado, relido SÓ quando o arquivo muda (inode, mtime, tamanho).
+
+    A mesa é montada a 10 Hz por três pilotos; um `stat` por volta é o que se
+    paga, e a leitura inteira só acontece depois de um gesto dela.
+    """
+    global _DECLARACAO_DO_DISCO
+    from hefesto_dualsense4unix.utils.maquina import (
+        MaquinaConfig,
+        caminho_da_maquina,
+        carregar_maquina,
+    )
+
+    try:
+        st = caminho_da_maquina().stat()
+        selo: tuple[int, int, int] | None = (st.st_ino, st.st_mtime_ns, st.st_size)
+    except OSError:
+        selo = None
+    if _DECLARACAO_DO_DISCO is None or _DECLARACAO_DO_DISCO[0] != selo:
+        _DECLARACAO_DO_DISCO = (selo, carregar_maquina() if selo else MaquinaConfig())
+    return _DECLARACAO_DO_DISCO[1]
+
+
+def _declarado(uniq: str, declaracao: Any = None) -> Any:
+    """O `ControleDeclarado` deste controle, ou `None` quando ela não disse nada."""
+    from hefesto_dualsense4unix.utils.maquina import chave_do_controle
+
+    chave = chave_do_controle(uniq)
+    if chave is None:
+        return None
+    base = declaracao if declaracao is not None else _declaracao_do_disco()
+    return (getattr(base, "controles", None) or {}).get(chave)
+
+
+def cor_declarada(uniq: str, declaracao: Any = None) -> CorDoPlastico | None:
+    """A cor do plástico que ELA declarou para este controle (`controles.cor`).
+
+    É o fio que faltava: o campo existia no `maquina.json` e nenhuma tela o lia.
+    Vale onde o aparelho não responde a cor (o rádio, o controle de outra marca),
+    e a cor LIDA do aparelho vence sempre: ver :func:`mesa_do_estado`. Nome que o
+    mapa não conhece (o campo «Outra») não pinta nada: `None`.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import cor_do_nome
+
+    declarado = _declarado(uniq, declaracao)
+    nome = getattr(declarado, "cor", None)
+    return cor_do_nome(nome) if isinstance(nome, str) and nome.strip() else None
+
+
+def familia_dos_botoes(uniq: str, declaracao: Any = None) -> str:
+    """`"xbox"`, `"nintendo"` ou `""` (o desenho do DualSense) para este controle.
+
+    O que ela declarou manda: `controles.botoes` (só o desenho da tela) vence o
+    `controles.modo` (a chave física do controle). Sem nenhum dos dois, `""`.
+    """
+    declarado = _declarado(uniq, declaracao)
+    botoes = getattr(declarado, "botoes", None)
+    if botoes in LETRAS_DA_FACE:
+        return str(botoes)
+    return FAMILIA_DO_MODO.get(str(getattr(declarado, "modo", None) or ""), "")
+
+
 def _por_numero_de_identidade(conectados: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """A MESMA regra do produto (`status_actions._por_numero_de_identidade`)."""
 
@@ -350,8 +429,14 @@ def mesa_do_estado(
     cores: dict[str, Any],
     *,
     alvo: str | None = None,
+    declaracao: Any = None,
 ) -> list[dict[str, Any]]:
-    """Os itens de mesa que `monta`/`aba02` sabem desenhar, na ordem da tela."""
+    """Os itens de mesa que `monta`/`aba02` sabem desenhar, na ordem da tela.
+
+    `declaracao` é o `maquina.json` já lido (os testes); sem ela, o disco, relido
+    só quando o arquivo muda. A cor e a família dos botões que ELA declarou saem
+    daqui para as dez abas de uma vez: é a mesa que todas leem.
+    """
     conectados = _por_numero_de_identidade(controles_conectados(state))
     emulacao = state.get("gamepad_emulation") or {}
     sabor = str(emulacao.get("flavor") or "")
@@ -366,6 +451,9 @@ def mesa_do_estado(
         transporte = str(entrada.get("transport") or "").lower()
         # guardou do sysfs) ou o da família, e o desenho fica no neutro: um
         cor = cores.get(uniq)
+        if cor is None or not getattr(cor, "codigo", ""):  # (noqa-acento): nome de atributo
+            # sem cor LIDA do aparelho: a que ela declarou (`controles.cor`).
+            cor = cor_declarada(uniq, declaracao) or cor
         slug, nome = "", MODELO_GENERICO
         if cor is not None:
             de_fabrica = str(getattr(cor, "codigo", "") or "")  # (noqa-acento): nome de atributo
@@ -378,6 +466,7 @@ def mesa_do_estado(
                 "jogador": numeros[posicao - 1],
                 "cor": slug,
                 "nome": nome,
+                "botoes": familia_dos_botoes(uniq, declaracao),
                 # O TRAVESSÃO NÃO É "BT" — corrigido em 05/09/2026. Este
                 # `if/else` devolvia "BT" quando o daemon NÃO publicava o
                 # transporte, e a aba 01 afirmava rádio sobre um campo que
