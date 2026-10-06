@@ -473,7 +473,37 @@ jobs:
       # pasta: um diretório de scripts que nenhum linter enxerga é exatamente o
       # padrão de portão cego que o `install-multi-distro` nasceu para fechar.
       - name: Varredura em severidade error
-        run: shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
+        run: shellcheck -S error scripts/*.sh scripts/ci/*.sh scripts/banco_de_prova/*.sh install.sh uninstall.sh
+
+  banco-de-prova-sonda:
+    name: Sonda do banco de prova (só à mão)
+    # O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01, parte 0 (06/10/2026). O banco de prova dá ao
+    # Hefesto um DualSense de mentira no kernel (o `uhid` no rádio, um gadget USB no cabo) e mede o
+    # produto de verdade no meio. Antes de gastar uma linha nisso, ESTE job mede no runner o que
+    # decide onde o banco mora: se o kernel dele registra o plástico no `hid_playstation`, se o
+    # `usb_f_hid` responde o GET_REPORT de feature (sem isso não há plástico de cabo), se o
+    # `install.sh --yes --no-proton-pin` sobe o broker e a regra de udev, e se quem roda o jogo abre
+    # o pad do Hefesto sem ter sessão num assento (o `uaccess` só dá ACL a quem tem assento).
+    #
+    # SÓ EM `workflow_dispatch`, de propósito: cria aparelho no kernel e roda o `install.sh` com
+    # `sudo`, o que não se faz a cada push. A decisão por perna é a última linha de `sonda.txt`
+    # (`casa_radio` e `casa_cabo`), e a saída inteira sobe como artefato mesmo se a sonda reprovar.
+    # Detalhe e a lista do que ela mede: o cabeçalho de `scripts/banco_de_prova/sonda.sh`.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: A sonda
+        run: bash scripts/banco_de_prova/sonda.sh
+      - name: Sobe o que a sonda mediu
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banco-de-prova-sonda
+          path: sonda-saida/
+          if-no-files-found: error
+          retention-days: 30
 
   icones:
     name: Ícones derivados do SVG canônico
