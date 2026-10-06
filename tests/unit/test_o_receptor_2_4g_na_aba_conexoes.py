@@ -81,6 +81,8 @@ def test_o_receptor_sem_faixa_diz_que_nao_foi_descoberto_e_traz_o_botao_descobri
                      r'data-gesto="receptor-descobrir" data-alvo="aaaa:bbbb" '
                      r'title="Faixa ainda não descoberta · clique para descobrir"', linha)
     assert f"<span>{a08.DESCOBRIR_A_FAIXA}</span>" in linha
+    # o nome acessível contém o rótulo à vista (WCAG 2.5.3): o comando de voz acha o botão
+    assert re.search(rf'aria-label="{a08.DESCOBRIR_A_FAIXA} · [^"]+">', linha), linha
     ponto = linha.split('class="ar-estado"')[1]
     assert "<button" not in ponto and "data-gesto" not in ponto, "o ponto voltou a ser o gesto"
 
@@ -292,6 +294,8 @@ def test_nao_achar_a_faixa_nao_grava_nada_e_a_linha_oferece_de_novo(
     assert a08._DESCOBERTA.passo == rx.PASSO_NADA and _descoberta_limpa == []
     linha = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
     assert a08.FAIXA_NAO_ACHADA in linha and 'data-gesto="receptor-descobrir"' in linha
+    assert f"<span>{a08.TENTAR_DE_NOVO}</span>" in linha
+    assert f'aria-label="{a08.TENTAR_DE_NOVO} · ' in linha, "o nome acessível perdeu o rótulo à vista"
 
 
 def test_a_banda_declarada_se_le_do_maquina_json() -> None:

@@ -4201,7 +4201,7 @@ TENTAR_DE_NOVO = f"{FAIXA_NAO_ENCONTRADA} · Tentar de novo"
 
 
 def _o_ponto(linha: Any) -> str:
-    """O estado da linha num ponto: verde = bom, laranja ou vermelho = problema, vazado = sem faixa.
+    """O estado da linha num ponto: verde = bom, laranja ou vermelho = problema, vazado = sem leitura.
 
     O texto do problema («3 teclas presas em 1 h») vai só no tooltip; o verde diz «Tudo certo».
     Para o leitor de tela o ponto diz a palavra inteira («Boa 74/79»): a cor nunca vai sozinha.
@@ -4247,10 +4247,13 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
         if descobrir:
             # a faixa por descobrir É o botão «Descobrir a faixa», à vista (desenho de 06/10/2026)
             dica = FAIXA_NAO_ACHADA if nada else FAIXA_NAO_DESCOBERTA
+            rotulo = TENTAR_DE_NOVO if nada else DESCOBRIR_A_FAIXA
+            # o nome que o leitor de tela e o comando de voz ouvem CONTÉM o rótulo à vista
+            # (WCAG 2.5.3): quem diz «Descobrir a faixa» acha o botão; o porquê fica no title
             faixa = (f'<button class="ar-faixa sem descobrir" type="button" '
                      f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}" '
-                     f'title="{_x(dica)}" aria-label="{_x(f"{nomes[linha.id]}: {dica}")}">'
-                     f'<span>{TENTAR_DE_NOVO if nada else DESCOBRIR_A_FAIXA}</span></button>')
+                     f'title="{_x(dica)}" aria-label="{_x(f"{rotulo} · {nomes[linha.id]}")}">'
+                     f'<span>{rotulo}</span></button>')
         else:
             # o passo do gesto guiado («Tire o receptor da porta») é a única frase que a faixa diz
             passo = f"<span>{_x(frase)}</span>" if frase else ""
