@@ -25,7 +25,7 @@
 #
 # Uso:
 #   scripts/portoes.sh              a leva inteira (rápidos + completos)
-#   scripts/portoes.sh --rapido     só a camada rápida (~6 s)
+#   scripts/portoes.sh --rapido     só a camada rápida (48 portões: 69 a 82 s em série, 19 a 29 s em paralelo)
 #   scripts/portoes.sh --suite      acrescenta a suíte de testes
 #   scripts/portoes.sh --listar     a tabela crua, que é o que o portão do portão lê
 #   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
@@ -58,8 +58,8 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 #   camada   rapido   | completo  | suite
 #   runner   py (o python resolvido) | bash | bin (binário do venv, senão PATH)
 #
-# A QUINTA COLUNA É OPCIONAL (06/10/2026) e quem lê as quatro primeiras não se quebra: ela declara o que o
-# portão LÊ, para a memória do verde, e vale em ordem de preferência o lado seguro. Sem ela, a árvore inteira.
+# A QUINTA COLUNA É OPCIONAL (06/10/2026), vem depois das quatro e quem lê só as quatro não se quebra. Ela
+# declara o que o portão LÊ, para a memória do verde. Sem ela, vale o lado seguro: a árvore inteira.
 #   um glob       `src/**`: só estes (o ignorado também), e glob que não casa nada faz o portão rodar sempre
 #   @sempre       o portão lê a máquina ou a história do git, e nunca é lembrado
 #   @dia          o portão compara com a data de hoje (prazo que vence): a data entra na chave
