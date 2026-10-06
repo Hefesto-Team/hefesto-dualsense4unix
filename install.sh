@@ -531,7 +531,7 @@ ask_yn() {
 #
 # De onde vêm os nomes: dos empacotamentos que esta casa já publica
 # (`packaging/debian/control`, `packaging/fedora/*.spec`, `packaging/arch/PKGBUILD`)
-# e da matriz `smoke-multi-distro` do CI (`.github/workflows/ci.yml:796-811`),
+# e da matriz do job `smoke-multi-distro` do CI (`.github/workflows/ci.yml`),
 # que já declara os nomes de runtime de Fedora 40, Arch e Debian 12. Não são
 # palpite: cada nome tem empacotamento ou contêiner de CI por trás.
 #
