@@ -1,0 +1,3 @@
+ROLA|lint-test|rapido
+PULA-NO-RAPIDO|lint-test|Pytest unit
+PULA-NO-RAPIDO|lint-test|Pytest core
