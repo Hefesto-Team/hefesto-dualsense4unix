@@ -697,7 +697,9 @@ def test_o_gancho_sem_a_regua_na_arvore_reprova_e_nao_passa(casa: Path, tmp_path
 # ---------------------------------------------------------------------------
 
 
-def commit_msg(casa: Path, texto: str, lista: str | None = LISTA) -> tuple[subprocess.CompletedProcess[str], str]:
+def commit_msg(
+    casa: Path, texto: str, lista: str | None = LISTA,
+) -> tuple[subprocess.CompletedProcess[str], str]:
     arquivo = casa.parent / "MENSAGEM"
     arquivo.write_text(texto, encoding="utf-8")
     extra = {"AUTORIA_VEDADOS": lista} if lista is not None else {}
