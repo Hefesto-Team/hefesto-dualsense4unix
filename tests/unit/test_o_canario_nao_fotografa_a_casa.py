@@ -143,6 +143,75 @@ def test_o_pesado_que_nasce_no_meio_e_uma_linha_so(
     assert deltas == [f"CRIADO   {_estado(lar) / 'nasceu-pesado'}"], deltas
 
 
+def test_a_pasta_que_passa_do_teto_no_meio_e_uma_linha_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cresceu além do teto: um MUDADO, e o que mora nela não vira APAGADO falso."""
+    lar = _lar_falso(tmp_path, monkeypatch)
+    pasta = _estado(lar) / "cresce"
+    _encher(pasta, TETO // 2)
+    antes = canario._fotografar_tudo_de_aviso()
+
+    _encher(pasta, 3 * TETO)
+
+    deltas = canario._deltas_do_canario(
+        antes, canario._fotografar_tudo_de_aviso(antes)
+    )
+    assert deltas == [f"MUDADO   {pasta} (passou do teto, o canário não entrou)"], deltas
+
+
+def test_o_teto_de_bytes_tambem_fecha_a_pasta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Poucos arquivos grandes: o teto de bytes fecha a pasta antes de resumir tudo."""
+    lar = _lar_falso(tmp_path, monkeypatch)
+    monkeypatch.setattr(canario, "_CANARIO_TETO_BYTES", 1000)
+    pasta = _estado(lar) / "poucos-e-grandes"
+    pasta.mkdir()
+    for n in range(5):
+        (pasta / f"g{n}.bin").write_bytes(b"x" * 400)
+    chamadas = _contar_resumos(monkeypatch)
+
+    foto = canario._fotografar_tudo_de_aviso()
+
+    assert foto[str(pasta)][2] == canario._CANARIO_PESADO
+    assert len([c for c in chamadas if "poucos-e-grandes" in c]) <= 2, chamadas
+
+
+def test_a_pasta_pesada_nao_e_listada_inteira(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O teto vale para a LISTAGEM também: a pasta enorme não é lida até o fim."""
+    lar = _lar_falso(tmp_path, monkeypatch)
+    _encher(_estado(lar) / "enorme", 10 * TETO)
+    lidas: list[str] = []
+    original = canario.os.scandir
+
+    class _Contada:
+        def __init__(self, caminho: Any) -> None:
+            self._real = original(caminho)
+
+        def __enter__(self) -> _Contada:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            self._real.close()
+
+        def __iter__(self) -> _Contada:
+            return self
+
+        def __next__(self) -> Any:
+            entrada = next(self._real)
+            lidas.append(entrada.path)
+            return entrada
+
+    monkeypatch.setattr(canario.os, "scandir", _Contada)
+
+    canario._fotografar_tudo_de_aviso()
+
+    assert len(lidas) <= 2 * TETO, len(lidas)
+
+
 def test_o_pesado_que_some_aparece_como_apagado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

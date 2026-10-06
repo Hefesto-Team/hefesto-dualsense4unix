@@ -7,6 +7,7 @@ import errno
 import fnmatch
 import hashlib
 import inspect
+import itertools
 import os
 import shlex
 import shutil
@@ -479,7 +480,10 @@ def _caminhar_com_teto(raiz: str, foto: _Foto) -> bool:
     while pilha:
         atual = pilha.pop()
         try:
-            varridas = list(os.scandir(atual))
+            # Só até o teto: listar inteira uma pasta de 278 mil nomes antes de
+            # contar já seria pagar o disco.
+            with os.scandir(atual) as lista:
+                varridas = list(itertools.islice(lista, _CANARIO_TETO_ENTRADAS - entradas + 1))
         except OSError:
             continue
         for entrada in varridas:
@@ -560,7 +564,8 @@ def _fotografar_arvore(raiz: Path, pesados: frozenset[str] | None = None) -> _Fo
         foto[str(raiz)] = _entrada_de_pesado()
         return foto
     try:
-        filhos = list(os.scandir(raiz))
+        with os.scandir(raiz) as lista:
+            filhos = list(itertools.islice(lista, _CANARIO_TETO_ENTRADAS + 1))
     except OSError:
         return foto
     foto[str(raiz)] = (st.st_mtime_ns, st.st_size, "")
@@ -635,16 +640,30 @@ def _relato_do_canario(foto: _Foto, raizes: list[Path]) -> list[str]:
 def _deltas_do_canario(
     antes: dict[str, tuple[int, int, str]], depois: dict[str, tuple[int, int, str]]
 ) -> list[str]:
-    """Lista legível do que mudou entre as duas fotos (vazia = nada mudou)."""
+    """Lista legível do que mudou entre as duas fotos (vazia = nada mudou).
+
+    A pasta que passou do teto durante a sessão é UMA linha: o que mora nela
+    não foi apagado, só deixou de ser fotografado.
+    """
+    novos_pesados = [
+        c + os.sep for c, (_m, _t, r) in depois.items()
+        if r == _CANARIO_PESADO and antes.get(c, (0, 0, ""))[2] != _CANARIO_PESADO
+    ]
     deltas: list[str] = []
     deltas.extend(f"CRIADO   {c}" for c in sorted(set(depois) - set(antes)))
-    deltas.extend(f"APAGADO  {c}" for c in sorted(set(antes) - set(depois)))
+    deltas.extend(
+        f"APAGADO  {c}" for c in sorted(set(antes) - set(depois))
+        if not any(c.startswith(p) for p in novos_pesados)
+    )
     for caminho in sorted(set(antes) & set(depois)):
         (_mt_a, tam_a, resumo_a) = antes[caminho]
         (_mt_d, tam_d, resumo_d) = depois[caminho]
         if (tam_a, resumo_a) == (tam_d, resumo_d):
             continue
-        detalhe = f"tamanho {tam_a}->{tam_d}" if tam_a != tam_d else "conteúdo"
+        if resumo_d == _CANARIO_PESADO:
+            detalhe = "passou do teto, o canário não entrou"
+        else:
+            detalhe = f"tamanho {tam_a}->{tam_d}" if tam_a != tam_d else "conteúdo"
         deltas.append(f"MUDADO   {caminho} ({detalhe})")
     return deltas
 
