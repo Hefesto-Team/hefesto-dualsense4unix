@@ -229,6 +229,12 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "scripts/github/aplicar.py::DONOS_PERMITIDOS": (
+        "os donos em que o aplicador aceita escrever (a organização e a conta de quem mantém): "
+        "é a guarda contra escrever no repositório errado, não um caso isento"),
+    "scripts/github/aplicar.py::EXCECOES": (
+        "o nome do campo do repositorio.yml que declara quem passa pela porta do ruleset "
+        "(a resposta dela de 06/10: os administradores passam), não uma isenção da régua"),
     "scripts/ensaios/quem_e_quem.py::CONHECIDOS": (
         "os endereços da mesa, lidos quando o ensaio roda, para o dono da máscara "
         "pegar toda forma deles; nasce vazia e não isenta nada"),
