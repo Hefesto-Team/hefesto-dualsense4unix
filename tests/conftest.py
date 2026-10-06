@@ -346,6 +346,20 @@ _CANARIO_ARMADO = False
 
 _CANARIO_LIMITE_RESUMO = 4 * 1024 * 1024
 
+# O teto é de TAMANHO, por filho de primeiro nível, e não de nome. Medido em
+# 06/10/2026, o maior filho vigiado tem 286 entradas e 1,7 MB; o teto fica a 7x
+# e a 19x disso. Em 28/09 uma pasta da casa tinha 278 mil arquivos e 7,1 GB de
+# sha256 por foto: sem o teto, a foto custava isso.
+_CANARIO_TETO_ENTRADAS = 2_000
+
+_CANARIO_TETO_BYTES = 32 * 1024 * 1024
+
+_CANARIO_PESADO = "[pesado: o canário não entrou]"
+
+_CANARIO_LINK = "-> "
+
+_CANARIO_LIMITE_NOMES = 3
+
 _CANARIO_LIMITE_AVISO = 10
 
 
@@ -438,34 +452,184 @@ def _resumo_do_arquivo(caminho: Path, tamanho: int) -> str:
         return ""
 
 
-def _fotografar_arvore(raiz: Path) -> dict[str, tuple[int, int, str]]:
-    """{caminho: (mtime_ns, tamanho, resumo)} sob `raiz`. Ausente = dict vazio."""
-    foto: dict[str, tuple[int, int, str]] = {}
-    if not raiz.exists():
-        return foto
-    for caminho in [raiz, *raiz.rglob("*")]:
+_Foto = dict[str, tuple[int, int, str]]
+
+
+def _entrada_de_link(caminho: str) -> tuple[int, int, str]:
+    """O link é UMA entrada, pelo `lstat`, com o alvo normalizado no lugar do resumo."""
+    st = os.lstat(caminho)
+    try:
+        alvo = os.readlink(caminho)
+    except OSError:
+        alvo = ""
+    absoluto = os.path.normpath(os.path.join(os.path.dirname(caminho), alvo))
+    return (st.st_mtime_ns, st.st_size, _CANARIO_LINK + absoluto)
+
+
+def _entrada_de_pesado() -> tuple[int, int, str]:
+    """A pasta que o canário não percorre: uma entrada só, sem conteúdo."""
+    return (0, 0, _CANARIO_PESADO)
+
+
+def _caminhar_com_teto(raiz: str, foto: _Foto) -> bool:
+    """Anda sob `raiz` sem seguir link; False quando o teto estoura (foto incompleta)."""
+    pilha = [raiz]
+    entradas = 0
+    gastos = 0
+    while pilha:
+        atual = pilha.pop()
         try:
-            st = caminho.stat()
-            e_arquivo = caminho.is_file()
+            varridas = list(os.scandir(atual))
         except OSError:
             continue
-        resumo = _resumo_do_arquivo(caminho, st.st_size) if e_arquivo else ""
-        foto[str(caminho)] = (st.st_mtime_ns, st.st_size, resumo)
+        for entrada in varridas:
+            entradas += 1
+            if entradas > _CANARIO_TETO_ENTRADAS:
+                return False
+            caminho = entrada.path
+            try:
+                if entrada.is_symlink():
+                    foto[caminho] = _entrada_de_link(caminho)
+                    continue
+                st = entrada.stat(follow_symlinks=False)
+                e_pasta = entrada.is_dir(follow_symlinks=False)
+                e_arquivo = entrada.is_file(follow_symlinks=False)
+            except OSError:
+                continue
+            resumo = ""
+            if e_arquivo and st.st_size <= _CANARIO_LIMITE_RESUMO:
+                if gastos + st.st_size > _CANARIO_TETO_BYTES:
+                    return False
+                gastos += st.st_size
+                resumo = _resumo_do_arquivo(Path(caminho), st.st_size)
+            foto[caminho] = (st.st_mtime_ns, st.st_size, resumo)
+            if e_pasta:
+                pilha.append(caminho)
+    return True
+
+
+def _primeiro_nivel(
+    filhos: list[os.DirEntry[str]],
+) -> tuple[_Foto, list[str]] | None:
+    """O primeiro nível inteiro e as pastas dele; None quando ele sozinho passa do teto."""
+    foto: _Foto = {}
+    pastas: list[str] = []
+    gastos = 0
+    if len(filhos) > _CANARIO_TETO_ENTRADAS:
+        return None
+    for entrada in filhos:
+        caminho = entrada.path
+        try:
+            if entrada.is_symlink():
+                foto[caminho] = _entrada_de_link(caminho)
+                continue
+            st = entrada.stat(follow_symlinks=False)
+            if entrada.is_dir(follow_symlinks=False):
+                foto[caminho] = (st.st_mtime_ns, st.st_size, "")
+                pastas.append(caminho)
+                continue
+            resumo = ""
+            if entrada.is_file(follow_symlinks=False) and st.st_size <= _CANARIO_LIMITE_RESUMO:
+                if gastos + st.st_size > _CANARIO_TETO_BYTES:
+                    return None
+                gastos += st.st_size
+                resumo = _resumo_do_arquivo(Path(caminho), st.st_size)
+            foto[caminho] = (st.st_mtime_ns, st.st_size, resumo)
+        except OSError:
+            continue
+    return foto, pastas
+
+
+def _fotografar_arvore(raiz: Path, pesados: frozenset[str] | None = None) -> _Foto:
+    """{caminho: (mtime_ns, tamanho, resumo)} sob `raiz`. Ausente = dict vazio.
+
+    O primeiro nível entra inteiro. Cada pasta de primeiro nível é andada até
+    o teto (`_CANARIO_TETO_ENTRADAS` / `_CANARIO_TETO_BYTES`); estourado, ela
+    vira UMA entrada `_CANARIO_PESADO`. `pesados` é a lista da foto do começo:
+    esses não são andados de novo, e um pesado que encolhe não vira chuva de
+    CRIADO. Link é entrada, nunca caminho.
+    """
+    foto: _Foto = {}
+    if not raiz.exists():
+        return foto
+    try:
+        st = raiz.stat()
+    except OSError:
+        return foto
+    if pesados is not None and str(raiz) in pesados:
+        foto[str(raiz)] = _entrada_de_pesado()
+        return foto
+    try:
+        filhos = list(os.scandir(raiz))
+    except OSError:
+        return foto
+    foto[str(raiz)] = (st.st_mtime_ns, st.st_size, "")
+    nivel = _primeiro_nivel(filhos)
+    if nivel is None:
+        foto[str(raiz)] = _entrada_de_pesado()
+        return foto
+    foto.update(nivel[0])
+    for pasta in nivel[1]:
+        if pesados is not None and pasta in pesados:
+            foto[pasta] = _entrada_de_pesado()
+            continue
+        parcial: _Foto = {}
+        if _caminhar_com_teto(pasta, parcial):
+            foto.update(parcial)
+        else:
+            foto[pasta] = _entrada_de_pesado()
     return foto
 
 
-def _fotografar_tudo() -> dict[str, tuple[int, int, str]]:
-    foto: dict[str, tuple[int, int, str]] = {}
+def _pesados_da_foto(foto: _Foto) -> frozenset[str]:
+    """Os caminhos que a foto do começo não percorreu."""
+    return frozenset(c for c, (_m, _t, r) in foto.items() if r == _CANARIO_PESADO)
+
+
+def _fotografar_tudo(antes: _Foto | None = None) -> _Foto:
+    """A foto das árvores que reprovam; `antes` é a do começo e fixa os pesados."""
+    pesados = _pesados_da_foto(antes) if antes is not None else None
+    foto: _Foto = {}
     for raiz in _canario_raizes():
-        foto.update(_fotografar_arvore(raiz))
+        foto.update(_fotografar_arvore(raiz, pesados))
     return foto
 
 
-def _fotografar_tudo_de_aviso() -> dict[str, tuple[int, int, str]]:
-    foto: dict[str, tuple[int, int, str]] = {}
+def _fotografar_tudo_de_aviso(antes: _Foto | None = None) -> _Foto:
+    """A foto das árvores que só avisam; `antes` fixa os pesados, como acima."""
+    pesados = _pesados_da_foto(antes) if antes is not None else None
+    foto: _Foto = {}
     for raiz in _canario_raizes_de_aviso():
-        foto.update(_fotografar_arvore(raiz))
+        foto.update(_fotografar_arvore(raiz, pesados))
     return foto
+
+
+def _relato_do_canario(foto: _Foto, raizes: list[Path]) -> list[str]:
+    """Uma linha por árvore com pesado ou link para fora; vazio se não houver."""
+    linhas: list[str] = []
+    for raiz in raizes:
+        prefixo = str(raiz)
+        pesados: list[str] = []
+        fora: list[str] = []
+        for caminho, (_m, _t, resumo) in sorted(foto.items()):
+            if caminho != prefixo and not caminho.startswith(prefixo + os.sep):
+                continue
+            nome = raiz.name if caminho == prefixo else os.path.relpath(caminho, prefixo)
+            if resumo == _CANARIO_PESADO:
+                pesados.append(nome)
+            elif resumo.startswith(_CANARIO_LINK):
+                alvo = resumo[len(_CANARIO_LINK):]
+                if alvo != prefixo and not alvo.startswith(prefixo + os.sep):
+                    fora.append(nome)
+        if not pesados and not fora:
+            continue
+        nomes = [*pesados, *fora][:_CANARIO_LIMITE_NOMES]
+        onde = os.path.relpath(prefixo, os.path.expanduser("~"))
+        linhas.append(
+            f"  - {onde}: {len(pesados)} pasta(s) pesada(s) e "
+            f"{len(fora)} link(s) para fora ({', '.join(nomes)})"
+        )
+    return linhas
 
 
 def _deltas_do_canario(
@@ -990,9 +1154,8 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
 
-    deltas_aviso = _deltas_do_canario(
-        _CANARIO_FOTO_AVISO, _fotografar_tudo_de_aviso()
-    )
+    foto_aviso = _fotografar_tudo_de_aviso(_CANARIO_FOTO_AVISO)
+    deltas_aviso = _deltas_do_canario(_CANARIO_FOTO_AVISO, foto_aviso)
     if deltas_aviso:
         mostrados = deltas_aviso[:_CANARIO_LIMITE_AVISO]
         restam = len(deltas_aviso) - len(mostrados)
@@ -1009,7 +1172,21 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             "  daemon dela é trabalho real, e desfazê-la seria o dano maior.",
         ])
 
-    deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, _fotografar_tudo())
+    foto_fim = _fotografar_tudo(_CANARIO_FOTO_INICIAL)
+    relato = _relato_do_canario(
+        {**foto_aviso, **foto_fim},
+        [*_canario_raizes(), *_canario_raizes_de_aviso()],
+    )
+    if relato:
+        _escrever_no_terminal(session, [
+            "",
+            "CANARIO-FS-01 (relato, não é portão): pasta pesada ou link para fora:",
+            *relato,
+            "  O canário não entrou aqui: o state do produto não guarda a casa, "
+            "e a casa mora em ~/.local/state/hefesto-casa/.",
+        ])
+
+    deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, foto_fim)
     if not deltas:
         return
     linhas = [
