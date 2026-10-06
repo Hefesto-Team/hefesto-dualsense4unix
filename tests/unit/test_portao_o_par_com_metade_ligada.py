@@ -119,6 +119,8 @@ uma cópia de ``src/`` — régua que só sabe passar não é régua (armadilha 
 from __future__ import annotations
 
 import ast
+import functools
+import io
 import re
 import shutil
 from dataclasses import dataclass, field
@@ -229,32 +231,71 @@ def _modulos(raiz: Path) -> list[Path]:
     return sorted(p for p in raiz.rglob("*.py") if "__pycache__" not in p.parts)
 
 
+@functools.cache
+def _arvore_do_texto(texto: str) -> ast.Module:
+    """A AST de um texto, lida UMA vez por conteúdo — e SÓ para leitura.
+
+    As quatro varreduras desta régua (e as mordidas, que repetem cada uma sobre
+    uma cópia que difere em um arquivo) liam e parseavam os mesmos módulos. A
+    chave é o texto: o arquivo mordido tem outro texto e, logo, outra árvore.
+    Quem pede a árvore não a altera (todos só caminham por ela).
+    """
+    return ast.parse(texto)
+
+
+@functools.cache
+def _fatos_do_texto(
+    texto: str,
+) -> tuple[
+    tuple[tuple[str, int, int], ...],
+    tuple[tuple[str, int], ...],
+    frozenset[str],
+] | None:
+    """Corpos de função, chamadas e palavras de um texto — só dependem do TEXTO.
+
+    ``None`` é o módulo que não parseia. O índice de ``src/`` inteiro refazia
+    esta caminhada por todos os nós a cada varredura; aqui ela é feita uma vez
+    por conteúdo e o caminho do arquivo só entra na hora de montar o índice.
+    """
+    try:
+        arvore = _arvore_do_texto(texto)
+    except SyntaxError:  # pragma: no cover - árvore em movimento
+        return None
+    fora = _prosa(arvore)
+    corpos: list[tuple[str, int, int]] = []
+    chamadas: list[tuple[str, int]] = []
+    palavras: set[str] = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            corpos.append((no.name, no.lineno, no.end_lineno or no.lineno))
+        elif isinstance(no, ast.Call):
+            alvo = no.func
+            nome = getattr(alvo, "id", None) or getattr(alvo, "attr", None)
+            if isinstance(nome, str):
+                chamadas.append((nome, no.lineno))
+        elif (
+            isinstance(no, ast.Constant)
+            and isinstance(no.value, str)
+            and id(no) not in fora
+            and no.value.isidentifier()
+        ):
+            palavras.add(no.value)
+    return tuple(corpos), tuple(chamadas), frozenset(palavras)
+
+
 def _indexar(raiz: Path) -> _Indice:
     chamadas: dict[str, list[tuple[Path, int]]] = {}
     corpos: dict[str, list[tuple[Path, int, int]]] = {}
     palavras: set[str] = set()
     for caminho in _modulos(raiz):
-        try:
-            arvore = ast.parse(caminho.read_text(encoding="utf-8"))
-        except SyntaxError:  # pragma: no cover - árvore em movimento
+        fatos = _fatos_do_texto(caminho.read_text(encoding="utf-8"))
+        if fatos is None:  # pragma: no cover - árvore em movimento
             continue
-        fora = _prosa(arvore)
-        for no in ast.walk(arvore):
-            if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                fim = no.end_lineno or no.lineno
-                corpos.setdefault(no.name, []).append((caminho, no.lineno, fim))
-            elif isinstance(no, ast.Call):
-                alvo = no.func
-                nome = getattr(alvo, "id", None) or getattr(alvo, "attr", None)
-                if isinstance(nome, str):
-                    chamadas.setdefault(nome, []).append((caminho, no.lineno))
-            elif (
-                isinstance(no, ast.Constant)
-                and isinstance(no.value, str)
-                and id(no) not in fora
-                and no.value.isidentifier()
-            ):
-                palavras.add(no.value)
+        for nome, inicio, fim in fatos[0]:
+            corpos.setdefault(nome, []).append((caminho, inicio, fim))
+        for nome, linha in fatos[1]:
+            chamadas.setdefault(nome, []).append((caminho, linha))
+        palavras |= fatos[2]
     return _Indice(chamadas=chamadas, corpos=corpos, palavras=palavras)
 
 
@@ -296,7 +337,7 @@ def _acessores(flag: str, raiz: Path) -> set[str]:
         if flag not in texto:
             continue
         try:
-            arvore = ast.parse(texto)
+            arvore = _arvore_do_texto(texto)
         except SyntaxError:  # pragma: no cover - árvore em movimento
             continue
         for no in ast.walk(arvore):
@@ -332,7 +373,7 @@ def _leituras(flag: str, raiz: Path) -> list[str]:
         if flag not in texto and not any(nome in texto for nome in acessores):
             continue
         try:
-            arvore = ast.parse(texto)
+            arvore = _arvore_do_texto(texto)
         except SyntaxError:  # pragma: no cover - árvore em movimento
             continue
         fora = _prosa(arvore)
@@ -368,7 +409,7 @@ def pares_com_metade_ligada(raiz: Path | None = None) -> dict[str, Par]:
     escritas: dict[str, dict[bool, set[str]]] = {}
     for caminho in _modulos(territorio):
         try:
-            arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+            arvore = _arvore_do_texto(caminho.read_text(encoding="utf-8"))
         except SyntaxError:  # pragma: no cover - árvore em movimento
             continue
         visitante = _Escritas()
@@ -684,20 +725,25 @@ _TOKENS_DE_PROSA: tuple[int, ...] = tuple(
 )
 
 
+@functools.cache
+def _prosa_dos_bytes(conteudo: bytes) -> tuple[tuple[int, str], ...]:
+    """A prosa de um conteúdo, tokenizada UMA vez por conteúdo (a chave são os bytes)."""
+    linhas: dict[int, str] = {}
+    try:
+        for tok in tokenize.tokenize(io.BytesIO(conteudo).readline):
+            if tok.type not in _TOKENS_DE_PROSA:
+                continue
+            for offset, texto in enumerate(tok.string.splitlines()):
+                linhas.setdefault(tok.start[0] + offset, "")
+                linhas[tok.start[0] + offset] += texto
+    except (tokenize.TokenError, SyntaxError):
+        return ()
+    return tuple(linhas.items())
+
+
 def _prosa_de(modulo: Path) -> dict[int, str]:
     """As linhas do módulo que são COMENTÁRIO ou STRING, pela numeração real."""
-    linhas: dict[int, str] = {}
-    with modulo.open("rb") as fh:
-        try:
-            for tok in tokenize.tokenize(fh.readline):
-                if tok.type not in _TOKENS_DE_PROSA:
-                    continue
-                for offset, texto in enumerate(tok.string.splitlines()):
-                    linhas.setdefault(tok.start[0] + offset, "")
-                    linhas[tok.start[0] + offset] += texto
-        except (tokenize.TokenError, SyntaxError):
-            return {}
-    return linhas
+    return dict(_prosa_dos_bytes(modulo.read_bytes()))
 
 
 def citacoes_de_linha(raiz: Path | None = None) -> list[CitacaoDeLinha]:
@@ -760,23 +806,37 @@ def _blocos_definidos(linhas: list[str], nome: str) -> list[tuple[int, int, bool
     Módulo que não parseia devolve lista vazia: quem cobra sintaxe é outro
     portão, e acusar por causa dele seria acusar duas vezes o mesmo defeito.
     """
+    return list(_blocos_do_texto("\n".join(linhas)).get(nome, ()))
+
+
+@functools.cache
+def _blocos_do_texto(texto: str) -> dict[str, tuple[tuple[int, int, bool], ...]]:
+    """Todo `def`/`class` do texto, por nome, numa só caminhada pela árvore.
+
+    A régua pergunta por vários nomes do MESMO alvo, e cada pergunta refazia o
+    ``ast.parse`` e a caminhada inteira; aqui o texto é lido uma vez e a
+    resposta de cada nome sai da tabela, na mesma ordem em que a caminhada
+    os acharia.
+    """
     try:
-        arvore = ast.parse("\n".join(linhas))
+        arvore = ast.parse(texto)
     except SyntaxError:
-        return []
-    achadas: list[tuple[int, int, bool]] = []
+        return {}
+    achadas: dict[str, list[tuple[int, int, bool]]] = {}
 
     def anda(no: ast.AST, dentro_de_funcao: bool) -> None:
         for filho in ast.iter_child_nodes(no):
             eh_funcao = isinstance(filho, (ast.FunctionDef, ast.AsyncFunctionDef))
             eh_definicao = eh_funcao or isinstance(filho, ast.ClassDef)
-            if eh_definicao and filho.name == nome:  # type: ignore[attr-defined]
+            if eh_definicao:
                 fim = getattr(filho, "end_lineno", None) or filho.lineno  # type: ignore[attr-defined]
-                achadas.append((filho.lineno, fim, dentro_de_funcao))  # type: ignore[attr-defined]
+                achadas.setdefault(filho.name, []).append(  # type: ignore[attr-defined]
+                    (filho.lineno, fim, dentro_de_funcao)  # type: ignore[attr-defined]
+                )
             anda(filho, dentro_de_funcao or eh_funcao)
 
     anda(arvore, False)
-    return achadas
+    return {nome: tuple(blocos) for nome, blocos in achadas.items()}
 
 
 def _definicao_unica(linhas: list[str], nome: str) -> tuple[int, int] | None:
