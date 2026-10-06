@@ -127,3 +127,70 @@ def test_o_lote_de_04_09_so_vira_dela_com_a_prova() -> None:
         "estas linhas do lote de 04/09 dizem `ela` sem o carimbo "
         f"`{MARCA_ELA}` com a palavra dela na `escolha`: {sem_prova}"
     )
+
+
+#: As colunas sem as quais uma decisão aberta não se decide vendo: a pergunta,
+#: a recomendação e o preço do outro lado (o pedido dela de 23/08/2026, «decidir
+#: vendo inclui ver o custo»).
+COLUNAS_QUE_MORDEM = (
+    "id",
+    "titulo",
+    "a_pergunta",
+    "recomendacao",
+    "preco_do_outro_lado",
+    "estado",
+)
+
+
+def test_o_registro_tem_as_colunas_que_mordem() -> None:
+    """MORDE: apagar `preco_do_outro_lado` do cabeçalho."""
+    linhas = _linhas()
+    assert linhas, "o registro está vazio"
+    for coluna in COLUNAS_QUE_MORDEM:
+        assert coluna in linhas[0], (
+            f"a coluna `{coluna}` sumiu de {CSV_.name}: decidir vendo inclui ver o "
+            "custo do outro lado, não só a pergunta"
+        )
+
+
+def test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado() -> None:
+    """Uma decisão sem preço é uma pergunta sem contexto.
+
+    `decidida` e `caduca` já foram respondidas por ela (a caduca, substituída por
+    outra fala dela); cobrar o preço delas castiga quem fez a correção certa.
+    MORDE: esvaziar o `preco_do_outro_lado` de uma linha que espera a palavra dela.
+    """
+    ja_respondidas = {"decidida", "caduca"}
+    for d in _linhas():
+        if (d.get("estado") or "").strip() in ja_respondidas:
+            continue
+        assert (d.get("preco_do_outro_lado") or "").strip(), (
+            f"a decisão {d.get('id')} não diz o preço de decidir para o outro "
+            "lado: ela chegaria como pendência, não como escolha informada"
+        )
+        assert (d.get("a_pergunta") or "").strip(), (
+            f"a decisão {d.get('id')} não faz pergunta nenhuma"
+        )
+
+
+def test_a_regra_do_preco_morde_numa_copia(tmp_path, monkeypatch) -> None:
+    """Hoje nenhuma decisão espera a palavra dela, e a regra acima passa por vazio.
+
+    A mordida mora aqui: uma linha `aberta` sem o preço, e um cabeçalho sem a coluna.
+    """
+    import sys
+
+    import pytest
+
+    cabeca = ",".join(COLUNAS_QUE_MORDEM)
+    sem_preco = tmp_path / "sem-preco.csv"
+    sem_preco.write_text(f"{cabeca}\nD-X,t,a pergunta?,r,,aberta\n", encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "CSV_", sem_preco, raising=True)
+    with pytest.raises(AssertionError, match="D-X"):
+        test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado()
+
+    sem_coluna = tmp_path / "sem-coluna.csv"
+    sem_coluna.write_text("id,titulo,a_pergunta,recomendacao,estado\nD-Y,t,p,r,aberta\n", encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "CSV_", sem_coluna, raising=True)
+    with pytest.raises(AssertionError, match="preco_do_outro_lado"):
+        test_o_registro_tem_as_colunas_que_mordem()

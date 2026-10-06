@@ -11,7 +11,7 @@
 # POR QUE REGRA, E NÃO LISTA DE ARQUIVO
 # --------------------------------------
 # Lista de arquivo envelhece a cada arquivo novo, e esta casa já pagou por
-# isso: `docs/data/frases-de-tela-25-08.json` é uma enumeração congelada num
+# isso: a lista de frases de tela de 25/08 era uma enumeração congelada num
 # mundo que acabou — ela cita a ordem das abas "medida do main.glade", e o
 # main.glade saiu do disco em 06/09/2026. Régua LÊ, nunca DIGITA o que devia
 # ler do fonte, e uma regra de caminho é a forma mais fraca de leitura que
