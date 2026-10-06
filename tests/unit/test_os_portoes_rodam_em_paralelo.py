@@ -771,3 +771,54 @@ def test_o_portoes_sh_nao_usa_o_pytest_sem_lar_proprio() -> None:
     texto = PORTOES.read_text(encoding="utf-8")
     assert "-p no:cacheprovider" in texto
     assert "//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i" in texto
+
+
+# --- 7. O que a árvore não guarda, o portão declara ----------------------------------------------
+#
+# Medido em 06/10/2026 com `strace -f -e trace=execve` sobre os 66 portões: estes leem a história do
+# git, a máquina ou a data, que a chave por conteúdo não alcança. Sem a declaração, o verde de ontem
+# valeria hoje.
+
+_DECLARADOS = {
+    "a-origem": ("@sempre", "git log base..HEAD, merge-base com o dev, rev-parse HEAD"),
+    "autoria-historia": ("@sempre", "rev-parse das tags e a história inteira"),
+    "autoria-arvore": ("@sempre", "git config hooks.anonimato.isento"),
+    "endereco-dela-em-toda-forma": ("@sempre", "pergunta à máquina: bluetoothctl e sysfs"),
+    "regua-de-tela": ("@sempre", "git diff --cached, git show e rev-list"),
+    "interpretador-do-portao": ("@sempre", "git worktree list: as outras árvores da máquina"),
+    "src-desta-arvore": ("@sempre", "git worktree list: as outras árvores da máquina"),
+    "paridade-transporte": ("@dia", "date.today(): dívida com prazo que vence"),
+    "fala-de-tela": ("@dia", "date.today(): prazo que vence"),
+}
+
+
+def _tokens_da_tabela(texto_sh: str) -> dict[str, str]:
+    achados: dict[str, str] = {}
+    abre = texto_sh.index("_LISTA() {")
+    corpo = texto_sh[texto_sh.index("cat <<'TABELA'\n", abre) :]
+    for linha in corpo[: corpo.index("\nTABELA\n")].splitlines():
+        campos = linha.split("|")
+        if len(campos) >= 5 and not linha.startswith("#"):
+            tokens = [t for t in campos[4].split() if t.startswith("@")]
+            if tokens:
+                achados[campos[1]] = " ".join(tokens)
+    return achados
+
+
+def test_o_portao_que_le_o_que_a_arvore_nao_guarda_declara_isso() -> None:
+    achados = _tokens_da_tabela(PORTOES.read_text(encoding="utf-8"))
+    esperados = {nome: token for nome, (token, _) in _DECLARADOS.items()}
+    assert achados == esperados, (
+        "a declaração de um portão mudou: quem lê a história, a máquina ou a data tem de dizer, "
+        "ou o verde de ontem vale hoje.\n"
+        + "\n".join(f"  {n}: {m}" for n, (_, m) in _DECLARADOS.items())
+    )
+
+
+def test_morde_o_token_arrancado_da_tabela() -> None:
+    texto = PORTOES.read_text(encoding="utf-8")
+    velho = "rapido|a-origem|py|scripts/check_a_origem.py|@sempre\n"
+    assert texto.count(velho) == 1
+    sem = _tokens_da_tabela(texto.replace(velho, velho.replace("|@sempre", "")))
+    assert "a-origem" not in sem, "a régua não vê o token arrancado"
+    assert sem != {n: t for n, (t, _) in _DECLARADOS.items()}
