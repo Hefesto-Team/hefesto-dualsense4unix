@@ -11,6 +11,7 @@ mora em `scripts/ci-local/jobs.txt`, e estas réguas garantem as duas pontas:
 O script em si é medido numa árvore de mentira (um repositório git de verdade, com o `act` e o
 `docker` de mentira no PATH): o que ele roda, o que ele exporta e como ele classifica o resultado.
 """
+
 from __future__ import annotations
 
 import os
@@ -26,16 +27,38 @@ WORKFLOWS = RAIZ / ".github" / "workflows"
 TABELA = RAIZ / "scripts" / "ci-local" / "jobs.txt"
 SCRIPT = RAIZ / "scripts" / "ci-local.sh"
 
-# O que o script usa; o PATH da árvore de mentira só tem isto (mais o `act` e o `docker` de mentira),
-# e é por isso que «sem act» e «sem docker» são medidas de verdade.
+# O que o script usa. O PATH da árvore de mentira só tem isto (mais o `act` e o `docker` de
+# mentira), e é por isso que «sem act» e «sem docker» são medidas de verdade.
 FERRAMENTAS = (
-    "awk", "basename", "bash", "cat", "cp", "cut", "date", "dirname", "git", "grep", "head", "ls",
-    "mkdir", "mktemp", "mv", "pwd", "rm", "sed", "sha256sum", "sort", "tr", "uniq", "wc",
+    "awk",
+    "basename",
+    "bash",
+    "cat",
+    "cp",
+    "cut",
+    "date",
+    "dirname",
+    "git",
+    "grep",
+    "head",
+    "ls",
+    "mkdir",
+    "mktemp",
+    "mv",
+    "pwd",
+    "rm",
+    "sed",
+    "sha256sum",
+    "sort",
+    "tr",
+    "uniq",
+    "wc",
 )
 RUNNERS_QUE_O_ACT_MAPEIA = {"ubuntu-latest", "ubuntu-24.04"}
 
 
 # --- a tabela contra os workflows ------------------------------------------------------------
+
 
 def _jobs_dos_workflows() -> dict[str, dict]:
     jobs: dict[str, dict] = {}
@@ -69,7 +92,9 @@ def test_todo_job_dos_workflows_tem_uma_decisao_e_so_uma() -> None:
     sem_decisao = sorted(jobs - set(decisoes))
     sem_job = sorted(set(decisoes) - jobs)
     repetidos = sorted(j for j, d in decisoes.items() if len(d) != 1)
-    assert not sem_decisao, f"job do workflow sem linha ROLA ou FORA-DE-CASA em jobs.txt: {sem_decisao}"
+    assert not sem_decisao, (
+        f"job do workflow sem linha ROLA ou FORA-DE-CASA em jobs.txt: {sem_decisao}"
+    )
     assert not sem_job, f"jobs.txt cita job que nenhum workflow tem: {sem_job}"
     assert not repetidos, f"job com mais de uma decisão em jobs.txt: {repetidos}"
 
@@ -96,15 +121,15 @@ def test_a_linha_rola_diz_o_modo_e_a_imagem_do_runner_que_o_act_nao_tem() -> Non
             ruins.append(f"{job}: o modo é rapido ou completo")
             continue
         runs_on = str(jobs[job].get("runs-on", ""))
-        if "matrix.os" in runs_on:
-            alvos = set(jobs[job]["strategy"]["matrix"]["os"])
-        else:
-            alvos = {runs_on}
+        alvos = set(jobs[job]["strategy"]["matrix"]["os"]) if "matrix.os" in runs_on else {runs_on}
         if "container" in jobs[job]:
             continue  # o container do job manda; o runner é só o hospedeiro
         for alvo in alvos - RUNNERS_QUE_O_ACT_MAPEIA:
             if not (alvo == "ubuntu-22.04" and len(campos) >= 4 and campos[3] == "ubuntu-22.04"):
-                ruins.append(f"{job}: o runner {alvo} não tem imagem no act (diga `ubuntu-22.04` na 4ª coluna, ou deixe fora)")
+                ruins.append(
+                    f"{job}: o runner {alvo} não tem imagem no act "
+                    "(diga `ubuntu-22.04` na 4ª coluna, ou deixe fora)"
+                )
     assert not ruins, ruins
 
 
@@ -115,17 +140,25 @@ def test_todo_passo_que_o_rapido_tira_existe_no_job() -> None:
         if campos[0] != "PULA-NO-RAPIDO":
             continue
         job, passo = campos[1], campos[2]
-        nomes = [p.get("name") for p in (jobs.get(job, {}).get("steps") or []) if isinstance(p, dict)]
+        nomes = [
+            p.get("name") for p in (jobs.get(job, {}).get("steps") or []) if isinstance(p, dict)
+        ]
         if passo not in nomes:
             sumidos.append(f"{job}: «{passo}»")
-    assert not sumidos, f"PULA-NO-RAPIDO de passo que o YAML não tem (o --rapido rodaria o passo inteiro): {sumidos}"
+    assert not sumidos, (
+        "PULA-NO-RAPIDO de passo que o YAML não tem "
+        f"(o --rapido rodaria o passo inteiro): {sumidos}"
+    )
 
 
 def test_a_suite_inteira_so_roda_no_completo() -> None:
     """Os dois passos que rodam a suíte têm de estar na lista do que o `--rapido` tira."""
     tirados = {(c[1], c[2]) for c in _linhas() if c[0] == "PULA-NO-RAPIDO"}
-    for job, passo in (("lint-test", "Pytest unit"), ("lint-test", "Pytest core"),
-                       ("gtk-real", "A suíte inteira sob Xvfb, com o GTK real")):
+    for job, passo in (
+        ("lint-test", "Pytest unit"),
+        ("lint-test", "Pytest core"),
+        ("gtk-real", "A suíte inteira sob Xvfb, com o GTK real"),
+    ):
         assert (job, passo) in tirados, f"o --rapido rodaria «{passo}» do job {job}"
 
 
@@ -138,11 +171,24 @@ def test_os_checks_que_o_ruleset_exige_pelo_nome_rodam_no_rapido() -> None:
 
 # --- o script, numa árvore de mentira ----------------------------------------------------------
 
+
 def _git(arvore: Path, *args: str) -> None:
     env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull}
     subprocess.run(
-        ["git", "-c", "core.hooksPath=/dev/null", "-c", "user.name=t", "-c", "user.email=t@t.t", *args],
-        cwd=arvore, env=env, check=True, capture_output=True,
+        [
+            "git",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t.t",
+            *args,
+        ],
+        cwd=arvore,
+        env=env,
+        check=True,
+        capture_output=True,
     )
 
 
@@ -160,7 +206,15 @@ echo "ENV: ${RUNNER_TOOL_CACHE:-}"
 echo "---YAML---"
 cat "$yml"
 echo "---FIM---"
-case ",${FAKE_REDE:-}," in *",$job,"*) echo "E: Temporary failure resolving 'archive.ubuntu.com'"; exit 1 ;; esac
+TEXTO="Temporary failure resolving 'archive.ubuntu.com'"
+# a rede caída como o apt a escreve, na saída de um passo (`[job]   | texto`)
+case ",${FAKE_REDE:-}," in *",$job,"*)
+  echo "[CI/$job]   | W: Failed to fetch http://archive.ubuntu.com/InRelease  $TEXTO"
+  exit 1 ;; esac
+# o mesmo texto CITADO (uma linha de teste, com número de linha): reprova, mas não é a rede
+case ",${FAKE_CITA:-}," in *",$job,"*)
+  echo "[CI/$job]   | 163 | echo \"E: $TEXTO\"; exit 1"
+  echo "Error: Job '$job' failed"; exit 1 ;; esac
 case ",${FAKE_FALHA:-}," in *",$job,"*) echo "Error: Job '$job' failed"; exit 1 ;; esac
 exit 0
 """
@@ -177,9 +231,11 @@ def _escrever_exec(caminho: Path, texto: str) -> None:
 
 
 class Mundo:
-    """Uma árvore git de verdade com o script, a tabela e os workflows, e o PATH sem nada além do preciso."""
+    """Uma árvore git de verdade com o script, a tabela, os workflows e um PATH mínimo."""
 
-    def __init__(self, base: Path, tabela: str | None = None, com_act: bool = True, com_docker: bool = True) -> None:
+    def __init__(
+        self, base: Path, tabela: str | None = None, com_act: bool = True, com_docker: bool = True
+    ) -> None:
         base.mkdir(parents=True, exist_ok=True)
         self.base = base
         self.arvore = base / "arvore"
@@ -224,7 +280,11 @@ class Mundo:
         }
         return subprocess.run(
             ["bash", str(self.arvore / "scripts" / "ci-local.sh"), *args],
-            cwd=self.arvore, env=env, capture_output=True, text=True, timeout=120,
+            cwd=self.arvore,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
 
     def log(self, job: str) -> str:
@@ -238,7 +298,9 @@ def mundo(tmp_path: Path) -> Mundo:
 
 def _sem_linha(tabela: str, prefixo: str) -> str:
     saida = [ln for ln in tabela.splitlines() if not ln.startswith(prefixo)]
-    assert len(saida) == len(tabela.splitlines()) - 1, f"a tabela não tem uma linha única que comece por {prefixo!r}"
+    assert len(saida) == len(tabela.splitlines()) - 1, (
+        f"a tabela não tem uma linha única que comece por {prefixo!r}"
+    )
     return "\n".join(saida) + "\n"
 
 
@@ -246,11 +308,16 @@ def test_o_script_confere_a_tabela_com_os_workflows_na_propria_corrida(tmp_path:
     ok = Mundo(tmp_path / "a").rodar("--listar")
     assert ok.returncode == 0, ok.stderr
     # job do workflow sem decisão: reprova e nomeia
-    sem = Mundo(tmp_path / "b", tabela=_sem_linha(TABELA.read_text(encoding="utf-8"), "ROLA|glifos|"))
+    sem = Mundo(
+        tmp_path / "b", tabela=_sem_linha(TABELA.read_text(encoding="utf-8"), "ROLA|glifos|")
+    )
     r = sem.rodar("--rapido", "--conferir")
     assert r.returncode == 2 and "glifos" in r.stderr, r.stderr
     # linha que cita job que não existe
-    sobra = Mundo(tmp_path / "c", tabela=TABELA.read_text(encoding="utf-8") + "ROLA|job-que-nao-existe|rapido\n")
+    sobra = Mundo(
+        tmp_path / "c",
+        tabela=TABELA.read_text(encoding="utf-8") + "ROLA|job-que-nao-existe|rapido\n",
+    )
     r = sobra.rodar("--listar")
     assert r.returncode == 2 and "job-que-nao-existe" in r.stderr, r.stderr
     # fora de casa sem motivo
@@ -258,7 +325,11 @@ def test_o_script_confere_a_tabela_com_os_workflows_na_propria_corrida(tmp_path:
     r = Mundo(tmp_path / "d", tabela=tabela).rodar("--listar")
     assert r.returncode == 2 and "pypi" in r.stderr, r.stderr
     # PULA-NO-RAPIDO de passo que o YAML não tem
-    r = Mundo(tmp_path / "e", tabela=TABELA.read_text(encoding="utf-8") + "PULA-NO-RAPIDO|lint-test|Passo que não existe\n").rodar("--listar")
+    r = Mundo(
+        tmp_path / "e",
+        tabela=TABELA.read_text(encoding="utf-8")
+        + "PULA-NO-RAPIDO|lint-test|Passo que não existe\n",
+    ).rodar("--listar")
     assert r.returncode == 2 and "Passo que não existe" in r.stderr, r.stderr
 
 
@@ -280,8 +351,17 @@ def test_tudo_verde_sai_0_e_o_resumo_e_a_ultima_linha(mundo: Mundo) -> None:
     r = mundo.rodar("--rapido")
     assert r.returncode == 0, r.stderr + r.stdout
     ultima = r.stdout.strip().splitlines()[-1]
-    assert ultima.startswith("ci-local --rapido:") and "0 vermelho(s)" in ultima and "0 não rodado(s)" in ultima
-    assert (mundo.casa / "ci-local" / "ultimo-rapido.txt").read_text(encoding="utf-8").strip().endswith(ultima)
+    assert (
+        ultima.startswith("ci-local --rapido:")
+        and "0 vermelho(s)" in ultima
+        and "0 não rodado(s)" in ultima
+    )
+    assert (
+        (mundo.casa / "ci-local" / "ultimo-rapido.txt")
+        .read_text(encoding="utf-8")
+        .strip()
+        .endswith(ultima)
+    )
 
 
 def test_vermelho_sai_1_e_diz_qual(mundo: Mundo) -> None:
@@ -297,6 +377,13 @@ def test_a_rede_caida_nao_e_verde_nem_vermelho_e_sai_2(mundo: Mundo) -> None:
     assert "a rede caiu" in mundo.log("pre-commit")
 
 
+def test_o_texto_da_rede_citado_dentro_do_log_nao_e_rede(mundo: Mundo) -> None:
+    """Um teste que cita a frase da rede caída não faz o job vermelho virar «não rodou»."""
+    r = mundo.rodar("--rapido", FAKE_CITA="glifos")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "1 vermelho(s) [glifos]" in r.stdout and "0 não rodado(s)" in r.stdout
+
+
 def test_vermelho_vale_mais_que_nao_rodado_no_codigo_de_saida(mundo: Mundo) -> None:
     r = mundo.rodar("--rapido", FAKE_FALHA="glifos", FAKE_REDE="pre-commit")
     assert r.returncode == 1
@@ -308,14 +395,20 @@ def test_o_act_roda_a_arvore_do_indice_e_nao_o_disco(mundo: Mundo) -> None:
     log = mundo.log("glifos")
     arquivos = next(ln for ln in log.splitlines() if ln.startswith("ARQUIVOS:"))
     assert "versionado.txt" in arquivos
-    assert "ignorado.txt" not in arquivos, "o arquivo ignorado entrou no que o act roda: o runner do GitHub não o tem"
+    assert "ignorado.txt" not in arquivos, (
+        "o arquivo ignorado entrou no que o act roda: o runner do GitHub não o tem"
+    )
     assert "/tmp/cil." in next(ln for ln in log.splitlines() if ln.startswith("CWD:"))
 
 
-def test_o_act_nao_compartilha_a_ferramenta_nem_abre_o_servidor_para_a_rede_local(mundo: Mundo) -> None:
+def test_o_act_nao_compartilha_a_ferramenta_nem_abre_o_servidor_para_a_rede_local(
+    mundo: Mundo,
+) -> None:
     mundo.rodar("--job", "glifos")
     log = mundo.log("glifos")
-    assert "RUNNER_TOOL_CACHE=/tmp/hostedtoolcache" in log, "o Python do setup-python voltou a ficar num volume que sobrevive ao job"
+    assert "RUNNER_TOOL_CACHE=/tmp/hostedtoolcache" in log, (
+        "o Python do setup-python voltou a ficar num volume que sobrevive ao job"
+    )
     assert "--artifact-server-addr 127.0.0.1" in log
     assert "--cache-server-addr 127.0.0.1" in log
     assert "--pull=false" in log and "--rm" in log
@@ -324,7 +417,12 @@ def test_o_act_nao_compartilha_a_ferramenta_nem_abre_o_servidor_para_a_rede_loca
 def _passos_do_yaml_do_log(log: str) -> list[str]:
     corpo = log.split("---YAML---\n", 1)[1].split("---FIM---", 1)[0]
     dados = yaml.safe_load(corpo)
-    return [p.get("name", "") for j in dados["jobs"].values() for p in (j.get("steps") or []) if isinstance(p, dict)]
+    return [
+        p.get("name", "")
+        for j in dados["jobs"].values()
+        for p in (j.get("steps") or [])
+        if isinstance(p, dict)
+    ]
 
 
 def test_o_rapido_tira_a_suite_da_copia_e_o_completo_a_deixa(mundo: Mundo) -> None:
@@ -332,11 +430,15 @@ def test_o_rapido_tira_a_suite_da_copia_e_o_completo_a_deixa(mundo: Mundo) -> No
     passos = _passos_do_yaml_do_log(mundo.log("lint-test"))
     assert "Pytest unit" not in passos and "Pytest core" not in passos
     assert "Ruff" in passos, "o --rapido tirou mais do que a tabela mandou"
-    assert "A suíte inteira sob Xvfb, com o GTK real" not in _passos_do_yaml_do_log(mundo.log("gtk-real"))
+    assert "A suíte inteira sob Xvfb, com o GTK real" not in _passos_do_yaml_do_log(
+        mundo.log("gtk-real")
+    )
     shutil.rmtree(mundo.saida)
     mundo.rodar("--completo")
     assert "Pytest unit" in _passos_do_yaml_do_log(mundo.log("lint-test"))
-    assert "A suíte inteira sob Xvfb, com o GTK real" in _passos_do_yaml_do_log(mundo.log("gtk-real"))
+    assert "A suíte inteira sob Xvfb, com o GTK real" in _passos_do_yaml_do_log(
+        mundo.log("gtk-real")
+    )
 
 
 def test_o_job_avulso_roda_o_yaml_inteiro_e_so_tira_o_que_mandam(mundo: Mundo) -> None:
@@ -355,23 +457,31 @@ def _yaml_do_log(log: str) -> dict:
 def test_sem_needs_tira_so_a_dependencia_que_a_tabela_manda(mundo: Mundo) -> None:
     mundo.rodar("--completo")
     smoke = _yaml_do_log(mundo.log("runtime-smoke"))["jobs"]["runtime-smoke"]
-    assert "needs" not in smoke, "o needs: lint-test mandaria o act rodar a suíte inteira antes do smoke"
+    assert "needs" not in smoke, (
+        "o needs: lint-test mandaria o act rodar a suíte inteira antes do smoke"
+    )
     release = _yaml_do_log(mundo.log("deb-install-smoke"))["jobs"]
-    assert "needs" not in release["deb"], "o deb ainda manda o act rodar o `build` (e a suíte) antes dele"
-    assert release["deb-install-smoke"]["needs"] == ["deb"], "o artefato do .deb vem do `deb`: esse needs fica"
+    assert "needs" not in release["deb"], (
+        "o deb ainda manda o act rodar o `build` (e a suíte) antes dele"
+    )
+    assert release["deb-install-smoke"]["needs"] == ["deb"], (
+        "o artefato do .deb vem do `deb`: esse needs fica"
+    )
     # e o que a tabela não manda tirar continua como o YAML escreveu
     original = yaml.safe_load((WORKFLOWS / "release.yml").read_text(encoding="utf-8"))["jobs"]
     assert release["github-release"]["needs"] == original["github-release"]["needs"]
 
 
 def test_o_checkout_com_ref_vira_o_da_arvore_local(mundo: Mundo) -> None:
-    """Com `ref:` o act roda o checkout de verdade e busca no servidor um repositório que ele não sabe qual é."""
+    """Com `ref:` o act roda o checkout de verdade e busca no servidor um repositório qualquer."""
     mundo.rodar("--completo")
     for job in ("build", "deb"):
         passos = _yaml_do_log(mundo.log(job))["jobs"][job]["steps"]
         checkout = next(p for p in passos if str(p.get("uses", "")).startswith("actions/checkout"))
         assert "ref" not in (checkout.get("with") or {}), f"o checkout do {job} ainda pede ref:"
-    assert "ref:" in (WORKFLOWS / "release.yml").read_text(encoding="utf-8"), "o teste deixou de medir o que o YAML tem"
+    assert "ref:" in (WORKFLOWS / "release.yml").read_text(encoding="utf-8"), (
+        "o teste deixou de medir o que o YAML tem"
+    )
 
 
 def test_job_que_fica_fora_de_casa_nao_roda_calado(mundo: Mundo) -> None:

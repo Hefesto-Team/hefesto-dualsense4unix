@@ -157,8 +157,18 @@ def _coletar_sem_gtk() -> str:
         )
         return subprocess.run(
             [
-                python, "-m", "pytest", "tests", "--collect-only", "-q", "-rs",
-                "--continue-on-collection-errors", "-p", "no:cacheprovider", "-p", PLUGIN,
+                python,
+                "-m",
+                "pytest",
+                "tests",
+                "--collect-only",
+                "-q",
+                "-rs",
+                "--continue-on-collection-errors",
+                "-p",
+                "no:cacheprovider",
+                "-p",
+                PLUGIN,
             ],
             cwd=RAIZ,
             env=ambiente,
@@ -172,7 +182,11 @@ def main(argv: list[str]) -> int:
     if "--julgar" in argv:
         i = argv.index("--julgar")
         origem = argv[i + 1] if i + 1 < len(argv) else "-"
-        saida = sys.stdin.read() if origem == "-" else Path(origem).read_text(encoding="utf-8", errors="replace")
+        saida = (
+            sys.stdin.read()
+            if origem == "-"
+            else Path(origem).read_text(encoding="utf-8", errors="replace")
+        )
     else:
         saida = _coletar_sem_gtk()
     queixas, total, pulados = julgar(saida, versionados())
@@ -183,7 +197,9 @@ def main(argv: list[str]) -> int:
         if total == 0:
             print("\n".join(saida.splitlines()[-15:]))
         return 1
-    print(f"OK: {total} testes coletados, {pulados} módulo(s) pulado(s) com motivo, nenhum módulo sumiu.")
+    print(
+        f"OK: {total} testes coletados, {pulados} módulo(s) pulado(s) com motivo, nenhum módulo sumiu."
+    )
     return 0
 
 

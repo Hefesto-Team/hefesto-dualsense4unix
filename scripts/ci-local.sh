@@ -55,8 +55,13 @@ EM_PARALELO="${CI_LOCAL_JOBS:-2}"        # quantos jobs do act ao mesmo tempo
 PERNAS="${CI_LOCAL_PERNAS:-3}"           # quantas pernas de matriz por job
 DATA="$(date +%Y-%m-%d_%H%M)"
 SAIDA="${CI_LOCAL_SAIDA:-$CASA/ci-local/$DATA}"
-# O texto que o log tem quando a REDE caiu: o job reprovou, mas não por defeito dele.
-REDE_CAIDA='Temporary failure resolving|Could not resolve host|Name or service not known|EAI_AGAIN|Network is unreachable|Temporary failure in name resolution'
+# O que o log tem quando a REDE caiu: o job reprovou, mas não por defeito dele. Só conta a SAÍDA DE UM
+# PASSO (`[job]   | texto`) no formato de quem fala com a rede (apt, git, curl, pip, node) e as linhas
+# do próprio act ao puxar a imagem. Citação de código ou de teste dentro do log (`| 163 | echo "E: Temporary
+# failure resolving"`) não conta: a primeira versão deste filtro olhava a frase solta, e o texto de um teste
+# que a citava fez dois jobs vermelhos de verdade passarem por «rede caída» (06/10/2026).
+REDE_PASSO='\]\s+\|\s+(W: Failed to fetch .*(Temporary failure resolving|Could not resolve)|Temporary failure resolving .|fatal: unable to access .*Could not resolve host|curl: \([67]\) |.*Failed to establish a new connection: \[Errno -[23]\]|(Error: )?getaddrinfo (EAI_AGAIN|ENOTFOUND))'
+REDE_ACT='^Error: .*(no such host|dial tcp|Temporary failure in name resolution)'
 
 modo=""; alvo=""; conferir=0; listar=0; SEM_PASSO=()
 while [ $# -gt 0 ]; do
@@ -315,7 +320,7 @@ rodar_job() { # job índice
   )
   rc=$?
   # Reprovou porque a rede caiu: não é defeito do job, e não rodar não é verde.
-  if [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE "$REDE_CAIDA" "$log"; then
+  if [ "$rc" != 0 ] && [ "$rc" != 2 ] && grep -qE -e "$REDE_PASSO" -e "$REDE_ACT" "$log"; then
     echo "ci-local: a rede caiu no meio deste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
     echo rede > "$SAIDA/$job.motivo"; rc=2
   fi
