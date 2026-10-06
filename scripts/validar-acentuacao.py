@@ -28,6 +28,7 @@ import argparse
 import re
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 A = "á"
@@ -469,6 +470,32 @@ _PATTERNS: dict[str, re.Pattern[str]] = {e: _compila_pattern(e) for e in _CORREC
 _cache_alternancia: tuple[tuple[int, int], re.Pattern[str]] | None = None
 
 
+def _como_arvore_de_prefixos(palavras: Iterable[str]) -> str:
+    """A MESMA alternância de palavras, escrita como árvore de prefixos.
+
+    ``a(?:cao|coes)`` casa exatamente o que ``acao|acoes`` casa; muda só o
+    custo: a alternância plana tentava as 314 palavras em CADA posição de CADA
+    linha (33 s de 60 do ``--all``), e a árvore decide pela primeira letra. As
+    bordas ``(?<!…)`` e ``(?!…)`` em volta continuam exigindo a palavra inteira,
+    então no máximo uma palavra casa em cada ponto, na árvore ou na lista.
+    """
+    raiz: dict[str, dict] = {}
+    for palavra in palavras:
+        no = raiz
+        for letra in palavra:
+            no = no.setdefault(letra, {})
+        no[""] = {}
+
+    def escreve(no: dict[str, dict]) -> str:
+        ramos = [re.escape(letra) + escreve(sub) for letra, sub in sorted(no.items()) if letra]
+        if not ramos:
+            return ""
+        corpo = ramos[0] if len(ramos) == 1 else "(?:" + "|".join(ramos) + ")"
+        return f"(?:{corpo})?" if "" in no else corpo
+
+    return escreve(raiz)
+
+
 def _alternancia() -> re.Pattern[str]:
     """Um único padrão com as 314 palavras, em vez de 314 padrões por linha."""
     global _cache_alternancia
@@ -477,7 +504,7 @@ def _alternancia() -> re.Pattern[str]:
         return _cache_alternancia[1]
     pat = re.compile(
         r"(?<![A-Za-z0-9_])(?:"
-        + "|".join(re.escape(e) for e in sorted(_CORRECOES, key=len, reverse=True))
+        + _como_arvore_de_prefixos(_CORRECOES)
         + r")(?![A-Za-z0-9_])",
         re.IGNORECASE,
     )
@@ -729,6 +756,7 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
     linhas_texto = _mascara_codigo_python(conteudo, linhas) if eh_python else linhas
 
     violacoes: list[tuple[int, str, str, str]] = []
+    alternancia = _alternancia()
     for idx, linha in enumerate(linhas):
         if idx in pular_idx:
             continue
@@ -740,7 +768,7 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
             linha_busca = linhas_texto[idx]
         else:
             linha_busca = linha
-        for m in _alternancia().finditer(linha_busca):
+        for m in alternancia.finditer(linha_busca):
             correta = _CORRECOES.get(m.group().lower())
             if correta is None:
                 continue

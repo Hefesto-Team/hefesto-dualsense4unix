@@ -95,14 +95,31 @@ def test_a_arvore_inteira_da_o_mesmo_resultado() -> None:
     )
 
 
-def test_a_ordenacao_por_comprimento_esta_la() -> None:
-    """A trava que impede o achado truncado."""
+def test_o_achado_nunca_sai_truncado_pelo_prefixo() -> None:
+    """A trava que impede o achado truncado, medida no COMPORTAMENTO.
+
+    Até 06/10/2026 ela lia o fonte atrás de ``key=len`` e ``reverse=True``; a
+    alternância passou a ser árvore de prefixos, que também prefere a palavra
+    mais longa, e a trava passou a perguntar o que importa: com uma palavra e o
+    prefixo dela no dicionário, o achado é a palavra inteira, nunca o prefixo.
+    """
     mod = _modulo()
-    fonte = inspect.getsource(mod)
-    assert "key=len" in fonte and "reverse=True" in fonte, (
-        "a alternância perdeu a ordenação por comprimento: um prefixo passa a "
-        "casar antes do termo inteiro e o achado sai truncado"
-    )
+    mod._CORRECOES["zzpalx"] = "zzpalx-certa"
+    mod._CORRECOES["zzpalxyz"] = "zzpalxyz-certa"
+    try:
+        inteira = mod._alternancia().search("olha o zzpalxyz aqui")
+        assert inteira is not None and inteira.group() == "zzpalxyz", (
+            "a alternância devolveu o prefixo no lugar da palavra inteira: o "
+            "achado sai truncado e a sugestão corrige a palavra errada"
+        )
+        curta = mod._alternancia().search("olha o zzpalx aqui")
+        assert curta is not None and curta.group() == "zzpalx"
+        assert mod._alternancia().search("olha o zzpalxy aqui") is None, (
+            "um pedaço de palavra, sem a borda, não pode casar"
+        )
+    finally:
+        del mod._CORRECOES["zzpalx"]
+        del mod._CORRECOES["zzpalxyz"]
 
 
 def test_o_laco_de_314_passadas_nao_voltou() -> None:
