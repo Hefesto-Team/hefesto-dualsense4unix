@@ -214,13 +214,13 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
-    "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 1,
+    "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 0,
     "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 4,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 0,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_PAR_ACEITO": 0,
-    "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 3,
+    "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 2,
     "tests/unit/test_toda_fala_declarada_chega_a_tela.py::_FALA_SEM_TELA_HOJE": 0,
-    "tests/unit/test_todo_campo_do_caderno_tem_consumidor.py::ISENTOS": 5,
+    "tests/unit/test_todo_campo_do_caderno_tem_consumidor.py::ISENTOS": 0,
     "tests/unit/test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula.py::PENDENTES": 1,
 }
 
@@ -229,6 +229,9 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "scripts/recibo_da_medida.py::_IGNORADOS_QUE_ENTRAM": (
+        "as pastas ignoradas pelo git que a chave da memória dos portões lê (medido por strace: "
+        "quatro portões abrem arquivos de scripts/ que o git não leva); entra na chave, não isenta nada"),
     "scripts/github/aplicar.py::DONOS_PERMITIDOS": (
         "os donos em que o aplicador aceita escrever (a organização e a conta de quem mantém): "
         "é a guarda contra escrever no repositório errado, não um caso isento"),
