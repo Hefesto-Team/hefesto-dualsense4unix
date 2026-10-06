@@ -359,10 +359,41 @@ rodar_job() { # job índice
   return "$rc"
 }
 
+# O que o `act` roda junto com o job: o `needs:` dele, menos o que a tabela manda tirar (`SEM-NEEDS`), e o
+# `needs:` deles, e assim por diante. Dois `act` ao mesmo tempo com um job em comum brigam pelo mesmo
+# container (`Conflict. The container name "/act-Release-deb-…" is already in use`: medido em 06/10/2026),
+# e o job que é plano de outro já roda dentro dele: o resultado dele é o do job que o cobre.
+needs_do_job() { # job -> os `needs:` dele, um por linha, sem o que o SEM-NEEDS tira
+  local f tira; f="$(arquivo_do_job "$1")"; [ -n "$f" ] || return 0
+  tira=",$(campo SEM-NEEDS "$1" 3),"
+  awk -v job="$1" '
+    /^jobs:/ {emjobs=1}
+    emjobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {atual=$1; sub(/:$/, "", atual)}
+    atual==job && /^    needs:/ {v=$0; sub(/^    needs:[[:space:]]*/, "", v); gsub(/[\[\]]/, "", v); n=split(v, d, /[[:space:]]*,[[:space:]]*/); for (i=1;i<=n;i++) if (d[i] != "") print d[i]}
+  ' "$RAIZ/.github/workflows/$f" | while read -r d; do case "$tira" in *",$d,"*) ;; *) echo "$d" ;; esac; done
+}
+plano_do_job() { # job -> ele e tudo o que o act roda junto
+  local fila=("$1") visto=" " atual d
+  while [ "${#fila[@]}" -gt 0 ]; do
+    atual="${fila[0]}"; fila=("${fila[@]:1}")
+    case "$visto" in *" $atual "*) continue ;; esac
+    visto="$visto$atual "
+    while read -r d; do [ -n "$d" ] && fila+=("$d"); done < <(needs_do_job "$atual")
+  done
+  for d in $visto; do echo "$d"; done
+}
+declare -A COBERTO=()
+for j in "${JOBS[@]}"; do
+  for k in "${JOBS[@]}"; do
+    [ "$j" != "$k" ] && plano_do_job "$k" | grep -qx "$j" && { COBERTO[$j]=$k; break; }
+  done
+done
+
 INI=$(date +%s)
 i=0
 for j in "${JOBS[@]}"; do
   [ -n "$j" ] || continue
+  [ -z "${COBERTO[$j]:-}" ] || continue
   while [ "$(jobs -rp | wc -l)" -ge "$EM_PARALELO" ]; do wait -n 2>/dev/null || true; done
   ( rodar_job "$j" "$i"; rc=$?
     if [ "$rc" = 0 ]; then echo "ci-local: $j verde ($(cat "$SAIDA/$j.seg")s)" >&2
@@ -371,6 +402,12 @@ for j in "${JOBS[@]}"; do
   i=$((i + 1))
 done
 wait
+for j in "${!COBERTO[@]}"; do # o job que é plano de outro tem o resultado do que o cobre
+  k="${COBERTO[$j]}"
+  cp "$SAIDA/$k.rc" "$SAIDA/$j.rc" 2>/dev/null || echo 2 > "$SAIDA/$j.rc"
+  echo "rodou dentro do plano de $k: veja $SAIDA/$k.log" > "$SAIDA/$j.log"
+  echo "ci-local: $j rodou dentro do plano de $k (rc=$(cat "$SAIDA/$j.rc"))" >&2
+done
 
 VERDE=(); VERMELHO=(); NAO_RODOU=()
 for j in "${JOBS[@]}"; do

@@ -477,8 +477,8 @@ def test_sem_needs_tira_so_a_dependencia_que_a_tabela_manda(mundo: Mundo) -> Non
 def test_o_checkout_com_ref_vira_o_da_arvore_local(mundo: Mundo) -> None:
     """Com `ref:` o act roda o checkout de verdade e busca no servidor um repositório qualquer."""
     mundo.rodar("--completo")
-    for job in ("build", "deb"):
-        passos = _yaml_do_log(mundo.log(job))["jobs"][job]["steps"]
+    for job, onde_rodou in (("build", "build"), ("deb", "deb-install-smoke")):
+        passos = _yaml_do_log(mundo.log(onde_rodou))["jobs"][job]["steps"]
         checkout = next(p for p in passos if str(p.get("uses", "")).startswith("actions/checkout"))
         assert "ref" not in (checkout.get("with") or {}), f"o checkout do {job} ainda pede ref:"
     assert "ref:" in (WORKFLOWS / "release.yml").read_text(encoding="utf-8"), (
@@ -508,6 +508,26 @@ def test_o_job_sem_matriz_de_runners_roda_numa_chamada_so(mundo: Mundo) -> None:
 def test_uma_perna_vermelha_faz_o_job_vermelho(mundo: Mundo) -> None:
     r = mundo.rodar("--job", "deb", FAKE_FALHA="deb")
     assert r.returncode == 1 and "1 vermelho(s) [deb]" in r.stdout
+
+
+def test_o_job_que_e_plano_de_outro_nao_roda_sozinho_ao_lado_dele(mundo: Mundo) -> None:
+    """Dois act com um job em comum brigam pelo mesmo container (`Conflict. The container name`)."""
+    r = mundo.rodar("--job", "deb,deb-install-smoke")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "2 verde(s)" in r.stdout.strip().splitlines()[-1]
+    assert "rodou dentro do plano de deb-install-smoke" in mundo.log("deb")
+    chamadas = [ln for ln in mundo.log("deb-install-smoke").splitlines() if ln.startswith("ARGS:")]
+    assert len(chamadas) == 2, "o deb-install-smoke roda as duas pernas, e o deb vai dentro delas"
+    # falhando o que cobre, o coberto leva o mesmo código: não fica verde por ter sido «só um plano»
+    r = mundo.rodar("--job", "deb,deb-install-smoke", FAKE_FALHA="deb-install-smoke")
+    assert r.returncode == 1 and "2 vermelho(s)" in r.stdout.strip().splitlines()[-1]
+
+
+def test_o_runtime_smoke_nao_cobre_o_lint_test_porque_o_needs_dele_sai(mundo: Mundo) -> None:
+    r = mundo.rodar("--job", "runtime-smoke,lint-test")
+    assert r.returncode == 0 and "2 verde(s)" in r.stdout.strip().splitlines()[-1]
+    assert len([ln for ln in mundo.log("lint-test").splitlines() if ln.startswith("ARGS:")]) == 1
+    assert "rodou dentro" not in mundo.log("lint-test")
 
 
 def test_job_que_fica_fora_de_casa_nao_roda_calado(mundo: Mundo) -> None:
