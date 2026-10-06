@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# scripts/hooks/commit-msg — a mensagem de commit não nomeia ferramenta nem
-# atribui autoria a quem não é pessoa desta casa.
+# scripts/hooks/commit-msg — a mensagem de commit não traz termo da lista que
+# não se publica nem atribui autoria a quem não é pessoa desta casa.
 #
 # POR QUE ELE É VERSIONADO, e a razão é medida (15/09/2026): a máquina dela
 # tinha um `commit-msg` GLOBAL fazendo exatamente isto, e ele RODOU 1.179 vezes
@@ -28,34 +28,49 @@ set -uo pipefail
 MSG_FILE="${1:?uso: commit-msg <arquivo-da-mensagem>}"
 [ -f "$MSG_FILE" ] || exit 0
 
-# O nome da ferramenta não se escreve inteiro nem aqui: o sanitizador de
-# coautoria da casa apaga a linha que o traga, e este arquivo viraria a
-# primeira ocorrência do que ele proíbe.
-FERRAMENTA="$(printf '%s' 'cla''ude|anth''ropic|open''ai|chat''gpt|cop''ilot|gem''ini|deep''seek|ai''der|winds''urf|code''ium|tab''nine|gpt-[0-9]')"
+# O vocabulário não mora no repositório: quem diz que linha traz termo da lista
+# é a régua única (`scripts/check_autoria.py texto`), a mesma do pre-push e do
+# CI, que lê a lista de fora (`git config autoria.vedados` ou AUTORIA_VEDADOS) e
+# devolve só o número da linha. Sem a régua ou sem a lista, o vocabulário fica
+# para o pre-push e o CI, que reprovam; este gancho só corrige.
+REGUA="$(git rev-parse --show-toplevel 2>/dev/null || true)/scripts/check_autoria.py"
+COM_TERMO=" "
+if [ -f "$REGUA" ] && command -v python3 >/dev/null 2>&1; then
+    MEDIDA="$(AUTORIA_LIMITE=100000 python3 "$REGUA" texto < "$MSG_FILE" || true)"
+    if printf '%s\n' "$MEDIDA" | grep -q 'NÃO MEDIDO'; then
+        echo "commit-msg: a lista de termos não chegou; o vocabulário fica para o pre-push e o CI." >&2
+    fi
+    COM_TERMO=" $(printf '%s\n' "$MEDIDA" \
+        | sed -n 's/^  linha \([0-9][0-9]*\): termo da lista (nível 1)$/\1/p' | tr '\n' ' ')"
+else
+    echo "commit-msg: scripts/check_autoria.py ausente; o vocabulário fica para o pre-push e o CI." >&2
+fi
+_tem_termo() { case "$COM_TERMO" in *" $1 "*) return 0 ;; esac; return 1; }
 ATRIBUICAO='^[[:space:]]*(co[-_ ]?aut'"$(printf '%s' 'hored')"'[-_ ]?by|assisted[-_ ]?by|paired[-_ ]?with|generated[-_ ]?(by|with)|[A-Za-z]+-session)[[:space:]]*:'
 
 #: As duas pessoas desta casa. Coautoria entre elas é legítima e FICA.
 PESSOAS='vitoriamaria\.sds@gmail\.com|andre\.dsbf@gmail\.com'
 
 ASSUNTO="$(head -1 "$MSG_FILE")"
-if printf '%s' "$ASSUNTO" | grep -qiE "$FERRAMENTA"; then
-    echo "commit-msg: o ASSUNTO traz atribuição a quem não assina o projeto. Reescreva-o." >&2
-    echo "  Regra desta casa: só as pessoas do .mailmap assinam." >&2
+if _tem_termo 1; then
+    echo "commit-msg: o ASSUNTO traz termo da lista que não se publica. Reescreva-o." >&2
+    echo "  Regra desta casa: nenhuma mensagem do repositório traz atribuição a quem não" >&2
+    echo "  assina o projeto." >&2
     exit 1
 fi
 
 LIMPO="$(mktemp)"
 trap 'rm -f "$LIMPO"' EXIT
-CORTADAS=0
 {
     printf '%s\n' "$ASSUNTO"
-    tail -n +2 "$MSG_FILE" | while IFS= read -r linha; do
+    n=1
+    tail -n +2 "$MSG_FILE" | while IFS= read -r linha || [ -n "$linha" ]; do
+        n=$((n + 1))
         if printf '%s' "$linha" | grep -qiE "$ATRIBUICAO" \
            && ! printf '%s' "$linha" | grep -qiE "$PESSOAS"; then
-            CORTADAS=$((CORTADAS + 1))
             continue
         fi
-        if printf '%s' "$linha" | grep -qiE "$FERRAMENTA"; then
+        if _tem_termo "$n"; then
             continue
         fi
         printf '%s\n' "$linha"
@@ -69,7 +84,7 @@ done
 
 if ! cmp -s "$LIMPO" "$MSG_FILE"; then
     cp "$LIMPO" "$MSG_FILE"
-    echo "commit-msg: linhas de atribuição ou de ferramenta removidas da mensagem." >&2
+    echo "commit-msg: linhas de atribuição ou com termo da lista removidas da mensagem." >&2
 fi
 
 if [ ! -s "$MSG_FILE" ]; then

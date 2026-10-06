@@ -51,10 +51,14 @@ ATRIBUICAO = re.compile(
 GITHUB_NOME = "GitHub"
 GITHUB_ENDERECO = "noreply@github.com"
 ESPACO_DO_TOKEN = re.compile(r"[A-Za-z0-9]+")
+ENDERECO = re.compile(r"[^\s<>@,;]+@[^\s<>@,;]+")
 
 
 def git(*args: str, entrada: str | None = None, ok: bool = False) -> str:
-    r = subprocess.run(["git", *args], input=entrada, capture_output=True, text=True)
+    # UTF-8 com troca do byte que não se lê: um arquivo em Latin-1 no diff derrubava a
+    # régua com um traceback, e o push ficava barrado sem medida nenhuma.
+    r = subprocess.run(["git", *args], input=entrada, capture_output=True,
+                       encoding="utf-8", errors="replace")
     if r.returncode != 0 and not ok:
         sys.exit(f"autoria: git {' '.join(args[:2])} falhou: {r.stderr.strip()[:200]}")
     return r.stdout
@@ -190,10 +194,16 @@ def _identidades_do_commit(an: str, ae: str, cn: str, ce: str, casa: Casa) -> li
     return ruins + _identidade("committer", cn, ce, casa)
 
 
+def _atribuicao_da_casa(valor: str, casa: Casa) -> bool:
+    """A linha de atribuição traz endereço, e TODO endereço dela é de quem está no `.mailmap`."""
+    enderecos = [e.lower() for e in ENDERECO.findall(valor)]
+    return bool(enderecos) and all(e in casa[1] for e in enderecos)
+
+
 def _mensagem(msg: str, casa: Casa, lista: Lista | None, nivel2: bool) -> list[str]:
     ruins = []
     for m in ATRIBUICAO.finditer(msg):
-        if not any(e in m.group(1).lower() for e in casa[1]):
+        if not _atribuicao_da_casa(m.group(1), casa):
             ruins.append("linha de atribuição a quem não assina o projeto")
     if lista is not None:
         if lista.vedado(msg, 1):
@@ -426,7 +436,9 @@ def modo_remoto(remoto: str, lista: Lista | None) -> int:
 def modo_texto(lista: Lista | None) -> int:
     ruins: list[str] = []
     if lista is not None:
-        for i, linha in enumerate(sys.stdin.read().splitlines(), 1):
+        # Quebra só no fim de linha: o número tem de ser o mesmo que o `read` do
+        # gancho de commit-msg conta.
+        for i, linha in enumerate(sys.stdin.read().split("\n"), 1):
             if lista.vedado(linha, 1):
                 ruins.append(f"linha {i}: termo da lista (nível 1)")
             if lista.vedado(linha, 2):
@@ -446,6 +458,11 @@ def _veredito(ruins: list[str], alcance: str, lista: Lista | None) -> int:
     if lista is None:
         print("autoria: NÃO MEDIDO: a lista de termos não chegou (AUTORIA_VEDADOS ou "
               "`git config autoria.vedados`); a parte de vocabulário não foi medida.")
+        return 1
+    if lista.invalidas:
+        print(f"autoria: NÃO MEDIDO: {lista.invalidas} linha(s) da lista não se leem "
+              "(o formato é `1 <termo>`, `2 <Termo>` ou `1 re:<expressão>`); "
+              "o termo delas não foi medido.")
         return 1
     if unicos:
         return 1

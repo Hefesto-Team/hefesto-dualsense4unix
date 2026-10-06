@@ -163,6 +163,19 @@ def test_chave_de_atribuicao_sem_o_endereco_da_casa_reprova(repo: Path, chave: s
     assert p.returncode == 1, saida(p)
 
 
+@pytest.mark.parametrize("valor", [
+    "Fornecedor X <x@fora.test>, um@casa.test",
+    "Fornecedor X <x+um@casa.test>",
+    "Pessoa Um <um@casa.test> <x@fora.test>",
+])
+def test_atribuicao_com_endereco_de_fora_ao_lado_do_da_casa_reprova(repo: Path, valor: str) -> None:
+    """TODO endereço da linha é da casa: o da casa ao lado (ou dentro) de outro não basta."""
+    commitar(repo, f"feat: x\n\n{COAUTORIA}: {valor}")
+    p = rodar(repo, "historia", "HEAD")
+    assert p.returncode == 1, saida(p)
+    assert "linha de atribuição" in p.stdout
+
+
 def test_signed_off_by_de_quem_esta_no_mailmap_passa(repo: Path) -> None:
     commitar(repo, "feat: x\n\nSigned-off-by: Pessoa Dois <dois@casa.test>", autor=DOIS)
     p = rodar(repo, "historia", "HEAD")
@@ -263,6 +276,16 @@ def test_a_lista_pode_vir_do_arquivo_do_git_config(repo: Path, tmp_path: Path) -
     p = rodar(repo, "historia", "HEAD", lista="")
     assert p.returncode == 1
     assert "termo da lista na mensagem" in p.stdout
+
+
+@pytest.mark.parametrize("ruim", ["3 outro", "1re:x", "1 re:(", "nivel termo"])
+def test_linha_da_lista_que_nao_se_le_e_nao_medido_e_nao_verde(repo: Path, ruim: str) -> None:
+    """Um termo da lista que não se lê é um termo que não se mede: não sai verde."""
+    commitar(repo)
+    p = rodar(repo, "historia", "HEAD", lista=LISTA + ruim + "\n")
+    assert p.returncode == 1, saida(p)
+    assert "NÃO MEDIDO" in p.stdout and "1 linha(s)" in p.stdout
+    assert ruim not in saida(p)
 
 
 def test_arquivo_da_lista_que_nao_existe_tambem_e_nao_medido(repo: Path) -> None:
@@ -376,6 +399,22 @@ def test_o_diff_mede_o_nivel_1_nas_linhas_acrescentadas_e_so_nelas(repo: Path) -
     assert rodar(repo, "diff", base, topo).returncode == 0
     topo2 = commitar(repo, "docs: pior", arquivos={"a.md": f"{CANARIO}\nlimpa\nmais {CANARIO}\n"})
     assert rodar(repo, "diff", topo, topo2).returncode == 1
+
+
+def test_o_diff_com_arquivo_que_nao_e_utf8_mede_e_nao_cai(repo: Path) -> None:
+    """Um arquivo em Latin-1 derrubava a régua com traceback, e o push ficava barrado sem medida."""
+    base = git(repo, "rev-parse", "HEAD")
+    (repo / "latin.txt").write_bytes(b"ol\xe1 mundo\n")
+    git(repo, "add", "latin.txt")
+    topo = commitar(repo, "feat: latin", arquivos={})
+    p = rodar(repo, "diff", base, topo)
+    assert p.returncode == 0, saida(p)
+    (repo / "latin.txt").write_bytes(b"ol\xe1 " + CANARIO.encode() + b"\n")
+    git(repo, "add", "latin.txt")
+    topo = commitar(repo, "feat: latin de novo", arquivos={})
+    p = rodar(repo, "diff", base, topo)
+    assert p.returncode == 1 and "Traceback" not in saida(p), saida(p)
+    assert "latin.txt: linha acrescentada com termo da lista (nível 1)" in p.stdout
 
 
 def test_mensagem_nova_com_vocabulario_de_processo_reprova(repo: Path) -> None:
@@ -651,3 +690,58 @@ def test_o_gancho_sem_a_regua_na_arvore_reprova_e_nao_passa(casa: Path, tmp_path
     p = git_vivo(casa, "push", "origin", "dev:refs/heads/fecho/x")
     assert p.returncode != 0
     assert "política não medida" in saida(p)
+
+
+# ---------------------------------------------------------------------------
+# O gancho de commit-msg: o vocabulário vem da mesma lista, nunca de um literal
+# ---------------------------------------------------------------------------
+
+
+def commit_msg(casa: Path, texto: str, lista: str | None = LISTA) -> tuple[subprocess.CompletedProcess[str], str]:
+    arquivo = casa.parent / "MENSAGEM"
+    arquivo.write_text(texto, encoding="utf-8")
+    extra = {"AUTORIA_VEDADOS": lista} if lista is not None else {}
+    p = subprocess.run(
+        ["bash", "scripts/hooks/commit-msg", str(arquivo)],
+        cwd=casa, env=_ambiente(extra), capture_output=True, text=True,
+    )
+    return p, arquivo.read_text(encoding="utf-8")
+
+
+def test_o_commit_msg_barra_o_assunto_com_termo_da_lista(casa: Path) -> None:
+    p, _ = commit_msg(casa, f"feat: {FORNECEDOR.replace('-', ' ')} entra\n")
+    assert p.returncode == 1, saida(p)
+    assert FORNECEDOR.replace("-", " ") not in saida(p)
+
+
+def test_o_commit_msg_tira_do_corpo_a_linha_com_termo_e_a_atribuicao_de_fora(casa: Path) -> None:
+    """O termo vem da LISTA: um fornecedor que nenhum literal do gancho conhece sai igual."""
+    texto = (
+        "feat: limpo\n\n"
+        "linha que fica\n"
+        f"linha com {CANARIO} sai\n"
+        f"o {FORNECEDOR.replace('-', ' ')} também sai\n"
+        f"{COAUTORIA}: Fulana <fulana@fora.test>\n"
+        "o agente de pareamento fica"
+    )
+    p, depois = commit_msg(casa, texto)
+    assert p.returncode == 0, saida(p)
+    assert depois.splitlines() == [
+        "feat: limpo", "", "linha que fica",
+        "o agente de pareamento fica",
+    ]
+
+
+def test_o_commit_msg_sem_a_lista_nao_mexe_e_avisa(casa: Path) -> None:
+    texto = f"feat: limpo\n\nlinha com {CANARIO}\n"
+    p, depois = commit_msg(casa, texto, lista="")
+    assert p.returncode == 0, saida(p)
+    assert depois == texto
+    assert "a lista de termos não chegou" in p.stderr
+
+
+def test_o_commit_msg_nao_carrega_vocabulario_proprio() -> None:
+    """Nenhuma lista de nomes no gancho: quem decide é a régua, pela lista de fora."""
+    gancho = (RAIZ / "scripts" / "hooks" / "commit-msg").read_text(encoding="utf-8")
+    assert "check_autoria.py" in gancho and " texto " in gancho
+    assert "FERRAMENTA" not in gancho
