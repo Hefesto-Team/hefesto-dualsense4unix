@@ -1,6 +1,6 @@
 # Changelog
 
-Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A série 0.9.4.x tem quatro números; onde um formato exige três, a quarta casa vira metadado de build (`0.9.4+5`).
+Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão tem três números e, numa correção entre duas versões, quatro (0.9.5, 0.9.5.1); onde um formato exige três, a quarta casa vira metadado de build (`0.9.5+1`).
 
 ## [Unreleased]
 
