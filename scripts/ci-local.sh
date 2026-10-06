@@ -79,6 +79,7 @@ done
 # PULA-NO-RAPIDO|job|passo     no --rapido o passo de nome exato sai da cópia do YAML
 # SEM-NEEDS|job|dep,dep|motivo  as dependências citadas saem do `needs:` do job, na cópia (o act seguiria o `needs:` e rodaria
 #                              de novo, antes dele, o job de que ele depende); o `needs:` que sobra continua valendo
+# EM-TAG|workflow.yml|motivo   o workflow dispara em tag: o act roda o evento `push` com `ref: refs/tags/v<versão do pyproject>`
 # FORA-DE-CASA|job|motivo      não roda em casa, com o motivo medido
 linhas() {
   if [ -n "${TABELA:-}" ]; then printf '%s\n' "$TABELA"; else cat "$JOBS_TXT" 2>/dev/null; fi | grep -vE '^\s*(#|$)'
@@ -114,12 +115,15 @@ conferir_tabela() {
   [ -z "$dup" ] || { echo "ci-local: o job '$dup' existe em mais de um workflow; a tabela o nomeia só pelo id" >&2; erros=1; }
   while IFS='|' read -r tipo j resto _; do
     [ -n "$j" ] || continue
-    jobs_do_yaml | awk -v j="$j" '$2==j {ok=1} END{exit !ok}' \
+    [ "$tipo" = EM-TAG ] || jobs_do_yaml | awk -v j="$j" '$2==j {ok=1} END{exit !ok}' \
       || { echo "ci-local: a tabela cita o job '$j', que nenhum workflow tem" >&2; erros=1; }
     case "$tipo" in
       ROLA) case "$resto" in rapido|completo) ;; *) echo "ci-local: ROLA|$j|$resto: o modo é rapido ou completo" >&2; erros=1 ;; esac ;;
       FORA-DE-CASA) [ -n "$resto" ] || { echo "ci-local: FORA-DE-CASA|$j sem motivo" >&2; erros=1; } ;;
       PULA-NO-RAPIDO) passo_existe "$j" "$resto" || { echo "ci-local: PULA-NO-RAPIDO|$j|$resto: o job não tem esse passo" >&2; erros=1; } ;;
+      EM-TAG)
+        [ -f "$RAIZ/.github/workflows/$j" ] || { echo "ci-local: EM-TAG|$j: o workflow não existe" >&2; erros=1; }
+        [ -n "$resto" ] || { echo "ci-local: EM-TAG|$j sem motivo" >&2; erros=1; } ;;
       SEM-NEEDS)
         [ -n "$resto" ] || { echo "ci-local: SEM-NEEDS|$j sem a lista de dependências" >&2; erros=1; }
         [ -n "$(linhas | awk -F'|' -v j="$j" '$1=="SEM-NEEDS" && $2==j {print $4}')" ] || { echo "ci-local: SEM-NEEDS|$j sem motivo" >&2; erros=1; } ;;
@@ -288,6 +292,12 @@ rodar_job() { # job índice
   ini=$(date +%s)
   yml="$(yaml_de "$job")" || { echo "ci-local: o job '$job' não está em workflow nenhum" > "$log"; echo 2 > "$SAIDA/$job.rc"; return 2; }
   porta=$((30000 + ($$ % 3000) * 10 + i % 10))
+  local arquivo_do_yaml; arquivo_do_yaml="$(arquivo_do_job "$job")"
+  if [ -n "$(campo EM-TAG "$arquivo_do_yaml" 3)" ]; then
+    local versao; versao="$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$ARV/pyproject.toml" 2>/dev/null | head -1)"
+    printf '{"ref": "refs/tags/v%s"}\n' "${versao:-0.0.0-local}" > "$TMP/tag-$job.json"
+    extras+=(-e "$TMP/tag-$job.json")
+  fi
   [ -n "$IMAGEM_22" ] && extras+=(-P "ubuntu-22.04=$IMAGEM_22")
   # shellcheck disable=SC2086
   (

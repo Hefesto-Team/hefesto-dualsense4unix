@@ -348,12 +348,30 @@ def test_o_job_avulso_roda_o_yaml_inteiro_e_so_tira_o_que_mandam(mundo: Mundo) -
     assert "Pytest unit" not in passos and "Pytest core" in passos
 
 
-def test_sem_needs_tira_o_needs_so_do_job_declarado(mundo: Mundo) -> None:
+def _yaml_do_log(log: str) -> dict:
+    return yaml.safe_load(log.split("---YAML---\n", 1)[1].split("---FIM---", 1)[0])
+
+
+def test_sem_needs_tira_so_a_dependencia_que_a_tabela_manda(mundo: Mundo) -> None:
     mundo.rodar("--completo")
-    smoke = mundo.log("runtime-smoke").split("---YAML---\n", 1)[1].split("---FIM---", 1)[0]
-    assert "needs: lint-test" not in smoke
-    multi = mundo.log("smoke-multi-distro").split("---YAML---\n", 1)[1].split("---FIM---", 1)[0]
-    assert "needs: build-wheel" in multi, "o needs do smoke-multi-distro leva o artefato do wheel; não pode sair"
+    smoke = _yaml_do_log(mundo.log("runtime-smoke"))["jobs"]["runtime-smoke"]
+    assert "needs" not in smoke, "o needs: lint-test mandaria o act rodar a suíte inteira antes do smoke"
+    release = _yaml_do_log(mundo.log("deb-install-smoke"))["jobs"]
+    assert "needs" not in release["deb"], "o deb ainda manda o act rodar o `build` (e a suíte) antes dele"
+    assert release["deb-install-smoke"]["needs"] == ["deb"], "o artefato do .deb vem do `deb`: esse needs fica"
+    # e o que a tabela não manda tirar continua como o YAML escreveu
+    original = yaml.safe_load((WORKFLOWS / "release.yml").read_text(encoding="utf-8"))["jobs"]
+    assert release["github-release"]["needs"] == original["github-release"]["needs"]
+
+
+def test_o_checkout_com_ref_vira_o_da_arvore_local(mundo: Mundo) -> None:
+    """Com `ref:` o act roda o checkout de verdade e busca no servidor um repositório que ele não sabe qual é."""
+    mundo.rodar("--completo")
+    for job in ("build", "deb"):
+        passos = _yaml_do_log(mundo.log(job))["jobs"][job]["steps"]
+        checkout = next(p for p in passos if str(p.get("uses", "")).startswith("actions/checkout"))
+        assert "ref" not in (checkout.get("with") or {}), f"o checkout do {job} ainda pede ref:"
+    assert "ref:" in (WORKFLOWS / "release.yml").read_text(encoding="utf-8"), "o teste deixou de medir o que o YAML tem"
 
 
 def test_job_que_fica_fora_de_casa_nao_roda_calado(mundo: Mundo) -> None:

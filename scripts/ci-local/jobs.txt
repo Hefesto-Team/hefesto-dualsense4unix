@@ -8,6 +8,7 @@
 #                                   casa dela (`scripts/rodar-a-suite.sh`, no fecho); o --completo a roda aqui também.
 #   SEM-NEEDS|job|dep,dep|motivo    as dependências citadas saem do `needs:` na cópia: o act o seguiria e rodaria, antes do job,
 #                                   o job de que ele depende (a suíte inteira, no caso do `lint-test` e do `build`).
+#   EM-TAG|workflow.yml|motivo      o workflow dispara em tag (`on.push.tags`): o act roda o evento `push` com `ref: refs/tags/v<versão>`.
 #   FORA-DE-CASA|job|motivo         não roda em casa. O motivo é medida, com o comando e o que ele respondeu.
 #
 # O que se mede aqui NÃO é o runner do GitHub: é o `catthehacker/ubuntu:act-24.04` + scripts/ci-local/Dockerfile.
@@ -44,6 +45,7 @@ FORA-DE-CASA|autoria|o passo «A história publicada» pede o segredo `AUTORIA_V
 ROLA|validate-manifest|rapido
 FORA-DE-CASA|build-flatpak|o flatpak-builder constrói dentro do bubblewrap, que pede user namespace, e o container do act não o dá sem `--privileged`. Medido em 06/10/2026: `unshare --user --map-root-user true` no container do runner: `unshare failed: Operation not permitted`. Rodar com `--privileged` entrega o kernel da máquina ao container, e esta casa não entrega. Além disso `flatpak install` baixa o runtime GNOME//47 inteiro do Flathub.
 # --- release.yml --------------------------------------------------------------------------------
+EM-TAG|release.yml|o release dispara em tag; num ramo `github.ref_name` vira «voo/ci» e o upload-artifact recusa o nome `dist-voo/ci` (medido em 06/10/2026)
 ROLA|build|completo
 SEM-NEEDS|deb|build|o needs: build mandaria o act rodar a suíte inteira de novo antes dele; o `build` é job desta tabela
 ROLA|deb|completo|ubuntu-22.04
