@@ -98,7 +98,7 @@ GRUPOS = (
     "rotulos", "milestones", "tipos_de_issue", "ambientes", "discussoes", "projetos",
     "rulesets", "comunidade",
 )
-DADOS_SEM_APLICADOR = ("versão", "de_fora")
+DADOS_SEM_APLICADOR = ("versão", "de_fora", "release")
 # O que a casa decidiu não usar do GitHub, cada coisa com o motivo medido.
 DE_FORA_OBRIGATORIAS = ("lfs", "merge_queue", "codespaces")
 
@@ -193,6 +193,7 @@ def validar(dados: Any) -> list[str]:
         ("projetos", _validar_projetos),
         ("comunidade", _validar_comunidade),
         ("de_fora", _validar_de_fora),
+        ("release", _validar_release),
     ):
         if grupo in dados:
             erros += validador(dados[grupo])
@@ -516,6 +517,14 @@ def _validar_comunidade(c: Any) -> list[str]:
     n = c.get("saude_minima") if isinstance(c, dict) else None
     if not isinstance(n, int) or isinstance(n, bool) or not 1 <= n <= 100:
         return ["comunidade.saude_minima: inteiro de 1 a 100"]
+    return []
+
+
+def _validar_release(release: Any) -> list[str]:
+    """O bloco `release`: a série da versão, que o `scripts/release/versao.py` lê (aqui só se confere a forma)."""
+    serie = release.get("serie") if isinstance(release, dict) else None
+    if not isinstance(serie, str) or not re.fullmatch(r"\d+(\.\d+){0,2}", serie):
+        return ['release.serie: texto com o prefixo da versão, como "0.9" ou "4"']
     return []
 
 
@@ -1333,6 +1342,30 @@ def planejar(c: Contexto, grupos: set[str]) -> tuple[list[Acao], list[str]]:
 # ---------------------------------------------------------------------------
 
 
+def avisos_da_release(c: Contexto) -> list[str]:
+    """O que a release ainda pede a quem mantém e a API não deixa fazer: se avisa, não se aplica nem reprova.
+
+    A publicação no PyPI usa o publicador de confiança (OIDC): o PyPI só aceita o repositório depois de quem
+    mantém registrar nele o dono, o repositório, o fluxo `release.yml` e o ambiente `pypi`, e a API do PyPI não
+    deixa ler nem fazer esse registro. O que o repositório guarda do gesto é a variável `PYPI_PUBLISH`, que só
+    vale «true» depois dele (o job `pypi` do `release.yml` pergunta por ela): sem a variável, o gesto não foi feito.
+    """
+    if "release" not in c.dados:
+        return []
+    try:
+        status, v = c.gh.ler(f"repos/{c.repo}/actions/variables/PYPI_PUBLISH", aceita=(200, 404))
+    except ErroDeServidor as e:
+        return [f"release: não medi o publicador de confiança do PyPI ({e})"]
+    if status == 404 or str((v or {}).get("value", "")).lower() != "true":
+        return [
+            "release: o publicador de confiança do PyPI não está registrado para este repositório (a variável "
+            "PYPI_PUBLISH não é «true»); a primeira publicação no PyPI não sai. O gesto é de quem mantém, uma vez: em "
+            f"https://pypi.org/manage/account/publishing/ registrar o dono {c.dono}, o repositório {c.nome}, o fluxo "
+            "release.yml e o ambiente pypi; depois pôr a variável PYPI_PUBLISH com o valor true em Settings > Variables"
+        ]
+    return []
+
+
 def guarda_de_escrita(gh: Gh, repo: str) -> str | None:
     """O motivo da recusa, ou None quando a escrita pode seguir."""
     dono = repo.split("/")[0]
@@ -1401,6 +1434,8 @@ def principal(argv: list[str] | None = None, gh: Gh | None = None) -> int:
     acoes, sem_medida = planejar(c, grupos)
     detalhe += [_linha(f"falta: {x.texto}", x) for x in acoes]
     detalhe += [f"sem medida: {m}" for m in sem_medida]
+    if not pedidos:  # só na conferência do todo: o aviso não é de um grupo
+        detalhe += [f"aviso: {x}" for x in avisos_da_release(c)]
 
     if a.conferir:
         if sem_medida:

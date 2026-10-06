@@ -3,8 +3,13 @@
 
 Cada recusa daqui copia uma medida da API de verdade (a descrição OpenAPI e o esquema do GraphQL
 públicos do GitHub, lidos em 06/10/2026): o dublê não é mais frouxo que o servidor.
+
+Fala duas línguas: `gh api -i -X MÉTODO caminho` (a API) e `gh release view|create|upload|edit|delete` (a
+release). A release imutável recusa o que a do GitHub recusa: arquivo novo ou trocado numa versão já
+publicada, e a tag de uma versão que já foi publicada com a imutável ligada nunca mais volta a ser release,
+nem depois de a release ser apagada (documentação de «immutable releases», lida em 06/10/2026).
 """
-import json, os, re, sys
+import hashlib, json, os, re, sys
 from urllib.parse import unquote
 
 ESTADO = os.environ["GH_MENTIRA_ESTADO"]
@@ -23,6 +28,7 @@ for chave, padrao in {
     "arquivos_da_comunidade": {"code_of_conduct": True, "contributing": True, "issue_template": True,
                                "pull_request_template": True, "license": True, "readme": True},
     "prox_id": 100, "repos_extras": {}, "ligados": {}, "ramo_padrao": "dev",
+    "releases": {}, "tags_imutaveis": [], "variaveis": {}, "ramos": {}, "commits": {}, "tags": None,
 }.items():
     st.setdefault(chave, padrao)
 
@@ -48,6 +54,121 @@ def saida(status, corpo=None, msg=None):
 
 
 a = sys.argv[1:]
+
+
+def sai_gh(codigo, saida_=None, erro=None):
+    json.dump(st, open(ESTADO, "w"))
+    if saida_:
+        sys.stdout.write(saida_)
+    if erro:
+        sys.stderr.write(erro + "\n")
+    sys.exit(codigo)
+
+
+def sha_de(caminho):
+    return "sha256:" + hashlib.sha256(open(caminho, "rb").read()).hexdigest()
+
+
+def release_de_mentira(args):
+    verbo, resto_ = args[0], args[1:]
+    repo_ = None
+    posicionais, flags = [], {}
+    k = 0
+    while k < len(resto_):
+        x = resto_[k]
+        if x in ("--repo", "-R", "--title", "-t", "--notes-file", "-F", "--json"):
+            flags[x] = resto_[k + 1]
+            k += 2
+        elif x.startswith("--draft="):
+            flags["--draft"] = x.split("=", 1)[1]
+            k += 1
+        elif x.startswith("--"):
+            flags[x] = True
+            k += 1
+        else:
+            posicionais.append(x)
+            k += 1
+    repo_ = flags.get("--repo") or flags.get("-R")
+    if repo_ != st["slug"]:
+        sai_gh(1, None, f"gh: o gh de mentira só conhece --repo {st['slug']} (veio {repo_})")
+    if not posicionais:
+        sai_gh(2, None, "gh: falta a tag")
+    tag, arquivos = posicionais[0], posicionais[1:]
+    rels = st["releases"]
+    with open(LOG, "a") as f:
+        f.write(json.dumps({"m": f"release {verbo}", "p": tag, "b": {"flags": sorted(map(str, flags)), "arquivos": arquivos},
+                            "escrita": verbo != "view"}) + "\n")
+    r = rels.get(tag)
+
+    def sobe(rel_, caminhos, clobber):
+        if rel_["travada"]:
+            sai_gh(1, None, "HTTP 422: Cannot upload assets to an immutable release.")
+        for c in caminhos:
+            nome = os.path.basename(c)
+            if not os.path.isfile(c):
+                sai_gh(1, None, f"open {c}: no such file or directory")
+            if nome in rel_["assets"] and not clobber:
+                sai_gh(1, None, f"HTTP 422: Validation Failed (Release.asset already_exists): {nome}")
+            rel_["assets"][nome] = sha_de(c)
+
+    def publica(rel_, tag_):
+        rel_["draft"] = False
+        if st["imutaveis"]:
+            rel_["travada"] = True
+            if tag_ not in st["tags_imutaveis"]:
+                st["tags_imutaveis"].append(tag_)
+
+    if verbo == "view":
+        if r is None:
+            sai_gh(1, None, "release not found")
+        campos = (flags.get("--json") or "tagName").split(",")
+        todos = {"tagName": tag, "isDraft": r["draft"], "name": r.get("title"), "body": r.get("notes"),
+                 "assets": [{"name": n, "digest": d, "size": 1} for n, d in sorted(r["assets"].items())]}
+        sai_gh(0, json.dumps({c: todos[c] for c in campos}) + "\n")
+    if verbo == "create":
+        if tag in st["tags_imutaveis"]:
+            sai_gh(1, None, "HTTP 422: Validation Failed (Release.tag_name was used by an immutable release)")
+        if r is not None:
+            sai_gh(1, None, "HTTP 422: Validation Failed (Release.tag_name already_exists)")
+        if flags.get("--verify-tag") and st["tags"] is not None and tag not in st["tags"]:
+            sai_gh(1, None, f"tag {tag} doesn't exist in the repository")
+        nf = flags.get("--notes-file") or flags.get("-F")
+        if nf and not os.path.isfile(nf):
+            sai_gh(1, None, f"open {nf}: no such file or directory")
+        rels[tag] = {"draft": bool(flags.get("--draft")), "assets": {}, "travada": False,
+                     "title": flags.get("--title") or tag, "notes": open(nf).read() if nf else ""}
+        if not rels[tag]["draft"]:
+            # como o `gh`: a release nasce publicada e os arquivos sobem depois
+            publica(rels[tag], tag)
+        sobe_ = rels[tag]
+        if arquivos:
+            if sobe_["travada"]:
+                sai_gh(1, None, "HTTP 422: Cannot upload assets to an immutable release.")
+            sobe(sobe_, arquivos, False)
+        sai_gh(0, f"https://github.com/{st['slug']}/releases/tag/{tag}\n")
+    if r is None:
+        sai_gh(1, None, "release not found")
+    if verbo == "upload":
+        sobe(r, arquivos, bool(flags.get("--clobber")))
+        sai_gh(0)
+    if verbo == "edit":
+        if r["travada"]:
+            sai_gh(1, None, "HTTP 422: Cannot modify an immutable release.")
+        if flags.get("--draft") == "false" and r["draft"]:
+            publica(r, tag)
+        elif flags.get("--draft") == "true":
+            r["draft"] = True
+        sai_gh(0, f"https://github.com/{st['slug']}/releases/tag/{tag}\n")
+    if verbo == "delete":
+        if not flags.get("--yes"):
+            sai_gh(1, None, "gh: sem --yes e sem terminal para confirmar")
+        del rels[tag]
+        sai_gh(0)
+    sai_gh(2, None, f"gh release {verbo}: o gh de mentira não conhece")
+
+
+if a and a[0] == "release":
+    release_de_mentira(a[1:])
 if a[:2] != ["api", "-i"] or a[2] != "-X":
     sys.stderr.write("o gh de mentira só fala `gh api -i -X MÉTODO caminho`\n"); sys.exit(2)
 metodo, caminho = a[3], a[4].lstrip("/")
@@ -459,6 +580,70 @@ if mc and metodo == "PUT":
     novo = mc.group(1) not in st["colaboradores"]
     st["colaboradores"][mc.group(1)] = corpo["permission"]
     saida(201 if novo else 204)
+
+# --- variáveis do repositório e o avanço de um ramo ------------------------------------------
+
+mv = re.fullmatch(r"actions/variables/([^/]+)", sub)
+if mv and metodo == "GET":
+    if mv.group(1) not in st["variaveis"]:
+        saida(404, msg="Not Found")
+    saida(200, {"name": mv.group(1), "value": st["variaveis"][mv.group(1)]})
+
+
+def quem_pode_passar(ruleset):
+    """Como o GitHub: quem está na lista de exceção do ruleset (o papel de administrador, no arquivo
+    da casa) passa por TODAS as regras dele; o papel vem das permissões do repositório."""
+    papel = st["colaboradores"].get(st["user"], "none")
+    for b in ruleset.get("bypass_actors", []):
+        if b.get("actor_type") == "RepositoryRole" and b.get("actor_id") == 5 and papel == "admin":
+            return True
+    return False
+
+
+def violacoes_do_avanco(ramo, antigo, novo, forcado):
+    """As regras ativas dos rulesets que miram o ramo e que o avanço fere, ruleset a ruleset."""
+    commits = st["commits"]
+    novos, atual = [], novo
+    while atual and atual != antigo and atual in commits:
+        novos.append(atual)
+        atual = commits[atual].get("pai")
+    avanco_reto = atual == antigo
+    achadas = []
+    for rs in st["rulesets"]:
+        if rs["enforcement"] != "active" or rs["target"] != "branch":
+            continue
+        if f"refs/heads/{ramo}" not in rs["conditions"]["ref_name"]["include"]:
+            continue
+        if quem_pode_passar(rs):
+            continue
+        for regra in rs["rules"]:
+            t = regra["type"]
+            if t == "non_fast_forward" and (forcado or not avanco_reto):
+                achadas.append(f"{rs['name']}: Cannot force-push to this branch")
+            if t == "required_signatures" and any(not commits[c].get("assinado") for c in novos):
+                achadas.append(f"{rs['name']}: Commits must have verified signatures")
+            if t == "required_linear_history" and any(commits[c].get("merge") for c in novos):
+                achadas.append(f"{rs['name']}: Merge commits are not allowed on this branch")
+            if t in ("pull_request", "required_status_checks"):
+                achadas.append(f"{rs['name']}: Changes must be made through a pull request")
+    return achadas
+
+
+mf = re.fullmatch(r"git/refs/heads/([^/]+)", sub)
+if mf:
+    ramo = mf.group(1)
+    if ramo not in st["ramos"]:
+        saida(404, msg="Reference does not exist")
+    if metodo == "GET":
+        saida(200, {"ref": f"refs/heads/{ramo}", "object": {"sha": st["ramos"][ramo], "type": "commit"}})
+    if metodo == "PATCH":
+        if corpo.get("sha") not in st["commits"]:
+            saida(422, msg="Object does not exist")
+        achadas = violacoes_do_avanco(ramo, st["ramos"][ramo], corpo["sha"], bool(corpo.get("force")))
+        if achadas:
+            saida(422, msg="Repository rule violations found\n\n" + "\n".join(achadas))
+        st["ramos"][ramo] = corpo["sha"]
+        saida(200, {"ref": f"refs/heads/{ramo}", "object": {"sha": corpo["sha"], "type": "commit"}})
 
 # --- rótulos, milestones, ambientes ----------------------------------------------------------
 

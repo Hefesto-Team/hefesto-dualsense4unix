@@ -18,9 +18,10 @@ on:
         required: true
         type: string
 
+# O fluxo lê; o job que precisa de mais pede o seu (o `integridade` atesta, o `github-release` publica
+# e o `pypi` assina pelo OIDC). Nada mais escreve no repositório.
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
   build:
@@ -78,6 +79,12 @@ jobs:
       # o pyproject.toml e tentar publicar tem de REPROVAR aqui.
       - name: Consistência de versão entre os alvos versionados
         run: python3 scripts/check_version_consistency.py
+      # A tag é a que dispara a release: se ela não diz a versão que o pacote tem, o que sai é um arquivo
+      # com um número e uma tag com outro. O dono da versão é `scripts/release/versao.py`.
+      - name: A tag diz a versão do pacote
+        env:
+          REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
+        run: python3 scripts/release/versao.py conferir-tag "${REF_NAME}"
       - name: Instalar e testar
         run: |
           pip install -c constraints.txt -e ".[dev]"
@@ -374,66 +381,118 @@ jobs:
             GASTO=$((GASTO + INTERVALO))
           done
 
-  github-release:
-    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci]
+  # O que se baixa se confere: o `SHA256SUMS` de todo arquivo da release e o atestado de procedência (de que
+  # commit e de que fluxo cada um saiu). O atestado só existe no servidor (precisa do token OIDC); no `act`,
+  # que não o tem, o passo é pulado e o resto roda de verdade, sobre os arquivos que o `act` consegue montar.
+  integridade:
+    name: SHA256SUMS e atestado de procedência
     runs-on: ubuntu-latest
+    needs: [build, appimage, deb, flatpak]
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: actions/download-artifact@v4
         with:
-          name: dist-${{ needs.build.outputs.version }}
-          path: dist/
-      - uses: actions/download-artifact@v4
-        with:
-          name: appimage-${{ needs.build.outputs.version }}
-          path: dist/appimage/
-      # Dois .deb (um por distro): deb-<ver>-ubuntu-22.04 e -ubuntu-24.04.
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: deb-${{ needs.build.outputs.version }}-*
-          path: dist/deb/
+          pattern: "*-${{ needs.build.outputs.version }}*"
+          path: dist/tudo/
           merge-multiple: true
+      - name: Gerar o SHA256SUMS
+        run: python3 scripts/release/sums.py gerar dist/tudo
+      - name: Conferir o SHA256SUMS com o do sistema
+        run: |
+          python3 scripts/release/sums.py conferir dist/tudo
+          cd dist/tudo && sha256sum --check SHA256SUMS
+      - name: Atestado de procedência
+        if: ${{ !env.ACT }}
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: dist/tudo/SHA256SUMS
+      - name: Guardar o SHA256SUMS
+        uses: actions/upload-artifact@v4
+        with:
+          name: sums-${{ needs.build.outputs.version }}
+          path: dist/tudo/SHA256SUMS
+          if-no-files-found: error
+
+  # A release nasce como rascunho, recebe os arquivos e só então é publicada: a release imutável trava a versão
+  # no instante em que ela é pública, e apagar e recriar a versão (o que este job fazia a cada re-execução) o
+  # GitHub recusa. `scripts/release/publicar.py` faz os passos e recusa o que não confere.
+  github-release:
+    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci, integridade]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      # Tudo o que a release publica numa pasta só: o wheel, o sdist, o AppImage, os dois .deb, o bundle
+      # Flatpak e o `SHA256SUMS` que o job `integridade` guardou.
       - uses: actions/download-artifact@v4
         with:
-          name: flatpak-${{ needs.build.outputs.version }}
-          path: dist/flatpak/
-      - name: Extrair seção da release do CHANGELOG
+          pattern: "*-${{ needs.build.outputs.version }}*"
+          path: dist/tudo/
+          merge-multiple: true
+      - name: Conferir os arquivos com o SHA256SUMS
+        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak'
+      - name: Notas da release (a seção do CHANGELOG e como conferir)
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          # Extrai do CHANGELOG só a seção desta versão: "## [VERSION]" até
-          # próxima "## [" (ou EOF). Padrão Keep a Changelog.
-          # Sem --notes-file CHANGELOG.md inteiro (~750 linhas, ridiculo).
-          awk -v v="$VERSION" '
-            $0 ~ "^## \\[" v "\\]" { p=1; print; next }
-            p && /^## \[/ { exit }
-            p { print }
-          ' CHANGELOG.md > /tmp/release-notes.md
+          python3 scripts/release/changelog.py notas "${VERSION}" --repo "${GITHUB_REPOSITORY}" > /tmp/release-notes.md
           echo "---NOTES PREVIEW---"
           head -20 /tmp/release-notes.md
-          echo "..."
           wc -l /tmp/release-notes.md
-      - name: Criar release no GitHub
+      - name: Publicar a release (rascunho, arquivos, publicação)
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          # Idempotente: re-run / re-dispatch da mesma tag não deve falhar com
-          # "release already exists". Se já existe, apaga (preservando a tag
-          # git — sem --cleanup-tag) e recria com os artefatos atuais.
-          if gh release view "v${VERSION}" >/dev/null 2>&1; then
-            echo "Release v${VERSION} já existe — apagando para recriar."
-            gh release delete "v${VERSION}" --yes
-          fi
-          gh release create "v${VERSION}" \
-            --title "Hefesto - DualSense4Unix v${VERSION}" \
-            --notes-file /tmp/release-notes.md \
-            dist/hefesto_dualsense4unix-*.whl dist/hefesto_dualsense4unix-*.tar.gz \
-            dist/appimage/*.AppImage \
-            dist/deb/*.deb \
-            dist/flatpak/*.flatpak
+          python3 scripts/release/publicar.py "v${VERSION}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pasta dist/tudo \
+            --notas /tmp/release-notes.md \
+            --titulo "Hefesto - DualSense4Unix v${VERSION}"
+
+  # Os arquivos de pacote de cada distribuição seguem a versão: o `PKGBUILD` ganha o hash do tarball da tag, e o
+  # que sai daqui fica num artefato para quem mantém o pacote publicar (o AUR e o Flathub são contas de quem mantém).
+  # Com `PACOTES_REPOS` (uma lista de DONO/NOME no GitHub) e o segredo `PACOTES_TOKEN`, ele também abre o PR de
+  # atualização em cada um.
+  pacotes:
+    name: Pacotes de distribuição na versão da tag
+    runs-on: ubuntu-latest
+    needs: [build, github-release]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Baixar o tarball da tag
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: curl --fail --silent --show-error --location --output fonte.tar.gz "https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/v${VERSION}.tar.gz"
+      - name: Preparar os arquivos de pacote
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: python3 scripts/release/pacotes.py preparar --versao "${VERSION}" --tarball fonte.tar.gz --saida dist/pacotes
+      - name: Guardar os arquivos de pacote
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacotes-${{ needs.build.outputs.version }}
+          path: dist/pacotes/
+          if-no-files-found: error
+      - name: Abrir o PR de atualização nos repositórios de pacote
+        if: ${{ vars.PACOTES_REPOS != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.PACOTES_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PACOTES_REPOS: ${{ vars.PACOTES_REPOS }}
+        run: python3 scripts/release/pacotes.py abrir-pr --versao "${VERSION}" --pasta dist/pacotes --repos "${PACOTES_REPOS}"
 
   # O `if` deixa este job inerte enquanto a variável não existir, mas inerte não
   # é guardado: no dia em que ela existir, sem o `guarda-ci` aqui o wheel sobe
@@ -441,9 +500,11 @@ jobs:
   # com os portões do ci.yml vermelhos. Todo job que entrega para fora depende
   # do guarda; quem cobra isso é `tests/unit/test_release_workflow_nomes_e_portoes.py`.
   pypi:
-    needs: [build, guarda-ci]
+    needs: [build, guarda-ci, integridade]
     runs-on: ubuntu-latest
     environment: pypi
+    permissions:
+      id-token: write
     if: ${{ vars.PYPI_PUBLISH == 'true' }}
     steps:
       - uses: actions/download-artifact@v4

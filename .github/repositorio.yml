@@ -62,11 +62,11 @@ seguranca:
   varredura_de_codigo: true
   linguagens_da_varredura: [python, actions]
   grafo_de_dependencias: true
-  # A release de hoje apaga e recria a versão (`gh release delete` e `gh release create` no
-  # release.yml), o que a release imutável não deixa: o GitHub nunca reaproveita a tag.
+  # A release do `release.yml` nasce como rascunho, recebe os arquivos e só então é publicada
+  # (`scripts/release/publicar.py`): a imutável trava os arquivos e a tag da versão publicada, e o
+  # GitHub nunca reaproveita uma tag que já foi de uma release imutável.
   releases_imutaveis:
-    ligada: false
-    depois: "quando a release deixar de apagar e recriar a versão publicada"
+    ligada: true
 
 # Só o fluxo mais restrito: o `GITHUB_TOKEN` lê, e o PR de gente de fora espera a aprovação de quem mantém.
 ações:
@@ -91,6 +91,14 @@ equipes:
         função: maintainer
       - conta: AndreBFarias
         função: maintainer
+
+# A série da versão: o prefixo das versões que este repositório numera. O `scripts/release/versao.py`
+# lê esta linha, descobre a última tag da série e propõe a próxima pelo tipo dos commits (`feat` sobe o
+# primeiro número depois do prefixo, `fix` o seguinte); nenhum número é escolhido à mão. «0.9» segue a
+# numeração do `pyproject.toml` (0.9.4.5 -> 0.9.5); seguir do `v4.0.0`, que também está nas tags, é
+# trocar por «4» (-> 4.1.0). Nenhuma versão foi publicada com esta série ainda: trocar custa uma linha.
+release:
+  serie: "0.9"
 
 # O arquivo é a lista dos rótulos de triagem. Os nove que o GitHub cria sozinho entram aqui com a
 # descrição em português, e o que não está no arquivo fica como está (apagar rótulo solta ele das issues).
@@ -189,16 +197,17 @@ projetos:
 # Cada regra é uma chave com um aplicador em `scripts/github/aplicar.py`.
 # `checks` são os nomes que o GitHub mostra (o `name` do job, ou o id dele; o job com matriz
 # leva o valor entre parênteses) e cada um tem de existir em `.github/workflows/`.
-# Os administradores passam pelo ruleset «a porta» (o trabalho do dia entra por push direto no `dev`);
-# o ruleset «a história» não tem exceção para ninguém, e é nele que mora a assinatura: uma exceção
-# anularia a regra para quem mais empurra commit. O histórico linear mora na porta, e não na
-# história: a história do `dev` já traz centenas de merges que o `main` ainda não tem, e sem exceção
-# a regra barraria o primeiro push do repositório recriado e o avanço do `main` na release.
-# A assinatura (SSH, o selo «Verified») só se aplica depois do push da história: a que já existe
-# não é assinada.
+# Os administradores passam pelo ruleset «a porta» (o trabalho do dia entra por push direto no `dev`).
+# A assinatura (SSH, o selo «Verified») mora na regra da história, que no `dev` não tem exceção para
+# ninguém: uma exceção anularia a regra para quem mais empurra commit. No `main` a regra da história é
+# outra, com a exceção de quem administra: o `main` está milhares de commits atrás do `dev`, e nenhum
+# deles é assinado, então o primeiro avanço dele na release seria recusado pelos commits antigos sem a
+# exceção. O histórico linear mora na porta, e não na história, pelo mesmo motivo (o `dev` traz centenas
+# de merges que o `main` ainda não tem).
+# A assinatura só se aplica depois do push da história: a que já existe não é assinada.
 rulesets:
-  - nome: "A história do dev e do main não se reescreve e vem assinada"
-    ramos: [dev, main]
+  - nome: "A história do dev não se reescreve e vem assinada"
+    ramos: [dev]
     sem_apagar: true
     sem_push_forcado: true
     assinatura: exigida
@@ -218,6 +227,12 @@ rulesets:
     sem_apagar: true
     sem_push_forcado: true
     sem_atualizar: true
+  - nome: "A história do main não se reescreve e vem assinada, e quem administra a avança"
+    ramos: [main]
+    sem_apagar: true
+    sem_push_forcado: true
+    assinatura: exigida
+    excecao: administradores
 
 # O perfil da comunidade do GitHub (README, licença, conduta, como contribuir, segurança e os
 # modelos de issue e de PR) em 100%.

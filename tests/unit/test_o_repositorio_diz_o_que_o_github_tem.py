@@ -155,7 +155,7 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
     [
         lambda d: d["funções"]["wiki"].update(ligada=False),
         lambda d: d["funções"].pop("sponsor"),
-        lambda d: d["seguranca"]["releases_imutaveis"].pop("depois"),
+        lambda d: d["seguranca"]["releases_imutaveis"].update(ligada=False),
         lambda d: d["seguranca"].pop("linguagens_da_varredura"),
         lambda d: d["seguranca"].update(grafo_de_dependencias=False),
         lambda d: d["rotulos"]["lista"][0].update(cor="#d73a4a"),
@@ -607,7 +607,7 @@ def test_sem_rulesets_deixa_os_rulesets_para_depois_do_push(gh: Mentira) -> None
     assert gh.estado["rulesets"] == []
     assert rodar("--conferir") == 1  # o todo ainda tem diferença
     assert rodar("--aplicar") == 0
-    assert len(gh.estado["rulesets"]) == 3
+    assert len(gh.estado["rulesets"]) == 4
 
 
 def test_falha_de_escrita_aparece_e_nao_vira_verde(gh: Mentira, capsys: Capsys) -> None:
@@ -752,15 +752,20 @@ def test_o_grafo_de_dependencias_que_o_github_nao_liga_por_api_so_se_mede(
 
 
 def test_a_release_imutavel_liga_e_desliga_pelo_arquivo(gh: Mentira, tmp_path: Path) -> None:
-    ligada = _arquivo(tmp_path, lambda d: d["seguranca"].update(releases_imutaveis=True))
-    assert (
-        rodar("--aplicar", "--so", "seguranca", arquivo=ligada) == 0
-        and gh.estado["imutaveis"] is True
+    # o arquivo a quer ligada: o `release.yml` publica como rascunho e não recria a versão
+    assert _dados()["seguranca"]["releases_imutaveis"] == {"ligada": True}
+    desligada = _arquivo(
+        tmp_path,
+        lambda d: d["seguranca"].update(
+            releases_imutaveis={"ligada": False, "depois": "enquanto o ensaio recria a versão"}
+        ),
     )
     assert (
-        rodar("--conferir", "--so", "seguranca") == 1
-    )  # o arquivo do repositório a quer desligada
-    assert rodar("--aplicar", "--so", "seguranca") == 0 and gh.estado["imutaveis"] is False
+        rodar("--aplicar", "--so", "seguranca", arquivo=desligada) == 0
+        and gh.estado["imutaveis"] is False
+    )
+    assert rodar("--conferir", "--so", "seguranca") == 1
+    assert rodar("--aplicar", "--so", "seguranca") == 0 and gh.estado["imutaveis"] is True
 
 
 def test_os_rotulos_chegam_inteiros_e_a_deriva_volta(gh: Mentira) -> None:
@@ -1078,26 +1083,40 @@ def test_o_arquivo_de_um_repositorio_so_com_o_minimo_continua_valendo() -> None:
 
 
 def assinatura_anulada_por_excecao(dados: dict[str, Any]) -> list[str]:
-    """Os rulesets que exigem assinatura e deixam alguém de fora dela.
+    """Os rulesets do `dev` que exigem assinatura e deixam alguém de fora dela.
 
     A exceção de administrador anula a regra para quem mais empurra commit direto no `dev`: a
-    assinatura exigida morreria no primeiro push de quem mantém.
+    assinatura exigida morreria no primeiro push de quem mantém. No `main` a exceção é da decisão
+    D-0610-ASSINATURA-E-O-MAIN: o `main` está milhares de commits atrás do `dev`, nenhum assinado, e
+    sem ela o primeiro avanço dele na release seria recusado pelos commits antigos.
     """
-    return [r["nome"] for r in dados["rulesets"] if r.get("assinatura") and r.get("excecao")]
+    return [
+        r["nome"]
+        for r in dados["rulesets"]
+        if r.get("assinatura") and r.get("excecao") and "dev" in r.get("ramos", [])
+    ]
 
 
-def test_a_assinatura_exigida_mora_na_regra_sem_excecao_e_cobre_o_dev_e_o_main() -> None:
+def test_a_assinatura_exigida_cobre_o_dev_sem_excecao_e_o_main_com_a_dos_administradores() -> None:
     dados = _dados()
     assert assinatura_anulada_por_excecao(dados) == []
     exigem = [r for r in dados["rulesets"] if r.get("assinatura") == "exigida"]
-    assert len(exigem) == 1 and sorted(exigem[0]["ramos"]) == ["dev", "main"]
+    por_ramo = {tuple(r["ramos"]): r for r in exigem}
+    assert set(por_ramo) == {("dev",), ("main",)}, "um ruleset da assinatura por ramo"
+    assert "excecao" not in por_ramo[("dev",)]
+    assert por_ramo[("main",)]["excecao"] == "administradores"
 
 
-def test_mordida_assinatura_na_regra_com_excecao_reprova() -> None:
+def test_mordida_assinatura_do_dev_com_excecao_reprova() -> None:
     dados = _dados()
-    porta = next(r for r in dados["rulesets"] if r.get("excecao"))
-    porta["assinatura"] = "exigida"
-    assert assinatura_anulada_por_excecao(dados) == [porta["nome"]]
+    do_dev = next(r for r in dados["rulesets"] if r.get("assinatura") and r["ramos"] == ["dev"])
+    do_dev["excecao"] = "administradores"
+    assert assinatura_anulada_por_excecao(dados) == [do_dev["nome"]]
+    # e a regra que junta o dev e o main num ruleset com exceção também reprova
+    dados = _dados()
+    do_main = next(r for r in dados["rulesets"] if r.get("assinatura") and r["ramos"] == ["main"])
+    do_main["ramos"] = ["dev", "main"]
+    assert assinatura_anulada_por_excecao(dados) == [do_main["nome"]]
 
 
 def test_as_versoes_publicadas_nao_se_apagam_nem_se_movem() -> None:

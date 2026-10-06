@@ -1,0 +1,34 @@
+# As notas que o GitHub gera para cada release (`gh release create --generate-notes`, no `release.yml`):
+# os PRs que entraram desde a versão anterior, agrupados pelos mesmos rótulos de área de
+# `.github/repositorio.yml`. A seção do CHANGELOG abre as notas, e esta lista vem em seguida.
+# Cada rótulo daqui existe em `rotulos` do repositorio.yml, e cada área de lá tem a sua categoria aqui
+# (os dois lados são conferidos pelo teste `tests/unit/test_a_release_sai_sozinha.py`).
+changelog:
+  exclude:
+    labels:
+      - duplicate
+      - invalid
+      - wontfix
+    authors:
+      - dependabot[bot]
+  categories:
+    - title: "A janela e as abas"
+      labels: ["área: tela"]
+    - title: "Pareamento e Bluetooth"
+      labels: ["área: rádio"]
+    - title: "Microfone e alto-falante"
+      labels: ["área: som"]
+    - title: "Vibração"
+      labels: ["área: háptica"]
+    - title: "Gatilhos adaptativos"
+      labels: ["área: gatilhos"]
+    - title: "Steam, Heroic, Lutris e RetroArch"
+      labels: ["área: lançadores"]
+    - title: "Instalação e pacotes"
+      labels: ["área: instalação"]
+    - title: "Correções"
+      labels: ["bug"]
+    - title: "Documentação"
+      labels: ["documentation"]
+    - title: "Outras mudanças"
+      labels: ["*"]
