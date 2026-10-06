@@ -30,7 +30,7 @@ LISTA = "\n".join([
     "2 agente", "2 Agente", "2 agentes", "2 Agentes",
     "2 subagente", "2 Subagente", "2 subagentes", "2 Subagentes",
     "2 assistente", "2 Assistente",
-    "2 modelo",
+    "2 SIGLAX",
 ]) + "\n"
 
 MAILMAP = (
@@ -388,10 +388,10 @@ def test_mensagem_nova_com_vocabulario_de_processo_reprova(repo: Path) -> None:
 
 def test_o_nivel_2_preserva_a_caixa(repo: Path) -> None:
     base = git(repo, "rev-parse", "HEAD")
-    # `modelo` está na lista em maiúscula: a forma minúscula é outra palavra
-    assert rodar(repo, "diff", base, commitar(repo, "feat: o modelo")).returncode == 0
+    # `SIGLAX` está na lista em maiúscula: a forma minúscula é outra palavra
+    assert rodar(repo, "diff", base, commitar(repo, "feat: o siglax")).returncode == 0
     base2 = git(repo, "rev-parse", "HEAD")
-    assert rodar(repo, "diff", base2, commitar(repo, "feat: o modelo")).returncode == 1
+    assert rodar(repo, "diff", base2, commitar(repo, "feat: o SIGLAX")).returncode == 1
 
 
 def test_o_nivel_2_nao_mede_a_historia_ja_publicada(repo: Path) -> None:
@@ -430,8 +430,8 @@ def test_push_para_ramo_fora_da_lista_de_publicaveis_reprova_s9(repo: Path) -> N
 
 def test_push_de_referencia_que_nunca_sai_da_maquina_reprova(repo: Path) -> None:
     sha = commitar(repo)
-    git(repo, "update-ref", "refs/ferramenta/x", sha)
-    p = empurrar(repo, "refs/ferramenta/x", sha, "refs/heads/dev")
+    git(repo, "update-ref", "refs/interno/x", sha)
+    p = empurrar(repo, "refs/interno/x", sha, "refs/heads/dev")
     assert p.returncode == 1
     assert "nunca sai da máquina" in p.stdout
 

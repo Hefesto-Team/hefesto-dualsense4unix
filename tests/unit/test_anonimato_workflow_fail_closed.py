@@ -1,254 +1,224 @@
-"""O portão de anonimato do servidor não aprova mais quando NÃO CONSEGUE medir."""
+"""O workflow `autoria` do servidor não aprova mais quando NÃO CONSEGUE medir.
+
+Os passos de verdade são extraídos do YAML e rodados num repositório de brinquedo, com a
+régua real e uma lista sintética: o que o CI executa é o que o teste executa.
+"""
 from __future__ import annotations
 
 import os
-import re
+import shutil
 import subprocess
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 yaml = pytest.importorskip("yaml")
 
 REPO = Path(__file__).resolve().parents[2]
-WORKFLOW = REPO / ".github" / "workflows" / "anonymity-check.yml"
-JOB = "scan-commits"
-PASSO_AUDITORIA = "Auditar mensagens de commit"
+WORKFLOWS = REPO / ".github" / "workflows"
+WORKFLOW = WORKFLOWS / "autoria.yml"
+JOB = "autoria"
 
-EMAIL_VENENOSO = "dev@open" "ai.com"
+CANARIO = "zqcanario" + "autoria"
+LISTA = f"1 {CANARIO}\n2 subagente\n2 Subagente\n"
+MAILMAP = "Pessoa Um <um@casa.test>\n"
+UM = ("Pessoa Um", "um@casa.test")
+DE_FORA = ("Fulana de Fora", "fulana@fora.test")
+ZERO = "0" * 40
+SHA_FANTASMA = ("dead" "beef" * 8)[:40]
 
-SHA_FANTASMA = "dead" "beef" * 8
-SHA_FANTASMA = SHA_FANTASMA[:40]
 
-
-def _workflow() -> dict:
-    if not WORKFLOW.exists():  # pragma: no cover — árvore sem o workflow
-        pytest.skip(f"{WORKFLOW} não encontrado")
+def _workflow() -> dict[Any, Any]:
+    assert WORKFLOW.exists(), f"{WORKFLOW} não encontrado: o CI perdeu a régua de autoria"
     dados = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-    assert isinstance(dados, dict), "anonymity-check.yml não é um mapeamento YAML"
+    assert isinstance(dados, dict), "autoria.yml não é um mapeamento YAML"
     return dados
 
 
-def _passo(nome: str) -> dict:
-    passos = _workflow()["jobs"][JOB]["steps"]
-    achados = [p for p in passos if str(p.get("name", "")) == nome]
+def _passos() -> list[dict[str, Any]]:
+    return cast("list[dict[str, Any]]", _workflow()["jobs"][JOB]["steps"])
+
+
+def _passo(nome: str) -> dict[str, Any]:
+    achados = [p for p in _passos() if str(p.get("name", "")) == nome]
     assert achados, f"o passo {nome!r} sumiu do job {JOB}"
     return achados[0]
 
 
-def _shell_da_auditoria() -> str:
-    return str(_passo(PASSO_AUDITORIA)["run"])
+def test_o_workflow_antigo_saiu_e_o_novo_ficou() -> None:
+    assert WORKFLOW.is_file()
+    assert not (WORKFLOWS / "anonymity-check.yml").exists()
 
 
-def _linhas_da_auditoria() -> list[str]:
-    return _shell_da_auditoria().splitlines()
+def test_a_lista_vem_do_secret_e_o_clone_traz_a_historia_inteira() -> None:
+    dados = _workflow()
+    assert dados["jobs"][JOB]["env"]["AUTORIA_VEDADOS"] == "${{ secrets.AUTORIA_VEDADOS }}"
+    checkout = _passos()[0]
+    assert str(checkout["uses"]).startswith("actions/checkout@")
+    assert checkout["with"]["fetch-depth"] == 0, "a régua recusa clone raso"
 
 
-def _sem_comentarios(linhas: list[str]) -> list[str]:
-    return [ln for ln in linhas if not ln.strip().startswith("#")]
+def test_os_gatilhos_cobrem_todo_ramo_as_tags_o_pr_e_o_agendamento() -> None:
+    gatilhos = _workflow()[True]  # `on:` vira True no YAML 1.1
+    assert gatilhos["push"]["branches"] == ["**"], "o ramo de fecho precisa do check antes do dev"
+    assert gatilhos["push"]["tags"] == ["v*"]
+    assert "pull_request" in gatilhos and "schedule" in gatilhos and "workflow_dispatch" in gatilhos
+    assert _workflow()["permissions"] == {"contents": "read"}
 
 
-def test_o_git_log_do_intervalo_nao_engole_o_codigo_de_saida() -> None:
-    """A cura em uma linha: sem `|| true` e sem `2>/dev/null` no git log que"""
-    for linha in _sem_comentarios(_linhas_da_auditoria()):
-        if "git log" not in linha or "%H" not in linha:
-            continue
-        assert "|| true" not in linha, (
-            f"o `|| true` voltou ao git log que monta a lista: {linha.strip()!r}. "
-            "Ele torna 'não consegui auditar' indistinguível de 'nada a auditar'."
-        )
-        assert "2>/dev/null" not in linha, (
-            f"o erro do git log voltou a ir para /dev/null: {linha.strip()!r}"
-        )
+def test_todo_passo_de_conteudo_chama_a_regua_unica_e_nenhum_engole_o_codigo_de_saida() -> None:
+    for passo in _passos()[1:]:
+        corpo = str(passo["run"])
+        assert "scripts/check_autoria.py" in corpo, f"{passo['name']}: não chama a régua única"
+        assert "grep" not in corpo, f"{passo['name']}: vocabulário no YAML em vez de na lista"
+        assert "|| true" not in corpo and "2>/dev/null" not in corpo, passo["name"]
+        assert not passo.get("continue-on-error"), passo["name"]
 
 
-def test_o_passo_consulta_o_codigo_de_saida_do_git_log() -> None:
-    shell = _shell_da_auditoria()
-    assert re.search(r"RC_\w+=\$\?", shell), (
-        "o passo não guarda mais o código de saída do git log — sem ele não há "
-        "como separar erro de intervalo vazio"
-    )
+def test_o_passo_do_pr_so_pula_o_texto_de_robo() -> None:
+    passo = _passo("Título e corpo do PR")
+    assert "Bot" in str(passo["if"])
 
 
-def test_a_captura_do_codigo_sobrevive_ao_bash_e() -> None:
-    """O runner roda todo `run:` com `bash -e`."""
-    for linha in _sem_comentarios(_linhas_da_auditoria()):
-        if "git log" in linha and "%H" in linha:
-            assert re.search(r"\|\|\s*RC_\w+=\$\?", linha), (
-                f"git log sem captura do código sob `bash -e`: {linha.strip()!r}"
-            )
+# ---------------------------------------------------------------------------
+# Os passos de verdade, num repositório de brinquedo
+# ---------------------------------------------------------------------------
 
 
-def test_entre_o_git_log_e_o_primeiro_exit_0_existe_um_exit_1() -> None:
-    """Reprova se o `exit 0` incondicional voltar."""
-    linhas = _sem_comentarios(_linhas_da_auditoria())
-    i_git = next(
-        (i for i, ln in enumerate(linhas) if "git log" in ln and "%H" in ln), None
-    )
-    assert i_git is not None, "o passo não monta mais a lista de commits"
-
-    i_exit0 = next(
-        (i for i, ln in enumerate(linhas) if i > i_git and "exit 0" in ln), None
-    )
-    if i_exit0 is None:
-        return
-    houve_exit_1 = any("exit 1" in ln for ln in linhas[i_git:i_exit0])
-    assert houve_exit_1, (
-        "o passo sai 0 depois do git log sem nenhum caminho de `exit 1` no meio: "
-        "é o fail-open de PUBLICAÇÃO-FIEL-01/E5 de volta"
-    )
+def _ambiente(extra: dict[str, str] | None = None) -> dict[str, str]:
+    env = dict(os.environ)
+    for chave in list(env):
+        if chave.startswith(("GIT_AUTHOR", "GIT_COMMITTER", "AUTORIA_")):
+            del env[chave]
+    env.update({"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
+    env.update(extra or {})
+    return env
 
 
-def test_a_reprovacao_por_intervalo_irresoluvel_nomeia_o_intervalo() -> None:
-    """Aceite da E5: sair 1 com o intervalo escrito na mensagem."""
-    linhas = _sem_comentarios(_linhas_da_auditoria())
-    erros_com_range = [
-        ln
-        for ln in linhas
-        if "::error::" in ln and "$RANGE" in ln and "git log" in ln
-    ]
-    assert erros_com_range, (
-        "nenhuma mensagem de erro cita o intervalo e o git log — quem lê o log "
-        "do run não saberia o que não pôde ser auditado"
-    )
-
-
-def test_o_vazio_legitimo_continua_aprovando() -> None:
-    """A outra metade da separação: intervalo que RESOLVE e não tem commit não"""
-    shell = _shell_da_auditoria()
-    assert "Nada a auditar" in shell
-
-
-def _git(repo: Path, *args: str, env: dict[str, str] | None = None) -> None:
-    """git com os ganchos globais desligados — a máquina de desenvolvimento tem"""
-    ambiente = dict(os.environ)
-    ambiente.update(env or {})
-    subprocess.run(
+def _git(repo: Path, *args: str, extra: dict[str, str] | None = None) -> str:
+    r = subprocess.run(
         ["git", "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", *args],
-        cwd=repo,
-        env=ambiente,
-        check=True,
-        capture_output=True,
-        text=True,
+        cwd=repo, env=_ambiente(extra), capture_output=True, text=True,
     )
+    assert r.returncode == 0, r.stderr
+    return r.stdout.strip()
 
 
-def _commit(repo: Path, texto: str, mensagem: str, email: str) -> None:
-    (repo / "arquivo.txt").write_text(texto, encoding="utf-8")
-    _git(repo, "add", "arquivo.txt")
-    _git(
-        repo,
-        "commit",
-        "--no-verify",
-        "-m",
-        mensagem,
-        env={
-            "GIT_AUTHOR_NAME": "Fulana",
-            "GIT_AUTHOR_EMAIL": email,
-            "GIT_COMMITTER_NAME": "Fulana",
-            "GIT_COMMITTER_EMAIL": email,
-        },
-    )
+def _commit(repo: Path, mensagem: str, autor: tuple[str, str] = UM) -> str:
+    (repo / "a.txt").write_text(mensagem, encoding="utf-8")
+    _git(repo, "add", "a.txt")
+    _git(repo, "commit", "-q", "-m", mensagem, extra={
+        "GIT_AUTHOR_NAME": autor[0], "GIT_AUTHOR_EMAIL": autor[1],
+        "GIT_COMMITTER_NAME": autor[0], "GIT_COMMITTER_EMAIL": autor[1],
+    })
+    return _git(repo, "rev-parse", "HEAD")
 
 
 @pytest.fixture()
-def repo_limpo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git(repo, "init", "-q")
-    _commit(repo, "um", "feat: o primeiro", "fulana@example.com")
-    _commit(repo, "dois", "feat: o segundo", "fulana@example.com")
-    return repo
+def repo(tmp_path: Path) -> Path:
+    r = tmp_path / "r"
+    r.mkdir()
+    _git(r, "init", "-q", "-b", "dev")
+    (r / "scripts").mkdir()
+    shutil.copy2(REPO / "scripts" / "check_autoria.py", r / "scripts" / "check_autoria.py")
+    (r / ".mailmap").write_text(MAILMAP, encoding="utf-8")
+    _git(r, "add", ".mailmap", "scripts")
+    _commit(r, "chore: nasce")
+    return r
 
 
-def _sha(repo: Path, ref: str = "HEAD") -> str:
-    saida = subprocess.run(
-        ["git", "rev-parse", ref], cwd=repo, capture_output=True, text=True, check=True
-    )
-    return saida.stdout.strip()
+def _rodar(repo: Path, nome_do_passo: str, extra: dict[str, str], lista: str | None = LISTA,
+           entrada: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Executa o shell REAL do passo, extraído do YAML, sob `bash -e` como o runner."""
+    script = repo.parent / "passo.sh"
+    script.write_text(str(_passo(nome_do_passo)["run"]), encoding="utf-8")
+    env = _ambiente({**extra, **({"AUTORIA_VEDADOS": lista} if lista is not None else {})})
+    return subprocess.run(["bash", "-e", str(script)], cwd=repo, env=env, input=entrada,
+                          capture_output=True, text=True)
 
 
-def _rodar_o_passo(
-    repo: Path, *, intervalo: str, topo: str
-) -> subprocess.CompletedProcess[str]:
-    """Executa o shell REAL do passo, extraído do YAML, no repo de mentira."""
-    script = repo / "passo_auditoria.sh"
-    script.write_text(_shell_da_auditoria(), encoding="utf-8")
-    ambiente = dict(os.environ)
-    ambiente.update({"RANGE": intervalo, "PUSH_AFTER": topo})
-    return subprocess.run(
-        ["bash", "-e", str(script)],
-        cwd=repo,
-        env=ambiente,
-        capture_output=True,
-        text=True,
-    )
+def _saida(p: subprocess.CompletedProcess[str]) -> str:
+    return p.stdout + p.stderr
 
 
-def test_intervalo_irresoluvel_reprova(repo_limpo: Path) -> None:
-    """O caso do force-push: `before` órfão, e nem o topo resolve."""
-    proc = _rodar_o_passo(
-        repo_limpo, intervalo=f"{SHA_FANTASMA}..HEAD", topo=SHA_FANTASMA
-    )
-    saida = proc.stdout + proc.stderr
-    assert proc.returncode != 0, (
-        "o portão APROVOU um intervalo que não conseguiu auditar: " + saida
-    )
-    assert "não consegui auditar" in saida
-    assert SHA_FANTASMA in saida, "a mensagem não nomeia o intervalo"
+PUSH = "O que o push traz"
 
 
-def test_intervalo_vazio_de_verdade_aprova(repo_limpo: Path) -> None:
-    """Intervalo que RESOLVE e não tem commit continua saindo 0."""
-    proc = _rodar_o_passo(repo_limpo, intervalo="HEAD..HEAD", topo=_sha(repo_limpo))
-    saida = proc.stdout + proc.stderr
-    assert proc.returncode == 0, saida
-    assert "Nada a auditar" in saida
+def test_push_com_before_orfao_mede_a_historia_inteira(repo: Path) -> None:
+    """O push forçado não vira «nada a auditar»: a identidade de fora na história reprova."""
+    _commit(repo, "feat: de fora", autor=DE_FORA)
+    topo = _commit(repo, "feat: limpo")
+    p = _rodar(repo, PUSH, {"ANTES": ZERO, "DEPOIS": topo})
+    assert p.returncode != 0, _saida(p)
+    assert "VERMELHO" in p.stdout
 
 
-def test_intervalo_valido_com_historia_limpa_aprova(repo_limpo: Path) -> None:
-    proc = _rodar_o_passo(
-        repo_limpo, intervalo="HEAD~1..HEAD", topo=_sha(repo_limpo)
-    )
-    saida = proc.stdout + proc.stderr
-    assert proc.returncode == 0, saida
-    assert "OK:" in saida
+def test_push_com_before_que_nao_resolve_reprova_em_vez_de_passar(repo: Path) -> None:
+    _commit(repo, "feat: de fora", autor=DE_FORA)
+    topo = _commit(repo, "feat: limpo")
+    p = _rodar(repo, PUSH, {"ANTES": SHA_FANTASMA, "DEPOIS": topo})
+    assert p.returncode != 0, _saida(p)
 
 
-def test_identidade_de_provedor_de_ia_reprova(tmp_path: Path) -> None:
-    """Contraprova de que o passo AUDITA: o que ele deve pegar, ele pega."""
-    repo = tmp_path / "sujo"
-    repo.mkdir()
-    _git(repo, "init", "-q")
-    _commit(repo, "um", "feat: o primeiro", "fulana@example.com")
-    _commit(repo, "dois", "feat: o segundo", EMAIL_VENENOSO)
-    proc = _rodar_o_passo(repo, intervalo="HEAD~1..HEAD", topo=_sha(repo))
-    saida = proc.stdout + proc.stderr
-    assert proc.returncode != 0, "o portão passou por cima de identidade de IA: " + saida
-    assert "provedor IA" in saida
+def test_push_com_before_orfao_e_historia_limpa_aprova(repo: Path) -> None:
+    topo = _commit(repo, "feat: limpo")
+    p = _rodar(repo, PUSH, {"ANTES": ZERO, "DEPOIS": topo})
+    assert p.returncode == 0, _saida(p)
+    assert "OK" in p.stdout
 
 
-def test_recuo_para_o_topo_audita_de_verdade(tmp_path: Path) -> None:
-    """O recuo não pode ser carimbo: quando o intervalo não resolve e o topo"""
-    repo = tmp_path / "sujo-com-intervalo-quebrado"
-    repo.mkdir()
-    _git(repo, "init", "-q")
-    _commit(repo, "um", "feat: o primeiro", "fulana@example.com")
-    _commit(repo, "dois", "feat: o segundo", EMAIL_VENENOSO)
-    proc = _rodar_o_passo(
-        repo, intervalo=f"{SHA_FANTASMA}..HEAD", topo=_sha(repo)
-    )
-    saida = proc.stdout + proc.stderr
-    assert proc.returncode != 0, "o recuo para o topo virou carimbo: " + saida
-    assert "provedor IA" in saida
+def test_push_com_before_valido_mede_o_que_foi_acrescentado(repo: Path) -> None:
+    antes = _commit(repo, "feat: limpo")
+    topo = _commit(repo, "fix: o subagente refez")
+    p = _rodar(repo, PUSH, {"ANTES": antes, "DEPOIS": topo})
+    assert p.returncode != 0, _saida(p)
+    assert "(nível 2)" in p.stdout
 
 
-def test_recuo_para_o_topo_avisa_no_log(repo_limpo: Path) -> None:
-    """Auditar coisa diferente da pedida não pode acontecer em silêncio."""
-    proc = _rodar_o_passo(
-        repo_limpo, intervalo=f"{SHA_FANTASMA}..HEAD", topo=_sha(repo_limpo)
-    )
-    saida = proc.stdout + proc.stderr
-    assert proc.returncode == 0, saida
-    assert "::warning::" in saida
-    assert "não resolvível" in saida
+def test_push_com_before_valido_e_commit_de_fora_reprova_pela_identidade(repo: Path) -> None:
+    antes = _commit(repo, "feat: limpo")
+    topo = _commit(repo, "feat: de fora", autor=DE_FORA)
+    p = _rodar(repo, PUSH, {"ANTES": antes, "DEPOIS": topo})
+    assert p.returncode != 0, _saida(p)
+
+
+def test_push_limpo_com_before_valido_aprova(repo: Path) -> None:
+    antes = _commit(repo, "feat: um")
+    topo = _commit(repo, "feat: dois")
+    p = _rodar(repo, PUSH, {"ANTES": antes, "DEPOIS": topo})
+    assert p.returncode == 0, _saida(p)
+
+
+def test_sem_o_secret_o_passo_diz_nao_medido_e_reprova(repo: Path) -> None:
+    """O PR de fork não recebe o secret: o verde sobre o vazio é o que se evita."""
+    topo = _commit(repo, "feat: limpo")
+    p = _rodar(repo, PUSH, {"ANTES": ZERO, "DEPOIS": topo}, lista="")
+    assert p.returncode != 0
+    assert "NÃO MEDIDO" in p.stdout
+
+
+def test_o_passo_do_pr_mede_a_historia_do_topo_e_o_que_ele_acrescenta(repo: Path) -> None:
+    base = _commit(repo, "feat: base")
+    topo = _commit(repo, "fix: o subagente refez")
+    p = _rodar(repo, "O que o PR traz", {"BASE": base, "TOPO": topo})
+    assert p.returncode != 0, _saida(p)
+
+
+def test_o_passo_do_pr_com_base_que_nao_resolve_reprova(repo: Path) -> None:
+    topo = _commit(repo, "feat: limpo")
+    p = _rodar(repo, "O que o PR traz", {"BASE": SHA_FANTASMA, "TOPO": topo})
+    assert p.returncode != 0, _saida(p)
+
+
+def test_o_texto_do_pr_com_termo_reprova_e_o_limpo_passa(repo: Path) -> None:
+    sujo = _rodar(repo, "Título e corpo do PR", {"TITULO": "fix: x", "CORPO": f"veja {CANARIO}"})
+    assert sujo.returncode != 0 and CANARIO not in _saida(sujo)
+    limpo = _rodar(repo, "Título e corpo do PR", {"TITULO": "fix: x", "CORPO": "corpo limpo"})
+    assert limpo.returncode == 0, _saida(limpo)
+
+
+def test_o_passo_da_arvore_mede_o_conteudo(repo: Path) -> None:
+    topo = _commit(repo, f"feat: {CANARIO}")
+    p = _rodar(repo, "A árvore", {"REV": topo})
+    assert p.returncode != 0 and CANARIO not in _saida(p)

@@ -1,0 +1,63 @@
+name: autoria
+
+# Quem assina a história e o que o texto carrega: uma régua só
+# (`scripts/check_autoria.py`), a mesma do gancho de pre-push e do `portoes.sh`.
+# Mede o ESTADO, não o intervalo: um intervalo que não resolve não vira verde.
+# O push mede a história inteira do topo (a identidade de quem assina) e, quando o
+# `before` resolve, o que ele acrescentou; o `before` órfão (push forçado) fica só
+# com a história inteira, e nunca vira «nada a auditar».
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autoria:
+    runs-on: ubuntu-latest
+    env:
+      AUTORIA_VEDADOS: ${{ secrets.AUTORIA_VEDADOS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: A história publicada
+        run: python3 scripts/check_autoria.py historia origin/dev origin/main $(git tag -l | sed 's#^#refs/tags/#')
+      - name: O que o PR traz
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          TOPO: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 scripts/check_autoria.py historia "$TOPO"
+          python3 scripts/check_autoria.py diff "$BASE" "$TOPO"
+      - name: O que o push traz
+        if: github.event_name == 'push'
+        env:
+          ANTES: ${{ github.event.before }}
+          DEPOIS: ${{ github.event.after }}
+        run: |
+          python3 scripts/check_autoria.py historia "$DEPOIS"
+          if [ "$ANTES" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$ANTES^{commit}"; then
+            python3 scripts/check_autoria.py diff "$ANTES" "$DEPOIS"
+          fi
+      - name: Título e corpo do PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+          CORPO: ${{ github.event.pull_request.body }}
+        run: printf '%s\n%s\n' "$TITULO" "$CORPO" | python3 scripts/check_autoria.py texto
+      - name: A árvore
+        env:
+          REV: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/check_autoria.py arvore "$REV"
+      - name: As referências do servidor
+        run: python3 scripts/check_autoria.py remoto origin

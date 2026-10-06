@@ -188,23 +188,16 @@ completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 # Emoji_Presentation) sobre a árvore versionada, e o gancho de pre-commit, que
 # usa faixas largas. O que se perdeu foi só o alcance sobre arquivo que não
 # está mais aqui.
-# O PORTÃO DA HISTÓRIA — 15/09/2026, e ele nasce da queixa dela, com o
-# repositório aberto na frente: uma ferramenta aparecia como contribuidora, e
-# *"algo no hook anti ia falhou, isso é regra do projeto original"*. Mais a
-# segunda metade: *"o emaillist lá deveria ser o meu e o do andre apenas (…)
-# isso deveria ser sempre considerado."*
-# POR QUE OS DOIS GUARDAS QUE JÁ EXISTIAM NÃO BASTARAM, medido no mesmo dia:
-#   1. O `commit-msg` GLOBAL dela rodou 1.179 vezes entre 02 e 04/09 e ainda
-#      assim 30 commits entraram em `dev` com trailer de coautoria. Gancho de
-#      `commit-msg` NÃO roda em `cherry-pick`, em `rebase`, em `merge
-#      --no-edit` nem sob `--no-verify` — e esta casa integra leva por
-#      cherry-pick.
-#   2. O passo de auditoria do `anonymity-check.yml` mede o INTERVALO DO PUSH e
-#      sai `0` quando não o resolve ("Nada a auditar"). Intervalo que não
-#      resolve é portão cego.
-# Esta régua varre TODA a história alcançável por `dev`, `main` e `HEAD`, toda
-# vez que alguém roda os portões. Camada rápida: 470 ms em 2.711 commits.
-rapido|historia-sem-ia|py|scripts/check_a_historia_nao_tem_ia.py
+# A AUTORIA — uma régua só, `scripts/check_autoria.py`, a mesma do gancho de
+# pre-push e do workflow `autoria` do CI. Quem pode assinar é o `.mailmap` (autor,
+# committer e tagger, nome e endereço), e os termos que não se publicam vêm de uma
+# lista fora do repositório (`git config autoria.vedados`): sem ela a régua sai
+# «NÃO MEDIDO» e reprova, em vez de dar verde. Mede a história que VIAJA, toda vez
+# que alguém roda os portões, porque o gancho de commit-msg não roda em
+# cherry-pick, rebase, merge --no-edit nem sob --no-verify, e esta casa integra
+# leva por cherry-pick. O `.mailmap` nasceu da palavra dela de 15/09/2026:
+# *"o emaillist lá deveria ser o meu e o do andre apenas."*
+rapido|autoria-historia|py|scripts/check_autoria.py historia
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
@@ -360,6 +353,7 @@ rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all
 completo|anonimato|bash|scripts/check_anonymity.sh
+completo|autoria-arvore|py|scripts/check_autoria.py arvore
 completo|acentuacao|py|scripts/validar-acentuacao.py --all
 completo|mypy|bin|mypy src/hefesto_dualsense4unix
 completo|coleta-sem-gtk|py|scripts/check_a_coleta_sem_gtk.py

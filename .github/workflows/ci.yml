@@ -34,9 +34,8 @@ jobs:
   anonymity:
     runs-on: ubuntu-latest
     steps:
-      # `fetch-depth: 0` PORQUE O `historia-sem-ia` VARRE A HISTÓRIA INTEIRA.
-      # O padrão do `actions/checkout` é profundidade 1, e a régua recusa clone
-      # raso em vez de dar verde sobre um commit só.
+      # `fetch-depth: 0` veio com o portão da história, que agora roda no workflow
+      # `autoria`; reduzir a profundidade deste job é medida à parte.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -144,7 +143,6 @@ jobs:
       - run: python3 scripts/check_os_quatro_lugares.py
       - run: python3 scripts/check_identidade_vem_de_cima.py
       - run: python3 scripts/check_a_cor_vem_do_aparelho.py
-      - run: python3 scripts/check_a_historia_nao_tem_ia.py
       - run: python3 scripts/check_a_tela_nao_confessa.py
       # A moldura: a barra de título, o `.desktop` e a unit — o que ela lê
       # ANTES de qualquer página, e o que as duas réguas de corpo não alcançam.
@@ -320,8 +318,8 @@ jobs:
       # Z6-07 (24/08/2026, P-11 da PAREAMENTO-01): SEM `fetch-depth: 0` o
       # padrão do `actions/checkout` é profundidade 1 — `HEAD~1` NÃO EXISTE
       # no runner, e a regra 17 (`id-sumiu-sem-nota`, abaixo) nasceria verde
-      # sem medir nada. O mesmo defeito já pago pelo `anonymity-check.yml`
-      # (`:36`), agora no job do mapa.
+      # sem medir nada. O mesmo defeito já pago pelo workflow `autoria`,
+      # agora no job do mapa.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -335,7 +333,7 @@ jobs:
       - name: Instalar o pytest
         run: python -m pip install pytest
       # A referência vem do EVENTO, nunca de `HEAD~1` fixo — o mesmo desenho
-      # de `anonymity-check.yml:41-49`: num PR de vários commits, `HEAD~1`
+      # do workflow `autoria`: num PR de vários commits, `HEAD~1`
       # compararia contra o commit anterior em vez da base, e um renome feito
       # no primeiro commit do PR passaria despercebido.
       - name: Definir ref de comparação (id estável)

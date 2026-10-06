@@ -9,6 +9,9 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
 CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
+# O CI tem dois arquivos que rodam portão da lista: o `ci.yml` e o `autoria.yml`, que
+# carrega a régua única de autoria (`scripts/check_autoria.py`).
+AUTORIA_YML = RAIZ / ".github" / "workflows" / "autoria.yml"
 
 _FERRAMENTAS = ("ruff", "mypy", "shellcheck", "pytest", "pre-commit")
 
@@ -124,7 +127,8 @@ def confere(texto_sh: str, texto_ci: str) -> list[str]:
 
 def test_a_lista_local_e_a_do_ci_sao_a_mesma() -> None:
     queixas = confere(
-        PORTOES_SH.read_text(encoding="utf-8"), CI_YML.read_text(encoding="utf-8")
+        PORTOES_SH.read_text(encoding="utf-8"),
+        CI_YML.read_text(encoding="utf-8") + "\n" + AUTORIA_YML.read_text(encoding="utf-8"),
     )
     assert not queixas, (
         f"A lista de portões divergiu em {len(queixas)} ficha(s):\n"
@@ -243,3 +247,18 @@ def test_a_ferramenta_conta_dos_dois_lados() -> None:
     sh_sem, ci_com = _duble([], [], ["mypy src/hefesto_dualsense4unix"])
     queixas = confere(sh_sem, ci_com)
     assert len(queixas) == 1 and queixas[0].startswith("mypy:")
+
+
+def test_a_regua_de_autoria_roda_nos_dois_lados_e_o_portao_velho_saiu() -> None:
+    """O `autoria-historia` e o `autoria-arvore` estão na lista; o `historia-sem-ia` saiu."""
+    texto_sh = PORTOES_SH.read_text(encoding="utf-8")
+    # a linha crua é `PORTAO|camada|id|runner|argumentos`
+    ids = [ln.split("|")[2] for ln in _linhas_declaradas(texto_sh)
+           if ln.startswith("PORTAO|") and len(ln.split("|")) >= 5]
+    assert "autoria-historia" in ids and "autoria-arvore" in ids
+    assert "historia-sem-ia" not in ids
+    do_ci = fichas_do_ci(
+        CI_YML.read_text(encoding="utf-8") + "\n" + AUTORIA_YML.read_text(encoding="utf-8")
+    )
+    assert "scripts/check_autoria.py" in do_ci
+    assert "scripts/check_a_historia_nao_tem_ia.py" not in do_ci

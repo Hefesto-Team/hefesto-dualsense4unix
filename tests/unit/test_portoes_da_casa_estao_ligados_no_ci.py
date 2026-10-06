@@ -9,6 +9,8 @@ import yaml
 
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
+# O `autoria.yml` também roda portão da lista: a régua única de autoria.
+AUTORIA = RAIZ / ".github" / "workflows" / "autoria.yml"
 
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
 
@@ -59,11 +61,12 @@ def portoes_da_casa() -> list[str]:
 
 def passos_do_ci() -> list[dict]:
     """Todo passo de todo job do CI, já com o nome do job e o job inteiro junto."""
-    dados = yaml.safe_load(CI.read_text(encoding="utf-8"))
     passos: list[dict] = []
-    for nome_do_job, job in (dados.get("jobs") or {}).items():
-        for passo in job.get("steps") or []:
-            passos.append({**passo, "__job__": nome_do_job, "__do_job__": job})
+    for fluxo in (CI, AUTORIA):
+        dados = yaml.safe_load(fluxo.read_text(encoding="utf-8"))
+        for nome_do_job, job in (dados.get("jobs") or {}).items():
+            for passo in job.get("steps") or []:
+                passos.append({**passo, "__job__": nome_do_job, "__do_job__": job})
     return passos
 
 
