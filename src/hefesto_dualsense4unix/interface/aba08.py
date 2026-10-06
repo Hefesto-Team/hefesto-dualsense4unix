@@ -2272,6 +2272,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       p.setAttribute('data-tipo', tipo);
       p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
       document.getElementById('rd-veu').classList.add('aberto');
+      aSecaoCabeOPainel();
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
       if(primeiro) primeiro.focus();
       return true;
@@ -2337,8 +2338,40 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(p.contains(document.activeElement)) document.activeElement.blur();
       p.classList.remove('aberto'); p.setAttribute('inert', ''); p.setAttribute('aria-hidden', 'true');
       document.getElementById('rd-veu').classList.remove('aberto');
+      aSecaoCabeOPainel();
       if(quemAbriu && document.contains(quemAbriu)) quemAbriu.focus();
       quemAbriu = null;
+    }
+    // A SEÇÃO CABE O PAINEL (06/10/2026, item 2). O painel é absoluto e seguia a altura da seção:
+    // com as entradas fechadas ela tinha 169 px e o «Conectar» pedia 488, que rolavam por dentro,
+    // com o miolo vazio embaixo. Aberto, ele estica a seção até caber, no máximo até o fim do
+    // miolo (a página nunca rola); fechado, a seção volta à altura dela. A conta é refeita quando
+    // a lista do painel ou a seção mudam de tamanho (a procura acha aparelhos a cada leitura).
+    function aSecaoCabeOPainel(){
+      var s = document.getElementById('rd-secao'), p = document.getElementById('rd-painel');
+      if(!s || !p) return;
+      s.style.minHeight = '';
+      if(!p.classList.contains('aberto')) return;
+      var cs = getComputedStyle(p), vao = parseFloat(cs.rowGap) || 0, precisa = 0, n = 0;
+      Array.prototype.forEach.call(p.children, function(c){
+        if(c.offsetParent === null && getComputedStyle(c).position !== 'fixed') return;
+        precisa += c.scrollHeight; n += 1;
+      });
+      precisa += vao * Math.max(0, n - 1) + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+                 + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth) + 2;
+      var miolo = s.closest('.miolo'), teto = Infinity;
+      if(miolo) teto = miolo.getBoundingClientRect().bottom
+                       - parseFloat(getComputedStyle(miolo).paddingBottom) - s.getBoundingClientRect().top;
+      var alvo = Math.floor(Math.min(precisa, teto));
+      if(alvo > s.offsetHeight) s.style.minHeight = alvo + 'px';
+    }
+    window.addEventListener('resize', aSecaoCabeOPainel);
+    if(window.ResizeObserver){
+      var olhoDoPainel = new ResizeObserver(function(){ aSecaoCabeOPainel(); });
+      var corpoDoPainel = document.getElementById('rd-painel-corpo');
+      if(corpoDoPainel) olhoDoPainel.observe(corpoDoPainel);
+      var corpoDaSecao = document.querySelector('#rd-secao > .quadro-corpo');
+      if(corpoDaSecao) olhoDoPainel.observe(corpoDaSecao);
     }
     document.addEventListener('keydown', function(ev){
       if(ev.key === 'Escape'){ fecharAPergunta(); fecharPainel(); }
