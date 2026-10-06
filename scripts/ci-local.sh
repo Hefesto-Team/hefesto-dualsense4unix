@@ -32,6 +32,12 @@
 # Ubuntu 26 em 19/10/2026, e o 24.04 é o de hoje. O que o `act` não alcança (privilégio de
 # kernel, FUSE, publicar, perguntar ao servidor) é `FORA-DE-CASA`, com a medida.
 #
+# A FERRAMENTA (o Python do `setup-python`) fica numa pasta do próprio container, que morre com
+# ele. O `act` monta por padrão UM volume `act-toolcache` em /opt/hostedtoolcache, compartilhado
+# por todos os jobs e que sobrevive a eles: o `pip install` de um job deixava pacote no Python do
+# job seguinte, e o `referencias-docs` ficou vermelho ou verde conforme o job que rodou antes
+# (o `hidapi.py` deixado por outro job, sem a biblioteca nativa). O runner do GitHub nasce limpo.
+#
 # O servidor de artefato e o de cache do `act` ficam em 127.0.0.1 (o padrão dele é o IP da
 # rede local).
 #
@@ -267,11 +273,12 @@ rodar_job() { # job índice
     cd "$ARV" || exit 2
     "$ACT" push -W "$yml" -j "$job" \
       -P "ubuntu-latest=$IMAGEM" -P "ubuntu-24.04=$IMAGEM" "${extras[@]}" \
-      --pull=false --rm --container-architecture linux/amd64 \
+      --pull=false --rm --container-architecture linux/amd64 "${OFFLINE[@]}" \
       --artifact-server-path "$CASA/ci-local/artefatos" \
       --artifact-server-addr 127.0.0.1 --artifact-server-port "$porta" \
       --cache-server-addr 127.0.0.1 \
       --concurrent-jobs "$PERNAS" \
+      --env RUNNER_TOOL_CACHE=/tmp/hostedtoolcache --env AGENT_TOOLSDIRECTORY=/tmp/hostedtoolcache \
       --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env 'GIT_CONFIG_VALUE_0=*' \
       "${OPCOES[@]}" ${CI_LOCAL_ACT_EXTRA:-} >"$log" 2>&1
   )
@@ -285,6 +292,13 @@ rodar_job() { # job índice
   echo $(( $(date +%s) - ini )) > "$SAIDA/$job.seg"
   return "$rc"
 }
+
+# As actions (`setup-python`…) o `act` clona em ~/.cache/act; dois `act` clonando juntos se pisam
+# («Unable to reset to <sha>: EOF»). Com a cópia já ali, `--action-offline-mode` não baixa de
+# novo (e a corrida sai rápida e sem rede); sem ela, um job de cada vez até a cópia existir.
+OFFLINE=()
+if [ -d "$HOME/.cache/act/actions-setup-python@v5" ]; then OFFLINE=(--action-offline-mode)
+else EM_PARALELO=1; fi
 
 INI=$(date +%s)
 i=0
