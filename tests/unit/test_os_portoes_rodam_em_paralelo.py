@@ -559,9 +559,9 @@ def test_morde_a_memoria_que_ignora_o_proprio_portao(tmp_path: Path) -> None:
     )
 
 
-# O PORTÃO QUE LÊ O ÍNDICE (`git ls-files`, `git show :caminho`) é cego ao arquivo novo antes do
-# `git add`, e a memória não pode piorar isso: o mesmo arquivo, com os mesmos bytes, agora no índice, é
-# outra pergunta. A chave tem de ver o índice, não só o disco.
+# O PORTÃO QUE LÊ O ÍNDICE (`git ls-files`, `git show :caminho`) é cego ao arquivo novo antes
+# do `git add`, e a memória não pode piorar isso: o mesmo arquivo, com os mesmos bytes, agora no
+# índice, é outra pergunta. A chave tem de ver o índice, não só o disco.
 
 _PY_INDICE = textwrap.dedent("""\
     import subprocess, sys
@@ -570,7 +570,9 @@ _PY_INDICE = textwrap.dedent("""\
     """)
 _PY_ENCENADO = textwrap.dedent("""\
     import subprocess, sys
-    encenado = subprocess.run(["git", "show", ":dados/a/x.txt"], capture_output=True, text=True).stdout
+    encenado = subprocess.run(
+        ["git", "show", ":dados/a/x.txt"], capture_output=True, text=True
+    ).stdout
     sys.exit(1 if "MORDIDA" in encenado else 0)
     """)
 TABELA_DO_INDICE = """
@@ -580,7 +582,7 @@ rapido|encenado|py|scripts/g_encenado.py
 
 
 def _mexer_no_indice(repo: Path, como: str) -> list[dict[str, str]]:
-    """Corre na árvore limpa, muda o DISCO, corre, dá o `git add`, corre: devolve as duas últimas."""
+    """Corre na árvore limpa, muda o DISCO, corre, dá o `git add`, corre: as duas últimas."""
     assert set(_status(_corre(repo, "--rapido").stdout).values()) == {"ok"}
     if como == "arquivo-novo":
         (repo / "dados/proibido.txt").write_text("novo\n", encoding="utf-8")
@@ -617,7 +619,7 @@ def test_o_git_add_faz_o_portao_que_le_o_indice_rodar_de_novo(
 def test_morde_a_memoria_que_ignora_o_indice(tmp_path: Path) -> None:
     texto = RECIBO.read_text(encoding="utf-8")
     velho = 'h.update(f"{rel}\\0{ent.sha(rel)}\\0{ent.no_indice(rel)}\\n".encode())'
-    assert texto.count(velho) == 1, "a memória mudou: a mordida precisa apontar para a linha do índice"
+    assert texto.count(velho) == 1, "a memória mudou: a mordida aponta para a linha do índice"
     mutante = texto.replace(velho, 'h.update(f"{rel}\\0{ent.sha(rel)}\\n".encode())')
     _, depois_do_add = _mexer_no_indice(_repo_do_indice(tmp_path, recibo=mutante), "arquivo-novo")
     assert depois_do_add["indice"] == "lembrado", (
@@ -625,10 +627,10 @@ def test_morde_a_memoria_que_ignora_o_indice(tmp_path: Path) -> None:
     )
 
 
-# A ÁRVORE QUE MUDA DURANTE A CORRIDA: a chave é a do começo, e o portão mede os bytes do meio. O portão
-# abaixo faz, na primeira vez, o papel de quem salva um arquivo enquanto os portões rodam: troca a marca
-# mordida pela limpa antes de ler. O verde dele é dos bytes limpos, e não pode ficar lembrado sob a chave
-# dos mordidos.
+# A ÁRVORE QUE MUDA DURANTE A CORRIDA: a chave é a do começo, e o portão mede os bytes do meio.
+# O portão abaixo faz, na primeira vez, o papel de quem salva um arquivo enquanto os portões
+# rodam: troca a marca mordida pela limpa antes de ler. O verde dele é dos bytes limpos, e não
+# pode ficar lembrado sob a chave dos mordidos.
 
 _PY_QUEM_SALVA_NO_MEIO = textwrap.dedent("""\
     import pathlib, sys
