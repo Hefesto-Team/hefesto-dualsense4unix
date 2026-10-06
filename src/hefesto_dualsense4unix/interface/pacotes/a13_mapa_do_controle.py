@@ -5,7 +5,8 @@
 fala do usuário, 29/09/2026, com os quatro DualSense na mesa:
 
     «Mesmo Sistema que implementamos na aba Controles para cada botão piscar
-    quando apertarmos ele no controle fisico deve ser implementado no Mapa do  (noqa-acento: citação literal)
+    quando apertarmos ele no controle fisico  (noqa-acento: citação literal)
+    deve ser implementado no Mapa do
     Controle. (…) imagina que fulano tenha alterado ele pra refletir o botão X
     por questão de acessibilidade lá devemos mostrar isso (…) Falta um filtro
     pro controle conectado que está sendo visto ali.»

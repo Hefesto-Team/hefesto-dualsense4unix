@@ -804,7 +804,8 @@ class SemCenso:
 #: máquina onde os jogos da Epic abrem — ou seja, **dois cartões da mesma tela
 #: procurando o mesmo programa em disco**, e o segundo existindo só para repetir
 #: a resposta do primeiro.
-#: Ela: *"Epic e gog ficam dentro do heróic. Melhor mesmo seu ponto"*.  # noqa-acento: citação literal
+#: Decisão de produto: *"Epic e gog ficam dentro do heróic.  # noqa-acento: citação literal
+#: Melhor mesmo seu ponto"*.
 #:
 #: **O RÓTULO DO HEROIC NÃO MUDA**, e agora ele carrega mais do que carregava:
 #: com o cartão fora, o «(Epic · GOG)» é o ÚNICO lugar da tela onde a Epic

@@ -1142,8 +1142,8 @@ async def _metade_do_canal(
     os DOIS chamadores de `ligar_o_microfone` — o 🎙 da tela e a borda do botão
     do plástico. Costurar isto no `ipc_handlers` deixaria o plástico de fora,
     com a suíte verde, e a regra de produto é explícita:
-    *"o botão fisico do mic se ligado no microfone ele fica ligado tambem.  # (noqa-acento: citação literal)
-    indepente se nativo ou virtual"*.
+    *"o botão fisico do mic se ligado no microfone  # (noqa-acento: citação literal)
+    ele fica ligado tambem. indepente se nativo ou virtual"*.  # (noqa-acento: citação literal)
 
     **ANTES da eleição** porque ligar pode PRECISAR da ponte subir: com a
     palavra já guardada, a ponte que `_canal_no_ar` faz nascer já recebe o

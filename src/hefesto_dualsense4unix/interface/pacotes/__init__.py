@@ -695,7 +695,8 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
     return {
-        # *"Esse x controles cai fora pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
+        # *"Esse x controles cai fora  # (noqa-acento: citação literal)
+        # pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
         "rodape.salvar": _dica_do_salvar(do_rodape),
