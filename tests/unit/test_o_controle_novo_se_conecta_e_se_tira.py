@@ -25,6 +25,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import central_do_radio as cr
+from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08_tela
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
@@ -329,3 +330,147 @@ def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
         assert sorted(f.endereco for f in mundo.fisicos.values() if f.conectado_em) == ligados
     finally:
         bancada.fechar()
+
+
+# ---- a página: as curas 3 e 4, no WebKit, na janela do piloto (1212 por 809) ----
+
+MOCKUP_08 = Path(__file__).resolve().parents[2] / "mockup/08-conexoes.html"
+A_CAIXA_ESCOLHE = "      if(aCaixaEscolhe(ev)) return;\n"
+A_GAVETA_NA_LINHA = "      aGavetaNaLinha(p);\n"
+
+ABRE_A_GAVETA = r"""
+(function(){
+  const r = document.getElementById('cx8-3');
+  r.checked = true; r.dispatchEvent(new Event('change', {bubbles: true}));
+  const t = document.createElement('style');
+  t.textContent = '.radio .painel{transition:none !important}';
+  document.head.appendChild(t);
+  document.querySelector('.radio .abre-lugar[data-alvo="L3"]').click();
+  const b = document.querySelector('.radio .linha .menu-da-linha[data-alvo="nao-conectou-L3-P5"]');
+  b.scrollIntoView({block: 'center'});
+  b.click();
+  return 'ok';
+})()
+"""
+
+MEDE_A_GAVETA = r"""
+(function(){
+  const p = document.getElementById('rd-painel'), r = p.getBoundingClientRect();
+  const b = document.querySelector('.radio .linha .menu-da-linha[data-alvo="nao-conectou-L3-P5"]');
+  const rb = b.getBoundingClientRect();
+  const livres = [...document.querySelectorAll('.radio .lugar.aberto .linha .menu-da-linha')]
+    .map(function(m){
+      const q = m.getBoundingClientRect();
+      const e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+      return e === m || m.contains(e);
+    });
+  return JSON.stringify({
+    aberto: p.classList.contains('aberto'), tipo: p.getAttribute('data-tipo'),
+    largura: Math.round(r.width), altura: Math.round(r.height),
+    perto_da_linha: Math.abs(r.top - rb.top) <= 12, a_esquerda_do_menu: r.right <= rb.left,
+    estado: (p.querySelector('.estado') || {}).textContent || '',
+    botoes: [...p.querySelectorAll('.escolha .btn')].map(function(x){
+      const s = getComputedStyle(x);
+      return [x.textContent.trim(), s.backgroundColor, s.color];
+    }),
+    menus: livres.length, menus_livres: livres.filter(Boolean).length,
+  });
+})()
+"""
+
+O_CONECTAR_E_OUTRA_CAIXA = r"""
+(function(){
+  const r = document.getElementById('cx8-3');
+  r.checked = true; r.dispatchEvent(new Event('change', {bubbles: true}));
+  const t = document.createElement('style');
+  t.textContent = '.radio .painel{transition:none !important}';
+  document.head.appendChild(t);
+  document.getElementById('rd-b-conectar').click();
+  window.__antes = [...document.querySelectorAll('#rd-painel .op[aria-pressed="true"]')]
+    .map(function(o){ return o.dataset.alvo; });
+  const topo = document.querySelector('.radio .sala .lugar[data-id="L2"] .lugar-topo');
+  const q = topo.getBoundingClientRect();
+  let alvo = null;
+  for (let x = q.right - 8; x > q.left + 40 && !alvo; x -= 6) {
+    const e = document.elementFromPoint(x, q.top + q.height / 2);
+    if (e && topo.contains(e) && !e.closest('button, input, a, [data-gesto]')) alvo = e;
+  }
+  window.__clicou = alvo ? (alvo.className || alvo.tagName) : '';
+  if (alvo) alvo.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+  return 'ok';
+})()
+"""
+
+MEDE_O_ALVO = r"""
+(function(){
+  const p = document.getElementById('rd-painel');
+  const fora = {
+    antes: window.__antes, clicou: window.__clicou,
+    aberto: p.classList.contains('aberto'), tipo: p.getAttribute('data-tipo'),
+    depois: [...p.querySelectorAll('.op[aria-pressed="true"]')].map(function(o){
+      return o.dataset.alvo; }),
+  };
+  document.querySelector('.radio .abre-lugar[data-alvo="L3"]').click();
+  document.querySelector('.radio .linha .menu-da-linha[data-alvo="celular-L3"]').click();
+  fora.outra_linha = [p.getAttribute('data-tipo'),
+                      document.getElementById('rd-painel-titulo').textContent];
+  return JSON.stringify(fora);
+})()
+"""
+
+
+def _a_pagina(tmp_path: Path, sem: str = "") -> Path:
+    if not sem:
+        return MOCKUP_08
+    pagina = MOCKUP_08.read_text(encoding="utf-8")
+    assert pagina.count(sem) == 1, sem
+    cega = tmp_path / "08-mordida.html"
+    cega.write_text(pagina.replace(sem, ""), encoding="utf-8")
+    return cega
+
+
+def _no_webkit_08(pagina: Path, prepara: str, mede: str) -> dict[str, Any]:
+    from tests.unit.test_a_secao_cabe_o_painel_aberto import _no_webkit
+
+    return _no_webkit(pagina, 0, prepara=prepara, mede=mede)
+
+
+def test_com_o_conectar_aberto_a_caixa_de_outro_adaptador_muda_o_alvo(tmp_path: Path) -> None:
+    """A cura 3: com o painel do «Conectar» aberto, o clique na caixa de outro adaptador é a
+    escolha do chip (o alvo muda e o painel fica), e o «⋮» de outra linha troca a gaveta. Um véu
+    cobria a seção e todo clique nela só fechava o painel.
+
+    MORDIDA: :func:`test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel`.
+    """
+    f = _no_webkit_08(_a_pagina(tmp_path), O_CONECTAR_E_OUTRA_CAIXA, MEDE_O_ALVO)
+    assert f["clicou"], f"nenhum ponto vazio na caixa recebeu o clique (um véu por cima?): {f}"
+    assert f["antes"] != ["L2"], f
+    assert (f["aberto"], f["tipo"], f["depois"]) == (True, "conectar", ["L2"]), f
+    assert f["outra_linha"] == ["menu", "Celular"], f
+
+
+def test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel(tmp_path: Path) -> None:
+    f = _no_webkit_08(_a_pagina(tmp_path, A_CAIXA_ESCOLHE), O_CONECTAR_E_OUTRA_CAIXA, MEDE_O_ALVO)
+    assert f["aberto"] is False and f["depois"] == f["antes"] != ["L2"], f
+
+
+def test_a_gaveta_tem_o_tamanho_do_que_mostra_e_mora_ao_lado_da_linha(tmp_path: Path) -> None:
+    """A cura 4 (foto 13 dela): a gaveta do «⋮» era a seção inteira, vazia, com o nome solto e um
+    botão. Agora: do tamanho do que mostra, na altura da linha e à esquerda do «⋮» (a coluna dos
+    «⋮» das outras linhas fica livre), com o estado do aparelho, e o que apaga é vermelho com
+    letra branca.
+
+    MORDIDA: :func:`test_mordida_sem_a_gaveta_na_linha_ela_volta_ao_canto`.
+    """
+    f = _no_webkit_08(_a_pagina(tmp_path), ABRE_A_GAVETA, MEDE_A_GAVETA)
+    assert (f["aberto"], f["tipo"]) == (True, "menu"), f
+    assert f["largura"] <= 340 and f["altura"] <= 160, f"maior que o que mostra: {f}"
+    assert f["perto_da_linha"] and f["a_esquerda_do_menu"], f
+    assert f["menus"] >= 3 and f["menus_livres"] == f["menus"], f"cobre «⋮» de outras: {f}"
+    assert f["estado"].startswith(a08_tela.NAO_CONECTOU), f
+    assert f["botoes"] == [[a08_tela.TIRAR_A_LINHA, "rgb(255, 85, 85)", "rgb(255, 255, 255)"]], f
+
+
+def test_mordida_sem_a_gaveta_na_linha_ela_volta_ao_canto(tmp_path: Path) -> None:
+    f = _no_webkit_08(_a_pagina(tmp_path, A_GAVETA_NA_LINHA), ABRE_A_GAVETA, MEDE_A_GAVETA)
+    assert not (f["perto_da_linha"] and f["a_esquerda_do_menu"]), f

@@ -3013,6 +3013,7 @@ TIRAR_A_LINHA = "Tirar esta linha"
 DESLIGUE_O_PROCURAR = "desligue o Procurar para esquecer"
 ESQUECER_FAZ = "Tira o pareamento com este adaptador. Para voltar, use Conectar."
 DESLIGADO = "Desligado"
+CONECTADO = "Conectado"
 USB = "USB"
 ESQUECER = "Esquecer"
 MENU_DA_LINHA = "\u22ee"
@@ -3685,8 +3686,9 @@ def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
                                                  f'data-lugar="{lid}"'))
         moldes.append(f'<template class="painel-molde" data-painel="menu" '
                       f'data-alvo="{alvo}|{lid}" data-titulo="{titulo}">'
+                      + _estado_na_gaveta(ap, lug)
                       + (f'<p class="explica">{ESQUECER_FAZ}</p>' if esquece else "")
-                      + _botoes(itens) + '</template>')
+                      + _botoes(itens, "btn apaga") + '</template>')
         if not esquece:
             continue
         moldes.append(f'<template class="pergunta-molde" data-esquecer="1" '
@@ -3696,11 +3698,23 @@ def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
     return "".join(moldes)
 
 
-def _botoes(itens: list[tuple[str, str, str]]) -> str:
+def _botoes(itens: list[tuple[str, str, str]], classe: str = "btn") -> str:
     """`(ícone, rótulo, atributos)` → a lista de botões de um painel."""
     return ('<div class="escolha">' + "".join(
-        f'<button class="btn" {attrs}>{_ic(ic) if ic else ""}{_x(rot)}</button>'
+        f'<button class="{classe}" {attrs}>{_ic(ic) if ic else ""}{_x(rot)}</button>'
         for ic, rot, attrs in itens) + "</div>")
+
+
+def _estado_na_gaveta(ap: dict[str, Any], lug: dict[str, Any]) -> str:
+    """O estado do aparelho na gaveta do «⋮», embaixo do nome: o que a linha diz · o adaptador."""
+    if ap.get("nao_conectou"):
+        estado = f'<span class="nao-conectou">{NAO_CONECTOU}</span>'
+    elif ap.get("desligado"):
+        estado = _x(USB if ap.get("usb") else DESLIGADO)
+    else:
+        estado = CONECTADO
+    onde = _titulo_do_lugar(lug)
+    return f'<p class="estado">{estado}{" · " + _x(onde) if onde else ""}</p>'
 
 
 def _moldes_de_painel(cena: dict[str, Any]) -> str:

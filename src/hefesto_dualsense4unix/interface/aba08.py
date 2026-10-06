@@ -1838,6 +1838,22 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .painel:not([data-tipo="conectar"]) .cadeado{display:none}
   .radio .painel .explica{margin:0 0 10px;font-size:12.5px;color:var(--texto-suave);
                           line-height:1.4}
+  /* A gaveta do «⋮» (cura 4 da O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01): o
+     tamanho do que mostra, ao lado da linha, com o estado do aparelho embaixo do nome e os
+     botões do mesmo grupo com a mesma largura; o que apaga é vermelho com letra branca. */
+  .radio .painel[data-tipo="menu"]{bottom:auto;width:auto;min-width:250px;max-width:340px;
+    border:1px solid var(--border-forte);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.5);
+    padding:11px 12px 12px;gap:8px;overflow:visible}
+  .radio .painel[data-tipo="menu"] .painel-cab h2{color:var(--fg)}
+  .radio .painel[data-tipo="menu"] .estado{margin:-4px 0 0;font-size:12.5px;color:var(--texto-suave)}
+  .radio .painel[data-tipo="menu"] .estado .nao-conectou{color:var(--red)}
+  .radio .painel[data-tipo="menu"] .explica{margin:0}
+  .radio .painel[data-tipo="menu"] .escolha{display:grid;grid-auto-flow:column;
+    grid-auto-columns:1fr;gap:7px}
+  .radio .painel[data-tipo="menu"] .escolha .btn{justify-content:center}
+  .radio .painel .btn.apaga{background:var(--red);border-color:var(--red);color:#fff}
+  .radio .painel .btn.apaga:hover{background:#ff6e6e;border-color:#ff6e6e;color:#fff}
+  .radio .painel .btn.apaga svg{color:#fff}
   .radio .lugar-nome[class*="cor-"]:not(:focus){border-color:var(--cor-do-grupo)}
   .radio .porta svg[class*="cor-"]{color:var(--cor-do-grupo)}
   .radio .cor-cyan{--cor-do-grupo:var(--cyan)}
@@ -2277,7 +2293,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       painelAberto = {tipo: tipo, alvo: alvo || '', marca: marcaDoMolde(m)};
       p.setAttribute('data-tipo', tipo);
       p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
-      document.getElementById('rd-veu').classList.add('aberto');
+      aGavetaNaLinha(p);
       aSecaoCabeOPainel();
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
       if(primeiro) primeiro.focus();
@@ -2343,7 +2359,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(!p.classList.contains('aberto')) return;
       if(p.contains(document.activeElement)) document.activeElement.blur();
       p.classList.remove('aberto'); p.setAttribute('inert', ''); p.setAttribute('aria-hidden', 'true');
-      document.getElementById('rd-veu').classList.remove('aberto');
       aSecaoCabeOPainel();
       if(quemAbriu && document.contains(quemAbriu)) quemAbriu.focus();
       quemAbriu = null;
@@ -2353,11 +2368,29 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     // com o miolo vazio embaixo. Aberto, ele estica a seção até caber, no máximo até o fim do
     // miolo (a página nunca rola); fechado, a seção volta à altura dela. A conta é refeita quando
     // a lista do painel ou a seção mudam de tamanho (a procura acha aparelhos a cada leitura).
+    // A GAVETA DO «⋮» MORA AO LADO DA LINHA (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01,
+    // cura 4). Ela era o painel da seção inteira, com o nome e um botão num retângulo vazio que
+    // cobria a coluna dos «⋮» das outras linhas. Agora tem o tamanho do que mostra e abre à
+    // esquerda do «⋮» que a abriu, na altura da linha: a coluna dos «⋮» fica livre.
+    function aGavetaNaLinha(p){
+      p.style.top = ''; p.style.right = '';
+      if(p.getAttribute('data-tipo') !== 'menu' || !p.offsetParent) return;
+      var alvo = (painelAberto && painelAberto.alvo || '').split('|');
+      var b = um('.radio .linha .menu-da-linha[data-alvo="' + aspas(alvo[0]) + '"][data-lugar="'
+                 + aspas(alvo[1] || '') + '"]');
+      var r = b && b.getBoundingClientRect();
+      if(!r || !r.width) return;
+      var base = p.offsetParent.getBoundingClientRect();
+      var topo = Math.round(r.top - base.top - 6);
+      topo = Math.max(0, Math.min(topo, Math.round(base.height - p.offsetHeight - 4)));
+      p.style.top = topo + 'px';
+      p.style.right = Math.round(base.right - r.left + 6) + 'px';
+    }
     function aSecaoCabeOPainel(){
       var s = document.getElementById('rd-secao'), p = document.getElementById('rd-painel');
       if(!s || !p) return;
       s.style.minHeight = '';
-      if(!p.classList.contains('aberto')) return;
+      if(!p.classList.contains('aberto') || p.getAttribute('data-tipo') === 'menu') return;
       var cs = getComputedStyle(p), vao = parseFloat(cs.rowGap) || 0, precisa = 0, n = 0;
       Array.prototype.forEach.call(p.children, function(c){
         if(c.offsetParent === null && getComputedStyle(c).position !== 'fixed') return;
@@ -2404,8 +2437,32 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     document.addEventListener('keydown', function(ev){
       if(ev.key === 'Escape'){ fecharAPergunta(); fecharPainel(); }
     });
+    // O «CONECTAR» NÃO PRENDE A SEÇÃO (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01,
+    // cura 3). Um véu cobria a seção com o painel aberto, e todo clique nela só fechava o painel:
+    // outra linha, outro adaptador, nada respondia. Sem o véu, as linhas respondem como sempre (o
+    // «⋮» de outra linha troca a gaveta), e com a busca acesa o clique na caixa de outro adaptador
+    // é a escolha do chip: o alvo muda para ela. O clique em nada fecha o painel, como o véu.
+    function aCaixaEscolhe(ev){
+      var caixa = perto(ev, '.radio .sala .lugar');
+      if(!caixa || perto(ev, '.linha, button, input, a, [data-gesto], .balao')) return false;
+      var aberto = painelAberto && painelAberto.tipo === 'conectar';
+      if(!aberto && !um('.radio .sala .lugar.buscando')) return false;
+      var lid = caixa.dataset.id, m = moldeDoPainel('conectar', '');
+      var op = m && um('.op[data-alvo="' + aspas(lid) + '"]', m.content);
+      if(!op || op.getAttribute('aria-disabled') === 'true'){ balancar(caixa); return true; }
+      var chip = aberto && um('#rd-painel .op[data-alvo="' + aspas(lid) + '"]');
+      if(chip){ chip.click(); return true; }
+      var b = document.getElementById('rd-escolher');
+      if(b && comPiloto()){ b.setAttribute('data-alvo', lid); b.click(); }
+      return true;
+    }
     document.addEventListener('click', function(ev){
-      if(perto(ev, '#rd-fechar') || perto(ev, '#rd-veu')){ fecharPainel(); return; }
+      if(perto(ev, '#rd-fechar')){ fecharPainel(); return; }
+      if(aCaixaEscolhe(ev)) return;
+      var foraDoPainel = !!painelAberto && !perto(ev, '#rd-painel');
+      if(foraDoPainel && !perto(ev, '.radio button, .radio input, .radio a, .radio [data-gesto]')){
+        fecharPainel(); return;
+      }
       // escolher dentro do painel: quem vem / para onde → a pergunta
       var ir = perto(ev, '#rd-painel [data-aparelho][data-destino]');
       if(ir){ fecharPainel(); perguntar(moldeDe(ir.dataset.aparelho, ir.dataset.destino)); return; }
@@ -3071,6 +3128,7 @@ MIOLO = f'''
 
         <div class="sala" data-campo="radio-sala" data-hef-alvo="html">{SALA_DO_DESENHO}</div>
         <button hidden id="rd-reordenar" data-gesto="adaptador-reordenar" value=""></button>
+        <button hidden id="rd-escolher" data-gesto="escolher-adaptador" data-alvo=""></button>
         <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html">{CAMPOS_DO_RADIO["radio-moldes"]}</div>
 
         <!-- OS BOTÕES DAS ENTRADAS SUBIRAM PARA O CHECK-UP — 25/09/2026. Ficam
@@ -3090,7 +3148,6 @@ MIOLO = f'''
             <button class="btn confirma" id="rd-pergunta-sim" data-gesto="confirmar-mudanca"></button>
           </div>
         </div>
-        <div class="veu" id="rd-veu"></div>
         <aside class="painel" id="rd-painel" aria-hidden="true" inert role="dialog" aria-labelledby="rd-painel-titulo">
           <div class="painel-cab">
             <span class="pulso" id="rd-pulso"></span>
