@@ -106,7 +106,7 @@ class TestAudioSeConta:
         assert sd.contar_placas_dualsense("") == 0
 
     def test_o_denominador_e_quem_esta_no_cabo(self) -> None:
-        """Dois USB e dois BT: só o cabo cria placa ALSA (medido na mesa dela)."""
+        """Dois USB e dois BT: só o cabo cria placa ALSA (medido na bancada)."""
         assert sd.controles_no_cabo(mesa_cheia()) == 2
         assert sd.controles_no_cabo(None) is None
         assert sd.controles_no_cabo({}) is None

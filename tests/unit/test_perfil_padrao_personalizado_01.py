@@ -168,7 +168,7 @@ def test_recusa_quando_ela_ja_tem_um_perfil_personalizado(disco: Path) -> None:
 
 
 def test_recusa_quando_ela_ja_renomeou_o_perfil_na_mao(disco: Path) -> None:
-    """O arquivo é `meu_perfil.json` mas o NOME lá dentro é dela."""
+    """O arquivo é `meu_perfil.json` mas o NOME lá dentro é do usuário."""
     dela = dict(PERFIL_DELA, name="Meu jeito")
     _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, dela)
 

@@ -266,7 +266,7 @@ def test_sair_da_aba_apaga_o_selo() -> None:
 
 
 def test_nada_e_escrito_no_pipewire() -> None:
-    """O selo INFORMA. O mudo persistido é dela, e o `doctor` o respeita."""
+    """O selo INFORMA. O mudo persistido é do usuário, e o `doctor` o respeita."""
     registro: list[list[str]] = []
     _monitor(sources=_SOURCES, sink_mute="Mute: yes", registro=registro)
 

@@ -6,8 +6,7 @@ o registro «A-ESCADA-DE-RELEASES» de 24/08/2026, seção *0.9.5 — o rádio p
 de mentir*, declarava *"arquivo a nascer: `scripts/check_bancada_de_bt.py`"*.
 Sem ele, o degrau dela não tinha como ser conferido por ninguém — só descrito.
 
-O DEGRAU É DELA, na palavra dela: *"quando terminarmos a bancada do specs em
-bt"*. E o que ele exige NÃO é construir canal nenhum. A escada é explícita:
+O DEGRAU É DO USUÁRIO, na  E o que ele exige NÃO é construir canal nenhum. A escada é explícita:
 
     "Este degrau não manda construir canal nenhum — manda PARAR DE AFIRMAR o que
      não se mediu. Preencher `radio_por_que_nao_aciona` com `decisao-tomada`
@@ -21,7 +20,7 @@ AS QUATRO RÉGUAS, e cada uma sai da tabela da escada:
 
     R1  célula de rádio que admite NÃO acionar e não nomeia a culpa
     R2  célula de rádio que afirma acionar e não foi medida
-    R3  das SETE perguntas de rádio dela, quantas seguem sem medição
+    R3  das SETE perguntas de rádio do usuário, quantas seguem sem medição
     R4  ensaio de rádio no caderno sem o `degrau` preenchido
 
 A QUINTA É DE BANCADA E NÃO ENTRA AQUI: `ls /sys/class/bluetooth/` devolvendo
@@ -96,7 +95,7 @@ def r2(pecas: list[dict]) -> list[str]:
 
 
 def r3(pecas: list[dict]) -> list[str]:
-    """Das sete perguntas dela, quantas seguem sem UMA medição de rádio."""
+    """Das sete perguntas de produto, quantas seguem sem UMA medição de rádio."""
     fora = []
     for chave, texto, familias in PERGUNTAS:
         da_familia = [peca for peca in pecas if peca.get("familia") in familias]

@@ -8,7 +8,7 @@ estava medido antes desta sprint (`PAGINAS-ESPECIAIS-B1`, §2.4):
     confirma: `página trocada no meio do tique: calibrar-sensores.html 1`, com
     **zero pinturas**.
 
-O QUE A TELA DIZIA E O QUE O APARELHO RESPONDIA, medido no daemon dela em
+O QUE A TELA DIZIA E O QUE O APARELHO RESPONDIA, medido no daemon do usuário em
 11/09/2026 com os dois DualSense na bancada::
 
     a tela                          o `daemon.state_full`
@@ -170,7 +170,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     A ORDEM DOS CARTÕES É A DA BANCADA (`ctx.mesa`), que é a ordem do PRODUTO —
     por `player_slot`, não pela posição no `controllers` do IPC. Desenhar por
-    índice inverte os dois controles dela na primeira execução, e a razão inteira
+    índice inverte os dois controles do usuário na primeira execução, e a razão inteira
     está em `mesa_viva`, disciplina 1.
 
     A CHAVE DA COLUNA É O `pref` DA BANCADA, e não o endereço do aparelho: é o

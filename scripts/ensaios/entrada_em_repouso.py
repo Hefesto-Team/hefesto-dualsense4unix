@@ -19,13 +19,13 @@ mesa 2+2 (medir cabo hoje e rádio amanhã não responde nada):
    quais bytes se mexem em cada braço. Se forem os mesmos, código que trate os
    dois transportes de forma diferente na ENTRADA é podável.
 
-POR QUE ISTO NÃO PEDE A MÃO DELA (Lei 2)
+POR QUE ISTO NÃO PEDE A MÃO DO USUÁRIO (Lei 2)
 -----------------------------------------
 Nenhum degrau depende de olho, ouvido ou cronômetro humano — pelo contrário: o
 ensaio EXIGE que ninguém toque. O DualSense parado já transmite em intervalo
 fixo, e são esses milhares de quadros que a máquina conta. O que precisa de
 dedo — *qual bit acende quando se aperta o quadrado* — está no modo
-``--apertar``, que é O BLOCO DELA e sai marcado como tal no relatório.
+``--apertar``, que é O BLOCO DO USUÁRIO e sai marcado como tal no relatório.
 
 A RÉGUA, DECLARADA — e ela é ABSOLUTA
 --------------------------------------
@@ -54,14 +54,14 @@ teste que morde exatamente essa cura.
 
 OS DOIS CONTROLES, E ELES SÃO POR NÓ
 -------------------------------------
-**POSITIVO — o fluxo está vivo e eu estou no offset certo.** Dois carimbos
+**POSITIVO — o fluxo está vivo e o offset está certo.** Dois carimbos
 independentes têm de ANDAR em cada nó: (a) o contador de sequência do quadro e
 (b) o `sensor_timestamp` de 32 bits em `corpo[27..30]`. Um nó cujo carimbo não
 anda está entregando quadro repetido, e dele não sai veredito nenhum. Um
 terceiro carimbo, este de OUTRO OBSERVADOR: o `status[0]` em `corpo[52]`
 decodificado pela fórmula do driver tem de bater com o que o `sysfs` publica em
-`/sys/class/power_supply/ps-controller-battery-*`. Se o meu byte e o sysfs
-discordam, quem está errado sou eu.
+`/sys/class/power_supply/ps-controller-battery-*`. Se o byte decodificado e o sysfs
+discordam, quem está errado é o offset do instrumento.
 
 **NEGATIVO — ninguém tocou em nada.** Na MESMA janela, `corpo[7..10]` (botões e
 hat) tem de ficar em `08 00 00 00` e o `status` tem de ficar parado. Se um botão
@@ -88,7 +88,7 @@ USO
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py --json
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py --segundos 60
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py --bruto docs/data/ensaios-brutos/
-    .venv/bin/python scripts/ensaios/entrada_em_repouso.py --apertar   # BLOCO DELA
+    .venv/bin/python scripts/ensaios/entrada_em_repouso.py --apertar   # BLOCO DO USUÁRIO
 """
 
 from __future__ import annotations

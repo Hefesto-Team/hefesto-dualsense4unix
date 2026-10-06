@@ -91,7 +91,7 @@ def tema_escolhido_na_sessao() -> str:
 
 
 def adotar_o_tema_da_sessao() -> str:
-    """Faz o processo usar o tema que ELA escolheu. Devolve o nome adotado, ou ``""``."""
+    """Faz o processo usar o tema que O usuário escolheu. Devolve o nome adotado, ou ``""``."""
     escolhido = tema_escolhido_na_sessao()
     if not escolhido:
         return ""
@@ -113,7 +113,7 @@ def pedir_a_variante_escura() -> bool:
     """Pede ao GTK a variante ESCURA do tema do sistema. Devolve se conseguiu.
 
     BUG-GUI-COSMIC-WIDGET-CONTRAST-01: em COSMIC a sessão **não** aplica a
-    variante escura do tema GTK por padrão — medido na máquina dela em
+    variante escura do tema GTK por padrão — medido na máquina do usuário em
     04/09/2026, com a sessão inteira em escuro:
 
         gsettings org.gnome.desktop.interface color-scheme = 'prefer-dark'

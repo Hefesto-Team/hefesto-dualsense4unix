@@ -13,7 +13,7 @@ daemon não respondeu sai «-», fora do veredito, com o motivo.
 AS MORDIDAS (feitas em 02/10/2026, uma por vez, com o md5 conferido na volta):
 
 1. ``_numero`` lendo ``None`` como 0,0: o azul de leitor perdido vira colapso.
-2. ``resumir`` chaveando pelo ``passo``: a janela «base» com a Steam dela cai
+2. ``resumir`` chaveando pelo ``passo``: a janela «base» com a Steam do usuário cai
    no grupo da base.
 3. a Steam sem olhar o ``HOME``: duas dela; sem a lista ``excluir``: três.
 4. o controle chaveado pela posição: os números trocam de controle; pelo

@@ -74,7 +74,7 @@ class TestDecisaoPura:
         assert wrapper_banner_text({"gamepad_emulation": "torto"}) is None
 
     def test_a_frase_diz_o_que_o_produto_faz_em_vez_de_mandar_copiar(self) -> None:
-        """07-Q2, palavra dela em 05/09/2026: *"O produto aplica ela"*."""
+        """07-Q2, palavra em 05/09/2026: *"O produto aplica ela"*."""
         assert "atalho de inicialização" in WRAPPER_MISSING_TEXT
         assert "duplicar" in WRAPPER_MISSING_TEXT
         assert "aba Sistema" not in WRAPPER_MISSING_TEXT

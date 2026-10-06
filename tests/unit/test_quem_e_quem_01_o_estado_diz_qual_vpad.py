@@ -1,6 +1,6 @@
 """QUEM-É-QUEM-01 — o produto diz qual vpad é alimentado por qual controle.
 
-O defeito, medido na bancada de 15/08/2026 com os QUATRO controles dela na
+O defeito, medido na bancada de 15/08/2026 com os QUATRO controles do usuário na
 mesa: o `state_full` publicava `coop.players` como um NÚMERO (4), e a pergunta
 *"o vpad do jogador 2 é alimentado por qual controle físico?"* não tinha
 resposta observável. Respondê-la custava apertar botão em cada controle —

@@ -46,7 +46,7 @@ As travas, todas exercidas em código e não em recomendação:
 6. Antes e depois de cada escrita o instrumento PROVA que o controle continua
    são: o feature `0x20` sai igual byte a byte, o `hardware_version` do sysfs
    não mudou, e o aparelho continua entregando reports de entrada. A prova
-   aparece na tela — não é uma frase minha, é uma medida.
+   aparece na tela — não é uma frase do instrumento, é uma medida.
 
 A PROCEDÊNCIA DO PAYLOAD (é isto que autoriza a escrita)
 --------------------------------------------------------

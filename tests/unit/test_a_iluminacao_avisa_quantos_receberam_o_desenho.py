@@ -32,7 +32,7 @@ com a função do produto e não com um dublê.** `_janela_do_desfecho(ctx, "")`
 monta um `_Janela` com o alvo em "Todos" — `definir_alvo` é quem sabe que `uniq`
 vazio quer dizer isso —, e é literalmente o que o docstring do `_Janela` mandava
 fazer *"se um dia esta aba ganhar um Todos"*. **A aba ainda não tem esse
-escopo** (é decisão dela, e está na lista *"Ainda aberto"* do `aba04.py`:
+escopo** (é decisão de produto, e está na lista *"Ainda aberto"* do `aba04.py`:
 *"um 'aplicar a todos' teria de ser um botão próprio — e ele não existe"*), então
 a régua abre a porta com `monkeypatch` sobre a FUNÇÃO DO PRODUTO, nunca sobre um
 dublê que responda o que a régua quer ouvir.
@@ -265,8 +265,7 @@ def _os_que_escrevem_desenho(a04, pac):
     """Os caminhos de escrita de desenho desta aba, com o clique de cada.
 
     **ERAM CINCO E HOJE É UM** — 07/09/2026. `luzes`, `desenho-de` (nos dois
-    ramos) e `reenviar-desenho` saíram com a botoeira, por ordem dela: *"só
-    olhar a linha de cima da seleção de player e replicar o que tem lá."* O que
+    ramos) e `reenviar-desenho` saíram com a botoeira, por  O que
     sobra é o `player`, que escreve o desenho de CARONA na renumeração — e era
     justamente essa carona que a LUZES-01 existia para tornar dispensável.
 
@@ -290,7 +289,7 @@ def test_o_gesto_poe_a_frase_do_dono_no_canal_de_recado(monkeypatch, a04, pac,
 
     É a entrega da sprint em uma linha: *o pacote lê a conta e devolve a frase
     do dono no `recado`*. **O canal verde caducou em 13/09/2026**
-    (TELA-CALADA-01, pedido dela: *"em todas as abas da interface"*): o piloto
+    (TELA-CALADA-01, ): o piloto
     leva a frase ao diário da janela (`hefesto_vivo._deu_certo_dizendo`, linha
     `[relato]`), e não ao cartão. A chave continua sendo `recado` — ver
     `test_o_canal_e_o_verde_de_seis_segundos`.

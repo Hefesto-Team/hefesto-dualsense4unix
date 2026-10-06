@@ -36,7 +36,7 @@ UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
 DO_MOCKUP = ("Cosmic Red", "Starlight Blue")
 
-#: A MESA DELA EM 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve.
+#: A BANCADA EM 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve.
 MESA = [
     {"pref": "p1", "uniq": UNIQ_CABO, "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb", "alvo": True,
@@ -80,7 +80,7 @@ def test_a_bancada_tem_os_quatro_enderecos_da_identidade():
 
     Até 07/09 o lugar vazio era um cartão à parte, sem UM `data-campo` por
     dentro — e `== 2` era o número que o DEFEITO produzia. Com os quatro
-    DualSense dela na mesa, o daemon publicava quatro e a tela mostrava dois:
+    DualSense do usuário na mesa, o daemon publicava quatro e a tela mostrava dois:
     o `peca` e o `via` do p3 e do p4 não existiam para o piloto pousar. Uma
     régua que confere com a metade errada da mesa dá verde sobre ela.
 
@@ -125,7 +125,7 @@ def test_o_pacote_escreve_o_nome_do_aparelho_no_cabecalho(a02, ctx):
 
 
 def test_o_controle_sem_cor_lida_nao_ganha_nome_inventado(a02, ctx):
-    """Regra dela: campo sem informação não mostra nada.
+    """Regra de produto: campo sem informação não mostra nada.
 
     `identidade_de` cai no TRANSPORTE quando não sobrou nome, e o desenho já
     mostra o transporte ao lado — o cabeçalho leria a palavra duas vezes.

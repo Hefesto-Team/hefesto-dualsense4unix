@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""A faixa laranja da aba Jogar diz o que ela pediu e o daemon não alcançou.
+"""A faixa laranja da aba Jogar diz o que o usuário pediu e o daemon não alcançou.
 
 POR QUE ESTA RÉGUA EXISTE, medido em 02/09/2026 na foto da aba com os dois
-controles dela na mesa: a faixa vinha CRAVADA no HTML —
+controles do usuário na mesa: a faixa vinha CRAVADA no HTML —
 
     ● Vai mudar para **Sony DualSense** quando você clicar em **Aplicar**
 
@@ -151,7 +151,7 @@ def test_clicar_no_que_ja_esta_valendo_nao_cria_pendencia() -> None:
 
 
 def test_o_daemon_calado_nao_apaga_a_escolha_dela() -> None:
-    """O ramo offline do motor: *"o que ela decidiu não pode evaporar"*.
+    """O ramo offline do motor: *"o que o usuário decidiu não pode evaporar"*.
 
     E há uma armadilha medida: `mode_of_state({})` devolve `desktop` — ele só
     devolve `None` para um não-dicionário. Sem a guarda, um pedido de Navegação
@@ -210,9 +210,9 @@ def test_um_chip_mexe_num_eixo_so() -> None:
     """A Navegação é um MODO; DualSense e Xbox são CAMINHOS do mesmo modo.
 
     Anotar `modo=gamepad` junto com o caminho poria na faixa a palavra do CHIP
-    sob o rótulo do INTERRUPTOR — dois nomes diferentes na tela dela, colados.
+    sob o rótulo do INTERRUPTOR — dois nomes diferentes na tela do usuário, colados.
 
-    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
+    AJUSTADA À REGRA DE PRODUTO — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
     chip «Xbox» anotava o eixo `mascara`, comparado com a máscara viva — e com o
     cartão do P1 em DualSense a pendência nunca morria. AGORA confere o eixo
     `caminho`, e que a máscara não é anotada.

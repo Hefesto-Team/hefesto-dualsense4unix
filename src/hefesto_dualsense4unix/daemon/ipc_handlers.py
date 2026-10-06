@@ -46,7 +46,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 def _config_que_viaja(cfg: object) -> dict[str, Any]:
     """`asdict(cfg)` sem os campos que não atravessam JSON.
 
-    DEFEITO VIVO, achado em 03/09/2026 lendo o journal do daemon dela:
+    DEFEITO VIVO, achado em 03/09/2026 lendo o journal do daemon do usuário:
 
         ipc_client_error  err='Object of type function is not JSON serializable'
 
@@ -103,11 +103,11 @@ def _caminho_publicado(daemon: object) -> str | None:
 def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
     """`{uniq: máscara efetiva}` para cada controle conectado agora.
 
-    MASCARA-NA-TELA-01, 03/09/2026 — o pedido é dela: *"é uma máscara por
+    MASCARA-NA-TELA-01, 03/09/2026 — o pedido é de produto: *"é uma máscara por
     controle. Mesmo caso do anterior."*
 
     O REGISTRO JÁ EXISTIA. `external_mask.mascara_efetiva` decide desde
-    15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão dela) e é consultada na criação
+    15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão de produto) e é consultada na criação
     de todo gamepad virtual; os três degraus do daemon que faltavam —
     `virtual_pad`, `coop` e `gamepad` — fecharam em 29/08. **O que nunca
     chegou foi a TELA:** `mesa_viva` lia o `flavor` da SESSÃO e escrevia o
@@ -240,7 +240,7 @@ _WRAPPER_MARKER_TTL_SEC = 2.0
 _PONTES_CONFIRMADAS_TTL_SEC = 5.0
 
 
-# Medido na máquina dela em 09/08: dois DualSense ligados e pareados, e a
+# Medido na máquina do usuário em 09/08: dois DualSense ligados e pareados, e a
 
 _HID_DEVICES_DIR = "/sys/bus/hid/devices"
 
@@ -979,7 +979,7 @@ class IpcHandlersMixin:
         * ``guardado_em`` só é prometido no caso do alvo AUSENTE (abaixo) —
           para "Todos" continua sem promessa por-controle: o valor foi para o
           default, sem endereço, e publicar um MAC aqui mandaria a usuária
-          esperar por um controle que não é o dono do que ela pediu.
+          esperar por um controle que não é o dono do que o usuário pediu.
         * **Não** afirma nada em **Modo Nativo**: o ``report_thread`` está mudo
           e nenhum byte sai (CONSERTO 1.3). É onde a rota irmã ainda mente —
           medido em 14/08, ``led.set`` sem ``uniq`` com o output mutado responde
@@ -1074,8 +1074,8 @@ class IpcHandlersMixin:
         ABAS-05 (25/07): a trava manual é limpa SÓ na categoria ``trigger``. O
         clear sem categoria apagava ``led`` e ``rumble`` junto — desligar UM
         gatilho reabria a troca automática de perfil para reescrever a cor que a
-        aba Lightbar tinha acabado de aplicar. É a queixa histórica "a config
-        que eu deixo não fica", e a granularidade por categoria (ONDA-U/F1)
+        aba Lightbar tinha acabado de aplicar. É a queixa histórica de que a
+        configuração do usuário não fica, e a granularidade por categoria (ONDA-U/F1)
         existe exatamente para isso não acontecer: o próprio ``state_store``
         documenta que o fim do "Testar motores" não pode apagar o LED de outra
         aba — não havia razão para o botão "Desligar" dos gatilhos poder.
@@ -1193,7 +1193,7 @@ class IpcHandlersMixin:
     ) -> dict[str, Any]:
         """O brilho das cinco luzes de número: Fraco, Médio ou Forte.
 
-        DECISÃO DELA, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
+        DECISÃO, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
         *"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*. Quem clica é
         a linha LEDs da aba Iluminação, uma pílula por controle.
 
@@ -1498,7 +1498,7 @@ class IpcHandlersMixin:
            número. Sem o `force`, o passo 2 reafirmava a camada VELHA e a
            lâmpada só acertava no próximo hotplug.
 
-           MEDIDO com os dois DualSense dela e o daemon vivo, lendo
+           MEDIDO com os dois DualSense do usuário e o daemon vivo, lendo
            `/sys/class/leds`:
 
                identity.number.set sozinho ....... o `player_slot` troca,
@@ -1701,7 +1701,7 @@ class IpcHandlersMixin:
         ``pop``+``insert`` — um RODÍZIO, que empurra todos entre a origem e o
         destino. A tela prometia outra coisa em dezessete lugares do mockup
         aprovado (os 16 tooltips de botão e a legenda: *"Os dois trocam, os
-        outros não se mexem"*), e a palavra dela de 28/08 é *"Trocar é TROCA,
+        outros não se mexem"*), e a palavra de 28/08 é *"Trocar é TROCA,
         não fila"*. Quem estava errado era o daemon.
 
         Por que permutar em vez de reescrever 1..N (que é o que o
@@ -2145,9 +2145,7 @@ class IpcHandlersMixin:
         """Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar.
 
         O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), no lugar do `autoswitch.lock`
-        (o cadeado de 23/07, que cedia a todo perfil de jogo). A palavra dela:
-        *«Aperto o botão do freestyle e o jogo que eu tiver jogando vai ter essa
-        config independente do perfil do jogo.»*  (noqa-acento: citação dela)
+        (o cadeado de 23/07, que cedia a todo perfil de jogo). A   (noqa-acento: citação)
 
         `ligado` opcional: ausente → inverte.
 
@@ -2156,7 +2154,7 @@ class IpcHandlersMixin:
         (`profiles.manager`, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`). Ligado,
         nenhum caminho automático troca o perfil.
 
-        **DESLIGAR DEVOLVE A ESCOLHA DELA NA HORA** (item 3 da decisão), sem
+        **DESLIGAR DEVOLVE A ESCOLHA DO USUÁRIO NA HORA** (item 3 da decisão), sem
         depender do leitor de janela — no COSMIC sem portal o autoswitch não
         acha janela nunca. Com jogo vivo, o jogo volta por cima
         (`origin="launch"`), e a escolha fica a de antes; sem jogo, a escolha
@@ -2185,7 +2183,7 @@ class IpcHandlersMixin:
         return resposta
 
     async def _o_que_volta_sem_o_freestyle(self) -> dict[str, Any]:
-        """O botão apagado: o jogo vivo, ou a escolha dela, ou nenhum perfil."""
+        """O botão apagado: o jogo vivo, ou a escolha do usuário, ou nenhum perfil."""
         from hefesto_dualsense4unix.profiles.autoswitch import jogo_do_wrapper_vivo
         from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
         from hefesto_dualsense4unix.utils.session import a_escolha_dela
@@ -2892,7 +2890,7 @@ class IpcHandlersMixin:
     ) -> dict[str, str | None]:
         """``{serial, modelo, nome_declarado}`` deste controle. ``None`` = não sei.
 
-        ROTA-A (02/09/2026). O defeito que ela viu: com UM controle o do cabo
+        ROTA-A (02/09/2026). O defeito que o usuário viu: com UM controle o do cabo
         chamava-se "Starlight Blue"; com DOIS, o MESMO cabo virou "Cosmic Red".
         **O nome vinha da POSIÇÃO na lista**, porque o daemon publicava `uniq`,
         `transport`, `battery_pct`, `player`, `player_slot`, `lightbar_*`,
@@ -2901,7 +2899,7 @@ class IpcHandlersMixin:
 
         As três chaves, e cada uma tem fonte diferente:
 
-        * ``nome_declarado`` — **o que ELA nomeou**, de `maquina.json`
+        * ``nome_declarado`` — **o que O usuário nomeou**, de `maquina.json`
           (`controles[<uniq>].cor`, texto livre, decisão C2). Zero I/O aqui: o
           daemon já carrega o documento em `_maquina` no boot e o REBINDA no
           "Aplicar" do `machine.declare`;
@@ -3083,9 +3081,9 @@ class IpcHandlersMixin:
         """Entrega STATUS-04: `inputs` de quem não tem NENHUMA outra fonte.
 
         Escrita em 17/07/2026 e adiada com razão medida — *"co-op é DEFAULT ON
-        (…) no estado normal da máquina dela, TODO secundário já tem reader
+        (…) no estado normal da máquina do usuário, TODO secundário já tem reader
         (…) O buraco real é o modo Nativo e emulação-off"*. A razão continua
-        de pé (medido em 04/09/2026 com os dois DualSense dela em USB e co-op
+        de pé (medido em 04/09/2026 com os dois DualSense do usuário em USB e co-op
         ligado: os dois já traziam `inputs`, e este caminho não abriu reader
         nenhum). O que caducou foi tratar o buraco como hipotético: nos modos
         em que o co-op se desmonta, metade da mesa ficava muda — e nesses
@@ -3500,7 +3498,7 @@ class IpcHandlersMixin:
 
         Quem diz se degradou é `virtual_pad.motivo_da_degradacao`, o mesmo dono
         do `dedup_status` e do diário: a máscara DualSense no uinput quando o
-        caminho é o do DualSense. O caminho Xbox em uinput é escolha dela.
+        caminho é o do DualSense. O caminho Xbox em uinput é escolha do usuário.
         """
         from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
 
@@ -3584,7 +3582,7 @@ class IpcHandlersMixin:
         Só as regras do jogo em foco (`e_regra_deste_jogo`), e essa poda é a
         diferença entre informação e ruído: com 14 perfis no disco, doze
         "não entraram" a cada janela de desktop, e todos por funcionarem como
-        deveriam. O que ela precisa ver é o perfil que ela escreveu PARA aquele
+        deveriam. O que ela precisa ver é o perfil que o usuário escreveu PARA aquele
         jogo e que o jogo abriu sem.
 
         Fora de janela de jogo devolve `[]` sem tocar em disco: o predicado
@@ -3803,13 +3801,13 @@ class IpcHandlersMixin:
         publicava o ``index`` e mais nada sobre quem é quem, enquanto o
         ``daemon.state_full`` (o mesmo daemon, a mesma mesa) publicava
         ``player_slot`` e ``player``. As duas listas discordavam, e a discordância
-        foi MEDIDA na mesa dela com os quatro DualSense ligados::
+        foi MEDIDA na bancada com os quatro DualSense ligados::
 
             controller.list   índices  0=vermelho 1=azul  2=roxo 3=branco
             as lâmpadas       jogador  2=vermelho 1=azul  3=roxo 4=branco
 
         Quem lesse só esta lista chamaria de "Controle 1" o controle que acende
-        **jogador 2** na mão dela. O ``index`` não é um número de jogador: é a
+        **jogador 2** na mão do usuário. O ``index`` não é um número de jogador: é a
         ordem dos HANDLES, e a fila de identidade é outra lista sobre a mesma
         mesa (o bloco *"Listas diferentes sobre a mesma mesa"* em
         ``daemon/subsystems/base.numero_do_assento_na_mesa`` mede a mesma
@@ -3868,7 +3866,7 @@ class IpcHandlersMixin:
         :meth:`_handle_controller_target_set` para o que custava não traduzir.
 
         RECUSA com frase quando o alvo não está na mesa. A alternativa — cair
-        no broadcast — pintaria os quatro controles no gesto em que ela pediu
+        no broadcast — pintaria os quatro controles no gesto em que o usuário pediu
         UM, que é exatamente o defeito que o seletor existe para matar.
         """
         describe = getattr(self.controller, "describe_controllers", None)
@@ -4263,7 +4261,7 @@ class IpcHandlersMixin:
 
         O QUE ESTA FUNÇÃO CURA, e foi medido na conferência da
         `O-SALVAR-DA-JOGAR-01`: com `self.store.active_profile` em `None` e os
-        marcadores em disco valendo — *o estado da máquina dela*, descrito em
+        marcadores em disco valendo — *o estado da máquina do usuário*, descrito em
         `profiles_actions.perfil_que_esta_valendo` — os três gravadores deste
         arquivo respondiam `sem_perfil` e **não gravavam byte nenhum**. O
         `gamepad.mask.set` fazia isso CALADO: o registro de sessão guardava a
@@ -4283,7 +4281,7 @@ class IpcHandlersMixin:
         perfil carrega"*, e quem cobre marker órfão é o `restore_last_profile`.
         Sem a confirmação, um marker apontando para um perfil apagado trocaria o
         `sem_perfil` calado de hoje por um `FileNotFoundError` estourando no
-        meio de um gesto dela — que é piorar, não curar.
+        meio de um gesto do usuário — que é piorar, não curar.
 
         NUNCA LEVANTA: quem chama é rota de escrita de um clique. Uma exceção
         aqui derrubaria o gesto inteiro por causa de um arquivo de sessão, que é
@@ -4431,7 +4429,7 @@ class IpcHandlersMixin:
 
         Params: ``{uniq?: str, giroscopio?: bool, acelerometro?: bool}``.
         `uniq` omitido = o primário; campo omitido = **não mexe naquele
-        sensor**. Decisão dela, 04/09/2026, depois de eu recomendar virar
+        sensor**. Decisão, 04/09/2026, depois de se recomendar virar
         leitura:
 
             *"ele tem que funcionar de verdade. ambos independente do modo e
@@ -4739,9 +4737,9 @@ class IpcHandlersMixin:
             # (`profiles/schema.SpeakerOverrides.fonte` escreve a separação por
             # extenso), e a tela só tinha como pedir a segunda.
             #
-            # O QUE ISSO CUSTAVA: a escolha dela ia ao perfil e o daemon só a
+            # O QUE ISSO CUSTAVA: a escolha do usuário ia ao perfil e o daemon só a
             # lia do perfil ATIVO. Sem perfil ativo, ou antes do "Salvar", o
-            # nó ficava no padrão e o clique dela não movia uma nota de som.
+            # nó ficava no padrão e o clique do usuário não movia uma nota de som.
             from hefesto_dualsense4unix.integrations.alto_falante_bt import (
                 FONTE_MIX,
                 FONTE_SFX,
@@ -4957,7 +4955,7 @@ class IpcHandlersMixin:
     def _uniq_do_alvo_de_saida(self) -> str | None:
         """O endereço do alvo de `controller.target.set`, ou `None` para TODOS.
 
-        Dono único da pergunta *"ela apontou para alguém?"*, e ele existe
+        Dono único da pergunta *"o usuário apontou para alguém?"*, e ele existe
         separado de :meth:`_uniq_do_primario` porque os dois caminhos que o
         consultam querem quedas DIFERENTES quando a resposta é `None`:
 
@@ -4984,10 +4982,10 @@ class IpcHandlersMixin:
         """Em quem o ato cai quando ela não disse o endereço.
 
         **O ALVO DE SAÍDA ENTROU — 18/09/2026, UM-NUMERO-SO-01, e ele vem
-        primeiro.** MEDIDO na mesa dela com os quatro DualSense: mandar
+        primeiro.** MEDIDO na bancada com os quatro DualSense: mandar
         `controller.target.set` e depois `sensor.set` devolvia o MESMO `uniq`
         as quatro vezes — o do primário. O seletor não alcançava este caminho,
-        e a queixa dela foi exatamente essa: *"a mudança dos leds e afins não
+        e a queixa de uso foi exatamente essa: *"a mudança dos leds e afins não
         foram aplicadas pros demais controles do app (deveriam ser 4)"*.
 
         **Havia DUAS línguas de alvo dentro do mesmo daemon**, e a pessoa não
@@ -5036,7 +5034,7 @@ class IpcHandlersMixin:
         O `common[8]` (LED) e o `common[9]` (mudo) são campos SEPARADOS, com
         bits de autorização diferentes (`MIC_MUTE_LED_CONTROL_ENABLE` 0x01 e
         `POWER_SAVE_CONTROL_ENABLE` 0x02). Acender o LED **não muta nada** — é
-        por isso que a inversão que ela pediu (*"aceso = o mic está
+        por isso que a inversão que o usuário pediu (*"aceso = o mic está
         funcionando"*) cabe sem escrever uma linha no byte do mudo, e por isso
         as três recusas medidas (BT-E-VPAD-01, MIC-BT-DONO-01,
         MIC-DOIS-DONOS-01) continuam inteiras: as três são sobre o `common[9]`.
@@ -5105,9 +5103,7 @@ class IpcHandlersMixin:
         Somar os dois num método só faria a interface prometer uma coisa e
         entregar outra.
 
-        **Por que ele é universal**, que era o pedido dela — *"independente de
-        saber se tá via bt ou via cabo, o app deve ser inteligente pra saber
-        qual caminho usar"*: o que existe nos dois transportes é uma fonte de
+        **Por que ele é universal**, que era o : o que existe nos dois transportes é uma fonte de
         captura no sistema, e quem a encontra é
         `integrations/audio_control.fonte_de_captura_do_controle` — no cabo, o
         source ALSA do controle; no rádio, o source publicado pela ponte de
@@ -5118,7 +5114,7 @@ class IpcHandlersMixin:
         nenhum"*, e era com essa frase que ela justificava mexer SÓ na fonte do
         sistema. **O registrador existe**: é o `common[6]`, que o
         `hid-playstation` desta máquina NOMEIA (`mic_volume`, `0x0 - 0x40`), e
-        a bancada dela mediu a captura mudando com ele no cabo — *"Deu certo.
+        a bancada mediu a captura mudando com ele no cabo — *"Deu certo.
         funciona"* (`docs/data/ensaios.csv`,
         `folha-mic-volume-o-byte-age-cabo-0909`). O que a frase tinha de certo
         continua de pé e é o que sustenta a UNIVERSALIDADE: a fonte no sistema é
@@ -5145,7 +5141,7 @@ class IpcHandlersMixin:
         estava escrito que *"quando o alvo não se resolve a rota global continua
         valendo, e o campo `por_uniq` diz qual das duas foi usada, para a tela
         não precisar adivinhar"*. **Ela adivinhava certo e o gesto continuava
-        errado.** A palavra dela, sobre este caminho:
+        errado.** A palavra de produto, sobre este caminho:
 
             *"Esse erro não deveria acontecer. Deveria ser só pro controle em
             questao. Parece um bug"* — 02-Q8
@@ -5337,7 +5333,7 @@ class IpcHandlersMixin:
         Params:
             origin: "manual"|"profile" — a origem da ATIVAÇÃO, que é o que fura
                 o lock de 30 s do gesto manual. **O silêncio é "profile"**
-                (ORIGEM-QUE-MENTE-01): quem quer o gesto dela tem de DECLARAR,
+                (ORIGEM-QUE-MENTE-01): quem quer o gesto do usuário tem de DECLARAR,
                 e é o que o plano da transição de modo faz.
 
         Resposta: ``{"status": "ok", "arranjo": {seção: estado}}`` — o relatório
@@ -5428,7 +5424,7 @@ class IpcHandlersMixin:
         Params:
             enabled: bool (obrigatório)
 
-        Molde do `mouse.emulation.set`, e a razão de existir é a queixa dela de
+        Molde do `mouse.emulation.set`, e a razão de existir é a queixa de
         29/07: ela desligou "o modo mouse teclado", o mouse obedeceu (tem flag em
         disco desde o FEAT-MOUSE-PERSIST-01) e o teclado seguiu emitindo Alt+Tab
         no R1 dentro da partida — não havia lugar nenhum onde desligá-lo.
@@ -5461,18 +5457,18 @@ class IpcHandlersMixin:
     ) -> dict[str, Any]:
         """A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`.
 
-        MASCARA-NA-TELA-01, 03/09/2026 — o pedido é dela: *"é uma máscara por
+        MASCARA-NA-TELA-01, 03/09/2026 — o pedido é de produto: *"é uma máscara por
         controle. Mesmo caso do anterior."*
 
         ESTE ERA O ÚNICO DEGRAU QUE FALTAVA, e o próprio `external_mask` o
         nomeava desde 15/08/2026: *"Falta também o lado da escrita: quem grava a
-        escolha dela é a rota IPC, que ainda só conhece a máscara da sessão."*
+        escolha do usuário é a rota IPC, que ainda só conhece a máscara da sessão."*
         Os outros três — `virtual_pad`, `coop` e `gamepad` — fecharam em 29/08.
         `set_mask` e `clear_mask` existiam no registro e não tinham UM chamador
         em `src/`.
 
         **O GESTO GRAVA NO PERFIL DESDE 08/09/2026** (MASCARA-NO-PERFIL-01,
-        decisão dela: *"pode entrar sim"*). A forma do gesto **não mudou** — o
+        ). A forma do gesto **não mudou** — o
         chip do cartão continua chamando `gamepad.mask.set {uniq, flavor}` —, e
         o que mudou é onde a escolha para: `controllers[uniq].mascara` do perfil
         ATIVO, que é a mesma estrada que o `rumble.motores.set` já usava. Não
@@ -5710,7 +5706,7 @@ class IpcHandlersMixin:
         intactos. Escolha de alguém não se destrói para registrar outra.
 
         Fora do `daemon.state_full` de propósito — aquilo é o tique de 20 Hz, e
-        a declaração muda por gesto dela, não por quadro.
+        a declaração muda por gesto do usuário, não por quadro.
         """
         from hefesto_dualsense4unix.utils.maquina import (
             carregar_maquina,

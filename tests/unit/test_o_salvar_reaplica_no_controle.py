@@ -11,7 +11,7 @@ Lia o campo CRU. E o dono da pergunta
 todas as letras, que o campo cru não serve:
 
     "Sobrevive ao daemon responder `active_profile: null`, que é o estado da
-     máquina dela hoje"
+     máquina do usuário hoje"
 
 Com `null`, `ativo_agora` ficava vazio, o `if` era falso, e o `profile.switch`
 **nunca saía**. O `.json` mudava no disco e o controle continuava com o perfil
@@ -22,7 +22,7 @@ anterior — enquanto a MESMA aba realçava a linha, porque o realce
 função o anunciava duas linhas acima: *"Gravar sem reaplicar deixa a tela
 dizendo uma coisa e o aparelho fazendo outra"*.
 
-Esta régua LÊ o comportamento: monta o estado que a máquina dela publica hoje e
+Esta régua LÊ o comportamento: monta o estado que a máquina do usuário publica hoje e
 confere que o `profile.switch` sai.
 """
 from __future__ import annotations
@@ -58,7 +58,7 @@ class _Ponte:
 
 @pytest.fixture
 def gravado(monkeypatch):
-    """Não escreve no disco dela: o `save_profile` vira um registrador."""
+    """Não escreve no disco do usuário: o `save_profile` vira um registrador."""
     escritos: list[Any] = []
     loader = SimpleNamespace(save_profile=lambda prof, **_kw: escritos.append(prof))
     monkeypatch.setattr(mod, "_com_o_src", lambda: loader)
@@ -72,7 +72,7 @@ def _mandar(estado, ponte, gravado, *, nome="Jogos", era=""):
 
 
 def test_com_o_daemon_mudo_o_controle_ainda_reaplica(monkeypatch, gravado):
-    """`active_profile: null` é o estado da máquina dela — e era o buraco."""
+    """`active_profile: null` é o estado da máquina do usuário — e era o buraco."""
     monkeypatch.setattr(
         mod, "gravar_e_reaplicar", mod.gravar_e_reaplicar, raising=False
     )

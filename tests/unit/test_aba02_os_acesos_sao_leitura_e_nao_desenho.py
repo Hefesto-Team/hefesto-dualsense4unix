@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026.
 
-**O par «Virtual | Nativo» saiu da aba em 04/10/2026 (decisão dela de 02/10, um microfone por
+**O par «Virtual | Nativo» saiu da aba em 04/10/2026 (decisão de 02/10, um microfone por
 controle, sempre), com o gesto, o campo `mic-modo-aceso` e as réguas dele; ficam os dois
 botões da rota. O que segue conta a história dos quatro.**
 
@@ -10,7 +10,7 @@ alto-falante (`Sons do jogo` / `Todo o som do PC`) e o modo do microfone
 (`Virtual` / `Nativo`). Até hoje o aceso de todos eles era a classe `on` que o
 gerador escreveu **uma vez**, no dia em que montou o arquivo.
 
-O QUE ESTAVA NA TELA DELA, medido com o daemon vivo em 03/09/2026:
+O QUE ESTAVA NA TELA DO USUÁRIO, medido com o daemon vivo em 03/09/2026:
 
     na tela (o desenho)                no aparelho / no disco
     card 2: "Todo o som do PC" aceso   speaker.rota = 2  (= Sons do jogo)
@@ -38,7 +38,7 @@ AFIRMA sem ter lido.
 
 A MORDIDA (arranque a cura, veja reprovar, devolva):
 
-  * troque `rota_na_tela` por `return "jogo"` (o valor que a mesa dela dá hoje,
+  * troque `rota_na_tela` por `return "jogo"` (o valor que a bancada dá hoje,
     e por isso o mais convincente): reprova em `test_a_rota_vem_do_byte_do_
     aparelho` e em `test_a_rota_desconhecida_nao_acende_botao_nenhum`;
   * tire o `data-hef-quando` de um dos quatro botões no gerador: reprova em
@@ -159,7 +159,7 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     `data-hef-quando` o alvo vira booleano e os DOIS acenderiam ao mesmo tempo.
     """
     doc = onde.read_text(encoding="utf-8")
-    # veio curar: com os quatro DualSense dela ligados, dois assentos ficavam
+    # veio curar: com os quatro DualSense do usuário ligados, dois assentos ficavam
     cards = len(re.findall(r'class="ctl card[^"]*"', doc))
     assert cards >= 2, "o desenho precisa de mais de um card para esta régua morder"
     for campo, valores in _pares(a02, onde).items():
@@ -181,7 +181,7 @@ def test_o_endereco_do_aceso_nao_mora_no_container(a02):
 
     **ELA MEDIA A FORMA E NÃO O ATO — corrigida em 20/09/2026.** A redação
     anterior proibia QUALQUER `data-campo` no container, e reprovou a decisão
-    dela do mesmo dia (*"Fica os dois botões. Mas no rádio o botão fica cinza
+    de produto do mesmo dia (*"Fica os dois botões. Mas no rádio o botão fica cinza
     sem ser ativado"*), que endereça o container com
     `data-hef-alvo="classe"` — de propósito, porque a razão de o «Nativo» ficar
     cinza é do conjunto, não de um botão.
@@ -248,7 +248,7 @@ def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
 
 
 def test_a_carga_desconhecida_e_a_da_janela_antiga(a02, monkeypatch):
-    """A carga sem leitura é `— %`, como a GTK. Decisão dela, 03/09/2026."""
+    """A carga sem leitura é `— %`, como a GTK. Decisão, 03/09/2026."""
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
     from pacotes import Contexto
 

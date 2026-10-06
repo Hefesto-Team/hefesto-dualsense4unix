@@ -359,7 +359,7 @@ def test_um_dualsense_edge_de_verdade_nao_e_o_nosso_vpad(tmp_path: Path) -> None
       outro;
     - troque TAMBÉM `DeviceDoWine.e_nosso` para casar pelo `devid` do PDO
       (`VID_054C&PID_0DF2`) e o veredicto vira `RECEBEU DO NOSSO NÓ`, com os 500
-      reports do controle DELA contados como nossos.
+      reports do controle do usuário contados como nossos.
 
     Arrancadas as duas, vistas reprovar as duas, devolvidas.
     """

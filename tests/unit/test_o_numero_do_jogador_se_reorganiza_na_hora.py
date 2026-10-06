@@ -2,7 +2,7 @@
 
 A cura 1 da O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01.
 
-**O que ela viu, 29/09, ~18h10:** com os quatro na mesa, o P2 e o P3 desligados
+**O que o usuário viu, 29/09, ~18h10:** com os quatro na mesa, o P2 e o P3 desligados
 pelo PS, e o roxo (o P4) *«ficou no player 4 durante muito muito tempo»*. O
 diário mediu 5 min 3 s da saída ao P2 no aparelho: o lugar guardado venceu às
 18:00:13 (30 s, a ``D-2409-O-ASSENTO-GUARDADO-NAO-ANDA``), e o gatilho da
@@ -435,7 +435,7 @@ class TestAMesaParadaNaoArma:
     def test_quem_troca_de_transporte_dentro_do_prazo_nao_arma(
         self, raizes: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch, sai: str
     ) -> None:
-        """A troca de cabo por rádio da fala dela: sai e volta em segundos."""
+        """A troca de cabo por rádio da fala do usuário: sai e volta em segundos."""
         entradas, _dev = raizes
         relogio, reg, escritores, daemon = _mesa_assentada(QUATRO)
         ficam = [u for u in QUATRO if u != sai]
@@ -648,7 +648,7 @@ class TestComOJogoNaAutoridade:
     def test_os_secundarios_se_recriam_e_o_p1_fica(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A fala dela: o P2 e o P3 desligam, o roxo (P4) vira P2 no jogo."""
+        """A fala do usuário: o P2 e o P3 desligam, o roxo (P4) vira P2 no jogo."""
         bancada, escritores = jogo_aberto((P2, P3))
         vpad_do_p1 = bancada.vpad_do_p1
         vpad_do_p4 = bancada.vpad_de(P4)

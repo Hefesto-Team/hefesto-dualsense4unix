@@ -1,6 +1,6 @@
-"""O-PRODUTO-PROMOVE-E-RECLAMA-01 — o doctor acusava a escolha dela como falha.
+"""O-PRODUTO-PROMOVE-E-RECLAMA-01 — o doctor acusava a escolha do usuário como falha.
 
-O QUE ELA VIU, no fim do install de 10/08/2026
+O QUE O USUÁRIO VIU, no fim do install de 10/08/2026
 ==============================================
 Duas linhas seguidas do doctor, o mesmo aparelho, vereditos opostos::
 
@@ -22,17 +22,16 @@ Ou seja: **o produto passou a criar exatamente a condição que este check
 continuava acusando.** O nome do arquivo — `51-hefesto-dualsense-no-default-source
 .conf` — é o fóssil da regra antiga, e ajudou a esconder a inversão.
 
-O OPT-IN QUE EXISTIA NÃO ERA DELA
+O OPT-IN QUE EXISTIA NÃO ERA DO USUÁRIO
 =================================
 Havia um opt-in: a variável de ambiente
 `HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1`. Pela regra desta casa — *"tudo
 tem que focar em funcionar na interface do app e no install"* — opt-in que só se
-alcança exportando env não é opt-in dela; é opt-in de quem lê o código. Ela
-disse, com todas as letras, que quer o microfone do controle: *"sobre o microfone
-tem que gravar minha voz"*.
+alcança exportando env não é opt-in dela; é opt-in de quem lê o código. O usuário
+disse, com todas as letras, que quer o microfone do controle.
 
-O promotor no disco, esse sim, é gesto dela: só existe se o install rodou sem
-`--keep-dualsense-mic`, ou se ela clicou "Ligar" na aba Emulação.
+O promotor no disco, esse sim, é gesto do usuário: só existe se o install rodou sem
+`--keep-dualsense-mic`, ou se o usuário clicou "Ligar" na aba Emulação.
 """
 
 from __future__ import annotations

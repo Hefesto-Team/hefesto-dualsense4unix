@@ -1,4 +1,4 @@
-"""PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08) — o perfil dela era reescrito"""
+"""PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08) — o perfil do usuário era reescrito"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -166,7 +166,7 @@ def test_catch_all_com_suppress_true_nao_liga_a_supressao() -> None:
 
 
 def test_o_disco_dela_dois_catch_all_nao_prendem_a_emulacao() -> None:
-    """MORDIDA do item 2, metade B: o estado medido no disco dela."""
+    """MORDIDA do item 2, metade B: o estado medido no disco do usuário."""
     daemon = _daemon()
     daemon.apply_profile_suppression(
         True, profile=_perfil("sackboy_nativo", catch_all=True)

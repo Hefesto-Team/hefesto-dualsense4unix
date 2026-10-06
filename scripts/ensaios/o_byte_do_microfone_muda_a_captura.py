@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""o_byte_do_microfone_muda_a_captura.py — o ganho do aparelho, medido no PICO da voz dela.
+"""o_byte_do_microfone_muda_a_captura.py — o ganho do aparelho, medido no PICO da voz do usuário.
 
-A PERGUNTA QUE ELE DECIDE (MIC-VOLUME-02, decisão dela de 09/09/2026: *"3-c"*)
+A PERGUNTA QUE ELE DECIDE (MIC-VOLUME-02, )
 --------------------------------------------------------------------------------
 O campo `ControllerMicOverride.volume` já TEM ato: `mic.volume.set` mexe no
 ganho da FONTE no PipeWire (MIC-VOLUME-01), e a docstring dele afirma que *"o
@@ -10,7 +10,7 @@ O mapa (`audio.microfone.volume@dualsense`) e o kernel desta máquina dizem o
 contrário: `common[6]` (`mic_volume`, `0x0 - 0x40`), autorizado por flag0
 `0x40`, com porta no produto (`set_audio_volumes(microphone=…)`) e, até este
 ensaio, **zero chamadores** — por decisão datada (SOM-SEMPRE-01, 06/09). Duas
-afirmações da casa se contradizem, e ela decidiu ligar o byte. **Antes de
+afirmações da casa se contradizem, e o usuário decidiu ligar o byte. **Antes de
 ligar, medir.**
 
 **MEDIDO EM 09/09/2026, e a resposta foi «obedece»:** *"Deu certo. funciona"*
@@ -48,7 +48,7 @@ este instrumento
 -------------------------------------------------------------------------
 Este bloco dizia *"o daemon NÃO toca neste byte (AUDIO-OWNER-01 apaga os bits
 de áudio que não são dele, e o microfone nunca é), então uma escrita basta e
-não há martelo"*. **Caducou na mesma semana, por esta medição.** Ela mandou
+não há martelo"*. **Caducou na mesma semana, por esta medição.** O usuário mandou
 ligar o byte, e a MIC-VOLUME-02 ligou: `set_microphone_volume` toma a posse do
 `common[6]` quando ela mexe no deslizante (`mic.volume.set`) ou quando um
 perfil com `mic.volume` é aplicado. A partir daí o `_build_common` manda
@@ -243,7 +243,7 @@ def main() -> int:
         print(f"\nbyte deixado em {args.deixar:#04x} com o bit, porta fechada.")
 
     frase = veredito(capturas)
-    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem coordena escreve):")
+    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem roda escreve):")
     for nivel, captura in capturas:
         print(linha_do_caderno(
             id=f"mic-byte-do-aparelho-{nivel:02x}-{'com' if com_bit else 'sem'}-bit-{time.strftime('%d%m')}",

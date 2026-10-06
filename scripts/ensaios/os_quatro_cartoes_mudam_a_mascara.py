@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """Clica o chip de máscara nos QUATRO cartões da Jogar, dentro do WebKit dela.
 
-O PEDIDO É DELA, 03/09/2026: *"É uma máscara por controle. (…) Se isso não
-ocorre com os 4 controles em cada aba, então temos que construir isso e garantir
-isso."*
+O PEDIDO É DE PRODUTO, 03/09/2026
 
 O QUE ESTE ENSAIO PROVA, e o teste de unidade não alcança: o teste conta
-atributos num arquivo. Este faz o caminho DELA — o dedo no chip, o evento
+atributos num arquivo. Este faz o caminho DO USUÁRIO — o dedo no chip, o evento
 subindo pelo ouvinte único do piloto, o `closest('[data-controle]')` achando de
 quem é o cartão, a tradução `pref → uniq` na mesa viva, o gesto decidindo, e a
 frase voltando à tela. Até 03/09 os chips do P3 e do P4 não tinham
 ``data-gesto``: **o clique morria no DOM** e nada — nem terminal, nem tela —
 dizia uma palavra.
 
-NADA CHEGA AO DAEMON DELA. ``pacotes.ponte.chamar`` é trocado por um gravador
+NADA CHEGA AO DAEMON DO USUÁRIO. ``pacotes.ponte.chamar`` é trocado por um gravador
 antes do primeiro clique: o caminho inteiro é percorrido e a chamada
 ``gamepad.mask.set`` é ANOTADA em vez de despachada. Ela está usando a máquina;
 um ensaio que trocasse a máscara do controle no cabo dela seria um estrago, não
@@ -24,7 +22,7 @@ A PÁGINA É A DA BANCADA, e isto é deliberado: o piloto abre o PUBLICADO
 ``check_o_desenho_aprovado.py --publicar-enderecos``, que é ato de quem
 coordena. Medir o publicado hoje daria **verde sobre a página congelada** — a
 armadilha mais cara do `docs/method/COMO-OLHAR-A-TELA.md`. O desvio é uma cópia
-num diretório temporário; a bancada dela não é tocada.
+num diretório temporário; a bancada não é tocada.
 
 OS TRÊS DESFECHOS QUE ELE SABE SEPARAR, e a diferença é o ponto inteiro:
 
@@ -126,7 +124,7 @@ def main() -> int:
     if not opcoes.publicado:
         _desviar_para_a_bancada(lixo)
 
-    # `gamepad.mask.set` no daemon DELA, que está vivo e com controle na mesa.
+    # `gamepad.mask.set` no daemon do usuário, que está vivo e com controle na mesa.
     ipcs: list[tuple[str, dict]] = []
     ponte.chamar = lambda metodo, timeout=None, **params: (  # type: ignore[assignment]
         ipcs.append((metodo, dict(params))) or True)

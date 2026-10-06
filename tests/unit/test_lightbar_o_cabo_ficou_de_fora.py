@@ -1,8 +1,6 @@
 """LIGHTBAR-O-CABO-FICOU-DE-FORA-01 — a barra do cabo, e o sinal certo.
 
-Achado por ela na bancada de 07/09/2026, com os quatro DualSense na mesa:
-*"o lightbar azul tá nos dois controles. p1 e p2. cada controle deve ter um
-lightbar da sua cor apenas"*.
+Achado por ela na bancada de 07/09/2026, com os quatro DualSense na mesa.
 
 Eram DOIS defeitos com o mesmo sintoma:
 

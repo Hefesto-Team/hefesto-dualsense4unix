@@ -1,4 +1,4 @@
-"""A janela sabe DE QUEM é o microfone que ela mexeu — MIC-DA-MESA-CHEIA-01.
+"""A janela sabe DE QUEM é o microfone que o usuário mexeu — MIC-DA-MESA-CHEIA-01.
 
 **O defeito, e ele é da mesa cheia.** Com dois DualSense no cabo há DUAS placas
 de som, e o ``mic.volume.set`` que não consegue mirar o controle escolhido cai
@@ -9,7 +9,7 @@ traduz a resposta em três estados de propósito (``ipc_bridge.alvo_honrado``:
 
 **Onde o caminho se perdia.** O card chamava ``ipc_bridge.mic_volume_set``, o
 invólucro ``bool``, e o ``bool`` colapsa os dois casos no mesmo ``True``. O
-callback de sucesso então gravava o volume no rascunho DELA — o perfil deste
+callback de sucesso então gravava o volume no rascunho DO USUÁRIO — o perfil deste
 controle ganhava um número que este controle nunca teve, porque quem mudou de
 volume foi o vizinho.
 
@@ -17,7 +17,7 @@ volume foi o vizinho.
 
 1. o card chama ``mic_volume_set_detalhado`` e lê o corpo com ``alvo_honrado``;
 2. alvo não honrado **não entra no rascunho**, e a tela CONFESSA
-   (``TEXTO_MIC_ALVO_NAO_HONRADO``, marcado `PROVISÓRIO — decisão dela`).
+   (``TEXTO_MIC_ALVO_NAO_HONRADO``, marcado `PROVISÓRIO — decisão de produto`).
 
 ``None`` — o daemon não se pronunciou — continua registrando, e essa linha é
 deliberada: "não sei" não é "não honrei", e recusar por ausência de notícia
@@ -26,7 +26,7 @@ devolver três estados em vez de dois.
 
 **O que este arquivo NÃO cobre, e por quê.** Separar ``sem_fonte`` de "daemon
 offline" pede um ESTADO NOVO na tela — controle insensível com a dica —, e isso
-é desenho: foto antes e depois, e a palavra é dela. A lápide do
+é desenho: foto antes e depois, e a palavra é de produto. A lápide do
 ``portao_a_casa_sabe_e_o_produto_nao_faz`` já dizia isso, e continua dizendo.
 """
 

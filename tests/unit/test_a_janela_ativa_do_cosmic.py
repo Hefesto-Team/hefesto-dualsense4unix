@@ -204,7 +204,7 @@ def compositor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 
 class TestOCompositorResponde:
-    """O caminho feliz, que é o da máquina dela."""
+    """O caminho feliz, que é o da máquina do usuário."""
 
     def test_le_a_janela_ativa(self, compositor: CompositorDeMentira) -> None:
         """MORDIDA: troque `_ESTADO_ATIVADO` para 3 no módulo e reprova."""
@@ -376,7 +376,7 @@ def _codigo_sem_prosa(caminho: Path) -> str:
 
 
 class TestNenhumaJanelaPodeNascerDaqui:
-    """A trava da tela dela, conferida no FONTE (a regra de 02/09/2026)."""
+    """A trava da tela do usuário, conferida no FONTE (a regra de 02/09/2026)."""
 
     def test_o_backend_nao_liga_interface_de_desenhar(self) -> None:
         """Este cliente lê o compositor; ele não desenha nada."""
@@ -453,7 +453,7 @@ class TestOCompostoDoXWayland:
         assert composto.backend_name == "xlib"
 
     def test_com_o_x_cego_a_leitura_vem_do_compositor(self) -> None:
-        """O caso medido na sessão dela às 23h02 de 02/09."""
+        """O caso medido na sessão do usuário às 23h02 de 02/09."""
         from hefesto_dualsense4unix.integrations import window_detect
 
         xlib = _XlibDeMentira(None, "sem_foco_x")

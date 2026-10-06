@@ -185,7 +185,7 @@ def from_simple_choice(
     o ``"game"``, que é OUTRO campo do esquema (``process_name``, o basename de
     ``/proc/PID/exe``) — e confundir os dois faz o perfil casar por acaso.
 
-    R-12 item 3: o nome do programa é gravado **como ela digitou**. Antes vinha
+    R-12 item 3: o nome do programa é gravado **como o usuário digitou**. Antes vinha
     um ``.lower()`` aqui, e o casamento do outro lado
     (``MatchCriteria.matches``) compara com o basename CRU de ``/proc/PID/exe``
     — ``Cyberpunk2077.exe`` nunca casaria com ``cyberpunk2077.exe``. Os presets
@@ -308,9 +308,8 @@ def _detect_steam_appid(match: Match) -> str | None:
     traduzido). O editor simples não tem como exprimir esse recorte, e mostrar
     o perfil como "Jogo da Steam <id>" seria mentir sobre o que ele faz.
 
-    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado por ela:
-    *"sumiu a opção de entregar o controle pra Steam? pq ela é que impedia o
-    dual input em jogos como pragmata"*). A regra estrita também recusava
+    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado por ela). A regra estrita também
+    recusava
     ``process_name``, e ESSA metade caducou. O parágrafo acima continua
     valendo inteiro para ``window_title_regex``.
 
@@ -320,7 +319,7 @@ def _detect_steam_appid(match: Match) -> str | None:
        Trocar "3357650 E PRAGMATA.exe" por "Jogo da Steam 3357650" na tela não
        muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
        que o seletor "Aplica a" faz.
-    2. A precisão que a recusa dizia proteger não existia. No journal dela de
+    2. A precisão que a recusa dizia proteger não existia. No journal do usuário de
        10/08, com a janela ``steam_app_3357650`` em foco, o daemon registrou
        ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
        — o perfil ``Pragmata`` NÃO era candidato ao próprio jogo. Sob Proton o
@@ -336,7 +335,7 @@ def _detect_steam_appid(match: Match) -> str | None:
 
     Reconhecer NÃO é apagar: ``from_simple_choice`` preserva o ``process_name``
     do disco quando o appid não mudou (ver ``_process_name_a_preservar``). Sem
-    isso, reabrir e salvar tiraria da regra dela um campo que ela não pediu
+    isso, reabrir e salvar tiraria da regra de produto um campo que ela não pediu
     para tirar — que é exatamente o round-trip quebrado de onde o R-12 nasceu.
 
     UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
@@ -407,7 +406,7 @@ def exigencia_invisivel(match: Match) -> str:
     Preservar o invisível continua certo. Esconder que ele EXISTE é que não.
 
     A frase é factual e não manda apagar nada: quem escreveu o critério foi ela,
-    e a decisão de mudá-lo é dela. Diz o que há.
+    e a decisão de mudá-lo é do usuário. Diz o que há.
 
     **ELA DIZIA "ONDE MEXER", E ISSO SAIU EM 05/09/2026.** O fim da frase era
     *"Ligue o Modo avançado para ver e mudar."* — e o "Modo avançado" é uma
@@ -450,8 +449,7 @@ PROCEDENCIA_DA_STEAM = "Steam"
 
 SEPARADOR_DA_PROCEDENCIA = " · "
 
-#: 11/09/2026: *"a ideia é que todas as features mesmo do app funcionem  (noqa-acento)
-#: nao so pra mim mas pra qualquer outro user"*.  (noqa-acento) cita ela
+#: 11/09/2026: todas as features funcionam para qualquer usuário, não só para a máquina de quem desenvolve.
 _FORMA_FIXA: dict[str, str] = {
     PROCEDENCIA_DA_NAVEGACAO: "browser",
     PROCEDENCIA_DE_QUALQUER_JOGO: "any",
@@ -475,7 +473,7 @@ def forma_da_procedencia(
     * **«Steam»** → ``steam_game`` com jogo, ``steam`` sem. **As duas formas
       continuam alcançáveis, e isso não é esperteza — é a única saída que não
       perde uma.** A Steam é o único nome deste campo com DOIS significados no
-      disco: o CLIENTE aberto (``process_name=["steam"]``) e UM JOGO dela
+      disco: o CLIENTE aberto (``process_name=["steam"]``) e UM JOGO do usuário
       (``steam_app_<id>``). Mapear «Steam» só para o jogo faria todo perfil do
       cliente abrir travado; só para o cliente faria o campo de baixo não
       valer nada. Quem separa os dois é o campo de baixo estar cheio, que é

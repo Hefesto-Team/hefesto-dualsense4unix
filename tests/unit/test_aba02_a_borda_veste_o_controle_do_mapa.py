@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 """A BORDA DA ABA 02 VESTE O CONTROLE DELE — no WebKit, e não só em Python.
 
-A LEI É DELA, 03/09/2026:
+A LEI É DO USUÁRIO, 03/09/2026
 
-    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho.
-    nada hardcoded. eu quero que cada user ao usar seu controle se toque disso
-    que o app se adaptou ao controle dele"*
-
-O TESTE QUE PROVA A LEI não é "os dois controles dela pintam certo" — os dois
+O TESTE QUE PROVA A LEI não é "os dois controles do usuário pintam certo" — os dois
 estão no desenho, e uma cura falsa passaria neles. É **um modelo que o desenho
 NÃO tem**: Nova Pink, Astro Bot, Sterling Silver. Se só os quatro do mockup
 funcionarem, trocou-se um cravado por outro.
@@ -22,7 +17,7 @@ errada produz alarme convincente e falso"*. Aqui a pergunta é feita ao
 
 A JANELA É `Gtk.OffscreenWindow` por duas razões, e as duas estão escritas nesta
 casa: sob Xvfb não há gerenciador de janelas e uma `Gtk.Window` fica 1x1 para
-sempre; e ela tem UMA tela — janela de teste não nasce na frente dela.
+sempre; e ela tem UMA tela — janela de teste não nasce na frente do usuário.
 
 O QUE MUDOU DO LADO DO PRODUTO, e é o que este arquivo guarda: até 03/09/2026
 `a02_controles.cor_da_borda` recebia o NOME de tela e o procurava em
@@ -211,7 +206,7 @@ def test_a_mesa_dela_de_hoje_chega_certa_aos_dois_assentos(medido: dict) -> None
 
 
 def test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor(medido: dict) -> None:
-    """A regra antiga pinta o Nova Pink em `rgb(238, 126, 166)`, que não é dela."""
+    """A regra antiga pinta o Nova Pink em `rgb(238, 126, 166)`, que não é do usuário."""
     _hexa, certo = FORA_DO_DESENHO["nova-pink"]
     velho = medido["medidas"]["mordida-nova-pink"]["p1"]
     assert velho != certo, (

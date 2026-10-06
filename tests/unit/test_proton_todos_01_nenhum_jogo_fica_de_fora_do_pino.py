@@ -93,7 +93,7 @@ def test_todos_alcanca_qualquer_ferramenta(ferramenta: str) -> None:
 
 
 def test_o_install_pede_todos() -> None:
-    """Sem esta linha, a decisão dela morre no CLI e nunca alcança a máquina."""
+    """Sem esta linha, a decisão de produto morre no CLI e nunca alcança a máquina."""
     import re
 
     raiz = pathlib.Path(proton_pin.__file__).resolve().parents[3]
@@ -125,7 +125,7 @@ def test_a_flag_existe_no_cli() -> None:
 
 
 def test_a_regua_sabe_reprovar() -> None:
-    """Com a ordem dela DESLIGADA, o caso central falha — é o que a prova."""
+    """Com a ordem de produto DESLIGADA, o caso central falha — é o que a prova."""
     original = _vdf({"0": PINO, "2497900": "proton_11"})
 
     sem, _ = proton_pin.build_compat_tool_mapping(

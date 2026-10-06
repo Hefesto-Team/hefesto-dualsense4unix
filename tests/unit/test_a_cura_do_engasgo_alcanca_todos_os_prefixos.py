@@ -46,7 +46,7 @@ MANGO = r"C:\windows\system32\VkLayer_MANGOHUD_x86_64.json"
 
 @pytest.fixture()
 def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Duas bibliotecas Steam, como na máquina dela: a padrão e a de outro disco."""
+    """Duas bibliotecas Steam, como na máquina do usuário: a padrão e a de outro disco."""
     home = tmp_path / "home"
     outro_disco = tmp_path / "OutroDisco" / "SteamLibrary"
     padrao = home / ".steam" / "steam"
@@ -68,7 +68,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_o_censo_enxerga_a_biblioteca_do_outro_disco(casa: Path) -> None:
-    """Sem o `libraryfolders.vdf`, a cura só pegaria metade dos jogos dela."""
+    """Sem o `libraryfolders.vdf`, a cura só pegaria metade dos jogos do usuário."""
     pastas = cv.pastas_compatdata(casa)
     assert len(pastas) == 2, f"esperava as duas bibliotecas, achei {pastas}"
 
@@ -157,7 +157,7 @@ def test_o_que_reapareceu_ligado_e_desligado_de_novo_pelo_gancho(casa: Path) -> 
 
 
 def test_o_botao_forca_e_vence_a_memoria(casa: Path) -> None:
-    """A vontade da GUI prevalece (regra dela, 09/08/2026): clique explícito manda."""
+    """A vontade da GUI prevalece (regra, 09/08/2026): clique explícito manda."""
     cv.curar_todos(casa)
     cv.curar_todos(casa, religar=True)
     de_novo = {r.appid: r for r in cv.curar_todos(casa, forcar=True)}

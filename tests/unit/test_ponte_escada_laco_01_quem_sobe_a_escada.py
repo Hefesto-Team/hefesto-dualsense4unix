@@ -145,7 +145,7 @@ class TestNoLancamento:
     def test_perfil_com_modo_manda_e_a_escada_abre_parada_nele(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A regra mais velha da casa: não trocar o modo de um jogo dela."""
+        """A regra mais velha da casa: não trocar o modo de um jogo do usuário."""
         _marker(env_dir)
         perfil = _perfil(ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox"))
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, perfil)])
@@ -164,7 +164,7 @@ class TestNoLancamento:
     def test_com_jogo_vivo_o_lancamento_nao_arma_sozinho(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """R-04: recriar o vpad com jogo aberto arranca o controle da mão dela."""
+        """R-04: recriar o vpad com jogo aberto arranca o controle da mão do usuário."""
         _marker(env_dir)
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil())])
         daemon = _DaemonFalso(flavor="xbox", authority="game")
@@ -205,7 +205,7 @@ class _FakeStore:
 
 
 class _DaemonDoGesto:
-    """AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026."""
+    """AJUSTADO À REGRA DE PRODUTO — MODO-DE-CONEXAO-01, 13/09/2026."""
 
     def __init__(self, *, flavor: str = "dualsense", aplica: bool = True) -> None:
         self.controller = SimpleNamespace()
@@ -384,7 +384,7 @@ class TestOGesto:
         assert ponte_confirmada_do_appid(APPID) is None
 
     def test_o_gesto_reinicia_o_relogio_do_silencio(self) -> None:
-        """Ela reclamou: os três minutos recomeçam. MORDE a linha"""
+        """O usuário reclamou: os três minutos recomeçam. MORDE a linha"""
         d = _DaemonDoGesto(flavor="dualsense")
         _abrir_tentativa(d, pe.ESCADA[0], agora=0.0)
 

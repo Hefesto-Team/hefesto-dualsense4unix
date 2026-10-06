@@ -1,4 +1,4 @@
-"""SOM-MIC-REPLUG-01 — o silêncio que ela pediu não pode morrer com o cabo."""
+"""SOM-MIC-REPLUG-01 — o silêncio que o usuário pediu não pode morrer com o cabo."""
 from __future__ import annotations
 
 from typing import Any
@@ -167,7 +167,7 @@ class TestACuraEstaLIGADA:
         assert fonte.count("await reapply_speaker_after_connect") == 2
 
     def test_cada_um_tem_o_proprio_suppress(self) -> None:
-        """O alto-falante falhar não pode custar o mudo do microfone dela."""
+        """O alto-falante falhar não pode custar o mudo do microfone do usuário."""
         from pathlib import Path
 
         fonte = Path(

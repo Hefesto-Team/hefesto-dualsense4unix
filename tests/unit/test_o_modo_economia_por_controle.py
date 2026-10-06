@@ -186,7 +186,7 @@ def test_a_vibracao_tem_teto_e_nao_some(da_peca: str | None, do_perfil: str | No
 
 
 def test_as_barras_de_motor_sobrevivem_a_economia() -> None:
-    """As barras só reduzem, e são escolha dela: a economia não as apaga."""
+    """As barras só reduzem, e são escolha do usuário: a economia não as apaga."""
     dela = ControllerRumbleOverride(policy="max", motor_fraco_pct=50)
     nova = vibracao_na_economia(dela, "balanceado")
     assert nova is not None

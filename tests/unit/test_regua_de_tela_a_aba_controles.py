@@ -348,12 +348,12 @@ def test_sem_a_ponte_a_tela_fica_na_cena_fixa_do_mockup():
     """A MORDIDA: uma aba aberta e nunca tocada tem de ser o desenho.
 
     Quatro controles e o chip «Perfil ativo» sem nome são a cena literal do
-    mockup aprovado. Se esta tela mostrasse a mesa dela, o dado não estaria vindo
+    mockup aprovado. Se esta tela mostrasse a bancada, o dado não estaria vindo
     da ponte — estaria vindo de algum lugar que ninguém declarou.
 
     O CHIP NASCE COM O QUE O PINTOR ESCREVE SEM PERFIL ATIVO — 13/09/2026
     (VAO-DO-ESQUELETO-01). Até então o desenho trazia o nome de um perfil de
-    exemplo, e ele ficava na tela dela sempre que a pintura não chegava. A
+    exemplo, e ele ficava na tela do usuário sempre que a pintura não chegava. A
     régua pergunta o valor ao dono (`pacotes.topo`) em vez de digitá-lo.
     """
     from hefesto_dualsense4unix.interface import pacotes

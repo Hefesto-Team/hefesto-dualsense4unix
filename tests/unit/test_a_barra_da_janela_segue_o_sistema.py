@@ -47,7 +47,7 @@ def sessao(monkeypatch):
 
 
 def test_a_barra_da_janela_fica_do_lado_do_sistema(gtk, sessao) -> None:
-    """A queixa dela, fechada: sob COSMIC os três botões vão para a direita."""
+    """A queixa de uso, fechada: sob COSMIC os três botões vão para a direita."""
     from hefesto_dualsense4unix.app import theme
 
     sessao("COSMIC")
@@ -81,7 +81,7 @@ def test_fora_do_cosmic_o_produto_nao_mexe(gtk, sessao) -> None:
 
 
 def test_nada_e_escrito_na_configuracao_dela(gtk, sessao) -> None:
-    """A decisão ``1-a`` em uma linha: **nenhuma** linha no disco dela."""
+    """A decisão ``1-a`` em uma linha: **nenhuma** linha no disco do usuário."""
     import ast
 
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/theme.py").read_text(

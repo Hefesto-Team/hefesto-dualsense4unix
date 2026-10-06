@@ -1,18 +1,12 @@
 """ABA 10 — a DICA da linha por controle não pode nomear o aparelho.
 
-A LEI, e ela é dela (03/09/2026):
-
-    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada
-    user ao usar seu controle se toque disso que o app se adaptou ao controle
-    dele"*  (noqa-acento: citação literal)
+A LEI, e é do usuário (03/09/2026)
 
 O IRMÃO DESTA RÉGUA é ``test_aba10_a_identidade_vem_de_cima.py``, que cobra a
 BARRA de 3px. Ele fechou o lugar onde a cor do mockup sobrevivia; este fecha o
 único que sobrou nesta aba — e é o mesmo defeito escrito em outro atributo.
 
-O QUE ESTAVA NA TELA DELA, medido em 03/09/2026 com P1 White no cabo e P2
+O QUE ESTAVA NA TELA DO USUÁRIO, medido em 03/09/2026 com P1 White no cabo e P2
 Galactic Purple no rádio (``mockup/10-perfis.html``, linhas 1284 e 1342 da
 publicada de então)::
 
@@ -20,7 +14,7 @@ publicada de então)::
       ...<span data-hef="guarda.nome">P1 • White • USB</span>
 
 A célula dizia o aparelho; o ``title`` da MESMA linha dizia o desenho. E as
-duas metades da frase estavam erradas ao mesmo tempo: o perfil dela guarda
+duas metades da frase estavam erradas ao mesmo tempo: o perfil do usuário guarda
 ZERO ajustes por controle — o painel ao lado já anunciava ``0 de 2``.
 
 POR QUE NÃO SE PINTAVA, e era estrutural, não preguiça: o ``escrever()`` do
@@ -43,12 +37,11 @@ cursor toca (``guarda.nome``, vivo) e a conta está na coluna ao lado
 (``guarda.proprio``, o ponto embaixo de cada glifo, alvo ``classe``, vivo; até
 02/10/2026 era o próprio glifo, ``guarda.secao``, que desde então diz o
 controle agora). É a decisão nº4 dela deste mesmo dia, sobre esta mesma
-tabela: *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho é
-gatilho."*
+tabela
 
 A CÉLULA GANHOU DICA EM 02/10/2026, e não é a volta das oito: ela só existe
 onde há o que dizer (*"O controle não diz."* e a máscara que não é a
-DualSense, decisão dela de 29/09: «a dica diz qual»), vem do pacote
+DualSense, decisão de 29/09: «a dica diz qual»), vem do pacote
 (``guarda.dica``) e não nomeia aparelho. A régua de baixo, que olha TODA dica
 da tabela contra os 28 modelos, continua cobrindo-a.
 

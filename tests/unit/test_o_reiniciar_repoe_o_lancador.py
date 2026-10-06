@@ -271,7 +271,7 @@ def test_o_reiniciar_do_tray_repoe_tambem(
 
 def test_parar_o_servico_nao_mexe_no_lancador(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A decisão dela é sobre o REINICIAR. Parar é outro ato."""
+    """A decisão de produto é sobre o REINICIAR. Parar é outro ato."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     class _Janela:

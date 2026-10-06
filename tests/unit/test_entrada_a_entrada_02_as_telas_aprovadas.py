@@ -4,7 +4,7 @@ A conferência da ENTRADA-A-ENTRADA-01 achou o maior problema dela: as três tel
 da âncora ``#mapear-entrada-a-entrada`` (a página publicada, ``08-conexoes.html``)
 descrevem o fluxo da ``LogicaDaCalibracao`` — uma fase SENTADA sobre os
 aparelhos já plugados e uma fase EM PÉ sobre as entradas vazias —, e o motor
-perguntava a face a cada plug. Decisão de quem coordena: o motor serve as
+perguntava a face a cada plug. Decisão de produto: o motor serve as
 telas APROVADAS; as telas não mudam.
 
 UMA RÉGUA POR ITEM DA SPRINT, e cada uma morde (a mordida está no docstring):
@@ -551,7 +551,7 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
 def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
     tmp_path: Path, disco: Path
 ) -> None:
-    """A mesa DELA: no ``0000:02:00.0`` o par de ``usb2-port1`` é
+    """A bancada: no ``0000:02:00.0`` o par de ``usb2-port1`` é
     ``usb1-port5`` (o ``peer``, medido em 23/09). Os dois lados do buraco têm
     ``devpath`` diferente, e o lugar do buraco é o do lado 2.0 — o que o
     DualSense ganha ali.
@@ -740,7 +740,7 @@ def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
 
 
 def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
-    """Palavra dela na R9: *«usarmos um dualsense e o USB pra sairmos de porta"""
+    """Palavra de produto na R9: *«usarmos um dualsense e o USB pra sairmos de porta"""
     laco = _em_pe(vazia)
     dongle = vazia.plugar(1, "2", DONGLE_BT)
     foto = laco.olhar()
@@ -1029,7 +1029,7 @@ def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
 
 
 def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
-    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido dela: *«temos o"""
+    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido: *«temos o"""
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},

@@ -481,7 +481,7 @@ class DraftApplier:
 
         `volume` e `muted` chegam na mesma seção (PERFIL-GUARDA-O-MIC-01) e NÃO
         são aplicados aqui: quem os manda ao vivo é o `mic.volume.set`/`mic.set`
-        do IPC, disparado pelo card no gesto dela — o rascunho só os carrega
+        do IPC, disparado pelo card no gesto do usuário — o rascunho só os carrega
         para o "Salvar Perfil".
 
         MIC-GATE-POR-CAMPO-01 (22/08/2026): campo ausente **ou nulo** é campo
@@ -712,7 +712,7 @@ class DraftApplier:
 
 
 def _leds_do_rascunho(leds_raw: dict[str, Any]) -> Any:
-    """A luz de uma seção do rascunho como `LedsConfig`, só com o que ela escreveu."""
+    """A luz de uma seção do rascunho como `LedsConfig`, só com o que o usuário escreveu."""
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
     campos: dict[str, Any] = {}
@@ -733,7 +733,7 @@ def _leds_do_rascunho(leds_raw: dict[str, Any]) -> Any:
 
 
 def _gatilhos_do_rascunho(trig_raw: dict[str, Any]) -> Any:
-    """Os gatilhos de uma seção do rascunho, só os lados que ela escreveu."""
+    """Os gatilhos de uma seção do rascunho, só os lados que o usuário escreveu."""
     from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
 
     lados = {

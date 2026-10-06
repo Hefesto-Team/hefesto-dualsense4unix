@@ -131,7 +131,7 @@ class TestAtribuirNumero:
     async def test_trocar_para_1_permuta_com_quem_estava_no_1(
         self, config_isolado: Path
     ) -> None:
-        """O gesto dela: "quero que ESTE seja o 1"."""
+        """O gesto do usuário: "quero que ESTE seja o 1"."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B])
         assert ds.slot_for(UNIQ_A, assign=False) == 1

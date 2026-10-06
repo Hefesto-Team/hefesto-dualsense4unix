@@ -1,13 +1,13 @@
 """MODO-DE-CONEXAO-01 — o chip de modo escolhe o CAMINHO, e nunca a máscara.
 
-A queixa dela, 13/09/2026, está citada na sprint: o chip «Xbox» da aba Jogar
+A queixa, 13/09/2026, está citada na sprint: o chip «Xbox» da aba Jogar
 dizia «aplicado» e não mudava nada. A causa, medida pelo estudo: o plano do chip
 mandava a MÁSCARA (`gamepad.emulation.set {flavor: "xbox"}`), o cartão do P1 a
 vencia em `mascara_efetiva`, e `start_gamepad_emulation_desfecho` respondia
 `ja_estava` antes de gravar qualquer coisa. O perfil ativo recebia
 `gamepad_flavor = "xbox"` e o jogo continuava recebendo o DualSense.
 
-A regra dela (a sprint cita as três mensagens): o MODO é a base, a MÁSCARA vem
+A regra de produto (a sprint cita as três mensagens): o MODO é a base, a MÁSCARA vem
 por cima e independe dele. Esta régua a cobra de ponta a ponta, pelo gesto REAL
 (`a01_jogar.modo_xbox`), pelo handler REAL (`_handle_gamepad_emulation_set`) e
 pelos métodos REAIS do `lifecycle.Daemon`, até o vpad. Só a borda é dublada: o

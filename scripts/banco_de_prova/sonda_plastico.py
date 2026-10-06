@@ -6,7 +6,7 @@ plástico da parte 1 (`plastico_de_mentira.py`, da L4): é o menor aparelho que
 responde a pergunta «este kernel deixa o `hid_playstation` registrar um
 DualSense de mentira?», para o job `banco-de-prova-sonda` do CI gravar a resposta
 antes de qualquer decisão da casa. Só stdlib, e só roda onde há `/dev/uhid` (o
-runner do CI, uma VM): na máquina dela o `uhid` é do produto, e este arquivo
+runner do CI, uma VM): na máquina do usuário o `uhid` é do produto, e este arquivo
 nunca é chamado ali.
 
 Três verbos:

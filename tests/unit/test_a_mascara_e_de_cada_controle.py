@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """A máscara é de CADA aparelho — e a tela e a escrita finalmente sabem disso.
 
-O PEDIDO É DELA, 03/09/2026: *"É uma máscara por controle. Mesmo caso do
+O PEDIDO É DE PRODUTO, 03/09/2026: *"É uma máscara por controle. Mesmo caso do
 anterior."* — o "anterior" é a decisão dos quatro lugares, do mesmo dia.
 
 **A CASA JÁ TINHA A METADE DIFÍCIL.** ``external_mask`` guarda a escolha por
-APARELHO desde 15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão dela), e
+APARELHO desde 15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão de produto), e
 ``mascara_efetiva`` é consultada na criação de todo gamepad virtual — os três
 degraus do daemon (``virtual_pad``, ``coop``, ``gamepad``) fecharam em 29/08.
 
 FALTAVAM DOIS, e os dois estavam NOMEADOS no próprio módulo:
 
-1. **a escrita.** *"Falta também o lado da escrita: quem grava a escolha dela é
+1. **a escrita.** *"Falta também o lado da escrita: quem grava a escolha do usuário é
    a rota IPC, que ainda só conhece a máscara da sessão."* ``set_mask`` e
    ``clear_mask`` existiam no registro e **não tinham um chamador em `src/`**;
 2. **a tela.** ``mesa_viva`` lia o ``flavor`` da SESSÃO e escrevia o mesmo valor
@@ -56,7 +56,7 @@ def test_sem_escolha_o_aparelho_herda_a_sessao(registro) -> None:
 
 
 def test_dois_aparelhos_com_mascaras_diferentes(registro) -> None:
-    """O PEDIDO DELA, na forma mais curta que se pode medir.
+    """O PEDIDO, na forma mais curta que se pode medir.
 
     Um escolhe DualSense, o outro não escolhe nada — e os dois recebem coisas
     diferentes na MESMA sessão.
@@ -132,7 +132,7 @@ class _Ponte:
     dicionário caía no `timeout` da ponte real e o `_safe_call` estourava com
     `'<=' not supported between instances of 'dict' and 'int'`. **Na ponte de
     mentira aquilo casava perfeitamente**, e a régua ficou VERDE sobre um gesto
-    que nunca gravou um byte: medido com o daemon dela, `controller_masks.json`
+    que nunca gravou um byte: medido com o daemon do usuário, `controller_masks.json`
     não existia antes nem depois do clique.
 
     Um dublê com assinatura mais frouxa que o original não é um dublê — é uma

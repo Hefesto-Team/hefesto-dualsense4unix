@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """A PONTE PARA O PRODUTO — o que os gestos usam para agir. Nada se reescreve.
 
-PERGUNTA DELA, 01/09/2026, e ela mudou esta camada: *"mas vc comparou com o
-produto estável? tipo não estamos refazendo do zero né?"* — seguida de *"em
-todas as abas temos praticamente tudo pronto"*.
+PERGUNTA, 01/09/2026, e ela mudou esta camada: ** — seguida de .
 
 Não estávamos refazendo o motor, mas estávamos reescrevendo a camada de cima: os
 primeiros gestos chamavam o socket CRU, montando o payload à mão. Isso perde o
@@ -127,7 +125,7 @@ TETOS = {
     # o prazo da trava mais 1 s. O prazo de tela de 0,25 s dava «não respondeu» sobre
     # uma busca que subia.
     "radio.busca.set": PRAZO_DA_TRAVA_DO_GESTO_S + 2.0,
-    # Medido no daemon dela em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
+    # Medido no daemon do usuário em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
     "daemon.reload": 15.0,
 }
 
@@ -211,7 +209,7 @@ def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
 
 
 def escolher_arquivo(titulo: str, padrao: str = "*", **_: Any) -> str | None:
-    """O caminho que ela escolheu, ou `None` se cancelou. Substituído pelo piloto."""
+    """O caminho que o usuário escolheu, ou `None` se cancelou. Substituído pelo piloto."""
     raise RuntimeError(
         f"escolher_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "
         f"pode abrir o seletor do sistema — ele substitui esta função ao subir.")
@@ -234,12 +232,12 @@ def dentro_da_janela() -> bool:
     `escolher_arquivo` for a função declarada aqui, não há janela: quem está
     chamando um gesto é uma régua, um script ou um driver de medição.
 
-    **POR QUE ISSO PRECISOU EXISTIR — 06/09/2026, e o defeito era meu.** O som
+    **POR QUE ISSO PRECISOU EXISTIR — 06/09/2026, por um defeito medido.** O som
     de confirmação da aba 02 (A-CONFISSAO-NO-BOTAO-01) chama o tocador do
     sistema. Medido na bancada: com o `pactl` DUBLADO de uma régua vizinha, o
     sink do DualSense casa pela regra do um-para-um, o motor o encontra "na
     lista viva" e segue para o `paplay` — que **não** está dublado. A suíte
-    tocava som no alto-falante do controle DELA, e ela está trabalhando.
+    tocava som no alto-falante do controle do usuário, enquanto ele trabalhava.
 
     A guarda-mãe do `audio_saida` não alcança este caso de propósito: ela
     confere o sink contra a lista viva, e numa régua a lista viva é de mentira.
@@ -247,7 +245,7 @@ def dentro_da_janela() -> bool:
 
     **É O MESMO DESENHO QUE O MEDIDOR DE ONDAS JÁ USA**, e pela mesma razão
     escrita lá: *"a suíte chama `a02_controles.pacote()` centenas de vezes, e um
-    fluxo de captura aberto a cada chamada seguraria o microfone DELA aberto
+    fluxo de captura aberto a cada chamada seguraria o microfone do usuário aberto
     durante a suíte inteira. O piloto é o produto; é ele quem autoriza."* A
     diferença é que ali o piloto acende a chave com uma linha própria, e aqui o
     fato já estava disponível sem tocar no piloto.

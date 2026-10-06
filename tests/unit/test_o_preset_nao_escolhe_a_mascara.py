@@ -1,6 +1,6 @@
 """MASCARA-QUE-GRUDA-01 — preset de gênero não tem opinião sobre máscara.
 
-Decisão dela, 22/08/2026, literal:
+Decisão, 22/08/2026, literal:
 
     *"A máscara deve vir da escolha do user. Ele escolhe como quer que o jogo
     reconheça o controle conectado: se deve aparecer como Xbox ou DualSense."*
@@ -18,7 +18,7 @@ citava como razão a H1 da auditoria pré-release:
     morto + controle duplicado)."*
 
 **A H1 não foi refutada: ela continua SEM remedição** (E1 da sprint, que precisa
-de um jogo com vibração rodando e da mão dela). O que a derrubou como razão de
+de um jogo com vibração rodando e da mão do usuário). O que a derrubou como razão de
 portão foi a decisão acima — nem a H1 de pé autoriza o produto a escrever
 máscara no perfil de alguém. O que a H1 ganha, enquanto ninguém a remede, é uma
 linha na tela dizendo que ela existe e que não foi reconferida
@@ -27,7 +27,7 @@ linha na tela dizendo que ela existe e que não foi reconferida
 E `DEFAULT_FLAVOR = "xbox"` **fica**: ele é o piso do daemon quando ninguém
 nunca escolheu, e não uma opinião gravada em arquivo nenhum. São duas perguntas
 diferentes, e confundi-las foi o que fez o `xbox` viajar para dentro do disco
-dela.
+do usuário.
 """
 
 from __future__ import annotations

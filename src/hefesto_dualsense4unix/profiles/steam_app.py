@@ -39,7 +39,7 @@ _APPID_CRU_RE = re.compile(r"^(?:steam_app_)?(\d+)$", re.IGNORECASE)
 
 
 def steam_appid_de_texto(texto: str | None) -> int | None:
-    """Appid do que ela COLOU no campo, ou ``None`` quando não dá para saber."""
+    """Appid do que o usuário COLOU no campo, ou ``None`` quando não dá para saber."""
     if not isinstance(texto, str):
         return None
     limpo = texto.strip()

@@ -16,7 +16,7 @@ vigia escrita, ficava calado):
 - `utils/i18n._candidate_locale_dirs()` inclui `Path.home()/.local/share/
   locale` como segundo candidato. Como o candidato XDG isolado nasce vazio, o
   `_find_locale_dir()` cai para este — e num source-install real, ele
-  encontraria o catálogo `.mo` DELA, deixando `init_locale()` (que trava o
+  encontraria o catálogo `.mo` DO USUÁRIO, deixando `init_locale()` (que trava o
   resultado num flag de módulo pela sessão inteira) dependente do disco do
   dev, não do teste.
 - `core/system_check._wireplumber_hijacks_mic()` lê `Path.home()/.local/

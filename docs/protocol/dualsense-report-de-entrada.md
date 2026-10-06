@@ -258,7 +258,7 @@ O ciclo mora em `0x82` (comando) / `0x83` (confirmação). Cada passo devolve um
 E os doze podem ser escritos à mão: `SET_FEATURE 0x80` com
 `[12, 1, lo, hi, lo, hi, …]` — vinte e seis bytes.
 
-### A família de fábrica inteira, e por que ela não é de agente
+### A família de fábrica inteira, e por que ela não é de qualquer ferramenta
 
 O `0x80`/`0x81` é **uma família**, e a metade dela mexe no aparelho:
 
@@ -276,7 +276,7 @@ O `0x80`/`0x81` é **uma família**, e a metade dela mexe no aparelho:
 O autor do levantamento externo avisa, com estas palavras, que *«there are
 chances that it may brick your controller»*, e que o firmware muda com
 frequência. **Ler é `[12, 2]`; qualquer outro `num` sai da leitura.** A metade
-de escrita não entra em ensaio nenhum sem a palavra dela.
+de escrita não entra em ensaio nenhum sem a palavra de produto.
 
 **Um brinde do mesmo levantamento, e é conferência de graça:** o `[9, 2]`
 devolve o endereço de rádio pelo **mesmo** par `0x80`/`0x81` que o feature

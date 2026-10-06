@@ -103,7 +103,7 @@ def test_morde_a_peneira_acusa_a_confissao(portao, frase: str) -> None:
 @pytest.mark.parametrize("frase", LEGITIMAS)
 def test_a_peneira_nao_acusa_a_voz_da_pessoa_nem_a_afirmacao_positiva(
         portao, frase: str) -> None:
-    """A voz DELA respondendo *"não sei"* não é o produto confessando."""
+    """A voz do usuário respondendo *"não sei"* não é o produto confessando."""
     assert not portao._forma(frase), (
         f"a peneira acusou {frase!r}, que é a voz da pessoa ou uma afirmação "
         f"positiva — obrigar a declarar isto esvazia a tabela de sentido")

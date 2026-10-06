@@ -122,7 +122,7 @@ class TestOComentarioFalsoSaiu:
 
 
 def _params_para_disco(nome_preset: str, flat: list[int]) -> list[int] | list[list[int]]:
-    """Simula a forma que ESTES dois modos assumem no disco dela (nested)."""
+    """Simula a forma que ESTES dois modos assumem no disco do usuário (nested)."""
     if nome_preset == "MultiPositionFeedback":
         return [[v] for v in flat]
     if nome_preset == "MultiPositionVibration":

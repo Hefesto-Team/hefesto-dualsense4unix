@@ -28,7 +28,6 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 )
 
 # pinta a linha dela pelo seu próprio método (`app/actions/rumble_actions.py`,
-# Quem mediu isso não fui eu — foi o `portao_a_casa_sabe_e_o_produto_nao_faz`,
 from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
     DICA_DO_TETO_DA_MESA,
     DICA_DOS_VALORES_QUE_PASSAM,
@@ -125,8 +124,7 @@ CSS = """
      é isso que faz o rótulo "Motor esquerdo" ficar na mesma linha dos quatro
      interruptores, e as cinco colunas acabarem no MESMO y — que é a régua dela.
      (A cura do vão é na ALTURA, nunca `space-between`.) */
-  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido dela: *"as linhas
-     horizontais (…) precisam melhorar ali"*.
+  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026
 
      Elas já atravessavam as cinco colunas, no mesmo y — mas o `gap:16px` do grid
      abria um buraco entre cada duas, e o olho lia CINCO TRACINHOS em vez de uma
@@ -138,8 +136,7 @@ CSS = """
      é padding — e padding não interrompe borda. O vão VERTICAL (`row-gap`) fica:
      é ele que separa uma linha da outra. */
   /* O RESPIRO VERTICAL É UMA ESCALA, E A DIVISÓRIA MORA NO MEIO DELE —
-     31/08/2026, pedido dela: *"em vibração tem que ver a distribuição vertical
-     dos elementos da tabela. tão todos colados nas linhas"*.
+     31/08/2026
 
      O CENSO QUE MEDIU O DEFEITO (DOM, coluna do P1, antes da cura). A folga é da
      divisória até o conteúdo, acima e abaixo:
@@ -188,7 +185,7 @@ CSS = """
     /* A LARGURA DA COLUNA DE RÓTULOS E O VÃO ATÉ A PRIMEIRA COLUNA DE
        CONTROLE VÊM DE `medidas.py` — o dono deles nas TRÊS abas que têm
        essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
-       acabava em x=536 numa e x=542 na outra. Ela viu: *"tem algo que
+       acabava em x=536 numa e x=542 na outra. O usuário viu: *"tem algo que
        deixa estranho essa área da primeira coluna."* */
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
@@ -216,7 +213,7 @@ CSS = """
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca)
                        var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);
   }
-  /* O DESENHO NOVO DELA — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
+  /* O DESENHO NOVO DO USUÁRIO — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
      DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
      para dentro da Força (`--r-forca` 112 = 79 dos degraus + 7 de vão + 26 do
      trilho, `--r-barra`), e a faixa que era dele vira a «Sensor Háptico», a
@@ -242,8 +239,7 @@ CSS = """
     background:linear-gradient(to right,transparent calc(50% - 1px),
       var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
       transparent calc(50% + 1px)),var(--border-forte)}
-  /* O PADRÃO TRAVA AS BARRAS — 04/10/2026, ela: «se balanceado é o original.
-     então não tem pq ter original». Com o degrau Padrão (`.forca.padrao`), o
+  /* O PADRÃO TRAVA AS BARRAS — 04/10/2026, ela. Com o degrau Padrão (`.forca.padrao`), o
      Sensor Háptico e os dois motores ficam inteiros verdes e travados, com a
      palavra no lugar do número: o sinal chega como o jogo mandou e o que ela
      guardou fica esperando a Economia ou o Máximo. Travar é TROCAR DE ELEMENTO
@@ -269,7 +265,7 @@ CSS = """
   .vib .ctrl[data-conectado="nao"] .forca.padrao ~ .motor .trilho.travada{display:none}
   .motor.haptica.fora{opacity:.45}
   .motor.haptica.fora .trilho.arrasta,.motor.haptica.fora .lado{pointer-events:none}
-  /* a barra vertical entre blocos irmãos — pedido dela */
+  /* a barra vertical entre blocos irmãos — pedido */
   /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
      A borda separadora mora na CÉLULA (`> div > *`), e padding na coluna
      recua a célula junto: a linha parava 21px antes da divisa e voltava a
@@ -287,8 +283,7 @@ CSS = """
      Medido na Iluminação no mesmo dia: copiar a regra da aba Jogar não bastava,
      porque lá o desenho tem 62px e aqui tem 124. */
   /* ---------- O LUGAR SEM CONTROLE, E SÃO OS QUATRO PELA MESMA REGRA ----------
-     QUEIXA DELA, 05/09/2026: *"temos que entender se só tem um controle
-     conectado só aparece config daquele. aba cinco tá errada."*
+     QUEIXA, 05/09/2026
 
      E ESTAVA. Medido na tela viva com UM controle ligado: a segunda coluna
      mostrava `—` no Modelo e, logo abaixo, os TRÊS degraus, os três trilhos e
@@ -358,8 +353,7 @@ CSS = """
      `text`, `line`, `path`…), e elas existiam porque o `.vazia` ficava DE FORA
      da regra compartilhada. Com a classe morta, quem responde é
      `monta.py` — `[data-controle][data-conectado="nao"]:not(.vazia) .ds-svg
-     {visibility:hidden}`, a S-04 de 05/09/2026, palavra dela: *"os svgs não
-     deveriam aparecer prós demais controles desconectados"*.
+     {visibility:hidden}`, a S-04 de 05/09/2026
 
      MANTÊ-LAS SERIA O SEGUNDO DONO do mesmo fato, e o pior tipo: um desenho
      cinza por baixo de um `visibility:hidden !important` é código que ninguém
@@ -370,7 +364,7 @@ CSS = """
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08:
      *"as linhas horizontais deveriam separar os campos em linhas"*. É a mesma
      cura da Iluminação, e o motivo de estar na CÉLULA (e não na grade) é o
      mesmo: as sete linhas não são de `.vib`, são de cada coluna, com as mesmas
@@ -403,7 +397,7 @@ CSS = """
   .vib > div:not(:last-child) > *::before{right:-26px}
   .vib > .rotulos > *::before{left:0;right:-16px}
   .vib > div > *:first-child::before{display:none}
-  /* NÃO HÁ COLUNA DESTACADA, e é decisão dela de 28/08: os quatro ficam lado a
+  /* NÃO HÁ COLUNA DESTACADA, e é decisão de 28/08: os quatro ficam lado a
      lado, sempre visíveis, e a fita do topo fica ESMAECIDA (fora de `monta.ABAS_QUE_ESCOLHEM`).
      Aqui havia um `.ctrl.escolhido` — fundo `--sel-bg` e rótulo em negrito na
      coluna do P1 — com o `title` "A fita do topo aponta para este controle".
@@ -414,15 +408,14 @@ CSS = """
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */
   .vib .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido dela: *"no nome das
-     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026,  Encostado na divisa, o rótulo fica
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
-  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+  /* O RÓTULO ALINHA À ESQUERDA — decisão, 31/08/2026: *"alinha a esquerda a
      primeira coluna."*
 
-     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     E ELA REVOGA A DECISÃO DE PRODUTO MESMA de 30/08 (*"no nome das linhas deixa
      alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
      vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
      o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
@@ -436,15 +429,15 @@ CSS = """
   /* O RÓTULO OCUPA A ALTURA INTEIRA DA LINHA, e o texto fica centrado dentro
      dele. Não é enfeite: sem isto o rótulo da última linha acaba 29px acima dos
      botões que ele nomeia, e a régua lê — com razão — um vão entre as colunas.
-     A cura é na ALTURA, que é a regra dela. */
+     A cura é na ALTURA, que é a regra de produto. */
   .vib .rotulos > :not(.cel-des) > .sec-rot{flex:1}
   /* O VERDE DESTA ABA VIROU O PADRÃO DAS DEZ em 30/08 (`--rot-campo`, em
      `topo.html`), e a exceção escopada em `.vib` que vivia aqui virou redundância. */
   /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     PRIMEIRA LETRA, e o usuário confirmou: *"a maiúscula a regra é sobre a primeira
      letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
      uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     o usuário apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
      é a forma mais difícil de ler que existe.
      O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
      O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
@@ -462,7 +455,7 @@ CSS = """
      logo abaixo dele e as duas juntas enchiam a célula. A legenda virou dica no
      mesmo dia, e o `flex-start` sobrou: o rótulo ficava sozinho no alto de uma
      célula de 124 px, com o vazio inteiro embaixo. Centrado, ele fica na altura
-     do desenho que nomeia — a cura do vão é na ALTURA, regra dela. */
+     do desenho que nomeia — a cura do vão é na ALTURA, regra de produto. */
   .vib .rotulos .cel-des{gap:8px}
 
   /* O DESENHO: a borda tem a cor do plástico, sempre — é como ela sabe de quem é
@@ -508,20 +501,20 @@ CSS = """
 
      A coluna que NÃO tem ajuste próprio herda a força geral, e até hoje isso
      aparecia como NADA: o pacote emitia `degrau=""`, o alvo `classe` apagava os
-     três, e ela leu o resultado como defeito — *"o botão não tá ativo"*, com a
+     três, e ela leu o resultado como defeito, com a
      coluna ao lado marcando 150%.
 
      A decisão [05] dela (04/09) mandava o herdado acender na LINHA DE MESA, e a
-     linha de mesa foi apagada em 05/09 pela decisão dela de não ter mesa em
+     linha de mesa foi apagada em 05/09 pela decisão de produto de não ter mesa em
      nada da interface. O herdado ficou sem lugar. Aqui ele ganha o lugar que
-     sobrou, que é o botão: ACESO, porque é a força que a mão dela sente, e
+     sobrou, que é o botão: ACESO, porque é a força que a mão do usuário sente, e
      DIFERENTE do escolhido, porque procedência é informação — foi exatamente
      isso que a decisão [05] pediu, e só o endereço dela é que mudou.
 
      A MARCA É O TRAÇO, NÃO A COR: o preenchimento de `.seg button.on` continua
      dizendo "ligado" e a borda tracejada diz "veio de fora". Trocar a cor faria
      o olho ler outro ESTADO; trocar o traço faz ele ler a mesma força com outra
-     origem. E o peso volta ao normal — negrito é o que ela escolheu para esta
+     origem. E o peso volta ao normal — negrito é o que o usuário escolheu para esta
      coluna. */
   .vib .seg.herdado button.on{background:transparent;border-style:dashed;
                               font-weight:500}
@@ -539,13 +532,13 @@ CSS = """
   .motor .num{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg)}
   /* `.teto` AQUI É O SUFIXO DA ESCALA — o "/255" e o "Máx" que dizem em que
      unidade o número ao lado está. **Não é o "Teto da vibração"**, que é outra
-     coisa e mora na aba Conexões (global + por controle, decisão dela de
+     coisa e mora na aba Conexões (global + por controle, decisão de
      28/08 — hoje "sem teto agora"). Esta aba não escreve teto nenhum.
 
-     "máx" VIROU "Máx" — 28/08/2026. Ela apontou o padrão na Conexões ("• o rádio
+     "máx" VIROU "Máx" — 28/08/2026. O usuário apontou o padrão na Conexões ("• o rádio
      de cada adaptador, em fatias") e mandou caçar rótulo visível começando em
      minúscula em TODAS as abas. Este é o único caso desta aba, e foi a única
-     coisa tocada aqui: a Vibração está FECHADA por elogio literal dela
+     coisa tocada aqui: a Vibração está FECHADA por elogio literal
      (`CORRECOES.md:39`). O irmão "/255" fica como está — barra e dígito não
      têm caixa. */
   .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace}
@@ -559,14 +552,13 @@ CSS = """
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
   .motor.off .num{color:var(--comment)}
-  /* O TRILHO ARRASTÁVEL — 03/09/2026, decisão dela: *"0 a 200%, e grava na
-     hora."* Ele é um `<input type=range>` de verdade, e não um trilho pintado:
+  /* O TRILHO ARRASTÁVEL — 03/09/2026,  Ele é um `<input type=range>` de verdade, e não um trilho pintado:
      é o `value` dele que o piloto lê no `change`.
 
      A APARÊNCIA NÃO MUDA UM PIXEL DE PROPÓSITO. A Vibração está FECHADA por
-     elogio literal dela (`CORRECOES.md:39`), e um controle nativo do
+     elogio literal (`CORRECOES.md:39`), e um controle nativo do
      WebKit ali dentro traria a cor e a altura do tema do sistema no meio de uma
-     tela que ela aprovou. `appearance:none` desliga o desenho nativo e as duas
+     tela que o usuário aprovou. `appearance:none` desliga o desenho nativo e as duas
      regras abaixo reconstroem EXATAMENTE o que o `.trilho` + `.cheio` já eram:
      5px de altura, raio 3, o fundo `--border-forte` e o polegar de 12px em
      `--purple` com a borda `--panel`.
@@ -611,7 +603,7 @@ CSS = """
   .acoes-col .btn.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
 
   /* O LADO QUE TREME — e onde entra a cor do plástico (D-O-SVG-VIBRA-POR-LADO,
-     palavra dela: "Parte esquerda vibra mostrando a cor do motor esquerdo").
+     palavra de produto: "Parte esquerda vibra mostrando a cor do motor esquerdo").
      O traço é LARANJA porque o contorno do desenho já é a cor do plástico:
      pintar o traço de plástico apagaria o lado em vez de mostrá-lo. Quem diz de
      quem é o tremor é o CONTORNO (e a borda da moldura), que são o plástico; o
@@ -642,7 +634,7 @@ CSS = """
 
      TRÊS TONS, e o nome do tom vem do produto (`app/telas/vibracao.DIZ`,
      `.ALERTA` e `.INFO`), nunca um hex emitido pelo Python: `diz` conta o que
-     está acontecendo, `alerta` avisa que o que ela escolheu não chega, `info`
+     está acontecendo, `alerta` avisa que o que o usuário escolheu não chega, `info`
      explica sem alarmar. O laranja é o `--orange` do tema, o MESMO `#ffb86c`
      que a janela estável usa nestas linhas — um token, não uma segunda cópia
      da cor.
@@ -663,17 +655,17 @@ CSS = """
 
      MEDIDO no WebKit da janela do produto (1180x757 — o `TAMANHO_NA_TELA`, e
      não o `TAMANHO_OCULTA`, que é 143 px mais alto e responderia "não rola"
-     sempre), com a MESA DELA — dois controles, um `usb` e um `bt`, `vpads == 0`
+     sempre), com a BANCADA — dois controles, um `usb` e um `bt`, `vpads == 0`
      —, injetando o BOOTSTRAP do piloto e pintando a carga do
      `a05_vibracao.pacote()`. A régua está versionada:
      `tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`.
 
        .miolo: client 564 · fundo em 733 px
        a cena CRAVADA (1 linha) ................ estado 18 px · rola 0
-       a mesa dela, com a frase de 211 chars ... estado 60 px · rola 40 · CORTADA
-       a mesa dela, com a frase de hoje ........ estado 42 px · rola 22 · inteira
+       a bancada, com a frase de 211 chars ... estado 60 px · rola 40 · CORTADA
+       a bancada, com a frase de hoje ........ estado 42 px · rola 22 · inteira
 
-     A FRASE ENCURTOU — decisão dela, 02/09, ciente do custo. A de 211
+     A FRASE ENCURTOU — decisão, 02/09, ciente do custo. A de 211
      caracteres ocupava 1072 px de 1072: quebrava em duas sublinhas e a segunda
      — "que você fixar aqui embaixo." — terminava em 740 px, SETE px abaixo do
      fundo do miolo. Fotografado. A de hoje tem 162 caracteres, ocupa 942 px e
@@ -686,9 +678,9 @@ CSS = """
      SOBRAM 22 px DE ROLAGEM, e eles não são texto: são DUAS mensagens acesas ao
      mesmo tempo (a dos pedidos e a do alcance) onde o desenho reservou UMA — 42
      px contra 20 de folga. `vpads == 0` não é excepcional, é o estado corrente
-     da mesa dela. Caber os 22 exige encolher a tabela que ela aprovou, e o
+     da bancada. Caber os 22 exige encolher a tabela que o usuário aprovou, e o
      `.miolo` (16px 3px 18px 18px) é do `topo.html`, comum às dez abas: é
-     DECISÃO DELA, não pixel. As saídas estão em `mockup/DIVERGENCIAS.md`. */
+     DECISÃO DE PRODUTO, não pixel. As saídas estão em `mockup/DIVERGENCIAS.md`. */
   /* OS DEZ PIXELS QUE FALTAVAM — VIBRAÇÃO-CABE-01 FECHA EM 05/09/2026.
      A régua acusava o alerta terminando 41 px abaixo do fundo do miolo; a saída
      da faixa "Estado" devolveu 31, e estes dez são os últimos. Eles saem do
@@ -699,9 +691,9 @@ CSS = """
        line-height  1,5 -> 1,4 nas duas linhas do `.est`
 
      O QUE **NÃO** PAGOU A CONTA, e as duas exclusões são regra desta casa: a
-     FRASE (texto de tela é decisão dela — o dono é
+     FRASE (texto de tela é decisão de produto — o dono é
      `rumble_actions.texto_do_alcance_da_intensidade`, e encurtá-la por pixel
-     seria eu decidindo o que ela lê) e a TABELA que ela aprovou, junto com o
+     seria eu decidindo o que ela lê) e a TABELA que o usuário aprovou, junto com o
      `.miolo` do `topo.html`, que é comum às dez abas.
 
      Medido depois: o alerta termina em 733 px e o fundo do miolo é 733. */
@@ -710,7 +702,7 @@ CSS = """
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
                    font-size:12px;line-height:1.4}
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
-  /* O TOM `diz` SAIU — 07/09/2026, com a única frase que o vestia. Ordem dela,
+  /* O TOM `diz` SAIU — 07/09/2026, com a única frase que o vestia. Ordem de produto,
      olhando o pé do quadro com os quatro na mesa: *"Vibração remove essa última
      frase também."* Ver `app/telas/vibracao.py` (as três frases que ficam).
 
@@ -721,7 +713,7 @@ CSS = """
      estado saiu e as cinco peças da trava ficaram sem chamador.
 
      O QUE ESTA REGRA JÁ TINHA CUSTADO, e fica registrado porque foi medido: em
-     03/09 o marcador dela era VERDE, e a foto da tela dela mostrava
+     03/09 o marcador dela era VERDE, e a foto da tela do usuário mostrava
      `● (verde) não há gamepad virtual` colado a `▲ (laranja) A intensidade não
      está chegando a jogo nenhum` — o MESMO fato com marcadores de sentido
      oposto. A cura foi o marcador herdar a cor do texto, que é o que os dois
@@ -774,14 +766,14 @@ CSS = """
      · **"a frase é LIDA do glade e nunca redigitada"** — VALE, e vale para
        sempre. É ela que evitou a segunda cópia de um texto de tela, e o
        endereço da leitura continua em :data:`DICA_DOS_VALORES_QUE_PASSAM`.
-     · **"ela sobe para a tela"** — CADUCOU em 05/09/2026, decisão dela na
+     · **"ela sobe para a tela"** — CADUCOU em 05/09/2026, decisão de produto na
        05-Q2. A atribuição *"decisão [02] dela, 04/09/2026"* que esta aba
        carregava em quatro lugares era do PO, não dela: a fonte real é a
        `ONDA2-05-VIBRACAO-01`, que decidiu no lugar dela a partir do
        `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`. Hoje ela
-       respondeu a pergunta, e **a palavra dela vence a atribuição**.
+       respondeu a pergunta, e **a palavra de produto vence a atribuição**.
 
-     O CUSTO QUE ELA ACEITOU, e estava escrito na opção que ela escolheu: quem
+     O CUSTO QUE O USUÁRIO ACEITOU, e estava escrito na opção que o usuário escolheu: quem
      testar em Economia com as barras em 220 não descobre NA TELA por que o
      tremor saiu fraco — descobre passando o rato no `?`. Ela leu isso e
      escolheu assim mesmo.
@@ -806,7 +798,7 @@ def _endereco_de_pintura(nome, extra=""):
 def _trilho_arrastavel(valor, teto, campo):
     """O trilho da "Personalizado" como `<input type=range>` — 03/09/2026.
 
-    DECISÃO DELA: *"0 a 200%, e grava na hora."* Até hoje esta linha era
+     Até hoje esta linha era
     LEITURA — um `<div>` sem `value` — e o gesto `forca` recusava o clique nela
     com um `ValueError` que **não chega à tela**: o contrato do piloto manda
     `RuntimeError` ao cartão e deixa o `ValueError` no `stderr` de quem lançou a
@@ -853,18 +845,17 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     são os mesmos nos quatro lugares; o que um lugar sem controle não pode ter é
     um número afirmado. `0` ali seria a tela dizendo *"este motor está em zero"*
     sobre um aparelho que não está na mesa — e o travessão é a palavra que esta
-    casa usa para *"isto eu não sei"*.
+    casa usa para .
 
-    `arrasta` troca o trilho de LEITURA pelo `<input type=range>` da decisão
-    dela de 03/09 — ver :func:`_trilho_arrastavel`. Aqui só a linha do
+    `arrasta` troca o trilho de LEITURA pelo `<input type=range>` da decisão de 03/09 — ver :func:`_trilho_arrastavel`. Aqui só a linha do
     "Personalizado" o pede; as duas de motor têm builder próprio
     (:func:`_barra_de_motor`) desde 04/09.
 
-    **FATO SUBSTITUÍDO, e quem o derrubou foi ELA.** Esta linha dizia *"as duas
+    **FATO SUBSTITUÍDO, e quem o derrubou foi o usuário.** Esta linha dizia *"as duas
     de motor continuam leitura, porque o par `weak`/`strong` viaja JUNTO ao
     daemon e um arraste por lado mandaria meio par"*. Era verdade enquanto a
-    barra do motor fosse um comando (`rumble.set`). Ela decidiu em 04/09/2026 —
-    fora das opções que eu ofereci — que a barra **não manda o par: ela é
+    barra do motor fosse um comando (`rumble.set`). O usuário decidiu em 04/09/2026 —
+    fora das opções que estavam postas — que a barra **não manda o par: ela é
     POLÍTICA que MULTIPLICA o degrau**, e as duas são independentes de propósito
     (*"se so a do motor fraco tiver 100 e a outrqa 50% então será 150 em um e  # noqa-acento: citação literal
     75% no outro"*). O método que grava uma barra sem a outra existe desde o
@@ -887,7 +878,7 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     o trilho nunca esteve em colisão — ele é um `<span>` filho, e o que o apagava
     era a pintura do PAI. Renomeá-lo junto seria mais bonito e custaria caro
     agora: o `casamento.py:54` mede contra a página PUBLICADA, e a publicação é
-    ato DELA — um nome novo lá vira órfão até ela publicar. Quando a
+    ato DO USUÁRIO — um nome novo lá vira órfão até ela publicar. Quando a
     `05-vibracao` sair da `mockup/DIVERGENCIAS.md`, unificar o par em
     `mult`/`mult-pct` é uma linha aqui e uma no pacote.
 
@@ -942,15 +933,9 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     travessão; ele é `display:none` num lugar vazio, e o que a tela mostra é o
     `—` que a folha põe por cima (`.ctrl[data-conectado="nao"] .motor::after`).
 
-    **É A METADE DE DESENHO QUE A ONDA1-D2 DEIXOU COM ENDEREÇO**, e a decisão é
-    dela, de 04/09/2026, dita fora das três opções que eu ofereci:
+    **É A METADE DE DESENHO QUE A ONDA1-D2 DEIXOU COM ENDEREÇO**, e a decisão
+    é de produto, de 04/09/2026, dita fora das três opções que estavam postas:
 
-        "os slcers do botão esquerdo e direito (forte e  # noqa-acento: citação dela
-         fraco) se multiplicam (interagem com os botões economia, moderado,
-         máximo, se eu tiver 150% do perfil de vibração e as duas linhas
-         estiverem 100 entao a vibração dos 2 será 150%, mas se so a do motor
-         fraco tiver 100 e a outrqa 50% então será 150 em um e 75% no outro
-         entende?"
 
     `efetivo(motor) = degrau(coluna) x barra(motor)`, e a conta mora num lugar
     só, do lado do daemon (`gamepad._mults_por_motor`). Esta linha é o primeiro
@@ -1070,8 +1055,6 @@ def _endereca_o_tremor(desenho, pref):
     return desenho
 
 
-#     "eu mapeei as cores, glifos, controles, id e tudo mais. é pro projeto usar  # noqa-acento: citação literal
-#      canto superior. é white no p1, mas a borda de tudo é cosmic red e os svgs  # noqa-acento: citação literal
 
 FOLHA_DOS_28 = re.sub(r"</?style[^>]*>", "", monta_.folha_das_cores())
 
@@ -1104,7 +1087,7 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
     """Dá ao `<svg>` o endereço da COR e tira dele a folha de um modelo só.
 
     `com_dono=False` é o LUGAR VAZIO da mesa, e ele sai daqui **sem**
-    `data-colorway`. Não é economia: é a regra dela — campo sem informação não
+    `data-colorway`. Não é economia: é a regra de produto — campo sem informação não
     mostra nada. Um lugar sem controle não tem modelo, e afirmar "Galactic
     Purple" ali seria o desenho falando por um aparelho que não existe. Sem o
     atributo, nenhuma regra da folha casa e o desenho cai no cinza neutro, que é
@@ -1150,7 +1133,7 @@ def _coluna(c, e=None, conectado=None):
     dono do desenho.
 
     **UMA FUNÇÃO SÓ PARA OS QUATRO LUGARES — 07/09/2026, e é cura de defeito
-    MEDIDO com os quatro DualSense dela na mesa.** Havia um `_coluna_vazia()` à
+    MEDIDO com os quatro DualSense do usuário na mesa.** Havia um `_coluna_vazia()` à
     parte que devolvia um cartão **sem um único `data-campo` por dentro**:
 
         <div class="ctrl vazia" …><div class="seg"><span class="nada">—</span></div>…
@@ -1190,8 +1173,7 @@ def _coluna(c, e=None, conectado=None):
        é a mesma cura de 05/09 para a coluna que perde o dono ao vivo. Nada de
        clicável sobrevive num lugar vazio: `display:none` não recebe clique.
 
-    A ordem dela de 31/08/2026 continua inteira — *"Deixa os outros espaços dos
-    4 controles a mostra ainda mas cinza igual vc fez na aba jogar."* A coluna
+    A ordem de 31/08/2026 continua inteira —  A coluna
     continua na tela, com as sete linhas na mesma altura, o nome dizendo a
     POSIÇÃO e o ESTADO (nunca o do plástico) e o travessão no lugar do ajuste.
     O que mudou é que agora ela tem ONDE receber o controle que chega.
@@ -1260,14 +1242,14 @@ def _coluna(c, e=None, conectado=None):
             {linhas[0]}
             {linhas[1]}
             <div class="acoes-col">
-              <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
-                   *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
+              <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
+                   **.
                    O par Testar/Parar já diz a duração pelo próprio par: quem começa
                    escolhe quando termina. E desde 07/09/2026 o gesto também não
                    tem duração: o Testar fica ligado até o Parar
                    (`a05_vibracao._EM_TESTE`). -->
               <!-- O texto dos dois é RÓTULO (categoria dela, 03/09/2026), e
-                   este par foi decidido por ela justamente para NÃO mudar —
+                   este par foi decidido pelo usuário justamente para NÃO mudar —
                    quem começa escolhe quando termina. O que estes botões fazem
                    é gesto, e o gesto tem dono no pacote da aba
                    (`interface/pacotes/a05_vibracao`, `testar` e `parar`).
@@ -1302,7 +1284,7 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo">Vibração</span>
         <!-- A DICA DO QUADRO ENCOLHEU DE 1000 PARA ~200 CARACTERES — 30/08/2026,
-             regra dela: *"ao invés de estar tudo em [um só] deveria estar em cada
+             regra de produto: *"ao invés de estar tudo em [um só] deveria estar em cada
              seção"*, e vale *"em todas as abas"*.
              Ela tinha QUATRO parágrafos, e três deles nomeavam um campo que está
              na tela, a poucos pixels: a Força, os dois motores e o Testar. Cada um
@@ -1317,8 +1299,7 @@ MIOLO = f'''
         <div class="vib">
 
           <div class="rotulos">
-            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido dela: *"'O lado que treme
-                 acende em laranja; …' isso é tool tip"*. Mesma cura da Iluminação,
+            <!-- A LEGENDA VIROU DICA — 30/08/2026,  Mesma cura da Iluminação,
                  no mesmo dia, e pelo mesmo motivo: prosa cinza na coluna de rótulos
                  compete com os rótulos. O texto não muda uma palavra — ele explica
                  uma decisão medida (`D-O-SVG-VIBRA-POR-LADO`) e some seria perder. -->
@@ -1329,9 +1310,7 @@ MIOLO = f'''
                   <b>plástico</b> diz de quem é o controle. Apagado é lado desligado.
                 </span></span></span>
             </div>
-            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido dela:
-                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
-                 coluna serve como nome da linha"*. Esta célula existia vazia só para
+            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026,  Esta célula existia vazia só para
                  ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
                  nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
@@ -1354,8 +1333,8 @@ MIOLO = f'''
                      frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
                      que é onde há espaço para ele.
 
-                     E O PORQUÊ SAIU DAQUI EM 11/09/2026 (A4-058, aprovado por
-                     ela): ele JUSTIFICAVA a regra contra uma alternativa que
+                     E O PORQUÊ SAIU DAQUI EM 11/09/2026 (A4-058, aprovado
+                     pelo usuário): ele JUSTIFICAVA a regra contra uma alternativa que
                      ninguém propôs. O fato — a escolha fica guardada e não
                      chega ao motor — é o que ela precisa, e é o que fica. -->
                 Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
@@ -1372,7 +1351,7 @@ MIOLO = f'''
               </span></span></span></div>
             <div><span class="sec-rot">{ESQ["rot"]}
               <span class="ajuda">?<span class="dica">
-                <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado por ela.
+                <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado pelo usuário.
                       O `nome`/`apelido`/`nota` do CSV continuam donos do `title`
                       do interruptor (`_coluna`) e do `mapa-do-controle`; aqui a
                       frase é a que ela leu e aprovou, e ela fala do PUNHO, que é
@@ -1404,7 +1383,7 @@ MIOLO = f'''
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <!-- O MEIO SEGUNDO SAIU DA DICA EM 24/09/2026
                      (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela prometia um pulso,
-                     e o gesto deixou de ser pulso em 07/09, a pedido dela: o
+                     e o gesto deixou de ser pulso em 07/09, a pedido: o
                      `a05_vibracao.testar` fica ligado até o Parar, segue as
                      barras ao vivo, e o teste de cada controle é dele
                      (`_EM_TESTE`, um por controle desde 03/10). Medido no
@@ -1537,7 +1516,7 @@ def _colunas_do_corpo(corpo):
 
 
 def _conferir(doc):
-    """As decisões dela nesta aba, conferidas NA SAÍDA. Só o miolo, sem"""
+    """As decisões de produto nesta aba, conferidas NA SAÍDA. Só o miolo, sem"""
     import re as _re
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = _re.sub(r"<!--.*?-->", "", corpo, flags=_re.S)
@@ -1578,7 +1557,7 @@ def _conferir(doc):
         exigir("--plastico:" not in bloco,
                f"o lugar vazio {c['pref']} afirma uma cor de plástico — mesma "
                f"regra do `data-colorway` logo acima")
-    #    medido com os quatro DualSense dela na mesa. Até aqui ela proibia os
+    #    medido com os quatro DualSense do usuário na mesa. Até aqui ela proibia os
     for alvo in (".seg > *", ".motor > *", ".acoes-col > *"):
         exigir(f'.vib .ctrl[data-conectado="nao"] {alvo}' in doc,
                f"a folha deixou de esconder `{alvo}` num lugar sem controle — "
@@ -1744,7 +1723,7 @@ def _conferir(doc):
            "o recibo da faixa ficou laranja — laranja é o `alerta`, e alerta "
            "sobre um clique que gravou ensina que o botão falha")
 
-    #     MEDIDO com os quatro DualSense dela na mesa: o daemon publicava os
+    #     MEDIDO com os quatro DualSense do usuário na mesa: o daemon publicava os
     _marcas = _re.compile(
         r'data-campo="([^"]+)"'
         r'|data-hef-alvo="([^"]+)"'

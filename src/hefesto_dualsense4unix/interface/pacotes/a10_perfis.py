@@ -37,12 +37,12 @@ A SEGUNDA LEVA SÓ FOI POSSÍVEL POR TRÊS CORREÇÕES, e nenhuma é do daemon:
 NÃO SOBRA NENHUM SEM DONO — 03/09/2026, e os DOIS ÚLTIMOS fecharam no fim do
 dia:
 
-    editor.prioridade   o `<input type=range>` que ela pediu — era o ÚNICO
+    editor.prioridade   o `<input type=range>` que o usuário pediu — era o ÚNICO
                         campo do editor sem NENHUM caminho de escrita
     editor.estilo       escolher um estilo APLICA a receita: gatilho, degrau de
                         vibração e a cor de cada controle, de uma vez
 
-São TREZE gestos com dono. As duas decisões são dela, do mesmo dia: *"Slider,
+São TREZE gestos com dono. As duas decisões são do usuário, do mesmo dia: *"Slider,
 como você pediu"* e *"Construir o motor"* — e as receitas moram em
 `profiles/estilos_de_jogo.py`, num lugar só, nunca digitadas aqui.
 
@@ -59,7 +59,7 @@ clique de verdade no "Ativar" com o perfil ativo já escolhido:
     [gesto falhou] ativar: “meu_perfil” já é o perfil que está valendo…  (stderr)
     tarjas na tela: []                                                   (o DOM)
 
-A frase é inequivocamente DELA (*"Escolha outro na lista da esquerda e clique em
+A frase é inequivocamente DO USUÁRIO (*"Escolha outro na lista da esquerda e clique em
 Ativar"*), a cura de 02/09 a escreveu com cuidado, o
 `test_ativar_nao_diz_aplicado_sobre_o_perfil_que_ja_vale` a provou — e ela nunca
 chegou à tela. É a forma de defeito que o próprio `_recusou_dizendo` nomeia:
@@ -68,14 +68,14 @@ UM `ValueError` neste arquivo — o do `selecionar`, que fala de um clique sem
 nome de perfil e é a única frase daqui escrita para quem programa.
 
 A LISTA PASSOU A CABER INTEIRA — 02/09/2026. O `<tbody>` publicado tem catorze
-linhas porque catorze cabiam na figura, e a pasta dela tem **33 perfis**: os
+linhas porque catorze cabiam na figura, e a pasta do usuário tem **33 perfis**: os
 outros dezenove não existiam na tela, e com eles nove dos dez botões desta aba,
 que agem sobre o perfil ESCOLHIDO. A lista virou um `blocos` — ver
 `_html_da_lista`, que também explica por que a régua do mockup não conta esta
 entrega.
 
 E A ABA PAROU DE PERGUNTAR SÓ AO DAEMON quem está valendo — ver `_valendo`. Com
-`active_profile: null`, que é o estado da máquina dela hoje, três guardas se
+`active_profile: null`, que é o estado da máquina do usuário hoje, três guardas se
 desligavam ao mesmo tempo.
 
 O QUE A ONDA2-10 ACRESCENTOU — 04/09/2026, as decisões do PO:
@@ -134,12 +134,11 @@ from . import (
     registrar,
 )
 
-#: do state_full" — e daí eu concluí que não tinha dono. `profile.list` é um
 #: `profiles_dir()`. Ter outro dono que não o `state_full` não é não ter dono.
 SEM_DONO: dict[str, str] = {}
 
 
-#: disco dela, `_secoes_do_controle` devolvia seis chaves, esta lista lia cinco,
+#: disco do usuário, `_secoes_do_controle` devolvia seis chaves, esta lista lia cinco,
 SECOES_DA_COLUNA: tuple[str, ...] = (
     "leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
     "movimento")
@@ -190,11 +189,8 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     return _ESCOLHIDO or ativo
 
 
-# ORDEM DELA: *"Na tabela do perfil tem que terum svg dde  # (noqa-acento) cita ela
-# lupa no titulo da tabela"*, *"Procura nome de perfil, e  # (noqa-acento) cita ela
-# demais configs dos perfis, a ideia é  # (noqa-acento) cita ela
-# acharmos rápido o nome de um jogo e essa tabela precisa permitir que eu  # (noqa-acento) cita ela
-# escolha a ordenação dando duplo clique no nome das colunas."*  # (noqa-acento) cita ela
+# ORDEM DE PRODUTO: a tabela do perfil leva uma lupa no título, procura por nome de perfil e
+# demais configs, e deixa escolher a ordenação com duplo clique no nome das colunas.
 #
 
 _PROCURA: str = ""
@@ -263,7 +259,7 @@ def _larguras_em_texto(tabela: str) -> str:
 
 
 def _ordenada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """A lista na ordem que ela escolheu — ou na que o produto monta."""
+    """A lista na ordem que o usuário escolheu — ou na que o produto monta."""
     coluna, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
     if coluna not in COLUNAS_DA_LISTA:
         return list(lista)
@@ -306,7 +302,7 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     "Nome do Jogo": os campos que ela DIGITA são omitidos do tique
     (`CAMPOS_QUE_ELA_DIGITA`, para a pintura não apagar o que ela está
     escrevendo), então o único instante em que a tela pode devolver a forma
-    canônica do que ela colou é a resposta do PRÓPRIO gesto. Sem isto, o
+    canônica do que o usuário colou é a resposta do PRÓPRIO gesto. Sem isto, o
     endereço da loja fica no campo até ela trocar de perfil.
 
     O CAMINHO DE VOLTA JÁ EXISTIA e ninguém desta aba o usava: um gesto que
@@ -315,8 +311,7 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     pintura — logo o tique seguinte não briga, sobrescreve com o mesmo valor.
 
     POR QUE NA HORA E NÃO NO TIQUE, e o argumento é o do piloto, palavra por
-    palavra: *"Meio segundo entre o clique e a resposta basta para ela clicar de
-    novo achando que o primeiro não pegou"*. Meio segundo é o tique desta aba.
+     Meio segundo é o tique desta aba.
 
     **O `mesa:` NÃO É ENFEITE.** O `_deu_certo` entrega a carga CRUA ao
     `window.__hef.pintar`, que lê `p.blocos`, `p.mesa`, `p.colunas` e
@@ -456,9 +451,8 @@ def _rotulo_curto(controle: dict[str, Any]) -> str:
 def _plastico(controle: dict[str, Any]) -> str:
     """O hexadecimal da casca daquele controle, **pelo dono da cor**.
 
-    A LEI É DELA, 03/09/2026: *"se no topo tá mostrando controle white player 1,
-    então cada aba vai usar os controles lá de cima. Não mistura com a info dos
-    mockups."* A barra de 3px da linha era `--plastico` cravado no `<tr>` pelo
+    A LEI É DO USUÁRIO, 03/09/2026: ** A barra de 3px da linha era `--plastico` cravado no `<tr>`
+    pelo
     gerador — a cor do controle do DESENHO —, e ficava lá enquanto o
     `guarda.nome` ao lado já vinha do aparelho: a linha dizia `P1 • White • USB`
     com a barra vermelha do mockup.
@@ -468,7 +462,7 @@ def _plastico(controle: dict[str, Any]) -> str:
     do chip. Reescrever a leitura aqui criaria a segunda verdade sobre a cor, que
     é o que o portão `check_cores_do_dualsense.py` existe para matar.
 
-    O IMPORT É TARDIO E GUARDADO, e não uma exceção que eu abri: é exatamente o
+    O IMPORT É TARDIO E GUARDADO, e não uma exceção aberta aqui: é exatamente o
     que `hefesto_vivo._fita` faz para esta mesma leitura, pela mesma razão. O
     `monta` lê disco no import (o esqueleto, o SVG e dois CSV de `docs/`), então
     um `import` no topo derrubaria a janela onde não há repositório. E não é um
@@ -484,7 +478,7 @@ def _plastico(controle: dict[str, Any]) -> str:
     que ninguém pode conferir — o defeito que esta frente veio desfazer. Com o
     vazio o piloto escreve `''` no alvo `cor`, o `style` de linha cai, o
     `color:transparent` da classe volta e a barra SOME: campo sem informação não
-    mostra nada, regra dela.
+    mostra nada, regra de produto.
     """
     slug = str(controle.get("cor") or "")
     if not slug:
@@ -507,7 +501,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]], conectados: Any = ()) -> list[d
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` e `botoes` (`mesa_viva.py:427`, `mesa_do_estado`). Medido: `guarda.nome` saía
-    `["", ""]` para os DOIS controles da mesa dela, e a tabela ficava sem nome nenhum.
+    `["", ""]` para os DOIS controles da bancada, e a tabela ficava sem nome nenhum.
 
     FATO ERRADO, SUBSTITUÍDO — 11/09/2026. Aqui estava escrito *"QUEM JÁ FAZIA
     ISTO CERTO: `interface/perfis_vivos.mesa_de_agora` — o visor da aba"*.
@@ -555,7 +549,7 @@ def _atr(v: Any) -> str:
 
     **ESCAPA MENOS QUE O `html.escape` DO PYTHON, e isso é a cura de um defeito
     medido, não um relaxamento.** O `blocos` do piloto só reescreve o miolo
-    quando `alvo.innerHTML !== html` — ou seja, ele compara a MINHA string com a
+    quando `alvo.innerHTML !== html` — ou seja, ele compara a string do gerador com a
     **serialização que o navegador devolve**. Escapar o que o serializador não
     escapa faz as duas nunca baterem, e o bloco é reescrito a cada 500 ms para
     sempre.
@@ -570,7 +564,7 @@ def _atr(v: Any) -> str:
     As duas divergências, e as duas são de escapar DEMAIS:
 
         `'`   o Python manda `&#x27;`, o navegador devolve `'`   (`DON'T SCREAM`)
-        `\\n`  o Python (na minha primeira tentativa) mandava `&#10;`, o navegador
+        `\\n`  o Python (na primeira tentativa) mandava `&#10;`, o navegador
               devolve a quebra CRUA — e a dica da disputa tem dois parágrafos
 
     E NÃO É INSEGURO: dentro de aspas duplas, um `'` e um `<` não fecham nada —
@@ -578,7 +572,7 @@ def _atr(v: Any) -> str:
     exatamente o conjunto que o serializador de HTML escapa em atributo.
 
     O CUSTO DE NÃO CURAR ISTO NÃO É SÓ O CONTADOR: reescrever o `<tbody>` a cada
-    meio segundo apaga o `:hover` da linha sob o mouse dela e desfaz qualquer
+    meio segundo apaga o `:hover` da linha sob o mouse do usuário e desfaz qualquer
     seleção de texto na lista — três vezes por segundo, enquanto ela procura um
     perfil entre 33.
     """
@@ -607,9 +601,8 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
 
     A ÚNICA DIVERGÊNCIA DECLARADA É O ESCAPE — ver `_texto` e `_atr`.
 
-    `escolhido` É A LINHA ABERTA NO EDITOR — 04/09/2026, queixa dela: *"quando
-    clica em algum nome do perfis salvos nada indica que tal coisa tá
-    selecionado"*. O valor já existia (`_escolhido`, no alto deste arquivo) e
+    `escolhido` É A LINHA ABERTA NO EDITOR — 04/09/2026, queixa de uso. O valor já existia
+    (`_escolhido`, no alto deste arquivo) e
     alimentava só o texto do botão Remover e os gestos; ele não chegava à LINHA,
     e a tela ficava calada sobre o alvo de nove botões.
 
@@ -641,10 +634,10 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
     """As linhas da lista de perfis, TODAS — e é a maior mentira que esta aba
     contava.
 
-    MEDIDO em 02/09/2026, na máquina dela: `load_all_profiles()` devolve **33**
+    MEDIDO em 02/09/2026, na máquina do usuário: `load_all_profiles()` devolve **33**
     perfis e o `<tbody>` publicado tem **14 linhas**. O contador ao lado do
     título dizia "33 perfis" — e dizia a verdade — enquanto a tabela logo abaixo
-    mostrava catorze. **Dezenove perfis dela não tinham como ser clicados**, e
+    mostrava catorze. **Dezenove perfis do usuário não tinham como ser clicados**, e
     com eles nove dos dez botões desta aba: `ativar`, `remover`, `duplicar`,
     `editor.nome`… todos agem sobre o perfil ESCOLHIDO, e escolher é clicar numa
     linha que existe.
@@ -670,7 +663,7 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
        nenhum"* (palavras do gerador). O dado existe desde então; faltava a
        porta.
 
-    A LISTA VAZIA TAMBÉM É UM ESTADO, e a frase dela já estava escrita e nunca
+    A LISTA VAZIA TAMBÉM É UM ESTADO, e a frase de produto já estava escrita e nunca
     tinha aparecido: `perfis_web.LISTA_VAZIA` diz o que fazer para ter o
     primeiro perfil. Sem esta linha o `<tbody>` ficaria em branco — a tela
     calada sobre um estado que ela sabe explicar.
@@ -690,7 +683,7 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
     `alvo.innerHTML !== html`: do segundo tique em diante a tela tem 99 selos
     que o produto não tem (12.222 caracteres contra 10.341), e as duas strings
     nunca mais batem. O custo é o que a nota do `_atr` já descreve — o `:hover`
-    da linha sob o mouse dela apagado duas vezes por segundo, enquanto ela
+    da linha sob o mouse do usuário apagado duas vezes por segundo, enquanto ela
     procura um perfil entre 33.
 
     **A CURA MORA NO PILOTO, e não aqui** — carimbar o selo fora da serialização
@@ -725,7 +718,7 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
 
 
 def _html_dos_jogos(procedencia: str = "", foto: _FotoDoCatalogo | None = None) -> str:
-    """As `<option>` do `<datalist>` — os jogos DESTA máquina, do disco dela.
+    """As `<option>` do `<datalist>` — os jogos DESTA máquina, do disco do usuário.
 
     **E DAQUELE LANÇADOR, desde 11/09/2026** (C4-FUNCIONA-EM, §3): com
     `procedencia` cheia a lista traz só os jogos de onde o campo de cima diz
@@ -754,14 +747,14 @@ def _html_dos_jogos(procedencia: str = "", foto: _FotoDoCatalogo | None = None) 
     janela nenhuma.
 
     ESCAPAR É OBRIGATÓRIO E É O `_atr`, não o `html.escape`: os nomes vêm dos
-    `.acf` e dos `.desktop` DELA — `DON'T SCREAM` está no catálogo desta casa —,
+    `.acf` e dos `.desktop` DO USUÁRIO — `DON'T SCREAM` está no catálogo desta casa —,
     e escapar o que o serializador do navegador não escapa faria o `blocos`
     reescrever o bloco a cada 500 ms para sempre. A medição está na docstring de
     `_atr`.
 
-    **E OS JOGOS DE FORA DA STEAM ENTRAM — 11/09/2026**, que é a queixa dela
+    **E OS JOGOS DE FORA DA STEAM ENTRAM — 11/09/2026**, que é a queixa de uso
     com o exemplo na mão: *"em perfil falta detectar os jogos dos demais
-    lançadores. dando exemplo do guardi]ães da galáxia."*  # (noqa-acento) citação dela
+    lançadores. dando exemplo do guardi]ães da galáxia."*  # (noqa-acento) citação
 
     A DIVISÃO `value`/`label` É A MESMA, e o `value` de um jogo de lançador é a
     `wm_class` dele (``gotg.exe``) em vez do appid — o MESMO campo do perfil
@@ -771,7 +764,7 @@ def _html_dos_jogos(procedencia: str = "", foto: _FotoDoCatalogo | None = None) 
     própria seria a segunda verdade sobre o que esta lista oferece.
 
     NUNCA LEVANTA, pela mesma razão de `_jogo_reconhecido`: isto é PINTURA, a
-    duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
+    duas vezes por segundo, sobre a biblioteca do usuário. Uma exceção lendo um
     `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
 
     `foto` é a do tique (`_foto_do_catalogo`); sem ela, a pergunta de sempre.
@@ -866,11 +859,11 @@ def _lancador_da_chave(chave: str, foto: _FotoDoCatalogo | None = None) -> str:
     É a ponte que `simple_match.procedencia_do_match` pede, e ela mora aqui
     porque é leitura de disco: `profiles/` é o esquema, e um módulo de esquema
     que importasse `integrations/` obrigaria toda régua dele a ter a biblioteca
-    dela na mão.
+    do usuário na mão.
 
     **O RESIDUAL É «Instalado aqui», e nunca o campo travado.** Uma chave que o
     catálogo não conhece — ``guard``, ``Hefesto-Dualsense4Unix``, os dois
-    medidos no disco dela em 11/09/2026 — é um perfil que ELA escreveu, que
+    medidos no disco do usuário em 11/09/2026 — é um perfil que O usuário escreveu, que
     funciona, e que a §5 manda continuar válido e mostrado. `LANCADOR_DIRETO` é
     a palavra que o produto já tem para isso (*"de lugar nenhum, está no
     menu"*), e é a mesma que a lista do campo de baixo escreve. Travar o campo
@@ -1031,7 +1024,7 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
     `profiles_actions.perfil_que_esta_valendo` é o §P1 desta casa, e esta aba
     era o lugar mais caro para não o chamar: ela lia
     `ctx.state.get("active_profile")` cru, e a própria docstring de lá diz que o
-    daemon responder `active_profile: null` é *"o estado da máquina dela hoje"*.
+    daemon responder `active_profile: null` é *"o estado da máquina do usuário hoje"*.
     Com o `null`, as três guardas desta aba se desligavam ao mesmo tempo:
 
         ativar     deixava de recusar o perfil que JÁ está valendo
@@ -1203,8 +1196,7 @@ def _com_os_lugares_vazios(
 ) -> list[Any]:
     """A lista da mesa completada até os quatro lugares do desenho.
 
-    NASCEU EM 05/09/2026, da palavra dela — *"os svgs não deveriam aparecer prós
-    demais controles desconectados"*. Antes disto o pacote mandava só as linhas
+    NASCEU EM 05/09/2026, da  Antes disto o pacote mandava só as linhas
     da mesa e o `forEach` do bootstrap escrevia `''` no que sobrava. `''` serve
     para APAGAR (uma classe, uma cor, um texto) e nunca para ACENDER — e o
     lugar vazio precisa acender uma classe (`fora`) e escrever um rótulo
@@ -1467,7 +1459,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
       é o que está VALENDO: reaplicar outro trocaria o perfil pelas costas dela.
       NOTA DATADA — 01/10/2026: era o `profile.switch`, a ativação À MÃO, e o
       desfazer de um perfil de jogo posto pelo autoswitch o gravava como a
-      escolha dela (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01).
+      escolha do usuário (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01).
     * `launch_env.refresh` — a regra pode ter mudado, e com ela o
       `steam_app_<id>.env` de antecipação. É o mesmo aviso que o Salvar e o
       Remover da janela estável mandam (`footer_actions.py:101`), e a ordem é a
@@ -1529,7 +1521,7 @@ def _o_perfil_no_disco(nome: str) -> Any:
     O gesto lê o perfil do disco, muda o campo que ela editou e grava o
     perfil inteiro, sem nada do aparelho (decisão `D-2709-O-SALVAR-LE-O-PERFIL`):
     as outras abas gravam as escolhas delas no clique, e o estado vivo não é
-    escolha dela. Até 27/09 esta base punha o vivo por cima, e mudar a
+    escolha do usuário. Até 27/09 esta base punha o vivo por cima, e mudar a
     PRIORIDADE ligava o microfone de um controle no PRAGMATA dela.
 
     A VOLTA É PELO NOME QUE O PERFIL TEM: quem renomeia (`editor_nome`) o faz
@@ -1569,7 +1561,7 @@ def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
     `voltar-a-de-ontem`, que tem funil próprio.
 
     ERAM NOVE ATÉ 11/09/2026: o `editor.modo` passava por aqui e saiu com o
-    quadro «Modo», por ordem dela. O funil não muda — o que muda é quem entra
+    quadro «Modo», por ordem de produto. O funil não muda — o que muda é quem entra
     nele.
 
     **AQUI E NÃO EM `perfil.gravar_e_reaplicar`**, e a razão é medida e está
@@ -1694,7 +1686,7 @@ def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[
     que é um jogo reconhecido.
 
     **A QUINTA RESPOSTA CHEGOU COM O TERCEIRO ARGUMENTO — 11/09/2026, e é a
-    queixa dela fechada.** O `<datalist>` passou a oferecer jogo de lançador,
+    queixa de uso fechada.** O `<datalist>` passou a oferecer jogo de lançador,
     cujo `value` é a `wm_class` (``gotg.exe``), e o «Detectar» sempre gravou
     essa classe para um jogo de fora da Steam. Sem as `chaves`, as duas
     deixavam o rótulo MUDO: o botão respondia *"PRAGMATA"* a um jogo da Steam
@@ -1703,7 +1695,7 @@ def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[
 
     NUNCA LEVANTA, e é o mesmo contrato de `_com_a_carona`: ela é acabamento de
     um gesto que JÁ GRAVOU — e, desde o rótulo, também é PINTURA, chamada dez
-    vezes por segundo. Uma exceção lendo a biblioteca dela transformaria uma
+    vezes por segundo. Uma exceção lendo a biblioteca do usuário transformaria uma
     gravação bem-sucedida em tarja de recusa, e derrubaria a aba inteira por
     causa de um rótulo.
     """
@@ -1730,7 +1722,7 @@ def _agora_vale_em(prof: Any, texto: str = "") -> str:
     logo acima: *o desfecho não pode chamar de outra coisa um perfil que a
     lista chama de "Só manual"*.
 
-    `texto` É O QUE ELA DIGITOU (ou o que o «Detectar» achou: o appid da Steam
+    `texto` É O QUE O USUÁRIO DIGITOU (ou o que o «Detectar» achou: o appid da Steam
     **ou a `wm_class`**, desde 11/09/2026), e serve só para o nome do jogo.
     Vazio, a frase termina no rótulo — que é o certo para "Todos" e "Steam",
     onde jogo nenhum entra na regra.
@@ -1757,8 +1749,8 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     (`hefesto_vivo.py:1401`) e o piloto escuta `change` além de `click`, que é o
     único evento que um campo de texto dispara com o valor novo.
 
-    POR QUE RENOMEAR NA HORA, e não guardar num rascunho: decisão dela de
-    01/09 — *"clicar na cor já deveria aplicar a cor no controle"* —, e esta aba
+    POR QUE RENOMEAR NA HORA, e não guardar num rascunho: decisão de
+    01/09 — ** —, e esta aba
     não tem "Salvar" próprio (o do rodapé regrava o perfil ATIVO como o disco
     o tem, `rodape._draft_do_ativo`, e nem olha para este campo). Um
     campo que aceita texto e não guarda nada é o botão que responde calado.
@@ -1878,7 +1870,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     `process_name` do MESMO jogo, que ela nunca viu na tela e portanto nunca
     pediu para tirar (ESCONDER-EM-VEZ-DE-SAIR-01, `simple_match.py:277`).
 
-    AS DUAS RECUSAS, e as duas existem para não REBAIXAR a regra dela:
+    AS DUAS RECUSAS, e as duas existem para não REBAIXAR a regra de produto:
 
     * **o seletor travado** — quando o perfil casa por uma regra que esta tela
       não sabe mostrar (`window_title_regex`, lista de classes), o produto abre
@@ -1888,10 +1880,10 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     * **"Estilo de Jogo"** — é a quinta opção do desenho e não tem preset
       nenhum atrás. `from_simple_choice` devolve `MatchAny()` para chave
       desconhecida, sem reclamar (`simple_match.py:167`): escolher "Estilo de
-      Jogo" gravaria um catch-all no lugar da regra do jogo dela, em silêncio.
+      Jogo" gravaria um catch-all no lugar da regra do jogo do usuário, em silêncio.
 
     **E O CAMPO PASSOU A DIZER DE ONDE O JOGO VEM — C4-FUNCIONA-EM,
-    11/09/2026, desenho DELA.** O que chega agora é uma PROCEDÊNCIA
+    11/09/2026, desenho DO USUÁRIO.** O que chega agora é uma PROCEDÊNCIA
     («Navegação», «Steam», «Heroic», «Qualquer jogo»…), e quem a traduz na
     forma técnica é `simple_match.forma_da_procedencia` — o produto, sozinho,
     com o que o lançador entrega. A recusa do "Estilo de Jogo" deixou de ser
@@ -1901,10 +1893,10 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     **A GUARDA NOVA É A DA FORMA PRESERVADA, e ela não é zelo.** Se a
     procedência escolhida é a MESMA que o campo já mostrava, o gesto não grava
     nada. Sem isso, um perfil em «Instalado aqui» cuja regra é por
-    `process_name` (``guard``, medido no disco dela) seria reescrito como
+    `process_name` (``guard``, medido no disco do usuário) seria reescrito como
     `window_class` por um gesto que não mudou nada na tela — trocar um dado
     por outro que *"casa por acaso"* é o R-12 que esta casa já pagou. Quem
-    quiser mudar de verdade muda a opção, e aí a reescrita é o que ela pediu.
+    quiser mudar de verdade muda a opção, e aí a reescrita é o que o usuário pediu.
     """
     from hefesto_dualsense4unix.profiles.simple_match import (
         MSG_ESCOLHA_O_JOGO,
@@ -1948,7 +1940,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
 def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[Any, int]:
     """O perfil com a receita do estilo dentro, e QUANTOS controles ganharam cor.
 
-    AS TRÊS COISAS QUE O ESTILO ESCREVE são as que ela aprovou em 03/09/2026 ao
+    AS TRÊS COISAS QUE O ESTILO ESCREVE são as que o usuário aprovou em 03/09/2026 ao
     mandar construir o motor — **gatilho + vibração + luz** —, e cada uma vai
     para o lugar que já era dela no esquema:
 
@@ -1965,17 +1957,15 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     {})` devolve exatamente o padrão de cada modo. É a mesma porta que a aba
     Gatilhos usa (`a03_gatilhos._padroes`).
 
-    A LUZ É POR UNIDADE PORQUE A LEI É DELA, verbatim: *"nenhuma cor dos
-    controles nunca pode ser a mesma, mesmo no mesmo perfil e estilo de jogo.
-    Dentro da paleta de fps tem que ter variações pra cada unidade de
-    controle."* Quem garante isso, medindo, é `estilos_de_jogo.as_quatro` — e
+    A LUZ É POR UNIDADE PORQUE A LEI É DO USUÁRIO, verbatim: ** Quem garante isso, medindo, é
+    `estilos_de_jogo.as_quatro` — e
     por isso a cor sai de `cor_da_unidade(estilo, jogador)`, nunca de uma cor
     escrita aqui. **O global `leds` NÃO é tocado**: uma cor no global é a cor
-    que os quatro herdariam, que é exatamente o defeito que a lei dela proíbe.
+    que os quatro herdariam, que é exatamente o defeito que a lei de produto proíbe.
 
     E DOIS CONTROLES NO MESMO LUGAR É RECUSA, não escolha silenciosa: dois
     `jogador` iguais na mesa dariam a MESMA cor às duas peças, com o motor
-    inocente. É o único caminho pelo qual a lei dela cairia depois de o motor
+    inocente. É o único caminho pelo qual a lei de produto cairia depois de o motor
     dizer que está tudo distinto.
 
     `LedsConfig` COM DOIS CAMPOS SÓ, e isso é contrato: `_controllers_to_specs`
@@ -2046,16 +2036,16 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
 def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Estilo de Jogo": escolher um APLICA a receita inteira no perfil.
 
-    **ELE GANHOU MOTOR EM 03/09/2026, e a decisão de construí-lo é dela.**
+    **ELE GANHOU MOTOR EM 03/09/2026, e a decisão de construí-lo é do usuário.**
     Perguntada se o motor devia existir, respondeu *"Construir o motor"*, e
     escolheu o alcance: **gatilho + vibração + luz**. As receitas estão
-    em `profiles/estilos_de_jogo.py` — *"o resto ta aprovado"* —, e é de lá que
+    em `profiles/estilos_de_jogo.py` —  —, e é de lá que
     saem tanto os rótulos do `<select>` (`aba10.ESTILOS`) quanto o que cada um
     faz. **Não há tabela de estilo neste arquivo**, e não pode haver: uma
     segunda cópia da receita divergiria no dia em que ela mudasse uma.
 
     O QUE ELE ERA ATÉ HOJE DE MANHÃ, medido no produto instalado com o daemon
-    dela vivo e um DualSense White no cabo:
+    do usuário vivo e um DualSense White no cabo:
 
         estilo_na_tela: "Terror"      ← a tela AFIRMA o estilo, e continua
         tarjas: []                    ← ninguém disse nada
@@ -2074,7 +2064,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     estilo depois do clique seria a tela dizendo que guardou o que não guardou.
 
     "PERSONALIZADO" NÃO MEXE EM NADA, e é o único que responde sem gravar. Ele é
-    o estilo que diz *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se
+    o estilo que diz  — `as_quatro()` levanta de propósito se
     alguém lhe pedir a cor. A resposta é um DESFECHO (a tira do rodapé), não uma
     tarja de recusa: escolher "Personalizado" é uma escolha legítima, e recusar
     dizendo faria a tela tratar de erro o que é o comportamento pedido.
@@ -2089,7 +2079,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     """
     from hefesto_dualsense4unix.profiles import estilos_de_jogo as receitas
 
-    # primeira escolha dela passar calada, que foi o defeito de manhã.
+    # primeira escolha do usuário passar calada, que foi o defeito de manhã.
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
     if escolhido == "—":
         escolhido = ""
@@ -2126,8 +2116,8 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     seria descartado sem uma palavra — ela digitaria o nome do jogo, veria o
     campo aceitar, e a regra continuaria a mesma.
 
-    ENTÃO O SELETOR ANDA JUNTO, e isso desfaz um IMPASSE que eu mesmo criei e
-    medi antes de entregar: com o perfil em "Todos", escolher "Jogo" no seletor
+    ENTÃO O SELETOR ANDA JUNTO, e isso desfaz um IMPASSE criado e
+    medido antes de entregar: com o perfil em "Todos", escolher "Jogo" no seletor
     recusava por falta de nome (`MSG_JOGO_SEM_NOME`), e digitar o nome recusava
     por o seletor estar em "Todos". **Os dois caminhos fechados, e o perfil
     preso em "Todos" para sempre.** Digitar o nome de um jogo é dizer "este
@@ -2142,7 +2132,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     endereço da loja, que ele sabe ler) é "Jogo da Steam"; qualquer outra coisa
     é "Jogo", com o nome do programa. E ele SÓ decide quando o seletor não
     estava numa das TRÊS que têm campo livre: com "Jogo", "Jogo da Steam" ou
-    "Jogo (pela janela)" já escolhido por ela, a escolha dela manda — digitar
+    "Jogo (pela janela)" já escolhido pelo usuário, a escolha do usuário manda — digitar
     "1245620" num perfil que ela pôs em "Jogo" não pode virar um perfil da
     Steam pelas costas dela. (A terceira entrou em 06/09/2026, ONDA5-10-01.)
 
@@ -2162,7 +2152,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     grava o número. O que ficava errado era a TELA — o campo continuava
     mostrando `https://store.steampowered.com/app/1599660/…` sobre uma regra que
     já guardava `1599660`, e assim ficava até ela trocar de perfil. A janela
-    antiga trocava o endereço pelo número na frente dela.
+    antiga trocava o endereço pelo número na frente do usuário.
 
     **A CORREÇÃO SÓ CABE AQUI, e a razão é medida:** `editor.jogo` está em
     `CAMPOS_QUE_ELA_DIGITA`, logo o tique NÃO o repinta enquanto ela está no
@@ -2170,7 +2160,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     único instante em que a tela pode devolver a forma canônica é a resposta
     deste gesto — e ela é pintada na hora, sem esperar os 500 ms.
 
-    O VALOR SAI DE `simple_extra(prof.match)`, e não de um `if` meu: é a MESMA
+    O VALOR SAI DE `simple_extra(prof.match)`, e não de um `if` local: é a MESMA
     função que `perfis_web._pacote_do_editor` usa para encher este campo a cada
     tique. Escrever aqui "o appid quando é steam_game, o texto quando não é"
     seria a segunda verdade sobre o que este campo mostra — e as duas
@@ -2242,7 +2232,7 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
       produto só sabe guardá-la como `MatchCriteria(window_class=…)`, que é uma
       regra que este editor não sabe MOSTRAR — o perfil abriria travado, com a
       frase de usar a linha de comando. Gravar isso a partir de um botão seria
-      empurrar o perfil dela para fora da tela."* Se gravar a regra empurra o
+      empurrar o perfil do usuário para fora da tela."* Se gravar a regra empurra o
       perfil para fora da tela, **o conserto é a tela aprender a regra**, e foi
       o que a sprint fez: `simple_match` ganhou o preset `"janela"`, e os TRÊS
       seletores ganharam o rótulo antes de este botão gravar um byte.
@@ -2301,7 +2291,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     NASCE NO DISCO, e não num rascunho, porque esta aba não tem "Salvar"
     próprio — a janela estável só PREENCHE O EDITOR (`on_profile_new:3016`) e
-    quem grava é o botão seguinte. Aqui, com a ação imediata que ela pediu, o
+    quem grava é o botão seguinte. Aqui, com a ação imediata que o usuário pediu, o
     arquivo nasce e a lista o mostra no tique seguinte, já aberto no editor.
 
     A REGRA DO JOGO EM FOCO É A MESMA DO PRODUTO, e a guarda também: o
@@ -2322,8 +2312,8 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     ela criou para o Pragmata nasceu prioridade 0 e NUNCA valia no jogo, porque
     o catch-all dela (prioridade 100) vencia em todo o resto. **Ela não errou a
     configuração — a janela não tinha saída**, e um perfil novo desta tela caía
-    no mesmo buraco. Medido no disco dela hoje: os catch-all são `meu_perfil`
-    (1) e `fallback` (0), então a folga sai **11** — e os perfis de jogo dela
+    no mesmo buraco. Medido no disco do usuário hoje: os catch-all são `meu_perfil`
+    (1) e `fallback` (0), então a folga sai **11** — e os perfis de jogo do usuário
     estão em 80, o que continua sendo o certo: a conta promete vencer os
     "vale sempre", não vencer todo mundo.
 
@@ -2337,17 +2327,17 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     Ele NÃO é ativado: nascer não é passar a valer.
 
     **E NASCE SEM A SEÇÃO `mode` — decisão desta sprint, 11/09/2026.** Com o
-    quadro «Modo» fora do editor (ordem dela), a pergunta *"que modo tem um
+    quadro «Modo» fora do editor (ordem de produto), a pergunta *"que modo tem um
     perfil criado aqui?"* deixou de ter quem a responda na tela, e alguém tinha
     de decidir. É `None`, que é o que `Profile` já faz sozinho, e o valor tem
-    nome na tela dela: **«Não mexer no modo»** — o perfil sem opinião, que entra
+    nome na tela do usuário: **«Não mexer no modo»** — o perfil sem opinião, que entra
     e deixa o modo como estiver.
 
     POR QUE ESTE E NÃO OUTRO: é o único que preserva o comportamento de HOJE.
     Antes de 06/09 o campo não era alcançável por esta tela e todo perfil nascia
     assim; nos cinco dias em que o quadro existiu, quem não o tocou continuou
     nascendo assim. Qualquer outro padrão faria um perfil novo passar a MEXER no
-    modo da máquina dela sem que ninguém tivesse pedido — que é a cicatriz do
+    modo da máquina do usuário sem que ninguém tivesse pedido — que é a cicatriz do
     `or "xbox"` do Salvar da janela estável (ESCOLHA-DELA-VENCE-01/E1).
 
     QUEM MUDA DEPOIS É A ABA JOGAR, e nada aqui zera o campo de um perfil que já
@@ -2408,7 +2398,7 @@ def criar_para_o_jogo(ctx: Contexto, p: Any, *, classes: tuple[str, ...],
 def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Duplicar": o perfil inteiro numa cópia, e o editor abre nela.
 
-    A DICA DELA DIZ *"Copia o perfil inteiro para o editor, com «(cópia)» no
+    A DICA DO USUÁRIO DIZ *"Copia o perfil inteiro para o editor, com «(cópia)» no
     nome"*, e as três partes se cumprem — a última por consequência da segunda:
     a cópia nasce no disco e o `_ESCOLHIDO` passa a ser ela, então é ela que o
     editor pinta no tique seguinte.
@@ -2547,7 +2537,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("10-perfis.html", "procurar")
 def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """A lupa: guarda o que ela digitou, e o tique seguinte mostra a lista curta.
+    """A lupa: guarda o que o usuário digitou, e o tique seguinte mostra a lista curta.
 
     **ELE É UM GESTO VIVO (`data-hef-vivo`), e não um clique** — a quarta porta
     do piloto, a que dispara a cada TECLA e por contrato só LÊ. As outras três
@@ -2562,7 +2552,7 @@ def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     **E ELE NÃO GRAVA**, que é a outra metade do contrato do vivo: `_PROCURA`
     mora na memória desta janela. Um filtro que voltasse do disco esconderia
-    perfis dela na próxima abertura sem que ela tivesse digitado nada.
+    perfis do usuário na próxima abertura sem que ela tivesse digitado nada.
 
     O TERMO VEM DO `valor`, e não do `texto`: num `<input>` o `textContent` é
     vazio — é o defeito que deixou quatro campos desta aba sem dono em 01/09.
@@ -2653,7 +2643,7 @@ SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
 
 AGORA_NAO_DIZ = TRAVESSAO
 
-#: A dica da célula neutra, e a da máscara que não é a DualSense (decisão dela
+#: A dica da célula neutra, e a da máscara que não é a DualSense (decisão de produto
 #: de 29/09, pergunta [40]: «Aceso no DualSense», com a dica dizendo qual).
 DICA_DO_NAO_DIZ = "O controle não diz."
 DICA_DA_MASCARA = "Máscara: {mascara}."

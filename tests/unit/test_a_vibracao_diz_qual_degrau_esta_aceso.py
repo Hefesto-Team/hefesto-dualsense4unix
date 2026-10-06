@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A ABA VIBRAÇÃO: o degrau aceso vem do daemon, e a largura sai sem `%`.
 
-DUAS COISAS, e as duas foram medidas em 02/09/2026 com o daemon dela vivo e
+DUAS COISAS, e as duas foram medidas em 02/09/2026 com o daemon do usuário vivo e
 DOIS controles na mesa (um no `usb`, um no `bt`).
 
 1. **O DEGRAU ACESO SAÍA DO DESENHO, e o desenho MENTIA.** A política de
@@ -41,7 +41,7 @@ A MORDIDA:
   reprova — a barra viraria ``width:46.7%%``, que o CSS descarta.
 
 ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve e onde o endereço
-existe. A página publicada ainda não o tem, e é por isso que a tela dela não
+existe. A página publicada ainda não o tem, e é por isso que a tela do usuário não
 muda até o ``--publicar 05``.
 """
 from __future__ import annotations
@@ -154,7 +154,7 @@ def test_o_lugar_vazio_nao_acende_degrau_mas_tem_onde_receber(bancada) -> None:
 
     ESTA RÉGUA INVERTEU EM 07/09/2026. Ela pedia que o bloco vazio não tivesse
     `data-campo="degrau"`, e era essa ausência o defeito: medido com os quatro
-    DualSense dela na mesa, o daemon publicava os quatro, o pacote mandava as
+    DualSense do usuário na mesa, o daemon publicava os quatro, o pacote mandava as
     quatro colunas e o P3 e o P4 continuavam no travessão — o dado chegava e não
     tinha onde pousar (`hefesto_vivo._pintar` procura `data-campo` DENTRO do
     bloco daquele `data-controle`).
@@ -220,7 +220,7 @@ def test_o_degrau_emitido_e_sempre_um_dos_quatro() -> None:
 
 
 def test_a_mesa_sem_politica_nao_acende_degrau_nenhum() -> None:
-    """Campo sem informação NÃO MOSTRA NADA — a regra dela, 02/09/2026."""
+    """Campo sem informação NÃO MOSTRA NADA — a regra, 02/09/2026."""
     import pacotes
 
     pac = pacotes.pacote_da_pagina(PAGINA, _ctx(policy=""))

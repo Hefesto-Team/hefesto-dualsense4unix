@@ -52,7 +52,7 @@ def test_o_verde_leva_o_volume_do_alto_falante() -> None:
 
 
 def test_a_origem_diz_que_veio_do_rascunho() -> None:
-    """`origin="draft"` separa o gesto dela do autoswitch no journal."""
+    """`origin="draft"` separa o gesto do usuário do autoswitch no journal."""
     applier, daemon = _applier()
     applier.apply({"speaker": {"volume": 10}})
     assert daemon.speaker_chamado[0]["origin"] == "draft"

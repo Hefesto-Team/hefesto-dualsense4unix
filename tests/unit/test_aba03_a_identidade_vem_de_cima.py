@@ -99,7 +99,7 @@ def _cores(a03, r, mesa) -> dict[str, str]:
     Ela saiu do HTML do chip em 03/09/2026 e passou a ter endereço próprio no
     EMBRULHO — o único elemento que o produto pode pintar com o alvo `plastico`
     sem carimbar o selo dentro do HTML que ele mesmo compara. Uma régua que
-    continuasse procurando `--plastico` no chip daria verde sobre a mesa dela e
+    continuasse procurando `--plastico` no chip daria verde sobre a bancada e
     vermelho sobre a cura, que é o pior defeito que uma régua pode ter.
 
     O LUGAR SEM COLUNA NÃO APARECE AQUI, e é fato e não omissão: o `blocos`
@@ -224,7 +224,7 @@ def test_sem_cor_lida_o_chip_nao_veste_plastico(a03):
     """O controle por rádio, sem cor lida, sai `P2 • BT` — e nada mais.
 
     A LEITURA POR RÁDIO AINDA NÃO TRAZ A COR. A mesa nasce com `cor` vazia e
-    `nome` igual a `"Não sei"`, e a regra dela é a de sempre: *campo sem
+    `nome` igual a `"Não sei"`, e a regra de produto é a de sempre: *campo sem
     informação não mostra nada*. Cair de volta no mockup vestiria aquele
     controle com o plástico de outro.
 

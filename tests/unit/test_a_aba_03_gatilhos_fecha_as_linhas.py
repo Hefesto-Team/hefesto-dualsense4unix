@@ -283,7 +283,7 @@ def test_a_dica_do_pronto_acompanha_o_modo_no_tique(a03, ctx):
 # Elas exercitavam `a03_gatilhos.reenviar`, que foi apagado no dia em que a
 
 def test_o_reenvio_saiu_do_desenho():
-    """O `↻` SAIU da bancada — 06/09/2026, decisão dela.
+    """O `↻` SAIU da bancada — 06/09/2026, decisão de produto.
 
     **ESTA RÉGUA INVERTEU**, e a versão antiga (`…esta_nas_quatro_colunas…`)
     cobrava o botão em cada coluna, pela decisão [03] do PO de 04/09. Ela leu a
@@ -312,7 +312,7 @@ def test_o_reenvio_saiu_do_desenho():
 def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
     """O botão e o dono dele saem JUNTOS, e esta régua é a corda entre os dois.
 
-    **O ATO ACONTECEU — 08/09/2026, e esta régua é quem o cobrou.** Ela mandou
+    **O ATO ACONTECEU — 08/09/2026, e esta régua é quem o cobrou.** O usuário mandou
     tirar o `↻` em 06/09 (*"sai"*), vendo-o na tela; o desenho saiu no mesmo dia
     e o gesto ficou de propósito, porque o produto renderiza a PUBLICADA e o
     botão continuava lá. A publicação veio em `44c2327e` e a segunda metade do
@@ -363,12 +363,12 @@ def test_o_sucesso_pleno_nao_manda_recado(
         a03, ctx, disco_que_guarda, gesto_, clique):
     """Deu tudo certo? A tela PISCA, e nenhuma palavra nova entra nela.
 
-    **ESTA RÉGUA INVERTEU EM 06/09/2026**, e a inversão é decisão dela. Ela
+    **ESTA RÉGUA INVERTEU EM 06/09/2026**, e a inversão é decisão de produto. Ela
     cobrava a chave `recado` em todo sucesso — a D-01 do PO, *"no próprio
     cartão, como a recusa"*. Em 05/09 ela respondeu a `03-Q4` vendo as quatro
     formas lado a lado e escolheu **"O campo pisca em verde"**, recusando
     explicitamente a tarja verde no cartão, descrita na opção com a frase viva
-    desta aba. A palavra dela: *"nenhuma palavra nova entra na tela"*.
+    desta aba. A
 
     **O DEFEITO QUE A VERSÃO ANTIGA GUARDAVA CONTINUA GUARDADO** — *o gesto dá
     certo e a tela não diz nada* —, e quem o guarda agora é a piscada, medida
@@ -415,7 +415,7 @@ def test_a_falha_de_disco_continua_falando(
     ele tem NOTÍCIA, a tela fala.*
 
     O `reenviar` FICA DE FORA, e não é esquecimento: ele passa `guardar=False`
-    e não escreve byte nenhum no disco dela — logo não tem segunda metade a
+    e não escreve byte nenhum no disco do usuário — logo não tem segunda metade a
     dizer. Quem guarda esse contrato é
     `test_o_gatilho_aplicado_vai_para_o_perfil.py::test_o_reenviar_nao_ganhou_frase_de_disco`.
 
@@ -458,7 +458,7 @@ def test_o_guardar_nao_ganhou_recibo(a03, ctx, disco_que_guarda):
 
     ELE JÁ ESTAVA CERTO ANTES DA `03-Q4`, e é a razão de esta régua ser curta:
     com a piscada da `ONDA5-03-01`, um `None` passou a dizer "deu certo" sem
-    palavra nenhuma — exatamente o que ela pediu, sem uma linha nova. O risco
+    palavra nenhuma — exatamente o que o usuário pediu, sem uma linha nova. O risco
     que ela guarda é o de alguém "uniformizar" os cinco gestos acrescentando
     recibo a este, que é a forma pela qual a palavra voltaria à tela pela porta
     dos fundos.

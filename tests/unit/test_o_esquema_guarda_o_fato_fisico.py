@@ -28,7 +28,7 @@ PARES_DO_MOCKUP: dict[str, str] = {
 
 
 def test_a_face_guarda_perto_e_alto() -> None:
-    """``perto`` e ``alto`` entram no esquema, e são fato DELA."""
+    """``perto`` e ``alto`` entram no esquema, e são fato DO USUÁRIO."""
     mapa = MapaDaMesa.model_validate(
         {
             "faces": [
@@ -94,7 +94,7 @@ def test_o_no_torto_e_recusado(nos: list[str]) -> None:
 
 
 def test_a_irma_bate_com_o_desenho_dela_entrada_por_entrada() -> None:
-    """As catorze irmãs saem iguais às que ela escreveu à mão no mockup."""
+    """As catorze irmãs saem iguais às que o usuário escreveu à mão no mockup."""
     achadas = irmas_de(mapa_dela())
     assert achadas == PARES_DO_MOCKUP, (
         "a irmã derivada divergiu do desenho dela: "

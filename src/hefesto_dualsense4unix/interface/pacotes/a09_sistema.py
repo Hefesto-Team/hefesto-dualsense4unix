@@ -20,7 +20,7 @@ certa com `None`: devolve o traço. **Só que a página não é branca — ela �
 desenho dela.** Onde o pacote não escreve, o que fica na tela é o literal do
 mockup, e ele é convincente:
 
-    o que a tela mostrava          o que a máquina dela dizia (02/09, 04:23)
+    o que a tela mostrava          o que a máquina do usuário dizia (02/09, 04:23)
     ─────────────────────────────  ────────────────────────────────────────
     Como ele enxerga a janela: —   Sem ver nada agora (sem_foco_x)
     O que ele impõe:          —    Nada é limitado
@@ -118,7 +118,7 @@ _PERGUNTA: dict[str, Any] = {}
 
 
 def _a_pergunta_venceu() -> None:
-    """Tira a pergunta do painel quando o gesto dela deixou de estar armado."""
+    """Tira a pergunta do painel quando o gesto do usuário deixou de estar armado."""
     dono = _PERGUNTA.get("gesto")
     if not dono or _armado_agora() == dono:
         return
@@ -131,7 +131,7 @@ def _no_painel(repouso: Any) -> str:
     """O que vai ao painel AGORA: o último pedido, ou o repouso da camada.
 
     O VALOR DE REPOUSO É DA CAMADA DO PRODUTO (`aba_sistema.pacote`, a chave
-    `registro`), e não uma frase minha. Ela decidiu ali que, sem ninguém ter
+    `registro`), e não uma frase deste pacote. O usuário decidiu ali que, sem ninguém ter
     pedido, o painel mostra o traço — e o motivo vive em `SEM_FONTE`.
 
     O QUE ISSO ARRANCA DA TELA, e é o ponto inteiro: enquanto ninguém escrevia
@@ -259,7 +259,7 @@ def _autostart() -> str | None:
     01/09/2026: esta linha trazia a literal `hefesto-dev-dualsense4unix.service`,
     sobrevivente da purga do `-dev`. A unit com esse nome NÃO EXISTE mais;
     `systemctl --user is-enabled` devolvia `not-found` enquanto a verdade da
-    máquina dela era `enabled`. A linha "Ligar junto com o computador" da aba
+    máquina do usuário era `enabled`. A linha "Ligar junto com o computador" da aba
     Sistema afirmava o contrário do que estava valendo, e nenhuma régua via —
     porque o valor lido era um `str` plausível, não um erro.
     """
@@ -291,7 +291,7 @@ def _achados(state: dict[str, Any] | None,
     OS DOIS QUE FALTAVAM — 03/09/2026, e por isso o exame desta tela era 6/8 do
     exame da GTK. `_refresh_storm_diag` (`daemon_actions.py` e `:1185`)
     acrescenta ao `storm_report` mais dois achados, e os dois só FALAM QUANDO HÁ
-    PROBLEMA (devolvem `None` quando está tudo bem — decisão dela de 22/08/2026
+    PROBLEMA (devolvem `None` quando está tudo bem — decisão de 22/08/2026
     para o vigia do Steam Input):
 
     * `medir_guarda_do_steam_input()` — o vigia morto. **2,8 ms**, entra aqui;
@@ -301,7 +301,7 @@ def _achados(state: dict[str, Any] | None,
 
     Medido por grep antes de ligar: as duas funções tinham UM chamador em toda a
     árvore, e era a GTK. São funções de MÓDULO — não pedem janela, não pedem
-    `self` — então isto é ponte, não código novo. Na mesa dela, agora, as duas
+    `self` — então isto é ponte, não código novo. Na bancada, agora, as duas
     devolvem `None`: o exame continua com seis linhas, e é assim que a GTK
     também se comporta hoje. A diferença aparece no dia do problema, que é
     justamente o dia em que ela precisa ver.
@@ -341,12 +341,12 @@ def linha_do_som_do_sistema(
         state: dict[str, Any] | None) -> tuple[str, str] | None:
     """*"Som do sistema: sai em X, entra por Y"* — `None` quando não se sabe.
 
-    **O PEDIDO É DELA, 21/09/2026:** *"outra coisa que precisamos ter é
+    **O PEDIDO É DE PRODUTO, 21/09/2026:** *"outra coisa que precisamos ter é
     sincronia com os canais de saida de som e entrada de som do sistema
     operacional. isso é importante."*
     <!-- noqa-acento: citação literal -->
 
-    **OS NOMES SÃO OS DO PAINEL DELA, e é o ponto inteiro.** Eles vêm da
+    **OS NOMES SÃO OS DO PAINEL DO USUÁRIO, e é o ponto inteiro.** Eles vêm da
     `Description` que o próprio servidor de som publica — as mesmas palavras
     que o painel do COSMIC mostra («Microfone do Controle 1», «HDA NVidia
     Estéreo digital (HDMI)»). Ler o nome CRU aqui daria
@@ -469,7 +469,7 @@ def _prontuario(pode_perguntar: bool = True) -> tuple[str, str] | None:
 def _perguntar_o_prontuario() -> None:
     """O prontuário SEM a varredura dos executáveis. Guarda o resultado e sai.
 
-    ELA CUSTAVA 6,9 SEGUNDOS E ESTA TELA NÃO LIA UM BYTE DELA — medido em
+    ELA CUSTAVA 6,9 SEGUNDOS E ESTA TELA NÃO LIA UM BYTE DO USUÁRIO — medido em
     06/09/2026, e é a cura do pior tique das dez abas.
 
     `medir_prontuario_dos_jogos()` (`daemon_actions.py:596`) é a composição de
@@ -486,7 +486,7 @@ def _perguntar_o_prontuario() -> None:
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
     encosta na varredura: `prontuario_dos_jogos.py:385` o define como *"há
     carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
-    lidos do disco em milissegundos. Quem diz isso não sou eu — é o docstring do
+    lidos do disco em milissegundos. Quem diz isso é o docstring do
     dono, em `:559`: *"O carimbo não depende de ler executável nenhum"*. A
     `evidencia`, que é tudo o que os 7 s produzem, entra em `NAO_SEI` e em
     `IMPEDIDO`, e nenhum dos dois chega a esta aba.
@@ -526,10 +526,10 @@ def _nome_do_plastico(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     """O nome DESTE controle, pelo dono compartilhado — ou `""`.
 
     O dono é `pacotes.identidade_de`, e ele já sabe a ordem das quatro fontes
-    (*o que ELA nomeou > o modelo decodificado > o nome da MESA > o transporte
+    (*o que O usuário nomeou > o modelo decodificado > o nome da MESA > o transporte
     só*), já descarta o `"Não sei"` da mesa e já casa por `uniq` em vez de por
     posição. Escrever aqui uma quinta leitura seria a segunda verdade que a lei
-    dela de 03/09 proíbe — e as abas 02 e 06 já o chamam com `ctx.mesa`.
+    de produto de 03/09 proíbe — e as abas 02 e 06 já o chamam com `ctx.mesa`.
 
     OS DOIS ÚLTIMOS DEGRAUS DE `identidade_de` NÃO SERVEM COMO NOME. Ele nunca
     devolve vazio: sem nome nenhum cai no transporte e, sem nem isso, no
@@ -556,7 +556,7 @@ def _nome_do_plastico(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
 def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     """`P1 · White · cabo · <serial>` — a identidade de fábrica de UM controle.
 
-    DECISÃO 10 DELA, 03/09/2026: *"Serial de fábrica: inteiro, e SÓ na aba
+    DECISÃO 10 DO USUÁRIO, 03/09/2026: *"Serial de fábrica: inteiro, e SÓ na aba
     Sistema (a de diagnóstico)."* Ele é identificador único como um MAC, o daemon
     já o publica (`ipc_handlers._identidade_publicada`, ROTA-A de 02/09) e até
     hoje NENHUMA tela do produto o mostrava — nem esta, nem a GTK.
@@ -565,17 +565,15 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     caixa de diagnóstico desta aba, ela já existe, já tem endereço
     (`registro-texto`) e já está publicada. Uma linha de estado nova custaria
     30px numa coluna que o gerador engenha para acabar no mesmo y da irmã — e
-    seria mudança de DESENHO, que é decisão dela e não minha.
+    seria mudança de DESENHO, que é decisão de produto.
 
-    O NOME E O NÚMERO VÊM DE CIMA — 03/09/2026, e é a lei dela:
+    O NOME E O NÚMERO VÊM DE CIMA — 03/09/2026, e é a lei de produto:
 
-        "se no topo tá mostrando controle white player 1, então cada aba vai
-         usar os controles lá de cima. Não mistura com a info dos mockups."
 
     ESTA LINHA LIA SÓ O `modelo` DO `state_full`, e o `modelo` sai do serial —
     que o daemon **não publica para quem está no rádio** (ver
     :data:`SEM_SERIAL_LIDO`: o aparelho responde, o publicador é que cala).
-    Fotografado na mesa dela em 03/09/2026, com o P1 no cabo e o P2 no rádio:
+    Fotografado na bancada em 03/09/2026, com o P1 no cabo e o P2 no rádio:
 
         a fita, no topo      P1 · White · USB
                              P2 · Galactic Purple · BT
@@ -584,7 +582,7 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
 
     O MESMO APARELHO, NA MESMA TELA, com a identidade presente num lugar e
     ausente no outro — e o dado existia: `mesa_viva.LeitorDeCor` já o lê pelo
-    broker e traduz o código de fábrica pelo mapa DELA
+    broker e traduz o código de fábrica pelo mapa DO USUÁRIO
     (`docs/data/cores-do-dualsense.csv`, 28 modelos). Quem sabe juntar as duas
     portas é `pacotes.identidade_de`; ver :func:`_nome_do_plastico`.
 
@@ -602,17 +600,17 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
 
     NADA AQUI É INVENTADO: sem nome lido a linha não escreve nome nenhum, e sem
     serial ela diz :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como
-    defeito. É a regra dela — *campo sem informação não mostra nada*.
+    defeito. É a regra de produto — *campo sem informação não mostra nada*.
 
     A PALAVRA DO TRANSPORTE SAIU DAQUI — ONDA4-S10, 06/09/2026. Esta linha era
     `"cabo" if transport == "usb" else "rádio"`, e ela **já estava certa** — o
     que é exatamente o problema: era a QUARTA cópia de uma tradução que tem
-    dona, e a única que dizia a palavra dela. Duas coisas ela não tinha, e a
+    dona, e a única que dizia a palavra de produto. Duas coisas ela não tinha, e a
     dona tem: o transporte que o mapa não conhece volta CRU, para alguém o ver,
     e o transporte AUSENTE diz *"não sei por onde"* em vez de afirmar rádio
     sobre um campo que ninguém leu — que é o que o `else` fazia.
 
-    **Este passo não muda um pixel na mesa dela**, e é o que impede a próxima
+    **Este passo não muda um pixel na bancada**, e é o que impede a próxima
     pessoa de concluir que "a 09 já estava certa" e deixar a cópia viva.
     """
     numero = jogador_de(c)
@@ -639,8 +637,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
     dono dela — nunca digitada, pela razão que `_autostart()` já pagou.
 
     E A IDENTIDADE DE FÁBRICA VEM POR ÚLTIMO, que é a decisão 10 dela. As duas
-    coisas cabem no mesmo painel porque as duas respondem à mesma pergunta —
-    *"o que eu digo ao suporte?"*.
+    coisas cabem no mesmo painel porque as duas respondem à mesma pergunta.
 
     A ORDEM FOI MEDIDA, NÃO ESCOLHIDA. O painel tem 110 px (seis linhas) e leva
     `data-hef-rolar="fim"`: ele SEMPRE mostra o fim do texto. E
@@ -1017,7 +1014,7 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
 
     A COR SÓ APARECE SE ALGUÉM A LEU. Sem leitura o chip perde a classe
     `plastico` (e com ela a borda colorida), perde o `--plastico` e perde o nome:
-    é a regra dela, *campo sem informação não mostra nada*. Inventar um tom para
+    é a regra de produto, *campo sem informação não mostra nada*. Inventar um tom para
     preencher seria repetir o defeito que esta frente veio matar, só que com
     outra cor.
 
@@ -1030,7 +1027,7 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
     **A FITA E A LINHA DE IDENTIDADE FALAM A MESMA LÍNGUA — ONDA4-S10,
     06/09/2026.** A foto de 03/09 transcrita em `_linha_de_identidade` pegou as
     duas na MESMA tela em dialetos diferentes: a fita dizia a sigla de máquina e
-    o painel logo abaixo dizia a palavra dela. O chip lia `via` da mesa, que é a
+    o painel logo abaixo dizia a palavra de produto. O chip lia `via` da mesa, que é a
     sigla; agora ele pergunta ao dono, com o `transporte` cru que a mesa publica
     ao lado. Nenhuma palavra é escrita aqui.
     """
@@ -1099,9 +1096,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     `data-campo` daqui: `hefesto-estado`, `hefesto-pausa`,
     `hefesto-troca-de-perfil`, `hefesto-ambiente`.
 
-    E SABE MAIS QUE O QUE EU TINHA ESCRITO: cada valor vem com `txt`, a classe
-    do selo (`cls`), o glifo (`g`) e a dica. Meu pacote só tinha o texto — e as
-    frases dele eram minhas, enquanto estas foram escritas com ela.
+    E SABE MAIS QUE O PACOTE ANTIGO: cada valor vem com `txt`, a classe
+    do selo (`cls`), o glifo (`g`) e a dica. O pacote antigo só tinha o texto, e as
+    frases dele eram deste arquivo, enquanto estas vêm da camada do produto.
 
     O QUE ELE EMITE É O ENDEREÇO DA PÁGINA, E NADA MAIS — 02/09/2026. Antes
     saíam quatro chaves com o nome que a CAMADA usa (`frase`, `autostart`,
@@ -1147,7 +1144,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
-    # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido dela: *«Remove esse
+    # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido: *«Remove esse
     if isinstance(exame, dict):
         fora["exame-lista"] = _html_do_exame(_com_os_avisos(exame, ctx))
     tira = _html_da_fita(ctx.mesa)
@@ -1173,7 +1170,7 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
     """As linhas que a coluna Atenção da Jogar publicava, já na forma do exame.
 
     A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. A coluna Atenção saiu da Jogar em
-    07/09, por ordem dela, e as fontes que só ela publicava ficaram caladas no
+    07/09, por ordem de produto, e as fontes que só ela publicava ficaram caladas no
     produto: as de `painel.AVISOS_DA_TELA` e as duas que o pacote da Jogar
     junta a elas (o opt-out antigo e a divergência de máscara). Ficam fora as
     que a tela já diz noutro lugar (`a01_jogar._avisos_com_outra_casa`): a
@@ -1262,8 +1259,8 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
 
     A FRASE INTEIRA VAI NO `title`, e é a cura de 03/09/2026. A linha do exame é
     UMA linha e o desenho a corta: `09-sistema.html:825` diz
-    `overflow:hidden;text-overflow:ellipsis;white-space:nowrap`. Medido na mesa
-    dela, na foto do produto instalado, com um controle no cabo — **CINCO das
+    `overflow:hidden;text-overflow:ellipsis;white-space:nowrap`. Medido na bancada, na foto do
+    produto instalado, com um controle no cabo — **CINCO das
     seis linhas cortavam**, e sem `title` não havia como ler o resto:
 
         cura do travamento do USB ATIVA (mic e fone do co…      68 car, ~22 escondidos
@@ -1288,7 +1285,7 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     valores que encurta (ver `APELIDO_NA_TELA` e o `inteiro=` do `est()`), e a
     nota de lá diz o mesmo — *"a frase INTEIRA continua no `title` do valor (…)
     é ele que segura a informação"*. Quebrar a linha em duas mudaria a altura do
-    quadro, que é desenho, e desenho é decisão dela.
+    quadro, que é desenho, e desenho é decisão de produto.
 
     O «O QUE FAZER» NÃO CHEGA MAIS À TELA — SISTEMA-BOTOES-01, 13/09/2026. Ele é
     instrução do `doctor`, e a linha da `WirePlumber` mandava clicar em
@@ -1359,7 +1356,7 @@ from . import gesto  # noqa: E402
 SUFIXO_DA_RAZAO = "-razao"
 
 #: São exatamente os três que `aba_sistema.travas()` alcança E que esta aba
-#: (SISTEMA-BOTOES-01), pela decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
+#: (SISTEMA-BOTOES-01), pela decisão de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM
 BOTOES_CINZAS = ("reiniciar",)
 
 #: troca o RÓTULO do botão do `daemon.reload`, logo o desenho mudou um pixel e
@@ -1394,7 +1391,7 @@ def _trava(ctx: Contexto, nome: str,
 
     ELA NÃO PINTA O BOTÃO DE CINZA, E ISSO ESTÁ DECLARADO. O desenho não tem
     estado apagado para `.btn` (medido: a folha desta página tem
-    `.seg button:disabled`, e nada para `.btn`), e inventá-lo mudaria o que ela
+    `.seg button:disabled`, e nada para `.btn`), e inventá-lo mudaria o que o usuário
     aprovou. O que esta função destrava é a metade que NÃO é desenho: o clique
     inútil passa a RECUSAR DIZENDO o motivo, em vez de disparar um no-op que se
     apresenta como ação. Era o defeito exato que
@@ -1437,7 +1434,7 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     é o segundo, e é uma tela.
 
     A RECUSA ENTROU EM 03/09/2026, e o defeito estava na foto: com `paused:
-    False` — medido na mesa dela — o botão ficava verde e clicável, e o clique
+    False` — medido na bancada — o botão ficava verde e clicável, e o clique
     mandava `daemon.resume` a um daemon que não está pausado. Um no-op que se
     apresenta como ação.
     """
@@ -1469,7 +1466,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
     (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.
 
-    ELE LEVA 9,5 SEGUNDOS, medido no daemon dela em 01/09/2026 — contra 1 ms do
+    ELE LEVA 9,5 SEGUNDOS, medido no daemon do usuário em 01/09/2026 — contra 1 ms do
     `daemon.resume` e 57 ms do `daemon.status`. É a razão de os gestos rodarem em
     thread: síncrono, este botão congelaria a janela inteira por nove segundos e
     meio, e quem clicou concluiria que o app travou. É também a razão de
@@ -1538,7 +1535,7 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
     A TOLERÂNCIA AO `bool` NÃO É ENFEITE: o dublê da régua
     (`tests/unit/test_os_botoes_tem_dono.py`, `PonteDeMentira.__getattr__`)
     devolve a dupla só para `identity…_set` e `True` para todo o resto. Sem esta
-    função o gesto rebentaria com `TypeError` na régua e funcionaria na mão dela
+    função o gesto rebentaria com `TypeError` na régua e funcionaria na mão do usuário
     — a régua reprovando a cura, que é a forma de defeito que esta casa já pagou
     onze vezes em 26/08.
     """
@@ -1554,13 +1551,13 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     POR QUE `machine.declare` E NÃO `rumble.policy_set`, que seria o palpite: o
     teto da MESA e a política de vibração são dois donos diferentes. O
     `_effective_mult` (`core/rumble.py:104`) lê os dois e aplica `min` entre
-    eles — `_sob_o_teto`, nunca produto —, então gravar a escolha dela como
+    eles — `_sob_o_teto`, nunca produto —, então gravar a escolha do usuário como
     política apagaria a política por controle que as outras abas escrevem. Quem
     é dono desta escolha é o `orcamento.teto` do `maquina.json`, e o contrato do
     produto diz o mesmo: `interface/sistema.GESTOS["perfil-da-mesa"]` aponta para
     `secao_orcamento._ao_escolher:468`, que monta `{"orcamento": {"teto": …}}`.
 
-    O QUE MUDA EM RELAÇÃO À JANELA ANTIGA, e é decisão dela: lá o
+    O QUE MUDA EM RELAÇÃO À JANELA ANTIGA, e é decisão de produto: lá o
     `_ao_escolher` **não manda IPC** — acumula em `host._maquina_pendente` e só o
     "Aplicar" do rodapé grava (`footer_actions.py`). Aqui vale a regra de
     01/09: *"clicar na cor já deveria aplicar"*. O gesto age na hora, e o
@@ -1628,7 +1625,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     E O ESTADO NÃO SE INVERTE ÀS CEGAS. Com `is-enabled` ilegível
     (`autostart_ligado` devolve `None`), o gesto RECUSA em vez de adivinhar: um
     `enable` disparado sobre "não sei" tem 50% de chance de desfazer a escolha
-    dela sem que ninguém tenha pedido.
+    do usuário sem que ninguém tenha pedido.
 
     ELE ESTÁ EM `hefesto_vivo.PERIGOSOS` — já estava, antes de ter dono — e por
     isso a prova automática desta casa NUNCA o clica. Ligar um gesto que mexe na
@@ -1649,15 +1646,15 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A TRAVA VEM DA CAMADA DO PRODUTO: com o serviço desligado, `travas()`
     responde *"O serviço está desligado — não há o que reiniciar."* — e é essa a
-    frase que chega à tela, não uma minha.
+    frase que chega à tela, não uma deste pacote.
 
     ELE TAMBÉM JÁ ESTAVA EM `hefesto_vivo.PERIGOSOS`: reiniciar o daemon derruba
     a sessão dele no meio do trabalho dela, e a régua não o clica.
 
-    **E ELE REPÕE O LANÇADOR — decisão dela, 21/09/2026.** A pergunta foi dela:
+    **E ELE REPÕE O LANÇADOR — decisão, 21/09/2026.** A pergunta foi do usuário:
     *"seria importante ele fechar e reabrir o launcher, seja steam, epic,
     heroic ou qualquer outro"*; posta entre três formas (automático · oferecido
-    num segundo clique · botão separado), ela escolheu a primeira com estas
+    num segundo clique · botão separado), o usuário escolheu a primeira com estas
     palavras: *"Faz automático mesmo"*.
     <!-- noqa-acento: citação literal -->
 
@@ -1673,7 +1670,7 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     **QUEM DECIDE E QUEM AGE É `reposicao_dos_lancadores`**, e nenhuma regra
     dele mora aqui — inclusive a única exceção ao "automático": com jogo
     aberto, nada é fechado, porque fechar o lançador fecharia o jogo junto. Não
-    é ressalva minha; é o contrato que o produto já aplica desde 18/09.
+    é ressalva deste pacote; é o contrato que o produto já aplica desde 18/09.
 
     **A FALHA DA REPOSIÇÃO NÃO DESFAZ O REINÍCIO.** O `restart` já aconteceu e
     deu `rc=0`; levantar aqui faria a tela dizer "não consegui" sobre um
@@ -1706,7 +1703,7 @@ CONFIRMA = "Confirma?"
 _CONFIRMA_DO_GESTO: dict[str, str] = {}
 
 
-#: O VERBO É DELA — *"em sistema um específico pra parar o Daemon E Ativar o
+#: O VERBO É DO USUÁRIO — *"em sistema um específico pra parar o Daemon E Ativar o
 ATIVAR = "Ativar o serviço"
 
 DESLIGAR = "parar-ou-retomar"
@@ -1734,7 +1731,7 @@ def _rotulo_do_desenho(gesto: str) -> str:
 
     O dono do rótulo é o gerador (`interface/aba09.py`, o `item()`), e o que ele
     produziu está na página que o produto renderiza. Digitar "Parar o serviço"
-    aqui seria o segundo dono de uma palavra que ela escolheu — e envelheceria
+    aqui seria o segundo dono de uma palavra que o usuário escolheu — e envelheceria
     calado no dia em que ela trocasse o verbo, que é exatamente o que aconteceu
     em 31/08 ("encerrar" -> "parar").
 
@@ -1750,7 +1747,7 @@ def _rotulo_do_desenho(gesto: str) -> str:
 
     A ORDEM É PUBLICADO PRIMEIRO, e ela importa: onde os dois têm o botão, quem
     manda é o que o produto RENDERIZA — comparar contra a bancada faria o guarda
-    esperar uma palavra que a tela dela não mostra.
+    esperar uma palavra que a tela do usuário não mostra.
     """
     if not _ROTULOS:
         for publicado in (True, False):
@@ -1846,19 +1843,18 @@ def _confirmado(o: dict[str, Any], gesto_: str,
 
 @gesto("09-sistema.html", DESLIGAR, grava="_systemctl")
 def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O PAR que ela pediu, num botão só: **Parar o serviço** e **Ativar o serviço**.
+    """O PAR que o usuário pediu, num botão só: **Parar o serviço** e **Ativar o serviço**.
 
-    DECISÃO DELA, 03/09/2026, com estas palavras: *"E em sistema um específico
-    pra parar o Daemon E Ativar o Daemon (sendo que em jogar também consegue
-    isso)."* — **um** controle, os dois atos. E é o que a página comporta: a
+    DECISÃO, 03/09/2026, com estas palavras:  — **um** controle, os dois atos. E é o que a página
+    comporta: a
     coluna de ações desta faixa tem quatro botões e o portão do gerador
     (`aba09.py`, o par de alturas) reprova o quinto, porque as duas colunas
     irmãs desta aba acabam no mesmo y. Um botão a mais abriria os 38px de vão
-    que ela reclamou em 31/08.
+    que o usuário reclamou em 31/08.
 
     AS DUAS CARAS NÃO SÃO SIMÉTRICAS, e a assimetria é o ponto:
 
-    * **Parar** derruba o serviço e os controles dela viram gamepads comuns —
+    * **Parar** derruba o serviço e os controles do usuário viram gamepads comuns —
       pede os dois cliques (:func:`_confirmado`);
     * **Ativar** devolve o que já estava parado. Não há o que perder, e pedir
       confirmação para consertar seria uma parede na saída de emergência: com o
@@ -1875,7 +1871,7 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     A TRAVA DA CAMADA NÃO É CONSULTADA NESTE, e está declarado: `travas()` prende
     o `desligar` com *"O serviço já está desligado"* — que é verdade e deixou de
     ser trava no instante em que o botão passou a LIGAR nesse estado. Consultá-la
-    aqui recusaria exatamente o clique que ela pediu que funcionasse.
+    aqui recusaria exatamente o clique que o usuário pediu que funcionasse.
 
     O QUE ELE DEVOLVE é o `blocos:` dos cinco rótulos, para a troca ser
     instantânea: sem isso a palavra do botão só mudaria no tique seguinte, e
@@ -1911,14 +1907,13 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def ativar_o_servico() -> bool:
     """Liga o serviço se ele estiver PARADO. Devolve se ELE precisou ligar.
 
-    DONO ÚNICO DO ATO, e ele existe por causa da outra metade da decisão dela:
-    *"Adiciona essa função extra quando clicar em ligar"* — o interruptor
+    DONO ÚNICO DO ATO, e ele existe por causa da outra metade da  — o interruptor
     **Ligado** da aba Jogar liga o serviço também, e é o mesmo ato que o "Ativar
     o serviço" desta aba faz. Escrito duas vezes, ele teria dois donos: uma
     cópia desarmaria o `_user_stopped_daemon` e a outra não, e o daemon voltaria
     a morrer no próximo F5 por um caminho e não pelo outro.
 
-    OS TRÊS PORTÕES SÃO DO PRODUTO, e não meus — são exatamente os que
+    OS TRÊS PORTÕES SÃO DO PRODUTO, e não deste pacote — são exatamente os que
     `daemon_actions.ensure_daemon_running` consulta antes de subir o daemon, na
     ordem dele:
 
@@ -2004,7 +1999,7 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     Funciona, e é frágil — ninguém o religa quando ele cai, e ele não volta com
     o computador.
 
-    OS TRÊS TEMPOS SÃO OS DA JANELA ANTIGA, na ordem dela: ler o pid, pedir ao
+    OS TRÊS TEMPOS SÃO OS DA JANELA ANTIGA, na ordem de produto: ler o pid, pedir ao
     processo avulso que saia, subir a unit. **Nenhum deles é escrito aqui de
     novo:** o pid vem de `_read_daemon_pid`, a saída passa por
     :func:`_o_avulso_saiu` (que consulta o `is_alive` do produto) e quem sobe a
@@ -2079,8 +2074,8 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     em massa recusa DIZENDO, com a frase do dono
     (`daemon_actions.frase_sem_aplicacao_em_massa`).
 
-    O CONSENTIMENTO É EXIGÊNCIA DO MOTOR, e não desenho meu: `with_steam_closed`
-    FECHA a Steam dela por uns 20 segundos. A pergunta é a mesma que o diálogo
+    O CONSENTIMENTO É EXIGÊNCIA DO MOTOR, e não desenho da tela: `with_steam_closed`
+    FECHA a Steam do usuário por uns 20 segundos. A pergunta é a mesma que o diálogo
     da janela antiga fazia — `DaemonActionsMixin._STEAM_APPLY_CORPO`, palavra
     por palavra —, e ela sai de lá hoje justamente para não haver duas.
 
@@ -2093,7 +2088,7 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     (:func:`_pergunta_da_steam`), e chega pelo PACOTE — não depende do canal de
     recado, que a TELA-CALADA-01 cala para o sucesso.
 
-    OS TRÊS DESFECHOS DO MOTOR ESTÃO COBERTOS, e nenhuma frase é minha: a
+    OS TRÊS DESFECHOS DO MOTOR ESTÃO COBERTOS, e nenhuma frase é deste pacote: a
     recusa da janela (`format_steam_janela_recusa` — jogo aberto, a Steam não
     fechou, resposta inesperada) e o resultado (`format_apply_wrapper_result` —
     quantos jogos mudaram, quantos ficaram, quantos falharam). **O resultado
@@ -2147,7 +2142,7 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     cliques — e o refresh das abas velhas, que esta interface não tem.
 
     O QUE O SEGURAVA ERA A REDE DE SEGURANÇA: um gesto que grava restauraria o
-    perfil DELA quando a prova botão a botão o acionasse. A rede mora no
+    perfil do usuário quando a prova botão a botão o acionasse. A rede mora no
     decorador desde a `ONDA3-GESTO-DECLARA-01`, e este gesto a declara no mesmo
     commit em que nasce — `pacotes.perigosos()` o recebe derivado, e o
     `--prova-gesto` nunca o clica.

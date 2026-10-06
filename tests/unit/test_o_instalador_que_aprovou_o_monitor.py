@@ -1,6 +1,6 @@
 """INSTALADOR-QUE-APROVOU-O-MONITOR-01 — o install dizia OK sobre o que o doctor reprova.
 
-MEDIDO em 09/08/2026, na máquina dela, no MESMO terminal, com dois minutos de
+MEDIDO em 09/08/2026, na máquina do usuário, no MESMO terminal, com dois minutos de
 diferença:
 
     passo 10/11 do install.sh:
@@ -141,7 +141,7 @@ def _rodar(func: str, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
 
 
 def test_monitor_nao_e_aprovado_pela_verificacao_do_install(tmp_path: Path) -> None:
-    """O estado EXATO de 09/08 na máquina dela tem de REPROVAR.
+    """O estado EXATO de 09/08 na máquina do usuário tem de REPROVAR.
 
     Este é o teste que morde: com a cura arrancada, a função devolvia 0 e
     imprimia `OK: microfone padrão ativo = …monitor (DualSense fora)`.
@@ -159,7 +159,7 @@ def test_o_monitor_do_proprio_controle_tambem_reprova(tmp_path: Path) -> None:
 
     O `.monitor` do sink do DualSense casa "DualSense" no nome sem ser o mic —
     e a verificação dizia `OK: mic do DualSense desabilitado`. É o mesmo defeito
-    com outro nó: gravar a saída do controle não é gravar a voz dela.
+    com outro nó: gravar a saída do controle não é gravar a voz do usuário.
     """
     monitor_do_controle = (
         "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
@@ -241,7 +241,7 @@ def test_install_confere_a_fonte_padrao_depois_da_cura() -> None:
 
 
 def test_install_reprova_o_monitor_com_a_consequencia_na_tela() -> None:
-    """Não basta dizer "monitor": ela tem de ler o que isso faz com a voz dela."""
+    """Não basta dizer "monitor": ela tem de ler o que isso faz com a voz do usuário."""
     texto = _texto_do_install()
     assert "o microfone padrão do sistema é um MONITOR" in texto
     assert "SAI do PC" in texto, "a consequência sumiu do texto do install"

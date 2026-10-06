@@ -485,7 +485,7 @@ def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
 async def test_com_um_movimento_esperando_nenhum_outro_comeca(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Um por vez vale também para o arrastar. A palavra dela:"""
+    """Um por vez vale também para o arrastar. A palavra de produto:"""
     from types import SimpleNamespace
 
     central = _central(dono, mundo, relogio)

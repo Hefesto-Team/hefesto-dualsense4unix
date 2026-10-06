@@ -38,7 +38,7 @@ def _libraryfolders(steamapps: Path, caminhos: list[Path]) -> None:
 
 @pytest.fixture()
 def casa_com_link(tmp_path: Path) -> Path:
-    """A forma REAL da máquina dela: `.steam/steam` é link, e o vdf cita o alvo."""
+    """A forma REAL da máquina do usuário: `.steam/steam` é link, e o vdf cita o alvo."""
     real = tmp_path / ".steam/debian-installation"
     (real / "steamapps").mkdir(parents=True)
     (tmp_path / ".steam/steam").symlink_to(real, target_is_directory=True)

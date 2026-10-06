@@ -3,7 +3,7 @@
 
 A PERGUNTA QUE ELE DECIDE
 --------------------------
-A `VIBRACAO-POR-MOTOR-01` (decisão dela, 04/09/2026) diz que cada motor tem um
+A `VIBRACAO-POR-MOTOR-01` (decisão, 04/09/2026) diz que cada motor tem um
 multiplicador próprio que **compõe** com o degrau da coluna::
 
     efetivo(motor) = degrau(coluna) x barra(motor)
@@ -23,7 +23,7 @@ O DESENHO — e a sacada é medir a RAZÃO, não o valor absoluto
 -------------------------------------------------------------
 O par sai da conta DO PRODUTO (`daemon.subsystems.gamepad._mults_por_motor`,
 com um daemon sintético carregando os números dela), nunca de um `150` e um
-`75` digitados aqui: um par digitado mediria o meu palpite.
+`75` digitados aqui: um par digitado mediria o palpite de quem o digitou.
 
 O par é entregue pelo `rumble.set` do daemon VIVO, que é a porta de escrita
 desta casa — nada de `os.write` cru disputando o hidraw com quem já o segura
@@ -33,7 +33,7 @@ par, e isso não atrapalha: **um fator comum aos dois motores não muda a razão
 entre eles**, e a razão é a assinatura da barra. O degrau vigente sai impresso
 no cabeçalho, como manda a casa.
 
-Os passos, e cada um é uma pergunta para a mão dela::
+Os passos, e cada um é uma pergunta para a mão do usuário::
 
     1  PAR SIMÉTRICO   (base, base)          controle POSITIVO — os dois tremem
     2  O PAR DA CONTA  (base * fraca, base * forte)  o fraco inteiro, o forte pela metade
@@ -51,13 +51,13 @@ Os passos, e cada um é uma pergunta para a mão dela::
 O QUE ELE **NÃO** PROVA, e está dito em vez de escondido
 ---------------------------------------------------------
 **Ele não prova que o daemon INSTALADO faz a conta.** O daemon vivo é o da
-árvore dela; o código desta sprint mora numa worktree e só chega ao aparelho
-depois do merge e de um `install.sh` — que agente nenhum roda. O que ele prova é
+árvore do usuário; o código desta sprint mora numa worktree e só chega ao aparelho
+depois do merge e de um `install.sh` — que o ensaio não roda. O que ele prova é
 o andar de baixo: que o par que a conta produz **chega ao motor como par**, com
 os dois motores em intensidades diferentes. O andar de cima é o teste de
 unidade, e os dois juntos fecham a afirmação.
 
-A BANCADA É DELA
+A BANCADA É DO USUÁRIO
 -----------------
 Escrever no aparelho exige a bancada. O ensaio chama `scripts/bancada.sh exigir`
 sozinho e PARA com `rc=2` se ela estiver tomada — nunca contorna por outro
@@ -66,9 +66,9 @@ caminho, que é como se inventa medição falsa.
 Uso::
 
     scripts/ensaios/o_multiplicador_chega_ao_motor.py --sem-escrever   # só a conta
-    scripts/ensaios/ONDA...py --base 200 --segundos 1.5                # na mão dela
+    scripts/ensaios/ONDA...py --base 200 --segundos 1.5                # na mão do usuário
 
-Ele não abre janela nenhuma: sem GTK, sem navegador, sem `DISPLAY`. A tela dela
+Ele não abre janela nenhuma: sem GTK, sem navegador, sem `DISPLAY`. A tela do usuário
 não recebe nada.
 """
 from __future__ import annotations

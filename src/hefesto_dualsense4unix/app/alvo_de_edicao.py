@@ -19,8 +19,8 @@ controles conectados. Nenhum toast, nenhuma recusa.
 
 **A causa é que ``None`` carregava duas coisas diferentes:**
 
-* *"ela clicou em Todos"* — escolha legítima e deliberada, que a R-16 protege;
-* *"eu não sei quem é o alvo"* — ausência de informação.
+* *"o usuário clicou em Todos"* — escolha legítima e deliberada, que a R-16 protege;
+*  — ausência de informação.
 
 Este módulo separa as duas em estados distintos, e é o único lugar que escreve
 o alvo. A regra da casa aplicada literalmente: **ausência de informação se
@@ -56,7 +56,7 @@ produção, não em teste:
    escreve**, e mostra ``alvo.recusa()``.
 3. Aba para quem a pergunta não faz sentido chama
    ``ConfigActionsMixin.set_alvo_inativo(True, motivo)`` — motivo GUARDADO,
-   nunca pintado no cabeçalho (decisão dela de 23/08/2026) — e escreve o
+   nunca pintado no cabeçalho (decisão de 23/08/2026) — e escreve o
    motivo na própria docstring: foi a docstring que provou, nesta sprint, que
    aquela aba se desqualificou de propósito e não por esquecimento.
 4. Aba que ganha widget de escolha novo declara em qual dos três ele cai.

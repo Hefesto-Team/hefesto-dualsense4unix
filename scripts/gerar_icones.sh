@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gera TODOS os ícones do projeto a partir do SVG canônico.
 #
-# Pedido dela, literal, em 01/08/2026:
+# Pedido, literal, em 01/08/2026:
 #   "então o PNG tem que tá automatizado pra sempre refletir o SVG — tipo, se eu
 #    voltar a abrir e mudar o desenho dele, eu quero ver isso refletido em tudo
 #    que faça uso dele"
@@ -64,8 +64,8 @@ cd "$AQUI"
 
 SVG="assets/hefesto-logo.svg"
 
-# O SVG QUE VAI PARA O RASTERIZADOR NÃO É O ARQUIVO DELA — é uma cópia com os
-# transforms ASSADOS. Decisão dela, 30/08/2026:
+# O SVG QUE VAI PARA O RASTERIZADOR NÃO É O ARQUIVO DO USUÁRIO — é uma cópia com os
+# transforms ASSADOS. Decisão, 30/08/2026:
 #   *"então o nosso install sempre deve corrigir ele pra ter o mesmo SVG em
 #    qualquer versão, PNG ou afins."*
 #

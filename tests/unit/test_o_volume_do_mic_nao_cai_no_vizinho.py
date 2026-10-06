@@ -1,6 +1,6 @@
 """ONDA5-02-01: o deslizante do microfone parou de cair na placa do vizinho.
 
-**A palavra dela, 02-Q8, 05/09/2026**, depois de eu oferecer três redações de
+**A palavra de produto, 02-Q8, 05/09/2026**, depois de se oferecerem três redações de
 bilhete para a tela CONFESSAR a queda:
 
     *"Esse erro não deveria acontecer. Deveria ser só pro controle em questao.
@@ -15,7 +15,7 @@ O QUE ESTAVA ABERTO, e onde
 `_handle_mic_volume_set` resolvia a fonte pelo `uniq` e, quando não resolvia,
 caía para `fonte_de_captura_do_controle()` — a PRIMEIRA source de DualSense da
 lista. Com dois controles ligados, "a primeira" é quem calhou de aparecer
-primeiro no `pactl`, e é isso, e nada mais, que fazia o deslizante do card dela
+primeiro no `pactl`, e é isso, e nada mais, que fazia o deslizante do card
 mexer no microfone de outra pessoa.
 
 A regra que ela pede **já estava escrita um arquivo ao lado**: a aplicação de

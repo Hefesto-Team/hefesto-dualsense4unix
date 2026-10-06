@@ -268,7 +268,7 @@ class TestDreno:
     def test_dreno_descarta_apos_gesto_manual_novo(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A última palavra é dela: gesto novo mata a pendência do perfil."""
+        """A última palavra é de produto: gesto novo mata a pendência do perfil."""
         setters = self._adiar(daemon, relogio, monkeypatch)
         relogio.avancar(20.0)
         daemon._emu_manual_ts = relogio.agora
@@ -390,7 +390,7 @@ class TestRelatorio:
         monkeypatch: pytest.MonkeyPatch,
         isolated_profiles_dir: Path,
     ) -> None:
-        """Com o Modo Freestyle ligado, o gesto DELA continua valendo.
+        """Com o Modo Freestyle ligado, o gesto do usuário continua valendo.
 
         NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. A fronteira
         que este teste travava (o cadeado morava só no `AutoSwitcher._tick`)
@@ -465,7 +465,7 @@ class TestIpcProfileSwitch:
         assert resposta["active_profile"] == "sackboy_nativo"
         assert resposta["mode_aplicado"] is True
         assert resposta["secoes"]["mode"] == "aplicado"
-        # VERDADE-01: o `profile.switch` do IPC é gesto dela (ver acima).
+        # VERDADE-01: o `profile.switch` do IPC é gesto do usuário (ver acima).
         assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
 
 

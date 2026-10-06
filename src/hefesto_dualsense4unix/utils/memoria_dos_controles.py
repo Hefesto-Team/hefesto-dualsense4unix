@@ -1235,7 +1235,7 @@ def _devolver_um(pasta: Path, item: Item, depois_do_teste: Path, relato: Relato)
 
 
 def _dizer_as_escolhas_de_camada(pasta: Path, manifesto: Manifesto, relato: Relato) -> None:
-    """As camadas que ela mandou MANTER não voltam sozinhas — ditas por nome."""
+    """As camadas que o usuário mandou MANTER não voltam sozinhas — ditas por nome."""
     for item in manifesto.itens:
         if item.chave != "camadas-vulkan":
             continue
@@ -1675,7 +1675,7 @@ def _nome_e_nosso(nome: str) -> bool:
 
     O endpoint da háptica se chama ``alsa_output.usb-…_HEFESTO…`` (é ele que o
     jogo acha como um DualSense de cabo); o nó cru do DualSense de verdade não
-    tem o ``HEFESTO`` e é dela.
+    tem o ``HEFESTO`` e é do usuário.
     """
     return nome.strip().lower().startswith(_INICIOS_DE_NOME_NOSSO) or "HEFESTO" in nome
 

@@ -22,7 +22,7 @@ def sem_tocar_o_pipewire_da_maquina() -> Any:
     por controle e escreve o resultado em `_CAMADA_1`, que é **estado de
     módulo**. Duas consequências, e as duas doem:
 
-    1. a régua vai ao PipeWire da máquina de quem a roda — e a máquina dela
+    1. a régua vai ao PipeWire da máquina de quem a roda — e a máquina do usuário
        está em uso;
     2. a leitura fica no módulo para a régua SEGUINTE. Medido em 12/09/2026:
        com este arquivo antes de `test_a02_a_fonte_do_som_ganha_gesto.py`, duas

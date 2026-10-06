@@ -85,7 +85,7 @@ def _campos(a08: Any, *movimentos: dict[str, Any], busca: int | None = None) -> 
 
 
 def _chip(a08: Any, adaptador: int) -> None:
-    """O clique dela no chip (ou na caixa): o adaptador aberto é o destino."""
+    """O clique do usuário no chip (ou na caixa): o adaptador aberto é o destino."""
     a08._ABERTO["lugar"] = _id(ADAPTADORES[adaptador])
 
 

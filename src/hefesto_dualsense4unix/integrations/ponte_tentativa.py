@@ -13,7 +13,7 @@ A divisão continua a mesma, e é ela que mantém as duas coisas separáveis:
 - este módulo GUARDA A TENTATIVA EM CURSO e chama aquelas decisões nos três
   momentos em que o produto encosta nelas;
 - quem AGE continua sendo `daemon/launch_env.py` (no lançamento) e
-  `daemon/subsystems/hotkey.py` (no gesto dela). Nenhum dos dois ganhou
+  `daemon/subsystems/hotkey.py` (no gesto do usuário). Nenhum dos dois ganhou
   decisão nova: os dois passaram a perguntar.
 
 OS TRÊS MOMENTOS
@@ -62,9 +62,8 @@ come o aperto dela.
   é o único canal que ela enxerga sem sair do jogo: o `hotkey` pisca a cor do
   modo pulado (`CORES_DO_MODO`) antes de aplicar a troca. Um degrau que some
   em silêncio é o defeito com outro nome.
-- **Pula** porque o gesto serve para uma coisa só, e ela disse qual:
-  *"o PS+R3 altera a bridge, e isso permite que dentro do jogo eu possa testar
-  a bridge sem fechar o jogo"*. Um degrau que exige REABRIR o jogo não testa
+- **Pula** porque o gesto serve para uma coisa só, e o usuário disse qual. Um degrau que exige
+  REABRIR o jogo não testa
   nada dentro do jogo — ele pertence ao lançamento.
 
 **FATO CORRIGIDO (29→30/08/2026).** Esta seção dizia *"não pula, porque pular
@@ -86,14 +85,14 @@ perfil tem `mode`.
 Ou seja: **"parar" não adiava o degrau, só cobrava um aperto por ele.** É o
 mesmo achado que `2b6bc5f9` registrou sem consertar — *"a escada nunca ARMA o
 Nativo nem o Steam Input... fechá-lo mexe no ramo 'o perfil manda', que é
-decisão dela"* — e ele continua aberto, e continua sendo dela.
+decisão de produto"* — e ele continua aberto, e continua sendo dela.
 
 O que o pulo GARANTE, e é o que `2b6bc5f9` acrescentou: a ponte de pé é
 guardada (`_anotar_o_gesto(a_registrar=True)`) e o tique a grava no `mode` do
 perfil sem carimbar, então o próximo lançamento abre a tentativa PARADA nela.
 Ela não repaga os gestos que já gastou.
 
-E o que "parar" custava foi MEDIDO, com os quatro jogos dela e quatro apertos
+E o que "parar" custava foi MEDIDO, com os quatro jogos do usuário e quatro apertos
 cada (`D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`): o jogo SEM
 carimbo perdia o 2º aperto (`xbox -> xbox`, nada), 3 trocas em 4 apertos,
 enquanto os três carimbados faziam 4 em 4. **O gesto se comportava diferente
@@ -103,7 +102,7 @@ carimbo em jogo nenhum, tinha o comportamento pior em TODOS eles.
 DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026)
 ----------------------------------------------------
 O parar acima custava DUAS coisas, e as duas foram medidas três vezes no
-journal dela (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
+journal do usuário (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
 03:19:14), sempre na mesma sequência de quatro linhas:
 
     ponte_escada_parou_no_degrau_caro  de=gamepad/xbox proximo=native/- ...
@@ -134,9 +133,9 @@ O LAÇO NÃO ANDA SOZINHO COM O JOGO ABERTO
 ------------------------------------------
 Não há relógio que suba degrau. A escada avança em dois pontos só: o
 lançamento (com o jogo ainda fora, onde recriar o vpad não custa nada a
-ninguém) e o gesto DELA. Este é o desenho, não uma limitação temporária: cada
+ninguém) e o gesto do usuário. Este é o desenho, não uma limitação temporária: cada
 degrau ao vivo recria o vpad, e recriar o vpad com o jogo aberto arranca o
-controle da mão dela (R-04, medido em 23/07/2026 e de novo em 19/08). Um laço
+controle da mão do usuário (R-04, medido em 23/07/2026 e de novo em 19/08). Um laço
 que subisse sozinho pagaria esse preço sem ela pedir.
 
 É `como_subir` que sustenta isso mecanicamente, e por isso ele é chamado nos
@@ -151,9 +150,9 @@ só escritor.
 
 **Não confirma NO gesto.** Um `PS + R3` isolado continua sendo o contrário de
 uma confirmação: é o sinal de que a ponte de pé NÃO pegou. O que confirma é o
-gesto SEGUIDO DE SILÊNCIO com o jogo vivo — ela mexeu, parou de mexer, e
+gesto SEGUIDO DE SILÊNCIO com o jogo vivo — o usuário mexeu, parou de mexer, e
 continuou jogando. Nesse caso o carimbo sai `POR_GESTO` (e não `POR_SILENCIO`),
-porque foi a mão dela que pôs aquela ponte de pé; a distinção é a do esquema,
+porque foi a mão do usuário que pôs aquela ponte de pé; a distinção é a do esquema,
 e `ponte_escada.por_que_confirmou` é a dona dela.
 
 A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026)
@@ -161,8 +160,8 @@ A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026)
 O gesto tem um SEGUNDO registro vivo além da tentativa, e ele existe porque a
 tentativa não cobre o caso que mais custa a ela: **o jogo com carimbo**. Ali a
 escada não roda (e não deve rodar), `avancar_por_gesto` devolve `None`, e o
-gesto dela trocava a ponte viva sem que nada no disco aprendesse. Medido no
-journal: 24 apertos em 7 dias, porque os 23 perfis de jogo dela pedem
+gesto do usuário trocava a ponte viva sem que nada no disco aprendesse. Medido no
+journal: 24 apertos em 7 dias, porque os 23 perfis de jogo do usuário pedem
 `dualsense` e ela joga em `xbox`.
 
 `ponte_do_gesto` (a `GestoDela`) é esse registro: a ponte que o gesto deixou de
@@ -242,7 +241,7 @@ class Comeco:
 
 @dataclass(frozen=True)
 class Passo:
-    """O que o gesto dela pode fazer pela escada AGORA."""
+    """O que o gesto do usuário pode fazer pela escada AGORA."""
 
     degrau: ponte_escada.Degrau | None
     caminho: str | None
@@ -253,7 +252,7 @@ class Passo:
 
 @dataclass
 class GestoDela:
-    """A ponte que o GESTO dela deixou de pé, esperando o silêncio."""
+    """A ponte que o GESTO do usuário deixou de pé, esperando o silêncio."""
 
     appid: int
     ponte: ponte_escada.Ponte
@@ -285,7 +284,7 @@ def em_curso(daemon: Any) -> Tentativa | None:
 
 
 def gesto_em_curso(daemon: Any) -> GestoDela | None:
-    """A ponte que o gesto dela deixou de pé neste daemon, ou None."""
+    """A ponte que o gesto do usuário deixou de pé neste daemon, ou None."""
     valor = getattr(daemon, ATRIBUTO_DO_GESTO, None)
     return valor if isinstance(valor, GestoDela) else None
 
@@ -339,7 +338,7 @@ def gesto_deixou_de_pe(
     jogo_vivo: bool,
     agora: float | None = None,
 ) -> GestoDela | None:
-    """Momento 2b: a ponte que o gesto dela deixou de pé. None = nada anotado.
+    """Momento 2b: a ponte que o gesto do usuário deixou de pé. None = nada anotado.
 
     NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O registro guardava a MÁSCARA
     que o gesto pôs de pé, e o tique a alinhava em ``mode.gamepad_flavor`` do
@@ -489,7 +488,7 @@ def comecar(
 def avancar_por_gesto(
     daemon: Any, *, jogo_vivo: bool, agora: float | None = None
 ) -> Passo | None:
-    """Momento 2: ela apertou `PS + R3`. Devolve o degrau a aplicar, ou None."""
+    """Momento 2: o usuário apertou `PS + R3`. Devolve o degrau a aplicar, ou None."""
     tentativa = em_curso(daemon)
     if tentativa is None:
         return None

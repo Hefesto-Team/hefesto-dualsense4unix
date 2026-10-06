@@ -193,7 +193,7 @@ class TestOGesto:
         """MORDIDA: apague o `_lembrar_do_som(..., speaker={"fonte": "mix"})`.
 
         Sem ele o botão acende, o som não muda e a escolha some no recarregar
-        — os dezesseis botões que ela nomeou em 02/09.
+        — os dezesseis botões que o usuário nomeou em 02/09.
         """
         p = Ponte()
         _gesto("rota")(_ctx(_dele(P1), _dele(P2)), {"uniq": P1, "rota": "junto"}, p)

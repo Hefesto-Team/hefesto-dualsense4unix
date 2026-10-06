@@ -2,7 +2,7 @@
 
 Na noite de 27/09 o diário disse `vpad_degradado motivo=sem_uhid` para cada
 jogador que conectava. Não havia queda nenhuma: o Freestyle carregava
-`caminho: xbox`, o modo que ela escolheu pelo PS + R3, e os pads nasceram no
+`caminho: xbox`, o modo que o usuário escolheu pelo PS + R3, e os pads nasceram no
 `uinput` por escolha. O `dedup_status` já sabia disso; o anúncio do co-op
 (`coop._promote_player`) e o motivo por controle do estado
 (`ipc_handlers._vpad_backend_motivo`) não perguntavam o caminho.

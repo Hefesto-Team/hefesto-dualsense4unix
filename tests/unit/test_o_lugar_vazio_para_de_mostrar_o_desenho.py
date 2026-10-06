@@ -244,7 +244,7 @@ def test_o_molde_nao_toca_o_desenho_da_vibracao(pacotes_mod):
 
 
 def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
-    """O texto do vazio é DELA, e já está no desenho — nada novo nasce aqui."""
+    """O texto do vazio é DO USUÁRIO, e já está no desenho — nada novo nasce aqui."""
     from hefesto_dualsense4unix.interface import onde
 
     doc = onde.pagina("02-controles.html", publicado=True).read_text(encoding="utf-8")

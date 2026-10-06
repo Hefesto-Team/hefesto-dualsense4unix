@@ -50,7 +50,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_a_mascara_escolhida_do_jogador_vence_a_do_jogo() -> None:
-    """A garantia 1. Sem ela, a D-5 não existe: a escolha dela seria enfeite."""
+    """A garantia 1. Sem ela, a D-5 não existe: a escolha do usuário seria enfeite."""
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
     assert mascara_efetiva(MAC_P2, "xbox") == "dualsense"

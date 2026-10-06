@@ -94,7 +94,7 @@ def _zonas_a_partir_de(inicio: int, forca: int) -> dict[int, int]:
 
 
 def _forca_de_byte(valor: int) -> int:
-    """Converte a força de byte (0-255, o que a tela dela mostra) para 1-8."""
+    """Converte a força de byte (0-255, o que a tela do usuário mostra) para 1-8."""
     if valor <= 0:
         return 0
     return max(1, min(8, round(valor / 255 * 8)))

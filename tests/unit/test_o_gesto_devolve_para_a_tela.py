@@ -29,7 +29,7 @@ item 1 reprova dizendo que nada foi para a tela. Troque `REGISTRO` por qualquer
 outro nome — o item 1 reprova dizendo que a página não tem esse endereço.
 
 O «Ver os plugins» SAIU DA ABA EM 13/09/2026 (SISTEMA-BOTOES-01), pela decisão
-dela D-OS-PLUGINS-APARECEM-ONDE-AGEM, e as duas réguas dele saíram junto:
+de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM, e as duas réguas dele saíram junto:
 `test_ver_plugins_mostra_os_nomes_que_o_daemon_respondeu` e
 `test_ver_plugins_sem_plugin_diz_qual_dos_dois_silencios_e`. Quem cobra a
 saída é `test_cada_botao_da_aba_sistema_faz_o_que_diz`.

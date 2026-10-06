@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""o_brilho_de_hardware_da_barra.py — o byte que nem o kernel escreve, no olho dela.
+"""o_brilho_de_hardware_da_barra.py — o byte que nem o kernel escreve, no olho de quem confere.
 
-A PERGUNTA QUE ELE DECIDE (BRILHO-DE-HARDWARE-01, decisão dela de 09/09/2026: *"2b"*)
+A PERGUNTA QUE ELE DECIDE (BRILHO-DE-HARDWARE-01, )
 ------------------------------------------------------------------------------------
 A barra do DualSense tem DOIS brilhos, e a casa os confundia até 08/09:
 
@@ -13,7 +13,7 @@ A barra do DualSense tem DOIS brilhos, e a casa os confundia até 08/09:
   `flag2` bit0 em `common[38]`. O produto manda o byte sempre em 0 e **o
   kernel desta máquina nem define o bit**. `nao-medido` nos dois transportes.
 
-Ela decidiu medir. Este instrumento escreve o byte, com e sem o bit, e ela
+O usuário decidiu medir. Este instrumento escreve o byte, com e sem o bit, e ela
 olha a barra.
 
 O DESENHO
@@ -32,9 +32,9 @@ firmware ignora a autorização — e o kernel estava certo em não a definir.
 O MARTELO
 ---------
 Quando o daemon é dono das luzes, cada report dele leva `flag2` com o bit e
-`common[42] = 0`: uma escrita minha pode ser desfeita antes de ela olhar. Por
+`common[42] = 0`: uma escrita do instrumento pode ser desfeita antes de quem usa olhar. Por
 isso cada nível **martela** a 10 Hz durante a janela (`--uma-vez` desliga).
-Se a barra "piscar" entre dois brilhos, é o daemon e eu disputando — e isso é
+Se a barra "piscar" entre dois brilhos, é o daemon e o instrumento disputando — e isso é
 um SIM do firmware, não um não. No rádio o bloco cai sob `suppress_leds` e o
 daemon não manda o bit: lá a escrita única já é limpa.
 
@@ -171,7 +171,7 @@ def main() -> int:
         escritor.fechar()
         print("\nnível 0 devolvido com o bit, porta fechada — o daemon reassume a cor na próxima escrita dele.")
 
-    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem coordena escreve):")
+    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem roda escreve):")
     for nivel, resposta in respostas:
         print(linha_do_caderno(
             id=f"brilho-de-hardware-nivel{nivel}-{'com' if com_bit else 'sem'}-bit-{time.strftime('%d%m')}",

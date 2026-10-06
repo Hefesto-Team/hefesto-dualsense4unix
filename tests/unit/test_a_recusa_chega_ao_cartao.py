@@ -3,9 +3,9 @@
 
 **O CONTRATO MUDOU EM 13/09/2026** (FRASES-E-DICAS-01), e esta régua mudou junto
 em vez de ser apagada: o roteiro no tempo é o mesmo, e as perguntas viraram o
-avesso. A palavra dela está no índice da leva
+avesso. A palavra de produto está no índice da leva
 (o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026, linha 19):
-a caixa laranja da foto era uma recusa pousada no cartão, e ela mandou esse tipo
+a caixa laranja da foto era uma recusa pousada no cartão, e o usuário mandou esse tipo
 de frase parar de aparecer. O clique recusado responde pela piscada de recusa
 no botão (`test_a_recusa_pisca_no_botao`), e a frase vai ao diário da janela.
 Hoje a régua cobra que, em cada parada do roteiro — logo depois do clique, seis
@@ -28,7 +28,7 @@ humanizada existia, estava testada — e saía no `stderr` do processo:
 
 Quem clica na janela não lê o terminal de quem a lançou. **É a forma de defeito
 mais cara desta casa: alguém curou o caminho e provou a cura num caminho que ela
-não usa.** Medido pelo caminho DELA — dois cliques no 🎙 da `02-controles`, com
+não usa.** Medido pelo caminho DO USUÁRIO — dois cliques no 🎙 da `02-controles`, com
 um dublê que faz o `mic.set` recusar: os dois recusaram com a frase certa, o
 `desfechos` do piloto a guardou, e o DOM não tinha uma letra dela. O segundo
 clique parecia o primeiro.
@@ -50,7 +50,7 @@ canal mentir:
    basta para ela clicar de novo achando que o primeiro não pegou.
 6. **ELA É DO CONTROLE, E NÃO DA COLUNA** — o item de 02/09/2026, e o único que
    só existe no TEMPO. Ver abaixo.
-7. **ELA VENCE**, e vence no prazo QUE ELA DECIDIU: *"a frase de recusa SOME
+7. **ELA VENCE**, e vence no prazo QUE O USUÁRIO DECIDIU: *"a frase de recusa SOME
    depois de um tempo — ~30 s e desaparece. É aviso, não estado."*
 
 E A OITAVA, que é sobre o instrumento e não sobre o produto: **o aviso não pode

@@ -156,7 +156,7 @@ def linha_do_caderno(**campos: str) -> str:
 
 
 def perguntar(texto: str) -> str:
-    """A pergunta para ela, e a resposta dela — verbatim, sem limpar."""
+    """A pergunta para ela, e a resposta de produto — verbatim, sem limpar."""
     try:
         return input(texto).strip()
     except EOFError:

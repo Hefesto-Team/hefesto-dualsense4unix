@@ -27,7 +27,7 @@ def test_o_dono_existe_e_e_um_so() -> None:
 
 
 def test_a_deteccao_nao_acredita_so_no_sinalizador(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tema escuro + `prefer-dark` False = escuro. É o caso EXATO da máquina dela."""
+    """Tema escuro + `prefer-dark` False = escuro. É o caso EXATO da máquina do usuário."""
     import comum
 
     gi = pytest.importorskip("gi")

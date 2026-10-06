@@ -174,7 +174,7 @@ def test_so_quem_mudou_e_repintado(registro_limpo: Path) -> None:
 def test_o_perfil_calado_devolve_todo_mundo_ao_padrao(
     registro_limpo: Path,
 ) -> None:
-    """DECISÃO DELA, 09/09/2026: *"Default é Hefesto dualsense padrão"*."""
+    """DECISÃO, 09/09/2026: *"Default é Hefesto dualsense padrão"*."""
     gerente = _gerente()
     gerente.apply_controller_mascaras(_perfil("Antes", **{P2: "xbox"}))
     assert mask_mod.mascara_efetiva(P2, "dualsense") == "xbox"
@@ -216,7 +216,7 @@ def test_o_perfil_calado_devolve_ate_quem_ele_nunca_viu(
 def test_o_que_a_devolucao_custa_e_so_o_vpad_de_quem_estava_fora(
     registro_limpo: Path,
 ) -> None:
-    """O CUSTO DA DECISÃO DELA, medido — e ele é o que a torna barata."""
+    """O CUSTO DA DECISÃO DE PRODUTO, medido — e ele é o que a torna barata."""
     calado = Profile(
         name="Calado",
         match=MatchAny(),

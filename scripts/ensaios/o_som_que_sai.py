@@ -362,25 +362,25 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     **Este caminho é o ensaio 1 da MESA-DE-QUATRO-01**, não deste script
     sozinho. Até 07/09/2026 ele parava ANTES de escrever, com rc=3, e a razão
     estava escrita: *"ele existe aqui para que o instrumento esteja pronto
-    quando a bancada e a orelha dela estiverem"*. As duas chegaram — ela está
+    quando a bancada e a orelha do usuário estiverem"*. As duas chegaram — ela está
     na bancada com os quatro DualSense —, e o que faltava do nosso lado era o
     laço entre o encoder e o fio, que agora existe (:func:`rodar_o_arranjo`).
 
     **O QUE NÃO MUDOU, E É O PONTO:** ele continua parando em rc=3 sem
     ``--eu-estou-ouvindo``. O ensaio não é *escrever*; o ensaio é *escrever com
-    a orelha dela do outro lado*, e um instrumento que escreve sem isso mede o
+    a orelha do usuário do outro lado*, e um instrumento que escreve sem isso mede o
     kernel aceitando uma entrega — que não é medição nenhuma. As seis recusas,
     na ordem em que caem:
 
     1. sem ``--exigir-mac`` conferido — para não escrever no controle errado;
     2. endereço que não está na lista;
     3. aparelho no CABO (a escada só existe no rádio);
-    4. arranjo não escolhido (as duas fontes divergem, e a escolha é dela);
+    4. arranjo não escolhido (as duas fontes divergem, e a escolha é de produto);
     5. degrau fora da escada ``0x31``-``0x39``;
     6. **sem a declaração de que ela está ouvindo**, e sem a bancada reservada.
 
     E O RETORNO DO ``os.write()`` CONTINUA NÃO SENDO A MEDIÇÃO. O kernel aceita
-    a entrega; o firmware descarta calado. Quem mede é a orelha dela, e o
+    a entrega; o firmware descarta calado. Quem mede é a orelha do usuário, e o
     veredito vai para ``docs/data/ensaios.csv`` com o relato dela, nunca com o
     número deste script.
     """

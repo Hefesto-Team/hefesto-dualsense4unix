@@ -131,7 +131,7 @@ def _emitidos(monkeypatch: Any = None) -> dict[str, Any]:
 
 @pytest.fixture(autouse=True)
 def _perfil_no_lugar_do_disco(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O perfil da régua no lugar da pasta dela — e o `_ESCOLHIDO` limpo."""
+    """O perfil da régua no lugar da pasta do usuário — e o `_ESCOLHIDO` limpo."""
     from hefesto_dualsense4unix.profiles import loader
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -221,7 +221,7 @@ def test_a_tabela_da_guarda_nomeia_os_controles_da_mesa() -> None:
 
 
 def test_o_rotulo_da_guarda_e_o_mesmo_do_monta() -> None:
-    """A ordem do rótulo tem UM dono — `monta.rotulo`, decisão dela de 26/08."""
+    """A ordem do rótulo tem UM dono — `monta.rotulo`, decisão de 26/08."""
     monta = pytest.importorskip(
         "hefesto_dualsense4unix.interface.monta",
         reason="o gerador lê o repositório no import; num pacote instalado não há",

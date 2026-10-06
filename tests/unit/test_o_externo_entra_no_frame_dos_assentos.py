@@ -180,8 +180,8 @@ def test_a_marca_nao_e_digitada_em_lugar_nenhum_da_interface() -> None:
 
     A RÉGUA MEDE O QUE VAI À TELA, e não o texto dos arquivos — e as duas
     primeiras voltas dela reprovaram sobre PROSA: o comentário de `aba01.py` que
-    explica a sprint cita a queixa dela (*"…e um 8BitDo…"*), e a legenda de
-    `aba08.py` diz, com todas as letras, que Nintendo e 8BitDo são decisão dela.
+    explica a sprint cita a queixa de uso (*"…e um 8BitDo…"*), e a legenda de
+    `aba08.py` diz, com todas as letras, que Nintendo e 8BitDo são decisão de produto.
     É a armadilha nomeada no `COMO-OLHAR-A-TELA.md` — *régua que casa um token
     em qualquer lugar do texto, em vez do campo que o significa*. Citação não é
     tela, e calar a citação para calar a régua seria apagar o registro.
@@ -229,7 +229,7 @@ def test_a_marca_nao_e_digitada_em_lugar_nenhum_da_interface() -> None:
 
 
 def test_a_palavra_mesa_nao_entra_no_cartao_do_externo() -> None:
-    """Ordem dela, no mesmo fôlego da escolha do frame."""
+    """Ordem de produto, no mesmo fôlego da escolha do frame."""
     from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
         primeiro_trecho_banido,
     )

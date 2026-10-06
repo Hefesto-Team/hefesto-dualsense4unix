@@ -262,7 +262,7 @@ def test_o_perfil_do_heroic_vira_regra_de_jogo_depois_de_declarado() -> None:
 
 
 def test_a_janela_do_proprio_hefesto_nunca_e_regra_de_jogo() -> None:
-    """O QUE A LINHA 1799 PROTEGIA — medido no disco dela em 11/09/2026."""
+    """O QUE A LINHA 1799 PROTEGIA — medido no disco do usuário em 11/09/2026."""
     personalizado = Profile(
         name="Personalizado",
         match=MatchCriteria(window_class=["Hefesto-Dualsense4Unix"]),
@@ -323,7 +323,7 @@ def test_a_classe_declarada_sobrevive_ao_jogo_ja_semeado(tmp_path: Path) -> None
 def test_criar_a_mao_um_segundo_perfil_para_o_mesmo_jogo_nao_e_recusado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """*"eu posso criar ou criar um perfil duplicado do mesmo jogo"*."""
+    """**."""
     destino = tmp_path / "perfis"
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
     loader.semear_perfis_dos_jogos(
@@ -586,7 +586,7 @@ def test_o_gatilho_automatico_assina_as_duas_bibliotecas() -> None:
 def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O daemon dela fica DIAS de pé — e a biblioteca que muda é a do Heroic."""
+    """O daemon do usuário fica DIAS de pé — e a biblioteca que muda é a do Heroic."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     casa = Path.home()

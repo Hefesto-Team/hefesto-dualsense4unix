@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """O CHIP DO ALTO-FALANTE TEM A CARA DO CHIP DO MICROFONE — 17/09/2026.
 
-**A ORDEM DELA, com um print da aba Controles na mão:** *"deixar esse acordado
-com o mesmo estilo do botao que ta MUDO acima"*. <!-- noqa-acento: citação literal -->
+**A ORDEM DE PRODUTO, com um print da aba Controles na mão:** **. <!-- noqa-acento: citação literal
+-->
 
 Os dois moram no MESMO cartão de dispositivo, um debaixo do outro: o rótulo da
 moldura do Microfone termina num chip (`MUDO` / `ATIVO`, com ícone e risco) e o
@@ -26,16 +26,16 @@ que é exatamente a forma pela qual onze réguas desta casa já caíram. Então:
 
 **A CAIXA NÃO ENTRA NA CONTA, E ISSO CUSTOU UMA VOLTA.** A primeira tentativa
 desta frente subiu a caixa por CSS, para o par ficar idêntico ao do microfone. O
-portão `maiuscula-decorativa` reprovou — e ele carrega a palavra dela de
+portão `maiuscula-decorativa` reprovou — e ele carrega a palavra de
 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o cabo e acordado (ambos
 minusculo sem iniciar de forma capitular)."* <!-- noqa-acento: citação literal -->
-As duas ordens dela não brigam: o que ela pediu hoje foi o ESTILO, e a caixa do
+As duas ordens de produto não brigam: o que o usuário pediu hoje foi o ESTILO, e a caixa do
 chip do microfone não é estilo — é o TEXTO que `mesa_viva.selo_do_mic` devolve.
 `TestACaixaNaoSobe` guarda o lado certo, para que ninguém "complete a
 semelhança" por CSS depois.
 
 **O PIOR DESFECHO DESTA MUDANÇA É UMA PÍLULA CINZA VAZIA**, e é o estado normal
-da mesa dela: pelo rádio o DualSense não publica placa ALSA, o pacote manda o
+da bancada: pelo rádio o DualSense não publica placa ALSA, o pacote manda o
 marcador de "não há o que dizer" e uma regra o esconde. Sem fundo isso não se
 via; com fundo, uma regra que deixe de casar põe uma pastilha vazia no cartão de
 TODO controle por rádio. A régua cobra que todo chip que carrega o marcador seja
@@ -170,7 +170,7 @@ def _estilo(doc: str, classe: str) -> dict[str, str]:
 
 
 def _cara_de_chip(doc: str) -> dict[str, str]:
-    """O que os DOIS que já eram pílula concordam — a "cara" que ela apontou."""
+    """O que os DOIS que já eram pílula concordam — a "cara" que o usuário apontou."""
     mic = _estilo(doc, _classe_do_campo(doc, CAMPO_DO_CHIP_DO_MIC))
     alarme = _estilo(doc, _classe_do_campo(doc, CAMPO_DO_ALARME))
     return {p: v for p, v in mic.items()
@@ -197,7 +197,7 @@ class TestACaraDoChip:
     def test_o_chip_do_canal_tem_a_cara_que_os_dois_ja_tinham(
         self, pagina: str
     ) -> None:
-        """*"deixar esse acordado com o mesmo estilo do botao que ta MUDO acima"*."""
+        """**."""
         canal = _classe_do_campo(pagina, CAMPO_DO_CHIP_DO_CANAL)
         tem = _estilo(pagina, canal)
         falta = {p: v for p, v in _cara_de_chip(pagina).items()

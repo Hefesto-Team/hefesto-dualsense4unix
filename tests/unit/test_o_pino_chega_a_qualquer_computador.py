@@ -751,7 +751,7 @@ def mesa(lar: Path) -> Path:
 
 
 class TestTodoJogoTemClasse:
-    """(d) do cético: "todo jogo" é todo jogo que roda por Proton."""
+    """(d) da conferência: "todo jogo" é todo jogo que roda por Proton."""
 
     def test_ferramenta_que_nao_e_proton_fica_mesmo_com_todos(self) -> None:
         """MORDIDA: tire o `e_da_familia_proton` do `troca_pedida`."""

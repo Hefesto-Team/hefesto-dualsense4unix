@@ -108,7 +108,7 @@ def test_os_tres_estados_saem_diferentes_do_python() -> None:
     precisam existir: ``_escolhido()`` sincroniza o escolhido com o ativo
     enquanto ela não clicou em nada, então o estado inicial é o combinado. Uma
     tela que desenhasse só dois estados faria o combinado parecer "só ativo" —
-    e a queixa dela voltaria no primeiro clique.
+    e a queixa de uso voltaria no primeiro clique.
 
     MORDIDA: faça ``_linha_da_lista`` ignorar ``escolhido`` e os três viram
     dois; faça-a ignorar ``ativo`` e viram dois pelo outro lado.
@@ -203,7 +203,7 @@ def test_o_desenho_marca_a_linha_que_o_editor_abriu() -> None:
 
 
 def test_a_folha_pinta_os_tres_estados() -> None:
-    """Três regras, três estados. Sem elas o DOM sabe e a tela dela não mostra."""
+    """Três regras, três estados. Sem elas o DOM sabe e a tela do usuário não mostra."""
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     folha = re.sub(r"/\*.*?\*/", "", html, flags=re.S)
 

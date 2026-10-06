@@ -281,7 +281,7 @@ class _OSKController:
         return _adotar_orfao()
 
     def toggle(self) -> None:
-        """O SEGUNDO TOQUE FECHA — decisão dela, 02/09/2026."""
+        """O SEGUNDO TOQUE FECHA — decisão, 02/09/2026."""
         with self._tranca:
             if self._pid_vivo() is not None:
                 self._fechar()
@@ -433,7 +433,7 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     touchpad em `event23`, a mesma identidade nos dois.
 
     O que faz as três regiões não dispararem tecla HOJE é outra coisa, e é
-    decisão dela: o touchpad voltou a ser ponteiro do SISTEMA
+    decisão de produto: o touchpad voltou a ser ponteiro do SISTEMA
     (TOUCHPAD-DO-SISTEMA-01), e quem se cala é o `_combine_with_touchpad`
     abaixo, pelo `ponteiro_do_sistema` do reader. Medido na mesma leitura:
     `LIBINPUT_IGNORE_DEVICE` ausente no nó do touchpad físico.
@@ -442,7 +442,7 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     espelhando `subsystems/mouse.py` (`if not cfg.mouse_emulation_enabled:
     return`). É o que dá dentes ao interruptor: desligada, o device NÃO nasce,
     e o gate de despacho do poll loop (`_keyboard_device is not None`) fecha
-    sozinho — a mesma mecânica que fazia o mouse dela estar honestamente
+    sozinho — a mesma mecânica que fazia o mouse do usuário estar honestamente
     desligado enquanto o teclado emitia Alt+Tab dentro da partida. `getattr`
     defensivo em dois níveis: dublê de teste sem `config` (ou sem o campo)
     segue com o comportamento histórico (ligado).

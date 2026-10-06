@@ -7,21 +7,21 @@ número é quem diz se a largura pode ser afirmada. Um ``—`` ao lado de um tri
 cheio não é meia informação: é informação errada, porque quem olha lê o
 comprimento primeiro.
 
-**MEDIDO NO DOM VIVO em 03/09/2026**, com a mesa dela (um DualSense White no
+**MEDIDO NO DOM VIVO em 03/09/2026**, com a bancada (um DualSense White no
 cabo), pela ``scripts/ensaios/a_coluna_sem_controle_da_vibracao.py``::
 
     lugar  identidade          mult/mult-pos    motor-e/motor-e-pct  motor-d/…
     p1     P1 · White · USB      100%/100            —/0%                —/0%
     p2     —                       —/                —/47.1%             —/47.1%
 
-**A COLUNA DO MEIO MUDOU DE CONTRATO EM 03/09/2026**, decisão dela: a linha do
+**A COLUNA DO MEIO MUDOU DE CONTRATO EM 03/09/2026**, decisão de produto: a linha do
 multiplicador virou um ``<input type=range>``, e o que o pintor escreve nela
 deixou de ser a LARGURA (``forca-pct``, uma fração de 0 a 100) e passou a ser a
 POSIÇÃO (``mult-pos``, o número de 0 ao teto). A medição acima está reescrita
 com os nomes de hoje; o que ela mediu — o par número/trilho contando a mesma
 história — não mudou.
 
-A coluna do controle DELA está honesta: os motores não sabem, e os trilhos vão
+A coluna do controle do usuário está honesta: os motores não sabem, e os trilhos vão
 a zero. É essa metade que este arquivo guarda, e ela é do pacote desta aba —
 ``_barra`` devolve ``w = "0%"`` junto com ``n = "—"``, e o pacote repassa os
 dois.
@@ -41,7 +41,7 @@ AS MORDIDAS, todas com ``cp`` para devolver — nunca ``git checkout --``:
   ``""`` → ``test_todo_trilho_desta_aba_sai_com_numero`` reprova dizendo que
   ``motor-e-pct`` não é número;
 * apague a linha do ``forca-pct`` do pacote (a ponte de publicação) → o mesmo
-  caso reprova, e é o defeito que ELE já teve na tela dela: o trilho do
+  caso reprova, e é o defeito que ELE já teve na tela do usuário: o trilho do
   multiplicador congelado na largura do mockup;
 * emita ``pct["w"]`` em ``mult-pos`` →
   ``test_a_posicao_do_multiplicador_cabe_na_barra`` reprova no ``max``, onde a
@@ -160,7 +160,7 @@ def test_a_posicao_do_multiplicador_cabe_na_barra(policy: str) -> None:
 def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
     """Número ``—`` e trilho a zero andam JUNTOS, ou a tela mente.
 
-    A mesa parada é o caso mais comum na bancada dela: ninguém pediu vibração,
+    A mesa parada é o caso mais comum na bancada: ninguém pediu vibração,
     ``per_vpad`` está vazio e ``motores_do_controle`` responde ``None`` nos dois
     lados — *"nada a dizer"*, que nunca é zero. O número vira travessão; a
     largura tem de ir a zero, porque uma barra é uma AFIRMAÇÃO de quantidade e

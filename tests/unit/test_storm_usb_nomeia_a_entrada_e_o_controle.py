@@ -190,7 +190,7 @@ def test_os_fabricantes_de_controle_sao_os_da_secao_do_radio() -> None:
 
 
 def test_o_adaptador_que_se_declara_no_aparelho(tmp_path: Path) -> None:
-    """A tripla ``e0/01/01`` no descritor do aparelho — o UB500 da mesa dela."""
+    """A tripla ``e0/01/01`` no descritor do aparelho — o UB500 da bancada."""
     raiz = tmp_path / "sys"
     _no(raiz, "1-4", vid="2357", pid="0604", nome="TP-Link UB500 Adapter",
         tripla=("e0", "01", "01"))
@@ -320,7 +320,7 @@ def test_a_entrada_largada_que_voltou_a_ter_aparelho_nao_fica_parada(tmp_path: P
 
 
 def test_entrada_vazia_sem_a_desistencia_nao_e_parada(tmp_path: Path) -> None:
-    """Vazia depois de um -71 que o kernel seguiu tentando: pode ter sido a mão dela."""
+    """Vazia depois de um -71 que o kernel seguiu tentando: pode ter sido a mão do usuário."""
     laudo = storm_por_porta(
         linhas=[_linha("usb 3-4.4: device descriptor read/64, error -71")],
         hoje=HOJE,

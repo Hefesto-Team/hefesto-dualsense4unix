@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DA FORÇA DA VIBRAÇÃO **POR CONTROLE** — aba Vibração, 03/09/2026.
 
-DUAS DECISÕES DELA, no mesmo dia, e esta régua mede as duas:
+DUAS DECISÕES DE PRODUTO, no mesmo dia, e esta régua mede as duas:
 
 1. **"Construir por controle."** O clique num degrau da coluna deixou de mandar
    `rumble.policy_set` (que é da MESA e não aceita `uniq`) e passou a gravar
@@ -24,7 +24,7 @@ da aba Conexões.
 
 A PONTE É DUBLÊ E O DISCO É DE MENTIRA, SEMPRE. `perfil.gravar_e_reaplicar`
 chama `p.profile_reaplicar(...)` quando o nome casa o ativo, e uma ponte real
-mandaria isso ao daemon DELA, que está vivo com um DualSense no cabo. Todo
+mandaria isso ao daemon do usuário, que está vivo com um DualSense no cabo. Todo
 `uniq` daqui vem da faixa sintética `aa:bb:cc:00:00:01` — há dois portões de
 anonimato que reprovam o contrário.
 
@@ -45,7 +45,7 @@ O QUE ELA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
 12. o desenho publica um `<input type=range>` por coluna viva, com o teto e o
     passo derivados;
 13. os dois gestos estão em `PERIGOSOS` — a prova automática não escreve no
-    perfil dela;
+    perfil do usuário;
 14. o fator que chega ao motor é o da conta do produto, ponta a ponta.
 
 AS MORDIDAS ESTÃO NO DOCSTRING DE CADA CASO, uma a uma, com o que reprova.
@@ -161,7 +161,7 @@ def test_o_degrau_clicado_vira_override_so_daquele_controle(
         pac, clique_no_degrau, disco) -> None:
     """Clicar "Economia" na coluna do P1 não toca no P2 nem no global.
 
-    É A DECISÃO DELA INTEIRA numa asserção: até 02/09 este clique chamava
+    É A DECISÃO DE PRODUTO INTEIRA numa asserção: até 02/09 este clique chamava
     `rumble.policy_set`, que é da MESA, e mudava os quatro de uma vez.
 
     MORDIDA: em `a05_vibracao.forca`, troque `_gravar_a_forca(ctx, p, uniq,
@@ -392,7 +392,7 @@ def test_o_desenho_tem_a_barra_arrastavel_com_o_teto_do_esquema() -> None:
 
 @pytest.mark.parametrize("nome", ["forca", "intensidade"])  # (noqa-acento) id
 def test_os_dois_gestos_que_gravam_ficam_de_fora_da_prova(nome: str) -> None:
-    """Quem escreve no disco dela não entra na prova botão a botão."""
+    """Quem escreve no disco do usuário não entra na prova botão a botão."""
     from hefesto_dualsense4unix.interface import hefesto_vivo, regua_do_mockup
 
     class _Gesto:

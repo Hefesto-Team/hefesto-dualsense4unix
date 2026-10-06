@@ -1,8 +1,7 @@
 """receptor_sem_fio.py — o receptor 2.4G de teclado e mouse: reconhecer, ver sofrer, achar a faixa.
 
-O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01 (04/10/2026). Ela: *«o meu teclado e mouse
-quando tá super conectado desse jeito é o primeiro a pedir ajuda; ele se digita sozinho e escreve
-errado agora»* e *«pensando no user universal. uma forma na origem do problema»*.
+O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01 (04/10/2026).  e *«pensando no user universal.
+uma forma na origem do problema»*.
 
 NINGUÉM LÊ O CANAL DESTES RECEPTORES. Nenhum driver, comando HID documentado ou projeto lê a
 frequência de um dongle de mouse genérico (pesquisa 01 e 04 do conjunto); há canais vendor sem

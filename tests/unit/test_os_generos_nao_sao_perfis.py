@@ -16,7 +16,7 @@ ESTILOS = REPO / "assets" / "estilos_de_jogo"
 
 
 def _molde_de_jogo(nome: str, appid: str, **extra: object) -> dict:
-    """O perfil de jogo COMO ELE ESTÁ no disco dela hoje — o molde de 29/08."""
+    """O perfil de jogo COMO ELE ESTÁ no disco do usuário hoje — o molde de 29/08."""
     perfil = Profile(
         name=nome,
         match={"type": "criteria", "window_class": [f"steam_app_{appid}"]},

@@ -268,7 +268,7 @@ def wireplumber() -> Any:
 def test_a_escolha_gravada_passa_ao_nome_novo_do_mesmo_controle(wireplumber: Any) -> None:
     """Régua 4. A fonte gravada no nome velho do P2: o P1 não a toma; o P2 a passa.
 
-    MORDIDA: sem a passagem, a escolha dela fica num nome que não existe mais e
+    MORDIDA: sem a passagem, a escolha do usuário fica num nome que não existe mais e
     o WirePlumber dá a fonte padrão a outro nó.
     """
     p1, p2 = JOGADORES[0], JOGADORES[1]
@@ -331,7 +331,7 @@ _STREAM_PROPERTIES = (
     "Input/Audio:media.name:hefesto-retorno-do-mic-APARELHOKUKTZP\\sinput={\"mute\":false}\n"
     "Output/Audio:media.role:Notification={\"volume\":0.3}\n"
 )
-#: O que é dela, e tem de ficar byte a byte.
+#: O que é do usuário, e tem de ficar byte a byte.
 _DELA = {
     "default-nodes": [
         "[default-nodes]",

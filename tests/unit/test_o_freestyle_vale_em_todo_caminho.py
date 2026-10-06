@@ -1,12 +1,12 @@
 """O-MODO-FREESTYLE-03 — o perfil de fora do jogo vale em todo caminho, e nasce ligado.
 
-NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, a fala dela de
+NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, a fala do usuário de
 29/09): o Freestyle deixou de ser o perfil de fora do jogo. Desligado, ele não
-vale em lugar nenhum; fora do jogo vale a escolha dela, que o boot restaura com
+vale em lugar nenhum; fora do jogo vale a escolha do usuário, que o boot restaura com
 regra de janela ou sem (a RESTORE-ESCOPO-01 saiu). Os achados 1 e 2 abaixo
-mudaram de propósito: o boot restaura a escolha dela, a máquina nova nasce com o
+mudaram de propósito: o boot restaura a escolha do usuário, a máquina nova nasce com o
 botão aceso (e é ali que o Freestyle vale no boot), e o rodapé sem perfil age na
-escolha dela, e não no Freestyle. As réguas do contrato novo estão em
+escolha do usuário, e não no Freestyle. As réguas do contrato novo estão em
 `test_o_hefesto_abre_na_escolha.py` e
 `test_o_freestyle_desligado_nunca_e_o_perfil_ativo.py`; os achados 3 a 5 seguem.
 
@@ -27,7 +27,7 @@ teste):
 5. **o diálogo do «Restaurar»** que dizia «Personalizado» — a régua dele é a
    `test_gui_review_fixes.py::test_restore_dialog_nao_cita_navegacao`.
 
-A MATRIZ (regra dela, 23/09): os QUATRO controles — P1 e P3 no USB, P2 e P4 no BT —
+A MATRIZ (regra, 23/09): os QUATRO controles — P1 e P3 no USB, P2 e P4 no BT —
 no backend REAL (`PyDualSenseController`, handles de bancada sem aparelho nenhum
 atrás), com o boot real, nos três caminhos da sessão: vazia, com um perfil de
 janela, com o Freestyle. O gatilho se mede no BYTE do report de cada transporte
@@ -177,7 +177,7 @@ VALE_NO_BOOT = {
 def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
     semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
 ) -> None:
-    """Em cada caminho da sessão, vale o que ela escolheu, e o gatilho chega aos quatro."""
+    """Em cada caminho da sessão, vale o que o usuário escolheu, e o gatilho chega aos quatro."""
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
@@ -202,7 +202,7 @@ def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
 def test_o_boot_nao_reescreve_a_escolha_dela(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """O boot restaura a escolha sem regravá-la: a sessão continua dizendo o jogo dela."""
+    """O boot restaura a escolha sem regravá-la: a sessão continua dizendo o jogo do usuário."""
     _prepara_a_sessao("sessao-com-perfil-de-janela")
     controle, _ = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
@@ -250,7 +250,7 @@ def test_o_boot_nao_entra_por_cima_do_jogo_que_ja_vale(
     """O daemon reiniciado no meio da partida: o jogo já vale antes do controle chegar.
 
     O autoswitch roda antes do primeiro controle, e pode ter posto o Sackboy.
-    O boot não troca isso pelo que ela escolheu — seria uma troca no meio do
+    O boot não troca isso pelo que o usuário escolheu — seria uma troca no meio do
     jogo, desfeita um tique depois pelo próprio autoswitch —, e não escreve nada
     no fio. Vale na máquina nova (o Freestyle aceso) e com «sem escolha».
 
@@ -317,7 +317,7 @@ def _ctx_sem_perfil() -> Any:
 def test_os_tres_gestos_sem_perfil_ativo_agem_no_freestyle(
     semeadura_ligada: None, tmp_path: Path, gesto: str,
 ) -> None:
-    """Sem perfil valendo, os três botões agem na escolha dela.
+    """Sem perfil valendo, os três botões agem na escolha do usuário.
 
     Na máquina nova a escolha é o Freestyle aceso (a semeadura acende o botão,
     `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 7), e a dica de cada um diz o

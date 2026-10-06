@@ -6,7 +6,7 @@ coluna Atenção da aba Jogar (`app/actions/jogar/painel.py:358`). As três
 chamavam `wrapper_banner_text` direto, que só olha
 `gamepad_emulation.wrapper_used` e não consulta lista nenhuma.
 
-A decisão dela no mesmo dia (pergunta `07-Q3`): *"as duas recusas calam tudo"*.
+A decisão de produto no mesmo dia (pergunta `07-Q3`): *"as duas recusas calam tudo"*.
 E a `a07_lancadores.calados` já dizia, por escrito, que a conta precisava de um
 dono para a outra metade não a redigitar:
 

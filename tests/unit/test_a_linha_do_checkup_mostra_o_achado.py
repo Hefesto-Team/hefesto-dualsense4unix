@@ -7,7 +7,7 @@ do dono), que a aba Jogar ainda lê pelo `_exame()`; as réguas dos endereços d
 saíram com ela.
 
 **02/09/2026.** As cinco linhas do Check-up da aba Conexões têm três partes: o
-selo, a frase e o `?`. A frase e o selo já vinham do exame da mesa dela; as
+selo, a frase e o `?`. A frase e o selo já vinham do exame da bancada; as
 TRÊS estavam erradas, cada uma de um jeito, e as três têm dono no produto.
 
 **A FRASE MOSTRAVA O RÓTULO.** O pacote emitia ``[i["titulo"] for i in itens]``
@@ -39,7 +39,7 @@ e a frase ao lado já eram os dela — a linha 1 dizia "Economia de energia
 desligada" e o `?` explicava *"as entradas em uso entregam 500 mA ou mais"*, que
 é a medição de OUTRO achado.
 
-**E ENTÃO O `?` PASSOU A REPETIR A LINHA — decisão dela, 02/09/2026.** Com a
+**E ENTÃO O `?` PASSOU A REPETIR A LINHA — decisão, 02/09/2026.** Com a
 publicação do mesmo dia a linha passou a mostrar a MEDIÇÃO, e a dica ao lado
 trazia essa mesma medição na segunda das três metades: a pessoa lia a frase e
 a lia de novo ao parar o ponteiro. O `?` fica com o que a linha NÃO diz — **por
@@ -52,9 +52,9 @@ mostra o ``rotulo``** (``secao_exame.PainelDoExame``, ``:1177``) — naquela tel
 a dica é o único caminho de ``Item.porque`` até a pessoa. Duas telas mostram
 coisas diferentes na linha, logo pedem dicas diferentes.
 
-**O QUARTO SELO — decisão dela, 02/09/2026.** ``SELO_DO_ESTADO`` manda
+**O QUARTO SELO — decisão, 02/09/2026.** ``SELO_DO_ESTADO`` manda
 ``atencao`` e ``problema`` para a MESMA palavra e a MESMA pílula  (noqa-acento)
-laranja, e ela
+laranja, e o usuário
 decidiu que *"o que está quebrado agora não pode parecer igual ao que só podia
 estar melhor"*. Esta leva entrega a **cor**: a pílula ganhou o endereço
 ``selo-estado`` (alvo ``classe``), o pacote emite o ESTADO cru e o desenho traz
@@ -147,8 +147,7 @@ def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
     """A cor sai do ESTADO, e é ele que separa os dois — não a palavra.
 
     Enquanto o único canal era `SELO_DO_ESTADO`, os dois estados chegavam à
-    tela como a mesma pílula laranja e a mesma palavra: *"o que está quebrado
-    agora parecia igual ao que só podia estar melhor"*, que é a frase dela.
+    tela como a mesma pílula laranja e a mesma  que é a frase de produto.
     """
     quebrado = a08._linha(_item(estado="problema"))
     so_podia_melhorar = a08._linha(_item(estado="atencao"))  # (noqa-acento) id
@@ -173,7 +172,7 @@ def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
 
 
 def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
-    """Decisão dela, 02/09/2026 — e é a metade do meio que sai."""
+    """Decisão, 02/09/2026 — e é a metade do meio que sai."""
     it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
     linha = a08._linha(it)
     assert linha["porque"] == it.porque, "a linha continua mostrando a medição"
@@ -205,7 +204,7 @@ def test_uma_linha_sem_cura_nao_inventa_o_que_fazer():
 
 
 def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
-    """26/09/2026, pedido dela: *«vamos remover essas infos que aparecem no"""
+    """26/09/2026, pedido: *«vamos remover essas infos que aparecem no"""
     html = BANCADA.read_text(encoding="utf-8")
     assert 'data-campo="examinado"' not in html
     assert 'data-campo="conta-gestao"' not in html

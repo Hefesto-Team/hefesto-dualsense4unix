@@ -8,11 +8,11 @@ delegar ao default do ESQUEMA para "chamador sem opinião", esse default é `0`
 (`profiles/schema.py`) — e o perfil recém-salvo passou a nascer ABAIXO dos
 catch-all que ela tem em disco.
 
-O disco dela em 30/07, medido: `fallback` 0, `vitoria` 0, `meu_perfil` 1,
+O disco do usuário em 30/07, medido: `fallback` 0, `vitoria` 0, `meu_perfil` 1,
 `Pragmata` 5, `Pragmata2` 5. Com prioridade 0 o perfil novo perde para três
 deles; e o desempate final é a ordem alfabética do nome do arquivo, então nem o
-empate salvava. Isso é literalmente a queixa crônica dela — "a config que eu
-deixo nunca é respeitada" — reaparecendo num caminho que antes funcionava (o
+empate salvava. É a queixa crônica de que a configuração do usuário nunca é
+respeitada, reaparecendo num caminho que antes funcionava (o
 default anterior era 5, que empatava no topo e vencia pelo alfabeto).
 
 O módulo NÃO importa a GUI no topo, de propósito. `app.actions.profiles_actions`

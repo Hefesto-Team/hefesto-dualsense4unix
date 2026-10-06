@@ -15,7 +15,7 @@ POR QUE ELE É PURO, E ISSO NÃO É PREFERÊNCIA
 Nada aqui roda ``systemctl``, abre soquete ou lê disco: quem faz isso é o
 chamador, e entrega o resultado no :class:`Leitura`. É o que deixa a régua medir
 **este** código — o mesmo que a interface roda — sem daemon, sem rede e sem
-tocar a mesa dela. O piloto ``src/hefesto_dualsense4unix/interface/sistema_viva.py`` é quem
+tocar a bancada. O piloto ``src/hefesto_dualsense4unix/interface/sistema_viva.py`` é quem
 faz as chamadas de verdade.
 
 A REGRA QUE MAIS PESA AQUI: A AUSÊNCIA DE DADO É UM VALOR

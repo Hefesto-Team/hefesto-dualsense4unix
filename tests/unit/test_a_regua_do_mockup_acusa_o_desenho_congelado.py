@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A régua que ELA pediu: um campo que continua exibindo o valor do mockup."""
+"""A régua que O usuário pediu: um campo que continua exibindo o valor do mockup."""
 from __future__ import annotations
 
 import pathlib

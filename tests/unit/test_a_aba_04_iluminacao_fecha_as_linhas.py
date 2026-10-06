@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""As QUATRO decisões dela na aba Iluminação, medidas uma a uma — 04/09/2026.
+"""As QUATRO decisões de produto na aba Iluminação, medidas uma a uma — 04/09/2026.
 
 A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
 §2, aba `04-iluminacao`, e a sprint
 `2026-09-04-ONDA2-04-ILUMINACAO-01-o-interruptor-de-verdade-e-a-cor-que-se-grava-ao-desligar`:
 
     [01] a razão do tracejado    uma linha só quando há ressalva          (D-02)
-         ↑ CADUCOU EM 07/09/2026, por ordem dela: *"o que eu não quero é frase
-           da steam ou outras"*. A linha saiu da célula `LEDs`, e as cinco
+         ↑ CADUCOU EM 07/09/2026, por  A linha saiu da célula `LEDs`, e as cinco
            réguas que a mediam saíram com ela — ver
            `test_a_04_as_lampadas_espelham_o_numero`, que guarda a AUSÊNCIA.
            A razão do tracejado continua no `title` das duas tiras.
@@ -17,10 +16,10 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
 
 **A DE PESO É A [02], E ELA VEIO CONTRA A RECOMENDAÇÃO ESCRITA.** A lista desta
 aba propunha que o botão só MOSTRASSE o estado do automático, e que mudá-lo
-continuasse na aba Perfis (conflito C-4). Ela escolheu o interruptor, aceitou o
+continuasse na aba Perfis (conflito C-4). O usuário escolheu o interruptor, aceitou o
 custo declarado (~30 px) e aceitou a consequência que ele abre — com estas
 palavras: *"ok aceito o caminho"*. **Desligar GRAVA a cor de cada controle no
-ato**, para cumprir a regra dela de 03/09 (*"nenhuma cor dos controles nunca
+ato**, para cumprir a regra de 03/09 (*"nenhuma cor dos controles nunca
 pode ser a mesma"*) sem o produto nunca dizer não a ela.
 
 O QUE ESTE ARQUIVO MEDE, com a mordida escrita em cada caso:
@@ -50,7 +49,7 @@ chamada. É o mesmo desenho de `test_a_04_o_trilho_de_brilho_grava.py`.
 **RELATADO, e é de outra posse:** `("04-iluminacao.html", "auto-cores")` tem de
 entrar em `hefesto_vivo.PERIGOSOS` — o gesto chama `gravar_e_reaplicar`, e a
 régua de clique acionaria o interruptor sozinha, desligando o automático no
-perfil DELA para provar que sabe clicar. `interface/hefesto_vivo.py` é da ONDA 0
+perfil do usuário para provar que sabe clicar. `interface/hefesto_vivo.py` é da ONDA 0
 e esta frente não o toca; quem já reprova por isso é
 `tests/unit/test_todo_gesto_que_grava_esta_protegido.py`, com o nome do gesto na
 mensagem.
@@ -219,7 +218,7 @@ def test_o_estado_do_automatico_chega_a_tela(a04, pac):
 
 
 def test_desligar_grava_a_cor_de_cada_controle(pac, a04):
-    """**A D-13 INTEIRA, e é o caso que ela aceitou por escrito.**"""
+    """**A D-13 INTEIRA, e é o caso que o usuário aceitou por escrito.**"""
     caminho = _semear(automatico=True)
     p = PonteDeMentira()
     a04.auto_cores(_ctx(pac), _mudanca(), p)
@@ -299,11 +298,11 @@ def test_o_interruptor_reaplica_o_perfil(pac, a04):
 
 
 def test_o_click_que_vem_junto_do_change_nao_inverte_duas_vezes(pac, a04):
-    """Um clique dela é UM ato — e o navegador manda dois eventos por ele.
+    """Um clique do usuário é UM ato — e o navegador manda dois eventos por ele.
 
     Um `<input type="checkbox">` dispara `click` E `change` no mesmo ato, e o
     BOOTSTRAP escuta os dois. Sem o guarda, um clique viraria DUAS inversões: o
-    interruptor voltaria sozinho ao lugar, com duas gravações no perfil dela
+    interruptor voltaria sozinho ao lugar, com duas gravações no perfil do usuário
     pelo caminho.
 
     A MORDIDA: tire o `if _so_abriu_o_seletor(o): return None` do gesto e esta

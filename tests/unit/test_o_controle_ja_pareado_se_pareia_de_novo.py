@@ -208,7 +208,8 @@ def test_o_clique_esquece_o_par_velho_antes_de_abrir_a_busca(
     assert "radio.busca.set" in ordem and ordem.index("radio.busca.set") > 0
     busca = next(p for m, p in ponte_de_mentira.pedidos if m == "radio.busca.set")
     assert busca == {"ligada": True, "destino": destino}
-    # o MESMO clique é a escolha dela: o `radio.mover` do aparelho no adaptador, depois da busca
+    # o MESMO clique é a escolha do usuário: o `radio.mover` do aparelho no adaptador, depois da
+    # busca
     assert ordem.index("radio.mover") > ordem.index("radio.busca.set")
     assert ("radio.mover", {"destino": destino, "aparelho": a08._mac(controle)}
             ) in ponte_de_mentira.pedidos

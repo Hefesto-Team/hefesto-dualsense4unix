@@ -87,7 +87,7 @@ def test_os_seis_selos_saem_para_cada_controle(vias: list[str]) -> None:
 
 
 def test_o_mic_desligado_por_escolha_tambem_e_certo() -> None:
-    """Pedido dela: *Mic ✓ (também com o mic desligado, se foi escolha)*."""
+    """Pedido: *Mic ✓ (também com o mic desligado, se foi escolha)*."""
     pac = _pac()
     u = UNIQS[0]
     dec = _Declaracao({_hex(u): _Controle(microfone=False)})
@@ -106,7 +106,7 @@ def test_o_mic_pelo_radio_sem_ponte_nao_e_certo() -> None:
 
 
 def test_conexao_e_bateria_sairam_do_cartao() -> None:
-    """26/09/2026, pedido dela: *«vamos remover as linhas de conexão estávbel"""
+    """26/09/2026, pedido: *«vamos remover as linhas de conexão estávbel"""
     pac = _pac()
     c = {"uniq": UNIQS[0], "transport": "bt", "battery_pct": 40, "hz_movimento": 20}
     assert set(pac.estado_do_controle(c, {}, {}, _Declaracao())) == {

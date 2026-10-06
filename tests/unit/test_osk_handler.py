@@ -143,7 +143,7 @@ def test_sem_binario_notifica_a_usuaria(
     monkeypatch: pytest.MonkeyPatch,
     _sem_notificacao_de_verdade: list[list[str]],
 ) -> None:
-    """Apertar L3 sem teclado na tela instalado vira aviso na tela dela."""
+    """Apertar L3 sem teclado na tela instalado vira aviso na tela do usuário."""
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which",

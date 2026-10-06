@@ -31,7 +31,7 @@ O CAMINHO, medido lendo o código (nenhum aparelho tocado):
     `primary_uniq`, e este nunca é a identidade de um externo (a adoção
     deliberada de externo, a `E3`, está EXPLICITAMENTE não-entregue:
     core/evdev_reader.py:580-583, "O que ela NÃO faz: adotar ninguém (...)
-    o veto de 19/07 segue de pé; quem o derruba é a E3, e ela é dela").
+    o veto de 19/07 segue de pé; quem o derruba é a E3, e é do usuário").
 
     Desde 28/09/2026 (O-MODO-XBOX-NAO-E-QUEDA-02, item 5) o laço entrega aos
     atalhos os botões de CADA controle na mesa (`poll.botoes_de_cada_controle`):

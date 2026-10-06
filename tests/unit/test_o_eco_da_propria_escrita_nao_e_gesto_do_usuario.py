@@ -1,16 +1,16 @@
 """A borda do botão do microfone não conta o ECO da nossa própria escrita.
 
-O DEFEITO ERA UM LAÇO FECHADO, medido na bancada dela em 10/09/2026 com o
+O DEFEITO ERA UM LAÇO FECHADO, medido na bancada em 10/09/2026 com o
 DualSense do rádio na mesa::
 
     1. o daemon liga o microfone            -> set_microphone_mute(False)
     2. o firmware apaga o bit de mudo
     3. a mudança volta no report de entrada
     4. `_registrar_borda_do_mic` incrementava o contador de bordas
-    5. `mic_da_mesa_loop` lia isso como "ela apertou o botão do microfone"
+    5. `mic_da_mesa_loop` lia isso como "o usuário apertou o botão do microfone"
     6. o daemon DESLIGAVA o microfone
 
-No journal dela::
+No journal do usuário::
 
     02:11:15.541  bt_mic_palavra_dela   ligado=True
     02:11:15.547  bt_mic_pedido         ligar=True  seq=4
@@ -125,7 +125,7 @@ def test_o_gesto_DELA_conta_borda(handle: _Handle) -> None:  # noqa: N802
 
 
 def test_o_eco_da_nossa_escrita_nao_conta_borda(handle: _Handle) -> None:
-    """O caso EXATO da bancada dela: nós pedimos, e o eco volta."""
+    """O caso EXATO da bancada: nós pedimos, e o eco volta."""
     handle.set_microphone_mute(False)
     handle.report(False)
     assert handle._mic_mudo_seq == 0, (

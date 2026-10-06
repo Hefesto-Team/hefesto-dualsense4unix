@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""a_entrada_que_nasce_sozinha.py — quem mexe no cursor e no teclado dela."""
+"""a_entrada_que_nasce_sozinha.py — quem mexe no cursor e no teclado do usuário."""
 
 from __future__ import annotations
 

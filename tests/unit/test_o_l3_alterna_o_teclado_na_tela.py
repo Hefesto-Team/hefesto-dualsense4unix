@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO SEGUNDO TOQUE — o L3 abre, e apertado de novo FECHA.
 
-DECISÃO DELA, 02/09/2026, verbatim: *"deixar no preset do botão L3, no
+DECISÃO, 02/09/2026, verbatim: *"deixar no preset do botão L3, no
 mapeamento, abrir o teclado virtual e fechar o teclado virtual caso apertado
 novamente."*
 
@@ -93,7 +93,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_o_preset_de_fabrica_do_l3_e_o_alternador() -> None:
-    """O mapa é o que ela mandou mexer — *"no preset do botão L3, no mapeamento"*."""
+    """O mapa é o que o usuário mandou mexer — *"no preset do botão L3, no mapeamento"*."""
     assert DEFAULT_BUTTON_BINDINGS["l3"] == (TOKEN_TOGGLE_OSK,), (
         "o L3 saiu do alternador. Se voltou a ser `__OPEN_OSK__`, o teclado na "
         "tela deixa de ter saída no mesmo dedo que o abriu.")

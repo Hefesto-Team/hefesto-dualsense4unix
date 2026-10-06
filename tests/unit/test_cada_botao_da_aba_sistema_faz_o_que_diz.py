@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """CADA BOTÃO DA ABA SISTEMA FAZ O QUE DIZ — SISTEMA-BOTOES-01, 13/09/2026.
 
-A palavra dela está no índice da leva
-(o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026): *«não sei
-se nossos botões da aba sistema fazem o que deveriam fazer de fato e se
-funcionam»*. O estudo mediu os catorze gestos e achou metade deles em parte:
+A palavra de produto está no índice da leva
+(o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026). O estudo mediu os catorze gestos e achou
+metade deles em parte:
 armavam sem a pergunta que o `title` promete, piscavam verde sobre um clique que
 não fez nada, e recusavam calados.
 
@@ -276,7 +275,7 @@ def test_a_recusa_de_outro_botao_tira_a_pergunta_no_tique(a09, ctx, pin):
 
 
 def test_o_proton_com_a_steam_aberta_recusa_no_clique_1(a09, ctx, pin):
-    """Na máquina dela a Steam fica aberta: o botão armava calado e recusava calado.
+    """Na máquina do usuário a Steam fica aberta: o botão armava calado e recusava calado.
 
     MORDIDA: tire o `_porque_o_proton_nao_trava` de `fixar_proton`.
     """
@@ -306,7 +305,7 @@ def test_o_proton_sem_o_pino_no_disco_recusa_no_clique_1_com_a_frase_dele(a09, c
 
 
 def test_o_proton_no_clique_2_trava_todo_jogo(a09, ctx, pin):
-    """A ordem dela de 17/09 chega ao botão — INSTALL-UNIVERSAL, 18/09/2026."""
+    """A ordem de 17/09 chega ao botão — INSTALL-UNIVERSAL, 18/09/2026."""
     with contextlib.redirect_stderr(io.StringIO()):
         a09.fixar_proton(ctx, {}, None)
 

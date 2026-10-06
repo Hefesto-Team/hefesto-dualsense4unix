@@ -8,10 +8,10 @@ disco passa. O que ela vê é outra coisa — a repintura do tique escreve TEXTO
 aceita UM alvo de pintura**. O card que nasceu ATIVO e ficou mudo mostrava a
 palavra ``MUDO`` sobre o fundo VERDE.
 
-DECISÃO DELA, 03/09/2026: *"Cor + ícone. Redundante de propósito — quem lê
+DECISÃO, 03/09/2026: *"Cor + ícone. Redundante de propósito — quem lê
 rápido pega pela cor, quem não distingue cor pega pelo risco."*
 
-Ele NÃO TOCA O APARELHO DELA: não clica no 🎙, que faria ``mic.set`` no
+Ele NÃO TOCA O APARELHO DO USUÁRIO: não clica no 🎙, que faria ``mic.set`` no
 firmware do DualSense que está no cabo agora. Ele injeta a carga que o TIQUE
 injetaria — ``window.__hef.pintar`` com ``mic-selo`` valendo cada um dos três
 estados — e lê o DOM na MESMA avaliação de JS, para que o tique de 500 ms não

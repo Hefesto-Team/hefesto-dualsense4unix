@@ -1,11 +1,7 @@
 """A cena dela, medida no daemon: 3 no rádio + 1 no cabo, cada um com o SEU som.
 
-A CENA, com as palavras dela (10/09/2026)
-------------------------------------------
-    *"imagina que estejam jogando um fps com 4 players local (3 por bt … + um
-    no cabo) … o canal de som sfx (a cada tiro dado o som do tiro efeito
-    sonoro sai pra cada controle), e cada controle com seu microfone
-    individual funcionando."*
+A CENA, com as palavras (10/09/2026)
+-----------------------------------------
 
 Esta régua mede a metade de SAÍDA dessa cena no produto: sobe um `Daemon` de
 verdade com quatro DualSense no sysfs, e olha o que chegou ao `pactl` e às
@@ -17,7 +13,7 @@ O QUE ELA TRAVA, e cada item já foi um defeito nesta casa
 ----------------------------------------------------------
 1. **os QUATRO ganham nó** — não o primário, não "o que estiver no cabo";
 2. **cada nó tem nome próprio** (`hefesto_som_<hex6>` do `uniq`): quatro
-   entradas de nome igual na lista de som dela é o defeito de 07/09;
+   entradas de nome igual na lista de som do usuário é o defeito de 07/09;
 3. **os três do rádio ganham UMA ponte CADA**, com o hidraw daquele controle —
    uma ponte compartilhada manda o som do P2 no alto-falante do P1;
 4. **o do cabo NÃO ganha ponte de rádio**, e ainda assim tem rota;
@@ -62,7 +58,7 @@ _PRODUTO = 0x0CE6
 
 
 def _forjar_sysfs(raiz: Path) -> Path:
-    """Uma árvore `/sys/class/hidraw` com os quatro. Nada aqui existe no disco dela."""
+    """Uma árvore `/sys/class/hidraw` com os quatro. Nada aqui existe no disco do usuário."""
     classe = raiz / "hidraw"
     classe.mkdir(parents=True)
     for n, (uniq, transporte) in enumerate(_MESA):

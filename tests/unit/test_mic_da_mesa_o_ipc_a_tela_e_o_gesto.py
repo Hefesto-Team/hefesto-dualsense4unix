@@ -373,7 +373,7 @@ async def test_a_borda_sem_endereco_nao_elege_ninguem() -> None:
 
 @pytest.mark.asyncio
 async def test_o_mudo_de_quem_nao_elegeu_nao_tira_o_microfone_de_quem_elegeu() -> None:
-    """A MESA DE QUATRO, na cena que ela nomeou — e era alcançável no 1º toque."""
+    """A MESA DE QUATRO, na cena que o usuário nomeou — e era alcançável no 1º toque."""
     backend = _BackendDaMesa((_J1, _J2))
     daemon = _DaemonDoGesto(backend)
 

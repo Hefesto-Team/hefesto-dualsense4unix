@@ -54,7 +54,7 @@ def test_sem_jogo_em_foco_a_escolha_global_e_escrita() -> None:
 
 
 def test_o_detector_que_levanta_falha_para_o_lado_de_escrever() -> None:
-    """Sem detector confiável, escreve — perder escolha dela é pior."""
+    """Sem detector confiável, escreve — perder escolha do usuário é pior."""
 
     class _DaemonQuebrado(_Daemon):
         def _janela_de_jogo_em_foco(self) -> bool:

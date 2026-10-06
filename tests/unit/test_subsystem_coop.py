@@ -535,7 +535,7 @@ def test_primario_nao_crava_1_quando_o_registro_diz_outro_numero(
 ) -> None:
     """R-24: o primário era `1` HARDCODED na barra de player.
 
-    Falha-sem: na máquina dela o Pro Nintendo segurava o slot 1 no registro
+    Falha-sem: na máquina do usuário o Pro Nintendo segurava o slot 1 no registro
     de externos e o DualSense primário acendia "player 1" pelo co-op — "os
     dois controles aparecem como player 1", medido. Com o espaço único, o
     primário acende o número que o registro deu a ELE.

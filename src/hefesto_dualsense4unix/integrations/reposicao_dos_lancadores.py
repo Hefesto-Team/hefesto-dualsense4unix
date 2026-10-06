@@ -1,8 +1,6 @@
 """Fechar e reabrir o lançador que estava aberto — REPOR-O-LANCADOR-01.
 
-**Por que isto existe, e o pedido é dela (21/09/2026):** *"tenho pensando sobre
-o botão de reiniciar daemon. Acho que além do que ele já faz seria importante
-ele fechar e reabrir o launcher, seja steam, epic, heroic ou qualquer outro."*
+**Por que isto existe, e o pedido é de produto (21/09/2026):** **
 <!-- noqa-acento: citação literal -->
 E, quando lhe foram postas três formas: *"Faz automático mesmo"*.
 
@@ -13,7 +11,7 @@ serviço sem repor o lançador devolve a máquina exatamente ao estado que o
 reinício queria desfazer. A Steam ainda apaga sozinha o wrapper da Launch
 Option, e só uma reabertura o devolve ao lugar.
 
-**A REGRA DO JOGO ABERTO NÃO É NOVA E NÃO É MINHA.** Está escrita no produto
+**A REGRA DO JOGO ABERTO NÃO É NOVA E NÃO É DESTE MÓDULO.** Está escrita no produto
 desde 18/09/2026, em `steam_launch_options._fechar_a_steam_uma_vez`: *"o jogo
 aberto vem ANTES de qualquer decisão — fechar a Steam com um jogo aberto o
 mataria"*. Este módulo aplica a MESMA regra a todos os lançadores, e é o único

@@ -64,7 +64,7 @@ class _BootDaemon:
 
 
 def _salvar_sackboy_dela() -> None:
-    """Grava o perfil `Sackboy` COMO ELE ESTÁ na máquina dela (08/08 01:49)."""
+    """Grava o perfil `Sackboy` COMO ELE ESTÁ na máquina do usuário (08/08 01:49)."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 

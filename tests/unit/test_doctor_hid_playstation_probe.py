@@ -1,6 +1,6 @@
 """PROBE-MORTO-PS-01 — o detector do DualSense que o kernel abortou no probe.
 
-O defeito, medido na máquina dela em 08/08/2026 (6 vezes): o driver
+O defeito, medido na máquina do usuário em 08/08/2026 (6 vezes): o driver
 `playstation` aborta a probe, e o controle conecta no Bluetooth, acende a luz
 do próprio firmware e NÃO existe para o sistema — sem hidraw, sem input, sem
 nó de LED. A dona tinha dois controles ligados, a janela mostrava um, e nada

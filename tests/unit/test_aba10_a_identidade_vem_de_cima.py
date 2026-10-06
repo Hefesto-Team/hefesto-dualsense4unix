@@ -1,16 +1,11 @@
 """ABA 10 — a identidade do controle vem da FITA DO TOPO, nunca do mockup.
 
-A LEI, e ela é dela (03/09/2026):
-
-    *"se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado. Por isso temos o mapa pra servir como  (noqa-acento)
-    variável de identificação"*
+A LEI, e é do usuário (03/09/2026)
 
 (A marca acima é a isenção da casa para **citação literal**: as palavras
-dela não se corrigem, e o portão de acentuação pula a linha que a carrega.)
+de produto não se corrigem, e o portão de acentuação pula a linha que a carrega.)
 
-O QUE ELA VIU, e é o que originou a lei: a fita do topo dizendo
+O QUE O USUÁRIO VIU, e é o que originou a lei: a fita do topo dizendo
 ``P1 · White · USB`` com a tabela por controle logo abaixo pintando a barra de
 3px na cor do controle do DESENHO. Nesta aba o defeito tinha endereço exato: o
 ``--plastico`` morava no ``<tr>``, **sem nenhum ``data-hef``**, então o
@@ -153,7 +148,7 @@ def test_a_lista_da_barra_acompanha_a_da_linha(disco: list[Any]) -> None:
 
 
 def test_sem_cor_lida_a_barra_fica_vazia(disco: list[Any]) -> None:
-    """Regra dela: *campo sem informação não mostra nada*."""
+    """Regra de produto: *campo sem informação não mostra nada*."""
     assert a10_perfis._plastico(SEM_COR) == "", (
         "a aba inventou uma cor para um controle cuja cor não foi lida")
     fora = _pacote([*MESA, SEM_COR])

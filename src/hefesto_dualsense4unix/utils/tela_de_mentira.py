@@ -1,4 +1,4 @@
-"""A janela de instrumento não nasce na tela dela. TELA-DELA-02."""
+"""A janela de instrumento não nasce na tela do usuário. TELA-DELA-02."""
 
 from __future__ import annotations
 

@@ -1,8 +1,6 @@
 """Salvar não pode desfazer o que a aba já gravou.
 
-MEDIDO EM 05/09/2026, atrás do pedido dela: *"aplicar aplica todas as configs
-naquele perfil e salvar se lembra disso quando eu for jogar o jogo e no dia
-seguinte e por diante"*. Um ciclo inteiro — perfil no disco, ela configura nas
+MEDIDO EM 05/09/2026, atrás do  Um ciclo inteiro — perfil no disco, ela configura nas
 abas 02, 04, 05 e 06, volta e clica **Salvar** no rodapé — mostrou que **5 de
 11 campos sobreviviam**, e que três deles não se perdiam por esquecimento: o
 produto já tinha gravado o valor certo no disco e o Salvar o **desfazia**.
@@ -17,7 +15,7 @@ AS DUAS CAUSAS DE 05/09, e onde cada uma mora hoje:
    os emitia, e todo Salvar os zerava. A cura é do ``to_profile``, e o Salvar
    de hoje passa por ele (§2).
 
-E O QUE O APARELHO PUBLICA NÃO ENTRA (§3): cada aba grava a escolha dela no
+E O QUE O APARELHO PUBLICA NÃO ENTRA (§3): cada aba grava a escolha do usuário no
 clique (o som na 02, a luz na 04, a força na 05, o mouse na 06, o sensor pelo
 ``sensor.set`` do daemon), e o Salvar regrava isso, com o aparelho dizendo
 outra coisa.
@@ -135,7 +133,7 @@ def test_as_lampadas_daquele_controle_sobrevivem_ao_salvar(
 
 
 def test_a_cor_acesa_nao_vence_o_disco(perfil_configurado: str) -> None:
-    """A cor que o aparelho acende não é a escolha dela; a do disco é.
+    """A cor que o aparelho acende não é a escolha do usuário; a do disco é.
 
     Até 27/09 a cor viva vencia o disco no Salvar (medido em 01/09, quando o
     clique na cor ainda não gravava). Desde 09/09 o clique grava

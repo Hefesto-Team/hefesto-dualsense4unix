@@ -286,7 +286,7 @@ class TestQuarentena:
         )
 
     def test_boot_novo_libera(self, tmp_path: Path) -> None:
-        """A quarentena é do BOOT. Reiniciar a máquina é gesto dela, e recomeça."""
+        """A quarentena é do BOOT. Reiniciar a máquina é gesto do usuário, e recomeça."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
 
@@ -440,7 +440,7 @@ class TestFiacao:
         assert "bt_bonds_autorestore.sh" in UNINSTALL.read_text(encoding="utf-8")
 
     def test_o_install_nao_promete_mais_restauro_manual(self) -> None:
-        """A decisão dela de 08/08 contra a linha de `install.sh` que a contradizia."""
+        """A decisão de 08/08 contra a linha de `install.sh` que a contradizia."""
         texto = texto_do_instalador()
         assert "restauração é MANUAL" not in texto, (
             "o install.sh voltou a prometer restauro manual — contradiz a "

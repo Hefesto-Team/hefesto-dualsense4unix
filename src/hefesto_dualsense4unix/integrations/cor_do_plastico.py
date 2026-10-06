@@ -38,7 +38,7 @@ com um CRC-32 nos quatro últimos bytes, e a semente é o **byte de cabeçalho d
 transação HIDP** — há uma por sentido, e a de quem ESCREVE feature é
 ``SET_REPORT|FEATURE`` (``0x53``). Ver :data:`SEMENTE_SET_FEATURE_BT`.
 
-**MEDIDO EM 02/09/2026, com o controle dela no rádio** (``hidraw5``, o mesmo
+**MEDIDO EM 02/09/2026, com o controle do usuário no rádio** (``hidraw5``, o mesmo
 comando três vezes, mudando só o envelope):
 
 ===================  ==========  ============================================
@@ -56,7 +56,7 @@ para DUAS unidades** (``hidraw8``, código ``02``, em 27/08/2026; ``hidraw5``,
 código ``04``, hoje). Duas unidades não são universalidade, e este arquivo não
 escreve que são.
 
-UMA TABELA SÓ, E ELA É O MAPA DELA
+UMA TABELA SÓ, E ELA É O MAPA DO USUÁRIO
 ----------------------------------
 
 O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. A tradução código → nome
@@ -139,8 +139,8 @@ TABELA_DAS_CORES = _RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 
 _ZONAS_DO_TOM = ("casca_esq", "casca_dir")
 
-#: *«aí ele pluga o controle dele e o app não funciona pq ele tá todo setado  (noqa-acento): dela
-#: pra funcionar só no meu pc»*.  (noqa-acento): citação literal
+#: O produto não pode estar ajustado só para a máquina de quem desenvolve: outro usuário pluga o
+#: controle dele e o app tem de funcionar.
 MODELOS: dict[int, str] = {
     0x0CE6: "DualSense",
     0x0DF2: "DualSense Edge",
@@ -192,7 +192,7 @@ class IdentidadeDeFabrica:
 
     ROTA-A (02/09/2026). Até aqui o módulo devolvia só a COR e jogava o serial
     fora dentro de :func:`decodificar` — e o daemon, que é quem tem o fd, não
-    publicava nem um nem outro. O resultado media-se na tela dela: ``Cosmic
+    publicava nem um nem outro. O resultado media-se na tela do usuário: ``Cosmic
     Red`` e ``Starlight Blue`` cravados no HTML, e o nome de um controle mudando
     quando o segundo entrava na mesa, porque ele vinha da POSIÇÃO.
 
@@ -203,7 +203,7 @@ class IdentidadeDeFabrica:
     22/09/2026. ``cor=None`` saía igual quando o aparelho respondeu com um
     código fora da tabela (resposta: não muda nunca) e quando o descritor não
     chegou ou o ``ioctl`` estourou (falha: a próxima pode responder). Quem
-    guardava tratava as duas como a primeira, e os dois controles dela ficaram
+    guardava tratava as duas como a primeira, e os dois controles do usuário ficaram
     sem modelo nem cor pelo resto da sessão. ``definitiva`` separa as duas AQUI,
     na fonte — quem guarda não adivinha:
 
@@ -321,7 +321,7 @@ def _sem_acento(texto: str) -> str:
 
 
 def cor_do_nome(nome: str) -> CorDoPlastico | None:
-    """A cor pelo nome oficial de fábrica — o caminho da escolha dela.
+    """A cor pelo nome oficial de fábrica — o caminho da escolha do usuário.
 
     A tela grava o NOME (``ControleDeclarado.cor`` é texto livre, decisão C2), e
     é por aqui que o nome gravado volta a ter hexa para pintar a borda. Compara
@@ -363,7 +363,7 @@ def cor_do_serial(serial: str) -> CorDoPlastico | None:
     return cor_do_codigo(serial[FATIA_DA_COR])
 
 
-#: padrão dela, sem a sessão com a luz na mão (ela dormia): a saturação de 15%
+#: padrão de produto, sem a sessão com a luz na mão (ela dormia): a saturação de 15%
 SATURACAO_NEUTRA = 0.15
 VALOR_CLARO = 0.5
 
@@ -614,7 +614,7 @@ def alvo_do_controle(
     **O FILTRO DE CABO SAIU — ``ONDA-CONEXOES-11``, 02/09/2026.** Ele exigia
     barramento USB e era NOSSO, não do aparelho. A razão dele já tinha caído em
     27/08/2026 (não era o firmware recusando o ``0x80``: era a semente do nosso
-    CRC), e o que faltava era medir com o controle DELA no rádio. Medido hoje,
+    CRC), e o que faltava era medir com o controle do usuário no rádio. Medido hoje,
     em ``hidraw5``: **64 bytes, eco ``[1, 19, 2]``, código ``04`` — Galactic
     Purple — em 13,6 ms**, com o mesmo comando que sai pelo cabo, só assinado
     com a semente ``0x53``. Ver a tabela no cabeçalho do módulo.
@@ -675,10 +675,10 @@ def _perguntar_ao_hidraw(
 
     **A porta é o broker, e a queda para ``open()`` vem depois.** Esta função
     fazia ``os.open(caminho, O_RDWR)`` e nada mais, e por isso a cor não chegava
-    à tela dela. Medido em 29/08/2026, com o daemon rodando e sem parar nada: os
+    à tela do usuário. Medido em 29/08/2026, com o daemon rodando e sem parar nada: os
     dois DualSense no cabo estão ``0600 root:root``, ``os.open`` direto colhe
     ``errno 13`` nos dois, ``ler_pelo_cabo`` devolve ``None`` nos dois — e
-    ``None`` é o "Não sei" que ela viu nos dois cards.
+    ``None`` é o "Não sei" que o usuário viu nos dois cards.
 
     Os nós estão fechados porque **o Hefesto os esconde do JOGO**: é o BROKER-01
     funcionando (``broker/hidraw_broker.py``, ``setfacl -b`` + ``chmod 0600``).
@@ -841,7 +841,7 @@ class AgendaDaPergunta:
     (``interface/mesa_viva.LeitorDeCor``) e o daemon
     (``daemon/ipc_handlers._identidade_de_fabrica``) guardavam a primeira
     resposta PARA SEMPRE, e a falha de um instante virava «este controle não
-    tem cor». Medido no ``interface.log`` e no journal dela: a janela das 23:36
+    tem cor». Medido no ``interface.log`` e no journal do usuário: a janela das 23:36
     abriu 28 s depois do segundo controle entrar pelo rádio, no meio de um
     engasgo de 5 s em que o daemon perdia um terceiro nó (``ENODEV``). O broker
     serviu um descritor na hora, e a pergunta por ele não trouxe cor; serviu o

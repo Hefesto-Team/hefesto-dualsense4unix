@@ -334,9 +334,7 @@ def fonte_de_captura_do_uniq(
 def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
     """Põe o volume da captura do controle em `volume_pct` (0-100).
 
-    MIC-VOLUME-01, pedido dela: *"um slicer de microfone pra definir o volume
-    do microfone real (independente de saber se tá via bt ou via cabo), o app
-    deve ser inteligente pra saber qual caminho usar"*. A "inteligência" mora
+    MIC-VOLUME-01,  A "inteligência" mora
     em quem RESOLVE a fonte — `fonte_de_captura_do_uniq` quando há endereço,
     `fonte_de_captura_do_controle` quando não há.
 

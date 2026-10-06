@@ -57,9 +57,9 @@ def observar_os_atalhos(
     disparou neste tique (ou None), e None sem gerente de atalhos.
 
     **O PS E AS COMBINAÇÕES VALEM EM QUALQUER UM DOS QUATRO.** O PS + R3 é
-    decisão dela de 27/09 (resposta 11, `D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`);
+    decisão de 27/09 (resposta 11, `D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`);
     o item 5 da O-MODO-XBOX-NAO-E-QUEDA-02 estende a regra ao PS sozinho e às
-    outras combinações. Medido na sessão dela (G0 e G9 de 27/09): só o «primário» era
+    outras combinações. Medido na sessão do usuário (G0 e G9 de 27/09): só o «primário» era
     lido, e o PS do branco, que acende o «1», não abria a Steam. Cada controle
     é lido com o aperto DELE (`observe(..., de=<MAC>)`), e o ato do gesto
     pergunta de quem ele é (:func:`quem_segura_os_atalhos`).

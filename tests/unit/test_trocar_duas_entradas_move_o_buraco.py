@@ -26,7 +26,7 @@ _L8 = lugar_de(PCI_A, "6")
 
 
 def _com_o_que_ela_disse() -> dict[str, Any]:
-    """A máquina dela, com nome, velocidade, hub e extensor nas entradas da troca.
+    """A máquina do usuário, com nome, velocidade, hub e extensor nas entradas da troca.
 
     O extensor é a chave da porta (``extensor: true``, desde 04/10/2026) e a ponta ``8a`` é a
     entrada-filha que o Mapear grava; as duas vão com o buraco. O documento no jeito de ANTES

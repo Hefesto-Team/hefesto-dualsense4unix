@@ -242,7 +242,7 @@ def test_o_guardar_nao_apaga_o_que_a_tela_nao_mostrou(disco):
     `data-campo`, logo nunca eram pintadas, logo mostravam sempre o que o
     gerador cravou — que é **exatamente** `acoes_de_botao.padrao()`. O gesto
     calculava "nada mudou", gravava `button_actions = None` e APAGAVA a escolha
-    dela, em silêncio, com o botão dizendo "Guardar".
+    do usuário, em silêncio, com o botão dizendo "Guardar".
 
     A mordida: tire a trava do `guardar_definicoes` — este teste reprova
     dizendo que o perfil perdeu o `cross`.

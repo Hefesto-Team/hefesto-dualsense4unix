@@ -274,7 +274,7 @@ def test_sem_vpad_para_devolver_o_controle_a_marca_nao_esconde_nada(
     _sem_env: None,
     _jogo_marcado_na_frente: None,
 ) -> None:
-    """Esconder o físico sem um virtual vivo é ZERO controles na mão dela."""
+    """Esconder o físico sem um virtual vivo é ZERO controles na mão do usuário."""
     daemon = _DaemonFalso()
     preparar(daemon)
 

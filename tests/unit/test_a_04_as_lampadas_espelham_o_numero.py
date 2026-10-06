@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A célula `LEDs` é ESPELHO da linha `Jogador` — 07/09/2026, ordem dela.
+"""A célula `LEDs` é ESPELHO da linha `Jogador` — 07/09/2026, ordem de produto.
 
 **ESTE ARQUIVO ERA A RÉGUA DA BOTOEIRA (LUZES-01, 06/09/2026), e a botoeira
 saiu.** Ele se chamava `test_a_04_as_cinco_lampadas_sem_o_numero.py` e provava
@@ -7,19 +7,8 @@ as cinco linhas `FALTA_NO_HTML` que aquela sprint fechou: marcar cada lâmpada,
 os presets "Desenho do P1".."P4", "Todas acesas"/"Todas apagadas", o reenvio, e
 "Voltar todos ao automático".
 
-**A ORDEM DELA, olhando a aba com os quatro DualSense na mesa:**
-
-    "pq tá surgindo os leds no lado da iluminação se acima já tem o canto dos
-     players? pode remover?"
-
-e, corrigindo o que eu tinha entendido a mais:
-
-    "para. os leds. barra de luz ficam. é o desenho original. o que eu não
-     quero é frase da steam ou outras e p1,P2..."
-
-e a forma final, que é o contrato:
-
-    "só olhar a linha de cima da seleção de player e replicar o que tem lá."
+**A ORDEM DE PRODUTO, olhando a aba com os quatro DualSense na mesa:** a célula `LEDs` só espelha a
+linha de cima da seleção de player, e replica o que tem lá. Esse é o contrato.
 
 **O QUE SAIU E O QUE FICOU:**
 
@@ -30,7 +19,7 @@ e a forma final, que é o contrato:
     a moldura de reenvio    saiu   (gesto `reenviar-desenho`)
     a linha de ressalva     saiu   (`data-campo="luz-ressalva"`)
 
-**AS QUATRO LINHAS DE PARIDADE REABREM COMO DECISÃO DELA, e a distinção é o
+**AS QUATRO LINHAS DE PARIDADE REABREM COMO DECISÃO DE PRODUTO, e a distinção é o
 ponto:** o produto não as perdeu por descuido — ela dispensou o controle manual
 do desenho. A quinta (`csv:148`, "Voltar todos ao automático") FICA, e é o que
 os três primeiros testes deste arquivo continuam provando: o `auto-todos` veio
@@ -172,17 +161,14 @@ def _clique(**extra) -> dict:
     return {"controle": "p1", "uniq": UM, **extra}
 
 def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
-    """Ela mandou tirar os três cantos que falavam de automático — 07/09/2026.
+    """O usuário mandou tirar os três cantos que falavam de automático — 07/09/2026.
 
-        *"Olha na real sai todos. Deixa só lá o de cima mesmo o tongle. E aí vai
-         servir pra dizer. O jogo é que escolhe quais serão as cores de todos os
-         controles."*
 
     OS DOIS TESTES QUE MORAVAM AQUI mediam o gesto de escopo GLOBAL da faixa do
     título, campo a campo contra o gêmeo da janela estável, e o `profile_switch`
     que ele disparava. Eles nasceram em 06/09 e morreram em 07/09, um dia
     depois — não porque estivessem errados, mas porque a peça que mediam saiu.
-    **Um teste que continua exigindo o gesto reprovaria a ordem dela**, e é essa
+    **Um teste que continua exigindo o gesto reprovaria a ordem de produto**, e é essa
     a forma de defeito que esta régua substitui.
 
     O QUE ELE FAZIA fica escrito no pacote, na nota da poda, com a medição que
@@ -208,7 +194,7 @@ def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
 
 
 def test_a_faixa_do_titulo_tem_um_morador_so():
-    """Ficou o interruptor, e só ele — ordem dela de 07/09/2026."""
+    """Ficou o interruptor, e só ele — ordem de 07/09/2026."""
     from hefesto_dualsense4unix.interface import onde
 
     for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
@@ -270,12 +256,12 @@ def _celulas_de_leds(grade: str) -> list[tuple[int, str]]:
 
 
 def test_as_cinco_lampadas_desenham_o_padrao_do_numero_da_coluna():
-    """A réplica que ela pediu, medida coluna a coluna.
+    """A réplica que o usuário pediu, medida coluna a coluna.
 
     O PADRÃO NÃO SE DIGITA AQUI: ele é perguntado a `monta.luzinhas`, que sai de
     `core/led_control.player_led_pattern` — o MESMO que o daemon acende. Escrever
-    `<i class="on">` na posição que eu achasse certa faria esta régua medir a
-    minha memória em vez do produto, que é o defeito que esta casa nomeia como
+    `<i class="on">` na posição que parecesse certa faria esta régua medir a
+    memória de quem a escreveu em vez do produto, que é o defeito que esta casa nomeia como
     *a régua digita o que devia LER*.
 
     A MORDIDA: faça `aba04.coluna` passar um número fixo a `desenho_da_luz` — o
@@ -342,7 +328,7 @@ def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():
-    """*"o que eu não quero é frase da steam ou outras"* — 07/09/2026."""
+    """** — 07/09/2026."""
     import re
 
     from hefesto_dualsense4unix.interface import onde

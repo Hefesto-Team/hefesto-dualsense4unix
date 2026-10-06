@@ -122,7 +122,7 @@ def _clicar(gesto_: str, o: dict, p) -> None:
 
 
 def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
-    """Clicar `Rígido` e ver o campo voltar para o disco é a queixa dela.
+    """Clicar `Rígido` e ver o campo voltar para o disco é a queixa de uso.
 
     A MORDIDA: apague a linha `_do_rascunho(uniq, disco) or` do `cfgs` em
     `pacote()` — ou chame `esquecer_o_rascunho()` entre o gesto e a leitura — e
@@ -201,7 +201,7 @@ def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
 
 
 def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
-    """A alavanca é invisível e é do PRODUTO; o desenho é dela."""
+    """A alavanca é invisível e é do PRODUTO; o desenho é do usuário."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Machine"}, _Ponte())

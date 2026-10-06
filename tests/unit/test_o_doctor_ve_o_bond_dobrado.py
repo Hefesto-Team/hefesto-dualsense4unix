@@ -1,6 +1,6 @@
 """BOND-DOBRADO-01 — o controle com chave em dois adaptadores, e ninguém via.
 
-Achado na mesa dela em 19/09/2026: quatro DualSense, SEIS bonds. Dois
+Achado na bancada em 19/09/2026: quatro DualSense, SEIS bonds. Dois
 controles com chave de pareamento em dois adaptadores ao mesmo tempo — uma
 migração feita pela metade, em que o bond do adaptador de ORIGEM ficou.
 
@@ -13,7 +13,7 @@ do `doctor.sh` e rodado com uma lista de caminhos de mentira. É a mesma
 mordida que separa "acha o defeito" de "acusa qualquer coisa".
 
 A-SOBRA-DO-BOND-SAI-SOZINHA-01 (25/09/2026): o check contava OBJETO do BlueZ, e
-o BlueZ guarda um objeto para todo aparelho que uma busca achou. Na mesa dela,
+o BlueZ guarda um objeto para todo aparelho que uma busca achou. Na bancada,
 dez vizinhos vistos por hci1 e hci2 viraram dez «chaves em dois adaptadores»,
 e o doctor deu 12 avisos para UM controle com chave dobrada. Agora só conta
 objeto com ``Paired=true`` — e quem apaga a sobra é a central do rádio, sozinha

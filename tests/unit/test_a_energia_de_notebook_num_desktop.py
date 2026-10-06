@@ -1,10 +1,10 @@
 """A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 — o install pergunta pelo modo desempenho.
 
-Decisão dela (02/10/2026): o install pergunta; `--desempenho` / `--sem-desempenho`
+Decisão (02/10/2026): o install pergunta; `--desempenho` / `--sem-desempenho`
 respondem sem perguntar; sem TTY vale o padrão (sim no desktop, não no notebook
 com bateria); cada ajuste é um arquivo permanente; o uninstall desfaz; o doctor
 diz o estado de cada um. Só entra o que a prova no aparelho mostrou: o perfil de
-energia é decisão dela, e os três ajustes de hipótese (NVIDIA, áudio HDA, ASPM)
+energia é decisão de produto, e os três ajustes de hipótese (NVIDIA, áudio HDA, ASPM)
 nascem escritos e DESLIGADOS.
 
 Tudo roda em prefixo de mentira (`HEFESTO_DESEMPENHO_RAIZ`): sem root, sem
@@ -188,7 +188,7 @@ class TestOMecanismo:
     @pytest.mark.parametrize(
         ("gerenciador", "cliente", "pedido_sai", "le_de_volta", "deve_passar"),
         [
-            # o pedido sai 1 com o perfil aplicado (a porta SATA da máquina dela)
+            # o pedido sai 1 com o perfil aplicado (a porta SATA da máquina do usuário)
             ("system76-power", "system76-power", 1, "Power Profile: Performance", True),
             ("system76-power", "system76-power", 0, "Power Profile: Balanced", False),
             ("power-profiles-daemon", "powerprofilesctl", 1, "performance", True),

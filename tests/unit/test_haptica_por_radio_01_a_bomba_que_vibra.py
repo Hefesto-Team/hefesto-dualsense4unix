@@ -133,7 +133,7 @@ def test_a_sequencia_anda_e_o_contador_de_quadros_tambem() -> None:
 
 
 def test_o_microfone_e_perguntado_a_cada_report() -> None:
-    """O bit 0 dos enables é o microfone, e o gesto dela muda no meio."""
+    """O bit 0 dos enables é o microfone, e o gesto do usuário muda no meio."""
     respostas = iter([True, False, True])
     bomba, escritas = _bomba(_pcm(512 * 3, canal=2), com_microfone=lambda: next(respostas))
     while True:

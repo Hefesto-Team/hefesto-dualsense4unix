@@ -1,6 +1,6 @@
-"""O par de cada entrada vem do DESENHO DELA — e o ``peer`` do ``/sys`` não volta.
+"""O par de cada entrada vem do DESENHO DO USUÁRIO — e o ``peer`` do ``/sys`` não volta.
 
-CONEXÕES · MAPA 2D 01 / frente PAR (25/08/2026). Decisão dela do mesmo dia, que
+CONEXÕES · MAPA 2D 01 / frente PAR (25/08/2026). Decisão de produto do mesmo dia, que
 reverte a de mais cedo (``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS``).
 
 A MEDIÇÃO QUE DERRUBOU A PREMISSA
@@ -20,7 +20,7 @@ BURACO — é para isso que o kernel o publica — e nunca dois buracos vizinhos
 plástico só, **cada uma com o seu aparelho ao mesmo tempo** (``plano[porta.par]``
 devolve um aparelho DIFERENTE; se fosse o mesmo buraco nunca haveria dois).
 
-Na mesa dela o ``peer`` responde por **zero** entradas; o desenho, pelas
+Na bancada o ``peer`` responde por **zero** entradas; o desenho, pelas
 **catorze**. A fonte certa já estava no esquema — ``FaceDeclarada.portas``, de
 duas em duas —, responde com o gabinete inteiro vazio, e é **fato dela** em vez
 de inferência.

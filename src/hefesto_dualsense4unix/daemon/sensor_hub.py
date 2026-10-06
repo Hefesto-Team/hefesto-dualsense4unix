@@ -7,10 +7,10 @@ event loop do daemon a 10 Hz enquanto a GUI está aberta. Quem produz: um
 
 **O terceiro tipo nasceu em 04/09/2026 e é a entrega STATUS-04**, escrita em
 17/07/2026 e adiada com razão medida: *"co-op é DEFAULT ON (…) no estado
-normal da máquina dela, TODO secundário já tem reader e o card dele já terá
+normal da máquina do usuário, TODO secundário já tem reader e o card dele já terá
 inputs só com STATUS-01/02. O buraco real é o **modo Nativo** (…) e
 emulação-off"*. A aposta continua verdadeira — medido em 04/09/2026 com os
-dois DualSense dela em USB e co-op ligado, os DOIS controles publicam
+dois DualSense do usuário em USB e co-op ligado, os DOIS controles publicam
 `inputs` com giro, acelerômetro e touchpad, e este hub não abre reader de
 gamepad NENHUM. O que ela fecha é o buraco: nos modos em que o co-op está
 desmontado (Nativo, emulação off, suspensão por Steam Input) o secundário
@@ -52,14 +52,13 @@ evdev entrega o mesmo evento a todos os fds abertos, e isto não é hidraw
 outra camada).
 
 **O reader de MOTION é a exceção, e ela nasceu deliberada em 04/09/2026**
-(SENSOR-DE-VERDADE-01, decisão dela: *"ele tem que funcionar de verdade.
-ambos independente do modo e da mascara"*). <!-- noqa-acento: citação literal -->
+(SENSOR-DE-VERDADE-01, ). <!-- noqa-acento: citação literal -->
 O node "Motion Sensors" é SEPARADO do node do controle: grabá-lo esconde o
 giro e o acelerômetro de quem lê evdev **sem tocar um único botão** — os
 gatilhos, os analógicos e o d-pad continuam chegando ao jogo pelo outro node.
 É o oposto do caso acima, e é por isso que a mesma máquina de grab serve aos
 dois com sinais trocados. Só grabamos quando ELA desligou um sensor; sem
-pedido dela, este hub continua sendo um observador que não disputa nada
+pedido, este hub continua sendo um observador que não disputa nada
 (:meth:`SensorHub._reconciliar_grabs`).
 
 **Quem grabou o node é que fica com os eventos, e por isso o `ipc_handlers`

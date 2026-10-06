@@ -139,7 +139,7 @@ def _fluxo(gabinete: Gabinete) -> ee.MapearAsPortas:
 
 
 def _salvar_vazio(fluxo: ee.MapearAsPortas, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O clique dela no «Salvar e ir para a próxima», com os dois campos vazios,"""
+    """O clique do usuário no «Salvar e ir para a próxima», com os dois campos vazios,"""
     monkeypatch.setattr(pac, "_o_mapa", lambda: fluxo)
     pac.mapear_gravar(None, {"forma": {"nome": "", "lugar": ""}}, None)
 

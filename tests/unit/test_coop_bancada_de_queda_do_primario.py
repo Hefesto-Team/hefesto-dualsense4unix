@@ -61,7 +61,7 @@ O roteiro (o mínimo que reproduz a noite dela)
 ``t=0: A,B`` → ``t=5: B`` (o primário A cai) → ``t=8: B,A`` (A volta com node
 novo). Rodado nas DUAS ordens de propósito — ``connect()`` antes do ``sync()``
 e ``sync()`` antes do ``connect()`` —, porque os dois laços são independentes e
-qual chega primeiro é sorteio na máquina dela.
+qual chega primeiro é sorteio na máquina do usuário.
 
 As asserções que MORDEM
 =======================
@@ -457,7 +457,7 @@ class TestAPiscadaDoPrimario:
     def test_o_jogador_2_continua_sendo_o_mesmo_controle(
         self, bancada: Bancada, sync_antes_do_connect: bool
     ) -> None:
-        """Asserção 2 — a queixa dela, em uma linha."""
+        """Asserção 2 — a queixa de uso, em uma linha."""
         _rodar_a_noite_dela(bancada, sync_antes_do_connect=sync_antes_do_connect)
 
         assert bancada.jogador_2() == UNIQ_B, (

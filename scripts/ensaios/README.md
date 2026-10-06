@@ -88,21 +88,21 @@ do caderno, e RECUSAM rodar (rc=2):
 
 ## Os instrumentos documentados aqui
 
-**Os de 09/09/2026 — as decisões dela viraram instrumento antes de virarem
+**Os de 09/09/2026 — as decisões de produto viraram instrumento antes de virarem
 campo** (*"1-b;2b;3-c;4a"*; a regra é *a bancada vem antes do campo*):
 
 | instrumento | sprint | escreve? | o que decide |
 | --- | --- | --- | --- |
 | `escrita_pelo_broker.py` | (os três abaixo) | — | a porta comum: o report do transporte pelos construtores do produto, o `common` vazio, o martelo a N Hz, a linha do caderno proposta |
-| `o_fone_tem_volume_proprio.py` | FONE-01 | `common[4]` + flag0 `0x10` | o byte do fone manda sozinho? (orelha dela, tom no sink do controle) |
-| `o_brilho_de_hardware_da_barra.py` | BRILHO-DE-HARDWARE-01 | `common[42]` + flag2 bit0 | o firmware escurece a barra pelo byte que nem o kernel escreve? (olho dela, com e sem o bit) |
+| `o_fone_tem_volume_proprio.py` | FONE-01 | `common[4]` + flag0 `0x10` | o byte do fone manda sozinho? (orelha do usuário, tom no sink do controle) |
+| `o_brilho_de_hardware_da_barra.py` | BRILHO-DE-HARDWARE-01 | `common[42]` + flag2 bit0 | o firmware escurece a barra pelo byte que nem o kernel escreve? (olho de quem confere, com e sem o bit) |
 | `o_byte_do_microfone_muda_a_captura.py` | MIC-VOLUME-02 | `common[6]` + flag0 `0x40` | o byte é ganho de hardware? (o PICO de três gravações, razão 1,5 declarada) |
 | `os_nos_de_som_por_controle.py` | SOM-POR-CONTROLE-01 · MIC-OS-QUATRO-01 | não | um nó de saída e um de entrada por controle, na lista viva; `--observar` para a mordida de tirar o cabo |
 | `o_envelope_do_som_no_radio.py` | ensaio 13 · SOM-POR-CONTROLE-01 | reports da escada | o mesmo Opus em DOIS envelopes HID (DATA vs SET_REPORT); passo 0 de luz; `--crc-errado` |
 | `a_folha_do_microfone_por_controle.py` | MIC-OS-QUATRO-01 · MIC-VOLUME-02 | `common[6]` + flag0 `0x40`, só com «Assumir» | a FOLHA do microfone, uma coluna por controle: o nó (casado por ENDEREÇO), o botão que PEDE o canal, o pico ao vivo sem tocar disco, o byte do aparelho ao lado do campo da tela, e a resposta CRUA do daemon — que é o que desmascara a tarja do «sem_fonte» |
 
 Os cinco que escrevem fazem isso pelo broker, com o daemon VIVO, e nenhum
-conclui: a linha do caderno sai PROPOSTA no fim, e quem coordena a escreve.
+conclui: a linha do caderno sai PROPOSTA no fim, e quem roda a escreve.
 Todos rodam nos DOIS transportes; o do envelope só existe no rádio, e o do
 fone no rádio só monta (não há sink de som lá até o ensaio 13 dar som).
 
@@ -288,8 +288,7 @@ só falta implementar, é sprint.
 **Pergunta:** existe um identificador que (a) distingue as unidades, (b) é
 legível nos **dois** transportes e (c) **não exige escrita nenhuma**?
 
-É a pergunta dela de 15/08/2026 — *"nos 4 controles via cabo e bt vamos ter
-sempre identificado né?"* — traduzida para algo que uma máquina responde. Lê os
+É a pergunta de 15/08/2026 — ** — traduzida para algo que uma máquina responde. Lê os
 candidatos (`0x05`, `0x09`, `0x0b`, `0x20`, `0x22`) em cada controle **duas
 vezes**, com intervalo, e julga cada um contra cinco critérios: legível nos dois
 transportes, distingue as unidades, estável entre leituras, ancorado no MAC, e
@@ -412,7 +411,7 @@ data e quem mediu.
 | o rádio entrega movimento a taxa **maior** que o cabo — ~414 Hz contra 250,0 Hz cravados no cabo | **medido** 15/08, janela de 5 s | `taxa_de_entrada.py`, daemon parado |
 | reports que o descritor declara e o firmware não implementa devolvem `EPIPE` na hora (10 deles no cabo) | **medido** 15/08 | `censo_features.py` |
 | a cor de fábrica está nos caracteres 5–6 do serial, via `SET 0x80` + `GET 0x81` | **medido** 15/08 **no CABO, em 4 de 4 unidades**; e **medido POR RÁDIO** em 27/08 (`hidraw8`) e 02/09 (`hidraw5`), em 2 unidades | `cor_do_plastico.py`. Os quatro códigos batem com o nome que ela usa (00 White, 02 Cosmic Red, 04 Galactic Purple, 05 Starlight Blue). **SUBSTITUÍDO o "medido-negativo" de 15/08**, que dizia *"por rádio o `SET 0x80` volta `EIO` imediato — e a causa é o TRANSPORTE, não a unidade"*: o `EIO` era o NOSSO envelope. Por rádio o feature vai assinado com CRC-32 de semente **`0x53`** (`SET_REPORT\|FEATURE`), e não `0xA3`; com ela o aparelho devolve 64 bytes, eco `[1, 19, 2]` e o código, em 13,6 ms. Sem assinatura nenhuma o firmware recusa igual — o CRC não é opcional no rádio |
-| existe crachá que distingue a unidade nos DOIS transportes **sem escrita**: é o **MAC** | **medido** 15/08, 4 unidades, os dois braços | `identidade_nos_dois_transportes.py`. Sai de graça no `HID_UNIQ` do sysfs; o feature `0x09` confirma. O `0x20` e o `hardware_version` **não** servem: agrupam por revisão de placa, e a data de compilação do firmware colide em PARES nos quatro controles dela |
+| existe crachá que distingue a unidade nos DOIS transportes **sem escrita**: é o **MAC** | **medido** 15/08, 4 unidades, os dois braços | `identidade_nos_dois_transportes.py`. Sai de graça no `HID_UNIQ` do sysfs; o feature `0x09` confirma. O `0x20` e o `hardware_version` **não** servem: agrupam por revisão de placa, e a data de compilação do firmware colide em PARES nos quatro controles do usuário |
 | a escada `0x32`–`0x39` carrega áudio | **hipótese viva** | o canal existe; provar exige escrever |
 | `hardware_version` distingue os quatro controles | **medido** 15/08, mas **não é a cor** | o byte *Variation* é `0x00` nos quatro; o que varia é a revisão de placa. Dois controles da mesma cor comprados juntos teriam o mesmo valor — é chave de diagnóstico, não fonte de cor |
 

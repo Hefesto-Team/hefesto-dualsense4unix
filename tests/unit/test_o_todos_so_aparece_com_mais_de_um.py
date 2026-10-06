@@ -1,6 +1,6 @@
 """O chip `Todos` da fita só existe quando há MAIS DE UM controle na mesa.
 
-DECISÃO DELA, 04/09/2026:
+DECISÃO, 04/09/2026:
 
     "só faz sentido aparecer o todos, no selecionar se tiver mais de um
      controle conectado. faz isso também"

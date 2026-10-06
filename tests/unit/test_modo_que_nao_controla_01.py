@@ -1,6 +1,6 @@
 """MODO-QUE-NAO-CONTROLA-01 — "Controlar o PC" que entra sem controlar o PC.
 
-Medido com ela ao vivo em 09/08/2026, às 23h50. Ela escolheu "Controlar o PC",
+Medido com ela ao vivo em 09/08/2026, às 23h50. O usuário escolheu "Controlar o PC",
 clicou no "Aplicar" e relatou: *"cliquei em aplicar e nada"*.
 
 O modo ENTROU — o journal prova (`native_mode_changed native=False`,
@@ -23,7 +23,7 @@ A cura é a tela dizer. Estes testes trancam as duas metades:
 NOTA DATADA — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01). A segunda metade
 dizia *"se alguém trocar a cura pela outra saída (o modo LIGAR o mouse), este
 teste reprova e a decisão volta para ela"*. A pergunta foi à sessão dos desenhos
-com a letra dela de 09/08 junto, e foi decidida em 29/09 pelo padrão dela, com
+com a letra dela de 09/08 junto, e foi decidida em 29/09 pelo padrão de produto, com
 ela dormindo: D-2909-A-NAVEGACAO-LIGA-O-MOUSE — entrar na Navegação liga o
 mouse, pelo chip e pelo PS + R3. Ela pode desfazer. A razão está na classe
 `TestAEntradaLigaOMouse`.
@@ -140,7 +140,7 @@ class TestSemAlarmeFalso:
         )
 
     def test_saindo_do_desktop_o_aviso_cala(self) -> None:
-        """AGORA-E-DEPOIS-01: com pendência, a caixa mostra a ESCOLHA dela."""
+        """AGORA-E-DEPOIS-01: com pendência, a caixa mostra a ESCOLHA do usuário."""
         assert (
             texto_do_desktop_sem_emulacao(
                 _estado(mouse=False, teclado=True), modo_exibido="gamepad"
@@ -203,13 +203,13 @@ class TestAEntradaLigaOMouse:
 
         O `mouse.emulation.restore` NÃO levava `origin`, e era certo: restaurar
         preferência persistida é reconciliação por definição. O arranjo é outra
-        coisa — ele é o clique dela, e o `origin="manual"` é o que FURA o lock
+        coisa — ele é o clique do usuário, e o `origin="manual"` é o que FURA o lock
         de 30 s de `apply_profile_mouse` para que o modo que ela acabou de pedir
         não seja adiado por um toggle de segundos antes.
 
         NOTA DATADA — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada
         passou a ligar o mouse com `origin="manual"` quando o pedido é à mão,
-        como o PS + R3 já fazia; o carimbo é do gesto dela de entrar no modo.
+        como o PS + R3 já fazia; o carimbo é do gesto do usuário de entrar no modo.
         """
         passos = dict(plan_mode_transition(MODE_DESKTOP))
 

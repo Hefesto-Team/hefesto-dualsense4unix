@@ -8,7 +8,7 @@ PARIDADE: a janela estável faz as duas coisas há meses.
    removido: X", "Lista recarregada", ``mensagem_de_ativacao``. Aqui só a
    RECUSA falava: ``RuntimeError`` vira tarja (``hefesto_vivo._recusou_dizendo``)
    e o sucesso não escrevia uma letra — o piloto anota ``("aplicou", "")``.
-   Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA, silêncio no
+   Para os NOVE gestos desta aba que ESCREVEM NO DISCO DO USUÁRIO, silêncio no
    sucesso é a mesma classe de defeito que o toast existe para curar.
 
 2. **O "Recarregar" ERA UM BOTÃO MORTO COM APARÊNCIA DE VIVO.** O
@@ -24,7 +24,7 @@ que lê ``p.blocos``, ``p.mesa``, ``p.colunas`` e ``p.vazios`` — e mais nada. 
 dicionário achatado passa por todos os laços sem casar com nenhum: zero escrito,
 zero erro. É a forma exata do defeito que já custou dois dias ao ``blocos`` do
 ``normalizar``, e um gesto que a repetisse ficaria verde em toda régua de
-registro enquanto a tela dela continuava muda.
+registro enquanto a tela do usuário continuava muda.
 """
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
 
 
 def test_a_tira_recebe_vazio_e_a_frase_vai_no_relato() -> None:
-    """A TIRA NÃO FALA MAIS — 13/09/2026, pedido dela.
+    """A TIRA NÃO FALA MAIS — 13/09/2026, pedido.
 
     O gesto continua montando a frase (é o relato do que ele fez), mas ela viaja
     em ``relato``, que o ``pintar`` não lê — ele só lê ``p.blocos``, ``p.mesa``,

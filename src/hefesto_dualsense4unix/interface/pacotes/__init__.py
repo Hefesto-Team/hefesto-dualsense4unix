@@ -24,7 +24,7 @@ devolve **endereço → valor**: o que a pintura consome. Nenhuma função de pa
 toca GTK, WebView ou IPC — elas são puras, e é por isso que dá para testá-las
 sem abrir janela.
 
-DE ONDE VEM O ENDEREÇO DE CADA VALOR, e é a parte que ela apontou: o
+DE ONDE VEM O ENDEREÇO DE CADA VALOR, e é a parte que o usuário apontou: o
 `docs/data/mapa-controles.csv` (308 linhas, o mesmo que gera o `specs.html`) diz,
 para cada peça do controle, o canal, o `report_id` e o comando **por transporte**
 — e se ela ACIONA no cabo e no rádio. Quem o pergunta em tempo de execução é
@@ -105,7 +105,7 @@ def gesto(pagina: str, nome: str, *,
     que é a única forma de provar que o botão faz o que promete, em vez de
     provar que ele existe.
 
-    `grava=` — O QUE ESTE GESTO MUDA NA MÁQUINA DELA, e quem o declara é quem o
+    `grava=` — O QUE ESTE GESTO MUDA NA MÁQUINA DO USUÁRIO, e quem o declara é quem o
     escreve. Duas formas, e a diferença decide quem confere:
 
     * **o nome da porta**, quando existe uma chamada que a árvore enxerga —
@@ -190,7 +190,7 @@ def podar_o_que_saiu(ctx: Contexto) -> frozenset[str]:
 
     **A PODA SÓ ACONTECE QUANDO ALGUÉM SAI**, e não a cada tique: varrer seis
     caches dez vezes por segundo para não achar nada é trabalho por nada, e o
-    evento que a queixa dela nomeia é raro — é a mão dela tirando o cabo.
+    evento que a queixa de uso nomeia é raro — é a mão do usuário tirando o cabo.
 
     ELA NÃO PODA QUEM CHEGA. Um controle que entra não deixa lixo em cache
     nenhum; o que ele encontra é a própria entrada, da sessão anterior dele, e
@@ -230,7 +230,7 @@ def largar_o_que_as_abas_seguram(p: Any) -> None:
 
 
 def perigosos() -> set[tuple[str, str]]:
-    """Os gestos que mexem na máquina dela — DERIVADOS, nunca digitados."""
+    """Os gestos que mexem na máquina do usuário — DERIVADOS, nunca digitados."""
     return set(GESTOS_QUE_MEXEM)
 
 
@@ -340,7 +340,7 @@ def _chave_do_molde(pagina: str, ctx: Contexto) -> tuple[str, str]:
 
     O NOME SE PERGUNTA AO DONO, e aqui ele é CHAVE DE CACHE — 19/09/2026. Com o
     `ctx.state.get("active_profile")` cru a chave era `None` em toda volta na
-    máquina dela (o daemon não publica o perfil de janela), e trocar de perfil
+    máquina do usuário (o daemon não publica o perfil de janela), e trocar de perfil
     NÃO invalidava o molde: a página seguia com o molde do perfil anterior. Ver
     `perfil.nome_do_ativo`.
     """
@@ -695,7 +695,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
     return {
-        # *"Esse x controles cai fora pra ganharmos espaçço Lateral"*.  # (noqa-acento): dela
+        # .  # (noqa-acento): dela
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
         "rodape.salvar": _dica_do_salvar(do_rodape),

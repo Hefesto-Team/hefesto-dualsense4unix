@@ -1,10 +1,10 @@
 """A tira do "não sei" é TRACEJADA — e a apagada continua lisa e vazia.
 
-DECISÃO 9 DELA, 03/09/2026::
+DECISÃO 9 DO USUÁRIO, 03/09/2026::
 
     "Tira da luz: tracejado para 'não sei'; lisa e vazia para 'apagada'."
 
-O QUE ESTAVA NA TELA, e é o defeito que ela nomeou: *"a barra está APAGADA"* e
+O QUE ESTAVA NA TELA, e é o defeito que o usuário nomeou: *"a barra está APAGADA"* e
 *"não sei se está acesa"* pintavam a MESMA tira, **byte por byte** —
 `background:var(--panel);color:transparent;opacity:1` nas duas. A única coisa
 que as separava era o `title`, e quem não passa o mouse não vê.
@@ -138,7 +138,7 @@ def test_a_frase_da_apagada_e_perguntada_ao_motor_e_nao_digitada(a04):
 
 
 def test_a_incerta_e_a_apagada_deixaram_de_ser_a_mesma_tira(a04):
-    """O defeito que ela nomeou, medido: as duas eram iguais byte por byte."""
+    """O defeito que o usuário nomeou, medido: as duas eram iguais byte por byte."""
     apagada = a04.desenho_da_luz("", 1.0, 1, estado=a04.APAGADA)
     incerta = a04.desenho_da_luz("", 1.0, 1, estado=a04.INCERTA)
     assert apagada != incerta, (
@@ -201,7 +201,7 @@ def test_a_tira_carrega_o_endereco_do_estado_nas_duas_paginas(a04, bancada):
 
 
 def test_a_folha_desenha_o_contorno_e_so_o_contorno(bancada):
-    """O tracejado é CONTORNO, e nunca cor nova — ordem dela."""
+    """O tracejado é CONTORNO, e nunca cor nova — ordem de produto."""
     regra = bancada.split(".tira-luz.incerta{", 1)
     assert len(regra) == 2, "a folha perdeu a regra do tracejado."
     corpo = regra[1].split("}", 1)[0]

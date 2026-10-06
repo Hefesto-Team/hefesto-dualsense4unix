@@ -10,7 +10,7 @@ contra um texto digitado aqui.
 
 O QUE MUDOU EM 03/10/2026 (``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO``): o
 ramo da Navegação saiu do recado. Ali nenhum jogo recebe gamepad por decisão
-dela (``D-1409``) e a intensidade fica guardada, então a faixa cala. O aviso só
+de produto (``D-1409``) e a intensidade fica guardada, então a faixa cala. O aviso só
 existe para a emulação ligada sem gamepad virtual, e nesse estado o interruptor
 da aba Jogar diz «Ligado» em 100% das vezes. O que continua valendo aqui é só
 isto: **o recado nunca manda ligar o que já está ligado**, e a pergunta tem um

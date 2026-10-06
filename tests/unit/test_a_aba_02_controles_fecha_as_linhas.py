@@ -274,7 +274,7 @@ def _com_camada_1(**kw: Any) -> None:
 
 
 def test_o_byte_do_pc_com_a_saida_em_outro_lugar_nao_acende_nada() -> None:
-    """O estado que ela VIU em 03/09: o botão aceso e o som saindo na TV.
+    """O estado que o usuário VIU em 03/09: o botão aceso e o som saindo na TV.
 
     MORDE: devolva `aceso_da_rota` a `rota_na_tela(entry)` e este caso reprova
     com `'pc' != ''` — a tela volta a afirmar que todo o som do PC está saindo
@@ -291,7 +291,7 @@ def test_o_byte_do_pc_com_a_saida_no_controle_acende_pc() -> None:
 
 
 def test_o_desacordo_nao_vira_mais_frase_no_cartao() -> None:
-    """A ressalva do alto-falante SAIU — 22/09/2026, ordem dela."""
+    """A ressalva do alto-falante SAIU — 22/09/2026, ordem de produto."""
     _com_camada_1(byte=BYTE_PC, sink_do_controle=SINK, sink_padrao="hdmi")
     campos = _card({"speaker": {"volume": 102, "muted": False, "rota": BYTE_PC}})
     assert "alto-ressalva" not in campos, campos.get("alto-ressalva")
@@ -617,7 +617,7 @@ O_SOM_EM_TRES_ESTADOS = r"""
   // O 🎙 DOS DOIS CARDS: nenhuma cor congelada, e nenhum endereço — quem diz o
   // estado do microfone é o selo ao lado, que é vivo.
   // O SELETOR MUDOU EM 20/09/2026, e não é afrouxamento: o 🎙 deixou de ter
-  // `data-mudo` porque deixou de CALAR (ordem dela), e procurá-lo por ali
+  // `data-mudo` porque deixou de CALAR (ordem de produto), e procurá-lo por ali
   // devolvia lista vazia — a régua mediria o nada e passaria. O que ela mede
   // continua igual: a cor não vem do gerador, e o endereço vivo está lá.
   const mics = [...document.querySelectorAll('.mudo-i[data-gesto="mic-retorno"]')]
@@ -868,10 +868,10 @@ def test_o_hertz_da_linha_e_medido_e_nunca_cravado() -> None:
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_cabecalho_do_cartao_pergunta_a_palavra_ao_dono(
         transporte: str) -> None:
-    """Na tela é **USB** e **BT** — palavra dela, 21/09/2026.
+    """Na tela é **USB** e **BT** — palavra, 21/09/2026.
 
-    **A NEGAÇÃO SAIU INTEIRA, e é decisão dela.** Até 21/09 esta régua negava
-    `("USB", "BT")` no texto de tela, pela I9 de 25/08. Ela olhou a fita e
+    **A NEGAÇÃO SAIU INTEIRA, e é decisão de produto.** Até 21/09 esta régua negava
+    `("USB", "BT")` no texto de tela, pela I9 de 25/08. O usuário olhou a fita e
     disse o contrário — *"USB e BT é muito bom"* —, e com isso a tela e o
     desenho passaram a falar a mesma palavra. O que a régua mede é o que
     sempre importou: **o cartão PERGUNTA ao dono** em vez de traduzir por
@@ -888,7 +888,7 @@ def test_o_cabecalho_do_cartao_pergunta_a_palavra_ao_dono(
 def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
     """O defeito vivo que a costura da ONDA B abriu, e que esta sprint fecha.
 
-    Um controle sem nome lido — a mesa dela pelo rádio é exatamente este caso —
+    Um controle sem nome lido — a bancada pelo rádio é exatamente este caso —
     faz `identidade_de` cair no ÚLTIMO degrau, que é o transporte. O cabeçalho
     tem lugar próprio para o transporte, então esse degrau vira AUSÊNCIA: o
     desenho escreve `P2 • — • rádio`.

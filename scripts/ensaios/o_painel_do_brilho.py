@@ -48,7 +48,7 @@ COR_PADRAO = (255, 255, 255)
 
 
 class Coluna:
-    """Um aparelho no painel: a porta aberta, o martelo e os controles dela."""
+    """Um aparelho no painel: a porta aberta, o martelo e os controles do usuário."""
 
     def __init__(self, alvo, ao_mudar) -> None:
         self.alvo = alvo
@@ -254,7 +254,7 @@ class Painel:
         return True
 
     def propor_linhas(self) -> None:
-        """O painel NÃO conclui: imprime as linhas, e quem coordena as escreve."""
+        """O painel NÃO conclui: imprime as linhas, e quem roda as escreve."""
         nota = self.nota.get_text().strip()
         print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv):")
         for coluna in self.colunas:

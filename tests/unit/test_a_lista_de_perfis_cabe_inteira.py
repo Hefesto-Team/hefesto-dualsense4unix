@@ -1,9 +1,9 @@
 """A lista de perfis mostra TODOS os perfis, e não os catorze do desenho.
 
-O DEFEITO, medido em 02/09/2026 na máquina dela: ``load_all_profiles()``
+O DEFEITO, medido em 02/09/2026 na máquina do usuário: ``load_all_profiles()``
 devolve **33** perfis e o ``<tbody>`` publicado tem **14** linhas. O contador ao
 lado do título dizia "33 perfis" — e dizia a verdade — enquanto a tabela logo
-abaixo mostrava catorze. **Dezenove perfis dela não tinham como ser clicados**,
+abaixo mostrava catorze. **Dezenove perfis do usuário não tinham como ser clicados**,
 e com eles nove dos dez botões desta aba: ``ativar``, ``remover``, ``duplicar``,
 ``editor.nome``… todos agem sobre o perfil ESCOLHIDO, e escolher é clicar numa
 linha que existe.
@@ -235,7 +235,7 @@ def test_o_miolo_da_lista_e_estavel_no_ida_e_volta_do_navegador() -> None:
 
 
 def test_um_nome_de_perfil_com_aspas_nao_derrama_marcacao() -> None:
-    """Os 33 nomes vêm do disco DELA — o gerador escrevia catorze nossos."""
+    """Os 33 nomes vêm do disco do usuário — o gerador escrevia catorze nossos."""
     linhas = _linhas(_pacote(['Elden Ring "GOTY"']))
     assert "&quot;GOTY&quot;" in linhas[0]
     assert '"GOTY"' not in linhas[0].split(">", 1)[0], (
@@ -259,7 +259,7 @@ def test_a_pagina_publicada_aceita_largura_no_trilho() -> None:
     """O ``data-hef-alvo="largura"`` do trilho JÁ ESTÁ PUBLICADO.
 
     FATO DERRUBADO em 02/09/2026: a nota em ``a10_perfis`` dizia que o atributo
-    estava *"já escrito na BANCADA, esperando o ato de publicar DELA"*. Ela já
+    estava *"já escrito na BANCADA, esperando o ato de publicar DO USUÁRIO"*. Ela já
     publicou — o commit ``70b58116`` levou a aba inteira, o atributo está nas
     DUAS páginas, e ``mockup/DIVERGENCIAS.md`` não tem seção da aba 10. Enquanto
     a nota ficou de pé, a barra seguiu nos 90% do desenho com o conserto no

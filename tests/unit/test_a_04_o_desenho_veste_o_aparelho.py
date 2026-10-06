@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 """O DESENHO DA 04 VESTE O APARELHO — e o mapa dela cabe inteiro na página.
 
-A LEI, e ela é dela (03/09/2026):
+A LEI, de 03/09/2026:
 
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-     (…) nada hardcoded."
+    A cor do plástico, o desenho do DualSense, as bordas e a escolha de cada player vêm do
+    controle identificado no canto superior, a partir do mapa de cores já catalogado,
+    e não de valores cravados no desenho. Cada pessoa pode ter um modelo diferente.
 
-    "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-     players com cada controle — tudo isso muda de acordo com o controle
-     identificado no canto superior. é white no p1, mas a borda de tudo é
-     cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
-     (noqa-acento: citação literal)
-
-O DEFEITO ESTAVA FOTOGRAFADO antes desta régua existir. Com a mesa dela — um
+O DEFEITO ESTAVA FOTOGRAFADO antes desta régua existir. Com a bancada — um
 White no cabo e um Galactic Purple no rádio — a `04-iluminacao` mostrava, com
 três centímetros entre uma coisa e a outra::
 
@@ -100,7 +94,7 @@ def _elementos(caminho: pathlib.Path) -> list[tuple[str, dict[str, str]]]:
 
 
 def _modelos_do_mapa() -> set[str]:
-    """Os colorways que o mapa DELA cataloga, lidos de onde o gerador os escreve."""
+    """Os colorways que o mapa DO USUÁRIO cataloga, lidos de onde o gerador os escreve."""
     return set(re.findall(r'svg\[data-colorway="([a-z0-9-]+)"\]', monta.DS))
 
 
@@ -222,7 +216,7 @@ def test_o_pacote_nao_manda_o_desenho_para_quem_nao_sabe_receber(monkeypatch) ->
     02/09 que a fizeram nascer. Aqui a consequência de errar é a pior desta aba:
     com o endereço na página e o alvo faltando no pintor, `escrever()` cai no
     ramo padrão e escreve o colorway como TEXTO dentro do `<svg>` — o DualSense
-    de 146 px some da tela dela e vira a palavra `white`.
+    de 146 px some da tela do usuário e vira a palavra `white`.
 
     ELE FALHA FECHADO de propósito: qualquer coisa que a guarda não reconheça
     vira "não emita".

@@ -21,7 +21,7 @@ com o tique em que a tela lê — ela existiria e ninguém a veria. O recado fic
 guardado no daemon e sai em TODO `state_full` até a próxima borda daquele
 controle o substituir.
 
-**POR QUE UM POR `uniq`, e não um só.** Na mesa de quatro que ela nomeou, a J1
+**POR QUE UM POR `uniq`, e não um só.** Na mesa de quatro que o usuário nomeou, a J1
 elege e o J2 é recusado no mesmo segundo. Um depósito único faria a recusa do
 J2 apagar a resposta da J1 (e vice-versa), e o card errado mostraria a frase do
 vizinho. A chave é o endereço do controle, que é o mesmo endereço que o card já
@@ -32,7 +32,7 @@ usa (`data-uniq`).
 algo comparado com o "agora" de quem o gravou, que é justamente o que o
 consumidor não tem.
 
-**E O RECADO TEM PRAZO — decisão dela, 02/09/2026:** *"a frase de recusa some
+**E O RECADO TEM PRAZO — decisão, 02/09/2026:** *"a frase de recusa some
 depois de um tempo, na ordem de 30 segundos. É aviso, não estado."* Passado o
 `VALIDADE_DO_RECADO_S`, o recado deixa de ser publicado e a chave do `uniq`
 some do bloco. Antes disso o depósito republicava a última resposta até o
@@ -229,7 +229,7 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
     * ``recados`` — um por `uniq`, com a frase, a idade dela e o ``vale_agora``
       que diz se o retrato da mesa gravado JUNTO com a frase ainda é o de
       agora. **Recado passado de `VALIDADE_DO_RECADO_S` não sai** — a chave do
-      `uniq` some, e a tela fica sem o que pintar, que é o que ela decidiu
+      `uniq` some, e a tela fica sem o que pintar, que é o que o usuário decidiu
       (*"campo sem informação não mostra nada"*).
 
     **O PRAZO FILTRA, NÃO APAGA.** `publicar` roda a 10 Hz no caminho de

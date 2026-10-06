@@ -70,7 +70,7 @@ DUALSENSE_EDGE_NAME = (
 )
 
 # É EMULAÇÃO, não suporte a aparelho Nintendo físico: o Hefesto faz o DualSense
-# quatro DualSense (decisão dela, 06/09/2026).
+# quatro DualSense (decisão, 06/09/2026).
 NINTENDO_VENDOR = 0x057E
 NINTENDO_PROCON_PRODUCT = 0x2009
 #: os quatro vpads dela sem abrir nenhum. Os bytes 2-3 do GUID são o **CRC16
@@ -125,7 +125,7 @@ FLAVORS: dict[str, dict[str, Any]] = {
     },
 }
 #: provado com SDL2 e validado em gameplay. Hoje a máscara DualSense vibra pelo
-#:   config vem `None` ou com valor desconhecido. A primeira escolha dela na
+#:   config vem `None` ou com valor desconhecido. A primeira escolha do usuário na
 #:   nova o jogo recebe a máscara DualSense;
 DEFAULT_FLAVOR = "xbox"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AS TRÊS FRASES DO PÉ: elas não custam mais layout, e cabem onde foram parar.
 
-ORDEM DELA, 07/09/2026, olhando a aba com os quatro DualSense na mesa:
+ORDEM, 07/09/2026, olhando a aba com os quatro DualSense na mesa:
 
     *"navegacao tem essas 3 frases aqui na parte de baixo que quebram o
     layout"*
@@ -23,7 +23,7 @@ cada uma fala, VIVAS, escritas pelo mesmo pacote a cada tique.
    teclado" ia a **356px** e o ``overflow-y`` do ``.miolo`` cortava o último
    parágrafo. A frase que se mudou para não sumir sumia de novo.
 
-**A CENA É A DELA**, e nenhuma frase é digitada aqui: as três saem dos donos
+**A CENA É A DO USUÁRIO**, e nenhuma frase é digitada aqui: as três saem dos donos
 (``a06_navegacao.RESSALVA_DOS_GLOBAIS``, ``a06_navegacao.RAZAO_DO_PORTAO`` e
 ``input_actions.frase_do_teclado_na_tela``). Uma cena com texto inventado
 mediria uma tela que o produto não pinta — e o comprimento da frase é
@@ -34,7 +34,7 @@ exatamente o que decide se ela cabe.
 ``modo-portao`` ao ``vivas`` da ``D_TECLADO`` e o segundo reprova nomeando a
 dica que passa do fim da janela.
 
-**O CHROME NÃO É O WEBKIT DELA**, e esta régua não finge que é: aqui se mede o
+**O CHROME NÃO É O WEBKIT DO USUÁRIO**, e esta régua não finge que é: aqui se mede o
 LAYOUT (caixa, fluxo e ``overflow``), que é padronizado. A prova no motor do
 produto é a foto do piloto, com o daemon vivo — e ela está no relatório da
 frente.
@@ -128,7 +128,7 @@ _MEDIR_AS_DICAS = """
 
 @pytest.fixture(scope="module")
 def pagina():
-    """A página PUBLICADA — a que o piloto carrega e que está na frente dela."""
+    """A página PUBLICADA — a que o piloto carrega e que está na frente do usuário."""
     from playwright.sync_api import sync_playwright
 
     import onde

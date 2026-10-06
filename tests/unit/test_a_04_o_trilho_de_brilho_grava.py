@@ -1,4 +1,4 @@
-"""O trilho de brilho da aba Iluminação passa a GRAVAR — decisão dela, 03/09/2026.
+"""O trilho de brilho da aba Iluminação passa a GRAVAR — decisão, 03/09/2026.
 
 Perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
 Perfil", ela respondeu **"Grava na hora"**.
@@ -11,8 +11,7 @@ com a contagem: `publicado = cor(16) apagar(2) auto(2) player(8)`; nenhum de
 brilho em lugar nenhum.
 
 POR QUE GRAVAR É A ÚNICA SAÍDA COERENTE, e está medido: esta interface NÃO TEM
-RASCUNHO (decisão dela de 01/09 — *"clicar na cor já deveria aplicar a cor no
-controle"*), e o número que a coluna imprime é lido do PERFIL EM DISCO por
+RASCUNHO (), e o número que a coluna imprime é lido do PERFIL EM DISCO por
 `brilho_do_controle`. Sem gravar, o valor voltaria sozinho ao velho no tique
 seguinte — mais um botão que aceita o toque e não age.
 
@@ -22,14 +21,14 @@ O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
    e o lugar VAZIO da mesa não oferece nenhum;
 2. o arraste GRAVA no disco, no override DAQUELE controle, na escala do disco
    (0.0-1.0) e com a chave que o esquema exige (12 hex, sem `:`);
-3. a gravação PRESERVA o que já estava no override — os overrides do disco dela
+3. a gravação PRESERVA o que já estava no override — os overrides do disco do usuário
    hoje são `{"lightbar": [255, 0, 0]}` e nada mais;
 4. o aparelho recebe a COR PEDIDA com o brilho NOVO, e a cor pedida sai do
    brilho VELHO (D8: o `lightbar_rgb` do daemon é pós-escala);
 5. o `click` que o navegador manda DEPOIS do `change` não grava uma segunda vez;
 6. as TRÊS recusas dizem por quê — e a quarta deixou de ser recusa em
    04/09/2026: quando não há cor a reacender o brilho VAI ao disco, e o gesto
-   avisa pelo canal de SUCESSO da D-01, com a frase curta que ela escolheu;
+   avisa pelo canal de SUCESSO da D-01, com a frase curta que o usuário escolheu;
 7. o gesto está em `hefesto_vivo.PERIGOSOS` — uma régua não arrasta o brilho
    dela para provar que sabe clicar.
 
@@ -288,7 +287,7 @@ def test_o_clique_que_segue_o_change_nao_grava_de_novo(pac):
     """Um `<input type="range">` clicado na pista dispara `input`, `change` e `click`.
 
     O BOOTSTRAP escuta os DOIS últimos (`hefesto_vivo`, o ouvinte único), então
-    sem o guarda cada clique na pista gravaria DUAS vezes no perfil dela e
+    sem o guarda cada clique na pista gravaria DUAS vezes no perfil do usuário e
     mandaria DUAS escritas ao rádio — que por Bluetooth disputa fila com os
     relatórios de input do próprio controle.
 

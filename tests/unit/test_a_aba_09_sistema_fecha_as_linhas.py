@@ -3,9 +3,9 @@
 
 A [02] é do PO em 04/09/2026
 (o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026, §2 `09`);
-a [01] e a [03] são DELA, em 05/09/2026, e a [01] REVERTEU o PO.
+a [01] e a [03] são DO USUÁRIO, em 05/09/2026, e a [01] REVERTEU o PO.
 
-**[01] — o botão continua se chamando "Atualizar".** Palavra dela na 09-Q1:
+**[01] — o botão continua se chamando "Atualizar".** Palavra de produto na 09-Q1:
 *"Segue fazendo os dois. Com mesmo nome"*. Ele faz DOIS trabalhos, e a dica
 NEGAVA o caro: dizia *"Relê tudo o que esta aba mostra. Não muda nada."* — e o
 clique manda o IPC `daemon.reload`, que do outro lado derruba e sobe o leitor
@@ -21,8 +21,8 @@ metade do desenho. `disabled` mataria o clique, e o clique é o único caminho d
 quem chega pelo controle até a razão.
 
 **[03] — o botão diz que está trabalhando.** `daemon.reload` leva **9,5 s**
-(medido no daemon dela em 01/09) e o clique sumia por nove segundos e meio: o
-segundo clique parecia o primeiro. A palavra da espera é dela, na 09-Q3:
+(medido no daemon do usuário em 01/09) e o clique sumia por nove segundos e meio: o
+segundo clique parecia o primeiro. A palavra da espera é do usuário, na 09-Q3:
 *"Atualizando…"*.
 
 O QUE ESTA RÉGUA MEDE, e em três camadas — cada uma pega o que a de cima não
@@ -31,7 +31,7 @@ consegue ver:
 1. **o PACOTE** emite a razão de cada botão em TODO tique, inclusive vazia, e a
    frase é a do produto — nunca uma digitada aqui;
 2. **o DESENHO** carrega a peça inteira (botão + `?` no MESMO `data-campo`), o
-   rótulo que ela mandou manter, o rótulo da espera, e a dica que parou de
+   rótulo que o usuário mandou manter, o rótulo da espera, e a dica que parou de
    negar;
 3. **a TELA VIVA**, num WebKit de verdade com o piloto do produto: a razão
    ACENDE o cinza, o `?` aparece com a frase, a razão vazia APAGA o cinza de
@@ -60,7 +60,7 @@ A MORDIDA (colada no relato desta frente):
   dica que voltou a esconder o trabalho caro;
 * troque só o VALOR de `ROTULO_ATUALIZAR` e as duas linhas que o comparam com
   `aba09.ROTULO_ATUALIZAR` continuam VERDES — medido. Quem morde é a linha que
-  cobra a palavra dela LITERAL, logo abaixo delas.
+  cobra a palavra de produto LITERAL, logo abaixo delas.
 """
 from __future__ import annotations
 
@@ -358,7 +358,7 @@ LER_A_TELA = r"""
     reaplicar: rea ? {
       rotulo: (rea.textContent || '').trim(),
       em_voo: rea.classList.contains('hef-em-voo'),
-      // A PISCADA DO "DEU CERTO" (05/09/2026, decisão dela na `03-Q4`). Ela é o
+      // A PISCADA DO "DEU CERTO" (05/09/2026, decisão de produto na `03-Q4`). Ela é o
       // que responde no lugar da frase quando o gesto não trouxe notícia — ver
       // `test_o_gesto_que_da_certo_pisca_no_botao`.
       deu_certo: rea.classList.contains('hef-deu-certo'),

@@ -122,7 +122,7 @@ A_DIVIDA: dict[str, str] = {
         "`interface/pacotes/a06_navegacao.py` — a lista oferece *Só dentro do "
         "jogo* e o perfil não tem o campo que o sustenta. A opção sai da lista "
         "ou o campo nasce; as duas curas tiram a frase — medida em 11/09/2026",
-    # fica: a frase descreve a escolha dela, e não uma capacidade que devemos
+    # fica: a frase descreve a escolha do usuário, e não uma capacidade que devemos
     "como se o Hefesto não estivesse instalado":
         "o sujeito é o JOGO excluído por ela; a frase descreve a escolha, não "
         "uma capacidade que devemos — 21/09/2026",

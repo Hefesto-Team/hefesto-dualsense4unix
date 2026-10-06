@@ -1,12 +1,10 @@
 """O CAMINHO DE UM JOGO NÃO VAZA PARA O SEGUINTE — O-CAMINHO-NAO-VAZA-01.
 
-Decisão dela, 17/09/2026, ao ver a causa: *"puts aqui é fogo kkkkkkkkkkk,
-deveria ficar só pra aquele jogo do perfil não? mas ótima descoberta"*.
+Decisão, 17/09/2026, ao ver a causa.
 
-A QUEIXA, e ela é de quem estava jogando: *"joguei um jogo com controle por
-movimento e na hora do vamos ver o controle não deu resposta (pragmata)"*.
+A QUEIXA, e ela é de quem estava jogando.
 
-O DEFEITO, medido no disco dela em 17/09/2026 — três perfis opinam um caminho
+O DEFEITO, medido no disco do usuário em 17/09/2026 — três perfis opinam um caminho
 (`dont_scream.json` e `future_knight.json` pedem `"xbox"`,
 `sackboytm_a_big_adventure.json` pede `"dualsense"`), o `pragmata.json` não tem
 sequer seção `mode`, e o `gamepad_caminho.flag` diz `dualsense`. Ela nunca
@@ -20,7 +18,7 @@ uma linha de log que explique.
 
 A CURA são DOIS SLOTS onde havia um, e cada régua abaixo morde um pedaço dela:
 
-- `config.gamepad_caminho_global` — a escolha DELA, a que vale em todo jogo. Só
+- `config.gamepad_caminho_global` — a escolha do usuário, a que vale em todo jogo. Só
   o gesto manual escreve, e o boot a relê de `gamepad_caminho.flag`. É o ÚNICO
   lugar de onde um start sem opinião herda (`gamepad._caminho_a_herdar`).
 - `config.gamepad_caminho` — o caminho DESTA sessão. Acompanha todo start,
@@ -110,7 +108,7 @@ class _EvdevFalso:
 def _daemon(*, escolha_dela: str | None = None) -> Any:
     """Daemon dublado com a máscara DualSense e o backend real liberando uhid.
 
-    `escolha_dela` é `config.gamepad_caminho_global`: o que ELA escolheu para
+    `escolha_dela` é `config.gamepad_caminho_global`: o que O usuário escolheu para
     valer em todo jogo. ``None`` = ela nunca escolheu, que é o caso da bancada
     do PRAGMATA — o `gamepad_caminho.flag` dela diz `dualsense`, e nenhum dos
     dois valores pode fazer um jogo sem opinião cair em uinput.
@@ -208,7 +206,7 @@ def _guardar_sem_limpar(
 
 class TestOJogoSeguinteNaoHerdaOCanal:
     def test_o_jogo_que_opina_e_obedecido(self) -> None:
-        """PRIMEIRO o que NÃO pode regredir: a escolha dela para AQUELE jogo."""
+        """PRIMEIRO o que NÃO pode regredir: a escolha do usuário para AQUELE jogo."""
         daemon = _daemon()
 
         _o_jogo_que_opina(daemon)
@@ -234,7 +232,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
     def test_o_jogo_sem_opiniao_abre_em_uhid_com_o_espelho_de_motion_de_pe(
         self, _bancada: list[_PadFalso]
     ) -> None:
-        """A QUEIXA DELA, em duas asserções: o canal E o espelho."""
+        """A QUEIXA DE USO, em duas asserções: o canal E o espelho."""
         daemon = _daemon()
         _o_jogo_que_opina(daemon)
 
@@ -266,17 +264,14 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança e o vazamento voltou por
         outra porta, porque o arquivo global é escrito por TODO gesto manual.
 
-        A decisão dela, ao ver a causa:
-
-            *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
-            esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
+        A decisão de produto, ao ver a causa
 
         Enquanto um start sem opinião herdar de QUALQUER lugar, existe um lugar
         a envenenar. O caminho DualSense é o que tem todas as features, e é o
-        default que a ordem dela de 17/09 já pedia.
+        default que a ordem de 17/09 já pedia.
 
         O `gamepad_caminho_global` continua existindo e continua sendo escrito
-        — é o que a tela mostra como escolha dela. O que mudou é que ninguém
+        — é o que a tela mostra como escolha do usuário. O que mudou é que ninguém
         NASCE dele, e é isso que esta régua mede.
         """
         daemon = _daemon(escolha_dela="xbox")

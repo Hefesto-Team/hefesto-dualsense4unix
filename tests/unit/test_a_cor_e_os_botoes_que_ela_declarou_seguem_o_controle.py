@@ -1,6 +1,6 @@
 """AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01: a cor e os botões declarados seguem o controle.
 
-As respostas dela de 06/10/2026: os glifos das outras abas seguem o `controles.modo` e o
+As respostas de 06/10/2026: os glifos das outras abas seguem o `controles.modo` e o
 `controles.botoes`, e a `controles.cor` aparece em tudo, como a do DualSense. Os três campos
 existiam no `maquina.json` e nenhuma tela os lia: só a seção da janela GTK, que saiu.
 
@@ -126,7 +126,7 @@ def test_as_letras_da_face_cobrem_os_quatro_botoes_de_cada_familia(mv) -> None:
 
 
 def test_o_disco_e_relido_quando_o_arquivo_muda(mv) -> None:
-    """A mesa lê o `maquina.json` do lar (o `conftest` o desvia) e o relê no gesto dela."""
+    """A mesa lê o `maquina.json` do lar (o `conftest` o desvia) e o relê no gesto do usuário."""
     assert gravar_maquina({"controles": {CHAVE: {"botoes": "xbox"}}})
     assert _mesa(mv)["botoes"] == "xbox"
     assert gravar_maquina({"controles": {CHAVE: {"botoes": "nintendo", "cor": "Cosmic Red"}}})

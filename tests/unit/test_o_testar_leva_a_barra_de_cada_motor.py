@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """VIBRA-MULT-01 — o "Testar" da aba Vibração leva a barra de CADA motor.
 
-A QUEIXA É DELA, 08/09/2026
-----------------------------
-    *"na guia vibração os slicers não estão se multiplicando: motor esquerdo x
-    força de vibração (ou personalizado), motor direito x força de vibração ou
-    personalizado, pra cada controle — e funcionar dentro do jogo respeitando
-    isso."*
+A QUEIXA É DO USUÁRIO, 08/09/2026
+---------------------------
 
 A CONTA existia e estava certa desde 04/09 (`gamepad._mults_por_motor`, 55
 réguas em `test_cada_motor_tem_o_seu_multiplicador.py`). A TELA passou a dizer
-o produto em 09/09. **O que faltava era o botão que a mão dela aperta.**
+o produto em 09/09. **O que faltava era o botão que a mão do usuário aperta.**
 
 O QUE FOI MEDIDO, e são dois defeitos empilhados
 -------------------------------------------------
@@ -35,7 +31,7 @@ E A CURA É PROVISÓRIA POR DESENHO, o que cria um risco com data marcada: no di
 em que o daemon passar a multiplicar os dois fatores, a barra é contada DUAS
 vezes e o que ela sente vira `base x barra² x degrau`. **A §3 deste arquivo é a
 guarda desse dia** — três réguas que reprovam nomeando a dobra e dizendo o que
-tirar da aba, para que a descoberta não seja pela mão dela.
+tirar da aba, para que a descoberta não seja pela mão do usuário.
 
 A MORDIDA DE CADA CASO está no docstring dele. A de todos:
 em `a05_vibracao._par_das_barras`, troque o `return` por `return PAR_DE_TESTE`
@@ -131,8 +127,8 @@ def _testar(pac, a05, ctx, uniq: str, controle: str) -> tuple[int, ...]:
 def test_a_barra_esquerda_pela_metade_corta_o_strong_pela_metade(pac, a05) -> None:
     """Motor esquerdo em 50 % -> o `strong` sai pela metade, e o `weak` inteiro.
 
-    É A FRASE DELA na linguagem do fio: *"se so a do motor fraco tiver 100 e a
-    outrqa 50% então será 150 em um e 75% no outro"*.  <!-- noqa-acento: citação dela -->
+    É A FRASE DE PRODUTO na linguagem do fio: *"se so a do motor fraco tiver 100 e a
+    outrqa 50% então será 150 em um e 75% no outro"*.  <!-- noqa-acento: citação -->
     O degrau (os 150 %) é do daemon; o que esta régua cobra é o SEGUNDO fator,
     que é o que nunca saía da tela.
 
@@ -298,7 +294,7 @@ def test_o_reassert_de_5hz_aplica_um_fator_so_nos_dois_motores(perfis) -> None: 
 
 
 def test_a_conta_inteira_da_barra_vale_uma_vez_so(pac, a05, perfis) -> None:  # noqa: F811
-    """A CONTA DE PONTA A PONTA: o clique dela, a aba, o daemon, o número final.
+    """A CONTA DE PONTA A PONTA: o clique do usuário, a aba, o daemon, o número final.
 
     É a régua que diz a repartição por extenso, com um número que ninguém
     precisa derivar:

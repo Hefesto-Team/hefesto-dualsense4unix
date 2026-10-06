@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""A ABA VIBRAÇÃO: o número da força é o que ela ESCOLHEU, e o punho aceso é o
+"""A ABA VIBRAÇÃO: o número da força é o que o usuário ESCOLHEU, e o punho aceso é o
 que TREME de verdade.
 
-TRÊS COISAS, e as três foram medidas em 03/09/2026 contra o daemon dela, com
+TRÊS COISAS, e as três foram medidas em 03/09/2026 contra o daemon do usuário, com
 dois controles na mesa (um no cabo, um por rádio).
 
 1. **O NÚMERO DO MULTIPLICADOR ESTAVA MORTO.** A aba montava a barra
@@ -39,7 +39,7 @@ dois controles na mesa (um no cabo, um por rádio).
 3. **FRASES DA JANELA ESTÁVEL NÃO TINHAM ATRAVESSADO** — o teto da mesa (nos
    quatro tooltips de degrau) e a nota do card "Testar motores". Eram TRÊS até
    05/09/2026: a dos 5 segundos explicava o Modo Auto, que saiu desta tela por
-   decisão dela. Elas são LIDAS, nunca redigitadas — uma segunda cópia de texto
+   decisão de produto. Elas são LIDAS, nunca redigitadas — uma segunda cópia de texto
    de tela diverge na primeira edição.
 
    **E O DONO MUDOU DE CASA EM 06/09/2026.** A fonte era o ``gui/main.glade``;
@@ -187,7 +187,7 @@ def test_o_cursor_da_barra_acompanha_o_pedido() -> None:
 def test_o_max_acende_so_no_teto() -> None:
     """O ``Máx`` é booleano e diz UMA coisa: este número é o topo da barra.
 
-    **O TETO TROCOU DE DONO EM 03/09/2026**, e é a decisão dela: a barra deixou
+    **O TETO TROCOU DE DONO EM 03/09/2026**, e é a decisão de produto: a barra deixou
     de parar no degrau ``Máximo`` (150) e vai até onde ela pode ARRASTAR —
     ``a05_vibracao.teto_da_barra()``, que sai do ``RUMBLE_CUSTOM_MULT_MAX`` do
     esquema. Consequência medida, e é o ponto deste caso: **nenhum dos quatro
@@ -233,10 +233,10 @@ def test_o_desenho_tem_endereco_para_os_dois_punhos(bancada) -> None:
     pintura contada, tela igual.
 
     A CONTA É POR LUGAR DESDE 07/09/2026, e era por "coluna viva". A troca é
-    cura de defeito medido com os quatro DualSense dela na mesa: o lugar VAZIO
+    cura de defeito medido com os quatro DualSense do usuário na mesa: o lugar VAZIO
     era um cartão à parte, sem um único ``data-campo``, e o ``treme-e``/
     ``treme-d`` que o pacote emite para os QUATRO lugares chegava sem ter onde
-    pousar. Contar ``colunas vivas`` era medir o desenho, não a mesa dela.
+    pousar. Contar ``colunas vivas`` era medir o desenho, não a bancada.
     """
     from hefesto_dualsense4unix.interface import aba05
     lugares = len(aba05.MESA)
@@ -286,7 +286,7 @@ def test_o_pacote_emite_o_tremor_que_o_produto_calculou() -> None:
 
 
 def test_a_mesa_parada_nao_acende_punho_nenhum() -> None:
-    """``vpads == 0`` é o estado corrente da mesa dela, e nele nada treme."""
+    """``vpads == 0`` é o estado corrente da bancada, e nele nada treme."""
     for uniq, col in _pacote()["colunas"].items():
         assert col["treme-e"] == "" and col["treme-d"] == "", (
             f"a coluna {uniq} acendeu um punho com a mesa parada: {col}")
@@ -307,7 +307,7 @@ def test_as_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
 
     **ERAM TRÊS ATÉ 05/09/2026.** A terceira era *"Espera 5 segundos antes de
     trocar de faixa"*, e ela explicava o Modo Auto — que saiu desta tela por
-    decisão dela (*"segue os três modos sempre"*, ver `aba05.FORCA`).
+    decisão de produto (*"segue os três modos sempre"*, ver `aba05.FORCA`).
 
     **E A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta): a régua lia o
     XML da janela, que está saindo. Quem responde agora é `app/telas/vibracao`,

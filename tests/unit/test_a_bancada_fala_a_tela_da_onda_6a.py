@@ -216,7 +216,7 @@ def test_a_replica_termina_apagando_o_perfil_novo_de_verdade() -> None:
 
     O perfil do «Novo» vale para tudo e nasce ACIMA dos que valem sempre
     (`_prioridade_acima_dos_catch_all`): esquecido no disco, ele passa a valer
-    no lugar do perfil dela em toda janela sem jogo. O primeiro clique no
+    no lugar do perfil do usuário em toda janela sem jogo. O primeiro clique no
     «Remover» só ARMA; quem apaga é o segundo, dentro do prazo do dono
     (`a10_perfis.SEGUNDOS_PARA_CONFIRMAR`).
 

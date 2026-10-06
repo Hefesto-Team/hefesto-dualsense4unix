@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""controles_vivos.py — a aba Controles VIVA: o desenho dela com a mesa dela.
+"""controles_vivos.py — a aba Controles VIVA: o desenho dela com a bancada.
 
 O mockup aprovado rodando num `WebKit2.WebView` dentro de uma janela GTK3
 (`D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`), e o `daemon.state_full`
@@ -15,7 +15,7 @@ AS DUAS MORDIDAS, e as duas foram medidas:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup (quatro controles, Mortal Kombat, o P1 com o
-                          gatilho em 200/255). Se ela mostrar a mesa dela, o
+                          gatilho em 200/255). Se ela mostrar a bancada, o
                           dado não está vindo do daemon.
     --arranca-enderecos   apaga os `data-*` que o `aba02.py` escreve: a pintura
                           tem de DESABAR. Se não desabar, os endereços não
@@ -37,9 +37,7 @@ E o resto:
 
 O QUE ESTE PROGRAMA ESCREVE, e é UMA COISA SÓ (31/08/2026)
 ----------------------------------------------------------
-Até 30/08 este arquivo não escrevia nada. Mudou por pedido dela, literal: *"Não
-sei se o botão de ativar ele na interface tá funcionando viu. não sei se segue
-desativado."* e *"eu quero é que **ele funcione na interface e se lembre**"*.
+Até 30/08 este arquivo não escrevia nada. Mudou por pedido, literal:  e **.
 
 O único gesto que APLICA é a **fileira de modos da aba Jogar** — os botões
 `[data-modo]` de "O que o controle faz agora". Ele sai daqui por
@@ -623,9 +621,9 @@ def _leitor_duble(codigos: str | None) -> Any:
     """Um `ler_identidade_pelo_cabo` de mentira, que responde os códigos pedidos.
 
     Existe para PROVAR a junta `código de fábrica → colorway do desenho →
-    --plastico` sem mandar um byte ao aparelho dela. É o mesmo ponto de injeção
+    --plastico` sem mandar um byte ao aparelho do usuário. É o mesmo ponto de injeção
     que o próprio `cor_do_plastico.ler_pelo_cabo` já oferece (`perguntar=`) e que
-    a suíte usa para não mandar comando de fábrica aos controles dela.
+    a suíte usa para não mandar comando de fábrica aos controles do usuário.
     """
     if not codigos:
         return None
@@ -706,7 +704,7 @@ class Janela:
             GLib.timeout_add(TIQUE_DO_INTERRUPTOR_MS, self._tique_do_interruptor)
 
     def _saiu_da_aba(self, titulo: str) -> None:
-        """Ela clicou na tira. Sair da Controles só DESLIGA a pintura."""
+        """O usuário clicou na tira. Sair da Controles só DESLIGA a pintura."""
         self.pronto = False
         print(f"[fora da Controles] {titulo} — o mockup estático; a pintura pausou.")
 
@@ -787,7 +785,7 @@ class Janela:
         )
 
     def _aplicar_o_modo(self, chave: str) -> None:
-        """O clique dela virando pedido — pelo dono, e só por ele."""
+        """O clique do usuário virando pedido — pelo dono, e só por ele."""
         motivo = painel.porque_nao_aplica(chave)
         if motivo:
             self.recusas_de_modo.append(chave)
@@ -904,10 +902,10 @@ class Janela:
             print(f"aviso: sem medidor de microfone ({erro})", file=sys.stderr)
 
     def _estado(self) -> tuple[dict | None, str]:
-        """O `state_full` de agora — do daemon dela, ou do dublê.
+        """O `state_full` de agora — do daemon do usuário, ou do dublê.
 
         O DUBLÊ ACEITA UM ROTEIRO, e é assim que a chegada e a saída de controle
-        se provam sem plugar nada na mesa dela: uma lista de
+        se provam sem plugar nada na bancada: uma lista de
         ``{"aos": segundos, "state": …}`` (``state: null`` = daemon calado), e o
         tique escolhe a cena pelo relógio. Sem roteiro, o arquivo é um
         `state_full` só.

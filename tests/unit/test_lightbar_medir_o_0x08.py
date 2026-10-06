@@ -1,6 +1,6 @@
 """LIGHTBAR-MEDIR-O-0X08-01 — o instrumento que separa duas medições que brigam.
 
-08/08/2026. A lightbar dos DualSense dela por Bluetooth **não acende mais**:
+08/08/2026. A lightbar dos DualSense do usuário por Bluetooth **não acende mais**:
 LEDs de jogador acesos, barra morta, escritas de cor ignoradas — a assinatura
 exata do latch de firmware documentado em `core/lightbar_reset.py:1-11`.
 
@@ -38,7 +38,7 @@ segue de pé como correlação, tendo caído como causa SUFICIENTE no ensaio
 A hipótese que concilia o que restou, e que segue sem ensaio que a feche: **o
 0x08 devolve o claim, e só derruba quando é mandado em cima da conexão.** Este
 arquivo não prova a hipótese — hardware não cabe em teste unitário. Ele garante
-que o INSTRUMENTO usado para prová-la na mesa dela não minta, que é a armadilha
+que o INSTRUMENTO usado para prová-la na bancada não minta, que é a armadilha
 nº 3 desta casa: *"o instrumento pode estar brigando com o produto"*.
 
 O QUE ESTES TESTES TRAVAM
@@ -50,7 +50,7 @@ O QUE ESTES TESTES TRAVAM
 - `uniq` restringe a UM controle — sem isso não há variável única com dois
   controles na mesa;
 - e o instrumento **não vira cura por acidente**: nenhum caminho automático
-  pode passar a chamá-lo sem decisão dela.
+  pode passar a chamá-lo sem decisão de produto.
 """
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def test_falha_de_um_handle_nao_derruba_o_outro() -> None:
 
 
 def test_o_instrumento_nao_virou_cura_por_acidente() -> None:
-    """O portão que impede o 0x08 de voltar à adoção sem decisão dela."""
+    """O portão que impede o 0x08 de voltar à adoção sem decisão de produto."""
     arvore = ast.parse(BACKEND_PY.read_text(encoding="utf-8"))
     donos: list[str] = []
     for no in ast.walk(arvore):

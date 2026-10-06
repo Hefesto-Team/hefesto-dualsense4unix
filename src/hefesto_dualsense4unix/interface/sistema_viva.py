@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sistema_viva.py — a aba SISTEMA viva: o desenho dela com a máquina dela.
+"""sistema_viva.py — a aba SISTEMA viva: o desenho dela com a máquina do usuário.
 
 O mockup aprovado rodando num `WebKit2.WebView` dentro de uma janela GTK3
 (`D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`), pintado pelo que o
@@ -16,7 +16,7 @@ AS DUAS MORDIDAS, e as duas são as do piloto da aba Controles:
                           mockup ("Ligado", "Sim — e continua depois de
                           reiniciar", "Os 4
                           controles", "8 linhas"). Se ela mostrar a máquina
-                          dela, o dado não está vindo do Python.
+                          do usuário, o dado não está vindo do Python.
     --arranca-enderecos   apaga os `data-id` que o `aba09.py` escreve: a pintura
                           tem de DESABAR. Se não desabar, os endereços não
                           estavam sendo usados.
@@ -32,7 +32,7 @@ E o resto:
 **ESTA LEVA NÃO ESCREVE NADA, e a exceção é uma só.** Os doze gestos chegam ao
 Python, são registrados com o dono declarado em
 `hefesto_dualsense4unix.interface.sistema.GESTOS` e **ecoam de volta**. O único
-que AGE é o `atualizar`, e ele só relê — nenhum perfil dela é tocado, nenhum
+que AGE é o `atualizar`, e ele só relê — nenhum perfil do usuário é tocado, nenhum
 `systemctl start/stop/restart` é disparado, nenhum byte vai a aparelho.
 
 A TRADUÇÃO NÃO MORA AQUI. Ela é produto e mora em
@@ -243,7 +243,7 @@ window.HEF = (function(){
     //
     // A marca do "não sei" é OPACIDADE INLINE, e é de propósito: uma classe
     // nova (`.chave.nao-sei`) exigiria CSS que o desenho dela não tem, e
-    // acrescentar CSS é mudar o que ela aprovou. O inline marca só o estado que
+    // acrescentar CSS é mudar o que o usuário aprovou. O inline marca só o estado que
     // o mockup nunca desenhou, e a dica diz por quê.
     const ch = end('hefesto-autostart');
     if(ch){
@@ -351,7 +351,7 @@ class Janela:
         self.janela = self.tela.janela
 
     def _saiu_da_aba(self, titulo: str) -> None:
-        """Ela clicou na tira. Sair da Sistema só DESLIGA a pintura."""
+        """O usuário clicou na tira. Sair da Sistema só DESLIGA a pintura."""
         self.pronto = False
         print(f"[fora da Sistema] {titulo} — o mockup estático; a pintura pausou.")
 
@@ -408,7 +408,7 @@ class Janela:
             GLib.timeout_add(ms, lambda s=script: (self._js(s), False)[1])
 
     def _estado(self) -> dict[str, Any] | None:
-        """O `state_full` de agora — do daemon dela, ou do dublê, ou `None`.
+        """O `state_full` de agora — do daemon do usuário, ou do dublê, ou `None`.
 
         `None` é o daemon CALADO, e é diferente de mesa vazia. A tela separa os
         dois.

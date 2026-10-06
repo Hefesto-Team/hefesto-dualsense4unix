@@ -26,7 +26,7 @@ Política:
   - **Um controle físico = UM dispositivo de jogo** (JOGO-01): a allowlist do
     Steam Input escolhe QUAL dispositivo o jogo enxerga, nunca QUANTOS.
   - **A marca esconde o FÍSICO; ela não tira o Hefesto da frente**
-    (ESCONDER-EM-VEZ-DE-SAIR-01, 09/08/2026 — decisão dela). Um controle
+    (ESCONDER-EM-VEZ-DE-SAIR-01, 09/08/2026 — decisão de produto). Um controle
     duplicado se cura por dois lados: escondendo o virtual (o produto saindo de
     cena) ou escondendo o físico (o produto ficando). O caminho escolhido é o
     segundo, e o mecanismo é o MESMO na direção contrária — o `hide` do broker
@@ -37,7 +37,7 @@ Política:
     os gamepads virtuais** (`suspend_vpads_for_steam_input`). Curava o duplicado
     com UM controle e derrubava o jogador 2 junto, porque o jogador 2 **é** um
     gamepad virtual — `coop_derrubado_pela_excecao_steam_input`, vinte
-    ocorrências no journal dela em 08/08. O raciocínio antigo não estava errado
+    ocorrências no journal do usuário em 08/08. O raciocínio antigo não estava errado
     sobre o duplicado; estava errado sobre o preço, que ninguém tinha declarado.
     As funções da suspensão saíram em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01):
     sem chamador desde 09/08, o flag que elas armavam nunca podia ser verdade.
@@ -262,7 +262,7 @@ def sync_steam_input_exception(
     O que a marca do Steam Input faz, desde 09/08/2026
     -------------------------------------------------
     **Esconde o controle FÍSICO do jogo marcado e mantém os virtuais de pé**
-    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela). O jogo enxerga um dispositivo
+    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto). O jogo enxerga um dispositivo
     por controle — o do Hefesto —, e cor, gatilhos, vibração e numeração
     continuam sendo nossos. É o mesmo estado canônico de qualquer outro jogo,
     reforçado na borda de entrada por `esconder_o_fisico_para_o_jogo`.
@@ -281,12 +281,12 @@ def sync_steam_input_exception(
       Mullet Mad Jack enumerava js0=vpad e js2=físico e repartia os dois entre
       dois jogadores. Daí a suspensão do vpad.
 
-    O que ninguém tinha declarado é o preço, e ele foi MEDIDO na máquina dela em
+    O que ninguém tinha declarado é o preço, e ele foi MEDIDO na máquina do usuário em
     08/08: **o jogador 2 é um gamepad virtual.** Derrubar os virtuais para curar
     o duplicado do jogador 1 derruba o jogador 2 junto —
     `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia.
 
-    A decisão dela fecha a conta pelo outro lado: *"a allowlist do Steam Input
+    A decisão de produto fecha a conta pelo outro lado: *"a allowlist do Steam Input
     NÃO tira o Hefesto da frente"*. O duplicado tem duas curas — esconder o
     virtual ou esconder o físico — e a segunda custa o jogador 2, a primeira
     não. O mecanismo é o mesmo `hide`/`restore` do broker, na direção contrária.
@@ -530,7 +530,7 @@ def _politicas_do_perfil_ativo(daemon: Any) -> dict[str, str]:
 
 
 def _degrau_da_peca(daemon: Any, target_uniq: str | None) -> str | None:
-    """O degrau que vale para a peça: o que ELA escolheu, ou o global do daemon."""
+    """O degrau que vale para a peça: o que O usuário escolheu, ou o global do daemon."""
     chave = _chave_da_peca(target_uniq)
     propria = _politicas_do_perfil_ativo(daemon).get(chave) if chave else None
     if propria:
@@ -569,7 +569,7 @@ def _mults_por_motor(
 ) -> tuple[float, float]:
     """`(mult_fraco, mult_forte)` — o DEGRAU da coluna VEZES a barra de cada motor.
 
-    A CONTA DELA, 04/09/2026, com os números dela:
+    A CONTA DO USUÁRIO, 04/09/2026, com os números dela:
 
         efetivo(motor) = degrau x barra(motor)
 
@@ -907,7 +907,7 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
       - máscara dualsense: ok SÓ se o vpad do P1 e TODOS os vpads do co-op
         estão em uhid. Motivos: `fallback_motivo` do P1 (ou `sem_uhid`) e
         `jogador_<N>_uinput` por jogador degradado. NOTA DATADA — PS-L3-MASCARA-01,
-        14/09/2026: o uinput do caminho Xbox é ESCOLHA dela, não degradação, e não
+        14/09/2026: o uinput do caminho Xbox é ESCOLHA do usuário, não degradação, e não
         entra (o vpad carrega o caminho em que nasceu, `caminho_do_vpad`);
       - emulação ligada SEM device (start falhou): `vpad_ausente`.
 
@@ -1075,7 +1075,7 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     - só age no vpad do P1 que caiu (`motivo_da_degradacao`): máscara DualSense
       no uinput com o caminho do DualSense. A máscara Xbox é uinput por design
       (o `hid_playstation` não faz bind em VID/PID da Microsoft), e o modo Xbox
-      é uinput por escolha dela; o pad renasce no caminho em que nasceu;
+      é uinput por escolha do usuário; o pad renasce no caminho em que nasceu;
     - precheck `uhid_available()` (ressalva do VPAD-01): sem ele, com o uhid
       persistentemente quebrado (permissão do nó, kernel sem `hid_playstation`),
       cada conexão destruiria e recriaria o vpad uinput que ESTÁ funcionando —
@@ -1305,7 +1305,7 @@ def _deve_promover_backend(
 def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     """De onde um start SEM opinião herda o caminho — e é UM lugar só.
 
-    O-CAMINHO-NAO-VAZA-01, 17/09/2026. A herança é a ESCOLHA DELA
+    O-CAMINHO-NAO-VAZA-01, 17/09/2026. A herança é a ESCOLHA DO USUÁRIO
     (`config.gamepad_caminho_global`, o que o boot relê de
     `gamepad_caminho.flag`), nunca o caminho da sessão que está correndo.
 
@@ -1314,21 +1314,17 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     ficava lá e virava lei sobre os 29 perfis que não opinam. O PRAGMATA, que
     não tem sequer seção `mode`, abria em uinput, e com ele iam embora as dez
     linhas do mapa que só existem no caminho DualSense — a IMU entre elas. A
-    queixa dela: *"joguei um jogo com controle por movimento e na hora do vamos
-    ver o controle não deu resposta"*.
+    queixa de uso.
 
     É função nomeada, e não uma linha embutida, para a régua poder MORDER o
     ponto exato: `test_o_caminho_nao_vaza_entre_jogos` repõe aqui a leitura
     velha e o laço de produção inteiro roda por cima dela.
 
     E AGORA NÃO HERDA DE LUGAR NENHUM — CAMINHO-CONTAGIO-01, ponto 2 do escopo
-    de 19/09/2026, e é ordem dela:
-
-        *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
-        esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
+    de 19/09/2026, e é   <!-- noqa-acento: citação literal -->
 
     A O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança — do slot da sessão para a
-    escolha dela — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
+    escolha do usuário — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
     é escrito por TODO gesto manual, e o PS + R3 dentro de um jogo é manual.
     Medido em 18/09: um aperto no DON'T SCREAM carimbou `xbox` no arquivo
     global, e **26 dos 29 perfis não têm `mode.caminho`** — herdaram todos, o
@@ -1338,11 +1334,11 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     opinião herdar de qualquer lugar, existe um lugar a envenenar; a terceira
     porta seria achada pela terceira vez. O caminho DualSense é o que tem TODAS
     as features (UHID: giroscópio, acelerômetro e touchpad chegam ao jogo), e é
-    o default que a ordem dela de 17/09 já pedia — *"os jogos e perfis tem que
+    o default que a ordem de 17/09 já pedia — *"os jogos e perfis tem que
     iniciar com todas as features ativadas por default"*.
 
     O `gamepad_caminho_global` CONTINUA EXISTINDO e continua sendo escrito: ele
-    é o que a tela mostra como escolha dela e o que o `--status` relata. O que
+    é o que a tela mostra como escolha do usuário e o que o `--status` relata. O que
     mudou é que ninguém NASCE dele.
 
     **DEVOLVER ``None`` É O QUE ENTREGA «TUDO DUALSENSE», E NÃO CRAVAR
@@ -1356,7 +1352,7 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     A máscara nasce `dualsense`, então o default É DualSense para todo perfil
     que não opina — que é o PRAGMATA e os outros 25. Cravar `dualsense` aqui
     daria o mesmo resultado nesse caso e um resultado ERRADO no outro: com o
-    cartão do P1 em «Xbox 360» (escolha dela, máscara `xbox`), o slot passaria
+    cartão do P1 em «Xbox 360» (escolha do usuário, máscara `xbox`), o slot passaria
     a dizer `dualsense` sobre um aparelho que `quer_uhid` mantém em uinput — a
     tela afirmando DualSense sobre um vpad Xbox. É o F7 desta casa, o produto
     dizendo uma coisa e fazendo outra, e foi a premissa de
@@ -1419,12 +1415,12 @@ def caminho_da_sessao(daemon: Any) -> str | None:
 
     O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026), item 1 da cura consolidada. O
     slot da sessão (`config.gamepad_caminho`) é escrito por quem ESCOLHE o
-    modo: o perfil ativado (o lançamento, o autoswitch, o boot) e o gesto dela.
+    modo: o perfil ativado (o lançamento, o autoswitch, o boot) e o gesto do usuário.
     Quem só RECRIA o pad (a ordem do co-op, o revive, a volta do Steam Input, a
     promoção, o juiz das máscaras, o cartão, a saída do Modo Nativo, a
     automação de dois controles) lê daqui e não escolhe nada.
 
-    Medido na sessão dela de 27/09 às 21h07 e às 23h28: o lançamento do
+    Medido na sessão do usuário de 27/09 às 21h07 e às 23h28: o lançamento do
     PRAGMATA pôs o pad em DualSense e, segundos depois, um restart o devolveu
     ao Xbox sem que o diário dissesse quem pediu. Cada restart tinha a sua
     fonte (a foto da suspensão, o caminho do pad velho, nenhuma).
@@ -1467,7 +1463,7 @@ def start_gamepad_emulation(
 
     `origin` é OBRIGATÓRIO e keyword-only — decisão medida de 08/08/2026
     (ORIGEM-QUE-MENTE-01): o default `"manual"` fazia o SILÊNCIO de um cliente
-    virar gesto dela, e foi assim que nasceu o "Jogador 3" fantasma (pedido sem
+    virar gesto do usuário, e foi assim que nasceu o "Jogador 3" fantasma (pedido sem
     origem furava o portão JOGO-01 e ainda calava o autoswitch por 30 s). O
     VERDADE-01 (18/08) só alargou o TIPO, para caber `"gesto_de_perfil"` — não
     devolveu o default. Há portão que reprova o retorno dele.
@@ -1495,7 +1491,7 @@ def start_gamepad_emulation_desfecho(
 
     MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão
     (`virtual_pad.CAMINHO_DUALSENSE` · `CAMINHO_XBOX`), e ele NÃO é a máscara.
-    ``None`` = o chamador não opina, e vale a ESCOLHA DELA
+    ``None`` = o chamador não opina, e vale a ESCOLHA DO USUÁRIO
     (`config.gamepad_caminho_global`, o que o boot relê de `gamepad_caminho.flag`)
     ou, sem escolha nenhuma, o que sai da máscara. Nunca o canal que o jogo
     anterior deixou de pé — O-CAMINHO-NAO-VAZA-01, 17/09/2026.
@@ -1520,7 +1516,7 @@ def start_gamepad_emulation_desfecho(
     usuária destrava a promoção por apply idêntico — perfil/autoswitch nunca
     recriam o vpad degradado (o latch anti-churn; ver `_deve_promover_backend`).
     `"gesto_de_perfil"` (VERDADE-01) conta como automático em TUDO aqui — só o
-    gate R-04 o reconhece como gesto dela.
+    gate R-04 o reconhece como gesto do usuário.
 
     NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui havia a trava da
     JOGO-01: *"com a exceção de Steam Input ATIVA, todo apply AUTOMÁTICO é
@@ -1532,7 +1528,7 @@ def start_gamepad_emulation_desfecho(
     ramo que encerra uma suspensão HERDADA continua abaixo, agora guardado pelo
     flag da suspensão e não pela exceção: ele existe para o daemon que subiu
     ANTES desta cura e está com uma suspensão de pé agora. Deixou de ser só o
-    gesto dela — QUALQUER apply passa a encerrá-la, e tem de ser assim, porque
+    gesto do usuário — QUALQUER apply passa a encerrá-la, e tem de ser assim, porque
     do contrário a suspensão herdada sobreviveria até ela lembrar de clicar no
     botão. Por isso a origem foi para dentro do log.
     """
@@ -1642,7 +1638,7 @@ def start_gamepad_emulation_desfecho(
                 save_gamepad_emulation,
             )
 
-            # medido na máquina dela: o gesto com que ela diz «Sony DualSense»
+            # medido na máquina do usuário: o gesto com que ela diz «Sony DualSense»
             # `gamepad.mask.set`, que grava no registro por aparelho.
             if flavor is not None:
                 save_gamepad_emulation(True, key)

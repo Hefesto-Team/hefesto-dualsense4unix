@@ -707,7 +707,7 @@ class TestODoctorPergunta:
         assert "o diário do daemon não tem a subida dele" not in saida
 
     def test_a_medida_que_morre_calada_avisa_com_uma_venv_ao_lado(self, lar: Path) -> None:
-        """O mundo do job do GTK real e da mesa dela: uma `.venv` ao lado do `doctor.sh`."""
+        """O mundo do job do GTK real e da bancada: uma `.venv` ao lado do `doctor.sh`."""
         copia = lar / "scripts" / "doctor.sh"
         copia.parent.mkdir()
         shutil.copy2(DOCTOR, copia)

@@ -14,8 +14,7 @@ linha — e a dica do quadro Navegação já citava *"a linha de estado abaixo"*
 desde 27/08, para uma linha que não existia.
 
 O QUE ESTA RÉGUA COBRA, e é o inverso do que parece: **que esta aba NÃO tenha
-frase própria.** A LEI 0 desta empreitada é dela — *"Não temos que recriar nada.
-só aproveitar o que foi feito e integrar ao novo desenho"* —, e a forma de
+frase própria.** A LEI 0 desta empreitada é do usuário —  —, e a forma de
 quebrá-la aqui seria reescrever as frases da GTK em português "melhor". Então
 cada linha abaixo compara o que a tela recebe com o que a função do produto
 devolve, chamando as duas.
@@ -190,7 +189,7 @@ def test_a_linha_do_teclado_na_tela_e_a_funcao_do_produto(osk: bool | None) -> N
 
 
 def test_com_o_daemon_mudo_o_mouse_nao_afirma_nada() -> None:
-    """Sem bloco, sem linha — a régua da tela vazia é a regra dela."""
+    """Sem bloco, sem linha — a régua da tela vazia é a regra de produto."""
     mesa = _mesa(None, None)
     assert mesa["rato-estado"] == NADA_A_DIZER
     assert mesa["teclado-osk"] == NADA_A_DIZER

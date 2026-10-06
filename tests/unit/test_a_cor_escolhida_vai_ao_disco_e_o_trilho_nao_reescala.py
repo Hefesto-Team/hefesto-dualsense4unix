@@ -1,12 +1,11 @@
 """A cor que ela escolhe VAI AO DISCO — e o trilho de brilho para de reescalá-la.
 
-**A QUEIXA DELA, na bancada de 09/09/2026**, e ela contou as duas metades como
+**A QUEIXA DE USO, na bancada de 09/09/2026**, e o usuário contou as duas metades como
 uma coisa só:
 
-    "o controle branco fica oscilando entre a cor que eu seleciono e a cor
-     azul. fora que o slicer tá estranho ainda"   # noqa-acento: citação dela
+    o controle branco oscilava entre a cor escolhida e o azul, e o deslizante estava estranho.
 
-**O QUE O DISCO DELA DIZIA**, medido no `personalizado.json` naquele dia — o
+**O QUE O DISCO DO USUÁRIO DIZIA**, medido no `personalizado.json` naquele dia — o
 override do controle branco, inteiro (o endereço fica de fora: é identidade
 real, e `test_anonimato_de_fixtures.py` reprova até a forma mascarada dele em
 arquivo versionado)::
@@ -23,7 +22,7 @@ dela (`#2850B4`). **Os dois são azuis**, e é o azul que ela via voltar.
 **E O TRILHO ERA A MESMA RAIZ.** Sem cor no disco, o gesto `brilho` só podia
 adivinhar a cor pela luz ACESA — que vem pós-escala (D8) — e `cor_escolhida` só
 sabe desfazer a escala dos catorze tons da guia. Toda cor fora deles voltava
-INTEIRA e era escalada por cima de si mesma. Medido no aparelho dela, com
+INTEIRA e era escalada por cima de si mesma. Medido no aparelho do usuário, com
 `#2850B4` e o trilho SUBINDO::
 
     80% -> 60%   (32,64,144) -> (19,38,86)
@@ -134,11 +133,11 @@ def _cor_no_disco(caminho) -> list | None:
 
 
 def test_clicar_num_tom_grava_a_cor_no_override_dela(pac, a04):
-    """O estado do disco dela em 09/09: brilho sim, cor não. Depois do clique, as duas.
+    """O estado do disco do usuário em 09/09: brilho sim, cor não. Depois do clique, as duas.
 
     **A MORDIDA:** tire a chamada de `_guardar_a_cor_no_perfil` do fim de
     `_escrever_a_cor` e o `lightbar` volta a ser `None` — o disco fica como
-    estava na bancada dela, e a cor só vive na camada volátil do daemon.
+    estava na bancada, e a cor só vive na camada volátil do daemon.
     """
     caminho = _semear("regua", campos={"lightbar_brightness": 0.49})
     assert _cor_no_disco(caminho) is None, "o semeado tem de nascer SEM cor"
@@ -150,7 +149,7 @@ def test_clicar_num_tom_grava_a_cor_no_override_dela(pac, a04):
 
 
 def test_a_cor_gravada_leva_a_procedencia_do_numero_de_hoje(pac, a04):
-    """Sem o carimbo, a escolha dela nasce fóssil e `cores_sem_colisao` a desloca.
+    """Sem o carimbo, a escolha do usuário nasce fóssil e `cores_sem_colisao` a desloca.
 
     `_e_fossil` lê `lightbar_para_o_numero`: sem ele a peça é `LEGADO` e a
     regra passa a provar pela FORMA — uma cor igual à do número de outro vira
@@ -179,7 +178,7 @@ def test_gravar_a_cor_preserva_o_brilho_que_ja_estava(pac, a04):
 
 
 def test_desligar_a_barra_tambem_grava(pac, a04):
-    """"Desligar" é escolha dela, e sem gravar o perfil reaplicado a reacenderia."""
+    """"Desligar" é escolha do usuário, e sem gravar o perfil reaplicado a reacenderia."""
     caminho = _semear("regua", campos={"lightbar": [255, 128, 0]})
     a04.apagar(_ctx(pac), {"uniq": UNIQ}, PonteDeMentira())
 
@@ -204,7 +203,7 @@ def _rgb_que_saiu(ponte: PonteDeMentira) -> tuple:
 
 
 def test_o_trilho_manda_a_cor_do_disco_e_nao_a_luz_acesa(pac, a04):
-    """O caso medido no aparelho dela: `#2850B4` a 50%, arrastando para 70%."""
+    """O caso medido no aparelho do usuário: `#2850B4` a 50%, arrastando para 70%."""
     _semear("regua", campos={"lightbar": list(FORA_DA_GUIA),
                              "lightbar_brightness": 0.5})
     ponte = PonteDeMentira()
@@ -217,7 +216,7 @@ def test_o_trilho_manda_a_cor_do_disco_e_nao_a_luz_acesa(pac, a04):
 
 
 def test_arrastar_dez_vezes_nao_escurece_a_cor(pac, a04):
-    """A prova do acúmulo, e ela é o que ela viu: a barra morrendo no preto."""
+    """A prova do acúmulo, e ela é o que o usuário viu: a barra morrendo no preto."""
     _semear("regua", campos={"lightbar": list(FORA_DA_GUIA),
                              "lightbar_brightness": 0.5})
     aceso = [20, 40, 90]

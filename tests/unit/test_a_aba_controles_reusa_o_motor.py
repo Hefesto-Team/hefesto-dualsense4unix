@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO REUSO NA ABA CONTROLES — e das três regras que ela reescrevia errado.
 
-POR QUE ELA EXISTE. LEI 0 da migração, palavra dela em 02/09/2026:
-
-    *"no gtk eu já deixei praticamente tudo pronto, estamos adaptando e migrando
-    o que fizemos na versão estável pra ela funcionar no html. Não temos que
-    recriar nada."*
+POR QUE ELA EXISTE. LEI 0 da migração, palavra em 02/09/2026
 
 `interface/cartao_do_controle.py` tem **26 funções públicas de módulo** — 5.951
 linhas de texto de tela que a GTK já provou. Medido em 02/09/2026, a interface
@@ -14,7 +10,7 @@ nova alcançava DUAS (`rotulo_lightbar`, pela aba Iluminação, e
 das dez, chamava ZERO**. Ela reescrevia à mão o que o motor já sabia — e três
 das reescritas estavam ERRADAS.
 
-O QUE CADA UMA CUSTAVA, medido com os DOIS controles dela na mesa (um `usb`, um
+O QUE CADA UMA CUSTAVA, medido com os DOIS controles do usuário na mesa (um `usb`, um
 `bt`) em 02/09/2026 às 16h:
 
 1. **"102%"**. `speaker.volume` é o registrador do protocolo, **0-255**
@@ -32,8 +28,7 @@ O QUE CADA UMA CUSTAVA, medido com os DOIS controles dela na mesa (um `usb`, um
    transformava AUSÊNCIA em zero. O daemon só publica `speaker` depois do
    primeiro `speaker.set` (`ipc_handlers.py:3288`).
 3. **`#000000` sobre uma cor desconhecida.** O motor diz por que é mentira, com
-   todas as letras: *"o 0,0,0 do sysfs sem escrita nossa pode ser o azul-kernel
-   brilhando neste exato momento"* (`controller_card.rotulo_lightbar`).
+   todas as letras:  (`controller_card.rotulo_lightbar`).
 4. **um ramo inteiro que só sabia devolver `—`.** A máscara caía em
    `NOME_DA_MASCARA.get(vpad_backend, "—")`, e `NOME_DA_MASCARA` é indexada por
    MÁSCARA (`dualsense`, `xbox`) enquanto `vpad_backend` vale `uhid`/`uinput`/
@@ -217,8 +212,7 @@ def test_sem_leitura_de_audio_o_microfone_nao_chuta(pac, a02):
     `bool(None)` → `False` → `mic_set(True)`: o clique CALAVA um microfone que
     ninguém sabia se estava calado.
 
-    A regra é a do motor, palavra por palavra: *"mandar um pedido sem saber o
-    estado atual seria chutar qual é o oposto"* (`controller_card.acao_mic`), e
+    A regra é a do motor, palavra por  (`controller_card.acao_mic`), e
     a frase que sobe à tela é a dele (`DICA_MIC_SEM_LEITURA`).
 
     MORDE: apagar a guarda faz `chamadas` virar `[("mic_set", (True,), ...)]`.
@@ -247,9 +241,7 @@ def test_a_cor_de_fonte_desconhecida_nao_vira_preto(pac, a02):
     """`lightbar_source == "desconhecida"` é "não sei", e não "apagada".
 
     O dono da regra é `controller_card.rotulo_lightbar`, e ele devolve `None`
-    como cor-base exatamente aqui. A frase dele: *"NUNCA 'apagada': o 0,0,0 do
-    sysfs sem escrita nossa pode ser o azul-kernel brilhando neste exato
-    momento"*.
+    como cor-base exatamente aqui. A frase dele.
 
     **A PALAVRA MUDOU EM 04/09/2026 — decisão [02] dela**, e o que esta régua
     mede não: *"palavra curta no lugar do travessão, frase inteira no hover"*.
@@ -386,7 +378,7 @@ def test_o_backend_uinput_e_ambiguo_e_diz_nao_sei(pac, a02):
     assert _card(pac, a02, {**BASE, "vpad_backend": None})["mascara"] == "—"
 
 
-#: `daemon.state_full` com os dois controles dela na mesa: 36 blocos, todos com
+#: `daemon.state_full` com os dois controles do usuário na mesa: 36 blocos, todos com
 TOUCHPAD_COMO_O_DAEMON_PUBLICA = {
     "touching": False, "x": 960, "y": 540, "width": 1920, "height": 1080,
 }
@@ -411,7 +403,7 @@ def test_inputs_com_leitura_e_sem_touchpad_nao_e_sem_toque(pac, a02):
 def test_a_palavra_do_touchpad_e_a_do_produto(pac, a02):
     """`Sem toque` / `1 toque` — a conta é a MESMA linha que a GTK escreve.
 
-    DECISÃO DELA, 02/09/2026 (item 15): *"o touchpad usa a palavra do produto:
+    DECISÃO, 02/09/2026 (item 15): *"o touchpad usa a palavra do produto:
     '1 toque', '2 toques', 'Sem toque', que é o que o motor já conta"*. A GTK
     faz `texto_toques(1 if tocando else 0)` (`controller_card.py:2954`), e é
     isso que esta aba passou a fazer — no lugar do `COM_TOQUE = "Tocando"`, que
@@ -464,7 +456,7 @@ def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
 
 
 def test_o_pontinho_so_acende_com_toque(a02):
-    """Decisão dela (item 15): o ponto só aparece quando há toque."""
+    """Decisão de produto (item 15): o ponto só aparece quando há toque."""
     solto = a02.dedos_do_controle(
         {"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[1][0][0]
     tocando = a02.dedos_do_controle(
@@ -561,7 +553,7 @@ def com_a_pagina_publicada(a02):
 def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
     """Toda chave emitida tem onde pousar na página que o piloto ABRE.
 
-    A BANCADA É DELA. O gerador escreve em `mockup/`, e o produto só recebe
+    A BANCADA É DO USUÁRIO. O gerador escreve em `mockup/`, e o produto só recebe
     pelo `--publicar 02`, que é ato dela. Emitir antes põe as chaves em
     `casamento.medir(...)["orfaos"]`, e quem reprova é
     `test_o_clique_do_analogico_tem_dono::test_a_aba_controles_nao_emite_para_
@@ -594,7 +586,7 @@ def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
 
 def test_publicada_a_pagina_o_volume_e_a_curva_medida(pac, a02,
                                                       com_a_pagina_publicada):
-    """Decisão dela (item 16): o número E a barra do volume ganham endereço."""
+    """Decisão de produto (item 16): o número E a barra do volume ganham endereço."""
     from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
 
     d = _card(pac, a02, {**BASE, "speaker": {"volume": 40, "muted": False}})
@@ -616,7 +608,7 @@ def test_publicada_a_pagina_o_retangulo_da_luz_diz_o_que_o_campo_diz(
         pac, a02, com_a_pagina_publicada):
     """O desenho ao lado do campo para de contradizer o campo.
 
-    FOTOGRAFADO em 02/09/2026 às 19h, com os dois controles dela: o `luz-hex`
+    FOTOGRAFADO em 02/09/2026 às 19h, com os dois controles do usuário: o `luz-hex`
     dizia `#0000FF` (o `lightbar_rgb` vivo do P1) e o retângulo logo abaixo
     estava no `#7EB8D4` que o mockup cravou. **A régua do mockup não vê** — ela
     conta `data-campo`, e o retângulo não tinha nenhum: `02-controles` deu
@@ -624,7 +616,7 @@ def test_publicada_a_pagina_o_retangulo_da_luz_diz_o_que_o_campo_diz(
 
     OS TRÊS "NÃO SEI" MANDAM VAZIO, e o vazio apaga a cor de linha
     (`hefesto_vivo.py:100-104`) — o retângulo volta ao `--panel` da folha de
-    estilo, que é o "nada" que ela decidiu para campo sem informação.
+    estilo, que é o "nada" que o usuário decidiu para campo sem informação.
 
     MORDE: fazer `_cor_da_barra` devolver o hex sempre reprova na terceira
     linha, com o travessão virando `background` inválido.

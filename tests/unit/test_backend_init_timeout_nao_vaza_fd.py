@@ -133,7 +133,7 @@ class TestInitQueEstouraNaoVazaFd:
         )
 
     def test_init_rapido_nao_fecha_o_handle_entregue(self) -> None:
-        """O contrapeso, e o teste que protege a mesa dela: no caminho feliz o"""
+        """O contrapeso, e o teste que protege a bancada: no caminho feliz o"""
         devolvido, handle = self._rodar()
 
         assert devolvido is handle, "o caminho feliz tem de entregar o handle"

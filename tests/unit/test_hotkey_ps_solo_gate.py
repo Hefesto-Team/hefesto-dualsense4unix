@@ -20,7 +20,7 @@ decisões estão certas isoladamente; o defeito é a COMPOSIÇÃO: desligar o
 long-press removeu, sem querer, o único teto que existia.
 
 A mordida: `test_segurar_para_religar_nao_abre_a_steam` põe os dois holds lado a
-lado — 5.038 ms (o religamento medido no journal dela) e 200 ms (um toque
+lado — 5.038 ms (o religamento medido no journal do usuário) e 200 ms (um toque
 humano). Arrancado o teto de `_observe_ps_solo`, o caso longo dispara e o teste
 reprova imprimindo os dois `held_ms` juntos.
 

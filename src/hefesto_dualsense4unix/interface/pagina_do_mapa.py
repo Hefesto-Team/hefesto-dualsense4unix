@@ -7,11 +7,9 @@ O DEFEITO QUE ELE FECHA, 11/09/2026
 A página dizia **"o arranjo de agora"** sobre um censo de **24/08/2026 cravado
 em JavaScript**: oito aparelhos, três faces, um mapa e duas leituras digitados à
 mão dentro do HTML, todos de UMA máquina. Quem abrisse o produto noutro
-computador lia o gabinete de outra pessoa — e a ordem dela de 11/09/2026 é
-justamente a contrária:
-
-    "a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento)
-     mim mas pra qualquer outro user"   — citação literal, 11/09/2026
+computador lia o gabinete de outra pessoa — e a ordem de 11/09/2026 é
+justamente a contrária: todas as features funcionam para qualquer usuário,
+não só para a máquina de quem desenvolve.
 
 E a página não tinha gerador: era o único HTML desta casa escrito à mão, e já
 tinha divergido da origem congelada em treze pedaços sem ninguém ver.
@@ -323,10 +321,10 @@ ABRE_A_PORTA = """\
        ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
     HUB_LIDO = f.hubLido || {};
     /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
-       pintou o plugue (aparelho, depois o que ela disse, depois a placa). */
+       pintou o plugue (aparelho, depois o que o usuário disse, depois a placa). */
     USB_DE = f.usbDe || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
-       O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
+       O-MAPA-QUE-ELA-CORRIGE-01: o usuário clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */
     if (!manterOEditor) editando = null;
   }
@@ -334,7 +332,7 @@ ABRE_A_PORTA = """\
   function dizerDeQuando() {
     /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
        mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
-       passava a dizer de quando era a leitura desta máquina, e ela pediu que
+       passava a dizer de quando era a leitura desta máquina, e o usuário pediu que
        isso saísse («essa info some»). A linha existe só para o exemplo se
        dizer exemplo; com a leitura de quem abre, ela sai da página. */
     var el = document.getElementById("de-quando");
@@ -390,10 +388,10 @@ ABRE_A_PORTA = """\
 
 #: ══ A CAIXA DA JANELA — 24/09/2026 ═════════════════════════════════════════
 #:
-#: A palavra dela, na página da sessão dos desenhos: *«Vira caixa da janela,
+#: A palavra de produto, na página da sessão dos desenhos: *«Vira caixa da janela,
 #: rolando por dentro»*. Até aqui esta era uma página de DOCUMENTO — a
 #: `.pagina` com `max-width:1180px` (a largura das abas antes de 08/09) e a
-#: página inteira rolando: na TV dela, 1180 x 2195 ao lado de uma janela de
+#: página inteira rolando: na TV do usuário, 1180 x 2195 ao lado de uma janela de
 #: 1600 x 808. O recuo e o tamanho vêm do dono comum das três páginas avulsas
 #: (`caixa_da_janela.moldura`), lidos do esqueleto das abas.
 #:
@@ -403,7 +401,7 @@ ABRE_A_PORTA = """\
 #: O fundo de dentro continua o `--color-paper` desta página: os painéis
 #: dela são `--color-paper-2`, e no fundo das abas eles sumiriam.
 CAIXA_DA_JANELA = (
-    "  /* A CAIXA DA JANELA — 24/09/2026, decisão dela: «vira caixa da janela,\n"
+    "  /* A CAIXA DA JANELA — 24/09/2026, decisão de produto: «vira caixa da janela,\n"
     "     rolando por dentro». O recuo e o tamanho são os das abas (as três\n"
     "     linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */\n"
     "  body {\n"
@@ -486,7 +484,8 @@ EDICOES: tuple[Edicao, ...] = (
         ),
         depois=(
             '  <header class="topo" style="position:relative;padding-left:132px">\n'
-            "    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: \"ok temos um botão pra vir\n"
+            "    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: \"ok temos um botão pra"
+            "vir\n"
             "         pra cá. Mas e o botão pra voltar?\". Não havia nenhum href de saída nesta\n"
             "         página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA\n"
             "         aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da\n"
@@ -874,7 +873,7 @@ EDICOES: tuple[Edicao, ...] = (
         ),
         porque=(
             "11/09/2026, ordem dela: *\"a ideia é que todas as features mesmo "
-            "do app funcionem nao so pra mim mas "  # (noqa-acento: citação dela)
+            "do app funcionem nao so pra mim mas "  # (noqa-acento: citação)
             "pra qualquer outro user\"*. O rodapé listava "
             "os caminhos de barramento de UM gabinete — `3-1.2`, `4-1`, `1-3` — como "
             "se fossem os de quem abre. O que ele explica (o que se mede e o que se "
@@ -969,9 +968,9 @@ EDICOES: tuple[Edicao, ...] = (
         depois="  </footer>\n  </div>\n</div>\n\n<script>\n",
         porque="24/09/2026 — e fecha depois do rodapé, que rola junto com o resto.",
     ),
-    # ═══ O MAPA DAS CONEXÕES — 26/09/2026, o que ela pediu olhando a página ═══
+    # ═══ O MAPA DAS CONEXÕES — 26/09/2026, o que o usuário pediu olhando a página ═══
     # Publicadas em 26/09/2026 pela O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, por
-    # delegação dela («quem implementa publica»). Várias editam o que uma edição
+    # delegação de produto («quem implementa publica»). Várias editam o que uma edição
     # de antes escreveu (o cabeçalho e os modos de 11/09): o gerador as aplica
     # em ordem, e a régua cobra cada `antes` no texto da vez dela.
     Edicao(
@@ -980,7 +979,7 @@ EDICOES: tuple[Edicao, ...] = (
         ),
         depois=(
             '<style>\n'
-            '  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos dela olhando a'
+            '  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos olhando a'
             ' página. */\n'
             '  /* «a cor de fonte de qualquer cinza que tem na página muda pr'
             'a branco» */\n'
@@ -1465,14 +1464,14 @@ EDICOES: tuple[Edicao, ...] = (
         depois=(
             '  /* ══ O EDITOR DA ENTRADA — 26/09/2026 ═══════════════════════'
             '═══════════\n'
-            '     Pedido dela: «ao clicar em um desses usb mapeados eu pudess'
+            '     Pedido: «ao clicar em um desses usb mapeados eu pudess'
             'e setar que tem\n'
             '     tal coisa lá. no caso o hub ou afins». E a velocidade é a o'
             'utra metade: o\n'
             '     kernel só sabe se a entrada é USB 3.0 pelo par que a placa-'
             'mãe declara, e\n'
             '     ela pode corrigir o que o firmware diz. `DECLARADO` é o que'
-            ' ela disse nesta\n'
+            ' o usuário disse nesta\n'
             '     página; gravar no `maquina.json` é do produto. */\n'
             '  var DECLARADO = {};\n'
             '  var editando = null;\n'
@@ -1553,7 +1552,7 @@ EDICOES: tuple[Edicao, ...] = (
             '\n'
             '  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════════════'
             '════════════\n'
-            '     Pedido dela: «Todas as palavras Iniciam com a letra maiúscu'
+            '     Pedido: «Todas as palavras Iniciam com a letra maiúscu'
             'la». Os\n'
             '     conectivos ficam minúsculos no meio da frase, que é como el'
             'a mesma escreve\n'
@@ -1669,9 +1668,9 @@ EDICOES: tuple[Edicao, ...] = (
         porque='26/09/2026 — «Velocidade» grava: o gesto `entrada-velocidade`.',
     ),
     # ═══ O EXEMPLO CONTINUA DIZENDO QUE É EXEMPLO — 26/09/2026 ═══
-    # A conferência da O-MAPA-DAS-CONEXOES-NO-PRODUTO-01. O pedido dela
+    # A conferência da O-MAPA-DAS-CONEXOES-NO-PRODUTO-01. O pedido
     # (*«leitura deste computador · 26/09/2026 03h13 essa info some»*) é sobre
-    # a leitura DA MÁQUINA DELA, e a edição do cabeçalho tirou junto a única
+    # a leitura DA MÁQUINA DO USUÁRIO, e a edição do cabeçalho tirou junto a única
     # defesa de 11/09: quem ainda não mapeou nada via o gabinete de exemplo
     # (os aparelhos de outra pessoa, «4 Coisas para Mudar de Lugar») sem nada
     # dizendo que não é o dele. A linha volta SÓ no exemplo: quando o produto
@@ -1979,7 +1978,7 @@ EDICOES: tuple[Edicao, ...] = (
         ),
     ),
     # ══ O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026 ══════════════════════════════
-    # Os pedidos dela, com o mapa aberto: renomear a entrada, trocar duas de
+    # Os pedidos, com o mapa aberto: renomear a entrada, trocar duas de
     # lugar, dizer onde fica o hub e corrigir a velocidade. As edições daqui
     # para baixo são desta sprint; o `porque` de cada uma diz o passo.
     Edicao(
@@ -2443,7 +2442,7 @@ EDICOES: tuple[Edicao, ...] = (
         depois=(
             '  /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609'
             '-TROCAR-MOVE-\n'
-            '     O-BURACO). Pedido dela: «trocar elas de lugar no mapeamento».'
+            '     O-BURACO). Pedido: «trocar elas de lugar no mapeamento».'
             ' Só nas\n'
             '     entradas que gravam, sem as pontas; cada opção diz o nome, a '
             'face e o que\n'
@@ -3523,7 +3522,7 @@ EDICOES: tuple[Edicao, ...] = (
         depois=_com_os_dados(
             '  /* ══ O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-C'
             'ORRIGE-ONDE-SE-CLICA-01 ═══════\n'
-            '     Pedido dela: «clicar num dispositivo não oferece modi'
+            '     Pedido: «clicar num dispositivo não oferece modi'
             'ficá-lo ou identificá-lo, nem no\n'
             '     mapa nem em Atualmente Conectado». Clicar em QUALQUER'
             ' aparelho (o botão com o nome dele\n'
@@ -3558,7 +3557,7 @@ EDICOES: tuple[Edicao, ...] = (
             '][1];\n'
             '    return t;\n'
             '  }\n'
-            '  /* o nome que ela deu vence; depois o tipo que ela disse'
+            '  /* o nome que ela deu vence; depois o tipo que o usuário disse'
             '; depois o que a máquina leu */\n'
             '  function rotuloDoAparelho(a) {\n'
             '    return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoT'
@@ -4304,7 +4303,7 @@ EDICOES: tuple[Edicao, ...] = (
         antes=(
             '  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════'
             '════════════════════\n'
-            '     Pedido dela: «Todas as palavras Iniciam com a letra'
+            '     Pedido: «Todas as palavras Iniciam com a letra'
             ' maiúscula». Os\n'
             '     conectivos ficam minúsculos no meio da frase, que é'
             ' como ela mesma escreve\n'

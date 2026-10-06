@@ -209,7 +209,7 @@ def test_um_link_com_o_nome_da_copia_sai_sem_levar_o_alvo(tmp_path: Path) -> Non
 
 
 def test_o_ensaio_diz_cada_copia_que_apagaria_e_nao_apaga_nenhuma(tmp_path: Path) -> None:
-    """O `--dry-run` é como quem coordena olha o uninstall na máquina dela."""
+    """O `--dry-run` é como se olha o uninstall na máquina do usuário."""
     raiz = _mesa_do_root(tmp_path)
     antes = _retrato(raiz)
     r = _rodar(tmp_path, BLOCO_DO_ENSAIO + BLOCO_DOS_BONDS, purge=True, antes="DRY_RUN=1\n")

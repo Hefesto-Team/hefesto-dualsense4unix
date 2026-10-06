@@ -114,10 +114,10 @@ CHEGAM = f"Os {N_CTRL} controles chegam."
 CSS = """
   /* ---------- Lançadores ---------- */
   /* A GRADE ROLA POR DENTRO, E O `.miolo` PARA DE ROLAR — ROLAGEM-01, 09/09/2026.
-     Achado dela em 08/09: *"duas paginas ficaram com barra de navegação  (noqa-acento: citação dela)
+     Achado dela em 08/09: *"duas paginas ficaram com barra de navegação  (noqa-acento: citação)
      vertical. tipo a gatilhos e lançadores."*
 
-     A CAUSA, MEDIDA NO WEBKIT VIVO com os quatro na mesa e o daemon dela:
+     A CAUSA, MEDIDA NO WEBKIT VIVO com os quatro na mesa e o daemon do usuário:
      `DIV.miolo 668>564`. O `.miolo` tem 564px de caixa; o conteúdo desta aba
      pediu **668**. Não é a `.janela`, que fecha em 775/775 nas dez — é o filho.
 
@@ -125,9 +125,9 @@ CSS = """
      na MESMA sessão, com meia hora de intervalo: `.lancadores` foi de **493 a
      534px** sozinha, porque o cartão da Steam saiu de «CHEGAM» para «NÃO
      CHEGAM» com um jogo pendente — e a lista de pendências (`.lanc-fora`) tem o
-     tamanho que os jogos DELA tiverem. Some-se «Adicionar novo Lançador», que
-     cria cartão. *Quantos lançadores ela tem, e quantos jogos com pendência, é
-     dela — e a caixa não pode crescer com eles.*
+     tamanho que os jogos do usuário tiverem. Some-se «Adicionar novo Lançador», que
+     cria cartão. *Quantos
+     lançadores ela tem, e quantos jogos com pendência, é do usuário — e a caixa não pode crescer com eles.*
 
      É a mesma frase que declara o `DIV.rolo` da `10-perfis` em `POR_DESENHO`
      (`scripts/ensaios/a_janela_cabe_no_que_ela_ve.py`), e por isso a cura é a
@@ -186,7 +186,7 @@ CSS = """
   .lanc-selo{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;
              font-family:'JetBrains Mono',monospace}
   /* O VERDE DO «LOCALIZADO» — 11/09/2026, LANCADOR-LOCALIZAR-01, e ele nasceu
-     de uma queixa dela: *"não aparece verde os localizados"*.
+     de uma queixa de uso: *"não aparece verde os localizados"*.
 
      MEDIDO NA PÁGINA VIVA antes da cura, com a grade pintada como o pacote a
      pinta (`blocos` -> `cartoes_html`): o selo da Steam saía
@@ -284,7 +284,7 @@ CSS = """
   .carimbo{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--green);
            margin-left:auto;white-space:nowrap}
   /* A LISTA DE JOGOS DENTRO DO CARTÃO — 02/09/2026, e ela NASCE VAZIA.
-     Na máquina dela, hoje, os 63 jogos com o atalho estão todos em ordem e a
+     Na máquina do usuário, hoje, os 63 jogos com o atalho estão todos em ordem e a
      lista não ocupa um pixel: `linhas_de_jogos([])` devolve string vazia, e o
      bloco fica com altura zero. Ela só aparece quando há o que dizer — que é a
      mesma regra do carimbo, e o motivo de o cartão não engordar por existir.
@@ -322,7 +322,7 @@ CSS = """
     background:var(--elevated);border:1px solid var(--border-sutil)}
   .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
     line-height:1.5;color:var(--texto-suave);word-break:break-all}
-  /* A TELA DE REGISTRO — 08/09/2026, o registro de lançador que ela pediu.
+  /* A TELA DE REGISTRO — 08/09/2026, o registro de lançador que o usuário pediu.
      A CAIXA, o topo, o corpo e o rodapé vêm do `monta.CSS_POPUP`, que é o dono
      da `.tela-nova` desde 29/08 e existe justamente para a segunda aba com
      pop-up não copiar as 49 linhas da primeira. O que é DESTA tela — e só
@@ -347,7 +347,7 @@ CSS = """
     background:var(--app-bg);border:1px solid var(--border-forte);color:var(--fg);
     font-family:'JetBrains Mono',monospace;font-size:11.5px}
   .lanc-novo-campo input:focus{outline:none;border-color:var(--purple)}
-  /* AS DUAS PORTAS DO «ONDE ELE ESTÁ» — 10/09/2026, decisão dela (a opção C):
+  /* AS DUAS PORTAS DO «ONDE ELE ESTÁ» — 10/09/2026, decisão de produto (a opção C):
      o campo que ela digita e o botão que abre o seletor do sistema. A linha é
      `flex` e o campo é quem estica (`flex:1`), porque o rótulo do botão tem
      tamanho FIXO e o caminho não tem: dividir a largura ao meio deixaria o
@@ -481,7 +481,7 @@ if _FALTAM:
         "é pintura perdida — `querySelector` devolve `null`, a pintura conta "
         "zero, e zero passa por 'nada mudou'.")
 
-# quatro DualSense dela na mesa foi esse: o lugar vazio saía por um ramo
+# quatro DualSense do usuário na mesa foi esse: o lugar vazio saía por um ramo
 _ESTADOS = tuple(dl.MOLDURA)
 _POR_ESTADO: dict[str, dict[str, set[str]]] = {}
 for _lanc in QUADRO.lancadores:

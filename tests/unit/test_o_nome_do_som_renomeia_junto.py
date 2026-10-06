@@ -16,7 +16,7 @@ número nenhum.
 A CAUSA, MEDIDA DE DENTRO DO DAEMON — e o numerador está CERTO
 ---------------------------------------------------------------
 No mesmo instante em que os rótulos diziam ``2, 4, 1, 3``, o ``controller.list``
-do daemon dela respondia ``player_slot`` ``2, 4, 3, 1`` para os mesmos quatro
+do daemon do usuário respondia ``player_slot`` ``2, 4, 3, 1`` para os mesmos quatro
 ``uniq``. O cálculo do assento nunca esteve errado: **o rótulo é a fotografia
 do assento de quando o nó nasceu**, e quando um controle entra na mesa e
 empurra o assento de OUTRO, o nó do outro não renasce.
@@ -27,7 +27,7 @@ E NÃO HÁ RENOMEAR NO LUGAR — medido nesta máquina no mesmo dia: o ``pactl``
 PulseAudio daemon running"* sob o PipeWire. **Renomear é republicar** — o mesmo
 ato que o daemon já faz por rotina quando o controle pisca.
 
-A ORDEM DELA, 20/09/2026: *"corrige tudo que contenha a info incorreta
+A ORDEM, 20/09/2026: *"corrige tudo que contenha a info incorreta
 sobrescrevendo-a"*.
 
 POR QUE UMA RÉGUA DE «TEM NÚMERO» NÃO SERVE
@@ -40,9 +40,9 @@ DAQUELE ``uniq``. Ver :func:`test_a_regua_fraca_da_verde_sobre_a_troca`.
 
 O QUE ESTE ARQUIVO NÃO MEDE
 ----------------------------
-Som. Nenhum ``pactl`` de verdade sai daqui — o servidor de som dela tem quatro
+Som. Nenhum ``pactl`` de verdade sai daqui — o servidor de som do usuário tem quatro
 DualSense em cima. Que o alto-falante do Player 3 toque o que entrou no nó do
-Player 3 é a orelha dela, e já está medido na sprint.
+Player 3 é a orelha do usuário, e já está medido na sprint.
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ def test_a_troca_entre_dois_rotulos_e_envelhecimento() -> None:
 
 
 def test_a_regua_fraca_da_verde_sobre_a_troca() -> None:
-    """O estado REAL da mesa dela passaria por uma régua de «tem número»."""
+    """O estado REAL da bancada passaria por uma régua de «tem número»."""
     no_ar = {
         uniq: f"Alto-falante do Controle {n}" + _SONY
         for uniq, n in _ASSENTOS_DO_NOME.items()

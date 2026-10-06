@@ -235,7 +235,7 @@ class TestQuemNaoTomaAVez:
         assert not list(berco.rglob("*.pid"))
 
     def test_o_lock_e_por_tela(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A janela de um Xvfb de instrumento nunca chama a da tela dela."""
+        """A janela de um Xvfb de instrumento nunca chama a da tela do usuário."""
         ai = _carregar_o_lancador()
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
         dela = ai.nome_da_vez()

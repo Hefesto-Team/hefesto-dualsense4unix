@@ -4,8 +4,8 @@
 OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (29/09/2026). A tabela «Os gestos
 do controle» da aba Navegação oferecia trocar o que cada gesto faz, e o daemon
 tinha um ato cravado por gesto e nenhum lugar de onde ler outro: a lista
-aceitava o clique, mostrava a escolha e não mudava o controle. A pergunta dela
-(*«Essa aba tá integrada e realmente funciona?»*) teve a resposta medida: os
+aceitava o clique, mostrava a escolha e não mudava o controle. A pergunta de produto teve a
+resposta medida: os
 seis gestos funcionavam, e a lista ao lado de cada um era desenho sem dono.
 <!-- noqa-acento: citação literal -->
 
@@ -22,11 +22,11 @@ Aqui mora o que os três lados usam, e só isto:
   confere ao escolher e o daemon confere de novo ao rodar.
 
 A TABELA É DA MÁQUINA, NÃO DO PERFIL (``D-2909-OS-GESTOS-SAO-DA-MAQUINA``,
-decidida por ela em 29/09, «Do computador»): o PS + cima troca de perfil, e um
+decidida pelo usuário em 29/09, «Do computador»): o PS + cima troca de perfil, e um
 gesto cujo ato mudasse com o perfil mudaria debaixo do dedo de quem o usa; e
 um perfil importado de outra pessoa não pode trazer um script para rodar.
 
-O «— NADA —» VOLTOU NOS SEIS GESTOS (resposta dela de 01/10, ~23h55, a §14 da
+O «— NADA —» VOLTOU NOS SEIS GESTOS (resposta de 01/10, ~23h55, a §14 da
 sprint): com visitas, o PS sozinho abria a Steam por cima do jogo, e calar o
 gesto era o que ela tentou fazer duas vezes. No PS + L3 e no PS + R3 ele tira
 a reescrita do perfil do jogo por um combo errado.
@@ -129,7 +129,7 @@ VARIAVEL_DO_TRANSPORTE = "HEFESTO_TRANSPORTE"
 
 @dataclass(frozen=True)
 class EscolhaDoGesto:
-    """O que um gesto faz agora. ``declarada`` separa a escolha dela do de fábrica.
+    """O que um gesto faz agora. ``declarada`` separa a escolha do usuário do de fábrica.
 
     O PS sozinho precisa da diferença: sem declaração, quem manda é o degrau
     antigo da máquina (``DaemonConfig.ps_button_action``, o do ambiente e do

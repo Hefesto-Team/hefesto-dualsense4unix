@@ -94,7 +94,7 @@ jobs:
       # embora as instruções da casa prometessem um portão para isso. Medido
       # no dia: um arquivo com um MAC real E com o mesmo endereço na forma de
       # serial USB de doze hexadecimais passava verde por todo o bloco de fim
-      # de leva. Duas sprints escritas por agente já tinham copiado o endereço
+      # de leva. Duas sprints já tinham copiado o endereço
       # da mantenedora quando este portão nasceu.
       - run: python3 scripts/check_endereco_de_radio.py
       # O IRMÃO DELE PARA O SERIAL (03/09/2026, a pedido dela): o endereço de
@@ -135,7 +135,7 @@ jobs:
       # numa lista de DÍVIDA, não numa reprovação — um portão que reprova
       # vinte e três de uma vez é um portão que alguém desliga na segunda.
       # A pressão fica no DESPACHO, e funciona: em 25/08 ele recusou quatro
-      # despachos de quem coordenava a leva, que teve de declarar a posse.
+      # despachos de uma leva, que teve de declarar a posse.
       #
       # Roda no `python3` pelado, sem PyYAML: analisador próprio, estrito, que
       # RECUSA o que não entende dizendo a linha.

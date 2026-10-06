@@ -1,9 +1,9 @@
 """A-MESMA-LINGUA-01 — o número da carta é o número que vai no nome do vpad.
 
-Decisão dela, 07/09/2026, em cinco palavras: *"precisamos que falem a mesma
+Decisão, 07/09/2026, em cinco palavras: *"precisamos que falem a mesma
 língua."*
 
-O DEFEITO, medido na bancada dela no mesmo dia com os QUATRO DualSense na mesa
+O DEFEITO, medido na bancada no mesmo dia com os QUATRO DualSense na mesa
 (`daemon.state_full`, os quatro itens de `coop.mesa`) — e era **4 de 4**,
 nenhum acerto por sorte:
 
@@ -86,7 +86,7 @@ def _daemon_dublado(vpad_p1: Any = None, *, fila: dict[str, int] | None = None) 
 
 
 def _mesa_de_quatro(*, fila: dict[str, int] | None = FILA) -> CoopManager:
-    """A bancada dela: o primário + três secundários já sentados, com o"""
+    """A bancada: o primário + três secundários já sentados, com o"""
     mgr = CoopManager(_daemon_dublado(_VpadDublado(1, P1), fila=fila))  # type: ignore[arg-type]
     for indice, mac in enumerate((P2, P3, P4), start=2):
         mgr._players[mac] = _jogador(mac, indice)

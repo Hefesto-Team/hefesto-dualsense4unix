@@ -1,8 +1,8 @@
 """Nenhuma linha do mapa afirma sem dizer DE ONDE SABE — e o ponteiro se segue.
 
-O DEFEITO, E ELE É DELA
+O DEFEITO, E ELE É DO USUÁRIO
 ------------------------
-Palavra dela, 26/08/2026, sobre as features do DualSense pelo cabo:
+Palavra, 26/08/2026, sobre as features do DualSense pelo cabo:
 
     "já validamos via testes individuais mas nunca marcamos num canto e
      integramos ao projeto lá, usamos a tentativa e erro pra eliminação e

@@ -17,7 +17,7 @@ esta casa usa.** Todas as passadas daqui — as seis de 08/09, os seis cruzament
 de 10/09 — foram por `/dev/hidraw`, onde quem manda no MTU, no enquadramento e
 no canal é o BlueZ. Ninguém desta casa mandou um byte por socket L2CAP.
 
-O QUE A MEDIÇÃO DELA DE 10/09/2026 DEIXOU DE PÉ, e é o que torna este ensaio o
+O QUE A MEDIÇÃO DO USUÁRIO DE 10/09/2026 DEIXOU DE PÉ, e é o que torna este ensaio o
 próximo
 --------------------------------------------------------------------------------
 Com dois controles na mesa, um no cabo e um no rádio, ela mediu:
@@ -57,7 +57,7 @@ invisível a quem escreve. Aqui não há HIDP: **o `0xA2` é nosso**. O CRC não
     pelo hidraw:  write(fd, [0x31][seq][common…][CRC])
     por L2CAP:    send(sk, [0xA2][0x31][seq][common…][CRC])
 
-DOIS DEGRAUS, E O SEGUNDO CUSTA O CONTROLE DELA
+DOIS DEGRAUS, E O SEGUNDO CUSTA O CONTROLE DO USUÁRIO
 ------------------------------------------------
 * **degrau A (`--conectar`)** — abre um SEGUNDO canal no mesmo PSM, com o BlueZ
   ainda conectado. Não derruba nada. Pode ser recusado pelo firmware, e a

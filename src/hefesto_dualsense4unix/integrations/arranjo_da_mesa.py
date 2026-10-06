@@ -836,7 +836,7 @@ def julgar(
     mesa: Mesa,
     segurando: str | None = None,
 ) -> Veredito | None:
-    """O que dizer desta entrada para o aparelho que está na mão dela."""
+    """O que dizer desta entrada para o aparelho que está na mão do usuário."""
     aloc = alocacao(mesa.mapa, mesa.leitura)
 
     quem = aloc.get(entrada.n)

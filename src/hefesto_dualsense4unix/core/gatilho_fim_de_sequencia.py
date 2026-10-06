@@ -1,6 +1,6 @@
 """O mecanismo: reafirmar o que o produto quer **no fim de uma sequência**.
 
-- **Decisão dela, 12/08/2026**, e é ela quem generalizou: *"reafirmar o que o
+- **Decisão, 12/08/2026**, e é ela quem generalizou: *"reafirmar o que o
   produto quer no fim da sequência, seja cor, número ou o IGNORE do ambiente"*.
 - **Este módulo é só o MECANISMO.** O conteúdo — que cor, que número, que
   ambiente — é de quem registra a ação. Ele não sabe o que é lightbar.

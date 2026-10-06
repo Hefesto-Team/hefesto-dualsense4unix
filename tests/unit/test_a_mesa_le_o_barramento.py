@@ -281,9 +281,9 @@ def test_um_dualsense_no_cabo_nao_e_outro_radio_que_divide_a_faixa() -> None:
 
     "Dispositivo USB que não é hub e não é o adaptador" inclui, nesta bancada
     real, os DOIS DualSense do cabo (`054c:0ce6` em `3-1` e `3-4`). A tela diria
-    que os controles dela atrapalham os controles dela. Decisão M4.
+    que os controles do usuário atrapalham os controles do usuário. Decisão M4.
 
-    Mordida: apaguei o `if vid in _VIDS_DE_CONTROLE: continue`; o `054c:0ce6`
+    Mordida: apagar o `if vid in _VIDS_DE_CONTROLE: continue` o `054c:0ce6`
     entrou na lista e o teste reprovou.
     """
     bancada = Bancada()

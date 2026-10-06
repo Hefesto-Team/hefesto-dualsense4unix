@@ -39,7 +39,8 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit import test_o_parear_espera_o_clique as _base
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 
-#: as fixtures do dublê da escolha dela (o dono vivo e a central reais sobre o mundo de mentira)
+#: as fixtures do dublê da escolha do usuário (o dono vivo e a central reais sobre o mundo de
+#: mentira)
 diario, relogio, mesa = _base.diario, _base.relogio, _base.mesa
 
 ADAPTADORES = {SALA: "/org/bluez/hci7", QUARTO: "/org/bluez/hci8", VARANDA: "/org/bluez/hci9"}

@@ -1,4 +1,4 @@
-"""O-BOTAO-ENTREGA-O-QUE-PROMETE-01 — os nomes da fileira do som são DELA."""
+"""O-BOTAO-ENTREGA-O-QUE-PROMETE-01 — os nomes da fileira do som são DO USUÁRIO."""
 from __future__ import annotations
 
 import pathlib
@@ -31,7 +31,7 @@ BOTAO = r'<button[^>]*data-rota="{rota}"[^>]*>([^<]*)</button>'
 
 
 def _bancada() -> str:
-    """O DESENHO que ela aprovou, pelo dono do caminho — nunca digitado."""
+    """O DESENHO que o usuário aprovou, pelo dono do caminho — nunca digitado."""
     from hefesto_dualsense4unix.interface import onde
 
     return (onde.BANCADA / "02-controles.html").read_text(encoding="utf-8")
@@ -113,7 +113,7 @@ def test_o_nome_interno_nao_chega_ao_botao(rota: str) -> None:
 
 @pytest.mark.parametrize("rota", sorted(DELA))
 def test_o_gerador_guarda_a_palavra_dela(rota: str) -> None:
-    """A constante que o `abaNN.py` emite, contra a palavra dela DIGITADA."""
+    """A constante que o `abaNN.py` emite, contra a palavra de produto DIGITADA."""
     import aba02
 
     das_constantes = {

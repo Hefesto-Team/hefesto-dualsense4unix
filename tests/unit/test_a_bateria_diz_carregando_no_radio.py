@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """O ESTADO DE CARGA NÃO PERGUNTA POR ONDE O CONTROLE FALA — BATERIA-ICONE-01.
 
-**A DECISÃO DELA, 06/09/2026, verbatim, e ela recusou as três opções que lhe
+**A DECISÃO, 06/09/2026, verbatim, e ela recusou as três opções que lhe
 foram oferecidas:**
 
-    *"icone mas no radio ele pode tá carregando
-     tambem."*  <!-- noqa-acento: fala dela, verbatim -->
+    **  <!-- noqa-acento: fala do usuário, verbatim -->
 
 São DUAS coisas numa frase, e as duas viram régua aqui:
 
@@ -158,7 +157,7 @@ def test_todo_estado_do_dono_tem_resposta_na_tela() -> None:
 
 
 def test_carregando_e_cheio_tem_palavra_e_descarregando_e_silencio() -> None:
-    """A decisão dela, lida ao pé da letra: só o que o número NÃO diz vira ícone."""
+    """A decisão de produto, lida ao pé da letra: só o que o número NÃO diz vira ícone."""
     assert carga_na_tela("carregando") == "Carregando"
     assert carga_na_tela("cheio") == "Cheio"
     assert carga_na_tela("descarregando") == ""
@@ -178,7 +177,7 @@ def test_ninguem_reportou_ainda_nao_desenha_icone() -> None:
 
 
 def test_a_funcao_da_palavra_nao_tem_por_onde_receber_o_transporte() -> None:
-    """A decisão dela escrita na ASSINATURA, e é a régua mais barata do arquivo."""
+    """A decisão de produto escrita na ASSINATURA, e é a régua mais barata do arquivo."""
     import inspect
 
     parametros = list(inspect.signature(carga_na_tela).parameters)
@@ -189,7 +188,7 @@ def test_a_funcao_da_palavra_nao_tem_por_onde_receber_o_transporte() -> None:
 
 
 def test_o_card_do_radio_carregando_diz_o_icone() -> None:
-    """A cena da decisão dela, medida onde a tela lê: **rádio e carregando**."""
+    """A cena da decisão de produto, medida onde a tela lê: **rádio e carregando**."""
     card = _card(_entrada(transport="bt", battery_state="carregando"))
     assert card["bateria-carga"] == "Carregando", (
         "um controle NO RÁDIO e carregando não anunciou o estado no card — é "

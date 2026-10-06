@@ -1,6 +1,6 @@
 """O-ASSENTO-GUARDADO-NAO-ANDA-02 — o jogo também espera a carta 1, e o prazo conta a suspensão.
 
-**A decisão (24/09/2026, por delegação dela, ``D-2409-O-JOGO-ESPERA-O-LUGAR-
+**A decisão (24/09/2026, por delegação de produto, ``D-2409-O-JOGO-ESPERA-O-LUGAR-
 GUARDADO``).** Com o P1 fora dentro do prazo, o P2 virava primário na hora e
 dirigia o jogador 1 do jogo enquanto a lâmpada e a tela diziam 2. Agora, com o
 jogo aberto, o vpad do P1 fica parado à espera dele e o P2 continua no vpad 2.
@@ -733,7 +733,7 @@ class TestORelogioEUmSo:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAVoltaPeloOutroTransporte:
-    """A linha 3 da bancada dela: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
+    """A linha 3 da bancada: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
 
     @pytest.mark.parametrize(
         ("de", "para"), [("usb", "bt"), ("bt", "usb")], ids=["cabo-para-radio", "radio-para-cabo"]

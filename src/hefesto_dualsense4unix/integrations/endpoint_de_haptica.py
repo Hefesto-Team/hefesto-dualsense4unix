@@ -72,7 +72,7 @@ depois desta cura. O id do endpoint sai do NOME, e a âncora do
 
 UM ENDPOINT POR APARELHO — 02/10/2026
 -------------------------------------
-A-HAPTICA-E-POR-APARELHO-01, pela palavra dela de 29/09, à pergunta da háptica
+A-HAPTICA-E-POR-APARELHO-01, pela palavra de 29/09, à pergunta da háptica
 de P1 a P4: *«todas as features são um por aparelho. sempre.»* Ela REVOGA a
 ``D-2909-A-HAPTICA-TEM-UM-ENDPOINT-POR-LUGAR``: de 28/09 a 02/10 eram QUATRO
 nós, um por lugar, de pé desde o primeiro DualSense
@@ -87,7 +87,7 @@ endpoint do aparelho; no cabo um laço o leva à placa dele
 O nó do aparelho que saiu FICA enquanto um jogo toca nele (nó que some quebra
 o jogo que o escolheu).
 
-**O preço, que ela aceitou na pergunta:** o registro que o jogo lê (o device
+**O preço, que o usuário aceitou na pergunta:** o registro que o jogo lê (o device
 KS, ``audio_ks_dualsense``) se grava no lançamento, e o aparelho que chega com
 o jogo aberto ganha um endpoint que o jogo não conhece até reabrir. O diário
 diz a linha ``haptica_aparelho_sem_registro_no_jogo``, uma vez por aparelho e
@@ -104,7 +104,7 @@ levam ao controle como levam o do jogo.
 
 **O ALVO É O ``object.serial``, COM O RECUO PROIBIDO** (:func:`argv_do_tocador`):
 um fluxo de reprodução cujo alvo não resolve cai na saída PADRÃO sem erro — a
-TV ou a caixa de som dela, tocando um zumbido de 60 Hz. O fluxo pede
+TV ou a caixa de som do usuário, tocando um zumbido de 60 Hz. O fluxo pede
 ``node.dont-fallback`` e ``node.dont-reconnect``, e o destino é conferido no
 grafo (:func:`conferir_o_destino_do_tocador`): ligado a outro nó, morre.
 """
@@ -177,7 +177,6 @@ MAX_NOME = 127
 
 PRIORIDADE_DA_SESSAO = 0
 
-#: era pra tá assim eu acho"*.  <!-- noqa-acento: citação literal -->
 #: a vibração (a háptica do DualSense viaja como áudio nos traseiros); em zero,
 VOLUME_DOS_MOTORES = "100%"
 
@@ -310,7 +309,7 @@ def nome_do_endpoint(uniq: str) -> str:
 def rotulo_da_haptica(numero: int | None) -> str:
     """A FORMA A — «Háptica do Controle N (DualSense Wireless Controller)».
 
-    **Decidido por delegação dela em 24/09/2026**, pelo padrão que ela fixou
+    **Decidido por delegação em 24/09/2026**, pelo padrão que ela fixou
     para o alto-falante e o microfone em 23/09 (A-FORJA-VALIDA-O-SOM-01, E6): o
     nome dela na frente, o ``iProduct`` da Sony atrás, e nada de endereço. O
     rótulo de antes, «DualSense <hex6> (háptica)», punha o rabo do endereço do
@@ -1075,7 +1074,7 @@ class TocadorDoRumble:
         return not vista
 
     def _conferir_o_destino(self, proc: Any, sink: str) -> None:
-        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV dela."""
+        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV do usuário."""
         for espera in ESPERAS_DA_CONFERENCIA_S:
             if self._fim.wait(espera) or proc.poll() is not None:
                 return

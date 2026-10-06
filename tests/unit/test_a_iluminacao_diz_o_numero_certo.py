@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A aba Iluminação não pode discordar de si mesma sobre QUEM é o controle.
 
-D2, FOTOGRAFADO EM 02/09/2026 na tela dela: a coluna do controle do cabo dizia
+D2, FOTOGRAFADO EM 02/09/2026 na tela do usuário: a coluna do controle do cabo dizia
 ``Modelo: P—`` no rótulo e deixava o botão ``2`` ACESO logo abaixo. A mesma aba,
 dois lugares, duas respostas.
 
@@ -27,12 +27,12 @@ AS RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
 4. a fileira dos quatro números é viva, e a dica não nomeia controle que não
    está na mesa;
 5. a célula LEDs é um DESENHO — a palavra ``Aceso`` escrita nela apagava as duas
-   tiras e as cinco lâmpadas, e foi fotografado na tela dela em 02/09/2026;
+   tiras e as cinco lâmpadas, e foi fotografado na tela do usuário em 02/09/2026;
 6. a tira APAGADA não acende: um ``color:`` vazio deixava o halo
    ``currentColor`` herdar o ``--fg`` e a barra desligada saía BRANCA, mais
    forte que a acesa;
 7. a fileira tem ONZE casas e nenhuma porta de cor fora dela — 11/09/2026,
-   ordem dela. O que morava aqui era a régua do seletor de cores do sistema
+   ordem de produto. O que morava aqui era a régua do seletor de cores do sistema
    (*ABRIR não é APLICAR*): ele saiu da guia, e com ele a segunda porta do
    gesto ``cor``. A medição que o justificava não se perdeu — mora na docstring
    de ``a04_iluminacao._so_abriu_o_seletor``, que continua guardando o trilho e
@@ -339,7 +339,7 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
     desenho. Ele exigia, com todas as letras, `'data-campo="luz"' not in
     publicado`.
 
-    **ELA PUBLICOU** (`70b58116`, *"ela mandou publicar as sete"*), e o
+    **ELA PUBLICOU** (`70b58116`, *"o usuário mandou publicar as sete"*), e o
     publicado passou a ter o endereço novo. A asserção da espera ficou VERMELHA
     no `dev` desde então — medido em 03/09/2026, antes de qualquer mudança
     desta frente: `grep -c 'data-campo="luz"' paginas/04-iluminacao.html` = 2.
@@ -559,7 +559,7 @@ def test_a_tira_nao_acende_sob_steam_e_no_nativo_mostra_a_cor(colunas):
 
 
 def test_a_dica_da_luz_nao_diz_aceso_e_nomeia_quem_esta_conectado(colunas):
-    """As duas decisões dela de 02/09/2026, na mesma frase."""
+    """As duas decisões de 02/09/2026, na mesma frase."""
     luz = colunas()[DO_RADIO["uniq"]]["luz"]
     assert "aceso" not in luz.lower(), (
         f"a palavra voltou à dica: {luz!r}. Não há canal de leitura de LED de "
@@ -676,13 +676,13 @@ def _clicar(gesto, clique, conectados=None):
 
 
 def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
-    """Ela mandou tirar os três cantos que falavam de automático — 07/09/2026.
+    """O usuário mandou tirar os três cantos que falavam de automático — 07/09/2026.
 
     O TESTE QUE MORAVA AQUI media o gesto do botão  # noqa-acento: verbo medir
     `Automático` de cada coluna:
     que ele largava o claim e pintava a cor do slot com o número que o MOTOR dá,
     e não com o `or 1` que era a posição disfarçada de default. O gesto saiu com
-    o widget, no mesmo commit, por ordem dela — e um teste que continua
+    o widget, no mesmo commit, por ordem de produto — e um teste que continua
     exigindo o gesto reprovaria a ordem em vez do defeito.
 
     **O QUE ELE PROTEGIA NÃO SE PERDEU, e é isto que autoriza a troca:** a queda
@@ -746,7 +746,7 @@ def test_o_hex_torto_recusa_com_a_razao_do_motor():
 
 
 def test_a_casa_hachurada_saiu_e_o_gesto_nao_aceita_cor_sem_tom():
-    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem dela."""
+    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem de produto."""
     import onde
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
@@ -883,7 +883,7 @@ def test_o_botao_da_luz_recusa_dizendo_quando_o_daemon_nao_responde(gesto, cliqu
 
     O DEFEITO, medido em 02/09/2026 com este mesmo dublê: `cor`, `apagar` e
     `auto` chamavam `p.led_set(...)` e `p.chamar(...)` **jogando fora o
-    booleano**. Com o Hefesto desligado, o clique dela sumia: a barra não
+    booleano**. Com o Hefesto desligado, o clique do usuário sumia: a barra não
     mudava, a tela não dizia nada, e o segundo clique parecia o primeiro.
 
     O contrato desta casa é explícito — *"o que o produto não faz não vira botão

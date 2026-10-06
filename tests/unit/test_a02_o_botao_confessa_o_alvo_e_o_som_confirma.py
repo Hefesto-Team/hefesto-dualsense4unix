@@ -24,12 +24,12 @@ um `uniq` sintético (todos os desta casa), `audio_saida.sink_do_controle`
 devolve `""` — o casamento por dispositivo USB VETA o sink real que está na
 máquina. Nenhum som sai daqui, e o motor nunca toca no sink padrão.
 
-**E ISSO NÃO BASTAVA — o achado mais caro deste dia, e o defeito era MEU.**
+**E ISSO NÃO BASTAVA — o achado mais caro deste dia.**
 Numa régua que DUBLA o `pactl` (a irmã `test_a02_som_e_sensor_falam_quando_
 recusam.py` faz isso), o veto acima não existe: a lista viva é de mentira, o
 sink do DualSense casa pela regra do um-para-um, e o motor segue para o
 `paplay`, que **não** está dublado. Medido: `paplay --device=<o sink do controle
-dela>`. A cura é `ponte.dentro_da_janela` — sem janela de pé, ninguém clicou —
+do usuário>`. A cura é `ponte.dentro_da_janela` — sem janela de pé, ninguém clicou —
 e a `TestAGuardaDaMaquinaDela` é quem a segura.
 
 AS MORDIDAS DESTE ARQUIVO
@@ -268,7 +268,7 @@ def test_a_frase_da_confissao_e_a_do_dono(casa: Any) -> None:
     falando de VOLUME, porque nasceu para o deslizante. Dita depois de um clique
     no 🎙, nomeia um gesto que ela não fez. Enquanto o daemon não responder
     `por_uniq` neste caminho, a frase é inerte; o dia em que responder, a palavra
-    é dela — e quem cobra isso é a régua-estopim abaixo.
+    é de produto — e quem cobra isso é a régua-estopim abaixo.
     """
     p = PonteQueDizDeQuem({"status": "ok", "por_uniq": False})
     with pytest.raises(RuntimeError) as erro:
@@ -454,14 +454,14 @@ def _seletor_do_piloto(*_a: Any, **_k: Any) -> None:
 
 
 class TestAGuardaDaMaquinaDela:
-    """**Sem a janela de pé, o som não nasce — e o defeito que isto cura era MEU.**
+    """**Sem a janela de pé, o som não nasce — e o defeito que isto cura foi medido.**
 
     Medido na bancada em 06/09/2026, com a cura do som já escrita: a régua irmã
     `test_a02_som_e_sensor_falam_quando_recusam.py` dubla o `pactl` e devolve uma
     lista com um sink de DualSense. O `escolher_sink` casa por REGRA (o
     um-para-um: uma fonte, um controle na mesa), o motor encontra o sink "na
     lista viva" — que é de mentira — e segue para o `paplay`, **que não está
-    dublado**. A suíte tocava som no alto-falante do controle DELA, com ela
+    dublado**. A suíte tocava som no alto-falante do controle do usuário, com ela
     trabalhando.
 
     **A guarda-mãe do `audio_saida` não alcança este caso, e é de propósito:**
@@ -504,7 +504,7 @@ class TestAGuardaDaMaquinaDela:
         guarda, `_rodar_tocador` **não** é chamado.
 
         MORDIDA: tire o `dentro_da_janela` de `_fora_do_voo` e o espião registra
-        um `paplay --device=<o sink do controle dela>`.
+        um `paplay --device=<o sink do controle do usuário>`.
         """
 
         def pactl(argv: list[str]) -> str:

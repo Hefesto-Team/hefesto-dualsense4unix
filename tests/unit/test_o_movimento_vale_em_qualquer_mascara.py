@@ -60,7 +60,7 @@ def test_a_deriva_do_controle_dela_nao_move_a_mira() -> None:
 
     Sem corte, a câmera dela passearia sozinha com o controle na mesa — que é
     a queixa mais comum de mira por giroscópio em qualquer produto. Este teste
-    usa a deriva MEDIDA no aparelho dela, não um número inventado.
+    usa a deriva MEDIDA no aparelho do usuário, não um número inventado.
     """
     assert rot.deflexao((0.0, 0.0, 0.0), _arranjo()) == (0, 0)
     for sensibilidade in (1, 6, 12):
@@ -175,7 +175,7 @@ def _evento(tipo: int, code: int, *, t: float = 0.0, value: int = 0) -> SimpleNa
 
 
 def _leitor() -> MotionSensorReader:
-    # (ou não) um DualSense na mesa dela. É a TELA-DELA-01 aplicada ao sensor.
+    # (ou não) um DualSense na bancada. É a TELA-DELA-01 aplicada ao sensor.
     return MotionSensorReader(device_path=Path("/dev/hefesto-nao-existe"))
 
 
@@ -717,7 +717,7 @@ _P2, _P3, _P4 = "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04"
 
 def test_a_mira_vale_para_os_jogadores_2_3_e_4(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ORDEM DELA NUMA LINHA. ARRANQUE a chamada de `aplicar_o_movimento` do"""
+    """A ORDEM DE PRODUTO NUMA LINHA. ARRANQUE a chamada de `aplicar_o_movimento` do"""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=_arranjo(sensibilidade=12),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0),

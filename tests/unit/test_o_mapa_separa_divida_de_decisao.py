@@ -20,7 +20,7 @@ O contador de dívida deste arquivo não se moveu.)
 **RECONTADO EM 25/09/2026: são 45** — 23 no cabo, 22 no rádio (na base
 desta recontagem eram 47: 24 no cabo, 23 no rádio). As DUAS que SAÍRAM saíram
 PELO MOTIVO CERTO: os dois lados de `luz.led_jogador.brilho@dualsense` passaram
-a ser ACIONADOS pelo produto. A decisão dela
+a ser ACIONADOS pelo produto. A decisão de produto
 `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS` (Fraco, Médio e Forte na linha
 LEDs, nascendo no Fraco) virou campo do perfil e report nos dois transportes
 (O-BRILHO-DAS-LUZES-DE-NUMERO-01). As duas eram `so-ela-decide`, que é
@@ -46,18 +46,18 @@ e o número desceu — que é para isso que ele está aqui.*
 entraram são do lado do RÁDIO, e a subida é de HONESTIDADE pela quarta vez
 neste arquivo: `audio.alto_falante@dualsense` e
 `audio.saida_dedicada.payload_do_degrau@dualsense` subiram para `medido`
-porque o som SAIU pelo rádio na bancada dela (report `0x35`, 70 s com a
-orelha dela) — e o `aciona = não` continua onde estava, porque o contrato
+porque o som SAIU pelo rádio na bancada (report `0x35`, 70 s com a
+orelha do usuário) — e o `aciona = não` continua onde estava, porque o contrato
 daquela célula pede TRÊS coisas e a corrida cumpriu uma: falta o **negativo de
-rota** e o **teste cego**, que são dela. *A casa passou a admitir que mediu, e
+rota** e o **teste cego**, que são do usuário. *A casa passou a admitir que mediu, e
 a dívida não se moveu.*
 
 **RECONTADO EM 09/09/2026: eram 45** — 23 no cabo, 22 no rádio. As DUAS que
 entraram são os dois lados de `luz.lightbar.brilho@dualsense`, e a subida é de
 HONESTIDADE pela terceira vez neste arquivo: a BRILHO-DE-HARDWARE-01 mediu o
-byte na bancada DELA e a premissa da sprint caiu junto — o `common[42]` obedece
+byte na bancada e a premissa da sprint caiu junto — o `common[42]` obedece
 nos dois transportes, mas o que ele atenua são as **lâmpadas de numeração**, não
-a barra. Palavra dela, com os quatro na mão: *"o que o slicer altera não são as
+a barra. Palavra de produto, com os quatro na mão: *"o que o slicer altera não são as
 cores do lightbar mas os leds que indicam qual player é o dono daquele
 controle"*. <!-- noqa-acento: citação literal -->
 A célula subiu de `nao-medido` para `medido` e o `aciona = não` continua onde
@@ -74,7 +74,7 @@ por dívida nova: `movimento.imu.ligar@dualsense` nos dois lados,
 para `medido` porque a casa passou a admitir que mediu, e o `aciona = não` já
 estava lá. A quinta é `plataforma.udev_autosuspend@sn30` no rádio.
 
-*A recontagem esperou:* o agente da SPECS-A-PROCEDENCIA-01 viu o vermelho, o
+*A recontagem esperou:* a sprint SPECS-A-PROCEDENCIA-01 viu o vermelho, o
 declarou no relatório dele e NÃO recontou — *"recontar é reescrever a prosa do
 arquivo, e ela é de quem a escreveu"*. Estava certo: um número que se conserta
 sozinho para o teste passar é um número que ninguém leu.
@@ -115,7 +115,7 @@ O domínio, e ele responde *"não aciona — e daí?"*:
 `nada-a-acionar`     não há feature a acionar: ou o aparelho não oferece, ou a
                      linha é de MEDIÇÃO e `aciona = não` responde "o fenômeno
                      não aconteceu", nunca "o produto não faz".
-`so-ela-decide`      a pergunta existe, ninguém a respondeu, e a resposta é dela.
+`so-ela-decide`      a pergunta existe, ninguém a respondeu, e a resposta é do usuário.
                      Nem dívida nem decisão — fila de decisão.
 ===================  ============================================================
 
@@ -128,8 +128,8 @@ O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
 20 `nada-a-acionar`, 2 `so-ela-decide`.
 
 Em 29/08/2026 as duas `so-ela-decide` saíram — eram o acelerômetro do DualSense
-no cabo e no rádio, e a pergunta foi respondida por ela com *"não era pra ele
-sair. era pra ele FUNCIONAR"*. A palavra continua no domínio, sem uso e com a
+no cabo e no rádio, e a pergunta foi respondida por ela com **. A palavra continua no domínio, sem
+uso e com a
 razão escrita, em `RESERVADOS`: o estado que ela nomeia não morreu com a linha
 que a usava.
 
@@ -447,7 +447,7 @@ def respostas_que_voltaram(
     decisoes: Path | str,
     respondidas: dict[str, str] | None = None,
 ) -> list[str]:
-    """O que desfaz uma resposta dela, por linha. Lista vazia: nada voltou."""
+    """O que desfaz uma resposta de produto, por linha. Lista vazia: nada voltou."""
     linhas = {_celula(linha, "id"): linha for linha in _linhas(mapa)}
     decididas = {
         _celula(linha, "id")
@@ -523,7 +523,8 @@ def _decisoes_com_o_estado(destino: Path, ident: str, estado: str) -> Path:
 
 @pytest.mark.parametrize("estado", ["implementada", "feita", "no ar"])
 def test_a_decisao_que_sobe_a_escada_continua_respondida(estado: str) -> None:
-    """DECISAO-SEM-DONO-01: subir a `feita` não desfaz a resposta dela; voltar a `aberta`, sim."""
+    """DECISAO-SEM-DONO-01: subir a `feita` não desfaz a resposta de produto; voltar a `aberta`,
+    sim."""
     import tempfile
 
     decisao = next(iter(RESPONDIDAS_POR_ELA.values()))
@@ -591,7 +592,7 @@ def test_o_veto_alcanca_o_pro() -> None:
 )
 def test_a_regua_do_veto_ve_o_pro_que_volta(ident: str, colunas: dict[str, str],
                                            achado: str) -> None:
-    """A régua de cima tem de VER a linha do Pro que desfaz a resposta dela."""
+    """A régua de cima tem de VER a linha do Pro que desfaz a resposta de produto."""
     import tempfile
 
     with tempfile.TemporaryDirectory() as pasta:

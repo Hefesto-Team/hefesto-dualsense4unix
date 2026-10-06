@@ -1,4 +1,4 @@
-"""A entrada declarada vence o firmware — e o editor do mapa grava no disco dela.
+"""A entrada declarada vence o firmware — e o editor do mapa grava no disco do usuário.
 
 O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. A velocidade vinha só do par
 SuperSpeed (``peer``) que o firmware da placa publica para cada entrada, e o
@@ -10,7 +10,7 @@ enumerado na entrada vence os dois.
 
 TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramentos ``usb9``/``usb10``, caminhos
 ``9-*``/``10-*``, e o ``maquina.json`` no ``tmp_path`` que o ``conftest``
-desvia. Nada da bancada dela entra no código: a declaração é dado de quem usa.
+desvia. Nada da bancada entra no código: a declaração é dado de quem usa.
 
 A MORDIDA (E2 da sprint): arranque a leitura do declarado — o ``declarada`` do
 ``_rapido_do_no`` ou o ``_o_que_ela_declarou_nas_entradas`` do
@@ -89,7 +89,7 @@ def _usb(bancada: mapa_das_portas.Bancada) -> dict[str, int]:
 
 
 def test_a_velocidade_declarada_vence_o_par_do_firmware() -> None:
-    """O ``peer`` diz 2.0 na frente e ela diz 3.0: vale o que ela disse."""
+    """O ``peer`` diz 2.0 na frente e ela diz 3.0: vale o que o usuário disse."""
     sem = _usb(mapa_das_portas.mesa_do_motor(_mapa(), _censo()))
     assert sem == {"1": 2, "5": 3, "7": 3}, f"o firmware de mentira não diz o que devia: {sem}"
 
@@ -183,7 +183,7 @@ def test_o_extensor_declarado_e_a_chave_da_entrada_e_nao_uma_filha(disco: Path) 
 
 
 def test_a_entrada_fora_do_mapa_nao_grava(disco: Path) -> None:
-    """A do hub (``5.1``) e a do exemplo não têm número no disco dela."""
+    """A do hub (``5.1``) e a do exemplo não têm número no disco do usuário."""
     antes = disco.read_bytes()
     for numero in ("5.1", "99"):
         with pytest.raises(ValueError):

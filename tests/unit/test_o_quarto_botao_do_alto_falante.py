@@ -120,7 +120,7 @@ def _entry(uniq: str, ponte: Ponte) -> dict[str, Any]:
 
 
 def _clicar(m: dict[str, Any], uniq: str, rota: str) -> None:
-    """O clique dela, pelo mesmo gesto que a página chama."""
+    """O clique do usuário, pelo mesmo gesto que a página chama."""
     import pacotes
     import pacotes.a02_controles
 

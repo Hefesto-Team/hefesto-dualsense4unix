@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A aba Iluminação diz de quem é a luz agora: «o jogo pinta por cima; sem jogo, a sua cor».
 
-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 3 (decisão dela de 04/10/2026): a regra já valia no
+O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 3 (decisão de 04/10/2026): a regra já valia no
 produto, e a tela só não a dizia. Uma linha curta embaixo das cores, sem botão novo; com o jogo
 pintando a barra de algum controle, a linha ganha «Agora: a cor do jogo» (e «no P2» se for só
 parte dos controles). O sinal vem do daemon (`luz_do_jogo` no `state_full`), nunca da cor lida.

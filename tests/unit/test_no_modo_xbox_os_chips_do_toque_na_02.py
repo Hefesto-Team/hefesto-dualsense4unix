@@ -1,6 +1,6 @@
 """NO-MODO-XBOX-TUDO-FUNCIONA-01 — os chips do toque e da inclinação na aba 02.
 
-A resposta dela de 28/09/2026 (~16h50): o touchpad move o cursor ou vira
+A resposta de 28/09/2026 (~16h50): o touchpad move o cursor ou vira
 botões em zonas, e a inclinação move um analógico, um chip por controle, como a
 Mira Virtual. A página publicada ganhou os chips em 29/09 (a «Inclinação»
 embaixo de cada analógico e o «Cursor | Botões» no pé do touchpad) SEM gesto no

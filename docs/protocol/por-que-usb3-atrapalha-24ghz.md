@@ -48,11 +48,11 @@ número errado não é decisão a preservar, e sai de todos os lugares onde apar
 
 ## 3. O que esta página NÃO autoriza a dizer
 
-Ruído existir **não** é ruído estar atrapalhando a máquina dela. As duas
+Ruído existir **não** é ruído estar atrapalhando a máquina do usuário. As duas
 afirmações estão a uma medição de distância, e a medição não foi feita:
 
 1. **não** se pode dizer que o aparelho de 5 Gbps está derrubando o Bluetooth
-   dela — é hipótese, e é a W1 da §9 que a fecharia;
+   do usuário — é hipótese, e é a W1 da §9 que a fecharia;
 2. **não** se pode prometer ganho por afastar o aparelho. Por isso a terceira
    linha de R1 diz "não medi o ganho nesta máquina", e diz sempre;
 3. **não** se pode citar milímetro, altura de antena ou linha de visada. Esses

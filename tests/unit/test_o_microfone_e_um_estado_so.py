@@ -1,17 +1,11 @@
 """O microfone é UM ATO, e as duas metades são do mesmo gesto.
 
-MICROFONE-UM-ATO-01 (04/09/2026). O conceito é DELA, e derrubou a pergunta que
-eu tinha feito: eu levei o microfone como *"duas camadas se contradizem"* e
-ofereci três arranjos que GUARDAVAM a contradição. Ela recusou os três:
+MICROFONE-UM-ATO-01 (04/09/2026). O conceito é DO USUÁRIO, e derrubou a pergunta
+anterior, que tratava o microfone como "duas camadas que se contradizem" e
+oferecia três arranjos que GUARDAVAM a contradição; os três foram recusados.
 
-    *"tá errado o conceito da coisa. o botão é pra ligar o microfone e ele ser
-    ouvido no canal específico dele."*
-
-E ao meio-dia acrescentou as duas regras que faltavam, com todas as letras:
-
-    *"o botão fisico do mic se ligado no  # noqa-acento: citação dela
-    microfone ele fica ligado tambem.  # noqa-acento: citação dela
-    indepente se nativo ou virtual"*  # noqa-acento: citação dela
+Ao meio-dia vieram as duas regras que faltavam: o botão físico do microfone, se ligado,
+liga também o microfone da tela, independente de modo nativo ou virtual.
 
 A CONTRADIÇÃO ERA MEDÍVEL, E FOI MEDIDA NA BANCADA
 ---------------------------------------------------
@@ -35,7 +29,6 @@ AS QUATRO MORDIDAS QUE ESTE ARQUIVO EXERCE
    `test_o_eco_da_nossa_escrita_nao_executa_o_ato_de_novo`;
 4. **tirar a guarda de idempotência da metade do firmware** — reprova
    `test_o_botao_do_plastico_nao_toma_a_posse_do_byte`, que é a régua da
-   decisão dela de 30/08: *"o botão do Controle sempre controla a interface"*.
 
 E O DUBLÊ É TÃO ESTRITO QUANTO A PONTE REAL, que é a cicatriz de 04/09: a
 máscara **nunca gravou um byte** e a régua passou verde porque o dublê aceitava
@@ -215,7 +208,7 @@ def test_o_ato_nao_muda_de_caminho_com_o_modo_nativo(nativo: bool) -> None:
 
 
 def test_o_ato_e_identico_nos_dois_modos() -> None:
-    """A prova direta da regra dela: os dois caminhos são o mesmo caminho."""
+    """A prova direta da regra de produto: os dois caminhos são o mesmo caminho."""
     passos = []
     for nativo in (False, True):
         d = _daemon(native_mode=nativo)
@@ -255,7 +248,7 @@ def test_o_eco_da_nossa_escrita_nao_executa_o_ato_de_novo() -> None:
 
 
 def test_o_eco_vale_uma_vez_so() -> None:
-    """A segunda borda com o mesmo valor é gesto dela, e tem de passar."""
+    """A segunda borda com o mesmo valor é gesto do usuário, e tem de passar."""
     hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
     assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is True
     assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is False

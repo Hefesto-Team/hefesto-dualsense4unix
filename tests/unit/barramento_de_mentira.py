@@ -1,8 +1,8 @@
-"""Um BlueZ de mentira, para medir a ponte privilegiada sem tocar no rádio dela.
+"""Um BlueZ de mentira, para medir a ponte privilegiada sem tocar no rádio do usuário.
 
 PONTE-SEM-CHAMADOR-01 (20/09/2026). A única forma honesta de medir a lista de
 candidatos do verbo `descobrir` é abrindo uma varredura — e abrir varredura na
-máquina dela custa de 32% a 43% dos pacotes do adaptador que a hospeda, com
+máquina do usuário custa de 32% a 43% dos pacotes do adaptador que a hospeda, com
 quatro DualSense de pé. Por isso `scripts/bt_ponte_privilegiada.sh` ganhou o
 quarto gancho de teste, `HEFESTO_BT_BIN`: uma pasta posta NA FRENTE do `PATH`,
 de onde saem o `busctl` e o `bluetoothctl` que ele chama.
@@ -30,7 +30,7 @@ ADAPTADOR = "aa:bb:cc:00:00:11"
 CONTROLE = "aa:bb:cc:00:00:22"
 VIZINHO = "aa:bb:cc:00:00:44"
 
-#: O que os seis objetos de DualSense do BlueZ responderam na mesa dela em
+#: O que os seis objetos de DualSense do BlueZ responderam na bancada em
 CLASSE_DO_DUALSENSE = 9480
 ICONE_DO_DUALSENSE = "input-gaming"
 

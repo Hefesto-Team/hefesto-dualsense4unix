@@ -55,7 +55,7 @@ def test_o_embrulho_esta_no_leitor_do_dono() -> None:
 
 
 def test_o_jogo_de_fora_nao_chega_a_pergunta(proc_com_o_jogo: set[str]) -> None:
-    """Com o jogo dela aberto, «há jogo da Steam?» responde não, nas duas perguntas."""
+    """Com o jogo do usuário aberto, «há jogo da Steam?» responde não, nas duas perguntas."""
     assert slo.cmdline_de_pid(PID_DE_FORA).startswith("/home/x/.steam"), (
         "o /proc de mentira não serve o reaper: a régua não mediria nada"
     )

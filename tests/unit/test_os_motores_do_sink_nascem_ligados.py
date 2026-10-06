@@ -2,7 +2,7 @@
 
 HAPTICA-CABO-VOLUME-01 (Z2, prioridade zero) — 19/09/2026.
 
-**MEDIDO NO APARELHO DELA, com o controle NO CABO**, tocando 150 Hz nos canais
+**MEDIDO NO APARELHO DO USUÁRIO, com o controle NO CABO**, tocando 150 Hz nos canais
 3-4 do sink USB e lendo o acelerômetro do próprio controle:
 
     repouso             tremor =   20
@@ -88,7 +88,7 @@ def test_sink_estereo_nao_e_caso_deste_piso() -> None:
 
 
 def test_servidor_mudo_nao_escreve() -> None:
-    """`None` do runner é dúvida, e na dúvida não se mexe no som dela."""
+    """`None` do runner é dúvida, e na dúvida não se mexe no som do usuário."""
     escritas: list[list[str]] = []
 
     def correr(cmd: list[str]) -> str | None:
@@ -118,7 +118,7 @@ def test_o_piso_e_cem_e_esta_declarado() -> None:
 
 
 def test_o_endpoint_le_a_frente_antes_de_escrever() -> None:
-    """`set-sink-volume` com quatro valores define os QUATRO — a frente é dela."""
+    """`set-sink-volume` com quatro valores define os QUATRO — a frente é do usuário."""
     saida = f"Sink #9\n\tName: {SINK}\n\t{QUARENTA}\n"
     assert eh._volume_da_frente(saida, SINK) == ("40%", "40%")
     assert eh._volume_da_frente(saida, "outro_sink") == ("100%", "100%")

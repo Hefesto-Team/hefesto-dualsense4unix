@@ -36,7 +36,7 @@ O QUE ELE MORDE
    frágil: um patch futuro que acrescente o ramo ao DualSense derruba o
    argumento, e é bom que derrube ruidosamente.
 4. **A honestidade de grau.** Nada foi ao aparelho nesta leva. Toda célula que
-   ela escreveu tem de continuar `afirmado-no-doc` e nenhuma pode ter ganhado
+   o usuário escreveu tem de continuar `afirmado-no-doc` e nenhuma pode ter ganhado
    `ate_onde_foi`. Um `medido` aqui seria mentira que o portão de paridade não
    pega — ele confere a FORMA (quem afirma diz de onde sabe), nunca a origem.
 5. **As duas linhas classificadas como NÃO-CANAL** — `handshake_usb` e

@@ -141,7 +141,7 @@ async def test_profile_switch_arma_lock_manual(running_server: Any) -> None:
 
     NOTA DATADA — 01/10/2026 (a medida (a) do tema «Freestyle definitivo»): a
     trava expirava em MANUAL_PROFILE_LOCK_SEC (30 s), sem linha no diário, e a
-    escolha dela caía pela janela em foco. Agora ela não tem prazo: solta num
+    escolha do usuário caía pela janela em foco. Agora ela não tem prazo: solta num
     evento (`profiles.manager.soltar_a_trava_da_mao`), e esta régua cobra que
     o tempo sozinho não a solte.
     """

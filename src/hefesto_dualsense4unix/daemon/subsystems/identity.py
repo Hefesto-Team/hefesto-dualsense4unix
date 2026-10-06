@@ -61,7 +61,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   recupera o seu. Fechar a lacuna deixa de ser um gesto e passa a ser
   aritmética. O critério que resume: **nunca existe um jogador 2 sem um
   jogador 1**;
-- **D-30 / ORDEM-DE-CHEGADA-01 (decisão DELA, 15/08/2026, 03:54)**: o número
+- **D-30 / ORDEM-DE-CHEGADA-01 (decisão, 15/08/2026, 03:54)**: o número
   segue a **ordem de conexão daquele momento**, e não mais o lugar que o
   endereço ganhou num dia qualquer do passado — *"deve ser lembrado por ordem
   de conexão naquele momento apenas. Não uma imagem fixa salva por mec"*. Isto
@@ -123,9 +123,8 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   silêncio, sem uma linha na tela dizendo por quê. Os cinco controles desta
   bancada têm MAC de 12 hex, então **toda prova feita aqui passa** — é a
   amostra mais favorável possível, e é exatamente o que a
-  ``D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA`` (decisão dela, 29/08/2026) condena:
-  *"o app vai ser GPL3 e gratuito e pensado em acessibilidade pra outros users
-  com autismo ou não"*. Dono: ``O-CONTROLE-SEM-MAC-01``.
+  ``D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA`` (decisão, 29/08/2026) condena. Dono:
+  ``O-CONTROLE-SEM-MAC-01``.
 
   A decisão de não persistir continua CERTA — um path que muda entre boots
   persistido é pior que nada, porque devolve a configuração de um aparelho a
@@ -203,7 +202,7 @@ E o reboot da máquina (R-23). O que governa o load é o
   trabalho do load;
 - versão DIFERENTE/ausente → arquivo escrito por uma versão que numerava
   por outra regra; é descartado UMA vez e a sessão seguinte renumera. É o
-  que cura, sozinha, a numeração torta já gravada na máquina dela (o
+  que cura, sozinha, a numeração torta já gravada na máquina do usuário (o
   externo segurando o slot 1 enquanto os dois DualSense exibiam 2 e 3, e
   depois o ``{"a0fa…": 1, "143a…": 2}`` que fazia o controle sozinho na
   mesa nascer jogador 2 — NUM-01);
@@ -366,7 +365,7 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
     "o fim" só existe se a lista chegar ordenada.
 
     **A FAIXA SINTÉTICA NÃO É EXPURGADA AQUI, e a decisão é de 18/09/2026.**
-    Na mesa dela havia quatro endereços ``aa:bb:cc:00:00:0{1..4}`` na fila,
+    Na bancada havia quatro endereços ``aa:bb:cc:00:00:0{1..4}`` na fila,
     escritos por uma corrida da suíte em 22/08, ocupando os postos 4 a 7 e
     empurrando um DualSense real para o **oitavo**. A primeira cura escrita
     descartava-os aqui — e foi RECUADA no mesmo dia, medida contra a suíte:
@@ -405,7 +404,7 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
 def merged_order_payload(
     existente: Any, kind: str, ranks: dict[str, int]
 ) -> list[dict[str, Any]]:
-    """Fila nova: as entradas do OUTRO ``kind`` preservadas + as minhas (NUM-01).
+    """Fila nova: as entradas do OUTRO ``kind`` preservadas + as do ``kind`` atual (NUM-01).
 
     O read-modify-write que os dois registros já faziam por namespace
     (``slots`` e ``externals``), agora sobre a fila única. ``existente`` é o
@@ -963,7 +962,7 @@ class ControllerIdentityRegistry:
     def _numeros_das_lampadas_locked(self) -> dict[str, int]:
         """O número que cada presente pode MOSTRAR NO APARELHO (sob ``_lock``).
 
-        APARELHO-NAO-SE-CONTRADIZ-01, decisão dela de 20/09/2026, verbatim:
+        APARELHO-NAO-SE-CONTRADIZ-01, decisão de 20/09/2026, verbatim:
         *"As lâmpadas esperam a cor"*.
 
         **O QUE FOI MEDIDO, e é a razão desta função existir.** Ela desligou o
@@ -975,7 +974,7 @@ class ControllerIdentityRegistry:
             23:56:49.284  gatilho_da_cor_escrito: rosa → verde
 
         Por **27 segundos** o mesmo controle mostrava três lâmpadas de Player 3
-        e a barra do Player 4. A palavra dela, confirmando a predição: *"Rosa e
+        e a barra do Player 4. A palavra de produto, confirmando a predição: *"Rosa e
         só verde meio minuto depois"*.
 
         A assimetria não era de desenho: as lâmpadas saem por rotas que não
@@ -1057,7 +1056,7 @@ class ControllerIdentityRegistry:
           o que já tinha até o próximo batimento, em vez de acender um
           número que outro já está acendendo.
 
-        MEDIDO em 27/08/2026, com os quatro DualSense dela no rádio: o link
+        MEDIDO em 27/08/2026, com os quatro DualSense do usuário no rádio: o link
         de um caiu e voltou entre dois ``sync_connected``. Ele continuou
         recebendo escrita (o handle voltou antes do batimento) e acendeu o
         LUGAR GRAVADO dele, que era 1; o primeiro da mesa também acendia 1.
@@ -1171,13 +1170,13 @@ class ControllerIdentityRegistry:
         ficava vazio e o piso lido pelos externos (``_ds_reserve``) valia 0 —
         o Pro Nintendo USB tomava o slot 1 no primeiro tick de externo e os
         dois DualSense herdavam 2 e 3 (o "não existe Controle 1" medido na
-        máquina dela). O lifecycle chama ESTE método ANTES de agendar o tick
+        máquina do usuário). O lifecycle chama ESTE método ANTES de agendar o tick
         dos externos no MESMO ciclo do poll loop, então quem está na mesa
         ocupa 1..N primeiro. A ORDEM do iterável é significativa (o
         lifecycle entrega em ordem de ``describe_controllers``, primário
         primeiro) — nunca passar um ``set``, que numeraria por hash.
 
-        D-30 (decisão dela, 15/08) — este método é o BATIMENTO da fila do
+        D-30 (decisão, 15/08) — este método é o BATIMENTO da fila do
         momento, e faz três coisas novas, todas baratas:
 
         1. carimba a onda de chegada de quem entrou AGORA (quem já estava na
@@ -1439,7 +1438,7 @@ class ControllerIdentityRegistry:
         """Grava a fila do momento AGORA, sem esperar a janela de estabilidade.
 
         Existe para UM chamador — ``identity.number.set``, a escolha à mão —
-        e a razão é que o clique dela é sobre **o que ela está vendo**. Quem
+        e a razão é que o clique do usuário é sobre **o que ela está vendo**. Quem
         planeja a troca lê os lugares GRAVADOS (``snapshot``); quem pinta a
         tela lê a FILA DO MOMENTO (``_ordem_do_momento_locked``). Enquanto os
         dois discordam, o plano é calculado sobre uma mesa que não é a da
@@ -1464,7 +1463,7 @@ class ControllerIdentityRegistry:
         guardado entra no alinhamento e NÃO se solta. Soltá-lo (a primeira
         escrita desta sprint) fechava a fila no instante do clique, e a troca
         saía sobre outra mesa: pedir o 3 para o P4 mandava o P3 para o 2, e
-        não para o 4 — contra a regra dela de 28/08, *"os dois trocam, os
+        não para o 4 — contra a regra de 28/08, *"os dois trocam, os
         outros não se mexem"* —, e o 4 que a aba oferecia era recusado como
         fora da mesa. Conferência de 24/09/2026.
         """
@@ -1481,7 +1480,7 @@ class ControllerIdentityRegistry:
             return True
 
     def escolha_da_mao(self, ranks: dict[str, int]) -> None:
-        """Aplica a escolha DELA — e a fila do momento passa a concordar.
+        """Aplica a escolha do usuário — e a fila do momento passa a concordar.
 
         A forma é a que ela já fixou para o microfone
         (``D-O-MICROFONE-A-MAQUINA-DA-O-PADRAO-O-PERFIL-SOBREPOE``): **a

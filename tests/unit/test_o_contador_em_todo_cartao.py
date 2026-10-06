@@ -126,5 +126,5 @@ def test_a_vigia_leva_as_pontes_do_disco_ate_a_conta(monkeypatch, tmp_path):
     (5, "5 jogos já sabem por onde entrar"),
 ])
 def test_o_texto_e_o_que_ela_escolheu(pontes, texto):
-    """A frase é a da escolha dela, com o plural certo."""
+    """A frase é a da escolha do usuário, com o plural certo."""
     assert texto in desenho.contador_html(pontes)

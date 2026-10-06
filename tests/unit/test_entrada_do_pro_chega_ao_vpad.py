@@ -26,7 +26,7 @@ mesma linha registra que **por rádio o envelope é IDÊNTICO ao do cabo** — o
 Bluetooth não muda o report do Pro, ao contrário do DualSense.
 
 Este arquivo NÃO mede o fio: ele não sabe se o report chega por rádio. Ele
-guarda a metade que é NOSSA — se o report chega e a tradução some, o dedo dela
+guarda a metade que é NOSSA — se o report chega e a tradução some, o dedo do usuário
 não vira nada no jogo, e a suíte inteira continua verde. Medir o fio é bancada.
 
 MORDE? Apague uma linha do `BUTTON_MAP` (ou o corpo do `_refresh_dpad_buttons`)

@@ -262,7 +262,7 @@ class TestModoJogoPadrao:
     def test_modo_nativo_manual_vence_o_default(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Conexão Nativa (Sony)" já É a resposta dela para "como quero jogar" —"""
+        """"Conexão Nativa (Sony)" já É a resposta de produto para "como quero jogar" —"""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon.store.set_native_mode_active(True, origin="manual")
@@ -298,7 +298,7 @@ class TestModoJogoPadrao:
     def test_gesto_manual_recente_adia_e_nao_mexe_no_modo(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Invariante forte: trava de 30 s do gesto dela vale também aqui."""
+        """Invariante forte: trava de 30 s do gesto do usuário vale também aqui."""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon._emu_manual_ts = relogio.agora
@@ -385,7 +385,7 @@ class TestSoltarOModoJogoPadrao:
     def test_nao_derruba_o_vpad_que_ja_estava_ligado(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Na máquina dela o vpad vive LIGADO por flag em disco. Um "reverter"
+        """Na máquina do usuário o vpad vive LIGADO por flag em disco. Um "reverter"
         ingênuo a deixaria sem controle nenhum no desktop ao fechar o jogo."""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
@@ -697,7 +697,7 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
     def test_perfil_de_desktop_continua_congelado(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O que ela pediu segue de pé: janela comum não troca o perfil."""
+        """O que o usuário pediu segue de pé: janela comum não troca o perfil."""
         save_profile(
             Profile(
                 name="Navegação",

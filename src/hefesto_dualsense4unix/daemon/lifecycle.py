@@ -180,11 +180,11 @@ def _soltar_o_pad_do_lancamento(daemon: Any) -> None:
 
 
 def _mascara_da_maquina() -> str:
-    """A máscara que ELA escolheu para a máquina, ou a de fábrica da sessão.
+    """A máscara que O usuário escolheu para a máquina, ou a de fábrica da sessão.
 
     A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026). É o que o jogo sem opinião de
-    máscara veste. O flag só é escrito por gesto dela que diz a máscara (ponto
-    2 da MASCARA-CONTAGIO-01), então é a escolha dela e nunca a de um jogo.
+    máscara veste. O flag só é escrito por gesto do usuário que diz a máscara (ponto
+    2 da MASCARA-CONTAGIO-01), então é a escolha do usuário e nunca a de um jogo.
     Sem flag, vale o `DaemonConfig.gamepad_flavor` (`dualsense`), e não o
     `normalize_flavor(None)`: o `DEFAULT_FLAVOR` daquele módulo é o `xbox`
     legado, e foi medindo que isso apareceu. Lido do disco a cada ativação,
@@ -296,7 +296,7 @@ class DaemonConfig:
     gamepad_caminho_global: str | None = None
     coop_enabled: bool = True
     # do DualSense.
-    # `keyboard_emulation.flag` persiste a escolha dela (lida no boot, abaixo em
+    # `keyboard_emulation.flag` persiste a escolha do usuário (lida no boot, abaixo em
     keyboard_emulation_enabled: bool = True
     ps_button_action: Literal["steam", "none", "custom"] = "steam"
     ps_button_command: list[str] = field(default_factory=list)
@@ -329,7 +329,7 @@ class DaemonConfig:
     #: por quê, porque a tela já não estava lá.
     #:
     #: Quem rebate é `interface/pacotes/a05_vibracao._bater_o_coracao_do_teste`,
-    #: a cada 1 s enquanto a janela vive. A ordem dela: *"o testar e parar é
+    #: a cada 1 s enquanto a janela vive. A ordem de produto: *"o testar e parar é
     #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: dela)
     rumble_active_em: float | None = None
     #: O par fixado de CADA controle, `{dono: (weak, strong, carimbo)}` (o `None` é a mesa
@@ -374,12 +374,11 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
 
     MASCARA-CONTAGIO-01, ponto 3, 21/09/2026 — **irmã exata de
     :func:`_a_escolha_dela_sem_o_vazamento`, logo abaixo**, no outro eixo. A
-    ordem dela de 19/09 nomeava os dois: *"sim tudo dualsense, tudo ligado
-    mascara dualsense por default mas esse vazamento me preocupa"*.
+    ordem de 19/09 nomeava os dois.
     <!-- noqa-acento: citação literal -->
 
-    O `gamepad_emulation.flag` da máquina dela diz `xbox` — e não por escolha
-    dela para todos os jogos. Os pontos 1 e 2 desta sprint fecharam as DUAS
+    O `gamepad_emulation.flag` da máquina do usuário diz `xbox` — e não por escolha
+    do usuário para todos os jogos. Os pontos 1 e 2 desta sprint fecharam as DUAS
     portas que o escreviam sem pedido: o perfil do Future Knight promovendo a
     máscara dele a padrão da máquina, e o chip «Sony DualSense» re-carimbando o
     valor da memória a cada clique. O arquivo ficou com um valor que ninguém
@@ -427,7 +426,7 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
 def _a_escolha_dela_sem_o_vazamento(
     do_disco: object, origem: str | None = None
 ) -> str | None:
-    """A escolha dela lida do disco, com o `xbox` do vazamento devolvido."""
+    """A escolha do usuário lida do disco, com o `xbox` do vazamento devolvido."""
     from hefesto_dualsense4unix.integrations.virtual_pad import (
         CAMINHO_DUALSENSE,
         CAMINHO_XBOX,
@@ -482,15 +481,15 @@ class ModoAdiado:
     apenas REPORTAM o adiamento): `mode` é o eixo que a usuária sente — máscara
     do vpad e co-op, o que faz o jogo funcionar a 4 — e o único cuja perda dura
     a sessão inteira. Um retry por eixo multiplicaria os caminhos assíncronos
-    capazes de mexer no estado do controle sem gesto dela; os outros três voltam
+    capazes de mexer no estado do controle sem gesto do usuário; os outros três voltam
     a ser avaliados na próxima ativação de perfil, que é barata e frequente.
 
     Campos:
       - `carimbo_manual` — valor de `_emu_manual_ts` na criação. Se o carimbo
         MUDAR, houve gesto manual NOVO (mais recente que o perfil) e a pendência
-        é descartada: a última palavra é dela, não do perfil de meia hora atrás.
+        é descartada: a última palavra é de produto, não do perfil de meia hora atrás.
       - `nao_antes_de` — `carimbo_manual + MANUAL_PROFILE_LOCK_SEC`; antes disso
-        o lock ainda protege o gesto dela.
+        o lock ainda protege o gesto do usuário.
       - `esperando_jogo` — dedupe do log de espera (o dreno roda a ~1 Hz).
     """
 
@@ -745,7 +744,7 @@ class Daemon:
         # teclado era o único dos três sem flag em disco, e por isso o único que
         # não tinha como ser desligado). Três valores: `None` = nunca configurada
         # e o default da config vale (compat: continua ligado); `True`/`False` =
-        # decisão DELA e vence o default, inclusive um default vindo do env.
+        # decisão de produto e vence o default, inclusive um default vindo do env.
         # Best-effort por construção (o load nunca levanta).
         from hefesto_dualsense4unix.utils.session import load_keyboard_preference
         kbd_pref = load_keyboard_preference()
@@ -786,7 +785,7 @@ class Daemon:
             # AQUI E NÃO ANTES: ele não é dono de nenhum nó, só observa. Subir
             # cedo faria a primeira leitura pegar o servidor de som antes de o
             # `bt_mic` e o `alto_falante` publicarem os nós deles, e a primeira
-            # resposta da tela seria um mundo sem o controle dela.
+            # resposta da tela seria um mundo sem o controle do usuário.
             await self._safe_start(
                 "ouvinte_do_som", lambda: start_ouvinte_do_som(self))
             # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth. O gate de
@@ -946,7 +945,7 @@ class Daemon:
         o controle e um pause manual anterior não é pisado.
 
         `grava_o_modo` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): a porta
-        da escolha dela. LIGANDO, o modo `native` vai ao perfil ativo por
+        da escolha do usuário. LIGANDO, o modo `native` vai ao perfil ativo por
         :meth:`gravar_o_modo_escolhido`, também com o Nativo já ligado (o
         clique no «Desligado» aceso conserta um perfil que divergiu). A saída
         do Nativo não grava: quem grava é o modo que entra.
@@ -1220,7 +1219,7 @@ class Daemon:
     ) -> dict[str, str]:
         """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
 
-        POINT-AND-CLICK-01 (17/09/2026), pela ordem dela olhando a aba
+        POINT-AND-CLICK-01 (17/09/2026), pela ordem de produto olhando a aba
         principal: *"o modo point and click é o modo navegação (…) Ele ativa o
         modo configurado lá."* A primeira metade já existia — o chip
         **Navegação** entra em ``MODE_DESKTOP`` e grava ``mode.kind`` no perfil
@@ -1232,7 +1231,7 @@ class Daemon:
         um arquivo único da máquina, que não abre perfil nenhum. Entrar no modo
         descartava, em silêncio, as CINCO coisas que a aba Navegação grava:
         ``mouse``, ``teclado_emulado``, ``key_bindings``, ``button_actions`` e a
-        supressão. *A escolha dela morria antes do aparelho* — aqui pela
+        supressão. *A escolha do usuário morria antes do aparelho* — aqui pela
         variante mais cara: o produto perguntava ao arquivo de sessão quando
         devia perguntar ao perfil.
 
@@ -1252,14 +1251,14 @@ class Daemon:
            D-2909-A-NAVEGACAO-LIGA-O-MOUSE (O-MOUSE-SEGUE-A-NAVEGACAO-01,
            29/09/2026): o chip obedecia ao ``mouse.enabled`` do perfil, e o
            ``{false, 6, 1}`` que ele lia tinha a forma do estado vivo copiado,
-           não de uma escolha dela — ela entrou no modo «controle vira mouse»
+           não de uma escolha do usuário — ela entrou no modo «controle vira mouse»
            e o cursor não andou. O PS + R3 ligava pelo socorro
            (``forcar_mouse``), e as duas portas faziam o contrário uma da
            outra. O ``enabled`` do perfil segue valendo na ATIVAÇÃO de um perfil
            que diz Navegação (:meth:`apply_profile_mouse`), e enquanto ela
            estiver na Navegação.
         2. **key_bindings** e **button_actions** — o teclado virtual recebe o
-           que ela escreveu, com os mesmos `botoes_calados`.
+           que o usuário escreveu, com os mesmos `botoes_calados`.
         3. **teclado_emulado** — `schema.resolver_teclado_emulado` é a
            precedência PURA da T14 (24/08/2026), escrita, testada e até hoje
            **sem um único chamador de ativação real**. Ligá-la aqui é o lugar
@@ -1412,7 +1411,7 @@ class Daemon:
         `keyboard.emulation.set` (o padrão do setter): a flag de sessão segue
         guardando a escolha do interruptor, como sempre guardou.
 
-        Com ``grava`` (a porta da escolha dela), ``mouse.enabled`` e
+        Com ``grava`` (a porta da escolha do usuário), ``mouse.enabled`` e
         ``teclado_emulado`` vão ao perfil ativo NA MESMA GRAVAÇÃO, por
         :func:`manager.gravar_a_navegacao_no_perfil_ativo`, e só se os DOIS
         lados chegaram: um teclado recusado não deixa meio-passo no disco.
@@ -1498,11 +1497,11 @@ class Daemon:
         tem dentes: desligar DESTRÓI o device virtual (via
         `stop_keyboard_emulation`), então o gate do poll loop
         (`_keyboard_device is not None`) fecha por consequência, do mesmo jeito
-        que o mouse dela já estava honestamente desligado. Retorna o estado
+        que o mouse do usuário já estava honestamente desligado. Retorna o estado
         efetivo ao final (o pedido pode falhar por /dev/uinput).
 
         `persist=False` existe para o restore do boot e para os testes: o
-        caminho normal (gesto dela) grava `keyboard_emulation.flag` para que a
+        caminho normal (gesto do usuário) grava `keyboard_emulation.flag` para que a
         escolha atravesse restart/reboot — era exatamente o que faltava, já que
         o default da config é True e voltava a valer a cada boot.
 
@@ -1594,7 +1593,7 @@ class Daemon:
             return desfecho in DESFECHOS_EMULACAO_ATIVA
         return desfecho in (EMU_DESLIGADO, EMU_JA_ESTAVA)
 
-    # acima fechou: um chamador distraído promovido a gesto dela, com o jogo da
+    # acima fechou: um chamador distraído promovido a gesto do usuário, com o jogo da
     def set_gamepad_emulation_desfecho(
         self,
         enabled: bool,
@@ -1608,10 +1607,10 @@ class Daemon:
         """O mesmo pedido de `set_gamepad_emulation`, dizendo o que ACONTECEU.
 
         `caminho_e_escolha=False`: o `caminho` é o do dono da sessão, e não uma
-        escolha dela (ver `gamepad.start_gamepad_emulation_desfecho`).
+        escolha do usuário (ver `gamepad.start_gamepad_emulation_desfecho`).
 
         `grava_o_modo` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): a porta
-        da escolha dela. Ligando, com o desfecho `aplicado` ou `ja_estava`, o
+        da escolha do usuário. Ligando, com o desfecho `aplicado` ou `ja_estava`, o
         modo `gamepad` vai ao perfil ativo por :meth:`gravar_o_modo_escolhido`,
         FORA do `_emu_lock` — o disco não segura a próxima troca. O caminho vai
         quando é escolha (`caminho_e_escolha`); sem ele, o do perfil fica.
@@ -1686,7 +1685,7 @@ class Daemon:
         porta: PortaQueGrava,
         mouse_ligado: bool | None = None,
     ) -> str | None:
-        """O modo que ela escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
+        """O modo que o usuário escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
 
         O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): QUEM TROCA O MODO GRAVA O
         MODO. A escolha feita pelo chip da aba Jogar era gravada pela janela,
@@ -1695,11 +1694,11 @@ class Daemon:
         seguiu em Xbox depois do «Sony DualSense» das 01:43 de 29/09. O PS + R3
         gravava no daemon, e o cartão também. Agora há um escritor só, aqui, e
         os três setters do modo o chamam depois do aparelho, só quando a porta
-        diz que é escolha dela (`grava_o_modo`).
+        diz que é escolha do usuário (`grava_o_modo`).
 
         O perfil é o de :func:`manager.nome_do_perfil_que_grava` (o ativo: com o
         Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou a
-        escolha dela; «sem escolha», nenhum), e a regra da seção é a do dono,
+        escolha do usuário; «sem escolha», nenhum), e a regra da seção é a do dono,
         :func:`manager.secao_do_modo_com_o_caminho`: o modo não escreve a
         máscara, e nada mudou, nada se grava. `porta` vai ao `profile_salvo`.
 
@@ -1760,9 +1759,9 @@ class Daemon:
         DualSense; e reativar o perfil também não recriava, porque
         `apply_profile_mode` compara o `mode.gamepad_flavor`, não a máscara
         efetiva. Nada aplicava a máscara do cartão com o jogo aberto, e a regra
-        dela é *"eles precisam funcionar durante o jogo"*.
+        de produto é *"eles precisam funcionar durante o jogo"*.
 
-        O ATO MORA AQUI, e o handler só o chama: a máscara é gesto dela, logo
+        O ATO MORA AQUI, e o handler só o chama: a máscara é gesto do usuário, logo
         `origin="manual"` — a origem que a trava R-04 deixa passar com o jogo
         aberto. O P1 é o vpad desta classe (`start_gamepad_emulation_desfecho`,
         que compara a máscara efetiva e só recria se ela mudou); os outros são
@@ -1884,7 +1883,7 @@ class Daemon:
            disse nada. Sem essa distinção, o "Controlar o PC" que ela acabou de
            escolher voltaria a ser "Jogar pelo Hefesto" em ~2 s;
         3. **lock de gesto manual (30 s)** — invariante forte do projeto: gesto
-           dela cria trava de 30 s e nada reverte nesse período. Aqui o pedido
+           do usuário cria trava de 30 s e nada reverte nesse período. Aqui o pedido
            apenas ESPERA (o tick lento repete, e ele entra quando o lock
            vencer), como no `aplicar_modo_jogo_padrao`;
         4. **Modo Nativo** — o controle está SOLTO para o jogo de propósito;
@@ -1892,10 +1891,10 @@ class Daemon:
            agora (modo desktop, ou perfil com seção `mouse`). Ligar o vpad aqui
            derrubaria o mouse pela exclusão mútua e, no tique seguinte, o perfil
            o religaria: um flap sem fim entre cursor e vpad. Dois controles na
-           mesa não são autorização para arrancar o cursor da mão dela;
+           mesa não são autorização para arrancar o cursor da mão do usuário;
         6. **um controle só** — nada a fazer.
 
-        Chama com `origin="profile"` de propósito: NÃO é gesto dela, então não
+        Chama com `origin="profile"` de propósito: NÃO é gesto do usuário, então não
         carimba `_emu_manual_ts` (não trava perfil nenhum por 30 s) e **não
         persiste** preferência (R-07 — só o gesto manual escreve em disco). A
         automação fica fora do disco por construção: se ela desligar depois, o
@@ -2012,7 +2011,7 @@ class Daemon:
            PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): **catch-all não liga**, pela
            mesma razão pela qual ele não libera (item 3) — ver o comentário no
            corpo. Sem essa metade, um catch-all com `suppress: true` (o
-           `sackboy_nativo` do disco dela) criava um estado do qual nenhum
+           `sackboy_nativo` do disco do usuário) criava um estado do qual nenhum
            outro catch-all conseguia sair.
         3. **desired=False** — LIBERA a supressão apenas se ela veio de perfil
            (`_suppress_from_profile`). Supressão de origem manual (lock já
@@ -2203,7 +2202,7 @@ class Daemon:
 
         VPAD-NA-JANELA-DA-STEAM-01 (17/08/2026) — **o cliente Steam conta.**
         Até aqui esta guarda só reconhecia `steam_app_<id>`, e a janela do
-        CLIENTE (`steam`) respondia `False`. Como o perfil de desktop dela casa
+        CLIENTE (`steam`) respondia `False`. Como o perfil de desktop do usuário casa
         com `steam` no `window_class`, alternar para a Steam no meio da partida
         autorizava a reversão de modo e **destruía o vpad**; o jogo, que já
         tinha enumerado aquele nó, ficava com um descritor órfão e um controle
@@ -2220,7 +2219,7 @@ class Daemon:
         conferir um preço, ler uma conquista — e reverter ali é absurdo pelo
         mesmo critério que já protegia o `steam_app_<id>`.
 
-        **O preço, e ela decidiu pagá-lo (17/08):** com a Steam em foco, o modo
+        **O preço, e o usuário decidiu pagá-lo (17/08):** com a Steam em foco, o modo
         vindo de PERFIL não reverte, mesmo sem jogo nenhum atrás. Na prática
         isso mantém o vpad de pé enquanto ela navega na Steam, que é o estado
         normal desta máquina. Fora da Steam (Firefox, terminal) a reversão
@@ -2862,8 +2861,8 @@ class Daemon:
         `reapply_speaker_on_connect`, que já decidiram, ANTES de chegar aqui,
         que há opinião a aplicar: perfil sem a seção não chama este método (sem
         opinião é silêncio, não ordem — tomar a posse dos bytes de áudio por um
-        perfil que não pediu nada é a queixa "a config que eu deixo nunca é
-        respeitada", do lado do som).
+        perfil que não pediu nada é a queixa de que a configuração do usuário
+        nunca é respeitada, do lado do som).
 
         POR QUE ISTO FALA DIRETO COM O BACKEND, e não pelo `speaker.set` do IPC
         (a armadilha desta entrega, e a razão de a chamada estar aqui e não lá):
@@ -2873,7 +2872,7 @@ class Daemon:
         perfil que passasse por aquele caminho armaria a trava na primeira
         ativação e todas as seguintes seriam descartadas em silêncio: o perfil
         pararia de funcionar depois do primeiro uso. A trava é o registro de um
-        gesto DELA; perfil reaplicado não é gesto dela e não pode carimbá-la.
+        gesto do usuário; perfil reaplicado não é gesto do usuário e não pode carimbá-la.
 
         Pelo mesmo eixo, o lock de 30 s de `_emu_manual_ts` (mouse/modo/política
         de rumble) NÃO é consultado aqui: o gesto manual de áudio tem trava
@@ -2968,7 +2967,7 @@ class Daemon:
         prometer uma coisa e entregar outra):
 
         - `volume` tem DOIS DEGRAUS desde 09/09/2026 (MIC-VOLUME-02, decisão
-          dela `D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`): o ganho da
+          de produto `D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`): o ganho da
           FONTE de captura no PipeWire (camada 1) **e** o `common[6]` do
           aparelho, por `set_microphone_volume`. É a fonte no sistema que torna
           a feature universal — ela existe no cabo e no rádio —, e é o byte do
@@ -2976,7 +2975,7 @@ class Daemon:
           lado. **FATO SUBSTITUÍDO:** esta linha dizia que *"o DualSense não
           expõe registrador de ganho de microfone em transporte nenhum"*; o
           `hid-playstation` desta máquina NOMEIA o campo (`mic_volume`,
-          `0x0 - 0x40`) e a bancada dela mediu a captura mudando com ele, no
+          `0x0 - 0x40`) e a bancada mediu a captura mudando com ele, no
           cabo (`docs/data/ensaios.csv`,
           `folha-mic-volume-o-byte-age-cabo-0909`).
           `sem_fonte` NÃO é falha — por Bluetooth sem a ponte de áudio de pé não
@@ -2993,8 +2992,8 @@ class Daemon:
         exatamente a trava que `ProfileManager.apply_mic` consulta para NÃO
         escrever. Um applier de perfil que passasse por lá armaria a trava na
         primeira ativação e todas as seguintes seriam descartadas em silêncio.
-        A trava é o registro de um gesto DELA; perfil reaplicado não é gesto
-        dela e não pode carimbá-la.
+        A trava é o registro de um gesto do usuário; perfil reaplicado não é gesto
+        do usuário e não pode carimbá-la.
 
         Vocabulário de retorno (R-03): `APLICADO`, `IGNORADO_SEM_CONTROLE`
         (não havia fonte de captura nem handle para escrever — nada foi feito e
@@ -3299,7 +3298,7 @@ class Daemon:
         -----------------------------------------------------------
         `daemon/subsystems/__init__.py` registrava a razão: o subsystem
         publicava um `module-null-sink` por controle e **nenhum
-        `module-loopback`** — quatro entradas mudas na lista de som dela.
+        `module-loopback`** — quatro entradas mudas na lista de som do usuário.
 
         * a rota do CABO chegou em 09/09 (SOM-POR-CONTROLE-01): o nó recebe
           uma `RotaDoNo` e sobe o `module-loopback` junto quando ela existe;
@@ -3875,14 +3874,14 @@ class Daemon:
         entre os campos preenchidos com alvo ausente reprovando por decisão
         escrita (`profiles/schema.py`, `_casa_sem_caixa`) — então qualquer perfil
         com `window_title_regex` ou `process_name` devolvia False SEMPRE, sem
-        erro nenhum. Medido nos 15 perfis do disco dela: dos seis perfis de jogo,
+        erro nenhum. Medido nos 15 perfis do disco do usuário: dos seis perfis de jogo,
         um só casava aqui, e por uma `wm_class` `steam_app_*` que a evidência
         nº 1 já pegava sozinha — a evidência nº 2 era letra morta.
 
         Tradeoff registrado (o mesmo que a AUTOMATISMO-MORTO-01 discute no
         cadeado, por outra porta): com o título valendo, um regex solto de
         título passa a poder declarar "é jogo" a partir de uma janela que não é
-        jogo — medido no disco dela, uma aba de navegador chamada "Portal 2"
+        jogo — medido no disco do usuário, uma aba de navegador chamada "Portal 2"
         casa o `coop_local` (prioridade 75, `mode: gamepad`, só título) e vence
         o `Navegação` (prioridade 50). Aqui o consumidor é o sinal de EXIBIÇÃO,
         não a troca de perfil; quem quiser fechar isso mexe no perfil, não neste
@@ -3996,7 +3995,7 @@ class Daemon:
 
         ABA-DO-JOGO-01 (10/08/2026). Nenhuma capacidade nova: quem responde é a
         `steam_game_running_appid`, que existe desde 08/08 (RELANCAR-AGORA-01) e
-        até hoje só era chamada por gesto dela, dentro da janela. O que muda é
+        até hoje só era chamada por gesto do usuário, dentro da janela. O que muda é
         que o fato passa a VIAJAR — o daemon o publica no store, o `state_full` o
         leva, e a janela deixa de ter que adivinhar.
 

@@ -113,7 +113,7 @@ class Caixa(NamedTuple):
 
 
 def _worktrees_do_git(daqui: pathlib.Path) -> list[pathlib.Path]:
-    """Toda árvore que o `git` declara — a principal e as de agente."""
+    """Toda árvore que o `git` declara — a principal e as de trabalho."""
     try:
         saida = subprocess.run(
             ["git", "worktree", "list", "--porcelain"],
@@ -621,7 +621,7 @@ class Tela:
         return vindos
 
     def foto(self, caminho: str | pathlib.Path) -> pathlib.Path:
-        """Um PNG da janela oculta — para o olho dela, que é a palavra final."""
+        """Um PNG da janela oculta — para o olho de quem confere, que é a palavra final."""
         if not isinstance(self.janela, Gtk.OffscreenWindow):  # pragma: no cover
             raise ErroDeRegua("só a janela oculta fotografa (Gtk.OffscreenWindow)")
         self._bombear(lambda: False, 0.15)

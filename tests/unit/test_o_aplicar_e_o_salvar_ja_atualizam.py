@@ -1,9 +1,9 @@
 """O «Aplicar», o «Salvar Perfil» e o «Importar» do rodapé já atualizam.
 
-O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01 (02/10/2026). O pedido dela de 29/09: os
+O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01 (02/10/2026). O pedido de 29/09: os
 botões do rodapé que mandam ou gravam perfil fazem também o que o «Atualizar»
 (aba Sistema) e o «Reconectar controles» (aba Jogar) fazem. A forma é a «versão
-leve» que ela escolheu (respostas 42, 43 e 44 da sprint): os arquivos que a
+leve» que o usuário escolheu (respostas 42, 43 e 44 da sprint): os arquivos que a
 Steam lê (`launch_env.refresh`, nunca o `daemon.reload`, que para os atalhos),
 o rádio só do elo morto, e a reconciliação com a numeração (`coop.sync` e
 `identity.renumber`), a cada Aplicar, Salvar e Importar.
@@ -113,7 +113,7 @@ def _o_arquivo(nome: str = NOME) -> dict[str, Any]:
 
 
 class _PonteDoImportar(PonteDoRodape):
-    """O seletor do sistema devolve o arquivo que ela escolheu."""
+    """O seletor do sistema devolve o arquivo que o usuário escolheu."""
 
     def __init__(self, escolhido: Path) -> None:
         super().__init__()

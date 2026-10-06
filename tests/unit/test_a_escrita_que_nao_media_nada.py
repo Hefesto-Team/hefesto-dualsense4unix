@@ -12,7 +12,7 @@ do `device.write`. A única conferência que existia
 (``int(escrito) == len(report)``) morava no ramo de fallback — e handle BT
 toma SEMPRE o ramo do `writeReport`, então ela nunca rodava no rádio. Medido
 contra o aparelho na mesma noite: o log dizia ``cor=(0,255,0) enviado=True``
-com a barra física APAGADA, e ela confirmou com o olho.
+com a barra física APAGADA, e o usuário confirmou com o olho.
 
 **2. O `lightbar_disputada` que continuava `True` com a Steam morta.** O campo
 é lido da FOTO que o sentinela tira no tique de 30 s, e era devolvido cru.
@@ -249,7 +249,7 @@ def _handler() -> Any:
 def test_lightbar_disputada_zera_quando_o_escritor_cru_some(
     _handler: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA, no campo que chega à tela dela.
+    """A MORDIDA, no campo que chega à tela do usuário.
 
     O `state_full` publicava `True` com a Steam morta. Trocar
     `segurado_de_fato` de volta por `segurado` faz este teste reprovar.

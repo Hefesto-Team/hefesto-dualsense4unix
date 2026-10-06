@@ -21,12 +21,12 @@ Controle N». **O que continua faltando para ligá-lo são as TRÊS linhas do
 registro** — `daemon/subsystems/__init__.py`, `daemon/lifecycle.py` e
 `daemon/connection.py` —, e nenhuma delas estava na posse daquela sprint.
 
-Com os quatro DualSense na mesa dela (medido em 07/09/2026: dois no cabo, dois
+Com os quatro DualSense na bancada (medido em 07/09/2026: dois no cabo, dois
 no rádio), `AltoFalanteSubsystem.alvos()` devolve **os quatro**, e os quatro
 nasceriam com o MESMO rótulo genérico — porque
 `GerenciadorDeNosDeSom._construir` chama `SinkVirtualPipeWire(uniq=uniq)` sem
 rótulo próprio, e o default era uma constante de rótulo genérico. Quatro entradas
-idênticas e mudas na lista de som dela, ao lado das DUAS placas reais que hoje
+idênticas e mudas na lista de som do usuário, ao lado das DUAS placas reais que hoje
 FUNCIONAM pelo cabo. Ela escolhe uma das quatro e o som some.
 
 QUEM JÁ TINHA ESCRITO ISTO, E COM ESTAS PALAVRAS
@@ -45,7 +45,7 @@ importa `app/`, e por isso a resposta mudou de endereço em vez de ganhar uma
 segunda cópia.
 
 E a invariante 4 mudou de forma: `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`
-(decisão DELA) diz que o nó é publicado mesmo sem rota — *"nó que some quebra o
+(decisão de produto) diz que o nó é publicado mesmo sem rota — *"nó que some quebra o
 jogo que o escolheu"*. O que sobra dela, e é o que este arquivo trava, é que
 **um `module-null-sink` publicado pelo DAEMON tenha o `module-loopback` ao
 lado**: o daemon só publica quem tem rota; quem não tem, ele nem constrói.

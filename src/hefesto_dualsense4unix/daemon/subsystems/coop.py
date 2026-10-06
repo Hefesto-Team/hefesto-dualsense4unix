@@ -59,7 +59,7 @@ def identidade_do_vpad(vpad: Any) -> dict[str, Any]:
       **FATO SUBSTITUÍDO — A-MESMA-LINGUA-01, 07/09/2026.** Esta linha dizia
       que ele era *"o `player_index` de ALOCAÇÃO"*, e era verdade até hoje: o
       nome nascia do índice do co-op enquanto o número publicado saía da fila
-      de chegada, e os dois divergiam em 4 de 4 na bancada dela. Agora o nome
+      de chegada, e os dois divergiam em 4 de 4 na bancada. Agora o nome
       nasce da MESMA fila (:meth:`CoopManager.numero_para_o_nome`), então este
       campo é *o número da carta no instante do nascimento do vpad*.
 
@@ -209,7 +209,7 @@ class CoopManager:
         QUEM-É-QUEM-01, entrega **E1** (sprint
         a sprint `QUEM-E-QUEM-01`).
         Até aqui o estado publicado dizia `coop.players: 4` — um NÚMERO. A
-        pergunta dela às 04:05 de 15/08/2026 — *"o vpad e o físico correspondem
+        pergunta de produto às 04:05 de 15/08/2026 — *"o vpad e o físico correspondem
         ao mesmo?"* — **não pôde ser lida do estado publicado**: foi paga
         apertando X em cada controle, quatro vezes, à mão (é o buraco que
         `scripts/ensaios/quem_e_quem.py` declara em voz alta: *"Nenhum arquivo
@@ -256,7 +256,7 @@ class CoopManager:
           **O QUE ELE SIGNIFICA MUDOU EM 07/09/2026 (A-MESMA-LINGUA-01), e a
           diferença é o ponto inteiro.** Até hoje ele dizia *"estes dois
           inteiros vêm de espaços de numeração diferentes"* — e por isso ficava
-          `True` para sempre, nos quatro controles da mesa dela, sem que nada
+          `True` para sempre, nos quatro controles da bancada, sem que nada
           jamais o apagasse. Agora o nome NASCE do número da carta
           (:meth:`CoopManager.numero_para_o_nome`), então o normal é `False` e
           o alarme passa a dizer uma coisa só, verificável e temporária: *a
@@ -592,7 +592,7 @@ class CoopManager:
     def numero_para_o_nome(self, identity: str, fallback: int) -> int:
         """O número que vai DENTRO do nome do vpad deste controle.
 
-        A-MESMA-LINGUA-01 (07/09/2026). Decisão dela, em cinco palavras:
+        A-MESMA-LINGUA-01 (07/09/2026). Decisão de produto, em cinco palavras:
         *"precisamos que falem a mesma língua."*
 
         **A pergunta é feita ao DONO, e o dono é um só.** O número que a carta
@@ -603,7 +603,7 @@ class CoopManager:
         `player_index`. É a regra desta casa: *quando um valor tem dono, a
         régua PERGUNTA ao dono.*
 
-        O QUE ESTAVA ERRADO, medido na bancada dela em 07/09/2026 com os
+        O QUE ESTAVA ERRADO, medido na bancada em 07/09/2026 com os
         QUATRO na mesa — e era **4 de 4**, nenhum acerto por sorte:
 
         | aparelho                | carta | nome do vpad |
@@ -629,7 +629,7 @@ class CoopManager:
         `INPUT2` — e nada mais); o uinput é igual, o nome vai no `UI_DEV_SETUP`
         antes do `UI_DEV_CREATE`. Renomear é DERRUBAR e RECRIAR.
 
-        **O PREÇO DE RECRIAR, medido no journal da bancada dela, 07/09/2026**
+        **O PREÇO DE RECRIAR, medido no journal da bancada, 07/09/2026**
         (um replug real do controle branco, `uhid_device_created` →
         `vpad_uhid_ativo` → sinks de volta → `launch_env` reassentado):
 
@@ -1214,7 +1214,7 @@ class CoopManager:
     def numeros_de_jogador(self) -> dict[str, int]:
         """MAC -> número ÚNICO deste controle na mesa. FONTE ÚNICA (MESA-CHEIA-12).
 
-        Medição de 15/08/2026, 01h00, com os QUATRO DualSense dela no rádio: o
+        Medição de 15/08/2026, 01h00, com os QUATRO DualSense do usuário no rádio: o
         desenho aceso na barra de player NÃO era o número que o daemon
         publicava. Do `state_full` e do `/sys/class/leds` ao mesmo tempo:
 
@@ -1243,7 +1243,7 @@ class CoopManager:
         Um replug basta para separá-las — e nesta mesa elas estavam separadas
         nos três secundários.
 
-        A verdade única é a FILA DE CHEGADA, por decisão dela (sprint
+        A verdade única é a FILA DE CHEGADA, por decisão de produto (sprint
         `2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador`: *"a
         ordem deve ser por ordem de conexão daquele momento"*, e essa ordem
         prevalece). Ela já governava a lâmpada e a cor automática
@@ -1812,9 +1812,9 @@ class CoopManager:
     def o_posto_do_p1_espera(self, uniq: str) -> bool:
         """O posto do P1 que caiu ESPERA por ele? — a decisão de 24/09/2026.
 
-        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`, por delegação dela: com o P1
+        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`, por delegação de produto: com o P1
         fora dentro do prazo, o vpad do jogador 1 fica parado à espera dele e o
-        P2 continua no vpad 2. São três as decisões dela que já diziam isso —
+        P2 continua no vpad 2. São três as decisões de produto que já diziam isso —
         *o primário espera a carta 1* e *o Hefesto manda no número, sempre*
         (23/09), e a linha 17, *os outros três não trocam de número*.
 
@@ -1823,7 +1823,7 @@ class CoopManager:
 
         1. **o co-op está de pé** (`should_be_active`): cada controle tem o
            próprio vpad. Fora do co-op o outro controle é a RESERVA e assume na
-           hora — é o gesto dela de desligar um e seguir jogando com o outro;
+           hora — é o gesto do usuário de desligar um e seguir jogando com o outro;
         2. **o jogo está com a autoridade** (o sinal pegajoso da R-04): sem
            jogo, o dono do posto de P1 também navega o PC (a aba Navegação), e
            parar o posto tiraria o mouse de quem ficou por até 30 s sem nenhum
@@ -2093,11 +2093,11 @@ def _numeros_sem_vpad(
     Conexão Nativa"* abrindo o :meth:`CoopManager.should_be_active`, esse
     caminho não existe: o mecanismo do co-op desta casa é *grab do físico + um
     vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
-    Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
+    Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que o usuário
     pediu**, pela mesma razão que já mantém a exceção de
     ``lifecycle.py:1926-1927``. Ou o jogo conta os dois físicos sozinho, ou
     alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
-    palavra dela). A régua que trava isto é
+    palavra de produto). A régua que trava isto é
     ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.
 
     **POR QUE ESTE PARÁGRAFO MORA AQUI e não lá em cima**, que é onde ele

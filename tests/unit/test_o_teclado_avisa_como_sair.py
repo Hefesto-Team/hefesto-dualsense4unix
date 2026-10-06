@@ -31,7 +31,7 @@ _ID_DA_DECISAO = "D-0609-A-FRASE-DO-TECLADO-NA-TELA"
 
 
 def _frase_que_ela_decidiu() -> str:
-    """A frase entre aspas na linha da decisão dela, lida do CSV."""
+    """A frase entre aspas na linha da decisão de produto, lida do CSV."""
     with _DECISOES.open(encoding="utf-8") as arquivo:
         for linha in csv.DictReader(arquivo):
             if linha.get("id") != _ID_DA_DECISAO:
@@ -161,7 +161,7 @@ def test_a_frase_ensina_o_gesto_de_saida(mesa: dict[str, Any]) -> None:
 
 
 def test_a_frase_e_a_que_ela_decidiu(mesa: dict[str, Any]) -> None:
-    """O texto publicado é, palavra por palavra, o da decisão dela.
+    """O texto publicado é, palavra por palavra, o da decisão de produto.
     (D-0609-A-FRASE-DO-TECLADO-NA-TELA)
     """
     controlador = _OSKController()

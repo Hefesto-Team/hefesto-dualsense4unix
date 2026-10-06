@@ -15,12 +15,12 @@
 > ```
 >
 > **E isso está CERTO**, não é falha: a direção é `mockup/` → produto, nunca o
-> contrário, e *publicação é o olho dela* (PROVA-DE-TELA-01). As dez frentes
-> recusaram publicar porque cada uma move pixel, e pixel é decisão dela.
+> contrário, e *publicação é o olho de quem confere* (PROVA-DE-TELA-01). As dez frentes
+> recusaram publicar porque cada uma move pixel, e pixel é decisão de produto.
 >
 > **A leitura correta da tabela abaixo:** ela diz *"o código sabe fazer"*, não
 > *"ela já tem"*. A distância entre as duas é UMA leva — a de publicação, que
-> é dela aprovar aba por aba.
+> é do usuário aprovar aba por aba.
 
 
 **03/09/2026.** Esta casa tinha dois números sobre a interface nova, e os dois
@@ -29,7 +29,7 @@ mediam a interface nova **contra ela mesma**:
 | número | o que compara | o que ele não pode responder |
 | --- | --- | --- |
 | a régua de tela | quantos campos da página são escritos pelo produto | se o campo devia existir |
-| a régua do mockup | o publicado contra o desenho que ela aprovou | se o desenho cobre o que o produto já fazia |
+| a régua do mockup | o publicado contra o desenho que o usuário aprovou | se o desenho cobre o que o produto já fazia |
 
 Nenhum dos dois responde a pergunta da qual sai a fila de trabalho: **o que a
 janela GTK faz e a interface em HTML ainda não faz.** Esta é a medição desse
@@ -67,7 +67,7 @@ refazer a leitura.
 | `NAO_DA_PARA_SABER` | não se decide lendo — precisa de bancada |
 
 **A paridade é `IGUAL / total`.** É a régua mais dura de propósito: `DIFERENTE`
-não conta como paridade, porque a queixa dela que originou tudo foi exatamente
+não conta como paridade, porque a queixa de uso que originou tudo foi exatamente
 essa — *"o produto via html não funcionou igual o gtk"*.
 
 O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.csv)**,
@@ -105,7 +105,7 @@ escreveram**, e a lista de features delas — que é o dado — sempre teve **49
 **38**, como a tabela acima continua mostrando. E o `01-jogar` publicou **11%**
 onde a divisão daquele dia dava **12%** (5 de 42).
 
-**A 07 CAIU DE 47% PARA 31% EM 21/09/2026, e não perdeu função.** Ela
+**A 07 CAIU DE 47% PARA 31% EM 21/09/2026, e não perdeu função.** O usuário
 pediu os mesmos botões em todos os lançadores, e os sete que só a Steam tinha
 saíram: o reparo do atalho e o Steam Input desligado passaram a ser do vigia
 `hefesto-steam-input-guard`, sem clique. Um `IGUAL` que vira *"automático"* é
@@ -192,7 +192,7 @@ maior bloco é o `DIFERENTE`.
 <!-- A LINHA DO BRILHO SAIU DAQUI EM 03/09/2026, e ela era a maior falta
      desta aba: *"contados os gestos das duas páginas, nenhum de brilho em
      lugar nenhum — o trilho é decoração"*. O trilho passou a GRAVAR (decisão
-     dela, "Grava na hora") e a linha virou `DIFERENTE`, com a diferença
+     de produto, "Grava na hora") e a linha virou `DIFERENTE`, com a diferença
      medida e o endereço dos dois lados no CSV. Ela não é decisão a preservar:
      é um fato que a medição derrubou. -->
 - **`03-gatilhos` · os 73 parâmetros.** 17 dos 19 modos têm ajuste, e na GTK
@@ -228,7 +228,7 @@ foram direto a `IGUAL`.
   tinha abandonado.
 - **`04-iluminacao` · onde a cor é gravada.** A GTK guarda a **intenção** no
   rascunho; o HTML **fotografa o que está aceso**. A diferença aparece quando o
-  daemon não aplicou: a GTK salva o que ela pediu, o HTML salva o que o aparelho
+  daemon não aplicou: a GTK salva o que o usuário pediu, o HTML salva o que o aparelho
   está mostrando.
 
 ### `SO_NO_HTML` — o HTML faz, e a GTK nunca fez
@@ -355,9 +355,8 @@ achado §5.4 da A-TELA-NOVA-ENTRA-NA-RÉGUA-DO-MAPA-01. Uma linha podia dizer
 CANAL embaixo dela só aciona num transporte. Os dois números concordavam consigo
 mesmos, e ninguém perguntava ao outro.
 
-**Ele INFORMA, nunca VETA.** `D-0609-O-MAPA-INFORMA-NUNCA-VETA`, palavra dela em
-06/09/2026: *"Esse mapa é funcional e real. tá desatualizado no sentido de não
-ter sido medido. foi e tudo funciona."* <!-- noqa-acento: citação literal -->
+**Ele INFORMA, nunca VETA.** `D-0609-O-MAPA-INFORMA-NUNCA-VETA`, palavra em
+06/09/2026
 Uma célula `nao-medido` vira **AVISO impresso**, e o `rc` continua ZERO. Quem a
 remede é a bancada, com o relatório de quem passou por ela
 (SPECS-A-PROCEDENCIA-01).
@@ -435,7 +434,7 @@ de atraso cada aba tem, que é o que não muda a cada cura.
    foram publicadas na madrugada de 04/09.
 
 O que o CSV **não** decide é a ordem. Ele diz onde estão os buracos, com
-endereço; qual se fecha primeiro é dela.
+endereço; qual se fecha primeiro é do usuário.
 
 ## Nota de verificação — 05/09/2026
 
@@ -487,7 +486,7 @@ que ninguém fez.
 **A régua de `DIFERENTE` que esta leva firmou:** ela exige que o lado HTML
 entregue a MESMA RESPOSTA por outro caminho, com endereço. Se a resposta não
 chega à tela, é `FALTA_NO_HTML` — e é por isso que a *linha da verdade* (56) e
-o *"Já movi — reexaminar"* (269) continuam `FALTA` mesmo sendo escolha dela: o
+o *"Já movi — reexaminar"* (269) continuam `FALTA` mesmo sendo escolha do usuário: o
 que elas não são é **dívida a pagar**, e isso o `porque` diz.
 
 ## Nota de verificação — 11/09/2026, a linha 384 e o fato que ela derrubou
@@ -499,13 +498,11 @@ do CSV** — `10-perfis` vai de `19 DIFER · 8 FALTA` para `20 · 7`, e a linha
 nenhuma linha virou `IGUAL`.
 
 **A razão não é uma cura de código — é um fato errado sendo substituído.** A
-leva de 11/09 tirou o quadro «Modo» do editor de Perfis por ordem dela e
+leva de 11/09 tirou o quadro «Modo» do editor de Perfis por ordem de produto e
 declarou, em três lugares, uma **«perda de capacidade»**. Quem derrubou a
 declaração foi **ELA**, no mesmo dia:
 
-> *"a informação que eu selecionar no modo ou mascara na aba jogar ao salvar o*  <!-- noqa-acento: citação literal -->
-> *perfil faz a mesma função que o modo tinha na aba perfil isso foi*  <!-- noqa-acento: citação literal -->
-> *implementado desde o inicio mas voltou e não deVEria ter ocorrido"*  <!-- noqa-acento: citação literal -->
+> **  <!-- noqa-acento: citação literal -->
 
 E o código concorda: `a01_jogar._gravar_o_modo_do_chip` → `_gravar_o_modo` →
 `interface/pacotes/perfil.gravar_o_modo_no_ativo` grava a seção `mode` do perfil
@@ -516,7 +513,7 @@ ativo **no clique**, sem passar pelo «Salvar Perfil». O quadro em Perfis era
 HTML entrega a MESMA RESPOSTA por outro caminho, com endereço. O que sobra de
 diferença é **LUGAR** (fileira de chips na Jogar, não quadro no editor de
 Perfis) e **ESCOPO** (só o perfil ATIVO; nunca `"none"`), e os dois são
-consequência de decisão dela — está escrito no `porque` da linha e no docstring
+consequência de decisão de produto — está escrito no `porque` da linha e no docstring
 de `gravar_o_modo_no_ativo`.
 
 **O SINAL TROCOU JUNTO, e não por conveniência:** `_mode_section_from_editor` é
@@ -537,7 +534,7 @@ de existir. A tabela acima foi **recontada do CSV**: `09-sistema` vai de
 `11 IGUAL · 7 SO_HTML · 29%` para `12 · 6 · 32%`, e `TODAS` de `143 · 59` para
 `144 · 58`.
 
-**A razão é decisão dela, e está escrita:** `docs/data/decisoes-de-produto.csv`, linha
+**A razão é decisão de produto, e está escrita:** `docs/data/decisoes-de-produto.csv`, linha
 `D-OS-PLUGINS-APARECEM-ONDE-AGEM` (26/08/2026) — *os plugins não ganham seção
 própria; a infraestrutura se mostra pelo efeito, não pelo nome*. O `porque` da
 linha guarda o veredito de antes, com a data.
@@ -578,9 +575,9 @@ alto-falante nunca acendeu.
 (o jogo vê o controle como)"** caiu de `IGUAL` para **`DIFERENTE`**, e a tabela
 acima foi **recontada do CSV**: `01-jogar` vai de `14 IGUAL · 22 DIFER · 33%` para
 `13 · 23 · 31%`, e `TODAS` de `145 · 160 · 37%` para `144 · 161 · 36%`. **A
-paridade desce um ponto, e é por decisão dela, não por defeito.**
+paridade desce um ponto, e é por decisão de produto, não por defeito.**
 
-**A razão:** a regra dela de 13/09 (`D-1309-O-MODO-E-A-BASE-E-A-MASCARA-VEM-POR-CIMA`
+**A razão:** a regra de 13/09 (`D-1309-O-MODO-E-A-BASE-E-A-MASCARA-VEM-POR-CIMA`
 em `docs/data/decisoes-de-produto.csv`) separa as duas camadas. Os chips «Sony
 DualSense» e «Xbox» escolhem o CAMINHO (`mode.caminho`), e a máscara é do cartão
 de cada controle, por `gamepad.mask.set`. A GTK continua com UM seletor de máscara
@@ -623,7 +620,7 @@ autoconferências de `aba01.py` e `aba02.py` recusam a marca de volta.
 foi **recontada do CSV**: `07-lancadores` vai de `15 IGUAL · 5 DIFER · 50%` para
 `14 · 6 · 47%`, e `TODAS` de `143 · 160` para `142 · 161`.
 
-**A razão:** o desenho da lista de exclusão, aprovado por ela, pôs o «Adicionar
+**A razão:** o desenho da lista de exclusão, aprovado pelo usuário, pôs o «Adicionar
 à lista de exclusão» no lugar do botão nos oito cartões — e a exclusão é o
 contrário da marca. A marca por jogo continua na interface nova pelo chip
 «Steam Input» da aba Jogar (`a01_jogar.modo_steam`), com o mesmo dono. As duas
@@ -639,7 +636,7 @@ funciona") passaram a ter o escopo do sinal em `a01_jogar.py`.
 — quantos jogadores voltaram, se a numeração compactou"** foi de `IGUAL` para
 **`DIFERENTE`**, e a tabela acima foi **recontada do CSV**: `01-jogar` vai de
 `12 IGUAL · 23 DIFER · 29%` para `11 · 24 · 26%`, e `TODAS` de `131 · 172` para
-`130 · 173`. **A paridade desce por decisão dela, não por defeito.**
+`130 · 173`. **A paridade desce por decisão de produto, não por defeito.**
 
 **A razão:** `D-2409-O-RECONECTAR-NAO-DIZ-NADA` — *«Nada: o número novo aparece
 no próprio cartão»*. A GTK diz no toast quantos jogadores voltaram e o que a
@@ -670,7 +667,7 @@ vai de `12 IGUAL · 4 SO_HTML · 32%` para `13 · 3 · 34%`, e `TODAS` de
 ## Nota de verificação — 26/09/2026, o escopo do microfone sai da aba Conexões
 
 `A-08-O-CHECKUP-ABSORVE-A-GESTAO-01`: o «Microfone e botões» saiu da linha do
-controle a pedido dela (repetia a aba Jogar/Controles), e com ele o escopo do
+controle a pedido (repetia a aba Jogar/Controles), e com ele o escopo do
 botão físico do microfone. A linha do CSV foi de `SO_NO_HTML` para **`IGUAL`**,
 pelo mesmo caminho da contagem do exame da 09: nenhum dos dois lados oferece o
 escopo nesta aba, e o sinal é a decisão escrita no pacote
@@ -681,8 +678,7 @@ vai de `16 IGUAL · 2 SO_HTML · 33%` para `17 · 1 · 35%`, e `TODAS` de
 ## Nota de verificação — 26/09/2026, a Gestão de Controles enxuga
 
 `D-2609-A-GESTAO-ENXUTA`. A linha **`08-conexoes` · "O carimbo 'Examinado há …'"**
-foi de `DIFERENTE` para **`FALTA_NO_HTML`**: o canto da seção saiu, a pedido
-dela. A bateria foi para o nome do cartão e a contagem ficou no topo da janela;
+foi de `DIFERENTE` para **`FALTA_NO_HTML`**: o canto da seção saiu, a pedido. A bateria foi para o nome do cartão e a contagem ficou no topo da janela;
 as duas seguem `DIFERENTE`, com o endereço novo. A tabela acima foi recontada do
 CSV: `08-conexoes` vai de `27 DIFER · 5 FALTA` para `26 · 6`, e `TODAS` de
 `173 · 35` para `172 · 36`.

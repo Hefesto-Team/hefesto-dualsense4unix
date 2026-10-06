@@ -3,7 +3,7 @@
 Os dois defeitos de tela medidos na noite de 18→19/08/2026, com DON'T SCREAM
 aberto:
 
-1. ela escolheu "Xbox 360" em "O jogo vê o controle como:", e a janela seguiu
+1. o usuário escolheu "Xbox 360" em "O jogo vê o controle como:", e a janela seguiu
    dizendo que estava tudo certo enquanto o aparelho continuava DualSense — o
    gate R-04 do daemon havia RECUSADO a troca. O rodapé chegou a anunciar
    desfecho de sucesso sobre a recusa, porque `set_gamepad_emulation` devolve o

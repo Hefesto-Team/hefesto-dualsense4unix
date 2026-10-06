@@ -206,7 +206,7 @@ def test_o_selo_segue_os_reparaveis_e_nao_os_faltantes(desenho):
 
 
 def test_o_nome_do_jogo_e_escapado(desenho):
-    """O rótulo vem do `appmanifest` DELA — é conteúdo de terceiro."""
+    """O rótulo vem do `appmanifest` DO USUÁRIO — é conteúdo de terceiro."""
     lida = desenho.Leitura(
         reparaveis=(("7", '<b>&"joguinho"', "nunca recebeu o atalho"),),
         instalados=1)
@@ -475,7 +475,7 @@ def test_localizar_este_lancador_abre_a_tela_de_registro(desenho):
 
     A `.tela-nova` desta casa aparece por `:target` (`monta.CSS_POPUP`), e **só
     uma âncora muda o fragmento** — um `<button>` com `data-gesto` manda o gesto
-    e não abre nada. O botão sairia da tela dela como um clique que grava a
+    e não abre nada. O botão sairia da tela do usuário como um clique que grava a
     intenção e não mostra onde digitar.
 
     ELE É COBRADO NOS SEIS, e não num: foi por ser escrito duas vezes que ele
@@ -504,14 +504,14 @@ def test_localizar_este_lancador_abre_a_tela_de_registro(desenho):
 
 
 def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
-    """A PALAVRA É DELA — 08/09/2026: *"Adicionar novo Lançador? Seria legal um"""
+    """A PALAVRA É DE PRODUTO — 08/09/2026: *"Adicionar novo Lançador? Seria legal um"""
     do_cartao = desenho.ADICIONAR_ROTULO
     global_ = desenho.ADICIONAR_NOVO_ROTULO
     assert do_cartao != global_, (
         f"os dois botões voltaram a dizer a mesma coisa ({do_cartao!r}): um é "
         f"«ele está aqui, te mostro onde» e o outro é «tem um que você não "
         f"conhece». Ela pediu um sinônimo justamente para separá-los.")
-    # aprovou: *"ok aprovadíssimo todas. Manda ver."*  # noqa-acento: citação dela
+    # aprovou: *"ok aprovadíssimo todas. Manda ver."*  # noqa-acento: citação
     assert do_cartao == "Localizar este lançador", (
         f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
         f"'Localizar este lançador' — a palavra do SELO daquele cartão")
@@ -692,7 +692,7 @@ _VAZIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
 
 
 def _como_o_dom_devolve(marcacao: str) -> str:
-    """Reserializa a marcação pelas regras que o WEBKIT DELA usa. É medida."""
+    """Reserializa a marcação pelas regras que o WEBKIT DO USUÁRIO usa. É medida."""
     from html.parser import HTMLParser
 
     def texto(s: str) -> str:
@@ -780,7 +780,7 @@ def test_os_jogos_dispensados_do_lembrete_aparecem_na_lista(desenho):
     GTK) e a LEITURA não tinha nenhuma: clicar produzia um silêncio permanente
     que ninguém podia consultar depois.
 
-    A LINHA GANHOU BOTÃO EM 02/09/2026, por decisão dela — e ele só pôde nascer
+    A LINHA GANHOU BOTÃO EM 02/09/2026, por decisão de produto — e ele só pôde nascer
     porque `launch_wrapper_dialog` ganhou o `remove_dismissed_appid` que lhe
     faltava. Esta régua guarda os dois lados: a linha tem de mostrar o botão, e
     o botão tem de apontar para um gesto com dono. Um `data-gesto` que ninguém
@@ -805,7 +805,7 @@ def test_voltar_a_perguntar_recusa_dizendo_quando_o_arquivo_nao_aceita(
     """Um clique que falha calado é o defeito mais caro desta casa.
 
     `add_dismissed_appid` engole a falha de propósito (roda no tique, e o pior
-    caso é o lembrete voltar uma vez). O `remove` roda no CLIQUE DELA: se ele
+    caso é o lembrete voltar uma vez). O `remove` roda no CLIQUE DO USUÁRIO: se ele
     engolisse, a linha continuaria na tela e o segundo clique pareceria o
     primeiro. Por isso ele devolve `bool` e o gesto levanta `RuntimeError`.
 
@@ -835,7 +835,7 @@ def test_a_ponte_confirmada_chega_ao_contador(desenho):
 
 def _disco_dublado(monkeypatch, *, dispensados=("4242",), pontes=3,
                    instalados=7):
-    """Todo o disco que `_ler_do_disco` toca, dublado — e nada da máquina dela.
+    """Todo o disco que `_ler_do_disco` toca, dublado — e nada da máquina do usuário.
 
     ELE EXISTE PORQUE AS DUAS RÉGUAS DE CIMA PROVAM O DESENHO, e não o
     CHAMADOR: `test_os_jogos_dispensados_do_lembrete_aparecem_na_lista` e
@@ -993,7 +993,7 @@ def test_a_steam_sem_procura_e_sem_biblioteca_nao_conta_como_encontrada(desenho)
 def test_a_steam_que_esta_aqui_continua_respondendo_pelo_censo(a07, desenho,
                                                                monkeypatch,
                                                                tmp_path):
-    """A MESA DELA não pode mudar: achada, o cartão volta a ser o de sempre."""
+    """A BANCADA não pode mudar: achada, o cartão volta a ser o de sempre."""
     _pastas_falsas(monkeypatch, tmp_path, "steam")
     lida = desenho.Leitura(
         com_wrapper=("1", "2"), instalados=2,
@@ -1064,7 +1064,7 @@ def test_o_texto_de_ajuda_nao_conta_controle_por_conta_propria():
     reescrevê-lo no tique. Um número fora de endereço é o número do DESENHO,
     congelado no HTML pelo `monta.CONECTADOS` do gerador.
 
-    MEDIDO NA JANELA DELA EM 03/09/2026, com um DualSense no cabo, antes da
+    MEDIDO NA JANELA DO USUÁRIO EM 03/09/2026, com um DualSense no cabo, antes da
     cura:
 
         cabeçalho   ``● 1 controle: 1 USB · 0 BT``   (lido do aparelho)
@@ -1107,7 +1107,7 @@ def _publicada(com_a_legenda: bool = False) -> str:
 
 
 def test_o_selo_do_nao_localizado_e_a_palavra_dela(desenho):
-    """A PALAVRA É DELA, e este é o ÚNICO lugar que a digita."""
+    """A PALAVRA É DE PRODUTO, e este é o ÚNICO lugar que a digita."""
     assert desenho.SELOS["off"] == "NÃO LOCALIZADO", (
         f"o selo do estado 'procurei e não achei' diz "
         f"{desenho.SELOS['off']!r}, e a palavra dela é 'NÃO LOCALIZADO'")
@@ -1126,7 +1126,7 @@ def test_a_palavra_do_selo_chega_a_pagina_publicada(desenho):
 
 
 def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
-    """A DECISÃO É DELA, E É A SEGUNDA — 08/09/2026, e ela desfaz a primeira."""
+    """A DECISÃO É DE PRODUTO, E É A SEGUNDA — 08/09/2026, e ela desfaz a primeira."""
     chaves = [x.chave for x in desenho.EMBUTIDOS]
     assert "epic" not in chaves, (
         f"a Epic voltou a ter cartão: {chaves}. Ela decidiu o contrário depois "
@@ -1472,7 +1472,7 @@ def test_o_tirar_daqui_alcanca_os_seis_cartoes(desenho):
 
 
 def test_o_nome_descartado_e_dito(a07, ctx, desenho, monkeypatch):
-    """A tela não come em silêncio o que ela digitou."""
+    """A tela não come em silêncio o que o usuário digitou."""
     p = _PonteQueAnota()
     a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": desenho.STEAM}, p)
     fora = a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
@@ -1586,10 +1586,9 @@ def _com_lar_de_mentira(monkeypatch, tmp_path):
 
 def test_o_seletor_grava_o_desktop_que_ela_apontou(a07, ctx, desenho,
                                                    tmp_path, monkeypatch):
-    """«Escolher o arquivo…» — decisão dela de 09/09/2026, a opção (C).
+    """«Escolher o arquivo…» — decisão de 09/09/2026, a opção (C).
 
-        "Ou no Máximo Localizar o lançador. aí eu mesmo
-         abro a tela e procuro o .desktop."
+        O usuário abre o seletor e procura o `.desktop` ele mesmo.
 
     O QUE ESTA RÉGUA PROVA, e é o caminho inteiro: o gesto abre o seletor com o
     filtro e a pasta de partida, resolve o que voltou nas MESMAS buscas do
@@ -1666,7 +1665,7 @@ def test_cancelar_o_seletor_nao_e_erro_nem_noticia(a07, ctx, desenho,
 
 def test_o_seletor_aceita_um_programa_do_path(a07, ctx, desenho,
                                               tmp_path, monkeypatch):
-    """O quarto caso medido: ela apontou um BINÁRIO, e não um atalho."""
+    """O quarto caso medido: o usuário apontou um BINÁRIO, e não um atalho."""
     _com_lar_de_mentira(monkeypatch, tmp_path)
     binario = tmp_path / "opt" / "Ryujinx"
     binario.parent.mkdir(parents=True, exist_ok=True)
@@ -1704,7 +1703,7 @@ _CONFISSOES = ("não tem por onde", "ainda não sei fazer", "por enquanto não d
 
 
 def test_a_recusa_do_registro_nunca_confessa_divida_nossa(a07, desenho):
-    """A TELA NÃO CONTA À USUÁRIA UM BURACO NOSSO — decisão dela, 07/09/2026."""
+    """A TELA NÃO CONTA À USUÁRIA UM BURACO NOSSO — decisão, 07/09/2026."""
     localizar = desenho.ADICIONAR_ROTULO
     tirar = desenho.acao_de_tirar(desenho.STEAM).rotulo
     achou = ("Abrir o lançador", "Criar perfil para um jogo")
@@ -1790,8 +1789,7 @@ def test_os_selos_de_uma_mesma_moldura_tem_a_mesma_cor(desenho):
 
 
 def test_a_lista_vazia_da_steam_nao_ocupa_um_pixel(desenho):
-    """*"isso na steam essa frase tem que sumir pra nivelarmos a altura do bloco
-    da styeam com demais."* — ela, 22/09/2026.
+    """** — ela, 22/09/2026.
 
     A lista vazia era a frase «Nada pendente, e você não tirou nem dispensou
     nenhum jogo.» embaixo de uma linha, e só o cartão da Steam pagava os 28 px.

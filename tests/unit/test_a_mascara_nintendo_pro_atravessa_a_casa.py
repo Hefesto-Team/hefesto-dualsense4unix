@@ -1,7 +1,6 @@
 """A máscara Nintendo Pro existe e ATRAVESSA a casa inteira (07/09/2026).
 
-Ordem dela: *"tem que mandar um agente construir só o do pro controller da
-Nintendo"*. A máscara é de EMULAÇÃO — o Hefesto faz o DualSense dela se
+ A máscara é de EMULAÇÃO — o Hefesto faz o DualSense do usuário se
 apresentar ao jogo como um Pro; não é suporte a aparelho Nintendo físico.
 
 O QUE ESTE PORTÃO EXISTE PARA IMPEDIR, e é o defeito que a sprint nomeou:

@@ -125,7 +125,7 @@ def _medir(*, com_camada: bool, tremer: bool) -> dict[str, Any]:
         return False
 
     def tremida() -> bool:
-        """A mão dela não fica parada: 1 px, como um dedo no rato."""
+        """A mão do usuário não fica parada: 1 px, como um dedo no rato."""
         fora["j"] = 1 - int(fora.get("j", 0))
         ponteiro.warp(tela, int(fora["px"]) + int(fora["j"]), int(fora["py"]))
         return bool(fora.get("tremendo"))

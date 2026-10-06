@@ -53,7 +53,7 @@ class TestOBotaoTrocouDeAtoNaTela:
 
 
 class TestOMudoNaoVIRAFALTADEVOZ:
-    """**21/09/2026, medido na mesa dela com os quatro na mão.**"""
+    """**21/09/2026, medido na bancada com os quatro na mão.**"""
 
     def _gesto(self):
         fonte = pathlib.Path(
@@ -128,7 +128,7 @@ class TestOLeitorLEOFORMATOQueOParserConhece:
         "\tDriver: PipeWire\n")
 
     def test_o_comando_pede_o_formato_curto(self):
-        """MORDIDA: tire o `"short"` do argv. Os quatro controles da mesa dela"""
+        """MORDIDA: tire o `"short"` do argv. Os quatro controles da bancada"""
         fonte = self.FONTE.read_text(encoding="utf-8")
         assert '["pactl", "list", "short", "sources"]' in fonte, (
             "o leitor voltou ao formato longo — `fontes_dualsense` não o "

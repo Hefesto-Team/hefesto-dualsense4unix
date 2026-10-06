@@ -45,7 +45,7 @@ def _mesa_dela() -> list[Profile]:
 
 class TestOTextoDaColuna:
     def test_nenhum_sempre_anuncia_disputa(self) -> None:
-        """Os quatro «Sempre» da mesa dela dizem só «Sempre»: ninguém vence sozinho."""
+        """Os quatro «Sempre» da bancada dizem só «Sempre»: ninguém vence sozinho."""
         perfis = _mesa_dela()
         for perfil in perfis:
             if perfil.match.type == "any":

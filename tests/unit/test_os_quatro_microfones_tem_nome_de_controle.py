@@ -1,10 +1,9 @@
-"""Os QUATRO microfones: um nó por controle, com o nome DELA — MIC-OS-QUATRO-01.
+"""Os QUATRO microfones: um nó por controle, com o nome DO USUÁRIO — MIC-OS-QUATRO-01.
 
-A palavra dela, 08/09/2026 à noite: *"o lance dos 4 mic virtuais via bt pra cada
-controle e cavbo"*.  <!-- noqa-acento: citação literal, palavra por palavra -->
+A palavra, 08/09/2026 à noite.  <!-- noqa-acento: citação literal, palavra por palavra -->
 
-E o NOME é decisão dela de 09/09/2026 (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
-MICROFONE-DO-CONTROLE-N`, palavra dela: *"4a"*): **«Microfone do Controle N»**,
+E o NOME é decisão de 09/09/2026 (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
+MICROFONE-DO-CONTROLE-N`, ): **«Microfone do Controle N»**,
 com o número do ASSENTO, como na tela.
 
 O QUE ESTE ARQUIVO MORDE, e os três são defeitos MEDIDOS nesta árvore
@@ -12,9 +11,9 @@ O QUE ESTE ARQUIVO MORDE, e os três são defeitos MEDIDOS nesta árvore
 
 1. **O rótulo dizia o TRANSPORTE e publicava o ENDEREÇO dela.** A ponte
    batizava o nó de ``Microfone DualSense BT (aa:bb:cc:…)`` — o MAC do
-   controle dela na lista de dispositivos de áudio de toda aplicação que abre
+   controle do usuário na lista de dispositivos de áudio de toda aplicação que abre
    um seletor de microfone.
-2. **A palavra dela sobre o microfone de um controle no CABO evaporava.** O
+2. **A palavra de produto sobre o microfone de um controle no CABO evaporava.** O
    supervisor lia só o rádio e tratava *"não está no rádio"* como *"saiu da
    mesa"*. Medido, com o registro em mãos: a palavra dura até a varredura
    seguinte — e `dizer_no_ar` acorda o laço, então "seguinte" é imediato.
@@ -23,7 +22,7 @@ O QUE ESTE ARQUIVO MORDE, e os três são defeitos MEDIDOS nesta árvore
    cabo a mesa nunca chega a QUATRO, e trocar o fio pelo rádio continua
    trocando o microfone de nome.
 
-**NADA AQUI FALA COM O PIPEWIRE DELA.** Nenhum `pactl` de verdade, nenhum
+**NADA AQUI FALA COM O PIPEWIRE DO USUÁRIO.** Nenhum `pactl` de verdade, nenhum
 módulo carregado, nenhum `parec`: os dois donos (`canal_do_microfone.abrir` e
 `fechar`) entram dublados, e o que se mede é quem chamou o quê, com que nome.
 
@@ -121,7 +120,7 @@ def test_o_rotulo_nunca_carrega_o_endereco_do_controle(numerador_limpo) -> None:
     **A MORDIDA:** devolva a f-string de antes de 09/09 —
     ``f"Microfone DualSense BT ({uniq})"`` — e esta régua reprova nomeando os
     dois defeitos que ela carregava: o endereço à mostra e a palavra do
-    transporte no lugar da palavra dela.
+    transporte no lugar da palavra de produto.
 
     A varredura é por PEDAÇO do endereço, e não pelo endereço inteiro: um
     rótulo com ``aabbcc000001`` (sem os dois-pontos) ou com só o rabo
@@ -274,7 +273,7 @@ def _com_uma_fonte(monkeypatch, fontes: list[str]) -> None:
 def test_sem_toque_dela_o_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """Um microfone por controle, sempre: a decisão dela de 02/10/2026.
+    """Um microfone por controle, sempre: a decisão de 02/10/2026.
 
     O rádio já erguia a ponte de todo controle; o cabo só erguia o canal de
     quem apertava o botão. MORDIDA: devolver o `_registro.abertos()` sozinho
@@ -345,7 +344,7 @@ def test_o_supervisor_do_cabo_nao_encosta_em_quem_esta_no_radio(  # type: ignore
 def test_o_canal_do_cabo_cai_quando_ela_desliga(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """A recusa dela derruba o canal — e o `parec` que lia o microfone dela."""
+    """A recusa dela derruba o canal — e o `parec` que lia o microfone do usuário."""
     bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())

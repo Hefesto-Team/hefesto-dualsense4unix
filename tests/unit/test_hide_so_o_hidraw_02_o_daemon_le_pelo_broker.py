@@ -150,7 +150,7 @@ class TestAPortaDoNoFechado:
             dev.close()
 
     def test_no_que_nao_e_dualsense_nunca_vai_ao_broker(self, mesa: Any) -> None:
-        """O teclado dela não é assunto do broker. A MORDIDA: tire o"""
+        """O teclado do usuário não é assunto do broker. A MORDIDA: tire o"""
         broker, _ = mesa
         with pytest.raises(PermissionError):
             er.abrir_input_device(NO_TECLADO)

@@ -95,7 +95,7 @@ def _daemon(transporte: str = "usb") -> Any:
 
 
 def _jogo_que_opina(d: Any, mascara: str) -> None:
-    """O Future Knight: o único perfil dela com máscara global."""
+    """O Future Knight: o único perfil do usuário com máscara global."""
     gp.start_gamepad_emulation(d, "dualsense", origin="profile")
     d.apply_profile_mode(ProfileModeConfig(kind="gamepad", gamepad_flavor=mascara), origin="manual")
     assert d._gamepad_device.flavor == mascara, "premissa: o jogo que opina veste a dele"
@@ -105,7 +105,7 @@ def _jogo_que_opina(d: Any, mascara: str) -> None:
 
 
 def _perfil_sem_modo() -> Profile:
-    """Um dos 23 perfis dela sem seção `mode`, com opinião (criteria)."""
+    """Um dos 23 perfis do usuário sem seção `mode`, com opinião (criteria)."""
     return Profile.model_validate(
         {
             "name": "Sackboy",
@@ -157,7 +157,7 @@ class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
         assert lc._mascara_da_maquina() == DaemonConfig.gamepad_flavor == "dualsense"
 
     def test_a_escolha_dela_para_a_maquina_vale(self) -> None:
-        """Ela escolheu Xbox para tudo (o flag, pela CLI): o jogo sem opinião"""
+        """O usuário escolheu Xbox para tudo (o flag, pela CLI): o jogo sem opinião"""
         save_gamepad_emulation(True, "xbox")
         d = _daemon()
         gp.start_gamepad_emulation(d, "dualsense", origin="profile")
@@ -182,7 +182,7 @@ class TestOsCartoesChegamDepoisDoModo:
         assert d._gamepad_device.flavor == "dualsense"
 
     def test_com_o_jogo_na_autoridade_espera_e_depois_converge(self) -> None:
-        """A R-04 inteira: ninguém recria o boneco na mão dela."""
+        """A R-04 inteira: ninguém recria o boneco na mão do usuário."""
         d = _daemon()
         _jogo_que_opina(d, "xbox")
         registro_de_mascaras().set_mask(MAC_P1, "dualsense")

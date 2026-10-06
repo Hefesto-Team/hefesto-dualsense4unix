@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""A POSIÇÃO DO PONTINHO — a queixa dela, e a régua que ela deixa.
+"""A POSIÇÃO DO PONTINHO — a queixa de uso, e a régua que ela deixa.
 
-A QUEIXA É DELA, 04/09/2026, com dois DualSense na mesa (um no cabo, um no
+A QUEIXA É DO USUÁRIO, 04/09/2026, com dois DualSense na mesa (um no cabo, um no
 rádio, os dois validados): *"não funciona o touch, analogicos"*.
 
 E ela estava certa nos dois. O DADO CHEGAVA INTEIRO — `daemon/sensor_hub.py`

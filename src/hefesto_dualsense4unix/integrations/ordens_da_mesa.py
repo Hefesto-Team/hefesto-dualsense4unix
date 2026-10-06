@@ -75,7 +75,7 @@ A DISCIPLINA — a mesma de ``exame_da_mesa.py`` e ``censo_do_barramento.py``
 O QUE NENHUMA ORDEM PODE DIZER
 -------------------------------
 
-1. que o aparelho de 5 Gbps está derrubando o Bluetooth dela — é hipótese, e a
+1. que o aparelho de 5 Gbps está derrubando o Bluetooth do usuário — é hipótese, e a
    medição que a fecharia não foi feita;
 2. **"Wi-Fi"**, enquanto a classe do aparelho for ``ff`` e ela não tiver
    declarado o que é. O kernel não classifica, e o ``product`` dizer
@@ -310,7 +310,7 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
 
 
 def dois_radios_colados(leitura: Leitura) -> Ordem | None:
-    """R2 — duas entradas coladas NO DESENHO DELA, as duas irradiando."""
+    """R2 — duas entradas coladas NO DESENHO DO USUÁRIO, as duas irradiando."""
     acusados = [
         (primeira, segunda)
         for primeira, segunda in leitura.vizinhas
@@ -568,7 +568,7 @@ def ordens_novas(
     """As ordens que ela ainda não dispensou **neste arranjo**.
 
     ``dispensadas`` é ``{chave da regra: arranjo dispensado}``. A chave do
-    dispensado é o ARRANJO, e não a recomendação: a dispensa vale para o que ela
+    dispensado é o ARRANJO, e não a recomendação: a dispensa vale para o que o usuário
     viu, e se ela mudar os cabos e a mesma regra disparar com um arranjo novo, é
     fato novo e a ordem volta. Chavear só pelo slug faria a decisão de ontem
     calar uma medição de hoje.
@@ -599,11 +599,11 @@ def ordens_caladas(
     """As ordens que a dispensa dela está segurando — e que a tela CONTA.
 
     Dispensa que some sem deixar marca é a mesma classe de defeito do card que
-    some: ela deixaria de saber que existe uma decisão dela ali.
+    some: ela deixaria de saber que existe uma decisão de produto ali.
 
     O `ordem.arranjo and` é a outra metade da cura de 06/09/2026 — ver
     :func:`ordens_novas`. Sem ele esta contagem incluiria as ordens vivas de
-    arranjo vazio, e a tela diria que há uma decisão dela onde não há nenhuma.
+    arranjo vazio, e a tela diria que há uma decisão de produto onde não há nenhuma.
     """
     return tuple(
         ordem

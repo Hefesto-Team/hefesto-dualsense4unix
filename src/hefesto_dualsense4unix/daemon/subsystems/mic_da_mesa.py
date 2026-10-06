@@ -20,9 +20,9 @@ borda. **A identidade vem do fd, não do report** — e é isso que
 **O GESTO É O BOTÃO, E NÃO O BIT DE MUDO — O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01
 (28/09/2026).** Até então a borda era a virada do bit `STATUS_MIC_MUDO` de
 `status[1]`, a CONSEQUÊNCIA de um aperto — e esse bit vira com qualquer um que
-escreva o mudo no firmware. Na sessão dela de 28/09 o branco teve três bordas
+escreva o mudo no firmware. Na sessão do usuário de 28/09 o branco teve três bordas
 que ninguém deu, e cada uma elegeu o microfone da máquina e gravou o perfil
-dela (*«eu não apertei o botão do Mic»*). O porquê inteiro está em
+do usuário. O porquê inteiro está em
 `core/backend_pydualsense._registrar_borda_do_mic`.
 
 AS DUAS GUARDAS SÃO REUSADAS, NÃO REINVENTADAS. O sossego
@@ -99,7 +99,7 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
     Este laço **não escreve nada**: ele só dá endereço ao gesto. Quem elege é
     `integrations/eleicao_de_microfone.py` e quem acende é
     `backend.set_mic_led(..., uniq=)` — separados de propósito, porque a
-    eleição toca no áudio da máquina dela e tem de poder ser recusada sem que
+    eleição toca no áudio da máquina do usuário e tem de poder ser recusada sem que
     a leitura do gesto se perca.
 
     A PRIMEIRA VARREDURA NÃO DISPARA NADA, e isso é a carência: quando o laço

@@ -266,7 +266,7 @@ class TestATabelaEGeradaDoDado:
 
 
 class TestODocumentoDeProvenienciaSegueVazio:
-    """R3 na direção contrária: nenhum valor pode ter entrado sem a mão dela."""
+    """R3 na direção contrária: nenhum valor pode ter entrado sem a mão do usuário."""
 
     def test_curvas_proprias_md_nao_tem_tabela_de_valores(self) -> None:
         """Se alguém colar uma curva no documento, este portão avisa."""

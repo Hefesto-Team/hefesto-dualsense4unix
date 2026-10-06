@@ -43,7 +43,7 @@ GL = monta_.GLIFO_DA_SECAO
 CSS = CSS_GLIFO + """
   /* ---------- Gatilhos · a mesa de quatro ----------
      UMA GRADE SÓ: uma coluna de rótulos e UMA COLUNA POR CONTROLE da `MESA`.
-     Decisão dela, 28/08: "os quatro lado a lado, sempre visíveis", e a fita
+     Decisão, 28/08: "os quatro lado a lado, sempre visíveis", e a fita
      esmaecida — cada coluna é o seu próprio alvo, e um chip que não aponta para
      nada seria escolha falsa.
 
@@ -80,7 +80,7 @@ CSS = CSS_GLIFO + """
      o Python usa em `glifo(tam=GL)`. Escrito duas vezes, ele diverge no dia em
      que alguém mudar um dos dois — é a cicatriz das cores do plástico. */
   /* ---------- A GRADE É UMA SÓ, E AS COLUNAS SÃO `subgrid` ----------
-     DECISÃO DELA, 02/09/2026: *"os ajustes viram lista e a caixa acompanha o
+     DECISÃO, 02/09/2026: *"os ajustes viram lista e a caixa acompanha o
      modo. A aba passa a rolar nos modos grandes, e isso é aceito. A tela nunca
      esconde o que está gravado no disco."*
 
@@ -120,10 +120,7 @@ CSS = CSS_GLIFO + """
                        var(--r-modo) var(--r-pronto)
                        var(--t-aj-d) var(--r-acao)}
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
-     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
-     nome da linha e a divisória entre eles tem que estar clara. pra todas as
-     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
      A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
      moldura do quadro já existe. */
   /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
@@ -141,14 +138,12 @@ CSS = CSS_GLIFO + """
      24px antes da divisa. A célula de baixo não recorta nada, e o traço
      cai no mesmo lugar: entre uma linha e a outra. */
   /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026, e é a cura que
-     a Vibração já tinha e esta aba não. Pedido dela: *"lá precisa de respiro em
-     tudo (…) as bordas das 3 páginas tão sobrando de um jeito feio e tão sem dar
-     respiro."*
+     a Vibração já tinha e esta aba não.
 
      MEDIDO ANTES DA CURA: o respiro das células desta aba era **0px/0px**, e a
      divisória ficava em `top:0` — encostada no conteúdo de cima, com o vão
      INTEIRO embaixo dela. O olho lê isso como linha grudada em cima e buraco
-     embaixo, que é exatamente o "sobrando e sem respiro" que ela viu. A hipótese
+     embaixo, que é exatamente o "sobrando e sem respiro" que o usuário viu. A hipótese
      da lista dela estava certa: *"o problema não era só contraste — é respiro"*.
 
      CUSTO DE ALTURA: ZERO. `top:-var(--r-ar)` só muda DE QUE LADO da linha o vão
@@ -170,15 +165,14 @@ CSS = CSS_GLIFO + """
      de célula acima ele desenhava a SEGUNDA linha, 10px abaixo da primeira. */
 
   .duas-colunas > div{display:grid;grid-row:1/-1;grid-template-rows:subgrid}
-  /* a barra vertical entre blocos irmãos — pedido dela. Ela mora na COLUNA do
+  /* a barra vertical entre blocos irmãos — pedido. Ela mora na COLUNA do
      controle, e não na de rótulos: é o rótulo que serve as quatro. */
   .duas-colunas .ctrl{border-left:1px solid var(--linha);padding:0 12px 0 13px}
   /* O RÓTULO OCUPA A ALTURA INTEIRA DA SUA LINHA, e o texto fica centrado
      dentro dele. Sem isto o rótulo da última linha acaba acima dos botões que
      ele nomeia, e a régua lê — com razão — um vão entre as colunas. */
   .duas-colunas .rotulos > *{display:flex;flex-direction:column;justify-content:center}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido dela: *"no nome das
-     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026,  Encostado na divisa, o rótulo fica
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
@@ -206,19 +200,18 @@ CSS = CSS_GLIFO + """
   .duas-colunas .rotulos > .rot-r2-1{grid-area:6/2}
   .duas-colunas .rotulos > .rot-r2-2{grid-area:7/2}
   .duas-colunas .rotulos > .rot-r2-3{grid-area:8/2}
-  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão dela, 31/08/2026: *"o l2 e o r2 tem
-     que tá centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
+  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão, 31/08/2026
 
      EU TINHA ESCRITO O CONTRÁRIO AQUI, e o argumento era que cabeçalho encosta
-     no que titula. Ela olhou a foto e decidiu o oposto — e a decisão é dela: um
+     no que titula. O usuário olhou a foto e decidiu o oposto — e a decisão é de produto: um
      glifo que titula TRÊS linhas, preso na primeira, lê como se fosse só dela.
      No meio, ele pertence às três. */
   .duas-colunas .rotulos > .sec-glifo{display:flex;align-items:center;
              justify-content:center}
-  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+  /* O RÓTULO ALINHA À ESQUERDA — decisão, 31/08/2026: *"alinha a esquerda a
      primeira coluna."*
 
-     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     E ELA REVOGA A DECISÃO DE PRODUTO MESMA de 30/08 (*"no nome das linhas deixa
      alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
      vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
      o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
@@ -237,8 +230,8 @@ CSS = CSS_GLIFO + """
      mais largo que "direito" (40,92px). Com o par glifo+palavra encostado na
      divisa direita, quem manda no x do glifo é a largura da PALAVRA, e as duas
      palavras não têm a mesma largura. Numa coluna de rótulos isso salta aos
-     olhos, e ela viu na foto.
-     A CURA NÃO DESFAZ O PEDIDO DELA: o par glifo+palavra deixa de ser uma caixa
+     olhos, e o usuário viu na foto.
+     A CURA NÃO DESFAZ O PEDIDO: o par glifo+palavra deixa de ser uma caixa
      que ENCOLHE até o texto e passa a ocupar uma TRILHA da grade, larga o
      bastante para o maior dos dois. A coluna de rótulos ganha duas trilhas —
      [1fr elástico][o par] —, e a segunda é COMPARTILHADA pela linha do L2 e pela
@@ -252,7 +245,7 @@ CSS = CSS_GLIFO + """
      e isso é inevitável: palavras de larguras diferentes, encostadas à direita,
      com o glifo no mesmo x. O que se escolhe é onde a diferença aparece, e ela
      aparece no vão interno em vez de aparecer na coluna de glifos, que é o que
-     ela viu.
+     o usuário viu.
      As linhas sem glifo atravessam as duas trilhas (`grid-column:1/-1`) e
      continuam encostadas na divisa — as divisórias medem os mesmos 404→532 de
      antes, conferido célula a célula.
@@ -271,10 +264,10 @@ CSS = CSS_GLIFO + """
   .duas-colunas .rotulos > *:has(.gl) > .sec-rot{grid-column:2;
     justify-content:space-between}
   /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     PRIMEIRA LETRA, e o usuário confirmou: *"a maiúscula a regra é sobre a primeira
      letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
      uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     o usuário apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
      é a forma mais difícil de ler que existe.
      O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
      O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
@@ -286,8 +279,7 @@ CSS = CSS_GLIFO + """
      ABAIXO da última barra do P3 — nomeava de baixo uma lista que começa em
      cima. Os 5px são o que põe a linha de 11px no centro da primeira barra
      (82px / 4 = 20,5px de altura por barra). */
-  /* O `.no-topo` SAIU — 30/08/2026, pedido dela: *"centraliza os nomes dentro
-     das distâncias verticais de cada linha"*. Ele prendia "Ajustes" no alto de
+  /* O `.no-topo` SAIU — 30/08/2026,  Ele prendia "Ajustes" no alto de
      uma célula de 92px, e o nome ficava a 40px do conteúdo que nomeia. Com o
      centro, ele cai na altura do bloco — e é a mesma regra que as outras seis
      linhas da coluna já seguiam. */
@@ -307,14 +299,12 @@ CSS = CSS_GLIFO + """
   /* O CHIP DO CONTROLE é o mesmo chip da fita, com a borda na cor do plástico —
      é como ela sabe de quem é a coluna (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Ele
      NÃO acende: aqui ele não é escolha, é cabeçalho. */
-  /* O NOME DA COLUNA FICA CENTRADO — decisão dela, 31/08/2026: *"temos que
-     centralizar o nome das colunas dos controles, ou então colocarmos os SVG de
-     cada controle ao lado direito do nome."*
+  /* O NOME DA COLUNA FICA CENTRADO — decisão, 31/08/2026
 
      ESCOLHI CENTRALIZAR, e a razão é orçamento: o chip mede 126px numa coluna de
      232, então centrá-lo custa ZERO. O SVG ao lado pediria altura que a linha do
      nome não tem — ela é `--r-nome`, 24px, e um desenho de 24px de altura é o
-     mesmo caso das lâmpadas do jogador que ela mandou sair dos desenhos
+     mesmo caso das lâmpadas do jogador que o usuário mandou sair dos desenhos
      pequenos: não é desenho apagado, é desenho que não cabe. Para caber, a linha
      iria a 40px e comeria 16 dos 24px de folga que a grade tem.
      Se ela quiser o SVG, o preço está aqui e é dela a escolha. */
@@ -335,8 +325,7 @@ CSS = CSS_GLIFO + """
   /* O SELETOR DOS 19 MODOS. Era uma grade de 19 botões de 172px, e com quatro
      controles na tela ela não existe mais: a coluna de um controle mede 220px de
      conteúdo, e a grade pediria 19 fileiras — 566px numa coluna que tem 447px
-     inteiros. Vira o mesmo `<select>` que a Navegação usa nos campos dela
-     ("quando eu falei de drop in eu tava falando de todos os campos"), com as
+     inteiros. Vira o mesmo `<select>` que a Navegação usa nos campos dela, com as
      19 descrições no `title` de cada opção: nenhum modo e nenhuma frase saiu. */
   select.modo,select.pronto{
     width:100%;padding:0 9px;border-radius:6px;font-size:11.5px;
@@ -366,10 +355,7 @@ CSS = CSS_GLIFO + """
   .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
 
   /* ---------- O ACORDEÃO DOS AJUSTES — ROLAGEM-01, 09/09/2026 ----------
-     Proposta DELA, 08/09, olhando o produto instalado e maximizado: *"E tava
-     pensando pra gatilhos talvez fosse interessante colocar a seção do r2 e l2
-     dentros de blocos de expansão igual fizemos na aba controles o que vc
-     acha?"*  <!-- noqa-acento: citação literal, palavra por palavra -->
+     Proposta DO USUÁRIO, 08/09, olhando o produto instalado e maximizado
 
      A CAUSA ESTÁ MEDIDA, e não era a `.janela` (775/775 nas dez): era o
      `DIV.miolo`, 863 contra uma caixa de 564. Com os quatro na mesa e o dado
@@ -425,7 +411,7 @@ CSS = CSS_GLIFO + """
   body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3::before{display:none}
 
   /* O GLIFO DA SEÇÃO É O QUE SE CLICA. Ele já era o cabeçalho das três linhas
-     (decisão dela de 31/08: *"o L2 e o R2 deveriam controlar a seção"*) — agora
+     () — agora
      ele controla mesmo. São DOIS `<label>` sobrepostos, e só um está visível:
      o de abrir aponta para o rádio da seção, o de fechar aponta para o rádio
      `#dobra-nenhum`. Com um `<label>` só não haveria como FECHAR sem abrir o
@@ -448,7 +434,7 @@ CSS = CSS_GLIFO + """
      seguida de dígitos de 0 a 7 é uma fuga OCTAL: o que o gerador escrevia
      virava o byte 0x15 mais as duas letras que sobravam, e a tela mostrava o
      retângulo de glifo faltando ao lado do L2 e do R2 — fotografado no produto
-     publicado, com a mesa dela. O navegador nunca viu fuga nenhuma.
+     publicado, com a bancada. O navegador nunca viu fuga nenhuma.
 
      O RESTO DA CASA JÁ ESCREVIA ASSIM (`topo.html`, `aba08.py`): o caractere
      cru atravessa Python e CSS sem quem o interprete no meio. */
@@ -466,7 +452,7 @@ CSS = CSS_GLIFO + """
   .ajustes-vazio{grid-row:1 / span 2;font-size:11.5px;color:var(--comment);
                  font-style:italic;display:flex;align-items:center}
   /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
-     Fotografada a aba com a mesa dela (dois controles), as colunas P3 e P4
+     Fotografada a aba com a bancada (dois controles), as colunas P3 e P4
      diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
      "Guardar" e "Em todos" ABERTOS. Escolher `Rígido` num lugar onde não há
      aparelho é um clique que só pode terminar em recusa — e um botão que
@@ -475,7 +461,7 @@ CSS = CSS_GLIFO + """
      O SELETOR É O `data-conectado`, e não a classe `off`, porque ele é o que o
      PILOTO mantém vivo: `hefesto_vivo.py:84-91` põe `data-conectado="nao"`
      em todo lugar que a mesa não tem, a cada tique. Assim a inércia acompanha
-     a mesa DELA — um controle ligado no P3 devolve a coluna sem tocar em CSS —
+     a bancada — um controle ligado no P3 devolve a coluna sem tocar em CSS —
      em vez de congelar no estado que o gerador viu.
 
      `pointer-events` PARA O RATO; o `disabled` teria de vir do piloto, que é de
@@ -486,7 +472,7 @@ CSS = CSS_GLIFO + """
   .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
 
   /* E ELE TAMBÉM TEM DE PARECER QUE NÃO SE CLICA — 03/09/2026. A trava acima
-     era só `pointer-events`, que é INVISÍVEL: fotografada a aba com a mesa dela
+     era só `pointer-events`, que é INVISÍVEL: fotografada a aba com a bancada
      (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
      que funcionam. Medido nos pixels da foto do produto:
 
@@ -530,9 +516,7 @@ CSS = CSS_GLIFO + """
      escreveu. Aqui ele fica na coluna de quem ele guarda. */
   .duas-colunas .ctrl .btn{width:100%;font-size:11.5px;padding:0 6px}
 
-  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ----------
-     *"Isso é pra quando o user salva algum efeito. É assim que tem que
-     aparecer. O nome que o user deixar lá. Ali é só exemplo."*
+  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ---------
 
      "Meus efeitos" existia no campo de escolha com dois nomes de exemplo e sem
      dono nenhum — não havia, em todo o `src/`, onde guardar um efeito com nome.
@@ -566,7 +550,7 @@ CSS = CSS_GLIFO + """
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
     pointer-events:none;opacity:.55}
 
-  /* O REENVIO SAIU DA FAIXA — 06/09/2026, decisão dela. As duas regras que
+  /* O REENVIO SAIU DA FAIXA — 06/09/2026, decisão de produto. As duas regras que
      vestiam o botão (a largura do glifo e a trava do lugar vazio) saíram com
      ele: folha que veste um elemento que ninguém emite é peso que envelhece
      calado. A razão da saída, e o que ainda espera o `--publicar 03`, estão no
@@ -696,7 +680,7 @@ def bloco(lado, sigla, modo, pronto, ajustes):
     alturas diferentes, porque cada uma vale o maior modo que está NELA.
 
     A CAIXA DE AJUSTES É MONTADA PELO PACOTE, e não aqui — 02/09/2026. Ela era
-    escrita nesta função e outra vez do lado do produto; com a decisão dela de
+    escrita nesta função e outra vez do lado do produto; com a decisão de produto de
     que *"a caixa acompanha o modo"*, o produto passou a trocá-la INTEIRA a cada
     tique, e duas marcações para o mesmo desenho seriam duas verdades. O dono é
     `pacotes.a03_gatilhos.html_dos_ajustes`; esta linha só entrega a cena.
@@ -739,7 +723,7 @@ def bloco(lado, sigla, modo, pronto, ajustes):
 def _chip(c):
     """O cabeçalho da coluna. A BORDA DE COR SÓ SAI PARA QUEM ESTÁ NA MESA.
 
-    Decisão dela, 31/08/2026: *"os demais 3 e o 4 ficam lá com os espaços mas
+    Decisão, 31/08/2026: *"os demais 3 e o 4 ficam lá com os espaços mas
     tudo com Desligado e Nenhum, **fora a borda do P1 e P2**."*
 
     A borda desta aba é o `D-A-BORDA-E-A-IDENTIDADE-DA-PECA`: ela é como se sabe
@@ -859,7 +843,7 @@ DICA_DE_FECHAR = "Fecha os ajustes."
 ROTULOS = f'''        <div class="rotulos">
           <div class="rot-linha-1"><span class="sec-rot">Controle</span></div>
 
-          <!-- O L2 E O R2 TITULAM A SEÇÃO — decisão dela, 31/08/2026: *"o L2 e o
+          <!-- O L2 E O R2 TITULAM A SEÇÃO — decisão, 31/08/2026: *"o L2 e o
                R2 deveriam controlar a seção e não ficar do lado esquerdo de
                gatilho esquerdo ou direito."*
 
@@ -1081,7 +1065,7 @@ def _enderecos_de_cada_coluna(corpo):
 
 
 def _conferir(doc):
-    """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA."""
+    """As decisões de 31/08 nesta aba, conferidas NA SAÍDA."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
     if len(corpo) < 2000:
@@ -1103,7 +1087,6 @@ def _conferir(doc):
            f"os chips sem cor do plástico não são {len(vazios)}")
     exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
            "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
-    #    diferente. (…) nada hardcoded. eu quero que cada user ao usar seu  # noqa-acento: citação literal
     #    * o do EMBRULHO (`data-campo="plastico"` + alvo `plastico`) é o da COR.
     #      É o único alvo do piloto que escreve `--plastico`, e ele vale para a
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == len(MESA),
@@ -1241,7 +1224,7 @@ def _conferir(doc):
            "a trava do lugar vazio sumiu do CSS — as colunas sem controle "
            "voltam a aceitar clique que só pode terminar em recusa")
 
-    #    DualSense dela na mesa: o daemon publica quatro, a carga da aba chega
+    #    DualSense do usuário na mesa: o daemon publica quatro, a carga da aba chega
     _por_coluna = _enderecos_de_cada_coluna(corpo)
     exigir(len(_por_coluna) == len(MESA),
            f"a régua achou {len(_por_coluna)} colunas e a `MESA` tem "

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""a_captura_armada_do_som_no_radio.py — o instrumento que espera o som dela voltar.
+"""a_captura_armada_do_som_no_radio.py — o instrumento que espera o som do usuário voltar.
 
 A PERGUNTA QUE ELE EXISTE PARA RESPONDER, E ELA ESTÁ ABERTA HÁ VINTE DIAS
 --------------------------------------------------------------------------
@@ -30,11 +30,11 @@ evento. Então ele grava tudo o tempo todo e deixa **ela** dizer quando:
 
 **POR QUE O BOTÃO DE MUDO, e a escolha é sobre o risco, não sobre elegância.**
 Ela tem UMA tela e quatro aparelhos na mesa; o marcador tem de ser algo que ela
-alcance sem tirar os olhos da bancada e que **não mexa na máquina dela**:
+alcance sem tirar os olhos da bancada e que **não mexa na máquina do usuário**:
 
 * **o touchpad** seria o marcador óbvio (grande, fácil de acertar no escuro) e
-  está DESCARTADO: clicar nele é um clique de mouse na tela dela, e um clique
-  cego já desfez configuração dela nesta casa;
+  está DESCARTADO: clicar nele é um clique de mouse na tela do usuário, e um clique
+  cego já desfez configuração do usuário nesta casa;
 * **o botão PS** dispara ``ps_button_action_steam`` — o daemon tentaria abrir a
   Steam a cada marca;
 * **o mudo do microfone** muda um bit do firmware, é reversível apertando de
@@ -69,7 +69,7 @@ controlador — o último ponto antes do ar.
 O QUE ELE ESCREVE NO APARELHO: **NADA**
 ----------------------------------------
 Nem um byte. Ele abre o hidraw **em leitura**, e o ``btmon`` é passivo. Não
-reinicia o daemon, não toca no som dela, não abre janela. As únicas escritas
+reinicia o daemon, não toca no som do usuário, não abre janela. As únicas escritas
 que a captura pode ver são as do PRODUTO, em regime.
 
 O PRIVILÉGIO, E A DEGRADAÇÃO HONESTA

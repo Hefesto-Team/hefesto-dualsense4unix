@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """A RÉGUA DA LARGURA: o desenho acompanha a janela, até um teto.
 
-DECISÃO DELA, 08/09/2026, com o produto instalado e os quatro DualSense na mesa.
-O que ela disse foi o sintoma: *"o background fica completamente preto"*.
+DECISÃO, 08/09/2026, com o produto instalado e os quatro DualSense na mesa.
+O que o usuário disse foi o sintoma: *"o background fica completamente preto"*.
 
 MEDIDO, NÃO ERA FALTA DE FUNDO. O `body` do `topo.html` já pinta `#11121a`; o
 que ela via era a cor da casa, só que MUITA — a `.janela` parava em 1180px
 enquanto a janela maximizada tem ~1900, deixando ~360px de casa de cada lado. A
-recomendação foi levada a ela e ela aprovou: *"eu confio em vc, manda ver"*.
+recomendação foi levada a ela e o usuário aprovou.
 
 O QUE ESTA RÉGUA GUARDA, e o que ela deliberadamente NÃO guarda
 ----------------------------------------------------------------

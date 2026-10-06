@@ -33,7 +33,7 @@ AS TRÊS PONTAS QUE ESTE PORTÃO AMARRA
 3. a régua única de `scripts/identidade_do_vpad.py`.
 Renomear qualquer uma das três sem as outras reprova.
 
-A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório do agente E1.
+A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório da mordida E1.
 """
 from __future__ import annotations
 

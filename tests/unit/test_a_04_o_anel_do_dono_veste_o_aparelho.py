@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """A COR DO PLÁSTICO DA 04 NÃO SE CRAVA — nem no anel, nem no antes/depois.
 
-A LEI, e ela é dela (03/09/2026):
+A LEI, e é do usuário (03/09/2026):
 
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho.
-     nada hardcoded. eu quero que cada user ao usar seu controle se toque disso
-     que o app se adaptou ao controle dele"
 
 O DESENHO GRANDE já vestia o aparelho desde 03/09 de manhã — o `data-colorway`
 com o alvo `atributo`, e a folha das cores com os vinte e oito modelos do mapa

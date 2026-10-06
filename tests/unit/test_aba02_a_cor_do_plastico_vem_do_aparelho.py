@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """A COR DO PLÁSTICO DA ABA 02 É A DO APARELHO, EM TODOS OS ASSENTOS — 03/09/2026.
 
-A LEI É DELA:
-
-    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded. (…) eu quero que cada user ao usar seu controle se
-    toque disso que o app se adaptou ao controle dele"*
+A LEI É DO USUÁRIO
 
 O DEFEITO QUE ESTE ARQUIVO FECHA NÃO É "a cor está cravada" — esse já tinha sido
 curado em 03/09 às 01h31, e o teste irmão
@@ -14,7 +9,7 @@ curado em 03/09 às 01h31, e o teste irmão
 CURA**, e ele só aparece quando a mesa viva é menor que a mesa do desenho.
 
 A CURA DE 01h31 pôs DUAS folhas no fim do `<head>`: a do desenho, com os dois
-assentos que ela aprovou, e uma vazia por cima, endereçada, onde o produto
+assentos que o usuário aprovou, e uma vazia por cima, endereçada, onde o produto
 escrevia o que leu. Duas folhas só se sobrepõem no assento que a SEGUNDA nomeia.
 
 MEDIDO NO WEBKITGTK DESTA MÁQUINA — o motor da janela dela —, com a página da
@@ -28,14 +23,14 @@ que ``folha_do_plastico`` monta para **um** controle na mesa (P1 White):
                 onde não há controle nenhum
 
 O p2 ficava **Starlight Blue** — a cor do desenho, num lugar vazio. Com um
-controle no cabo e o outro desligado, é exatamente a mentira que a lei dela veio
+controle no cabo e o outro desligado, é exatamente a mentira que a lei de produto veio
 matar, e ela sobrevivia a `check_identidade_vem_de_cima` (que não olha dentro de
 `<style>`) e à régua do mockup (que não enumera folha de estilo).
 
 A CURA É ESTRUTURAL, e é por isso que ela se testa sem abrir navegador: **uma
 folha só**, endereçada, com `data-hef-alvo="html"`, que o produto TROCA INTEIRA.
 O que a troca não escreve deixa de existir — não sobra para o desenho. E o
-:data:`PISO` é a primeira regra dela, porque `.ctl{border:2px solid
+:data:`PISO` é a primeira regra de produto, porque `.ctl{border:2px solid
 var(--plastico)}` e uma `var()` sem valor **invalida a declaração inteira**: sem
 o piso, o assento que a mesa viva não nomeia perderia a borda em vez de ficar
 neutro (a lição está medida no comentário do `.ctl.off`, em `aba02.py`).
@@ -194,7 +189,7 @@ def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
 
 
 def test_a_bancada_mostra_o_desenho_que_ela_aprovou(doc):
-    """Sem daemon, a página é a bancada: a folha nasce com o que ela aprovou."""
+    """Sem daemon, a página é a bancada: a folha nasce com o que o usuário aprovou."""
     assert _cor_do_assento(doc, "p1") == DO_DESENHO[0]
     assert _cor_do_assento(doc, "p2") == DO_DESENHO[1]
 
@@ -215,7 +210,7 @@ def test_nenhum_assento_fica_sem_cor_definida(doc, a02):
 
 
 def test_a_mesa_dela_de_hoje_chega_inteira_a_tela(doc, a02):
-    """P1 White no cabo, P2 Galactic Purple no rádio — os dois aparelhos dela."""
+    """P1 White no cabo, P2 Galactic Purple no rádio — os dois aparelhos do usuário."""
     troca = a02.folha_do_plastico([
         {"pref": "p1", "cor": "white", "nome": "White"},
         {"pref": "p2", "cor": "galactic-purple", "nome": "Galactic Purple"},
@@ -269,13 +264,13 @@ def _casca_do_mapa() -> dict[str, str]:
 
 
 def test_o_mapa_dela_tem_vinte_e_oito_modelos():
-    """O número da lei dela. Se ele mudar, tudo abaixo tem de ser relido."""
+    """O número da lei de produto. Se ele mudar, tudo abaixo tem de ser relido."""
     assert len(_modelos_do_mapa()) == 28
 
 
 @pytest.mark.parametrize("slug", sorted(_casca_do_mapa()))
 def test_todo_modelo_do_mapa_dela_vira_borda(a02, slug):
-    """A LEI DELA, medida modelo a modelo: *"nada hardcoded"*.
+    """A LEI DE PRODUTO, medida modelo a modelo: *"nada hardcoded"*.
 
     A pergunta é feita com o SLUG — o `id` da linha dela, que é o que
     `mesa_viva.mesa_do_estado` põe em `cor` —, e não com o nome de tela. Perguntar
@@ -286,7 +281,7 @@ def test_todo_modelo_do_mapa_dela_vira_borda(a02, slug):
     dos três Chroma, de Ghost of Yōtei, Marathon, Genshin Impact e 007 First
     Light. A folha os pinta com `url(#hachura-sem-hex)`, que numa **borda** não é
     hachura — é declaração inválida, e a borda SOME. O neutro é o que a regra
-    dela manda: campo sem informação não mostra nada.
+    de produto manda: campo sem informação não mostra nada.
     """
     medida = _casca_do_mapa()[slug]
     borda = a02.cor_da_borda(slug)
@@ -300,7 +295,7 @@ def test_todo_modelo_do_mapa_dela_vira_borda(a02, slug):
 
 
 def test_a_borda_e_o_chip_da_fita_nunca_discordam(a02):
-    """O defeito que ELA viu: dois valores da mesma cor, três centímetros um do"""
+    """O defeito que O usuário viu: dois valores da mesma cor, três centímetros um do"""
     import monta
 
     for slug, medida in sorted(_casca_do_mapa().items()):

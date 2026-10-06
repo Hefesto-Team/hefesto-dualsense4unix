@@ -1,8 +1,6 @@
 """AUTO-01 (sprint 25/07) — um clique em vez de dez.
 
-O pedido dela: *"ao clicar em tal coisa, ele não precisar alterar 10 coisas em
-abas, fechar a Steam, abrir, aplicar x, y e z, tudo de forma manual mas de forma
-automática, o máximo que der."*
+O
 
 Este arquivo trava os três itens que impediam **os quatro jogadores**:
 
@@ -15,10 +13,8 @@ Este arquivo trava os três itens que impediam **os quatro jogadores**:
     linha de comando. Virou um botão, "Preparar co-op", que encadeava modo de
     jogo + co-op + renumeração.
     **NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01:** esse botão SAIU, e a
-    entrega da AUTO-01.2 não foi desfeita: ela foi ao limite. Decisão dela,
-    tomada mais de uma vez: *"todos e tudo no Hefesto tem que tá com o permitir
-    co-op ligado (…) se eu conecto 4 controles no PC eu espero, com 4 pessoas
-    jogando, que cada um controle o próprio personagem"*. Preparar o co-op
+    entrega da AUTO-01.2 não foi desfeita: ela foi ao limite. Decisão de produto,
+    tomada mais de uma vez. Preparar o co-op
     deixou de ser gesto porque o co-op deixou de ser opção — o piso do daemon
     nasce ligado. O que a AUTO-01.2 tinha de insubstituível (o ciclo FORÇADO,
     que alcançava de carona no ``coop.set``) mudou de dono ANTES da remoção:
@@ -34,7 +30,7 @@ Invariante que NÃO pode cair junto: gesto manual dela cria trava de 30 s e nada
 Os testes do daemon entram pelo caminho PÚBLICO de verdade (o `Daemon.run()`,
 com o poll loop girando): um teste que chamasse só o método da cura passaria
 mesmo com a chamada arrancada do poll loop, e aí a automação não existiria na
-máquina dela.
+máquina do usuário.
 """
 from __future__ import annotations
 
@@ -98,7 +94,7 @@ class _ControleComInventario(FakeController):
 
 @pytest.fixture()
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Flags de sessão em tmp — o disco DELA não pode decidir o teste."""
+    """Flags de sessão em tmp — o disco do usuário não pode decidir o teste."""
     monkeypatch.setattr(session_mod, "config_dir", lambda ensure=False: tmp_path)
     return tmp_path
 
@@ -180,7 +176,7 @@ class TestDoisControlesLigamAEmulacao:
     async def test_o_poll_loop_liga_a_emulacao_com_dois_controles(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cura, pelo caminho que roda na máquina dela: o daemon de pé.
+        """A cura, pelo caminho que roda na máquina do usuário: o daemon de pé.
 
         Instalação nova (nenhuma flag em disco), dois DualSense plugados: a
         emulação sobe sem ninguém abrir terminal nem aba. Sem ela o co-op nunca
@@ -242,7 +238,7 @@ class TestDoisControlesLigamAEmulacao:
     def test_gesto_manual_recente_apenas_espera(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Invariante forte: trava de 30 s do gesto dela vale também aqui."""
+        """Invariante forte: trava de 30 s do gesto do usuário vale também aqui."""
         relogio = _Relogio()
         monkeypatch.setattr(lifecycle_mod.time, "monotonic", relogio)
         d = _daemon(controles=2)

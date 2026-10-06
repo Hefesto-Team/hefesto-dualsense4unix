@@ -4,7 +4,7 @@
 # power/control=on desliga o runtime PM do device; autosuspend_delay_ms=-1 é a
 # trava redundante (delay negativo = nunca suspende) caso algo devolva "auto".
 # ACTION add|change: add cobre plug/coldplug (systemd-udev-trigger no boot);
-# change reaplica quando qualquer agente mexe em runtime (precedente: 99-usb-power-change
+# change reaplica quando qualquer processo mexe em runtime (precedente: 99-usb-power-change
 # da Aurora). DEVTYPE=usb_device: o atributo power/ vive no device, não na interface.
 #
 # ATRIBUIÇÃO: em máquinas com o ritual-Aurora as regras 99-usb-* já garantem o

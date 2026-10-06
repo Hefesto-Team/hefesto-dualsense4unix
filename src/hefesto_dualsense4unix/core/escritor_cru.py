@@ -1,7 +1,7 @@
 """ESCRITOR-CRU-01: enxergar o escritor que a classe LED não vê.
 
-- **Medido na madrugada de 16/08/2026, e a hipótese é DELA** (*"não é pq a
-  steam tá aberta?"*, levantada enquanto eu perseguia outra pista). Par de
+- **Medido na madrugada de 16/08/2026, e a hipótese é DO USUÁRIO**, levantada enquanto se perseguia outra
+  pista. Par de
   eliminação completo, nada mais tocado entre os dois lados:
 
   ===================  ==========================================
@@ -49,7 +49,7 @@ isso o veredito daqui **nunca** licencia repintura em regime: ele licencia
 UMA reafirmação no fim da sequência (``GATILHO-DA-COR-01``) e, na aba Status,
 a frase honesta de que a cor mostrada é a PEDIDA.
 
-**NOTA DATADA — 23/09/2026, e a regra acima mudou por decisão dela.** *"Hefesto
+**NOTA DATADA — 23/09/2026, e a regra acima mudou por decisão de produto.** *"Hefesto
 manda e controla sempre, steam sequestrou hefesto corrigiu ao no segundo após"*
 (STEAM-NO-FISICO-01). O SENTINELA continua licenciando uma reafirmação só; a
 :class:`VigiaDoSequestro`, no fim deste módulo, licencia a reescrita da barra e
@@ -63,8 +63,8 @@ O QUE ELE NÃO VÊ, dito antes que alguém descubra do jeito caro
   e a cmdline de :func:`pids_da_steam`). Um segundo escritor cru — um jogo
   fora do Steam, outro daemon de controle — passa despercebido. Varrer
   ``/proc/*/fd`` inteiro seria caro e indiscreto, e a Steam é o escritor que
-  a mesa dela mediu;
-- **Não sabe QUANDO ela escreveu**, só que ela pode. Daí a rate-limit não vir
+  a bancada mediu;
+- **Não sabe QUANDO o usuário escreveu**, só que ela pode. Daí a rate-limit não vir
   daqui: quem decide a frequência é o gatilho;
 - **Degrada em silêncio.** Sem ``/proc``, sem permissão, orçamento estourado —
   devolve o que juntou. Ausência de veredito é "não sondado", **nunca**
@@ -141,7 +141,7 @@ def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[i
     varreduras de ``/proc`` no mesmo daemon seriam duas verdades sobre o mesmo
     ``/proc``, que é a família de defeito que a casa acabou de pagar.
 
-    O QUE O FORK CUSTAVA, medido em 25/08/2026 na máquina dela
+    O QUE O FORK CUSTAVA, medido em 25/08/2026 na máquina do usuário
     ==========================================================
     Janela do Hefesto ABERTA e um DualSense no cabo: o par de ``pgrep`` daqui
     saía a cada 3,3 s (o ritmo do ``controller.list``), e **um** ``pgrep``
@@ -390,7 +390,7 @@ class Veredito:
         aba Status tem — e ela conta o passado no presente. Medido em 19/09: a
         Steam levou SIGTERM, `pgrep` devolveu zero, e sete segundos depois o
         `daemon.state_full` ainda publicava ``lightbar_disputada: True``. O
-        aviso na tela dela nomeia um processo que não existe mais.
+        aviso na tela do usuário nomeia um processo que não existe mais.
 
         E há um caminho em que a foto **nunca** é corrigida: o
         `vigiar_escritor_cru` é no-op TOTAL em Modo Nativo (nem sonda) e

@@ -190,14 +190,14 @@ def has_poison(value: str) -> bool:
 
     **A PERGUNTA ERA ESTREITA E FICOU LARGA — 06/09/2026, ONDA5-07-01.** Até
     aqui ela cobrava a `IGNORE_SIGNATURE` como TOKEN COMPLETO, o que na prática
-    quer dizer *"a atribuição tem o nosso par SOZINHO na lista"*. A assinatura
+    quer dizer . A assinatura
     cola `VAR=` ao par, e daí saía um ponto cego estrutural: numa linha
     `VAR=0x057e/0x2009,0x054c/0x0ce6` — o nosso par em SEGUNDO — a substring
     nem aparece.
 
     **Medido antes da cura:** `has_poison` e `has_extended_ignore` respondiam
     **os dois `False`**, o produto não via o próprio veneno, e `migrate_value`
-    EMBRULHAVA a linha inteira — pondo o par que manda ignorar o DualSense dela
+    EMBRULHAVA a linha inteira — pondo o par que manda ignorar o DualSense do usuário
     como argumento do `env(1)` de dentro do wrapper. O jogo continuava cego para
     o controle, com a tela dizendo que o atalho de inicialização estava no
     lugar.
@@ -386,7 +386,7 @@ def e_a_arvore_canonica(pilha: Sequence[str]) -> bool:
        que vem depois no arquivo. O PRAGMATA estava assim: sem o wrapper na
        árvore canônica (o ``VKD3D_CONFIG=no_upload_hvv`` dela o havia comido de
        novo) e com o wrapper na outra. O `censo_do_wrapper` respondeu
-       **"faltantes: 0"** com o defeito vivo, e o jogo dela sem reconhecer o
+       **"faltantes: 0"** com o defeito vivo, e o jogo do usuário sem reconhecer o
        controle no rádio.
 
     É a família do `WRAPPER-EM-TODOS-01`: o portão que passa verde porque olha
@@ -1018,7 +1018,7 @@ def _steam_launch_cmdline(
     Onde a resposta guarda um gesto destrutivo — `steam -shutdown` com jogo
     aberto MATA o jogo — o chamador tem de gastar `invalidar_varredura_de_proc()`
     antes de perguntar: um `openat` a mais num clique não se compara a fechar um
-    jogo dela. **Os três caminhos DESTE módulo já gastam** (`--apply` da CLI,
+    jogo do usuário. **Os três caminhos DESTE módulo já gastam** (`--apply` da CLI,
     `apply_wrapper_to_all_games`, `with_steam_closed`). **Quatro caminhos FORA
     dele ainda não**, e é dívida declarada da BG-03, não descuido:
     `proton_pin._steam_gate`, `app/actions/daemon_actions.py`,
@@ -1175,7 +1175,7 @@ def reopen_steam() -> bool:
     AMBIENTE-PRESUMIDO-01 (23/08/2026): isto exigia o binário ``steam`` no
     PATH e, quando não achava, voltava MUDO. Quem instalou a Steam pela
     Flatpak ou pela Snap não tem esse binário — então `with_steam_closed`
-    fechava a Steam dela, fazia o trabalho, e a deixava fechada sem uma
+    fechava a Steam do usuário, fazia o trabalho, e a deixava fechada sem uma
     palavra. O fallback é a URL `steam://` pelo `xdg-open`, que é ela que o
     `.desktop` da Flatpak/Snap registra.
 

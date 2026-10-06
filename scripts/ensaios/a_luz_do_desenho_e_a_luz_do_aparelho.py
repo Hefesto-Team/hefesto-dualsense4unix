@@ -7,7 +7,7 @@ SVG**. A lightbar do desenho grande e as cinco lâmpadas do indicador nunca
 foram campo: o gerador CRAVA ``style="--luz:#7EB8D4"`` no ``<g>`` e a classe
 ``led-on`` nos ``<rect>`` que o MOCKUP escolheu, e nada no produto os alcança.
 
-O que isso custa está fotografado em 03/09/2026, na mesa dela, com UM controle
+O que isso custa está fotografado em 03/09/2026, na bancada, com UM controle
 no cabo: a coluna do P1 dizia ``#0000FF`` na caixa do hexadecimal e desenhava a
 barra em ``#7EB8D4`` — a mesma célula afirmando duas cores. Quem olha a tela lê
 o desenho antes de ler o número.
@@ -27,7 +27,7 @@ Nada aqui compara o produto com ele mesmo: os dois lados vêm de donos
 diferentes, e é isso que faz a divergência aparecer em vez de se cancelar.
 
 REPROVA quando a coluna tem controle e as duas luzes discordam. Uma coluna sem
-controle não é medida — não há luz a afirmar, e é a regra dela.
+controle não é medida — não há luz a afirmar, e é a regra de produto.
 
 Uso (a janela é OCULTA; ela tem UMA tela)::
 
@@ -136,8 +136,7 @@ def _o_que_o_aparelho_diz(piloto: hefesto_vivo.Piloto) -> dict[str, dict]:
     comparar o produto com ele mesmo: ele erraria o desenho e a resposta do
     mesmo jeito, e a régua concordaria com o erro.
 
-    A REGRA QUE SE COBRA É DELA: *"se não tá mostrando agora, não tem info pra
-    mostrar no produto"*. Com ressalva, o desenho não pode acender cor nenhuma;
+    A REGRA QUE SE COBRA É DO USUÁRIO. Com ressalva, o desenho não pode acender cor nenhuma;
     sem ressalva, ele tem de acender exatamente a cor base.
 
     O `_ctx_de_agora` é a mesa do último tique — o piloto a guarda para resolver

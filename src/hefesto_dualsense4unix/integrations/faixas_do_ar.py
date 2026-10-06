@@ -1,6 +1,6 @@
 """faixas_do_ar.py — a régua de 79 canais, UMA FAIXA POR APARELHO (o modelo, sem HTML).
 
-AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01 (04/10/2026), o desenho 1 que ela aprovou.
+AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01 (04/10/2026), o desenho 1 que o usuário aprovou.
 A régua de cima vale para todas as linhas: os mesmos 79 canais, do mesmo tamanho.
 
 * **Pintado é o canal bom**, na cor do aparelho. O buraco é o canal perdido, e nele fica a

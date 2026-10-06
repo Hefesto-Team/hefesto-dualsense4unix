@@ -9,10 +9,10 @@ O motivo de cada uma era **guardado e nunca mostrado**: existia só para o
 portão da Z2-9 ler. Quem usasse o produto via a fita apagada e não tinha como
 saber se aquilo era escolha ou defeito.
 
-A outra metade é a decisão dela de 23/08/2026, que continua inteira: **o
+A outra metade é a decisão de 23/08/2026, que continua inteira: **o
 cabeçalho não ganha um pixel**. A versão que pendurava um rótulo ao lado da
 fita empurrava altura e largura, cobria o subtítulo do produto e deixava a aba
-visivelmente mais larga que as outras dez — ela mandou tirar, e o motivo é
+visivelmente mais larga que as outras dez — o usuário mandou tirar, e o motivo é
 válido para qualquer explicação que ocupe espaço.
 
 Tooltip resolve as duas: aparece só com o ponteiro parado em cima, e ocupa
@@ -75,7 +75,7 @@ class _HostDaFita:
 
 
 def test_a_moldura_do_hover_nao_pinta_nada() -> None:
-    """A decisão dela de 23/08 continua de pé: o cabeçalho não ganha um pixel."""
+    """A decisão de 23/08 continua de pé: o cabeçalho não ganha um pixel."""
     host = _HostDaFita()
     assert host._target_strip_hover.get_visible_window() is False, (
         "o EventBox está pintando: o cabeçalho ganharia um retângulo que não "

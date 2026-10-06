@@ -191,7 +191,7 @@ class TestOTextoDizAntesDeAcontecer:
     def test_o_check_nao_oferece_quando_a_regra_de_terceiro_explica(
         self, bancada: Bancada
     ) -> None:
-        """A mordida que o pedido dela nomeia, do lado do atropelo."""
+        """A mordida que o pedido nomeia, do lado do atropelo."""
         bancada.no("hidraw1", 0o666, "0e6f", "0185")
         bancada.regra("71-pdp-controllers.rules", PDP_ESTREITA)
         saida = bancada.check()
@@ -242,7 +242,7 @@ class TestACuraAge:
         assert bancada.modo("hidraw0") == "660"
 
     def test_a_cura_nao_toca_no_no_de_terceiro(self, bancada: Bancada) -> None:
-        """O outro lado da mordida que ela pediu, medido no nó e não no texto."""
+        """O outro lado da mordida que o usuário pediu, medido no nó e não no texto."""
         bancada.no("hidraw0", 0o666, "1234", "5678")
         bancada.no("hidraw1", 0o666, "0e6f", "0185")
         bancada.regra("71-pdp-controllers.rules", PDP_ESTREITA)
@@ -306,13 +306,13 @@ class TestAFiacao:
         assert 'RESTAURAR_HIDRAW}" -eq 1' in corpo
 
     def test_o_apply_fixes_nao_chama_a_cura(self) -> None:
-        """AUSÊNCIA DELIBERADA — decisão dela, 07/08/2026."""
+        """AUSÊNCIA DELIBERADA — decisão, 07/08/2026."""
         corpo = _funcao_inteira("apply_fixes")
         assert "restaurar_hidraw_uaccess " not in corpo
         assert "restaurar_hidraw_uaccess\n" not in corpo
 
     def test_o_install_nao_ganhou_a_opcao(self) -> None:
-        """A outra metade da decisão dela: no install, não entra."""
+        """A outra metade da decisão de produto: no install, não entra."""
         for nome in ("install.sh", "scripts/install_udev.sh", "scripts/install-host-udev.sh"):
             alvo = ROOT / nome
             if alvo.exists():

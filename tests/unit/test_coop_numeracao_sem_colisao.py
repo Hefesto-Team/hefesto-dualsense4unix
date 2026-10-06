@@ -1,6 +1,6 @@
 """R-13 (auditoria 23/07) — a numeração de jogador para de colidir.
 
-A queixa dela: *"dois 'player 2' e dois 'player 1' em vez de 1, 2, 3, 4"*.
+A queixa de uso: *"dois 'player 2' e dois 'player 1' em vez de 1, 2, 3, 4"*.
 
 Estado medido em 23/07: os EXTERNOS ocupam os slots 1 (Pro Nintendo) e 3
 (8BitDo); o DualSense branco é slot 2. O co-op numera por conta própria — 1 no

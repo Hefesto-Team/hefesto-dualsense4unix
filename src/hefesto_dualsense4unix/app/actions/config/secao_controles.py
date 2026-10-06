@@ -58,7 +58,7 @@ COLUNAS = 3
 
 
 # A barra do DualSense por rádio nasce travada em ALGUMAS instâncias de conexão,
-# 2. **o produto NÃO reconecta.** O botão PS é dela. Este arquivo derruba e
+# 2. **o produto NÃO reconecta.** O botão PS é do usuário. Este arquivo derruba e
 #    espera; `integrations/gesto_de_reconexao` não tem `reconectar` de propósito;
 
 TEXTO_DO_BOTAO = "A luz não acende"
@@ -108,14 +108,14 @@ def frase_nao_voltou(segundos: int) -> str:
 
 
 # moravam `FRASE_NASCEU_CONDENADO` e `frase_do_nascimento`
-# anexo da dica do mesmo botão na aba 08. A ordem dela de 13/09
+# anexo da dica do mesmo botão na aba 08. A ordem de 13/09
 # O carimbo `nascimento` continua no `state_full`, para o diagnóstico.
 
 
 def pode_derrubar(dados: Any) -> bool:
     """O botão é clicável neste card?
 
-    Três condições, e a regra dela é a primeira: **no rádio**. As outras duas
+    Três condições, e a regra de produto é a primeira: **no rádio**. As outras duas
     são o que o gesto precisa para existir — um DualSense adotado (o 8BitDo não
     tem barra) e um endereço para o BlueZ procurar.
     """

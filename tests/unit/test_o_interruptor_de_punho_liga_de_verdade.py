@@ -1,13 +1,9 @@
 """O interruptor de punho da aba Vibração acende com a barra, e o clique escreve.
 
-ORDEM DELA, 14/09/2026, com os dois controles na mesa e a foto da aba na mão:
-
-    *"ao abrir o vibração o motor esquerdo do controle azul não fica ativado e
-     nem se eu clicar em máximo ele liga. ele deveria ligar se > 0 no slicer
-     dele."*  (noqa-acento: citação literal)
+ORDEM, 14/09/2026, com os dois controles na mesa e a foto da aba na mão
 
 O QUE ESTAVA QUEBRADO, e eram DUAS metades — as duas mentindo do mesmo jeito,
-medidas no daemon dela no mesmo dia:
+medidas no daemon do usuário no mesmo dia:
 
 1. **não havia pintura.** A classe `on` dos oito botões era a da CENA do mockup:
    o P1 com os dois punhos acesos e o P2 com o esquerdo apagado, cravados no
@@ -27,7 +23,7 @@ com sprint (`MIGRA-VIBRACAO-06`) e com a razão certa — *não há campo de hab
 motor por lado em `profiles/schema.py`*. **A cura de 14/09 não criou o campo.**
 Ela leu o que já existia: a barra daquele motor.
 
-A REGRA É DELA E TEM UMA FONTE SÓ: aceso = `barra(motor) > 0`. O clique é o par —
+A REGRA É DE PRODUTO E TEM UMA FONTE SÓ: aceso = `barra(motor) > 0`. O clique é o par —
 desligar escreve 0, ligar devolve 100 —, pelo mesmo `rumble.motores.set` que o
 arraste usa. Um campo `ligado` separado do valor seria a segunda verdade desta
 linha, e na primeira vez que os dois divergissem a tela diria "ligado" com a
@@ -250,7 +246,7 @@ def test_a_recusa_fala_com_quem_tem_o_controle_na_mao(
     """`RuntimeError` leva a frase ao cartão dela; `ValueError` fica no `stderr`.
 
     É o contrato do piloto (`hefesto_vivo._recusou_dizendo`), e as duas recusas
-    deste gesto são sobre um gesto DELA — as duas têm de chegar aos olhos dela.
+    deste gesto são sobre um gesto do usuário — as duas têm de chegar aos olhos dela.
     """
     gesto = pacotes.gesto_da_pagina("05-vibracao.html", "lado")
     assert gesto is not None

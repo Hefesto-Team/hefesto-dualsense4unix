@@ -212,7 +212,7 @@ def test_o_buraco_do_terceiro_trecho_estava_aberto_e_fechou() -> None:
     metade_que_sobra = FRASE_VIVA_ATE_06_09.split(". Alguns")[0] + "."
     assert busca(lista_velha, metade_que_sobra) is None, (
         "sem a segunda metade, a lista velha ficava CEGA sobre a frase viva — "
-        "e é exatamente o estado em que um agente cumpriria a decisão [01] com "
+        "e é exatamente o estado em que alguém cumpriria a decisão [01] com "
         "a régua verde."
     )
     assert busca(FRASES_BANIDAS, metade_que_sobra) == "gatilhos ficam duros"

@@ -95,7 +95,7 @@ def fontes_nativas(saida_pactl: str) -> list[str]:
     então a pergunta que decide se ele está ao alcance é literal: **existe uma
     fonte deste controle que não seja nossa?**
 
-    **O QUE FOI MEDIDO, com os controles dela na mesa.** No RÁDIO só existem as
+    **O QUE FOI MEDIDO, com os controles do usuário na mesa.** No RÁDIO só existem as
     nossas — ``hefesto_mic_0000ab``, ``_0000f0``, ``_0000d8`` — e nenhuma fonte
     do kernel. No CABO existem AS DUAS: a
     ``alsa_input.usb-Sony_…_DualSense_Wireless_Controller-00.HiFi__Mic__source``

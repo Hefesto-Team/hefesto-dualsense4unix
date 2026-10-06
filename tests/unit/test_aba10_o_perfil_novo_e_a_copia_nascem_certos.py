@@ -2,7 +2,7 @@
 
 DOIS DEFEITOS DE COMPORTAMENTO, medidos em 03/09/2026 contra a interface nova.
 Nenhum é de desenho, e nenhum aparece na tela: os dois só se veem no `.json`
-que ficou no disco dela.
+que ficou no disco do usuário.
 
 1. **O perfil novo nascia em prioridade ZERO** — PERFIL-NASCE-CERTO-01. A
    janela estável calcula ``max(prioridade dos catch-all) + 10``
@@ -78,7 +78,7 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def gravados(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    """O que o ``save_profile`` receberia — sem tocar na pasta dela.
+    """O que o ``save_profile`` receberia — sem tocar na pasta do usuário.
 
     O gesto grava por ``pacotes/perfil.gravar_e_reaplicar``, que resolve o
     ``loader`` no momento da chamada: substituir o atributo do MÓDULO alcança os
@@ -114,7 +114,7 @@ def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *perfis: Any) -> list[Any]:
 
 
 def _ctx() -> Contexto:
-    """O daemon calado — ``active_profile: null`` é o estado da máquina dela.
+    """O daemon calado — ``active_profile: null`` é o estado da máquina do usuário.
 
     Calado importa aqui: com ele, ``gravar_e_reaplicar`` não manda
     ``profile.switch``, e o que sobra nas chamadas é só o ``launch_env.refresh``.

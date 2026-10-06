@@ -215,7 +215,7 @@ class AutoSwitcher:
         `_activate` — e NADA o sincronizava com `store.active_profile`. Um
         `profile.switch` dela (janela, CLI, PS+D-pad) trocava o perfil de
         verdade e o autoswitch seguia acreditando no que ELE tinha ativado por
-        último. A prova está no journal dela: `profile_autoswitch from_=None
+        último. A prova está no journal do usuário: `profile_autoswitch from_=None
         to=sackboy_nativo` com outro perfil ativo havia horas — o autoswitch
         "entrando" num perfil que já era o ativo, reescrevendo gatilhos, LEDs,
         modo e política de rumble por cima do que ela tinha escolhido na mão.
@@ -250,7 +250,7 @@ class AutoSwitcher:
         boot monta o manager com `mouse_applier=None` e `mode_applier=None` de
         propósito, porque no boot quem governa a emulação são os FLAGS
         PERSISTIDOS, não o perfil (com o applier ligado, um `point_and_click`
-        como last_profile matava o gamepad restaurado e invertia a escolha dela
+        como last_profile matava o gamepad restaurado e invertia a escolha do usuário
         a cada boot). A re-ativação pelo autoswitch reintroduzia por acidente
         exatamente o que aquela cura removeu.
         """
@@ -458,13 +458,13 @@ class AutoSwitcher:
     def _saida_para_a_escolha(
         self, profile: Profile | None, veio_da_escolha: bool
     ) -> bool:
-        """True quando a troca é SAÍDA de um perfil específico rumo à escolha dela."""
+        """True quando a troca é SAÍDA de um perfil específico rumo à escolha do usuário."""
         if profile is None or not veio_da_escolha or not self._current_especifico:
             return False
         return self._current_profile is not None and profile.name != self._current_profile
 
     def _perfil_da_escolha(self) -> Profile | None:
-        """O perfil da escolha dela, pelo dono (`a_escolha_dela`). Nunca levanta."""
+        """O perfil da escolha do usuário, pelo dono (`a_escolha_dela`). Nunca levanta."""
         from hefesto_dualsense4unix.utils.session import a_escolha_dela
 
         nome = a_escolha_dela(freestyle_ligado=self.freestyle_ligado())
@@ -696,7 +696,7 @@ class AutoSwitcher:
         ):
             return
         # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
-        # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
+        #
         if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info

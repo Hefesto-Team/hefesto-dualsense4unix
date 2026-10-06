@@ -1,8 +1,6 @@
 """A MARCA DA COR NÃO SOME — a borda e o X de cada controle vêm da cor DELE.
 
-**A QUEIXA DELA, 24/09/2026:** *"quando eu abaixo o volume do lightbar,. o X
-não permanece no seletor dos demais controles. isso é um erro que me
-incomoda."*   # noqa-acento: citação literal
+**A QUEIXA, 24/09/2026:** **   # noqa-acento: citação literal
 
 «Volume do lightbar» é o trilho «Brilho» da aba Iluminação; «o X» é a casa
 `tomado` da fileira de tons, que marca a cor que OUTRO controle tem. A borda
@@ -314,7 +312,7 @@ class Mesa:
 
     def fora_do_lugar(self, conectados: list[dict[str, Any]] | None = None,
                       cores: dict[int, tuple[int, int, int]] | None = None) -> list[str]:
-        """Cada marca que saiu do lugar neste tique — vazio é a regra dela cumprida."""
+        """Cada marca que saiu do lugar neste tique — vazio é a regra de produto cumprida."""
         cor_de = COR_DELE if cores is None else cores
         pacote = self.a04.pacote(self.ctx(conectados))
         guia = [_hexa(t) for t in self.a04.tons_da_guia()]
@@ -564,7 +562,7 @@ def test_sem_a_paleta_o_trilho_nao_escurece_o_global_fora_da_guia(mesa_de):
 def test_sem_a_paleta_o_global_preto_nao_e_cor(mesa_de):
     """Global preto e paleta desligada: subir o trilho do 0% não manda o preto.
 
-    O preto é banido como cor (ordem dela de 22/09, `led_control.cor_escolhida`):
+    O preto é banido como cor (ordem de 22/09, `led_control.cor_escolhida`):
     o `apply` não manda cor nenhuma ao default, e o degrau 3 não tem global a
     afirmar. Lido como cor, ele faria o trilho reenviar o preto — e a barra que
     ela acabou de subir ficaria apagada.

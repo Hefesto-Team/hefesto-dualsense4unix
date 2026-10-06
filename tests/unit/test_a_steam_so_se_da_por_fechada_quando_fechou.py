@@ -20,7 +20,7 @@ WEBHELPER = 101
 
 
 class Mesa:
-    """O `/proc` de mentira, com um relógio e as regras da Steam dela."""
+    """O `/proc` de mentira, com um relógio e as regras da Steam do usuário."""
 
     def __init__(self, raiz: Path, lar: Path) -> None:
         self.raiz = raiz

@@ -67,7 +67,7 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 
 
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
-    # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da mesa dela
+    # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da bancada
     "scripts/check_a_conferencia.py": (
         "MEDIDO em 08/09/2026, e ele fica fora das duas listas POR DESENHO, não "
         "por esquecimento. Ele é a tabela que ELA escreveu — a coluna «✓ na "
@@ -79,7 +79,7 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "DONO — ela abre o socket do daemon vivo e lê o `lightbar_rgb` de cada "
         "controle da mesa, porque foi assim que ela viu o defeito (dois azuis "
         "lado a lado) e é a única leitura que não mente sobre o plástico. Nem o "
-        "CI nem uma worktree de agente têm quatro DualSense conectados; "
+        "CI nem uma worktree de trabalho têm quatro DualSense conectados; "
         "pendurá-lo ali daria um vermelho que ninguém pode fechar, e a casa já "
         "mediu o que isso custa — agente caçando régua quebrada em vez de "
         "defeito.\n"

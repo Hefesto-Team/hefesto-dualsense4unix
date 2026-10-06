@@ -1,13 +1,13 @@
 """FEAT-HOTKEY-PONTE-CYCLE-01 — o gesto PS + R3 = PRÓXIMA PONTE.
 
 Ponte = a forma como o jogo enxerga o controle (máscara DualSense, máscara
-Xbox, mouse+teclado). Ela pediu poder trocar de ponte SEM fechar o jogo.
+Xbox, mouse+teclado). O usuário pediu poder trocar de ponte SEM fechar o jogo.
 
 Dois blocos:
 
 1. DESPACHO. O `_fire` era uma CADEIA de ifs terminada em `else: cb =
    self.on_prev` — qualquer combo que não fosse "gamemode" nem "next" caía no
-   perfil ANTERIOR. Um combo novo trocaria o perfil dela para trás no meio da
+   perfil ANTERIOR. Um combo novo trocaria o perfil do usuário para trás no meio da
    partida. Os testes daqui mordem essa cadeia.
 
 2. CICLO. O callback do gesto: origin="manual" (a única origem que atravessa o
@@ -76,7 +76,7 @@ def test_todo_combo_configurado_tem_despacho() -> None:
 
 
 def test_default_do_combo_da_ponte() -> None:
-    """Pedido dela, 19/08/2026: o gesto é `PS + R3`."""
+    """Pedido, 19/08/2026: o gesto é `PS + R3`."""
     assert DEFAULT_COMBO_PONTE == ("ps", "r3")
     assert HotkeyConfig().next_bridge == ("ps", "r3")
     assert DEFAULT_COMBO_PONTE != DEFAULT_COMBO_GAMEMODE, "colide com o modo jogo"

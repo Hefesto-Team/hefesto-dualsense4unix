@@ -148,7 +148,7 @@ class GanhoDaHaptica:
         return vale_o_padrao(propria or self._politica_global)
 
     def pct_guardado(self, uniq: str | None) -> int:
-        """O ganho que ela escolheu para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
+        """O ganho que o usuário escolheu para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
         from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 
         chave = _chave(uniq)

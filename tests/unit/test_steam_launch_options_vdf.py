@@ -84,7 +84,7 @@ LINHA_ESTENDIDA = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 %command%"
 )
 
-#: DualSense dela, com a tela dizendo que o atalho estava no lugar.
+#: DualSense do usuário, com a tela dizendo que o atalho estava no lugar.
 LINHA_NOSSO_PAR_EM_SEGUNDO = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009,0x054c/0x0ce6 %command%"
 )

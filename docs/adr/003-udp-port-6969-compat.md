@@ -13,7 +13,7 @@ Integração zero-config com mods. Mantém rate limit duplo (global 2000 pkt/s +
 
 ## Nota de verificação — 2026-07-25
 
-A decisão continua válida na porta e no schema. **Uma frase dela nunca foi
+A decisão continua válida na porta e no schema. **Uma frase de produto nunca foi
 verdade no código:** a porta UDP **não** é configurável por
 `~/.config/hefesto/daemon.toml`. O daemon não lê arquivo de configuração nenhum
 (ver `docs/usage/hotkeys.md`, seção "Onde a configuração dos hotkeys mora"); a

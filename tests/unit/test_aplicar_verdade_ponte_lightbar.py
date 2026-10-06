@@ -125,7 +125,7 @@ def test_a_regua_do_ramo_aplicado(monkeypatch: pytest.MonkeyPatch) -> None:
     `"<assunto> aplicado em N controles"`. No dia em que aquela frase mudar de
     forma, esta aba deixa de reconhecê-la e passa a mostrar na tela a palavra
     "aplicado", que ela recusa por medição. Este teste reprova nesse dia, em
-    vez de a divergência sair na tela dela.
+    vez de a divergência sair na tela do usuário.
     """
     corpo_um = {"status": "ok", "aplicado_em": ["a"], "guardado_em": []}
     corpo_tres = {"status": "ok", "aplicado_em": ["a", "b", "c"], "guardado_em": []}

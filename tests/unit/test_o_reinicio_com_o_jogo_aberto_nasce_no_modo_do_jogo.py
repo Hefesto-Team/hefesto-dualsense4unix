@@ -8,13 +8,14 @@ ela passou a proteger um modo que ninguém escolheu para aquele jogo. Ela
 resolveu na mão às 03:07:09, com o PS + R3.
 
 A cura (`D-3009-O-REINICIO-COM-O-JOGO-ABERTO-NASCE-NO-PERFIL-DO-JOGO`, a
-validar por ela): o sinal nasce e é avaliado antes do primeiro pad, e o boot
-pergunta pelo jogo em cena antes da escolha dela — o pad, o perfil ativo e a
+validar
+pelo usuário): o sinal nasce e é avaliado antes do primeiro pad, e o boot
+pergunta pelo jogo em cena antes da escolha do usuário — o pad, o perfil ativo e a
 tela nascem do mesmo perfil.
 
 O lar é de mentira (`XDG_*` desviados, com guarda que sai): o marcador do
 lançador com o appid e um pid vivo (o desta régua), um perfil com a regra
-`steam_app_<appid>` em Xbox, o Freestyle desligado, e a escolha dela num
+`steam_app_<appid>` em Xbox, o Freestyle desligado, e a escolha do usuário num
 terceiro perfil em DualSense. A varredura de processos é calada: o jogo em
 cena é o do marcador, e um jogo aberto na máquina de quem roda não decide nada.
 """
@@ -195,7 +196,7 @@ def test_o_reinicio_nasce_no_modo_do_jogo_em_cena(caso: str, _lar: list[str]) ->
     - `jogo-com-perfil`: o Future Knight em cena → o pad em Xbox, o perfil dele
       ativo (`origin="system"`), e o tique do autoswitch acha o modo já certo;
     - `freestyle-ligado`: o Freestyle manda, e o modo é o dele;
-    - `jogo-sem-perfil` e `sem-jogo`: a escolha dela (a da O-HEFESTO-ABRE).
+    - `jogo-sem-perfil` e `sem-jogo`: a escolha do usuário (a da O-HEFESTO-ABRE).
 
     MORDIDA: tire o jogo em cena do `connection._o_nome_que_o_boot_restaura`
     (o `if appid_em_cena is not None:`) e o caso `jogo-com-perfil` nasce
@@ -225,7 +226,7 @@ def test_o_sinal_e_avaliado_antes_do_primeiro_pad(_lar: list[str]) -> None:
 
 
 def test_o_jogo_em_cena_nao_vira_a_escolha_dela(_lar: list[str]) -> None:
-    """Depois do reinício no jogo, a escolha dela segue no terceiro perfil."""
+    """Depois do reinício no jogo, a escolha do usuário segue no terceiro perfil."""
     nome = _o_disco("jogo-com-perfil")
 
     asyncio.run(_o_reinicio(nome))

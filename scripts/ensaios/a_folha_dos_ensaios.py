@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""a_folha_dos_ensaios.py — todos os ensaios de byte numa folha só, com os controles dela."""
+"""a_folha_dos_ensaios.py — todos os ensaios de byte numa folha só, com os controles do usuário."""
 
 from __future__ import annotations
 
@@ -584,8 +584,8 @@ class Folha:
         GLib.timeout_add(int(1000 / HZ), self._tique)
 
     def _fundo_opaco(self) -> None:
-        """Um fundo SÓLIDO, e a razão é dela: *"o fundo tá muito transparente"*."""
-        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal)
+        """Um fundo SÓLIDO, e a razão é do usuário."""
+        # do próprio botão. .  # (noqa-acento: citação literal)
         pintar_fundo_solido(self.janela)
 
     def _topo(self) -> Gtk.Widget:
@@ -945,7 +945,7 @@ class Folha:
         return True
 
     def propor(self, ensaio: Ensaio) -> None:
-        """A folha NÃO conclui: imprime as linhas, e quem coordena as escreve."""
+        """A folha NÃO conclui: imprime as linhas, e quem roda as escreve."""
         print(f"\nLINHAS PROPOSTAS — {ensaio.titulo} (docs/data/ensaios.csv):")
         for aparelho in self.aparelhos:
             caixa = self.notas.get((ensaio.id, aparelho.alvo.mac))

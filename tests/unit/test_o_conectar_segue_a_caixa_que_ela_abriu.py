@@ -271,7 +271,7 @@ class JanelaDePe:
 def test_a_janela_que_um_pedido_desfeito_interrompeu_recomeca(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A espera do gesto sai porque ela pediu outro destino, e ela o desfaz no"""
+    """A espera do gesto sai porque o usuário pediu outro destino, e ela o desfaz no"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     no_gesto = mesa.central._guardar(cr.Movimento(
@@ -757,7 +757,7 @@ def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
 def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
-    """O último clique dela vence também pela TELA. Entre o chip aceito e o fio"""
+    """O último clique do usuário vence também pela TELA. Entre o chip aceito e o fio"""
     mundo = mundo_da_madrugada()
     relogio = rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)

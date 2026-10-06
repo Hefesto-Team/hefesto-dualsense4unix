@@ -1,13 +1,13 @@
 """A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01 — a aba Controle diz QUEM te ouve.
 
-**A decisão dela, 19/09/2026.** Perguntada com quatro opções depois de a
-medição mostrar o defeito, ela escolheu *«Espelhar o botão E consertar a
+**A decisão, 19/09/2026.** Perguntada com quatro opções depois de a
+medição mostrar o defeito, o usuário escolheu *«Espelhar o botão E consertar a
 tela»* — as duas metades:
 
 ===========================  ==============================================
 superfície                   o que passa a dizer
 ===========================  ==============================================
-a luz do controle            o estado do MEU microfone: mudo apaga, ligado
+a luz do controle            o estado do microfone do usuário: mudo apaga, ligado
                              ACENDE, ligado com alguém de fora gravando e
                              entrando som PISCA
 a aba Controle               QUEM está ouvindo, por escrito

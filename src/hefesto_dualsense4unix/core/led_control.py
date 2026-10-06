@@ -322,7 +322,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     fóssil, do legado e da cor repetida ao primeiro tom livre não tem decisão
     de pé: é o que evita duas luzes iguais sem apagar nenhuma, e a
     A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01 o registra como o que é
-    (29/09/2026). A barra é como ela sabe de quem é o controle — na mesa dela
+    (29/09/2026). A barra é como ela sabe de quem é o controle — na bancada
     quatro DualSense são do MESMO modelo, e a luz os separa.
 
     AS PERGUNTAS DE COR SÃO PELO TOM, e não pelo byte (29/09/2026): o fóssil
@@ -331,7 +331,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
 
     **`mesa` já vem NA ORDEM que decide** (o número do controle, quando há
     um), e a ordem é o contrato: *"o segundo desloca para o tom vizinho"* são
-    as palavras dela, e "primeiro" só tem definição estável se for o número.
+    as palavras de produto, e "primeiro" só tem definição estável se for o número.
     Quem chama ordena; aqui a regra é cega e determinista — a MESMA mesa
     devolve SEMPRE a mesma resposta, que é o que impede a barra de piscar
     (medido em 05/09/2026: um endereço com dois donos repintou a tela 80
@@ -370,8 +370,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     Preto (`_APAGADA`) fica de fora nos dois sentidos: não é deslocado e não
     toma cor de ninguém — barra apagada é ausência de cor, não identidade.
 
-    A METADE QUE NÃO MORA AQUI é a recusa no GESTO — *"mesmo que eu escolha
-    cor X, meu amigo não pode escolher a mesma"*. Lá se sabe que o alvo é UM
+    A METADE QUE NÃO MORA AQUI é a recusa no GESTO. Lá se sabe que o alvo é UM
     controle e a tela pode dizer de quem é a cor; ver
     `interface/pacotes/a04_iluminacao.py::_sem_repetir_a_cor_do_vizinho`.
     """
@@ -475,26 +474,25 @@ PRETO: RGB = (0, 0, 0)
 def cor_escolhida(rgb: RGB | None) -> RGB | None:
     """A cor que a pessoa escolheu — ``None`` quando não houve escolha.
 
-    **O PRETO É BANIDO COMO COR — 22/09/2026, ordem dela:** *"vamos banir esse
-    preto de aparecer independente do controle tambem"*. <!-- noqa-acento: citação literal -->
+    **O PRETO É BANIDO COMO COR — 22/09/2026, ordem de produto:** **. <!-- noqa-acento: citação
+    literal -->
 
-    A QUEIXA QUE O REVELOU, e ela é de um controle só: *"pq o lightbar do
-    starlight blue sempre desliga após conectar? mesmo o perfil atual não
-    mandando ele desligar"*. O perfil MANDAVA: a peça daquele controle tinha
+    A QUEIXA QUE O REVELOU, e ela é de um controle só. O perfil MANDAVA: a peça daquele controle
+    tinha
     `leds.lightbar: [0,0,0]`, escrita por um "Salvar Perfil" das 13:53 daquele
     dia, quando a cor lida veio vazia. Medido no mesmo disco: **sete dos 29
-    perfis dela** guardam o preto na seção GLOBAL — neles, abrir o jogo apaga
+    perfis do usuário** guardam o preto na seção GLOBAL — neles, abrir o jogo apaga
     a barra dos QUATRO.
 
     A CAUSA É DE FORMA, e está no esquema: `LedsConfig.lightbar` nasce
-    `(0, 0, 0)`, então *"não opinou"* e *"quero apagado"* são o mesmo byte. Com
+    `(0, 0, 0)`, então *"não opinou"* e  são o mesmo byte. Com
     um valor só para as duas coisas, a leitura honesta é a que não apaga nada:
     preto vira `None`, e quem decide a cor passa a ser a paleta automática do
     número (`cores_sem_colisao`).
 
     **APAGAR A BARRA CONTINUA POSSÍVEL, e por outro caminho:** o brilho. O
     `lightbar_brightness` em 0.0 zera os três canais DEPOIS desta função
-    (`LedSettings.apply_brightness`), e esse é um campo que só a mão dela move.
+    (`LedSettings.apply_brightness`), e esse é um campo que só a mão do usuário move.
     Banir a cor preta não tira dela o apagar; tira do produto o direito de
     apagar sozinho.
     """

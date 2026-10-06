@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O "Atualizar" da aba Sistema não diz "Pronto." sem ter feito.
 
-**A PALAVRA DELA, 05/09/2026, na `09-Q3`:** *"o botão diz Atualizando… e no fim
+**A PALAVRA, 05/09/2026, na `09-Q3`:** *"o botão diz Atualizando… e no fim
 o campo pisca em verde — **mas o botão tem de realmente fazer o que promete**"*.
 
 O DEFEITO QUE ESTA RÉGUA FECHA, medido em 05/09/2026: o gesto era
@@ -17,7 +17,7 @@ O QUE ELA MEDE, E COMO — e a forma é o ponto: **ela chama o gesto e olha o qu
 ele fez.** Onze réguas desta casa caíram em 26/08 por *digitarem o que deviam
 LER*; nenhuma asserção aqui lê o texto do `a09_sistema.py`.
 
-1. com a ponte recusando **calada** (o caso da mesa dela, e `_call_checked`
+1. com a ponte recusando **calada** (o caso da bancada, e `_call_checked`
    devolve `(False, None)` para toda falha de transporte), o gesto levanta
    `RuntimeError` com a frase de reserva do produto;
 2. com a ponte recusando **dizendo** — o daemon respondeu e recusou —, a frase
@@ -85,7 +85,7 @@ def clicar():
 
 
 def test_com_o_servico_mudo_o_botao_recusa_em_vez_de_dizer_pronto(a09, clicar):
-    """O caso da mesa dela: serviço parado, motivo `None`, e nada de "Pronto.".
+    """O caso da bancada: serviço parado, motivo `None`, e nada de "Pronto.".
 
     `RuntimeError` é o contrato desta interface para *"o produto recusou, e a
     frase VAI PARA A TELA"* — `hefesto_vivo._recusou_dizendo:2523`. Sem ele o
@@ -164,7 +164,7 @@ def test_a_frase_de_reserva_diz_as_duas_metades(a09):
 def test_a_porta_nova_continua_esperando_os_quinze_segundos(monkeypatch):
     """Se a espera encolher, o botão passa a recusar todo clique que FUNCIONA.
 
-    `daemon.reload` leva 9,5 s medidos no daemon dela em 01/09/2026, e por isso
+    `daemon.reload` leva 9,5 s medidos no daemon do usuário em 01/09/2026, e por isso
     tem teto de 15 s em `ponte.TETOS`. O padrão do bridge é 250 ms e, desde o
     `BUG-IPC-READ-NO-TIMEOUT-01`, cobre também a LEITURA da resposta: com ele, o
     `daemon.reload` que dá certo voltaria `False` — e a cura desta sprint viraria

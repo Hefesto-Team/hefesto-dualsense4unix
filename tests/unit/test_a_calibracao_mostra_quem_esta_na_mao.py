@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """A calibração mostra os controles de QUEM A ABRE — zero, um ou quatro.
 
-F3-CALIBRAR, 11/09/2026. A ordem dela é de 11/09 e vale para o produto inteiro:
+F3-CALIBRAR, 11/09/2026. A ordem de produto é de 11/09 e vale para o produto inteiro
 
-    *"a ideia é que todas as features mesmo do app funcionem nao so  # (noqa-acento) cita ela
-    pra mim mas pra qualquer outro user"*
-
-O DEFEITO QUE ESTA RÉGUA IMPEDE DE VOLTAR, medido no daemon dela em 11/09 com
+O DEFEITO QUE ESTA RÉGUA IMPEDE DE VOLTAR, medido no daemon do usuário em 11/09 com
 os dois DualSense na bancada::
 
     a tela dizia                    o `daemon.state_full` respondia

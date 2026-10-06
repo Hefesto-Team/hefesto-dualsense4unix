@@ -7,16 +7,16 @@ tocada por este módulo** — ele importa dela, nunca a edita.
 O SOM SAI PELO RÁDIO DESDE 10/09/2026, E A LIÇÃO FICA
 ------------------------------------------------------
 Pelo ``0x35`` de 334 B, com UM quadro Opus por report (:data:`ARRANJO_035`):
-70 s contínuos pelo alto-falante, com a orelha dela, e o som CALA com o CRC
+70 s contínuos pelo alto-falante, com a orelha do usuário, e o som CALA com o CRC
 invertido. Desde 03/10/2026 o produto escreve o ``0x36`` combinado
 (:func:`montar_relatorio_combinado`): o mesmo quadro Opus, o bloco da háptica e
-o ``0x10``, num relatório só, provado na bancada dela. Quem escreve no
+o ``0x10``, num relatório só, provado na bancada. Quem escreve no
 controle é a :class:`PonteDeSomPorRadio`, uma por controle no rádio, e quem a
 sobe é o subsystem (``daemon/subsystems/alto_falante._casar_as_pontes``).
 
 A lição que o mapa guarda tem nome (``audio.saida_dedicada@dualsense``):
 a FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal responde, ele
-FAZ o que se esperava dele. Ela segurou o som em ``não`` até a orelha dela
+FAZ o que se esperava dele. Ela segurou o som em ``não`` até a orelha do usuário
 ouvir o CONTEÚDO, em 10/09, e segura o degrau do produto em ``MONTOU`` até a
 bancada ouvir o caminho inteiro: o nó, a ponte e o controle. Quem conta o som
 pelo rádio conta pelo degrau e pela data, que estão no :data:`ARRANJO_035`.
@@ -52,7 +52,7 @@ CRC-32               [543..546]                  [543..546]
 
 **O Senshi não é testemunha independente:** ele cita o DS5Dongle
 (``DualSenseBtReportBuilder.kt:76``) — leu a mesma fonte e chegou a outro
-arranjo. **E NENHUM DOS DOIS TOCOU:** o ensaio de 10/09, com a orelha dela,
+arranjo. **E NENHUM DOS DOIS TOCOU:** o ensaio de 10/09, com a orelha do usuário,
 achou o ``0x35`` de 334 B com um quadro só. Os dois ficam montáveis pelo mesmo
 PCM, para ensaio (`scripts/ensaios/o_som_que_sai.py` os monta lado a lado); o
 produto não os usa.
@@ -85,9 +85,9 @@ O QUE ESTE MÓDULO **NÃO** FAZ, E TEM DONO
   ``core/backend_pydualsense.py`` e de ``app/audio_saida.py``, e o segundo
   está em ``nao_toca:`` desta sprint. O nó virtual é **por onde o áudio
   entra**; o que o firmware faz com ele depois tem dono, e não é este;
-* **não escolhe o degrau para regime.** A decisão dela
+* **não escolhe o degrau para regime.** A decisão de produto
   (``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE``) deixava ``0x32`` contra
-  ``0x39`` para *depois do D5*, e a orelha dela achou o ``0x35`` em 10/09; o
+  ``0x39`` para *depois do D5*, e a orelha do usuário achou o ``0x35`` em 10/09; o
   ``0x36`` combinado o sucedeu em 03/10. A escolha do degrau pelo tamanho do
   payload desceu para o ensaio que a usava (``scripts/ensaios/o_som_que_sai.py``,
   O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01, 28/09/2026): o produto escreve um degrau
@@ -545,7 +545,7 @@ ARRANJO_035 = Arranjo(
 #: últimos. Layout do fork loteran do DS5Dongle (``src/audio.cpp``, a função
 #: que monta o ``REPORT_ID 0x36``), lido no código; NÃO medido nesta bancada: o
 #: ensaio ``scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`` o provou na
-#: bancada dela em 03/10/2026 (som e háptica juntos; sem o ``0x10`` a háptica
+#: bancada em 03/10/2026 (som e háptica juntos; sem o ``0x10`` a háptica
 #: cala), e a :class:`PonteDeSomPorRadio` escreve só ele.
 DEGRAU_COMBINADO = 0x36
 POS_TAG_CONTROLE_COMBINADO = 2
@@ -2429,7 +2429,7 @@ POR_RADIO = "radio"
 TRANSPORTE_CABO = "usb"
 TRANSPORTE_RADIO = "bt"
 
-#: com os quatro DualSense dela na mesa. ``daemon/subsystems/alto_falante
+#: com os quatro DualSense do usuário na mesa. ``daemon/subsystems/alto_falante
 #: acento); ``app/audio_saida`` diz ``"bt"`` (a palavra do ``state_full``). O
 _PALAVRAS_DE_RADIO = frozenset({"bt", "radio", "rádio", "bluetooth"})
 
@@ -2535,12 +2535,12 @@ def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str) -> bool:
     """Ligar o mix deste monitor ao nó realimentaria o próprio som? PURA.
 
     O «No controle e na TV» é um ``module-loopback`` do monitor da SAÍDA PADRÃO
-    para o nó. Na máquina dela a saída padrão é o HDMI e o fio é inofensivo;
+    para o nó. Na máquina do usuário a saída padrão é o HDMI e o fio é inofensivo;
     numa máquina em que a saída padrão é o PRÓPRIO controle, o fio fecha um
     laço de realimentação, e não havia trava em lugar nenhum:
 
     * no rádio, ``hefesto_som_X.monitor → hefesto_som_X`` — a saída padrão é o
-      nó (ela escolheu «Alto-falante do Controle N» nas configurações de som);
+      nó (o usuário escolheu «Alto-falante do Controle N» nas configurações de som);
     * no cabo, ``D.monitor → hefesto_som_X → D`` — a saída padrão é a placa USB
       do controle, que o WirePlumber elege sozinho (``priority.session`` 1109,
       acima do HDMI e da placa-mãe) ou que vence quando o fone está plugado nele.
@@ -2550,7 +2550,7 @@ def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str) -> bool:
     Recusar ``hefesto_som_*`` ou qualquer placa de DualSense tiraria o mix de
     quem joga com a saída num controle e o som no outro.
 
-    Inferido da leitura do código, não medido na orelha — a mesa dela não
+    Inferido da leitura do código, não medido na orelha — a bancada não
     reproduz o caso, porque a saída padrão lá é o HDMI.
     """
     if not monitor:
@@ -2695,7 +2695,7 @@ def descricao_do_alto_falante(uniq: str) -> str:
 def rotulo_do_alto_falante(numero: int | None) -> str:
     """A FORMA A — «Alto-falante do Controle N (DualSense Wireless Controller)».
 
-    **Decisão dela de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01, E6): o nome dela
+    **Decisão de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01, E6): o nome dela
     fica na frente, e o sufixo é o ``iProduct`` da Sony, a string que um jogo
     procura. Sob Proton esta string É o nome do endpoint
     (``winepulse.drv/pulse.c``, ``get_device_name``); sem o sufixo o nó existe e

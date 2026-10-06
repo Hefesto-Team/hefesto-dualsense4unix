@@ -2,7 +2,7 @@
 
 Uma auditoria de 09/08 isolou quatro capacidades que existiam no código, tinham
 teste próprio e **zero chamadores em `src/`** — cada uma de um dos recursos que
-ela nomeou (*"vibração, giroscópio, touchpad, microfone, áudio específico do
+o usuário nomeou (*"vibração, giroscópio, touchpad, microfone, áudio específico do
 DualSense. Falo isso ingame"*):
 
 ======================  ==========================  ==========  ============
@@ -26,7 +26,7 @@ tinha chamador porque a **classe inteira** não era instanciada pelo daemon real
 (o próprio ``ipc_handlers`` já registrava isso: *"o antigo `_rumble_engine` NÃO
 é instanciado no daemon real"*), e ela saiu da árvore em 28/09/2026. Fiá-la
 seria fiar um objeto morto. O que
-respondia à pergunta dela — *"a vibração saiu do nosso lado?"* — passou a ser
+respondia à pergunta de produto —  — passou a ser
 medido no caminho VIVO (``apply_game_rumble``), e é isso que o bloco 5 tranca.
 
 Nada aqui toca hardware: o hidraw do físico é um ``os.pipe()``, o ``/dev/uhid``
@@ -201,7 +201,7 @@ class TestExtrairOJackDoReportCru:
         assert extract_jack_status(_bt_report(jack=_HP_DETECT)) == _HP_DETECT
 
     def test_bt_com_crc_corrompido_nao_diz_nada(self) -> None:
-        """``None`` e não ``0``: rádio corrompido não despluga o fone dela."""
+        """``None`` e não ``0``: rádio corrompido não despluga o fone do usuário."""
         assert extract_jack_status(_bt_report(jack=_HP_DETECT, corrupt=True)) is None
 
     def test_report_de_outro_id_nao_diz_nada(self) -> None:

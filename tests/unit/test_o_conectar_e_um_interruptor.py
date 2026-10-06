@@ -103,7 +103,7 @@ class Parada:
 
 
 def mundo_da_madrugada(relogio: rm.Relogio) -> RadioComHora:
-    """Dois controles no ar na sala (com som), e o verde novo, desligado, na mão dela."""
+    """Dois controles no ar na sala (com som), e o verde novo, desligado, na mão do usuário."""
     mundo = RadioComHora(relogio)
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(SALA, AZUL)
@@ -338,7 +338,7 @@ def test_o_mover_segue_com_os_trinta_segundos_dele(
 def test_o_parear_que_nao_chega_faz_a_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Não Conectou» fica para o que ela mandou e não chegou: com a busca"""
+    """«Não Conectou» fica para o que o usuário mandou e não chegou: com a busca"""
     bancada, _parada = montar(a08, monkeypatch)
     mundo = bancada.mundo
     try:

@@ -12,9 +12,8 @@ caixa por caixa aberta. Exceções, só estas e declaradas: o que não começa p
 unidade, «·», «—», aspas), a unidade e a marca escritas assim (``_MARCAS``) e o glifo de uma
 letra só (o «i» da informação no selo da aba Sistema).
 
-O NOME: ordem dela de 05/10/2026, 13h — *«Nome que o user colocar pra controle mesmo se ele
-colocar minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o
-resto como ela escreveu; ao gravar e ao ler o que já estava gravado.
+O NOME: ordem de 05/10/2026, 13h. Só a primeira letra; o
+resto como o usuário escreveu; ao gravar e ao ler o que já estava gravado.
 <!-- noqa-acento: citação literal -->
 
 TUDO É DE MENTIRA: as páginas num WebKit fora da tela, com o pintor do piloto; o BlueZ e o
@@ -238,7 +237,8 @@ def test_renomear_o_adaptador_grava_com_a_primeira_maiuscula(
 
 def test_o_nome_gravado_em_minuscula_se_le_com_a_primeira_maiuscula(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O que já estava no BlueZ como «azul» aparece «Azul»; o celular fica como ela escreveu."""
+    """O que já estava no BlueZ como «azul» aparece «Azul»; o celular fica como o usuário
+    escreveu."""
     monkeypatch.setattr(a08, "_e_controle_do_bluez", lambda a: a.classe == 0x2508)
     lidos = (SimpleNamespace(nome="azul", endereco="AA:BB:CC:00:00:01", conectado=True,
                              classe=0x2508),

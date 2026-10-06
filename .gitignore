@@ -116,10 +116,8 @@ STATE.md
 # Material de trabalho do redesign: mockups, referências e capturas de tela
 # soltas. A logo final vive em assets/hefesto-logo.svg; o resto não vai pro repo.
 
-# novo-layout/ — A REFERÊNCIA DO DESENHO. NÃO é o produto, e nenhum agente
-# escreve aqui. Palavra dela, 30/08/2026: *"não tava trackeado por um motivo
-# ÓBVIO: é só pra referência do desenvolvimento. Se fosse pra usar, ao menos
-# copiasse todos os html e criasse uma pasta chamada layout."*
+# novo-layout/ — A REFERÊNCIA DO DESENHO. NÃO é o produto, e nada se escreve aqui: é só
+# referência do desenvolvimento, e por isso não é versionado.
 # O produto lê de `layout/`, que é versionado.
 novo-layout/
 

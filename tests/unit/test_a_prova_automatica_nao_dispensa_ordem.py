@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""A prova botão a botão não cala um achado da máquina dela.
+"""A prova botão a botão não cala um achado da máquina do usuário.
 
-**03/09/2026.** Medido com o journal do daemon dos dois lados, na mesa dela:
+**03/09/2026.** Medido com o journal do daemon dos dois lados, na bancada:
 
     16:11:53  (antes)  MesaDeclarada(altura_da_antena='acima',
                                      linha_de_visada='com_gente',

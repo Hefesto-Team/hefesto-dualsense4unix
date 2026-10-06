@@ -28,11 +28,11 @@ escreve aceitava Opus como estado, e o pior é o ``state.micBtn``: ele **fecha u
 laço**, porque o botão do microfone liga e desliga a ponte que produz o áudio
 que o envenena.
 
-E O 90 NÃO EXISTE — uma correção ao que ela viu
+E O 90 NÃO EXISTE — uma correção ao que o usuário viu
 ------------------------------------------------
 Toda régua de bateria desta casa é ``nibble * 10 + 5``, que só produz
-``{5, 15, …, 95, 100}``. O agente mediu **85** e **95**; a dez repinturas por
-segundo, isso se lê como "90". Ela viu certo; o número é que não era 90.
+``{5, 15, …, 95, 100}``. A medição deu **85** e **95**; a dez repinturas por
+segundo, isso se lê como "90". O usuário viu certo; o número é que não era 90.
 
 O QUE A CASA JÁ SABIA, E COBRIU PELA METADE
 --------------------------------------------
@@ -147,7 +147,7 @@ class TestAGuardaNoLaco:
         assert e._reports_recusados == 1
 
     def test_a_guarda_nao_congela_o_controle(self) -> None:
-        """O risco que dói na mesa dela: guarda estrita demais = controle morto."""
+        """O risco que dói na bancada: guarda estrita demais = controle morto."""
         e = _Espiao()
         for _ in range(50):
             e._consumir_report(_bt_valido())

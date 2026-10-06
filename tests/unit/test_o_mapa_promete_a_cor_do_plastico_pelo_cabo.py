@@ -26,7 +26,7 @@ O QUE ELE MORDE, E POR QUÊ CADA UM
   **O TERCEIRO ERA O DE BARRAMENTO, e ele saiu na ``ONDA-CONEXOES-11``**: a razão
   dele ("por rádio o SET_FEATURE 0x80 devolve EIO", E7, 15/08/2026) tinha sido
   refutada em 27/08/2026 — não era o aparelho, era a semente do nosso CRC — e em
-  02/09/2026 o controle DELA no rádio devolveu o serial pelo produto. Onde havia
+  02/09/2026 o controle do usuário no rádio devolveu o serial pelo produto. Onde havia
   um filtro há agora um ENVELOPE: pelo rádio o pedido vai assinado;
 * **o envelope de cada transporte**. O comando é o mesmo nos dois — ``[1, 19]`` —
   e o que muda é a assinatura. A semente é ``0x53`` (``SET_REPORT|FEATURE``) e
@@ -42,7 +42,7 @@ O QUE ELE MORDE, E POR QUÊ CADA UM
 
 NADA AQUI ENCOSTA EM APARELHO. O transporte entra por ``perguntar``, que é o
 ponto de injeção que o módulo declara justamente para uma suíte distraída não
-mandar comando de fábrica para os quatro controles dela.
+mandar comando de fábrica para os quatro controles do usuário.
 """
 from __future__ import annotations
 
@@ -276,7 +276,7 @@ class TestOEnvelopeDoRadio:
         ) & 0xFFFFFFFF, "assinar com a semente de LEITURA é o erro de 23/08/2026"
 
     def test_a_trava_aceita_o_envelope_e_recusa_o_rabo_corrompido(self) -> None:
-        """A trava não afrouxou para deixar o rádio passar: ela APERTOU."""
+        """A trava não afrouxou para deixar o rádio passar: o usuário APERTOU."""
         envelope = envelope_de_radio(montar_pedido())
         conferir_pedido(envelope)
         torto = bytearray(envelope)
@@ -361,7 +361,7 @@ class TestOMapaEOProdutoNaoDivergem:
     o ENSAIO e falsa sobre o PRODUTO: `_perguntar_ao_hidraw` abre o nó com
     `os.open` DIRETO, e o BROKER-01 — que é DEFAULT no `install.sh` — deixa os
     nós dos DualSense `0600 root:root` para escondê-los do jogo. Medido em
-    29/08/2026 na máquina dela, com o broker no ar: `PermissionError 13 EACCES`
+    29/08/2026 na máquina do usuário, com o broker no ar: `PermissionError 13 EACCES`
     nos dois controles, e `ler_pelo_cabo` devolvendo `None` — que é "Não sei" na
     tela.
 

@@ -1,6 +1,6 @@
 """MESA-CHEIA-12 — o desenho aceso na barra É o número publicado.
 
-A medição de **15/08/2026, 01h00**, com os QUATRO DualSense dela no rádio. De
+A medição de **15/08/2026, 01h00**, com os QUATRO DualSense do usuário no rádio. De
 um lado o `daemon.state_full` pelo socket, do outro o `/sys/class/leds` da
 máquina, lidos no mesmo minuto:
 
@@ -30,12 +30,12 @@ daemon reescrevia ativamente o desenho, e o desenho batia 4/4 com o
   (`_next_player_index`, menor livre ≥2), que é a ordem em que o EVIOCGRAB de
   cada secundário confirmou nesta sessão.
 
-Duas ordens diferentes do mesmo MAC. Na mesa dela elas estavam separadas nos
+Duas ordens diferentes do mesmo MAC. Na bancada elas estavam separadas nos
 três secundários porque o co-op os promoveu na ordem 4º/2º/3º da fila
 (journal: `coop_player_added player=2/3/4`), enquanto a fila da casa punha o
 quarto em 4 e o segundo em 2.
 
-A verdade única é a FILA DE CHEGADA, por decisão dela
+A verdade única é a FILA DE CHEGADA, por decisão de produto
 (o registro «INDICE-a-cor-do-controle-e-o-som-de-cada-jogador» de 14/08/2026:
 *"a ordem deve ser por ordem de conexão daquele momento"*, e essa ordem
 prevalece). A cura foi tirar o número publicado do `player_index` e pô-lo em
@@ -49,8 +49,7 @@ decodificada em número. Se o desenho voltar a divergir do número publicado em
 QUALQUER um dos quatro jogadores, o teste cai.
 
 Nenhum endereço real: os quatro usam a faixa forjada `aa:bb:cc:…`, a mesma
-allowlist de `test_anonimato_de_fixtures.py`. A ORDEM dos MACs reproduz a mesa
-dela; os bytes, não.
+allowlist de `test_anonimato_de_fixtures.py`. A ORDEM dos MACs reproduz a bancada; os bytes, não.
 """
 from __future__ import annotations
 

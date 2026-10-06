@@ -6,9 +6,7 @@
 > `afirmado-no-doc` — leitura cruzada de repositórios de terceiros contra o
 > `hid-playstation.c` que está compilado nesta máquina.
 >
-> Ele nasceu do pedido dela: *"lançar novo workflow pra agentes procurarem no
-> Github tais canais ou tais id (…) como é só informação eles trouxeram e me
-> ajudaram no mapa do controle"*. O contrato é FATO com ENDEREÇO — um número,
+> Ele nasceu do  O contrato é FATO com ENDEREÇO — um número,
 > um offset, um formato de comando. Não há uma linha de código de terceiro
 > copiada aqui.
 
@@ -130,7 +128,7 @@ agora tem hipótese endereçada para confirmar, em vez de 26 posições cegas.
 
 ## 4. O que CONFIRMA o driver, e o que o CONTRADIZ
 
-O driver do Linux é o que roda na máquina dela. Um achado que o contradiz é
+O driver do Linux é o que roda na máquina do usuário. Um achado que o contradiz é
 suspeito; um que o confirma por caminho independente vale mais que achado
 solitário.
 
@@ -257,7 +255,7 @@ enquadramento do rádio traz sequência própria. **Se for verdade, uma checagem
 vivacidade construída sobre o corpo 6 funciona no cabo e é CEGA no rádio** — a
 pior forma de defeito, porque passa em todo teste feito com o cabo espetado.
 
-**Não medi.** É a primeira coisa que eu poria na bancada dela: ligar no rádio,
+**Não medi.** É a primeira coisa que eu poria na bancada: ligar no rádio,
 capturar N reports parado na mesa, e olhar se o corpo 6 anda.
 
 ---

@@ -298,7 +298,7 @@ class TestOsDonosRespondemLigado:
 
 
 class TestAFilaDela:
-    """O que espera a palavra dela é lista FECHADA, e cada item diz o que falta."""
+    """O que espera a palavra de produto é lista FECHADA, e cada item diz o que falta."""
 
     def test_a_fila_e_exatamente_a_declarada(self) -> None:
         do_esquema = frozenset(

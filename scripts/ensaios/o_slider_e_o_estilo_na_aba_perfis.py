@@ -4,11 +4,11 @@
 
 POR QUE ELE EXISTE, e é a regra desta casa: os testes de unidade provam a CONTA
 — que o gesto grava a prioridade certa, que o estilo escreve gatilho, vibração e
-uma cor por unidade. O que eles NÃO provam é que o clique dela CHEGA: o
+uma cor por unidade. O que eles NÃO provam é que o clique do usuário CHEGA: o
 `<input type=range>` nasceu hoje, e um campo que o ouvinte do piloto não
 alcançasse daria verde em toda régua de Python e silêncio na tela.
 
-O ENSAIO FAZ O CAMINHO DELA, no motor que ela usa:
+O ENSAIO FAZ O CAMINHO DO USUÁRIO, no motor que ela usa:
 
 1. abre a página **da BANCADA** (`mockup/10-perfis.html`) no
    ``WebKit2.WebView`` do piloto — ver `A PÁGINA É A DA BANCADA` abaixo;
@@ -22,7 +22,7 @@ O ENSAIO FAZ O CAMINHO DELA, no motor que ela usa:
 **O DAEMON FICA DE FORA, e é escolha.** `mesa_viva.estado_do_daemon` é trocado
 por um que levanta, então o tique do piloto sai antes de tocar a mesa — o que
 este ensaio mede é o CAMINHO DO CLIQUE e o da PINTURA, não a leitura do
-aparelho. Sem isso ele dependeria de quantos controles estão na mesa dela agora,
+aparelho. Sem isso ele dependeria de quantos controles estão na bancada agora,
 e um ensaio que muda de resultado conforme o cabo não mede nada.
 
 **A PÁGINA É A DA BANCADA, e isto é a coisa mais importante deste arquivo.** O
@@ -32,7 +32,7 @@ DESENHO do slider ainda não foi publicado — publicar é ato dela
 ensaio carrega o `mockup/` à mão. O que ele mede é exatamente o que ela vai
 receber quando aprovar: o mesmo HTML, o mesmo motor, o mesmo despachante.
 
-**NADA TOCA O PERFIL DELA.** O `HOME` e os quatro `XDG_*` são desviados para um
+**NADA TOCA O PERFIL DO USUÁRIO.** O `HOME` e os quatro `XDG_*` são desviados para um
 diretório temporário ANTES do primeiro import do pacote, e o perfil de ensaio é
 escrito lá. E a ponte é trocada por um dublê que ANOTA em vez de falar com o
 daemon vivo: `gravar_e_reaplicar` termina em `launch_env.refresh`, e um ensaio
@@ -157,7 +157,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 
 class PonteDeMentira:
-    """Anota, e não fala com o daemon dela. Ver o cabeçalho."""
+    """Anota, e não fala com o daemon do usuário. Ver o cabeçalho."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []

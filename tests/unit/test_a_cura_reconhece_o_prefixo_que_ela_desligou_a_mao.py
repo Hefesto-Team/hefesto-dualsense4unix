@@ -1,4 +1,4 @@
-"""O estado REAL da máquina dela em 23/08/2026, e a cura tem de conviver com ele."""
+"""O estado REAL da máquina do usuário em 23/08/2026, e a cura tem de conviver com ele."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -23,7 +23,7 @@ SUFIXO_DELA = ".desligado"
 
 @pytest.fixture()
 def prefixo_dela(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`compatdata/1599660` no estado exato em que a máquina dela está."""
+    """`compatdata/1599660` no estado exato em que a máquina do usuário está."""
     raiz = tmp_path / "compatdata" / "1599660"
     (raiz / "pfx").mkdir(parents=True)
     (raiz / "pfx" / "system.reg").write_text(
@@ -133,7 +133,7 @@ def test_devolver_volta_byte_a_byte_e_os_arquivos_dela_seguem_como_estavam(
 def test_o_lancamento_seguinte_nao_desfaz_a_devolucao_dela(
     prefixo_dela: Path, tmp_path: Path
 ) -> None:
-    """Ela clicou em devolver; abrir o jogo de novo não pode desligar outra vez."""
+    """O usuário clicou em devolver; abrir o jogo de novo não pode desligar outra vez."""
     casa = tmp_path / "casa"
     cv.aplicar_no_prefixo(
         cv.prefixo_de_jogo(prefixo_dela, appid="1599660"), forcar=True, home=casa

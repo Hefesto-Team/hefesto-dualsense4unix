@@ -394,10 +394,10 @@ async def vigiar_o_cabo_em_espera(
 
 
 def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None) -> str | None:
-    """O nome da escolha dela para o boot, com a memória do botão quando há.
+    """O nome da escolha do usuário para o boot, com a memória do botão quando há.
 
     `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4: o boot e a reconexão
-    restauram a escolha dela, com regra de janela ou sem. A pergunta é a do
+    restauram a escolha do usuário, com regra de janela ou sem. A pergunta é a do
     dono (`utils.session.resolve_boot_profile`, que pergunta a
     `a_escolha_dela`); a memória do Modo Freestyle (`o_freestyle_manda`) vale
     quando há `store`, e o disco quando o boot pergunta antes de haver memória.
@@ -405,20 +405,20 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
 
     O JOGO EM CENA VEM ANTES DA ESCOLHA — A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01
     (01/10/2026, `D-3009-O-REINICIO-COM-O-JOGO-ABERTO-NASCE-NO-PERFIL-DO-JOGO`,
-    a validar por ela). Com um jogo aberto na hora do boot (o «Reiniciar», o
+    a validar pelo usuário). Com um jogo aberto na hora do boot (o «Reiniciar», o
     install, uma queda do serviço), o perfil cuja regra `steam_app_<appid>`
     casa com ele é o que vale, e o primeiro pad nasce no modo dele: o
     autoswitch o poria nove segundos depois, com a trava já protegendo o modo
     de fora do jogo. Com o Freestyle ligado, vale o Freestyle, como sempre.
     `appid_em_cena` é o do sinal de jogo (`Daemon.appid_em_cena`); sem ele, a
-    escolha dela.
+    escolha do usuário.
 
     NOTA DATADA — 01/10/2026: aqui morava a RESTORE-ESCOPO-01 (22/07), que
     pulava todo perfil com regra de janela, e o Freestyle entrava no lugar
-    (O-MODO-FREESTYLE-03). No disco dela isso é todo perfil que não é o
+    (O-MODO-FREESTYLE-03). No disco do usuário isso é todo perfil que não é o
     Freestyle: medido no diário de 28 e 29/09, seis boots com a sessão em Pro
-    Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A fala dela de
-    29/09 revogou a regra para a escolha dela.
+    Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A fala do usuário de
+    29/09 revogou a regra para a escolha do usuário.
     """
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
     from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, o_freestyle_manda
@@ -460,7 +460,7 @@ def perfil_que_o_boot_restaura(
 
     A mesma pergunta do restore (:func:`_o_nome_que_o_boot_restaura`): com o
     Modo Freestyle ligado, o Freestyle, e o primeiro pad nasce no modo DELE;
-    desligado, a escolha dela, com regra de janela ou sem — escolher o Future
+    desligado, a escolha do usuário, com regra de janela ou sem — escolher o Future
     Knight à mão deixa o controle no Xbox fora do jogo, que é o que o «Ativar»
     já faz. Com um jogo aberto na hora do boot (`appid_em_cena`, desde a
     A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01), o perfil do jogo vem antes da
@@ -476,7 +476,7 @@ def perfil_que_o_boot_restaura(
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
-    """Reativa a escolha dela no boot e na reconexão (FEAT-PERSIST-SESSION-01)."""
+    """Reativa a escolha do usuário no boot e na reconexão (FEAT-PERSIST-SESSION-01)."""
     from functools import partial
 
     from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
@@ -895,8 +895,7 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     situação que a madrugada de 16/08 mediu. Dois eventos entram aqui, e cada
     um responde a uma metade da medição:
 
-    - ``pintura_com_escritor_cru`` — *"a barra fica APAGADA depois de cada
-      comando nosso"*. O produto pintou (contador do `_pintar_por_hidraw_bt`) e
+    - ``pintura_com_escritor_cru``. O produto pintou (contador do `_pintar_por_hidraw_bt`) e
       há um escritor cru segurando o nó: quem escrever por ÚLTIMO ganha, e
       hoje é ela. O gatilho reafirma 1,5 s depois que a sequência de comandos
       sossega — uma escrita por rajada, não uma por comando;
@@ -905,9 +904,8 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
       exatamente quando ela repinta tudo o que enxerga (medido em 12/08:
       98 reports de saída numa probe com ela viva, contra 6 sem ela).
 
-    **Modo Nativo é no-op TOTAL — nem sonda.** Regra dela, literal: *"no modo
-    nativo devolvemos o controle pra steam e no modo conexão também, todo o
-    resto é o hefesto"*. Ali o dono do hidraw é o jogo, e um escritor cru não
+    **Modo Nativo é no-op TOTAL — nem sonda.** Regra de produto, literal. Ali o dono do hidraw é o
+    jogo, e um escritor cru não
     é intruso: é o dono. Sondar seria gastar `pgrep` para concluir que sim, o
     jogo está lá. 24/09/2026 (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-
     HEFESTO`): a barra e o número passaram a ser do Hefesto no Nativo também, e

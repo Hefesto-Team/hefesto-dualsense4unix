@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A 05 DESENHA O CONTROLE DELA, e não o do mockup — os 28 modelos do mapa."""
+"""A 05 DESENHA O CONTROLE DO USUÁRIO, e não o do mockup — os 28 modelos do mapa."""
 from __future__ import annotations
 
 import csv
@@ -179,14 +179,13 @@ def test_todo_desenho_de_controle_pede_o_alvo_de_atributo() -> None:
 def test_o_lugar_vazio_nao_afirma_modelo_nenhum() -> None:
     """O `<svg>` de um lugar sem controle sai SEM `data-colorway`.
 
-    É a regra dela — campo sem informação não mostra nada. Um lugar vazio não
+    É a regra de produto — campo sem informação não mostra nada. Um lugar vazio não
     tem aparelho, logo não tem modelo: afirmar "Galactic Purple" ali é o desenho
     falando por um controle que não existe.
 
     E NÃO MUDA UM PIXEL, o que foi medido no Chrome antes de ser escrito: o
     lugar sem controle não mostra desenho nenhum — quem responde por isso é a
-    folha COMPARTILHADA (`monta.py`, a S-04 de 05/09/2026, palavra dela: *"os
-    svgs não deveriam aparecer prós demais controles desconectados"*), com
+    folha COMPARTILHADA (`monta.py`, a S-04 de 05/09/2026, ), com
     `[data-controle][data-conectado="nao"] .ds-svg{visibility:hidden}`. Medido
     em 07/09/2026 com a fusão dos dois ramos de coluna: o PNG da aba saiu
     **byte a byte idêntico** ao de antes.

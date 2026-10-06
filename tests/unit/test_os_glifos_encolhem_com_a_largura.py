@@ -20,7 +20,7 @@ def test_o_gerador_traz_a_regra() -> None:
 
 
 def test_a_pagina_publicada_traz_a_regra() -> None:
-    """Curar o gerador e não publicar deixa a tela dela igual."""
+    """Curar o gerador e não publicar deixa a tela do usuário igual."""
     if not PAGINA.exists():  # pragma: no cover — árvore sem a página publicada
         pytest.skip(f"{PAGINA.name} não está publicada nesta árvore")
     assert REGRA in PAGINA.read_text(encoding="utf-8"), (

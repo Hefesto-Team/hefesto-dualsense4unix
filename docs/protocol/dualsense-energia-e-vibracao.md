@@ -132,9 +132,9 @@ hexadecimal, e `0x0224` lido assim é literalmente "2.24"; o macro do driver lê
 "2.21" mas produz `0x0215`, que na mesma convenção seria "2.15". Isso tem cara
 de conversão decimal/hexadecimal perdida no caminho.
 
-**Mas não decide nada**, por duas razões: o driver é o que roda na máquina dela,
+**Mas não decide nada**, por duas razões: o driver é o que roda na máquina do usuário,
 e o Edge não passa por esse teste em nenhuma das fontes (é sempre v2). **É
-ensaio de um comando:** ler o report de firmware dos dois controles dela e ver
+ensaio de um comando:** ler o report de firmware dos dois controles do usuário e ver
 de que lado dos dois limiares eles caem.
 
 ### 4.2. O byte 36 — dois nibbles de redução de potência, e ninguém sabe quem é quem
@@ -175,7 +175,7 @@ com o aparelho na mesa:
 4. **Se `UseRumbleNotHaptics2` faz algo diferente do bit 1 do `valid_flag0`.** A
    única anotação que existe diz que o efeito é o mesmo.
 5. **Qual nibble do byte 36 é do rumble** (§4.2).
-6. **A versão de firmware dos controles dela** (§4.1).
+6. **A versão de firmware dos controles do usuário** (§4.1).
 7. **O byte 40** (§4.3).
 
 ---
@@ -194,4 +194,4 @@ O `awalol/DS5Dongle` já era fonte desta casa, no mesmo commit, para a linha
 `audio.alto_falante` do mapa.
 
 **Nada aqui é código copiado.** São números, offsets e nomes de campo — o que
-ela pediu quando disse que a informação é o que se traz.
+o usuário pediu quando disse que a informação é o que se traz.

@@ -42,7 +42,7 @@
 #                     tira o bit de OUTROS dos nós /dev/hidraw* que estão
 #                     abertos a qualquer usuário local E que NENHUMA regra udev
 #                     explica (0666 -> 0660). Nunca roda sozinho: NÃO entra no
-#                     --fix e NÃO entra no install. Decisão dela, 07/08/2026
+#                     --fix e NÃO entra no install. Decisão, 07/08/2026
 #                     (resposta 16 do painel). Ver RESTAURO-SO-COM-SINTOMA-01.
 #   --quiet           só mostra FAIL/WARN.
 #   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
@@ -121,7 +121,7 @@ esta_instalacao_e_um_checkout() {
 }
 
 #: O que dizer a quem NÃO tem checkout, quando não há gesto melhor. A T-03
-#: redigiu este mínimo e o carimbou PROVISÓRIO (aguarda o olho dela): ele é
+#: redigiu este mínimo e o carimbou PROVISÓRIO (aguarda o olho de quem confere): ele é
 #: honesto e universal, mas não nomeia o gesto do formato — um `flatpak
 #: update`, um `apt upgrade`. Nomear é texto novo de tela, e isso é decisão
 #: dela. É a MESMA frase que já está no produto, palavra por palavra — não uma
@@ -154,7 +154,7 @@ _CONSELHO_GESTO_GENERICO="atualize o Hefesto pelo mesmo caminho por onde você o
 # cima: `test_bg06_…::test_o_gesto_e_nomeado_por_formato` compara as duas nos
 # cinco formatos e reprova se divergirem.
 #
-# **PROVISÓRIO — decisão dela**: os cinco gestos nomeados são texto novo de
+# **PROVISÓRIO — decisão de produto**: os cinco gestos nomeados são texto novo de
 # tela. Carimbo herdado da T-03, que redigiu a genérica e parou aqui de
 # propósito.
 
@@ -247,7 +247,7 @@ conselho_de_instalacao() {
 
 # Um aparte que SÓ faz sentido para quem tem o repositório: o nome de uma flag,
 # o número de um passo do instalador. Fora do checkout devolve NADA — é o que
-# mantém a frase de hoje intacta na máquina dela e limpa nas outras.
+# mantém a frase de hoje intacta na máquina do usuário e limpa nas outras.
 #
 # ELE JÁ VEM COM O ESPAÇO NA FRENTE, e por isso o aparte NÃO pode começar por
 # pontuação: `"; opt-out: --no-dkms"` sai como "install.sh ; opt-out", com o
@@ -898,7 +898,7 @@ check_hid_playstation() {
 # ---------------------------------------------------------------------------
 # check_hid_playstation (acima) só conferia se o MÓDULO carregou. Módulo
 # carregado e controle invisível são compatíveis, e foi o que aconteceu 6x na
-# máquina dela em 08/08/2026: o controle conecta no Bluetooth, acende a luz do
+# máquina do usuário em 08/08/2026: o controle conecta no Bluetooth, acende a luz do
 # PRÓPRIO firmware e não existe para o sistema — sem hidraw, sem input, sem nó
 # de LED, sem bateria. A dona tinha dois controles ligados, a janela mostrava
 # um, e nada em lugar nenhum do produto sabia dizer por quê.
@@ -972,7 +972,7 @@ _hid_playstation_orfaos_agora() {
 # indistinguível de "não houve nada". Esta casa já pagou quatro medições
 # falsas por essa armadilha (índice de 08/08, §8).
 #
-# O TAMANHO da janela foi MEDIDO na máquina dela em 09/08, e a primeira
+# O TAMANHO da janela foi MEDIDO na máquina do usuário em 09/08, e a primeira
 # escolha estava errada: com 24 h a mesma consulta via 1 dos 6 abortos de
 # 08/08 (o boot dela é mais velho que um dia), e com 3 dias via os 6. Como o
 # aborto recuperado é só `info`, uma janela larga custa pouco ruído e devolve
@@ -1132,7 +1132,7 @@ check_led_sysfs_gravavel() {
 # `/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F` — os nós auxiliares do
 # VPAD que o próprio daemon acabara de criar. Não havia DualSense físico
 # conectado. O instrumento deu verde sobre um device que nós mesmos fabricamos,
-# e ficou calado exatamente sobre o que a pergunta era (o controle dela).
+# e ficou calado exatamente sobre o que a pergunta era (o controle do usuário).
 # `check_led_sysfs_gravavel` já resolvia isto do jeito certo, com
 # `[[ "${dev_real}" == */devices/virtual/* ]] && continue`.
 #
@@ -1186,7 +1186,7 @@ check_input_uaccess() {
         # FATO QUE CAIU, SUBSTITUÍDO — 24/09/2026. O teste era só
         # `/devices/virtual/`, e desde o BlueZ 5.73 o DualSense FÍSICO pelo
         # rádio mora em `/devices/virtual/misc/uhid/`, ao lado do vpad: o
-        # controle dela pelo BT era contado como «gamepad VIRTUAL». Quem
+        # controle do usuário pelo BT era contado como «gamepad VIRTUAL». Quem
         # separa os dois ali é a identidade do vpad (o `uniq` 02:fe), como em
         # `core/evdev_reader.py:_is_virtual_evdev`.
         uniq="$(cat "/sys/class/input/${base}/device/uniq" 2>/dev/null || true)"
@@ -1335,7 +1335,7 @@ check_usb_storm_config_conflict() {
     fi
 }
 
-# A BANDEJA DO PRODUTO É O TRAY — 19/09/2026, ordem dela: *"desabilitamos o
+# A BANDEJA DO PRODUTO É O TRAY — 19/09/2026, ordem de produto: *"desabilitamos o
 # applet pela complexidade. o tray faz o mesmo mas melhor."*
 #
 # Esta função auditava a saúde do applet COSMIC: `X-CosmicApplet`,
@@ -1358,7 +1358,7 @@ check_bandeja() {
             pass "autostart do tray instalado (${exec_do_autostart})"
         else
             # Um autostart que NÃO pede o tray abriria a JANELA a cada login,
-            # na frente dela. É `fail` de propósito.
+            # na frente do usuário. É `fail` de propósito.
             fail "o autostart existe mas não pede o tray (Exec=${exec_do_autostart}) — reinstale"
         fi
     else
@@ -1460,8 +1460,8 @@ check_wireplumber_source() {
     # E o opt-in que existia era uma VARIÁVEL DE AMBIENTE. Pela regra desta casa
     # (*"tudo tem que focar em funcionar na interface do app e no install"*),
     # opt-in que só se alcança exportando env não é opt-in dela: é opt-in de
-    # quem lê o código. O promotor no disco, sim, é gesto dela — ele só existe
-    # se o install rodou sem `--keep-dualsense-mic` ou se ela clicou "Ligar" na
+    # quem lê o código. O promotor no disco, sim, é gesto do usuário — ele só existe
+    # se o install rodou sem `--keep-dualsense-mic` ou se o usuário clicou "Ligar" na
     # aba Emulação.
     #
     # Continua ALARMANDO no caso que o check foi criado para pegar: promotor
@@ -1569,7 +1569,7 @@ _prefere_mic_do_dualsense() {
     #    é ELA quem diz que a promoção foi pedida — e ela existe porque quem
     #    pediu deixou o gesto gravado, não porque um arquivo faltou.
     [[ -f "$(_marca_do_gesto_do_mic)" ]] && return 0
-    # 5. Nem o 51 nem a marca: NÃO SEI, e "não sei" nunca é "ela pediu".
+    # 5. Nem o 51 nem a marca: NÃO SEI, e "não sei" nunca é "o usuário pediu".
     #
     #    FATO ERRADO, SUBSTITUÍDO — esta linha era `return 0`, com o
     #    comentário *"sua ausência (ex.: --promote-source, mic promote) é a
@@ -1578,7 +1578,7 @@ _prefere_mic_do_dualsense() {
     #    (ou a instalação que nunca houve). Lendo as duas como uma, o doctor
     #    dava [OK] — e ELEGIA o mic do controle a fonte padrão do sistema, com
     #    `pass` na tela — em cima de uma máquina com a cura desarmada. É desse
-    #    estado que saiu a queixa dela de 04/08: *"não funciona nem mic, nem os
+    #    estado que saiu a queixa de 04/08: *"não funciona nem mic, nem os
     #    botões de sons do jogo"* (DROPIN-AMBIGUO-01).
     #
     #    A migração escolhida é a CONSERVADORA (E4 da sprint, opção (b)):
@@ -1676,7 +1676,7 @@ _sources_com_porta_usavel() {
     done
 }
 
-# MIC-PADRAO-NO-CABO-01 §D.7 (quem coordena): 0 = o alvo `$1` é o DualSense só por falta de outra entrada (`$2` = prefere 0) com o 51 no lugar; o WirePlumber o elege sozinho acima de qualquer monitor, e gravado ele venceria a webcam plugada depois (reproduzido com dublês, não medido no aparelho).
+# MIC-PADRAO-NO-CABO-01 §D.7 (decisão de produto): 0 = o alvo `$1` é o DualSense só por falta de outra entrada (`$2` = prefere 0) com o 51 no lugar; o WirePlumber o elege sozinho acima de qualquer monitor, e gravado ele venceria a webcam plugada depois (reproduzido com dublês, não medido no aparelho).
 _dualsense_por_falta_com_o_51() { [[ "${2:-0}" -eq 0 && "${1,,}" == *dualsense* && -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]; }
 
 check_default_source_monitor() {
@@ -1832,7 +1832,7 @@ fix_default_source_monitor() {
 # sobre uma cura desarmada, e a máquina só descobria no meio do jogo. Este
 # aqui lê disco, e por isso vale com nenhum controle conectado.
 #
-# PROVISÓRIO — decisão dela: as três frases desta função são texto novo de
+# PROVISÓRIO — decisão de produto: as três frases desta função são texto novo de
 # tela (LEVA-1-D, 26/08/2026).
 check_dropin_do_mic_armado() {
     local conf="${HOME}/.config/wireplumber/wireplumber.conf.d"
@@ -1865,7 +1865,7 @@ check_dropin_do_mic_armado() {
 # O ALTO-FALANTE QUE NÃO DORME (SOM-QUE-NAO-DORME-01; conferido pelo doctor
 # desde a INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). A cura é o drop-in 54
 # do WirePlumber, que o install põe sem flag. O único aviso de que ele faltava
-# era indireto — o «Canal dormindo» da tela, que saiu por ordem dela
+# era indireto — o «Canal dormindo» da tela, que saiu por ordem de produto
 # (O-ALTO-FALANTE-DIZ-ATIVO-01) —, e o leitor Python dele
 # (`audio_saida.regra_nunca_dorme_instalada`) só alimentava a janela GTK. Lê o
 # disco, então vale sem controle na mesa. Só o CABO depende dele: pelo rádio
@@ -2225,7 +2225,7 @@ _dualsense_perfil_status() {
 #           a ser `[In] Mic`, do nosso `assets/ucm/DualSense-HiFi.conf`, cujo
 #           `SectionDevice."Mic"` declara só `CapturePCM` e `CapturePriority`.
 #           Sem `CaptureVolume`/`CaptureMixerElem`, o elemento continua fora.
-# Trocar isso é mudança no SISTEMA dela e depende do par controlado do ganho
+# Trocar isso é mudança no SISTEMA do usuário e depende do par controlado do ganho
 # (`scripts/ensaios/o_caminho_do_mic_no_cabo.py --ganho-plano`). Por isso este
 # decisor DIZ, e não conserta.
 #
@@ -2466,7 +2466,7 @@ check_mic_perfil_sem_sinal() {
 #
 # É WARN, e nunca FAIL, de propósito: o estado que ele descreve é o de sempre —
 # nasceu com o produto e não é regressão de ninguém —, e a cura é mudança no
-# SISTEMA dela que depende de uma medição com a orelha dela. Um FAIL aqui
+# SISTEMA do usuário que depende de uma medição com a orelha do usuário. Um FAIL aqui
 # reprovaria toda instalação por um ponto que só ela pode fechar.
 #
 # E O VERDE DAQUI NÃO DIZ QUE O MICROFONE ESTÁ BOM. Ele responde sobre a
@@ -2765,7 +2765,7 @@ check_ultimo_device_ks() {
 # uma noite. Em 15/08 o Pragmata tinha `VKD3D_CONFIG=no_upload_hvv %command%`
 # no lugar da chamada do wrapper (a Steam guarda UMA linha por jogo e a
 # sobrescreve sem avisar); o contador dizia "60 jogos com o wrapper" e passava
-# em verde, enquanto o jogo dela ficava sem controle nenhum no Bluetooth.
+# em verde, enquanto o jogo do usuário ficava sem controle nenhum no Bluetooth.
 #
 # O censo é READ-ONLY e roda com a Steam ABERTA — só a escrita é que exige a
 # Steam fechada. `--censo` não anota nada em disco: o doctor diagnostica, quem
@@ -2838,7 +2838,7 @@ print("erros=" + str(len(d.get("erros") or [])))
 #   UserLocalConfigStore/apps/<appid>                        11 linhas
 #   UserLocalConfigStore/WebStorage/apps/<appid>              3 linhas
 #
-# Qual é a viva não é palpite: quando ela digitou `VKD3D_CONFIG=no_upload_hvv
+# Qual é a viva não é palpite: quando o usuário digitou `VKD3D_CONFIG=no_upload_hvv
 # %command%` nas Opções de Inicialização do Pragmata pela janela da Steam, foi
 # a PRIMEIRA que mudou, e só ela. As outras duas seguem com a linha antiga.
 #
@@ -3858,7 +3858,7 @@ check_bluez_fastconnectable() {
 # A troca transfere peso para o `hefesto-bt-agent.service`, uma unit que já
 # falhou duas vezes em 04/08 (BT-AGENT-TRAVA-O-RESTART-01 e
 # BT-AGENT-MORTO-FICA-MORTO-01). Com o agente morto, o re-pareamento legítimo
-# dela para de funcionar — e é o doctor que tem de dizer isso antes que ela
+# do usuário para de funcionar — e é o doctor que tem de dizer isso antes que ela
 # descubra pelo controle que não conecta.
 #
 # QUEM LÊ O VALOR (06/08/2026): `scripts/bluez_config.sh verificar`, e só ele.
@@ -3977,7 +3977,7 @@ check_bluez_justworks_repairing() {
                 # veredito vem do contrato do BlueZ e do histórico desta unit
                 # (BT-AGENT-TRAVA-O-RESTART-01 e BT-AGENT-MORTO-FICA-MORTO-01,
                 # 04/08), não de um pareamento medido com o agente morto. A
-                # frase diz o que o BlueZ FAZ, não o que o controle dela fez.
+                # frase diz o que o BlueZ FAZ, não o que o controle do usuário fez.
                 fail "pareamento por rádio PARADO: JustWorksRepairing=confirm só aceita com um agente registrado para confirmar, e o hefesto-bt-agent.service está ${state:-ausente} — sem ele o BlueZ RECUSA o re-pareamento ('Refusing connection from ...') e nenhum controle volta a entrar por Bluetooth. Ligue: sudo systemctl enable --now hefesto-bt-agent.service"
             fi
             ;;
@@ -4366,7 +4366,7 @@ check_bt_radio() {
         # Bonded e Trusted ficam todos `true` o tempo todo.
         #
         # Sem este aviso o defeito se parece com regressão do Hefesto, e foi
-        # exatamente assim que ele chegou (a queixa dela: "conecta sozinho e
+        # exatamente assim que ele chegou (a queixa de uso: "conecta sozinho e
         # algo apaga a conexão"). Vale para device pareado, conectado ou não.
         if [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] \
                 && ! _dbus_bt_prop "${p}" org.bluez.Device1 UUIDs \
@@ -4510,7 +4510,7 @@ check_bt_crc_counters() {
 # é por onde a régua injeta uma bancada em vez de medir a topologia de quem
 # roda o teste.
 #
-# «NOMEAR E RELIGAR», a palavra dela de 23/09 (24/09/2026). Cada linha diz a
+# «NOMEAR E RELIGAR», a palavra de 23/09 (24/09/2026). Cada linha diz a
 # ENTRADA pelo nome da seção do rádio (o dono é `entrada_a_entrada.nome_da_porta`,
 # e o módulo pergunta a ele) e o CONTROLE que está nela — ou o adaptador BT, que
 # leva todos os controles dele quando cai. E a entrada em que o kernel DESISTIU
@@ -4609,7 +4609,7 @@ check_kernel_watch() {
     # ELE CONTAVA O ARQUIVO INTEIRO E ESCREVIA NO PRESENTE. `grep -c "[JOYCON]"`
     # sobre um log que começa em 20/07 devolvia 9, e a frase saía *"o kernel deu
     # rate-limit no 8BitDo 9 vezes"* — com o 8BitDo desligado e os nove eventos
-    # em 11/08 e 26/08. A palavra dela: *"nem o 8bitdo tá conectado nem o usb
+    # em 11/08 e 26/08. A palavra de produto: *"nem o 8bitdo tá conectado nem o usb
     # pareceu ter dado pau. acho que essas 4 mensagens tão erradas não?"*.
     #
     # ESTAVAM. E o defeito não é o número — é o TEMPO VERBAL. Um aviso que
@@ -4852,7 +4852,7 @@ check_cmdline_platform() {
 #   07/08 — com número.
 #
 # Por que o teto é WARN e não FAIL: numa máquina que já veio com bluez ≥ 5.87
-# (o caso do PC novo), nada disto é escolha dela, e o primeiro lançamento pós-
+# (o caso do PC novo), nada disto é escolha do usuário, e o primeiro lançamento pós-
 # 5.87 que carregue o `5bc6aa79` (previsivelmente o 5.88) sai desta faixa por
 # mérito próprio. O dever do doctor aqui é NOMEAR o motivo, não decidir por
 # ela. Quando o 5.88 sair com a correção, este teto sobe — e o estudo §D é o
@@ -5014,7 +5014,7 @@ check_bt_agent_service() {
 #   4. a sessão consegue escrever nele? (sem o grupo nos processos dela — quem
 #      acabou de entrar no grupo —, a trava funciona só para ler).
 # SEM MOTOR ROOT, A FALTA DA TRAVA NÃO É DEFEITO (conferência da INSTALL-E-
-# UNINSTALL-DO-RADIO-01, a decisão P-2.9 de quem coordena): quem instalou por
+# UNINSTALL-DO-RADIO-01, a decisão de produto P-2.9): quem instalou por
 # pacote, ou com `--no-udev`, não tem o timer do watchdog nem o drop-in do
 # bluetoothd (que roda o modo ativo como root) — e a trava da sessão já põe em
 # fila todos os escritores daquela máquina. Mandar essa pessoa «atualizar pelo
@@ -5277,7 +5277,7 @@ check_bt_sdp_cache_envenenado() {
         # sob demanda; `btmgmt`/`bluetoothctl` do 5.86 não têm equivalente
         # (`btmgmt find-service` é varredura por UUID, não browse de um device
         # já conectado). Sem ele o conselho muda: em vez de mandar a humana
-        # rodar um comando que não existe na máquina dela, o doctor assume o
+        # rodar um comando que não existe na máquina do usuário, o doctor assume o
         # que não sabe e dá o caminho barato primeiro.
         local _como_distinguir
         if command -v sdptool >/dev/null 2>&1; then
@@ -5403,7 +5403,7 @@ check_bt_paired_sem_bonded() {
 
 # BOND-DOBRADO-01 (19/09/2026) — o mesmo controle com chave em DOIS adaptadores.
 #
-# ACHADO NA MESA DELA, e ninguém via: quatro DualSense, SEIS bonds. Dois
+# ACHADO NA BANCADA, e ninguém via: quatro DualSense, SEIS bonds. Dois
 # controles com chave de pareamento em dois adaptadores ao mesmo tempo — uma
 # migração feita pela metade, em que o bond do adaptador de ORIGEM ficou.
 # O `§6.3` do `GUIA-RADIO-DA-SALA` manda apagá-lo justamente para isso.
@@ -5428,7 +5428,7 @@ _bond_dobrado_por_controle() {
     #
     # Só conta objeto com `Paired=true`: o BlueZ guarda um objeto para todo
     # aparelho que uma busca achou, e o vizinho que dois adaptadores viram
-    # passar não tem chave em nenhum. Medido na mesa dela em 25/09: 23
+    # passar não tem chave em nenhum. Medido na bancada em 25/09: 23
     # objetos, 10 vizinhos de busca em hci1 e hci2, e o check dava 12 avisos
     # para UM controle com chave dobrada (a régua é
     # `test_o_doctor_ve_o_bond_dobrado.py`).
@@ -5588,16 +5588,16 @@ for i in itens:
 #    Os dois viraram ramos separados, com o gesto que serve a cada um.
 #
 # 2. *"1 jogo(s) fora do Proton pinado"*, sem nome e sem razão. O jogo é o
-#    DON'T SCREAM, e ele está fora PORQUE O PRODUTO RESPEITOU A ESCOLHA DELA:
+#    DON'T SCREAM, e ele está fora PORQUE O PRODUTO RESPEITOU A ESCOLHA DO USUÁRIO:
 #    em 14/08/2026 a trava o arrastou de `proton_11` para o pinado e o
 #    microfone do jogo — que é a mecânica inteira dele — morreu. Desde 19/08 o
 #    `build_compat_tool_mapping` preserva escolha por jogo e registra
 #    `action="preservado"` no `proton-pin-lock.json`. Esse registro é lido
 #    aqui: escolha respeitada é INFO com o nome do jogo, não WARN sem nome.
 #
-#    NOTA DATADA, 18/09/2026: a ordem dela de 17/09 (`--lock --todos`) revogou
+#    NOTA DATADA, 18/09/2026: a ordem de 17/09 (`--lock --todos`) revogou
 #    a guarda `preservado` para jogo que roda por Proton, e o DON'T SCREAM foi
-#    junto para o pino a pedido dela. Escolha, agora, é só o que tem prova —
+#    junto para o pino a pedido. Escolha, agora, é só o que tem prova —
 #    o `jogos_fora_do_pino.txt` e a ferramenta que não é Proton —, e o resto
 #    volta a ser WARN, com o `--fix` que trava.
 check_proton_pin() {
@@ -5727,9 +5727,9 @@ except Exception:  # noqa: BLE001 - sem rótulo o appid ainda nomeia o jogo
     def rotulo_do_jogo(appid, home=None):
         return f"appid {appid}"
 
-# TRÊS BALDES, e o que separa é a ORDEM DELA de 17/09/2026 (*"ele e todo o
+# TRÊS BALDES, e o que separa é a ORDEM de 17/09/2026 (*"ele e todo o
 # resto de agora em diante"*), não o registro `preservado` de antes dela:
-#   - NOMEADO: está no `jogos_fora_do_pino.txt` — a exceção que ela escreveu;
+#   - NOMEADO: está no `jogos_fora_do_pino.txt` — a exceção que o usuário escreveu;
 #   - NATIVO: a ferramenta dele não é Proton (steamlinuxruntime e afins) — a
 #     escolha de rodar nativo, que o `--todos` não troca desde 18/09/2026;
 #   - FORA: está num OUTRO Proton — o que a ordem manda travar.
@@ -5796,10 +5796,10 @@ PY
         [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — $(_gesto_da_trava_do_pino "${present}"); ou, para refazer tudo, $(conselho_de_instalacao)"
         # FATO QUE CAIU, SUBSTITUÍDO — 18/09/2026. Aqui se dizia *"fora do
         # Proton pinado por ESCOLHA SUA (…) Não há o que consertar"* sobre todo
-        # jogo com `preservado` no registro. A ordem dela de 17/09 revogou essa
+        # jogo com `preservado` no registro. A ordem de 17/09 revogou essa
         # guarda para jogo que roda por Proton, e a frase passou a dizer o
-        # contrário do que ela mandou. Sobram como escolha só as duas que têm
-        # prova: a exceção que ela NOMEOU, e a ferramenta que não é Proton.
+        # contrário do que o usuário mandou. Sobram como escolha só as duas que têm
+        # prova: a exceção que o usuário NOMEOU, e a ferramenta que não é Proton.
         [[ -n "${nomeados}" ]] && info "fora do Proton pinado por exceção que você nomeou em ${arquivo_nomeados:-jogos_fora_do_pino.txt}: ${nomeados} — o install, o vigia da Steam e o botão não tocam nestes; para devolver um: python3 ${py} --de-volta-ao-pino APPID"
         [[ -n "${nativos}" ]] && info "rodando por uma ferramenta que não é Proton, a escolha de rodar nativo, que o produto não troca: ${nativos} — o pino existe por causa do Wine, e estes não passam por ele"
         [[ -n "${fora}" ]] && warn "jogo(s) fora do Proton pinado, em outro Proton: ${fora} — a ordem de 17/09/2026 é todo jogo que roda por Proton no pino, e um upgrade de Proton pode trazer de volta o controle duplicado neles; $(_gesto_da_trava_do_pino "${present}"). Para deixar um de fora: python3 ${py} --fora-do-pino APPID"
@@ -5817,7 +5817,7 @@ PY
 # ---------------------------------------------------------------------------
 # O `hide` do broker age em UMA superfície: `/dev/hidraw*`. O mesmo controle
 # aparece em TRÊS — `hidraw`, `evdev` (`/dev/input/event*`) e `joydev`
-# (`/dev/input/js*`) — e as duas de baixo continuam com a ACL da sessão dela;
+# (`/dev/input/js*`) — e as duas de baixo continuam com a ACL da sessão do usuário;
 # o `jsN` ainda com o bit de leitura de `other`, legível pelo mundo inteiro.
 # Medido nesta bancada em 25/08/2026, um DualSense no cabo, o hidraw escondido:
 #
@@ -5829,10 +5829,10 @@ PY
 # só vê o vpad" — contagem de nós hidraw lida como resposta a uma pergunta
 # sobre três superfícies. É a família O-PORTAO-QUE-NAO-MEDE-O-QUE-PROMETE no
 # pior lugar possível: quem investiga "por que o Steam mostra controle
-# dobrado" — o terceiro controle dela — começava lendo um verde.
+# dobrado" — o terceiro controle do usuário — começava lendo um verde.
 #
 # CONFERE E NÃO CURA, e aqui a regra é dura: nenhuma destas funções escreve
-# permissão nenhuma. A saída que o produto tomou foi escolhida por ela em
+# permissão nenhuma. A saída que o produto tomou foi escolhida pelo usuário em
 # 23/09/2026, entre as três da E2 da sprint: estender o `hide` a evdev e
 # joydev («Esconder tudo»). A regra 72 faz os nós de entrada do físico
 # nascerem fechados e o broker os fecha e abre junto com o hidraw
@@ -5891,7 +5891,7 @@ except (OSError, ValueError, AttributeError):
 PYEOF
 }
 
-#: rc=0 se um processo DELA consegue `open(2)` o nó — que é a pergunta que o
+#: rc=0 se um processo DO USUÁRIO consegue `open(2)` o nó — que é a pergunta que o
 #: jogo faz. NÃO se usa `[[ -r ]]` sozinho: rodando como root ele responde
 #: "sim" para tudo e o instrumento viraria outro falso verde. As três formas
 #: de o nó estar alcançável, cada uma medida nesta casa:
@@ -6054,7 +6054,7 @@ _veredito_do_hide() {
     done
     fora="${fora# }"
     if [[ -n "${fora}" ]]; then
-        # PROVISÓRIO — decisão dela: texto novo de tela (LEVA-1-D, 26/08/2026).
+        # PROVISÓRIO — decisão de produto: texto novo de tela (LEVA-1-D, 26/08/2026).
         warn "o hide não cobre a mesa inteira: ${hidden_count} nó(s) escondido(s), mas o censo do produto vê DualSense físico FORA do hide (${fora}) — o jogo enxerga esse(s) controle(s) direto, e quem enumerar /dev/input ou hidraw acha o controle dobrado; este check NÃO afirma que o jogo só vê o vpad"
         info "  confira se a emulação está ligada para ele na aba Emulação; se estiver, o broker não pegou o nó: sudo systemctl restart hefesto-hidraw-broker.service"
         return
@@ -6094,7 +6094,7 @@ _veredito_do_hide() {
     [[ "${TRES_SUP_SEM_MAPA}" -gt 0 ]] && info "${TRES_SUP_SEM_MAPA} nó(s) escondido(s) sem mapa no sysfs — ficaram fora do veredito abaixo"
     if [[ -n "${TRES_SUP_ABERTOS}" ]]; then
         # HIDE-SO-O-HIDRAW-02 (24/09/2026): a E2 da ESCONDE-SÓ-O-HIDRAW-01 foi
-        # decidida por ela em 23/09 («Esconder tudo») e o broker fecha os nós
+        # decidida pelo usuário em 23/09 («Esconder tudo») e o broker fecha os nós
         # de entrada junto com o hidraw. Nó de entrada aberto com o hidraw
         # escondido deixou de ser «decisão em aberto» e passou a ser um broker
         # que não fechou: o de antes da cura, ainda na memória.
@@ -6574,7 +6574,7 @@ PYEOF
 # O veredito dos nascimentos, puro. $1 = a saída de `_nascimentos_do_daemon`.
 #
 # WARN e não FAIL, e com «pode»: o carimbo diz a CONDIÇÃO do nascimento (outro
-# programa segurava o nó), não a lâmpada. Medido com o olho dela em 25/09: dos
+# programa segurava o nó), não a lâmpada. Medido com o olho de quem confere em 25/09: dos
 # três carimbados assim, a barra do P2 obedeceu ao Hefesto e a do P3 e a do P4,
 # não. A lâmpada não se lê.
 _veredito_dos_nascimentos() {
@@ -6629,7 +6629,7 @@ check_quem_segura_o_fisico() {
 #
 #   1. o install nunca passou por aqui (produto anterior a esta cura, ou
 #      install nunca rodado nesta máquina);
-#   2. ela pediu para pular (`--no-osk`);
+#   2. o usuário pediu para pular (`--no-osk`);
 #   3. o install TENTOU e não conseguiu (sem sudo, sem rede, distro sem o
 #      pacote);
 #   4. o pacote foi instalado e alguém o removeu depois — não fomos nós: o
@@ -6638,8 +6638,8 @@ check_quem_segura_o_fisico() {
 # O que as distingue é a sentinela que o install grava
 # (~/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf). Sem ela, este
 # check só poderia dizer "não tem" — que é exatamente a resposta que fez a
-# máquina dela ficar quatro dias quebrada em agosto. O caso (2) é o único que
-# NÃO é FAIL: é escolha dela, registrada e datada.
+# máquina do usuário ficar quatro dias quebrada em agosto. O caso (2) é o único que
+# NÃO é FAIL: é escolha do usuário, registrada e datada.
 readonly OSK_BIN_WAYLAND="wvkbd-mobintl"
 readonly OSK_BIN_X11="onboard"
 readonly OSK_PKG_WAYLAND="wvkbd"
@@ -6720,7 +6720,7 @@ check_teclado_na_tela() {
 
     case "${resultado}" in
         pulado)
-            # ESCOLHA DELA — e é por isso que não é FAIL. Sem a sentinela esta
+            # ESCOLHA DO USUÁRIO — e é por isso que não é FAIL. Sem a sentinela esta
             # linha seria indistinguível do FAIL de baixo, que é o defeito de
             # 04/08 (108b711) inteiro em uma frase.
             info "teclado na tela: PULADO a pedido (${motivo:-"--no-osk"}, em ${data:-data não registrada})"
@@ -6884,11 +6884,11 @@ check_steam_input() {
 # então o jogo cujo DualSense vem PELA Steam (medido: Mullet Mad Jack, 2111190)
 # não achava controle nenhum.
 #
-# FATO SUBSTITUÍDO — 16/08/2026 (a regra dela de 11/08: número errado não vira
+# FATO SUBSTITUÍDO — 16/08/2026 (a regra de 11/08: número errado não vira
 # nota de rodapé, sai). Este check reprovava com [FAIL] quando o
 # `steam_app_<appid>.env` de um jogo da allowlist trazia
 # `SDL_GAMECONTROLLER_IGNORE_DEVICES`/`PROTON_DISABLE_HIDRAW` ("a exceção NÃO
-# vale"). **Isso deixou de ser verdade em 09/08**, com a decisão dela
+# vale"). **Isso deixou de ser verdade em 09/08**, com a decisão de produto
 # ESCONDER-EM-VEZ-DE-SAIR-01: a marca passou a significar "esconda o controle
 # FÍSICO neste jogo", e a JOGO-01 escreveu o invariante que voltou a valer —
 # *"a allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*. O obituário
@@ -6897,7 +6897,7 @@ check_steam_input() {
 # de `tests/unit/test_r06_allowlist_steam_input.py` diz o mesmo com outras
 # palavras: *"a env sem dedup virou a AUSÊNCIA de ramo"*.
 #
-# Ou seja: o [FAIL] passou 7 dias exigindo o estado que a decisão dela matou de
+# Ou seja: o [FAIL] passou 7 dias exigindo o estado que a decisão de produto matou de
 # propósito, e o `.env` que ele acusava era o CERTO. Medido em 16/08 05h: os
 # dois jogos da allowlist com `.env` (Pragmata e Sackboy) reprovavam, e o
 # install termina imprimindo os [FAIL] do doctor — todo install dela acabava em
@@ -6949,7 +6949,7 @@ check_steam_input_allowlist() {
         # (`disable_steam_input.sh`) de ZERAR um `UseSteamControllerConfig` que
         # JÁ estava em 1|2. Se o guard passou por ali antes de o appid entrar na
         # lista, o valor foi a zero e não volta sozinho — a entrada fica lá para
-        # sempre, inerte, e a casa acha que cumpriu o pedido dela.
+        # sempre, inerte, e a casa acha que cumpriu o pedido.
         # Medido em 16/08: o Sackboy (1599660) está na allowlist com
         # `UseSteamControllerConfig "0"` no vdf, marcado por ela no editor de
         # perfil e desligado na Steam.
@@ -7039,7 +7039,7 @@ _steam_input_do_appid() {
 # devices`, e o `timeout` é um BINÁRIO: ele executa o bluetoothctl de verdade e
 # pula o embrulho BLUEZ-586-CTL-01 do começo deste arquivo — e o 5.86, no modo
 # de um comando só, não imprime nada. Com um DualSense conectado pelo rádio, o
-# doctor dizia «controle não detectado agora». Medido na mesa dela depois do
+# doctor dizia «controle não detectado agora». Medido na bancada depois do
 # install de 25/09.
 #
 # A resposta agora vem do KERNEL (o `uevent` de cada hidraw: LÊ ARQUIVO, não
@@ -7121,7 +7121,7 @@ check_controller() {
 # "provável ajuste manual" para cada nó 0666 — e o ajuste manual não existia. A
 # causa era UMA linha, `KERNEL=="hidraw*", MODE="0666"`, num arquivo de terceiro
 # (`60-openrgb.rules`), que abria os SEIS nós que ninguém reivindicava — entre
-# eles os receptores do teclado e do mouse dela. A mensagem acusava a única
+# eles os receptores do teclado e do mouse do usuário. A mensagem acusava a única
 # pessoa que não tinha feito aquilo, e mandava procurar onde não estava.
 #
 # Os três critérios, e por que cada um:
@@ -7475,7 +7475,7 @@ check_perms_soft() {
             info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve ao esperado (o controle físico 0600, aberto pelo broker; o virtual 0660+uaccess)."
         fi
     fi
-    # A OFERTA — decisão dela de 07/08/2026, resposta 16 do painel: o restauro
+    # A OFERTA — decisão de 07/08/2026, resposta 16 do painel: o restauro
     # mora no doctor e só aparece quando há sintoma. O diagnóstico NÃO age: ele
     # diz que o conserto existe, o que ele vai fazer antes de fazer, e o que ele
     # não resolve. Diagnóstico que conserta sozinho é o oposto de diagnóstico.
@@ -7505,11 +7505,11 @@ check_perms_soft() {
     fi
 }
 
-# A CURA de RESTAURO-SO-COM-SINTOMA-01 — decisão dela, 07/08/2026, resposta 16
+# A CURA de RESTAURO-SO-COM-SINTOMA-01 — decisão, 07/08/2026, resposta 16
 # do painel: *"o `--restaurar-hidraw-uaccess`: só no `doctor`, quando houver
 # sintoma"*.
 #
-# POR QUE NÃO ENTRA NO INSTALL, na palavra dela: o install roda SEMPRE, e
+# POR QUE NÃO ENTRA NO INSTALL, na palavra de produto: o install roda SEMPRE, e
 # reescreveria permissão que outro programa pôs de propósito. O caso concreto
 # desta casa é o OpenRGB (ACUSA-O-CULPADO-01). Pelo mesmo motivo isto NÃO entra
 # no `--fix`: o `--fix` é o laço que roda tudo de uma vez, e roda ANTES dos
@@ -7541,7 +7541,7 @@ check_perms_soft() {
 #     inteira. Quem CONCEDE o uaccess aos nós do Hefesto é a regra udev — o
 #     `./install.sh` e o `scripts/doctor.sh --fix`, que a reaplicam.
 #
-# O nome da opção é o DELA (resposta 16) e não foi trocado; a metade "uaccess"
+# O nome da opção é o DO USUÁRIO (resposta 16) e não foi trocado; a metade "uaccess"
 # do nome descreve o estado a que os nós do Hefesto voltam, não uma concessão
 # que este comando faça.
 restaurar_hidraw_uaccess() {
@@ -8420,7 +8420,7 @@ _dono_das_regras_udev() {
 
 # A FILA DE NUMERAÇÃO, LIMPA DE ENDEREÇO DE FIXTURE — 18/09/2026.
 #
-# MEDIDO na mesa dela: quatro endereços `aa:bb:cc:00:00:0{1..4}` moravam no
+# MEDIDO na bancada: quatro endereços `aa:bb:cc:00:00:0{1..4}` moravam no
 # `controllers.json` desde 22/08, ocupando os postos 4 a 7 da fila e
 # empurrando um DualSense REAL para o oitavo. A causa (a suíte escrevendo no
 # `~/.config` real) foi fechada em 25/08 pelo lar de mentira de sessão; a
@@ -8439,7 +8439,7 @@ _dono_das_regras_udev() {
 #
 #   1. O PYTHON. Rodava o `python3` do sistema com o erro jogado fora, e o
 #      `--casa` importa `platformdirs`, que só a venv do produto garante — na
-#      bancada dela ele existia por acaso (o pacote do pipx). Sem ele o script
+#      bancada ele existia por acaso (o pacote do pipx). Sem ele o script
 #      morria no import e esta linha dizia "sem endereço de fixture" sem ter
 #      lido o arquivo. Agora é o `_python_do_produto`, e o veredito sai da
 #      primeira palavra da resposta: `OK:` passa, `LIMPO:` segue, qualquer
@@ -8626,7 +8626,7 @@ apply_fixes() {
     fix_mic_dualsense
     fix_proton_pinado
     fix_fila_sem_fixture
-    # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão dela de
+    # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão de produto de
     # 07/08/2026: `restaurar_hidraw_uaccess` NÃO é chamado aqui. O `--fix` roda
     # tudo de uma vez e roda ANTES dos checks, então chamá-lo daqui seria agir
     # sem sintoma — exatamente o motivo pelo qual ela recusou pôr isto no
@@ -8800,7 +8800,7 @@ check_desempenho() {
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
-    # RESTAURO-SO-COM-SINTOMA-01 (decisão dela, 07/08/2026): rota própria, pedida
+    # RESTAURO-SO-COM-SINTOMA-01 (decisão, 07/08/2026): rota própria, pedida
     # a dedo. Ela não é alcançável por nenhum outro modo do doctor — nem pelo
     # --fix, nem pelo install.
     if [[ "${RESTAURAR_HIDRAW}" -eq 1 ]]; then

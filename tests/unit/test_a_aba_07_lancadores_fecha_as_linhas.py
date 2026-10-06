@@ -255,7 +255,7 @@ def test_as_duas_listas_entram_na_conta_dos_calados(a07, desenho):
 
 
 def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
-    """21/09/2026, o desenho aprovado por ela (OS-LANCADORES-IGUAIS-E-A-LISTA-"""
+    """21/09/2026, o desenho aprovado pelo usuário (OS-LANCADORES-IGUAIS-E-A-LISTA-"""
     lida = desenho.Leitura(com_wrapper=("620",), instalados=1)
     fileira = desenho.acoes_html(
         a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)[0])
@@ -315,7 +315,7 @@ def test_com_as_quatro_verdadeiras_o_lembrete_nasce(a07, desenho):
 
     O «NÃO PERGUNTAR» SAIU EM 21/09/2026 com os outros botões que só a Steam
     tinha. O aviso é um rótulo de estado, e quem o cala continua sendo a
-    resposta dela: o «Não usar neste jogo» da lista e a lista de exclusão, que
+    resposta de produto: o «Não usar neste jogo» da lista e a lista de exclusão, que
     escreve no mesmo `jogos_sem_wrapper.txt`.
     """
     lida = desenho.Leitura(com_wrapper=("620",), instalados=1)

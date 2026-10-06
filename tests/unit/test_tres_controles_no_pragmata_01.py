@@ -1,12 +1,11 @@
 """TRES-CONTROLES-01 — o jogo via três controles, e um deles era espelho de espelho.
 
-O QUE ELA VIU, EM 10/08/2026
+O QUE O USUÁRIO VIU, EM 10/08/2026
 ============================
-*"ok inputs ainda tão duplicado na hora do pragmata mesmo clicando lá em
-entregar o controle pra steam"* — com a caixinha marcada, com a exceção armada e
+** — com a caixinha marcada, com a exceção armada e
 com o físico escondido, o controle continuava dobrado.
 
-O QUE O `/dev/input` DELA TINHA, MEDIDO COM O JOGO ABERTO
+O QUE O `/dev/input` DO USUÁRIO TINHA, MEDIDO COM O JOGO ABERTO
 =========================================================
 Quatro aparelhos para UM controle físico::
 
@@ -31,7 +30,7 @@ POR QUE ISTO EXPLICA O QUE JÁ FUNCIONAVA
 A regra desta casa é que hipótese tem de explicar o que funcionava antes, senão
 é contorno. Explica: até 09/08 a exceção do Steam Input **suspendia o nosso
 vpad**. O Steam via um controle só, criava um espelho só, e o jogo via um. A
-decisão dela de 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01) manteve o vpad de pé para não
+decisão de 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01) manteve o vpad de pé para não
 derrubar o jogador 2 do co-op junto — fechou aquela conta e reabriu esta pelo
 outro lado. O invariante da JOGO-01 (25/07) é o mesmo dos dois lados: *"a
 allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*.
@@ -39,9 +38,8 @@ allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*.
 O QUE **NÃO** SE FEZ, E POR QUÊ
 ===============================
 A saída elegante seria ``SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT`` ("aceite só
-o nosso vpad"). Ela está ERRADA aqui, e o motivo é uma exigência dela: *"deve
-ser universal, caso eu tenha 4 novos dual sense ou novos pro controler ou
-8bitdo"*. Os externos são read-only por decisão de produto — numeramos e
+o nosso vpad"). Ela está ERRADA aqui, e o motivo é uma exigência dela. Os externos são read-only
+por decisão de produto — numeramos e
 acendemos o LED, não os adotamos —, então eles chegam ao jogo POR SI, e um
 `_EXCEPT` os apagaria todos. Ver `test_o_except_mataria_os_externos_dela`.
 """
@@ -108,7 +106,7 @@ def test_sem_cobertura_o_espelho_tambem_nao_e_escondido() -> None:
 
     Com dois DualSense físicos e um vpad vivo (o que o `EBUSY` de 02/08 produzia
     o tempo todo) o IGNORE inteiro é omitido — e tem de ser, senão um dos dois
-    controles dela some do jogo. O espelho da Valve sai junto: é melhor ela ver
+    controles do usuário some do jogo. O espelho da Valve sai junto: é melhor ela ver
     um controle a mais do que jogar com um a menos.
 
     Morde: dar ao espelho um ramo PRÓPRIO, fora do `cobertura_total`, faz este

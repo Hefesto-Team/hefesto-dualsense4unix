@@ -1,4 +1,4 @@
-"""Os CINCO gestos da aba Perfis que gravavam no disco dela e não diziam nada.
+"""Os CINCO gestos da aba Perfis que gravavam no disco do usuário e não diziam nada.
 
 03/09/2026. O ``test_aba10_os_gestos_dizem_o_que_fizeram`` curou os três
 primeiros — ``ativar``, ``recarregar``, ``remover``. **Sobravam cinco**, e a
@@ -235,7 +235,7 @@ def test_a_biblioteca_ilegivel_nao_vira_recusa(
 ) -> None:
     """O perfil JÁ ESTÁ NO DISCO quando o nome do jogo é buscado.
 
-    Uma exceção lendo a biblioteca dela transformaria uma gravação
+    Uma exceção lendo a biblioteca do usuário transformaria uma gravação
     bem-sucedida em tarja de recusa — o mesmo contrato de ``_com_a_carona``.
 
     MORDIDA: tire o ``try/except`` de ``_jogo_reconhecido`` e este teste

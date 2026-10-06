@@ -86,7 +86,7 @@ def _forjar_pe(
 
 @pytest.fixture
 def duskfade(tmp_path: Path) -> Path:
-    """O jogo QUEBRADO, como ele é no disco dela (medido 16/08/2026)."""
+    """O jogo QUEBRADO, como ele é no disco do usuário (medido 16/08/2026)."""
     alvo = tmp_path / "Duskfade" / "Duskfade" / "Binaries" / "Win64"
     alvo.mkdir(parents=True)
     exe = alvo / "Duskfade-Win64-Shipping.exe"

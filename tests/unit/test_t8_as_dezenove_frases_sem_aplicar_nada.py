@@ -31,15 +31,15 @@ O TEXTO NÃO É NOVO
 ==================
 É a mesma frase que a aba já mostra para o modo selecionado — é o que mantém a
 T8 na classe **cosmética pré-aprovada** ("tornar dica visível"). Reescrever
-qualquer uma das 19 a tornaria estrutural e faria esperar o olho dela; por isso
+qualquer uma das 19 a tornaria estrutural e faria esperar o olho de quem confere; por isso
 o teste também exige que nenhuma delas seja escrita à mão neste arquivo nem no
 módulo da aba.
 
-GTK REAL, SEM JANELA NA TELA DELA
+GTK REAL, SEM JANELA NA TELA DO USUÁRIO
 =================================
 Os botões são ``Gtk.RadioButton`` de verdade, criados fora de qualquer
 toplevel: nada é mapeado, nada aparece. É o que permite ler
-``get_tooltip_text()`` do BOTÃO — a pergunta certa é o que o dedo dela alcança,
+``get_tooltip_text()`` do BOTÃO — a pergunta certa é o que o dedo do usuário alcança,
 não o que um dicionário guardou.
 """
 from __future__ import annotations

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bt_bonds_autorestore.sh — BONDS-QUE-SOBREVIVEM-01: a VOLTA automática.
 #
-# Decisão dela, 08/08/2026: "restauro de bonds tem de ser automático — manual
+# Decisão, 08/08/2026: "restauro de bonds tem de ser automático — manual
 # com sudo não é produto". E a regra irmã: toda cura entra no install, sem flag.
 # O salva-vidas já GRAVAVA sozinho desde 21/07; a volta continuava sendo um
 # comando que ela tinha de digitar com sudo, e por isso nunca acontecia.
@@ -9,7 +9,7 @@
 # ---------------------------------------------------------------------------
 # 1. O QUE APAGA OS BONDS — medido ao vivo em 15/08/2026, 06:29
 # ---------------------------------------------------------------------------
-# Não é hipótese, é relógio. Journal da máquina dela, na mesa dos quatro
+# Não é hipótese, é relógio. Journal da máquina do usuário, na mesa dos quatro
 # controles, com bluez 5.86 (o backport JÁ aplicado — ele não curou isto):
 #
 #   06:29:01  snapshot de bonds gravado ... (4 bond(s))
@@ -46,7 +46,7 @@
 # E o gatilho é a MORTE, nunca a parada: o systemd entrega `$SERVICE_RESULT` ao
 # ExecStopPost, e só agimos quando ele NÃO é `success`. Um `systemctl stop`
 # limpo — reboot, uninstall, o próprio bt_bonds_restore.sh — não restaura nada.
-# É isso que impede que um `bluetoothctl remove` decidido por ela seja
+# É isso que impede que um `bluetoothctl remove` decidido pelo usuário seja
 # desfeito pelo produto no desligamento seguinte.
 #
 # Alternativas medidas e descartadas:
@@ -150,7 +150,7 @@ done
 # O log em produção é o que conta a história quando o bond volta DE VERDADE, e
 # não pode sumir. O que não pode existir é a linha que descreve um evento que
 # nunca houve: a suíte roda este script de verdade, e por isso gravava
-# "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal DELA — 36
+# "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal do usuário — 36
 # vezes em 15/08, oito delas entre 18h29 e 21h38. Vinte minutos de caçada foram
 # atrás de uma morte que o `systemctl` desmentia (Result=success, ativo desde
 # as 14:14). Os DADOS do teste já eram isolados; o LOG não era.

@@ -9,10 +9,9 @@ bancada: true
 
 # O COMO do mapa — o gesto das 178 células
 
-**Ordem dela, 07/09/2026, depois de ver as 21 prontas:**
+**Ordem, 07/09/2026, depois de ver as 21 prontas:**
 
-> *"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra
-> remodelar os demais testes via agentes."*
+> **
 
 Isto é o modelo das 21 aplicado às 178 células do mapa de canais — as que
 sobram depois da bancada. Mesma forma, mesmos sete campos, mesma regra: o que
@@ -22,8 +21,7 @@ está aqui a página LÊ, e nada dela é digitado lá.
 
 **A variação por controle sai do TRANSPORTE.** As 21 trazem, na coluna do
 roteiro, o que cada um dos quatro faz — escrito por ela. As 178 não têm essa
-coluna, e a variação vem de onde ela sempre veio: *"por isso dois controles
-dois bt e dois no cabo. Pra batermos de vez o controle que temos do hardware"*.
+coluna, e a variação vem de onde ela sempre veio.
 Então numa célula do cabo quem reage é P1 e P2, e P3 e P4 são as TESTEMUNHAS —
 e testemunha não é enfeite: se a coisa acontecer nelas também, o comando pegou
 o transporte inteiro em vez do controle escolhido.
@@ -1649,7 +1647,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto diz, ao lado do número, o estado da carga do P1 e do P2 — e que esse estado é lido do aparelho, não deduzido de eles estarem no cabo.
 
-**Onde olhar.** Na aba Controles, nas linhas fechadas do quadro «Dispositivos conectados». Logo depois do número em porcento aparece um iconezinho: um raio quando está carregando, um certo quando está cheio, um triângulo de atenção quando a carga deu problema. Passe o mouse nele e a dica escreve a palavra: Carregando, Cheio, Fora de faixa ou Erro de carga. Quando o controle está só gastando, NÃO aparece ícone nenhum — a ausência é a resposta, e é decisão dela: o número caindo já diz. No cartão aberto o número do controle some do começo da linha, por isso os passos abrem o cartão de um controle que não está sendo medido.
+**Onde olhar.** Na aba Controles, nas linhas fechadas do quadro «Dispositivos conectados». Logo depois do número em porcento aparece um iconezinho: um raio quando está carregando, um certo quando está cheio, um triângulo de atenção quando a carga deu problema. Passe o mouse nele e a dica escreve a palavra: Carregando, Cheio, Fora de faixa ou Erro de carga. Quando o controle está só gastando, NÃO aparece ícone nenhum — a ausência é a resposta, e é decisão de produto: o número caindo já diz. No cartão aberto o número do controle some do começo da linha, por isso os passos abrem o cartão de um controle que não está sendo medido.
 
 **Os passos.**
 
@@ -1712,7 +1710,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é o único em que você mexe. Sem ícone enquanto só gasta; com o carregador ligado, o ícone de raio e a palavra Carregando — e a linha dele continuando a dizer BT, que é o ponto inteiro deste teste.
 * **P4** — No rádio, e não se toca nele. Sem cabo, sem carregador, sem ícone, do começo ao fim. Ele é a prova de que o raio que apareceu no P3 é do P3.
 
-**A armadilha.** A PROVA DESTA LINHA PAROU NO MONTOU, e a metade que você vai medir aqui é INÉDITA: em 06/09 os quatro controles foram lidos no aparelho e nenhum dos dois do rádio estava carregando, então «carregando pelo rádio» nunca foi visto nesta casa. O que você anotar é a primeira prova que existe. Duas ciladas. A primeira é o carregador: se, ao ligá-lo, a linha do P3 trocar de BT para USB, o que você ligou não é um carregador — é uma porta que também fala dados, e o teste virou outro. Troque por um carregador de tomada ou uma bateria portátil e refaça. A segunda é o silêncio: um controle que só gasta NÃO mostra ícone, e isso não é campo faltando nem defeito — é decisão dela, porque o número caindo já conta a história. Anotar «não apareceu ícone» com os dois na mão e sem carregador é o resultado CERTO da primeira metade.
+**A armadilha.** A PROVA DESTA LINHA PAROU NO MONTOU, e a metade que você vai medir aqui é INÉDITA: em 06/09 os quatro controles foram lidos no aparelho e nenhum dos dois do rádio estava carregando, então «carregando pelo rádio» nunca foi visto nesta casa. O que você anotar é a primeira prova que existe. Duas ciladas. A primeira é o carregador: se, ao ligá-lo, a linha do P3 trocar de BT para USB, o que você ligou não é um carregador — é uma porta que também fala dados, e o teste virou outro. Troque por um carregador de tomada ou uma bateria portátil e refaça. A segunda é o silêncio: um controle que só gasta NÃO mostra ícone, e isso não é campo faltando nem defeito — é decisão de produto, porque o número caindo já conta a história. Anotar «não apareceu ícone» com os dois na mão e sem carregador é o resultado CERTO da primeira metade.
 
 ---
 
@@ -2748,7 +2746,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-identidade.cracha_nos_dois_transportes-cabo — O crachá que serve nos DOIS transportes sem escrita (a pergunta dela) · cabo
+## mapa-identidade.cracha_nos_dois_transportes-cabo — O crachá que serve nos DOIS transportes sem escrita (a pergunta de produto) · cabo
 
 *Célula:* `identidade.cracha_nos_dois_transportes @ cabo`
 
@@ -2784,7 +2782,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-identidade.cracha_nos_dois_transportes-radio — O crachá que serve nos DOIS transportes sem escrita (a pergunta dela) · rádio
+## mapa-identidade.cracha_nos_dois_transportes-radio — O crachá que serve nos DOIS transportes sem escrita (a pergunta de produto) · rádio
 
 *Célula:* `identidade.cracha_nos_dois_transportes @ rádio`
 
@@ -3543,7 +3541,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, logo depois de encaixar o cabo, o Hefesto consegue mandar nas lâmpadas daquele controle sem pedir senha e sem recusar.
 
-**Onde olhar.** A tela não tem campo que mostre esta permissão: nenhuma linha de «O exame de hoje», na aba Sistema, fala dela. O que se lê é a CONSEQUÊNCIA: na aba Iluminação, o botão da linha «Jogador» que você clica pisca a borda em verde quando o pedido foi aplicado e em laranja quando foi recusado; e o aparelho, as cinco lâmpadas entre o touchpad e o botão PS.
+**Onde olhar.** A tela não tem campo que mostre esta permissão: nenhuma linha de «O exame de hoje», na aba Sistema, fala do usuário. O que se lê é a CONSEQUÊNCIA: na aba Iluminação, o botão da linha «Jogador» que você clica pisca a borda em verde quando o pedido foi aplicado e em laranja quando foi recusado; e o aparelho, as cinco lâmpadas entre o touchpad e o botão PS.
 
 **Os passos.**
 
@@ -3581,7 +3579,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, logo depois de o controle voltar pelo rádio, o Hefesto consegue mandar nas lâmpadas dele sem pedir senha e sem recusar.
 
-**Onde olhar.** A tela não tem campo que mostre esta permissão: nenhuma linha de «O exame de hoje», na aba Sistema, fala dela. O que se lê é a consequência: o botão da linha «Jogador», na aba Iluminação, pisca a borda em verde quando o pedido foi aplicado e em laranja quando foi recusado; e as cinco lâmpadas do aparelho, entre o touchpad e o botão PS.
+**Onde olhar.** A tela não tem campo que mostre esta permissão: nenhuma linha de «O exame de hoje», na aba Sistema, fala do usuário. O que se lê é a consequência: o botão da linha «Jogador», na aba Iluminação, pisca a borda em verde quando o pedido foi aplicado e em laranja quando foi recusado; e as cinco lâmpadas do aparelho, entre o touchpad e o botão PS.
 
 **Os passos.**
 
@@ -4061,7 +4059,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Anote a cor da barra e o desenho das cinco lâmpadas dos quatro aparelhos.
 3. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P1.
 4. Confira que a barra do P1 ficou amarela.
-5. Peça a quem coordena para mandar o comando que devolve a barra SÓ ao P1.
+5. Rode o comando que devolve a barra SÓ ao P1.
 6. Anote o que a barra do P1 fez: continuou amarela, apagou ou mudou de cor.
 7. Anote o que as cinco lâmpadas do P1 fizeram.
 8. Confira que a barra e as lâmpadas do P2, do P3 e do P4 não mudaram.
@@ -4096,7 +4094,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Abra a aba Iluminação.
 3. Anote a cor da barra e o desenho das cinco lâmpadas dos quatro aparelhos.
 4. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P3, e confira que a barra dele ficou amarela.
-5. Peça a quem coordena para mandar o comando que devolve a barra SÓ ao P3.
+5. Rode o comando que devolve a barra SÓ ao P3.
 6. Anote o que a barra do P3 fez: continuou amarela, apagou ou mudou de cor.
 7. Anote o que as cinco lâmpadas do P3 fizeram.
 8. Confira que a barra e as lâmpadas do P1, do P2 e do P4 não mudaram.
@@ -6170,7 +6168,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Encaixe os dois cabos de volta, cada um na entrada de onde saiu.
 8. Conte até cinco e confira que o número voltou ao do passo 3 e que o selo continua o mesmo.
 9. Se algum número não mexeu, clique em «Examinar Entradas», no pé de «Rádio e Adaptadores», e leia de novo.
-10. Leia também a linha do rádio dos controles, no mesmo quadro, e anote o selo e a frase dela.
+10. Leia também a linha do rádio dos controles, no mesmo quadro, e anote o selo e a frase de produto.
 
 **Passa quando.** Com os dois cabos espetados, a linha das portas traz o selo CERTO e diz que NENHUMA das portas USB está em economia de energia. E o número de portas cai em duas quando você tira os dois cabos e sobe de volta quando você os devolve — é essa mexida no número que prova que os dois controles estavam entre as portas contadas.
 
@@ -6411,7 +6409,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, e é um dos dois que têm de responder. Dedo leve, andando de um canto ao outro, e o pontinho acompanhando. Repare também no ANDAR do pontinho: pelo rádio chegam menos leituras que pelo cabo.
 * **P4** — Rádio, e é o outro que tem de responder. Mesmos gestos. Se o P3 responder e o P4 não, o defeito não é do rádio — é do segundo controle sem fio, e isso é outra coisa.
 
-**A armadilha.** Se o P1 responder e o P3 e o P4 ficarem no travessão enquanto o dedo anda, é o rádio que o Hefesto não alcança pelo esconderijo — o cartão cego que esta célula existe para pegar; anote e não conte como passa. Um gesto por vez: num ensaio pediu-se para girar o controle E passar o dedo ao mesmo tempo, o toque saiu ZERO, e por pouco não se acusou o produto de não ler o touchpad. Gesto composto produz ausência falsa. Pelo rádio chegam menos leituras que do aparelho — medido em dez segundos de dedo: 2.807 contra 3.660 —, então o pontinho pode andar mais aos saltos que no cabo, e isso sozinho não reprova. O caso já conhecido, e ele é dela: pelo rádio o toque funciona FORA do jogo e não dentro. Se o pontinho andar aqui e o mesmo dedo não fizer nada dentro do jogo, isso já foi visto, o repasse até o controle virtual está inteiro e a perda é depois dele — continua sem causa. Anote e siga; não é erro seu. A casa também declarou uma ressalva que só existe no rádio: o som do microfone viaja no MESMO pacote em que viaja o toque. Se o pontinho de um controle do rádio acender ou pular sem dedo nenhum, olhe antes o selo do Microfone daquele cartão — ATIVO ou DESLIGADO — e anote as duas coisas juntas. O travessão não é «Sem toque»: é «não consegui ler». E um dedo só: dois dedos fazem duas bolinhas e a palavra «2 toques», e isso é o teste dos dedos. Onde a prova parou: a casa provou que o toque entra no controle virtual que o jogo lê, e parou aí.
+**A armadilha.** Se o P1 responder e o P3 e o P4 ficarem no travessão enquanto o dedo anda, é o rádio que o Hefesto não alcança pelo esconderijo — o cartão cego que esta célula existe para pegar; anote e não conte como passa. Um gesto por vez: num ensaio pediu-se para girar o controle E passar o dedo ao mesmo tempo, o toque saiu ZERO, e por pouco não se acusou o produto de não ler o touchpad. Gesto composto produz ausência falsa. Pelo rádio chegam menos leituras que do aparelho — medido em dez segundos de dedo: 2.807 contra 3.660 —, então o pontinho pode andar mais aos saltos que no cabo, e isso sozinho não reprova. O caso já conhecido, e ele é do usuário: pelo rádio o toque funciona FORA do jogo e não dentro. Se o pontinho andar aqui e o mesmo dedo não fizer nada dentro do jogo, isso já foi visto, o repasse até o controle virtual está inteiro e a perda é depois dele — continua sem causa. Anote e siga; não é erro seu. A casa também declarou uma ressalva que só existe no rádio: o som do microfone viaja no MESMO pacote em que viaja o toque. Se o pontinho de um controle do rádio acender ou pular sem dedo nenhum, olhe antes o selo do Microfone daquele cartão — ATIVO ou DESLIGADO — e anote as duas coisas juntas. O travessão não é «Sem toque»: é «não consegui ler». E um dedo só: dois dedos fazem duas bolinhas e a palavra «2 toques», e isso é o teste dos dedos. Onde a prova parou: a casa provou que o toque entra no controle virtual que o jogo lê, e parou aí.
 
 ---
 
@@ -6445,7 +6443,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 18. Devolva a lista da linha «Touchpad», «Clique esquerdo», ao que você anotou, e clique em «Guardar».
 19. Se quiser o dado do jogo, abra um jogo que use o clique do touchpad, aperte-o no P1 e anote o que acontecer — sem reprovar por isso.
 
-**Passa quando.** As três linhas do Touchpad mostram a marca «não dispara», e a frase dela explica por quê. O touchpad do P1 e o do P2 estalam e o clique chega ao computador como clique de mouse. E nenhum dos quatro digita o «Espaço» que você escolheu: a recusa é a mesma nos quatro, e o produto não finge ter aplicado.
+**Passa quando.** As três linhas do Touchpad mostram a marca «não dispara», e a frase de produto explica por quê. O touchpad do P1 e o do P2 estalam e o clique chega ao computador como clique de mouse. E nenhum dos quatro digita o «Espaço» que você escolheu: a recusa é a mesma nos quatro, e o produto não finge ter aplicado.
 
 **Por controle.**
 
@@ -6540,7 +6538,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, testemunha — e esta testemunha responde uma pergunta em vez de ficar quieta. Passe o dedo nela e anote se a seta anda: andando, quem move a seta é o sistema, que ouve os quatro; não andando, quem move é o Hefesto, e aí só o controle «Navega o PC» move.
 * **P4** — Rádio, segunda testemunha, mesma pergunta. Se o P3 mover e o P4 não, anote — são dois controles no mesmo tipo de conexão, e a diferença entre eles é o achado.
 
-**A armadilha.** O dedo tem de andar APOIADO: a seta só junta movimento enquanto o dedo está na superfície, e levantar zera a referência de propósito — é isso que impede o salto ao reapoiar. Se a seta pular ao reapoiar, isso é o defeito. Quem move a seta com o touchpad físico hoje é o SISTEMA, e não o Hefesto: foi decisão dela em 09/08, o Hefesto devolveu o touchpad ao computador nos dois transportes, e em 03/09 os dois nós foram medidos assim. Continua sendo depois de 24/09, quando o Hefesto passou a esconder os nós do aparelho de todo programa: o sistema os abre por uma porta que o esconderijo não fecha, a mesma do teclado e do mouse. Se a seta PARAR de andar com o dedo desde então, esse é o defeito, e ele é novo. A ajuda de «Quem navega, e com qual controle» diz que os outros controles «não mexem no cursor» — isso vale para o analógico e os seis gestos, que são do Hefesto; o dedo no touchpad é do sistema. Daí saem duas coisas que enganam. A primeira: a seta andar não prova que o Hefesto está funcionando — prova que o touchpad e o nó dele estão de pé. A segunda: a «Velocidade de cursor» pode não mudar NADA no dedo e mudar tudo no analógico esquerdo, porque o número é do Hefesto e o dedo não passa por ele; se for isso que você vir, anote — é o estado medido, não um defeito novo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA: medido em 18/09/2026 com os dedos dela, o sistema emitiu 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó. Não é o que este teste mede. E não confunda os dois gestos: apertar até estalar é o clique, e ele é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
+**A armadilha.** O dedo tem de andar APOIADO: a seta só junta movimento enquanto o dedo está na superfície, e levantar zera a referência de propósito — é isso que impede o salto ao reapoiar. Se a seta pular ao reapoiar, isso é o defeito. Quem move a seta com o touchpad físico hoje é o SISTEMA, e não o Hefesto: foi decisão em 09/08, o Hefesto devolveu o touchpad ao computador nos dois transportes, e em 03/09 os dois nós foram medidos assim. Continua sendo depois de 24/09, quando o Hefesto passou a esconder os nós do aparelho de todo programa: o sistema os abre por uma porta que o esconderijo não fecha, a mesma do teclado e do mouse. Se a seta PARAR de andar com o dedo desde então, esse é o defeito, e ele é novo. A ajuda de «Quem navega, e com qual controle» diz que os outros controles «não mexem no cursor» — isso vale para o analógico e os seis gestos, que são do Hefesto; o dedo no touchpad é do sistema. Daí saem duas coisas que enganam. A primeira: a seta andar não prova que o Hefesto está funcionando — prova que o touchpad e o nó dele estão de pé. A segunda: a «Velocidade de cursor» pode não mudar NADA no dedo e mudar tudo no analógico esquerdo, porque o número é do Hefesto e o dedo não passa por ele; se for isso que você vir, anote — é o estado medido, não um defeito novo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA: medido em 18/09/2026 com os dedos do usuário, o sistema emitiu 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó. Não é o que este teste mede. E não confunda os dois gestos: apertar até estalar é o clique, e ele é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
 
 ---
 
@@ -6578,7 +6576,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, e é um dos dois que têm de mover a seta. Dedo apoiado, andando devagar nos dois sentidos, e depois dez segundos indo e voltando para ver se ela anda liso.
 * **P4** — Rádio, e é o outro. Mesmos gestos. Se o P3 mover a seta e o P4 não, anote: são dois controles sem fio, e a diferença entre eles é o achado deste teste.
 
-**A armadilha.** Este é o lado que nunca foi medido com um dedo. Em 03/09 mediu-se que o touchpad existe pelo rádio, com os mesmos eixos e a mesma geometria do cabo, mas ninguém encostou nele — a POSIÇÃO por rádio não tem medição de bancada nenhuma. O que sair daqui é o primeiro número. Existe uma observação dela, de 11/08, que também nunca foi medida: pelo rádio o touchpad move a seta, mas os gatilhos e o analógico não. Por isso o ato do analógico, e por isso ele só vale no controle que diz «Navega o PC»: em qualquer outro o analógico não move a seta de propósito, e cobrar isso dele seria reprovar um produto que está certo. O dedo tem de andar APOIADO: levantar zera a referência, e é isso que impede o salto ao reapoiar; se a seta pular, isso é o defeito. E quem move a seta com o touchpad físico hoje é o SISTEMA, não o Hefesto — decisão dela de 09/08, medida igual nos dois transportes em 03/09, e que continua valendo com os nós do aparelho escondidos de todo programa desde 24/09, porque o sistema os abre por uma porta que o esconderijo não fecha: a seta andar prova que o touchpad e o nó dele estão de pé, não que o Hefesto está movendo. A frase «os outros não mexem no cursor», na ajuda de «Quem navega», fala do analógico e dos gestos, que são do Hefesto — não do dedo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA: medido em 18/09/2026 com os dedos dela, 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó. Não é o que este teste mede. Apertar até estalar é o clique, e é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
+**A armadilha.** Este é o lado que nunca foi medido com um dedo. Em 03/09 mediu-se que o touchpad existe pelo rádio, com os mesmos eixos e a mesma geometria do cabo, mas ninguém encostou nele — a POSIÇÃO por rádio não tem medição de bancada nenhuma. O que sair daqui é o primeiro número. Existe uma observação dela, de 11/08, que também nunca foi medida: pelo rádio o touchpad move a seta, mas os gatilhos e o analógico não. Por isso o ato do analógico, e por isso ele só vale no controle que diz «Navega o PC»: em qualquer outro o analógico não move a seta de propósito, e cobrar isso dele seria reprovar um produto que está certo. O dedo tem de andar APOIADO: levantar zera a referência, e é isso que impede o salto ao reapoiar; se a seta pular, isso é o defeito. E quem move a seta com o touchpad físico hoje é o SISTEMA, não o Hefesto — decisão de 09/08, medida igual nos dois transportes em 03/09, e que continua valendo com os nós do aparelho escondidos de todo programa desde 24/09, porque o sistema os abre por uma porta que o esconderijo não fecha: a seta andar prova que o touchpad e o nó dele estão de pé, não que o Hefesto está movendo. A frase «os outros não mexem no cursor», na ajuda de «Quem navega», fala do analógico e dos gestos, que são do Hefesto — não do dedo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA: medido em 18/09/2026 com os dedos do usuário, 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó. Não é o que este teste mede. Apertar até estalar é o clique, e é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
 
 ---
 
@@ -6700,7 +6698,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Está no RÁDIO e é testemunha e contraste: parado enquanto o Testar é do P1 ou do P2, e, com as duas barras em 100, os dois punhos dele têm de tremer quando o Testar é dele.
 * **P4** — Também no rádio, testemunha: não mexa nas barras dele, e ele não pode tremer em momento nenhum deste teste. Se tremer junto com o P1, a vibração perdeu o endereço e foi para os quatro.
 
-**A armadilha.** O Testar mudou duas vezes, e as duas mudanças importam aqui. Desde 07/09, por pedido dela, ele NÃO é mais um pulso de meio segundo: fica ligado até você clicar em Parar — é isso que deixa você clicar e só depois pegar o controle com as duas mãos. E desde 09/09 o Testar obedece às barras da coluna: com a barra do Motor esquerdo em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado — em Desligado quem manda nos motores é o jogo. O tremor viaja pelo casco: com o controle apoiado na mesa, ou apertado com força, o punho mudo parece tremer também — segure leve. A barra grava no perfil ativo no instante em que você a solta, e fica gravada: por isso os números se anotam antes e se devolvem no fim. O ícone ao lado da barra acende sozinho quando ela passa de 0; clicar nele liga o motor em 100 ou o desliga em 0, e não lembra o número de antes. O «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou. No mapa esta célula chegou até o aparelho obedecer, num teste às cegas com o jogo; aqui é a confirmação pelo Testar, sem jogo — que a barra também vale para a vibração do jogo é o que o teste do rumble por amplitude mede.
+**A armadilha.** O Testar mudou duas vezes, e as duas mudanças importam aqui. Desde 07/09, por pedido, ele NÃO é mais um pulso de meio segundo: fica ligado até você clicar em Parar — é isso que deixa você clicar e só depois pegar o controle com as duas mãos. E desde 09/09 o Testar obedece às barras da coluna: com a barra do Motor esquerdo em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado — em Desligado quem manda nos motores é o jogo. O tremor viaja pelo casco: com o controle apoiado na mesa, ou apertado com força, o punho mudo parece tremer também — segure leve. A barra grava no perfil ativo no instante em que você a solta, e fica gravada: por isso os números se anotam antes e se devolvem no fim. O ícone ao lado da barra acende sozinho quando ela passa de 0; clicar nele liga o motor em 100 ou o desliga em 0, e não lembra o número de antes. O «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou. No mapa esta célula chegou até o aparelho obedecer, num teste às cegas com o jogo; aqui é a confirmação pelo Testar, sem jogo — que a barra também vale para a vibração do jogo é o que o teste do rumble por amplitude mede.
 
 ---
 
@@ -6739,7 +6737,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Barra esquerda em 0, direita em 100: só o punho direito treme, e só o lado direito acende no desenho.
 * **P4** — Também no rádio, mesma configuração. Se ele responder diferente do P3, anote qual dos dois — dois controles no mesmo transporte discordando aponta para o aparelho, não para o caminho.
 
-**A armadilha.** O Testar NÃO é mais um pulso de meio segundo: desde 07/09, por pedido dela, ele fica ligado até você clicar em Parar. E desde 09/09 ele obedece às barras da coluna: com a barra esquerda em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado. Segunda, e é do rádio: o comando vai numerado e conferido, e um comando que chegue fora de ordem o próprio controle joga fora, sem avisar ninguém. O sintoma é uma vibração que falha de vez em quando, e ele não aparece em campo nenhum da tela — se acontecer, refaça a rodada antes de concluir qualquer coisa. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: a medição de quatro controles na mesa não achou diferença nenhuma entre cabo e rádio nesta família; se aqui os dois do rádio se comportarem diferente dos dois do cabo, isso é informação nova e vale anotar com todas as letras. Quarta: a barra grava no perfil ativo assim que você a solta — escreva os oito números antes, devolva depois. E o «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou.
+**A armadilha.** O Testar NÃO é mais um pulso de meio segundo: desde 07/09, por pedido, ele fica ligado até você clicar em Parar. E desde 09/09 ele obedece às barras da coluna: com a barra esquerda em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado. Segunda, e é do rádio: o comando vai numerado e conferido, e um comando que chegue fora de ordem o próprio controle joga fora, sem avisar ninguém. O sintoma é uma vibração que falha de vez em quando, e ele não aparece em campo nenhum da tela — se acontecer, refaça a rodada antes de concluir qualquer coisa. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: a medição de quatro controles na mesa não achou diferença nenhuma entre cabo e rádio nesta família; se aqui os dois do rádio se comportarem diferente dos dois do cabo, isso é informação nova e vale anotar com todas as letras. Quarta: a barra grava no perfil ativo assim que você a solta — escreva os oito números antes, devolva depois. E o «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou.
 
 ---
 
@@ -7106,7 +7104,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P1** — No cabo, e é TESTEMUNHA: você não mexe no bloco dele. O som do P3 não pode sair dele.
 * **P2** — No cabo, e é a segunda testemunha. Mesmo gesto do P1.
 
-**A armadilha.** O selo ATIVO do alto-falante NÃO apaga com «Tudo no PC e Nada no Controle», e isso é decisão dela: o selo fala do canal, não da rota. Quem responde o negativo de rota é o seu ouvido. O ♪ não é confirmação: ele CALA o alto-falante, e as barrinhas ficam no chão com ele calado — se você clicou nele sem querer, clique de novo antes de concluir que o rádio não toca. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. O canal do rádio aceitava bytes muito antes de tocar um som, e foi por isso que a casa mirou no report errado durante semanas. Terceira: «Efeitos do Jogo e Áudio do PC no Controle» deixa o som da máquina saindo também pelo controle até alguém voltar ao botão de sempre — esquecer disso faz o próximo teste ouvir o PC no controle e parece defeito sem ser. E as passadas cegas usam ele, e não «Tudo no Controle e Nada no PC», de propósito: com o quarto a TV cala, e o silêncio da TV entregaria a resposta sem o seu ouvido no controle. Não dispare vibração no P3 ou no P4 enquanto testa: pelo rádio o som e a vibração disputam o mesmo fio. E quarta, que é a razão das seis passadas cegas: você SABE o que quer ouvir, e ouvido que sabe o que quer ouvir ouve. A escuta cega existe porque a sua própria expectativa é a fonte de erro mais provável deste teste — e ela já derrubou uma medição desta casa antes.
+**A armadilha.** O selo ATIVO do alto-falante NÃO apaga com «Tudo no PC e Nada no Controle», e isso é decisão de produto: o selo fala do canal, não da rota. Quem responde o negativo de rota é o seu ouvido. O ♪ não é confirmação: ele CALA o alto-falante, e as barrinhas ficam no chão com ele calado — se você clicou nele sem querer, clique de novo antes de concluir que o rádio não toca. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. O canal do rádio aceitava bytes muito antes de tocar um som, e foi por isso que a casa mirou no report errado durante semanas. Terceira: «Efeitos do Jogo e Áudio do PC no Controle» deixa o som da máquina saindo também pelo controle até alguém voltar ao botão de sempre — esquecer disso faz o próximo teste ouvir o PC no controle e parece defeito sem ser. E as passadas cegas usam ele, e não «Tudo no Controle e Nada no PC», de propósito: com o quarto a TV cala, e o silêncio da TV entregaria a resposta sem o seu ouvido no controle. Não dispare vibração no P3 ou no P4 enquanto testa: pelo rádio o som e a vibração disputam o mesmo fio. E quarta, que é a razão das seis passadas cegas: você SABE o que quer ouvir, e ouvido que sabe o que quer ouvir ouve. A escuta cega existe porque a sua própria expectativa é a fonte de erro mais provável deste teste — e ela já derrubou uma medição desta casa antes.
 
 ---
 

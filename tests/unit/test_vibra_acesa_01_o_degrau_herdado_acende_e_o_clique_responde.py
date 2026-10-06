@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""A ABA VIBRAÇÃO NO PERFIL DELA: o degrau herdado acende, e o clique responde.
+"""A ABA VIBRAÇÃO NO PERFIL DO USUÁRIO: o degrau herdado acende, e o clique responde.
 
-**QUEIXA DELA, 17/09/2026, com a foto da aba aberta:** *"o botão não tá ativo"*.
+**QUEIXA, 17/09/2026, com a foto da aba aberta:** .
 Nenhum dos três — Economia, Balanceado, Máximo — aceso, e a coluna ao lado
-marcando **150%**. A tela negando a força que a mão dela sentia.
+marcando **150%**. A tela negando a força que a mão do usuário sentia.
 
 O PERFIL EM QUE ISSO ACONTECE é o que estas réguas montam, e ele é o dela:
 DON'T SCREAM, `rumble.policy = "max"` no global, e o bloco `controllers[uniq]`
-existindo **sem** a seção `rumble`. Medido no disco dela em 17/09: dos 29
+existindo **sem** a seção `rumble`. Medido no disco do usuário em 17/09: dos 29
 perfis, **6** têm política global escrita e só **5** (9 entradas) têm override
 por controle. *Na maioria das colunas da maioria dos perfis, a força é HERDADA*
 — que é justamente o caso que a tela não sabia mostrar.
@@ -26,7 +26,7 @@ não casa com nenhum `data-hef-quando`.
 Era **meia decisão**. A [05] dela, de 04/09, mandava a coluna sem ajuste próprio
 não acender *"e passar a apontar para essa linha"* — a LINHA DE MESA, que diria
 o degrau em vigor. A linha de mesa foi apagada **um dia depois**, em 05/09, por
-outra decisão dela (*"não é pra ter mesa em nada da interface"*). O contrapeso
+outra decisão de produto. O contrapeso
 saiu, o vazio ficou, e o estado herdado deixou de ter lugar na tela.
 
 A cura devolve a procedência ao lugar que sobrou — o próprio botão: ele acende
@@ -37,7 +37,7 @@ que deixou de existir é "herdado = nada na tela".**
 **2. O clique morto, e ele é pior.** Com o global em `max` e nenhum override,
 clicar "Máximo" não gravava (`draft_config.with_controller_rumble` limpa o
 override igual ao global, regra COR-04), não acendia (defeito 1) e **não dizia
-nada**. Ela clicou três vezes achando que estava quebrado.
+nada**. O usuário clicou três vezes achando que estava quebrado.
 
 A DECISÃO, e ela é de produto: **responder, não gravar**. Forçar o override
 escreveria no disco um valor que não muda um byte do que chega ao motor — a peça
@@ -106,7 +106,7 @@ class PonteDeMentira:
 
 
 def _o_perfil_dela(com_override: str | None = None) -> dict[str, Any]:
-    """O perfil DELA na forma CRUA que a pintura lê — global `max`, sem override."""
+    """O perfil do usuário na forma CRUA que a pintura lê — global `max`, sem override."""
     dele: dict[str, Any] = {"leds": {"lightbar": [65, 9, 55]},
                             "speaker": {"volume": 102, "muted": False}}
     if com_override:
@@ -161,7 +161,7 @@ def disco_dela(monkeypatch, a05):
 
 
 def _ctx(pac):
-    """Um tique com UM controle na mesa e a força geral do perfil dela."""
+    """Um tique com UM controle na mesa e a força geral do perfil do usuário."""
     return pac.Contexto(
         state={"active_profile": "Bancada", "rumble_policy": GLOBAL,
                "rumble_mult_applied": 1.5},
@@ -213,7 +213,7 @@ def test_a_coluna_com_override_proprio_nao_se_diz_herdada(
 
 def test_sem_politica_nenhuma_a_marca_nao_afirma_procedencia(
         pac, disco_dela) -> None:
-    """Campo sem informação NÃO MOSTRA NADA — a regra dela, 02/09/2026."""
+    """Campo sem informação NÃO MOSTRA NADA — a regra, 02/09/2026."""
     ctx = _ctx(pac)
     ctx.state["rumble_policy"] = ""
     col = pac.pacote_da_pagina(PAGINA, ctx)["colunas"][UNIQ]
@@ -297,7 +297,7 @@ def test_o_clique_que_ja_vale_nao_escreve_no_perfil(pac, disco_dela) -> None:
     perfil limpo, e a mesma de `with_controller_leds`.
 
     Se um dia a casa decidir o contrário, é esta régua que tem de cair primeiro,
-    com a decisão dela escrita ao lado.
+    com a decisão de produto escrita ao lado.
     """
     _, gravados = disco_dela
     ponte = PonteDeMentira()

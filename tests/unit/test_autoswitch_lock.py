@@ -266,7 +266,7 @@ class TestPersistencia:
     async def test_boot_retoma_o_freestyle_da_sessao_anterior(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`lifecycle.run` carrega a flag no boot — a escolha dela atravessa"""
+        """`lifecycle.run` carrega a flag no boot — a escolha do usuário atravessa"""
         from hefesto_dualsense4unix.core.controller import ControllerState
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 

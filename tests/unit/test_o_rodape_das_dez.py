@@ -96,7 +96,7 @@ def test_importar_nao_sobrescreve_perfil_dela(casa, ctx, tmp_path):
 
 
 def test_importar_recusa_o_que_nao_e_perfil(casa, ctx, tmp_path):
-    """Um JSON qualquer é recusado ANTES de tocar a pasta dela."""
+    """Um JSON qualquer é recusado ANTES de tocar a pasta do usuário."""
     ruim = tmp_path / "qualquer.json"
     ruim.write_text('{"oi": 1}', encoding="utf-8")
 
@@ -109,7 +109,7 @@ def test_importar_recusa_o_que_nao_e_perfil(casa, ctx, tmp_path):
 
 
 def test_cancelar_o_seletor_nao_e_erro(casa, ctx):
-    """Ela clicou e desistiu. Não levanta, não escreve."""
+    """O usuário clicou e desistiu. Não levanta, não escreve."""
     p = PonteDeMentira(escolhe=None)
     _g("importar")(ctx, {}, p)
     assert list(casa.glob("*.json")) == []

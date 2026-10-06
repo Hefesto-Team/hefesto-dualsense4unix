@@ -48,7 +48,7 @@ byte seguinte é `0x31`** (o output report do DualSense por rádio).
 
 O sentido NÃO é lido do opcode do btsnoop — é lido do CONTEÚDO, do byte `0xA2`,
 que só existe no sentido host->device. Isso é de propósito: o opcode é memória
-minha sobre um formato, e o `0xA2` é o protocolo. A casa já pagou por um parser
+sobre um formato, e o `0xA2` é o protocolo. A casa já pagou por um parser
 de `btmon` que, em 12/08/2026, não venceu o formato.
 
 O `handle` do ACL vira MAC pela tabela do kernel: cada conexão ACL é um device

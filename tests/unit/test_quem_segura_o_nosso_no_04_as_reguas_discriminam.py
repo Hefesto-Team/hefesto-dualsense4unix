@@ -46,7 +46,7 @@ UMA constante — `"Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"`
 sem número de jogador —, e o vpad de uinput não tem `uniq` nem device HID onde
 diferenciar um do outro. Com dois vpads na mesa, `_escolher` devolvia o de
 menor `eventN` para os DOIS, e o `state_full` publicava o inode de P1 dentro do
-bloco de P2. O backend uinput é o que está VIVO na máquina dela hoje. Cura: sem
+bloco de P2. O backend uinput é o que está VIVO na máquina do usuário hoje. Cura: sem
 `uniq`, mais de um homônimo é ambiguidade REAL, e a resposta é os quatro
 `None`. Guardado por `test_r1_coop_de_uinput_e_ambiguo_e_a_regua_recusa`.
 
@@ -65,18 +65,17 @@ espelho nenhum** (zero ocorrências de `28de`), então ele não prova que a
 enumeração segue com uma thread só quando há espelho na mesa. O veredicto do
 log real é o MESMO antes e depois da cura: `RECEBEU DO NOSSO NÓ`, 9914 reports.
 
-O LIMITE QUE **NÃO** FOI CURADO, e que é decisão dela — (2) na matriz
+O LIMITE QUE **NÃO** FOI CURADO, e que é decisão de produto — (2) na matriz
 ---------------------------------------------------------------------
 A régua 2 não CONFUNDE o espelho com o nosso vpad: ela o deixa de fora, e há
 teste que morde. Mas ela também não tem NOME para ele. Um jogo que segure só o
 espelho do nosso vpad — que é o caminho normal quando o Steam Input está
 ligado, e a entrada DELE somos nós, lavada pela Steam — cai no veredito
-`NENHUM`, cujo texto é *"o censo FECHOU (...) e nenhum deles segura o nosso nó
-nem o do físico. Isto é uma afirmação, não uma ausência de dado."*
+`NENHUM`, cujo texto é
 
 **É uma afirmação, e ela lê como "a nossa entrada não chegou ao jogo" quando a
 entrada chegou, um andar acima.** Curar isso é acrescentar uma classe de alvo e
-um sexto veredito ao léxico de cinco — e léxico de veredito é dela. Fica
+um sexto veredito ao léxico de cinco — e léxico de veredito é do usuário. Fica
 DECLARADO aqui e no relato, com teste que prende o comportamento de hoje para
 que a próxima pessoa não descubra sozinha:
 `test_r2_o_jogo_que_so_segura_o_espelho_cai_em_nenhum_e_esse_e_o_limite`.
@@ -345,7 +344,7 @@ def test_r1_o_edge_de_verdade_tem_o_nosso_vidpid_e_nao_e_nosso(mesa: Mesa) -> No
 
 
 def test_r1_o_espelho_xbox_do_nosso_vpad_nao_e_o_nosso_vpad(mesa: Mesa) -> None:
-    """Pergunta 2 da matriz, no backend UINPUT — o caso vivo na máquina dela.
+    """Pergunta 2 da matriz, no backend UINPUT — o caso vivo na máquina do usuário.
 
     O Steam Input espelha CADA controle que enxerga, o nosso vpad inclusive, e
     os espelhos se chamam `Microsoft X-Box 360 pad 0`/`1`. O nosso vpad de
@@ -542,7 +541,7 @@ def test_r2_o_censo_separa_quem_segura_o_nosso_de_quem_segura_o_fisico(
 def test_r2_o_jogo_que_so_segura_o_espelho_cai_em_nenhum_e_esse_e_o_limite(
     tmp_path: Path,
 ) -> None:
-    """O LIMITE DECLARADO — não é defeito curado, é decisão dela."""
+    """O LIMITE DECLARADO — não é defeito curado, é decisão de produto."""
     nosso = tmp_path / "dev" / "input" / "event8"
     espelho = tmp_path / "dev" / "input" / "event21"
     for caminho in (nosso, espelho):

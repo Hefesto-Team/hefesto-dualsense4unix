@@ -76,7 +76,7 @@ def _linhas_de_codigo(texto: str) -> list[tuple[int, str]]:
 
 @pytest.mark.parametrize("origem", ["launch", "autoswitch", "manual", "boot"])
 def test_o_perfil_aplica_gatilho_e_luz_em_toda_origem(origem: str) -> None:
-    """A queixa dela era com `origin="launch"`; a decisão é para todas.
+    """A queixa de uso era com `origin="launch"`; a decisão é para todas.
     (D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO)
     """
     fc = _ControleQueAnota()

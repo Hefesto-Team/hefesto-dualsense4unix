@@ -174,7 +174,7 @@ class TestAAclQueAMascaraAnula:
         assert self._alcancavel(tmp_path, "user:ela:rw-", 0o660)
 
 
-#: O DualSense dela pelo RÁDIO: o BlueZ ≥5.73 o põe sob `/misc/uhid/`.
+#: O DualSense do usuário pelo RÁDIO: o BlueZ ≥5.73 o põe sob `/misc/uhid/`.
 RADIO = "/sys/devices/virtual/misc/uhid/0005:054C:0CE6.0006"
 CABO = "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.0/0003:054C:0CE6.0042"
 VPAD = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F"

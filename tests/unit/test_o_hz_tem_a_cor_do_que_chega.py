@@ -1,12 +1,8 @@
 """O Hz tem a cor do que chega — O-HZ-TEM-A-COR-DA-DISTANCIA-01.
 
-O que ela disse em 30/09/2026, ~02h, com a aba Conexões aberta e os quatro
-DualSense no rádio:
-*«naquela sessão do hertz eles precisam ter os
-numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal -->
-branco e verde pra indicar o quão bom a sua
-distancia tá daquele conector.»* <!-- noqa-acento: citação literal -->
-E às ~03h, sobre quais números: *«isso. um pra cada conector»* — o Hz de cada
+O que o usuário disse em 30/09/2026, ~02h, com a aba Conexões aberta e os quatro
+DualSense no rádio
+E às ~03h, sobre quais números:  — o Hz de cada
 controle e o «N/79» de cada adaptador.
 
 MEDIDO antes da cura (02/10, sobre ``474029fe6``, o mesmo instrumento antes e
@@ -15,11 +11,11 @@ depois): o 359, o 180 e o «sem número» saíam na mesma cor, e só o 60 mudava
 opacidade 0,8; o glifo tinha um par de arcos só; e o ``a08`` atribuía o
 ``CANAIS_DO_BT = 79`` e o ``HZ_QUE_ENGASGA = 125.0`` à mão.
 
-As decisões (quem coordena, 30/09/2026, a validar por ela):
+As decisões (decisão de produto, 30/09/2026, a validar pelo usuário):
 D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE e
 D-3009-OS-CANAIS-SE-PINTAM-PELO-PISO-DO-SALTO. A distância de verdade é o RSSI
 do enlace (D-3009-A-DISTANCIA-E-O-RSSI-E-ESPERA-A-PROVA), e o leitor dele
-espera a prova 0 na bancada dela.
+espera a prova 0 na bancada.
 
 Nenhuma régua espera o que a própria função devolve: os números de entrada são
 os medidos pela casa (a sprint cita as fontes), e os cortes vêm de donos que

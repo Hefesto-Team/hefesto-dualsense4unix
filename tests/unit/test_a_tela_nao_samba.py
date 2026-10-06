@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """A TELA NÃO SAMBA — a interface parada não pode mexer no DOM.
 
-**A palavra dela, 06/09/2026, com o produto aberto e um DualSense no cabo:**
-*"a interface inteira tá sambando"* — e quatro sintomas: pisca/repinta sem
+**A palavra, 06/09/2026, com o produto aberto e um DualSense no cabo:**
+ — e quatro sintomas: pisca/repinta sem
 parar, cliques não aplicam ou atrasam, trava por instantes, e *"botões não
 funcionam, algo ativa o tooltip mas ele se desativa"*.
 
 POR QUE FOTO NENHUMA VIA ISSO, e é a razão de esta régua existir: duas fotos da
-tela dela com um minuto de intervalo saem IDÊNTICAS. O defeito não está no
+tela do usuário com um minuto de intervalo saem IDÊNTICAS. O defeito não está no
 layout parado — está no MOVIMENTO entre dois tiques. E o contador de pinturas
 que o piloto já tinha também não via: ele conta o que o piloto ACHA que
 escreveu, e o defeito era justamente a escrita que ele não contava — um
@@ -258,7 +258,7 @@ def test_o_html_repetido_nao_muta_mesmo_reserializado() -> None:
 
 
 def test_o_bloco_nao_destroi_um_botao_em_voo() -> None:
-    """Um botão trabalhando nunca é arrancado debaixo do dedo dela.
+    """Um botão trabalhando nunca é arrancado debaixo do dedo do usuário.
 
     Um gesto desta casa leva 9,5 s (`daemon.reload`): são 95 tiques de chance
     de o bloco ser reconstruído entre o `mousedown` e o `click`, e o

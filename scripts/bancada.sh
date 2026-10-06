@@ -3,12 +3,12 @@
 # 1 controle na mesa, 3 adaptadores de rádio. Isolar árvore de git não divide
 # aparelho, e é por isso que o worktree não basta.
 #
-# O GESTO QUE ELE TORNA SEGURO, e são as palavras dela:
-#   "vamos fazer a medição do BT, enquanto isso manda agentes pra execução das
+# O GESTO QUE ELE TORNA SEGURO, e são as palavras de produto:
+#   "vamos fazer a medição do BT, enquanto isso manda as demais frentes para a execução das
 #    demais sprints"
 # Quinze das vinte e duas sprints precisam do daemon vivo, onze abrem hidraw e
-# duas colidem de frente com a medição de rádio. Sem semáforo, um agente para o
-# daemon debaixo da mão dela no meio da medição -- e o pior caso não é o agente
+# duas colidem de frente com a medição de rádio. Sem semáforo, uma frente para o
+# daemon debaixo da mão do usuário no meio da medição -- e o pior caso não é essa frente
 # falhar: é ele MEDIR, e publicar um número colhido enquanto o aparelho mudava.
 #
 # DUAS PROVAS DE VIDA INDEPENDENTES, e nenhuma exige que alguém lembre de
@@ -19,7 +19,7 @@
 #
 # POR QUE AS DUAS, e não só o PID: um processo pode virar zumbi e o PID
 # continuar existindo. E por que não só o relógio: um teto de quatro horas
-# deixaria a bancada travada quatro horas depois de a sessão dela morrer.
+# deixaria a bancada travada quatro horas depois de a sessão do usuário morrer.
 #
 # O TETO NÃO É ZELO -- é a lição do `btmgmt` sem adaptador, que travava o
 # `install.sh` PARA SEMPRE em quem não tem Bluetooth. O que não volta sozinho

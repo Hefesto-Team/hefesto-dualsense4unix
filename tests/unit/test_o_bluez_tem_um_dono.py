@@ -233,7 +233,7 @@ def test_a_guarda_recusa_o_sistema_e_nao_o_barramento_de_mentira(
 def test_sob_a_suite_o_busctl_do_sistema_nao_responde_nem_a_leitura(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Uma régua que lê o barramento DELA mede a máquina, não o produto."""
+    """Uma régua que lê o barramento DO USUÁRIO mede a máquina, não o produto."""
     if bd.shutil.which(bd.FERRAMENTA, path=bd._PATH_DO_SISTEMA) is not None:
         monkeypatch.setenv("PATH", bd._PATH_DO_SISTEMA)
         assert bd.busctl(["tree", bd.SERVICO, "--list"]) is None
@@ -416,7 +416,7 @@ def travas_pegas(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 def test_o_reconectar_segura_uma_trava_so_do_disconnect_ao_connect(
     trava_de_mentira: Path, travas_pegas: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de quem coordena: o «Reconectar controles» entra na trava — e o"""
+    """Decisão de produto: o «Reconectar controles» entra na trava — e o"""
     barramento = bm.BarramentoDeMentira()
     barramento.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO]["Connected"] = True
     dono = bd.DonoVivo(barramento)
@@ -491,7 +491,7 @@ def test_o_parear_pela_ponte_espera_a_trava(
 def test_a_busca_da_ponte_so_nasce_com_a_trava(
     trava_de_mentira: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de quem coordena: o ``descobrir`` do piso entra na trava — a busca"""
+    """Decisão de produto: o ``descobrir`` do piso entra na trava — a busca"""
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.1)
     abertas: list[Any] = []
 

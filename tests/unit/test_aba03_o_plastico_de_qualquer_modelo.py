@@ -1,11 +1,10 @@
 """A régua da aba 03: a cor do plástico vem do APARELHO, nos 28 modelos dela.
 
-A LEI, e ela é dela (03/09/2026)::
+A LEI, de 03/09/2026::
 
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho.
-    nada hardcoded. eu quero que cada um, ao usar seu controle, se toque disso —
-    que o app se adaptou ao controle dele"
+    A cor do plástico, o desenho do DualSense, as bordas e a escolha de cada player vêm do
+    controle identificado no canto superior, a partir do mapa de cores já catalogado,
+    e não de valores cravados no desenho. Cada pessoa pode ter um modelo diferente.
 
 O DEFEITO que esta régua fecha: o cabeçalho de cada coluna trazia
 `style="--plastico:#ae335a"` — o Cosmic Red do DESENHO — num `<span>` cujo alvo
@@ -19,7 +18,7 @@ A CURA tem duas metades, e as duas estão aqui:
 1. o `--plastico` subiu para o EMBRULHO (`.cabeca`), que tem `data-campo` e o
    alvo `plastico` — o único que escreve a variável — e fica FORA do
    `innerHTML` que o alvo `html` do miolo compara;
-2. o pacote escreve nele o que leu do MAPA DELA, e não de uma tabela sua.
+2. o pacote escreve nele o que leu do MAPA DO USUÁRIO, e não de uma tabela sua.
 
 **O QUE SEPARA A CURA DA MAQUIAGEM, e é o que esta régua mede:** trocar o Cosmic
 Red por outro hexadecimal escrito à mão seria trocar um cravado por outro. Por

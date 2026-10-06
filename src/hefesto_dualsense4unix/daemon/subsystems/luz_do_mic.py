@@ -3,7 +3,7 @@
 LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
 `common[8]` por decisão de estado; as peças A e B só respondem perguntas.
 
-**O CONTRATO, e ele é decisão dela** (a sprint `LUZ-DO-MIC-01`, §1)::
+**O CONTRATO, e ele é decisão de produto** (a sprint `LUZ-DO-MIC-01`, §1)::
 
     apagado (0)      = MUDO. É a ÚNICA coisa que apaga esta luz.
     aceso fixo (1)   = o microfone está LIGADO — haja ou não app ouvindo
@@ -12,23 +12,22 @@ LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
 
 A precedência está em `decidir`, e ela é a §1.1 escrita em código.
 
-**O `0` DEIXOU DE SER DUAS COISAS — 19/09/2026, decisão dela**
+**O `0` DEIXOU DE SER DUAS COISAS — 19/09/2026, decisão de produto**
 (a sprint `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`). O
 contrato de 02/09 dizia *"apagado = MUDO, ou ninguém ouvindo — OS DOIS SÃO A
 MESMA LUZ"*, e foi isso que custou a noite dela: com o microfone LIGADO e
-ninguém gravando, a luz apagada lhe disse *"desligado"*, ela apertou o botão
+ninguém gravando, a luz apagada lhe disse *"desligado"*, o usuário apertou o botão
 para ligar e **desligou** — o vigia mediu `mudo=False canal_ativo=True` antes
 do primeiro clique.
 
-Perguntada com quatro opções, ela escolheu *«Espelhar o botão E consertar a
+Perguntada com quatro opções, o usuário escolheu *«Espelhar o botão E consertar a
 tela»*: a luz passa a responder ao BOTÃO, na hora, sem depender de app nenhum
 estar aberto, e o *"alguém te ouve"* não some — vira o PISCANDO, e ganha texto
 na aba Controle (`interface/pacotes/a02_controles.py`, campo `mic-ressalva`).
 
 **A LUZ INVERTE O KERNEL, e isso é o ponto inteiro.** O `hid-playstation`
 escreve `mute_button_led = ds->mic_muted` (`hid-playstation.c:1538-1540`): para
-ele, luz ACESA quer dizer MUDO. Aqui é o contrário — palavra dela: *"confuso
-mudo e apagado tem que ser sinonimos aqui"*. Enquanto a posse do byte for
+ele, luz ACESA quer dizer MUDO. Aqui é o contrário —  Enquanto a posse do byte for
 nossa, o firmware obedece a nós e o kernel não pinta nada; por isso a devolução
 da posse tem de REPINTAR na língua do KERNEL antes de soltar (ver
 `_devolver`), senão a luz fica presa no nosso vocabulário sobre um byte que
@@ -71,7 +70,7 @@ thread de report já atualizou, sem HID I/O, e a da PEÇA B é um `dict` sob
 **TODO `pactl` SAI DO EVENT LOOP, e isto é requisito.** A PEÇA A dispara três
 subprocessos com `timeout` de 3 s cada, e a resolução de fonte mais dois;
 chamá-los de dentro da corrotina congelaria o mesmo loop que serve o IPC e
-reafirma o report de saída — até 9 s no pior caso, com a máquina dela parecendo
+reafirma o report de saída — até 9 s no pior caso, com a máquina do usuário parecendo
 travada. Tudo que fala com o mundo passa por `_fora_do_laco`, que é o
 `daemon._run_blocking` com queda tolerante.
 
@@ -250,12 +249,12 @@ def decidir(
         ninguém ouvindo, e o microfone ligado    -> 1
         resto                                    -> 1
 
-    **A LINHA DE BAIXO MUDOU EM 19/09/2026, E É DECISÃO DELA.** Ela era
+    **A LINHA DE BAIXO MUDOU EM 19/09/2026, E É DECISÃO DE PRODUTO.** Ela era
     `não ouvintes -> 0`, e a sprint
     `2026-09-19-A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01` mediu o preço: com o
-    microfone LIGADO e nenhum app gravando — o arranjo exato da mesa dela
+    microfone LIGADO e nenhum app gravando — o arranjo exato da bancada
     naquela noite —, o journal só tinha `luz_do_mic_escrita estado=0`, a luz
-    apagada lhe disse *"desligado"*, e o primeiro clique dela **desligou** o
+    apagada lhe disse *"desligado"*, e o primeiro clique do usuário **desligou** o
     microfone que já estava no ar.
 
     Hoje **quem apaga é só o `mudo is True`**. A luz espelha o BOTÃO: o *"tem
@@ -265,7 +264,7 @@ def decidir(
     **E O FILTRO ANTI-AUTO-REFERÊNCIA CONTINUA CERTO.** A regra 3 de
     `e_stream_do_hefesto` exclui de `ouvintes` todo gravador cujo
     `application.name` contenha `hefesto` — e é por isso que a lista vem vazia
-    na mesa dela: o único gravador do canal é o `hefesto-canal-do-microfone`,
+    na bancada: o único gravador do canal é o `hefesto-canal-do-microfone`,
     o medidor de nível da própria aba Controle. Contá-lo faria a luz **acender
     sozinha porque a tela está aberta**, e o `2` passaria a dizer *"a aba está
     medindo"* em vez de *"alguém te ouve"*. A causa do defeito não era o
@@ -804,7 +803,7 @@ def luz_do_mic_do_jogo(uniq: str | None) -> int | None:
 
 
 def a_pessoa_mandou(uniq: str | None, em: float | None = None) -> None:
-    """Ela mandou no microfone deste controle (o aperto, o 🎙). `None` = agora."""
+    """O usuário mandou no microfone deste controle (o aperto, o 🎙). `None` = agora."""
     chave = chave_do_mic(uniq)
     if chave is None:
         return
@@ -818,7 +817,7 @@ def a_pessoa_mandou(uniq: str | None, em: float | None = None) -> None:
 
 
 def quando_a_pessoa_mandou(uniq: str | None) -> float | None:
-    """O instante da última ordem dela neste controle; `None` = nenhuma."""
+    """O instante da última ordem de produto neste controle; `None` = nenhuma."""
     chave = chave_do_mic(uniq)
     return _A_PESSOA_MANDOU_EM.get(chave) if chave else None
 
@@ -833,7 +832,7 @@ def _instante(em: Any) -> float:
 
 
 def _o_jogo_pede_a_luz(chave: str, valor: int, em: float) -> bool:
-    """Guarda o pedido de luz do jogo se ele é mais novo que a ordem dela."""
+    """Guarda o pedido de luz do jogo se ele é mais novo que a ordem de produto."""
     if em <= _A_PESSOA_MANDOU_EM.get(chave, float("-inf")):
         logger.info("luz_do_mic_pedido_velho_do_jogo", uniq=chave, luz=valor)
         return False

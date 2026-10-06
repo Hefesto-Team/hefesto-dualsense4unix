@@ -94,7 +94,7 @@ def test_a_piscada_alcanca_os_dois_transportes() -> None:
 
 
 def test_a_piscada_ignora_o_seletor_de_controle() -> None:
-    """Ela pediu "o lightbar de TODOS" — o alvo da janela não pode calar os"""
+    """O usuário pediu "o lightbar de TODOS" — o alvo da janela não pode calar os"""
     inst, _cabo, radio, node = _backend_com_dois()
     inst.set_output_target(0)
     inst.pintar_lightbar_sem_lembrar((10, 20, 30))
@@ -284,7 +284,7 @@ def test_sem_troca_nao_pisca_a_cada_tique(monkeypatch: Any) -> None:
 
 
 def test_a_janela_pisca_igual_ao_gesto(monkeypatch: Any) -> None:
-    """Ela pediu que valesse "seja com steam aberta ou não" e por qualquer"""
+    """O usuário pediu que valesse "seja com steam aberta ou não" e por qualquer"""
     _sem_thread(monkeypatch)
     d = _Daemon(flavor=PONTE_XBOX)
     avisar_troca_de_modo(d)  # type: ignore[arg-type]
@@ -360,7 +360,7 @@ def test_o_release_do_modo_nativo_avisa_mesmo_sem_persist(monkeypatch: Any) -> N
     `lifecycle._release_controller_to_game` desliga a emulação com
     `origin="profile"` — ou seja `persist=False` — e é EXATAMENTE a troca que
     tem de piscar branco. Com a guarda em `persist`, entrar em Modo Nativo
-    ficava mudo, e ela pediu o branco por escrito.
+    ficava mudo, e o usuário pediu o branco por escrito.
     """
     _sem_thread(monkeypatch)
     chamadas: list[Any] = []

@@ -52,15 +52,15 @@ O CARD RESPONDE (26/08/2026)
 
 O conselho dispensado nunca sumia. Cada card de ordem traz `[Ignorar]`: grava a
 dispensa no rascunho da máquina, chaveada pelo ARRANJO (`D-ORDEM-IGNORADA-VOLTA`).
-Ela mexeu nos cabos e a mesma regra disparou com arranjo novo? é fato novo, e a
-ordem VOLTA. O `[Já movi — reexaminar]` saiu: ela decidiu em 31/08/2026 que não
+O usuário mexeu nos cabos e a mesma regra disparou com arranjo novo? é fato novo, e a
+ordem VOLTA. O `[Já movi — reexaminar]` saiu: o usuário decidiu em 31/08/2026 que não
 faz sentido ter o examinar e o reexaminar.
 
 O TOPO, E QUEM DECIDE A COR (26/08/2026)
 ------------------------------------------
 
 O selo passa a dizer o texto de `ordens_da_mesa.cabecalho()` — os quatro
-cabeçalhos da §8.3 da ORDEM-DE-SERVIÇO-01, que curam a queixa dela de que
+cabeçalhos da §8.3 da ORDEM-DE-SERVIÇO-01, que curam a queixa de uso de que
 *"o 'está tudo certo' não fala nada"*: o estado bom passa a contar QUANTA coisa
 foi conferida, e o "não soube" deixa de se disfarçar dele.
 

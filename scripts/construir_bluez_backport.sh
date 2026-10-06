@@ -3,7 +3,7 @@
 # construído do zero e conferido a cada passo (BLUETOOTHD-NAO-DERRUBA-01).
 #
 # POR QUE EXISTE: até 23/09/2026 o 5.86-0ubuntu0.1~hefesto24.04.3 que roda na
-# máquina dela não tinha fonte, patch nem receita em lugar nenhum — o install
+# máquina do usuário não tinha fonte, patch nem receita em lugar nenhum — o install
 # só consumia .deb prontos de um cache que já não existia. Este script é a
 # receita inteira, e cada entrada dele está fixada por SHA-256 em
 # assets/bluez-backport/BASELINE.

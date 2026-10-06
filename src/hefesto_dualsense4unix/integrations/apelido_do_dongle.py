@@ -43,7 +43,7 @@ controle DESCONECTA. É a metade (1) do ``BT-NINTENDO-ACTIVE-01``, pesquisa de
 ``scripts/bt_active_mode.sh:137-149`` aplica.
 
 Renomear um adaptador que hospeda um Pro sem manter o prefixo derruba o Pro. Por
-isso a decisão dela (22/08/2026) é: *"você escreve, o produto protege o
+isso a decisão (22/08/2026) é: *"você escreve, o produto protege o
 prefixo"*. O nome que a TELA mostra é o dela, limpo; o que vai ao BlueZ é o
 costurado. Ela nunca precisa saber que a costura existe.
 
@@ -116,7 +116,7 @@ por isso o caminho ``/org/bluez/hciN`` é resolvido a cada leitura a partir do
 BD Address, nunca guardado.
 
 Nunca SUBTRAI. Se um adaptador carrega o prefixo e não hospeda Nintendo nenhum,
-o prefixo fica: tirar uma palavra que ela escreveu é pior que deixar uma palavra
+o prefixo fica: tirar uma palavra que o usuário escreveu é pior que deixar uma palavra
 que não faz nada. Ver :func:`limpar_o_nome`.
 """
 
@@ -168,7 +168,7 @@ class Dongle:
 
     @property
     def nome(self) -> str:
-        """O nome DELA — o alias sem a costura do produto."""
+        """O nome DO USUÁRIO — o alias sem a costura do produto."""
         return limpar_o_nome(self.alias, hospeda_nintendo=self.hospeda_nintendo)
 
     @property

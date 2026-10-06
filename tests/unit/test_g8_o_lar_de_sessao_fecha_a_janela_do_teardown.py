@@ -1,10 +1,10 @@
 """LAR-DE-SESSAO-01 — o isolamento tem de sobreviver ao teardown (G8).
 
-O DEFEITO, medido no disco DELA em 25/08/2026: quatro endereços da faixa de
+O DEFEITO, medido no disco do usuário em 25/08/2026: quatro endereços da faixa de
 fixture `aa:bb:cc:00:00:0{1..4}` moravam no `controllers.json` de PRODUÇÃO,
 ocupando os postos 2 a 5 e empurrando os DualSense REAIS para 6, 7 e 8 —
 `core/led_control.py` só tem cor de PS5 para 1..4, então dois dos controles
-dela ficaram sem cor de jogador. É REINCIDÊNCIA: o
+do usuário ficaram sem cor de jogador. É REINCIDÊNCIA: o
 `backup-limpeza-20260811-233704/controllers.json` já trazia forjados em 11/08.
 
 O MECANISMO que o forense nomeou:
@@ -14,7 +14,7 @@ O MECANISMO que o forense nomeou:
      FUNÇÃO (`_hefesto_fake_env`), e o teardown dele DEVOLVE o valor de antes
      do teste — que é o `~/.config` dela;
   3. logo, qualquer escrita DEPOIS do teardown (finalizador, `atexit`, thread,
-     subprocesso, singleton que atravessa os casos) cai na mesa dela.
+     subprocesso, singleton que atravessa os casos) cai na bancada.
 
 A CURA, no `tests/conftest.py`: o `pytest_sessionstart` desvia `HOME` e os
 quatro `XDG_*` para um lar de MENTIRA da sessão inteira, ANTES da coleta. O
@@ -26,7 +26,7 @@ AS TRÊS RÉGUAS DESTE ARQUIVO, e cada uma pega uma coisa diferente:
   dublê. É a cura em uma asserção, e custa zero.
 
   RÉGUA 2 (`TestAEscritaTardiaNaoAlcancaAMesa`) — o fim a fim, num pytest
-  ANINHADO com um `$HOME` de mentira no lugar da mesa dela. Ela roda a MORDIDA
+  ANINHADO com um `$HOME` de mentira no lugar da bancada. Ela roda a MORDIDA
   nos dois sentidos dentro do próprio caso: com `HEFESTO_SEM_LAR_DE_SESSAO=1`
   o vazamento VOLTA a acontecer (e o teste exige que volte — régua que só sabe
   passar não é régua), e sem a escotilha ele não acontece.
@@ -109,7 +109,7 @@ class TestOAmbienteDeForaDoCaso:
 
 
 class TestOEspelhoNaoEUmDiretorioVazio:
-    """O dublê ESPELHA a casa dela, e só os quatro do produto nascem vazios."""
+    """O dublê ESPELHA a casa do usuário, e só os quatro do produto nascem vazios."""
 
     def test_o_que_o_produto_escreve_nasce_vazio_e_nao_e_symlink(
         self, tmp_path: Path
@@ -274,7 +274,7 @@ def test_semeia_a_fila_e_agenda_a_escrita_tardia():
 def _rodar_o_ninho(
     tmp_path: Path, repo: Path, *, com_a_cura: bool
 ) -> tuple[Path, subprocess.CompletedProcess[str]]:
-    """Um pytest ANINHADO com um `$HOME` de mentira no lugar da mesa dela."""
+    """Um pytest ANINHADO com um `$HOME` de mentira no lugar da bancada."""
     quintal = tmp_path / ("com-a-cura" if com_a_cura else "sem-a-cura")
     quintal.mkdir()
     (quintal / "conftest.py").symlink_to(repo / "tests" / "conftest.py")

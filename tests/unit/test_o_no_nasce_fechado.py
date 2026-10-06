@@ -1,10 +1,6 @@
 """O-NO-NASCE-FECHADO-01 — o nó nasce `0600 root` e o Hefesto abre sob pedido.
 
-Decisão dela, 20/09/2026, e ela tem três partes:
-
-    «Nossa udev não deveria garantir isso? Por mim caminho um e lembrando que
-     o Hefesto tem que ter prioridade em tudo e isso deveria estar no install
-     por default»
+Decisão, 20/09/2026, e ela tem três partes
 
 O DEFEITO que isto fecha: a Steam aberta ANTES de o controle conectar pelo
 rádio abre o `/dev/hidraw` do FÍSICO na janela em que o udev deu `uaccess` e o
@@ -12,7 +8,7 @@ broker ainda não tirou — e **tirar a ACL não fecha descritor já aberto**. A
 barra de luz fica apagada e não volta nem fechando a Steam. Medido em quatro
 noites: 5 de 9 conexões em 10/09, 3 de 3 em 13/09, 8 de 8 em 17/09.
 
-Esta régua é de UNIDADE, e é de propósito: os quatro DualSense dela estão em
+Esta régua é de UNIDADE, e é de propósito: os quatro DualSense do usuário estão em
 uso agora, e um teste que rodasse `udevadm` desfaria o que o produto fez. Nada
 aqui toca /dev, /sys, o udev vivo, o broker vivo nem o daemon — as operações de
 fs são dublê, o validador é injetado, e a regra udev é lida do asset como
@@ -526,7 +522,7 @@ class TestNoInstallPorDefault:
         assert re.search(r"^ExecStopPost=.*--restore-all-and-exit$", texto, re.MULTILINE)
 
     def test_o_install_nasce_com_a_cura_ligada(self) -> None:
-        """A MORDIDA da ordem dela: «no install por default»."""
+        """A MORDIDA da ordem de produto: «no install por default»."""
         texto = INSTALL.read_text(encoding="utf-8")
         assert re.search(r"^ABRIR_O_NO=0$", texto, re.MULTILINE)
         assert re.search(r"^\s*--no-fechar-o-no\)\s+ABRIR_O_NO=1 ;;$", texto, re.MULTILINE)

@@ -1,6 +1,6 @@
 """O quadro "Modo" saiu da aba Perfis — e o que o perfil guarda ficou.
 
-**ESTA RÉGUA INVERTEU EM 11/09/2026, por ordem dela:**
+**ESTA RÉGUA INVERTEU EM 11/09/2026, por ordem de produto:**
 
     "em perfis ainda aparece modo. Isso deve aparecer só na aba jogar."
 
@@ -9,7 +9,7 @@ nasceu em 06/09 (`PERFIL-MODO-01`) porque a linha 384 do CSV da paridade tinha o
 veredito mais duro da aba — *"NÃO EXISTE — nem na página, nem no pacote"* —, e
 esta régua provava que os quatro botões gravavam o que prometiam.
 
-**A ORDEM DELA REVOGA A EXIGÊNCIA, NÃO O DADO**, e essa distinção é o assunto
+**A ORDEM DE PRODUTO REVOGA A EXIGÊNCIA, NÃO O DADO**, e essa distinção é o assunto
 inteiro deste arquivo:
 
 * o QUADRO sai da tela, o GESTO sai do pacote — nada na página o alcançava mais,
@@ -70,7 +70,7 @@ MESA = [
 
 
 class PonteDeMentira:
-    """Anota, e não fala com o daemon dela. Sabe RECUSAR (ver `falha`)."""
+    """Anota, e não fala com o daemon do usuário. Sabe RECUSAR (ver `falha`)."""
 
     def __init__(self, falha: bool = False) -> None:
         self.chamadas: list[str] = []
@@ -139,7 +139,7 @@ def _ctx() -> Contexto:
 
 
 def test_a_aba_perfis_nao_tem_mais_gesto_de_modo() -> None:
-    """Ordem dela, 11/09/2026 — e a queda se mede nos DOIS lugares."""
+    """Ordem, 11/09/2026 — e a queda se mede nos DOIS lugares."""
     assert not hasattr(a10_perfis, "editor_modo"), (
         "`a10_perfis.editor_modo` voltou — o quadro «Modo» saiu do editor de "
         "Perfis por ordem dela em 11/09/2026, e um gesto que nenhum clique "
@@ -253,9 +253,9 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     máscara não é do modo, e nada de máscara inventada
     (ESCOLHA-DELA-VENCE-01/E1).
 
-    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026 (na validação). ANTES
+    AJUSTADA À REGRA DE PRODUTO — MODO-DE-CONEXAO-01, 13/09/2026 (na validação). ANTES
     a segunda asserção cobrava a poda: fora do modo jogo o `gamepad_flavor` era
-    zerado. AGORA cobra que ele FICA — o item 2 da regra dela na sprint: «A
+    zerado. AGORA cobra que ele FICA — o item 2 da regra de produto na sprint: «A
     MÁSCARA vem por cima, independente do modo». Com o PS + R3 gravando a cada aperto, a volta
     pela Navegação apagava a máscara padrão do perfil em silêncio, medido.
 

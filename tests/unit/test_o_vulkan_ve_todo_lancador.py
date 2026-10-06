@@ -1,4 +1,4 @@
-"""O-VULKAN-VE-TODO-LANCADOR-E-DIZ-O-ESTADO-01 — as duas perguntas dela."""
+"""O-VULKAN-VE-TODO-LANCADOR-E-DIZ-O-ESTADO-01 — as duas perguntas de produto."""
 
 from __future__ import annotations
 

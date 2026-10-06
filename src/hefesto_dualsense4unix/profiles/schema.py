@@ -269,9 +269,9 @@ class ProfileMovimentoConfig(BaseModel):
 
     NO PERFIL E POR CONTROLE — A-MIRA-POR-MOVIMENTO-NA-TELA-01 (23/09/2026).
     Esta seção nasceu só global, pelo precedente do `remapeamento`; a palavra
-    dela pôs o chip «Mira Virtual» no cartão de CADA controle, e o override
+    de produto pôs o chip «Mira Virtual» no cartão de CADA controle, e o override
     entrou em `ControllerOverrides.movimento` com ESTA mesma classe, sem
-    migração. A peça sobrepõe o perfil campo a campo — só os campos que ela
+    migração. A peça sobrepõe o perfil campo a campo — só os campos que o usuário
     escreveu (`roteador_de_movimento.arranjo_da_peca`).
     """
 
@@ -369,7 +369,7 @@ class ProfileMicConfig(BaseModel):
     daquele controle como microfone padrão do sistema, e acende o LED dele
     quando a eleição é conferida. Ele não muta mais nada: o texto anterior
     dizia *"alterna o mute do microfone padrão do sistema"*, e essa é
-    exatamente a coisa que ela mandou parar de fazer — *"mexendo com ambos os
+    exatamente a coisa que o usuário mandou parar de fazer — *"mexendo com ambos os
     canais de áudio é péssimo"*.
 
     Desligado, o botão não mexe no áudio do sistema — é o que se quer num
@@ -382,9 +382,7 @@ class ProfileMicConfig(BaseModel):
 
     O VOLUME E O MUDO (MIC-VOLUME-01, 16/08/2026)
     ----------------------------------------------
-    Pedido dela, olhando a aba Status: *"dá espaço a um slider de microfone pra
-    definir o volume do microfone real (independente de saber se tá via bt ou
-    via cabo), o app deve ser inteligente pra saber qual caminho usar"* — e,
+    Pedido, olhando a aba Status: ** — e,
     sobre gravar: *"ao clicarmos em salvar perfil ou aplicar no perfil ativo ele
     de fato o faz e na próxima sessão lembra disso"*.
 
@@ -396,17 +394,13 @@ class ProfileMicConfig(BaseModel):
     **Os dois campos são opcionais, e `None` é "sem opinião".** É o mesmo
     contrato do `mouse` e do `speaker`, e ele importa aqui pelo motivo de
     sempre: um perfil que não pediu nada não pode impor nada. A queixa que
-    originou essa regra — *"a config que eu deixo nunca é respeitada"* — vale
+    originou essa regra — ** — vale
     nos dois sentidos.
 
     **ATIVAR UM PERFIL APLICA O MICROFONE (18/08/2026).** Esta docstring dizia
     que a seção era só lembrança, e que ativar o perfil não tocava no
-    microfone. Isso caducou, e foi ELA quem o derrubou: *"informação de
-    microfone e som, touch, acelerômetro, giroscópio e afins. cara, temos que
-    salvar isso no perfil sempre"* — e, sobre o contrato antigo: *"isso é
-    informação antiga. o sistema de perfis não funcionava, mas acho que não vem
-    ao caso, até pq na época não tinhamos microfone dentro do sistema de
-    perfis."* Quem aplica é `ProfileManager.apply_mic`.
+    microfone. Isso caducou, e foi ELA quem o derrubou:  — e, sobre o contrato antigo: ** Quem
+    aplica é `ProfileManager.apply_mic`.
 
     **O MUDO NÃO É DO PERFIL — O-MUDO-E-DO-CONTROLE-01.** Os dois campos NÃO
     custam a mesma coisa, e por isso não atravessam pelos mesmos caminhos:
@@ -426,8 +420,7 @@ class ProfileMicConfig(BaseModel):
 
     **`volume` é do CAMINHO, e desde 09/09/2026 também do aparelho.** Ele é o
     volume da fonte de captura no sistema (o source do PipeWire), e por isso
-    funciona igual no cabo e no rádio — que é exatamente o "independente de
-    saber se tá via bt ou via cabo" do pedido dela. O segundo degrau é o
+    funciona igual no cabo e no rádio — que é exatamente o  do pedido. O segundo degrau é o
     `common[6]` do controle, o ganho de captura do firmware, pela régua única
     `core/backend_pydualsense.byte_do_volume_do_microfone` (MIC-VOLUME-02,
     D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO). Fato errado substituído
@@ -457,7 +450,7 @@ class ProfileSpeakerConfig(BaseModel):
     para a AUSÊNCIA da seção nos três. Perfil COM seção aplica — inclusive o
     `mic`, desde 18/08/2026.) Tomar posse
     por um perfil que não pediu nada é exatamente o hábito que produziu a
-    queixa "a config que eu deixo nunca é respeitada".
+    queixa .
 
     POR QUE ``volume`` É OBRIGATÓRIO (e ``muted`` sozinho é recusado aqui).
     Medido na SOM-02 (armadilha 1) com o `set_speaker_volume` real: uma
@@ -478,7 +471,7 @@ class ProfileSpeakerConfig(BaseModel):
     ``muted=True`` manda 0 ao firmware e guarda os 180 como preferência; o
     ``muted=False`` posterior devolve os 180 (medido na sprint).
 
-    A ROTA DE SAÍDA (``rota``), pedido DELA em 09/08/2026: *"tanto usar o mic
+    A ROTA DE SAÍDA (``rota``), pedido em 09/08/2026: *"tanto usar o mic
     do controle quanto usar o canal de saída de som específico do DS"*. É o
     ``OUTPUT_PATH_SEL`` (``audio_control``, bits 4-5) da referência canônica,
     o mesmo número que o ``rota`` do ``speaker.set`` já carrega:
@@ -504,7 +497,7 @@ class ProfileSpeakerConfig(BaseModel):
 
     O que mudou não é este campo, é quem responde quando ele cala: o controle
     passou a NASCER em ``ROTA_PADRAO_DO_SOM`` («Sons do jogo») na adoção — um
-    ponto de partida até alguém mudar, palavra dela no mesmo dia. Perfil sem
+    ponto de partida até alguém mudar, palavra de produto no mesmo dia. Perfil sem
     rota herda esse nascimento em vez de herdar o fone vazio; perfil COM rota
     continua mandando, e é ele quem escreve por último.
 
@@ -516,7 +509,7 @@ class ProfileSpeakerConfig(BaseModel):
     ``TriggersConfig``. A rota do som é, até aqui, o ÚNICO campo com
     nascimento preparado.
 
-    Que os outros dois passem a ter é decisão DELA, de 16/09/2026: o botão de
+    Que os outros dois passem a ter é decisão, de 16/09/2026: o botão de
     balanceado pré-setado em todo perfil sem configuração alterada, os
     gatilhos nascendo rígidos e os controles com tudo ativado por padrão.
     Isso é trabalho a fazer, não o estado de hoje — e escrever aqui que já
@@ -531,7 +524,7 @@ class ProfileSpeakerConfig(BaseModel):
     LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o som
     do PC" da janela também mexe na CAMADA 1 (o *default sink* do PipeWire),
     que é um fato GLOBAL do sistema e não é campo de perfil — restaurá-lo na
-    ativação é decisão dela, não efeito colateral de trocar de janela.
+    ativação é decisão de produto, não efeito colateral de trocar de janela.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -541,13 +534,13 @@ class ProfileSpeakerConfig(BaseModel):
     rota: int | None = Field(default=None, ge=0, le=3)
     #: A FONTE do nó de som deste controle — ``"mix"`` (todo o som do PC cai
     #: aqui também, o *«HDMI completo»* dela) ou ``"sfx"`` (o nó fica livre para
-    #: a corrente que o jogo mandar). Pedido dela, 08/09/2026: *"os somns seja
+    #: a corrente que o jogo mandar). Pedido, 08/09/2026: *"os somns seja
     #: hdmi completo seja o canal do sfx caindo pra cada controle"*.
     #: <!-- noqa-acento: citação literal -->
     #:
     #: **ADITIVO e sem bump de versão**, como a ``rota``: perfil antigo carrega
     #: com ``None``, que é **não mexer** — o nó daquele controle segue o padrão
-    #: da casa, que é ``sfx`` por decisão dela
+    #: da casa, que é ``sfx`` por decisão de produto
     fonte: Literal["mix", "sfx"] | None = None
     #: O BOTÃO «PADRÃO» DO VOLUME (04/10/2026, desenho aprovado em `docs/process/estudos/
     #: 2026-10-04-o-jogo-decide/`): ligado, o volume do alto-falante deste controle é o do JOGO
@@ -581,7 +574,7 @@ class ProfileSpeakerConfig(BaseModel):
         ``"rota": null`` em todo perfil salvo transformaria "voltar uma versão"
         em "todos os perfis com som quebrados" — e daemon velho com janela nova
         é combinação real nesta casa. Omitindo o campo quando ninguém opinou,
-        o perfil dela continua idêntico ao que era, byte a byte, e só quem de
+        o perfil do usuário continua idêntico ao que era, byte a byte, e só quem de
         fato escolheu um canal carrega a chave nova.
         """
         dados = handler(self)
@@ -639,7 +632,7 @@ class PonteConfirmada(BaseModel):
     Sem essa distinção o produto não separa "nunca tentei" de "tentei e
     funciona", e uma escada que tenta as pontes em ordem **nunca para**: ela
     rodaria de novo em todo jogo, a cada abertura, arrancando o controle da mão
-    dela a cada degrau (R-04, medido em 23/07 — recriar o vpad com o jogo aberto
+    do usuário a cada degrau (R-04, medido em 23/07 — recriar o vpad com o jogo aberto
     tira o controle do jogo).
 
     POR QUE A TUPLA SE REPETE AQUI, em vez de o carimbo ser um simples
@@ -655,7 +648,7 @@ class PonteConfirmada(BaseModel):
     ADITIVO, sem bump de versão — mesmo caminho do ``mouse``, do ``mic``, do
     ``speaker`` e do ``mode``: perfil antigo, SEM o campo, carrega e vale.
     ``None`` aqui significa exatamente **"ainda não sei"**, e é isso que os 18
-    perfis do disco dela passam a dizer. Um perfil que já traz
+    perfis do disco do usuário passam a dizer. Um perfil que já traz
     ``gamepad_flavor="dualsense"`` NÃO vira confirmado por existir: nenhuma
     migração escreve este campo, e o portão
     ``test_ponte_confirmada_01`` reprova quem tentar.
@@ -862,11 +855,10 @@ class ControllerRumbleOverride(BaseModel):
 class ControllerMicOverride(BaseModel):
     """O MICROFONE de UMA unidade física (MIC-QUINTO-AJUSTE-01, 03/09/2026).
 
-    Decisão dela, 03/09/2026 — o microfone vira o QUINTO ajuste por controle:
+    Decisão, 03/09/2026 — o microfone vira o QUINTO ajuste por controle:
     é o `Virtual` que faz o mic soar igual no cabo e no rádio, ou seja, é o
     ajuste que faz o CANAL daquele controle funcionar; e com
-    ``CANAL-POR-CONTROLE-01`` — *"4 controles os 4 tem que ter canais de
-    entrada unico pra cada qual"* (noqa-acento: citação literal) —
+    ``CANAL-POR-CONTROLE-01`` —  —
     um controle no cabo e outro no rádio precisam poder ter tratamentos
     diferentes.
 
@@ -901,7 +893,7 @@ class ControllerMicOverride(BaseModel):
     **FATO SUBSTITUÍDO EM 03/09/2026, e completado em 09/09.** Esta seção
     listava o ``volume`` entre os campos DE FORA, primeiro porque o applier
     *"não chamava"* a primitiva por peça (falso desde 03/09 pela manhã) e
-    depois porque faltava a palavra dela. As duas coisas caíram: ela mandou
+    depois porque faltava a palavra de produto. As duas coisas caíram: o usuário mandou
     abrir (*"manda a ver em tudo que falta por favor"*), o campo existe logo
     abaixo, e ``Daemon.apply_profile_mic`` resolve a fonte com
     ``audio_control.fonte_de_captura_do_uniq(uniq)`` quando há ``uniq`` — **sem
@@ -911,7 +903,7 @@ class ControllerMicOverride(BaseModel):
 
     E desde 09/09/2026 o campo chega ao APARELHO, não só à fonte do sistema:
     ``set_microphone_volume`` escreve o ``common[6]`` daquele controle
-    (MIC-VOLUME-02, decisão dela ``D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
+    (MIC-VOLUME-02, decisão de produto ``D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
     APARELHO``, depois de a bancada medir o byte obedecendo no cabo —
     ``docs/data/ensaios.csv``, ``folha-mic-volume-o-byte-age-cabo-0909``). Um
     campo, dois degraus, e os dois por ``uniq``.
@@ -967,13 +959,13 @@ class ControllerMicOverride(BaseModel):
 class ControllerSensoresOverride(BaseModel):
     """Giroscópio e acelerômetro DESTA peça — ligados ou desligados.
 
-    SENSOR-DE-VERDADE-01 (04/09/2026). Decisão dela, depois de eu recomendar a
+    SENSOR-DE-VERDADE-01 (04/09/2026). Decisão de produto, depois de se recomendar a
     saída barata (virar leitura, um selo "no ar / parado", zero linha nova):
 
         *"ele tem que funcionar de verdade. ambos independente do modo e da
         mascara."* <!-- noqa-acento: citação literal -->
 
-    **DOIS campos e não um**, porque ela disse *"ambos"* e cada um por si —
+    **DOIS campos e não um**, porque o usuário disse *"ambos"* e cada um por si —
     e porque o caminho do report sabe separá-los: giroscópio e acelerômetro
     viajam na mesma janela de 25 bytes, em faixas distintas
     (``core/virtual_motion.FAIXA_GIROSCOPIO`` / ``FAIXA_ACELEROMETRO``), e
@@ -1018,7 +1010,7 @@ class ControllerOverrides(BaseModel):
     (merge POR CAMPO na aplicação, PERFIL-01 — override parcial nunca apaga a
     cor global no replug).
 
-    **A EXCEÇÃO É UMA, E É DECISÃO DELA (09/09/2026):** em ``mascara``, ``None``
+    **A EXCEÇÃO É UMA, E É DECISÃO (09/09/2026):** em ``mascara``, ``None``
     quer dizer *"volte ao padrão"* — *"Default é Hefesto dualsense padrão"*. O
     controle que o perfil não declara **perde** a máscara própria que estivesse
     valendo, em vez de mantê-la. A diferença existe porque a máscara é a única
@@ -1027,7 +1019,7 @@ class ControllerOverrides(BaseModel):
     próprio que atravessava a troca. Ver o campo, lá embaixo, e
     ``manager.apply_controller_mascaras``, que mede o que a devolução custa.
 
-    O ALVO É TUDO — DECISÃO DELA, 02/09/2026
+    O ALVO É TUDO — DECISÃO, 02/09/2026
     -----------------------------------------
     *"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"*
     — e ela marcou junto: teclas e ações de botão, mouse e teclado emulado,
@@ -1035,7 +1027,7 @@ class ControllerOverrides(BaseModel):
 
     **O QUE ISSO DERRUBA:** esta docstring trazia uma lista de seções *"FORA
     porque NÃO TÊM RESPOSTA HONESTA por unidade"*. Essa lista caiu — a resposta
-    dela é que tem resposta, e é por controle. As medições que sustentavam a
+    de produto é que tem resposta, e é por controle. As medições que sustentavam a
     lista continuam de pé, mas mudaram de papel: não são recusa, são FILA DE
     ENGENHARIA, e estão abaixo com o que falta construir em cada uma.
 
@@ -1060,18 +1052,18 @@ class ControllerOverrides(BaseModel):
       ``apply_speaker(uniq=...)`` → ``apply_profile_speaker(uniq=...)`` →
       ``set_speaker_volume(uniq=...)``, com o alvo no parâmetro em toda a
       escada;
-    - ``mic``, desde MIC-QUINTO-AJUSTE-01 (03/09/2026, decisão dela):
+    - ``mic``, desde MIC-QUINTO-AJUSTE-01 (03/09/2026, decisão de produto):
       ``manager.apply_controller_mics`` chama ``apply_mic(uniq=...)`` →
       ``apply_profile_mic(uniq=...)`` → ``set_microphone_mute(uniq=...)``. É um
       subconjunto — só o ``muted`` —, e ``ControllerMicOverride`` diz por
       medição o que ficou de fora e o que cada um espera;
-    - ``mascara``, desde MASCARA-NO-PERFIL-01 (08/09/2026, decisão dela — *"pode
-      entrar sim"*): ``manager.apply_controller_mascaras`` escreve a máscara
+    - ``mascara``, desde MASCARA-NO-PERFIL-01 (08/09/2026, ): ``manager.apply_controller_mascaras``
+      escreve a máscara
       daquela peça no registro que ``external_mask.mascara_efetiva`` consulta na
       criação de cada gamepad virtual, e é o perfil que passa a mandar (ver o
       item 3 da fila abaixo, que dizia o contrário até 08/09).
     - ``movimento``, desde A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026, a
-      palavra dela: o chip «Mira Virtual» no cartão de cada controle):
+      palavra de produto: o chip «Mira Virtual» no cartão de cada controle):
       ``manager._controllers_to_miras`` monta o arranjo daquela peça por cima
       do do perfil, e o tique o pergunta com o ``uniq`` de cada jogador
       (``roteador_de_movimento.da_peca``).
@@ -1098,7 +1090,7 @@ class ControllerOverrides(BaseModel):
          formas.
 
          O QUE FALTA É ABRIR O CAMPO AQUI, e é decisão à parte: abrir muda o
-         que o perfil dela aceita no disco. Há teste que reprova no dia em que
+         que o perfil do usuário aceita no disco. Há teste que reprova no dia em que
          alguém o abrir, para que esse dia seja DELIBERADO;
        - ``button_toggles_system`` — ``hotkey.mic_button_loop`` precisa
          consultar o override daquele ``uniq`` antes de
@@ -1128,14 +1120,14 @@ class ControllerOverrides(BaseModel):
        ``ControllerSensoresOverride`` e sai na resposta do método.
 
     3. ``mode``, e ele é o único da fila com DOIS eixos. O ``mode`` é da SESSÃO
-       (decisão dela, 10/08/2026): existe um só, e o daemon não pode estar em
+       (decisão, 10/08/2026): existe um só, e o daemon não pode estar em
        dois ao mesmo tempo. **A MÁSCARA do gamepad NÃO está nessa frase** —
        ela ficou larga demais e ela a reescreveu em 15/08/2026
        (MÁSCARA-POR-JOGADOR-01): o co-op cria um gamepad virtual por controle e
        cada um carrega o próprio ``flavor``, então a máscara **é do jogador**,
        com a do jogo como padrão herdado.
 
-       **A MÁSCARA SAIU DESTA FILA EM 08/09/2026 — decisão dela, MASCARA-NO-
+       **A MÁSCARA SAIU DESTA FILA EM 08/09/2026 — decisão de produto, MASCARA-NO-
        PERFIL-01.** A pergunta foi *"a máscara por controle deve entrar no
        perfil, junto com luz, gatilho, vibração, som, mic e sensores — ou fica
        da máquina?"*, e a resposta foi *"pode entrar sim"*. **FATO
@@ -1153,7 +1145,7 @@ class ControllerOverrides(BaseModel):
        recriar, então um perfil que repete a máscara de alguém não o faz sumir
        no meio da partida (é a regra da NUMA-03). Isso vale inclusive para o
        perfil CALADO, que desde 09/09/2026 devolve todo mundo ao padrão
-       (decisão dela): a devolução apaga a entrada, mas só cai o vpad de quem
+       (decisão de produto): a devolução apaga a entrada, mas só cai o vpad de quem
        estava FORA do padrão — medido, 0 de 4 com a mesa já no padrão.
 
        ONDE A MÁSCARA É RESOLVIDA, e a resposta continua num arquivo só:
@@ -1182,7 +1174,7 @@ class ControllerOverrides(BaseModel):
        **É pergunta aberta para ela, não dívida com dono** — inventá-lo aqui
        seria feature nova.
 
-    A CONTRADIÇÃO ABERTA, E ELA É DELA — não se fecha escrevendo código
+    A CONTRADIÇÃO ABERTA, E É DO USUÁRIO — não se fecha escrevendo código
     -------------------------------------------------------------------
     Três frases desta casa não cabem juntas, e a decisão de 02/09 as põe frente
     a frente:
@@ -1205,9 +1197,9 @@ class ControllerOverrides(BaseModel):
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
     # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
     # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
-    # `mascara` entrou em 08/09/2026, por decisão dela — e é a primeira que não
+    # `mascara` entrou em 08/09/2026, por decisão de produto — e é a primeira que não
     # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
-    # chip «Mira Virtual» que ela pediu no cartão de cada controle.
+    # chip «Mira Virtual» que o usuário pediu no cartão de cada controle.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1215,10 +1207,10 @@ class ControllerOverrides(BaseModel):
     mic: ControllerMicOverride | None = None
     sensores: ControllerSensoresOverride | None = None
     #: *"Como este controle aparece nos jogos"*, SÓ desta peça — MASCARA-NO-
-    #: PERFIL-01 (08/09/2026, decisão dela: *"pode entrar sim"*).
+    #: PERFIL-01 (08/09/2026, ).
     #:
     #: ``None`` = **volte ao padrão**, e esta é a ÚNICA seção desta classe em
-    #: que ``None`` não quer dizer *"sem opinião"*. É decisão dela, 09/09/2026:
+    #: que ``None`` não quer dizer *"sem opinião"*. É decisão, 09/09/2026:
     #: *"Default é Hefesto dualsense padrão"*. O controle que o perfil não
     #: declara perde a máscara própria e passa a seguir o
     #: ``mode.gamepad_flavor`` do perfil e, sem ele, o

@@ -17,9 +17,9 @@ ASSETS="$HERE/assets"
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 DISABLE_USB_AUDIO=0
 
-# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o `73-hefesto-ps5-controller.rules`
+# O-NO-NASCE-FECHADO-01 (decisão, 20/09/2026): o `73-hefesto-ps5-controller.rules`
 # versionado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600 root) e o
-# broker o abre sob pedido. É o DEFAULT, por ordem dela. `--no-fechar-o-no`
+# broker o abre sob pedido. É o DEFAULT, por ordem de produto. `--no-fechar-o-no`
 # instala uma cópia com as linhas físicas reabertas — para quem precise do nó
 # aberto para ferramenta de terceiro, ou para reverter sem editar asset.
 #
@@ -285,7 +285,7 @@ sudo udevadm control --reload-rules
 # dispositivos — sempre, em toda máquina. O `--attr-match` só olha os sysattrs
 # do PRÓPRIO nó, e um `hidraw` não tem `idVendor`: esse atributo mora no pai
 # USB, e no Bluetooth não existe nem pai USB (o BlueZ cria o HID por `uhid`, em
-# /sys/devices/virtual/misc/uhid/). Medido na máquina dela em 12/08 com três
+# /sys/devices/virtual/misc/uhid/). Medido na máquina do usuário em 12/08 com três
 # DualSense no rádio e um no cabo:
 #
 #     udevadm trigger --dry-run --verbose --subsystem-match=hidraw
@@ -302,7 +302,7 @@ sudo udevadm control --reload-rules
 #
 # `--action=change` e não `add`: é o bastante para o udev reaplicar MODE/OWNER
 # e para a 73-seat-late.rules converter a TAG uaccess em ACL — conferido com
-# `udevadm test --action=change /sys/class/hidraw/hidraw4` no DualSense dela no
+# `udevadm test --action=change /sys/class/hidraw/hidraw4` no DualSense do usuário no
 # rádio, que resolveu `70-ps5-controller.rules:10 MODE 0660` e
 # `73-seat-late.rules:16 RUN 'uaccess'`. E `change` não re-executa os `RUN+=`
 # que outras regras da casa condicionam a `ACTION=="add"`.

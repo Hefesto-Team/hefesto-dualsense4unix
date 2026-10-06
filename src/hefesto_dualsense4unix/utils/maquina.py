@@ -123,7 +123,7 @@ class RadioDeclarado(BaseModel):
 
 
 class OrdemDispensada(BaseModel):
-    """Uma recomendação que ela mandou calar — e o arranjo em que ela calou."""
+    """Uma recomendação que o usuário mandou calar — e o arranjo em que ela calou."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -222,7 +222,7 @@ class FaceDeclarada(BaseModel):
 
 
 class PortaDeclarada(BaseModel):
-    """Uma entrada do gabinete, pelo número DELA — e tudo o que se sabe dela.
+    """Uma entrada do gabinete, pelo número DO USUÁRIO — e tudo o que se sabe dela.
 
     UM REGISTRO SÓ (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026). A entrada
     morava em dois: aqui (o ``caminho`` de barramento deste boot, os nós, o
@@ -252,7 +252,7 @@ class PortaDeclarada(BaseModel):
     ``filha_de`` é o número da entrada que hospeda a EXTENSÃO. Cabo de extensão
     passivo não tem descritor USB — o dongle na ponta enumera como se estivesse
     na entrada do hub, e nenhuma leitura de ``/sys``, hoje ou nunca, distingue
-    os dois casos. Quem sabe é ela, porque ela disse; não há detecção e não há
+    os dois casos. Quem sabe é ela, porque o usuário disse; não há detecção e não há
     palpite.
 
     O nome é ``filha_de`` e não "mãe" por construção: "mãe" escrito sem acento
@@ -475,8 +475,7 @@ _TETO_DA_ORDEM_DOS_ADAPTADORES = 63
 class AdaptadorDeclarado(BaseModel):
     """Um adaptador Bluetooth pelo ENDEREÇO: o nome que ela deu a ele.
 
-    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido dela: *«temos
-    o nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
+    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026)
     Revoga a herança da D3: com o adaptador levando o nome da porta, as
     entradas que ela numerou no Mapear viraram adaptadores «15» e «13». O
     nome é do APARELHO e vai com ele de porta em porta; o da entrada fica em
@@ -489,8 +488,7 @@ class AdaptadorDeclarado(BaseModel):
     daqui), e saíram na migração (:func:`migrar_o_documento`).
 
     E A ORDEM DA CAIXA DELE também mora aqui desde então: a posição em que
-    ela o arrastou na Conexões (25/09/2026, *«segurar a área do conector e
-    arrastar ela pra mudar de ordem entre eles»*). Ela morava no
+    ela o arrastou na Conexões (25/09/2026). Ela morava no
     ``gui_preferences.json``, pela chave do LUGAR (a D3): o terceiro registro
     do mesmo adaptador, e uma chave que mudava quando ele mudava de porta.
     <!-- noqa-acento: citação literal -->
@@ -523,13 +521,12 @@ class ControleDeclarado(BaseModel):
     zero a cada abertura.
 
     ``microfone`` é a ponte de mic por Bluetooth DAQUELE controle
-    (``QUATRO-MICROFONES-01``, 22/08/2026, decisão dela: *"por controle"*). Mora
+    (``QUATRO-MICROFONES-01``, 22/08/2026, ). Mora
     aqui, e não no perfil, pela razão do cabeçalho de
     ``daemon/subsystems/bt_mic.py``: um microfone que liga ao trocar de jogo é
     exatamente a surpresa que aquele módulo recusa.
 
-    **OS TRÊS VALORES MUDARAM DE SIGNIFICADO EM 18/09/2026**, por ordem dela:
-    *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*.
+    **OS TRÊS VALORES MUDARAM DE SIGNIFICADO EM 18/09/2026**, por
 
     ==========  =====================================================
     ``None``    ninguém disse nada → **o microfone LIGA**. É um
@@ -540,12 +537,10 @@ class ControleDeclarado(BaseModel):
     ==========  =====================================================
 
     **FATO SUBSTITUÍDO, e a razão dele continua de pé com outro nome.** Esta
-    linha dizia *"Só ``True`` chega ao disco; desligar escreve ``None``, porque
-    'nunca pedi' e 'não quero' deixam a ponte no chão do mesmo jeito — e um
-    ``false`` gravado seria um valor de catálogo para o silêncio"*. Era verdade
+    linha dizia . Era verdade
     enquanto o default FOSSE o silêncio. Invertido o default, ``None`` deixou
     de ser um jeito de desligar: seria o botão que não desliga. O medo que a
-    regra velha protegia — o default entrando disfarçado de escolha dela — hoje
+    regra velha protegia — o default entrando disfarçado de escolha do usuário — hoje
     se protege pelo outro lado: é o ``false`` no disco que impede o produto de
     decidir sozinho por cima dela.
     """
@@ -651,7 +646,7 @@ class OrcamentoDeclarado(BaseModel):
 
 
 class GestoDeclarado(BaseModel):
-    """O que ela escolheu para UM gesto do controle (OS-GESTOS-DO-CONTROLE-01).
+    """O que o usuário escolheu para UM gesto do controle (OS-GESTOS-DO-CONTROLE-01).
 
     ``faz`` é um token de ``core/acoes_do_gesto.ACOES``; ``script`` é o caminho
     do arquivo escolhido, e só existe com ``faz == "script"``. A forma é
@@ -905,7 +900,7 @@ def entradas_do_mapa(mapa: MapaDaMesa) -> frozenset[str]:
 
 
 def entrada_do_lugar(maquina: MaquinaConfig, lugar: str) -> str | None:
-    """O número DELA para este lugar — ``None`` quando nenhuma entrada o guarda."""
+    """O número DO USUÁRIO para este lugar — ``None`` quando nenhuma entrada o guarda."""
     if not lugar:
         return None
     achadas = [numero for numero, porta in maquina.mapa.portas.items() if porta.lugar == lugar]

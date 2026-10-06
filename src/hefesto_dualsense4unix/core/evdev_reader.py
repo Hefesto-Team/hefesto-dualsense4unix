@@ -232,7 +232,7 @@ def _is_virtual_evdev(event_path: str) -> bool:
     que preenche `phys` — e aí ela volta a valer. Ela é rede de outro cenário,
     não a segunda perna deste.
 
-    **O que isto custa, e é dela decidir:** a redundância que o texto prometia
+    **O que isto custa, e é do usuário decidir:** a redundância que o texto prometia
     não existe hoje. Se o `player_mac` mudasse de prefixo, ou se um controle de
     rádio chegasse com `uniq` ilegível, não há segunda perna — o produto
     classificaria um aparelho de VERDADE como virtual. Restaurá-la é trivial e
@@ -296,7 +296,7 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
     return False
 
 
-# A palavra dela de 23/09, «Esconder tudo»: os nós de entrada do DualSense
+# A palavra de 23/09, «Esconder tudo»: os nós de entrada do DualSense
 # DualSense. Nó de teclado, de mouse, de outro controle, nunca vai ao broker.
 
 _ABRIDOR_DO_BROKER: Any = None
@@ -882,7 +882,7 @@ def discover_gamepads(
     `ESPECIE_EXTERNAL`, o nó que o sysfs diz ser de DualSense
     (`_no_de_dualsense_no_sysfs`) sai da volta ANTES de abrir, esteja ele
     aberto ou fechado (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01,
-    25/09/2026). Medido na máquina dela com os quatro controles: o inventário
+    25/09/2026). Medido na máquina do usuário com os quatro controles: o inventário
     dos externos abria pelo broker o nó de gamepad de cada DualSense a cada
     1,3 s (o tique de 2 s e a janela, a cada 4 s), só para ler a identidade e
     descartar — duas linhas por nó, uma em cada diário. Na dúvida (sysfs
@@ -892,7 +892,7 @@ def discover_gamepads(
     **O que ela NÃO faz: adotar ninguém.** Devolver um externo aqui é dizer que
     ele existe e qual a forma dos eixos dele — não é dar-lhe vpad nem lugar na
     partida. O veto de 19/07 (*"externo não ganha controle virtual"*) segue de
-    pé; quem o derruba é a `E3`, e ela é dela.
+    pé; quem o derruba é a `E3`, e é do usuário.
 
     CUSTO (lição PERF-MULTI-CONTROLLER-01): touchpad, movimento, teclado,
     mouse e botão de energia ficam de fora pelo sysfs, sem abrir
@@ -1079,7 +1079,7 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     broker (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01, 25/09/2026). O
     resto abre pelo caminho, um por um (open + ioctls + close), só quando o
     sysfs diz que o nó tem botão de gamepad: os 20 nós por volta que a máquina
-    dela abria (botões de energia, entradas de áudio, HDMI, mouse e teclado)
+    do usuário abria (botões de energia, entradas de áudio, HDMI, mouse e teclado)
     ficam de fora sem abrir desde a A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01
     (28/09/2026). Fora do event loop, sempre. Quem
     chama: o tique dos externos do daemon, a cada 2 s
@@ -1930,11 +1930,11 @@ class TouchState:
     desenhar o ponto quando `touching` for True.
 
     **MULTITOQUE-01 (18/09/2026) — `pontos` é a verdade, `x`/`y` é o resumo.**
-    Ela perguntou por que o desenho mostra UM dedo num touchpad que faz
+    O usuário perguntou por que o desenho mostra UM dedo num touchpad que faz
     rolagem de dois e pinça: *"NA INTERFACE NA ABA CONTROLES SÓ MOSTRA UM
     TOQUE NO DESENHO DO SVG APESAR DO TOUCH SER MULTITOQUE"*.
     <!-- noqa-acento: citação literal -->
-    Medido no mesmo dia com os dedos dela no controle azul: o nó do kernel
+    Medido no mesmo dia com os dedos do usuário no controle azul: o nó do kernel
     declara `ABS_MT_SLOT 0..1` — DOIS dedos, e o libinput emitiu 8 pinças e
     922 eventos de rolagem, todos com `2`. O terceiro dedo não existe para o
     aparelho (zero `GESTURE_SWIPE` em 45 s), e o zoom com três funciona
@@ -1979,7 +1979,7 @@ class TouchpadReader(_EvdevReconnectLoop):
     responsabilidades acima só valem quando o touchpad **não** é ponteiro do
     sistema. Desde 09/08 a `assets/76-dualsense-touchpad-libinput-ignore.rules`
     tira do libinput só o touchpad do VPAD; o FÍSICO volta a ser o touchpad do
-    sistema em todos os modos, que foi o que ela pediu — *"a ideia do touchpad é
+    sistema em todos os modos, que foi o que o usuário pediu — *"a ideia do touchpad é
     ele voltar a funcionar assim, seja no modo nativo ou dualsense"*. Nesse
     estado o libinput já move o cursor e já entrega o clique, e o reader tem de
     ficar de fora: o mesmo dedo movendo o cursor por dois caminhos é o "engasgo"

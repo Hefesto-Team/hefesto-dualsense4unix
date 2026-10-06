@@ -2,12 +2,9 @@
 
 **Leia isto antes de tentar fotografar, medir ou entender a interface.**
 
-Pedido dela, literal, em 01/08/2026:
+Pedido, literal, em 01/08/2026:
 
-> *"se tiver outro conhecimento desatualizado no repositório, ou que você usou
-> e não funcionou e você descobriu a forma certa, isso deve ser materializado
-> como conhecimento perpétuo pra evitar perdermos tempo reaprendendo sempre sem
-> necessidade."*
+> **
 
 Este arquivo é isso. Cada linha aqui custou tempo de alguém.
 
@@ -15,11 +12,11 @@ Este arquivo é isso. Cada linha aqui custou tempo de alguém.
 
 ## ANTES DE TUDO: ELA TEM UMA TELA SÓ, E A JANELA NÃO NASCE NELA
 
-**Regra dela, 04/09/2026, e ela é sobre o serviço dela, não sobre estética.**
+**Regra, 04/09/2026, e ela é sobre o serviço dela, não sobre estética.**
 A sessão do COSMIC tem **três áreas de trabalho alfinetadas, nesta ordem**: a
-PRIMEIRA é DELA e ela está nela **agora**, trabalhando; a SEGUNDA é de quem
+PRIMEIRA é DO USUÁRIO e ela está nela **agora**, trabalhando; a SEGUNDA é de quem
 estiver trabalhando aqui. Uma janela que nasce na dela rouba o foco, e o mouse
-dela passa a brigar com o clique de quem mede — os dois se quebram.
+do usuário passa a brigar com o clique de quem mede — os dois se quebram.
 
 **A ORDEM DE PREFERÊNCIA, e ela é dura:**
 
@@ -29,7 +26,7 @@ dela passa a brigar com o clique de quem mede — os dois se quebram.
    é a resposta certa** — não há área de trabalho a errar.
 2. **Se a janela for inevitável** (o app de validação, um Playwright que precisa
    de compositor, um jogo para o ensaio do sensor), ela nasce na SEGUNDA área.
-   O auxiliar que a estaciona é da MÁQUINA DELA, não deste repositório: ele vive
+   O auxiliar que a estaciona é da MÁQUINA DO USUÁRIO, não deste repositório: ele vive
    em `~/.config/zsh/scripts/` e os quatro gestos dele — estacionar a janela que
    nascer, abrir um navegador dedicado, mover uma janela já aberta e
    diagnosticar — estão escritos nas instruções da máquina, que são o dono
@@ -39,7 +36,7 @@ dela passa a brigar com o clique de quem mede — os dois se quebram.
    arquivo é versionado desde 20/09/2026, e o que é versionado é publicado. O
    nome do auxiliar carrega o de um fornecedor, e o `check_anonymity.sh`
    reprova fornecedor em arquivo rastreado. Duplicar aqui a página da máquina
-   dela também quebraria a regra da casa de não ter dois donos do mesmo texto.
+   do usuário também quebraria a regra da casa de não ter dois donos do mesmo texto.
 
 3. **Se o auxiliar RECUSAR** estacionar, a resposta é **aceitar a recusa e
    dizer na entrega**. Não force a variável de ambiente que ele oferece: ela
@@ -91,7 +88,7 @@ os dois é o assunto do `mockup/LEIA-PRIMEIRO.md`.
 | **`src/hefesto_dualsense4unix/interface/olhar.py`** | fotografa as dez páginas num Chrome headless e mede a moldura | **rotina, sempre** |
 | **`src/hefesto_dualsense4unix/interface/hefesto_vivo.py`** | o PILOTO: a janela GTK com o `WebView` e o daemon vivo dentro. `--oculta` desvia para um Xvfb; `--foto`, `--segundos` e `--prova-clique` dirigem por dentro | quando a pergunta é *"o produto FAZ?"* — é o único que roda o motor |
 | `src/hefesto_dualsense4unix/interface/ver.py` | o desenho aprovado dentro da janela GTK, sem dado nenhum | quando a pergunta é sobre o DESENHO, e ligar dado atrapalharia |
-| `src/hefesto_dualsense4unix/interface/janela.py` | a ponte JS: clica, lê o DOM e mede geometria por `run_javascript` | dentro do piloto, para validar sem tocar no mouse dela |
+| `src/hefesto_dualsense4unix/interface/janela.py` | a ponte JS: clica, lê o DOM e mede geometria por `run_javascript` | dentro do piloto, para validar sem tocar no mouse do usuário |
 
 Esta tabela tem portão: `tests/unit/test_a_tabela_dos_scripts_de_tela.py` confere
 que todo caminho citado aqui EXISTE, que o retratista está nomeado e que o
@@ -119,7 +116,7 @@ por teclado e conferindo onde parou — a prova final para *"ficou bonito?"*. El
 precisava da janela **aberta, maximizada e em foco**, e o COSMIC recusou
 maximizar por atalho, por duplo clique e por F11 nesta máquina; por isso nunca
 foi rotina. **A interface nova não tem equivalente hoje**, e quem quiser essa
-prova abre o piloto e pede o olho dela (PROVA-DE-TELA-01).
+prova abre o piloto e pede o olho de quem confere (PROVA-DE-TELA-01).
 
 O `retratar_dialogos.py` fotografava os **diálogos** de confirmação, que nascem
 por cima e vivem um segundo. A interface nova não tem diálogo GTK modal: o que
@@ -141,7 +138,7 @@ Seja honesto sobre isto ao usá-la:
   INICIAL da página; o que nasce do gesto só aparece com o piloto ou com uma
   régua que clica (`tests/unit/test_a_palavra_de_tela_da_interface_nova.py` é o
   molde);
-- **não substitui o olho dela.** A regra da casa
+- **não substitui o olho de quem confere.** A regra da casa
   (PROVA-DE-TELA-01)
   continua valendo: interface só fecha com ela olhando.
 
@@ -353,7 +350,7 @@ A casa já pagou por isso **duas vezes**, com custo medido:
   (PERFIL-REESCRITO-NA-PARTIDA-01,
   linhas 43-47);
 - **07/08/2026** — o diário da bateria (474 linhas, 49 testes verdes) ficou
-  **5h49m** no disco sem escrever **uma linha** no journal, com o controle dela
+  **5h49m** no disco sem escrever **uma linha** no journal, com o controle do usuário
   conectado o tempo todo. Uma noite de medição teria produzido nada, em silêncio.
   Reiniciado o serviço às 21:34:39 (autorização dela), a primeira amostra saiu
   35 segundos depois.
@@ -374,7 +371,7 @@ A janela do `journalctl` tem de **começar depois** do start, e **sempre com dat
 completa** — `--since "21:34:39"` sem data devolve zero em qualquer janela, e
 aqui o comando quebrado imita exatamente o defeito que ele deveria detectar.
 
-E **reiniciar é decisão dela**, nunca sua: o restart derruba os handles de uma
+E **reiniciar é decisão de produto**, nunca sua: o restart derruba os handles de uma
 partida em curso.
 
 O caso inteiro, com a mordida (0 antes, 2 depois, mesmo código no disco) e o
@@ -447,7 +444,7 @@ cauda (p99), por mais que a coluna exista.
 
 ### Endereço de rádio truncado FUNDE dois adaptadores num só
 
-**MEDIDO em 23/08/2026** na mesa dela, que tem dois adaptadores 5.4 do **mesmo
+**MEDIDO em 23/08/2026** na bancada, que tem dois adaptadores 5.4 do **mesmo
 fabricante** — logo o mesmo OUI, os três primeiros octetos.
 
 Contando controles por adaptador na mesma leitura de `HID_PHYS`:
@@ -520,12 +517,12 @@ que ela pede existe em `src/`?* — e nunca com o cabeçalho.
 
 - **`ydotool` exige `ydotoold` vivo** e só faz `mousemove` **relativo**. Clique
   por coordenada absoluta não existe — e clique cego já desfez configuração
-  dela;
+  do usuário;
 - **`wtype` cria e destrói um teclado virtual a cada chamada**; em rajada o
   compositor perde eventos;
-- **o helper global de captura de tela dela** (fora deste repositório, em
+- **o helper global de captura de tela do usuário** (fora deste repositório, em
   `/usr/local/bin`) fotografa a tela inteira e imprime o caminho do PNG. Serve
-  para ver o que está na frente dela agora — não para percorrer abas.
+  para ver o que está na frente do usuário agora — não para percorrer abas.
 
 ---
 
@@ -535,22 +532,21 @@ Escrito em 25/08/2026, depois de duas rodadas de mockup jogadas fora por não
 haver regra escrita.
 
 **Quando vale.** Quando a tela vai mudar de forma, não de detalhe — e quando a
-pergunta é *"isso resolve o que eu preciso?"*, que ela responde **vendo**, nunca
+pergunta é , que ela responde **vendo**, nunca
 lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 
 **As cinco regras, e cada uma nasceu de um defeito da mesma noite:**
 
 1. **HTML standalone, aberto por duplo clique.** Sem rede, sem servidor, sem
-   fonte web. Ela recusou o artefato publicado com uma frase: *"html standalone
-   por favor"*. É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
+   fonte web. Ela recusou o artefato publicado com uma  É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
    que só funciona com rede não serve para depurar rádio.
 2. **A paleta tem dono único: `scripts/paleta_da_casa.py`**, copiada byte a byte.
    *"O artefato tem de parecer parte do Hefesto, não um site sobre ele."*
-3. **Ponha o dado REAL da máquina dela dentro**, medido no dia — não um exemplo.
+3. **Ponha o dado REAL da máquina do usuário dentro**, medido no dia — não um exemplo.
    Foi o que fez o mapa de entradas virar conversa: ela reconheceu a própria mesa
    e apontou o erro em segundos.
 4. **A tela mostra o AGORA.** O mockup abria numa leitura antiga do barramento e
-   ela viu o Wi-Fi numa entrada de onde já o tinha tirado. **Estado velho como
+   o usuário viu o Wi-Fi numa entrada de onde já o tinha tirado. **Estado velho como
    padrão é o F7 desta casa** — a tela afirmando com confiança o que deixou de
    ser verdade. O "antes" é relatório; nunca estado.
 5. **Se ele vira especificação de sprint, ele é VERSIONADO** — em
@@ -561,7 +557,7 @@ lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 
 **E a régua do mockup: `node --check` NÃO é teste.** Ele valida sintaxe e é cego
 a referência inexistente. Um `ReferenceError` na última linha da função de
-desenho deixou uma seção inteira — que carregava três decisões dela — sem
+desenho deixou uma seção inteira — que carregava três decisões de produto — sem
 aparecer em **todas** as versões entregues, e nenhuma conferência acusou. A régua
 que serve monta um DOM falso e **roda**, em todo estado alcançável:
 

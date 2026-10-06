@@ -305,7 +305,7 @@ class TestOGestoQueServeParaCadaLayout:
         )
 
     def test_o_aparte_de_checkout_some_fora_dele(self, tmp_path: Path) -> None:
-        """`so_no_checkout` é o que mantém a tela dela intacta."""
+        """`so_no_checkout` é o que mantém a tela do usuário intacta."""
         pacote = _layout_de_pacote(tmp_path)
 
         assert _frase(DOCTOR, 'so_no_checkout "(sem flag)"') == " (sem flag)"

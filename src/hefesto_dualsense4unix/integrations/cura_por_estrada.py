@@ -23,7 +23,7 @@ AS DUAS ESTRADAS, e por que são duas
 `heroic`                `…/config/heroic/config.json`, em
                         `defaultSettings.enviromentOptions` — a lista de
                         `{key, value}` que o Heroic passa a TODO jogo que ele
-                        lança. **Medido no disco dela em 09/09/2026: a chave
+                        lança. **Medido no disco do usuário em 09/09/2026: a chave
                         existe e está vazia.** (A grafia sem o segundo `n` é
                         do Heroic, não um erro de digitação daqui.)
 os demais               `<lar>/.local/share/flatpak/overrides/<app-id>`,
@@ -39,12 +39,12 @@ caminho no dia:
 1. **não há dependência de YAML nesta casa** — o `pyproject.toml` não declara
    `pyyaml`, e `censo_dos_lancadores._lutris` já tinha recusado importá-la só
    para ler um nome de arquivo. Escrever YAML à mão num arquivo de configuração
-   DELA é o tipo de aposta que esta casa não faz;
-2. **o Lutris nunca foi aberto na máquina dela** — medido em 09/09/2026,
+   do usuário é o tipo de aposta que esta casa não faz;
+2. **o Lutris nunca foi aberto na máquina do usuário** — medido em 09/09/2026,
    `~/.var/app/net.lutris.Lutris` não existe. Não há um `.yml` de jogo em que
    escrever, e a pasta de configuração inteira ainda não nasceu.
 
-O override do Flatpak alcança o mesmo destino: o Lutris DELA é um flatpak, e o
+O override do Flatpak alcança o mesmo destino: o Lutris DO USUÁRIO é um flatpak, e o
 jogo que ele lança roda dentro da caixa dele, herdando o ambiente. É por
 lançador e não por jogo — e por jogo não faria diferença, porque **a conta é a
 mesma para todos**: o ambiente vem da ponte, não do título.
@@ -56,7 +56,7 @@ caixa o `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW`, com o
 Modo Nativo ligado em foco — zero controles. A caixa continua sendo a estrada
 da carona; o `system.env` do `.yml` do jogo passou a ser a camada da EXCLUSÃO
 («A CAMADA DO JOGO DO LUTRIS», mais abaixo). O motivo 1 caiu: o PyYAML passou a
-dependência de execução (por delegação, a validar por ela), o mesmo leitor do
+dependência de execução (por delegação, a validar pelo usuário), o mesmo leitor do
 Lutris, e nenhum YAML se escreve à mão. O motivo 2 continua medido: o Lutris
 dela segue sem jogo.
 
@@ -67,7 +67,7 @@ O QUE ESTE MÓDULO NUNCA FAZ
   ligado, ou desligado desde sempre — a cura RECUSA dizendo. Escrever um
   `SDL_GAMECONTROLLER_IGNORE_DEVICES` deduzido aqui seria uma segunda conta ao
   lado da do daemon, e a segunda conta envelhece calada;
-* **nunca apaga o que é dela.** As duas estradas leem, fundem e regravam: um
+* **nunca apaga o que é do usuário.** As duas estradas leem, fundem e regravam: um
   `MANGOHUD=1` que ela pôs no Heroic continua lá depois da cura — e a
   PERMISSÃO do arquivo volta como estava, que é parte do que estava lá (ver
   :func:`_escrever_atomico`);
@@ -105,7 +105,7 @@ Heroic no Modo Nativo abria sem o controle que o Modo Nativo existe para
 mostrar.
 
 **O HEROIC COPIA A LISTA GLOBAL PARA DENTRO DE CADA JOGO** (conferência de
-25/09/2026, medido no fonte dele e no disco dela): quando ela muda qualquer
+25/09/2026, medido no fonte dele e no disco do usuário): quando ela muda qualquer
 opção de um jogo, o `GamesConfig/<jogo>.json` ganha uma cópia inteira do
 `enviromentOptions` global, e dali em diante é ELA que vale para aquele jogo.
 O desfazer passa por essas cópias com o registro do `config.json` da mesma
@@ -895,13 +895,13 @@ def copias_por_jogo_do_heroic(lar: Path) -> list[tuple[Path, Path]]:
     """``[(config.json da casa, cópia de um jogo)]`` em toda casa do Heroic.
 
     **O HEROIC COPIA O AMBIENTE GLOBAL PARA DENTRO DO JOGO — conferência de
-    25/09/2026, medido no fonte dele e no disco dela.** O `GameConfigV0` monta
+    25/09/2026, medido no fonte dele e no disco do usuário.** O `GameConfigV0` monta
     as opções de um jogo como `{...globais, ...do jogo}`, com
     `enviromentOptions: [...enviromentOptions]` — uma CÓPIA da lista global —,
     e grava tudo em `GamesConfig/<jogo>.json` na primeira vez que ela muda
     qualquer opção daquele jogo (o `setSetting` chama o `flush`). Dali em
     diante a lista do jogo vale SOZINHA: a global não entra mais nele. No disco
-    dela, em 25/09, um dos três jogos com configuração própria carregava o
+    do usuário, em 25/09, um dos três jogos com configuração própria carregava o
     `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` copiados em
     22/09 — um uninstall que só limpa a lista global deixa AQUELE jogo sem o
     DualSense físico, que é o defeito que esta sprint existe para fechar.

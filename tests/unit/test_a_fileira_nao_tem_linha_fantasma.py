@@ -2,7 +2,7 @@
 
 O defeito que esta régua fecha: `painel.CHIPS_DA_ESCADA` tinha CINCO linhas e a
 página publicada tem QUATRO `data-degrau`. A quinta — `pointclick` — saiu do
-desenho em 31/08/2026 por ordem dela (*"nos mockups tira o point and click e
+desenho em 31/08/2026 por ordem de produto (*"nos mockups tira o point and click e
 deixa só o navegação."*) e ficou dezessete dias viva na tabela, envenenando
 a conta dos chips sem dono, que devolvia um chip que a tela não mostra.
 

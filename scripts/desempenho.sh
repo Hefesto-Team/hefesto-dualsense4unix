@@ -5,7 +5,7 @@
 #   desempenho.sh remover           desfaz TODOS os arquivos (uninstall.sh)
 #   desempenho.sh ids               imprime os ids que este roteiro conhece
 #
-# O QUE É (decisão dela, 02/10/2026): o install pergunta se o computador deve ser
+# O QUE É (decisão, 02/10/2026): o install pergunta se o computador deve ser
 # usado no modo desempenho para jogar, e cada ajuste é um ARQUIVO PERMANENTE na
 # forma que o install já usa para o USB e o Bluetooth (modprobe.d, tmpfiles.d,
 # unit de sistema) — nunca um comando que some no reboot. Quem decide a pergunta
@@ -16,7 +16,7 @@
 # OS AJUSTES
 #   perfil   o perfil de energia em Performance, a cada boot (unit de sistema que
 #            fala com o system76-power ou com o power-profiles-daemon). É
-#            DECISÃO DELA: entra sempre que o pedido é sim.
+#            DECISÃO DE PRODUTO: entra sempre que o pedido é sim.
 #   nvidia   NVreg_DynamicPowerManagement=0 (modprobe.d)          — a provar
 #   audio    snd_hda_intel power_save=0 (modprobe.d)              — a provar
 #   aspm     política ASPM do PCIe em performance (tmpfiles.d)    — a provar
@@ -139,7 +139,7 @@ _aplicar_perfil() {
     gerenciador="$(_gerenciador)"
     # O sucesso da unit é o ESTADO, não o código de saída do pedido: o
     # system76-power sai 1 quando uma peça do perfil falha (a política de link
-    # de uma porta SATA que não a aceita, medido na máquina dela em 03/10) mesmo
+    # de uma porta SATA que não a aceita, medido na máquina do usuário em 03/10) mesmo
     # com o perfil aplicado, e a unit ficaria falhada a cada boot. Pede, e
     # confere lendo o perfil de volta; o Restart= só volta a pedir se não pegou.
     if [[ "${gerenciador}" == "system76-power" ]]; then

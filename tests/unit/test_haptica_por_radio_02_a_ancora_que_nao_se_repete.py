@@ -1,7 +1,7 @@
 """HAPTICA-POR-RADIO — a âncora que não se repete e a ponte que volta ao som.
 
 INSTALL-UNIVERSAL (18/09/2026). Dois defeitos do endpoint de háptica pelo
-rádio que não dependem da máquina dela, e por isso chegariam a qualquer outra:
+rádio que não dependem da máquina do usuário, e por isso chegariam a qualquer outra:
 
 1. **A ÂNCORA REPETIDA.** A distribuição ordenava TODOS os controles vivos e
    dava a i-ésima âncora ao i-ésimo; quem já tinha endpoint era só pulado. B

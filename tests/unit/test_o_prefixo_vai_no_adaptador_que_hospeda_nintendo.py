@@ -6,7 +6,7 @@ O DEFEITO, MEDIDO em 22/08/2026 na bancada de três adaptadores
 -----------------------------------------------------------------
 
 `scripts/bt_active_mode.sh` escolhia UM adaptador — o primeiro do glob do sysfs,
-com `return 0` na primeira volta — e prefixava `Nintendo` só nele. Na mesa dela
+com `return 0` na primeira volta — e prefixava `Nintendo` só nele. Na bancada
 o Pro Controller vive no segundo, e o prefixo ficava no primeiro, que não
 hospeda Nintendo nenhum::
 
@@ -47,7 +47,7 @@ em que o venv da casa pode não existir. Importar Python ali é depender de cois
 que pode não estar de pé exatamente quando o Pro conecta. A cópia é o preço; o
 portão de paridade abaixo é o que a impede de virar uma segunda verdade.
 
-NADA AQUI ENCOSTA NO BARRAMENTO DELA
+NADA AQUI ENCOSTA NO BARRAMENTO DO USUÁRIO
 -------------------------------------
 
 Bancada inteira de mentira: `HEFESTO_SYS_BLUETOOTH` e `HEFESTO_BT_LIB` desviam

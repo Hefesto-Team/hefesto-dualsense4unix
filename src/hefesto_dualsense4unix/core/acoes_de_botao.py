@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O QUE CADA BOTÃO DO CONTROLE FAZ — a lista única, e o padrão DERIVADO.
 
-DECISÃO DELA, 01/09/2026, ao ler a medição de que 12 das 21 linhas da tela
+DECISÃO, 01/09/2026, ao ler a medição de que 12 das 21 linhas da tela
 aceitavam escolha e não tinham onde ser guardadas: *"ganha campo. essa é a parte
 das features que precisam ou serem ajustadas ou desenvolvidas."*
 
@@ -116,7 +116,7 @@ def o_ps_aceita(token: str) -> bool:
     teclado_na_tela = {TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK}
     return all(p.startswith("KEY_") or p in teclado_na_tela for p in token.split("+"))
 
-#: de propósito — tirá-los da tela seria apagar uma promessa que ela aprovou —,
+#: de propósito — tirá-los da tela seria apagar uma promessa que o usuário aprovou —,
 SEM_ATENDENTE: frozenset[str] = frozenset(
     {TOKEN_STEAM, TOKEN_SAIR_DO_JOGO, TOKEN_PROGRAMA})
 
@@ -205,7 +205,7 @@ def padrao() -> dict[str, str]:
     quem consulta `BUTTON_TO_UINPUT`, `DPAD_TO_KEY` e `EDGE_KEY_MAP`. O teclado
     virtual age em paralelo, com `DEFAULT_BUTTON_BINDINGS`. Quando os dois têm
     opinião sobre o mesmo botão, quem a TELA mostra é o do mouse — porque é o
-    que a pessoa vê acontecer com o cursor na frente dela.
+    que a pessoa vê acontecer com o cursor na frente do usuário.
 
     O CASO QUE TORNA ISSO VISÍVEL É O `r3`: o mouse o quer como Botão do meio e
     o teclado como "Fechar o teclado na tela", e o produto faz **os dois**. O
@@ -268,11 +268,11 @@ def tabela_efetiva(
     São três, e a ordem é a da precedência:
 
         1. o de fábrica        derivado dos quatro mapas do produto
-        2. `key_bindings`      o que ela escreveu na janela ANTIGA
-        3. `button_actions`    o que ela escolheu na tela NOVA
+        2. `key_bindings`      o que o usuário escreveu na janela ANTIGA
+        3. `button_actions`    o que o usuário escolheu na tela NOVA
 
     A CAMADA DO MEIO NASCEU EM 06/09/2026 (ONDA3-MOTOR-01) e ela cura uma perda
-    silenciosa de escolha dela: `apply_button_actions` roda DEPOIS do
+    silenciosa de escolha do usuário: `apply_button_actions` roda DEPOIS do
     `apply_keyboard` e reescreve o conjunto INTEIRO do teclado virtual com o que
     sai daqui. Sem esta camada, um perfil com `button_actions` preenchido
     apagava, a cada ativação, todo atalho que ela tivesse escrito à mão — sem
@@ -306,7 +306,7 @@ def botoes_calados(
     escolhas: dict[str, str] | None,
     key_bindings: dict[str, list[str]] | None = None,
 ) -> frozenset[str]:
-    """Os botões que ela mandou CALAR — a quinta porta, e ela existe por medida.
+    """Os botões que o usuário mandou CALAR — a quinta porta, e ela existe por medida.
 
     `do_mouse` NÃO DISTINGUE "não é do mouse" de "foi calado", e é dessa
     indistinção que saía o defeito medido pela frente da aba 06 em 04/09/2026:
@@ -362,7 +362,7 @@ def resolver(
     `key_bindings` É A CAMADA DO MEIO — 06/09/2026, ONDA3-MOTOR-01. Ela existe
     porque o `apply_button_actions` reescreve o conjunto INTEIRO do teclado
     virtual com o que sai daqui, DEPOIS de o `apply_keyboard` ter escrito o que
-    ela digitou na janela antiga: sem herdar, todo atalho dela morria na
+    o usuário digitou na janela antiga: sem herdar, todo atalho dela morria na
     ativação seguinte de qualquer perfil que tivesse `button_actions`. As regras
     e a razão de o `r3` ficar fora estão em :func:`tabela_efetiva` e em
     :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte

@@ -116,7 +116,7 @@ def test_o_fio_pede_na_mesma_cadencia_do_tique() -> None:
 
     O `intervalo` de fábrica é o próprio `TIQUE_MS`. Um leitor que lesse em
     laço apertado curaria o travamento e cobraria o preço do outro lado —
-    dezenas de `state_full` por segundo no daemon dela.
+    dezenas de `state_full` por segundo no daemon do usuário.
     """
     leitor = hv.LeitorDoEstado()
     assert leitor._intervalo == pytest.approx(hv.TIQUE_MS / 1000.0)

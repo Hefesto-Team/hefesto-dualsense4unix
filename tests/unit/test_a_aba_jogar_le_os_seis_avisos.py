@@ -242,7 +242,7 @@ def test_a_divergencia_cala_sem_as_duas_pontas(extra: dict[str, Any], porque: st
 
 
 def test_sem_alarme_do_daemon_a_coluna_cala() -> None:
-    """`mascara_divergente: null` é o estado normal — e é o da máquina dela."""
+    """`mascara_divergente: null` é o estado normal — e é o da máquina do usuário."""
     state = _mesa(gamepad_emulation={"enabled": True, "flavor": "dualsense",
                                      "mascara_divergente": None,
                                      "mascara_divergencias": []})

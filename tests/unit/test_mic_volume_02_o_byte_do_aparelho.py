@@ -1,6 +1,6 @@
-"""MIC-VOLUME-02 — o `common[6]` do aparelho, medido na bancada dela e LIGADO.
+"""MIC-VOLUME-02 — o `common[6]` do aparelho, medido na bancada e LIGADO.
 
-**Decisão dela, 09/09/2026** (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
+**Decisão, 09/09/2026** (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
 APARELHO`): *"3-c"* — ligar o byte do aparelho, revogando neste ponto a
 decisão de 06/09 que o mantinha fora da chamada.
 
@@ -13,7 +13,7 @@ Duas afirmações desta casa se contradiziam, e nenhuma podia desempatar a outra
 * o mapa de canais e o `hid-playstation` desta máquina diziam que o registrador
   existe e **tem nome** (`mic_volume`, comentário `0x0 - 0x40`).
 
-O olho dela desempatou no CABO, em 09/09/2026, com o P2 plugado e a fonte do
+O olho de quem confere desempatou no CABO, em 09/09/2026, com o P2 plugado e a fonte do
 sistema travada a 100 % para isolar o ganho do aparelho: *"Deu certo.
 funciona"* (`docs/data/ensaios.csv`, `folha-mic-volume-o-byte-age-cabo-0909`).
 Byte que obedece ganha campo — e o que esta régua guarda é o campo, não a
@@ -31,10 +31,10 @@ devolvida)
    rota — cada byte daquele bloco tem dono próprio;
 4. `microfone=False` na devolução do alto-falante: sem ele, um "Devolver" do som
    apaga em silêncio o ganho de captura que ela ajustou;
-5. a chamada no `mic.volume.set`: arrancá-la faz o gesto dela mexer só na fonte
+5. a chamada no `mic.volume.set`: arrancá-la faz o gesto do usuário mexer só na fonte
    do sistema, que é o mundo de antes desta sprint;
-6. a chamada no applier de perfil: arrancá-la faz o gesto dela valer e o PERFIL
-   dela não — metade do número ficaria pelo caminho na próxima troca de janela;
+6. a chamada no applier de perfil: arrancá-la faz o gesto do usuário valer e o PERFIL
+   do usuário não — metade do número ficaria pelo caminho na próxima troca de janela;
 7. o `uniq` nos dois: sem ele o byte vai para o handle do vizinho.
 
 MACs fake (regra da casa: octetos 4 e 5 zerados).

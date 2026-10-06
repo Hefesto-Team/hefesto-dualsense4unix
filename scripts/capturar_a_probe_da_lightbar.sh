@@ -3,7 +3,7 @@
 #
 # POR QUE ESTE INSTRUMENTO EXISTE
 # -------------------------------
-# Em 11-12/08/2026, com quatro DualSense na mesa dela, ficou medido que uma
+# Em 11-12/08/2026, com quatro DualSense na bancada, ficou medido que uma
 # conexão de rádio nasce com a lightbar ACESA quando ninguém tem o hidraw
 # aberto, e nasce APAGADA quando a Steam está viva. Também ficou medido que o
 # firmware GUARDA a cor entre conexões — um controle voltou de uma desconexão

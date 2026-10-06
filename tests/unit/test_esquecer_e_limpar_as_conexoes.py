@@ -1,6 +1,6 @@
 """Esquecer e limpar as conexões — ESQUECER-E-LIMPAR-AS-CONEXOES-01.
 
-O que ela disse em 30/09/2026, ~01h30, com os quatro DualSense no rádio:
+O que o usuário disse em 30/09/2026, ~01h30, com os quatro DualSense no rádio:
 *«opção esquecer ali. Esse dualsense fantasma ali não faz sentido.»*
 <!-- noqa-acento: citação literal -->
 E às ~03h, sobre o «Limpar Conexões»:
@@ -15,10 +15,10 @@ voltava ao reabrir; o teclado no ar não tinha como ser esquecido e o fone fora
 do ar nem aparecia; a dobra do controle que desligou ficava; e a chave tirada
 por outro programa, com o serviço vivo, ficava sem lápide.
 
-As decisões (quem coordena, 30/09/2026, a validar por ela):
+As decisões (decisão de produto, 30/09/2026, a validar pelo usuário):
 D-3009-A-LINHA-TEM-APARELHO, D-3009-O-ESQUECER-TEM-NOME,
-D-3009-A-CASA-SE-LIMPA-SOZINHA (pela resposta dela; os momentos e as guardas de
-quem coordena) e D-3009-TODO-ESQUECER-TEM-LAPIDE.
+D-3009-A-CASA-SE-LIMPA-SOZINHA (pela resposta de produto; os momentos e as guardas de
+a decisão de produto) e D-3009-TODO-ESQUECER-TEM-LAPIDE.
 
 A central é a ``CentralDoRadio`` de verdade, com o ``DonoVivo`` de verdade por
 cima do rádio de mentira com física, e todo pedido da tela atravessa o
@@ -184,7 +184,7 @@ def movimento(aparelho: str, destino: str, estado: str = cr.NAO_CHEGOU, *,
 
 
 def o_mover_que_nao_chega(casa: Casa, quem: str, destino: str) -> cr.Movimento:
-    """O «Mover» sem o gesto dela: a central esquece a origem, abre a janela"""
+    """O «Mover» sem o gesto do usuário: a central esquece a origem, abre a janela"""
     feito = casa.central.mover(quem, destino)
     assert (feito.estado, feito.aparelho) == (cr.NAO_CHEGOU, quem), feito
     return feito

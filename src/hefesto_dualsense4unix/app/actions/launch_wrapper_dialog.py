@@ -155,7 +155,7 @@ def remove_dismissed_appid(appid: str) -> bool:
     módulo só sabia ``add_dismissed_appid`` — o botão *"Não perguntar para este
     jogo"* do lembrete. Clicar produzia um silêncio PERMANENTE, sem tela que o
     mostrasse e sem gesto que o desfizesse; a única saída era editar o
-    ``launch_dialog_dismissed.json`` à mão. Decisão dela, 02/09/2026: nasce o
+    ``launch_dialog_dismissed.json`` à mão. Decisão, 02/09/2026: nasce o
     desfazer, e a aba Lançadores ganha o botão *"Voltar a perguntar"*.
 
     MESMA ESCRITA DO ``add``: merge com o disco, ``mkstemp`` + ``os.replace`` no
@@ -164,7 +164,7 @@ def remove_dismissed_appid(appid: str) -> bool:
 
     ELE DEVOLVE ``bool``, E O ``add`` NÃO — a diferença é deliberada. O ``add``
     roda no tique da GUI, onde engolir a falha é o certo (o pior caso é o
-    lembrete voltar uma vez). Este roda no CLIQUE DELA, e um clique que falha
+    lembrete voltar uma vez). Este roda no CLIQUE DO USUÁRIO, e um clique que falha
     calado é o defeito mais caro desta casa: a linha continuaria na tela e o
     segundo clique pareceria o primeiro. Quem chama levanta a recusa com a
     frase; ver ``interface/pacotes/a07_lancadores.voltar_a_perguntar``.

@@ -6,7 +6,7 @@ rabo do endereço do controle no rótulo — e, com o P3 e o P4 no BT, a célula
 ``mapa-audio.saida_dedicada.payload_do_degrau-cabo`` da bancada contava quatro
 placas DualSense onde pede duas.
 
-A DECISÃO, por delegação dela e pelo padrão dela (a forma A de 23/09 vale para
+A DECISÃO, por delegação de produto e pelo padrão de produto (a forma A de 23/09 vale para
 tudo que o Hefesto publica; nada de endereço na tela), está DIGITADA aqui de
 propósito: «Háptica do Controle N (DualSense Wireless Controller)», com o
 número do jogador, republicado quando o número muda. A régua lê a decisão, não
@@ -16,8 +16,7 @@ A HISTÓRIA DO NÓ, que mudou duas vezes: até 28/09 ele era um por controle no
 rádio, com o nome pelo rabo do endereço; de 28/09 a 02/10 foi um por LUGAR
 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01), com o rótulo fixo do lugar, e a
 renovação saiu; desde 02/10/2026 é um por APARELHO, nos dois transportes (a
-A-HAPTICA-E-POR-APARELHO-01, pela palavra dela de 29/09: *«todas as features
-são um por aparelho. sempre.»*), com o nome pela marca do aparelho, que não é
+A-HAPTICA-E-POR-APARELHO-01, pela ), com o nome pela marca do aparelho, que não é
 o endereço, e o rótulo que segue o número volta com as guardas de 24/09.
 
 O QUE O JOGO LÊ NÃO PODE MUDAR, e a medição está na seção 3: os casamentos do

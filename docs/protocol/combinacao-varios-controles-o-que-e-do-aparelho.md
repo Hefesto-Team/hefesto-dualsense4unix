@@ -1,9 +1,7 @@
 # Vários controles na mesa — o que é canal do aparelho e o que é do host
 
 > Escrito em 03/09/2026, na frente **COMBINAÇÃO** da leva que ela encomendou:
-> *"lançar novo workflow pra agentes procurarem no GitHub tais canais ou tais
-> id (…) como é só informação eles trouxeram e me ajudaram no mapa do
-> controle"*.
+> **.
 >
 > **Nada aqui foi ao aparelho.** Esta página traz FATO LIDO — em fonte de
 > driver, em fonte de biblioteca pública e em relato de terceiro — com o
@@ -89,7 +87,7 @@ byte antes de onde o kernel, o SDL3 e esta casa os põem.
 
 **Quem está certo:** o kernel, o SDL3 e nós. A prova não é aritmética, é
 bancada: esta casa envia pelo `build_bt_report` (`common` em `[3]`, tag `0x10`)
-e o aparelho obedeceu no rádio, com o olho dela, em 11 e 12/08/2026. O caminho
+e o aparelho obedeceu no rádio, com o olho de quem confere, em 11 e 12/08/2026. O caminho
 BT da `pydualsense` **não é o que este produto usa** — o `ds_output_report.py`
 existe precisamente por isso.
 
@@ -148,7 +146,7 @@ O cabo não tem esse caminho: lá o quadro é aceito pelo tamanho e mais nada.
 não avisa que está devagar: ele perde quadro em silêncio, e a única testemunha é
 o dmesg. Esta casa mediu **0 falhas de CRC em 35.351 quadros** (E-3, 15/08) com
 quatro controles na mesa — o que é um resultado, não uma ausência de risco: diz
-que a mesa dela, naquela janela, não chegou perto do limite.
+que a bancada, naquela janela, não chegou perto do limite.
 
 ---
 
@@ -294,7 +292,7 @@ bandwidth limitation because two DualSense controllers can be used
 simultaneously without issues."*
 
 **Isto confirma o que esta casa mediu em 12/08** (`comb-dois-no-radio-saida-2235`,
-olho dela: os dois obedeceram nas duas rotas) — em outro adaptador, em outra
+olho de quem confere: os dois obedeceram nas duas rotas) — em outro adaptador, em outra
 distribuição, por outra pessoa, dez meses depois. É a confirmação independente
 mais forte que esta frente achou.
 
@@ -313,7 +311,7 @@ de ~30 s; o outro perde fones Sony. A hipótese do segundo, dita por ele:
 fones entram em repouso e cedem o ar.
 
 **Os dois marcadores que eles publicam são o que interessa para nós**, porque
-são o que se procura no log quando a mesa dela engasgar:
+são o que se procura no log quando a bancada engasgar:
 
 - `bluetoothd: profiles/input/device.c:hidp_send_message() BT socket write
   error: Resource temporarily unavailable (11)` — a fila de SAÍDA do HID sobre
@@ -328,10 +326,10 @@ como pista para um ensaio de `btmon`, não como fato.
 ### 6.2.1 E NA NOSSA MESA A CAUSA ERA NOSSA — medido em 22/09/2026
 
 O §6.2 fecha dizendo que o EAGAIN dos relatores é *pista para um ensaio de
-`btmon`, não fato*. **Na mesa dela o ensaio aconteceu, e o culpado era o
+`btmon`, não fato*. **Na bancada o ensaio aconteceu, e o culpado era o
 Hefesto.**
 
-A queixa dela foi *"4 controles conectados só um aparece na interface agora"*.
+A queixa de uso foi *"4 controles conectados só um aparece na interface agora"*.
 <!-- noqa-acento: citação literal --> O que os diários disseram:
 
 | o que | quanto |
@@ -403,7 +401,7 @@ responde — e é o que sobra para ela ensaiar.
 
 1. **Quantos DualSense cabem num adaptador.** Não há uma única medição pública
    com três ou quatro DualSense de rádio ao mesmo tempo, dizendo o que degrada
-   primeiro. O melhor que existe é o "dois funcionam" da §6.1. A mesa dela já é
+   primeiro. O melhor que existe é o "dois funcionam" da §6.1. A bancada já é
    maior que qualquer relato que eu tenha achado.
 2. **Qual é a taxa real do rádio.** Ninguém publicou. O SDL chuta 1000 Hz e diz
    que chuta.

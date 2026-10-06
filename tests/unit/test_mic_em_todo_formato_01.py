@@ -1,4 +1,4 @@
-"""MIC-EM-TODO-FORMATO-01 — a voz dela ficava para trás no `exit 0` da linha 941."""
+"""MIC-EM-TODO-FORMATO-01 — a voz do usuário ficava para trás no `exit 0` da linha 941."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def test_o_mic_e_curado_antes_do_exit_dos_formatos_nao_nativos() -> None:
 
     Arranque para ver reprovar: tirar as chamadas de
     `fix_wireplumber_default_source.sh` de antes do `exit 0`. É o estado do
-    produto até 10/08/2026 — e o efeito é a voz dela perder para o eco em
+    produto até 10/08/2026 — e o efeito é a voz do usuário perder para o eco em
     flatpak, appimage e deb.
     """
     exit_linha = _linha_do_exit_da_bifurcacao()

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A ABA CONEXÕES PARA DE AFIRMAR O QUE NÃO MEDIU — `MIGRA-08-01`, 03/09/2026.
 
-Quatro coisas na tela dela eram o DESENHO apresentado como diagnóstico da
-máquina dela. Fotografadas no produto vivo, com dois controles ligados:
+Quatro coisas na tela do usuário eram o DESENHO apresentado como diagnóstico da
+máquina do usuário. Fotografadas no produto vivo, com dois controles ligados:
 
     o que a tela dizia                          o que a máquina diz
     ------------------------------------------  ---------------------------
@@ -332,7 +332,7 @@ def test_a_bateria_sem_leitura_vira_o_travessao_do_produto() -> None:
 def test_a_contagem_e_do_dono() -> None:
     """A frase inteira vem de `interface.conexoes.texto_da_contagem`.
 
-    Ela SAIU DO CANTO DA GESTÃO em 26/09/2026, a pedido dela; o dono segue
+    Ela SAIU DO CANTO DA GESTÃO em 26/09/2026, a pedido; o dono segue
     escrevendo a frase para quem a mostra."""
     from hefesto_dualsense4unix.interface import conexoes as tela
 
@@ -407,7 +407,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     Ele era `2` — um por controle CONECTADO da `monta.MESA`, que traz dois
     ligados e dois vazios. A conta estava certa para o mundo em que o cartão
     vazio nascia sem um `data-campo` por dentro, e esse mundo era o defeito:
-    com os quatro DualSense dela na mesa, o daemon publicava quatro, a carga
+    com os quatro DualSense do usuário na mesa, o daemon publicava quatro, a carga
     chegava com os quatro e a tela mostrava DOIS, porque o passo 2 do piloto
     procura `data-campo` DENTRO de `[data-controle="pN"]` e nos dois lugares
     vazios não havia nenhum.
@@ -442,7 +442,7 @@ JARGAO_DAS_DUAS_PERGUNTAS = ("antena", "visada")
 def test_as_duas_perguntas_da_sala_nao_falam_antena_nem_visada() -> None:
     """A redação decidida em D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO, na página.
 
-    O rótulo de cada pergunta é a marca `.mm-q`; o jargão que ela disse não
+    O rótulo de cada pergunta é a marca `.mm-q`; o jargão que o usuário disse não
     entender fica só no nome do campo (`sala-visada`), nunca no que se lê.
     """
     html = BANCADA.read_text(encoding="utf-8")

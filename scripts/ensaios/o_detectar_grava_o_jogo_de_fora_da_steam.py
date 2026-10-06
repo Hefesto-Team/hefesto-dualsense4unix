@@ -5,7 +5,7 @@
 POR QUE ELE EXISTE (ONDA5-10-01, 06/09/2026, decisão 10-Q2 dela): os testes de
 unidade provam a CONTA — que `from_simple_choice("janela", …)` grava, que
 `detect_simple_preset` reconhece, que o gesto devolve a notícia. O que eles NÃO
-provam é que o CLIQUE DELA CHEGA: o botão "Detectar" prometia no `title`
+provam é que o CLIQUE DO USUÁRIO CHEGA: o botão "Detectar" prometia no `title`
 *"funciona com jogo de qualquer lugar"* e recusava todo jogo de fora da Steam,
 mandando a pessoa para a linha de comando. **Botão que você mudou e nunca
 clicou não está entregue.**
@@ -16,7 +16,7 @@ opção na BANCADA e o PUBLICADO ainda não a tem. Este ensaio pinta o mesmo per
 nas DUAS páginas e mostra o que o campo fica mostrando em cada uma — o custo
 exato da espera pelo `--publicar 10`, que é ato dela.
 
-O CAMINHO DELA, no motor que ela usa:
+O CAMINHO DO USUÁRIO, no motor que ela usa:
 
 1. abre a página no ``WebKit2.WebView`` do piloto (a da BANCADA e a do
    PUBLICADO, uma por vez);
@@ -29,7 +29,7 @@ O CAMINHO DELA, no motor que ela usa:
 **O DAEMON FICA DE FORA**, e a mesa e a classe de janela são impostas: o que se
 mede é o CAMINHO DO CLIQUE, não a leitura do aparelho.
 
-**NADA TOCA O PERFIL DELA.** O `HOME` e os quatro `XDG_*` vão para um diretório
+**NADA TOCA O PERFIL DO USUÁRIO.** O `HOME` e os quatro `XDG_*` vão para um diretório
 temporário ANTES do primeiro import do pacote, e a ponte é um dublê que anota.
 
 Uso (sempre oculto; ela tem UMA tela)::
@@ -136,7 +136,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 
 class PonteDeMentira:
-    """Anota, e não fala com o daemon dela."""
+    """Anota, e não fala com o daemon do usuário."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []

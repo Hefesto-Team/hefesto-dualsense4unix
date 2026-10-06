@@ -456,7 +456,7 @@ class TestNenhumCaminhoDeCasaNaArvore:
 
 
 class TestRotuloDoVerBotao:
-    """`scripts/ver_botao.py` roda na frente dela, e mentia o nome do aparelho."""
+    """`scripts/ver_botao.py` roda na frente do usuário, e mentia o nome do aparelho."""
 
     @staticmethod
     def _rotulo(nome: str, uniq: str | None) -> str:

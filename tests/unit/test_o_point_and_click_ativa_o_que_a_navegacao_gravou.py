@@ -1,10 +1,6 @@
 """POINT-AND-CLICK-01 — o modo Navegação carregando o PERFIL, e não a sessão.
 
-A ordem dela, 17/09/2026, olhando a aba principal do produto aberto:
-
-    *"E o modo point and click é o modo navegação e o modo que nós mesmos
-    podemos usar e configurar na aba navegação. **Ele ativa o modo configurado
-    lá.**"*
+A ordem, 17/09/2026, olhando a aba principal do produto aberto
 
 A primeira metade já existia. A segunda era o defeito: o terceiro passo da
 transição para o `MODE_DESKTOP` era `mouse.emulation.restore`, que lê a **flag
@@ -33,7 +29,7 @@ ele se fecha escolhendo os números — não escrevendo mais asserções.
 O FURO DESTA RÉGUA, dito porque a casa exige: ela mede o **daemon**, não o
 **aparelho**. Um `set_mouse_emulation` que devolve `True` não prova cursor na
 tela — foi assim que *"aplicado"* apareceu sobre nada quatro vezes numa
-madrugada. A prova do aparelho é da bancada dela.
+madrugada. A prova do aparelho é da bancada.
 """
 from __future__ import annotations
 
@@ -311,7 +307,7 @@ def test_o_perfil_sem_opiniao_deixa_a_flag_global_mandar() -> None:
 
 
 def test_as_teclas_do_perfil_chegam_ao_device_virtual() -> None:
-    """Os `key_bindings` que ela escreveu na aba Navegação sobem no device."""
+    """Os `key_bindings` que o usuário escreveu na aba Navegação sobem no device."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     d = _daemon_com(PERFIL_DA_NAVEGACAO)
 

@@ -1,7 +1,7 @@
-"""As frases — e a PALAVRA — que ela mandou tirar da tela, num lugar só.
+"""As frases — e a PALAVRA — que o usuário mandou tirar da tela, num lugar só.
 
-ELA, 31/08/2026, sobre o aviso do Modo Nativo: *"qualquer coisa fora isso tá
-incorreta"*. A regra que sobrou é curta e vale para a interface inteira:
+ELA, 31/08/2026, sobre o aviso do Modo Nativo. A regra que sobrou é curta e vale para a interface
+inteira:
 
     **NENHUM ALARME SEM MEDIÇÃO.**
 
@@ -20,7 +20,7 @@ A proibição vivia **só** dentro de `aba01._conferir`, que lê o **HTML
 ESTÁTICO** da página gerada. A coluna Atenção, porém, é escrita em **tempo de
 execução** — o piloto manda o texto pelo `_json`. Logo quem cumprir a
 decisão [01] ao pé da letra (*"o aviso do Modo Nativo na coluna Atenção"*)
-poria a frase banida na tela dela **com o gerador VERDE**.
+poria a frase banida na tela do usuário **com o gerador VERDE**.
 
 A régua olhava o lugar errado. Agora a lista é uma só, e há duas guardas
 lendo-a: a estática (`aba01._conferir`) e a de execução (`hefesto_vivo._json`,
@@ -29,8 +29,8 @@ o funil por onde TODO valor passa a caminho do WebView).
 O QUE A DECISÃO [01] AINDA PODE TER, e é a leitura de PO de 04/09/2026: a
 coluna Atenção pode dizer **o estado medido** — *o Modo Nativo está ligado, a
 Ponte com o jogo está desligada* — porque isso o produto mede e sabe. O que ela
-não pode é PROFETIZAR consequência que ninguém mediu. A decisão dela de 31/08
-vence a minha recomendação de 04/09, como venceu nas outras sete.
+não pode é PROFETIZAR consequência que ninguém mediu. A decisão de 31/08
+vence a recomendação de 04/09, como venceu nas outras sete.
 
 A TERCEIRA GUARDA — 06/09/2026, ONDA5-01-02, e ela lê o **FONTE**:
 
@@ -64,7 +64,7 @@ A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01:
 
 `texto_visivel` lê a página CRUA, que é o que ela abre no navegador quando olha
 a bancada. O produto renderiza a mesma página com a folha de usuário do piloto
-por cima, e a primeira regra dela apaga a `.nota` — o bilhete de projeto. Por
+por cima, e a primeira regra de produto apaga a `.nota` — o bilhete de projeto. Por
 isso há :func:`texto_visivel_no_produto`, que pergunta ao dono da folha o que
 ele esconde antes de contar. Sem essa separação a régua acusava **34
 ocorrências visíveis "em o produto"** onde um Chrome com a folha posta mostrava

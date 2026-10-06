@@ -1,13 +1,13 @@
 """PONTE-ESCADA-01 — tenta em ordem, para quando acerta, nunca mais pergunta.
 
-A decisão dela, 19/08/2026: *"o produto tenta as pontes em ordem; ela confirma
+A decisão, 19/08/2026: *"o produto tenta as pontes em ordem; ela confirma
 UMA vez qual pegou; o produto grava para sempre"* — mais o atalho de escolher
 direto na aba de perfil quando já souber.
 
 Este módulo é a DECISÃO, e só ela: qual é a próxima ponte a tentar, quanto
 custa subir esse degrau, e quando é honesto gravar que a ponte pegou. Ele não
 cria vpad, não escreve `.env`, não mexe na Steam. Quem age é `launch_env` (no
-lançamento) e o gesto dela (ao vivo).
+lançamento) e o gesto do usuário (ao vivo).
 
 NENHUMA PALAVRA NOVA
 --------------------
@@ -111,7 +111,7 @@ Steam (Steamworks) terem por onde chegar.
 UMA CONTRADIÇÃO VIVA, REGISTRADA E NÃO ESCONDIDA
 ------------------------------------------------
 DON'T SCREAM (2497900) aparece nas duas medições desta casa com desfechos
-opostos: a tabela de 16/08 o lista como *"SIM (perfil dela, dualsense)"*, e a
+opostos: a tabela de 16/08 o lista como *"SIM (perfil do usuário, dualsense)"*, e a
 bancada de 18→19/08 mediu que **sem Steam Input ele não via controle nenhum**.
 As duas não podem estar certas ao mesmo tempo sobre o mesmo estado da máquina.
 
@@ -123,12 +123,12 @@ O QUE ESTE MÓDULO NUNCA FAZ
 ---------------------------
 **Gravar "funciona" sobre algo que ninguém confirmou.** É a disciplina do balde
 `sem_impedimento_conhecido` do `prontuario_dos_jogos`: uma ponte só vira
-CONFIRMADA por gesto dela, por silêncio dela com o jogo VIVO, ou por escolha
-dela na aba de perfil. Jogo fechado no meio da escada não confirma nada.
+CONFIRMADA por gesto do usuário, por silêncio dela com o jogo VIVO, ou por escolha
+do usuário na aba de perfil. Jogo fechado no meio da escada não confirma nada.
 
 **Guardar o que já tem dono.** A confirmação mora no PERFIL, no campo
 `Profile.ponte` (`PonteConfirmada`, PONTE-CONFIRMADA-01, 19/08/2026) — é a
-regra dela de 18/08, *"o perfil tem de guardar tudo"*, e quem grava é
+regra de 18/08, *"o perfil tem de guardar tudo"*, e quem grava é
 `profiles/manager.confirmar_ponte`. Este módulo não abre uma segunda gaveta
 para o mesmo fato: ele DECIDE, e devolve a ponte a carimbar. Os três nomes de
 origem (`POR_GESTO`, `POR_SILENCIO`, `POR_ESCOLHA_DELA`) são byte a byte os
@@ -142,10 +142,10 @@ retoma dali em vez de reviver os degraus de baixo — sem nenhum arquivo novo
 para isso ficar velho.
 
 **Subir um degrau sozinho com o jogo aberto.** Cada degrau ao vivo recria o
-vpad, e recriar o vpad com o jogo aberto arranca o controle da mão dela (R-04,
-medido em 23/07/2026; medido DE NOVO em 19/08 no journal dela). O gate
+vpad, e recriar o vpad com o jogo aberto arranca o controle da mão do usuário (R-04,
+medido em 23/07/2026; medido DE NOVO em 19/08 no journal do usuário). O gate
 `_recriacao_bloqueada_por_jogo` já implementa a metade defensiva disto: origem
-automática é barrada, origem que é gesto dela nunca é. Este módulo declara a
+automática é barrada, origem que é gesto do usuário nunca é. Este módulo declara a
 outra metade — `como_subir` NUNCA responde "agora" com o jogo vivo.
 """
 from __future__ import annotations
@@ -190,7 +190,7 @@ class Ponte:
 
     NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. Nos degraus de gamepad, o
     campo `mascara` NOMEIA O CAMINHO de conexão (`"dualsense"` · `"xbox"`), e
-    não a máscara que o jogo vê: a regra dela de 13/09 separou os dois, e os
+    não a máscara que o jogo vê: a regra de 13/09 separou os dois, e os
     dois degraus ao vivo desta escada são os dois chips «Sony DualSense» e
     «Xbox» da aba Jogar. `ponte_do_perfil` o lê de `mode.caminho` e, sem ele,
     de `mode.gamepad_flavor`, como antes. O nome do campo ficou para o carimbo
@@ -341,7 +341,7 @@ def divergencia_com_o_carimbo(
     ``None`` quando não discordam, **ou quando não há o que comparar**, que é o
     caso que esta função nasceu para separar.
 
-    O DEFEITO QUE ELA CURA, medido no journal dela em 17/09/2026 às 10:45:02:
+    O DEFEITO QUE ELA CURA, medido no journal do usuário em 17/09/2026 às 10:45:02:
 
         ``ponte_confirmada_diverge_do_perfil ponte_do_perfil=gamepad/xbox
         ponte_gravada=gamepad/dualsense``
@@ -433,7 +433,7 @@ def confirmacao_por_silencio(
 
 
 def por_que_confirmou(gestos: int) -> str:
-    """`POR_GESTO` quando a mão dela pôs a ponte de pé; `POR_SILENCIO` quando não."""
+    """`POR_GESTO` quando a mão do usuário pôs a ponte de pé; `POR_SILENCIO` quando não."""
     return POR_GESTO if gestos > 0 else POR_SILENCIO
 
 

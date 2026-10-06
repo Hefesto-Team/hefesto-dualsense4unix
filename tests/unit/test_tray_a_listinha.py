@@ -215,7 +215,7 @@ def test_so_o_reconectar_nao_traz_os_radios(gtk_de_mentira: Any) -> None:
 
 
 def test_o_rotulo_do_servico_segue_o_estado(gtk_de_mentira: Any) -> None:
-    """Um item, dois rótulos — a forma que ela escolheu em 03/09/2026."""
+    """Um item, dois rótulos — a forma que o usuário escolheu em 03/09/2026."""
     verbos: list[str] = []
     tray = _tray(gtk_de_mentira, on_servico=lambda v: verbos.append(v))
     tray._montar_os_atos_do_servico()
@@ -263,7 +263,7 @@ def test_o_interruptor_despacha_o_plano_do_dono_na_ordem_dele(
 
 def test_ligar_sobe_o_servico_antes_de_falar_com_o_daemon(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Decisão dela, 03/09/2026 — e a ORDEM é o ponto."""
+    """Decisão, 03/09/2026 — e a ORDEM é o ponto."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     passos: list[str] = []
@@ -279,7 +279,7 @@ def test_ligar_sobe_o_servico_antes_de_falar_com_o_daemon(
 
 def test_desligar_nao_sobe_servico_nenhum(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """«Desligado» é o modo NATIVO, não "parar o Hefesto" — decisão dela."""
+    """«Desligado» é o modo NATIVO, não "parar o Hefesto" — decisão de produto."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     passos: list[str] = []
@@ -307,7 +307,7 @@ def test_o_reconectar_faz_os_dois_passos_da_aba_jogar(
 
 
 def test_o_titulo_nao_conta_perfis(gtk_de_mentira: Any) -> None:
-    """*"no tray remover o numero de perfis"* — palavra dela, 21/09/2026."""
+    """*"no tray remover o numero de perfis"* — palavra, 21/09/2026."""
     tray = _tray(gtk_de_mentira)
     tray._status_item = _Item("")
     tray._profiles_submenu = _Menu()

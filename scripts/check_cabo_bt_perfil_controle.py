@@ -260,7 +260,7 @@ def _campos_do_esquema(classe: str, fonte: pathlib.Path = ESQUEMA) -> set[str]:
     return set(re.findall(r"^    ([a-z_]+):\s", corpo, re.M))
 
 
-#: vez de doze `noqa-acento` espalhados: dois agentes independentes chegaram a
+#: vez de doze `noqa-acento` espalhados: duas leituras independentes chegaram a
 NAO = "nao"  # noqa-acento: valor cru do mapa (`*_aciona`), não prosa
 _SEM_LINHA = "sem linha"
 _RESSALVA = "com ressalva"
@@ -269,7 +269,7 @@ _SIM_ = "sim"
 _NAO_EXISTE = "nao existe no aparelho"  # noqa-acento: valor cru do mapa
 _ESCADA = (_SEM_LINHA, NAO, _NAO_EXISTE, _RESSALVA, _SIM_)
 
-#: A tela é dos quatro DualSense (decisão dela de 06/09).
+#: A tela é dos quatro DualSense (decisão de 06/09).
 _O_APARELHO_DELA = "dualsense"
 
 

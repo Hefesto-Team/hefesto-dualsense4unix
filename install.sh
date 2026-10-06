@@ -316,7 +316,7 @@ FORCE_XWAYLAND=0
 WIFI_POWERSAVE_OFF=0
 # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): o vigia do dongle Wi-Fi USB é
 # DEFAULT, e todo passo default da camada de máquina tem saída — o produto é
-# para qualquer usuário (resposta 3 de quem coordena).
+# para qualquer usuário (resposta de produto 3).
 NO_WIFI_USB=0
 # A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026): o modo desempenho. Vazio =
 # o install pergunta (ou, sem TTY, vale o padrão da máquina); sim|sem = a flag.
@@ -2712,7 +2712,7 @@ install_censo_do_gabinete_host
 # avisamos como gerar e seguimos SEM falhar o install (o backport é conveniência
 # de resiliência, não requisito de funcionamento — o controle já funciona no
 # 5.72). O install NÃO constrói: são uns 3 minutos e 824 MB de obra, com as
-# dependências de build — decisão de quem coordena, 23/09/2026.
+# dependências de build — decisão de produto, 23/09/2026.
 #
 # EFEITO COLATERAL MEDIDO (documentado, não escondido):
 #   (a) o postinst do PRÓPRIO pacote bluez reinicia o bluetoothd ao trocar de
@@ -2726,7 +2726,7 @@ install_censo_do_gabinete_host
 #       /dev/uhid do controle) — contingência documentada se aparecer
 #       regressão: UserspaceHID=false em /etc/bluetooth/input.conf.
 # O VEREDITO DO 3f É DO BINÁRIO, e não da versão (INSTALL-E-UNINSTALL-DO-RADIO-01,
-# 23/09/2026 — decisão de quem coordena sobre o relato da BLUETOOTHD-NAO-DERRUBA-01).
+# 23/09/2026 — decisão de produto sobre o relato da BLUETOOTHD-NAO-DERRUBA-01).
 #
 # O portão de antes perguntava `bluetoothd --version`, que imprime «5.86» para o
 # .3 e para o .4, e pulava por «já ≥ 5.79». O .4 traz o hefesto-0002 (o EAGAIN
@@ -4340,7 +4340,7 @@ fi
 # ---------------------------------------------------------------------------
 # 11a-bis. A Steam fecha UMA vez para os passos que editam os arquivos dela
 # ---------------------------------------------------------------------------
-# INSTALL-UNIVERSAL, 18/09/2026 (692cf5343, item c do cético). Cada passo que
+# INSTALL-UNIVERSAL, 18/09/2026 (692cf5343, item c da conferência). Cada passo que
 # edita arquivo da Steam fechava e REABRIA a Steam por conta própria — o 11, o
 # 11b e o 11b-bis. O 11b-ter (sentinela) e o 11c (trava do Proton) vinham
 # depois, achavam a Steam de pé outra vez e ADIAVAM (rc 3). Na máquina em que

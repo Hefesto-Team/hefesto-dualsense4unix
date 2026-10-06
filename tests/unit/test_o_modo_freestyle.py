@@ -148,7 +148,7 @@ def as_duas_paginas() -> dict[str, dict[str, Any]]:
 def test_o_botao_do_desenho_tem_letra_e_altura_maiores(
     as_duas_paginas: dict[str, dict[str, Any]],
 ) -> None:
-    """O pedido dela, em pixels: maior que hoje, e ainda um botão de canto."""
+    """O pedido, em pixels: maior que hoje, e ainda um botão de canto."""
     desenho, hoje = as_duas_paginas["desenho"], as_duas_paginas["publicada"]
     assert (desenho["fonte"], desenho["altura"]) == (hoje["fonte"], hoje["altura"]), (
         f"a publicada diz {hoje['rotulo']!r} e não tem a letra e a altura do "

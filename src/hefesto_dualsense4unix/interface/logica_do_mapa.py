@@ -189,7 +189,7 @@ class LogicaDoMapa:
         return numero
 
     def acrescentar_face(self, nome: str) -> bool:
-        """Cria uma face com o nome que ELA escreveu. Sem nome, não cria."""
+        """Cria uma face com o nome que O usuário escreveu. Sem nome, não cria."""
         limpo = nome.strip()
         if not limpo:
             return False
@@ -240,7 +240,7 @@ def classe_do_escolhido(bancada: mapa_das_portas.Bancada, caminho: str) -> str:
 def veredito_do_quadrado(
     bancada: mapa_das_portas.Bancada, numero: str, escolhido: str
 ) -> motor.Veredito | None:
-    """O que este quadrado diz sobre o aparelho que está na mão dela."""
+    """O que este quadrado diz sobre o aparelho que está na mão do usuário."""
     entrada = motor.por_num(bancada.mesa.faces, numero)
     if entrada is None:
         return None

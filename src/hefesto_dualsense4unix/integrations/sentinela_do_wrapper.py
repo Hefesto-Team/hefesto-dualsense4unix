@@ -5,7 +5,7 @@ SENTINELA-WRAPPER-01 — 16/08/2026, defeito pego AO VIVO.
 O QUE ACONTECEU
 ---------------
 Ela jogou Pragmata (appid 3357650) no CABO e funcionou. Passou para o
-Bluetooth e, nas palavras dela: *"no inicio travou alguns inputs mas logo em
+Bluetooth e, nas palavras de produto: *"no inicio travou alguns inputs mas logo em
 sequencia ele parou de ser reconhecido no jogo, mas o perfil de pragmata segue
 ativo no controle com tudo funcionando só não sendo reconhecido"*.
 
@@ -18,7 +18,7 @@ As Opções de Inicialização do Pragmata eram::
 
     VKD3D_CONFIG=no_upload_hvv %command%
 
-e as dos outros SESSENTA jogos dela eram a chamada do `hefesto-launch`. A
+e as dos outros SESSENTA jogos do usuário eram a chamada do `hefesto-launch`. A
 Steam guarda **UMA linha por jogo**: quando o `VKD3D_CONFIG` foi posto (quase
 certo que para curar o crash de 14/08), ele SUBSTITUIU o wrapper. Ninguém
 percebeu, porque a Steam não avisa e o campo aceita qualquer texto.
@@ -53,7 +53,7 @@ O QUE ESTE MÓDULO FAZ, em três camadas independentes
 3. **REPARAR** (`reparar_ou_adiar`) — repõe o wrapper PRESERVANDO o que já
    estava na linha, ou ADIA dizendo por quê.
 
-A COMPOSIÇÃO QUE PRESERVA A LINHA DELA (medida, não suposta)
+A COMPOSIÇÃO QUE PRESERVA A LINHA DO USUÁRIO (medida, não suposta)
 -------------------------------------------------------------
 O reparo do Pragmata tem de manter o wrapper **e** o `VKD3D_CONFIG` — soltar
 um dos dois troca um defeito por outro. A linha que o `migrate_value` já emite

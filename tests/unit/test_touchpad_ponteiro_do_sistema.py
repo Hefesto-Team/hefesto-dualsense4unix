@@ -1,13 +1,10 @@
 """TOUCHPAD-DO-SISTEMA-01 — o touchpad volta a ser touchpad, em todos os modos.
 
-O PEDIDO DELA, 09/08/2026, textual: *"quando eu conecto o controle DualSense no
-PC via BT ou cabo, ANTES do Hefesto, o touchpad funciona como mouse. No Hefesto
-impedimos isso de funcionar em todos os modos. A ideia do touchpad é ele voltar
-a funcionar assim, seja no modo nativo ou dualsense."* E, quando o assunto
-desviou para a emulação de mouse pelo analógico: *"ainda assim isso é diferente
-do meu pedido"* — o pedido é sobre o TOUCHPAD como ponteiro do sistema.
+O PEDIDO, 09/08/2026, textual: ** E, quando o assunto
+desviou para a emulação de mouse pelo analógico: ** — o pedido é sobre o TOUCHPAD como ponteiro do
+sistema.
 
-A CAUSA, medida no controle dela (``/run/udev/data/c13:68``, DualSense por USB,
+A CAUSA, medida no controle do usuário (``/run/udev/data/c13:68``, DualSense por USB,
 09/08/2026): ``E:ID_INPUT_TOUCHPAD=1`` **e** ``E:LIBINPUT_IGNORE_DEVICE=1``. Uma
 linha só, com curinga, em ``assets/76-dualsense-touchpad-libinput-ignore.rules``
 apagava o touchpad de TODO aparelho em TODO modo::
@@ -41,7 +38,7 @@ AS MORDIDAS (cada uma foi arrancada e vista reprovar):
 - tirar o ``if getattr(reader, "ponteiro_do_sistema", False)`` do
   ``_combine_with_touchpad`` -> ``test_o_clique_nao_vira_tecla_quando_o_sistema_
   e_o_ponteiro`` reprova, e um clique só passaria a disparar o botão do mouse
-  DELA mais um ``KEY_BACKSPACE``.
+  do usuário mais um ``KEY_BACKSPACE``.
 
 Nenhum controle real, nenhum ``/dev``, nenhum ``udevadm control`` é tocado: a
 regra é lida como texto e a base do udev é um diretório temporário.
@@ -115,7 +112,7 @@ def linhas() -> list[str]:
 
 
 def test_o_touchpad_fisico_nao_e_mais_ignorado(linhas: list[str]) -> None:
-    """O pedido dela, em uma asserção: o touchpad físico é do SISTEMA.
+    """O pedido, em uma asserção: o touchpad físico é do SISTEMA.
 
     Vale por USB e por Bluetooth, e para os quatro nomes que o mesmo touchpad
     assume. Devolver o curinga `*DualSense*Touchpad` reprova aqui.

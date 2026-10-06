@@ -1,4 +1,4 @@
-"""O `uninstall.sh` leva o que a leva do rádio instalou — e só o que é dela."""
+"""O `uninstall.sh` leva o que a leva do rádio instalou — e só o que é do usuário."""
 
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def test_os_nomes_do_arquivo_migrado_voltam_ao_padrao(tmp_path: Path) -> None:
 
 
 def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -> None:
-    """O « #N» que o BlueZ põe em cada adaptador não faz do nome uma escolha dela."""
+    """O « #N» que o BlueZ põe em cada adaptador não faz do nome uma escolha do usuário."""
     r = _mesa(
         tmp_path,
         {

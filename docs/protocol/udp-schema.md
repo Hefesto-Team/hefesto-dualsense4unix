@@ -17,7 +17,7 @@ não reinicia subsistemas — sem o restart, o daemon segue escutando na 6969.
 ### Quem pode mandar
 
 Qualquer processo local. **Não há autenticação, token ou allowlist**: quem
-alcança a porta manda gatilho, cor, player-LED e deadzone no controle dela. É
+alcança a porta manda gatilho, cor, player-LED e deadzone no controle do usuário. É
 compatibilidade com o DSX **por decisão** (ADR-003) — os mods de Cyberpunk,
 Forza e Assetto Corsa escrevem cru nessa porta e não têm onde carregar
 credencial.

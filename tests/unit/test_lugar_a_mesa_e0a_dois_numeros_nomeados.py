@@ -1,6 +1,6 @@
 """LUGAR-À-MESA-01/E0a — o `coop status` diz os DOIS números, nomeados.
 
-A queixa medida em 06/08/2026, com três controles ligados na mesa dela:
+A queixa medida em 06/08/2026, com três controles ligados na bancada:
 
     $ hefesto-dualsense4unix coop status
     co-op local: ligado

@@ -10,7 +10,7 @@ POR QUE ISSO NÃO É HIPÓTESE
 ----------------------------
 É a família ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` acontecendo DENTRO da cura que
 a combate, e ela já aconteceu duas vezes nesta mesma leva. Medido em
-25/08/2026 por quem coordena: ``app/fala_do_mapa.py::formata_pt_br`` e
+25/08/2026 na conferência: ``app/fala_do_mapa.py::formata_pt_br`` e
 ``::Numero`` nasceram na ONDA0-Z6 (``26e0ccc``, 24/08) sob o título *"a
 medição chega à tela por portão, não por lembrança"* — e nenhuma tela os
 chama. Os dois estão registrados como órfãos em

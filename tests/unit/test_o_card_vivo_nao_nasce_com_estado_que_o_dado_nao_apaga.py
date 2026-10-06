@@ -1,7 +1,6 @@
 """O card VIVO não nasce pintado com estado que o dado não possa apagar.
 
-A QUEIXA QUE ISTO CURA — 19/09/2026, palavras dela: *"o botão r2 fica sempre
-pressionado isso pra todos os controles"*.  <!-- noqa-acento: citação literal -->
+A QUEIXA QUE ISTO CURA — 19/09/2026, palavras de produto.  <!-- noqa-acento: citação literal -->
 
 O DEFEITO, MEDIDO: o gerador da aba Controles dava a classe `plast` (a cor do
 plástico) às três peças que o desenho original destaca — ``cross``, ``l2`` e

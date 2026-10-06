@@ -1,6 +1,6 @@
 """"Todo o som do PC" só acende quando as DUAS camadas concordam.
 
-ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026). Decisão dela, meio-dia: *"sons do pc
+ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026). Decisão de produto, meio-dia: *"sons do pc
 e sons do jogo. veja como fizemo no gtk."*  # noqa-acento: citação literal
 
 São dois caminhos independentes, e a janela antiga já sabia
@@ -59,7 +59,7 @@ def test_o_byte_sozinho_nao_acende_todo_o_som_do_pc() -> None:
 
 
 def test_o_desacordo_vira_recado_e_nao_silencio() -> None:
-    """Apagar os dois botões sem dizer nada seria o silêncio que ela reclamou."""
+    """Apagar os dois botões sem dizer nada seria o silêncio que o usuário reclamou."""
     frase = recado_da_rota(BYTE_TODO_O_SOM_DO_PC, PLACA_DO_CONTROLE, A_TV)
     assert frase == MOTIVO_ROTA_SO_NO_BYTE
     assert "não é ele" in frase
@@ -95,7 +95,7 @@ def test_o_radio_nunca_acende_todo_o_som_do_pc() -> None:
 
 
 def test_o_sink_no_controle_com_o_byte_do_jogo_nao_e_desacordo() -> None:
-    """Ela mandou o som para cá pelas configurações do sistema: sem recado."""
+    """O usuário mandou o som para cá pelas configurações do sistema: sem recado."""
     assert recado_da_rota(BYTE_SONS_DO_JOGO, PLACA_DO_CONTROLE, PLACA_DO_CONTROLE) == ""
 
 

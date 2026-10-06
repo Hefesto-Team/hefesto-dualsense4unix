@@ -99,7 +99,7 @@ def sustentam_a_ponte(ensaios: list[dict], ponte: str) -> list[dict]:
       o campo existir. Recusá-los reprovaria hoje toda célula de grau forte que
       passa — e reprovar afirmação VERDADEIRA é o erro que esta casa já pagou
       caro em 12/08 e em 13/08.
-    - **ensaio COM `ponte` sustenta só a DELA.** Quem declarou por onde mediu
+    - **ensaio COM `ponte` sustenta só a DO USUÁRIO.** Quem declarou por onde mediu
       disse também por onde NÃO mediu: um ensaio pela máscara Xbox não fala pelo
       giroscópio, que só existe pela nossa máscara DualSense.
 

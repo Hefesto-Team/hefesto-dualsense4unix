@@ -261,7 +261,7 @@ def test_prova_dentro_do_prazo_passa(tmp_path: Path) -> None:
 
 
 def test_as_duas_colunas_vazias_nao_reprovam(tmp_path: Path) -> None:
-    """A política de validade ainda é decisão dela (seção 8 do índice da sprint)."""
+    """A política de validade ainda é decisão de produto (seção 8 do índice da sprint)."""
     caminho = monta_arvore(tmp_path, [linha_forte(provado_em="", validade_dias="")])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout

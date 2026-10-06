@@ -112,7 +112,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 class Mesa:
-    """A mesa de quatro com as peças de produção, e os gestos dela."""
+    """A mesa de quatro com as peças de produção, e os gestos do usuário."""
 
     def __init__(self, transportes: tuple[str, ...] = TRANSPORTE) -> None:
         self.transportes = transportes
@@ -336,7 +336,7 @@ class TestQuemNaoGuardaLugar:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOGestoDelaTrocaSobreOQueElaVe:
-    """O clique dela é TROCA sobre o que ela vê — e ela vê o buraco."""
+    """O clique do usuário é TROCA sobre o que ela vê — e ela vê o buraco."""
 
     def test_o_3_para_o_p4_troca_o_p3_e_o_p4_e_mais_ninguem(self) -> None:
         mesa = Mesa()
@@ -392,7 +392,7 @@ class TestOGestoDelaTrocaSobreOQueElaVe:
         assert mesa.tela() == {P1: 1, P3: 3, P4: 4}
 
     def test_a_troca_sobrevive_ao_congelamento_da_mesa(self) -> None:
-        """A mesa estável congela 4 s depois; a escolha dela fica."""
+        """A mesa estável congela 4 s depois; a escolha do usuário fica."""
         mesa = Mesa()
         mesa.sai(1)
         IpcHandlersMixin._set_number_locked(mesa.reg, None, P4, 3)

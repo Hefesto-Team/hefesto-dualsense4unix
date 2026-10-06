@@ -548,7 +548,7 @@ def main():
   }}
   *{{box-sizing:border-box;margin:0;padding:0}}
   /* O RECUO DO `body` E O TAMANHO DA `.cx` VÊM DA JANELA DAS ABAS — 24/09/2026,
-     decisão dela: o mapa segue a caixa da janela, como a Calibrar. */
+     decisão de produto: o mapa segue a caixa da janela, como a Calibrar. */
   body{{background:#11121a;color:var(--fg);font-family:var(--f);
         display:flex;flex-direction:column;align-items:center;gap:16px}}
   .mono{{font-family:var(--m)}}
@@ -566,9 +566,7 @@ def main():
   h1 .p{{color:var(--pink)}}
   .sub{{font-family:var(--m);font-size:11.5px;color:var(--comment);margin-top:3px}}
 
-  /* A LISTA GANHOU 140px E UMA TERCEIRA COLUNA — 01/09/2026, pedido dela:
-     *"o que eu não quero na mapa é barra de rolagem nem pra esquerda nem
-     vertical; pode ir realocando os elementos pra terem mais harmonia."*
+  /* A LISTA GANHOU 140px E UMA TERCEIRA COLUNA — 01/09/2026
 
      MEDIDO ANTES: a página pedia 1042px numa janela de 800 — 242px de rolagem
      vertical. O culpado era a LISTA, com 832px fixos, enquanto o desenho ao lado
@@ -579,7 +577,7 @@ def main():
      **zero rolagem vertical e zero lateral** em 1920x1080, 1600x900, 1440x900 e
      1390x800 — as quatro medidas.
 
-     E OS 920px SÃO HARMONIA MEDIDA, que foi a outra metade do pedido dela. Com
+     E OS 920px SÃO HARMONIA MEDIDA, que foi a outra metade do pedido. Com
      os 860 que a conta da rolagem pedia, **8 dos 28 itens quebravam em duas
      linhas** (`feat-rumble-esquerdo`, `feat-giroscopio`, `led-jogador`), e dois
      chegavam a 61px de altura numa lista onde o padrão é 36. Com 920 são 4, e o
@@ -588,8 +586,7 @@ def main():
      curva vira. */
   .mapa{{display:grid;grid-template-columns:minmax(0,1fr) 920px;gap:0;align-items:stretch}}
   .lado-ds{{padding:20px 24px;display:flex;align-items:center;justify-content:center}}
-  /* A LISTA NÃO ROLA DE LADO — 31/08/2026, pedido dela: *"a página de mapa do
-     dualsense tem uma barra horizontal desnecessária."*
+  /* A LISTA NÃO ROLA DE LADO — 31/08/2026
 
      A CAUSA eram três regras que se contradiziam: `column-width` deixa o
      navegador criar QUANTAS colunas couberem na largura, `max-height` limita a
@@ -608,7 +605,7 @@ def main():
                columns:260px 3;column-gap:20px;column-fill:balance}}
   .grupo{{break-inside:avoid;-webkit-column-break-inside:avoid}}
   .ds{{width:100%;height:auto;max-height:74vh}}
-  /* TUDO PREENCHIDO — decisão dela, 27/08: os paths deste SVG são FAIXAS e
+  /* TUDO PREENCHIDO — decisão, 27/08: os paths deste SVG são FAIXAS e
      ANÉIS. Traçá-los fazia cada aresta virar dois fios a 0,99 de distância:
      era a linha dupla do casco, as várias voltas dos botões, os furos do
      alto-falante em rosquinha e as lâmpadas ocas — tudo a mesma causa. */
@@ -627,7 +624,7 @@ def main():
   .ds #mp-led-jogador rect{{fill:var(--led-apagado)}}
   .ds #mp-led-jogador rect.led-on{{fill:var(--led-aceso)}}
   /* o PS não tem anel: a peça existe só para dar caixa e alvo, e quem se vê — e
-     quem acende — é o glifo. Decisão dela, 27/08: "Remove o circulo e Deixa só o
+     quem acende — é o glifo. Decisão, 27/08: "Remove o circulo e Deixa só o
      Glifo do PS pra ser o Botão". */
   .ds .sem-tinta{{fill:none !important;stroke:none !important}}
   /* A PONTA DO PUNHO fechava em BICO: a borda externa e a interna do punho
@@ -663,14 +660,14 @@ def main():
   .ds .oculta .peca{{stroke-width:.32;stroke-linejoin:round}}
   /* E ACENDEM NA COR DA CASA. A `feat-bateria` veio do editor com `fill="#3a3f4b"`
      como ATRIBUTO — cinza sobre fundo escuro: ela ficava visível e invisível ao
-     mesmo tempo, que foi o "não tá funcionando" que ela viu. */
+     mesmo tempo, que foi o "não tá funcionando" que o usuário viu. */
   .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio .peca,
   .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro .peca,
   .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria .peca,
   .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo .peca,
   .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito .peca
     {{fill:var(--pink) !important;stroke:var(--pink) !important}}
-  /* A BATERIA É O LIGHTBAR. Decisão dela, 27/08: "bateria pode ser usando as
+  /* A BATERIA É O LIGHTBAR. Decisão, 27/08: "bateria pode ser usando as
      barras da lightbar com 100% e a barra cheia e 0% ela apagada". Apontá-la sem
      acender as duas tiras é apontar um medidor que não está ali. */
   .mapa:has(.item-feat-bateria:hover) #mp-lightbar :is(.peca,rect,path,circle,ellipse)
@@ -688,7 +685,7 @@ def main():
   .ds #mp-corpo .peca{{stroke:var(--z-casca-solida, var(--sem-plastico))}}
   /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
   .sobre{{color:var(--branco);opacity:1;pointer-events:none}}
-  /* OS GLIFOS DELA TRAZEM COR NO `style` INLINE, e style inline vence folha: no
+  /* OS GLIFOS DO USUÁRIO TRAZEM COR NO `style` INLINE, e style inline vence folha: no
      hover eles continuavam cinza-claro sobre a peça acesa e sumiam. `currentColor`
      com !important devolve a palavra à folha, sem tocar no desenho dela. */
   /* TODO descendente que não peça `none` pinta com a cor do grupo — inclusive o
@@ -719,15 +716,13 @@ def main():
      coluna, e a linha "Corpo" — a última — caía fora da caixa, invisível e
      inalcançável. É a mesma cicatriz que o portão das peças já nomeia, e ela
      voltou porque a barra roubou altura.
-     A cura é na ALTURA, encolhendo o mais alto — regra dela, 27/08 —, e não em
+     A cura é na ALTURA, encolhendo o mais alto — regra, 27/08 —, e não em
      `space-between`: o item passa de 38 para 36 px, que é o `--h-escolha` da
      escala desta casa, e o vão entre grupos de 13/11 para 11/9. Com isso o
      conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
      com ZERO de rolagem (era 12 px). */
   .grupo + .grupo{{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}}
-  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026: *«colocar essas
-     fontes com cores em branco. pra ser visível. pq a tela inteira tá meio
-     dificil de ser lida»*) (noqa-acento: citação dela). A cor fica no desenho;
+  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026) (noqa-acento: citação). A cor fica no desenho;
      o texto lê-se. */
   .grupo-rot{{font-size:10.5px;color:var(--branco);
               letter-spacing:.6px;margin-bottom:6px}}
@@ -751,7 +746,7 @@ def main():
      O «No jogo» só aparece quando a troca de botões alcança a peça, e entra no
      lugar do apelido, na MESMA linha: medido no piloto em 01/10/2026, uma linha
      a mais embaixo do nome fazia a página rolar 18 px na janela ladrilhada
-     (1212 x 809), e ela pediu o mapa sem rolagem em 01/09. A marca tracejada no
+     (1212 x 809), e o usuário pediu o mapa sem rolagem em 01/09. A marca tracejada no
      desenho é a mesma notícia.
      É uma CLASSE (`tem`), e não `:has(b:empty)`: medido no WebKitGTK em
      01/10/2026, a regra com `:empty` dentro do `:has()` não se recalcula quando
@@ -775,7 +770,7 @@ def main():
   /* A BARRA DE PROVAS. A gramática é a da lista da direita — mesmo rótulo em
      versalete, mesma família de caixa —, para a barra não parecer colada de
      outra tela. Três blocos, e a BARRA VERTICAL entre eles: é o separador que
-     ela pediu em 27/08 ("uma barra vertical entre os blocos"). */
+     o usuário pediu em 27/08 ("uma barra vertical entre os blocos"). */
   .provas{{display:flex;align-items:stretch;border-bottom:1px solid var(--border-sutil)}}
   .prova{{padding:11px 18px;display:flex;flex-direction:column;gap:7px;justify-content:space-between}}
   .prova + .prova{{border-left:1px solid var(--border-sutil)}}
@@ -801,8 +796,7 @@ def main():
   .prova-nota{{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
                font-size:11px;line-height:1.45;color:var(--branco)}}
 
-  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: *"ok temos um botão pra vir
-     pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
+  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto. Não havia: `grep href` no mapa gerado
      devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
      mockup abre como ARQUIVO, onde nem sempre há um.
      O destino é a aba de onde ela veio (o dono é o `caixa_da_janela.voltar`). */
@@ -822,12 +816,12 @@ def main():
 <div class="cx">
   <div class="topo">
     <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Desde 29/09/2026 só a Conexões abre
-         este mapa (a Controles e a Navegação o perderam, por ordem dela), e por
+         este mapa (a Controles e a Navegação o perderam, por ordem de produto), e por
          isso ela é a reserva de quem abre o arquivo direto. O dono é o
          `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
     {caixa_da_janela.voltar("08-conexoes.html")}
     <h1><span class="p">O mapa do controle</span></h1>
-    <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
+    <!-- A LINHA DE INSTRUÇÃO SAIU — decisão, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende
          só remove isso."* O comportamento FICA: o que sai é a legenda que o
          narrava. Quem passa o mouse descobre em meio segundo; quem não passa

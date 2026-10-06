@@ -1,8 +1,8 @@
 """LUZ-DO-MIC-01 §2 — devolver a posse do `common[8]` REPINTA antes de soltar.
 
 O defeito, medido no aparelho em 02/09/2026 com dois controles na mesa e o olho
-dela: **devolver a posse deixa a luz presa no último valor que escrevemos.**
-Palavra dela: *"ambos tão ligados. e ficaram."*
+de quem confere: **devolver a posse deixa a luz presa no último valor que escrevemos.**
+
 
 A causa está no contrato do kernel: o `hid-playstation` escreve
 `mute_button_led = ds->mic_muted` **na borda do botão físico**, dentro de

@@ -4,11 +4,11 @@ A CURA ESTÁ APLICADA (29/08/2026): ``_perguntar_ao_hidraw`` entra por
 ``abrir_hidraw``. **A mordida se prova arrancando-a**: troque o corpo da função
 pelo ``os.open(caminho, os.O_RDWR | os.O_NONBLOCK)`` de antes e as SEIS
 reprovam, a mordida 1 com ``cor is None`` — que é o "Não sei" dos dois cards
-que ela viu hoje.
+que o usuário viu hoje.
 
-O DEFEITO, MEDIDO NA MESA DELA EM 29/08/2026
+O DEFEITO, MEDIDO NA BANCADA EM 29/08/2026
 --------------------------------------------
-Palavra dela: *"fora que os controles lá em cima tão tudo Não sei ainda."*
+
 
 Os dois cards da aba Controles dizem "Não sei" no lugar da cor, e não é o
 aparelho que se cala. Medido, com o daemon rodando e sem parar nada::
@@ -60,7 +60,7 @@ esta:
 
     gravando no ``cor``, ela declara Cosmic Red -> clica "Não sei" (a entrada
     some do arquivo, como tem de sumir) -> a leitura seguinte grava Cosmic Red
-    de volta. **O gesto dela é desfeito sem rastro.** A asserção "a cor lida
+    de volta. **O gesto do usuário é desfeito sem rastro.** A asserção "a cor lida
     não apaga a cor declarada" não pega isso, porque ``None`` não é declaração:
     é a ausência dela. Mesma classe do ``or "xbox"`` do ``external_mask.py``.
 
@@ -197,7 +197,7 @@ class AparelhoDeMentira:
 
 
 def porta_do_broker(arquivo: Path) -> tuple[Any, BrokerDeMentira, AparelhoDeMentira]:
-    """``(perguntar, broker, aparelho)`` — a mesa dela, com o nó ESCONDIDO."""
+    """``(perguntar, broker, aparelho)`` — a bancada, com o nó ESCONDIDO."""
     broker = BrokerDeMentira(arquivo)
     aparelho = AparelhoDeMentira(fds_aceitos=_ConjuntoVivo(broker.servidos))
     abrir = partial(abrir_hidraw, cliente=broker)
@@ -223,7 +223,7 @@ class _ConjuntoVivo:
 def test_mordida_1_com_o_no_escondido_a_cor_chega_pela_porta_do_broker(
     tmp_path: Path,
 ) -> None:
-    """A mesa DELA: nó 0600 root:root, daemon rodando, broker de pé."""
+    """A bancada: nó 0600 root:root, daemon rodando, broker de pé."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
     perguntar, broker, aparelho = porta_do_broker(arquivo)

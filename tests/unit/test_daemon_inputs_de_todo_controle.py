@@ -1,6 +1,6 @@
 """STATUS-04 — `state_full` publica `inputs` de TODO controle, não só do primário.
 
-A queixa dela, com dois DualSense na mesa: *"não funciona o touch, analogicos
+A queixa de uso, com dois DualSense na mesa: *"não funciona o touch, analogicos
 ... nem giroscopio e acelerometro"*. Parte era taxa de pintura. A outra parte
 estava no daemon, e não era falta de dado: era DESENHO.
 
@@ -13,11 +13,11 @@ motion e touchpad abertos e legíveis ao lado.
 
 **A razão estava escrita, e era medida** (sprint STATUS, 17/07/2026, item
 STATUS-04, adiado de P1 para P2): *"co-op é DEFAULT ON, o checkbox saiu da UI
-(…) no estado normal da máquina dela, TODO secundário já tem reader e o card
+(…) no estado normal da máquina do usuário, TODO secundário já tem reader e o card
 dele já terá inputs só com STATUS-01/02. O buraco real é o modo Nativo (…) e
 emulação-off — cenários em que ela está jogando fullscreen, não olhando a
 GUI."* A aposta continua verdadeira: medido em 04/09/2026 com os dois DualSense
-dela em USB e co-op ligado, os DOIS controles já traziam `inputs` com giro,
+do usuário em USB e co-op ligado, os DOIS controles já traziam `inputs` com giro,
 acelerômetro e touchpad.
 
 **O que caducou foi tratar o buraco como hipotético.** Nos modos em que o co-op

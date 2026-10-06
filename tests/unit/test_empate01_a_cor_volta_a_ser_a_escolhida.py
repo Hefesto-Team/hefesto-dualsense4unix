@@ -4,7 +4,7 @@ Três entregas da fila crítica dos perfis, todas com evidência datada:
 
 **SALVAR-NAO-REBAIXA-01.** `_build_profile_from_editor` terminava com um
 `base.update({name, priority, match})` que sobrescrevia SEMPRE, com o que
-estivesse nos widgets. Medido no disco dela: `Pragmata` era regra de jogo com
+estivesse nos widgets. Medido no disco do usuário: `Pragmata` era regra de jogo com
 prioridade 100 em 26/07 às 23h40 e amanheceu catch-all em 27/07 às 23h04;
 `vitoria.json` caiu de prioridade 100 para 0. Salvar a cor pela aba Perfis
 gravava de volta a leitura empobrecida da tela.

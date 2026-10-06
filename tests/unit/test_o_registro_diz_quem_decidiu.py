@@ -130,7 +130,7 @@ def test_o_lote_de_04_09_so_vira_dela_com_a_prova() -> None:
 
 
 #: As colunas sem as quais uma decisão aberta não se decide vendo: a pergunta,
-#: a recomendação e o preço do outro lado (o pedido dela de 23/08/2026, «decidir
+#: a recomendação e o preço do outro lado (o pedido de 23/08/2026, «decidir
 #: vendo inclui ver o custo»).
 COLUNAS_QUE_MORDEM = (
     "id",
@@ -158,8 +158,8 @@ def test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado() -> None:
 
     `decidida` (e os degraus acima dela na escada: `implementada`, `feita`, `no ar`)
     e `caduca` já foram respondidas por ela (a caduca, substituída por outra fala
-    dela); cobrar o preço delas castiga quem fez a correção certa.
-    MORDE: esvaziar o `preco_do_outro_lado` de uma linha que espera a palavra dela.
+    do usuário); cobrar o preço delas castiga quem fez a correção certa.
+    MORDE: esvaziar o `preco_do_outro_lado` de uma linha que espera a palavra de produto.
     """
     import sys
 
@@ -180,7 +180,7 @@ def test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado() -> None:
 
 
 def test_a_regra_do_preco_morde_numa_copia(tmp_path, monkeypatch) -> None:
-    """Hoje nenhuma decisão espera a palavra dela, e a regra acima passa por vazio.
+    """Hoje nenhuma decisão espera a palavra de produto, e a regra acima passa por vazio.
 
     A mordida mora aqui: uma linha `aberta` sem o preço, e um cabeçalho sem a coluna.
     """

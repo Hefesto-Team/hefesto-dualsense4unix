@@ -63,7 +63,7 @@ _ALCANCE_O_QUE_SOBRA = " Aqui embaixo ela ainda vale."
 #: virtual, o jogo ainda enxerga o físico. O sujeito é o sistema, não o Hefesto
 #: (a régua é `scripts/check_a_tela_nao_confessa.py`). A Navegação saiu daqui em
 #: `D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO`: lá nenhum jogo recebe gamepad
-#: por decisão dela (`D-1409`), e a intensidade guardada vale quando ele chega.
+#: por decisão de produto (`D-1409`), e a intensidade guardada vale quando ele chega.
 _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU = (
     "o Status já está em “Ligado”, e o sistema não deixou o Hefesto criar o "
     "gamepad virtual."
@@ -103,7 +103,7 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
        (VPAD-09): o jogo ainda vê o físico e a intensidade não passa. É a única
        frase de defeito. **Na Navegação não há aviso** (emulação desligada,
        ``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO``): nenhum jogo recebe
-       gamepad ali, por decisão dela (``D-1409``), e a intensidade fica
+       gamepad ali, por decisão de produto (``D-1409``), e a intensidade fica
        guardada e vale no primeiro pedido de um jogo com gamepad;
     3. **Conexão Nativa (Sony) sem gamepad virtual?** A intensidade também não
        alcança, mas é o modo funcionando como deve: a frase não manda consertar
@@ -151,8 +151,8 @@ def texto_do_teto_do_orcamento(
 
     CONFIG-05 (22/08/2026), e ela é a metade visível da invariante **teto, não
     troca**: o orçamento CALCULA, a aba de origem só EXIBE. Nada aqui reescreve
-    a escolha dela — os quatro botões seguem afundando onde ela os pôs, o
-    deslizador segue mostrando o número que ela escolheu, e voltar o orçamento
+    a escolha do usuário — os quatro botões seguem afundando onde ela os pôs, o
+    deslizador segue mostrando o número que o usuário escolheu, e voltar o orçamento
     para Balanceado devolve tudo sem um clique a mais. Espelhar estado entre
     abas é a classe de defeito que a `ABAS-01` curou, e esta linha é o formato
     que não a repete.

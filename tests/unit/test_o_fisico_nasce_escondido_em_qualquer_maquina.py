@@ -298,7 +298,7 @@ def montar(
 
 
 def _a_regra_de_antes() -> str:
-    """O conteúdo como a mesa dela o tinha até 25/09: `MODE=`, sem atribuição final."""
+    """O conteúdo como a bancada o tinha até 25/09: `MODE=`, sem atribuição final."""
     return a_regra_do_no().read_text(encoding="utf-8").replace(
         'MODE:="0600", OWNER:="root", GROUP:="root"', 'MODE="0600", OWNER="root", GROUP="root"'
     )

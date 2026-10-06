@@ -3,7 +3,7 @@
 O invariante é o da MONITOR-QUE-VENCE-01 (08/08/2026), e ele cabe numa linha:
 **um microfone de verdade nunca pode perder para um monitor.** Monitor é o laço
 de retorno do que SAI; eleger um como microfone padrão é gravar o áudio do jogo
-no lugar da voz dela.
+no lugar da voz do usuário.
 
 Em 08/08 esse invariante foi aplicado ao microfone do CABO, pelo drop-in 51 do
 WirePlumber (``priority.session = 1500``). O canal do RÁDIO ficou de fora — e
@@ -17,7 +17,7 @@ Lá ela ficou em **200** por catorze dias depois da medição, com um comentári
 dizendo espelhar o drop-in 51 — espelhando a versão de 25/07, que rebaixava
 para 50 e foi substituída.
 
-MEDIDO NA MÁQUINA DELA EM 03/09/2026, com um DualSense no cabo e a webcam
+MEDIDO NA MÁQUINA DO USUÁRIO EM 03/09/2026, com um DualSense no cabo e a webcam
 plugada (``LC_ALL=C pactl list sources``)::
 
     alsa_output.pci-…hdmi-stereo.monitor                  696
@@ -82,7 +82,7 @@ def _prioridade_da_entrada_no_dropin() -> int | None:
 
 
 def test_o_canal_do_radio_vence_qualquer_monitor() -> None:
-    """A voz dela, pelo rádio, nunca pode perder para o laço do que sai."""
+    """A voz do usuário, pelo rádio, nunca pode perder para o laço do que sai."""
     assert bt.PRIORIDADE_SESSAO_DA_PONTE > MONITOR_MAIS_ALTO_MEDIDO, (
         f"a source da ponte nasce em {bt.PRIORIDADE_SESSAO_DA_PONTE}, e o "
         f"monitor mais alto desta bancada foi MEDIDO em "

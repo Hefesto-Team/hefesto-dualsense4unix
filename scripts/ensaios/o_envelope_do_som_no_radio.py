@@ -210,7 +210,7 @@ def main() -> int:
             fechar()
         print("\nporta fechada.")
 
-    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem coordena escreve):")
+    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem roda escreve):")
     for nome, envelope, resposta in respostas:
         print(linha_do_caderno(
             id=f"som-radio-envelope-{envelope}-{nome}-{'crc-errado-' if args.crc_errado else ''}{time.strftime('%d%m')}",

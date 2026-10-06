@@ -674,7 +674,7 @@ def _o_dia_do_reparo(desenho) -> object:
 
 @pytest.mark.parametrize("dia", ["bom", "reparo"])
 def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
-    """Os cartões ACHADOS oferecem os mesmos botões — o pedido dela, *"todos os"""
+    """Os cartões ACHADOS oferecem os mesmos botões — o pedido, *"todos os"""
     desenho, _a07 = _aba07
     lida = _o_dia_bom(desenho) if dia == "bom" else _o_dia_do_reparo(desenho)
     cartoes = desenho.cartoes(lida)
@@ -686,7 +686,7 @@ def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
 
 
 def test_a_lista_vazia_nao_ocupa_linha_no_cartao(_aba07) -> None:
-    """Sem jogo excluído, o cartão não ganha pé — palavra dela, 21/09/2026:"""
+    """Sem jogo excluído, o cartão não ganha pé — palavra, 21/09/2026:"""
     desenho, a07 = _aba07
     lida = _o_dia_bom(desenho)
     antes = desenho.cartoes(lida)

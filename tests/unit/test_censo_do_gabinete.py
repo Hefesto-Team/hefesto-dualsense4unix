@@ -239,7 +239,7 @@ def _censo_com_a_palavra_dela():
 
 
 def test_o_install_nao_apaga_o_que_ela_ensinou():
-    """**A MORDIDA.** A segunda instalação não pode zerar a resposta dela."""
+    """**A MORDIDA.** A segunda instalação não pode zerar a resposta de produto."""
     antigo = _censo_com_a_palavra_dela()
     novo = censo_desta_bancada(dmidecode="")
     herdado = cg.preservar_o_que_ela_disse(novo, antigo, dict(PLACA_DESTA_BANCADA))

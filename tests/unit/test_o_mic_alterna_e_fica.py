@@ -1,4 +1,4 @@
-"""**O 🎙 é uma TRAVA, não um gatilho — ordem dela, 21/09/2026, em caixa alta.**"""
+"""**O 🎙 é uma TRAVA, não um gatilho — ordem, 21/09/2026, em caixa alta.**"""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ class TestOBotaoEUmaTrava:
         assert not mesa[0].terminou, "o retorno morreu no mesmo clique"
 
     def test_o_clique_seguinte_desliga(self, mesa):
-        """O SEGUNDO CLIQUE APAGA, e é a metade da ordem dela que faltava."""
+        """O SEGUNDO CLIQUE APAGA, e é a metade da ordem de produto que faltava."""
         monitor_do_microfone.ligar(UNIQ, f"hefesto_mic_{marca_do_aparelho(UNIQ)}")
         assert monitor_do_microfone.esta_ligado(UNIQ)
         monitor_do_microfone.desligar(UNIQ)
@@ -126,7 +126,7 @@ class TestOFechoNaoDeixaMicrofoneAberto:
 
 class TestATelaRefleteOsDoisEstados:
     def test_o_campo_do_botao_e_o_do_retorno(self):
-        """Ela pediu que o clique REFLITA na tela."""
+        """O usuário pediu que o clique REFLITA na tela."""
         pagina = PAGINA.read_text(encoding="utf-8")
         assert 'data-gesto="mic-retorno" data-campo="mic-retorno"' in pagina
 

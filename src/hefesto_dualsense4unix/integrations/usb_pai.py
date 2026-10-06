@@ -40,7 +40,7 @@ placa ALSA nenhuma** (medido 15/08/2026 — a placa segue o transporte). Para
 esses controles a resposta honesta deste módulo é a ausência, e quem chama tem
 de dizer isso na tela em vez de emprestar a placa do vizinho.
 
-UNIVERSALIDADE (o que ela pediu em 15/08/2026)
+UNIVERSALIDADE (o que o usuário pediu em 15/08/2026)
 -----------------------------------------------
 
 Nada aqui olha MAC, ordem de conexão, número de controles ou nome de máquina.

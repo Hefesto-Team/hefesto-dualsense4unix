@@ -98,7 +98,7 @@ def test_a_volta_para_so_no_controle_derruba_o_mix_e_mantem_a_saida(
 def test_a_escolha_de_um_nao_mexe_no_no_do_vizinho(
     bancada: Pactl, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A régua de aceitação DELA: *"sem impactar os demais"*."""
+    """A régua de aceitação DO USUÁRIO: *"sem impactar os demais"*."""
     nome = escrever_perfil({P1: af.FONTE_SFX, P2: af.FONTE_MIX})
     _sub, ger = subsystem_e_gerenciador(
         nome, ponte_do_radio_por_controle=lambda _uniq: (lambda: True)

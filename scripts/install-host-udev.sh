@@ -234,7 +234,7 @@ fi
 # é 0 quando o uid resolve root, quando o grupo da sessão não resolve, ou
 # quando o formato não traz o binário/as units —, gravar a regra fechada
 # entregaria um DualSense INUTILIZÁVEL: nó fechado, ninguém para abri-lo, e o
-# conserto exigindo `sudo`. O produto é para qualquer usuário (ordem dela,
+# conserto exigindo `sudo`. O produto é para qualquer usuário (ordem de produto,
 # 11/09/2026).
 #
 # Então: broker entra ⇒ regra FECHADA; broker não entra ⇒ regra ABERTA, pela
@@ -339,7 +339,7 @@ done
 
 # O-NO-NASCE-FECHADO-01: de onde sai a regra do nó que vai para /etc (ver o
 # bloco do `REGRA_ABERTA_SH`, lá em cima). Por default é o asset FECHADO — a
-# decisão dela. Sem broker, é a variante ABERTA; sem o helper da
+# decisão de produto. Sem broker, é a variante ABERTA; sem o helper da
 # transformação, ela não vai para /etc nenhuma (a do pacote, aberta, continua
 # valendo).
 REGRA_DO_NO="73-hefesto-ps5-controller.rules"
@@ -561,7 +561,7 @@ _build_install_cmd() {
     # conf são OPT-IN (`./install.sh --uhid-contrapressao`), e os pacotes não
     # os levam (`X-HefestoNaoEmpacotado` na própria conf) — ligar muda o
     # `write(2)` de todo HID por Bluetooth da máquina, e ninguém leva isso sem
-    # pedir. Então aqui não se instala nada novo: o pedido dela é a conf em
+    # pedir. Então aqui não se instala nada novo: o pedido é a conf em
     # /etc/modprobe.d, gravada pelo install, e só com ela no disco o parâmetro
     # é rearmado — o pedido que já está na máquina volta a valer agora, sem
     # recarregar o uhid (que derrubaria todo HID por Bluetooth). Sem a conf, o

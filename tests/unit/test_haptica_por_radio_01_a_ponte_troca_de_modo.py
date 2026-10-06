@@ -1,7 +1,7 @@
 """HAPTICA-POR-RADIO-01 (P4) — o daemon publica o endpoint e troca de modo.
 
 O escritor do controle é **UM SÓ**: dois disputam o nibble de sequência e os
-enables, e foi assim que o microfone dela ficou desligado 93 vezes por segundo
+enables, e foi assim que o microfone do usuário ficou desligado 93 vezes por segundo
 em 10/09 — e foi assim que ela sentiu atraso em TODOS os inputs do jogo na
 bancada de 18/09, com o ensaio escrevendo por fora.
 

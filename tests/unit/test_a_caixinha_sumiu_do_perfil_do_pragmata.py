@@ -40,7 +40,7 @@ CABECALHO = (
 
 
 def _match_dela() -> MatchCriteria:
-    """O match como está no disco dela — os dois campos, na mesma ordem."""
+    """O match como está no disco do usuário — os dois campos, na mesma ordem."""
     return MatchCriteria(window_class=[WM_JOGO], process_name=[EXE_DO_JOGO])
 
 

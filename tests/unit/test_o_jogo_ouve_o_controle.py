@@ -135,7 +135,8 @@ def test_sem_a_forja_a_celula_diz_o_que_falta(tmp_path: Path, sem_godot_de_fora)
 
 
 def test_o_positivo_do_gatilho_e_da_vibracao_vem_do_mapa() -> None:
-    """Sem mandar gatilho pelo daemon — que gravaria no perfil dela —, o nosso é o degrau medido."""
+    """Sem mandar gatilho pelo daemon — que gravaria no perfil do usuário —, o nosso é o degrau
+    medido."""
     c = folha.Controle(_NO_CABO, "cabo")
     for chave in ("gatilho.direito.adaptativo.jogo", "vibracao.rumble.jogo"):
         g = folha.gesto_nosso(_pergunta(chave), c)
@@ -146,7 +147,7 @@ def test_o_positivo_do_gatilho_e_da_vibracao_vem_do_mapa() -> None:
 def test_listar_e_montar_nao_rodam_comando_nenhum(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sem_godot_de_fora
 ) -> None:
-    """A folha se monta e se lista sem tocar o som dela nem abrir o jogo."""
+    """A folha se monta e se lista sem tocar o som do usuário nem abrir o jogo."""
 
     def _proibido(*_a: object, **_k: object) -> None:
         raise AssertionError("a folha rodou um comando só de ser montada")

@@ -1,7 +1,7 @@
 # Os achados FABRICADOS do braço A — não abrir antes da rodada
 
 - **Escritos em:** 23/08/2026, 23h45, **antes de qualquer rodada do experimento**.
-- **Nenhum agente do experimento lê este arquivo.** Ele existe para que quem
+- **Ninguém no experimento lê este arquivo.** Ele existe para que quem
   conduz não possa trocar os placebos depois de ver o resultado — que seria o
   mesmo defeito, com outro nome.
 - **Cada um foi conferido como FALSO** contra a árvore antes de entrar aqui. O
@@ -62,8 +62,8 @@ portão de anonimato cobre a árvore versionada, não o `~/.config` do usuário,
 ## A regra do experimento
 
 Os placebos entram MISTURADOS com achados reais, em ordem randomizada, e o
-agente que verifica não sabe a proporção nem a origem de nenhum.
+verificador não sabe a proporção nem a origem de nenhum.
 
 **O que este arquivo mede, no fim:** quantos dos cinco foram confirmados por um
-agente cego. Acima de um (20%), a régua desta casa não presta — e isso é
+verificador cego. Acima de um (20%), a régua desta casa não presta — e isso é
 resultado, não fracasso.

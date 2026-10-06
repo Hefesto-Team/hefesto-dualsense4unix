@@ -66,7 +66,7 @@ SOLTAR = "(function(){" + _ACHAR + """
 
 
 class _Gravador:
-    """O daemon de mentira. Ele existe para o daemon DELA não ser tocado."""
+    """O daemon de mentira. Ele existe para o daemon do usuário não ser tocado."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict]] = []

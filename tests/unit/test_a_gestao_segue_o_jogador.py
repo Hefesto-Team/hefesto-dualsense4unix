@@ -12,9 +12,9 @@ tela, e este arquivo guarda as três.
    `data-pref`, o número do jogador (`monta._endereco_do_chip`), e escreve as
    regras dos QUATRO lugares.
 2. **AS FRASES CABO/RÁDIO QUE SOBRARAM NA 08.** A palavra de tela do
-   transporte é USB/BT (decisão dela de 21/09, a I9 revogada). A régua pergunta
+   transporte é USB/BT (decisão de 21/09, a I9 revogada). A régua pergunta
    a palavra ao dono (`home_actions.palavra_do_transporte`) e nunca a digita: a
-   régua de 06/09 que negava `"USB"` teria reprovado a decisão dela.
+   régua de 06/09 que negava `"USB"` teria reprovado a decisão de produto.
 3. **OS TEXTOS QUE NEGAVAM O SOM PELO RÁDIO.** O som sai pelo `0x35` desde
    10/09, e a `PonteDeSomPorRadio` o escreve por controle. Os três que a
    sprint nomeia, e os quatro que o grep da frase achou citando a proibição

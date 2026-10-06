@@ -20,7 +20,7 @@ montado com o mesmo dado que a função lia.*
 O ORÁCULO DA CLASSE NÃO SAI DO CÓDIGO
 ======================================
 `e_controle` decide pela *class of device* que o aparelho anuncia, não pelo
-nome. O número contra o qual ela é medida — 9480 — foi lido na mesa dela em
+nome. O número contra o qual ela é medida — 9480 — foi lido na bancada em
 20/09/2026 (`busctl get-property … org.bluez.Device1 Class` nos seis objetos de
 DualSense do BlueZ, que também respondem `Icon` = `input-gaming`). Montar o
 esperado a partir de `CLASSE_MAIOR_PERIFERICO` seria tautologia.
@@ -40,7 +40,7 @@ PROVA DE MORDIDA (20/09/2026), cada arrancada devolvida em seguida. Controle:
      "não havia ninguém", e a pessoa repetiria PS + Create contra uma varredura
      que nunca rodou;
   d) `e_controle` ignorando a classe MENOR (só a maior decide) — **1
-     reprovação**: o teclado dela, que é periférico como o controle, entraria
+     reprovação**: o teclado do usuário, que é periférico como o controle, entraria
      na lista de controles;
   e) o laço de candidatos arrancado da PONTE, do outro lado — **3 reprovações**
      aqui. É o que prova que as réguas de ponta a ponta medem o script, e não
@@ -98,7 +98,7 @@ def test_a_classe_do_dualsense_medida_na_mesa_dela_e_controle() -> None:
 
 
 def test_o_que_nao_e_controle_fica_de_fora() -> None:
-    """Fone, celular e teclado não entram na lista de controles dela."""
+    """Fone, celular e teclado não entram na lista de controles do usuário."""
     assert gp.e_controle(CLASSE_DO_FONE) is False
     assert gp.e_controle(CLASSE_DO_CELULAR) is False
     assert gp.e_controle(CLASSE_DO_TECLADO) is False

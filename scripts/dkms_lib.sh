@@ -406,7 +406,7 @@ _dkms_initramfs_desatualizado() {
 #: pipeline inteiro reprovar. A guarda `if ! …` inverte isso e vira SEMPRE
 #: verdadeira — o passo protegido roda sempre.
 #:
-#: MEDIDO na máquina dela em 01/09/2026, com os módulos `installed` nos dois
+#: MEDIDO na máquina do usuário em 01/09/2026, com os módulos `installed` nos dois
 #: kernels: o instalador chamava `dkms add` num pacote já adicionado, o dkms
 #: recusava com *"DKMS tree already contains"*, e o aviso dizia **"in-tree
 #: continua"** — sobre dois módulos que estavam instalados e EM USO

@@ -47,7 +47,7 @@ class TestOGanhoTemOndePegar:
                 f"do input, em vez de mover o cursor: {tag}")
 
     def test_o_ganho_desceu_para_linha_propria(self, alvo: pathlib.Path) -> None:
-        """A POSIÇÃO É DELA, e ela a aprovou por imagem."""
+        """A POSIÇÃO É DO USUÁRIO, e ela a aprovou por imagem."""
         corpo = alvo.read_text(encoding="utf-8")
         assert re.search(r'<div class="vol ganho"', corpo), (
             "o ganho não é uma linha de volume — ele voltou para a linha do "
@@ -170,7 +170,7 @@ def test_a_razao_do_cinza_e_a_mesma_da_recusa() -> None:
 
 
 class TestOGanhoViajaNoPerfil:
-    """**21/09/2026 — a segunda metade da ordem dela, e a que faltava.**"""
+    """**21/09/2026 — a segunda metade da ordem de produto, e a que faltava.**"""
 
     def _perfil_vazio(self):
         from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile

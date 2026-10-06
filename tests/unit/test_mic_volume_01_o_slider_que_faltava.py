@@ -1,6 +1,6 @@
 """MIC-VOLUME-01 (16/08/2026) — o controle deslizante que faltava no microfone.
 
-**O pedido dela**, olhando a aba Status::
+**O pedido**, olhando a aba Status::
 
     "esse botão de silenciar some. dá espaço a um slicer de microfone pra
      definir o volume do microfone real (independente de saber se tá via bt
@@ -9,7 +9,7 @@
     "ao clicarmos em salvar perfil ou aplicar no perfil ativo ele de fato o
      faz e na próxima sessão lembra disso"
 
-**A assimetria que ela viu na tela existia no código.** O bloco do alto-falante
+**A assimetria que o usuário viu na tela existia no código.** O bloco do alto-falante
 tinha nível, volume e silenciar; o do microfone tinha nível e silenciar. E o
 perfil guardava `volume`/`muted`/`rota` do alto-falante contra **um booleano**
 do microfone — então nem havia onde lembrar o valor.
@@ -31,7 +31,7 @@ transportes é uma FONTE no sistema — no cabo o source ALSA do controle, no
 rádio o source que a ponte de áudio publica. Quem chama não escolhe caminho.
 O ganho do aparelho (`common[6]`) é o segundo degrau, medido só no cabo. Fato
 substituído em 29/09/2026: esta linha dizia que o DualSense não expõe
-registrador de ganho de microfone; a bancada dela o mediu em 09/09/2026.
+registrador de ganho de microfone; a bancada o mediu em 09/09/2026.
 
 **E `sem_fonte` é resposta, não falha.** Por Bluetooth, sem a ponte de pé, não
 existe fonte de captura (medido em 16/08: `pactl list cards` traz só as duas
@@ -262,7 +262,7 @@ class TestAsDuasCamadasNaoSeMisturam:
 
 
 class TestOMicChegaAoRascunho:
-    """A metade de CIMA do caminho: o dedo dela chega ao rascunho do perfil?"""
+    """A metade de CIMA do caminho: o dedo do usuário chega ao rascunho do perfil?"""
 
 
     def test_perfil_sem_secao_mic_continua_sem_ganhar_uma(self) -> None:

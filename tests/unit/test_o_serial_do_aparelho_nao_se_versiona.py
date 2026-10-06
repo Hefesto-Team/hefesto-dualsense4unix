@@ -1,6 +1,6 @@
 """O número de série de um aparelho não entra em arquivo versionado.
 
-O PEDIDO É DELA — 03/09/2026. Ao ver o serial do controle dela aparecer numa
+O PEDIDO É DE PRODUTO — 03/09/2026. Ao ver o serial do controle do usuário aparecer numa
 leitura de ``daemon.state_full``, a pergunta foi *"vale um portão para número de
 série?"*, e a resposta foi **sim, faz o portão pro número de série**.
 

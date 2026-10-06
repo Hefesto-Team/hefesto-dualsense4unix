@@ -18,7 +18,7 @@ outras duas ficou sem nenhuma.
 
 A CURA É REUSO, e as frases já existiam há muito: uma `Ordem` traz TRÊS linhas
 (`ordens_da_mesa.Ordem.linhas`), com os rótulos de
-`exame_da_mesa.ROTULOS_DA_ORDEM` — *"O que eu vi aqui"*, *"Por que importa"*,
+`exame_da_mesa.ROTULOS_DA_ORDEM`, *"Por que importa"*,
 *"Ganho esperado"*. A primeira é o `porque` que a linha já mostra; as outras
 duas são exatamente o que o `?` promete, e as três telas do produto já as
 escreviam — o card do GTK (`secao_exame._linha_da_ordem`) e o `--exame` no
@@ -108,7 +108,7 @@ def test_ele_traz_as_duas_frases_do_produto_com_o_rotulo_delas() -> None:
 
 
 def test_ele_nao_repete_a_linha_que_esta_ao_lado() -> None:
-    """DECISÃO 9 DELA, e ela continua valendo: *"o `?` para de repetir a linha"*."""
+    """DECISÃO 9 DO USUÁRIO, e ela continua valendo: *"o `?` para de repetir a linha"*."""
     linha = a08._linha(_item_de_ordem())
     assert linha["porque"] == VI, "a linha deixou de mostrar a medição"
     assert VI not in linha["dica"], (

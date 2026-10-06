@@ -14,7 +14,7 @@ continuava fechado: **24 px de altura contra os 358 de um cartão aberto**. O
 dado dela chegava e ficava invisível. Só recarregar a página desfazia.
 
 POR QUE O DESENHO NÃO RESOLVIA: o P3 e o P4 nascem com a marca cravada no HTML,
-por decisão dela de 31/08. Uma marca que o HTML crava e o produto só sabe
+por decisão de 31/08. Uma marca que o HTML crava e o produto só sabe
 acrescentar é uma marca de mão única.
 
 **ESTA RÉGUA RODA O JS, e não o lê.** O passo `1b`/`1c` é extraído do

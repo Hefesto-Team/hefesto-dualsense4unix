@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """O PERFIL ATIVO, lido de quem já é dono dele — `profiles/loader.py`.
 
-POR QUE ESTE ARQUIVO EXISTE, e ele nasceu de um erro meu que ela pegou em
-01/09/2026 com uma pergunta só: *"vc tá corrigindo na origem esses problemas que
-tá relatando né?"*
+POR QUE ESTE ARQUIVO EXISTE: ele nasceu de um erro apanhado em
+01/09/2026 com uma pergunta só
 
 A resposta era NÃO. O pacote trazia dezessete valores `sem_dono` — travessões
 na tela, com uma frase explicando que o produto não sabia aquilo. **Doze deles
@@ -16,9 +15,9 @@ tinham dono**, e o dono era o perfil:
     key_bindings                   os gestos                      1/33 perfis
 
 O ERRO TEVE UMA FORMA SÓ, a que `portao_a_casa_sabe_e_o_produto_nao_faz.py` nomeia —
-*a casa sabe e o produto não faz*: **perguntei só ao `state_full` do daemon.** Ele não publica
-gatilho nem brilho; concluí "não tem dono" e escrevi o travessão. O dado estava
-no disco dela o tempo todo, e a `gui/aba_*.py` que ela usa hoje já o lê.
+*a casa sabe e o produto não faz*: **perguntou-se só ao `state_full` do daemon.** Ele não publica
+gatilho nem brilho; concluiu-se "não tem dono" e escreveu-se o travessão. O dado estava
+no disco do usuário o tempo todo, e a `gui/aba_*.py` que o usuário usa hoje já o lê.
 
 O QUE O PERFIL É, e a distinção muda o que a tela deve dizer: ele é o que está
 **salvo**, não o que está **aplicado**. Para a cor da barra isso importa — o
@@ -84,12 +83,12 @@ def nome_do_ativo(state: Any = None) -> str:
     continuariam cegas.
 
     O DONO DA PERGUNTA É `profiles_actions.perfil_que_esta_valendo` (§P1), e
-    ele resolve em DUAS pernas: o daemon primeiro, a escolha dela no disco
+    ele resolve em DUAS pernas: o daemon primeiro, a escolha do usuário no disco
     depois (`utils.session.a_escolha_dela`, o mesmo dono que o boot pergunta).
     O ``state.get("active_profile")`` CRU só tem a primeira.
 
     O QUE ISSO CURA, MEDIDO em 06/09/2026 com um perfil no disco e o daemon
-    respondendo ``active_profile: null`` — que é o estado da máquina dela
+    respondendo ``active_profile: null`` — que é o estado da máquina do usuário
     descrito em `perfil_que_esta_valendo` e reproduzido em régua::
 
         perfil.ativo("régua")   ->  {'name': 'régua', …}
@@ -132,7 +131,7 @@ def ativo(nome: str | None) -> dict[str, Any]:
 
     O `{}` faz cada valor virar travessão, que é o que a tela sabe mostrar. Essa
     é a diferença entre "não há perfil agora" e "este valor não tem dono": a
-    primeira é um estado, a segunda era um erro meu.
+    primeira é um estado, a segunda era um erro.
 
     NOME VAZIO NÃO É "NÃO HÁ" — 06/09/2026, PERFIL-MODO-01 Passo 2. Todo
     chamador desta função passa ``ctx.state.get("active_profile")``, e esse
@@ -342,7 +341,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     O REAPLICAR É O `profile.reaplicar` (01/10/2026,
     O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, item 9 da
     cura): era o `profile.switch`, que é a ativação À MÃO — a cada clique que
-    grava, o perfil que vale virava a escolha dela, e com um perfil de jogo
+    grava, o perfil que vale virava a escolha do usuário, e com um perfil de jogo
     posto pelo autoswitch ela passava a abrir o Hefesto naquele jogo. O
     `profile.reaplicar` roda a mesma cadeia da ativação sem gravar a escolha
     (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01).
@@ -377,7 +376,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     docstring dele diz por que o campo cru não serve::
 
         "Sobrevive ao daemon responder ``active_profile: null``, que é o estado
-         da máquina dela hoje"
+         da máquina do usuário hoje"
 
     Com ``null``, ``ativo_agora`` ficava vazio, o ``if`` era falso e o
     ``profile.switch`` **nunca saía**. O `.json` mudava no disco e o controle
@@ -435,7 +434,7 @@ def reaplicar(nome: str, ctx: Any, p: Any, *, era: str = "") -> None:
 def com_a_carona(frase: str = "") -> str:
     """Repõe o atalho de inicialização que a Steam comeu, e junta a notícia à frase.
 
-    CARONA-DO-WRAPPER-01 (16/08/2026), e **o desenho é dela**: *"nem precisa ter
+    CARONA-DO-WRAPPER-01 (16/08/2026), e **o desenho é do usuário**: *"nem precisa ter
     um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar ou salvar
     o perfil seja dentro ou fora da guia de perfis."*
 
@@ -443,7 +442,7 @@ def com_a_carona(frase: str = "") -> str:
     qualquer coisa escrita nela substitui a chamada do `hefesto-launch` em
     silêncio. Sem o atalho, o `launch_env` que o daemon materializa nunca é
     lido — o jogo é instruído a ignorar o vpad que nós criamos para ele. Nas
-    palavras dela: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
+    palavras de produto: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
     no controle com tudo funcionando"*.
 
     POR QUE AQUI, E NÃO NO PACOTE DE UMA ABA — 06/09/2026, ONDA5-07-02
@@ -463,9 +462,9 @@ def com_a_carona(frase: str = "") -> str:
     declara ter de rodar — *"Só em thread worker: lê disco e o `/proc`"*. Chamar
     `passada()` daqui é o mesmo trabalho sem a segunda troca de thread.
 
-    `ligada()` É O PORTÃO E NÃO UM `if` MEU: ele é o mesmo que a janela estável
+    `ligada()` É O PORTÃO E NÃO UM `if` LOCAL: ele é o mesmo que a janela estável
     consulta, e é o que desliga a carona na suíte (a `conftest.py` põe
-    `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta casa não vai ao `/proc` dela,
+    `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta casa não vai ao `/proc` do usuário,
     e não reescreve a biblioteca da máquina em que roda.
 
     NUNCA LEVANTA. Ela é efeito colateral de um gesto que já deu certo: uma
@@ -474,7 +473,7 @@ def com_a_carona(frase: str = "") -> str:
     O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. `frase` vazia de volta quer dizer
     *não diga nada*: sem nada a repor, `ResultadoDaCarona.frase` é vazia
     (`carona_do_wrapper.py:197`) e quem chamou volta a devolver `None` — o "deu
-    certo" é a piscada verde de ~1,5 s (decisão dela, `03-Q4`), **sem palavra
+    certo" é a piscada verde de ~1,5 s (decisão de produto, `03-Q4`), **sem palavra
     nova na tela**. A carona só fala quando tem notícia.
 
     OS DOIS REGISTROS DE CHAMADA, e os dois são legítimos:
@@ -490,7 +489,7 @@ def com_a_carona(frase: str = "") -> str:
     (`_carona_ja_avisado`), que impede o mesmo aviso a cada gesto. As duas
     dependem do `GLib.timeout_add` da janela e são território do piloto — não
     deste pacote. Enquanto elas não vierem, um reparo adiado é REDITO a cada
-    gesto dela; é ruído conhecido, com endereço, e não defeito novo.
+    gesto do usuário; é ruído conhecido, com endereço, e não defeito novo.
     """
     from hefesto_dualsense4unix.app.actions import carona_do_wrapper as carona
 
@@ -573,7 +572,7 @@ def a_volta_do_perfil(ctx: Any, p: Any) -> None:
 
     O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01: os três botões que gravam ou mandam
     perfil terminam com a parte do «Atualizar» (aba Sistema) e do «Reconectar
-    controles» (aba Jogar) que é do perfil. É a «versão leve» que ela escolheu
+    controles» (aba Jogar) que é do perfil. É a «versão leve» que o usuário escolheu
     em 29/09 (respostas 42, 43 e 44 da sprint):
 
     1. ``launch_env.refresh``: os arquivos que a Steam lê ao abrir um jogo. Não

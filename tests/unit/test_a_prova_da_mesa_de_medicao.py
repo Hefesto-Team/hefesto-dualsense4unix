@@ -540,11 +540,9 @@ def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
         pg.close()
 
 
-# O QUE ELA PEDIU EM 07/09/2026, com quatro DualSense na mesa e o daemon parado
+# O QUE O USUÁRIO PEDIU EM 07/09/2026, com quatro DualSense na mesa e o daemon parado
 def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
-    """*"não estamos usando o nosso mapa? pq até agora ele não entendeu qual
-    player deveria aparecer, nem qual controle (…) nem o modo de conexão (qual
-    é bt e qual é cabo) se tá ou não carregando"*.
+    """**.
 
     A página só sabia perguntar ao daemon, e com ele parado punha travessão em
     tudo — como se não houvesse controle nenhum, tendo QUATRO. Tudo isto o
@@ -603,7 +601,7 @@ def test_a_cor_que_ela_disse_fica_guardada_pelo_endereco(lar, monkeypatch) -> No
 
 
 def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
-    """*"coisas que eu precisa fazer todos separados um por vez (…) afinal"""
+    """Teste de mãos e ouvidos roda um controle de cada vez."""
     ts = med.todos_os_testes()
     por_id = {t.id: t for t in ts}
     assert por_id["roteiro-06"].um_por_vez, "a vibração tem de ser um por vez"
@@ -617,7 +615,7 @@ def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
 
 
 def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
-    """*"O COMO é obrigatório (…) isso aqui me quebra. isso eu espero que a"""
+    """O «como» de cada teste já vem pronto na página; ninguém o preenche."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
         alvo = next(t for t in _testes_da_pagina(s.url)
@@ -893,7 +891,7 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
 
 
 def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
-    """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,"""
+    """** — 07/09/2026,"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1400, "height": 1050})
         pg.goto(s.url)

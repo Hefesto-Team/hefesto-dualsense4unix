@@ -4,7 +4,7 @@ O DEFEITO, e ele desligava TRÊS guardas de uma vez. A aba lia
 ``ctx.state.get("active_profile")`` cru, em cinco lugares. A docstring do dono
 da pergunta — ``profiles_actions.perfil_que_esta_valendo:574`` — diz, com estas
 palavras, que o daemon responder ``active_profile: null`` é *"o estado da
-máquina dela hoje"*. Com o ``null``:
+máquina do usuário hoje"*. Com o ``null``:
 
     ativar     deixava de recusar o perfil que JÁ está valendo, e voltava a
                dizer "aplicado" sobre um não-evento

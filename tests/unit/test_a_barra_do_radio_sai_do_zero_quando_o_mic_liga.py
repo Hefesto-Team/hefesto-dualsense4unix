@@ -19,7 +19,7 @@ A CADEIA TEM TRÊS ELOS, e este arquivo guarda os três
 A LINHA DE BASE, e ela é o controle negativo desta entrega
 -----------------------------------------------------------
 
-Medida na bancada dela às 22h de 22/08/2026 e refeita às 00h de 23/08, com a
+Medida na bancada às 22h de 22/08/2026 e refeita às 00h de 23/08, com a
 régua do PRODUTO (`daemon.state_full` mais `ocupacao_por_adaptador`): quatro
 DualSense no rádio, distribuídos 1/2/1 em três adaptadores, e a coluna de áudio
 em **zero nos três** — não porque o rádio recusou, mas porque ninguém pediu.
@@ -71,7 +71,7 @@ MESA = {UM: ADAPTADOR_A, DOIS: ADAPTADOR_B, TRES: ADAPTADOR_B, QUATRO: ADAPTADOR
 
 
 def _bancada() -> tuple[Any, Any]:
-    """Um `/sys/class/hidraw` de mentira com os quatro nós da mesa dela."""
+    """Um `/sys/class/hidraw` de mentira com os quatro nós da bancada."""
     nos = {
         f"hidraw{indice}": {"HID_UNIQ": uniq, "HID_PHYS": adaptador}
         for indice, (uniq, adaptador) in enumerate(MESA.items())
@@ -214,7 +214,7 @@ class TestOStateFullDizDeQuemEACadaPonte:
 
         O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026): o `BtMicSubsystem.motivo`
         diz o que do SISTEMA segura a ponte; sem a chave no `state_full`, quem
-        lê o bloco vê «Desligado» sem motivo, como se fosse escolha dela.
+        lê o bloco vê «Desligado» sem motivo, como se fosse escolha do usuário.
         """
         from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 

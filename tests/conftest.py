@@ -1161,7 +1161,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             "  A bancada mediu a foto do início; a árvore de hoje é outra. Este",
             "  run NÃO decide nada — nem o verde, nem o vermelho. Rode de novo",
             "  com a árvore parada (um mutador por vez, ou um git worktree por",
-            "  agente) antes de gravar qualquer nota que dependa dele.",
+            "  frente) antes de gravar qualquer nota que dependa dele.",
         ])
         session.exitstatus = 1
 
@@ -1914,21 +1914,21 @@ def _nenhuma_ancora_de_usb_viva_na_suite(tmp_path_factory: pytest.TempPathFactor
 def _nenhum_uinput_de_verdade() -> Iterator[None]:
     """A suíte NÃO cria aparelho de entrada no kernel de quem a roda.
 
-    **O defeito, medido em 20/08/2026, e ele saiu da máquina dela.** Ela relatou
+    **O defeito, medido em 20/08/2026, e ele saiu da máquina do usuário.** Ele relatou
     janelas saindo de tela cheia sozinhas e suspeitou de tecla presa. O kernel
     contava outra história: **1289 nós `Hefesto - DualSense4Unix Virtual
     Keyboard` criados naquele dia**, 51 nos últimos trinta minutos, cada um
-    vivendo cerca de 0,4 ms. Eram meus: cada `pytest -q` cria centenas deles, e a
+    vivendo cerca de 0,4 ms. Eram da suíte: cada `pytest -q` cria centenas deles, e a
     suíte rodou quinze vezes naquela sessão.
 
-    **Por que isso derrubava a tela cheia dela sem ninguém apertar nada:** para o
+    **Por que isso derrubava a tela cheia do usuário sem ninguém apertar nada:** para o
     compositor Wayland cada add/remove de teclado é um re-assentamento de seat, e
     superfície em tela cheia costuma largar o fullscreen numa troca de foco. Não
-    é preciso Esc nenhum — e foi atrás do Esc que eu fui primeiro, ancorada em
+    é preciso Esc nenhum — e foi atrás do Esc que se foi primeiro, ancorado em
     duas linhas de log que depois se provaram falsas.
 
-    **A raiz não é a suíte ser desleixada — é a máquina dela ser a mesma.** Aqui
-    a máquina de desenvolvimento é a máquina em que ela joga, trabalha e assiste.
+    **A raiz não é a suíte ser desleixada — é a máquina do usuário ser a mesma.** Aqui
+    a máquina de desenvolvimento é a máquina em que o usuário joga, trabalha e assiste.
     Uma suíte que mexe em `/dev/input` não está num ambiente isolado: está
     escrevendo entrada de verdade, por cima da sessão de uma pessoa que está
     usando o computador.
@@ -2542,7 +2542,7 @@ def motivo_do_pulo(*relativos: str, raiz: Path | None = None) -> str | None:
         "Não veio para esta árvore: "
         + "; ".join(insumo.razao for insumo in ausentes)
         + " — num clone limpo (o `release.yml`) a ausência é esperada; numa "
-        "árvore de agente, copie-os da árvore de quem despacha antes de medir."
+        "árvore de trabalho, copie-os da árvore de quem despacha antes de medir."
     )
 
 

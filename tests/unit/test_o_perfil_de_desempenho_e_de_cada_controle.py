@@ -1,9 +1,9 @@
 """O PERFIL DE DESEMPENHO É DE CADA CONTROLE — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01.
 
-Decisões dela de 26/09/2026: o Perfil de Desempenho mora em cada cartão da aba
+Decisões de 26/09/2026: o Perfil de Desempenho mora em cada cartão da aba
 Conexões (`D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE`), «Eu escolho» virou
 «Personalizado» (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`), os outros dois viraram
-«Perfil Máximo» e «Perfil Econômico» (pedido dela na mesma noite) e o cartão e a aba
+«Perfil Máximo» e «Perfil Econômico» (pedido na mesma noite) e o cartão e a aba
 Sistema falam o MESMO perfil, por um dono e pelo mesmo gesto do daemon
 (`D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`).
 
@@ -23,8 +23,7 @@ O que cada seção prova, e a mordida que a derruba:
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o `maquina.json`
 e o perfil gravados aqui moram dentro dele.
 
-A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
-de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal -->
+A régua dela, a de toda  <!-- noqa-acento: citação literal -->
 """
 from __future__ import annotations
 

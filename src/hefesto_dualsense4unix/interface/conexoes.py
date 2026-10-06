@@ -145,7 +145,7 @@ class Controle:
         perguntada.
 
         A PALAVRA DO TRANSPORTE É A DA TELA (:data:`NOME_DO_TRANSPORTE`) desde
-        24/09/2026 — era «pelo cabo»/«pelo rádio», de antes da decisão dela de
+        24/09/2026 — era «pelo cabo»/«pelo rádio», de antes da decisão de
         21/09. É a mesma frase de ``pacotes.a08_conexoes.caminho_do_microfone``.
         """
         estado = "Ligado" if self.mic_ligado else "Desligado"
@@ -192,7 +192,7 @@ def fala_do_teto(chave: str | None) -> str:
 
 
 def opcoes_do_teto() -> tuple[str, str, str]:
-    """As três opções do campo, NA ORDEM DA TELA — o desenho que ela aprovou."""
+    """As três opções do campo, NA ORDEM DA TELA — o desenho que o usuário aprovou."""
     from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
 
     return (SEGUE_O_GLOBAL, fala_do_teto(""), fala_do_teto(_ORCAMENTO_COM_TETO))
@@ -357,7 +357,7 @@ def _o_botao_da_dica(acao: Any, classe: str) -> str:
 
 
 #: O «i» do «Por quê» é um ÍCONE, desenhado, e não uma letra: o botão diz o nome dele no
-#: ``aria-label`` («Por quê: …»), e a regra dela da primeira letra maiúscula vale para palavra
+#: ``aria-label`` («Por quê: …»), e a regra de produto da primeira letra maiúscula vale para palavra
 #: escrita num botão — um «i» minúsculo como texto era palavra para ela e para a régua.
 _O_I_DA_DICA = ('<svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true">'
                 '<path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg>')

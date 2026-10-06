@@ -4,7 +4,7 @@ ELA MUDOU PARA CÁ EM 01/09/2026, e a razão é uma só: o wheel empacota
 `packages = ["src/hefesto_dualsense4unix"]`, e nada fora dali entra. Enquanto as
 páginas viviam em `layout/`, **quem instalasse o Hefesto não recebia a
 interface** — ela só existia na árvore de quem a desenvolvia. Foi o que a
-auditoria das dez ondas MIGRA mediu, e o que ela mandou desfazer com estas
+auditoria das dez ondas MIGRA mediu, e o que o usuário mandou desfazer com estas
 palavras: *"preciso do produto completo"*.
 
 O QUE MORA AQUI, e a divisão é entre PRODUTO e BANCADA:

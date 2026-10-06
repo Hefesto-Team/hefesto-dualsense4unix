@@ -52,7 +52,7 @@ ADAPTADOR_DO_MEIO = "aa:bb:cc:00:00:11"
 
 
 def _a_dela_com_os_nomes_dos_adaptadores() -> dict[str, Any]:
-    """A máquina dela, com os três adaptadores nomeados como ela os nomeou."""
+    """A máquina do usuário, com os três adaptadores nomeados como ela os nomeou."""
     documento = _a_maquina_dela()
     documento["adaptadores"] = {
         "aabbcc000011": {"nome": "Meio"},
@@ -256,7 +256,7 @@ def test_a_troca_feita_fora_do_produto_se_repara_na_migracao() -> None:
 
 
 def test_um_boot_com_outra_numeracao_diz_a_mesma_entrada(tmp_path: Path) -> None:
-    """A máquina dela foi mapeada no boot 1 (a Entrada 7 é ``1-5``); no boot 2
+    """A máquina do usuário foi mapeada no boot 1 (a Entrada 7 é ``1-5``); no boot 2
     os controladores subiram na ordem inversa, e o DualSense no cabo da Entrada
     7 enumera como ``3-5``. O Mapear, o nome da porta e o motor do arranjo
     dizem a Entrada 7 — e o ``1-5`` deste boot, que é o OUTRO controlador,

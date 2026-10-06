@@ -1,6 +1,6 @@
 """SOM-SEMPRE-01 — o volume nasce em 100%, em todo controle, sem ninguém pedir.
 
-**A medição que é o alicerce disto**, feita na bancada dela na madrugada de
+**A medição que é o alicerce disto**, feita na bancada na madrugada de
 15-16/08/2026, com o controle azul na mão, no CABO, em teste CEGO (ela relatava
 o que ouvia sem saber o que fora enviado). Três passadas em
 `docs/data/ensaios.csv`, com o MESMO arquivo, a MESMA rota e o MESMO sink::
@@ -16,9 +16,7 @@ ZERO em todo report"* desde 25/07 sem que ninguém o tivesse ligado ao silêncio
 "A casa sabe e o produto não faz", de novo, e agora na mesma família do
 keepalive que cancelava o rumble pelos BYTES.
 
-A decisão dela, textual (16/08/2026, 00h): *"precisamos setar o som sempre em
-todos os controles no 100% e garantir que sempre fique acordado e ligar isso a
-interface na aba de status (config default)."*
+A decisão de produto, textual (16/08/2026, 00h): **
 
 O que estes testes travam:
 
@@ -83,7 +81,7 @@ def _backend_sem_hardware() -> PyDualSenseController:
     """`PyDualSenseController` real, sem tocar em aparelho nenhum.
 
     Real de propósito: o que se afere é o caminho de adoção que roda na
-    máquina dela, e um dublê de backend provaria apenas que a linha foi
+    máquina do usuário, e um dublê de backend provaria apenas que a linha foi
     digitada.
     """
     from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
@@ -360,13 +358,13 @@ def test_devolver_a_posse_nao_emudece_o_controle() -> None:
     o último valor que mandamos, isto é, os 100%. Quem devolve a posse fica
     com o som ligado, não com o silêncio de antes desta cura.
 
-    É por isso que a irreversibilidade que ela aceitou é menor do que parece:
+    É por isso que a irreversibilidade que o usuário aceitou é menor do que parece:
     o que não volta é o valor que o firmware tinha ANTES de nós, e esse valor
     ninguém nunca soube — o DualSense não devolve o volume, não há report de
     entrada nem feature que o leia.
 
     MORDIDA: fazer o `release_audio_volumes` zerar os bytes MANTENDO os bits
-    ligados — aí a devolução emudeceria o controle, que é o oposto do que ela
+    ligados — aí a devolução emudeceria o controle, que é o oposto do que o usuário
     pediu.
     """
     inst = _backend_sem_hardware()

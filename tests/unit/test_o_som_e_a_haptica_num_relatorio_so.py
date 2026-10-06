@@ -10,7 +10,7 @@ No primeiro tempo nasceram o montador do relatório combinado
 (`alto_falante_bt.montar_relatorio_combinado` e o escritor único
 `RelatorioCombinado`) e o ensaio de bancada que prova o formato
 (`scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`), que recusa com o daemon
-no ar. A bancada dela provou o formato em 03/10 ~23h15 (som e háptica juntos;
+no ar. A bancada provou o formato em 03/10 ~23h15 (som e háptica juntos;
 sem o ``0x10`` a háptica cala). No SEGUNDO tempo a ponte passa a ter um
 escritor só: a `BombaDeSomPeloRadio` monta o ``0x36`` com o som e a háptica do
 quadro e o ``0x10`` sempre (as réguas do fim deste arquivo).

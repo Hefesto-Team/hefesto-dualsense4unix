@@ -1,7 +1,7 @@
 """ROTA-A + ROTA-C — os donos de fato, e as cinco réguas que têm de morder.
 
 O defeito que estas réguas guardam foi medido em 02/09/2026 com DOIS controles
-na mesa dela:
+na bancada:
 
 * **o nome vinha da POSIÇÃO.** Com um controle, o do cabo chamava-se "Starlight
   Blue"; com dois, o MESMO cabo virou "Cosmic Red". O daemon publicava `uniq`,
@@ -46,7 +46,7 @@ def _controle(
 def test_o_controle_que_nao_e_jogador_ainda_tem_numero() -> None:
     """`{"player": None, "player_slot": 2}` é jogador **2**.
 
-    Fora de qualquer `parametrize` de propósito: é o caso medido na mesa dela e
+    Fora de qualquer `parametrize` de propósito: é o caso medido na bancada e
     ele não pode se perder numa lista de tuplas onde ninguém o lê.
 
     **E O FATO QUE ELE DERRUBA:** o MAPA e a ROTA-C diziam *"no rádio o `player`
@@ -86,7 +86,7 @@ class TestJogadorDe:
 
 
 def test_a_ordem_das_chaves_e_a_mesma_da_gtk() -> None:
-    """Se a GTK mudar a ordem dela, ESTA régua reprova — as duas mudam juntas.
+    """Se a GTK mudar a ordem de produto, ESTA régua reprova — as duas mudam juntas.
 
     `base.numero_do_controle` é o dono da regra do outro lado. Ele lê
     `player_slot` PRIMEIRO; se alguém inverter lá e não aqui, a mesma mesa
@@ -155,7 +155,7 @@ class TestIdentidadeDe:
         assert pacotes.identidade_de({"uniq": AZUL}) == "—"
 
     def test_a_mesa_e_a_terceira_porta_do_mesmo_fato(self) -> None:
-        """O caminho que funciona HOJE, antes de o daemon dela ser reiniciado."""
+        """O caminho que funciona HOJE, antes de o daemon do usuário ser reiniciado."""
         assert (
             pacotes.identidade_de(
                 _controle(AZUL, transport="bt"),

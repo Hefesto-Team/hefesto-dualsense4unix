@@ -32,7 +32,7 @@ def test_preset_de_jogo_sem_modo_recebe_o_modo_jogo(tmp_path: Path) -> None:
 
 
 def test_modo_escolhido_por_ela_nao_e_sobrescrito(tmp_path: Path) -> None:
-    """A regra que torna a migração segura: onde ela mexeu, recua."""
+    """A regra que torna a migração segura: onde o usuário mexeu, recua."""
     escolha = {"kind": "native"}
     fps = _escreve(tmp_path, "fps", {"name": "FPS", "priority": 60,
                                      "mode": dict(escolha)})
@@ -66,7 +66,7 @@ def test_o_ramo_do_coop_local_esta_aposentado_e_relata(tmp_path: Path) -> None:
 
 
 def test_prioridade_ajustada_por_ela_e_preservada(tmp_path: Path) -> None:
-    """Qualquer número diferente do de fábrica antigo é escolha dela."""
+    """Qualquer número diferente do de fábrica antigo é escolha do usuário."""
     coop = _escreve(tmp_path, "coop_local", {"name": "Co-op local", "priority": 92,
                                              "mode": {"kind": "gamepad"}})
 

@@ -119,7 +119,7 @@ async def test_com_o_interruptor_desligado_o_aperto_derruba_a_luz_do_jogo(
 ) -> None:
     """O jogo acendeu a luz do P2; ela aperta depois: vale o último que mandou.
 
-    A borda nasce no backend (o contador do plástico), como na mesa dela, e o
+    A borda nasce no backend (o contador do plástico), como na bancada, e o
     laço das bordas a publica; o laço da luz a lê e chama o `a_pessoa_mandou`.
 
     MORDIDA: as bordas fora do `start_mic_do_jogo` (de volta só com o

@@ -1,6 +1,7 @@
 """Aba 05 · Vibração — o adaptador: o que a tela recebe e o que ela manda.
 
-A página é ``src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html``, aprovada por ela com
+A página é ``src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html``, aprovada pelo usuário
+com
 elogio literal
 (``_ferramentas/CORRECOES.md:39``). Este módulo é o outro lado dela: pega o
 ``daemon.state_full`` e devolve **um pacote por tique** — nunca uma chamada por
@@ -28,7 +29,7 @@ plausível e falso é pior que um traço honesto, porque ela confia nele.
 * **OS OITO INTERRUPTORES DE LADO GANHARAM FONTE — 14/09/2026.** Eles estavam
   em :data:`SEM_FONTE` desde que esta tela nasceu, com a razão certa: *não há
   campo de habilitar motor por lado*. A cura de 14/09 não criou o campo — ela
-  leu o que já existia. Ordem dela, com o controle na mão: *"ele deveria ligar se
+  leu o que já existia. Ordem de produto, com o controle na mão: *"ele deveria ligar se
   > 0 no slicer dele"*. Aceso passou a ser a LEITURA da barra daquele motor, e o
   clique, o par que a escreve (`interface/pacotes/a05_vibracao`, chave
   `lado-{lado}` e gesto `lado`). A `MIGRA-VIBRACAO-06`, que fecharia isto criando
@@ -50,7 +51,7 @@ MOTOR_PARA_BARRA: dict[str, str] = {"strong": "forte_pct", "weak": "fraco_pct"}
 #: para — a palavra é do comentário de ``rumble_actions._POLICY_MULT:67-69``.
 #:
 #: FICA ESCRITO porque ele é o degrau da escada que NÃO é botão da tela: o
-#: ``Auto`` saiu da aba em 05/09/2026, pela palavra dela (*"segue os três modos
+#: ``Auto`` saiu da aba em 05/09/2026, pela palavra de produto (*"segue os três modos
 #: sempre"*), e :func:`degraus_da_forca` o deixa de fora por este nome. A
 #: escada continua com ele — a mesa em ``Auto`` é estado que o produto ainda
 #: sabe dizer (:func:`_pedido_da_politica`).
@@ -89,7 +90,7 @@ def teto_da_barra() -> int:
 
 
 def degraus_da_forca() -> tuple[str, ...]:
-    """As chaves dos degraus que a tela oferece, na ordem dela — do produto."""
+    """As chaves dos degraus que a tela oferece, na ordem de produto — do produto."""
     escada = _escada()
     return tuple(sorted(
         (k for k in escada if k != FORCA_SEM_MULTIPLICADOR),
@@ -312,7 +313,7 @@ def textos_do_estado(
 
     :param alvo: o :class:`~app.alvo_de_edicao.AlvoDeEdicao` desta tela. O padrão
         é ``TODOS``, e **é medição, não conveniência**: nesta aba a fita do topo
-        nasce inerte (decisão dela, 28/08), não há controle escolhido, e o único
+        nasce inerte (decisão, 28/08), não há controle escolhido, e o único
         clique que grava — o degrau de força — manda ``rumble.policy_set``, que
         **não leva endereço**. Não há override de peça sendo escrito, logo não há
         a divergência que aquela frase confessa, e um aviso permanente viraria
@@ -327,7 +328,7 @@ def textos_do_estado(
     **O QUE ELA NÃO COBRE**, e fica dito: a tela nova afirma QUATRO forças, uma
     por coluna, e o produto tem UMA. Essa mentira é de outra natureza e já está
     declarada em :data:`SEM_FONTE` (``forca:por-controle``); nenhuma das quatro
-    frases fala dela.
+    frases fala do usuário.
     """
     from hefesto_dualsense4unix.app.actions import rumble_actions as _ra
     from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, EstadoDoAlvo

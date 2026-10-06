@@ -87,7 +87,7 @@ def bancada(monkeypatch: Any) -> Any:
 
 
 def _ctx(*, com_radio: bool) -> Any:
-    """A mesa dela de hoje: um White no cabo. Com `com_radio`, mais um no rádio."""
+    """A bancada de hoje: um White no cabo. Com `com_radio`, mais um no rádio."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     mesa: list[dict[str, Any]] = [

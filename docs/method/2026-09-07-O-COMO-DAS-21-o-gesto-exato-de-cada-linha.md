@@ -11,20 +11,18 @@ bancada: true
 
 **Encomenda dela, 07/09/2026, verbatim:**
 
-> *"O COMO é obrigatório: escreva o gesto exato que foi aplicado. É isto que se
-> perdia quando a sessão morria. isso aqui me quebra. isso eu espero que o
-> [assistente] descreva."*
+>
 
-<!-- A palavra entre colchetes é uma ELISÃO, não uma paráfrase: ela
+<!-- A palavra entre colchetes é uma ELISÃO, não uma paráfrase: o usuário
      escreveu ali o nome de um fornecedor, e este arquivo passou a ser
      versionado em 20/09/2026. O `check_anonymity.sh` reprova nome de
-     fornecedor em arquivo rastreado, e a regra dela sobre isso é
+     fornecedor em arquivo rastreado, e a regra de produto sobre isso é
      absoluta. Nenhuma outra palavra da frase foi tocada. -->
 
 E o defeito que fez este arquivo nascer, apontado por ela olhando a linha 10 na
 tela:
 
-> *"sinceramente não entendi o que diabos é pra fazer aqui."*
+> **
 
 Ela estava certa. O COMO saía como `linha do roteiro: 10` mais `passa quando:
 mudaram` — o roteiro repetido, não o gesto. Um roteiro escrito em telegrama
@@ -37,7 +35,7 @@ linha por teste. Este diz **como** se faz, e não cabe numa linha: onde olhar na
 tela, o gesto exato na ordem, o que muda em cada um dos quatro, e a armadilha
 que faz o teste dar falso verde.
 
-**Os dois têm donos diferentes de propósito.** O roteiro é dela — a decisão do
+**Os dois têm donos diferentes de propósito.** O roteiro é do usuário — a decisão do
 que vale medir. O COMO é meu, por pedido explícito dela, e é por isso que mora
 aqui e não lá: se estivesse na mesma tabela, mexer no gesto pareceria mexer na
 decisão.
@@ -47,7 +45,7 @@ Mudou uma linha aqui, o próximo `F5` da bancada mostra o gesto novo.
 
 ## Como isto foi escrito, e o que confere
 
-Quatorze agentes: sete escreveram, sete conferiram — e a conferência não foi de
+Quatorze frentes: sete escreveram, sete conferiram — e a conferência não foi de
 texto, foi de **medição no produto**. Cada conferente foi ver, nos pacotes que
 montam as abas, se o campo citado existe com aquele rótulo. **Um COMO que manda
 olhar um campo inexistente é pior que nenhum COMO**, porque manda ela procurar.
@@ -57,7 +55,7 @@ Onde a fonte não bastava, está escrito *"a fonte não diz"* — declarar a lac
 
 **Reconferido em 24/09/2026**, linha a linha, contra as páginas publicadas, os
 pacotes que as pintam e as fotos do dia: o gesto que tinha caído foi reescrito
-no lugar, e o «por controle» de cada linha segue a coluna que ela escreveu no
+no lugar, e o «por controle» de cada linha segue a coluna que o usuário escreveu no
 roteiro.
 
 ---
@@ -439,9 +437,9 @@ roteiro.
 
 ---
 
-## Linha 11 — Som pelo rádio: o ensaio 1 da bancada, com a orelha dela
+## Linha 11 — Som pelo rádio: o ensaio 1 da bancada, com a orelha do usuário
 
-**O que isto prova.** O som já saiu pelo rádio com a orelha dela, em 10/09. O que esta linha prova agora é o resto: que o som mirado no P3 sai SÓ no P3 — não no P4, que está no mesmo rádio, nem na TV —, que mirado na TV ele sai da TV e o P3 cala, e que ela acerta de onde o som sai sem saber para onde ele foi mandado.
+**O que isto prova.** O som já saiu pelo rádio com a orelha do usuário, em 10/09. O que esta linha prova agora é o resto: que o som mirado no P3 sai SÓ no P3 — não no P4, que está no mesmo rádio, nem na TV —, que mirado na TV ele sai da TV e o P3 cala, e que ela acerta de onde o som sai sem saber para onde ele foi mandado.
 
 **Onde olhar.** O instrumento é o ouvido dela, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, no meio da frente do DualSense, logo abaixo e entre os dois analógicos. O volante do teste é a lista de saídas de som — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto, aba Controles, o cartão do P3: o bloco Alto-falante, com o selo ATIVO, o número do volume e quatro botões — «Efeitos do Jogo no Controle, Áudio do PC no PC» e «Efeitos do Jogo e Áudio do PC no Controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e Nada no Controle» e «Tudo no Controle e Nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV.
 

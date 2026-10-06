@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """A RÉGUA DOS QUATRO SILÊNCIOS DA ABA VIBRAÇÃO — 04/09/2026.
 
-O ENUNCIADO É DELA, e são quatro palavras — <!-- noqa-acento: literal dela -->
-*"vibração nem funciona tambem"*.  <!-- noqa-acento: citação dela -->
-Citação não se corrige: o que ela escreveu é o que ela escreveu.
+O ENUNCIADO É DO USUÁRIO, e são quatro palavras — <!-- noqa-acento: literal -->
+*"vibração nem funciona tambem"*.  <!-- noqa-acento: citação -->
+Citação não se corrige: o que o usuário escreveu é o que o usuário escreveu.
 
-O que estava calado, medido nesta árvore com o daemon dela vivo e dois
+O que estava calado, medido nesta árvore com o daemon do usuário vivo e dois
 DualSense no cabo:
 
 1. **A MIRA NÃO ERA CONFERIDA** (04/09). O gesto mandava `controller.target.set`
@@ -24,7 +24,7 @@ DualSense no cabo:
    `draft_config.with_controller_rumble` LIMPA o override em três casos (igual
    ao global do perfil, `policy=None`, `auto`), e a coluna sem override cai no
    `rumble_policy` da MESA: clicar "Auto" no P2 apagava o `max` dele e acendia
-   "Balanceado" um tique depois — **o botão que ela clicou não é o que fica
+   "Balanceado" um tique depois — **o botão que o usuário clicou não é o que fica
    aceso**. A janela estável conta esse mesmo desfecho desde 25/08 (RUM-3).
 4. **A MESA EM `Auto` ENGOLIA A ESCOLHA, sem uma palavra.**
    `profiles/manager._controllers_to_rumble_scales` PULA toda peça com opinião
@@ -43,7 +43,7 @@ O QUE ESTA RÉGUA COBRA — e cada caso traz a mordida no docstring:
   sucedido é ruído crônico, e ruído crônico é como um aviso deixa de ser lido.
 
 **A PONTE É DUBLÊ, SEMPRE.** `perfil.gravar_e_reaplicar` chama
-`p.profile_reaplicar(...)`, e uma ponte real mandaria isso ao daemon DELA. Todo
+`p.profile_reaplicar(...)`, e uma ponte real mandaria isso ao daemon do usuário. Todo
 `uniq` daqui vem da faixa sintética `aa:bb:cc:00:00:0N` — há dois portões de
 anonimato nesta árvore e eles não perdoam.
 """
@@ -249,7 +249,7 @@ CLIQUE_DE_CADA_GESTO = {
 
 @pytest.mark.parametrize("nome", sorted(CLIQUE_DE_CADA_GESTO))
 def test_os_cinco_gestos_dizem_a_causa_certa(pac, nome) -> None:
-    """Os CINCO donos desta aba, e nenhum deles acusa o clique dela."""
+    """Os CINCO donos desta aba, e nenhum deles acusa o clique do usuário."""
     clique = {"controle": "p2", **CLIQUE_DE_CADA_GESTO[nome]}
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as recusa:
@@ -330,7 +330,7 @@ def test_a_recusa_do_degrau_nao_oferece_botao_que_nao_existe(pac) -> None:
 
     ELA MEDIA O MUNDO DE ONTEM: mandava tentar *"em cima de um dos quatro
     botões (Economia, Balanceado, Máximo ou Auto)"*, e desde 05/09 são três — o
-    `Auto` saiu da tela pela palavra dela. A tela mandando ela procurar o que
+    `Auto` saiu da tela pela palavra de produto. A tela mandando ela procurar o que
     não está lá é a mesma família de defeito que esta régua inteira persegue.
 
     OS NOMES NÃO SE DIGITAM AQUI, e é o ponto: eles são perguntados ao produto

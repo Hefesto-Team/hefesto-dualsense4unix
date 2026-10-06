@@ -6,7 +6,7 @@ que a PESSOA ABRE"* — e a cura que sobrou não adivinha: ela pergunta o
 `Discovering` ao `org.bluez.Adapter1`.
 
 Este arquivo prende as três peças da cura, e o barramento é de MENTIRA de
-propósito: abrir varredura de verdade na máquina dela custa de 32,5% a 43,4% dos
+propósito: abrir varredura de verdade na máquina do usuário custa de 32,5% a 43,4% dos
 pacotes do adaptador, com quatro DualSense de pé.
 
 O BARRAMENTO DE MENTIRA É `busctl`, NÃO UM DUBLÊ DE FUNÇÃO
@@ -59,7 +59,7 @@ E AS TRÊS QUE SOBRAM
 9. As duas da FIAÇÃO moram em
    `tests/unit/test_a_conta_de_slots_por_adaptador.py`, bloco 9: a seção
    passando a varredura ao motor, e a guarda que impede a suíte de abrir
-   sete processos contra o `bluetoothd` DELA.
+   sete processos contra o `bluetoothd` DO USUÁRIO.
 
 AS DUAS QUE A CONFERÊNCIA ADVERSARIAL ACRESCENTOU (20/09/2026)
 ---------------------------------------------------------------
@@ -130,7 +130,7 @@ def _bancada(mapa: dict[str, str]) -> dict[str, Any]:
     """Um `/sys/class/hidraw` de mentira: `{uniq do controle: MAC do adaptador}`.
 
     Mesma forma de `test_a_conta_de_slots_por_adaptador._bancada`. Sem ela o
-    teste mediria a bancada de quem o roda — e quem o roda é a mesa DELA, com
+    teste mediria a bancada de quem o roda — e quem o roda é a bancada, com
     quatro DualSense de pé.
     """
     nos = {f"hidraw{i}": (uniq, phys) for i, (uniq, phys) in enumerate(mapa.items())}
@@ -509,7 +509,7 @@ def test_a_lembranca_nao_congela_a_resposta_para_sempre(
 def test_o_leitor_nao_presume_bancada_nenhuma(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Um adaptador só, e o leitor responde igual — a ordem dela de 11/09."""
+    """Um adaptador só, e o leitor responde igual — a ordem de 11/09."""
     _ligar_o_barramento(monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_QUE_VARRE, "true")})
     leitura = varredura_do_radio.quem_esta_varrendo()
 
@@ -598,7 +598,7 @@ def test_o_barramento_travado_nao_segura_a_thread_do_desenho(
     A lembrança de 3 s não alcança isso: ela segura quantas vezes se pergunta,
     não quanto tempo cada pergunta dura.
 
-    TRÊS adaptadores de propósito — é a mesa dela, e é onde o defeito é maior.
+    TRÊS adaptadores de propósito — é a bancada, e é onde o defeito é maior.
     Com um só, um padrão de 5 s daria 5 s e o mesmo limite pegaria; com três,
     o arranjo difícil mostra que o corte é do ORÇAMENTO INTEIRO e não de uma
     pergunta.

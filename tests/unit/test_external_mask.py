@@ -159,7 +159,7 @@ def test_a_mascara_nao_toca_o_controllers_json_nem_renumera_a_fila(
 
     ``identity.load`` descarta a fila inteira quando a versão difere
     (``identity.py:558``), e ``_save_locked`` só aproveita as entradas do outro
-    lado no MESMO schema (``:940-950``) — um bump renumeraria a mesa dela e o
+    lado no MESMO schema (``:940-950``) — um bump renumeraria a bancada e o
     primeiro save de DualSense apagaria a fila dos externos. Este teste é o
     guarda disso: registrar máscara não pode deixar UM BYTE diferente no
     ``controllers.json``, e a fila tem de renascer idêntica.

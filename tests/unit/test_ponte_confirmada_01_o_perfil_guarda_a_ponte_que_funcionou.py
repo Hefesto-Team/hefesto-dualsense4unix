@@ -172,7 +172,7 @@ class TestQualEAPonteDesteAppid:
         assert ponte_confirmada_do_appid("999999") is None
 
     def test_no_empate_vence_quem_sabe_a_ponte(self) -> None:
-        """Duas fichas do mesmo jogo é real no disco dela (pragmata/pragmata2)."""
+        """Duas fichas do mesmo jogo é real no disco do usuário (pragmata/pragmata2)."""
         save_profile(_perfil_de_jogo("Pragmata", "3357650", prioridade=99))
         save_profile(
             carimbar_ponte(

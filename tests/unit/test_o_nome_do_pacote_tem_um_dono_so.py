@@ -170,7 +170,7 @@ def test_o_degrau_final_nao_inventa_nome_de_pacote(canonico: str) -> None:
 
 
 def test_o_degrau_final_diz_a_frase_que_ela_aprovou() -> None:
-    """O que CHEGA À TELA, conferido contra a frase dela — não contra a conta."""
+    """O que CHEGA À TELA, conferido contra a frase de produto — não contra a conta."""
     frases = {
         sd.gesto_de_instalar(canonico, **_argumentos_do_formato(formato))
         for canonico in DEPENDENCIAS

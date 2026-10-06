@@ -82,7 +82,7 @@ def explicacao_da_disputa(
 
 
 def perfil_que_ela_ativou() -> str | None:
-    """A escolha dela, lida do disco pelo dono (`utils.session.a_escolha_dela`).
+    """A escolha do usuário, lida do disco pelo dono (`utils.session.a_escolha_dela`).
 
     O Freestyle quando o botão está ligado; desligado, o último perfil que ela
     ativou; «sem escolha», `None`. Sobrevive ao daemon responder
@@ -114,7 +114,7 @@ class PerfilQueVale(NamedTuple):
 
     - ``"daemon"`` — o daemon respondeu com um nome. É a verdade mais fresca.
     - ``"disco"``  — o daemon respondeu ``null`` (ou não respondeu) e o
-      marcador em disco tem um nome. **É o caso VIVO da máquina dela.**
+      marcador em disco tem um nome. **É o caso VIVO da máquina do usuário.**
     - ``"nenhum"`` — o daemon respondeu, ninguém tem nome: não há perfil ativo.
     - ``"nao_sei"`` — não houve resposta e não há marcador. A tela não sabe.
     """

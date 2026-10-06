@@ -44,7 +44,7 @@ def _no(nome: str, uniq: str, bus: int, path: str) -> str:
 
 
 def _mesa_de_dois(marcador: str) -> list[str]:
-    """A mesa dela: um controle no cabo e um no rádio, com o nó `marcador`."""
+    """A bancada: um controle no cabo e um no rádio, com o nó `marcador`."""
     if marcador == "Motion Sensors":
         usb, bt = NOME_MOTION_USB, NOME_MOTION_BT
     else:

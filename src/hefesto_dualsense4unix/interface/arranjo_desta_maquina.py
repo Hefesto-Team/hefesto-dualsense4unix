@@ -262,7 +262,7 @@ def _resumo(semente: str) -> str:
 def _declarado(
     mapa: Any, numeros: Any, nome_de: Callable[[str], str | None] | None = None
 ) -> dict[str, dict[str, Any]]:
-    """O que ela disse de cada entrada DO MAPA DELA, para o editor da página."""
+    """O que o usuário disse de cada entrada DO MAPA DO USUÁRIO, para o editor da página."""
     saida: dict[str, dict[str, Any]] = {}
     for numero in sorted(numeros):
         porta = mapa.portas.get(numero)

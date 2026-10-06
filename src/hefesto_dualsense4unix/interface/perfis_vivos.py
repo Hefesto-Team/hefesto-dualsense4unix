@@ -15,7 +15,7 @@ AS DUAS MORDIDAS, as mesmas do piloto da aba Controles:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup (14 perfis, "Mortal Kombat" ativo, quatro
-                          controles). Se ela mostrar os perfis dela, o dado não
+                          controles). Se ela mostrar os perfis do usuário, o dado não
                           está vindo do Python.
     --arranca-enderecos   apaga os `data-hef` que o `aba10.py` escreve: a
                           pintura tem de DESABAR. Se não desabar, os endereços
@@ -25,19 +25,19 @@ E o resto:
 
     --duble a.json        os perfis e o estado vêm de um roteiro, não do disco
                           nem do daemon. É o PADRÃO, e é de propósito: os perfis
-                          dela têm nome de jogo, e uma foto versionada com eles
-                          seria a biblioteca dela num PNG. (A mesma razão do
+                          do usuário têm nome de jogo, e uma foto versionada com eles
+                          seria a biblioteca do usuário num PNG. (A mesma razão do
                           `retratar_abas._PERFIS_DA_FOTO`, que fazia isto na
                           JANELA GTK e saiu com ela em 06/09/2026 — a razão
                           ficou, e o dublê aqui é quem a carrega agora.)
-    --do-disco            lê os perfis DELA de verdade (`load_all_profiles`).
+    --do-disco            lê os perfis do usuário de verdade (`load_all_profiles`).
                           Não fotografe com isto ligado.
     --prova-gesto         cliques sintéticos, para provar tela → Python → eco
 
 ESTA LEVA NÃO ESCREVE NADA. Nenhum método de escrita é pronunciado: o único IPC
 é `daemon.state_full` (via `mesa_viva.METODO`) e o único acesso a disco é de
 LEITURA. Os gestos chegam ao Python, são registrados com o DONO REAL declarado
-em `perfis_web.DONOS_DOS_GESTOS` e ecoam de volta. Nenhum perfil dela é tocado.
+em `perfis_web.DONOS_DOS_GESTOS` e ecoam de volta. Nenhum perfil do usuário é tocado.
 
 A JANELA, AS DUAS PONTES E A GUARDA DE CARGA são da biblioteca
 (`hefesto_dualsense4unix.interface.janela`), e o que decide o que a tela recebe
@@ -45,7 +45,7 @@ A JANELA, AS DUAS PONTES E A GUARDA DE CARGA são da biblioteca
 sobra aqui é a costura: quem lê o disco, quem lê o daemon, e o JavaScript da
 página.
 
-A ARMADILHA QUE É DESTE ARQUIVO, e não da ponte: **nome de perfil é DADO DELA
+A ARMADILHA QUE É DESTE ARQUIVO, e não da ponte: **nome de perfil é DADO DO USUÁRIO
 dentro de uma PÁGINA.** Num `Gtk.TreeView` um perfil chamado `<b>x</b>` é o
 texto `<b>x</b>`; numa página, é markup. Por isso nenhuma linha desta tela é
 montada por concatenação de HTML: o ajudante CLONA o `<tr>` que o `aba10.py`
@@ -271,7 +271,7 @@ window.HEF = (function(){
 
   function eco(o){
     // O ECO MORA NA TELA por um tique só: quem decide o que fica é o Python, e
-    // o tique seguinte repinta. Aqui o eco existe para o clique dela não sumir
+    // o tique seguinte repinta. Aqui o eco existe para o clique do usuário não sumir
     // meio segundo depois — a mesma razão do piloto da Controles.
     if(o.gesto==='linha'){
       for(const tr of qa('[data-hef-perfil]'))
@@ -288,7 +288,7 @@ window.HEF = (function(){
   //
   // NADA DE `innerHTML` COM TEXTO, e a disciplina deste arquivo continua de
   // pé: cada opção nasce por `createElement` + `textContent`. Os nomes dos
-  // lançadores vêm do disco dela (o censo), e um deles com `<` seria marcação.
+  // lançadores vêm do disco do usuário (o censo), e um deles com `<` seria marcação.
   function remontaAmbiente(m){
     const amb = q('[data-hef="editor.ambiente"]');
     if(!amb) return 'sem-campo';
@@ -317,7 +317,7 @@ window.HEF = (function(){
 
 
 def perfis_do_disco() -> list[Any]:
-    """Os perfis DELA, em LEITURA. `load_all_profiles` e nada mais."""
+    """Os perfis do usuário, em LEITURA. `load_all_profiles` e nada mais."""
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 
     return list(load_all_profiles())

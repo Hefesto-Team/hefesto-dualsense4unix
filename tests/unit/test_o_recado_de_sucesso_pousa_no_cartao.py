@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O RECADO DE SUCESSO NO CARTÃO — e o botão que diz que está trabalhando.
 
-Duas decisões dela de 04/09/2026, medidas na JANELA e não no terminal:
+Duas decisões de 04/09/2026, medidas na JANELA e não no terminal:
 
 **D-01 — o canal de sucesso.** *"No próprio cartão, como a recusa."* Até aqui a
 interface nova só falava quando RECUSAVA: um gesto que dava certo imprimia
@@ -11,7 +11,7 @@ lê terminal. **Cinco linhas do CSV paravam nesse buraco**, em cinco abas (02,
 
 **`09` [03] — o estado "em voo".** *"O botão diz que está trabalhando"*, e diz
 DURANTE a espera, no lugar exato do clique. Há um gesto desta casa que leva
-**9,5 segundos** (``daemon.reload``, medido no daemon dela em 01/09) e nenhuma
+**9,5 segundos** (``daemon.reload``, medido no daemon do usuário em 01/09) e nenhuma
 das dez abas tinha estado em voo: o clique sumia por nove segundos e meio e o
 segundo clique parecia o primeiro.
 
@@ -23,8 +23,8 @@ A OUTRA METADE CADUCOU EM 05/09/2026. Este parágrafo dizia que ELA recusara
 régua existia também para que ninguém os construísse. Quem recusou foi o PO,
 lendo a D-01 como se ela fechasse a forma — os conflitos C-3 e C-6 são dele. Em
 05/09 ela respondeu a `03-Q4` vendo as quatro formas lado a lado e escolheu o
-campo que pisca. **A palavra dela vence a leitura que o PO fez da palavra
-dela.**
+campo que pisca. **A palavra de produto vence a leitura que o PO fez da palavra
+de produto.**
 
 E a piscada não é um segundo canal para o mesmo fato: é o mesmo fato num sinal
 mais barato. Desde então o cartão diz só o que tem NOTÍCIA, e o gesto que só
@@ -58,7 +58,7 @@ defeito inteiro. O que é estado que FICA (a frase no cartão, o botão de volta
 é perguntado até aparecer.
 
 AS SETE COISAS QUE ESTA RÉGUA COBRAVA — E AS CINCO PRIMEIRAS MUDARAM DE CONTRATO
-EM 13/09/2026 (TELA-CALADA-01). Pela palavra dela, *"essas frases de status que
+EM 13/09/2026 (TELA-CALADA-01). Pela palavra de produto, *"essas frases de status que
 aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as abas da
 interface"*, o gesto que deu certo não põe frase na tela — nem a do dono do
 assunto: ela vai ao diário da janela. A régua do contrato novo é
@@ -165,7 +165,7 @@ function(){
     botao: b ? {
       classes: b.className,
       em_voo: b.classList.contains('hef-em-voo'),
-      // A PISCADA DO "DEU CERTO" — 05/09/2026, decisão dela na `03-Q4`.
+      // A PISCADA DO "DEU CERTO" — 05/09/2026, decisão de produto na `03-Q4`.
       deu_certo: b.classList.contains('hef-deu-certo'),
       // A PISCADA DA RECUSA — 13/09/2026, FRASES-E-DICAS-01: a recusa saiu do
       // cartão e passou a responder no botão.
@@ -181,7 +181,7 @@ function(){
       voo: b.getAttribute('data-hef-voo') || '',
       texto: (b.textContent || '').trim(),
       filhos: b.children.length,
-      // A GEOMETRIA, arredondada ao pixel: é a metade da decisão dela que
+      // A GEOMETRIA, arredondada ao pixel: é a metade da decisão de produto que
       // nenhuma leitura de classe mede — *"nada muda de lugar"*. É o que separa
       // o `outline` (que não ocupa espaço) de uma borda mais grossa.
       caixa: (function(r){ return {x: Math.round(r.x), y: Math.round(r.y),
@@ -598,7 +598,7 @@ def test_a_piscada_nao_acende_na_recusa(medido: dict) -> None:
 
 
 def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
-    """A metade da decisão dela que nenhuma leitura de classe mede."""
+    """A metade da decisão de produto que nenhuma leitura de classe mede."""
     antes = _leitura(medido, "antes")["botao"]
     piscando = _leitura(medido, "depois-do-sucesso")["botao"]
     assert antes and piscando, (antes, piscando)
@@ -612,7 +612,7 @@ def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
     """A PERGUNTA FOI INVERTIDA EM 13/09/2026 — TELA-CALADA-01.
 
     Ela era `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` e exigia a frase
-    de sucesso no cartão do p1. A palavra dela, com a foto do rodapé: *"essas
+    de sucesso no cartão do p1. A palavra de produto, com a foto do rodapé: *"essas
     frases de status que aparecem no rodapé isso não deveria estar
     aparecendo"*, *"em todas as abas da interface"*. O gesto que devolve
     `{"recado": …}` continua dando certo e continua piscando; a frase vai ao

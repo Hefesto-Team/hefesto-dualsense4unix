@@ -13,7 +13,7 @@ Ela desliga a barra na aba Iluminação, vai aos Gatilhos, clica "Guardar esse
 efeito" — e a barra acende. Um botão cujo nome promete UM efeito desfazendo
 escolha viva dela em outra aba, calado.
 
-POR QUE A REAPLICAÇÃO NÃO FAZ FALTA: esta aba aplica NA HORA (decisão dela de
+POR QUE A REAPLICAÇÃO NÃO FAZ FALTA: esta aba aplica NA HORA (decisão de
 01/09, *"clicar já aplica"*). Quando ela chega ao Guardar, `modo` e `pronto` já
 mandaram o efeito ao aparelho — o `profile_switch` reaplicava por cima um
 gatilho que já estava lá e levava junto nove seções que ninguém pediu.

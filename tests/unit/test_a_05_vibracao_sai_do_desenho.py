@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """05 · Vibração — a aba pior da casa, medida pela régua do mockup.
 
-O NÚMERO QUE ESTA RÉGUA GUARDA, medido em 03/09/2026 com a mesa dela (um
+O NÚMERO QUE ESTA RÉGUA GUARDA, medido em 03/09/2026 com a bancada (um
 DualSense White no cabo e um Galactic Purple no rádio), pelo
 ``hefesto_vivo.py --prova-de-mockup --voltas-por-aba 6``::
 
@@ -20,7 +20,7 @@ mesmo tratamento — dar a mesma marca às três seria maquiar:
   sem precisar de marca nenhuma.
 * **4 x ``lado`` + 2 x ``testar`` + 2 x ``parar``** — **RÓTULO.** O que a régua
   lia neles era o ``<title>`` do glifo (o nome da peça, de
-  ``docs/data/pecas-do-dualsense.csv``) e o texto de dois botões que ela decidiu
+  ``docs/data/pecas-do-dualsense.csv``) e o texto de dois botões que o usuário decidiu
   em 30/08 justamente para não mudarem. Nenhum estado do produto os move.
 * **2 x ``plastico`` + 2 x ``desenho``** — **NEM UM NEM OUTRO, e ficam
   cobrados.** São as quatro molduras do SVG. A régua as lê pelo ``textContent``,
@@ -173,7 +173,7 @@ def test_os_oito_degraus_saem_do_produto(regua, vereditos):
     A CONTA PASSOU DE "DUAS COLUNAS VIVAS" PARA A MESA INTEIRA — 07/09/2026.
     Até aqui o lugar VAZIO era um cartão à parte, sem um único `data-campo`
     dentro, e por isso os degraus dele não existiam. Medido com os quatro
-    DualSense dela na mesa: o daemon publicava os quatro, o pacote mandava as
+    DualSense do usuário na mesa: o daemon publicava os quatro, o pacote mandava as
     quatro colunas e o P3 e o P4 continuavam no travessão — **o dado chegava e
     não tinha onde pousar**. Os quatro lugares saem do mesmo molde agora
     (`aba05._coluna`), e uma régua que continuasse contando `* 2` daria verde
@@ -263,7 +263,7 @@ def test_a_marca_de_rotulo_nao_alcanca_dado(regua, cravados):
 
 
 def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
-    """*"esconder RESERVANDO o espaço (`visibility:hidden`)"* — decisão dela."""
+    """*"esconder RESERVANDO o espaço (`visibility:hidden`)"* — decisão de produto."""
     import onde
 
     from hefesto_dualsense4unix.interface import aba05
@@ -286,7 +286,7 @@ def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
 def test_o_teto_do_multiplicador_sai_do_produto():
     """`_no_teto` pergunta o teto a quem é dono dele, e não sabe o que é `—`.
 
-    O DONO TROCOU EM 03/09/2026, decisão dela: *"0 a 200%"*. A barra deixou de
+    O DONO TROCOU EM 03/09/2026,  A barra deixou de
     parar no degrau `Máximo` (`app/telas/vibracao.teto_da_barra`, 150) e vai até
     onde ela pode ARRASTAR — `a05_vibracao.teto_da_barra`, que sai do
     `RUMBLE_CUSTOM_MULT_MAX` do esquema. A régua continua PERGUNTANDO; o que

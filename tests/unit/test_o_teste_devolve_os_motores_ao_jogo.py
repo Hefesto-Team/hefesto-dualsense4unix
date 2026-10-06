@@ -1,13 +1,6 @@
 """O "Testar" da Vibração nunca deixa o jogo mudo — A-TELA-QUE-TRAVA-02.
 
-ORDEM DELA, 15/09/2026, com o controle na mão:
-
-    *"o testar e parar é sobre o teste naquele momento isso nao  (noqa-acento: dela)
-     interfere in game. testar eu ligo o status de vibração pra ver se eu
-     concordo como isso vai funcionar. mas clicar em parar é só pra impactar no teste naquele
-     momento e não mutar a vibração in game. em game se eu quiser desligar a
-     vibração do motor esquerdo zero o slicer, no direito o mesmo e de forma
-     geral eu zero no perfil max min e personalizado."*
+ORDEM, 15/09/2026, com o controle na mão
      (noqa-acento: citação literal)
 
 O QUE ESTAVA QUEBRADO, e foi medido antes de ser curado: o "Testar" tira os
@@ -21,11 +14,11 @@ porque a tela já não estava lá.
     $ grep "parar_o_teste|em_teste|rumble_passthrough" hefesto_vivo.py
     (nada)
 
-ELA ESCOLHEU ENTRE QUATRO CAMINHOS e pegou **as duas metades mais a rede**:
+O USUÁRIO ESCOLHEU ENTRE QUATRO CAMINHOS e pegou **as duas metades mais a rede**:
 
 1. **a LARGADA** — o piloto devolve ao trocar de página e ao fim da janela;
 2. **o CORAÇÃO** — enquanto a janela vive, a aba rebate a cada 1 s, e por isso
-   um teste deixado ligado com a janela aberta NÃO solta sozinho (o pedido dela
+   um teste deixado ligado com a janela aberta NÃO solta sozinho (o pedido
    de 07/09: *"o botão Testar tem que ficar em estado de ligado"*);
 3. **o TETO** — o daemon solta o rumble fixado que ninguém rebate em 3 s. É a
    rede para a janela que MORRE sem conseguir largar, e cobre TODOS os

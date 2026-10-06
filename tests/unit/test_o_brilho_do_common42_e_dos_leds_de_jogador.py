@@ -1,7 +1,7 @@
 """O `common[42]` é o brilho dos LEDS DE JOGADOR — e o produto manda ali o da BARRA.
 
 MEDIDO POR ELA EM 09/09/2026, na bancada, com um DualSense no cabo e outro no
-rádio, mexendo um controle deslizante e olhando o aparelho. Palavra dela:
+rádio, mexendo um controle deslizante e olhando o aparelho. Palavra de produto:
 
     "o que o slicer altera não são as cores do lightbar mas os leds que indicam
     qual player é o dono daquele controle, tipo player 1...2 e tanto no cabo
@@ -14,7 +14,7 @@ BRILHO-DE-HARDWARE-01. A fonte externa já dizia o certo e ninguém tinha olhado
 
 O QUE ESTE TESTE GUARDA
 ----------------------
-A DÍVIDA FECHOU EM 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01, decisão dela
+A DÍVIDA FECHOU EM 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01, decisão de produto
 `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): o `common[42]` ganhou campo
 próprio — o degrau que o perfil escolheu para aquele controle
 (`_brilho_das_luzes`), e não o `light.brightness` da pydualsense. A régua tem
@@ -27,7 +27,7 @@ DUAS metades, e a segunda é a que morde:
    transportes, é de `test_o_brilho_das_luzes_de_numero.py`.
 
 A prova do aparelho não mora num teste: mora em `docs/data/ensaios.csv`
-(`painel-do-brilho-*-0909`), porque quem a produziu foi o olho dela.
+(`painel-do-brilho-*-0909`), porque quem a produziu foi o olho de quem confere.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""O GESTO DELA PÕE O MICROFONE NO AR — a costura, não a ponte."""
+"""O GESTO DO USUÁRIO PÕE O MICROFONE NO AR — a costura, não a ponte."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
 P4 = "aa:bb:cc:00:00:04"
 
-#: A MESA DELA — quatro DualSense, dois no cabo e dois no rádio, na disposição
+#: A BANCADA — quatro DualSense, dois no cabo e dois no rádio, na disposição
 MESA_DELA: tuple[tuple[str, str], ...] = (
     (P1, "bluetooth"),
     (P2, "usb"),
@@ -190,7 +190,7 @@ def _sem_eco() -> Any:
 
 @pytest.fixture()
 def gancho(subsystem):  # type: ignore[no-untyped-def]
-    """Instala o subsystem como quem atende a palavra dela, e restaura depois."""
+    """Instala o subsystem como quem atende a palavra de produto, e restaura depois."""
     anteriores = eleicao.registrar_dizedor_do_no_ar(
         subsystem.no_ar, subsystem.esquecer_a_palavra, subsystem.palavra_no_ar
     )
@@ -199,7 +199,7 @@ def gancho(subsystem):  # type: ignore[no-untyped-def]
 
 
 def test_o_ato_do_microfone_diz_a_palavra_dela(gancho, registro) -> None:  # type: ignore[no-untyped-def]
-    """MORDIDA 1: `ligar_o_microfone` põe o pedido dela no registro."""
+    """MORDIDA 1: `ligar_o_microfone` põe o pedido no registro."""
     d = _DaemonDeMentira()
     ato = asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
     assert ato.canal_no_sistema.feita
@@ -238,7 +238,7 @@ def test_sem_ninguem_atendendo_o_ato_nao_explode(registro) -> None:  # type: ign
 
 
 def test_a_ponte_que_nasce_depois_recebe_a_palavra_dela(subsystem, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Reconexão de rádio é ROTINA: a ponte nova tem de saber o que ela pediu.
+    """Reconexão de rádio é ROTINA: a ponte nova tem de saber o que o usuário pediu.
 
     Se o latch morasse na `PonteMicBluetooth`, a primeira reconexão o apagaria
     e o microfone cairia em silêncio — o mesmo sintoma que esta cura fecha,
@@ -247,7 +247,7 @@ def test_a_ponte_que_nasce_depois_recebe_a_palavra_dela(subsystem, monkeypatch) 
     **O HOTPLUG AQUI É O `hidrawN` RENUMERANDO**, e não o controle saindo da
     mesa: o gerenciador casa as pontes por CAMINHO, então uma reconexão que
     devolva outro `/dev/hidrawN` para o mesmo endereço derruba a ponte e ergue
-    outra — com o controle presente o tempo todo, e a palavra dela intacta no
+    outra — com o controle presente o tempo todo, e a palavra de produto intacta no
     registro. (O controle que SAI da mesa é outro caso, e ali a palavra morre
     de propósito: ver `test_o_controle_que_sai_da_mesa_perde_a_palavra`.)
 
@@ -376,11 +376,11 @@ def test_ligar_pede_o_canal_e_calar_nao_o_solta(subsystem, registro) -> None:  #
     assert registro.no_ar() == {"aabbcc000001": False}
 
 
-# AS RÉGUAS DAQUI EXERCITAM A MESA DELA INTEIRA — os quatro DualSense.
+# AS RÉGUAS DAQUI EXERCITAM A BANCADA INTEIRA — os quatro DualSense.
 
 
 def _mesa_de_quatro(daemon: Any) -> None:
-    """Põe os QUATRO DualSense dela no backend do dublê, com o transporte."""
+    """Põe os QUATRO DualSense do usuário no backend do dublê, com o transporte."""
     daemon.controller.describe_controllers = lambda: [  # type: ignore[method-assign]
         {"uniq": uniq, "connected": True, "transport": transporte}
         for uniq, transporte in MESA_DELA
@@ -388,7 +388,7 @@ def _mesa_de_quatro(daemon: Any) -> None:
 
 
 def test_o_ato_recusado_nao_deixa_o_microfone_no_ar(gancho, registro) -> None:  # type: ignore[no-untyped-def]
-    """A SEXTA PORTA, nos quatro controles dela."""
+    """A SEXTA PORTA, nos quatro controles do usuário."""
     for uniq, _ in MESA_DELA:
         d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
         _mesa_de_quatro(d)
@@ -405,7 +405,7 @@ def test_o_ato_recusado_nao_deixa_o_microfone_no_ar(gancho, registro) -> None:  
 def test_o_canal_recusado_continua_pedido_para_a_ponte_poder_nascer(  # type: ignore[no-untyped-def]
     gancho, registro
 ) -> None:
-    """Desfazer a PALAVRA não desfaz o PEDIDO — e a distinção é dela."""
+    """Desfazer a PALAVRA não desfaz o PEDIDO — e a distinção é do usuário."""
     d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
     _mesa_de_quatro(d)
     asyncio.run(hotkey.ligar_o_microfone(d, P4, ligado=True))

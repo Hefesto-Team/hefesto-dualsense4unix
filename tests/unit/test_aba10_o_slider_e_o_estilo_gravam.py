@@ -210,7 +210,7 @@ def test_o_estilo_grava_gatilho_vibracao_e_uma_cor_por_unidade(
 
 
 def test_nenhuma_unidade_recebe_a_cor_de_outra(disco: dict[str, Any]) -> None:
-    """A LEI DELA, medida no que foi GRAVADO — e não no motor."""
+    """A LEI DE PRODUTO, medida no que foi GRAVADO — e não no motor."""
     for rotulo in [e.rotulo for e in estilos_de_jogo.ESTILOS
                    if e.chave != "personalizado"]:
         disco["perfil"] = Profile(name="Pragmata", match=MatchAny(), priority=40)
@@ -258,7 +258,7 @@ def test_o_gatilho_gravado_e_construivel(disco: dict[str, Any]) -> None:
 
 
 def test_personalizado_nao_mexe_em_nada(disco: dict[str, Any]) -> None:
-    """"Personalizado" é o estilo que diz *"eu ajusto na mão"*."""
+    """"Personalizado" é o estilo que diz ."""
     era = disco["perfil"]
     resposta = a10_perfis.editor_estilo(
         _ctx(), {"valor": "Personalizado"}, PonteDeMentira())
@@ -276,7 +276,7 @@ def test_um_estilo_que_o_produto_nao_conhece_recusa(disco: dict[str, Any]) -> No
 
 
 def test_dois_controles_no_mesmo_lugar_recusam(disco: dict[str, Any]) -> None:
-    """O único caminho pelo qual a lei dela cairia com o motor inocente."""
+    """O único caminho pelo qual a lei de produto cairia com o motor inocente."""
     mesa = [dict(MESA[0]), {**MESA[1], "jogador": 1}]
     with pytest.raises(RuntimeError, match="MESMA cor"):
         a10_perfis.editor_estilo(_ctx(mesa), {"valor": "FPS"}, PonteDeMentira())

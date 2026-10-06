@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""check_a_janela_nao_confessa.py — a MOLDURA também é tela dela.
+"""check_a_janela_nao_confessa.py — a MOLDURA também é tela do usuário.
 
 POR QUE ELE NASCEU, e o achado é o valor durável desta frente
 --------------------------------------------------------------
@@ -16,7 +16,7 @@ para a moldura do produto.
 **E ele atravessou incólume as duas réguas de tela desta casa.**
 ``check_a_conferencia.py`` e ``check_a_tela_nao_confessa.py`` medem o
 **corpo das dez páginas** — o HTML. A barra de título é GTK; o ``.desktop`` é
-INI; a unit é systemd. *A régua parava na borda da* ``<body>``\\ *, e a tela dela
+INI; a unit é systemd. *A régua parava na borda da* ``<body>``\\ *, e a tela do usuário
 não para.* Enquanto as dez páginas eram varridas linha por linha, a primeira
 coisa que ela lê ao abrir o programa não era medida por ninguém.
 
@@ -59,7 +59,7 @@ porque **nesta janela ninguém o lê**: o
 sem barra de abas e sem barra de endereço — quem escreve o que aparece na
 moldura é o ``set_title`` que esta régua já mede.
 
-Pô-lo aqui daria DEZ vermelhos sobre texto que a tela dela não mostra, e isso
+Pô-lo aqui daria DEZ vermelhos sobre texto que a tela do usuário não mostra, e isso
 tem nome nesta casa: *o instrumento respondendo sobre outra coisa que não o
 produto*. Se um dia a página abrir num navegador de verdade — onde o ``<title>``
 vira o nome da aba —, ele passa a ser moldura e entra aqui. **Fica escrito para

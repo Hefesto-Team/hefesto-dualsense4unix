@@ -448,7 +448,7 @@ class TestAHospedeiraNaoEnvelheceCalada:
     """A `Hospedeira` é o único dado deste arquivo que vem de fora do repo."""
 
     def test_o_portao_mede_sob_o_sandbox_da_copia(self) -> None:
-        """A cópia da máquina dela chega ao portão, em toda máquina."""
+        """A cópia da máquina do usuário chega ao portão, em toda máquina."""
         alvo = next(a for a in ALVOS if a.nome in HOSPEDEIRAS)
         assert alvo.protect_system == "strict", alvo
         assert "/var/lib/bluetooth" in alvo.gravaveis and "/tmp" in alvo.gravaveis, alvo

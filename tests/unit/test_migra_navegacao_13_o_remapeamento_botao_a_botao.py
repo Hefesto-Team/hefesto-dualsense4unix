@@ -414,7 +414,7 @@ def test_o_guardar_nao_apaga_o_que_a_tela_nao_mostrou(
 def test_zerar_de_proposito_grava(
     aba: Any, ctx: Any, disco: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com a linha que ELA mexeu na trava, tudo sem troca é pedido legítimo."""
+    """Com a linha que O usuário mexeu na trava, tudo sem troca é pedido legítimo."""
     from pacotes import perfil
     from pacotes.a06_navegacao import SEM_TROCA
 

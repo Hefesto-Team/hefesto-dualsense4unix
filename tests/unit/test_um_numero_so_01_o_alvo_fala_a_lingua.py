@@ -1,8 +1,8 @@
 """UM-NUMERO-SO-01 — o daemon e as lâmpadas param de discordar sobre quem é quem.
 
-**A MEDIÇÃO QUE ORIGINOU ISTO, 18/09/2026, na mesa dela com os quatro
+**A MEDIÇÃO QUE ORIGINOU ISTO, 18/09/2026, na bancada com os quatro
 DualSense ligados pelo rádio.** Pintei um controle de cada cor pelo
-``controller.target.set {index}`` e pedi a ela o que via. A resposta dela, e
+``controller.target.set {index}`` e pedi a ela o que via. A resposta de produto, e
 o instrumento que lê ``/sys/class/leds/*:white:player-N`` depois, concordaram::
 
     índice do daemon   0=vermelho  1=azul   2=roxo   3=branco
@@ -151,7 +151,7 @@ def test_o_gesto_nao_toca_arquivo_limpo(tmp_path) -> None:
 
 
 def test_mordida_da_ponta_1_sem_o_gesto_a_fila_podre_fica(tmp_path) -> None:
-    """Arranca o gesto: o arquivo continua com os oito, como estava na mesa dela."""
+    """Arranca o gesto: o arquivo continua com os oito, como estava na bancada."""
     import json as _json
 
     alvo = tmp_path / "controllers.json"
@@ -194,7 +194,7 @@ class _RegistroDaFila:
 
 @pytest.fixture
 def handlers():
-    """Os handlers com a mesa dela, sem daemon nem aparelho."""
+    """Os handlers com a bancada, sem daemon nem aparelho."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
     class _Daemon:
@@ -257,7 +257,7 @@ async def test_o_indice_continua_valendo_byte_a_byte(handlers) -> None:
 
 @pytest.mark.asyncio
 async def test_dois_alvos_juntos_recusam_em_vez_de_escolher(handlers) -> None:
-    """Escolher em silêncio é como um clique dela vai parar no aparelho errado."""
+    """Escolher em silêncio é como um clique do usuário vai parar no aparelho errado."""
     with pytest.raises(ValueError, match="UM alvo só"):
         await handlers._handle_controller_target_set({"index": 0, "jogador": 1})
 
@@ -340,7 +340,7 @@ def test_alvo_que_saiu_da_mesa_cai_no_primario_em_vez_de_sumir() -> None:
 
 
 def test_mordida_da_ponta_4_sem_o_alvo_o_ato_vai_para_o_primario() -> None:
-    """Arranca a consulta ao alvo: volta o defeito medido na mesa dela."""
+    """Arranca a consulta ao alvo: volta o defeito medido na bancada."""
     b = _backend()
     b._output_target_key = "k2"
     antigo = b._handles.get(b._primary_key)

@@ -134,7 +134,7 @@ def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
     """Prende ao PORTUGUÊS o nome que o leitor de tela anuncia.
 
     Um `Gtk.Button` que só carrega uma imagem não tem rótulo, e o ATK cai no
-    nome do ÍCONE. **MEDIDO NESTA ÁRVORE, na sessão dela (`LANG=pt_BR.UTF-8`),
+    nome do ÍCONE. **MEDIDO NESTA ÁRVORE, na sessão do usuário (`LANG=pt_BR.UTF-8`),
     com a barra montada exatamente como o construtor a montava:**
 
     ============================  =============  ==========
@@ -146,13 +146,13 @@ def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
     ``window-restore-symbolic``   ``Restore``    ``Restore``
     ============================  =============  ==========
 
-    **SÓ O FECHAR ESTAVA TRADUZIDO.** Na tela dela, dois dos três botões se
+    **SÓ O FECHAR ESTAVA TRADUZIDO.** Na tela do usuário, dois dos três botões se
     anunciavam em inglês — «Maximize» e «Minimize» — com a dica ao lado dizendo
     «Maximizar» e «Minimizar». Quem lê recebia uma palavra; quem ouve, outra. E
     o estado novo desta volta entra pela mesma porta: sem esta função, a janela
     maximizada passaria a anunciar «Restore».
 
-    CORREÇÃO DE FATO, e o erro foi meu: a primeira versão desta docstring dizia
+    CORREÇÃO DE FATO, de um erro de medição: a primeira versão desta docstring dizia
     que **os três** respondiam em inglês, inclusive ``'Close'``. Aquela medição
     rodou com ``LC_ALL=C`` no próprio arquivo de ambiente da régua — herdado da
     regra de LER o servidor de som sem tradução — e respondeu sobre o locale do
@@ -163,7 +163,7 @@ def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
     entra no ATK — está na tabela, com a dica certa do lado do nome errado.
 
     Duas réguas, em ``tests/unit/test_a_barra_diz_o_estado_da_janela.py``: a de
-    dentro do processo amarra o nome à dica (e morde na sessão dela, pelos dois
+    dentro do processo amarra o nome à dica (e morde na sessão do usuário, pelos dois
     botões em inglês); ``test_o_nome_acessivel_nao_segue_o_locale`` mede **num
     processo filho com ``LC_ALL=C``**, para a garantia não depender do locale
     de quem roda a suíte.
@@ -497,7 +497,7 @@ class JanelaDaAba:
         return False
 
     def _saiu_da_aba(self, titulo: str) -> None:
-        """Ela clicou na tira. Isso é LEGÍTIMO, e matar a janela por isso é bug."""
+        """O usuário clicou na tira. Isso é LEGÍTIMO, e matar a janela por isso é bug."""
         if not self.na_aba:
             return
         self.na_aba = False

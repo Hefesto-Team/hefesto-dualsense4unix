@@ -466,7 +466,7 @@ class AppTray:
                 (p.get("name") for p in profiles if p.get("active")),
                 None,
             )
-            # remover o numero de perfis"*. <!-- noqa-acento: citação dela -->
+            # remover o numero de perfis"*. <!-- noqa-acento: citação -->
             label = (
                 _("Hefesto - DualSense4Unix - perfil: %s") % active
                 if active

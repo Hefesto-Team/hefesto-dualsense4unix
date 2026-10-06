@@ -1,7 +1,7 @@
 """CONEXAO-ZUMBI-01 — o controle que conecta e NÃO vira controle.
 
-Ela viu quatro coisas com dois DualSense ligados (18/09/2026): *"o lightbar tá
-sem a solução"*, *"a mudança dos leds e afins não foram aplicadas pros demais
+O usuário viu quatro coisas com dois DualSense ligados (18/09/2026), *"a mudança dos leds e afins
+não foram aplicadas pros demais
 controles"*, *"ambos conectados, ambos como player 1 e ambos com lightbar
 azul"*, *"com dois ou mais controles conectados a interface do app para de
 funcionar"*. As quatro são UMA causa: o segundo controle tinha conexão de rádio
@@ -29,10 +29,10 @@ regressão só apareceu aos 181 segundos, com 67 testes verdes). Então:
   `time.monotonic` de verdade e uma thread de verdade, e exige que ele só cure
   depois de a janela passar — o instante inicial tem de sair sem cura.
 
-A MESA DELA NÃO É TOCADA. Todos os leitores entram por injeção, e os endereços
+A BANCADA NÃO É TOCADA. Todos os leitores entram por injeção, e os endereços
 são da faixa sintética da casa (`aa:bb:cc:…`). Nenhum teste chama `hcitool`,
 `busctl` ou `sudo` de verdade — o `desconectar` corta rádio, e cortar o rádio
-dela no meio de uma partida é exatamente o defeito que esta sprint cura.
+do usuário no meio de uma partida é exatamente o defeito que esta sprint cura.
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def _vigia(ponte: Any, **kwargs: Any) -> VigiaDeZumbis:
 
 
 def test_o_link_sem_hid_e_sem_bluez_e_zumbi() -> None:
-    """As três condições juntas — o caso que ela viu."""
+    """As três condições juntas — o caso que o usuário viu."""
     achados = zumbis([LINK_SAO, LINK_ZUMBI], {SAO}, CONHECIDOS)
     assert [z.controle for z in achados] == [ZUMBI]
 
@@ -105,7 +105,7 @@ def test_o_link_com_hidraw_nunca_e_zumbi() -> None:
     """A MORDIDA que mais importa: quem virou controle não se toca.
 
     Sem esta, o detector poderia acusar todo link do rádio — e a cura seria
-    derrubar os quatro DualSense da mesa dela.
+    derrubar os quatro DualSense da bancada.
     """
     assert zumbis([LINK_SAO], {SAO}, CONHECIDOS) == []
     assert zumbis([LINK_ZUMBI], {SAO, ZUMBI}, CONHECIDOS | {("hci1", ZUMBI)}) == []
@@ -333,7 +333,7 @@ def test_o_subsystem_esta_nas_tres_pontas() -> None:
 
 
 def test_o_vigia_nasce_ligado_e_a_chave_desliga(monkeypatch: Any) -> None:
-    """Ligado por default — ordem dela: *"o produto precisa ser inteligente"*."""
+    """Ligado por default — """
     vigia = ConexoesSubsystem()
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI", raising=False)
     assert vigia.is_enabled(object()) is True  # type: ignore[arg-type]

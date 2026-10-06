@@ -231,7 +231,7 @@ def test_quando_o_jogo_devolve_a_autoridade_a_mascara_entra(daemon: Any) -> None
 
 
 def test_gesto_manual_na_mascara_esquece_a_divergencia(daemon: Any) -> None:
-    """A palavra dela é mais nova que a de qualquer perfil (R-02/C6)."""
+    """A palavra de produto é mais nova que a de qualquer perfil (R-02/C6)."""
     _autoridade(daemon, "daemon")
     start_gamepad_emulation(daemon, "dualsense", origin="profile")
     _autoridade(daemon, "game")
@@ -250,8 +250,8 @@ def test_ela_ativando_o_perfil_na_mao_troca_a_mascara_com_jogo_aberto(
     """`origin="manual"` na ativação = `profile.switch` da GUI/applet ou o
     PS+D-pad no controle — nas rotas de ativação NADA MAIS usa essa origem
     (autoswitch, launch, sinal de jogo e dreno têm as suas). É vontade
-    explícita da usuária, e o gate R-04 sempre disse que a última palavra é
-    dela."""
+    explícita da usuária, e o gate R-04 sempre disse que a última palavra
+    é de produto."""
     _autoridade(daemon, "daemon")
     start_gamepad_emulation(daemon, "dualsense", origin="profile")
     _autoridade(daemon, "game")

@@ -121,7 +121,7 @@ def test_a_devolucao_da_posse_leva_o_preamp_junto() -> None:
 
 
 def test_a_rota_preserva_o_microfone_quando_assume_o_byte_do_zero() -> None:
-    """A REGRESSÃO de 02/08/2026, medida na máquina dela e curada no mesmo dia."""
+    """A REGRESSÃO de 02/08/2026, medida na máquina do usuário e curada no mesmo dia."""
     novo = _byte_da_rota(_Handle(), rep.SAIDA_SO_NO_ALTO_FALANTE)
 
     assert novo is not None

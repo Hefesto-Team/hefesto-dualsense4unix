@@ -179,7 +179,7 @@ def test_com_a_marca_as_duas_sobem(mesa: Any, monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_o_0003_de_antes_da_marca_segue_de_pe(mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A máquina dela até o próximo boot: o `0003` de 10/09, sem a marca."""
+    """A máquina do usuário até o próximo boot: o `0003` de 10/09, sem a marca."""
     (antigo,) = bt_mic.SRCVERSION_DO_0003_SEM_A_MARCA
     monkeypatch.setattr(
         bt_mic, "RAIZ_DO_MODULO_DO_DRIVER",

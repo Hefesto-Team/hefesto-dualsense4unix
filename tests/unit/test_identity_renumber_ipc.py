@@ -1,6 +1,6 @@
 """IPC `identity.renumber` (ONDA-U/U2/U10) — compacta slots 1..N.
 
-Contrato (fixado entre os agentes GUI/daemon do sprint):
+Contrato (fixado entre a GUI e o daemon do sprint):
   - método `identity.renumber`, args `{}`;
   - gate: só executa com `display_authority != 'game'`; com sessão de jogo
     aberta devolve `{ok: False, reason: "sessao_de_jogo_aberta"}` sem tocar

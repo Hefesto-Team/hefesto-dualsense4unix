@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """o_formato_do_audio_no_cabo.py — o mesmo bloco de áudio, no controle do CABO.
 
-A PERGUNTA, E ELA É DELA — 10/09/2026, com os dois controles na mesa:
-
-    *"manda antes pro controle com fio. eu quero saber se o mesmo teste
-     funcionaria nele, pq o audio mesmo com cabo a gnt precisa tomar o
-     controle."*  # noqa-acento: citação literal
+A PERGUNTA, E É DO USUÁRIO — 10/09/2026, com os dois controles na mesa
 
 **O que ela desenhou é o controle positivo que faltava, e ele separa duas coisas
 que esta casa vinha medindo juntas: o FORMATO e o TRANSPORTE.**
@@ -50,8 +46,7 @@ zero se leria como silêncio de formato.
 QUEM MANDA NO APARELHO ENQUANTO ISSO
 -------------------------------------
 O daemon está vivo e é o dono da barra e do estado. Este ensaio **não assume** o
-controle: ele escreve os reports de áudio e sai. É a palavra dela — *"o audio
-mesmo com cabo a gnt precisa tomar o controle"* — e ela tem razão para o REGIME;
+controle: ele escreve os reports de áudio e sai. É a  — e ela tem razão para o REGIME;
 para uma rajada de 5 s o que decide é se o firmware ACEITA o corpo, e isso não
 depende de posse.
 

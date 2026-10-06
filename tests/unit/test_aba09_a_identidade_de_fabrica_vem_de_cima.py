@@ -1,13 +1,13 @@
 """A "Identidade de fábrica" da aba 09 nomeia o controle DA FITA, não o do serial.
 
-A LEI É DELA, 03/09/2026:
+A LEI É DO USUÁRIO, 03/09/2026:
 
     "se no topo tá mostrando controle white player 1, então cada aba vai usar
     os controles lá de cima. Não mistura com a info dos mockups. Cada feature
     faz referencia ao controle conectado. Por isso temos o mapa pra  # noqa-acento: ela
     servir como variável de identificação"
 
-O QUE FOI MEDIDO, e é o que estes testes trancam. Mesa dela em 03/09/2026, com
+O QUE FOI MEDIDO, e é o que estes testes trancam. Bancada em 03/09/2026, com
 um `White` no cabo e um `Galactic Purple` no rádio — os dois lidos, os dois
 sabidos pela mesa:
 
@@ -20,7 +20,7 @@ O MESMO APARELHO, NA MESMA TELA, nomeado num lugar e anônimo no outro.
 
 A CAUSA: `_linha_de_identidade` lia SÓ `c["modelo"]` do `state_full`, e o
 `modelo` sai do serial — que o daemon não publica para quem está no rádio.
-Sondado no daemon dela no mesmo dia:
+Sondado no daemon do usuário no mesmo dia:
 
     usb  state_full.serial  os 17 caracteres   modelo "White"
     bt   state_full.serial  None               modelo None
@@ -112,7 +112,7 @@ def test_o_controle_do_cabo_continua_nomeado() -> None:
 
 
 def test_o_nome_e_o_mesmo_que_a_fita_escreve() -> None:
-    """Duas escritas, uma verdade. É a lei dela, e é o que a foto mostrava rompido."""
+    """Duas escritas, uma verdade. É a lei de produto, e é o que a foto mostrava rompido."""
     fita = a09_sistema._html_da_fita(MESA_DELA)
     for controle, item in ((NO_CABO, MESA_DELA[0]), (NO_RADIO, MESA_DELA[1])):
         nome = item["nome"]
@@ -150,7 +150,7 @@ def test_o_transporte_nao_vira_nome_do_aparelho() -> None:
 
         AssertionError: 'P2 · BT · rádio · o serial só é lido no cabo'
 
-    Desde 21/09/2026 a palavra do transporte na tela É `BT` (decisão dela, a
+    Desde 21/09/2026 a palavra do transporte na tela É `BT` (decisão de produto, a
     I9 revogada), então a mesma mordida daria `P2 · BT · BT` — e a régua conta
     a palavra, em vez de proibir as duas grafias que agora são a certa.
     """

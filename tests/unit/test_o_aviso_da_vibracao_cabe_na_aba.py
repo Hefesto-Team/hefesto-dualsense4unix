@@ -8,11 +8,11 @@ da ``.vib-estado``, que mede 1072 px, ele ocupava **1072 px**: quebrava em duas
 sublinhas, o quadro passava a rolar 40 px e a segunda metade ficava **CORTADA**
 pela borda de baixo do miolo. Para ler o aviso inteiro ela tinha de arrastar.
 
-**E o estado não era excepcional:** ``rumble_ff.vpads == 0`` é o da máquina dela
+**E o estado não era excepcional:** ``rumble_ff.vpads == 0`` é o da máquina do usuário
 com os dois controles na mesa. O custo caía exatamente sobre a frase que a linha
 existe para dizer.
 
-DECISÃO DELA, 02/09/2026 — *encurtar a frase, em vez de deixar a aba rolar*. E
+DECISÃO, 02/09/2026 — *encurtar a frase, em vez de deixar a aba rolar*. E
 ela é uma frase só, com um dono só (``rumble_actions.texto_do_alcance_da_
 intensidade``): encurtar ali muda a janela GTK junto, de propósito.
 

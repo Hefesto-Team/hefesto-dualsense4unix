@@ -36,7 +36,7 @@ def test_o_produto_sabe_montar_o_pacote_desde_a_bancada() -> None:
 
 
 def test_a_frase_nao_culpa_mais_o_nosso_conhecimento() -> None:
-    """A tela dela não pode dizer que o Hefesto não sabe, quando ele sabe."""
+    """A tela do usuário não pode dizer que o Hefesto não sabe, quando ele sabe."""
     assert "não sabe montar" not in MOTIVO_NO_SEM_PONTE_NO_RADIO
     assert "Ligue-o no cabo" in MOTIVO_NO_SEM_PONTE_NO_RADIO, (
         "a saída que funciona hoje continua tendo de estar na frase"

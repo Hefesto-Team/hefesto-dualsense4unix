@@ -1,17 +1,14 @@
 """ORDEM-DE-CHEGADA-01 / D-30 — o número sai da ordem de conexão do MOMENTO.
 
-**Decisão dela, 15/08/2026 às 03:54**, depois de dar reset de fábrica nos
+**Decisão, 15/08/2026 às 03:54**, depois de dar reset de fábrica nos
 quatro DualSense e re-parear um a um, na ordem **vermelho, azul, branco,
 roxo**:
 
-> *"deve ser lembrado por ordem de conexão naquele momento apenas. Não uma
-> imagem fixa salva por mec (…) Vermelho, deveria ser o player 1, azul, o
-> player 2, branco o player 3, roxo o player 4. mas tá agora, vermelho 1,
-> branco 2, roxo 3, azul 4"*
+> **
 
-O que ela viu — `vermelho 1, branco 2, roxo 3, azul 4` — é o `controllers.json`
+O que o usuário viu — `vermelho 1, branco 2, roxo 3, azul 4` — é o `controllers.json`
 dela sendo obedecido à risca: a fila GRAVADA tinha essa ordem, de um dia
-qualquer do passado, e a exibição saía dela. A opção (b) que ela escolheu troca
+qualquer do passado, e a exibição saía dela. A opção (b) que o usuário escolheu troca
 a fonte, **sem destruir o gravado**: a fila do momento manda, o gravado
 desempata.
 
@@ -23,7 +20,7 @@ identity.py`). Ela foi escolhida porque paga zero do preço delas, e é
 exatamente esse "zero" que os testes daqui existem para cobrar:
 
 1. **o número segue a ordem de conexão daquele momento** —
-   `TestOCasoDela`, com a mesa dela sem tradução;
+   `TestOCasoDela`, com a bancada sem tradução;
 2. **a ordem CONGELA quando a mesa fica estável** — `TestCongelarEGravar`.
    Congelar, aqui, é *gravar*: a ordem do momento é escrita na fila
    persistida, e por isso sobrevive ao restart (R-23);
@@ -35,14 +32,13 @@ exatamente esse "zero" que os testes daqui existem para cobrar:
 
 ## O que este arquivo NÃO prova
 
-Que a ordem do momento é a resposta certa: isso é decisão dela, tomada, e não
+Que a ordem do momento é a resposta certa: isso é decisão de produto, tomada, e não
 se mede em teste. E não prova nada sobre a mesa com externo ligado além do
 invariante de contagem (`TestAMesaMistaContinuaFechando`) — o mapa completo
 com Pro Controller e 8BitDo continua sem medição, como a sprint declara.
 
 Nenhum endereço real: faixa forjada `aa:bb:cc:…`, octetos 4 e 5 zerados, a
-mesma allowlist de `test_anonimato_de_fixtures.py`. A ORDEM reproduz a mesa
-dela; os bytes, não.
+mesma allowlist de `test_anonimato_de_fixtures.py`. A ORDEM reproduz a bancada; os bytes, não.
 """
 from __future__ import annotations
 
@@ -150,7 +146,7 @@ def conectar_um_a_um(
     ordem: tuple[str, ...] = ORDEM_DE_CONEXAO,
     intervalo: float = 60.0,
 ) -> None:
-    """A mesa dela sendo montada: um controle de cada vez, minutos entre eles."""
+    """A bancada sendo montada: um controle de cada vez, minutos entre eles."""
     na_mesa: list[str] = []
     for uniq in ordem:
         na_mesa.append(uniq)
@@ -254,7 +250,7 @@ class TestCongelarEGravar:
     def test_o_congelado_atravessa_o_restart_do_daemon(
         self, config_isolado: Path
     ) -> None:
-        """R-23 continua de pé — e agora com a ordem QUE ELA PEDIU."""
+        """R-23 continua de pé — e agora com a ordem QUE O USUÁRIO PEDIU."""
         reg, relogio = self.montar(config_isolado)
         relogio.avancar(JANELA_MESA_ESTAVEL_SEC)
         reg.sync_connected(list(ORDEM_DE_CONEXAO))

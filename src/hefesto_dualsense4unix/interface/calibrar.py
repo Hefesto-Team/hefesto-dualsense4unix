@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A página de calibração dos sensores de movimento — `mockup/calibrar-sensores.html`.
 
-PEDIDO DELA, 31/08/2026, e é o segundo botão que ela mandou nascer na Controles:
+PEDIDO, 31/08/2026, e é o segundo botão que o usuário mandou nascer na Controles:
 
     "Preciso que crie uma nova página que abre e mostra os svgs dos controles
      conectados e o procedimento igual o da steam pra calibrar os controles.
@@ -17,9 +17,9 @@ procedimento inteiro, sem uma linha de JavaScript.
 O QUE "OS 4 AO MESMO TEMPO" QUER DIZER, e vale escrever porque é o ponto do
 pedido: a calibração é de TODOS de uma vez, não um controle por vez. Quem tem
 quatro na mesa não repete o gesto quatro vezes. A tela mostra os que estão
-conectados — hoje dois, pela decisão dela do mesmo dia de deixar dois fora.
+conectados — hoje dois, pela decisão de produto do mesmo dia de deixar dois fora.
 
-POR QUE O PROCEDIMENTO DA STEAM: é o que ela nomeou, e ele é o mínimo honesto —
+POR QUE O PROCEDIMENTO DA STEAM: é o que o usuário nomeou, e ele é o mínimo honesto —
 o giroscópio zera medindo o repouso, então a única coisa que a pessoa precisa
 fazer é **não mexer**. Toda instrução a mais é ruído.
 
@@ -28,8 +28,8 @@ páginas que abrem POR FORA das dez abas, e uma segunda gramática de página
 avulsa na mesma janela seria uma a mais.
 
 **A CAIXA É A DA JANELA DAS ABAS** desde 23/09/2026
-(A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01), lida do `topo.html`, porque ela
-pediu a Calibrar do tamanho do programa. Em 24/09/2026 ela decidiu que o «Mapa
+(A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01), lida do `topo.html`, porque o usuário
+pediu a Calibrar do tamanho do programa. Em 24/09/2026 o usuário decidiu que o «Mapa
 do controle» e o mapa das portas seguem a mesma caixa, e as três avulsas
 passaram a pedi-la ao mesmo dono, `caixa_da_janela.py`
 (AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01).
@@ -39,7 +39,7 @@ OS CONTROLES SÃO DE QUEM ABRE A PÁGINA — 11/09/2026, F3-CALIBRAR
 
 Até hoje esta página desenhava `monta.CONECTADOS` (o desenho, sempre dois) com
 números de uma constante deste arquivo (`REPOUSO`, seis por controle). Medido no
-daemon dela em 11/09, com os dois DualSense na bancada:
+daemon do usuário em 11/09, com os dois DualSense na bancada:
 
     a tela dizia            o aparelho respondia
     P1 · Cosmic Red · USB   P1 · Starlight Blue · USB
@@ -228,7 +228,7 @@ CSS = """
     border-color:var(--purple);color:var(--fg)}
 
   /* `.controles` E NÃO `.mesa` — 11/09/2026. A palavra é banida em texto de
-     tela (decisão dela, 06/09) e o nome da classe não chega a lê-la, mas este
+     tela (decisão, 06/09) e o nome da classe não chega a lê-la, mas este
      bloco passou a ser o alvo que o produto TROCA a cada mudança de bancada, e
      o seletor vive escrito no pacote: `[data-bloco="controles"]`. Um endereço
      novo nasce na língua de hoje. */
@@ -570,7 +570,7 @@ def documento(quem):
 
     <!-- O QUE ELA PRECISA SABER, E SÓ ISSO. A calibração não muda ajuste nenhum
          do perfil: ela zera a leitura de repouso do aparelho. Escrever mais que
-         isto seria a mesma prosa que ela mandou cortar dos tooltips. -->
+         isto seria a mesma prosa que o usuário mandou cortar dos tooltips. -->
     <div class="aviso">
       A calibração <b>não muda os seus ajustes</b> — ela só ensina ao controle qual é o zero dele.
       Se o cursor anda sozinho com o controle parado, é isto que resolve.

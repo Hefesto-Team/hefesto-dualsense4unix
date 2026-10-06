@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """A ABA 07 USA O CONTROLE DA MESA, e a mesa lê do APARELHO.
 
-A LEI, e ela é dela (03/09/2026):
+A LEI, e é do usuário (03/09/2026):
 
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado.   <!-- noqa-acento: citação dela -->
-    Por isso temos o mapa pra servir como variável de identificação"
 
-O QUE ESTAVA NA TELA, medido em 03/09/2026 com os DOIS controles dela na mesa
+O QUE ESTAVA NA TELA, medido em 03/09/2026 com os DOIS controles do usuário na mesa
 (um no cabo, um no rádio), na foto da `07-lancadores`:
 
     cabeçalho   2 controles: 1 USB · 1 BT      <- certo, lido do aparelho
@@ -29,7 +25,7 @@ desenho sobrevivia inteiro na tela.
 A CURA DESTA ABA tem duas metades, e uma sem a outra não anda:
 
 1. o GERADOR tira da página os chips que nomeiam controle. A página estática não
-   sabe nada dos controles dela, e a regra é a dela — *campo sem informação não
+   sabe nada dos controles do usuário, e a regra é a dela — *campo sem informação não
    mostra nada*. Fica o `Selecionar:` e o chip `Todos`, que são ESTRUTURA;
 2. o PACOTE escreve os chips com a mesa VIVA, por `blocos[".fita"]`. **Sem esta
    metade, a primeira seria maquiagem**: zeraria a régua e deixaria a fita vazia.
@@ -138,7 +134,7 @@ def _chips(html: str) -> list[str]:
 
 
 def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
-    """Regra dela: campo sem informação NÃO MOSTRA NADA."""
+    """Regra de produto: campo sem informação NÃO MOSTRA NADA."""
     chips = _chips(_fita_da_07(MESA_COM_UM_SEM_COR))
     assert len(chips) == 3, (
         f"esperava `Todos` + dois controles, saíram {len(chips)}. Uma fita que "

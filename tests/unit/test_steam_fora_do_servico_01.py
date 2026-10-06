@@ -104,7 +104,7 @@ class TestADoDaemonNasceFora:
     def test_o_comando_proprio_do_ps_nasce_fora(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O ``custom`` do PS é o programa DELA, e mora no mesmo serviço."""
+        """O ``custom`` do PS é o programa DO USUÁRIO, e mora no mesmo serviço."""
         chamadas: list[dict[str, Any]] = []
 
         def _abrir(argv: Sequence[str], **kwargs: Any) -> fds.Abertura:

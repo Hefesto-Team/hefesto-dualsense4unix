@@ -1,12 +1,11 @@
 """GATILHO-DA-COR-01: repintar a lightbar DEPOIS que a rajada da Steam passa.
 
-- **Medido em:** bancada de 11-12/08/2026, com o olho dela, quatro DualSense na
+- **Medido em:** bancada de 11-12/08/2026, com o olho de quem confere, quatro DualSense na
   mesa. As linhas estão em ``docs/data/ensaios.csv`` (``linha_id =
   luz.lightbar.cor@dualsense``), e as três que sustentam este arquivo são
   ``btmon-a-rajada-tem-hora``, ``gatilho-1500ms-por-controle`` e
   ``gatilho-escrever-no-silencio``.
-- **A formulação é dela:** *"não podemos colocar um gatilho pra sempre que a
-  steam aloprar em sequência algo ativa a sobrescrição automática?"*
+- **A formulação é do usuário:** **
 
 O DEFEITO
 =========
@@ -27,10 +26,10 @@ ou seja, dentro da rajada. Chega junto, e a última palavra é da Steam.
 
 SÃO DUAS LUZES, NÃO UMA
 =======================
-Pergunta dela, 12/08: *"isso vai servir pro player e pro lightbar, certo?"* —
+Pergunta, 12/08: *"isso vai servir pro player e pro lightbar, certo?"* —
 e a resposta tem de ser sim, porque **a Steam repinta as duas**. Medido no
 mesmo dia: ao abrir a Steam com as barras acesas, elas migraram para as cores
-de jogador dela, e o número de jogador acompanhou. Um gatilho que reescrevesse
+de jogador do usuário, e o número de jogador acompanhou. Um gatilho que reescrevesse
 só a cor deixaria o produto dizendo uma coisa na luz e outra na tela.
 
 As duas cabem no MESMO report — ``valid_flag1`` liga os dois bits
@@ -43,8 +42,7 @@ O ERRO QUE ENSINOU O DESENHO
 ============================
 A primeira versão do gatilho esperava 1,5 s **depois de cada controle** e
 escrevia só naquele. Falhou: três conexões em três segundos, e só o ÚLTIMO
-ficou magenta (ensaio ``gatilho-1500ms-por-controle``; literal dela: *"só o
-player 4 que é o controle azul o resto tá no padrão da steam"*). O último
+ficou magenta (ensaio ``gatilho-1500ms-por-controle``; literal). O último
 sobreviveu apenas porque ninguém conectou depois dele.
 
 Por isso o disparo é no **fim da sequência**, nunca por controle: cada evento
@@ -55,7 +53,7 @@ ONDE MORA O QUÊ
 Este módulo tem só o **conteúdo** da lightbar: o report que se escreve e o
 número medido de espera. O **mecanismo** — armar, re-adiar, disparar no
 silêncio — mora em `core/gatilho_fim_de_sequencia.py`, genérico por decisão
-dela (*"reafirmar o que o produto quer no fim da sequência, seja cor, número
+de produto (*"reafirmar o que o produto quer no fim da sequência, seja cor, número
 ou o IGNORE do ambiente"*), porque já são três os defeitos da mesma família. A
 fiação dos dois é `daemon/connection.py`.
 """
@@ -147,7 +145,7 @@ def build_bt_lightbar_report(
 ) -> bytes:
     """Report ``0x31`` MÍNIMO que pinta a lightbar e o número do jogador.
 
-    É o report exato que venceu a Steam na mesa dela (ensaio
+    É o report exato que venceu a Steam na bancada (ensaio
     ``cor-rota-hidraw-com-steam``, 12/08), acrescido do bit do número — que a
     Steam também repinta.
 

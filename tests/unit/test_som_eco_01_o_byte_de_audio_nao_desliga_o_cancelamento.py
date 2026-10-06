@@ -22,7 +22,7 @@ class TestOCancelamentoDeEcoNasceLigado:
         assert rep.AUDIO_CONTROL_BASE_SEGURA & rep.AUDIO_CONTROL_FORCE_INTERNAL_MIC
 
     def test_o_cancelamento_de_ruido_esta_ligado(self) -> None:
-        """Decisão dela, 17/09/2026, diante do microfone do cabo."""
+        """Decisão, 17/09/2026, diante do microfone do cabo."""
         assert rep.AUDIO_CONTROL_BASE_SEGURA & rep.AUDIO_CONTROL_NOISE_CANCEL, (
             "o cancelamento de ruído saiu da base — é a decisão dela de "
             "17/09/2026, e sem ele o microfone dela volta a não ficar limpo"

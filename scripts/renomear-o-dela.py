@@ -19,7 +19,7 @@ Uso::
 Contrato das ferramentas da casa: idempotente, ``--conferir``, resumo em UMA linha
 (o detalhe vai para ``--detalhe ARQUIVO``). O que não é versionado (``docs/process/``
 e o arquivo de instruções da raiz) é reapontado pelo ``reapontar-a-casa.py`` de
-quem coordena, com a mesma tabela.
+a costura, com a mesma tabela.
 """
 from __future__ import annotations
 

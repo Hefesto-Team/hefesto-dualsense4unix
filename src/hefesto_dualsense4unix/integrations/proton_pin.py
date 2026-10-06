@@ -270,7 +270,7 @@ def fora_do_pino_path(home: Path | None = None) -> Path:
 
 
 def ler_jogos_fora_do_pino(path: Path | None = None) -> list[str]:
-    """Os appids que ela NOMEOU como fora do pino. Nunca levanta."""
+    """Os appids que o usuário NOMEOU como fora do pino. Nunca levanta."""
     destino = path if path is not None else fora_do_pino_path()
     try:
         return [
@@ -876,8 +876,7 @@ def lock_games_to_pinned_proton(
     `appinfo.vdf` só precisa ser lido quando há jogo novo.
 
     ``todos=True`` alcança TODO jogo, inclusive o que aponta para uma
-    ferramenta que o Hefesto nunca escreveu — ordem dela de 17/09/2026:
-    *"ele e todo o resto de agora em diante."* Sem ele, a guarda `preservado`
+    ferramenta que o Hefesto nunca escreveu —  Sem ele, a guarda `preservado`
     continua valendo, e ela é o padrão da função de propósito: quem chamar sem
     pedir não atropela ninguém.
 
@@ -1136,7 +1135,7 @@ def lock_proton_for_all_games(
     continua `False` (quem chama sem pedir não atropela ninguém); os chamadores
     do PRODUTO pedem `todos=True`.
 
-    O que ela nomeou em `jogos_fora_do_pino.txt` fica de fora, e jogo nativo
+    O que o usuário nomeou em `jogos_fora_do_pino.txt` fica de fora, e jogo nativo
     do Linux não ganha entrada nova (:func:`jogos_sem_entrada_nova`).
 
     O worker da aba Sistema chama ``lock_proton_for_all_games()`` sem

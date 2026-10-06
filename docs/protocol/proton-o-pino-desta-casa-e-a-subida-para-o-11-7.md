@@ -1,28 +1,27 @@
 # O Proton desta casa — o pino, a subida para o 11-7, e o que ela não entrega
 
-**Medido em 17/09/2026**, na máquina dela, sem escrever um byte nela. Estudo:
-nada aqui foi aplicado. O passo que toca o disco dela está na §4 e tem dono
+**Medido em 17/09/2026**, na máquina do usuário, sem escrever um byte nela. Estudo:
+nada aqui foi aplicado. O passo que toca o disco do usuário está na §4 e tem dono
 humano.
 
-Pergunta que originou: *"dentro do proton eu gostaria que fossemos pra versão
-11.7 (…) só agora na 11.6 que fomos garantir o mic e o som mesmo que por bt."*
+Pergunta que originou
 
 ---
 
 ## §0 A resposta, em cinco linhas
 
-1. **A 11-7 não está no disco dela.** Existem quatro Protons em
+1. **A 11-7 não está no disco do usuário.** Existem quatro Protons em
    `compatibilitytools.d`, e o mais novo é o `GE-Proton11-6-x86_64`. A subida
    **exige download de 563.784.602 bytes**.
 2. **A subida é mecanicamente segura e já foi simulada**: 24 jogos migram, 1 é
-   preservado por escolha dela, o default global troca, 3 entradas ficam
+   preservado por escolha do usuário, o default global troca, 3 entradas ficam
    intactas. O `--lock` reconhece o 11-6 como pino NOSSO sozinho, pelo registro.
 3. **A 11-7 não perde a feature pela qual o pino subiu.** A nota do release diz,
    com todas as letras, que a pilha de áudio/haptics Sony foi *rebased*
    "retaining behavior".
-4. **Nenhum dos 25 jogos dela está em qualquer lista por appid do Proton** —
+4. **Nenhum dos 25 jogos do usuário está em qualquer lista por appid do Proton** —
    nem no 11-6, nem nas que o 11-7 acrescenta. As mudanças de controle da 11-7
-   não tocam a biblioteca dela.
+   não tocam a biblioteca do usuário.
 5. **O mic e o som por Bluetooth NÃO vieram da 11-6.** São código desta casa,
    medidos em 03/09, 06/09 e 10/09 — com o pino ainda no `GE-Proton10-34`. A
    coincidência é de calendário. A §6 mede isso.
@@ -86,14 +85,14 @@ Steam.
 regrava o `config.vdf` ao sair e a edição seria perdida. Recusa devolve `rc=3`.
 
 **A guarda de 19/08/2026:** entrada de jogo que já aponta para outra ferramenta
-vira `action="preservado"` — não se atropela escolha dela. Nasceu de um estrago
+vira `action="preservado"` — não se atropela escolha do usuário. Nasceu de um estrago
 medido: em 14/08 a trava arrastou três escolhas deliberadas dela para o pino sem
 perguntar.
 
 **A memória que faz a subida alcançar os jogos:** `pinos_do_hefesto`, no
 registro. É a lista dos Protons que ESTE produto já pinou. O que está nela é
-nosso e **migra**; qualquer outro valor continua sendo escolha dela e é
-preservado. Sem ela, a guarda de 19/08 lê como escolha dela o que o próprio
+nosso e **migra**; qualquer outro valor continua sendo escolha do usuário e é
+preservado. Sem ela, a guarda de 19/08 lê como escolha do usuário o que o próprio
 produto escreveu — que foi exatamente o defeito de 16/09/2026, curado em
 `84d89a8de`.
 
@@ -136,7 +135,7 @@ E o doctor confere no fim (`check_proton_pin`, `install.sh:4218`), com
 
 ---
 
-## §2 O que está no disco dela HOJE
+## §2 O que está no disco do usuário HOJE
 
 Medido em 17/09/2026.
 
@@ -152,7 +151,7 @@ Medido em 17/09/2026.
 `~/.cache/hefesto-dualsense4unix/proton/` tem só o tarball do 11-6 (509 MB) e o
 `.sha512sum` dele.
 
-O `--report` de hoje, na máquina dela:
+O `--report` de hoje, na máquina do usuário:
 
 ```
 pinned_name         = GE-Proton11-6-x86_64
@@ -160,7 +159,7 @@ pinned_present      = True
 pinned_manifest_ok  = True          <- o sha256 do manifesto bate com o conf
 global_tool         = GE-Proton11-6-x86_64
 global_is_pinned    = True
-games_off_pin       = ['2497900']   <- DON'T SCREAM, escolha dela
+games_off_pin       = ['2497900']   <- DON'T SCREAM, escolha do usuário
 games_leaky_proton  = []            <- nenhum jogo em Proton <= 9
 mapping             = 29 entradas
 ```
@@ -183,7 +182,7 @@ Wendigo Blue, PEAK, Pro Jank Footy, ORPHEUS e Future Knight.
 
 | appid | onde está | por quê |
 | --- | --- | --- |
-| `2497900` DON'T SCREAM | `proton_11` | **escolha dela**, respeitada desde 19/08 |
+| `2497900` DON'T SCREAM | `proton_11` | **escolha do usuário**, respeitada desde 19/08 |
 | `1245620` | `proton_11` | **não está instalado** — fora de `list_installed_appids` |
 | `2369580` | `GE-Proton10-34` | **não está instalado**; ficou no pino de abril |
 
@@ -222,7 +221,7 @@ Fixes"**. Cinco itens, e só o último é infraestrutura:
 preservado. Não há, na nota, promessa de melhora do áudio do controle — e
 também não há regressão anunciada.
 
-Os outros quatro itens são **por appid** e nenhum toca a biblioteca dela (§5):
+Os outros quatro itens são **por appid** e nenhum toca a biblioteca do usuário (§5):
 
 - novos defaults Sony→XInput: Capcom Fighting Collection 1 e 2, MARVEL vs.
   CAPCOM Arcade Classics, Street Fighter 30th Anniversary, Tetris Effect:
@@ -236,7 +235,7 @@ Os outros quatro itens são **por appid** e nenhum toca a biblioteca dela (§5):
 O grosso do release é **Wine-Wayland com renderização de processo filho** (85
 patches na série), janelamento/fullscreen/cursor, vídeo e overlay da Steam. Ela
 roda COSMIC sob Wayland, então esse é o pedaço que de fato muda o chão embaixo
-dos jogos dela. Dois itens são os que eu olharia primeiro se algo estranhar:
+dos jogos do usuário. Dois itens são os que eu olharia primeiro se algo estranhar:
 
 - **overlay da Steam, "Focus restoration and Steam Input identity"**
   (`fb769bc5`): passa a usar uma janela X11 `InputOnly` separada e o **foco de
@@ -246,7 +245,7 @@ dos jogos dela. Dois itens são os que eu olharia primeiro se algo estranhar:
 
 O próprio autor marca dois itens como **não reconfirmados em tempo de execução**
 (o flicker do launcher do Marvel Rivals e o HDR do DOOM Eternal), e pede
-cautela com "direct scanout" — nenhum deles alcança a biblioteca dela.
+cautela com "direct scanout" — nenhum deles alcança a biblioteca do usuário.
 
 ### O upstream do Proton
 
@@ -273,13 +272,13 @@ sha512 na mesma passada. O sha512 resultante bate, byte a byte, com o
 tarball autêntico.
 
 O mesmo cruzamento foi feito no 11-6 como controle: o `.sha512sum` em cache na
-máquina dela é idêntico ao publicado hoje, e o `pinned_manifest_ok` é `True`.
+máquina do usuário é idêntico ao publicado hoje, e o `pinned_manifest_ok` é `True`.
 
 ---
 
 ## §4 O caminho seguro de migração — NÃO EXECUTADO
 
-Nada desta seção foi rodado. O passo 3 em diante toca a máquina dela.
+Nada desta seção foi rodado. O passo 3 em diante toca a máquina do usuário.
 
 ### Antes de tudo: as duas perguntas que são dela
 
@@ -288,7 +287,7 @@ Nada desta seção foi rodado. O passo 3 em diante toca a máquina dela.
    ouviu isso funcionar, subir para a 11-7 não arrisca nada medido — e testar a
    promessa uma vez, na 11-6, antes de trocar, vale mais do que qualquer plano.
 2. **Ela quer o 11-7 pelo controle, ou pelo resto?** Pelo controle, o ganho é
-   nulo para a biblioteca dela (§5). Pelo Wayland/overlay, pode ser real.
+   nulo para a biblioteca do usuário (§5). Pelo Wayland/overlay, pode ser real.
 
 ### Passo 0 — a foto de antes (read-only, sem risco)
 
@@ -365,7 +364,7 @@ esperado.
 `GE-Proton11-6-x86_64` continua no disco: nenhum deles precisa de rede.
 
 1. **Um jogo só** — trocar o Proton daquele jogo pela janela da Steam
-   (Propriedades → Compatibilidade). Isso o transforma em escolha dela, e o
+   (Propriedades → Compatibilidade). Isso o transforma em escolha do usuário, e o
    `--lock` seguinte passa a **preservá-lo**. É o caminho mais barato e o que o
    produto foi desenhado para respeitar.
 2. **Tudo, pelo produto** — voltar as três chaves do conf para o 11-6 e rodar
@@ -389,7 +388,7 @@ que o vdf já não tem.
   dezenas; o install reinicia o daemon e reescreve lançadores. As duas linhas do
   `proton_pin.py` fazem exatamente o passo 11c e nada mais.
 - **Não apagar o `GE-Proton11-6-x86_64`.** Ele é o caminho de volta sem rede.
-- **Não tocar em `2497900`, `1245620` nem `4046520`.** São escolhas dela.
+- **Não tocar em `2497900`, `1245620` nem `4046520`.** São escolhas do usuário.
 
 ---
 
@@ -400,7 +399,7 @@ existe.** O que existe é uma decisão datada de sinal contrário, e ela vale:
 
 | decisão | data | o que diz |
 | --- | --- | --- |
-| a guarda `preservado` | 19/08/2026 | jogo que já aponta para outra ferramenta **não** é atropelado. Nasceu do estrago de 14/08, em que três escolhas dela foram apagadas sem pergunta |
+| a guarda `preservado` | 19/08/2026 | jogo que já aponta para outra ferramenta **não** é atropelado. Nasceu do estrago de 14/08, em que três escolhas do usuário foram apagadas sem pergunta |
 | o pino sobe para 11-6 | 16/09/2026 | a razão é a **feature** (áudio/haptics no jogo), e o conf declara que o 11-7 saiu no mesmo dia e não foi pinado porque *"o pino é a versão que este projeto validou"* |
 
 A segunda é a que a subida para o 11-7 muda, e ela é explicitamente reversível
@@ -410,12 +409,12 @@ jogo com razão escrita para ficar na 11-6.
 ### A medição que fecha o risco de controle
 
 O script `proton` do GE-Proton liga variáveis de ambiente de controle **por
-appid**. Se um jogo dela caísse numa dessas listas, o Proton mudaria a
+appid**. Se um jogo do usuário caísse numa dessas listas, o Proton mudaria a
 identidade do DualSense dentro do jogo — e isso conversaria com o que este
 produto faz por fora. Medido contra o `proton` do 11-6 instalado, cruzando com
 `list_installed_appids()`:
 
-| variável | appids na lista | jogos DELA |
+| variável | appids na lista | jogos do usuário |
 | --- | --- | --- |
 | `PROTON_SONY_HIDRAW_XINPUT` | 144 | **nenhum** |
 | `PROTON_SONY_DUALSENSE_AS_DUALSHOCK4` | 21 | **nenhum** |
@@ -427,10 +426,10 @@ produto faz por fora. Medido contra o `proton` do 11-6 instalado, cruzando com
 
 E os appids que o 11-7 **acrescenta** a essas listas (eFootball, Dragon Age:
 Inquisition, as três coletâneas Capcom, Street Fighter 30th, Tetris Effect:
-Connected, Grandia, Grandia II, Lunar) também não estão na biblioteca dela.
+Connected, Grandia, Grandia II, Lunar) também não estão na biblioteca do usuário.
 
 **Conclusão medida: pelo lado do controle, a 11-7 é neutra para os 25 jogos
-dela.** O risco real da subida não é de controle — é o chão de Wayland e
+do usuário.** O risco real da subida não é de controle — é o chão de Wayland e
 overlay da §3.
 
 ### O que continua de pé, e é a razão original do pino
@@ -475,7 +474,7 @@ write() no /dev/hidraw, com o daemon vivo e o hid-playstation ligado
 sem primer · sem socket L2CAP · sem root · sem unbind
 ```
 
-Grau: **MEDIDO NO APARELHO**, com a orelha dela — 70 segundos contínuos sem
+Grau: **MEDIDO NO APARELHO**, com a orelha do usuário — 70 segundos contínuos sem
 corte, e a mordida do CRC calando o som. Nada nesse caminho passa por Proton: o
 Proton só existe dentro de um jogo Windows, e a ponte toca com jogo nenhum
 aberto.
@@ -504,15 +503,15 @@ controle, 1 jogo. Nada em `docs/data/ensaios.csv` mede um jogo Windows abrindo o
 alto-falante do controle: as linhas de `audio.alto_falante@dualsense` são todas
 do caminho **nosso** (IPC `speaker.set` e `pw-play`), medidas em 15/08.
 
-**A consequência prática para a decisão dela:** a 11-6 está pinada por uma
+**A consequência prática para a decisão de produto:** a 11-6 está pinada por uma
 promessa não colhida. Subir para a 11-7 não arrisca uma feature medida, porque
 não há feature medida a arriscar — e, segundo a nota do release, a pilha
 continua lá.
 
-### 6.4 O que a frase dela acerta
+### 6.4 O que a frase de produto acerta
 
 Ela associou 11-6 ao som e ao mic porque as duas coisas aconteceram na mesma
-semana e a subida do pino foi pedida por ela com o Sackboy aberto, pedindo
+semana e a subida do pino foi pedida pelo usuário com o Sackboy aberto, pedindo
 *"sons do jogo sfx, microfone também"*. O pedido é o mesmo; os dois caminhos que
 o atendem é que são dois. **A casa deve os dois — um já entrega por rádio
 (nosso), o outro ainda não foi conferido no jogo (Proton).**

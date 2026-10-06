@@ -92,7 +92,7 @@ def test_no_radio_pede_o_disconnect(pac, gesto, monkeypatch) -> None:
 
 
 def test_ja_estava_fora_conta_como_sucesso(pac, gesto, monkeypatch) -> None:
-    """A linha é do módulo: os dois estados pedem o MESMO gesto dela (apertar PS)."""
+    """A linha é do módulo: os dois estados pedem o MESMO gesto do usuário (apertar PS)."""
     from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 
     monkeypatch.setattr(

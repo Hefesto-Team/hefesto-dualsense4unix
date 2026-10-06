@@ -61,7 +61,7 @@ def test_o_clique_liga_e_desliga_pela_escolha(
 
 def test_o_clique_escreve_o_recibo_na_tela(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A QUEIXA DELA, presa por régua: "Clico em confirma e não aparece nada"."""
+    """A QUEIXA DE USO, presa por régua: "Clico em confirma e não aparece nada"."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     _mesa(a09, monkeypatch, ligado=False)

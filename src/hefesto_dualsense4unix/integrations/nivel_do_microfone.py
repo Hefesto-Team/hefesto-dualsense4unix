@@ -60,7 +60,7 @@ Régua: CPU por processo lida em ``/proc/<pid>/stat`` (utime+stime), janela de
 30 a 40 s **descartando a partida** — o custo aparente de 18 % da primeira
 corrida do levantamento era PARTIDA, não regime. Somam-se o Python deste
 módulo, os ``parec`` filhos e os deltas de ``pipewire``, ``pipewire-pulse`` e
-``wireplumber``. Percentuais são de **UM** núcleo; a máquina dela tem 16.
+``wireplumber``. Percentuais são de **UM** núcleo; a máquina do usuário tem 16.
 
 .. _custo-medido:
 
@@ -89,7 +89,7 @@ porque os quatro compartilham o mesmo servidor de som e o mesmo ``epoll``.
 fluxo para os ``uniq`` que :meth:`NivelDoMicrofone.seguir` receber — e o
 chamador (PEÇA C) passa só os controles que a PEÇA A já disse ter ouvinte. É a
 precedência da §1.1 da sprint escrita em código: o estado 2 (piscando) só pode
-existir dentro do estado 1 (aceso). Na mesa dela, com ninguém ouvindo, o custo
+existir dentro do estado 1 (aceso). Na bancada, com ninguém ouvindo, o custo
 desta peça é **zero processo e zero por cento** — nada é aberto.
 
 Amostrar por JANELAS curtas foi medido e REJEITADO: a partida é barata (45 a
@@ -173,10 +173,10 @@ pior caso — fala conectada não cai ao piso dentro de uma palavra —, mas mod
 não é medida. **A palavra final é a bancada com ela**, e é por isso que os
 QUATRO valores são parâmetros do construtor, não constantes cravadas no laço.
 
-## A TRAVA DE MORTE — um ``parec`` vazado prende o microfone DELA
+## A TRAVA DE MORTE — um ``parec`` vazado prende o microfone do usuário
 
 Não é hipótese. Em 03/09, às 00h36, um ``parec`` deste medidor ficou órfão
-(``ppid=1``) segurando a fonte do DualSense dela em ``RUNNING`` por **39
+(``ppid=1``) segurando a fonte do DualSense do usuário em ``RUNNING`` por **39
 minutos**, num cgroup que não é unit do Hefesto — um ``systemctl --user stop``
 do daemon não o recolheria. Ele foi morto à mão e a fonte voltou a ``IDLE``.
 
@@ -200,9 +200,9 @@ saída para arquivo, para ``DEVNULL`` ou para um fd herdado reabre exatamente o
 vazamento de 00h36. Há teste que morde isso.
 
 O cano cobre a morte do pai. Ele NÃO cobre um ``parec`` vivo que para de
-entregar — esse ficaria de pé, mudo, com o microfone dela aberto. Quem cobre é
+entregar — esse ficaria de pé, mudo, com o microfone do usuário aberto. Quem cobre é
 :data:`MUDEZ_S`: o fluxo que emudece por mais que isso é **fechado**, não só
-respondido com ``None``. Soltar o microfone dela é obrigação, não zelo.
+respondido com ``None``. Soltar o microfone do usuário é obrigação, não zelo.
 
 ## A IDENTIDADE — o dono é ESTE arquivo, e a razão é uma junta
 

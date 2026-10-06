@@ -1,6 +1,6 @@
 """As faixas de endereço que NUNCA são um controle de verdade — um dono só.
 
-**O DEFEITO QUE ISTO CURA, medido no disco dela em 18/09/2026.** O
+**O DEFEITO QUE ISTO CURA, medido no disco do usuário em 18/09/2026.** O
 ``controllers.json`` de produção tinha OITO entradas na fila de numeração, e
 quatro eram endereços de fixture (``aa:bb:cc:00:00:0{1..4}``) escritos por uma
 corrida da suíte em 22/08/2026. Os três DualSense reais ficaram com os postos

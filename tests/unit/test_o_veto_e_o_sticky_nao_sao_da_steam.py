@@ -76,7 +76,7 @@ class TestODetectarNaoGravaANossaPropriaJanela:
             "o «Detectar» gravaria a regra da janela do próprio Hefesto")
 
     def test_o_sticky_de_outro_app_vence_a_nossa_crua(self):
-        """É o caso do clique dela: o foco está aqui, o jogo está atrás."""
+        """É o caso do clique do usuário: o foco está aqui, o jogo está atrás."""
         from hefesto_dualsense4unix.interface.pacotes.a10_perfis import (
             _classe_de_outro_app,
         )
@@ -136,7 +136,7 @@ class TestOVetoDaR21AlcancaQualquerLancador:
 
 
 class TestOLutrisGanhaODegrauDoAppid:
-    """**O `pga.db` DELA TEM ZERO JOGOS** — e é por isso que o que entra aqui"""
+    """**O `pga.db` DO USUÁRIO TEM ZERO JOGOS** — e é por isso que o que entra aqui"""
 
     def _banco(self, tmp_path: Path, linhas):
         banco = tmp_path / "pga.db"

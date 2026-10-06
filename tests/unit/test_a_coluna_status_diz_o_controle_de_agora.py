@@ -1,6 +1,6 @@
 """A coluna «Status» da aba Perfis diz o controle de agora, e o ponto diz o disco.
 
-A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01 (02/10/2026). A queixa dela de 29/09,
+A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01 (02/10/2026). A queixa de 29/09,
 com os quatro DualSense na mesa: *«alguns estão acesos e outros não. E pora
 piorar não refletem o stauts real daquele momento do controle. parece
 aleatório.»* <!-- noqa-acento: citação literal -->
@@ -10,7 +10,7 @@ só para aquele controle (`perfis_web._secoes_do_controle`), e nada na coluna
 lia o controle. Clicar noutro perfil da lista trocava os glifos das quatro
 linhas com os controles parados.
 
-A CURA (decidida por ela em 29/09, «Ponto embaixo» e «Aceso no DualSense"): o
+A CURA (decidida pelo usuário em 29/09, «Ponto embaixo» e «Aceso no DualSense"): o
 glifo (`guarda.secao`) sai da entrada viva de cada controle, pelos donos que a
 aba Controles já lê; o «só deste controle» vira o ponto embaixo
 (`guarda.proprio`); o que o dono não responde fica no «não sei»

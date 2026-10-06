@@ -158,7 +158,7 @@ def test_a_volta_de_antes_do_estilo_continua_no_historico(primeira_carga: None) 
 
 
 def test_o_gesto_recusa_o_estilo_que_saiu_sem_gravar() -> None:
-    """Até quem coordena publicar a 10, a página velha ainda oferece «Co-op local»."""
+    """Até a publicação da 10, a página velha ainda oferece «Co-op local»."""
     from pacotes import Contexto, a10_perfis
 
     pasta = profiles_dir(ensure=True)

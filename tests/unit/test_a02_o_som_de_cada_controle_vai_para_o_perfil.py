@@ -1,12 +1,6 @@
 """A aba Controles passa a GRAVAR o som de CADA controle no perfil.
 
-PEDIDO DELA, 05/09/2026, e ele é sobre AMANHÃ:
-
-    *"ao pular e sair configurando de aba em aba o perfil vai se lembrando de
-    cada config de cada aba pra cada controle. aí aplicar aplica todas as
-    configs naquele perfil e salvar se lembra disso quando eu for jogar o jogo
-    e no dia seguinte e por diante. pra cada perfil e dentro dele cada config
-    pra cada comtrole"*
+PEDIDO, 05/09/2026, e ele é sobre AMANHÃ
 
 O QUE ESTAVA MEDIDO, nesta árvore, com o ciclo inteiro — perfil no disco → os
 cinco gestos de som da aba 02 → reler o arquivo::
@@ -51,7 +45,7 @@ Cada uma foi executada, e a frase entre parênteses é a que a régua devolveu:
 * trocar ``if base.volume is None:`` por ``if True:`` em ``_lembrar_do_som``
   (preferir a leitura VIVA ao que o perfil já sabe) — reprova
   ``test_a_rota_nao_derruba_o_volume_que_ela_escolheu``. **É a mordida que
-  mediu um defeito meu**: a primeira versão desta cura preferia o tique do
+  mediu um defeito real**: a primeira versão desta cura preferia o tique do
   daemon, e com o perfil em 62 e o tique ainda em 100 o clique na rota devolvia
   o disco a 100;
 * mover a chamada para ANTES do ``raise`` de recusa — reprova
@@ -86,7 +80,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Os dois DualSense da bancada dela, com a máscara da casa (octetos 4 e 5
+#: Os dois DualSense da bancada, com a máscara da casa (octetos 4 e 5
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
@@ -250,12 +244,12 @@ def test_os_dois_volumes_vao_em_escalas_diferentes(casa: Any) -> None:
 
 
 def test_a_rota_nao_derruba_o_volume_que_ela_escolheu(casa: Any) -> None:
-    """O TIQUE DO DAEMON NÃO CORRIGE O QUE ELA ESCOLHEU — defeito meu, medido.
+    """O TIQUE DO DAEMON NÃO CORRIGE O QUE O USUÁRIO ESCOLHEU — defeito medido.
 
     A primeira versão de `_lembrar_do_som` preenchia o volume do alto-falante
     com a leitura VIVA sempre que o gesto não falava dele. Com o perfil em 62 e
     o tique do daemon ainda em 100 — a janela entre a escrita e a publicação do
-    estado —, o clique seguinte na rota devolvia o disco a 100 e a escolha dela
+    estado —, o clique seguinte na rota devolvia o disco a 100 e a escolha do usuário
     sumia sem uma palavra. É a mesma família do *"o Salvar destruía o que o
     produto gravou"* que esta leva fecha.
 
@@ -303,10 +297,10 @@ def test_o_pedido_recusado_nao_chega_ao_disco(casa: Any) -> None:
 
 
 def test_o_som_de_um_controle_nao_mexe_no_do_outro(casa: Any) -> None:
-    """*"pra cada perfil e dentro dele cada config pra cada comtrole"*.
+    """**.
 
     Com dois DualSense na mesa, o volume do P2 é do P2. Esta é a metade do
-    pedido dela que nenhum campo global sabe cumprir.
+    pedido que nenhum campo global sabe cumprir.
     """
     p = Ponte()
     _gesto("volume")(_ctx(_dele(P1), _dele(P2)),
@@ -378,14 +372,14 @@ def test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado(casa: Any) -> None:
     mundo com daemon e controle e SEM perfil, e todas medem que o gesto que dá
     certo não levanta.
 
-    ELAS ESTAVAM CERTAS, e a razão é a regra dela de 02/09: *"é aviso, não
+    ELAS ESTAVAM CERTAS, e a razão é a regra de 02/09: *"é aviso, não
     estado"*. "Não há perfil ativo" é ESTADO PARADO — o chip `Perfil ativo` do
     cabeçalho o mostra o tempo todo, e está na foto desta aba. Repeti-lo como
     recado de 30 s a cada clique de som é estado disfarçado de aviso, e o preço
     é o oposto do pretendido: quem recebe a mesma frase em todo clique para de
     ler os recados.
 
-    E o ramo é raro: medido no `state_full` VIVO da máquina dela, o daemon
+    E o ramo é raro: medido no `state_full` VIVO da máquina do usuário, o daemon
     publica `active_profile: 'meu_perfil'` — este caminho é o do daemon parado.
 
     MORDIDA: devolver o `raise` — esta régua reprova, e com ela as oito

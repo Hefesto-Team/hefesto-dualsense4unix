@@ -4,11 +4,9 @@ cria: nenhum módulo — este documento ensina a usar dois instrumentos que já 
 
 # A RÉGUA DE TELA — como se prova a interface
 
-**29/08/2026.** Pedido dela, com todas as letras:
+**29/08/2026.** Pedido, com todas as letras:
 
-> *"materializa isso, e temos que ter no nosso hook do novo dev algo que induza
-> a construção de validações via interface pra ver se tal problema foi resolvido
-> ou se tal coisa traz regressão. E os testes automáticos funcionam."*
+> **
 
 **Este arquivo é para quem for escrever a PRÓXIMA validação de interface** —
 pessoa ou agente. Ele não narra o dia: ele ensina o vocabulário, diz qual dos
@@ -90,7 +88,7 @@ silêncio.
 | `avancar(seg)` · `aos(seg, funcao)` · `relogio` | o tempo, que é metade das provas |
 | `recados(gesto=None)` · `limpar_recados()` | o que a página mandou pelo `postMessage`, na ordem |
 | `executar(js)` | JS cru, para o que o vocabulário não cobre |
-| `foto(caminho)` | um PNG da janela oculta, para o olho dela |
+| `foto(caminho)` | um PNG da janela oculta, para o olho de quem confere |
 
 **Nada devolve `None` calado.** Todo `_exigir` conta quantos elementos o seletor
 casou, e `0` levanta `SemElemento` nomeando o seletor. Zero não é *"nada
@@ -140,7 +138,7 @@ Régua de verdade mora em `tests/unit/test_*.py`, e o modelo pronto é
 módulo (abrir um `WebView` por teste custaria 1,5 s cada) e uma `CabecaDeMentira`
 que **herda o piloto** em vez de copiá-lo — `_remontar`, `_pintar`,
 `_pacote_do_card` e `_da_tela` rodam verbatim, então quem quebrar qualquer um
-dos quatro é pego ali e não na tela dela.
+dos quatro é pego ali e não na tela do usuário.
 
 ---
 
@@ -246,7 +244,7 @@ porque alguém clicou"*. A guarda continua valendo para a primeira carga, que é
 onde ela protege; sair da aba só **pausa a pintura**.
 
 > **A lição, e ela vale para toda cura de robustez:** uma guarda que trata o
-> caminho normal como falha é pior que guarda nenhuma — matou a tela DELA para
+> caminho normal como falha é pior que guarda nenhuma — matou a tela do usuário para
 > relatar um sucesso. O mesmo padrão apareceu no `DONOS_DOS_GESTOS`, onde um
 > `KeyError` cru derrubava a janela inteira para relatar um dono desconhecido.
 
@@ -259,7 +257,7 @@ nenhum** — o Chrome falhava calado, e foi a troca para o WebKit que revelou.
 
 **A régua:** contar os filtros que apontam para id inexistente e **deixar a
 conta escrita**, em voz alta, mesmo enquanto a cura não é aplicada (ela muda
-1,09% dos pixels do desenho que ela aprovou, logo é decisão dela).
+1,09% dos pixels do desenho que o usuário aprovou, logo é decisão de produto).
 
 > **A lição:** *referência morta que o motor ignora em silêncio é a classe de
 > defeito que só um SEGUNDO motor revela.* Vale para `url(#id)`, para

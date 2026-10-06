@@ -186,7 +186,7 @@ class TestOJogoForaDoPinTemNomeERazao:
     def test_sem_registro_de_escolha_continua_alarmando_com_o_nome(
         self, tmp_path: Path
     ) -> None:
-        """O NEGATIVO: sem prova de que foi escolha dela, o alarme fica."""
+        """O NEGATIVO: sem prova de que foi escolha do usuário, o alarme fica."""
         lar = _lar_do_proton(
             tmp_path, manifesto="ok", por_jogo={"2497900": "proton_11"}, registro={}
         )

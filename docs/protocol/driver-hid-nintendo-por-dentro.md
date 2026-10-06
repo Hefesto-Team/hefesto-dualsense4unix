@@ -315,7 +315,7 @@ Mas quem for **ler** o nó precisa saber.
 **Regra que sai daqui, e é a mesma dos dois lados da casa:** o nó de player LED
 é **fonte de intenção, nunca de estado**. Para saber o que a lâmpada está
 fazendo há dois caminhos, e nenhum deles é o sysfs: perguntar `0x31` por
-`hidraw`, ou o olho dela. A docstring de `read_player_pattern` em
+`hidraw`, ou o olho de quem confere. A docstring de `read_player_pattern` em
 `core/external_leds.py` já avisa que "esta função NÃO enxerga lâmpada nenhuma";
 esta seção é o **porquê**, no nível do driver. Grau **ALTA**.
 

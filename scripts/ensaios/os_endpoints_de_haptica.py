@@ -22,7 +22,7 @@ laudo lê os quatro, e o que o curador vai gravar sai do dono da lista
 A-HAPTICA-DO-RADIO citam morava no ``/tmp`` e não existe mais (procurado em
 28/09). Ela lê o monitor de cada endpoint ao mesmo tempo e diz o RMS de cada
 um dos quatro canais — a frente é o alto-falante, os traseiros são os motores
-—, que é como se vê, sem a mão dela, se o jogo espelha a vibração nos quatro
+—, que é como se vê, sem a mão do usuário, se o jogo espelha a vibração nos quatro
 lugares ou manda a cada um a sua. Ler o monitor não escreve nada em lugar
 nenhum.
 

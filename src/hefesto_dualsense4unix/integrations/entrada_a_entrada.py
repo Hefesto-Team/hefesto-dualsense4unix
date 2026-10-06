@@ -1,7 +1,7 @@
 """entrada_a_entrada.py — o motor do «Mapear Entrada a Entrada».
 
-ENTRADA-A-ENTRADA-01 (23/09/2026), a R9 das doze decisões dela do rádio:
-*ligar de verdade*. A palavra dela é a especificação:
+ENTRADA-A-ENTRADA-01 (23/09/2026), a R9 das doze decisões de produto do rádio:
+*ligar de verdade*. A palavra de produto é a especificação:
 
     "A ideia é usarmos um dualsense e o USB pra sairmos de porta em porta
      mapeando conectando e removendo e falando qual entrada é qual ali. (…) E
@@ -26,7 +26,7 @@ mudam, e cada fase abaixo diz qual delas pinta (:data:`TELAS`):
    plugados que não têm lugar: «Onde fica esta entrada?», o aparelho como
    «espécie · caminho», as QUATRO respostas (:data:`FACES`), e «entrada N de
    M · sem sair da cadeira». A resposta de um HUB vale para tudo o que pende
-   dele: na mesa dela, quatro toques cobriam sete aparelhos. «Não sei onde
+   dele: na bancada, quatro toques cobriam sete aparelhos. «Não sei onde
    fica» pula sem gravar e sem perguntar de novo.
 2. **FIM** (``#mapear-entrada-a-entrada-fim``) — «Acabou a parte sem
    levantar.», sem contador. Quem já tem lugar para tudo abre a janela direto
@@ -43,8 +43,7 @@ foi ao disco.
 SÓ O DUALSENSE MARCA UMA PORTA
 ------------------------------
 
-Palavra dela na R9: *«usarmos um dualsense e o USB pra sairmos de porta em
-porta»*. Aceitar qualquer aparelho deixava uma re-enumeração espontânea — o
+Palavra de produto na R9. Aceitar qualquer aparelho deixava uma re-enumeração espontânea — o
 ``-71``, o reset de porta da ponte root — virar «a porta que ela plugou». Na
 fase em pé só um aparelho ``054c`` (:data:`_VID_DA_SONY`) confirma a entrada;
 o dongle que re-enumera numa vaga não marca nada.
@@ -247,7 +246,7 @@ TELAS: Mapping[str, str] = {
 
 MOTIVO_SEM_LUGAR = "sem_lugar"
 
-#: A Sony — a família DualSense da casa. Na fase em pé, só um aparelho dela
+#: A Sony — a família DualSense da casa. Na fase em pé, só um aparelho do usuário
 _VID_DA_SONY = "054c"
 
 _ENCAIXE_DE_FORA = "hotplug"
@@ -363,7 +362,7 @@ class Pergunta:
 
 @dataclass(frozen=True)
 class Gravacao:
-    """O que um gesto dela fez no disco. ``motivo`` é ``""`` quando gravou, e"""
+    """O que um gesto do usuário fez no disco. ``motivo`` é ``""`` quando gravou, e"""
 
     lugar: str
     entrada: str
@@ -477,7 +476,7 @@ class LacoDaEntrada:
         return self._pintada
 
     def responder(self, face: str) -> Gravacao:
-        """A resposta dela para a pergunta da vez — grava na hora, e vale para o"""
+        """A resposta de produto para a pergunta da vez — grava na hora, e vale para o"""
         if face not in FACES:
             raise ValueError(f"{face!r} não é uma das quatro respostas")
         with self._trava:
@@ -797,7 +796,7 @@ def _lugar_do_furo(furo: Furo, controladores: Mapping[int, str]) -> str:
     """O lugar de um buraco: o do lado 2.0, onde o DualSense enumera.
 
     Os dois nós de um buraco USB 3 NÃO dão o mesmo lugar quando o controlador
-    numera as duas raízes de jeitos diferentes. Medido na mesa dela em 23/09:
+    numera as duas raízes de jeitos diferentes. Medido na bancada em 23/09:
     no ``0000:02:00.0``, ``usb1-port6`` é o par de ``usb2-port2``, e os dois
     lados são ``…-usb-0:6`` e ``…-usb-0:2`` (o udev publica o mesmo ``ID_PATH``
     para ``usb1-port2`` e ``usb2-port2`` — por isso existe o
@@ -893,7 +892,7 @@ def _gravar_as_portas(
     controladores: Mapping[int, str],
     nome: str | None = None,
 ) -> Gravacao:
-    """A resposta dela vira a entrada — numa gravação só, o hub e o que pende"""
+    """A resposta de produto vira a entrada — numa gravação só, o hub e o que pende"""
     if face is not None and not _face_aceita(face, maquina):
         raise ValueError(f"{face!r} não é um lugar do gabinete que o produto conhece")
     validas = [
@@ -1112,7 +1111,7 @@ def _rotulo_de_reserva(
     O rótulo de reserva é o ``devpath``, como o desenho aprovado mostra
     («Entrada 4.1.4», TRANSPLANTE-DA-SECAO-01). Mas a entrada do PRÓPRIO
     computador — o ``devpath`` de um número só — se repete em todo controlador
-    USB: cada hub-raiz numera as entradas dele a partir de 1. Na mesa dela, com
+    USB: cada hub-raiz numera as entradas dele a partir de 1. Na bancada, com
     dois controladores, o ``1-4`` (o adaptador do rádio) e o ``3-4`` (o hub)
     saíam os dois «Entrada 4», no doctor e na seção do rádio.
 
@@ -1275,7 +1274,7 @@ def voltar_ao_automatico(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """«Voltar ao automático»: tira o que ela disse do aparelho e da entrada dele.
+    """«Voltar ao automático»: tira o que o usuário disse do aparelho e da entrada dele.
 
     Do aparelho: o tipo e o nome (``mesa.radios``). Da entrada: a chave do extensor e o nome
     da entrada. A ligação (hub) e a velocidade ficam: são da porta, não do aparelho, e têm o
@@ -1549,8 +1548,8 @@ class Pendencia:
 def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     """``nome da face -> Pendencia`` de cada face que pende de uma entrada.
 
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA). Pedido dela:
-    *«identificar onde fica o hub»*. Uma função pura sobre o ``mapa`` do disco:
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA).  Uma função pura sobre o ``mapa`` do
+    disco:
     lê o que o Mapear gravou (os caminhos e os nós), e por isso vale com o hub
     desplugado e em qualquer máquina. <!-- noqa-acento: citação literal -->
 
@@ -1908,7 +1907,7 @@ class MapearAsPortas:
     Sem GTK e sem IPC, como o laço: tudo o que lê entra por argumento, com o
     default do sistema, e a gravação é :func:`_gravar_no_mapa`.
 
-    O GESTO DELA: ``abrir`` → ela encaixa o DualSense numa porta → o tique
+    O GESTO DO USUÁRIO: ``abrir`` → ela encaixa o DualSense numa porta → o tique
     (``foto_sem_esperar``, que pede o ``olhar`` num fio próprio) acha a porta
     que ele acabou de mostrar e ela vira a PORTA DA VEZ, com o medido e o que
     já se sabe dela → ``gravar(nome=…, lugar=…)`` → ela leva o controle para
@@ -1921,8 +1920,7 @@ class MapearAsPortas:
     que APARECEU: com dois controles já no cabo (a mesa de quatro), o que
     estava encaixado antes de ela começar não conta — só se for o único.
 
-    O TIQUE NÃO ESPERA O ``/sys`` (O-MAPEAR-NAO-CONGELA-A-JANELA-01, queixa
-    dela de 26/09: *«o mapear entradas toda hora tá fechando o app»*). Trocar
+    O TIQUE NÃO ESPERA O ``/sys`` (O-MAPEAR-NAO-CONGELA-A-JANELA-01, ). Trocar
     o controle de entrada com a tela aberta fazia o kernel segurar o lock do
     aparelho enquanto enumerava, o censo esperava o lock no ``bMaxPower``, e a
     janela esperava o censo: 5, 10 e 15 s. Agora a leitura é de um fio próprio
@@ -2023,7 +2021,7 @@ class MapearAsPortas:
         mudar de porta), a tela pode ainda mostrar a porta de antes quando ela
         salva. O gesto lê de novo e anda o fluxo antes de escolher — o nome vai
         para onde o DualSense está. E o «Terminar» que chegar durante essa
-        leitura não apaga o Salvar que ela clicou antes: vale a porta da vez do
+        leitura não apaga o Salvar que o usuário clicou antes: vale a porta da vez do
         clique, e nada se perde.
 
         Levanta ``ValueError`` quando o gesto chega errado (um lugar que o
@@ -2033,7 +2031,7 @@ class MapearAsPortas:
 
         SEM NOME E SEM LUGAR NÃO É RECUSA (29/09/2026,
         O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): é o «deixe vazia para ela ser
-        enumerada» da frase dela. A porta sem número nasce numerada, fora de
+        enumerada» da frase de produto. A porta sem número nasce numerada, fora de
         toda face; a que já tem número não muda (:func:`_gravar_a_porta`).
         """
         with self._trava:
@@ -2347,7 +2345,7 @@ def _porta_do_mapa(
 
 
 def _numeros_do_mapa(mapa: MapaDaMesa) -> tuple[str, ...]:
-    """Os números do desenho: os das faces, na ordem dela, e depois o resto."""
+    """Os números do desenho: os das faces, na ordem de produto, e depois o resto."""
     achados: list[str] = []
     for face in mapa.faces:
         for numero in face.portas:

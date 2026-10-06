@@ -12,7 +12,7 @@ marcador em disco). `a03_gatilhos.pacote` e `a04_iluminacao.pacote` emitiam
 também `perfil`, lido CRU do `active_profile` do daemon. O piloto completa o
 cabeçalho com `setdefault`: quem chega primeiro ganha, e o pacote da aba chega
 primeiro. Com o daemon respondendo `active_profile: null` — o estado da máquina
-dela — o `""` da aba vencia o nome que o disco dava.
+do usuário — o `""` da aba vencia o nome que o disco dava.
 
 A regra já estava escrita em `a09_sistema.pacote`: um pacote de aba só emite
 endereço DAQUELA página. O chip mora no `topo.html`, que é das dez.
@@ -25,7 +25,7 @@ A MORDIDA: devolva `"perfil": ctx.state.get("active_profile") or ""` ao retorno
 de `a03_gatilhos.pacote` e esta régua reprova nomeando a 03; tire-o de lá e
 devolva-o só ao de `a04_iluminacao.pacote`, e ela reprova nomeando a 04.
 
-NADA AQUI TOCA A MÁQUINA DELA: o `conftest.py` desvia `HOME` e os `XDG_*`, e a
+NADA AQUI TOCA A MÁQUINA DO USUÁRIO: o `conftest.py` desvia `HOME` e os `XDG_*`, e a
 fixture confere o desvio contra o lar do `passwd` antes de gravar o perfil.
 """
 from __future__ import annotations
@@ -99,7 +99,7 @@ def perfil_no_disco() -> Iterator[str]:
 
 
 def _com_o_daemon_calado() -> Contexto:
-    """O daemon responde `active_profile: null` — o estado da máquina dela."""
+    """O daemon responde `active_profile: null` — o estado da máquina do usuário."""
     return Contexto(state={"active_profile": None, "rumble_policy": "balanceado"},
                     mesa=[dict(m) for m in MESA], conectados=[dict(FALSO)], estados={})
 

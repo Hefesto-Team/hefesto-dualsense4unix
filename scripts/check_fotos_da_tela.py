@@ -108,7 +108,7 @@ def _git(raiz: Path, *args: str) -> str:
 
 
 def na_arvore_principal(raiz: Path) -> bool:
-    """Esta é a árvore de quem coordena, ou uma worktree de agente?"""
+    """Esta é a árvore principal, ou uma worktree de trabalho?"""
     proprio = _git(raiz, "rev-parse", "--absolute-git-dir")
     comum = _git(raiz, "rev-parse", "--path-format=absolute", "--git-common-dir")
     if not proprio or not comum:

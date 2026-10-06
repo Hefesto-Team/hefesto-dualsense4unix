@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A ABA VIBRAÇÃO: todo `data-papel` tem quem atenda — e o endereço não se perde.
 
-MEDIDO EM 03/09/2026, clicando a aba PUBLICADA no WebKit, com o daemon dela
+MEDIDO EM 03/09/2026, clicando a aba PUBLICADA no WebKit, com o daemon do usuário
 vivo e um DualSense White no cabo. O ouvinte de clique do piloto lê **qualquer**
 ``data-papel`` como o NOME DE UM GESTO::
 
@@ -59,7 +59,7 @@ A MORDIDA — as duas, e cada uma pega uma metade:
   cega para quatro campos, que é comprar silêncio com cegueira.
 
 ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve. A publicação é ato
-DELA (``--publicar 05``), e até lá a página que o produto renderiza continua com
+DO USUÁRIO (``--publicar 05``), e até lá a página que o produto renderiza continua com
 os quatro cliques mortos — está em ``mockup/DIVERGENCIAS.md``.
 """
 from __future__ import annotations
@@ -154,7 +154,7 @@ def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
     `data-hef`: as molduras das colunas VIVAS já se chamavam `plastico` desde
     03/09, e quem ainda respondia `desenho` eram as duas do lugar VAZIO — que
     não tinham `data-campo` NENHUM. Essa ausência era o defeito, medido com os
-    quatro DualSense dela na mesa: o pacote mandava as quatro colunas e o P3 e o
+    quatro DualSense do usuário na mesa: o pacote mandava as quatro colunas e o P3 e o
     P4 não tinham onde receber. Hoje as quatro molduras carregam o par
     `data-campo="plastico"` / `data-hef-alvo="plastico"`, e a régua conta um
     endereço VIVO onde contava um morto.

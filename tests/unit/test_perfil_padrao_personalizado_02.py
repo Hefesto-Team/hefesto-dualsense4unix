@@ -49,7 +49,7 @@ class _DaemonDeBoot:
 
 
 def _ativa_na_mao(manager: object, nome: str) -> None:
-    """O gesto dela, com os DOIS escritores que o produto usa.
+    """O gesto do usuário, com os DOIS escritores que o produto usa.
 
     O `profile.switch` do IPC (`daemon/ipc_handlers.py`) e o ciclo por hotkey
     (`daemon/subsystems/hotkey.py`) fazem exatamente estes dois passos, nesta
@@ -62,7 +62,7 @@ def _ativa_na_mao(manager: object, nome: str) -> None:
 
 @pytest.mark.asyncio
 async def test_o_ciclo_ativa_a_ativa_b_reinicia_e_volta_em_b(lar: Path) -> None:
-    """A frase dela inteira: ativa A, ativa B, reinicia — tem de voltar em B."""
+    """A frase de produto inteira: ativa A, ativa B, reinicia — tem de voltar em B."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile

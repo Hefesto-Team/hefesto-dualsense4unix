@@ -6,7 +6,7 @@ e por isso as duas já estavam violadas em produção — "Feedback" era rótulo
 tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
 
 1. O `name` de cada preset é CHAVE SERIALIZADA, não texto: ele está no perfil
-   no disco dela (`triggers.left.mode`, validado contra `PRESET_FACTORIES` em
+   no disco do usuário (`triggers.left.mode`, validado contra `PRESET_FACTORIES` em
    `profiles/schema.py:67`), no IPC (comando `trigger.set`) e no protocolo DSX
    (`daemon/udp_server.py`). Trocar um `name` faz `acao.json`, `corrida.json`,
    `esportes.json` e `pragmata.json` pararem de abrir com `ValueError`. Este
@@ -23,7 +23,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
 
    **NOTA DATADA — 07/08/2026, remedido.** O 22 continua sendo o TETO que
    ninguém pode furar, mas deixou de ser garantia de uma linha só. Medido nesta
-   árvore, com a fonte +3 que ela aceitou (resposta 8 do painel de 07/08) e com
+   árvore, com a fonte +3 que o usuário aceitou (resposta 8 do painel de 07/08) e com
    os DOIS lados da aba montados, como o produto monta:
 
    | | medição de 29/07 | remedição de 07/08 |
@@ -33,7 +33,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
    | rótulos que quebram | 1 (`Custom`) | 3 |
 
    Os três que quebram na árvore de 07/08 têm **20** caracteres cada: "Arma
-   semi-automática", "Vibração por posição" e — depois da decisão dela — "Arco
+   semi-automática", "Vibração por posição" e — depois da decisão de produto — "Arco
    de flecha (Bow)". Baixar o limite para 19 reprovaria dois rótulos que ela
    nunca foi convidada a rever e um que ela **acabou de decidir**, então o
    número fica em 22 e a verdade fica escrita aqui.
@@ -59,7 +59,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
 
 3. O rótulo não repete o `name` em inglês entre parênteses. Dos cinco que
    repetiam, três estão só em português; "Bow" e "Weapon" seguem com o termo,
-   agora por DECISÃO DELA de 07/08 ("Arco de flecha (Bow)" e "Disparo
+   agora por DECISÃO de 07/08 ("Arco de flecha (Bow)" e "Disparo
    (Weapon)"), e não mais por pendência.
 
 Não importa `gi` de propósito: tudo aqui é dado puro de `trigger_specs`, então
@@ -102,7 +102,7 @@ PENDENCIA_DE_PALAVRA: frozenset[str] = frozenset()
 
 
 def test_os_dezenove_names_sao_exatamente_os_de_hoje() -> None:
-    """Contrato: renomear um `name` faz o perfil dela parar de abrir."""
+    """Contrato: renomear um `name` faz o perfil do usuário parar de abrir."""
     assert tuple(spec.name for spec in PRESETS) == NOMES_CONTRATADOS
 
 

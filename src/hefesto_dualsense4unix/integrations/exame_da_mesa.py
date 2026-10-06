@@ -456,7 +456,7 @@ def exame(
     como adivinhar que precisa de um sexto substituto. Pior: o
     `test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido` vigia
     ``pathlib``, e as duas varreduras do catálogo usam ``os.listdir`` e
-    ``open`` — o portão passaria verde sobre um exame lendo a máquina dela.
+    ``open`` — o portão passaria verde sobre um exame lendo a máquina do usuário.
     Com o default desligado, quem quer ordens pede: `main()` pede e
     `app/actions/config/secao_exame.py` pede.
 
@@ -880,7 +880,7 @@ def _porta_de_hoje(
 
     O caminho do kernel (``3-4.4``) carrega o número do barramento, e o número
     é a ORDEM em que os controladores xHCI subiram naquele boot. Nos 12 boots
-    medidos na mesa dela a ordem não mudou; num computador em que mude, o
+    medidos na bancada a ordem não mudou; num computador em que mude, o
     caminho de um -71 de ontem nomeia OUTRA entrada hoje. O ``lugar`` que o
     kernel-watch grava na linha (o controlador PCI e a cadeia de portas) é o
     que diz qual é a certa, e esta função o traduz pelos barramentos da raiz.

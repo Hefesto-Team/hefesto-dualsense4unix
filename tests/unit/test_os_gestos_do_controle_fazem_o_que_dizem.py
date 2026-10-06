@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OS GESTOS DO CONTROLE FAZEM O QUE A TELA DIZ — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01.
 
-A pergunta dela (29/09): *«Essa aba tá integrada e realmente funciona?»*. Medido
+A pergunta (29/09). Medido
 no `dev` de 01/10: os seis gestos disparavam, cada um com o ato cravado em
 `start_hotkey_manager`, e a lista ao lado de cada um era desenho sem dono — o
 `maquina.json` recusava o campo, o pacote da 06 declarava `acao-do-gesto` em

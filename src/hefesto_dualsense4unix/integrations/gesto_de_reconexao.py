@@ -13,12 +13,12 @@ diz o que aconteceu numa frase em português. Não reconecta, não sonda o
 aparelho, não escreve em LED nenhum.
 
 **A REGRA DE NÃO RECONECTAR FOI REVOGADA POR ELA — 22/09/2026.** Aqui estava
-escrito: *"Não reconectar é decisão dela, e é o contrato deste módulo. O botão
-PS é dela; `reconectar` não existe aqui de propósito."* A palavra dela, no dia:
+escrito: *"Não reconectar é decisão de produto, e é o contrato deste módulo. O botão
+PS é do usuário; `reconectar` não existe aqui de propósito."* A palavra de produto, no dia:
 *"pera o reconectar deveria sim tocar no radio. não faz sentido ele ficar de
 fora."* <!-- noqa-acento: citação literal -->
 
-E O DIA MEDIU POR QUÊ. A mesa dela caiu num estado que o botão PS **não**
+E O DIA MEDIU POR QUÊ. A bancada caiu num estado que o botão PS **não**
 resolve: o BlueZ dizendo ``Connected: true`` para quatro controles com o kernel
 sem HID nenhum deles — elo de pé, sessão de entrada morta. Para o rádio já
 estava tudo certo, então apertar PS não fazia nada; o que destrava é derrubar o
@@ -96,7 +96,7 @@ ESTADO_JA_ESTAVA_FORA = "ja_estava_fora"  # (noqa-acento): chave de máquina
 ESTADO_SEM_ALVO = "sem_alvo"
 ESTADO_NAO_DEU = "nao_deu"  # (noqa-acento): chave de máquina
 ESTADO_VOLTOU = "voltou"
-#: O elo morto caiu, e o resto é dela: um DualSense dormindo não atende
+#: O elo morto caiu, e o resto é do usuário: um DualSense dormindo não atende
 ESTADO_SO_O_PS = "so_o_ps"  # (noqa-acento): chave de máquina
 ESTADO_JA_NO_AR = "ja_no_ar"  # (noqa-acento): chave de máquina
 
@@ -217,7 +217,7 @@ def _modalias_dos_dualsense() -> tuple[str, ...]:
 
     Os números SÃO os do broker (`broker/hidraw_broker.PHYS_VENDOR` e
     `PHYS_PRODUCTS`), lidos de lá, e a pergunta é por PROPRIEDADE, nunca pelo
-    `Alias`: o nome é editável e a mesa dela tem quatro aparelhos com o mesmo,
+    `Alias`: o nome é editável e a bancada tem quatro aparelhos com o mesmo,
     que é a doença que esta casa já pagou casando nó de som por rótulo.
 
     **O EDGE ENTROU EM 25/09/2026** (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01).

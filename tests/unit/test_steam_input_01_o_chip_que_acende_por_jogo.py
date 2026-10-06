@@ -119,10 +119,10 @@ def _steam_fechada(monkeypatch):
     que esta casa já pagou — *"from-import copia a referência"*.
 
     E o `with_steam_closed` é dublado por segurança em todo teste: o de verdade
-    escala para `pkill -TERM`/`-KILL` na Steam DELA. `stop_steam` e
+    escala para `pkill -TERM`/`-KILL` na Steam do usuário. `stop_steam` e
     `reopen_steam` também: a régua que usa o `with_steam_closed` DE VERDADE
     (:class:`SteamDeMentira`) troca só esses dois, e um que escapasse cairia
-    aqui em vez de na Steam dela.
+    aqui em vez de na Steam do usuário.
     """
     for dono in (slo, ponte):
         monkeypatch.setattr(dono, "steam_running", lambda: False)
@@ -260,8 +260,7 @@ def test_sair_do_steam_input_desliga_o_jogo_e_so_ele(lar) -> None:
     """Clique no «Steam Input», clique no «Sony DualSense»: o appid sai e o vdf volta a `"0"`.
 
     FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela
-    regra dela (*"a idea é eu poder escolher qualquer que seja o modo
-    independnete da ordem"*). Esta régua tratava o chip como INTERRUPTOR: o segundo
+    regra de produto. Esta régua tratava o chip como INTERRUPTOR: o segundo
     clique nele desligava. Na fileira que é grupo de rádio o segundo clique
     REAPLICA, e quem tira o jogo da lista é clicar em qualquer um dos outros
     três (`a01_jogar.o_que_o_chip_faz`). A primeira metade abaixo mede isso; o
@@ -315,21 +314,21 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     O ADIAMENTO NÃO É RECUSA — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026.
     Até aqui o gesto levantava com a frase do dono, e a tela piscava recusa
     sobre um clique que valeu. Agora ele volta com a piscada verde, o chip
-    acende pela escolha dela, e a frase vai à faixa de pendência.
+    acende pela escolha do usuário, e a frase vai à faixa de pendência.
 
     Arranque o gate (faça `garantir_ponte` escrever com a Steam viva, ou
     dublê `ponte.steam_running` para `False` dentro do `garantir_ponte`) e a
     segunda asserção reprova: **com ela viva a edição é engolida na saída
     dela** — a Steam regrava o `localconfig.vdf` ao sair.
 
-    **A VONTADE FICA, e é a metade que faz o clique valer.** Ela clicou; o
+    **A VONTADE FICA, e é a metade que faz o clique valer.** O usuário clicou; o
     produto anota. Quem completa é o `hefesto-steam-input-guard.path`, medido
-    **active** e **enabled** na máquina dela em 20/09/2026, com
+    **active** e **enabled** na máquina do usuário em 20/09/2026, com
     `PathChanged=%h/.steam/steam/userdata` — ele acorda quando a Steam acaba de
     sair e roda `disable_steam_input.sh --apply-quiet`, que liga os jogos da
     lista e desliga os de fora.
 
-    **E O PRIMEIRO CLIQUE NÃO FECHA A STEAM DELA: ele AVISA** — escolha dela,
+    **E O PRIMEIRO CLIQUE NÃO FECHA A STEAM DO USUÁRIO: ele AVISA** — escolha,
     23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): *"o primeiro clique
     avisa, o segundo fecha"*. A resposta é o rótulo armado do chip, e o dublê
     de `with_steam_closed` desta régua levanta se o primeiro clique o alcançar.
@@ -374,7 +373,7 @@ def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
     Ligar adiado usa `Estado.frase()`, que nomeia o jogo e termina em *"Ligo
     assim que a Steam fechar"*. `garantir_fora_da_lista_desligado` devolve só
     `(status, detalhe)` — não há `Estado`, logo não há frase do dono a ler. Esta
-    é nossa, e está marcada PROVISÓRIO: texto de tela é palavra dela.
+    é nossa, e está marcada PROVISÓRIO: texto de tela é palavra de produto.
 
     A MORDIDA: devolva `""` no ramo do desligar adiado e o clique pisca VERDE
     sobre um jogo que a Steam ainda comanda — quem clicou abriria o jogo
@@ -443,7 +442,7 @@ def _o_segundo_clique() -> dict[str, str]:
 
 def test_o_primeiro_clique_avisa_e_o_segundo_fecha_liga_e_reabre(
         lar, monkeypatch) -> None:
-    """A escolha dela, inteira: *"o primeiro clique avisa, o segundo fecha"*."""
+    """A escolha do usuário, inteira: *"o primeiro clique avisa, o segundo fecha"*."""
     steam = SteamDeMentira(monkeypatch)
     ctx = _ctx()
     ctx.mesa.extend(dict(c) for c in MESA_DE_QUATRO)
@@ -697,12 +696,12 @@ def _alcance_do_gesto(fn: Any, _visto: frozenset[str] = frozenset(),
 def test_so_o_segundo_clique_alcanca_o_fechar_a_steam() -> None:
     """UMA função do alcance do gesto fecha a Steam, e é a do segundo clique.
 
-    A escolha dela, 23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): *"o
+    A escolha, 23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): *"o
     primeiro clique avisa, o segundo fecha"*. O gesto alcança
     `with_steam_closed` — e só por :func:`a01_jogar._fechar_a_steam_e_ligar`,
     que `modo_steam` só chama depois de `_o_clique_que_confirma`.
 
-    FATO SUBSTITUÍDO — esta régua se chamava «o gesto nunca fecha a Steam dela»
+    FATO SUBSTITUÍDO — esta régua se chamava «o gesto nunca fecha a Steam do usuário»
     e reprovava qualquer `with_steam_closed` no alcance: um `<span>` não tinha
     como perguntar. O `blocos:` troca o rótulo do chip, e a pergunta é ele.
 
@@ -829,10 +828,10 @@ def _ponte_de_pe() -> None:
 
 
 def test_com_a_ponte_de_pe_so_o_steam_input_acende(lar) -> None:
-    """UM ACESO SÓ — a D-2 da sprint, decidida por ela em 21/09/2026.
+    """UM ACESO SÓ — a D-2 da sprint, decidida pelo usuário em 21/09/2026.
 
     A régua daqui cobrava os DOIS acesos («Sony DualSense» + «Steam Input»), o
-    padrão que a sprint propôs enquanto a D-2 esperava a palavra dela. A
+    padrão que a sprint propôs enquanto a D-2 esperava a palavra de produto. A
     palavra veio com a aba aberta: *"dois botões ligados no modo"*. O Steam
     Input é o DEGRAU 4 da escada (`ponte_escada.ESCADA[3]`, que senta sobre o
     caminho DualSense), e o degrau em que se está é um.
@@ -995,7 +994,7 @@ def test_o_gesto_esta_registrado_e_declara_o_que_grava() -> None:
 
 
 def test_sem_controle_na_mesa_nenhum_botao_do_modo_acende(lar) -> None:
-    """O Modo apaga com a mesa vazia — pedido dela, 22/09/2026."""
+    """O Modo apaga com a mesa vazia — pedido, 22/09/2026."""
     _ponte_de_pe()
 
     vazio = aba.pacote(_ctx())

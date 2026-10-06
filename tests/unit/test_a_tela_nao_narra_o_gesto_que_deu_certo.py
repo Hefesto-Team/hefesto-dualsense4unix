@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A TELA NÃO NARRA O GESTO QUE DEU CERTO — TELA-CALADA-01, 13/09/2026.
 
-A palavra dela, com a foto do rodapé:
+A palavra de produto, com a foto do rodapé:
 
     *"essas frases de status que aparecem no rodapé isso não deveria estar
     aparecendo"* — *"em todas as abas da interface"*

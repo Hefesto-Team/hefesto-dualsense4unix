@@ -3,7 +3,7 @@
 #
 # Mede, NO RUNNER DO CI, o que decide onde o banco mora. Quem a chama é o job
 # `banco-de-prova-sonda` do ci.yml, e só em `workflow_dispatch`: ela cria aparelhos no kernel
-# (uhid, um gadget USB, o install.sh com sudo) e NUNCA roda na máquina dela — o kernel é um só.
+# (uhid, um gadget USB, o install.sh com sudo) e NUNCA roda na máquina do usuário — o kernel é um só.
 #
 # A sonda MEDE, não reprova: cada medida grava `chave=valor` em `sonda.txt` e nenhuma
 # derruba as outras. Mas medida que não se fez não vira «não»: ela diz `não-mediu` com o

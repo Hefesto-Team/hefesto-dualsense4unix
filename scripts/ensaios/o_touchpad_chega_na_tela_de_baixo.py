@@ -31,7 +31,7 @@ OS QUATRO DEGRAUS, e o instrumento fecha três
    do sysfs a cada chamada.
 2. **O emulador ABRE o nó, ou vê o aparelho por `hidraw`?** — lido de
    `/proc/<pid>/fd`, com cada descritor classificado por IDENTIDADE.
-3. **O toque vira toque na tela de baixo?** — **só o olho dela fecha.** O
+3. **O toque vira toque na tela de baixo?** — **só o olho de quem confere fecha.** O
    instrumento imprime o gesto e se recusa a concluir.
 
 O DEGRAU 2 NÃO PROVA O 3, e o instrumento nunca diz que prova. Descritor
@@ -51,7 +51,7 @@ AS ARMADILHAS QUE ELE FOI DESENHADO PARA NÃO REPETIR
   é um processo cujo modo de falha É TRAVAR. Por isso `--abrir` tem teto de
   tempo e o travamento sai como RESULTADO — com a assinatura das threads — e
   não como espera para sempre.
-- **A janela não nasce na tela dela.** Ela tem uma tela só. O `--abrir` desvia
+- **A janela não nasce na tela do usuário.** Ela tem uma tela só. O `--abrir` desvia
   o emulador para o `Xvfb` da casa antes de o processo existir; a janela não
   tem para onde nascer na sessão viva.
 
@@ -81,7 +81,7 @@ COMO USAR
     # travamento em vez de travar junto:
     o_touchpad_chega_na_tela_de_baixo.py --abrir --sem-cura
 
-O degrau 3 é dela, e o `--o-gesto` imprime o que ela tem de fazer.
+O degrau 3 é do usuário, e o `--o-gesto` imprime o que ela tem de fazer.
 """
 from __future__ import annotations
 

@@ -33,8 +33,7 @@ O ITEM 1 TROCOU DE CORPO EM 06/09/2026, e a conta está medida
 --------------------------------------------------------------
 
 Até este dia o item 1 era o `gui/main.glade`. A `GTK-3` o apagou por decisão
-dela (`D-0609-GTK-LEVA-INTEIRA`: *"a ideia sempre foi reaproveitar o que fiz no
-gtk e não apontar nada mais pra lá mas pro html"*), e um portão que perde o
+de produto (`D-0609-GTK-LEVA-INTEIRA`), e um portão que perde o
 arquivo que lê não fica verde — ele reprova nomeando o que sumiu
 (`conferir_html` devolve "arquivo de interface não encontrado" do mesmo jeito
 que o antecessor devolvia). Trocar o corpo, e não só apagá-lo, é o que devolve
@@ -123,7 +122,7 @@ JUNTO com a troca dos 24 rótulos (E1 a E4). A troca não veio: MEDIDO em
 os três `window_class:` / `title_regex:` / `process_name:` ainda começam em
 minúscula. Havia duas saídas ruins e uma boa:
 
-- nascer VERMELHO e derrubar o CI por um trabalho de redação que é dela: não;
+- nascer VERMELHO e derrubar o CI por um trabalho de redação que é do usuário: não;
 - nascer com a lista de jargão vazia, "para não incomodar": isso é decoração
   com nome de portão, e é o defeito-mãe desta casa (PORTÃO-VIVO-01);
 - nascer com cada sobrevivente ESCRITO, um a um, com o que ele vira e por que

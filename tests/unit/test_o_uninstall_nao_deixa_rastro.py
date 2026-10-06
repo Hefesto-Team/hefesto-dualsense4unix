@@ -282,13 +282,13 @@ def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
     tmp_path: Path, nativo: bool, com_registro: bool
 ) -> None:
     """O Heroic copia a lista global para dentro do jogo em que ela muda uma
-    opção, e dali em diante a do jogo vale SOZINHA. Medido no disco dela em
+    opção, e dali em diante a do jogo vale SOZINHA. Medido no disco do usuário em
     25/09: um jogo com o `IGNORE` e o `DISABLE_HIDRAW` copiados em 22/09. Sem
     o desfazer nas cópias, o uninstall deixa AQUELE jogo sem o DualSense.
 
     Nas duas casas do Heroic, com e sem registro (a instalação de antes dele).
     O que ela pôs só naquele jogo fica; o `__GL_SHADER_*` da cópia fica (pode
-    ser a escolha dela para o jogo); o jogo cuja lista ela escreveu sem nada
+    ser a escolha do usuário para o jogo); o jogo cuja lista o usuário escreveu sem nada
     nosso sai byte a byte igual.
 
     A MORDIDA: tire de `desfazer_as_estradas` o laço das cópias e o `IGNORE`

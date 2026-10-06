@@ -608,7 +608,7 @@ def test_o_fluxo_vivo_que_emudece_volta_a_nao_sei() -> None:
 
 def test_o_fluxo_que_emudece_e_fechado_e_solta_o_microfone_dela() -> None:
     """Responder `None` não basta: o `parec` mudo continua com o microfone
-    DELA aberto e a fonte presa em RUNNING.
+    do usuário aberto e a fonte presa em RUNNING.
 
     Este é o vazamento medido de 03/09 às 00h36 entrando por outra porta — lá
     o `parec` ficou 39 minutos órfão segurando a fonte do DualSense. O cano
@@ -616,7 +616,7 @@ def test_o_fluxo_que_emudece_e_fechado_e_solta_o_microfone_dela() -> None:
 
     MORDE: apague o ramo `elif (agora - canal.ultimo_dado) >= self._mudez_s`
     de `NivelDoMicrofone._reconciliar` e o fluxo fica de pé para sempre —
-    `parado` continua False e o microfone dela nunca é solto.
+    `parado` continua False e o microfone do usuário nunca é solto.
     """
     fabrica, relogio = _Fabrica(), _Relogio()
     with _medidor(fabrica, relogio) as medidor:

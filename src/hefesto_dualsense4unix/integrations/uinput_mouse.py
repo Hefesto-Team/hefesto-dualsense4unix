@@ -257,7 +257,7 @@ class UinputMouseDevice:
         atendem são SUBSTITUÍDOS inteiros.
 
         Ela escolhia `— Nada —`, a tela confirmava, e o botão continuava fazendo
-        o que fazia: perda silenciosa de escolha dela. Quem monta a sacola é
+        o que fazia: perda silenciosa de escolha do usuário. Quem monta a sacola é
         `core/acoes_de_botao.botoes_calados()`; `None` aqui quer dizer "ninguém
         informou", e é o contrato de antes byte a byte.
         """
@@ -490,7 +490,7 @@ CLIQUE_SEM_NOTICIA_S = 0.5
 class CursorDoToque:
     """O ponteiro que o touchpad move pelo Hefesto com o controle virtual de pé.
 
-    A resposta dela de 28/09 (~16h50) pôs «o touchpad move o cursor» entre os
+    A resposta de 28/09 (~16h50) pôs «o touchpad move o cursor» entre os
     arranjos por perfil de jogo. Na Navegação o cursor é o do mouse emulado;
     no modo DualSense e no Xbox não há mouse emulado (a exclusão mútua), e o
     arranjo precisa de um nó próprio, mínimo: movimento relativo e o botão

@@ -4,10 +4,10 @@ RESERVA-DO-RADIO-01 (20/09/2026). A sprint nasceu querendo **reservar** um
 adaptador para os controles e deixar outro para o resto do mundo. A medição de
 20/09 derrubou a premissa: não existe *"o adaptador onde o COSMIC varre"*.
 
-    **A varredura é do adaptador que a PESSOA ABRE. Um só, o que ela escolheu,
+    **A varredura é do adaptador que a PESSOA ABRE. Um só, o que o usuário escolheu,
     e nenhum enquanto ela não escolhe.**
 
-Quatro corridas com a mão dela, a última conferida por foto da tela no instante
+Quatro corridas com a mão do usuário, a última conferida por foto da tela no instante
 da medição. A tela de Bluetooth do ``cosmic-settings`` **lista** os adaptadores
 sem varrer nenhum; a busca mora um nível abaixo, dentro do adaptador em que ela
 entra, e a lista "Dispositivos próximos" **é** a busca.
@@ -22,9 +22,9 @@ pública do ``org.bluez.Adapter1``, não custa privilégio nenhum, responde pelo
 estado de agora e cobre de graça a **cauda** — na corrida 3 o adaptador varreu
 por mais 21 segundos depois de a janela fechar.
 
-E ele não pressupõe bancada nenhuma. A ordem dela de 11/09 é que o produto é
-para qualquer usuário; uma reserva que pressupõe três adaptadores é a bancada
-dela escrita no código, e é por isso que a reserva morreu e esta leitura ficou.
+E ele não pressupõe bancada nenhuma. A ordem de 11/09 é que o produto é
+para qualquer usuário; uma reserva que pressupõe três adaptadores é a bancada escrita no código, e
+é por isso que a reserva morreu e esta leitura ficou.
 
 AUSÊNCIA É RESPOSTA, E É O CONTRATO INTEIRO DESTE MÓDULO
 =========================================================

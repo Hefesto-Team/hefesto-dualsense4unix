@@ -87,7 +87,7 @@ def test_a_ordem_passa_a_frente_de_tudo() -> None:
 
 
 def test_o_estado_bom_diz_quanta_coisa_conferiu() -> None:
-    """A queixa dela, curada: o número e o botão. "Tudo certo" sozinho não volta."""
+    """A queixa de uso, curada: o número e o botão. "Tudo certo" sozinho não volta."""
     topo = ordens.cabecalho(**AS_QUATRO[ordens.TOPO_NADA_A_MUDAR])  # type: ignore[arg-type]
     assert "5" in topo.texto
     assert topo.botao, "o estado bom precisa abrir a lista do que foi conferido"
@@ -95,7 +95,7 @@ def test_o_estado_bom_diz_quanta_coisa_conferiu() -> None:
 
 
 def test_o_estado_bom_com_dispensa_conta_a_decisao_dela() -> None:
-    """Dispensa que some sem deixar marca some com uma decisão dela junto."""
+    """Dispensa que some sem deixar marca some com uma decisão de produto junto."""
     topo = ordens.cabecalho(**AS_QUATRO[ordens.TOPO_NADA_NOVO])  # type: ignore[arg-type]
     assert "1" in topo.texto
     assert topo.botao

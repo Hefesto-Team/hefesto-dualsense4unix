@@ -5,7 +5,7 @@
 # adaptador para outro. Cada verbo tem a entrada validada ANTES de tocar em
 # qualquer coisa, e NÃO EXISTE verbo que execute comando arbitrário.
 #
-# POR QUE EXISTE (decisão dela, 22/08/2026)
+# POR QUE EXISTE (decisão, 22/08/2026)
 #
 #   "a ideia é que usemos o sudo só na hora do install e isso vai valer sempre
 #    no nosso app. não tem como não usar se tratando de bt. zero problemas."
@@ -130,15 +130,15 @@
 # Bluetooth), e sai crua de propósito: quem decide se um candidato é
 # controle é quem chama, não esta ponte. Vazia quando o BlueZ não a
 # publica — um aparelho só-LE não tem classe, e inventar uma seria pior
-# que a coluna vazia. Medido na mesa dela em 20/09/2026: os seis objetos
+# que a coluna vazia. Medido na bancada em 20/09/2026: os seis objetos
 # de DualSense do BlueZ respondem `u 9480` (0x2508).
 # Alias e nome são higienizados (controle/tab/quebra viram espaço) porque vêm
 # do BlueZ, não de nós.
 #
 # CÓDIGOS DE SAÍDA: 0 sucesso · 1 falha operacional · 2 uso/entrada inválida.
 #
-# O ALIAS É ESCRITO LITERALMENTE, e isso é decisão dela (#5 de 22/08/2026: "o
-# nome do dongle é dela; o prefixo funcional é do produto"). O prefixo
+# O ALIAS É ESCRITO LITERALMENTE, e isso é decisão de produto (#5 de 22/08/2026: "o
+# nome do dongle é do usuário; o prefixo funcional é do produto"). O prefixo
 # "Nintendo " é posto pelo `bt_active_mode.sh` a cada tick do watchdog, nos
 # adaptadores que HOSPEDAM a linhagem Nintendo — era "no PRIMEIRO adaptador"
 # até 22/08/2026, e essa é a cura N-IGUAL-A-UM-01/E2. Quem desenha a tela
@@ -151,7 +151,7 @@
 #   HEFESTO_BT_BIN          pasta posta NA FRENTE do PATH: `busctl`,
 #                           `bluetoothctl` e `hcitool` saem dela, não do
 #                           sistema. É o que torna a lista de candidatos
-#                           medível sem abrir varredura no rádio dela.
+#                           medível sem abrir varredura no rádio do usuário.
 #   HEFESTO_BT_LAPIDES      a lista de lápides (default: a do acervo de bonds,
 #                           só com a árvore REAL; com raiz de teste e sem este
 #                           gancho, nenhuma lápide é escrita)
@@ -196,14 +196,14 @@ SYSFS_REAL="/sys"
 
 #: As lápides e o diário moram na pasta do root do produto. Só a árvore REAL
 #: escreve neles sem gancho: uma régua com a raiz desviada que esquecesse de
-#: desviá-los escreveria no disco dela.
+#: desviá-los escreveria no disco do usuário.
 LAPIDES_REAIS="/var/lib/hefesto-dualsense4unix/bt-bonds/.lapides"
 DIARIO_REAL="/var/lib/hefesto-dualsense4unix/radio-diario.jsonl"
 
 #: BARRAMENTO DE MENTIRA. Com esta pasta na frente do PATH, o `busctl` e o
-#: `bluetoothctl` que este script chama são os DELA — os da pasta —, e não os
+#: `bluetoothctl` que este script chama são os DO USUÁRIO — os da pasta —, e não os
 #: do sistema. Existe por uma razão só: a lista de candidatos do `descobrir`
-#: só se mede abrindo uma varredura, e abrir varredura na máquina dela custa
+#: só se mede abrindo uma varredura, e abrir varredura na máquina do usuário custa
 #: 32-43% dos pacotes do adaptador com quatro controles de pé. Inerte sob
 #: sudo, como os outros três ganchos (contenção 3 do cabeçalho).
 BIN_DE_TESTE="${HEFESTO_BT_BIN:-}"
@@ -218,7 +218,7 @@ SEGUNDOS_MAX=120
 
 # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
 # arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
-# sem isto grava, no journal da máquina dela, linhas que descrevem eventos que
+# sem isto grava, no journal da máquina do usuário, linhas que descrevem eventos que
 # nunca aconteceram.
 LOG_TAG=hefesto-bt-ponte
 LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
@@ -465,10 +465,10 @@ _onde() {
 _hci_do_mac() {
     local alvo="$1" caminho hci endereco
     #: RAIZ DE TESTE NÃO FALA COM O BARRAMENTO REAL. A suíte roda estes scripts
-    #: DE VERDADE, na máquina dela, com quatro DualSense e um Pro no rádio — e
+    #: DE VERDADE, na máquina do usuário, com quatro DualSense e um Pro no rádio — e
     #: `renomear`/`descobrir`/`parear` MEXEM no adaptador. Sem esta linha,
     #: bastaria um MAC de teste coincidir com um adaptador vivo para um portão
-    #: derrubar a mesa dela. Mesma razão do gancho de raiz do bt_bonds_snapshot.
+    #: derrubar a bancada. Mesma razão do gancho de raiz do bt_bonds_snapshot.
     #: E `HEFESTO_BT_BIN` abre a exceção, que é segura POR CONSTRUÇÃO: com ele
     #: o `busctl` da linha seguinte é o da pasta de teste, então o barramento
     #: que responde não é o dela. Sem ele, a guarda acima continua inteira.
@@ -690,7 +690,7 @@ _apagar() {
 
 #: FECHAR A JANELA É PARTE DO GESTO, e não higiene. Se este processo morrer sem
 #: derrubar o `bluetoothctl` que está atrás, a varredura continua de pé no
-#: adaptador DELA por até <segundos> — e varredura no próprio adaptador custa de
+#: adaptador do usuário por até <segundos> — e varredura no próprio adaptador custa de
 #: 32% a 43% dos pacotes, com quatro controles em cima. Quem fecha a tela tem de
 #: fechar o rádio junto, inclusive quando quem fecha é um sinal.
 #:
@@ -825,7 +825,7 @@ verbo_parear() {
 }
 
 #: CONEXAO-ZUMBI-01 (18/09/2026) — derruba o LINK de um controle que conectou e
-#: NÃO virou controle. O caso, medido na mesa dela às 11h55: ACL de pé, nenhum
+#: NÃO virou controle. O caso, medido na bancada às 11h55: ACL de pé, nenhum
 #: `hidraw`, nenhum nó de LED, nenhuma bateria — e o controle parado no padrão
 #: de fábrica, barra azul e jogador 1. Derrubar o link faz o controle procurar
 #: de novo, e achar o adaptador onde o bond dele está.
@@ -903,7 +903,7 @@ verbo_desconectar() {
 #   3. NINGUÉM CONECTADO: com qualquer conexão de pé no adaptador (os nós
 #      `hciN:<handle>` do kernel), o verbo recusa. Um adaptador em laço não tem
 #      controle vivo — se tem, a leitura está errada, e errar aqui derruba a
-#      mesa dela.
+#      bancada.
 # E o freio: uma porta só é reiniciada uma vez a cada INTERVALO_ENTRE_RESETS_S.
 # Se o laço voltar dentro dele, o verbo não insiste — o que resta é a mão
 # dela, e o diário diz qual porta, UMA vez por reinício.
@@ -920,7 +920,7 @@ verbo_desconectar() {
 # é o dongle sumindo e voltando na porta dela. Depois de MAX_REINICIOS_SEGUIDOS
 # reinícios sem cura (o laço voltou antes de JANELA_DA_CURA_S), o verbo PARA,
 # diz no diário UMA vez, e o sino fica com a frase de pôr a mão. Ele só volta
-# a reiniciar aquela porta depois que o laço sumir do journal — a mão dela
+# a reiniciar aquela porta depois que o laço sumir do journal — a mão do usuário
 # (tirar e pôr) ou o adaptador que se curou.
 LIMIAR_DO_LACO=5
 JANELA_DO_LACO_S=150
@@ -1022,7 +1022,7 @@ _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 
 #: O FREIO SOLTA quando o laço some: para cada porta em que o verbo parou de
 #: reiniciar, se o adaptador que mora nela AGORA não tem um único «command tx
-#: timeout» na janela do journal (ou a porta está vazia), a mão dela curou — o
+#: timeout» na janela do journal (ou a porta está vazia), a mão do usuário curou — o
 #: freio e a contagem de reinícios seguidos saem, e o diário diz O QUE MEDIU:
 #: a porta vazia é o adaptador fora dela, e não «voltou» (conferência de
 #: 23/09/2026 — o diário dizia «voltou» sobre uma porta sem aparelho).
@@ -1177,7 +1177,7 @@ verbo_reiniciar_travado() {
         printf 'reiniciado\t%s\t%s\t%s\n' "${porta}" "${hci}" "${quantos}"
         _registrar "adaptador da porta ${porta} (${hci}) reiniciado: ${quantos} «command tx timeout» seguidos"
         #: A frase diz o que a espera mediu: «foi reiniciado» só quando o
-        #: adaptador VOLTOU à porta. Sem ele, o que resta é a mão dela.
+        #: adaptador VOLTOU à porta. Sem ele, o que resta é a mão do usuário.
         if [[ -n "${volta}" ]]; then
             frase="O adaptador da porta ${porta} travou e foi reiniciado."
         else
@@ -1196,7 +1196,7 @@ verbo_reiniciar_travado() {
 
 # --- O RELIGAR NA HORA (STORM-USB-02, 24/09/2026) ---------------------------
 #
-# A palavra dela de 23/09 é «nomear e religar»: o controle que cai por -71 volta
+# A palavra de 23/09 é «nomear e religar»: o controle que cai por -71 volta
 # sozinho, COM O MESMO NÚMERO. O religar existia (o `bt_rebind_orphans.sh`, no
 # tique de 2 min do watchdog), mas o lugar guardado de quem saiu vale 30 s — e
 # no tique o controle voltava fora do prazo em mais de 3 de cada 4 quedas. Este

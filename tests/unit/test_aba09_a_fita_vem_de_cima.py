@@ -109,7 +109,7 @@ def test_o_gerador_e_o_pacote_escrevem_o_mesmo_nome() -> None:
 
 
 def test_a_fita_viva_nomeia_o_controle_da_mesa() -> None:
-    """Com a mesa dela, o chip do cabo diz `White` e traz a cor do plástico."""
+    """Com a bancada, o chip do cabo diz `White` e traz a cor do plástico."""
     saida = a09_sistema._html_da_fita(MESA_DELA)
     assert "White" in saida
     assert "--plastico:" in saida
@@ -123,7 +123,7 @@ def test_a_fita_viva_nao_traz_um_nome_do_mockup() -> None:
 
 
 def test_o_controle_sem_cor_nao_ganha_cor_inventada() -> None:
-    """Campo sem informação não mostra nada — regra dela."""
+    """Campo sem informação não mostra nada — regra de produto."""
     saida = a09_sistema._html_da_fita(MESA_DELA)
     chips = re.findall(r'<label class="chip[^"]*" data-campo="fita-chip"[^>]*>', saida)
     assert len(chips) == 2, f"esperava dois chips de controle, achei {len(chips)}"

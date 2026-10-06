@@ -7,8 +7,8 @@ O QUE ESTA FRENTE FECHOU, medido pela `PAGINAS-ESPECIAIS-B1` em 11/09/2026:
     `#point-and-click`       7 `<select>` · ZERO com endereço
     `#remapeamento`          22 `<select>` · ZERO com endereço
 
-A reação dela ao número é o dado desta sprint: *"eu achei que elas
-funcionavam"*. E a ordem que ela deu na onda anterior é a régua do que cabe
+A reação dela ao número é o dado desta sprint. E a ordem que ela deu na onda anterior é a régua do
+que cabe
 aqui — *"A ideia não é adicionar mais nada em termos de feature ou interface,
 Mas é fazer o todo funcionar"*: estas telas já estão desenhadas e prometidas.
 
@@ -417,7 +417,7 @@ def test_o_cancelar_larga_a_escolha_pendente(bancada):
 def test_o_gesto_esta_registrado_e_a_casa_sabe_que_ele_grava():
     """Ele saiu do `SEM_GESTO` e entrou nas duas listas que importam.
 
-    A segunda é a que protege a máquina DELA: `pacotes.perigosos()` é derivada
+    A segunda é a que protege a máquina do usuário: `pacotes.perigosos()` é derivada
     do `grava=` do decorador, e é ela que faz a prova de clique do piloto
     recusar-se a apertar este botão contra o daemon vivo. Um gesto que grava
     perfil e não aparece ali é uma régua que escreve no perfil real de quem a

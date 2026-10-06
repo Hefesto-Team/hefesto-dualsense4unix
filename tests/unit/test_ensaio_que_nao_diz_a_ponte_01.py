@@ -24,7 +24,7 @@ A REGRA, e a razão de ela ser ASSIMÉTRICA
 `eliminacao.sustentam_a_ponte`:
 
 - ensaio de ponte VAZIA sustenta afirmação de QUALQUER ponte;
-- ensaio COM ponte sustenta só a DELA.
+- ensaio COM ponte sustenta só a DO USUÁRIO.
 
 O primeiro braço não é generosidade: é o que impede a coluna nova de reprovar,
 no dia em que nasce, toda célula de grau forte que hoje passa — os 177 ensaios

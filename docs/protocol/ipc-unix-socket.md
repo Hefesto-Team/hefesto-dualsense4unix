@@ -212,7 +212,7 @@ um evento que pode nunca vir.
 ### `led.player_brightness_set` — o brilho das luzes de número (O-BRILHO-DAS-LUZES-DE-NUMERO-01)
 
 `{brilho: "fraco" | "medio" | "forte", uniq?}` → `{status, brilho,
-aplicado_em, guardado_em}`. Decisão dela de 24/09/2026
+aplicado_em, guardado_em}`. Decisão de 24/09/2026
 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): Fraco, Médio e Forte na linha
 LEDs, nascendo no Fraco. A palavra é a do perfil
 (`leds.player_led_brightness`); a tradução para o degrau do firmware
@@ -242,7 +242,7 @@ brilho); no rádio, no `0x31` que acende o número. O `flag2` leva só o bit0
 
 **Não arma a trava manual `led`**, de propósito: quem chama é a pílula da aba
 Iluminação, e ela grava a palavra no override do controle ANTES de chamar —
-uma troca de perfil reaplica o que o perfil diz, que é o que ela escolheu.
+uma troca de perfil reaplica o que o perfil diz, que é o que o usuário escolheu.
 
 **A leitura de volta é o `state_full`** (A-04-PERGUNTA-AO-DAEMON-VIVO-01): cada
 controle traz `brilho_das_luzes` (`"fraco"`, `"medio"` ou `"forte"`, o degrau
@@ -264,7 +264,7 @@ A aba Iluminação diz «Agora: a cor do jogo» só com ele.
 |----------------------|----------------------------------------------------|----------------------------------------------------------------|
 | `rumble.motores.set` | `{uniq?: str, forte_pct?: 0-100, fraco_pct?: 0-100, haptica_pct?: 0-200}` | `{status, uniq, perfil, gravado, forte_pct, fraco_pct, haptica_pct}` |
 
-Decisão dela, 04/09/2026. **A barra não é um comando: é POLÍTICA**, e ela
+Decisão, 04/09/2026. **A barra não é um comando: é POLÍTICA**, e ela
 MULTIPLICA o degrau da coluna — `efetivo(motor) = degrau x barra(motor)`. Com o
 degrau em `Máximo` (150 %), barra fraca 100 % e barra forte 50 %, o motor fraco
 recebe 150 % e o forte 75 %.
@@ -301,7 +301,7 @@ padrão, 150, apaga a chave). Ele não multiplica o degrau: no PCM do jogo a For
 alcança, e esta barra é o único fator. Quem o aplica é o dono do ganho
 (`daemon/ganho_da_haptica.py`), relido no mesmo ato: os traseiros da placa daquele
 controle no cabo, em fator linear, e o conversor da ponte no rádio, antes do int8. No
-`state_full`, cada controle traz `haptica_pct` (o que ela escolheu), `haptica_vale_pct`
+`state_full`, cada controle traz `haptica_pct` (o que o usuário escolheu), `haptica_vale_pct`
 (o que vale: na Economia, no máximo 30), `haptica_alcanca` (o Hefesto está no caminho
 dele) e `haptica_no_ar` (há háptica chegando a ele agora: no cabo, o monitor da placa
 dele; no rádio, a ponte em háptica com sinal), e `haptica_pct_padrao` traz o padrão.
@@ -361,8 +361,7 @@ funcionar.
 
 **`mic.led.set` é o BYTE VIZINHO, e acender NÃO muta** (MIC-DA-MESA-ELEICAO-01,
 01/09/2026). `common[8]` e `common[9]` têm bits de autorização diferentes, e é
-por isso que a inversão que ela pediu — *"as pessoas precisam ter um aviso
-visual que o mic tá funcionando"* — cabe sem escrever uma linha no byte do mudo.
+por isso que a inversão que o usuário pediu — ** — cabe sem escrever uma linha no byte do mudo.
 **Nesta casa, ACESO = este microfone está VIVO**, ao contrário da convenção da
 Sony; o contrato do byte não inverteu, quem decide o argumento é o chamador.
 
@@ -471,7 +470,7 @@ neste projeto — "este controle está jogando agora?" —, respondida pelo camp
 O que mudou em **15/08/2026 (MESA-CHEIA-12)**: os dois deixaram de ser espaços
 de numeração diferentes. Até ali o `player` saía do índice de alocação do vpad
 do co-op (`_next_player_index`, ordem em que o grab confirmou na sessão) e a
-barra de LED do controle saía desta fila — e, com os quatro DualSense dela no
+barra de LED do controle saía desta fila — e, com os quatro DualSense do usuário no
 rádio, três dos quatro acendiam um número e eram chamados de outro. Agora
 `CoopManager.numeros_de_jogador()` é a fonte única dos dois: quando `player`
 existe, ele é igual ao `player_slot`. A ordem de chegada é a verdade, e a barra
@@ -498,11 +497,10 @@ no renumber, para a interface não anunciar sucesso de um no-op.
 
 **COOP-SEM-INTERRUPTOR-01 (06/08/2026, decisão da mantenedora):** o co-op local
 não é mais uma opção — cada controle conectado é um jogador, sempre. Palavra
-dela: *"se eu conecto 4 controles no PC eu espero, com 4 pessoas jogando, que
-cada um controle o próprio personagem"*.
+de produto.
 
 - `coop.set {enabled: true}` continua ligando/reconciliando e **persiste** o
-  gesto manual (é gesto DELA: toma a posse do eixo `mode`).
+  gesto manual (é gesto do usuário: toma a posse do eixo `mode`).
 - `coop.set {enabled: false}` é **recusado em voz alta** — `status: "recusado"`,
   com `motivo` legível. A FORMA do retorno é preservada de propósito
   (`players` continua lá): quem lê o contrato não quebra, e quem esperava o
@@ -584,7 +582,7 @@ frase de tela de cada motivo mora do lado da GUI (`_MOTIVOS_MAQUINA`,
 sobrescrito**, e os bytes ficam intactos.
 
 A declaração **não** entra no `daemon.state_full`: aquilo é o tique de 20 Hz, e
-isto muda por gesto dela. O daemon lê o arquivo uma vez no boot
+isto muda por gesto do usuário. O daemon lê o arquivo uma vez no boot
 (`daemon/lifecycle.py`, ao lado dos flags de sessão).
 
 ### `radio.mover` — mover UM aparelho, ou conectar um novo (MOVER-UM-POR-VEZ-01)
@@ -597,7 +595,7 @@ O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
 | `radio.mover` | `{aparelho?: "aa:bb:…" ou uniq, destino?: "aa:bb:…"}` | `{status, movimento}` ou `{status: "sem_central"}` |
 
 Sem `aparelho` é o «Conectar»: a busca abre no adaptador da D8 (mais vaga de ponte; no
-empate, menos controles; quem varre por último), e nada pareia sem o clique dela: com
+empate, menos controles; quem varre por último), e nada pareia sem o clique do usuário: com
 `aparelho` que a janela viu, no destino da busca, é o «Parear» dela; o «Parear de Novo» pede o mesmo antes de a janela ver o aparelho, que esteja fora do ar em todo adaptador, e o `Pair` só sai quando a janela o vê. Sem `destino`, a D8 escolhe
 também no mover. `status: "ocupado"` é a recusa, e ela tem duas causas: OUTRO
 movimento está em curso, ou outro motor segurou a trava do rádio por mais de 5 s.
@@ -642,7 +640,7 @@ código de uma tecla nem texto: só contagens. A chave é `{}` sob a suíte e no
 
 ### `mira.set` — o chip «Mira Virtual», por controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01)
 
-A palavra dela, 23/09/2026: um botão «Mira Virtual» ao lado de Giroscópio e
+A palavra, 23/09/2026: um botão «Mira Virtual» ao lado de Giroscópio e
 Acelerômetro, no cartão de cada controle — o movimento do controle vira o
 **analógico direito** daquele controle, para quem não alcança o analógico.
 
@@ -657,7 +655,7 @@ Calibrar sensores («O quanto um gesto anda» e «Ignorar tremor até»); `gatil
 é o «Só enquanto eu segurar» (um botão de `REMAPEAVEIS`, ou `null` para a mira
 andar sempre — o PS é recusado), e `inverter_horizontal`/`inverter_vertical`
 são os dois «Inverter» (A-MIRA-POR-MOVIMENTO-NA-TELA-02). `inclinacao` e
-`toque` são os dois arranjos da resposta dela de 28/09/2026
+`toque` são os dois arranjos da resposta de 28/09/2026
 (NO-MODO-XBOX-TUDO-FUNCIONA-01): `inclinacao` grava o `acelerometro` da peça —
 o analógico que a inclinação do controle move, `"analogico_esquerdo"` ou
 `"analogico_direito"` (o chip embaixo de cada um), ou `"nenhum"` —, e `toque`
@@ -677,7 +675,7 @@ do `store`, que o tique pergunta com o `uniq` de cada jogador, e o filtro do
 report, que tira o giroscópio nativo da janela de quem mira — a câmera não anda
 em dobro no caminho Virtual). **Em Modo Nativo o pedido com `ligada` é
 recusado inteiro** (e o com `inclinacao` ou `toque`, que também precisam do
-controle virtual), sem escrita nenhuma, com `status: "nativo"` — palavra dela
+controle virtual), sem escrita nenhuma, com `status: "nativo"` — palavra
 de 24/09/2026 (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`): no Nativo o chip fica
 cinza e não grava. Os ajustes sem `ligada` gravam também no Nativo, com
 `alcance.tique = "nao_se_aplica"` e a `ressalva` dizendo que valem quando o

@@ -75,7 +75,7 @@ class TestOCarimboPreencheOSilencioDoPerfil:
     def test_perfil_sem_modo_arma_a_ponte_carimbada(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O ramo que antes não armava nada. Agora honra o gesto dela."""
+        """O ramo que antes não armava nada. Agora honra o gesto do usuário."""
         _marker(env_dir)
         perfil = _perfil(
             None, ponte=PonteConfirmada(kind="gamepad", gamepad_flavor="xbox")
@@ -130,7 +130,7 @@ class TestOPerfilManda:
     def test_carimbo_discordando_nao_troca_a_mascara_dela(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Trocar o modo de um jogo dela sem ela pedir é a regra ao contrário."""
+        """Trocar o modo de um jogo do usuário sem ela pedir é a regra ao contrário."""
         _marker(env_dir)
         perfil = _perfil(
             ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense"),

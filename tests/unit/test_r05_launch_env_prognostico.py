@@ -4,7 +4,7 @@
 uma máscara DIFERENTE da atual, esses backends descrevem outro flavor e não
 dizem nada sobre o que vai existir quando o perfil ativar.
 
-Caso medido na configuração dela: máscara global `xbox` (vpad uinput) e o
+Caso medido na configuração do usuário: máscara global `xbox` (vpad uinput) e o
 Sackboy com perfil `dualsense`. O `steam_app_1599660.env` saía SEM
 `SDL_GAMECONTROLLER_IGNORE_DEVICES` e SEM `PROTON_DISABLE_HIDRAW` — porque
 "uinput" não autoriza o dedup. O arquivo por-appid ficava estritamente PIOR que

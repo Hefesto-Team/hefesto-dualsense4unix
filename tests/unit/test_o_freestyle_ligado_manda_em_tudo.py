@@ -84,7 +84,7 @@ def _gerente(store: StateStore, controle: Any | None = None) -> ProfileManager:
 
 
 def _liga(store: StateStore, controle: Any | None = None) -> ProfileManager:
-    """O gesto dela: o «Ativar» do Freestyle (o mesmo do botão «Modo Freestyle»)."""
+    """O gesto do usuário: o «Ativar» do Freestyle (o mesmo do botão «Modo Freestyle»)."""
     gerente = _gerente(store, controle)
     gerente.activate(FREESTYLE, origin="manual")
     assert store.freestyle_ligado is True
@@ -516,7 +516,7 @@ def test_o_freestyle_de_fora_do_jogo_com_o_modo_desligado_nao_existe_mais(
 
 
 def _o_jogo_valendo_fora_da_escolha(store: StateStore) -> _Handlers:
-    """O botão apagado, a escolha dela no Sofá, e o PRAGMATA posto pelo lançamento."""
+    """O botão apagado, a escolha do usuário no Sofá, e o PRAGMATA posto pelo lançamento."""
     _o_jogo()
     loader.save_profile(Profile(name="Sofá", match=MatchCriteria(window_class=["zathura"]),
                                 priority=60))
@@ -535,13 +535,13 @@ def test_gravar_numa_aba_nao_muda_o_modo(semeadura_ligada: None, ligado: bool) -
     Conferência de 28/09/2026. Toda aba que grava passa pelo funil
     `interface/pacotes/perfil.gravar_e_reaplicar`. Até 01/10/2026 ele mandava
     `profile.switch` (a ativação à mão): o primeiro ajuste dela mexia no Modo
-    Freestyle, e o perfil do jogo posto pelo lançamento virava a escolha dela.
+    Freestyle, e o perfil do jogo posto pelo lançamento virava a escolha do usuário.
     Desde O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 é o `profile.reaplicar`. É o
     funil de verdade, com o handler de verdade, nas duas pontas: o jogo valendo
     com o botão apagado, e o Freestyle com o botão aceso.
 
     MORDIDA: faça o funil mandar `profile_switch` de novo e a célula
-    `desligado` reprova com o PRAGMATA gravado como a escolha dela.
+    `desligado` reprova com o PRAGMATA gravado como a escolha do usuário.
     """
     from hefesto_dualsense4unix.interface.pacotes import perfil as funil
 
@@ -794,7 +794,7 @@ def test_ligar_sem_caminho_pergunta_o_modo_ao_perfil_ativo(
 
 
 def test_o_caminho_que_ela_manda_vence_o_do_perfil(semeadura_ligada: None) -> None:
-    """O chip de modo manda o caminho: o pedido dela é a escolha, e vai como escolha."""
+    """O chip de modo manda o caminho: o pedido é a escolha, e vai como escolha."""
     loader.load_all_profiles()
     store = StateStore()
     h = _Handlers(store, _liga(store))

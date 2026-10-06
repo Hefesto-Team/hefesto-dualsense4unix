@@ -1,12 +1,12 @@
 """As duas curas de 09/08/2026, à noite: o som na linha e a bateria no jogo.
 
-Duas decisões dela, no mesmo dia e pela mesma razão de sempre — *"falo isso
+Duas decisões de produto, no mesmo dia e pela mesma razão de sempre — *"falo isso
 ingame"*:
 
 1. **o som do jogo aparece na linha de recursos do card.** O carimbo
    ``audio_do_jogo`` existia no vpad desde 02/08 (PARIDADE-SONY-01/E1), já
    tinha respondido **sim** ao vivo com o jogo aberto, e nada na janela o lia.
-   Ela decidiu: *"sim, na linha de recursos do card"*, e **sem** o número do
+   O usuário decidiu: *"sim, na linha de recursos do card"*, e **sem** o número do
    volume — a linha diz que o som está chegando, não em que volume;
 2. **a bateria do controle chega ao jogo.** O ``forward_battery`` nasceu em
    15/07 (``69951a7``) e passou 25 dias com **zero chamadores em `src/`**. A

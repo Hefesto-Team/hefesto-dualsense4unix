@@ -13,7 +13,7 @@ Médio), cabo e rádio iguais::
     ativação        (76, 38, 0)    Fraco    73, 18             0,3
     «Aplicar»       (209, 104, 0)  Médio    182, 45            —
 
-e o «Salvar» com a economia ligada gravava os 30% do teto como o brilho DELA:
+e o «Salvar» com a economia ligada gravava os 30% do teto como o brilho DO USUÁRIO:
 desligada a economia, o P2 seguia a `(76, 38, 0)` para sempre. Na «Bateria
 longa», o mesmo em todos os controles.
 
@@ -61,8 +61,7 @@ da seção 1 pelo «Aplicar» passam a ser: tire o `_perfil_na_economia` do
 `ProfileManager.apply`, ou faça o `_o_todos_das_luzes_vai_cru` devolver sempre
 `True` (o quadro intermediário).
 
-A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
-de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal -->
+A régua dela, a de toda  <!-- noqa-acento: citação literal -->
 — P1 a P4, cabo e rádio.
 
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o perfil e o

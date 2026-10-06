@@ -1,18 +1,13 @@
 """A `04-iluminacao` mostra o controle DA MESA, e nunca o do desenho.
 
-A LEI, e ela é dela (03/09/2026)::
+A LEI, e é do usuário (03/09/2026)::
 
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar os
-    controles lá de cima. Não mistura com a info dos mockups. Cada feature faz
-    referencia ao controle conectado. Por isso temos o mapa pra servir como  (noqa-acento)
-    variável de identificação"
 
-    (A frase é dela, palavra por palavra: citação não se corrige.)
+    (A frase é do usuário, palavra por palavra: citação não se corrige.)
 
-E, sobre a COR: *"se identificou o controle como modelo White a cor do card em
-volta tem que ser branco. Temos isso no mapa."*
+E, sobre a COR
 
-O QUE ESTAVA NA TELA DELA, fotografado em 03/09/2026 com dois controles na mesa
+O QUE ESTAVA NA TELA DO USUÁRIO, fotografado em 03/09/2026 com dois controles na mesa
 (um White no cabo, um por rádio sem cor lida)::
 
     rótulo da coluna (VIVO)    P1 • White • USB
@@ -27,7 +22,7 @@ O QUE ESTES TESTES COBREM, e cada um tem a mordida escrita:
 
 1. a moldura tem endereço e NÃO tem `--plastico` cravado;
 2. o pacote MANDA a cor da casca, lida da mesa viva;
-3. sem cor lida ele manda VAZIO — regra dela: campo sem informação não mostra
+3. sem cor lida ele manda VAZIO — regra de produto: campo sem informação não mostra
    nada. Um `#000` ali diria PRETO, que é uma cor;
 4. o anelzinho do dono declara de quem é, senão a régua o lê como congelado;
 5. o antes/depois do rodapé é um `blocos:` vivo e nomeia quem está na mesa;
@@ -48,7 +43,7 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
         sys.path.insert(0, _p)
 
 
-#: A MESA DELA DE 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve: um
+#: A BANCADA DE 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve: um
 MESA_DELA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
@@ -70,7 +65,7 @@ BRANCO = "#e4e0d8"
 
 @pytest.fixture
 def carga():
-    """O pacote da `04`, com a mesa DELA."""
+    """O pacote da `04`, com a bancada."""
     import pacotes
 
     def montar(mesa=None, conectados=None):
@@ -157,7 +152,7 @@ def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
 
 
 def test_sem_cor_lida_o_pacote_manda_vazio_e_nunca_a_do_mockup(carga):
-    """Campo sem informação não mostra nada — a regra é dela."""
+    """Campo sem informação não mostra nada — a regra é de produto."""
     col = carga()["colunas"][NO_RADIO["uniq"]]
     assert col["plastico"] == "", (
         f"o controle de rádio, sem cor lida, mandou {col['plastico']!r}. "

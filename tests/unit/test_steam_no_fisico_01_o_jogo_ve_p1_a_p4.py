@@ -558,11 +558,11 @@ class TestOP1RenasceNoMesmoCaminho:
     A conferência de 24/09/2026 achou a terceira porta do vazamento de caminho
     (O-CAMINHO-NAO-VAZA-01, CAMINHO-CONTAGIO-01): o `_reerguer_o_p1` chamava o
     start SEM caminho. Um start sem opinião não herda de lugar nenhum, por
-    ordem dela (`gamepad._caminho_a_herdar` devolve ``None``), e o
+    ordem de produto (`gamepad._caminho_a_herdar` devolve ``None``), e o
     `_guardar_o_caminho` LIMPA o slot da sessão. Com a mesa no Modo Xbox — o
     chip da aba Jogar, que muda o CAMINHO e não a máscara —, a carta 1 que
     chegava depois do primário devolvia o P1 em DualSense/uhid, e a escolha
-    dela sumia da tela e dos secundários sem ela ter tocado em nada.
+    do usuário sumia da tela e dos secundários sem ela ter tocado em nada.
 
     Aqui o start e o stop são os DE VERDADE (`gamepad`), para a régua não ser
     mais frouxa que o produto: o dublê do `vpad_do_p1` não conhece caminho.

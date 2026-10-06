@@ -133,7 +133,7 @@ class TestVpadDegradationText:
 
     def test_o_modo_xbox_com_a_mascara_dualsense_nao_acende(self) -> None:
         """O-MODO-XBOX-NAO-E-QUEDA-02: máscara DualSense no `uinput` pelo modo
-        Xbox que ela escolheu não é queda, e o daemon publica `degraded=False`.
+        Xbox que o usuário escolheu não é queda, e o daemon publica `degraded=False`.
         Mordida: devolva ao banner a leitura `backend == "uinput"`."""
         assert vpad_degradation_text(_state(degraded=False)) is None
 

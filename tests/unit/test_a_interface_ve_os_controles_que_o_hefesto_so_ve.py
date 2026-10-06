@@ -120,7 +120,7 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
     abas acusa: a lista vazia é *"não há"* **e** *"ainda não perguntei"*. O que
     mudou em 07/09/2026 é COMO se diz "nada".
 
-    **O DEFEITO ESTAVA NA TELA DELA, e foi fotografado:** com quatro DualSense na
+    **O DEFEITO ESTAVA NA TELA DO USUÁRIO, e foi fotografado:** com quatro DualSense na
     mesa e nenhum externo, a aba Jogar mostrava um `—` solto logo abaixo dos
     quatro cartões. `escrever()` troca valor vazio por travessão de propósito
     (`hefesto_vivo.py`), a `.ext-vaga` é `display:contents`, e esse travessão
@@ -130,7 +130,7 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
 
     A MORDIDA: devolva `""` em qualquer um dos DOIS `return` de
     `_html_dos_externos` e esta régua reprova. **São dois de propósito** — a
-    saída curta (`if not ctx.externos`) é o caminho que a máquina dela percorre,
+    saída curta (`if not ctx.externos`) é o caminho que a máquina do usuário percorre,
     e curar só o de baixo deixa o travessão exatamente onde ela o viu. Foi o que
     aconteceu na primeira volta desta cura.
     """

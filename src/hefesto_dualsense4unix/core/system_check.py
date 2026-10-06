@@ -43,7 +43,7 @@ def fonte_configurada_do_wireplumber() -> str | None:
     É o `default.configured.audio.source` do `default-nodes`: o que um
     `pactl set-default-source` (nosso ou de qualquer outro programa) ou a
     escolha nas configurações de som deixou gravado. O WirePlumber o devolve
-    sozinho quando aquele nó reaparece — é por isso que ele é a escolha dela,
+    sozinho quando aquele nó reaparece — é por isso que ele é a escolha do usuário,
     e não o ativo de agora.
 
     **UM LEITOR SÓ DESTE ARQUIVO no lado Python.** O aviso de boot
@@ -98,7 +98,7 @@ def _marca_do_gesto_do_mic() -> Path:
 def _dualsense_mic_intended() -> bool:
     """True quando o mic do DualSense ser a fonte padrão é o que a pessoa PEDIU.
 
-    **O DEFEITO, medido em 16/09/2026 na máquina dela.** Esta função perguntava
+    **O DEFEITO, medido em 16/09/2026 na máquina do usuário.** Esta função perguntava
     a UMA variável de ambiente, e só a ela — enquanto o `doctor.sh` responde à
     MESMA pergunta com CINCO degraus (`_prefere_mic_do_dualsense`). Duas fontes
     de verdade para a mesma decisão, e esta lia a mais fraca: o daemon sobe pelo
@@ -120,7 +120,7 @@ def _dualsense_mic_intended() -> bool:
     A cura é a regra da casa, sem novidade: *quando um valor tem dono, a régua
     PERGUNTA ao dono*. Os cinco degraus abaixo são os do `doctor.sh`, na mesma
     ordem e pela mesma razão — a ordem é a hierarquia de quem manda, e o último
-    degrau é o que diz que **"não sei" nunca é "ela pediu"**.
+    degrau é o que diz que **"não sei" nunca é "o usuário pediu"**.
     """
     conf = _dir_dos_dropins()
     if (conf / "52-hefesto-dualsense-disable-source.conf").exists():

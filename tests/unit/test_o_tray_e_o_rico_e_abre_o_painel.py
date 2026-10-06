@@ -51,7 +51,7 @@ def test_o_estado_vem_do_state_full_e_nao_do_status() -> None:
 
     O `AppTray._controllers_suffix_from_state` a lê para dizer quantos estão na
     mesa; com o `status` o tray diria sempre «1 controle». Medido em 19/09 na
-    máquina dela: `state_full` devolveu perfil, bateria e a lista.
+    máquina do usuário: `state_full` devolveu perfil, bateria e a lista.
     """
     from hefesto_dualsense4unix.cli import cmd_tray
 

@@ -4,7 +4,7 @@
 POR QUE ISTO EXISTE, e a medição é de 21/09/2026
 ------------------------------------------------
 A Steam guarda **UMA** linha de ``LaunchOptions`` por jogo, e tudo que quiser
-estar ali disputa a mesma linha. Na máquina dela havia DOIS donos:
+estar ali disputa a mesma linha. Na máquina do usuário havia DOIS donos:
 
 * o Hefesto, que põe o atalho ``hefesto-launch`` (sem ele, no rádio o jogo
   tende a não enxergar controle nenhum);
@@ -16,9 +16,8 @@ PRAGMATA perdia o atalho e o vigia o repunha, das 04:31 às 22:00. Quem abrisse
 o jogo na janela errada jogava sem controle. *Duas ferramentas escrevendo a
 mesma linha não é configuração; é sorteio.*
 
-A DECISÃO É `D-2109-AS-OPCOES-POR-JOGO-TEM-UM-DONO-SO`, e a ordem dela, de
-21/09/2026, é esta: *"PODE CORRIGIR E INTEGRAR ELE AO NOSSO APP.
-DESATIVA O ORIGINAL ENTÃAO."*  <!-- noqa-acento: citação literal, a
+A DECISÃO É `D-2109-AS-OPCOES-POR-JOGO-TEM-UM-DONO-SO`, e a ordem, de
+21/09/2026, é esta:   <!-- noqa-acento: citação literal, a
 digitação é a dela -->
 
 O QUE ESTE MÓDULO FAZ

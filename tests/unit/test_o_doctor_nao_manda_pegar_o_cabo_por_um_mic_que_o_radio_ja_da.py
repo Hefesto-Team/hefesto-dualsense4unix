@@ -31,7 +31,7 @@ A MORDIDA desta régua é dupla, de propósito:
    deixaria a tela mentindo ao contrário.
 
 O QUE ELA **NÃO** MEDE: que a ponte esteja no ar agora, ou que o firmware
-obedeça. Isso é bancada, com a orelha dela. Aqui se mede só que o produto
+obedeça. Isso é bancada, com a orelha do usuário. Aqui se mede só que o produto
 parou de recomendar o cabo por um motivo que deixou de ser verdade.
 """
 

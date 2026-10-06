@@ -51,13 +51,13 @@ de 5 (5, 15, 25, … 95) — com estas faixas, **todo** degrau do hardware cruza
 fronteira, então nenhum se perde.
 
 Volume esperado numa sessão de 16 h: ~10 linhas de faixa + ~32 âncoras + as
-bordas de cabo, algo como 45 linhas. O evento mais frequente do journal dela
+bordas de cabo, algo como 45 linhas. O evento mais frequente do journal do usuário
 (``hidraw_broker_hidden``) teve 14.105 ocorrências em 7 dias — este diário é
 0,3% disso. GRAU: MEDIDO (contagem do protocolo de 07/08).
 
 O endereço NÃO vai cru
 ----------------------
-O journal dela já publica ``uniq=`` cru hoje, e o repositório é público: o
+O journal do usuário já publica ``uniq=`` cru hoje, e o repositório é público: o
 endereço de rádio identifica o aparelho. Toda linha daqui sai com a **máscara da
 casa** — octetos 4 e 5 zerados (``OUI:00:00:NN``), a mesma convenção que o
 portão ``tests/unit/test_docs_mac_anonimato.py`` cobra dos arquivos versionados.

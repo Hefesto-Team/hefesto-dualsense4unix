@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""o_fone_tem_volume_proprio.py — o byte do fone, variado SOZINHO, na orelha dela.
+"""o_fone_tem_volume_proprio.py — o byte do fone, variado SOZINHO, na orelha do usuário.
 
-A PERGUNTA QUE ELE DECIDE (FONE-01, decisão dela de 09/09/2026: *"1-b"*)
+A PERGUNTA QUE ELE DECIDE (FONE-01, )
 --------------------------------------------------------------------------
 O DualSense tem DUAS saídas — o alto-falante e o fone do jack — e o produto
 manda **o mesmo byte** para as duas: `set_audio_volumes(headphone=efetivo,
 speaker=efetivo)` (`core/backend_pydualsense.py`), por uma razão medida em
 15/08 (`sfx-o-fone-manda-por-cima`: o fone manda por cima da rota, e um fone
-em zero silenciaria quem plugasse um headset). Ela decidiu que o fone ganha
+em zero silenciaria quem plugasse um headset). O usuário decidiu que o fone ganha
 campo próprio no perfil, por controle. **Antes do campo, a bancada:** o
 firmware obedece a um `common[4]` diferente do `common[5]`?
 
@@ -19,7 +19,7 @@ comunidade. Este ensaio é o que diz se ele vale.
 O DESENHO
 ---------
 Um tom (440 Hz, contínuo) toca no SINK do controle enquanto o `common[4]` vai
-de `0x7F` a `0x00` com o alto-falante FIXO — e a orelha dela, no fone, diz o
+de `0x7F` a `0x00` com o alto-falante FIXO — e a orelha do usuário, no fone, diz o
 que mudou. Os passos, e cada um é uma pergunta::
 
     1  fone 0x7F, bit ligado       controle POSITIVO — tem de sair som no fone
@@ -39,10 +39,10 @@ que mudou. Os passos, e cada um é uma pergunta::
 O MARTELO, e por que ele existe
 -------------------------------
 O daemon é dono do volume e reescreve fone E alto-falante em cada report de
-áudio dele. Uma escrita minha pode ser desfeita antes de ela ouvir. Por isso
+áudio dele. Uma escrita do instrumento pode ser desfeita antes de quem usa ouvir. Por isso
 cada passo **martela** o byte a 10 Hz durante a janela (`--uma-vez` desliga).
 O relatório diz quantas escritas foram — e se o som "piscar" entre dois
-volumes, isso é o daemon e eu disputando, e é um SIM do firmware.
+volumes, isso é o daemon e o instrumento disputando, e é um SIM do firmware.
 
 NO RÁDIO
 --------
@@ -148,7 +148,7 @@ def sink_do_alvo(mac: str, macs_na_mesa: list[str]) -> str:
 
 
 def tocar(sink: str, caminho_do_wav: str) -> subprocess.Popen[bytes] | None:
-    """`paplay` no sink do controle, em segundo plano. Sem sink, não toca — na TV dela, nunca."""
+    """`paplay` no sink do controle, em segundo plano. Sem sink, não toca — na TV do usuário, nunca."""
     if not sink:
         return None
     try:
@@ -251,7 +251,7 @@ def main() -> int:
                 os.unlink(wav)
         print("\nfone devolvido ao teto (0x7F), porta fechada.")
 
-    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem coordena escreve):")
+    print("\nLINHAS PROPOSTAS PARA O CADERNO (docs/data/ensaios.csv — quem roda escreve):")
     for passo, resposta in respostas.items():
         volume, com_bit, _ = PASSOS[passo]
         print(linha_do_caderno(

@@ -196,7 +196,7 @@ def _ambiente_limpo() -> dict[str, str]:
 
 
 class Bancada:
-    """O ``/sys`` de mentira da mesa dela, e a corrente do religar ligada nele."""
+    """O ``/sys`` de mentira da bancada, e a corrente do religar ligada nele."""
 
     def __init__(self, tmp_path: Path, *, esperas: str = "0 0 0", regras: bool = True) -> None:
         self.tmp = tmp_path

@@ -11,7 +11,7 @@ campo que ninguém leu.
 
 **O DONO MUDOU DE ENDEREÇO EM 06/09/2026, e a régua foi junto.** Havia dois
 dicionários para o mesmo fato: `pacotes.VIA_DO_TRANSPORTE` (a SIGLA de máquina)
-e `home_actions._PALAVRA_DO_TRANSPORTE` (a palavra da tela). A decisão dela
+e `home_actions._PALAVRA_DO_TRANSPORTE` (a palavra da tela). A decisão de produto
 (D-05, e o glossário desta casa) é *cabo* e *rádio*, e a sigla sobrou num lugar
 só — a contagem do topo, `2 USB · 0 BT`. Hoje o `mesa_viva` lê
 `home_actions.palavra_do_transporte`, e esta régua confere contra ELE: o que ela

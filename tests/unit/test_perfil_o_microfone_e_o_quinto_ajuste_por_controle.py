@@ -154,7 +154,7 @@ def test_a_ida_e_volta_pelo_disco_preserva_o_mudo_da_peca() -> None:
 
 
 def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
-    """Duas unidades, dois volumes, um perfil só — o pedido dela por microfone."""
+    """Duas unidades, dois volumes, um perfil só — o pedido por microfone."""
     applier, chamadas = _espiao()
     gerente = _gerente(applier)
     perfil = Profile(

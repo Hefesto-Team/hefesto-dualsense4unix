@@ -127,7 +127,7 @@ def motivo_da_degradacao(vpad: object) -> str | None:
     """Por que ESTE vpad caiu do canal que pediu — ``None`` quando não caiu.
 
     Degradado é uma coisa só: a máscara DualSense no ``uinput`` quando o caminho
-    é o do DualSense. O caminho Xbox no ``uinput`` é escolha dela (PS-L3-MASCARA-01),
+    é o do DualSense. O caminho Xbox no ``uinput`` é escolha do usuário (PS-L3-MASCARA-01),
     e a máscara que o ``uhid`` não veste também não é queda. O modo, a máscara e
     a forma de conexão são três eixos, e esta é a única pergunta que junta os
     dois primeiros para dizer «degradou»: o diário (``vpad_degradado``), o
@@ -245,11 +245,11 @@ def make_virtual_pad(
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
 
-    MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO que ela escolheu
+    MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO que o usuário escolheu
     (`CAMINHO_DUALSENSE` · `CAMINHO_XBOX`, ou ``None`` = ninguém escolheu). O
     uhid só é tentado com o caminho DualSense **e** a máscara efetiva DualSense
     (:func:`quer_uhid`); o caminho Xbox vai direto ao uinput, e isso não é
-    degradação — é a escolha dela. O pad devolvido carrega o caminho em que
+    degradação — é a escolha do usuário. O pad devolvido carrega o caminho em que
     nasceu (`pad.caminho`), que é o que o laço do co-op compara.
 
     NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): no caminho Xbox escolhido o
@@ -295,7 +295,7 @@ def make_virtual_pad(
 
     A RESOLUÇÃO É AQUI, E ANTES DO BACKEND — a armadilha que
     `external_mask.py:68-77` descreveu para quem escrevesse este degrau: o gate
-    do `_try_uhid` (*"não é dualsense, logo não é meu"*) decide pela máscara que
+    do `_try_uhid` decide pela máscara que
     RECEBE. Se ele continuasse recebendo a do JOGO, um jogador que escolheu
     `dualsense` numa sessão `xbox` teria o uhid vetado e cairia no uinput com
     máscara DualSense — o par degradado em que a vibração do jogo morre

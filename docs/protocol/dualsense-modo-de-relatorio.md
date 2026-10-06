@@ -30,7 +30,7 @@ COMPLETO. Não há segundo modo no fio.
 | quem diz | onde | grau |
 |---|---|---|
 | o driver desta máquina | `:140-141` (`DS_INPUT_REPORT_USB 0x01`, `_SIZE 64`) e o despacho em `:1579-1581` | fonte desta máquina |
-| o descritor lido do aparelho dela | `plataforma.descritor_hid@dualsense`: *"INPUT `0x01` (64 B com o id)"* | MEDIDO nesta casa, 15/08/2026 |
+| o descritor lido do aparelho do usuário | `plataforma.descritor_hid@dualsense`: *"INPUT `0x01` (64 B com o id)"* | MEDIDO nesta casa, 15/08/2026 |
 | o SDL | `SDL_hidapi_ps5.c:413-415` — lê UM report de entrada e decide pelo TAMANHO: `size == 64` ⇒ *"Connected over USB"*, modo completo. Ele **não pergunta nada** | afirmado-no-doc |
 
 ### Por rádio o aparelho NASCE mudo, e uma leitura o acorda
@@ -190,7 +190,7 @@ daqui. Nenhum dos dois é limite do APARELHO: são políticas de quem escreve.
 
 | quem | quantos bytes escreve no `0x02` |
 |---|---|
-| o descritor lido do aparelho dela (15/08/2026) | **48** com o id — declara 47 de payload |
+| o descritor lido do aparelho do usuário (15/08/2026) | **48** com o id — declara 47 de payload |
 | SDL (`:1107-1109`) | **48**, exatamente |
 | driver desta máquina | **63** — `DS_OUTPUT_REPORT_USB_SIZE` (`:145`), struct em `:361-366`: 1 id + 47 do `common` + **15 reservados** |
 
@@ -407,9 +407,7 @@ foi número, offset, ordem e endereço — que é informação, não obra.
 
 ## O método, para a próxima leva repetir
 
-Ela pediu um jeito de preencher a lacuna da Sony sem bancada:
-*"lançar novo workflow pra agentes procurarem no Github tais canais ou tais id.
-(…) como é só informação eles trouxeram e me ajudaram no mapa do controle."*
+O usuário pediu um jeito de preencher a lacuna da Sony sem bancada
 <!-- noqa-acento: citação literal -->
 
 O que funcionou, na ordem:

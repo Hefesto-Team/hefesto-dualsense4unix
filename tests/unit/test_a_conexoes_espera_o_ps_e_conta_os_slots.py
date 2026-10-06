@@ -23,15 +23,15 @@ O QUE ESTA RÉGUA COBRA, e nenhuma delas passa por acaso
    rápido que o relógio dela, e a tela diria "não voltou" com 54 segundos
    sobrando. É a armadilha inteira desta cura, e o caso 2 a mede.
 2. **O mesmo botão cancela**, e o Cancelar **não fala com o BlueZ**: não existe
-   reconexão neste produto, o botão PS é dela.
+   reconexão neste produto, o botão PS é do usuário.
 3. **A contagem só começa se o controle CAIU.** A condição é a do dono
    (`_BlocoDaLuz._chegou_o_gesto`): `caiu` falso significa "não achei" ou "não
    consegui falar com o `bluetoothd`", e nos dois mandar apertar PS é gastar o
-   gesto dela por uma coisa que não aconteceu.
+   gesto do usuário por uma coisa que não aconteceu.
 4. **O fim da espera não fala na tela** — MUDOU DE CONTRATO EM 13/09/2026
    (TELA-CALADA-03). Até ali o recado do fim sobrevivia à espera, pela razão do
    ELO-MUDO-01 (*sem ele "não voltou" viraria silêncio*), e morria quando o
-   controle voltava. A palavra dela vence essa razão: *"essas frases de status
+   controle voltava. A palavra de produto vence essa razão: *"essas frases de status
    (…) não deveria estar aparecendo"*, *"em todas as abas da interface"*. A
    instrução do segundo tempo (o PS com a contagem) fica; a frase do fim vai ao
    diário da janela, uma vez só.

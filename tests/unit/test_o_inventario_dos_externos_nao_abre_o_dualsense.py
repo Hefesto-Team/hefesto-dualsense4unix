@@ -1,6 +1,6 @@
 """O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01 — quem procura externo não abre o DualSense.
 
-Medido na máquina dela em 25/09/2026, com os quatro DualSense ligados: o
+Medido na máquina do usuário em 25/09/2026, com os quatro DualSense ligados: o
 inventário dos externos abria pelo broker o nó de gamepad de cada controle a
 cada 1,3 s (o tique dos externos, 2 s, e a janela, `controller.list` a cada
 4 s), só para ler a identidade e descartar. Cada abertura é uma linha em cada
@@ -21,7 +21,7 @@ real: é ele quem escreve a linha `hidraw_broker_fd_recebido state=entrada`.
 Um `os.open` ou um `open` em `/dev/input`, `/dev/hidraw`, `/dev/uinput`,
 `/dev/uhid` ou `/sys/class/input` reprova a régua.
 
-A matriz é a regra dela: de um a quatro DualSense, pelo cabo, pelo rádio e
+A matriz é a regra de produto: de um a quatro DualSense, pelo cabo, pelo rádio e
 misto, com o Edge (0df2), escondidos e abertos, com e sem o Pro (057e:2009) e
 o 8BitDo em modo PS4 (054c:05c4, que é Sony e não é DualSense).
 """
@@ -167,7 +167,7 @@ def _nos_do_dualsense(k: int, ds: _DS) -> list[tuple[str, dict[str, Any]]]:
 
 def _nos_do_vpad(k: int) -> list[tuple[str, dict[str, Any]]]:
     """O DualSense VIRTUAL do jogador k (054c:0df2, uniq 02:fe): o daemon o
-    cria e ele fica aberto na máquina dela; ninguém o abre na descoberta."""
+    cria e ele fica aberto na máquina do usuário; ninguém o abre na descoberta."""
     return [("gamepad", {
         "vendor": 0x054C, "product": 0x0DF2, "bus": 0x03,
         "uniq": f"02:fe:00:00:00:{k:02x}", "name": f"DualSense Wireless Controller (Hefesto P{k})",
@@ -317,7 +317,7 @@ def _montar(
     sombras = tmp_path / "servidos"
     sombras.mkdir()
 
-    # Intercalados, como na máquina dela: DualSense, externos e teclado.
+    # Intercalados, como na máquina do usuário: DualSense, externos e teclado.
     aparelhos: list[list[tuple[str, dict[str, Any]]]] = []
     for k, ds in enumerate(dualsenses, start=1):
         aparelhos.append(_nos_do_dualsense(k, ds))
@@ -630,7 +630,7 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
     montar: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
     nome: str, escondidos: bool, externos: bool,
 ) -> None:
-    """Dois minutos da máquina dela, pelos dois chamadores de verdade.
+    """Dois minutos da máquina do usuário, pelos dois chamadores de verdade.
 
     60 `ExternalLedSync.tick` a cada 2 s e 30 `controller.list
     {external: true}` a cada 4 s, intercalados. Depois de CADA passo: zero

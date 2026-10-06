@@ -205,7 +205,7 @@ printf '>>> se um controle recusar conexão depois: bluetoothctl remove <MAC> e 
 # storage sendo mexido por baixo dele. O mask --runtime fecha a janela: com a
 # unit mascarada a activation falha na hora e o stop conclui de verdade.
 systemctl mask --runtime bluetooth.service >/dev/null 2>&1 || true
-# AGENTE-QUE-NAO-VOLTA-01 (15/08/2026) — MEDIDO na máquina dela, e o preço foram
+# AGENTE-QUE-NAO-VOLTA-01 (15/08/2026) — MEDIDO na máquina do usuário, e o preço foram
 # oito horas de Bluetooth inutilizável.
 #
 # O `hefesto-bt-agent.service` declara `Requires=bluetooth.service`, então parar o

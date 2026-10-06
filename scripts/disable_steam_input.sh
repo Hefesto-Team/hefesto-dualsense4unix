@@ -595,7 +595,7 @@ case "${MODE}" in
         #
         # D-32 (05/08/2026): este pré-voo usava o `needs_fix`, que casa também
         # o opt-in per-app da allowlist. Com SÓ appids da allowlist ligados ele
-        # dizia "sim, precisa" — e o `--apply` FECHAVA E REABRIA a Steam dela
+        # dizia "sim, precisa" — e o `--apply` FECHAVA E REABRIA a Steam do usuário
         # para não mudar byte nenhum, terminando em `resultado=aplicado`, que a
         # janela traduzia para "a Steam não sequestra mais o seu controle".
         # Quem decide aqui é o `needs_real_fix`: precisa = a transformação

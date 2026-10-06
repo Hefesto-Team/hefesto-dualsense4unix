@@ -14,7 +14,7 @@ Esta bateria vigia o que quebraria em silêncio:
 2. **o formato do separador** — vírgula e nada mais. Um separador errado faz o
    consumidor ignorar a variável inteira, e ninguém percebe;
 3. **a agulha do winebus casa** — reproduzimos aqui o algoritmo MEDIDO no
-   Proton 10 da máquina dela (molde `0x%04X/0x%04X` + `wcscasestr`, isto é,
+   Proton 10 da máquina do usuário (molde `0x%04X/0x%04X` + `wcscasestr`, isto é,
    substring sem caixa);
 4. **par inválido é descartado, nunca corrigido** — a assimetria da casa manda
    errar para o lado do controle DUPLICADO, jamais para o do controle sumido;

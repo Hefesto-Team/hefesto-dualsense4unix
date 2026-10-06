@@ -151,7 +151,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
 
 
 def test_a_mesa_de_quatro_parada_nao_levanta_ponte_nenhuma(bancada: _Bancada) -> None:
-    """Quatro controles ociosos escreviam 400 reports por segundo no rádio dela."""
+    """Quatro controles ociosos escreviam 400 reports por segundo no rádio do usuário."""
     bancada.volta(*MESA)
     assert bancada.de_pe == [], "a ponte subiu sem ninguém tocando"
     assert _PonteDeMentira.criadas == []
@@ -240,7 +240,7 @@ class TestOLacoDoNoQueNaoNasce:
     def test_a_ponte_que_nao_subiu_tira_o_caminho_e_o_prazo_devolve(
         self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A falha de verdade — com o som dela na mão — some com o nó."""
+        """A falha de verdade — com o som do usuário na mão — some com o nó."""
         agora = [1000.0]
         monkeypatch.setattr(mod.time, "monotonic", lambda: agora[0])
         _PonteDeMentira.falham.add(MESA[0])

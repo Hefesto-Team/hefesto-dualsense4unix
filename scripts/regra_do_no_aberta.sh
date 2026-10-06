@@ -21,7 +21,7 @@
 # pode rodar no `postinst`). Num `.deb` ou `.rpm` o controle ficava morto até
 # alguém rodar o helper à mão.
 #
-# Isso bate de frente com a ordem dela de 11/09/2026 — *o produto é para
+# Isso bate de frente com a ordem de 11/09/2026 — *o produto é para
 # qualquer usuário; nada pode depender da bancada, do perfil ou dos jogos
 # dela*.
 #

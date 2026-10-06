@@ -53,7 +53,7 @@ def alvo_fora_da_mesa(host: Any) -> str | None:
     à tela. Zero chamadores de produção precisam capturar esta exceção
     hoje: todos já checam ``alvo_de_edicao(host).desconhecido`` antes.
 
-    **Devolve ``None``** quando ela ESCOLHEU "Todos" (não há alvo a
+    **Devolve ``None``** quando o usuário ESCOLHEU "Todos" (não há alvo a
     guardar) ou quando o alvo escolhido está conectado agora.
 
     **Mapa VAZIO não é "não sei": é "não tem DualSense na mesa"** (conserto

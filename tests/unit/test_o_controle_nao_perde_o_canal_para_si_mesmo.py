@@ -1,6 +1,6 @@
 """O controle não perde o microfone para SI MESMO — e o defeito era de FORMA.
 
-MEDIDO NA BANCADA DELA, 10/09/2026, com o DualSense do rádio na mão. Ela pedia
+MEDIDO NA BANCADA, 10/09/2026, com o DualSense do rádio na mão. Ela pedia
 o canal do microfone e o daemon o derrubava sozinho 49 ms depois::
 
     01:57:08.255  bt_mic_palavra_dela            ligado=True
@@ -8,7 +8,7 @@ o canal do microfone e o daemon o derrubava sozinho 49 ms depois::
     01:57:08.304  bt_mic_palavra_dela_esquecida        <- 49 ms
     01:57:09.376  bt_mic_pedido                  ligar=False seq=5
 
-O sintoma que ela viu foi o nó `hefesto_mic_<hex6>` nascendo, sumindo e
+O sintoma que o usuário viu foi o nó `hefesto_mic_<hex6>` nascendo, sumindo e
 voltando — *"algo tava bugando"* —, e o microfone do rádio nunca ficava no ar.
 <!-- noqa-acento: citação literal -->
 
@@ -23,7 +23,7 @@ A CAUSA está numa linha do log, e ela se lê sozinha::
 tem duas guardas para não tocar em quem não perdeu nada — `dono_antes ==
 quem_tocou` e `eleitor.eleito == dono_antes` —, e as duas comparavam as strings
 CRUAS. Com formatos diferentes dos dois lados, nenhuma disparava: o controle
-perdia o canal para si mesmo e `esquecer_a_palavra` apagava o pedido dela.
+perdia o canal para si mesmo e `esquecer_a_palavra` apagava o pedido.
 
 **As guardas existiam e estavam certas na intenção.** O que faltava era comparar
 a mesma coisa dos dois lados — é a família de defeito que esta casa já nomeia:
@@ -58,7 +58,7 @@ NORMALIZADO = "aabbccddeed8"
 
 @pytest.mark.asyncio
 async def test_nao_esquece_a_palavra_de_quem_acabou_de_pedir(monkeypatch):
-    """O caso EXATO da bancada dela: os três campos são o mesmo aparelho."""
+    """O caso EXATO da bancada: os três campos são o mesmo aparelho."""
     esquecidos: list[str] = []
     monkeypatch.setattr(hotkey, "esquecer_a_palavra", esquecidos.append)
     daemon = _DaemonDeMentira()

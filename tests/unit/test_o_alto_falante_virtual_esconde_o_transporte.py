@@ -1,12 +1,12 @@
 """O-ALTO-FALANTE-VIRTUAL-01 — o alto-falante virtual esconde o transporte.
 
-**O pedido dela, 29/08/2026:** alto-falante virtual *"no estilo do gamepad
+**O pedido, 29/08/2026:** alto-falante virtual *"no estilo do gamepad
 virtual"*, para o som do controle funcionar **independente da máscara e do
 transporte**. O contrato é o mesmo do vpad: o jogo escolhe um gamepad, não um
 transporte — aqui, quem escolhe a saída escolhe um CONTROLE, não um sink.
 
-**O nome é dela** (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`,
-palavra dela: *"4a"*): «Alto-falante do Controle N», par de «Microfone do
+**O nome é do usuário** (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`,
+): «Alto-falante do Controle N», par de «Microfone do
 Controle N», com o sufixo da Sony desde 23/09/2026. O `sink_name` segue o
 APARELHO (`hefesto_som_<hex6>`), e por isso sobrevive à troca de assento tanto
 quanto à troca de cabo.
@@ -277,7 +277,7 @@ def test_sem_placa_de_som_no_cabo_o_no_nao_nasce_e_a_rota_diz_por_que(
     `module-null-sink` entra no servidor, e a frase mora em `rota.motivo`.
 
     MORDIDA: tire a guarda «SEM ROTA, SEM NÓ» de `GerenciadorDeNosDeSom._erguer`
-    e um nó mudo entra na lista de som dela.
+    e um nó mudo entra na lista de som do usuário.
     """
     servidor.placas = ()
     GerenciadorDeNosDeSom().reconciliar([_cabo(_UNIQ_NUNCA_VISTO)])
@@ -288,7 +288,7 @@ def test_sem_placa_de_som_no_cabo_o_no_nao_nasce_e_a_rota_diz_por_que(
 
 
 def test_no_radio_sem_ponte_a_rota_recusa_com_a_frase() -> None:
-    """A queixa histórica dela: *"na hora do vamos ver a versão de BT não funcionava"*."""
+    """A queixa histórica dela."""
     for ponte in (None, lambda: False):
         rota = af.rota_do_no(_UNIQ_P2, af.TRANSPORTE_RADIO, ponte_do_radio=ponte)
         assert rota.tem_rota is False
@@ -363,7 +363,7 @@ def test_quem_sai_da_mesa_leva_so_o_seu_no(
 
 
 def test_a_mascara_nao_entra_em_assinatura_nenhuma_do_dono() -> None:
-    """Som não é entrada, e a máscara é do gamepad — pedido dela, literal."""
+    """Som não é entrada, e a máscara é do gamepad — pedido, literal."""
     for alvo in (
         af.nome_do_sink,
         af.descricao_do_alto_falante,

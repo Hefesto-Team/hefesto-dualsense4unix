@@ -8,8 +8,8 @@ crescem sem se pisarem.
 A SEÇÃO RESPONDE DUAS PERGUNTAS, E SÓ AGORA A SEGUNDA
 ------------------------------------------------------
 
-1. *"o que eu quero que fique ligado?"* — o **perfil de desempenho**;
-2. *"cabe o que eu quero fazer?"* — a **conta de fatias por adaptador**, que é
+1.  — o **perfil de desempenho**;
+2.  — a **conta de fatias por adaptador**, que é
    a pergunta que decide o produto (*cabem quatro controles com todas as
    features no rádio, nesta máquina?*) e que a seção nunca soube fazer.
 
@@ -27,7 +27,7 @@ já está gravado.
 
 **2. O microfone fica FORA do perfil.** Ele é o único que **capta a sala**, e
 um perfil de DESEMPENHO que o ligasse ou o calasse transformaria uma escolha
-de bateria numa escolha de privacidade feita pelas costas. A decisão é dela
+de bateria numa escolha de privacidade feita pelas costas. A decisão é de produto
 (`D-PERFIL-DE-DESEMPENHO`, 24/08/2026) e continua inteira.
 
 **A RAZÃO CITADA CADUCOU — NASCE-LIGADO-MIC-01, 17/09/2026.** Aqui se lia que
@@ -41,7 +41,7 @@ preço que o `plano_de_radio` conta, foi: *"LIGADO SEMPRE… COM A TELA DIZENDO 
 
 **3. A tabela tem UMA linha com ponto de aplicação, e diz as outras quatro.**
 :data:`LINHAS_DO_TETO` é o dono único da lista, e :func:`alcance_de_hoje`
-DERIVA a frase dela em vez de repeti-la. Antes eram duas coisas — uma frase
+DERIVA a frase de produto em vez de repeti-la. Antes eram duas coisas — uma frase
 digitada ao lado de uma tabela — e elas podiam divergir sem ninguém notar.
 
 **4. Esta seção NÃO grava.** O dono da escolha é o `machine.declare`, e o

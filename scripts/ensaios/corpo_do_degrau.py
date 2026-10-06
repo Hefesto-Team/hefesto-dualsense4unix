@@ -5,7 +5,7 @@ A PERGUNTA QUE ELE DECIDE
 --------------------------
 Na madrugada de 15/08/2026 ficou medido que o firmware do DualSense **executa
 reports de output de 141 e 547 bytes por rádio** — a escada `0x31`-`0x39`, lida do
-descritor dos aparelhos dela. O comando de 47 bytes (`common`) vale igual em todos
+descritor dos aparelhos do usuário. O comando de 47 bytes (`common`) vale igual em todos
 os degraus: mandar a mesma cor pelo `0x31`, pelo `0x32` e pelo `0x39` acende a
 mesma luz.
 
@@ -27,7 +27,7 @@ O DESENHO, e a sacada é não mexer no comando
 ---------------------------------------------
 Manda-se **o mesmo `common`** pedindo uma cor, no **mesmo report**, variando SÓ o
 recheio depois dele. A lightbar é o sensor — e ela é boa porque é observável pelo
-olho dela, sem instrumento que possa mentir sobre si mesmo.
+olho de quem confere, sem instrumento que possa mentir sobre si mesmo.
 
   passo   recheio dos bytes extras              cor pedida
   1       tudo zero (a linha de base)           VERMELHO
@@ -56,7 +56,7 @@ A ARMADILHA QUE ESTE ENSAIO TEM DE RESPEITAR
 `os.write()` num hidraw devolve sucesso quando o **KERNEL** aceita a entrega; ele
 NÃO espera veredito do firmware. Em 15/08 o kernel aceitou até um pacote de tamanho
 errado que era o controle negativo. **O retorno desta chamada não é a medição.**
-Quem mede é o olho dela.
+Quem mede é o olho de quem confere.
 
 E a segunda: APAGAR ENTRE OS PASSOS. Sem isso o passo N herda a cor do N-1 e a
 sequência inteira sai falso-positiva — o instrumento apaga, confirma, e só então
@@ -67,13 +67,13 @@ A PORTA E O QUE ELE ESCREVE
 Porta: o broker (`comum.abrir_no_hidraw`), com o daemon VIVO — parar o daemon
 derruba os quatro vpads e o co-op. Escrita CRUA por `os.write` no hidraw, envelope
 BT montado com o `build_bt_report`/`bt_crc32` DO PRODUTO (semente `0xA2`), nunca
-um envelope montado à mão: um report escrito por mim mediria o meu palpite, não o
+um envelope montado à mão: um report escrito à mão mediria o palpite de quem o escreveu, não o
 que o daemon manda.
 
 O QUE ELE RECUSA POR CONSTRUÇÃO
 --------------------------------
 * qualquer report fora de `0x31`-`0x39` — a família `0xF0`-`0xF7` é o canal de
-  atualização de firmware, e ela está BLOQUEADA por decisão dela de 15/08;
+  atualização de firmware, e ela está BLOQUEADA por decisão de 15/08;
 * alvo sem `--exigir-mac` conferido, para não escrever no controle errado;
 * aparelho no CABO — a escada só existe no rádio, e escrever ali seria medir outra
   coisa.

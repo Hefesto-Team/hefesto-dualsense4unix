@@ -1,6 +1,6 @@
 """O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01 — o broker só escreve no nó que mudou.
 
-O ACHADO (25/09/2026, medido na máquina dela, só lendo): a cada 30 s o daemon
+O ACHADO (25/09/2026, medido na máquina do usuário, só lendo): a cada 30 s o daemon
 pede ao broker que re-esconda o hidraw físico e os nós de entrada de cada
 DualSense (o rehide da reconciliação), e o broker fazia `removexattr` da ACL e
 `chmod 0600` em cada nó SEM olhar o estado. Com quatro controles pelo rádio,

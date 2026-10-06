@@ -95,7 +95,7 @@ As duas foram medidas em 25/08/2026, escrevendo este portão, e as duas deixavam
 1. **DOCSTRING contada como chamador.** O nome aparece dezoito vezes em prosa
    dentro de ``gamepad.py`` — e a régua que lê literais de texto para pegar
    despacho por ``getattr`` engolia as dezoito. A primeira medição saiu VERDE
-   com o defeito na frente dela.
+   com o defeito na frente do usuário.
 2. **``__all__`` contado como chamador.** ``"suspend_vpads_for_steam_input"``
    está na lista de reexportação, que é literal de texto como qualquer outro.
 
@@ -110,7 +110,7 @@ A MORDIDA (arranque a cura, veja reprovar, devolva)
 - **dê um chamador em produção a ``suspend_vpads_for_steam_input``**: o portão
   reprova pela outra direção — a entrada do registro virou lápide de um defeito
   que acabou, e registro que não se limpa vira paisagem. É esta metade que
-  avisa quem coordena, sozinha, se alguma frente RELIGAR a suspensão.
+  avisa, sozinha, se alguma frente RELIGAR a suspensão.
 
 Os dois lados também são exercitados por dublê em ``TestOPortaoMorde``, sobre
 uma cópia de ``src/`` — régua que só sabe passar não é régua (armadilha A2).
@@ -717,7 +717,7 @@ def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
     return achados[0] if len(achados) == 1 else None
 
 
-#: reprovava só nas pernas 3.10 e 3.11 do `lint-test`, verde na mesa dela e no
+#: reprovava só nas pernas 3.10 e 3.11 do `lint-test`, verde na bancada e no
 _TOKENS_DE_PROSA: tuple[int, ...] = tuple(
     tipo
     for tipo in (tokenize.COMMENT, tokenize.STRING, getattr(tokenize, "FSTRING_MIDDLE", None))

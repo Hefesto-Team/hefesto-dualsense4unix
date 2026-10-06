@@ -207,7 +207,7 @@ SONDA = r"""
     });
   });
 
-  // ---- O REFINAMENTO QUE ELA APROVOU NA VIBRACAO (27/08) ----
+  // ---- O REFINAMENTO QUE O USUÁRIO APROVOU NA VIBRACAO (27/08) ----
   // 1) todo titulo de secao de um mesmo quadro comeca no MESMO x
   document.querySelectorAll('.quadro-corpo').forEach(c=>{
     const ts=[...c.querySelectorAll('.sec-rot, .col-rot')];

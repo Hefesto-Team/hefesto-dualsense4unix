@@ -159,8 +159,8 @@ if [ -f scripts/validar-citacoes-de-linha.py ]; then
 fi
 
 # 4. A FOTO da tela. MEDIDO em 24/08/2026: a regra "fotografe se a mudança
-#    tocou a tela" está escrita em três documentos e é do coordenador — e o
-#    coordenador integrou NOVE branches de interface sem abrir a tela uma vez,
+#    tocou a tela" está escrita em três documentos e é de quem integra — e quem
+#    integra integrou NOVE branches de interface sem abrir a tela uma vez,
 #    furando a ORDEM do próprio checklist (commitou no passo 5 antes de
 #    fotografar no passo 3). O portão da suíte pegou o erro, mas só roda na
 #    suíte inteira, de ~8 min, que ele roda DEPOIS de commitar: portão certo,

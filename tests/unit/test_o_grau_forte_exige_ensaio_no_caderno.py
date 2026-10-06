@@ -450,7 +450,7 @@ def test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa(
 
 
 def test_o_jogo_reagiu_com_o_olho_dela_passa(tmp_path: Path) -> None:
-    """O caso SIMÉTRICO: com o gesto dela gravado, o degrau mais alto passa."""
+    """O caso SIMÉTRICO: com o gesto do usuário gravado, o degrau mais alto passa."""
     caminho = monta_arvore(
         tmp_path,
         [

@@ -5,7 +5,7 @@ DECISAO-SEM-DONO-01. O `docs/data/decisoes-de-produto.csv` guarda a decisão e o
 dela, e até aqui o registro parava no momento em que ela respondia: nada ligava
 a linha ao código. O microfone mudo de 17/09 era uma decisão de 25/08.
 
-A ESCADA do campo `estado`, nas palavras que ela aceitou em 23/09:
+A ESCADA do campo `estado`, nas palavras que o usuário aceitou em 23/09:
 
     aberta -> decidida -> implementada -> feita -> no ar        (e `caduca`)
 
@@ -59,7 +59,7 @@ PISO = Path("docs/data/decisoes-sem-prova.txt")
 ESTADOS = ("aberta", "decidida", "implementada", "feita", "no ar", "caduca")
 DEGRAUS_QUE_EXIGEM_PROVA = ("implementada", "feita", "no ar")
 #: Os degraus em que ELA JÁ RESPONDEU. O resto da escada diz até onde o código chegou, e
-#: a decisão que sobe a `feita` continua decidida por ela: quem pergunta «ela decidiu?»
+#: a decisão que sobe a `feita` continua decidida pelo usuário: quem pergunta «o usuário decidiu?»
 #: (as réguas do registro, do mapa e da trava do jogo aberto) lê este conjunto, nunca a
 #: palavra `decidida` sozinha. Senão a primeira decisão promovida some dessas réguas.
 RESPONDIDAS = ("decidida", *DEGRAUS_QUE_EXIGEM_PROVA)

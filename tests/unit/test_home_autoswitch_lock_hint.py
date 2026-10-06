@@ -1,7 +1,7 @@
 """UX-05 (auditoria 24/07) — o cadeado tinha EFEITO visível e CAUSA invisível.
 
 `autoswitch_locked` (hoje `freestyle_ligado`) só existia na GUI como o marcador de um checkbox
-(`_render_home`, `set_active`). Na máquina dela a flag estava ligada desde
+(`_render_home`, `set_active`). Na máquina do usuário a flag estava ligada desde
 24/07 20:42 e o que ela via era outra coisa: "o modo jogo não ativa", "os
 perfis não mudam". Ninguém relê uma caixinha de 16 px depois de marcá-la.
 

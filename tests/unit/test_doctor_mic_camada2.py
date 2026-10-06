@@ -75,7 +75,7 @@ def _decide(ativo: str) -> tuple[str, str, str]:
 @pytest.mark.skipif(not DOCTOR.exists(), reason="scripts/doctor.sh ausente")
 class TestOQueODoctorEscolhe:
     def test_nao_troca_quando_o_perfil_ativo_ja_serve(self) -> None:
-        """O caso que estragava a máquina dela."""
+        """O caso que estragava a máquina do usuário."""
         _card, ativo, alvo = _decide(
             "output:analog-surround-40+input:iec958-stereo"
         )

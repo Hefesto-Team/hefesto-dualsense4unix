@@ -31,7 +31,7 @@ _TOAST_LIGHTBAR_APAGADA = "Lightbar apagada"
 _ASSUNTO_APAGAR = "Apagar a lightbar"
 
 
-#: escolha DELA, e estão no §8 da sprint. Enquanto a resposta não vem, o
+#: escolha do usuário, e estão no §8 da sprint. Enquanto a resposta não vem, o
 _AVISO_MESMO_DESENHO_NOS_QUATRO = (
     "O mesmo desenho foi para os {n} controles ligados."
 )
@@ -66,13 +66,13 @@ def frase_do_envio(
     e a frase de lá aparece na tela com a palavra que esta aba recusa. É um
     acoplamento REAL, e por isso ele tem régua: ``test_a_regua_do_ramo_aplicado``
     em ``tests/unit/test_aplicar_verdade_ponte_lightbar.py`` reprova no dia em
-    que as duas formas divergirem, em vez de a divergência sair na tela dela.
+    que as duas formas divergirem, em vez de a divergência sair na tela do usuário.
 
     ``coop_aplica`` viaja intacto: só quem escreve os 5 LEDs de jogador o passa
     ``True`` (``_COOP_LAYER_FIELDS = ("player_leds",)`` no backend), e a cor da
     lightbar nunca foi governada pelo co-op.
 
-    ``nativo_aplica=False`` SEMPRE, e é a decisão dela de 23/09/2026
+    ``nativo_aplica=False`` SEMPRE, e é a decisão de 23/09/2026
     (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): no Modo Nativo o
     Hefesto escreve a barra e o número, e esta aba só fala dos dois.
     """

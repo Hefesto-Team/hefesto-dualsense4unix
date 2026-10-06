@@ -100,7 +100,7 @@ def test_a_lista_e_declarada_e_nao_adivinhada() -> None:
 def test_o_perfil_de_julho_continua_abrindo_na_pagina_simples(
     chave: str, de_julho: list[str]
 ) -> None:
-    """MORDE `_PRESETS_HISTORICOS`: sem ele o perfil dela cai no avançado."""
+    """MORDE `_PRESETS_HISTORICOS`: sem ele o perfil do usuário cai no avançado."""
     do_disco = MatchCriteria(window_class=list(de_julho))
     assert detect_simple_preset(do_disco) == chave
 
@@ -114,7 +114,7 @@ def test_a_escrita_grava_a_lista_de_hoje() -> None:
 
 
 def test_o_historico_nao_engole_perfil_com_campo_invisivel() -> None:
-    """Lista de julho MAIS um `process_name` não é preset — é regra dela."""
+    """Lista de julho MAIS um `process_name` não é preset — é regra de produto."""
     com_invisivel = MatchCriteria(
         window_class=["gnome-terminal", "alacritty", "kitty", "konsole"],
         process_name=["alacritty"],

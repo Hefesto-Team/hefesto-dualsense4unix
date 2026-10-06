@@ -7,7 +7,7 @@ EMBUTIDO — nenhuma leitura do controle físico no caminho de criação. O que
 estes testes travam:
 
 1. **máscara DualSense + /dev/uhid usável → uhid, SEM precisar de físico.** Era
-   o buraco do estudo de 117 agentes: sem hidraw legível (BT dormindo, boot
+   o buraco do estudo anterior: sem hidraw legível (BT dormindo, boot
    antes do connect) o vpad caía para uinput `054c:0ce6`, indistinguível do
    físico — e a launch option `IGNORE_DEVICES` persistida escondia os dois.
 2. **máscara Xbox → uinput, sempre.** O `hid_playstation` só faz bind em VID da

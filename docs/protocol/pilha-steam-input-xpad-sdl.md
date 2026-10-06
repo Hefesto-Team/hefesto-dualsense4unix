@@ -4,7 +4,7 @@
 DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
 
 - **Levantado em:** 11/08/2026, contra o código das quatro camadas e contra os
-  binários instalados **na máquina dela**.
+  binários instalados **na máquina do usuário**.
 - **Por que este arquivo existe:** as três referências que esta casa já tinha
   descrevem o **aparelho** (o DualSense, o Pro, o 8BitDo). Nenhuma descreve os
   três programas que disputam esse aparelho — o `xpad` do kernel, o Steam Input
@@ -16,7 +16,7 @@ DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
   leitura de arquivo, com a Steam **fechada**.
   **A seção 6-bis é de outra natureza, e foi acrescentada em 12/08/2026:** ela é
   bancada, com a Steam **aberta**, escrita no `hidraw`, `btmon` no ar e o olho
-  dela como aceite. Cada linha de lá tem ensaio em `docs/data/ensaios.csv`.
+  de quem confere como aceite. Cada linha de lá tem ensaio em `docs/data/ensaios.csv`.
   **A seção 5-bis, de 13/09/2026, é sonda só-leitura** com o vpad vivo: nenhuma
   biblioteca abriu `hidraw`, e nenhum contêiner da Steam foi iniciado.
   **A seção 5-ter, de 17/09/2026, é leitura passiva com o JOGO FECHADO:** nós
@@ -58,14 +58,14 @@ sistema e concluiu-se que ele não entregava nada — a biblioteca que os jogos
 usam entrega tudo. Aconteceu de novo em 10/09, com o giroscópio do vpad (seção
 5-bis).
 
-| camada | de onde vem o código citado | o que roda na máquina dela |
+| camada | de onde vem o código citado | o que roda na máquina do usuário |
 |---|---|---|
 | `xpad` | `torvalds/linux`, **tag `v7.0`**, `drivers/input/joystick/xpad.c` (2346 linhas) | **MEDIDO AQUI:** kernel `7.0.11-76070011-generic`, `CONFIG_JOYSTICK_XPAD=m`, `CONFIG_JOYSTICK_XPAD_FF=y`, `CONFIG_JOYSTICK_XPAD_LEDS=y` |
 | `hid-playstation` | `torvalds/linux`, tag `v7.0` | DKMS desta casa, ver a canônica dos externos §1.1 |
 | SDL3 | `libsdl-org/SDL`, branch `main`, buscado em 11/08/2026 | **MEDIDO AQUI:** a que a Steam distribui é `SDL-release-3.4.0-1163-g2d7f30078` (`steamrt64/libSDL3.so.0`, de 21/07) |
 | SDL2 | `libsdl-org/SDL`, branch `SDL2` | **MEDIDO AQUI:** `libSDL2-2.0.so.0.3200.10` nos `pinned_libs` do runtime |
 | `winebus.sys` | `ValveSoftware/wine`, branch `proton_10.0` | **MEDIDO AQUI:** Proton 10.0 e 11.0 instalados, mais GE-Proton 10-34, 11-1 e 11-3 |
-| Steam Input | `strings(1)` no `steamclient.so` | **MEDIDO AQUI:** `ubuntu12_32/steamclient.so` da instalação dela |
+| Steam Input | `strings(1)` no `steamclient.so` | **MEDIDO AQUI:** `ubuntu12_32/steamclient.so` da instalação do usuário |
 
 ATENÇÃO: **os números de linha do `xpad` mudam entre versões.** O `master` do
 kernel estava em `7.2.0-rc7` no dia deste levantamento e tem numeração
@@ -182,7 +182,7 @@ próprio. **GRAU: ALTA.**
 
 ### 1.5 POR QUE o layout Xbox 360 não tem giroscópio nem touchpad
 
-Esta é a seção que ela pediu por escrito, e a resposta tem **três camadas
+Esta é a seção que o usuário pediu por escrito, e a resposta tem **três camadas
 independentes**. Não é uma limitação do Linux, nem uma escolha do driver — é o
 protocolo.
 
@@ -423,14 +423,12 @@ jogadores estava de pé, num jogo com exceção de Steam Input ativa — que é
 exatamente o que `docs/usage/jogos-e-mascaras.md` afirmava ser impossível até
 ser corrigido no mesmo dia.
 
-**5. O ACEITE DELA, no mesmo jogo, e é o que decide.** Palavras dela: *"na hora
-do vamos ver os 4 conectaram certinho. cada qual com seu player rumble e
-afins"*. Quatro controles, cada um com o seu número, a sua vibração e o resto —
+**5. O ACEITE DE PRODUTO, no mesmo jogo, e é o que decide.** Palavras de produto. Quatro controles, cada um com o seu número, a sua vibração e o resto —
 com a exceção de Steam Input ativa naquele appid.
 
 Isso fecha o par que este documento vinha perseguindo. A leitura do fonte
 previa um risco real; a medição de ambiente confirmou o mecanismo e mostrou que
-ele não tem alvo; e o olho dela confirmou o resultado. **Os três concordam**, e
+ele não tem alvo; e o olho de quem confere confirmou o resultado. **Os três concordam**, e
 é raro — na maior parte desta sessão eles discordaram, e foi por isso que a
 sessão existiu.
 
@@ -688,7 +686,7 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | `integrations/storm_doctor.py:46` e `:72` | o diagnóstico deixa de acusar aquele appid como conflito |
 | `daemon/launch_env.py:299-330` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
-**O que ela NÃO muda mais, e isto é decisão dela, datada.** Até 09/08 a marca
+**O que ela NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
 tinha um ramo próprio no arquivo de envs: o jogo marcado recebia um ambiente
 diferente (sem dedup) e o vpad era **suspenso**. A decisão de
 ESCONDER-EM-VEZ-DE-SAIR-01
@@ -902,17 +900,15 @@ MEDIDO**.
 
 ---
 
-## 5-ter. O caminho do PROTON para a IMU — medido com o jogo dela (17/09/2026)
+## 5-ter. O caminho do PROTON para a IMU — medido com o jogo do usuário (17/09/2026)
 
-**Acrescentada em 17/09/2026**, depois da queixa dela: *"joguei um jogo com
-controle por movimento e na hora do vamos ver o controle não deu resposta
-(pragmata)"*.
+**Acrescentada em 17/09/2026**, depois da queixa de uso.
 
 A 5-bis mede o **SDL do host**. O PRAGMATA não carrega SDL nenhum — não há
 `SDL2.dll` nem `SDL3.dll` na pasta do jogo e nenhuma cadeia `SDL_Joystick` no
 executável — e é um jogo Windows sob Proton. O caminho dele é outro, e é este.
 
-**A régua desta seção.** Leitura passiva no host, com o daemon dela vivo, o
+**A régua desta seção.** Leitura passiva no host, com o daemon do usuário vivo, o
 controle no rádio e **o jogo fechado**: nenhuma janela abriu, nenhum serviço
 reiniciou, nenhum `EVIOCGRAB`, nenhuma escrita em perfil, em `.vdf` ou em
 `launch_env`. As fontes são `/proc/bus/input/devices`, `/sys`, `open()` em modo
@@ -965,7 +961,7 @@ E 248,4 Hz é o teto: `MOTION_EMIT_MAX_HZ = 250.0`
 (`core/physical_report_reader.py`). A razão 248,4/675,8 dá **36,8%** — que é o
 mesmo "~37%" que a bancada de 16/08/2026 achou (7.231 contra 19.435) e deixou
 escrito no `mapa-controles.csv` como *"ninguém sabe se é decimação legítima ou
-perda"*. **É decimação legítima, e é a que ela decidiu manter em 19/08**, com o
+perda"*. **É decimação legítima, e é a que o usuário decidiu manter em 19/08**, com o
 preço na mesa: sem o teto, quatro vpads em co-op seriam ~3.200 `writes/s` no
 `/dev/uhid`. A linha do mapa foi substituída.
 
@@ -1024,11 +1020,11 @@ Duas leituras, e a segunda é uma ressalva:
    consumidor do `ebx`, ou abrir o jogo. **GRAU: NÃO MEDIDO.** É a linha 11 da
    seção 7, e ela nasce desta seção.
 
-**O jogo ABRIU o nosso vpad, e escreveu nele.** Journal do daemon dela, dentro
+**O jogo ABRIU o nosso vpad, e escreveu nele.** Journal do daemon do usuário, dentro
 da sessão do PRAGMATA (01:39:08 → 01:47:01 de 17/09): às 01:39:38,
 `uhid_replica_ativa categoria=trigger_right` e `categoria=trigger_left`. Isso
 só acontece quando o jogo manda output report de gatilho adaptativo no
-`hidraw` do vpad. Logo, no instante da queixa dela, **o jogo tinha o nosso
+`hidraw` do vpad. Logo, no instante da queixa de uso, **o jogo tinha o nosso
 aparelho na mão e falava DualSense com ele** — e a janela de motion estava
 fluindo (`uhid_motion_streaming on=True` desde 01:38:08, `on=False` só às
 01:50:12). **GRAU: MEDIDO AQUI**, no journal.
@@ -1077,7 +1073,7 @@ E o canal não sai só da máscara: sai do PAR. `quer_uhid`
 `dualsense`. Com o caminho `xbox`, a máscara `dualsense` **também** cai no
 `uinput` — e o `state_full` não chama isso de degradado, porque é escolha.
 
-**Medido na máquina dela, 17/09/2026:** entre `01:54:48` e `03:32:23` o journal
+**Medido na máquina do usuário, 17/09/2026:** entre `01:54:48` e `03:32:23` o journal
 registra `gamepad_emulation_started caminho=xbox` — **1 h 37 min** em que
 nenhum jogo teria recebido giroscópio, e nada na tela diz isso. E o disco
 guarda a escolha: `~/.config/hefesto-dualsense4unix/gamepad_caminho.flag`
@@ -1087,7 +1083,7 @@ responde `caminho: dualsense`.
 **A divergência é DESENHO, não defeito:** `_guardar_o_caminho`
 (`daemon/subsystems/gamepad.py`) só persiste com `origin == "manual"`, e a volta
 das 03:32 veio de `origin=launch` — *"um perfil trocando de caminho não vira a
-escolha dela em disco"*. A consequência, até 27/09, era que o **próximo boot
+escolha do usuário em disco"*. A consequência, até 27/09, era que o **próximo boot
 do daemon** relia a flag e subia o vpad no `uinput`: o giroscópio sumia sem que
 ninguém tivesse mexido em nada, até um jogo com ponte confirmada em
 `gamepad/dualsense` reabrir o canal. **Desde 28/09**
@@ -1131,7 +1127,7 @@ qual é: **NÃO MEDIDO**.
 ### 5-ter.8 A env por appid do PRAGMATA está ATRASADA — medido, e é nosso
 
 `~/.local/state/hefesto-dualsense4unix/launch_env/steam_app_3357650.env`, no
-disco dela às 03:39:57 e não reescrito desde:
+disco do usuário às 03:39:57 e não reescrito desde:
 
 ```
 # estado: perfil nativo | native=True emulacao=False mascara=dualsense backends=[]
@@ -1378,7 +1374,7 @@ investigação da lightbar por Bluetooth.** Esta página descrevia a Steam como
 DualSense, e o que ela escreve pinta a barra de luz.
 
 Toda esta seção é `MEDIDO AQUI` na bancada de 11→12/08. O aceite do que a
-**barra fez** é o olho dela, com fala literal em cada linha; a **contagem de
+**barra fez** é o olho de quem confere, com fala literal em cada linha; a **contagem de
 pacotes e os `timestamps`** são leitura do instrumento (`btmon`) — e a linha da
 rajada de 6-bis.3 é a única do bloco cujo `observado_por` é `bancada`, e não
 `olho-dela`, justamente por isso. As linhas de ensaio são
@@ -1428,7 +1424,7 @@ pareamento (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01).
 
 ### 6-bis.3 A escrita é em RAJADA, e a rajada tem hora
 
-A pergunta foi dela — *"se medimos quando a steam pinta o lightbar e o player
+A pergunta foi do usuário — *"se medimos quando a steam pinta o lightbar e o player
 led então sabemos quando sobrescrever o input da steam não?"* — e os
 *timestamps* das mesmas capturas respondem:
 
@@ -1443,8 +1439,7 @@ janela.
 
 **E a rajada não é por controle — é por EVENTO.** Um protótipo que escrevia
 1,5 s depois de **cada** conexão nova perdeu dois dos três: só o último ficou
-com a cor pedida (*"só o player 4 que é o controle azul o resto tá no padrão da
-steam"*). **Cada conexão nova faz a Steam repintar todos os controles**, não só
+com a cor pedida. **Cada conexão nova faz a Steam repintar todos os controles**, não só
 o que chegou.
 
 ### 6-bis.4 Em regime ela repinta, não apaga
@@ -1473,29 +1468,25 @@ e por rádio o `sysfs` é a **única** rota que sobra — justamente a que perde
 a Steam.
 
 **E a vitória não encerra a disputa.** O magenta pegou nos três no instante, mas
-**não durou nos três**: *"dois dos controles ficaram magenta e o branco tá
-vermelho no player 2"* — vermelho é a cor de jogador 2 da Steam, ou seja, ela
+**não durou nos três**: ** — vermelho é a cor de jogador 2 da Steam, ou seja, ela
 repintou **um** e não os outros dois. **O que decide qual controle a Steam
 repinta não foi medido.**
 
-### 6-bis.6 O que isto compra, e a ressalva dela
+### 6-bis.6 O que isto compra, e a ressalva de produto
 
-O desenho que sai daqui é o que ela formulou — *"não podemos colocar um gatilho
-pra sempre que a steam aloprar em sequência algo ativa a sobrescrição
-automática?"* — e ele **arma a cada conexão e só dispara quando o rádio
+O desenho que sai daqui é o que ela formulou — ** — e ele **arma a cada conexão e só dispara quando o rádio
 sossega**, escrevendo então em **todos** os controles pela rota `hidraw`. Com a
 sequência de conexões encerrada havia cerca de um minuto, uma escrita em cada um
-pintou os três, e o aceite dela foi *"perfeito"*.
+pintou os três, e o aceite de produto foi *"perfeito"*.
 
-**A ressalva é dela, e fica escrita porque é a que impede a reincidência:** esta
+**A ressalva é do usuário, e fica escrita porque é a que impede a reincidência:** esta
 é a **segunda** vez que a rota de escrita é apontada como causa nesta casa, não
 a primeira. *"Reconectar cura"* já foi concluído e derrubado **quatro vezes
 desde 17/07**. Quem for mexer aqui responde antes o que derrubou a conclusão
 anterior — senão é o mesmo erro das quatro vezes passadas, com data nova.
 
 **E há uma regra de produto, também dela, que decide QUANDO esse gatilho pode
-agir** (12/08/2026): *"no modo nativo devolvemos o controle pra steam e no modo
-conexão também, todo o resto é o hefesto"*. Em **Conexão Nativa (Sony)** e no
+agir** (12/08/2026). Em **Conexão Nativa (Sony)** e no
 modo em que a entrada é da Steam, o controle é de quem está jogando e o Hefesto
 **não** repinta; em todo o resto, quem manda é o Hefesto. É a mesma cerca do
 `FEAT-NATIVE-OUTPUT-MUTE-01`, agora aplicada à cor.
@@ -1542,10 +1533,10 @@ Uma variável por linha, que é como se ataca isto.
 | # | pergunta | o ensaio que a fecha | seção |
 |---|---|---|---|
 | 3 | a taxa real do giroscópio do vpad Edge — 250 ou 1000 para o jogo? | os quatro passos de 5.3, **contra a SDL3 da Steam** | 5 |
-| 4 | de quantos bits de autorização o firmware precisa para vibrar? | bancada, um bit por vez, com o controle na mão dela | 6.5 |
+| 4 | de quantos bits de autorização o firmware precisa para vibrar? | bancada, um bit por vez, com o controle na mão do usuário | 6.5 |
 | 5 | o pedido de rumble do jogo chega ao vpad numa sessão com Steam Input? | o anel de pedidos crus, sessão de jogo real | 6.5 |
 | 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | regravar os dois braços com `scripts/capturar_a_probe_da_lightbar.sh` e comparar os `0x31` distintos que ele imprime — o parser de 12/08 (um `awk` sobre o `btmon -r`) não venceu o formato, e desde 25/09 a leitura é a do `btsnoop` binário | 6-bis.2 |
-| 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão dela | 6-bis.5 |
+| 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão de produto | 6-bis.5 |
 | 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
 | 11 | o que a **classe própria do Edge** muda no motor do jogo — o consumidor do `ebx` da cadeia de `cmp` | desmontar o ramo, ou abrir o jogo com `PROTON_LOG=+hid` | 5-ter.4 |
 | 12 | o `winebus` enumera os nós **evdev** do físico quando o `hidraw` dele está negado/inacessível? | `PROTON_LOG=+hid` com o jogo aberto, contando `udev_add_device` por nó | 5-ter.9 |
@@ -1611,7 +1602,7 @@ em devolver.
 - TRES-CONTROLES-01
   — a medição do `/dev/input` com quatro nós
 - ESCONDER-EM-VEZ-DE-SAIR-01
-  — a decisão dela que reabriu a conta pelo outro lado
+  — a decisão de produto que reabriu a conta pelo outro lado
 - WRAPPER-EM-TODOS-01
   — a cobertura, e por que o `IGNORE` só sai com um vpad por físico
 - LUGAR-À-MESA-01

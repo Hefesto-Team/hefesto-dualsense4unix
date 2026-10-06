@@ -44,7 +44,7 @@ outro e metade dos comandos dela ia para o controle que o jogo não estava
 lendo. O invariante que faltava, e que segue valendo nos dois lados desta
 fronteira: **um controle físico produz exatamente UM dispositivo de jogo**.
 
-NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela): **a
+NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto): **a
 allowlist do Steam Input não tem mais ramo nenhum neste arquivo de saída.** A
 marca passou a significar "esconda o controle FÍSICO neste jogo", e não "entregue
 o físico à Steam"; o jogo marcado recebe exatamente a mesma env de qualquer
@@ -514,7 +514,7 @@ def ponte_do_lancamento(
 
 
 def _jogo_na_autoridade(daemon: DaemonProtocol) -> bool:
-    """Há jogo com o controle na mão dela AGORA? PONTE-ESCADA-LACO-01."""
+    """Há jogo com o controle na mão do usuário AGORA? PONTE-ESCADA-LACO-01."""
     return getattr(daemon, "display_authority", "unknown") == "game"
 
 
@@ -533,16 +533,16 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
       nem acelerômetro no descritor HID — dez linhas de `mapa-controles.csv`
       dizem `gamepad/dualsense` na coluna `ponte_alcanca`.
 
-    Medido no daemon dela em 22/08/2026: perfil Sackboy pedindo
+    Medido no daemon do usuário em 22/08/2026: perfil Sackboy pedindo
     `gamepad_flavor="dualsense"`, quatro vpads uinput com máscara `xbox` e
     `mode_from_profile=null`. Ou seja, marcar o jogo REMOVIA features em vez de
-    preservá-las — o oposto exato da decisão dela (*"a allowlist do Steam Input
+    preservá-las — o oposto exato da decisão de produto (*"a allowlist do Steam Input
     NÃO tira o Hefesto da frente"*).
 
     **Não é um segundo escritor da máscara.** Quem escreve continua sendo
     `lifecycle.apply_profile_mode` -> `_pedir_mascara_do_perfil`, com o gate
     R-04 inteiro no caminho (jogo com a autoridade => `ADIADO_JOGO_ABERTO`, e
-    nada é recriado na mão dela). O embrulho só decide se a chamada acontece,
+    nada é recriado na mão do usuário). O embrulho só decide se a chamada acontece,
     exatamente como o `_mode_applier_ao_sair_do_nativo` do `lifecycle.py`, que
     barra só o `native`.
 
@@ -747,10 +747,10 @@ def arm_launch_profile(
     o controle físico**, com o Hefesto na frente do jogo marcado de ponta a
     ponta. Com isso, o motivo escrito acima — *"impor a máscara ali seria
     contradizer a própria exceção"* — deixou de existir: não há mais exceção a
-    contradizer, e a máscara do perfil dela é uma opinião sobre o vpad que o
+    contradizer, e a máscara do perfil do usuário é uma opinião sobre o vpad que o
     jogo marcado agora enxerga. **O código NÃO foi mudado nesta leva, de
     propósito.** Ligar o arming num jogo marcado muda o que ela vê ao abrir o
-    jogo, e trocar o modo de um jogo dela sem que ela peça é a regra mais velha
+    jogo, e trocar o modo de um jogo do usuário sem que ela peça é a regra mais velha
     desta casa ao contrário. Fica registrado como pergunta para ela, com o preço
     declarado: enquanto isto for assim, marcar um jogo continua desligando,
     calado, o modo do perfil daquele jogo NO LANÇAMENTO.
@@ -771,16 +771,16 @@ def arm_launch_profile(
     - **o perfil manda.** Perfil com `mode` continua sendo aplicado como
       sempre, mesmo que o carimbo diga outra coisa. A divergência é
       GRITADA (`ponte_confirmada_diverge_do_perfil`) e devolvida no dicionário,
-      nunca resolvida às escondidas — trocar o modo de um jogo dela sem ela
+      nunca resolvida às escondidas — trocar o modo de um jogo do usuário sem ela
       pedir é a regra mais velha desta casa ao contrário;
     - **o carimbo preenche o silêncio.** Perfil SEM `mode` é ausência de
       opinião (R-02), e era o ramo em que nada era armado. Com o
       `Profile.ponte` carimbado, é ele que arma — porque a confirmação veio de
-      um gesto dela, e honrar o gesto dela não é atropelar ninguém;
+      um gesto do usuário, e honrar o gesto do usuário não é atropelar ninguém;
     - **a ponte entregue é relatada**, e só quando a máscara CONVERGIU. Dizer
       "entreguei" sobre uma troca que o gate R-04 recusou é a mesma mentira
       que a MASCARA-01 tirou daqui em 19/08. E o arming NÃO carimba nada: quem
-      confirma é o gesto dela, ou o silêncio dela com o jogo vivo
+      confirma é o gesto do usuário, ou o silêncio dela com o jogo vivo
       (`ponte_escada.confirmacao_por_silencio`), e quem grava é
       `profiles/manager.confirmar_ponte`.
     """
@@ -1058,7 +1058,7 @@ def compose_env(
       corrigida na conferência do mesmo dia: o uinput ficava de fora por ser
       tratado como DEGRADAÇÃO (o `all(b == "uhid")` de 03/08, escrito quando o
       pior caso era mapeamento menos validado), e não por causa do PID. Desde o
-      caminho Xbox (13/09) o uinput é ESCOLHA dela, e desde a
+      caminho Xbox (13/09) o uinput é ESCOLHA do usuário, e desde a
       TROCA-DENTRO-DO-JOGO-01 (14/09) a regra não depende mais de qual canal o
       vpad pegou: fora do Modo Nativo o jogo vê só o virtual.
     - Emulação desligada ou sem vpad vivo: SÓ o preload de shaders.
@@ -2069,7 +2069,7 @@ def _mascara_do_primario(daemon: Any, cfg: Any) -> str:
 
     Esta env lia `config.gamepad_flavor`, a máscara da SESSÃO, e o jogo vê a do
     CARTÃO quando há uma (`external_mask.mascara_efetiva`). Medido na máquina
-    dela em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
+    do usuário em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
     `mascara_viva=xbox` com o vpad vestindo DualSense, e a env do Sony DualSense
     saindo com o `SDL_JOYSTICK_HIDAPI=0` do Xbox.
 
@@ -2168,10 +2168,10 @@ def modo_do_estado_vivo(
     DISABLE, e o jogo aberto assim via o DualSense de plástico. Como a env é lida
     UMA vez no `exec`, o PS + R3 dentro do jogo não a alcança: o físico morre
     grabado e o vpad chega como segundo controle. Era o defeito medido no Future
-    Knight — e o Future Knight só era o jogo com perfil próprio. Na máquina dela,
+    Knight — e o Future Knight só era o jogo com perfil próprio. Na máquina do usuário,
     em 14/09, 1 dos 30 perfis tinha `mode`: os outros 29 jogos liam este arquivo.
 
-    DECISÃO DELA (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL): fora do Modo
+    DECISÃO DE PRODUTO (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL): fora do Modo
     Nativo o jogo vê só o controle virtual, com perfil ou sem perfil. Aqui isso é
     uma regra só, do mesmo tipo que o arquivo por appid usa — o `ModoAntecipado`.
 

@@ -1,4 +1,4 @@
-"""mapa_das_portas.py — o número que ELA escreveu no gabinete, e o que ele responde."""
+"""mapa_das_portas.py — o número que O usuário escreveu no gabinete, e o que ele responde."""
 
 from __future__ import annotations
 
@@ -444,7 +444,7 @@ def _classe_do_motor(aparelho: Aparelho, tipos: Mapping[str, str] | None = None)
         return do_kernel
     if aparelho.classe == _CLASSE_DE_VIDEO:
         return "webcam"
-    # a máquina não mediu: vale o que ela disse (QUEM VENCE: a máquina no que mede)
+    # a máquina não mediu: vale o que o usuário disse (QUEM VENCE: a máquina no que mede)
     declarado = (tipos or {}).get(f"{aparelho.vid}:{aparelho.pid}", "")
     return _CLASSE_DO_TIPO_DECLARADO.get(declarado, "")
 

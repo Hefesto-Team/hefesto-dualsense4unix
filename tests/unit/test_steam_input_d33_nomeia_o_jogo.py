@@ -124,7 +124,7 @@ class TestMensagemDoDoctor:
         assert "lista de exceções" in msg
 
     def test_aponta_o_botao_que_preserva_a_escolha_dela(self, casa: Path) -> None:
-        """O ponteiro antigo mandava clicar no botão que APAGA a escolha dela."""
+        """O ponteiro antigo mandava clicar no botão que APAGA a escolha do usuário."""
         _localconfig(casa, _vdf([_SACKBOY]))
 
         _, msg = sd.check_steam_input(casa)

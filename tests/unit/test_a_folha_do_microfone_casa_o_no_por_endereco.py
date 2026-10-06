@@ -186,7 +186,7 @@ def test_quando_ninguem_publica_e_o_daemon_diz_sem_fonte_os_dois_concordam(folha
 
 
 def test_o_daemon_atendendo_no_no_de_outro_controle_sai_acusado(folha):
-    """O defeito que o `por_uniq` existe para confessar, dito na tela dela."""
+    """O defeito que o `por_uniq` existe para confessar, dito na tela do usuário."""
     leitura = folha.LeituraDoSistema(canal="hefesto_mic_000011", do_produto="hefesto_mic_000011")
     frase = folha.veredito_da_tarja(
         leitura, {"status": "ok", "fonte": "hefesto_mic_000022"}, perguntou=True
@@ -286,7 +286,7 @@ def test_o_codigo_do_ouvido_nao_sabe_escrever_arquivo(folha):
 
 
 def test_a_folha_diz_com_todas_as_letras_quando_falta_o_par(folha):
-    """*"preciso de um no cabo e um no rádio; achei dois no cabo"* — dela, verbatim."""
+    """Quando falta o par (um no cabo e um no rádio), a folha diz com todas as letras."""
     dois_cabos = [
         AlvoDeMentira(MAC_DO_CABO, folha.CABO),
         AlvoDeMentira(MAC_DO_RADIO, folha.CABO),

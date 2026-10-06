@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """O pacote da aba `07` Lançadores — a aba que era desenho inteiro.
 
-A DECISÃO DELA QUE ABRIU ESTA ABA, e ela CADUCOU outra, de um dia antes:
+A DECISÃO DE PRODUTO QUE ABRIU ESTA ABA, e ela CADUCOU outra, de um dia antes:
 
-    01/09/2026 — *"a única que não faremos, só deixamos o botão levando pra
-    ela, é a de lançadores."*
+    01/09/2026
 
-    02/09/2026 — *"não daria para incluir G e F aqui? (…) temos um mapa
-    funcional disso no gtk. a estrutura sim, validar de fato eu poderia
-    somente juntos com ele."*   <!-- noqa-acento: citação literal -->
+    02/09/2026
 
 A `F` é esta aba (o registro «ROTA-F-a-aba-lancadores» de 02/09/2026).
 A segunda decisão vale, e ela traz a razão: **o GTK tem o mapa funcional** —
@@ -20,7 +17,7 @@ apaga decisão medida, e a nota é o que impede a próxima pessoa de reabrir.
 
 O QUE ESTA ABA AFIRMAVA, E O QUE O PRODUTO RESPONDE
 ---------------------------------------------------
-Medido em 02/09/2026 na máquina dela, com `censo_do_wrapper(anotar=False)` e
+Medido em 02/09/2026 na máquina do usuário, com `censo_do_wrapper(anotar=False)` e
 `prontuario_dos_jogos.levantar_censo` — leitura pura, nada escrito:
 
     o HTML afirmava                  o produto responde
@@ -78,7 +75,7 @@ casa de mentira, `PATH` sem binário e `pastas_de_atalhos` numa pasta vazia:
     DEPOIS  steam · selo 'off' (NÃO ACHEI) · presente False · topo "0 encontrados"
 
 Uma máquina sem Steam recebia o selo VERDE, na mesma tela em que os outros
-cinco diziam `NÃO ACHEI`. **Na máquina dela nada muda** — a Steam está lá, e a
+cinco diziam `NÃO ACHEI`. **Na máquina do usuário nada muda** — a Steam está lá, e a
 busca a acha pelo `.desktop`.
 
 NADA SE REESCREVE — o que este arquivo NÃO faz
@@ -103,8 +100,7 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     daemon/launch_env.launch_session_appid               1º degrau da escada
     daemon/launch_env.read_last_run_marker               3º degrau da escada
 
-O REPARO SAIU DESTA ABA — 21/09/2026, palavra dela: *"a ideia é termos os
-mesmos botões pra todos os lançadores. sempre."* O «Consertar», o «Ver o que
+O REPARO SAIU DESTA ABA — 21/09/2026,  O «Consertar», o «Ver o que
 impede», o «Posso fechar a Steam», o «Não perguntar», o «Copiar a linha» e os
 dois do Steam Input saíram, e com eles a vigia de dentro da aba
 (`_VigiaDaSteam`) e os portões do censo. Quem repõe o atalho é o vigia de fora
@@ -118,7 +114,7 @@ cada tique e que a GTK vira banner em DUAS abas, sem clique nenhum. `grep -rn
 wrapper_used src/hefesto_dualsense4unix/interface/` só achava o dublê de
 perfis. Junto vieram as duas metades que faltavam do mesmo assunto: o botão que
 DISPENSA o aviso (a lista existia e só a GTK a escrevia) e o caminho para
-`with_steam_closed`, sem o qual o `Consertar` recusa sempre na mesa dela.
+`with_steam_closed`, sem o qual o `Consertar` recusa sempre na bancada.
 
 `carona_do_wrapper.passada()` responderia parte disto — mas ela ESCREVE no
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
@@ -126,10 +122,10 @@ cada tique é a coisa mais perigosa que esta aba poderia fazer. A pintura usa o
 CENSO (read-only, seguro com a Steam aberta — e é por isso que ele é uma camada
 separada do reparo); quem chama o caminho que escreve é o gesto "Consertar" e,
 desde 03/09/2026, a :class:`_VigiaDaSteam` que esse gesto arma quando é adiado
-— nunca a pintura, e nunca sem um clique dela antes.
+— nunca a pintura, e nunca sem um clique do usuário antes.
 
 E ELA FOI A ÚLTIMA METADE QUE FALTAVA: com a Steam aberta o `Consertar` recusa
-dizendo *"Feche a Steam e eu reponho"*, e até 03/09 **nada reperguntava** — a
+dizendo , e até 03/09 **nada reperguntava** — a
 tela prometia e ela é que tinha de lembrar. A janela velha cumpre essa frase
 desde 16/08 com um tique de `INTERVALO_DA_VIGIA_S`; a página cumpre agora com o
 mesmo tique, a mesma frase e o mesmo desligador.
@@ -140,7 +136,7 @@ digitado de voltar: não há onde digitá-lo.
 
 O CUSTO, E POR QUE O DISCO NÃO ENTRA NO TIQUE
 ----------------------------------------------
-Medido em 02/09/2026, na máquina dela:
+Medido em 02/09/2026, na máquina do usuário:
 
     censo_do_wrapper()          26 ms (85 ms na primeira)
     jogos_instalados()          12 ms
@@ -265,7 +261,7 @@ def _declarados() -> tuple[desenho.SemCenso, ...]:
 
     try:
         declaracao = carregar_maquina()
-    except Exception:  # pragma: no cover - o disco dela não derruba a aba
+    except Exception:  # pragma: no cover - o disco do usuário não derruba a aba
         return ()
     return tuple(
         desenho.SemCenso(chave=chave, nome=item.rotulo,
@@ -282,7 +278,7 @@ def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
 
     try:
         achados = jl.lancadores_por_conteudo()
-    except Exception:  # pragma: no cover - o disco dela não derruba a aba
+    except Exception:  # pragma: no cover - o disco do usuário não derruba a aba
         return ()
     de_fabrica = {atalho for item in desenho.SEM_FONTE for atalho in item.atalhos}
     de_fabrica |= {atalho for atalho in desenho.A_STEAM.atalhos}
@@ -311,7 +307,7 @@ def _onde_estao_os_lancadores(
 
     A STEAM ENTROU EM 02/09, e ela era a AUSÊNCIA que custava: a busca percorria
     `SEM_FONTE`, que é a lista de *"não sei ler a biblioteca dele"* — e a Steam
-    não está nela porque o produto LÊ a biblioteca dela. Só que ter censo do
+    não está nela porque o produto LÊ a biblioteca do usuário. Só que ter censo do
     interior não responde se o lançador está aqui, e o cartão da Steam nascia
     com `presente=True` cravado. Numa casa de mentira sem Steam nenhuma o topo
     dizia **"1 encontrado"** e o cartão acendia o selo verde `CHEGAM`. Agora a
@@ -322,9 +318,9 @@ def _onde_estao_os_lancadores(
     botão de registro não ganha busca própria: ele entra na MESMA lista,
     com os MESMOS três campos, e é achado pelas MESMAS duas buscas. Um segundo
     caminho seria a assimetria que produz duas respostas para a mesma pergunta —
-    e a segunda envelhece calada, porque só a máquina dela a exercita.
+    e a segunda envelhece calada, porque só a máquina do usuário a exercita.
 
-    AS PASTAS SÃO AS DO MOTOR, e não uma lista minha:
+    AS PASTAS SÃO AS DO MOTOR, e não uma lista local:
     `jogos_locais.pastas_de_atalhos()` já resolve `XDG_DATA_HOME` e
     `XDG_DATA_DIRS` pela spec, e já pagou o preço de não fazê-lo — em 23/08 o
     produto olhava DOIS diretórios cravados e perdia os 54 atalhos de
@@ -344,8 +340,7 @@ def _onde_estao_os_lancadores(
 
     O `onde` É O CAMINHO INTEIRO, e isso é o que a frase prometia. A docstring
     do `DIZ_ACHEI` (a frase saiu da tela em 11/09 e o nome em 21/09/2026) dizia
-    que dizer ONDE *"é o que deixa ela conferir a resposta sem acreditar em
-    mim"* — e o código tinha
+    que dizer ONDE ** — e o código tinha
     o caminho na mão e o jogava fora: `shutil.which` já devolve
     `/usr/bin/flatpak` e a linha o trocava por `PATH/flatpak`, uma notação que
     ela não pode `ls`. O mesmo no laço das pastas: ele sabe em QUAL das quatro
@@ -390,7 +385,7 @@ def _onde_estao_os_lancadores(
 
 
 def _dispensados() -> tuple[tuple[str, str], ...]:
-    """Os jogos que ELA mandou não perguntar mais — e que tela nenhuma mostrava."""
+    """Os jogos que O usuário mandou não perguntar mais — e que tela nenhuma mostrava."""
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -530,7 +525,7 @@ def aviso_do_jogo_aberto(
     porque a decisão `07-Q2` que eles registram continua valendo para quem
     ainda a mostra.
 
-    **A FRASE MUDOU EM 06/09/2026 (ONDA5-07-03), e a palavra é dela.** Ela
+    **A FRASE MUDOU EM 06/09/2026 (ONDA5-07-03), e a palavra é de produto.** Ela
     terminava em *"Copie as opções na aba Sistema."*, e a aba Sistema da
     interface nova tem doze botões e nenhum copia coisa alguma. A decisão
     `07-Q2` dela, em 05/09, recusou as TRÊS opções oferecidas — só o fato,
@@ -550,11 +545,11 @@ def aviso_do_jogo_aberto(
     (*"Não perguntar para este jogo"*) calava; o *"Não usar neste jogo"* — o
     `jogos_sem_wrapper.txt`, a lista que o produto INTEIRO respeita no reparo —
     não calava tela nenhuma. Ela tirava o jogo de propósito e a tela reclamava
-    dele toda vez que ele abrisse. **Um aviso que sobrevive à resposta dela
+    dele toda vez que ele abrisse. **Um aviso que sobrevive à resposta de produto
     ensina que o botão não obedece.**
 
-    E AS DUAS SÃO A MESMA FRASE DELA, dita de dois jeitos: *"eu sei, deixa
-    assim"*. O desfazer de cada uma já está na lista do cartão — *"Voltar a
+    E AS DUAS SÃO A MESMA FRASE DE PRODUTO, dita de dois jeitos. O desfazer de cada uma já está na
+    lista do cartão — *"Voltar a
     usar"* e *"Voltar a perguntar"* —, e é o que impede o silêncio por engano
     de ser um caminho só de ida.
 
@@ -576,7 +571,7 @@ def aviso_do_jogo_aberto(
     atalho, e a dispensa) e **não aplicava a da EMULAÇÃO**. O buraco é medível:
     no Modo Nativo não há gamepad virtual, logo não há o que duplicar — e a aba
     avisava assim mesmo, com um alarme que não podia acontecer. A janela velha
-    nunca teve esse defeito, porque a decisão dela é uma função PURA
+    nunca teve esse defeito, porque a decisão de produto é uma função PURA
     (`launch_wrapper_dialog.wrapper_dialog_decision`) e ela pergunta pelo modo.
 
     ELA É IMPORTADA, E NÃO REDIGITADA. O que esta aba faz é ENTREGAR a evidência
@@ -647,8 +642,7 @@ def com_o_que_o_daemon_diz(
     `home_actions.wrapper_banner_text`, e o texto é
     :data:`JOGO_ABERTO_SEM_O_ATALHO` (ver :func:`aviso_do_jogo_aberto`).
 
-    OS BOTÕES SAÍRAM DAQUI — 21/09/2026, palavra dela: *"a ideia é termos os
-    mesmos botões pra todos os lançadores. sempre."* Esta função pendurava no
+    OS BOTÕES SAÍRAM DAQUI — 21/09/2026,  Esta função pendurava no
     cartão da Steam o «Não perguntar para este jogo», o «Posso fechar a Steam
     por uns 20 segundos?», o «Desligar o Steam Input» e o «Deixar tudo
     pronto» — botões que só ela tinha, e que faziam à mão o que o produto já faz
@@ -789,8 +783,7 @@ def com_a_exclusao(
     O PÉ DO CARTÃO diz os jogos DAQUELE lançador que estão na lista, cada um com
     o seu «Tirar da lista». Só onde há o botão de excluir (um cartão que não
     achou o lançador não tem o que excluir), e SÓ COM JOGO NA LISTA: a frase do
-    vazio saiu em 21/09/2026, palavra dela — *"é um espaço vertical que
-    ganhamos ao remover"*.
+    vazio saiu em 21/09/2026
 
     A LISTA DA STEAM PERDE OS EXCLUÍDOS. A exclusão escreve no
     `jogos_sem_wrapper.txt`, e a lista do cartão mostra esse arquivo como
@@ -894,7 +887,7 @@ ABERTO = "aberto"
 def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
     """`(appid, "aberto"|"fechado")` — as TRÊS evidências da GTK, nesta ordem.
 
-    ELA É A DA JANELA VELHA, e a ordem não é minha: `daemon_actions`
+    ELA É A DA JANELA VELHA, e a ordem vem de lá: `daemon_actions`
     (`_appid_do_jogo_ativo`) já respondia esta pergunta com as três, da mais
     forte para a mais tolerante, e a interface nova usava UMA.
 
@@ -1007,7 +1000,7 @@ def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
 def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Não usar neste jogo": põe o appid no `jogos_sem_wrapper.txt`.
 
-    É A RECUSA DELA, e o produto inteiro a respeita: `censo_do_wrapper` pula
+    É A RECUSA DO USUÁRIO, e o produto inteiro a respeita: `censo_do_wrapper` pula
     quem está nessa lista, e `apply_wrapper_to_all_games` a recebe em
     `excluir=`. Sem este botão, a única forma de tirar um jogo era editar o
     arquivo à mão — a lista existia sem NENHUMA tela que a escrevesse.
@@ -1041,7 +1034,7 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     O DESFAZER QUE NÃO EXISTIA, e a falta era de MOTOR e não de tela: até hoje
     `launch_wrapper_dialog` só tinha `add_dismissed_appid`. Clicar em *"Não
     perguntar para este jogo"* no lembrete da GTK produzia um silêncio
-    permanente, e desfazê-lo pedia editar um JSON à mão. Decisão dela,
+    permanente, e desfazê-lo pedia editar um JSON à mão. Decisão,
     02/09/2026 — nasce o par, e o botão é este.
 
     A RECUSA VAI PARA A TELA, e é por isso que `remove_dismissed_appid` devolve
@@ -1065,9 +1058,9 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Abrir o lançador": abre a Steam. Nos outros cinco, RECUSA dizendo.
 
-    DECISÃO 17 DELA, 03/09/2026: o botão LIGA, e o gesto entra em
+    DECISÃO 17 DO USUÁRIO, 03/09/2026: o botão LIGA, e o gesto entra em
     `hefesto_vivo.PERIGOSOS` — as duas metades, e a segunda não é opcional. Sem
-    ela a `--prova-gesto` clicaria este botão e abriria a Steam na tela dela,
+    ela a `--prova-gesto` clicaria este botão e abriria a Steam na tela do usuário,
     que é o oposto de toda janela desta casa nascer `--oculta`.
 
     O FATO QUE CAIU, e ele estava escrito no próprio arquivo:
@@ -1214,7 +1207,7 @@ def chave_do_rotulo(rotulo: str) -> str:
 
 
 def onde_isso_esta(alvo: str) -> tuple[str, str, str]:
-    """O que ela digitou, resolvido no disco: `(campo, agulha, onde)`."""
+    """O que o usuário digitou, resolvido no disco: `(campo, agulha, onde)`."""
     import shutil
 
     from hefesto_dualsense4unix.integrations import jogos_locais as jl
@@ -1410,7 +1403,7 @@ def _achar_o_que_ela_apontou(alvo: str) -> tuple[str, str, str]:
     mouse acertou o arquivo — o que ele pode ter errado é a PASTA: o produto só
     reencontra um `.desktop` que esteja numa das quatro pastas de aplicativos
     (`jogos_locais.pastas_de_atalhos`), e mandar a frase do teclado aqui seria
-    dizer *"confira o caminho"* sobre um caminho que ela apontou com o dedo.
+    dizer *"confira o caminho"* sobre um caminho que o usuário apontou com o dedo.
 
     **E A RECUSA ESTÁ CERTA, não é aspereza:** um atalho fora das quatro pastas
     é um lançador que a busca nunca acharia — o cartão diria «NÃO LOCALIZADO»
@@ -1443,8 +1436,7 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
                        ) -> dict[str, Any] | None:
     """«Escolher o arquivo…» — ela aponta o `.desktop` com o mouse.
 
-    **DECISÃO DELA, 09/09/2026, a opção (C):** *"Ou no Máximo Localizar o
-    lançador. aí eu mesmo abro a tela e procuro o .desktop."* — o campo de
+    **DECISÃO, 09/09/2026, a opção (C):**  — o campo de
     texto FICA (é o único caminho para um AppImage solto, que não tem
     `.desktop`) e ganha ao lado o botão que abre o seletor do sistema.
 
@@ -1459,7 +1451,7 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
 
     **COM A JANELA OCULTA NÃO HÁ DIÁLOGO**, e é de propósito: uma
     `Gtk.OffscreenWindow` não tem onde pôr um modal, e abrir um sem pai o
-    jogaria NA TELA DELA. O piloto devolve `None` e imprime no `stderr`, e este
+    jogaria NA TELA DO USUÁRIO. O piloto devolve `None` e imprime no `stderr`, e este
     gesto o lê como "cancelou" — que é a leitura certa: nada foi escolhido.
     Logo a prova botão a botão (`--prova-gesto`) **não pode** exercitá-lo, e é
     por isso que ele declara `grava=` e entra em `pacotes.perigosos()` **pela
@@ -1491,7 +1483,7 @@ def esquecer_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
     NUM CARTÃO DE FÁBRICA ELE NÃO APAGA O CARTÃO: apaga o ENSINO. O cartão volta
     a ser procurado só pelos caminhos de fábrica, que é o estado anterior ao
-    clique dela — e é por isso que o botão é o mesmo nos dois casos, e não dois.
+    clique do usuário — e é por isso que o botão é o mesmo nos dois casos, e não dois.
 
     O DESFAZER É O `None`, e a língua é a que o `maquina.json` já fala — ver
     `MaquinaConfig._o_none_e_o_esquecimento`, que carrega a razão inteira:

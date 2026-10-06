@@ -28,7 +28,7 @@ aqui, o `_safe_start` no `run()` e o `_stop_*` no `shutdown()`.
 -------------------------------------------------------------------
 Ele ficou de fora desde que nasceu, e a razão era boa: publicava um
 `module-null-sink` por controle e **nenhum `module-loopback`**, isto é, um sink
-mudo por DualSense na lista de som dela. É o defeito que `app/audio_saida.py`
+mudo por DualSense na lista de som do usuário. É o defeito que `app/audio_saida.py`
 nomeia na invariante 4 do `PlanoDoNo`: *"um `module-null-sink` sozinho seria
 exatamente o sink que aceita o áudio e o joga fora"*.
 
@@ -52,7 +52,7 @@ A receita completa das TRÊS pontas foi cumprida: a lista aqui,
 ------------------------------------------------------------
 Ele vigia o link que conecta e **não vira controle**: ACL de pé, nenhum
 `hidraw` e nenhum objeto no BlueZ — o controle parado no padrão de fábrica,
-barra azul e jogador 1, que foi o que ela viu com dois DualSense ligados. A
+barra azul e jogador 1, que foi o que o usuário viu com dois DualSense ligados. A
 receita completa das TRÊS pontas foi cumprida: a lista aqui,
 o `_safe_start` deste vigia no `run()` de `lifecycle.py` e o `_stop_conexoes`
 no `shutdown()` de `connection.py` — sem a terceira, a thread continuaria

@@ -1,6 +1,7 @@
 """dicas_da_conexao.py — as dicas da aba Conexões: cartões de poucas palavras, com UM gesto.
 
-AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que ela aprovou. Ela pediu «a ideia é
+AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que o usuário aprovou. O usuário
+pediu «a ideia é
 educar o user: pouco texto, muito mais intuitivo e orgânico». O quadro de frases (CERTO/AJUSTAR) e o
 quadro «Sugestão de Conexão» viram uma fileira de cartões:
 

@@ -31,7 +31,7 @@ mantenedora depois de olhar a tela:
 
 STATUS-SIMETRIA-02 é o veredito dela sobre aquela entrega: *"só distanciou as
 coisas"*. Espalhar os módulos pela largura resolveu o amontoamento e não
-produziu leitura. As seis mudanças desta rodada, todas medidas na tela dela:
+produziu leitura. As seis mudanças desta rodada, todas medidas na tela do usuário:
 
 * **o microfone não sai mais da faixa** (MIC-PRESENTE-01). Os dois ``hide()``
   viraram estado apagado com o motivo em palavras, e a largura do bloco é
@@ -54,7 +54,7 @@ produziu leitura. As seis mudanças desta rodada, todas medidas na tela dela:
   "Estado"; com 2+, quem fala é cada card.
 
 SOM-01 é a terceira rodada, e vem dos três pedidos que ela fez olhando a v2
-("quase perfeito"): *"dava pra colocar o auto falante abaixo do microfone"*,
+("quase perfeito"),
 *"aumentar e espaçar mais os botões do controle tipo x quadrado bola e
 triângulo e afins"* e *"permitir a expansão da janela"*. As três mudanças:
 
@@ -159,7 +159,7 @@ DICA_MIC_SEM_LEITURA: Final[str] = (
 
 
 #:
-#: **PROVISÓRIO — decisão dela.** Com dois DualSense no cabo há DUAS placas de
+#: **PROVISÓRIO — decisão de produto.** Com dois DualSense no cabo há DUAS placas de
 TEXTO_MIC_ALVO_NAO_HONRADO: Final[str] = (
     "O volume foi para o microfone de OUTRO controle: o Hefesto não conseguiu "
     "mirar este, e o pedido caiu no controle PRIMÁRIO. O perfil deste controle "
@@ -349,7 +349,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
       defeito nosso: a API do controle de Xbox não tem esse sensor. Sem a
       frase, ela vê um card com giroscópio desenhado e nenhum sinal de que o
       dado não sai dali. **O sujeito é o jogo, e não o controle** (21/09/2026,
-      ordem dela): o aparelho segue publicando movimento, e a Navegação e os
+      ordem de produto): o aparelho segue publicando movimento, e a Navegação e os
       gestos seguem usando;
     * **Modo Nativo** — não existe gamepad virtual, e perguntar se o dado
       "chegou ao vpad" não faz sentido. O jogo abre o hidraw do controle
@@ -469,7 +469,7 @@ def motores_no_fisico(item: Any) -> tuple[int, int] | None:
       que esta tela existe para não contar.
 
     O par ``(0, 0)`` fresco também some: ele é o jogo mandando PARAR, e a
-    parada não é o número que responde *"a vibração saiu do nosso lado?"*.
+    parada não é o número que responde .
     """
     if not isinstance(item, dict):
         return None
@@ -499,7 +499,7 @@ def _mascara_e_xbox(
     (`controllers[uniq].mascara` do perfil ativo) **vence** o degrau 2
     (`mode.gamepad_flavor`). Ler só o degrau 2 é perguntar a quem perde.
 
-    Medido na mesa dela naquele dia, com o perfil PRAGMATA:
+    Medido na bancada naquele dia, com o perfil PRAGMATA:
 
         flavor (global) = "xbox"
         por_aparelho    = {os quatro: "dualsense"}
@@ -585,7 +585,7 @@ def dedos_do_inputs(inputs: Any) -> tuple[tuple[float, float], ...] | None:
     """Os dedos apoiados AGORA, normalizados 0..1; ``None`` = sem sensor.
 
     MULTITOQUE-01 (18/09/2026). O DualSense tem DOIS pontos de toque no
-    hardware (`ABS_MT_SLOT 0..1`, medido no aparelho dela), e o payload os
+    hardware (`ABS_MT_SLOT 0..1`, medido no aparelho do usuário), e o payload os
     traz em ``touchpad.pontos``. Três respostas, e as três são diferentes:
 
     - ``None`` — não há bloco de touchpad: **não sei**, o desenho some.

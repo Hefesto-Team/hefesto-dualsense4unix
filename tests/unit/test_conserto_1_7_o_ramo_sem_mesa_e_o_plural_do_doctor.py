@@ -109,7 +109,7 @@ class TestORamoDaMesaDesconhecida:
         assert resultado["native_bt_fragil"] is True, (
             "o aviso de BT frágil SUMIU para backend que não conhece a mesa — "
             "é a regra antiga (só o primário) arrancada, a mutação que dois "
-            "céticos passaram sem que um teste reclamasse em 14/08/2026"
+            "revisões passaram sem que um teste reclamasse em 14/08/2026"
         )
 
     def test_sem_describe_controllers_o_primario_no_cabo_cala(self) -> None:

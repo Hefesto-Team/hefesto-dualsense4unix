@@ -6,9 +6,9 @@ A PERGUNTA QUE ELE RESPONDE
 *Quando o produto manda o som do PC para o alto-falante do controle, a leitura
 de volta acompanha a escrita nas DUAS camadas — ou só no byte do firmware?*
 
-POR QUE ELA IMPORTA, e a decisão é dela
+POR QUE ELA IMPORTA, e a decisão é de produto
 ----------------------------------------
-Decisão dela, 04/09/2026, meio-dia: *"sons do pc e sons do jogo. veja como
+Decisão, 04/09/2026, meio-dia: *"sons do pc e sons do jogo. veja como
 fizemo no gtk."*  # noqa-acento: citação literal
 
 São DOIS caminhos independentes, e a janela antiga já sabia disso
@@ -38,7 +38,7 @@ Ele **vai e VOLTA**, e a volta está no `finally`:
        `pactl get-default-sink` — e confere que as duas contam a mesma história;
     4. devolve a saída padrão ao que estava, e confere que voltou.
 
-Sem o passo 4 o som dela ficaria preso no controle, que é justamente por que o
+Sem o passo 4 o som do usuário ficaria preso no controle, que é justamente por que o
 gesto `rota` estava em `PERIGOSOS` e a régua de clique nunca o tinha clicado.
 
 A MORDIDA

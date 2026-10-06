@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 """A RÉGUA DA IDENTIDADE NA ABA 06: o controle da tela é o da MESA, nunca o do desenho.
 
-A LEI É DELA, 03/09/2026:
+A LEI É DO USUÁRIO, 03/09/2026:
 
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. (…) Por isso
-    temos o mapa pra servir como variável de identificação"
 
 (A frase elidida — *"Cada feature faz referência ao controle conectado"* — está
 inteira em `docs/process/sprints/arquivados/`, na
 `2026-09-03-IDENTIDADE-VEM-DE-CIMA-01-a-fita-manda-nas-dez-abas.md`.
-Ela sai daqui porque a palavra dela vem sem o acento e o portão `acentuacao`
+Ela sai daqui porque a palavra de produto vem sem o acento e o portão `acentuacao`
 varre este arquivo; a elisão é honesta e a fonte fica apontada.)
 
-O QUE ESTA ABA MOSTRAVA, medido em 03/09/2026 com os dois controles dela na
+O QUE ESTA ABA MOSTRAVA, medido em 03/09/2026 com os dois controles do usuário na
 mesa e o daemon no ar — a fita, os dois cartões e as duas dicas das telas de
 botões, todos ao lado de um cabeçalho que já contava certo::
 
@@ -34,7 +31,7 @@ O segundo é o que distingue uma frente honesta de uma que só maquia: um
 igualmente mentindo. Aqui o pacote é chamado com uma mesa de mentira que
 DISCORDA do desenho em tudo, e o que ele emite tem de ser a mesa, não o mockup.
 
-E ELA COBRA O SILÊNCIO, que é regra dela: *campo sem informação não mostra
+E ELA COBRA O SILÊNCIO, que é regra de produto: *campo sem informação não mostra
 nada*. Pelo rádio a cor do plástico não se lê (o mapa de canais responde
 `identidade.cor_do_aparelho` · `radio_aciona = não`), e o controle sem cor tem
 de sair da tela **sem cor** — nunca com a do desenho.
@@ -124,10 +121,10 @@ def test_os_cartoes_enderecam_o_nome_e_a_cor(miolo):
     esta régua congelou a metade que existia e teria dado verde sobre o defeito
     para sempre.
 
-    O DEFEITO QUE ELA DEIXAVA PASSAR, medido com os QUATRO DualSense dela na
+    O DEFEITO QUE ELA DEIXAVA PASSAR, medido com os QUATRO DualSense do usuário na
     mesa: o daemon publicava quatro, a carga chegava com `colunas` dos quatro,
     e a tela mostrava DOIS — o P3 e o P4 diziam "P3 · Desconectado" com o
-    aparelho ligado na mão dela, porque `hefesto_vivo.achar(raiz, k)` procura
+    aparelho ligado na mão do usuário, porque `hefesto_vivo.achar(raiz, k)` procura
     `data-campo` DENTRO do bloco e ali não havia nenhum.
 
     O CONTRATO DE HOJE é `len(MESA)` nos dois: quatro lugares, quatro endereços

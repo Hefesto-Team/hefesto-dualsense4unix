@@ -64,9 +64,9 @@ class JogoDoLancador:
         a pilha da Steam e exporta `SteamAppId`; o Proton batiza a janela por
         ele. O `executavel` deixou de ser a chave no mesmo minuto.
 
-        **O ESTRAGO ESTAVA MEDIDO NO PERFIL DELA:**
+        **O ESTRAGO ESTAVA MEDIDO NO PERFIL DO USUÁRIO:**
         ``window_class: ["gotg.exe"]`` é uma regra que nunca casa — nenhum
-        perfil ativava, nenhuma feature chegava ao jogo, e a queixa dela foi a
+        perfil ativava, nenhuma feature chegava ao jogo, e a queixa de uso foi a
         leitura certa: *"o Hefesto não é identificado e não funciona lá"*.
 
         O QUE CONTINUA VALENDO da nota antiga: os três emuladores (RetroArch,
@@ -436,7 +436,7 @@ def _lutris(pasta: Path, lar: Path | None = None, *,
 
     **O LEITOR ANTIGO OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de
     dado.** Ele lia `games/*.yml` e devolvia o `stem` como nome. Medido no
-    disco dela em 11/09/2026:
+    disco do usuário em 11/09/2026:
 
         ~/.var/app/net.lutris.Lutris/config/lutris  ->  data/lutris (symlink)
         data/lutris/games/   0 arquivos
@@ -444,7 +444,7 @@ def _lutris(pasta: Path, lar: Path | None = None, *,
 
     O `games/*.yml` só nasce para jogo com configuração PRÓPRIA; a biblioteca
     é a tabela. Com a pasta vazia o cartão dizia `LIDO · 0 jogos` — que se lê
-    como *"o Lutris está vazio"* e não como *"eu olhei no lugar errado"*.
+    como *"o Lutris está vazio"* e não como .
 
     **E O `.yml` NÃO DAVA A ETIQUETA.** Um `stem` (`sea-of-stars`) não é a
     `wm_class` que a janela anuncia, e é a etiqueta que esta sprint precisa —

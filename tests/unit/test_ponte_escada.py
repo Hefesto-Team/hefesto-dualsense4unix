@@ -117,7 +117,7 @@ class TestOPrecoDeCadaDegrau:
 
     @pytest.mark.parametrize("degrau", pe.ESCADA, ids=lambda d: d.ponte.chave)
     def test_nenhum_degrau_sobe_sozinho_com_o_jogo_aberto(self, degrau) -> None:
-        """R-04: recriar o vpad com o jogo aberto arranca o controle da mão dela."""
+        """R-04: recriar o vpad com o jogo aberto arranca o controle da mão do usuário."""
         assert pe.como_subir(degrau, jogo_vivo=True) != pe.SUBIR_AGORA
 
     def test_com_o_jogo_fechado_as_mascaras_saem_de_graca(self) -> None:
@@ -158,7 +158,7 @@ class TestAEscadaSoRodaQuandoOProdutoNaoSabe:
         assert pe.proximo_degrau(ponte_atual=pe.ESCADA[-1].ponte) is None
 
     def test_ponte_que_nao_e_degrau_nao_e_corrigida(self) -> None:
-        """Ela escolheu na mão uma tupla que a escada não conhece."""
+        """O usuário escolheu na mão uma tupla que a escada não conhece."""
         fora = pe.Ponte(pe.KIND_GAMEPAD, pe.MASCARA_XBOX, steam_input=True)
         assert pe.indice_do_degrau(fora) == -1
         assert pe.proximo_degrau(ponte_atual=fora) is None

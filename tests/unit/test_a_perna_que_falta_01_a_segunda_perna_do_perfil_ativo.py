@@ -5,7 +5,7 @@ O FATO, EM UMA LINHA
 --------------------
 A casa tem UM dono da pergunta *"que perfil está valendo agora"*, e ele resolve
 em DUAS pernas — o daemon primeiro, o marcador em disco depois. **Quatro lugares
-perguntavam só à primeira**, e sob o estado da máquina dela — o daemon
+perguntavam só à primeira**, e sob o estado da máquina do usuário — o daemon
 respondendo ``active_profile: null`` com um perfil valendo no disco — os quatro
 erravam:
 
@@ -38,7 +38,7 @@ AS QUATRO MORDIDAS (§5 da sprint), e cada uma tem o seu bloco abaixo:
 3. devolver ``chamar`` no lugar de ``chamar_detalhado`` → a ressalva some da
    tela;
 4. **a que morde mais** — um dublê de store que responde ``None`` **e** um
-   ``session.json`` válido no lar de mentira. É a combinação da máquina dela, e
+   ``session.json`` válido no lar de mentira. É a combinação da máquina do usuário, e
    era a que nenhuma régua exercitava.
 
 O QUE ESTE ARQUIVO NÃO MEDE, e está dito na entrega: nenhum byte sai no fio.
@@ -108,7 +108,7 @@ def lar_de_mentira() -> pathlib.Path:
 
 @pytest.fixture
 def a_maquina_dela(lar_de_mentira: pathlib.Path) -> pathlib.Path:
-    """A COMBINAÇÃO DA MÁQUINA DELA — a quarta mordida, e ela é a fixture."""
+    """A COMBINAÇÃO DA MÁQUINA DO USUÁRIO — a quarta mordida, e ela é a fixture."""
     save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
     sessao.save_last_profile(NO_DISCO)
     sessao.save_active_marker(NO_DISCO)
@@ -313,12 +313,12 @@ class _PonteDoRodape:
 
 
 def _ctx_do_daemon_calado() -> Contexto:
-    """O contexto da máquina dela: o daemon não diz quem está ativo."""
+    """O contexto da máquina do usuário: o daemon não diz quem está ativo."""
     return Contexto(state={"connected": True}, mesa=[], conectados=[], estados={})
 
 
 def test_o_salvar_grava_com_o_daemon_calado(a_maquina_dela: pathlib.Path) -> None:
-    """O gesto que ESCREVE NO DISCO DELA, medido no disco."""
+    """O gesto que ESCREVE NO DISCO DO USUÁRIO, medido no disco."""
     antes = _no_disco(a_maquina_dela)
     rodape.salvar(_ctx_do_daemon_calado(), {}, _PonteDoRodape())
     depois = _no_disco(a_maquina_dela)

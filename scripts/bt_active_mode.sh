@@ -62,7 +62,7 @@ LIB="${LIB%/}"
 LOG_TAG=hefesto-bt-active
 # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
 # arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
-# sem isto grava, no journal da máquina dela, linhas que descrevem eventos que
+# sem isto grava, no journal da máquina do usuário, linhas que descrevem eventos que
 # nunca aconteceram. Motivo completo no cabeçalho do bt_bonds_autorestore.sh.
 LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
 _registrar() {
@@ -322,7 +322,7 @@ mapfile -t ADAPTADORES < <(_adaptadores)
 #       em todos seria mais simples, e o A/B de 23/07 diz que o nome não
 #       atrapalha o clone — mas `integrations/apelido_do_dongle.py` só ESCONDE
 #       o prefixo na tela em adaptador COM Nintendo, e nunca subtrai. Num dongle
-#       sem Nintendo a palavra vira parte permanente do nome que ela escreveu:
+#       sem Nintendo a palavra vira parte permanente do nome que o usuário escreveu:
 #       "Nintendo Sala", para sempre. Pôr onde não precisa custa mais que não
 #       pôr.
 #   (2) o SNIFF default -> em TODOS (ver a seção 2). É a devolução do default do
@@ -362,7 +362,7 @@ if command -v busctl >/dev/null 2>&1; then
     # Mora aqui, e não no topo, porque este arquivo é citado por número de
     # linha até a altura do `mapfile` acima (`apelido_do_dongle.py`, o portão
     # da casa-sabe). Sem os ganchos de teste a trava é a da máquina; com eles,
-    # só a de `HEFESTO_RADIO_TRAVA` — um teste não segura a trava DELA.
+    # só a de `HEFESTO_RADIO_TRAVA` — um teste não segura a trava DO USUÁRIO.
     TRAVA_DO_RADIO="${HEFESTO_RADIO_TRAVA:-}"
     if [[ -z "${TRAVA_DO_RADIO}" && -z "${HEFESTO_SYS_BLUETOOTH:-}" \
         && -z "${HEFESTO_BT_LIB:-}" ]]; then
@@ -435,7 +435,7 @@ if command -v busctl >/dev/null 2>&1; then
             return 0
         fi
         # Com os ganchos de teste, nunca a casa de ninguém: um teste não lê o
-        # `maquina.json` DELA.
+        # `maquina.json` DO USUÁRIO.
         [[ -n "${HEFESTO_SYS_BLUETOOTH:-}" || -n "${HEFESTO_BT_LIB:-}" ]] && return 0
         while IFS=: read -r nome _ uid _ _ casa _; do
             [[ "${uid}" =~ ^[0-9]+$ ]] || continue

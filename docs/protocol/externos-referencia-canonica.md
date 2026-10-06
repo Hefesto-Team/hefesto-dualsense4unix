@@ -3,7 +3,7 @@
 **A fonte única de verdade deste projeto sobre o que os controles que NÃO são
 DualSense entendem.**
 
-- **Levantado em:** 07/08/2026, entre 19h10 e 19h45, com a máquina dela **viva**
+- **Levantado em:** 07/08/2026, entre 19h10 e 19h45, com a máquina do usuário **viva**
   e os **quatro** controles no rádio — dois DualSense, um Pro Controller
   Nintendo genuíno e um 8BitDo em modo PS4. Por três frentes de pesquisa
   simultâneas (o driver do kernel, o rádio, o conhecimento público), e conferido
@@ -19,7 +19,7 @@ DualSense entendem.**
 - **Leitura pura.** Nenhuma escrita em `hidraw`, nenhum serviço reiniciado,
   nenhum controle derrubado. O que só fecha escrevendo no aparelho está na
   seção 8, como protocolo para ela executar.
-- **Por que este arquivo existe:** ela pediu, literal — *"não deveríamos mapear
+- **Por que este arquivo existe:** o usuário pediu, literal — *"não deveríamos mapear
   a conexão bt dos outros 2, pro e 8bitdo?"*. E a lacuna estava medida: um
   `grep -i -E "nintendo|8bitdo|pro controller|057e"` em `docs/protocol/`
   devolvia **zero linhas**. A casa mapeou o DualSense a fundo e nunca mapeou os
@@ -45,7 +45,7 @@ decisão errada por confundir "documentação de comunidade" com "fato".
 | grau | significa |
 |---|---|
 | **ALTA** | está no código do driver que **esta máquina carrega**, ou em duas engenharias reversas independentes que concordam |
-| **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida na máquina dela** |
+| **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida na máquina do usuário** |
 | **BAIXA** | inferência, ou fonte única, ou derivação de duas medições que não se tocam |
 | **MEDIDO AQUI** | conferido nesta máquina na varredura de 07/08, com o comando citado |
 | **MEDIDO 11/08** | conferido nesta máquina em 11/08/2026, com o 8BitDo pelo **cabo** em modo Switch e o Pro genuíno no rádio. Vale o mesmo que MEDIDO AQUI; a data está no rótulo porque a **mesa era outra**, e transporte não atravessa |
@@ -61,10 +61,10 @@ errada nesta casa duas vezes:
    É a camada mais barata e a mais confiável — e **não** diz o que o aparelho
    aceita.
 2. **O APARELHO ACEITA.** O que o firmware honra de verdade. Só fecha
-   **medindo**, com o controle na mão dela. É a camada mais cara e a mais rasa
+   **medindo**, com o controle na mão do usuário. É a camada mais cara e a mais rasa
    deste documento.
 3. **ALGUÉM NA INTERNET DISSE.** Engenharia reversa de comunidade. **Toda linha
-   desta camada é SUSPEITA até ser conferida contra a máquina dela**, e cada uma
+   desta camada é SUSPEITA até ser conferida contra a máquina do usuário**, e cada uma
    diz aqui se foi conferida, e com que desfecho.
 
 E a lei desta página, medida no 8BitDo e válida para os dois aparelhos:
@@ -98,7 +98,7 @@ foi outra — o 8BitDo pelo **cabo**, em modo Switch, e o Pro genuíno no rádio
 o que se mediu ali está na seção 5.1, não aqui. Toda linha desta página que
 disser `MEDIDO 11/08` vem daquela mesa.
 
-**As duas premissas do pedido dela estão certas, e ficam MEDIDO AQUI:** o Pro
+**As duas premissas do pedido estão certas, e ficam MEDIDO AQUI:** o Pro
 genuíno por Bluetooth casa com o driver `nintendo`; o 8BitDo em modo PS4 casa com
 o `playstation`. É exatamente essa bifurcação de driver que o
 `resolve_external_leds` (`core/external_leds.py`) usa para escolher entre o
@@ -329,7 +329,7 @@ GRAU: ALTA (`:973-1048`):
 
 Teto: `subcmd_rate_max_attempts` = **25** tentativas.
 
-**O que acontece ao estourar as 25 tentativas DEPENDE do módulo, e a máquina dela
+**O que acontece ao estourar as 25 tentativas DEPENDE do módulo, e a máquina do usuário
 NÃO roda o vanilla.** No vanilla o driver loga `exceeded max attempts` e
 **transmite assim mesmo, sem ritmo** — e o comentário do próprio código diz que é
 isso que derruba o link Bluetooth. Aqui, com `skip_tx_on_rate_exceeded=Y`, o TX é
@@ -391,7 +391,7 @@ converter erra por **2x** no acelerômetro e por cerca de **14x** no giroscópio
 **Honestidade obrigatória:** o próprio comentário do driver já avisava que o
 número publicado não vale — *"In my own testing, I've discovered that my pro
 controller either reports IMU sample batches every 11ms or every 15ms."* O
-controle dela está no ramo de 11 ms. GRAU: ALTA.
+controle do usuário está no ramo de 11 ms. GRAU: ALTA.
 
 ATENÇÃO: **quem integrar velocidade angular do Pro pela constante do driver, em
 vez de pelo valor aprendido, erra a escala.** É o análogo, para o Pro, da
@@ -495,7 +495,7 @@ com a URL da Nintendo no comentário; `:2513-2534`).
 ATENÇÃO: **não existe estado "sem número" no Pro.** Com a escrita nossa calada
 (`EXTERNAL_PLAYER_LED_ENABLED = False`), o que fica aceso é o padrão do kernel ou
 o resíduo da última escrita nossa — hoje, `player-1=1, player-2=1, player-3=0,
-player-4=0`, congelado desde 15:24:01 de 07/08. É o custo que a decisão dela
+player-4=0`, congelado desde 15:24:01 de 07/08. É o custo que a decisão de produto
 aceitou, e está registrado para ninguém o redescobrir como surpresa.
 
 ### 3.7 O rumble
@@ -798,10 +798,10 @@ Aquilo é a cache do subsistema de LED do kernel. E o SN30 Pro **não tem lightb
 RGB física**: os quatro LEDs azuis dele são indicadores de **modo** (LED1
 D-input, LED2 X-input, LED3 macOS, rotativo = Switch ou pareamento). GRAU:
 **MÉDIA** — a semântica dos LEDs vem do manual do fabricante, e **a parte física
-nunca foi olhada nesta casa**. Fecha com cinco segundos de olho dela.
+nunca foi olhada nesta casa**. Fecha com cinco segundos de olho de quem confere.
 
-> **NOTA DATADA — 07/08/2026 21h06: ela olhou, e a metade física da `P-4` está
-> respondida.** Nas palavras dela, sobre o aparelho na mão: *"não há lightbar
+> **NOTA DATADA — 07/08/2026 21h06: o usuário olhou, e a metade física da `P-4` está
+> respondida.** Nas palavras de produto, sobre o aparelho na mão: *"não há lightbar
 > mas existe led de identificação de player nele também, igual o pro
 > controller"*.
 >
@@ -824,8 +824,8 @@ nunca foi olhada nesta casa**. Fecha com cinco segundos de olho dela.
 >   lugar que não chega a lugar nenhum. **GRAU: SEM PROVA**, e é isto que a
 >   `P-4` da seção 8.4 passa a perguntar.
 >
-> **Decisão dela em 07/08 (resposta 23):** *"preparar, e rodar quando ele
-> estiver ligado"*. GRAU: DECISÃO DELA.
+> **Decisão em 07/08 (resposta 23):** *"preparar, e rodar quando ele
+> estiver ligado"*. GRAU: DECISÃO DE PRODUTO.
 
 **O produto não escreve nesses nós desde 07/08 02:59**
 (`EXTERNAL_PLAYER_LED_ENABLED = False`).
@@ -1179,7 +1179,7 @@ citações das páginas irmãs; o que saiu foi a pergunta.
 ### 8.1 P-1. O timeout de supervisão — o número que falta para tudo
 
 **O que falta.** Intervalo de sniff negociado, latência e **timeout de
-supervisão** de cada link. **É o coração da pergunta dela sobre conexão
+supervisão** de cada link. **É o coração da pergunta de produto sobre conexão
 permanente**, e é o que decide a hipótese de 4.5.
 
 **Por que não fechou.** Os três caminhos falharam por permissão, e cada um do
@@ -1249,7 +1249,7 @@ esse resultado negativo já vale, porque separa "ele não quer falar" de "ele n�
 consegue no ritmo pedido". **Se um intervalo maior o fizer falar**, o achado é
 grande e muda o alvo inteiro.
 
-### 8.4 P-4. A luz do 8BitDo acende? (cinco segundos de olho dela)
+### 8.4 P-4. A luz do 8BitDo acende? (cinco segundos de olho de quem confere)
 
 **Pergunta.** Os nós `:red`/`:green`/`:blue`/`:global` do 8BitDo acendem alguma
 coisa física, ou são cache do kernel sobre hardware que não existe?
@@ -1264,7 +1264,7 @@ modo. **Cinco segundos.**
 E3.
 
 > **NOTA DATADA — 07/08/2026 21h06: metade desta pergunta está RESPONDIDA, e a
-> previsão acima se confirmou.** Ela olhou o aparelho: *"não há lightbar mas
+> previsão acima se confirmou.** O usuário olhou o aparelho: *"não há lightbar mas
 > existe led de identificação de player nele também, igual o pro controller"*.
 > Os cinco segundos foram gastos e o desfecho está na seção 4.7.
 >
@@ -1275,14 +1275,14 @@ E3.
 >   (o firmware traduz a cor para os LEDs físicos) ou se escreve num lugar que
 >   não chega a lugar nenhum (ele acende as luzes por conta própria). É a
 >   dependência que **bloqueia a numeração do 8BitDo**;
-> - **custo:** uma escrita e o olho dela. **Trinta segundos**, e continua sendo
+> - **custo:** uma escrita e o olho de quem confere. **Trinta segundos**, e continua sendo
 >   o item mais barato desta seção;
 > - **P0 e travas:** o aparelho tem de estar **ligado e no rádio** — ele não
 >   está desde a saída de 19h38 (seção 1.2). A escrita é no caminho `ds4`, que
 >   **não** passa pelo `EXTERNAL_PLAYER_LED_ENABLED`, então a decisão 12 dela
 >   (a luz dos externos fica calada) tem de ser lida **antes** de armar isto:
 >   pintar uma cor É afirmar alguma coisa no plástico dela;
-> - **DECISÃO DELA (resposta 23, 07/08):** *"preparar, e rodar quando ele
+> - **DECISÃO DE PRODUTO (resposta 23, 07/08):** *"preparar, e rodar quando ele
 >   estiver ligado"*. Logo o preparo pode ser escrito agora; a rodada espera o
 >   aparelho.
 >
@@ -1302,7 +1302,7 @@ E3.
 >   dependência que o defeito registrado em 7.2, item 5, precisa para ser
 >   curado com desenho, não com chute;
 > - **custo:** o controle no cabo em modo Switch, uma escrita no nó azul e o
->   olho dela. **Cinco segundos**, e é o item mais barato desta seção;
+>   olho de quem confere. **Cinco segundos**, e é o item mais barato desta seção;
 > - **o que NÃO responde:** nada disto diz o que o `054c:05c4` faz. São dois
 >   modos, dois drivers e duas famílias de LED — a metade acima continua aberta
 >   do jeito que está.
@@ -1368,7 +1368,7 @@ varredura acrescentou:
 
 ## 10. Fontes
 
-**Código do kernel — nesta árvore, e é o que a máquina dela carrega**
+**Código do kernel — nesta árvore, e é o que a máquina do usuário carrega**
 
 - `assets/dkms/hid-nintendo/hid-nintendo.c` (3303 linhas) e os remendos da casa
   em `assets/dkms/hid-nintendo/patch/`
@@ -1392,7 +1392,7 @@ varredura acrescentou:
   (`bluetooth_hid_notes.md`, `bluetooth_hid_subcommands_notes.md`,
   `rumble_data_table.md`). **Conferido nesta varredura:** o mapa do byte de
   bateria **concorda** com o driver; a taxa publicada (60/120 Hz) foi
-  **refutada** na mesa dela
+  **refutada** na bancada
 - `joycon-turnoff` (o modo de sleep do firmware) —
   `https://github.com/Sopsy/joycon-turnoff`. **Não conferido**; coerente com o
   medido

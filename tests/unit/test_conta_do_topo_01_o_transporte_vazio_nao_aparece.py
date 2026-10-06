@@ -1,16 +1,14 @@
 """CONTA-DO-TOPO-01 — o transporte vazio não aparece, e os DOIS escritores concordam.
 
-**Decisão dela, 17/09/2026**, com um controle só no rádio na mesa:
+**Decisão, 17/09/2026**, com um controle só no rádio na mesa:
 
-    "só tem 1 controle conectado ainda assim aparece no canto superior direito
-     0 usb  1 bt deveria mostrar só o que tá conectado que é 1 bt nesse caso"
 
 Ela REFINA a decisão de 06/09 e não a contradiz. Aquela escolheu a PALAVRA —
 ``USB``/``BT`` em vez de ``cabo``/``rádio``, porque *"2 cabo · 0 rádio"* não é
 português, e é a única exceção declarada em ``docs/A-LINGUA-DESTA-CASA``. Esta
 escolhe o que se OMITE. A palavra continua a mesma, e a régua de 06/09
 (``test_a_palavra_do_transporte_tem_um_dono_so``) continua medindo a pergunta
-dela sem uma vírgula de mudança.
+de produto sem uma vírgula de mudança.
 
 **A METADE QUE IMPORTA MAIS É A SEGUNDA.** A frase tem DOIS escritores:
 

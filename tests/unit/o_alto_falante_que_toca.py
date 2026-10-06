@@ -3,7 +3,7 @@
 **Nascido da RADIO-AFOGADO-01, 22/09/2026, e compartilhado de propósito.**
 Naquele dia a ponte do som deixou de subir em silêncio: ela escrevia 100
 reports de 334 B por segundo em cada DualSense do rádio, tocasse alguém ou
-não, e com três de pé a mesa dela caía em 11 a 89 segundos.
+não, e com três de pé a bancada caía em 11 a 89 segundos.
 
 Seis réguas de FIAÇÃO — quem recebe qual `hidraw`, em que ordem a ponte sobe,
 o bit do microfone em cada report — herdaram o mundo de antes: elas chamam

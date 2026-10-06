@@ -66,7 +66,7 @@ def _acesos(escolhido: str) -> set[str]:
 
 @pytest.fixture
 def com_troca(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """O perfil ativo com o Triângulo trocado pela Cruz — a fala dela, na régua."""
+    """O perfil ativo com o Triângulo trocado pela Cruz — a fala do usuário, na régua."""
     p = {"name": "regua", "remapeamento": {"triangle": "cross"}}
     monkeypatch.setattr(perfil, "ativo", lambda _nome=None: dict(p))
     return p

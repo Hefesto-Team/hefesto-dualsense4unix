@@ -27,7 +27,7 @@ O QUE ESTA RÉGUA COBRA:
 5. sem BlueZ é «não sei», e nada se escreve; a webcam não se move; o
    movimento em «não sei» não apaga a conexão viva do destino; um erro no meio
    não deixa a central emperrada num «esperando»;
-6. sem o agente próprio, o piso atende o ``Pair`` (decisão de quem coordena);
+6. sem o agente próprio, o piso atende o ``Pair`` (decisão de produto);
 7. os estados publicados são só os três;
 8. o ``state_full`` não abre o dono nem espera a foto do rádio;
 9. sob a suíte, a ponte root de verdade não roda.

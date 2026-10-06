@@ -108,7 +108,7 @@ def cmd_activate(name: str) -> None:
     """Ativa um perfil. Prefere o daemon vivo (profile.switch via IPC).
 
     Com o daemon rodando, `profile.switch` faz a troca DE VERDADE no processo
-    vivo (grava a escolha dela e aplica no controle). Antes, este comando
+    vivo (grava a escolha do usuário e aplica no controle). Antes, este comando
     abria um 2º controller local e gravava só o marker — o daemon vivo
     sobrescrevia o controle logo em seguida, e o perfil em uso não mudava.
     Só caímos no fallback (controller local + a escolha gravada pelo dono)
@@ -444,7 +444,7 @@ def _describe_match(profile: Profile) -> str:
 
 
 def _gravar_a_escolha_sem_o_daemon(name: str) -> None:
-    """A ativação à mão com o daemon fora do ar: a escolha dela, pelo dono."""
+    """A ativação à mão com o daemon fora do ar: a escolha do usuário, pelo dono."""
     from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, ligar_o_freestyle
     from hefesto_dualsense4unix.utils.session import gravar_a_escolha
 

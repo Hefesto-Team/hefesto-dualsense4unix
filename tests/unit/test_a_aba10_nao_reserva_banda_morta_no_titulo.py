@@ -88,7 +88,7 @@ def tira() -> dict:
 
 
 def test_a_tira_vazia_nao_ocupa_um_pixel(tira: dict) -> None:
-    """Zero de altura e zero de folga — é a queixa dela, em números."""
+    """Zero de altura e zero de folga — é a queixa de uso, em números."""
     vazia = tira["vazia"]
     assert vazia["altura"] == 0 and vazia["folga"] == 0, (
         f"a tira do desfecho VAZIA mede {vazia['altura']}px de altura e "

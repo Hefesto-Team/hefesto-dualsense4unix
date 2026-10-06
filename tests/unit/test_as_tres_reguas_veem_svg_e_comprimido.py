@@ -1,4 +1,4 @@
-"""Os dois buracos que a conferência da LEVA-4-C achou, e nenhum agente vira."""
+"""Os dois buracos que a conferência da LEVA-4-C achou, e que ninguém via."""
 
 from __future__ import annotations
 

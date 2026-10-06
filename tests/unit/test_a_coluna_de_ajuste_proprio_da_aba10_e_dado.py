@@ -30,10 +30,9 @@ A CURA, e as três metades chegam juntas: o desenho ganhou
 ela), o pacote passou a ler o dicionário POR NOME, e ``guarda.secao`` saiu de
 ``NAO_PINTAVEIS``.
 
-AS DUAS DECISÕES DELA QUE ESTE ARQUIVO SEGURA — 03/09/2026
+AS DUAS DECISÕES DE PRODUTO QUE ESTE ARQUIVO SEGURA — 03/09/2026
 -----------------------------------------------------------
-- **nº4, as oito dicas das células SAEM.** *"Meu Deus melhor nenhuma assim.
-  Auto falante é auto falante, gatilho é gatilho."* Eram quatro pares (um texto
+- **nº4, as oito dicas das células SAEM.**  Eram quatro pares (um texto
   por estado) que repetiam a dica do cabeçalho e ainda re-explicavam o que cada
   peça é. A régua olha o ELEMENTO, não a frase: proibir os oito textos deixaria
   o nono entrar livre.
@@ -129,7 +128,7 @@ def _perfil_de_regua() -> Any:
 
 @pytest.fixture(autouse=True)
 def _perfil_no_lugar_do_disco(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O perfil da régua no lugar da pasta dela — e o `_ESCOLHIDO` limpo."""
+    """O perfil da régua no lugar da pasta do usuário — e o `_ESCOLHIDO` limpo."""
     from hefesto_dualsense4unix.profiles import loader
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -197,7 +196,7 @@ def test_a_pagina_publicada_sabe_receber_a_pintura() -> None:
 
 
 def test_a_celula_nao_tem_dica_nenhuma() -> None:
-    """DECISÃO DELA nº4 — as oito dicas das células saíram, e não voltam."""
+    """DECISÃO DE PRODUTO nº4 — as oito dicas das células saíram, e não voltam."""
     com_dica = [c for c in _celulas(publicado=False) if "title=" in c]
     assert not com_dica, (
         f"{len(com_dica)} célula(s) de `Ajuste próprio` com dica. Ela mandou as "
@@ -243,7 +242,7 @@ def test_toda_coluna_sem_campo_esta_declarada() -> None:
 
 
 def test_a_coluna_do_microfone_existe_na_tela() -> None:
-    """DECISÃO DELA nº20 — o microfone é o quinto ajuste por controle."""
+    """DECISÃO DE PRODUTO nº20 — o microfone é o quinto ajuste por controle."""
     assert "mic" in a10_perfis.SECOES_DA_COLUNA, (
         "o microfone saiu da coluna `Ajuste próprio` (decisão dela nº20)")
     secoes = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)

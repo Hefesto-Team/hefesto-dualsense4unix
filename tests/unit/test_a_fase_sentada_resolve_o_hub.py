@@ -84,7 +84,7 @@ def test_nenhuma_face_e_mais_longa_do_que_a_maior_que_ela_aprovou() -> None:
 
 
 def test_nenhuma_face_diz_mesa() -> None:
-    """A palavra saiu da tela em 05/09/2026, ordem dela."""
+    """A palavra saiu da tela em 05/09/2026, ordem de produto."""
     from hefesto_dualsense4unix.interface import calibracao_das_entradas as calibrar_entradas
 
     for face in calibrar_entradas.FACES:

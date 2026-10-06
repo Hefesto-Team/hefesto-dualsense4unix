@@ -83,7 +83,7 @@ class TestAMesaDeQuatro:
         ) == {P1}
 
     def test_o_jogo_le_dois_dos_quatro_e_so_esses_dois_vibram(self, tmp_path):
-        """**A régua que separa a decisão dela de «sempre o P1».**"""
+        """**A régua que separa a decisão de produto de «sempre o P1».**"""
         inp = _input_de_mentira(
             tmp_path,
             {"event1": P1, "event2": P2, "event3": P3, "event4": P4},
@@ -221,7 +221,7 @@ class TestOGateEstaLigado:
 
 @pytest.mark.parametrize("quem", [P1, P2, P3, P4])
 def test_qualquer_um_dos_quatro_pode_ser_o_que_joga(tmp_path, quem):
-    """Nenhum índice é privilegiado — é o que a decisão dela pede."""
+    """Nenhum índice é privilegiado — é o que a decisão de produto pede."""
     inp = _input_de_mentira(
         tmp_path, {f"event{i + 1}": u for i, u in enumerate(MESA)}
     )

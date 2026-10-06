@@ -90,7 +90,7 @@ class _BackendComOKernelDentro:
 
 
     def apertar(self, uniq: str) -> None:
-        """O dedo dela no botão: o backend conta o aperto, o driver alterna e escreve."""
+        """O dedo do usuário no botão: o backend conta o aperto, o driver alterna e escreve."""
         self._pedido[uniq] = not self._firmware_mudo[uniq]
         self._seq[uniq] += 1
         self._kernel_mudo[uniq] = not self._kernel_mudo[uniq]
@@ -267,7 +267,7 @@ class TestOPrimeiroAperto:
 
     @pytest.mark.asyncio
     async def test_o_led_do_plastico_fica_aceso(self) -> None:
-        """O contrato do LED é dela: *aceso = este mic está no ar*."""
+        """O contrato do LED é do usuário: *aceso = este mic está no ar*."""
         daemon, backend, _eleitor = _a_mesa()
 
         async def corpo() -> None:
@@ -359,7 +359,7 @@ class TestQuemEstaNoArContinuaPodendoSair:
     async def test_o_me_cale_da_tela_de_quem_nunca_elegeu_continua_recusado(
         self,
     ) -> None:
-        """A recusa de quem nunca elegeu é texto DELA, e continua viva."""
+        """A recusa de quem nunca elegeu é texto DO USUÁRIO, e continua viva."""
         daemon, _backend, eleitor = _a_mesa((P1, P2))
 
         try:

@@ -2,9 +2,7 @@
 
 - **Levantado em:** 03/08/2026, por quatro agentes com verificação adversarial,
   e **medido no hardware dela** na mesma sessão
-- **Por que existe:** ela definiu o requisito em uma frase — *"deixar o projeto
-  robusto de tal forma que eu não note que estou no bt ou cabo, a ideia é termos
-  tudo funcionando via bt principalmente"*. Este documento é a régua desse
+- **Por que existe:** o usuário definiu o requisito em uma  Este documento é a régua desse
   requisito
 - **Regra de uso:** quando este documento e outro discordarem sobre o que
   funciona por Bluetooth, **este vence nas linhas MEDIDO AO VIVO** — as outras
@@ -55,7 +53,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 | **Áudio de sistema (card/sink no PipeWire)** | **impossível** — sem A2DP/HFP/HSP | — | — | **MEDIDO**: zero cards com o controle no rádio |
 
 > **NOTA DATADA — 12/08/2026: duas linhas da tabela ganharam condição, e as duas
-> condições foram medidas com quatro DualSense na mesa dela (dois no cabo, dois
+> condições foram medidas com quatro DualSense na bancada (dois no cabo, dois
 > no rádio).** Nenhuma das duas é diferença **de transporte** — e é por isso que
 > elas moram numa nota e não viraram coluna nova.
 >
@@ -66,11 +64,11 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 > obedeceram a verde puro. **No cabo a assimetria é gritante e foi medida no
 > mesmo instante:** em 11/08, com a Steam aberta e o daemon parado, a mesma
 > escrita acendeu os **dois** controles do cabo e **nenhum** dos dois do rádio
-> (`docs/data/ensaios.csv:26-27`, literal dela: *"só os cabo ficaram branco e o
+> (`docs/data/ensaios.csv:26-27`, literal: *"só os cabo ficaram branco e o
 > do bt não"*). A medição no fio, o contraste de 98 contra 6 pacotes de
 > saída e a rota que vence (`hidraw` cru) estão em
 > [a pilha do Steam Input](pilha-steam-input-xpad-sdl.md), seção 6-bis; os
-> ensaios são `docs/data/ensaios.csv:41-51`, todos com o olho dela.
+> ensaios são `docs/data/ensaios.csv:41-51`, todos com o olho de quem confere.
 >
 > **2. A vibração que o JOGO manda ao nó físico era cancelada pelo produto, nos
 > dois transportes.** Quando o jogo escreve força-feedback pelo `evdev` do
@@ -274,7 +272,7 @@ Ordenado por (impacto ÷ custo):
   `docs/data/caducos.csv`). **Fechado no mesmo dia, e não pela ausência:** a
   CONFIGURAÇÕES-FECHA-01/T6 mediu as taxas novas horas depois, e o README
   ficou com elas — ver a nota logo abaixo. As duas frentes nasceram do mesmo
-  commit-base e não se viram; a escolha entre as duas redações foi dela,
+  commit-base e não se viram; a escolha entre as duas redações foi do usuário,
   24/08/2026;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
   instala (`install.sh` os deixa em opt-in, desligados).

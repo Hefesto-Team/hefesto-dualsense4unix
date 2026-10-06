@@ -288,7 +288,7 @@ class TestOsSelosNoCartao:
 
 
 class TestOQuartoSeloSaiuDaTela:
-    """A ordem dela, e ela vale para a tela inteira:"""
+    """A ordem de produto, e ela vale para a tela inteira:"""
 
     def test_a_celula_do_mapa_so_vira_com_a_prova(self) -> None:
         """**A METADE QUE IMPEDE A CURA DE VIRAR MENTIRA.**"""

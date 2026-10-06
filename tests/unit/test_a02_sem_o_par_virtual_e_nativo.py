@@ -1,6 +1,6 @@
 """A 02 sem o par «Virtual | Nativo»: o pacote perde o gesto e tudo o que era dele.
 
-A decisão dela de 02/10/2026 (um microfone por controle, sempre, sem a escolha Nativo ou
+A decisão de 02/10/2026 (um microfone por controle, sempre, sem a escolha Nativo ou
 Virtual; `OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01`). O mockup já não tem o par
 (`mockup/DIVERGENCIAS.md`, 02-controles); o `--publicar 02` leva a página, e o pacote
 sai antes, para a página publicada nunca ter um botão que o pacote não atende.

@@ -38,7 +38,7 @@ O QUE ESTE ARQUIVO TRAVA
 Nada aqui toca o áudio da máquina: as funções de shell exercitadas são as que
 só mexem em ARQUIVO, num ``HOME`` de mentira, e ainda assim com um ``systemctl``
 dublê na frente do PATH — cinto e suspensório, porque o preço de um engano seria
-o WirePlumber da sessão dela.
+o WirePlumber da sessão do usuário.
 """
 
 from __future__ import annotations

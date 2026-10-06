@@ -640,8 +640,7 @@ def test_com_um_adaptador_so_a_caixa_nasce_e_fica_aberta(
 
 
 def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """*«segurar a área do conector e arrastar ela pra mudar de ordem entre
-    eles»*: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
+    """: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
     dele, desde 28/09/2026 — antes era o ``gui_prefs``, pelo lugar), e a sala
     nasce nela. <!-- noqa-acento: citação literal -->
 

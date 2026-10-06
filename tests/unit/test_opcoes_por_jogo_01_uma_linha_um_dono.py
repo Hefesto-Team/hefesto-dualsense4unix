@@ -97,7 +97,7 @@ def test_a_linha_final_e_o_atalho_na_frente() -> None:
 
 def test_o_jogo_que_ela_tirou_do_atalho_nao_o_recebe_de_volta(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A escolha dela ganha do automatismo — a regra do `excluir` do irmão."""
+    """A escolha do usuário ganha do automatismo — a regra do `excluir` do irmão."""
     monkeypatch.setattr(opj, "ler_jogos_sem_wrapper", lambda: [APPID])
     vdf = _vdf_de_mentira(tmp_path)
     _tabela(tmp_path, **{APPID: OPCOES})

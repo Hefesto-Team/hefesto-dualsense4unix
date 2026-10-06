@@ -1,6 +1,6 @@
 """RADIO-ABERTO-01/E1-bis — a cura de `confirm` chega mesmo ao disco?
 
-O DEFEITO, MEDIDO em 06/08/2026 na máquina dela:
+O DEFEITO, MEDIDO em 06/08/2026 na máquina do usuário:
 
     /etc/bluetooth/main.conf:25  JustWorksRepairing=always
 
@@ -445,7 +445,7 @@ def _backups_de_dropin(etc: Path) -> list[Path]:
 
 
 def test_aplicar_nao_destroi_dropin_editado_a_mao(tmp_path: Path) -> None:
-    """Reescrever por cima sem cópia é apagar decisão dela — no outro caminho."""
+    """Reescrever por cima sem cópia é apagar decisão de produto — no outro caminho."""
     etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
     alvo = etc / "main.conf.d" / "hefesto-justworks.conf"
     alvo.write_text(_DROPIN_DELA, encoding="utf-8")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O «Salvar Perfil» do rodapé recusava com a máquina dela como está AGORA.
+"""O «Salvar Perfil» do rodapé recusava com a máquina do usuário como está AGORA.
 
 ACHADO ABRINDO A TELA E CLICANDO — 06/09/2026, ONDA5-07-02, com o daemon vivo
 e um DualSense no cabo. O clique sintético em «Salvar Perfil» devolveu::
@@ -12,11 +12,11 @@ O daemon publica o teto de vibração como MEMÓRIA (`rumble_policy_custom_mult`
 = 0,7, de quando o degrau era "custom") ao lado do degrau de hoje
 (`balanceado`), e o Salvar copiava os dois soltos para o rascunho: o esquema
 recusa o par, com razão (*"o valor seria silenciosamente ignorado pelo
-daemon"*), e o perfil dela não era gravado.
+daemon"*), e o perfil do usuário não era gravado.
 
 DESDE 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não lê a vibração do
 aparelho: o teto lembrado não tem como chegar ao rascunho (§1). O teto É
-escolha dela quando ela arrasta a barra «Personalizado» da coluna de um
+escolha do usuário quando ela arrasta a barra «Personalizado» da coluna de um
 controle, e quem o grava, junto com o degrau, é o gesto da aba Vibração
 (`a05_vibracao._gravar_a_forca`), no clique (§2).
 
@@ -45,7 +45,7 @@ UNIQ = "aabbcc0000c1"
 
 @pytest.fixture
 def disco(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Pasta de perfis isolada — nada do disco dela é lido nem escrito."""
+    """Pasta de perfis isolada — nada do disco do usuário é lido nem escrito."""
     import hefesto_dualsense4unix.profiles.loader as loader_mod
 
     destino = tmp_path / "profiles"
@@ -88,7 +88,7 @@ class _Ponte:
 
 
 def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
-    """O caso EXATO da máquina dela: degrau "Padrão", teto lembrado 0,7."""
+    """O caso EXATO da máquina do usuário: degrau "Padrão", teto lembrado 0,7."""
     prof = _salvar(ESTADO_DELA)
     assert prof.rumble.policy is None, (
         f"o Salvar gravou a política do aparelho ({prof.rumble.policy!r}) num "
@@ -97,7 +97,7 @@ def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
 
 
 def test_sob_custom_no_aparelho_o_salvar_nao_inventa_o_teto(disco: Any) -> None:
-    """Nem sob "custom" o teto do aparelho vira escolha dela pelo Salvar."""
+    """Nem sob "custom" o teto do aparelho vira escolha do usuário pelo Salvar."""
     prof = _salvar({**ESTADO_DELA, "rumble_policy": "custom"})
     assert (prof.rumble.policy, prof.rumble.custom_mult) == (None, None)
 

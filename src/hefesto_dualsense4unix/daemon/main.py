@@ -93,7 +93,7 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         ps_long_press_ms=int(
             os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
         ),
-        # este env < `keyboard_emulation.flag` (a decisão DELA, lida no boot em
+        # este env < `keyboard_emulation.flag` (a decisão de produto, lida no boot em
         keyboard_emulation_enabled=(
             os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
         ),

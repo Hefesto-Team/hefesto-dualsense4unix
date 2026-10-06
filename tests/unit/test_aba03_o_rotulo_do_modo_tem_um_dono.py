@@ -79,7 +79,7 @@ def _selects(doc: str, classe: str) -> list[str]:
 def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
     """O que o produto pinta nos oito campos traz o `label` do `PRESETS`.
 
-    Esta é a metade que chega à tela DELA hoje, sem esperar publicação: o pacote
+    Esta é a metade que chega à tela do usuário hoje, sem esperar publicação: o pacote
     monta a lista a cada tique, então a página publicada pode continuar com a
     cópia velha que a palavra na tela já é a certa.
 
@@ -120,7 +120,7 @@ def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
 def test_as_curvas_de_feedback_estao_no_campo_em_qualquer_modo(a03, presets):
     """A firmeza constante não pode exigir que ela troque o modo antes.
 
-    O campo "Efeito pronto" fica visível nos 19 modos (decisão dela), e nos 17
+    O campo "Efeito pronto" fica visível nos 19 modos (decisão de produto), e nos 17
     que não são por posição ele mostra as curvas de FEEDBACK — que é o que a
     página crava. Oferecer cinco das seis ali é um buraco arbitrário: o gesto
     `pronto` sabe aplicar a sexta em qualquer modo, porque tira o modo da TABELA
@@ -260,7 +260,7 @@ def test_a_curva_vinda_do_disco_continua_nomeada(a03):
 
 
 def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):
-    """A cura do rótulo não pode levar junto a frase que ela aprovou.
+    """A cura do rótulo não pode levar junto a frase que o usuário aprovou.
 
     A dica desta tela é mais concreta que a do motor ("Trava dura do começo ao
     fim do curso. Serve para freio de carro e para arma travada." contra

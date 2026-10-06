@@ -1,12 +1,10 @@
 """MULTITOQUE-01 — os DOIS dedos do touchpad, do kernel até a bolinha.
 
-**A QUEIXA É DELA, com os quatro DualSense na mesa, 18/09/2026:** *"NA
+**A QUEIXA É DO USUÁRIO, com os quatro DualSense na mesa, 18/09/2026:** *"NA
 INTERFACE NA ABA CONTROLES SÓ MOSTRA UM TOQUE NO DESENHO DO SVG APESAR DO
-TOUCH SER MULTITOQUE"* — e ela provou no mesmo minuto: *"SE EU USAR 3 DEDOS
-DOU ZOOM E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE. COMO NUM
-NOTEBOOK."*  <!-- noqa-acento: citação literal -->
+TOUCH SER MULTITOQUE"* — e ela provou no mesmo minuto
 
-**O QUE A MEDIÇÃO DEVOLVEU, com os dedos dela no controle azul:**
+**O QUE A MEDIÇÃO DEVOLVEU, com os dedos do usuário no controle azul:**
 
 - o nó do kernel declara `ABS_MT_SLOT min=0 max=1` — **dois** dedos, e o
   terceiro não chega nem ao kernel (zero `GESTURE_SWIPE` em 45 s de gesto);
@@ -17,7 +15,7 @@ NOTEBOOK."*  <!-- noqa-acento: citação literal -->
   dedo morria no reader, três camadas antes da tela.
 
 Estas réguas travam a cadeia inteira, e cada uma morde num elo diferente —
-porque acertar um só parece certo e não muda nada na tela dela.
+porque acertar um só parece certo e não muda nada na tela do usuário.
 """
 from __future__ import annotations
 
@@ -101,7 +99,7 @@ def test_os_dois_dedos_saem_do_reader_com_slot_e_posicao() -> None:
 
 
 def test_levantar_o_primeiro_dedo_nao_renumera_o_segundo() -> None:
-    """Medido no aparelho dela: `1: [(1, 1865, 28)]` — o slot 1, sozinho."""
+    """Medido no aparelho do usuário: `1: [(1, 1865, 28)]` — o slot 1, sozinho."""
     reader = _reader()
     _dedo(reader, 0, 210, 478, ident=7)
     _dedo(reader, 1, 1865, 28, ident=8)

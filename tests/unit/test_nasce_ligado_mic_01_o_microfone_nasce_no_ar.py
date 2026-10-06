@@ -95,7 +95,7 @@ class _Backend:
                 "mic_mudo": self._mudo[uniq]}
 
     def calar_no_firmware(self, uniq: str) -> None:
-        """O dedo dela no botão do plástico ANTES de o daemon ver o controle."""
+        """O dedo do usuário no botão do plástico ANTES de o daemon ver o controle."""
         self._mudo[uniq] = True
 
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
@@ -324,7 +324,7 @@ class TestAMesaComDono:
 
     @pytest.mark.asyncio
     async def test_o_segundo_nao_rouba_a_fonte_padrao(self, mesa) -> None:
-        """Com quatro na mesa, o último a conectar tomaria o microfone dela."""
+        """Com quatro na mesa, o último a conectar tomaria o microfone do usuário."""
         daemon = mesa.daemon((P1, P2))
 
         await hotkey.nascer_no_ar(daemon, P1)
@@ -451,7 +451,7 @@ class TestOSilencioDelaVence:
     async def test_o_controle_sem_opiniao_nasce_ligado(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ordem dela de 17/09/2026: *"os jogos e perfis tem que iniciar com"""
+        """A ordem de 17/09/2026: *"os jogos e perfis tem que iniciar com"""
         monkeypatch.setattr(mgr, "load_profile", lambda _n: _perfil(mic={"volume": 100}))
         assert maquina.gravar_o_mudo_do_microfone(P2, False)
         daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
@@ -462,7 +462,7 @@ class TestOSilencioDelaVence:
 
     @pytest.mark.asyncio
     async def test_o_bit_do_mudo_ja_aceso_impede_o_nascimento(self, mesa) -> None:
-        """O outro caminho do silêncio: ela apertou o botão do plástico."""
+        """O outro caminho do silêncio: o usuário apertou o botão do plástico."""
         daemon = mesa.daemon(mudo_no_firmware=True)
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
@@ -588,7 +588,7 @@ class TestAMaquinaComOutroMicrofone:
 
     @pytest.mark.asyncio
     async def test_os_dois_nascem_no_ar_e_nenhum_toma_o_padrao(self, mesa) -> None:
-        """O caso que o cético pediu: a mesa de dois numa máquina com headset."""
+        """O caso pedido na conferência: a mesa de dois numa máquina com headset."""
         mesa.outro_microfone = HEADSET
         daemon = mesa.daemon((P1, P2))
 
@@ -728,7 +728,7 @@ NO_DO_CABO_SEM_NOME = (
 
 
 class TestAEscolhaGravadaDela:
-    """A partida do daemon não sobrescreve o microfone que ela escolheu."""
+    """A partida do daemon não sobrescreve o microfone que o usuário escolheu."""
 
     @pytest.mark.parametrize(
         "gravada",

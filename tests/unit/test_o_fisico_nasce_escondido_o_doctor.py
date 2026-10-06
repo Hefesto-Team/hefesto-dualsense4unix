@@ -1,6 +1,6 @@
 """O doctor acusa o que o udev DECIDIU sobre o nó físico, e quem o segura.
 
-O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026). Na mesa dela, o
+O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026). Na bancada, o
 doctor saiu `rc=0, tudo OK` com três DualSense físicos nascendo com a ACL da
 sessão e a Steam segurando os três: o `check_udev` confere que o ARQUIVO da
 regra existe, e o `_veredito_do_hide` que o nó está FECHADO agora — e nenhum

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O EXAME DA ABA SISTEMA CORTA A FRASE — e agora guarda o inteiro. 03/09/2026.
 
-MEDIDO NO PRODUTO INSTALADO, na mesa dela, com um DualSense White no cabo. A
+MEDIDO NO PRODUTO INSTALADO, na bancada, com um DualSense White no cabo. A
 foto do `hefesto_vivo --oculta --abre 09-sistema.html` mostrou CINCO das SEIS
 linhas do exame cortadas em reticências, e sem `title` não havia como ler o
 resto — nem passando o rato, nem rolando, nem alargando a janela:
@@ -19,12 +19,12 @@ resto — nem passando o rato, nem rolando, nem alargando a janela:
 O CORTE É DO DESENHO E FICA: `paginas/09-sistema.html:825` diz
 `overflow:hidden;text-overflow:ellipsis;white-space:nowrap`, e a `.saude` tem
 25,5px de altura fixa. Quebrar a linha em duas mudaria a altura do quadro —
-desenho, e desenho é decisão dela. O que NÃO é decisão dela é a frase ficar
+desenho, e desenho é decisão de produto. O que NÃO é decisão de produto é a frase ficar
 inalcançável.
 
 A ÚLTIMA LINHA É A QUE OBRIGOU A CURA, e ela não perde informação: INVERTE. O
 que sobra na tela, ao lado de um selo `NOTA`, é *"regra áudio-off inativa — o
-mic e o fone do controle…"*, que se lê como problema com o microfone dela. As
+mic e o fone do controle…"*, que se lê como problema com o microfone do usuário. As
 duas metades escondidas são **"estão liberados"** e **"O que fazer: nada"** — a
 resposta inteira.
 

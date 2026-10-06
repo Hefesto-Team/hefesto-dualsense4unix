@@ -1,9 +1,6 @@
 """As cinco lâmpadas do LED do jogador seguem o assento vivo, não o mockup.
 
-QUEIXA DELA, 14/09/2026, com os dois controles na mesa:
-
-    *"a interface tá dessincronizada com os controles reais. (o player do
-     controle , o led indicativo do player)"*  (noqa-acento: citação dela)
+QUEIXA, 14/09/2026, com os dois controles na mesa
 
 O QUE ESTAVA QUEBRADO: o `<div class="lampadas">` da aba Controles não tinha
 `data-campo`. Sem endereço, o `achar()` do piloto passa ao largo dele — o HTML
@@ -12,7 +9,7 @@ até a janela ser fechada. Um controle que trocasse de assento mostrava o padrã
 de outro jogador, calado.
 
 E O ASSENTO TROCA POR DESENHO, que é o que torna isto um defeito e não um
-detalhe: a ordem é a da CHEGADA (`daemon/subsystems/identity`, decisão dela — o
+detalhe: a ordem é a da CHEGADA (`daemon/subsystems/identity`, decisão de produto — o
 controle branco não pode ser sempre o player 3), então o número de um mesmo
 aparelho muda entre uma sessão e outra, e muda no replug.
 

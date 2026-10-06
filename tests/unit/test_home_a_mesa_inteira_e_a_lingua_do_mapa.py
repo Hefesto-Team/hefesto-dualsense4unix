@@ -5,7 +5,7 @@ INÍCIO NÃO MENTE-01 — **I5** e a metade de transporte da **I9**.
 **I5.** A Início não desenhava um único controle externo e não lia
 ``state["external"]`` (§2.2g). Com dois DualSense e um 8BitDo na mesa, esta aba
 dizia *"2 controles = 2 jogadores"* enquanto a aba Configurações mostrava TRÊS
-cards. Era a pergunta dela — *"o produto funciona com 4 controles ao mesmo
+cards. Era a pergunta de produto — *"o produto funciona com 4 controles ao mesmo
 tempo?"* — respondida com **não, a primeira tela nem os enxerga**.
 
 **I9 (metade de transporte).** Quatro dialetos para o mesmo fato na mesma
@@ -30,7 +30,7 @@ O QUE FICOU DE FORA, E POR QUÊ (não é esquecimento)
   duplicação não é hipótese, é o que sobra. Ver `TestOAvisoDeGrabFalaComEla`
   abaixo;
 * **a palavra "primário"** no subtítulo do card continua. É o outro jargão que
-  a I9 nomeia, e trocá-la é decisão DELA: o card já mostra o número do jogador,
+  a I9 nomeia, e trocá-la é decisão de produto: o card já mostra o número do jogador,
   então qualquer substituto ou repete o que está ali ou inventa um conceito
   novo na primeira tela.
 """

@@ -1,6 +1,6 @@
 """A régua da aba 03: o cabeçalho do lugar VAZIO tem de poder ser PROVADO.
 
-O DEFEITO, medido em 03/09/2026 com a régua do mockup e os dois controles dela
+O DEFEITO, medido em 03/09/2026 com a régua do mockup e os dois controles do usuário
 na mesa (um no cabo, um por rádio)::
 
     03-gatilhos.html   62 campos   58 PRODUTO   4 MOCKUP    93%
@@ -46,7 +46,7 @@ O QUE ESTA RÉGUA MORDE:
 
 E AS DUAS DE 11/09/2026, que medem o que a TELA recebe e não o que o pacote
 devolve — os cinco testes acima estavam VERDES enquanto o P2 mostrava um
-travessão na tela dela, porque nenhum deles passava por `normalizar()` e
+travessão na tela do usuário, porque nenhum deles passava por `normalizar()` e
 `apagar_os_lugares_sem_dono()`:
 
 * o molde escrever por cima do bloco do P2
@@ -241,9 +241,7 @@ def test_o_pacote_nao_emite_o_selo(a03):
 def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
     """Com UM controle na mesa, o P2 chega à tela dizendo, não com um traço.
 
-    A QUEIXA DELA, 11/09/2026 — a digitação é dela e não se limpa:
-    *"o p2 tá com - ao invés de P2 - Desconectado  # noqa-acento: citação dela
-    como os demais."*
+    A QUEIXA, 11/09/2026 — a digitação é dela e não se limpa
 
     MEDIDO NO DOM VIVO no mesmo dia, um DualSense por rádio no P1, aba 03
     aberta no `WebKit2.WebView` com `--oculta`::
@@ -261,7 +259,7 @@ def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
     o bloco se calava (`alvo.__hefBloco === html`).
 
     POR QUE ESTA RÉGUA E NÃO AS DE CIMA: as cinco acima param no que `pacote()`
-    devolve, e as cinco estavam VERDES com o travessão na tela dela. Quem mede
+    devolve, e as cinco estavam VERDES com o travessão na tela do usuário. Quem mede
     o produto tem de medir o que o produto MANDA — ver `_o_que_a_tela_recebe`.
 
     A MORDIDA: troque `chaves - ja_escrito.get(pref, set())` por `chaves` em

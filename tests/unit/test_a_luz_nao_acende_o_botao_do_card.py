@@ -2,15 +2,15 @@
 
 22/08/2026. A barra do DualSense por rádio nasce travada em algumas instâncias
 de conexão, e a única cura conhecida é derrubar a conexão pelo BlueZ e deixar a
-pessoa apertar PS. Este arquivo guarda as três regras dela sobre esse botão, e
+pessoa apertar PS. Este arquivo guarda as três regras de produto sobre esse botão, e
 guarda a mentira que a espera existe para não contar.
 
-AS REGRAS DELA, uma classe de teste cada
+AS REGRAS DE PRODUTO, uma classe de teste cada
 ----------------------------------------
 
 1. *"sempre visível mas só acionável quando tiver no rádio"* — no cabo o defeito
    não existe, e botão que SOME ensina que a tela é instável;
-2. **o produto não reconecta** — o botão PS é dela, e nada aqui pode chamar um
+2. **o produto não reconecta** — o botão PS é do usuário, e nada aqui pode chamar um
    ``Connect``;
 3. **o fim da espera diz o que aconteceu**, e "não voltou" tem de dizer que o
    controle continua PAREADO — sem isso a pessoa reapareia um controle pareado.
@@ -134,7 +134,7 @@ class TestSoAcionavelNoRadio:
         assert pode_derrubar(NO_RADIO) is True
 
     def test_no_cabo_o_botao_nao_e_clicavel(self) -> None:
-        """A regra dela, e a única diferença entre os dois dados é o transporte."""
+        """A regra de produto, e a única diferença entre os dois dados é o transporte."""
         assert pode_derrubar(NO_CABO) is False
 
     def test_controle_que_o_hefesto_nao_adotou_nao_ganha_o_gesto(self) -> None:

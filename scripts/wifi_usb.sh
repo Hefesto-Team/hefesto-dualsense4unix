@@ -4,13 +4,13 @@
 #
 # DE ONDE VEIO (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026). Nasceu no repo
 # pessoal dela, como `aurora-wifi-usb.sh` do self-heal do zsh, e mudou para cá
-# por ordem dela: *"tudo que diz respeito ao funcionamento do hefesto tem que
+# por ordem de produto: *"tudo que diz respeito ao funcionamento do hefesto tem que
 # ser tirado do meu repo pessoal (…) e fazer parte do hefesto como um todo
 # dentro do install"*. É da mesma família da Onda W, que o Hefesto já possui
 # (o DKMS `rtw88_usb` e o powersave do NetworkManager), e o `--status` responde
 # uma pergunta que é do rádio dos controles: o dongle voltou a dividir hub com
 # um adaptador Bluetooth? Vale para a CLASSE — qualquer Wi-Fi USB —, não para
-# o aparelho dela. Sem Wi-Fi USB na máquina, não faz nada.
+# o aparelho do usuário. Sem Wi-Fi USB na máquina, não faz nada.
 #
 # O SCAN DE FUNDO (medido em 23/09/2026). O Wi-Fi caía de 5 em 5 minutos, com
 # duas cadências exatas: 300 s depois de associar no AP forte e ~30 s no fraco.

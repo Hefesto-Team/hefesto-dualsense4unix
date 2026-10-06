@@ -59,7 +59,7 @@ def test_canario_vigia_os_tres_diretorios_reais(
 def test_escrita_em_perfil_real_vira_delta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Um teste que grava no perfil DELA aparece nomeado no relatório."""
+    """Um teste que grava no perfil do usuário aparece nomeado no relatório."""
     lar = _lar_falso(tmp_path, monkeypatch)
     antes = canario._fotografar_tudo()
 

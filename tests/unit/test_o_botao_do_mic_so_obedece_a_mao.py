@@ -1,10 +1,10 @@
 """O botão do microfone só obedece à mão — O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01.
 
-O DEFEITO, medido na sessão dela de 28/09/2026 (00h15 a 00h52)
+O DEFEITO, medido na sessão do usuário de 28/09/2026 (00h15 a 00h52)
 --------------------------------------------------------------
 Três bordas do botão do microfone do branco que ela não deu (00:18:40,
-00:22:15 e 00:22:17). Ela: *«eu não apertei o botão do Mic»*. Cada uma
-elegeu o microfone da máquina e **gravou o perfil dela**.
+00:22:15 e 00:22:17).  Cada uma
+elegeu o microfone da máquina e **gravou o perfil do usuário**.
 
 A causa estava escrita no leitor: a borda era contada pelo bit `MIC_MUTE` de
 `status[1]` — a CONSEQUÊNCIA de um aperto —, e esse bit muda com QUALQUER um
@@ -17,7 +17,7 @@ reports de verdade pelo `_consumir_report` (o leitor de antes):
     toque de 60 ms com o bit parado ................. 0 bordas (a mão deu 1)
     marca velha na fila do eco e dois apertos ....... 1 borda  (a mão deu 2)
 
-A CURA: a borda é o BOTÃO (`buttons[2]` bit 2, o dedo dela), no mesmo report
+A CURA: a borda é o BOTÃO (`buttons[2]` bit 2, o dedo do usuário), no mesmo report
 que já passava pela porta que recusa o áudio do rádio; o bit de estado só diz
 o que o firmware segurava no instante do aperto — e o aperto pede o contrário.
 
@@ -252,7 +252,7 @@ def test_o_botao_segurado_na_conexao_nao_e_aperto(transporte: str) -> None:
 
 @_TRANSPORTES
 def test_o_aperto_solta_a_posse_do_mudo_no_handle_e_no_mapa(transporte: str) -> None:
-    """O «calado» do perfil deixa a posse nossa; o dedo dela a devolve ao kernel."""
+    """O «calado» do perfil deixa a posse nossa; o dedo do usuário a devolve ao kernel."""
     h = _Handle()
     backend = _backend({_QUATRO[1]: h})
     _segurar(h, transporte, status=MUDO)

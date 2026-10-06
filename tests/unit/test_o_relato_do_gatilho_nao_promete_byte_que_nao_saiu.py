@@ -3,7 +3,7 @@
 O DEFEITO, MEDIDO EM 23/08/2026
 ===============================
 A ELO-MUDO-01 (22/08) fechou o silêncio: gatilho e luz passaram a aparecer no
-relatório de ativação em vez de sumir quando davam certo. O que ela escreveu
+relatório de ativação em vez de sumir quando davam certo. O que o usuário escreveu
 foi ``relatorio.setdefault(categoria, "aplicado")`` — a palavra FIXA. Com o
 perfil ``Sackboy`` dela e a mesa vazia, o relatório saía assim::
 
@@ -15,7 +15,7 @@ ELO-MUDO-01 nomeia, hospedada dentro da própria cura: ausência de notícia vir
 notícia inventada.
 
 O preço já foi pago uma vez: essa linha do journal sustentou um dia de caça a um
-defeito de gravação de gatilho que não existe. Os 34 perfis dela guardam
+defeito de gravação de gatilho que não existe. Os 34 perfis do usuário guardam
 ``triggers`` — a medição que dizia o contrário perguntava por ``trigger``, no
 singular, que não é campo de ``Profile``.
 

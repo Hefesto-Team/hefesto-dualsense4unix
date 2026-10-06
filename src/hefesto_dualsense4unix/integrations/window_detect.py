@@ -30,7 +30,7 @@ está entre eles é o `zcosmic_toplevel_info_v1` (versão 3), e é dele que fala
 JANELA-WAYLAND-CEGA-01 (02/09/2026): em XWayland, o backend deixa de ser só o
 `xlib`. Ele continua PREFERIDO — é o único que resolve `exe_basename` —, mas
 quando ele não enxerga (um app Wayland nativo em foco: `sem_foco_x`), a leitura
-passa para o `cosmic`, em vez de virar `unknown`. Medido na sessão dela: com o
+passa para o `cosmic`, em vez de virar `unknown`. Medido na sessão do usuário: com o
 Chrome/Wayland em foco, o produto lia `wm_class="unknown"` e o
 `zcosmic_toplevel_info_v1` lia `google-chrome`, no mesmo instante.
 """

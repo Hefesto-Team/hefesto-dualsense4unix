@@ -64,7 +64,7 @@ def classify(
 
        **Por que ela é a cura, e não mais uma perna:** as evidências 1 e 2
        exigem o detector enxergando e a 3 exige o wrapper. Medido em 31/07 na
-       máquina dela, o jogo NÃO passa pelo wrapper — sobrava uma perna só, e
+       máquina do usuário, o jogo NÃO passa pelo wrapper — sobrava uma perna só, e
        o detector cegar no meio da partida derrubava a autoridade sem nada ter
        acontecido no jogo.
 

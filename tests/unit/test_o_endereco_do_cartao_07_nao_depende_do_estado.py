@@ -5,11 +5,11 @@ A RÉGUA MORA NO GERADOR (`interface/aba07.py`, `_INSTAVEIS` e
 `_SEM_OBRIGATORIOS`), e roda a cada `python3 aba07.py`. Este teste a morde pela
 porta do IMPORT: as duas checagens correm no nível do módulo, e o gerador só
 escreve dentro do `if __name__ == "__main__"` — então `import aba07` roda a
-régua inteira **sem tocar a bancada dela**. É a mesma guarda que o
+régua inteira **sem tocar a bancada**. É a mesma guarda que o
 `test_a_palavra_do_transporte_tem_um_dono_so` cobra.
 
 O DEFEITO QUE ELA EXISTE PARA IMPEDIR foi medido em 07/09/2026 com os quatro
-DualSense dela na mesa, nas abas por CONTROLE (01-06, 08): o daemon publica
+DualSense do usuário na mesa, nas abas por CONTROLE (01-06, 08): o daemon publica
 quatro, a carga chega com os quatro, e a tela mostra DOIS. A causa é um ramo
 separado para o lugar vazio, que devolve um cartão **sem nenhum `data-campo`
 por dentro** — o pintor procura o endereço DENTRO do bloco daquele controle
@@ -24,7 +24,7 @@ POR QUE A RÉGUA VELHA NÃO BASTAVA, e é o ponto deste arquivo: o `_FALTAM` lê
 `MIOLO`, e o `MIOLO` sai de `cartoes(None)` — o estado de PARTIDA, em que os
 seis cartões nascem `nao_sei`. A página publicada tem `class="lanc ausente"`
 seis vezes e nenhuma outra. Um ramo que largasse um endereço no estado `ok`
-passaria verde e quebraria **exatamente na máquina dela**, que é onde os
+passaria verde e quebraria **exatamente na máquina do usuário**, que é onde os
 lançadores são achados. Régua que só vê um estado mede um instante.
 
 AS DUAS MORDIDAS abaixo são as duas coisas que o `_FALTAM` não alcança:

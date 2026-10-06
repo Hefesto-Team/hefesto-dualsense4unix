@@ -91,7 +91,7 @@ class TestOInstallRenderizaOsDois:
         assert trecho.count("-e ") >= 2
 
     def test_a_cura_entra_sem_flag(self, instalador: str) -> None:
-        """Regra dela, 08/08: nada à mão, nada opt-in."""
+        """Regra, 08/08: nada à mão, nada opt-in."""
         pedaco = instalador.split("SENTINELA_PY=", 1)[1][:400]
         assert "--enable" not in pedaco
         assert "--with-wrapper" not in pedaco

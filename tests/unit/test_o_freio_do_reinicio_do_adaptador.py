@@ -142,7 +142,7 @@ def test_o_reinicio_que_curou_por_horas_zera_a_conta(tmp_path: Path) -> None:
 
 
 def test_o_freio_solta_quando_o_laco_some_e_volta_a_valer_depois(tmp_path: Path) -> None:
-    """A mão dela curou (tirou e pôs): o laço sumiu do journal, e o freio solta."""
+    """A mão do usuário curou (tirou e pôs): o laço sumiu do journal, e o freio solta."""
     agora = int(time.time())
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": PORTA})
     _carimbar(tmp_path, anterior=agora - 901, seguidos=3)

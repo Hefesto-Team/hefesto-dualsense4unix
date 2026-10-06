@@ -385,7 +385,8 @@ def nivel_do_movimento(hz: object) -> str:
 
 
 #: O sinal (RSSI do enlace, dBm) que o rádio mede de cada controle. Os dois números são da
-#: bancada de 03/10/2026 (dados em `bancada-0310/x-sinal.txt`, um adaptador, a casa dela): abaixo
+#: bancada de 03/10/2026 (dados em `bancada-0310/x-sinal.txt`, um adaptador, a casa do usuário):
+#: abaixo
 #: de ~-48 o controle ainda funciona e já atrasa; abaixo de ~-52 perde aperto. São o ponto de
 #: partida, e a sprint mede de novo noutro adaptador antes de fixá-los.
 SINAL_QUE_ATRASA_DBM = -48

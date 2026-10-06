@@ -1,4 +1,4 @@
-"""A-SUITE-NAO-PERGUNTA-AO-SOM-01 — a suíte não conversa com o servidor de som dela."""
+"""A-SUITE-NAO-PERGUNTA-AO-SOM-01 — a suíte não conversa com o servidor de som do usuário."""
 
 from __future__ import annotations
 

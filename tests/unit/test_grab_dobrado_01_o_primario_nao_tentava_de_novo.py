@@ -1,6 +1,6 @@
 """GRAB-DOBRADO-01 — o `EVIOCGRAB` do P1 falhava e NINGUÉM tentava de novo.
 
-O DEFEITO, medido no journal dela
+O DEFEITO, medido no journal do usuário
 =================================
 14/08/2026, 15:54:58 — o primário trocou de controle::
 
@@ -165,7 +165,7 @@ def test_nao_graba_com_a_emulacao_desligada() -> None:
 
 
 def test_nao_graba_em_modo_nativo() -> None:
-    """No Modo Nativo o dispositivo do jogo é o FÍSICO — por escolha dela."""
+    """No Modo Nativo o dispositivo do jogo é o FÍSICO — por escolha do usuário."""
     dev = _DevOcupado(ocupado=False)
     daemon = _Daemon(_reader_com_grab_recusado(dev), nativo=True)
     assert gp.reconciliar_grab_do_primario(daemon) is False

@@ -266,7 +266,7 @@ def test_o_que_falta_esta_declarado(emitidos):
     ficar na lista depois de pintados seria a mentira SIMÉTRICA — dívida
     fantasma, que faz a próxima pessoa esperar por uma cura que já chegou.
 
-    À TARDE ENTRARAM DUAS, e as duas nasceram da decisão dela de construir a
+    À TARDE ENTRARAM DUAS, e as duas nasceram da decisão de produto de construir a
     política POR CONTROLE: `forca:auto-da-mesa` (pôr a MESA em `Auto` perdeu o
     botão, porque o esquema recusa `auto` por unidade) e `forca:global-em-auto`
     (com o global em `Auto` o produto PULA o override, e a tela ainda não
@@ -284,17 +284,17 @@ def test_o_que_falta_esta_declarado(emitidos):
     A `barra:forca` SAIU no dia anterior — a barra virou arrastável e grava.
 
     **E AS DUAS ÚLTIMAS SAÍRAM EM 04/09/2026, pela mesma regra e no mesmo dia
-    em que ela decidiu as duas:**
+    em que o usuário decidiu as duas:**
 
-    * `barra:motor` esperava *a palavra dela* sobre o par `weak`/`strong`. Ela
+    * `barra:motor` esperava *a palavra de produto* sobre o par `weak`/`strong`. Ela
       veio, e desfez a premissa: a barra **não manda o par** — ela é POLÍTICA
       que MULTIPLICA o degrau, e as duas são independentes. O método existe
       (`rumble.motores.set`), o gesto é `a05_vibracao.motor`;
     * `forca:auto-da-mesa` dizia que pôr a MESA em `Auto` perdera o botão e que
-      o desenho era decisão dela. Ela escolheu a **linha de mesa embaixo da
+      o desenho era decisão de produto. O usuário escolheu a **linha de mesa embaixo da
       grade** (decisão [05]), e o gesto é `a05_vibracao.forca_da_mesa`.
 
-    **E O ÚLTIMO SAIU EM 14/09/2026 — `lado:ligado`, por ordem dela com os dois
+    **E O ÚLTIMO SAIU EM 14/09/2026 — `lado:ligado`, por ordem de produto com os dois
     controles na mesa.** A dívida dizia que não havia *"nem campo no esquema, nem
     método de IPC, nem chave no `state_full`"*, e a última parte era a errada: a
     BARRA de cada motor já vive no perfil e o `rumble.motores.set` já a escreve.

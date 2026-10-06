@@ -336,7 +336,7 @@ def test_o_portao_de_serial_nao_reprova_palavra_comprida_nem_forjado() -> None:
         "MICROCASSYVOLTAGE",
         "MICROCASSYCURRENT",
         "INDEPENDENTEMENTE",
-        "PROGRAMATICAMENTE",  # transcrito de agente
+        "PROGRAMATICAMENTE",  # transcrito de sessão
         "REDIMENSIONAMENTO",
         "AB1C05D1234567890",  # serial-de-mentira: da docstring de mascarar_serial
         "ZZ9Y02Q0000000000",  # serial-de-mentira: de test_cor_do_plastico_recusa

@@ -9,9 +9,8 @@ comentário, `.desktop`, AppStream, `.po`. O ``S`` é do **DualSense**, o aparel
 que dá nome ao produto; ``Dualsense`` não é nada.
 
 **E ele travava uma cura já medida.** Em 11/09/2026 a barra da janela passou a
-dizer o nome inteiro, por ordem dela — *"no nome da janela não conseguimos
-deixar Hefesto - DualSense4Unix ao invés de só hefesto?"*  (noqa-acento: citação
-literal dela) —, e as duas linhas que o fizeram, as de ``_MOLDURA`` logo abaixo,
+dizer o nome inteiro, por   (noqa-acento: citação
+literal) —, e as duas linhas que o fizeram, as de ``_MOLDURA`` logo abaixo,
 nasceram com o nome **DIGITADO**, com a dívida escrita ao lado: ler do dono poria a grafia
 errada na barra dela. Fechada a grafia, as duas passaram a ler. É o padrão desta
 casa: *quando um valor tem dono, a régua PERGUNTA ao dono.*
@@ -35,7 +34,7 @@ mais paga.
 
 * ``Hefesto-Dualsense4Unix`` (hífen, sem espaços) — é o ``wm_class`` de
   ``identidade.py``, o ``StartupWMClass=`` e o ``Icon=`` do ``.desktop`` **já
-  instalado na máquina dela**, o ``last_class`` que o daemon gravou no estado, o
+  instalado na máquina do usuário**, o ``last_class`` que o daemon gravou no estado, o
   ``window_class`` que os perfis de jogo guardam, e o nome dos arquivos
   ``.AppImage``/``.png``/``.flatpak`` que as releases publicaram.
   **O que quebraria:** o ícone some da dock (o ``StartupWMClass`` deixa de casar
@@ -55,10 +54,7 @@ mais paga.
   **O que quebraria:** a configuração de teclado/mouse virtual dela volta ao
   padrão, sem aviso.
 
-Ordem dela, 11/09/2026, e é ela que decide estas quatro:
-
-    *"a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento: citação literal)
-    mim mas pra qualquer outro user"*
+Ordem, 11/09/2026, e é ela que decide estas quatro
 
 Uma troca de grafia que quebre o reconhecimento de janela, o ``.desktop`` ou o
 nó de entrada quebra a instalação de **todo mundo**. Por isso o passo 1 foi

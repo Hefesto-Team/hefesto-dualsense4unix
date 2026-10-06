@@ -3,17 +3,16 @@
 Este arquivo existe por causa de um ensaio que FALHOU, e o modo como ele falhou
 é o desenho inteiro.
 
-12/08/2026, mesa dela, três DualSense no rádio, Steam viva. A primeira versão do
+12/08/2026, bancada, três DualSense no rádio, Steam viva. A primeira versão do
 gatilho esperava 1,5 s depois de CADA conexão e escrevia só naquele controle:
-`.0034` às 23:55:53, `.0035` às 23:55:54, `.0036` às 23:55:56. Resultado, literal
-dela: *"só o player 4 que é o controle azul o resto tá no padrão da steam"*.
+`.0034` às 23:55:53, `.0035` às 23:55:54, `.0036` às 23:55:56. Resultado, literal.
 
 A leitura (ensaio `gatilho-1500ms-por-controle` em `docs/data/ensaios.csv`): a
 rajada da Steam **não é por controle, é por evento** — cada conexão nova faz ela
 repintar todos. Escrever 1,5 s depois do controle A não adianta se o B conecta
 depois. O `.0036` sobreviveu apenas porque ninguém conectou depois dele.
 
-A correção (ensaio `gatilho-escrever-no-silencio`, aceite dela: *"perfeito"*):
+A correção (ensaio `gatilho-escrever-no-silencio`, aceite de produto: *"perfeito"*):
 armar a cada conexão, disparar quando o rádio SOSSEGA, escrever em todos.
 
 O que estes testes travam, e cada um corresponde a uma linha de ensaio:
@@ -23,7 +22,7 @@ O que estes testes travam, e cada um corresponde a uma linha de ensaio:
 - a sequência dispara UMA vez, nunca uma por controle.
 
 A segunda metade do arquivo cobre o REGISTRO, que é o mecanismo virando
-reusável: decisão dela de 12/08, com três defeitos da mesma família já medidos
+reusável: decisão de 12/08, com três defeitos da mesma família já medidos
 (rumble, lightbar e o `IGNORE` do co-op).
 """
 from __future__ import annotations

@@ -4,7 +4,7 @@
 Ela cobre as cinco decisões do PO de 04/09/2026 sobre esta aba
 (o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026 §2
 `06-navegacao`) e a metade DITA dos dois defeitos da §3 — os que apagam o que
-ela escreveu:
+o usuário escreveu:
 
     [01] o portão de modo apaga o interruptor e escreve ao lado
     [02] as três regiões do touchpad ficam, com a marca de que não disparam
@@ -154,13 +154,13 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
 
     **ESTE CASO MEDIA O MUNDO DE ONTEM, e foi reescrito em 06/09/2026.** Ele
     afirmava `"ps" not in acoes.BOTOES` e cobrava que a dica dissesse *por que o
-    PS fica fora* — a decisão do PO de 04/09 (§2 `06[03]`). **A palavra dela a
+    PS fica fora* — a decisão do PO de 04/09 (§2 `06[03]`). **A palavra de produto a
     reverteu** na 06-Q3: *"O PS ganha a mesma lista das outras 21 linhas; se
     você der uma tecla a ele, ele passa a digitar SEM parar de abrir a Steam."*
 
     O NOME DA FUNÇÃO FICOU, e é decisão declarada, não descuido: ele é citado em
     `core/acoes_de_botao.py` (arquivo de outra posse), em duas sprints e em dois
-    relatórios de agente. Renomear aqui deixaria um ponteiro apontando para nada
+    relatórios de trabalho. Renomear aqui deixaria um ponteiro apontando para nada
     num arquivo que esta frente não pode editar — um defeito calado em troca de
     um nome bonito. **O que a régua PERGUNTA é o que importa, e mudou inteiro.**
     Está no relato da ONDA5-06-02 para quem costurar decidir os dois lados de
@@ -236,7 +236,7 @@ def test_o_aviso_nomeia_o_que_o_guardar_vai_substituir(aba, monkeypatch):
 
 
 def test_a_tira_nomeia_as_duas_coisas_que_o_ps_faz(aba, monkeypatch):
-    """A quinta frase da tira, e ela fecha a última oração da decisão dela.
+    """A quinta frase da tira, e ela fecha a última oração da decisão de produto.
 
     06-Q3, 06/09/2026: *"O PS ganha a mesma lista das outras 21 linhas; se você
     der uma tecla a ele, ele passa a digitar SEM parar de abrir a Steam, **e a

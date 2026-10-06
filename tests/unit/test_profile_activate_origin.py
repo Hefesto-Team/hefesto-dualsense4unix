@@ -124,7 +124,7 @@ def test_autoswitch_ativa_com_origin_autoswitch() -> None:
 
 
 def _no_disco(*nomes: str) -> None:
-    """Os perfis no disco isolado: a escolha dela só vale se o perfil abre."""
+    """Os perfis no disco isolado: a escolha do usuário só vale se o perfil abre."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 

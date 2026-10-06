@@ -1,7 +1,6 @@
 """A FITA DO TOPO — e ela aparece nas DEZ abas, o que multiplica todo defeito.
 
-Ela viu e disse, em 02/09/2026: *"o controle identificado em todas ta
-completamente errado"*. Medido no mesmo dia, com os dois controles dela na mesa
+O usuário viu e disse, em 02/09/2026. Medido no mesmo dia, com os dois controles do usuário na mesa
 (um no cabo, um no rádio) e o daemon respondendo em **1 ms**:
 
     o daemon publica    modelo="White" (usb, do serial) · null (bt)
@@ -97,7 +96,7 @@ def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
 
 
 def test_a_fita_viva_nao_repete_um_nome_do_mockup() -> None:
-    """Com a mesa dela, nenhum chip pode dizer "Cosmic Red" ou "Starlight Blue"."""
+    """Com a bancada, nenhum chip pode dizer "Cosmic Red" ou "Starlight Blue"."""
     html = monta.fita(ativo="p1", mesa=MESA_DELA)
     for inventado in ("Cosmic Red", "Starlight Blue", "Galactic Purple"):
         assert inventado not in html, (
@@ -108,11 +107,11 @@ def test_a_fita_pergunta_ao_dono_do_nome() -> None:
     """O nome do chip TEM de ser o que ``pacotes.identidade_de`` responde.
 
     Não é "um nome parecido": é o MESMO. Uma segunda leitura aqui divergiria no
-    dia em que a ordem do dono mudasse — e a ordem dele é *o que ELA nomeou > o
+    dia em que a ordem do dono mudasse — e a ordem dele é *o que O usuário nomeou > o
     modelo decodificado > o transporte só*, nunca a posição.
 
     A RÉGUA PASSA PELA `fita()`, e não por `identidade_do_chip` sozinha: o
-    defeito que ela viu não era o dono errado — era a fita **não perguntando a
+    defeito que o usuário viu não era o dono errado — era a fita **não perguntando a
     ele**. Uma régua que só exercitasse o dono ficaria verde com a chamada
     arrancada, que é o instrumento falso que esta casa persegue.
 
@@ -195,8 +194,7 @@ def test_o_chip_nao_diz_o_transporte_duas_vezes() -> None:
     transporte.
 
     O último degrau de `identidade_de` é *"o transporte sozinho"*: honesto num
-    card, que só mostra o nome; mudo aqui. Regra dela, 02/09/2026: *"se não tá
-    mostrando agora, não tem info pra mostrar no produto"*.
+    card, que só mostra o nome; mudo aqui. Regra, 02/09/2026.
 
     MORDIDA: tire o ramo `if nome in (c["via"], TRAVESSAO)` e este teste
     reprova com o chip do rádio dizendo `BT` duas vezes.

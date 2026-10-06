@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """A RÉGUA QUE FALTAVA: o que a tela mostra é DADO, ou é o desenho congelado?
 
-PEDIDO DELA, e foi ELA quem viu o buraco (02/09/2026):
+PEDIDO, e foi ELA quem viu o buraco (02/09/2026):
 
     *"um portão que, com o daemon vivo e a mesa real, reprove quando um campo
     continua exibindo o valor do mockup. Hoje nada acusa isso."*
 
 O CASO QUE NOMEIA O DEFEITO, e está no HTML publicado de hoje: a aba Gatilhos
 mostra ``Força 7 · Frequência 4 · Início do curso 25 · Fim do curso 230`` — com
-o perfil dela dizendo ``modo='Off' params=[]``. Nenhum daqueles quatro números
+o perfil do usuário dizendo ``modo='Off' params=[]``. Nenhum daqueles quatro números
 saiu do aparelho: são o desenho, cravado no arquivo em 26/08 e nunca repintado.
 Quem olha a tela lê quatro medidas de um gatilho que está DESLIGADO.
 
@@ -75,7 +75,7 @@ palavras: **"A régua não é caminho."**
 
 Este módulo É régua, e assume isso: nenhum nome dele promete nada ao produto.
 Quem quiser fiar uma destas funções à espinha viva do piloto — o tique, a
-pintura, o gesto dela — tira o ``_`` NA HORA de fiar, e aí o portão volta a
+pintura, o gesto do usuário — tira o ``_`` NA HORA de fiar, e aí o portão volta a
 cobrar dela o que cobra de toda promessa.
 """
 from __future__ import annotations
@@ -717,7 +717,7 @@ def _alvos_a_clicar(
     pagina: str,
     perigosos: set[tuple[str, str]],
 ) -> tuple[list[str], list[str]]:
-    """Os gestos a clicar, e os que ficam de fora por mexerem na máquina dela."""
+    """Os gestos a clicar, e os que ficam de fora por mexerem na máquina do usuário."""
     vistos: list[str] = []
     pulados: list[str] = []
     for nome in [g.nome for g in da_pagina] + sorted(registrados):

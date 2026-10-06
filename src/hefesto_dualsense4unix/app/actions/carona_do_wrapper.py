@@ -1,13 +1,13 @@
 """A carona: salvar ou aplicar um perfil repõe o wrapper que a Steam comeu.
 
-CARONA-DO-WRAPPER-01 — 16/08/2026, e o DESENHO É DELA.
+CARONA-DO-WRAPPER-01 — 16/08/2026, e o DESENHO É DO USUÁRIO.
 
 O PEDIDO, textual
 -----------------
 *"nem precisa ter um botão na gui, mas ele se auto corrigir ao clicarmos em
 aplicar ou salvar o perfil seja dentro ou fora da guia de perfis."*
 
-Eu ia propor um botão. O desenho dela é melhor, e a razão é curta: **um botão
+Um botão seria o caminho óbvio, mas o desenho escolhido é melhor, e a razão é curta: **um botão
 novo é mais uma coisa para lembrar de apertar**, e quem não souber que precisa
 apertar continua quebrado. A correção passa a ser EFEITO COLATERAL do gesto que
 já existe.
@@ -21,7 +21,7 @@ daemon materializa nunca é lido, e vence a lista de IGNORE da própria Steam �
 que contém ``0x054c/0x0df2``, o PID do NOSSO vpad. O jogo é instruído a ignorar
 o controle que nós criamos para ele.
 
-O sintoma, nas palavras dela: *"parou de ser reconhecido no jogo, mas o perfil
+O sintoma, nas palavras de produto: *"parou de ser reconhecido no jogo, mas o perfil
 segue ativo no controle com tudo funcionando só não sendo reconhecido"*.
 Funciona no cabo, quebra no rádio, e SÓ o jogo não enxerga.
 
@@ -32,7 +32,7 @@ acusar: *a cura escrita e nunca ligada*. Este módulo é o fio que faltava.
 
 O CENSO DOS GESTOS, e por que estes cinco
 -----------------------------------------
-Ela disse "aplicar ou salvar o perfil, **seja dentro ou fora da guia de
+O usuário disse "aplicar ou salvar o perfil, **seja dentro ou fora da guia de
 perfis**". Todo gesto do produto que aplica ou grava um PERFIL, e o que foi
 feito de cada um. (Os "Aplicar" de rumble, lightbar e gatilhos não entram: são
 o gesto de uma feature, não o de um perfil.)
@@ -85,7 +85,7 @@ Os dois de fora, cada um com o motivo:
 
 O QUE A CARONA REPARA: a biblioteca INTEIRA, e só quando há o que reparar
 -------------------------------------------------------------------------
-O gesto dela é sobre UM perfil; o defeito é da biblioteca inteira. As três
+O gesto do usuário é sobre UM perfil; o defeito é da biblioteca inteira. As três
 opções estavam na mesa e a escolhida é a terceira:
 
 (a) **reparar só o jogo daquele perfil** — recusada por três razões, e a
@@ -114,11 +114,11 @@ A STEAM ABERTA, que é a restrição dura
 --------------------------------------
 Reparar com a Steam viva é jogar fora o reparo. `reparar_ou_adiar` já sabe
 adiar (``adiado_steam_aberta`` / ``adiado_jogo_aberto``). A pergunta que sobra
-é o que fazer com o adiamento, e a resposta tem de valer para o pedido dela:
+é o que fazer com o adiamento, e a resposta tem de valer para o pedido:
 **ela não pode precisar lembrar de nada.** Então são as duas coisas:
 
 1. **avisa na hora**, uma vez (a frase da sentinela já nomeia o jogo e já diz
-   o que vai acontecer: *"Vou repor assim que o jogo e a Steam fecharem"*);
+   o que vai acontecer);
 2. **arma uma vigia** — um tique de :data:`INTERVALO_DA_VIGIA_S` segundos que
    refaz a passada até ela deixar de ser adiada. Quando ela fecha a Steam, o
    reparo simplesmente ACONTECE.
@@ -136,7 +136,7 @@ dormir. A leitura completa só acontece quando há chance real de escrever.
 O QUE ELA VÊ
 ------------
 Silêncio total é ruim — ela não saberia que foi consertada. Diálogo a cada
-Salvar é pior — vira ruído no gesto mais comum da janela, e o pedido dela
+Salvar é pior — vira ruído no gesto mais comum da janela, e o pedido
 começa justamente recusando mais um clique. O meio é **uma linha no rodapé, e
 só quando há notícia**:
 
@@ -145,7 +145,7 @@ só quando há notícia**:
 - adiado → a frase da sentinela, **uma vez por episódio**: enquanto o conjunto
   de jogos faltantes não mudar, salvar de novo não repete o aviso.
 
-Nenhum diálogo, em nenhum caminho. A carona nunca interrompe o gesto dela.
+Nenhum diálogo, em nenhum caminho. A carona nunca interrompe o gesto do usuário.
 
 THREAD, e por que não o executor compartilhado
 ----------------------------------------------
@@ -154,14 +154,14 @@ frase que vai para a tela é MONTADA LÁ (o nome do jogo sai de um
 `appmanifest`). O executor de `ipc_bridge` tem UM worker só e é o mesmo que
 serve `profile.switch`; `steam_running()` forka dois `pgrep` com teto de 5 s
 cada, e prender esse worker por até dez segundos atrasaria a ativação de perfil
-dela. Uma thread dedicada custa menos que esse acoplamento.
+do usuário. Uma thread dedicada custa menos que esse acoplamento.
 
 O DESLIGADOR, e por que ele existe
 ----------------------------------
 :data:`CARONA_ENV` desliga a carona. Ele NÃO é uma flag de produto — a regra da
 casa é *toda cura entra no install, sem flag*, e em produção a carona está
 sempre ligada. Ele existe pela mesma razão do `HEFESTO_BROKER_SOCKET` no
-`conftest.py`: a suíte roda na máquina DELA, e um teste de GUI que chamasse
+`conftest.py`: a suíte roda na máquina do usuário, e um teste de GUI que chamasse
 "Salvar" com a carona ligada varreria o `localconfig.vdf` REAL e poderia
 escrever nele. O `conftest.py` desliga em todo teste; quem quer exercitar a
 carona religa explicitamente, com fixtures.

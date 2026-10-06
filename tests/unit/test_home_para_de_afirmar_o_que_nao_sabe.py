@@ -12,7 +12,7 @@ que cada uma passou a dizer no lugar:
   DualSense na casa: o frame dizia "Nenhum controle conectado." e a linha logo
   acima dizia, em VERDE, *"pelo Hefesto — o jogo recebe o controle"*. A função
   respondia sobre o **vpad**; a pessoa lê como resposta sobre o **jogo**;
-* **I11 — o cadeado cego.** Na máquina dela, agora, a troca automática de
+* **I11 — o cadeado cego.** Na máquina do usuário, agora, a troca automática de
   perfil por janela está cega (``window_detect_seeing=False``,
   ``reason='sem_conexao_x'``) e o produto se declara são
   (``window_detect_healthy=True``). Com a caixa desmarcada — o padrão — a linha
@@ -21,7 +21,7 @@ que cada uma passou a dizer no lugar:
   medida contra a máscara do PERFIL, que entra sozinho pelo autoswitch. A frase
   acusava a pessoa de um gesto que ela não deu.
 
-O TEXTO de todas elas é **estrutural** e espera o olho dela
+O TEXTO de todas elas é **estrutural** e espera o olho de quem confere
 (PROVA-DE-TELA-01). Este arquivo mede o que a tela não pode dizer, e o que ela
 tem de deixar de calar — nunca a redação.
 """

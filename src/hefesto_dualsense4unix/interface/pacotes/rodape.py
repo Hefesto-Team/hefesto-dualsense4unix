@@ -5,9 +5,7 @@ Ele mora no `topo.html`, que é o esqueleto compartilhado — logo não pertence
 nenhum pacote de aba. Os gestos são registrados em `("*", nome)`, que o
 `gesto_da_pagina` resolve depois de não achar o da página.
 
-O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido dela
-(*"salvar exportar importar. dividir e ver se a feature do botão tá condizendo
-com o output seu"*):
+O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido:
 
     Aplicar   `footer_actions.on_apply_draft`  → `profile.apply_draft`
               (aqui, desde 01/10/2026: `profile.reaplicar`, a cadeia da ativação)
@@ -21,15 +19,14 @@ handler no `src/` e não há botão no `main.glade` (que traz `btn_footer_apply`
 — barata, porque o perfil já é JSON no disco — e chamá-la de "ligação"
 esconderia trabalho.
 
-O "APLICAR" NÃO É REDUNDANTE, mesmo com a decisão dela de que clicar já aplica.
+O "APLICAR" NÃO É REDUNDANTE, mesmo com a decisão de produto de que clicar já aplica.
 O que ele carrega sozinho é o **depois**: modo e máscara, que o jogo só lê
 quando abre, e que por isso não podem ir na hora. Foi um defeito real de
-08/08/2026, na palavra dela: *"quando eu clico ali no inferior no verde em
-aplicar, ele não aplica e não abre o pop up"*.
+08/08/2026, na
 
 A CARONA DO ATALHO DE INICIALIZAÇÃO — QUEM PEGA E QUEM NÃO PEGA (06/09/2026)
 ---------------------------------------------------------------------------
-Decisão dela, `07-Q1`: *"Deve aplicar automaticamente como era no gtk"* — e o
+Decisão de produto, `07-Q1`: *"Deve aplicar automaticamente como era no gtk"* — e o
 desenho é dela desde 16/08: *"nem precisa ter um botão na gui, mas ele se auto
 corrigir ao clicarmos em aplicar ou salvar o perfil seja dentro ou fora da guia
 de perfis."* Quem repõe é `perfil.com_a_carona()`, atrás do `carona.ligada()`
@@ -41,7 +38,7 @@ gesto      carona?  a razão
 =========  =======  ==========================================================
 Aplicar    SIM      manda o perfil aos controles; sem o atalho o jogo continua
                     sem enxergar o controle
-Salvar     SIM      grava o perfil no disco dela — o "salvar" literal do
+Salvar     SIM      grava o perfil no disco do usuário — o "salvar" literal do
                     pedido
 Importar   SIM      um perfil novo entra na pasta e passa a valer
 Exportar   não      copia um arquivo para FORA (`origem.read_bytes()`) e não
@@ -73,7 +70,7 @@ def _recado(frase: str) -> None:
     """A notícia da carona vai ao DIÁRIO da janela — e não mais à tela.
 
     ATÉ 13/09/2026 ELA IA AO CARTÃO, como `{"recado": …}` pelo canal de sucesso
-    do piloto (a D-01). Ela mandou tirar, com a foto deste rodapé: *"essas
+    do piloto (a D-01). O usuário mandou tirar, com a foto deste rodapé: *"essas
     frases de status que aparecem no rodapé isso não deveria estar
     aparecendo"*, *"em todas as abas da interface"* (TELA-CALADA-01). Medido no
     piloto oculto antes da cura: o «Aplicar» com um jogo sem o atalho escrevia
@@ -83,7 +80,7 @@ def _recado(frase: str) -> None:
     QUEM REPÕE O ATALHO É A CARONA, NÃO A FRASE: os três gestos continuam
     chamando `perfil.com_a_carona()` e o `localconfig.vdf` continua consertado.
     O que muda é só a notícia, que sai no `interface.log` como `[relato]`. O
-    "deu certo" na tela é a piscada verde de ~1,5 s no botão (decisão dela,
+    "deu certo" na tela é a piscada verde de ~1,5 s no botão (decisão de produto,
     `03-Q4`).
 
     UM LUGAR SÓ para os três gestos do rodapé: a terceira cópia de um `print` é
@@ -133,13 +130,13 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Regrava o perfil ATIVO como o disco o tem, normalizado, e roda a carona.
 
     O MESMO RASCUNHO DO «APLICAR», EM TODA ABA (:func:`_draft_do_ativo`), e
-    nunca o aparelho: cada escolha dela já foi ao disco no gesto que a fez
+    nunca o aparelho: cada escolha do usuário já foi ao disco no gesto que a fez
     (decisão D2 de 05/09). O que sobra ao Salvar é a rede de segurança dessa
     decisão: validar, migrar e escrever o arquivo na forma de hoje. Salvar duas
     vezes grava o mesmo arquivo. Decisão `D-2709-O-SALVAR-LE-O-PERFIL`.
 
     A JANELA ESTÁVEL PERGUNTA O NOME; aqui ele grava no perfil ativo, sem
-    perguntar (a interface nova é de ação imediata, decisão dela de 01/09).
+    perguntar (a interface nova é de ação imediata, decisão de 01/09).
     Salvar com outro nome é o "Duplicar" da aba Perfis.
 
     SEM PERFIL ATIVO E SEM ESCOLHA, RECUSA apontando a aba Perfis
@@ -164,17 +161,17 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 def perfil_do_rodape(state: Any) -> str:
-    """O perfil dos três gestos do rodapé: o ativo, ou a escolha dela.
+    """O perfil dos três gestos do rodapé: o ativo, ou a escolha do usuário.
 
     O-MODO-FREESTYLE-02, 24/09/2026: nasceu `perfil_do_salvar` e servia só ao
     Salvar; agora os três perguntam aqui. `perfil.nome_do_ativo` responde as
-    duas pernas: o daemon, depois o disco — e a perna do disco é a escolha dela
+    duas pernas: o daemon, depois o disco — e a perna do disco é a escolha do usuário
     (`utils.session.a_escolha_dela`, pela `perfil_que_esta_valendo`). `""`
     quando as duas dizem "ninguém": a recusa de cada gesto continua dizendo o
     que fazer.
 
     NOTA DATADA — 01/10/2026, item 10 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-
-    DELA`: havia uma terceira perna, o Freestyle (`loader.o_perfil_de_fora_do_
+    DO USUÁRIO`: havia uma terceira perna, o Freestyle (`loader.o_perfil_de_fora_do_
     jogo`), quando as duas calavam. Com «sem escolha» o chip diz «—», e o
     «Aplicar», o «Salvar» e o «Exportar» mirariam o Freestyle — e um «Aplicar»
     que o reativasse poria o Freestyle desligado como o perfil ativo. Saiu.
@@ -229,12 +226,12 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A VALIDAÇÃO É A DO PRODUTO — `Profile.model_validate`, o mesmo esquema
     pydantic que o `footer_actions.on_import_profile` usa. Um JSON que não é
-    perfil é recusado ANTES de tocar a pasta dela, com o erro do pydantic na
+    perfil é recusado ANTES de tocar a pasta do usuário, com o erro do pydantic na
     frase: nada de arquivo meio copiado.
 
     O CONFLITO DE NOME NÃO SOBRESCREVE. A janela estável "resolve conflito de
     nome se necessário"; aqui o novo entra como `nome-2`, `nome-3`… Perder um
-    perfil dela por um clique de importação é o estrago que esta linha impede.
+    perfil do usuário por um clique de importação é o estrago que esta linha impede.
 
     DEPOIS DE GRAVAR, A VOLTA (:func:`perfil.a_volta_do_perfil`, 02/10/2026),
     como o «Salvar»: todo botão do rodapé que grava perfil termina igual (a

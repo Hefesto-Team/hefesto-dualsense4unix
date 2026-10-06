@@ -145,7 +145,7 @@ def test_os_dois_prefixos_convivem_e_nao_se_confundem() -> None:
 
 
 def test_a_prioridade_vem_do_dono_e_nao_de_um_literal() -> None:
-    """A faixa do cabo, com a medição de 03/09 na máquina dela por trás."""
+    """A faixa do cabo, com a medição de 03/09 na máquina do usuário por trás."""
     assert canal.prioridade() == PRIORIDADE_SESSAO_DA_PONTE
 
 
@@ -531,7 +531,7 @@ def test_a_regra_0_cobre_os_quatro_chamadores_de_uma_vez() -> None:
 
 
 def test_o_canal_nasce_mudo_e_o_produto_desmuta() -> None:
-    """MEDIDO na máquina dela em 06/09/2026, com PipeWire 1.6.8::"""
+    """MEDIDO na máquina do usuário em 06/09/2026, com PipeWire 1.6.8::"""
     source = canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
     assert source is not None
     assert ["pactl", "set-source-mute", canal.nome_do_canal(P1), "0"] in PACTL_PEDIDO, (
@@ -540,7 +540,7 @@ def test_o_canal_nasce_mudo_e_o_produto_desmuta() -> None:
 
 
 def test_desmutar_nao_levanta_quando_nao_ha_pactl() -> None:
-    """O gesto dela nunca vira traceback — nem quando o servidor de som sumiu."""
+    """O gesto do usuário nunca vira traceback — nem quando o servidor de som sumiu."""
 
     def explode(_argv: list[str]) -> bool:
         raise OSError("pactl não está lá")

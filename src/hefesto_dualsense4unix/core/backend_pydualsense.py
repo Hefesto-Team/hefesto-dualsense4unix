@@ -249,8 +249,8 @@ def byte_do_volume_do_microfone(percentual: Any) -> int:
 
     A CONTA É LINEAR, e a diferença em relação à do alto-falante é medição, não
     gosto: a curva do alto-falante foi levantada byte a byte em 01/08 (mudo até
-    38, satura em 102), e a do microfone **ninguém levantou**. O que a bancada
-    dela mediu em 09/09/2026 foi que o byte AGE — *"Deu certo. funciona"*,
+    38, satura em 102), e a do microfone **ninguém levantou**. O que a bancada mediu em 09/09/2026
+    foi que o byte AGE — *"Deu certo. funciona"*,
     `docs/data/ensaios.csv`, `folha-mic-volume-o-byte-age-cabo-0909` —, e não
     onde ele fica mudo nem onde satura. Inventar uma curva aqui seria publicar
     como medida uma forma que ninguém viu; a linear é a única que não afirma
@@ -914,7 +914,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     mudou = out != self._last_out_report
                     if mudou:
                         self._last_change_at = now
-                    # DualSense na mesa dela (dois no cabo, dois no rádio) e o
+                    # DualSense na bancada (dois no cabo, dois no rádio) e o
                     confirmando = (
                         now - self._last_change_at
                     ) < OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC
@@ -1047,7 +1047,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         `_captura_status_audio`: o `extract_estado_do_mic` já devolve `None`
         para o que não é estado (id, tamanho, o bit de áudio e o CRC do BT).
 
-        BATERIA-QUE-PULA-01, 16/09/2026, e a queixa dela foi: *"esse numero da
+        BATERIA-QUE-PULA-01, 16/09/2026, e a queixa de uso foi: *"esse numero da
         bateria fica oscilando sem parar de 75 a 0 a 90 a 100"*.
 
         **O `readInput` da pydualsense não confere NADA.** Ele começa em
@@ -1113,7 +1113,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             ),
         )
 
-    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal dela.
+    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal do usuário.
     #
     # O `close()` do upstream é, literalmente:
     #
@@ -1248,7 +1248,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         MIC e PS ficaram presos e ela desligou o controle.
 
         Enquanto este byte só pintava um selo na tela, o estrago era cosmético.
-        A partir da ELEIÇÃO DE MICROFONE ele é o gesto dela — e um pacote
+        A partir da ELEIÇÃO DE MICROFONE ele é o gesto do usuário — e um pacote
         corrompido de rádio elegendo microfone sozinho é o pior desfecho
         possível deste trabalho.
 
@@ -1292,10 +1292,10 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         de `status[1]`, a CONSEQUÊNCIA de um aperto: o `hid-playstation` alterna
         `ds->mic_muted` na borda do botão e escreve o mudo no firmware. Mas esse
         bit muda com QUALQUER um que escreva o mudo — o kernel, o próprio
-        Hefesto, o que vier por outra ponte —, e na sessão dela de 28/09 o
-        branco teve três bordas que ninguém deu (00:18:40, 00:22:15, 00:22:17):
-        *«eu não apertei o botão do Mic»*. Cada uma elegeu o microfone da
-        máquina e gravou o perfil dela. O bit do botão (`buttons[2]` bit 2,
+        Hefesto, o que vier por outra ponte —, e na sessão do usuário de 28/09 o
+        branco teve três bordas que ninguém deu (00:18:40, 00:22:15, 00:22:17). Cada uma elegeu o
+        microfone da
+        máquina e gravou o perfil do usuário. O bit do botão (`buttons[2]` bit 2,
         `DS_BUTTONS2_MIC_MUTE`) vem no mesmo report e só muda quando alguém
         aperta.
 
@@ -1510,7 +1510,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
           sem dono, os bits saem zerados e o firmware conserva o que tinha.
         - AUDIO-OWNER-01, o TERCEIRO campo (12/08/2026): o `mute_button_led`
           (`common[8]`, flag1 0x01) faltava na conta de 25/07 — e é o que
-          MENTE PARA O OLHO DELA. O `0x01` estava fixo no `flag1` e o byte
+          MENTE PARA O OLHO DE QUEM CONFERE. O `0x01` estava fixo no `flag1` e o byte
           saía de `audio.microphone_led`, que nasce 0: ela apertava o mudo, o
           kernel acendia o LED e mutava o mic no firmware
           (`hid-playstation.c:1538-1540`, uma escrita na BORDA do botão), e o
@@ -1770,7 +1770,7 @@ class PyDualSenseController(IController):
         self._exposicao_do_no = None
         self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
         self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
-        # PERFIL ATÉ O JOGO PROVAR (decisão dela de 04/10/2026): o «sem efeito»
+        # PERFIL ATÉ O JOGO PROVAR (decisão de 04/10/2026): o «sem efeito»
         # do gatilho e o preto da lightbar são ausência até o jogo mandar um
         # efeito (ou uma cor) de verdade pela primeira vez, naquele controle e
         # naquela partida. Dali em diante o jogo manda em tudo, e a saída dele
@@ -2204,7 +2204,7 @@ class PyDualSenseController(IController):
         )
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         if game is not None and self._game_wins():
-            # O jogo manda; na ausência dele, o perfil ganha (decisão dela de
+            # O jogo manda; na ausência dele, o perfil ganha (decisão de produto de
             # 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09). Só a numeração
             # do jogador é do Hefesto, e não se pinta pelo jogo.
             nao_pinta = numeracao_do_jogo(
@@ -2219,7 +2219,7 @@ class PyDualSenseController(IController):
         """Apresenta a mesa INTEIRA ao provider antes de numerar alguém.
 
         MESA-NO-MEIO-DO-LOTE-01 — a causa raiz medida em 27/08/2026, com os
-        quatro DualSense dela no rádio. Toda escrita de LED por aqui é um
+        quatro DualSense do usuário no rádio. Toda escrita de LED por aqui é um
         LOTE: `enviar_gatilho_da_cor`, `reassert_resolved_outputs`, o
         priming de hotplug e o unmute resolvem `_merged_desired_for_key` de
         VÁRIAS chaves de uma vez, sob o mesmo `_io_lock`. E o provider de
@@ -2315,7 +2315,7 @@ class PyDualSenseController(IController):
 
         Cada camada é limpa pelo SEU dono — é o que impede a ativação de
         perfil (que roda a cada troca de janela) de apagar o ajuste manual, e
-        o "Aplicar" da GUI de apagar o que veio do perfil sem gesto dela.
+        o "Aplicar" da GUI de apagar o que veio do perfil sem gesto do usuário.
         """
         for uniq, donos in list(self._desired_owner_by_uniq.items()):
             override = self._desired_by_uniq.get(uniq)
@@ -2330,11 +2330,11 @@ class PyDualSenseController(IController):
     def _stamp_owner_locked(self, uniq: str, campos: Any, layer: str) -> None:
         """Carimba a procedência dos campos escritos. Sob `_io_lock` (R-20).
 
-        O jogo manda; na ausência dele, o perfil ganha (decisão dela de
+        O jogo manda; na ausência dele, o perfil ganha (decisão de
         03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09): o perfil carimbado
-        não tira o que o jogo pintou. O GESTO dela na interface (`usuaria`) é
-        a ordem mais nova, e vale o último que mandou (por delegação, a validar
-        por ela): ele solta o que o jogo pintou NAQUELES campos, até o jogo
+        não tira o que o jogo pintou. O GESTO do usuário na interface (`usuaria`) é
+        a ordem mais nova, e vale o último que mandou (por delegação, a
+        validar pelo usuário): ele solta o que o jogo pintou NAQUELES campos, até o jogo
         pintar de novo.
         """
         donos = self._desired_owner_by_uniq.setdefault(uniq, {})
@@ -2346,7 +2346,7 @@ class PyDualSenseController(IController):
     def _o_gesto_solta_o_que_o_jogo_pintou_locked(
         self, uniq: str, campos: tuple[str, ...]
     ) -> None:
-        """Tira da camada do jogo os campos que o gesto dela acabou de escrever."""
+        """Tira da camada do jogo os campos que o gesto do usuário acabou de escrever."""
         game = self._game_output_by_uniq.get(uniq)
         if game is not None:
             restante = _sem_os_campos(game, frozenset(campos))
@@ -2433,7 +2433,7 @@ class PyDualSenseController(IController):
     def _carimbar_o_brilho_locked(
         self, uniq: str, cor: Any, brilho: float | None
     ) -> None:
-        """Guarda o brilho em que a cor da mão dela foi mandada. Sob `_io_lock`."""
+        """Guarda o brilho em que a cor da mão do usuário foi mandada. Sob `_io_lock`."""
         carimbos = getattr(self, "_brilho_da_cor", None)
         if carimbos is None:
             carimbos = self._brilho_da_cor = {}
@@ -2483,7 +2483,7 @@ class PyDualSenseController(IController):
         O-CABO-ASSUME-DO-RADIO-01 (25/09/2026): o MESMO controle nos dois
         transportes é a mesma key em dois nós, e o dedupe ficava com o que o
         hidapi listasse primeiro — sorteio de enumeração. Agora vence o cabo
-        (decisão dela: no cabo há a vibração por áudio, o som e menos atraso).
+        (decisão de produto: no cabo há a vibração por áudio, o som e menos atraso).
         O kernel de hoje recusa o segundo nó (`ps_devices_list_add`, -EEXIST),
         então os dois só aparecem juntos num kernel que não recuse; a regra
         existe para a escolha nunca ser do sorteio.
@@ -2788,7 +2788,7 @@ class PyDualSenseController(IController):
         `_reservar_o_posto_de_primario`): ela é o desfecho ALTERNATIVO da
         retomada, e um journal que só registra o desfecho bom não mede coisa
         nenhuma. **A constante `PRIMARIO_RESERVA_SEC` não se mexe aqui** — o
-        valor só se decide depois da bancada, e a bancada é dela.
+        valor só se decide depois da bancada, e a bancada é do usuário.
         """
         reserva = self._primario_deposto
         if reserva is None:
@@ -3060,7 +3060,7 @@ class PyDualSenseController(IController):
         A redação de `MOTIVO_ALVO_FORA_DA_MESA`
         (`daemon/subsystems/rumble.py`) é a mesma que nasceu PROVISÓRIA aqui —
         *"O controle escolhido não está na mesa — nada foi enviado."* — e
-        segue **PROVISÓRIA — decisão dela**: vai ao olho dela no lote da
+        segue **PROVISÓRIA — decisão de produto**: vai ao olho de quem confere no lote da
         Onda 9, junto de RUM-1/RUM-2. Para led/gatilho/player não há redação
         nova: o valor fica guardado no override por-uniq, e o par
         `"registrado"` + *"Guardado — vai valer quando o Controle 2 voltar"*
@@ -3159,13 +3159,13 @@ class PyDualSenseController(IController):
         -------------------------------------------------------------------
         Colada ao item 3 vinha a frase "e sem 0x08 nenhum a barra ficou morta
         por 5 dias e 20 adoções (medido 08/08)". Ela **nunca foi medição**: era
-        uma frase que só existia em docstring e que eu registrei como se fosse
+        uma frase que só existia em docstring e que foi registrada como se fosse
         uma — a armadilha `A-12` de `docs/method/METODO-DE-ISOLAMENTO.md`, "o
         caderno envelhecer sem que ninguém note".
 
         A escavação do journal do daemon e dos transcritos, em 11/08, achou a
         barra **ACESA** no rádio DENTRO daqueles cinco dias, quatro vezes, três
-        delas com fala literal dela: 08/08 16:39, 08/08 21:35, 08/08 23:48 e
+        delas com fala literal: 08/08 16:39, 08/08 21:35, 08/08 23:48 e
         11/08 11:40 (ensaios `lightbar-bt-aceso-*` em `docs/data/ensaios.csv`;
         a correção está registrada no ensaio `lightbar-bt-sem-0x08-cinco-dias`,
         e a nota datada em `docs/method/METODO-DE-ISOLAMENTO.md`, seção "O que
@@ -3178,7 +3178,7 @@ class PyDualSenseController(IController):
           fora do banco dos réus, mas pela razão OPOSTA à que estava escrita;
         - a correlação de 03/08 segue de pé (7/7 dentro da janela), mas como
           causa SUFICIENTE da barra travada ela caiu em 11/08: no ensaio
-          `lightbar-bt-sem-0x08-hoje-2300` (olho dela, daemon parado, escrita
+          `lightbar-bt-sem-0x08-hoje-2300` (olho de quem confere, daemon parado, escrita
           direta, sem 0x08 havia sete dias) os dois do cabo acenderam e **os
           dois do rádio não**;
         - em 12/08 nomeou-se a variável que faltava, e nenhuma das medições
@@ -3186,7 +3186,7 @@ class PyDualSenseController(IController):
           probe** — e era o Steam. Ver o terceiro gabarito em
           `docs/method/METODO-DE-ISOLAMENTO.md`.
 
-        A hipótese que este método torna falsificável na mesa dela — uma
+        A hipótese que este método torna falsificável na bancada — uma
         variável, um gesto, um olho —, e que segue sem ensaio que a feche:
         **o 0x08 devolve o claim, desde que não seja mandado em cima da
         conexão.**
@@ -3223,9 +3223,7 @@ class PyDualSenseController(IController):
         """Repinta a barra dos DualSense do CABO, ignorando o cache.
 
         LIGHTBAR-O-CABO-FICOU-DE-FORA-01, achado por ela na bancada de
-        07/09/2026 com os quatro na mesa: *"o lightbar azul tá nos dois
-        controles. p1 e p2. cada controle deve ter um lightbar da sua cor
-        apenas"*.
+        07/09/2026 com os quatro na mesa.
 
         O IRMÃO DESTE MÉTODO SÓ CONHECE O RÁDIO. `reescrever_lightbar_por_hidraw`
         filtra por `_detect_transport(handle) == "bt"` — e está certo em
@@ -3240,7 +3238,7 @@ class PyDualSenseController(IController):
         regra — o reassert periódico deixa de martelar o firmware. Mas ela
         mede a COR, não o NÚMERO: quando a mesa se renumera, a cor que este
         controle deve ter mudou sem que a cor que ele TEM mudasse, e o cache
-        acerta a pergunta errada. O journal dela mostrou exatamente isso:
+        acerta a pergunta errada. O journal do usuário mostrou exatamente isso:
         `lightbar_reassert_skip_cache rgb=(0, 0, 255)`.
 
         Devolve ``{key: repintado?}``. Vazio = nenhum DualSense no cabo —
@@ -3303,7 +3301,7 @@ class PyDualSenseController(IController):
     def reescrever_lightbar_por_hidraw(self) -> dict[str, bool]:
         """Repinta cor E número de jogador em TODOS os DualSense do rádio.
 
-        GATILHO-DA-COR-01, medido na bancada de 11-12/08/2026 com o olho dela.
+        GATILHO-DA-COR-01, medido na bancada de 11-12/08/2026 com o olho de quem confere.
         O porquê inteiro está em `core/lightbar_gatilho.py`; aqui ficam as três
         decisões que são DESTE arquivo.
 
@@ -3327,8 +3325,7 @@ class PyDualSenseController(IController):
         dois dos três no padrão da Steam (ensaio `gatilho-1500ms-por-controle`).
 
         **3. O Modo Nativo ESCREVE, desde 23/09/2026.** Até ali era no-op, pela
-        regra dela *"no modo nativo devolvemos o controle pra steam e no modo
-        conexão também, todo o resto é o hefesto"*. A decisão
+        regra de produto **. A decisão
         `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01)
         revoga o «zero write» SÓ para a luz e o número: *"no Modo Nativo, o
         Hefesto escreve a barra e o número SEMPRE"* — e este report é
@@ -3339,7 +3336,7 @@ class PyDualSenseController(IController):
         MEDIDO em 12/08/2026: com as três barras apagadas pela Steam, um
         restart do daemon registrou três vezes
         ``lightbar_reassert_skip_cache`` (`core/sysfs_leds.py:134`) e não
-        reescreveu nada; as três barras continuaram apagadas, e ela confirmou
+        reescreveu nada; as três barras continuaram apagadas, e o usuário confirmou
         *"todas apagadas mas em nenhum momento os controles desligaram"*. A
         razão está admitida no próprio código: o ``multi_intensity`` mostra o
         valor PEDIDO, nunca o ACESO (`core/sysfs_leds.py:56-68`), e escrita
@@ -3699,12 +3696,12 @@ class PyDualSenseController(IController):
     ) -> bool:
         """A SEGUNDA rota da lightbar por rádio, em regime. ROTA-BT-EM-REGIME-01.
 
-        **O defeito, medido na bancada dela em 12/08/2026.** Por Bluetooth, o
+        **O defeito, medido na bancada em 12/08/2026.** Por Bluetooth, o
         produto tinha UMA rota de LED em regime — o `sysfs` — e é justamente a
         que perde: com a Steam viva, escrever `multi_intensity` NÃO muda a
         barra (ensaio ``cor-rota-sysfs-com-steam``), enquanto o report `0x31`
         escrito no `hidraw` PINTOU os três controles no mesmo instante
-        (``cor-rota-hidraw-com-steam``; literal dela: *"todos tão magenta"*).
+        (``cor-rota-hidraw-com-steam``; literal: *"todos tão magenta"*).
         O caderno de eliminação já julga a ROTA como **e-a-causa** nesta linha
         (`scripts/eliminacao.py`, ``luz.lightbar.cor@dualsense [radio]``).
 
@@ -3980,14 +3977,14 @@ class PyDualSenseController(IController):
         `_record_desired_locked` **zerar o campo `mic_led` de todos os
         overrides por-uniq**. Numa mesa de quatro, a borda do Jogador 2
         acenderia os quatro LEDs e apagaria o estado por-controle dos outros
-        três — o pedido dela (*"cada uma vê no PRÓPRIO controle se o mic dela
+        três — o pedido (*"cada uma vê no PRÓPRIO controle se o mic dela
         está no ar"*) era inalcançável por esta porta.
 
         `uniq` fecha isso: escreve SÓ naquele handle e grava SÓ no override
         dele, como `set_microphone_mute(muted, uniq=)` já fazia.
 
         `aceso` é o que a LUZ faz, e nesta casa a luz mudou de significado:
-        **aceso = este microfone está VIVO**, a inversão que ela pediu em
+        **aceso = este microfone está VIVO**, a inversão que o usuário pediu em
         01/09/2026. O byte não inverteu — quem decide o argumento é o chamador
         (`daemon/subsystems/mic_da_mesa.py`, que passa `not mudo`).
         """
@@ -4188,10 +4185,9 @@ class PyDualSenseController(IController):
     def assumir_volume_padrao_na_adocao(self, key: str, handle: Any) -> bool:
         """Toma a posse do volume e o põe em 100% assim que o controle é ADOTADO.
 
-        SOM-SEMPRE-01 (16/08/2026). Decisão dela, textual: *"precisamos setar o
-        som sempre em todos os controles no 100%"*.
+        SOM-SEMPRE-01 (16/08/2026). Decisão de produto, textual: **.
 
-        **O DEFEITO QUE ISTO FECHA, medido na bancada dela em 15-16/08 com o
+        **O DEFEITO QUE ISTO FECHA, medido na bancada em 15-16/08 com o
         controle na mão, no CABO, em teste CEGO** (`docs/data/ensaios.csv`,
         `sfx-cabo-sem-posse` / `sfx-cabo-com-posse` / `sfx-cabo-volume-zero`)::
 
@@ -4220,8 +4216,8 @@ class PyDualSenseController(IController):
         `reapply_speaker_after_connect(uniq=…)`) que cobre a chave nova sem
         transição agregada. O que continuava verdadeiro era a segunda guarda —
         o gancho exigia a seção `speaker` GLOBAL —, e ela foi o defeito da
-        SOM-ROTA-03: os perfis dela guardam o som só por peça, então o gancho
-        devolvia `None` para todo uniq e a escolha dela nunca voltava do
+        SOM-ROTA-03: os perfis do usuário guardam o som só por peça, então o gancho
+        devolvia `None` para todo uniq e a escolha do usuário nunca voltava do
         replug. Curado em `profiles/manager.reapply_speaker_on_connect`.
 
         Esta adoção continua sendo o piso — quem não tem perfil nenhum fica
@@ -4231,7 +4227,7 @@ class PyDualSenseController(IController):
         **O PREÇO, e ele é real.** Tomar a posse é irreversível até
         `speaker release` ou até o controle desconectar: enquanto formos donos,
         o firmware recebe o NOSSO valor em todo report e não há mais como ele
-        guardar outro. Ela aceitou este preço ao pedir 100% sempre, e a saída
+        guardar outro. O usuário aceitou este preço ao pedir 100% sempre, e a saída
         continua existindo e continua sendo dela — `hefesto-dualsense4unix
         speaker release` devolve o registrador. O que a devolução NÃO faz é
         emudecer: com os bits de validação apagados o firmware CONSERVA o
@@ -4250,18 +4246,17 @@ class PyDualSenseController(IController):
         nenhum, e o alto-falante nascia mudo em todo controle, toda vez.
         Medido com ela do lado do controle: mesmo tom, sem rota "não saiu som";
         com `rota=3` escrita, *"Saiu som"*. Agora nasce em `ROTA_PADRAO_DO_SOM`
-        («Sons do jogo», decisão dela no mesmo dia), e o
+        («Sons do jogo», decisão de produto no mesmo dia), e o
         `OUTPUT_PATH_SEL_MASK` preserva os bits do microfone — que era a razão
         real de a omissão ter sido prudente, e continua honrada.
 
         **SOBRE O MICROFONE, A RAZÃO TROCOU EM 09/09/2026 e a omissão FICOU.**
         Até 06/09 ele ficava fora porque *"o dono do microfone no Linux é o
-        kernel"*; a bancada dela derrubou a premissa (o byte AGE — *"Deu certo.
-        funciona"*, `folha-mic-volume-o-byte-age-cabo-0909`) e ela mandou ligá-lo
+        kernel"*; a bancada derrubou a premissa (o byte AGE — *"Deu certo.
+        funciona"*, `folha-mic-volume-o-byte-age-cabo-0909`) e o usuário mandou ligá-lo
         (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`). Quem o liga é o
         CAMPO do microfone (`set_microphone_volume`), e não a adoção: nascer a
-        100 % é decisão dela sobre o som que SAI (*"precisamos setar o som
-        sempre em todos os controles no 100%"*), e tomar a posse do ganho de
+        100 % é decisão de produto sobre o som que SAI (**), e tomar a posse do ganho de
         CAPTURA de todo controle adotado seria decidir por ela uma coisa que ela
         não pediu — com o preço de nunca mais o firmware mandar naquele byte.
 
@@ -4342,7 +4337,7 @@ class PyDualSenseController(IController):
     ) -> bool:
         """Assume a posse do `common[6]` — o GANHO DE CAPTURA do aparelho.
 
-        MIC-VOLUME-02 (09/09/2026). **Decisão dela, `D-0909-O-VOLUME-DO-MIC-
+        MIC-VOLUME-02 (09/09/2026). **Decisão de produto, `D-0909-O-VOLUME-DO-MIC-
         LIGA-O-BYTE-DO-APARELHO`, textual: *"3-c"*** — ligar o byte do
         aparelho, revogando neste ponto a decisão de 06/09 que o mantinha fora
         da chamada. A revogação está datada nos dois lugares em que aquela
@@ -4353,7 +4348,7 @@ class PyDualSenseController(IController):
         afirmações desta casa se contradiziam: a docstring do `mic.volume.set`
         dizia que *"o DualSense não expõe registrador de ganho de microfone em
         transporte nenhum"*, e o mapa mais o kernel diziam que o registrador
-        existe e tem nome. O olho dela desempatou no CABO, em 09/09/2026, com o
+        existe e tem nome. O olho de quem confere desempatou no CABO, em 09/09/2026, com o
         P2 plugado e a fonte do sistema travada a 100 % para isolar o ganho do
         aparelho: *"Deu certo. funciona"* (`docs/data/ensaios.csv`,
         `folha-mic-volume-o-byte-age-cabo-0909`). Byte que obedece ganha campo.
@@ -4597,7 +4592,7 @@ class PyDualSenseController(IController):
         `set_microphone_volume`, os três `release_*` e as duas leituras), e
         todos caíam no primário quando a interface não mandava endereço —
         enquanto `led.set`, `rumble.set` e `trigger.*` obedeciam ao seletor.
-        Duas línguas de alvo dentro do mesmo backend, e a queixa dela nomeava o
+        Duas línguas de alvo dentro do mesmo backend, e a queixa de uso nomeava o
         efeito: *"a mudança dos leds e afins não foram aplicadas pros demais
         controles do app (deveriam ser 4)"*.
 
@@ -5496,7 +5491,7 @@ class PyDualSenseController(IController):
         BATERIA-PARADA-01 (B1). `battery_pct` é o número e `battery_state` é o
         estado de carga — e eles vêm do MESMO byte (`states[53]`: nibble baixo
         = nível, nibble alto = carga). Nasceram numa função só justamente
-        porque a queixa dela era a metade que faltava: *"o percentual nunca é
+        porque a queixa de uso era a metade que faltava: *"o percentual nunca é
         atualizado"* descrevia um 100% mudo, que é indistinguível de uma barra
         travada quando ninguém diz "no cabo".
 
@@ -5653,7 +5648,7 @@ class PyDualSenseController(IController):
         `level is None`, nunca quando `level == 0`. E `DSBattery.__init__` nasce
         com `Level = 0`: todo handle recém-aberto — ou seja, **toda reconexão de
         rádio** — publicava `battery_pct = 0` até o primeiro report chegar, e o
-        cartão pintava isso como «0%». É a origem do zero que ela viu no meio do
+        cartão pintava isso como «0%». É a origem do zero que o usuário viu no meio do
         75/0/90/100, e o único caminho que o explica.
 
         A função IRMÃ logo abaixo (`_read_battery_state_opt`) já tinha a guarda
@@ -5743,7 +5738,7 @@ class PyDualSenseController(IController):
         `_a_carta_menor_locked` (O-MODO-XBOX-NAO-E-QUEDA-02, item 4). Com o
         posto vazio, senta quem tem a carta menor, e não o 1º que conectou.
 
-        **A DECISÃO (24/09/2026, por delegação dela,
+        **A DECISÃO (24/09/2026, por delegação de produto,
         `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`):** o jogo também espera a carta
         1. Com o P1 fora dentro do prazo, o P2 virava primário na hora e passava
         a dirigir o vpad do jogador 1 do jogo enquanto a lâmpada e a tela
@@ -5760,7 +5755,7 @@ class PyDualSenseController(IController):
           o próximo mais antigo assume;
         - **a pergunta pendurada** (`set_espera_do_posto`): o co-op de pé, o jogo
           com a autoridade e o lugar dele guardado na mesa. Sem pergunta, ou
-          com ela dizendo não, é a regra de sempre — e é o gesto dela de
+          com ela dizendo não, é a regra de sempre — e é o gesto do usuário de
           desligar um controle e seguir com o outro, fora do co-op.
 
         Nunca deixa a mesa sem ninguém à toa: sem handle nenhum não há vaga a

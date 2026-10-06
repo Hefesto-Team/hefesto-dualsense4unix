@@ -1,6 +1,6 @@
 """MODO-DE-CONEXAO-01 — o PS + R3 anda por CAMINHOS e grava no perfil ativo.
 
-A regra dela, 13/09/2026, está citada na sprint: *"o modo é base (ele o ps +
+A regra, 13/09/2026, está citada na sprint: *"o modo é base (ele o ps +
 r3)"* e *"inclusive o ps +r3 e isso fica setado no perfil"*. O gesto e o chip
 são o MESMO modo: Sony DualSense → Xbox → Navegação → Sony DualSense (§D.5), a
 máscara do vpad não muda em aperto nenhum, e cada aperto que o aparelho confirma
@@ -15,7 +15,7 @@ A bancada é a da `test_o_modo_nao_escreve_a_mascara.py`: o callback REAL do
 gesto (`hotkey.build_next_bridge_callback`) e os métodos REAIS do
 `lifecycle.Daemon`; dublados só o vpad, o grab, o launch env, as flags de sessão,
 o co-op e a lightbar. O perfil ativo é achado pela perna do disco
-(`session.json` + o marcador), que é o estado da máquina dela com o daemon
+(`session.json` + o marcador), que é o estado da máquina do usuário com o daemon
 calado.
 
 MORDE, e são duas curas independentes:

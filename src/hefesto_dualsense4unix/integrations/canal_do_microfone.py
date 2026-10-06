@@ -284,7 +284,7 @@ def renomear(
 
     Devolve o canal que está DE PÉ agora — `None` = não há canal de pé.
 
-    **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido na mesa dela em
+    **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido na bancada em
     20/09/2026, com os quatro DualSense de pé e o daemon respondendo
     ``2, 4, 3, 1``::
 

@@ -1,7 +1,6 @@
 """CANAL-POR-CONTROLE-01 — cada controle pede o canal DELE, e ninguém tira de ninguém.
 
-Decisão dela, 03/09/2026, com as palavras dela e sem corrigi-las:
-*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+Decisão, 03/09/2026, com as palavras de produto e sem corrigi-las
 
 **O QUE ESTAVA MEDIDO**, com os dois controles na mesa: existia UM canal, o do
 cabo. O do rádio não publicava fonte nenhuma, e quem recusava eram duas travas
@@ -19,7 +18,7 @@ AS DUAS METADES, e nenhuma vale sozinha:
 1. **sem pedido, nada sobe** — é a privacidade das duas travas, intacta. Um
    `is_enabled` verdadeiro sem `alvos()` vazio seria o microfone ligando junto
    com o daemon, que é o que o cabeçalho do módulo recusa desde 25/07/2026;
-2. **com pedido, sobe SÓ o dele** — é a decisão dela. Quatro controles, quatro
+2. **com pedido, sobe SÓ o dele** — é a decisão de produto. Quatro controles, quatro
    canais, e ninguém precisa tirar o de ninguém.
 
 COMO MORDE (exercido em 03/09/2026, cura arrancada e devolvida por `cp`)
@@ -144,7 +143,7 @@ class TestAsDuasMetades:
         assert sorted(n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])) == [UM, DOIS]
 
     def test_a_recusa_dela_cala_e_o_resto_continua(self) -> None:
-        """O par que substituiu o gate: o `false` no disco é a palavra dela."""
+        """O par que substituiu o gate: o `false` no disco é a palavra de produto."""
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
         assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
@@ -292,7 +291,7 @@ class _Pactl:
 
 @pytest.fixture()
 def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
-    """A mesa dela: um `pactl` dublado e o script que DECLARA as duas flags."""
+    """A bancada: um `pactl` dublado e o script que DECLARA as duas flags."""
     dublê = _Pactl()
     script = tmp_path / "fix_wireplumber_default_source.sh"
     script.write_text(

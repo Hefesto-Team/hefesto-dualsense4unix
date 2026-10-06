@@ -67,7 +67,7 @@ def test_a_dica_do_auto_saiu_de_vez() -> None:
 
 
 def test_a_dica_do_perfil_de_bateria_nao_promete_mais_que_a_tabela() -> None:
-    """A palavra dela dizia "barra de luz apagada" — e não há por onde apagá-la."""
+    """A palavra de produto dizia "barra de luz apagada" — e não há por onde apagá-la."""
     dica = secao_orcamento.DICAS[secao_orcamento.PERFIL_BATERIA_LONGA]
     for linha in secao_orcamento.LINHAS_DO_TETO:
         if linha.tem_ponto:

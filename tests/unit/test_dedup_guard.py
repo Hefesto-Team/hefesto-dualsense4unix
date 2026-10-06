@@ -102,7 +102,7 @@ class TestDedupStatus:
         assert motivos == ["sem_uhid", "jogador_2_uinput"]
 
     def test_o_caminho_xbox_escolhido_nao_e_degradacao(self) -> None:
-        """PS-L3-MASCARA-01 (14/09/2026): o uinput do caminho Xbox é escolha dela."""
+        """PS-L3-MASCARA-01 (14/09/2026): o uinput do caminho Xbox é escolha do usuário."""
         daemon = _daemon(backend="uinput", coop=((2, "uinput"),))
         daemon._gamepad_device.caminho = "xbox"
         for jogador in daemon._coop_manager._players.values():

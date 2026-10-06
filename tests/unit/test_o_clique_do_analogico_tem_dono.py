@@ -14,7 +14,7 @@ O QUE ELA COBRA, e o item 3 é o que dói:
 2. o clicado se distingue do solto;
 3. **sem leitor, o valor é o travessão — nunca "solto".** `inputs` é `None`
    para todo controle que não seja o primário nem tenha retrato vivo do co-op
-   (`daemon/ipc_handlers.py:2466-2470`), e foi assim que a mesa dela estava
+   (`daemon/ipc_handlers.py:2466-2470`), e foi assim que a bancada estava
    medida em 02/09/2026 às 04:23:
 
        uniq aabbcc000001 · bt  · is_primary True  · inputs presente · buttons []

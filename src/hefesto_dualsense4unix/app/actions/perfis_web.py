@@ -218,7 +218,7 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         "nome": str(getattr(profile, "name", "") or ""),
         "prioridade": f"{pct:.0f}%",
         "prioridade_n": str(prioridade),
-        # A FRASE É DELA, aprovada em 02/09/2026 — antes disso ela estava
+        # A FRASE É DO USUÁRIO, aprovada em 02/09/2026 — antes disso ela estava
         "prioridade_dica": (
             "Quando dois perfis servem ao mesmo tempo, entra o de número maior."
         ),

@@ -55,7 +55,7 @@ def test_nenhuma_aba_manda_url_para_campo_de_cor(aba: str) -> None:
 
 @pytest.mark.parametrize("aba", sorted(QUEM_PINTA))
 def test_os_oito_sem_amostragem_calam_em_vez_de_mentir(aba: str) -> None:
-    """Sem hexa amostrado, a resposta é `""` — a regra dela."""
+    """Sem hexa amostrado, a resposta é `""` — a regra de produto."""
     sem_hexa = [m for m in _todos_os_modelos()
                 if not str(monta.cor_da_zona(m)).startswith("#")]
     assert sem_hexa, "nenhum modelo sem hexa — a folha mudou de forma"

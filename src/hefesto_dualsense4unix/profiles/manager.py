@@ -77,7 +77,7 @@ class OFreestyleMandaError(RuntimeError):
 
 
 class OFreestyleDesligadoError(RuntimeError):
-    """Um caminho que não é a mão dela pediu o Freestyle com o modo desligado."""
+    """Um caminho que não é a mão do usuário pediu o Freestyle com o modo desligado."""
 
 
 def e_o_freestyle(nome: object) -> bool:
@@ -219,10 +219,10 @@ class ProfileManager:
         PERFIL-03 (autoload): `origin` separa o GESTO MANUAL da usuária das
         ativações automáticas — o bug provado do sprint era o autoswitch
         reescrever `session.json` a cada troca de janela, e o boot restaurar
-        "Navegação" em vez da escolha dela. Valores:
+        "Navegação" em vez da escolha do usuário. Valores:
 
           - ``"manual"`` (default) — profile.switch via IPC (GUI/CLI/bandeja/
-            TUI) e o ciclo por hotkey (PS+D-pad): É a escolha dela → grava
+            TUI) e o ciclo por hotkey (PS+D-pad): É a escolha do usuário → grava
             pelo dono (`utils.session.gravar_a_escolha`), decide o Modo
             Freestyle e arma a trava da troca à mão (ver o bloco antes da
             classe).
@@ -260,7 +260,7 @@ class ProfileManager:
         *,
         relatorio: dict[str, str] | None = None,
     ) -> Profile:
-        """O perfil inteiro de novo aos controles, sem virar a escolha dela.
+        """O perfil inteiro de novo aos controles, sem virar a escolha do usuário.
 
         O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). O «Aplicar» mandava
         `profile.apply_draft` (o `DraftApplier`), que leva menos da metade do
@@ -268,7 +268,7 @@ class ProfileManager:
         máscara, a mira, o modo e a política de vibração. Agora ele roda a
         MESMA cadeia da ativação, com todas as camadas.
 
-        Os appliers recebem a origem `manual`: o «Aplicar» é gesto dela
+        Os appliers recebem a origem `manual`: o «Aplicar» é gesto do usuário
         (`D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`), e com o jogo na
         autoridade a R-04 vale igual à da ativação. O que ele NÃO faz é o que
         só a escolha faz: não grava o `session.json` nem o
@@ -383,8 +383,8 @@ class ProfileManager:
         `reset_output_overrides` trocava o mapa por-uniq INTEIRO, e o
         autoswitch ativa perfil a CADA troca de janela. Resultado medido no
         achado C5: o ajuste por-controle que ela acabava de fazer na GUI era
-        apagado segundos depois — "as configs que eu faço não impactam
-        controle a controle". Agora a ativação substitui só o que é do perfil
+        apagado segundos depois (a configuração por controle não valia
+        controle a controle). Agora a ativação substitui só o que é do perfil
         e cede o campo que a usuária ajustou na mão.
 
         O `origin` é o botão de soltar dessa precedência: ativação MANUAL
@@ -427,9 +427,6 @@ class ProfileManager:
         # ESCOLHIDA (antes do brilho): depois dele, um `lightbar_brightness`
         cor_do_global = cor_escolhida(settings.lightbar)
         self._configure_auto_player_colors(profile)
-        # com estas palavras: *"eu tinha pedido pra remover todas as travas
-        # qualquer outro jogo"*, *"isso nao faz sentido mais."*  # (noqa-acento): dela
-        # do jogo"* e *"os gatilhos tambem nao tao aplicando"*  # (noqa-acento): dela
         resultado_da_saida = self.controller.apply_output_defaults(
             OutputSpec(
                 trigger_left=left,
@@ -444,7 +441,7 @@ class ProfileManager:
             )
         )
         overrides = _controllers_to_specs(profile.controllers, profile.leds)
-        # `#0000FF` do disco é a escolha dela para o número de hoje ou o
+        # `#0000FF` do disco é a escolha do usuário para o número de hoje ou o
         procedencias = _controllers_to_procedencias(profile.controllers)
         escalas = _controllers_to_led_scales(profile.controllers, profile.leds)
         escalar = getattr(self.controller, "set_led_scales", None)
@@ -598,7 +595,7 @@ class ProfileManager:
         06/09/2026, ONDA3-MOTOR-01. Este método roda DEPOIS do `apply_keyboard`
         e reescreve o conjunto INTEIRO do teclado virtual com o que o
         `resolver()` deriva. Enquanto o `resolver()` não consultava
-        `profile.key_bindings`, todo atalho que ela escreveu na janela antiga
+        `profile.key_bindings`, todo atalho que o usuário escreveu na janela antiga
         morria na ativação seguinte de qualquer perfil que tivesse
         `button_actions` — sem uma palavra, e com os dois campos continuando a
         aparecer no arquivo dela. Passar o campo é o elo; as três camadas e a
@@ -865,7 +862,7 @@ class ProfileManager:
     ) -> dict[str, str]:
         """Aplica a MÁSCARA das UNIDADES que o perfil declara (08/09/2026).
 
-        Decisão dela, MASCARA-NO-PERFIL-01: *"pode entrar sim"* — a máscara por
+        Decisão de produto, MASCARA-NO-PERFIL-01: *"pode entrar sim"* — a máscara por
         controle entra no perfil, ao lado de luz, gatilho, vibração, som, mic e
         sensores. **A consequência que ela sentiu, e que abriu a sprint:**
         trocar de perfil trocava o modo e **não trocava a máscara** de ninguém,
@@ -881,9 +878,9 @@ class ProfileManager:
         ``gamepad._motores_do_perfil_ativo``. Então o perfil escreve no
         registro, e o registro responde em memória.
 
-        **O PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO DELA, 09/09/2026.** A
+        **O PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO, 09/09/2026.** A
         pergunta era *"um perfil que não fala de máscara deve devolver todo
-        mundo ao padrão, ou deixar cada um como está?"*, e a resposta dela foi
+        mundo ao padrão, ou deixar cada um como está?"*, e a resposta de produto foi
         a primeira: *"Default é Hefesto dualsense padrão"*. Então esta função
         varre o registro e **apaga a máscara própria de todo controle que o
         perfil não declara** (:meth:`ExternalMaskRegistry.manter_somente`).
@@ -903,12 +900,12 @@ class ProfileManager:
           ele compara a máscara EFETIVA. Apagar a entrada de quem já estava no
           padrão não muda a efetiva — a comparação dá igual e o vpad **não
           cai**. Só cai o vpad de quem estava FORA do padrão, que é exatamente
-          quem a decisão dela manda trazer de volta;
+          quem a decisão de produto manda trazer de volta;
         * medido nos quatro assentos, com o padrão em ``dualsense``: **0 de 4**
           vpads caem quando a mesa já seguia o padrão, **1 de 4** quando um só
           estava em Xbox, **4 de 4** quando os quatro estavam. E **0 de 4**
           quando os quatro TINHAM entrada própria, mas igual ao padrão: as
-          quatro entradas somem do disco e nenhum controle dela sai da partida;
+          quatro entradas somem do disco e nenhum controle do usuário sai da partida;
         * a varredura em si custa **0,034 ms** e ZERO escrita de disco quando
           não há nada a devolver — o caso comum —, e **0,21 ms** com uma
           escrita só quando há quatro. (Mediana de 200 voltas, ``ext4``. O
@@ -1074,8 +1071,8 @@ class ProfileManager:
            volume: a primeira escrita nossa faz o hefesto mandar o volume do
            alto-falante E do fone em todo report, e o DualSense não devolve o
            valor que o firmware tinha. Um perfil que não pediu nada não pode
-           pagar esse preço (é a queixa "a config que eu deixo nunca é
-           respeitada", do lado do áudio).
+           pagar esse preço (é a queixa de que a configuração do usuário nunca é
+           respeitada, do lado do áudio).
         2. **a trava manual de áudio vence o perfil.** Categoria `"audio"` do
            `StateStore` (irmã de "trigger"/"led"/"rumble"): se ela acabou de
            mexer no volume na mão, o autoswitch reaplicando o perfil a cada
@@ -1211,16 +1208,16 @@ class ProfileManager:
         defeito que a E4 inteira existe para não cometer. Sem perfil ativo, sem
         opinião nenhuma ou sem applier: devolve `None` e não escreve nada. Com
         a trava manual de áudio armada devolve `"ignorado_trava_manual"` (e
-        também não escreve): se ela mexeu no volume na mão, quem manda é ela —
+        também não escreve): se o usuário mexeu no volume na mão, quem manda é ela —
         a reconexão não é ocasião para o perfil retomar o campo.
 
         **"A SEÇÃO" ERA SÓ A GLOBAL, E ISSO ERA O DEFEITO — SOM-ROTA-03,
         16/09/2026.** Este gancho olhava apenas `profile.speaker`, a seção
-        GLOBAL. Só que o alto-falante é da PEÇA — decisão dela de 10/08 — e os
-        perfis dela guardam o som exclusivamente em
+        GLOBAL. Só que o alto-falante é da PEÇA — decisão de 10/08 — e os
+        perfis do usuário guardam o som exclusivamente em
         `controllers[uniq].speaker`, sem global nenhuma. Medido nos dois
-        perfis dela: `global_speaker: null`, e este gancho devolvendo `None`
-        para todos os uniqs. Efeito: **a escolha dela nunca voltava depois de
+        perfis do usuário: `global_speaker: null`, e este gancho devolvendo `None`
+        para todos os uniqs. Efeito: **a escolha do usuário nunca voltava depois de
         um replug** — a última palavra ficava sendo a da adoção
         (`ROTA_PADRAO_DO_SOM`), e o `rota 3 + mudo` que ela gravou para uma
         peça sumia em silêncio ao trocar o cabo.
@@ -1513,7 +1510,7 @@ class ProfileManager:
         """O ÚNICO `save_profile` do caminho por appid. None = não há perfil.
 
         O `transformar` que devolve o PRÓPRIO perfil diz «nada a mudar», e nada
-        se grava (a guarda da escolha dela em :meth:`confirmar_ponte`).
+        se grava (a guarda da escolha do usuário em :meth:`confirmar_ponte`).
         """
         profile = perfil_do_appid(appid)
         if profile is None:
@@ -1637,11 +1634,11 @@ def pontes_confirmadas(
 def _a_escolha_dela_ja_carimbou(
     profile: Profile, kind: str, gamepad_flavor: object, steam_input: bool
 ) -> bool:
-    """O perfil já tem ESTA ponte carimbada pela escolha dela?
+    """O perfil já tem ESTA ponte carimbada pela escolha do usuário?
 
     O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01: a escada pede o carimbo da
     ponte de pé depois do silêncio, `por=silencio` ou `por=gesto`. Quando a
-    escolha dela já carimbou a MESMA ponte (o PS + R3 carimba na hora e deixa o
+    escolha do usuário já carimbou a MESMA ponte (o PS + R3 carimba na hora e deixa o
     gesto anotado, que o tique colhe 180 s depois), o carimbo dela fica: a
     escada não rebaixa a escolha. Outra ponte de pé, a escada carimba como
     sempre.
@@ -1782,8 +1779,7 @@ def gravar_o_modo_no_perfil_ativo(
 ) -> Profile | None:
     """O modo escolhido vai ao perfil ATIVO, na hora. None = não gravou.
 
-    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela palavra dela: *"inclusive o
-    ps +r3 e isso fica setado no perfil"*. Até aqui o gesto só deixava rastro
+    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela  Até aqui o gesto só deixava rastro
     depois de 180 s de jogo aberto, e no perfil do JOGO; agora ele grava no
     perfil que está valendo logo que o aparelho confirma, sem esperar e sem
     precisar de jogo.
@@ -1804,9 +1800,9 @@ def gravar_o_modo_no_perfil_ativo(
     03/10/2026): o jogo que o wrapper lançou e que ainda roda, e se ele está na
     allowlist do Steam Input. Quando o perfil que grava é a regra DESSE jogo, o
     carimbo vai na mesma gravação, `por=escolha_dela`
-    (:func:`_carimbo_da_escolha`): a escolha dela é confirmação da ponte naquele
+    (:func:`_carimbo_da_escolha`): a escolha do usuário é confirmação da ponte naquele
     jogo. Sem isto, o modo mudava e o carimbo ficava na ponte de antes, e o
-    serviço avisava `ponte_confirmada_diverge_do_perfil` sobre a escolha dela
+    serviço avisava `ponte_confirmada_diverge_do_perfil` sobre a escolha do usuário
     (Pro Jank Footy, 01/10, 19h17). Fora de jogo, ou com o Freestyle valendo,
     nada de carimbo: ele é «confirmada NESTE jogo».
 
@@ -1861,7 +1857,7 @@ def _carimbo_da_escolha(
 
     None em três casos: não há jogo do wrapper vivo; o perfil que grava não é a
     regra desse jogo (o Freestyle, ou o perfil escolhido fora dele); o carimbo
-    de hoje já é este, pela escolha dela. O gamepad sem caminho declarado não
+    de hoje já é este, pela escolha do usuário. O gamepad sem caminho declarado não
     carimba: a ponte dele é a máscara do aparelho, que este escritor não lê, e
     carimbar `gamepad` sem o canal diria «confirmada» sobre o que ninguém
     escolheu.
@@ -2174,7 +2170,7 @@ def _brilho_materializa_cor(
     Só no caso degenerado: a escala relativa é `brilho_do_controle /
     brilho_global`, e com brilho global 0 (ou sem seção global para comparar)
     a cor resolvida JÁ é preta — não há o que escalar de volta. Aí materializar
-    é a única forma honesta de honrar o pedido dela, e o custo (perder a cor
+    é a única forma honesta de honrar o pedido, e o custo (perder a cor
     automática daquele controle) é o comportamento antigo, restrito a um canto
     que ninguém alcança sem zerar o brilho do perfil inteiro.
     """
@@ -2439,7 +2435,7 @@ def _avisa_secoes_sem_applier(
 
     O defeito desta família, em uma linha: **applier ausente não levanta — a
     seção é ignorada em silêncio**. A rota nasce funcionando "quase", o "quase"
-    só aparece no aparelho dela, e o journal não guarda uma linha sequer sobre
+    só aparece no aparelho do usuário, e o journal não guarda uma linha sequer sobre
     a seção que não foi aplicada. Foi assim que a saída do Modo Nativo passou
     de 05/08 a 25/08 devolvendo tudo menos a vibração.
 

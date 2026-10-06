@@ -51,7 +51,7 @@ def test_a_folha_conhece_a_palavra_que_o_piloto_escreve() -> None:
 
 
 def test_a_moldura_vale_para_as_duas_palavras() -> None:
-    """A borda é o que ela viu diferente — não a cor, que já fora curada."""
+    """A borda é o que o usuário viu diferente — não a cor, que já fora curada."""
     folha = _folha_da_navegacao()
     palavra = _palavra_que_o_piloto_escreve()
 

@@ -19,7 +19,7 @@ Os dois casos, pelo nome que a sprint lhes deu:
    d-pad, o Círculo e o Quadrado.
 2. **o `resolver()` que não herdava `key_bindings`** — `apply_button_actions`
    roda DEPOIS do `apply_keyboard` e reescreve o conjunto INTEIRO do teclado
-   virtual. Todo atalho que ela escreveu na janela antiga morria na ativação
+   virtual. Todo atalho que o usuário escreveu na janela antiga morria na ativação
    seguinte de qualquer perfil com `button_actions`.
 """
 from __future__ import annotations
@@ -172,7 +172,7 @@ def test_o_de_fabrica_nao_cala_ninguem() -> None:
 
 
 def test_o_resolver_herda_os_atalhos_dela() -> None:
-    """O que ela escreveu na janela antiga chega ao teclado virtual."""
+    """O que o usuário escreveu na janela antiga chega ao teclado virtual."""
     dela = {"options": ["KEY_F1"], "l1": ["KEY_F2", "KEY_LEFTCTRL"]}
     _m, sem_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"})
     _m, com_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"}, dela)

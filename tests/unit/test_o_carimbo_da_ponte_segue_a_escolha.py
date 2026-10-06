@@ -1,9 +1,9 @@
-"""O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01 — a escolha dela carimba a ponte.
+"""O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01 — a escolha do usuário carimba a ponte.
 
 Medido no diário de 01/10 (Pro Jank Footy): às 19h04 ela trocou o modo para
 Xbox pela janela, o escritor único gravou `mode.caminho="xbox"` e deixou o
 carimbo `dualsense` onde a escada o tinha posto; às 19h17 o serviço avisou
-`ponte_confirmada_diverge_do_perfil` sobre a escolha dela. Havia dois
+`ponte_confirmada_diverge_do_perfil` sobre a escolha do usuário. Havia dois
 escritores da mesma escolha: o modo (na troca) e o carimbo (a escada, no
 tique), e a troca à mão só passava pelo primeiro.
 
@@ -11,7 +11,7 @@ A cura: o escritor único do modo (`Daemon.gravar_o_modo_escolhido` →
 `manager.gravar_o_modo_no_perfil_ativo`) grava o `mode` e o `ponte` NA MESMA
 gravação, com `por=escolha_dela`, quando o perfil que grava é o do jogo que o
 wrapper lançou e que ainda roda. Fora de jogo, nada de carimbo. E a escada não
-rebaixa a escolha dela para «silêncio» nem para «gesto» quando a ponte é a
+rebaixa a escolha do usuário para «silêncio» nem para «gesto» quando a ponte é a
 mesma (`ProfileManager.confirmar_ponte`).
 
 A BANCADA: o `Daemon` é o real, os perfis moram no `XDG_CONFIG_HOME` do teste
@@ -283,7 +283,7 @@ def test_a_escada_nao_desfaz_a_escolha(
     O caminho medido é o do PS + R3: o escritor carimba na hora, e o gesto fica
     anotado (`ponte_tentativa.gesto_deixou_de_pe`). Depois do silêncio, o tique
     de 1 Hz pede o carimbo da MESMA ponte, `por=gesto` (ou `por=silencio`, sem
-    gesto contado). A escolha dela fica, e nada se grava.
+    gesto contado). A escolha do usuário fica, e nada se grava.
 
     MORDIDA: tire a guarda de `ProfileManager.confirmar_ponte` e o carimbo
     vira `gesto`/`silencio` por cima da escolha.

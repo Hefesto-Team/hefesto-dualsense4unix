@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NADA-MOCKADO-01 — o portão que responde à pergunta dela, e não envelhece."""
+"""NADA-MOCKADO-01 — o portão que responde à pergunta de produto, e não envelhece."""
 from __future__ import annotations
 
 import csv
@@ -50,7 +50,7 @@ def _sem_prova_nem_ressalva() -> list[tuple[str, str, str]]:
 
 
 def test_a_divida_das_afirmacoes_sem_prova_nem_ressalva_nao_cresce() -> None:
-    """O piso da pergunta dela: nada de novo é afirmado sem sustentação."""
+    """O piso da pergunta de produto: nada de novo é afirmado sem sustentação."""
     achados = _sem_prova_nem_ressalva()
 
     assert len(achados) <= TETO_SEM_PROVA_NEM_RESSALVA, (

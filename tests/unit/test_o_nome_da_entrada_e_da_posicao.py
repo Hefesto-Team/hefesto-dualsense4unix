@@ -247,7 +247,7 @@ def test_o_gesto_do_nome_arma_no_clique_e_grava_no_change(
 
 
 def _com_o_mapa_trocado_por_fora() -> dict[str, Any]:
-    """A forma do disco dela depois de 26/09/2026 às 15h43 (MEDIDO): o ``mapa``"""
+    """A forma do disco do usuário depois de 26/09/2026 às 15h43 (MEDIDO): o ``mapa``"""
     documento = _a_maquina_dela()
     portas = documento["mapa"]["portas"]
     for um, outro in (("3", "4"), ("7", "8")):

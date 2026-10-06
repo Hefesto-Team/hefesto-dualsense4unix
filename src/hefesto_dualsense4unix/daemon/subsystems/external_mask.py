@@ -8,21 +8,21 @@ o daemon roda, como ela sobrevive ao reboot, o que ela NÃO promete, e — desde
 15/08/2026 — qual máscara um jogador recebe quando não escolheu nenhuma. Ele não
 adota externo, não cria gamepad virtual, não esconde ninguém do jogo e não
 desenha tela — isso é a `E2`/`E3`/`E4` da MÁSCARA-01 e a `E3` da
-LUGAR-À-MESA-01, que ela autorizou **depois** desta.
+LUGAR-À-MESA-01, que o usuário autorizou **depois** desta.
 
 O DONO DA MÁSCARA É O PERFIL — DESDE 08/09/2026
 ------------------------------------------------
 
 **NOTA DATADA — 08/09/2026 (MASCARA-NO-PERFIL-01).** A pergunta foi *"a máscara
 por controle deve entrar no perfil, junto com luz, gatilho, vibração, som, mic e
-sensores — ou fica da máquina?"*; a resposta dela foi *"pode entrar sim"*. O
+sensores — ou fica da máquina?"*; a resposta de produto foi *"pode entrar sim"*. O
 campo é ``profiles.schema.ControllerOverrides.mascara``, e quem o escreve aqui é
 ``profiles.manager.apply_controller_mascaras``, a cada ativação de perfil.
 
 **FATO SUBSTITUÍDO.** O cabeçalho deste módulo dizia que *"a escolha é do
 aparelho, não da configuração de jogo"* e que ela não podia morar no perfil
 porque *"cada troca automática de perfil — cada alt-tab — faria o controle sumir
-e voltar no meio da partida"*. A primeira metade caiu por decisão dela; a
+e voltar no meio da partida"*. A primeira metade caiu por decisão de produto; a
 segunda **continua medida e não some**: trocar a máscara derruba e recria o
 vpad. O que a torna suportável é que ninguém repinta quem não mudou —
 ``apply_controller_mascaras`` escreve peça a peça e :func:`vpad_ficou_para_tras`
@@ -35,7 +35,7 @@ a sprint `MASCARA-01`
 continua existindo por uma razão medida, e não por inércia — ``mascara_efetiva``
 é consultada na criação de todo vpad **e no tique do co-op**, que compara para
 decidir recriar; ler o perfil do disco ali seria a tempestade de syscalls que o
-``gamepad._motores_do_perfil_ativo`` já pagou uma vez. Quem grava o gesto dela
+``gamepad._motores_do_perfil_ativo`` já pagou uma vez. Quem grava o gesto do usuário
 (``gamepad.mask.set``) escreve nos DOIS: no perfil ativo, que é o dono, e aqui,
 para valer agora.
 
@@ -46,9 +46,9 @@ e aquele controle volta ao padrão. Não é escolha perdida, e não é dado a
 defender. Apagar o arquivo com o daemon parado também não muda máscara nenhuma
 de quem o perfil declara: a próxima ativação o reescreve.
 
-**PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO DELA, 09/09/2026.** A pergunta
+**PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO, 09/09/2026.** A pergunta
 aberta na entrega de 08/09 era *"um perfil que não fala de máscara devolve todo
-mundo ao padrão, ou deixa cada um como está?"*; a resposta dela foi *"Default é
+mundo ao padrão, ou deixa cada um como está?"*; a resposta de produto foi *"Default é
 Hefesto dualsense padrão"*. Nesta seção — e só nesta — ``None`` no perfil não é
 *"sem opinião"*: é *"volte ao padrão"*. O padrão é o degrau de baixo desta
 ordem, ou seja o ``mode.gamepad_flavor`` do perfil e, na falta dele, o
@@ -60,7 +60,7 @@ DE QUEM É A MÁSCARA — DO JOGADOR, DESDE 15/08/2026
 **NOTA DATADA — 15/08/2026 (MÁSCARA-POR-JOGADOR-01).** Até aqui este registro
 não tinha chamador nenhum em ``src/``, e a razão estava escrita em
 ``profiles/schema.py``: *"``mode`` e a máscara do gamepad são da SESSÃO, não da
-peça"* (decisão dela, 10/08/2026). **Ela reescreveu essa frase em 15/08/2026**:
+peça"* (decisão, 10/08/2026). **Ela reescreveu essa frase em 15/08/2026**:
 vale só para o ``mode``. A máscara passa a ser **do jogador**, com a máscara do
 jogo como **padrão herdado** — quem não escolheu nada segue o jogo, exatamente
 como um campo em branco de ``ControllerOverrides`` herda a seção global.
@@ -95,15 +95,15 @@ de propósito: meia cura que muda comportamento é pior que nenhuma.
 
 **A armadilha do primeiro degrau, para quem for escrevê-lo:**
 ``make_virtual_pad`` tem de resolver a máscara efetiva **ANTES** de escolher o
-backend, e passar o resultado ao ``_try_uhid``. O gate de lá (*"não é dualsense,
-logo não é meu"*) usa a máscara que recebe: se ele continuar recebendo a do
+backend, e passar o resultado ao ``_try_uhid``. O gate de lá usa a máscara que recebe: se ele
+continuar recebendo a do
 JOGO, um jogador que escolheu ``dualsense`` numa sessão ``xbox`` tem o uhid
 vetado e cai no ``uinput`` com máscara DualSense — que é o par degradado onde a
 vibração do jogo morre (VPAD-05/SPRINT-GAME-RUMBLE-01). A resolução é
 idempotente (``mascara_efetiva`` de uma máscara já efetiva devolve ela mesma),
 então resolver na factory e repassar a ``identity`` aos dois backends é seguro.
 
-Falta também o **lado da escrita**: quem grava a escolha dela é a rota IPC
+Falta também o **lado da escrita**: quem grava a escolha do usuário é a rota IPC
 (``daemon/ipc_handlers.py``), que ainda só conhece a máscara da sessão.
 
 RISCO NÃO MEDIDO — CONTROLES HETEROGÊNEOS NA MESMA SESSÃO
@@ -137,7 +137,7 @@ a ordem de preferência, com versão de esquema nova"*. Isso **caducou em
 ``REGRA-NAO-REGISTRO-01``:
 
 1. ``identity.load`` (``identity.py:1566``) DESCARTA a fila inteira quando a
-   versão do arquivo difere — um bump renumeraria a mesa dela;
+   versão do arquivo difere — um bump renumeraria a bancada;
 2. ``identity._save_locked`` só aproveita as entradas do outro lado quando
    ``bruto.get("version") == CONTROLLERS_SCHEMA_VERSION`` (``:2170-2174``): o
    primeiro save de DualSense depois de um bump APAGARIA a fila dos externos;
@@ -184,7 +184,7 @@ não reconhece, em vez de cair no ``DEFAULT_FLAVOR``. O normalizador tolerante
 (``uinput_gamepad.normalize_flavor``, que aceita sinônimos de CLI/IPC e cai em
 ``"xbox"``) é o certo para a linha de comando e o errado aqui: esta casa já
 pagou o ``or "xbox"`` do editor de perfis, que transformava *"sem opinião"* em
-*"exige Xbox"* e apagava giroscópio e touchpad no jogo dela sem que ninguém
+*"exige Xbox"* e apagava giroscópio e touchpad no jogo do usuário sem que ninguém
 pedisse (ESCOLHA-DELA-VENCE-01, E1). O catálogo de máscaras válidas é o
 ``FLAVORS`` do vpad — fonte única, para que uma máscara nova não precise ser
 declarada em dois lugares.
@@ -565,7 +565,7 @@ def mascara_efetiva(identity: str | None, flavor_do_jogo: object) -> str:
     executa o degrau 1.** Ela lê o registro, que é um CACHE — quem executa o
     degrau 1 é ``profiles.manager.apply_controller_mascaras``, escrevendo no
     cache a cada ativação de perfil (e apagando dele quem o perfil não declara),
-    e o ``gamepad.mask.set`` no gesto dela. O que esta função executa são os
+    e o ``gamepad.mask.set`` no gesto do usuário. O que esta função executa são os
     degraus 2 e 3, e o que ela faz com o degrau 1 é **honrar o que já foi
     aplicado**: entrada no registro vence ``flavor_do_jogo``, sem exceção.
 
@@ -627,7 +627,7 @@ def vpad_ficou_para_tras(
     runtime — rumble morto e prompts divergentes do P1 (SPRINT-GAME-RUMBLE-01,
     comentário de ``coop.py``).
 
-    A cura força a IGUALDADE; a decisão dela pede que a DIFERENÇA seja
+    A cura força a IGUALDADE; a decisão de produto pede que a DIFERENÇA seja
     respeitada. As duas cabem juntas porque o alvo da comparação deixa de ser um
     valor e passa a ser uma **função do aparelho**:
 
@@ -710,7 +710,7 @@ def escolher_a_mascara(
 
     1. **o registro vivo** recebe a escolha, porque é dele que a fábrica do vpad
        lê a máscara ao nascer (`mascara_efetiva`). Sem esta escrita ANTES, não
-       há como o aparelho vestir o que ela pediu;
+       há como o aparelho vestir o que o usuário pediu;
     2. **o aparelho veste** (`Daemon.vestir_a_mascara_do_aparelho`);
     3. **o perfil ativo** guarda — SÓ SE o aparelho concordou. Antes o perfil já
        tinha a máscara nova quando a barra de luz ainda dizia falha, e a aba
@@ -719,7 +719,7 @@ def escolher_a_mascara(
        fica pendurada esperando o próximo vpad.
 
     Sem vpad de pé (a Navegação) não há o que conferir, e a escolha vale para o
-    próximo — é o que ela pediu em 13/09 ao escolher máscara com o Hefesto
+    próximo — é o que o usuário pediu em 13/09 ao escolher máscara com o Hefesto
     desligado.
 
     `flavor` vazio LIMPA a escolha (o aparelho volta a herdar a do perfil), como

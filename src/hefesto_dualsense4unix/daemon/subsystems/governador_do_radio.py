@@ -102,7 +102,7 @@ OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
    conferência foi perguntar a ela no meio da partida — cada controle tem uma
    ponte só, a troca som → vibração derruba e sobe a ponte, e a ponte do som
    sob demanda desce sempre que o som para. A R3 (*sempre pedir mover*) vale a
-   cada vez que o controle CHEGA ao adaptador cheio; a resposta dela cai quando
+   cada vez que o controle CHEGA ao adaptador cheio; a resposta de produto cai quando
    ele SAI — desconecta ou é movido (:meth:`GovernadorDoRadio.conferir_as_autorizacoes`).
 2. **A marca «além do limite» sai quando o adaptador volta a caber.** A cada
    descida, as :attr:`GovernadorDoRadio.n_max` primeiras vagas do adaptador,
@@ -717,7 +717,7 @@ class GovernadorDoRadio:
                     )
                 sem_medida = True
             if autorizado or not vagas:
-                # R4: ela escolheu «Ligar aqui», ou não há para onde mover —
+                # R4: o usuário escolheu «Ligar aqui», ou não há para onde mover —
                 # medido, ou dito «não sei» depois do teto.
                 self._pedidos.pop(chave, None)
                 self._esperando_medida.pop(chave, None)

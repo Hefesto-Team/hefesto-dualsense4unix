@@ -1,6 +1,6 @@
 """O botão «Padrão» do volume do alto-falante (desenho aprovado em 04/10/2026).
 
-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 2 da seção «A decisão dela de 04/10». Ela, sobre o volume:
+O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 2 da seção «A decisão de 04/10». Ela, sobre o volume:
 *«Mesmo do anterior»* (o «Padrão» da vibração). Ligado, o volume do alto-falante deste controle é o
 do JOGO (os 100% de sempre, sem ajuste do Hefesto) e a barra fica verde e travada; desligado, ela
 ajusta, e o volume que tinha escolhido volta. O microfone fica de fora.

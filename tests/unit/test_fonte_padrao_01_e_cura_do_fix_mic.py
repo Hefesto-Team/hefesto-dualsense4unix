@@ -495,7 +495,7 @@ class TestPortaoParaDeAprovarOSintoma:
         classes abaixo: a onboard tem as três portas `not available` e
         ``fix_default_source_monitor`` a descarta, elegendo o DualSense (ver
         ``test_a_cura_nao_elege_fonte_sem_porta``). O doctor imprimia na tela
-        dela um comando que a cura dele mesmo se recusava a executar — e que,
+        do usuário um comando que a cura dele mesmo se recusava a executar — e que,
         MEDIDO em 30/07, o WirePlumber desfaz em segundos, devolvendo o monitor.
 
         O que fica travado agora é a CONCORDÂNCIA: o check oferece exatamente o
@@ -533,7 +533,7 @@ class TestPortaoParaDeAprovarOSintoma:
     ) -> None:
         """RECEITA-ERRADA-01 — a receita que leva a um comando impotente.
 
-        MEDIDO em 06/08/2026 na máquina dela: sem webcam e sem controle no
+        MEDIDO em 06/08/2026 na máquina do usuário: sem webcam e sem controle no
         cabo, o mic do DualSense suprimido e a onboard sem nada plugado, o
         doctor reprovava e mandava ``rode: scripts/doctor.sh --fix-mic``. O
         ``--fix-mic`` respondia *"não há nenhuma fonte de captura com porta
@@ -612,7 +612,7 @@ class TestCuraDaFontePadrao:
         estava certo e a afirmação, errada: o teste exigia que a cura elegesse a
         ONBOARD.
 
-        Provado na máquina dela em 30/07, depois de um `uninstall` + `install`
+        Provado na máquina do usuário em 30/07, depois de um `uninstall` + `install`
         limpos: eleger a onboard não gruda. O `pactl set-default-source` aceita,
         o WirePlumber não consegue honrar um nó sem porta usável, reelege
         sozinho e volta para o MONITOR em segundos — com a cura tendo impresso
@@ -624,7 +624,7 @@ class TestCuraDaFontePadrao:
         controle — que é o único microfone de verdade desta máquina.
 
         NOTA DATADA 13/09/2026 (MIC-PADRAO-NO-CABO-01, §D.7 da sprint, decidido
-        por quem coordena). Este teste rodava COM o drop-in 51 e exigia a
+        por decisão de produto). Este teste rodava COM o drop-in 51 e exigia a
         gravação do DualSense. A premissa é de 30/07, quando o 51 punha a
         entrada do controle em 50, abaixo do monitor. Desde a MONITOR-QUE-VENCE-01
         (08/08) o 51 a põe em 1500, acima de qualquer monitor, e gravar a escolha
@@ -814,7 +814,7 @@ class TestInstallChamaAsFontes:
         assert "--no-fonts)" in corpo
 
     def test_o_passo_fica_junto_do_resto_da_gui(self) -> None:
-        """Mesma natureza dos passos 4b/4c/4d: acabamento da GUI, no HOME dela,"""
+        """Mesma natureza dos passos 4b/4c/4d: acabamento da GUI, no HOME do usuário,"""
         assert TEXTO_INSTALL.index("# 4d. Catalogos i18n") < TEXTO_INSTALL.index(
             "# 4e. Fontes da identidade visual"
         ) < TEXTO_INSTALL.index("# 5. Symlink")

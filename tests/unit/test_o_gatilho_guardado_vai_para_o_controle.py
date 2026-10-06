@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO "Guardar esse efeito": o gatilho vai para o OVERRIDE do controle.
 
-A ABA GATILHOS APLICA NA HORA — é a decisão dela de 01/09/2026, *"clicar já
+A ABA GATILHOS APLICA NA HORA — é a decisão de 01/09/2026, *"clicar já
 aplica"*. Mas aplicar não guarda: o efeito vale até a próxima troca de perfil, e
 o disco continua com o que estava lá. Este botão é o ponto de gravação.
 

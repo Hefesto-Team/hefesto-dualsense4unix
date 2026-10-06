@@ -1,7 +1,7 @@
 """A aba Perfis recusava para o TERMINAL — e o "Estilo de Jogo" nem recusava.
 
 DOIS DEFEITOS, medidos em 03/09/2026 clicando a aba no PRODUTO INSTALADO, com o
-daemon dela vivo e um DualSense White no cabo.
+daemon do usuário vivo e um DualSense White no cabo.
 
 **1. O "Estilo de Jogo" era o último gesto SEM DONO da aba.** O
 ``data-hef-gesto="editor.estilo"`` está na página publicada
@@ -170,7 +170,7 @@ def test_o_ativar_recusa_com_a_classe_que_a_tarja_pinta(
 def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A recusa que protege DADO DELA — e era a mais cara de perder."""
+    """A recusa que protege DADO DO USUÁRIO — e era a mais cara de perder."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     a10_perfis._ESCOLHIDO = "Pragmata"
     with pytest.raises(RuntimeError, match="apagaria o dele"):
@@ -181,7 +181,7 @@ def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
 def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
     """A régua de FORMA sobre o arquivo inteiro, e ela é a que segura a regra.
 
-    As seis frases de :data:`DELA` são as que ela lê. A régua exige que cada
+    As seis frases de :data:`DO USUÁRIO` são as que ela lê. A régua exige que cada
     uma esteja num ``raise RuntimeError`` — e não num ``ValueError``, que
     ``_recusou_dizendo`` descarta antes de tocar o DOM.
 
@@ -213,6 +213,6 @@ def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
 
 
 def test_o_selecionar_continua_valueerror() -> None:
-    """O contrapeso da regra: nem toda recusa é dela."""
+    """O contrapeso da regra: nem toda recusa é do usuário."""
     with pytest.raises(ValueError, match="não trouxe o nome do perfil"):
         a10_perfis.selecionar(_ctx(), {"texto": ""}, PonteDeMentira())

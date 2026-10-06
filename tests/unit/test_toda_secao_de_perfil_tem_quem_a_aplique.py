@@ -4,7 +4,7 @@ O DEFEITO DE FORMA, EM UMA LINHA
 --------------------------------
 **Applier ausente não levanta: a seção é ignorada em silêncio.** Não há
 exceção, não há linha no journal, não há chave no relatório — a ativação
-responde sucesso e uma parte do perfil dela fica como o jogo a deixou. É a
+responde sucesso e uma parte do perfil do usuário fica como o jogo a deixou. É a
 família ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` casada com a ``ELO-MUDO-01``: o
 produto responde pelo TRANSPORTE ("o perfil foi reaplicado") e nunca pelo
 EFEITO.
@@ -23,17 +23,17 @@ a igualdade entre ``APPLIERS_DO_DAEMON`` e os parâmetros do construtor.
 O buraco que sobra é o de **fora para dentro**: as duas réguas de lá são
 internas ao par contrato/construtor. Apagar o ``rumble_passthrough_applier``
 dos DOIS ao mesmo tempo deixa as duas verdes — elas voltam a bater — e a seção
-``rumble.passthrough`` do arquivo de perfil dela simplesmente deixa de ter
+``rumble.passthrough`` do arquivo de perfil do usuário simplesmente deixa de ter
 dono, sem uma linha vermelha em lugar nenhum. **MEDIDO em 25/08/2026**, é o
 segundo caso do mesmo formato que este dia mede: *régua que se confere contra
 ela mesma não é régua*.
 
 A contagem independente aqui é o **esquema do perfil** — ``Profile``, o que é
-gravado no disco dela. Cada campo é classificado em :data:`_CLASSIFICACAO`
+gravado no disco do usuário. Cada campo é classificado em :data:`_CLASSIFICACAO`
 como *aplicado por applier injetado* ou *escrito direto no controle*, e a
 classificação é EXAUSTIVA nos dois sentidos: campo novo sem classificação
 reprova, e classificação que sobrou (campo removido do esquema) reprova
-também. Ninguém acrescenta seção ao perfil dela sem passar por aqui.
+também. Ninguém acrescenta seção ao perfil do usuário sem passar por aqui.
 
 O QUE CADA TESTE VIGIA
 -----------------------
@@ -293,7 +293,7 @@ def _appliers_lidos_pelo_gerente() -> set[str]:
 
 
 def test_todo_campo_do_perfil_esta_classificado() -> None:
-    """Seção nova no perfil dela não entra sem dizer QUEM a aplica."""
+    """Seção nova no perfil do usuário não entra sem dizer QUEM a aplica."""
     do_esquema = _campos_do_esquema()
     classificados = set(_CLASSIFICACAO)
     sem_classificacao = sorted(do_esquema - classificados)

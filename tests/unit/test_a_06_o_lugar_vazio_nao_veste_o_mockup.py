@@ -43,7 +43,7 @@ AS QUATRO MORDIDAS, e cada uma reprova um teste diferente:
 * tire o `!important` da regra da `--luz` (o valor chega em `style=` no próprio
   elemento, e estilo de linha vence folha que não o traga);
 * faça a função emitir regra para um lugar que a mesa OCUPA — a cor do aparelho
-  dela seria apagada pela regra seguinte.
+  do usuário seria apagada pela regra seguinte.
 """
 from __future__ import annotations
 
@@ -135,7 +135,7 @@ def test_a_luz_do_lugar_sem_dono_apaga_com_important() -> None:
 
 
 def test_o_lugar_ocupado_nao_e_apagado() -> None:
-    """Apagar um lugar COM dono mataria a cor do aparelho dela."""
+    """Apagar um lugar COM dono mataria a cor do aparelho do usuário."""
     mesa = [{"pref": "p1", "cor": "white"}, {"pref": "p2", "cor": "cosmic-red"}]
     folha = a06.folha_do_plastico(mesa, CAIXA)
     regras = _regras(folha)

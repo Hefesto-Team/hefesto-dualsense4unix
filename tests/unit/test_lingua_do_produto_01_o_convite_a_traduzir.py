@@ -137,7 +137,7 @@ def _convites_em(texto: str, catalogos: set[str]) -> list[tuple[int, str]]:
 
 
 def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
-    """Ancora a medição que sustenta a decisão dela, e a mantém honesta."""
+    """Ancora a medição que sustenta a decisão de produto, e a mantém honesta."""
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     total = len(_modulos_de_acoes())
 
@@ -164,7 +164,7 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
 def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
     """O encanamento existente não pode sumir enquanto ninguém olha.
 
-    A decisão dela diz explicitamente que o i18n **não** é removido. Estes
+    A decisão de produto diz explicitamente que o i18n **não** é removido. Estes
     módulos são a prova viva de que ele funciona; perdê-los seria arrancar
     trabalho bom para provar um ponto, que é o que ela recusou.
 

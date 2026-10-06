@@ -13,8 +13,7 @@ documentação". Medido em 11/08/2026: não era. O `--check` do `gerar-mapa.py`
 existia e NINGUÉM o chamava — nem workflow, nem hook, nem teste. Pela régua da
 casa (PORTÃO-VIVO-01), um gate que ninguém roda não é gate, é arquivo.
 
-E o defeito que o mapa foi feito para pegar é o dela, textual: *"tínhamos algo
-para o cabo e na hora do vamos ver a versão de BT não funcionava"*. Uma célula
+E o defeito que o mapa foi feito para pegar é o dela, textual. Uma célula
 que diz `aciona = sim, medido` e não aponta um teste é exatamente essa
 promessa: se aquela feature quebrar naquele transporte, a suíte inteira
 continua verde e ninguém fica sabendo.
@@ -51,7 +50,7 @@ FALHA
                           testes" — o que faria a regra acusar todo mundo.
   3. `prova-vencida`    — `provado_em` + `validade_dias` já no passado. Se as
                           DUAS colunas estiverem vazias, não reprova: a política
-                          de validade ainda é decisão dela, e portão que castiga
+                          de validade ainda é decisão de produto, e portão que castiga
                           a honestidade é pior que portão nenhum. Data ilegível
                           ou `validade_dias` não inteiro reprovam, porque uma
                           régua que não se consegue ler é uma regra desligada em
@@ -93,7 +92,7 @@ AVISO (não derruba o CI hoje)
                           e diz que obedeceu, mas ninguém do `olho-dela` viu.
                           `docs/method/METODO-DE-ISOLAMENTO.md` (seção "o que
                           registrar em cada linha do mapa") diz que só o olho
-                          dela sustenta esse degrau. Promoção por
+                          de quem confere sustenta esse degrau. Promoção por
                           `OLHO_DELA_REPROVA`.
  11. `mordida-nao-provada` — linha com grau forte e `teste_que_morde` preenchido
                           cuja `mordida_provada_em` está vazia: ninguém arrancou
@@ -192,7 +191,7 @@ FALHA (as duas mais novas)
                           `so-ela-decide`), ela está CERTA e a ressalva diz que
                           é de propósito — e é justamente por isso que a regra é
                           AVISO. No mesmo dia, ler uma coluna de causa como veto
-                          fez o coordenador mandar um agente PARAR um passo que
+                          levou a PARAR um passo que
                           funciona.
 
 A pergunta que passou a ter DONO — a procedência (06/09/2026)
@@ -257,7 +256,7 @@ preencher por analogia é o que destruiria o valor deste arquivo.
 
 O buraco de 12/08/2026, e por que a regra 6 nasceu
 --------------------------------------------------
-Um agente escreveu numa cópia da árvore a afirmação mais forte que o vocabulário
+Alguém escreveu numa cópia da árvore a afirmação mais forte que o vocabulário
 da casa permite — `cabo_ate_onde_foi = radio_ate_onde_foi = O APARELHO OBEDECEU`,
 `provado_por = olho-dela` — numa linha com ZERO ensaios no caderno, e o portão
 devolveu exatamente o mesmo número de reprovações de antes: quinze. A mentira
@@ -271,7 +270,7 @@ passou inteira, e por três motivos que este arquivo tinha por escrito:
     qualquer linha, de graça;
   - `mordida_provada_em` estava vazia em todas as linhas e ninguém a lia.
 
-A regra que ela aprovou é uma frase: **grau forte exige ensaio correspondente**.
+A regra que o usuário aprovou é uma frase: **grau forte exige ensaio correspondente**.
 O casamento é por `linha_id` == `id` E por transporte, porque `SAIU NO FIO` no
 cabo não se sustenta com ensaio de rádio — foi a assimetria cabo/rádio que fez
 este mapa existir. Quem casa os dois é `scripts/eliminacao.py`, reusado aqui em
@@ -1892,7 +1891,7 @@ def _achado_sem_olho_dela(
     lado: str,
     rotulo: str,
 ) -> Achado:
-    """Regras 10 e 13 — o degrau que só a mão dela fecha, sem a mão dela."""
+    """Regras 10 e 13 — o degrau que só a mão do usuário fecha, sem a mão do usuário."""
     if grau in GRAUS_SEM_LEGADO:
         return Achado(
             FALHA,

@@ -109,7 +109,7 @@ ABRE = '<defs id="cores-do-dualsense">'
 FECHA = "</defs>"
 
 #: O que pinta dentro de um grupo de zona. `:not([fill="none"])` preserva o botão
-#: PS, que é `sem-tinta` por decisão dela (27/08: "Remove o circulo e Deixa só o
+#: PS, que é `sem-tinta` por decisão (27/08: "Remove o circulo e Deixa só o
 #: Glifo do PS pra ser o Botão"), e os quatro glifos da face, que são traço puro.
 PINTAVEL = ':is(path,rect,circle,ellipse,polygon):not([fill="none"])'
 

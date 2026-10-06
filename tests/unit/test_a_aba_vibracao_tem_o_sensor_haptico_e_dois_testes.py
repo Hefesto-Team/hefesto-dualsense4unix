@@ -603,6 +603,6 @@ def test_a_aba_nao_rola_e_as_colunas_acabam_no_mesmo_y(medida: dict[str, Any]) -
 
 
 def test_o_desenho_nao_encolhe(medida: dict[str, Any]) -> None:
-    """O desenho volta ao tamanho de antes da linha da háptica, e a fala dela é essa."""
+    """O desenho volta ao tamanho de antes da linha da háptica, e a fala do usuário é essa."""
     assert medida["desenho"] >= DESENHO_DE_ANTES, (
         f"o desenho encolheu para {medida['desenho']} px: {medida}")

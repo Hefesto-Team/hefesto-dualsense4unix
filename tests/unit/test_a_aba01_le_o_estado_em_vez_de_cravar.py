@@ -2,7 +2,7 @@
 """A aba Jogar LÊ o que mostra — o interruptor, o chip, a máscara e os avisos.
 
 POR QUE ESTA RÉGUA EXISTE, e o que ela mede foi fotografado em 02/09/2026 e
-remedido no daemon dela em 03/09. Com ``native_mode false`` e
+remedido no daemon do usuário em 03/09. Com ``native_mode false`` e
 ``gamepad_emulation.enabled false`` — logo ``mode_of_state`` = **desktop** — a
 página publicada mostrava, ao mesmo tempo:
 
@@ -137,7 +137,7 @@ def test_o_interruptor_e_o_chip_saem_do_daemon(
     meio), mas por acaso: nada o tinha lido.
 
     COM UM CONTROLE NA MESA desde 22/09/2026: sem ninguém a fileira apaga
-    inteira (`a01_jogar._a_fileira_com_a_mesa`, pedido dela), e o que esta régua
+    inteira (`a01_jogar._a_fileira_com_a_mesa`, pedido), e o que esta régua
     mede é de onde vem o chip quando ele acende.
     """
     fora = aba.pacote(_com_mesa(state))
@@ -156,7 +156,7 @@ def test_a_mascara_do_cartao_e_a_do_aparelho() -> None:
 
 
 def test_dois_controles_duas_mascaras() -> None:
-    """A DECISÃO DELA, 03/09/2026: *"É uma máscara por controle."*
+    """A DECISÃO, 03/09/2026: *"É uma máscara por controle."*
 
     ESTE É O DEFEITO QUE A CURA MATOU, e ele era de PINTURA, não de leitura:
     `mesa_viva` já trazia a máscara de cada aparelho, mas o pacote emitia
@@ -167,7 +167,7 @@ def test_dois_controles_duas_mascaras() -> None:
 
     A MORDIDA: devolva `"mascara-cartao"` a `DA_PAGINA` e emita-o uma vez em
     `_estado_da_tela` — este teste reprova com os dois cartões em `DualSense`,
-    que é exatamente o que a tela dela mostrava.
+    que é exatamente o que a tela do usuário mostrava.
     """
     ctx = _com_mesa(VIVO_GAMEPAD_XBOX,
                     por_aparelho={UNIQ_A: "dualsense", UNIQ_B: "xbox"},
@@ -205,7 +205,7 @@ def test_rotulo_desenhado_que_o_produto_nao_monta_fica_apagado(
 
 
 def test_a_nintendo_pro_acende_como_as_outras_duas() -> None:
-    """A máscara nova é chip de primeira classe — 07/09/2026, ordem dela."""
+    """A máscara nova é chip de primeira classe — 07/09/2026, ordem de produto."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         mascaras_validas,
     )
@@ -307,7 +307,7 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
     nove réguas da coluna passaram a responder sobre a máquina em que rodam.
 
     **O QUE FAZ A RÉGUA VIRAR É O QUE ESTÁ NO CABO AGORA, e não a máquina.**
-    Há UMA máquina aqui (`MeowSystem`): a árvore dela e a de qualquer agente
+    Há UMA máquina aqui (`MeowSystem`): a árvore do usuário e a de qualquer worktree
     dividem o mesmo disco, e `/sys/module` e `/etc/modprobe.d` são da MÁQUINA,
     não da árvore — então a régua vira no TEMPO, não no lugar. O
     `snd_usb_audio` só é carregado quando há aparelho de áudio USB plugado, e
@@ -339,7 +339,7 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
     inteira: `ONDA5-01-01`:53-62` registra o
     `/sys/module/snd_usb_audio/parameters/quirk_flags` EXISTINDO com o quirk e
     o `check_snd_quirk()` devolvendo ``[ OK ]``. É a prova de que o ramo bom é
-    alcançável, e é por isso que ele não custa um gesto dela na bancada: esta
+    alcançável, e é por isso que ele não custa um gesto do usuário na bancada: esta
     casa já pagou essa medição.
 
     `_do_exame` ENTRA PELO MESMO MOTIVO, e não por asseio: ele chama
@@ -426,7 +426,7 @@ def test_a_coluna_atencao_sai_das_fontes_da_gtk(monkeypatch: Any) -> None:
 
 
 def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
-    """O `**i` que sobrescrevia o selo, e o que ele punha na tela dela."""
+    """O `**i` que sobrescrevia o selo, e o que ele punha na tela do usuário."""
     _sem_a_maquina(monkeypatch)
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
@@ -527,7 +527,7 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
     """Um endereço a menos deixa uma posição acesa para sempre."""
     if publicado and _em_trabalho():
         pytest.skip("01-jogar está declarada em trabalho no `mockup/DIVERGENCIAS.md`: "
-                    "o produto recebe no `--publicar`, que é ato de quem coordena")
+                    "o produto recebe no `--publicar`, que é ato da costura")
     if publicado and _atras_so_por_endereco():
         pytest.skip("o produto está atrás da bancada SÓ POR ENDEREÇO — nenhum "
                     "pixel mudou. Fecha com: scripts/check_o_desenho_aprovado.py "
@@ -566,7 +566,7 @@ def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
 
 
 def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:
-    """A CENA MUDOU POR ORDEM DELA — 07/09/2026, e esta régua trocou de sinal."""
+    """A CENA MUDOU POR ORDEM DE PRODUTO — 07/09/2026, e esta régua trocou de sinal."""
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")

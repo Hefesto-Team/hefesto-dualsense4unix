@@ -1,6 +1,6 @@
 """virtual_motion.py — o interruptor de giroscópio e acelerômetro, por peça.
 
-SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão dela, 04/09/2026, depois de eu
+SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão, 04/09/2026, depois de se
 recomendar a saída barata (virar leitura, um selo "no ar / parado"):
 
     *"ele tem que funcionar de verdade. ambos independente do modo e da
@@ -67,7 +67,7 @@ ou um comando de firmware que desligue a IMU — e este não existe:
 
 POR QUE O ESTADO MORA NUM REGISTRO POR ``uniq``, e não no objeto do vpad
 ------------------------------------------------------------------------
-Porque ela pediu *"independente (…) da mascara"*, e **trocar a máscara
+Porque o usuário pediu *"independente (…) da mascara"*, e **trocar a máscara
 derruba e recria o gamepad virtual** (medido, e registrado em
 ``profiles/schema.py``). Estado guardado no objeto do vpad morreria em cada
 troca de máscara — o sensor voltaria a ligar sozinho, em silêncio, e a tela

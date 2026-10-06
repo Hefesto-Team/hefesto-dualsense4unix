@@ -136,7 +136,7 @@ class _StoreSemTrava:
 
 
 def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
-    """Duas unidades, dois volumes, um perfil só — o pedido dela, literal."""
+    """Duas unidades, dois volumes, um perfil só — o pedido, literal."""
     chamadas: list[tuple[int, bool, str | None]] = []
 
     def applier(

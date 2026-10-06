@@ -1,6 +1,6 @@
 """BG-03: a janela aberta forkava um par de `pgrep` a cada 3,3 s.
 
-O DEFEITO, medido em 25/08/2026 na máquina dela (DAEMON-ACORDADO-01, seção
+O DEFEITO, medido em 25/08/2026 na máquina do usuário (DAEMON-ACORDADO-01, seção
 "Quem forka, e por que a cada 3,3 s")
 ====================================================================
 Com a janela do Hefesto ABERTA e um DualSense no cabo, numa janela cronometrada

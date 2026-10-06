@@ -1,9 +1,6 @@
 """central_do_radio.py — mover, parear, equilibrar e conferir (MOVER-UM-POR-VEZ-01).
 
-A palavra dela, 23/09/2026, e é a especificação: *"moveriamos por exemplo 1
-controle por vez. Apagaria esse um controle, o user, aperta os botões do
-controle pra sincronizar aquele controle e ele estaria no novo dispositivo. E
-não apagar tudo."* <!-- noqa-acento: citação literal -->
+A palavra, 23/09/2026, e é a especificação
 
 O QUE O ESTUDO DE 23/09 DERRUBOU, e por isso o mover é este
 ===========================================================
@@ -59,7 +56,7 @@ que a central a tem (:meth:`CentralDoRadio._pagar_as_meias_chaves`). O
 prazo é UM, o da tela também, e o pedido seguinte não espera a vigia para
 encontrá-lo vencido (:meth:`CentralDoRadio._vencer_os_prazos`).
 
-O NOME DELA mora pelo endereço do controle, e não na chave
+O NOME DO USUÁRIO mora pelo endereço do controle, e não na chave
 (:meth:`CentralDoRadio.cuidar_dos_nomes`, O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
 
 IDEMPOTÊNCIA É REQUISITO
@@ -84,9 +81,9 @@ mesmo controle.
 
 O «CONECTAR» (D8) é o mesmo caminho sem alvo: a janela abre no destino com
 mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
-SEM O CLIQUE DELA (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
-30/09/2026, a validar por ela): a janela pareia o aparelho que
-ela escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
+SEM O CLIQUE DO USUÁRIO (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
+30/09/2026, a validar pelo usuário): a janela pareia o aparelho que
+o usuário escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
 e só um que a janela viu (o «Parear de Novo» escolhe antes). Até 30/09 ela pareava o primeiro
 controle que aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO
 PAREAMENTO ANTIGO também chega (a foto 2 da lista dela de 25/09: *«conectou com
@@ -104,8 +101,8 @@ A FAXINA (A-SOBRA-DO-BOND-SAI-SOZINHA-01, 25/09/2026)
 ======================================================
 O mover desta central esquece a origem no fim. Um mover feito à mão, ou antes
 de ela existir, deixa a chave velha para trás: o controle fica com bond em dois
-adaptadores, e na mesa dela o P2 ficou assim de 19/09 a 25/09, com o ``doctor``
-acusando e ninguém arrumando. A pergunta dela, 25/09: *«A interface do app não
+adaptadores, e na bancada o P2 ficou assim de 19/09 a 25/09, com o ``doctor``
+acusando e ninguém arrumando. A pergunta, 25/09: *«A interface do app não
 deveria corrigir isso automaticamente?»* Deveria, e a decisão é de quem
 coordena: o controle guarda UM host, e quando o kernel o diz conectado num
 adaptador (``HID_PHYS``) ele mesmo respondeu qual chave vale. A do outro
@@ -118,8 +115,8 @@ vale, e aí nada sai: a sobra espera ele conectar pelo rádio.
 O QUE ESTE MÓDULO NÃO FAZ
 =========================
 Não fala com a tela (nada de recado, R8), não move a webcam (não é do rádio)
-e nunca apaga em lote. No «Conectar» pareia UM aparelho — o que ela escolheu
-na lista —, e nenhum sem o clique dela.
+e nunca apaga em lote. No «Conectar» pareia UM aparelho — o que o usuário escolheu
+na lista —, e nenhum sem o clique do usuário.
 """
 
 from __future__ import annotations
@@ -922,7 +919,7 @@ class CentralDoRadio:
             espera.wait(0.01)
 
     def _movimentos_publicados(self) -> tuple[Movimento, ...]:
-        """Os movimentos como a tela os lê: o destino que ela pediu, e que o fio"""
+        """Os movimentos como a tela os lê: o destino que o usuário pediu, e que o fio"""
         with self._tranca:
             pedido = self._destino_pedido
             return tuple(self._com_o_destino_pedido(m, pedido) for m in self._movimentos.values())
@@ -1156,7 +1153,7 @@ class CentralDoRadio:
     def _tomar_o_destino_pedido(
         self, movimento: Movimento, *, recomecar: bool = False
     ) -> Movimento | None:
-        """O fio atende o destino que ela pediu: o movimento vai para ele."""
+        """O fio atende o destino que o usuário pediu: o movimento vai para ele."""
         with self._tranca:
             novo, self._destino_pedido = self._destino_pedido, None
             if novo is None or novo == movimento.destino:
@@ -1241,7 +1238,7 @@ class CentralDoRadio:
         *,
         _ao_pegar_a_trava: Callable[[], None] | None = None,
     ) -> Movimento:
-        """UM aparelho para UM adaptador — síncrono, e bloqueia pelo gesto dela."""
+        """UM aparelho para UM adaptador — síncrono, e bloqueia pelo gesto do usuário."""
         from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
         alvo = endereco_de(aparelho)
@@ -1599,7 +1596,8 @@ class CentralDoRadio:
     def _ir_para(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez, *, conectar: bool
     ) -> Movimento | tuple[Movimento, bluez_dbus.AdaptadorDoBluez]:
-        """O destino que ela pediu (:meth:`_tomar_o_destino_pedido`), antes da janela de lá."""
+        """O destino que o usuário pediu (:meth:`_tomar_o_destino_pedido`), antes da janela de
+        lá."""
         novo = movimento.destino
         adaptador = next((a for a in dono.adaptadores() or () if a.endereco == novo), None)
         if adaptador is None:
@@ -1743,10 +1741,11 @@ class CentralDoRadio:
         segundos: float,
         destino: str = "",
     ) -> tuple[str, bool] | None:
-        """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho dela, ou ``None``.
+        """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho do usuário, ou ``None``.
 
         Com a janela aberta por ela, o controle CONHECIDO que pede para parear no destino é a
-        escolha dela (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01): ela já disse o que quer ao apertar
+        escolha do usuário (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01): ela já disse o que quer ao
+        apertar
         PS + Create e abrir a janela, e outro clique seria custo para quem joga.
         """
         fim = comeco + segundos
@@ -2438,7 +2437,7 @@ class CentralDoRadio:
             self._geracao_dos_nomes += 1
 
     def cuidar_dos_nomes(self) -> tuple[tuple[str, str], ...] | None:
-        """UMA volta do NOME DELA: guarda o que ela deu, e o devolve a todo objeto."""
+        """UMA volta do NOME DO USUÁRIO: guarda o que ela deu, e o devolve a todo objeto."""
         if self._ocupada():
             return None
         try:

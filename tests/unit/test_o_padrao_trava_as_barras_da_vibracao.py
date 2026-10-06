@@ -1,8 +1,7 @@
 """O «Padrão» trava as barras da aba Vibração (desenho aprovado em 04/10/2026).
 
-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 1 da seção «A decisão dela de 04/10». Ela:
-*«se balanceado é o original. então não tem pq ter original»*; aprovado: *«Perfeito só vamos trocar
-o rótulo do botão para Padrão»*. Com o degrau Padrão as três barras do controle (Sensor Háptico,
+O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 1 da seção «A decisão de 04/10».  aprovado. Com o degrau
+Padrão as três barras do controle (Sensor Háptico,
 Motor esquerdo, Motor direito) ficam inteiras verdes e travadas, com a palavra no lugar do número; o
 que ela guardou espera a Economia ou o Máximo.
 

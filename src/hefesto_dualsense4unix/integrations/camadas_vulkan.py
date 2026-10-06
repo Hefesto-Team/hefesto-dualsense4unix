@@ -542,7 +542,7 @@ _FEITO_PELA_EXCLUSAO = "religada-pela-exclusao"
 
 
 def _e_escolha_dela(registro_dela: dict[str, str]) -> bool:
-    """O `manter` deste registro veio de um GESTO dela, ou de uma inferência?"""
+    """O `manter` deste registro veio de um GESTO do usuário, ou de uma inferência?"""
     if registro_dela.get("escolha") != "manter":
         return False
     return registro_dela.get("feito") != _FEITO_CADUCO

@@ -50,16 +50,16 @@ def plan_mode_transition(
     por aqui em vez de virar um terceiro dono.
 
     ORIGEM-QUE-MENTE-01 (08/08/2026): todo passo que define modo viaja com
-    ``origin="manual"``. É AQUI que o clique dela vira pedido, e o daemon
+    ``origin="manual"``. É AQUI que o clique do usuário vira pedido, e o daemon
     precisa saber disso: desde a cura da origem, o silêncio no protocolo
     significa "automático", e automático NÃO fura o portão da allowlist do
     Steam Input.
 
-    MEDIDO na máquina dela, e o custo foi imediato: com o Sackboy marcado, o
+    MEDIDO na máquina do usuário, e o custo foi imediato: com o Sackboy marcado, o
     botão "Jogar pelo Hefesto" parou de funcionar — o clique chegava sem
     ``origin``, era lido como reconciliação e o daemon o recusava com
     ``gamepad_start_recusado_steam_input``. A cura tinha um contrapeso escrito
-    no teste (*"quem declara manual continua sendo tratado como gesto dela"*) e
+    no teste (*"quem declara manual continua sendo tratado como gesto do usuário"*) e
     faltava esta metade: **a janela precisa DECLARAR**.
 
     O ``mouse.emulation.restore`` não leva ``origin``: ele restaura a
@@ -86,7 +86,7 @@ def plan_mode_transition(
         ]
     if mode_id == MODE_DESKTOP:
         # a ORDEM não mudou. Era `mouse.emulation.restore`, que lê a flag de
-        # `key_bindings`, `button_actions` e a supressão. A ordem dela: *"o modo
+        # `key_bindings`, `button_actions` e a supressão. A ordem de produto: *"o modo
         return [
             ("native.mode.set", {"enabled": False, "origin": "manual"}),
             ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),

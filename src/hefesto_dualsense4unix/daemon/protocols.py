@@ -173,7 +173,7 @@ class DaemonProtocol(Protocol):
         R3), com as velocidades do perfil (D-2909-A-NAVEGACAO-LIGA-O-MOUSE,
         O-MOUSE-SEGUE-A-NAVEGACAO-01); o socorro `forcar_mouse` saiu com ela.
 
-        `grava_o_modo`: a porta da escolha dela; o modo `desktop` vai ao
+        `grava_o_modo`: a porta da escolha do usuário; o modo `desktop` vai ao
         perfil ativo depois do arranjo, e o `mouse.enabled` que a entrada
         ligou vai na mesma gravação (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
 

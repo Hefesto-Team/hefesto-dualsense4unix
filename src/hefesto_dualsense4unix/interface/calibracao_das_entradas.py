@@ -19,7 +19,7 @@ AS DUAS FASES TÊM PREÇOS MUITO DIFERENTES, E POR ISSO SÃO DUAS
 ---------------------------------------------------------------
 
 * a **fase sentada** paga primeiro e ninguém levanta: um toque por aparelho,
-  e o toque no HUB resolve tudo o que pende dele. Na mesa dela, quatro toques
+  e o toque no HUB resolve tudo o que pende dele. Na bancada, quatro toques
   cobriam sete aparelhos;
 * a **fase em pé** é opcional e visita **só as vazias** (o F-2 da sprint):
   mandar alguém ao fundo do gabinete para ensinar uma entrada que o computador
@@ -30,7 +30,7 @@ A fase sentada tem **fim próprio** — não é preâmbulo da outra (R31).
 O QUE ESTA JANELA APROVOU E O QUE ELA NÃO APROVOU
 --------------------------------------------------
 
-``docs/data/decisoes-de-produto.csv``, ``D-CALIBRAR-AS-ENTRADAS``: *"APROVADO POR ELA
+``docs/data/decisoes-de-produto.csv``, ``D-CALIBRAR-AS-ENTRADAS``: *"APROVADO PELO USUÁRIO
 em 25/08/2026, às ~03h55, VENDO o mockup"*. O carimbo cobre nominalmente as
 duas fases, a pergunta única do hub, os dois relógios, o ``[Não alcanço]`` como
 saída de primeira classe, a marreta batendo UMA vez em 0,82 s e as quatro

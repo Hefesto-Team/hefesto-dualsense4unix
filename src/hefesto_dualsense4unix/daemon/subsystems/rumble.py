@@ -368,7 +368,7 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
 
     No-op com rumble FIXADO em par NÃO-NULO: ali o dono é a usuária (aba
     Rumble), o reassert re-afirmaria o valor em 200ms de qualquer forma e zerar
-    seria desfazer o gesto dela. Best-effort: falha de hardware não pode
+    seria desfazer o gesto do usuário. Best-effort: falha de hardware não pode
     abortar a troca de modo.
 
     **`(0, 0)` NÃO é par fixado para esta guarda** (25/08/2026). A guarda era
@@ -382,8 +382,8 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     Os dois motivos do no-op caem no `(0, 0)`, e é por isso que ele passa a
     zerar:
 
-    - *"zerar seria desfazer o gesto dela"* — com `(0, 0)` zerar **é** o gesto
-      dela, palavra por palavra;
+    - *"zerar seria desfazer o gesto do usuário"* — com `(0, 0)` zerar **é** o gesto
+      do usuário, palavra por palavra;
     - *"o reassert re-afirmaria o valor de qualquer forma"* — não afirma: o
       reassert manda `set_rumble(0, 0)` e o dedup do `sendReport` come o
       report que não muda. É exatamente o buraco que `force_rumble_stop()`

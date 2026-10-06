@@ -14,7 +14,7 @@ DISPLAY_MORTO = ":9"
 def _reader_xlib_com_conexao_provada_morta(
     monkeypatch: pytest.MonkeyPatch, *, wayland_depois: bool
 ) -> window_detect.WindowReaderDiag:
-    """Constrói o leitor no estado exato da máquina dela: xlib, X recusando."""
+    """Constrói o leitor no estado exato da máquina do usuário: xlib, X recusando."""
     monkeypatch.setenv("DISPLAY", DISPLAY_MORTO)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     reader = window_detect.build_window_reader()

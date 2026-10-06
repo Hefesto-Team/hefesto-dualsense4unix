@@ -1,6 +1,6 @@
 """HIDE-SO-O-HIDRAW-02 — os quatro nós de entrada do físico somem como o hidraw.
 
-A palavra dela, 23/09/2026, escolhida entre as opções: **«Esconder tudo»**. Os
+A palavra, 23/09/2026, escolhida entre as opções: **«Esconder tudo»**. Os
 nós de entrada do DualSense FÍSICO (o gamepad, o touchpad, os sensores de
 movimento e a tomada do fone em `/dev/input/eventN`, e o joystick legado em
 `/dev/input/jsN`) somem para todos menos para o Hefesto, e só o Modo Nativo os
@@ -396,7 +396,7 @@ class TestOsNosDeEntradaDoAparelho:
         assert mesa.ops().entradas_do_no("hidraw5") == []
 
     def test_nome_reciclado_para_um_teclado_nao_devolve_nada(self, tmp_path: Path) -> None:
-        """Se o `hidrawN` virou o teclado dela entre o pedido e aqui, os nós"""
+        """Se o `hidrawN` virou o teclado do usuário entre o pedido e aqui, os nós"""
         mesa = _montar(tmp_path, hid="0005:3554:FA09.0002", extra="HID_PHYS=x\n")
         assert mesa.ops().entradas_do_no("hidraw5") == []
 

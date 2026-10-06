@@ -1,9 +1,9 @@
 """As lâmpadas esperam a cor — APARELHO-NAO-SE-CONTRADIZ-01, PARTE 1.
 
-DECISÃO DELA, 20/09/2026, verbatim: *"As lâmpadas esperam a cor"*. A razão é
+DECISÃO, 20/09/2026, verbatim: *"As lâmpadas esperam a cor"*. A razão é
 do produto, e não do código: **o aparelho nunca se contradiz consigo mesmo.**
 
-## O que foi medido, com os quatro DualSense na mesa dela
+## O que foi medido, com os quatro DualSense na bancada
 
 Ela desligou o P3 (Cosmic Red) e olhou o P4 (Galactic Purple)::
 
@@ -13,7 +13,7 @@ Ela desligou o P3 (Cosmic Red) e olhou o P4 (Galactic Purple)::
     23:56:49.284  gatilho_da_cor_escrito: rosa → verde       +31,5 s
 
 Por **27 segundos** o mesmo controle mostrava três lâmpadas de Player 3 e a
-barra do Player 4. A palavra dela, confirmando a predição: *"Rosa e só verde
+barra do Player 4. A palavra de produto, confirmando a predição: *"Rosa e só verde
 meio minuto depois"*.
 
 ## O que esta régua mede, e onde ela MORDE
@@ -115,7 +115,7 @@ def numeros_das_lampadas(reg: ControllerIdentityRegistry) -> dict[str, int | Non
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOAparelhoNaoSeContradiz:
-    """O número do aparelho não anda sem a cor — a decisão dela de 20/09."""
+    """O número do aparelho não anda sem a cor — a decisão de 20/09."""
 
     def test_o_gatilho_ainda_nao_disparou_e_o_numero_nao_se_mexe(self) -> None:
         """P3 sai; até a liberação, o P4 continua sendo o jogador 4."""

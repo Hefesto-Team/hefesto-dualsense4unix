@@ -25,7 +25,7 @@ Esta casa quer mandar patch upstream sobre o crash de heap do BlueZ. **O
 caminho natural de um relatório de corrupção de heap é anexar o core** — e o
 mantenedor upstream vai pedir.
 
-Anexar = publicar as credenciais de rádio de todos os aparelhos dela num
+Anexar = publicar as credenciais de rádio de todos os aparelhos do usuário num
 rastreador público, para sempre, com o histórico do bug.
 
 Não é hipótese: é o próximo passo óbvio de um trabalho que já está na fila.

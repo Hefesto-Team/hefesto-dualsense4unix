@@ -87,7 +87,7 @@ class PlanoDoAdaptador:
 
     @property
     def nome_na_tela(self) -> str:
-        """O nome DELA, nunca ``hciN`` — ver :data:`ADAPTADOR_SEM_NOME`."""
+        """O nome DO USUÁRIO, nunca ``hciN`` — ver :data:`ADAPTADOR_SEM_NOME`."""
         if self.apelido:
             return self.apelido
         if not self.endereco:

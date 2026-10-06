@@ -2,7 +2,7 @@
 
 **O que só quebra quando são quatro.** A sprint nomeia quatro defeitos; a
 ROTA CORRIGIDA de 06/09/2026 manda executar os DOIS que estão provados no
-código e são de agente (1 e 2) e deixar os outros dois — corridas de relógio
+código e são desta frente (1 e 2) e deixar os outros dois — corridas de relógio
 de jogo e cache de sysfs — para a MESA-DE-QUATRO-01.
 
 ## Defeito 1 — ``_connected`` era escrito por uma LEITURA
@@ -26,8 +26,7 @@ marcado ausente pelo tique** — uma única leitura de cor do ausente:
 
 O quarto foi de **3 para 4** e a lightbar dele de **verde para rosa** por
 causa de uma consulta — e o tique o traz de volta a 3 dois segundos depois,
-sem parar, enquanto o controle bounça no rádio. É a frase dela: *"quando um
-controle pisca, os outros trocam de cor e de número sozinhos, e voltam"*.
+sem parar, enquanto o controle bounça no rádio. É a
 
 A cura NÃO é chamar ``mark_disconnected`` (ele está sem chamador de produção
 **de propósito** — R-15/D2: o lugar na fila sobrevive ao disconnect). O
@@ -63,7 +62,7 @@ Régua que só sabe passar não é régua — e o dublê daqui sabe recusar.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc:…`` com os octetos 4 e 5
 zerados, a mesma allowlist de ``tests/unit/test_anonimato_de_fixtures.py``. A
-mesa de quatro reproduz a ORDEM da mesa dela; os bytes, não.
+mesa de quatro reproduz a ORDEM da bancada; os bytes, não.
 """
 from __future__ import annotations
 
@@ -367,7 +366,7 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
     def test_a_geometria_de_27_08_nao_colide_mais_por_construcao(
         self, config_isolado: Path
     ) -> None:
-        """A cena do journal dela, e é a única que produz a colisão."""
+        """A cena do journal do usuário, e é a única que produz a colisão."""
         reg = mesa_de_quatro(Relogio())
         inst = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))

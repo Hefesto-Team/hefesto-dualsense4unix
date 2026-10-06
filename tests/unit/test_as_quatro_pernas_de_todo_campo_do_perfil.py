@@ -1,4 +1,4 @@
-"""AS QUATRO PERNAS — toda escolha dela tem de sobreviver ao CICLO, não ao clique."""
+"""AS QUATRO PERNAS — toda escolha do usuário tem de sobreviver ao CICLO, não ao clique."""
 from __future__ import annotations
 
 import re

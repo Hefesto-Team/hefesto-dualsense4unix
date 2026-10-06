@@ -73,7 +73,7 @@
 #      que cabem no lugar guardado de quem saiu (30 s): o controle volta com o
 #      número dele — e o aviso de OUTRO controle que chega no meio do trabalho
 #      ganha mais uma volta das três (`religar_em_fundo`). O tique do watchdog
-#      passa de 2 em 2 min (medido no journal dela: mediana 120 s), e religado
+#      passa de 2 em 2 min (medido no journal do usuário: mediana 120 s), e religado
 #      só ali ele voltava fora do prazo em mais de 3 de cada 4 quedas. Sem a
 #      regra do sudo (o install sem senha, o Flatpak), nada muda: o tique
 #      continua religando, como antes.
@@ -147,7 +147,7 @@ _AWK_CMD="$(_escolher_awk)"
 # CADERNO-QUE-NÃO-ESCREVE-01 (08/08/2026). O caderno dela estava VAZIO: 120
 # linhas, todas banners do próprio shell, a última de 20/07 — contra 723 eventos
 # de storm no journal do mesmo período, com a vigia `enabled` e `active` o tempo
-# todo. Ela pediu a explicação da queda dos controles, e o arquivo que a guardaria
+# todo. O usuário pediu a explicação da queda dos controles, e o arquivo que a guardaria
 # não tinha nada.
 #
 # A CURA É O `-W interactive`, E NÃO O `fflush()`. Esta distinção custou duas

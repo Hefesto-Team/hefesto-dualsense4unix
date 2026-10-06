@@ -155,7 +155,7 @@ VOLATILE_ABSENCE_LIMIT = 2
 #: matou o 8BitDo ao vivo.
 LED_MIN_INTERVAL_SEC = 2.0
 
-#: LUGAR-À-MESA-01 / E0 — **DECISÃO DELA, 07/08/2026: "calar a luz até a
+#: LUGAR-À-MESA-01 / E0 — **DECISÃO, 07/08/2026: "calar a luz até a
 #: entrega existir"** (resposta 12 do painel, em
 #: o registro «DECISOES-DELA-as-onze-respostas-do-painel» de 07/08/2026).
 #: Enquanto o controle externo NÃO for jogador de verdade dentro do jogo, o
@@ -184,7 +184,7 @@ LED_MIN_INTERVAL_SEC = 2.0
 #: identidade; este interruptor governa só a APARÊNCIA).
 #:
 #: **Condição de volta, objetiva:** quando o externo virar jogador de verdade —
-#: a `E3` da LUGAR-À-MESA-01, que ela autorizou **só depois da MASCARA-01**.
+#: a `E3` da LUGAR-À-MESA-01, que o usuário autorizou **só depois da MASCARA-01**.
 #: Não é "quando alguém achar que já dá".
 #:
 #: **Custo declarado (GRAU: SUSPEITA COM MECANISMO).** O nó de LED guarda o
@@ -955,7 +955,7 @@ class ExternalImuEnabler:
 class ExternalLedSync:
     """Aplica o LED de posição dos externos no TICK do daemon (EXT-04, item 3).
 
-    **CALADO desde 07/08/2026** (E0 da LUGAR-À-MESA-01, DECISÃO DELA): o
+    **CALADO desde 07/08/2026** (E0 da LUGAR-À-MESA-01, DECISÃO DE PRODUTO): o
     interruptor de módulo :data:`EXTERNAL_PLAYER_LED_ENABLED` está ``False``, e
     com ele o tick faz ZERO escritas de LED — enquanto o externo não for
     jogador de verdade no jogo, o produto não acende número nele. **Tudo o que
@@ -1208,7 +1208,7 @@ class ExternalLedSync:
             self._last_authority = autoridade
 
             if not EXTERNAL_PLAYER_LED_ENABLED:
-                # E0 da LUGAR-À-MESA-01 — DECISÃO DELA de 07/08/2026: "calar a
+                # E0 da LUGAR-À-MESA-01 — DECISÃO de 07/08/2026: "calar a
                 # luz até a entrega existir". Enquanto o externo não for jogador
                 # dentro do jogo, o Hefesto não acende número nele: ZERO
                 # escritas, sem apagar (ver a docstring de

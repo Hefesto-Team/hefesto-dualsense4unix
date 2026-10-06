@@ -142,7 +142,7 @@ EXCECOES_DELA: dict[int, str] = {
 
 
 def excecao_dela(cp: int) -> tuple[bool, str]:
-    """True se ``cp`` é uma das exceções que ela nomeou, com o papel dele."""
+    """True se ``cp`` é uma das exceções que o usuário nomeou, com o papel dele."""
     papel = EXCECOES_DELA.get(cp)
     return (papel is not None), (papel or "")
 

@@ -24,7 +24,7 @@ Cada teste MORDE. As curas, e o que reprova ao arrancar cada uma:
 - as três chaves novas no `mouse_emulation` → `test_a_mordida_*` reprova;
 - o `bloqueio` no `failed` de `mouse.emulation.set` → a recusa volta a ser muda;
 - o desvio `"desligada"` → `"sem_device"` quando LIGAR falha → o motivo passa a
-  ser o próprio pedido dela ("está desligada" para quem acabou de tentar ligar);
+  ser o próprio pedido ("está desligada" para quem acabou de tentar ligar);
 - `pontes_confirmadas` no `state_full` → o editor de perfil volta a precisar de
   uma segunda ida ao daemon por gesto.
 """
@@ -188,7 +188,7 @@ async def test_sem_config_acessivel_o_bloco_continua_OMITIDO() -> None:  # noqa:
 
 @pytest.mark.asyncio
 async def test_a_mordida_ligar_e_falhar_devolve_o_motivo_certo() -> None:
-    """A recusa deixa de ser muda — e não devolve o pedido dela como motivo.
+    """A recusa deixa de ser muda — e não devolve o pedido como motivo.
 
     Arrancar o `resposta["bloqueio"]` faz `frase_da_recusa_do_mouse` cair em
     `RECUSA_SEM_MOTIVO` ("recusou e não disse por quê"), que é exatamente o

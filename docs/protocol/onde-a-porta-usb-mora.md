@@ -305,7 +305,7 @@ pergunta, para que ninguém cite como fato:
 | Placa Intel responde? | **ABERTA** | Nenhuma medição. |
 | Hub externo some sempre? | **PARCIAL** | Nesta bancada, os dois hubs estão na Matisse, que já não descreve nada — as duas causas estão **confundidas** e a medição não as separa. O que sustenta a expectativa é estrutural, não medido: o `_PLD` descreve a placa-mãe, e o firmware não pode conhecer um hub que a pessoa comprou depois. Quem tiver um hub no barramento do chipset fecha esta linha em um comando. |
 
-**O que qualquer pessoa pode rodar para responder pela máquina dela**, sem root:
+**O que qualquer pessoa pode rodar para responder pela máquina do usuário**, sem root:
 
 ```sh
 ls -d /sys/bus/usb/devices/usb*/*/usb*-port*                   | wc -l  # portas

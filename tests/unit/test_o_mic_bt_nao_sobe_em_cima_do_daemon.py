@@ -34,7 +34,7 @@ Reprovam:
 * `test_sobe_so_no_controle_que_o_daemon_nao_segura`
 
 Endereços sintéticos da faixa `e8:47:3a` com a máscara da casa (octetos 4 e 5
-zerados) — fora da faixa `aabbcc`, que é a que já vazou para a mesa dela.
+zerados) — fora da faixa `aabbcc`, que é a que já vazou para a bancada.
 """
 from __future__ import annotations
 

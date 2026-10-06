@@ -16,7 +16,7 @@ armadilha conhecida (o Nintendo/8BitDo por Bluetooth morre — é o driver
 registro «DECISOES-ABERTAS» da aba Configurações foi
 respondida mantendo a seção "Os controles" na leva da aba Configurações —
 **contrária à recomendação**, que era cortá-la justamente por causa da fala
-acima. A escolha é dela e está registrada com data; a fala de origem fica onde
+acima. A escolha é de produto e está registrada com data; a fala de origem fica onde
 está, porque decisão revogada nesta casa ganha uma segunda data, nunca some.
 
 O que a reabertura acrescenta a este arquivo, e só isso: as funções puras que a

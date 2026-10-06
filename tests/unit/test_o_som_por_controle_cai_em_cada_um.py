@@ -1,18 +1,16 @@
 """SOM-POR-CONTROLE-01 — o mix ou o SFX, caindo em CADA controle.
 
-**O pedido dela, 08/09/2026, à noite:** *"o lance dos 4 mic virtuais via bt pra
-cada controle e cavbo e os somns seja hdmi completo seja o canal do sfx caindo
-pra cada controle. nao esquece disso."*  <!-- noqa-acento: citação dela -->
+**O pedido, 08/09/2026, à noite:** **  <!-- noqa-acento: citação -->
 
 O QUE ESTE ARQUIVO MEDE, e o que ele NÃO mede
 ----------------------------------------------
 Mede o NOSSO lado: o nome do nó, o `sink_name`, a rota, a fonte e o ciclo de
 vida — tudo com dublê, sem um byte de PCM e sem um `pactl` de verdade. **Não
 mede som**: que o alto-falante do P2 toque o que entrou no nó do P2 é a orelha
-dela, na bancada, e está declarado na entrega.
+do usuário, na bancada, e está declarado na entrega.
 
 A MEDIÇÃO QUE ORIGINOU A SPRINT, refeita em 09/09/2026 às 19h55 com os QUATRO
-DualSense na mesa dela (dois no cabo, dois no rádio), por
+DualSense na bancada (dois no cabo, dois no rádio), por
 `scripts/ensaios/os_nos_de_som_por_controle.py`, que é leitura pura::
 
     saída padrão .... alsa_output.pci-…hdmi-stereo
@@ -63,7 +61,7 @@ from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
 
 _SONY = " (DualSense Wireless Controller)"
 
-#: régua que só passa com os quatro DualSense dela mede a bancada, não a cura.
+#: régua que só passa com os quatro DualSense do usuário mede a bancada, não a cura.
 _UNIQ_P1 = "02fe0011a1b2"
 _UNIQ_P2 = "02fe0011a1b3"
 
@@ -143,7 +141,7 @@ def _no_de_pe(
 
 
 def test_o_no_se_chama_alto_falante_do_controle_n() -> None:
-    """Decisão dela, 09/09/2026 (*"4a"*). Era «Alto-falante · P1» até 08/09."""
+    """Decisão, 09/09/2026 (*"4a"*). Era «Alto-falante · P1» até 08/09."""
     assert som.rotulo_do_alto_falante(1) == "Alto-falante do Controle 1" + _SONY
     assert som.rotulo_do_alto_falante(4) == "Alto-falante do Controle 4" + _SONY
     assert som.NOME_DO_ALTO_FALANTE_DO_CONTROLE == "Alto-falante do Controle"
@@ -376,7 +374,7 @@ def test_a_mesa_inteira_vai_para_quem_resolve_o_sink(
 
     `escolher_sink` desempata pelo dispositivo USB, e para isso precisa da
     lista inteira. MORDIDA: passe `(uniq,)` em vez da mesa e esta asserção cai
-    — e na bancada dela o som do P2 sai no alto-falante do P1.
+    — e na bancada o som do P2 sai no alto-falante do P1.
     """
     mesas: list[tuple[str, ...]] = []
 
@@ -410,7 +408,7 @@ def test_a_mesa_inteira_vai_para_quem_resolve_o_sink(
 
 
 def test_a_fonte_de_cada_controle_chega_ao_no(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A escolha dela, por controle, atravessa o gerenciador até a rota."""
+    """A escolha do usuário, por controle, atravessa o gerenciador até a rota."""
     fontes: list[str] = []
 
     class _NoFalso:
@@ -477,7 +475,7 @@ def _payload_do_ipc(mesa: list[dict[str, Any]], daemon: Any) -> list[dict[str, A
 
     Quem carimba é o PRODUTO: `IpcHandlersMixin._player_slot_for`, chamado sem
     instância porque ele só lê `self.daemon`. Redigitar `slot_for(…,
-    assign=False)` aqui faria a régua medir a minha cópia da leitura em vez da
+    assign=False)` aqui faria a régua medir uma cópia local da leitura em vez da
     do daemon — a forma de instrumento falso que esta casa já nomeou.
     """
     from types import SimpleNamespace
@@ -506,7 +504,7 @@ def _payload_do_ipc(mesa: list[dict[str, Any]], daemon: Any) -> list[dict[str, A
     ],
 )
 def test_o_assento_do_alto_falante_e_o_mesmo_do_microfone(mesa: Any) -> None:
-    """Os dois rótulos aparecem na MESMA lista de som dela — e dizem o mesmo N."""
+    """Os dois rótulos aparecem na MESMA lista de som do usuário — e dizem o mesmo N."""
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
     backend = _backend(mesa)
@@ -601,7 +599,7 @@ def test_uma_fonte_que_o_codigo_nao_conhece_cai_no_padrao() -> None:
 def test_a_palavra_do_transporte_nao_troca_a_frase(palavra: str) -> None:
     """As quatro grafias do rádio pedem a MESMA frase.
 
-    **ACHADO NA PASSADA SECA de 09/09/2026, com os quatro DualSense dela na
+    **ACHADO NA PASSADA SECA de 09/09/2026, com os quatro DualSense do usuário na
     mesa.** `ControleNaLista.transporte` diz `"rádio"` (a palavra da tela) e
     `app/audio_saida` diz `"bt"` (a do `state_full`). Com a comparação de texto
     contra UMA delas, os dois controles do rádio caíam no ramo do CABO e ela
@@ -627,8 +625,8 @@ def test_o_cabo_continua_sendo_cabo_nas_duas_grafias() -> None:
 def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
     """HAVIA TRÊS contas para o mesmo «Controle N». Sobrou uma — 12/09/2026.
 
-    TRES-CONTAS-PARA-UM-NUMERO-01, e o defeito que a originou foi medido na mesa
-    DELA em 09/09 às 22h, com os quatro DualSense ligados::
+    TRES-CONTAS-PARA-UM-NUMERO-01, e o defeito que a originou foi medido na bancada em 09/09 às
+    22h, com os quatro DualSense ligados::
 
         pactl list sources → Description: Microfone do Controle 2  ← o daemon
         a tela             → P1 • White • cabo                     ← o cartão

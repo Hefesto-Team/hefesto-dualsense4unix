@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A RÉGUA DO "Abrir o lançador" — o botão que a casa sabia fazer e não fazia.
 
-DECISÃO 17 DELA, 03/09/2026: o botão LIGA, e o gesto entra em
+DECISÃO 17 DO USUÁRIO, 03/09/2026: o botão LIGA, e o gesto entra em
 `hefesto_vivo.PERIGOSOS`, para que a prova automática nunca o clique e nunca
-abra a Steam na tela dela. **As duas metades são uma decisão só**, e é por
+abra a Steam na tela do usuário. **As duas metades são uma decisão só**, e é por
 isso que esta régua cobra as duas no mesmo arquivo: ligar sem o isento seria
 ligar contra ela — a `--prova-gesto` roda sozinha e abriria a Steam por cima do
 que ela estivesse fazendo.
@@ -28,7 +28,7 @@ O QUE ESTA RÉGUA COBRA, e cada item é uma forma de recaída:
 5. **`reopen_steam` NÃO é chamada pelos cinco.** É a mordida mais importante:
    um `if` invertido abriria a Steam quando ela clicasse no cartão do RetroArch.
 6. **O gesto está em `hefesto_vivo.PERIGOSOS`**, com a chave qualificada pela
-   página — a metade que protege a tela dela.
+   página — a metade que protege a tela do usuário.
 
 A MORDIDA (as duas saídas estão no relatório desta frente): troque
 `qual != desenho.STEAM` por `qual == desenho.STEAM` em `abrir_lancador` e os
@@ -37,7 +37,7 @@ itens 2, 4 e 5 reprovam nomeando o defeito; tire a linha
 
 NENHUM TESTE DAQUI ABRE A STEAM. `reopen_steam` é trocada por um dublê que só
 anota que foi chamada — a régua mede a CHAMADA, nunca o efeito. Uma régua desta
-casa que abrisse a Steam da máquina dela para provar que sabe abrir a Steam
+casa que abrisse a Steam da máquina do usuário para provar que sabe abrir a Steam
 seria exatamente o que a segunda metade da decisão 17 existe para impedir.
 """
 from __future__ import annotations
@@ -188,7 +188,7 @@ def test_nenhum_dos_cinco_abre_a_steam(a07, ctx, espia, desenho):
 
 
 def test_o_gesto_esta_entre_os_perigosos(desenho):
-    """Sem isto, `--prova-gesto` abriria a Steam na tela dela a cada volta."""
+    """Sem isto, `--prova-gesto` abriria a Steam na tela do usuário a cada volta."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     assert (PAGINA, desenho.ABRIR) in hefesto_vivo.PERIGOSOS, (

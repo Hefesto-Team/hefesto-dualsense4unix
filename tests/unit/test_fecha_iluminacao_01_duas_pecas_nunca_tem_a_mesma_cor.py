@@ -2,14 +2,14 @@
 
 `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (`docs/data/decisoes-de-produto.csv:56`) é
 **regra do produto, sempre**, e até 08/09/2026 não existia uma linha dela em
-`src/`. A mesa dela provava: dois dos quatro DualSense guardavam no perfil as
+`src/`. A bancada provava: dois dos quatro DualSense guardavam no perfil as
 cores dos slots **1 e 2**, e hoje eles são o **2 e o 4** — o número de outro dia
 fossilizado no arquivo, com o rank 1 e o rank 2 acendendo o MESMO `#0000FF`.
 
 **A PRIMEIRA VOLTA DESTA RÉGUA MENTIU, E ESTA NASCE DISSO.** Ela tinha um
 `test_o_broadcast_dela_sobrevive` que punha **DOIS** controles e escolhia o
 VERDE — que numa mesa de dois não é a cor do número de ninguém. *O nome do
-teste prometia a mesa dela; o corpo mede o único arranjo em que o defeito não
+teste prometia a bancada; o corpo mede o único arranjo em que o defeito não
 aparece.* Na mesa de QUATRO, com os overrides dela, o mesmo broadcast saía
 `[verde, vermelho, azul, rosa]`, com o P1 acendendo a cor do número do 3.
 
@@ -118,7 +118,7 @@ def _mesa_de_quatro(
     procedencias: dict[str, object] | None = None,
     auto: bool = True,
 ) -> tuple[IpcServer, bp.PyDualSenseController, dict[str, _NoDeLed]]:
-    """Os quatro DualSense dela, no produto real, com o disco dela na camada certa.
+    """Os quatro DualSense do usuário, no produto real, com o disco do usuário na camada certa.
 
     Os overrides entram pela porta do PERFIL (`reset_profile_overrides`), que é
     por onde eles chegam de verdade: é o `ProfileManager.apply` quem a chama, e
@@ -207,7 +207,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     def test_sem_broadcast_as_quatro_cores_saem_distintas(
         self, tmp_path: Path
     ) -> None:
-        """(b) O estado do disco dela, sem gesto nenhum: quatro cores, quatro.
+        """(b) O estado do disco do usuário, sem gesto nenhum: quatro cores, quatro.
 
         **A MORDIDA:** arranque `_com_cor_unica_locked` (devolva `r.saida`) e
         esta linha reprova com `3 de 4` — dois `#0000FF`, o rank 1 e o rank 2.
@@ -281,7 +281,7 @@ class TestAProcedenciaEOQueElaLe:
     def test_a_cor_escolhida_para_outro_numero_e_fossil(
         self, tmp_path: Path
     ) -> None:
-        """A decisão dela, palavra por palavra: *"quando o número daquele"""
+        """A decisão de produto, palavra por palavra: *"quando o número daquele"""
         roxo = (90, 20, 140)
         _s, ctl, _n = _mesa_de_quatro(
             tmp_path,
@@ -589,7 +589,7 @@ class TestOGestoDaAba:
     """A metade que só a TELA cumpre — a frase que diz de quem é a cor."""
 
     def test_escolher_o_tom_do_vizinho_recusa_e_diz_de_quem_e(self) -> None:
-        """A cor com dono RECUSA — decisão dela, 09/09/2026.
+        """A cor com dono RECUSA — decisão, 09/09/2026.
         (D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X)
         """
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
@@ -633,7 +633,7 @@ class TestOGestoDaAba:
         assert "tom on" in minha[0] and "tomado" not in minha[0]
 
     def test_o_x_e_preto_com_borda_branca_e_nao_a_cor_do_dono(self) -> None:
-        """Decisão dela, 09/09/2026, com os quatro na mesa."""
+        """Decisão, 09/09/2026, com os quatro na mesa."""
         from hefesto_dualsense4unix.interface import aba04
 
         css = aba04.CSS
@@ -734,7 +734,7 @@ def _comentarios_aninhados(html: str) -> list[int]:
 
 
 class TestAProsaQueVaiPararNaTela:
-    """*"Ainda temos 3 cantos falando sobre o automatico"* — palavra dela."""  # noqa-acento: citação literal
+    """ — palavra de produto."""  # noqa-acento: citação literal
 
     @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
     def test_a_pagina_04_nao_fala_do_botao_que_saiu(self, pasta: Path) -> None:
@@ -769,7 +769,7 @@ class TestAProsaQueVaiPararNaTela:
             f"fecha o de fora e o resto vira corpo visível: {sujas}")
 
     def test_a_legenda_nao_narra_commit_nem_cita_decisao_dela(self) -> None:
-        """A tela não é changelog — regra dela, 07/09/2026."""
+        """A tela não é changelog — regra, 07/09/2026."""
         from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
             texto_visivel,
         )

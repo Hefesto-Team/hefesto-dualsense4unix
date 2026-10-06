@@ -198,7 +198,7 @@ def test_o_registro_se_mexe_no_jogo_que_traz_o_carregador(lar: Path) -> None:
 
 
 def test_religado_depois_de_devolver_o_gancho_volta_a_tirar(lar: Path) -> None:
-    """Desligar devolve e grava `manter`; ligar de novo é a voz dela por cima."""
+    """Desligar devolve e grava `manter`; ligar de novo é a voz do usuário por cima."""
     _instalar_o_curador(lar)
     prefixo, jogo, _ = _prefixo_e_jogo(lar, com_carregador=True)
     marca = cv.chave_de_estado(r"Software\Khronos\Vulkan\ImplicitLayers", EPIC)

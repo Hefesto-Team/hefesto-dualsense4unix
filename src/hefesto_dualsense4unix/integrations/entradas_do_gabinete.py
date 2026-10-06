@@ -26,7 +26,7 @@ bancada em 25/08/2026::
 
 O DualSense é 2.0 e **sempre** enumera no lado 2.0. Contar nós daria 22 buracos
 onde existem 15; e chamar ``usb2-port2`` de "vazia" mandaria ela encaixar o cabo
-num buraco que já tem o mouse dela dentro. Por isso:
+num buraco que já tem o mouse do usuário dentro. Por isso:
 
 * :func:`listar_entradas` devolve **nós**, que é o que o kernel publica;
 * :func:`furos` agrupa os nós pelo ``peer`` e devolve **buracos**;
@@ -127,7 +127,7 @@ class Furo:
     def vazio(self) -> bool:
         """``True`` quando **todos** os nós deste buraco dizem ``not attached``.
 
-        O DualSense é 2.0 e enumera no lado 2.0: com o mouse dela em
+        O DualSense é 2.0 e enumera no lado 2.0: com o mouse do usuário em
         ``usb1-port6``, o par ``usb2-port2`` responde ``not attached`` e o
         buraco NÃO está vazio. Perguntar por nó em vez de por buraco é o defeito
         que esta propriedade existe para não deixar acontecer.

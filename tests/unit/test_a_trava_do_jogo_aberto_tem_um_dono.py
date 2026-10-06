@@ -6,11 +6,11 @@ automática do P1 —, mas a pergunta «posso recriar o pad com o jogo aberto?»
 fazia em cinco lugares, de três jeitos, e um deles (o juiz da máscara do co-op,
 `CoopManager.sync`) não perguntava: o perfil automático escrevia a máscara por
 peça no registro com o P1 segurado, e o P2 seria recriado no meio da partida no
-primeiro evento de `/dev/input`. E o gesto dela passava calado: achar quem
+primeiro evento de `/dev/input`. E o gesto do usuário passava calado: achar quem
 recriou às 03:07:09 custou juntar cinco eventos.
 
 A cura: um dono da pergunta (`gamepad._recriacao_bloqueada_por_jogo`), com a
-tabela das origens que passam com o jogo aberto, cada uma com a decisão dela; a
+tabela das origens que passam com o jogo aberto, cada uma com a decisão de produto; a
 linha `pad_recriado_com_o_jogo_aberto` de quem passa; o aviso de espera UMA vez
 por origem por episódio; e todos os juízes perguntando a ele.
 
@@ -234,7 +234,7 @@ def test_o_p1_morto_que_renasce_sozinho_leva_a_origem_ao_co_op(
 def test_o_gesto_dela_recria_e_diz_qual_decisao_deixou(
     secundarios: int, transporte: str, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com o jogo aberto, o gesto dela (`manual`) troca para Xbox, nos quatro."""
+    """Com o jogo aberto, o gesto do usuário (`manual`) troca para Xbox, nos quatro."""
     d = _daemon(transporte)
     mesa = _a_mesa(d, monkeypatch, secundarios) if secundarios else None
     if mesa is None:
@@ -413,7 +413,7 @@ def _decisoes_dela() -> dict[str, dict[str, str]]:
 
 
 def test_toda_origem_que_passa_aponta_uma_decisao_dela() -> None:
-    """Cada chave da tabela aponta um id decidido por ela (não por delegação)."""
+    """Cada chave da tabela aponta um id decidido pelo usuário (não por delegação)."""
     decisoes = _decisoes_dela()
     for origem, decisao in gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.items():
         linha = decisoes.get(decisao)

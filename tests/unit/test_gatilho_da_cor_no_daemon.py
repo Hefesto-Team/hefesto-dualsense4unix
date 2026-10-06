@@ -185,7 +185,7 @@ async def test_sem_conexao_nova_o_laco_nunca_repinta(
 async def test_evento_de_jogo_tambem_arma_o_gatilho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Escolha dela, 12/08: reafirmar depois de CADA evento que faz a Steam pintar."""
+    """Escolha, 12/08: reafirmar depois de CADA evento que faz a Steam pintar."""
     _fatias_curtas(monkeypatch)
     ctrl = _Controller()
     daemon = _StubDaemon(ctrl)

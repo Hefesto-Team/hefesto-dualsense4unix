@@ -18,11 +18,11 @@ arquivo é a régua de cada um.
      (fechado) ia para `/usr/lib/udev/rules.d/` do `.deb`/`.rpm`/Arch/Nix e o
      broker era instalado FORA do pacote. Num `apt install`, o DualSense
      nascia `0600` sem ninguém que o abrisse — **inutilizável**. Bate de
-     frente com a ordem dela de 11/09: *o produto é para qualquer usuário*.
+     frente com a ordem de 11/09: *o produto é para qualquer usuário*.
   4. **MENOR:** `capture_dualsense_blueprint` abria por `os.open(path)`.
 
 Régua de UNIDADE, como a irmã `test_o_no_nasce_fechado.py`: nada aqui toca
-/dev, /sys, o udev vivo, o broker vivo nem o daemon. Os quatro DualSense dela
+/dev, /sys, o udev vivo, o broker vivo nem o daemon. Os quatro DualSense do usuário
 estão em uso agora.
 """
 from __future__ import annotations
@@ -249,7 +249,7 @@ class TestOsPacotesNaoFechamSemPorta:
         assert all('TAG+="uaccess"' in linha for linha in edge)
 
     def test_o_asset_versionado_continua_fechado(self) -> None:
-        """A decisão dela não mudou: o default é o nó nascer fechado."""
+        """A decisão de produto não mudou: o default é o nó nascer fechado."""
         linhas = _linhas_efetivas(REGRA.read_text(encoding="utf-8"))
         fechadas = [linha for linha in linhas if 'TAG-="uaccess"' in linha]
         assert len(fechadas) == 4, fechadas

@@ -153,7 +153,7 @@ def test_renomear_esquecer_em_todos_e_parear_de_novo_o_nome_volta(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
     origem: str, destino: str,
 ) -> None:
-    """E2 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02, pela mão dela e de ponta a ponta."""
+    """E2 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02, pela mão do usuário e de ponta a ponta."""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(origem, VERMELHO)
     outro = next(a for a in ADAPTADORES if a != origem)

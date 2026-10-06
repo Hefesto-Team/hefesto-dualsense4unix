@@ -11,7 +11,7 @@ O QUE ENTRA na seção, nesta ordem e sem repetir linha (nem uma que uma versão
   3. o título dos PRs que entraram desde a última tag (os commits `feat`, `fix` e `perf` que terminam em
      `(#N)`), na mesma régua. Título com palavra da casa não entra, e a saída o avisa.
 
-Quem lê as sprints é a máquina de quem coordena: elas moram em `docs/process/sprints/` (e `arquivados/`),
+Quem lê as sprints é a máquina de quem mantém o projeto: elas moram em `docs/process/sprints/` (e `arquivados/`),
 que não viaja ao GitHub. Sem essa pasta, entram só as duas outras fontes. A série e a última tag são as do
 `versao.py`; a data da seção é a do AppStream (`versao.py gravar --data`), e a régua
 `check_version_consistency.py` confere as duas.

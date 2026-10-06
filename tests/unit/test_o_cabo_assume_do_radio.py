@@ -1,14 +1,14 @@
 """O-CABO-ASSUME-DO-RADIO-01 — o controle do rádio que ganha cabo passa para o cabo.
 
 Ela, 25/09/2026: plugou no USB um controle que estava pelo rádio, e ele
-*«segue conectado no modo bt mas agora segue carregando»*. A decisão dela:
+*«segue conectado no modo bt mas agora segue carregando»*. A decisão de produto:
 **passa para o cabo**, com o mesmo número e sem o jogo perder o controle; tirou
 o cabo, volta pelo rádio. <!-- noqa-acento: citação literal -->
 
 O QUE FOI MEDIDO ANTES DA CURA (e que esta régua reproduz)
 =========================================================
 
-Na mesa dela, 19:42 de 25/09, o kernel recusou o HID do cabo::
+Na bancada, 19:42 de 25/09, o kernel recusou o HID do cabo::
 
     playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address …
     playstation 0003:054C:0CE6.001B: probe with driver playstation failed with error -17
@@ -43,7 +43,7 @@ Os dublês, e por que nenhum é mais frouxo que o real:
 
 O nó hidraw da bancada não mora em ``/dev``: o ``hidraw_path`` do produto só
 devolve ``/dev/hidraw*``, e assim nenhum leitor de movimento, broker ou vpad
-uhid abre um nó da mesa dela.
+uhid abre um nó da bancada.
 
 AS MORDIDAS (25/09/2026, cada uma devolvida com o md5 conferido) estão no fim
 da sprint, em «O que foi feito».
@@ -566,7 +566,7 @@ def montar(
 def plugar_o_cabo_e_esperar(
     mesa: MesaDoCabo, uniq: str, *, tiques: int = 4
 ) -> list[dict[str, Any]]:
-    """O gesto dela: o cabo no controle que está no rádio. Devolve a foto de cada tique."""
+    """O gesto do usuário: o cabo no controle que está no rádio. Devolve a foto de cada tique."""
     mesa.kernel.conectar(uniq, "usb")
     fotos: list[dict[str, Any]] = []
     for _ in range(tiques):
@@ -602,7 +602,7 @@ def _transportes(quantos: int, posicao: int, outros: str) -> tuple[str, ...]:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOCaboAssume:
-    """A decisão dela: o cabo assume, o número fica, o boneco do jogo não cai."""
+    """A decisão de produto: o cabo assume, o número fica, o boneco do jogo não cai."""
 
     @MATRIZ
     @pytest.mark.parametrize("vao", [False, True], ids=["num-tique", "com-vao"])

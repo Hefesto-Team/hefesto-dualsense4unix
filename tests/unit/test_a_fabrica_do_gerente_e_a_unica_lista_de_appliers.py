@@ -5,7 +5,7 @@ O DEFEITO, EM UMA LINHA
 -----------------------
 **Applier ausente NÃO levanta: a seção é ignorada em silêncio.** Uma rota que
 monta o ``ProfileManager`` com a própria lista nasce funcionando "quase", e o
-"quase" só aparece no aparelho dela. É a família ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ``
+"quase" só aparece no aparelho do usuário. É a família ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ``
 (a cura escrita e nunca ligada) casada com a ``ELO-MUDO-01`` (o produto responde
 pelo TRANSPORTE e nunca pelo EFEITO): o perfil "foi reaplicado", e uma seção
 dele ficou como o jogo a deixou.

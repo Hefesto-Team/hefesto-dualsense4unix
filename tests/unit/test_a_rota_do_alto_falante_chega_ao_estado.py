@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A ROTA DO ALTO-FALANTE ENTRA NO `state_full` — cura de 01/09/2026.
 
-A ASSIMETRIA QUE ESTA CURA FECHA, medida com o daemon dela no ar e dois
+A ASSIMETRIA QUE ESTA CURA FECHA, medida com o daemon do usuário no ar e dois
 controles no cabo:
 
     speaker.set  RESPONDE com a rota:
@@ -15,8 +15,8 @@ quem trocasse a saída do alto-falante pelo botão não conseguia ler de volta q
 ficou valendo — o botão mudava algo que a interface não tinha como mostrar, e
 uma régua que medisse pelo estado diria "SEM EFEITO" sobre um botão que funciona.
 
-Achada quando ela pediu a validação botão a botão no aparelho: *"no aparelho por
-favor valida botão a botão tá bom?"* O gesto `rota` da aba Controles era o único
+Achada quando o usuário pediu a validação botão a botão no aparelho: ** O gesto `rota` da aba
+Controles era o único
 que o daemon aceitava e o estado não confirmava.
 
 `None` NÃO É ZERO, e é por isso que a chave só entra quando existe: a rota `0` é

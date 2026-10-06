@@ -543,7 +543,7 @@ def controles_no_cabo(state: object) -> int | None:
     """Quantos controles do `state_full` estão no CABO; ``None`` = não dá pra saber.
 
     MESA-CHEIA-11/E3 — este é o denominador honesto, e ele NÃO é "quantos
-    controles há". Medido na mesa dela em 14/08/2026 com quatro controles (dois
+    controles há". Medido na bancada em 14/08/2026 com quatro controles (dois
     USB e dois BT): o `/proc/asound/cards` trazia DUAS placas DualSense. A
     PLACA de áudio USB do controle só existe no cabo — por rádio o aparelho não
     anuncia A2DP/HFP/HSP e não há placa ALSA nenhuma a contar. Cobrar quatro

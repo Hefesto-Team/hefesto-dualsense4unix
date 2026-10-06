@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O CINZA DA MIRA AVISA O LEITOR DE TELA.
 
-O par «Virtual | Nativo» do microfone saiu da aba 02 (decisão dela de 02/10/2026) e
+O par «Virtual | Nativo» do microfone saiu da aba 02 (decisão de 02/10/2026) e
 saiu desta régua com ele; o arquivo ficou com o nome da régua de antes.
 """
 from __future__ import annotations

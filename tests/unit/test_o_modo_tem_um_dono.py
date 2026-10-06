@@ -1,6 +1,6 @@
 """O modo tem um dono, do boot à tela — O-MODO-XBOX-NAO-E-QUEDA-02.
 
-A sessão dela de 27/09 mediu o mesmo defeito por quatro portas: o modo que o
+A sessão do usuário de 27/09 mediu o mesmo defeito por quatro portas: o modo que o
 perfil pôs de pé era desfeito por quem só devia RECRIAR o pad. Às 21h07 e às
 23h28 o lançamento do PRAGMATA pôs o pad em DualSense, e segundos depois um
 restart o devolveu ao Xbox sem que o diário dissesse quem pediu (L2,
@@ -12,7 +12,7 @@ A cura consolidada (a sprint, «A cura, consolidada para quem implementa»):
 
 1. o caminho vive num lugar só, o slot da sessão (`gamepad.caminho_da_sessao`),
    e todo restart lê dele e diz quem pediu (`p1_reerguido motivo=…`);
-   (a) o arquivo da escolha dela guarda a origem, e a migração de 18/09 devolve
+   (a) o arquivo da escolha do usuário guarda a origem, e a migração de 18/09 devolve
    só o valor sem origem;
 3. o boot aplica o modo do perfil que restaura, uma vez, antes do primeiro pad,
    com ou sem foco X (os três boots de 27/09 às 21h: com foco, Xbox; sem foco,
@@ -324,7 +324,7 @@ def _arquivo_do_caminho() -> Iterator[Any]:
 
 
 class _DaemonDoGesto:
-    """O suficiente para o `_guardar_o_caminho` REAL gravar a escolha dela."""
+    """O suficiente para o `_guardar_o_caminho` REAL gravar a escolha do usuário."""
 
     def __init__(self) -> None:
         self.config = SimpleNamespace(gamepad_caminho=None, gamepad_caminho_global=None)
@@ -340,7 +340,7 @@ def test_o_gesto_fora_do_jogo_grava_com_a_origem(_arquivo_do_caminho: Any) -> No
 
 
 def test_a_escolha_dela_com_origem_sobrevive_aos_boots(_arquivo_do_caminho: Any) -> None:
-    """O `xbox` que ela escolheu fora do jogo NÃO é o vazamento de 18/09."""
+    """O `xbox` que o usuário escolheu fora do jogo NÃO é o vazamento de 18/09."""
     gp._guardar_o_caminho(_DaemonDoGesto(), "xbox", origin="manual")  # type: ignore[arg-type]
 
     for _boot in range(2):
@@ -390,7 +390,7 @@ DE_FORA = "Desktop Dela"
 
 @pytest.fixture
 def _lar_do_boot(monkeypatch: pytest.MonkeyPatch, _lar: Any) -> Iterator[list[Any]]:
-    """O lar de mentira com a escolha dela em Xbox e a emulação ligada no disco."""
+    """O lar de mentira com a escolha do usuário em Xbox e a emulação ligada no disco."""
     monkeypatch.setattr(session, "load_gamepad_preference", _PREFERENCIA_REAL)
     _SALVAR_EMULACAO_REAL(True, "dualsense")
     session.save_last_profile(DE_FORA)
@@ -425,7 +425,7 @@ def _config_do_boot() -> lifecycle.DaemonConfig:
 async def _o_boot(
     *, com_foco: bool, controle: Any = None, nome: str = DE_FORA
 ) -> lifecycle.Daemon:
-    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa a escolha dela como"""
+    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa a escolha do usuário como"""
     store = StateStore()
     estado = ControllerState(
         battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
@@ -458,7 +458,7 @@ async def _o_boot(
 def test_o_boot_nasce_no_modo_do_perfil_uma_vez(
     com_foco: bool, _lar_do_boot: list[Any]
 ) -> None:
-    """A escolha dela em Xbox: o pad do P1 nasce em Xbox no boot, e nasce UMA vez.
+    """A escolha do usuário em Xbox: o pad do P1 nasce em Xbox no boot, e nasce UMA vez.
 
     MORDE: tire do boot o caminho do perfil (o `_start_gamepad_emulation` volta
     a subir sem caminho) — sem foco o modo fica DualSense, e com foco o
@@ -482,7 +482,7 @@ def test_o_boot_nasce_no_modo_do_perfil_uma_vez(
 def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
     _lar_do_boot: list[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A escolha dela sem `mode`: o pad nasce pela máscara (DualSense), e o slot vazio."""
+    """A escolha do usuário sem `mode`: o pad nasce pela máscara (DualSense), e o slot vazio."""
     loader.save_profile(
         Profile(name=DE_FORA, match=MatchAny()), origem="teste"
     )
@@ -497,7 +497,7 @@ def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
 def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
     com_foco: bool, _lar_do_boot: list[Any]
 ) -> None:
-    """A escolha dela em Xbox COM a máscara Xbox: o P1 nasce vestido, e nasce uma vez.
+    """A escolha do usuário em Xbox COM a máscara Xbox: o P1 nasce vestido, e nasce uma vez.
 
     O modo do perfil é o caminho E a máscara (`mode.gamepad_flavor`). Conferência
     de 28/09: nenhuma régua olhava a máscara do boot.
@@ -528,11 +528,11 @@ def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
 def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_dela(
     _lar_do_boot: list[Any],
 ) -> None:
-    """A escolha dela é um perfil com regra de janela, em Xbox; o marcador, outro.
+    """A escolha do usuário é um perfil com regra de janela, em Xbox; o marcador, outro.
 
     NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4):
     esta régua cobrava o contrário — o restore pulava o perfil de janela
-    (RESTORE-ESCOPO-01) e o pad nascia no modo do Freestyle. A escolha dela
+    (RESTORE-ESCOPO-01) e o pad nascia no modo do Freestyle. A escolha do usuário
     volta com regra de janela ou sem, e o marcador é espelho: o boot lê o
     MESMO perfil que o restore ativa, e o pad nasce no Xbox dele.
 
@@ -633,13 +633,13 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
     """Freestyle (Xbox) → um jogo `gamepad` SEM `caminho`: o P1 volta ao DualSense.
 
     Sem opinião de caminho vale o de fábrica, e nunca o do perfil anterior
-    (CAMINHO-CONTAGIO-01, a ordem dela de 19/09 em `gamepad._caminho_a_herdar`:
+    (CAMINHO-CONTAGIO-01, a ordem de 19/09 em `gamepad._caminho_a_herdar`:
     *«tudo ligado mascara dualsense por default»*).  <!-- noqa-acento: citação literal -->
     As réguas daquela sprint chamavam o start direto; a ativação de verdade
     tinha um atalho: com a máscara igual, o `apply_profile_mode` não pedia
     nada, e o pad seguia no
     caminho Xbox com a máscara DualSense (o uinput que o jogo não vê) — com o
-    dono dizendo Xbox para todo restart seguinte. 26 dos 29 perfis dela não têm
+    dono dizendo Xbox para todo restart seguinte. 26 dos 29 perfis do usuário não têm
     `caminho` (medido em 18/09). Conferência de 28/09.
 
     MORDE: tire do `apply_profile_mode` a pergunta pelo dono com o perfil sem

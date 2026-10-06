@@ -7,7 +7,7 @@ e um jogo que procura o alto-falante do controle procura ``DualSense`` ou
 ``Wireless Controller`` — as strings USB da Sony. O nosso nó dizia só
 «Alto-falante do Controle 1».
 
-A DECISÃO DELA, 23/09/2026, é a FORMA A: «Alto-falante do Controle N (DualSense
+A DECISÃO, 23/09/2026, é a FORMA A: «Alto-falante do Controle N (DualSense
 Wireless Controller)» — o nome dela na frente, igual para o microfone, os
 quatro controles, o USB e o BT. A decisão está DIGITADA aqui de propósito: a
 régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).

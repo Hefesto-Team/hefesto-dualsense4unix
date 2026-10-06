@@ -1,4 +1,4 @@
-"""A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — nenhum teste manda aviso para a tela dela."""
+"""A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — nenhum teste manda aviso para a tela do usuário."""
 
 from __future__ import annotations
 

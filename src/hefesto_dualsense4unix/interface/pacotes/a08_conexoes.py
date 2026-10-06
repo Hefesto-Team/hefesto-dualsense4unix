@@ -103,7 +103,7 @@ def _mesa_do_radio(recarregar: bool = False) -> Any:
 
 
 def _dongles(recarregar: bool = False) -> Any:
-    """Os adaptadores pela ótica do BlueZ — endereço, alias e o nome DELA."""
+    """Os adaptadores pela ótica do BlueZ — endereço, alias e o nome DO USUÁRIO."""
     global _DONGLES
     if _DONGLES is None or recarregar:
         try:
@@ -131,7 +131,7 @@ def _censo(recarregar: bool = False) -> Any:
 
 
 def _logica_do_mapa() -> Any:
-    """O rascunho do gabinete DELA — `LogicaDoMapa` sobre o que ela declarou."""
+    """O rascunho do gabinete DO USUÁRIO — `LogicaDoMapa` sobre o que ela declarou."""
     global _LOGICA
     if _LOGICA is None:
         perfil._com_o_src()
@@ -228,7 +228,7 @@ def _e_um_receptor(no: str) -> bool:
 
 
 def _sugestao_do_vizinho(no: str, rotulos: Any) -> str:
-    """A palavra da LISTA DELA que o kernel sugere para este rádio, ou `""`."""
+    """A palavra da LISTA DO USUÁRIO que o kernel sugere para este rádio, ou `""`."""
     lido = _lido_do_kernel(no)
     if not lido:
         return ""
@@ -299,7 +299,7 @@ def _sala_na_tela(declaracao: Any) -> dict[str, str]:
     `linha_de_visada='com_gente'`, e na página os TRÊS botões da VISADA estavam
     apagados — a tela dizendo que ela não respondeu uma pergunta que ela
     respondeu. O "Sim" da ALTURA estava aceso por coincidência do mockup, que é
-    pior: um acerto que não vem de leitura nenhuma erra no primeiro clique dela.
+    pior: um acerto que não vem de leitura nenhuma erra no primeiro clique do usuário.
 
     E ELA CLICA DE NOVO, que é o custo real: sem eco, o segundo clique parece o
     primeiro, e um gesto que grava sem dizer que gravou é indistinguível de um
@@ -339,8 +339,7 @@ def _radios_declarados(declaracao: Any) -> dict[str, str]:
 def _mic_declarado(declaracao: Any, uniq: str) -> bool:
     """O microfone DESTE controle está ligado?
 
-    **A REGRA INVERTEU EM 18/09/2026** (ordem dela: *"todos os controles tem
-    que nascer com tudo mic, giroscopio e afins"*). Antes só `True` contava, e
+    **A REGRA INVERTEU EM 18/09/2026** (). Antes só `True` contava, e
     ausência era silêncio; agora só `False` desliga, e a ausência LIGA — que é
     o que o daemon faz desde a mesma data (`bt_mic.uniqs_recusados`).
 
@@ -365,7 +364,7 @@ def _so_hex(uniq: str) -> str:
 
 
 def _dispensadas_do_disco(declaracao: Any) -> None:
-    """Recarrega `{chave: arranjo}` do que ela mandou calar."""
+    """Recarrega `{chave: arranjo}` do que o usuário mandou calar."""
     global _DISPENSADAS
     with contextlib.suppress(Exception):
         _DISPENSADAS = {
@@ -424,7 +423,7 @@ def _pedir_o_exame_de_entrada() -> None:
 
 
 def _calada(item: Any) -> bool:
-    """Esta linha é uma ordem que ela mandou calar, **neste arranjo**?"""
+    """Esta linha é uma ordem que o usuário mandou calar, **neste arranjo**?"""
     return _ordem_calada(getattr(item, "ordem", None))
 
 
@@ -564,10 +563,10 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
     numa árvore sem `src/` no caminho.
 
     A PALAVRA DE `problema` AINDA É A DE `atencao` — 02/09/2026, e é  (noqa-acento)
-    ESPERA DELA. O mapa do dono manda os dois estados para **AJUSTAR**, e ela
+    ESPERA DO USUÁRIO. O mapa do dono manda os dois estados para **AJUSTAR**, e o usuário
     decidiu que *"o que está quebrado agora não pode parecer igual ao que só
     podia estar melhor"*. **A COR já saiu** (ver `selo-estado`, na
-    :func:`pacote`, e a regra `.selo.grave` do gerador); a PALAVRA é dela, e
+    :func:`pacote`, e a regra `.selo.grave` do gerador); a PALAVRA é de produto, e
     trocá-la aqui seria escolher no lugar dela. Quando ela disser, quem muda é
     `interface.conexoes.SELO_DO_ESTADO`, e o mapa é um só.
     """
@@ -580,7 +579,7 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
 def _dica_da_linha(item: Any) -> str:
     """O `?` de uma linha do Check-up, em HTML: o que importa e a cura.
 
-    DUAS METADES, E NÃO TRÊS — decisão dela, 02/09/2026: *"o ponto de
+    DUAS METADES, E NÃO TRÊS — decisão, 02/09/2026: *"o ponto de
     interrogação para de repetir a linha"*. Com a publicação de hoje a linha
     passou a mostrar a MEDIÇÃO (`Item.porque`, ver a chave `achado` do
     :func:`pacote`), e a dica ao lado repetia a mesma frase na segunda metade.
@@ -611,7 +610,7 @@ def _dica_da_linha(item: Any) -> str:
     exame viraria marcação. O escapador é o da camada de tela desta aba
     (`interface.conexoes._e`), o mesmo que o gerador do desenho usa.
 
-    UMA ORDEM DA MESA NÃO TEM VERBETE, E TINHA DE TER O DELA — 02/09/2026, e
+    UMA ORDEM DA MESA NÃO TEM VERBETE, E TINHA DE TER O DO USUÁRIO — 02/09/2026, e
     este era o achado de pé desta aba: *"o `?` de uma linha sem verbete e sem
     cura abre uma caixa VAZIA de 330px"*.
 
@@ -626,7 +625,7 @@ def _dica_da_linha(item: Any) -> str:
 
     A CURA É REUSO, e as frases já existiam: uma `Ordem` traz TRÊS linhas
     (`ordens_da_mesa.Ordem.linhas`) com os rótulos de
-    `exame_da_mesa.ROTULOS_DA_ORDEM` — *"O que eu vi aqui"*, *"Por que importa"*
+    `exame_da_mesa.ROTULOS_DA_ORDEM`, *"Por que importa"*
     e *"Ganho esperado"*. **A primeira é a que a linha já mostra** (é o
     `Item.porque`), então ela fica de fora e a decisão 9 continua valendo; as
     outras duas são exatamente o que o `?` promete. É o mesmo par que o card do
@@ -902,7 +901,7 @@ def _linha(item: Any) -> dict[str, Any]:
     OS CAMPOS SÃO `rotulo`, `estado` e `porque` — os do `exame_da_mesa.Item`,
     lidos do dataclass. A primeira versão daqui pedia `titulo` com `or str(it)`
     de reserva, e o `Item` não tem `titulo`: a reserva ganhava sempre e o
-    **`repr` do objeto Python foi parar na tela dela**, visível na foto de
+    **`repr` do objeto Python foi parar na tela do usuário**, visível na foto de
     01/09 — `Item(chave='energia_do_radio', rotulo='Economia de energia
     desligada', estado='a`, cortado no meio.
 
@@ -984,7 +983,7 @@ def _exame() -> list[dict[str, Any]]:
 
 
 def _bancada() -> Any:
-    """A mesa do motor montada sobre o rascunho DELA — ou `None` sem censo."""
+    """A mesa do motor montada sobre o rascunho DO USUÁRIO — ou `None` sem censo."""
     censo = _censo()
     if censo is None:
         return None
@@ -1008,7 +1007,7 @@ def palavra_da_conta(quantas: int) -> str:
 
 
 def _confissao_do_mapa() -> dict[str, str]:
-    """Os campos da confissão — o que o desenho DELA não consegue conferir.
+    """Os campos da confissão — o que o desenho DO USUÁRIO não consegue conferir.
 
     O DONO DAS FRASES É `mapa_da_mesa.confissao_do_desenho`, o mesmo que a
     janela do desenho redesenha a cada mudança. Aqui só a CONTA vai à tela, por
@@ -1019,20 +1018,19 @@ def _confissao_do_mapa() -> dict[str, str]:
     O DEFEITO QUE ISTO FECHA, medido nesta bancada em 03/09/2026: a
     `.mm-conf-linha` está FORA do bloco `.mm-faces` que o pacote troca, então
     ninguém nunca a repintava. Ela dizia **"três coisas"** — a conta da cena do
-    mockup — e o `title` listava as três; a mesa dela tem **UMA** lacuna
+    mockup — e o `title` listava as três; a bancada tem **UMA** lacuna
     (`especie`). Uma confissão que confessa a mais é tão falsa quanto uma que
     cala: manda ela procurar duas coisas que o produto já sabe.
 
     `confissao-nada` É O INTERRUPTOR DO SUMIÇO, e a regra é da GTK: lá a linha
     SOME quando o desenho responde por tudo (`confissao_do_desenho` devolve
-    vazio e o `_desenhar` não escreve nada). Sem ele, zero lacuna viraria *"O
-    que eu não consegui conferir neste desenho: nada."* — uma frase que ocupa
+    vazio e o `_desenhar` não escreve nada). Sem ele, zero lacuna viraria  — uma frase que ocupa
     espaço para não dizer nada.
 
     O DICIONÁRIO VAZIO É RESPOSTA, e é por isso que esta função não devolve
     tupla: sem censo o pacote não sabe quantas lacunas há, e emitir `""` seria
     PIOR que não emitir — o `escrever()` do piloto troca vazio por travessão, e
-    a tela diria *"O que eu não consegui conferir neste desenho: —."*. Não
+    a tela diria . Não
     emitir deixa a linha como o desenho a escreveu, que é o único estado
     honesto quando a leitura do barramento falhou.
     """
@@ -1055,12 +1053,12 @@ def _confissao_do_mapa() -> dict[str, str]:
 
 
 def _html_do_mapa() -> str:
-    """As faces do gabinete DELA, desenhadas pelo produto.
+    """As faces do gabinete DO USUÁRIO, desenhadas pelo produto.
 
     O DESENHO É UM SÓ (`interface/conexoes.html_do_mapa`) e o gerador do mockup
     usa o MESMO — a diferença é o dado: lá é a cena de bancada, aqui é o que ela
     declarou. Foi assim que a extração se provou fiel: a página regerada saiu
-    byte a byte igual à que ela aprovou.
+    byte a byte igual à que o usuário aprovou.
 
     O VEREDITO VEM DO MOTOR, e não de uma cópia: `veredito_do_quadrado` chama
     `arranjo_da_mesa.julgar`, que sabe de entrada azul, de folga na fileira e de
@@ -1155,7 +1153,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     (`nintendo_bt_warning`), e ela nasce só quando as duas condições valem — VID
     Nintendo E rádio. Nos outros aparelhos a linha não existe.
 
-    **A LISTA MORA DENTRO DA MOLDURA `.gc` — escolha DELA, 06/09/2026.** A
+    **A LISTA MORA DENTRO DA MOLDURA `.gc` — escolha, 06/09/2026.** A
     EXTERNOS-01 a pôs numa ressalva embaixo do acordeão e PERGUNTOU: à parte, ou
     no mesmo frame, como a janela GTK fazia? A resposta foi o mesmo frame. Quem
     faz a linha virar item da moldura é o CSS da bancada (`aba08.py`,
@@ -1227,7 +1225,7 @@ def _cor_desconhecida() -> str:
 
 
 def rotulo_do_controle(c: Any, completo: bool = True) -> str:
-    """A ordem dela, 26/08: marca • player • plástico • transporte."""
+    """A ordem, 26/08: marca • player • plástico • transporte."""
     marca = 'Sony <span class="pt">•</span> ' if completo else ""
     jogador = f'Player {c["jogador"]}' if completo else f'P{c["jogador"]}'
     nome = str(c.get("nome") or "")
@@ -1327,7 +1325,7 @@ def dica_da_luz(via: str) -> str:
        a escrever;
     2. **o AVISO DA MESA SUJA — que SAIU em 13/09/2026** (FRASES-E-DICAS-02).
        Ele era anexado à dica quando outro programa segurava nó de controle, e
-       era aviso com instrução: a ordem dela de 13/09 tira frase de aviso da
+       era aviso com instrução: a ordem de 13/09 tira frase de aviso da
        tela em toda forma, `title` incluído. A dica fica com o que o botão faz;
     3. **a RAZÃO de a cura ser oferecida — que SAIU em 13/09/2026**
        (FRASES-E-DICAS-03). `frase_do_nascimento` colava, depois do que o botão
@@ -1481,7 +1479,7 @@ def escopo_do_botao_do_mic(estado: Any) -> str:
 
     A chave é `mic_button_toggles_system`, publicada pelo `state_full` desde o
     `MIC-EXPOSE-01` (*"o botão de mic deixa de ser campo secreto do lifecycle —
-    a GUI/CLI leem o estado efetivo daqui"*). Medido na máquina dela em
+    a GUI/CLI leem o estado efetivo daqui"*). Medido na máquina do usuário em
     04/09/2026: `True`.
 
     AUSÊNCIA DEVOLVE VAZIO, e não o padrão do `DaemonConfig`: um daemon que não
@@ -1591,14 +1589,14 @@ def _teto_do_controle(
     guarda uma das outras três.
 
     FATO SUBSTITUÍDO — 19/09/2026. Aqui estava: *"Medido em 01/09/2026: zero dos
-    33 perfis dela têm `controllers[*].rumble`, então o caso é hoje
+    33 perfis do usuário têm `controllers[*].rumble`, então o caso é hoje
     inalcançável"*. **Deixou de ser verdade, e o próprio arquivo já dizia**: o
     bloco de :3183, remedido em 17/09 pela VIBRA-ACESA-01, conta 5 perfis com
     override por controle. Duas afirmações opostas no mesmo arquivo obrigam
     quem lê a escolher, que é o defeito que a regra do fato-substituído existe
     para matar.
 
-    **Remedido no disco dela em 19/09/2026, e o número CRESCEU de novo:**
+    **Remedido no disco do usuário em 19/09/2026, e o número CRESCEU de novo:**
 
         29 perfis
          6 com override de rumble por controle  ·  11 entradas
@@ -2003,7 +2001,7 @@ SEM_GESTO: dict[str, str] = {
 
 
 def _uniq(o: dict[str, Any]) -> str:
-    """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa."""
+    """O `uniq` do controle onde o usuário clicou. Vazio = clique solto, e recusa."""
     return str(o.get("uniq") or "")
 
 
@@ -2020,7 +2018,7 @@ def _indice(ctx: Contexto, uniq: str) -> int | None:
     O `index` vem publicado por entrada (é o mesmo campo que
     `ipc_handlers._numero_de_exibicao:526` lê). Quando ele falta, a posição na
     lista `controllers` é a MESMA conta — e `None` quando nem isso: aí o gesto
-    recusa dizendo, em vez de mirar o 0 e trocar o controle dela.
+    recusa dizendo, em vez de mirar o 0 e trocar o controle do usuário.
     """
     dele = ctx.por_uniq(uniq)
     i = dele.get("index")
@@ -2055,7 +2053,7 @@ def _resposta(r: Any) -> tuple[bool, str]:
 def _declarar(p: Any, mesa: dict[str, Any]) -> None:
     """Grava um pedaço da declaração da mesa, na hora.
 
-    DECISÃO DELA, 01/09/2026: **clicar já aplica** — a interface nova não junta
+    DECISÃO, 01/09/2026: **clicar já aplica** — a interface nova não junta
     mudanças num rascunho à espera de um "Aplicar". A GUI estável faz o
     contrário de propósito (`secao_mesa._ao_declarar:1467` acumula em
     `_maquina_pendente` e o rodapé grava), e o motivo dela — *"chamar
@@ -2224,7 +2222,7 @@ def _sem_endereco() -> str:
 
 
 def _slot(o: dict[str, Any], quantos: int, quem: str) -> int:
-    """A POSIÇÃO em que ela clicou, conferida contra o que foi pintado."""
+    """A POSIÇÃO em que o usuário clicou, conferida contra o que foi pintado."""
     bruto = str(o.get("v") or "")
     if not bruto.isdigit():
         raise ValueError(
@@ -2246,24 +2244,23 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     continua publicando a fonte. O que a tela promete aqui é outra coisa —
     *"Desligado, nenhum programa o enxerga"* — e isso é a PONTE, que existe ou
     não existe: `ControleDeclarado.microfone` no `maquina.json`
-    (`utils/maquina.py:522`), decisão dela de 22/08/2026 (*"por controle"*).
+    (`utils/maquina.py:522`), decisão de 22/08/2026 (*"por controle"*).
 
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
     (`ipc_handlers.py:5669`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
-    agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
+    agora"*. Sem essa parte, a escolha do usuário só valeria no próximo início do
     daemon.
 
     **DESLIGAR GRAVA `False` — MUDOU EM 18/09/2026, e a razão é a inversão.**
     Até aqui gravava `None`, e a regra era boa enquanto o default fosse o
     silêncio: *"nunca pedi" e "não quero" deixam a ponte no chão do mesmo
-    jeito*. Com a ordem dela — *"todos os controles tem que nascer com tudo mic,
-    giroscopio e afins"* — a ausência passou a LIGAR, e aí `None` deixou de ser
+    jeito*. Com a  — a ausência passou a LIGAR, e aí `None` deixou de ser
     um jeito de desligar: seria o botão que não desliga.
 
     O medo que a regra velha protegia continua real e agora tem outro nome: um
-    `false` no disco é o **único** registro de que ela disse não, e é o que
+    `false` no disco é o **único** registro de que o usuário disse não, e é o que
     impede o produto de religar sozinho no próximo boot. Ver
     `bt_mic.uniqs_recusados`.
 
@@ -2309,7 +2306,7 @@ def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
     daemon o carimbou (controles EXTERNOS, `external_key`), e o mapa que chega
     ao backend é chaveado pelo `uniq` (`set_rumble_scales`). Gravar sob a chave
     do `identity` produziria um override que o motor nunca casa — a escolha
-    dela sumiria calada, que é o defeito mais caro desta casa. Quando as duas
+    do usuário sumiria calada, que é o defeito mais caro desta casa. Quando as duas
     discordam, este gesto RECUSA em vez de gravar no lugar errado.
 
     MEDIDO no DualSense vivo dela em 01/09/2026: o item do `state_full` não
@@ -2396,7 +2393,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     "SEM TETO" CONTINUA RECUSANDO, e a recusa é a entrega: das três opções, é a
     única sem tradução honesta. `politica_do_rotulo` levanta com a razão medida,
-    e este gesto não grava nada — a frase que falta é dela.
+    e este gesto não grava nada — a frase que falta é do usuário.
 
     É DO PERFIL, NÃO DA MÁQUINA. Sem perfil ativo não há onde guardar a força
     de um controle (`profiles/schema.py:522`), e a recusa diz em que aba
@@ -2404,8 +2401,8 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     FATO ERRADO, SUBSTITUÍDO no mesmo dia: esta linha dizia *"medido no daemon
     vivo dela em 01/09/2026: `active_profile = None`, logo é ESTA a resposta que
-    a tela dela dá hoje"*. O daemon vivo responde `active_profile =
-    'meu_perfil'`. Na mesa dela o gesto **não recusa: grava** — no perfil que ela
+    a tela do usuário dá hoje"*. O daemon vivo responde `active_profile =
+    'meu_perfil'`. Na bancada o gesto **não recusa: grava** — no perfil que ela
     está usando — e a `gravar_e_reaplicar` ainda dispara `profile.switch`, que
     reaplica o perfil inteiro. Quem lesse a linha velha concluiria que a feature
     está inerte quando ela é o oposto, e deixaria de conferir o que o motor
@@ -2539,7 +2536,7 @@ def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 def _correr_o_exame_completo() -> None:
-    """As CINCO conferências mais as ordens de serviço, sobre a máquina dela."""
+    """As CINCO conferências mais as ordens de serviço, sobre a máquina do usuário."""
     global _EXTRAS
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import exame_da_mesa
@@ -2731,7 +2728,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     E A LINHA MUDA NA HORA: a decisão entra em `_DISPENSADAS` antes de o
     próximo tique montar a tira. Esperar o disco significaria a linha piscando
-    meio segundo depois do clique dela.
+    meio segundo depois do clique do usuário.
 
     **A ORDEM DAS DUAS ESCRITAS NÃO SE INVERTE.** `_declarar` LEVANTA quando o
     daemon recusa, e a memória só muda depois. Inverter poria a tela num estado
@@ -2771,7 +2768,7 @@ def _gravar_o_mapa(p: Any) -> None:
 
 @gesto("08-conexoes.html", "escolher-aparelho")
 def escolher_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Primeiro tempo: o aparelho vai para a mão dela. Clicar de novo desescolhe.
+    """Primeiro tempo: o aparelho vai para a mão do usuário. Clicar de novo desescolhe.
 
     NÃO GRAVA NADA, e é o único dos seis que não grava: escolher é estado de
     tela, não declaração. O que vai ao disco é o SEGUNDO tempo.
@@ -2850,7 +2847,7 @@ def nova_extensao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "nova-face", grava="machine_declare")
 def nova_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Cria uma face com o nome que ela escreveu. Sem nome, não cria."""
+    """Cria uma face com o nome que o usuário escreveu. Sem nome, não cria."""
     nome = str(o.get("valor") or "").strip()
     if not nome:
         raise ValueError(
@@ -2875,7 +2872,7 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e devolve a frase de tela pronta em português. Foi escrito para esta cura e
     nunca tinha sido chamado por tela nenhuma.
 
-    A RECUSA DO CABO É DO DESENHO, não minha: o `title` do botão apagado
+    A RECUSA DO CABO É DO DESENHO, não do gerador: o `title` do botão apagado
     (`aba08.LUZ_NO_CABO`, repintado por `secao_controles.DICA_NO_CABO`) diz que
     ele só vale no BT. Derrubar um controle que está no cabo não o derruba — e um botão
     que aceita o clique e não faz nada é o que responde calado.
@@ -3111,9 +3108,8 @@ def _maiuscula(frase: str) -> str:
 def nome_dado(nome: str) -> str:
     """O nome que ela deu (controle ou adaptador), com a primeira letra maiúscula.
 
-    Ordem dela de 05/10/2026, 13h: *«Nome que o user colocar pra controle mesmo se ele colocar
-    minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o resto
-    fica como ela escreveu. Vale ao gravar e ao ler o que já estava gravado em minúscula.
+    Ordem de 05/10/2026, 13h. Só a primeira letra; o resto
+    fica como o usuário escreveu. Vale ao gravar e ao ler o que já estava gravado em minúscula.
     <!-- noqa-acento: citação literal -->
     """
     nome = str(nome or "").strip()
@@ -3835,7 +3831,8 @@ NOME_DO_WIFI = "Wi-Fi"
 
 
 def cor_do_adaptador(cena: dict[str, Any], lid: str) -> str:
-    """O token de cor da POSIÇÃO do adaptador na ordem dela: caixa, pista e porta leem daqui."""
+    """O token de cor da POSIÇÃO do adaptador na ordem de produto: caixa, pista e porta leem
+    daqui."""
     ids = [str(lug["id"]) for lug in cena.get("lugares") or ()]
     posicao = ids.index(str(lid)) if str(lid) in ids else len(ids)
     return (CORES_DOS_ADAPTADORES[posicao] if posicao < len(CORES_DOS_ADAPTADORES)
@@ -3845,10 +3842,10 @@ def cor_do_adaptador(cena: dict[str, Any], lid: str) -> str:
 def nome_do_grupo(viz: dict[str, Any]) -> tuple[str, str, str]:
     """`(nome, procedência, glifo)` de um rádio vizinho — a ordem da mais forte à mais fraca.
 
-    A palavra dela vence; a do kernel IDÊNTICA à da lista sai sem interrogação (a
+    A palavra de produto vence; a do kernel IDÊNTICA à da lista sai sem interrogação (a
     procedência `lido` põe o selo à vista); a equivalência (Câmera → Webcam) fica
     com a interrogação; depois o nome que o aparelho dá de si; por fim a palavra do censo.
-    Nada disto grava: o `maquina.json` só recebe o gesto dela.
+    Nada disto grava: o `maquina.json` só recebe o gesto do usuário.
     """
     tipo = str(viz.get("tipo") or "")
     sugestao = str(viz.get("sugestao") or "")
@@ -4772,7 +4769,7 @@ def _modelo_do_radio(radio: Any) -> str:
 
 
 def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
-    """A cena da seção pela máquina dela — os donos, e nada estimado (R10)."""
+    """A cena da seção pela máquina do usuário — os donos, e nada estimado (R10)."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import entrada_a_entrada
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, nome_dado_ao_adaptador
@@ -4961,7 +4958,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
 
 
 def _onde_espera(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
-    """O adaptador em que um movimento espera o gesto dela — onde a busca ESTÁ."""
+    """O adaptador em que um movimento espera o gesto do usuário — onde a busca ESTÁ."""
     return next((str(a["lugar"]) for a in aparelhos if a.get("esperando") and a.get("lugar")),
                 None) or next((str(lug["id"]) for lug in lugares if lug.get("conectando")), None)
 
@@ -4991,9 +4988,8 @@ def _chave_da_ordem(endereco: object) -> str:
 
 
 def _na_ordem_dela(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Os adaptadores na ORDEM QUE ELA ARRASTOU — decisão dela, 25/09/2026:
-    *«segurar a área do conector e arrastar ela pra mudar de ordem entre
-    eles»*, e a ordem fica gravada no adaptador, pelo endereço
+    """Os adaptadores na ORDEM QUE ELA ARRASTOU — decisão, 25/09/2026, e a ordem fica gravada no
+    adaptador, pelo endereço
     (``utils/maquina.AdaptadorDeclarado.ordem``). Quem ela nunca arrastou vem
     depois, na ordem de sempre. <!-- noqa-acento: citação literal -->
 
@@ -5084,7 +5080,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     ou o «esperando» que passou de :data:`ESPERA_NA_TELA_S`.
 
     A LINHA TEM APARELHO (ESQUECER-E-LIMPAR-AS-CONEXOES-01,
-    D-3009-A-LINHA-TEM-APARELHO, 30/09/2026, a validar por ela).
+    D-3009-A-LINHA-TEM-APARELHO, 30/09/2026, a validar pelo usuário).
     A busca que ninguém respondeu (o movimento sem endereço) virava «DualSense ·
     Não Conectou», com o desenho do controle, a borda laranja e a caixa que
     abria — o *«controle fantasma»* dela. Agora a linha só existe enquanto há um
@@ -5377,8 +5373,8 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
     """O que CADA rádio está vendo e não está ligado — as listas do «Conectar».
 
     UMA LINHA POR ADAPTADOR QUE VIU O APARELHO, com o sinal medido POR ELE
-    (D-3009-A-LISTA-E-DO-ADAPTADOR-ACESO, 30/09/2026, a validar
-    por ela). A lista de antes era de todo aparelho com sinal em qualquer
+    (D-3009-A-LISTA-E-DO-ADAPTADOR-ACESO, 30/09/2026, a
+    validar pelo usuário). A lista de antes era de todo aparelho com sinal em qualquer
     adaptador, pelo endereço só: o mesmo aparelho visto por dois ficava com o
     sinal do último que o BlueZ listou, e o «Parear» mandava o chip aceso como
     destino de um aparelho que ele talvez nunca tivesse visto. O painel desenha
@@ -5490,7 +5486,7 @@ def _campos_da_cerimonia() -> dict[str, Any]:
 
 
 def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
-    """Os campos da seção Rádio e Adaptadores, pela cena da máquina dela."""
+    """Os campos da seção Rádio e Adaptadores, pela cena da máquina do usuário."""
     global _CENA_NA_TELA
     cena = cena_do_radio(ctx)
     _CENA_NA_TELA = cena
@@ -5517,7 +5513,7 @@ def _aparelho_na_tela(alvo: str) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "abrir-adaptador")
 def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem dela)."""
+    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem de produto)."""
     lug = _lugar_na_tela(o)
     if len(_CENA_NA_TELA.get("lugares") or ()) == 1:
         return {"armou": True}
@@ -5529,8 +5525,7 @@ def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A ordem das caixas que ela arrastou — gravada, e a sala nasce nela.
 
-    Decisão dela, 25/09/2026: *«segurar a área do conector e arrastar ela pra
-    mudar de ordem entre eles»*. O roteiro da página solta a caixa no lugar e
+    Decisão, 25/09/2026. O roteiro da página solta a caixa no lugar e
     manda a ordem NOVA, de cima para baixo, pelos ``data-id`` das caixas (o
     endereço de cada adaptador), e ela vai para o adaptador, pelo endereço —
     o mesmo dono do nome dele (``utils/maquina.guardar_ordem_dos_adaptadores``,
@@ -5694,7 +5689,7 @@ def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
 
 def _escolher_na_busca(p: Any, alvo: str) -> dict[str, Any] | None:
-    """O clique dela numa linha do «Conectar» com a busca de pé: a ESCOLHA."""
+    """O clique do usuário numa linha do «Conectar» com a busca de pé: a ESCOLHA."""
     busca = _onde_espera(_CENA_NA_TELA.get("lugares") or [], _CENA_NA_TELA.get("aparelhos") or [])
     if not busca:
         return None
@@ -5781,7 +5776,7 @@ def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     with contextlib.suppress(Exception):
         _tirar_a_linha(p, linha)
     _ligar_a_busca(p, True, lid)
-    # O mesmo clique é a escolha dela: a central pareia ESTE endereço quando a janela o
+    # O mesmo clique é a escolha do usuário: a central pareia ESTE endereço quando a janela o
     # ver. Se ela não aceitar agora, a busca segue aberta e o «Parear» da lista fecha.
     with contextlib.suppress(Exception):
         _pedir_ao_radio(p, str(linha["aparelho"]), lid)
@@ -5971,7 +5966,7 @@ def entrada_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "entrada-face", grava="responder")
 def entrada_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A resposta dela — uma das quatro faces do produto —, gravada na hora."""
+    """A resposta de produto — uma das quatro faces do produto —, gravada na hora."""
     face = str(o.get("face") or o.get("valor") or "")
     gravacao = _laco().responder(face)
     _esquecer("maquina")
@@ -6096,7 +6091,7 @@ def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok") -> str:
 def modo_da_fileira(st: dict[str, Any]) -> str:
     """O «Modo de conexão» da linha: o nome do chip aceso na aba Jogar.
 
-    O pedido dela diz *«Modo de conexão (DualSense)»*: é o modo que ela escolhe
+    O pedido diz *«Modo de conexão (DualSense)»*: é o modo que ela escolhe
     na fileira da Jogar, e não a posição do interruptor. Quem decide qual chip
     acende é o dono da Jogar (`a01_jogar._estado_da_tela`), e o nome do chip é
     o da tabela da fileira (`painel.CHIPS_DA_ESCADA`) — nada digitado aqui. Com
@@ -6121,7 +6116,7 @@ def modo_da_fileira(st: dict[str, Any]) -> str:
     return MODO_PELO_HEFESTO
 
 
-# D-O-ESCOPO-DO-MIC-SAIU-DA-08 — 25/09/2026, pedido dela (A-08-O-CHECKUP-ABSORVE-
+# D-O-ESCOPO-DO-MIC-SAIU-DA-08 — 25/09/2026, pedido (A-08-O-CHECKUP-ABSORVE-
 def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any],
                        declaracao: Any, modo: str | None = None) -> dict[str, str]:
     """Os seis selos de UM controle, lidos do daemon vivo e da declaração.

@@ -59,7 +59,7 @@ def test_fala_quando_a_tela_muda_sem_regua(de_tela: str) -> None:
 
 
 def test_nomeia_a_aba_que_o_commit_tocou() -> None:
-    """Sem o número da aba o aviso não é acionável — foi o pedido dela."""
+    """Sem o número da aba o aviso não é acionável — foi o pedido."""
     _, _, _, abas = portao.julgar([UMA_ABA, UMA_PAGINA,
     "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"])
     assert abas == ["06", "08"]

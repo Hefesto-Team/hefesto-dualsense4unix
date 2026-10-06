@@ -83,7 +83,7 @@ def a_suite_esta_rodando() -> bool:
 
     É o sinal que ``gesto_de_reconexao`` usava sozinho desde 22/09/2026, quando
     a primeira corrida de 457 testes chamou ``Disconnect`` e ``Connect`` nos
-    quatro DualSense da mesa dela, ao vivo. Agora ele guarda a BORDA: toda
+    quatro DualSense da bancada, ao vivo. Agora ele guarda a BORDA: toda
     escrita passa por :meth:`LeitorDoBluez.chamar` ou
     :meth:`LeitorDoBluez.escrever_propriedade`, e as duas perguntam aqui.
     """

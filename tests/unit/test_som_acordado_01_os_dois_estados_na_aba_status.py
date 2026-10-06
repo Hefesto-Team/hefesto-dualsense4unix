@@ -163,13 +163,13 @@ def test_a_rota_traz_o_estado_de_todos_os_canais_numa_leitura_so() -> None:
 
 
 def test_o_som_de_confirmacao_acorda_o_canal_antes_de_tocar() -> None:
-    """*"hoje em dia na interface nem por cabo esse bip tá saindo"* (dela).
+    """** (dela).
 
     Os dois lados da conta são medidos, cada um do seu lado: o arquivo escolhido
     tem **0,067 s** (o mais curto dos candidatos, escolha registrada em
     `_CANDIDATOS_DE_SOM`), e o religar de um nó suspenso come o começo do som.
     Num som de 67 ms, "o começo" é o som inteiro — e a suspensão é o estado
-    NORMAL entre dois gestos dela: os dois sinks de DualSense desta bancada
+    NORMAL entre dois gestos do usuário: os dois sinks de DualSense desta bancada
     estavam `SUSPENDED` na leitura de 16/08/2026, com os controles no cabo.
 
     Nada disto aparecia como falha: o `paplay` abria o fluxo, saía com zero, e

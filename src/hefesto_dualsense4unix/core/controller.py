@@ -70,7 +70,7 @@ class ControllerState:
       ``"carregando"``, ``"cheio"``, ``"fora_de_faixa"``, ``"erro"``) ou
       ``None`` = *"ninguém reportou ainda"*. BATERIA-PARADA-01 (B1): o
       percentual sozinho não distingue *"a barra congelou"* de *"está cheia
-      porque está no cabo"*, e era essa ausência que a queixa dela de 26/08
+      porque está no cabo"*, e era essa ausência que a queixa de 26/08
       nomeava. Campo NOVO com default, para não quebrar quem constrói o
       snapshot com os cinco obrigatórios de sempre.
     """

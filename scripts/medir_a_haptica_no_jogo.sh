@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Mede os TRÊS sinais automáticos da háptica nativa enquanto o jogo roda.
 #
-# O QUARTO SINAL É A MÃO DELA, e nenhum script o substitui: o jogo tem de
+# O QUARTO SINAL É A MÃO DO USUÁRIO, e nenhum script o substitui: o jogo tem de
 # vibrar. Este instrumento responde "a corrente está fechada?"; só ela responde
 # "chegou?".
 #

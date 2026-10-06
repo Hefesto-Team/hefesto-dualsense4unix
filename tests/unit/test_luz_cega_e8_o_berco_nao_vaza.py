@@ -1,9 +1,9 @@
 """LUZ-CEGA-01/E8 — o berço da suíte não vaza para o `config_dir()` real.
 
-O DEFEITO, medido em 25/08/2026 no journal DELA. Quatro endereços da faixa de
+O DEFEITO, medido em 25/08/2026 no journal do usuário. Quatro endereços da faixa de
 fixture `aa:bb:cc:*` moram no `controllers.json` de produção dela e empurram os
 DualSense REAIS para os postos 6, 7 e 8. A escrita foi datada: até
-`2026-08-11T23:50` a fila gravada tinha os quatro DualSense dela; em
+`2026-08-11T23:50` a fila gravada tinha os quatro DualSense do usuário; em
 `2026-08-22T02:13:43` o daemon a restaurou como **só** os quatro forjados
 (`identity_fila_restaurada`), com `identity_slots_restaurados_de_outro_boot
 arquivo_boot=df8018bc…` — ou seja, quem escreveu resolveu o `config_dir()`
@@ -20,7 +20,7 @@ isolamento de `XDG_CONFIG_HOME` do `conftest` (escopo de FUNÇÃO) não a alcan�
 nunca. É o buraco que o CANARIO-FS-01 nomeia no próprio texto de reprovação, e
 que 05/08/2026 curou em dois lugares (`storm_doctor._allowlist_path`,
 `EmulationActionsMixin._wp_dropin_dir`) — deixando um terceiro vivo:
-`app/gui_prefs.py`, que assim gravava as preferências DELA a cada
+`app/gui_prefs.py`, que assim gravava as preferências DO USUÁRIO a cada
 `save_gui_prefs` sob teste. O portão é AST, não regex: ele lê a árvore e olha
 só o que é atribuição no nível do módulo.
 

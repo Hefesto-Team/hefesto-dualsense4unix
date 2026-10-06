@@ -2,7 +2,7 @@
 
 CONEXAO-ZUMBI-01 (18/09/2026). Ela abriu o produto com dois DualSense ligados e
 disse quatro coisas: *"com dois ou mais controles conectados a interface do app
-para de funcionar"*, *"o lightbar tá sem a solução"*, *"a mudança dos leds e
+para de funcionar"*, , *"a mudança dos leds e
 afins não foram aplicadas pros demais controles"*, *"ambos conectados, ambos
 como player 1 e ambos com lightbar azul"*.
 
@@ -18,11 +18,7 @@ microfone, sem placa de som. O controle fica no padrão de fábrica — barra az
 e jogador 1 —, que é exatamente o que ela descreveu. E a interface estava viva
 (250 voltas em 25 s): o que morreu foi o CONTROLE.
 
-A ordem dela é o que este módulo existe para cumprir:
-
-    *"apresentei um sintoma de algo que deve ser tratado na origem como produto
-    como um todo. isso não é a ação esperada e o produto precisa ser inteligente
-    pra evitar problemas como esse."*
+A ordem de produto é o que este módulo existe para cumprir
 
 AS TRÊS CONDIÇÕES, E AS TRÊS SÃO NECESSÁRIAS
 ---------------------------------------------
@@ -39,9 +35,9 @@ A TERCEIRA É A TRAVA DE SEGURANÇA, e é ela que torna a cura barata. Um ACL se
 objeto no BlueZ **não serve a ninguém**: não há perfil, não há áudio, não há
 entrada, não há bateria — nenhum consumidor da máquina alcança aquele link.
 Derrubá-lo não pode interromper nada que esteja funcionando, porque nada está
-funcionando por ele. O fone, o mouse, o celular e o teclado dela têm objeto no
+funcionando por ele. O fone, o mouse, o celular e o teclado do usuário têm objeto no
 BlueZ enquanto conectados, e por isso ficam FORA por construção — sem lista de
-OUI, sem casar por nome, sem depender da bancada dela.
+OUI, sem casar por nome, sem depender da bancada.
 
 A terceira é também o que separa este defeito do **"conectado sem hidraw"** que
 o ``scripts/doctor.sh`` já pega (``check_bt_connected_sem_hidraw``): lá o BlueZ
@@ -94,7 +90,7 @@ SEGUNDOS_PARA_ZUMBI = 20.0
 
 JANELA_DO_TETO_S = 600.0
 
-#: árvore de mentira — a de verdade é a mesa dela, com quatro DualSense de pé.
+#: árvore de mentira — a de verdade é a bancada, com quatro DualSense de pé.
 RAIZ_ADAPTADORES = "/sys/class/bluetooth"
 
 RAIZ_HIDRAW = "/sys/class/hidraw"

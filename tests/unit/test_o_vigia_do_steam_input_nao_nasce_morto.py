@@ -282,7 +282,7 @@ class TestARegraDoAchado:
         ],
     )
     def test_calado_quando_nao_ha_o_que_dizer(self, rotulo: str, saida: object) -> None:
-        """Decisão dela, 22/08/2026: nada de linha permanente dizendo "tudo bem"."""
+        """Decisão, 22/08/2026: nada de linha permanente dizendo "tudo bem"."""
         from hefesto_dualsense4unix.app.actions import daemon_actions as da
 
         assert da.interpretar_guarda_do_steam_input(saida) is None, (

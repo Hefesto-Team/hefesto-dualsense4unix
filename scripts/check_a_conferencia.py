@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A CONFERÊNCIA DELA — a tabela de 07/09, medida no PUBLICADO, uma linha por item."""
+"""A CONFERÊNCIA DO USUÁRIO — a tabela de 07/09, medida no PUBLICADO, uma linha por item."""
 from __future__ import annotations
 
 import pathlib
@@ -79,7 +79,7 @@ def a_tela_nao_narra_commit() -> tuple[bool, str]:
 
 
 def frases_que_confessam() -> tuple[bool, str]:
-    """A regra dela de 07/09: a tela não informa os nossos defeitos."""
+    """A regra de 07/09: a tela não informa os nossos defeitos."""
     saida = subprocess.run(
         [sys.executable, str(RAIZ / "scripts/check_a_tela_nao_confessa.py")],
         capture_output=True, text=True, cwd=RAIZ)

@@ -424,9 +424,9 @@ class TestODonoDoNumeroPerguntaAoAparelho:
     ) -> None:
         """O controle NO FIO tem ganho, com o daemon elegendo `hefesto_mic_…`.
 
-        **O ARRANJO DIFÍCIL, E ELE É A MESA DELA DE 20/09/2026.** A primeira
+        **O ARRANJO DIFÍCIL, E ELE É A BANCADA DE 20/09/2026.** A primeira
         redação desta sprint resolvia a placa pelo `canal_fonte` que o daemon
-        publica, filtrando por `alsa_input.`. Medido na mesa dela, com UM
+        publica, filtrando por `alsa_input.`. Medido na bancada, com UM
         DualSense no fio e três no ar, o `state_full` respondeu
         `hefesto_mic_<hex6>` **para os quatro** — o nó que o produto ELEGEU
         (regra 0 de `escolher_fonte`), que é da nossa ponte e não tem placa
@@ -511,9 +511,9 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         """§6.3: nenhum campo nasce sem opinião, e esta está justificada.
 
         **O QUE A MORDIDA ARRANCA:** baixe `GANHO_PADRAO_PCT` e este teste
-        reprova. A razão de não baixar é medida e é dela — *o único microfone
-        dela é o do DualSense*, e ele já vive no topo: escolher outro número
-        faria o microfone dela ficar mais baixo do que está hoje, numa sprint
+        reprova. A razão de não baixar é medida e é do usuário — *o único microfone
+        do usuário é o do DualSense*, e ele já vive no topo: escolher outro número
+        faria o microfone do usuário ficar mais baixo do que está hoje, numa sprint
         cujo nome é «ter dono», não «mudar o som».
         """
         from hefesto_dualsense4unix.interface import aba02

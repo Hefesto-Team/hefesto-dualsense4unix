@@ -64,7 +64,7 @@ _KEY_LABELS: dict[str, str] = {
     "KEY_DOWN": "Seta ↓",
     "KEY_LEFT": "Seta ←",
     "KEY_RIGHT": "Seta →",
-    # O ALTERNADOR é o preset do L3 desde 02/09/2026 (decisão dela). Sem esta
+    # O ALTERNADOR é o preset do L3 desde 02/09/2026 (decisão de produto). Sem esta
     "__TOGGLE_OSK__": "Abrir e fechar teclado na tela",
     "__OPEN_OSK__": "Abrir teclado na tela",
     "__CLOSE_OSK__": "Fechar teclado na tela",

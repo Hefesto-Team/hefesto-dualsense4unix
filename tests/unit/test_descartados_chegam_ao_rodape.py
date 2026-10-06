@@ -106,7 +106,7 @@ async def test_a_lista_atravessa_o_fio(
     ``result["campos"]`` passa em todo teste de unidade e falha aqui.
 
     Socket próprio em ``tmp_path`` e ``XDG_RUNTIME_DIR`` isolado: o daemon VIVO
-    da máquina dela nunca é tocado.
+    da máquina do usuário nunca é tocado.
 
     MORDE: tirando o ``_rotulos_dos_descartados`` do ramo do ``ok`` na
     ``machine_declare_detalhado`` — reprova com ``()`` no lugar do rótulo.

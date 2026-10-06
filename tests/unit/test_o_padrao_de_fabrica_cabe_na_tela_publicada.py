@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UM PADRÃO DE FÁBRICA FORA DO VOCABULÁRIO DA TELA VIRA ESCOLHA DELA NO DISCO.
+"""UM PADRÃO DE FÁBRICA FORA DO VOCABULÁRIO DA TELA VIRA ESCOLHA DO USUÁRIO NO DISCO.
 
 O DEFEITO QUE ESTA RÉGUA MEDE, e ele foi reproduzido em 02/09/2026 na base
 `onda/abas-0209` (242c3e0c): o L3 nasceu alternador

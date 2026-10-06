@@ -430,7 +430,7 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
     dizendo que a ponte daquele jogo foi confirmada COM Steam Input, e a
     allowlist de hoje diz o contrário (ou vice-versa). O carimbo é evidência
     de outra natureza — ele diz que aquilo já pegou uma vez, com o jogo
-    aberto, na máquina dela —, e uma divergência entre ele e o disco é
+    aberto, na máquina do usuário —, e uma divergência entre ele e o disco é
     exatamente o tipo de coisa que ninguém descobre sem ser avisado.
 
     **Nomeia, nunca só conta.** É a regra do WRAPPER-EM-TODOS-01, e a razão de
@@ -510,7 +510,7 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     três frases de tela abaixo diziam que a marca *entrega a ENTRADA pela
     Steam*, faz *o jogo enxergar o DualSense físico direto* e **custa o
     co-op**. Os três morreram em **09/08/2026**
-    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela, commit `d8022ea5`): a marca
+    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto, commit `d8022ea5`): a marca
     inverteu de lado e passou a **esconder o controle físico**, com os
     virtuais de pé — um por jogador, co-op incluído. O mecanismo vivo está em
     `daemon/subsystems/gamepad.sync_steam_input_exception`, que chama

@@ -14,7 +14,7 @@ publica: o GE-Proton o cria só para o Monster Hunter Wilds (patch 0003) e
 EXCLUI o DualSense de propósito (`!is_dualsense_device_path`); e ainda apaga
 todo device MEDIA de DualSense a cada início. Sem o device, o passo 2 volta
 vazio e o jogo desiste antes de olhar o HID. **Com ele, vibrou** — com o físico
-direto e em modo produto (vpad `uhid`), na mão dela.
+direto e em modo produto (vpad `uhid`), na mão do usuário.
 
 O QUE ESTE MÓDULO GRAVA, POR CONTROLE NO CABO
 ---------------------------------------------
@@ -73,12 +73,12 @@ precisa ser combinado entre o daemon e o lançador: os dois lados leem o nó.
 O REGISTRO É DOS APARELHOS, E TEM UM DONO DA LISTA — 02/10/2026
 ---------------------------------------------------------------
 
-A-HAPTICA-E-POR-APARELHO-01, pela palavra dela de 29/09 (*«todas as features
+A-HAPTICA-E-POR-APARELHO-01, pela palavra de 29/09 (*«todas as features
 são um por aparelho. sempre.»*). Os endpoints são um por DualSense da mesa
 (`endpoint_de_haptica`), e o registro grava, no lançamento, um bloco por
 endpoint vivo: um por aparelho. De 28/09 a 02/10 eram os quatro lugares, de pé
 desde o primeiro DualSense (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01). O preço,
-que ela aceitou na pergunta: com o jogo aberto (`wineserver` vivo) nada se
+que o usuário aceitou na pergunta: com o jogo aberto (`wineserver` vivo) nada se
 grava, e o aparelho que chega depois não tem bloco até o jogo reabrir.
 
 O cabo cujo aparelho tem endpoint SAI da lista: um laço nosso leva o endpoint
@@ -203,8 +203,8 @@ def controles_no_cabo(
 ) -> list[Controle]:
     """Os DualSense ligados por USB COM placa de som, lidos do sysfs.
 
-    A raiz é injetável de propósito: a suíte nunca pode ler o controle dela
-    (memória "subsystem novo faz a suíte tocar o aparelho dela").
+    A raiz é injetável de propósito: a suíte nunca pode ler o controle do usuário
+    (memória "subsystem novo faz a suíte tocar o aparelho do usuário").
     """
     raiz = sysfs / "bus" / "usb" / "devices"
     achados: list[Controle] = []

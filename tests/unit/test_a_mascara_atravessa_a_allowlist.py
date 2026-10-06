@@ -10,7 +10,7 @@ from hefesto_dualsense4unix.daemon import launch_env as le
 
 
 class _DaemonDeMesa:
-    """A mesa dela: emulação ligada, quatro vpads uinput, máscara `xbox`."""
+    """A bancada: emulação ligada, quatro vpads uinput, máscara `xbox`."""
 
     def __init__(
         self,

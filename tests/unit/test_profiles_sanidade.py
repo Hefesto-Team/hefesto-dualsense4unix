@@ -49,7 +49,7 @@ def _de(achados: Sequence[Achado], regra: str) -> list[Achado]:
 
 @pytest.fixture
 def perfis_da_corrupcao() -> list[Profile]:
-    """O arranjo medido no disco dela, com nomes/MACs mascarados."""
+    """O arranjo medido no disco do usuário, com nomes/MACs mascarados."""
     return [
         _perfil(
             "editado_na_mao",

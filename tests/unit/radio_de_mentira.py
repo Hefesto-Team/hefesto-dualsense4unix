@@ -25,7 +25,7 @@ cima disto — a borda, a trava, o diário e o agente próprio são os do produt
 O ``HID_PHYS`` é :meth:`RadioDeMentira.onde_esta`: o adaptador em que o
 controle está CONECTADO agora; o movimento é :meth:`RadioDeMentira.hz`.
 
-A FÍSICA QUE A LISTA DELA DE 25/09 MEDIU (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01),
+A FÍSICA QUE A LISTA DO USUÁRIO DE 25/09 MEDIU (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01),
 e até ela este dublê era MAIS FROUXO que o controle de verdade:
 
 * **ligado, o PS + Create não faz nada** (passo c1: *«o controle nunca entra em
@@ -108,7 +108,7 @@ def uniq(aparelho: str) -> str:
 
 @dataclass
 class Fisico:
-    """O aparelho na mão dela: o host que ELE guarda, e onde está conectado."""
+    """O aparelho na mão do usuário: o host que ELE guarda, e onde está conectado."""
 
     endereco: str
     classe: int | None
@@ -223,7 +223,7 @@ class RadioDeMentira:
 
         LIGADO, NADA ACONTECE — a lista dela de 25/09, passo c1: o DualSense
         conectado não entra em modo de parear. O gesto fica anotado em
-        ``gestos_perdidos`` para a régua ver que ela apertou e nada veio.
+        ``gestos_perdidos`` para a régua ver que o usuário apertou e nada veio.
         """
         with self.tranca:
             fisico = self.fisicos[aparelho]
@@ -605,7 +605,7 @@ class RadioDeMentira:
 
 
 def o_clique_no_parear(central: Any, aparelho: str) -> Callable[[], None]:
-    """O clique dela no «Parear» da linha de ``aparelho``, como a tela o manda."""
+    """O clique do usuário no «Parear» da linha de ``aparelho``, como a tela o manda."""
     def clicar() -> None:
         busca = next((m.destino for m in central.movimentos()
                       if m.aparelho == "" and m.em_curso), "")

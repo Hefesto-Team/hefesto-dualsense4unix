@@ -182,7 +182,7 @@ class TestAFonteLeAteCompletar:
 
 
 class TestOGravadorNaoCaiNaFontePadrao:
-    """ARRANQUE o ``if not fonte`` e veja o instrumento ler o som da máquina dela."""
+    """ARRANQUE o ``if not fonte`` e veja o instrumento ler o som da máquina do usuário."""
 
     def test_fonte_vazia_nao_gera_comando(self) -> None:
         assert af.argv_do_gravador("") == []
@@ -198,7 +198,7 @@ class TestOGravadorNaoCaiNaFontePadrao:
 
 
 class TestORitmoImpedeAInundacao:
-    """ARRANQUE :func:`fonte_com_ritmo` do ensaio e veja 53x o fio no rádio dela."""
+    """ARRANQUE :func:`fonte_com_ritmo` do ensaio e veja 53x o fio no rádio do usuário."""
 
     def test_cada_quadro_tem_prazo_e_o_prazo_nao_deriva(self) -> None:
         """O sono é o que FALTA para o prazo, não um intervalo fixo."""
@@ -346,7 +346,7 @@ class TestOEnsaioRecusaAntesDeEscrever:
         assert "NÃO é a medição" in saida
 
     def test_o_teto_de_segundos_e_uma_trava(self, ensaio: Any) -> None:
-        """Pedir 600 s não toca 600 s no aparelho dela."""
+        """Pedir 600 s não toca 600 s no aparelho do usuário."""
         assert ensaio.TETO_DE_SEGUNDOS <= 15.0
         assert ensaio.SEGUNDOS_PADRAO <= ensaio.TETO_DE_SEGUNDOS
 

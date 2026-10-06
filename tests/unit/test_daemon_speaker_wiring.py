@@ -178,7 +178,7 @@ class TestApplierDoDaemon:
         ]
 
     def test_a_rota_sem_botao_chega_ao_aparelho_como_sons_do_jogo(self) -> None:
-        """A rota 3 da peça vira 2 — 22/09/2026, pedido dela."""
+        """A rota 3 da peça vira 2 — 22/09/2026, pedido."""
         backend = _BackendComAudio()
         backend.connect()
         estado = _daemon(backend).apply_profile_speaker(
@@ -405,7 +405,7 @@ class TestPontosDeInjecao:
     async def test_ciclo_por_hotkey_aplica_o_volume_do_perfil(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """PS+D-pad é gesto dela: o perfil que entra leva o volume junto."""
+        """PS+D-pad é gesto do usuário: o perfil que entra leva o volume junto."""
         save_profile(_perfil("baixo", speaker={"volume": 60}))
         save_profile(_perfil("alto", speaker={"volume": 220}))
         monkeypatch.setattr(

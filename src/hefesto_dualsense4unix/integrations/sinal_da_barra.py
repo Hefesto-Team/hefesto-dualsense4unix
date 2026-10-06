@@ -17,7 +17,7 @@ e nenhuma delas foi derrubada:
 E a bateria não salva: o ``ps-controller-battery`` do ``hid-playstation``
 registra ``capacity``, ``present``, ``scope`` e ``status``, e **mais nada** —
 não há ``current_now`` nem ``voltage_now`` para inferir consumo de barra acesa
-(MEDIDO 22/08/2026 nos quatro nós da bancada dela). Quem for tentar "medir a
+(MEDIDO 22/08/2026 nos quatro nós da bancada). Quem for tentar "medir a
 corrente" está tentando ler um arquivo que o driver não cria.
 
 O QUE ESTE MÓDULO FAZ ENTÃO
@@ -27,7 +27,7 @@ Ele responde a pergunta que TEM resposta, e que prevê a lâmpada:
     **esta instância de conexão nasceu com outro processo segurando o hidraw
     dela?**
 
-MEDIDO EM 22/08/2026, na bancada dela, seis instâncias contra o olho dela, e a
+MEDIDO EM 22/08/2026, na bancada, seis instâncias contra o olho de quem confere, e a
 concordância foi 6/6:
 
 ===========================  ===================  ==================
@@ -47,7 +47,7 @@ com a Steam morta e o daemon parado. **O defeito mora na instância, não no
 processo que o causou:** matar a Steam não cura, porque o que ela fez foi feito
 no nascimento e persiste até a reconexão (ou o power-off físico).
 
-POR QUE ISSO EXPLICA O "FALSO POSITIVO RECORRENTE" DELA
+POR QUE ISSO EXPLICA O "FALSO POSITIVO RECORRENTE" DO USUÁRIO
 =======================================================
 O alerta dela, 12/08/2026 (``docs/data/mapa-controles.csv``,
 ``luz.lightbar.cor@dualsense``, ``radio_ressalva``):
@@ -635,7 +635,7 @@ def limpo_para_conectar(
     É esta — e não :func:`veredito_do_nascimento` — que tem de guardar o botão de
     reconectar. Oferecer a cura com a mesa suja gasta o gesto do botão PS dela
     para produzir outra instância travada, que é a forma exata do "falso
-    positivo recorrente" que ela nomeou em 12/08/2026.
+    positivo recorrente" que o usuário nomeou em 12/08/2026.
 
     Devolve ``(confianca, porque, pids)``. ``CONFIANCA_NAO_SEI`` quando a sonda
     não pôde rodar — e aí o produto pode até oferecer a cura, mas tem de dizer

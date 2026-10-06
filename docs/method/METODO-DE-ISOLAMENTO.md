@@ -1,12 +1,11 @@
 # O método de isolamento — a lista que nos impede de errar
 
-- **Escrito em:** 10/08/2026, depois do primeiro ensaio de bancada dela e minha
+- **Escrito em:** 10/08/2026, depois do primeiro ensaio de bancada e minha
   (rumble do DualSense por Bluetooth).
 - **Revisto em:** 13/08/2026, depois das bancadas de 12 e 13/08. O que a revisão
   trouxe tem um nome só: **o instrumento mentia, não o produto** — quatro formas
   do mesmo defeito, todas medidas, todas com hora e linha de código.
-- **Nasceu de:** *"a ideia é terminarmos aqui com uma to do list de método boa o
-  suficiente pra nunca errarmos"*.
+- **Nasceu de:** **.
 - **Para que serve:** um ciclo repetível para isolar qualquer feature de qualquer
   controle em qualquer canal — e, no fim, **encolher o produto**.
 
@@ -245,9 +244,7 @@ nenhum, porque dá sossego falso.
 
 ## O CHECKLIST — o padrão universal de validação de um elemento
 
-- **Acrescentado em:** 11/08/2026, a pedido dela: *"pra que esse padrão de agora
-  seja o padrão universal de validação de cada elemento, pra que tenhamos um
-  padrão de checklist nesse sentido"*.
+- **Acrescentado em:** 11/08/2026, a
 - **Nasceu de:** a sessão da mesa cheia — quatro DualSense, dois no cabo e dois
   no rádio — em que rumble, lightbar e gatilho foram validados pela mesma
   sequência, e a sequência se mostrou melhor que a soma das partes.
@@ -323,7 +320,7 @@ chute contamina tudo o que vier depois.
       elemento funcionava em outro transporte, em outro dia, ou no relato dela,
       a explicação tem de cobrir isso também.
 
-### E — O desenho do ensaio, para não desperdiçar a mão dela
+### E — O desenho do ensaio, para não desperdiçar a mão do usuário
 
 - [ ] **E1. Nunca peça cronômetro a um humano.** Se a resposta depende de
       *quando* algo mudou, o instrumento está errado — redesenhe para que a
@@ -337,8 +334,7 @@ chute contamina tudo o que vier depois.
 - [ ] **E3. Amplitude máxima na primeira tentativa** (`METODO-01`, 01/08). 15%
       contra 100% quase reprovou uma entrega correta; 0 contra 255 a reabilitou
       em trinta segundos.
-- [ ] **E4. O desenho não pode ser AMBÍGUO** — regra dela, 12/08:
-      *"nosso resultado não deve ser ambíguo"*. Eu propus *"deixe os quatro na
+- [ ] **E4. O desenho não pode ser AMBÍGUO** — regra, 12/08. Eu propus *"deixe os quatro na
       mesa e veja qual para antes"*; ela recusou. O desenho que ficou:
       **dois controles, um em cada mão**, e os outros dois recebendo a mesma
       carga como lastro. Comparar duas mãos é resposta que o corpo dá sem
@@ -367,7 +363,7 @@ chute contamina tudo o que vier depois.
 - [ ] **F2. O teste que MORDE** (Passo 8), arrancado **de verdade** do arquivo
       de produção, visto reprovar, devolvido.
 - [ ] **F3. O grau, e ele é honesto por construção:** `MONTOU` → `SAIU NO FIO` →
-      `O APARELHO OBEDECEU` → `O JOGO RECEBEU` → `O JOGO REAGIU`. Só o olho dela
+      `O APARELHO OBEDECEU` → `O JOGO RECEBEU` → `O JOGO REAGIU`. Só o olho de quem confere
       sustenta o terceiro e o quinto; o quarto um instrumento vê, se declarar
       qual régua usou. A escada inteira, com o critério de cada degrau, está na
       seção *A escada de `ate_onde_foi`*.
@@ -378,10 +374,10 @@ chute contamina tudo o que vier depois.
       de qual bit, byte ou condição ele depende, escreva isso na ressalva — em
       vez de deixar a linha parecer fechada.
 - [ ] **F6. Antes de escrever `não obedece`, pergunte se aquilo é DECISÃO
-      DELA.** Em 12/08 registrei `não obedece` para o BlueZ não reconectar
-      sozinho — e a reconexão automática está desligada **a pedido dela**, por
+      DE PRODUTO.** Em 12/08 registrei `não obedece` para o BlueZ não reconectar
+      sozinho — e a reconexão automática está desligada **a pedido**, por
       decisão anterior, tomada por causa dos problemas que ela trazia. O ensaio
-      `ps-nao-reconecta-daemon-parado-2242` foi corrigido por ela no mesmo dia.
+      `ps-nao-reconecta-daemon-parado-2242` foi corrigido pelo usuário no mesmo dia.
       O que fica no caderno é o **fato** (`Connectable=false`, `Paired=true`,
       `Bonded=true`, `ReconnectMode=device`, bond intacto), nunca o julgamento.
       Procure em `docs/process/` e na memória de decisões antes de chamar de
@@ -414,7 +410,7 @@ seção; a triagem entre elas é uma pergunta só:
 
 | o sintoma | a forma |
 |---|---|
-| verde na máquina dela, vermelho no runner | **2** (o teste mede a máquina) ou **3** (o dublê é incompleto) — leia a exceção: `AttributeError` é 3, decisão que mudou é 2 |
+| verde na máquina do usuário, vermelho no runner | **2** (o teste mede a máquina) ou **3** (o dublê é incompleto) — leia a exceção: `AttributeError` é 3, decisão que mudou é 2 |
 | a **mesma SHA** deu verde e vermelho | **4** — é corrida do instrumento, não defeito |
 | o instrumento diz "aplicado" e nada aconteceu | **1**, ou a `A-1` (o instrumento disputa o hidraw) |
 
@@ -426,7 +422,7 @@ Já está na **pergunta 0**. Resumo com o comando:
 
 ### Forma 2 — o teste mede a MÁQUINA, não a lógica
 
-O teste passava na máquina dela e reprovava no runner, nas três versões de
+O teste passava na máquina do usuário e reprovava no runner, nas três versões de
 Python, e o motivo é que ele perguntava ao **sistema** sem querer.
 
 ```bash
@@ -440,7 +436,7 @@ prognostico_uhid = uhid_available() and permite_uhid
 ```
 
 Passar `permite_uhid=True` é **metade** da condição. `uhid_available()` pergunta
-se `/dev/uhid` existe — na máquina dela existe, no runner não. O teste
+se `/dev/uhid` existe — na máquina do usuário existe, no runner não. O teste
 `test_o_prognostico_de_outra_mascara_segue_intacto`
 (`tests/unit/test_ignore_no_fim_da_sequencia_cobertura.py:160`) achava que
 bastava a metade dele.
@@ -465,7 +461,7 @@ grep -rn 'markup_escape_text' src/ tests/
 **O que OLHAR:** o stub de `gi` que os testes de interface plantam quando não há
 PyGObject tem `timeout_add`, `idle_add` e `source_remove` — e **não** tinha
 `markup_escape_text`. Resultado: `AttributeError` nas três versões de Python do
-`ci.yml` e verde na máquina dela, onde o PyGObject é real.
+`ci.yml` e verde na máquina do usuário, onde o PyGObject é real.
 
 **O que isto decide:** se o dublê cobre a superfície que o produto de fato usa.
 
@@ -474,7 +470,7 @@ interface nova escapa no próprio HTML): o escape passou a ter piso próprio, e 
 que **não** foi feito: proteger a chamada com `hasattr` teria trocado a exceção
 por markup quebrado, que é pior — o teste afirma que o escape **acontece**.
 
-**Como pegar sozinho:** quando o CI reprova e a máquina dela passa, o suspeito
+**Como pegar sozinho:** quando o CI reprova e a máquina do usuário passa, o suspeito
 número um é o dublê, não o produto.
 
 ### Forma 4 — a foto mede um INSTANTE em vez de esperar a condição
@@ -513,7 +509,7 @@ sed -n '31,50p' scripts/check_packaging_parity.sh   # CORRIDA-DO-PIPEFAIL-01
 ```
 
 **O que OLHAR:** a assinatura no log é `printf: write error: Broken pipe`. Na
-máquina dela o produtor ganhou 200 de 200; o runner, mais lento, perdeu — e o
+máquina do usuário o produtor ganhou 200 de 200; o runner, mais lento, perdeu — e o
 `ci.yml` acusou o `doctor.sh` de não chamar uma função **viva na linha 4493**.
 A cura é **não construir o pipe**: o produtor vai para uma variável e o `grep` lê
 dela por here-string. As outras nove ocorrências de `| grep -q` naquele arquivo
@@ -665,7 +661,7 @@ E a resposta **não** é a confirmação que parece ser. O `trigger.set` devolve
 `aplicado_em` (`ipc_handlers.py:776`) — mas, no caminho por-MAC, `aplicado_em`
 é `[str(params["uniq"])]` (linha **1027**): **o eco do que você pediu**, não uma
 leitura do que ficou. Ele prova que a rota por-uniq foi tomada, não que o
-aparelho obedeceu. Quem confirma o alvo é a mão dela nos outros três.
+aparelho obedeceu. Quem confirma o alvo é a mão do usuário nos outros três.
 
 ### 3. Carimbar o relógio
 
@@ -751,7 +747,7 @@ sentiu, o campo não é `obedece`.*
 
 *"O daemon escrevendo output"* (amplo) e *"o keepalive perpétuo"* (estreito) dão
 vereditos **diferentes** para os MESMOS ensaios. Os seis ensaios de rumble de
-11/08 foram reformulados em 12/08, com o aceite dela, porque a dose-resposta
+11/08 foram reformulados em 12/08, com o aceite de produto, porque a dose-resposta
 (`0,5 s` → pulso; `8,0 s` → oito segundos exatos) tinha estreitado o mecanismo.
 O nome amplo **não estava errado, estava impreciso** — e manter os dois obrigaria
 a próxima pessoa a escolher entre eles.
@@ -759,7 +755,7 @@ a próxima pessoa a escolher entre eles.
 **Como escolher o nome:** o mais estreito que os seus ensaios sustentam. Se a
 dose-resposta apontou uma constante, o nome é a constante.
 
-### Não julgue DECISÃO DELA como defeito
+### Não julgue DECISÃO DE PRODUTO como defeito
 
 Ver **F6**. O caderno registra fato; o julgamento é o que envelhece mal.
 
@@ -787,7 +783,7 @@ Cada uma custou tempo real. Nenhuma é hipotética.
 | A-2 | **O daemon vivo é mais velho que o código** | Falta um dado que deveria estar lá |
 | A-3 | **Medir contra a régua errada** | Número absurdo (uma posição relativa deu `1,207`, impossível) |
 | A-4 | **Teste que não morde** | Verde com a cura arrancada |
-| A-5 | **Relatório de agente não é prova** | Reportou `aplicado=true` sem ter escrito no arquivo |
+| A-5 | **Relatório de execução não é prova** | Reportou `aplicado=true` sem ter escrito no arquivo |
 | A-6 | **Colisão de nomes silenciosa** | `getElementById('corpo')` devolveu o `<g>` do SVG, não a tabela; nenhum erro |
 | A-7 | **Só um lado do ensaio** | Seis ensaios "com" e nenhum "sem": zero poder de prova |
 | A-8 | **Pedir cronômetro à mão humana** | Duas rodadas com respostas incompatíveis entre si — e nenhuma delas era erro dela |
@@ -795,11 +791,11 @@ Cada uma custou tempo real. Nenhuma é hipotética.
 | A-10 | **Confundir controle negativo com prova** | O R2 ficar solto prova que o comando não vazou; **não** prova que o R2 obedece |
 | A-11 | **Supor que o firmware honra os bits** | A cura desliga os bits de autorização e o aparelho obedece aos bytes assim mesmo |
 | A-12 | **O caderno envelhecer sem que ninguém note** | Uma medição que só existe em docstring deixa o `eliminacao.py` acusando um culpado removido há sete dias |
-| A-13 | **A corrida do `pipefail`** | `produtor \| grep -q` devolve 141 **tendo achado**; enganou dois dias, porque a máquina dela ganhava a corrida e o runner perdia |
+| A-13 | **A corrida do `pipefail`** | `produtor \| grep -q` devolve 141 **tendo achado**; enganou dois dias, porque a máquina do usuário ganhava a corrida e o runner perdia |
 | A-14 | **Comparar relógio em vez de conteúdo** | `--check` verde com a página publicada divergindo das fontes |
 | A-15 | **O `--fix` reescreve o arquivo inteiro** | Uma "correção de acento" converte o CSV de CRLF para LF sem avisar |
 | A-16 | **O instrumento aceita mirar no vpad do próprio produto** | O vpad tem força-feedback e aceita o efeito **calado**; a medição sai falsa sem erro nenhum |
-| A-17 | **O teste mede a máquina** | Verde na máquina dela, vermelho no runner — a condição perguntava ao sistema (`/dev/uhid`) |
+| A-17 | **O teste mede a máquina** | Verde na máquina do usuário, vermelho no runner — a condição perguntava ao sistema (`/dev/uhid`) |
 | A-18 | **O dublê não tem o que o produto usa** | O stub de `gi` sem `markup_escape_text`: `AttributeError` só no CI |
 | A-19 | **A foto mede um instante** | A MESMA SHA deu success e failure sob Xvfb, onde não há gerenciador de janelas |
 | A-20 | **Presumir a causa e escrever como se fosse medição** | Um controle caiu às 22:00:33 de 12/08 e eu escrevi uma causa de firmware sem uma medição que a sustentasse. O caderno só tem o **efeito** (`comb-slot-jogador-2200`) e um **suspeito em aberto** (`rumble-quatro-duracao-igual-r1`) |
@@ -807,9 +803,9 @@ Cada uma custou tempo real. Nenhuma é hipotética.
 | A-22 | **`linha_id` sem `@controle`** | O ensaio não casa com o mapa e **some do julgador**, sem portão que acuse |
 | A-23 | **`resultado` limpo com a ressalva só na nota** | `obedece` + *"porém por duração diferente"* fez o julgador absolver o culpado |
 | A-24 | **O nome amplo demais do suspeito** | *"O daemon escrevendo output"* e *"o keepalive perpétuo"* dão vereditos opostos para os mesmos ensaios |
-| A-25 | **Julgar decisão dela como defeito** | `não obedece` para o BlueZ não reconectar sozinho — que é pedido dela, decisão anterior |
+| A-25 | **Julgar decisão de produto como defeito** | `não obedece` para o BlueZ não reconectar sozinho — que é pedido, decisão anterior |
 
-A `A-5` merece nota: em 10/08 um agente relatou a cura aplicada e com mordida
+A `A-5` merece nota: em 10/08 um relatório dizia a cura aplicada e com mordida
 provada, e o arquivo estava intacto. **Conferir o arquivo é parte do método**, não
 desconfiança.
 
@@ -817,7 +813,7 @@ As `A-8` a `A-12` são de 11/08, e três delas são erro meu, registrado de
 propósito:
 
 - **A `A-8` e a `A-9` são de desenho, não de execução.** Quando o ensaio exige da
-  mão dela uma precisão que a mão não dá, quem falhou foi o instrumento. A saída
+  mão do usuário uma precisão que a mão não dá, quem falhou foi o instrumento. A saída
   não é repetir com mais cuidado — é **redesenhar para que a resposta seja
   sentida**.
 - **A `A-10` aconteceu comigo em pleno registro:** marquei `gatilho.direito` como
@@ -833,7 +829,7 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
 - **A `A-20` é a que fez este guia ser reescrito.** Sobre a queda de um controle
   às 22:00:33 de 12/08 eu escrevi uma causa de firmware — *"foi power off do
   firmware por proteção"* — sem uma única medição que a sustentasse, num
-  documento cuja pergunta de abertura é qual instrumento está mentindo. Ela
+  documento cuja pergunta de abertura é qual instrumento está mentindo. O usuário
   corrigiu na hora, e a regra que ela deu vale mais que o episódio: *"presumir
   nunca pode ser feito, trabalhamos com evidências"*.
 
@@ -873,7 +869,7 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
 
 Tratar **MONTOU** como **funciona** é a mentira mais cara desta casa.
 
-> A coluna se chamava `grau` até 15/08/2026 (D-13, decisão dela). O nome velho
+> A coluna se chamava `grau` até 15/08/2026 (D-13, decisão de produto). O nome velho
 > não é aceito em lugar nenhum: quem o escrever leva `integridade` do portão.
 
 ---
@@ -951,7 +947,7 @@ MONTOU  →  SAIU NO FIO  →  O APARELHO OBEDECEU
 |---|---|---|
 | `MONTOU` | o byte existe na memória do produto e a suíte o lê. **Nada saiu do processo.** | a suíte, sem aparelho |
 | `SAIU NO FIO` | a escrita no nó do transporte não errou e houve resposta do outro lado. Diz que o canal está aberto — **não** diz que o aparelho fez coisa alguma com o que recebeu | a bancada, com o aparelho na mão |
-| `O APARELHO OBEDECEU` | alguém **viu** o aparelho fazer o que foi pedido, e gravou o ensaio no caderno com `observado_por = olho-dela` | a mão dela |
+| `O APARELHO OBEDECEU` | alguém **viu** o aparelho fazer o que foi pedido, e gravou o ensaio no caderno com `observado_por = olho-dela` | a mão do usuário |
 
 ### Os dois degraus da VOLTA — aparelho → vpad → JOGO (19/08/2026)
 
@@ -977,7 +973,7 @@ da sprint `TRES-PORTOES-01`, §7.
 | degrau | o critério | quem fecha |
 |---|---|---|
 | `O JOGO RECEBEU` | o **inode** do nó do nosso vpad aparece em `/proc/<pid>/fd` de um processo da árvore do jogo | um instrumento, de fora |
-| `O JOGO REAGIU` | o personagem andou, o gatilho endureceu **dentro** do jogo, o grito entrou | **a mão dela, e mais ninguém** |
+| `O JOGO REAGIU` | o personagem andou, o gatilho endureceu **dentro** do jogo, o grito entrou | **a mão do usuário, e mais ninguém** |
 
 #### O critério de `O JOGO RECEBEU`, com as quatro armadilhas já medidas
 
@@ -1007,7 +1003,7 @@ Quem for fechar `O JOGO RECEBEU` tem de dizer, no ensaio, **qual régua usou** e
 como ela escapa dessas quatro. Um instrumento que não declara isso é o defeito
 mais caro deste projeto repetido: *o instrumento mente mais que o produto*.
 
-#### O critério de `O JOGO REAGIU`, e por que só a mão dela o fecha
+#### O critério de `O JOGO REAGIU`, e por que só a mão do usuário o fecha
 
 **Não existe instrumento.** Nenhuma régua desta casa lê o estado interno de um
 jogo Unreal sob Proton, e nenhuma vai ler. O único sensor deste degrau é ela.
@@ -1047,7 +1043,7 @@ chave nos três; o que muda é a peça e o código evdev:
 | envelope rádio | `0x31` + CRC32 | igual ao cabo | igual + rate limiter 60 ms |
 
 Isolado num controle, o outro é **trocar o nome da variável** — que foi a frase
-dela. E o que **não** replica precisa estar escrito: a lightbar do DualSense é
+de produto. E o que **não** replica precisa estar escrito: a lightbar do DualSense é
 `impossível` no 8BitDo, que não tem LED RGB.
 
 ---
@@ -1138,7 +1134,7 @@ custado o dia:
     erro foi meu: eu registrei como medição uma frase que só existia em docstring
     (`cli/cmd_lightbar_reset.py:18-20`). A escavação do journal e dos transcritos
     achou a barra **acesa** no rádio dentro daqueles cinco dias, quatro vezes,
-    três delas com fala literal dela (ensaios `lightbar-bt-aceso-*`). **O
+    três delas com fala literal (ensaios `lightbar-bt-aceso-*`). **O
     docstring seguiu com a frase falsa até 13/08**, quando foi substituído no
     próprio arquivo — porque enquanto ela ficasse lá, quem lesse o código
     reencontraria a afirmação que o caderno já tinha derrubado;
@@ -1162,7 +1158,7 @@ mede quando a suspeita é da própria régua**.
 | D1 | o contraste, 6 minutos antes, com os MESMOS três: Steam fechada **depois** de eles subirem | só **um** dos três obedeceu. Mesmo controle, mesma revisão, resultados opostos — a variável é quem tinha o hidraw na probe |
 | — | as três revisões de hardware (`0x0710`, `0x1111`, `0x0711`) estavam representadas | a suspeita de revisão de hardware cai **com prova**, não por argumento |
 | D2 | `btmon`, duas capturas de 45 s, uma por braço | **98** pacotes de saída na probe suja contra **6** na limpa (dois por controle, que é o que o driver manda sozinho) — dezesseis vezes mais escrita, e o resultado inverso |
-| D2 | os **timestamps** desses pacotes | a Steam não disputa sempre: ela escreve em **duas rajadas** (t+0→3 s e t+15→18 s) e depois **cala**. A pergunta foi dela: *"se medimos quando a steam pinta o lightbar então sabemos quando sobrescrever, não?"* |
+| D2 | os **timestamps** desses pacotes | a Steam não disputa sempre: ela escreve em **duas rajadas** (t+0→3 s e t+15→18 s) e depois **cala**. A pergunta foi do usuário: *"se medimos quando a steam pinta o lightbar então sabemos quando sobrescrever, não?"* |
 
 **Limite dito em voz alta, porque não foi medido:** eu contei os pacotes,
 **não decodifiquei** o conteúdo deles. Não sei que report a Steam manda nem se
@@ -1190,7 +1186,7 @@ Quando você achar o quarto, ele provavelmente é este.
 Eu atribuí ao `systemd-logind` a retirada da permissão do nó, com o argumento de
 que device virtual não tem seat. **Errado.** Quem esconde o nó é o **broker de
 hidraw do próprio produto**, de propósito, para impedir que jogos e a Steam mexam
-direto no controle — e ele o faz 14.105 vezes em sete dias na máquina dela:
+direto no controle — e ele o faz 14.105 vezes em sete dias na máquina do usuário:
 
 ```bash
 journalctl --user -b | grep hidraw       # o journal da unit

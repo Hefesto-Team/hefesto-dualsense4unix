@@ -39,7 +39,7 @@ def slot_de_sessao(daemon: Any, chave: str) -> int | None:
     pergunta é a MESMA que a interface faz pelo IPC —
     ``ipc_handlers._player_slot_for``: ``slot_for(uniq, assign=False)``, leitura
     pura. ``assign=False`` não é detalhe: expor estado nunca pode ALOCAR lugar
-    na fila, senão nomear um nó de som mudaria a numeração da mesa dela.
+    na fila, senão nomear um nó de som mudaria a numeração da bancada.
 
     **É o DAEMON que entra, não o registro**, e a razão é de ordem medida em
     12/09/2026: ``Daemon.run()`` chama ``_safe_start("bt_mic", …)`` e
@@ -92,7 +92,7 @@ def numero_do_assento_na_mesa(
     (``tests/unit/test_mesa_cheia_11_a_janela_conta_quatro.py``). **A cura não
     mexeu na conta da casa — ela a ALCANÇOU**, que é o que a sprint pedia.
 
-    A DIVERGÊNCIA QUE ISTO MATA, medida na mesa dela em 09/09/2026 às 22h::
+    A DIVERGÊNCIA QUE ISTO MATA, medida na bancada em 09/09/2026 às 22h::
 
         pactl list sources → Description: Microfone do Controle 2   ← o daemon
         a tela             → P1 • White • cabo                      ← o cartão
@@ -116,7 +116,7 @@ def numero_do_assento_na_mesa(
     controle desligado não ganha nome, mesmo que o registro guarde um lugar na
     fila para ele (``slot_for`` com ``assign=False`` responde a COLOCAÇÃO que
     um ausente teria se voltasse; publicar um nó por essa resposta poria na
-    lista de som dela um «Microfone do Controle 3» de um controle que não está
+    lista de som do usuário um «Microfone do Controle 3» de um controle que não está
     lá).
 
     Sem daemon, sem registro, ou controle sem lugar na fila, cai no

@@ -10,7 +10,7 @@ from hefesto_dualsense4unix.app import audio_saida
 #: responder sobre o DualSense e calar em qualquer outro aparelho — e o produto
 _CAPACIDADE_DE_GANHO = "cvolume"
 
-#: baixar é dela e está medida — *o único microfone dela é o do DualSense* —, e
+#: baixar é dela e está medida — *o único microfone do usuário é o do DualSense* —, e
 GANHO_PADRAO_PCT = 100
 
 def _nome_do_scontrol(crua: str) -> str:

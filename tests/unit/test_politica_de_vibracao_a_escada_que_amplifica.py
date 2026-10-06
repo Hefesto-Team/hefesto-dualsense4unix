@@ -113,7 +113,7 @@ def test_o_teto_do_deslizador_e_o_do_esquema_do_perfil() -> None:
 
 
 def test_o_deslizador_vai_mais_longe_que_o_botao_maximo() -> None:
-    """Não é incoerência — é a divisão de papéis que ela decidiu em 11/08."""
+    """Não é incoerência — é a divisão de papéis que o usuário decidiu em 11/08."""
     teto_do_botao = RUMBLE_POLICY_MULT["max"]
     assert teto_do_botao < RUMBLE_CUSTOM_MULT_MAX, (
         "o preset ficou tão longe quanto o ajuste livre — some a diferença "

@@ -109,7 +109,7 @@ Bateria ocupando o bloco do Gamepad virtual, na mesma altura e largura do bloco
 **O que isso NÃO cobre:** não é o selo "FECHADA, não tocar" que Gatilhos,
 Vibração e Lançadores receberam — ela não usou essa palavra, e as duas abas ainda
 têm itens em aberto (as 27 minúsculas das pop-ups tocavam a Navegação, não estas — e eram **27**,
-não 22: quem coordena contou 22 e a conferência de 29/08 mediu 27, porque a régua
+não 22: a contagem foi 22 e a conferência de 29/08 mediu 27, porque a régua
 lia a página no estado inicial e a pop-up só existe no `:target`. Ela mandou
 capitalizar as 27, e estão capitalizadas;
 mas o "Automático" da máscara continua com dois mockups discordando, e um deles

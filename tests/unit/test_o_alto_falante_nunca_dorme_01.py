@@ -1,10 +1,9 @@
 """SOM-QUE-NAO-DORME-01 — o alto-falante do controle nunca dorme.
 
-A DECISÃO DELA, textual (16/08/2026, 00h): *"precisamos setar o som sempre em
-todos os controles no 100% e garantir que sempre fique acordado"*. Este arquivo
+A DECISÃO DE PRODUTO, textual (16/08/2026, 00h): **. Este arquivo
 trava a metade do "sempre acordado".
 
-O DEFEITO, MEDIDO NA ORELHA DELA
+O DEFEITO, MEDIDO NA ORELHA DO USUÁRIO
 ================================
 Bancada de 15/08/2026 23h45 — controle azul (hw 0x00001111) no CABO, card2,
 teste CEGO. Mesmo arquivo, mesma rota, mesmo volume::

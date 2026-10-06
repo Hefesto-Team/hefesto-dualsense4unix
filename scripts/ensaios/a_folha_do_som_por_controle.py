@@ -314,7 +314,7 @@ LINHAS: tuple[Linha, ...] = (
 
 @dataclass
 class Coluna:
-    """Um controle da mesa: a condição que ela pediu, a porta, e o que já saiu."""
+    """Um controle da mesa: a condição que o usuário pediu, a porta, e o que já saiu."""
 
     alvo: Aparelho
     rota_do_produto: af.RotaDoNo | None = None
@@ -338,7 +338,7 @@ class Coluna:
         return "cabo" if self.alvo.transporte == CABO else "radio"
 
     def common(self) -> bytes:
-        """O `common` de 47 B do PRODUTO, com os três valores que ela mexeu."""
+        """O `common` de 47 B do PRODUTO, com os três valores que o usuário mexeu."""
         return af.common_de_audio(volume=self.volume, rota=self.rota, preamp=self.preamp)
 
     def fd(self) -> int | None:
@@ -447,8 +447,8 @@ class Folha:
         GLib.timeout_add(int(1000 / HZ_DO_MARTELO), self._tique)
 
     def _fundo_opaco(self) -> None:
-        """Um fundo SÓLIDO — razão dela, na folha irmã: *"o fundo tá muito transparente"*."""
-        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal)
+        """Um fundo SÓLIDO — razão dela, na folha irmã."""
+        # do próprio botão. .  # (noqa-acento: citação literal)
         pintar_fundo_solido(self.janela)
 
     def _topo(self) -> Gtk.Widget:
@@ -811,7 +811,7 @@ class Folha:
         return True
 
     def propor(self, linha: Linha, *, exigir_nota: bool = True) -> None:
-        """A folha NÃO conclui: imprime as linhas, e quem coordena as escreve."""
+        """A folha NÃO conclui: imprime as linhas, e quem roda as escreve."""
         print(f"\nLINHAS PROPOSTAS — {linha.titulo} (docs/data/ensaios.csv):")
         for coluna in self.colunas:
             if linha.so_transporte and coluna.alvo.transporte != linha.so_transporte:

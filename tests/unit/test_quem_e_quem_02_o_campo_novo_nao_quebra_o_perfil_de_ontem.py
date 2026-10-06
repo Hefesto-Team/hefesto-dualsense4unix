@@ -4,7 +4,7 @@
 era uma LISTA ESCRITA À MÃO (`profiles/loader.py`,
 ``_SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE``), e esquecer de vir até ela não dava
 erro — dava um ``"secao": null`` em TODO save e um binário anterior à seção
-recusando TODOS os perfis dela num downgrade, não só os que usam a seção.
+recusando TODOS os perfis do usuário num downgrade, não só os que usam a seção.
 
 **E já aconteceu três vezes**, com registro no próprio arquivo: ``teclado_emulado``
 (24/08/2026, *"não previsto pela sprint"*) e ``button_actions`` (01/09/2026, cujo
@@ -21,7 +21,7 @@ campo, **não** migra dado e **não** decide o que nasce ligado — isso é dela
 (``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` contra ``D-PERFIL-DE-DESEMPENHO``). A sprint só
 exige que a resposta esteja ESCRITA onde o portão a enxergue.
 
-NADA AQUI TOCA O DISCO DELA. Os perfis são construídos no teste, num diretório
+NADA AQUI TOCA O DISCO DO USUÁRIO. Os perfis são construídos no teste, num diretório
 temporário; ``~/.config/hefesto-dualsense4unix/profiles/`` não é lido nem
 gravado em linha nenhuma. A chave por controle é ``aabbcc000002`` — sintética,
 na máscara da casa.
@@ -76,7 +76,7 @@ UNIQ_SINTETICO = "aabbcc000002"
 
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """O diretório de perfis vai para o tmp — o disco DELA nunca é tocado."""
+    """O diretório de perfis vai para o tmp — o disco do usuário nunca é tocado."""
     target = tmp_path / "profiles"
     target.mkdir()
 

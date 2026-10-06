@@ -2,15 +2,15 @@
 
 O QUE ESTE ARQUIVO GUARDA
 =========================
-Duas faces do mesmo defeito, medido em 11/08/2026 com quatro DualSense na mesa
-dela (dois no cabo, dois no rádio) e o olho dela como aceite.
+Duas faces do mesmo defeito, medido em 11/08/2026 com quatro DualSense na bancada (dois no cabo,
+dois no rádio) e o olho de quem confere como aceite.
 
 **Face 1 — os BYTES.** A cura anterior (`keepalive neutro`, GUERRA-01 item 2)
 apostava que DESLIGAR os bits de autorização de vibração bastava para o firmware
 conservar o motor que outro dono deixou girando. A aposta caiu: com o daemon
 parado, o EV_FF ligou o motor ESQUERDO, e UM único report com os bits de
 vibração DESLIGADOS pedindo `common[2]=200` e `common[3]=0` fez o tremor **trocar
-de lado na mão dela** (ensaio `keepalive-premissa-troca-de-lado`). O firmware
+de lado na mão do usuário** (ensaio `keepalive-premissa-troca-de-lado`). O firmware
 obedece aos BYTES. E os bytes de motor saem em TODO report, porque o report é
 atômico — logo o keepalive, que reescrevia o mesmo report a cada 0,5 s, era um
 apagador de vibração alheia rodando duas vezes por segundo. A dose-resposta
@@ -24,7 +24,7 @@ Aqui se morde o que faltava: **os bytes que vão ao fio**, e quantas vezes.
 **Face 2 — o quadrante silencioso.** Sem gamepad virtual E sem Modo Nativo ao
 mesmo tempo, ninguém protege: o multiplicador de intensidade da GUI não age (ele
 mora no `rumble_sink` do vpad) e o output do daemon não é mutado (só o Modo
-Nativo o muta). O journal dela mostrava exatamente isso —
+Nativo o muta). O journal do usuário mostrava exatamente isso —
 `launch_env_materializado ... backends=[] emulacao=False ... native=False` — e o
 produto não contava a ninguém.
 
@@ -33,7 +33,7 @@ reprovar. Foram arrancadas de verdade antes desta leva.
 
 O QUE ESTE ARQUIVO NÃO PROVA, DE PROPÓSITO
 ==========================================
-Que a vibração do jogo sobrevive na mão dela. Isso é medição de bancada, e está
+Que a vibração do jogo sobrevive na mão do usuário. Isso é medição de bancada, e está
 em `docs/data/ensaios.csv`. Aqui se prova o que o produto FAZ: para de mandar
 bytes de motor quando não é dono da vibração, e diz em voz alta quando cai no
 quadrante em que ninguém é dono.

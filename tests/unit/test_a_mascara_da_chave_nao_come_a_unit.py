@@ -48,7 +48,7 @@ def test_o_instalador_le_a_chave_em_disco() -> None:
 
 
 def test_o_instalador_nao_apaga_a_chave() -> None:
-    """Desfazer calado a decisão dela é o defeito oposto, e igualmente caro."""
+    """Desfazer calado a decisão de produto é o defeito oposto, e igualmente caro."""
     nome = _nome_da_chave()
     for linha in _fonte().splitlines():
         nua = linha.strip()

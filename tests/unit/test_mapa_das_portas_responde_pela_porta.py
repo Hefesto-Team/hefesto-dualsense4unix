@@ -1,4 +1,4 @@
-"""O número que ela escreveu no gabinete responde pelo aparelho."""
+"""O número que o usuário escreveu no gabinete responde pelo aparelho."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.integrations.mapa_das_portas import (
@@ -52,7 +52,7 @@ def test_as_entradas_vazias_sao_as_que_ela_pode_usar() -> None:
 
 
 def test_as_duas_entradas_da_frente_sao_vizinhas_e_o_sysfs_nao_sabe() -> None:
-    """O par que só o desenho DELA enxerga — e é o ponto do mapa inteiro."""
+    """O par que só o desenho DO USUÁRIO enxerga — e é o ponto do mapa inteiro."""
     from hefesto_dualsense4unix.integrations.mesa_de_radio import (
         vizinhancas_apertadas,
     )

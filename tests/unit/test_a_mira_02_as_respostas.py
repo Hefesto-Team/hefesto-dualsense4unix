@@ -1,4 +1,4 @@
-"""A-MIRA-POR-MOVIMENTO-NA-TELA-02 — as três respostas dela sobre a Mira Virtual."""
+"""A-MIRA-POR-MOVIMENTO-NA-TELA-02 — as três respostas de produto sobre a Mira Virtual."""
 
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ def test_fora_do_nativo_o_chip_grava(perfis: Path, tmp_path: Path) -> None:
 def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """Os três campos novos gravam NA PEÇA, só o que ela mexeu, e valem no"""
+    """Os três campos novos gravam NA PEÇA, só o que o usuário mexeu, e valem no"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 

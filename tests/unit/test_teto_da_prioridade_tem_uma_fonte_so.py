@@ -72,7 +72,7 @@ class TestUmTetoSo:
         assert _atributo_do_trilho("max") == sanidade.PRIORIDADE_MAXIMA
 
     def test_os_tres_lugares_dizem_o_mesmo_numero(self) -> None:
-        """A asserção da dona, escrita como ela pediu, numa linha só."""
+        """A asserção da dona, escrita como o usuário pediu, numa linha só."""
         assert (
             sanidade.PRIORIDADE_MAXIMA
             == _constante_por_ast(_PROFILES_ACTIONS, "PRIORIDADE_MAXIMA")

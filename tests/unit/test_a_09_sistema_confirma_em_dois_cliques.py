@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OS CINCO DESTRUTIVOS PEDEM DOIS CLIQUES — decisão dela, 03/09/2026."""
+"""OS CINCO DESTRUTIVOS PEDEM DOIS CLIQUES — decisão, 03/09/2026."""
 from __future__ import annotations
 
 import pathlib
@@ -230,7 +230,7 @@ def test_os_rotulos_saem_da_pagina_e_nao_de_uma_lista_aqui(a09):
 
 
 def test_com_o_servico_parado_o_botao_oferece_ligar(a09, ctx_parado, janela):
-    """*"um específico pra parar o Daemon E Ativar o Daemon"* — um botão, duas caras."""
+    """** — um botão, duas caras."""
     janela.status = "offline"
     a09._LENTO.clear()
 
@@ -310,7 +310,7 @@ def test_com_a_unit_instalada_e_o_servico_parado_ele_liga(a09, janela, monkeypat
 
 @pytest.mark.parametrize("modo,liga", [("gamepad", True), ("native", False)])
 def test_o_interruptor_da_jogar_liga_o_servico_so_no_ligado(monkeypatch, modo, liga):
-    """"Ligado" liga o serviço; "Desligado" não sobe o que ela mandou sair."""
+    """"Ligado" liga o serviço; "Desligado" não sobe o que o usuário mandou sair."""
     from pacotes import a01_jogar, a09_sistema
 
     ordem: list[str] = []

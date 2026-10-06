@@ -31,7 +31,7 @@ def _fonte(nome: str) -> str:
 
 @pytest.mark.parametrize("nome", ABAS_VIVAS)
 def test_nenhuma_aba_viva_crava_a_arvore_dela(nome: str) -> None:
-    """Um caminho absoluto de árvore em CÓDIGO faz o agente medir o passado."""
+    """Um caminho absoluto de árvore em CÓDIGO faz a medição olhar o passado."""
     culpadas = [
         (n, linha.rstrip())
         for n, linha in enumerate(_fonte(nome).splitlines(), 1)
@@ -42,7 +42,7 @@ def test_nenhuma_aba_viva_crava_a_arvore_dela(nome: str) -> None:
     assert not culpadas, (
         f"{nome} crava uma árvore em código: {culpadas}. "
         "Derive do próprio arquivo — `pathlib.Path(__file__).resolve().parents[2]` "
-        "—, senão rodar de uma árvore de agente lê a árvore dela."
+        "—, senão rodar de uma árvore de trabalho lê a árvore do usuário."
     )
 
 

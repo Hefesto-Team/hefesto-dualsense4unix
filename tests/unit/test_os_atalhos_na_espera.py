@@ -393,7 +393,7 @@ class TestOP2SeguraOsAtalhosNaEspera:
     def test_a_volta_pelo_outro_transporte_devolve_os_atalhos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, de: str, para: str,
     ) -> None:
-        """A linha 3 da bancada dela: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
+        """A linha 3 da bancada: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
         bancada = montar_atalhos(monkeypatch, kernel, 4, "usb" if de == "usb" else "bt")
         _fora_dentro_do_prazo(bancada, P1)
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]

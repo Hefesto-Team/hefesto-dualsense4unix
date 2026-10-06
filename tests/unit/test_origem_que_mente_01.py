@@ -1,4 +1,4 @@
-"""Silêncio não é gesto dela: o `origin` viaja explícito, sem default."""
+"""Silêncio não é gesto do usuário: o `origin` viaja explícito, sem default."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def test_silencio_nao_e_gesto_dela() -> None:
 
 
 def test_o_cliente_declara_e_e_respeitado() -> None:
-    """Quem diz "manual" continua sendo tratado como gesto dela."""
+    """Quem diz "manual" continua sendo tratado como gesto do usuário."""
     assert origem_do_pedido({"origin": "manual"}) == "manual"
     assert origem_do_pedido({"origin": "profile"}) == "profile"
 
@@ -134,8 +134,8 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     """O contrapeso: reconciliação continua sendo reconciliação.
 
     `mouse.emulation.restore` devolve a preferência que o daemon persistiu — não
-    há dedo dela nisso. Se ele passasse a viajar como "manual", a cura viraria
-    "tudo é gesto dela", que é exatamente o defeito de origem, agora escrito de
+    há dedo do usuário nisso. Se ele passasse a viajar como "manual", a cura viraria
+    "tudo é gesto do usuário", que é exatamente o defeito de origem, agora escrito de
     propósito.
 
     ONDE ELE MORA HOJE. Em 17/09/2026 (POINT-AND-CLICK-01) ele saiu do plano
@@ -161,7 +161,7 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
 
 
 def test_o_arranjo_do_desktop_declara_a_origem() -> None:
-    """E o passo que É gesto dela declara — a outra metade da mesma cura."""
+    """E o passo que É gesto do usuário declara — a outra metade da mesma cura."""
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "app/actions/mode_transition.py"
     ).read_text(encoding="utf-8")

@@ -7,8 +7,7 @@ CLI (`mic bt`), pela GUI ou por aqui.
 
 AS DUAS TRAVAS, LIDAS ANTES DE MEXER (CANAL-POR-CONTROLE-01, 03/09/2026)
 ------------------------------------------------------------------------
-Decisão dela, com as palavras dela e sem corrigi-las:
-*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+Decisão de produto, com as palavras de produto e sem corrigi-las
 
 Medido com os dois controles na mesa: existia **UM** canal, o do cabo.
 O do rádio não publicava fonte nenhuma, e quem recusava eram duas travas
@@ -20,9 +19,8 @@ trava                  de onde veio               o que protegia
 =====================  =========================  =============================
 `habilitado_por_env`   `d6f9d331`, 25/07/2026     privacidade + banda do rádio
 `uniqs_declarados`     `c59dd346`, 23/08/2026,    a mesma razão, mais o *"por
-                       QUATRO-MICROFONES-01/E1    controle"* que ela pediu. Não
-                       (decisão dela: *"por       é precaução nossa: é o
-                       controle"*)                INTERRUPTOR dela
+                       QUATRO-MICROFONES-01/E1    controle"* que o usuário pediu. Não
+                       ()                INTERRUPTOR dela
 =====================  =========================  =============================
 
 **As duas são a MESMA razão em duas roupas**, e ela está escrita abaixo: a
@@ -42,7 +40,7 @@ enquanto ninguém o abre. Ele não paga privacidade nem banda por existir.
 controle transmite áudio o tempo todo, ouvido ou não. Era verdade e deixou de
 ser: o pedido agora SEGUE o estado da source — `RUNNING` (tem app gravando)
 liga, qualquer outro desliga —, que é a mesma coisa que o cabo faz de graça.
-Medido na máquina dela no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
+Medido na máquina do usuário no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
 gravando `RUNNING`, e `IDLE` depois que ele sai (`integrations/
 dualsense_bt_audio.ESTADO_COM_OUVINTE`).
 
@@ -54,8 +52,8 @@ rádio pode existir sem capturar, como o do cabo.
 
 **Então a trava NÃO SAI: ela vira automática, e o critério explícito é o do
 cabo — PROCURA.** A ponte sobe para o controle cujo canal alguém está tentando
-usar, e o gesto que diz isso já existe e já é dela: o botão do microfone, que
-desde 01/09 quer dizer *"eu falo por este controle"*
+usar, e o gesto que diz isso já existe e já é do usuário: o botão do microfone, que
+desde 01/09 quer dizer
 (`integrations/eleicao_de_microfone.py`). A exigência que MORRE é a de declarar
 cada `uniq` à mão no `maquina.json` antes que ele possa ter canal.
 
@@ -70,13 +68,9 @@ estava escrito, no presente, *"por que ele não sobe SOZINHO, e a razão continu
 de pé"* — privacidade e banda, as duas abaixo. **Ela revogou as duas em
 25/08/2026, por escrito**, em `docs/data/decisoes-de-produto.csv`: a id 37
 (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
-com as palavras dela — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
+com as palavras de produto — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
 O PREÇO… o que caduca é o padrão desligado"*. A decisão nunca foi implementada,
-e em 17/09/2026 ela pediu a mesma coisa pela TERCEIRA vez:
-
-    *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
-    ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
-    ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
+e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez
 
 **O QUE MUDOU, E O QUE NÃO MUDOU.** Quem diz a palavra na CHEGADA do controle é
 `daemon/subsystems/hotkey.nascer_no_ar`, chamado pelo gancho de conexão
@@ -86,7 +80,7 @@ pé, quem sai da mesa perde o pedido e a palavra, e nada volta do disco. O que
 mudou é que a chegada volta a dizer a palavra — e é por isso que ela não
 clicava uma vez, clicava *toda vez*.
 
-**E O SILÊNCIO DELA CONTINUA VENCENDO.** O nascimento recua diante das duas
+**E O SILÊNCIO DO USUÁRIO CONTINUA VENCENDO.** O nascimento recua diante das duas
 formas de ela ter pedido para calar: o mudo daquele controle no `maquina.json`
 (a `ProfileManager.o_controle_pede_silencio`, O-MUDO-E-DO-CONTROLE-01) e o bit
 do mudo já aceso no aparelho.
@@ -107,7 +101,7 @@ deixaria a próxima pessoa sem saber que o padrão desligado já foi política:
    áudio não é de graça, ele divide o link. É por isso que a conta é POR
    ADAPTADOR, e é ela que diz quantos microfones cabem numa mesa.
 
-   NOTA DATADA — 22/08/2026, decisão dela. Aqui estava escrito que *"quem usa
+   NOTA DATADA — 22/08/2026, decisão de produto. Aqui estava escrito que *"quem usa
    gyro aiming perde resolução de integração (o espelho de motion mira
    250 Hz)"*. **Aquilo comparava réguas de transportes diferentes** e a
    remedição de 11/08/2026 o derrubou: 250 Hz é a taxa NATIVA DO CABO, e no
@@ -128,11 +122,11 @@ POR CONTROLE, E POR QUE UM `bool` NÃO SERVE (QUATRO-MICROFONES-01, 22/08/2026)
 ------------------------------------------------------------------------------
 
 Até 22/08 o gate era `DaemonConfig.bt_mic_enabled: bool` — **um** campo, lido
-por três lugares e escrito por nenhum. A decisão dela é literal: *"por
+por três lugares e escrito por nenhum. A decisão de produto é literal: *"por
 controle"*, um interruptor por card, quatro independentes ao mesmo tempo.
 
 **Um `bool` não sustenta quatro independentes** — ele só sabe dizer "todos" ou
-"nenhum", e a mesa dela tem quatro DualSense em três adaptadores. Somar um `bool`
+"nenhum", e a bancada tem quatro DualSense em três adaptadores. Somar um `bool`
 por controle no `DaemonConfig` também não serve: o `DaemonConfig` é config de
 PROCESSO, e o número de controles muda por hotplug, no meio da sessão.
 
@@ -146,9 +140,8 @@ Três razões, e a terceira é a que fecha a escolha:
   pediu: `bt_mic_uniqs` (quem ela ligou) e `bt_mic_recusados` (quem ela
   desligou). Até aqui havia um só, e o comentário nesta linha dizia que um
   `false` gravado *"é um valor de catálogo para o silêncio, e é por essa porta
-  que o default entra disfarçado de escolha dela"*. Isso valia com o default
-  sendo o silêncio; com a ordem dela — *"todos os controles tem que nascer com
-  tudo mic, giroscopio e afins"* — o `false` virou a ÚNICA forma de ela dizer
+  que o default entra disfarçado de escolha do usuário"*. Isso valia com o default
+  sendo o silêncio; com a  — o `false` virou a ÚNICA forma de ela dizer
   não, e não gravá-lo é que deixaria o produto decidir por cima dela;
 * a fonte é **chamável**, nunca uma cópia: o `machine.declare` relê o
   `maquina.json` e REBINDA `daemon._maquina` no "Aplicar" (`ipc_handlers.py`),
@@ -217,7 +210,7 @@ def habilitado_por_env(ambiente: dict[str, str] | None = None) -> bool:
     return env.get(ENV_HABILITA, "").strip().lower() in _VALORES_LIGADOS
 
 
-# carregado na máquina dela até o próximo boot. Ele se reconhece pelo
+# carregado na máquina do usuário até o próximo boot. Ele se reconhece pelo
 
 #: O nome do driver HID do DualSense no sysfs (`.../drivers/playstation`).
 DRIVER_QUE_LE_O_DUALSENSE = "playstation"
@@ -287,7 +280,7 @@ class RegistroDePedidosDeCanal:
         return True
 
     def dizer_no_ar(self, uniq: str, ligado: bool) -> bool:
-        """A PALAVRA DELA sobre este microfone. False = `uniq` ilegível."""
+        """A PALAVRA DE PRODUTO sobre este microfone. False = `uniq` ilegível."""
         chave = norm_mac(str(uniq)) or ""
         if len(chave) != _UNIQ_HEX:
             return False
@@ -310,7 +303,7 @@ class RegistroDePedidosDeCanal:
         return saiu
 
     def no_ar(self) -> dict[str, bool]:
-        """O que ela disse, por `uniq`. Cópia: o chamador não escreve aqui."""
+        """O que o usuário disse, por `uniq`. Cópia: o chamador não escreve aqui."""
         with self._lock:
             return dict(self._no_ar)
 
@@ -371,12 +364,12 @@ def uniqs_declarados(maquina: MaquinaConfig | None) -> frozenset[str]:
 def uniqs_recusados(maquina: MaquinaConfig | None) -> frozenset[str]:
     """Os `uniq` que ela DESLIGOU — a única coisa que tira um microfone do ar.
 
-    **A INVERSÃO — 18/09/2026, ordem dela:** *"todos os controles tem que
+    **A INVERSÃO — 18/09/2026, ordem de produto:** *"todos os controles tem que
     nascer com tudo mic, giroscopio e afins"*. Até aqui o microfone era
     opt-in: um DualSense novo na mesa nascia sem canal, e a aba respondia *"o
     sistema não vê um microfone neste controle"* — uma recusa que a pessoa não
     tinha como resolver, porque o botão que a resolveria estava atrás de uma
-    declaração que ninguém sabia existir. MEDIDO na mesa dela no mesmo dia:
+    declaração que ninguém sabia existir. MEDIDO na bancada no mesmo dia:
     dos quatro DualSense ligados, DOIS tinham microfone; os outros dois nunca
     haviam sido declarados.
 
@@ -384,7 +377,7 @@ def uniqs_recusados(maquina: MaquinaConfig | None) -> frozenset[str]:
     o cabeçalho deste módulo dizia *"um microfone que sobe sozinho com o
     daemon é inaceitável"*, e o `_start_alto_falante` do `lifecycle` explica o
     contraste — *"um alto-falante não escuta, e a privacidade não entra nesta
-    conta"*. A ordem dela substitui esse default, e a contrapartida é o que
+    conta"*. A ordem de produto substitui esse default, e a contrapartida é o que
     NÃO existia antes: um jeito de dizer NÃO. Até hoje só havia "não pedi",
     que não é a mesma coisa que "não quero" — e era por isso que o `False` não
     chegava ao disco.
@@ -437,7 +430,7 @@ def uniqs_pedidos(config: DaemonConfig | Any) -> frozenset[str]:
     return frozenset(norm_mac(str(u)) or "" for u in pedidos) - {""}
 
 
-# A queixa dela, de 16/09, com o DualSense no rádio: *"o canal de som não
+# A queixa, de 16/09, com o DualSense no rádio: *"o canal de som não
 # acessibilidade — quem usa o microfone do DualSense como único microfone (o
 
 
@@ -619,7 +612,7 @@ class BtMicSubsystem:
         """Os nós de BT que ganham ponte: TODOS, menos os que ela desligou.
 
         **A INVERSÃO DE 18/09/2026** (ver :func:`uniqs_recusados` para a ordem
-        dela e o que ela substitui). Antes a lista era a UNIÃO de quem pediu
+        de produto e o que ela substitui). Antes a lista era a UNIÃO de quem pediu
         com quem foi declarado, e um controle fora das duas ficava sem
         microfone para sempre. Agora a régua é a recusa: um DualSense TEM
         microfone, e isso é fato do aparelho, não escolha de configuração.
@@ -676,7 +669,7 @@ class BtMicSubsystem:
         return self._registro.pedir(uniq)
 
     def no_ar(self, uniq: str, ligado: bool) -> bool:
-        """A palavra DELA sobre este microfone. Porta pública, irmã de `pedir_canal`."""
+        """A palavra de produto sobre este microfone. Porta pública, irmã de `pedir_canal`."""
         if ligado:
             self._registro.pedir(uniq)
         ok = self._registro.dizer_no_ar(uniq, ligado)
@@ -710,12 +703,12 @@ class BtMicSubsystem:
         return saiu
 
     def palavra_no_ar(self, uniq: str) -> bool | None:
-        """O que ela disse sobre ESTE microfone. `None` = ela não disse nada."""
+        """O que o usuário disse sobre ESTE microfone. `None` = ela não disse nada."""
         chave = norm_mac(str(uniq)) or ""
         return self._registro.no_ar().get(chave)
 
     def _aplicar_a_palavra_dela(self) -> None:
-        """Entrega a cada ponte viva o que ela disse — ou `None`, se não disse."""
+        """Entrega a cada ponte viva o que o usuário disse — ou `None`, se não disse."""
         gerenciador = self._gerenciador
         if gerenciador is None:
             return
@@ -855,7 +848,7 @@ class BtMicSubsystem:
         `subsystems/base.numero_do_assento_na_mesa`, que pergunta o
         `player_slot` ao dono dele — o `identity_registry` — e só então aplica a
         regra da casa. A conta própria que vivia aqui era a TERCEIRA de três
-        para o mesmo rótulo, e era a que mentia na lista de som dela: «Microfone
+        para o mesmo rótulo, e era a que mentia na lista de som do usuário: «Microfone
         do Controle 2» no aparelho que o cartão chamava de P1, medido às 22h de
         09/09 com os quatro na mesa.
 
@@ -1020,7 +1013,7 @@ class BtMicSubsystem:
     def _reconciliar_o_cabo(self, nos: list[Any]) -> None:
         """O canal com nome de controle para TODO controle que está no FIO.
 
-        A decisão dela de 02/10/2026 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01):
+        A decisão de 02/10/2026 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01):
         um microfone por controle, sempre, nos dois transportes. O rádio já
         erguia a ponte de todo controle (``alvos``); o cabo só erguia o canal
         de quem o pedia pelo botão. Agora todo DualSense conectado pelo fio
@@ -1229,7 +1222,7 @@ class BtMicSubsystem:
         de um calado herdava o padrão sem a pergunta ser feita.
 
         **E QUANDO NÃO HÁ PARA ONDE VOLTAR, a recusa vai para o diário.** Foi o
-        caso medido nesta bancada: o único microfone dela é o do DualSense, e
+        caso medido nesta bancada: o único microfone do usuário é o do DualSense, e
         com o controle fora da mesa e ninguém mais no ar não sobra captura com
         porta usável que não seja controle. Aí nada é escrito, e o que fica no
         journal é o NOME do nó que herdou a eleição — porque uma denúncia sem o

@@ -1,16 +1,15 @@
 """MASCARA-PERSISTE-01 — a máscara fica, até ELA mudar na interface.
 
-Decisão dela, 22/08/2026: *"a máscara deveria ficar independente do jogo, até
-que eu mude na interface novamente."*
+Decisão, 22/08/2026
 
 **E «ELA MUDAR» NÃO É «UM PERFIL PASSAR» — corrigido em 21/09/2026.** A leitura
 de 22/08 fez o perfil de um jogo escrever o padrão da MÁQUINA, e o preço está
 no §1 de `test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina`: um perfil
 entre 29 levou a máquina inteira para Xbox, e ela perdeu giroscópio,
-acelerômetro e touchpad em todos os jogos. A decisão dela não mudou; o que
+acelerômetro e touchpad em todos os jogos. A decisão de produto não mudou; o que
 mudou foi quem conta como «ela».
 
-Medido no journal da máquina dela no mesmo dia, e o que foi medido derruba a
+Medido no journal da máquina do usuário no mesmo dia, e o que foi medido derruba a
 hipótese óbvia: **não é fechar o jogo que reverte a máscara**. A máscara viva
 ficou em `dualsense` das 19:02 às 19:41, com jogo abrindo e fechando e com o
 autoswitch passando pelo perfil "Navegação" no meio. Quem reverte é a **borda
@@ -139,7 +138,7 @@ def test_a_regua_ve_o_arquivo(flag: Path) -> None:
 def test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """**ESTA RÉGUA MEDIA A CAUSA DO DEFEITO DELA, e foi invertida em"""
+    """**ESTA RÉGUA MEDIA A CAUSA DO DEFEITO DO USUÁRIO, e foi invertida em"""
     save_gamepad_emulation(True, "xbox")
     _vpad_obedece(daemon, monkeypatch)
 
@@ -233,7 +232,7 @@ def test_so_grava_o_que_o_vpad_vestiu_de_verdade(
 def test_mascara_adiada_por_jogo_aberto_nao_chega_ao_disco(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O gate R-04 recusou: nada mudou, nem na mão dela nem no disco."""
+    """O gate R-04 recusou: nada mudou, nem na mão do usuário nem no disco."""
     save_gamepad_emulation(True, "xbox")
     daemon.config.gamepad_emulation_enabled = True
     daemon._gamepad_device = _Vpad("xbox")

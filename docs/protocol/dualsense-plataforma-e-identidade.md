@@ -3,13 +3,10 @@
 O que terceiros mapearam sobre **subir o controle** e **saber quem ele é**,
 levantado em 03/09/2026 numa leva que não tocou o aparelho.
 
-> Ela pediu isto com todas as letras: *"lançar novo workflow pra agentes
-> procurarem no Github tais canais ou tais id (…) peneiraram em vários repo e
-> acharam pessoas que nem a gnt que tinham mapeado parte do quebra cabeça e
-> **como é só informação eles trouxeram**"*.
+> O usuário pediu isto com todas as letras.
 
 **Grau de tudo o que está aqui: `afirmado-no-doc` ou leitura de fonte.** Nenhum
-byte saiu para o aparelho nesta leva — os dois controles estavam na mesa dela.
+byte saiu para o aparelho nesta leva — os dois controles estavam na bancada.
 O que foi lido da máquina foi o `report_descriptor` no sysfs, que o kernel
 guarda desde a probe: ler o arquivo não gera tráfego.
 
@@ -23,8 +20,7 @@ hub; este arquivo é o rodapé de fonte.**
 
 ## 1. O censo de feature reports, por transporte
 
-Lido do `report_descriptor` que o kernel guarda para os dois controles da mesa
-dela, em 03/09/2026. Bate report a report com a tabela da Game Controller
+Lido do `report_descriptor` que o kernel guarda para os dois controles da bancada, em 03/09/2026. Bate report a report com a tabela da Game Controller
 Collective e com o dump de descritor do `nondebug/dualsense`.
 
 | | quantos | quais |
@@ -37,7 +33,7 @@ Collective e com o dump de descritor do `nondebug/dualsense`.
 1. **`0x0A` só existe por cabo.** É o «Set Bluetooth Pairing» — ver §3.
 2. **`0x03` não existe em nenhum dos dois.** É o que o SDL pergunta a um pad de
    terceiro; ver §4.
-3. O firmware do aparelho dela declara `0x0B`/`0x0C` (cabo) e `0x0B`/`0xF6`/`0xF7`
+3. O firmware do aparelho do usuário declara `0x0B`/`0x0C` (cabo) e `0x0B`/`0xF6`/`0xF7`
    (rádio) que **nenhuma das duas fontes de terceiro traz**. Diferença de
    firmware, não de fonte.
 
@@ -251,7 +247,7 @@ A lista do que não se achou é informação: ela diz onde só o aparelho respon
 - **O `0x22` («Get Hardware Info»), o `0xE0` («Get system profile»), o `0x82`/
   `0x85` («individual data») e o `0x84`.** Nomeados, nunca decodificados por
   ninguém que se tenha achado.
-- **O `0x0B`, o `0x0C`, o `0xF6` e o `0xF7`**, que o firmware do aparelho dela
+- **O `0x0B`, o `0x0C`, o `0xF6` e o `0xF7`**, que o firmware do aparelho do usuário
   declara e nenhuma fonte pública menciona.
 - **Se o `0x03` volta vazio num DualSense genuíno.** É uma leitura, é barata, e
   fecharia o discriminador da §4d.

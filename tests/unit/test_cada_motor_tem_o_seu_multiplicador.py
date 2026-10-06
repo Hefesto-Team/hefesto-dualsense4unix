@@ -122,7 +122,7 @@ def _grava(nome: str, **barras: int | None) -> None:
 
 class TestAContaDela:
     def test_degrau_150_fraca_100_forte_50_sai_150_e_75(self, perfis: Path) -> None:
-        """O CASO EXATO DA FRASE DELA, do disco ao par escrito no controle."""
+        """O CASO EXATO DA FRASE DE PRODUTO, do disco ao par escrito no controle."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
         d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
@@ -259,7 +259,7 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
 
 class TestOQueNaoMuda:
     def test_perfil_sem_barra_e_byte_identico_ao_de_antes(self, perfis: Path) -> None:
-        """Catorze perfis no disco dela não têm as chaves novas. Nada muda neles."""
+        """Catorze perfis no disco do usuário não têm as chaves novas. Nada muda neles."""
         save_profile(Profile(name="Simples", match=MatchAny()))
         backend = _Backend()
         d = _daemon(perfil_ativo="Simples", controller=backend)
@@ -269,7 +269,7 @@ class TestOQueNaoMuda:
         assert backend.rumbles == [(BRANCO, 200, 137)]
 
     def test_as_duas_em_cem_entregam_o_degrau_inteiro(self, perfis: Path) -> None:
-        """A outra metade da frase dela: `150 · 100 · 100 → 150 e 150`."""
+        """A outra metade da frase de produto: `150 · 100 · 100 → 150 e 150`."""
         _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=100)
         backend = _Backend()
         d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
@@ -850,7 +850,7 @@ class TestATelaDizOProduto:
         assert "75%" in frase, f"o produto não saiu na frase: {frase}"
 
     def test_o_caso_dela_barra_zero_confessa_o_zero(self) -> None:
-        """O P2 da mesa dela: força 200%, motores em 0%."""
+        """O P2 da bancada: força 200%, motores em 0%."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
         frase = a05._quanto_multiplica({"sabe": True, "n": "200%"}, 0)
@@ -858,7 +858,7 @@ class TestATelaDizOProduto:
         assert "sai 0%" in frase, frase
 
     def test_sem_degrau_conhecido_a_dica_cala(self) -> None:
-        """Campo sem informação não mostra nada — a regra dela."""
+        """Campo sem informação não mostra nada — a regra de produto."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
         assert a05._quanto_multiplica({"sabe": False, "n": "—"}, 100) == ""

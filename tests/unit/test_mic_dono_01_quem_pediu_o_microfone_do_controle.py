@@ -109,7 +109,7 @@ class TestOAvisoNaoMandaDesfazerAEscolhaDela:
         """A PONTA QUE CHEGA NA PESSOA — e é ela que importa.
 
         O degrau certo não vale nada se o aviso sair assim mesmo. Aqui o
-        WirePlumber ESTÁ com o DualSense fixado (é o que ela pediu) e o produto
+        WirePlumber ESTÁ com o DualSense fixado (é o que o usuário pediu) e o produto
         tem de ficar quieto sobre isso.
         """
         mesa.marca()

@@ -15,7 +15,7 @@ def test_o_titulo_pergunta_em_vez_de_avisar() -> None:
 
 
 def test_o_rotulo_promete_o_fim_e_nao_o_meio() -> None:
-    """"Aplicar agora e reiniciar o jogo" — as palavras dela."""
+    """"Aplicar agora e reiniciar o jogo" — as palavras de produto."""
     assert "Aplicar agora" in r.ROTULO_FECHAR, (
         "o rótulo voltou a descrever o meio (fechar) em vez do fim (aplicar). "
         "Quem lê o botão precisa saber o que GANHA, não só o que perde."

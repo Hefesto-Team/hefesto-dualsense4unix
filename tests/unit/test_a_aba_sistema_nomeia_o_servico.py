@@ -1,7 +1,7 @@
 """O PORTÃO DA PALAVRA, do lado do PRODUTO — 31/08/2026, e ele guarda uma
-decisão dela.
+decisão de produto.
 
-A COLISÃO QUE ELA MANDOU DESFAZER
+A COLISÃO QUE O USUÁRIO MANDOU DESFAZER
 ---------------------------------
 Duas abas diziam *"Hefesto ligado/desligado"* e significavam coisas
 **diferentes**: na **Jogar** é o MODO (o Hefesto no meio do jogo, ou o aparelho

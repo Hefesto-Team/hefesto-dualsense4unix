@@ -75,8 +75,8 @@ três, apontando arquivo e linha:
   `gamepad steam-input` -> `cmd_steam.py:10`.
 
 **A quarta arrancada é a que valeu mais**, e ela reprovou o portão antes de
-reprovar o código: arranquei a **escapatória** (apaguei a citação da sprint da
-NOTA DATADA de `daemon_actions.py`) e o portão **passou** — porque a marca
+reprovar o código: arrancou-se a **escapatória** (a citação da sprint da
+NOTA DATADA de `daemon_actions.py` foi apagada) e o portão **passou** — porque a marca
 ``"A INVERSÃO"``, comparada sem caixa, casava com o ``"da inversão"`` que a
 paráfrase deixou para trás. A marca frouxa saiu da lista, a arrancada foi
 refeita e aí sim o portão reprovou a nota que explica o defeito

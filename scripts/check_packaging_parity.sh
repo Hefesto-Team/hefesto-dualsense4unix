@@ -36,7 +36,7 @@ set -uo pipefail
 # `|| missing+=(...)` dispara e o portão acusa um defeito que NÃO existe.
 #
 # É CORRIDA, e por isso enganou por dois dias: quem produz pouco costuma
-# terminar antes de o grep sair, e a máquina dela ganhou 200 vezes em 200. O
+# terminar antes de o grep sair, e a máquina do usuário ganhou 200 vezes em 200. O
 # runner do CI, mais lento, perdeu — e o `ci.yml` acusou "doctor.sh define
 # check_teclado_na_tela e NÃO a chama em main()" com a chamada VIVA na linha
 # 4493, deixando no log a assinatura do crime: `printf: write error: Broken
@@ -507,7 +507,7 @@ done
 #      bloco ONDA-R foi remover). Sem esta cobrança, renomear o arquivo para 79
 #      é uma regressão silenciosa e completa;
 #   3. os DOIS nós estão cobertos — o de movimento (giroscópio) e o de touchpad.
-#      Cobrir um só é meia cura, e foi meia cura que ela pediu para não ter.
+#      Cobrir um só é meia cura, e foi meia cura que o usuário pediu para não ter.
 echo "== acesso da sessão aos nós de ENTRADA (touchpad + sensores de movimento) =="
 if [[ "${HAS_UDEV_RULES}" -eq 0 ]]; then
     echo "[ OK ] sem assets/NN-*.rules neste checkout — nada a checar"
@@ -574,7 +574,7 @@ fi
 # casa ZERO dispositivos em toda máquina: o `--attr-match` só olha os sysattrs
 # do PRÓPRIO nó, e um `hidraw` não tem `idVendor` — ele mora no pai USB, e no
 # Bluetooth não existe pai USB (o BlueZ cria o HID por `uhid`). Medido na
-# máquina dela em 12/08: 8 dispositivos sem o filtro, 0 com ele.
+# máquina do usuário em 12/08: 8 dispositivos sem o filtro, 0 com ele.
 #
 # O que isso custava: numa instalação limpa com o DualSense já conectado no
 # rádio, a regra 70 (MODE 0660 + TAG uaccess) não era reaplicada ao nó que já
@@ -848,7 +848,7 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
         || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
     # O PACOTE NÃO LIGA O VIGIA (INSTALL-E-UNINSTALL-DO-RADIO-01, o P-15,
-    # decisão de quem coordena): o `install-host-udev.sh` não põe o timer, o
+    # decisão de produto): o `install-host-udev.sh` não põe o timer, o
     # dispatcher nem o drop-in do watchdog — o desenho dos timers da
     # resiliência, e o drop-in precisa da casa de uma pessoa. A razão está no
     # próprio helper, e o doctor diz a quem instalou por pacote como ligar.
@@ -881,7 +881,7 @@ fi
 # destino é cobrado na linha que INSTALA (e o `tmpfiles --create` na que o
 # aplica), a remoção na linha que REMOVE, e o doctor por definição E chamada no
 # main. O caminho do pacote (`install-host-udev.sh`) fica de fora, decisão de
-# quem coordena (P-2.9): pelo pacote não há motor root disputando o rádio — o
+# decisão de produto (P-2.9): pelo pacote não há motor root disputando o rádio — o
 # watchdog, o drop-in do bluetoothd e o sudoers da ponte são do `install.sh` —,
 # e sem o tmpfiles o daemon cai na trava da sessão, que o diz no log. O grupo
 # não é o obstáculo (a trava usa o `hefesto`, que o pacote também cria); a
@@ -1056,7 +1056,7 @@ fi
 # pelos dois lados, e o dono conhece cada asset de assets/bluetooth/ — inclusive
 # os dois blocos legados, que só existem para o `remover` limpar instalação
 # antiga. Sem isto, um asset podia ficar órfão (ninguém aplica, ninguém remove)
-# exatamente como o `always` ficou órfão no disco dela por quatro dias.
+# exatamente como o `always` ficou órfão no disco do usuário por quatro dias.
 echo "== paridade da config do BlueZ (assets/bluetooth × bluez_config.sh) =="
 if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     missing=()
@@ -1204,7 +1204,7 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
         # doctor" como se valesse para todos, e valia para um.
         #
         # A regra NÃO mudou: se o `bluez_config.sh` deve viajar em todo pacote é
-        # decisão dela, não deste script. O que mudou é o portão parar de
+        # decisão de produto, não deste script. O que mudou é o portão parar de
         # afirmar mais do que mediu — a mesma doutrina que fez o medidor de
         # rádio dizer "Não sei" em vez de "Folgada".
         echo "[ OK ] config do BlueZ: dono único, chamado nos dois lados, detector CHAMADO em main(), e a poda provada não-automática"
@@ -1418,12 +1418,12 @@ fi
 #
 # A ÂNCORA É O ARTEFATO, e aqui isso é o certo (ao contrário da seção do teclado
 # na tela, onde a âncora tem de ser a promessa): o arquivo versionado em
-# `assets/` É a promessa — o produto promete pôr isto na máquina dela. Se ele
+# `assets/` É a promessa — o produto promete pôr isto na máquina do usuário. Se ele
 # sair da árvore, não há promessa, e o silêncio é justo.
 #
 # O QUE CONTA COMO ARTEFATO DE SISTEMA, e a régua para quem acrescentar um tipo
 # novo amanhã: é artefato de sistema o arquivo que o produto INSTALA num lugar
-# do sistema ou da sessão dela e que um programa de fora do Hefesto lê —
+# do sistema ou da sessão do usuário e que um programa de fora do Hefesto lê —
 # `.rules` (udev), `.service .timer .path .socket` (systemd), `.conf` (modprobe,
 # wireplumber, NetworkManager, BlueZ, DKMS), `.desktop` (lançador) e `.policy`
 # (polkit). NÃO são: `.svg`/`.png` (arte — o portão de ícones acima já os cobra

@@ -1,4 +1,4 @@
-"""O atalho DELA abre na tela DELA — o avesso do TELA-DELA-02, e o par dele."""
+"""O atalho DO USUÁRIO abre na tela do usuário — o avesso do TELA-DELA-02, e o par dele."""
 
 from __future__ import annotations
 

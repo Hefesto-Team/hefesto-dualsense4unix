@@ -45,7 +45,7 @@ R3 (E9, o ponteiro): quando um texto desta aba cita um controle entre aspas
    "Verificar" e "Desligar Steam Input", que LEEM a allowlist; quem a escreve é
    a caixinha `profile_steam_input_check`, da aba **Perfis**. E o rótulo dela
    também mudou: a sprint ainda o chama de "Este jogo não funciona", e desde a
-   ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026, decisão dela) ele é "Esconder os
+   ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026, decisão de produto) ele é "Esconder os
    controles físicos neste jogo". Por isso R3 lê o rótulo do glade em vez de
    comparar com uma constante: a próxima renomeação reprova sozinha.
 
@@ -58,7 +58,7 @@ runner sem GTK transformaria `ImportError` em "zero declarações encontradas" �
 o jeito silencioso de este portão se desligar (mesma razão escrita em
 `scripts/validar-fala-de-tela.py`).
 
-A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório do agente E1.
+A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório da mordida E1.
 """
 from __future__ import annotations
 

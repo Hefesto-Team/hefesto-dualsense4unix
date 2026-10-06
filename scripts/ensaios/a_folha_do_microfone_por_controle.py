@@ -583,8 +583,8 @@ class Folha:
         GLib.timeout_add(int(RELER_A_LISTA_S * 1000), self._reler_a_lista)
 
     def _fundo_opaco(self) -> None:
-        """Fundo SÓLIDO. A razão é dela: *"o fundo tá muito transparente"*."""
-        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal)
+        """Fundo SÓLIDO. A razão é do usuário."""
+        # do próprio botão. .  # (noqa-acento: citação literal)
         pintar_fundo_solido(self.janela)
 
     def _topo(self) -> Gtk.Widget:
@@ -1012,7 +1012,7 @@ class Folha:
         return True
 
     def propor(self, linha: Linha) -> None:
-        """A folha NÃO conclui: imprime as linhas, e quem coordena as escreve."""
+        """A folha NÃO conclui: imprime as linhas, e quem roda as escreve."""
         print(f"\nLINHAS PROPOSTAS — {linha.titulo} (docs/data/ensaios.csv):")
         for controle in self.controles:
             caixa = self.notas.get((linha.id, controle.alvo.mac))
@@ -1036,7 +1036,7 @@ class Folha:
         sys.stdout.flush()
 
     def _nota_da_linha(self, linha: Linha, controle: ControleNaFolha, dela: str) -> str:
-        """O que a linha do caderno carrega de MEDIDO, além da frase dela."""
+        """O que a linha do caderno carrega de MEDIDO, além da frase de produto."""
         maximo = controle.ouvido.maximo if controle.ouvido is not None else 0.0
         medido = [
             f"sistema: {controle.leitura.frase()}",

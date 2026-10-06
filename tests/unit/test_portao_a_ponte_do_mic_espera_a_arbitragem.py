@@ -6,10 +6,10 @@ textual: *"`bt_mic_enabled` não ganha escritor antes de 5.a"*.
 
 O QUE ELE VIGIA, E POR QUE NÃO É "A ENTREGA DE 22/08 ERA ERRADA"
 ----------------------------------------------------------------
-O 5.b **já foi violado uma vez**, e de propósito: em 22/08 ela pediu o
+O 5.b **já foi violado uma vez**, e de propósito: em 22/08 o usuário pediu o
 interruptor por controle, ele foi entregue, e o preço — o pré-requisito 5.a —
 não estava na mesa. A nota datada de 23/08 no topo da sprint registra isso, e a
-decisão de manter a entrega é dela. **Um portão que reprovasse essa entrega
+decisão de manter a entrega é do usuário. **Um portão que reprovasse essa entrega
 seria um portão vermelho todo dia, e portão vermelho todo dia é portão que
 alguém apaga na segunda-feira** — é o argumento medido do
 `portao_a_casa_sabe_e_o_produto_nao_faz`, e ele vale aqui.

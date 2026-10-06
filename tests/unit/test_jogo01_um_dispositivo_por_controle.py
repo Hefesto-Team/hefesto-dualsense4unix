@@ -17,7 +17,7 @@ dedup)") e o gamepad virtual CONTINUAVA DE PÉ. Cada metade estava certa
 isoladamente; juntas produziam o duplicado.
 
 A allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS. Desde 09/08/2026
-(ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela) o dispositivo escolhido é o virtual:
+(ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto) o dispositivo escolhido é o virtual:
 esconde-se o FÍSICO e o Hefesto fica, porque o jogador 2 é um gamepad virtual e
 derrubar os virtuais o derrubava junto. A suspensão do vpad, que era a cura
 antiga, saiu em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01): a borda da

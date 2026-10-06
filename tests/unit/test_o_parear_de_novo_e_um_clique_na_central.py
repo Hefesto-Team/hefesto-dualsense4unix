@@ -1,7 +1,7 @@
 """O «Parear de Novo» é UM clique na central (O-CONTROLE-JA-PAREADO-...-01, o resto).
 
 O roxo tinha par no quarto, a ponte o esqueceu e ele entra em PS + Create depois: o
-clique dela chegou ANTES de a janela o ver. A central aceita a escolha e pareia o
+clique do usuário chegou ANTES de a janela o ver. A central aceita a escolha e pareia o
 endereço dela quando a janela o vir, e nenhum outro. O dublê do BlueZ é o de sempre
 (``radio_de_mentira``): nunca o BlueZ dela.
 
@@ -19,7 +19,7 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VERDE, VERMELHO
 from tests.unit import test_o_parear_espera_o_clique as _base
 
-#: as mesmas fixtures do dublê da escolha dela (o dono vivo e a central reais)
+#: as mesmas fixtures do dublê da escolha do usuário (o dono vivo e a central reais)
 diario, relogio, mesa = _base.diario, _base.relogio, _base.mesa
 
 
@@ -60,7 +60,7 @@ def test_um_clique_esquece_e_o_roxo_pareia_quando_a_janela_o_ve(
 
 def test_a_escolha_antes_de_ver_que_nunca_chega_nao_pareia_ninguem(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """Ela escolheu o roxo, mas ele nunca entra em PS + Create; o verde, de outra
+    """O usuário escolheu o roxo, mas ele nunca entra em PS + Create; o verde, de outra
     pessoa, entra aos 3 s. A janela vê o verde e NÃO o pareia: nenhum ``Pair``, e
     a janela acaba sem gesto."""
     mundo = _o_roxo_com_par_velho_no_quarto()

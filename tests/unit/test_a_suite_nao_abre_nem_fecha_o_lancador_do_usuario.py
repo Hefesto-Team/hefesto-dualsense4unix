@@ -1,4 +1,4 @@
-"""A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01 — a suíte não mexe no lançador dela."""
+"""A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01 — a suíte não mexe no lançador do usuário."""
 
 from __future__ import annotations
 

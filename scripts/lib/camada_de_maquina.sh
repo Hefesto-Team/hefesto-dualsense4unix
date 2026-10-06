@@ -4,7 +4,7 @@
 # POR QUE ESTE ARQUIVO NASCEU (31/08/2026)
 # ========================================
 # Ela desinstalou o Hefesto estável e decidiu ficar só com o de
-# desenvolvimento: *"eu desinstalei a versão antiga e vamos deixar só a dev"*.
+# desenvolvimento.
 # No mesmo instante o app de dev parou de funcionar — e o motivo estava escrito
 # no cabeçalho do `install-dev.sh` desde que ele nasceu, em 29/08:
 #
@@ -167,7 +167,7 @@ opcao_do_modprobe() {
 _render_broker_units() {
     local service_src="$1" socket_src="$2" out_dir="$3" uid="$4" grupo="$5"
     # O-NO-NASCE-FECHADO-01: o 6º argumento é 1 quando a regra udev instalada
-    # FECHA o nó do físico. Default 1 — é DEFAULT POR ORDEM DELA ("isso deveria
+    # FECHA o nó do físico. Default 1 — é DEFAULT POR ORDEM DE PRODUTO ("isso deveria
     # estar no install por default"), e um default 0 aqui faria a metade de
     # cima da cura (a udev) ficar sem a metade de baixo (o broker): nó fechado
     # que ninguém abre.
@@ -191,7 +191,7 @@ install_udev_host() {
     # O-NO-NASCE-FECHADO-01: o opt-out viaja para o instalador das regras. Sem
     # este repasse a flag mudaria só o broker, e as duas metades da cura
     # ficariam em desacordo — nó aberto com broker achando que fecha, ou o
-    # contrário. A ausência da flag é o DEFAULT DELA: o nó nasce fechado.
+    # contrário. A ausência da flag é o DEFAULT DO USUÁRIO: o nó nasce fechado.
     local _udev_args=()
     if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
         _udev_args+=(--no-fechar-o-no)
@@ -223,7 +223,7 @@ install_udev_host() {
 install_osk_host() {
     if [[ "${NO_OSK}" -eq 1 ]]; then
         printf '      teclado na tela pulado (--no-osk) — o L3 do controle só avisa que não tem o que abrir\n'
-        # A escolha dela também vira sentinela: sem isto, "ela não quis" e "o
+        # A escolha do usuário também vira sentinela: sem isto, "ela não quis" e "o
         # install não instalou" ficariam com a MESMA cara para o doctor — a
         # armadilha do commit 108b711, palavra por palavra.
         mkdir -p "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
@@ -455,7 +455,7 @@ install_trava_do_radio_host() {
 # SAI-DO-ZSH-01, 23/09/2026). O `bt_active_mode.sh` dá ao adaptador o nome da
 # porta em que ele está, lido do `maquina.json` de quem instalou — e o watchdog
 # (que o chama de 2 em 2 min) rodava com `ProtectHome=yes`: a casa inteira
-# invisível, o nome nunca chegava. Decisão de quem coordena: a unit passa a
+# invisível, o nome nunca chegava. Decisão de produto: a unit passa a
 # `ProtectHome=tmpfs` (a casa vira um tmpfs vazio e só leitura) e ESTE drop-in
 # monta por cima UM arquivo, só leitura. É o mais contido: o watchdog enxerga o
 # `maquina.json`, e nada mais da casa.
@@ -523,7 +523,7 @@ _ferramentas_que_faltam_ao_nome_do_lugar() {
 #   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
 #      estado vazio, e a poda nunca joga fora o MELHOR snapshot) + a VOLTA
 #      automática (bt_bonds_autorestore.sh no ExecStopPost do drop-in), que é a
-#      decisão dela de 08/08: "restauro de bonds tem de ser automático; manual
+#      decisão de 08/08: "restauro de bonds tem de ser automático; manual
 #      com sudo não é produto". A volta só corre quando o daemon MORREU
 #      (SERVICE_RESULT != success), é ADITIVA (nunca escreve por cima de uma
 #      [LinkKey] viva — é assim que a chave rotacionada deixa de ser risco) e
@@ -620,7 +620,7 @@ install_bt_resilience_host() {
 # PONTE-PRIVILEGIADA-01 (22/08/2026) — a infraestrutura que faz o botão de mover
 # um controle de dongle existir SEM a janela pedir senha.
 #
-# Decisão dela, do mesmo dia: "a ideia é que usemos o sudo só na hora do install
+# Decisão de produto, do mesmo dia: "a ideia é que usemos o sudo só na hora do install
 # e isso vai valer sempre no nosso app. não tem como não usar se tratando de bt.
 # zero problemas."
 #
@@ -787,7 +787,7 @@ install_placa_acordada_host() {
 # MOTOR-7 (25/08/2026) — o install lê o firmware, e a aba abre com o gabinete
 # JÁ DESENHADO.
 #
-# Pedido dela, deste dia: *"manda isso tudo pro nosso install viu. não podemos
+# Pedido, deste dia: *"manda isso tudo pro nosso install viu. não podemos
 # deixar isso passar. a ideia é que o install faça o trampo sujo todo pro user
 # sempre ter facilidade"*. É a regra da casa (toda cura entra no install, sem
 # flag) aplicada ao censo do gabinete.
@@ -808,7 +808,7 @@ install_placa_acordada_host() {
 #   - a identificação da placa (`/sys/class/dmi/id/`, legível por todo mundo);
 #   - e a CONTAGEM da tabela 8, que sai do `ls` do diretório mesmo com o `raw`
 #     ilegível. É ela que separa *"a sua placa não tem tabela de conectores"* de
-#     *"tem 18 entradas e eu não tive root para lê-las"* — duas frases que mandam
+#     ** — duas frases que mandam
 #     a pessoa fazer coisas diferentes.
 #
 # Sem root o `gabinete.json` sai com `tabela_8_respondeu: false` e a aba abre
@@ -824,7 +824,7 @@ install_placa_acordada_host() {
 # módulo grava as três, marca `divergem`, e a aba PERGUNTA. Divergência
 # declarada é informação; divergência escondida é o defeito de forma F6.
 #
-# E ELE NÃO GRAVA POR CIMA DA RESPOSTA DELA. Este arquivo tem dois escritores —
+# E ELE NÃO GRAVA POR CIMA DA RESPOSTA DE PRODUTO. Este arquivo tem dois escritores —
 # o install, que traz o firmware, e a aba, onde ela diz quantos buracos a
 # traseira tem. Reinstalar apagando isso perderia o trabalho dela em silêncio;
 # `preservar_o_que_ela_disse` carrega a declaração adiante, e só a descarta
@@ -1283,7 +1283,7 @@ install_dkms_rtw88_usb_host() {
 # O DONGLE WI-FI USB — O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026), DEFAULT
 # ---------------------------------------------------------------------------
 # Morava no self-heal do zsh dela (`aurora-wifi-usb.sh` e o vigia `aurora-`), e
-# veio por ordem dela: o que faz o Hefesto funcionar mora no Hefesto, com
+# veio por ordem de produto: o que faz o Hefesto funcionar mora no Hefesto, com
 # install, uninstall, paridade e doctor. É da família da Onda W (o DKMS acima):
 # o scan de fundo que derrubava o dongle a cada 300 s sai a cada associação, e
 # o vigia reinicia a porta quando o rádio trava MUDO — o caso em que o driver
@@ -1359,7 +1359,7 @@ install_wifi_usb_host() {
 # ---------------------------------------------------------------------------
 # O MODO DESEMPENHO — A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026)
 # ---------------------------------------------------------------------------
-# A decisão dela, 02/10 ~21h: *«na real no nosso install por default deveriamos
+# A decisão, 02/10 ~21h: *«na real no nosso install por default deveriamos
 # ter uma flag perguntando pro user se ele gostaria de usar o pc dele no modo
 # performance e aproveitarmos e usarmos a mesma politica que usamos pra criarmos  # noqa-acento: citação literal
 # soluções permanentes no pc da pc.»* O COSMIC e o system76-power são feitos para
@@ -1369,13 +1369,13 @@ install_wifi_usb_host() {
 # O install PERGUNTA. `--desempenho` e `--sem-desempenho` respondem sem
 # perguntar; sem TTY (o `--yes`, o CI) vale o PADRÃO: sim no desktop, não no
 # notebook (a máquina com bateria, `power_supply/BAT*`), onde o desempenho custa
-# a bateria de quem joga fora da tomada. O padrão é escolha de quem coordena
-# pelo padrão dela, a validar por ela.
+# a bateria de quem joga fora da tomada. O padrão é escolha de produto
+# pelo padrão de produto, a validar pelo usuário.
 #
 # Cada ajuste é um arquivo permanente, e o mecanismo mora em
 # `scripts/desempenho.sh` (aplicar e remover; o uninstall chama o mesmo dono).
 # Esta função só decide: os portões, a pergunta, a lista dos ajustes provados.
-# SÓ ENTRA O QUE A PROVA MOSTROU: o perfil de energia é decisão dela; os outros
+# SÓ ENTRA O QUE A PROVA MOSTROU: o perfil de energia é decisão de produto; os outros
 # três (NVIDIA, áudio HDA, ASPM) esperam a medida no aparelho, e a variável
 # `DESEMPENHO_PROVADOS` do `install.sh` os liga, um id por vez.
 #

@@ -16,7 +16,7 @@ _SPEC_POR_NOME = {p.name: p for p in PRESETS}
 
 
 def _efeito_com_os_padroes(nome: str):
-    """O preset como a tela dela o aplica: com os defaults dos controles."""
+    """O preset como a tela do usuário o aplica: com os defaults dos controles."""
     spec = _SPEC_POR_NOME[nome]
     return build_from_name(nome, [p.default for p in spec.params])
 

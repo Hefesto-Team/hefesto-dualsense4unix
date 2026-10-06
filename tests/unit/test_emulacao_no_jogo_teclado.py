@@ -1,6 +1,6 @@
 """EMULACAO-NO-JOGO-01 — o R1 trocava de aplicativo em vez de jogar.
 
-Queixa dela, 29/07: *"inicio o jogo e ele quando aperto r1 muda de app ao invés
+Queixa, 29/07: *"inicio o jogo e ele quando aperto r1 muda de app ao invés
 de funcionar no jogo"*; e, no mesmo relato, o raciocínio que aponta o defeito —
 com o modo mouse/teclado desligado, isso não deveria impactar. A transcrição
 literal (sem correção de grafia) está na sprint
@@ -12,7 +12,7 @@ MOUSE. O teclado emulado não tinha interruptor nenhum (sem gate de criação, s
 flag em disco, sem IPC, sem chave no `state_full`), e a exclusão mútua do poll
 loop era `if not gamepad_dispatched:` — a AUSÊNCIA do vpad lida como PERMISSÃO
 para o desktop entrar, justamente quando a exceção do Steam Input derruba o vpad
-DE PROPÓSITO para o jogo assumir. Medição do journal dela: 9 de 9 pressionamentos
+DE PROPÓSITO para o jogo assumir. Medição do journal do usuário: 9 de 9 pressionamentos
 de R1 em 7 dias caíram dentro de `steam_input_vpad_suspenso`, zero fora.
 
 Cada teste aqui MORDE: existe um par "com a cura" / "sem a cura" (ou uma asserção
@@ -226,7 +226,7 @@ async def test_boot_respeita_flag_desligada(monkeypatch: pytest.MonkeyPatch) -> 
 async def test_boot_sem_flag_mantem_o_teclado_ligado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Espelho: sem decisão dela nada muda (compat com o histórico)."""
+    """Espelho: sem decisão de produto nada muda (compat com o histórico)."""
     daemon, starts = await _boot_com_preferencia(monkeypatch, None)
     assert daemon.config.keyboard_emulation_enabled is True
     assert len(starts) == 1

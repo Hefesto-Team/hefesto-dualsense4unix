@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A seção «Rádio e Adaptadores» é o desenho aprovado — e cada fio dela tem dono.
 
-**23/09/2026 — TRANSPLANTE-DA-SECAO-01.** O `mockup/mapa-do-radio.html` que ela
+**23/09/2026 — TRANSPLANTE-DA-SECAO-01.** O `mockup/mapa-do-radio.html` que o usuário
 aprovou virou a seção `cx8-3` da aba Conexões. A regra da casa vale inteira: o
 Python PINTA (`a08_conexoes.campos_da_secao`), a página só abre e fecha o que
 veio pintado. Esta régua cobra o que costuma se perder numa transplantação —
@@ -27,7 +27,7 @@ e cada caso diz a mordida que o derruba.
    tratador real, com a central e o governador de mentira atrás dele.
 8. **«Além do limite» é laranja, nunca vermelho** — e quem passou do limite é
    quem o GOVERNADOR marcou, na ordem em que as pontes chegaram.
-9. **O sino lê o diário pela palavra dela**, pela hora, e nada cru.
+9. **O sino lê o diário pela palavra de produto**, pela hora, e nada cru.
 10. **A porta sem nome se chama pelo `devpath`** («Entrada 4.1.4»).
 11. **A leitura de fundo não pisca**: depois de um gesto que grava, o tique
     pinta a leitura de antes até a nova chegar, e a leitura em voo nasce
@@ -491,7 +491,7 @@ def test_o_pedido_do_governador_vira_a_janela_de_duas_saidas(mesa: Any) -> None:
     assert pedido[0]["data-alvo"] == U2 and pedido[0]["data-destino"] == I2
 
 
-#: o selo «sofrendo» da faixa de cada aparelho é o do desenho 1 que ela aprovou em 04/10
+#: o selo «sofrendo» da faixa de cada aparelho é o do desenho 1 que o usuário aprovou em 04/10
 #: (`docs/process/estudos/2026-10-04-o-desenho-das-conexoes/fotos/d1.png`), com a palavra junto.
 _O_VERMELHO_PEDIDO = ('.parte.movimento[data-nivel="engasga"]',
                       '.canais-do-lugar[data-nivel="engasga"]',

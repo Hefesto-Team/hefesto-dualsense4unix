@@ -36,7 +36,7 @@ o que o ``portao_a_casa_sabe_e_o_produto_nao_faz`` pegou em 25/08 — duas notas
 datadas seguiram dizendo "nada de produção chama" sobre funções que a produção
 passou a chamar.
 
-A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório do agente E1.
+A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório da mordida E1.
 """
 from __future__ import annotations
 

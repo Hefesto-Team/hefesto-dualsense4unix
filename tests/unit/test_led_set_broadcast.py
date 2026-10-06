@@ -1,6 +1,6 @@
 """BROADCAST-QUE-NAO-MENTE-01 (02/08) — `led.set` sem `uniq` APLICAVA NADA.
 
-Defeito medido na máquina dela, com dois DualSense na mesa e a paleta
+Defeito medido na máquina do usuário, com dois DualSense na mesa e a paleta
 automática ligada: um ``led.set`` com ``rgb=[0,255,0]`` e SEM ``uniq``
 respondia ``{"status": "ok"}`` e o sysfs não mudava — os controles seguiam
 azul (slot 1) e vermelho (slot 2). O MESMO pedido COM ``uniq`` nos dois MACs
@@ -23,7 +23,7 @@ Instrumento: backend REAL (``PyDualSenseController``) com handles e nós sysfs
 falsos — é o merge de verdade que está sob medição, não um dublê dele. O
 provider automático é o mesmo contrato do ``make_auto_output_provider``
 (``daemon/subsystems/identity.py``) e as cores saem de ``player_slot_color``,
-para a medição usar a MESMA paleta que ela viu na tela.
+para a medição usar a MESMA paleta que o usuário viu na tela.
 
 Falha-sem (cura arrancada): a última escrita em CADA nó volta a ser a cor da
 paleta, e ``aplicado_em`` some da resposta.
@@ -52,7 +52,7 @@ MAC_2 = "AA:BB:CC:00:00:02"
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
-#: A paleta que ela viu: slot 1 azul, slot 2 vermelho (`player_slot_color`).
+#: A paleta que o usuário viu: slot 1 azul, slot 2 vermelho (`player_slot_color`).
 AZUL = player_slot_color(1)
 VERMELHO = player_slot_color(2)
 VERDE = (0, 255, 0)
@@ -195,11 +195,11 @@ async def test_caminho_com_uniq_continua_mirando_so_um(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_o_broadcast_dela_vence_o_jogo(tmp_path: Path) -> None:
-    """O «Todos» é gesto dela: vence a cor que o jogo pintou, até o jogo pintar de novo.
+    """O «Todos» é gesto do usuário: vence a cor que o jogo pintou, até o jogo pintar de novo.
 
     A regra de 16/09 («meu perfil manda») caiu em 03/10/2026: o jogo manda, e na
-    ausência dele o perfil ganha. O gesto dela na interface é a ordem mais nova
-    (por delegação, a validar por ela), e o «Todos» é gesto como o clique num
+    ausência dele o perfil ganha. O gesto do usuário na interface é a ordem mais nova
+    (por delegação, a validar pelo usuário), e o «Todos» é gesto como o clique num
     controle.
     """
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)

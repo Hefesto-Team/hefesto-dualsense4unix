@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """O alvo ``atributo``: o desenho do controle passa a seguir o APARELHO.
 
-A LEI, e ela é dela — 03/09/2026:
-
-    *"os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-    players com cada controle — tudo isso muda de acordo com o controle
-    identificado no canto superior. É white no p1, mas a borda de tudo é cosmic
-    red e os svgs não são os que o meu mapa cataloga. Isso tá errado."*
+A LEI, e é do usuário — 03/09/2026
 
 O SVG escolhe a cor por ATRIBUTO: ``monta.svg()`` grava
 ``<svg data-colorway="cosmic-red">`` e a folha embutida pinta as dez zonas com
@@ -28,7 +23,7 @@ O QUE ELE MEDE, e cada número saiu deste motor:
 2. **o vazio APAGA, e cai no cinza cru** — sem ``data-colorway`` nenhuma regra
    da folha casa e o desenho volta aos ``fill`` do arquivo:
    ``rgb(58, 63, 75)``, o mesmo de um ``<rect>`` que nunca teve zona. Não é SVG
-   quebrado: é o controle SEM identidade, que é o que a regra dela pede quando
+   quebrado: é o controle SEM identidade, que é o que a regra de produto pede quando
    não há informação;
 3. **o contador não mente** — pintar o mesmo valor de novo devolve ``0``, e
    apagar o que já está apagado também;
@@ -60,7 +55,7 @@ AS TRÊS MORDIDAS, e elas RODAM — não estão num comentário:
   existe para não ter;
 * :func:`test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa`
   arranca a linha do travessão de ``_declarado_neste_elemento`` e a vê chamar de
-  ENDEREÇO MORTO exatamente o caso da mesa dela — pelo rádio o mapa responde que
+  ENDEREÇO MORTO exatamente o caso da bancada — pelo rádio o mapa responde que
   a cor do aparelho não se lê, e todo SVG daquele controle é pintado com vazio.
 """
 from __future__ import annotations
@@ -313,7 +308,7 @@ def test_depois_da_pintura_a_regua_da_produto(medido: dict) -> None:
 
 
 def test_o_vazio_declarado_nao_vira_travessao_na_comparacao() -> None:
-    """O caminho da MESA DELA: pelo rádio a cor do aparelho não se lê."""
+    """O caminho da BANCADA: pelo rádio a cor do aparelho não se lê."""
     campo = regua._Campo(chave="desenho", dono="p1", alvo="atributo", valor="")
     assert regua._declarado_neste_elemento(campo, regua.TRAVESSAO) == ""
 
@@ -366,7 +361,7 @@ def test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem() -> N
 
 
 def test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa() -> None:
-    """Arranca a linha do travessão e vê a régua acusar a mesa dela."""
+    """Arranca a linha do travessão e vê a régua acusar a bancada."""
     linha = re.compile(
         r'\n    if campo\.alvo == "atributo":\n(?:.*?\n)?'
         r'        return "" if declarado == TRAVESSAO else declarado\n', re.S)

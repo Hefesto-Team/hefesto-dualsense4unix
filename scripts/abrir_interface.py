@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Abre a interface nova COM identidade — a logo na dock, o nome na barra.
 
-Pedido dela, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na
-dock"*.
+Pedido, 29/08/2026.
 
 POR QUE ESTE ARQUIVO EXISTE, EM VEZ DE DUAS LINHAS NO PILOTO
 ------------------------------------------------------------
@@ -44,7 +43,7 @@ clicar o ``interface`` num repositório recém-clonado e já ver a logo.
 OS BOTÕES DA JANELA SAEM À ESQUERDA, E A CULPA NÃO É DO CÓDIGO (02/09/2026)
 ---------------------------------------------------------------------------
 Ela fotografou fechar/maximizar/minimizar **à esquerda e fora de ordem**,
-diferentes de toda outra janela da sessão dela. O código está certo: a
+diferentes de toda outra janela da sessão do usuário. O código está certo: a
 ``JanelaDaAba`` já põe uma ``Gtk.HeaderBar`` e **não** chama
 ``set_decoration_layout``, logo herda o do ambiente. Medido no GTK vivo, sem
 abrir janela nenhuma::
@@ -65,7 +64,7 @@ e é por isso que só as GTK destoam.
 
 **NÃO SE CONSERTA AQUI.** Um aplicativo que chamasse ``set_decoration_layout``
 passaria a ignorar a escolha global dela, e a próxima pessoa procuraria a causa
-no lugar errado. O conserto é de UMA LINHA, na máquina dela, e é decisão dela
+no lugar errado. O conserto é de UMA LINHA, na máquina do usuário, e é decisão de produto
 qual lado quer: ``:minimize,maximize,close`` põe os três à direita, na ordem
 usual do COSMIC.
 
@@ -82,7 +81,7 @@ que não responde (laço do GTK parado, ou já saindo) não segura o clique: o
 segundo processo abre a dele, como antes de 28/09.
 
 O lock é POR TELA (``nome_da_vez``): a janela que nasce num ``Xvfb`` de
-instrumento nunca pede nada à janela da tela dela. E ele só vale quando a
+instrumento nunca pede nada à janela da tela do usuário. E ele só vale quando a
 janela vai para uma tela de verdade (``HEFESTO_NA_TELA=1``, sem ``--oculta``):
 os instrumentos continuam abrindo quantas janelas escondidas quiserem.
 

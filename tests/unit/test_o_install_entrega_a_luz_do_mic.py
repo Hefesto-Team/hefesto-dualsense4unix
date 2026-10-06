@@ -226,7 +226,7 @@ def test_maquina_sem_nenhum_dos_dois_le_como_ausente(tmp_path: Path) -> None:
 
 
 def test_o_censo_oferece_o_pactl_sozinho_quando_ele_falta() -> None:
-    """Item 4 da PEÇA E: *nada de novo pede configuração dela*."""
+    """Item 4 da PEÇA E: *nada de novo pede configuração do usuário*."""
     preludo = "\n".join(
         [
             'warn() { printf "aviso: %s\\n" "$*"; }',
@@ -413,7 +413,7 @@ LACUNAS_DECLARADAS = {
         "03/09/2026 — o `.spec` nunca declarou `pulseaudio-utils`, nem para o "
         "microfone por Bluetooth, que é mais velho que esta sprint. Fechar a "
         "lacuna é acrescentar um `Recommends`, e é mudança em arquivo que a "
-        "PEÇA E não possui: fica para quem coordena, com a palavra dela."
+        "PEÇA E não possui: fica para o fecho, com a palavra do usuário."
     ),
     "packaging/arch/PKGBUILD": (
         "03/09/2026 — mesma lacuna do `.spec`, herdada do BT-MIC-01. No Arch o "
@@ -454,7 +454,7 @@ def _declara(arquivo: str) -> bool:
 
 
 def test_o_deb_declara_as_ferramentas_do_pulseaudio() -> None:
-    """O formato que a máquina dela mais provavelmente encontra, e o único que"""
+    """O formato que a máquina do usuário mais provavelmente encontra, e o único que"""
     assert _declara("packaging/debian/control"), (
         "`packaging/debian/control` parou de declarar `pulseaudio-utils`. É "
         "`Recommends` e não `Depends` de propósito — o apt o instala por "
@@ -508,7 +508,7 @@ def test_o_motivo_da_lacuna_do_flatpak_continua_verdadeiro() -> None:
 
 
 def test_familia_sem_tratamento_ainda_diz_o_nome_do_pacote() -> None:
-    """A quarta família, e ela existe por decisão dela, de 19/08/2026."""
+    """A quarta família, e ela existe por decisão, de 19/08/2026."""
     proc = _roda(
         f"comando_manual_pkg {CANONICO}",
         preludo=_extrai_funcao("comando_manual_pkg"),

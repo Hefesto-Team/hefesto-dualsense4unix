@@ -1,6 +1,6 @@
 """audio_saida.py — o som de confirmação e a rota de saída (SOM-04).
 
-Duas entregas que respondem a duas frases dela, e uma raiz só: **o registrador
+Duas entregas que respondem a duas frases de produto, e uma raiz só: **o registrador
 de volume do DualSense não tem leitura.** O firmware aceita o valor e não o
 devolve — está escrito na SOM-02 como o preço da camada 2. Consequência
 medida: depois de mover o controle deslizante, nada na tela pode confirmar que
@@ -27,7 +27,7 @@ O FATO QUE ORGANIZA ESTE MÓDULO INTEIRO, medido nesta bancada em 01/08/2026::
     0
 
 **Os dois tocadores aceitam um sink inexistente, saem com zero e tocam no sink
-PADRÃO.** Não há mensagem de erro, não há código de saída. Com o padrão dela no
+PADRÃO.** Não há mensagem de erro, não há código de saída. Com o padrão de produto no
 HDMI, um som "de confirmação do controle" sairia pela televisão e ela concluiria
 que o alto-falante quebrou. Por isso a regra desta casa aqui é dura e vale para
 todo caminho de código: **o sink é resolvido na lista viva de sinks antes de
@@ -41,7 +41,7 @@ janela e que este módulo REUSA em vez de duplicar:
   e roda em thread worker (``ipc_bridge.run_in_thread``, o padrão do card);
 * **`LC_ALL=C` em tudo**, porque a saída do `pactl` é traduzida;
 * **nada de escrever no estado do WirePlumber.** A SOM-02 proíbe com motivo:
-  o mudo persistido é escolha dela e o `doctor` o trata como legítimo. O
+  o mudo persistido é escolha do usuário e o `doctor` o trata como legítimo. O
   caminho é `pactl`, que é o que a própria dona usaria.
 
 Sobre a CHAVE de desligar o som (SOM-04, entrega 1, regra 6). Ela existe e
@@ -235,7 +235,7 @@ def acordar_sink(sink: str, *, runner: Callable[[list[str]], str] | None = None)
     :meth:`RotaDeSaida._trocar` (a janela que acredita na própria escrita é a
     janela que mente na tela).
 
-    **Por que isto não atropela escolha dela.** `set-sink-suspend 0` não muda
+    **Por que isto não atropela escolha do usuário.** `set-sink-suspend 0` não muda
     volume, não muda rota, não muda o sink padrão e não desfaz mudo: ele só
     impede que o PipeWire solte o hardware. Quem chega aqui é um gesto que
     pede som NAQUELE controle — e a suspensão não é opinião sobre esse pedido,
@@ -301,7 +301,7 @@ def garantir_saida_audivel(
 ) -> bool:
     """Tira o mute do sink do controle. Devolve True se havia o que tirar.
 
-    SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO com ela. Ela clicou nos dois
+    SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO com ela. O usuário clicou nos dois
     estados do seletor, o `pactl` obedeceu, e não saiu som nenhum: o sink do
     DualSense estava `MUTED` no PipeWire, por estado que o WirePlumber
     PERSISTE por rota (``~/.local/state/wireplumber/default-routes``) e
@@ -316,10 +316,10 @@ def garantir_saida_audivel(
     microfone mudo, que o ``doctor.sh`` confere e cura. O que faltava era
     alguém AGIR sobre a saída, e não só saber.
 
-    **Por que desmutar não atropela escolha dela.** Quem chega aqui é um gesto
+    **Por que desmutar não atropela escolha do usuário.** Quem chega aqui é um gesto
     que pede som NO CONTROLE — trocar o canal, mandar o som do PC para lá. Um
     mute herdado de outra sessão não é opinião sobre este pedido. E o desfazer
-    continua ao alcance: o mute do sistema é dela, e o próximo gesto dela
+    continua ao alcance: o mute do sistema é do usuário, e o próximo gesto do usuário
     vence este.
 
     **Por que não bastava recusar.** O ``tocar_confirmacao`` já recusa com
@@ -375,10 +375,9 @@ def tocar_confirmacao(
     7. o tocador rodou e devolveu erro.
 
     Nenhum caminho devolve "deu certo" sem ter tocado, e nenhum falha calado:
-    todo motivo que não seja escolha dela carrega um recado para a tela.
+    todo motivo que não seja escolha do usuário carrega um recado para a tela.
 
-    REGRESSÃO-DO-BIPE-01, 16/08/2026 — *"hoje em dia na interface nem por cabo
-    esse bip tá saindo"*, tendo saído antes. **O passo 6.5 é a cura**: com o
+    REGRESSÃO-DO-BIPE-01, 16/08/2026, tendo saído antes. **O passo 6.5 é a cura**: com o
     sink DORMINDO, este som não tinha como sair.
 
     Os degraus 1 a 7 conferiam tudo menos o único estado do sistema que
@@ -388,12 +387,12 @@ def tocar_confirmacao(
     * o arquivo escolhido tem **0,067 s** (ver :data:`_CANDIDATOS_DE_SOM`, e o
       "mais curto dos candidatos" é escolha registrada, não acaso);
     * o PipeWire suspende o nó ocioso, e **o religar do hardware come o começo
-      do som** — medido com a orelha dela em 15-16/08/2026, no cabo, mesmo
+      do som** — medido com a orelha do usuário em 15-16/08/2026, no cabo, mesmo
       canal, mesmo volume e mesma rota: "não saiu" com o nó ocioso, "tuuuuuuuu"
       com ele acordado (ver :func:`estados_dos_sinks`).
 
     Num som de 67 ms, "o começo" é o som inteiro. E a suspensão é o estado
-    NORMAL entre dois gestos dela: os dois sinks de DualSense desta bancada
+    NORMAL entre dois gestos do usuário: os dois sinks de DualSense desta bancada
     estavam `SUSPENDED` na leitura desta data, com os controles ligados no
     cabo. Nada disto aparecia como falha — o `paplay` abria o fluxo, saía com
     zero, e o tocador devolvia :data:`MOTIVO_TOCOU`.
@@ -609,7 +608,7 @@ def devolver_o_som_do_pc(
     **SÓ DEVOLVE QUEM ESTÁ COM ELA — 24/09/2026, O-TERCEIRO-NOME-DELA-01.**
     Com ``de`` (o `uniq` de quem clicou), a saída só volta se ela estiver NESTE
     controle agora. O quarto botão da fileira do som («Tudo no Controle e Nada
-    no PC») voltou por decisão dela de 23/09, e com ele uma mesa de quatro pode
+    no PC») voltou por decisão de 23/09, e com ele uma mesa de quatro pode
     ter um controle segurando a saída do PC enquanto outro troca de botão.
     Sem esta pergunta, o «Efeitos do Jogo e Áudio do PC no Controle» do P3
     devolvia à TV a saída que o P1 tinha acabado de pedir — o clique de um

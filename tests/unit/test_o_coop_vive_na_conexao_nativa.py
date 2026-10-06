@@ -22,7 +22,7 @@ O QUE ESTA RÉGUA NÃO MEDE, e é honesto dizer
 --------------------------------------------
 
 **Se o JOGO vê dois jogadores.** Essa é a §5 da sprint, e nenhuma leitura de
-código a responde: quem conta gamepads é o jogo. Ela é bancada dela (dois
+código a responde: quem conta gamepads é o jogo. Ela é bancada (dois
 DualSense num jogo de co-op local, no cabo e no rádio), e vive na
 MESA-DE-QUATRO-01. É exatamente por ela ainda estar aberta que o Caminho A — a
 tela dizendo de quem é a conta — é o piso desta sprint e não um extra: sem a

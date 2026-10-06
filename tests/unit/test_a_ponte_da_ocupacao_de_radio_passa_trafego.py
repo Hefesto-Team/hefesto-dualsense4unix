@@ -4,7 +4,7 @@
 ocupação ao dono (`radio_da_mesa.ocupacao_por_adaptador`) com uma lista de
 strings onde o dono queria dicionários: a chamada levantava sempre, o `except`
 engolia, e a chave `adaptadores` do pacote era `{}` em toda máquina. A palavra
-dela, no dia em que isso foi medido:
+de produto, no dia em que isso foi medido:
 
     "estamos recriando um produto que estava praticamente pronto pro gtk"
 

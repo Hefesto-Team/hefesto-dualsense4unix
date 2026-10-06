@@ -174,7 +174,7 @@ def test_fonte_que_levanta_nao_derruba_a_vibracao() -> None:
 
 
 def test_as_chaves_do_orcamento_sao_as_do_schema_que_as_grava() -> None:
-    """Renomear quebraria os perfis já gravados no disco dela."""
+    """Renomear quebraria os perfis já gravados no disco do usuário."""
     for chave in ORCAMENTOS:
         assert OrcamentoDeclarado(teto=chave).teto == chave  # type: ignore[arg-type]
     with pytest.raises(ValueError):

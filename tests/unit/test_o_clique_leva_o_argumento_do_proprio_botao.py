@@ -109,9 +109,9 @@ def test_a_vibracao_recusa_sem_alvo_e_trabalha_com_ele(ctx, nome):
     """O caso que o alvo CURA — e é o único dos oito que ele cura.
 
     Sem controle, `testar` recusa dizendo *"sem alvo a mesa inteira treme"*, que
-    é o comportamento CERTO: uma régua que engolisse isso faria a mesa dela
+    é o comportamento CERTO: uma régua que engolisse isso faria a bancada
     inteira vibrar para provar que sabe clicar. Com o alvo, o gesto chega à
-    ponte. Medido com dublê — nenhum comando saiu para o daemon dela.
+    ponte. Medido com dublê — nenhum comando saiu para o daemon do usuário.
 
     **A RECUSA PASSOU DE `ValueError` A `RuntimeError` — 04/09/2026**, e o tipo
     é o contrato: `hefesto_vivo._recusou_dizendo` leva `RuntimeError` ao CARTÃO

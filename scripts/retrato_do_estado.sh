@@ -2,7 +2,7 @@
 # retrato_do_estado.sh — fotografa TUDO que o Hefesto põe na máquina, para comparar
 # antes e depois de um ciclo `uninstall.sh` → `install.sh`.
 #
-# Por que existe (decisão dela, 08/08/2026):
+# Por que existe (decisão, 08/08/2026):
 #   "não quero nenhuma correção na mão, quero tudo dentro do install sem flag e ao final
 #    estudar o estado do pc, rodar uninstall, rodar install e comparar pra ver se contém
 #    todas as soluções descobertas e desenvolvidas por default"

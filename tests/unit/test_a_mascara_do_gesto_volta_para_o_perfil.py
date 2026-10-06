@@ -31,7 +31,7 @@ EPOCH = 1000
 
 
 def _perfil_dela() -> Profile:
-    """O perfil dela, da CÓPIA. Nunca do diretório em que ela joga."""
+    """O perfil do usuário, da CÓPIA. Nunca do diretório em que ela joga."""
     return Profile.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
 
 

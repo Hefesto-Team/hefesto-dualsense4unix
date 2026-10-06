@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A palavra do transporte tem UM dono — e quem CONTA não a lê.
 
-ONDA4-S10, 06/09/2026. A decisão é dela (D-05), verbatim: *"cabo / rádio, pela
+ONDA4-S10, 06/09/2026. A decisão é de produto (D-05), verbatim: *"cabo / rádio, pela
 função que já existe."* A função é a dona da frase longa da janela estável,
 em ``app/actions/home_actions.py:868``; esta régua mede que a interface nova a
 CHAMA em vez de reescrever a tradução, e — o que é mais caro — que **nenhuma
@@ -23,7 +23,7 @@ donos, e o segundo envelhece calado.*
 Quem conta lê ``transporte``; quem escreve na tela pergunta à dona.
 
 O QUE A CONTAGEM DO CABEÇALHO **NÃO** FAZ: ela não muda de língua. ``X USB ·
-Y BT`` fica, por decisão dela de 06/09 e por gramática — *"2 cabo · 0 rádio"*
+Y BT`` fica, por decisão de 06/09 e por gramática — *"2 cabo · 0 rádio"*
 não é português. É a única exceção declarada em
 ``docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`` §1.
 
@@ -207,7 +207,7 @@ def test_as_quatro_superficies_seguem_a_dona(monkeypatch) -> None:
 
 
 def test_as_quatro_superficies_dizem_a_palavra_dela_hoje() -> None:
-    """E o que elas dizem HOJE é `USB` e `BT` — palavra dela, 21/09/2026."""
+    """E o que elas dizem HOJE é `USB` e `BT` — palavra, 21/09/2026."""
     for cru in ("usb", "bt"):
         dela = home_actions.palavra_do_transporte(cru)
         estado, mesa = _mesa(cru, cru)
@@ -217,7 +217,7 @@ def test_as_quatro_superficies_dizem_a_palavra_dela_hoje() -> None:
 
 
 def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
-    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, por decisão dela."""
+    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, por decisão de produto."""
     from hefesto_dualsense4unix.interface import monta
 
     for controle in monta.MESA:
@@ -228,7 +228,7 @@ def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
 
 
 def test_a_contagem_e_a_unica_excecao_e_ela_continua_em_sigla() -> None:
-    """O cabeçalho fica em `USB`/`BT` — decisão dela, 06/09/2026."""
+    """O cabeçalho fica em `USB`/`BT` — decisão, 06/09/2026."""
     _, mesa = _mesa("usb", "bt")
     assert mesa_viva.texto_da_contagem(mesa)[1] == "1 USB · 1 BT"
 

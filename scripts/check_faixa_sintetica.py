@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Falha se uma faixa de MAC SINTÉTICA de teste aparecer no `config_dir()` real.
 
-T-06 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). Medido na bancada dela
+T-06 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). Medido na bancada
 em 23/08/2026: quatro registros com endereços da faixa `aabbcc` vazaram para
 `~/.config/hefesto-dualsense4unix/controllers.json` — a mesa de produção dela,
 não um fixture — empurrando os quatro DualSense REAIS dela das posições 1-4
 para 1, 6, 7 e 8. `grep -rl aabbcc tests/ | wc -l` achou 91 arquivos de teste
-usando a faixa; algum deles escreveu no disco dela em vez de num diretório
+usando a faixa; algum deles escreveu no disco do usuário em vez de num diretório
 isolado (T-06 também rastreia a CAUSA — ver `docs/process/agentes/` da leva).
 
 As faixas sintéticas da casa (o dono é `core/faixa_sintetica.py`; o
@@ -167,7 +167,7 @@ def achados_na_arvore(raiz: Path) -> list[str]:
 def limpar(diretorio: Path) -> list[str]:
     """Tira a faixa sintética da FILA do ``controllers.json`` — gesto explícito.
 
-    **O QUE ISTO CURA, medido na mesa dela em 18/09/2026:** quatro endereços
+    **O QUE ISTO CURA, medido na bancada em 18/09/2026:** quatro endereços
     ``aa:bb:cc:00:00:0{1..4}`` moravam na fila de numeração desde 22/08,
     ocupando os postos 4 a 7 e empurrando um DualSense real para o **oitavo**.
     A causa (a suíte escrevendo no ``~/.config`` real) foi fechada em 25/08

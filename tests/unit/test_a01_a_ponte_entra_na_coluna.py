@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A linha "Ponte com o jogo" — a órfã da D-10 que não tinha canal nenhum.
 
-DECISÃO DELA — 04/09/2026, D-10: *"Todas na coluna Atenção."*
+DECISÃO DE PRODUTO — 04/09/2026, D-10: *"Todas na coluna Atenção."*
 
 **CORREÇÃO DE FATO, e ela é o achado desta régua.** A D-10 nomeia TRÊS frases
 órfãs da aba Jogar — a ponte, o cadeado *"não trocar de perfil sozinho"* e o
@@ -12,7 +12,7 @@ aviso de PAUSA. Medido na árvore de hoje, **duas já estavam na coluna** desde
 O QUE ESTA RÉGUA GUARDA, e é a decisão de projeto que ela mede: **quem diz se a
 ponte é má notícia é o PRODUTO, pela cor que ele mesmo pinta.** `texto_da_ponte`
 devolve markup do Pango com `_COR_OK` nos dois desfechos bons e `_COR_AVISO` nos
-dois ruins. Reescrever aqui as quatro perguntas dela seria a segunda cópia de uma
+dois ruins. Reescrever aqui as quatro perguntas de produto seria a segunda cópia de uma
 regra que já tem dono — e a de cá envelheceria no primeiro desfecho novo.
 """
 from __future__ import annotations

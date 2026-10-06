@@ -1,6 +1,6 @@
 """O DESENHO GRANDE da `04-iluminacao` acende a luz do APARELHO, não a do mockup.
 
-O QUE ESTAVA NA TELA DELA, medido no DOM VIVO em 03/09/2026 com o produto
+O QUE ESTAVA NA TELA DO USUÁRIO, medido no DOM VIVO em 03/09/2026 com o produto
 instalado e UM controle no cabo
 (``scripts/ensaios/a_luz_do_desenho_e_a_luz_do_aparelho.py``)::
 
@@ -8,7 +8,7 @@ instalado e UM controle no cabo
     p1   o número 1, que pede a lâmpada 3, e o desenho acendendo NENHUMA
 
 O `#7EB8D4` é o `--luz` que o gerador CRAVA no `<g id="il-p1-lightbar">`: a cor
-do MOCKUP, parada na tela dela debaixo de uma caixa que já dizia `#0000FF`. A
+do MOCKUP, parada na tela do usuário debaixo de uma caixa que já dizia `#0000FF`. A
 mesma célula afirmando duas cores — e quem olha lê o desenho antes do número.
 
 AS CINCO LÂMPADAS ERAM PIOR: elas não acendiam **nenhuma**. `--led-apagado` e
@@ -27,7 +27,7 @@ POR QUE A CURA VIAJA NUMA FOLHA DE ESTILO, e não num campo: o pintor escreve
 texto, largura, fundo, valor, `innerHTML`, classe, cor, atributo e `--plastico`
 — **nenhum deles escreve um `--luz`**. É a mesma razão da `folha_do_plastico`,
 e o `<style id="plastico-vivo">` que a carrega **já está publicado**, que é o
-que faz esta cura chegar à tela dela HOJE.
+que faz esta cura chegar à tela do usuário HOJE.
 
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
@@ -85,7 +85,7 @@ def pacote04():
 
 @pytest.fixture
 def carga():
-    """O pacote da `04`, com a mesa DELA e os conectados que se pedir."""
+    """O pacote da `04`, com a bancada e os conectados que se pedir."""
     import pacotes
 
     def montar(conectados=None):
@@ -235,7 +235,7 @@ def test_o_pacote_manda_a_folha_da_luz_no_bloco_publicado(carga, pacote04):
 
     O `id` diz "plastico" porque foi o casco que o pariu — e ele fica, porque
     **já está publicado**. Um `<style id="luz-viva">` novo só chegaria à tela
-    dela no dia em que ela mandasse publicar a 04, e até lá a barra continuaria
+    do usuário no dia em que ela mandasse publicar a 04, e até lá a barra continuaria
     com a cor do mockup.
 
     A MORDIDA: tire o `+ folha_da_luz(...)` do `blocos` e este teste reprova; e

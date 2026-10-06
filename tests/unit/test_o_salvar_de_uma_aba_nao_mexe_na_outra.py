@@ -1,6 +1,6 @@
 """O Salvar de uma aba não mexe no perfil, e o gesto de uma seção só mexe nela.
 
-MEDIDO NO DISCO DELA em 26/09/2026. Às 18:38:37 ela clicou em «Salvar Perfil»
+MEDIDO NO DISCO DO USUÁRIO em 26/09/2026. Às 18:38:37 o usuário clicou em «Salvar Perfil»
 na aba Vibração com o PRAGMATA aberto, e o backup de antes e o de depois
 diferem em duas linhas que não são da vibração::
 
@@ -12,7 +12,7 @@ A causa era o Salvar pôr o estado do aparelho por cima do disco. Desde
 disco, e só ele, em toda aba — quem mede isso nas dez abas, com o aparelho
 divergindo em tudo, é `test_o_salvar_e_o_aplicar_leem_so_o_perfil.py`.
 
-ESTE ARQUIVO GUARDA O CASO DELA E OS ESCRITORES POR SEÇÃO: o clique das
+ESTE ARQUIVO GUARDA O CASO DO USUÁRIO E OS ESCRITORES POR SEÇÃO: o clique das
 18:38:37 com o estado daquela hora, e os gestos que gravam no clique (o
 editor da aba Perfis, a força da 05, o som da 02) mudando só o campo deles.
 
@@ -214,7 +214,7 @@ def _fora_da_secao(mudou: dict[str, Any], secoes: frozenset[str]) -> dict[str, A
 
 
 def test_o_caso_das_18h38_da_vibracao() -> None:
-    """O clique dela, com o estado dela: o microfone e a fonte do …:03 ficam."""
+    """O clique do usuário, com o estado dela: o microfone e a fonte do …:03 ficam."""
     antes = _o_disco()
     rodape.salvar(_ctx(VIVO_DAS_18H38, MESA_DAS_18H38),
                   _clique_do_salvar("05-vibracao.html"), PonteDeMentira())

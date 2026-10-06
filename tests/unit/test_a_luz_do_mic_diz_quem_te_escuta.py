@@ -233,7 +233,7 @@ def test_o_produto_nao_inventa_um_quinto_estado() -> None:
 
 
 def test_com_o_mic_ligado_e_ninguem_gravando_a_luz_acende() -> None:
-    """A decisão dela de 19/09, na menor forma possível."""
+    """A decisão de 19/09, na menor forma possível."""
     assert mod.decidir(
         mudo=False, ouvintes=[], captando=False, bateria_pct=100
     ) == mod.ACESA
@@ -676,7 +676,7 @@ def test_a_junta_com_as_pecas_irmas_existe_de_verdade() -> None:
 async def test_o_medidor_e_parado_no_desligamento(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O medidor segura `parec` VIVO: não pará-lo prende o microfone dela.
+    """O medidor segura `parec` VIVO: não pará-lo prende o microfone do usuário.
 
     Medido nesta bancada em 03/09/2026: um `parec` órfão ficou 25 minutos
     segurando a fonte de captura do DualSense em RUNNING. Ele tem o stdout em

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O pacote da aba `03` Gatilhos — e ele nasceu ERRADO, corrigido em 01/09/2026.
 
-O QUE ESTAVA ESCRITO AQUI, e era meu, e estava errado:
+O QUE ESTAVA ESCRITO AQUI, e estava errado:
 
     "o modo escolhido      NÃO EXISTE no state    ← sem dono
      o efeito pronto       NÃO EXISTE no state    ← sem dono
@@ -9,23 +9,22 @@ O QUE ESTAVA ESCRITO AQUI, e era meu, e estava errado:
 
 A parte factual continua verdadeira: o `state_full` do daemon **não** publica
 `triggers`, e o DualSense não devolve o modo em que está — gatilho adaptativo é
-comando de ida. O que estava errado era a CONCLUSÃO: dali eu tirei "não tem
+comando de ida. O que estava errado era a CONCLUSÃO: dali se tirou "não tem
 dono" e pintei quatro travessões.
 
-ELA PEGOU COM UMA PERGUNTA SÓ: *"vc tá corrigindo na origem esses problemas que
-tá relatando né?"* Não estava. O dado tem dono, e são dois, os dois já no
-produto que ela usa:
+A PERGUNTA QUE DESFEZ O ERRO: o dado tem dono, e são dois, os dois já no
+produto:
 
     profiles/schema.py       `triggers.left/right` → `mode` e `params`
     app/actions/trigger_specs.py   `PRESETS`: `name` (disco) → `label` (tela)
                                    e cada `param` com nome, faixa e padrão
 
-MEDIDO NO DISCO DELA, perfil "Ação", em 01/09/2026::
+MEDIDO NO DISCO DO USUÁRIO, perfil "Ação", em 01/09/2026::
 
     triggers.left  = {"mode": "Rigid",     "params": [0, 180]}
     triggers.right = {"mode": "Vibration", "params": [3, 8, 20]}
 
-Cinco dos 33 perfis dela têm gatilho configurado. Mostrar `—` ali era apagar da
+Cinco dos 33 perfis do usuário têm gatilho configurado. Mostrar `—` ali era apagar da
 tela uma escolha que ela salvou.
 
 O QUE AINDA NÃO TEM DONO, e agora a lista é honesta: nada desta aba. O que muda
@@ -95,7 +94,7 @@ def _casas_cravadas() -> dict[str, int]:
     `Machine` pede 6 barras, `MultiPositionVibration` pede 11, e a página crava
     4 e 2. *Os sete que sobram não cabiam, e a tela calava sobre eles.*
 
-    Com a decisão dela (a caixa acompanha o modo), quem manda é o MODO e a caixa
+    Com a decisão de produto (a caixa acompanha o modo), quem manda é o MODO e a caixa
     inteira vem em `blocos:`. O que este número diz agora é UMA coisa: quantas
     barras o produto ainda tem de SOBRESCREVER porque a página publicada as
     trouxe do desenho velho. Ele vai a zero no dia em que ela publicar a bancada
@@ -123,16 +122,16 @@ def _a_caixa_cresce() -> dict[str, bool]:
     """`{"e": bool, "d": bool}` — a página publicada deixa a caixa crescer?
 
     É A PERGUNTA QUE MANTÉM A CURA VÁLIDA NOS DOIS MUNDOS, e ela nasceu de um
-    estrago medido: a decisão dela (a caixa acompanha o modo) tem DUAS metades,
+    estrago medido: a decisão de produto (a caixa acompanha o modo) tem DUAS metades,
     e elas moram em lados diferentes da fronteira da publicação. A metade que
     ENCHE a caixa é este pacote e vale hoje — um `blocos:` pousa na página
     publicada como pousa na bancada. A metade que a faz CRESCER é o desenho, e
-    desenho só entra na tela dela quando ELA publica.
+    desenho só entra na tela do usuário quando ELA publica.
 
     A METADE SOZINHA É PIOR QUE NENHUMA. Medido em 02/09/2026 no Chrome, sobre
     o arquivo publicado, injetando o HTML que `html_dos_ajustes` emite e
     exatamente a operação do piloto (`alvo.innerHTML = html`), com os perfis do
-    disco dela::
+    disco do usuário::
 
         aventura  L2 `Curva de força`  10 barras em caixa de  92px → vaza  58px
                   R2 `Curva de força`  10 barras em caixa de  46px → vaza 104px
@@ -361,10 +360,10 @@ def dica_do_pronto(modo_chave: str) -> str:
     """O aviso do campo "Efeito pronto" — ANTES do clique, com o modo de AGORA.
 
     DECISÃO [02] do PO, 04/09/2026: *"Fica como está, e a dica avisa ANTES do
-    clique. O desenho é dela, o atalho de um clique é real, e a única dívida
+    clique. O desenho é do usuário, o atalho de um clique é real, e a única dívida
     medida é a tela não avisar que o modo vai mudar."*
 
-    **CONFIRMADA POR ELA EM 05/09/2026, pergunta `03-Q2`**: perguntada se uma
+    **CONFIRMADA PELO USUÁRIO EM 05/09/2026, pergunta `03-Q2`**: perguntada se uma
     curva pronta pode trocar o modo sozinha, marcou *"Aplica na hora, com
     aviso"* — que é este comportamento, com esta frase. **É esta linha que vale
     daqui em diante**, e a de cima fica pela mesma razão da `03-Q1`.
@@ -684,21 +683,21 @@ def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
       gatilho; arrastar num lugar vazio só pode terminar em recusa, e o botão
       que convida para uma recusa é pior que o botão que não existe — é a mesma
       regra que o `pointer-events:none` do CSS já aplica aos `<select>`;
-    * o DESENHO fica no padrão `False`, e isto está esperando a palavra dela.
-      A alavanca é invisível — o desenho não muda um pixel —, mas o que ela
+    * o DESENHO fica no padrão `False`, e isto está esperando a palavra de produto.
+      A alavanca é invisível — o desenho não muda um pixel —, mas o que o usuário
       aprovou em 27/08 foi uma barra de LEITURA, e transformar leitura em
       controle é decisão de produto. O gerador escreve a bancada e a bancada é
       o que ela olha; enquanto ela não disser, o desenho segue mostrando o que
-      ela aprovou e o produto segue tendo a paridade com a GTK que a Lei 0
+      o usuário aprovou e o produto segue tendo a paridade com a GTK que a Lei 0
       manda ter.
 
     `cabem` É O TETO DA PÁGINA QUE O PRODUTO RENDERIZA HOJE, e `None` quer dizer
-    "não há teto". Ele é a metade que faltava da decisão dela: a caixa acompanha
+    "não há teto". Ele é a metade que faltava da decisão de produto: a caixa acompanha
     o modo, mas a trilha que a deixa CRESCER está na bancada e a bancada só
     chega à tela quando ela publica. Sem o teto, uma caixa de 92px recebe onze
     barras e as sete que sobram caem por cima do `<select>` de Modo do R2 e do
     "Guardar esse efeito" — medido no Chrome sobre o arquivo PUBLICADO, com dois
-    perfis do disco dela (`aventura` vaza 58px à esquerda e 104 à direita;
+    perfis do disco do usuário (`aventura` vaza 58px à esquerda e 104 à direita;
     `corrida` vaza 119). Ver `_a_caixa_cresce`.
 
     COM TETO, A ÚLTIMA CASA VIRA O AVISO. Ela perde uma barra e ganha o número
@@ -759,9 +758,9 @@ def _html_de_uma_barra(sigla: str, i: int, a: dict[str, Any],
     aplicava os PADRÕES dele e acabava.
 
     O DESENHO NÃO MUDA UM PIXEL: a alavanca é um `<input type="range">`
-    transparente POR CIMA do trilho que ela aprovou. Quem desenha continua
+    transparente POR CIMA do trilho que o usuário aprovou. Quem desenha continua
     sendo o `.cheio` que o pacote pinta; o `<input>` só recebe o arrasto. Uma
-    barra visível nova seria desenho, e desenho é dela.
+    barra visível nova seria desenho, e desenho é do usuário.
 
     A FAIXA É A DO PARÂMETRO, e sai do produto: `spec.params[i].min_value` e
     `.max_value`, os mesmos números que o `Gtk.Scale` usa. Digitar `0..255`
@@ -777,7 +776,7 @@ def _html_de_uma_barra(sigla: str, i: int, a: dict[str, Any],
 
     E ELE NÃO FAZ O BLOCO PISCAR: o `value` viaja no ATRIBUTO, e arrastar muda
     a *propriedade*. O `innerHTML` continua igual ao emitido enquanto ela
-    arrasta, então o piloto não troca a caixa debaixo da mão dela.
+    arrasta, então o piloto não troca a caixa debaixo da mão do usuário.
     """
     oculta = ' style="display:none"' if escondida else ""
     alavanca = ""
@@ -863,7 +862,7 @@ def _valores_cravados_do_pronto() -> frozenset[str]:
 def _tabela_que_o_campo_mostra(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
     """A tabela que o campo "Efeito pronto" OFERECE naquele modo.
 
-    NÃO É `_tabela_da_curva`, e a diferença é uma decisão dela. A GUI estável
+    NÃO É `_tabela_da_curva`, e a diferença é uma decisão de produto. A GUI estável
     ESCONDE a linha de preset fora dos dois modos por posição
     (`_update_preset_row_visibility`); o desenho dela a mostra nos DEZENOVE. Nos
     outros 17 a página crava as curvas de FEEDBACK — logo é a tabela de feedback
@@ -909,7 +908,7 @@ def _curvas_que_a_pagina_esqueceu(modo: str) -> list[str]:
     `VIBRATION_POSITION_LABELS`). Não invento texto de tela: estas palavras já
     são as que a aba Gatilhos da GUI estável mostra a ela.
 
-    `custom` FICA DE FORA porque a página já o tem, com o nome que ELA aprovou
+    `custom` FICA DE FORA porque a página já o tem, com o nome que O usuário aprovou
     ("— Nenhum —", contra o "Personalizar" do motor). Acrescentá-lo daria duas
     opções para a mesma chave, com dois nomes.
 
@@ -927,7 +926,7 @@ def _curvas_que_a_pagina_esqueceu(modo: str) -> list[str]:
 
 
 def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
-    """As opções do campo "Efeito pronto": o desenho + o produto + os efeitos DELA."""
+    """As opções do campo "Efeito pronto": o desenho + o produto + os efeitos DO USUÁRIO."""
     _, rotulos = _tabela_que_o_campo_mostra(modo)
     linhas = [_opcoes_cravadas_do_pronto()]
     if modo == MODO_DA_VIBRACAO:
@@ -968,7 +967,7 @@ PONTO = ' <span class="pt">•</span> '
 def cor_de_borda(tinta: str) -> str:
     """A tinta da zona quando ela É cor, e `""` quando o mapa não tem hex.
 
-    O QUE O MAPA DELA RESPONDE, e são TRÊS formas — `gerar_cores_do_dualsense.
+    O QUE O MAPA DO USUÁRIO RESPONDE, e são TRÊS formas — `gerar_cores_do_dualsense.
     _tinta` é quem as escreve, a partir de `docs/data/cores-do-dualsense.csv`:
 
         `#rrggbb`                 o hexadecimal daquela zona
@@ -996,7 +995,7 @@ def cor_de_borda(tinta: str) -> str:
     `currentColor`. O chip vestia a cor da LETRA e a dica ao lado dizia, com
     todas as letras, que aquela era a cor do plástico daquele aparelho.
 
-    A REGRA É A DELA: *sem cor lida, sem cor na tela.* Sem `--plastico` a queda
+    A REGRA É A DO USUÁRIO: *sem cor lida, sem cor na tela.* Sem `--plastico` a queda
     do `topo.html` vale, a borda fica neutra, e a dica diz por quê.
 
     O TESTE DO `#` NÃO É NOVO: é o mesmo que `gerar_cores_do_dualsense.legivel`
@@ -1023,7 +1022,7 @@ def miolo_do_chip(jogador: int, nome: str, via: str,
 def a_pagina_recebe_a_cor_por_endereco() -> bool:
     """A página PUBLICADA já tem onde receber a cor por endereço?
 
-    ELA EXISTE PARA NÃO APAGAR A BORDA NA TELA DELA. O desenho de hoje pôs o
+    ELA EXISTE PARA NÃO APAGAR A BORDA NA TELA DO USUÁRIO. O desenho de hoje pôs o
     `--plastico` no embrulho, com `data-campo="plastico"`; a página que o
     `WebView` renderiza AGORA não o tem — ela só recebe o chip inteiro pelo alvo
     `html`. Um pacote que escrevesse só no endereço novo deixaria as duas
@@ -1080,12 +1079,12 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
                                       (:func:`cor_de_borda`, oito dos 28 modelos)
         ninguém leu a cor             pelo rádio ela pode não chegar nunca, hoje
 
-    É a metade que faltava da regra dela: *sem cor lida, sem cor na tela* — e,
+    É a metade que faltava da regra de produto: *sem cor lida, sem cor na tela* — e,
     quando não há, dizer POR QUE não há.
 
     **A SEGUNDA AUSÊNCIA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026.**
     A dica de quem ninguém leu confessava que a cor ainda não tinha sido lida:
-    confissão sobre um estado nosso numa dica flutuante, e a ordem dela de 13/09
+    confissão sobre um estado nosso numa dica flutuante, e a ordem de 13/09
     a tira da tela. Ela diz só o nome — e, sem nome, o `<span>` não tem dica.
     A do acabamento fica: ela diz o que o modelo É, não o que nós não fizemos.
     """
@@ -1331,13 +1330,13 @@ def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
     A LISTA DO "EFEITO PRONTO" É DO LADO, e não da coluna — 03/09/2026. Ela era
     uma só para os oito campos; agora ela depende do MODO daquele gatilho,
     porque as curvas de vibração só existem em `MultiPositionVibration` (ver
-    `html_das_opcoes_de_pronto`). A biblioteca dela continua igual nos oito: o
+    `html_das_opcoes_de_pronto`). A biblioteca do usuário continua igual nos oito: o
     que muda é a metade que vem do motor.
 
     E A LISTA DE "MODO" ENTROU — 03/09/2026, e ela é IGUAL nos oito: os 19
     rótulos não dependem de coluna nem de lado. Ela vem em bloco pela mesma
     razão que a de cima: o rótulo tem dono no produto, e enquanto a página
-    publicada carregar a cópia digitada, é o bloco que põe a palavra dela na
+    publicada carregar a cópia digitada, é o bloco que põe a palavra de produto na
     tela sem esperar publicação. Ver `html_das_opcoes_de_modo`.
 
     O BLOCO NÃO DESFAZ A ESCOLHA, e a ordem é o que garante: o piloto pinta os
@@ -1363,7 +1362,7 @@ from . import gesto  # noqa: E402
 
 
 def _uniq(o: dict[str, Any]) -> str:
-    """O `uniq` da coluna onde ela clicou. Vazio = recusa, nunca "todos".
+    """O `uniq` da coluna onde o usuário clicou. Vazio = recusa, nunca "todos".
 
     ESTA ABA TEM UMA COLUNA POR CONTROLE, e o alcance é a diferença entre um
     ajuste e um estrago: o `trigger.reset` sem `uniq` vai em BROADCAST e zera o
@@ -1412,7 +1411,7 @@ def _lado(o: dict[str, Any]) -> str:
 
 
 def _escolhido(o: dict[str, Any]) -> str:
-    """O que ela escolheu no campo, sem inventar nada quando não veio."""
+    """O que o usuário escolheu no campo, sem inventar nada quando não veio."""
     return str(o.get("modo") or o.get("v") or o.get("valor") or "").strip()
 
 
@@ -1458,7 +1457,7 @@ def _na_lingua_da_tela(motivo: str, modo: str) -> str:
     *"Fim (3) precisa ser maior que Início (5)"*, com os MESMOS rótulos que o
     `<select>` desta tela mostra, porque tira os dois do mesmo `spec.params`.
     Conferido em 02/09/2026: zero pacotes da interface nova a chamavam, e a
-    recusa chegava CRUA à tela dela.
+    recusa chegava CRUA à tela do usuário.
 
     O `_rotulo_do_param` (`:45`) FICA PRIVADO, e é decisão escrita: quem precisa
     dele é esta função, que já o usa por dentro. Torná-lo público criaria uma
@@ -1597,7 +1596,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
 
     **A TERCEIRA CASA DEIXOU DE SER O RECIBO E PASSOU A SER A NOTÍCIA —
     06/09/2026, a `03-Q4` dela.** Perguntada com as quatro formas lado a lado,
-    ela escolheu *"O campo pisca em verde"*, e a opção que descrevia o que esta
+    o usuário escolheu *"O campo pisca em verde"*, e a opção que descrevia o que esta
     função fazia até aqui — a tarja verde no cartão com a frase do recibo — foi
     a que ela recusou, com estas palavras: *"nenhuma palavra nova entra na
     tela"*. A regra que isso escreve, e ela vale para a aba inteira:
@@ -1622,7 +1621,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     **A ESCOLHA MORA NESTA FUNÇÃO, e não nos gestos**, pela razão de sempre:
     escrita nos quatro, o quarto é o que esquece — e o defeito seria mudo,
     porque um gesto que manda recibo a mais não quebra nada, só devolve à tela
-    a palavra que ela mandou tirar. É o defeito de forma que esta casa pagou
+    a palavra que o usuário mandou tirar. É o defeito de forma que esta casa pagou
     duas vezes em 05/09.
 
     **`_recibo` NÃO se apagou**, e continua dono da frase: o que mudou é QUANDO
@@ -1631,7 +1630,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     ``recibo_sempre`` SAIU EM 08/09/2026, COM O `reenviar`. Ele era a exceção e
     tinha um dono só: o reenvio decidia pelo **par** e não pelo lado, então
     pedia o recibo sempre e escolhia depois. Com o botão fora da tela por
-    decisão dela, o sinalizador ficou sem chamador — e um parâmetro que ninguém
+    decisão de produto, o sinalizador ficou sem chamador — e um parâmetro que ninguém
     passa é um ramo que ninguém mede. Se a faixa de reenvio voltar, ele volta
     com ela; a razão está guardada na lápide. **Sem aquela porta, a frase da
     recusa perderia o nome do gatilho que
@@ -1652,10 +1651,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     E ELE PASSOU A GRAVAR NO PERFIL — 05/09/2026, a **decisão D2**
     (o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
     *"persistência no clique em toda parte, com o rodapé como rede de
-    segurança"*. Ela pediu, com estas palavras: *"ao pular e sair configurando
-    de aba em aba o perfil vai se lembrando de cada config de cada aba pra cada
-    controle … e salvar se lembra disso quando eu for jogar o jogo e no dia
-    seguinte"*.
+    segurança"*. O usuário pediu, com estas palavras.
 
     **O QUE FALTAVA, MEDIDO:** `controllers[uniq].triggers` não persistia por
     clique nenhum. O `_RASCUNHO` guardava o gatilho aplicado NESTA SESSÃO e o
@@ -1734,7 +1730,7 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     **NÃO ABRIU O PERFIL, NÃO GRAVA — E NÃO LEVANTA.** São dois casos: não há
     `active_profile` (o `guardar` já explica esse na frase dele), ou o nome que
     o daemon publica não existe para ESTE leitor. O segundo não é hipótese: as
-    réguas desta aba rodam com `active_profile` de mentira, e na máquina dela o
+    réguas desta aba rodam com `active_profile` de mentira, e na máquina do usuário o
     daemon pode nomear um perfil que a pasta lida aqui não tem (apagado,
     renomeado, outra pasta). Nos dois, o gatilho FOI para o aparelho e o
     `_RASCUNHO` o segura na tela — levantar diria "não deu" sobre um efeito que
@@ -1859,8 +1855,8 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
 
     **O DEFEITO QUE ELA FECHA**, e ele é a queixa de origem desta casa: quando
     dava certo, a tela não dizia nada. O piloto imprimia `[gesto] … → aplicado`
-    no terminal de quem lançou a janela, e quem clica não lê terminal. A decisão
-    dela, 04/09/2026: *"No próprio cartão, como a recusa."*
+    no terminal de quem lançou a janela, e quem clica não lê terminal. A decisão, 04/09/2026: *"No
+    próprio cartão, como a recusa."*
 
     **NÃO HÁ CANAL NOVO AQUI, e é o ponto inteiro do conflito C-3.** A lista
     desta aba propunha *o campo que pisca*; o cartão é a mesma peça das outras
@@ -1868,13 +1864,13 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
     `hefesto_vivo._deu_certo_dizendo`, lendo o `recado` que o gesto devolve.
 
     **QUEM ESCOLHEU O CARTÃO FOI O PO, E A ESCOLHA CADUCOU — 06/09/2026.** Este
-    parágrafo dizia *"ela escolheu o cartão"*, e a atribuição estava errada nas
+    parágrafo dizia *"o usuário escolheu o cartão"*, e a atribuição estava errada nas
     duas metades. Quem recusou o campo que pisca foi o PO, em 04/09, lendo a
     D-01 (*"no próprio cartão, como a recusa"*) como se ela fechasse a FORMA —
     o conflito C-3 de `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` é
     dele. Em 05/09 ELA respondeu a `03-Q4` vendo as quatro formas lado a lado e
     escolheu **o campo que pisca**, com *"nenhuma palavra nova entra na tela"*.
-    A palavra dela vence a leitura que o PO fez da palavra dela.
+    A palavra de produto vence a leitura que o PO fez da palavra de produto.
 
     **O QUE ISSO FAZ COM ESTA FUNÇÃO: ela sai do caminho do sucesso pleno, e
     não do produto.** O `_aplicar` só a chama quando há uma segunda metade a
@@ -1923,14 +1919,14 @@ def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
     (`hefesto_vivo._recusou_dizendo`) e não tem por onde levar a de um sucesso.
     Então a regra é a honesta: **cala quando o byte saiu, fala quando não
     saiu.** O "aplicado" na tela — a outra metade da feature 19 — precisa de um
-    lugar na página, e lugar na página é dela.
+    lugar na página, e lugar na página é do usuário.
 
     SÃO DOIS OS CASOS QUE FALAM, e o segundo é o mais fino:
 
     * nada saiu no fio (as duas listas vazias, ou só `guardado_em`);
     * o corpo traz `motivo` COM `status: ok` — sucesso PARCIAL
       (`ipc_bridge._recusa_no_corpo`). O `ok` continua `True` e o byte pode até
-      ter saído, mas o daemon disse alguma coisa e essa coisa é dela.
+      ter saído, mas o daemon disse alguma coisa e essa coisa é do usuário.
 
     A RECUSA SECA (`ok=False`) NÃO PASSA POR AQUI: quem a trata é o chamador,
     que sabe nomear o que tentou aplicar ("o seu efeito 'Recuo do MK'", "a curva
@@ -1941,7 +1937,7 @@ def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
 
     O ASSUNTO É A FRASE DA GTK, e não uma escrita aqui: `_toast_trigger` monta
     `"Gatilho esquerdo (L2): <modo>"` — a cura TRG-01, que existe porque a barra
-    dizia `"LEFT -> Off"`, trocando a fala dela por id interno mais o lado em
+    dizia `"LEFT -> Off"`, trocando a fala do usuário por id interno mais o lado em
     inglês. A tela nova não vai reintroduzir o defeito com outro atalho.
     """
     assunto = _assunto(lado, modo_)
@@ -1967,7 +1963,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     É O QUE O PRÓPRIO DESENHO PROMETE, na dica do quadro: *"Escolher um modo já
     manda o efeito para aquele controle, e quem está com ele na mão sente na
-    hora"* — e *"soltar já manda"*. É também a decisão dela de 01/09 para a
+    hora"* — e *"soltar já manda"*. É também a decisão de 01/09 para a
     interface inteira: o gesto age na hora, e não junta rascunho.
 
     E É O QUE A GUI ESTÁVEL FAZ. `triggers_actions._on_mode_changed` remonta os
@@ -2032,7 +2028,7 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     (`_update_preset_row_visibility`). No desenho ela aparece sempre, para os
     19 — então escolher "Stop hard" com o modo em "Metralhadora" só pode querer
     dizer *"põe este gatilho na curva Stop hard"*. **Isto é escolha de produto
-    e é dela**; está no relato para ela decidir. O que não faço é a alternativa
+    e é do usuário**; está no relato para ela decidir. O que não faço é a alternativa
     calada: aplicar dez intensidades num modo que não tem posições, que o
     `build_from_name` recusaria e a tela não explicaria.
 
@@ -2253,10 +2249,10 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     `aplicado_em` cheio, e é dele que sai a frase que conta em quantos entrou.
 
     **ESCREVER GLOBAL AQUI NÃO É O `None` QUE O `alvo_de_edicao` PROÍBE.** Aquele
-    módulo existe porque `None` carregava duas coisas — *"ela clicou em Todos"* e
-    *"eu não sei quem é o alvo"* —, e a segunda virava escrita global silenciosa.
+    módulo existe porque `None` carregava duas coisas — *"o usuário clicou em Todos"* e
+     —, e a segunda virava escrita global silenciosa.
     Este gesto é a PRIMEIRA: `EstadoDoAlvo.TODOS`, escolha deliberada, com um
-    clique dela por trás. O que ele nunca faz é o segundo caso — sem coluna não
+    clique do usuário por trás. O que ele nunca faz é o segundo caso — sem coluna não
     há `forma`, e sem `forma` ele recusa dizendo.
 
     **A FONTE É A TELA, e não o disco** — pela razão do aparelho: o DualSense
@@ -2367,7 +2363,7 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Guardar esse efeito": a coluna vai para o PERFIL — e, com nome, para ELA.
 
     POR QUE ELE PRECISA EXISTIR, e é a diferença entre esta aba e as outras: os
-    dois gestos vizinhos (`modo` e `pronto`) APLICAM na hora — é a decisão dela
+    dois gestos vizinhos (`modo` e `pronto`) APLICAM na hora — é a decisão
     de 01/09, *"clicar já aplica"*. Mas aplicar não guarda: o efeito vale até a
     próxima troca de perfil, e o disco continua com o que estava lá. Este botão
     é o ponto de gravação, e é a única coisa nesta tela que sobrevive a um
@@ -2390,9 +2386,8 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     PERFIL-01: override parcial nunca apaga a cor global no replug)"*. Por isso
     este gesto só toca `triggers` do controle clicado e devolve o resto intacto.
 
-    E O NOME É O QUE FALTAVA — decisão 17 dela, 02/09/2026: *"Isso é pra quando
-    o user salva algum efeito. É assim que tem que aparecer. O nome que o user
-    deixar lá."* O campo ao lado do botão é opcional; preenchido, o par L2+R2
+    E O NOME É O QUE FALTAVA — decisão 17 dela, 02/09/2026:  O campo ao lado do botão é opcional;
+    preenchido, o par L2+R2
     entra em "Meus efeitos" com aquele nome e passa a aparecer nas quatro
     colunas. Vazio, este botão continua exatamente o que era.
 
@@ -2452,7 +2447,7 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
     OUTRA aba.
 
     E A REAPLICAÇÃO NÃO ERA NECESSÁRIA PARA NADA. Esta aba aplica NA HORA — é a
-    decisão dela de 01/09, *"clicar já aplica"*: quando ela chega a este botão,
+    decisão de 01/09, *"clicar já aplica"*: quando ela chega a este botão,
     `modo` e `pronto` já mandaram o efeito ao aparelho por `_aplicar`. O
     `profile_switch` reaplicava por cima um gatilho que já estava lá, e levava
     junto nove seções que ninguém pediu.
@@ -2467,7 +2462,7 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
 
 
 def _salvar_o_meu(apelido: str, dos_lados: dict[str, dict[str, Any]]) -> None:
-    """Guarda o par L2+R2 na biblioteca dela, com o nome que ela deixou."""
+    """Guarda o par L2+R2 na biblioteca do usuário, com o nome que ela deixou."""
     guardado: dict[str, Any] = {}
     for disco, cfg in dos_lados.items():
         _padroes(str(cfg["mode"]))

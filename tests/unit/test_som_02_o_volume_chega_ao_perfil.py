@@ -128,7 +128,7 @@ def pedidos_recusados(monkeypatch: pytest.MonkeyPatch) -> _Pedidos:
 
 
 def _perfil(**speaker: Any) -> Profile:
-    """O perfil dela, com (ou sem) a seção de alto-falante."""
+    """O perfil do usuário, com (ou sem) a seção de alto-falante."""
     return Profile(
         name="pragmata",
         match=MatchCriteria(window_class=["pragmata_class"]),

@@ -4,7 +4,7 @@
 POR QUE ELE EXISTE (JOGAR-O-QUE-FALTA-01, 06/09/2026): os testes de unidade
 provam a CONTA — que `is_primary` vira `"1"`, que a máscara clicada entra na
 seção `mode`, que o serviço calado ganha uma linha na coluna Atenção. O que eles
-**não** provam é que o clique dela chega e que a tela muda: um endereço que você
+**não** provam é que o clique do usuário chega e que a tela muda: um endereço que você
 acrescentou e nunca viu pintar não está entregue. É a regra desta casa, e o caso
 que a fundou foi o `--prova-gesto` dando verde sobre dois botões mortos.
 
@@ -29,12 +29,12 @@ O QUE ELE MEDE, e cada linha é um passo da sprint:
 5. **as mutações por tique com a mesa parada**, que é a régua da
    `A-TELA-SAMBA-01`. O alvo é ZERO no que não mudou.
 
-**O DAEMON FICA DE FORA** e **NADA TOCA O PERFIL DELA**: o `HOME` e os quatro
+**O DAEMON FICA DE FORA** e **NADA TOCA O PERFIL DO USUÁRIO**: o `HOME` e os quatro
 `XDG_*` vão para um diretório temporário ANTES do primeiro import do pacote, a
 ponte é um dublê que anota, e `mesa_viva.estado_do_daemon` é trocado por uma
 função que devolve a cena. **O interruptor NÃO é clicado**, e é decisão: o gesto
 `hefesto` chama `a09_sistema.ativar_o_servico()`, que roda `systemctl` na
-máquina dela de verdade.
+máquina do usuário de verdade.
 
 Uso (sempre oculto; ela tem UMA tela)::
 
@@ -177,7 +177,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 
 class PonteDeMentira:
-    """Anota, e não fala com o daemon dela."""
+    """Anota, e não fala com o daemon do usuário."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []

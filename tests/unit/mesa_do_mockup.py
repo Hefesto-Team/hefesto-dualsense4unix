@@ -1,4 +1,4 @@
-"""mesa_do_mockup.py — a mesa dela, do jeito que o mockup a declara.
+"""mesa_do_mockup.py — a bancada, do jeito que o mockup a declara.
 
 Transcrição das constantes de
 ``mockup/congelados/2026-08-24-mapa-das-portas.html``:

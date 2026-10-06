@@ -24,7 +24,7 @@ hidraw6 (DualSense físico)   ``crw-------``  exclusivo do daemon
 Nenhum `chmod` humano escolheria com precisão o COMPLEMENTO exato do conjunto
 de regras do Hefesto, nem sobreviveria ao reboot. A frase mandava procurar onde
 não estava — e os quatro nós abertos eram os receptores do TECLADO e do MOUSE
-dela, que por hidraw entregam os relatórios de entrada crus.
+do usuário, que por hidraw entregam os relatórios de entrada crus.
 
 Aqui a função shell REAL é executada (molde de
 ``tests/unit/test_doctor_8bitdo_cascade.py``), contra diretórios de regras
@@ -135,7 +135,7 @@ class TestAVarreduraNomeiaOCulpado:
         assert _varre(d) == ""
 
     def test_arquivo_em_etc_faz_sombra_no_de_usr_lib(self, tmp_path: Path) -> None:
-        """É assim que o udev resolve, e é o que a regra dela exercita HOJE."""
+        """É assim que o udev resolve, e é o que a regra de produto exercita HOJE."""
         etc = tmp_path / "etc"
         lib = tmp_path / "lib"
         etc.mkdir()

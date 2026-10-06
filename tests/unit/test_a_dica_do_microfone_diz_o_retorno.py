@@ -50,7 +50,7 @@ def test_o_interrogacao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
     """MORDIDA: devolva «O 🎙 cala o microfone e apaga a luz vermelha do"""
     if alvo == PUBLICADO and _a_02_esta_em_trabalho():
         pytest.skip("a 02 está declarada em trabalho: o publicado é o desenho "
-                    "de ontem até quem coordena publicar")
+                    "de ontem até a publicação")
     doc = alvo.read_text(encoding="utf-8")
     dicas = _dicas_do_microfone(doc)
     assert dicas, f"{alvo.name}: o «?» do Microfone sumiu — a régua não achou o que ler"

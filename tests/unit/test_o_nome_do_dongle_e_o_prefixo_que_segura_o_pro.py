@@ -20,7 +20,7 @@ cura arrancada não testa nada. Foram QUATRO, uma por cura:
    de `limpar_o_nome`, deixando a limpeza incondicional. Reprovaram QUATRO,
    entre eles `test_o_nome_dela_nao_e_comido_no_segundo_salvamento` —
    `"Nintendo do sofá"` num dongle SEM Pro voltou como `"do sofá"`, e o segundo
-   salvamento gravaria `"do sofá"`, comendo uma palavra que ela escreveu.
+   salvamento gravaria `"do sofá"`, comendo uma palavra que o usuário escreveu.
 
 3. **o teto de bytes — e a régua que não mordia nada.** Troquei `TETO_DE_BYTES`
    de 247 para 4096 e a suíte passou VERDE: os dois testes do teto importavam a
@@ -31,7 +31,7 @@ cura arrancada não testa nada. Foram QUATRO, uma por cura:
    `test_o_corte_come_a_cauda_e_nunca_o_prefixo`. Fica registrado porque o erro
    é o de sempre: teste que itera a mesma lista que deveria conferir.
 
-4. **a identidade por endereço.** Fiz `renomear_o_dongle` montar o caminho pela
+4. **a identidade por endereço.** `renomear_o_dongle` montava o caminho pela
    POSIÇÃO na tabela (`f"/org/bluez/hci{indice_na_tabela}"`, o palpite de que a
    ordem por endereço acompanha o índice) em vez de usar o objeto lido agora.
    Reprovou `test_a_escrita_e_por_endereco_e_nao_pelo_indice_do_boot`: com a

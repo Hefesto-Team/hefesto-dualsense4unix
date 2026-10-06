@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DA 01-JOGAR: lugar sem aparelho não oferece gesto — e o cheio oferece.
 
-A DECISÃO É DELA, 31/08/2026: *um lugar sem aparelho não oferece gesto nenhum*.
+A DECISÃO É DE PRODUTO, 31/08/2026: *um lugar sem aparelho não oferece gesto nenhum*.
 Um chip clicável numa coluna sem controle ou não faz nada — e mente — ou faz
 alguma coisa no controle errado, que é pior.
 
@@ -41,7 +41,7 @@ família de defeito que esta casa pagou onze vezes em 26/08.
    recebendo clique. E não só como o arquivo nasce: a régua faz o que o piloto
    faz no passo ``1c`` (``hefesto_vivo.py:1132``) — vira a marca para ``"sim"``
    **sem recarregar a página** — e cobra que os três chips do P3 e do P4 voltem
-   no mesmo tique. É o estado da mesa DELA, que está com os quatro DualSense
+   no mesmo tique. É o estado da bancada, que está com os quatro DualSense
    agora; o piloto vira marca e escreve campo, ele não materializa widget.
 
 E O PASSO ``1b`` TAMBÉM (``hefesto_vivo.py:1107``): a régua esvazia o P1 ao vivo

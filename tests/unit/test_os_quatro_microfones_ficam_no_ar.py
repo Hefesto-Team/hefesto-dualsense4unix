@@ -394,7 +394,7 @@ def test_a_ponte_de_um_cai_a_luz_dele_apaga_e_o_outro_nao_e_tocado(mesa: Any) ->
 def test_quem_nasce_antes_do_canal_nao_sai_do_ar_esperando_por_ele(mesa: Any) -> None:
     """O segundo controle nasce no ar, e o canal dele sobe segundos depois.
 
-    MEDIDO NO JOURNAL DELA em 22/09/2026, com dois DualSense no rádio: o P2
+    MEDIDO NO JOURNAL DO USUÁRIO em 22/09/2026, com dois DualSense no rádio: o P2
     nasceu no ar às 13:51:53, o laço do canal contou duas faltas e o tirou às
     13:51:56 (`mic_da_mesa_saiu_do_ar_de_fato`), e a fonte dele foi publicada
     às 13:52:01. A palavra foi esquecida, a ponte passou a seguir o ouvinte da

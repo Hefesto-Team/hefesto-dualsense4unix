@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """`daemon.reload` faz o trabalho E responde — as duas coisas.
 
-O DEFEITO ERA VIVO, e apareceu no journal do daemon DELA em 03/09/2026, duas
+O DEFEITO ERA VIVO, e apareceu no journal do daemon do usuário em 03/09/2026, duas
 vezes na mesma noite::
 
     ipc_client_error  err='Object of type function is not JSON serializable'
@@ -15,7 +15,7 @@ teste de esquema pegava) e em RUNTIME recebe uma ``lambda`` que o daemon injeta.
 **O PIOR DESFECHO NÃO É O ERRO — É O TRABALHO FEITO SEM RESPOSTA.**
 ``reload_config`` roda antes do ``return``: a config nova PASSA A VALER, e o
 cliente fica pendurado até o timeout sem saber disso. Quem tentar de novo
-recarrega duas vezes. Medido na máquina dela: `daemon.reload` por socket dá
+recarrega duas vezes. Medido na máquina do usuário: `daemon.reload` por socket dá
 `TimeoutError`, e o daemon cospe um traceback de quarenta linhas.
 
 POR QUE A RÉGUA NÃO LISTA O CAMPO

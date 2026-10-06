@@ -169,7 +169,7 @@ def test_a_regra_dela_para_outro_programa_fica() -> None:
 
 
 def test_recusa_quando_ela_ja_tem_um_freestyle() -> None:
-    """Um `freestyle.json` que não é o de fábrica é DELA: os dois ficam."""
+    """Um `freestyle.json` que não é o de fábrica é DO USUÁRIO: os dois ficam."""
     pasta = profiles_dir(ensure=True)
     bruto = _grava_dela(pasta)
     dela = {"name": "Freestyle", "version": 1, "match": {"type": "any"}, "priority": 7}
@@ -282,7 +282,7 @@ def test_maquina_nova_abre_com_o_freestyle(semeadura_ligada: None) -> None:
 
 
 def test_o_disco_de_23_09_vira_freestyle_numa_carga(semeadura_ligada: None) -> None:
-    """O disco dela hoje: o Personalizado com os quatro controles, ativo na sessão."""
+    """O disco do usuário hoje: o Personalizado com os quatro controles, ativo na sessão."""
     pasta = profiles_dir(ensure=True)
     bruto = _grava_dela(pasta)
     session.save_last_profile("Personalizado")
@@ -353,7 +353,7 @@ def test_o_install_profiles_depois_do_python_nao_traz_um_segundo(
 
 
 def _grava_meu_perfil(pasta: Path, match: dict[str, Any]) -> None:
-    """O disco de antes de 05/09: o padrão dela ainda se chama `meu_perfil`."""
+    """O disco de antes de 05/09: o padrão de produto ainda se chama `meu_perfil`."""
     pasta.mkdir(parents=True, exist_ok=True)
     velho = dict(PERFIL_DELA, name=loader.NOME_ANTIGO_DO_PADRAO, match=match)
     (pasta / loader.ARQUIVO_ANTIGO_DO_PADRAO).write_text(
@@ -412,7 +412,7 @@ def test_o_shell_recusa_a_fabrica_ao_lado_do_nome_antigo(
 def test_o_personalizado_que_ela_renomeou_nao_ganha_um_freestyle_ao_lado(
     semeadura_ligada: None,
 ) -> None:
-    """Ela deu outro nome ao padrão: esse é o perfil de fora do jogo DELA."""
+    """Ela deu outro nome ao padrão: esse é o perfil de fora do jogo do usuário."""
     pasta = profiles_dir(ensure=True)
     _grava_dela(pasta, dict(PERFIL_DELA, name="Sofá", match={"type": "any"}))
 
@@ -445,7 +445,7 @@ def _boot(controle: FakeController, store: StateStore) -> None:
 def test_o_boot_restaura_o_freestyle_com_os_quatro_controles(
     semeadura_ligada: None, transporte: str,
 ) -> None:
-    """O disco dela, uma carga, e o boot: o Freestyle vale, com os quatro."""
+    """O disco do usuário, uma carga, e o boot: o Freestyle vale, com os quatro."""
     pasta = profiles_dir(ensure=True)
     _grava_dela(pasta)
     session.save_last_profile("Personalizado")
@@ -536,7 +536,7 @@ def test_com_o_modo_freestyle_ligado_o_jogo_nao_entra(
 def test_com_o_modo_freestyle_desligado_a_volta_e_a_escolha_dela(
     semeadura_ligada: None,
 ) -> None:
-    """Desligado, o boot abre na escolha dela, o jogo entra e a volta é a ela."""
+    """Desligado, o boot abre na escolha do usuário, o jogo entra e a volta é a ela."""
     assert _cena(travado=False, escolha="Sofá") == ["Sofá", "Sofá",
                                                     "Mullet Mad Jack", "Sofá"]
 

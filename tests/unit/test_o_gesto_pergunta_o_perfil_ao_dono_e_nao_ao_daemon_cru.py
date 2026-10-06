@@ -3,7 +3,7 @@
 A QUEIXA QUE ISTO CURA — 19/09/2026: *"nessa aba o botão máximo economia e
 balanceado voltou a travar de novo"*.  <!-- noqa-acento: citação literal -->
 
-O DEFEITO, MEDIDO NO DIÁRIO DELA (`interface.log`, 19/09 por volta de 01:00)::
+O DEFEITO, MEDIDO NO DIÁRIO DO USUÁRIO (`interface.log`, 19/09 por volta de 01:00)::
 
     [gesto falhou] 05-vibracao.html · forca: não há perfil ativo agora, e a
     força da vibração de um controle é do PERFIL — não de todos.
@@ -22,7 +22,7 @@ a guarda do gesto               `ctx.state["active_profile"]` CRU         None
 
 `nome_do_ativo` resolve as DUAS pernas — o daemon primeiro, o marcador em disco
 depois (`session.json` + `active_profile.txt`). O daemon responde ``None`` em
-toda sessão dela por desenho: PRAGMATA é perfil escopado a janela de jogo, e o
+toda sessão do usuário por desenho: PRAGMATA é perfil escopado a janela de jogo, e o
 `RESTORE-ESCOPO-01` recusa restaurá-lo no boot de propósito
 (`daemon/state_store.PERFIL-ADIADO-POR-JANELA-01`). Não é falha do daemon — é a
 pergunta errada.
@@ -38,7 +38,7 @@ defeito — e foi o que aconteceu três vezes com esta linha.
 
 ONDE ELA MORDE: devolva `str(ctx.state.get("active_profile") or "").strip()` a
 qualquer uma das guardas e o teste da aba correspondente reprova com a frase de
-recusa que ela viu na tela.
+recusa que o usuário viu na tela.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ PERFIL = "Régua Do Gesto"
 def perfil_so_no_disco(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> str:
     """Um perfil que existe no DISCO e que o daemon não conhece.
 
-    É o estado da máquina dela: o marcador de sessão diz o nome, o
+    É o estado da máquina do usuário: o marcador de sessão diz o nome, o
     `daemon.state_full` diz `None`.
     """
     import pacotes.perfil as _perfil

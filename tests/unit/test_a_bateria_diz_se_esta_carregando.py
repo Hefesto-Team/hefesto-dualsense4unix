@@ -1,9 +1,6 @@
 """O estado de carga atravessa do byte até o payload — BATERIA-PARADA-01 (B1).
 
-A QUEIXA, e ela estava certa (26/08/2026):
-
-    *"sinto que o percentual de bateria do controle inclusive nunca é
-    atualizado enquanto o controle tá conectado seja por cabo seja por bt"*
+A QUEIXA, e ela estava certa (26/08/2026)
 
 O que estava congelado não era o número — era a AUSÊNCIA da outra metade. Três
 leituras do daemon vivo com sete segundos entre elas devolveram
@@ -12,9 +9,9 @@ leituras do daemon vivo com sete segundos entre elas devolveram
 o ESTADO**, e "100%" mudo é indistinguível de uma barra travada.
 
 Reconferido na bancada em 06/09/2026, e o aparelho concorda com o enunciado: o
-nó ``status`` do DualSense dela em ``/sys/class/power_supply/`` dizia ``Full``
+nó ``status`` do DualSense do usuário em ``/sys/class/power_supply/`` dizia ``Full``
 com ``capacity=100`` enquanto o produto não tinha campo nenhum para carregar
-essa palavra. (O endereço do controle dela não entra aqui: em ``tests/`` só
+essa palavra. (O endereço do controle do usuário não entra aqui: em ``tests/`` só
 circulam as faixas forjadas da casa — ver ``test_anonimato_de_fixtures.py``. A
 leitura está na entrega, em ``docs/process/agentes/2026-09-06/``, com a
 máscara.)

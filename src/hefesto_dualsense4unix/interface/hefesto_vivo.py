@@ -57,7 +57,7 @@ PRIMEIRA = "01-jogar.html"
 #: errado tinha consequência medida — ela relatou *"delay absurdo em controles"*
 #: olhando a aba 02, onde meio segundo de atraso separa o dedo do desenho.
 #:
-#: O CUSTO FOI MEDIDO ANTES DE BAIXAR, com o daemon dela vivo e dois DualSense
+#: O CUSTO FOI MEDIDO ANTES DE BAIXAR, com o daemon do usuário vivo e dois DualSense
 #:
 TIQUE_MS = 100
 
@@ -329,8 +329,8 @@ BOOTSTRAP = r"""
     // E o `innerHTML` recriaria 56 nós a dez vezes por segundo; este alvo
     // escreve estilo e devolve 0 quando nada mudou, que é o que mantém o
     // contador de pinturas honesto.
-    // NÃO SE PINTA O QUE ESTÁ SOB O DEDO DELA — 09/09/2026, e a queixa é dela:
-    // *"o slicer do brilho tá super estranho"*, *"oscila, aplica e não aplica"*.
+    // NÃO SE PINTA O QUE ESTÁ SOB O DEDO DO USUÁRIO — 09/09/2026, e a queixa é do usuário:
+    // , *"oscila, aplica e não aplica"*.
     //
     // O DEFEITO, medido: o trilho do brilho carrega `data-campo="brilho-pct"`
     // com alvo `valor`, e o tique repinta `el.value` dez vezes por segundo com
@@ -425,7 +425,7 @@ BOOTSTRAP = r"""
     }
     // O ALVO `marcado` — O DÉCIMO, e o único que escreve `el.checked`.
     //
-    // A DECISÃO DELA, 04/09/2026: opção **a**, *décimo alvo `marcado`*. O
+    // A DECISÃO, 04/09/2026: opção **a**, *décimo alvo `marcado`*. O
     // acordeão do alto-falante da aba 02 é um `<input type="checkbox">` em CSS
     // puro, e o estado da saída não tinha como chegar nele: dos nove alvos, o
     // `valor` escreve `el.value` (que num checkbox é a string `"on"`, e não o
@@ -480,7 +480,7 @@ BOOTSTRAP = r"""
       // já montado, e um pedaço de página vazio é ausência de página, não um
       // valor desconhecido a anunciar.
       //
-      // MEDIDO NA ABA LANÇADORES, no mesmo dia em que ela mandou calar os
+      // MEDIDO NA ABA LANÇADORES, no mesmo dia em que o usuário mandou calar os
       // cinco cartões achados: com a frase vazia, os cinco passaram a mostrar
       // um `—` solto no lugar do parágrafo — um travessão anunciando a
       // ausência de uma frase que ela acabara de mandar tirar.
@@ -490,7 +490,7 @@ BOOTSTRAP = r"""
       el.__hefHtml = h;
       return 0;
     }
-    // O ALVO `classe` — o ESTADO, que na tela dela é uma classe e não uma
+    // O ALVO `classe` — o ESTADO, que na tela do usuário é uma classe e não uma
     // palavra. Ele destrava cinco coisas que a página já desenha e o produto
     // não alcançava: qual dos quatro degraus da Vibração está aceso, o rótulo
     // `Máx` do teto, qual botão de jogador acende na Iluminação, o clique do
@@ -624,7 +624,7 @@ BOOTSTRAP = r"""
     // diz que ela não se lê), e `—` é o que o molde escreve num lugar sem dono
     // (`pacotes.TRAVESSAO`). Apagar devolve a borda ao tom neutro da folha de
     // estilo (`var(--plastico, …)`) em vez de deixar a cor do MOCKUP na tela —
-    // regra dela: campo sem informação não mostra nada. Escrever `—` numa
+    // regra de produto: campo sem informação não mostra nada. Escrever `—` numa
     // variável usada em `border` deixaria a declaração inválida no cálculo e a
     // borda sumiria de vez.
     //
@@ -673,7 +673,7 @@ BOOTSTRAP = r"""
       return mudou;
     }
     // O ALVO `atributo` — UM ATRIBUTO DA TAG, e é o que faltava para o desenho
-    // do controle seguir o aparelho. A lei dela, 03/09/2026: *"os svgs do
+    // do controle seguir o aparelho. A lei de produto, 03/09/2026: *"os svgs do
     // dualsense (…) mudam de acordo com o controle identificado no canto
     // superior. É white no p1, mas (…) os svgs não são os que o meu mapa
     // cataloga. Isso tá errado."*
@@ -699,7 +699,7 @@ BOOTSTRAP = r"""
     // escolhida. Sem `data-colorway` nenhuma regra da folha casa, e o desenho
     // cai nos `fill` crus do `ds_limpo.svg`: 62 formas em `#3a3f4b` — um cinza
     // neutro, com o contorno intacto. Não é um SVG quebrado nem invisível: é o
-    // controle SEM identidade, que é exatamente o que a regra dela pede quando
+    // controle SEM identidade, que é exatamente o que a regra de produto pede quando
     // não há informação. Deixar o atributo faria o contrário — manteria na tela
     // o colorway do MOCKUP sobre um aparelho que é outro, que é o defeito que
     // este alvo nasceu para curar.
@@ -747,7 +747,7 @@ BOOTSTRAP = r"""
       }
       const antes = el.getAttribute(nome);
       // COMPARA ANTES DE ESCREVER — A-TELA-SAMBA-01, 06/09/2026, e é a cura do
-      // *"algo ativa o tooltip mas ele se desativa"* que ela escreveu com o
+      // *"algo ativa o tooltip mas ele se desativa"* que o usuário escreveu com o
       // produto aberto.
       //
       // O RAMO ESCREVIA E DEPOIS RELIA, e o comentário acima explica por quê:
@@ -782,7 +782,7 @@ BOOTSTRAP = r"""
     // class="pt">•</span> Desconectado`; o `textContent` dele é igual ao que o
     // pacote manda, e a comparação sozinha o deixava como estava. Numa caixa
     // `flex` os espaços em volta do `<span>` somem, e a tela dizia
-    // `P3•Desconectado` ao lado de um `P1 • Desconectado` — ela viu: *"p1,p2
+    // `P3•Desconectado` ao lado de um `P1 • Desconectado` — o usuário viu: *"p1,p2
     // tão diferentes do p3 e p4"*. Escrever uma vez deixa os quatro com a
     // mesma forma.
     //
@@ -842,7 +842,7 @@ BOOTSTRAP = r"""
   // nó dentro de um cartão: num `[data-controle]` de linhas fixas (grid ou
   // flex), um filho inserido pela ORDEM ocupa uma célula e desloca a coluna
   // inteira — 65 px no desenho da aba 05.
-  // O ESTADO "EM VOO" DO BOTÃO — decisão dela, `09` [03], 04/09/2026: **o botão
+  // O ESTADO "EM VOO" DO BOTÃO — decisão de produto, `09` [03], 04/09/2026: **o botão
   // diz que está trabalhando**, e diz DURANTE a espera, no lugar exato do
   // clique.
   //
@@ -889,7 +889,7 @@ BOOTSTRAP = r"""
   // elementos é a resposta certa nesse caso, e o rótulo guardado é jogado fora
   // junto — senão o mapa cresce a cada gesto, para sempre.
   //
-  // E O POUSO PISCA — 05/09/2026, decisão dela na `03-Q4`, e desde 13/09/2026
+  // E O POUSO PISCA — 05/09/2026, decisão de produto na `03-Q4`, e desde 13/09/2026
   // em DUAS CORES (FRASES-E-DICAS-01). O `certo` chega do `finally` do piloto,
   // que é quem sabe qual dos desfechos aconteceu; o JS não adivinha:
   //
@@ -953,7 +953,7 @@ BOOTSTRAP = r"""
     // faria toda aba parecer inquieta, e a quietude é o que este número mede.
     //
     // ELE É REESCRITO EM TODO TIQUE de propósito: `window.__hef` morre com o
-    // documento, e sem isto a escolha dela sobreviveria no Python e sumiria da
+    // documento, e sem isto a escolha do usuário sobreviveria no Python e sumiria da
     // página na primeira troca de aba — o alvo voltaria a ser vazio sem que
     // nada na tela mudasse.
     if('alvo' in p){ window.__hef.alvoPadrao = p.alvo || ''; }
@@ -979,7 +979,7 @@ BOOTSTRAP = r"""
         //
         // O DEFEITO É VELHO E ESTAVA DORMINDO: até hoje `_fita` devolvia `""`
         // sempre que UM controle não tinha cor — e pelo rádio nenhum tem —,
-        // então o ramo quase nunca corria na mesa dela. Curar a guarda acordou
+        // então o ramo quase nunca corria na bancada. Curar a guarda acordou
         // o contador.
         // E NUNCA COM UM CHIP EM VOO DENTRO — A-TELA-SAMBA-01, 06/09/2026, e é
         // o mesmo cuidado do laço de blocos lá embaixo, aqui no caso mais
@@ -1040,7 +1040,7 @@ BOOTSTRAP = r"""
     // O SEGUNDO CASO É O MAPA DO GABINETE (01/09/2026): as faces e as entradas
     // são as que ELA declarou, e podem ser zero. Enquanto o bloco era estático,
     // a aba mostrava um gabinete de bancada — e os seis botões que mexem no
-    // mapa não podiam ser ligados, porque clicar declararia no disco dela o
+    // mapa não podiam ser ligados, porque clicar declararia no disco do usuário o
     // desenho de um exemplo.
     //
     // TROCA O MIOLO, e não o próprio nó: `outerHTML` no container mataria o
@@ -1056,7 +1056,7 @@ BOOTSTRAP = r"""
     // que já não existe — o `click` nunca completa — e o `hef-em-voo`, que é a
     // única coisa na tela dizendo *"estou trabalhando"*, some com o nó que o
     // vestia. Um gesto lento desta casa leva 9,5 s (`daemon.reload`): são 95
-    // chances de o botão ser arrancado debaixo do dedo dela.
+    // chances de o botão ser arrancado debaixo do dedo do usuário.
     //
     // ADIAR É A RESPOSTA CERTA, e não "trocar só o pedaço que mudou": o HTML do
     // bloco vem pronto do pacote, e casar filho a filho aqui seria escrever um
@@ -1112,18 +1112,18 @@ BOOTSTRAP = r"""
       alvo.__hefBloco = html;
       n += 1;
     }
-    // 0b. O MOLDE QUE CLONA — 19/09/2026, decisão dela: *a lista rola, sem teto*.
+    // 0b. O MOLDE QUE CLONA — 19/09/2026, decisão de produto: *a lista rola, sem teto*.
     //
     // O QUE ISTO CURA, e são DUAS pontas do mesmo defeito, as duas medidas no
     // Check-up da aba Conexões em 19/09 com o Chrome dirigindo a página
     // PUBLICADA:
     //
     //   * a lista que SOBRA some. O desenho tinha cinco blocos e o exame da
-    //     bancada dela devolve sete: dois achados sumiam, e a tira ficava com
+    //     bancada devolve sete: dois achados sumiam, e a tira ficava com
     //     cinco CERTO — a tela dizendo "está tudo bem" com dois achados
     //     abertos escondidos no fim;
     //   * a lista que FALTA mente. Com três achados (medido numa máquina sem a
-    //     bancada dela), os dois blocos que sobravam ficavam com o travessão de
+    //     bancada), os dois blocos que sobravam ficavam com o travessão de
     //     `escrever(el, '')` — a tela INVENTANDO duas linhas.
     //
     // UM TETO MAIOR NÃO RESOLVERIA, e é por isso que a peça é esta: as
@@ -1200,7 +1200,7 @@ BOOTSTRAP = r"""
       for(const el of alvos) n += escrever(el, v);
     }
     // 1b. OS LUGARES VAZIOS ganham a marca do desenho. `data-conectado` e a
-    // classe `off` são o que o gerador escreve nos dois lugares que ela mandou
+    // classe `off` são o que o gerador escreve nos dois lugares que o usuário mandou
     // deixar desconectados — usar as MESMAS marcas é o que faz o produto
     // parecer o desenho, em vez de inventar um terceiro estado.
     for(const pref of (p.vazios || [])){
@@ -1314,7 +1314,7 @@ BOOTSTRAP = r"""
     }, true);
     // E O `input`, QUE É A QUARTA PORTA — ver `manda_do_vivo` logo abaixo. Ela
     // é a única das quatro que NÃO despacha o gesto de `data-hef-gesto`, e a
-    // razão é que ali o gesto grava no disco dela.
+    // razão é que ali o gesto grava no disco do usuário.
     document.addEventListener('input', function(ev){ manda_do_vivo(ev); }, true);
     // A JANELA ESCONDIDA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Quem
     // sabe se a janela está à vista é o WebKit, e ele diz isso por
@@ -1325,7 +1325,7 @@ BOOTSTRAP = r"""
     // TROCAR DE ABA NÃO É ESCONDER. O documento que sai passa a `hidden`
     // antes de morrer, e o `pagehide` vem antes disso: sem esta marca, cada
     // troca de aba escreveria no diário que a janela foi escondida, e a linha
-    // que prova o minimizar na máquina dela não provaria nada. A página nova
+    // que prova o minimizar na máquina do usuário não provaria nada. A página nova
     // diz `vista` assim que nasce; a que volta do cache diz no `pageshow`.
     window.addEventListener('pagehide', function(){ window.__hefSaindo = true; });
     window.addEventListener('pageshow', function(){
@@ -1382,7 +1382,7 @@ BOOTSTRAP = r"""
   // 10-Q4 dela pede o rótulo do jogo *"ao vivo"*, e `input` é o único evento que
   // um campo de texto dispara a cada TECLA. As três portas de hoje despacham o
   // gesto de `data-hef-gesto` — que naquele campo é `editor.jogo`, e ele GRAVA
-  // O PERFIL DELA. Ligar `input` ao mesmo atributo regravaria o `.json` a cada
+  // O PERFIL DO USUÁRIO. Ligar `input` ao mesmo atributo regravaria o `.json` a cada
   // letra digitada.
   //
   // ENTÃO O ENDEREÇO É PRÓPRIO, e é essa a peça inteira: um elemento pode
@@ -1473,7 +1473,7 @@ BOOTSTRAP = r"""
         // `carga["alvo"]` nas abas cuja fita ESCOLHE, e o `pintar` o guarda em
         // `window.__hef.alvoPadrao` (ver a nota do `carga["alvo"]` no `_tique`).
         // No produto, um botão que não mora em coluna de controle nenhuma chega
-        // ao Python com o controle que ela apontou na fita — e isso é DESENHO,
+        // ao Python com o controle que o usuário apontou na fita — e isso é DESENHO,
         // não acidente: *"Esta aba passa a mirar o P2."*
         //
         // O QUE ISSO CUSTAVA, medido pela ONDA5-01-03 em 06/09 com foto: a
@@ -1500,7 +1500,7 @@ BOOTSTRAP = r"""
                        : (window.__hef.alvoPadrao || ''),
         // O VALOR, e ele é o que o `textContent` não alcança: num `<input>` o
         // texto é vazio, e num `<select>` é a lista INTEIRA de opções. Sem
-        // isto, um campo digitado chega ao Python sem o que ela digitou.
+        // isto, um campo digitado chega ao Python sem o que o usuário digitou.
         valor: (('value' in alvo) ? String(alvo.value ?? '') : ''),
         // `selectedOptions` dá o rótulo VISÍVEL da opção escolhida — o que ela
         // leu na tela — enquanto `value` dá a chave do contrato. Os dois vão,
@@ -1661,7 +1661,7 @@ DICA_DA_CASA = r"""
     }
     return false;
   }
-  // JÁ TEM NOME? A conta do HTML-AAM na ordem dela: o que vem ANTES do `title`
+  // JÁ TEM NOME? A conta do HTML-AAM na ordem de produto: o que vem ANTES do `title`
   // é nome; o que vem depois não salva ninguém. O `placeholder` é o caso que
   // decide sozinho — ele vem DEPOIS do `title`, e rotular por `placeholder` é
   // falha conhecida de acessibilidade; então um campo que só tem `placeholder`
@@ -1976,7 +1976,7 @@ DICA_DA_CASA = r"""
 def _com_dono(ctx: pacotes.Contexto) -> list[str]:
     """Os `pN` que têm controle DE VERDADE agora — QUEM-TEM-DONO-01, 03/09/2026.
 
-    NASCEU DE UMA REGRESSÃO MINHA, no mesmo dia. O passo `1c` do piloto (o que
+    NASCEU DE UMA REGRESSÃO, no mesmo dia. O passo `1c` do piloto (o que
     REABRE o cartão de um controle que chega) lia `carga["ocupados"]`, e a
     primeira versão daquela conta era `set(colunas)` — as colunas que a aba
     emitiu. Medido no DOM vivo, com UM controle na bancada: a `03-gatilhos`
@@ -2016,7 +2016,7 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
     """O clique no chip do `Selecionar:` — ele só ESCOLHE, e é todo o contrato.
 
     O QUE ELE NÃO FAZ, e está escrito porque é o risco desta cura: não troca de
-    perfil, não fala com o daemon e não grava no disco dela. O `_ipc` chega e
+    perfil, não fala com o daemon e não grava no disco do usuário. O `_ipc` chega e
     não é usado de propósito — a assinatura é a das dez abas.
 
     O `("*", …)` É O MESMO CORINGA DO RODAPÉ: a fita mora no `topo.html`, o
@@ -2027,8 +2027,7 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
     sobrou é como a tela passa a mostrar um aparelho e a mexer noutro.
 
     E ELE MANDA A PRÓPRIA FRASE, que desde 13/09/2026 vai ao diário da janela e
-    não à tela (TELA-CALADA-01: a tarja de rodapé que a mostrava saiu por pedido
-    dela, *"em todas as abas da interface"*). Na tela, o clique responde pela
+    não à tela (TELA-CALADA-01: a tarja de rodapé que a mostrava saiu por pedido, *"em todas as abas da interface"*). Na tela, o clique responde pela
     piscada (`MS_DA_PISCADA`). O cartão fica de fora de propósito: ver
     `_endereco_do_chip`.
     """
@@ -2064,7 +2063,7 @@ def _a_fita_desta_pagina_escolhe(pagina: str) -> bool:
 
 
 def _pref_escolhido(mesa: list[dict[str, Any]]) -> str:
-    """Que `pref` a fita acende AGORA, traduzido da escolha dela."""
+    """Que `pref` a fita acende AGORA, traduzido da escolha do usuário."""
     if not mesa:
         return "todos"
     se = ESCOLHA_DA_FITA.uniq
@@ -2340,8 +2339,8 @@ class FolgaDoServicoMudo:
 class LeitorDoEstado:
     """O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01, 15/09/2026.
 
-    A QUEIXA DELA, com os dois controles na mesa: *"tem algo muito estranho
-    travando a interface do app. como um todo."*  (noqa-acento: citação dela)
+    A QUEIXA DE USO, com os dois controles na mesa: *"tem algo muito estranho
+    travando a interface do app. como um todo."*  (noqa-acento: citação)
 
     A CAUSA JÁ ESTAVA ESCRITA DENTRO DO PRÓPRIO TIQUE, na A-TELA-SAMBA-01 de
     03/09: *"as DUAS VIAGENS de IPC do começo deste método são SÍNCRONAS — elas
@@ -2567,7 +2566,7 @@ class Piloto:
         dentro, então a janela continua viva enquanto ela escolhe.
 
         COM A JANELA OCULTA NÃO HÁ DIÁLOGO: uma `Gtk.OffscreenWindow` não tem
-        onde pôr um modal, e abrir um sem pai o jogaria NA TELA DELA — que é
+        onde pôr um modal, e abrir um sem pai o jogaria NA TELA DO USUÁRIO — que é
         exatamente o que `--oculta` existe para impedir. Nesse caso devolve
         `None`, e o gesto o lê como "cancelou".
         """
@@ -2791,13 +2790,13 @@ class Piloto:
 
     def _deu_certo_dizendo(self, pagina: str, nome: str, uniq: str,
                            resposta: object = None) -> bool:
-        """O gesto voltou SEM levantar — e agora a tela dela sabe disso.
+        """O gesto voltou SEM levantar — e agora a tela do usuário sabe disso.
 
         **O DEFEITO, e a decisão que o fecha.** Até 04/09/2026 a interface nova
         só falava quando RECUSAVA: um gesto que dava certo imprimia
         `[gesto] … → aplicado` no terminal de quem lançou a janela, e quem clica
         não lê terminal. **Cinco linhas do CSV paravam neste mesmo buraco**, em
-        cinco abas (02, 03, 05, 06 e 09). A decisão dela, no mesmo dia:
+        cinco abas (02, 03, 05, 06 e 09). A decisão de produto, no mesmo dia:
 
             *"No próprio cartão, como a recusa."*   — D-01
 
@@ -2813,8 +2812,8 @@ class Piloto:
         como se ela fechasse a FORMA — os conflitos C-3 e C-6 de
         `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` são dele, não
         dela. Em 05/09 ela respondeu a `03-Q4` vendo as quatro formas lado a
-        lado e escolheu o campo que pisca. **A palavra dela vence a leitura que
-        o PO fez da palavra dela.**
+        lado e escolheu o campo que pisca. **A palavra de produto vence a leitura que
+        o PO fez da palavra de produto.**
 
         E a piscada não é um segundo canal para o mesmo fato: é o mesmo fato num
         sinal mais barato. O cartão passa a dizer só o que tem notícia, e as
@@ -2826,7 +2825,7 @@ class Piloto:
         página nenhuma, e deixá-lo entrar faria o `escrever()` procurar um
         `data-campo="recado"` que não existe.
 
-        E QUANDO NÃO HÁ FRASE, A TELA NÃO FALA — 05/09/2026, decisão dela na
+        E QUANDO NÃO HÁ FRASE, A TELA NÃO FALA — 05/09/2026, decisão de produto na
         `03-Q4`. Até aqui valia uma frase do piloto (*"Pronto."*), e ela tirou
         a palavra nova da tela:
 
@@ -2842,7 +2841,7 @@ class Piloto:
         detalhes"), tem régua própria e não precisa saber que existe recado.
 
         **A METADE DO SUCESSO DA D-01 CADUCOU EM 13/09/2026** — TELA-CALADA-01,
-        pela palavra dela, com a foto do rodapé: *"essas frases de status que
+        pela palavra de produto, com a foto do rodapé: *"essas frases de status que
         aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as
         abas da interface"*. O recado de sucesso chegava por três portas — o
         cartão, as faixas `data-hef-recados` da 01 e da 05, e a aba seguinte —,
@@ -2878,7 +2877,7 @@ class Piloto:
 
 
     def _navegou(self, titulo: str) -> None:
-        """Ela clicou na tira. Aqui isso não pausa nada — é o ponto do piloto."""
+        """O usuário clicou na tira. Aqui isso não pausa nada — é o ponto do piloto."""
         print(f"[navegou] {titulo}")
 
     def _carregou(self, _view: Any, evento: Any) -> None:
@@ -3494,12 +3493,12 @@ class Piloto:
         SÓ OS INÓCUOS, e a lista é curta de propósito: `atualizar` é
         `daemon.reload` e `retomar` é `daemon.resume` num daemon que não está
         pausado. `desligar`, `restaurar-de-fabrica` e `refazer-proton` NÃO
-        entram — uma régua não mexe na máquina dela para provar que sabe clicar.
+        entram — uma régua não mexe na máquina do usuário para provar que sabe clicar.
 
         **E ATÉ 06/09/2026 ESSA FRASE ERA SÓ UMA FRASE.** Este caminho clicava o
         que a bandeira nomeasse, sem consultar `PERIGOSOS` uma única vez — só o
         `--prova-no-aparelho` a consultava. Achado pela `ONDA5-03-02`, que
-        mediu o próprio estrago: o clique dela **gravou no perfil real** da dona
+        mediu o próprio estrago: o clique do usuário **gravou no perfil real** da dona
         (a gravação foi no-op — o valor já era o mesmo desde as 02:46, e nenhum
         arquivo nasceu no `.historico/` — mas a porta estava aberta e ninguém
         sabia). É a terceira vez em quatro dias que o comentário que
@@ -3531,7 +3530,7 @@ class Piloto:
         self.ponte.rodar(script)
 
     def _provar_no_aparelho(self) -> bool:
-        """A PROVA BOTÃO A BOTÃO, no aparelho dela — pedido dela, 01/09/2026."""
+        """A PROVA BOTÃO A BOTÃO, no aparelho do usuário — pedido, 01/09/2026."""
         arquivo = onde.pagina(self.pagina, publicado=True)
         texto = arquivo.read_text(encoding="utf-8")
         da_pagina = regua_do_mockup._gestos_cravados(texto)
@@ -3848,7 +3847,7 @@ def _soltar_as_ondas() -> None:
 
 
 def _json(obj: Any, pagina: str = "") -> str:
-    """Serializa para o WebView — e DENUNCIA o que ela mandou tirar da tela."""
+    """Serializa para o WebView — e DENUNCIA o que o usuário mandou tirar da tela."""
     import json
 
     from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (

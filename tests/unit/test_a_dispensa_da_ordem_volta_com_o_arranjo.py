@@ -1,4 +1,4 @@
-"""A dispensa de uma ordem: cala no arranjo que ela viu, volta quando ele muda."""
+"""A dispensa de uma ordem: cala no arranjo que o usuário viu, volta quando ele muda."""
 from __future__ import annotations
 
 

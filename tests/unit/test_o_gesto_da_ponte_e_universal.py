@@ -116,7 +116,7 @@ async def _apertar(daemon: _Daemon, vezes: int) -> list[str]:
 class TestOGestoSeComportaIgual:
     @pytest.mark.asyncio
     async def test_as_quatro_sequencias_convergem(self) -> None:
-        """Os quatro jogos dela, quatro apertos cada, a MESMA sequência."""
+        """Os quatro jogos do usuário, quatro apertos cada, a MESMA sequência."""
         sequencias: dict[str, list[str]] = {}
         for nome, flavor, carimbo in QUATRO_JOGOS:
             d = _Daemon(flavor)

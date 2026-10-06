@@ -83,7 +83,7 @@ def _bancada(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
 
 
 def _os_dois_perfis() -> list[Profile]:
-    """O disco dela, reduzido ao par que brigou: o jogo e a navegação."""
+    """O disco do usuário, reduzido ao par que brigou: o jogo e a navegação."""
     return [
         _perfil("dont_scream", janela=CLASSE_DO_JOGO, prioridade=97),
         _perfil("navegacao", janela="steam", prioridade=50),

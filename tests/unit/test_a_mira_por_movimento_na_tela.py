@@ -594,7 +594,7 @@ def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
 
 
 def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
-    """O chip grava NO PERFIL daquela peça, e só o que ela mexeu."""
+    """O chip grava NO PERFIL daquela peça, e só o que o usuário mexeu."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -742,7 +742,7 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
 
 
 def test_o_chip_giroscopio_nao_mudou() -> None:
-    """A palavra dela: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro."""
+    """A palavra de produto: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro."""
     for abertura, miolo in _cartoes_da_bancada():
         giro = re.findall(r'<button class="sw[^"]*" data-gesto="sensor" '
                           r'data-sensor="giroscopio" data-campo="giro-ligado"[^>]*>'

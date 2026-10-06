@@ -79,11 +79,11 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 _LISTA() {
   cat <<'TABELA'
 rapido|contrato-ipc|py|scripts/gerar-contrato-ipc.py --check
-# 31/08/2026, decisão dela: este portão passou a cobrir também as planilhas de
+# 31/08/2026, decisão de produto: este portão passou a cobrir também as planilhas de
 # `docs/data/` — o mapa carregava 762 citações `arquivo:linha` e NENHUMA tinha
 # portão. Nasce em zero (nenhuma aponta além do fim hoje), e continua na camada
 # rápida porque o preço foi medido: 33 ms só `docs/protocol/`, 101 ms com o
-# mapa, o caderno e as decisões dela juntos -- 903 citações conferidas.
+# mapa, o caderno e as decisões de produto juntos -- 903 citações conferidas.
 rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
 # E O `src/` NÃO ESTAVA COBERTO — 06/09/2026, achado da A-PALAVRA-MESA-SAI-01.
 # O portão acima varre `docs/` e as planilhas: 2.977 citações em 21 documentos e
@@ -94,13 +94,13 @@ rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
 # furo"*, e tinha. Ele entra na camada COMPLETA porque custa ~60 s: ele abre
 # cada arquivo citado e confere a âncora, não só o número de linhas.
 completo|citacoes-no-codigo|pytest|tests/unit/test_portao_o_par_com_metade_ligada.py
-# NADA-MOCKADO-01, 09/09/2026 — a pergunta dela virou portão: *"não tem nada
+# NADA-MOCKADO-01, 09/09/2026 — a pergunta de produto virou portão: *"não tem nada
 # rodando em sandbox ou mockada, certo?"*. Uma linha do mapa que diz `aciona=sim`
 # está afirmando que o APARELHO faz aquilo; ele exige `provado_por` ou uma
 # ressalva declarada, e trava a dívida onde ela está (36 sem nenhum dos dois, de
 # 104 sem prova). Camada RÁPIDA: lê um CSV, custa milissegundos.
 rapido|nada-mockado|pytest|tests/unit/test_portao_nada_e_afirmado_sem_prova.py
-# A RÉGUA DE PRONTO DELA — CABO-BT-PERFIL-CONTROLE-01, 09/09/2026. A palavra
+# A RÉGUA DE PRONTO DO USUÁRIO — CABO-BT-PERFIL-CONTROLE-01, 09/09/2026. A palavra
 # dela de 08/09: "tudo funcionando por cabo ou bt ou tudo funcionando via perfil
 # e dentro de cada um um setting pra cada controle". Virou régua: toda feature
 # que a TELA oferece responde as quatro perguntas, e a lista de features é LIDA
@@ -113,7 +113,7 @@ rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_r
 # acima leem `*_aciona` ("o Hefesto MEXE nisso?"); esta lê `*_ate_onde_foi`
 # ("até onde a PROVA chegou?"), e a diferença é o critério do primeiro degrau:
 # *tratar MONTOU como «funciona» é a mentira mais cara desta casa*. Como a tela
-# não confessa dívida nossa (ordem dela de 07/09), a falta mora aqui — com
+# não confessa dívida nossa (ordem de 07/09), a falta mora aqui — com
 # CUSTO e com DONA, e os custos NUNCA somados numa frase só. Camada RÁPIDA:
 # 76 ms, e reaproveita as duas réguas donas (a lista de features e a escada).
 rapido|ate-onde-a-prova-chegou|py|scripts/check_ate_onde_a_prova_chegou.py
@@ -138,14 +138,14 @@ rapido|paridade-transporte|py|scripts/check_paridade_transporte.py|@dia
 # reprova para o dado ser atualizado. Sem isso o número vira propaganda no dia
 # seguinte à primeira cura. Camada rápida porque custa 0,4 s.
 rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
-# O DONO DE CADA COMPORTAMENTO — 05/09/2026, e a queixa é dela: *"estamos
+# O DONO DE CADA COMPORTAMENTO — 05/09/2026, e a queixa é do usuário: *"estamos
 # recriando um produto que estava praticamente pronto pro gtk"*. Cinco laudos
 # mediram 410 comportamentos das dez abas; os 50 que decidem estão em
 # `docs/data/donos-de-comportamento.csv` com o endereço do dono. O portão não
 # julga se um código recria — ele impede o LAUDO de envelhecer: endereço morto,
 # cura descosturada, SO-GTK que já migrou, e a dívida declarada, que só desce.
 rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
-# A CATRACA DA ORIGEM — 03/10/2026, a ordem dela de 02/10: *«a cada script novo,
+# A CATRACA DA ORIGEM — 03/10/2026, a ordem de 02/10: *«a cada script novo,
 # cada alteração nova enxugariamos e deixariamos o projeto mais enxuto, porém cada
 # vez mais inteligente e preciso»*. Três números que só descem (caso especial fora
 # do dono do eixo, remendo de sintoma por arquivo, linhas do projeto) sobre o
@@ -153,7 +153,7 @@ rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
 # É portão e não gancho de commit porque o cherry-pick não roda gancho. A mordida
 # é `tests/unit/test_a_catraca_da_origem_morde.py`, na suíte.
 rapido|a-origem|py|scripts/check_a_origem.py|@sempre
-# A DECISÃO TEM PROVA — 06/10/2026, DECISAO-SEM-DONO-01. O registro das decisões dela guardava a
+# A DECISÃO TEM PROVA — 06/10/2026, DECISAO-SEM-DONO-01. O registro das decisões de produto guardava a
 # palavra e parava ali: a decisão de 25/08 sobre o microfone esperou 23 dias e três pedidos. O
 # campo `prova` liga a linha a uma função de teste que cita o id; decisão nova sem prova (ou sem
 # a marca `processo`) reprova nomeada, e o piso desce pelo `--aceitar` e só sobe à mão, no diff.
@@ -164,7 +164,7 @@ rapido|decisao-tem-prova|py|scripts/check_a_decisao_tem_prova.py|docs/data/decis
 # sem chamador: nesse tempo entrou uma rota de saída que escrevia em todo controle conectado sem perguntar
 # o seletor (o brilho das luzes de número). Reprova função de `src/` com fan-out sem escopo, nomeando-a.
 rapido|broadcast-proibido|py|scripts/check_broadcast_proibido.py|src/**
-# NADA NOVO APONTA PARA A JANELA — 06/09/2026, sprint GTK-1. Decisão dela
+# NADA NOVO APONTA PARA A JANELA — 06/09/2026, sprint GTK-1. Decisão de produto
 # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no gtk e
 # não apontar nada mais pra lá mas pro html"*. A janela GTK sai em três sprints
 # (GTK-1 inventário, GTK-2 os leitores do glade, GTK-3 a remoção); enquanto ela
@@ -183,7 +183,7 @@ completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|@sempre
-# O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz
+# O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é de produto: *"sim, faz
 # o portão pro número de série"*. O serial de fábrica identifica a unidade dela
 # tão bem quanto o MAC, e a regra desta casa é sobre ARQUIVO VERSIONADO, não
 # sobre a palavra "MAC".
@@ -209,11 +209,11 @@ rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 completo|mac-por-oui|pytest|tests/unit/test_docs_mac_anonimato.py
 # A TERCEIRA RÉGUA, e ela mede o que as outras duas não podem: fixture de teste
 # tem de usar faixa FORJADA (`aa:bb:cc`), não endereço real podado — a máscara
-# da casa preserva o OUI, e o OUI é identidade de fabricante do aparelho dela.
+# da casa preserva o OUI, e o OUI é identidade de fabricante do aparelho do usuário.
 completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 # O `saida-de-agente` SAIU EM 15/09/2026, junto com o seu insumo. A régua
 # varria `docs/process/agentes/` atrás de glifo que o sanitizador da casa troca
-# por texto; a pasta inteira deixou de ser versionada por ordem dela, e régua
+# por texto; a pasta inteira deixou de ser versionada por ordem de produto, e régua
 # sem insumo dá verde sobre o vazio — que é pior que portão nenhum.
 # O QUE COBRIA O MESMO RISCO E FICA: o `glifos` (`validar-glifos.py`, critério
 # Emoji_Presentation) sobre a árvore versionada, e o gancho de pre-commit, que
@@ -226,12 +226,12 @@ completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 # «NÃO MEDIDO» e reprova, em vez de dar verde. Mede a história que VIAJA, toda vez
 # que alguém roda os portões, porque o gancho de commit-msg não roda em
 # cherry-pick, rebase, merge --no-edit nem sob --no-verify, e esta casa integra
-# leva por cherry-pick. O `.mailmap` nasceu da palavra dela de 15/09/2026:
-# *"o emaillist lá deveria ser o meu e o do andre apenas."*
+# leva por cherry-pick. O `.mailmap` nasceu da palavra de 15/09/2026:
+# **
 rapido|autoria-historia|py|scripts/check_autoria.py historia|@sempre
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
-# rodado por esta lista — só pela camada `suite`, que é de quem coordena e
+# rodado por esta lista — só pela camada `suite`, que é do fecho e
 # roda no fim. Achado pela conferência da frente C2, e a ironia é o ponto.
 completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chamador.py
 # 04/09/2026 — O PORTÃO QUE MEDE O PRÓPRIO INSTRUMENTO. Numa árvore de voo o
@@ -259,7 +259,7 @@ rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|os-quatro-lugares|py|scripts/check_os_quatro_lugares.py
 # 07/09/2026 — O IRMÃO DO DE CIMA, PELO OUTRO LADO. Aquele cobra que os quatro
 # lugares tenham os mesmos ENDEREÇOS; este cobra que o lugar sem aparelho não
-# OFEREÇA gesto nenhum, que é a decisão dela de 31/08/2026. Os dois são
+# OFEREÇA gesto nenhum, que é a decisão de 31/08/2026. Os dois são
 # necessários e nenhum vê o buraco do outro: a 01-jogar tinha os doze endereços
 # certos E três chips clicáveis em cada uma das duas colunas sem controle.
 # POR QUE A REDE DA CASA NÃO BASTAVA: a S-04 da folha (`monta.py:544`) mira
@@ -285,30 +285,30 @@ rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_
 # `python aba04.py`, e foi exatamente essa a folga que a conferência mostrou.
 rapido|gesto-onde-deve-04|pytest|tests/unit/test_a_04_iluminacao_o_gesto_esta_onde_deve.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
-# 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
+# 03/09/2026, a lei de produto: *"cada pessoa tem um dualsense diferente (…) nada
 # hardcoded, trazer tudo que eu já mapeei"*. O irmão acima acha cor congelada
 # em elemento SEM endereço; este acha cor de aparelho cravada mesmo ONDE o
 # endereço existe -- porque um endereço com o alvo errado não alcança a cor.
 # NASCE VERMELHO, e é o ponto: 360 cravados em sete das dez abas, o número de
 # onde as ondas partem. Ele distingue a TABELA dela (a folha com os 28 modelos,
 # que é o mecanismo certo) da ESCOLHA cravada (a folha podada para um só).
-# VERMELHO POR DECISÃO DELA, e não por descuido — 03/09/2026. Ele mede a página
+# VERMELHO POR DECISÃO DE PRODUTO, e não por descuido — 03/09/2026. Ele mede a página
 # PUBLICADA, e a bancada já está em ZERO: `--bancada` devolve 0 plástico, 0
 # colorway, 0 zona nas dez abas (era 503 na manhã deste dia). Os 358 que sobram
-# vivem só no publicado, e publicar é ATO DELA.
+# vivem só no publicado, e publicar é ATO DO USUÁRIO.
 #
-# ELA ESCOLHEU PUBLICAR POR ÚLTIMO, depois do install e dos cliques: *"deixa
+# O USUÁRIO ESCOLHEU PUBLICAR POR ÚLTIMO, depois do install e dos cliques: *"deixa
 # para o fim, depois do install"*. Até lá este portão fica vermelho, e ficar
 # vermelho é o comportamento CERTO — ele está dizendo a verdade sobre a tela
 # que ela vê hoje.
 #
-# NÃO O CALE, e não publique para o silenciar. `--publicar` é a palavra dela, e
+# NÃO O CALE, e não publique para o silenciar. `--publicar` é a palavra de produto, e
 # antecipá-lo entregaria dez abas que ela ainda não olhou.
 rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
 # O `colisao-de-sprints` (15/09/2026) e o `sprints-fechadas` (02/10/2026,
 # A-CASA-SEM-METALINGUAGEM-01) saíram pela mesma razão: liam `docs/process/`,
-# o caderno de quem coordena, que não viaja pelo git. Os dois moram nas
-# ferramentas de quem coordena, fora do repositório.
+# o caderno da casa, que não viaja pelo git. Os dois moram nas
+# ferramentas da casa, fora do repositório.
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
 rapido|glifos|py|scripts/validar-glifos.py --all
@@ -322,10 +322,10 @@ rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
 # de cima medem o desenho do controle; este mede se o cartão da aba 02 ainda
 # cabe no orçamento que `aba02.PARA_O_CARD` declara, e se algum rótulo dele sai
 # cortado. Nasceu com o empilhamento da fileira da saída de som — sem trava, a
-# próxima altura a crescer apareceria na tela dela, não aqui. ~4 s.
+# próxima altura a crescer apareceria na tela do usuário, não aqui. ~4 s.
 rapido|altura-do-cartao|py|scripts/check_a_altura_do_cartao.py
 rapido|regua-de-tela|py|scripts/check_regua_de_tela.py|@sempre
-# A ORDEM DELA, 07/09/2026: *"o layout não informa os nossos defeitos."* Este
+# A ORDEM, 07/09/2026:  Este
 # portão lê as dez páginas dos DOIS lados (bancada e publicado) e todo `Fala`
 # de `src/`, e obriga a DECLARAR toda frase com forma de confissão: de quem é o
 # sujeito, e desde quando. Ele não decide sozinho de propósito — nenhuma
@@ -334,7 +334,7 @@ rapido|regua-de-tela|py|scripts/check_regua_de_tela.py|@sempre
 rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py
 # A MOLDURA — 08/09/2026, e ele nasceu de um buraco entre as duas réguas acima.
 # Elas medem o CORPO das dez páginas; a barra de título é GTK, o `.desktop` é
-# INI e a unit é systemd. *A régua parava na borda da `<body>`, e a tela dela
+# INI e a unit é systemd. *A régua parava na borda da `<body>`, e a tela do usuário
 # não para.* Ela leu "Hefesto / as dez abas, vivas" na barra do produto
 # instalado, e na PRIMEIRA corrida esta régua achou a segunda ocorrência que
 # ninguém tinha visto: a mesma frase na dica do `.desktop`, que a dock mostra
@@ -342,7 +342,7 @@ rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py
 # possui — a forma de confissão do irmão acima e as palavras banidas do
 # `frases_que_ela_baniu`.
 rapido|janela-nao-confessa|py|scripts/check_a_janela_nao_confessa.py
-# A CAIXA ALTA QUE NÃO SIGNIFICA NADA — 11/09/2026, ordem dela: *"Esse tipo de
+# A CAIXA ALTA QUE NÃO SIGNIFICA NADA — 11/09/2026, ordem de produto: *"Esse tipo de
 # coisa não pode se repetir na interface."* Ela leu na MESMA tela `CABO` na fita
 # e `cabo` no cartão logo abaixo. O `CABO` não estava escrito em lugar nenhum:
 # o HTML dizia `cabo` e quem gritava era UMA LINHA DE FOLHA DE ESTILO — por isso
@@ -355,7 +355,7 @@ rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_deco
 # `DualSense4Unix`, com o `S` do DualSense, e `utils/identidade.py` escrevia o
 # `S` em minúscula — 427 linhas de 174 arquivos. A grafia errada TRAVAVA uma
 # cura já medida: a barra da janela nasceu com o nome DIGITADO porque ler do
-# dono poria a grafia errada na tela dela. Duas peneiras, e uma sozinha daria
+# dono poria a grafia errada na tela do usuário. Duas peneiras, e uma sozinha daria
 # verde sobre o defeito da outra — a grafia, e o DONO (a moldura digitando o
 # nome reprova mesmo com a grafia certa). Identificador técnico não se troca:
 # `wm_class`, app-id do Flatpak e os três nós uinput ficam com a grafia velha,
@@ -363,7 +363,7 @@ rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_deco
 # `scripts/aplicar_a_grafia_do_nome.sh`.
 rapido|grafia-do-nome|py|scripts/check_a_grafia_do_nome.py
 rapido|grafia-do-nome-morde|pytest|tests/unit/test_portao_a_grafia_do_nome_morde.py
-# A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01, 20/09/2026, e a ordem é dela:
+# A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01, 20/09/2026, e a ordem é de produto:
 # *"Um Hook que vá facilitando isso seria maravilhoso. Pois organicamente   # noqa-acento: citação literal
 # deixaríamos fácil pra gente e pro outro"*.  # noqa-acento: citação literal
 # Ele não traduz nada e não pede mutirão: impede TRÊS números de subirem, e
@@ -409,7 +409,7 @@ FORA-DO-LOCAL|scripts/banco_de_prova/sonda.sh|06/10/2026, O-FORJA-E-O-BANCO-DE-P
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
 FORA-DO-CI|scripts/check_o_endereco_em_toda_forma.py|27/09/2026, O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01: pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
-FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa ela roda no fecho, por quem coordena e com a máquina livre, depois dos portões (a lista «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
+FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa ela roda no fecho, no fecho e com a máquina livre, depois dos portões (a lista «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
 DIV
 }
 
@@ -474,7 +474,7 @@ _venv_bin() {
   # 1. a venv DESTA árvore, se houver.
   cand+=("$RAIZ/.venv/bin" "$RAIZ/venv/bin")
   # 2. as das outras árvores do mesmo `.git` — TODAS, não só a primeira. Numa
-  #    árvore de agente não há venv (o worktree copia só o que o git rastreia,
+  #    árvore de trabalho não há venv (o worktree copia só o que o git rastreia,
   #    e `.venv/` é ignorado), então é aqui que ela é achada.
   while read -r w; do
     [ -n "$w" ] && cand+=("$w/.venv/bin" "$w/venv/bin")
@@ -554,7 +554,7 @@ echo
 
 # --- O LAR DE MENTIRA DO RUNNER `pytest` -----------------------------------
 #
-# MEDIDO na máquina dela em 21/09/2026, com o daemon VIVO: `bash
+# MEDIDO na máquina do usuário em 21/09/2026, com o daemon VIVO: `bash
 # scripts/portoes.sh` sem argumento fez o portão `casa-sabe` (42 testes)
 # ESCREVER no `~/.config/hefesto-dualsense4unix` real — `controller_masks.json`
 # zerado (78 -> 27 B), o perfil do jogo regravado, e o autoswitch trocou o
@@ -574,7 +574,7 @@ echo
 # dela.
 #
 # PROVADO NOS DOIS SENTIDOS, no mesmo dia: com o HOME real, `rc=1` e quatro
-# arquivos dela mudados; com o lar de mentira, `rc=0` e a casa dela intacta.
+# arquivos dela mudados; com o lar de mentira, `rc=0` e a casa do usuário intacta.
 #
 # O escopo é o runner `pytest` de propósito: é o único que carrega o produto
 # inteiro. Os outros runners leem arquivo e não instanciam o daemon.
@@ -684,9 +684,9 @@ N=${#G_ID[@]}
 
 # --- as vagas ----------------------------------------------------------------
 #
-# O SEMÁFORO DA CASA (`vez-do-pytest.sh`, três vagas divididas com todos os agentes em voo) conta o
+# O SEMÁFORO DA CASA (`vez-do-pytest.sh`, três vagas divididas com todas as frentes em voo) conta o
 # `pytest` de cada portão. Quem já roda DENTRO de uma vaga (o `vez-do-pytest.sh bash scripts/portoes.sh`
-# de um agente) tem o descritor 9 preso a ela, herdado pelos filhos: aí os portões `pytest` não pedem
+# de uma frente) tem o descritor 9 preso a ela, herdado pelos filhos: aí os portões `pytest` não pedem
 # vaga de novo (três corridas de agente, cada uma segurando uma vaga e esperando outra, se travariam
 # para sempre) e rodam um de cada vez dentro da vaga que já têm. Sem o `vez-do-pytest.sh` (o CI, outra
 # máquina) a fila do `pytest` tem três vagas em máquina de oito núcleos ou mais, e uma nas outras.
@@ -764,7 +764,7 @@ _comando_do_portao() {  # índice -> o comando (para `eval`, dentro da raiz)
     # portão da lista só compara `scripts/*`. Portão do CI que não cabe em
     # `scripts/` precisa caber aqui, ou o buraco continua aberto.
     # O `env` com o LAR DE MENTIRA é o que impede este runner de escrever na
-    # casa dela — a razão inteira está no bloco «O LAR DE MENTIRA DO RUNNER
+    # casa do usuário — a razão inteira está no bloco «O LAR DE MENTIRA DO RUNNER
     # `pytest`», acima. Sem ele, este portão altera a configuração de quem está
     # usando o produto no mesmo instante. Em paralelo cada portão leva o SEU lar
     # (`$LAR_DE_MENTIRA/<índice>`): a substituição abaixo põe o índice no caminho
@@ -873,7 +873,7 @@ for ((n = 0; n < N; n++)); do
   # RC=0 NÃO É A MESMA COISA QUE «MEDIU», e a confusão entre as duas é a
   # família de defeito que esta casa mais caçou em 2026. Medido em 20/09/2026,
   # logo depois de o `sprints-fechadas` entrar: numa árvore SEM `docs/process/`
-  # — que é como todo worktree de agente nasce, porque `git worktree add` não
+  # — que é como todo worktree de trabalho nasce, porque `git worktree add` não
   # copia arquivo ignorado — o portão imprimia, certinho, «NÃO MEDIDO: não há
   # docs/process/sprints/ nesta árvore», e esta linha aqui engolia a saída e
   # escrevia `sprints-fechadas ok`. Do lado de quem lê, verde sobre 46 sprints

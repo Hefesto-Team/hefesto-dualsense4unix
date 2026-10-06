@@ -130,7 +130,7 @@ def o_radio_nunca_e_tocado(monkeypatch):
     Rodando a MORDIDA desta régua (arrancar a recusa do cabo do
     `luz_nao_acende`), o caso chegou ao `gesto_de_reconexao.desconectar` de
     verdade e o log da suíte imprimiu `reconexao_ja_estava_fora` com o endereço
-    do controle DELA. Naquele instante nada caiu — o do cabo não estava no rádio
+    do controle do usuário. Naquele instante nada caiu — o do cabo não estava no rádio
     —, mas o caminho estava aberto: a mesma régua, com o controle do rádio na
     lista, teria mandado um `Disconnect` no BlueZ da máquina de quem a roda.
 

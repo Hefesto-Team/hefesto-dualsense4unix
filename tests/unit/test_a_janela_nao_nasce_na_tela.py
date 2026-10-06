@@ -1,4 +1,4 @@
-"""A TRAVA DA TELA DELA — nenhuma janela nasce visível quando o ambiente proíbe."""
+"""A TRAVA DA TELA DO USUÁRIO — nenhuma janela nasce visível quando o ambiente proíbe."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def test_a_trava_le_o_ambiente(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(SEM_JANELA_NA_TELA, "1")
     assert janela_proibida_na_tela() is True, (
         "a trava não viu a variável — se ela lê o ambiente só na importação, "
-        "toda leva de agente volta a abrir janela na tela dela"
+        "toda leva de trabalho volta a abrir janela na tela dela"
     )
 
     monkeypatch.setenv(SEM_JANELA_NA_TELA, "   ")

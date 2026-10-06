@@ -1,4 +1,4 @@
-"""O jogo manda; na ausência dele, o perfil ganha — a decisão dela de 03/10/2026.
+"""O jogo manda; na ausência dele, o perfil ganha — a decisão de 03/10/2026.
 
 *«o certo seria os controles obedecerem quando o jogo manda e na
 ausencia disso o perfil ganha.»* <!-- noqa-acento: citação literal -->
@@ -12,7 +12,7 @@ handle. A regra era o `_campos_do_perfil_locked` (`core/backend_pydualsense.py`)
 consultado no merge, no `set_game_output_for` e no `set_game_trigger_for`, e o
 carimbo do perfil que soltava o gatilho do jogo.
 
-O número do jogador segue do Hefesto, e o gesto dela na interface (a ordem mais
+O número do jogador segue do Hefesto, e o gesto do usuário na interface (a ordem mais
 nova) vale até o jogo pintar de novo. Vale para os quatro controles, os modos
 DualSense e Xbox, cabo e rádio: a regra é do backend, por `uniq`, antes do
 transporte.
@@ -75,7 +75,7 @@ def _controle(
     campos_dela: dict[str, Any] | None = None,
     autoridade: str = "game",
 ) -> tuple[bp.PyDualSenseController, _NoDeLed, SimpleNamespace]:
-    """Controle com o jogo no comando e os campos DELA já carimbados."""
+    """Controle com o jogo no comando e os campos DO USUÁRIO já carimbados."""
     ctl = bp.PyDualSenseController()
     handle = _handle()
     no = _NoDeLed()
@@ -193,7 +193,7 @@ class TestOQueNaoTemDonoContinuaSendoDoJogo:
 
 
 class TestOGestoDelaNoMeioDoJogo:
-    """O gesto dela na interface é a ordem mais nova: vale até o jogo pintar de novo."""
+    """O gesto do usuário na interface é a ordem mais nova: vale até o jogo pintar de novo."""
 
     def test_a_cor_que_ela_escolhe_agora_vence_e_o_jogo_que_repinta_volta(self) -> None:
         """MORDIDA: o gesto sem soltar a camada do jogo e a cor dela não aparece."""
@@ -235,7 +235,7 @@ EFEITO_DO_PERFIL = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
 
 
 class TestPerfilAteOJogoProvar:
-    """Decisão dela de 04/10/2026 ~00h55: o «sem efeito» é ausência até o jogo provar."""
+    """Decisão de 04/10/2026 ~00h55: o «sem efeito» é ausência até o jogo provar."""
 
     @pytest.mark.parametrize(
         "sem_efeito", [SEM_EFEITO, SEM_EFEITO_OFICIAL, RIGIDO_SEM_FORCA]

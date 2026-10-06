@@ -15,7 +15,7 @@ nenhuma janela aberta, nenhum byte escrito:
 
 A aba Perfis está certa e sozinha: a cura é da PERFIL-ATUAL-01 (10/08), e o
 comentário dela já nomeava o caso — *"não é o `active_profile` do daemon
-quando ele está vazio, que é o caso VIVO da máquina dela"*. As outras três
+quando ele está vazio, que é o caso VIVO da máquina do usuário"*. As outras três
 nunca receberam essa cura.
 
 **A distinção que a tela precisa carregar**, e que não existia em lugar nenhum
@@ -48,7 +48,7 @@ DAEMON_SEM_NOME: dict[str, Any] = {"active_profile": None, "freestyle_ligado": T
 
 @pytest.fixture
 def marcador_no_disco(monkeypatch: pytest.MonkeyPatch) -> str:
-    """O `active_profile.txt` dela, sem tocar no disco dela."""
+    """O `active_profile.txt` dela, sem tocar no disco do usuário."""
     monkeypatch.setattr(pa, "perfil_que_ela_ativou", lambda: "Sackboy")
     return "Sackboy"
 
@@ -70,7 +70,7 @@ class TestODonoResponde:
     def test_o_daemon_sem_nome_cai_no_disco_e_o_disco_responde(
         self, marcador_no_disco: str
     ) -> None:
-        """MORDE o P1: é o caso VIVO da máquina dela."""
+        """MORDE o P1: é o caso VIVO da máquina do usuário."""
         vale = pa.perfil_que_esta_valendo(DAEMON_SEM_NOME)
         assert vale.nome == "Sackboy"
         assert vale.fonte == "disco", (

@@ -10,7 +10,7 @@ deixou girando. Sem ela, cada report de keepalive matava a vibração alheia.
 
 POR QUE ELE EXISTE, e o que ele NÃO prova
 -----------------------------------------
-Em 11/08/2026, com quatro DualSense na mesa dela (dois no cabo, dois no rádio),
+Em 11/08/2026, com quatro DualSense na bancada (dois no cabo, dois no rádio),
 o sintoma que esta cura previne foi medido de novo, com variável única e ida e
 volta: com o daemon VIVO, 40 s de força-feedback por evdev produziram um único
 pulso no controle do rádio e NADA no do cabo; com o daemon PARADO, os mesmos 40 s

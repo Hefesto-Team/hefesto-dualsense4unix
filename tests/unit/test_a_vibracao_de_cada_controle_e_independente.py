@@ -1,8 +1,6 @@
 """A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01 — o serviço e a aba.
 
-Ela, 03/10/2026, validando a leva 1: *«vibração e háptico é por cada controle e
-precisam funcionar em independente. hoje se eu clico em um o outro controle para
-de ter o efeito.»* O serviço guardava UM par fixado para a mesa inteira
+Ela, 03/10/2026, validando a leva 1:  O serviço guardava UM par fixado para a mesa inteira
 (`rumble_active`), e a aba mirava o serviço inteiro no controle clicado
 (`controller.target.set`): o «Testar» do P2 abandonava o P1.
 

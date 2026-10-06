@@ -20,7 +20,7 @@ sempre no lar de mentira.
 O DAEMON PODE ESTAR DESLIGADO, E ISSO NÃO IMPEDE NADA
 -----------------------------------------------------
 `--duble` lê um `state_full` de arquivo em vez de perguntar ao daemon: nenhum
-byte vai ao aparelho, nenhum `/sys` é lido, e nenhum perfil dela é escrito.
+byte vai ao aparelho, nenhum `/sys` é lido, e nenhum perfil do usuário é escrito.
 """
 from __future__ import annotations
 

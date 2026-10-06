@@ -13,7 +13,7 @@ O FATO que este arquivo inteiro defende, medido nesta bancada em 01/08/2026::
     0
 
 Os dois tocadores aceitam sink inexistente, saem com ZERO e tocam no sink
-PADRÃO. Com o padrão dela no HDMI, a "confirmação do alto-falante do controle"
+PADRÃO. Com o padrão de produto no HDMI, a "confirmação do alto-falante do controle"
 sairia pela televisão. Por isso a guarda da lista viva de sinks
 (:func:`audio_saida.tocar_confirmacao`) é a cura central, e há um teste só
 para ela.
@@ -258,7 +258,7 @@ def test_sem_arquivo_de_som_recusa_com_recado() -> None:
 
 
 def test_os_dois_silencios_de_proposito_nao_viram_recado() -> None:
-    """Nem todo "não tocou" é falha — e a tela não pode acusar escolha dela."""
+    """Nem todo "não tocou" é falha — e a tela não pode acusar escolha do usuário."""
     assert RECADOS[MOTIVO_DESLIGADO] == ""
     assert RECADOS[MOTIVO_OCUPADO] == ""
     assert RECADOS[MOTIVO_TOCOU] == ""

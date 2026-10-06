@@ -42,7 +42,7 @@ decodifica direto para o número do jogador que o APARELHO está mostrando:
 Isso transforma "olhar o controle com o olho e contar as luzinhas" numa
 **medição**, e é como este instrumento enxerga, sem pedir nada a ninguém, a
 divergência entre o número que o daemon diz e o desenho que ele de fato
-escreve — o defeito medido em 15/08/2026, que outro agente está curando em
+escreve — o defeito medido em 15/08/2026, que outra frente está curando em
 `src/`. Aqui ele só é OBSERVADO; este instrumento não conserta nada.
 
 O ENSAIO DO APERTO: FÍSICO ↔ PAD ↔ CARTÃO (`--apertar`)
@@ -77,7 +77,7 @@ troca de botão ligada, os dois diferem.
 
 O LIMITE, dito também na saída: o ensaio prova o canal que a grade lê, não a
 pintura. Ele não sabe se a aba 02 está na tela; quem prova a pintura são as
-réguas da aba e o olho dela.
+réguas da aba e o olho de quem confere.
 
 O RC do `--apertar`: 2 com uma FALHA, 3 com nada medido (sem aperto
 testemunhado, só apertos curtos, a tela que não respondeu, ou a tela que não

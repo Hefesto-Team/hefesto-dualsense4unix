@@ -1,4 +1,4 @@
-"""A coluna "Ajuste próprio" da aba Perfis acende por CLASSE, e com o dado DELA.
+"""A coluna "Ajuste próprio" da aba Perfis acende por CLASSE, e com o dado DO USUÁRIO.
 
 **O QUE ESTAVA ERRADO, e é a tabela ``Controle / Ajuste próprio / ID da
 peça``.** Cada linha tem um ``<span class="gr">`` por seção que o perfil sabe
@@ -112,7 +112,7 @@ def _perfil(**overrides: Any) -> Any:
 
 @pytest.fixture(autouse=True)
 def _lar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O perfil da régua no lugar da pasta dela, e a resposta da página LIMPA."""
+    """O perfil da régua no lugar da pasta do usuário, e a resposta da página LIMPA."""
     from hefesto_dualsense4unix.profiles import loader
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)

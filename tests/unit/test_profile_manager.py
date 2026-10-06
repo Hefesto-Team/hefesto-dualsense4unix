@@ -619,7 +619,7 @@ def _mk_profile_com_mic(
 
 
 def test_ativar_perfil_com_mic_aplica_volume(isolated_profiles_dir: Path):
-    """O pedido dela inteiro: *"temos que salvar isso no perfil sempre"*."""
+    """O pedido inteiro."""
     save_profile(_mk_profile_com_mic("gravando", volume=70))
     espiao = _MicEspiao()
     manager = ProfileManager(
@@ -693,7 +693,7 @@ def _mk_profile_com_override(name: str = "vitoria") -> Profile:
 
 
 def test_activate_aplica_override_so_no_alvo(isolated_profiles_dir: Path):
-    """O pedido dela aplicado: ativar o perfil pinta SÓ o controle do"""
+    """O pedido aplicado: ativar o perfil pinta SÓ o controle do"""
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
     save_profile(_mk_profile_com_override("vitoria"))

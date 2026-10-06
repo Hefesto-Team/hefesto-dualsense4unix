@@ -39,7 +39,7 @@ Regras de ouro (invariante "duplicado > zero controles"):
   - A lease é do APARELHO, e não do nome (29/09/2026): ela guarda o pai HID
     do nó no pedido, e o nome cujo pai mudou ou sumiu sai do rastreio sem
     tocar no fs (`_podar_o_que_saiu`). O `0600` do aparelho que saiu não
-    existe mais, e o aparelho que herdou o nome não é dela.
+    existe mais, e o aparelho que herdou o nome não é do usuário.
   - O validador SÓ aceita hidraw cujo pai HID imediato tem HID_ID de DualSense
     físico (054c:0ce6, ou o Edge 054c:0df2, em USB 0003 ou BT 0005). O NOSSO
     vpad também anuncia 0df2, e é REJEITADO pela topologia e pela identidade
@@ -1394,7 +1394,7 @@ class BrokerState:
         ExecStopPost, baseline do próximo start).
 
         O-NO-NASCE-FECHADO-01: são DUAS leases agora, e as duas morrem aqui —
-        o que a conexão escondeu e o que ela mandou manter ABERTO. O destino
+        o que a conexão escondeu e o que o usuário mandou manter ABERTO. O destino
         de cada nó é o `_repouso`, não mais o restore incondicional: no mundo
         em que o nó nasce fechado, abrir tudo no EOF seria entregar o físico à
         Steam exatamente no instante em que o daemon morreu.
@@ -1509,7 +1509,7 @@ def physical_nodes_exposure(
 
     Espelho read-only de `restore_all_physical` (mesma varredura, mesmo
     validador, mesmo critério de exposição), sem root, sem mutar nada e sem
-    falar com o broker — quem chama roda como a usuária, e é a permissão DELA
+    falar com o broker — quem chama roda como a usuária, e é a permissão DO USUÁRIO
     que decide. Nunca levanta: sysfs ilegível devolve `{}`.
     """
     fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)

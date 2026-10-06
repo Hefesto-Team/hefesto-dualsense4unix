@@ -1,12 +1,12 @@
-"""O-BRILHO-DAS-LUZES-DE-NUMERO-01 — Fraco, Médio e Forte, do disco dela ao BIT.
+"""O-BRILHO-DAS-LUZES-DE-NUMERO-01 — Fraco, Médio e Forte, do disco do usuário ao BIT.
 
-A DECISÃO É DELA, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
-*"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*. A razão que ela
+A DECISÃO É DE PRODUTO, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
+*"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*. A razão que o usuário
 escolheu: quem enxerga pouco não tinha como aumentar, e quem se incomoda com
 luz não tinha como escolher.
 
 O QUE O APARELHO FAZ JÁ ESTAVA MEDIDO (BRILHO-DE-HARDWARE-01, 09/09/2026, o
-olho dela, os dois transportes): o `common[42]` muda as cinco lâmpadas de
+olho de quem confere, os dois transportes): o `common[42]` muda as cinco lâmpadas de
 numeração em três degraus (0 alto · 1 médio · 2 baixo), e SÓ com o `flag2` bit0
 (`SET_PLAYER_LED_BRIGHTNESS`) ligado. O que esta régua prova é o PRODUTO: que o
 report que ele monta para cada controle leva o bit e o degrau certos.
@@ -19,7 +19,7 @@ o `flag2` e o `common[42]` — e, no cabo sem nó de LED, o fluxo que o
 `report_thread` mandaria (`_build_common`). O nó de LED do kernel é um dublê
 que guarda o número: ele é 0/1 por lâmpada e não carrega brilho nenhum.
 
-A MATRIZ (a regra dela: nunca só um modo, uma rota, um transporte ou o P1):
+A MATRIZ (a regra de produto: nunca só um modo, uma rota, um transporte ou o P1):
 
 * P1 a P4 na mesma mesa;
 * USB e BT;
@@ -443,7 +443,7 @@ class _PonteDeMentira:
 
 
 def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
-    """A pílula «Forte» do P3: o disco dela recebe o Forte SÓ no P3."""
+    """A pílula «Forte» do P3: o disco do usuário recebe o Forte SÓ no P3."""
     import json
 
     import pacotes

@@ -79,7 +79,7 @@ def _lock_path(path: Path) -> Path:
 # FIX-PACKAGING-SEED-PARITY-01: semeadura em RUNTIME dos presets default.
 SEED_MARKER_NAME = ".seeded_presets"
 
-# Decisão dela, literal: *"Meu_perfil como perfil default nao deveria existir.  noqa-acento
+# Decisão de produto, literal: *"Meu_perfil como perfil default nao deveria existir.  noqa-acento
 # em 05/09: 33 perfis, e SÓ DOIS são catch-all (`fallback` prio 0 e
 NOME_DO_PADRAO = "Freestyle"
 ARQUIVO_DO_PADRAO = "freestyle.json"
@@ -273,7 +273,7 @@ _PERSONALIZADO_VIROU_FREESTYLE_MARKER = ".personalizado_virou_freestyle"
 
 
 def _o_slot_dela_tem_nome_antigo(directory: Path) -> bool:
-    """O padrão dela ainda mora sob `meu_perfil.json` ou `personalizado.json`?"""
+    """O padrão de produto ainda mora sob `meu_perfil.json` ou `personalizado.json`?"""
     return any((directory / nome).exists()
                for nome in (ARQUIVO_ANTIGO_DO_PADRAO, ARQUIVO_DO_PERSONALIZADO))
 
@@ -741,8 +741,8 @@ def _classes_de_jogo_do_match(dados: dict[str, object]) -> list[str] | None:
 
     None em todo o resto — `type` que não é `criteria`, mais de uma classe,
     classe que não é `steam_app_<n>`, ou qualquer outro campo de critério
-    preenchido. Um perfil com `process_name` junto é regra que ela escreveu, e
-    enxugar o que ela escreveu é o oposto do pedido.
+    preenchido. Um perfil com `process_name` junto é regra que o usuário escreveu, e
+    enxugar o que o usuário escreveu é o oposto do pedido.
     """
     match = dados.get("match")
     if not isinstance(match, dict) or match.get("type") != "criteria":
@@ -1103,7 +1103,7 @@ def classes_de_jogo_da_marca(dest_dir: Path | None = None) -> list[str]:
 
 
 def perfis_de_jogo_semeados(dest_dir: Path | None = None) -> dict[str, str]:
-    """``{identidade: arquivo}`` do que o PRODUTO criou — nunca do que é dela."""
+    """``{identidade: arquivo}`` do que o PRODUTO criou — nunca do que é do usuário."""
     directory = dest_dir if dest_dir is not None else profiles_dir()
     return {
         identidade: arquivo
@@ -1199,7 +1199,7 @@ def _classes_do_perfil(jogo: JogoLocal) -> list[str]:
 
 
 def _perfil_do_jogo(jogo: JogoLocal) -> Profile:
-    """O perfil que nasce para um jogo — e SÓ o que o pedido dela manda."""
+    """O perfil que nasce para um jogo — e SÓ o que o pedido manda."""
     return Profile(
         name=jogo.nome,
         match=MatchCriteria(window_class=_classes_do_perfil(jogo)),
@@ -1435,11 +1435,11 @@ def reapontar_perfis_com_chave_de_executavel(
 ) -> tuple[str, ...]:
     """Conserta os perfis que nasceram com o basename do `.exe` como janela.
 
-    **A QUEIXA DELA, 21/09/2026:** *"GUARDIÃES DA GALAXIA ABERTO E AO INVÉS DE
+    **A QUEIXA, 21/09/2026:** *"GUARDIÃES DA GALAXIA ABERTO E AO INVÉS DE
     IDENTIFICAR ID DO JOGO AUTOMATICAMENTE COMO É NA STEAM NÃO OCORRRE ISSO E
     POR CONSEQUENCIA O HEFESTO NÃO É IDENTIFICADO E NÃO FUNCIONA LÁ."*
 
-    O perfil dela tinha ``window_class: ["gotg.exe"]`` — a derivação que a
+    O perfil do usuário tinha ``window_class: ["gotg.exe"]`` — a derivação que a
     LANCADOR-AGNOSTICO-01 derrubou. A janela do jogo anuncia
     ``steam_app_1088850``, e a regra nunca casava: nenhum perfil ativava e
     nenhuma feature chegava ao jogo.
@@ -1926,7 +1926,7 @@ def restaurar_do_historico(
 
     PERFIL-SEM-RASTRO-01. Sem `carimbo`, restaura a MAIS RECENTE — que é a
     versão de antes da última gravação, e portanto a resposta certa para
-    "desfaça o que a janela acabou de fazer com meu perfil".
+    .
 
     Escreve os BYTES ORIGINAIS, não uma reserialização: a restauração tem de
     ser idêntica ao que foi guardado, inclusive na formatação, senão comparar

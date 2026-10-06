@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO ELEITOR: ele não pode eleger o que a régua ao lado proíbe.
 
-O DEFEITO, medido em 01/09/2026 no log do `install.sh` da máquina dela:
+O DEFEITO, medido em 01/09/2026 no log do `install.sh` da máquina do usuário:
 
     [wp-fix] fonte padrão reeleita para …DualSense…iec958-stereo
              (porta usável, critério do doctor)
@@ -297,7 +297,7 @@ def _rodar_a_consulta(tmp_path: pathlib.Path, curta: str, funcao: str) -> str:
 
 
 def test_so_os_controles_na_maquina_nao_ha_outra_captura(tmp_path) -> None:
-    """A mesa dela: o microfone do cabo e o canal do rádio, e nada mais."""
+    """A bancada: o microfone do cabo e o canal do rádio, e nada mais."""
     curta = (
         f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
         f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"

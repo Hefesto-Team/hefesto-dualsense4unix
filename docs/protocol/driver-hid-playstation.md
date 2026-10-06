@@ -288,7 +288,7 @@ lista inteira do DualSense está em `hid-playstation.c:140-154`:
 | **feature** | **`0xF6`** | **não existe no fonte** | LIDO NO FONTE |
 
 Os oito degraus e o `0xF6` **são declarados pelo aparelho** — LIDO NO DESCRITOR,
-nos quatro DualSense dela, por rádio. O silêncio é do driver, não do controle.
+nos quatro DualSense do usuário, por rádio. O silêncio é do driver, não do controle.
 
 **O que o driver faz com um ID que não conhece, e são dois casos opostos:**
 
@@ -422,7 +422,7 @@ ignora os campos"*. **Para os dois bytes de motor isso é falso, e está medido 
 aparelho** — ver a
 [canônica do DualSense](dualsense-referencia-canonica.md), §2, *"Os BITS de
 vibração não são porteiro dos BYTES de motor"* (ensaio
-`keepalive-premissa-troca-de-lado`, com o olho dela). Logo:
+`keepalive-premissa-troca-de-lado`, com o olho de quem confere). Logo:
 
 | bloco apagado pela atribuição | o que se espera hoje |
 |---|---|
@@ -596,7 +596,7 @@ explicando a intenção do console), e a linha da canônica deve ganhar sua nota
 datada.** O que isto ainda **não** prova é o comportamento do console PS5 —
 prova o que o kernel Linux manda ao aparelho. Se algum dia alguém quiser a
 verdade do console, isso continua sendo uma observação de aparelho, e continua
-sendo do olho dela.
+sendo do olho de quem confere.
 
 ### Quem escolhe o número, e por que ele não é o número do jogo
 
@@ -848,7 +848,7 @@ Três leituras honestas:
 > * o p05 **teimosamente 1255 us** de TODAS as janelas — o número que a leitura
 >   2 chama de "instantâneo dentro da rajada" — é 797 Hz, que é exatamente o
 >   orçamento do adaptador aparecendo por baixo;
-> * e 392,4 é **metade** de ~800. **MEDIDO em 23/08 na mesa dela:** o adaptador
+> * e 392,4 é **metade** de ~800. **MEDIDO em 23/08 na bancada:** o adaptador
 >   `ac:a7:f1:00:00:41` hospeda **dois** controles, e os outros dois hospedam
 >   **um** cada (contagem por `HID_PHYS` inteiro; truncar no OUI funde os dois
 >   adaptadores desse fabricante e produz a distribuição errada).

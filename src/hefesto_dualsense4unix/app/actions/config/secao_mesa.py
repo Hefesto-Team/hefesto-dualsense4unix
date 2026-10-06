@@ -45,7 +45,7 @@ de tela: o rótulo, a cor da palavra e o selo de procedência.
 A COLUNA "O QUE É" É LIDA, E ELA SÓ CORRIGE (22/08/2026)
 ---------------------------------------------------------
 
-Decisão dela: *"classifica sozinho, você só corrige"*. Até aqui a coluna
+ Até aqui a coluna
 oferecia SETE botões por linha e perguntava à mão o que o kernel já responde:
 `bInterfaceClass/SubClass/Protocol` da interface 0 distingue mouse de teclado
 (`03/01/02` contra `03/01/01`) e Bluetooth de "sem fio" (`e0/01/01`). Quem lê
@@ -59,7 +59,7 @@ A ordem de precedência tem três degraus, e ela é o desenho:
 2. **o que o kernel leu vence o botão vazio** — a linha nasce preenchida, com
    o selo `(lido)`, e o seletor só aparece se ela clicar em "Corrigir";
 3. **quando ninguém sabe** — classe `ff`, em que o fabricante declinou de
-   classificar — a linha nasce com o seletor aberto e o `▲`. Na bancada dela,
+   classificar — a linha nasce com o seletor aberto e o `▲`. Na bancada,
    das quatro linhas de rádio vizinho, só UMA cai aqui.
 
 A junção entre as duas leituras é o `no` — o caminho real no sysfs, a mesma
@@ -69,7 +69,7 @@ declarou e que se repete quando há duas unidades do mesmo aparelho.
 O NOME DE CADA ADAPTADOR (22/08/2026)
 --------------------------------------
 
-Decisão dela: *"você escreve, o produto protege o prefixo"*. Três adaptadores
+ Três adaptadores
 `2357:0604` idênticos no barramento, e a única coisa que os separa é o BD
 Address — que não é nome. Quem lê e escreve o `org.bluez.Adapter1.Alias` é
 `integrations/apelido_do_dongle`, o segundo módulo que estava sem consumidor.
@@ -78,7 +78,7 @@ Duas coisas desta tela dependem dele, e as duas juntas são a razão de ele ser
 lido aqui e não em outro lugar:
 
 * a coluna **"Nome"** da tabela de adaptadores, que é um campo livre. O que a
-  tela mostra é o nome DELA, limpo: o prefixo `Nintendo` que segura o Pro
+  tela mostra é o nome DO USUÁRIO, limpo: o prefixo `Nintendo` que segura o Pro
   Controller fora do sniff frágil é costurado por baixo, e ela nunca precisa
   saber que existe;
 * o **rótulo do medidor**, que passa a dizer `Rádio em uso · Sala` em vez de um
@@ -107,8 +107,8 @@ cada uma tem o "porquê" inteiro junto da constante que a carrega:
 3. **a porta da calibração.** ``interface/calibracao_das_entradas.py`` nasceu
    inteira na leva 1 e nada a abria (:meth:`_PainelDaMesa._abrir_a_calibracao`).
 
-Todo texto novo delas está marcado ``PROVISÓRIO — decisão dela``, e a prova de
-tela não fechou: a palavra final é dela.
+Todo texto novo delas está marcado ``PROVISÓRIO — decisão de produto``, e a prova de
+tela não fechou: a palavra final é do usuário.
 
 **O nome grava NA HORA**, e a frase ao lado do campo diz isso. As três
 declarações desta seção esperam o "Aplicar" do rodapé porque moram no

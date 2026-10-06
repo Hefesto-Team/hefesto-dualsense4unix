@@ -159,7 +159,7 @@ def test_nenhum_modulo_le_a_arvore_real_do_processo() -> None:
         f"{len(culpados)} leitura(s) da árvore real `{PROCESSO}/`:\n  "
         + "\n  ".join(culpados)
         + "\n\nEssa pasta é `.gitignore:178` — ela não viaja no clone nem na "
-        "worktree de agente. O que uma régua lê mora em `docs/method/`. Se o "
+        "worktree de trabalho. O que uma régua lê mora em `docs/method/`. Se o "
         "que você está lendo é PROCESSO mesmo (sprint, painel, colisão), "
         "declare o módulo em `LEITORES_DE_PROCESSO` com a razão.")
 

@@ -157,8 +157,9 @@ o mesmo instrumento na mesma duração::
             (o contador de bordas do daemon subindo ~28/s, sozinho)
     DEPOIS  UMA permanência — o bit PARADO por 152 s, zero bordas no journal
 
-Com o microfone no ar e ela falando, a palavra dela:  # (noqa-acento: a citação literal vem abaixo)
-*"nao ficou maluco e nao desligou"*.  # (noqa-acento: verbo/citação)
+Com o microfone no ar e ela falando, a palavra de produto:  # (noqa-acento: a citação literal vem
+abaixo)
+.  # (noqa-acento: verbo/citação)
 O que restava provar era a queda do número, e ela caiu.
 
 O que a seção media, e continua valendo como medição  # (noqa-acento: verbo/citação)
@@ -552,7 +553,7 @@ def versao_libopus() -> str | None:
 #: `systemctl --user status wireplumber`, não o DualSense.
 _MODULO_PIPE_SOURCE = "module-pipe-source"
 
-#: MEDIDO NA MÁQUINA DELA EM 03/09/2026, com um DualSense no cabo e a webcam
+#: MEDIDO NA MÁQUINA DO USUÁRIO EM 03/09/2026, com um DualSense no cabo e a webcam
 #:     alsa_output…DualSense…analog-surround-40.monitor     1109
 #:     alsa_input…DualSense…iec958-stereo   (o CABO)        1500   ← o drop-in 51
 #: O QUE ISTO **NÃO** DECIDE: quem, entre dois DualSense, é o microfone padrão.
@@ -686,7 +687,7 @@ def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
     vem entre aspas duplas — e este argumento tem três propriedades separadas
     por espaço, então só a primeira chegava, pela metade.
 
-    MEDIDO na máquina dela em 06/09/2026 (PipeWire 1.6.8), carregando os dois
+    MEDIDO na máquina do usuário em 06/09/2026 (PipeWire 1.6.8), carregando os dois
     nós lado a lado e LENDO O NÓ com `pactl list sources`::
 
         A) como a ponte montava até hoje (sem aspas):
@@ -778,7 +779,7 @@ class SourceVirtualPipeWire:
         ficou no SERVIDOR quando o processo anterior morreu (ou quando quem
         subiu foi outro: o daemon e o `mic bt` do CLI publicam o mesmo nome).
 
-        **Medido na máquina dela em 07/09/2026, com um DualSense no rádio**, e o
+        **Medido na máquina do usuário em 07/09/2026, com um DualSense no rádio**, e o
         modo de falha é o pior que existe — silêncio sem uma linha de log::
 
             módulo órfão de pé  →  escritas ok: 8 · descartes: 1342 · 100,00% de zeros
@@ -1036,7 +1037,7 @@ class PonteMicBluetooth:
         )
 
     def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
-        """A palavra DELA sobre este microfone. `None` devolve a decisão ao ouvinte."""
+        """A palavra de produto sobre este microfone. `None` devolve a decisão ao ouvinte."""
         self._pedido_dela = ligado
 
     def iniciar(self) -> bool:
@@ -1207,7 +1208,7 @@ class PonteMicBluetooth:
         )
 
     def _talvez_seguir_a_source(self, agora: float | None = None) -> bool | None:
-        """O 0x32 segue O OUVINTE **OU** A PALAVRA DELA — o que ficou pedido."""
+        """O 0x32 segue O OUVINTE **OU** A PALAVRA DE PRODUTO — o que ficou pedido."""
         source = self._source
         if source is None:
             return self._mic_pedido
@@ -1571,7 +1572,7 @@ def numero_do_assento(uniq: str) -> int | None:
 def descricao_do_microfone(uniq: str) -> str:
     """«Microfone do Controle N (DualSense Wireless Controller)», sem o endereço dela.
 
-    **A FORMA A, decisão dela de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01): o
+    **A FORMA A, decisão de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01): o
     nome dela na frente e o ``iProduct`` da Sony atrás — a string que um jogo
     procura quando pede o microfone do controle por nome. Igual ao
     alto-falante (``alto_falante_bt.rotulo_do_alto_falante``), os quatro
@@ -1587,7 +1588,7 @@ def descricao_do_microfone(uniq: str) -> str:
       para matar (`integrations/canal_do_microfone`, "o defeito é de NOME").
       O nome INTERNO já tinha sido curado em 06/09; o rótulo LEGÍVEL, que é o
       que ela lê no seletor de entrada de qualquer aplicativo, não veio junto;
-    * e ele publicava **o MAC do controle dela** na lista de dispositivos de
+    * e ele publicava **o MAC do controle do usuário** na lista de dispositivos de
       áudio da máquina — visível em todo aplicativo que abra um seletor de
       microfone. A máscara da casa cobre arquivo versionado; esta linha
       escapava por não ser arquivo.

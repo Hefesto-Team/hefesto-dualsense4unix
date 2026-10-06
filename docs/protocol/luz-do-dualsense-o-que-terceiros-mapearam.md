@@ -6,7 +6,7 @@ aparelho nesta leva** — ela estava usando a máquina com dois controles vivos.
 Tudo aqui é `afirmado-no-doc` ou `inferido-do-codigo`; nenhuma célula ganhou
 `ate_onde_foi`.
 
-O pedido dela, que é o contrato deste trabalho: *"como é só informação eles
+O pedido, que é o contrato deste trabalho: *"como é só informação eles
 trouxeram"*. Fato com endereço — o número do report, o offset do byte, o formato
 do comando. Nenhuma linha de código de terceiro foi copiada.
 
@@ -191,7 +191,7 @@ aparelho responde.**
    0x20` responde, sem escrever nada no aparelho. Enquanto não se ler, não se
    sabe se a quinta lâmpada daqui é endereçável sozinha.
 2. **O par lâmpada1+lâmpada5 realmente se acende junto?** Fonte única. Um
-   bitmask assimétrico (`0x10`, só o bit4) e o olho dela fecham em segundos.
+   bitmask assimétrico (`0x10`, só o bit4) e o olho de quem confere fecham em segundos.
 3. **`common[42]` é o brilho de QUAL luz?** *(fora do meu tema, e é uma
    contradição — ver §7.)*
 4. **Os bits 6 e 7 de `common[43]`.** Ninguém os nomeou. `PlayerLightUNK : 2`.
@@ -223,7 +223,7 @@ fontes lidas hoje discordam:
   nenhum dos dois opina.
 
 **Não mexi na linha — não é minha, e a literatura não desempata.** Um degrau de
-brilho escrito com o bit0 do `valid_flag2` ligado, e o olho dela em qual luz
+brilho escrito com o bit0 do `valid_flag2` ligado, e o olho de quem confere em qual luz
 mudou, fecha a pergunta numa medição.
 
 Vale registrar o que a leva **confirmou** de graça no caminho: o **bit0 do

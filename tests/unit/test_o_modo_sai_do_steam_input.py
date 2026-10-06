@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01 — a fileira do Modo é um grupo de rádio.
 
-A QUEIXA DELA, 22/09/2026:
-*"pq eu nao posso trocar os modos de conexão pela interface?"*  # noqa-acento: citação dela
-*"eu saio clicando mas não muda de fato."* A foto: dois DualSense no
+A QUEIXA, 22/09/2026
+ A foto: dois DualSense no
 rádio, ninguém jogando, «Steam Input» aceso; ela clica «Sony DualSense» e
 «Xbox», e o «Steam Input» continua aceso.
 
-A REGRA DELA, 23/09/2026, e é ela que decide o que esta régua cobra: *"fez
-errado a idea é eu poder escolher qualquer que seja o modo independnete da
-ordem."* A primeira cura desta sprint consertou a foto e deixou a fileira
+A REGRA, 23/09/2026, e é ela que decide o que esta régua cobra: ** A primeira cura desta sprint
+consertou a foto e deixou a fileira
 DEPENDENTE DA ORDEM — o «Steam Input» clicado vindo do «Xbox» só mexia na lista,
 o «Xbox» só tirava o jogo da lista se o Steam Input estava aceso, o jogo da
 Steam aberto recusava o clique, e com o jogo fechado o «Steam Input» gravava e
@@ -441,7 +439,7 @@ def test_um_alvo_so_o_jogo_da_vez_aberto_ou_fechado(vdf, jogo_fechado, aberto) -
     FATO SUBSTITUÍDO: a primeira cura desta sprint só acendia para o jogo aberto
     e gravava para o fechado, e era a assimetria do «cliquei e nada acendeu».
     Esta régua cobrava o contrário (`test_jogo_fechado_nao_acende_o_steam_input`)
-    e foi invertida pela regra dela de 23/09.
+    e foi invertida pela regra de 23/09.
 
     A MORDIDA: devolva a condição `quando != ABERTO` a `_o_jogo_na_lista` e o
     caso `fechado` reprova com o «Sony DualSense» aceso.
@@ -507,7 +505,7 @@ def test_a_pendencia_do_steam_input_nomeia_o_chip_clicado() -> None:
     O caminho anotado é `dualsense` (a linha dele na tabela), e a rede de
     `_rotulo_de` traduz caminho em rótulo pelo `Chip.caminho` — que só o
     «Sony DualSense» tem. Sem o rótulo do CHIP, um clique sem `texto` poria
-    «Vai mudar para: Sony DualSense» sob o botão que ela apertou.
+    «Vai mudar para: Sony DualSense» sob o botão que o usuário apertou.
 
     A MORDIDA: tire o `or _rotulo_do_chip(chave)` de `_lembrar_do_chip` e a
     asserção reprova com «Sony DualSense».

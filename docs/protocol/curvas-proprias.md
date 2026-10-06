@@ -5,7 +5,7 @@ pelo Hefesto**. Ele existe por causa do processo de sala limpa
 (CLEAN-ROOM.md, regra R3): o dado e a origem nunca
 se separam.
 
-> **Vazio, e agora vazio de vez — nota datada de 29/08/2026, grau: DECISÃO DELA.**
+> **Vazio, e agora vazio de vez — nota datada de 29/08/2026, grau: DECISÃO DE PRODUTO.**
 > Esta tabela seria preenchida pela corrente `CR-03 → CR-04 → CR-06`, e a corrente
 > **saiu do disco** (`docs/data/decisoes-de-produto.csv`, `D-A-CORRENTE-DO-CLEAN-ROOM-SAI`):
 > sem a bancada de medir não há efeitos da casa, e sem eles não há o que devolver ao
@@ -63,7 +63,7 @@ _(nenhum ainda — ver CR-04)_
 
 **CC0-1.0** — domínio público, sem exigência de crédito.
 
-**Grau: DECISÃO DELA**, 07/08/2026. A pergunta estava aberta desde 25/07 na CR-06 —
+**Grau: DECISÃO DE PRODUTO**, 07/08/2026. A pergunta estava aberta desde 25/07 na CR-06 —
 a sprint de publicação, cortada em 29/08 —, e a resposta separa as duas coisas de
 propósito: o **código** é MIT, os **dados medidos** são CC0.
 

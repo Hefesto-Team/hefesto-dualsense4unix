@@ -218,7 +218,7 @@ def test_a_cura_ausente_chega_a_coluna(monkeypatch: Any, tmp_path: Any) -> None:
 
 def test_a_cura_agendada_tambem_e_trabalho_pendente(
         monkeypatch: Any, tmp_path: Any) -> None:
-    """``[INFO]`` entra: *"desconecte e reconecte"* é gesto DELA, não estado bom."""
+    """``[INFO]`` entra: *"desconecte e reconecte"* é gesto do usuário, não estado bom."""
     conf = tmp_path / "hefesto-dualsense-storm.conf"
     conf.write_text(f"options snd_usb_audio quirk_flags={QUIRK_DE_PE}",
                     encoding="utf-8")

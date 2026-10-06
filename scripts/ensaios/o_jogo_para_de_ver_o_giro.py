@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O JOGO para de ver o giro — medido pelo SDL que o jogo CARREGA, não pela interface.
 
-SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão dela, 04/09/2026:
+SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão, 04/09/2026:
 
     *"ele tem que funcionar de verdade. ambos independente do modo e da
     mascara."* <!-- noqa-acento: citação literal -->
@@ -23,7 +23,7 @@ dica com que ela rodou.
 
 Sem janela: o SDL sobe só o subsistema de controle, com `SDL_VIDEODRIVER` em
 `dummy`, e o processo de cada biblioteca nasce sem `DISPLAY` e sem
-`WAYLAND_DISPLAY`. **Nada nasce na tela dela.**
+`WAYLAND_DISPLAY`. **Nada nasce na tela do usuário.**
 
 O QUE ELE MEDE, e em que ordem
 -------------------------------
@@ -119,7 +119,7 @@ durante a medição** — o nó de movimento ao lado diz se havia dado a receber
 Uma sonda no host não é o contêiner do Steam Linux Runtime: lá dentro o SDL
 enumera por outro caminho, e quem mede lá é a MESA-DE-QUATRO-01. E ele não
 prova NADA sobre `O JOGO REAGIU`: um jogo de verdade, mirando, é o degrau
-seguinte, e esse só fecha com o olho dela.
+seguinte, e esse só fecha com o olho de quem confere.
 
 SAÍDA: o relatório em JSON, e o código de retorno ``3`` quando alguma
 biblioteca não pôde ser medida ou a enumeração dela não alcançou o piso.

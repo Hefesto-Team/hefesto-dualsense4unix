@@ -31,7 +31,7 @@ def _escrever(caminho: pathlib.Path, dado: object) -> None:
 
 
 def test_lancador_nunca_aberto_diz_o_que_fazer(tmp_path: pathlib.Path) -> None:
-    """*"Abra o Lutris uma vez e eu leio a biblioteca"* — §3 da sprint."""
+    """ — §3 da sprint."""
     b = censo.biblioteca_de("Lutris", lar=tmp_path)
 
     assert b.estado == censo.NUNCA_ABERTO
@@ -70,7 +70,7 @@ def test_o_heroic_le_as_tres_lojas(tmp_path: pathlib.Path) -> None:
 def test_o_caso_dela_biblioteca_cheia_e_zero_instalados(
     tmp_path: pathlib.Path,
 ) -> None:
-    """O disco dela em 09/09/2026: 37 na biblioteca, nenhum baixado."""
+    """O disco do usuário em 09/09/2026: 37 na biblioteca, nenhum baixado."""
     p = _flatpak(tmp_path, HEROIC_ID, "heroic")
     _escrever(p / "store_cache/legendary_library.json",
               {"library": [{"app_name": f"e{n}", "title": f"Epic {n}"}
@@ -101,7 +101,7 @@ def test_o_registro_e_quem_diz_o_instalado(tmp_path: pathlib.Path) -> None:
 
 
 def test_o_singular_e_o_plural_da_frase(tmp_path: pathlib.Path) -> None:
-    """"1 jogo · 1 instalado" — a tela dela não diz "1 jogos"."""
+    """"1 jogo · 1 instalado" — a tela do usuário não diz "1 jogos"."""
     p = _flatpak(tmp_path, HEROIC_ID, "heroic")
     _escrever(p / "store_cache/legendary_library.json",
               {"library": [{"app_name": "e1", "title": "Um só"}]})

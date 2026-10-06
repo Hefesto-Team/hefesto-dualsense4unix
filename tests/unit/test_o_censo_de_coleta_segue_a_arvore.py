@@ -188,7 +188,7 @@ def _projeto(
         + "    pytest.skip('a interface não roda sem o GTK real', allow_module_level=True)\n",
         encoding="utf-8",
     )
-    if quebrado:  # o `import gi` sem guarda: o furo que o CI vê e a máquina dela não
+    if quebrado:  # o `import gi` sem guarda: o furo que o CI vê e a máquina do usuário não
         (tests / "unit" / "test_quebrado.py").write_text(
             "import modulo_de_interface_que_o_runner_nao_tem\n\n\ndef test_q():\n    assert True\n",
             encoding="utf-8",

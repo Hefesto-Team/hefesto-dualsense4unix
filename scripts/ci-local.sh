@@ -255,7 +255,7 @@ OPCOES=()
 [ "${#OPCOES_DOCKER[@]}" -gt 0 ] && OPCOES=(--container-options "${OPCOES_DOCKER[*]}")
 
 # O YAML a rodar: o próprio, ou uma cópia sem o que a tabela manda tirar: os passos
-# `PULA-NO-RAPIDO` (só no --rapido: a suíte inteira tem a casa dela em `rodar-a-suite.sh`),
+# `PULA-NO-RAPIDO` (só no --rapido: a suíte inteira tem a casa do usuário em `rodar-a-suite.sh`),
 # os passos de `--sem-passo` e o `needs:` dos jobs `SEM-NEEDS`.
 tirar_passo() { # arquivo job passo
   awk -v job="$2" -v passo="$3" '

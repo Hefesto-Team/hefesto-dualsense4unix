@@ -124,7 +124,7 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
 
 
 def _ctx() -> Contexto:
-    """O daemon CALADO — ``active_profile: null`` é o estado da máquina dela."""
+    """O daemon CALADO — ``active_profile: null`` é o estado da máquina do usuário."""
     return Contexto(state={"active_profile": None}, mesa=list(MESA),
                     conectados=list(MESA), estados={})
 

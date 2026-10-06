@@ -1,6 +1,6 @@
 # A máquina limpa sem outra máquina: a escada
 
-O pedido dela, 27/09/2026: que qualquer pessoa com um COSMIC, um adaptador
+O pedido, 27/09/2026: que qualquer pessoa com um COSMIC, um adaptador
 Bluetooth, um cabo e um DualSense reproduza o que esta casa mede. A escada
 prova isso sem outra máquina, **mudando uma variável por degrau**. Cada degrau
 cita a linha do retrato (P0) que ele mudou, e cada resultado vira uma linha
@@ -14,10 +14,10 @@ chega a quem vai reproduzir.
 |---|---|---|---|
 | P0 | nada (o retrato) | as variáveis desta máquina | `o_basico.py retrato`, da `O-BASICO-MEDIDO-01` |
 | P1 | o HOME | o plano de usuária; a prova de que o ensaio não escreve | `p1-lar-vazio.sh` |
-| P2 | a interface num HOME vazio, sem aparelho | a primeira pintura das dez abas | a bancada de tela em lar de mentira, de quem coordena |
+| P2 | a interface num HOME vazio, sem aparelho | a primeira pintura das dez abas | a bancada de tela em lar de mentira, da casa |
 | P3 | a distro e o pip | o install como usuária, o `evdev` do pip, o `dkms build -k`, a receita do BlueZ, a sobra do uninstall | `p3-conteiner.sh` |
 | P4 | o sistema inteiro, depois um aparelho por vez | cabo, rádio, pareamento do zero, Secure Boot, a Steam instalada depois | `p4-vm.sh` |
-| P5 | o usuário (segunda conta) | o broker com outro uid; o `uaccess` sem o grupo `input` | só com ela: troca a tela dela |
+| P5 | o usuário (segunda conta) | o broker com outro uid; o `uaccess` sem o grupo `input` | só com ela: troca a tela do usuário |
 | P6 | o chip do adaptador | o teto de pontes por chip | só com um adaptador de outro fabricante |
 
 ## P0, o retrato
@@ -46,7 +46,7 @@ já instalado, o BlueZ curado). Isso se anota, não é defeito.
 
 ## P2 — a primeira pintura
 
-A receita é a bancada de tela em lar de mentira de quem coordena (o piloto
+A receita é a bancada de tela em lar de mentira da casa (o piloto
 `hefesto_vivo.py` com `--oculta`, Xvfb e D-Bus próprios, um daemon de
 mentira). Duas variantes do daemon de mentira: zero controles, e um só pelo
 rádio, sem nome. Abre as dez abas e grava o texto de cada uma. **Espera-se:**
@@ -104,7 +104,7 @@ por `foto` para um PNG. Precisa de `qemu-system-x86`, `qemu-utils` e `ovmf`
 - **P4c — Secure Boot.** `ligar --secboot`. O install não instala o DKMS sem
   a chave, diz o passo da MOK, e o DualSense segue com o driver de fábrica.
 - **P4d — a Steam instalada depois.** A nativa e a do Flathub, cada uma
-  instalada depois do Hefesto, na ordem dela: reiniciar o daemon, fechar o
+  instalada depois do Hefesto, na ordem de produto: reiniciar o daemon, fechar o
   Hefesto, sair da Steam, e então abrir, validar e anotar. O C21: o ambiente
   que a bancada abre é o do `systemd --user`, e não o da sessão COSMIC; a volta
   declara qual usou, e compara só os NOMES com os da Steam aberta pelo ícone.
@@ -120,5 +120,5 @@ e o `hefesto-<palavra>-<6 hex>`). Sem ele, o `guardar` recusa.
   broker aceita o uid dela, a central do rádio e os nomes do BlueZ são estado
   do sistema). P2 e P4 cobrem o que ele cobriria;
 - contêiner com `--privileged`, `--device` ou a árvore de trabalho montada;
-- VM com janela na tela dela;
-- a Steam aberta do shell de um agente (o ambiente dele contamina todo jogo).
+- VM com janela na tela do usuário;
+- a Steam aberta de um shell de trabalho (o ambiente dele contamina todo jogo).

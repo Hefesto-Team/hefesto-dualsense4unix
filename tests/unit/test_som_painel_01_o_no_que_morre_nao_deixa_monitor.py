@@ -1,11 +1,11 @@
 """SOM-PAINEL-01 — o nó que morre não deixa um MONITOR de herança.
 
-A QUEIXA DELA, 16/09/2026, com o DualSense no rádio
+A QUEIXA, 16/09/2026, com o DualSense no rádio
 ----------------------------------------------------
 *"o canal de som não mostra os canais de entrada e saída"* — e, na mesma
 frase, o jogo que não a ouvia: *"é como se ele tivesse mutado digitalmente"*.
 
-O QUE FOI MEDIDO NA MÁQUINA DELA
+O QUE FOI MEDIDO NA MÁQUINA DO USUÁRIO
 ---------------------------------
 Duas leituras do mesmo servidor, a minutos de distância::
 
@@ -14,7 +14,7 @@ Duas leituras do mesmo servidor, a minutos de distância::
 
 Um monitor é a saída RELIDA, não uma entrada. Quem pedir a fonte padrão grava
 o som que SAI — e o medidor mostra sinal, então PARECE funcionar. É a falha
-que se disfarça de sucesso, e as duas queixas dela saem dela: o painel escreve
+que se disfarça de sucesso, e as duas queixas de uso saem dela: o painel escreve
 "Nenhum dispositivo selecionado" (um monitor não é dispositivo de entrada) e o
 jogo grava silêncio.
 
@@ -33,7 +33,7 @@ problema do painel do COSMIC.
 
 O QUE ESTE ARQUIVO NÃO MEDE
 ----------------------------
-Som, e nenhum `pactl` de verdade sai daqui: o servidor de som dela tem quatro
+Som, e nenhum `pactl` de verdade sai daqui: o servidor de som do usuário tem quatro
 DualSense em cima. O leitor da fonte padrão é dublado em todas as réguas.
 """
 
@@ -56,7 +56,7 @@ _UM_MICROFONE_DE_VERDADE = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 class _EleitorDeMentira:
     """O eleitor da sessão, dublado. Conta as perguntas e o que recebeu.
 
-    `recusa` reproduz o desfecho MEDIDO nesta bancada: o único microfone dela é
+    `recusa` reproduz o desfecho MEDIDO nesta bancada: o único microfone do usuário é
     o do DualSense, e com o controle fora da mesa não sobra fonte de captura
     com porta usável — então o eleitor recusa e NADA é escrito.
 
@@ -212,7 +212,7 @@ def test_nao_sei_nunca_conta_como_buraco() -> None:
     """`pactl` que não respondeu não dispara devolução nenhuma.
 
     É a regra desta casa — *"não sei" nunca vira "saiu"*. Sem ela, um servidor
-    ocupado faria o produto reeleger a fonte padrão dela às cegas.
+    ocupado faria o produto reeleger a fonte padrão de produto às cegas.
 
     MORDIDA: ponha `BURACO_NAO_SEI` na tupla de `aberto` e a régua cai.
     """
@@ -270,7 +270,7 @@ async def test_a_recusa_do_eleitor_nomeia_o_no_que_ficou(
 ) -> None:
     """Sem microfone para onde voltar, a denúncia diz QUAL nó herdou.
 
-    É o estado MEDIDO desta bancada: o único microfone dela é o do DualSense, e
+    É o estado MEDIDO desta bancada: o único microfone do usuário é o do DualSense, e
     com o controle fora da mesa não há fonte de captura com porta usável. O
     eleitor recusa, nada é escrito — e o que não pode faltar é o NOME, porque
     uma denúncia sem ele obriga a próxima pessoa a remedir o que já foi medido.

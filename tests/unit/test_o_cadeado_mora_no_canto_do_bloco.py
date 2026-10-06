@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DA POSIÇÃO: o cadeado do perfil mora no canto do bloco Modo.
 
-PEDIDO DELA, 08/09/2026, olhando a aba Jogar: *"esse não trocar de perfil. Pode
+PEDIDO, 08/09/2026, olhando a aba Jogar: *"esse não trocar de perfil. Pode
 colocar ele no canto superior direito do bloco tipo esse banco de provas na guia
 navegação."*
 
@@ -9,7 +9,7 @@ Ele ficava solto LOGO ABAIXO da fileira de modos, dentro do bloco **Modo**, e
 ali lia como um QUINTO modo: na coluna dos modos, no fluxo de leitura dos modos,
 sem ser modo nenhum — é uma trava sobre o perfil.
 
-O MODELO É O QUE ELA APONTOU: o *"Banco de provas: o mapa do controle ↗"* da
+O MODELO É O QUE O USUÁRIO APONTOU: o *"Banco de provas: o mapa do controle ↗"* da
 Navegação (`aba06.py`), no canto superior direito do bloco, na linha do título.
 **A coisa que pertence ao bloco mas não é o miolo dele mora no canto.**
 
@@ -26,7 +26,7 @@ O GESTO NÃO PODE MUDAR, e é metade desta régua
 Mudança de POSIÇÃO que muda comportamento é mudança escondida. Por isso os casos
 vêm em par: um mede onde a trava está, o outro mede que o `data-gesto`, o
 `data-campo`, o alvo de pintura e a dica continuam os mesmos — e que ela nasce
-APAGADA, porque acendê-la no desenho afirmaria uma escolha dela que ela não fez.
+APAGADA, porque acendê-la no desenho afirmaria uma escolha do usuário que ela não fez.
 
 A LÍNGUA MUDOU EM 19/09/2026 E ESTA RÉGUA FOI ATRÁS (`TRAVA-PILULA-01`)
 -----------------------------------------------------------------------
@@ -269,7 +269,7 @@ def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
 
 
 def test_o_cadeado_nasce_apagado(medido: dict) -> None:
-    """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha dela."""
+    """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha do usuário."""
     assert medido["aceso_de_nascenca"] is False, (
         "o cadeado nasce aceso — o desenho afirmaria uma escolha que ela não fez")
 

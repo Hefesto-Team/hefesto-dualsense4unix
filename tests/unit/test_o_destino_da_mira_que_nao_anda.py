@@ -1,6 +1,6 @@
 """A-MIRA-NA-NAVEGACAO-02 — o destino que não anda, e o cartão «Só a janela».
 
-As duas decisões são dela, por delegação (24/09/2026), pelo mesmo padrão: *a
+As duas decisões são do usuário, por delegação (24/09/2026), pelo mesmo padrão: *a
 tela nunca afirma o que não acontece*.
 
 1. **O destino «mouse» fora da Navegação** (só por JSON à mão) não movia nada:

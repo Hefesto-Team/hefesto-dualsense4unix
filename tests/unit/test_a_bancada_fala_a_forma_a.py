@@ -1,6 +1,6 @@
 """A bancada fala a forma A — A-FORJA-VALIDA-O-SOM-01, 24/09/2026.
 
-A decisão dela de 23/09 mudou o nome que a lista de som mostra: a saída e a
+A decisão de 23/09 mudou o nome que a lista de som mostra: a saída e a
 entrada de cada controle passaram a se chamar «Alto-falante do Controle N
 (DualSense Wireless Controller)» e «Microfone do Controle N (DualSense
 Wireless Controller)». Os dois arquivos do gesto (`docs/method/…O-COMO-*`) são

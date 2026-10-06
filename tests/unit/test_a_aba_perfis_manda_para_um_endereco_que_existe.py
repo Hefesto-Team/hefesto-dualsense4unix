@@ -1,4 +1,4 @@
-"""A ABA PERFIS: o que ela manda tem onde cair, e o cabeçalho não é dela.
+"""A ABA PERFIS: o que ela manda tem onde cair, e o cabeçalho não é do usuário.
 
 POR QUE ESTA RÉGUA EXISTE, e o motivo é um erro de MEDIÇÃO, não de código —
 02/09/2026:

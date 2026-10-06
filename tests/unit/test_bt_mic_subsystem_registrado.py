@@ -66,8 +66,7 @@ async def test_o_supervisor_sobe_sem_declaracao_e_o_boot_nao_falha(
 
     **DOIS FATOS MUDARAM AQUI, e o segundo é um instrumento falso.**
 
-    (1) O CONTRATO, 18/09/2026, ordem dela: *"todos os controles tem que nascer
-    com tudo mic, giroscopio e afins"*. Este teste se chamava
+    (1) O CONTRATO, 18/09/2026,  Este teste se chamava
     `test_boot_nao_sobe_bt_mic_por_padrao` e dizia *"um microfone que liga
     sozinho com o daemon é inaceitável"*. Era o desenho da casa, e o preço dele
     foi medido: numa máquina onde ninguém declarou nada — que é TODA máquina
@@ -190,11 +189,10 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
     não havia a quem PEDIR canal, e o primeiro toque no botão do microfone caía
     no vazio.
 
-    **E O "NASCE DESLIGADO" CAIU EM 18/09/2026**, por ordem dela: *"todos os
-    controles tem que nascer com tudo mic, giroscopio e afins"*. Ele foi o
+    **E O "NASCE DESLIGADO" CAIU EM 18/09/2026**, por  Ele foi o
     desenho desta casa por um mês e tinha razão escrita — *"um microfone que
     sobe sozinho com o daemon é inaceitável"* —, e o preço dele foi medido no
-    mesmo dia: dos quatro DualSense da mesa dela, DOIS não tinham microfone,
+    mesmo dia: dos quatro DualSense da bancada, DOIS não tinham microfone,
     porque ninguém sabia que era preciso declarar. Vinte e sete recusas *"o
     sistema não vê um microfone neste controle"* no diário.
 

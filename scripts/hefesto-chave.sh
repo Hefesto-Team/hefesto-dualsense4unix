@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # hefesto-chave — desliga o Hefesto por completo, e o religa igualzinho.
 #
-# Pedido dela, 29/08/2026: *"temos que garantir que eu possa DESLIGAR o impacto
+# Pedido, 29/08/2026: *"temos que garantir que eu possa DESLIGAR o impacto
 # por completo e RELIGAR. (com o botão de desligar funcionando sem zuar o
 # resto)."*
 #
@@ -36,7 +36,7 @@ set -euo pipefail
 
 APLICATIVOS="${HOME}/.local/share/applications"
 
-# As units de USUÁRIO do app. Conferidas na máquina dela em 29/08 com
+# As units de USUÁRIO do app. Conferidas na máquina do usuário em 29/08 com
 # `systemctl --user list-unit-files`: o vigia da Steam chama-se
 # `hefesto-steam-input-guard.*`, e NÃO `hefesto-dualsense4unix-steam-input-*`
 # — errar o nome faria o `stop` devolver sucesso sem parar coisa nenhuma.

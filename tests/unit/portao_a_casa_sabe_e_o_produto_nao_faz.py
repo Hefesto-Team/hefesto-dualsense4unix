@@ -204,7 +204,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "pediu janela na tela, e o visor `interface/ver.py` recusa dizendo. "
         "NÃO abre nem fecha feature nenhuma do produto: ausente é o caminho de "
         "produção, e o lançador dela abre exatamente como sempre. Ela existe "
-        "para quem TRABALHA na máquina dela — uma leva de agente, um portão, "
+        "para quem TRABALHA na máquina dela — uma leva de trabalho, um portão, "
         "um ensaio —, e nasceu de uma foto: com treze frentes em voo, oito "
         "cópias da mesma janela nasceram empilhadas na tela dela, em cima do "
         "que ela estava fazendo. O `--oculta` já existia e não bastou porque a "

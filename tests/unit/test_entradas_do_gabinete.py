@@ -23,7 +23,7 @@ A BANCADA DE MENTIRA
 
 Copiada da medição desta casa em 25/08/2026, com caminhos `/mentira`. Sem o hub
 externo (que ela desplugou às 02h36) são **22 nós** e **15 buracos**, que é o
-número real da mesa dela::
+número real da bancada::
 
     usb1  480 Mbps   10 nós   usb1-port1 .. usb1-port10
         port3   configured  device=1-3   panel=right  h=left  v=lower   teclado

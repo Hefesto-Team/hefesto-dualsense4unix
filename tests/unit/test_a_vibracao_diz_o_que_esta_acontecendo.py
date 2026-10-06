@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """A ABA VIBRAÇÃO DIZ O QUE ESTÁ ACONTECENDO — a linha do estado.
 
-POR QUE ELA EXISTE, e o número foi medido em 02/09/2026 contra o daemon dela: a
+POR QUE ELA EXISTE, e o número foi medido em 02/09/2026 contra o daemon do usuário: a
 janela estável mostra QUATRO avisos nesta aba e a interface nova mostrava
 **zero**. A tela nova tinha os dois motores, os quatro degraus e o "Testar", e
 nenhuma palavra sobre o que acontece com eles.
 
-**E o pior estado era o de HOJE.** Com os dois controles na mesa, o daemon dela
+**E o pior estado era o de HOJE.** Com os dois controles na mesa, o daemon do usuário
 respondia ``rumble_ff.vpads == 0`` — não há gamepad virtual —, o que quer dizer
 que os quatro degraus de força **não agem sobre a vibração de jogo nenhum**. A
 janela estável diz isso desde 11/08/2026
@@ -14,8 +14,7 @@ janela estável diz isso desde 11/08/2026
 calada e a pessoa continuava clicando em "Máximo".
 
 **ERAM QUATRO ATÉ 07/09/2026, E HOJE SÃO TRÊS.** A primeira — a contagem de
-pedidos do jogo — saiu por ordem dela: *"Vibração remove essa última frase
-também."* Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
+pedidos do jogo — saiu por  Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
 ``test_as_frases_sao_as_do_produto``, que segura a lista fora (uma frase a mais
 reprova). **A função do produto NÃO morreu** — a janela estável continua a chamar;
 o que esta aba deixou de fazer é perguntar.

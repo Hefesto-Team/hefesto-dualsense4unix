@@ -1174,7 +1174,7 @@ if sudo -n true 2>/dev/null; then
     # consegue medir o caminho que já funcionava é decoração.
     #
     # TODOS OS ADAPTADORES, e o NOME volta ao padrão (INSTALL-E-UNINSTALL-DO-
-    # RADIO-01, 23/09/2026 — decisão de quem coordena, P-11). Até aqui o bloco
+    # RADIO-01, 23/09/2026 — decisão de produto, P-11). Até aqui o bloco
     # olhava o PRIMEIRO adaptador e só tirava o prefixo «Nintendo ». Com a
     # ENTRADA-A-ENTRADA-02 o Alias passou a levar o NOME DO LUGAR (o
     # `maquina.json`, projetado pelo `bt_active_mode.sh` e pelo renomear da
@@ -1340,7 +1340,7 @@ for dele in registros:
     fi
     # O DIÁRIO DO RÁDIO DO ROOT (`radio-diario.jsonl` e o `.1` da rotação,
     # escritos pela ponte e pelo watchdog) vai JUNTO do acervo de bonds
-    # guardado, na mesma pasta carimbada — decisão de quem coordena
+    # guardado, na mesma pasta carimbada — decisão de produto
     # (INSTALL-E-UNINSTALL-DO-RADIO-01, P-2.2): é o histórico que explica a mesa
     # que os bonds descrevem, e não se apaga por padrão. Fora do caminho de
     # antes, a próxima instalação não o relê no arranque como se fosse desta

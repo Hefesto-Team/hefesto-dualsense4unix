@@ -18,7 +18,7 @@ que o fazia funcionar. O diagnóstico da própria janela dizia, textualmente:
 *"o Hefesto vai desligá-lo no próximo ciclo do guarda, porque esse jogo não
 está na sua lista de exceções"*.
 
-A lista é o gesto dela dizendo *"a entrada deste jogo vem da Steam"*. Se o
+A lista é o gesto do usuário dizendo *"a entrada deste jogo vem da Steam"*. Se o
 gesto não liga a ponte, ele é decoração.
 
 ONDE A CHAVE MORA DE VERDADE (medido em 19/08/2026, e é o contrário do que se
@@ -72,9 +72,9 @@ quando a Steam acabou de sair — e a cada 30 minutos como rede.
 
 NENHUM APPID EMBARCADO
 ----------------------
-Decisão dela, 14/08/2026: receita por appid dentro do produto deixa todo jogo
+Decisão, 14/08/2026: receita por appid dentro do produto deixa todo jogo
 novo desprotegido. O que entra aqui é o MECANISMO; quais jogos entram na lista
-é config da máquina dela (`steam_input_apps.txt`).
+é config da máquina do usuário (`steam_input_apps.txt`).
 
 O OUTRO SENTIDO — JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026)
 --------------------------------------------------------

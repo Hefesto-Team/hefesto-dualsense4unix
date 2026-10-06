@@ -1,13 +1,8 @@
 """**MASCARA-CONTAGIO-01, 21/09/2026 — o latch que se realimentava pelo gesto.**
 
-A queixa dela, em caixa alta:
+A queixa de uso, em caixa alta
 
-    *"POR EXEMPLO O PERFIL PRAGMATA ALGUMAS VEZES ALTEREI O MODO DE CONEXÃO DOS
-    CONTROLES E MÁSCARAS MAS ALGO O MUDA NOVAMENTE PRA XBOX SEMPRE QUE EU O
-    INICIO. OU O PERFIL NAO TA SALVANDO OU TEMOS ALGUM TESTE OU ALGO ALÉM QUE
-    TÁ ZUANDO ISSO."*
-
-O perfil ESTAVA salvando. Medido na máquina dela naquele dia, com os arquivos
+O perfil ESTAVA salvando. Medido na máquina do usuário naquele dia, com os arquivos
 na mão:
 
     gamepad_emulation.flag ......... xbox   (o padrão da MÁQUINA)
@@ -15,16 +10,15 @@ na mão:
     future_knight.json ............. mode.gamepad_flavor: "xbox"
     pragmata.json .................. mode.gamepad_flavor: null
 
-`future_knight.json` é o ÚNICO dos 29 perfis dela com máscara declarada, e ao
+`future_knight.json` é o ÚNICO dos 29 perfis do usuário com máscara declarada, e ao
 ativá-lo o daemon promovia a escolha de UM JOGO a padrão da máquina. **A volta
 não existia**: perfil com `gamepad_flavor: null` saía na primeira linha sem
 desfazer nada. E o gesto que existia para desfazer — o chip «Sony DualSense» —
 **re-carimbava o `xbox` da memória a cada clique**, porque ele não manda
 `flavor` desde MODO-DE-CONEXAO-01 e o daemon caía em `config.gamepad_flavor`.
 
-É a mesma classe do CAMINHO-CONTAGIO-01 (19/09), no outro eixo — e a ordem dela
-daquele dia nomeava os dois: *"sim tudo dualsense, tudo ligado mascara dualsense
-por default mas esse vazamento me preocupa"*.
+É a mesma classe do CAMINHO-CONTAGIO-01 (19/09), no outro eixo — e a ordem de produto
+daquele dia nomeava os dois.
 """
 
 from __future__ import annotations
@@ -66,7 +60,7 @@ class TestPonto2OGestoQueNaoFalaDeMascaraNaoEscreveMascara:
 
     def test_a_escrita_do_flag_depende_do_flavor_ter_vindo(self):
         """O ponto exato do latch: sem esta guarda, `key` vem da MEMÓRIA e o
-        clique dela em «Sony DualSense» regrava o `xbox` que ele deveria
+        clique do usuário em «Sony DualSense» regrava o `xbox` que ele deveria
         desfazer.
 
         MORDIDA: troque o `if flavor is not None` por `if True`.

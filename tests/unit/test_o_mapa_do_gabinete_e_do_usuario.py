@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO MAPA DO GABINETE: o desenho é o DELA, e os seis botões o mudam.
+"""A RÉGUA DO MAPA DO GABINETE: o desenho é o DO USUÁRIO, e os seis botões o mudam.
 
 O QUE ESTAVA ERRADO ATÉ 01/09/2026, e é a razão de esta régua existir: a aba
 Conexões mostrava um gabinete de BANCADA — duas faces e dez entradas escritas
@@ -7,14 +7,14 @@ como constantes no gerador (`FACES`, `QUEM_ESTA`, `CENSO`) — enquanto o
 `maquina.json` dela **não existe** e o mapa declarado está vazio.
 
 Era por isso que os seis botões do mapa não podiam ser ligados: clicar
-declararia no disco DELA o desenho de um exemplo. A medição que os segurava
+declararia no disco do usuário o desenho de um exemplo. A medição que os segurava
 estava certa; o que faltava era a aba pintar o gabinete dela.
 
 AS QUATRO COISAS QUE ESTA RÉGUA COBRA:
 
 1. **O desenho é UM SÓ.** `interface/conexoes.html_do_mapa` desenha, e o gerador
    do mockup usa o MESMO. Foi assim que a extração se provou fiel — a página
-   regerada saiu byte a byte igual à que ela aprovou.
+   regerada saiu byte a byte igual à que o usuário aprovou.
 2. **O veredito vem do MOTOR.** O gerador tinha uma reescrita à mão do
    `arranjo_da_mesa.julgar`, com os cinco vereditos digitados como constantes.
 3. **O mapa vazio DIZ que está vazio.** Caixa em branco é indistinguível de
@@ -66,7 +66,7 @@ def a08():
 
 @pytest.fixture(autouse=True)
 def rascunho_limpo(a08, monkeypatch):
-    """Um rascunho novo por caso, e NUNCA o disco dela."""
+    """Um rascunho novo por caso, e NUNCA o disco do usuário."""
     from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
@@ -109,7 +109,7 @@ def test_o_mapa_vazio_diz_que_esta_vazio() -> None:
 
 
 def test_cada_quadrado_leva_o_endereco_da_entrada() -> None:
-    """Sem `data-entrada`, o clique não diz em qual buraco ela clicou."""
+    """Sem `data-entrada`, o clique não diz em qual buraco o usuário clicou."""
     from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
 
     saiu = html_do_mapa(

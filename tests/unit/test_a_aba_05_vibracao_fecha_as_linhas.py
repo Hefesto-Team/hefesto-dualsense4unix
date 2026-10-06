@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A ABA VIBRAÇÃO fecha as quatro decisões dela de 04/09/2026."""
+"""A ABA VIBRAÇÃO fecha as quatro decisões de 04/09/2026."""
 from __future__ import annotations
 
 import pathlib
@@ -237,7 +237,7 @@ def test_o_desenho_tem_as_duas_barras_de_motor(bancada: str) -> None:
     borda aceita sem reclamar.
 
     A CONTA ERA "POR COLUNA VIVA" ATÉ 07/09/2026, e a troca é cura de defeito
-    medido com os quatro DualSense dela na mesa: o lugar vazio era um cartão à
+    medido com os quatro DualSense do usuário na mesa: o lugar vazio era um cartão à
     parte, sem um único `data-campo`, e as duas barras do P3 e do P4 não
     existiam — o `barra-e`/`barra-d` que o pacote emite para os quatro lugares
     chegava sem ter onde pousar. Num lugar vazio a barra é `display:none` pela
@@ -289,9 +289,7 @@ def test_o_endereco_velho_do_motor_continua_sendo_emitido(a05) -> None:
 def test_a_faixa_de_estado_nao_existe_mais_no_desenho(bancada: str) -> None:
     """Nem a célula, nem o rótulo da coluna de rótulos, nem a faixa da grade.
 
-    **DECISÃO DELA, 05/09/2026, verbatim:** *"pq temos uma linha de estado se o
-    estado em vibração sempre vai ser o jogo mandando os input pro controle e a
-    gnt aumentando eles ou diminuindo? remove ela não faz sentido"*.
+    **DECISÃO, 05/09/2026, verbatim:** **.
 
     **ELA TEM RAZÃO MEDIDA pelo caminho que ela usa**, e é por isso que esta
     régua guarda a remoção em vez de a lamentar. A faixa tinha três estados
@@ -339,7 +337,7 @@ def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
     """A camada de produto da trava saiu junto — ela era desta aba e de mais
     nenhuma.
 
-    **NÃO FUI EU QUEM MEDIU ISSO**, e é o que torna a remoção segura: assim que
+    **A MEDIÇÃO NÃO É DESTE TESTE**, e é o que torna a remoção segura: assim que
     a faixa saiu, o `portao_a_casa_sabe_e_o_produto_nao_faz` reprovou nomeando
     `estado_da_trava` e `html_da_trava` como *promessas públicas sem chamador em
     produção*. A janela estável nunca as chamou — ela tem a sua própria linha
@@ -359,12 +357,9 @@ def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
 
 
 def test_a_linha_de_mesa_nao_existe_mais() -> None:
-    """A linha de mesa e o gesto dela saíram da aba — e não voltam calados.
+    """A linha de mesa e o gesto do usuário saíram da aba — e não voltam calados.
 
-    **DECISÃO DELA, 05/09/2026, verbatim:** *"não é pra ter mesa em nada da
-    interface. (…) segue os três modos sempre. clicou em perfil de energia
-    econômico na aba sistema todos vão pra vibração manual. o resto é
-    desnecessário e só polui e deixa difícil entender"*.
+    **DECISÃO, 05/09/2026, verbatim:** **.
 
     ELA TEM RAZÃO MEDIDA, e é por isso que esta régua guarda a remoção em vez de
     a lamentar: a economia de bateria JÁ tem dono — o Perfil de Bateria da aba
@@ -373,7 +368,7 @@ def test_a_linha_de_mesa_nao_existe_mais() -> None:
     econômico já limitava todo mundo no nível Economia. O `Auto` era um SEGUNDO
     dono do mesmo trabalho, numa aba diferente, com outra conta.
 
-    E OS 33 PERFIS DELA NUNCA O USARAM: medido em 05/09/2026, a política global
+    E OS 33 PERFIS DO USUÁRIO NUNCA O USARAM: medido em 05/09/2026, a política global
     é `None` nos 33 e nenhum controle tem `policy: auto`.
 
     MORDIDA: devolva o `@gesto("05-vibracao.html", "forca-mesa")` a
@@ -438,7 +433,7 @@ def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
     duas na tela — e escolheu a primeira. Até 05/09 o produto fazia a segunda,
     e aquilo estava escrito como *"decisão [02] dela, 04/09/2026"* em quatro
     lugares: a fonte real era a `ONDA2-05-VIBRACAO-01`, que decidiu no lugar
-    dela. **A palavra dela vence a atribuição.**
+    dela. **A palavra de produto vence a atribuição.**
 
     O QUE NÃO MUDOU, e é a metade da razão de 04/09 que não caducou: a frase é
     LIDA do `gui/main.glade` (`DICA_DOS_VALORES_QUE_PASSAM`), nunca redigitada.
@@ -593,7 +588,7 @@ def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, bancada: str) -> None:
 def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
     """O clique que NÃO contradiz o botão continua sem frase nenhuma.
 
-    **É ESTA QUE GUARDA A 03-Q4 DELA**, 05/09/2026: *"nada muda de lugar e
+    **É ESTA QUE GUARDA A 03-Q4 DO USUÁRIO**, 05/09/2026: *"nada muda de lugar e
     nenhuma palavra nova entra na tela"*. Sem ela, alguém acrescenta um
     `"Pronto."` na faixa e a decisão morre calada — o "deu certo" seco é a
     piscada verde no campo, não uma linha de texto.
@@ -625,7 +620,7 @@ def test_a_faixa_nao_declara_lugar_de_recado(bancada: str) -> None:
 
 
 def test_nenhuma_linha_da_faixa_diz_mesa(a05) -> None:
-    """A palavra "mesa" não entra em texto de tela — decisão dela, 06/09/2026."""
+    """A palavra "mesa" não entra em texto de tela — decisão, 06/09/2026."""
     ressalva = a05._ressalva_da_mesa(
         {"rumble": {"policy": "auto"},
          "controllers": {_chave(UNIQ): {"rumble": {"policy": "max"}}}},

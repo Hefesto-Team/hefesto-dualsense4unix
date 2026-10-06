@@ -8,7 +8,7 @@ medir a segunda pergunta, não deduzi-la da primeira.
 
 - `broker.hidraw_broker.physical_nodes_exposure` mede: cada hidraw de DualSense
   FÍSICO está legível pelo uid da usuária agora? (varredura read-only, sem
-  root, sem falar com o broker — quem chama roda como ela e é a permissão DELA
+  root, sem falar com o broker — quem chama roda como ela e é a permissão DO USUÁRIO
   que decide);
 - a aba Emulação passa a dizer as duas coisas na mesma linha.
 

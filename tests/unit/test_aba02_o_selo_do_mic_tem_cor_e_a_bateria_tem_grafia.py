@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AS DUAS DECISÕES DELA DE 03/09/2026 na aba Controles.
+"""AS DUAS DECISÕES DE 03/09/2026 na aba Controles.
 
 **1. O SELO DO MICROFONE GANHA COR + ÍCONE.** *"Cor + ícone. Redundante de
 propósito — quem lê rápido pega pela cor, quem não distingue cor pega pelo
@@ -18,7 +18,7 @@ ficava congelado no que o gerador desenhou —
 `<span>` carregava a palavra e a classe ao mesmo tempo.
 
 **2. A BATERIA DESCONHECIDA VOLTA A `— %`.** *"— %, como a janela antiga"* —
-paridade literal com a GTK, contra a harmonia interna do card. É dela.
+paridade literal com a GTK, contra a harmonia interna do card. É do usuário.
 
 AS MORDIDAS que estas réguas pegam, e as três foram feitas:
 
@@ -206,7 +206,7 @@ def test_a_bateria_pergunta_a_grafia_a_gtk() -> None:
 
 
 def test_a_bateria_desconhecida_e_travessao_com_porcento() -> None:
-    """Decisão dela: `— %`, como a janela antiga. Paridade literal."""
+    """Decisão de produto: `— %`, como a janela antiga. Paridade literal."""
     from pacotes.a02_controles import texto_da_bateria
 
     seco = str(mesa_viva.SEM_LEITOR)

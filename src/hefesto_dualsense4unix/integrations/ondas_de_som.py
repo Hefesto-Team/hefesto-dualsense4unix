@@ -1,6 +1,6 @@
 """As ondas sonoras da aba 02 — o que ENTRA e o que SAI, medido de verdade.
 
-Pedido dela, 05/09/2026: *"ondas sonoras do auto falante e do microfone devem
+Pedido, 05/09/2026: *"ondas sonoras do auto falante e do microfone devem
 ser reais na aba controle. sobre o audio que entra e o que sai"*.
 
 Até aqui as catorze barrinhas de cada medidor eram DESENHO — quatorze alturas
@@ -20,10 +20,10 @@ funções que importam vêm de lá inteiras:
   medição tornou obrigatórias;
 * :func:`~...nivel_do_microfone.abrir_fluxo` — que ainda pendura o
   ``PR_SET_PDEATHSIG`` no filho, a cura do ``parec`` órfão que segurava o
-  microfone dela aberto.
+  microfone do usuário aberto.
 
 O que este módulo acrescenta é UMA coisa: **o pico bruto não se perde**. A PEÇA
-B consome cada amostra na histerese e devolve um ``bool`` — a pergunta dela é
+B consome cada amostra na histerese e devolve um ``bool`` — a pergunta de produto é
 *"está entrando som?"*. A pergunta desta é *"quanto, nos últimos 560 ms?"*, e a
 resposta é uma fila de catorze alturas.
 
@@ -35,7 +35,7 @@ DualSense, com os picos casando em 0,01 dB.
 
 E o fluxo daqui **não acende a luz do microfone por engano**, que era o risco
 real: a PEÇA A (``quem_ouve_o_microfone``) desconta todo ``source-output`` com
-``resample.peaks``, *"seja nosso ou de estranho"* — e o argv que usamos é o
+``resample.peaks``,  — e o argv que usamos é o
 mesmo, com as mesmas três marcas. Um fluxo em modo de pico recebe ``max|x|``
 por bloco, não áudio: ele não consegue ouvir ninguém.
 
@@ -63,7 +63,7 @@ lido 0,119995. O medidor devolve a amplitude que entrou, não uma aproximação.
 **E ABRIR O MONITOR NÃO ACORDA O APARELHO.** Era a objeção séria — segurar o
 isócrono USB da saída do DualSense o dia inteiro custaria bateria dela. Medido
 no mesmo dia, lendo ``pactl list sinks short`` antes, durante (duas vezes) e
-depois de um fluxo de monitor no sink do DualSense dela: ``IDLE`` nas quatro
+depois de um fluxo de monitor no sink do DualSense do usuário: ``IDLE`` nas quatro
 leituras. O fluxo de monitor não muda o estado do sink.
 
 ## O CUSTO, e por que ele não entra no tique
@@ -84,7 +84,7 @@ Sem ela, :meth:`OndasDeSom.seguir` não abre processo nenhum e
 
 A razão é medida e é da casa: a suíte chama ``a02_controles.pacote()`` centenas
 de vezes, e um medidor que abrisse ``parec`` a cada chamada seguraria o
-microfone DELA aberto durante a suíte inteira. O ``_camada_1`` desta mesma aba
+microfone do usuário aberto durante a suíte inteira. O ``_camada_1`` desta mesma aba
 já tolera um ``pactl`` na thread; um fluxo de captura persistente é outra ordem
 de grandeza, e a trava é explícita em vez de torcida.
 

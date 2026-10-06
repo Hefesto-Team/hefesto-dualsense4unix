@@ -1,6 +1,6 @@
 """O CHIP «PERFIL ATIVO» NASCE SEM NOME, e só o pintor o nomeia.
 
-O DEFEITO, na tela dela em 13/09/2026 (PERFIS-TIRA-BUSCA-ATIVO-01, §4.1,
+O DEFEITO, na tela do usuário em 13/09/2026 (PERFIS-TIRA-BUSCA-ATIVO-01, §4.1,
 absorvido pela VAO-DO-ESQUELETO-01): com o perfil que valia ativado pela aba
 Perfis, o chip do topo dizia o nome de OUTRO perfil — o do exemplo do desenho.
 O literal morava no ``topo.html``, que entra inteiro nas dez páginas, e ficava

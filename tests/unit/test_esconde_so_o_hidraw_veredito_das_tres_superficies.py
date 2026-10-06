@@ -14,7 +14,7 @@ DualSense no cabo, `0003:054C:0CE6.0009`). O `hide` do broker age numa
 superfície só — `hidraw` — e o veredito lia a contagem dela como resposta a
 uma pergunta sobre três. É a família `O-PORTAO-QUE-NAO-MEDE-O-QUE-PROMETE` no
 pior lugar possível: quem investiga *"por que o Steam mostra controle
-dobrado"* — o terceiro controle dela — começava lendo um verde.
+dobrado"* — o terceiro controle do usuário — começava lendo um verde.
 
 O que estes testes travam:
 

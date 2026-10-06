@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """bancada_do_radio.py — o CONDUTOR da sentada do rádio, 19/09/2026.
 
-A ENCOMENDA É DELA: *"Prepara todos os testes, deixa tudo pronto (…) pra em
-uma sentada eu conseguir fazer todos os testes sem perdermos muito tempo. Pra
-vc ir conduzindo tudo em software e eu ir executando as etapas do mundo físico
-e te reportando"*.
+A ENCOMENDA É DO USUÁRIO.
 
-POR QUE SUBCOMANDOS, E NÃO UM ASSISTENTE QUE ELA PILOTA
---------------------------------------------------------
-A `a_folha_dos_ensaios` é uma folha que **ela** dirige, com deslizantes. Aqui é
-o contrário: **eu** disparo cada etapa na conversa, ela faz o gesto físico e me
-reporta. Um assistente interativo a obrigaria a ler prompt no terminal enquanto
-tem o controle na mão — que é o que esta sentada existe para evitar.
+POR QUE SUBCOMANDOS, E NÃO UM ASSISTENTE INTERATIVO
+---------------------------------------------------
+A `a_folha_dos_ensaios` é uma folha que **o usuário** dirige, com deslizantes. Aqui é
+o contrário: **o script** dispara cada etapa, quem usa faz o gesto físico e reporta. Um assistente interativo obrigaria a ler prompt no terminal enquanto
+tem o controle na mão — que é o que esta bancada existe para evitar.
 
 Então cada etapa é um subcomando que roda, mede e volta. Sem `input()`.
 
 O INSTRUMENTO DO DANO, e ele é medido
 --------------------------------------
 `poll.tick` do daemon, por `daemon.state_full`. Medido em 19/09 com a máquina
-dela em uso, três janelas de 2 s: **57,24 · 57,42 · 57,42 tiques/s** — 0,3% de
+do usuário em uso, três janelas de 2 s: **57,24 · 57,42 · 57,42 tiques/s** — 0,3% de
 variação. Qualquer queda que a varredura cause aparece contra esse piso.
 
 É o instrumento certo porque mede o PRODUTO, não o rádio em abstrato: o que

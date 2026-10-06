@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A MESA VIVA — do daemon dela até o desenho aprovado, sem GTK e sem escrever.
+"""A MESA VIVA — do daemon do usuário até o desenho aprovado, sem GTK e sem escrever.
 
 Este módulo é a metade que NÃO tem tela: ele lê o `daemon.state_full`, ordena a
 mesa como o produto ordena, junta a cor do plástico e devolve (a) os itens de
@@ -8,9 +8,9 @@ escreve na página a cada tique.
 
 TRÊS DISCIPLINAS, e as três nasceram de defeito medido nesta casa:
 
-1. **A ORDEM DA TELA NÃO É A ORDEM DO IPC.** Medido no daemon dela em 29/08:
+1. **A ORDEM DA TELA NÃO É A ORDEM DO IPC.** Medido no daemon do usuário em 29/08:
    `controllers[0]` é o primário e é o **jogador 2**; `controllers[1]` é o
-   jogador 1. Desenhar por índice inverte os dois controles dela na primeira
+   jogador 1. Desenhar por índice inverte os dois controles do usuário na primeira
    execução. Quem ordena é a mesma regra do produto
    (`status_actions._por_numero_de_identidade`: por `player_slot`, sem slot vai
    para o fim), e o número que se escreve é o de `actions/base.numero_do_controle`.
@@ -163,12 +163,12 @@ class LeitorDeCor:
     * quem decide a quem perguntar é o MAPA (`identidade.cor_do_aparelho`,
       coluna `aciona` do lado daquele transporte), não um `if` decorado. **A
       célula do rádio virou `sim` em 02/09/2026**: o `EIO` de 15/08 era a
-      semente do NOSSO CRC, e com a semente de escrita `0x53` o controle dela
+      semente do NOSSO CRC, e com a semente de escrita `0x53` o controle do usuário
       no rádio devolveu o serial em 13,6 ms;
     * QUANDO perguntar de novo é da `AgendaDaPergunta`, o dono que o daemon
       também chama. **SUBSTITUÍDO em 22/09/2026** o *"uma vez por endereço por
       sessão basta"*: a resposta não muda, mas a FALHA não é resposta, e
-      guardá-la como `None` apagou modelo e cor dos dois controles dela
+      guardá-la como `None` apagou modelo e cor dos dois controles do usuário
       (A-FITA-PERDEU-O-MODELO-E-A-COR-01).
 
     O `leitor` injetado fala o contrato da fonte: `uniq -> IdentidadeDeFabrica`.
@@ -300,7 +300,7 @@ def _declaracao_do_disco() -> Any:
     """O `maquina.json` validado, relido SÓ quando o arquivo muda (inode, mtime, tamanho).
 
     A mesa é montada a 10 Hz por três pilotos; um `stat` por volta é o que se
-    paga, e a leitura inteira só acontece depois de um gesto dela.
+    paga, e a leitura inteira só acontece depois de um gesto do usuário.
     """
     global _DECLARACAO_DO_DISCO
     from hefesto_dualsense4unix.utils.maquina import (
@@ -380,11 +380,11 @@ def _quantos_lugares() -> int:
 def _lugares_da_mesa(numeros: list[int]) -> list[str]:
     """O `pref` de cada um — e ele SEGUE O NÚMERO, não a ordem da lista.
 
-    APARELHO-NAO-SE-CONTRADIZ-01, PARTE 2. Decisão dela, 20/09/2026:
+    APARELHO-NAO-SE-CONTRADIZ-01, PARTE 2. Decisão, 20/09/2026:
     **«Curar — renomear junto com mover»**.
 
     **O QUE FOI MEDIDO**, lido pela ponte JS no WebKit vivo, a 400 ms, com o
-    daemon e os quatro controles na mesa dela:
+    daemon e os quatro controles na bancada:
 
     ======================  =================================  ================
     ..                      ``23:56:17.998``                   ``23:56:19.604``
@@ -408,7 +408,7 @@ def _lugares_da_mesa(numeros: list[int]) -> list[str]:
     deixar a tela compactar o número por conta própria seria duas verdades
     sobre qual é o Player 3 — o defeito que aquela função existe para matar. O
     cartão fica onde está até o daemon renomear, e aí ele move e renomeia no
-    mesmo tique. É literalmente a decisão dela.
+    mesmo tique. É literalmente a decisão de produto.
 
     **DOIS CASOS CAEM FORA, e os dois voltam à contagem por posição:** número
     acima do último cartão (um externo na mesa empurra os DualSense para
@@ -497,7 +497,7 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
     Devolve as duas metades porque o desenho as separa (a segunda é `<b>`), e
     porque escrever a frase inteira num `textContent` apagaria o `<b>`.
 
-    A FRASE FICA EM `USB`/`BT` POR GRAMÁTICA — decisão dela de 06/09/2026. A
+    A FRASE FICA EM `USB`/`BT` POR GRAMÁTICA — decisão de 06/09/2026. A
     palavra que nomeia UM controle virou `cabo`/`rádio` (D-05), e a contagem
     não acompanha porque *"2 cabo · 0 rádio"* não é português. Ver
     `docs/A-LINGUA-DESTA-CASA-…`, §1: esta é a única exceção declarada.
@@ -575,7 +575,7 @@ def _eixo_do_analogico(inputs: dict[str, Any], nome: str) -> int:
 
     Medido antes da cura, alimentando esta função pela faixa inteira:
     `0 → 128` (MENTIU), `1 → 1`, `64 → 64`, `128 → 128`, `255 → 255`. Só o zero
-    mentia, e mentia sozinho. O zero é alcançável na mesa dela: o `absinfo` dos
+    mentia, e mentia sozinho. O zero é alcançável na bancada: o `absinfo` dos
     dois DualSense dá `ABS_X/ABS_Y/ABS_RX/ABS_RY min=0 max=255`, e
     `core/evdev_reader.py` já escreve que "num stick o mínimo é um EXTREMO".
 

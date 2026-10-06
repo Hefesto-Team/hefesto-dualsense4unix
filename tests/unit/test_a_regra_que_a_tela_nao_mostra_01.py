@@ -32,7 +32,7 @@ def test_o_caso_dela_e_declarado_com_o_campo_e_o_valor() -> None:
 
 
 def test_a_frase_nao_manda_apagar_nada() -> None:
-    """Quem escreveu o critério foi ela; a decisão de mudá-lo é dela."""
+    """Quem escreveu o critério foi ela; a decisão de mudá-lo é do usuário."""
     texto = exigencia_invisivel(PRAGMATA).lower()
     for proibido in ("apague", "remova", "errado", "incorreto", "proton", "wine"):
         assert proibido not in texto
@@ -86,7 +86,7 @@ def test_salvar_pela_pagina_simples_continua_preservando_o_invisivel() -> None:
 
     `from_simple_choice` preserva o `process_name` do disco quando o editor
     simples salva. Se esta cura tivesse virado "apagar o que a tela não mostra",
-    salvar o perfil pela janela destruiria a regra dela em silêncio — o defeito
+    salvar o perfil pela janela destruiria a regra de produto em silêncio — o defeito
     oposto, e pior.
 
     Morde ao fazer `from_simple_choice` ignorar a `regra_do_disco`.

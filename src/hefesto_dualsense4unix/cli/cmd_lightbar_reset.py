@@ -24,11 +24,11 @@ CORREÇÃO DATADA (11/08/2026), porque a afirmação abaixo era falsa
 Este docstring dizia que, nesses cinco dias sem 0x08, "a barra continuou morta".
 **Não continuou.** A escavação do journal do daemon e dos transcritos achou a
 barra **ACESA** no rádio DENTRO daqueles cinco dias, quatro vezes, três delas
-com fala literal dela: 08/08 16:39, 08/08 21:35, 08/08 23:48 e 11/08 11:40
+com fala literal: 08/08 16:39, 08/08 21:35, 08/08 23:48 e 11/08 11:40
 (ensaios ``lightbar-bt-aceso-*`` em ``docs/data/ensaios.csv``; a correção está
 registrada no ensaio ``lightbar-bt-sem-0x08-cinco-dias``).
 
-O erro de método é o que importa guardar: eu registrei como MEDIÇÃO uma frase
+O erro de método é o que importa guardar: se registrou como MEDIÇÃO uma frase
 que só existia neste docstring. É a armadilha ``A-12`` de
 ``docs/method/METODO-DE-ISOLAMENTO.md`` — o caderno envelhecer sem que ninguém
 note.

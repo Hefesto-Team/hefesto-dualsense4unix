@@ -189,7 +189,7 @@ def test_delete_guarda_a_ultima_versao(dir_perfis: Path) -> None:
 def test_backup_quebrado_nao_impede_a_gravacao(
     dir_perfis: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Falha ao arquivar NÃO pode impedir a usuária de salvar o perfil dela."""
+    """Falha ao arquivar NÃO pode impedir a usuária de salvar o perfil do usuário."""
     save_profile(_perfil(priority=10))
 
     def _explode(*_a: object, **_k: object) -> Path:

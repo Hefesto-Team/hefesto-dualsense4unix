@@ -1,8 +1,6 @@
 """O caminho do RÁDIO de vibração e gatilhos, e a régua que o segura no lugar.
 
-Levantamento de 03/09/2026, sobre o pedido dela: *"ver o que no código tá setado
-pra funcionar só via cabo e não BT (…) e verificar no specs o caminho do Bt pra
-garantir que lá ele possa funcionar em ambos os modos"*.
+Levantamento de 03/09/2026, sobre o
 
 **O QUE A VARREDURA ACHOU, e é um negativo que vale escrever:** na área de
 vibração e gatilhos do DualSense **não há filtro nosso** — nenhum `if` de
@@ -294,7 +292,7 @@ def test_o_haptico_por_radio_nao_promete_obediencia(
     que a ressalva desta linha do mapa escreveu — *vira `hidraw` quando alguém
     mandar um bloco 0x12 e o motor responder* (o `0x92` é a tag `0x12` com o bit
     alto, como o `0x91` é a `0x11`). Mandaram: o `0x91` de controle antes do
-    `0x92`, dentro do `0x32`, vibrou pelo rádio em 18/09/2026 com a mão dela, e é
+    `0x92`, dentro do `0x32`, vibrou pelo rádio em 18/09/2026 com a mão do usuário, e é
     o bloco que a ponte do rádio escreve pelo hidraw do broker — desde 03/10/2026
     dentro do `0x36` combinado (O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01). O canal se
     lê no DONO: sem o bloco háptico no relatório da ponte, o `hidraw` volta a ser

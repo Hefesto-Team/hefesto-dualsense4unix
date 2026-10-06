@@ -5,9 +5,9 @@
 # -------------------
 # O mapa de fábrica do teclado emulado (`core/keyboard_mappings.py`) dá ao L3 o
 # token `__TOGGLE_OSK__` (era `__OPEN_OSK__` até 02/09/2026, quando o L3 virou
-# alternador por decisão dela), e o daemon (`daemon/subsystems/keyboard.py`) o
+# alternador por decisão de produto), e o daemon (`daemon/subsystems/keyboard.py`) o
 # cumpre abrindo — e fechando — um teclado na tela DO SISTEMA. Medido na
-# máquina dela em 09/08/2026:
+# máquina do usuário em 09/08/2026:
 #
 #     command -v onboard wvkbd-mobintl   ->  NENHUM DOS DOIS
 #     grep -c onboard install.sh         ->  0
@@ -37,7 +37,7 @@
 #     XWayland — a janela nativa em foco não recebe nada. Abrir e não digitar é
 #     PIOR que não abrir, porque parece que funcionou.
 #
-# A MEDIÇÃO QUE FECHA O CRITÉRIO (10/08/2026, máquina dela — Pop!_OS 24.04,
+# A MEDIÇÃO QUE FECHA O CRITÉRIO (10/08/2026, máquina do usuário — Pop!_OS 24.04,
 # COSMIC/Wayland, `XDG_SESSION_TYPE=wayland`):
 #
 #     wayland-info | grep -E 'layer_shell|virtual_keyboard'
@@ -53,7 +53,7 @@
 # A SENTINELA, E POR QUE ELA EXISTE
 # ---------------------------------
 # O commit 108b711 registrou a armadilha desta casa: "install.sh ARMA,
-# uninstall.sh DESARMA, doctor.sh lê a AUSÊNCIA como escolha dela — máquina
+# uninstall.sh DESARMA, doctor.sh lê a AUSÊNCIA como escolha do usuário — máquina
 # curada e máquina quebrada são o MESMO estado para o portão". Aqui o uninstall
 # NÃO desarma (pacote de sistema não é nosso para remover — mesma decisão do
 # `libopus0` da ponte de mic), mas a ausência continua ambígua: pode ser que o
@@ -155,7 +155,7 @@ sessao_grafica() {
 
 # Binário que FUNCIONA nesta sessão. Em "desconhecida" (install headless, por
 # ssh, CI) a aposta é declarada e não escondida: vale o de Wayland, que é o
-# padrão de todo desktop atual — e o doctor, que roda DENTRO da sessão dela,
+# padrão de todo desktop atual — e o doctor, que roda DENTRO da sessão do usuário,
 # corrige o veredito depois se a máquina for X11.
 binario_da_sessao() {
     case "$(sessao_grafica)" in
@@ -177,7 +177,7 @@ pacote_do_binario() {
 # HEFESTO_OSK_INSTALADO é o quarto hook de teste, e nasceu de um portão que
 # MUDOU DE COR SOZINHO em 10/08/2026: o `test_a_sentinela_grava_o_que_aconteceu`
 # passou meses verde afirmando `resultado=dry-run` e reprovou no minuto seguinte
-# ao `apt install wvkbd` na máquina dela — porque lia o PATH REAL e passou a ver
+# ao `apt install wvkbd` na máquina do usuário — porque lia o PATH REAL e passou a ver
 # o binário. O teste estava certo sobre o produto e errado sobre si mesmo: um
 # portão que depende do disco de quem o roda fica vermelho aqui e verde na CI, e
 # é o portão que alguém desliga na semana seguinte.

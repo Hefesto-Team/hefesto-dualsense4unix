@@ -11,16 +11,16 @@ com endereço, e é nossa:
    (``~100 transições em 6 s``; sem o `0x32`, ZERO em 1183 reports);
 2. `daemon/subsystems/mic_da_mesa.py:134` engole as transições do primeiro
    segundo como repique (``MIC_SOSSEGO_S = 1.0``);
-3. **a primeira depois de 1,0 s é ACEITA** e lida como o dedo dela no botão;
+3. **a primeira depois de 1,0 s é ACEITA** e lida como o dedo do usuário no botão;
 4. o daemon desliga o microfone — e sem o `0x32` o firmware para de oscilar,
    então nunca mais nasce borda e o mic não volta.
 
-No journal dela, hoje às 09:42, a assinatura exata::
+No journal do usuário, hoje às 09:42, a assinatura exata::
 
     mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
     bt_mic_palavra_dela  ligado=False
 
-A CURA é exigir SUSTENTAÇÃO da borda: o dedo dela TRAVA o valor (o kernel faz
+A CURA é exigir SUSTENTAÇÃO da borda: o dedo do usuário TRAVA o valor (o kernel faz
 latch), o gating do firmware não. **Mas a janela de sustentação precisa ficar
 acima da permanência MÁXIMA do gating, e ninguém mediu a distribuição** — só a
 média (~60 ms, derivada da taxa). Uma janela chutada abaixo do máximo deixa
@@ -42,7 +42,7 @@ QUEM VIRA O BIT SEM A MÃO (28/09/2026, O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01)
 -------------------------------------------------------------------------
 A sustentação de 300 ms saiu do produto: o gesto passou a ser o BOTÃO
 (`buttons[2]` bit 2), e o bit de mudo só diz o que o firmware segura. Mas na
-sessão dela de 28/09 o bit do branco virou três vezes sem ela apertar, e quem
+sessão do usuário de 28/09 o bit do branco virou três vezes sem ela apertar, e quem
 o escreveu ninguém mediu. Por isso a corrida também conta, pelo MESMO extrator
 do produto (`core/physical_report_reader.extract_estado_do_mic`, com CRC e sem
 o quadro de áudio), cada aperto e cada virada do bit de mudo que aconteceu com
@@ -179,7 +179,7 @@ def descrever(nome: str, amostras: list[float]) -> list[str]:
 
 
 def o_controle_no_radio(no: str | None = None):
-    """O DualSense do rádio. Um só, ou o `no` que ela disse: o bit é de um."""
+    """O DualSense do rádio. Um só, ou o `no` que o usuário disse: o bit é de um."""
     reais = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
     if no:
         nome = os.path.basename(no)

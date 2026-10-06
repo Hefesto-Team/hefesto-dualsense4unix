@@ -1,13 +1,11 @@
 """CANAL-SEM-VOZ-01 (17/09/2026) — a amputação para de cair calada.
 
-A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e ela é dela
-------------------------------------------------
-    *"joguei um jogo com controle por movimento e na hora do vamos ver o
-    controle não deu resposta (pragmata)"*
+A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e é do usuário
+-----------------------------------------------
 
 O perfil do PRAGMATA não tem a chave ``caminho``. Ele herdou o
 ``config.gamepad_caminho`` que o jogo anterior deixou de pé, e o jogo anterior
-era um em que ela escolheu Xbox — de propósito, e funcionou lá. Com o caminho
+era um em que o usuário escolheu Xbox — de propósito, e funcionou lá. Com o caminho
 Xbox o vpad nasce em ``uinput``, e em ``uinput`` não há giroscópio: dez linhas
 do ``docs/data/mapa-controles.csv`` saem do ar de uma vez.
 
@@ -29,21 +27,21 @@ jogou um jogo de movimento e o controle não respondeu. Um canal que alguém lê
 — o journal do launch e o ``daemon.state_full`` — é a diferença entre o produto
 saber e o produto contar.
 
-O QUE ESTE MÓDULO NÃO É, e as duas recusas são decisão DELA
+O QUE ESTE MÓDULO NÃO É, e as duas recusas são decisão de produto
 -----------------------------------------------------------
 1. **NÃO é degradação.** PS-L3-MASCARA-01 (14/09/2026): *o uinput do caminho
-   Xbox é ESCOLHA dela, não degradação*. Por isso este campo tem dono NOVO e
+   Xbox é ESCOLHA do usuário, não degradação*. Por isso este campo tem dono NOVO e
    não reaproveita `gamepad.dedup_status` nem `gamepad.notify_vpad_degradado`
    — pendurar a voz naqueles dois reabriria uma decisão medida, e decisão
    medida não se apaga. Com o caminho Xbox de pé o ``dedup_ok`` continua
-   ``True``, como ela decidiu, **e é exatamente esse "integra" que este campo
+   ``True``, como o usuário decidiu, **e é exatamente esse "integra" que este campo
    existe para acompanhar**: o canal está íntegro para o que ele entrega, e
    entrega dez linhas a menos.
 
-2. **NÃO é frase na tela.** Ordem dela de 07/09/2026, com portão
+2. **NÃO é frase na tela.** Ordem de 07/09/2026, com portão
    (`scripts/check_a_tela_nao_confessa.py`): a tela nunca confessa dívida
-   nossa. Aqui não é dívida nossa — é o PREÇO de uma escolha dela —, e por
-   isso a redação de qualquer frase é DELA. Este módulo entrega o DADO; quem
+   nossa. Aqui não é dívida nossa — é o PREÇO de uma escolha do usuário —, e por
+   isso a redação de qualquer frase é DO USUÁRIO. Este módulo entrega o DADO; quem
    escreve a frase é ela.
 
 NÃO EXISTE "XBOX COM GIROSCÓPIO", e ninguém deve gastar trabalho ali

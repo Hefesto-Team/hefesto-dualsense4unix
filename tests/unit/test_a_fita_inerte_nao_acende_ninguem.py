@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO CHIP: numa fita que não escolhe nada, o marcado é igual aos outros.
 
-PEDIDO DELA, 08/09/2026, na aba Gatilhos, com os quatro DualSense na mesa. A
+PEDIDO, 08/09/2026, na aba Gatilhos, com os quatro DualSense na mesa. A
 citação é palavra por palavra, inclusive onde falta acento — texto dela não se
 corrige:
 
@@ -29,10 +29,10 @@ marcado, ela reprova — mesmo que a folha tenha sido reescrita de outro jeito.
 Uma régua que lesse o texto do CSS mediria o arquivo que a cura editou, e daria
 verde sobre a própria edição. É a família de defeito que esta casa mais paga.
 
-E ELA MEDE O CASO DELA, QUE A PÁGINA ESTÁTICA NÃO TEM
+E ELA MEDE O CASO DO USUÁRIO, QUE A PÁGINA ESTÁTICA NÃO TEM
 ------------------------------------------------------
 Na página publicada o chip marcado é o ``Todos`` — o desenho nasce com o alvo em
-"todos". **Na tela dela o marcado era o P1**, porque o alvo escolhido viaja
+"todos". **Na tela do usuário o marcado era o P1**, porque o alvo escolhido viaja
 entre as abas e o piloto repinta a fita a cada tique. É o mesmo `.on` e a mesma
 regra, mas afirmar isso sem medir seria a hipótese que abriu a sprint. Por isso
 :func:`test_o_chip_do_plastico_marcado_tambem_fica_igual` MOVE o ``.on`` para o
@@ -47,7 +47,7 @@ Devolva a regra antiga ao ``interface/topo.html``::
                           color:var(--texto-suave);font-weight:600}
 
 regere e publique. Caem os três primeiros casos, com a borda e o peso do
-marcado diferentes dos irmãos — que é exatamente o que ela viu.
+marcado diferentes dos irmãos — que é exatamente o que o usuário viu.
 """
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 """O perfil novo nasce em «Padrão», na vibração, na háptica e no volume (04/10/2026).
 
-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 4 da seção «A decisão dela de 04/10». «Padrão» é só o
+O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 4 da seção «A decisão de 04/10». «Padrão» é só o
 rótulo de tela da chave `balanceado` (1,0x), e o perfil que acaba de nascer NÃO opina: a vibração
 fica sem `policy` (vale a política da casa, que nasce `balanceado`) e o alto-falante fica sem a
 seção `speaker` (o controle nasce nos 100% de sempre na adoção). As duas pontas são o que se

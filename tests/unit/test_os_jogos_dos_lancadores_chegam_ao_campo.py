@@ -331,7 +331,7 @@ def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
 def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**A FALTA QUE ELA NOMEOU, medida nas três origens de uma vez.**"""
+    """**A FALTA QUE O USUÁRIO NOMEOU, medida nas três origens de uma vez.**"""
     _heroic(tmp_path, [BAIXADO])
     _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste.x86_64", 1)])
     _atalho(tmp_path, "super-zsnes.desktop",
@@ -374,7 +374,7 @@ def test_o_nome_da_janela_chega_ao_rotulo_sem_a_tela_ler_disco_duas_vezes(
 def test_o_rotulo_nunca_derruba_a_aba_por_causa_de_um_disco_torto(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Isto é PINTURA sobre o disco dela — e o contrato é não levantar NUNCA."""
+    """Isto é PINTURA sobre o disco do usuário — e o contrato é não levantar NUNCA."""
     def _explode(*_a: object, **_k: object) -> list[Any]:
         raise OSError("um `pga.db` com byte torto")
 
@@ -442,7 +442,7 @@ def test_o_caderno_releu_quando_o_lutris_ganhou_uma_linha_no_banco(
 def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**O QUE A TERCEIRA ORIGEM ACHA NO DISCO DELA HOJE É ZERO JOGO.**"""
+    """**O QUE A TERCEIRA ORIGEM ACHA NO DISCO DO USUÁRIO HOJE É ZERO JOGO.**"""
     _atalho(tmp_path, "io.github.dummerle.rare.desktop",
             "[Desktop Entry]\nType=Application\nName=Rare\n"
             "Exec=/usr/bin/flatpak run io.github.dummerle.rare\n"
@@ -462,7 +462,7 @@ def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
 def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A PONTA, e ela é a queixa dela — medida nas funções REAIS da aba.**"""
+    """**A PONTA, e ela é a queixa de uso — medida nas funções REAIS da aba.**"""
     from hefesto_dualsense4unix.interface.pacotes import a10_perfis as a10
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 

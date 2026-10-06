@@ -27,7 +27,7 @@ alto-falante.
 O ALVO É O ``object.serial``, E NÃO O NOME (:func:`alvo_do_no`): pedido pelo
 nome do monitor, o PipeWire liga o fluxo de captura à FONTE PADRÃO sem erro
 nenhum — a fonte padrão desta máquina é o microfone do controle, e foi assim
-que a ponte do rádio mandou a voz dela ao alto-falante (SOM-ECO-02, medido em
+que a ponte do rádio mandou a voz do usuário ao alto-falante (SOM-ECO-02, medido em
 16/09/2026, ``alto_falante_bt.argv_do_gravador``). Pela mesma razão, quem
 derruba o endpoint de um aparelho solta o laço dele ANTES (:meth:`soltar`): um
 laço cujo alvo some pode ser religado à fonte padrão.
@@ -35,14 +35,14 @@ laço cujo alvo some pode ser religado à fonte padrão.
 E PEDIR SEM CONFERIR É A FORMA DO DEFEITO (a outra metade da SOM-ECO-02): na
 volta seguinte à que ligou o laço, o lado de captura dele é conferido no grafo
 (``alto_falante_bt.conferir_o_alvo_do_gravador``). Ligado a outro nó que não o
-endpoint do aparelho, o laço cai e aquela rota não se religa — a voz dela nunca
+endpoint do aparelho, o laço cai e aquela rota não se religa — a voz do usuário nunca
 vai à placa do controle. Sem conseguir olhar, o laço fica e a volta seguinte
 olha de novo: derrubar por não ter olhado trocaria um defeito raro por um mudo
 garantido.
 
 **O que não se mediu aqui:** o atraso do laço no controle na mão (o critério
 de pronto pede dentro dos 50 ms do dono dos laços) e a vibração com o jogo
-aberto. As duas são a prova no aparelho, e são dela.
+aberto. As duas são a prova no aparelho, e são do usuário.
 """
 
 from __future__ import annotations

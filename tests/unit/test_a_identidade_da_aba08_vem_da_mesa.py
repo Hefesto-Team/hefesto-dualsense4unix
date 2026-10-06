@@ -110,7 +110,7 @@ def test_o_pacote_escreve_a_cor_do_plastico() -> None:
 
 
 def test_sem_cor_lida_nao_se_inventa_nem_se_escreve_nao_sei() -> None:
-    """Regra dela: campo sem informação NÃO MOSTRA NADA."""
+    """Regra de produto: campo sem informação NÃO MOSTRA NADA."""
     pac = _pacote().pacote(_ctx(cor_do_p2=""))
     do_radio = [c for c in pac["colunas"].values() if c.get("via") == "BT"]
     assert do_radio, "a mesa de prova perdeu o controle de rádio"

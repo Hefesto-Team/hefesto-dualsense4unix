@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""jogar_vivo.py — a aba JOGAR VIVA: o desenho dela com a mesa dela.
+"""jogar_vivo.py — a aba JOGAR VIVA: o desenho dela com a bancada.
 
 A segunda das dez, e a primeira depois do piloto. O mockup aprovado
 (`src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`) num `WebKit2.WebView` dentro de uma janela GTK3
@@ -14,7 +14,7 @@ AS DUAS MORDIDAS, as mesmas do piloto e pelo mesmo motivo:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup (quatro controles, "Jogar pelo Hefesto",
-                          "1 aviso"). Se ela mostrar a mesa dela, o dado não
+                          "1 aviso"). Se ela mostrar a bancada, o dado não
                           está vindo do daemon.
     --arranca-enderecos   apaga os `data-*` que o `aba01.py` escreve: a pintura
                           tem de DESABAR.
@@ -31,7 +31,7 @@ O QUE ESTE ARQUIVO NÃO REESCREVE, e é a metade do trabalho
 * **O HTML de cartão e de chip de fita** é do gerador do mockup
   (`aba01.cartao`, `monta.fita`) — nunca de HTML escrito aqui. É o que faz esta
   aba ACOMPANHAR o desenho por construção. A `aba01.aviso` estava nesta lista
-  até 07/09/2026, quando a coluna Atenção saiu da Jogar por ordem dela; a
+  até 07/09/2026, quando a coluna Atenção saiu da Jogar por ordem de produto; a
   `html_dos_avisos` acompanhou o desenho e passou a devolver `""`, que é
   exatamente o que esta linha promete.
 * **O que o produto sabe responder, e o que não sabe**, é de
@@ -42,7 +42,7 @@ O QUE ESTE ARQUIVO NÃO REESCREVE, e é a metade do trabalho
 ESTA LEVA NÃO ESCREVE NADA. O único método de IPC pronunciado é
 `daemon.state_full` (`mesa_viva.METODO`). Todo gesto da tela chega ao Python, é
 registrado com o **dono real** (:data:`DONOS_DOS_GESTOS`) e **ecoa de volta** —
-nenhum perfil dela é tocado, nenhum byte vai ao aparelho.
+nenhum perfil do usuário é tocado, nenhum byte vai ao aparelho.
 
 A ARMADILHA DA PINTURA, que é desta camada e não da ponte: `textContent` num
 elemento que TEM filho apaga os filhos e força layout. Por isso o `aba01.cartao`
@@ -453,7 +453,7 @@ def _leitor_duble(codigos: str | None) -> Any:
     """Um `ler_identidade_pelo_cabo` de mentira, que responde os códigos pedidos.
 
     Existe para PROVAR a junta `código de fábrica → colorway → --plastico` sem
-    mandar um byte ao aparelho dela. É o mesmo ponto de injeção que o próprio
+    mandar um byte ao aparelho do usuário. É o mesmo ponto de injeção que o próprio
     `cor_do_plastico.ler_pelo_cabo` já oferece (`perguntar=`).
     """
     if not codigos:
@@ -515,7 +515,7 @@ class Janela:
         self.janela = self.tela.janela
 
     def _saiu_da_aba(self, titulo: str) -> None:
-        """Ela clicou na tira. Sair da Jogar só DESLIGA a pintura."""
+        """O usuário clicou na tira. Sair da Jogar só DESLIGA a pintura."""
         self.pronto = False
         print(f"[fora da Jogar] {titulo} — o mockup estático; a pintura pausou.")
 
@@ -600,7 +600,7 @@ class Janela:
         )
 
     def _estado(self) -> tuple[dict | None, str]:
-        """O `state_full` de agora — do daemon dela, ou do dublê."""
+        """O `state_full` de agora — do daemon do usuário, ou do dublê."""
         if self.args.duble:
             if self._roteiro is None:
                 bruto = json.loads(pathlib.Path(self.args.duble).read_text())

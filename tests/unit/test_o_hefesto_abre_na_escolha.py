@@ -1,4 +1,5 @@
-"""O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01 — o Hefesto abre na escolha dela.
+"""O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01 — o Hefesto abre na escolha do
+usuário.
 """
 from __future__ import annotations
 
@@ -63,7 +64,7 @@ def _perfil(nome: str, janela: str, *, prioridade: int = 80, cor: int = 1) -> No
 
 
 def _o_disco() -> None:
-    """O Freestyle (`match any`), a escolha dela, o jogo e o navegador."""
+    """O Freestyle (`match any`), a escolha do usuário, o jogo e o navegador."""
     loader.save_profile(Profile(name=FREESTYLE, match=MatchAny(),
                                 controllers=_com_os_quatro(7)), origem="régua")
     _perfil(AVATAR, JANELA_DO_AVATAR, cor=2)
@@ -509,7 +510,7 @@ def test_a_sessao_no_freestyle_apagado_vira_sem_escolha_com_a_copia() -> None:
 
 
 def test_o_disco_dela_nao_muda() -> None:
-    """A sessão num perfil que não é o Freestyle (o disco dela): nada a mudar."""
+    """A sessão num perfil que não é o Freestyle (o disco do usuário): nada a mudar."""
     _o_disco()
     session.gravar_a_escolha(AVATAR)
 

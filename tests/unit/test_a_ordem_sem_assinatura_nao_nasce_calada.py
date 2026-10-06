@@ -1,7 +1,7 @@
 """Uma ordem que ninguém dispensou não pode sumir da tela.
 
 `ordens_novas` e `ordens_caladas` comparam a dispensa dela com o ARRANJO — e não
-com o slug da regra —, e isso é decisão medida: a dispensa vale para o que ela
+com o slug da regra —, e isso é decisão medida: a dispensa vale para o que o usuário
 VIU, e se ela mudar os cabos e a mesma regra disparar com um arranjo novo, é
 fato novo e a ordem volta.
 
@@ -52,7 +52,7 @@ def test_a_ordem_viva_sem_assinatura_aparece() -> None:
 
 
 def test_a_ordem_viva_sem_assinatura_nao_conta_como_dispensada() -> None:
-    """E a tela não pode CONTAR uma decisão dela que não existe."""
+    """E a tela não pode CONTAR uma decisão de produto que não existe."""
     assert ordens_caladas((_ordem(),), {CHAVE: ""}) == ()
 
 

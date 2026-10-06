@@ -136,9 +136,7 @@ def _tem_tinta(pid):
 
 CSS = CSS_GLIFO + """
   /* ---------- Navegação ----------
-     A RODADA DOS QUATRO CONTROLES (27/08/2026). Ela: "precisamos que cada aba
-     dessa do nosso mockup seja reescrita pra 4 controles conectados (…)
-     considerando o nosso mapa. e o sistema de fitas."
+     A RODADA DOS QUATRO CONTROLES (27/08/2026). Ela
 
      O que mudou aqui, e por quê:
 
@@ -157,17 +155,15 @@ CSS = CSS_GLIFO + """
 
      As correções anteriores dela, que continuam valendo:
 
-     [56] "ativar mouse e emulação somem. aquela parte de roda dos pontos some
-     também. nesse espaço era pra termos as opções de ativação que conversamos."
+     [56]
 
-     [57] "todos os campos (coluna da direita das três tabelas ali, pra cada
-     valor de cada linha) e arrumar a largura e disposição dos elementos."
+     [57]
 
      [51] "no navegação faltou usar os svgs que já usamos em status."
      ------------------------------------------------------------------- */
 
   /* ---- O `1fr` NÃO DIVIDE IGUAL, e foi assim que a divisória vertical do bloco
-     de baixo ficou 8,3px fora da de cima (ela viu na tela, 27/08: "olha o
+     de baixo ficou 8,3px fora da de cima (o usuário viu na tela, 27/08: "olha o
      alinhamento das barras verticais do bloco superior e inferior").
      Medido: `.ativacao` resolvia em `534,688px 551,312px` — o mínimo automático de
      um item de grid é `min-content`, e o campo "DOIS DEDOS" com `nowrap` empurrava
@@ -197,7 +193,7 @@ CSS = CSS_GLIFO + """
      HTML e o produto não tinha por onde trocá-lo. Com `currentColor` a borda
      passa a ser um campo que o pacote pinta a cada tique.
 
-     O PADRÃO É O NEUTRO, e é a regra dela — *campo sem informação não mostra
+     O PADRÃO É O NEUTRO, e é a regra de produto — *campo sem informação não mostra
      nada*: sem leitura, `color` fica em `var(--border-forte)` e a caixa é
      cinza. Nunca a cor do mockup.
 
@@ -224,9 +220,7 @@ CSS = CSS_GLIFO + """
      medido no tamanho em que é desenhado. */
   /* AS DUAS PALAVRAS PARA O MESMO ESTADO FINALMENTE SE ENCONTRAM — 17/09/2026.
 
-     Queixa dela, com a foto da Navegação: *"vê que o campo de p2 de desativado
-     é diferente do campo p3 e p4? eu preciso que todos os campos desativados
-     fiquem iguais pra todos"*.
+     Queixa de uso, com a foto da Navegação.
 
      A causa estava NOMEADA nesta casa desde 04/09, no `a06_navegacao.py`: o P3
      e o P4 nascem `class="nav-ctl vazia"` no esqueleto; o P2 nasce OCUPADO (é
@@ -271,7 +265,7 @@ CSS = CSS_GLIFO + """
      que o `monta.svg()` escreve não pinta NADA: as duas tiras são `.peca`, e a
      regra neutra do esqueleto as deixa cinza. Era o caso desta aba até hoje. */
   .nav-ctl [id$="-lightbar"] .peca{fill:var(--luz)}
-  /* AS CINCO LÂMPADAS DO JOGADOR NÃO EXISTEM NESTES CARTÕES — decisão dela,
+  /* AS CINCO LÂMPADAS DO JOGADOR NÃO EXISTEM NESTES CARTÕES — decisão,
      28/08: elas saem dos desenhos pequenos e ficam só nos grandes, da
      Iluminação. Aqui o desenho tem 111px e cada lâmpada media 1,90 × 0,64 px:  (noqa-acento: verbo medir, imperfeito)
      dois terços de um pixel de altura. Não havia contraste que resolvesse.
@@ -324,10 +318,10 @@ CSS = CSS_GLIFO + """
      tela única que punha as duas tabelas lado a lado, e essa tela virou duas
      (uma tabela em cada). Ficaram sem um só elemento no HTML gerado. */
   /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     PRIMEIRA LETRA, e o usuário confirmou: *"a maiúscula a regra é sobre a primeira
      letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
      uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     o usuário apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
      é a forma mais difícil de ler que existe.
      O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
      O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
@@ -337,7 +331,7 @@ CSS = CSS_GLIFO + """
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
   /* O RESPIRO DO TÍTULO: `sec-alta` estava escrita no HTML desde 27/08 e não
      tinha uma linha de CSS — o título nascia colado no pé do bloco de cima.
-     Ela: "desce mais um pouco o título pra separar ele do bloco". */
+     Ela. */
   .sec-alta{margin-top:16px}
   /* o bloco dos três botões não tem título: o vão que o título ocuparia vira
      margem, senão ele encosta no bloco das opções. */
@@ -360,7 +354,7 @@ CSS = CSS_GLIFO + """
 
   /* O SEGUNDO QUADRO PAGA O PRÓPRIO CABEÇALHO — 30/08/2026.
      "As opções de ativação" era um `.sec-rot` de 17px dentro do quadro da
-     Navegação; virando quadro próprio (pedido dela) ela ganhou `.quadro-topo`
+     Navegação; virando quadro próprio (pedido) ela ganhou `.quadro-topo`
      (28px), duas bordas e o padding de corpo — 26px a mais do que o miolo tem.
      Medido: o miolo pedia 570 num espaço de 544.
      O respiro sai de onde ele é folga e não leitura: o topo do segundo quadro e
@@ -371,10 +365,10 @@ CSS = CSS_GLIFO + """
      TIRA DE ESTADOS — a que ficou, não a que saiu.
 
      O QUE A CONFERÊNCIA MEDIU, e derruba a premissa da cura de hoje: a queixa
-     dela (*"essas 3 frases aqui na parte de baixo que quebram o layout"*) foi
+     de uso (*"essas 3 frases aqui na parte de baixo que quebram o layout"*) foi
      lida como sendo das TRÊS frases, e não era. A tira nunca coube — **UMA
      linha sozinha já transbordava**, e a linha que sobra é a mais comum da
-     máquina dela. Medido em Chrome (1200x777), na página publicada e no `HEAD`,
+     máquina do usuário. Medido em Chrome (1200x777), na página publicada e no `HEAD`,
      `scrollHeight - clientHeight` do `.miolo`:
 
          tira vazia .............. 0px    0px  (HEAD)
@@ -393,7 +387,7 @@ CSS = CSS_GLIFO + """
 
      O QUE ELE NÃO COMPRA, e fica dito: com DUAS linhas o miolo volta a
      transbordar 40px, porque `modo-portao` sozinha ocupa duas. Ela é uma das
-     que SAÍRAM do pé por ordem dela — e esta medida é a segunda razão, medida,
+     que SAÍRAM do pé por ordem de produto — e esta medida é a segunda razão, medida,
      para que continue fora: aquele pé não cabe a frase, com trim nenhum.
 
      O RESPIRO SAI DE ONDE É FOLGA E NÃO LEITURA, que é a mesma regra da linha
@@ -402,10 +396,7 @@ CSS = CSS_GLIFO + """
   .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 2px}
   .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
-     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
-     nome da linha e a divisória entre eles tem que estar clara. pra todas as
-     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
      A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
      moldura do quadro já existe. */
   .at-col > .at-linha{border-bottom:1px solid var(--rot-linha)}
@@ -474,7 +465,7 @@ CSS = CSS_GLIFO + """
      O painel é o ÚLTIMO quadro da aba: o `?` da "Função do teclado" fica a
      541,5px do topo da janela de 777px, e a `.dica` do desenho abre para BAIXO
      (`top:-4px`). Sobravam 235px. Com as frases do produto dentro — que é o que
-     as três que ela mandou tirar do pé passaram a fazer — aquela dica vai a
+     as três que o usuário mandou tirar do pé passaram a fazer — aquela dica vai a
      267px com o teclado na tela instalado e a **319px sem** (a frase longa é a
      que manda instalar `wvkbd-mobintl` ou `onboard` pelo nome), e o
      `overflow-y` do `.miolo` cortava o último parágrafo. A frase que mudou de
@@ -494,7 +485,7 @@ CSS = CSS_GLIFO + """
   .escolha-at:hover{border-color:var(--purple)}
   .escolha-at.viva{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
 
-  /* os "seletores tipo bignumbers" que ela pediu para a velocidade de cursor */
+  /* os "seletores tipo bignumbers" que o usuário pediu para a velocidade de cursor */
   .campo-num{display:flex;align-items:center;height:var(--h-escolha);padding:0 11px;
              border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg)}
   /* cada par (rótulo + número) anda junto, e o ÚLTIMO número encosta na borda
@@ -513,7 +504,7 @@ CSS = CSS_GLIFO + """
   /* O `margin-left:auto` SÓ VALE QUANDO HÁ UM PAR ANTES — 01/09/2026. Ele
      existe para empurrar o SEGUNDO número até a borda direita do campo, e com
      dois pares fazia exatamente isso. Quando as duas linhas passaram a ter UM
-     número só (decisão dela), o par único é `:last-child` **e** `:first-child`,
+     número só (decisão de produto), o par único é `:last-child` **e** `:first-child`,
      e a mesma regra jogava o `− 6 +` para a direita deixando o campo vazio à
      esquerda — um campo que parece quebrado, ao lado de listas que começam
      coladas na borda. O `:not(:first-child)` é a diferença entre "empurra o
@@ -549,11 +540,10 @@ CSS = CSS_GLIFO + """
          cursor:pointer;line-height:1;padding:0}
   .passo:hover{border-color:var(--purple);color:var(--purple)}
 
-  /* AS DUAS VELOCIDADES ARRASTAM — decisão dela, 05/09/2026: *"velocidade do
-     cursor e da rolagem coloca um slicer pra cada"*. O molde é o da aba
+  /* AS DUAS VELOCIDADES ARRASTAM — decisão, 05/09/2026. O molde é o da aba
      Vibração (`aba05._trilho`), e a aparência é copiada dela de propósito:
      `appearance:none` desliga o controle nativo do WebKit — que traria a cor e
-     a altura do tema do sistema para dentro de uma tela que ela aprovou — e as
+     a altura do tema do sistema para dentro de uma tela que o usuário aprovou — e as
      três regras abaixo reconstroem o mesmo trilho de 5px, raio 3, fundo
      `--border-forte`, com o polegar de 12px em `--purple` e borda `--panel`.
 
@@ -586,7 +576,7 @@ CSS = CSS_GLIFO + """
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
-  /* O CABEÇALHO DA TABELA DE GESTOS É BRANCO E NEGRITO — decisão dela,
+  /* O CABEÇALHO DA TABELA DE GESTOS É BRANCO E NEGRITO — decisão,
      31/08/2026: *"Combinação no controle / O que faz: tira do verde, deixa
      branco e negrito."*
      Ele era `--rot-campo` (o verde que nomeia CAMPO nesta janela), e não é isso
@@ -657,8 +647,8 @@ CSS = CSS_GLIFO + """
      cabe numa linha. O comentário daqui afirmava, desde 28/08, que "Configurar
      o estilo Point-and-click" JÁ tinha virado "Estilo Point-and-click" — e o
      gerador continuava escrevendo o rótulo longo: era comentário descrevendo
-     cura que não existia. A troca aconteceu de fato em 11/09/2026, aprovada por
-     ela, e por outra razão: o botão e a tela que ele abre tinham nomes
+     cura que não existia. A troca aconteceu de fato em 11/09/2026, aprovada
+     pelo usuário, e por outra razão: o botão e a tela que ele abre tinham nomes
      diferentes. A medida de 28/08 fica registrada na LEGENDA. */
   .acoes.quatro{grid-template-columns:repeat(4,1fr)}
   .grupo-padrao{position:relative}
@@ -676,9 +666,8 @@ CSS = CSS_GLIFO + """
     background:transparent;color:var(--texto-suave);
     display:inline-flex;align-items:center;justify-content:center}
   .btn-conf.vermelho{border-color:var(--red);color:var(--red)}
-  /* O POP-UP ABRE NO CLIQUE E SÓ FECHA NA OPÇÃO OU FORA — decisão dela,
-     31/08/2026: *"voltar ao padrão tem que ficar aquele pop up ativo e só
-     desativar se eu clicar na opção ou fora dela."*
+  /* O POP-UP ABRE NO CLIQUE E SÓ FECHA NA OPÇÃO OU FORA — decisão,
+     31/08/2026
 
      ERA `:hover`, e o hover é o gatilho errado para uma pergunta que espera
      resposta: ela sumia assim que o ponteiro saía do caminho entre o botão e o
@@ -705,9 +694,7 @@ CSS = CSS_GLIFO + """
   .estado .verde{color:var(--green)} .estado .laranja{color:var(--orange)}
   .estado .valor{color:var(--fg);font-weight:600}
 
-  /* AS TRÊS LINHAS DE ESTADO NASCEM VAZIAS, E É REGRA DELA — 30/08/2026:
-     *"se não tá mostrando agora, não tem info pra mostrar no produto; mas
-     quando tiver, aparece a info correta"*. Elas são o que a GTK mostra e esta
+  /* AS TRÊS LINHAS DE ESTADO NASCEM VAZIAS, E É REGRA DE PRODUTO — 30/08/2026. Elas são o que a GTK mostra e esta
      aba calava — a dica do quadro Navegação já cita "a linha de estado abaixo"
      desde 27/08, e até hoje a linha que ela cita não existia.
 
@@ -720,7 +707,7 @@ CSS = CSS_GLIFO + """
 
      O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
      troca valor vazio por `—` (`hefesto_vivo.py:65`), então uma frase vazia
-     viraria um travessão solto na tela dela — foi o que a primeira foto
+     viraria um travessão solto na tela do usuário — foi o que a primeira foto
      mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
      Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o
      que faz a linha SUMIR quando o bloqueio acaba; chave ausente deixaria a
@@ -736,8 +723,7 @@ CSS = CSS_GLIFO + """
   .estado tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
 
   /* ---------- A FRASE DO PRODUTO DENTRO DO `?` ----------
-     07/09/2026, ordem dela: *"navegacao tem essas 3 frases aqui na parte de
-     baixo que quebram o layout"*. As três desceram para o `?` do campo de que
+     07/09/2026,  As três desceram para o `?` do campo de que
      falam (`ajuda(..., vivas=…)`), e continuam sendo escritas pelo pacote a
      cada tique — o que muda é o LUGAR, nunca o dono.
 
@@ -749,7 +735,7 @@ CSS = CSS_GLIFO + """
      dos dois caminhos, calado.
 
      O TRAÇO SEPARA DUAS VOZES, e é por isso que ele existe: o que está acima é
-     o texto FIXO do desenho, o que está abaixo é o que a máquina dela diz
+     o texto FIXO do desenho, o que está abaixo é o que a máquina do usuário diz
      AGORA. Sem a separação, uma frase que muda com o estado se lê como parte da
      explicação que nunca muda. */
   .dica .viva{display:block;margin-top:10px;padding-top:9px;
@@ -758,7 +744,7 @@ CSS = CSS_GLIFO + """
   .dica .viva:has(.nada){display:none}
 
   /* ---------- O `?` QUE TEM ALGO A DIZER SE ACENDE — 07/09/2026 ----------
-     A razão inteira está no comentário de `ajuda()`, e a curta é a palavra dela
+     A razão inteira está no comentário de `ajuda()`, e a curta é a palavra
      de 05/09: *"ninguém passa o rato onde não sabe que há algo"*.
 
      O SELETOR LÊ O CONTEÚDO VIVO, e é isso que o impede de mentir. Ele não
@@ -817,7 +803,7 @@ CSS = CSS_GLIFO + """
           03/09/2026. O desenho nascia `<input checked>`, a palavra saía de um
           `content:` de CSS, e o produto não tinha por onde escrever nenhum dos
           dois: a tela dizia **Ligado** com `mouse_emulation.enabled=false` no
-          daemon dela. Pior, clicar no `<label>` virava a caixa no DOM mesmo
+          daemon do usuário. Pior, clicar no `<label>` virava a caixa no DOM mesmo
           quando o gesto RECUSAVA — a tela trocava de lado sozinha e nada a
           devolvia.
 
@@ -844,7 +830,7 @@ CSS = CSS_GLIFO + """
 
      A TIRA DE ESTADOS SAIU DAQUI EM 07/09/2026, e a metade que ela pedia
      ficou: a frase *"escreve ao lado, na tira de estados"* caducou por ordem
-     dela (*"essas 3 frases … quebram o layout"*) — a razão foi para o `?` do
+     de produto (*"essas 3 frases … quebram o layout"*) — a razão foi para o `?` do
      "Status do Modo", que é a linha deste interruptor. O *"apaga o
      interruptor"* continua letra por letra, e é o que estas três regras fazem.
 
@@ -854,7 +840,7 @@ CSS = CSS_GLIFO + """
      apagado sem razão, ou uma razão sem interruptor apagado — que é exatamente
      o que a peça `monta.botao_cinza` evita do outro lado, e pela mesma regra.
      Aqui não dá para usar aquela peça: ela emite um `.btn`, e o "Status do
-     Modo" é o rótulo `.tog` que ela pediu em 27/08.
+     Modo" é o rótulo `.tog` que o usuário pediu em 27/08.
 
      E A MARCAÇÃO NÃO SE ESCREVE NUM COMENTÁRIO DE CSS: a primeira redação deste
      bloco citava a tag do rótulo por extenso, e a citação SAIU NA PÁGINA — o
@@ -882,7 +868,7 @@ CSS = CSS_GLIFO + """
          passa a valer também sob o portão;
        · o interruptor CONTINUAVA respondendo ao clique — este mesmo comentário
          dizia, por escrito, que *"nada aqui é `disabled` nem
-         `pointer-events:none`"*, e ela pediu **não clicável**. Agora é.
+         `pointer-events:none`"*, e o usuário pediu **não clicável**. Agora é.
 
      E O `cursor:not-allowed` MUDOU DE ELEMENTO, porque tinha de mudar: um
      elemento que não é alvo de ponteiro **não decide o cursor** — quem decide
@@ -904,7 +890,7 @@ CSS = CSS_GLIFO + """
      A REGRA PARTE DO ENDEREÇO, E NÃO MAIS DA CLASSE — 07/09/2026. Ela dizia
      `.quadro-corpo:has(.estado.portao .laranja)`, e as duas classes só existiam
      porque a razão morava na tira de `.estados`. A frase desceu para o `?` do
-     "Status do Modo" por ordem dela (*"essas 3 frases … quebram o layout"*), e
+     "Status do Modo" por ordem de produto (*"essas 3 frases … quebram o layout"*), e
      uma regra ancorada em `.estado.portao` teria parado de apagar o interruptor
      **em silêncio**: a razão continuaria chegando, o interruptor voltaria a
      parecer clicável, e nada reprovaria. O `data-campo` é o que não muda de
@@ -936,8 +922,7 @@ CSS = CSS_GLIFO + """
 
   /* ---------- A MARCA DE "NÃO DISPARA" NA COLUNA DO NOME ----------
      Decisão do PO, 04/09/2026 (§2 `06[02]`): as três regiões do touchpad
-     **ficam** — é a D-15 dela, *"pedi pra tirar o texto não o touch mostrando
-     os toques"* — **com a marca de que não disparam**. A marca nasce FIXA: a
+     **ficam** — é a D-15 dela, ** — **com a marca de que não disparam**. A marca nasce FIXA: a
      marca VIVA (que acende só quando o touchpad é o ponteiro do sistema)
      espera o daemon publicar esse dado, e isso é sprint própria.
 
@@ -960,7 +945,7 @@ CSS = CSS_GLIFO + """
      teclado na tela", ~200px).
 
      `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os seis combos) continuam com
-     os 176px que ela aprovou — lá não há marca nenhuma a caber. */
+     os 176px que o usuário aprovou — lá não há marca nenhuma a caber. */
   .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
 
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
@@ -1028,7 +1013,7 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo="",
     FATO SUBSTITUÍDO (02/09/2026, segunda correção): aqui estava escrito que
     *"as listas das três telas de pop-up ficam SEM `data-gesto` de propósito —
     elas são os CAMPOS de um formulário cujo ponto de gravação é o Guardar"*. A
-    primeira metade caducou com a decisão dela de 02/09 (*"as 21 listas param de
+    primeira metade caducou com a decisão de 02/09 (*"as 21 listas param de
     ser repintadas enquanto ela está mexendo"*): sem nome, o `change` de uma
     linha **não chega ao Python** — o `closest` do ouvinte
     (`hefesto_vivo.py:189`) não conhece `data-campo` nem `data-linha` —, e sem
@@ -1045,7 +1030,7 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo="",
 
     FATO SUBSTITUÍDO (02/09/2026): aqui estava escrito que as 49 listas ficam
     "sem nome" porque só o Guardar importa. **Sem nome elas nunca são pintadas**,
-    e um formulário que não é pintado mostra o DESENHO, não o perfil dela —
+    e um formulário que não é pintado mostra o DESENHO, não o perfil do usuário —
     enquanto o Guardar lê essas mesmas linhas e as grava. Medido contra a página
     publicada: as 21 opções cravadas são exatamente `acoes_de_botao.padrao()`, e
     o Guardar gravava `button_actions = None`, apagando em silêncio o que ela
@@ -1083,7 +1068,7 @@ def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
     que o `change` resolve.
 
     O `campo` é o SEGUNDO endereço, e ele não é enfeite: sem ele a lista fica
-    mostrando o que ela escolheu mesmo quando o gesto RECUSOU, porque a recusa
+    mostrando o que o usuário escolheu mesmo quando o gesto RECUSOU, porque a recusa
     de um gesto só imprime no terminal (`hefesto_vivo.py:341`) — na tela não
     aparece nada. Com ele, o tique seguinte reescreve o `value` com o que o
     DAEMON diz, e a opção sem dono volta sozinha para o lugar. É a única forma
@@ -1093,7 +1078,7 @@ def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
     texto DENTRO do `<select>` (o alvo padrão do `escrever` é `textContent`) e
     comeria as opções.
 
-    O `escolhido` NASCEU EM 02/09/2026, e a razão é a decisão dela sobre a
+    O `escolhido` NASCEU EM 02/09/2026, e a razão é a decisão de produto sobre a
     "Função do teclado": as três opções passaram a ser `Só dentro do jogo` ·
     `Só fora do jogo` · `Desativado`, e **o padrão é a do meio**. Sem este
     argumento a lista nasceria marcada na PRIMEIRA — que é justamente a única
@@ -1150,8 +1135,7 @@ def bignum(*pares):
 def trilho(valor, minimo, maximo, gesto, campo, titulo):
     """Uma velocidade como barra arrastável, com o número ao lado.
 
-    DECISÃO DELA, 05/09/2026: *"velocidade do cursor e da rolagem coloca um
-    slicer pra cada"*. Ela substitui o :func:`bignum` de `−`/`+` nas duas linhas
+    DECISÃO, 05/09/2026. Ela substitui o :func:`bignum` de `−`/`+` nas duas linhas
     das "opções de ativação" — e o par de botões saiu junto com os quatro gestos
     de passo que o atendiam, para não deixar endereço sem campo na página.
 
@@ -1214,7 +1198,6 @@ CSS += "\n  /* ---- o desenho acompanha o combo apontado, sem uma linha de scrip
 CSS += REALCE + "\n"
 
 
-# meu trabalho (…) nada hardcoded."*  (noqa-acento: citação literal)
 _FOLHA_NO_SVG = re.compile(
     r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
 
@@ -1286,8 +1269,7 @@ def desenho(c, **kw):
       (ver `folha_das_cores`). Mantê-la seria a mesma tabela quatro vezes, e a
       podada é justamente a que impede o desenho de virar outro aparelho;
     * o `<svg>` ganha `ENDERECO_DO_DESENHO`. Sem ele o `data-colorway` fica
-      sendo o do MOCKUP para sempre — era o defeito que ela nomeou: *"é white
-      no p1, mas (…) os svgs não são os que o meu mapa cataloga"*.
+      sendo o do MOCKUP para sempre — era o defeito que o usuário nomeou.
 
     AS DUAS ÂNCORAS PARAM A GERAÇÃO se sumirem. Uma `str.replace` que não casa
     devolve o texto intacto e não avisa — foi assim que a fita viva morreu em
@@ -1319,17 +1301,17 @@ def controle(c):
     caixa, e **uma envelheceu sem a outra**: a cheia ganhou
     `data-campo="identidade"` e `data-campo="navega"` em 03/09, a vazia não.
 
-    O QUE ISSO CUSTOU, medido nesta aba com os QUATRO DualSense dela na mesa:
+    O QUE ISSO CUSTOU, medido nesta aba com os QUATRO DualSense do usuário na mesa:
     o daemon publicava quatro controles, a carga chegava com
     `colunas = {p1, p2, p3, p4}` e `ocupados` com os quatro — e a tela mostrava
     DOIS. O passo 2 do piloto faz `achar(raiz, k)`, que procura `data-campo="k"`
     **dentro** do bloco `[data-controle]`; sem endereço, o dado dela chegava e
     não tinha onde pousar. O P3 e o P4 seguiam dizendo `P3 • Desconectado` com
-    travessão em tudo, com o aparelho ligado na mão dela.
+    travessão em tudo, com o aparelho ligado na mão do usuário.
 
     ``p1: 3 campos · p2: 3 · p3: 1 · p4: 1`` era a medida da página publicada.
 
-    O ESTADO INICIAL CONTINUA SENDO O DESENHO DELA: o lugar vazio nasce com
+    O ESTADO INICIAL CONTINUA SENDO O DESENHO DO USUÁRIO: o lugar vazio nasce com
     `class="nav-ctl vazia"`, `data-conectado="nao"` e o travessão. **Quem os
     tira é o piloto**, no passo `1c`, quando o controle chega — e agora ele tem
     onde escrever o que o controle diz. A `monta.MESA` não muda: ela é o desenho
@@ -1380,11 +1362,11 @@ def controle(c):
     mockup: com o P1 dela em White, o `<svg>` dizia `cosmic-red`.
 
     O PIXEL JÁ ESTAVA CERTO, E O MECANISMO NÃO — medido no WebKit em 03/09, com
-    os dois controles dela na mesa: o casco do P1 saía `rgb(228, 224, 216)`,
+    os dois controles do usuário na mesa: o casco do P1 saía `rgb(228, 224, 216)`,
     que é o White do mapa, porque a `a06_navegacao.folha_do_plastico`
     sobrescrevia as variáveis. Só que as REGRAS que leem essas variáveis são
     `svg[data-colorway="cosmic-red"] …`: elas casavam **porque o atributo do
-    mockup tinha ficado**. Ligar o atributo — que é o que a lei dela pede —
+    mockup tinha ficado**. Ligar o atributo — que é o que a lei de produto pede —
     teria apagado a cor em vez de acertá-la, e é por isso que a página passou a
     publicar os 28 modelos no mesmo movimento.
 
@@ -1395,13 +1377,10 @@ def controle(c):
     que APAGA o `data-colorway` — e o desenho cai no neutro que as regras
     `.nav-ctl.vazia .ds-svg` já pintam.
 
-    O `data-controle` do lugar vazio é decisão dela, 03/09/2026, e ela a
-    enunciou assim: *"tem que aparecer desligado enquanto não tem nenhum
-    controle. A partir do momento que tiver, ele aparece o controle devidamente
-    conectado. Se isso não ocorre com os 4 controles em cada aba, então temos
-    que construir isso e garantir isso."* — o `data-controle` chegou naquele
+    O `data-controle` do lugar vazio é decisão, 03/09/2026, e ela a
+    enunciou assim:  — o `data-controle` chegou naquele
     dia; os campos DE DENTRO chegam hoje, e sem eles a segunda metade da frase
-    dela não acontecia.
+    de produto não acontecia.
     """
     n = c["jogador"]
     conectado = bool(c.get("conectado", True))
@@ -1535,7 +1514,7 @@ VALEM_PARA = (
     + "</b>.")
 
 #:   · **o botão PS, e o parágrafo VIROU O CONTRÁRIO em 06/09/2026.** Ele dizia
-#:     (§2 `06[03]`), que **a palavra dela reverteu** na 06-Q3: *"O PS ganha a
+#:     (§2 `06[03]`), que **a palavra de produto reverteu** na 06-Q3: *"O PS ganha a
 #:     a digitar SEM parar de abrir a Steam."*
 D_DEFINICOES = ajuda(
     f"As <b>{len(BOTOES)} linhas</b> de cada botão: <b>o que ele faz</b> "
@@ -1627,7 +1606,7 @@ FILEIRA = '''
 
 #: `core/acoes_de_botao.BOTOES`, e é o que faz a linha SER GRAVADA: sem ela o
 #: MESMO campo do perfil (`Profile.button_actions`), e um segundo endereço para
-#: precisa virar dado com dono — e isso é decisão dela.
+#: precisa virar dado com dono — e isso é decisão de produto.
 PONTO_MAPA = [
     (gl("touchpad", rot="deslizar"), "Movimento do cursor", ""),
     (gl("touchpad", rot=TOUCH_REGIOES[0]) + MARCA_DO_TOUCHPAD,
@@ -1653,7 +1632,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
       <a class="tn-x" href="#" title="Fechar"{x}>×</a>
     </div>
     <div class="tn-corpo">
-      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+      <!-- TEXTO NA TELA É ZERO — regra, 30/08/2026: *"texto na interface é
            zero, só deixamos se for algo extremamente importante, e se for de
            média importância vira tooltip"*. Esta frase era prosa fixa a poucos
            pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
@@ -1812,7 +1791,7 @@ TELA_PONTO = f'''
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-ponto">×</a>
     </div>
     <div class="tn-corpo">
-      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+      <!-- TEXTO NA TELA É ZERO — regra, 30/08/2026: *"texto na interface é
            zero, só deixamos se for algo extremamente importante, e se for de
            média importância vira tooltip"*. Esta frase era prosa fixa a poucos
            pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
@@ -1844,7 +1823,7 @@ TELA_PONTO = f'''
     <div class="tn-rod">
       <!-- O "Cancelar" E O "×" GANHARAM NOME EM 11/09/2026, pela mesma razão
            que os da tela de Definições ganharam em 02/09: FECHAR É O "SAIR" da
-           decisão dela (*"as listas param de ser repintadas enquanto ela está
+           decisão de produto (*"as listas param de ser repintadas enquanto ela está
            mexendo, até guardar ou sair"*). Eles já fechavam a pop-up sozinhos,
            pelo `:target` do CSS; o que faltava era o Python saber que ela
            desistiu — sem isso a trava ficaria presa depois do "Cancelar", e as
@@ -1945,7 +1924,7 @@ MIOLO = f'''
     </div>
 
     <!-- ---------- AS OPÇÕES DE ATIVAÇÃO VIRARAM QUADRO PRÓPRIO ----------
-         Pedido dela, 30/08: *"a parte 'As opções de ativação' coloca na mesma cor
+         Pedido, 30/08: *"a parte 'As opções de ativação' coloca na mesma cor
          que o Navegação e divide em dois blocos, o superior e as opções de
          ativação"*.
 
@@ -1971,8 +1950,7 @@ MIOLO = f'''
             </div>
           </div>
           <!-- ---------- A RESSALVA DA D3 SAIU DA MOLDURA ----------
-               07/09/2026, ordem dela: *"navegacao tem essas 3 frases aqui na
-               parte de baixo que quebram o layout"* — e ela era a primeira das
+               07/09/2026,  — e ela era a primeira das
                três, 17,25px logo abaixo da grade das sete linhas.
 
                A DECISÃO D3 CONTINUA CUMPRIDA, e é o que importa: `mouse`,
@@ -2216,7 +2194,7 @@ LEGENDA = f'''<div class="nota">
 
 
 def _conferir(doc):
-    """As decisões dela nesta aba, conferidas NA SAÍDA."""
+    """As decisões de produto nesta aba, conferidas NA SAÍDA."""
     import re as _re
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = _re.sub(r"<!--.*?-->", "", corpo, flags=_re.S)
@@ -2256,7 +2234,7 @@ def _conferir(doc):
                    (PAPEL_SO_A_JANELA, PAPEL_QUE_NAVEGA, PAPEL_DO_CURSOR)),
                "um lugar vazio diz o que ele navega — e ele não navega nada")
 
-    #    O DEFEITO QUE ELA MEDE, com os QUATRO DualSense dela na mesa: o daemon
+    #    O DEFEITO QUE ELA MEDE, com os QUATRO DualSense do usuário na mesa: o daemon
     _lugares = _fileira.split('<div class="nav-ctl')[1:]
     exigir(len(_lugares) == len(MESA),
            f"a régua dos endereços achou {len(_lugares)} lugares na fileira, e "

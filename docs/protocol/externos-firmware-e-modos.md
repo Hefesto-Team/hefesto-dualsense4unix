@@ -2,7 +2,7 @@
 
 - **Levantado em:** 11/08/2026, com os dois aparelhos ligados ao mesmo tempo —
   o 8BitDo no **cabo**, em modo Switch, e o Pro Controller genuíno no **rádio**
-- **Por que existe:** a pergunta dela foi *"se o módulo DKMS importa para o Pro,
+- **Por que existe:** a pergunta de produto foi *"se o módulo DKMS importa para o Pro,
   não importaria também para o 8BitDo? e se houver firmware ou driver que o
   projeto deixou passar?"*. A metade do **driver** já estava respondida antes
   desta página começar — os dois caem no mesmo `hid_nintendo`, e **não falta
@@ -135,7 +135,7 @@ Pro 2 for Xbox — que têm **menos** modos e outros IDs.
 **Uma coisa já dá para eliminar sem tocar no aparelho:** o **Pro 2 não troca de
 modo por combo**, e sim por uma **chave física de quatro posições** (S/X/D/A) na
 traseira. **[FABRICANTE]**, grau **ALTA**. Como esta casa mediu com ela, em
-03/08/2026, que o modo troca com `Start + A`, **o controle dela não é um Pro 2**.
+03/08/2026, que o modo troca com `Start + A`, **o controle do usuário não é um Pro 2**.
 É SN30 Pro ou SN30 Pro+ — e essa distinção continua aberta, porque ela decide
 qual índice de firmware vale (seção 4).
 
@@ -302,7 +302,7 @@ registra o nó como `xpad%d`** — lido das strings do módulo instalado. Logo, 
 X-input: `resolve_external_leds` devolve `(None, None)`, `apply_player_number`
 devolve `False`, e mesmo que casasse, a
 `assets/79-external-controller-leds.rules` não daria permissão de escrita, porque
-nenhuma das seis regras dela contempla esse nome. **Dois motivos independentes
+nenhuma das seis regras de produto contempla esse nome. **Dois motivos independentes
 para o mesmo resultado: sem número de jogador.** **[MEDIDO 11/08]**, grau
 **ALTA**.
 
@@ -770,7 +770,7 @@ que chega ao **jogo** é indistinguível do genuíno.
 
 ## 7. A recomendação, e ela tem um preço na mesa
 
-A pergunta foi *"vale ou não vale atualizar o firmware dos aparelhos dela?"*.
+A pergunta foi *"vale ou não vale atualizar o firmware dos aparelhos do usuário?"*.
 
 ### 7.1 O Pro Controller genuíno — NÃO, e por três motivos
 
@@ -805,7 +805,7 @@ D-input, e `get-devices` é leitura pura.
 1. **Descobrir o modelo.** SN30 Pro e SN30 Pro+ têm numerações independentes.
    **Já se sabe que não é um Pro 2** (aquele troca de modo por chave física, e o
    dela troca por combo). Falta separar Pro de Pro+ — é olhar o aparelho: o Pro+
-   tem gatilhos maiores e o nome impresso atrás. **Cinco segundos de olho dela.**
+   tem gatilhos maiores e o nome impresso atrás. **Cinco segundos de olho de quem confere.**
 2. **Ler a versão, sem gravar.** Com o controle **desligado**, segurar
    **`B + Start`** para ligar em D-input (uma lâmpada piscando), ligar o cabo, e
    rodar:
@@ -865,7 +865,7 @@ Honestidade primeiro, porque cada linha aqui é trabalho de outra sessão.
 1. **A versão de firmware dos dois aparelhos.** Não medida, e não por
    dificuldade: **por escopo.** Ler a do `057E:2009` exige escrever o subcomando
    `0x02` no `hidraw`; ler a do 8BitDo exige que ele esteja em D-input, e trocar
-   o modo é dela. **Tentei:** `fwupdmgr get-devices` (devolveu só placa-mãe,
+   o modo é do usuário. **Tentei:** `fwupdmgr get-devices` (devolveu só placa-mãe,
    CPU, NVMe e TPM) e uma varredura de todo atributo de `sysfs` do device HID e
    do `usb_device` (só `bcdDevice`, que não é versão de firmware).
 2. **O `bcdDevice` do Pro genuíno.** Ele esteve no rádio o dia inteiro, e
@@ -885,7 +885,7 @@ Honestidade primeiro, porque cada linha aqui é trabalho de outra sessão.
 8. **Os IDs `2dc8:6103` e `2dc8:3010`**, que aparecem no `SDL_GameControllerDB`
    sob o nome "8BitDo Pro 2". O `6103` segue o padrão "+0x0100 = Bluetooth" e
    sugere que houve firmware do Pro 2 em que o D-input por rádio era `6103`, e
-   não `6006`. **SEM PROVA**, e só importaria se o aparelho dela fosse um Pro 2
+   não `6006`. **SEM PROVA**, e só importaria se o aparelho do usuário fosse um Pro 2
    — e não é.
 
 ### 8.1 Notas de instrumento
@@ -1005,14 +1005,13 @@ não com endereço.
 
 ### O remapeamento persistente não existe para este modelo
 
-Medição dela, no aparelho: *"8bitdo ultimate software não funciona nem a pau no
-meu controle"*.
+Medição dela, no aparelho.
 
 Bate com o que se sabe da linha: o **Ultimate Software** atende os aparelhos
 novos (Ultimate, Pro 2, e parte dos Pro+). O **SN30 Pro** de 2018 era servido
 pela ferramenta antiga, que **atualiza firmware e não remapeia**.
 
-**Consequência para o pedido dela** — trocar o botão do coração pelo da estrela
+**Consequência para o pedido** — trocar o botão do coração pelo da estrela
 de modo que valha em qualquer console, inclusive no Switch: **não há caminho por
 software.** O mapeamento vive no firmware, e a 8BitDo não expôs remapeamento
 para este modelo.
@@ -1038,9 +1037,9 @@ invertido.
 
 ### Os dois botões do meio, medidos — e não há o que trocar
 
-Ela perguntou se dava para trocar, por firmware, o botão do coração pelo da
-estrela, *"pra ele sempre funcionar nesse sentido"*. Medido em 11/08/2026, no
-aparelho dela, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
+O usuário perguntou se dava para trocar, por firmware, o botão do coração pelo da
+estrela. Medido em 11/08/2026, no
+aparelho do usuário, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
 
 | botão no plástico | evdev | code | o que faz |
 |---|---|---|---|
@@ -1051,15 +1050,14 @@ aparelho dela, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
 input de home e o botão estrela de print"*. Console e Linux concordam; não há
 divergência de plataforma.
 
-**Mas o pedido dela não era corrigir divergência — era INVERTER os dois**, de
+**Mas o pedido não era corrigir divergência — era INVERTER os dois**, de
 modo que a **estrela** acione o home e o coração acione o print, e que isso
 valesse **também no Switch**. Registrado com todas as letras porque quem escreve
 isto entendeu errado na primeira leitura e chegou a anotar "não há o que
 corrigir": não há **defeito**, e há um **pedido**, que são coisas diferentes.
 
 **No Switch: não dá.** O mapeamento vive no firmware, e o SN30 Pro de 2018 não
-tem remapeamento persistente — medido por ela: *"8bitdo ultimate software não
-funciona nem a pau no meu controle"*. O Ultimate Software atende os aparelhos
+tem remapeamento persistente — medido por ela. O Ultimate Software atende os aparelhos
 novos (Ultimate, Pro 2, parte dos Pro+); este modelo era servido pela ferramenta
 antiga, que **atualiza firmware e não remapeia**. Some-se a isso que o `fwupd`
 recusa o aparelho fora do modo bootloader (medido acima), e o caminho de

@@ -26,7 +26,7 @@ ponte julga ter mandado.
 O QUE ELE NUNCA FAZ
 --------------------
 **Não grava áudio em disco.** O PCM do ouvinte é lido em memória, vira
-estatística e morre com o processo. É o microfone da casa dela.
+estatística e morre com o processo. É o microfone da casa do usuário.
 
 **Não abre janela nenhuma** (TELA-DELA-02): é CLI, e o ouvinte é um `parec` sem
 interface.

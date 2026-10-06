@@ -10,7 +10,7 @@ censo dos dezessete feature reports não pôde ser feito, e a leitura da cor
 esbarrava na mesma porta.
 
 **A causa não é a que parecia, e a diferença importa muito.** A leitura fácil
-— e um relatório de agente daquele dia a fez — era que a regra udev não cobria
+— e um relatório daquele dia a fez — era que a regra udev não cobria
 o Bluetooth. Está errada, e mandaria consertar o lugar errado:
 `assets/70-ps5-controller.rules` está instalada, idêntica à árvore, e PEGOU
 (`CURRENT_TAGS=:seat:uaccess:`). Quem tira a ACL é **o próprio Hefesto**, de

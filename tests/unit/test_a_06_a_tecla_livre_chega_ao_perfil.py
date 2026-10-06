@@ -324,7 +324,7 @@ def test_o_padrao_da_linha_ao_lado_nao_apaga_a_dela(bancada):
 
 
 def test_o_guardar_das_teclas_nao_apaga_o_que_esta_fora_do_alcance(bancada):
-    """O que ela escreveu num botão FORA do domínio sobrevive ao Guardar."""
+    """O que o usuário escreveu num botão FORA do domínio sobrevive ao Guardar."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     ctx, mod, disco, _gravados = bancada

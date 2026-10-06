@@ -27,7 +27,7 @@ E a ironia estava escrita no próprio arquivo: a classe se apresentava como
 corpo fazia um grep, sem sequer borda de palavra. **O comentário descrevia o
 defeito que o código tinha.**
 
-A CURA, E O ALCANCE DELA (que é a parte difícil)
+A CURA, E O ALCANCE DO USUÁRIO (que é a parte difícil)
 ------------------------------------------------
 Duas funções, e a assimetria entre elas é o ponto:
 

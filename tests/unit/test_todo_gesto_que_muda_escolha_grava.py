@@ -1,4 +1,4 @@
-"""Todo gesto que muda uma escolha dela grava no clique — ou diz por que não é escolha."""
+"""Todo gesto que muda uma escolha do usuário grava no clique — ou diz por que não é escolha."""
 from __future__ import annotations
 
 import ast

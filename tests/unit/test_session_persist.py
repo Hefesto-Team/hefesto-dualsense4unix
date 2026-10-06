@@ -247,7 +247,7 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
 async def test_boot_restaura_a_escolha_com_regra_de_janela(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """A escolha dela volta no boot, com regra de janela ou sem."""
+    """A escolha do usuário volta no boot, com regra de janela ou sem."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile

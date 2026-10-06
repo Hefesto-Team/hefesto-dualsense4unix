@@ -68,7 +68,7 @@ def _linhas(cena: dict[str, Any], lugar: str, **marca: Any) -> list[dict[str, An
 def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """Um segundo antes do prazo a janela ainda é dela: a tela está ocupada, a"""
+    """Um segundo antes do prazo a janela ainda é do usuário: a tela está ocupada, a"""
     assert a08.ESPERA_NA_TELA_S == cr.PRAZO_DO_PENDENTE_S, (
         "a tela e a central voltaram a ter dois prazos")
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()

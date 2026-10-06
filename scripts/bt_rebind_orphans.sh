@@ -63,9 +63,9 @@
 # os DualSense, inclusive os por Bluetooth.
 #
 # ─── O órfão do CABO (STORM-USB-01, 24/09/2026) ──────────────────────────────
-# A mesma cura no outro transporte, e é a palavra dela de 23/09: «nomear e
+# A mesma cura no outro transporte, e é a palavra de 23/09: «nomear e
 # RELIGAR» — o controle que cai por -71 volta sozinho. No cabo, a probe perdida
-# tem outra forma, e está no journal da mesa dela (16/09, a 3-4.4):
+# tem outra forma, e está no journal da bancada (16/09, a 3-4.4):
 #
 #   usbhid 3-4.4:1.3: can't add hid device: -71
 #   usbhid 3-4.4:1.3: probe with driver usbhid failed with error -71
@@ -79,7 +79,7 @@
 #
 # Escopo, também ESTREITO — TODAS as condições:
 #   1. interface USB (`3-4.4:1.3`) de classe 03 (HID), SEM symlink `driver`;
-#   2. o aparelho dela é Sony (idVendor 054c). O vpad do hefesto nasce por uhid
+#   2. o aparelho do usuário é Sony (idVendor 054c). O vpad do hefesto nasce por uhid
 #      e não tem interface USB nenhuma: fica fora por construção;
 #   3. `authorized` da interface não é 0 — interface desligada é escolha de
 #      alguém, não o -71.
@@ -87,7 +87,7 @@
 # `devnum`, e o orçamento recomeça, como no rádio.
 #
 # ─── O religar NA HORA (STORM-USB-02, 24/09/2026) ────────────────────────────
-# O tique do watchdog passa a cada 2 min (medido no journal dela: 5.671
+# O tique do watchdog passa a cada 2 min (medido no journal do usuário: 5.671
 # intervalos, mediana 120 s, o maior 126 s), e o lugar guardado de quem saiu
 # vale 30 s (`identity.prazo_do_lugar_guardado`). Religado no tique, o controle
 # volta depois do prazo em mais de 3 de cada 4 quedas, e os outros já trocaram
@@ -170,7 +170,7 @@ fi
 
 # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
 # arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
-# sem isto grava, no journal da máquina dela, linhas que descrevem eventos que
+# sem isto grava, no journal da máquina do usuário, linhas que descrevem eventos que
 # nunca aconteceram. Motivo completo no cabeçalho do bt_bonds_autorestore.sh.
 LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
 _registrar() {

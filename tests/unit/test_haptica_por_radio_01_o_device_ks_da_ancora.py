@@ -94,7 +94,7 @@ def test_o_no_vestido_de_dualsense_e_lido() -> None:
 
 
 def test_o_no_sem_sysfs_path_fica_de_fora() -> None:
-    """Sem ele o Wine tira GUID_NULL, que é o ContainerId da caixa de som dela."""
+    """Sem ele o Wine tira GUID_NULL, que é o ContainerId da caixa de som do usuário."""
     assert ks.endpoints_de_mentira(_dubles(_sinks(caminho=None))) == []
 
 

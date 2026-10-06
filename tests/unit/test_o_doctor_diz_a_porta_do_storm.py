@@ -215,7 +215,7 @@ def test_o_hub_em_comum_e_aviso_e_nao_nota_de_rodape() -> None:
 
 
 def test_uma_porta_so_nao_acusa_o_hub() -> None:
-    """Com uma porta ruim, nenhum WARN de hub — o aparelho dela já explica tudo."""
+    """Com uma porta ruim, nenhum WARN de hub — o aparelho do usuário já explica tudo."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",

@@ -27,7 +27,7 @@ def test_o_prefixo_do_lancador_recebe_o_device(_lar, monkeypatch):
 
     MORDIDA: tire a chamada de `_device_ks_nos_lancadores` do
     `materialize_launch_env`. O prefixo continua sem device, e a háptica nativa
-    não chega ao jogo — o estado medido no disco dela em 21/09.
+    não chega ao jogo — o estado medido no disco do usuário em 21/09.
     """
     from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 

@@ -59,7 +59,7 @@ class TestInstalaEmTodoFormato:
         )
 
     def test_e_default_sem_flag_nenhuma(self) -> None:
-        """A regra dela de 08/08: nada opt-in."""
+        """A regra de 08/08: nada opt-in."""
         codigo = _sem_comentarios(TEXTO_INSTALL)
         assert "NO_OSK=0" in codigo, "o teclado na tela nasceria desligado"
         assert "--no-osk)" in codigo, "o opt-out não está no parser"

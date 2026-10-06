@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """o_caminho_do_mic_no_cabo.py — MIC-CABO-LIMPO-01: o censo do caminho do cabo.
 
-A QUEIXA, E ELA É DELA — 17/09/2026:
+A QUEIXA, E É DO USUÁRIO — 17/09/2026:
 
     *"sobre o mic do cabo ficar limpo igual o do mic no bt"*  # noqa-acento: citação literal
 
-E o outro lado da mesma frase, do mesmo dia, sobre o RÁDIO: *"o som do mic ta
-divino"*.  # noqa-acento: citação literal
+E o outro lado da mesma frase, do mesmo dia, sobre o RÁDIO.  # noqa-acento: citação literal
 
 POR QUE ESTE INSTRUMENTO EXISTE, E POR QUE ELE NÃO CURA NADA
 =============================================================
@@ -87,33 +86,33 @@ então isso hoje é invisível a todos os portões.
     entre os dois microfones — e isso **não foi medido**. A correlação cruzada
     só responde com FALA: sobre ruído de fundo ela é plana por construção, e
     *"não há atraso"* seria indistinguível de *"o instrumento não mede"*.
-    **Essa medição precisa da orelha dela.**
+    **Essa medição precisa da orelha do usuário.**
 
 **H3 — o ``common[7]`` que não sai no cabo.** Pelo rádio a base segura vai
 incondicionalmente; pelo cabo, por omissão, o byte nunca é escrito e o firmware
 fica no default DELE. ``ds_output_report`` afirma que esse default traz o
 cancelamento ligado — e **ninguém mediu isso no cabo**.
 
-**H4 — o ``NOISE_CANCEL``, que é gosto e é dela.**
+**H4 — o ``NOISE_CANCEL``, que é gosto e é do usuário.**
 ``AUDIO_CONTROL_NOISE_CANCEL`` (bit3 do ``common[7]``) **não tem um único
 escritor, em transporte nenhum**. Está fora da base por decisão escrita de
 16/09/2026: *«mexe na qualidade da CAPTURA (…) O eco é defeito; o ruído é
-gosto»*. A frase dela de 17/09 é o pedido que reabre essa decisão.
+gosto»*. A frase de 17/09 é o pedido que reabre essa decisão.
 
 O ROTEIRO, UM FATOR POR VEZ
 ============================
 
-**PASSO 0 — o controle no cabo. É DELA, e nada abaixo se mede sem ele.**
+**PASSO 0 — o controle no cabo. É DO USUÁRIO, e nada abaixo se mede sem ele.**
 
 **PASSO 1 — o censo (este instrumento, ``--censo``).** Lê e não escreve: o
 perfil ativo da placa, o formato e o mapa de canais do nó do cabo, o elemento de
 captura do mixer ALSA e a sua porcentagem, e os parâmetros NATIVOS do endpoint
-USB. Fecha sem a orelha dela.
+USB. Fecha sem a orelha do usuário.
 
 **PASSO 2 — decide a H2 (este instrumento, ``--canais``).** Grava a origem em
 DOIS canais e mede RMS e pico de CADA canal separado. Se um dos dois estiver
 morto ou só com ruído, o remix está custando 6 dB e trazendo lixo junto. Fecha
-sem a orelha dela.
+sem a orelha do usuário.
 
 A cura da H2, se ela se confirmar, **não é fixar «canal 0»** dentro do
 ``canal_do_microfone``: é o alimentador PERGUNTAR à origem o que ela é, e quem
@@ -121,11 +120,11 @@ responde tem de ser o dono único que já existe
 (``integrations/fontes_de_captura``). Uma segunda régua escrita dentro do
 ``canal_do_microfone`` sobre o mesmo estado é RECEITA-ERRADA-01 de novo.
 
-**PASSO 3 — decide a H1 (mede sozinho; o VALOR final é dela).** A mesma frase,
+**PASSO 3 — decide a H1 (mede sozinho; o VALOR final é do usuário).** A mesma frase,
 a mesma duração, com o ``Headset`` na porcentagem de hoje e depois mais alto:
 RMS, pico e **piso de ruído entre as frases**. Se o piso subir junto com a voz,
 o ganho não é a cura; se a voz subir e o piso ficar, é. Ganho demais satura, e
-por isso o número final é dela.
+por isso o número final é do usuário.
 
 O dono da cura, se ela se confirmar, é o ``scripts/doctor.sh``: ele JÁ é o dono
 da camada 2 (o perfil da placa, ``_dualsense_perfil_status``) e já tem o
@@ -138,26 +137,25 @@ de hoje) e 10 s com ``AUDIO_CONTROL_BASE_SEGURA`` escrito, pelo broker, como
 fazem os instrumentos de 09/09. Se não mudar nada, a hipótese cai e fica
 registrado que o default do firmware já traz o cancelamento no cabo.
 
-**PASSO 5 — A ORELHA DELA, E SÓ ELA: o ``NOISE_CANCEL``.** Duas passadas iguais,
+**PASSO 5 — A ORELHA DO USUÁRIO, E SÓ ELA: o ``NOISE_CANCEL``.** Duas passadas iguais,
 com e sem o bit3, pelo ``scripts/ensaios/a_folha_dos_ensaios.py``, como em
-``folha-mic-volume-o-byte-age-cabo-0909``. **A palavra dela decide.**
+``folha-mic-volume-o-byte-age-cabo-0909``. **A palavra de produto decide.**
 
 **PASSO 6 — o descarte (barato).** Com alguém gravando pelo cabo por 60 s, ler
 ``descartes`` do ``SourceVirtualPipeWire``. Se não for zero, o defeito é o
 alimentador que não segue o SUSPENDED/RUNNING da source — dívida já nomeada no
 cabeçalho do ``canal_do_microfone``, devida à ONDA5-MIC-VIRTUAL-02.
 
-O QUE VALE NOS DOIS TRANSPORTES, E É ORDEM DELA
+O QUE VALE NOS DOIS TRANSPORTES, E É ORDEM DE PRODUTO
 ================================================
 
-**Cura por transporte é proibida** — ordem dela de 16/09/2026, o app é de
+**Cura por transporte é proibida** — ordem de 16/09/2026, o app é de
 acessibilidade, trave a CLASSE. Qualquer opinião nova sobre o ``NOISE_CANCEL``
 ou sobre o ganho de captura vale nos DOIS transportes, com a mesma justificativa
 escrita. Ligar o bit3 só no cabo seria exatamente a cura por instância que ela
 vetou.
 
-E pela ordem dela de 17/09 — *"os jogos e perfis tem que iniciar com todas as
-features ativadas por default"* — o que o passo 5 decidir deixa de ser um bit
+E pela  — o que o passo 5 decidir deixa de ser um bit
 sem opinião e passa a ter um **default escrito e justificado**.
 
 AS ARMADILHAS DESTE CAMINHO, e as três já custaram
@@ -212,7 +210,7 @@ O QUE FOI MEDIDO EM 20/09/2026, E O QUE NÃO FOI
 ================================================
 
 Com um DualSense no cabo, tudo por leitura pura (``/proc``, ``/sys``, ``dpkg``,
-``amixer`` de consulta). **Nada tocou o servidor de som dela.**
+``amixer`` de consulta). **Nada tocou o servidor de som do usuário.**
 
 **FECHADO — o ganho em repouso.** ``Headset: Mono: Capture 101 [100%]
 [48.00dB] [on]``, lido duas vezes, com intervalo, e **idêntico** às duas. É
@@ -237,11 +235,11 @@ não existe» seria concluir o contrário do que há.
 
 * **o par com fone / sem fone.** Lidos agora, ``Headphone Jack`` e
   ``Headset Mic Jack`` estão os dois em ``off`` — coerente com nada plugado no
-  P2. O outro lado do par precisa da mão dela.
+  P2. O outro lado do par precisa da mão do usuário.
 * **``hw:N,0`` direto contra a porta.** O nó de captura está **RUNNING**, então
   o ``arecord`` disputa o PCM e volta ocupado. **Ocupado não é «o caminho está
   quebrado»** — esta casa já concluiu isso sobre um caminho sadio. Só vale com
-  o nó conferidamente suspenso, e suspender o nó é mexer no som dela.
+  o nó conferidamente suspenso, e suspender o nó é mexer no som do usuário.
 * **o *comb filtering* entre L e R.** Precisa de FALA: sobre ruído de fundo a
   correlação cruzada é plana por construção, e *"não há atraso"* seria
   indistinguível de *"o instrumento não mede"*.
@@ -268,7 +266,7 @@ ninguém escolheu isso. O preço de cada lado: **ligar** dá o botão a ela e de
 o WirePlumber restaurar volume de captura por rota (que é uma camada a mais de
 estado persistido, a mesma família do mudo da camada 1); **não ligar** mantém os
 +48 dB fixos, fora do alcance de todos. A medição que separa as duas é o
-``--ganho``, e ela é com a orelha dela.
+``--ganho``, e ela é com a orelha do usuário.
 
 USO
 ====

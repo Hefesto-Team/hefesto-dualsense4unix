@@ -120,14 +120,14 @@ def test_plano_do_nativo_so_liga_o_nativo() -> None:
 
 
 def test_plano_sem_flavor_nao_escolhe_mascara_nenhuma() -> None:
-    """AUTO-01.3: sem escolha dela, quem decide a máscara é o DAEMON."""
+    """AUTO-01.3: sem escolha do usuário, quem decide a máscara é o DAEMON."""
     plan = mode_transition.plan_mode_transition("gamepad", None)
     assert plan[-1] == ("gamepad.emulation.set", {"enabled": True, "origin": "manual"})
     assert "flavor" not in plan[-1][1]
 
 
 def test_plano_com_flavor_explicito_manda_o_campo() -> None:
-    """A escolha dela no seletor de máscara continua chegando intacta."""
+    """A escolha do usuário no seletor de máscara continua chegando intacta."""
     plan = mode_transition.plan_mode_transition("gamepad", "dualsense")
 
     assert plan[-1] == (

@@ -25,7 +25,7 @@ CATALOGO = [
 
 @pytest.fixture(autouse=True)
 def _catalogo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A biblioteca DELA nunca é lida por uma régua."""
+    """A biblioteca do usuário nunca é lida por uma régua."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     monkeypatch.setattr(
@@ -120,7 +120,7 @@ def test_com_a_biblioteca_vazia_a_lista_fica_vazia_e_o_campo_segue_livre(
 def test_a_leitura_da_biblioteca_nunca_derruba_a_aba(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Isto é PINTURA, duas vezes por segundo, sobre o disco dela."""
+    """Isto é PINTURA, duas vezes por segundo, sobre o disco do usuário."""
     def _explode() -> dict[str, str]:
         raise OSError("um `.desktop` ilegível")
 

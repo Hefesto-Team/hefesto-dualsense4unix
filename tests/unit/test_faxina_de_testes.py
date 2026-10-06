@@ -234,7 +234,7 @@ def test_pytest_of_e_pulse_so_entram_no_relato(raiz: Path) -> None:
 def test_o_padrao_e_relatar_sem_apagar_nada(
     raiz: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A decisão de apagar o que já está no disco dela é dela."""
+    """A decisão de apagar o que já está no disco do usuário é do usuário."""
     d = _dir_de_migracao(raiz, "tmpabcdefgh")
 
     assert FAXINA.main(["--raiz", str(raiz)]) == 0

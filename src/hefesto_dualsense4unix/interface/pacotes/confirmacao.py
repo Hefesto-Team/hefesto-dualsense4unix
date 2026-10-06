@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O CONSENTIMENTO DE DOIS TEMPOS — o relógio único sobre a Steam dela."""
+"""O CONSENTIMENTO DE DOIS TEMPOS — o relógio único sobre a Steam do usuário."""
 from __future__ import annotations
 
 import time

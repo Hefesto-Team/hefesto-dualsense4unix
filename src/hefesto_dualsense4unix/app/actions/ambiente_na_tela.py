@@ -3,7 +3,7 @@
 Uma frase pura: recebe o dicionário do `state_full` e devolve markup, no
 molde de ``daemon_actions.descrever_deteccao_de_janela`` (lê o par honesto em
 vez do trinco de mão única, escapa o que vem de fora, degrada com frase em vez
-de sumir). Ela não nomeia o mecanismo — diz o que aconteceu com a máquina dela,
+de sumir). Ela não nomeia o mecanismo — diz o que aconteceu com a máquina do usuário,
 nunca o nome do backend/protocolo.
 
 * :func:`descrever_display_grafico` — lê ``window_detect_backend`` e

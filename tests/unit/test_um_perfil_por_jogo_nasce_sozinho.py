@@ -149,7 +149,7 @@ def test_a_recusa_por_nome_nao_vira_marca_e_e_reavaliada(tmp_path: Path) -> None
 def test_o_jogo_que_ja_tem_perfil_pelo_appid_nao_ganha_um_segundo(
     tmp_path: Path,
 ) -> None:
-    """O caso real do disco dela: o preset se chama `sackboy_nativo`."""
+    """O caso real do disco do usuário: o preset se chama `sackboy_nativo`."""
     destino = tmp_path / "perfis"
     _perfil_dela(
         destino,
@@ -266,7 +266,7 @@ def test_a_marca_separa_o_que_o_produto_criou_do_que_e_dela(tmp_path: Path) -> N
 
 
 def test_perfil_semeado_que_ela_apagou_nao_ressuscita(tmp_path: Path) -> None:
-    """Mesmo contrato do `.seeded_presets`: deleção proposital é decisão dela."""
+    """Mesmo contrato do `.seeded_presets`: deleção proposital é decisão de produto."""
     destino = tmp_path / "perfis"
     loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=TRES_JOGOS)
     (destino / "ilha_de_vidro.json").unlink()
@@ -456,7 +456,7 @@ def test_o_piso_de_tempo_impede_varrer_a_cada_alt_tab(
 def test_o_jogo_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gatilho_armado: None
 ) -> None:
-    """O daemon dela fica dias de pé. Varrer só no boot deixaria o jogo de fora."""
+    """O daemon do usuário fica dias de pé. Varrer só no boot deixaria o jogo de fora."""
     destino = tmp_path / "perfis"
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
     biblioteca = [_jogo("910001", "Ilha de Vidro")]

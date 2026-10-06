@@ -1,6 +1,6 @@
 # `docs/method/` — o que as réguas LEEM
 
-Nasceu em 20/09/2026, por ordem dela, escolhida entre três opções:
+Nasceu em 20/09/2026, por ordem de produto, escolhida entre três opções:
 
 > *"Mover o que as réguas precisam"*
 
@@ -21,7 +21,7 @@ defeito que esta pasta existe para não repetir.
 
 O contrário também vale, e é o que a régua cobra: **nada que uma régua lê pode
 morar em `docs/process/`**, porque aquela pasta é `.gitignore:178` — ela não
-viaja no clone, não vem na worktree de agente, e some sem avisar.
+viaja no clone, não vem numa worktree de trabalho, e some sem avisar.
 
 ## O QUE MEDIU A LISTA
 
@@ -52,8 +52,7 @@ prosa não quebra clone nenhum. Quem quebrava era um punhado de sete arquivos.
 Os dois últimos são a razão de a sprint existir. Eles foram arquivados junto
 com 732 sprints fechadas, `_gesto_do_arquivo` devolveu `{}` **em silêncio**, e
 as 199 células da mesa de medição voltaram a mostrar a procedência repetida —
-o defeito que ela apontou em 07/09 olhando a linha 10: *"sinceramente não
-entendi o que diabos é pra fazer aqui"*. Sete réguas ficaram vermelhas e
+o defeito que o usuário apontou em 07/09 olhando a linha 10. Sete réguas ficaram vermelhas e
 nenhuma sabia dizer por quê.
 
 ## AS RÉGUAS QUE SEGURAM ISTO
@@ -67,4 +66,4 @@ nenhuma sabia dizer por quê.
 3. **nenhum módulo de `src/`, `scripts/` ou `tests/` lê a árvore real
    `docs/process/`**, salvo as réguas declaradas com a razão. O movedor de
    sprints e a régua da colisão saíram do repositório em 02/10/2026 e moram com
-   as ferramentas de quem coordena.
+   as ferramentas da casa.

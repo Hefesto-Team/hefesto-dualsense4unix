@@ -44,7 +44,7 @@ onze vezes em 26/08.
 **OS DOIS SENTIDOS, e é o par que nenhuma metade sozinha prova:**
 
 1. **ESCONDIDO NO VAZIO** — ``data-conectado="nao"``: nenhum ``[data-gesto]``
-   com caixa maior que zero recebendo clique. A decisão é dela, 31/08/2026:
+   com caixa maior que zero recebendo clique. A decisão é de produto, 31/08/2026:
    *um lugar sem aparelho não oferece gesto nenhum*.
 2. **VISÍVEL E CLICÁVEL NO CHEIO** — ``data-conectado="sim"``: TODOS com caixa
    maior que zero, TODOS recebendo o clique no próprio centro, TODOS com
@@ -54,7 +54,7 @@ onze vezes em 26/08.
 E OS DOIS PASSOS DO PILOTO, porque o estado inicial pode ser sorte e não regra:
 a régua faz o que ``hefesto_vivo`` faz nos passos ``1c`` e ``1b`` — vira a marca
 ``data-conectado`` **sem recarregar a página** — e cobra que os gestos do P3
-apareçam e os do P1 sumam no mesmo tique. É o estado da mesa DELA, que está com
+apareçam e os do P1 sumam no mesmo tique. É o estado da bancada, que está com
 os quatro DualSense agora. O piloto vira marca e escreve campo; ele não
 materializa widget.
 

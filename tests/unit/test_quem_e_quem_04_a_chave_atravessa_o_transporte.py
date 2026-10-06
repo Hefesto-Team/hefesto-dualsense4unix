@@ -1,6 +1,6 @@
 """QUEM-E-QUEM-04 — a chave do perfil atravessa o transporte, e a parede tem nome.
 
-O REQUISITO DELA, e ele é de produto: o mesmo controle, no cabo e no rádio, tem
+O REQUISITO DO USUÁRIO, e ele é de produto: o mesmo controle, no cabo e no rádio, tem
 de cair na MESMA memória do perfil. Se o transporte entrar na chave, trocar o
 cabo pelo rádio faz o produto esquecer o ajuste que ela acabou de fazer — e o
 esquecimento é silencioso, que é o pior desfecho possível para uma memória.
@@ -44,7 +44,7 @@ recusam — não é faixa forjada desta casa. ``3c9d07`` é, e foi escolhida por
 ser a SEGUNDA faixa sintética, conferida contra o registro IEEE em 22/08
 (``test_uma_faixa_nao_e_um_fabricante.py``): assim os dois controles da prova
 têm OUIs DIFERENTES, que é o que a mesa de dois quer dizer. O segundo existe
-para que a mesa da prova nunca tenha o tamanho da mesa dela — e toda prova
+para que a mesa da prova nunca tenha o tamanho da bancada — e toda prova
 roda também com **um** controle, que é a mesa mais comum do mundo e a que esta
 casa nunca tem.
 

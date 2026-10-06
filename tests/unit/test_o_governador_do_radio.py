@@ -1,7 +1,7 @@
 """O governador do rádio — GOVERNADOR-DO-RADIO-01 (23/09/2026), R2, R3 e R4 dela.
 
-Em 22/09 a terceira ponte num adaptador derrubou os quatro controles da mesa
-dela em 11 a 89 segundos. O governador é quem dá a vaga de cada ponte e quem
+Em 22/09 a terceira ponte num adaptador derrubou os quatro controles da bancada em 11 a 89
+segundos. O governador é quem dá a vaga de cada ponte e quem
 manda ceder na fonte quando o adaptador não escoa. Esta régua cobra:
 
 1. **O TEMPO REAL:** com o ``acl_tx`` do adaptador preso (o dublê do ioctl) e a
@@ -760,7 +760,7 @@ def test_a_ponte_que_terminou_sozinha_sai_e_a_sob_demanda_religa(som: Any) -> No
 
 @pytest.mark.asyncio
 async def test_o_ipc_ligar_aqui_responde_pelo_governador() -> None:
-    """O IPC ``radio.ponte.ligar_aqui`` é a resposta dela à pergunta da R3."""
+    """O IPC ``radio.ponte.ligar_aqui`` é a resposta de produto à pergunta da R3."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
     relogio, registro = _Relogio(), _Diario()

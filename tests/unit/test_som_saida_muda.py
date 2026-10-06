@@ -1,6 +1,6 @@
 """SOM-SAIDA-MUDA-01: pedir som no controle tem de deixar a saída audível.
 
-MEDIDO com ela em 04/08/2026. Ela clicou nos dois estados do seletor de canal
+MEDIDO com ela em 04/08/2026. O usuário clicou nos dois estados do seletor de canal
 ("Sons do jogo" e "Todo o som do PC"), o daemon escreveu o byte de rota, o
 `pactl` trocou o sink padrão — e **não saiu som nenhum**.
 
@@ -89,7 +89,7 @@ class TestGarantirSaidaAudivel:
 
 
 class _Memoria:
-    """A lembrança de "de onde o som veio" — injetável, fora do disco dela."""
+    """A lembrança de "de onde o som veio" — injetável, fora do disco do usuário."""
 
     def __init__(self) -> None:
         self.valor = ""

@@ -9,7 +9,7 @@ do produto devolvia o traço honesto — e o traço nunca chegava à tela, porqu
 pacote não emitia aqueles endereços.
 
 **Uma página que não é pintada não fica em branco: ela fica com o desenho.** O
-que a janela mostrava, contra o que a máquina dela respondia:
+que a janela mostrava, contra o que a máquina do usuário respondia:
 
     Como ele enxerga a janela: —   Sem ver nada agora (sem_foco_x)
     O que ele impõe:          —    Nada é limitado
@@ -27,7 +27,7 @@ AS QUATRO COISAS QUE ELA COBRA, e cada uma é um jeito diferente de recair:
    a chave `perfil` (o rótulo do perfil de BATERIA) apagou o `perfil` do
    cabeçalho — o perfil de JOGO, que é das dez abas.
 3. **O exame vem do DADO.** A lista sai do `storm_report`. A contagem que
-   ficava em cima dela saiu da página por pedido dela (25/09/2026, 22h13), e o
+   ficava em cima dela saiu da página por pedido (25/09/2026, 22h13), e o
    endereço saiu junto.
 4. **O painel de registro não pisca.** O que um gesto "Ver …" escreve fica; a
    pintura do tique seguinte repete o mesmo texto em vez de apagá-lo.
@@ -219,7 +219,7 @@ def test_o_que_nao_chega_na_tela_esta_declarado(a09, ctx):
 def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     """A contagem do exame saiu da página, e o endereço saiu dos dois lados.
 
-    Pedido dela, 25/09/2026, 22h13: *«Remove esse 8 linhas deixa o espaço
+    Pedido, 25/09/2026, 22h13: *«Remove esse 8 linhas deixa o espaço
     vazio»*. Um endereço que o pacote escreve sem lugar na página é escritor
     calado; um lugar na página sem quem o escreva mostra o «8» da bancada.
 

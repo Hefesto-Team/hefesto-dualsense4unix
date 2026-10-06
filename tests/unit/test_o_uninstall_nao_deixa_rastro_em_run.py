@@ -169,7 +169,7 @@ def test_os_carimbos_do_religar_saem_com_os_da_ponte_e_do_watchdog(tmp_path: Pat
 
 
 def test_o_ensaio_diz_que_tiraria_os_carimbos_do_religar_e_nao_tira(tmp_path: Path) -> None:
-    """O `--dry-run` é como quem coordena olha o uninstall na máquina dela."""
+    """O `--dry-run` é como se olha o uninstall na máquina do usuário."""
     religar = _carimbos_do_religar(tmp_path)
     antes = sorted(p.name for p in religar.iterdir())
     r = _rodar(tmp_path, BLOCO_DO_ENSAIO + BLOCO_DOS_CARIMBOS, "DRY_RUN=1\nAUTO_YES=0\n")

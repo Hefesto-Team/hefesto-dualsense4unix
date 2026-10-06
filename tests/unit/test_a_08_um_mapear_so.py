@@ -72,7 +72,7 @@ def _fluxo(gabinete: Gabinete) -> ee.MapearAsPortas:
 
 
 def _mapear_tres(gabinete: Gabinete, fluxo: ee.MapearAsPortas) -> None:
-    """O gesto dela: o MESMO DualSense em três portas, nome e lugar em cada."""
+    """O gesto do usuário: o MESMO DualSense em três portas, nome e lugar em cada."""
     assert fluxo.comecar()["estado"] == ee.ESPERANDO
     for bus, devpath, nome, lugar in (
         (1, "5", "Frente de baixo", ee.LUGAR_FRENTE),

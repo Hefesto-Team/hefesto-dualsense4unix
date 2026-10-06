@@ -1,6 +1,6 @@
 """TROCA-DE-PLAYER-01 — a escolha à mão SOBREPÕE a fila de chegada (29/08/2026).
 
-Palavra dela, hoje:
+Palavra de produto, hoje:
 
 > "o nosso layout é pra permitir a TROCA DO PLAYER de cada controle. Medimos
 > isso na época do lightbar e mapeamos isso. No novo layout temos uma seção pra
@@ -21,14 +21,14 @@ POR QUE A SUÍTE DE 25/07 NÃO VIA NADA DISSO
 desta cura, e **nenhum injeta relógio** — as 12 chamadas de ``sync_connected``
 montam a mesa numa olhada só, então os três controles caem na MESMA onda de
 chegada e o lugar gravado volta a ser o desempate. A suíte provava o mecanismo
-exatamente no único caso em que ele já funcionava. A mesa dela — quatro
+exatamente no único caso em que ele já funcionava. A bancada — quatro
 DualSense no rádio, ligados um a um — não é esse caso.
 
 **Toda régua daqui liga o relógio.** É a diferença entre medir um instante e
 medir um comportamento: sem tempo injetado, nem o congelamento da ordem
 (``JANELA_MESA_ESTAVEL_SEC``) nem as ondas separadas
 (``JANELA_DE_ONDA_SEC``) acontecem, e são justamente eles que desfaziam a
-escolha dela segundos depois.
+escolha do usuário segundos depois.
 
 O QUE ESTAVA QUEBRADO, medido em 29/08 antes da cura
 -----------------------------------------------------
@@ -188,7 +188,7 @@ class TestAEscolhaChegaNaTela:
     async def test_os_dois_trocam_e_o_do_meio_nao_se_mexe(
         self, config_isolado: Path
     ) -> None:
-        """TROCA, não rodízio — a palavra dela de 28/08."""
+        """TROCA, não rodízio — a palavra de 28/08."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE, WHITE])

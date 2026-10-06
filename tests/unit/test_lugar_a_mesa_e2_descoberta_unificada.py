@@ -290,7 +290,7 @@ VPAD_PATH = "/dev/input/event20"
 def _mesa_de_tres(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, aberturas: list[str] | None = None
 ) -> None:
-    """A mesa dela: um DualSense, um Pro, o nosso vpad e o IMU do Pro."""
+    """A bancada: um DualSense, um Pro, o nosso vpad e o IMU do Pro."""
     ds_dir = _arvore_hid(
         tmp_path, "bt/hci0/hci0:20/0005:054C:0CE6.0004", "playstation", "hidraw6"
     )

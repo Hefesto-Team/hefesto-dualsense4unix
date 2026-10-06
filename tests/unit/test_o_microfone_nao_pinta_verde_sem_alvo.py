@@ -28,7 +28,7 @@ escrevemos está lá, ou o promotor está faltando) e continuam verdadeiros com
 placa ou sem placa. O ramo verde descreve **o aparelho**, e é só ele que
 precisa de alvo para não mentir.
 
-A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório do agente E1.
+A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório da mordida E1.
 """
 from __future__ import annotations
 

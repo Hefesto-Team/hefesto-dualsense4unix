@@ -4,7 +4,7 @@ Segunda frente do mesmo arquivo (`daemon/ipc_handlers.py`), achada por outra
 onda e medida no aparelho: **renumerar trocava o `player_slot` e não movia
 lâmpada nenhuma.**
 
-A medição, com os dois DualSense dela e o daemon vivo, lendo
+A medição, com os dois DualSense do usuário e o daemon vivo, lendo
 `/sys/class/leds`:
 
     identity.number.set sozinho ....... o `player_slot` troca, lâmpada

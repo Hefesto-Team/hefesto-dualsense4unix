@@ -191,7 +191,7 @@ def controles_bt_frageis(state: dict[str, Any] | None) -> list[int]:
 
     Ordena de novo o que o daemon já ordenou (`sorted(numeros)`, no fim do
     `daemon/ipc_handlers.controles_bt_frageis`). Não é desconfiança do daemon: é
-    que esta é a ÚLTIMA parada antes do olho dela, e a regra "os números saem
+    que esta é a ÚLTIMA parada antes do olho de quem confere, e a regra "os números saem
     crescentes" tem de valer mesmo quando quem publicou o payload for um daemon
     diferente do que está no fonte de hoje (install editable: o daemon vivo é
     mais velho que o código). Custo: uma ordenação de no máximo quatro números.
@@ -259,9 +259,9 @@ def appid_do_jogo_em_foco(state: dict[str, Any] | None) -> str:
 
 
 def ela_ja_respondeu_sobre(appid: str) -> bool:
-    """Ela já disse "eu sei, deixa assim" sobre este jogo? — as DUAS recusas.
+    """O usuário já disse "eu sei, deixa assim" sobre este jogo? — as DUAS recusas.
 
-    São duas listas e as duas contam, porque as duas são ela dizendo a mesma
+    São duas listas e as duas contam, porque as duas são o usuário dizendo a mesma
     coisa: `launch_dialog_dismissed.json` ("Não perguntar para este jogo") e
     `jogos_sem_wrapper.txt` ("Tirar daqui").
 
@@ -306,7 +306,7 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     (`app/actions/jogar/painel.py:358`), porque as três chamavam
     `wrapper_banner_text` direto, sem consultar lista nenhuma.
 
-    A decisão dela, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
+    A decisão, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
     tudo"*. E a `a07_lancadores.calados` já dizia, por escrito, que a conta
     precisava de um dono para a outra metade não a redigitar.
 
@@ -483,7 +483,7 @@ def texto_do_desktop_sem_emulacao(
        que é o desenho normal e não tem nada de errado;
     2. **o modo EXIBIDO também é desktop** — com uma escolha pendente de SAIR do
        desktop, avisar sobre o modo que ela está deixando responderia a pergunta
-       errada (a caixa mostra a escolha dela, não o vigente: AGORA-E-DEPOIS-01);
+       errada (a caixa mostra a escolha do usuário, não o vigente: AGORA-E-DEPOIS-01);
     3. **o modo não mudou NESTE tique** — a transição para desktop dispara três
        IPCs e o `mouse.emulation.restore` é o ÚLTIMO deles. Julgar a emulação no
        mesmo tique em que o modo mudou acenderia o aviso enquanto a cura ainda
@@ -497,7 +497,7 @@ def texto_do_desktop_sem_emulacao(
     O teclado entra aqui pela mesma razão que o mouse: "Controlar o PC" promete
     mouse E teclado (`_MODE_DESCRIPTIONS["desktop"]`), e o teclado emulado tem
     interruptor próprio na mesma aba Navegação desde a EMULACAO-NO-JOGO-01. A
-    diferença é que o "off" do teclado é SEMPRE gesto dela — nenhum caminho
+    diferença é que o "off" do teclado é SEMPRE gesto do usuário — nenhum caminho
     automático escreve `keyboard_emulation_enabled` (só o boot, lendo o flag
     dela, e o `keyboard.emulation.set`) —, então aqui não há nem a dúvida que o
     mouse tem.
@@ -624,7 +624,7 @@ def texto_da_divergencia(
     fonte: object = FONTE_GESTO_DELA,
     perfil: object = None,
 ) -> str | None:
-    """A frase da divergência entre o que ela escolheu e o que o jogo vê."""
+    """A frase da divergência entre o que o usuário escolheu e o que o jogo vê."""
     if not isinstance(escolhida, str) or not escolhida:
         return None
     if not isinstance(no_aparelho, str) or not no_aparelho:
@@ -684,7 +684,7 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     -----------------------------------------------------
 
     A pergunta que saiu era *"exceção de Steam Input com o vpad suspenso"*, e a
-    frase dela dizia: *"pelo Steam Input — neste jogo a Steam entrega os botões,
+    frase de produto dizia: *"pelo Steam Input — neste jogo a Steam entrega os botões,
     e o Hefesto segue cuidando dos gatilhos, da cor e da vibração."* Ela nunca
     apareceu na tela, e não pode voltar como estava. Três medições, nesta ordem:
 
@@ -695,16 +695,16 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
        em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01).
     2. **Trocar a condição por `excecao_ativa` sozinho — a saída recomendada
        para o PAR — publicaria aqui uma frase que a medição derruba.** Desde a
-       `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão dela: *a allowlist do
+       `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão de produto: *a allowlist do
        Steam Input NÃO tira o Hefesto da frente*), a exceção **esconde o
        físico** (`esconder_o_fisico_para_o_jogo`) e **mantém o vpad de pé**. Ou
        seja: na exceção quem alimenta o jogo continua sendo o gamepad do
        Hefesto — o oposto do que a frase dizia.
     3. **E há medição em jogo, não só leitura de código** —
        `docs/protocol/pilha-steam-input-xpad-sdl.md`, §2.4-bis, MEDIDO em
-       11/08/2026 com um appid da allowlist DELA em sessão: **zero espelhos**
+       11/08/2026 com um appid da allowlist DO USUÁRIO em sessão: **zero espelhos**
        da Steam no sistema, os dois vpads do Hefesto de pé, quatro controles
-       com jogador e vibração, e o aceite dela. A Steam não estava entregando
+       com jogador e vibração, e o aceite de produto. A Steam não estava entregando
        botão nenhum.
 
     Logo, com a exceção ativa, a resposta verdadeira é a da terceira pergunta —
@@ -712,9 +712,9 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     exceção de Steam Input é a aba Emulação (`markup_status_steam_input`), e é
     lá que ela é nomeada.
 
-    O que fica em aberto, e é DELA: se a Início deve NOMEAR a exceção (algo
+    O que fica em aberto, e é DO USUÁRIO: se a Início deve NOMEAR a exceção (algo
     como "…e a Steam está no meio neste jogo"). É texto novo na primeira tela,
-    e texto de tela é palavra dela — PROVA-DE-TELA-01.
+    e texto de tela é palavra de produto — PROVA-DE-TELA-01.
     """
     if not isinstance(state, dict):
         return PONTE_PREFIXO + "não sei — o Hefesto está desligado."
@@ -753,7 +753,7 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
 
 
 #: minúsculo. Escreva: Cabo ou BT"*; <!-- noqa-acento: citação literal -->
-#: existia para escolher uma. Ela escolheu.
+#: existia para escolher uma. O usuário escolheu.
 _PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
     "usb": "USB",
     "cabo": "USB",
@@ -830,7 +830,7 @@ def _format_external_subtitle(entry: dict[str, Any]) -> str:
     fecha. A segunda metade diz o que o Hefesto NÃO faz com este aparelho, que
     é a informação que a pessoa procura ao ver um controle que não acende.
 
-    PROVISÓRIO — decisão dela.
+    PROVISÓRIO — decisão de produto.
     """
     bus = entry.get("bus")
     return "  ·  ".join([palavra_do_transporte(bus), "o Hefesto só vê"])
@@ -875,7 +875,7 @@ def externos_na_mesa(
 
 
 def reconciliar_pendente(janela: Any) -> dict[str, str]:
-    """A escolha dela MENOS o que o daemon já alcançou. Devolve o que sobra."""
+    """A escolha do usuário MENOS o que o daemon já alcançou. Devolve o que sobra."""
     pendente = dict(getattr(janela, "_escolha_pendente", None) or {})
     if "modo" in pendente and pendente["modo"] == getattr(
         janela, "_modo_vigente_do_daemon", None

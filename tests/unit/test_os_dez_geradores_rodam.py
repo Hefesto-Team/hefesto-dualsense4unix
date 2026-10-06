@@ -34,7 +34,7 @@ nasciam com `# noqa-acento` como TEXTO no topo, em letra de título. Está na fo
 de 01/09.
 
 ONDE ELA ESCREVE: num diretório temporário, pelo `HEFESTO_BANCADA`. Ela **não
-toca** a bancada dela — que é a razão de aquele desvio existir.
+toca** a bancada — que é a razão de aquele desvio existir.
 """
 from __future__ import annotations
 
@@ -82,7 +82,7 @@ def bancada_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
 def _rodar(nome: str, destino: pathlib.Path) -> subprocess.CompletedProcess[str]:
     ambiente = dict(os.environ)
     # O DESVIO DA ESCRITA (`interface/onde.py`). Sem ele o gerador escreveria na
-    # bancada DELA, e uma régua que muda o que mede não é régua.
+    # bancada, e uma régua que muda o que mede não é régua.
     ambiente["HEFESTO_BANCADA"] = str(destino)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
     return subprocess.run(

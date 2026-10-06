@@ -1,4 +1,4 @@
-"""O parear espera o clique dela — O-PAREAR-ESPERA-O-CLIQUE-01."""
+"""O parear espera o clique do usuário — O-PAREAR-ESPERA-O-CLIQUE-01."""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def test_sem_clique_nada_pareia(mesa: Any, relogio: rm.Relogio) -> None:
 
 
 def test_ela_escolhe_entre_dois(mesa: Any, relogio: rm.Relogio) -> None:
-    """O verde aos 2 s e o roxo aos 3 s, os dois em PS + Create; o clique dela"""
+    """O verde aos 2 s e o roxo aos 3 s, os dois em PS + Create; o clique do usuário"""
     mundo = _mundo(VERDE, ROXO)
     _dono, central = mesa(mundo)
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
@@ -313,7 +313,7 @@ def test_o_controle_que_chama_o_host_sem_clique_nao_pareia(
 
 def test_o_controle_que_chama_o_host_pareia_no_clique_dela(
         mesa: Any, relogio: rm.Relogio, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O mesmo roxo, e o clique dela um passo depois: um ``Pair`` no quarto, e
+    """O mesmo roxo, e o clique do usuário um passo depois: um ``Pair`` no quarto, e
     ele chega. A linha dele é «DualSense» na lista do quarto — com o sinal que
     o objeto tiver; o ``RSSI`` desse objeto não está medido (a prova 0 b da
     sprint fica para o aparelho), e a régua o dá."""

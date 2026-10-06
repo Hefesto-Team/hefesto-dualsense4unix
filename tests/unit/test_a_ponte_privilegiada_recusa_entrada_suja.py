@@ -359,10 +359,10 @@ def test_os_ganchos_de_teste_morrem_sob_sudo(arvore: Path) -> None:
 def test_a_raiz_de_teste_nao_fala_com_o_barramento_real(arvore: Path) -> None:
     """Com raiz desviada, os verbos que MEXEM no adaptador ficam inertes.
 
-    A suíte roda estes scripts de verdade, na máquina dela, com quatro DualSense
+    A suíte roda estes scripts de verdade, na máquina do usuário, com quatro DualSense
     e um Pro no rádio. `renomear`, `descobrir`, `parear` e `desconectar` mexem
     no adaptador — bastaria um MAC de teste coincidir com um adaptador vivo
-    para um portão derrubar a mesa dela no meio de uma partida. E o
+    para um portão derrubar a bancada no meio de uma partida. E o
     `desconectar` (CONEXAO-ZUMBI-01) é o que mais dói: ele CORTA um link.
     """
     for verbo, argv, dados in (

@@ -1,6 +1,6 @@
 """O-DOCTOR-VE-O-CONTROLE-NO-RADIO-01 — o doctor dizia «não detectado» com o controle no rádio.
 
-Medido na mesa dela depois do install de 25/09/2026: um DualSense conectado pelo
+Medido na bancada depois do install de 25/09/2026: um DualSense conectado pelo
 BT, e o ``check_controller`` avisando «controle não detectado agora». A causa:
 as duas perguntas «há controle agora?» rodavam ``timeout 4 bluetoothctl
 devices``, e o ``timeout`` é um BINÁRIO — ele executa o bluetoothctl de verdade
@@ -97,7 +97,7 @@ def _rodar(
 
 
 def test_o_dualsense_no_radio_e_visto(tmp_path: Path) -> None:
-    """O caso da mesa dela, 25/09."""
+    """O caso da bancada, 25/09."""
     raiz = _sys(
         tmp_path, [_uevent("0005", "054c", "0ce6", "aa:bb:cc:00:00:a1", "aa:bb:cc:00:00:01")]
     )

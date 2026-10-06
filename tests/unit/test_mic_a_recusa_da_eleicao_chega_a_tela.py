@@ -1301,7 +1301,7 @@ async def test_a_luz_da_j1_fica_quando_o_gesto_do_j2_da_o_padrao_a_um_terceiro()
     FATO SUBSTITUÍDO (13/09/2026, OS-QUATRO-NO-AR-01). Esta régua se chamava
     `test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_dela` e cobrava
     o plástico da J1 APAGADO. Perder o padrão não é mais sair do ar: o canal
-    DELA continua publicado e no ar, e a luz dela fica. Quem apaga a luz de
+    DO USUÁRIO continua publicado e no ar, e a luz dela fica. Quem apaga a luz de
     quem sai do ar de fato é `hotkey._conferir_quem_saiu_do_ar`.
 
     CURA A ARRANCAR: sem o ramo de `eleger_por_uniq` o `eleito` volta a ser a

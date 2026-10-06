@@ -1,11 +1,11 @@
-"""Persistência de sessão — a escolha dela, e os flags que atravessam o reboot.
+"""Persistência de sessão — a escolha do usuário, e os flags que atravessam o reboot.
 
-A ESCOLHA DELA TEM DOIS CAMPOS E UM DONO (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`,
+A ESCOLHA DO USUÁRIO TEM DOIS CAMPOS E UM DONO (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`,
 O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, 01/10/2026). O
 `freestyle_ligado.flag` diz se o Freestyle manda; o `session.json` guarda o
 último perfil que ELA ativou, fora o Freestyle. Quem responde «qual é a escolha
-dela» é :func:`a_escolha_dela`, e quem a grava é :func:`gravar_a_escolha` — só
-o gesto dela (`ProfileManager.activate(origin="manual")`) chega lá; o
+do usuário» é :func:`a_escolha_dela`, e quem a grava é :func:`gravar_a_escolha` — só
+o gesto do usuário (`ProfileManager.activate(origin="manual")`) chega lá; o
 autoswitch, o lançamento, o restauro e o «Aplicar» não tocam em nenhum dos dois.
 
 O `active_profile.txt` é ESPELHO da resposta (o Freestyle quando ligado),
@@ -120,7 +120,7 @@ def _o_perfil_carrega(nome: str) -> bool:
 
 
 def a_escolha_dela(*, freestyle_ligado: bool | None = None) -> str | None:
-    """A escolha dela: o Freestyle ligado, ou o último perfil que ela ativou."""
+    """A escolha do usuário: o Freestyle ligado, ou o último perfil que ela ativou."""
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
     try:
@@ -136,7 +136,7 @@ def a_escolha_dela(*, freestyle_ligado: bool | None = None) -> str | None:
 
 
 def resolve_boot_profile() -> str | None:
-    """O nome que o boot restaura — a escolha dela (:func:`a_escolha_dela`)."""
+    """O nome que o boot restaura — a escolha do usuário (:func:`a_escolha_dela`)."""
     return a_escolha_dela()
 
 
@@ -157,7 +157,7 @@ def espelhar_a_escolha() -> None:
 
 
 def gravar_a_escolha(nome: str) -> None:
-    """O escritor único da escolha dela: o `session.json` e o espelho."""
+    """O escritor único da escolha do usuário: o `session.json` e o espelho."""
     if not _e_o_freestyle(nome):
         save_last_profile(nome)
     espelhar_a_escolha()
@@ -417,11 +417,11 @@ def save_keyboard_emulation(enabled: bool) -> None:
     """Persiste a PREFERÊNCIA de emulação de teclado (EMULACAO-NO-JOGO-01).
 
     Molde exato do `save_mouse_emulation` (HARM-06): JSON com a chave
-    ``enabled``, gravado nos DOIS sentidos — o "off" é uma decisão dela e tem de
+    ``enabled``, gravado nos DOIS sentidos — o "off" é uma decisão de produto e tem de
     ficar escrito, não apagado. Até esta sprint o teclado emulado não tinha
     lugar nenhum onde ser desligado: o default `True` de
     `DaemonConfig.keyboard_emulation_enabled` vencia sempre, e o R1 (Alt+Tab no
-    mapa default) trocava de aplicativo dentro do jogo dela.
+    mapa default) trocava de aplicativo dentro do jogo do usuário.
 
     Não usa `session.json`: `save_last_profile` reescreve aquele arquivo inteiro.
     Best-effort: nunca propaga exceção (o IPC/boot não pode cair por I/O).

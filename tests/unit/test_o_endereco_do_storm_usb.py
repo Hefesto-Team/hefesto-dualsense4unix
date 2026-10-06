@@ -38,7 +38,7 @@ DIFÍCIL — um parser que só reconhecesse ``usb 3-4:`` daria verde sobre 40% d
 
 CINCO MORDIDAS QUE NÃO MORDIAM, achadas pela conferência de 20/09 e curadas
 aqui. Todas na mesma dobra: **a frase do laudo estava coberta em pedaços, e o
-pedaço de fora era o que a mesa dela imprime mais**:
+pedaço de fora era o que a bancada imprime mais**:
 
 * :func:`test_a_porta_de_raiz_diz_que_nao_ha_hub_no_caminho` — a bancada das
   réguas só tinha o arranjo FUNDO (``3-4.1.3``, atrás de dois hubs). O ramo
@@ -56,7 +56,7 @@ pedaço de fora era o que a mesa dela imprime mais**:
 
 A RAIZ DO ``/sys`` ENTRA POR ARGUMENTO em todos eles: nenhum teste aqui olha a
 máquina de quem roda a suíte, e é por isso que o resultado não muda quando o
-DualSense dela sai da mesa.
+DualSense do usuário sai da mesa.
 """
 
 from __future__ import annotations

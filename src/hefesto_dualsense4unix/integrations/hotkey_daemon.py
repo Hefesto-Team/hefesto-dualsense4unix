@@ -340,7 +340,7 @@ class HotkeyManager:
         DESPACHO POR DICIONÁRIO, e não cadeia de ifs. A cadeia anterior
         terminava num `else: cb = self.on_prev` — ou seja, QUALQUER combo que
         não fosse "gamemode" nem "next" caía no perfil ANTERIOR. Um combo novo
-        (o da ponte, por exemplo) trocaria o perfil dela para trás no meio da
+        (o da ponte, por exemplo) trocaria o perfil do usuário para trás no meio da
         partida, silenciosamente. Aqui, nome desconhecido é `(False, None)`:
         não dispara nada e deixa rastro no journal.
 

@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------
 # A lógica morava dentro do `install.sh` e do `uninstall.sh`, e por isso NUNCA
 # foi testada: todo portão da suíte lia os dois scripts como TEXTO. O defeito
-# que isso escondeu foi MEDIDO na máquina dela em 06/08/2026:
+# que isso escondeu foi MEDIDO na máquina do usuário em 06/08/2026:
 #
 #   /etc/bluetooth/main.conf:25 = `JustWorksRepairing=always`
 #
@@ -106,7 +106,7 @@ BACKUPS_MANTER="${HEFESTO_BT_BACKUPS_MANTER:-10}"
 # ---------------------------------------------------------------
 # A primeira versão desta entrega podava os backups dentro do `aplicar` e do
 # `remover`. MEDIDO por simulação só-leitura do pipeline exato contra o
-# /etc/bluetooth dela: a primeira execução de `aplicar` apagaria 27 dos 37
+# /etc/bluetooth do usuário: a primeira execução de `aplicar` apagaria 27 dos 37
 # backups — e entre eles os DOIS pontos de medição do colapso
 # "404 linhas -> 3 linhas" (`main.conf.bak.hefesto-1784672963`, 404 linhas,
 # 21/07 19:29, e `main.conf.bak.hefesto-1784694261`, 3 linhas, 22/07 01:24)
@@ -497,7 +497,7 @@ _despir_main_conf() {
 # A ESCRITA É ATÔMICA, e isso não é preciosismo (06/08/2026):
 # a versão anterior fazia `install -m644 tmp /etc/bluetooth/main.conf`, que
 # escreve NO LUGAR (mesmo inode, O_TRUNC). Disco cheio ou um kill no meio
-# deixavam o main.conf DELA truncado — e como o nosso bloco fica no FIM, o corte
+# deixavam o main.conf DO USUÁRIO truncado — e como o nosso bloco fica no FIM, o corte
 # cai DENTRO dele: sobra sentinela de abertura sem fechamento, e a partir daí
 # `aplicar` E `remover` RECUSAM para sempre (é a recusa correta, e é um beco sem
 # saída, com o doctor mandando rodar exatamente o que não pode funcionar). Agora
@@ -518,7 +518,7 @@ _despir_main_conf() {
 # symlink, o `mv -f` o SUBSTITUI por arquivo comum, e o alvo do link fica para
 # trás intocado. NÃO é regressão — o `install -m644` da versão anterior seguia o
 # link e reescrevia o alvo, o que é outro estrago, não menor — e não se aplica à
-# máquina dela (MEDIDO: `/etc/bluetooth/main.conf` é arquivo comum). Fica dito
+# máquina do usuário (MEDIDO: `/etc/bluetooth/main.conf` é arquivo comum). Fica dito
 # aqui para quem encontrar o caso não achar que foi acidente.
 #: Saída de `_copia_de_seguranca`. Variável global, e NÃO `$( )`, de propósito:
 #: dentro de uma substituição de comando o `_lixo_add` roda num SUBSHELL e a
@@ -536,7 +536,7 @@ _BACKUP_FEITO=""
 # com um `cp` sem `-n`, sem teste de `-e` e sem `mktemp`. Duas gravações do
 # MESMO rótulo dentro do mesmo segundo faziam a segunda SOBRESCREVER o
 # backup da primeira — e isso acontece DENTRO do `aplicar`/`remover`, sem
-# gesto dela, no par `remover; aplicar` que o próprio doctor sugere.
+# gesto do usuário, no par `remover; aplicar` que o próprio doctor sugere.
 # Reproduzido: `aplicar` sobre o estado A, edição, `aplicar` de novo no
 # mesmo segundo, e o backup do estado A não existe mais. O destruído é
 # sempre o de MAIOR valor (o estado imediatamente anterior), o
@@ -555,7 +555,7 @@ _BACKUP_FEITO=""
 # O que não passar é APAGADO e DITO, e o original não é tocado.
 #
 # UM ARQUIVO POR ESTADO — O-PRODUTO-EM-QUALQUER-MAQUINA-01, B7 (28/09/2026).
-# MEDIDO: o /etc/bluetooth dela tinha 51 backups do main.conf, um por `aplicar`
+# MEDIDO: o /etc/bluetooth do usuário tinha 51 backups do main.conf, um por `aplicar`
 # ou `remover` que mudou o arquivo — cada par uninstall + install deixava dois,
 # quase sempre dos MESMOS dois estados. Ela, ao ver: *«Importante apagarmos»*.
 # A poda à mão tirou 17 repetidos. A cura é na origem: se um backup nosso ao
@@ -694,7 +694,7 @@ _remover_dropin() {
 
 # `%T@\t%p`, do mais NOVO para o mais VELHO. Nunca casa arquivo que não tenha o
 # nosso prefixo `main.conf.bak.hefesto-` — o `main.conf.bak.` de outra
-# ferramenta que existe na máquina dela não é nosso e fica onde está.
+# ferramenta que existe na máquina do usuário não é nosso e fica onde está.
 #
 # ARQUIVO VAZIO NÃO É BACKUP (achado de 06/08/2026, MEDIDO). O `_copia_de_
 # seguranca` cria o arquivo com `mktemp` (nasce com ZERO byte) e só depois o
@@ -725,7 +725,7 @@ _lista_backups_vazios() {
 
 # Temporários de troca atômica que ficaram para trás. Com o `trap` desta versão
 # isso não deveria acontecer mais — mas um SIGKILL não tem trap, e o que já está
-# no disco dela hoje ninguém varreu. Reportar é obrigação; APAGAR não fazemos,
+# no disco do usuário hoje ninguém varreu. Reportar é obrigação; APAGAR não fazemos,
 # pela mesma regra dos backups: um temporário órfão pode ser a única cópia do
 # conteúdo que a máquina tentou gravar quando morreu.
 _lista_orfaos() {
@@ -869,7 +869,7 @@ _podar() {
 
     local removidos=0 falhos=0
     for p in "${alvos[@]}"; do
-        # Anunciar remoção que não aconteceu é mentir sobre o disco dela: o
+        # Anunciar remoção que não aconteceu é mentir sobre o disco do usuário: o
         # `|| true` do desenho anterior engolia a falha do `rm` e a frase saía
         # igual. Aqui cada arquivo é conferido DEPOIS.
         if _r rm -f "${p}" 2>/dev/null && [[ ! -e "${p}" ]]; then

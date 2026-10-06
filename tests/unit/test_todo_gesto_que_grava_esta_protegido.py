@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Todo gesto que MEXE na máquina dela declara isso — e a árvore confere.
+"""Todo gesto que MEXE na máquina do usuário declara isso — e a árvore confere.
 
 A LISTA FICOU PARA TRÁS DE UMA CURA QUATRO VEZES, e a quarta foi maior que as
 três primeiras:
@@ -17,12 +17,12 @@ três primeiras:
    verde sobre `tirar-daqui`, `voltar-a-usar`, `nao-perguntar`,
    `voltar-a-perguntar`, `consertar`, `consertar-fechando-a-steam`,
    `este-jogo-nao-funciona` e `deixar-tudo-pronto` — o último reescreve a linha
-   de lançamento de TODOS os jogos dela.
+   de lançamento de TODOS os jogos do usuário.
 
-**O ESTRAGO É REAL E É NA MÁQUINA DELA.** A régua de clique roda com o daemon
-vivo e o perfil dela em disco: um gesto que grava e não está protegido faz o
-produto escolher o estilo de jogo dela, mudar a prioridade de um perfil, marcar
-um jogo dela ou dispensar um achado do Check-up — para provar que sabe clicar.
+**O ESTRAGO É REAL E É NA MÁQUINA DO USUÁRIO.** A régua de clique roda com o daemon
+vivo e o perfil do usuário em disco: um gesto que grava e não está protegido faz o
+produto escolher o estilo de jogo do usuário, mudar a prioridade de um perfil, marcar
+um jogo do usuário ou dispensar um achado do Check-up — para provar que sabe clicar.
 
 O QUE MUDOU EM 06/09/2026 (`ONDA3-GESTO-DECLARA-01`)
 -----------------------------------------------------
@@ -373,7 +373,7 @@ def test_as_portas_da_aba_07_estao_protegidas(nome: str) -> None:
     """A quarta repetição, nomeada — para a regressão ter nome.
 
     A `STEAM-INPUT-01` mediu que a régua era cega para a aba INTEIRA. Estas
-    escrevem em arquivos DELA: `jogos_sem_wrapper.txt`,
+    escrevem em arquivos DO USUÁRIO: `jogos_sem_wrapper.txt`,
     `launch_dialog_dismissed.json`, a lista de exclusão, o pino, o atalho e o
     perfil novo.
     """
@@ -431,7 +431,7 @@ def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
     revelou: o gesto `08-conexoes·adaptador-renomear` (era `renomear-adaptador`
     até 23/09/2026, TRANSPLANTE-DA-SECAO-01) não chama `dar_nome_ao_adaptador`;
     ele chama `_gravar_o_nome`, do mesmo arquivo, e é o ajudante que grava no
-    disco dela.
+    disco do usuário.
     """
     gestos = _gestos_registrados()
     fn = gestos[("08-conexoes.html", "adaptador-renomear")]

@@ -93,7 +93,7 @@ class PonteDeMentira:
 
 
 def _com_o_perfil(monkeypatch, a04, perfil_falso):
-    """Faz o pacote ler ESTE perfil, sem tocar o disco dela."""
+    """Faz o pacote ler ESTE perfil, sem tocar o disco do usuário."""
     monkeypatch.setattr(a04.perfil, "ativo", lambda _nome: perfil_falso)
 
 
@@ -208,7 +208,7 @@ def test_sem_brilho_no_perfil_o_campo_nao_viaja(a04, ctx, monkeypatch):
     """`None` OMITE o campo, e omitir é o retrocompatível do `_payload_led_set`.
 
     A MORDIDA: devolva `1.0` no lugar do `None` em `brilho_do_controle` e esta
-    linha reprova. Mandar `1.0` diria *"ela escolheu cheio"* onde ninguém
+    linha reprova. Mandar `1.0` diria *"o usuário escolheu cheio"* onde ninguém
     escolheu nada — e um perfil sem seção `leds` deixaria de poder herdar o
     default do schema.
     """

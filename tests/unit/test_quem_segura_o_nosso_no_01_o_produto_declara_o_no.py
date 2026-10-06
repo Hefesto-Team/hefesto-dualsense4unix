@@ -371,10 +371,10 @@ class TestASuiteNaoOlhaOSysfsDela:
 
         MORDIDA: tirar `_nenhum_sysfs_vivo_na_varredura_de_vpad` faz dezenas de
         testes que chamam `_handle_daemon_state_full` varrerem o `/sys` VIVO —
-        e a máquina de desenvolvimento é a máquina dela, com vpads de verdade
+        e a máquina de desenvolvimento é a máquina do usuário, com vpads de verdade
         ali dentro. O payload sob teste passaria a depender de quantos
         controles estavam ligados, e um teste que casasse com o `event22` de
-        verdade estaria afirmando sobre o aparelho dela (TEMPESTADE-DE-
+        verdade estaria afirmando sobre o aparelho do usuário (TEMPESTADE-DE-
         TECLADOS-01, a mesma raiz).
         """
         assert not no_mod.RAIZ_CLASS_INPUT.startswith("/sys")

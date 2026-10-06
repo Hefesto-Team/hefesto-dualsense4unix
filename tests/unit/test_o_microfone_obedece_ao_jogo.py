@@ -1,7 +1,8 @@
 """A luz e o mudo do microfone obedecem ao jogo (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
 
-**A DECISÃO** (D-2909-O-MICROFONE-OBEDECE-AO-JOGO, por delegação, a validar por
-ela; revoga a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO). O princípio é dela, de
+**A DECISÃO** (D-2909-O-MICROFONE-OBEDECE-AO-JOGO, por delegação, a
+validar pelo usuário; revoga a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO). O princípio é do usuário,
+de
 29/09, ~21h20: *«Garantir que o inpút do joogo chegue ao controle do  # (noqa-acento) dela
 jogador. Aí se o jogo (…) desliga e liga o microfone do user (…) aí o  # (noqa-acento) dela
 controle obedece»*.
@@ -19,7 +20,7 @@ AS RÉGUAS, na ordem da sprint
 3. o eco do driver não conta; a janela é uma por aperto e se abre onde o
    report SAI;
 4. o botão físico sempre vale: ou o jogo responde a ele, ou ele vale sozinho;
-5. o 🎙 da tela também é dela;
+5. o 🎙 da tela também é do usuário;
 6. o jogo solta;
 7. quatro jogadores, no tempo;
 8. sem jogo, o pedido fica retido;
@@ -757,7 +758,7 @@ class TestOBotaoFisicoSempreVale:
     async def test_o_aperto_devolve_a_luz_a_ela_mesmo_sem_o_ato(
         self, casa: Any, uhid: _UhidPorFd  # noqa: F811
     ) -> None:
-        """Cena 1b: com o botão fora do sistema, a borda ainda é ordem dela."""
+        """Cena 1b: com o botão fora do sistema, a borda ainda é ordem de produto."""
         casa.perfil(FREESTYLE)
         kernel = _KernelComLuz((P1,))
         daemon, pad, relogio = await self._cena(casa, kernel)

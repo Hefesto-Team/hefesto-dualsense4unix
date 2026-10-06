@@ -38,7 +38,7 @@ class _PonteQueAnota:
     passou de `chamar` (devolve `bool`, joga fora a resposta) para `resultado`
     (devolve o que o daemon disse), porque era o `bool` que fazia um
     `{"status": "failed"}` voltar como sucesso e a recusa não chegar à tela
-    dela. O dublê devolve o `ok` do daemon de verdade — inclusive o bloco
+    do usuário. O dublê devolve o `ok` do daemon de verdade — inclusive o bloco
     `keyboard_emulation`, que é o que o handler manda para a janela não precisar
     de uma segunda chamada (`daemon/ipc_handlers.py:3877`).
 

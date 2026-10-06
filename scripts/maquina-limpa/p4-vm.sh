@@ -7,17 +7,17 @@
 # que alcança o que nenhum outro alcança: o COSMIC do pacote, o DKMS
 # carregando depois do reinício, o Secure Boot, o `uaccess` sem o grupo
 # `input`, o pareamento do zero e a `.venv` com o que o pip entrega — e o
-# aparelho de verdade, passado pelo cabo e pelo rádio. Ela liberou a VM nesta
+# aparelho de verdade, passado pelo cabo e pelo rádio. O usuário liberou a VM nesta
 # máquina em 28/09 (*«pode usar o Pc atual como VM»*); o `qemu-system-x86`, o
 # `qemu-utils` e o `ovmf` são o pedido 1 dela, e sem eles este script diz isso
 # e sai.
 #
 # AS TRAVAS, e nenhuma é opcional:
 #   - a VM roda SEM JANELA (`-display none`): cada tela vem por `screendump`
-#     para um PNG que se lê com calma. Nada nasce na tela dela, e não existe
+#     para um PNG que se lê com calma. Nada nasce na tela do usuário, e não existe
 #     flag que abra uma janela;
 #   - o QMP é um socket na pasta da VM, e é por ele que tudo se dirige;
-#   - passar um aparelho TIRA o aparelho do daemon dela até a devolução. O
+#   - passar um aparelho TIRA o aparelho do daemon do usuário até a devolução. O
 #     `passar` recusa sem o `--sei-que-tira`, e o `devolver` é o caminho de
 #     volta (depois dele, o controle volta pelo «Mover» da aba Conexões);
 #   - o que sai de dentro da VM com endereço de aparelho passa pelo mascarador

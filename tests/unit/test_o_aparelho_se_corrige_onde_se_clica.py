@@ -1,10 +1,11 @@
 """Clicar num aparelho abre o painel dele: nome, tipo, extensor, o que fazer — e o resto.
 
 O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026), com a A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01
-absorvida. Ela pediu: *«clicar num dispositivo não oferece modificá-lo ou identificá-lo»*.
+absorvida. O usuário pediu: *«clicar num dispositivo não oferece modificá-lo ou identificá-lo»*.
 
 A página sob prova é a da BANCADA (``publicado=False``): o painel novo só vira o produto no
-``--publicar`` de quem coordena, depois do olho dela. TUDO É DE MENTIRA: barramento ``usb9``,
+``--publicar`` da costura, depois do olho de quem confere. TUDO É DE MENTIRA: barramento
+``usb9``,
 caminhos ``9-*``, ``maquina.json`` no ``tmp_path``.
 
 AS MORDIDAS (arrancando a cura e vendo reprovar): ``cuidarDoAviso`` sem o ``setTimeout`` (o aviso
@@ -335,7 +336,7 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
 
 
 def _escolher(seletor: str, valor: str) -> str:
-    """Escolhe ``valor`` numa lista do painel, como a mão dela: muda e avisa a página."""
+    """Escolhe ``valor`` numa lista do painel, como a mão do usuário: muda e avisa a página."""
     return (f"(function(){{const s=document.querySelector({json.dumps(seletor)});"
             f"if(!s)return 'sem a lista';s.value={json.dumps(valor)};"
             "s.dispatchEvent(new Event('change',{bubbles:true}));return 'ok';})()")

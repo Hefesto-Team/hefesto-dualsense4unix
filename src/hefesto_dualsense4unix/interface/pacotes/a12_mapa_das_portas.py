@@ -5,10 +5,9 @@ O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. Até aqui um clique nesta página
 chegava ao piloto como `[gesto sem dono] mapa-das-portas.html · clique · …`: a
 página não tinha pacote, e o que ela declarava numa entrada sumia ao reler.
 
-Os dois pedidos dela que isto atende:
+Os dois pedidos que isto atende:
 
-* *«ao clicar em um desses usb mapeados eu pudesse setar que tem tal coisa lá.
-  no caso o hub ou afins»* — «O que tem aqui»: Direto, Hub ou Extensor;
+*  — «O que tem aqui»: Direto, Hub ou Extensor;
 * a velocidade da entrada, porque o par SuperSpeed que o firmware da placa
   publica (``peer``) não prova o conector: na mesa em que isto nasceu, as duas
   USB 2.0 pretas de trás têm o par, e a frente que o gabinete chama de 3.0
@@ -17,7 +16,7 @@ Os dois pedidos dela que isto atende:
 
 <!-- noqa-acento: citação literal -->
 
-Os dois vão ao `maquina.json` DELA, em `mapa.portas[N]`, pelo gravador único do
+Os dois vão ao `maquina.json` DO USUÁRIO, em `mapa.portas[N]`, pelo gravador único do
 Mapear (`integrations/entrada_a_entrada`), sem IPC: a declaração é dado de
 quem usa, no disco dele. O produto lê de lá (`interface/arranjo_desta_maquina`
 e `integrations/mapa_das_portas.velocidade_da_entrada`).
@@ -156,7 +155,7 @@ def aparelho_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "voltar-ao-automatico", grava="voltar_ao_automatico")
 def voltar_ao_automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Voltar ao automático»: tira o que ela disse do aparelho (tipo, nome) e da entrada."""
+    """«Voltar ao automático»: tira o que o usuário disse do aparelho (tipo, nome) e da entrada."""
     modelo = str(o.get("modelo") or "").strip() or None
     entrada = str(o.get("entrada") or "").strip() or None
     return _gravou(ee.voltar_ao_automatico(numero=entrada, modelo=modelo), ctx)

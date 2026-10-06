@@ -148,7 +148,7 @@ def _palavra_do_cartao(nome: str) -> str | None:
 
 
 def test_o_canto_da_gestao_nao_conta_mais() -> None:
-    """A contagem saiu do canto da Gestão em 26/09/2026, a pedido dela; o dono
+    """A contagem saiu do canto da Gestão em 26/09/2026, a pedido; o dono
     (`interface.conexoes.texto_da_contagem`) segue medido logo abaixo."""
     assert 'data-campo="conta-gestao"' not in _pagina("08-conexoes.html")
     palavras = [_palavra_do_cartao(n) for n, _ in _cartoes_da_gestao()]
@@ -162,7 +162,7 @@ def test_o_canto_da_gestao_nao_conta_mais() -> None:
     ([], "0 controles"),
 ])
 def test_a_contagem_omite_o_transporte_vazio(transportes: list[str], esperada: str) -> None:
-    """O transporte sem controle não aparece — a decisão dela de 17/09 no canto
+    """O transporte sem controle não aparece — a decisão de 17/09 no canto
     de cima (`mesa_viva.frase_dos_transportes`) vale para o canto da Gestão.
 
     MORDIDA: tire os dois `if` de `texto_da_contagem` — o caso de um controle

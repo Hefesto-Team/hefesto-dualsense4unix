@@ -135,7 +135,7 @@ def test_o_valor_antes_continua_o_de_antes_da_nossa_escrita(
 
 
 def test_o_manter_vindo_do_botao_e_respeitado(prefixo: Path, casa: Path) -> None:
-    """Ela clicou em «devolver»: nenhum lançamento pode desfazer isso."""
+    """O usuário clicou em «devolver»: nenhum lançamento pode desfazer isso."""
     cv.curar_um_prefixo(prefixo, appid="222", home=casa)
     cv.aplicar_no_prefixo(
         cv.prefixo_de_jogo(prefixo, appid="222"), religar=True, home=casa

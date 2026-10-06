@@ -584,7 +584,7 @@ def test_identidade_sintetizada_ganha_numero_mas_nunca_vai_ao_disco(
 def test_load_expulsa_identidade_sintetizada_ja_gravada(tmp_path: Path) -> None:
     """MIGRAÇÃO sem bump de schema: o fantasma já gravado morre no `load`.
 
-    O `controllers.json` REAL da máquina dela tem a entrada sintética do modo
+    O `controllers.json` REAL da máquina do usuário tem a entrada sintética do modo
     Switch guardando um slot. Como o `load` já pulava `if not persistable`,
     reclassificar o endereço sintético cura o arquivo existente sem tocar na
     `CONTROLLERS_SCHEMA_VERSION` — bumpar renumeraria TODO mundo (inclusive os

@@ -2,7 +2,7 @@
 
 Em 19/09/2026 esta casa afirmou que pôr o DualSense em modo de pareamento «é
 firmware, não há verbo, D-Bus nem sysfs que faça isso». A conclusão prática
-está certa — hoje a mão dela é necessária. **A razão está errada**, e é a razão
+está certa — hoje a mão do usuário é necessária. **A razão está errada**, e é a razão
 que a próxima pessoa lê.
 
 O feature report `0x0A` «Set Bluetooth Pairing» grava host + link key no

@@ -6,14 +6,11 @@ Freestyle de 24/09, com a vibração sem opinião, o microfone sem seção e as 
 de número no Fraco. O conteúdo de fábrica é o item 1 da sprint, e um dono só
 evita dois «de fábrica».
 
-O QUE ELA DISSE, e em que ordem. Nas palavras que abrem a sprint: *«no freestyle a ideia
+O QUE O USUÁRIO DISSE, e em que ordem. Nas palavras que abrem a sprint: *«no freestyle a ideia
 é tudo estar no ultra até vibração e afins.»* — e o item 1 da sprint o escreveu
 campo a campo: vibração no Máximo com o jogo passando, alto-falante no teto,
 microfone aberto com o ganho no teto, as luzes no brilho mais forte, os sensores
-ligados. Na noite de 27/09 (a resposta 12): *«Quero testar algo diferente do
-padrão e jogar e salvar ele. Aperto o botão do freestyle e o jogo que eu tiver
-jogando vai ter essa config independente do perfil do jogo. Só isso. E lá se eu
-configurar te no ultra ok»* (noqa-acento: citação literal) — o Freestyle tem
+ligados. Na noite de 27/09 (a resposta 12):  — o Freestyle tem
 o que ela configurar, e o «ultra» vale **só como fábrica do arquivo novo**. Esta
 régua mede o arquivo novo.
 

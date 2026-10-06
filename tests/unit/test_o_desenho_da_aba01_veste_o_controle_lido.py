@@ -112,7 +112,7 @@ def test_o_pacote_emite_o_colorway_do_controle_e_nao_o_do_desenho() -> None:
 
 
 def test_sem_cor_lida_o_desenho_nao_afirma_modelo_nenhum() -> None:
-    """Vazio e desconhecido calam — a regra dela, campo sem informação não mostra nada."""
+    """Vazio e desconhecido calam — a regra de produto, campo sem informação não mostra nada."""
     assert a01_jogar._colorway_do_desenho("") == ""
     assert a01_jogar._colorway_do_desenho("modelo-que-nao-existe") == ""
     for slug in ("", "modelo-que-nao-existe"):

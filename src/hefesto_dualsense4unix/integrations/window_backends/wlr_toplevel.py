@@ -4,7 +4,7 @@ Cobre o bloco wlroots: Sway, Hyprland, niri, river.
 
 **NÃO cobre o COSMIC, e a linha que dizia o contrário caiu em 02/09/2026.**
 Este cabeçalho listava *"COSMIC (cosmic-comp, smithay)"* como coberto. Medido
-com `wayland-info` na sessão dela: dos 58 globais que o cosmic-comp 0.1
+com `wayland-info` na sessão do usuário: dos 58 globais que o cosmic-comp 0.1
 publica, o `zwlr_foreign_toplevel_manager_v1` **não está lá** — e é por isso
 que o `wlrctl`, instalado nesta máquina, responde *"Foreign Toplevel Management
 interface not found"*. Quem cobre o COSMIC é o `cosmic_toplevel.py`, falando

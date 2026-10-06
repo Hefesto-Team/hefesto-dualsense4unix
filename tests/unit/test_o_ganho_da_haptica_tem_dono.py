@@ -720,7 +720,7 @@ def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
 
 
 def test_no_cabo_a_luz_ouve_a_placa_do_controle(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Cabo: o ouvido da placa lê o monitor dela, e a luz segue o sinal dos traseiros."""
+    """Cabo: o ouvido da placa lê o monitor do usuário, e a luz segue o sinal dos traseiros."""
     from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
     from tests.unit.test_o_gravador_do_monitor_entrega_so_o_pcm import Gravadores
 

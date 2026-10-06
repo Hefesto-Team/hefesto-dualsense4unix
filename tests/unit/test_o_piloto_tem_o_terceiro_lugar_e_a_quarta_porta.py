@@ -564,7 +564,7 @@ def test_o_gesto_vivo_que_grava_e_recusado_nomeando(medido: dict) -> None:
 
 
 def test_o_gesto_vivo_nao_troca_bloco(medido: dict) -> None:
-    """Uma troca de HTML a cada tecla arrancaria o campo debaixo do dedo dela."""
+    """Uma troca de HTML a cada tecla arrancaria o campo debaixo do dedo do usuário."""
     recusados = medido["vivos_recusados"]
     assert any(VIVO_QUE_TROCA_BLOCO in r and "blocos" in r for r in recusados), (
         f"a recusa do bloco não aparece: {recusados!r}")

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# mesa-de-medicao.sh — sobe A MESA DE MEDIÇÃO e a abre na tela dela.
+# mesa-de-medicao.sh — sobe A MESA DE MEDIÇÃO e a abre na tela do usuário.
 #
-# A encomenda é dela, 06/09/2026:
+# A encomenda é do usuário, 06/09/2026:
 #
 #     "a ideia é termos uma página pra medirmos o que falta no specs. (…) eu
 #     registro lá que tal controle ficou x com o teste y clico em avançar, o
@@ -9,32 +9,32 @@
 #
 # E a razão de a página existir, que é a que decide tudo: a sessão de quem
 # estava na bancada acabava e levava embora não só o resultado como o MODO DE
-# CHEGAR NELE. A frase dela, palavra por palavra, está na entrada da
+# CHEGAR NELE. A frase de produto, palavra por palavra, está na entrada da
 # A-VALIDACAO-DOS-QUATRO-01, de 06/09/2026, que mora fora deste repositório
 # com o resto dos arquivos de processo.
 #
-# A JANELA É DELA E PARA ELA. Aqui **não** vale `--oculta`: esta é a única
-# janela desta casa que nasce de propósito na tela dela, porque é ela que vai
+# A JANELA É DO USUÁRIO E PARA ELA. Aqui **não** vale `--oculta`: esta é a única
+# janela desta casa que nasce de propósito na tela do usuário, porque é ela que vai
 # olhar os quatro controles e clicar. As réguas automáticas — o Playwright que
 # prova esta página — essas sim rodam headless, e é o `--sem-abrir` que as serve.
 #
-# ELE LIGA O DAEMON SE ELE ESTIVER PARADO — e NUNCA o reinicia. Pedido dela,
+# ELE LIGA O DAEMON SE ELE ESTIVER PARADO — e NUNCA o reinicia. Pedido,
 # 07/09/2026: *"quando rodar o validar ele tem que acionar isso
 # automaticamente"*, depois de atravessar meia bancada com o daemon morto. Sem
 # daemon a página lê o kernel e o kernel devolve a LÂMPADA da sessão passada:
 # ela plugou o controle que o roteiro chama de P1 e a página o pôs no P3.
 #
-# A DIFERENÇA ENTRE `start` E `restart` É A SESSÃO DELA. `start` num serviço já
+# A DIFERENÇA ENTRE `start` E `restart` É A SESSÃO DO USUÁRIO. `start` num serviço já
 # ativo não faz nada; `restart` derruba o daemon vivo, com os controles na mão
 # dela, no meio de uma medição. Por isso aqui só se pergunta `is-active` e só
 # se chama `start` — e se ele já estiver de pé, o script não toca em nada.
 #
 # A RÉGUA NÃO LIGA NADA: com `--sem-abrir` (que é o que o Playwright usa) o
-# daemon não é acionado. Uma suíte que sobe serviço na máquina dela é uma
-# suíte que mexe na mesa dela sem ela pedir.
+# daemon não é acionado. Uma suíte que sobe serviço na máquina do usuário é uma
+# suíte que mexe na bancada sem ela pedir.
 #
 # Uso:
-#   scripts/mesa-de-medicao.sh                 liga o daemon se preciso, sobe e abre na tela dela
+#   scripts/mesa-de-medicao.sh                 liga o daemon se preciso, sobe e abre na tela do usuário
 #   scripts/mesa-de-medicao.sh --sem-abrir     sobe e só imprime o endereço (é o que a régua usa)
 #   scripts/mesa-de-medicao.sh --sem-daemon    não liga o daemon, mesmo parado
 #   scripts/mesa-de-medicao.sh --porta 8765    escolhe a porta (0 = a primeira livre)
@@ -108,7 +108,7 @@ fi
 
 # ---------------------------------------------------------------------------
 # O DAEMON — `start` se estiver parado, e nada se estiver de pé. Ver o
-# cabeçalho: `restart` derrubaria o daemon vivo com os controles na mão dela.
+# cabeçalho: `restart` derrubaria o daemon vivo com os controles na mão do usuário.
 # ---------------------------------------------------------------------------
 if [ "$LIGAR_DAEMON" = 1 ] && command -v systemctl >/dev/null 2>&1; then
   ESTADO="$(systemctl --user is-active "$UNIT" 2>/dev/null || true)"
@@ -153,7 +153,7 @@ for p in ('P1','P2','P3','P4'):
 # ---------------------------------------------------------------------------
 # O SERVIDOR. Biblioteca padrão, `127.0.0.1`, sem uma dependência nova — a
 # dívida do `playwright`, que não está no `pyproject.toml` e deixa toda árvore
-# de agente com dois portões vermelhos, já ensinou o preço de acrescentar uma.
+# de trabalho com dois portões vermelhos, já ensinou o preço de acrescentar uma.
 # ---------------------------------------------------------------------------
 TUBO="$(mktemp -d)/endereco"
 mkfifo "$TUBO"
@@ -168,7 +168,7 @@ rm -rf "$(dirname "$TUBO")"
 printf 'a mesa está em: %s\n' "$ENDERECO"
 
 if [ "$ABRIR" = 1 ]; then
-  # A tela é DELA. Nada de `--oculta` aqui, e nada de escolher navegador por
+  # A tela é DO USUÁRIO. Nada de `--oculta` aqui, e nada de escolher navegador por
   # conta própria: `xdg-open` respeita o padrão que ela configurou.
   (xdg-open "$ENDERECO" >/dev/null 2>&1 || true) &
   printf 'abri na tela dela. Ctrl-C para fechar o servidor.\n'

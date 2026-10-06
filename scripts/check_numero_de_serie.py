@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Nenhum NÚMERO DE SÉRIE de aparelho em arquivo versionado.
 
-POR QUE ELE NASCEU, e o pedido é dela — 03/09/2026. Ao ver o serial do controle
-dela aparecer numa leitura de ``daemon.state_full``, a pergunta foi *"vale um
+POR QUE ELE NASCEU, e o pedido é de produto — 03/09/2026. Ao ver o serial do controle
+do usuário aparecer numa leitura de ``daemon.state_full``, a pergunta foi *"vale um
 portão para número de série?"*, e a resposta foi **sim**.
 
 **NÃO É A PRIMEIRA RÉGUA DE SERIAL, E É PRECISO DIZER ISSO.** Ao escrever este

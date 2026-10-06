@@ -135,10 +135,8 @@ class MicDraft(BaseModel):
 
     ``volume`` (0-100, o por cento da FONTE de captura no sistema) e ``muted``
     (o mudo do FIRMWARE do controle) espelham os dois campos homônimos de
-    ``ProfileMicConfig``. Eles entraram em 18/08/2026, a pedido dela — depois
-    de o microfone ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de
-    microfone e som, touch, acelerômetro, giroscópio e afins. cara, temos que
-    salvar isso no perfil sempre."*
+    ``ProfileMicConfig``. Eles entraram em 18/08/2026, a pedido — depois
+    de o microfone ficar mudo e o DON'T SCREAM não ouvir nada
 
     **NOTA DATADA — 18/08/2026.** Este parágrafo dizia que o mic não tinha
     escritor na janela e que a seção só nascia pela leitura do disco. Isso
@@ -191,7 +189,7 @@ class SpeakerDraft(BaseModel):
     rota: int | None = Field(default=None, ge=0, le=3)
     #: escrevo".
     #:
-    #: **ELE FALTAVA AQUI, e a falta DESTRUÍA a escolha dela** — 10/09/2026.
+    #: **ELE FALTAVA AQUI, e a falta DESTRUÍA a escolha do usuário** — 10/09/2026.
     #: `ProfileSpeakerConfig.fonte` existe desde 09/09 e o daemon o OBEDECE
     #: (`AltoFalanteSubsystem._fonte_do_controle`), mas o caminho de disco da
     #: janela e da aba Perfis passa por este draft: sem o campo, todo "Salvar
@@ -385,7 +383,7 @@ class DraftConfig(BaseModel):
     source_ponte: Any | None = None
     # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
     # `Profile` (`Profile.button_actions` e `Profile.teclado_emulado`, em
-    # método. O `button_actions` nasceu por decisão dela em 01/09 e nenhum
+    # método. O `button_actions` nasceu por decisão em 01/09 e nenhum
     source_button_actions: Any | None = None
     source_teclado_emulado: bool | None = None
     source_remapeamento: dict[str, str] | None = None
@@ -498,12 +496,12 @@ class DraftConfig(BaseModel):
         PERFIL-SALVA-TUDO-01: ``mode`` e ``suppress_desktop_emulation`` também
         saem daqui quando ELA os editou nesta sessão (``mode_dirty`` /
         ``suppress_dirty``) — nesse caso o valor vale mesmo com nome NOVO,
-        porque é gesto dela e não a regra herdada de outro perfil.
+        porque é gesto do usuário e não a regra herdada de outro perfil.
 
         ``priority=None`` (default) significa "o chamador não tem opinião": o
         número vem do perfil de ORIGEM quando é o mesmo perfil e, na falta dele,
         do DEFAULT DO ESQUEMA. Nunca de um literal inventado aqui: o antigo
-        default 5 desta assinatura era a assinatura digital dos perfis dela
+        default 5 desta assinatura era a assinatura digital dos perfis do usuário
         salvos pelo rodapé (``pragmata.json`` e ``pragmata2.json``, prioridade 5
         sem ela ter tocado no slider, empatados entre si e com os outros
         catch-all). Um portão de busca em
@@ -559,7 +557,7 @@ class DraftConfig(BaseModel):
             else None
         )
 
-        # título do FPS e prioridade 60 — e nenhuma regra para o jogo dela.
+        # título do FPS e prioridade 60 — e nenhuma regra para o jogo do usuário.
         # já tem a comparação certa (`profiles/slug.mesmo_slug`, usada nas duas
         mesmo_perfil = self.source_name is not None and (
             name == self.source_name or mesmo_slug(name, self.source_name)

@@ -60,7 +60,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          daquele controle livre para o que o jogo endereçar a
                          ele, `mix` derrama nele todo o som da máquina sem
                          tirá-lo da TV. Ela exige `uniq` e não toma a posse do
-                         volume. Entrou em 20/09/2026: até ali a escolha dela
+                         volume. Entrou em 20/09/2026: até ali a escolha do usuário
                          só chegava ao nó pelo PERFIL ATIVO, e sem perfil ativo
                          não chegava nunca.
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}

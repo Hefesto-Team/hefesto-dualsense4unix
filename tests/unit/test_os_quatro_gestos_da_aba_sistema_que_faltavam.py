@@ -18,7 +18,7 @@ de cada uma é a própria linha do CSV:
 O QUE ESTA RÉGUA MEDE, e em três camadas — cada uma pega o que a de cima não vê:
 
 1. **os GESTOS**, com o motor dublado no ponto em que ele sairia da máquina: o
-   que se confere é o que teria ido ao `systemctl`, à Steam e ao disco dela;
+   que se confere é o que teria ido ao `systemctl`, à Steam e ao disco do usuário;
 2. **o DESENHO**, que carrega os dois botões novos — e o do modo improvisado
    nasce ESCONDIDO, com a regra de CSS que o esconde e o `data-campo` que o
    acende;
@@ -135,7 +135,7 @@ def _confirma(gesto: str) -> dict[str, object]:
 
 
 def test_os_tres_gestos_novos_declaram_o_que_mexem() -> None:
-    """Sem isto, a prova botão a botão clica os três na máquina dela."""
+    """Sem isto, a prova botão a botão clica os três na máquina do usuário."""
     from hefesto_dualsense4unix.interface import pacotes
 
     perigosos = {g for (pg, g) in pacotes.perigosos() if pg == PAGINA}
@@ -169,7 +169,7 @@ def test_o_corrigir_modo_recusa_fora_do_modo_improvisado(
 
 def test_o_corrigir_modo_pede_ao_avulso_que_saia_e_sobe_a_unit(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Os três tempos da janela antiga, na ordem dela — e NADA é reescrito aqui."""
+    """Os três tempos da janela antiga, na ordem de produto — e NADA é reescrito aqui."""
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_avulso")
     monkeypatch.setattr(a09._matriz(), "_read_daemon_pid", lambda: 4242)
     saiu: list[int] = []
@@ -249,7 +249,7 @@ def test_o_campo_do_modo_improvisado_sai_ate_quando_a_camada_levanta(
 
 def _com_a_steam(monkeypatch: pytest.MonkeyPatch, *, janela: str = "ok",
                  resultado: object = None) -> dict[str, list]:
-    """Dubla o motor da Steam no ponto em que ele MEXERIA na máquina dela."""
+    """Dubla o motor da Steam no ponto em que ele MEXERIA na máquina do usuário."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     visto: dict[str, list] = {"fechou": [], "aplicou": []}
@@ -272,7 +272,7 @@ def _com_a_steam(monkeypatch: pytest.MonkeyPatch, *, janela: str = "ok",
 def test_o_aplicar_aos_jogos_nao_fecha_a_steam_no_primeiro_clique(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """O consentimento é EXIGÊNCIA DO MOTOR: `with_steam_closed` fecha a Steam
-    dela por uns 20 segundos, e o primeiro clique só PERGUNTA."""
+    do usuário por uns 20 segundos, e o primeiro clique só PERGUNTA."""
     visto = _com_a_steam(monkeypatch)
     fora = a09.aplicar_aos_jogos(
         _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "Aplicar aos jogos da Steam"},
@@ -333,7 +333,7 @@ def test_a_instalacao_sem_aplicacao_em_massa_recusa_dizendo_como_atualizar(
 
 @pytest.fixture()
 def _preset(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
-    """Um preset de mentira no lugar do asset — e o disco dela fica intacto."""
+    """Um preset de mentira no lugar do asset — e o disco do usuário fica intacto."""
     from hefesto_dualsense4unix.profiles import loader
 
     de_verdade = json.loads(
@@ -362,7 +362,7 @@ def test_o_restaurar_de_fabrica_adota_o_perfil_como_ativo(
     """Os TRÊS tempos do dono: disco, `profile.reaplicar` e `launch_env.refresh`.
 
     O `era=` é o que faz o reaplicar sair (o `profile.switch` até 01/10/2026:
-    reaplicar não é escolha dela). Sem ele o `.json` muda no disco e o
+    reaplicar não é escolha do usuário). Sem ele o `.json` muda no disco e o
     controle continua com o perfil anterior — o sintoma que ela leu como *"não
     está salvando"*.
     """
@@ -425,7 +425,7 @@ def test_o_desenho_tem_os_dois_botoes_novos() -> None:
 
 
 def test_o_botao_do_modo_improvisado_nasce_escondido() -> None:
-    """A cena que ela aprovou não muda um pixel: no desenho o serviço está de pé"""
+    """A cena que o usuário aprovou não muda um pixel: no desenho o serviço está de pé"""
     import re
 
     pagina = _html()
@@ -454,9 +454,9 @@ def test_a_declaracao_do_que_espera_a_publicacao_bate_com_a_pagina() -> None:
     *a régua media o mundo de ontem*.  # (noqa-acento: verbo medir, imperfeito)
     A versão anterior cravava UM campo
     (`CAMPO_DO_MODO_AVULSO`) e exigia que ele estivesse fora da página E dentro
-    da declaração. Ela mandou publicar as dez abas para os quatro DualSense
+    da declaração. O usuário mandou publicar as dez abas para os quatro DualSense
     aparecerem na bancada, os cinco campos chegaram à página — e a régua passou
-    a reprovar a publicação que ela pediu, em vez de reprovar defeito.
+    a reprovar a publicação que o usuário pediu, em vez de reprovar defeito.
 
     O QUE SOBREVIVE É O INVARIANTE, e ele vale para qualquer campo: **declarar
     o que já está publicado é mentira, e é isso que se cobra**. O outro sentido

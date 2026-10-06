@@ -1,7 +1,6 @@
 """A MÁSCARA POR CONTROLE CHEGOU AO VPAD — a corrente ligada, medida ponta a ponta.
 
-Decisão dela, 29/08/2026: ``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`` — *"a
-máscara por controle vale ao clicar em Aplicar, mesmo com jogo aberto"*.
+Decisão, 29/08/2026: ``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`` — **.
 
 O registro por aparelho existe desde 15/08 (``daemon/subsystems/external_mask.py``,
 arquivo próprio ``controller_masks.json``) e os DOIS backends de vpad já sabiam
@@ -21,8 +20,8 @@ O QUE ESTA BATERIA MEDE, e por que cada peça existe
 
 2. **A ARMADILHA que ``external_mask.py:59-68`` deixou escrita** para quem
    fosse escrever este degrau: a máscara efetiva tem de ser resolvida **ANTES**
-   de escolher o backend. O gate do ``_try_uhid`` (*"não é dualsense, logo não
-   é meu"*) decide pela máscara que RECEBE; recebendo a do jogo, um jogador que
+   de escolher o backend. O gate do ``_try_uhid`` decide pela máscara que RECEBE; recebendo a do
+   jogo, um jogador que
    escolheu ``dualsense`` numa sessão ``xbox`` teria o uhid vetado e cairia no
    uinput com máscara DualSense — o par degradado em que a vibração do jogo
    MORRE (VPAD-05 / SPRINT-GAME-RUMBLE-01). É um defeito que só aparece com o
@@ -31,7 +30,7 @@ O QUE ESTA BATERIA MEDE, e por que cada peça existe
 3. **O VPAD NÃO É RECRIADO FORA DO APLICAR** — o coração do risco desta
    entrega. Trocar a máscara destrói e recria o vpad, e há medição ao vivo
    (20:15 de 2026-07-18) de que isso invalida o handle do jogo aberto: a Steam
-   nunca reabre o hidraw do vpad do P1. A decisão dela aceita esse preço **no
+   nunca reabre o hidraw do vpad do P1. A decisão de produto aceita esse preço **no
    Aplicar**; o que não pode existir é recriação em NENHUM outro momento. Duas
    réguas, porque são dois laços diferentes:
 
@@ -55,7 +54,7 @@ O QUE ESTA BATERIA MEDE, e por que cada peça existe
 5. **A MÁSCARA DA SESSÃO NÃO É CONTAMINADA** pela escolha de um aparelho. São
    duas máscaras e confundi-las destrói dado dela: ``config.gamepad_flavor`` e
    o ``save_gamepad_emulation`` são a máscara do JOGO; a escolha do aparelho
-   mora no arquivo próprio. Carimbar uma como a outra apagaria a escolha dela
+   mora no arquivo próprio. Carimbar uma como a outra apagaria a escolha do usuário
    do disco — o defeito do Sackboy (22/08) pelo avesso — e ainda contaminaria
    todo secundário, que herda ``config.gamepad_flavor`` no ``_flavor()``.
 
@@ -131,7 +130,7 @@ def _cria(flavor: str | None, identity: str | None) -> Any:
 def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() -> None:
     """A mordida. Mesma sessão, mesma chamada, DOIS resultados — pela escolha.
 
-    É a decisão dela funcionando: o P2 marcado `dualsense` aparece como
+    É a decisão de produto funcionando: o P2 marcado `dualsense` aparece como
     DualSense no jogo enquanto o P1 marcado `xbox` aparece como Xbox 360, e a
     máscara da sessão (`"xbox"`, o argumento posicional) é só o padrão herdado.
     """
@@ -185,8 +184,8 @@ def test_o_gate_do_uhid_recebe_a_mascara_efetiva_e_nao_a_do_jogo(
     """A armadilha que `external_mask.py:59-68` descreveu, medida.
 
     Um jogador que escolheu `dualsense` numa sessão `xbox`: o `_try_uhid` tem
-    de receber `"dualsense"`, senão o gate dele (*"não é dualsense, logo não é
-    meu"*) veta o uhid e o jogador cai no uinput COM máscara DualSense — o par
+    de receber `"dualsense"`, senão o gate dele veta o uhid e o jogador cai no uinput COM máscara
+    DualSense — o par
     degradado em que a vibração do jogo morre. O defeito seria invisível aqui
     (o `flavor` sai certo!) e apareceria só com o controle na mão, como
     "escolhi DualSense e o jogo parou de vibrar".
@@ -222,7 +221,7 @@ def test_o_uhid_e_vetado_para_quem_escolheu_xbox_numa_sessao_dualsense(
     Sessão `dualsense`, aparelho marcado `xbox`. O `_try_uhid` recebe `"xbox"`
     e devolve `(None, None)` — uinput por DESIGN, não degradação. Se recebesse
     a máscara do jogo, subiria um DualSense Edge REAL no kernel para um
-    controle que ela pediu para aparecer como Xbox.
+    controle que o usuário pediu para aparecer como Xbox.
     """
     registro_de_mascaras().set_mask(MAC_P1, "xbox")
     recebido: list[str] = []
@@ -511,7 +510,7 @@ def test_cinquenta_aplicares_identicos_nao_recriam_o_vpad_do_p1(p1: Any) -> None
 
 
 def test_o_aplicar_recria_quando_a_escolha_dela_muda(p1: Any) -> None:
-    """E o Aplicar CONTINUA aplicando — a decisão dela vale no gesto.
+    """E o Aplicar CONTINUA aplicando — a decisão de produto vale no gesto.
     (D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR)
     """
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (

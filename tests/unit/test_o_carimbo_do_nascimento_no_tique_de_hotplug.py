@@ -70,7 +70,7 @@ def como_o_backend_escreve(uniq: str) -> str:
     Um fixture que devolvesse a grafia do sysfs onde o produto lê a do backend
     seria régua falsa: ela aprovaria um casamento que em produção não acontece
     NUNCA. Foi assim que o carimbo do nascimento passou de 22/08 a 25/08
-    "entregue" e sem carimbar nada na máquina dela.
+    "entregue" e sem carimbar nada na máquina do usuário.
     """
     return "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
 
@@ -124,7 +124,7 @@ class TestOCarimboEPorInstancia:
         assert len(cartorio.todos()) == 6
 
     def test_a_instancia_que_some_e_esquecida(self) -> None:
-        """O carimbo morre com a conexão: o defeito é dela, não do plástico."""
+        """O carimbo morre com a conexão: o defeito é do usuário, não do plástico."""
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(_instancias_da_bancada(), agora=100.0)
         cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
@@ -377,7 +377,7 @@ class TestOTiqueDeHotplugCarimba:
         )
 
     def test_o_modo_nativo_nao_fabrica_limpa(self, bancada_no_sysfs, monkeypatch):
-        """Ali o daemon não sonda (regra dela), o diário não ganha a linha, e um"""
+        """Ali o daemon não sonda (regra de produto), o diário não ganha a linha, e um"""
 
         def _bomba(**_k: object) -> list[sb.Leitura]:
             raise AssertionError(
@@ -433,7 +433,7 @@ class TestOTiqueDeHotplugCarimba:
 class TestOCarimboSoFalaDosControlesDoProduto:
     """O sysfs enumera TODO DualSense da máquina. Carimbar um que o produto não
     abriu falaria de um controle que a tela nem lista — e faria a suíte, que
-    roda na mesa dela com quatro controles ligados, pagar `journalctl`."""
+    roda na bancada com quatro controles ligados, pagar `journalctl`."""
 
     def test_sem_handle_aberto_nem_o_sysfs_e_lido(self, monkeypatch) -> None:
         leituras: list[int] = []

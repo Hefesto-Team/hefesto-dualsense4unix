@@ -65,7 +65,7 @@ def mascarar_mac(mac: str) -> str:
 
 
 def hardware_version(dir_device: str) -> str:
-    """O `hardware_version` do sysfs — a identidade que ela pediu que eu use."""
+    """O `hardware_version` do sysfs — a identidade que o usuário pediu que eu use."""
     for nome in ("hardware_version", "device/hardware_version"):
         caminho = os.path.join(dir_device, nome)
         try:

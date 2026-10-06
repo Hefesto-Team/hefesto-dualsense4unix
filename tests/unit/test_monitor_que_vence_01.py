@@ -1,6 +1,6 @@
 """Um microfone de verdade nunca perde para um monitor.
 
-MONITOR-QUE-VENCE-01 (08/08/2026). MEDIDO na máquina dela, com o drop-in
+MONITOR-QUE-VENCE-01 (08/08/2026). MEDIDO na máquina do usuário, com o drop-in
 instalado pelo `install.sh`:
 
     alsa_output…DualSense…analog-surround-40.monitor   priority.session = 1109
@@ -8,7 +8,7 @@ instalado pelo `install.sh`:
     alsa_input.pci-…analog-stereo (a placa do PC)      priority.session = 2009
 
 O monitor vencia o microfone por **vinte e duas vezes**, e a eleição de fonte
-padrão entregava o áudio de SAÍDA no lugar da voz dela. O `install.sh` criava
+padrão entregava o áudio de SAÍDA no lugar da voz do usuário. O `install.sh` criava
 essa condição por default, e a conferência final do próprio install a denunciava
 no mesmo fôlego (`[FAIL] a fonte de captura padrão é um MONITOR`).
 
@@ -60,7 +60,7 @@ def _prioridades_da_entrada() -> list[int]:
 
 
 def test_a_entrada_do_controle_vence_qualquer_monitor() -> None:
-    """A voz dela nunca pode perder para o laço de retorno do que sai."""
+    """A voz do usuário nunca pode perder para o laço de retorno do que sai."""
     prioridades = _prioridades_da_entrada()
     assert prioridades, (
         "nenhuma regra casa `alsa_input.*DualSense` com `priority.session` — o "

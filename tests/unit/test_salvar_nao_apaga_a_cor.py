@@ -1,16 +1,16 @@
-"""Desligar a barra e salvar não pode apagar a cor que ela escolheu.
+"""Desligar a barra e salvar não pode apagar a cor que o usuário escolheu.
 
 O ACHADO MAIS GRAVE DA LEVA DE 03/09/2026, e o juiz que o nomeou disse que ele
 não estava marcado como o mais grave por ninguém:
 
     "Desligar" a barra de luz e depois "Salvar Perfil" apaga a cor escolhida
-    por ela, para sempre, em silêncio.
+    pelo usuário, para sempre, em silêncio.
 
 A CAUSA ERA DE VOCABULÁRIO: o Salvar lia ``lightbar_rgb`` cru do estado do
 daemon e o gravava como override daquele controle. Com a barra apagada esse
 campo é ``(0, 0, 0)``, e o esquema **não tem campo de aceso/apagado**, só a
 cor: gravar o preto não guarda "estava apagada", guarda PRETO por cima da
-escolha dela.
+escolha do usuário.
 
 DESDE 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não lê a luz do aparelho
 em estado nenhum: apagada, desconhecida ou acesa noutra cor, o que sai é a

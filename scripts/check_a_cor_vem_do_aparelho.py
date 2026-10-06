@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 """check_a_cor_vem_do_aparelho.py — a cor do plástico vem do APARELHO, não do desenho.
 
-A LEI, e ela é dela (03/09/2026)
----------------------------------
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada  # noqa-acento: citação literal
-    user ao usar seu controle se toque disso que o app se adaptou ao controle
-    dele"
+A LEI, de 03/09/2026
+--------------------
+    A cor do plástico, o desenho do DualSense, as bordas e a escolha de cada player vêm do
+    controle identificado no canto superior, a partir do mapa de cores já catalogado,
+    e não de valores cravados no desenho. Cada pessoa pode ter um modelo diferente.
 
-    "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-    players com cada controle — tudo isso muda de acordo com o controle
-    identificado no canto superior. é white no p1, mas a borda de tudo é cosmic  # noqa-acento: citação literal
-    red e os svgs não são os que o meu mapa cataloga. isso tá errado"
-
-Ela mapeou **28 modelos e 10 zonas** em ``docs/data/cores-do-dualsense.csv``. O
+O mapa cataloga **28 modelos e 10 zonas** em ``docs/data/cores-do-dualsense.csv``. O
 produto usa QUATRO — os do desenho, cravados. Quem tiver um Nova Pink vê um
 Cosmic Red.
 
@@ -32,7 +25,7 @@ AS TRÊS FAMÍLIAS, e elas são três porque o desenho crava a cor de três jeit
     Os ``--z-casca:#hex`` da folha embutida em cada SVG. **Aqui mora a
     armadilha**, e ela é o oposto do que parece.
 
-O QUE **NÃO** É DÍVIDA, e confundir isto mandaria apagar o trabalho DELA
+O QUE **NÃO** É DÍVIDA, e confundir isto mandaria apagar o trabalho DO USUÁRIO
 ------------------------------------------------------------------------
 Um CSS que declara os 28 modelos e escolhe por seletor **é a tabela dela,
 publicada** — é o mecanismo certo, e é o que o ``mapa-do-controle.html`` já faz.

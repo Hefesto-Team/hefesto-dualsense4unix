@@ -29,7 +29,7 @@ que mais importam:
 * devolva `steam_game_running_appid()` para o `detectar` e o
   `test_a_escada_alcanca_o_jogo_que_ela_ja_fechou` reprova.
 
-NADA AQUI TOCA A MÁQUINA DELA. O `conftest.py` desta casa desvia `HOME` e os
+NADA AQUI TOCA A MÁQUINA DO USUÁRIO. O `conftest.py` desta casa desvia `HOME` e os
 quatro `XDG_*`; o que escreve em disco escreve no lar de mentira, e o que
 abriria a Steam é dublado — mexer na Steam de quem roda a suíte seria o
 instrumento brigando com o produto, que é a armadilha 3 desta casa.
@@ -132,7 +132,7 @@ def test_sem_jogo_aberto_o_aviso_nao_acende(a07):
 
 
 def test_o_aviso_respeita_a_dispensa_dela(a07, desenho):
-    """Se ela mandou não perguntar, o aviso não volta para aquele jogo."""
+    """Se o usuário mandou não perguntar, o aviso não volta para aquele jogo."""
     lida = desenho.Leitura(dispensados=(("3357650", "Um jogo"),))
     html, appid = a07.aviso_do_jogo_aberto(SEM_WRAPPER, lida)
     assert (html, appid) == ("", ""), (

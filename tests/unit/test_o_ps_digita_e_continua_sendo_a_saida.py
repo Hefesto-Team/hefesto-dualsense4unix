@@ -1,6 +1,6 @@
 """ONDA5-06-01 — o botão PS digita, e CONTINUA sendo a saída.
 
-A DECISÃO É DELA (06-Q3, 05/09/2026), e ela escolheu a opção cujo próprio texto
+A DECISÃO É DE PRODUTO (06-Q3, 05/09/2026), e o usuário escolheu a opção cujo próprio texto
 declara um custo:
 
     *"O PS ganha a mesma lista das outras 21 linhas; se você der uma tecla a ele,
@@ -163,7 +163,7 @@ def test_o_de_fabrica_da_linha_do_ps_e_nenhuma_tecla():
     """A linha do PS só digita (01/10/2026): o de fábrica dela é «— Sem tecla —».
 
     O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, `D-0110-A-LINHA-DO-PS-SO-DIGITA`
-    (por delegação, a validar por ela). Até ali o de fábrica dela era o degrau
+    (por delegação, a validar pelo usuário). Até ali o de fábrica dela era o degrau
     da máquina (`DaemonConfig.ps_button_action`, «Abrir a Steam»), e o PS tinha
     dois donos para o mesmo ato. O que o toque no PS faz no computador é o ⑥ da
     tabela dos gestos; a linha não lê mais o degrau.
@@ -180,7 +180,7 @@ def test_o_ps_nao_cai_na_terceira_sacola():
     """O de fábrica do PS é `__STEAM__`, que está em `SEM_ATENDENTE`.
 
     Sem a saída própria, o PS cairia em `sem_dono` — e a tira da aba escreveria
-    na tela dela que o botão que abre a Steam "não acende nada hoje", enquanto
+    na tela do usuário que o botão que abre a Steam "não acende nada hoje", enquanto
     `profiles/manager.py` registraria o mesmo no journal como
     `button_actions_sem_atendente`.
 

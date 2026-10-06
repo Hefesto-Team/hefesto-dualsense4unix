@@ -14,9 +14,9 @@ lendo o byte 55 do report de input):
 
     ninguém escreve            MicMuted   0.0%   transições  0
     asserindo MUTE a 20 Hz     MicMuted  96.4%   transições  9
-    parei de escrever          MicMuted   7.9%   transições  1
+    parou de escrever          MicMuted   7.9%   transições  1
 
-As 9 transições em 2 s enquanto EU mantinha o mute a 20 Hz são o segundo
+As 9 transições em 2 s enquanto o mute era mantido a 20 Hz são o segundo
 escritor desfazendo o mudo ~4x por segundo-e-meio — a cadência do keepalive
 `OUT_REPORT_KEEPALIVE_SEC = 0.5`. É a assinatura de flapping que o
 BT-MIC-GATING-01 descreve em `integrations/dualsense_bt_audio.py`.

@@ -635,7 +635,7 @@ def test_a_pasta_do_root_fora_da_forma_recusa(raizes: m.Raizes) -> None:
 
 
 def test_o_sistema_de_verdade_e_inerte_no_ensaio(raizes: m.Raizes) -> None:
-    """No ensaio, o daemon e a Steam de que ele falaria são os DELA: nada."""
+    """No ensaio, o daemon e a Steam de que ele falaria são os DO USUÁRIO: nada."""
     s = m.Sistema()
     assert s.ensaio
     assert s.daemon_ativo() is False

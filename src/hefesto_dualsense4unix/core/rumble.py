@@ -157,11 +157,11 @@ def _effective_mult(
     ``max``, ``_controllers_to_rumble_scales`` publica ``1,5/0,3 = 5,0`` e o
     motor daquela peça recebe cinco vezes o que o teto prometeu.
 
-    ESTÁ INERTE NA MESA DELA, medido em 01/09/2026: ``orcamento_em_vigor()``
+    ESTÁ INERTE NA BANCADA, medido em 01/09/2026: ``orcamento_em_vigor()``
     devolve ``None`` (o ``maquina.json`` não existe), e os 33 perfis não têm
     um único ``controllers[*].rumble``. **A aritmética não se toca aqui**:
     corrigi-la exige escolher entre saturar o produto no teto e fazer o fator
-    ser ``min`` também, e as duas mudam o que o motor faz — é decisão dela, e é
+    ser ``min`` também, e as duas mudam o que o motor faz — é decisão de produto, e é
     sprint própria.
 
     **Teto, não troca**: o ``config.rumble_policy`` dela não é reescrito em

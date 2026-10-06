@@ -82,7 +82,7 @@ def test_r1_nao_chuta_wifi() -> None:
 
 
 def test_r1_chama_pelo_nome_que_ela_declarou() -> None:
-    """Declarado por ela, o aparelho passa a ter nome — e é o nome DELA."""
+    """Declarado por ela, o aparelho passa a ter nome — e é o nome DO USUÁRIO."""
     ordem = ordens.radio_largo_no_mesmo_hub(
         leitura(nomes_declarados={"2357:012d": "o adaptador de rede"})
     )
@@ -289,7 +289,7 @@ def test_sem_desenho_a_acao_diz_o_que_falta_para_apontar() -> None:
 
 
 def test_com_desenho_a_acao_aponta_o_numero_dela() -> None:
-    """Declarado o mapa, a ordem troca a contagem pelo número que ela escreveu."""
+    """Declarado o mapa, a ordem troca a contagem pelo número que o usuário escreveu."""
     ordem = ordens.radio_largo_no_mesmo_hub(
         leitura(entradas_livres_declaradas=("4",))
     )

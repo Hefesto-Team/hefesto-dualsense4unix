@@ -1,9 +1,8 @@
 """NO-MODO-XBOX-TUDO-FUNCIONA-01 — no modo Xbox, o jogo vê o pad.
 
-A ordem dela, 27/09 à noite: *«tá errado se tiver no modo xbox é pra
-literalmente tudo isso funcionar.»* <!-- noqa-acento: citação literal -->
+A ordem, 27/09 à noite
 
-O QUE SE MEDIU NA SESSÃO DELA (27/09, `medidas/sessao/G1-…` e `G3-…`): o modo
+O QUE SE MEDIU NA SESSÃO DO USUÁRIO (27/09, `medidas/sessao/G1-…` e `G3-…`): o modo
 Xbox com a máscara DualSense fazia o pad «Sony … DualSense Edge» no `uinput`,
 sem hidraw, e com a Nintendo o «Pro Controller (Hefesto …)», também sem
 hidraw. Sob o Proton o jogo não usa nenhum dos dois: o PRAGMATA segurou só o

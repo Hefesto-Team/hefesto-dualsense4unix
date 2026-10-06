@@ -1,9 +1,8 @@
 """ABA-DO-JOGO-01 — a aba "No jogo" só existe com jogo da Steam aberto.
 
-O PEDIDO DELA, LITERAL (10/08/2026)
+O PEDIDO, LITERAL (10/08/2026)
 ===================================
-    *"essa aba no jogo só deveria aparecer quando efetivamente eu tivesse com
-    um jogo steam aberto"*
+    **
 
 Hoje ela aparece sempre.
 
@@ -18,7 +17,7 @@ ele foi confundido com portão de existência.
 
 Nenhuma capacidade nova entrou: quem responde *"há jogo da Steam aberto?"* é a
 `steam_game_running_appid`, escrita em 08/08 (RELANCAR-AGORA-01) e até hoje só
-chamada por gesto dela, dentro da janela. O que esta leva faz é o fato VIAJAR —
+chamada por gesto do usuário, dentro da janela. O que esta leva faz é o fato VIAJAR —
 o daemon sonda, o `state_full` leva, a janela lê.
 
 O QUE CADA TESTE MORDE
@@ -30,7 +29,7 @@ O TRI-ESTADO, QUE É A PARTE FÁCIL DE PERDER
 ===========================================
 `appid=None` responde a duas perguntas muito diferentes: "sondei e não há jogo"
 e "ainda não sondei". Por isso o par `lido`+`appid`. Sem o `lido`, a aba some no
-instante em que o daemon sobe — inclusive com o jogo dela aberto — e volta dois
+instante em que o daemon sobe — inclusive com o jogo do usuário aberto — e volta dois
 segundos depois: pisca a cada restart do daemon. O teste
 `test_ainda_nao_perguntei_nao_e_nao_ha_jogo` é o que trava isso, e ele reprova
 com qualquer simplificação que jogue o `lido` fora.
@@ -128,7 +127,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
     pé é o laço de verdade, com a sua aritmética de `next_at` — que é justamente
     o que este teste precisa exercitar. O controle nasce desconectado de
     propósito: é a prova de que a sonda roda ANTES daquele gate, e portanto com
-    o jogo dela aberto e o DualSense carregando fora da mesa.
+    o jogo do usuário aberto e o DualSense carregando fora da mesa.
     """
 
     def __init__(self, resposta: Any, *, ticks: int = 4) -> None:

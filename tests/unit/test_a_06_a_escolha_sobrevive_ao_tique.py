@@ -91,7 +91,7 @@ def _outra_opcao(botao: str) -> tuple[str, str]:
 
 
 def test_o_tique_seguinte_nao_desfaz_a_escolha(aba):
-    """O coração da decisão dela: clicou, o tique passou, a escolha ficou."""
+    """O coração da decisão de produto: clicou, o tique passou, a escolha ficou."""
     ctx, mod, _ = aba
     antes = _tique(ctx, mod)
     token, rotulo = _outra_opcao("cross")
@@ -122,7 +122,7 @@ def test_a_trava_nao_e_omissao_as_vinte_e_uma_continuam_pintando(aba):
 
 
 def test_o_gesto_da_linha_nao_grava_e_nao_chama_o_daemon(aba):
-    """*"Não vira gravação automática"* — palavra dela, conferida no ato.
+    """*"Não vira gravação automática"* — palavra de produto, conferida no ato.
 
     A MORDIDA: faça `linha_de_botao` chamar `perfil.gravar_e_reaplicar` — esta
     linha reprova nomeando a chamada que apareceu.
@@ -160,7 +160,7 @@ def test_escolher_de_volta_o_do_perfil_esvazia_a_trava(aba):
 
 
 def test_fechar_a_tela_larga_o_que_ela_nao_guardou(aba):
-    """O fechar e o "Cancelar" são o "sair" da decisão dela."""
+    """O fechar e o "Cancelar" são o "sair" da decisão de produto."""
     ctx, mod, _ = aba
     do_perfil = _tique(ctx, mod)["acao-triangle"]
     _, rotulo = _outra_opcao("triangle")

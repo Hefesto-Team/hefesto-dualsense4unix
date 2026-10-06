@@ -367,7 +367,7 @@ def _comandos_do_helper(tmp: Path, etc: Path, src: Path) -> list[str]:
 
 
 def test_o_helper_roda_limpo_numa_maquina_nova_e_duas_vezes(tmp_path: Path) -> None:
-    """Como ele roda de verdade: `bash -c` SEM `set -e` — o erro vira ruído na tela dela."""
+    """Como ele roda de verdade: `bash -c` SEM `set -e` — o erro vira ruído na tela do usuário."""
     src = tmp_path / "src"
     src.mkdir()
     shutil.copy(ASSET, src / NOVA)

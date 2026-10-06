@@ -513,7 +513,7 @@ def rumble_stop(uniq: str | None = None) -> bool:
     `daemon.subsystems.gamepad.apply_game_rumble` **descarta o FF de todo
     jogo** na primeira linha (`rumble_active is not None` → `return None`). Um
     instrumento que chamou `rumble_stop` achando que estava "limpando a
-    bagunça" deixou a máquina dela **sem vibração em jogo nenhum, em
+    bagunça" deixou a máquina do usuário **sem vibração em jogo nenhum, em
     silêncio** — e não havia uma palavra aqui que avisasse.
 
     **A FIXAÇÃO É DELIBERADA, e não é defeito** (`_handle_rumble_stop`,
@@ -547,7 +547,7 @@ def rumble_motores_set(
 ) -> tuple[bool, dict[str, Any] | None]:
     """A BARRA de cada motor, no perfil, POR PEÇA (VIBRACAO-POR-MOTOR-01).
 
-    Decisão dela, 04/09/2026: a barra não manda o par `rumble.set` agora — ela
+    Decisão, 04/09/2026: a barra não manda o par `rumble.set` agora — ela
     é POLÍTICA, e MULTIPLICA o degrau da coluna. ``efetivo(motor) = degrau x
     barra(motor)``.
 
@@ -595,7 +595,7 @@ def rumble_policy_custom(mult: float) -> bool:
     ``mult`` deve ser float em ``[0.0, RUMBLE_CUSTOM_MULT_MAX]`` — a faixa mora
     em ``profiles.schema`` e o handler do daemon recusa fora dela (HARM-19).
     Este texto dizia ``[0.0, 1.0]`` à mão e ficou mentindo de 11/08/2026, quando
-    o teto voltou a 2.0 por decisão dela: acima de 1.0 o multiplicador
+    o teto voltou a 2.0 por decisão de produto: acima de 1.0 o multiplicador
     AMPLIFICA o que o jogo pediu.
 
     Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
@@ -968,9 +968,6 @@ def frase_do_ato_do_microfone(corpo: Any) -> str | None:
 def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
     """Volume da CAPTURA do microfone, no sistema (MIC-VOLUME-01, 16/08/2026).
 
-    Pedido dela: *"um slicer de microfone pra definir o volume do microfone
-    real (independente de saber se tá via bt ou via cabo), o app deve ser
-    inteligente pra saber qual caminho usar"*.
 
     **Não confundir com `mic_set`.** São camadas diferentes e não se substituem:
 
@@ -991,7 +988,7 @@ def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
     **FATO SUBSTITUÍDO EM 09/09/2026 (MIC-VOLUME-02).** Esta linha dizia que *"o
     DualSense não expõe registrador de ganho de microfone — nem no cabo nem no
     rádio"*. **Expõe**: é o `common[6]`, nomeado pelo `hid-playstation`
-    (`mic_volume`, `0x0 - 0x40`), e a bancada dela mediu a captura mudando com
+    (`mic_volume`, `0x0 - 0x40`), e a bancada mediu a captura mudando com
     ele no cabo. O daemon passou a escrevê-lo no mesmo pedido, por `uniq`, logo
     depois da fonte — quem chama daqui continua não escolhendo caminho, e ganhou
     o segundo degrau de graça.

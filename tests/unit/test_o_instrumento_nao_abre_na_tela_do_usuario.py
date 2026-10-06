@@ -1,4 +1,4 @@
-"""TELA-DELA-02 — nenhum instrumento de `scripts/` abre janela na tela dela."""
+"""TELA-DELA-02 — nenhum instrumento de `scripts/` abre janela na tela do usuário."""
 
 from __future__ import annotations
 

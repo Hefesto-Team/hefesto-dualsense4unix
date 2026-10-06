@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O CHECK-UP RESPONDE EM UMA LINHA, e a mesa de rádio é a DELA."""
+"""O CHECK-UP RESPONDE EM UMA LINHA, e a mesa de rádio é a DO USUÁRIO."""
 from __future__ import annotations
 
 import pathlib
@@ -109,7 +109,7 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
 
 
 def test_a_linha_de_veredito_saiu_da_tela() -> None:
-    """A LINHA SAIU — 26/09/2026, pedido dela com a janela maximizada."""
+    """A LINHA SAIU — 26/09/2026, pedido com a janela maximizada."""
     html = BANCADA.read_text()
     assert 'class="veredito"' not in html, (
         "a linha de veredito voltou ao desenho — ela saiu a pedido dela")
@@ -171,7 +171,7 @@ def test_a_razao_do_nascimento_nao_chega_a_dica() -> None:
     """A RAZÃO DO NASCIMENTO SAIU DA DICA — FRASES-E-DICAS-03, 13/09/2026.
 
     CONTRATO QUE MUDOU: até esta data a condenação escrevia a razão depois do
-    que o botão faz. A ordem dela de 13/09
+    que o botão faz. A ordem de 13/09
     (o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026) tira da
     tela frase de aviso em toda forma, `title` incluído: a dica fica com o que o
     botão faz, e o carimbo `nascimento` fica no `state_full`, para o diagnóstico.

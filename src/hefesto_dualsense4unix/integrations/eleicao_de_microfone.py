@@ -1,13 +1,9 @@
 """Elege o microfone do sistema POR CONTROLE — e sabe voltar atrás.
 
-MIC-DA-MESA-ELEICAO-01 (01/09/2026). Decisão dela, com as palavras dela:
-
-    *"Se eu apertar o botão físico mic do controle e ele acender, significa que
-    eu quero que o canal de áudio do microfone seja o controle. O botão de
-    silenciar é confuso e mexendo com ambos os canais de áudio é péssimo."*
+MIC-DA-MESA-ELEICAO-01 (01/09/2026). Decisão de produto, com as palavras de produto
 
 O botão do mic deixa de ser "mudo" e passa a ser **ELEIÇÃO**: apertar quer
-dizer *"eu falo por este controle"*, e o canal de captura DAQUELE controle vira
+dizer , e o canal de captura DAQUELE controle vira
 o microfone que o sistema usa.
 
 O QUE ESTE MÓDULO NÃO FAZ, e cada linha é uma medição:
@@ -34,7 +30,7 @@ independentes: **o WirePlumber não honra nó eleito que não se sustenta.** Ele
 reelege sozinho, e a preferência que você acabou de gravar vira lixo. Por isso
 a pós-condição canônica é o ATIVO relido, nunca o `configured` — e por isso
 declarar sucesso pela escrita é o *"silêncio não é sucesso"* na forma mais cara
-que ele tem aqui: o LED do controle passaria a mentir sobre o microfone dela.
+que ele tem aqui: o LED do controle passaria a mentir sobre o microfone do usuário.
 
 E **guardar o anterior é obrigatório**, porque eleger PERSISTE: o valor de
 antes é empurrado pilha abaixo, e numa mesa em turnos quatro eleições empurram
@@ -42,8 +38,7 @@ o microfone real dela quatro degraus para baixo, caladas.
 
 A ELEIÇÃO ENCOLHEU — CANAL-POR-CONTROLE-01, 03/09/2026
 -------------------------------------------------------
-Decisão dela, com as palavras dela e sem corrigi-las:
-*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+Decisão de produto, com as palavras de produto e sem corrigi-las
 
 Duas coisas que este módulo tratava como uma passam a ser duas:
 
@@ -141,7 +136,7 @@ def registrar_dizedor_do_no_ar(
     esquecedor: Callable[[str], bool] | None = None,
     leitor: Callable[[str], bool | None] | None = None,
 ) -> _GanchosDaPalavra:
-    """Instala quem atende a palavra dela. Devolve os anteriores, para restaurar."""
+    """Instala quem atende a palavra de produto. Devolve os anteriores, para restaurar."""
     global _DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA, _LEITOR_DA_PALAVRA
     anteriores = (_DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA, _LEITOR_DA_PALAVRA)
     _DIZEDOR_DO_NO_AR = dizedor
@@ -151,7 +146,7 @@ def registrar_dizedor_do_no_ar(
 
 
 def palavra_no_ar(uniq: str) -> bool | None:
-    """O que ela disse sobre ESTE microfone. `None` = nada, ou ninguém atende."""
+    """O que o usuário disse sobre ESTE microfone. `None` = nada, ou ninguém atende."""
     leitor = _LEITOR_DA_PALAVRA
     if leitor is None:
         return None
@@ -164,7 +159,7 @@ def palavra_no_ar(uniq: str) -> bool | None:
 
 
 def dizer_no_ar(uniq: str, ligado: bool) -> bool:
-    """*"Quero/não quero este microfone no ar"*. False = ninguém atendeu."""
+    """. False = ninguém atendeu."""
     dizedor = _DIZEDOR_DO_NO_AR
     if dizedor is None:
         return False
@@ -348,7 +343,7 @@ def fonte_ativa() -> str | None:
 
 @dataclass
 class ResultadoDaEleicao:
-    """O que a eleição conseguiu, e nunca o que ela mandou."""
+    """O que a eleição conseguiu, e nunca o que o usuário mandou."""
 
     ok: bool
     alvo: str | None = None
@@ -577,12 +572,12 @@ class EleitorDeMicrofone:
         **O «FICA» É UM SÓ, E CADA PORTA O LÊ PELO QUE ELA É.** `calou` é o
         `uniq` de quem apertou para se calar, e só o botão o passa:
 
-        * no botão, o ato é de calar e a palavra dela já foi dita. O padrão
-          fica no canal que ela calou, que grava silêncio por escolha dela; a
+        * no botão, o ato é de calar e a palavra de produto já foi dita. O padrão
+          fica no canal que ela calou, que grava silêncio por escolha do usuário; a
           posse do eleito cai aqui, e o ato está FEITO (``ok=True``, sem
-          frase, com o ativo relido). É a decisão dela de 19/09
+          frase, com o ativo relido). É a decisão de 19/09
           (A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01): a luz é o estado do microfone
-          dela, e mudo é apagada;
+          do usuário, e mudo é apagada;
         * no nó que morre (sem `calou`), o buraco continua: ``ok=False`` com o
           motivo, que vai para o diário. Sem candidato real, eleger outra fonte
           não é a cura (a correção de rumo da SOM-PAINEL-01, 17/09/2026).
@@ -721,7 +716,7 @@ def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str | None:
     *"qual nó é o microfone deste controle"* ao daemon dá a resposta ERRADA
     para esta pergunta: o ``canal_fonte`` do ``state_full`` é o nó que o
     produto ELEGEU, e a regra 0 de :func:`escolher_fonte` faz dele o nosso
-    ``hefesto_mic_<hex6>`` — **inclusive no cabo**. Medido na mesa dela em
+    ``hefesto_mic_<hex6>`` — **inclusive no cabo**. Medido na bancada em
     20/09, com um DualSense no fio e três no ar: os QUATRO responderam
     ``hefesto_mic_…``, e nenhum deles tem placa ALSA.
 
@@ -782,7 +777,7 @@ def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
         return None
 
 
-#: As chaves do `default-nodes` do WirePlumber que guardam a escolha dela.
+#: As chaves do `default-nodes` do WirePlumber que guardam a escolha do usuário.
 CHAVE_DA_FONTE_GRAVADA = "default.configured.audio.source"
 CHAVE_DA_SAIDA_GRAVADA = "default.configured.audio.sink"
 

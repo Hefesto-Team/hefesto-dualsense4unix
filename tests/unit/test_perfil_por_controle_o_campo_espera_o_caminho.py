@@ -353,11 +353,11 @@ def test_o_microfone_ja_tem_endereco_por_peca() -> None:
 
 
 def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
-    """ELA DISSE A PALAVRA — 03/09/2026 — e este fio trocou de lado.
+    """O USUÁRIO DISSE A PALAVRA — 03/09/2026 — e este fio trocou de lado.
 
     Ele nasceu vigiando uma PORTA FECHADA: *"o campo não entra por decurso de
     prazo: entra quando ela disser"*, e a instrução no corpo era literal —
-    *"se foi a palavra dela, apague este teste"*. Ela disse: *"manda a ver em
+    *"se foi a palavra de produto, apague este teste"*. O usuário disse: *"manda a ver em
     tudo que falta por favor"*, depois de ter posto o alvo do produto em uma
     frase no mesmo dia: *"4 controles funcionarem no mesmo modo com configs
     diferentes"*. Com dois DualSense no cabo há DUAS placas de som

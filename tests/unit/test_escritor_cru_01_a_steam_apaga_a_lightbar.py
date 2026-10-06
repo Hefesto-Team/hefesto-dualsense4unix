@@ -296,7 +296,7 @@ async def test_sem_escritor_cru_o_comando_nosso_nao_repinta(
 async def test_em_modo_nativo_nao_sonda_nem_repinta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Regra dela: *"no modo nativo devolvemos o controle pra steam"*."""
+    """Regra de produto."""
     _fatias_curtas(monkeypatch)
     ctrl = _Controller()
     daemon = _StubDaemon(ctrl, nativo=True)

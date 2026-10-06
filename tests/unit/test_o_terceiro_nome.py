@@ -50,7 +50,7 @@ class TestOsQuatroNomesNaTela:
     def _corpo(self, alvo: pathlib.Path) -> str:
         if alvo == PUBLICADO and _a_02_esta_em_trabalho():
             pytest.skip("a 02 está declarada em trabalho: o publicado é o "
-                        "desenho de ontem até quem coordena publicar")
+                        "desenho de ontem até a publicação")
         return alvo.read_text(encoding="utf-8")
 
     def test_o_terceiro_diz_o_nome_dela(self, alvo: pathlib.Path) -> None:

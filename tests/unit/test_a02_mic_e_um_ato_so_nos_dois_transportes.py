@@ -1,7 +1,7 @@
 """A queixa 15 dela, em forma de régua — e ela é sobre uma frase INVERTIDA.
 
 <!-- noqa-acento: citação literal -->
-*"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  # noqa-acento: citação dela
+**  # noqa-acento: citação
 
 O aviso que ela leu na aba 02, disparado pelo botão "Virtual" do microfone:
 
@@ -19,7 +19,7 @@ e recusava o mais forte — e o que "não vale no cabo" nunca foi a feature: é 
 IMPLEMENTAÇÃO dela, a `PonteMicBluetooth`. A frase deu à ponte o nome da
 capacidade.
 
-O botão «Virtual | Nativo» saiu da aba 02 (decisão dela de 02/10/2026, um microfone
+O botão «Virtual | Nativo» saiu da aba 02 (decisão de 02/10/2026, um microfone
 por controle, sempre) com o gesto `mic-modo` e a regra que o guardava
 (`pode_ligar_o_mic`, `dica_do_microfone`, `tem_canal_de_captura`), que ficaram sem
 chamador e saíram em 04/10/2026. Sobra o que a queixa 15 provou e o mapa sustenta: o

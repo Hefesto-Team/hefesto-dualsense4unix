@@ -365,7 +365,7 @@ Um esqueleto que parecesse completo seria pior que nenhum. **Vá à prosa quando
 **Duas prosas que já salvaram medição neste mês**, para você entender o que está
 em jogo antes de achar que a ressalva é enfeite: uma célula dizia "nada foi
 enviado a aparelho nenhum" e caducou no mesmo dia; outra guardava a observação
-dela de 02/08 sobre o alto-falante — que um agente quase enfraqueceu por achar
+dela de 02/08 sobre o alto-falante — que quase foi enfraquecida por achar
 que não estava medido, porque mediu outra coisa (ausência de placa ALSA no
 rádio) e concluiu demais.
 

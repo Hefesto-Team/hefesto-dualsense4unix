@@ -246,9 +246,9 @@ def test_o_perfil_de_bateria_aceso_sai_do_disco(a09, ctx):
     gerador escreve a partir do mesmo `PERFIS`. Uma régua que digitasse
     `"bateria_longa"` viraria o segundo dono da tradução botão→disco.
 
-    MORDIDA: apaguei `fora["bateria-perfil"] = perfil_da_bateria`. Reprovou com
-    `KeyError`. Depois devolvi a linha e troquei o gravado no disco por outro
-    perfil sem mexer no pacote: passou, como tem de passar.
+    MORDIDA: apagar `fora["bateria-perfil"] = perfil_da_bateria` reprova com
+    `KeyError`; devolvida a linha, trocar o gravado no disco por outro
+    perfil sem mexer no pacote passa, como tem de passar.
     """
     from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
         PERFIS,
@@ -322,7 +322,7 @@ def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
 
     ERAM DUAS RÉGUAS: `test_ver_plugins_recusa_com_o_servico_desligado` e
     `test_ver_plugins_passa_com_o_servico_de_pe`, e mediam a trava do gesto. O
-    gesto saiu pela decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
+    gesto saiu pela decisão de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM
     (`docs/data/decisoes-de-produto.csv`): plugin não ganha seção própria. O que se
     cobra é a saída inteira — sem dono no pacote, sem trava e sem dono na
     camada do produto. A CLI e o IPC do daemon ficam.
@@ -378,7 +378,7 @@ def test_o_atualizar_zera_a_faixa_lenta(a09, ctx):
     depois de o daemon reaplicar a configuração — e quem clicou não distingue
     "aplicou" de "não pegou".
 
-    MORDIDA: apaguei o `_LENTO.clear()` do gesto. Reprovou dizendo que o cache
+    MORDIDA: apagar o `_LENTO.clear()` do gesto reprova dizendo que o cache
     continuava carregado depois do clique.
     """
     a09.pacote(ctx)
@@ -535,7 +535,7 @@ class _RC0:
 
 
 def test_o_tique_escreve_o_status_e_os_tres_ligaveis(a09, ctx):
-    """As duas linhas do teto SAÍRAM em 25/09/2026, por pedido dela (as tabelas"""
+    """As duas linhas do teto SAÍRAM em 25/09/2026, por pedido (as tabelas"""
     from hefesto_dualsense4unix.interface.pacotes import normalizar
 
     mesa = normalizar(dict(a09.pacote(ctx)))["mesa"]

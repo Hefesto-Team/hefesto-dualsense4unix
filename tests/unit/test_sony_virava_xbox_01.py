@@ -1,4 +1,4 @@
-"""SONY-VIRAVA-XBOX-01 — a palavra dela entregava a máscara OPOSTA, calada."""
+"""SONY-VIRAVA-XBOX-01 — a palavra de produto entregava a máscara OPOSTA, calada."""
 from __future__ import annotations
 
 import pytest

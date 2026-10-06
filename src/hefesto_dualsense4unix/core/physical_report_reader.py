@@ -300,7 +300,7 @@ def _struct_base(report: bytes) -> int | None:
     report de áudio, e os bytes de Opus caem exatamente sobre os eixos e os
     botões do `struct dualsense_input_report`.
 
-    Medido ao vivo na máquina dela: 3 minutos depois de a ponte do mic subir, os
+    Medido ao vivo na máquina do usuário: 3 minutos depois de a ponte do mic subir, os
     botões **MIC e PS** (que moram no mesmo `buttons[2]`) ficaram presos, e cada
     leitura disparava `ps_button_action_steam` — o daemon tentando abrir a Steam
     dezenas de vezes por segundo. Ela descreveu como *"o teclado e o mouse com
@@ -342,8 +342,8 @@ def eh_report_de_estado(report: bytes) -> bool:
     return _struct_base(report) is not None
 
 
-# Na mesa dela — quatro DualSense por rádio, ~2.400 relatórios/s no total
-# aparelho dela. O portão que trava a economia é
+# Na bancada — quatro DualSense por rádio, ~2.400 relatórios/s no total
+# aparelho do usuário. O portão que trava a economia é
 
 
 def _janela_com_base(report: bytes, base: int) -> bytes | None:

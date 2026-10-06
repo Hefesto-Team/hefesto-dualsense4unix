@@ -9,7 +9,7 @@ leitura:
    WirePlumber. Tem leitura, tem persistência e não custa posse nenhuma. Se o
    sink do controle estiver MUDO, mexer aqui não faz som sair: o `doctor` sabe
    detectar essa condição e a reporta de propósito, porque alto-falante mudo
-   pode ser escolha dela;
+   pode ser escolha do usuário;
 2. **registrador de volume no HID** — é o que este comando manda, pelo
    `speaker.set` do IPC;
 3. **fluxo de áudio por Bluetooth** — não implementado (o DualSense não fala

@@ -162,7 +162,7 @@ def test_a_regua_sabe_recusar() -> None:
 def test_todo_ramo_de_alarme_tem_uma_cena(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O portão do portão: ramo novo sem cena reprova AQUI, não na tela dela."""
+    """O portão do portão: ramo novo sem cena reprova AQUI, não na tela do usuário."""
     fonte = Path(sd.__file__).read_text(encoding="utf-8")
     ramos = [
         no.lineno

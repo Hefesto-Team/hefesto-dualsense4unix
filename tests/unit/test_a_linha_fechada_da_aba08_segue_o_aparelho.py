@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""A LINHA FECHADA DA ABA 08 SEGUE O APARELHO — e a confissão segue a mesa dela.
+"""A LINHA FECHADA DA ABA 08 SEGUE O APARELHO — e a confissão segue a bancada.
 
 **03/09/2026.** Três coisas desta aba decidiam o que mostrar pela POSIÇÃO NO
-DESENHO, e não pelo que o daemon disse. As três foram medidas na mesa dela no
+DESENHO, e não pelo que o daemon disse. As três foram medidas na bancada no
 mesmo dia, com **um** controle na mesa, no cabo, com a ponte de microfone
 DESLIGADA no `maquina.json`:
 
@@ -16,7 +16,7 @@ ponte" no P2                 dela não tem P2
 "A luz não acende" ACESO     o lugar do P2 está vazio; o do      o mockup
 no segundo lugar e apagado   P1 está no CABO, onde o botão
 no primeiro                  recusa
-"…não consegui conferir:     a bancada dela tem **UMA**          o mockup
+"…não consegui conferir:     a bancada tem **UMA**          o mockup
 **três coisas**"             lacuna (`especie`)
 ===========================  ==================================  ==============
 
@@ -211,7 +211,7 @@ def test_o_gerador_e_o_pacote_dizem_a_mesma_frase() -> None:
 
 
 def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
-    """O que o pacote emite quando a bancada dela tem `quantas` lacunas."""
+    """O que o pacote emite quando a bancada tem `quantas` lacunas."""
     from hefesto_dualsense4unix.interface import logica_do_mapa as mapa_da_mesa
 
     pac = _pacote()

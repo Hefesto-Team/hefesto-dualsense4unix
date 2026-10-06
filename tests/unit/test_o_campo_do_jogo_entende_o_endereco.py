@@ -65,7 +65,7 @@ class TestOQueViraNumero:
         assert steam_appid_de_texto(texto) == APPID
 
     def test_com_barra_no_fim_e_sem_barra_dao_o_mesmo(self) -> None:
-        """`/app/851100/` e `/app/851100` são o mesmo jogo — pedido dela."""
+        """`/app/851100/` e `/app/851100` são o mesmo jogo — pedido."""
         com = steam_appid_de_texto("https://store.steampowered.com/app/851100/")
         sem = steam_appid_de_texto("https://store.steampowered.com/app/851100")
         assert com == sem == APPID

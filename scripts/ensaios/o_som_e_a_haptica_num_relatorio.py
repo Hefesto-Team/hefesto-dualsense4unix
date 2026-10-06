@@ -15,7 +15,7 @@ O que ele manda, a 93,75 relatórios por segundo (o ritmo do ``0x35`` que
 tocou), por ``--segundos``: no ``0x13``, um tom contínuo (``--tom-hz``); no
 ``0x12``, uma onda senoidal (``--haptica-hz``) no lado escolhido (``--lado``:
 ``centro`` são os dois canais em fase, ``esquerdo`` o canal 3 e ``direito`` o
-canal 4, o que a mão dela mediu em 03/10); no ``0x10``, o estado
+canal 4, o que a mão do usuário mediu em 03/10); no ``0x10``, o estado
 (``--estado``: ``audio`` pede rota, volume e pré-amplificador do alto-falante,
 como o ensaio do som; ``neutro`` vai com as validades zeradas; ``nenhum`` tira
 o bloco, a variação que testa se o firmware exige o ``0x10``).
@@ -28,7 +28,7 @@ nada vai ao aparelho. COM ``--escrever``, ele RECUSA, nesta ordem:
 2. sem ``--exigir-mac`` conferido, ou com um endereço fora da lista;
 3. o controle no cabo (o ``0x36`` é do rádio);
 4. sem ``--eu-estou-ouvindo`` (rc=3): o ensaio é escrever com o ouvido e a
-   mão dela do outro lado;
+   mão do usuário do outro lado;
 5. a bancada tomada por outra reserva (``scripts/bancada.sh exigir`` passa
    só com ela LIVRE: quem reservou mede, e o ensaio não escreve por cima).
 

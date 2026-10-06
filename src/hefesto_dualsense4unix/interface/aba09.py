@@ -166,7 +166,6 @@ def impoe(perfil):
 
 CSS = """
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
-     Pedido dela: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
      1. Status (três colunas: o Status e o exame em duas);
      2. Configurações Avançadas (quatro colunas de botões);
      3. os Detalhes técnicos, com a altura que sobra.
@@ -198,16 +197,14 @@ CSS = """
      cresce e encolhe é só o `.registro`. */
   .quadro-corpo > *{flex-shrink:0}
   /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos.
-     A LETRA É A DO «Sistema», e o pedido é dela (25/09/2026, 22h13):
+     A LETRA É A DO «Sistema», e o pedido é de produto (25/09/2026, 22h13):
      *«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
      Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica
      só o lugar: o vão e o risco de cima. */
   .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
-  /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido dela: *«no MESMO
-     estilo das linhas do O exame de hoje (a pílula à esquerda e o texto
-     curto)»*. 25,5px por linha, e quatro linhas em cada uma das três colunas:
+  /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA —  25,5px por linha, e quatro linhas em cada uma das três colunas:
      elas acabam no mesmo y. */
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
          color:var(--texto-suave);border-bottom:1px solid var(--border-sutil);
@@ -275,8 +272,7 @@ CSS = """
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
 
-  /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido dela: *«ganhar altura pra
-     ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
+  /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA
      A seção cresce com o quadro (`estica`), e a caixa é ABSOLUTA dentro dela:
      um filho absoluto não conta para a altura do pai, então o registro vivo,
      com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página
@@ -285,7 +281,7 @@ CSS = """
 
      A LINHA QUEBRA, E NÃO SAI PELA DIREITA — 25/09/2026. Era `pre`, e a linha
      do journal (uns 200 caracteres) saía cortada: para ler uma linha inteira
-     era preciso rolar de lado, e ela pediu o painel «mais fácil de ser lido».
+     era preciso rolar de lado, e o usuário pediu o painel «mais fácil de ser lido».
      `pre-wrap` guarda as quebras do texto e dobra o que não cabe. */
   .registro{flex:1 1 auto;flex-shrink:1;min-height:120px;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
@@ -333,7 +329,7 @@ def linha(selo, cls, g, txt, ident="", href="", title=""):
 
 
 def item(rotulo, diz, cls="btn", gesto="", em_voo="", extra=""):
-    """Um botão com o que ele faz no `title` — pedido dela em 27/08."""
+    """Um botão com o que ele faz no `title` — pedido em 27/08."""
     g = f' data-gesto="{gesto}"' if gesto else ""
     v = f' data-hef-em-voo="{em_voo}"' if em_voo else ""
     return f'''            <button class="{cls}" title="{diz}"{g}{v}{extra}>{rotulo}</button>'''
@@ -448,8 +444,7 @@ MIOLO = f'''
       <div class="quadro-corpo">
 
         <!-- ---------- 1. STATUS + O EXAME ---------- -->
-        <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido
-             dela, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
+        <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
              «Remove esse 8 linhas deixa o espaço vazio». O `<span>` vazio segura
              a terceira faixa: nada sobe, e o exame continua onde estava. -->
         <div class="sec-rot sr-status3">
@@ -710,7 +705,7 @@ if len(_CINZAS) != _PORQUES or _PORQUES_NA_CAIXA != _PORQUES:
         f"ERRO: esta página tem {_PORQUES} `?` de razão e {_PORQUES_NA_CAIXA} "
         f"deles dentro de uma `.acao` (esperados {len(_CINZAS)} nos dois).")
 
-# 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE ELA MANDOU (09-Q1),
+# 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE O USUÁRIO MANDOU (09-Q1),
 _RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(
     linha_ for linha_ in _ACOES_DO_SERVICO.splitlines()
     if 'data-gesto="atualizar"' in linha_))

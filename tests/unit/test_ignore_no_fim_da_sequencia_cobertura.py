@@ -1,6 +1,6 @@
 """IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) — a decisão do IGNORE espera a mesa.
 
-O defeito, medido no journal dela com quatro DualSense e o Sackboy aberto: o
+O defeito, medido no journal do usuário com quatro DualSense e o Sackboy aberto: o
 produto decidia o `SDL_GAMECONTROLLER_IGNORE_DEVICES` **durante** a subida dos
 gamepads virtuais, uma vez por borda, e nada reavaliava a decisão quando a
 subida terminava.
@@ -123,7 +123,7 @@ def _env_do_arquivo(path: Path) -> dict[str, str]:
 
 @pytest.fixture
 def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`launch_env/` hermético e o perfil do Sackboy no lugar do disco dela."""
+    """`launch_env/` hermético e o perfil do Sackboy no lugar do disco do usuário."""
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(le, "_load_profiles", lambda daemon: [_perfil_do_jogo()])
     monkeypatch.setattr(le, "_permite_uhid", lambda daemon: True)

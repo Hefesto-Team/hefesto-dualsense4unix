@@ -20,7 +20,7 @@ em toda chamada. O que não acontecia era o outro lado: **o nome nunca chegava**
 ``state["active_profile"]`` é ``null`` sempre que o daemon não sabe dizer — e o
 `perfil_que_esta_valendo` de `profiles_actions` (§P1) existe desde 24/08 EXATO
 para isso: *"Sobrevive ao daemon responder `active_profile: null`, que é o
-estado da máquina dela hoje"*. As abas novas liam o campo CRU e caíam no `{}`.
+estado da máquina do usuário hoje"*. As abas novas liam o campo CRU e caíam no `{}`.
 
 **E o «Ativar» não curava nada disso**: `profile.switch` grava os dois
 marcadores manuais em disco (`session.json` + `active_profile.txt`), que é
@@ -51,7 +51,7 @@ CURTO_CIRCUITO_DECLARADO = {"a05_vibracao.py"}
 
 @pytest.fixture
 def pasta_de_perfis(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Dois perfis num diretório temporário. Nada toca a pasta DELA."""
+    """Dois perfis num diretório temporário. Nada toca a pasta do usuário."""
     pasta = tmp_path / "perfis"
     pasta.mkdir()
     (pasta / "perfil_de_ontem.json").write_text(json.dumps({
@@ -82,7 +82,7 @@ def marcador(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
 
 
 def _ctx_com_daemon_calado() -> Contexto:
-    """O estado VIVO da máquina dela: o daemon responde, e não sabe o perfil."""
+    """O estado VIVO da máquina do usuário: o daemon responde, e não sabe o perfil."""
     return Contexto(state={"active_profile": None})
 
 

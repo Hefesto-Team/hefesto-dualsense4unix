@@ -178,7 +178,7 @@ def test_a_frase_que_saiu_esta_na_lista_das_banidas() -> None:
 
 
 def test_nenhuma_frase_que_fica_cai_na_lista() -> None:
-    """A régua contra a frase não pode calar as que pedem um gesto dela."""
+    """A régua contra a frase não pode calar as que pedem um gesto do usuário."""
     que_ficam = {
         "_NAO_CONFERIU": painel._NAO_CONFERIU,
         "_NAO_COMPACTOU": painel._NAO_COMPACTOU,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O override por controle NÃO carrega o `auto_player_colors` — e não pode.
 
-A REGRA É DELA, 03/09/2026: *"nenhuma cor dos controles nunca pode ser a mesma,
+A REGRA É DE PRODUTO, 03/09/2026: *"nenhuma cor dos controles nunca pode ser a mesma,
 mesmo no mesmo perfil e estilo de jogo."*
 
 ESTE ARQUIVO NASCEU DE UM ALARME FALSO, e o registro é a metade útil dele. Ao
@@ -13,7 +13,7 @@ E a leitura do `rodape.py:104` confirmava — `auto_player_colors=False` está l
 escrito. O raciocínio que se seguiu era coerente e inteiro: com o automático
 desligado em cada controle da mesa, o que chegasse depois cairia na cor GLOBAL
 do perfil, e o seguinte também — dois controles com a mesma cor, que é o que a
-regra dela proíbe.
+regra de produto proíbe.
 
 **MEDIDO, O CAMINHO NÃO EXISTE.** O valor daquela linha é DESCARTADO:
 ``with_controller_leds`` chama ``_leds_draft_to_config`` sem ``include_auto``, e
@@ -22,7 +22,7 @@ antiga e está escrita nas duas pontas (``LedsDraft.auto_player_colors`` e
 ``_leds_draft_to_config``): *o toggle é do PERFIL*, e um override que o
 gravasse densificaria uma seção parcial com um campo que o backend ignora.
 
-O QUE ESTE ARQUIVO PASSA A GUARDAR É ISSO, e é o que a regra dela depende:
+O QUE ESTE ARQUIVO PASSA A GUARDAR É ISSO, e é o que a regra de produto depende:
 **um controle que chega depois continua recebendo a cor automática do NÚMERO
 dele**, porque nenhum override por controle tem opinião sobre o automático.
 

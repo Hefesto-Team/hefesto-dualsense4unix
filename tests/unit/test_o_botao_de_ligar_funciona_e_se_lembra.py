@@ -1,10 +1,7 @@
 """O BOTÃO DE LIGAR O HEFESTO NA TELA NOVA: ele funciona, e ele se lembra.
 
-Pedido dela, 31/08/2026, literal:
-
-    *"Não sei se o botão de ativar ele na interface tá funcionando viu. não sei
-    se segue desativado."*
-    *"eu quero é que **ele funcione na interface e se lembre**."*
+Pedido, 31/08/2026, literal
+    **
 
 O QUE FOI MEDIDO ANTES DE UMA LINHA SER ESCRITA
 -----------------------------------------------
@@ -38,7 +35,7 @@ AS SEIS RÉGUAS, E ONDE CADA UMA MORDE
    **Morde** com a delegação arrancada (o teste troca o dono em tempo de
    execução e exige que a resposta acompanhe).
 3. :func:`test_todo_passo_que_define_modo_declara_origem_manual` — sem
-   ``origin="manual"`` o daemon lê o clique dela como reconciliação e o portão
+   ``origin="manual"`` o daemon lê o clique do usuário como reconciliação e o portão
    da allowlist do Steam Input o recusa (ORIGEM-QUE-MENTE-01). **Morde**
    tirando o campo.
 4. :func:`test_o_desligado_nao_finge_ter_dono` — o quarto botão não tem
@@ -139,9 +136,9 @@ def test_gesto_de_endereco_inventado_nao_derruba_nem_aplica() -> None:
 
 
 def test_a_tela_acende_o_modo_vivo_e_nao_o_do_desenho() -> None:
-    """O caso DELA, de 30/08 às 21:15, congelado como fixture.
+    """O caso DO USUÁRIO, de 30/08 às 21:15, congelado como fixture.
 
-    O ``state_full`` do daemon dela dizia ``gamepad.enabled = False`` e
+    O ``state_full`` do daemon do usuário dizia ``gamepad.enabled = False`` e
     ``native_mode = False``; o desenho traz ``class="on"`` chumbado no "Jogar
     pelo Hefesto". A tela tem de acender o que o daemon diz.
     """
@@ -253,7 +250,7 @@ def test_a_lembranca_tem_um_lugar_so_e_e_o_do_produto(
 
 
 def test_o_disco_lembra_o_desligar_e_o_ligar(tmp_path: pathlib.Path) -> None:
-    """O ciclo inteiro, no disco — o "se lembre" que ela pediu."""
+    """O ciclo inteiro, no disco — o "se lembre" que o usuário pediu."""
     from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 

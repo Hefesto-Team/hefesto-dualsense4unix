@@ -117,7 +117,7 @@ def test_a_cor_por_radio_sai_pelo_hidraw_mesmo_com_o_sysfs_aceitando() -> None:
 
 
 def test_o_numero_do_jogador_tambem_sai_por_radio() -> None:
-    """São DUAS luzes, e a Steam repinta as duas (pergunta dela, 12/08)."""
+    """São DUAS luzes, e a Steam repinta as duas (pergunta, 12/08)."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle})
 
@@ -158,7 +158,7 @@ def test_pelo_cabo_nada_sai_porque_pelo_cabo_a_barra_obedece() -> None:
 
 
 def test_modo_nativo_escreve_a_luz_pelo_radio() -> None:
-    """Era *"no modo nativo devolvemos o controle pra steam"* — zero escrita."""
+    """Era ** — zero escrita."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle}, mute=True)
 

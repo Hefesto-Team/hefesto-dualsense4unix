@@ -82,7 +82,7 @@ def nome_do_glifo(nome: str) -> str:
             f"inventa aqui, escreva a linha lá")
     return NOME_DA_PECA[nome]
 
-#: "Automático" (decisão dela): DualSense · Xbox 360 · Nintendo Pro.
+#: "Automático" (decisão de produto): DualSense · Xbox 360 · Nintendo Pro.
 #: era DualSense e o P3 Xbox 360; a Controles e a Conexões diziam o contrário, na
 MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 
@@ -181,12 +181,11 @@ def cor_de_css(colorway: str, zona: str = "casca-solida") -> str:
     no HTML congelado. Resultado: com um Grey Camouflage na mesa, o desenho
     dizia `grey-camouflage` e a pele três centímetros ao lado dizia Cosmic Red.
 
-    **É a queixa dela literal, com os donos trocados** — *"os svgs mudam de
-    acordo com o controle identificado (…) isso tá errado"* —, e é pior do que
+    **É a queixa de uso literal, com os donos trocados** — ** —, e é pior do que
     não pintar: não pintar é uma lacuna, pintar OUTRO MODELO é uma afirmação
     falsa. São 8 de 28, 29% do mapa dela.
 
-    O `""` É A REGRA DELA, e não zelo: *campo sem informação não mostra nada*. O
+    O `""` É A REGRA DE PRODUTO, e não zelo: *campo sem informação não mostra nada*. O
     alvo `cor` com valor vazio APAGA a declaração em linha, e a pele cai no
     neutro da folha — um controle sem cor de plástico, que é o honesto quando a
     amostragem não existe. O DESENHO continua certo: o `data-colorway` recebe o
@@ -329,22 +328,22 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
 
     `mesa`: OS CONTROLES DE VERDADE, quando quem chama os tem. O padrão `None`
     usa os `CONECTADOS` do mockup, e é por isso que as dez páginas geradas saem
-    byte a byte iguais ao que ela aprovou — o desenho não mudou.
+    byte a byte iguais ao que o usuário aprovou — o desenho não mudou.
 
     ELE PRECISOU EXISTIR, e o defeito estava na tela em 01/09/2026: com UM
     controle no cabo, o piloto pintava o card certo (`Starlight Blue · USB`) e o
     topo certo (`1 controle: 1 USB · 0 BT`), mas a fita continuava mostrando
     `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` — os dois do mockup. O
-    controle dela aparecia na fita como P2 NO RÁDIO enquanto estava no cabo.
+    controle do usuário aparecia na fita como P2 NO RÁDIO enquanto estava no cabo.
 
     É a quarta vez que este defeito aparece nesta casa, e sempre com a mesma
     forma: **uma frase que nomeia um controle que não está na mesa**. As outras
     três foram o botão de jogador da Iluminação, o primário da Navegação e o
     censo da Conexões.
 
-    **E ELE VOLTOU EM 02/09/2026, por defeitos que moram AQUI.** Ela viu e
-    disse: *"o controle identificado em todas ta completamente errado"*. Medido
-    com os dois controles dela na mesa (um `usb`, um `bt`), o daemon
+    **E ELE VOLTOU EM 02/09/2026, por defeitos que moram AQUI.** O usuário viu e
+    disse. Medido
+    com os dois controles do usuário na mesa (um `usb`, um `bt`), o daemon
     respondendo em 1 ms:
 
         identidade_de()  →  "White"  ·  "BT"     ← certo, e o card já mostrava
@@ -356,15 +355,14 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     1. **O NOME VINHA DE `c["nome"]`**, que na mesa viva é o nome do PLÁSTICO
        (`mesa_viva.mesa_do_estado`) — e vale `"Não sei"` quando a cor não foi
        lida. Quem sabe nomear um controle é `pacotes.identidade_de`, e a ordem
-       dele é *o que ELA nomeou > o modelo decodificado > o transporte só*,
+       dele é *o que O usuário nomeou > o modelo decodificado > o transporte só*,
        NUNCA a posição. Agora é ele quem responde.
     2. **A COR NÃO LIDA DERRUBAVA A FITA INTEIRA.** `cor_da_zona("")` levanta
        `SystemExit` — e no rádio a cor do plástico NUNCA chega (o mapa diz:
        `identidade.cor_do_aparelho`, `radio_aciona = não`). Com um controle no
        BT, a fita viva morria a cada tique e a tela ficava com os dois chips do
        mockup para sempre. Sem cor lida o chip perde a borda colorida — é a
-       regra dela: *"se não tá mostrando agora, não tem info pra mostrar no
-       produto"*. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
+       regra de produto. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
 
     O TEXTO DO CHIP SAI DE `rotulo(c, "curta")`, e não de um f-string próprio:
     a gramática do rótulo já tinha dono, e ter uma segunda cópia aqui é
@@ -407,14 +405,14 @@ def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     """Como este controle se chama no chip — pelo DONO, nunca por leitura nova.
 
     Delega a `pacotes.identidade_de`, que é o dono desde a ROTA-A (02/09/2026) e
-    já acerta: *o que ELA nomeou > o modelo decodificado > o transporte só*, e
+    já acerta: *o que O usuário nomeou > o modelo decodificado > o transporte só*, e
     NUNCA a posição — a posição foi o que fez o mesmo controle mudar de nome
     quando o segundo entrou na mesa.
 
     **A TRADUÇÃO DE UMA CHAVE, e ela é a única lógica daqui:** `identidade_de`
     lê `transport` (o nome CRU do daemon) e o item da mesa guarda o mesmo fato
     como `transporte` (`mesa_viva.mesa_do_estado:328`). Sem esta linha o último
-    degrau da ordem — *"o transporte sozinho"* — cai no travessão, e o controle
+    degrau da  — cai no travessão, e o controle
     do rádio aparece como `P2 • — • BT` quando podia dizer `P2 • BT • BT`.
     O certo é `identidade_de` aprender as duas grafias, ou a mesa publicar a do
     daemon; enquanto isso não acontece, a tradução mora aqui, à vista.
@@ -546,9 +544,9 @@ CSS_POPUP = """
      de verdade, ou no produto — onde quem desenha é o GTK, cuja barra é sólida.
 
      POR QUE ISSO IMPORTA: a `#mapear-entradas` esconde 140px, e entre eles está
-     a confissão inteira ("o que eu não consegui conferir neste desenho"). Uma
+     a confissão inteira. Uma
      tela que parece completa e não está é a classe de defeito que esta casa
-     mais paga. O número está na mesa; encolher o conteúdo é decisão dela. */
+     mais paga. O número está na mesa; encolher o conteúdo é decisão de produto. */
   .tn-corpo > .moldura{scrollbar-width:thin;
                        scrollbar-color:var(--border-forte) var(--panel-2, #21222c)}
   .moldura::-webkit-scrollbar{width:9px}
@@ -573,8 +571,7 @@ CSS_FOLHA = """
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
   /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA DELA, 05/09/2026: *"temos que entender se só tem um controle
-     conectado só aparece config daquele. aba cinco tá errada."*
+     QUEIXA, 05/09/2026
 
      E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
      a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
@@ -582,8 +579,7 @@ CSS_FOLHA = """
      A 05 mostrava até um interruptor de motor ACESO em laranja.
 
      POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (decisão dela de 31/08 — *"deixa os outros espaços a mostra ainda mas
-     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
+     (). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
      entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
@@ -616,11 +612,11 @@ CSS_FOLHA = """
      cima de uma coluna sem aparelho. */
   [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
 
-  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é dela: *"os svgs não
+  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é de produto: *"os svgs não
      deveriam aparecer prós demais controles desconectados"*.
 
      A VERSÃO ANTERIOR DESTA REGRA PINTAVA o SVG de `var(--linha)` em vez de o
-     tirar. Era menos do que ela pediu e pior do que parecia: um controle
+     tirar. Era menos do que o usuário pediu e pior do que parecia: um controle
      cinza-chumbo continua sendo um CONTROLE desenhado, e a coluna vazia
      passava a mostrar um aparelho apagado ao lado de três travessões — a tela
      desenhando o que não está aqui. Sumir é a resposta honesta, e é a mesma
@@ -668,7 +664,7 @@ CSS_FOLHA = """
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
-     cobrando a altura da fonte, que é o preço que a regra dela de 30/08
+     cobrando a altura da fonte, que é o preço que a regra de 30/08
      (*"texto na interface é zero"*) não aceita pagar.
 
      A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
@@ -688,7 +684,7 @@ CSS_FOLHA = """
      sobre um chip morto é a mesma promessa vazia por outro meio.
 
      NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
-     aprovado compara o que se VÊ; a regra existe para o rato dela.
+     aprovado compara o que se VÊ; a regra existe para o rato do usuário.
 
      AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
      esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
@@ -803,7 +799,7 @@ def svg(pref: str, colorway: str, classes: str = "ds-svg",
     O `data-colorway` continua sendo escrito, que é o que faz a folha de cima
     alcançar este desenho.
 
-    POR QUE ISSO É UM PARÂMETRO, e não uma regra de CSS. Decisão dela, 28/08:
+    POR QUE ISSO É UM PARÂMETRO, e não uma regra de CSS. Decisão, 28/08:
     **as lâmpadas do jogador SOMEM dos desenhos pequenos; ficam só nos grandes,
     da Iluminação.** Elas medem 1,15 de 60 unidades do desenho — num cartão de
     62px isso dá **1,06 × 0,36 px**, e na Navegação, com 111px, **1,90 × 0,64 px**.
@@ -811,8 +807,8 @@ def svg(pref: str, colorway: str, classes: str = "ds-svg",
     apagada, é lâmpada que não cabe.
 
     E APAGAR NÃO ERA TIRAR. Foi o que a volta anterior fez na Jogar — deixou as
-    vinte no DOM, pintadas de `--border-forte`, e escreveu que "continuam
-    apagadas, e eu remedi", citando o 1,064 × 0,356 dela como razão para ficar.
+    vinte no DOM, pintadas de `--border-forte`, e escreveu que as lâmpadas
+    continuavam apagadas, citando uma medição de 1,064 × 0,356 como razão para ficar.
     O número era a razão para SAIR. Quem herda um desenho com o grupo lá dentro
     volta a acendê-lo no dia em que precisar do número do jogador; o grupo fora
     é o que não volta sozinho.

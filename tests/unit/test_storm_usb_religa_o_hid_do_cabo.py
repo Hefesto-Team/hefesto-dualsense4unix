@@ -1,7 +1,7 @@
 """O controle do cabo que perdeu a HID no -71 é RELIGADO — STORM-USB-01, 24/09/2026.
 
-A palavra dela de 23/09 é «nomear e religar»: *o controle que cai por -71 volta
-sozinho*. No cabo, a probe perdida tem uma forma que o journal da mesa dela
+A palavra de 23/09 é «nomear e religar»: *o controle que cai por -71 volta
+sozinho*. No cabo, a probe perdida tem uma forma que o journal da bancada
 guardou (16/09, a 3-4.4)::
 
     usbhid 3-4.4:1.3: can't add hid device: -71

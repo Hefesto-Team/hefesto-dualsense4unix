@@ -1,4 +1,4 @@
-"""O PORTÃO DA ARMADILHA DO EDITABLE INSTALL — o agente mede a PRÓPRIA árvore."""
+"""O PORTÃO DA ARMADILHA DO EDITABLE INSTALL — quem roda mede a PRÓPRIA árvore."""
 
 from __future__ import annotations
 

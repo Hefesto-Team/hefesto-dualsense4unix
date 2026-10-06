@@ -3,7 +3,7 @@
 
 A aba 06 lê o estado do ÚLTIMO TIQUE (500 ms, `hefesto_vivo.TIQUE_MS`), e não o
 widget. Isso é a escolha certa — a tela nunca vira uma segunda verdade sobre o
-daemon —, e ela cobra um preço: entre o clique dela e o tique seguinte, o pacote
+daemon —, e ela cobra um preço: entre o clique do usuário e o tique seguinte, o pacote
 não sabe o que acabou de acontecer. A memória `_PEDIDO` existe para pagar esse
 preço, e em 02/09 ela cobriu só o `+`/`-` das velocidades. Faltavam três coisas.
 
@@ -129,7 +129,7 @@ def test_dois_cliques_no_interruptor_no_mesmo_tique_desfazem() -> None:
 
 
 def test_o_teclado_acompanha_o_interruptor_nos_dois_cliques() -> None:
-    """O interruptor é dos DOIS (decisão dela, 27/08) — desfazer é dos dois.
+    """O interruptor é dos DOIS (decisão, 27/08) — desfazer é dos dois.
 
     Desde 29/09/2026 os dois vão no MESMO pedido (`desktop.status.set`), e o
     daemon liga o teclado depois do mouse: a janela não manda um segundo

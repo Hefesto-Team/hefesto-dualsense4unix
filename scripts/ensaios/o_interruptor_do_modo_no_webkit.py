@@ -6,21 +6,21 @@ O QUE ELE PROVA, e por que o teste de unidade não bastava: a régua
 um ``ctx`` de mentira. Isso prova a CONTA. O que prova o PRODUTO é o caminho
 inteiro — ``<label>`` no DOM → ouvinte do piloto (``manda_do_alvo``) → thread de
 ``trabalhar`` → o gesto — dentro do mesmo ``WebKit2.WebView`` que ela usa, com o
-estado do daemon dela sendo lido de verdade.
+estado do daemon do usuário sendo lido de verdade.
 
 **A PONTE É INTERCEPTADA, E ISSO NÃO É COMODIDADE — É REGRA DA CASA.** O par
 ``("06-navegacao.html", "modo")`` está na lista de PERIGOSOS do piloto
-(``hefesto_vivo.py:878``), com a razão escrita: *"O CURSOR É DELA. Ligar a
+(``hefesto_vivo.py:878``), com a razão escrita: *"O CURSOR É DO USUÁRIO. Ligar a
 emulação de mouse move o ponteiro na tela em que ela está trabalhando"*. E há um
-segundo custo, medido aqui: o interruptor é dos DOIS (decisão dela, 27/08), então
+segundo custo, medido aqui: o interruptor é dos DOIS (decisão, 27/08), então
 dois cliques a partir de *mouse desligado · teclado ligado* deixariam o **teclado
-desligado** ao fim — mudança na configuração dela que ninguém pediu.
+desligado** ao fim — mudança na configuração do usuário que ninguém pediu.
 
 Então ``pacotes.ponte.resultado`` é trocado por um gravador, que responde
 ``{"status": "ok"}`` e **não fala com o daemon**. O que continua REAL: a página,
-o clique, o ouvinte, a thread, o gesto, e o ``ctx`` lido do daemon dela.
+o clique, o ouvinte, a thread, o gesto, e o ``ctx`` lido do daemon do usuário.
 
-**O PORTÃO DE MODO É NEUTRALIZADO, E ISSO VAI ESCRITO NA SAÍDA.** O daemon dela
+**O PORTÃO DE MODO É NEUTRALIZADO, E ISSO VAI ESCRITO NA SAÍDA.** O daemon do usuário
 publica ``mode: None`` (medido em 03/09/2026), e o gesto recusa TODO clique nesse
 estado — com razão, e nos dois lados: a GTK faz ``blocked = mode != MODE_DESKTOP``
 (``mouse_actions.py:205``) e desliga o interruptor igual. Esse portão funciona e
@@ -35,7 +35,7 @@ Ele mede quatro coisas:
 2. o que o "Status do Modo" MOSTRA — a palavra e a classe ``ligado`` —, que
    desde 03/09 vem do daemon e não do desenho;
 3. que o clique chega ao gesto pelo caminho do produto (DOM → ouvinte → thread);
-4. que nada foi escrito no daemon dela: o gravador é a única saída.
+4. que nada foi escrito no daemon do usuário: o gravador é a única saída.
 
 Uso (sempre oculto; ela tem UMA tela)::
 
@@ -105,7 +105,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 
 class _Gravador:
-    """O daemon de mentira. Ele existe para o daemon DELA não ser tocado."""
+    """O daemon de mentira. Ele existe para o daemon do usuário não ser tocado."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict]] = []

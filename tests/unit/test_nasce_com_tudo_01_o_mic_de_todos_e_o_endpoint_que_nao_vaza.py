@@ -1,9 +1,9 @@
 """NASCE-COM-TUDO-01 — o microfone de todo controle, e o nó que parava de cair.
 
-**A ORDEM DELA, 18/09/2026:** *"todos os controles tem que nascer com tudo mic,
+**A ORDEM, 18/09/2026:** *"todos os controles tem que nascer com tudo mic,
 giroscopio e afins"*, *"alem de som"*.
 
-**O QUE ESTAVA MEDIDO quando ela disse isso**, com os quatro DualSense no rádio:
+**O QUE ESTAVA MEDIDO quando o usuário disse isso**, com os quatro DualSense no rádio:
 
     giroscópio · acelerômetro · alto-falante   4 de 4   ✓
     microfone                                  2 de 4   ✗
@@ -84,7 +84,7 @@ class _Subsystem:
 
 
 def test_todo_controle_do_radio_ganha_canal_sem_declarar_nada() -> None:
-    """A INVERSÃO: antes isto devolvia [] — a queixa dela, em uma linha."""
+    """A INVERSÃO: antes isto devolvia [] — a queixa de uso, em uma linha."""
     assert _Subsystem().alvos(_A, _B) == [_A, _B]
 
 
@@ -148,7 +148,7 @@ def test_o_endpoint_de_pe_com_a_mesma_ancora_e_adotado() -> None:
 
 
 def test_os_duplicados_da_mesma_ancora_caem_na_adocao() -> None:
-    """Cinco do mesmo controle era o estado REAL da mesa dela."""
+    """Cinco do mesmo controle era o estado REAL da bancada."""
     nome = nome_do_endpoint(_L1)
     pactl = _Pactl([(str(70 + i), nome, _ANCORA.declarado) for i in range(5)])
     EndpointDeHaptica(uniq=_L1, ancora=_ANCORA, runner=pactl).iniciar()

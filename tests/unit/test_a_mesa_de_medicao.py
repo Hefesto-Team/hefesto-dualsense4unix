@@ -429,7 +429,7 @@ def test_o_servidor_so_atende_o_proprio_computador() -> None:
 
 
 def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
-    """A janela é DELA; a régua usa `--sem-abrir`."""
+    """A janela é DO USUÁRIO; a régua usa `--sem-abrir`."""
     sh = LANCADOR
     assert sh.exists() and os.access(sh, os.X_OK)
     fonte = sh.read_text(encoding="utf-8")

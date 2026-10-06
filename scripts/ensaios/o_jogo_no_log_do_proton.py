@@ -56,9 +56,7 @@ contam os reports::
 
     00b4:trace:hid:process_hid_report device 0000000000C51210 report_buf ...
 
-Rota A diz *"o kernel publicou o nosso carimbo neste nó"*. Rota B diz *"um
-aparelho com o nosso `uniq` foi registrado do lado Windows, e N reports
-atravessaram"*. **Quando as duas discordam, o veredicto é `NÃO SONDADO`** — o
+Rota A diz . Rota B diz . **Quando as duas discordam, o veredicto é `NÃO SONDADO`** — o
 instrumento não escolhe a que gosta mais.
 
 O QUE ESTA RÉGUA NÃO OLHA, DE PROPÓSITO
@@ -249,7 +247,7 @@ class NoDoLog:
 
     @property
     def destino_curto(self) -> str:
-        """O destino em três palavras, para a tabela caber na tela dela."""
+        """O destino em três palavras, para a tabela caber na tela do usuário."""
         if not self.destino:
             return "(o log não disse)"
         for marca, curto in _DESTINOS:

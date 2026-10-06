@@ -8,7 +8,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 
-#: destes é um controle desta bancada: régua que só passa com os DualSense dela
+#: destes é um controle desta bancada: régua que só passa com os DualSense do usuário
 P1 = "aa:bb:cc:00:00:c1"
 P2 = "aa:bb:cc:00:00:c2"
 
@@ -109,7 +109,7 @@ def escrever_perfil(fontes: dict[str, str], nome: str = PERFIL) -> str:
 
 
 def ela_clica(uniq: str, fonte: str, nome: str = PERFIL) -> None:
-    """O gesto dela nos três botões: grava a fonte no perfil, e o mtime anda."""
+    """O gesto do usuário nos três botões: grava a fonte no perfil, e o mtime anda."""
     alvo = _caminho_do_perfil(nome)
     corpo = json.loads(alvo.read_text(encoding="utf-8"))
     corpo["controllers"].setdefault(mod._uniq_de_perfil(uniq), {}).setdefault(

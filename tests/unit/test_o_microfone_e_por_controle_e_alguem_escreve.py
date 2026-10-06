@@ -10,7 +10,7 @@ relatava, e a única forma de subir a ponte era exportar
 A-CASA-SABE-E-O-PRODUTO-NAO-FAZ, e é exatamente o que o
 `portao_a_casa_sabe_e_o_produto_nao_faz` mede.
 
-A decisão dela, textual em 22/08: *"por controle"*. Um `bool` não sustenta
+A decisão de produto, textual em 22/08: *"por controle"*. Um `bool` não sustenta
 quatro independentes — ele só sabe dizer "todos" ou "nenhum" —, e por isso o
 gate virou um CONJUNTO de `uniq`, com a ausência valendo desligado.
 
@@ -36,12 +36,12 @@ AS MORDIDAS, EXERCIDAS EM 23/08/2026 — a saída real está no relatório da le
    volta a `None` e o defeito-mãe está de volta, com todo o resto verde.
 2. **`alvos()` devolvendo `list(nos)` sem filtrar.** Reprovou
    `test_so_o_controle_que_ela_ligou_ganha_ponte` com os quatro `uniq` na lista
-   — ligar UM microfone ligaria os quatro, que é o oposto da decisão dela.
+   — ligar UM microfone ligaria os quatro, que é o oposto da decisão de produto.
 3. **`"uniqs": com_ponte` fora do bloco do `state_full`.** Reprovou
    `test_o_state_full_diz_de_quais_controles_a_ponte_subiu`, e é a régua cega
    que deixava a barra de rádio pintar áudio zero com a ponte de pé.
 4. **`reconciliar_bt_mic` sem a chamada no `machine.declare`.** Reprovou
-   `test_o_aplicar_reconcilia_a_ponte_sem_reiniciar_o_daemon` — a escolha dela
+   `test_o_aplicar_reconcilia_a_ponte_sem_reiniciar_o_daemon` — a escolha do usuário
    gravada no disco e nenhum efeito na mesa até o próximo início do Hefesto.
 """
 from __future__ import annotations
@@ -165,16 +165,15 @@ class TestOGate:
     microfone caía no vazio. Agora `is_enabled` é sempre `True` — o supervisor
     tem de estar de pé para atender o pedido.
 
-    **E O GATE VIROU DE LADO EM 18/09/2026**, por ordem dela: *"todos os
-    controles tem que nascer com tudo mic, giroscopio e afins"*. Até aqui
+    **E O GATE VIROU DE LADO EM 18/09/2026**, por  Até aqui
     `alvos()` respondia `[]` para quem não tinha declaração, e era ele que
-    guardava a privacidade. MEDIDO na mesa dela no mesmo dia: dos quatro
+    guardava a privacidade. MEDIDO na bancada no mesmo dia: dos quatro
     DualSense ligados, DOIS tinham microfone — os outros dois nunca haviam sido
     declarados, e a aba respondia *"o sistema não vê um microfone neste
     controle"*, recusa que a pessoa não tinha como resolver.
 
-    O que guarda a escolha dela agora é a RECUSA (`uniqs_recusados`), e ela é
-    mais forte do que a ausência era: `false` no disco é um registro do que ela
+    O que guarda a escolha do usuário agora é a RECUSA (`uniqs_recusados`), e ela é
+    mais forte do que a ausência era: `false` no disco é um registro do que o usuário
     disse, e sobrevive ao boot. Antes só havia "não pedi".
     """
 
@@ -203,7 +202,7 @@ class TestOGate:
 
 class TestPorControle:
     def test_so_o_controle_que_ela_desligou_fica_sem_ponte(self) -> None:
-        """A decisão dela, exercida contra a mesa cheia — pelo outro lado.
+        """A decisão de produto, exercida contra a mesa cheia — pelo outro lado.
 
         **O SENTIDO VIROU EM 18/09/2026, o TESTE não.** Esta régua sempre
         mediu a mesma coisa: que o interruptor é POR CONTROLE e não uma chave
@@ -220,7 +219,7 @@ class TestPorControle:
         assert sorted(no.uniq for no in escolhidos) == sorted([UM, DOIS, QUATRO])
 
     def test_dois_desligados_ficam_no_chao_e_os_outros_dois_sobem(self) -> None:
-        """O caso do adaptador de DOIS controles da mesa dela."""
+        """O caso do adaptador de DOIS controles da bancada."""
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({DOIS, TRES}))
 

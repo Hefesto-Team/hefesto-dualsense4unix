@@ -142,7 +142,7 @@ def test_estado_de_erro_nao_inventa_capacidade(mod):
 
 
 def test_o_casamento_nao_depende_de_ordem_nem_de_nome(mod):
-    """Regra dela: nada pode depender de MAC nem de ordem de conexão."""
+    """Regra de produto: nada pode depender de MAC nem de ordem de conexão."""
     fisicos = {
         "hidraw10": (128, 128, 129, 128),
         "hidraw8": (127, 124, 130, 129),

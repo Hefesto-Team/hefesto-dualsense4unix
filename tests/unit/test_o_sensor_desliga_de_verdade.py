@@ -42,7 +42,7 @@ def _registro_limpo() -> Any:
 
 
 def test_desligar_o_giro_nao_toca_no_acelerometro() -> None:
-    """*"ambos"* — e cada um por si. É a frase dela, virada assertiva."""
+    """*"ambos"* — e cada um por si. É a frase de produto, virada assertiva."""
     fora = janela_com_sensores(JANELA_VIVA, giroscopio=False)
     assert fora[FAIXA_GIROSCOPIO] == bytes(6)
     assert fora[FAIXA_ACELEROMETRO] == JANELA_VIVA[FAIXA_ACELEROMETRO]
@@ -55,7 +55,7 @@ def test_desligar_o_acelerometro_nao_toca_no_giro() -> None:
 
 
 def test_o_touchpad_e_o_relogio_atravessam_o_interruptor() -> None:
-    """Desligar sensor não pode apagar o dedo dela nem o `sensor_timestamp`."""
+    """Desligar sensor não pode apagar o dedo do usuário nem o `sensor_timestamp`."""
     fora = janela_com_sensores(JANELA_VIVA, giroscopio=False, acelerometro=False)
     assert fora[12:] == JANELA_VIVA[12:], "o timestamp/touchpad foi junto"
 
@@ -108,7 +108,7 @@ def test_voltar_a_tudo_ligado_apaga_a_entrada() -> None:
 
 
 def test_o_endereco_casa_em_maiuscula_e_minuscula() -> None:
-    """O MAC chega do daemon em minúsculas e da tela como ela digitou."""
+    """O MAC chega do daemon em minúsculas e da tela como o usuário digitou."""
     reg = RegistroDeSensores()
     reg.definir(PECA.upper(), giroscopio=False)
     assert reg.estado(PECA).giroscopio is False
@@ -344,7 +344,7 @@ class _StoreVazia:
 
 
 def test_o_perfil_desliga_o_sensor_daquela_peca() -> None:
-    """O degrau que faz a escolha dela sobreviver ao replug."""
+    """O degrau que faz a escolha do usuário sobreviver ao replug."""
     gerente = ProfileManager(
         controller=object(),  # type: ignore[arg-type]
         store=_StoreVazia(),  # type: ignore[arg-type]

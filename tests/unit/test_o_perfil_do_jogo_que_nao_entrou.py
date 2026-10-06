@@ -94,7 +94,7 @@ def test_perfil_generico_que_nao_casou_nao_e_regra_deste_jogo() -> None:
 
 
 def test_catch_all_e_manual_ficam_de_fora() -> None:
-    """Catch-all casa com tudo; ``MatchManual`` nunca casa POR ESCOLHA dela."""
+    """Catch-all casa com tudo; ``MatchManual`` nunca casa POR ESCOLHA do usuário."""
     catch_all = Profile(name="fallback", match=MatchAny())
     so_manual = Profile(name="coop_local", match=MatchManual())
     vazio = _perfil("vazio")
@@ -243,7 +243,7 @@ def test_fora_de_jogo_nao_toca_no_disco(_disco: list[int]) -> None:
     """No desktop a resposta é `[]` — e sem `load_all_profiles`.
 
     Morde na guarda do appid. Arranque: remover o `return []` antecipado, e o
-    `state_full` (10 Hz) passa a ler os 14 perfis do disco dela a cada tique,
+    `state_full` (10 Hz) passa a ler os 14 perfis do disco do usuário a cada tique,
     com ela parada no navegador. É o poller cego que esta casa já pagou uma vez
     (104% de um núcleo).
     """
@@ -256,7 +256,7 @@ def test_o_cache_evita_reler_o_disco_a_cada_tique(_disco: list[int]) -> None:
     """Dez tiques com a mesma janela = UMA leitura de disco.
 
     Morde no cache. Arranque: sem ele são 10 leituras aqui — e ~140 JSON por
-    segundo na máquina dela, já que o `state_full` roda a 10 Hz.
+    segundo na máquina do usuário, já que o `state_full` roda a 10 Hz.
     """
     handlers = _Handlers(_StoreDublado("steam_app_3357650"))
     for _ in range(10):

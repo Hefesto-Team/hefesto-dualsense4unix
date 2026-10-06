@@ -316,7 +316,7 @@ def test_decisao_3_o_aviso_do_process_name_nao_aparece(a09):
 
     O aviso é o `profile_process_name_aviso` da janela antiga
     (`gui/main.glade:2603`, com `profiles_actions.texto_do_processo_que_nao_casa`).
-    Ele NÃO tem par no HTML, e a decisão dela é que não passe a ter. A régua
+    Ele NÃO tem par no HTML, e a decisão de produto é que não passe a ter. A régua
     existe porque a dívida está registrada no inventário como
     `FALTA_NO_HTML` — quem fechar a lista sem ler esta decisão o traria de volta
     achando que está fechando um buraco.

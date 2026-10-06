@@ -188,7 +188,7 @@ done
 # broker (o `postinst` roda sem sessão e não pode renderizar o uid; quem
 # instala o broker é o `install-host-udev.sh`, DEPOIS, à mão). Um `apt install`
 # que fecha o nó sem pôr ninguém para abri-lo entrega um DualSense
-# INUTILIZÁVEL, e o produto é para qualquer usuário (ordem dela, 11/09/2026).
+# INUTILIZÁVEL, e o produto é para qualquer usuário (ordem, 11/09/2026).
 #
 # Então o diretório VIVO leva a variante ABERTA, sobrescrevendo o que o laço
 # copiou. O ESPELHO de /usr/share (mais abaixo) continua com o asset FECHADO

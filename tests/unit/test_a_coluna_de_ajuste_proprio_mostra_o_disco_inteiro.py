@@ -177,7 +177,7 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
 
 
 def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
-    """Dois números para o mesmo fato, na mesma tela, é a divergência que ela viu."""
+    """Dois números para o mesmo fato, na mesma tela, é a divergência que o usuário viu."""
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
     extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
                6: "seis", 7: "sete", 8: "oito"}

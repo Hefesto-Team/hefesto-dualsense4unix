@@ -1,6 +1,6 @@
 """O retrato do servidor de som, com um dono — O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01.
 
-**O DEFEITO, medido em 27/09/2026 no daemon dela (bpftrace e py-spy):** o
+**O DEFEITO, medido em 27/09/2026 no daemon do usuário (bpftrace e py-spy):** o
 daemon executava `pactl` 22 a 23 vezes por segundo — 660 em 30 s —, cada um
 um fork de um processo de 260 MB e um cliente novo no `pipewire-pulse`, o
 mesmo servidor por onde passam o som do jogo e a háptica do rádio. Medido de
@@ -49,7 +49,7 @@ servidor, e não do controle.
 **O FORMATO CURTO SAI DO LONGO**, e isso foi medido antes de ser escrito: os
 `printf` do `pactl` 16.1 (lidos no binário) usam os mesmos campos nas duas
 formas, e a síntese a partir do longo deu o curto byte a byte, nas saídas e
-nas entradas da máquina dela, em 28/09/2026. Um tipo relido custa UM `pactl`.
+nas entradas da máquina do usuário, em 28/09/2026. Um tipo relido custa UM `pactl`.
 """
 
 from __future__ import annotations

@@ -49,7 +49,7 @@ def _ctx(controles: list[dict[str, Any]], **estado: Any) -> Contexto:
 def test_o_numero_esmaece_so_enquanto_o_jogo_nao_recebeu() -> None:
     """O dano que a decisão [02] mata, com a medição que o revelou.
 
-    02/09/2026, na mesa dela, com os dois controles::
+    02/09/2026, na bancada, com os dois controles::
 
         uniq …0003 · bt  · player 1    · player_slot 1
         uniq …00d8 · usb · player None · player_slot 2   ← "Player 2" assim mesmo
@@ -177,7 +177,7 @@ class _PonteDeMentira:
 
 
 def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
-    """O clique manda a escolha DELA, não um "inverta o que você tiver"."""
+    """O clique manda a escolha do usuário, não um "inverta o que você tiver"."""
     for guardado, pedido in ((False, True), (True, False)):
         p = _PonteDeMentira()
         aba.cadeado(_ctx([], freestyle_ligado=guardado),
@@ -369,7 +369,7 @@ def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
 
     **POR QUE O ALVO ENTRA NESTA RÉGUA:** se alguém reusar `.cartao.alvo` para o
     primário, o defeito só aparece no dia em que ela editar a fita com um
-    controle que não é o primário — tarde, e na tela dela. Aqui aparece agora: o
+    controle que não é o primário — tarde, e na tela do usuário. Aqui aparece agora: o
     pacote não emite `alvo` nenhum, e quem o escreve é o piloto.
 
     A MORDIDA: troque `_e_o_primario` por `return "1"` e as duas primeiras
@@ -503,7 +503,7 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     Linha 5 do CSV: *"nada. `_ESCOLHA`/`_ROTULO` são dicionários de módulo lidos
     só dentro do próprio arquivo"*, e a consequência: *"ela escolhe 'Xbox' na 01,
     clica em 'Salvar Perfil' na 10, e o perfil grava a máscara que estava no
-    disco — a escolha dela não entra."*
+    disco — a escolha do usuário não entra."*
 
     **QUEM GRAVA É O DAEMON** desde a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01
     (29/09/2026): a janela gravava depois da resposta, e com quatro controles a

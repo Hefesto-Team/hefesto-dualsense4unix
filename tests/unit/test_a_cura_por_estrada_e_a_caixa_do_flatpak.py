@@ -63,7 +63,7 @@ def _ambiente(tmp: pathlib.Path, corpo: str = DEFAULT_ENV) -> pathlib.Path:
 
 
 def test_a_caixa_com_devices_all_deixa_o_controle_entrar(tmp_path) -> None:
-    """Os cinco lançadores dela trazem `devices=all` — medido em 09/09/2026."""
+    """Os cinco lançadores do usuário trazem `devices=all` — medido em 09/09/2026."""
     _instalar(tmp_path, HEROIC)
 
     p = caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path))
@@ -329,7 +329,7 @@ def test_o_recibo_diz_o_nome_do_cartao_e_nao_a_chave(tmp_path) -> None:
 
 
 def test_arquivo_ilegivel_recusa_e_nao_e_reescrito(tmp_path) -> None:
-    """**QUEM NÃO SABE LER NÃO ESCREVE**, e sem isto a cura APAGA o que é dela."""
+    """**QUEM NÃO SABE LER NÃO ESCREVE**, e sem isto a cura APAGA o que é do usuário."""
     _instalar(tmp_path, HEROIC)
     pasta = tmp_path / ".var/app" / HEROIC / "config/heroic"
     pasta.mkdir(parents=True)

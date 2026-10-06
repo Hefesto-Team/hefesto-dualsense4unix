@@ -11,11 +11,7 @@ concedido a um caminho que ninguém usa.
 
 POR QUE ISTO É A PEÇA CENTRAL, E NÃO UM BOTÃO A MAIS
 ====================================================
-A pergunta dela foi:
-
-    *"a ideia nesse caso não é darmos prioridade pro hefesto? e garantirmos a
-    conexão por lá e controlar a conexão melhor que o gerenciador padrão que
-    temos no cosmic?"*
+A pergunta de produto foi
 
 Se ela parear um controle **por aqui**, ela nunca abre a tela de Bluetooth do
 COSMIC para um controle — e a varredura de terceiro, que custa de 32% a 43% dos
@@ -30,7 +26,7 @@ candidatos conforme eles aparecem; e pareia UM endereço, quando alguém pedir.
 **Não escolhe por ela, e não pareia sozinho.** O gesto físico do controle —
 segurar PS + Create até a barra piscar — não se automatiza, e um módulo que
 pareasse o primeiro candidato que visse poderia casar o fone da vizinha com o
-adaptador dela. Quem escolhe é quem está olhando; este arquivo só sabe abrir a
+adaptador do usuário. Quem escolhe é quem está olhando; este arquivo só sabe abrir a
 janela, listar e obedecer.
 
 A JANELA É PROCESSO, E A LEITURA É FIO PRÓPRIO
@@ -81,9 +77,9 @@ QUEM É CONTROLE SE PERGUNTA À CLASSE, NUNCA AO NOME
 ====================================================
 Antes de parear, um candidato não tem ``hidraw``, não tem ``HID_UNIQ`` e não tem
 nó de som — não há propriedade de posse a consultar, que é o que esta casa
-prefere desde a decisão dela sobre os nós de áudio. O que existe é a *class of
+prefere desde a decisão de produto sobre os nós de áudio. O que existe é a *class of
 device* do Bluetooth, que o próprio aparelho anuncia e o BlueZ publica em
-``org.bluez.Device1.Class``. **Medido na mesa dela em 20/09/2026**: os seis
+``org.bluez.Device1.Class``. **Medido na bancada em 20/09/2026**: os seis
 objetos de DualSense do BlueZ respondem ``u 9480`` (0x2508) — periférico
 (classe maior 0x05), gamepad (classe menor 0x02). Casar pelo nome faria o
 produto depender do rótulo que o firmware escreve, e o rótulo é de terceiro.

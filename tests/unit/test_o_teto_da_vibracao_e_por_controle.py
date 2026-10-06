@@ -13,7 +13,7 @@ diria que ele funciona mesmo com o que foi para o arquivo errado.
 
 A PONTE É DUBLÊ, SEMPRE. `perfil.gravar_e_reaplicar` chama
 `p.profile_switch(...)` quando o nome casa o ativo, e uma ponte real mandaria
-isso ao daemon DELA, que está vivo. Todo `uniq` daqui vem da faixa sintética
+isso ao daemon do usuário, que está vivo. Todo `uniq` daqui vem da faixa sintética
 `aa:bb:cc:00:00:01` — há dois portões de anonimato que reprovam o contrário.
 
 O QUE ELA COBRA, e cada item é um jeito diferente de o campo mentir:
@@ -317,7 +317,7 @@ def test_o_fator_que_chega_ao_hardware_e_zero_ponto_tres(
 
 def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
         pac, tela, gesto, disco) -> None:
-    """O elo que faz a escolha dela VALER AGORA — e que régua nenhuma cobria.
+    """O elo que faz a escolha do usuário VALER AGORA — e que régua nenhuma cobria.
 
     `perfil.gravar_e_reaplicar` pede `profile.switch`; quem o atende chama
     `ProfileManager.apply`, e é ali (`profiles/manager.py:206-211`) que o mapa
@@ -483,7 +483,7 @@ def test_o_gesto_saiu_do_inventario_do_que_falta(a08) -> None:
 
 
 def test_a_recusa_velha_saiu_dos_dois_lugares(a08, tela) -> None:
-    """O fato errado sai de TODOS os lugares — regra dela, 11/08/2026.
+    """O fato errado sai de TODOS os lugares — regra, 11/08/2026.
 
     A afirmação *"o produto aplica `min` … sobrepor mudaria o daemon"* estava em
     DOIS: no `SEM_GESTO` deste pacote e no `SEM_FONTE` da camada de tela. Uma
@@ -648,7 +648,7 @@ def test_o_json_do_perfil_sobrevive_ao_disco(tmp_path, pac, tela, gesto,
     relido = loader.load_profile("Descartavel")
     assert relido.controllers[CHAVE].rumble.policy == "economia", (
         "o loader não conseguiu reler o que o gesto gravou")
-    # (Era o `profile.switch` até 01/10/2026; reaplicar não é escolha dela.)
+    # (Era o `profile.switch` até 01/10/2026; reaplicar não é escolha do usuário.)
     assert ("profile_reaplicar", ("Descartavel",)) in p.chamadas, (
         f"o gesto fez {p.chamadas} e não pediu o `profile.reaplicar`")
 

@@ -98,7 +98,7 @@ def _a_terceira_no_a_com_vaga_no_b(
 
 
 def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptador() -> None:
-    """A resposta dela vale enquanto o CONTROLE ficar naquele adaptador."""
+    """A resposta de produto vale enquanto o CONTROLE ficar naquele adaptador."""
     relogio, registro = _Relogio(), _Diario()
     governador = _a_terceira_no_a_com_vaga_no_b(relogio, registro)
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)

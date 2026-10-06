@@ -10,7 +10,7 @@ cada campo da tela em três montes:
 
 A aba Navegação era **28 indecidíveis de 29 campos** — de longe a maior
 concentração da casa. INDECIDÍVEL não é defeito: é o limite honesto de um
-instrumento que lê a TELA. Se o desenho cravou `6` e o daemon dela diz `6`,
+instrumento que lê a TELA. Se o desenho cravou `6` e o daemon do usuário diz `6`,
 olhar a tela não separa *"pintou o valor certo"* de *"nunca pintou"*.
 
 **A cura é fazer o valor MUDAR.** Esta régua troca o daemon por um DUBLÊ que
@@ -29,11 +29,11 @@ O QUE ESTA RÉGUA **NÃO** PROVA, e ela diz: que a tela acompanhou. Isso é do
 piloto, e foi medido em 02/09 com o mesmo dublê, pela `--prova-de-mockup` com a
 fila reduzida à 06:
 
-    mesa dela (2 controles)   produto  1 · mockup 0 · indecidível 28
+    bancada (2 controles)   produto  1 · mockup 0 · indecidível 28
 
 Aqui fica a metade que roda no CI, sem GTK, sem display e sem daemon.
 
-A PÁGINA CRESCE, E OS NÚMEROS DESTE ARQUIVO SÃO LIDOS DELA — 29, depois 38,
+A PÁGINA CRESCE, E OS NÚMEROS DESTE ARQUIVO SÃO LIDOS DO USUÁRIO — 29, depois 38,
 depois 43 com a publicação das dez. As três asserções que digitavam o número
 caíram no mesmo dia (03/09/2026) e viraram piso + comparação de conjuntos. A onda
 IDENTIDADE-VEM-DE-CIMA acrescentou NOVE à `06-navegacao` publicada: os quatro

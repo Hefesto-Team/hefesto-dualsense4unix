@@ -36,7 +36,7 @@ def _pagina(publicado: bool) -> str:
 def test_o_quadro_do_modo_nao_esta_na_aba_perfis(
     publicado: bool, marca: str, o_que_e: str
 ) -> None:
-    """Ordem dela, 11/09/2026 — e as duas páginas respondem igual."""
+    """Ordem, 11/09/2026 — e as duas páginas respondem igual."""
     assert marca not in _pagina(publicado), (
         f"{o_que_e} voltou à aba Perfis ({'publicada' if publicado else 'bancada'}) "
         f"— {marca!r}. O quadro «Modo» saiu do editor por ordem dela em "

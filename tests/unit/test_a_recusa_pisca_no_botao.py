@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A RECUSA PISCA NO BOTÃO, E A FRASE NÃO CHEGA À TELA — FRASES-E-DICAS-01, 13/09/2026.
 
-A palavra dela está no índice da leva
+A palavra de produto está no índice da leva
 (o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026, linha 19):
 com a foto da aba Gatilhos e a caixa laranja *«Esse número é maior do que a
-quantidade de controles ligados»*, ela mandou que esse tipo de frase parasse de
+quantidade de controles ligados»*, o usuário mandou que esse tipo de frase parasse de
 aparecer. A caixa era a recusa do gesto `player` da aba 04 — um número `.fora`
 clicado com um controle só na mesa —, que o piloto pousava no cartão do P1 por
 30 s. O §0 da sprint: frase de aviso não chega à tela em forma nenhuma (recado,

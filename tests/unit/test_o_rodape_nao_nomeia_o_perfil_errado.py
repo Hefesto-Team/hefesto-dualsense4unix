@@ -4,7 +4,7 @@ O DEFEITO, medido em 03/09/2026 pela régua do mockup e nomeado pelo juiz da
 leva: as DEZ abas diziam *"Grava no perfil **Mortal Kombat**"* no ``title`` do
 botão "Salvar Perfil", com ``meu_perfil`` ativo.
 
-**O nome veio do pedido dela, e era um EXEMPLO.** Ela escreveu *"'Aplicar vale
+**O nome veio do pedido, e era um EXEMPLO.** O usuário escreveu *"'Aplicar vale
 agora • Salvar Perfil grava no Mortal Kombat' isso deveria em formato de
 tooltip"*, e o ``fim.html`` congelou o exemplo em vez do nome. O comentário do
 próprio arquivo já dizia o que importava — *o NOME do perfil, "a informação que

@@ -1,32 +1,29 @@
 #!/usr/bin/env python3
 """Os ESTILOS DE JOGO: um atalho que ajusta gatilho, vibração e luz de uma vez.
 
-A DECISÃO DE CONSTRUIR É DELA, 03/09/2026: o `<select>` de quinze opções estava
+A DECISÃO DE CONSTRUIR É DO USUÁRIO, 03/09/2026: o `<select>` de quinze opções estava
 desenhado na aba Perfis — *o campo mais aceso do painel* — e não tinha nada
 atrás. Perguntada se o motor devia existir, ela respondeu **"Construir o
 motor"**, e escolheu o alcance: **gatilho + vibração + luz**.
 
-A REGRA QUE MANDA NA COR, e ela é dela, verbatim
+A REGRA QUE MANDA NA COR, e é do usuário, verbatim
 =================================================
 
-    *"nenhuma cor dos controles nunca pode ser a mesma, mesmo no mesmo perfil e
-    estilo de jogo. Dentro da paleta de fps tem que ter variações pra cada
-    unidade de controle."*
+    **
 
 **Isso não é preferência estética — é ENDEREÇO.** A barra de luz é a única
 maneira de saber, olhando para a mesa, qual controle é qual. Duas unidades com a
 mesma cor apagam essa informação, e apagam-na justamente quando ela mais importa:
 com quatro controles ligados.
 
-E A REGRA PEGA UM DEFEITO VIVO. Medido no perfil dela em 03/09/2026: a seção
+E A REGRA PEGA UM DEFEITO VIVO. Medido no perfil do usuário em 03/09/2026: a seção
 GLOBAL do perfil guarda **uma** cor (`leds.lightbar`), e com
 ``auto_player_colors`` desligado os quatro controles a recebem — os quatro
 iguais. O `auto_player_colors` é o que a impede hoje, e ele é um interruptor que
 alguém pode desligar sem perceber o que perde.
 
 **Então o estilo nunca escolhe UMA cor: escolhe uma FAMÍLIA**, e cada unidade
-recebe uma variação dela. É a leitura literal do que ela pediu — *"dentro da
-paleta de fps tem que ter variações pra cada unidade"*.
+recebe uma variação dela. É a leitura literal do que o usuário pediu.
 
 COMO AS QUATRO VARIAÇÕES NASCEM, e por que não são digitadas
 --------------------------------------------------------------
@@ -44,14 +41,13 @@ não entrega.
 A MARATONA É A ÚNICA EXCEÇÃO À COR, E NÃO À REGRA
 --------------------------------------------------
 Ela pede economia de bateria, e a proposta original era a luz APAGADA. Apagada,
-os quatro ficam iguais — o que a regra dela proíbe. A leitura que fica: brilho
+os quatro ficam iguais — o que a regra de produto proíbe. A leitura que fica: brilho
 MÍNIMO com as quatro cores distintas. Gasta quase nada e a mesa continua
 legível. **Se ela preferir apagada mesmo, é uma palavra e uma linha.**
 
 O «CO-OP LOCAL» SAIU — 25/09/2026, O-CO-OP-LOCAL-SAI-01
 --------------------------------------------------------
-O pedido é dela (`D-2409-O-CO-OP-LOCAL-SAI`): *"Temos que remover o perfil
-coop ou modo de jogo coop que não faz sentido inclusive."* O Hefesto dá um
+O pedido é de produto (`D-2409-O-CO-OP-LOCAL-SAI`):  O Hefesto dá um
 controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não é um modo
 que se escolhe — um Estilo com esse nome prometia ligar o que nunca desliga.
 O que ele fazia (gatilho `SimpleRigid`,

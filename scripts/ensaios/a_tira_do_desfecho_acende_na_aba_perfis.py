@@ -5,14 +5,14 @@ POR QUE ELE EXISTE, e é a regra desta casa: o teste de unidade
 ``test_aba10_os_cinco_gestos_calados_passaram_a_falar`` prova que os cinco
 handlers DEVOLVEM a frase. Isso prova a CONTA. O que prova o PRODUTO é o mesmo
 clique dentro do ``WebKit2.WebView`` que ela usa — porque entre o handler e o
-olho dela ainda há o embrulho (``{"mesa": …}``), o ``_deu_certo`` do piloto, o
+olho de quem confere ainda há o embrulho (``{"mesa": …}``), o ``_deu_certo`` do piloto, o
 ``window.__hef.pintar`` e a folha de estilo que acende a `.desfecho` pela
 classe. Cada um desses degraus já quebrou calado nesta casa.
 
-**ELE NÃO TOCA UM PERFIL DELA.** ``XDG_CONFIG_HOME`` é desviado para uma pasta
+**ELE NÃO TOCA UM PERFIL DO USUÁRIO.** ``XDG_CONFIG_HOME`` é desviado para uma pasta
 de mentira ANTES de qualquer import do produto — é lá que `platformdirs` decide
 onde ficam os perfis —, e o ensaio semeia dois perfis próprios. O
-``XDG_RUNTIME_DIR`` fica o real, para a janela achar o daemon dela e pintar com
+``XDG_RUNTIME_DIR`` fica o real, para a janela achar o daemon do usuário e pintar com
 estado de verdade; o que ela pode receber daqui é um ``launch_env.refresh``,
 que relê e não escreve.
 

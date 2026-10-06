@@ -1,15 +1,13 @@
 """ELO-MUDO-01/E1 — o lançamento ATIVA o perfil, e não arma duas seções.
 
-O DEFEITO, MEDIDO EM 22/08/2026 com o jogo dela aberto. O daemon sabia o nome
+O DEFEITO, MEDIDO EM 22/08/2026 com o jogo do usuário aberto. O daemon sabia o nome
 do jogo, resolvia o perfil por appid, e aplicava **duas seções de oito**: a
 supressão e — só fora da allowlist — o `mode`. Gatilho, luz, vibração, som e
 microfone esperavam o autoswitch, que espera a CLASSE DA JANELA. Ela respondeu
 `unknown` por 21 minutos seguidos (`reason="sem_foco_x"`, `useful_age_sec=1276`)
 com o jogo aberto, o perfil certo no disco e o `match` casando.
 
-A queixa dela, com estas palavras: *"o perfil do sackboy não tá aplicando as
-features das abas que eu seto e clico em salvar, como as abas de rumble,
-gatilhos e deve ter outras"*. Nenhum elo estava quebrado — ninguém chamava a
+A queixa de uso, com estas palavras. Nenhum elo estava quebrado — ninguém chamava a
 ativação.
 
 E o caminho da ALLOWLIST era ainda mais curto: `return` antes de tudo. Isso
@@ -32,7 +30,7 @@ O que este portão cobra:
    `armado: True` continuaria sendo resposta de TRANSPORTE: diz que o modo foi
    pedido e cala sobre as outras sete seções;
 5. ativação que falha **não derruba o arming** — o modo é o que põe o controle
-   na mão dela;
+   na mão do usuário;
 6. e ela roda **uma vez por lançamento**, não a 1 Hz enquanto o jogo carrega.
 """
 from __future__ import annotations
@@ -211,7 +209,7 @@ def test_a_origem_e_launch_e_nao_manual(
 def test_na_allowlist_o_perfil_e_ativado_do_mesmo_jeito(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A decisão dela, em código."""
+    """A decisão de produto, em código."""
     _daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=True)
 
     assert resultado is not None
@@ -298,7 +296,7 @@ def test_o_relatorio_da_ativacao_sobe_no_retorno(
 def test_ativacao_que_levanta_nao_impede_o_arming_do_modo(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """O modo é o que põe o controle na mão dela — ele não pode cair junto."""
+    """O modo é o que põe o controle na mão do usuário — ele não pode cair junto."""
     espiao.levanta = True
     daemon, resultado = _armar(env_dir, monkeypatch)
 

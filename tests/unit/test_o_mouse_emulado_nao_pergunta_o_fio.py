@@ -1,11 +1,8 @@
 """O gatilho e o analógico viram mouse pelo MESMO caminho nos dois fios — medido.
 
 O PEDIDO, 03/09/2026: fechar as duas linhas do mapa que nasceram de uma
-observação DELA no aparelho, em 11/08/2026, no meio de um ensaio de gatilho:
+observação DO USUÁRIO no aparelho, em 11/08/2026, no meio de um ensaio de gatilho:
 
-    "notei uma coisa o r2 e o l2 quando o teclado tá ativo ele funciona como
-    mouse, além do analogico também funcionar como mouse e o touch também, a
-    exceção do touch os demais não funcionam no modo bt"
 
 `entrada.emulacao_mouse.gatilhos@dualsense` e `.analogico@dualsense` guardam
 essa frase desde então, com as vinte e seis colunas de transporte MUDAS.

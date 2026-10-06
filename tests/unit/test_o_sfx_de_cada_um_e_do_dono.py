@@ -51,7 +51,7 @@ def _subsystem(perfil: str | None) -> Any:
 
 
 def test_cada_controle_recebe_a_fonte_do_override_dele(tmp_path: Path) -> None:
-    """Item 1 e 4 — e o item 4 é a régua de aceitação DELA."""
+    """Item 1 e 4 — e o item 4 é a régua de aceitação DO USUÁRIO."""
     nome = _perfil_com_fontes(tmp_path, {_P1: FONTE_MIX, _P2: FONTE_SFX})
     sub = _subsystem(nome)
 

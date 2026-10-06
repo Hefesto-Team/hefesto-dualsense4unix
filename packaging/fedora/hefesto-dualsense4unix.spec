@@ -629,7 +629,7 @@ fi
   leva, e o portao de anonimato deixou de aprovar quando nao conseguia auditar.
 
 * Fri Jul 31 2026 Vitoria Maria <[REDACTED]> - 1:0.5.0-1
-- A leva da auditoria: treze agentes mediram o projeto e um verificador
+- A leva da auditoria: treze medicoes cobriram o projeto e uma verificacao
   independente reenquadrou tres dos oito achados graves.
 - O instalador voltou a rearmar as curas de modulo: quatro portoes testavam
   permissao de escrita num arquivo de root, davam sempre falso, e o ciclo de

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O DESENHO DA ABA 08 É O CONTROLE DELA, e não o do mockup."""
+"""O DESENHO DA ABA 08 É O CONTROLE DO USUÁRIO, e não o do mockup."""
 from __future__ import annotations
 
 import pathlib
@@ -115,7 +115,7 @@ def test_a_folha_nao_e_digitada_no_gerador() -> None:
 
 
 def _ctx(cor_do_p2: str = "galactic-purple") -> Any:
-    """A mesa dela: o White no cabo, e um no rádio com a cor variável."""
+    """A bancada: o White no cabo, e um no rádio com a cor variável."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
@@ -193,7 +193,7 @@ def test_todo_modelo_que_o_pacote_pode_emitir_e_pintavel() -> None:
 
 
 def test_sem_cor_lida_o_desenho_fica_sem_identidade() -> None:
-    """Regra dela: campo sem informação NÃO MOSTRA NADA."""
+    """Regra de produto: campo sem informação NÃO MOSTRA NADA."""
     colunas = _pacote().pacote(_ctx(cor_do_p2=""))["colunas"]
     do_radio = [c for c in colunas.values() if c.get("via") == "BT"]
     assert do_radio, "a mesa de prova perdeu o controle de rádio"

@@ -119,7 +119,7 @@ Não escreve em aparelho, não abre nem fecha jogo, não toca na Steam, não mex
 em configuração, não cria dispositivo de entrada. O pior desfecho de um erro
 aqui é um relatório errado.
 
-E não fecha o degrau sozinho: `O JOGO REAGIU` é dela, e só dela.
+E não fecha o degrau sozinho: `O JOGO REAGIU` é do usuário, e só dela.
 
 OS CINCO VEREDITOS
 -------------------
@@ -129,7 +129,7 @@ OS CINCO VEREDITOS
                                    verdade. O produto está fora do caminho.
     SEGURA OS DOIS ............... nosso E físico. É o sintoma do controle em
                                    dobro, e não é bom presságio.
-    NENHUM ....................... a árvore do jogo existe, o censo DELA
+    NENHUM ....................... a árvore do jogo existe, o censo DO USUÁRIO
                                    fechou, e ela não segura nem um nem outro.
                                    AFIRMAÇÃO POSITIVA — só se imprime com o
                                    censo fechado.

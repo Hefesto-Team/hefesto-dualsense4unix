@@ -2,10 +2,7 @@
 
 O teste que a medição dela de **06/08/2026, 22h40** exigiu, e que não existia:
 
-> *"a `E0` ganha um critério a mais: não basta parar de afirmar o que não se
-> entrega — é preciso garantir que **dois aparelhos nunca acendam o mesmo
-> número**, inclusive quando um deles é o nosso próprio vpad. Um teste que
-> conte LEDs acesos por número fecha isso, e não existe hoje."*
+>
 
 ## O que conta como "exibir um número"
 
@@ -426,7 +423,7 @@ class TestExternoNaFrenteNaFila:
 
     **GRAU: SUSPEITA COM MECANISMO, forte** — o mecanismo está em código e a
     fila ancestral foi MEDIDA; a mesa exata não foi reproduzida na máquina
-    dela.
+    do usuário.
     """
 
     def test_o_vpad_e_o_pro_disputam_o_numero_1(self, raiz_leds: Path) -> None:
@@ -484,7 +481,7 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
     as duas superfícies estão certas cada uma no seu espaço.
 
     **GRAU: MEDIDO** (era "suspeita com mecanismo" até 14/08). Em 15/08/2026,
-    01h00, com os quatro DualSense dela no rádio, o `state_full` publicava
+    01h00, com os quatro DualSense do usuário no rádio, o `state_full` publicava
     `player` 1/2/3/4 e as barras acendiam 1/4/2/3 — a divergência ao vivo,
     nesta mesa, exatamente pelo mecanismo descrito acima.
 

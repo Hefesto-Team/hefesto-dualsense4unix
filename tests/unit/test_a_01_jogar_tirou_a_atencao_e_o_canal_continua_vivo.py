@@ -76,7 +76,7 @@ def test_o_pacote_parou_de_emitir_os_quatro_enderecos() -> None:
 
 
 def test_o_travessao_solto_dos_externos_morreu() -> None:
-    """O `—` que ela viu logo abaixo dos quatro cartões, na mesma ordem.
+    """O `—` que o usuário viu logo abaixo dos quatro cartões, na mesma ordem.
 
     ELE NÃO ERA A LINHA DE RESSALVA nem parte da faixa Atenção — medido no DOM
     vivo, com os quatro DualSense na mesa: era o campo `externos`, que devolvia

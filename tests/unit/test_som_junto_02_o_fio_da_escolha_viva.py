@@ -1,4 +1,4 @@
-"""O-BOTAO-ENTREGA-O-QUE-PROMETE-01 — o FIO entre o clique dela e o nó vivo."""
+"""O-BOTAO-ENTREGA-O-QUE-PROMETE-01 — o FIO entre o clique do usuário e o nó vivo."""
 from __future__ import annotations
 
 import asyncio

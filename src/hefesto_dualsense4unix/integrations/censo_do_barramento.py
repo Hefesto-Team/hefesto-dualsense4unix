@@ -5,7 +5,7 @@ O PROBLEMA QUE ESTE MÓDULO RESOLVE
 
 ``mesa_de_radio.py`` responde três perguntas sobre RÁDIO e recusa todo o resto:
 hub não entra, controle no cabo não entra, e o que não emite 2,4 GHz nunca foi
-olhado. A decisão dela de 22/08/2026 pede o oposto — *"todo o rádio, hub de
+olhado. A decisão de 22/08/2026 pede o oposto — *"todo o rádio, hub de
 energia, todos os usb, todos os dongles tipo do mouse e teclado, e até webcam ou
 microfones extras. tudo de verdade."*
 
@@ -28,7 +28,7 @@ bancada em 22/08/2026::
     4-1        2357:012d   ff/ff/ff   do fabricante — o kernel NÃO nomeia
     4-3        05e3:0626   09/00/00   hub
 
-Por isso o grau. ``GRAU_LIDO`` é *"o kernel disse, e temos palavra para isso"*;
+Por isso o grau. ``GRAU_LIDO`` é ;
 ``GRAU_DESCONHECIDO`` é *"ninguém disse"* — a classe ``ff``, em que o fabricante
 declinou de classificar, e qualquer código que este módulo não saiba nomear. Os
 dois casos guardam o código cru em ``classe`` para a tela mostrar, e nos dois a
@@ -118,7 +118,7 @@ ESPECIE_DESCONHECIDA = "Não identificado"
 
 #: O que o KERNEL ligou nas interfaces do aparelho (``ligado_como``), na ordem em que a palavra
 #: vale quando há mais de uma: Wi-Fi vence Bluetooth (um combo é as duas coisas, e o que
-#: atrapalha o rádio dela é o Wi-Fi), e o resto vem depois.
+#: atrapalha o rádio do usuário é o Wi-Fi), e o resto vem depois.
 LIGADO_COMO_WIFI = "wifi"
 LIGADO_COMO_BLUETOOTH = "bluetooth"
 LIGADO_COMO_CONTROLE = "controle"

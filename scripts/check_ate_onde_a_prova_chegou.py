@@ -26,7 +26,7 @@ from check_paridade_transporte import (
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
-#: `não` em quase tudo. A tela é dos quatro DualSense (decisão dela de 06/09).
+#: `não` em quase tudo. A tela é dos quatro DualSense (decisão de 06/09).
 _O_APARELHO_DELA = "dualsense"
 
 SEM_REGISTRO = "—"

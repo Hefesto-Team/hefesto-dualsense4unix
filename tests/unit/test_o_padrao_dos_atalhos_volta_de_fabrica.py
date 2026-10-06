@@ -153,7 +153,7 @@ def test_reaplica_o_perfil_ativo_e_relê_o_ambiente(pac, gesto, disco) -> None:
     gesto(_ctx(pac, "Mortal Kombat"), {}, p)
 
     nomes = [c[0] for c in p.chamadas]
-    # Era o `profile.switch` até 01/10/2026; reaplicar não é escolha dela.
+    # Era o `profile.switch` até 01/10/2026; reaplicar não é escolha do usuário.
     assert "profile_reaplicar" in nomes, (
         f"o gesto fez {nomes} e não pediu o `profile.reaplicar`. O perfil mudou no "
         f"disco e o aparelho continua com os atalhos velhos até a próxima troca.")

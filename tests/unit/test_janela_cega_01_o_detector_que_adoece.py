@@ -381,7 +381,7 @@ def test_cascata_wayland_nomeia_a_propria_cegueira() -> None:
 
     O `cosmic` entra aqui desde 02/09/2026, e emudecê-lo não é formalidade:
     sem isso este teste falaria com o compositor de VERDADE da máquina onde
-    ele roda — verde no CI, e na máquina dela devolvendo a janela que estiver
+    ele roda — verde no CI, e na máquina do usuário devolvendo a janela que estiver
     na frente.
     """
     cascata = window_detect._WaylandCascadeBackend()

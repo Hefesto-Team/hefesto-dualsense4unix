@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """check_identidade_vem_de_cima.py — a identidade do controle vem da FITA, nunca do mockup.
 
-A LEI, e ela é dela (03/09/2026)
+A LEI, e é do usuário (03/09/2026)
 ---------------------------------
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado. Por isso temos o mapa pra servir como  # noqa-acento: citação literal
-    variável de identificação"
 
 A fita do topo lê do aparelho. Toda aba abaixo dela tem de usar AQUELE controle.
 Um nome de cor ou um `--plastico` escrito à mão dentro da página é o mockup
-mandando na tela do produto — e o resultado é o que ela viu em 03/09: a fita
+mandando na tela do produto — e o resultado é o que o usuário viu em 03/09: a fita
 dizendo `P1 · White · USB` com o card logo abaixo dizendo `Cosmic Red`.
 
 POR QUE ESTA RÉGUA EXISTE ALÉM DA QUE JÁ HAVIA
@@ -42,7 +38,7 @@ Comentário não conta — `<!-- ... -->` e `/* ... */` são prosa, e contá-los
 inflaria o número. Número inflado é a coisa que esta casa mais derruba.
 
 O que ela NÃO reprova, de propósito: `P1`, `P2`, `P3`, `P4`. O número do
-jogador é ESTRUTURA — é a posição na mesa, não a identidade do aparelho. Ela
+jogador é ESTRUTURA — é a posição na mesa, não a identidade do aparelho. O usuário
 disse com todas as letras: *"O p1 ou p2 reflete o player do jogador."*
 
 AS ISENÇÕES

@@ -8,7 +8,7 @@
 #  vibração de forma espelhada".
 #
 # O instrumento anterior mediu se A CORRENTE fechava. Este mede QUEM RECEBE, e
-# é a pergunta que a queixa dela faz.
+# é a pergunta que a queixa de uso faz.
 #
 # Só lê o journal do daemon. Não toca em nada.
 #

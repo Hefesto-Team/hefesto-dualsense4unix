@@ -147,7 +147,7 @@ class TestONoDoVpadNaoSeLe:
         "valor", [None, "", "/dev/hidraw7", "deda4", _REAL_1, _REAL_2]
     )
     def test_na_duvida_e_controle_de_verdade(self, valor: str | None) -> None:
-        """Errar para "pode ser controle dela" custa dois ``read`` de sysfs;"""
+        """Errar para "pode ser controle do usuário" custa dois ``read`` de sysfs;"""
         assert not e_no_do_vpad(valor)
 
 
@@ -202,6 +202,6 @@ class TestOEspelhoNaoDiverge:
             )
 
     def test_todo_jogador_da_mesa_cai_na_mesma_faixa(self) -> None:
-        """Quatro DualSense é a mesa dela; os quatro vpads têm de ser pegos."""
+        """Quatro DualSense é a bancada; os quatro vpads têm de ser pegos."""
         for jogador in (1, 2, 3, 4):
             assert e_no_do_vpad(player_mac(jogador))

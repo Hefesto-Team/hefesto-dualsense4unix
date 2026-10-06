@@ -354,7 +354,7 @@ def test_o_gesto_espera_a_trava_no_prazo_e_recusa_sem_tocar_nada(
 def test_o_gesto_da_tela_volta_logo_e_o_movimento_segue_no_fio(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """``comecar_a_mover`` devolve «esperando» sem esperar o gesto dela."""
+    """``comecar_a_mover`` devolve «esperando» sem esperar o gesto do usuário."""
     central = _central(dono, mundo, relogio)
     segurar = threading.Event()
     relogio.durante = lambda: segurar.wait(5)

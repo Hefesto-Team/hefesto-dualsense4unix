@@ -8,15 +8,15 @@ PRÓPRIA — o alto-falante interno, o canal que poucos jogos usam para SFX — 
 convive com a saída normal do sistema (no caso desta bancada, o HDMI da TV).
 Saber que "o som funciona" não diz nada: a pergunta é qual som sai por onde.
 
-O DESENHO É DELA, de 15/08/2026, e a sacada está nos DOIS TIMBRES:
+O DESENHO É DO USUÁRIO, de 15/08/2026, e a sacada está nos DOIS TIMBRES:
 
   som A  "hmmmmm"       180 Hz contínuo, com harmônicos em 360 e 540 — grave
   som B  "bep bep bep"  1300 Hz pulsado a 2 Hz                       — agudo
 
 Um tom só, tocado duas vezes, produz o relato ambíguo "ouvi" — que não diz de
 onde nem qual. Com dois timbres opostos, o relato dela JÁ carrega a resposta:
-ela disse *"tuc hmmmmmm no controle"* e *"bep bep bep"*, e nenhuma das duas
-frases cabe no outro caso. Nas palavras dela: *"som da tv tipo AAAAAA e no
+o usuário disse *"tuc hmmmmmm no controle"* e *"bep bep bep"*, e nenhuma das duas
+frases cabe no outro caso. Nas palavras de produto: *"som da tv tipo AAAAAA e no
 controle apenas um BBêeee. Sons diferentes."*
 
 OS TRÊS CASOS, e o terceiro é o que fecha
@@ -29,7 +29,7 @@ OS TRÊS CASOS, e o terceiro é o que fecha
 O caso 3 não é o caso 2 repetido: ele é o que a janela faz no botão "Todo o som
 do PC", e é o único que exercita a troca do PADRÃO do sistema em vez de mirar um
 sink. Rodar só o 2 e concluir o 3 é pular etapa — e foi o erro cometido na
-primeira passada de 15/08, corrigido por ela na hora: *"não pula etapa, nem
+primeira passada de 15/08, corrigido pelo usuário na hora: *"não pula etapa, nem
 chega em conclusão assim"*.
 
 O QUE ESTE ENSAIO ISOLOU, e é a razão de ele existir
@@ -84,7 +84,7 @@ DE VAZAMENTO .. os dois timbres tocando ao mesmo tempo em lugares diferentes é 
 
 O QUE ELE DEVOLVE
 ------------------
-O sink padrão dela é guardado ANTES e devolvido no fim, inclusive se o ensaio
+O sink padrão de produto é guardado ANTES e devolvido no fim, inclusive se o ensaio
 morrer no meio (`try/finally`). Trocar a saída de áudio de alguém e não devolver
 é estragar a máquina de quem emprestou a bancada.
 

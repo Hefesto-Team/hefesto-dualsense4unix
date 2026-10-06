@@ -1,4 +1,4 @@
-"""A trava do perfil ativo é a pílula que ela pediu, e o travessão não acende."""
+"""A trava do perfil ativo é a pílula que o usuário pediu, e o travessão não acende."""
 from __future__ import annotations
 
 import pathlib
@@ -42,7 +42,7 @@ def test_o_emissor_responde_as_tres_e_so_o_true_acende() -> None:
 
 
 def test_o_gesto_ouve_click_porque_um_botao_nao_emite_change() -> None:
-    """O contrato de clique, e ele é a metade que grava no disco dela."""
+    """O contrato de clique, e ele é a metade que grava no disco do usuário."""
     from hefesto_dualsense4unix.interface.pacotes import a01_jogar as p
 
     fonte = pathlib.Path(p.__file__).read_text(encoding="utf-8")

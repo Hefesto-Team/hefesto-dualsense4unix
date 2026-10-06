@@ -1,16 +1,13 @@
 """MIC-NA-TELA-01 — o que sobrou quando o 🎙 trocou de ATO.
 
 **ESTE ARQUIVO MEDIA UM BOTÃO QUE NÃO EXISTE MAIS — 21/09/2026.** Ele guardava
-os três estados da LUZ DO PLÁSTICO no 🎙, pedido dela em 10/09. Em 21/09 ela
+os três estados da LUZ DO PLÁSTICO no 🎙, pedido em 10/09. Em 21/09 ela
 trocou o ato do mesmo botão:
 
-    "SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE ASSIM
-     ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR DEFAULT
-     SEGUE DESLIGADO"
 
-Os dois não cabem num elemento só, e a aritmética é dela: o microfone nasce
+Os dois não cabem num elemento só, e a aritmética é do usuário: o microfone nasce
 ATIVO (ordem de 18/09), então a luz deixaria o botão verde **sem ela ter
-clicado** — o contrário exato do que ela mandou. Saíram com o ato o campo
+clicado** — o contrário exato do que o usuário mandou. Saíram com o ato o campo
 `mic-botao-estado`, o tradutor `mesa_viva.estado_do_botao_do_mic`, as duas
 palavras de CSS e as réguas que os mediam.
 
@@ -23,10 +20,7 @@ Quem mede a trava nova é `test_o_mic_alterna_e_fica.py`.
 
 O enunciado antigo, para quem for ler o histórico:
 
-**O pedido dela, 10/09/2026:** *"vamos lá na interface invertemos o botão mic
-ele aceso (vai indicar que agora tá gravando audio, ele captando audio vai
-ficar no estado de piscando (guia visual pro leigo que pegar o controle de
-primeira))"*.  <!-- noqa-acento: citação literal -->
+**O pedido, 10/09/2026:** **.  <!-- noqa-acento: citação literal -->
 
 ## O QUE ESTA RÉGUA TRAVA, e o principal não é o CSS
 
@@ -43,7 +37,7 @@ piscando devagar). A tela passa a LER esse estado, e não a decidi-lo de novo:
    `prefers-reduced-motion` respeitado.
 
 **Um segundo ternário do lado da tela** (mudo? canal? nível?) poria o botão e a
-luz na mão dela discordando no primeiro dia em que um dos dois fosse corrigido
+luz na mão do usuário discordando no primeiro dia em que um dos dois fosse corrigido
 — e é por isso que o `.mudo-i.on` de 06/09 caiu: naquela versão a classe vinha
 do GERADOR, não do aparelho.
 

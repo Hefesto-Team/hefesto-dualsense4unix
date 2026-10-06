@@ -1,12 +1,11 @@
 """CANAL-SEM-VOZ-01 (17/09/2026) — a régua R3, a do silêncio.
 
-A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e ela é dela
+A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e é do usuário
 ================================================
-    *"joguei um jogo com controle por movimento e na hora do vamos ver o
-    controle não deu resposta (pragmata)"*
+    **
 
-O `pragmata.json` **não tem** a chave `caminho` — lido no disco dela. Ele herdou
-o `config.gamepad_caminho` que o jogo anterior deixou de pé (ela escolheu Xbox
+O `pragmata.json` **não tem** a chave `caminho` — lido no disco do usuário. Ele herdou
+o `config.gamepad_caminho` que o jogo anterior deixou de pé (o usuário escolheu Xbox
 no DON'T SCREAM, de propósito, e funcionou lá). Com o caminho Xbox o vpad nasce
 em `uinput`, e em `uinput` não há giroscópio: **dez linhas** do
 `docs/data/mapa-controles.csv` saem do ar juntas.
@@ -30,16 +29,16 @@ saber e o produto contar.
 
 A MORDIDA DE CADA TESTE está no docstring dele. Foram arrancadas de verdade.
 
-O QUE ESTA RÉGUA PROTEGE DOS DOIS LADOS, e o segundo lado é decisão DELA
+O QUE ESTA RÉGUA PROTEGE DOS DOIS LADOS, e o segundo lado é decisão de produto
 ========================================================================
-PS-L3-MASCARA-01 (14/09/2026): *o uinput do caminho Xbox é ESCOLHA dela, não
+PS-L3-MASCARA-01 (14/09/2026): *o uinput do caminho Xbox é ESCOLHA do usuário, não
 degradação*. `gamepad.dedup_status` o isenta desde então
 (`and caminho_do_vpad(device) != CAMINHO_XBOX`), e `degraded` no `state_full`
 faz o mesmo.
 
 `test_a_escolha_dela_continua_integra_e_o_campo_novo_fala` exige **as duas
 coisas na mesma leitura**: `degraded`/`dedup_ok` dizendo íntegro (a decisão
-dela, intacta) **e** `canal_sem_imu` dizendo que as dez saíram do ar. Ele
+de produto, intacta) **e** `canal_sem_imu` dizendo que as dez saíram do ar. Ele
 reprova tanto para quem arrancar a voz nova quanto para quem tentar "curar"
 isto reabrindo a decisão de 14/09 — que é o que aconteceria ao tirar a isenção
 de `gamepad.py`.
@@ -131,7 +130,7 @@ class TestOParQueTiraAsDezDoAr:
     @pytest.mark.parametrize(
         ("flavor", "backend", "caminho", "sem_dez", "porque"),
         [
-            # O caso DELA: o jogo vê um DualSense, e o canal é o comum.
+            # O caso DO USUÁRIO: o jogo vê um DualSense, e o canal é o comum.
             ("dualsense", "uinput", "xbox", True, "o par do PRAGMATA"),
             # O canal do DualSense entrega as dez — nada a dizer.
             ("dualsense", "uhid", "dualsense", False, "o primeiro degrau"),
@@ -217,7 +216,7 @@ class _DaemonFalso:
 
 @pytest.fixture()
 def borda(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _RegistroDeLog:
-    """A borda de materialização isolada: nada de disco dela, nada de perfis."""
+    """A borda de materialização isolada: nada de disco do usuário, nada de perfis."""
     from hefesto_dualsense4unix.daemon import launch_env as le
 
     registro = _RegistroDeLog()
@@ -239,7 +238,7 @@ class TestOJournalNomeiaAsDez:
     def test_o_evento_sai_com_as_dez_linhas_nominadas(
         self, borda: _RegistroDeLog
     ) -> None:
-        """A entrega desta frente, vista do journal dela."""
+        """A entrega desta frente, vista do journal do usuário."""
         _materializar(_DaemonFalso())
 
         avisos = borda.avisos(sem_imu.EVENTO)
@@ -309,7 +308,7 @@ class TestOJournalNomeiaAsDez:
         assert (tmp_path / "default.env").exists()
 
 
-# PARTE 4 — o `state_full`, com a decisão dela intacta ao lado
+# PARTE 4 — o `state_full`, com a decisão de produto intacta ao lado
 
 
 @pytest.fixture
@@ -384,7 +383,7 @@ class TestOStateFullPublicaOCampoNovo:
         As duas afirmações saem da MESMA leitura do `state_full`:
 
         1. `degraded` e `dedup_ok` dizem ÍNTEGRO — PS-L3-MASCARA-01
-           (14/09/2026), decisão dela: o uinput do caminho Xbox é ESCOLHA, não
+           (14/09/2026), decisão de produto: o uinput do caminho Xbox é ESCOLHA, não
            degradação. **Reponha a "cura" que tira a isenção
            `and caminho_do_vpad(device) != CAMINHO_XBOX` de
            `gamepad.dedup_status` e este teste reprova** — porque isso é
@@ -451,7 +450,7 @@ def _perfil(*, caminho: str | None, mascara: str, carimbo: str | None) -> Profil
 
 class TestOAlarmeSoComparaTermoComTermo:
     def test_perfil_sem_caminho_nao_diverge_de_carimbo_nenhum(self) -> None:
-        """O ALARME FALSO DAS 10:45:02, medido no journal dela em 17/09/2026."""
+        """O ALARME FALSO DAS 10:45:02, medido no journal do usuário em 17/09/2026."""
         perfil = _perfil(caminho=None, mascara="xbox", carimbo="dualsense")
 
         assert (

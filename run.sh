@@ -119,11 +119,9 @@ if [[ "$MODE" == "gui" ]]; then
        && [[ "${GDK_BACKEND:-}" != "x11" ]]; then
         export GDK_BACKEND=x11
     fi
-    # A INTERFACE QUE ABRE É A HTML — 01/09/2026, ordem dela: *"tudo tem que
-    # apontar pro nosso lancher html e tudo tem que apontar pros arquivos na
-    # nossa pasta"*, e antes disso *"a versão antiga não segue disponível, vai
-    # gerar confusão nos agentes. Só a nova está disponível e deve ser
-    # integrada"*.
+    # A INTERFACE QUE ABRE É A HTML — 01/09/2026: tudo aponta para o lançador
+    # HTML e para os arquivos da pasta do produto; a versão antiga não segue
+    # disponível, só a nova.
     #
     # Aqui havia `python3 -m hefesto_dualsense4unix.app.main`, a janela GTK
     # velha — e ela era o que o `.desktop` instalado abria, porque o `install.sh`

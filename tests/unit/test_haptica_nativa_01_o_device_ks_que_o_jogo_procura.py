@@ -19,7 +19,7 @@ Morde em oito alturas:
    `compose_env`, que é quem o daemon materializa (a seção do fim explica o
    buraco que essa altura fechou, e o que ele deixava passar verde).
 
-Tudo em sysfs e registro sintéticos: a suíte nunca lê o controle dela, e os
+Tudo em sysfs e registro sintéticos: a suíte nunca lê o controle do usuário, e os
 seriais das instâncias do winebus estão na faixa sintética `aa:bb:cc`.
 """
 from __future__ import annotations

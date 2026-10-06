@@ -187,7 +187,7 @@ def test_o_campo_oferece_de_onde_o_jogo_vem(
 def test_a_maquina_sem_lancador_nenhum_sai_com_as_duas_fixas(
     maquina_pelada: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A ORDEM DELA:** o produto é para qualquer pessoa, não para esta bancada."""
+    """**A ORDEM DE PRODUTO:** o produto é para qualquer pessoa, não para esta bancada."""
     _o_disco_tem(monkeypatch, Profile(name="Universal", priority=0,
                                       match=MatchAny()))
 
@@ -223,7 +223,7 @@ def test_os_lancadores_que_a_tela_ordena_o_censo_sabe_ler() -> None:
 def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
     maquina_dela: pathlib.Path,
 ) -> None:
-    """As cinco leituras, e as duas últimas são o disco DELA de 11/09/2026."""
+    """As cinco leituras, e as duas últimas são o disco do usuário de 11/09/2026."""
     def vem_de(match: Any) -> str | None:
         return sm.procedencia_do_match(match, a10._lancador_da_chave)
 
@@ -283,7 +283,7 @@ def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
 def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O gesto que o dedo dela aciona, e o arquivo LIDO DE VOLTA."""
+    """O gesto que o dedo do usuário aciona, e o arquivo LIDO DE VOLTA."""
     prof = Profile(name="Guardioes", priority=80,
                    match=MatchCriteria(window_class=[CHAVE_DO_GOTG]))
     _o_disco_tem(monkeypatch, prof)

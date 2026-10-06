@@ -33,8 +33,8 @@ um controle esquentando, o rádio ficando mais cheio, qualquer coisa que anda
 para um lado só — sairia com cara de dose-resposta. A ordem alternada faz a
 deriva se cancelar e a dose, se existir, sobreviver.
 
-A RÉGUA DO E-5, E O NEGATIVO QUE QUASE ME ENGANOU
---------------------------------------------------
+A RÉGUA DO E-5, E O NEGATIVO QUE QUASE ENGANOU
+-----------------------------------------------
 A régua é de máquina, não de ouvido: **zeros exatos em todas as amostras = não
 captou; qualquer piso de ruído = captou.**
 

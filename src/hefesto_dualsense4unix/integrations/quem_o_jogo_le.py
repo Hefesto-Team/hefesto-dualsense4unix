@@ -16,11 +16,8 @@ também perguntava a :func:`pids_de_jogo` (``_ha_jogo_aberto``), saiu em
 28/09/2026 com o endpoint por lugar, cujo rótulo não muda. O texto abaixo é o
 registro de 20 e 25/09, quando o evdev votava.
 
-**A CORREÇÃO É DELA, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
+**A CORREÇÃO É DO USUÁRIO, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
 
-    "na real o certo não era somente o controle do player 1 receber a vibração?
-     pq é um jogo de um player e o erro era que o player 3 tava recebendo a
-     vibração de forma espelhada"
 
 A `O-ROTULO-QUE-COLIDE-01` leu a queixa como *"dois controles não vibram"* e
 curou a colisão de nomes dos gravadores. A colisão era real e a cura fica — mas
@@ -29,10 +26,10 @@ cujo endpoint tivesse stream**, e num jogo de um jogador isso não é ninguém
 além de quem segura o controle.
 
 E a colisão era, por acidente, o que segurava os outros dois: medido no journal
-dela, 1 controle entrou em háptica e 270 tentativas de cada um dos outros dois
+do usuário, 1 controle entrou em háptica e 270 tentativas de cada um dos outros dois
 foram recusadas. *Curar a colisão sem este gate faria os três vibrarem.*
 
-A REGRA, decidida por ela entre três opções:
+A REGRA, decidida pelo usuário entre três opções:
 
     Só o controle que o JOGO está usando entra em modo háptica.
 
@@ -46,7 +43,7 @@ O SINAL, e ele é universal
 **Quem o jogo tem ABERTO.** Os descritores de um processo são legíveis em
 ``/proc/<pid>/fd``, e cada ``eventN`` carrega o ``uniq`` do controle no sysfs.
 Não depende de saber o nome do jogo, nem de lista de jogos, nem de lançador —
-o que atende a ordem dela de 16/09: *o app é de acessibilidade e não se cura
+o que atende a ordem de 16/09: *o app é de acessibilidade e não se cura
 por caso*.
 
 A DOBRA QUE NENHUMA LEITURA INGÊNUA ATRAVESSA
@@ -72,7 +69,7 @@ em 21/09, com o PRAGMATA de um jogador, o evdev deixou os QUATRO entrarem em
 háptica (A-HAPTICA-QUEM-JOGA-02). Um fd diz o que o processo abriu, não quem
 está jogando.
 
-FATO SUBSTITUÍDO: aqui estava *"Medido na mesa dela em 20/09 … event21,
+FATO SUBSTITUÍDO: aqui estava *"Medido na bancada em 20/09 … event21,
 event264, event265 uniq=02:fe:f0:… Um jogo com máscara DualSense abre esse"*.
 A lista era de nós que o DAEMON via (a sprint de 20/09: «83 descritores
 visíveis»), sem nomear quem os segurava; e no ``017d72d1c`` a mesma frase dizia

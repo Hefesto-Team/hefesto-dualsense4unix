@@ -1,8 +1,6 @@
 """O Mapear não congela a janela — O-MAPEAR-NAO-CONGELA-A-JANELA-01 (26/09/2026).
 
-A queixa dela: *«o mapear entradas toda hora tá fechando o app. dá um crash
-feio. acho que é se eu continuar nessa tela e trocar antes de fechar essa tela
-de mapear.»* <!-- noqa-acento: citação literal -->
+A queixa de uso
 
 Medido: não era crash. O tique da aba 08 lia o ``/sys`` USB no fio da janela
 (o censo lê ``product`` e ``bMaxPower``, que o kernel serve sob o lock do

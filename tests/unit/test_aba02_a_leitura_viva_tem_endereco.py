@@ -3,7 +3,7 @@
 
 A aba Controles é a aba da leitura ao vivo: os dezesseis glifos, os dois
 analógicos, os gatilhos, o giroscópio e o acelerômetro. **Nada disso tinha
-endereço.** O que estava na tela dela eram os valores que o gerador cravou uma
+endereço.** O que estava na tela do usuário eram os valores que o gerador cravou uma
 vez, e a medição de 03/09 os pôs lado a lado com o que o daemon publicava no
 mesmo instante, com o aparelho PARADO na mesa:
 
@@ -50,7 +50,7 @@ LUGARES = _lugares_da_bancada()
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
-#: OS DOIS CONTROLES DA MESA DELA, na forma do `state_full` medido em
+#: OS DOIS CONTROLES DA BANCADA, na forma do `state_full` medido em
 #: 03/09/2026: um `is_primary` COM leitura e um por rádio SEM `inputs` nenhum.
 CABO = {
     "uniq": UNIQ_CABO, "transport": "usb", "battery_pct": 95, "player_slot": 1,
@@ -104,7 +104,7 @@ def a02():
 
 @pytest.fixture()
 def ctx(a02):
-    """O `Contexto` da mesa dela, com a BANCADA como lista de endereços válidos."""
+    """O `Contexto` da bancada, com a BANCADA como lista de endereços válidos."""
     from pacotes import Contexto
 
     a02._ENDERECOS = frozenset(
@@ -172,7 +172,7 @@ def test_os_gatilhos_dizem_a_frase_da_gtk_e_a_barra_acompanha(a02):
 
 
 def test_os_analogicos_usam_a_frase_do_produto(a02):
-    """`_markup_xy` é o dono, e o `<br>` é a quebra que a tela dela usa."""
+    """`_markup_xy` é o dono, e o `<br>` é a quebra que a tela do usuário usa."""
     from hefesto_dualsense4unix.interface.cartao_do_controle import _markup_xy
 
     v = a02.leitura_viva(CABO)
@@ -184,7 +184,7 @@ def test_o_zero_do_analogico_e_o_extremo_e_nao_o_centro(a02):
     """O `or 128` transformaria o talo à esquerda no repouso — erro de 128.
 
     É o defeito que `mesa_viva._eixo_do_analogico` mediu e curou em 29/08, e
-    ele é alcançável na mesa dela: o `absinfo` dos dois DualSense dá `min=0`.
+    ele é alcançável na bancada: o `absinfo` dos dois DualSense dá `min=0`.
     """
     v = a02.leitura_viva({"inputs": {"lx": 0, "ly": 0}})
     assert v["xy-l"].startswith("X:  0"), v["xy-l"]
@@ -219,7 +219,7 @@ def test_a_cor_da_barra_sai_do_dono_e_nao_daqui(a02):
 def test_sem_leitor_tudo_volta_ao_repouso_e_nao_ao_desenho(a02):
     """O `_reset_inputs_render` da GTK, linha por linha.
 
-    Vale para METADE da mesa dela agora: o daemon só publica `inputs` para o
+    Vale para METADE da bancada agora: o daemon só publica `inputs` para o
     `is_primary`, e o card do outro mostrava três glifos acesos, L2 em 200/255
     e seis eixos com número.
     """

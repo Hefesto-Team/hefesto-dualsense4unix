@@ -2,7 +2,7 @@
 
 O relato de 09/08/2026, depois de jogar: *"aparentemente ele voltou a funcionar
 com máscaras mas em alguns momentos deixou de funcionar"*. E a medição, tirada
-do `state_full` VIVO da máquina dela no mesmo dia, com o jogo já fechado::
+do `state_full` VIVO da máquina do usuário no mesmo dia, com o jogo já fechado::
 
     rumble_ff = {"plays": 117, "vpads": 1}
     per_vpad[0] = {"ff_play_count": 117, "output_count": 263, ...}
@@ -122,7 +122,7 @@ def vpad():
 
 
 def test_parada_conta_como_play_mas_nao_como_pedido(vpad):
-    """O caso EXATO da mesa dela: `plays` sobe, e o motor nunca mexeria."""
+    """O caso EXATO da bancada: `plays` sobe, e o motor nunca mexeria."""
     for _ in range(3):
         vpad._handle_output(_evento_de_output(flag0=_V1, weak=0, strong=0))
 

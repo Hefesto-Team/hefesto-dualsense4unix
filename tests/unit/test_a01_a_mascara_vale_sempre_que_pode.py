@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A máscara: ela vale sempre que PODE valer, e a tela para de ficar calada.
 
-A QUEIXA É DELA, 04/09/2026, e é a primeira da lista:
+A QUEIXA É DO USUÁRIO, 04/09/2026, e é a primeira da lista:
 
     *"independente do modo a mascara deve funcionar ali sempre. E todas as
      demais features do programa também."*
@@ -12,7 +12,7 @@ O QUE FOI MEDIDO — e esta régua tranca cada fato:
    (`daemon/ipc_handlers.py:4022`); `set_mask` persiste em
    `controller_masks.json`; `mascara_efetiva` é consultada na criação de todo
    gamepad virtual (`gamepad.py:1322`, `uinput_gamepad.py:187`). **Logo a
-   escolha dela JÁ vale sempre que pode valer** — o motor estava pronto;
+   escolha do usuário JÁ vale sempre que pode valer** — o motor estava pronto;
 2. o que faltava era a TELA dizer isso. Fora do modo `gamepad` não existe vpad,
    então o clique era aceito, gravado, e não mudava nada que se visse — que é
    exatamente o que ela sente como *"não funciona"*;
@@ -26,7 +26,7 @@ cuidado (*"cinza antes, com a razão na dica"*):
     a máscara fora do modo jogo   → RESSALVA. Ela PODE escolher agora, e a
                                     escolha vale quando o vpad nascer. Apagar o
                                     chip diria "você não pode escolher", que é
-                                    falso — e trocaria a queixa dela por outra
+                                    falso — e trocaria a queixa de uso por outra
                                     pior.
     o Nintendo Pro                → CINZA. Ele nunca pode. É o caso em que o
                                     cinza é a verdade.
@@ -81,7 +81,7 @@ def _ctx(state: dict[str, Any]) -> Contexto:
 
 
 def test_a_escolha_da_mascara_persiste_e_vale_na_criacao_do_vpad() -> None:
-    """As duas pontas do caminho que a queixa dela supõe quebrado."""
+    """As duas pontas do caminho que a queixa de uso supõe quebrado."""
     from hefesto_dualsense4unix.daemon.subsystems import external_mask
 
     assert hasattr(external_mask.registro_de_mascaras(), "set_mask")

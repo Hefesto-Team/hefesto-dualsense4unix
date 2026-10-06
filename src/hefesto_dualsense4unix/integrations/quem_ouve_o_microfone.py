@@ -1,7 +1,7 @@
 """Quem está com o microfone DESTE controle aberto — a PEÇA A da LUZ-DO-MIC-01.
 
 A luz do botão de mudo deixou de ser espelho do mudo e passou a responder
-*"alguém está me ouvindo agora?"* (decisão dela, 02/09/2026, em
+ (decisão, 02/09/2026, em
 a sprint `LUZ-DO-MIC-01`).
 O estado ``aceso fixo`` da §1 é literalmente a resposta deste módulo: **algum
 app está com o microfone deste controle aberto**.

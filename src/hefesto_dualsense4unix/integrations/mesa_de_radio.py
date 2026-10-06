@@ -233,7 +233,7 @@ def radios_do_barramento(
     * **os adaptadores Bluetooth** — eles têm tabela própria, e aparecer nas
       duas faria a mesma antena contar duas vezes;
     * **os controles** — ``054c:0ce6`` é um DualSense no cabo, e listá-lo diria
-      à pessoa que os controles dela atrapalham os controles dela (M4).
+      à pessoa que os controles do usuário atrapalham os controles do usuário (M4).
 
     Não pede ``existe``: aqui a varredura é do próprio diretório de raiz, e não
     uma subida pela árvore — quem precisa de ``existe`` é o

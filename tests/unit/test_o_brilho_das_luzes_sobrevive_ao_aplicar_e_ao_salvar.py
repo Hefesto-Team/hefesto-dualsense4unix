@@ -1,8 +1,7 @@
 """O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01 — a pílula, o «Aplicar» e o «Salvar».
 
-A queixa dela, 26/09/2026: *«tentei alterar a força dos leds
-fraco medio e forte <!-- noqa-acento: citação literal -->
-e ao aplicar ele não aplicar e ao salvar ele não salva»*.
+A queixa, 26/09/2026: alterar a força dos LEDs (fraco, médio, forte) não aplicava
+e não salvava.
 
 **MEDIDO ANTES DA CURA**, na mesa de quatro da A-MARCA (o `IpcServer` real, o
 merge do `PyDualSenseController`, o `SysfsLedNode` sobre arquivos, o laranja do
@@ -24,7 +23,7 @@ qual ela foi escolhida (`lightbar_para_o_numero`), e o «Salvar» a regravava
 sem ele. Sem o número a cor é `LEGADO`, e o tom do número de outro controle
 virava fóssil na troca seguinte.
 
-A MATRIZ, a regra dela: os três brilhos, P1 a P4, cabo e rádio.
+A MATRIZ, a regra de produto: os três brilhos, P1 a P4, cabo e rádio.
 
 **AS MORDIDAS**, arrancadas e devolvidas:
 

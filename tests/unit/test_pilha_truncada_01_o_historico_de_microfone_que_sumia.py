@@ -152,7 +152,7 @@ class TestOHistoricoSobrevive:
         assert not any("DualSense" in v for v in lidas), lidas
 
     def test_a_pilha_de_sink_nao_e_tocada(self, home: Path) -> None:
-        """`source` é o alvo; o histórico de SAÍDA é escolha dela, não nossa.
+        """`source` é o alvo; o histórico de SAÍDA é escolha do usuário, não nossa.
 
         Inclusive a entrada do DualSense na pilha de sink: quem desliga o mic
         não está pedindo para esquecer o alto-falante do controle.

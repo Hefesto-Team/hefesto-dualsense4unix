@@ -15,7 +15,7 @@ def _escritor(secao: str) -> str:
 
 
 def test_o_mic_grava_os_dois_campos_daquela_peca() -> None:
-    """``volume`` e ``gain`` viram override DELA, e não do vizinho."""
+    """``volume`` e ``gain`` viram override DO USUÁRIO, e não do vizinho."""
     d = DraftConfig.default().with_controller_mic(
         UNIQ, MicDraft(muted=True, volume=40, gain=30))
     secao = d.controller_override(UNIQ).mic

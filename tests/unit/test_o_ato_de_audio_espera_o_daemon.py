@@ -1,4 +1,4 @@
-"""O ato de áudio espera o daemon terminar — MEDIDO na máquina dela."""
+"""O ato de áudio espera o daemon terminar — MEDIDO na máquina do usuário."""
 
 from __future__ import annotations
 

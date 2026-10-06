@@ -1,7 +1,7 @@
-"""O produto monta o MESMO report que fez o som sair na bancada dela.
+"""O produto monta o MESMO report que fez o som sair na bancada.
 
 MEDIDO EM 10/09/2026: o alto-falante do DualSense tocou por rádio, 70 segundos
-contínuos, sem um corte, com a orelha dela e o alcance testado. Os bytes que
+contínuos, sem um corte, com a orelha do usuário e o alcance testado. Os bytes que
 saíram no fio começam assim::
 
     35 10 91 07 fe 00 00 00 00 ff 01 93 c8 …
@@ -166,7 +166,7 @@ def test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id() -> None:
 
 
 def test_o_microfone_entra_no_mesmo_report_que_leva_o_som() -> None:
-    """O bit 0 dos enables. É a metade da integração que ela pediu."""
+    """O bit 0 dos enables. É a metade da integração que o usuário pediu."""
     sem = af.controle_de_audio_035(contador_de_quadros=0, com_microfone=False)
     com = af.controle_de_audio_035(contador_de_quadros=0, com_microfone=True)
     assert sem[0] == 0xFE

@@ -84,7 +84,7 @@ def _dobrado(
 def test_conectado_na_sala_a_chave_do_quarto_sai(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """O caso da mesa dela, com as três metades: o esquecer, a lápide, o diário."""
+    """O caso da bancada, com as três metades: o esquecer, a lápide, o diário."""
     _dobrado(mundo, VERMELHO, SALA, QUARTO)
     dono = ligar()
     central = _central(dono, mundo)

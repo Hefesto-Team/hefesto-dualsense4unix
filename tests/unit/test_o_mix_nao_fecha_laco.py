@@ -1,10 +1,10 @@
 """O «No controle e na TV» não pode realimentar o próprio controle.
 
-A LACUNA, e ela só não aparece na máquina dela
+A LACUNA, e ela só não aparece na máquina do usuário
 ------------------------------------------------------------------------------
 A SOM-JUNTO-01 (17/09/2026) fez a fonte ``mix`` chegar ao nó que já está de pé:
 um ``module-loopback`` do monitor da SAÍDA PADRÃO do sistema para o nó do
-controle. Na mesa dela a saída padrão é o HDMI e o fio é inofensivo. Numa
+controle. Na bancada a saída padrão é o HDMI e o fio é inofensivo. Numa
 máquina em que a saída padrão é o PRÓPRIO controle, o fio fecha um laço:
 
 * no rádio, ``hefesto_som_X.monitor → hefesto_som_X`` — a pessoa escolheu
@@ -23,7 +23,7 @@ O QUE ELA TRAVA
 1. ``argv_das_rotas`` — o dono PURO que os dois chamadores usam (o daemon e o
    plano da janela) — não sobe o mix que fecha laço, nos dois transportes;
 2. ``rota_do_no`` entrega a rota com o monitor do mix VAZIO nesse caso, para o
-   estado ficar legível — e sem frase nova para a tela (texto de tela é dela);
+   estado ficar legível — e sem frase nova para a tela (texto de tela é do usuário);
 3. o monitor de OUTRO controle continua valendo: ele termina no alto-falante
    deste e não volta, e recusá-lo tiraria o mix de quem joga com a saída num
    controle e o som no outro;

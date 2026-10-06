@@ -1,6 +1,6 @@
 """A tela renomeia junto com mover — APARELHO-NAO-SE-CONTRADIZ-01, PARTE 2.
 
-DECISÃO DELA, 20/09/2026: **«Curar — renomear junto com mover»**. A razão é de
+DECISÃO, 20/09/2026: **«Curar — renomear junto com mover»**. A razão é de
 acessibilidade: 1,6 s é tempo de sobra para o olho pegar, e num produto de
 acessibilidade um número errado é caro.
 

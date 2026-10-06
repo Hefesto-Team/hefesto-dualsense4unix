@@ -1,19 +1,16 @@
 """TROCA-DENTRO-DO-JOGO-01 — a regra vale para TODO jogo, não só o que tem perfil.
 
-Ela leu a PS-L3-MASCARA-01 e cobrou, em 14/09/2026, com a grafia dela:
-
-    *"inclusive nao pode ter sido feita pensando  (noqa-acento: citação literal)
-    so num dos jogos. ele é o sintoma de algo maior não?"*
+Ela leu a PS-L3-MASCARA-01 e cobrou, em 14/09/2026, com a grafia dela
 
 Estava certa. O conserto de 14/09 alcançava só o `steam_app_<appid>.env`, e na
-máquina dela UM perfil tem `mode` (o do Future Knight): os outros 29 jogos leem o
+máquina do usuário UM perfil tem `mode` (o do Future Knight): os outros 29 jogos leem o
 `default.env`, que copiava o estado VIVO e, sem vpad de pé, saía sem
 `SDL_GAMECONTROLLER_IGNORE_DEVICES`. O jogo aberto assim vê o DualSense de
 plástico; ao subir um modo de jogo com o PS + R3 lá dentro, o físico morre
 grabado e o vpad chega como segundo controle. A env é lida UMA vez, no `exec`
 (`assets/hefesto-launch.sh`), e nada do que o daemon regrave depois a alcança.
 
-DECISÃO DELA — D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL: fora do Modo Nativo
+DECISÃO DE PRODUTO — D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL: fora do Modo Nativo
 o jogo vê só o controle virtual, com perfil ou sem perfil. O preço que ela leu
 antes de escolher: na Navegação o jogo fica sem gamepad até ela subir um modo.
 
@@ -70,7 +67,7 @@ def _daemon(
     fisicos: int = 1,
     coop: bool = True,
 ) -> SimpleNamespace:
-    """A mesa dela sem perfil nenhum: o que o `default.env` descreve."""
+    """A bancada sem perfil nenhum: o que o `default.env` descreve."""
     return SimpleNamespace(
         is_native_mode=lambda: native,
         config=SimpleNamespace(

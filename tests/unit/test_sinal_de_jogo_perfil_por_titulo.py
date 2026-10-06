@@ -202,7 +202,7 @@ class _ControladorComReplay(FakeController):
 async def test_aba_de_navegador_com_titulo_de_jogo_sobe_a_autoridade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O PREÇO desta cura, medido no disco dela e fixado aqui de propósito."""
+    """O PREÇO desta cura, medido no disco do usuário e fixado aqui de propósito."""
     _sem_marcador(monkeypatch, tmp_path)
     _perfis(monkeypatch, [_perfil_coop_local()])
 

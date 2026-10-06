@@ -1,15 +1,8 @@
 """A ABA 07 NÃO CRAVA COR DE APARELHO — e três formas de cravar eram cegas.
 
-A LEI, e ela é dela (03/09/2026)::
+A LEI, e é do usuário (03/09/2026)::
 
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-     glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-     entende? nada hardcoded."
 
-    "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-     players com cada controle — tudo isso muda de acordo com o controle
-     identificado no canto superior. é white no p1, mas a borda de tudo é
-     cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
 
 O QUE ESTA ABA JÁ TINHA, e não se repete aqui:
 `scripts/check_identidade_vem_de_cima.py` e
@@ -29,9 +22,9 @@ sobre a página envenenada — a tabela abaixo é a saída daquela corrida::
     var(--cosmic-red)                          0  CEGA               0 CEGA
     --nova-pink:#ff0000 no esqueleto           0  CEGA               0 CEGA
 
-As três primeiras cegueiras são exatamente as formas que a frase dela nomeia: o
-apelido é o que vai num `data-colorway` (*"os svgs não são os que o meu mapa
-cataloga"*) e o hexadecimal solto é o que pinta uma borda (*"a borda de tudo é
+As três primeiras cegueiras são exatamente as formas que a frase de produto nomeia: o
+apelido é o que vai num `data-colorway` e o hexadecimal solto é o que pinta uma borda (*"a borda de
+tudo é
 cosmic red"*). Nenhuma delas escreve "Cosmic Red" em lugar nenhum.
 
 **Esta tabela é uma MEDIÇÃO daquele dia, não um requisito.** Se alguém ampliar

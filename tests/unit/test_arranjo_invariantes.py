@@ -198,7 +198,7 @@ def test_ninguem_troca_de_adaptador_sem_baixar_o_pico() -> None:
 
 
 def test_sem_adaptador_nenhum_o_motor_diz_que_nao_cabe() -> None:
-    """A mesa dela às 02h36 de 25/08: o hub saiu e levou os três dongles."""
+    """A bancada às 02h36 de 25/08: o hub saiu e levou os três dongles."""
     mesa = mock.mesa_sem_hub()
     assert motor.adaptadores_da_mesa(mesa) == ()
     plano = motor.plano_dos_controles(mock.CONTROLES, motor.adaptadores_da_mesa(mesa))
@@ -442,7 +442,7 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
 
 
 def test_as_duas_casas_versionadas_do_mockup_nao_andam_sozinhas() -> None:
-    """Corrigir nos DOIS foi a palavra dela, e agora é o gerador quem corrige."""
+    """Corrigir nos DOIS foi a palavra de produto, e agora é o gerador quem corrige."""
     raiz = _FONTE_DO_MOTOR.parents[3]
     bancada = _o_que_o_gerador_escreve()
     produto = _o_que_o_produto_recebe()
@@ -791,7 +791,7 @@ _ENTRADAS_COM_CAMINHO = 8
 
 
 def _bancada_do_gabinete_dela() -> object:
-    """A `Bancada` do produto: o desenho DELA sobre a leitura de 25/08 às 02h30."""
+    """A `Bancada` do produto: o desenho DO USUÁRIO sobre a leitura de 25/08 às 02h30."""
     from hefesto_dualsense4unix.integrations import mapa_das_portas
     from tests.unit.test_mapa_a_bancada_de_mentira import (
         bancada_de_agora,

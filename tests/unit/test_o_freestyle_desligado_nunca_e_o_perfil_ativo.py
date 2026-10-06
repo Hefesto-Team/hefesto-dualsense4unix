@@ -8,10 +8,10 @@ Perfis não o oferece como um perfil a escolher.
 A INVARIANTE (item 6 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): no retrato do
 `daemon.state_full`, `active_profile == Freestyle` só com `freestyle_ligado`.
 Até 01/10/2026 o boot e a volta do jogo punham o Freestyle valendo com o botão
-apagado — o chip dizia «Freestyle» e o botão dizia «desligado», e a pergunta
-dela de 29/09 era qual dos dois dizia a verdade.
+apagado — o chip dizia «Freestyle» e o botão dizia «desligado», e a pergunta de 29/09 era qual dos
+dois dizia a verdade.
 
-A guarda mora na origem, `ProfileManager._ativar`: só a mão dela põe o
+A guarda mora na origem, `ProfileManager._ativar`: só a mão do usuário põe o
 Freestyle, e pondo-o acende o botão. Cada caminho abaixo é um dos que punham.
 
 Os `uniq` são da faixa forjada da casa.
@@ -45,7 +45,7 @@ OUTRO = "Navegador"
 
 
 def _o_disco() -> None:
-    """O Freestyle (`match any`) e a escolha dela, com o botão apagado."""
+    """O Freestyle (`match any`) e a escolha do usuário, com o botão apagado."""
     loader.save_profile(Profile(name=FREESTYLE, match=MatchAny()), origem="régua")
     loader.save_profile(Profile(name=AVATAR,
                                 match=MatchCriteria(window_class=[JANELA_DO_AVATAR]),

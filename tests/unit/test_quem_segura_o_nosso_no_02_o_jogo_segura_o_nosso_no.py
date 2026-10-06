@@ -15,7 +15,7 @@ NENHUM TESTE DAQUI TOCA O `/sys` OU O `/proc` VIVOS
 Todas as árvores são forjadas em `tmp_path`, e os "nós de /dev" são arquivos
 comuns. É a disciplina da TEMPESTADE-DE-TECLADOS-01 aplicada ao lado dos
 scripts: nada é criado em `/dev/input`, nada é aberto, e nenhum teste depende
-do que estava plugado na máquina dela na hora.
+do que estava plugado na máquina do usuário na hora.
 
 AS OITO MORDIDAS — arrancadas uma a uma, vistas reprovar, devolvidas
 --------------------------------------------------------------------
@@ -449,7 +449,7 @@ def test_o_censo_casa_por_inode_e_nao_por_caminho(tmp_path: Path) -> None:
     """O fd aponta para UM caminho e o alvo é OUTRO — o mesmo inode.
 
     É o critério do degrau, ao pé da letra: o minor é reciclado, e `event22`
-    já foi vpad DualSense às 01:40 e vpad Xbox às 01:50 na máquina dela.
+    já foi vpad DualSense às 01:40 e vpad Xbox às 01:50 na máquina do usuário.
 
     MORDIDA 4: casar por `os.readlink` (o que o `quem_o_jogo_abre.py` faz)
     reprova aqui, porque os dois caminhos são textos diferentes.

@@ -1,6 +1,6 @@
 """MESA-NO-MEIO-DO-LOTE-01 — dois controles acendendo o MESMO jogador.
 
-**O que ela viu, 27/08/2026**, com os quatro DualSense dela no rádio: dois
+**O que o usuário viu, 27/08/2026**, com os quatro DualSense do usuário no rádio: dois
 acendiam **jogador 1**, um acendia 2, outro acendia 3, e **ninguém acendia 4**.
 
 O journal do daemon guardou a cena inteira, e ela fecha na aritmética. Às
@@ -62,7 +62,7 @@ co-op) e passa a ser ESTRUTURAL, no ponto único onde um endereço vira número
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc:…`` com os octetos 4 e 5
 zerados, a mesma allowlist de ``tests/unit/test_anonimato_de_fixtures.py``. A
-ORDEM reproduz a mesa dela; os bytes, não.
+ORDEM reproduz a bancada; os bytes, não.
 """
 from __future__ import annotations
 

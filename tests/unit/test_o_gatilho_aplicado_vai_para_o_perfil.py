@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DA D2 NOS GATILHOS: o que ela aplicou no clique VAI PARA O DISCO.
 
-Ela pediu, com estas palavras, em 05/09/2026:
-
-    *"ao pular e sair configurando de aba em aba o perfil vai se lembrando de
-    cada config de cada aba pra cada controle. aí aplicar aplica todas as
-    configs naquele perfil e salvar se lembra disso quando eu for jogar o jogo e
-    no dia seguinte e por diante."*
+O usuário pediu, com estas palavras, em 05/09/2026
 
 A decisão que a atende é a **D2** —
 o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026:
@@ -167,7 +162,7 @@ def _triggers_gravados(prof: Any) -> Any:
 
 
 def test_escolher_um_modo_grava_no_perfil(pac, disco) -> None:
-    """A queixa dela, no caso mais simples: escolher `Rígido` no L2 e ir jogar."""
+    """A queixa de uso, no caso mais simples: escolher `Rígido` no L2 e ir jogar."""
     _, gravados = disco
     _gesto(pac, "modo")(_ctx(pac),
                         {"uniq": UNIQ, "lado": "e", "valor": "Rigid"},
@@ -325,14 +320,14 @@ def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
         pac, perfil_que_nao_abre) -> None:
     """O ramo que CALAVA passou a falar — e a frase tem forma, não só palavras.
 
-    Ela decidiu em 05/09, sobre a divergência entre as abas 02 e 03: **as duas
+    O usuário decidiu em 05/09, sobre a divergência entre as abas 02 e 03: **as duas
     abas falam**. O que este caso mede é o *como*:
 
     1. **as duas metades** — `aparelho` e `perfil` na mesma frase. Só a primeira
        esconderia o defeito; só a segunda mandaria ela procurar no aparelho um
        efeito que ESTÁ lá;
     2. **o nome do perfil** — sem ele a frase não diz o que consertar, e é
-       justamente o nome que separa "apagado" de "renomeado" na mesa dela;
+       justamente o nome que separa "apagado" de "renomeado" na bancada;
     3. **o recibo vem PRIMEIRO** — a frase abre pelo que ela FEZ. Invertida, o
        cartão começa por uma queixa sobre um gesto que funcionou;
     4. **o canal é o verde** — `{"recado": …}`, nunca um `RuntimeError`. O

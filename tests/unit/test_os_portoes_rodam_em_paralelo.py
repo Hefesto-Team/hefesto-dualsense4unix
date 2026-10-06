@@ -431,7 +431,7 @@ def _corre_dentro_de_uma_vaga(
 
 
 def test_quem_ja_esta_numa_vaga_nao_pede_vaga_de_novo(tmp_path: Path) -> None:
-    """Três corridas de agente, cada uma numa vaga e esperando outra, se travariam para sempre."""
+    """Três corridas de portões, cada uma numa vaga e esperando outra, se travariam para sempre."""
     repo, anota, env = _repo_da_vez(tmp_path)
     r = _corre_dentro_de_uma_vaga(repo, tmp_path, env)
     assert _status(r.stdout) == {"pytest-tela": "ok"}, r.stdout + r.stderr

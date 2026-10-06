@@ -20,7 +20,7 @@
 * **[02] o fim da frase que mandava a um lugar que não existe aqui** — e a
   guarda que impede a remenda de apodrecer.
 
-* **[03] a frase da Prioridade que ela aprovou**, agora no desenho, amarrada ao
+* **[03] a frase da Prioridade que o usuário aprovou**, agora no desenho, amarrada ao
   produto por leitura.
 
 * **[04] o campo do jogo se corrige** depois que ela sai dele.
@@ -320,7 +320,7 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
     **O ARGUMENTO DESTA DOCSTRING CADUCOU EM 06/09/2026 — ONDA5-10-01, decisão
     10-Q2 dela.** Ele dizia que a frase *"precisa de um fim que esta tela
     alcança"*, e o fim que ela alcançava era mandar usar
-    ``hefesto-dualsense4unix profile`` na linha de comando. A palavra dela sobre
+    ``hefesto-dualsense4unix profile`` na linha de comando. A palavra de produto sobre
     isso foi ***"Isso é erro do produto."*** — **o fim agora é o FATO**, e para
     aí. A régua não mudou uma linha: ela sempre comparou contra a CONSTANTE, e
     é por isso que continua verde com um fim novo. Quem cobra que o fim não
@@ -382,7 +382,7 @@ def test_nenhuma_pagina_desta_interface_oferece_o_modo_avancado() -> None:
 def test_a_frase_da_prioridade_do_desenho_e_a_que_ela_aprovou(
     gerador: Any,
 ) -> None:
-    """O desenho recita a frase DELA, e a régua a lê do PRODUTO."""
+    """O desenho recita a frase de produto, e a régua a lê do PRODUTO."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     do_produto = perfis_web._pacote_do_editor(
@@ -441,7 +441,7 @@ def test_o_endereco_colado_vira_o_numero_na_frente_dela(
 def test_o_campo_nunca_volta_vazio_da_correcao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Corrigir não pode APAGAR o que ela digitou."""
+    """Corrigir não pode APAGAR o que o usuário digitou."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -731,7 +731,7 @@ def test_a_tira_diz_a_metade_curta(monkeypatch: pytest.MonkeyPatch) -> None:
     caracteres. Elas não passam: o que estoura é o NÚMERO DE JOGOS, porque
     `steam_launch_options.lista_de_jogos` não tem teto. Com a frase de ativação
     grudada, a forma longa cabe até DOIS jogos e a curta até CINCO. A escolha
-    dela continua certa e continua tendo trabalho; o que mudou foi a razão.
+    do usuário continua certa e continua tendo trabalho; o que mudou foi a razão.
 
     O DUBLÊ É OBRIGATÓRIO, e sem ele esta régua daria verde sobre a cura
     inteira: `carona.ligada()` lê `HEFESTO_CARONA_WRAPPER`, a `conftest.py` o

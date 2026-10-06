@@ -1,6 +1,6 @@
 """PARIDADE-BYTE-01 — o LED de jogador, por número de jogador, nos dois.
 
-O padrão de LED de jogador é o que diz, na mesa dela, **quem é o Controle 1**.
+O padrão de LED de jogador é o que diz, na bancada, **quem é o Controle 1**.
 Ele mora em common[43] e é autorizado pelo bit 0x10 do flag1 — e, como toda
 feature deste projeto até 10/08/2026, era provado num transporte só.
 

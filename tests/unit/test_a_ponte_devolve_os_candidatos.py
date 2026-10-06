@@ -6,10 +6,10 @@ zero**. Quem chamasse ficava com um adaptador varrendo e nenhuma lista para
 escolher — e sem lista o verbo `parear` só serve a quem já sabe o endereço de
 cor, que é exatamente a pessoa que não precisa de botão.
 
-COMO SE MEDE ISTO SEM TOCAR NO RÁDIO DELA
+COMO SE MEDE ISTO SEM TOCAR NO RÁDIO DO USUÁRIO
 ==========================================
 A única forma honesta de medir a lista de candidatos é abrindo uma varredura, e
-abrir varredura na máquina dela custa de 32% a 43% dos pacotes do adaptador que
+abrir varredura na máquina do usuário custa de 32% a 43% dos pacotes do adaptador que
 a hospeda, com quatro DualSense de pé. Por isso o script ganhou o quarto gancho
 de teste, `HEFESTO_BT_BIN`: uma pasta posta na frente do `PATH`, de onde saem o
 `busctl` e o `bluetoothctl` que ele chama. Com ela, o barramento que responde é
@@ -38,7 +38,7 @@ PROVA DE MORDIDA (20/09/2026), cada arrancada devolvida em seguida. Controle:
      `\t` do nome empurra todas as colunas seguintes;
   d) o `kill` arrancado de `_fechar_a_busca` — **reprovou
      `test_a_varredura_cai_junto_com_a_ponte`**: a ponte morre e o
-     `bluetoothctl` fica varrendo o adaptador dela;
+     `bluetoothctl` fica varrendo o adaptador do usuário;
   e) `HEFESTO_BT_BIN` fora da linha de `unset` sob sudo — **1 reprovação**: o
      gancho de teste sobreviveria ao sudo, que é a contenção 3 caindo.
 """

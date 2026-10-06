@@ -1,7 +1,7 @@
-"""DROPIN-AMBIGUO-01 — a ausência do drop-in era indistinguível de escolha dela.
+"""DROPIN-AMBIGUO-01 — a ausência do drop-in era indistinguível de escolha do usuário.
 
 O arquivo `~/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf`
-**não existia** na máquina dela em 04/08/2026. Sem ele o WirePlumber promoveu o
+**não existia** na máquina do usuário em 04/08/2026. Sem ele o WirePlumber promoveu o
 DualSense a microfone padrão do sistema, e daí saíram os sintomas que ela
 reportou como *"não funciona nem mic, nem os botões de sons do jogo"*.
 
@@ -14,7 +14,7 @@ A causa-raiz é **um estado com dois significados**. O terceiro degrau de
 — e o comentário ao lado dizia que a ausência do 51 *"é a promoção
 explícita"*. Mas a ausência tem **duas origens** e o disco não as distingue:
 
-- *"ela pediu para promover o mic do controle"* (`mic promote`), decisão a
+- *"o usuário pediu para promover o mic do controle"* (`mic promote`), decisão a
   honrar;
 - *"o uninstall removeu e a instalação seguinte não rearmou"*, cura desarmada,
   a reparar.
@@ -30,7 +30,7 @@ contrário apaga; e o degrau 3 passa a LER a marca em vez de inferir. Sem marca
 e sem o 51 o veredito é **"não sei"**, que é o que o disco de fato diz.
 
 **A migração é a CONSERVADORA (E4, opção (b)), e está escrita em voz alta**
-porque escolher em silêncio seria reescrever a escolha dela: máquina que
+porque escolher em silêncio seria reescrever a escolha do usuário: máquina que
 promoveu ANTES desta cura existir não tem marca nenhuma e passa a ser tratada
 como "não sei" — perde a preferência automática, ganha um aviso que diz o
 comando exato, e o caminho de volta é um gesto só. A opção (a) — assumir a
@@ -165,7 +165,7 @@ class TestAAusenciaSemMarcaNaoEEscolha:
         assert "mic promote" in saida, saida
 
     def test_o_predicado_recusa_sem_marca(self, maquina: Maquina) -> None:
-        """O degrau em si: "não sei" nunca é "ela pediu"."""
+        """O degrau em si: "não sei" nunca é "o usuário pediu"."""
         r = maquina.doctor("_prefere_mic_do_dualsense")
         assert r.returncode == 1, (
             "sem o 51 e sem marca o doctor ainda diz que o mic do DualSense "

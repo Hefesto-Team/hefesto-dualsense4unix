@@ -25,7 +25,7 @@ E a varredura desta régua achou **mais três da mesma família**, no mesmo par 
 arquivos, que a linha 177 do CSV da paridade não citava:
 
 * ``rumble_actions.texto_do_alcance_da_intensidade`` — *"Ligue “Jogar pelo
-  Hefesto” na aba Início"*. **Esta era a única que chega à tela dela HOJE**
+  Hefesto” na aba Início"*. **Esta era a única que chega à tela do usuário HOJE**
   (``app/telas/vibracao.textos_do_estado`` → ``a05_vibracao.pacote``, o bloco
   ``#vib-estado`` da aba Vibração), e mandava procurar DUAS coisas
   inexistentes: uma aba "Início" e um rótulo "Jogar pelo Hefesto";

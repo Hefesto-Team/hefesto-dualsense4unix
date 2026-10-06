@@ -452,7 +452,7 @@ def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
 
 
 def _com_carga(roteiro: Any, *, buraco_s: float = 0.0, lento_s: float = 0.0) -> Any:
-    """O roteiro com a máquina ocupada, SEM carregar a máquina dela."""
+    """O roteiro com a máquina ocupada, SEM carregar a máquina do usuário."""
     def com_carga(fora: Any, piloto: Any, t: float) -> bool:
         seguir = roteiro(fora, piloto, t)
         if buraco_s and "esconde" in fora.marcos and "buraco" not in fora.marcos:
@@ -1275,7 +1275,7 @@ def test_r6_cada_pactl_uma_vez_por_dono(renovacao: Any, n: int, nativa: str,
 
 
 def test_r6_a_eleicao_roda_pelo_dono_dela(renovacao: Any) -> None:
-    """A memória da eleição embrulha o `_rodar` DELA, e não o de `audio_saida`."""
+    """A memória da eleição embrulha o `_rodar` DO USUÁRIO, e não o de `audio_saida`."""
     renovacao.conta.nativa = "casada"
     conta = renovacao.renovar(4)
     assert "pactl list sources short" in conta.eleicao, conta.eleicao

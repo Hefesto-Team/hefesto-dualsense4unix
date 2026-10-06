@@ -49,7 +49,7 @@ def test_com_a_mesa_vazia_a_aba_diz_alguma_coisa() -> None:
 
 
 def test_com_a_mesa_cheia_a_linha_nao_existe() -> None:
-    """Zero pixel na cena que ela aprovou — dois controles na mesa."""
+    """Zero pixel na cena que o usuário aprovou — dois controles na mesa."""
     for quantos in (1, 2, 3, 4):
         assert aba.pacote(_ctx(quantos))["mesa-frase"] == "", (
             f"a linha da mesa vazia apareceu com {quantos} controle(s)")

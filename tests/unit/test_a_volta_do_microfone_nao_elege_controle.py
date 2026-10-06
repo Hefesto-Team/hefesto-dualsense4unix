@@ -1,6 +1,6 @@
 """A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 — calar não elege um controle calado.
 
-O QUE ELA VIU NA BANCADA DE 29/09/2026 (B1.3)
+O QUE O USUÁRIO VIU NA BANCADA DE 29/09/2026 (B1.3)
 ---------------------------------------------
 Os quatro DualSense pelo rádio, só o roxo no ar e a fonte padrão da máquina;
 o vermelho, o branco e o azul calados. Ela calou o roxo pelo botão, e 166 ms
@@ -24,7 +24,7 @@ Com o eleitor DO PRODUTO, o laço DO PRODUTO (`hotkey.ligar_o_microfone`) e o
 subsystem DO PRODUTO (`bt_mic`). O dublê é o `pactl` e o script, e ele responde
 o que o script responde: a régua 1 confere isso rodando o script e o
 `doctor.sh` de verdade sobre a mesma lista, com um `pactl` de mentira num PATH
-temporário. Nenhum teste daqui fala com o servidor de som dela.
+temporário. Nenhum teste daqui fala com o servidor de som do usuário.
 
 Os endereços são da faixa sintética da casa, com os octetos 4 e 5 zerados, e
 cada cor tem o último octeto que a sprint usa.
@@ -225,7 +225,7 @@ class _Daemon:
 
 @pytest.fixture()
 def sem_processo(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Um `pactl` que escapasse do dublê reprova, em vez de chegar ao som dela."""
+    """Um `pactl` que escapasse do dublê reprova, em vez de chegar ao som do usuário."""
 
     def _recusa(*args: Any, **kwargs: Any) -> Any:
         raise AssertionError(f"esta régua tentou rodar processo: {args!r}")
@@ -468,7 +468,7 @@ async def test_o_headset_plugado_depois_herda_o_padrao(mesa: Any) -> None:
 async def test_sem_poder_perguntar_nada_se_escreve_e_o_ato_de_calar_se_completa(
     mesa: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, como: str
 ) -> None:
-    """O «não sei» nunca escreve, e o silêncio que ela pediu não depende dele."""
+    """O «não sei» nunca escreve, e o silêncio que o usuário pediu não depende dele."""
     m = mesa(_mesa_de(MESA_DE_29))
     assert (await _apertar(m, ROXO, ligado=True)).feito
     m.pw.escritas.clear()

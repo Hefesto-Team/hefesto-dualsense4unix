@@ -75,7 +75,7 @@ def test_as_mascaras_tem_as_mesmas_frases_nas_duas_listas() -> None:
     aqui.
 
     NOTA DATADA — 07/09/2026: eram DUAS, e a régua as digitava. A máscara
-    **Nintendo Pro** nasceu por ordem dela e teve de entrar nas três listas —
+    **Nintendo Pro** nasceu por ordem de produto e teve de entrar nas três listas —
     inclusive no ``app.rs``, que é a superfície que ninguém lembra, e que só
     apareceu porque esta régua reprovou. É a razão de ela existir.
     """

@@ -198,7 +198,7 @@ async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
 async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Dois controles na mesa, e ela escolheu o SEGUNDO como microfone padrão."""
+    """Dois controles na mesa, e o usuário escolheu o SEGUNDO como microfone padrão."""
     from pathlib import Path
 
     estado = Path.home() / ".local" / "state" / "wireplumber"

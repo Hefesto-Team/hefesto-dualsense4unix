@@ -21,7 +21,7 @@ o "não tem para onde ir" acontecem por baixo dele. É o mesmo contrato do
 gamepad virtual, que é o precedente que ela citou: *o jogo escolhe um
 dispositivo, não um transporte* (``integrations/virtual_pad.py``).
 
-AS TRÊS DECISÕES DELA, E ELAS SÃO CURTAS
+AS TRÊS DECISÕES DE PRODUTO, E ELAS SÃO CURTAS
 -----------------------------------------
 ``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE`` (06/09/2026, por delegação,
 reversível numa frase — ``docs/data/decisoes-de-produto.csv:213``):
@@ -33,10 +33,10 @@ reversível numa frase — ``docs/data/decisoes-de-produto.csv:213``):
    escolheu.** O que vai e volta é a ROTA, e o nó fica;
 2. **no cabo ele não vira saída padrão.** ``priority.session`` baixa
    (``integrations.alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM``). Publicar o nó
-   é uma coisa; mandar o som do sistema para ele é outra, e a segunda é dela;
+   é uma coisa; mandar o som do sistema para ele é outra, e a segunda é do usuário;
 3. **o degrau é o ``0x36`` combinado desde 03/10/2026**: o som e a háptica do
-   controle num relatório só, com o ``0x10`` em todo quadro (provado na bancada
-   dela), e é ele que a ``PonteDeSomPorRadio`` que este subsystem sobe por
+   controle num relatório só, com o ``0x10`` em todo quadro (provado na bancada), e é ele que a
+   ``PonteDeSomPorRadio`` que este subsystem sobe por
    controle no rádio escreve.
 
 O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
@@ -47,7 +47,7 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   ``0x36`` no hidraw. A régua que fica é a da
   **FALÁCIA DO CANAL QUE RESPONDE** — concluir que, porque um canal
   responde, ele FAZ o que se esperava dele: o mapa segura o degrau em
-  ``MONTOU`` até a orelha dela ouvir o caminho inteiro do produto
+  ``MONTOU`` até a orelha do usuário ouvir o caminho inteiro do produto
   (``audio.saida_dedicada@dualsense``, AS-FRASES-QUE-A-BANCADA-ACHOU-01);
 * **PASSOU A LIGAR — 09/09/2026, SOM-POR-CONTROLE-01.** Esta linha dizia *"não
   liga o monitor ao sink USB do controle no cabo"*, e era verdade: o
@@ -82,7 +82,7 @@ razões de verdade:
   escritas; ficou uma;
 * *"os quatro nascem com o MESMO rótulo"* — agora cada um nasce «Alto-falante
   do Controle N», com o número do ASSENTO, pelo mesmo gancho do «Microfone do
-  Controle N» (decisão dela de 09/09, *"4a"*).
+  Controle N» (decisão de 09/09, *"4a"*).
 
 **ELE DEIXOU DE SER ÓRFÃO EM 10/09/2026 — SOM-FIADO-01.** As três linhas do
 registro existem, e são as três que a receita exige:
@@ -230,7 +230,7 @@ class GerenciadorDeNosDeSom:
             ponte_do_radio=self._ponte_do_radio(uniq),
         )
 
-    # som via canal de audio externo do controle"*.  # (noqa-acento): a digitação é dela
+    # som via canal de audio externo do controle"*.  # (noqa-acento): a digitação é do usuário
 
     def _reafinar(
         self, uniq: str, no: Any, transporte: str, mesa: tuple[str, ...]
@@ -243,7 +243,7 @@ class GerenciadorDeNosDeSom:
         na lista) e, em ``mix``, um ``pactl get-default-sink``. Com a mesa de
         quatro cheia e :data:`RECONCILIA_S` em 5 s, são menos de um subprocesso
         por segundo. **Não é a tempestade de syscalls do mapa de motores do
-        `gamepad.py`**, e o preço de não pagá-lo é a escolha dela presa até o
+        `gamepad.py`**, e o preço de não pagá-lo é a escolha do usuário presa até o
         daemon reiniciar, que é o defeito que esta sprint fechou.
 
         O que NÃO se lê aqui é o perfil: a fonte vem do cache por
@@ -333,7 +333,7 @@ class GerenciadorDeNosDeSom:
             return None
 
     def _fonte_do_no(self, uniq: str) -> str:
-        """``mix`` ou ``sfx`` para este controle — o padrão dela quando ninguém disse."""
+        """``mix`` ou ``sfx`` para este controle — o padrão de produto quando ninguém disse."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import FONTE_PADRAO
 
         if self._fonte_por_controle is None:
@@ -381,7 +381,7 @@ class GerenciadorDeNosDeSom:
     ) -> Any:
         """Constrói e SOBE o nó daquele controle. `None` = não subiu."""
         no = self._construir(uniq, transporte, mesa, descricao=descricao)
-        # aqui poria uma entrada MUDA por DualSense na lista de som dela;
+        # aqui poria uma entrada MUDA por DualSense na lista de som do usuário;
         rota = getattr(no, "rota", None)
         if rota is not None and not getattr(rota, "tem_rota", True):
             logger.info(
@@ -661,7 +661,7 @@ class AltoFalanteSubsystem:
         porque é o mesmo código, não porque duas cópias combinaram.
 
         E o número passou a ser o da TELA. Antes era a posição entre os
-        conectados, que é a ordem dos HANDLES — na mesa dela, às 22h de 09/09,
+        conectados, que é a ordem dos HANDLES — na bancada, às 22h de 09/09,
         isso batizou de «Microfone do Controle 2» o aparelho cujo cartão dizia
         P1.
 
@@ -861,7 +861,7 @@ class AltoFalanteSubsystem:
 
         Um por DualSense da mesa, em qualquer transporte; e o do aparelho que
         SAIU fica enquanto um jogo toca nele: o nó que some debaixo do jogo
-        leva a háptica da partida junto (a decisão dela de 08/09, «nó que some
+        leva a háptica da partida junto (a decisão de 08/09, «nó que some
         quebra o jogo que o escolheu»). Servidor mudo é «toca» — na dúvida, o
         nó fica.
         """
@@ -878,7 +878,7 @@ class AltoFalanteSubsystem:
     def _avisar_quem_o_jogo_nao_conhece(self, marca: str) -> None:
         """O endpoint que nasce com um jogo tocando: o registro do lançamento não o tem.
 
-        A-HAPTICA-E-POR-APARELHO-01, item 5 — o preço que ela aceitou na
+        A-HAPTICA-E-POR-APARELHO-01, item 5 — o preço que o usuário aceitou na
         pergunta [27]: o device KS se grava no lançamento, e o aparelho que
         chega com o jogo aberto ganha um endpoint que o jogo não conhece até
         reabrir. Uma linha por aparelho e partida, para a bancada e o doctor

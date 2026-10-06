@@ -41,7 +41,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def mundo_com(adaptadores: tuple[str, ...]) -> rm.RadioDeMentira:
-    """O vermelho no ar no primeiro adaptador, e o verde novo na mão dela."""
+    """O vermelho no ar no primeiro adaptador, e o verde novo na mão do usuário."""
     mundo = rm.RadioDeMentira(adaptadores=adaptadores)
     mundo.pareado(adaptadores[0], VERMELHO)
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
@@ -77,7 +77,7 @@ def test_a_caixa_que_ela_abriu_fica_com_a_busca_noutro_adaptador(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     onde_busca: str, onde_ela_abre: str, jogadores: str,
 ) -> None:
-    """A cena da foto 34: a busca de pé num adaptador, e o clique dela no ▶ de"""
+    """A cena da foto 34: a busca de pé num adaptador, e o clique do usuário no ▶ de"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=TRES,
                       jogadores=JOGADORES[jogadores])
@@ -139,7 +139,7 @@ def test_sem_escolha_dela_a_caixa_da_busca_abre(
 def test_ela_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str,
 ) -> None:
-    """Fechar a caixa da busca é escolha dela («nenhuma aberta»): nenhuma abre"""
+    """Fechar a caixa da busca é escolha do usuário («nenhuma aberta»): nenhuma abre"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -271,7 +271,7 @@ def test_o_chip_aceso_diz_onde_a_busca_esta(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     onde_busca: str, onde_ela_abre: str,
 ) -> None:
-    """A caixa aberta é dela, e o chip aceso do «Procurando» é do rádio: com a"""
+    """A caixa aberta é do usuário, e o chip aceso do «Procurando» é do rádio: com a"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -410,7 +410,7 @@ MOVER = [(destino, dela) for destino in (QUARTO, VARANDA) for dela in TRES if de
 def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_dela_fica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, dela: str,
 ) -> None:
-    """O «Mover» (a pergunta da mudança, ``confirmar-mudanca``) é um clique dela"""
+    """O «Mover» (a pergunta da mudança, ``confirmar-mudanca``) é um clique do usuário"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)

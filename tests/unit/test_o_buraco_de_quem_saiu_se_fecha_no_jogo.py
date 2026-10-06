@@ -85,7 +85,7 @@ class MesaHonesta(MesaDoJogo):
     ``virtual_pad.make_virtual_pad``, com o ``_try_uhid`` e o
     ``UhidDualSense.start`` de verdade, e quem diz se ele fica de pé é o
     :class:`KernelDoHidPlaystation`. Recusado, o produto cai no ``uinput``, como
-    cairia na mesa dela, e a cada tique a bancada confere que o kernel não
+    cairia na bancada, e a cada tique a bancada confere que o kernel não
     recusou ninguém.
     """
 

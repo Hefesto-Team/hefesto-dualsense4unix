@@ -126,7 +126,7 @@ from monta import cor_da_zona as _cor  # noqa: E402
 _CASCA = _cor("cosmic-red")
 
 ESTILO = f"""  <style>
-    /* Tudo PREENCHIDO — foi a decisão dela em 27/08. Os paths são faixas e anéis:
+    /* Tudo PREENCHIDO — foi a decisão em 27/08. Os paths são faixas e anéis:
        traçá-los faz cada aresta virar dois fios.
        A COR É A DO COSMIC RED, lida do desenho — não digitada. Ela é só para
        você enxergar enquanto edita; quem manda na cor final é
@@ -147,8 +147,7 @@ svg_para_editar().write_text(
 f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- ===========================================================================
      DualSense — o controle para EDITAR.
-     Gerado em 27/08/2026 a pedido dela: "converter o controle inteiro pra svg que
-     arrumo agora", "com os nomes de cada elemento descritos nas layers e objetos".
+     Gerado em 27/08/2026 a pedido: , "com os nomes de cada elemento descritos nas layers e objetos".
 
      COMO USAR
        1. Abra este arquivo no seu editor (Boxy SVG, Figma, Inkscape).

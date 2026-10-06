@@ -1,9 +1,6 @@
 """A aba Navegação grava no PERFIL, e a tela para de prometer por-controle.
 
-O PEDIDO DELA, 05/09/2026: *"ao pular e sair configurando de aba em aba o perfil
-vai se lembrando de cada config de cada aba pra cada controle. aí aplicar aplica
-todas as configs naquele perfil e salvar se lembra disso quando eu for jogar o
-jogo e no dia seguinte e por diante."*
+O PEDIDO, 05/09/2026
 
 O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
 → ela mexe na aba 06 → Salvar do rodapé → relê o disco), em `HOME` de mentira:
@@ -16,7 +13,7 @@ O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
 **O `teclado_emulado` não tinha caminho NENHUM.** `keyboard.emulation.set` grava
 na flag global da sessão (`utils/session.py:273`) e `DraftConfig.to_profile` o
 emite por PASSTHROUGH do que veio do disco — então desligar o teclado e clicar
-Salvar devolvia o valor VELHO, por cima da escolha dela, sem uma palavra.
+Salvar devolvia o valor VELHO, por cima da escolha do usuário, sem uma palavra.
 
 E O CAMINHO DO CLIQUE NÃO EXISTIA PARA NENHUM DOS DOIS (decisão D2 do
 o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
@@ -33,13 +30,13 @@ O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 3. o segundo disparo do mesmo arraste (`change` + `click`) não reescreve o
    arquivo — o guarda é a IGUALDADE, não um relógio;
 4. gravar NÃO reaplica o perfil: nenhum `profile.switch` sai destes gestos, e é
-   o que impede um arraste de barra de desfazer o que ela mexeu em outra aba;
+   o que impede um arraste de barra de desfazer o que o usuário mexeu em outra aba;
 5. sem perfil ativo o aparelho muda e o gesto DIZ que não guardou — pelo canal
    de aviso, nunca pela recusa: o mouse ficou mesmo mais rápido;
 6. a RESSALVA da D3 nasce só com mais de um controle ligado, e o desenho
    publicado tem o endereço dela VAZIO;
 7. os quatro gestos estão em `hefesto_vivo.PERIGOSOS` — uma régua de clique não
-   troca a velocidade do mouse dela para provar que sabe clicar.
+   troca a velocidade do mouse do usuário para provar que sabe clicar.
 
 O LAR É DE MENTIRA. O `conftest` desvia `HOME` e os quatro `XDG_*`; estes testes
 escrevem perfil de verdade, com `save_profile`, dentro dele — que é a única
@@ -406,7 +403,7 @@ def test_a_barra_nao_manda_o_daemon_reaplicar_o_perfil(pac, a06, gesto, carga):
     `perfil.gravar_e_reaplicar` termina em `profile_switch`, que reaplica o
     perfil INTEIRO — e a barra de luz que ela DESLIGOU acende de novo (medido em
     03/09 no `a03_gatilhos`, repetido em 04/09 no trilho de brilho da 04). Numa
-    BARRA seria pior: cada passo do arraste desfaria o que ela mexeu nas outras
+    BARRA seria pior: cada passo do arraste desfaria o que o usuário mexeu nas outras
     abas e ainda não salvou.
 
     A MORDIDA: troque o `loader.save_profile` de `_guardar_no_perfil` por
@@ -455,7 +452,7 @@ def test_a_ressalva_sai_no_pacote_em_todo_tique(pac, a06):
 
 
 def test_a_ressalva_nao_usa_a_palavra_que_ela_baniu(a06):
-    """*"não é pra ter mesa em nada da interface"* — ordem dela, 05/09/2026."""
+    """ — ordem, 05/09/2026."""
     assert "mesa" not in a06.RESSALVA_DOS_GLOBAIS.lower()
 
 
@@ -497,7 +494,7 @@ def test_a_ressalva_nao_ocupa_mais_linha_no_pe_do_painel(a06):
 
 @pytest.mark.parametrize("nome", ["vel-cursor", "vel-rolagem", "teclado", "modo"])
 def test_o_gesto_que_grava_esta_em_perigosos(nome):
-    """A régua de clique não troca a velocidade do mouse dela para se provar."""
+    """A régua de clique não troca a velocidade do mouse do usuário para se provar."""
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert (PAGINA, nome) in PERIGOSOS

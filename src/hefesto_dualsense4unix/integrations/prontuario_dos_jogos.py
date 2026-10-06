@@ -1,6 +1,6 @@
 """PRONTUARIO-01 — o que o DISCO sabe sobre cada jogo, e o que ele NÃO sabe.
 
-O alvo que ela nomeou em 15/08/2026, ao sair: *"espero de fato que tenhamos
+O alvo que o usuário nomeou em 15/08/2026, ao sair: *"espero de fato que tenhamos
 tudo resolvido e cada um dos jogos locais jogável via cabo ou bt"*. Este módulo
 é a régua desse alvo — e a primeira coisa que ele faz é recusar o número fácil.
 
@@ -31,7 +31,7 @@ O cruzamento que faltava. Cada peça já existia sozinha — a linha de
 inicialização (`sentinela_do_wrapper`), a API de entrada do executável
 (`api_de_entrada`), o Steam Input e a allowlist (`steam_launch_options`) — e
 ninguém as tinha posto lado a lado por jogo. Posto lado a lado, o censo da
-máquina dela (24 jogos instalados, 16/08/2026) mostra o número que decide o
+máquina do usuário (24 jogos instalados, 16/08/2026) mostra o número que decide o
 alvo dela:
 
     entende_dualsense   7 jogos   SDL ou o plugin DualShock no binário
@@ -412,7 +412,7 @@ class Prontuario:
         - a favor, num balde PRÓPRIO: `PONTE_CONFIRMADA`, que diz "esta
           combinação já pegou aqui" — um fato de natureza diferente de tudo o
           mais neste módulo, porque não foi lido do disco: foi confirmado com o
-          jogo aberto, na máquina dela.
+          jogo aberto, na máquina do usuário.
 
         O que ele NÃO faz, e a recusa é decisão medida (16/08, Duskfade x
         DON'T SCREAM): promover ninguém a "funciona". `SEM_IMPEDIMENTO`

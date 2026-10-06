@@ -74,7 +74,7 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
 
     Este teste exigia a saída **(a)** da sprint: o `mic_button_loop` só agia
     quando `fonte_padrao_e_o_controle()` respondia sim. Ela caiu em 01/09/2026
-    (MIC-DA-MESA-ELEICAO-01), por decisão dela e por duas medições:
+    (MIC-DA-MESA-ELEICAO-01), por decisão de produto e por duas medições:
 
     1. **A guarda não separava CONTROLES.** Ela pergunta por SUBSTRING
        "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte

@@ -3,7 +3,7 @@
 A vibração dos jogos da Sony pelo cabo depende do sink `…HiFi__Speaker__sink`,
 que só nasce com a placa do controle aberta por UCM. O gancho do produto
 (`scripts/install_ucm_dualsense.sh`) é lido pelo `ucm.conf` do SISTEMA. Quatro
-buracos que só apareciam fora da bancada dela, e cada régua abaixo morde um:
+buracos que só apareciam fora da bancada, e cada régua abaixo morde um:
 
 1. o `alsa-ucm-conf` não era declarado no censo do install — no apt ele chega
    como `Recommends`, e numa instalação sem recomendações simplesmente falta —,
@@ -20,7 +20,7 @@ buracos que só apareciam fora da bancada dela, e cada régua abaixo morde um:
    casos que esta leva quer expor.
 
 **FORA DAQUI, e declarado:** o `Syntax 6` do `assets/ucm/DualSense-gancho.conf`.
-O cético mediu que o `Syntax 6` pede libasound >= 1.2.7 e que o gancho só usa
+A conferência mediu que o `Syntax 6` pede libasound >= 1.2.7 e que o gancho só usa
 o que o nível 4 já tem, mas baixar o número pede conferir com `alsaucm` um
 DualSense NO CABO, e os controles da bancada estavam descarregados.
 """

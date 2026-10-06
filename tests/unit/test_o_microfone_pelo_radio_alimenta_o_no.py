@@ -378,7 +378,7 @@ def test_o_parar_desliga_o_microfone_mesmo_sem_ter_ligado(pactl, par) -> None:  
 
 
 def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """SUSPENDED + a palavra DELA: o microfone vai ao ar."""
+    """SUSPENDED + a palavra de produto: o microfone vai ao ar."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -396,7 +396,7 @@ def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: i
 
 
 def test_o_mudo_dela_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """RUNNING + `False`: *"não quero ser ouvida"* vence um app gravando."""
+    """RUNNING + `False`:  vence um app gravando."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -433,7 +433,7 @@ def test_sem_a_palavra_dela_o_ouvinte_continua_dono(pactl, par) -> None:  # type
 
 
 def test_o_parar_esquece_a_palavra_dela(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """A terceira das cinco portas: o pedido dela morre com a ponte."""
+    """A terceira das cinco portas: o pedido morre com a ponte."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -449,7 +449,7 @@ def test_o_parar_esquece_a_palavra_dela(pactl, par) -> None:  # type: ignore[no-
 def test_quatro_controles_no_radio_tem_quatro_canais(pactl) -> None:  # type: ignore[no-untyped-def]
     """Quatro DualSense, quatro canais com nome próprio — o foco dela.
 
-    *"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+
     Uma tela que conta um está descrevendo a bancada de ontem.
     """
     for uniq in OS_QUATRO:
@@ -866,7 +866,7 @@ def test_a_prioridade_chega_ao_no_e_nao_so_ao_argv(pactl) -> None:  # type: igno
     pedaço que o servidor joga fora. Ela mede o TEXTO do comando; o nó nascia
     com o 2000 padrão do `pipewire-pulse`.
 
-    MEDIDO na máquina dela em 06/09/2026, carregando os dois lado a lado e
+    MEDIDO na máquina do usuário em 06/09/2026, carregando os dois lado a lado e
     LENDO O NÓ com `pactl list sources`::
 
         sem aspas  ->  description = Microfone          priority.session = 2000

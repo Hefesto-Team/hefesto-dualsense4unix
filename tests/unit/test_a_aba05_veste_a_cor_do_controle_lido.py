@@ -112,7 +112,7 @@ def test_a_moldura_pede_o_alvo_da_cor_uma_vez_por_coluna_conectada() -> None:
     **INVERTEU EM 07/09/2026, E É O PONTO INTEIRO DA CURA.** Esta régua dizia
     *"o lugar vazio NÃO ganha o endereço… ele não desenha controle nenhum, logo
     não tem plástico que vestir"* — e essa ausência era o defeito, medido com os
-    quatro DualSense dela na mesa: o daemon publicava os quatro, o pacote
+    quatro DualSense do usuário na mesa: o daemon publicava os quatro, o pacote
     mandava as quatro colunas e o P3 e o P4 ficavam no travessão, porque o
     piloto pinta procurando `data-campo` DENTRO do bloco daquele
     `data-controle`. Sem endereço, o dado dela chega e não tem onde pousar.
@@ -178,7 +178,7 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
       identidade contava os três valores de cada chip como congelados;
     * um controle SEM colorway não pode derrubar a fita. `cor_da_zona("")`
       levanta `SystemExit`, e era isso que fazia o piloto desistir da fita
-      inteira e deixar os dois controles do MOCKUP na tela dela.
+      inteira e deixar os dois controles do MOCKUP na tela do usuário.
 
     A MORDIDA: tirar o `data-campo` do chip faz o
     `check_identidade_vem_de_cima --bancada --aba 05` voltar de 0 para 8.
@@ -192,7 +192,7 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
     trouxe esta régua). O `c6adb2d8` a tornou condicional, e com razão:
     `.chip.plastico` desenha a borda com `var(--plastico)`, e vesti-la num chip
     sem cor lida pintaria uma borda que ninguém leu — que é o defeito desta onda
-    inteira, e é a regra dela: campo sem informação não mostra nada.
+    inteira, e é a regra de produto: campo sem informação não mostra nada.
 
     Com o recorte velho a própria régua se contradizia: ela exigia dois chips
     **e** que o segundo não tivesse cor, e o segundo era justamente o que a

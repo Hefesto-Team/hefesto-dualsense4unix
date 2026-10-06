@@ -333,7 +333,7 @@ def test_sem_a_pagina_a_conta_e_a_de_antes() -> None:
 
 
 def test_o_que_a_aba_declara_vence_o_desenho() -> None:
-    """A linha LEDs apagada da 04 é pedido dela que o desenho não tem."""
+    """A linha LEDs apagada da 04 é pedido que o desenho não tem."""
     carga = _carga("04-iluminacao.html", [])
     from pacotes import a04_iluminacao
 

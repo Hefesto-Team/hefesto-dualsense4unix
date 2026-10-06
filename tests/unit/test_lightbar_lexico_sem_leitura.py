@@ -22,9 +22,9 @@ ler uma linha nomeada dele custa uma passada de ``ElementTree``. O que ela
 mapa é da Z6/PAREAMENTO-01, e fingir que ele já existe seria trocar um defeito
 de tela por um defeito de portão.
 
-**O que ela também não alcança, e é dela:** ``docs/usage/interface.md`` ainda
+**O que ela também não alcança, e é do usuário:** ``docs/usage/interface.md`` ainda
 diz que a linha mostra *"o que está aceso neste instante"*. O arquivo é de
-outra frente nesta leva; o conserto está nomeado no relatório do agente A4.
+outra frente nesta leva; o conserto está nomeado no relatório A4.
 """
 
 from __future__ import annotations

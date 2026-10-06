@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_a_maiuscula_decorativa.py — a CAIXA ALTA que não significa nada.
 
-POR QUE ELE NASCEU, e a ordem é dela
+POR QUE ELE NASCEU, e a ordem é de produto
 -------------------------------------
 Em 11/09/2026 ela abriu o produto instalado com um DualSense no cabo e leu, na
 MESMA tela, a mesma palavra escrita de dois jeitos::
@@ -16,7 +16,7 @@ MESMA tela, a mesma palavra escrita de dois jeitos::
 `topo.html` (ESQUELETO-C2); o que não pode é voltar — nem ali, nem em nenhuma
 das outras nove páginas.
 
-E A REGRA DA CASA SOBRE MAIÚSCULA É DELA, de 30/08/2026: *"a maiúscula a   (noqa-acento: citação literal)
+E A REGRA DA CASA SOBRE MAIÚSCULA É DO USUÁRIO, de 30/08/2026: *"a maiúscula a   (noqa-acento: citação literal)
 regra é sobre a primeira letra a ser capitalizada, é o padrão do projeto"*.
 Palavra INTEIRA em caixa alta não é ênfase nesta casa — é ruído, e é o que esta
 régua procura.
@@ -44,7 +44,7 @@ O QUE ELE NÃO LÊ, E É DECISÃO
 * **O ``<title>`` do documento** (``Hefesto — aba JOGAR``). Mesma razão do
   ``check_a_janela_nao_confessa``: o `WebKit2.WebView` mora numa `Gtk.Window`
   sem barra de abas e sem barra de endereço — **nesta janela ninguém o lê**.
-  Contá-lo daria dez vermelhos sobre texto que a tela dela não mostra.
+  Contá-lo daria dez vermelhos sobre texto que a tela do usuário não mostra.
 * **O conteúdo dos SELOS**, e é ordem da sprint: *"Os selos são desenho e
   ficam."* A peneira é ESTRUTURAL (a classe do elemento), nunca uma lista de
   palavras: um selo novo amanhã já nasce coberto, e uma palavra decorativa que

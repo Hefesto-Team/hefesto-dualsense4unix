@@ -1,4 +1,4 @@
-"""A prova botão a botão não pode gravar no perfil DELA."""
+"""A prova botão a botão não pode gravar no perfil do usuário."""
 
 from __future__ import annotations
 

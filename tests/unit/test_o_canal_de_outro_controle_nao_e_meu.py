@@ -180,7 +180,7 @@ def test_o_canal_de_pe_neste_processo_fica() -> None:
 
 
 def test_canal_com_escritor_fica_mesmo_sem_pedido() -> None:
-    """O canal vivo de OUTRO processo — o `mic bt` do CLI, ou o daemon dela."""
+    """O canal vivo de OUTRO processo — o `mic bt` do CLI, ou o daemon do usuário."""
     servidor = _Servidor()
     servidor.pôr("536870933", CANAL_DO_VIZINHO, escreve=True)
     varredor = servidor.varredor()
@@ -286,7 +286,7 @@ def test_o_laco_nao_derruba_o_canal_de_quem_pediu(monkeypatch: pytest.MonkeyPatc
 
 
 def test_sem_varredor_injetado_o_gerenciador_de_mentira_nao_varre_nada() -> None:
-    """A suíte roda na máquina onde o daemon dela está de pé: laço de teste não varre."""
+    """A suíte roda na máquina onde o daemon do usuário está de pé: laço de teste não varre."""
     sub = bt_mic.BtMicSubsystem(gerenciador=_GerenciadorDeMentira())
     contexto = type("Ctx", (), {"config": None, "controller": None})()
     asyncio.run(sub.start(contexto))  # type: ignore[arg-type]

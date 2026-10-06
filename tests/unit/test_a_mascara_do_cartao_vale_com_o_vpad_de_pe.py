@@ -1,6 +1,6 @@
 """MODO-DE-CONEXAO-01 — a máscara do cartão vale com o vpad de pé e o jogo aberto.
 
-A regra dela, 13/09/2026, está citada na sprint: *"eles precisam funcionar
+A regra, 13/09/2026, está citada na sprint: *"eles precisam funcionar
 durante o jogo"*. O estudo mediu que o `gamepad.mask.set` gravava o registro e o
 perfil e **não recriava o vpad**: o cartão acendia «Xbox 360» e o jogo seguia
 recebendo o DualSense, e reativar o perfil também não recriava. O §D.6 decidiu:
@@ -21,7 +21,7 @@ NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: a mordida citava
 `_handle_gamepad_mask_set._vestir_a_mascara_na_hora`. O ato saiu do handler do
 socket e virou `external_mask.escolher_a_mascara`, chamado pela rota IPC e pelo
 gesto PS + L3 — antes o gesto alcançava o handler privado por string. O que esta
-régua mede não mudou: o vpad tem de nascer vestindo a escolha dela.
+régua mede não mudou: o vpad tem de nascer vestindo a escolha do usuário.
 """
 from __future__ import annotations
 

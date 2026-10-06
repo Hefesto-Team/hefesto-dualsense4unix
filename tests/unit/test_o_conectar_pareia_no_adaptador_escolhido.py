@@ -7,14 +7,14 @@ Os relatos dela de 26/09/2026, com três DualSense e três adaptadores:
     respeitaw nem a guia selecionada no radio e adaptadores e nem o botão
     correspondente ao Conectar.»* <!-- noqa-acento: citação literal -->
 
-E a decisão dela, às 04h: *«No adaptador aberto (a Esquerda)»*.
+E a decisão de produto, às 04h: *«No adaptador aberto (a Esquerda)»*.
 
 MEDIDO no ``radio-diario.jsonl`` dela: os oito «Conectar» da madrugada abriram
 a busca no ``hci0``, qualquer que fosse o adaptador aberto — o destino era o da
 D8, e o chip do «Procurando» morava num painel que o próprio «Conectar» abria
 com a busca já de pé noutro adaptador.
 
-A RÉGUA É A DELA, a frase 1: *idempotente, universal, independente do número do
+A RÉGUA É A DO USUÁRIO, a frase 1: *idempotente, universal, independente do número do
 jogador, da posição do adaptador na lista, da quantidade de adaptadores e do
 transporte*. Então cada caso roda na MATRIZ: o destino em cada uma das três
 posições, a lista em três ordens, e dois arranjos de números de jogador. O
@@ -168,7 +168,7 @@ def preparar_o_diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def preparar_a_tela(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """O pacote da 08 lendo na hora, sem nada da tela de antes nem do disco dela."""
+    """O pacote da 08 lendo na hora, sem nada da tela de antes nem do disco do usuário."""
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -198,7 +198,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def mundo_da_madrugada() -> rm.RadioDeMentira:
-    """Dois controles no ar na sala (com som), e o verde novo, desligado, na mão dela."""
+    """Dois controles no ar na sala (com som), e o verde novo, desligado, na mão do usuário."""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(SALA, AZUL)
@@ -212,7 +212,7 @@ def ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho
 
 
 class BuscaDePe:
-    """Segura o fio da central DENTRO da janela, esperando o gesto dela."""
+    """Segura o fio da central DENTRO da janela, esperando o gesto do usuário."""
 
     def __init__(self, relogio: rm.Relogio) -> None:
         self.portao = threading.Event()

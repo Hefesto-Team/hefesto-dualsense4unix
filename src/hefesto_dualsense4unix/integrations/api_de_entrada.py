@@ -21,9 +21,9 @@ Dos 24 jogos, **14 caem no mesmo balde** — a assinatura "XInput e mais nada":
 | jogo | imports do PE | agulhas | funciona hoje com máscara DualSense? |
 |---|---|---|---|
 | **Duskfade** | (nenhum de entrada) | `rawinput,xinput` | **NÃO** — é o defeito |
-| **DON'T SCREAM** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil dela) |
-| **Big Walk** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil dela) |
-| **Sackboy** | `xinput1_4.dll` | `rawinput,xinput` | **SIM** (perfil dela) |
+| **DON'T SCREAM** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil do usuário) |
+| **Big Walk** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil do usuário) |
+| **Sackboy** | `xinput1_4.dll` | `rawinput,xinput` | **SIM** (perfil do usuário) |
 | **Stray** | `xinput1_3.dll` | `rawinput,xinput` | **SIM** |
 | PEAK, MMJ, Mad King, Mr. Sleepy Man, Scarlet Deer Inn, オバケイドロ, REANIMAL,
   DON'T SCREAM TOGETHER | (nenhum de entrada) | `rawinput,xinput` | sem perfil |

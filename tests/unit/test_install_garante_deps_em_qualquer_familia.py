@@ -186,7 +186,7 @@ def test_familia_desconhecida_nao_inventa(tmp_path: Path) -> None:
     ],
 )
 def test_opensuse_nao_e_prometido(tmp_path: Path, os_release: str) -> None:
-    """19/08/2026 — decisão dela: **não prometer openSUSE**."""
+    """19/08/2026 — decisão de produto: **não prometer openSUSE**."""
     arquivo = tmp_path / "os-release"
     arquivo.write_text(os_release, encoding="utf-8")
     proc = _roda(
@@ -398,7 +398,7 @@ def test_checagem_de_biblioteca_nao_morre_de_sigpipe(tmp_path: Path) -> None:
 
 
 def test_reconhecimento_nao_diz_mais_que_so_sabe_apt() -> None:
-    """Fato errado se substitui (regra dela, 11/08/2026)."""
+    """Fato errado se substitui (regra, 11/08/2026)."""
     assert "instala dependências só por apt" not in INSTALL
     assert "sem apt-get: esta não é uma distro da família Debian/Ubuntu" not in INSTALL
 

@@ -1,7 +1,7 @@
 """O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 — quem troca o modo grava o modo.
 
 A bancada da demo de 29/09 (achado 2, 01h43): com o Modo Freestyle ligado e os
-quatro DualSense no rádio, ela clicou no «Sony DualSense» da aba Jogar. Os
+quatro DualSense no rádio, o usuário clicou no «Sony DualSense» da aba Jogar. Os
 quatro pads trocaram, e o `freestyle.json` seguiu dizendo `caminho: xbox`. Quem
 gravava o modo do chip era a JANELA, depois da resposta do
 `gamepad.emulation.set`; com quatro pads a troca levou ~2,9 s, a janela desistiu
@@ -9,7 +9,7 @@ aos 2,0 s, e a escolha nunca chegou ao perfil.
 
 A cura: um escritor só, no daemon (`Daemon.gravar_o_modo_escolhido`), que os
 três setters do modo chamam DEPOIS do aparelho, e só quando a porta diz que é
-escolha dela (`grava_o_modo`). A janela deixou de gravar o modo.
+escolha do usuário (`grava_o_modo`). A janela deixou de gravar o modo.
 
 A BANCADA é um lar de mentira: o `Daemon` é SUBCLASSE do real (herda as
 assinaturas, e o dublê não pode ser mais frouxo que o produto), o
@@ -273,7 +273,7 @@ def test_o_chip_grava_no_freestyle_sem_depender_da_janela(bancada: _Bancada) -> 
 def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(bancada: _Bancada) -> None:
     """Depois do chip, o «Ativar» do Freestyle não para nem recria o pad.
 
-    E o primeiro pad do boot nasce no modo que ela escolheu
+    E o primeiro pad do boot nasce no modo que o usuário escolheu
     (`_o_modo_do_perfil_do_boot`).
 
     MORDIDA: a mesma da régua 1. O `profile.switch` recria o pad em Xbox (uma
@@ -381,7 +381,7 @@ def test_o_nativo_ja_aceso_grava_native_no_perfil_que_divergiu(bancada: _Bancada
     """O Nativo já ligado e o perfil dizendo `gamepad`: o clique à mão conserta o perfil.
 
     É o `ja_estava` do Nativo: o setter volta cedo (nada a trocar no aparelho),
-    e a escolha dela vai ao perfil do mesmo jeito, como o chip aceso faz com o
+    e a escolha do usuário vai ao perfil do mesmo jeito, como o chip aceso faz com o
     caminho. Sem isto, o «Desligado» aceso clicado de novo deixaria o perfil
     dizendo o modo de antes, e o boot o seguiria.
 

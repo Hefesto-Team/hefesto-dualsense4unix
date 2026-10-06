@@ -1,4 +1,4 @@
-"""AGORA E DEPOIS — a escolha dela para de voltar sozinha, e o clique para de aplicar."""
+"""AGORA E DEPOIS — a escolha do usuário para de voltar sozinha, e o clique para de aplicar."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real

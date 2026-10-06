@@ -348,7 +348,7 @@ def write_lightbar_slot(
        ou ele as acende por conta própria e ignora o que mandamos, e então esta
        função escreve num lugar que não chega a lugar nenhum.
 
-       **GRAU: SEM PROVA.** A medição que decide custa uma escrita e o olho dela:
+       **GRAU: SEM PROVA.** A medição que decide custa uma escrita e o olho de quem confere:
        pintar um slot conhecido e perguntar o que as luzes fizeram. Está na
        ``P-4`` de :doc:`docs/protocol/externos-referencia-canonica`.
     """

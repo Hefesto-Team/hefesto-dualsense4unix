@@ -1,6 +1,6 @@
 """A régua do defeito D3: nenhum endereço da aba Gatilhos fica sem quem escreva.
 
-O DEFEITO, medido em 02/09/2026 com a mesa dela (dois controles, perfil
+O DEFEITO, medido em 02/09/2026 com a bancada (dois controles, perfil
 `meu_perfil`, `triggers.left = {mode: 'Off', params: []}` e o mesmo à direita) e
 fotografado com o piloto oculto:
 
@@ -27,7 +27,8 @@ O QUE ELA MORDE, e os quatro já aconteceram:
 * a barra de preenchimento pintar por texto     → `test_a_barra_diz_como_quer_ser_pintada`
 * a coluna vazia aceitar clique sem dizer nada  → `test_o_lugar_vazio_recusa_dizendo_que_esta_vazio`
 * a coluna VAZIA ficar com o efeito de quem saiu → `test_o_lugar_vazio_recebe_desligado_e_nenhum`
-* a recusa do daemon chegar CRUA na tela dela   → `test_a_recusa_do_daemon_chega_na_lingua_da_tela`
+* a recusa do daemon chegar CRUA na tela do usuário   →
+  `test_a_recusa_do_daemon_chega_na_lingua_da_tela`
 """
 from __future__ import annotations
 
@@ -153,7 +154,7 @@ def test_o_modo_com_ajuste_traz_os_dele_e_so_os_dele(a03):
 
 
 def test_o_modo_grande_nao_esconde_ajuste(a03):
-    """A DECISÃO 2 DELA numa asserção: *"a tela nunca esconde o que está
+    """A DECISÃO 2 DO USUÁRIO numa asserção: *"a tela nunca esconde o que está
     gravado no disco"*.
 
     Cinco dos 19 modos pedem mais barras do que a página reservava —
@@ -493,7 +494,7 @@ class _PonteQueRecusa:
     ],
 )
 def test_a_recusa_do_daemon_chega_na_lingua_da_tela(a03, gesto_, clique, cru, esperado):
-    """A frase que vai para a tela dela é a humanizada, não a do `core`."""
+    """A frase que vai para a tela do usuário é a humanizada, não a do `core`."""
     from pacotes import Contexto, gesto_da_pagina
 
     fn = gesto_da_pagina(PAGINA, gesto_)
@@ -565,7 +566,7 @@ def test_o_efeito_com_nome_nasce_e_volta(a03, tmp_path, monkeypatch):
     A BIBLIOTECA MORA EM `app/gui_prefs.py` — a caixa de preferências da
     interface, que já existia, é XDG-correta e resolve o caminho NA CHAMADA. O
     `conftest.py` desta casa já desvia `HOME` e os `XDG_*` para um lar de
-    mentira, então nada aqui toca o disco dela.
+    mentira, então nada aqui toca o disco do usuário.
 
     ARRANQUE o `_salvar_o_meu` do gesto `guardar` e esta régua reprova na
     primeira asserção: o nome não volta.
@@ -676,7 +677,7 @@ def test_a_caixa_nao_vaza_na_pagina_que_o_produto_renderiza_hoje(a03):
 
 
 def test_o_aviso_do_que_nao_coube_saiu_por_decisao_dela(a03):
-    """Ela mandou tirar o aviso, e a casa que ele ocupava voltou a ser barra."""
+    """O usuário mandou tirar o aviso, e a casa que ele ocupava voltou a ser barra."""
     assert not hasattr(a03, "NAO_COUBE"), (
         "a constante do aviso voltou. Ela saiu por decisão dela em 02/09/2026, "
         "e uma frase de tela não volta sem a palavra dela")

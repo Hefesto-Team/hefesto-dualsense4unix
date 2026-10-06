@@ -371,7 +371,7 @@ def _escolhida(uniq: str, numero: int, cor: RGB, plastico: str | None,
 ], ids=["roxo-ao-lado-do-galactic", "rosa-ao-lado-do-cosmic", "branco-ao-lado-do-white"])
 def test_a_escolha_ao_lado_de_um_plastico_vizinho_fica(plastico: str, escolha: RGB,
                                                         k: int, via: str) -> None:
-    """A cor que ela escolheu fica, e o plástico vizinho de outro controle cede ao número."""
+    """A cor que o usuário escolheu fica, e o plástico vizinho de outro controle cede ao número."""
     del via
     numeros = [1, 2, 3, 4]
     quem_escolhe = numeros[(k % 4)]

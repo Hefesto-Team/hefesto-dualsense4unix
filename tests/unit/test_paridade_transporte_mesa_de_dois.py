@@ -17,7 +17,7 @@ saída do controle no rádio**.
 
 POR QUE ELE EXISTE, e o que ele NÃO prova
 -----------------------------------------
-Em 12/08/2026, com os controles na mesa dela, os dois lados foram MEDIDOS e
+Em 12/08/2026, com os controles na bancada, os dois lados foram MEDIDOS e
 gravados em `docs/data/ensaios.csv`: `comb-cabo-radio-saida-2212` (+ o irmão de
 rádio) — FF disparado no cabo e no rádio na MESMA janela, os dois vibraram
 iguais; e `comb-dois-no-radio-saida-2235` — os DOIS controles do rádio

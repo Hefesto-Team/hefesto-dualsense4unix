@@ -8,7 +8,7 @@ valores além de 0 e 1? Existe meio-brilho? Existe piscar?*
 
 POR QUE ELA IMPORTA, e a pergunta é dela
 -----------------------------------------
-Em 02/09/2026 ela decidiu que a luz do microfone deve dizer DUAS coisas ao
+Em 02/09/2026 o usuário decidiu que a luz do microfone deve dizer DUAS coisas ao
 mesmo tempo, com brilho diferente:
 
     aceso fraco  = o canal deste controle está vivo
@@ -34,7 +34,7 @@ cada, e no fim DEVOLVE A POSSE. Só isso.
 
 **O mudo do microfone mora em OUTRO byte** — o `common[9]`, com outro bit de
 autorização — e este instrumento não o toca. Acender a luz não muta nada: é o
-mesmo fato que sustenta a inversão que ela pediu, e as três recusas medidas
+mesmo fato que sustenta a inversão que o usuário pediu, e as três recusas medidas
 (BT-E-VPAD-01, MIC-BT-DONO-01, MIC-DOIS-DONOS-01) são todas sobre o byte 9.
 
 A DEVOLUÇÃO É OBRIGATÓRIA e está no `finally`, inclusive para o Ctrl+C. Sem ela
@@ -53,7 +53,7 @@ caminho certo é o do produto: quem segura o valor entre um report e o próximo
 
 COMO SE LÊ O RESULTADO
 ----------------------
-Quem lê é o olho dela: o registrador **não tem caminho de leitura** no
+Quem lê é o olho de quem confere: o registrador **não tem caminho de leitura** no
 firmware. O instrumento imprime o que está MANDANDO e espera; ela diz o que a
 luz fez. É por isso que a linha do mapa vai nascer `provado_por = olho-dela`, e
 nunca `bancada`.

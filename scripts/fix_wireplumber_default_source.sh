@@ -23,7 +23,7 @@
 #     --unmute-routes   SÓ tira o `"mute":true` persistido das rotas do DualSense
 #                       (camada 1) — sem mexer em drop-in nem em fonte padrão.
 #     --marcar-gesto-do-mic   DROPIN-AMBIGUO-01: só grava a MARCA DO GESTO
-#                       ("o mic do DualSense é escolha dela, em <data>"). Não
+#                       ("o mic do DualSense é escolha do usuário, em <data>"). Não
 #                       toca em drop-in, em fonte padrão nem no WirePlumber.
 #                       É por onde o `install.sh --keep-dualsense-mic` carimba.
 #     --apagar-gesto-do-mic   o contrário: só apaga a marca. É por onde o
@@ -51,7 +51,7 @@
 # (FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01, BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01, ADR-019.)
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — MEDIDO na máquina dela, num
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — MEDIDO na máquina do usuário, num
 # `install.sh` completo, e a contradição estava no mesmo terminal:
 #
 #   passo 10/11 do install:  OK: microfone padrão ativo = alsa_output.pci-…
@@ -117,7 +117,7 @@ readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
 # "ela promoveu o mic do controle a dedo". A ausência tem DUAS origens e o
 # disco não as distingue: a promoção explícita e o `uninstall` que desarmou a
 # cura (ou a instalação que nunca houve). Máquina curada e máquina quebrada
-# eram o MESMO estado — e foi desse estado que saiu a queixa dela de 04/08,
+# eram o MESMO estado — e foi desse estado que saiu a queixa de 04/08,
 # *"não funciona nem mic, nem os botões de sons do jogo"*.
 #
 # A cura é marcar o GESTO, nunca o estado: quem LIGA o microfone do DualSense
@@ -228,7 +228,7 @@ pick_target_source_id() {
 #
 # INSTALADOR-QUE-APROVOU-O-MONITOR-01. O `pick_target_source_id` acima escolhe a
 # primeira fonte não-DualSense do `wpctl status` e pronto — sem o filtro de porta
-# que a cura do doctor aplica desde a RECEITA-ERRADA-01. Medido na máquina dela:
+# que a cura do doctor aplica desde a RECEITA-ERRADA-01. Medido na máquina do usuário:
 # isso elegia `alsa_input.pci-…analog-stereo`, cujas TRÊS portas de captura estão
 # `not available`; o `pactl`/`wpctl` aceita, o WirePlumber não consegue honrar um
 # nó sem porta usável, reelege sozinho, e o `.monitor` do sink volta. O estrago é
@@ -315,7 +315,7 @@ fontes_elegiveis() {
 # responde — daqui só sai a resposta.
 #
 # DIFERENÇA DELIBERADA PARA `fontes_elegiveis`: aquela função EXCLUI o DualSense
-# de propósito, porque a pergunta dela é *"qual é a melhor que NÃO é o
+# de propósito, porque a pergunta de produto é *"qual é a melhor que NÃO é o
 # controle"* — a régua do caminho de VOLTA. Esta pergunta é outra: *"o nó que eu
 # quero eleger para de pé?"*, e o nó que se quer eleger normalmente **é** o
 # controle. Misturar as duas faria a eleição recusar sempre.
@@ -401,7 +401,7 @@ install_dropin() {
 
 # SOM-QUE-NAO-DORME-01 — o alto-falante do controle nunca dorme.
 #
-# MEDIDO na orelha dela em 15/08/2026 23h45 (ensaio
+# MEDIDO na orelha do usuário em 15/08/2026 23h45 (ensaio
 # `sfx-no-suspenso-come-o-comeco`): com o nó SUSPENSO, o primeiro som depois do
 # silêncio se perde no religar do hardware. Num jogo é o SFX importante sumindo.
 # O drop-in 54 põe `session.suspend-timeout-seconds = 0` no sink do DualSense, e
@@ -484,7 +484,7 @@ install_disable_dropin() {
 #     until v == nil                      -- PARA no primeiro buraco
 #
 # Apagada a base, a leitura para na primeira volta e `.0`/`.1` ficam
-# INALCANÇÁVEIS: some o histórico INTEIRO de preferência de microfone dela, não
+# INALCANÇÁVEIS: some o histórico INTEIRO de preferência de microfone do usuário, não
 # só a linha do DualSense.
 #
 # São DOIS defeitos, não um, e o estado real desta máquina exibe os dois — ele
@@ -633,7 +633,7 @@ verify_active_not_dualsense() {
     # (auto_null.monitor)"; cinco segundos depois, `pactl get-default-source`
     # respondia o DualSense. Mesmo estado de máquina, dois veredictos —
     # dependendo de quando se olhou. Um julgamento que depende do relógio não é
-    # idempotente, e ela nomeou isso.
+    # idempotente, e o usuário nomeou isso.
     #
     # A CURA é esperar por uma resposta que SIGNIFIQUE alguma coisa: enquanto
     # for vazia, `auto_null` ou o mic do DualSense, o grafo ainda pode mudar.
@@ -674,7 +674,7 @@ verify_active_not_dualsense() {
     # o mic do DualSense — e era exatamente por isso que a resposta saía "OK",
     # enquanto o doctor reprovava o mesmo estado dois minutos depois. Monitor é
     # defeito PRÓPRIO: o que qualquer aplicativo gravar é o áudio de SAÍDA do
-    # sistema, não a voz dela. Não se chama isso de microfone padrão ativo.
+    # sistema, não a voz do usuário. Não se chama isso de microfone padrão ativo.
     if is_monitor_source "${cur}"; then
         log "FALHA: a fonte padrão é um MONITOR (${cur}) — não é microfone nenhum:"
         log "       o que qualquer aplicativo gravar é o áudio de SAÍDA do sistema,"
@@ -797,7 +797,7 @@ usb_quirk_active_session() {
 # PROMOTOR desde então, e o `rm -f` que ficou aqui desarmava a cura de 08/08 no
 # gesto de LIGAR o microfone: sem o arquivo, a entrada volta ao 50 de fábrica, o
 # monitor vence de novo por vinte e duas vezes, e o que qualquer aplicativo
-# grava é o eco do que sai — não a voz dela. A aba Emulação, enquanto isso,
+# grava é o eco do que sai — não a voz do usuário. A aba Emulação, enquanto isso,
 # escrevia "Ligado" em verde, porque só olhava o 52/53.
 #
 # Quem liga o mic quer o mic: o promotor FICA, e passa a ser GARANTIDO
@@ -851,7 +851,7 @@ _arma_dropins_do_mic() {
 #
 # Idempotente, e a data do carimbo é a do PRIMEIRO gesto: reescrevê-la a cada
 # `--enable-mic` apagaria a única informação que a marca carrega além da
-# própria existência — QUANDO ela pediu. $1 = o gesto, para o arquivo dizer de
+# própria existência — QUANDO o usuário pediu. $1 = o gesto, para o arquivo dizer de
 # onde veio.
 _marca_do_gesto_gravar() {
     local gesto="${1:-enable-mic}"
@@ -959,7 +959,7 @@ promote_source_dualsense() {
     # como ele sempre foi — o 51 sai, e sai ANTES do restart, como antes. Não é
     # descuido: `doctor.sh:_prefere_mic_do_dualsense` lê a ausência do 51 como a
     # promoção explícita da usuária, e é ela que impede a cura do doctor de
-    # eleger outra fonte por cima da escolha dela. O que mudou foi só o
+    # eleger outra fonte por cima da escolha do usuário. O que mudou foi só o
     # `--enable-mic`, onde apagar o promotor era desarmar MONITOR-QUE-VENCE-01.
     enable_mic_dualsense "sem-promotor"
     # Camadas 1 e 2 têm UM dono: o doctor. Promover uma fonte sem porta de
@@ -1013,7 +1013,7 @@ ACORDADO_MUDOU=1
 # MIC-DA-MESA-ELEICAO-01: `fonte-se-sustenta`, `melhor-fonte-elegivel` e
 # `outra-captura-elegivel` são CONSULTA. O gesto do botão do mic passa por
 # `fonte-se-sustenta` e `outra-captura-elegivel` a cada aperto, e não pode
-# escrever drop-in nenhum na máquina dela — ver o bloco `outra-captura-elegivel`
+# escrever drop-in nenhum na máquina do usuário — ver o bloco `outra-captura-elegivel`
 # no `case` abaixo. A `melhor-fonte-elegivel` é a pergunta do install.
 if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" \
    && "${MODE}" != "apagar-gesto" && "${MODE}" != "fonte-se-sustenta" \
@@ -1080,7 +1080,7 @@ case "${MODE}" in
         # O PREÇO ACEITO, e ele tem de estar na tela: com o drop-in 51 no lugar
         # a entrada do controle fica em `priority.session = 1500`, abaixo de
         # qualquer captura real (2009) — logo **plugar a webcam desfaz a
-        # escolha dela**, e o LED tem de apagar quando isso acontecer, porque
+        # escolha do usuário**, e o LED tem de apagar quando isso acontecer, porque
         # ele é pintado da RELEITURA do ativo, nunca do que mandamos.
         rc_consulta=0
         outra_captura_elegivel || rc_consulta=$?
@@ -1089,7 +1089,7 @@ case "${MODE}" in
     nunca-dorme)
         # Modo isolado: o `install.sh` o chama SEM FLAG, em todos os formatos,
         # antes de qualquer decisão sobre o microfone. Só reinicia o WirePlumber
-        # se o arquivo REALMENTE mudou — reiniciar o áudio da sessão dela à toa,
+        # se o arquivo REALMENTE mudou — reiniciar o áudio da sessão do usuário à toa,
         # a cada instalação idempotente, seria custo sem cura.
         #
         # O `if` explícito (em vez de `[[ ... ]] && cmd`) é por causa do
@@ -1104,7 +1104,7 @@ case "${MODE}" in
         ;;
     marcar-gesto)
         # DROPIN-AMBIGUO-01: SÓ o carimbo. Existe para o `install.sh` poder
-        # dizer "ela pediu para não mexerem no mic dela" (`--keep-dualsense-mic`)
+        # dizer "o usuário pediu para não mexerem no mic dela" (`--keep-dualsense-mic`)
         # sem que isso vire mais uma inferência de estado no doctor.
         _marca_do_gesto_gravar "keep-dualsense-mic"
         exit 0

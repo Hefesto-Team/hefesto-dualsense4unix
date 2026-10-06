@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """A RÉGUA DA CURA DE 01/09/2026: o que está no perfil chega à tela.
 
-POR QUE ELA EXISTE, e a pergunta dela é o enunciado: *"vc tá corrigindo na
-origem esses problemas que tá relatando né?"*
+POR QUE ELA EXISTE, e a pergunta de produto é o
 
 Não estava. Dezessete valores desta interface mostravam travessão com uma frase
 dizendo que o produto não sabia aquilo. **Doze tinham dono** — o perfil no disco
-dela — e o erro tinha uma forma só: *eu perguntei ao `state_full` do daemon, ele
-não publica gatilho nem brilho, e li a ausência como inexistência.*
+do usuário — e o erro tinha uma forma só: *perguntou-se ao `state_full` do daemon, ele
+não publica gatilho nem brilho, e a ausência foi lida como inexistência.*
 
 O QUE ESTA RÉGUA MEDE, e é a parte que a cura pode perder de novo: que os
 valores do perfil ATRAVESSEM até o pacote. Ela não olha texto de tela nem
@@ -193,7 +192,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         (`steam_launch_options.reopen_steam`, que tinha zero chamadores vindos
         de `interface/`). Decisão 17 dela, 03/09: o botão liga, e o gesto entra
         em `hefesto_vivo.PERIGOSOS` para a `--prova-gesto` não abrir a Steam na
-        tela dela.
+        tela do usuário.
 
     **DE CINCO PARA TRÊS — 05/09/2026.** `barra:motor` e
     `forca:auto-da-mesa` saíram CURADOS; a razão de cada um está no dict
@@ -211,7 +210,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         (`_onde_estao_os_lancadores`) mas não LÊ a biblioteca de nenhum deles;
       * `plugins` — o IPC `plugin.list` existe e **só a CLI o chama**.
 
-    O `sem_dono` é o oposto de esconder: é a tela dizendo *"isto eu não sei"*
+    O `sem_dono` é o oposto de esconder: é a tela dizendo
     em vez de mostrar o desenho como se fosse dado.
 
     **A RÉGUA MORDE NOS DOIS SENTIDOS, e é por isso que a igualdade é exata:**

@@ -8,13 +8,13 @@ da saída de som aceso, e um tom contínuo no sink padrão saiu **só na TV**:
     (as quatro pontes `hefesto_som_*`, os quatro endpoints de háptica,
      o sink USB do controle no cabo: 0,000000)
 
-Palavra dela: *"so saiu na tv."*
+
 
 A CAUSA NÃO ERA O APARELHO. O botão gravava `speaker.fonte = "mix"` no PERFIL,
 e o único leitor daquela escolha no daemon é
 `AltoFalanteSubsystem._fontes_do_perfil`, que lê o perfil **ATIVO**. Sem perfil
 ativo — ou antes de o "Salvar" acontecer — a resposta honesta dele é `{}`, cada
-nó fica com `FONTE_PADRAO`, e o clique dela não move uma nota de som.
+nó fica com `FONTE_PADRAO`, e o clique do usuário não move uma nota de som.
 
 A CURA É UM CAMINHO NOVO, NÃO UM SEGUNDO DONO: `speaker.set` passou a aceitar
 `fonte`, o subsystem guarda a escolha VIVA e ela vence o perfil. O perfil
@@ -215,7 +215,7 @@ def test_a_recusa_da_posse_nao_leva_a_escolha_da_camada_1_junto(
 def test_o_byte_recusado_tambem_nao_leva_a_fonte(
     sub: AltoFalanteSubsystem,
 ) -> None:
-    """O firmware diz não; o nó continua ouvindo o que ela escolheu."""
+    """O firmware diz não; o nó continua ouvindo o que o usuário escolheu."""
 
     class _Recusa(_Backend):
         def set_speaker_volume(self, volume: Any, **k: Any) -> bool:

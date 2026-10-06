@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""A borda do cartão da aba Jogar é a cor do controle DELA, não a do mockup.
+"""A borda do cartão da aba Jogar é a cor do controle do usuário, não a do mockup.
 
-A LEI, e ela é dela (03/09/2026, IDENTIDADE-VEM-DE-CIMA-01):
+A LEI, e é do usuário (03/09/2026, IDENTIDADE-VEM-DE-CIMA-01):
 
     "se no topo tá mostrando controle white player 1, então cada aba vai usar
     os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado.  (noqa-acento: palavra dela)
+    faz referencia ao controle conectado.  (noqa-acento: palavra de produto)
     Por isso temos o mapa pra servir como variável de identificação"
 
-O QUE ESTAVA NA TELA, fotografado em 03/09 com os dois controles dela na mesa e
+O QUE ESTAVA NA TELA, fotografado em 03/09 com os dois controles do usuário na mesa e
 a página publicada de hoje:
 
     rótulo do cartão do P1     White · USB          ← o pacote já escrevia certo
@@ -28,7 +28,7 @@ O QUE ESTA RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
    entregar*: um `data-campo` que ninguém escreve zera a régua e deixa a tela
    igualmente errada;
 4. sem leitura de cor o pacote manda VAZIO, e não o nome do desenho — regra
-   dela: campo sem informação não mostra nada;
+   de produto: campo sem informação não mostra nada;
 5. a pele NÃO é o `.cartao`: o desenho grande tem 16 traços em `currentColor`
    (`ds_limpo.svg`), e pintar a cor no cartão repintaria o controle inteiro.
 
@@ -143,7 +143,7 @@ def test_cada_lugar_da_mesa_tem_a_pele_enderecada() -> None:
     O LUGAR VAZIO CONTINUA SEM PELE NA TELA, e é isso que esta régua ainda
     protege — só que por CSS e não por ausência de HTML: `.cartao.off > .pele`
     é `display:none`, e a regra já existia desde 03/09 exatamente para o cartão
-    que vira `off` em tempo de execução. A cena que ela aprovou não muda um
+    que vira `off` em tempo de execução. A cena que o usuário aprovou não muda um
     pixel; o que muda é haver onde a cor pousar.
     """
     fileira = fileira_de_cartoes()

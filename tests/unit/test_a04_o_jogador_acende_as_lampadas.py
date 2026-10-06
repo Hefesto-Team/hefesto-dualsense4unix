@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""AS CINCO LÂMPADAS SEGUEM O NÚMERO — a queixa dela, 04/09/2026.
+"""AS CINCO LÂMPADAS SEGUEM O NÚMERO — a queixa, 04/09/2026.
 
 *"escolha do jogador no iluminação não funciona"*.
 
 O gesto `player` da aba Iluminação chamava `identity.number.set` e parava aí.
 Isso troca o NÚMERO EXIBIDO; as cinco lâmpadas brancas do DualSense não vêm
-com ele. Medido na mesa dela, com os dois controles ligados e o daemon vivo,
+com ele. Medido na bancada, com os dois controles ligados e o daemon vivo,
 lendo `/sys/class/leds` a cada passo::
 
     estado de partida            slot=2 → lâmpadas do 2 · slot=1 → do 1
@@ -18,7 +18,7 @@ lendo `/sys/class/leds` a cada passo::
 ``aplicado_em: [<o controle>]``. É a camada do co-op repintando por cima, uma
 posição acima do override por-uniq no merge do backend. Um gesto que escrevesse
 o override e lesse aquele `aplicado_em` como sucesso poria "aplicado" na tela
-dela sobre duas lâmpadas paradas.
+do usuário sobre duas lâmpadas paradas.
 
 Daí os DOIS ramos que os testes abaixo separam, e a régua existe porque eles são
 fáceis de fundir num só por engano:

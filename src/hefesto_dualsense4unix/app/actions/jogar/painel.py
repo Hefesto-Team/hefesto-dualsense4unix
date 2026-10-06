@@ -28,8 +28,8 @@ Os três buracos de 29/08/2026 — e o que os fechou em 31/08/2026
 ---------------------------------------------------------------
 
 Os três eram perguntas para ELA, e ela as respondeu de uma vez ao redesenhar o
-**Modo de conexão** em 31/08/2026, depois de perguntar *"qual a diferença de
-nativo pra dualsense?"*. A forma aprovada é o interruptor **HEFESTO
+**Modo de conexão** em 31/08/2026, depois de perguntar **. A forma aprovada é o interruptor
+**HEFESTO
 Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
 
 1. **O quarto botão de modo, "Desligado".** Ele não tinha leitor:
@@ -41,7 +41,7 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
    Desligado do interruptor, que **é** o ``MODE_NATIVE`` — e esse lê (o mesmo
    ``mode_of_state``) e escreve (``apply_mode('native')``). A lápide, com a
    data, é :data:`MODO_DESLIGADO`. Parar o Hefesto INTEIRO continua sendo
-   "Parar o serviço", na aba Sistema — e a palavra é escolha dela de 31/08:
+   "Parar o serviço", na aba Sistema — e a palavra é escolha de 31/08:
    "parar" é o que o `systemctl stop` faz e é o par de "Ligado"; "encerrar"
    sugeria fim definitivo, e o serviço volta no próximo login.
 
@@ -54,7 +54,7 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
    função daqui: a pergunta é de quem desenvolve, e a tela nunca a fez.
 
 3. **O "Automático" da escada não tinha leitor nem escritor.** **FECHADO por
-   palavra dela**, 31/08: *"na aba jogar o Botão Automático não existe"*. O
+   palavra de produto**, 31/08: *"na aba jogar o Botão Automático não existe"*. O
    MECANISMO ficou inteiro — *tentar em ordem e parar quando acerta* é o que
    ``integrations/ponte_tentativa`` faz sozinho, sempre; o que saiu foi o botão
    que fingia comandá-lo.
@@ -62,9 +62,7 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
 O QUE CONTINUA EM ABERTO, e é honesto dizer
 -------------------------------------------
 
-* **Point And Click FECHOU** — POINT-AND-CLICK-01, 17/09/2026, pela ordem dela:
-  *"o modo point and click é o modo navegação e o modo que nós mesmos podemos
-  usar e configurar na aba navegação. Ele ativa o modo configurado lá."* Ele
+* **Point And Click FECHOU** — POINT-AND-CLICK-01, 17/09/2026, pela  Ele
   nunca foi um botão órfão: é o ``kind="desktop"`` do perfil, com chip na tela
   chamado **Navegação**, gesto no terceiro degrau do PS + R3 e uma aba inteira
   configurando-o. **O que faltava era o fio** entre o que ela configura e o que
@@ -233,11 +231,11 @@ def plano_do_modo(
 
 
 class Lembranca(NamedTuple):
-    """O que ELA DECIDIU sobre o gamepad virtual, lido do DISCO.
+    """O que O USUÁRIO DECIDIU sobre o gamepad virtual, lido do DISCO.
 
     É a metade que o daemon calado não responde. ``modo_vivo`` pergunta ao
     ``state_full``: com o daemon fora do ar ele devolve ``None``, e a tela
-    ficaria sem ter o que dizer justamente na hora em que a pergunta dela — *"não
+    ficaria sem ter o que dizer justamente na hora em que a pergunta de produto — *"não
     sei se segue desativado"* — é mais aflita.
     """
 
@@ -348,9 +346,9 @@ class Aviso(NamedTuple):
 #: E ELA NÃO AFIRMA O QUE NINGUÉM MEDIU. *"O jogo vê dois jogadores"* seria
 #: afirmação forte sem régua — a §4.2 da sprint é **inferido do código**, e a
 #: medição que a fecharia (dois DualSense num jogo de co-op local, no cabo e no
-#: rádio) é bancada dela, na MESA-DE-QUATRO-01. A frase diz de quem é a conta,
+#: rádio) é bancada, na MESA-DE-QUATRO-01. A frase diz de quem é a conta,
 #: que é o que se sabe.
-#: **ELA ENCOLHEU COM A IRMÃ — 11/09/2026, proposta A3-007, aprovada por ela.**
+#: **ELA ENCOLHEU COM A IRMÃ — 11/09/2026, proposta A3-007, aprovada pelo usuário.**
 #: A oração de quem conta é a mesma de ``aba01.NATIVO_E_OS_JOGADORES``, e as
 #: duas mudaram na mesma linha porque a régua cobra a mesma oração nas duas.
 FRASE_DO_MODO_NATIVO = (

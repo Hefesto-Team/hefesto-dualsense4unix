@@ -1,17 +1,14 @@
-"""O PRETO É BANIDO COMO COR DE LIGHTBAR — ordem dela, 22/09/2026.
+"""O PRETO É BANIDO COMO COR DE LIGHTBAR — ordem, 22/09/2026.
 
-**A QUEIXA, com as palavras dela:** *"pq o lightbar do starlight blue sempre
-desliga após conectar? mesmo o perfil atual não mandando ele desligar e ter
-cor? isso é só com ele, independente da ordem"*.
+**A QUEIXA, com as palavras de produto:** **.
 
-**O PERFIL MANDAVA.** Medido no disco dela no mesmo minuto: a peça daquele
+**O PERFIL MANDAVA.** Medido no disco do usuário no mesmo minuto: a peça daquele
 controle tinha `leds.lightbar: [0, 0, 0]`, escrita por um "Salvar Perfil" às
 13:53 daquele dia — o Salvar leu *"não sei a cor"* (`lightbar_rgb is None`) e
-gravou PRETO. E não era um controle só: **sete dos 29 perfis dela** guardam o
+gravou PRETO. E não era um controle só: **sete dos 29 perfis do usuário** guardam o
 preto na seção GLOBAL, e neles abrir o jogo apagava a barra dos quatro.
 
-**A ORDEM:** *"vamos banir esse preto de aparecer independente do controle
-tambem"*. <!-- noqa-acento: citação literal -->
+**A ORDEM:** **. <!-- noqa-acento: citação literal -->
 
 O QUE ESTA RÉGUA COBRA, nos cinco pontos do caminho:
 
@@ -24,7 +21,7 @@ O QUE ESTA RÉGUA COBRA, nos cinco pontos do caminho:
 
 E O CONTRAPESO: **apagar a barra continua possível pelo
 brilho**. `lightbar_brightness = 0.0` zera os três canais DEPOIS da escolha da
-cor, e essa é a mão dela — o banimento tira do produto o direito de apagar
+cor, e essa é a mão do usuário — o banimento tira do produto o direito de apagar
 sozinho, não tira dela o apagar.
 """
 
@@ -58,7 +55,7 @@ def _spec_da_peca(rgb: tuple[int, int, int], *, brilho: float = 1.0) -> Any:
 
 
 def test_a_peca_preta_nao_escreve_cor_nenhuma() -> None:
-    """A peça do Starlight Blue, como estava no disco dela."""
+    """A peça do Starlight Blue, como estava no disco do usuário."""
     spec = _spec_da_peca(PRETO)
     assert spec is None or spec.led is None, (
         "a peça preta voltou a mandar cor para o aparelho")
@@ -71,7 +68,7 @@ def test_a_peca_com_cor_continua_escrevendo() -> None:
 
 
 def test_o_brilho_zero_continua_apagando_a_peca() -> None:
-    """O contrapeso: apagar pelo brilho é a mão dela, e ela continua valendo."""
+    """O contrapeso: apagar pelo brilho é a mão do usuário, e ela continua valendo."""
     spec = _spec_da_peca((128, 0, 255), brilho=0.0)
     assert spec is not None and spec.led == (0, 0, 0), (
         "o brilho 0 parou de apagar — o banimento comeu o apagar dela")
@@ -110,7 +107,7 @@ def _led_do_global(rgb: tuple[int, int, int], *, brilho: float = 1.0) -> Any:
 
 
 def test_o_global_preto_nao_apaga_os_quatro() -> None:
-    """Sete perfis de jogo dela guardavam isto — e apagavam a mesa inteira."""
+    """Sete perfis de jogo do usuário guardavam isto — e apagavam a mesa inteira."""
     assert _led_do_global(PRETO) is None
 
 
@@ -136,7 +133,7 @@ def test_sem_cor_lida_o_arquivo_fica_sem_o_campo() -> None:
 
 
 def test_o_preto_que_ja_esta_no_disco_chega_a_tela_como_sem_cor() -> None:
-    """Os sete perfis de jogo dela — o preto já gravado não vira escolha."""
+    """Os sete perfis de jogo do usuário — o preto já gravado não vira escolha."""
     from hefesto_dualsense4unix.app.draft_config import _leds_config_to_draft
 
     assert _leds_config_to_draft(LedsConfig(lightbar=PRETO)).lightbar_rgb is None
