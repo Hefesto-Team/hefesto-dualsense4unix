@@ -493,9 +493,13 @@ def test_o_pedido_do_governador_vira_a_janela_de_duas_saidas(mesa: Any) -> None:
 
 #: o selo «sofrendo» da faixa de cada aparelho é o do desenho 1 que o usuário aprovou em 04/10
 #: (`docs/process/estudos/2026-10-04-o-desenho-das-conexoes/fotos/d1.png`), com a palavra junto.
+#: E o da gaveta do «⋮» (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01, 06/10): o que
+#: apaga é vermelho com letra branca, e o «Não conectou» do estado tem a cor do selo da faixa.
 _O_VERMELHO_PEDIDO = ('.parte.movimento[data-nivel="engasga"]',
                       '.canais-do-lugar[data-nivel="engasga"]',
-                      '.ar-selo.sofrendo')
+                      '.ar-selo.sofrendo',
+                      '.painel .btn.apaga',
+                      '.estado .nao-conectou')
 
 
 def test_alem_do_limite_e_laranja_nunca_vermelho(mesa: Any) -> None:
