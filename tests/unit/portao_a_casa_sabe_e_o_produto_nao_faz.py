@@ -1207,8 +1207,41 @@ class Promessa:
     tipo: str
 
 
-def _arvore(caminho: Path) -> ast.Module:
-    return ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
+def _nos_de_import(arvore: ast.AST) -> tuple[ast.Import | ast.ImportFrom, ...]:
+    """Os ``import`` e ``from … import`` da árvore, na ordem do ``ast.walk``."""
+    return tuple(
+        no for no in ast.walk(arvore) if isinstance(no, (ast.Import, ast.ImportFrom))
+    )
+
+
+@functools.lru_cache(maxsize=None)
+def _lido_do_texto(
+    texto: str,
+) -> tuple[ast.Module, tuple[ast.Import | ast.ImportFrom, ...]]:
+    """A AST de um texto e os imports dela, lidos UMA vez por conteúdo — SÓ para leitura.
+
+    O portão varre a mesma árvore dezenas de vezes (cada mordida refaz a varredura
+    sobre uma cópia que difere em UM arquivo), e o ``ast.parse`` de 358 módulos e
+    as três caminhadas por todos os nós atrás dos imports eram quase todo o preço
+    de cada varredura. A chave é o TEXTO, nunca o caminho nem o mtime: o arquivo
+    mordido tem outro texto e, logo, outra árvore.
+    """
+    arvore = ast.parse(texto)
+    return arvore, _nos_de_import(arvore)
+
+
+def _arvore(caminho: Path, *, mutavel: bool = False) -> ast.Module:
+    """A árvore do arquivo; ``mutavel`` pede uma própria, que quem poda pode alterar."""
+    texto = caminho.read_text(encoding="utf-8")
+    if mutavel:
+        return ast.parse(texto, filename=str(caminho))
+    return _lido_do_texto(texto)[0]
+
+
+def _arvore_e_imports(
+    caminho: Path,
+) -> tuple[ast.Module, tuple[ast.Import | ast.ImportFrom, ...]]:
+    return _lido_do_texto(caminho.read_text(encoding="utf-8"))
 
 
 def _modulos(raiz: Path) -> list[Path]:
@@ -1250,6 +1283,7 @@ class _Mapa:
     arvores: dict[str, ast.Module]
     define: dict[str, frozenset[str]]
     reexporta: dict[str, dict[str, tuple[str, str]]]
+    imports: dict[str, tuple[ast.Import | ast.ImportFrom, ...]]
 
 
 def _nome_de_modulo(alvo: Path, caminho: Path) -> str:
@@ -1283,8 +1317,9 @@ def _base_do_import(mapa: _Mapa, modulo: str, no: ast.ImportFrom) -> str:
 
 def _mapear(alvo: Path) -> _Mapa:
     modulos = {_nome_de_modulo(alvo, p): p for p in _modulos(alvo)}
-    arvores = {nome: _arvore(p) for nome, p in modulos.items()}
-    mapa = _Mapa(modulos, arvores, {}, {})
+    lidos = {nome: _arvore_e_imports(p) for nome, p in modulos.items()}
+    arvores = {nome: lido[0] for nome, lido in lidos.items()}
+    mapa = _Mapa(modulos, arvores, {}, {}, {nome: lido[1] for nome, lido in lidos.items()})
     for nome, arvore in arvores.items():
         definidos: set[str] = set()
         for no in arvore.body:
@@ -1296,7 +1331,7 @@ def _mapear(alvo: Path) -> _Mapa:
                 definidos.add(no.target.id)
         mapa.define[nome] = frozenset(definidos)
         reexporta: dict[str, tuple[str, str]] = {}
-        for no in ast.walk(arvore):
+        for no in mapa.imports[nome]:
             if not isinstance(no, ast.ImportFrom):
                 continue
             base = _base_do_import(mapa, nome, no)
@@ -1338,7 +1373,7 @@ def _com_ancestrais(mapa: _Mapa, modulo: str) -> set[str]:
 
 def _importados(mapa: _Mapa, modulo: str) -> set[str]:
     saida: set[str] = set()
-    for no in ast.walk(mapa.arvores[modulo]):
+    for no in mapa.imports[modulo]:
         if isinstance(no, ast.Import):
             for apelido in no.names:
                 if apelido.name in mapa.modulos:
@@ -1354,11 +1389,19 @@ def _importados(mapa: _Mapa, modulo: str) -> set[str]:
 
 
 def _tabela_de_nomes(
-    mapa: _Mapa, modulo: str, arvore: ast.AST, externo: bool = False
+    mapa: _Mapa,
+    modulo: str,
+    arvore: ast.AST,
+    externo: bool = False,
+    imports: tuple[ast.Import | ast.ImportFrom, ...] | None = None,
 ) -> dict[str, tuple[str, object]]:
-    """Nome local -> o módulo (``módulo``) ou o símbolo (``símbolo``) que ele é."""
+    """Nome local -> o módulo (``módulo``) ou o símbolo (``símbolo``) que ele é.
+
+    ``imports`` são os nós de import já colhidos da MESMA árvore; sem eles, a
+    árvore é caminhada aqui (é o caso das fontes de fora do pacote).
+    """
     tabela: dict[str, tuple[str, object]] = {}
-    for no in ast.walk(arvore):
+    for no in _nos_de_import(arvore) if imports is None else imports:
         if isinstance(no, ast.Import):
             for apelido in no.names:
                 if apelido.asname:
@@ -1731,7 +1774,7 @@ def _fontes_externas(
             continue
     for nome, caminho in sorted(pontes_vivas(raiz_do_projeto).items()):
         try:
-            arvore = _arvore(caminho)
+            arvore = _arvore(caminho, mutavel=True)
         except (OSError, SyntaxError):  # pragma: no cover — piloto quebrado é dele
             continue
         if podar_a_bancada:
@@ -1778,7 +1821,10 @@ def promessas_sem_caminho(
     for modulo in alcancados:
         arvore = mapa.arvores[modulo]
         contexto = _Contexto(
-            mapa, modulo, _tabela_de_nomes(mapa, modulo, arvore), mapa.define[modulo]
+            mapa,
+            modulo,
+            _tabela_de_nomes(mapa, modulo, arvore, imports=mapa.imports[modulo]),
+            mapa.define[modulo],
         )
         for indice, no in enumerate(arvore.body):
             visitante = _Referencias(contexto)
@@ -1819,16 +1865,20 @@ def promessas_sem_caminho(
                 if p.stem not in ponte_viva
             }
 
+    # Quem cita cada símbolo, indexado UMA vez: perguntar «algum outro nó o cita?»
+    # varrendo todos os nós a cada candidata era candidatas × nós; o índice
+    # responde a mesma pergunta com a mesma resposta.
+    citantes: dict[tuple[str, str], set[tuple[str, int]]] = {}
+    for onde, posicao, refs in refs_por_no:
+        for referencia in refs:
+            citantes.setdefault(referencia, set()).add((onde, posicao))
+
     orfas: dict[str, Promessa] = {}
     for promessa, modulo, indice in _candidatas(mapa, alvo):
         if promessa.arquivo in bancada_do_desenho:
             continue
         se_alcanca = (modulo, promessa.nome)
-        if any(
-            se_alcanca in refs
-            for onde, posicao, refs in refs_por_no
-            if not (onde == modulo and posicao == indice)
-        ):
+        if citantes.get(se_alcanca, set()) - {(modulo, indice)}:
             continue
         if promessa.nome in planas:
             continue
