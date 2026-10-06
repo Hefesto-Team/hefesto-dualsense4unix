@@ -1,6 +1,7 @@
 """O-CANARIO-NAO-FOTOGRAFA-A-CASA-01 — a foto do canário tem teto, e o link não é caminho."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -185,7 +186,7 @@ def test_a_pasta_pesada_nao_e_listada_inteira(
     lar = _lar_falso(tmp_path, monkeypatch)
     _encher(_estado(lar) / "enorme", 10 * TETO)
     lidas: list[str] = []
-    original = canario.os.scandir
+    original = os.scandir
 
     class _Contada:
         def __init__(self, caminho: Any) -> None:
@@ -205,7 +206,7 @@ def test_a_pasta_pesada_nao_e_listada_inteira(
             lidas.append(entrada.path)
             return entrada
 
-    monkeypatch.setattr(canario.os, "scandir", _Contada)
+    monkeypatch.setattr(os, "scandir", _Contada)
 
     canario._fotografar_tudo_de_aviso()
 
