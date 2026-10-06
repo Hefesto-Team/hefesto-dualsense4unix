@@ -162,7 +162,7 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
         lambda d: d["rotulos"]["lista"].append(dict(d["rotulos"]["lista"][0])),
         lambda d: d["ações"].update(aprovacao_de_fork="ninguem"),
         lambda d: d["ambientes"][0].update(revisores=[f"conta{i}" for i in range(7)]),
-        lambda d: d["ambientes"][0].update(revisores="[REDACTED]"),
+        lambda d: d["ambientes"][0].update(revisores="uma-conta"),
         lambda d: d["ambientes"][0].update(tags=[], ramos=[]),
         lambda d: d["equipes"][0].update(nome="Mantenedores Da Casa"),
         lambda d: d["projetos"][0]["etapas"][0].update(cor="VERDE"),
