@@ -306,7 +306,9 @@ def chave_do_portao(ent: Entradas, ambiente: str, ficha: str, runner: str, argv:
         if (ent.raiz / pedaco).is_file():
             arquivos.add(pedaco)
     h = hashlib.sha256()
-    h.update(f"{ambiente}\n{ficha}|{runner}|{argv}\n".encode())
+    # o caminho da árvore entra: um portão que confere a PRÓPRIA árvore (o piloto, o `src/`) pode passar numa
+    # e reprovar noutra com os mesmos bytes, e o verde de uma não é o da outra
+    h.update(f"{ambiente}\n{ent.raiz}\n{ficha}|{runner}|{argv}\n".encode())
     if runner == "bin" and palavras:
         h.update(f"bin:{palavras[0]}:{_stat_de(palavras[0])}\n".encode())
     if "@dia" in sinais:

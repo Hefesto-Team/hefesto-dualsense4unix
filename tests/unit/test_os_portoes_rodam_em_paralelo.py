@@ -690,6 +690,16 @@ def test_o_prazo_que_vence_poe_a_data_na_chave(
     assert chave(date(2026, 10, 6), ["@que-nao-existe"]) is None
 
 
+def test_os_mesmos_bytes_em_outra_arvore_nao_sao_o_mesmo_verde(tmp_path: Path) -> None:
+    """O portão que confere a PRÓPRIA árvore pode passar numa e reprovar noutra."""
+    (tmp_path / "um").mkdir()
+    (tmp_path / "dois").mkdir()
+    um = _repo_da_memoria(tmp_path / "um")
+    dois = _repo_da_memoria(tmp_path / "dois")
+    linha = "p|py|scripts/g_ok.py|dados/a/**"
+    assert _chaves(um, linha) != _chaves(dois, linha)
+
+
 def test_o_head_na_chave_acompanha_a_historia(tmp_path: Path) -> None:
     repo = _repo_da_memoria(tmp_path)
     sem = "p|py|scripts/g_ok.py|dados/a/**"
