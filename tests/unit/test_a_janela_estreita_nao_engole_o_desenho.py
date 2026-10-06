@@ -386,12 +386,8 @@ ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
         "fim'), que é o que sumiu. CURA: o `title` do campo passar a carregar a "
         "opção escolhida, como a aba Conexões faz nos dez `<select>` dela"
     ),
-    ("06-navegacao.html", "estreita"): (
-        "DEFEITO VIVO — dois `<select>` sem `title` nenhum: 'Sobe um degrau no "
-        "Modo de conexão' perde 18 px e 'Ligada — cada controle navega o Hefesto' "
-        "perde 20 px. É o mesmo campo que a FOTO desta régua mostra cortado em "
-        "'Modo de cone'"
-    ),
+    # 06/10/2026 (leva 1.7, item 10): a entrada da 06 saiu. As opções novas de
+    # «Tipo de navegação» cabem a 940 px, e a régua deu XPASS estrito.
 }
 
 
