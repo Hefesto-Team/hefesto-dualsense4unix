@@ -534,6 +534,9 @@ def test_o_job_que_e_plano_de_outro_nao_roda_sozinho_ao_lado_dele(mundo: Mundo) 
     assert r.returncode == 0, r.stdout + r.stderr
     assert "2 verde(s)" in r.stdout.strip().splitlines()[-1]
     assert "rodou dentro do plano de deb-install-smoke" in mundo.log("deb")
+    assert not (mundo.saida / "deb.seg").exists(), (
+        "o deb rodou o próprio act ao lado do que o cobre"
+    )
     chamadas = [ln for ln in mundo.log("deb-install-smoke").splitlines() if ln.startswith("ARGS:")]
     assert len(chamadas) == 2, "o deb-install-smoke roda as duas pernas, e o deb vai dentro delas"
     # falhando o que cobre, o coberto leva o mesmo código: não fica verde por ter sido «só um plano»
