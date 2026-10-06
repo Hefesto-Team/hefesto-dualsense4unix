@@ -29,6 +29,19 @@
 #   scripts/portoes.sh --suite      acrescenta a suíte de testes
 #   scripts/portoes.sh --listar     a tabela crua, que é o que o portão do portão lê
 #   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
+#   scripts/portoes.sh --em-serie   um portão de cada vez, na ordem da lista (a mesma corrida, sem a pressa)
+#   scripts/portoes.sh --sem-memoria  roda todos, sem pular o que já passou sobre os mesmos bytes
+#
+# EM PARALELO E COM MEMÓRIA (06/10/2026, OS-PORTOES-RODAM-EM-PARALELO-E-LEMBRAM-O-VERDE-01). Medido na
+# `integra/1-6`: 66 portões, 664 s somados, um por um, e a mesma árvore verde há cinco minutos rodava os 66
+# de novo. Agora os portões `py`, `bash` e `bin` rodam em `nproc` − 2 vagas, os `pytest` em três (a vez do
+# `vez-do-pytest.sh` quando ele existe), cada `pytest` com HOME, XDG_*, TMPDIR, D-Bus e Xvfb PRÓPRIOS:
+# dois portões nunca dividem lar, bus nem display. A saída de cada um vai a um arquivo e sai impressa na
+# ORDEM DA LISTA, como sempre saiu. O veredito é o mesmo da corrida em série (`--em-serie` é o mesmo motor
+# com uma vaga). E um portão verde fica lembrado pelo hash do que ELE lê (`scripts/recibo_da_medida.py`,
+# `chaves` e `anotar`): a corrida seguinte só o pula se esses bytes são idênticos; sem a quinta coluna da
+# tabela, são os da árvore inteira. `--sem-memoria` e a variável `CI` desligam a memória, e o recibo do
+# push continua pedindo a camada completa da MESMA árvore, com ou sem memória.
 #
 # O INTERPRETADOR SE DECLARA. A casa já pagou por medir contra a biblioteca
 # errada — "todo instrumento tem de declarar qual biblioteca está usando" — e
@@ -40,10 +53,17 @@ set -uo pipefail
 RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readlink -f "$0")")")"
 
 # ---------------------------------------------------------------------------
-# A TABELA. Colunas: camada|id|runner|argumentos
+# A TABELA. Colunas: camada|id|runner|argumentos[|entradas]
 #
 #   camada   rapido   | completo  | suite
 #   runner   py (o python resolvido) | bash | bin (binário do venv, senão PATH)
+#
+# A QUINTA COLUNA É OPCIONAL (06/10/2026) e quem lê as quatro primeiras não se quebra: ela declara o que o
+# portão LÊ, para a memória do verde, e vale em ordem de preferência o lado seguro. Sem ela, a árvore inteira.
+#   um glob       `src/**`: só estes (o ignorado também), e glob que não casa nada faz o portão rodar sempre
+#   @sempre       o portão lê a máquina ou a história do git, e nunca é lembrado
+#   @dia          o portão compara com a data de hoje (prazo que vence): a data entra na chave
+#   @head         o portão lê a história a partir do HEAD: o HEAD entra na chave
 #
 # Tempos medidos nesta árvore em 25/08/2026, `dev` em f475b2a, e é por eles que
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
@@ -100,7 +120,7 @@ rapido|ate-onde-a-prova-chegou|py|scripts/check_ate_onde_a_prova_chegou.py
 rapido|ate-onde-a-prova-chegou-morde|pytest|tests/unit/test_portao_a_quinta_pergunta_morde.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
-rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all
+rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all|@dia
 rapido|caducos|py|scripts/validar-caducos.py --all
 # O TEXTO PÚBLICO FALA COM QUEM USA — 28/09/2026: README, docs/usage, .github
 # (menos workflows), NOTICE, CHANGELOG e o metainfo, sem ID, sem «dela» e sem o
@@ -109,7 +129,7 @@ rapido|texto-publico|py|scripts/check_texto_publico.py
 rapido|palavra-de-tela|py|scripts/validar-palavra-de-tela.py --all
 rapido|version-consistency|py|scripts/check_version_consistency.py
 rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
-rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
+rapido|paridade-transporte|py|scripts/check_paridade_transporte.py|@dia
 # 03/09/2026: O TERCEIRO NÚMERO. Os dois outros medem a interface nova contra
 # ela mesma (campos escritos; publicado × mockup) e nenhum responde "o que a GTK
 # faz e o HTML não faz" -- que é de onde sai a fila. Este confere as 396
@@ -132,7 +152,7 @@ rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
 # motor `scripts/catraca.py`; o tamanho que cresce exige `Origem: <id>` na faixa.
 # É portão e não gancho de commit porque o cherry-pick não roda gancho. A mordida
 # é `tests/unit/test_a_catraca_da_origem_morde.py`, na suíte.
-rapido|a-origem|py|scripts/check_a_origem.py
+rapido|a-origem|py|scripts/check_a_origem.py|@sempre
 # NADA NOVO APONTA PARA A JANELA — 06/09/2026, sprint GTK-1. Decisão dela
 # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no gtk e
 # não apontar nada mais pra lá mas pro html"*. A janela GTK sai em três sprints
@@ -151,7 +171,7 @@ rapido|a-origem|py|scripts/check_a_origem.py
 completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
-rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_dela_em_toda_forma.py
+rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_dela_em_toda_forma.py|@sempre
 # O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz
 # o portão pro número de série"*. O serial de fábrica identifica a unidade dela
 # tão bem quanto o MAC, e a regra desta casa é sobre ARQUIVO VERSIONADO, não
@@ -197,7 +217,7 @@ completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 # cherry-pick, rebase, merge --no-edit nem sob --no-verify, e esta casa integra
 # leva por cherry-pick. O `.mailmap` nasceu da palavra dela de 15/09/2026:
 # *"o emaillist lá deveria ser o meu e o do andre apenas."*
-rapido|autoria-historia|py|scripts/check_autoria.py historia
+rapido|autoria-historia|py|scripts/check_autoria.py historia|@sempre
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
@@ -211,11 +231,11 @@ completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chama
 # suíte pela lição que este arquivo já carrega no `mac-por-oui`: era teste da
 # SUÍTE, e a suíte roda no FIM -- entre o vazamento e a reprovação havia um dia
 # inteiro de trabalho. Custa ~1 s.
-completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py
+completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py|@sempre
 completo|a-tela-dela|pytest|tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py
 completo|o-instrumento-e-a-tela|pytest|tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py
 completo|a-frase-banida|pytest|tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py
-completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py
+completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py|@sempre
 completo|o-piloto-e-a-arvore|pytest|tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 # 07/09/2026 — ELA MEDIU O DEFEITO NA MESA: *"4 controles conectados mas as
@@ -293,7 +313,7 @@ rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
 # cortado. Nasceu com o empilhamento da fileira da saída de som — sem trava, a
 # próxima altura a crescer apareceria na tela dela, não aqui. ~4 s.
 rapido|altura-do-cartao|py|scripts/check_a_altura_do_cartao.py
-rapido|regua-de-tela|py|scripts/check_regua_de_tela.py
+rapido|regua-de-tela|py|scripts/check_regua_de_tela.py|@sempre
 # A ORDEM DELA, 07/09/2026: *"o layout não informa os nossos defeitos."* Este
 # portão lê as dez páginas dos DOIS lados (bancada e publicado) e todo `Fala`
 # de `src/`, e obriga a DECLARAR toda frase com forma de confissão: de quem é o
@@ -349,13 +369,13 @@ rapido|grafia-do-nome-morde|pytest|tests/unit/test_portao_a_grafia_do_nome_morde
 # zonas, os 2.471 caminhos versionados e o AST de `app/actions/`.
 rapido|projeto-traduzivel|py|scripts/check_o_projeto_e_traduzivel.py
 rapido|projeto-traduzivel-morde|pytest|tests/unit/test_o_projeto_e_traduzivel_morde.py
-rapido|ruff|bin|ruff check src/ tests/
-completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
+rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
+completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh|scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all
 completo|anonimato|bash|scripts/check_anonymity.sh
-completo|autoria-arvore|py|scripts/check_autoria.py arvore
+completo|autoria-arvore|py|scripts/check_autoria.py arvore|@sempre
 completo|acentuacao|py|scripts/validar-acentuacao.py --all
-completo|mypy|bin|mypy src/hefesto_dualsense4unix
+completo|mypy|bin|mypy src/hefesto_dualsense4unix|src/** pyproject.toml
 completo|coleta-sem-gtk|py|scripts/check_a_coleta_sem_gtk.py
 suite|suite|bin|pytest -q
 TABELA
@@ -376,22 +396,28 @@ FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em cas
 DIV
 }
 
-_uso() { sed -n '2,32p' "$0" | sed 's/^# \?//'; }
+_uso() { sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# \?//'; }
 
 CAMADAS="rapido completo"
-case "${1:-}" in
-  --listar)
-    _LISTA | sed 's/^/PORTAO|/'
-    _DIVERGENCIAS
-    exit 0 ;;
-  --rapido)  CAMADAS="rapido" ;;
-  --interpretador) CAMADAS="" ;;   # só o cabeçalho; ver o bloco do interpretador
-  --suite)   CAMADAS="rapido completo suite" ;;
-  --aceite)  CAMADAS="rapido completo suite" ;;
-  -h|--help) _uso; exit 0 ;;
-  "")        ;;
-  *) echo "ERRO: opção desconhecida '${1}'. Veja $0 --help" >&2; exit 2 ;;
-esac
+MODO=""
+EM_SERIE=0
+SEM_MEMORIA=0
+for _opcao in "$@"; do
+  case "$_opcao" in
+    --listar)
+      _LISTA | sed 's/^/PORTAO|/'
+      _DIVERGENCIAS
+      exit 0 ;;
+    --rapido)  CAMADAS="rapido" ;;
+    --interpretador) CAMADAS=""; MODO="interpretador" ;;   # só o cabeçalho; ver o bloco do interpretador
+    --suite)   CAMADAS="rapido completo suite" ;;
+    --aceite)  CAMADAS="rapido completo suite" ;;
+    --em-serie) EM_SERIE=1 ;;
+    --sem-memoria) SEM_MEMORIA=1 ;;
+    -h|--help) _uso; exit 0 ;;
+    *) echo "ERRO: opção desconhecida '${_opcao}'. Veja $0 --help" >&2; exit 2 ;;
+  esac
+done
 
 # --- o interpretador, resolvido e DECLARADO -------------------------------
 #
@@ -504,7 +530,7 @@ fi
 # `--interpretador` para AQUI, e é ele que torna a resolução OBSERVÁVEL — que é
 # a metade que faltava quando o defeito de 04/09 viveu meses: o python errado
 # saía impresso e ninguém tinha como afirmar, numa régua, que ele estava certo.
-if [ "${1:-}" = "--interpretador" ]; then
+if [ "$MODO" = "interpretador" ]; then
   [ -z "${VENV_INCOMPLETA:-}" ]; exit $?
 fi
 echo
@@ -574,6 +600,10 @@ _sair() {
     for id in ${NAO_MEDIDOS[@]+"${NAO_MEDIDOS[@]}"} ${PULADOS[@]+"${PULADOS[@]}"}; do
       bandeiras+=(--nao-medido "$id")
     done
+    # o que veio da memória fica dito no recibo: verde de OUTRA corrida sobre os mesmos bytes
+    for id in ${LEMBRADOS[@]+"${LEMBRADOS[@]}"}; do
+      bandeiras+=(--lembrado "$id")
+    done
     echo
     "$PY" "$RAIZ/scripts/recibo_da_medida.py" fechar portoes-completo "$rc" \
       --raiz "$RAIZ" --corrida "$RECIBO_DA_CORRIDA" \
@@ -584,15 +614,32 @@ _sair() {
 }
 
 # --- a corrida -------------------------------------------------------------
+#
+# A CORRIDA EM TRÊS TEMPOS (06/10/2026, OS-PORTOES-RODAM-EM-PARALELO-E-LEMBRAM-O-VERDE-01):
+#
+#   1. LER a tabela e escolher os portões da camada (o ausente da árvore sai nomeado, sem rodar);
+#   2. LEMBRAR: perguntar ao `recibo_da_medida.py chaves` o hash do que cada portão lê, e pular quem já
+#      passou sobre os mesmos bytes;
+#   3. RODAR o resto em duas filas, cada uma com as suas vagas (a geral e a do `pytest`), com a saída de
+#      cada portão num arquivo, e IMPRIMIR na ordem da lista, de modo que o relato lê igual ao da corrida
+#      em série. O veredito, o `NÃO MEDIDO` e o recibo são os de sempre.
+#
+# O QUE NUNCA DIVIDE ESTADO: cada `pytest` leva o lar de mentira PRÓPRIO (`$LAR_DE_MENTIRA/<n>`), o D-Bus
+# e o Xvfb próprios, e `-p no:cacheprovider` (dois pytest nunca escrevem o mesmo `.pytest_cache`).
 VERMELHOS=()
 AUSENTES=()
 NAO_MEDIDOS=()
 PULADOS=()
+LEMBRADOS=()
+VERDES_TSV=""
 TOTAL=0
+G_ID=(); G_RUN=(); G_ARGV=(); G_ENT=(); G_ESTADO=(); G_CHAVE=(); G_DICA=()
 
-while IFS='|' read -r camada id runner argv; do
+while IFS='|' read -r camada id runner argv entradas; do
   [ -z "${camada:-}" ] && continue
+  case "$camada" in "#"*) continue ;; esac
   case " $CAMADAS " in *" $camada "*) ;; *) continue ;; esac
+  estado="rodar"
 
   # PORTÃO DECLARADO E AUSENTE SAI VERMELHO NOMEANDO. Um script que sumiu da
   # árvore e some da corrida em silêncio é o portão cego da cicatriz acima.
@@ -603,12 +650,91 @@ while IFS='|' read -r camada id runner argv; do
         *'*'*) ;;  # glob: quem expande é o shell, não dá para conferir aqui
         *) if [ ! -e "$RAIZ/$primeiro" ]; then
              AUSENTES+=("$id -> $primeiro")
-             printf '  %-22s AUSENTE DA ÁRVORE  %s\n' "$id" "$primeiro"
-             continue
+             estado="ausente"
            fi ;;
       esac ;;
   esac
+  case "$runner" in
+    py|bash|bin|pytest) ;;
+    *) echo "ERRO: runner desconhecido '$runner' no portão '$id'" >&2; exit 2 ;;
+  esac
+  G_ID+=("$id"); G_RUN+=("$runner"); G_ARGV+=("$argv"); G_ENT+=("${entradas:-}")
+  G_ESTADO+=("$estado"); G_CHAVE+=(""); G_DICA+=(0)
+  # a suíte inteira toca a máquina: nunca se lembra
+  [ "$camada" = suite ] && G_ENT[${#G_ID[@]}-1]="@sempre"
+done < <(_LISTA)
+N=${#G_ID[@]}
 
+# --- as vagas ----------------------------------------------------------------
+#
+# O SEMÁFORO DA CASA (`vez-do-pytest.sh`, três vagas divididas com todos os agentes em voo) conta o
+# `pytest` de cada portão. Quem já roda DENTRO de uma vaga (o `vez-do-pytest.sh bash scripts/portoes.sh`
+# de um agente) tem o descritor 9 preso a ela, herdado pelos filhos: aí os portões `pytest` não pedem
+# vaga de novo (três corridas de agente, cada uma segurando uma vaga e esperando outra, se travariam
+# para sempre) e rodam um de cada vez dentro da vaga que já têm. Sem o `vez-do-pytest.sh` (o CI, outra
+# máquina) a fila do `pytest` tem três vagas em máquina de oito núcleos ou mais, e uma nas outras.
+_NUCLEOS="$(nproc 2>/dev/null || echo 4)"
+VAGAS_GERAIS="${PORTOES_VAGAS:-$(( _NUCLEOS > 3 ? _NUCLEOS - 2 : 1 ))}"
+SEMAFORO=""
+_vez="${HEFESTO_VEZ_DO_PYTEST:-$RAIZ/docs/process/ferramentas-da-leva/vez-do-pytest.sh}"
+_dentro_da_vaga=0
+case "$(readlink /proc/$$/fd/9 2>/dev/null || true)" in */vagas/vaga-*) _dentro_da_vaga=1 ;; esac
+if [ "$_dentro_da_vaga" -eq 1 ]; then
+  VAGAS_PYTEST=1
+elif [ -f "$_vez" ]; then
+  SEMAFORO="bash $_vez"
+  VAGAS_PYTEST=3
+else
+  VAGAS_PYTEST=$(( _NUCLEOS >= 8 ? 3 : 1 ))
+fi
+VAGAS_PYTEST="${PORTOES_VAGAS_PYTEST:-$VAGAS_PYTEST}"
+[ "$EM_SERIE" -eq 1 ] && { VAGAS_GERAIS=1; VAGAS_PYTEST=1; }
+# tela e bus PRÓPRIOS de cada `pytest`, quando a máquina os tem
+PREFIXO_DE_TELA=""
+command -v dbus-run-session >/dev/null 2>&1 && PREFIXO_DE_TELA="dbus-run-session --"
+command -v xvfb-run >/dev/null 2>&1 && PREFIXO_DE_TELA="${PREFIXO_DE_TELA:+$PREFIXO_DE_TELA }xvfb-run -a"
+
+# --- a memória -----------------------------------------------------------------
+[ -n "${CI:-}" ] && SEM_MEMORIA=1   # o CI mede de verdade, sempre
+OUT="$LAR_DE_MENTIRA/saidas"
+mkdir -p "$OUT"
+MEM_PASTA=""
+if [ "$SEM_MEMORIA" -eq 0 ] && [ "$N" -gt 0 ]; then
+  _linhas=""
+  for ((n = 0; n < N; n++)); do
+    [ "${G_ESTADO[n]}" = rodar ] || continue
+    _resolvido="${G_ARGV[n]}"
+    [ "${G_RUN[n]}" = bin ] && _resolvido="$(_bin "${_resolvido%% *}") ${_resolvido#* }"
+    _linhas+="${G_ID[n]}|${G_RUN[n]}|${_resolvido}|${G_ENT[n]}"$'\n'
+  done
+  _chaves="$("$PY" "$RAIZ/scripts/recibo_da_medida.py" chaves --raiz "$RAIZ" \
+             <<<"$_linhas" 2>"$OUT/memoria.err")" || _chaves=""
+  [ -s "$OUT/memoria.err" ] && sed 's/^/  /' "$OUT/memoria.err"
+  declare -A _CHAVE_DE=() _DICA_DE=()
+  while IFS=$'\t' read -r _a _b _c; do
+    case "$_a" in
+      "#pasta") MEM_PASTA="$_b" ;;
+      "") ;;
+      *) _CHAVE_DE["$_a"]="$_b"; _DICA_DE["$_a"]="${_c:-0}" ;;
+    esac
+  done <<<"$_chaves"
+  for ((n = 0; n < N; n++)); do
+    [ "${G_ESTADO[n]}" = rodar ] || continue
+    G_DICA[n]="${_DICA_DE[${G_ID[n]}]:-0}"
+    _k="${_CHAVE_DE[${G_ID[n]}]:-}"
+    [ -n "$MEM_PASTA" ] && [ -n "$_k" ] || continue
+    G_CHAVE[n]="$_k"
+    [ -e "$MEM_PASTA/${G_ID[n]}.$_k" ] && G_ESTADO[n]="lembrado"
+  done
+fi
+
+# --- o que roda, e como --------------------------------------------------------
+_comando_do_portao() {  # índice -> o comando (para `eval`, dentro da raiz)
+  local i="$1" runner="${G_RUN[$1]}" argv="${G_ARGV[$1]}" cmd
+  if [ "$runner" = pytest ]; then
+    mkdir -p "$LAR_DE_MENTIRA/$i"/{config,data,cache,state,runtime,tmp}
+    chmod 700 "$LAR_DE_MENTIRA/$i/runtime"
+  fi
   case "$runner" in
     py)   cmd="$PY $argv" ;;
     bash) cmd="bash $argv" ;;
@@ -621,17 +747,109 @@ while IFS='|' read -r camada id runner argv; do
     # O `env` com o LAR DE MENTIRA é o que impede este runner de escrever na
     # casa dela — a razão inteira está no bloco «O LAR DE MENTIRA DO RUNNER
     # `pytest`», acima. Sem ele, este portão altera a configuração de quem está
-    # usando o produto no mesmo instante.
-    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]} $PY -m pytest -q $argv" ;;
-    *)    echo "ERRO: runner desconhecido '$runner' no portão '$id'" >&2; exit 2 ;;
+    # usando o produto no mesmo instante. Em paralelo cada portão leva o SEU lar
+    # (`$LAR_DE_MENTIRA/<índice>`): a substituição abaixo põe o índice no caminho
+    # das seis variáveis, e o TMPDIR mora lá também.
+    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $PREFIXO_DE_TELA $PY -m pytest -q -p no:cacheprovider $argv"
+            [ -n "$SEMAFORO" ] && cmd="$SEMAFORO $cmd" ;;
+  esac
+  echo "$cmd"
+}
+
+_roda_um() {  # índice: roda o portão e deixa a saída, os ms e, POR ÚLTIMO, o rc em $OUT
+  local n="$1" cmd inicio fim rc
+  cmd="$(_comando_do_portao "$n")"
+  inicio=$(date +%s%N)
+  ( cd "$RAIZ" && eval "$cmd" ) > "$OUT/$n.out" 2>&1
+  rc=$?
+  fim=$(date +%s%N)
+  printf '%d' $(( (fim - inicio) / 1000000 )) > "$OUT/$n.ms"
+  printf '%d' "$rc" > "$OUT/$n.rc.tmp" && mv -f "$OUT/$n.rc.tmp" "$OUT/$n.rc"
+}
+
+_escalona() {  # VAGAS ÍNDICE... : no máximo VAGAS portões ao mesmo tempo
+  local vagas="$1" rodando=0 n; shift
+  for n in "$@"; do
+    while [ "$rodando" -ge "$vagas" ]; do wait -n 2>/dev/null; rodando=$((rodando - 1)); done
+    _roda_um "$n" &
+    rodando=$((rodando + 1))
+  done
+  wait
+}
+
+_mais_lentos_primeiro() {  # o que o portão levou da última vez decide quem sai antes; o resto, na ordem da lista
+  local n
+  for n in "$@"; do printf '%s %s\n' "${G_DICA[n]:-0}" "$n"; done | sort -s -k1,1nr | awk '{print $2}'
+}
+
+_mata_arvore() { local f; for f in $(pgrep -P "$1" 2>/dev/null); do _mata_arvore "$f"; done; kill "$1" 2>/dev/null || true; }
+_interrompe() { local f; for f in $(jobs -p); do _mata_arvore "$f"; done; exit 130; }
+trap _interrompe INT TERM
+
+GERAL=(); DO_PYTEST=(); TODOS=()
+for ((n = 0; n < N; n++)); do
+  [ "${G_ESTADO[n]}" = rodar ] || continue
+  TODOS+=("$n")
+  if [ "${G_RUN[n]}" = pytest ]; then DO_PYTEST+=("$n"); else GERAL+=("$n"); fi
+done
+
+_nota_da_vaga=""
+[ -n "$SEMAFORO" ] && _nota_da_vaga=" (pela vez-do-pytest)"
+[ "$_dentro_da_vaga" -eq 1 ] && _nota_da_vaga=" (dentro de uma vaga que já é sua)"
+echo "         vagas   ${VAGAS_GERAIS} gerais, ${VAGAS_PYTEST} de pytest${_nota_da_vaga}"
+if [ "$SEM_MEMORIA" -eq 1 ]; then echo "         memória desligada"; else echo "         memória ${MEM_PASTA:-(indisponível)}"; fi
+echo
+
+INICIO_DA_CORRIDA=$(date +%s)
+ESCALONADORES=()
+if [ "$EM_SERIE" -eq 1 ]; then
+  _escalona 1 ${TODOS[@]+"${TODOS[@]}"} & ESCALONADORES+=("$!")
+else
+  if [ ${#GERAL[@]} -gt 0 ]; then
+    mapfile -t _ordem < <(_mais_lentos_primeiro "${GERAL[@]}")
+    _escalona "$VAGAS_GERAIS" "${_ordem[@]}" & ESCALONADORES+=("$!")
+  fi
+  if [ ${#DO_PYTEST[@]} -gt 0 ]; then
+    mapfile -t _ordem < <(_mais_lentos_primeiro "${DO_PYTEST[@]}")
+    _escalona "$VAGAS_PYTEST" "${_ordem[@]}" & ESCALONADORES+=("$!")
+  fi
+fi
+
+_escalonadores_vivos() {
+  local p
+  for p in ${ESCALONADORES[@]+"${ESCALONADORES[@]}"}; do kill -0 "$p" 2>/dev/null && return 0; done
+  return 1
+}
+
+SOMA_MS=0
+# --- a impressão, na ORDEM DA LISTA --------------------------------------------
+for ((n = 0; n < N; n++)); do
+  id="${G_ID[n]}"; runner="${G_RUN[n]}"
+  case "${G_ESTADO[n]}" in
+    ausente)
+      printf '  %-22s AUSENTE DA ÁRVORE  %s\n' "$id" "${G_ARGV[n]%% *}"
+      continue ;;
+    lembrado)
+      TOTAL=$((TOTAL + 1))
+      LEMBRADOS+=("$id")
+      _idade=$(( $(date +%s) - $(stat -c %Y "$MEM_PASTA/$id.${G_CHAVE[n]}" 2>/dev/null || date +%s) ))
+      printf '  %-22s lembrado  (verde sobre os mesmos bytes, há %s)\n' "$id" \
+        "$([ "$_idade" -ge 3600 ] && echo "$((_idade / 3600)) h" || echo "$((_idade / 60 + 1)) min")"
+      continue ;;
   esac
 
   TOTAL=$((TOTAL + 1))
-  inicio=$(date +%s%N)
-  saida="$(cd "$RAIZ" && eval "$cmd" 2>&1)"
-  rc=$?
-  fim=$(date +%s%N)
-  ms=$(( (fim - inicio) / 1000000 ))
+  while [ ! -e "$OUT/$n.rc" ]; do
+    _escalonadores_vivos || { [ -e "$OUT/$n.rc" ] || break; }
+    sleep 0.1
+  done
+  if [ -e "$OUT/$n.rc" ]; then
+    rc="$(cat "$OUT/$n.rc")"; ms="$(cat "$OUT/$n.ms")"
+    saida="$(cat "$OUT/$n.out")"
+  else
+    rc=125; ms=0; saida="o portão não terminou: a corrida foi interrompida antes dele"
+  fi
+  SOMA_MS=$((SOMA_MS + ms))
 
   # RC=0 NÃO É A MESMA COISA QUE «MEDIU», e a confusão entre as duas é a
   # família de defeito que esta casa mais caçou em 2026. Medido em 20/09/2026,
@@ -658,9 +876,11 @@ while IFS='|' read -r camada id runner argv; do
     NAO_MEDIDOS+=("$id")
   elif [ "$rc" -eq 0 ]; then
     printf '  %-22s ok      %6d ms\n' "$id" "$ms"
+    pulos=""
     # PULO NÃO É VERDE. O pytest devolve 0 com teste pulado (sem tela, sem o
     # dado), e o portão sai `ok`: a linha diz quantos, e o recibo também, como
-    # o recibo da suíte diz os dela.
+    # o recibo da suíte diz os dela. E portão com pulo NÃO fica na memória: o
+    # que ele não mediu hoje ele tem de medir amanhã.
     if [ "$runner" = pytest ]; then
       pulos="$(printf '%s\n' "$saida" \
         | grep -E '^[= ]*[0-9]+ (passed|failed|skipped|xfailed|xpassed|errors?|deselected)' \
@@ -670,14 +890,24 @@ while IFS='|' read -r camada id runner argv; do
         PULADOS+=("$id: $pulos teste(s) pulado(s)")
       fi
     fi
+    # só o verde que MEDIU, sem pulo, entra na memória
+    [ -z "$pulos" ] && [ -n "${G_CHAVE[n]}" ] && VERDES_TSV+="$id"$'\t'"${G_CHAVE[n]}"$'\t'"$ms"$'\n'
   else
     printf '  %-22s VERMELHO rc=%s %5d ms\n' "$id" "$rc" "$ms"
     printf '%s\n' "$saida" | sed 's/^/      /'
     VERMELHOS+=("$id")
   fi
-done < <(_LISTA)
+done
+wait 2>/dev/null
+trap - INT TERM
 
+if [ -n "$VERDES_TSV" ] && [ -n "$MEM_PASTA" ]; then
+  printf '%s' "$VERDES_TSV" | "$PY" "$RAIZ/scripts/recibo_da_medida.py" anotar --raiz "$RAIZ" || true
+fi
+
+PAREDE=$(( $(date +%s) - INICIO_DA_CORRIDA ))
 echo
+echo "tempo: ${PAREDE} s de parede; $((SOMA_MS / 1000)) s de portão somados; ${#LEMBRADOS[@]} lembrado(s) sem rodar."
 if [ ${#AUSENTES[@]} -gt 0 ]; then
   echo "PORTÕES DECLARADOS E AUSENTES DA ÁRVORE (${#AUSENTES[@]}):"
   printf '  %s\n' "${AUSENTES[@]}"
@@ -687,11 +917,13 @@ if [ ${#NAO_MEDIDOS[@]} -gt 0 ]; then
   echo "  Faltou o DADO, não o conserto — eles não reprovam. Mas também não"
   echo "  entram na conta dos verdes: ninguém pode dizer que estão certos."
 fi
+_dos_lembrados=""
+[ ${#LEMBRADOS[@]} -gt 0 ] && _dos_lembrados=" (${#LEMBRADOS[@]} lembrados de uma corrida anterior sobre os mesmos bytes)"
 if [ ${#VERMELHOS[@]} -eq 0 ] && [ ${#AUSENTES[@]} -eq 0 ]; then
   if [ ${#NAO_MEDIDOS[@]} -gt 0 ]; then
     echo "VERDES — $((TOTAL - ${#NAO_MEDIDOS[@]})) de ${TOTAL} portões; ${#NAO_MEDIDOS[@]} NÃO MEDIDO(S)."
   else
-    echo "TODOS VERDES — ${TOTAL} portões."
+    echo "TODOS VERDES — ${TOTAL} portões.${_dos_lembrados}"
   fi
   _sair 0
 fi
