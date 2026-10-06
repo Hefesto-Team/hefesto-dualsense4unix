@@ -2,7 +2,7 @@
 """versao.py — o dono da versão: propõe a próxima, grava em todos os alvos e confere a tag.
 
   versao.py atual                       a versão do `pyproject.toml`
-  versao.py proxima [--desde vX.Y.Z]    a próxima versão, pelo tipo dos commits desde a última tag da série
+  versao.py seguinte [--desde vX.Y.Z]    a próxima versão, pelo tipo dos commits desde a última tag da série
   versao.py gravar [VERSAO] [--data D]  grava a mesma versão em todos os alvos (padrão: a proposta)
   versao.py conferir-tag vX.Y.Z         a tag diz a versão que o pacote tem (o `release.yml` chama)
   versao.py hash ARQUIVO                grava no PKGBUILD o hash do tarball da tag
@@ -76,9 +76,9 @@ def classificar(mensagem: str) -> tuple[str | None, bool]:
     return (("feat", True) if incompativel else (None, False))
 
 
-def subir(ultima: str, serie: str, nivel: str) -> str:
+def subir(partida: str, serie: str, nivel: str) -> str:
     """`feat` sobe o primeiro número depois da série; `fix`, o seguinte. Sempre com ao menos três números."""
-    partes = list(_comum.como_tupla(ultima))
+    partes = list(_comum.como_tupla(partida))
     posicao = len(_comum.como_tupla(serie)) + (0 if nivel == "feat" else 1)
     partes += [0] * (posicao + 1 - len(partes))
     partes = [*partes[:posicao], partes[posicao] + 1]
@@ -90,10 +90,10 @@ def proposta(raiz: Path, desde: str | None = None) -> dict[str, object]:
     serie = _comum.serie_do_arquivo(raiz)
     tags = _comum.tags_da_serie(raiz, serie)
     base = desde[1:] if desde and desde.startswith("v") else None
-    ultima = base or (tags[-1] if tags else versao_do_pyproject(raiz))
-    if _comum.como_tupla(ultima)[: len(_comum.como_tupla(serie))] != _comum.como_tupla(serie):
-        raise SystemExit(f"a versão {ultima} não é da série {serie} (`release.serie` em .github/repositorio.yml)")
-    tag = f"v{ultima}"
+    partida = base or (tags[-1] if tags else versao_do_pyproject(raiz))
+    if _comum.como_tupla(partida)[: len(_comum.como_tupla(serie))] != _comum.como_tupla(serie):
+        raise SystemExit(f"a versão {partida} não é da série {serie} (`release.serie` em .github/repositorio.yml)")
+    tag = f"v{partida}"
     tem_tag = bool(_comum.git(raiz, "tag", "--list", tag, ok=True).strip())
     intervalo = f"{tag}..HEAD" if tem_tag else "HEAD"
     bruto = _comum.git(raiz, "log", "--format=%B%x1e", intervalo, ok=True)
@@ -106,29 +106,29 @@ def proposta(raiz: Path, desde: str | None = None) -> dict[str, object]:
         incompativeis += int(incompativel)
     nivel = "feat" if contagem["feat"] else ("fix" if contagem["fix"] else None)
     return {
-        "serie": serie, "ultima": ultima, "tag": tag if tem_tag else None, "contagem": contagem,
+        "serie": serie, "partida": partida, "tag": tag if tem_tag else None, "contagem": contagem,
         "incompativeis": incompativeis,
-        "proxima": subir(ultima, serie, nivel) if nivel else None,
+        "seguinte": subir(partida, serie, nivel) if nivel else None,
     }
 
 
 # ---------------------------------------------------------------- a gravação
 
-def nova_release_no_metainfo(texto: str, versao: str, data: str, resumo: str | None) -> str:
+def nova_release_no_metainfo(texto: str, numero: str, data: str, resumo: str | None) -> str:
     corpo = (f"\n      <description>\n        <p>{resumo}</p>\n      </description>\n    </release>" if resumo else "/>")
-    abre = f'    <release version="{versao}" date="{data}"'
+    abre = f'    <release version="{numero}" date="{data}"'
     bloco = f"{abre}>{corpo}\n" if resumo else f"{abre}{corpo}\n"
     return re.sub(r"(<releases>\n)", lambda m: m.group(1) + bloco, texto, count=1)
 
 
-def resumo_do_changelog(raiz: Path, versao: str) -> str | None:
+def resumo_do_changelog(raiz: Path, numero: str) -> str | None:
     """Os primeiros itens da seção da versão, sem formatação, para o AppStream (None se a seção não existe)."""
     arq = raiz / "CHANGELOG.md"
     if not arq.is_file():
         return None
     corpo = None
     for linha in arq.read_text(encoding="utf-8").splitlines():
-        if re.match(rf"^##\s*\[{re.escape(versao)}\]", linha):
+        if re.match(rf"^##\s*\[{re.escape(numero)}\]", linha):
             corpo = []
             continue
         if corpo is not None and linha.startswith("## ["):
@@ -141,7 +141,7 @@ def resumo_do_changelog(raiz: Path, versao: str) -> str | None:
     return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def plano_de_gravacao(raiz: Path, versao: str, data: str) -> list[tuple[str, str, str]]:
+def plano_de_gravacao(raiz: Path, numero: str, data: str) -> list[tuple[str, str, str]]:
     """(arquivo, texto atual, texto novo) de cada alvo que mudaria. Um arquivo com dois alvos (o README)
     recebe os dois: o segundo parte do texto que o primeiro já trocou."""
     conf = carregar_conferencia(raiz)
@@ -156,14 +156,14 @@ def plano_de_gravacao(raiz: Path, versao: str, data: str) -> list[tuple[str, str
         atual = textos.get(rel, originais[rel])
         if rotulo.startswith("metainfo"):
             m = re.search(r'<release\s+version="([^"]+)"', atual)
-            if m and m.group(1) == versao:
+            if m and m.group(1) == numero:
                 return
-            textos[rel] = nova_release_no_metainfo(atual, versao, data, resumo_do_changelog(raiz, versao))
+            textos[rel] = nova_release_no_metainfo(atual, numero, data, resumo_do_changelog(raiz, numero))
             return
         m = re.search(padrao, atual, re.MULTILINE)
         if not m:
             raise SystemExit(f"{rel}: o padrão do alvo «{rotulo}» não casa; ajuste o check_version_consistency.py")
-        alvo = conf._TRADUTORES.get(rel, lambda v: v)(versao) if traduzir else versao
+        alvo = conf._TRADUTORES.get(rel, lambda v: v)(numero) if traduzir else numero
         if m.group(1) != alvo:
             textos[rel] = atual[: m.start(1)] + alvo + atual[m.end(1):]
 
@@ -187,41 +187,41 @@ def cmd_atual(a: argparse.Namespace, raiz: Path) -> int:
 def cmd_proxima(a: argparse.Namespace, raiz: Path) -> int:
     p = proposta(raiz, a.desde)
     c = p["contagem"]
-    base = p["tag"] or f"{p['ultima']} (sem tag: a história inteira)"
+    base = p["tag"] or f"{p['partida']} (sem tag: a história inteira)"
     aviso = f"; {p['incompativeis']} incompatível(is): decida se pede série nova" if p["incompativeis"] else ""
-    if p["proxima"] is None:
-        print(f"versao.py proxima: nada a lançar desde {base} (0 feat, 0 fix){aviso}")
+    if p["seguinte"] is None:
+        print(f"versao.py seguinte: nada a lançar desde {base} (0 feat, 0 fix){aviso}")
     else:
-        print(f"versao.py proxima: {p['proxima']} (série {p['serie']}; {c['feat']} feat, {c['fix']} fix desde {base}){aviso}")
+        print(f"versao.py seguinte: {p['seguinte']} (série {p['serie']}; {c['feat']} feat, {c['fix']} fix desde {base}){aviso}")
         if a.so_o_numero:
-            print(p["proxima"])
+            print(p["seguinte"])
     return 0
 
 
 def cmd_gravar(a: argparse.Namespace, raiz: Path) -> int:
-    versao = a.versao
-    if versao is None:
-        versao = proposta(raiz)["proxima"]  # type: ignore[assignment]
-        if versao is None:
-            return _comum.encerrar("versao", raiz, 0, "versao.py gravar: nada a lançar; nada gravado", [], a.detalhe)
-    versao = versao[1:] if versao.startswith("v") else versao
-    if not VALIDA.match(versao):
-        print(f"versao.py gravar: «{versao}» não é uma versão (X.Y.Z ou X.Y.Z.W)")
+    numero = a.numero
+    if numero is None:
+        numero = proposta(raiz)["seguinte"]  # type: ignore[assignment]
+        if numero is None:
+            return _comum.encerrar("numero", raiz, 0, "versao.py gravar: nada a lançar; nada gravado", [], a.detalhe)
+    numero = numero[1:] if numero.startswith("v") else numero
+    if not VALIDA.match(numero):
+        print(f"versao.py gravar: «{numero}» não é uma versão (X.Y.Z ou X.Y.Z.W)")
         return 2
     serie = _comum.serie_do_arquivo(raiz)
-    if _comum.como_tupla(versao)[: len(_comum.como_tupla(serie))] != _comum.como_tupla(serie) and not a.fora_da_serie:
-        print(f"versao.py gravar: {versao} não é da série {serie}; a série é a linha `release.serie` de .github/repositorio.yml")
+    if _comum.como_tupla(numero)[: len(_comum.como_tupla(serie))] != _comum.como_tupla(serie) and not a.fora_da_serie:
+        print(f"versao.py gravar: {numero} não é da série {serie}; a série é a linha `release.serie` de .github/repositorio.yml")
         return 2
     data = a.data or hoje()
-    plano = plano_de_gravacao(raiz, versao, data)
+    plano = plano_de_gravacao(raiz, numero, data)
     detalhe = [f"{'mudaria' if a.conferir else 'gravou'}: {rel}" for rel, _a, _n in plano]
     if not plano:
-        return _comum.encerrar("versao", raiz, 0, f"versao.py gravar: {versao} já está em todos os alvos", [], a.detalhe)
+        return _comum.encerrar("numero", raiz, 0, f"versao.py gravar: {numero} já está em todos os alvos", [], a.detalhe)
     if a.conferir:
-        return _comum.encerrar("versao", raiz, 1, f"versao.py gravar: {versao} mudaria {len(plano)} arquivo(s)", detalhe, a.detalhe)
+        return _comum.encerrar("numero", raiz, 1, f"versao.py gravar: {numero} mudaria {len(plano)} arquivo(s)", detalhe, a.detalhe)
     for rel, _atual, novo in plano:
         (raiz / rel).write_text(novo, encoding="utf-8")
-    return _comum.encerrar("versao", raiz, 0, f"versao.py gravar: {versao} gravada em {len(plano)} arquivo(s)", detalhe, a.detalhe)
+    return _comum.encerrar("numero", raiz, 0, f"versao.py gravar: {numero} gravada em {len(plano)} arquivo(s)", detalhe, a.detalhe)
 
 
 def cmd_conferir_tag(a: argparse.Namespace, raiz: Path) -> int:
@@ -279,12 +279,12 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--detalhe", type=Path, help="o detalhe vai para este arquivo")
 
     sub.add_parser("atual").set_defaults(f=cmd_atual)
-    p = sub.add_parser("proxima")
+    p = sub.add_parser("seguinte")
     p.add_argument("--desde", help="a tag de partida (padrão: a última da série)")
     p.add_argument("--so-o-numero", action="store_true", help="imprime o número também numa linha à parte")
     p.set_defaults(f=cmd_proxima)
     p = sub.add_parser("gravar")
-    p.add_argument("versao", nargs="?")
+    p.add_argument("numero", nargs="?")
     p.add_argument("--data", help="AAAA-MM-DD da release (padrão: hoje)")
     p.add_argument("--fora-da-serie", action="store_true", help="aceita uma versão fora da série declarada")
     comum(p)

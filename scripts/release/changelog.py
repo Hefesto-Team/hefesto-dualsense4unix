@@ -35,7 +35,7 @@ import publico
 GRUPOS = ("Adicionado", "Mudado", "Removido", "Corrigido")
 DO_TIPO = {"adicionado": "Adicionado", "mudado": "Mudado", "removido": "Removido", "corrigido": "Corrigido"}
 PR = re.compile(r"^(?P<tipo>feat|fix|perf)(?:\([^)]*\))?!?:\s+(?P<titulo>.+?)\s+\(#(?P<numero>\d+)\)$")
-CABECALHO = re.compile(r"^##\s*\[(?P<versao>[^\]]+)\](?:\s*[—-]\s*(?P<data>\d{4}-\d{2}-\d{2}))?\s*$")
+CABECALHO = re.compile(r"^##\s*\[(?P<numero>[^\]]+)\](?:\s*[—-]\s*(?P<data>\d{4}-\d{2}-\d{2}))?\s*$")
 FECHADA = re.compile(r"^#\s*fechada\s+(\d{2})/(\d{2})/(\d{4})")
 EM_CICLO = re.compile(r"^#\s*ciclo:\s*feita\b.*\bem=(\d{2})/(\d{2})/(\d{4})")
 
@@ -156,35 +156,35 @@ def do_prs(raiz: Path, tag: str | None, avisos: list[str]) -> list[tuple[str, st
 
 # ------------------------------------------------------------ montar
 
-def montar_texto(raiz: Path, versao: str, data: str, avisos: list[str]) -> tuple[str, list[str]]:
+def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple[str, list[str]]:
     arq = raiz / "CHANGELOG.md"
     texto = arq.read_text(encoding="utf-8")
     cabeca, secoes = partir(texto)
     anteriores = {normal(i) for cab, corpo in secoes
-                  if (m := CABECALHO.match(cab)) and m.group("versao") not in ("Unreleased", versao)
+                  if (m := CABECALHO.match(cab)) and m.group("numero") not in ("Unreleased", numero)
                   for lista in itens(corpo).values() for i in lista}
 
     serie = _comum.serie_do_arquivo(raiz)
     tags = _comum.tags_da_serie(raiz, serie)
-    anterior = [t for t in tags if _comum.comparavel(t) < _comum.comparavel(versao)]
+    anterior = [t for t in tags if _comum.comparavel(t) < _comum.comparavel(numero)]
     tag = f"v{anterior[-1]}" if anterior else None
     desde = data_da_tag(raiz, tag)
 
     novas: list[tuple[str, str, str]] = []  # (grupo, item, de onde)
-    indice_nao_lancado = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("versao") == "Unreleased"), None)
+    indice_nao_lancado = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("numero") == "Unreleased"), None)
     if indice_nao_lancado is not None:
         for grupo, lista in itens(secoes[indice_nao_lancado][1]).items():
             novas += [(grupo, i, "o que estava em Unreleased") for i in lista]
     novas += [(g, i, "sprint") for g, i in do_sprints(raiz, desde, avisos)]
     novas += [(g, i, "PR") for g, i in do_prs(raiz, tag, avisos)]
 
-    indice_versao = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("versao") == versao), None)
+    indice_versao = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("numero") == numero), None)
     if indice_versao is not None:
         existente = itens(secoes[indice_versao][1])
         cab_versao = secoes[indice_versao][0]
     else:
         existente = {}
-        cab_versao = f"## [{versao}] — {data}"
+        cab_versao = f"## [{numero}] — {data}"
     ja = {normal(i) for lista in existente.values() for i in lista}
     adicionadas: list[str] = []
     for grupo, item, origem in novas:
@@ -199,7 +199,7 @@ def montar_texto(raiz: Path, versao: str, data: str, avisos: list[str]) -> tuple
         return texto, []
     # a ordem do arquivo: Unreleased (vazio), a versão nova, as anteriores
     topo: list[tuple[str, list[str]]] = [("## [Unreleased]", [""]), (cab_versao, corpo_de(existente))]
-    resto = [(c, b) for c, b in secoes if not ((m := CABECALHO.match(c)) and m.group("versao") in ("Unreleased", versao))]
+    resto = [(c, b) for c, b in secoes if not ((m := CABECALHO.match(c)) and m.group("numero") in ("Unreleased", numero))]
     saida = cabeca.rstrip("\n") + "\n\n"
     for cab, corpo in topo + resto:
         corpo_limpo = list(corpo)
@@ -210,31 +210,31 @@ def montar_texto(raiz: Path, versao: str, data: str, avisos: list[str]) -> tuple
 
 
 def cmd_montar(a: argparse.Namespace, raiz: Path) -> int:
-    versao = a.versao.removeprefix("v")
+    numero = a.numero.removeprefix("v")
     data = a.data or dt.date.today().isoformat()
     avisos: list[str] = []
     arq = raiz / "CHANGELOG.md"
     antes = arq.read_text(encoding="utf-8")
-    novo, adicionadas = montar_texto(raiz, versao, data, avisos)
+    novo, adicionadas = montar_texto(raiz, numero, data, avisos)
     detalhe = avisos + [f"entrou ({o})" for o in adicionadas]
     if novo == antes:
-        existe = any((m := CABECALHO.match(c)) and m.group("versao") == versao for c, _b in partir(antes)[1])
+        existe = any((m := CABECALHO.match(c)) and m.group("numero") == numero for c, _b in partir(antes)[1])
         if not existe:
-            return _comum.encerrar("changelog", raiz, 4, f"changelog.py montar: nada a dizer da {versao} (Unreleased vazio, nenhuma sprint, nenhum PR)", detalhe, a.detalhe)
-        return _comum.encerrar("changelog", raiz, 0, f"changelog.py montar: a seção {versao} já está completa", detalhe, a.detalhe)
+            return _comum.encerrar("changelog", raiz, 4, f"changelog.py montar: nada a dizer da {numero} (Unreleased vazio, nenhuma sprint, nenhum PR)", detalhe, a.detalhe)
+        return _comum.encerrar("changelog", raiz, 0, f"changelog.py montar: a seção {numero} já está completa", detalhe, a.detalhe)
     if a.conferir:
-        return _comum.encerrar("changelog", raiz, 1, f"changelog.py montar: a seção {versao} mudaria ({len(adicionadas)} item(ns) novo(s) ou movido(s))", detalhe, a.detalhe)
+        return _comum.encerrar("changelog", raiz, 1, f"changelog.py montar: a seção {numero} mudaria ({len(adicionadas)} item(ns) novo(s) ou movido(s))", detalhe, a.detalhe)
     arq.write_text(novo, encoding="utf-8")
-    return _comum.encerrar("changelog", raiz, 0, f"changelog.py montar: seção {versao} de {data} com {len(adicionadas)} item(ns)", detalhe, a.detalhe)
+    return _comum.encerrar("changelog", raiz, 0, f"changelog.py montar: seção {numero} de {data} com {len(adicionadas)} item(ns)", detalhe, a.detalhe)
 
 
 # ------------------------------------------------------------ notas
 
-def corpo_da_versao(raiz: Path, versao: str) -> list[str] | None:
+def corpo_da_versao(raiz: Path, numero: str) -> list[str] | None:
     _cab, secoes = partir((raiz / "CHANGELOG.md").read_text(encoding="utf-8"))
     for c, corpo in secoes:
         m = CABECALHO.match(c)
-        if m and m.group("versao") == versao:
+        if m and m.group("numero") == numero:
             limpo = list(corpo)
             while limpo and not limpo[0].strip():
                 limpo.pop(0)
@@ -244,8 +244,8 @@ def corpo_da_versao(raiz: Path, versao: str) -> list[str] | None:
     return None
 
 
-def notas_de(raiz: Path, versao: str, repo: str | None) -> str | None:
-    corpo = corpo_da_versao(raiz, versao)
+def notas_de(raiz: Path, numero: str, repo: str | None) -> str | None:
+    corpo = corpo_da_versao(raiz, numero)
     if corpo is None:
         return None
     onde = f" --repo {repo}" if repo else ""
@@ -260,10 +260,10 @@ def notas_de(raiz: Path, versao: str, repo: str | None) -> str | None:
 
 
 def cmd_notas(a: argparse.Namespace, raiz: Path) -> int:
-    versao = a.versao.removeprefix("v")
-    texto = notas_de(raiz, versao, a.repo)
+    numero = a.numero.removeprefix("v")
+    texto = notas_de(raiz, numero, a.repo)
     if texto is None:
-        print(f"changelog.py notas: o CHANGELOG.md não tem a seção [{versao}]; rode `changelog.py montar {versao}`", file=sys.stderr)
+        print(f"changelog.py notas: o CHANGELOG.md não tem a seção [{numero}]; rode `changelog.py montar {numero}`", file=sys.stderr)
         return 3
     sys.stdout.write(texto)
     return 0
@@ -274,13 +274,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--raiz", help="a árvore (padrão: a deste script)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("montar")
-    p.add_argument("versao")
+    p.add_argument("numero")
     p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
     p.add_argument("--conferir", action="store_true")
     p.add_argument("--detalhe", type=Path)
     p.set_defaults(f=cmd_montar)
     p = sub.add_parser("notas")
-    p.add_argument("versao")
+    p.add_argument("numero")
     p.add_argument("--repo", help="DONO/NOME, para o comando de conferir o atestado")
     p.set_defaults(f=cmd_notas)
     a = ap.parse_args(argv)

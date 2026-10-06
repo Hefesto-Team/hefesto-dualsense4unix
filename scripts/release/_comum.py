@@ -31,13 +31,13 @@ def git(raiz: Path, *args: str, ok: bool = False) -> str:
     return r.stdout if r.returncode == 0 else ""
 
 
-def como_tupla(versao: str) -> tuple[int, ...]:
-    return tuple(int(p) for p in versao.split("."))
+def como_tupla(numero: str) -> tuple[int, ...]:
+    return tuple(int(p) for p in numero.split("."))
 
 
-def comparavel(versao: str) -> tuple[int, ...]:
+def comparavel(numero: str) -> tuple[int, ...]:
     """A versão com zeros à direita até quatro casas: `0.9.5` e `0.9.5.0` valem o mesmo."""
-    t = como_tupla(versao)
+    t = como_tupla(numero)
     return t + (0,) * (4 - len(t))
 
 

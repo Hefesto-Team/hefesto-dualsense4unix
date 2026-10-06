@@ -183,14 +183,14 @@ def test_a_proxima_versao_sai_do_tipo_dos_commits(
 ) -> None:
     for c in commits:
         commitar(brinquedo, c)
-    r = rodar(VERSAO, "proxima", "--so-o-numero", raiz=brinquedo)
+    r = rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo)
     assert r.returncode == 0 and r.stdout.splitlines()[-1] == esperada, r.stdout
 
 
 def test_commit_que_nao_lanca_nada_nao_propoe_versao(brinquedo: Path) -> None:
     for c in ("docs: um texto", "test: um teste", "chore: faxina", "refactor: arruma"):
         commitar(brinquedo, c)
-    r = rodar(VERSAO, "proxima", raiz=brinquedo)
+    r = rodar(VERSAO, "seguinte", raiz=brinquedo)
     assert r.returncode == 0 and "nada a lançar" in r.stdout
 
 
@@ -198,11 +198,12 @@ def test_a_ultima_tag_e_a_mais_alta_da_serie_e_a_proxima_parte_dela(brinquedo: P
     commitar(brinquedo, "feat: um")
     git(brinquedo, "tag", "v0.9.5")
     commitar(brinquedo, "fix: dois")
-    r = rodar(VERSAO, "proxima", "--so-o-numero", raiz=brinquedo)
+    r = rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo)
     assert r.stdout.splitlines()[-1] == "0.9.5.1", "um fix depois da 0.9.5 sobe a quarta casa"
     commitar(brinquedo, "feat: três")
     assert (
-        rodar(VERSAO, "proxima", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1] == "0.9.6"
+        rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1]
+        == "0.9.6"
     )
 
 
@@ -212,19 +213,21 @@ def test_trocar_a_serie_e_trocar_a_linha_do_arquivo(brinquedo: Path) -> None:
     )
     commitar(brinquedo, "feat: um")
     assert (
-        rodar(VERSAO, "proxima", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1] == "4.1.0"
+        rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1]
+        == "4.1.0"
     )
     commitar(brinquedo, "fix: dois")
     # feat e fix juntos: o feat manda
     assert (
-        rodar(VERSAO, "proxima", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1] == "4.1.0"
+        rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1]
+        == "4.1.0"
     )
 
 
 def test_a_proposta_e_idempotente(brinquedo: Path) -> None:
     commitar(brinquedo, "feat: um")
-    a = rodar(VERSAO, "proxima", raiz=brinquedo).stdout
-    b = rodar(VERSAO, "proxima", raiz=brinquedo).stdout
+    a = rodar(VERSAO, "seguinte", raiz=brinquedo).stdout
+    b = rodar(VERSAO, "seguinte", raiz=brinquedo).stdout
     assert a == b
 
 
@@ -237,7 +240,7 @@ def _conferencia(raiz: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _conteudo_dos_alvos(raiz: Path) -> dict[str, str]:
+def _texto_dos_alvos(raiz: Path) -> dict[str, str]:
     return {
         rel: (raiz / rel).read_text(encoding="utf-8")
         for rel in ALVOS_DE_VERSAO
@@ -259,7 +262,7 @@ def test_gravar_poe_a_mesma_versao_em_todos_os_alvos_e_a_regua_do_repositorio_co
     assert "gravada em" in primeira_linha(r)
     depois = _conferencia(brinquedo)
     assert depois.returncode == 0, depois.stdout
-    textos = _conteudo_dos_alvos(brinquedo)
+    textos = _texto_dos_alvos(brinquedo)
     assert 'version = "0.9.5"' in textos["pyproject.toml"]
     assert "pkgver=0.9.5" in textos["packaging/arch/PKGBUILD"]
     assert re.search(r"^Version:\s*0\.9\.5\s*$", textos["packaging/debian/control"], re.M)
@@ -288,15 +291,15 @@ def test_gravar_sem_a_secao_do_changelog_a_regua_do_repositorio_acusa(brinquedo:
 
 
 def test_gravar_de_novo_nao_muda_nada_e_o_conferir_diz_o_que_faria(brinquedo: Path) -> None:
-    antes = _conteudo_dos_alvos(brinquedo)
+    antes = _texto_dos_alvos(brinquedo)
     c = rodar(VERSAO, "gravar", "0.9.5", "--data", "2026-10-07", "--conferir", raiz=brinquedo)
     assert c.returncode == 1 and "mudaria" in primeira_linha(c)
-    assert _conteudo_dos_alvos(brinquedo) == antes, "o --conferir não escreve"
+    assert _texto_dos_alvos(brinquedo) == antes, "o --conferir não escreve"
     assert rodar(VERSAO, "gravar", "0.9.5", "--data", "2026-10-07", raiz=brinquedo).returncode == 0
-    depois = _conteudo_dos_alvos(brinquedo)
+    depois = _texto_dos_alvos(brinquedo)
     segunda = rodar(VERSAO, "gravar", "0.9.5", "--data", "2026-10-07", raiz=brinquedo)
     assert segunda.returncode == 0 and "já está em todos os alvos" in primeira_linha(segunda)
-    assert _conteudo_dos_alvos(brinquedo) == depois
+    assert _texto_dos_alvos(brinquedo) == depois
     assert rodar(VERSAO, "gravar", "0.9.5", "--conferir", raiz=brinquedo).returncode == 0
 
 
@@ -352,7 +355,7 @@ def test_a_serie_do_repositorio_real_existe_e_a_proposta_roda_nele() -> None:
     """O arquivo de verdade declara a série, e o dono lê a mesma linha que o aplicador valida."""
     dados = yaml.safe_load(REPOSITORIO_YML.read_text(encoding="utf-8"))
     assert re.fullmatch(r"\d+(\.\d+){0,2}", dados["release"]["serie"])
-    r = rodar(VERSAO, "proxima", raiz=RAIZ)
+    r = rodar(VERSAO, "seguinte", raiz=RAIZ)
     assert r.returncode == 0, r.stdout
 
 
@@ -662,7 +665,7 @@ def test_mordida_artefato_fora_do_sha256sums_reprova(tmp_path: Path) -> None:
 def test_mordida_artefato_trocado_no_caminho_reprova(tmp_path: Path) -> None:
     pasta = _pasta_de_artefatos(tmp_path)
     rodar(SUMS, "gerar", str(pasta))
-    (pasta / "hefesto-0.9.5.tar.gz").write_bytes(b"outro conteudo")
+    (pasta / "hefesto-0.9.5.tar.gz").write_bytes(b"outro texto")
     r = rodar(SUMS, "conferir", str(pasta))
     assert r.returncode == 1 and "hash diferente: hefesto-0.9.5.tar.gz" in r.stdout
 
@@ -1306,8 +1309,8 @@ def test_o_arquivo_recusa_serie_torta() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _brinquedo_na_versao(brinquedo: Path, versao: str = "0.9.5") -> None:
-    assert rodar(VERSAO, "gravar", versao, "--data", "2026-10-07", raiz=brinquedo).returncode == 0
+def _brinquedo_na_versao(brinquedo: Path, numero: str = "0.9.5") -> None:
+    assert rodar(VERSAO, "gravar", numero, "--data", "2026-10-07", raiz=brinquedo).returncode == 0
 
 
 def test_os_pacotes_saem_na_versao_da_tag_com_o_hash_do_tarball(
@@ -1320,7 +1323,7 @@ def test_os_pacotes_saem_na_versao_da_tag_com_o_hash_do_tarball(
     r = rodar(
         PACOTES,
         "preparar",
-        "--versao",
+        "--numero",
         "0.9.5",
         "--tarball",
         str(tarball),
@@ -1348,7 +1351,7 @@ def test_os_pacotes_saem_na_versao_da_tag_com_o_hash_do_tarball(
     segunda = rodar(
         PACOTES,
         "preparar",
-        "--versao",
+        "--numero",
         "0.9.5",
         "--tarball",
         str(tarball),
@@ -1361,7 +1364,7 @@ def test_os_pacotes_saem_na_versao_da_tag_com_o_hash_do_tarball(
         rodar(
             PACOTES,
             "preparar",
-            "--versao",
+            "--numero",
             "0.9.5",
             "--tarball",
             str(tarball),
@@ -1390,7 +1393,7 @@ def test_mordida_arquivo_de_pacote_numa_versao_que_nao_e_a_da_tag_reprova(
     r = rodar(
         PACOTES,
         "preparar",
-        "--versao",
+        "--numero",
         "0.9.5",
         "--tarball",
         str(tarball),
@@ -1418,7 +1421,7 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
         rodar(
             PACOTES,
             "preparar",
-            "--versao",
+            "--numero",
             "0.9.5",
             "--tarball",
             str(tarball),
@@ -1458,7 +1461,7 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     r = rodar(
         PACOTES,
         "abrir-pr",
-        "--versao",
+        "--numero",
         "0.9.5",
         "--pasta",
         str(saida),
@@ -1470,15 +1473,15 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     assert r.returncode == 0, r.stdout + r.stderr
     assert "atualiza-0.9.5" in git(remoto, "branch", "--list")
     assert "Pessoa Teste" in git(remoto, "log", "-1", "--format=%an", "atualiza-0.9.5")
-    conteudo = git(remoto, "show", "atualiza-0.9.5:PKGBUILD")
-    assert "pkgver=0.9.5" in conteudo and "sha256sums=('" in conteudo
+    conteúdo = git(remoto, "show", "atualiza-0.9.5:PKGBUILD")
+    assert "pkgver=0.9.5" in conteúdo and "sha256sums=('" in conteúdo
     pedido = prs.read_text(encoding="utf-8")
     assert "--repo Hefesto-Team/pacote-arch" in pedido and "--head atualiza-0.9.5" in pedido
     # distro que o artefato não tem: recusa antes de clonar
     ruim = rodar(
         PACOTES,
         "abrir-pr",
-        "--versao",
+        "--numero",
         "0.9.5",
         "--pasta",
         str(saida),
@@ -1494,7 +1497,7 @@ def test_o_publicar_nao_importa_o_que_nao_usa() -> None:
     """Os scripts de `scripts/release/` rodam no `python3` pelado do runner: só a stdlib."""
     permitidos = set(sys.stdlib_module_names) | {
         "_comum",
-        "versao",
+        "numero",
         "changelog",
         "sums",
         "publico",

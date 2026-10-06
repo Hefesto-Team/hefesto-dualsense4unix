@@ -479,7 +479,7 @@ jobs:
       - name: Preparar os arquivos de pacote
         env:
           VERSION: ${{ needs.build.outputs.version }}
-        run: python3 scripts/release/pacotes.py preparar --versao "${VERSION}" --tarball fonte.tar.gz --saida dist/pacotes
+        run: python3 scripts/release/pacotes.py preparar --numero "${VERSION}" --tarball fonte.tar.gz --saida dist/pacotes
       - name: Guardar os arquivos de pacote
         uses: actions/upload-artifact@v4
         with:
@@ -492,7 +492,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PACOTES_TOKEN }}
           VERSION: ${{ needs.build.outputs.version }}
           PACOTES_REPOS: ${{ vars.PACOTES_REPOS }}
-        run: python3 scripts/release/pacotes.py abrir-pr --versao "${VERSION}" --pasta dist/pacotes --repos "${PACOTES_REPOS}"
+        run: python3 scripts/release/pacotes.py abrir-pr --numero "${VERSION}" --pasta dist/pacotes --repos "${PACOTES_REPOS}"
 
   # O `if` deixa este job inerte enquanto a variável não existir, mas inerte não
   # é guardado: no dia em que ela existir, sem o `guarda-ci` aqui o wheel sobe

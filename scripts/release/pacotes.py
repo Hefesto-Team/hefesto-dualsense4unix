@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """pacotes.py — os arquivos de pacote de cada distribuição, na versão da tag e com o hash do tarball dela.
 
-  pacotes.py preparar --versao V --tarball ARQ --saida DIR   copia o PKGBUILD, o .spec, o control e o nix para
+  pacotes.py preparar --numero V --tarball ARQ --saida DIR   copia o PKGBUILD, o .spec, o control e o nix para
                                                              DIR, conferindo a versão e gravando o hash no PKGBUILD
-  pacotes.py abrir-pr --versao V --pasta DIR --repos LISTA   abre o PR de atualização em cada repositório de pacote
+  pacotes.py abrir-pr --numero V --pasta DIR --repos LISTA   abre o PR de atualização em cada repositório de pacote
 
 A versão dos quatro arquivos já foi gravada, no commit da release, pelo `versao.py gravar`: aqui ela só é
 CONFERIDA contra a tag (um arquivo de pacote com outra versão reprova). O que a tag ainda não tinha é o hash do
@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _comum
-import versao as dono
+import sums
 
 # distro -> [(arquivo na árvore, regex da versão dentro dele)]
 ARQUIVOS = {
@@ -54,12 +54,12 @@ def preparar(a: argparse.Namespace) -> int:
             m = re.search(padrao, arq.read_text(encoding="utf-8"), re.MULTILINE) if arq.is_file() else None
             if not m:
                 erros.append(f"{rel}: sem a linha da versão")
-            elif m.group(1) != a.versao:
-                erros.append(f"{rel}: diz {m.group(1)} e a tag é {a.versao}")
+            elif m.group(1) != a.numero:
+                erros.append(f"{rel}: diz {m.group(1)} e a tag é {a.numero}")
     if erros:
-        return _comum.encerrar("pacotes", raiz, 1, f"pacotes.py preparar: {len(erros)} arquivo(s) de pacote fora da versão {a.versao}", erros, None)
+        return _comum.encerrar("pacotes", raiz, 1, f"pacotes.py preparar: {len(erros)} arquivo(s) de pacote fora da versão {a.numero}", erros, None)
     saida = Path(a.saida)
-    hexa = dono.sha256_de(tarball)
+    hexa = sums.sha256_de(tarball)
     mudancas = []
     for distro, lista in ARQUIVOS.items():
         for rel, _p in lista:
@@ -77,8 +77,8 @@ def preparar(a: argparse.Namespace) -> int:
     if a.conferir and mudancas:
         return _comum.encerrar("pacotes", raiz, 1, f"pacotes.py preparar: {len(mudancas)} arquivo(s) mudariam em {saida}", mudancas, None)
     if not mudancas:
-        return _comum.encerrar("pacotes", raiz, 0, f"pacotes.py preparar: {saida} já tem os arquivos da {a.versao} (hash {hexa[:12]})", [], None)
-    return _comum.encerrar("pacotes", raiz, 0, f"pacotes.py preparar: {len(mudancas)} arquivo(s) em {saida} na {a.versao} (hash {hexa[:12]})", mudancas, None)
+        return _comum.encerrar("pacotes", raiz, 0, f"pacotes.py preparar: {saida} já tem os arquivos da {a.numero} (hash {hexa[:12]})", [], None)
+    return _comum.encerrar("pacotes", raiz, 0, f"pacotes.py preparar: {len(mudancas)} arquivo(s) em {saida} na {a.numero} (hash {hexa[:12]})", mudancas, None)
 
 
 def _rodar(*cmd: str, cwd: Path | None = None) -> str:
@@ -108,27 +108,27 @@ def abrir_pr(a: argparse.Namespace) -> int:
             print(f"pacotes.py abrir-pr: {pedido}: sem os arquivos da distro «{distro}» em {pasta}")
             return 2
         if a.conferir:
-            abertos.append(f"{repo} ({distro}): abriria o PR atualiza-{a.versao}")
+            abertos.append(f"{repo} ({distro}): abriria o PR atualiza-{a.numero}")
             continue
         with tempfile.TemporaryDirectory(prefix="pacotes-") as tmp:
             clone = Path(tmp) / "repo"
             _rodar("gh", "repo", "clone", repo, str(clone), "--", "--depth", "1")
-            ramo = f"atualiza-{a.versao}"
+            ramo = f"atualiza-{a.numero}"
             _rodar("git", "checkout", "-B", ramo, cwd=clone)
             for arq in origem.iterdir():
                 shutil.copy2(arq, clone / arq.name)
             _rodar("git", "add", "-A", cwd=clone)
             if not _rodar("git", "status", "--porcelain", cwd=clone).strip():
-                abertos.append(f"{repo} ({distro}): já está na {a.versao}")
+                abertos.append(f"{repo} ({distro}): já está na {a.numero}")
                 continue
             _rodar("git", "-c", f"user.name={autor[0]}", "-c", f"user.email={autor[1]}", "commit", "-m",
-                   f"Atualiza para a versão {a.versao}", cwd=clone)
+                   f"Atualiza para a versão {a.numero}", cwd=clone)
             _rodar("git", "push", "--force-with-lease", "origin", ramo, cwd=clone)
-            _rodar("gh", "pr", "create", "--repo", repo, "--head", ramo, "--title", f"Atualiza para a versão {a.versao}",
-                   "--body", f"A versão {a.versao} do Hefesto saiu; os arquivos de pacote seguem a tag.", cwd=clone)
+            _rodar("gh", "pr", "create", "--repo", repo, "--head", ramo, "--title", f"Atualiza para a versão {a.numero}",
+                   "--body", f"A versão {a.numero} do Hefesto saiu; os arquivos de pacote seguem a tag.", cwd=clone)
             abertos.append(f"{repo} ({distro}): PR aberto de {ramo}")
     codigo = 1 if (a.conferir and abertos) else 0
-    return _comum.encerrar("pacotes", raiz, codigo, f"pacotes.py abrir-pr: {len(abertos)} repositório(s) tratados na {a.versao}", abertos, None)
+    return _comum.encerrar("pacotes", raiz, codigo, f"pacotes.py abrir-pr: {len(abertos)} repositório(s) tratados na {a.numero}", abertos, None)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -136,13 +136,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--raiz", help="a árvore (padrão: a deste script)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("preparar")
-    p.add_argument("--versao", required=True)
+    p.add_argument("--numero", required=True)
     p.add_argument("--tarball", required=True)
     p.add_argument("--saida", required=True)
     p.add_argument("--conferir", action="store_true")
     p.set_defaults(f=preparar)
     p = sub.add_parser("abrir-pr")
-    p.add_argument("--versao", required=True)
+    p.add_argument("--numero", required=True)
     p.add_argument("--pasta", required=True)
     p.add_argument("--repos", required=True, help="DONO/NOME[:distro], separados por vírgula")
     p.add_argument("--conferir", action="store_true")
