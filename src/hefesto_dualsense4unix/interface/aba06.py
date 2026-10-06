@@ -1522,9 +1522,8 @@ if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_T
         f"{SEM_TROCA!r} x {_SEM_TROCA_DO_PACOTE!r}")
 
 D_QUANDO = ajuda(
-    "Vale para <b>este perfil</b>. <b>Desligado</b>, o controle "
-    "é só gamepad e nada desta aba chega ao PC, até você entrar na Navegação "
-    "de novo.",
+    "Liga o <b>tipo de navegação</b> escolhido logo abaixo. Vale para "
+    "<b>este perfil</b>. <b>Desligado</b>, o controle é só gamepad.",
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
     "Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado "
@@ -1546,12 +1545,21 @@ D_VEL = ajuda(D_VEL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
 D_ROL = ajuda(D_ROL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
 D_VEL_ESTILO = ajuda(D_VEL_TXT)
 D_ROL_ESTILO = ajuda(D_ROL_TXT)
+#: O TIPO DE NAVEGAÇÃO — 06/10/2026, leva 1.7 (desenho-navegacao, item 10). A
+#: «Navegação Interna» de três opções sem dono virou a lista do tipo que o
+#: interruptor liga (`D-2909-O-INTERRUPTOR-LIGA-O-TIPO-ESCOLHIDO`), com o desenho
+#: dela de 03/10 ~00h: na Interna, cada controle ajusta o próprio controle nas
+#: abas Jogar, Controles, Gatilhos, Iluminação e Vibração, R1 e L1 trocam de aba
+#: e o Start guarda os de todos no perfil.
 D_INTERNA = ajuda(
-    "Navegar o Hefesto com o controle — abas, botões e listas.<br><br>"
-    "O cursor do PC é outra coisa: é <b>um só</b>, e sai do controle marcado "
-    "«Navega o PC».")
+    "<b>Interna</b>: cada controle ajusta o próprio controle nas abas Jogar, "
+    "Controles, Gatilhos, Iluminação e Vibração, ao mesmo tempo. <b>R1</b> e "
+    "<b>L1</b> trocam de aba, o direcional escolhe, <b>X</b> aciona e "
+    "<b>Start</b> guarda os de todos no perfil.<br><br>"
+    "<b>O computador</b>: o controle vira mouse e teclado.")
 D_STEAM = ajuda(
-    "Serve para navegar a <b>Steam</b> sem mouse, com o d-pad e os botões.")
+    "O controle navega o <b>Big Picture</b> da Steam, em qualquer modo de "
+    "conexão, pelo cabo e pelo BT.")
 
 # AS DUAS SAEM COM A MESMA MUDANÇA: o `<input>` some, a cor passa a ser a classe
 STATUS_MODO = ('<label class="tog" data-gesto="modo" data-campo="rato-ligado"'
@@ -1593,14 +1601,13 @@ OPCOES_TECLADO = [
 TECLADO_PADRAO = OPCOES_TECLADO[1]
 
 ATIVACAO_ESQ = [
-    ("Status do Modo", D_QUANDO, STATUS_MODO),
+    ("Status da navegação", D_QUANDO, STATUS_MODO),
     ("Função do teclado", D_TECLADO,
      simples(OPCOES_TECLADO, gesto="teclado", campo="teclado-estado",
              escolhido=TECLADO_PADRAO)),
-    ("Navegação Interna", D_INTERNA, simples([
-        "Ligada — cada controle navega o Hefesto",
-        f"Só o Player {NAVEGA} navega",
-        "Desligada"], gesto="navegacao-interna")),
+    ("Tipo de navegação", D_INTERNA, simples([
+        "Interna — cada controle ajusta o seu",
+        "O computador — mouse e teclado"], gesto="navegacao-interna")),
 ]
 
 ATIVACAO_DIR = [
@@ -1613,10 +1620,9 @@ ATIVACAO_DIR = [
      trilho(DEFAULT_SCROLL_SPEED, SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
             "vel-rolagem", "vel-rolagem",
             "Vale na hora.")),
-    ("Modo Steam", D_STEAM, simples([
+    ("Modo Big Picture na Steam", D_STEAM, simples([
         "Desligado",
-        "Ligado — o controle navega a Steam como num Steam Deck",
-        "Ligado, e a Steam abre em Modo Jogo na próxima vez"], gesto="modo-steam")),
+        "Ligado — o controle navega o Big Picture"], gesto="modo-steam")),
 ]
 
 #:                        e `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`). É a linha que
