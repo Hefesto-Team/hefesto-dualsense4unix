@@ -1,0 +1,102 @@
+name: Nix
+
+# O-NIX-LEVA-AS-REGRAS-DO-HOST-01 (06/10/2026). O pacote Nix e o módulo NixOS moram num workflow
+# PRÓPRIO, e não no ci.yml, por duas razões medidas:
+#   1. o `scripts/ci-local.sh` só roda os jobs em modo offline se TODA action do arquivo está em
+#      cache, e a `cachix/install-nix-action` no ci.yml tiraria esse modo de todos os jobs de casa;
+#   2. a guarda do release (`guarda-ci`) exige o ci.yml inteiro verde na mesma SHA, e o `package.nix`
+#      nunca compilou antes de hoje (o hash do pydualsense era o placeholder): a primeira corrida
+#      dele pode vir vermelha, e isso não pode trancar uma release que não tem nada de Nix.
+# Roda só quando o que ele prova mudou, ou à mão.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+      - 'onda/**'
+    paths: &caminhos
+      - 'packaging/nix/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'assets/82-nintendo-pro-nosniff.rules'
+      - 'assets/83-hefesto-bond-snapshot.rules'
+      - 'assets/systemd/hefesto-bt-bonds-snapshot.*'
+      - 'scripts/bt_nosniff_now.sh'
+      - 'scripts/bt_bonds_snapshot.sh'
+      - '.github/workflows/nix.yml'
+  pull_request:
+    paths: *caminhos
+
+permissions:
+  contents: read
+
+jobs:
+  nix:
+    name: Nix (o pacote leva os alvos das regras, o módulo NixOS avalia)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # O-NIX-LEVA-AS-REGRAS-DO-HOST-01 (06/10/2026). A casa não tem Nix, e a prova do
+    # pacote e do módulo NixOS é este job: o único lugar onde o `nix build` roda.
+    # Três perguntas, em ordem, e cada uma reprova nomeando o que faltou:
+    #   1. o pacote COMPILA (o hash do pydualsense é o real desde hoje);
+    #   2. as regras 82 e 83 do pacote chamam os alvos DO PRÓPRIO PACOTE, e o
+    #      udev as aceita (`udevadm verify`) — caminho de host que sobra é a regra
+    #      inerte que o `TEST==` deixava calada;
+    #   3. o módulo NixOS avalia com `enable = true` e registra as regras, a unidade
+    #      do snapshot dos bonds e os módulos do kernel.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: O pacote compila
+        run: nix build .#default --no-write-lock-file --print-build-logs --out-link resultado
+      - name: As regras 82 e 83 chamam os alvos do pacote
+        run: |
+          set -eu
+          pacote="$(readlink -f resultado)"
+          for regra in 82-nintendo-pro-nosniff 83-hefesto-bond-snapshot; do
+            arquivo="$pacote/lib/udev/rules.d/$regra.rules"
+            if grep -n '/usr/local/lib/hefesto-dualsense4unix\|/usr/bin/systemctl' "$arquivo"; then
+              echo "::error::$regra ainda chama caminho de host" && exit 1
+            fi
+            grep -q "$pacote/libexec/hefesto-dualsense4unix/" "$arquivo"
+            udevadm verify --no-style "$arquivo"
+          done
+          unidade="$pacote/lib/systemd/system/hefesto-bt-bonds-snapshot.service"
+          if grep -n '/usr/local/lib' "$unidade"; then
+            echo "::error::a unidade do snapshot ainda chama caminho de host" && exit 1
+          fi
+          grep -q "ExecStart=$pacote/libexec/hefesto-dualsense4unix/bt_bonds_snapshot.sh" "$unidade"
+          test -f "$pacote/lib/systemd/system/hefesto-bt-bonds-snapshot.timer"
+          test -x "$pacote/libexec/hefesto-dualsense4unix/bt_nosniff_now.sh"
+          test -x "$pacote/libexec/hefesto-dualsense4unix/bt_bonds_snapshot.sh"
+      - name: O módulo NixOS avalia e registra o que deve
+        run: |
+          nix eval --impure --no-write-lock-file --raw --expr '
+            let
+              flake = builtins.getFlake (toString ./.);
+              nixos = flake.inputs.nixpkgs.lib.nixosSystem {
+                system = "x86_64-linux";
+                modules = [
+                  flake.nixosModules.default
+                  {
+                    services.hefesto-dualsense4unix.enable = true;
+                    boot.loader.grub.enable = false;
+                    fileSystems."/" = { device = "none"; fsType = "tmpfs"; };
+                    system.stateVersion = "25.05";
+                  }
+                ];
+              };
+              c = nixos.config;
+              nomes = map (p: p.pname or p.name);
+            in
+              assert builtins.elem "hefesto-dualsense4unix" (nomes c.services.udev.packages);
+              assert builtins.elem "hefesto-dualsense4unix" (nomes c.systemd.packages);
+              assert builtins.elem "uinput" c.boot.kernelModules;
+              assert builtins.elem "uhid" c.boot.kernelModules;
+              assert builtins.hasAttr "hefesto-bt-bonds-snapshot" c.systemd.timers;
+              "ok"
+          '

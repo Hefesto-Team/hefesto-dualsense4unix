@@ -265,6 +265,31 @@ class TestONixLevaOsAlvosPeloStore:
         assert re.search(r'hash = "sha256-[A-Za-z0-9+/]{43}="', pacote)
 
 
+class TestAProvaDoNixMoraNumWorkflowProprio:
+    """A única prova do Nix é o job que o compila, e ele não pode derrubar o resto do CI."""
+
+    NIX_YML = Path(".github/workflows/nix.yml")
+    CI_YML = Path(".github/workflows/ci.yml")
+
+    def test_o_job_compila_confere_as_regras_e_avalia_o_modulo(self) -> None:
+        texto = _texto(self.NIX_YML)
+        for passo in ("nix build .#default", "udevadm verify", "nixosModules.default",
+                      "services.hefesto-dualsense4unix.enable = true"):
+            assert passo in texto, f"o job do Nix perdeu `{passo}`"
+
+    def test_ele_roda_quando_o_que_ele_prova_muda(self) -> None:
+        texto = _texto(self.NIX_YML)
+        for caminho in ("packaging/nix/**", "flake.nix", "assets/82-nintendo-pro-nosniff.rules",
+                        "assets/83-hefesto-bond-snapshot.rules", "scripts/bt_nosniff_now.sh"):
+            assert caminho in texto, f"mexer em {caminho} não dispara a prova do Nix"
+
+    def test_a_action_do_nix_nao_entra_no_ci_yml(self) -> None:
+        """No `ci.yml` ela tiraria o modo offline do `ci-local.sh` de todos os jobs de casa e
+        poria um job que nunca compilou na guarda que tranca a release."""
+        assert "install-nix-action" not in _texto(self.CI_YML)
+        assert "install-nix-action" in _texto(self.NIX_YML)
+
+
 class TestALacunaNaoEnvelheceCalada:
     def test_lacuna_declarada_que_ja_nao_vale_reprova(
         self, receitas: dict[str, str]
