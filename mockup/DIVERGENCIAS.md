@@ -21,4 +21,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **06/10/2026** — o Wi-Fi em 5 GHz com linha, o «Descobrir a faixa» na faixa do receptor e a seção
+  que cabe o painel do «Conectar» (desenho da leva 1.7; sprint OS-OUTROS-SEM-FIO-APARECEM-E-A-PROCURA-CABE-NA-SECAO-01).
+  Até publicar, a página publicada continua a de 05/10, sem o estilo da linha do 5 GHz nem do
+  botão: o pacote novo só entra no mesmo fecho do `--publicar 08`, senão o trilho sai cru.
