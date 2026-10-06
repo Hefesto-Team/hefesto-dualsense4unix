@@ -5,6 +5,10 @@
 #         ver o que faria, sem mexer: bash scripts/instalar-hooks.sh --conferir
 #         (sai 1 quando faria alguma coisa; sem argumento é idempotente)
 #
+# O `--conferir` também avisa quando a máquina não assina commit (o `dev` e o `main` exigem o selo
+# «Verified»). É só aviso: não muda o código de saída e nunca configura nada. Quem configura a chave é
+# `bash scripts/github/assinar-commits.sh --aplicar`.
+#
 # Por que um instalador e não um arquivo pronto: `.git/hooks/` não é versionado
 # pelo git, então um gancho lá dentro não viaja para quem clona.
 #
@@ -34,6 +38,18 @@ if [ "${EUID:-$(id -u)}" -eq 0 ]; then
   echo "não rode com sudo: o HOME vira /root e o gancho aponta para o lugar errado." >&2
   exit 1
 fi
+
+# Avisa (nunca aplica) quando o git global desta conta não assina commit. Só no `--conferir`, e só se o
+# conferidor existe nesta árvore.
+avisar_assinatura() {
+  local assinar="scripts/github/assinar-commits.sh" saida
+  [ "$CONFERIR" -eq 1 ] && [ -f "$assinar" ] || return 0
+  if ! saida="$(bash "$assinar" --conferir 2>&1)"; then
+    echo "AVISO: esta máquina não assina commit, e o dev e o main exigem commit assinado:"
+    printf '%s\n' "$saida" | sed 's/^/  /'
+    echo "  para configurar: bash scripts/github/assinar-commits.sh --aplicar"
+  fi
+}
 
 POLITICA="scripts/check_autoria.py"
 COMUM="$(git rev-parse --path-format=absolute --git-common-dir)"
@@ -73,6 +89,7 @@ if [ -n "$CAMINHO_GLOBAL" ]; then
   echo "  A política de autoria chega pelo gancho global, que lê autoria.politica."
   echo "  Gancho nenhum roda em cherry-pick, rebase ou --no-verify: a trava que"
   echo "  alcança esses caminhos é o portão \`autoria-historia\`, em \`bash scripts/portoes.sh\`."
+  avisar_assinatura
   if [ "$CONFERIR" -eq 1 ]; then
     [ "$FARIA" -eq 0 ] && echo "conferido: nada a fazer." && exit 0
     exit 1
@@ -131,6 +148,7 @@ echo "Nota: gancho de commit-msg não roda em cherry-pick, rebase, merge"
 echo "--no-edit nem sob --no-verify. A trava que alcança esses caminhos é o"
 echo "portão \`autoria-historia\`, em \`bash scripts/portoes.sh\`."
 
+avisar_assinatura
 if [ "$CONFERIR" -eq 1 ]; then
   [ "$FARIA" -eq 0 ] && echo "conferido: nada a fazer." && exit 0
   echo "conferido: $FARIA passo(s) a fazer."
