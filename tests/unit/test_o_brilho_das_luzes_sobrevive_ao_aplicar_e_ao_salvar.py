@@ -12,8 +12,8 @@ P2 e o ciano do P3 gravados no perfil), com o Forte clicado no P2:
     depois do «Salvar»   disco Forte · pílula Fraco
     perfil reaplicado    merge Forte · pílula Forte
 
-O valor morria no «Aplicar»: o rascunho não leva o campo, e o `DraftApplier`
-troca o mapa inteiro de overrides do daemon (`reset_output_overrides`) pelo do
+O valor morria no «Aplicar»: o rascunho não leva o campo, e o «Aplicar» de
+então trocava o mapa inteiro de overrides do daemon (`reset_output_overrides`) pelo do
 rascunho. O «Salvar» nunca perdeu o brilho no disco; a tela é que dizia
 Fraco, porque a pílula pergunta ao daemon vivo. Dos seis gestos da aba 04 que
 gravam no perfil, só este morria no «Aplicar» — e a varredura da seção 2, que
@@ -37,9 +37,7 @@ A MATRIZ, a regra de produto: os três brilhos, P1 a P4, cabo e rádio.
 * devolva ao «Salvar» a luz acesa no override e a cor que mudou só no
   aparelho vai ao disco (`test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco`);
 * tire o `is None` do `rodape.aplicar` e o «Aplicar» pisca verde com o daemon
-  calado (`test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo`);
-* tire o `_com_o_teto_da_economia` do `DraftApplier.apply` e a seção 3
-  reprova — o Forte dela venceria a «Bateria longa».
+  calado (`test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo`).
 
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o perfil e o
 `maquina.json` gravados aqui moram dentro dele.
@@ -124,10 +122,6 @@ class _PonteDoRodape(barra._PonteDoRodape):
         """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome."""
         self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
         return super().profile_reaplicar(nome)
-
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
-        self.rascunhos.append(payload)
-        return super().apply_draft_detalhado(payload)
 
     @property
     def luzes(self) -> list[dict[str, Any]]:

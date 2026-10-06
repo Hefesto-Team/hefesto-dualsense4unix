@@ -31,7 +31,7 @@ def test_o_documento_nao_promete_persistencia_no_aplicar() -> None:
         re.DOTALL,
     ), (
         "a tabela dos botões voltou a dizer que o Aplicar persiste — ele despacha "
-        "`profile.apply_draft` pelo IPC e não abre arquivo nenhum"
+        "`profile.reaplicar` pelo IPC e não abre arquivo nenhum"
     )
     assert "**Salvar Perfil**" in texto, (
         "o documento tem de nomear quem realmente salva; dizer só o que o Aplicar "

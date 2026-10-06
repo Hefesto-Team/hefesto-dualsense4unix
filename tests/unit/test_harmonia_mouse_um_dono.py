@@ -13,7 +13,6 @@ import pytest
 
 pytest.importorskip("gi")
 
-from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_sub
@@ -36,28 +35,6 @@ class _FakeWidget:
 
     def set_visible(self, value: bool) -> None:
         self.visible = bool(value)
-
-
-@pytest.fixture()
-def apply_result(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """`profile.apply_draft` síncrono, com resultado controlável pelo teste."""
-    box: dict[str, Any] = {"result": {"status": "ok"}, "erro": None, "enviados": []}
-
-    def _fake(
-        _method: str,
-        params: Any,
-        on_success: Any = None,
-        on_failure: Any = None,
-        **_kw: Any,
-    ) -> None:
-        box["enviados"].append(params)
-        if box["erro"] is not None:
-            on_failure(box["erro"])
-            return
-        on_success(box["result"])
-
-    monkeypatch.setattr(footer_actions.ipc_bridge, "call_async", _fake)
-    return box
 
 
 @pytest.fixture()
@@ -219,11 +196,3 @@ def test_desligar_o_mouse_na_mao_persiste_off(tmp_config: Path, daemon: Daemon) 
     daemon.set_mouse_emulation(False, origin="manual")
 
     assert session.load_mouse_preference()[0] is False
-
-
-def _applier(daemon: Daemon) -> Any:
-    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-
-    return DraftApplier(controller=daemon.controller, store=daemon.store, daemon=daemon)
-
-

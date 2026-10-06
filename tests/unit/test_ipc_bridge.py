@@ -161,46 +161,10 @@ class TestWrappersRetornamBool:
             assert ipc_bridge.player_leds_set((True, False, True, False, True)) is False
 
 
-class TestApplyDraftDetalhado:
-    """APLICAR-VERDADE-01/E2 — a ponte para de estreitar a verdade.
-
-    Havia uma ``apply_draft`` que devolvia ``bool``, e o mapa ``failed``
-    (quais seções NÃO entraram) morria nela: quem chamava recebia ``False`` e
-    não tinha como distinguir "o daemon está desligado" de "a seção de luzes
-    falhou". A cura foi ADITIVA — a booleana ficou de pé (o valor-verdade dela
-    É o contrato R-18, e um ``dict`` no lugar seria sempre verdadeiro num
-    ``if``), e quem precisa dizer a verdade na tela passou a chamar a
-    detalhada. Em 26/08/2026 a booleana foi PODADA (BG-07): ninguém tinha
-    migrado de volta, e ela era a última rota do ``__all__`` sem travessia
-    nesta família. A regra R-18 continua tendo dono único —
-    ``aplicacao_confirmada``, exercitada logo abaixo.
-
-    Esta classe é a metade da E2 que NÃO precisa de GTK, então morde também no
-    CI headless; a metade da tela mora em
-    ``tests/unit/test_aplicar_verdade_ponte_lightbar.py``.
-    """
+class TestLeituraDoEstado:
+    """``daemon_state_full`` e ``daemon_status_basic``: ``None`` é "sem resposta"."""
 
     OFFLINE_EXC = FileNotFoundError("socket ausente")
-
-    def test_o_failed_atravessa_a_ponte(self):
-        """Falha-sem: o mapa de seções que caíram tem de CHEGAR ao chamador."""
-        resposta = {
-            "status": "ok",
-            "applied": [],
-            "failed": {"leds": "hidraw: Permission denied"},
-        }
-        with patch.object(ipc_bridge, "_run_call", return_value=resposta):
-            assert ipc_bridge.apply_draft_detalhado({"leds": {}}) == resposta
-
-    def test_offline_devolve_none_e_nao_dicionario_vazio(self):
-        """``None`` quer dizer "não houve resposta" — é o que separa "o Hefesto"""
-        with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
-            assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
-
-    def test_resposta_que_nao_e_dicionario_e_tratada_como_ausencia(self):
-        with patch.object(ipc_bridge, "_run_call", return_value="ok"):
-            assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
-
 
     def test_daemon_state_full_offline_none(self):
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
@@ -233,7 +197,6 @@ class TestWrappersPropagandoBugs:
             (ipc_bridge.rumble_passthrough, (True,)),
             (ipc_bridge.rumble_policy_custom, (0.3,)),
             (ipc_bridge.player_leds_set, ((True, True, False, False, False),)),
-            (ipc_bridge.apply_draft_detalhado, ({"x": 1},)),
             (ipc_bridge.daemon_state_full, ()),
             (ipc_bridge.daemon_status_basic, ()),
         ],
@@ -327,7 +290,6 @@ _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 _PONTE = _SRC / "app" / "ipc_bridge.py"
 
 _QUEM_FICOU_NO_LUGAR: dict[str, str] = {
-    "apply_draft": "apply_draft_detalhado",
     "rumble_policy_set": "rumble_policy_set_checked",
     "rumble_policy_set_detalhado": "rumble_policy_set_checked",
     "trigger_reset": "trigger_reset_detalhado",

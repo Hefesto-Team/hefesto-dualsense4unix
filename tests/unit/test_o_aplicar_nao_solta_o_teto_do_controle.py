@@ -1,8 +1,8 @@
 """O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 — o «Aplicar» e o «Salvar» respeitam a economia.
 
 Achado pela O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01 (26/09/2026). O rascunho
-do rodapé não sabia da economia de bateria, e o `DraftApplier` troca o mapa de
-overrides do daemon inteiro (`reset_output_overrides`).
+do rodapé não sabia da economia de bateria, e o «Aplicar» de então trocava o mapa
+de overrides do daemon inteiro (`reset_output_overrides`).
 
 **MEDIDO ANTES DA CURA**, na mesa de quatro da A-MARCA (o `IpcServer` real, o
 merge do `PyDualSenseController`, o `SysfsLedNode` sobre arquivos), a economia
@@ -21,13 +21,13 @@ A CURA, e cada régua abaixo mede uma parte:
 
 * o rascunho leva o Fraco, o Médio e o Forte (global e de cada controle), e a
   segunda viagem do rodapé saiu (`DraftConfig._controllers_to_ipc`);
-* o `DraftApplier` põe o teto pelo MESMO dono da ativação
-  (`_com_o_teto_da_economia` → `manager._perfil_na_economia`, com a declaração
-  que o gesto `economia-do-controle` grava), e o controle em economia vai na
-  camada do PERFIL (`_publicar_a_economia`): na camada dela o teto ficaria
-  preso depois de a economia desligar;
+* o «Aplicar» põe o teto pelo MESMO dono da ativação
+  (`manager._perfil_na_economia`, com a declaração que o gesto
+  `economia-do-controle` grava), e o controle em economia vai na camada do
+  PERFIL: na camada do usuário o teto ficaria preso depois de a economia
+  desligar;
 * o «Todos» das luzes só vai cru a todos quando ninguém termina noutro
-  degrau (`DraftApplier._o_todos_das_luzes`): nenhum quadro intermediário;
+  degrau (`manager._o_todos_das_luzes_vai_cru`): nenhum quadro intermediário;
 * o «Salvar» grava o brilho do disco, e não o aceso, no controle em economia:
   desde 27/09 ele não lê o aparelho em controle nenhum
   (`D-2709-O-SALVAR-LE-O-PERFIL`);
@@ -35,31 +35,20 @@ A CURA, e cada régua abaixo mede uma parte:
 
 **AS MORDIDAS**, arrancadas e devolvidas (o relato da sprint diz o que caiu):
 
-* tire o `_com_o_teto_da_economia` do `DraftApplier.apply` → a seção 1 e a 2
-  reprovam no «Aplicar»;
-* troque o `reset_profile_overrides` de `_publicar_a_economia` pelo
-  `apply_output_for` (a camada dela) → a seção 1 reprova ao desligar a economia;
+* tire o `_perfil_na_economia` do `ProfileManager.apply` → a seção 1 reprova
+  no «Aplicar»;
 * devolva ao `rodape.salvar` a luz acesa (a cor e o brilho do aparelho no
   override) → a seção 1 e a 2 reprovam no disco depois do «Salvar»;
-* faça o `_o_todos_das_luzes` devolver sempre o degrau → a seção 1 acusa o
-  quadro intermediário;
+* faça o `_o_todos_das_luzes_vai_cru` devolver sempre `True` → a seção 1 acusa
+  o quadro intermediário;
 * tire o `player_led_brightness` de `_controllers_to_ipc` → a seção 3 reprova,
   e a seção 1 da O-BRILHO junto;
 * tire o `_com_a_procedencia_da_mesma_cor` do `with_controller_leds` → a seção 4;
-* e as quatro da conferência (seção 5): as procedências de
-  `_publicar_a_economia` (ou o número no rascunho), o teto do global da mesa,
-  o `_o_rascunho_tem_o_mapa` e o resto da entrada em `_entrada_na_economia`.
 
 NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). O «Aplicar»
-do rodapé deixou de passar pelo `DraftApplier`: ele manda `profile.reaplicar`,
-e o daemon roda a cadeia da ativação. As partes da cura que moram no
-`DraftApplier` seguem valendo para o `profile.apply_draft` (a janela GTK e a
-linha de comando) e são medidas pelas seções que o chamam direto; pelo
-«Aplicar», o teto é o `manager._perfil_na_economia` da ativação, e o «Todos»
-das luzes que não pisca é o `manager._o_todos_das_luzes_vai_cru`. As mordidas
-da seção 1 pelo «Aplicar» passam a ser: tire o `_perfil_na_economia` do
-`ProfileManager.apply`, ou faça o `_o_todos_das_luzes_vai_cru` devolver sempre
-`True` (o quadro intermediário).
+do rodapé manda `profile.reaplicar`, e o daemon roda a cadeia da ativação; o
+`profile.apply_draft` e o `DraftApplier` saíram do código em 06/10/2026, com as
+seções que os chamavam direto.
 
 A régua dela, a de toda  <!-- noqa-acento: citação literal -->
 — P1 a P4, cabo e rádio.
@@ -173,18 +162,6 @@ def _o_disco(n: int) -> dict[str, Any]:
     }
 
 
-def test_sem_economia_o_aplicar_e_o_de_antes() -> None:
-    """Nenhuma economia declarada: a vista é o MESMO rascunho, byte a byte."""
-    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-    from hefesto_dualsense4unix.profiles.schema import registrar_declaracao_da_mesa
-
-    registrar_declaracao_da_mesa(None)
-    applier = DraftApplier(controller=object(), store=object(), daemon=None)  # type: ignore[arg-type]
-    rascunho: dict[str, Any] = {"leds": {"lightbar_brightness": 1.0}, "controllers": None}
-    assert applier._com_o_teto_da_economia(rascunho) is rascunho
-    assert applier._em_economia == frozenset()
-
-
 def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
     """Nenhum `_with_*` no rodapé: a regra da cor é do `DraftConfig`."""
     fonte = pathlib.Path(rodape.__file__).read_text(encoding="utf-8")
@@ -192,49 +169,3 @@ def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
         no.attr for no in ast.walk(ast.parse(fonte))
         if isinstance(no, ast.Attribute) and no.attr.startswith("_with_")})
     assert privados == [], f"o rodapé escreve no rascunho por {privados}"
-
-
-def test_o_alto_falante_do_controle_em_economia_viaja_no_aplicar() -> None:
-    """A economia não toca o alto-falante, e a vista não o pode perder."""
-    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-    from hefesto_dualsense4unix.profiles.schema import (
-        declaracao_da_economia,
-        registrar_declaracao_da_mesa,
-    )
-    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
-
-    class _Controle:
-        def __init__(self) -> None:
-            self.falantes: list[tuple[str | None, int, bool]] = []
-
-        def set_speaker_volume(self, volume: int, *, muted: bool = False,
-                               uniq: str | None = None, rota: int | None = None) -> None:
-            self.falantes.append((uniq, volume, muted))
-
-        def apply_output_defaults(self, spec: Any) -> str:
-            return "escreveu"
-
-        def apply_output_for(self, uniq: str, spec: Any, **_: Any) -> str:
-            return "escreveu"
-
-        def reset_output_overrides(self, overrides: Any = None, **_: Any) -> None:
-            return None
-
-        def reset_profile_overrides(self, overrides: Any = None, **_: Any) -> None:
-            return None
-
-    declaracao = MaquinaConfig.model_validate(declaracao_da_economia(UNIQS[1], True))
-    registrar_declaracao_da_mesa(lambda: declaracao)
-    try:
-        ctl = _Controle()
-        applier = DraftApplier(controller=ctl, store=object(), daemon=None)  # type: ignore[arg-type]
-        applier.apply({"controllers": {
-            UNIQS[1]: {"leds": {"player_led_brightness": "forte"},
-                       "speaker": {"volume": 200, "muted": False}},
-            UNIQS[3]: {"speaker": {"volume": 90, "muted": True}},
-        }})
-    finally:
-        registrar_declaracao_da_mesa(None)
-    assert applier._em_economia == frozenset({UNIQS[1]}), applier._em_economia
-    assert sorted(ctl.falantes) == sorted([(UNIQS[1], 200, False), (UNIQS[3], 90, True)]), (
-        f"o «Aplicar» levou {ctl.falantes}")

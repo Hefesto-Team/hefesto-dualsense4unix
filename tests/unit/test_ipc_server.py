@@ -331,58 +331,6 @@ async def test_stop_preserva_socket_recriado_por_outro(
     server.socket_path.unlink()
 
 
-@pytest.mark.asyncio
-async def test_apply_draft_rumble_aplica_policy(
-    tmp_path: Path, isolated_profiles_dir: Path
-) -> None:
-    """`profile.apply_draft` deve escalar rumble via _apply_rumble_policy.
-
-    Cenário: policy "economia" (mult 0.3) + draft rumble (weak=200, strong=200).
-    Esperado:
-        - controller.set_rumble chamado com (60, 60) (valores efetivos escalados);
-        - daemon.config.rumble_active persiste (200, 200) (valores brutos) para
-          o poll loop continuar reaplicando a política a cada tick.
-    """
-    from dataclasses import dataclass, field
-    from unittest.mock import MagicMock
-
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
-
-    @dataclass
-    class _FakeDaemon:
-        config: DaemonConfig = field(default_factory=DaemonConfig)
-        store: object | None = None
-        _rumble_engine: object | None = None
-
-    cfg = DaemonConfig()
-    cfg.rumble_policy = "economia"  # type: ignore[assignment]
-    fake_daemon = _FakeDaemon(config=cfg)
-
-    controller = MagicMock()
-    store = StateStore()
-    store.update_controller_state(
-        ControllerState(
-            battery_pct=50, l2_raw=0, r2_raw=0, connected=True, transport="usb"
-        )
-    )
-    manager = ProfileManager(controller=controller, store=store)
-    server = IpcServer(
-        controller=controller,
-        store=store,
-        profile_manager=manager,
-        socket_path=tmp_path / "apply_draft_rumble.sock",
-        daemon=fake_daemon,
-    )
-
-    resultado = await server._handle_profile_apply_draft(
-        {"rumble": {"weak": 200, "strong": 200}}
-    )
-
-    assert "rumble" in resultado["applied"]
-    controller.set_rumble.assert_called_once_with(weak=60, strong=60)
-    assert fake_daemon.config.rumble_active == (200, 200)
-
-
 # AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01 — boundary do handler profile.switch
 
 

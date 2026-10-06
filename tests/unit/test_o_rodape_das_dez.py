@@ -122,5 +122,5 @@ def test_aplicar_e_salvar_recusam_sem_perfil_ativo(ctx):
         p = PonteDeMentira()
         with pytest.raises(ValueError, match=r"[Pp]erfil"):
             _g(nome)(ctx, {}, p)
-        assert not any(c[0] == "apply_draft_detalhado" for c in p.chamadas), (
+        assert not any(c[0] == "profile_reaplicar" for c in p.chamadas), (
             f"{nome} recusou e chamou o daemon assim mesmo")

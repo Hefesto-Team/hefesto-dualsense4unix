@@ -599,10 +599,6 @@ class _PonteDoRodape:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
 
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> tuple[bool, None]:
-        self.chamadas.append(("apply_draft_detalhado", (payload,)))
-        return True, None
-
     def profile_reaplicar(self, nome: str) -> dict[str, Any]:
         self.chamadas.append(("profile_reaplicar", (nome,)))
         return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}

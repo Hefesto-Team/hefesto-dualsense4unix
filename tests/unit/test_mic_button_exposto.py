@@ -5,12 +5,11 @@ subsystem `mic_hotkey` no boot e não aparecia na GUI, no draft nem no schema
 de perfil. Quem quisesse mudá-lo tinha de editar código.
 
 Agora: seção `mic` no perfil (opcional, None = sem opinião), sub-draft
-`MicDraft` com a mesma disciplina dirty/in_profile do mouse, seção no
-`apply_draft` e o valor efetivo no `daemon.state_full`.
+`MicDraft` com a mesma disciplina dirty/in_profile do mouse e o valor efetivo
+no `daemon.state_full`.
 """
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -64,22 +63,6 @@ class TestSchema:
             ProfileMicConfig(button_toggles_system=True, volume=fora)
 
 
-def _applier() -> tuple[Any, Any]:
-    """Applier com daemon de mentira e o flag do mic LIGADO, como no boot."""
-    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-    from hefesto_dualsense4unix.daemon.state_store import StateStore
-    from hefesto_dualsense4unix.testing import FakeController
-
-    daemon = MagicMock()
-    daemon.config = MagicMock(mic_button_toggles_system=True)
-    applier = DraftApplier(
-        controller=FakeController(transport="usb"),
-        store=StateStore(),
-        daemon=daemon,
-    )
-    return applier, daemon
-
-
 class TestDraft:
     def test_o_default_do_rascunho_e_nao_ter_opiniao(self) -> None:
         """NOTA DATADA — 22/08/2026 (MIC-GATE-POR-CAMPO-01)."""
@@ -103,44 +86,6 @@ class TestDraft:
         origem = Profile(name="p", match=MatchAny())
         salvo = DraftConfig.from_profile(origem).to_profile("p")
         assert salvo.mic is None
-
-
-class TestGatePorCampo:
-    """MIC-GATE-POR-CAMPO-01 (22/08/2026) — o gate era por SEÇÃO."""
-
-
-    def test_a_chave_nula_e_silencio_e_nao_falha_a_secao(self) -> None:
-        """Nulo explícito é "sem opinião", não payload torto."""
-        applier, daemon = _applier()
-
-        aplicadas = applier.apply(
-            {"mic": {"volume": 70, "muted": None, "button_toggles_system": None}}
-        )
-
-        assert "mic" in aplicadas
-        assert applier.failed == {}
-        assert daemon.config.mic_button_toggles_system is True
-
-
-class TestApplier:
-
-    def test_apply_draft_escreve_na_config_viva(self) -> None:
-        applier, daemon = _applier()
-        aplicadas = applier.apply({"mic": {"button_toggles_system": False}})
-        assert "mic" in aplicadas
-        assert daemon.config.mic_button_toggles_system is False
-
-    def test_secao_ausente_nao_toca_no_flag(self) -> None:
-        applier, daemon = _applier()
-        applier.apply({"rumble": {"weak": 0, "strong": 0}})
-        assert daemon.config.mic_button_toggles_system is True
-
-    def test_valor_invalido_nao_corrompe_a_config(self) -> None:
-        """`_apply_section` engole a exceção — mas nada é escrito."""
-        applier, daemon = _applier()
-        aplicadas = applier.apply({"mic": {"button_toggles_system": "sim"}})
-        assert "mic" not in aplicadas
-        assert daemon.config.mic_button_toggles_system is True
 
 
 class TestLacoDoBotao:

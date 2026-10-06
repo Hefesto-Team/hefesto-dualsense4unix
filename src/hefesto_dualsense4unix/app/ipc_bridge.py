@@ -233,8 +233,7 @@ def _call_checked_detalhado(
     (ou respondeu algo que não é dicionário).
 
     Por que a função nova em vez de trocar a assinatura de ``_call_checked``:
-    o mesmo motivo escrito em ``apply_draft_detalhado`` — a forma de hoje tem
-    chamadores vivos em arquivos que outras frentes estão editando, e uma
+    a forma de hoje tem chamadores vivos em arquivos que outras frentes estão editando, e uma
     3-tupla desempacotada num ``ok, motivo = …`` levanta ``ValueError`` em
     tempo de execução, não em tempo de revisão. Aditivo: ninguém quebra, e quem
     precisa da verdade inteira pede por ela.
@@ -723,9 +722,8 @@ def machine_declare_detalhado(
     recusa. Vem em RÓTULO de tela (:func:`_rotulos_dos_campos`), e é **vazio no
     caso comum**: a chave nem aparece no corpo quando não há nada a dizer.
 
-    Duas funções em vez de trocar o tipo de retorno da :func:`machine_declare`
-    pela mesma razão do par ``apply_draft``/``apply_draft_detalhado``: a
-    ``machine_declare`` está no ``__all__`` e a dupla ``(ok, motivo)`` é o
+    Duas funções em vez de trocar o tipo de retorno da :func:`machine_declare`:
+    a ``machine_declare`` está no ``__all__`` e a dupla ``(ok, motivo)`` é o
     contrato de quem já a chama. Aditivo — ninguém quebra, e quem precisa da
     verdade inteira pede por ela.
 
@@ -781,14 +779,6 @@ def player_led_brightness_set_detalhado(
     if uniq:
         payload["uniq"] = uniq
     return _corpo_do_daemon("led.player_brightness_set", payload)
-
-
-def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type-arg]
-    """Envia ``profile.apply_draft`` e devolve a RESPOSTA INTEIRA do daemon."""
-    ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
-    if ok and isinstance(result, dict):
-        return result
-    return None
 
 
 def destinos_da_aplicacao(resposta: Any) -> tuple[list[str], list[str]]:
@@ -1159,7 +1149,6 @@ def haptica_testar(uniq: str, ligado: bool) -> tuple[bool, dict[str, Any] | None
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",
     "alvo_honrado",
-    "apply_draft_detalhado",
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",

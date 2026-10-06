@@ -1,8 +1,8 @@
 """ESCRITOR-CRU-01: enxergar o escritor que a classe LED não vê.
 
-- **Medido na madrugada de 16/08/2026, e a hipótese é DO USUÁRIO**, levantada enquanto se perseguia outra
-  pista. Par de
-  eliminação completo, nada mais tocado entre os dois lados:
+- **Medido na madrugada de 16/08/2026, e a hipótese é DO USUÁRIO**, levantada
+  enquanto se perseguia outra pista. Par de eliminação completo, nada mais
+  tocado entre os dois lados:
 
   ===================  ==========================================
   COM a Steam aberta   a barra fica APAGADA depois de cada comando

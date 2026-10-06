@@ -159,8 +159,7 @@ class MicDraft(BaseModel):
     Ele era por SEÇÃO: qualquer gesto de microfone (arrastar o volume, clicar
     em Silenciar) marcava ``dirty``, e o "Aplicar" do rodapé levava junto o
     ``button_toggles_system`` — que NENHUMA superfície escreve, então o valor
-    que viajava era o default de fábrica, uma opinião que ninguém deu. Do outro
-    lado, ``ipc_draft_applier._apply_mic`` a escreve na config VIVA do daemon.
+    que viajava era o default de fábrica, uma opinião que ninguém deu.
     O molde da cura é o ``rota`` do ``SpeakerDraft``, que já fazia certo:
     ``None`` é sem opinião, a chave não viaja, e campo ausente é campo não
     tocado. O custo do defeito era pequeno (a ativação de perfil não lê este

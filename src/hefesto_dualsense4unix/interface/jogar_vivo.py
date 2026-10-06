@@ -130,7 +130,7 @@ DONOS_DOS_GESTOS = {
     "reconciliação de jogadores, que JÁ é produto que funciona na janela de "
     "hoje. O que faltava era a tela nova ter onde ligá-lo.",
     "rodape": "Aplicar/Salvar/Importar têm dono (app/actions/footer_actions.py: "
-    "on_apply_draft, on_save_profile, on_import_profile). EXPORTAR NÃO TEM — "
+    "on_save_profile, on_import_profile). EXPORTAR NÃO TEM — "
     "não existe handler no src/ nem botão no main.glade. Nesta leva nenhum é "
     "chamado: 'Salvar Perfil' GRAVA NO DISCO DELA, e esta leva não escreve.",
 }

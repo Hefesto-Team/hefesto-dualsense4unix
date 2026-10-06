@@ -4,10 +4,6 @@ Separado de `ipc_server.py` para manter o dispatcher de IO enxuto (<500 LOC)
 e concentrar a lógica de cada método em um único lugar. Exposto como mixin
 `IpcHandlersMixin` — `IpcServer` herda dele e o dispatcher continua
 registrando os handlers em `__post_init__` via `self._handle_*`.
-
-Helper `DraftApplier` extrai as 4 seções do `profile.apply_draft` (leds,
-triggers, rumble, mouse) em métodos isolados, reduzindo o tamanho do handler
-orquestrador para muito abaixo do limite de 100 LOC por método.
 """
 from __future__ import annotations
 
@@ -24,7 +20,6 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 from hefesto_dualsense4unix.core import escritor_cru as _escritor_cru
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
-from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
     apply_rumble_policy,
     uniq_do_alvo_de_output,
@@ -751,18 +746,6 @@ class IpcHandlersMixin:
             ]
         }
 
-    async def _handle_profile_apply_draft(
-        self, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse."""
-        applier = DraftApplier(
-            controller=self.controller,
-            store=self.store,
-            daemon=self.daemon,
-        )
-        applied = applier.apply(params)
-        return {"status": "ok", "applied": applied, "failed": dict(applier.failed)}
-
     async def _handle_profile_reaplicar(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
@@ -1340,9 +1323,8 @@ class IpcHandlersMixin:
         mesmo dia). Hoje o ausente só perde a fila; o número dele volta a
         ser calculado quando ele voltar para a mesa.
 
-        Repintura: ``reassert_resolved_outputs`` (getattr defensivo, mesmo
-        padrão do apply_draft) reafirma o LED do DualSense já com o slot
-        novo; os externos são repintados pelo PRÓPRIO tick lento seguinte
+        Repintura: ``reassert_resolved_outputs`` (getattr defensivo) reafirma o LED do
+        DualSense já com o slot novo; os externos são repintados pelo PRÓPRIO tick lento seguinte
         (``ExternalLedSync.tick`` compara contra o slot atualizado — sem
         precisar de escrita síncrona aqui), mas o agendamento é adiantado
         via ``daemon._schedule_external_tick`` (getattr defensivo) para não
@@ -6499,4 +6481,4 @@ def _a_luz_do_jogo_no_controle(status: dict[str, Any], uniq: Any) -> None:
         status["luz_do_mic_do_jogo"] = int(do_jogo)
 
 
-__all__ = ["DraftApplier", "IpcHandlersMixin"]
+__all__ = ["IpcHandlersMixin"]

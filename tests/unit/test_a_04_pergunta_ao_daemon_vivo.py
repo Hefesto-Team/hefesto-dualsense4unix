@@ -407,7 +407,7 @@ def test_o_aplicar_diz_o_brilho_da_cor_que_acendeu(mesa_de):
 
     NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). Esta régua
     dizia que o brilho atravessava a troca automática para OUTRO perfil: o
-    `DraftApplier` escrevia a cor na camada dela, que a troca automática não
+    o «Aplicar» antigo escrevia a cor na camada dela, que a troca automática não
     solta. O «Aplicar» passou a ser a cadeia da ativação, a cor vai na camada
     do perfil, e o perfil seguinte manda na dele (`D-1409`, o perfil aplica
     tudo). O que fica medido é o que o daemon diz da cor que o «Aplicar»

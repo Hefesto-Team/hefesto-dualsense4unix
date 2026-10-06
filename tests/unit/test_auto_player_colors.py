@@ -563,8 +563,8 @@ class TestAtivacaoReassertaResolvido:
     (`apply_output_defaults`) e a paleta automática só aparecia no PRÓXIMO
     replug — um boot com os controles já conectados ficava com a cor global
     (visto na máquina: dois DualSense em BT, ambos com o roxo do perfil).
-    O fix: `reassert_resolved_outputs()` ao final da ativação (manager) e do
-    apply_draft (applier) converge o estado físico ao resolvido
+    O fix: `reassert_resolved_outputs()` ao final da ativação (manager)
+    converge o estado físico ao resolvido
     (explícita > automática > global).
     """
 
@@ -638,16 +638,3 @@ class TestAtivacaoReassertaResolvido:
         antes = list(n1.colors)
         inst.reassert_resolved_outputs()
         assert len(n1.colors) == len(antes) + 1
-
-    def test_apply_draft_chama_o_reassert(self) -> None:
-        """O caminho do "Aplicar" da GUI converge o físico ao resolvido."""
-        from unittest.mock import MagicMock
-
-        from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-
-        controller = MagicMock()
-        applier = DraftApplier(
-            controller=controller, store=MagicMock(), daemon=MagicMock()
-        )
-        applier._apply_leds({"lightbar": [10, 20, 30], "lightbar_brightness": 1.0})
-        controller.reassert_resolved_outputs.assert_called_once()

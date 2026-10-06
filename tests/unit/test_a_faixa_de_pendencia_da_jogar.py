@@ -11,10 +11,8 @@ frase eram falsas, e por motivos diferentes:
 
 1. o alvo sai de `aba01.MODO_ACESO`, logo a frase só sabe prometer o que já está
    valendo (a cura de 31/08 matou a contradição e deixou uma tautologia);
-2. **clicar em "Aplicar" não troca modo nem máscara nesta interface.** O rodapé
-   daqui manda `profile.apply_draft`, e o contrato desse payload está escrito no
-   produto (`app/draft_config.to_ipc_dict`, PERFIL-SALVA-TUDO-01): *"`mode` e
-   `suppress_desktop_emulation` … NÃO viajam no 'Aplicar'"*.
+2. **clicar em "Aplicar" não trocava modo nem máscara** (02/09; desde 01/10 o
+   rodapé manda `profile.reaplicar`, a cadeia da ativação, que leva os dois).
 
 O QUE A RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
 

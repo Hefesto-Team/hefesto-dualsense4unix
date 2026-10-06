@@ -7,8 +7,8 @@ nenhum pacote de aba. Os gestos são registrados em `("*", nome)`, que o
 
 O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido:
 
-    Aplicar   `footer_actions.on_apply_draft`  → `profile.apply_draft`
-              (aqui, desde 01/10/2026: `profile.reaplicar`, a cadeia da ativação)
+    Aplicar   `profile.reaplicar`, a cadeia da ativação (desde 01/10/2026; o
+              `profile.apply_draft` antigo saiu do daemon)
     Salvar    `footer_actions.on_save_profile` → diálogo de nome + save_profile
     Importar  `footer_actions.on_import_profile` → FileChooser + validação
     Exportar  **NÃO EXISTE**

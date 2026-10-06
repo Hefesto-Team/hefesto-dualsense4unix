@@ -2150,10 +2150,8 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     **o gesto age na hora**, e não junta mudanças num rascunho à espera de um
     "Aplicar".
 
-    A GUI estável tem as duas rotas — o `led.set` direto e o
-    `profile.apply_draft` do rascunho — e o próprio `on_lightbar_apply` chama a
-    primeira de "a cor já acende ao soltar o seletor". Aqui a primeira é a
-    regra, e o "Salvar Perfil" continua sendo o que grava.
+    A cor chega pelo `led.set` direto, "a cor já acende ao soltar o seletor", e
+    o "Salvar Perfil" continua sendo o que grava.
 
     A CONVERSÃO NÃO MORA AQUI, e morava até 02/09/2026. A linha era::
 

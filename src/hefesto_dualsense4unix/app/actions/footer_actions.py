@@ -93,7 +93,7 @@ def _lista_de_secoes(secoes: Any) -> str:
 
 
 def _mensagem_de_aplicacao(result: Any) -> str:
-    """Texto do rodapé para uma resposta ACEITA de ``profile.apply_draft``."""
+    """Texto do rodapé para o relato da ativação (``applied`` e ``failed``)."""
     if not isinstance(result, dict):
         return _("Perfil aplicado ao controle.")
     aplicadas = result.get("applied")

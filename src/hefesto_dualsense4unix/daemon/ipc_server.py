@@ -4,8 +4,6 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
 
     profile.switch       {name: str} -> {active_profile: str}
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
-    profile.apply_draft  {triggers?, leds?, rumble?, mouse?}
-                         -> {status, applied: [str], failed: {str: str}}
     profile.reaplicar    {name: str} -> {active_profile, mode_aplicado, secoes}
     trigger.set    {side, mode, params, uniq?} -> {status, aplicado_em, guardado_em}
     trigger.reset  {side?, uniq?}              -> {status, aplicado_em, guardado_em}
@@ -99,7 +97,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController
 from hefesto_dualsense4unix.daemon import launch_env
-from hefesto_dualsense4unix.daemon.ipc_handlers import DraftApplier, IpcHandlersMixin
+from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_CONTROLLER_DISCONNECTED,
@@ -157,7 +155,6 @@ class IpcServer(IpcHandlersMixin):
         self._handlers = {
             "profile.switch": self._handle_profile_switch,
             "profile.list": self._handle_profile_list,
-            "profile.apply_draft": self._handle_profile_apply_draft,
             "profile.reaplicar": self._handle_profile_reaplicar,
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
@@ -434,7 +431,6 @@ __all__ = [
     "PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS",
     "PROTOCOL_VERSION",
     "TETO_DO_PEDIDO_MS",
-    "DraftApplier",
     "IpcServer",
     "_apply_rumble_policy",
     "apply_rumble_policy",

@@ -4,7 +4,7 @@ O defeito, medido em 13/08/2026: `docs/protocol/ipc-unix-socket.md` trazia uma
 tabela "Métodos v1" com DEZ linhas escritas à mão, e o dicionário `_handlers` de
 `daemon/ipc_server.py` registrava TRINTA E SETE métodos. Faltava a família
 inteira do rumble, mais `plugin.list`, `plugin.reload`, `daemon.pause`,
-`daemon.resume` e `profile.apply_draft`.
+`daemon.resume`.
 
 O QUE ESTE ARQUIVO DEFENDE NÃO É A TABELA — É O NÚMERO
 -------------------------------------------------------

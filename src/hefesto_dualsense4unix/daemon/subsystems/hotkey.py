@@ -1496,32 +1496,6 @@ def _acender(acender: Any, aceso: bool, uniq: str) -> None:
         acender(aceso)
 
 
-def devolver_a_luz_ao_kernel(daemon: DaemonProtocol) -> int:
-    """Devolve a POSSE do `common[8]` de todos os controles da mesa."""
-    devolver = getattr(daemon.controller, "set_microphone_led", None)
-    if not callable(devolver):
-        # `PyDualSenseController`. Num daemon dublado a devolução não acontece,
-        logger.warning("mic_da_mesa_posse_sem_backend")
-        return 0
-    quantos = 0
-    for uniq in _uniqs_conectados(daemon) or [None]:  # type: ignore[list-item]
-        try:
-            if uniq is None:
-                devolver(None)
-            else:
-                devolver(None, uniq=uniq)
-        except TypeError:
-            logger.warning("mic_da_mesa_posse_sem_endereco", uniq=uniq)
-            with contextlib.suppress(Exception):
-                devolver(None)
-        except Exception as exc:  # pragma: no cover - defensivo
-            logger.warning("mic_da_mesa_posse_falhou", uniq=uniq, err=str(exc))
-            continue
-        quantos += 1
-    logger.info("mic_da_mesa_posse_devolvida", controles=quantos)
-    return quantos
-
-
 def _eleitor(daemon: DaemonProtocol) -> Any:
     """O eleitor da SESSÃO. Um só, porque ele guarda o microfone de antes.
 
@@ -2660,7 +2634,6 @@ __all__ = [
     "canal_do_microfone",
     "canal_do_microfone_loop",
     "definir_acao_do_ps",  # (noqa-acento) nome de função
-    "devolver_a_luz_ao_kernel",
     "ligar_o_microfone",
     "mic_button_loop",
     "mic_do_jogo_loop",

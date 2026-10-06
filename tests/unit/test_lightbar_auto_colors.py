@@ -7,18 +7,14 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("lightbar auto colors")
 
 from typing import Any
-from unittest.mock import MagicMock
 
 import gi
-import pytest
 
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
-from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-from hefesto_dualsense4unix.daemon.subsystems import identity
 from hefesto_dualsense4unix.profiles.schema import (
 
     ControllerOverrides,
@@ -160,65 +156,3 @@ def _gdk_rgba_ok() -> bool:
         return hasattr(Gdk, "RGBA")
     except Exception:
         return False
-
-
-class TestApplierAutoColors:
-    @pytest.fixture(autouse=True)
-    def _singleton_limpo(self) -> Any:
-        identity.reset_identity_registry()
-        yield
-        identity.reset_identity_registry()
-
-    @staticmethod
-    def _applier() -> tuple[DraftApplier, MagicMock]:
-        controller = MagicMock()
-        return (
-            DraftApplier(controller=controller, store=MagicMock(), daemon=None),
-            controller,
-        )
-
-    def test_secao_leds_configura_o_registro(self) -> None:
-        applier, controller = self._applier()
-        applied = applier.apply(
-            {
-                "leds": {
-                    "lightbar_rgb": [10, 20, 30],
-                    "lightbar_brightness": 0.4,
-                    "player_leds": [True, False, False, False, False],
-                    "auto_player_colors": False,
-                }
-            }
-        )
-        assert applied == ["leds"]
-        registry = identity.get_identity_registry()
-        assert registry.auto_enabled is False
-        assert registry.auto_brightness == pytest.approx(0.4)
-        controller.apply_output_defaults.assert_called_once()
-
-    def test_toggle_sozinho_configura_sem_broadcast(self) -> None:
-        """Payload parcial (só o toggle) — o caminho do botão da aba."""
-        applier, controller = self._applier()
-        registry = identity.get_identity_registry()
-        registry.configure(enabled=False)
-        applied = applier.apply({"leds": {"auto_player_colors": True}})
-        assert applied == ["leds"]
-        assert registry.auto_enabled is True
-        controller.apply_output_defaults.assert_not_called()
-
-    def test_payload_sem_a_chave_nao_mexe_no_registro(self) -> None:
-        """GUI antiga (sem o campo) = sem opinião: o vigente fica."""
-        applier, _controller = self._applier()
-        registry = identity.get_identity_registry()
-        registry.configure(enabled=False, brightness=0.2)
-        applier.apply({"leds": {"lightbar_rgb": [1, 2, 3]}})
-        assert registry.auto_enabled is False
-        assert registry.auto_brightness == pytest.approx(0.2)
-
-    def test_toggle_invalido_recusa_a_secao(self) -> None:
-        applier, controller = self._applier()
-        applied = applier.apply({"leds": {"auto_player_colors": "sim"}})
-        assert applied == []
-        assert identity.get_identity_registry().auto_enabled is True
-        controller.apply_output_defaults.assert_not_called()
-
-

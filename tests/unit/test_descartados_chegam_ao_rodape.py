@@ -177,7 +177,7 @@ def test_o_embrulho_de_duas_pontas_continua_valendo(
 
     A função está no ``__all__``, e trocar a aridade dela quebraria todo
     chamador que não fosse migrado na mesma leva. Aditivo é a regra desta
-    fronteira (ver ``apply_draft``/``apply_draft_detalhado``).
+    fronteira.
     """
     monkeypatch.setattr(
         ipc_bridge,

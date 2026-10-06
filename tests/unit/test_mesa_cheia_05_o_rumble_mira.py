@@ -294,63 +294,6 @@ class TestEscreverRumbleNoDono:
         escrever_rumble_no_dono(controller, "aabbcc0000ff", 10, 20)
 
 
-class TestOAplicarDoRodapeTambemTemDono:
-    """Sítio órfão 1 — `ipc_draft_applier.DraftApplier._apply_rumble`."""
-
-    @pytest.mark.asyncio
-    async def test_aplicar_mirado_no_tres_nao_marreta_o_dois(
-        self, mesa: _Mesa
-    ) -> None:
-        dois, tres = mesa.uniqs[1], mesa.uniqs[2]
-
-        await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
-        await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
-
-        await mesa.server._handle_controller_target_set({"index": mesa.indice_de(tres)})
-        resposta = await mesa.server._handle_profile_apply_draft(
-            {"rumble": {"weak": 40, "strong": 80}}
-        )
-        assert "rumble" in resposta["applied"]
-        assert mesa.config.rumble_active == (40, 80)
-
-        mesa.limpar_motores()
-        mesa.ticks()
-        assert mesa.motores_de(dois) == [], (
-            "o reassert marretou o Controle 2 com o valor que ela mandou para o "
-            "3 — o dono ficou rançoso do gesto anterior"
-        )
-        assert mesa.motores_de(tres) == [("left", 80), ("right", 40)] * 3, (
-            "o controle que ela escolheu no «Aplicar» não recebeu nada"
-        )
-        assert mesa.config.rumble_active_uniq == tres, (
-            "o «Aplicar» do rodapé gravou o par NOVO e deixou o dono RANÇOSO no "
-            "controle do gesto anterior"
-        )
-
-    @pytest.mark.asyncio
-    async def test_aplicar_com_os_sliders_em_zero_esquece_o_dono(
-        self, mesa: _Mesa
-    ) -> None:
-        """(0,0) no «Aplicar» é passthrough — solta o par E o endereço dele."""
-        dois = mesa.uniqs[1]
-        await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
-        await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
-
-        await mesa.server._handle_profile_apply_draft(
-            {"rumble": {"weak": 0, "strong": 0}}
-        )
-        assert mesa.config.rumble_active is None
-        assert mesa.config.rumble_active_uniq is None, (
-            "o par foi solto e o dono ficou para trás — endereço sem par é lixo "
-            "que sobrevive ao gesto"
-        )
-
-        mesa.limpar_motores()
-        mesa.ticks()
-        for uniq in mesa.uniqs:
-            assert mesa.motores_de(uniq) == [], uniq
-
-
 class TestATrocaDePoliticaNaoTrocaDeControle:
     """Sítio órfão 2 — `lifecycle.Daemon._reapply_rumble_policy_to_active`."""
 
@@ -479,32 +422,6 @@ class TestOAbandonadoTemRotaDeVolta:
         assert mesa.motores_de(tres) == [("left", 90), ("right", 40)] * 4, (
             "o dono novo recebe o gesto e os três reasserts"
         )
-
-    @pytest.mark.asyncio
-    async def test_o_aplicar_do_rodape_tambem_devolve_o_abandonado(
-        self, mesa: _Mesa
-    ) -> None:
-        """A terceira porta: o «Aplicar» do rodapé, por `profile.apply_draft`."""
-        dois, tres = mesa.uniqs[1], mesa.uniqs[2]
-
-        await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
-        await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
-        mesa.ticks(2)
-        await mesa.server._handle_controller_target_set({"index": mesa.indice_de(tres)})
-
-        mesa.limpar_motores()
-        await mesa.server._handle_profile_apply_draft(
-            {"rumble": {"weak": 40, "strong": 80}}
-        )
-        mesa.ticks(3)
-        assert mesa.motores_de(dois) == [("left", 0), ("right", 0)], (
-            "o «Aplicar» do rodapé mudou o dono do par e abandonou o Controle 2 "
-            "vibrando"
-        )
-        assert mesa.motores_de(tres) == [("left", 80), ("right", 40)] * 4, (
-            "o controle que ela escolheu no «Aplicar» recebe o par e os reasserts"
-        )
-
 
 class TestOResgateNaoPiscaQuemNaoFoiAbandonado:
     """Hipótese tem de explicar o que JÁ funcionava — e não pode piscar motor."""

@@ -449,7 +449,8 @@ PROCEDENCIA_DA_STEAM = "Steam"
 
 SEPARADOR_DA_PROCEDENCIA = " · "
 
-#: 11/09/2026: todas as features funcionam para qualquer usuário, não só para a máquina de quem desenvolve.
+#: 11/09/2026: todas as features funcionam para qualquer usuário, não só para
+#: a máquina de quem desenvolve.
 _FORMA_FIXA: dict[str, str] = {
     PROCEDENCIA_DA_NAVEGACAO: "browser",
     PROCEDENCIA_DE_QUALQUER_JOGO: "any",

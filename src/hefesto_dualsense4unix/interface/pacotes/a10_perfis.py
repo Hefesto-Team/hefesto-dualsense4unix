@@ -98,7 +98,7 @@ O QUE A ONDA2-10 ACRESCENTOU — 04/09/2026, as decisões do PO:
 
 O QUE ESTA ABA NÃO SABE FAZER, e é o teto de tudo o que está acima: **o daemon
 não tem `profile.save` nem `profile.delete`.** Os 39 métodos que ele atende
-trazem só `profile.switch`, `profile.list` e `profile.apply_draft` — gravar e
+trazem `profile.switch`, `profile.list` e `profile.reaplicar` — gravar e
 apagar perfil roda no processo da janela, direto no disco, e por isso todo gesto
 que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 `launch_env.refresh` para a antecipação por appid).

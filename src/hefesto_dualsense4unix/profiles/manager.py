@@ -263,7 +263,7 @@ class ProfileManager:
         """O perfil inteiro de novo aos controles, sem virar a escolha do usuário.
 
         O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). O «Aplicar» mandava
-        `profile.apply_draft` (o `DraftApplier`), que leva menos da metade do
+        `profile.apply_draft` (já removido), que levava menos da metade do
         perfil: ficavam de fora o volume e o ganho do microfone, os sensores, a
         máscara, a mira, o modo e a política de vibração. Agora ele roda a
         MESMA cadeia da ativação, com todas as camadas.
@@ -489,7 +489,7 @@ class ProfileManager:
         """O «Todos» das luzes de número vai cru a todo controle nesta ativação?
 
         O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026), a regra que o
-        `DraftApplier._o_todos_das_luzes` já tinha para o «Aplicar» antigo. O
+        «Aplicar» antigo já tinha. O
         `apply_output_defaults` leva o global CRU a todo handle; um controle que
         termina noutro degrau (a palavra dele, ou o Fraco da economia) passaria
         por ele antes do dele, um quadro intermediário (medido na mesa de
@@ -1987,9 +1987,8 @@ def resolve_key_bindings(
     """Resolve um mapping CRU de key_bindings (button→tokens) para o device.
 
     Mesmas regras de `_to_key_bindings`, mas recebe o mapping cru em vez de um
-    `Profile` — usado por `profile.apply_draft` (DraftApplier) para empurrar os
-    bindings editados na aba Teclado ao device vivo sem reativar o perfil do
-    disco (BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01).
+    `Profile` — para empurrar os bindings editados na aba Teclado ao device vivo sem
+    reativar o perfil do disco (BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01).
 
     Regras (FEAT-KEYBOARD-PERSISTENCE-01):
     - `None` → herda `DEFAULT_BUTTON_BINDINGS` completo.

@@ -91,9 +91,6 @@ class _PonteDoRodape:
     def profile_reaplicar(self, nome: str) -> dict[str, Any]:
         return self.mesa.rodar(self.mesa.server._handle_profile_reaplicar({"name": nome}))
 
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self.mesa.rodar(self.mesa.server._handle_profile_apply_draft(payload))
-
     def __getattr__(self, nome: str) -> Any:
         raise AttributeError(f"a régua não previu o rodapé chamar a ponte em {nome!r}")
 

@@ -14,7 +14,7 @@ OS TRÊS DEGRAUS DO REUSO, nesta ordem — e a ordem é a regra:
     1. `app/ipc_bridge.py`   36 funções, SEM GTK. É a camada que a GUI estável
                              usa para falar com o daemon. `led_set`,
                              `trigger_set`, `rumble_policy_set_checked`,
-                             `mic_set`, `speaker_set`, `apply_draft_detalhado`,
+                             `mic_set`, `speaker_set`,
                              `identity_number_set`, `profile_switch`…
     2. os módulos da CLI     `cli/cmd_native.py`, `cli/cmd_coop.py` — também
                              puros, e donos dos métodos que o bridge não expõe.
@@ -94,7 +94,6 @@ mira_set_detalhado = _b.mira_set_detalhado
 
 profile_list = _b.profile_list
 profile_switch = _b.profile_switch
-apply_draft_detalhado = _b.apply_draft_detalhado
 freestyle_set = _b.freestyle_set
 machine_declare = _b.machine_declare
 
@@ -113,7 +112,7 @@ TETOS = {
     # `mouse.emulation.restore` de 2,0 s logo acima.** A razão é o que ele faz
     # `key_bindings`/`button_actions` e pode CRIAR o device de teclado além do
     "desktop.arranjo.apply": 3.0,
-    "profile.switch": 3.0, "profile.apply_draft": 3.0,
+    "profile.switch": 3.0,
     # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
     # cadeia da ativação, e por isso o teto é o do `profile.switch`.
     "profile.reaplicar": 3.0,
