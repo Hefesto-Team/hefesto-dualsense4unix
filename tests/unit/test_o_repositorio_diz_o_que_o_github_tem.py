@@ -319,7 +319,7 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
             e["repo"]["has_discussions"], e["sponsor"]) == (True, False, False, False, False)
     assert (e["alertas"], e["fixes"], e["relato"]) == (True, True, True)
     assert set(e["análise"].values()) == {"enabled"}
-    assert e["colaboradores"] == {"[REDACTED]": "admin", "AndreBFarias": "admin"}
+    assert e["colaboradores"] == {aplicar.CONTA_DA_CASA: "admin", "AndreBFarias": "admin"}
     assert [r["name"] for r in e["rulesets"]] == [r["nome"] for r in d["rulesets"]]
     porta = next(r for r in e["rulesets"] if "revisão" in r["name"] or "checks" in r["name"])
     tipos = {x["type"] for x in porta["rules"]}
@@ -363,6 +363,42 @@ def test_a_deriva_volta_ao_arquivo(gh: Mentira) -> None:
     assert depois["repo"]["description"] == _dados()["about"]["descrição"]
     assert depois["relato"] is True and depois["colaboradores"]["AndreBFarias"] == "admin"
     assert any(x["type"] == "required_status_checks" for x in depois["rulesets"][1]["rules"])
+
+
+def _porta(e: dict[str, Any]) -> dict[str, Any]:
+    return next(r for r in e["rulesets"] if any(x["type"] == "pull_request" for x in r["rules"]))
+
+
+def _aprovacoes_a_zero(e: dict[str, Any]) -> None:
+    for x in _porta(e)["rules"]:
+        if x["type"] == "pull_request":
+            x["parameters"]["required_approving_review_count"] = 0
+
+
+def _check_renomeado(e: dict[str, Any]) -> None:
+    for x in _porta(e)["rules"]:
+        if x["type"] == "required_status_checks":
+            x["parameters"]["required_status_checks"][0]["context"] = "outro"
+
+
+@pytest.mark.parametrize(
+    "deriva",
+    [
+        _aprovacoes_a_zero,
+        _check_renomeado,
+        lambda e: _porta(e).update(bypass_actors=[]),
+        lambda e: _porta(e).update(enforcement="evaluate"),
+        lambda e: _porta(e)["conditions"]["ref_name"].update(include=["refs/heads/dev"]),
+    ],
+)
+def test_a_deriva_de_valor_do_ruleset_volta_ao_arquivo(gh: Mentira, deriva: Any) -> None:
+    assert rodar("--aplicar") == 0
+    e = gh.estado
+    deriva(e)
+    gh.estado_arq.write_text(json.dumps(e))
+    assert rodar("--conferir") == 1
+    assert rodar("--aplicar") == 0
+    assert rodar("--conferir") == 0
 
 
 def test_o_que_o_servidor_acrescenta_nao_e_deriva(gh: Mentira) -> None:
