@@ -207,18 +207,22 @@ class TestOsTresPortoesDePaginaPassamPeloPontoComum:
 
 class TestOsCachesNaoAdocamOVeredito:
     def test_a_poda_da_ponte_nao_suja_a_arvore_compartilhada(self) -> None:
-        """A árvore lida por conteúdo é só de leitura: podar não pode alterá-la."""
+        """A árvore lida por conteúdo é só de leitura: podar a ponte não pode alterá-la."""
+        import ast
+
         casa = pytest.importorskip("tests.unit.portao_a_casa_sabe_e_o_produto_nao_faz")
-
-        def chaves(poda: bool) -> set[str]:
-            return set(casa.promessas_sem_caminho(podar_a_bancada=poda))
-
-        antes = chaves(False)
-        chaves(True)
-        depois = chaves(False)
+        piloto = RAIZ / casa._PILOTO_DA_INTERFACE_NOVA
+        antes = ast.dump(casa._arvore(piloto))
+        podadas = dict(casa._fontes_externas(RAIZ, podar_a_bancada=True))
+        assert casa._PASTA_DA_PONTE + "/hefesto_vivo.py" in podadas, (
+            "instrumento inválido: a poda nem chegou ao piloto")
+        depois = ast.dump(casa._arvore(piloto))
         assert antes == depois, (
-            "uma varredura podada alterou a árvore que a seguinte leu: a poda mexeu "
-            f"na árvore compartilhada. Diferença: {sorted(antes ^ depois)}")
+            "a poda da ponte alterou a árvore COMPARTILHADA do piloto: a varredura "
+            "seguinte lê um piloto já podado e o portão adoça o próprio veredito")
+        assert ast.dump(podadas[casa._PASTA_DA_PONTE + "/hefesto_vivo.py"]) != antes, (
+            "a árvore podada saiu igual à inteira: a poda não podou nada, e esta "
+            "régua não mede a cópia")
 
     def test_a_arvore_de_prefixos_casa_o_que_a_alternancia_plana_casava(self) -> None:
         """A cura de tempo da acentuação não pode mudar quem é acusado."""
