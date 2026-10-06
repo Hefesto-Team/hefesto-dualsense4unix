@@ -625,6 +625,50 @@ def test_morde_a_memoria_que_ignora_o_indice(tmp_path: Path) -> None:
     )
 
 
+# A ÁRVORE QUE MUDA DURANTE A CORRIDA: a chave é a do começo, e o portão mede os bytes do meio. O portão
+# abaixo faz, na primeira vez, o papel de quem salva um arquivo enquanto os portões rodam: troca a marca
+# mordida pela limpa antes de ler. O verde dele é dos bytes limpos, e não pode ficar lembrado sob a chave
+# dos mordidos.
+
+_PY_QUEM_SALVA_NO_MEIO = textwrap.dedent("""\
+    import pathlib, sys
+    vez = pathlib.Path("lixo/ja-salvou")
+    if not vez.exists():
+        vez.parent.mkdir(exist_ok=True)
+        vez.write_text("1")
+        pathlib.Path("dados/marca.txt").write_text("limpo\\n")
+    sys.exit(1 if "MORDIDA" in pathlib.Path("dados/marca.txt").read_text() else 0)
+    """)
+
+
+def _a_arvore_muda_no_meio(tmp_path: Path, **kw: str) -> dict[str, str]:
+    repo = _monta(
+        tmp_path,
+        "rapido|salva|py|scripts/g_salva.py",
+        arquivos={"scripts/g_salva.py": _PY_QUEM_SALVA_NO_MEIO, "dados/marca.txt": "MORDIDA\n"},
+        **kw,
+    )
+    assert _status(_corre(repo, "--rapido").stdout) == {"salva": "ok"}
+    (repo / "dados/marca.txt").write_text("MORDIDA\n", encoding="utf-8")
+    return _status(_corre(repo, "--rapido").stdout)
+
+
+def test_o_verde_de_uma_arvore_que_mudou_no_meio_nao_fica_lembrado(tmp_path: Path) -> None:
+    assert _a_arvore_muda_no_meio(tmp_path) == {"salva": "VERMELHO"}, (
+        "o verde dos bytes do meio ficou lembrado sob a chave dos bytes do começo"
+    )
+
+
+def test_morde_a_memoria_que_nao_confere_a_chave_depois(tmp_path: Path) -> None:
+    texto = PORTOES.read_text(encoding="utf-8")
+    velho = 'if [ "${_CHAVE_DEPOIS[$_a]:-}" = "$_b" ]; then'
+    assert texto.count(velho) == 1
+    depois = _a_arvore_muda_no_meio(tmp_path, portoes=texto.replace(velho, "if true; then"))
+    assert depois == {"salva": "lembrado"}, (
+        "a mordida não pegou: a régua não vê a chave que não foi conferida depois da corrida"
+    )
+
+
 def test_vermelho_nao_e_lembrado(tmp_path: Path) -> None:
     repo = _monta(
         tmp_path, "rapido|py-marca|py|scripts/g_marca.py", arquivos=_MORDIDAS["mordida-no-py"]

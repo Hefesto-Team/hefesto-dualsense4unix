@@ -704,13 +704,15 @@ command -v xvfb-run >/dev/null 2>&1 && PREFIXO_DE_TELA="${PREFIXO_DE_TELA:+$PREF
 OUT="$LAR_DE_MENTIRA/saidas"
 mkdir -p "$OUT"
 MEM_PASTA=""
+declare -A G_LINHA_DE=()
 if [ "$SEM_MEMORIA" -eq 0 ] && [ "$N" -gt 0 ]; then
   _linhas=""
   for ((n = 0; n < N; n++)); do
     [ "${G_ESTADO[n]}" = rodar ] || continue
     _resolvido="${G_ARGV[n]}"
     [ "${G_RUN[n]}" = bin ] && _resolvido="$(_bin "${_resolvido%% *}") ${_resolvido#* }"
-    _linhas+="${G_ID[n]}|${G_RUN[n]}|${_resolvido}|${G_ENT[n]}"$'\n'
+    G_LINHA_DE["${G_ID[n]}"]="${G_ID[n]}|${G_RUN[n]}|${_resolvido}|${G_ENT[n]}"
+    _linhas+="${G_LINHA_DE[${G_ID[n]}]}"$'\n'
   done
   _chaves="$("$PY" "$RAIZ/scripts/recibo_da_medida.py" chaves --raiz "$RAIZ" \
              <<<"$_linhas" 2>"$OUT/memoria.err")" || _chaves=""
@@ -906,8 +908,33 @@ done
 wait 2>/dev/null
 trap - INT TERM
 
+# A CHAVE DE NOVO, DEPOIS DA CORRIDA: o portão mediu os bytes do meio da corrida, e a chave é a do começo.
+# Se a árvore mudou enquanto ele rodava (alguém salvou um arquivo, deu `git add`), o verde dele não é o dos
+# bytes da chave, e anotá-lo deixaria lembrado um verde que ninguém mediu. Só se anota a chave que não mudou.
 if [ -n "$VERDES_TSV" ] && [ -n "$MEM_PASTA" ]; then
-  printf '%s' "$VERDES_TSV" | "$PY" "$RAIZ/scripts/recibo_da_medida.py" anotar --raiz "$RAIZ" || true
+  _depois=""
+  while IFS=$'\t' read -r _a _b _c; do
+    [ -n "$_a" ] && _depois+="${G_LINHA_DE[$_a]:-}"$'\n'
+  done <<<"$VERDES_TSV"
+  _chaves_depois="$(printf '%s' "$_depois" \
+    | "$PY" "$RAIZ/scripts/recibo_da_medida.py" chaves --raiz "$RAIZ" 2>/dev/null)" || _chaves_depois=""
+  declare -A _CHAVE_DEPOIS=()
+  while IFS=$'\t' read -r _a _b _c; do
+    case "$_a" in "#"*|"") ;; *) _CHAVE_DEPOIS["$_a"]="$_b" ;; esac
+  done <<<"$_chaves_depois"
+  _confirmados=""; _mudaram=()
+  while IFS=$'\t' read -r _a _b _c; do
+    [ -n "$_a" ] || continue
+    if [ "${_CHAVE_DEPOIS[$_a]:-}" = "$_b" ]; then
+      _confirmados+="$_a"$'\t'"$_b"$'\t'"$_c"$'\n'
+    else
+      _mudaram+=("$_a")
+    fi
+  done <<<"$VERDES_TSV"
+  [ ${#_mudaram[@]} -gt 0 ] \
+    && echo "memória: a árvore mudou durante a corrida, e estes verdes não ficam lembrados: ${_mudaram[*]}"
+  [ -n "$_confirmados" ] \
+    && { printf '%s' "$_confirmados" | "$PY" "$RAIZ/scripts/recibo_da_medida.py" anotar --raiz "$RAIZ" || true; }
 fi
 
 PAREDE=$(( $(date +%s) - INICIO_DA_CORRIDA ))
