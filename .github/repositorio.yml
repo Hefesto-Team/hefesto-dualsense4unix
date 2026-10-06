@@ -1,0 +1,78 @@
+# O que este repositório tem no GitHub, escrito como código. Quem lê é o
+# `scripts/github/aplicar.py`:
+#   python3 scripts/github/aplicar.py --repo DONO/NOME --conferir   diz a diferença; sai com 1 se houver
+#   python3 scripts/github/aplicar.py --repo DONO/NOME --aplicar    aplica pelo `gh api`, e rodar de novo não muda nada
+# Mudar uma configuração na interface do GitHub não vale: a próxima conferência acusa a diferença.
+versão: 1
+
+about:
+  descrição: "O DualSense completo no Linux: gatilhos adaptativos, luz, vibração, giroscópio, áudio e até quatro jogadores."
+  # Sem endereço próprio por enquanto: a página do produto nasce com as Pages, depois da release 1.
+  site: ""
+  topicos:
+    - dualsense
+    - ps5
+    - linux
+    - gamepad
+    - controller
+    - adaptive-triggers
+    - haptic-feedback
+    - gyroscope
+    - accessibility
+    - python
+
+# `ligada: false` precisa de `depois`: o que está desligado hoje e quando volta a ser considerado.
+funções:
+  issues:
+    ligada: true
+  wiki:
+    ligada: false
+    depois: "depois da release 1"
+  pages:
+    ligada: false
+    depois: "depois da release 1"
+  projects:
+    ligada: false
+    depois: "depois da release 1"
+  discussions:
+    ligada: false
+    depois: "depois da release 1"
+  sponsor:
+    ligada: false
+    depois: "depois da release 1"
+
+seguranca:
+  relato_privado: true
+  alertas_do_dependabot: true
+  atualizacoes_de_seguranca: true
+  varredura_de_segredo: true
+  protecao_de_push_de_segredo: true
+
+# Quem mantém: as duas contas do `.mailmap`.
+mantenedores:
+  - conta: vitoriamariadb
+    função: admin
+  - conta: AndreBFarias
+    função: admin
+
+# Cada regra é uma chave com um aplicador em `scripts/github/aplicar.py`.
+# `checks` são os nomes que o GitHub mostra (o `name` do job, ou o id dele; o job com matriz
+# leva o valor entre parênteses) e cada um tem de existir em `.github/workflows/`.
+# Os administradores passam pelo ruleset «a porta» (o trabalho do dia entra por push direto no `dev`);
+# o ruleset «a história» não tem exceção para ninguém.
+rulesets:
+  - nome: "A história do dev e do main não se reescreve"
+    ramos: [dev, main]
+    sem_apagar: true
+    sem_push_forcado: true
+    historico_linear: true
+  - nome: "O que entra no dev e no main passa pelos checks e pela revisão"
+    ramos: [dev, main]
+    revisão:
+      aprovacoes: 1
+    checks:
+      - autoria
+      - "lint-test (3.10)"
+      - "lint-test (3.11)"
+      - "lint-test (3.12)"
+    excecao: administradores
