@@ -231,7 +231,8 @@ _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que n
 NAO_SAO_DIVIDA: dict[str, str] = {
     "scripts/recibo_da_medida.py::_IGNORADOS_QUE_ENTRAM": (
         "as pastas ignoradas pelo git que a chave da memória dos portões lê (medido por strace: "
-        "quatro portões abrem arquivos de scripts/ que o git não leva); entra na chave, não isenta nada"),
+        "quatro portões abrem arquivos de scripts/ que o git não leva); "
+        "entra na chave, não isenta nada"),
     "scripts/github/aplicar.py::DONOS_PERMITIDOS": (
         "os donos em que o aplicador aceita escrever (a organização e a conta de quem mantém): "
         "é a guarda contra escrever no repositório errado, não um caso isento"),
