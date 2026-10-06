@@ -1846,7 +1846,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
     padding:11px 12px 12px;gap:8px;overflow:visible}
   .radio .painel[data-tipo="menu"] .painel-cab h2{color:var(--fg)}
   .radio .painel[data-tipo="menu"] .estado{margin:-4px 0 0;font-size:12.5px;color:var(--texto-suave)}
-  .radio .painel[data-tipo="menu"] .estado .nao-conectou{color:var(--red)}
   .radio .painel[data-tipo="menu"] .explica{margin:0}
   .radio .painel[data-tipo="menu"] .escolha{display:grid;grid-auto-flow:column;
     grid-auto-columns:1fr;gap:7px}
@@ -1854,6 +1853,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .painel .btn.apaga{background:var(--red);border-color:var(--red);color:#fff}
   .radio .painel .btn.apaga:hover{background:#ff6e6e;border-color:#ff6e6e;color:#fff}
   .radio .painel .btn.apaga svg{color:#fff}
+  .radio .painel[data-solto]:not([data-tipo="menu"]){border:1px solid var(--linha);border-radius:9px}
   .radio .lugar-nome[class*="cor-"]:not(:focus){border-color:var(--cor-do-grupo)}
   .radio .porta svg[class*="cor-"]{color:var(--cor-do-grupo)}
   .radio .cor-cyan{--cor-do-grupo:var(--cyan)}
@@ -2294,6 +2294,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       p.setAttribute('data-tipo', tipo);
       p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
       aGavetaNaLinha(p);
+      oPainelDeixaOsMenus(p);
       aSecaoCabeOPainel();
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
       if(primeiro) primeiro.focus();
@@ -2386,6 +2387,25 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       p.style.top = topo + 'px';
       p.style.right = Math.round(base.right - r.left + 6) + 'px';
     }
+    // O PAINEL NÃO COBRE A COLUNA DOS «⋮» (a mesma cura 3): o «Conectar» aberto ocupava a borda
+    // direita da seção, por cima do «⋮» de toda linha, e o clique nele caía no painel. Aberto, o
+    // painel para à esquerda da coluna, e o «⋮» de qualquer linha continua ao alcance.
+    function oPainelDeixaOsMenus(p){
+      if(!p) return;
+      p.removeAttribute('data-solto');
+      if(!p.classList.contains('aberto') || p.getAttribute('data-tipo') === 'menu'
+         || !p.offsetParent) return;
+      p.style.right = '';
+      var esquerda = Infinity;
+      todos('.radio .lugar.aberto .linha .menu-da-linha').forEach(function(m){
+        var q = m.getBoundingClientRect();
+        if(q.width) esquerda = Math.min(esquerda, q.left);
+      });
+      if(esquerda === Infinity) return;
+      var base = p.offsetParent.getBoundingClientRect();
+      p.style.right = Math.max(0, Math.round(base.right - esquerda + 6)) + 'px';
+      p.setAttribute('data-solto', '');
+    }
     function aSecaoCabeOPainel(){
       var s = document.getElementById('rd-secao'), p = document.getElementById('rd-painel');
       if(!s || !p) return;
@@ -2415,6 +2435,9 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(precisa) pistas.setAttribute('data-fora-no-titulo', '');
     }
     window.addEventListener('resize', aSecaoCabeOPainel);
+    window.addEventListener('resize', function(){
+      oPainelDeixaOsMenus(document.getElementById('rd-painel'));
+    });
     window.addEventListener('resize', oQueEstaForaDaFaixaCabe);
     document.addEventListener('change', function(ev){
       if(ev.target && ev.target.name === 'cx8-secao') oQueEstaForaDaFaixaCabe();
@@ -2428,7 +2451,9 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     if(window.ResizeObserver){
       var olhoDoMiolo = new ResizeObserver(function(){ oQueEstaForaDaFaixaCabe(); });
       todos('.miolo > *').forEach(function(q){ olhoDoMiolo.observe(q); });
-      var olhoDoPainel = new ResizeObserver(function(){ aSecaoCabeOPainel(); });
+      var olhoDoPainel = new ResizeObserver(function(){
+        oPainelDeixaOsMenus(document.getElementById('rd-painel')); aSecaoCabeOPainel();
+      });
       var corpoDoPainel = document.getElementById('rd-painel-corpo');
       if(corpoDoPainel) olhoDoPainel.observe(corpoDoPainel);
       var corpoDaSecao = document.querySelector('#rd-secao > .quadro-corpo');

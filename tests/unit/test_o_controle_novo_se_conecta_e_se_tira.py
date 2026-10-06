@@ -337,6 +337,7 @@ def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
 MOCKUP_08 = Path(__file__).resolve().parents[2] / "mockup/08-conexoes.html"
 A_CAIXA_ESCOLHE = "      if(aCaixaEscolhe(ev)) return;\n"
 A_GAVETA_NA_LINHA = "      aGavetaNaLinha(p);\n"
+O_PAINEL_DEIXA_OS_MENUS = "      p.style.right = Math.max(0, Math.round(base.right - esquerda + 6)) + 'px';\n"
 
 ABRE_A_GAVETA = r"""
 (function(){
@@ -369,6 +370,7 @@ MEDE_A_GAVETA = r"""
     largura: Math.round(r.width), altura: Math.round(r.height),
     perto_da_linha: Math.abs(r.top - rb.top) <= 12, a_esquerda_do_menu: r.right <= rb.left,
     estado: (p.querySelector('.estado') || {}).textContent || '',
+    cor_do_estado: getComputedStyle(p.querySelector('.estado .nao-conectou') || p).color,
     botoes: [...p.querySelectorAll('.escolha .btn')].map(function(x){
       const s = getComputedStyle(x);
       return [x.textContent.trim(), s.backgroundColor, s.color];
@@ -388,6 +390,8 @@ O_CONECTAR_E_OUTRA_CAIXA = r"""
   document.getElementById('rd-b-conectar').click();
   window.__antes = [...document.querySelectorAll('#rd-painel .op[aria-pressed="true"]')]
     .map(function(o){ return o.dataset.alvo; });
+  // a caixa que se abre com o painel já aberto: a coluna dos «⋮» dela nasce depois do painel
+  document.querySelector('.radio .abre-lugar[data-alvo="L3"]').click();
   const topo = document.querySelector('.radio .sala .lugar[data-id="L2"] .lugar-topo');
   const q = topo.getBoundingClientRect();
   let alvo = null;
@@ -410,8 +414,15 @@ MEDE_O_ALVO = r"""
     depois: [...p.querySelectorAll('.op[aria-pressed="true"]')].map(function(o){
       return o.dataset.alvo; }),
   };
-  document.querySelector('.radio .abre-lugar[data-alvo="L3"]').click();
-  document.querySelector('.radio .linha .menu-da-linha[data-alvo="celular-L3"]').click();
+  // o clique cai onde o dedo cai: o «⋮» tem de ser o elemento daquele ponto, não um painel
+  // por cima dele (um .click() direto no botão atravessaria o painel e mentiria)
+  const m = document.querySelector('.radio .linha .menu-da-linha[data-alvo="celular-L3"]');
+  m.scrollIntoView({block: 'center'});
+  const q = m.getBoundingClientRect();
+  const e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+  fora.no_ponto_do_menu = !!e && m.contains(e);
+  fora.no_ponto = e ? (e.id || e.className || e.tagName) : '';
+  if (e) e.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
   fora.outra_linha = [p.getAttribute('data-tipo'),
                       document.getElementById('rd-painel-titulo').textContent];
   return JSON.stringify(fora);
@@ -438,15 +449,24 @@ def _no_webkit_08(pagina: Path, prepara: str, mede: str) -> dict[str, Any]:
 def test_com_o_conectar_aberto_a_caixa_de_outro_adaptador_muda_o_alvo(tmp_path: Path) -> None:
     """A cura 3: com o painel do «Conectar» aberto, o clique na caixa de outro adaptador é a
     escolha do chip (o alvo muda e o painel fica), e o «⋮» de outra linha troca a gaveta. Um véu
-    cobria a seção e todo clique nela só fechava o painel.
+    cobria a seção e todo clique nela só fechava o painel; sem o véu, o painel ainda cobria a
+    coluna dos «⋮», e o clique de verdade (no ponto do botão) caía nele.
 
-    MORDIDA: :func:`test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel`.
+    MORDIDAS: :func:`test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel` e
+    :func:`test_mordida_com_o_painel_na_borda_o_menu_da_linha_fica_por_baixo`.
     """
     f = _no_webkit_08(_a_pagina(tmp_path), O_CONECTAR_E_OUTRA_CAIXA, MEDE_O_ALVO)
     assert f["clicou"], f"nenhum ponto vazio na caixa recebeu o clique (um véu por cima?): {f}"
     assert f["antes"] != ["L2"], f
     assert (f["aberto"], f["tipo"], f["depois"]) == (True, "conectar", ["L2"]), f
+    assert f["no_ponto_do_menu"] is True, f"o «⋮» está por baixo de {f['no_ponto']!r}: {f}"
     assert f["outra_linha"] == ["menu", "Celular"], f
+
+
+def test_mordida_com_o_painel_na_borda_o_menu_da_linha_fica_por_baixo(tmp_path: Path) -> None:
+    f = _no_webkit_08(_a_pagina(tmp_path, O_PAINEL_DEIXA_OS_MENUS), O_CONECTAR_E_OUTRA_CAIXA,
+                      MEDE_O_ALVO)
+    assert f["outra_linha"][0] == "conectar" and f["no_ponto_do_menu"] is False, f
 
 
 def test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel(tmp_path: Path) -> None:
@@ -468,6 +488,7 @@ def test_a_gaveta_tem_o_tamanho_do_que_mostra_e_mora_ao_lado_da_linha(tmp_path: 
     assert f["perto_da_linha"] and f["a_esquerda_do_menu"], f
     assert f["menus"] >= 3 and f["menus_livres"] == f["menus"], f"cobre «⋮» de outras: {f}"
     assert f["estado"].startswith(a08_tela.NAO_CONECTOU), f
+    assert f["cor_do_estado"] != "rgb(255, 85, 85)", f"texto vermelho na gaveta: {f}"
     assert f["botoes"] == [[a08_tela.TIRAR_A_LINHA, "rgb(255, 85, 85)", "rgb(255, 255, 255)"]], f
 
 
