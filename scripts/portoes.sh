@@ -71,8 +71,8 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
 # O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
 # isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
-# enquanto a tabela tinha o dobro. Medida em 20/09/2026: **44 `rapido` e 17
-# `completo`** (61 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# enquanto a tabela tinha o dobro. Medida em 06/10/2026: **48 `rapido` e 19
+# `completo`** (67 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
 # aqui conta de novo, e o comando é o dono da resposta:
 #   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
