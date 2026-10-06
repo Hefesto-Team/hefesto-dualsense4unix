@@ -1,0 +1,65 @@
+# O `rotulos.yml` põe no PR o rótulo da área que ele toca, pelo caminho dos arquivos mudados.
+# Cada rótulo existe no `repositorio.yml`, e cada caminho tem de casar com algum arquivo do repositório.
+"área: tela":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/hefesto_dualsense4unix/interface/**"
+          - "mockup/**"
+          - "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md"
+"área: rádio":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/hefesto_dualsense4unix/integrations/*bluez*"
+          - "src/hefesto_dualsense4unix/integrations/*radio*"
+          - "src/hefesto_dualsense4unix/integrations/*pareamento*"
+          - "src/hefesto_dualsense4unix/daemon/subsystems/conexoes.py"
+          - "src/hefesto_dualsense4unix/daemon/subsystems/governador_do_radio.py"
+          - "docs/usage/bluetooth*.md"
+"área: som":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/hefesto_dualsense4unix/integrations/*audio*"
+          - "src/hefesto_dualsense4unix/integrations/*microfone*"
+          - "src/hefesto_dualsense4unix/integrations/alto_falante*"
+          - "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
+          - "src/hefesto_dualsense4unix/daemon/subsystems/*mic*.py"
+"área: háptica":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/hefesto_dualsense4unix/integrations/*haptica*"
+          - "src/hefesto_dualsense4unix/core/rumble.py"
+          - "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py"
+"área: gatilhos":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/hefesto_dualsense4unix/core/trigger_effects.py"
+          - "src/hefesto_dualsense4unix/core/gatilho*.py"
+          - "docs/protocol/trigger-modes.md"
+"área: lançadores":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/hefesto_dualsense4unix/integrations/steam*.py"
+          - "src/hefesto_dualsense4unix/integrations/*lancadores*.py"
+          - "src/hefesto_dualsense4unix/integrations/proton_pin.py"
+          - "src/hefesto_dualsense4unix/profiles/**"
+          - "docs/usage/jogos-e-mascaras.md"
+"área: instalação":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "install.sh"
+          - "uninstall.sh"
+          - "packaging/**"
+          - "flatpak/**"
+          - "scripts/build_*.sh"
+          - "docs/usage/instalacao.md"
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/usage/**"
+          - "README.md"
+          - "CHANGELOG.md"
+"dependências":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"
+          - "constraints.txt"

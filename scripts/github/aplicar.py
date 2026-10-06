@@ -13,8 +13,9 @@ alguma depois de aplicar; 2 o arquivo não vale, a conta não é a certa ou o se
 deixou medir (o que não se mediu nunca sai como verde).
 
 Há coisas que o GitHub só mede e não deixa criar por API (as categorias das Discussions, o grafo
-de dependências, a saúde da comunidade): elas entram no `--conferir` como diferença e, no
-`--aplicar`, ficam como «falhou» com o que fazer à mão, nunca como verde.
+de dependências, a saúde da comunidade, a edição de uma vista de projeto): elas entram no
+`--conferir` como diferença e, no `--aplicar`, ficam como «sobrou» com o que fazer à mão, nunca
+como verde.
 """
 from __future__ import annotations
 
@@ -93,7 +94,7 @@ CORES_DE_ETAPA = ("BLUE", "GRAY", "GREEN", "ORANGE", "PINK", "PURPLE", "RED", "Y
 FORMATOS_DE_VISTA = ("table", "board", "roadmap")
 # A ordem é a em que se aplica: as funções ligam antes de o que depende delas.
 GRUPOS = (
-    "about", "configuracao", "funções", "seguranca", "acoes", "mantenedores", "equipes",
+    "about", "configuração", "funções", "seguranca", "ações", "mantenedores", "equipes",
     "rotulos", "milestones", "tipos_de_issue", "ambientes", "discussoes", "projetos",
     "rulesets", "comunidade",
 )
@@ -181,8 +182,8 @@ def validar(dados: Any) -> list[str]:
     erros += _validar_mantenedores(dados.get("mantenedores"))
     erros += _validar_rulesets(dados.get("rulesets"))
     for grupo, validador in (
-        ("configuracao", _validar_configuracao),
-        ("acoes", _validar_acoes),
+        ("configuração", _validar_configuracao),
+        ("ações", _validar_acoes),
         ("equipes", _validar_equipes),
         ("rotulos", _validar_rotulos),
         ("milestones", _validar_milestones),
@@ -296,6 +297,9 @@ def _validar_ruleset(r: Any) -> list[str]:
     ramos, tags = r.get("ramos"), r.get("tags")
     if (ramos is None) == (tags is None):
         erros.append(f"ruleset «{nome}»: `ramos` ou `tags`, um dos dois")
+    if tags is not None:
+        # a revisão de PR e os checks olham ramo e PR; o servidor recusa as duas num ruleset de tag
+        erros += [f"ruleset «{nome}»: `{k}` só vale para ramo" for k in ("revisão", "checks") if k in r]
     alvo = ramos if ramos is not None else tags
     rotulo = "ramos" if ramos is not None else "tags"
     if not isinstance(alvo, list) or not alvo or not all(isinstance(b, str) and b for b in alvo):
@@ -327,28 +331,28 @@ def _validar_ruleset(r: Any) -> list[str]:
 def _validar_configuracao(cfg: Any) -> list[str]:
     mesc = cfg.get("mesclagem") if isinstance(cfg, dict) else None
     if not isinstance(mesc, dict):
-        return ["configuracao.mesclagem: falta"]
-    erros = [f"configuracao.mesclagem.{k}: desconhecida" for k in mesc if k not in MESCLAGEM]
-    erros += [f"configuracao.mesclagem.{k}: falta declarar" for k in MESCLAGEM if k not in mesc]
+        return ["configuração.mesclagem: falta"]
+    erros = [f"configuração.mesclagem.{k}: desconhecida" for k in mesc if k not in MESCLAGEM]
+    erros += [f"configuração.mesclagem.{k}: falta declarar" for k in MESCLAGEM if k not in mesc]
     erros += [
-        f"configuracao.mesclagem.{k}: verdadeiro ou falso"
+        f"configuração.mesclagem.{k}: verdadeiro ou falso"
         for k, v in mesc.items() if not isinstance(v, bool)
     ]
     if mesc.get("squash") is False and mesc.get("rebase") is False and mesc.get("merge_commit") is False:
-        erros.append("configuracao.mesclagem: ao menos um jeito de mesclar fica ligado")
+        erros.append("configuração.mesclagem: ao menos um jeito de mesclar fica ligado")
     return erros
 
 
 def _validar_acoes(acoes: Any) -> list[str]:
     if not isinstance(acoes, dict):
-        return ["acoes: falta"]
+        return ["ações: falta"]
     erros: list[str] = []
     if acoes.get("permissao_do_fluxo") not in PERMISSAO_DO_FLUXO:
-        erros.append(f"acoes.permissao_do_fluxo: entre {tuple(PERMISSAO_DO_FLUXO)}")
+        erros.append(f"ações.permissao_do_fluxo: entre {tuple(PERMISSAO_DO_FLUXO)}")
     if not isinstance(acoes.get("fluxo_aprova_pr"), bool):
-        erros.append("acoes.fluxo_aprova_pr: verdadeiro ou falso")
+        erros.append("ações.fluxo_aprova_pr: verdadeiro ou falso")
     if acoes.get("aprovacao_de_fork") not in APROVACAO_DE_FORK:
-        erros.append(f"acoes.aprovacao_de_fork: entre {tuple(APROVACAO_DE_FORK)}")
+        erros.append(f"ações.aprovacao_de_fork: entre {tuple(APROVACAO_DE_FORK)}")
     return erros
 
 
@@ -626,14 +630,14 @@ CONSULTAS = {
         "mutation CriarProjeto($dono:ID!,$titulo:String!){createProjectV2(input:"
         "{ownerId:$dono,title:$titulo}){projectV2{id number}}}"),
     "AtualizarProjeto": (
-        "mutation AtualizarProjeto($id:ID!,$descricao:String!,$publico:Boolean!){updateProjectV2("
-        "input:{projectId:$id,shortDescription:$descricao,public:$publico}){projectV2{id}}}"),
+        "mutation AtualizarProjeto($id:ID!,$resumo:String!,$publico:Boolean!){updateProjectV2("
+        "input:{projectId:$id,shortDescription:$resumo,public:$publico}){projectV2{id}}}"),
     "LigarProjeto": (
         "mutation LigarProjeto($projeto:ID!,$repo:ID!){linkProjectV2ToRepository(input:"
         "{projectId:$projeto,repositoryId:$repo}){repository{id}}}"),
     "AtualizarEtapas": (
-        "mutation AtualizarEtapas($campo:ID!,$opcoes:[ProjectV2SingleSelectFieldOptionInput!]){"
-        "updateProjectV2Field(input:{fieldId:$campo,singleSelectOptions:$opcoes})"
+        "mutation AtualizarEtapas($campo:ID!,$etapas:[ProjectV2SingleSelectFieldOptionInput!]){"
+        "updateProjectV2Field(input:{fieldId:$campo,singleSelectOptions:$etapas})"
         "{projectV2Field{... on ProjectV2SingleSelectField{id}}}}"),
 }
 
@@ -719,12 +723,12 @@ def planejar_about(c: Contexto) -> list[Acao]:
 
 
 def planejar_configuracao(c: Contexto) -> list[Acao]:
-    quer = c.dados["configuracao"]["mesclagem"]
+    quer = c.dados["configuração"]["mesclagem"]
     r = c.estado_do_repo()
     corpo = {MESCLAGEM[k]: v for k, v in quer.items() if bool(r.get(MESCLAGEM[k])) != v}
     if not corpo:
         return []
-    return [Acao(f"configuracao: {', '.join(sorted(corpo))} diferem", c.patch(corpo))]
+    return [Acao(f"configuração: {', '.join(sorted(corpo))} diferem", c.patch(corpo))]
 
 
 def _planejar_função(nome: str) -> Callable[[Contexto], list[Acao]]:
@@ -832,7 +836,7 @@ def planejar_grafo_de_dependencias(c: Contexto) -> list[Acao]:
 
 
 def planejar_acoes(c: Contexto) -> list[Acao]:
-    quer = c.dados["acoes"]
+    quer = c.dados["ações"]
     acoes: list[Acao] = []
     _, w = c.gh.ler(f"repos/{c.repo}/actions/permissions/workflow")
     corpo: dict[str, Any] = {}
@@ -841,12 +845,12 @@ def planejar_acoes(c: Contexto) -> list[Acao]:
     if bool(w.get("can_approve_pull_request_reviews")) != quer["fluxo_aprova_pr"]:
         corpo["can_approve_pull_request_reviews"] = quer["fluxo_aprova_pr"]
     if corpo:
-        acoes.append(Acao("acoes: as permissões do fluxo diferem",
+        acoes.append(Acao("ações: as permissões do fluxo diferem",
                           c.escreve("PUT", "actions/permissions/workflow", corpo)))
     _, f = c.gh.ler(f"repos/{c.repo}/actions/permissions/fork-pr-contributor-approval")
     politica = APROVACAO_DE_FORK[quer["aprovacao_de_fork"]]
     if f.get("approval_policy") != politica:
-        acoes.append(Acao("acoes: a aprovação de PR de fora difere", c.escreve(
+        acoes.append(Acao("ações: a aprovação de PR de fora difere", c.escreve(
             "PUT", "actions/permissions/fork-pr-contributor-approval",
             {"approval_policy": politica})))
     return acoes
@@ -1184,7 +1188,7 @@ def _planejar_projeto(c: Contexto, p: dict[str, Any], atual: dict[str, Any]) -> 
     titulo = p["título"]
     if (atual.get("shortDescription") or "") != p["descrição"] or bool(atual.get("public")) != p["público"]:
         acoes.append(Acao(f"projetos.{titulo}: descrição ou visibilidade diferem", _graphql_em(
-            c, "AtualizarProjeto", {"id": atual["id"], "descricao": p["descrição"],
+            c, "AtualizarProjeto", {"id": atual["id"], "resumo": p["descrição"],
                                     "publico": p["público"]})))
     campos = (atual.get("fields") or {}).get("nodes") or []
     etapa = next((x for x in campos if x.get("name") == "Status"), None)
@@ -1195,7 +1199,7 @@ def _planejar_projeto(c: Contexto, p: dict[str, Any], atual: dict[str, Any]) -> 
     elif [(o["name"], o["color"]) for o in etapa.get("options") or []] != quer_opcoes:
         opcoes = [{"name": n, "color": cor, "description": ""} for n, cor in quer_opcoes]
         acoes.append(Acao(f"projetos.{titulo}: as etapas do Status diferem", _graphql_em(
-            c, "AtualizarEtapas", {"campo": etapa["id"], "opcoes": opcoes})))
+            c, "AtualizarEtapas", {"campo": etapa["id"], "etapas": opcoes})))
     ligados = {x["nameWithOwner"] for x in (atual.get("repositories") or {}).get("nodes") or []}
     for repo in p["ligado_a"]:
         if repo in ligados:
@@ -1267,7 +1271,7 @@ def planejar_projetos(c: Contexto) -> list[Acao]:
 # uma entrada aqui para tudo o que o arquivo declara, e nenhuma entrada sem declaração.
 APLICADORES: dict[str, Callable[[Contexto], list[Acao]]] = {
     "about": planejar_about,
-    "configuracao": planejar_configuracao,
+    "configuração": planejar_configuracao,
     **{f"funções.{n}": _planejar_função(n) for n in FUNCOES},
     "seguranca.relato_privado": _interruptor(
         "relato_privado", "private-vulnerability-reporting",
@@ -1283,7 +1287,7 @@ APLICADORES: dict[str, Callable[[Contexto], list[Acao]]] = {
     "seguranca.varredura_de_codigo": planejar_varredura_de_codigo,
     "seguranca.grafo_de_dependencias": planejar_grafo_de_dependencias,
     "seguranca.releases_imutaveis": planejar_releases_imutaveis,
-    "acoes": planejar_acoes,
+    "ações": planejar_acoes,
     "mantenedores": planejar_mantenedores,
     "equipes": planejar_equipes,
     "rotulos": planejar_rotulos,
@@ -1409,13 +1413,13 @@ def principal(argv: list[str] | None = None, gh: Gh | None = None) -> int:
     c.esquecer()
     depois, sem_medida_depois = planejar(c, grupos)
     detalhe += [_linha(f"sobrou: {x.texto}", x) for x in depois]
+    fazer = [x for x in acoes if not x.a_mao]
     if falhas or depois or sem_medida or sem_medida_depois:
         sobram = len(falhas) + len(depois) + len(sem_medida_depois)
         codigo = 2 if (sem_medida or sem_medida_depois) else 1
-        fazer = [x for x in acoes if not x.a_mao]
         return encerrar(codigo, f"{a.repo}: aplicado {len(fazer) - len(falhas)} de "
                         f"{len(fazer)}; sobram {sobram}")
-    return encerrar(0, f"{a.repo}: aplicado {len(acoes)}; conferido sem diferença")
+    return encerrar(0, f"{a.repo}: aplicado {len(fazer)}; conferido sem diferença")
 
 
 if __name__ == "__main__":

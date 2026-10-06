@@ -1,0 +1,77 @@
+name: Algo não funciona
+description: Conte o que aconteceu, para a gente conseguir repetir.
+title: "[Defeito] "
+labels: ["bug"]
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por avisar. Quanto mais preciso o relato, mais rápido sai a correção.
+        Para uma dúvida de uso, prefira as [Discussões](https://github.com/Hefesto-Team/hefesto-dualsense4unix/discussions/categories/q-a).
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu
+      description: O que você fez, o que viu e o que esperava ver.
+    validations:
+      required: true
+  - type: textarea
+    id: como-repetir
+    attributes:
+      label: Como repetir
+      description: Os passos, a partir do controle ligado.
+      placeholder: |
+        1. Conecto o controle por cabo.
+        2. Abro a aba Gatilhos.
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Como o controle está ligado
+      options:
+        - Cabo
+        - Bluetooth
+        - Os dois, em controles diferentes
+    validations:
+      required: true
+  - type: dropdown
+    id: controle
+    attributes:
+      label: Qual controle
+      options:
+        - DualSense
+        - DualSense Edge
+        - Outro (diga qual na descrição)
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribuição e versão
+      placeholder: Fedora 42, Ubuntu 24.04, Pop!_OS 24.04...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão do Hefesto
+      description: A saída de `hefesto-dualsense4unix --version`.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Saída do doctor
+      description: Rode `hefesto-dualsense4unix doctor` e cole o resultado aqui.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: registro
+    attributes:
+      label: Registro do serviço
+      description: O fim de `journalctl --user -u hefesto-dualsense4unix --since "10 min ago"`, se o problema aparece ali.
+      render: shell

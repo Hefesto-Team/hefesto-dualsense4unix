@@ -22,7 +22,7 @@ about:
 
 # A mesclagem de PR em linha reta: o histórico do `dev` e do `main` não ganha commit de merge feito
 # pelo botão do GitHub (a porta, abaixo, também exige histórico linear de quem não mantém).
-configuracao:
+configuração:
   mesclagem:
     merge_commit: false
     squash: true
@@ -67,7 +67,7 @@ seguranca:
     depois: "quando a release deixar de apagar e recriar a versão publicada"
 
 # Só o fluxo mais restrito: o `GITHUB_TOKEN` lê, e o PR de gente de fora espera a aprovação de quem mantém.
-acoes:
+ações:
   permissao_do_fluxo: leitura
   fluxo_aprova_pr: false
   aprovacao_de_fork: todos_de_fora

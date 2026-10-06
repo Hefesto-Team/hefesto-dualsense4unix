@@ -1,8 +1,25 @@
 # Contribuindo
 
-Issues e pull requests são bem-vindos. Para uma mudança grande, abra uma issue antes, para combinarmos o caminho.
+Obrigado por querer ajudar. Quem usa o Hefesto ajuda de três jeitos, do mais simples ao mais fundo:
+
+1. **Contando como foi.** Um problema, um jogo que não reconhece o controle ou uma ideia: abra uma [issue](https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues/new/choose) pelo formulário que combina. Uma dúvida de uso vai para as [Discussões](https://github.com/Hefesto-Team/hefesto-dualsense4unix/discussions/categories/q-a), e quem mostra o próprio setup ajuda quem está chegando.
+2. **Medindo.** Rodar `hefesto-dualsense4unix doctor` e colar a saída na issue já poupa uma ida e volta. Relato de outra distribuição, outro modelo de controle ou outro adaptador Bluetooth vale muito.
+3. **Mexendo no código.** Por enquanto o projeto não revisa pull request de quem ainda não contribuiu: converse antes numa issue ou numa discussão, e combinamos o caminho. Quem passar a contribuir entra no arquivo `.mailmap`, e a partir daí o pull request é revisado.
+
+As issues que cabem a quem está chegando levam o rótulo [good first issue](https://github.com/Hefesto-Team/hefesto-dualsense4unix/labels/good%20first%20issue).
 
 Tudo no projeto é escrito em português do Brasil, com acentuação: código, comentários, documentação e mensagens de commit.
+
+## Como o trabalho anda
+
+O trabalho do dia vai para o ramo `dev`, e o `main` só recebe uma versão pronta, no lançamento. O `dev` e o `main` aceitam só commit **assinado** (o selo «Verified» do GitHub) e só por autor que está no `.mailmap`; quem muda o `main` ou o `dev` por pull request ainda precisa de uma revisão e dos testes verdes. As versões publicadas (as tags `v*`) não se apagam nem se reescrevem.
+
+Para assinar commit com uma chave SSH, depois de pôr a chave pública na sua conta do GitHub como «Signing key»:
+
+```bash
+bash scripts/github/assinar-commits.sh --conferir   # diz o que falta
+bash scripts/github/assinar-commits.sh --aplicar    # grava a configuração no seu git
+```
 
 ## Ambiente
 
@@ -10,6 +27,7 @@ Tudo no projeto é escrito em português do Brasil, com acentuação: código, c
 bash scripts/dev_bootstrap.sh              # cria a .venv com as dependências
 bash scripts/dev_bootstrap.sh --with-tray  # inclui PyGObject e GTK, para a janela e a bandeja
 pip install pre-commit && pre-commit install
+bash scripts/instalar-hooks.sh             # liga os ganchos do repositório e avisa se o seu git não assina
 ```
 
 ## Antes de abrir o pull request
@@ -72,4 +90,4 @@ Ficam em inglês dentro do português: `lightbar` e `rumble`, os nomes que a Son
 
 ## Dúvidas
 
-Abra uma issue com o modelo «Pergunta».
+Pergunte nas [Discussões](https://github.com/Hefesto-Team/hefesto-dualsense4unix/discussions/categories/q-a).

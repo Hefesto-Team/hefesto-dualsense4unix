@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Tirar uma dúvida
+    url: https://github.com/Hefesto-Team/hefesto-dualsense4unix/discussions/categories/q-a
+    about: Para perguntar como usar, a conversa é nas Discussões.
+  - name: Mostrar o seu setup
+    url: https://github.com/Hefesto-Team/hefesto-dualsense4unix/discussions/categories/show-and-tell
+    about: Conte com qual controle, jogo e distribuição você usa o Hefesto.
+  - name: Relatar uma falha de segurança
+    url: https://github.com/Hefesto-Team/hefesto-dualsense4unix/security/advisories/new
+    about: Em privado, sem abrir uma issue pública.

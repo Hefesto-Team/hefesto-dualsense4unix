@@ -1,0 +1,27 @@
+title: "[Pergunta] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de perguntar, vale olhar o [guia de problemas](https://github.com/Hefesto-Team/hefesto-dualsense4unix/blob/main/docs/usage/troubleshooting.md). Se for um defeito, abra uma [issue](https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues/new/choose).
+  - type: textarea
+    id: pergunta
+    attributes:
+      label: Sua pergunta
+      description: O que você quer fazer e o que já tentou.
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribuição e versão
+      placeholder: Fedora 42, Ubuntu 24.04, Pop!_OS 24.04...
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Como o controle está ligado
+      options:
+        - Cabo
+        - Bluetooth
+        - Ainda não liguei

@@ -1,3 +1,7 @@
-# Botão "Sponsor" do GitHub, no topo da página do repositório e ao lado de cada
-# issue. O nome é o do endereço do Patreon, sem a URL inteira e sem `@`.
+# O botão «Sponsor» do GitHub, no topo da página e ao lado de cada issue. O Patreon já existia; o
+# GitHub Sponsors, o Ko-fi e a página de doação (PIX, com o QR code) entram aqui quando quem mantém
+# decidir quem recebe: cada chave abaixo fica comentada até lá.
 patreon: Hefesto_Team
+# github: []
+# ko_fi:
+# custom: []

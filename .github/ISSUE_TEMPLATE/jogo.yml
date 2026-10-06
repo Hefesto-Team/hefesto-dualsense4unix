@@ -1,0 +1,54 @@
+name: Um jogo ou emulador
+description: O controle não é reconhecido, ou não se comporta direito, num jogo ou emulador.
+title: "[Jogo] "
+labels: ["jogo ou emulador"]
+type: Jogo ou emulador
+body:
+  - type: input
+    id: nome
+    attributes:
+      label: Nome do jogo ou do emulador
+    validations:
+      required: true
+  - type: dropdown
+    id: origem
+    attributes:
+      label: De onde ele roda
+      options:
+        - Steam
+        - Heroic
+        - Lutris
+        - RetroArch
+        - Direto no Linux
+        - Outro
+    validations:
+      required: true
+  - type: input
+    id: proton
+    attributes:
+      label: Versão do Proton ou do Wine
+      description: Deixe em branco se o jogo é nativo.
+  - type: textarea
+    id: o-que-acontece
+    attributes:
+      label: O que acontece com o controle
+      description: Se não aparece, aparece como outro controle, ou algum recurso não chega ao jogo.
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Como o controle está ligado
+      options:
+        - Cabo
+        - Bluetooth
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Saída do doctor
+      description: Rode `hefesto-dualsense4unix doctor` com o jogo aberto e cole o resultado aqui.
+      render: shell
+    validations:
+      required: true

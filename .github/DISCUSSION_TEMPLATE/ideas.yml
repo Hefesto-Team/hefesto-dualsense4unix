@@ -1,0 +1,17 @@
+title: "[Ideia] "
+body:
+  - type: textarea
+    id: ideia
+    attributes:
+      label: Sua ideia
+      description: O que você quer fazer e hoje não dá, e como imagina que funcionaria.
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Para qual conexão
+      options:
+        - Cabo e Bluetooth
+        - Só cabo
+        - Só Bluetooth

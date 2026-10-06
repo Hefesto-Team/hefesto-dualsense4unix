@@ -1,0 +1,18 @@
+name: Dependências
+
+# O PR que acrescenta ou troca uma dependência é lido contra a lista de falhas conhecidas do GitHub:
+# a que tem gravidade alta reprova o PR. Precisa do grafo de dependências ligado (o repositório é público).
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Revisão das dependências
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

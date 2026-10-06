@@ -1,0 +1,27 @@
+title: "[Meu setup] "
+body:
+  - type: markdown
+    attributes:
+      value: Conte como você usa o Hefesto. Ajuda quem está chegando a saber o que esperar.
+  - type: input
+    id: controle
+    attributes:
+      label: Qual controle (ou quantos)
+      placeholder: Um DualSense por cabo, quatro por Bluetooth...
+    validations:
+      required: true
+  - type: input
+    id: jogo
+    attributes:
+      label: Jogo ou emulador
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribuição e versão
+  - type: textarea
+    id: como
+    attributes:
+      label: Como ficou
+      description: O que funcionou bem e o que você ajustou.

@@ -1,0 +1,34 @@
+name: Uma ideia
+description: Sugira uma funcionalidade nova ou uma melhoria.
+title: "[Ideia] "
+labels: ["enhancement"]
+type: Ideia
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: O que você quer fazer e hoje não dá
+      description: Conte a situação, não só a solução.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Como você imagina que funcionaria
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Para qual conexão
+      description: O Hefesto trata cabo e Bluetooth do mesmo jeito, e a ideia deve valer para os dois.
+      options:
+        - Cabo e Bluetooth
+        - Só cabo
+        - Só Bluetooth
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: O que você já tentou

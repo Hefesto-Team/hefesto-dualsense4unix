@@ -1,4 +1,4 @@
-## Descrição
+## O que muda
 
 <!-- O que esta mudança faz e por quê. Se houver issue: Closes #N. -->
 
@@ -11,7 +11,7 @@
 - [ ] `docs`: documentação
 - [ ] `test`: só testes
 
-## Escopo
+## Onde mexe
 
 - [ ] Serviço (daemon, IPC, HID, UDP)
 - [ ] Janela
@@ -19,14 +19,16 @@
 - [ ] Linha de comando
 - [ ] Perfis e troca automática
 - [ ] Instalador e pacotes (.deb, Flatpak, AppImage, Arch, Fedora, Nix)
-- [ ] CI
+- [ ] CI e GitHub
 - [ ] Documentação
 
-## Checklist
+## Antes de pedir a revisão
 
+- [ ] O autor dos commits está no `.mailmap` e os commits estão assinados (veja o [CONTRIBUTING](CONTRIBUTING.md)).
 - [ ] `.venv/bin/ruff check src/ tests/` sem apontamentos.
 - [ ] `.venv/bin/mypy src/hefesto_dualsense4unix` sem erros.
 - [ ] `bash scripts/rodar-a-suite.sh` sem falhas.
+- [ ] A mudança vale para o cabo e para o Bluetooth, e para um a quatro controles.
 - [ ] O pre-commit rodou, sem `--no-verify`.
 
 ## Como testei

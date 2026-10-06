@@ -164,9 +164,9 @@ if ehgraph:
         if proj is None:
             saida(200, {"errors": [{"message": "projeto não encontrado"}]})
     if nome_op == "AtualizarProjeto":
-        if not isinstance(variaveis.get("publico"), bool) or not isinstance(variaveis.get("descricao"), str):
+        if not isinstance(variaveis.get("publico"), bool) or not isinstance(variaveis.get("resumo"), str):
             saida(200, {"errors": [{"message": "variáveis erradas"}]})
-        proj["desc"], proj["public"] = variaveis["descricao"], variaveis["publico"]
+        proj["desc"], proj["public"] = variaveis["resumo"], variaveis["publico"]
         saida(200, {"data": {"updateProjectV2": {"projectV2": {"id": proj["id"]}}}})
     if nome_op == "LigarProjeto":
         repo = next((r for r, ident in {st["slug"]: st["repo"]["node_id"], **st["repos_extras"]}.items()
@@ -178,7 +178,7 @@ if ehgraph:
         saida(200, {"data": {"linkProjectV2ToRepository": {"repository": {"id": variaveis["repo"]}}}})
     if nome_op == "AtualizarEtapas":
         cores = {"BLUE", "GRAY", "GREEN", "ORANGE", "PINK", "PURPLE", "RED", "YELLOW"}
-        opcoes = variaveis.get("opcoes") or []
+        opcoes = variaveis.get("etapas") or []
         if not all(o.get("name") and o.get("color") in cores and isinstance(o.get("description"), str)
                    for o in opcoes) or len({o["name"] for o in opcoes}) != len(opcoes):
             saida(200, {"errors": [{"message": "opções inválidas"}]})
@@ -274,7 +274,8 @@ if mo:
                     saida(422, msg="group_by com campo que não existe")
             numero = len(proj["vistas"]) + 1
             proj["vistas"].append({"id": f"PVTV_{numero}", "number": numero, "name": corpo["name"],
-                                   "layout": corpo["layout"].upper() + "_LAYOUT", "filter": corpo.get("filter")})
+                                   "layout": corpo["layout"].upper() + "_LAYOUT", "filter": corpo.get("filter"),
+                                   "group_by": corpo.get("group_by")})
             saida(201, proj["vistas"][-1])
     saida(404, msg=f"o gh de mentira não conhece {metodo} {caminho}")
 
@@ -517,7 +518,7 @@ if me:
                            "reviewers": [{"type": "User", "reviewer": {"login": l, "id": conta(l)}}
                                          for l in env["revisores"]]})
         saida(200, {"name": nome, "protection_rules": regras,
-                    "deployment_branch_policy": env["politica"]})
+                    "deployment_branch_policy": env["política"]})
     if resto_ == "" and metodo == "PUT":
         if len(corpo.get("reviewers") or []) > 6:
             saida(422, msg="até seis revisores")
@@ -530,24 +531,24 @@ if me:
         pol = corpo.get("deployment_branch_policy")
         if pol is not None and bool(pol.get("protected_branches")) == bool(pol.get("custom_branch_policies")):
             saida(422, msg="Exactly one of protected_branches or custom_branch_policies must be true")
-        antigo = st["ambientes"].get(nome, {"politicas": []})
+        antigo = st["ambientes"].get(nome, {"políticas": []})
         st["ambientes"][nome] = {"revisores": logins, "autoaprova": bool(corpo.get("prevent_self_review")),
-                                 "politica": pol, "politicas": antigo["politicas"]}
+                                 "política": pol, "políticas": antigo["políticas"]}
         saida(200, {"name": nome})
     if resto_ == "deployment-branch-policies":
         if env is None:
             saida(404)
         if metodo == "GET":
-            saida(200, {"total_count": len(env["politicas"]), "branch_policies": env["politicas"]})
+            saida(200, {"total_count": len(env["políticas"]), "branch_policies": env["políticas"]})
         if metodo == "POST":
-            if not (env["politica"] or {}).get("custom_branch_policies"):
+            if not (env["política"] or {}).get("custom_branch_policies"):
                 saida(404, msg="o ambiente não usa regras de ramo próprias")
             if corpo.get("type") not in ("branch", "tag") or not corpo.get("name"):
                 saida(422, msg="type ou name inválidos")
-            if any(p["name"] == corpo["name"] and p["type"] == corpo["type"] for p in env["politicas"]):
+            if any(p["name"] == corpo["name"] and p["type"] == corpo["type"] for p in env["políticas"]):
                 saida(409, msg="regra repetida")
-            env["politicas"].append({"id": novo_id(), "name": corpo["name"], "type": corpo["type"]})
-            saida(200, env["politicas"][-1])
+            env["políticas"].append({"id": novo_id(), "name": corpo["name"], "type": corpo["type"]})
+            saida(200, env["políticas"][-1])
 
 # --- os rulesets -----------------------------------------------------------------------------
 
