@@ -6,8 +6,8 @@ script faz a parte mecânica, e só ela:
 
 1. ``git mv`` de cada arquivo da ``TABELA`` (o que já foi movido é pulado);
 2. toda referência versionada ao nome velho passa ao novo (caminho e nome-base);
-3. o marcador de isenção de acento, ``citação literal dela``, vira
-   ``citação literal`` (``scripts/validar-acentuacao.py`` ignora qualquer linha
+3. o marcador de isenção de acento perde o «dela» da razão (``citação literal``;
+   ``scripts/validar-acentuacao.py`` ignora qualquer linha
    com ``noqa-acento``, então a razão escrita depois dele pode mudar de forma).
 
 Uso::
@@ -78,8 +78,8 @@ TABELA: dict[str, str] = {
 }
 
 #: O marcador de isenção: a razão perde o «dela».
-MARCADOR_VELHO = "citação literal dela"
 MARCADOR_NOVO = "citação literal"
+MARCADOR_VELHO = MARCADOR_NOVO + " " + "dela"
 
 _EXT_TEXTO = {
     ".py", ".sh", ".md", ".yml", ".yaml", ".toml", ".csv", ".txt", ".html", ".css",
@@ -114,7 +114,11 @@ def pares_de_nome(tabela: dict[str, str]) -> tuple[re.Pattern[str], dict[str, st
 
 
 #: Arquivos de posse alheia: recebem só a troca do caminho que quebraria, nunca o marcador.
-SO_REFERENCIA = ("install.sh", "uninstall.sh", "README.md", "docs/usage/", "tests/conftest.py", ".github/")
+SO_REFERENCIA = (
+    "install.sh", "uninstall.sh", "README.md", "docs/usage/", "tests/conftest.py", ".github/",
+    # dados que a costura escreve: só o caminho, nunca o marcador dentro das células
+    "docs/data/mapa-controles.csv", "docs/data/decisoes-de-produto.csv", "docs/specs.html",
+)
 
 
 def reescrever(texto: str, regras: tuple[re.Pattern[str], dict[str, str]], marcador: bool = True) -> str:
@@ -149,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
 
     mudados: list[str] = []
     for rel in sorted(presentes):
-        if not _texto(rel) or rel.startswith("docs/process/"):
+        if not _texto(rel) or rel.startswith("docs/process/") or rel == "scripts/renomear-o-dela.py":
             continue
         caminho = RAIZ / rel
         if not caminho.is_file():
