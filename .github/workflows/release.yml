@@ -33,6 +33,9 @@ jobs:
           # Quando disparado via workflow_dispatch, faz checkout da tag
           # indicada no input em vez de main HEAD.
           ref: ${{ github.event.inputs.tag || github.ref }}
+          # A história inteira, como o lint-test do ci.yml: há réguas que a leem
+          # (RELEASE-NO-CLONE-LIMPO-01).
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -49,7 +52,11 @@ jobs:
           # A cura ficou do lado dos testes (checar a typelib que cada módulo
           # puxa); instalar PyGObject pelo pip aqui foi tentado e revertido —
           # matava o interpretador no meio da suíte.
-          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
+            bubblewrap librsvg2-common libopus0
+          # Os mesmos pacotes e a mesma chave do lint-test do ci.yml
+          # (RELEASE-NO-CLONE-LIMPO-01): o teste do doctor no bwrap pula sem ela.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       # PORTÃO-VIVO-01 bloco D: "o workflow que produz o artefato é o que
       # verifica menos". Até aqui a release rodava TRÊS gates —
       # check_anonymity.sh, ruff e pytest tests/unit — enquanto o ci.yml rodava
@@ -73,9 +80,9 @@ jobs:
         run: python3 scripts/check_version_consistency.py
       - name: Instalar e testar
         run: |
-          pip install -e ".[dev]"
+          pip install -c constraints.txt -e ".[dev]"
           ruff check src/ tests/
-          pytest tests/unit -v
+          pytest tests/unit -v --continue-on-collection-errors
           # tests/core (12 testes) também não rodava aqui — mesma lacuna que o
           # CI-TESTS-CORE-ORFAO-01 fechou do lado do ci.yml.
           pytest tests/core -v

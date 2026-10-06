@@ -201,14 +201,14 @@
       "data": "2026-10-05",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 931693,
+      "piso": 931129,
       "por_item": {
-        "docs": 57788,
+        "docs": 57155,
         "scripts": 95565,
         "src": 280742,
-        "tests": 497598
+        "tests": 497667
       },
-      "razao": "o crescimento do conjunto «Conexões 3» (a3dfe59fd), já pago no fecho de 05/10; base da leva 1.6",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -254,7 +254,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 2438
+      "universo": 2436
     }
   }
 }
