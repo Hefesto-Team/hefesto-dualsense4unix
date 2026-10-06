@@ -152,12 +152,17 @@ def test_a_grade_de_cada_lugar_tem_o_endereco_da_familia() -> None:
 
 
 def test_a_folha_troca_o_rotulo_dos_quatro_botoes_de_cada_familia(mv) -> None:
+    """No mockup E no gerador: o mockup sozinho é a saída de ontem, e passaria com a
+    regra arrancada do `aba02.py` até a próxima regeneração."""
+    import aba02
+
     folha = "".join(re.findall(r"<style[^>]*>(.*?)</style>", _pagina(), re.S))
-    for familia, letras in mv.LETRAS_DA_FACE.items():
-        for botao, letra in letras.items():
-            alvo = f'.glifos[data-botoes="{familia}"] .gb[data-glifo="{botao}"]'
-            assert f'{alvo}::before{{content:"{letra}"}}' in folha, (familia, botao)
-            assert f"{alvo} svg{{display:none}}" in folha, (familia, botao)
+    for origem, texto in (("mockup/02-controles.html", folha), ("aba02.CSS", aba02.CSS)):
+        for familia, letras in mv.LETRAS_DA_FACE.items():
+            for botao, letra in letras.items():
+                alvo = f'.glifos[data-botoes="{familia}"] .gb[data-glifo="{botao}"]'
+                assert f'{alvo}::before{{content:"{letra}"}}' in texto, (origem, familia, botao)
+                assert f"{alvo} svg{{display:none}}" in texto, (origem, familia, botao)
 
 
 def test_o_desenho_nasce_sem_familia() -> None:
