@@ -748,6 +748,7 @@ def test_o_grafo_de_dependencias_que_o_github_nao_liga_por_api_so_se_mede(
     assert rodar("--conferir") == 1
     codigo, detalhe = _detalhe(tmp_path, "--aplicar")
     assert codigo == 1 and "à mão" in detalhe and "grafo_de_dependencias" in detalhe
+    assert "feito: seguranca.grafo" not in detalhe, "o que não se fez não vira «feito»"
     assert gh.escritas() == [], "o que só se mede não pode virar escrita"
 
 
@@ -793,6 +794,28 @@ def test_o_rotulo_com_outra_caixa_e_renomeado_e_o_que_nao_esta_no_arquivo_fica(g
     nomes = [x["name"] for x in gh.estado["labels"]]
     assert "bug" in nomes and "Bug" not in nomes
     assert "estranho" in nomes, "apagar rótulo o solta das issues: só com `exclusivos: true`"
+
+
+def test_o_rotulo_com_barra_e_interrogacao_no_nome_chega_inteiro_e_se_corrige(
+    gh: Mentira, tmp_path: Path
+) -> None:
+    nomes = ["build / ci", "o que é isto?", "50% pronto #3"]
+    arq = _arquivo(
+        tmp_path,
+        lambda d: d["rotulos"]["lista"].extend(
+            {"nome": n, "cor": "ededed", "descrição": "um rótulo difícil"} for n in nomes
+        ),
+    )
+    assert rodar("--aplicar", "--so", "rotulos", arquivo=arq) == 0
+    assert set(nomes) <= {x["name"] for x in gh.estado["labels"]}
+    e = gh.estado
+    for x in e["labels"]:
+        if x["name"] in nomes:
+            x["description"] = "outra"
+    _gravar(gh, e)
+    assert rodar("--conferir", "--so", "rotulos", arquivo=arq) == 1
+    assert rodar("--aplicar", "--so", "rotulos", arquivo=arq) == 0
+    assert rodar("--conferir", "--so", "rotulos", arquivo=arq) == 0
 
 
 def test_rotulos_exclusivos_apagam_o_que_nao_esta_no_arquivo(gh: Mentira, tmp_path: Path) -> None:
@@ -912,6 +935,7 @@ def test_a_categoria_de_discussao_que_falta_so_se_mede(gh: Mentira, tmp_path: Pa
     assert rodar("--conferir", "--so", "discussoes") == 1
     codigo, detalhe = _detalhe(tmp_path, "--aplicar", "--so", "discussoes")
     assert codigo == 1 and "q-a" in detalhe and "à mão" in detalhe
+    assert "feito: discussoes" not in detalhe, "o que não se fez não vira «feito»"
     assert gh.escritas() == [], "a API do GitHub não cria categoria: nada a escrever"
 
 

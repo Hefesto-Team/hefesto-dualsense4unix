@@ -467,7 +467,8 @@ if sub == "labels":
         st["labels"].append({"id": novo_id(), "name": corpo["name"], "color": corpo.get("color", "ededed").lower(),
                              "description": corpo.get("description") or None})
         saida(201, st["labels"][-1])
-ml = re.fullmatch(r"labels/(.+)", sub)
+# o caminho que a API roteia: o nome do rótulo é UM segmento (a barra e o `?` sem escape o partem)
+ml = re.fullmatch(r"labels/([^/]+)", sub)
 if ml:
     nome = unquote(ml.group(1))
     achado = next((x for x in st["labels"] if x["name"].lower() == nome.lower()), None)
