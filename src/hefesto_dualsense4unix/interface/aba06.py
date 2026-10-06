@@ -775,10 +775,10 @@ CSS = CSS_GLIFO + """
          .ajuda.tem-viva:has(.viva:not(:empty):not(:has(.nada)))  → SyntaxError
          .ajuda.tem-viva:has(.viva > :not(.nada))                 → funciona
 
-     E A RÉGUA QUE EU TINHA ESCRITO PARA ELA DAVA VERDE, porque procurava o
-     texto do seletor no documento — e o texto estava lá. *A régua respondia
-     sobre o próprio texto do código, não sobre o produto*, que é a assinatura
-     das seis de 05/09. Quem revelou foi ABRIR e olhar a cor.
+     A RÉGUA DESSA REGRA DAVA VERDE, porque procurava o texto do seletor no
+     documento — e o texto estava lá. *A régua respondia sobre o próprio texto
+     do código, não sobre o produto*, que é a assinatura das seis de 05/09.
+     Quem revelou foi ABRIR e olhar a cor.
 
      O QUE O SELETOR VÁLIDO EXIGE, e está declarado porque é um contrato: a
      frase viva tem de trazer ao menos UM elemento. As três trazem —

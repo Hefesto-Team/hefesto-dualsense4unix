@@ -202,10 +202,10 @@ CSS = CSS_GLIFO + """
   .duas-colunas .rotulos > .rot-r2-3{grid-area:8/2}
   /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão, 31/08/2026
 
-     EU TINHA ESCRITO O CONTRÁRIO AQUI, e o argumento era que cabeçalho encosta
-     no que titula. O usuário olhou a foto e decidiu o oposto — e a decisão é de produto: um
-     glifo que titula TRÊS linhas, preso na primeira, lê como se fosse só dela.
-     No meio, ele pertence às três. */
+     O desenho anterior prendia o glifo à primeira linha, no argumento de que
+     cabeçalho encosta no que titula. A foto mostrou o contrário: um glifo que
+     titula TRÊS linhas, preso na primeira, lê como se fosse só dela. No meio,
+     ele pertence às três. */
   .duas-colunas .rotulos > .sec-glifo{display:flex;align-items:center;
              justify-content:center}
   /* O RÓTULO ALINHA À ESQUERDA — decisão, 31/08/2026: *"alinha a esquerda a
