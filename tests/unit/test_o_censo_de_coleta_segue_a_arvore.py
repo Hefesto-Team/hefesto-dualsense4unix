@@ -43,6 +43,7 @@ def _saida(
     pulados: dict[str, str] | None = None,
     vazios: tuple[str, ...] = (),
     erros: tuple[str, ...] = (),
+    erros_do_censo: dict[str, str] | None = None,
     com_censo: bool = True,
 ) -> str:
     linhas: list[str] = []
@@ -54,6 +55,7 @@ def _saida(
     for modulo, motivo in (pulados or {}).items():
         linhas.append(f"CENSO pulado {modulo} :: {motivo}")
     linhas += [f"CENSO vazio {m}" for m in vazios]
+    linhas += [f"CENSO erro {m} :: {c}" for m, c in (erros_do_censo or {}).items()]
     linhas += list(erros)
     return "\n".join(linhas) + "\n"
 
@@ -85,12 +87,17 @@ def test_o_pulo_sem_motivo_reprova() -> None:
 
 
 def test_o_erro_de_coleta_continua_reprovando_e_nao_vira_modulo_sumido() -> None:
-    erro = f"ERROR {B} - ModuleNotFoundError: No module named 'gi'"
-    queixas, _, _ = censo.julgar(_saida({A: 1}, erros=(erro,)), [A, B])
-    assert any("não coletam sem o GTK" in q for q in queixas) and f"  {erro}" in queixas
-    assert not any("SUMIRAM" in q for q in queixas), (
-        "o erro já foi dito; dizê-lo de novo como «sumiu» confunde"
-    )
+    causa = "ModuleNotFoundError: No module named 'gi'"
+    for saida in (
+        _saida({A: 1}, erros_do_censo={B: causa}),  # a linha do plugin, que não depende do `-r`
+        _saida({A: 1}, erros=(f"ERROR {B} - {causa}",)),  # o resumo do pytest, quando o `-r` o pede
+    ):
+        queixas, _, _ = censo.julgar(saida, [A, B])
+        assert any("não coletam sem o GTK" in q for q in queixas)
+        assert any(q.startswith(f"  {B} :: ") and "No module named 'gi'" in q for q in queixas)
+        assert not any("SUMIRAM" in q for q in queixas), (
+            "o erro já foi dito; dizê-lo de novo como «sumiu» confunde"
+        )
 
 
 def test_o_modulo_sem_nenhum_teste_reprova() -> None:
@@ -147,7 +154,9 @@ def test_o_ci_ainda_reprova_o_erro_de_coleta_pelo_dono() -> None:
 # --- de ponta a ponta, num projeto de verdade ---------------------------------------------
 
 
-def _projeto(base: Path, *, ignorar_no_conftest: str | None = None) -> list[str]:
+def _projeto(
+    base: Path, *, ignorar_no_conftest: str | None = None, quebrado: bool = False
+) -> list[str]:
     tests = base / "tests"
     (tests / "unit").mkdir(parents=True)
     (tests / "__init__.py").write_text("", encoding="utf-8")
@@ -176,6 +185,11 @@ def _projeto(base: Path, *, ignorar_no_conftest: str | None = None) -> list[str]
         + "    pytest.skip('a interface não roda sem o GTK real', allow_module_level=True)\n",
         encoding="utf-8",
     )
+    if quebrado:  # o `import gi` sem guarda: o furo que o CI vê e a máquina dela não
+        (tests / "unit" / "test_quebrado.py").write_text(
+            "import modulo_de_interface_que_o_runner_nao_tem\n\n\ndef test_q():\n    assert True\n",
+            encoding="utf-8",
+        )
     return [
         "tests/unit/test_a.py",
         "tests/unit/test_pulado.py",
@@ -194,7 +208,8 @@ def _coletar(base: Path) -> str:
             "tests",
             "--collect-only",
             "-q",
-            "-rs",
+            "-rs",  # o `-r` com só o `s` tira o resumo padrão `fE`: o erro tem de vir do plugin
+            "--continue-on-collection-errors",
             "-p",
             "no:cacheprovider",
             "-p",
@@ -231,3 +246,19 @@ def test_de_ponta_a_ponta_o_pulo_passa_e_o_modulo_no_collect_ignore_e_nomeado(
     queixas, total, _ = censo.julgar(saida, modulos)
     assert total == 1
     assert "  tests/unit/test_que_vai_sumir.py" in queixas, queixas
+
+
+def test_de_ponta_a_ponta_o_import_sem_guarda_reprova_com_a_causa_e_sem_o_r_do_pytest(
+    tmp_path: Path,
+) -> None:
+    """Sem `-r` o pytest não escreve o resumo `fE`: o erro tem de vir do plugin."""
+    modulos = _projeto(tmp_path / "quebrado", quebrado=True)
+    saida = _coletar(tmp_path / "quebrado")
+    assert "ERROR tests/unit/test_quebrado.py" not in saida, "o teste deixou de medir sem o resumo"
+    queixas, _, _ = censo.julgar(saida, [*modulos, "tests/unit/test_quebrado.py"])
+    assert any("não coletam sem o GTK" in q for q in queixas), queixas
+    assert any(
+        q.startswith("  tests/unit/test_quebrado.py :: ") and "modulo_de_interface" in q
+        for q in queixas
+    ), queixas
+    assert not any("SUMIRAM" in q for q in queixas)

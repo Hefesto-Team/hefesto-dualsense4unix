@@ -659,7 +659,7 @@ jobs:
       - name: Censo de coleta (nenhum módulo pode sumir calado)
         run: |
           set -uo pipefail
-          python -m pytest tests --collect-only -q -rs --continue-on-collection-errors \
+          python -m pytest tests --collect-only -q --continue-on-collection-errors \
             -p no:cacheprovider -p scripts.check_a_coleta_sem_gtk > /tmp/coleta.txt 2>&1 || true
           python3 scripts/check_a_coleta_sem_gtk.py --julgar /tmp/coleta.txt
       # GUARDA-GI-REAL-01: `--cov` sem `--cov-fail-under` NÃO é um portão — é

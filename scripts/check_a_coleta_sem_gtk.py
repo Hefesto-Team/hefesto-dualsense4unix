@@ -10,8 +10,9 @@ O julgamento tem UM dono, este arquivo, e dois chamadores:
 
 A coleta carrega ESTE arquivo como plugin do pytest (`-p scripts.check_a_coleta_sem_gtk`): ele anota, módulo
 a módulo, o que a coleta fez, e escreve na saída as linhas `CENSO …`. Sem ele a saída não diz de qual módulo é
-cada pulo (`exigir_gi_real()` pula pelo `tests/conftest.py`, e o `-rs` aponta para o conftest), e um módulo
-pulado de propósito se lê igual a um módulo que sumiu.
+cada pulo (`exigir_gi_real()` pula pelo `tests/conftest.py`, e o `-rs` aponta para o conftest) nem a causa de
+cada erro (o `-rs` sozinho tira o resumo padrão `fE`), e um módulo pulado de propósito se lê igual a um módulo
+que sumiu.
 
 O que reprova: módulo versionado que não deu nó nenhum NEM aparece como pulado com motivo (sumiu calado:
 um `collect_ignore` num conftest, um `python_files` mudado, um arquivo que o pytest deixou de achar); módulo
@@ -51,6 +52,7 @@ sys.meta_path.insert(0, _SemGtk())
 
 # --- o lado do pytest: o plugin -----------------------------------------------------------------
 _PULADOS: dict[str, str] = {}
+_ERROS: dict[str, str] = {}
 _VAZIOS: set[str] = set()
 
 
@@ -60,22 +62,33 @@ def _motivo(report) -> str:  # type: ignore[no-untyped-def]
     return " ".join(str(texto).replace("Skipped:", "", 1).split())[:200]
 
 
+def _causa(report) -> str:  # type: ignore[no-untyped-def]
+    """A última linha do erro de coleta (a exceção), sem depender do `-r` do pytest."""
+    linhas = [ln.strip() for ln in str(getattr(report, "longrepr", "")).splitlines() if ln.strip()]
+    achadas = [ln for ln in linhas if ln.startswith("E ")]
+    return " ".join((achadas or linhas or ["(sem causa)"])[-1].split())[:200]
+
+
 def pytest_collectreport(report) -> None:  # type: ignore[no-untyped-def]
-    """Um módulo que a coleta PULOU de ponta a ponta, com a razão."""
+    """Um módulo que a coleta PULOU de ponta a ponta (com a razão) ou NÃO coletou (com a causa)."""
     nodeid = getattr(report, "nodeid", "")
     if not (nodeid.endswith(".py") and "::" not in nodeid):
         return
     if getattr(report, "skipped", False):
         _PULADOS[nodeid] = _motivo(report) or "(sem motivo)"
+    elif getattr(report, "failed", False):
+        _ERROS[nodeid] = _causa(report)
     elif getattr(report, "passed", False) and not list(getattr(report, "result", None) or []):
         _VAZIOS.add(nodeid)
 
 
 def pytest_report_collectionfinish(config, start_path, items) -> list[str]:  # type: ignore[no-untyped-def]
-    """As linhas do censo: só o que foge do comum (pulado, vazio) e a marca de que o plugin rodou."""
+    """As linhas do censo: só o que foge do comum (pulado, erro, vazio) e a marca de que o plugin rodou."""
     linhas = ["CENSO ativo"]
     for modulo in sorted(_PULADOS):
         linhas.append(f"CENSO pulado {modulo} :: {_PULADOS[modulo]}")
+    for modulo in sorted(_ERROS):
+        linhas.append(f"CENSO erro {modulo} :: {_ERROS[modulo]}")
     for modulo in sorted(_VAZIOS):
         linhas.append(f"CENSO vazio {modulo}")
     return linhas
@@ -84,6 +97,8 @@ def pytest_report_collectionfinish(config, start_path, items) -> list[str]:  # t
 # --- o julgamento ------------------------------------------------------------------------------
 _RE_NO = re.compile(r"^(tests/[^\s:]+\.py)::")
 _RE_PULADO = re.compile(r"^CENSO pulado (\S+) :: ?(.*)$")
+_RE_ERRO = re.compile(r"^CENSO erro (\S+) :: ?(.*)$")
+_RE_ERRO_DO_PYTEST = re.compile(r"^ERROR (tests/[^\s:]+\.py)\b")
 _RE_VAZIO = re.compile(r"^CENSO vazio (\S+)\s*$")
 
 
@@ -104,12 +119,18 @@ def julgar(saida: str, modulos: list[str]) -> tuple[list[str], int, int]:
     com_nos: dict[str, int] = {}
     pulados: dict[str, str] = {}
     vazios: list[str] = []
-    erros = [ln for ln in linhas if ln.startswith("ERROR ")]
+    erros: dict[str, str] = {}
     for ln in linhas:
         if (m := _RE_NO.match(ln)) is not None:
             com_nos[m.group(1)] = com_nos.get(m.group(1), 0) + 1
         elif (m := _RE_PULADO.match(ln)) is not None:
             pulados[m.group(1)] = m.group(2).strip()
+        elif (m := _RE_ERRO.match(ln)) is not None:
+            erros[m.group(1)] = m.group(2).strip()
+        elif (
+            m := _RE_ERRO_DO_PYTEST.match(ln)
+        ) is not None:  # o resumo do pytest, quando o `-r` o pede
+            erros.setdefault(m.group(1), ln[len("ERROR ") :].strip())
         elif (m := _RE_VAZIO.match(ln)) is not None:
             vazios.append(m.group(1))
     total = sum(com_nos.values())
@@ -123,7 +144,7 @@ def julgar(saida: str, modulos: list[str]) -> tuple[list[str], int, int]:
         queixas.append("a coleta não coletou nada; o pytest morreu antes.")
     if erros:
         queixas.append(f"{len(erros)} módulo(s) não coletam sem o GTK (o lint-test do CI reprova):")
-        queixas.extend("  " + e for e in erros)
+        queixas.extend(f"  {m} :: {c}" for m, c in sorted(erros.items()))
         queixas.append(
             "Módulo de interface precisa de exigir_gi_real() (tests/conftest.py) antes do primeiro import "
             "que carregue o GTK."
@@ -131,8 +152,7 @@ def julgar(saida: str, modulos: list[str]) -> tuple[list[str], int, int]:
     for modulo, motivo in sorted(pulados.items()):
         if not motivo or motivo == "(sem motivo)":
             queixas.append(f"{modulo}: pulado SEM motivo (diga a razão no skip).")
-    com_erro = {e.split()[1].split("::")[0] for e in erros if len(e.split()) > 1}
-    sumiram = [m for m in modulos if m not in com_nos and m not in pulados and m not in com_erro]
+    sumiram = [m for m in modulos if m not in com_nos and m not in pulados and m not in erros]
     if sumiram:
         queixas.append(
             f"{len(sumiram)} módulo(s) versionado(s) SUMIRAM da coleta, sem nó e sem pulo com motivo "
@@ -163,7 +183,6 @@ def _coletar_sem_gtk() -> str:
                 "tests",
                 "--collect-only",
                 "-q",
-                "-rs",
                 "--continue-on-collection-errors",
                 "-p",
                 "no:cacheprovider",
