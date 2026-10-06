@@ -1,0 +1,84 @@
+name: Wiki
+
+# A Wiki do repositório é GERADA, nunca escrita à mão: `scripts/wiki/gerar.py` lê o README, o guia de uso
+# (`docs/usage`), o mapa dos controles (`docs/data/mapa-controles.csv`) e o protocolo (`docs/protocol`)
+# na hora e monta as páginas. Os filtros de publicação rodam sobre o texto gerado: a página que reprova
+# não sobe e a fonte é corrigida. Só empurra para o `<repositório>.wiki.git` se alguma página mudou.
+# Saídas do gerador: 0 limpo; 1 houve página segurada (as outras sobem e o job termina vermelho com a
+# lista); 3 um filtro não pôde medir (a lista de termos não chegou): nada sobe.
+on:
+  push:
+    branches: [dev]
+    paths:
+      - README.md
+      - docs/usage/**
+      - docs/protocol/**
+      - docs/data/mapa-controles.csv
+      - assets/appimage/Hefesto-Dualsense4Unix.png
+      - scripts/wiki/**
+      - scripts/check_texto_publico.py
+      - scripts/check_endereco_de_radio.py
+      - scripts/check_o_endereco_dela_em_toda_forma.py
+      - scripts/check_autoria.py
+      - scripts/check_paridade_transporte.py
+      - src/hefesto_dualsense4unix/core/formas_do_endereco.py
+      - .github/workflows/wiki.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  gerar:
+    name: Gerar e publicar a Wiki
+    runs-on: ubuntu-latest
+    env:
+      AUTORIA_VEDADOS: ${{ secrets.AUTORIA_VEDADOS }}
+      WIKI_REPO: https://github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: A Wiki que já está no ar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # O token vai no cabeçalho HTTP (como o `actions/checkout`), nunca na URL.
+          cabecalho="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$cabecalho"
+          echo "CABECALHO=$cabecalho" >> "$GITHUB_ENV"
+          url="https://github.com/${{ github.repository }}.wiki.git"
+          if ! git -c "http.extraheader=Authorization: Basic $cabecalho" clone --quiet "$url" _wiki 2>/dev/null; then
+            git init --quiet -b master _wiki
+            git -C _wiki remote add origin "$url"
+          fi
+      - name: Gerar as páginas
+        id: gerar
+        run: |
+          rc=0
+          python3 scripts/wiki/gerar.py --saida _wiki --detalhe wiki-detalhe.txt || rc=$?
+          grep -E '^(segurada|aviso|NÃO MEDIDO)' wiki-detalhe.txt || true
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -gt 1 ]; then exit "$rc"; fi
+      - name: Empurrar o que mudou
+        env:
+          ATOR: ${{ github.actor }}
+          ID_DO_ATOR: ${{ github.actor_id }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          cd _wiki
+          git add -A
+          if git diff --cached --quiet; then
+            echo "A Wiki já está igual ao repositório."
+            exit 0
+          fi
+          git -c user.name="$ATOR" -c user.email="${ID_DO_ATOR}+${ATOR}@users.noreply.github.com" \
+            commit --quiet -m "docs(wiki): a Wiki acompanha o dev em ${COMMIT:0:9}"
+          git -c "http.extraheader=Authorization: Basic $CABECALHO" push --quiet origin HEAD:master
+      - name: Páginas seguradas
+        if: steps.gerar.outputs.rc == '1'
+        run: |
+          echo "Há página segurada pelos filtros: corrija a fonte (a lista está no passo «Gerar as páginas»)."
+          exit 1
