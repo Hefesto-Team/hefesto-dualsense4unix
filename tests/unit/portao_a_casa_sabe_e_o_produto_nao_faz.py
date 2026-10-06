@@ -1214,7 +1214,7 @@ def _nos_de_import(arvore: ast.AST) -> tuple[ast.Import | ast.ImportFrom, ...]:
     )
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _lido_do_texto(
     texto: str,
 ) -> tuple[ast.Module, tuple[ast.Import | ast.ImportFrom, ...]]:
@@ -1866,7 +1866,7 @@ def promessas_sem_caminho(
             }
 
     # Quem cita cada símbolo, indexado UMA vez: perguntar «algum outro nó o cita?»
-    # varrendo todos os nós a cada candidata era candidatas × nós; o índice
+    # varrendo todos os nós a cada candidata era candidatas vezes nós; o índice
     # responde a mesma pergunta com a mesma resposta.
     citantes: dict[tuple[str, str], set[tuple[str, int]]] = {}
     for onde, posicao, refs in refs_por_no:
