@@ -432,7 +432,8 @@ jobs:
           BASE_DA_FAIXA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python3 scripts/check_a_origem.py ${BASE_DA_FAIXA:+--base "$BASE_DA_FAIXA"}
       # A DECISÃO TEM PROVA (06/10/2026, DECISAO-SEM-DONO-01): decisão dela decidida e sem
-      # função de teste que a cite (ou sem a marca `processo`) reprova nomeada; o piso só desce.
+      # função de teste que a cite (ou sem a marca `processo`) reprova nomeada; o piso desce pelo
+      # `--aceitar` e só sobe à mão.
       - name: Cada decisão decidida tem prova
         run: python3 scripts/check_a_decisao_tem_prova.py
       # BROADCAST PROIBIDO (06/10/2026, OS-PORTOES-QUE-NINGUEM-CHAMA-01): rota de saída que

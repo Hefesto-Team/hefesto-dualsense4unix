@@ -1,6 +1,6 @@
 # PISO das decisões decididas e sem prova (scripts/check_a_decisao_tem_prova.py).
-# Um id por linha. Só desce: `--aceitar` tira o que ganhou prova ou a marca
-# `processo`; entrada nova à mão é rejeitada pelo portão.
+# Um id por linha. Desce sozinho: `--aceitar` tira o que ganhou prova ou a marca
+# `processo`. Só sobe à mão, no diff: a decisão registrada antes da régua dela.
 D-0110-A-ACAO-NA-NAVEGACAO-VAI-NA-DICA-DO-NOME
 D-0110-A-CARONA-ESCREVE-NA-COPIA-DO-JOGO
 D-0110-A-CONTA-DO-MAPEAR-CALA-SEM-ENTRADA

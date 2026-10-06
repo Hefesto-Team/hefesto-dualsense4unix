@@ -156,8 +156,9 @@ rapido|a-origem|py|scripts/check_a_origem.py|@sempre
 # A DECISÃO TEM PROVA — 06/10/2026, DECISAO-SEM-DONO-01. O registro das decisões dela guardava a
 # palavra e parava ali: a decisão de 25/08 sobre o microfone esperou 23 dias e três pedidos. O
 # campo `prova` liga a linha a uma função de teste que cita o id; decisão nova sem prova (ou sem
-# a marca `processo`) reprova nomeada, e o piso das antigas só desce. O portão mede que a prova
-# EXISTE, não que ela morde: a mordida é de quem sobe a decisão a `implementada`.
+# a marca `processo`) reprova nomeada, e o piso desce pelo `--aceitar` e só sobe à mão, no diff.
+# O portão mede que a prova EXISTE, não que ela morde: a mordida é de quem sobe a decisão a
+# `implementada`.
 rapido|decisao-tem-prova|py|scripts/check_a_decisao_tem_prova.py|docs/data/decisoes-dela.csv docs/data/decisoes-sem-prova.txt tests/**
 # BROADCAST PROIBIDO — 06/10/2026, OS-PORTOES-QUE-NINGUEM-CHAMA-01. Nasceu em 25/08, verde, e ficou 42 dias
 # sem chamador: nesse tempo entrou uma rota de saída que escrevia em todo controle conectado sem perguntar

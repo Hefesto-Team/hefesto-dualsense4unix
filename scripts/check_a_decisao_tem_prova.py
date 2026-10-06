@@ -21,9 +21,16 @@ O PORTÃO, em quatro regras:
   3. `decidida` sem prova e sem a marca `processo` só passa se estiver no PISO
      (`docs/data/decisoes-sem-prova.txt`, um id por linha). Decisão NOVA sem
      prova não passa, e a lista sai nominal.
-  4. o piso só desce: id que ganhou prova, ganhou a marca, caducou ou saiu do
-     CSV tem de sair do piso (`--aceitar`). Piso velho deixaria uma decisão nova
-     entrar pela vaga de uma que já foi paga.
+  4. id que ganhou prova, ganhou a marca, caducou ou saiu do CSV tem de sair do
+     piso (`--aceitar`). Piso velho deixaria uma decisão nova entrar pela vaga
+     de uma que já foi paga.
+
+O PISO DESCE SOZINHO E SÓ SOBE À MÃO. O `--aceitar` nunca acrescenta: ele só
+tira. Uma decisão registrada antes da régua dela (o registro é no dia em que ela
+responde, e o código vem depois) entra no piso pela mão de quem a registra, numa
+linha que aparece no diff, de preferência sob um comentário datado que diz de
+onde ela veio. O portão não distingue essa entrada de uma que fura a fila: quem
+confere o diff do piso é quem a distingue.
 
 A marca `processo` é declarada uma a uma, nunca por palavra: a triagem por
 vocabulário dá 34% de «indecidível» (`medir_decisoes_sem_prova.py`).
@@ -218,14 +225,15 @@ def aceitar(raiz: Path, m: dict[str, Any], semear: bool = False) -> int:
     if m["novas_sem_prova"]:
         print(
             f"RECUSADO: {len(m['novas_sem_prova'])} decisão(ões) sem prova que não estão no piso. "
-            "O piso só desce: dê prova (ou, se é de processo, a marca) a cada uma."
+            "O --aceitar só desce o piso: dê prova (ou, se é de processo, a marca) a cada uma, "
+            "ou, se é decisão registrada antes da régua dela, acrescente o id ao piso à mão."
         )
         _imprimir_ids(m["novas_sem_prova"])
         return 2
     cabecalho = (
         "# PISO das decisões decididas e sem prova (scripts/check_a_decisao_tem_prova.py).\n"
-        "# Um id por linha. Só desce: `--aceitar` tira o que ganhou prova ou a marca\n"
-        "# `processo`; entrada nova à mão é rejeitada pelo portão.\n"
+        "# Um id por linha. Desce sozinho: `--aceitar` tira o que ganhou prova ou a marca\n"
+        "# `processo`. Só sobe à mão, no diff: a decisão registrada antes da régua dela.\n"
     )
     corpo = "".join(f"{i}\n" for i in m["sem_prova"])
     (raiz / PISO).write_text(cabecalho + corpo, encoding="utf-8")
@@ -277,7 +285,7 @@ def main(argv: list[str] | None = None) -> int:
         _imprimir_ids(m["sem_prova"], limite=10**6)
     print(
         f"VERDE: {m['linhas']} decisões · {len(m['com_prova'])} com prova que abre · "
-        f"{len(m['processo'])} de processo · {len(m['sem_prova'])} no piso (só descem)"
+        f"{len(m['processo'])} de processo · {len(m['sem_prova'])} no piso (descem pelo --aceitar)"
     )
     print(
         "E VERDE AQUI NÃO QUER DIZER FEITO: este portão mede que a prova EXISTE e cita a decisão, "
