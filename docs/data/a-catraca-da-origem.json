@@ -48,16 +48,16 @@
       "universo": 353
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-04",
+      "data": "2026-10-06",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 481,
+      "piso": 479,
       "por_item": {
         "__init__.py": 1,
         "app/actions/config/secao_controles.py": 2,
         "app/actions/daemon_actions.py": 5,
         "app/gui_prefs.py": 1,
-        "app/ipc_bridge.py": 2,
+        "app/ipc_bridge.py": 1,
         "app/mic_monitor.py": 3,
         "app/tray.py": 4,
         "broker/hidraw_broker.py": 18,
@@ -85,7 +85,6 @@
         "core/system_check.py": 2,
         "daemon/battery_journal.py": 2,
         "daemon/connection.py": 6,
-        "daemon/ipc_draft_applier.py": 1,
         "daemon/ipc_handlers.py": 4,
         "daemon/launch_env.py": 2,
         "daemon/lifecycle.py": 2,
@@ -195,7 +194,7 @@
       },
       "razao": "o teto desceu sozinho com o número",
       "unidade": "remendos",
-      "universo": 354
+      "universo": 357
     },
     "tamanho": {
       "data": "2026-10-05",
