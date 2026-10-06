@@ -204,6 +204,11 @@ echo "ARGS: $*"
 echo "CWD: $(pwd)"
 echo "ARQUIVOS: $(ls -A | tr '\n' ' ')"
 echo "ENV: ${RUNNER_TOOL_CACHE:-}"
+for ((i = 0; i < ${#args[@]}; i++)); do
+  [ "${args[i]}" = "--action-cache-path" ] && cache="${args[i+1]}"
+done
+echo "CACHE_ACOES: $(ls -A "$cache" | tr '\n' ' ')"
+mkdir -p "$cache/actions-novo@v1" && echo x > "$cache/actions-novo@v1/x"
 echo "---YAML---"
 cat "$yml"
 echo "---FIM---"
@@ -514,6 +519,34 @@ def test_a_perna_pedida_e_a_unica_que_roda(mundo: Mundo) -> None:
     log = mundo.log("deb")
     assert len([ln for ln in log.splitlines() if ln.startswith("ARGS:")]) == 1
     assert "--matrix os:ubuntu-22.04" in log and "=== a perna ubuntu-24.04" not in log
+
+
+def test_cada_chamada_trabalha_numa_copia_do_cache_das_actions(mundo: Mundo) -> None:
+    """Dois act no mesmo `~/.cache/act` se pisam (`Unable to reset to <sha>: EOF`)."""
+    compartilhado = mundo.base / ".cache" / "act"
+    (compartilhado / "actions-fake@v1").mkdir(parents=True)
+    (compartilhado / "actions-fake@v1" / "marca").write_text("x", encoding="utf-8")
+    mundo.rodar("--job", "glifos")
+    log = mundo.log("glifos")
+    args = next(ln for ln in log.splitlines() if ln.startswith("ARGS:")).split()
+    privado = args[args.index("--action-cache-path") + 1]
+    assert privado != str(compartilhado) and privado.startswith("/tmp/cil."), privado
+    assert "actions-fake@v1" in next(ln for ln in log.splitlines() if ln.startswith("CACHE_ACOES:"))
+    assert (compartilhado / "actions-novo@v1" / "x").is_file(), "o que o act baixou não voltou"
+    assert not Path(privado).exists(), "a cópia ficou para trás"
+
+
+def test_com_as_actions_em_cache_o_act_nao_baixa_de_novo(mundo: Mundo) -> None:
+    mundo.rodar("--job", "glifos")
+    assert "--action-offline-mode" not in mundo.log("glifos"), "sem a cópia local ele tem de baixar"
+    for pasta in (
+        "actions-setup-python@v5",
+        "actions-upload-artifact@v4",
+        "actions-download-artifact@v4",
+    ):
+        (mundo.base / ".cache" / "act" / pasta).mkdir(parents=True, exist_ok=True)
+    mundo.rodar("--job", "glifos")
+    assert "--action-offline-mode" in mundo.log("glifos")
 
 
 def test_o_job_sem_matriz_de_runners_roda_numa_chamada_so(mundo: Mundo) -> None:

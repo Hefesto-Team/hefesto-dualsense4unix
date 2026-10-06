@@ -54,6 +54,7 @@ BASE="catthehacker/ubuntu:act-24.04"
 BASE_22="catthehacker/ubuntu:act-22.04"
 EM_PARALELO="${CI_LOCAL_JOBS:-2}"        # quantos jobs do act ao mesmo tempo
 PERNAS="${CI_LOCAL_PERNAS:-3}"           # quantas pernas de matriz por job
+CACHE_ACOES="${CI_LOCAL_CACHE_ACOES:-$HOME/.cache/act}"
 DATA="$(date +%Y-%m-%d_%H%M)"
 SAIDA="${CI_LOCAL_SAIDA:-$CASA/ci-local/$DATA}"
 # O que o log tem quando a REDE caiu: o job reprovou, mas não por defeito dele. Só conta a SAÍDA DE UM
@@ -307,7 +308,13 @@ SUJA=""
 if ! git -C "$RAIZ" diff --cached --quiet HEAD -- 2>/dev/null; then SUJA=" (índice com mudança não commitada)"; fi
 
 chamar_act() { # job yml log porta [rótulo do runner da matriz]
-  local job="$1" yml="$2" log="$3" porta="$4" rotulo="${5:-}" extras=()
+  local job="$1" yml="$2" log="$3" porta="$4" rotulo="${5:-}" extras=() cache rc
+  # O cache das actions (`~/.cache/act`) é de CADA chamada: dois `act` clonando e dando reset no mesmo
+  # diretório se pisam («Unable to reset to <sha>: EOF», «lstat …/.prettierrc.js: no such file»; medido
+  # em 06/10/2026). A chamada trabalha numa cópia (2 s) e devolve o que baixou de novo, sem sobrescrever.
+  cache="$TMP/acoes-$job${rotulo:+-$rotulo}"
+  mkdir -p "$CACHE_ACOES"
+  cp -a "$CACHE_ACOES/." "$cache/" 2>/dev/null || mkdir -p "$cache"
   [ -f "$TMP/tag-$job.json" ] && extras+=(-e "$TMP/tag-$job.json")
   # A matriz de runners (`runs-on: ${{ matrix.os }}`) roda UMA perna por chamada: com as duas imagens no mesmo
   # `-P`, o act dá a mesma imagem às duas pernas (a ordem do mapa muda de corrida para corrida: medido em
@@ -321,6 +328,7 @@ chamar_act() { # job yml log porta [rótulo do runner da matriz]
     "$ACT" push -W "$yml" -j "$job" \
       -P "ubuntu-latest=$IMAGEM" -P "ubuntu-24.04=$IMAGEM" "${extras[@]}" \
       --pull=false --rm --container-architecture linux/amd64 "${OFFLINE[@]}" \
+      --action-cache-path "$cache" \
       --artifact-server-path "$CASA/ci-local/artefatos" \
       --artifact-server-addr 127.0.0.1 --artifact-server-port "$porta" \
       --cache-server-addr 127.0.0.1 \
@@ -329,18 +337,22 @@ chamar_act() { # job yml log porta [rótulo do runner da matriz]
       --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env 'GIT_CONFIG_VALUE_0=*' \
       "${OPCOES[@]}" ${CI_LOCAL_ACT_EXTRA:-} >"$log" 2>&1
   )
+  rc=$?
+  ( flock 9; cp -an "$cache/." "$CACHE_ACOES/" 2>/dev/null ) 9>"$CACHE_ACOES/.trava"
+  rm -rf "$cache"
+  return "$rc"
 }
 
 rodar_job() { # job índice
-  local job="$1" i="$2" yml log rc=0 r ini porta rot arquivo_do_yaml versao rotulos=("")
+  local job="$1" i="$2" yml log rc=0 r ini porta rot arquivo_do_yaml numero rotulos=("")
   log="$SAIDA/$job.log"
   ini=$(date +%s)
   yml="$(yaml_de "$job")" || { echo "ci-local: o job '$job' não está em workflow nenhum" > "$log"; echo 2 > "$SAIDA/$job.rc"; return 2; }
   porta=$((30000 + ($$ % 3000) * 10 + i % 10))
   arquivo_do_yaml="$(arquivo_do_job "$job")"
   if [ -n "$(campo EM-TAG "$arquivo_do_yaml" 3)" ]; then
-    versao="$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$ARV/pyproject.toml" 2>/dev/null | head -1)"
-    printf '{"ref": "refs/tags/v%s"}\n' "${versao:-0.0.0-local}" > "$TMP/tag-$job.json"
+    numero="$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$ARV/pyproject.toml" 2>/dev/null | head -1)"
+    printf '{"ref": "refs/tags/v%s"}\n' "${numero:-0.0.0-local}" > "$TMP/tag-$job.json"
   fi
   [ "$(campo ROLA "$job" 4)" = ubuntu-22.04 ] && rotulos=(ubuntu-24.04 ubuntu-22.04)
   [ -n "$SO_PERNA" ] && [ "${#rotulos[@]}" -gt 1 ] && rotulos=("$SO_PERNA")
@@ -367,6 +379,23 @@ rodar_job() { # job índice
   echo $(( $(date +%s) - ini )) > "$SAIDA/$job.seg"
   return "$rc"
 }
+
+# As actions (`setup-python`…) o `act` clona em ~/.cache/act. Com todas as cópias já ali,
+# `--action-offline-mode` não baixa de novo (e a corrida sai rápida e sem rede); faltando alguma, cada
+# chamada baixa a dela na própria cópia do cache (ver `chamar_act`) e devolve ao cache de todos.
+acoes_em_falta() { # as actions (fora o checkout, que o act troca pela árvore) dos workflows dos jobs a rodar, sem cópia local
+  local j f u ref
+  for j in "${JOBS[@]}"; do
+    f="$(arquivo_do_job "$j")"; [ -n "$f" ] || continue
+    grep -hoE 'uses: *[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+[^ ]*@[^ ]+' "$ARV/.github/workflows/$f"
+  done | sed -E 's/^uses: *//' | sort -u | while read -r u; do
+    case "$u" in actions/checkout@*) continue ;; esac
+    ref="${u#*@}"; u="${u%%@*}"
+    [ -d "$CACHE_ACOES/$(echo "$u" | cut -d/ -f1,2 | tr / -)@${ref//\//-}" ] || echo "$u@$ref"
+  done
+}
+OFFLINE=()
+if [ -z "$(acoes_em_falta)" ]; then OFFLINE=(--action-offline-mode); fi
 
 # O que o `act` roda junto com o job: o `needs:` dele, menos o que a tabela manda tirar (`SEM-NEEDS`), e o
 # `needs:` deles, e assim por diante. Dois `act` ao mesmo tempo com um job em comum brigam pelo mesmo
