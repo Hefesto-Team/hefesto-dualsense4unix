@@ -29,6 +29,7 @@ for chave, padrao in {
                                "pull_request_template": True, "license": True, "readme": True},
     "prox_id": 100, "repos_extras": {}, "ligados": {}, "ramo_padrao": "dev",
     "releases": {}, "tags_imutaveis": [], "variaveis": {}, "ramos": {}, "commits": {}, "tags": None,
+    "issues": [], "comentarios": {}, "cartoes": [],
 }.items():
     st.setdefault(chave, padrao)
 
@@ -309,6 +310,48 @@ if ehgraph:
                     campo["options"] = [{"id": f"o{k}", **o} for k, o in enumerate(opcoes)]
                     saida(200, {"data": {"updateProjectV2Field": {"projectV2Field": {"id": campo["id"]}}}})
         saida(200, {"errors": [{"message": "campo não encontrado"}]})
+    # --- o quadro: o card de uma issue (o ciclo da sprint) ---------------------------------
+    def issue_do_no(no):
+        return next((i for i in st["issues"] if i["node_id"] == no), None)
+
+    def projeto_do_id(pid):
+        return next((p for p in st["projetos"] if p["id"] == pid), None)
+
+    if nome_op == "CartaoDaIssue":
+        i = issue_do_no(variaveis.get("issue"))
+        if i is None:
+            saida(200, {"data": {"node": None}})
+        itens = [{"id": c["id"], "project": {"id": c["projeto"]}} for c in st["cartoes"] if c["alvo"] == i["node_id"]]
+        saida(200, {"data": {"node": {"id": i["node_id"], "projectItems": {"nodes": itens}}}})
+    if nome_op == "AdicionarCartao":
+        p, i = projeto_do_id(variaveis.get("projeto")), issue_do_no(variaveis.get("alvo"))
+        if p is None or i is None:
+            saida(200, {"errors": [{"message": "Could not resolve to a node with the global id"}]})
+        achado = next((c for c in st["cartoes"] if c["projeto"] == p["id"] and c["alvo"] == i["node_id"]), None)
+        if achado is None:  # como o GitHub: adicionar de novo devolve o card que já existe
+            achado = {"id": f"PVTI_{novo_id()}", "projeto": p["id"], "alvo": i["node_id"], "etapa": None}
+            st["cartoes"].append(achado)
+        saida(200, {"data": {"addProjectV2ItemById": {"item": {"id": achado["id"]}}}})
+    if nome_op in ("MoverCartao", "EtapaDoCartao"):
+        if nome_op == "EtapaDoCartao":
+            c = next((c for c in st["cartoes"] if c["id"] == variaveis.get("cartao")), None)
+            if c is None:
+                saida(200, {"data": {"node": None}})
+            p = projeto_do_id(c["projeto"])
+            status = next(x for x in p["campos"] if x["name"] == "Status")
+            nome_etapa = next((o["name"] for o in status["options"] if o["id"] == c["etapa"]), None)
+            saida(200, {"data": {"node": {"id": c["id"], "fieldValueByName": {"name": nome_etapa} if nome_etapa else None}}})
+        p = projeto_do_id(variaveis.get("projeto"))
+        c = next((c for c in st["cartoes"] if c["id"] == variaveis.get("cartao")), None)
+        if p is None or c is None or c["projeto"] != p["id"]:
+            saida(200, {"errors": [{"message": "Could not resolve to a node with the global id"}]})
+        campo = next((x for x in p["campos"] if x["id"] == variaveis.get("campo")), None)
+        if campo is None or campo["dataType"] != "SINGLE_SELECT" or not isinstance(variaveis.get("etapa"), str):
+            saida(200, {"errors": [{"message": "The field is not a single select field of this project"}]})
+        if variaveis["etapa"] not in [o["id"] for o in campo["options"]]:
+            saida(200, {"errors": [{"message": "The option does not exist in this field"}]})
+        c["etapa"] = variaveis["etapa"]
+        saida(200, {"data": {"updateProjectV2ItemFieldValue": {"projectV2Item": {"id": c["id"]}}}})
     saida(200, {"errors": [{"message": f"operação desconhecida: {nome_op}"}]})
 
 
@@ -695,9 +738,104 @@ mm = re.fullmatch(r"milestones/(\d+)", sub)
 if mm and metodo == "PATCH":
     for x in st["milestones"]:
         if x["number"] == int(mm.group(1)):
-            x.update({k: v for k, v in corpo.items() if k in ("title", "description", "due_on")})
+            if corpo.get("state", "open") not in ("open", "closed"):
+                saida(422, msg="Validation Failed: state")
+            x.update({k: v for k, v in corpo.items() if k in ("title", "description", "due_on", "state")})
             saida(200, x)
     saida(404)
+def marco_de(numero):
+    return next((m for m in st["milestones"] if m["number"] == numero), None)
+
+
+def garantir_rotulos(nomes):
+    """Como o GitHub: rótulo que não existe é CRIADO calado, com a cor de fábrica (a casa nunca quer isso)."""
+    for n in nomes:
+        if not any(x["name"].lower() == n.lower() for x in st["labels"]):
+            st["labels"].append({"id": novo_id(), "name": n, "color": "ededed", "description": None})
+
+
+def corpo_da_issue(i):
+    m = marco_de(i["marco"]) if i.get("marco") else None
+    return {"number": i["number"], "node_id": i["node_id"], "title": i["title"], "body": i["body"], "state": i["state"],
+            "state_reason": i["state_reason"], "labels": [{"name": n} for n in i["rotulos"]],
+            "milestone": {"number": m["number"], "title": m["title"]} if m else None,
+            "html_url": f"https://github.com/{st['slug']}/issues/{i['number']}", "user": {"login": st["user"]}}
+
+
+def validar_issue(c, criando):
+    if criando and (not isinstance(c.get("title"), str) or not c["title"].strip()):
+        saida(422, msg="Validation Failed: title is missing")
+    if "labels" in c and not (isinstance(c["labels"], list) and all(isinstance(x, str) for x in c["labels"])):
+        saida(422, msg="Validation Failed: labels")
+    if c.get("milestone") is not None and "milestone" in c and marco_de(c["milestone"]) is None:
+        saida(422, msg="Validation Failed: milestone does not exist")
+    if "state" in c and c["state"] not in ("open", "closed"):
+        saida(422, msg="Validation Failed: state")
+    if "state_reason" in c and c["state_reason"] not in ("completed", "not_planned", "reopened", None):
+        saida(422, msg="Validation Failed: state_reason")
+
+
+if sub == "issues":
+    if metodo == "GET":
+        q = dict(p.partition("=")[::2] for p in consulta.split("&") if p)
+        estado_pedido = q.get("state", "open")
+        achadas = [i for i in st["issues"] if estado_pedido == "all" or i["state"] == estado_pedido]
+        if q.get("labels"):
+            achadas = [i for i in achadas if all(r in i["rotulos"] for r in unquote(q["labels"]).split(","))]
+        saida(200, pagina([corpo_da_issue(i) for i in achadas]))
+    if metodo == "POST":
+        validar_issue(corpo, True)
+        garantir_rotulos(corpo.get("labels", []))
+        n = len(st["issues"]) + 1
+        st["issues"].append({"number": n, "node_id": f"I_kwDO{n}", "title": corpo["title"], "body": corpo.get("body") or "",
+                             "state": "open", "state_reason": None, "rotulos": list(corpo.get("labels", [])),
+                             "marco": corpo.get("milestone")})
+        saida(201, corpo_da_issue(st["issues"][-1]))
+mi = re.fullmatch(r"issues/(\d+)(?:/(comments))?", sub)
+if mi:
+    i = next((x for x in st["issues"] if x["number"] == int(mi.group(1))), None)
+    if i is None:
+        saida(404)
+    if mi.group(2) == "comments":
+        lista = st["comentarios"].setdefault(str(i["number"]), [])
+        if metodo == "GET":
+            saida(200, pagina(lista))
+        if metodo == "POST":
+            if not isinstance(corpo.get("body"), str) or not corpo["body"].strip():
+                saida(422, msg="Validation Failed: body is missing")
+            lista.append({"id": novo_id(), "body": corpo["body"], "user": {"login": st["user"]}})
+            saida(201, lista[-1])
+    elif metodo == "GET":
+        saida(200, corpo_da_issue(i))
+    elif metodo == "PATCH":
+        validar_issue(corpo, False)
+        garantir_rotulos(corpo.get("labels", []))
+        for k, v in corpo.items():
+            if k == "title":
+                i["title"] = v
+            elif k == "body":
+                i["body"] = v
+            elif k == "labels":
+                i["rotulos"] = list(v)
+            elif k == "state":
+                i["state"] = v
+            elif k == "state_reason":
+                i["state_reason"] = v
+            elif k == "milestone":
+                i["marco"] = v
+            else:
+                saida(422, msg=f"campo desconhecido: {k}")
+        if i["state"] == "open":
+            i["state_reason"] = "reopened" if i["state_reason"] == "completed" else i["state_reason"]
+        saida(200, corpo_da_issue(i))
+mm_ = re.fullmatch(r"milestones/(\d+)", sub)
+if mm_ and metodo == "GET":
+    m = marco_de(int(mm_.group(1)))
+    if m is None:
+        saida(404)
+    saida(200, {**m, "open_issues": sum(1 for i in st["issues"] if i.get("marco") == m["number"] and i["state"] == "open"),
+                "closed_issues": sum(1 for i in st["issues"] if i.get("marco") == m["number"] and i["state"] == "closed")})
+
 me = re.fullmatch(r"environments/([^/]+)(?:/(.*))?", sub)
 if me:
     nome, resto_ = unquote(me.group(1)), me.group(2) or ""

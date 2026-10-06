@@ -8,6 +8,7 @@ bloco, um trecho cercado no corpo da sprint:
     titulo: O microfone de cada controle liga sozinho
     tipo: adicionado          # adicionado | mudado | removido | corrigido
     area: tela                # opcional; uma das áreas do rótulo «área: …» de .github/repositorio.yml
+    marco: Primeira versão pública   # opcional; um dos marcos (`milestones`) de .github/repositorio.yml
     muda: O botão do microfone liga e desliga só o microfone daquele controle.
     pronto: Ao apertar o botão, só o microfone daquele controle muda.
     ```
@@ -35,9 +36,10 @@ import _comum
 
 BLOCO = re.compile(r"^```publico[ \t]*\n(.*?)^```[ \t]*$", re.DOTALL | re.MULTILINE)
 CAMPO = re.compile(r"^([a-z]+):[ \t]*(.*)$")
-CAMPOS = ("titulo", "tipo", "area", "muda", "pronto")
+CAMPOS = ("titulo", "tipo", "area", "muda", "pronto", "marco")
 OBRIGATORIOS = ("titulo", "tipo", "muda", "pronto")
 TIPOS = ("adicionado", "mudado", "removido", "corrigido")
+MARCADOR = "A-PREENCHER"  # o do molde da sprint: o bloco que ainda o traz não vai a ninguém
 LIMITES = {"titulo": 80, "muda": 400, "pronto": 400}
 # O que o texto de quem usa não diz, além do que o `check_texto_publico.py` já barra.
 DA_CASA = (
@@ -103,6 +105,26 @@ def passa_pela_autoria(raiz: Path, texto: str) -> str | None:
     return "a régua de autoria recusou o texto" + (f": {primeira[0][:120]}" if primeira else "")
 
 
+def marcos_do_arquivo(raiz: Path) -> list[str]:
+    arq = raiz / ".github" / "repositorio.yml"
+    if not arq.is_file():
+        return []
+    return re.findall(r'^\s+- titulo:\s*"([^"]+)"', arq.read_text(encoding="utf-8"), re.MULTILINE)
+
+
+def erros_de_texto(texto: str, raiz: Path, autoria: bool = True) -> list[str]:
+    """Os defeitos de um texto solto que vai a quem usa (o comentário de entrega, por exemplo)."""
+    erros: list[str] = []
+    for nome, padrao in _expressoes_da_casa(raiz):
+        if padrao.search(texto):
+            erros.append(f"tem uma palavra da casa («{nome}»): escreva para quem usa")
+    if autoria and not erros:
+        motivo = passa_pela_autoria(raiz, texto)
+        if motivo:
+            erros.append(motivo)
+    return erros
+
+
 def validar(bloco: dict[str, str], raiz: Path, autoria: bool = True) -> list[str]:
     """Os defeitos do bloco; lista vazia quando ele pode ir a quem usa."""
     erros: list[str] = []
@@ -110,17 +132,20 @@ def validar(bloco: dict[str, str], raiz: Path, autoria: bool = True) -> list[str
         erros.append(bloco["_erro"])
     erros += [f"falta o campo `{c}`" for c in OBRIGATORIOS if not bloco.get(c)]
     erros += [f"campo desconhecido `{c}`" for c in bloco if c not in CAMPOS and c != "_erro"]
+    erros += [f"`{c}` ainda traz o marcador do molde ({MARCADOR}): escreva o texto" for c in CAMPOS if MARCADOR in bloco.get(c, "")]
     if bloco.get("tipo") and bloco["tipo"] not in TIPOS:
         erros.append(f"`tipo` é um destes: {', '.join(TIPOS)}")
     areas = areas_do_arquivo(raiz)
     if bloco.get("area") and areas and bloco["area"] not in areas:
         erros.append(f"`area` é uma destas (os rótulos «área: …» do repositório): {', '.join(areas)}")
+    marcos = marcos_do_arquivo(raiz)
+    if bloco.get("marco") and marcos and bloco["marco"] not in marcos:
+        erros.append(f"`marco` é um destes (os `milestones` do repositório): {', '.join(marcos)}")
     for campo, limite in LIMITES.items():
         if len(bloco.get(campo, "")) > limite:
             erros.append(f"`{campo}` passa de {limite} caracteres")
-    expressoes = _expressoes_da_casa(raiz)
     for campo in CAMPOS:
-        for nome, padrao in expressoes:
+        for nome, padrao in _expressoes_da_casa(raiz):
             if padrao.search(bloco.get(campo, "")):
                 erros.append(f"`{campo}` tem uma palavra da casa («{nome}»): escreva para quem usa")
     if autoria and not erros:
