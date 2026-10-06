@@ -6405,10 +6405,13 @@ class IpcHandlersMixin:
         central = self._a_central()
         if central is None:
             return {"status": "sem_central", "dispensado": False}
+        # quem decide o que ainda está em curso é a central: a linha que a tela já diz «Não
+        # conectou» sai pelo fecho da vigia (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-…-01)
+        feito = await asyncio.to_thread(central.dispensar, aparelho)
         atual = central.movimento_de(aparelho)
-        if atual is not None and atual.em_curso:
+        if feito is None and atual is not None and atual.em_curso:
             return {"status": "ocupado", "dispensado": False}
-        return {"status": "ok", "dispensado": central.dispensar(aparelho) is not None}
+        return {"status": "ok", "dispensado": feito is not None}
 
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:

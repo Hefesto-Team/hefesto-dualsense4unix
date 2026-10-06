@@ -16,6 +16,8 @@ mas não conecta sozinho; o ``Connect`` falha enquanto o adaptador varre, e, no 
 
 from __future__ import annotations
 
+import asyncio
+import time
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +28,10 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
+    Bancada,
+    id_da_tela,
     mundo_da_madrugada,
+    preparar_a_tela,
     preparar_o_diario,
 )
 
@@ -36,6 +41,11 @@ ADAPTADORES = (SALA, QUARTO, VARANDA)
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return preparar_o_diario(tmp_path, monkeypatch)
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    return preparar_a_tela(monkeypatch)
 
 
 def o_controle_do_diario(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str, *,
@@ -211,10 +221,24 @@ def test_o_prazo_da_chave_nova_conta_do_pair_e_nao_da_janela(
 def test_a_chave_que_nunca_atende_sai_aos_sessenta_segundos_do_pair(diario: Path) -> None:
     """O outro lado do contrato, que continua: a chave que o controle nunca atende sai como
     meia chave — mas só aos 60 s do ``Pair``, depois de chamada de novo a cada
-    :data:`~central_do_radio.REPROVOCAR_S`."""
+    :data:`~central_do_radio.REPROVOCAR_S`. E nenhum ``Connect`` da volta espera além do prazo:
+    o veredito da central não passa do instante em que a tela diz «Não conectou».
+
+    MORDIDA do teto: chame ``dono.conectar`` sem o ``espera`` em ``_provocar_a_chave_nova``.
+    """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     visto = o_controle_do_diario(mundo, relogio, VERDE, acorda_em=1e9)
     central, dono = central_sem_tela(mundo, relogio)
+    esperas: list[float] = []
+    conectar = dono.conectar
+
+    def conectar_medindo(caminho: str, *, espera: float = bd.ESPERA_DO_CONNECT_S,
+                         quem: str = "") -> bd.Escrita:
+        if visto["pareou"] is not None:
+            esperas.append(relogio.agora + espera - visto["pareou"])
+        return conectar(caminho, espera=espera, quem=quem)
+
+    dono.conectar = conectar_medindo  # type: ignore[method-assign]
     try:
         rm.ela_pareia(relogio, mundo, central, VERDE)
         central.conectar(QUARTO)
@@ -224,7 +248,84 @@ def test_a_chave_que_nunca_atende_sai_aos_sessenta_segundos_do_pair(diario: Path
         assert mundo.lapides == [(QUARTO, VERDE)]
         chamadas = len(_linha(mundo, "Connect", VERDE))
         assert chamadas >= cr.PRAZO_DO_PENDENTE_S // cr.REPROVOCAR_S - 1, chamadas
+        tarde = [round(e, 1) for e in esperas[1:] if e > cr.PRAZO_DO_PENDENTE_S]
+        assert esperas and not tarde, f"Connect esperando além do prazo do Pair: {tarde}"
         assert mundo.objeto(SALA, VERMELHO) is not None and mundo.objeto(SALA, AZUL) is not None
     finally:
         central.fechar(espera=5.0)
         dono.fechar()
+
+
+def bancada_no_tempo(a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
+                     relogio: rm.Relogio) -> Bancada:
+    """A tela, a central e o tratador REAL do ``radio.dispensar``, com a hora de parede da tela
+    andando junto com o relógio da central (o prazo das duas é o mesmo)."""
+    base = time.time() - relogio.agora
+    monkeypatch.setattr(time, "time", lambda: base + relogio.agora)
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    pelo_daemon = bancada.ponte.resultado
+
+    def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
+        if metodo != "radio.dispensar":
+            return pelo_daemon(metodo, timeout, **params)
+        bancada.ponte.chamadas.append((metodo, dict(params)))
+        return asyncio.run(bancada.ponte.eu._handle_radio_dispensar(params))
+
+    monkeypatch.setattr(bancada.ponte, "resultado", resultado)
+    return bancada
+
+
+def _linhas_de(cena: dict[str, Any], aparelho: str, lugar: str) -> list[dict[str, Any]]:
+    return [a for a in cena["aparelhos"] if a.get("lugar") == id_da_tela(lugar)
+            and (a.get("aparelho") or "") == id_da_tela(aparelho)]
+
+
+@pytest.mark.parametrize("mundo_de", (mundo_da_madrugada, _o_quarto_controle),
+                         ids=("terceiro", "quarto"))
+@pytest.mark.parametrize("destino", ADAPTADORES)
+def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, mundo_de: Any,
+) -> None:
+    """A cura 2: o «Tirar esta linha» da gaveta tira a linha, e ela não volta em 10 s de tique.
+
+    O caso medido: a tela e a central contam o mesmo prazo, mas quem fala primeiro é a tela (a
+    vigia da central dá uma volta por segundo, e o ``Connect`` da volta segura o fio). Nesse
+    vão a linha já diz «Não conectou», com o «Tirar esta linha» na gaveta, e o tratador
+    respondia ``ocupado``: a tela levantava «a linha não saiu agora» e a linha ficava. Agora o
+    clique é o veredito: a central fecha o movimento como a vigia fecharia (a meia chave sai
+    antes, e o aparelho não volta como «Desligado») e a linha some.
+
+    MORDIDA: tire o bloco do ``vencido`` de ``CentralDoRadio.dispensar`` (o ``ocupado`` volta),
+    ou devolva o ``ocupado`` do ``_handle_radio_dispensar`` antes de perguntar à central.
+    """
+    mundo, relogio = mundo_de(), rm.Relogio()
+    mundo.pareado(destino, VERDE, conectado=False, host=False)
+    ligados = sorted(f.endereco for f in mundo.fisicos.values() if f.conectado_em)
+    bancada = bancada_no_tempo(a08, monkeypatch, mundo, relogio)
+    try:
+        prazo = cr.PRAZO_DO_PENDENTE_S
+        bancada.central._guardar(cr.Movimento(
+            VERDE, destino, cr.ESPERANDO, cr.PASSO_CONFERINDO,
+            motivo=cr.MOTIVO_SEM_CONFIRMACAO, pareou_no_destino=True,
+            comecou=relogio() - prazo - 0.5, quando=time.time() - prazo - 0.5))
+        campos = bancada.tique()
+        (linha,) = _linhas_de(dict(a08._CENA_NA_TELA), VERDE, destino)
+        assert linha.get("nao_conectou"), linha
+        clique = {"alvo": linha["id"], "lugar": linha["lugar"]}
+        assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
+                f'data-lugar="{linha["lugar"]}"') in campos["radio-moldes"]
+
+        bancada.gesto("aparelho-menu", **clique)
+        assert bancada.gesto("dispensar-linha", **clique) == {"armou": True}
+
+        for volta in range(20):
+            relogio.dormir(0.5)
+            if volta % 2:
+                bancada.central.vigiar()
+            sobra = _linhas_de(bancada.cena(), VERDE, destino)
+            assert not sobra, f"a linha voltou aos {0.5 * (volta + 1):.1f} s de tique: {sobra}"
+        assert bancada.central.movimento_de(VERDE) is None
+        assert mundo.objeto(destino, VERDE) is None, "a meia chave ficou e volta como Desligado"
+        assert sorted(f.endereco for f in mundo.fisicos.values() if f.conectado_em) == ligados
+    finally:
+        bancada.fechar()

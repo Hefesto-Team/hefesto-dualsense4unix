@@ -1851,9 +1851,15 @@ class CentralDoRadio:
             if bluez_dbus.como_booleano(
                     dono.propriedade(no, bluez_dbus.APARELHO, "Trusted")) is not True:
                 dono.confiar(no, quem=QUEM)
+            # o ``Connect`` espera no máximo o que sobra do prazo: o veredito não passa do
+            # instante em que a tela diz «Não conectou»
+            resta = self._prazo_do_pendente_s - (self._relogio() - movimento.prazo_desde)
+            if resta < 1.0 or bluez_dbus.como_booleano(
+                    dono.propriedade(no, bluez_dbus.APARELHO, "Connected")) is True:
+                return
             logger.info("central_chama_a_chave_nova", aparelho=mascarar(movimento.aparelho),
                         adaptador=mascarar(movimento.destino))
-            self._conectar(dono, movimento.aparelho, movimento.destino)
+            dono.conectar(no, espera=min(bluez_dbus.ESPERA_DO_CONNECT_S, resta), quem=QUEM)
 
     def _chegou(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
         """A pergunta do CONFERIR, UMA vez. Controle: ``HID_PHYS`` no destino E o"""
@@ -2367,6 +2373,12 @@ class CentralDoRadio:
         alvo = endereco_de(aparelho)
         if alvo is None:
             return None
+        vencido = self.movimento_de(alvo)
+        if (vencido is not None and vencido.em_curso and vencido.passo == PASSO_CONFERINDO
+                and self._relogio() - vencido.prazo_desde >= self._prazo_do_pendente_s):
+            # a tela já diz «Não conectou» (o mesmo prazo) e a vigia ainda não falou: o clique
+            # dela é o veredito, e o fecho é o da vigia (a meia chave sai antes)
+            self._vigiar_um(vencido)
         with self._tranca:
             atual = self._movimentos.get(alvo)
             if atual is None or atual.em_curso:
