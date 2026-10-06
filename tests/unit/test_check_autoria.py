@@ -19,6 +19,8 @@ REGUA = RAIZ / "scripts" / "check_autoria.py"
 CANARIO = "zqcanario" + "autoria"
 FORNECEDOR = "fornecedor" + "-x"
 ZERO = "0" * 40
+# O sanitizador de coautoria do pre-commit apaga a linha que traz o literal: monta-se por partes.
+COAUTORIA = "Co-Authored" + "-By"
 
 LISTA = "\n".join([
     "# lista sintética dos testes",
@@ -147,6 +149,7 @@ def test_a_saida_nao_imprime_o_nome_nem_o_endereco_de_quem_reprovou(repo: Path) 
 
 def test_coautoria_de_ferramenta_reprova_pela_regra_estrutural(repo: Path) -> None:
     """Nem a lista precisa conhecer o fornecedor: a linha de atribuição é a regra."""
+    commitar(repo, f"feat: x\n\n{COAUTORIA}: Fornecedor X <x@{FORNECEDOR}.test>")
     p = rodar(repo, "historia", "HEAD", lista=f"1 {CANARIO}\n")
     assert p.returncode == 1
     assert "linha de atribuição" in p.stdout
@@ -217,10 +220,11 @@ def test_arquivo_com_o_canario_no_nome_que_entrou_e_saiu_reprova_s12(repo: Path)
 def test_refs_replace_que_mascara_um_trailer_reprova_s4(repo: Path) -> None:
     """O `git log` obedece a `refs/replace`; o push não. A régua mede o que viaja."""
     limpo = commitar(repo, "feat: limpo")
+    sujo = commitar(repo, f"feat: sujo\n\n{COAUTORIA}: Fornecedor X <x@fora.test>")
     git(repo, "replace", sujo, limpo)
     # o dublê é real: o log comum, com as substituições valendo, mente
     visto = git(repo, "log", "-1", "--format=%B", sujo)
-    assert "Co-Authored" not in visto, "o dublê não mascarou nada: o caso não prova S4"
+    assert COAUTORIA not in visto, "o dublê não mascarou nada: o caso não prova S4"
     p = rodar(repo, "historia", sujo)
     assert p.returncode == 1, saida(p)
     assert "linha de atribuição" in p.stdout
