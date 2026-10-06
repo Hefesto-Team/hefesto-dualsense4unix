@@ -5,7 +5,8 @@ name: Wiki
 # na hora e monta as páginas. Os filtros de publicação rodam sobre o texto gerado: a página que reprova
 # não sobe e a fonte é corrigida. Só empurra para o `<repositório>.wiki.git` se alguma página mudou.
 # Saídas do gerador: 0 limpo; 1 houve página segurada (as outras sobem e o job termina vermelho com a
-# lista); 3 um filtro não pôde medir (a lista de termos não chegou): nada sobe.
+# lista); 2 a saída foi recusada (não é uma Wiki); 3 um filtro não pôde medir (a lista de termos não
+# chegou): nada sobe.
 on:
   push:
     branches: [dev]

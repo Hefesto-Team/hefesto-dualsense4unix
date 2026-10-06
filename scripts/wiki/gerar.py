@@ -12,8 +12,9 @@ Cada página carrega, no alto, o cabeçalho da fonte, e no fim a linha «corrija
 
 Os filtros de publicação rodam sobre o texto GERADO (`filtros_de_publicacao.py`): a página que
 reprova não sobe (os links dos outros para ela voltam ao arquivo no repositório), e a fonte é
-corrigida. Saídas: 0 limpo; 1 houve página segurada, ou `--conferir` achou diferença; 3 um filtro
-não pôde medir (nada é escrito: o que não dá para medir reprova).
+corrigida. Saídas: 0 limpo; 1 houve página segurada, ou `--conferir` achou diferença; 2 a saída é
+recusada (a árvore de origem, ou uma pasta com arquivos que não é Wiki); 3 um filtro não pôde medir
+(nada é escrito: o que não dá para medir reprova).
 """
 from __future__ import annotations
 
@@ -84,6 +85,7 @@ class Pagina:
     fonte: str         # o arquivo do repositório de onde a página nasce
     grupo: str         # onde ela aparece na navegação
     corpo: str = ""
+    posicao: int = 0   # a ordem dentro do grupo (as famílias do mapa seguem `FAMILIAS`); empate, pelo nome
 
 
 @dataclass
@@ -279,7 +281,9 @@ def _paginas_do_mapa(raiz: Path, wiki: Wiki, seguradas: set[str]) -> None:
     escada = _escada()
     ordem = {c: i for i, (c, _) in enumerate(CONTROLES)}
     rotulo = dict(CONTROLES)
-    familias = sorted({ln["familia"] for ln in linhas})
+    # A ordem de `FAMILIAS` (a de quem lê: gatilhos, luz, som…), e a família que ela não conhece vai ao fim.
+    posicao = {f: i for i, f in enumerate(FAMILIAS)}
+    familias = sorted({ln["familia"] for ln in linhas}, key=lambda f: (posicao.get(f, len(posicao)), f))
     nomes = {f: f"Mapa-{ascii_minusculo(FAMILIAS.get(f, f))}" for f in familias}
     indice = ["# O mapa dos controles", "",
               "Cada recurso do controle, no cabo e no Bluetooth, com até onde foi provado:", ""]
@@ -301,7 +305,8 @@ def _paginas_do_mapa(raiz: Path, wiki: Wiki, seguradas: set[str]) -> None:
         if nomes[fam] in seguradas:
             continue
         titulo = FAMILIAS.get(fam, fam)
-        wiki.paginas[nomes[fam]] = Pagina(nomes[fam], titulo, MAPA, "O mapa dos controles")
+        wiki.paginas[nomes[fam]] = Pagina(nomes[fam], titulo, MAPA, "O mapa dos controles",
+                                          posicao=1 + familias.index(fam))
         deles = sorted((ln for ln in linhas if ln["familia"] == fam),
                        key=lambda ln: (ln["chave"], ordem.get(ln["controle"], 99)))
         texto = [f"# O mapa dos controles: {titulo}", "",
@@ -355,7 +360,7 @@ def montar(raiz: Path, *, fora: dict[str, str] | None = None, seguradas: set[str
 def _navegacao(wiki: Wiki) -> None:
     """A barra lateral, o rodapé e o «Nesta Wiki» do início, tudo da lista de páginas."""
     grupos: dict[str, list[Pagina]] = {}
-    for p in sorted(wiki.paginas.values(), key=lambda q: (q.nome != "Mapa-dos-controles", q.nome)):
+    for p in sorted(wiki.paginas.values(), key=lambda q: (q.posicao, q.nome)):
         if p.nome != "Home":
             grupos.setdefault(p.grupo, []).append(p)
     ordem = ["Usar", "O mapa dos controles", "O protocolo"]
@@ -463,7 +468,7 @@ def _do_disco(pasta: Path) -> dict[str, bytes]:
     if pasta.is_dir():
         for p in sorted(pasta.rglob("*")):
             relativo = p.relative_to(pasta).as_posix()
-            if p.is_file() and not relativo.startswith(".git/"):
+            if p.is_file() and relativo != ".git" and not relativo.startswith(".git/"):
                 achados[relativo] = p.read_bytes()
     return achados
 
@@ -473,6 +478,22 @@ def diferenca(esperado: dict[str, bytes], no_disco: dict[str, bytes]) -> list[st
         [f"falta {n}" for n in esperado if n not in no_disco]
         + [f"a mais {n}" for n in no_disco if n not in esperado]
         + [f"muda {n}" for n in esperado if n in no_disco and esperado[n] != no_disco[n]])
+
+
+def recusa_da_saida(pasta: Path, raiz: Path) -> str | None:
+    """Por que `pasta` não pode receber a Wiki, ou None. A escrita apaga o que a Wiki não leva.
+
+    A saída nunca é a árvore de onde a Wiki nasce (nem uma pasta acima dela), e uma pasta que já
+    tem arquivos só é Wiki se tem a página de início ou a barra lateral: um `--saida` trocado não
+    apaga o repositório de ninguém.
+    """
+    alvo, origem = pasta.resolve(), raiz.resolve()
+    if alvo == origem or alvo in origem.parents:
+        return f"{pasta} contém a árvore de origem"
+    no_disco = _do_disco(pasta)
+    if no_disco and not {"Home.md", "_Sidebar.md"} & set(no_disco):
+        return f"{pasta} tem arquivos e não é uma Wiki (sem Home.md nem _Sidebar.md)"
+    return None
 
 
 def escrever(esperado: dict[str, bytes], pasta: Path) -> None:
@@ -523,16 +544,25 @@ def principal(argv: list[str] | None = None) -> int:
     if a.conferir:
         dif = diferenca(esperado, _do_disco(a.saida))
         print(f"wiki: {marcas}; conferir: {'igual' if not dif else str(len(dif)) + ' diferença(s)'}")
-        for d in dif[:40]:
-            print(f"  {d}")
+        if a.detalhe:
+            with a.detalhe.open("a", encoding="utf-8") as fh:
+                fh.write("".join(f"conferir: {d}\n" for d in dif))
+        else:
+            for d in dif[:40]:
+                print(f"  {d}")
         return 1 if dif or r.seguradas else 0
+    recusa = recusa_da_saida(a.saida, raiz)
+    if recusa:
+        print(f"wiki: RECUSADO, nada escrito ({recusa})", file=sys.stderr)
+        return 2
     escrever(esperado, a.saida)
     if a.recibo:
         a.recibo.mkdir(parents=True, exist_ok=True)
         (a.recibo / f"wiki.{impressao_das_fontes(raiz, r.wiki)}").write_text(marcas + "\n", encoding="utf-8")
     print(f"wiki: {marcas}; escrito em {a.saida}")
-    for m in (m for ms in r.seguradas.values() for m in ms):
-        print(f"  segurada: {m}", file=sys.stderr)
+    if not a.detalhe:   # com `--detalhe`, a lista mora no arquivo e o terminal fica no resumo
+        for m in (m for ms in r.seguradas.values() for m in ms):
+            print(f"  segurada: {m}", file=sys.stderr)
     return 1 if r.seguradas else 0
 
 
