@@ -15,7 +15,9 @@ AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 * tirar o `max-width` do `.card-nome` aberto → o nome longo derruba a bateria para a 2ª linha (3);
 * o pacote da 02 deixar de emitir `jogador` → o número vivo some (4);
 * a 08 voltar a ter uma `dono_na_linha` só dela → a identidade da função reprova (6);
-* a Calibrar voltar ao «Player {jogador}» → a régua 7 reprova.
+* a Calibrar voltar ao «Player {jogador}» → a régua 7 reprova;
+* o `.nome b` da Calibrar sem o `inline-flex`, o `.quem-nome` sem o `overflow:hidden` ou o
+  `.quem-num` sem o `white-space:pre` → o «• P<n>» some ou cola no nome (régua 7, no WebKit).
 """
 from __future__ import annotations
 
@@ -368,15 +370,91 @@ def test_a_calibrar_diz_o_nome_e_o_numero_ou_so_o_numero(monkeypatch: pytest.Mon
     blocos = "".join(str(b) for b in carga["blocos"].values())
     num1 = '<span data-campo="jogador" data-hef-alvo="html">1</span>'
     num2 = '<span data-campo="jogador" data-hef-alvo="html">2</span>'
-    assert f"Vitória{monta.SEPARADOR}P{num1}" in blocos, blocos[:400]
+    assert re.sub(r"<[^>]+>", "", blocos).count("Vitória • P1") >= 1, blocos[:400]
+    assert f'title="Vitória">Vitória</span><span class="quem-num">{monta.SEPARADOR}P{num1}' in (
+        blocos), blocos[:400]
     assert f">P{num2}<" in blocos or f"P{num2}</b>" in blocos
     assert "Player " not in blocos and "Sony <span" not in blocos
     assert mesa and doc  # a bancada e a mesa existem; o resto é do que o pacote devolveu
 
 
 def test_o_texto_de_quem_joga_com_o_numero() -> None:
-    assert monta.quem_joga_com_o_numero({MAC_NORM: "Vitória"}, "aa:bb:cc:00:00:01", 1).startswith(
-        f"Vitória{monta.SEPARADOR}P")
+    com_nome = monta.quem_joga_com_o_numero({MAC_NORM: "Vi <b>"}, "aa:bb:cc:00:00:01", 1)
+    assert com_nome.startswith(
+        '<span class="quem-nome" title="Vi &lt;b&gt;">Vi &lt;b&gt;</span>'
+        f'<span class="quem-num">{monta.SEPARADOR}P'), com_nome
+    assert re.sub(r"<[^>]+>", "", com_nome) == "Vi &lt;b&gt; • P1"
     assert monta.quem_joga_com_o_numero({}, "aa:bb:cc:00:00:01", 1).startswith("P")
     assert "•" not in monta.quem_joga_com_o_numero({}, "aa:bb:cc:00:00:01", 1)
     assert monta.quem_joga_com_o_numero({}, "x", None) == ""
+
+
+@pytest.fixture(scope="module")
+def calibrar_medida() -> dict[str, Any]:
+    """Abre a bancada da Calibrar e põe no 1º cartão o «<nome> • P3» que o pacote manda."""
+    if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
+        pytest.skip("sem servidor gráfico — o WebKit não abre")
+    try:
+        import regua_de_tela
+
+        from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
+        from hefesto_dualsense4unix.interface.janela import (
+            ALTURA_DO_DESENHO,
+            LARGURA_DO_DESENHO,
+        )
+    except (ImportError, ValueError) as erro:  # pragma: no cover
+        pytest.skip(f"a régua de tela não importou ({erro})")
+
+    por_a_folha = (
+        "(function(){var s=document.createElement('style');"
+        "s.textContent=" + json.dumps(FOLHA_DA_CASA)
+        + ";document.head.appendChild(s);return 1;})()"
+    )
+    medir = (
+        "(function(){var c=document.querySelector('.ctr');var n=c.querySelector('.nome');"
+        "var b=n.querySelector('b');var q=b.querySelector('.quem-num');"
+        "var t=c.querySelector('.ctr-topo').getBoundingClientRect();"
+        "var rn=n.getBoundingClientRect();var rq=q?q.getBoundingClientRect():null;"
+        "var pt=q&&q.querySelector('.pt');var qn=b.querySelector('.quem-nome');"
+        "var vao=(pt&&qn)?pt.getBoundingClientRect().left-qn.getBoundingClientRect().right:null;"
+        "return {num:q?q.innerText:null,num_dir:rq?rq.right:null,nome_dir:rn.right,vao:vao,"
+        "alt_b:Math.round(b.getBoundingClientRect().height),alt_topo:Math.round(t.height)}})()"
+    )
+    fora: dict[str, Any] = {}
+    with regua_de_tela.Tela(onde.pagina(PCAL, publicado=False), titulo_esperado="Hefesto",
+                            largura=LARGURA_DO_DESENHO, altura=ALTURA_DO_DESENHO) as tela:
+        tela.executar(por_a_folha)
+        # A cena do desenho tem dois cartões; com quatro controles cada um tem 1/4 da fila, e é
+        # aí que o nome comum já não cabe. Os dois que faltam são cópias do segundo.
+        tela.executar(
+            "(function(){var cs=document.querySelectorAll('.ctr');var u=cs[cs.length-1];"
+            "for(var i=cs.length;i<4;i++){u.parentNode.appendChild(u.cloneNode(true))}})()")
+        fora["cartoes"] = tela._cru("document.querySelectorAll('.ctr').length")
+        fora["sem_nome_topo"] = tela._cru(
+            "Math.round(document.querySelector('.ctr .ctr-topo').getBoundingClientRect().height)")
+        for rotulo, nome in (("comum", "Vitória Maria"), ("longo", NOME_LONGO)):
+            quem = monta.quem_joga_com_o_numero({MAC_NORM: nome}, UNIQS[0], 3)
+            tela.executar("document.querySelector('.ctr .nome b').innerHTML=" + json.dumps(quem))
+            fora[rotulo] = tela._cru(medir)
+    return fora
+
+
+@pytest.mark.parametrize("rotulo", ["comum", "longo"])
+def test_a_calibrar_mostra_o_numero_mesmo_com_o_nome_longo(
+        calibrar_medida: dict[str, Any], rotulo: str) -> None:
+    """O cartão da Calibrar é de uma linha: quem encolhe é o NOME, e o «• P<n>» fica à vista.
+
+    Medido em 07/10/2026 pelo conferente final: num texto só, «Vitória Maria • P3» virava
+    «Vitória Maria …», sem o número.
+    MORDIDAS (`calibrar.py`, rodadas em 07/10/2026): tirar o `display:inline-flex` do `.nome b`
+    (o texto volta a ser um só, e o corte do `.nome` come o «• P3»), ou o `overflow:hidden` do
+    `.quem-nome` (o nome deixa de encolher e empurra o número para fora), ou o `white-space:pre`
+    do `.quem-num` (o espaço antes do «•» some, e ele cola no nome).
+    """
+    assert calibrar_medida["cartoes"] == 4, calibrar_medida
+    m = calibrar_medida[rotulo]
+    assert m["num"] is not None and m["num"].strip().endswith("P3"), m
+    assert m["num_dir"] <= m["nome_dir"] + 0.5, f"o «• P3» passou da caixa do nome: {m}"
+    assert m["vao"] is not None and m["vao"] >= 2, f"o «•» colou no nome, sem o espaço: {m}"
+    assert m["alt_topo"] == calibrar_medida["sem_nome_topo"], (
+        f"o nome mudou a altura do topo do cartão: {m}")

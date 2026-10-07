@@ -89,7 +89,12 @@
   .ctr-topo{display:flex;align-items:center;gap:9px;min-width:0}
   .ctr .nome{font-size:12.5px;color:var(--texto-mudo);line-height:15px;white-space:nowrap;
              overflow:hidden;text-overflow:ellipsis}
-  .ctr .nome b{color:var(--fg);font-weight:600}
+  .ctr .nome b{color:var(--fg);font-weight:600;display:inline-flex;max-width:100%;
+               vertical-align:top}
+  /* O nome encolhe com reticência e o «• P<n>» não: com o número no fim de um texto só, o
+     corte do `.nome` comia o número já com «Vitória Maria» (`monta.quem_joga_com_o_numero`). */
+  .ctr .nome .quem-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ctr .nome .quem-num{white-space:pre}
   /* `height:auto` NÃO É DETALHE: o SVG nasce com `width="1160" height="800"`
      nos atributos (é o tamanho que o rasterizador do ícone usa), e sem esta
      linha o `width:74px` do CSS encolhe SÓ a largura — a altura fica em 800 e

@@ -142,10 +142,16 @@ def quem_joga_com_o_numero(nomes: dict[str, str], uniq: str, jogador: Any) -> st
     """Para quem não tem lâmpadas (a Calibrar): `<nome> • P<n>`, ou só `P<n>` sem nome.
 
     Sai da MESMA regra de `dono_na_linha`; aqui o número fica ao lado do nome, e não no lugar dele.
+    O nome e o número vão em dois `span` colados (`quem-nome` e `quem-num`): o cartão da Calibrar
+    é de uma linha só, e quem ganha a reticência é o NOME, com ele inteiro no `title`; o «• P<n>»
+    não encolhe. Num texto só, o corte comia o número já com «Vitória Maria» (13 letras).
     """
     quem = dono_na_linha(nomes, uniq, jogador, em_html=True)
     numero = dono_na_linha({}, uniq, jogador, em_html=True)
-    return quem if quem in ("", numero) else f"{quem}{SEPARADOR}{numero}"
+    if quem in ("", numero):
+        return quem
+    return (f'<span class="quem-nome" title="{quem}">{quem}</span>'
+            f'<span class="quem-num">{SEPARADOR}{numero}</span>')
 
 
 def partes_do_modelo(c: dict[str, Any]) -> list[str]:
