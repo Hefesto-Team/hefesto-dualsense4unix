@@ -2200,6 +2200,16 @@ class _GadgetsEstacionados:
 
 
 _GADGETS_ESTACIONADOS = _GadgetsEstacionados()
+_CONTRATOS_JA_AVISADOS: set[tuple[str, ...]] = set()
+
+
+def _avisar_o_contrato_que_falta(faltam: list[str]) -> None:
+    """Uma linha por conjunto de contratos: o pad nasce uhid, e o log diz por quê."""
+    chave = tuple(faltam)
+    if chave in _CONTRATOS_JA_AVISADOS:
+        return
+    _CONTRATOS_JA_AVISADOS.add(chave)
+    logger.warning("pad_usb_sem_contrato_fica_o_uhid", contratos=list(faltam))
 
 
 def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
@@ -2208,7 +2218,9 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
         return False
     gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity)
     if gadget is None:
-        if CONTRATO_QUE_FALTA():
+        faltam = CONTRATO_QUE_FALTA()
+        if faltam:
+            _avisar_o_contrato_que_falta(faltam)
             return False
         try:
             serial = pad_usb.serial_do_pad(pad.mac)

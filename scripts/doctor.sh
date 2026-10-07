@@ -3451,6 +3451,50 @@ PY
     done <<<"${saida}"
 }
 
+# O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026): o pad virtual
+# nasce como DualSense USB (um gadget só HID ligado pelo `vhci_hcd`) onde o
+# kernel cumpre o contrato, e como uhid onde não cumpre. Sem pai USB, o jogo
+# com a biblioteca da Sony pode não casar o som com o controle. A pergunta é a
+# do daemon (`system_check.contrato_do_pad_em_usb`), importada e não
+# redigitada. O `GADGET_HID_WRITE_GET_REPORT` e a enumeração pelo `vhci` só se
+# medem montando: quando faltam, o daemon diz no diário
+# (`pad_usb_features_recusadas_fica_o_uhid`, `pad_usb_nao_enumerou_fica_o_uhid`).
+# HEFESTO_RAIZ_MODULOS e HEFESTO_LIB_MODULES existem para os testes.
+check_o_pad_em_usb() {
+    local py saida
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python para conferir o contrato do pad em USB"; return; }
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - <<'PY' 2>/dev/null
+import os
+import sys
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.core.system_check import contrato_do_pad_em_usb
+except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
+    print("sem-produto")
+    raise SystemExit(0)
+faltam = contrato_do_pad_em_usb(
+    raiz_modulos=os.environ.get("HEFESTO_RAIZ_MODULOS") or "/sys/module",
+    lib_modules=os.environ.get("HEFESTO_LIB_MODULES") or None,
+)
+print("faltam:" + ",".join(faltam))
+PY
+)" || saida=""
+    case "${saida}" in
+        "faltam:")
+            pass "o pad virtual pode nascer em USB (libcomposite, usb_f_hid, usbip_vudc e vhci_hcd ao alcance)" ;;
+        "faltam:?")
+            info "o contrato do pad em USB não se deixou ler" ;;
+        faltam:*)
+            warn "o kernel não traz ${saida#faltam:} — o pad virtual nasce uhid, sem pai USB, e o jogo com a biblioteca da Sony pode não casar o som com o controle; com os módulos instalados para este kernel, reinicie o hefesto-hidraw-broker (ele os carrega)" ;;
+        *)
+            info "contrato do pad em USB não conferido (o pacote não está ao alcance do python ${py})" ;;
+    esac
+}
+
 # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
 # (perfil-por-jogo). Quando a detecção falha, o autoswitch fica silenciosamente
 # cego e o perfil-por-jogo vira letra morta — esta seção torna o estado visível.
@@ -8910,6 +8954,7 @@ main() {
     hdr "o modo de cada jogador e a hora de cada pad"
     check_o_modo_no_ar
     check_a_hora_do_pad
+    check_o_pad_em_usb
     hdr "broker hide-hidraw (cura de raiz do controle duplicado)"
     check_hidraw_broker
     check_quem_segura_o_fisico

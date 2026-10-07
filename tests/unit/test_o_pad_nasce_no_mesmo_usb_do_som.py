@@ -1029,3 +1029,75 @@ def test_a_marca_da_regra_73_e_o_serial_que_o_broker_escreve() -> None:
     assert f'ATTRS{{serial}}=="{pad_usb.SERIAL_PREFIXO}*"' in texto
     assert hidraw_broker.PAD_USB_NOME == pad_usb.SERIAL_PREFIXO
     assert 'KERNEL=="hidg*", SUBSYSTEM=="hidg", MODE="0660"' in texto
+
+
+# --- 6. Sem o kernel, o pad é uhid, e o doctor diz o contrato que falta ------
+
+
+def _modulos(tmp_path: Path, carregados: tuple[str, ...]) -> tuple[Path, Path]:
+    raiz = tmp_path / "module"
+    raiz.mkdir()
+    for nome in carregados:
+        (raiz / nome).mkdir()
+    lib = tmp_path / "lib-modules"
+    lib.mkdir()
+    (lib / "modules.dep").write_text("kernel/drivers/usb/gadget/udc/dummy_hcd.ko.zst:\n")
+    (lib / "modules.builtin").write_text("")
+    return raiz, lib
+
+
+def _doctor_do_pad(tmp_path: Path, raiz: Path, lib: Path) -> str:
+    import subprocess
+    import sys
+
+    doctor = Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
+    feito = subprocess.run(
+        ["bash", "-c",
+         f'source "{doctor}"; '
+         f"_python_do_produto() {{ printf '%s\\n' '{sys.executable}'; }}; "
+         "check_o_pad_em_usb"],
+        capture_output=True, text=True, timeout=60, check=False,
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
+             "HEFESTO_RAIZ_MODULOS": str(raiz), "HEFESTO_LIB_MODULES": str(lib)},
+    )
+    return feito.stdout + feito.stderr
+
+
+class TestSemOKernelODoctorDizOContrato:
+    def test_o_system_check_nomeia_o_que_falta(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.core import system_check
+
+        raiz, lib = _modulos(tmp_path, ("libcomposite", "usb_f_hid"))
+        assert system_check.contrato_do_pad_em_usb(
+            raiz_modulos=str(raiz), lib_modules=str(lib)
+        ) == ["usbip_vudc", "vhci_hcd"]
+
+    def test_o_doctor_avisa_o_contrato_que_falta(self, tmp_path: Path) -> None:
+        raiz, lib = _modulos(tmp_path, ("libcomposite", "usb_f_hid", "vhci_hcd"))
+        saida = _doctor_do_pad(tmp_path, raiz, lib)
+        assert "[WARN]" in saida and "usbip_vudc" in saida, saida
+        assert "nasce uhid" in saida
+
+    def test_com_o_contrato_o_doctor_diz_que_o_pad_nasce_em_usb(self, tmp_path: Path) -> None:
+        raiz, lib = _modulos(tmp_path, pad_usb.MODULOS_DO_GADGET)
+        saida = _doctor_do_pad(tmp_path, raiz, lib)
+        assert "[ OK ]" in saida and "[WARN]" not in saida, saida
+
+    def test_o_daemon_avisa_uma_vez_e_o_pad_nasce_uhid(
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        avisos: list[dict[str, Any]] = []
+        monkeypatch.setattr(bancada.ug, "_CONTRATOS_JA_AVISADOS", set())
+        monkeypatch.setattr(
+            bancada.ug.logger, "warning",
+            lambda evento, **kw: avisos.append({"evento": evento, **kw}),
+        )
+        bancada.falta = ["vhci_hcd"]
+        for _ in range(2):
+            pad = bancada.pad()
+            try:
+                assert pad.start() and pad._gadget is None
+            finally:
+                pad.stop()
+        sem = [a for a in avisos if a["evento"] == "pad_usb_sem_contrato_fica_o_uhid"]
+        assert sem == [{"evento": "pad_usb_sem_contrato_fica_o_uhid", "contratos": ["vhci_hcd"]}]
