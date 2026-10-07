@@ -1324,12 +1324,13 @@ MIRA_ACESA_NA_CENA = {"p2"}
 
 
 def _mira_do_cartao(c):
-    """`(curto, inteiro)` da linha da mira da CENA: o travessão com a Mira apagada.
+    """`(curto, inteiro)` da linha da mira da CENA: vazia com a Mira apagada.
 
-    O piloto escreve `—` num valor vazio (`escrever`), e a cena diz o mesmo que o produto dirá.
+    A Mira apagada é um estado lido, não uma leitura que falta: a linha fica vazia, e não com o
+    `—`. O endereço é de alvo `html`, que o piloto escreve vazio (o `texto` vazio viraria `—`).
     """
     if c["pref"] not in MIRA_ACESA_NA_CENA:
-        return VAZIO, ""
+        return "", ""
     bloco = _mira_de_nascenca()
     return _resumo_da_mira(bloco, curto=True), _resumo_da_mira(bloco)
 
@@ -1439,7 +1440,7 @@ def controle(c):
     luz = {"luz": _hex(player_slot_color(n))} if conectado else {}
     identidade = c["nome"] if conectado else SEM_NINGUEM_AQUI
     estado = _linha_do_cartao(c["via"], navega) if conectado else VAZIO
-    mira = _mira_do_cartao(c) if conectado else (VAZIO, "")
+    mira = _mira_do_cartao(c) if conectado else ("", "")
     return (
         f'              <div class="{classe}"{tinta}'
         f' data-controle="{c.get("uniq") or c["pref"]}"'
@@ -1452,7 +1453,7 @@ def controle(c):
         f' data-hef-alvo="html">{estado}</div>\n'
         f'                <div class="nav-mira" data-campo="mira-resumo-dica" data-hef-alvo="atributo"'
         f' data-hef-atributo="title" title="{mira[1]}"><span data-campo="mira-resumo"'
-        f' data-hef-alvo="texto">{mira[0]}</span></div>\n'
+        f' data-hef-alvo="html">{mira[0]}</span></div>\n'
         f'              </div>')
 
 

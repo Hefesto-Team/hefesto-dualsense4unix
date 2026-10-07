@@ -144,6 +144,7 @@ emitidas para o vazio (`SEM_ENDERECO`) e um "Guardar" que apagava o perfil
 """
 from __future__ import annotations
 
+import html
 import re
 import time
 from typing import Any
@@ -757,7 +758,9 @@ def a_mira_do_cartao(dele: dict[str, Any], ctx: Contexto) -> dict[str, str]:
     quatro ajustes da Calibrar, e o cartão passa a dizê-los quando a Mira dele está acesa — pelo
     MESMO leitor da Calibrar (`a11.resumo_da_mira`, sobre o bloco `mira` do daemon) e pelo mesmo
     `ligada` do chip (`a02._mira_ligada`). Apagada, sem leitura ou no Modo Nativo (o chip fica
-    cinza e a Mira não anda), a linha fica vazia: afirmação sem leitura é chute.
+    cinza e a Mira não anda), a linha fica vazia: afirmação sem leitura é chute. O resumo vai
+    pelo alvo `html` (escapado aqui) porque o `texto` vazio vira travessão no piloto, e a linha
+    de uma Mira apagada diria «—», o sinal de leitura que falta.
     """
     from .a02_controles import _mira_ligada, _nativo
     from .a11_calibrar_sensores import resumo_da_mira
@@ -765,7 +768,7 @@ def a_mira_do_cartao(dele: dict[str, Any], ctx: Contexto) -> dict[str, str]:
     bloco = dele.get("mira")
     if _mira_ligada(dele) is not True or _nativo(ctx):
         return dict(MIRA_VAZIA)
-    return {"mira-resumo": resumo_da_mira(bloco, curto=True) or "",
+    return {"mira-resumo": html.escape(resumo_da_mira(bloco, curto=True) or ""),
             "mira-resumo-dica": resumo_da_mira(bloco) or ""}
 
 

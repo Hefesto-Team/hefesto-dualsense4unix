@@ -356,3 +356,19 @@ def test_a_cena_dos_geradores_diz_o_mesmo_que_o_produto() -> None:
     assert a11_calibrar_sensores.resumo_da_mira({}) is None
     assert a11_calibrar_sensores.resumo_da_mira({"ligada": True}) is None
     assert rot.DESTINO_NENHUM  # o dono do «apagado» existe e é o que a 02 lê
+
+
+def test_a_linha_da_06_com_a_mira_apagada_fica_vazia_e_nao_com_travessao() -> None:
+    """A Mira apagada é estado lido, e o cartão da 06 não diz «—» por ela.
+
+    O piloto escreve `—` num `texto` vazio (`hefesto_vivo.escrever`) e escreve vazio num `html`
+    vazio; o pacote emite `""` com a Mira apagada, e só o alvo `html` deixa a linha vazia na tela.
+    MORDIDA: o `data-hef-alvo="texto"` de volta no `mira-resumo` do gerador da 06.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    html = onde.pagina("06-navegacao.html", publicado=False).read_text(encoding="utf-8")
+    alvos = re.findall(r'data-campo="mira-resumo" data-hef-alvo="([a-z]+)">([^<]*)<', html)
+    assert len(alvos) == 4, alvos
+    assert {a for a, _ in alvos} == {"html"}, alvos
+    assert sorted(t for _, t in alvos)[:3] == ["", "", ""], alvos
