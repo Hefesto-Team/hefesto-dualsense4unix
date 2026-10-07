@@ -24,7 +24,7 @@ O QUE CAIU DO ENUNCIADO, e o motivo é bom
 -----------------------------------------
 A §3 item 1 mandava o esquema aprender uma SEGUNDA FORMA de chave — a do
 controle sem serial, "com prefixo explícito". **Ela não existe.** A
-``O-CONTROLE-SEM-MAC-01`` fechou antes (``cd5ff9bc``) e mediu que dos cinco
+``O-CONTROLE-SEM-MAC-01`` fechou antes (``2b437a43``) e mediu que dos cinco
 crachás candidatos sobra o ``0x09``, que devolve **o endereço de rádio** — é de
 onde o próprio ``hid_playstation`` tira o ``HID_UNIQ``. O crachá não é uma
 segunda gramática; é *outra estrada para o mesmo valor*, e

@@ -6,7 +6,7 @@ A palavra de produto, com a foto do rodapé:
     *"essas frases de status que aparecem no rodapé isso não deveria estar
     aparecendo"* — *"em todas as abas da interface"*
 
-O `71c69c57` tirou a TARJA. O recado ainda chegava por três portas: o CARTÃO
+O `8b0a3b48` tirou a TARJA. O recado ainda chegava por três portas: o CARTÃO
 do controle, as FAIXAS `data-hef-recados` da 01 e da 05, e a ABA SEGUINTE.
 Esta régua cobra as três, no piloto do produto, com a janela OCULTA:
 

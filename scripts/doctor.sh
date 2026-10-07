@@ -5510,7 +5510,7 @@ check_exame_da_mesa() {
     #
     # O FORMATO É O DO DONO (`exame_da_mesa._imprimir_relatorio`): uma linha
     # por item, com TAB entre os campos. O `veredito` continua saindo do
-    # módulo — nada é recalculado aqui, que é a cicatriz do `6c86e295`.
+    # módulo — nada é recalculado aqui, que é a cicatriz do `6fffd547`.
     resumo="$("${py}" "${arquivo}" --censo 2>/dev/null | "${py}" -c '
 import json
 import sys
@@ -5539,7 +5539,7 @@ for i in itens:
     veredito="$(sed -n 's/^veredito=//p' <<<"${resumo}")"
 
     # O veredito NÃO é recalculado aqui. Ele sai de `exame_da_mesa.veredito()`,
-    # que é a resposta escrita ao `6c86e295` — um segundo lugar decidindo a cor
+    # que é a resposta escrita ao `6fffd547` — um segundo lugar decidindo a cor
     # do topo é exatamente como o verde volta a conviver com o vermelho.
     #
     # E O ENDEREÇO NA TELA É A ABA **CONEXÕES**, seção Check-up. Estas linhas

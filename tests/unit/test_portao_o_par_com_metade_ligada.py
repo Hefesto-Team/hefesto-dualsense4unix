@@ -2,7 +2,7 @@
 
 O DEFEITO, MEDIDO: **existe quem retoma e não existe quem suspende.** A flag
 ``daemon._steam_input_vpad_suspenso`` só pode andar para ``False`` desde
-``d8022ea`` (09/08/2026), e o produto continua LENDO os dois valores dela. Uma
+``08e4633`` (09/08/2026), e o produto continua LENDO os dois valores dela. Uma
 das duas respostas é impossível, e nada no produto diz isso: **é pior que
 ausência de dado, é dado que mente sempre para o mesmo lado.**
 

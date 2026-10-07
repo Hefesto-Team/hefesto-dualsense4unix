@@ -2084,7 +2084,7 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     por palavra —, e ela sai de lá hoje justamente para não haver duas.
 
     A PERGUNTA VAI AO PAINEL DE REGISTRO — TELA-CALADA-03, 13/09/2026. Ela ia
-    por `recado`, e desde `71c69c57` esta aba não tem cartão nem faixa onde um
+    por `recado`, e desde `8b0a3b48` esta aba não tem cartão nem faixa onde um
     recado pouse: medido no piloto oculto, o primeiro clique virava o botão em
     «Confirma?» e a tela não dizia uma palavra sobre o que ia acontecer. Agora
     ela vai para onde os primeiros cliques de «Refazer os consertos

@@ -510,7 +510,7 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     três frases de tela abaixo diziam que a marca *entrega a ENTRADA pela
     Steam*, faz *o jogo enxergar o DualSense físico direto* e **custa o
     co-op**. Os três morreram em **09/08/2026**
-    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto, commit `d8022ea5`): a marca
+    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto, commit `08e4633c`): a marca
     inverteu de lado e passou a **esconder o controle físico**, com os
     virtuais de pé — um por jogador, co-op incluído. O mecanismo vivo está em
     `daemon/subsystems/gamepad.sync_steam_input_exception`, que chama

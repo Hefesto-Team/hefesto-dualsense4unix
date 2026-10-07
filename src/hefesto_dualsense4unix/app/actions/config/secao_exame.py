@@ -28,7 +28,7 @@ palpite com cara de laudo.
 Fonte única: a seção NÃO reimplementa checagem nenhuma. Toda medição vem de
 `integrations/exame_da_mesa.py`, e o SELO vem de `exame_da_mesa.veredito()` —
 nunca de uma conta feita aqui. Isso é regra, não estilo: a casa pagou duas
-vezes em agosto (`6c86e295`, `c3d3518f`) por uma tela que mostrava verde em
+vezes em agosto (`6fffd547`, `d6188124`) por uma tela que mostrava verde em
 cima de vermelho, e a cicatriz está escrita em `scripts/doctor.sh:1647-1651`.
 Um segundo lugar decidindo a cor do topo é como aquilo volta.
 
@@ -68,7 +68,7 @@ foi conferida, e o "não soube" deixa de se disfarçar dele.
 `cabecalho()` não vê `ESTADO_PROBLEMA` — a assinatura dele conhece ordens e duas
 contagens, e nada mais. Um selo pintado só por ele mostraria "Nada a mudar" em
 VERDE com a linha de pareamentos em VERMELHO logo abaixo, que é a cicatriz de
-`6c86e295` voltando pela porta dos fundos. Por isso o topo é o estado MAIS
+`6fffd547` voltando pela porta dos fundos. Por isso o topo é o estado MAIS
 GRAVE entre os dois, e quem for mais grave também é quem dá a frase. Escalar
 nunca inventa um verde; só o apaga.
 

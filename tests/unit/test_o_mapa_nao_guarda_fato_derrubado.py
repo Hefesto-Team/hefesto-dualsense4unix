@@ -281,7 +281,7 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         ),
         caiu_em="22/08/2026",
         quem_derrubou=(
-            "o commit e2c9d401 (BARRA-MUDA-01) criou "
+            "o commit 578a70b4 (BARRA-MUDA-01) criou "
             "integrations/sinal_da_barra.py, cujo `instancias_dualsense` lê o "
             "`hardware_version` de toda conexão viva; o daemon a chama no "
             "hotplug, a janela GTK ao montar a aba, e o valor sai pelo IPC para "

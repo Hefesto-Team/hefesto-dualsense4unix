@@ -327,7 +327,7 @@ def test_install_trata_o_exit_3_sem_declarar_reeleicao(tmp_path: Path) -> None:
     """rc 3 não é falha do drop-in — mas também não é "fonte padrão reeleita".
 
     A RÉGUA ANTERIOR CRAVAVA A FORMA, e por isso reprovou a melhora: ela exigia
-    o literal `"${rc:-0}" -eq 3` no texto do install. Em 01/09/2026 (d405d0d0)
+    o literal `"${rc:-0}" -eq 3` no texto do install. Em 01/09/2026 (a3c41fa9)
     nasceu um terceiro desfecho — o `2`, "o DualSense é a ÚNICA fonte de captura
     com porta usável" —, o `if [[ … -eq 3 ]]` virou `case "${rc:-0}" in`, e a
     régua passou a reprovar um install que trata o rc 3 melhor do que antes.

@@ -95,7 +95,7 @@ registro. É a lista dos Protons que ESTE produto já pinou. O que está nela é
 nosso e **migra**; qualquer outro valor continua sendo escolha do usuário e é
 preservado. Sem ela, a guarda de 19/08 lê como escolha do usuário o que o próprio
 produto escreveu — que foi exatamente o defeito de 16/09/2026, curado em
-`84d89a8de`.
+`b3f087baa`.
 
 **A ordem de escrita é registro ANTES do vdf, e é invariante:** se a persistência
 do estado falhar, o vdf fica intacto e o lock volta com erro. A ordem inversa
@@ -459,7 +459,7 @@ três marcos são anteriores à subida do pino.**
 | **10/09/2026** | **o alto-falante toca por rádio: o report `0x35`** | `GE-Proton10-34` |
 | 16/09/2026 | o pino sobe para `GE-Proton11-6-x86_64` | — |
 
-O pino só saiu do `GE-Proton10-34` em **16/09/2026** (`dcada2d59`, e o registro
+O pino só saiu do `GE-Proton10-34` em **16/09/2026** (`f4039bf2f`, e o registro
 do lock foi gravado às 02:10 daquele dia). Os três marcos são de **seis a treze
 dias antes**.
 
@@ -485,7 +485,7 @@ Opus e publica uma source PipeWire (`module-pipe-source`) a partir do report
 `0x32`. Também fora do Proton.
 
 **E há medição direta de que o Proton não escreve nesse fio**, feita em
-16/09/2026 (`ce10c7f3b`): o `winebus.so` só expõe
+16/09/2026 (`d10bed160`): o `winebus.so` só expõe
 `hidraw_device_set_output_report` e `hid_device_set_feature_report` — é um cano,
 repassa o report do processo Windows e não compõe nenhum. Quem escreve são o SDL
 do jogo e a Steam Input, e os dois já têm cobertura própria.
@@ -567,7 +567,7 @@ fluxo no membro 8363, é `GE-Proton11-7-x86_64`.
 ### 7.3 A precisão de "25 jogos travados"
 
 Circula a leitura de que o pino *"trava 25 jogos mais o default global"*. O
-número exato, medido no vdf vivo e batendo com o commit `84d89a8de`:
+número exato, medido no vdf vivo e batendo com o commit `b3f087baa`:
 
 > **25 jogos são MIRADOS; 24 carregam o pino; 1 é preservado; mais o default
 > global.** São 25 entradas no `CompatToolMapping` apontando para o

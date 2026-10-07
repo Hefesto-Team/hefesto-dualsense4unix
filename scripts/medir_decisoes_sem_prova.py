@@ -325,7 +325,7 @@ def _laudo(m: dict, nominal: bool) -> None:
         print(f"    {ident}")
     print("  e o furo maior, medido no caso que a sprint escolheu:")
     print("    D-AUDIO-E-GIRO-NASCEM-LIGADOS tinha citação dentro de tests/")
-    print("    desde 2026-09-04 (1a5a8bb3e) — e em 2026-09-17 ela abriu o")
+    print("    desde 2026-09-04 (608bafc17) — e em 2026-09-17 ela abriu o")
     print("    produto e o microfone estava mudo. Treze dias de verde sobre")
     print("    um defeito que ela já tinha pedido três vezes.")
     print(f"  por isso os baldes são «{BALDE_DENTRO}», «{BALDE_CABECALHO}» e")

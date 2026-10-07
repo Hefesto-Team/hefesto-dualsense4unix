@@ -199,7 +199,7 @@ BOOTSTRAP = r"""
   // O `title` É A ÚNICA EXCEÇÃO, e ela é NOMEADA — 03/09/2026. O `fim.html`, que
   // é um só para as dez páginas, pede `data-hef-alvo="atributo"
   // data-hef-atributo="title"` nos botões Salvar e Exportar, para a dica dizer o
-  // NOME do perfil ativo em vez de congelar um exemplo (`7db1e0e6`). Aquele
+  // NOME do perfil ativo em vez de congelar um exemplo (`7325132e`). Aquele
   // commit deu por certo que este alvo "sabe escrever num `title`" — e a guarda o
   // recusava CALADA: as 20 páginas (dez publicadas, dez da bancada) pediam um
   // atributo que nunca pintava, e o único barulho veio do portão

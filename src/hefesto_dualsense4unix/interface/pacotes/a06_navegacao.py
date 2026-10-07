@@ -2510,7 +2510,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     FATO SUBSTITUÍDO, e ele estava escrito AQUI: *"as 21 `<select>` têm
     `data-linha` e nenhum `data-campo`, então nada nunca as pintou"*. Isso valia
     contra a página publicada da manhã. **O usuário mandou publicar** no mesmo dia
-    (commit `70b58116`), e a página publicada de agora traz `data-campo` e
+    (commit `6f289554`), e a página publicada de agora traz `data-campo` e
     `data-hef-alvo="valor"` nas 21 — medido com dublê: os 21 campos saem
     PRODUTO, e o valor que a tela mostra é o do perfil.
 

@@ -339,7 +339,7 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
     desenho. Ele exigia, com todas as letras, `'data-campo="luz"' not in
     publicado`.
 
-    **ELA PUBLICOU** (`70b58116`, *"o usuário mandou publicar as sete"*), e o
+    **ELA PUBLICOU** (`6f289554`, *"o usuário mandou publicar as sete"*), e o
     publicado passou a ter o endereço novo. A asserção da espera ficou VERMELHA
     no `dev` desde então — medido em 03/09/2026, antes de qualquer mudança
     desta frente: `grep -c 'data-campo="luz"' paginas/04-iluminacao.html` = 2.

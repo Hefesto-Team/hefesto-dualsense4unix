@@ -476,7 +476,7 @@ def _veredito_do_exame(vivos: list[Any]) -> dict[str, Any]:
     de `ordens_da_mesa.cabecalho()`, que é o dono declarado — *"a chave de
     estado vem CALCULADA AQUI, num lugar só: um segundo lugar decidindo a cor do
     topo é exatamente como o verde volta a conviver com o vermelho (cicatriz de
-    6c86e295)"*. As duas contagens saem de `secao_exame.contagens_do_cabecalho`,
+    6fffd547)"*. As duas contagens saem de `secao_exame.contagens_do_cabecalho`,
     que as mantém SEPARADAS de propósito: *"conferi 5 coisas"* e *"5 coisas não
     deram resposta"* são afirmações opostas, e a tela que as colapsa mente de
     verde.

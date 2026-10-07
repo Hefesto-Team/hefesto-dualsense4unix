@@ -70,7 +70,7 @@ def test_a_cor_e_a_do_pior_achado() -> None:
 
 
 def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
-    """A MORDIDA da cicatriz `6c86e295`, e ela é a razão de a função existir."""
+    """A MORDIDA da cicatriz `6fffd547`, e ela é a razão de a função existir."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import FRASE_DO_SELO
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import cabecalho
 
@@ -79,7 +79,7 @@ def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
     verde = cabecalho(ordens=[], conferidas=2, sem_resposta=0, dispensadas=0).texto
     assert saiu["veredito"] != verde, (
         f"com uma linha em `problema` o veredito escreveu {verde!r} — a frase "
-        f"do cabeçalho, que não conhece `problema`. É a cicatriz 6c86e295 "
+        f"do cabeçalho, que não conhece `problema`. É a cicatriz 6fffd547 "
         f"voltando: o verde convivendo com o vermelho na mesma seção.")
     assert saiu["veredito"] == FRASE_DO_SELO["problema"], (
         "quando o estado das linhas vence o do cabeçalho, a frase tem de ser a "

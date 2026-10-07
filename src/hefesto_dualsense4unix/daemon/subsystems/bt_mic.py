@@ -18,8 +18,8 @@ e a leitura é esta:
 =====================  =========================  =============================
 trava                  de onde veio               o que protegia
 =====================  =========================  =============================
-`habilitado_por_env`   `d6f9d331`, 25/07/2026     privacidade + banda do rádio
-`uniqs_declarados`     `c59dd346`, 23/08/2026,    a mesma razão, mais o *"por
+`habilitado_por_env`   `42213029`, 25/07/2026     privacidade + banda do rádio
+`uniqs_declarados`     `598aa5a3`, 23/08/2026,    a mesma razão, mais o *"por
                        QUATRO-MICROFONES-01/E1    controle"* que o usuário pediu. Não
                        (decisão de produto: *"por       é precaução nossa: é o
                        controle"*)                INTERRUPTOR dela

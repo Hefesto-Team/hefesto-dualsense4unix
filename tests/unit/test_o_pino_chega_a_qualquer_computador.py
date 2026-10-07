@@ -457,7 +457,7 @@ class TestOInstallLeCadaCodigo:
                 assert "--lock --todos" in linha, linha
 
     def test_a_ordem_baixa_fecha_uma_vez_edita_trava_e_reabre(self) -> None:
-        """692cf5343 (c): o download ANTES da janela, a trava DENTRO dela."""
+        """d172d9fb8 (c): o download ANTES da janela, a trava DENTRO dela."""
         ordem = [
             'step "11a"',
             '_pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)"',

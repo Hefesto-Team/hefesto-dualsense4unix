@@ -1474,7 +1474,7 @@ install_desempenho_host() {
 install_bt_agent_host() {
     # QUEM ANUNCIA O PASSO É O CHAMADOR, e esta função NÃO repete o `step`.
     # Curado em 01/09/2026: quando o bloco de topo do `install.sh` virou função
-    # (commit `a53f44e2`), o `step` veio junto e o do chamador ficou — o
+    # (commit `304b5f39`), o `step` veio junto e o do chamador ficou — o
     # cabeçalho `[3g]` saía DUAS VEZES no caminho normal. E com `--no-udev`
     # saía UMA e mais nada: o único passo do instalador que anunciava e ficava
     # calado, enquanto todos os vizinhos dizem `pulado (--no-udev)`.

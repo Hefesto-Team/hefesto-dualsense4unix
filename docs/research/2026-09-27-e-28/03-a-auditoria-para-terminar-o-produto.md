@@ -34,12 +34,12 @@ conferindo no código, no git e no CI, e tirou deles quinze ações em ordem.
 ## Três fatos que a síntese corrigiu
 
 - A integração estava **um** commit à frente do `dev`, não sete; a cura do
-  censo de coleta (`d0188111c`, `1a05fa114`) já estava no `dev`.
+  censo de coleta (`9478461b4`, `078d71806`) já estava no `dev`.
 - O CI do `dev` **não fica verde desde 22/08 às 04h53 UTC** — 61 corridas
   vermelhas seguidas, de 26/08 a 27/09. Nelas o passo «Censo de coleta»
   reprovava e o `Pytest unit` ficava pulado. As sprints `VERDE-NAO-E-PROVA-01`
   («desde 26/09») e `O-CI-DA-DEV-VOLTA-A-VERDE-01` («desde pelo menos 20/09»)
-  datavam errado. Na corrida do `d587a737f` o censo passou e o `Pytest unit`
+  datavam errado. Na corrida do `137deee9c` o censo passou e o `Pytest unit`
   rodou pela primeira vez em 32 dias: o que ele reprovar é **medida, não
   regressão**.
 - A `O-MODO-XBOX-NAO-E-QUEDA-01` estava `feita`, não aberta.
@@ -55,7 +55,7 @@ conferindo no código, no git e no CI, e tirou deles quinze ações em ordem.
 4. A troca de controle não para o laço.
 5. O clique duplo não apaga perfil nem desfaz alternância.
 6. Um aplicador e uma receita de gravação — antes, a `O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01`
-   corrigida, porque partia de premissa que caiu com `7c07ec336`.
+   corrigida, porque partia de premissa que caiu com `42ae38857`.
 7. O CI verde de verdade.
 8. O protocolo do básico.
 9. A entrada e o engasgo medidos por par.
@@ -83,7 +83,7 @@ e 3 uinput): 7 pads para 4 jogadores. Desde 13h50 os quatro estavam no modo
 Xbox, sem movimento, touchpad nem háptica.
 
 A promoção do *connect* também trocava o modo Xbox por DualSense (12h52 e
-16h15); `ba5c786b4` curou isso às 16h23. Ficaram sem caminho o *revive*
+16h15); `8e2ff3c68` curou isso às 16h23. Ficaram sem caminho o *revive*
 (`gamepad.py:1194`) e a volta do Steam Input (`gamepad.py:585`, que guarda só
 a máscara).
 
@@ -136,7 +136,7 @@ de história.
   sprint antes, `O-DESTINO-DA-GRAVACAO-TEM-UM-DONO-01`, e a do Freestyle em
   duas (A: camada e aplicador; B: o registro de fora do jogo e o fim do
   `freestyle.json`).
-- **A sprint do Salvar parte de premissa caducada.** Desde `7c07ec336` (25/09,
+- **A sprint do Salvar parte de premissa caducada.** Desde `42ae38857` (25/09,
   `O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01`) o botão do microfone grava no perfil, e
   o mudo mora em três lugares (perfil, sessão, aparelho), com dois escritores
   no mesmo clique. A favor da cura: os 29 perfis da bancada passados por
@@ -356,7 +356,7 @@ apontam para uma pasta fora do git.
 ## 10. As sprints de 27/09 e o que fechou em 26/09 (eixos 01 e 02)
 
 - **O CI voltou a reprovar num hook que os portões não rodam.** A corrida do
-  `d587a737f` caiu no `pre-commit`, no `indice-html-publicado`: dos 13 hooks
+  `137deee9c` caiu no `pre-commit`, no `indice-html-publicado`: dos 13 hooks
   do `.pre-commit-config.yaml`, é o único sem espelho no `scripts/portoes.sh`.
 - **A camada Freestyle, como escrita, ligaria a emulação de mouse, inverteria
   a mira e mataria o giroscópio.** «Liga todo liga/desliga» e «no máximo todo

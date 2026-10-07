@@ -188,8 +188,8 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
     confirmação que um conserto pode ter.
 
     Esta função escolhia os chips por `class="… plastico"`, e isso valia
-    enquanto `monta.fita` a escrevia em TODO chip (o commit `80f8c859`, que
-    trouxe esta régua). O `c6adb2d8` a tornou condicional, e com razão:
+    enquanto `monta.fita` a escrevia em TODO chip (o commit `463fc78a`, que
+    trouxe esta régua). O `335d0df5` a tornou condicional, e com razão:
     `.chip.plastico` desenha a borda com `var(--plastico)`, e vesti-la num chip
     sem cor lida pintaria uma borda que ninguém leu — que é o defeito desta onda
     inteira, e é a regra de produto: campo sem informação não mostra nada.

@@ -1701,7 +1701,7 @@ RC_STEAM_NAO_FECHOU = 3
 def _fechar_a_steam_uma_vez() -> int:
     """A janela de Steam fechada do install, aberta UMA vez para todos os passos.
 
-    692cf5343, item (c) da conferência (18/09/2026). O install fechava e reabria a
+    d172d9fb8, item (c) da conferência (18/09/2026). O install fechava e reabria a
     Steam em cada passo que edita os arquivos dela (11, 11b, 11b-bis) — e a
     reabria ANTES do 11b-ter e do 11c. Resultado medido no código: numa máquina
     em que a Steam estava aberta, a sentinela e a trava `--todos` do Proton

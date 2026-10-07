@@ -237,7 +237,7 @@
           "data": "2026-10-04",
           "de": 914558,
           "para": 921053,
-          "razao": "crescimento da leva 1.5 já pago por Origem na integra/0110 (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, D-O-AVISO-DE-PORQUE-O-PERFIL-NAO-ENTRA, vibracao.haptics_vcm) que desceu ao dev em fed3f6f90"
+          "razao": "crescimento da leva 1.5 já pago por Origem na integra/0110 (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, D-O-AVISO-DE-PORQUE-O-PERFIL-NAO-ENTRA, vibracao.haptics_vcm) que desceu ao dev em 27af0f38e"
         },
         {
           "data": "2026-10-05",
@@ -249,7 +249,7 @@
           "data": "2026-10-05",
           "de": 928712,
           "para": 931693,
-          "razao": "o crescimento do conjunto «Conexões 3» (a3dfe59fd), já pago no fecho de 05/10; base da leva 1.6"
+          "razao": "o crescimento do conjunto «Conexões 3» (2d4d16d8a), já pago no fecho de 05/10; base da leva 1.6"
         }
       ],
       "unidade": "linhas",

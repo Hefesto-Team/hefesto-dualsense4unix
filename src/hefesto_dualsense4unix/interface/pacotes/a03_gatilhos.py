@@ -2266,7 +2266,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     **DEIXOU DE SER PROVISÓRIO — 08/09/2026.** Esta docstring dizia que o botão
     estava na bancada e **não** na publicada, esperando o ato dela; a publicação
-    de `44c2327e` o levou, e as quatro colunas da página que o produto renderiza
+    de `f1393b41` o levou, e as quatro colunas da página que o produto renderiza
     o têm. O gesto que estava à espera passou a ser clicável, e o texto que
     dizia o contrário atravessou dois dias — o mesmo `--publicar` cuja outra
     metade deixou o `reenviar` sem botão. Ver a lápide dele neste arquivo.

@@ -83,11 +83,11 @@ perfil tem `mode`.
     perfil mode=native -> motivo=perfil_manda   armar=None
 
 Ou seja: **"parar" não adiava o degrau, só cobrava um aperto por ele.** É o
-mesmo achado que `2b6bc5f9` registrou sem consertar — *"a escada nunca ARMA o
+mesmo achado que `50f2c9c6` registrou sem consertar — *"a escada nunca ARMA o
 Nativo nem o Steam Input... fechá-lo mexe no ramo 'o perfil manda', que é
 decisão de produto"* — e ele continua aberto, e continua sendo dela.
 
-O que o pulo GARANTE, e é o que `2b6bc5f9` acrescentou: a ponte de pé é
+O que o pulo GARANTE, e é o que `50f2c9c6` acrescentou: a ponte de pé é
 guardada (`_anotar_o_gesto(a_registrar=True)`) e o tique a grava no `mode` do
 perfil sem carimbar, então o próximo lançamento abre a tentativa PARADA nela.
 Ela não repaga os gestos que já gastou.

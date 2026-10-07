@@ -45,7 +45,7 @@ O DIA EM QUE ESTE ARQUIVO NÃO BASTOU — 03/09/2026
 --------------------------------------------------
 Este docstring dizia *"a tela mostra cinco antes de o esquema guardar cinco, e
 isso é declaração, não invenção"*. Não era mais verdade quando foi escrito:
-``3f757b77`` (02:50) pôs o ``mic`` em ``ControllerOverrides`` e ``7e64c2e3``
+``017c7405`` (02:50) pôs o ``mic`` em ``ControllerOverrides`` e ``eb22662a``
 (02:56), noutra worktree, desenhou a coluna afirmando no commit que o campo
 *"ainda não existe"*. O merge levou os dois e ninguém releu a isenção.
 

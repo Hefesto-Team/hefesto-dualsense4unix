@@ -92,7 +92,7 @@ Quatro leituras preveem os mesmos 26 s, e nenhuma é separada pelo dado:
 1. a reconexão zera o acumulador (no Windows, reconectar o controle zera o
    engasgo por um tempo);
 2. o controle virtual Sony é o gatilho;
-3. um laço do daemon é o metrônomo (o `02f8c2f09`, de 12/08, mostra que o daemon
+3. um laço do daemon é o metrônomo (o `e2411154d`, de 12/08, mostra que o daemon
    já teve varredura periódica do `/proc` a cada 2 s);
 4. qualquer outro trabalho do daemon parado junto.
 
@@ -155,7 +155,7 @@ cura), e as duas queixas (07/09 e 26/09) vieram com ela desligada:
   o min 13–14. Quem compara pelo tamanho do tranco, que é o que o olho vê, vê
   «melhorou» por ~13 min.
 - **A hipótese foi escrita como «FORTE» antes de o A/B ser lido.** O A/B só foi lido
-  no commit das 03:34 (`751cb0893`, *«e o A/B derrubou a hipótese»*); nessa noite
+  no commit das 03:34 (`5c97e4e32`, *«e o A/B derrubou a hipótese»*); nessa noite
   ela já tinha pedido a cura «contra o vulcan» para todos os jogos.
 - **Nenhum outro teste ao vivo mediu nada.** Não houve log por quadro, e as
   sessões logo depois de cada mudança de camada foram de 3,5 e 3,8 min (07/09) e
@@ -196,7 +196,7 @@ biblioteca compara não se sabe.
 (`src/hefesto_dualsense4unix/integrations/quem_ouve_o_microfone.py:304`), chamada
 pela luz do microfone a `INTERVALO_DE_QUEM_OUVE_S = 1.0`
 (`src/hefesto_dualsense4unix/daemon/subsystems/luz_do_mic.py:217`), desde
-`82d04f960` (03/09). O vpad só responde `UHID_GET_REPORT` dentro de `pump_ff`
+`335d0df52` (03/09). O vpad só responde `UHID_GET_REPORT` dentro de `pump_ff`
 (`src/hefesto_dualsense4unix/integrations/uhid_gamepad.py:1213`), uma vez por
 tique do laço de 60 Hz; o excesso de cada pico no início do defeito (~15–16 ms) é
 perto de um tique. É compatível com o caminho do controle, não prova.
@@ -229,9 +229,9 @@ caiu: o compositor fica em outro grupo de CPU.
 - **A conferência corrigiu dois defeitos:** a espera do `systemd-run` nasceu com
   10 s dentro do laço de leitura do daemon e poderia deixar os quatro controles sem
   entrada; caiu para 2,0 s, o mesmo teto do `pgrep` e do `wmctrl` do mesmo toque
-  (`src/hefesto_dualsense4unix/integrations/fora_do_servico.py:63`, `50b403cdb`).
+  (`src/hefesto_dualsense4unix/integrations/fora_do_servico.py:63`, `23b71bd37`).
   E um comando que chegasse como texto pelo `daemon.reload` virava uma letra por
-  argumento (`00f669bef`).
+  argumento (`878739003`).
 - **O comentário do nice** em `src/hefesto_dualsense4unix/daemon/main.py` dizia que
   o nice 5 «elimina o stutter», sem medição; passou a dizer o custo medido. O
   nice 5 continua.
@@ -241,7 +241,7 @@ caiu: o compositor fica em outro grupo de CPU.
 ### 6.2 A aba Sistema deixa de prometer cura
 
 A dica *«Tira dos jogos a sobreposição Vulkan que engasga a imagem»* era uma
-**regressão de 25/09** (`8fe83895b`): o texto anterior dizia «Tirar pode não
+**regressão de 25/09** (`73288a42a`): o texto anterior dizia «Tirar pode não
 resolver o engasgo». A linha *«✓ OK · Nenhuma sobreposição picotando o jogo»* só
 aparecia no desenho, na página antes da primeira pintura e na foto do README; o
 produto em uso repinta o exame com a linha própria.
@@ -283,7 +283,7 @@ produto em uso repinta o exame com a linha própria.
 - **O log por quadro pode não chegar pelo wrapper.** Em 23/08 mediu-se que
   `MANGOHUD=1` passado pelo wrapper não aparece no ambiente do jogo; só funcionou
   com a Steam inteira nascendo com a variável. Que o texto da opção de
-  inicialização sobreviva (`d168ea850`) não prova que a variável chegue. O primeiro
+  inicialização sobreviva (`e01612a9c`) não prova que a variável chegue. O primeiro
   passo de qualquer ensaio é conferir que o CSV nasceu.
 - **O ensaio que decide o caminho do controle (~40 min), na forma corrigida pela
   conferência:**

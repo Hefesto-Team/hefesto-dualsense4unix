@@ -5,7 +5,7 @@ ausencia disso o perfil ganha.»* <!-- noqa-acento: citação literal -->
 (ela, 03/10/2026 ~18h15, na bancada do Forja; revoga a PERFIL-MANDA-01 de
 16/09, «meu perfil manda»).
 
-A causa, medida no `807c8a6d7` (`agentes/mic-15/medida-o-jogo-manda.txt`): com a
+A causa, medida no `79fdccbbd` (`agentes/mic-15/medida-o-jogo-manda.txt`): com a
 cor e o gatilho no perfil do controle, o jogo pintou e a lightbar que valia era a
 do perfil, `(255, 255, 0)`, e o bloco cru do gatilho do jogo nunca chegou ao
 handle. A regra era o `_campos_do_perfil_locked` (`core/backend_pydualsense.py`),

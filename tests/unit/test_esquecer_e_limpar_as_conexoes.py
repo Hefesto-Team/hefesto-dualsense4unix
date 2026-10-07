@@ -7,7 +7,7 @@ E às ~03h, sobre o «Limpar Conexões»:
 *«limpar com frequencia a cada troca <!-- noqa-acento: citação literal -->
 ou ao desligar os controles, algo nessa linha»*.
 
-MEDIDO antes da cura (02/10, sobre ``2fd24c009``, o mesmo instrumento antes e
+MEDIDO antes da cura (02/10, sobre ``3f2efdaf4``, o mesmo instrumento antes e
 depois): o «Conectar» anônimo que acabou fazia a linha «DualSense · Não
 Conectou» sem aparelho, com a caixa laranja; a linha de quem não chegou ficava
 com ele já no ar noutro adaptador; o X que a tirava morava na janela e ela

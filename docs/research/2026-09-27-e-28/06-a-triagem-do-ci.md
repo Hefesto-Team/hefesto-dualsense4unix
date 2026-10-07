@@ -4,7 +4,7 @@ Os vermelhos que sobraram no CI do `dev` em 27/09/2026, reproduzidos num clone l
 
 ## O ponto de partida
 
-A corrida 36354426805 do CI (commit `e4f06a523`) mediu o `dev` com duas
+A corrida 36354426805 do CI (commit `2a2fcd954`) mediu o `dev` com duas
 mudanças novas:
 
 - o job **lint-test** roda sem PyGObject, e o teste que cai pela falta do GTK

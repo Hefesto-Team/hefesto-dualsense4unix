@@ -4,7 +4,7 @@
 POR QUE ELA NASCEU, e o número é o argumento: em 01/09/2026, medidos um a um,
 **os DEZ estavam quebrados**. Nenhum rodava. E ninguém sabia.
 
-O que os quebrou foi um commit só — `6f7e0119`, o que mudou a interface de
+O que os quebrou foi um commit só — `4162c208`, o que mudou a interface de
 `layout/` para dentro de `src/`. Ele levou três coisas junto:
 
   * `monta.R` passou de "a raiz do repositório" para "a pasta deste módulo", e

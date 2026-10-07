@@ -256,7 +256,7 @@ class TestONativoNaoSePerdeEleMudaDeLugar:
 
     @pytest.mark.asyncio
     async def test_a_ponte_de_pe_e_guardada_para_o_lancamento_seguinte(self) -> None:
-        """É ISTO que torna o pulo seguro, e é a metade de `2b6bc5f9` que fica."""
+        """É ISTO que torna o pulo seguro, e é a metade de `50f2c9c6` que fica."""
         d = _Daemon("dualsense")
         _abrir_como_no_lancamento(d, "dualsense", carimbo=False)
         await _apertar(d, 2)

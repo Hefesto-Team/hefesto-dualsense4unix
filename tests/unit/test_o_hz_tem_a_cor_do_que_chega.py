@@ -9,7 +9,7 @@ distancia tá daquele conector.»* <!-- noqa-acento: citação literal -->
 E às ~03h, sobre quais números: *«isso. um pra cada conector»* — o Hz de cada
 controle e o «N/79» de cada adaptador.
 
-MEDIDO antes da cura (02/10, sobre ``474029fe6``, o mesmo instrumento antes e
+MEDIDO antes da cura (02/10, sobre ``cba4c97ab``, o mesmo instrumento antes e
 depois): o 359, o 180 e o «sem número» saíam na mesma cor, e só o 60 mudava
 (laranja); os «N/79» 74, 44 e 20 saíam os três laranja; o ``.hz`` tinha
 opacidade 0,8; o glifo tinha um par de arcos só; e o ``a08`` atribuía o

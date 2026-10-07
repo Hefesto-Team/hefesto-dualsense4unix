@@ -40,7 +40,7 @@ terceiro número, e ele nasce com dono, com dado e com portão.
 
 Aqui havia uma segunda cópia dele, e ela envelheceu: em 04/09/2026 esta linha
 dizia **14%** sobre uma tabela do mesmo arquivo que já dizia **27%**. Os dois
-números estiveram certos — o 14% é o de 03/09 (`548c0fbc`), o 27% é o de hoje —
+números estiveram certos — o 14% é o de 03/09 (`79960fdf`), o 27% é o de hoje —
 e o defeito não foi de medição: **era o número ter dois donos, e só um deles ter
 régua.** A cópia sai; o dono fica.
 

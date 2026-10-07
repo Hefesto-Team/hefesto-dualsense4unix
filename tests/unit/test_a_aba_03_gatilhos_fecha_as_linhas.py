@@ -315,7 +315,7 @@ def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
     **O ATO ACONTECEU — 08/09/2026, e esta régua é quem o cobrou.** O usuário mandou
     tirar o `↻` em 06/09 (*"sai"*), vendo-o na tela; o desenho saiu no mesmo dia
     e o gesto ficou de propósito, porque o produto renderiza a PUBLICADA e o
-    botão continuava lá. A publicação veio em `44c2327e` e a segunda metade do
+    botão continuava lá. A publicação veio em `f1393b41` e a segunda metade do
     ato ficou pendurada — esta régua acendeu no dia em que venceu, e portão
     nenhum dos 49 roda este arquivo, então o vermelho atravessou a integração
     calado. Hoje os dois lados estão fora: página sem botão, pacote sem gesto.

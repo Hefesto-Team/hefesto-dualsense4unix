@@ -30,7 +30,7 @@ traço (``#f8f8f2`` contra ``#bd93f9``) e ``glifo`` troca os dois por
 
 O DIA EM QUE ESTE ARQUIVO INTEIRO MORREU — 03/09/2026
 ------------------------------------------------------
-Ele nasceu em ``c3712efb`` (02/09, 23h38) e ``7e64c2e3`` (03/09, 02h56) mudou
+Ele nasceu em ``ae2219a2`` (02/09, 23h38) e ``eb22662a`` (03/09, 02h56) mudou
 por baixo dele TRÊS contratos sem tocá-lo. **Nove dos dez testes pararam de
 rodar** — não de reprovar: ``ValueError``, ``AttributeError`` e um ``20 == 16``:
 

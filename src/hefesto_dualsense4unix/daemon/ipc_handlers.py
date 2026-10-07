@@ -5683,7 +5683,7 @@ class IpcHandlersMixin:
         mesma razão: a ponte da GUI usa `_safe_call`, que colapsa erro de
         protocolo e daemon morto em `(False, None)` — a janela anunciaria
         "daemon offline?" para uma recusa de um daemon vivíssimo. É a doutrina
-        do commit `d614d04` ("o daemon recusa, e diz por quê"). A frase de tela
+        do commit `daee934` ("o daemon recusa, e diz por quê"). A frase de tela
         mora do lado da GUI (`_MOTIVOS_MAQUINA`, `app/ipc_bridge.py`): o daemon
         não conhece o texto da janela.
 

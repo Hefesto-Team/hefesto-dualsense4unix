@@ -17,7 +17,7 @@ Entre 19h50 e 20h20 de 27/09:
 - o teclado na tela do COSMIC (`cosmic-osk`) manda uns 20 pedidos de vibração nulos por segundo a cada pad;
 - 30 jogos da Steam, todos com o atalho do Hefesto e no GE-Proton11-7; um jogo do Heroic no GE-Proton10-34, fora do pino.
 
-**O multiplicador de pads não está curado.** O boot das 19h10 criou 1 pad uhid e 6 uinput para 4 jogadores (o P1 nasceu 4 vezes em 5,3 s). O `dev` foi a `108922578` às 20h36 com a `7bf6ef5ec`, e o boot seguinte fez de novo 1 uhid + 6 uinput, com 2 `coop_ordem_recriada recriar=['p1']`. A `7bf6ef5ec` não cura o multiplicador. Do kernel ao daemon, a espera ficou em ≤ 1 ms por pad nos dois boots.
+**O multiplicador de pads não está curado.** O boot das 19h10 criou 1 pad uhid e 6 uinput para 4 jogadores (o P1 nasceu 4 vezes em 5,3 s). O `dev` foi a `400a1257e` às 20h36 com a `f89421d7d`, e o boot seguinte fez de novo 1 uhid + 6 uinput, com 2 `coop_ordem_recriada recriar=['p1']`. A `f89421d7d` não cura o multiplicador. Do kernel ao daemon, a espera ficou em ≤ 1 ms por pad nos dois boots.
 
 ## 2. O protocolo do básico
 
@@ -28,7 +28,7 @@ O que o protocolo tem de resolver, medido:
 - **As sondas não viajam.** Tudo o que o protocolo usava morava numa pasta ignorada pelo git, e o pacote não leva `scripts/ensaios` (`packaging/arch/PKGBUILD` instala uma lista sem ela). Proposta: as sondas passam a ser versionadas em `scripts/`, a saída vai para o diretório de estado do usuário (`XDG_STATE_HOME`), e o protocolo entra como `hefesto-dualsense4unix basico`, achado pelo mesmo `encontrar_arquivo_do_repo` do doctor.
 - **No modo Xbox o lado do jogo fica cego.** O `comum.descobrir_aparelhos` (`scripts/ensaios/comum.py`) só varre `/sys/class/hidraw`, e o `src/hefesto_dualsense4unix/integrations/no_do_vpad.py` recusa nome repetido; os três pads uinput homônimos saem com `per_vpad[].evdev = None`. O `uinput_gamepad._create_device` não passa `phys`, e o pad sai com o `py-evdev-uinput` padrão. Proposta: nascer com `phys="hefesto-vpad/<n>"`, dono `A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01`; até lá, casar pad e jogador por um pulso de FF lido no delta de `per_vpad[].ff_nao_nulo_count`.
 - **Quase toda escrita pelo IPC deixa estado.** `led.set`, `trigger.set` e `led.player_set` com `uniq` entram na camada da usuária, que sobrevive a hotplug e vence todo perfil automático; o `trigger.reset` com `uniq` grava `trigger_off()` pela mesma porta. O `gamepad.mask.set` e o PS + R3 gravam no perfil ativo. Logo, a volta do subcomando `saidas` é o reinício do daemon, declarado; a régua é zero `override_do_perfil_cedeu_ao_ajuste_manual` no primeiro jogo depois. O `state_full` não publica essa camada; proposta: `controllers[].camada_da_usuaria`.
-- **O `led.auto_release` não faz nada desde 14/09** (`d2260945e`): o `_handle_led_auto_release` (`src/hefesto_dualsense4unix/daemon/ipc_handlers.py:1211`) só registra no diário e devolve `ok`. A docstring ficou; é fato errado a tirar.
+- **O `led.auto_release` não faz nada desde 14/09** (`7e426bd3b`): o `_handle_led_auto_release` (`src/hefesto_dualsense4unix/daemon/ipc_handlers.py:1211`) só registra no diário e devolve `ok`. A docstring ficou; é fato errado a tirar.
 - **Os dois modos se medem sem gravar arquivo** (hipótese até conferir os sha256): `gamepad.emulation.set {enabled, caminho}` sem `origin` vira `origin="profile"` e escreve só o caminho da sessão. O PS + R3 cicla dualsense → xbox → mouse_teclado e grava o perfil ativo a cada aperto.
 - **O vendor:product do pad uhid é `054c:0df2`**, não `054c:0ce6` (`src/hefesto_dualsense4unix/integrations/uhid_gamepad.py:103`; `src/hefesto_dualsense4unix/integrations/uinput_gamepad.py:109`: «NUNCA o 0x0ce6 do físico»). O que distingue os pads é o nome e os nós: o uhid se chama «DualSense Wireless Controller (Hefesto Pn)», tem hidraw e os nós «Motion Sensors» e «Touchpad»; o uinput se chama «Sony Interactive Entertainment DualSense Edge…», com `Phys=py-evdev-uinput` e sem hidraw.
 - **«Parar no primeiro vermelho» trava tudo hoje**, por causa do multiplicador. A linha 1 vira 1a (agora: pads = jogadores) e 1b (no boot: pads criados = jogadores), e a parada segue a dependência de alvo.
@@ -121,7 +121,7 @@ O resultado do ensaio não entrou neste registro.
 
 ## O que ficou aberto
 
-- O multiplicador de pads no boot (1 uhid + 6 uinput para 4 jogadores), que a `7bf6ef5ec` não curou.
+- O multiplicador de pads no boot (1 uhid + 6 uinput para 4 jogadores), que a `f89421d7d` não curou.
 - O modo DualSense que cai para o Xbox 12 s depois de entrar, com o PRAGMATA aberto (`O-MODO-XBOX-NAO-E-QUEDA-02`).
 - O Freestyle que volta por cima do jogo vivo aos 12 s de foco fora dele: a guarda generalizada espera decisão.
 - A escada que confirma ponte sem ninguém jogar.

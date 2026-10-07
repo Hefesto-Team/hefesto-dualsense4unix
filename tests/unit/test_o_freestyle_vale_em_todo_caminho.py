@@ -419,8 +419,8 @@ def _copias(pasta: Path) -> list[bytes]:
 
 
 @pytest.mark.parametrize("versao", range(6), ids=[  # (noqa-acento): nome de parâmetro
-    "22-04-974c55869", "22-04-c2bd10f8e", "23-04-099e4f839",
-    "28-06-00eb5eeb9", "20-07-4a9bb696e", "24-09-o-modo-freestyle-03"])
+    "22-04-fe27e7b2a", "22-04-d08b5995d", "23-04-34503c512",
+    "28-06-425429a7e", "20-07-c81846696", "24-09-o-modo-freestyle-03"])
 def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
     semeadura_ligada: None, versao: int,
 ) -> None:

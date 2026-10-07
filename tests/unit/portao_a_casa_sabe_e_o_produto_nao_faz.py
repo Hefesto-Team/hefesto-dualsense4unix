@@ -32,7 +32,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "scripts/lib/camada_de_maquina.sh",
         "src/hefesto_dualsense4unix/broker/hidraw_broker.py",
         "ENDEREÇO CORRIGIDO em 31/08/2026, e quem mandou corrigir foi esta "
-        "própria régua: a fonte era `install.sh` e o commit a53f44e2 do mesmo "
+        "própria régua: a fonte era `install.sh` e o commit 304b5f39 do mesmo "
         "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
         "— as dez curas de HOST saíram do instalador e viraram "
         "`scripts/lib/camada_de_maquina.sh`, que o `install.sh`:988 passa a "

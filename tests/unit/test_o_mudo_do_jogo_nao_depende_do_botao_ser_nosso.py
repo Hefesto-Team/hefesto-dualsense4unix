@@ -1,6 +1,6 @@
 """O-MUDO-DO-JOGO-NAO-DEPENDE-DO-BOTAO-SER-NOSSO-01 — o pedido do jogo não é o botão.
 
-A causa, medida no `807c8a6d7`: o `lifecycle.py` só chamava o
+A causa, medida no `79fdccbbd`: o `lifecycle.py` só chamava o
 `hotkey.start_mic_hotkey` com `mic_button_toggles_system` ligado, e era ele
 quem subia o `mic_do_jogo_loop` (o mudo que o jogo pede no `common[9]` do
 vpad) e o `mic_da_mesa_loop` (as bordas do plástico com endereço). Com o

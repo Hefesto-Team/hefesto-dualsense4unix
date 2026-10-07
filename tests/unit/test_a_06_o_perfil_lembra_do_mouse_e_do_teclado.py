@@ -8,7 +8,7 @@ jogo e no dia seguinte e por diante."*
 O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
 → ela mexe na aba 06 → Salvar do rodapé → relê o disco), em `HOME` de mentira:
 
-    mouse.speed         11 → 11   SOBREVIVE   (o rodapé já o levava, ed91c687)
+    mouse.speed         11 → 11   SOBREVIVE   (o rodapé já o levava, ace94b9f)
     mouse.scroll_speed   4 →  4   SOBREVIVE
     mouse.enabled     True → True SOBREVIVE
     teclado_emulado  False → True PERDIDO

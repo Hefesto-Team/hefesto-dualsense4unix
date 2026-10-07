@@ -260,7 +260,7 @@ def test_a_pagina_publicada_aceita_largura_no_trilho() -> None:
 
     FATO DERRUBADO em 02/09/2026: a nota em ``a10_perfis`` dizia que o atributo
     estava *"já escrito na BANCADA, esperando o ato de publicar DO USUÁRIO"*. Ela já
-    publicou — o commit ``70b58116`` levou a aba inteira, o atributo está nas
+    publicou — o commit ``6f289554`` levou a aba inteira, o atributo está nas
     DUAS páginas, e ``mockup/DIVERGENCIAS.md`` não tem seção da aba 10. Enquanto
     a nota ficou de pé, a barra seguiu nos 90% do desenho com o conserto no
     disco há um commit.

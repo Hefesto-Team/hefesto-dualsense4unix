@@ -39,7 +39,7 @@ diz o mesmo, com o trilho cinza e a razão no `?` ao lado.
 saiu PELO MOTIVO CERTO, e é a mesma que entrou por honestidade em 10/09:
 `audio.alto_falante@dualsense` no rádio passou a ser ACIONADA pelo produto. O
 som pelo `0x35` e a háptica pelo `0x32` fecharam o contrato da célula, e o
-commit `9f1920152` a virou para `sim` com a régua que morde. *A dívida foi paga,
+commit `a3dc47b4e` a virou para `sim` com a régua que morde. *A dívida foi paga,
 e o número desceu — que é para isso que ele está aqui.*
 
 **RECONTADO EM 10/09/2026: eram 47** — 23 no cabo, 24 no rádio. As DUAS que

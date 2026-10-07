@@ -778,7 +778,7 @@ class TestAProsaQueVaiPararNaTela:
             (BANCADA / "04-iluminacao.html").read_text(encoding="utf-8"))
 
         for frase in ("O que mudou hoje", "Ainda aberto", "tongle",
-                      "pedido seu", "decisão sua", "2c228352"):
+                      "pedido seu", "decisão sua", "4ec48520"):
             assert frase not in texto, f"a tela ainda narra: {frase!r}"
 
 

@@ -4340,7 +4340,7 @@ fi
 # ---------------------------------------------------------------------------
 # 11a-bis. A Steam fecha UMA vez para os passos que editam os arquivos dela
 # ---------------------------------------------------------------------------
-# INSTALL-UNIVERSAL, 18/09/2026 (692cf5343, item c da conferência). Cada passo que
+# INSTALL-UNIVERSAL, 18/09/2026 (d172d9fb8, item c da conferência). Cada passo que
 # edita arquivo da Steam fechava e REABRIA a Steam por conta própria — o 11, o
 # 11b e o 11b-bis. O 11b-ter (sentinela) e o 11c (trava do Proton) vinham
 # depois, achavam a Steam de pé outra vez e ADIAVAM (rc 3). Na máquina em que

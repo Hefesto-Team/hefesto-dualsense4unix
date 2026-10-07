@@ -53,7 +53,7 @@ As dez correções:
 1. **Uma sprint ficou fora.** A `O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01`, escrita à 01h23 de 28/09, trata do toque fantasma no botão do microfone, que grava o perfil e muda o microfone padrão. Na onda 1 ela colidia com a SOM no `luz_do_mic.py`. Entra na onda 2 com os itens 1 a 3, e o item 4 (`loader.py`) fica para a onda 3.
 2. **A O-FEITO recebeu um arquivo que declara não tocar**: um gancho de fora do repositório que é da O-ENDERECO.
 3. **Faltava posse à -02.** O primário é escolhido em `_recompute_primary` (`src/hefesto_dualsense4unix/core/backend_pydualsense.py`), pela «1ª chave de inserção». Esse arquivo e o `daemon/subsystems/poll.py` entram na onda 1. O item 5 (o PS em **qualquer** controle, não só no que acende o «1») precisa do `hotkey.py` e vai para a onda 3.
-4. **O CI do `dev` estava vermelho**, e a `O-CI-DA-DEV-VOLTA-A-VERDE-01` não era «só ler». A corrida 36359321758, sobre `108922578`, deu:
+4. **O CI do `dev` estava vermelho**, e a `O-CI-DA-DEV-VOLTA-A-VERDE-01` não era «só ler». A corrida 36359321758, sobre `400a1257e`, deu:
    - 35 falhas e 6 erros no Pytest unit, no 3.12 e no 3.11;
    - o job do GTK real vermelho;
    - o job do 3.10 em andamento havia mais de cinco horas.

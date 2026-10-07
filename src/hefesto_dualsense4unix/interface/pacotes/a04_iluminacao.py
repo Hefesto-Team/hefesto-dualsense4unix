@@ -49,7 +49,7 @@ em todos e a tira escurecia duas vezes. Quem separa as duas escalas agora é
 divisão.
 
 O PRODUTO ALCANÇOU A BANCADA no `players` e no `brilho`: a publicação de
-02/09/2026 (`70b58116`) levou ao HTML publicado o `data-hef-alvo="largura"` do
+02/09/2026 (`6f289554`) levou ao HTML publicado o `data-hef-alvo="largura"` do
 trilho e o `data-campo="players"` do `.players`, e os quatro
 `data-campo="player-N"` sumiram dos botões nos DOIS lados. A frase que estava
 aqui — *"A BANCADA ANDOU E O PRODUTO NÃO"* — caducou no mesmo dia em que foi

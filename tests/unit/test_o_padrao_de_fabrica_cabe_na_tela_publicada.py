@@ -2,7 +2,7 @@
 """UM PADRÃO DE FÁBRICA FORA DO VOCABULÁRIO DA TELA VIRA ESCOLHA DO USUÁRIO NO DISCO.
 
 O DEFEITO QUE ESTA RÉGUA MEDE, e ele foi reproduzido em 02/09/2026 na base
-`onda/abas-0209` (242c3e0c): o L3 nasceu alternador
+`onda/abas-0209` (35dbae69): o L3 nasceu alternador
 (`core/keyboard_mappings.DEFAULT_BUTTON_BINDINGS`), a página que o produto
 RENDERIZA foi congelada antes disso e não tem a `<option>` do rótulo novo, e o
 "Guardar" da aba Navegação passou a gravar `{'l3': '__OPEN_OSK__'}` no perfil

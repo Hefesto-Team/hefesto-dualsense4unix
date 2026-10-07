@@ -470,10 +470,10 @@ O pedido dela que originou o formato, nas palavras dela: *"cada feature de cada
 um deles deve ter o canal via bt ou cabo NA MESMA LINHA e todos os 3 controles
 devem ser possíveis de serem comparados."*
 
-<!-- O script que fez a migração (`scripts/migrar-mapa-v2.py`) e os retratos  <!-- ref-externa: `scripts/migrar-mapa-v2.py` foi APAGADO em 05/09/2026 (commit 4cb7e97d). A migração que ele fez já está no mapa; a menção é histórica e o portão a cobrava desde ontem, sem ninguém ver. -->
+<!-- O script que fez a migração (`scripts/migrar-mapa-v2.py`) e os retratos  <!-- ref-externa: `scripts/migrar-mapa-v2.py` foi APAGADO em 05/09/2026 (commit f12978c2). A migração que ele fez já está no mapa; a menção é histórica e o portão a cobrava desde ontem, sem ninguém ver. -->
      congelados (`mapa-controles-v1.csv`, `ensaios-v1.csv`) foram APAGADOS em
      05/09/2026, com a razão dela: "a ideia é termos menos arquivos, se algo
      vira a v2 deveria ser o mesmo arquivo sobrescrevendo o anterior".
      Rodá-lo de novo escrevia 264 linhas por cima das 308 de hoje, sem backup,
      imprimindo verde. Não se tranca uma arma descarregada: apaga-se. O git os
-     guarda em 6ca1417d, e a medição que os justificava está acima. -->
+     guarda em 6155b49d, e a medição que os justificava está acima. -->

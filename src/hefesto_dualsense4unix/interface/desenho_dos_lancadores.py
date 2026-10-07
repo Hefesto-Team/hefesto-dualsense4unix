@@ -31,7 +31,7 @@ roda como script solto, `python3 aba07.py`) e pelo pacote (que roda dentro da
 janela), e uma dependência pesada aqui atravessaria para os dois.
 
 **A LINHA MUDOU EM 09/09/2026, e o fato antigo dizia MAIS do que era verdade.**
-Ela dizia *"não importa NADA do produto"*, e desde o censo (`7dc8af8f`) isso
+Ela dizia *"não importa NADA do produto"*, e desde o censo (`2767a9ac`) isso
 deixou de ser exato: ele importa DOIS módulos de `integrations/` — o censo e a
 leitura das caixas do Flatpak. Os dois são `pathlib`, `json` e `configparser`, e
 os dois respondem o que o CARTÃO mostra; nenhum puxa daemon, GTK ou IPC.

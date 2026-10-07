@@ -75,7 +75,7 @@ está jogando.
 FATO SUBSTITUÍDO: aqui estava *"Medido na bancada em 20/09 … event21,
 event264, event265 uniq=02:fe:f0:… Um jogo com máscara DualSense abre esse"*.
 A lista era de nós que o DAEMON via (a sprint de 20/09: «83 descritores
-visíveis»), sem nomear quem os segurava; e no ``017d72d1c`` a mesma frase dizia
+visíveis»), sem nomear quem os segurava; e no ``d472e03f7`` a mesma frase dizia
 «máscara Xbox».
 
 QUEM ALIMENTA O VPAD, E NÃO DE QUEM ELE NASCEU
