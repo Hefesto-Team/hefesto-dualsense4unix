@@ -1425,8 +1425,10 @@
   .luz-grade .moldura{color:var(--linha);border:1px solid currentColor;
                       border-radius:8px;background:var(--app-bg);overflow:hidden}
   .luz-grade .moldura .ds-svg{color:var(--fg)}
-  .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;white-space:nowrap;
-            display:flex;align-items:center;justify-content:center}
+  /* A linha «Modelo» leva o nome do jogador (item 9, 06/10): um nome comprido NÃO alarga a coluna do
+     controle, quebra em duas linhas como a Vibração faz, e a tela continua sem rolagem. */
+  .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;min-width:0;
+            overflow-wrap:anywhere;display:flex;align-items:center;justify-content:center}
 
   /* A LUZ É LUZ, E NÃO PLÁSTICO. Os tokens são os do mapa do controle
      (`mapa.py`), que é onde eles nasceram: a barra e as cinco lâmpadas ficam de
@@ -2973,7 +2975,7 @@
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
+          <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Vitória <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">

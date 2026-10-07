@@ -107,7 +107,10 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
+from hefesto_dualsense4unix.interface.monta import partes_do_modelo
+
 from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
+from .nome_do_jogador import nomes_dos_donos, o_nome_de
 
 SEM_DONO: dict[str, str] = {}
 
@@ -1602,6 +1605,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa_dele:
             donos[_numero(ctx, c)] = casa_dele
 
+    #: o nome que ela deu a cada controle (o `Alias`), pelo leitor único; a linha «Modelo» o diz
+    nomes_dela = nomes_dos_donos()
     pecas = _as_pecas_da_mesa(ctx, p)
     cor_de = [peca["cor"] for peca in pecas]
     casas = as_casas_da_mesa(pecas)
@@ -1653,7 +1658,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                                   dica_da_luz(nome, via, recado or ""),
                                   estado=estado),
             ENDERECO_DA_INCERTA: "sim" if estado == INCERTA else "",
-            "identidade": f"P{n} • {nome} • {via}",
+            "identidade": " • ".join(partes_do_modelo(
+                {"jogador": n, "dono": o_nome_de(nomes_dela, uniq), "nome": nome, "via": via})),
             #: recusar — ver `um_botao_de_player`. Não é `len(donos)`: quem não
             "players": fileira_de_players(nome, n, donos,
                                           quantos=len(ctx.conectados)),

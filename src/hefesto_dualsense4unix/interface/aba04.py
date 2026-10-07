@@ -516,8 +516,10 @@ CSS = """
   .luz-grade .moldura{color:var(--linha);border:1px solid currentColor;
                       border-radius:8px;background:var(--app-bg);overflow:hidden}
   .luz-grade .moldura .ds-svg{color:var(--fg)}
-  .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;white-space:nowrap;
-            display:flex;align-items:center;justify-content:center}
+  /* A linha «Modelo» leva o nome do jogador (item 9, 06/10): um nome comprido NÃO alarga a coluna do
+     controle, quebra em duas linhas como a Vibração faz, e a tela continua sem rolagem. */
+  .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;min-width:0;
+            overflow-wrap:anywhere;display:flex;align-items:center;justify-content:center}
 
   /* A LUZ É LUZ, E NÃO PLÁSTICO. Os tokens são os do mapa do controle
      (`mapa.py`), que é onde eles nasceram: a barra e as cinco lâmpadas ficam de
@@ -1181,8 +1183,7 @@ def coluna(c):
         ' title="A borda é a cor do plástico deste controle, quando o produto a'
         ' conhece. A barra acende a cor do número, e as cinco lâmpadas dizem'
         ' qual é."' if ligado else "")
-    rotulo = (f'P{j} <span class="pt">•</span> {c["nome"]}'
-              f' <span class="pt">•</span> {c["via"]}' if ligado else
+    rotulo = (monta_.rotulo(c, "modelo") if ligado else
               f'P{j} <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
     # `opcoes` eram `... if ligado else ""`, e o preço foi MEDIDO nas  (noqa-acento: nome de variável)
     # DualSense do usuário na mesa e o daemon de pé, a foto ao vivo mostrava o P3 e o

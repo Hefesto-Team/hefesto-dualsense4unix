@@ -90,7 +90,7 @@ MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 # (`"usb"`/`"bt"`), que é a chave que `mesa_viva.mesa_do_estado` publica, e
 MESA = [
     {"pref": "p1", "jogador": 1, "cor": "cosmic-red",     "nome": "Cosmic Red",
-     "via": "USB", "transporte": "usb",
+     "dono": "Vitória", "via": "USB", "transporte": "usb",
      "alvo": True,  "mascara": "DualSense",    "conectado": True},
     {"pref": "p2", "jogador": 2, "cor": "starlight-blue", "nome": "Starlight Blue",
      "via": "BT",  "transporte": "bt",
@@ -148,8 +148,22 @@ def quem_joga_com_o_numero(nomes: dict[str, str], uniq: str, jogador: Any) -> st
     return quem if quem in ("", numero) else f"{quem}{SEPARADOR}{numero}"
 
 
+def partes_do_modelo(c: dict[str, Any]) -> list[str]:
+    """As partes TEXTO da linha «Modelo» (04 e 05): `Pn`, o nome que ela deu, o modelo e a via.
+
+    A ordem é UMA e mora aqui: o gerador a junta com o `SEPARADOR`, e os pacotes das duas abas a
+    juntam com « • » no que o piloto pinta. Sem nome (`dono` vazio ou ausente) a parte some, e a
+    linha fica como era: nunca «P1 • P1».
+    """
+    return [p for p in (f'P{c["jogador"]}', str(c.get("dono") or ""), c["nome"], c["via"]) if p]
+
+
 def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só."""
+    if forma == "modelo":
+        # a linha «Modelo» das abas 04 e 05 leva o nome do jogador (o `Alias` que a aba Conexões dá
+        # ao controle) antes do modelo: pedido dela de 06/10/2026. O nome é texto DELA: escapado.
+        return SEPARADOR.join(html.escape(p) for p in partes_do_modelo(c))
     if forma == "curta":
         return SEPARADOR.join(p for p in [f'P{c["jogador"]}', c["nome"], c["via"]] if p)
     if forma == "peca":

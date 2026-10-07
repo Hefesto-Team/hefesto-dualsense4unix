@@ -1224,8 +1224,7 @@ def _coluna(c, e=None, conectado=None):
              ' data-conectado="nao" title="Nenhum controle neste lugar."')
     tinta = f' style="--plastico:{plastico}"' if conectado else ""
     if conectado:
-        rotulo = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}\n'
-                  f'              <span class="pt">•</span> {c["via"]}</div>')
+        rotulo = monta_.rotulo(c, "modelo") + "</div>"
     else:
         rotulo = f'P{c["jogador"]} <span class="pt">•</span> Desconectado</div>'
     return f'''

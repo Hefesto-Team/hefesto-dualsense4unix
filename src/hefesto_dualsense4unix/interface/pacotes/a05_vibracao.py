@@ -30,9 +30,11 @@ from typing import Any
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from hefesto_dualsense4unix.core.rumble import POLITICA_PADRAO, vale_o_padrao
+from hefesto_dualsense4unix.interface.monta import partes_do_modelo
 
 from . import Contexto, registrar
 from . import perfil as _perfil
+from .nome_do_jogador import nomes_dos_donos, o_nome_de
 
 #: era o ENDEREÇO no desenho mais a EMISSÃO aqui. As duas metades entraram
 #: fantasma — a próxima pessoa esperaria por uma cura que já chegou.
@@ -564,6 +566,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         str(c.get("uniq") or ""): str(c.get("cor") or "") for c in ctx.mesa
     }
     colunas: dict[str, dict[str, Any]] = {}
+    nomes_dela = nomes_dos_donos()
+    da_mesa = {str(c.get("uniq") or ""): c for c in ctx.mesa}
     # `col["forca"]`, porque `pacote_da_coluna` só conhece o `state_full`; quem
     # UMA LEITURA POR TIQUE, e não uma por coluna: `perfil.ativo` abre o JSON,
     perfil_ativo = _perfil_ativo(ctx)
@@ -575,7 +579,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         barras = _barras_dos_motores(ctx.state, uniq)
         padrao = vale_o_padrao(politica)
         plano = {
-            "identidade": _sem_marcacao(col.get("identidade", "")),
+            "identidade": _identidade_do_modelo(da_mesa.get(uniq), nomes_dela,
+                                                _sem_marcacao(col.get("identidade", ""))),
             # variável em vez de inventar um tom.
             "plastico": str(col.get("plastico") or ""),
             "colorway": modelo_por_uniq.get(uniq, ""),
@@ -628,6 +633,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
     }
+
+
+def _identidade_do_modelo(item: dict[str, Any] | None, nomes: dict[str, str], pronta: str) -> str:
+    """A linha «Modelo» com o nome que ela deu ao controle (o `Alias`); sem nome, a que já vinha."""
+    quem = o_nome_de(nomes, (item or {}).get("uniq"))
+    if not item or not quem:
+        return pronta
+    # texto dela, nunca marcação: não passa pelo `_sem_marcacao`, que arrancaria um `<...>` do nome
+    return " · ".join(partes_do_modelo(dict(item, dono=quem)))
 
 
 def _sem_marcacao(texto: str) -> str:

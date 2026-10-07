@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.interface.monta import dono_na_linha
 
-from . import TODOS_OS_LUGARES, Contexto, perfil, registrar
+from . import TODOS_OS_LUGARES, Contexto, nome_do_jogador, perfil, registrar
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.interface.conexoes import Vibracao
@@ -3110,18 +3110,6 @@ def _maiuscula(frase: str) -> str:
     return frase[:1].upper() + frase[1:]
 
 
-def nome_dado(nome: str) -> str:
-    """O nome que ela deu (controle ou adaptador), com a primeira letra maiúscula.
-
-    Ordem de 05/10/2026, 13h: *«Nome que o user colocar pra controle mesmo se ele colocar
-    minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o resto
-    fica como o usuário escreveu. Vale ao gravar e ao ler o que já estava gravado em minúscula.
-    <!-- noqa-acento: citação literal -->
-    """
-    nome = str(nome or "").strip()
-    return _maiuscula(nome)
-
-
 def _cor_de(ap: dict[str, Any]) -> str:
     return str(ap.get("cor") or COR_DO_TIPO.get(str(ap.get("tipo")), "var(--texto-mudo)"))
 
@@ -4687,8 +4675,7 @@ def _dicionario(valor: object) -> dict[str, Any]:
     return valor if isinstance(valor, dict) else {}
 
 
-def _mac(valor: object) -> str:
-    return str(norm_mac(str(valor or "")) or "").upper()
+_mac = nome_do_jogador.mac
 
 
 def _hora(carimbo: float, hoje: float) -> str:
@@ -4769,14 +4756,9 @@ def _tipo_do_aparelho(icone: str, classe: int | None, aparencia: int | None = No
     return pela_classe if pela_classe != "outro" else _tipo_pela_aparencia(aparencia)
 
 
-_NOMES_DE_FABRICA = ("DualSense", "Wireless Controller")
-
-
-def _e_nome_de_fabrica(nome: str) -> bool:
-    return any(nome.startswith(f) for f in _NOMES_DE_FABRICA)
-
-
-_ALIAS_QUE_E_ENDERECO = re.compile(r"[0-9A-Fa-f]{2}([-:_][0-9A-Fa-f]{2}){5}")
+nome_dado = nome_do_jogador.nome_dado
+_e_nome_de_fabrica = nome_do_jogador.e_nome_de_fabrica
+_ALIAS_QUE_E_ENDERECO = nome_do_jogador.ALIAS_QUE_E_ENDERECO
 
 
 def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]],
@@ -4804,15 +4786,8 @@ def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]
 
 
 def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
-    """O nome que ela deu a cada controle, pelo ENDEREÇO — um só por aparelho."""
-    nomes: dict[str, str] = {}
-    for a in sorted(aparelhos_bz, key=lambda a: getattr(a, "conectado", None) is not True):
-        nome = str(getattr(a, "nome", "") or "").strip()
-        endereco = _mac(getattr(a, "endereco", ""))
-        if (nome and endereco and not _e_nome_de_fabrica(nome)
-                and not _ALIAS_QUE_E_ENDERECO.fullmatch(nome) and endereco not in nomes):
-            nomes[endereco] = nome_dado(nome) if _e_controle_do_bluez(a) else nome
-    return nomes
+    """O nome que ela deu a cada controle, pelo ENDEREÇO — o leitor é o `nome_do_jogador`."""
+    return nome_do_jogador.nomes_por_endereco(aparelhos_bz, _e_controle_do_bluez)
 
 
 def _modelo_do_radio(radio: Any) -> str:
