@@ -92,7 +92,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `led.player_brightness_set` | `daemon/ipc_handlers.py:1174` (`_handle_led_player_brightness_set`) | O brilho das cinco luzes de número: Fraco, Médio ou Forte. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1294` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos). | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1538` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle. | sim |
-| `machine.declare` | `daemon/ipc_handlers.py:5651` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa. | sim |
+| `machine.declare` | `daemon/ipc_handlers.py:5651` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
 | `plugin.list` | `daemon/ipc_handlers.py:5734` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
 | `plugin.reload` | `daemon/ipc_handlers.py:5742` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:6067` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |

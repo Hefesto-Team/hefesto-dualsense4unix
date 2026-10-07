@@ -5651,7 +5651,7 @@ class IpcHandlersMixin:
     async def _handle_machine_declare(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03).
+        """Grava no `maquina.json` o que o usuário declarou sobre a máquina (CONFIG-03).
 
         A aba Configurações é o lugar do que o Hefesto **não tem como medir** —
         altura da antena, linha de visada, o que é o rádio vizinho, o modo da
