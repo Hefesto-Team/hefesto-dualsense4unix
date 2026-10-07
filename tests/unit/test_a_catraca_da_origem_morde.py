@@ -455,7 +455,8 @@ def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_facto
     r = fecho("--so", "catraca")
     assert r.returncode == 0, r.stdout + r.stderr
     assert "piso do tamanho registrado e commitado" in r.stdout
-    assert _git(raiz, "rev-parse", "HEAD^{tree}")[:12] in r.stdout, "os recibos seguintes são da árvore nova"
+    arvore_nova = _git(raiz, "rev-parse", "HEAD^{tree}")[:12]
+    assert arvore_nova in r.stdout, "os recibos seguintes são da árvore nova"
     assert _git(raiz, "log", "-1", "--format=%s").startswith("chore(catraca)")
     assert _git(raiz, "show", "--name-only", "--format=").splitlines() == [CADERNO]
     commit = _git(raiz, "rev-parse", "HEAD")
