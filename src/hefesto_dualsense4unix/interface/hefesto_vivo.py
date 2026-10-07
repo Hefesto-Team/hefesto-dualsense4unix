@@ -3765,15 +3765,24 @@ def _o_desenho_cheio_no_lugar_vazio(
         vivos: list[str],
         vazios_agora: Iterable[str],
         texto: str) -> list[str]:
-    """Os campos de um lugar SEM controle que mostram o desenho de um lugar CHEIO."""
+    """Os campos de um lugar SEM controle que mostram o desenho de um lugar CHEIO.
+
+    O que o desenho diz do lugar vazio DAQUELE número não é vazamento: o número do jogador
+    (`jogador`, o «P1» de quem joga) é o mesmo cheio ou vazio, e o lugar vazio do desenho o
+    diz pela mesma troca de número que o molde usa (`pacotes._a_palavra_do_desenho`).
+    """
     do_desenho, proprios = _o_lugar_no_arquivo(texto)
     cheio: dict[tuple[str, str], set[str]] = {}
     vazio: dict[tuple[str, str], set[str]] = {}
+    vazio_por_numero: dict[tuple[str, str], dict[int, list[str]]] = {}
     for c in cravados:
         if c.dono not in pacotes.TODOS_OS_LUGARES:
             continue
         (vazio if c.dono in do_desenho else cheio).setdefault(
             (c.chave, c.alvo), set()).add(c.valor)
+        if c.dono in do_desenho:
+            vazio_por_numero.setdefault((c.chave, c.alvo), {}).setdefault(
+                int(c.dono[1:]), []).append(c.valor)
     agora = set(vazios_agora)
     fora: list[str] = []
     for c, vivo in zip(cravados, vivos, strict=True):
@@ -3783,6 +3792,9 @@ def _o_desenho_cheio_no_lugar_vazio(
                 or vivo in ("", pacotes.TRAVESSAO, regua_do_mockup.SUMIU)):
             continue
         k = (c.chave, c.alvo)
+        if k in vazio_por_numero and vivo == pacotes._a_palavra_do_desenho(
+                c.alvo, vazio_por_numero[k])(int(c.dono[1:])):
+            continue
         if vivo in cheio.get(k, ()) and vivo not in vazio.get(k, ()):
             fora.append(f"{c.endereco} [{c.alvo}] = {vivo[:70]!r}")
     return fora

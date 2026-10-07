@@ -392,6 +392,32 @@ def test_a_prova_acusa_o_desenho_cheio_e_poupa_o_vazio() -> None:
         cravados, limpos, ["p1", "p3", "p4"], _PAGINA_DE_MENTIRA)
 
 
+_PAGINA_COM_O_NUMERO = """
+<div data-controle="p1"><span data-campo="nome" data-hef-alvo="html">Sony</span>
+  <b data-campo="jogador" data-hef-alvo="html">1</b></div>
+<div data-controle="p3" data-conectado="nao"><span data-campo="nome" data-hef-alvo="html">—</span>
+  <b data-campo="jogador" data-hef-alvo="html">3</b></div>
+<div data-controle="p4" data-conectado="nao"><span data-campo="nome" data-hef-alvo="html">—</span>
+  <b data-campo="jogador" data-hef-alvo="html">4</b></div>
+"""
+
+
+def test_o_numero_do_lugar_vazio_nao_e_o_desenho_cheio() -> None:
+    """O P1 vazio diz «1» como o P3 vazio do desenho diz «3»: é o número do lugar, não vazamento.
+
+    Medido em 07/10/2026 com a 02 e a 06 publicadas pelo tema das telas: o `jogador` novo do
+    cartão acusava `p1·jogador = '1'` na mesa vazia. O nome do cheio continua acusado.
+    MORDIDA: tirar a troca de número do `_o_desenho_cheio_no_lugar_vazio` (`hefesto_vivo.py`).
+    """
+    cravados = regua_do_mockup._campos_cravados(_PAGINA_COM_O_NUMERO)
+    tela = {"p1·nome": "Sony", "p1·jogador": "1", "p3·nome": "—", "p3·jogador": "3",
+            "p4·nome": "—", "p4·jogador": "4"}
+    vivos = [tela[c.endereco] for c in cravados]
+    acusa = hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
+        cravados, vivos, ["p1", "p3", "p4"], _PAGINA_COM_O_NUMERO)
+    assert acusa == ["p1·nome [html] = 'Sony'"], acusa
+
+
 def test_o_elemento_do_proprio_lugar_nao_e_cobrado() -> None:
     """O `achar()` procura DENTRO do lugar; o próprio elemento não é endereço."""
     vazios, proprios = hefesto_vivo._o_lugar_no_arquivo(_PAGINA_DE_MENTIRA)
