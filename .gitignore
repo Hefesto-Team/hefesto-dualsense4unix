@@ -55,16 +55,6 @@ logs/
 *.log
 *.log.*
 
-# Evidencias de processo auxiliar
-Task_Final/
-IMPORTANT.md
-*_AI_*.md
-*_agent_*.md
-# Varredura e auditoria: transcrito bruto (.jsonl) e síntese carregam atribuição
-# de ferramenta (identificador de modelo, nome de fornecedor) — NUNCA versionar.
-# `docs/process/` saiu inteira do repositório em 15/09/2026; estas linhas ficam
-# porque o padrão `*.jsonl` alcança qualquer canto da árvore.
-docs/process/audits/
 *.jsonl
 
 # Secrets
@@ -88,38 +78,12 @@ Thumbs.db
 daemon.toml.local
 *.sock
 .hefesto_runtime/
-.ferramenta/
 
 # Source tarballs baixados durante debug local (ex: apt source libdbusmenu)
 libdbusmenu-*/
 libdbusmenu_*.dsc
 libdbusmenu_*.diff.gz
 libdbusmenu_*.orig.tar.gz
-
-# --- anti-IA (anonimato local) ---
-GUIA.md
-AGENTS.md
-ferramenta.md
-ferramenta.md
-HANDOFF-PROMPT.md
-HANDOFF.md
-HOW_TO_RESUME.md
-VALIDATOR_BRIEF.md
-STATE.md
-.ferramenta
-.windsurfrules
-.cursor/
-.aider*
-.continue/
-.github/ferramenta-instructions.md
-
-# Material de trabalho do redesign: mockups, referências e capturas de tela
-# soltas. A logo final vive em assets/hefesto-logo.svg; o resto não vai pro repo.
-
-# novo-layout/ — A REFERÊNCIA DO DESENHO. NÃO é o produto, e nada se escreve aqui: é só
-# referência do desenvolvimento, e por isso não é versionado.
-# O produto lê de `layout/`, que é versionado.
-novo-layout/
 
 # O `main.h` do módulo DKMS do rtw88 é DERIVADO — 01/09/2026. Ele congela o
 # layout de `struct rtw_dev`, que muda de kernel para kernel, e por isso vive
@@ -128,23 +92,6 @@ novo-layout/
 # Versionar a cópia escolhida criaria uma segunda verdade sobre qual ABI é a
 # nossa — e essa é a que corrompe memória sem avisar.
 assets/dkms/rtw88-usb/main.h
-
-# O ÍNDICE DE CÓDIGO (`fazer_grafos` / `code-review-graph build`) — 02/09/2026.
-# 356 MB de artefato DERIVADO: 1405 arquivos, 32.596 nós, 227.832 arestas.
-# Reconstruído em ~1 min por quem precisar; versioná-lo seria carregar no
-# repositório uma cópia que envelhece a cada commit.
-.code-review-graph/
-
-# O TRANSCRITO DA SESSÃO que o comando de exportação deixa na raiz —
-# 06/09/2026. Ele nasce aqui porque o comando grava no diretório de trabalho, e
-# ela pediu que ficasse na área de trabalho dela: o de 05/09 foi movido para
-# `~/Área de trabalho/hefesto-sessao-2026-09-05.txt`.
-#
-# POR QUE NÃO SE VERSIONA, e a razão é de segurança e não de tamanho: um
-# transcrito carrega a conversa INTEIRA — caminhos, saídas de comando e o que
-# ela digitou. Já houve senha de sudo dita numa sessão desta casa. Um arquivo
-# assim entra no repositório uma vez e fica no histórico para sempre.
-rodando.txt
 
 # A SAÍDA RECUSADA DE UM GERADOR DE ABA — 07/09/2026.
 # `abaNN.py` escreve a página e só então `_conferir()` a lê de volta; quando a
@@ -178,10 +125,6 @@ docs/history/DUVIDAS_V2.md
 docs/history/RESPOSTAS_V1.md
 docs/history/HEFESTO_DECISIONS_V1.md
 docs/history/sprints-canceladas/
-DECISOES.md
-Texto colado.txt
-mockup/TODO-DELA.md
-mockup/PROMPT-PARA-COLAR.md
 
 # O DESPACHO E A COSTURA DE LEVA, e as réguas cujo insumo saiu junto.
 scripts/despachar-agente.sh
