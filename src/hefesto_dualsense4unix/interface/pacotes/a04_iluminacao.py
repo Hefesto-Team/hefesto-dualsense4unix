@@ -438,8 +438,34 @@ def _acende_em_alguma_intensidade(tom: tuple[int, int, int],
     return _escala_crua(tom, fator) == alvo
 
 
+def _as_luzes_do_plastico() -> frozenset[tuple[int, int, int]]:
+    """Os tons de luz que a tabela do plástico dá: a cor automática de cada casco."""
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import TABELA, tom_da_luz
+
+    luzes = (tom_da_luz(cor) for cor in TABELA.values())
+    return frozenset(luz for luz in luzes if luz is not None)
+
+
 def a_casa_da_cor(rgb: Any) -> str | None:
-    """A CASA da guia de uma cor pedida: o tom que a acende, ou `None`."""
+    """A CASA da guia de uma cor pedida: o tom que a acende, ou o mais perto.
+
+    A escada é: o tom exato; o mesmo tom em outro brilho (se for UM só); e,
+    quando nenhum dos dois casa e a cor é **a luz de algum plástico**, o tom da
+    guia mais perto no RGB (empate, o primeiro da guia).
+
+    O último degrau é a leva 1.7 (item 5 do pedido, o X que sumiu): desde
+    D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO a cor automática é o tom do
+    plástico (`tom_da_luz`), que cai fora dos onze tons — Cosmic Red
+    `(255, 0, 82)`, Starlight Blue `(0, 172, 255)` — e sem casa não havia X nem
+    marca própria. A barra segue acendendo a cor do plástico; só a fileira marca
+    o tom vizinho.
+
+    O QUE CONTINUA SEM CASA: o preto; a cor acesa IGUAL por mais de um tom (de
+    0,4% a 0,7% de brilho: escolher entre eles seria escolher por ela); e a cor
+    que ela mesma pôs fora da guia e que não é luz de plástico (o global
+    `#2850B4`, A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01) — marcar o vizinho dela
+    inventaria um dono que ninguém escolheu.
+    """
     if not rgb or len(tuple(rgb)) < 3:
         return None
     r, g, b = tuple(rgb)[:3]
@@ -450,7 +476,12 @@ def a_casa_da_cor(rgb: Any) -> str | None:
     if alvo in tons:
         return _hex(alvo)
     casados = [t for t in tons if _acende_em_alguma_intensidade(t, alvo)]
-    return _hex(casados[0]) if len(casados) == 1 else None
+    if casados:
+        return _hex(casados[0]) if len(casados) == 1 else None
+    if alvo not in _as_luzes_do_plastico():
+        return None
+    return _hex(min(tons, key=lambda t: sum((a - b) ** 2
+                                            for a, b in zip(t, alvo, strict=True))))
 
 
 def a_chave_da_cor(rgb: Any) -> str | None:
