@@ -2436,6 +2436,18 @@
   .miolo > .quadro.estica{flex:0 1 auto}
   .ctl:has(> input:checked) .so-fechado,
   body:has(#c-todos:checked) .ctl .so-fechado{display:none}
+  /* QUEM JOGA, só no cartão aberto: o nome dele, ou o «Pn» sem nome. A tira fechada tem o «Pn •»
+     dela (`.so-fechado`), e o assento vazio nunca abre, então o par volta a sumir nele. */
+  .so-aberto{display:none}
+  .ctl:has(> input:checked) .so-aberto,
+  body:has(#c-todos:checked) .ctl .so-aberto{display:inline}
+  /* O PREÇO DO NOME: a faixa aberta quebra em duas linhas (e a bateria cai) quando a soma dos itens
+     passa da largura, porque o `flex-wrap:wrap` conta o tamanho CHEIO de cada um. Um nome de 24
+     letras com o plástico mais longo da tabela (31) passava. O `.card-nome` aberto tem teto, corta
+     com reticência e já leva o `title` com a linha inteira (`card-vpad`); a frase do giroscópio
+     (`flex:1 1 0`) é quem cede primeiro, antes de o nome perder uma letra. */
+  .ctl:has(> input:checked) .card-nome,
+  body:has(#c-todos:checked) .ctl .card-nome{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* A LINHA DO GIROSCÓPIO ACENDE COM O CARD, e some sem `title` — ver o bloco
      `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:
      quem apagar uma sem a outra deixa ou um vão elástico vazio no cabeçalho, ou
@@ -2461,6 +2473,8 @@
     visibility:hidden;display:block}
   .ctl.off:has(> input:checked) .so-fechado,
   body:has(#c-todos:checked) .ctl.off .so-fechado{display:inline}
+  .ctl.off:has(> input:checked) .so-aberto,
+  body:has(#c-todos:checked) .ctl.off .so-aberto{display:none}
   body:has(#c-todos:checked) .chip[for="c-todos"],
   body:has(#c-p1:checked) .chip[for="c-p1"],
   body:has(#c-p2:checked) .chip[for="c-p2"],
@@ -2799,7 +2813,7 @@
            A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
       <input class="radio-mesa" type="radio" name="mesa" id="c-p1" data-campo="card-aberto" data-hef-alvo="marcado" checked>
       <label class="faixa" for="c-p1" title="Clique para abrir este controle — os outros fecham.">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P1 <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">1</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></span> <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -3329,7 +3343,7 @@
            A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
       <input class="radio-mesa" type="radio" name="mesa" id="c-p2" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p2" title="Clique para abrir este controle — os outros fecham.">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P2 <span class="pt">•</span> </span><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">BT</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">2</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></span> <span class="pt">•</span> </span><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">BT</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -3859,7 +3873,7 @@
            A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
       <input class="radio-mesa" type="radio" name="mesa" id="c-p3" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p3" title="Lugar vazio: nenhum controle conectado aqui.">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P3 <span class="pt">•</span> </span><span data-campo="peca">—</span> <span class="pt">•</span> <span data-campo="via">—</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">3</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">3</span></span> <span class="pt">•</span> </span><span data-campo="peca">—</span> <span class="pt">•</span> <span data-campo="via">—</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -4389,7 +4403,7 @@
            A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
       <input class="radio-mesa" type="radio" name="mesa" id="c-p4" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p4" title="Lugar vazio: nenhum controle conectado aqui.">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P4 <span class="pt">•</span> </span><span data-campo="peca">—</span> <span class="pt">•</span> <span data-campo="via">—</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">4</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">4</span></span> <span class="pt">•</span> </span><span data-campo="peca">—</span> <span class="pt">•</span> <span data-campo="via">—</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
                31/08/2026, em duas frases: *"remover o vê como de todos os
