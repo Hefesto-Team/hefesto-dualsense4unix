@@ -56,6 +56,10 @@ import struct
 import threading
 from collections.abc import Callable, Iterable
 
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 VENDOR_SONY = 0x054C
 PRODUTO_DO_PAD = 0x0DF2
 
@@ -214,7 +218,10 @@ def hidraw_do_gadget(
         return None
     try:
         nomes = sorted(os.listdir(raiz_class_hidraw))
-    except OSError:
+    except OSError as exc:
+        # Sem a classe hidraw o pad não enumera: o vigia da enumeração vence
+        # o prazo e devolve o pad ao uhid; a linha diz por quê.
+        logger.debug("pad_usb_classe_hidraw_ilegivel", raiz=raiz_class_hidraw, errno=exc.errno)
         return None
     for nome in nomes:
         if not nome.startswith("hidraw"):

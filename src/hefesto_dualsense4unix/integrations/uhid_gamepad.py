@@ -2289,10 +2289,10 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> None:
     for _ in range(_MAX_EVENTS_PER_PUMP):
         try:
             report = os.read(fd, _GADGET_LEITURA)
-        except BlockingIOError:
-            return
         except OSError as exc:
-            if exc.errno != errno.EBADF:
+            # EAGAIN é a fila do f_hid vazia (o fim normal da drenagem); EBADF,
+            # o fd que o stop fechou. O resto é falha e vai ao diário.
+            if exc.errno not in (errno.EAGAIN, errno.EBADF):
                 logger.warning("pad_usb_leitura_falhou", err=str(exc), player=pad.player)
             return
         if not report:

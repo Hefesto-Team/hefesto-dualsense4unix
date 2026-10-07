@@ -27,9 +27,9 @@ import pytest
 from hefesto_dualsense4unix.broker import hidraw_broker as broker
 from hefesto_dualsense4unix.integrations import pad_usb
 
-# Faixas forjadas da casa: ``aa:bb:cc`` e ``02:fe``; nunca um endereço real.
-MAC_DO_PAD = "02:fe:8a:00:00:01"
-SERIAL_DO_PAD = "hefesto-pad-02fe8a000001"
+# Faixas forjadas da casa: ``aa:bb:cc`` e ``02:fe:00``; nunca um endereço real.
+MAC_DO_PAD = "02:fe:00:8a:00:01"
+SERIAL_DO_PAD = "hefesto-pad-02fe008a0001"
 MAC_DO_EDGE = "aa:bb:cc:00:00:11"
 MAC_DO_ADAPTADOR = "aa:bb:cc:00:00:10"
 
@@ -372,7 +372,7 @@ def _pedido(serial: str = SERIAL_DO_PAD, descritor: bytes | None = None) -> byte
 
 
 def _serial(n: int) -> str:
-    return f"hefesto-pad-02fe8a0000{n:02x}"
+    return f"hefesto-pad-02fe008a00{n:02x}"
 
 
 @pytest.fixture
@@ -684,6 +684,23 @@ def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> BancadaDoGadget:
     return BancadaDoGadget(monkeypatch, tmp_path)
 
 
+class _EspiaoDoDiario:
+    """O logger de verdade, que também anota ``(nível, evento)`` de cada linha."""
+
+    def __init__(self, real: Any) -> None:
+        self.real = real
+        self.eventos: list[tuple[str, str]] = []
+
+    def __getattr__(self, nivel: str) -> Callable[..., Any]:
+        alvo = getattr(self.real, nivel)
+
+        def anotar(evento: str, *args: Any, **kw: Any) -> Any:
+            self.eventos.append((nivel, evento))
+            return alvo(evento, *args, **kw)
+
+        return anotar
+
+
 class TestOVpadNasceNoGadget:
     def test_o_vpad_nasce_no_gadget_com_as_features_do_probe(
         self, bancada: BancadaDoGadget
@@ -708,8 +725,12 @@ class TestOVpadNasceNoGadget:
             pad.stop()
 
     def test_a_entrada_sai_crua_e_o_output_do_jogo_chega_ao_controle(
-        self, bancada: BancadaDoGadget
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+        espiao = _EspiaoDoDiario(uhid_gamepad.logger)
+        monkeypatch.setattr(uhid_gamepad, "logger", espiao)
         pedidos: list[tuple[int, int]] = []
         pad = bancada.pad(rumble_sink=lambda w, s: pedidos.append((w, s)))
         bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
@@ -737,6 +758,8 @@ class TestOVpadNasceNoGadget:
                 time.sleep(0.02)
             assert pedidos and pedidos[-1] != (0, 0)
             assert pad.ff_report_estranho_count == 0
+            # A fila do f_hid vazia (EAGAIN) é o fim da drenagem, não falha.
+            assert ("warning", "pad_usb_leitura_falhou") not in espiao.eventos
         finally:
             pad.stop()
 
@@ -874,20 +897,20 @@ class TestOGetReportEOHidrawDoGadget:
             series[str(usb_device / "serial")] = serial
 
         vhci = sys_ / "devices" / "platform" / "vhci_hcd.0" / "usb3"
-        aparelho("hidraw3", vhci / "3-1", "hefesto-pad-02fe80000001")
-        aparelho("hidraw4", vhci / "3-2", "hefesto-pad-02fe80000002")
+        aparelho("hidraw3", vhci / "3-1", "hefesto-pad-02fe00800001")
+        aparelho("hidraw4", vhci / "3-2", "hefesto-pad-02fe00800002")
         fisico = sys_ / "devices" / "pci0000:00" / "usb1"
-        aparelho("hidraw1", fisico / "1-4", "hefesto-pad-02fe80000002")
+        aparelho("hidraw1", fisico / "1-4", "hefesto-pad-02fe00800002")
 
         def ler(caminho: str) -> str:
             return series.get(caminho, "")
 
         achado = pad_usb.hidraw_do_gadget(
-            "hefesto-pad-02fe80000002", raiz_class_hidraw=str(classe), ler=ler
+            "hefesto-pad-02fe00800002", raiz_class_hidraw=str(classe), ler=ler
         )
         assert achado == ("hidraw4", "/devices/platform/vhci_hcd.0/usb3/3-2/3-2:1.0")
         assert pad_usb.hidraw_do_gadget(
-            "hefesto-pad-02fe80000009", raiz_class_hidraw=str(classe), ler=ler
+            "hefesto-pad-02fe00800009", raiz_class_hidraw=str(classe), ler=ler
         ) is None
         assert pad_usb.hidraw_do_gadget("teclado", raiz_class_hidraw=str(classe), ler=ler) is None
 
@@ -916,7 +939,7 @@ def _usb_da_mesa(
 def mesa_do_som(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     sysfs = tmp_path / "sys"
     _usb_da_mesa(sysfs, "devices/platform/vhci_hcd.0/usb3", "3-1", vid="054c", pid="0df2",
-                dev="189:257", serial=pad_usb.serial_do_pad("02:fe:80:00:00:01"))
+                dev="189:257", serial=pad_usb.serial_do_pad("02:fe:00:80:00:01"))
     _usb_da_mesa(sysfs, "devices/pci0000:00/0000:00:14.0/usb1", "1-2", vid="046d",
                 pid="c52b", dev="189:2")
     _usb_da_mesa(sysfs, "devices/pci0000:00/0000:00:14.0/usb1", "1-3", vid="1a2c",
@@ -996,7 +1019,7 @@ def test_o_alto_falante_ancora_o_no_do_aparelho_no_gadget_dele(
     mesa = h.mesa.__wrapped__(monkeypatch, tmp_path)  # type: ignore[attr-defined]
     monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
     _usb_da_mesa(mesa.sysfs, "devices/platform/vhci_hcd.0/usb5", "5-1", vid="054c",
-                 pid="0df2", dev="189:513", serial=pad_usb.serial_do_pad("02:fe:80:00:00:03"))
+                 pid="0df2", dev="189:513", serial=pad_usb.serial_do_pad("02:fe:00:80:00:03"))
     interface = "/devices/platform/vhci_hcd.0/usb5/5-1/5-1:1.0"
     pad_usb.registrar_gadget(h._P3, interface)
     for uniq, lugar in ((h._P3, 3), (h._P4, 4)):
@@ -1041,7 +1064,7 @@ class TestARegra73AbreOPadEmUsb:
         return udev.rodar(ap, raiz)
 
     def test_o_pad_em_usb_nasce_aberto_para_o_jogo(self, tmp_path: Path, maquina: str) -> None:
-        ap = self._rodar(tmp_path, maquina, _pelo_vhci(pad_usb.serial_do_pad("02:fe:80:00:00:01")))
+        ap = self._rodar(tmp_path, maquina, _pelo_vhci(pad_usb.serial_do_pad("02:fe:00:80:00:01")))
         assert ap.acl_da_sessao and ap.modo == "0660", (ap.tags, ap.modo, ap.run)
 
     @pytest.mark.parametrize("serial", [None, "", "8c41f2000000", "HEFESTO"])
@@ -1059,7 +1082,7 @@ class TestARegra73AbreOPadEmUsb:
         from tests.unit import test_o_fisico_nasce_escondido_em_qualquer_maquina as udev
 
         ap = udev.pelo_cabo("0df2")
-        ap.pais[2].attrs["serial"] = pad_usb.serial_do_pad("02:fe:80:00:00:01")
+        ap.pais[2].attrs["serial"] = pad_usb.serial_do_pad("02:fe:00:80:00:01")
         fechado, motivo = udev._fechado(self._rodar(tmp_path, maquina, ap))
         assert fechado, motivo
 
