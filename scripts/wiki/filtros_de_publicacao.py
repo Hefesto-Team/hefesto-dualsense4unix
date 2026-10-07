@@ -81,7 +81,7 @@ def endereco_da_maquina(paginas: dict[str, str], veredito: Veredito, lar: Path |
     `lar` desvia a pergunta para um lar de mentira (sem `bluetoothctl`); no CI a máquina não
     tem endereço real e a régua diz «não medido» sem reprovar, que é o desenho dela.
     """
-    portao = carregar("check_o_endereco_dela_em_toda_forma")
+    portao = carregar("check_o_endereco_em_toda_forma")
     reais = portao.enderecos_da_maquina(lar)
     if not reais:
         return

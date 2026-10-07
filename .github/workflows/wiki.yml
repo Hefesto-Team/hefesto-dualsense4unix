@@ -19,7 +19,7 @@ on:
       - scripts/wiki/**
       - scripts/check_texto_publico.py
       - scripts/check_endereco_de_radio.py
-      - scripts/check_o_endereco_dela_em_toda_forma.py
+      - scripts/check_o_endereco_em_toda_forma.py
       - scripts/check_autoria.py
       - scripts/check_paridade_transporte.py
       - src/hefesto_dualsense4unix/core/formas_do_endereco.py
