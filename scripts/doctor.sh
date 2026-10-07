@@ -4371,7 +4371,7 @@ check_bt_radio() {
         if [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] \
                 && ! _dbus_bt_prop "${p}" org.bluez.Device1 UUIDs \
                     | grep -q '00001124-0000-1000-8000-00805f9b34fb'; then
-            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez ${p%/*} org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto, senão o pareamento novo nasce igual"
+            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez ${p%/*} org.bluez.Adapter1 RemoveDevice o ${p} — e pareie de novo. O próprio RemoveDevice tira o [ServiceRecords] do cache (device.c:5440 do BlueZ 5.86), e sem ele o BlueZ refaz o SDP na conexão seguinte: não há arquivo para apagar à mão (contrato bluez-dbus)"
         fi
     done <<<"${paths}"
     # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
@@ -5458,8 +5458,9 @@ check_bond_dobrado() {
         mac="${linha%% *}"
         adps="${linha#* }"
         # O RECADO DIZ O GESTO — quem acusa diz o comando. `esquecer` da ponte
-        # apaga o bond E o cache SDP (o cache sozinho envenena o pareamento
-        # seguinte, SDP-CACHE-01); os endereços vão pelo stdin, fora do journal.
+        # apaga o bond em disco e o cache da origem (o RemoveDevice do BlueZ já tira
+        # o [ServiceRecords], device.c:5440 do 5.86); os endereços vão pelo stdin,
+        # fora do journal.
         warn "o controle ${mac} tem chave de pareamento em MAIS DE UM adaptador (${adps# }) — migração feita pela metade: o bond do adaptador de ORIGEM ficou. Na reconexão o adaptador errado pode ganhar a corrida, e a conta de ocupação do rádio soma o mesmo controle duas vezes. O Hefesto esquece a sobra sozinho assim que o controle conectar pelo rádio (a chave que ele usar é a que fica). Para não esperar, apague a do adaptador que sai (os dois endereços vão pelo stdin, e o registro do sudo fica sem eles): printf '%s\n%s\n' <adaptador-que-sai> ${mac} | sudo /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh esquecer"
     done < <(_bond_dobrado_por_controle)
     [[ "${achou}" -eq 0 ]] && pass "nenhum controle com bond em mais de um adaptador"

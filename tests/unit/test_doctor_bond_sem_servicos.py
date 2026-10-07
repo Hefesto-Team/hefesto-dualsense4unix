@@ -57,7 +57,22 @@ def test_bond_sem_perfil_hid_e_acusado(tmp_path: Path) -> None:
     assert "[FAIL]" in saida, saida
     assert "NENHUM perfil HID" in saida, saida
     assert "RemoveDevice" in saida, saida
-    assert "cache" in saida, saida
+    assert "bluez-dbus" in saida, saida
+
+
+def test_a_cura_nao_manda_apagar_arquivo_do_bluez(tmp_path: Path) -> None:
+    """O-BLUEZ-SO-PELA-PORTA-OFICIAL-01: o RemoveDevice já tira o [ServiceRecords] do cache.
+
+    Medido no fonte do BlueZ 5.86 (`device_remove_stored`, device.c:5402-5456): a pasta do
+    bond sai inteira e do `cache/<MAC>` saem os grupos ServiceRecords, Attributes e Endpoints.
+    O conselho de `sudo rm -f /var/lib/bluetooth/*/cache/<MAC>` não muda o que o BlueZ faz na
+    conexão seguinte (sem [ServiceRecords] ele refaz o SDP), então não se aconselha.
+    MORDIDA: devolva o `&& sudo rm -f ...cache/${mac}` à mensagem do doctor.
+    """
+    saida = _rodar_check_bt_radio(_busctl_fake(tmp_path, "as 0"))
+
+    assert "rm -f" not in saida, saida
+    assert "/var/lib/bluetooth" not in saida, saida
 
 
 def test_bond_com_perfil_hid_fica_quieto(tmp_path: Path) -> None:

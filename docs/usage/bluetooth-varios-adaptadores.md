@@ -76,10 +76,9 @@ outro. Anote qual endereço ficou em qual porta.
 ### 3.3 Migrar um controle
 
 ```bash
-# 1. Tirar do adaptador antigo, com o cache junto
+# 1. Tirar do adaptador antigo
 bluetoothctl select <ENDERECO_DO_ADAPTADOR_ANTIGO>
 bluetoothctl remove <ENDERECO_DO_CONTROLE>
-sudo rm -f /var/lib/bluetooth/*/cache/<ENDERECO_DO_CONTROLE>
 
 # 2. Parear no adaptador de destino, com o controle em PS + Create
 bluetoothctl
@@ -90,9 +89,9 @@ bluetoothctl
 > scan off
 ```
 
-Apagar o cache é parte do gesto. Sem isso, o pareamento novo nasce com o
-registro SDP vazio e o BlueZ recusa a reconexão como *unknown device*: o link
-cai sozinho e parece defeito do controle. O `scripts/doctor.sh` avisa quando um
+Não há arquivo para apagar à mão: o `remove` (`Adapter1.RemoveDevice`) já tira o
+registro SDP do cache do BlueZ (`device_remove_stored`, `device.c` do BlueZ 5.86), e sem
+ele o BlueZ refaz o SDP na conexão seguinte. O `scripts/doctor.sh` avisa quando um
 controle tem pareamento sem registro SDP.
 
 O PS + Create é obrigatório porque ninguém construiu a alternativa, e não
@@ -143,7 +142,7 @@ Vale conferir, uma vez, que o sistema não atrapalha:
 |---|---|---|
 | Desconexão aleatória, nada no log | Queda de tensão no hub | Use um hub com fonte própria |
 | Um adaptador some do `bluetoothctl list` | `btusb` sensível a hub | Ligue esse adaptador direto no computador |
-| Controle não reconecta, vira *unknown device* | Cache SDP sujo | Apague o cache e pareie de novo (§3.3) |
+| Controle não reconecta, vira *unknown device* | Pareamento sem registro SDP | Remova o controle e pareie de novo (§3.3) |
 | A entrada engasga só com o microfone ligado | Adaptador saturado | Mova um controle para outro adaptador (§3.4) |
 | Mouse ou teclado falhando | Dois receptores de 2,4 GHz colados | Afaste os receptores |
 | Tudo pior depois de um reboot | `hciN` inverteu | Confira pelo endereço, não pelo índice (§3.1) |

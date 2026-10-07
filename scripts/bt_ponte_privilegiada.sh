@@ -11,16 +11,17 @@
 #    no nosso app. não tem como não usar se tratando de bt. zero problemas."
 #
 # O gesto de migrar um controle está no docs/usage/bluetooth-varios-adaptadores.md
-# §3.3, e uma das suas cinco linhas exige root:
+# §3.3. Tirar o pareamento é `Adapter1.RemoveDevice`, que o usuário comum faz pelo
+# D-Bus; o que exige root é só a sobra em disco quando o dongle está FORA da mesa
+# (o BlueZ não está lá para apagar a própria pasta).
 #
-#     rm -f /var/lib/bluetooth/*/cache/<MAC_CONTROLE>
-#
-# Esse `rm` NÃO é zelo: é o SDP-CACHE-01 que o `scripts/doctor.sh` documenta.
-# Sem apagar, o pareamento novo nasce com o registro SDP vazio, o BlueZ recusa a
-# reconexão como *unknown device*, o link cai sozinho e parece defeito do
-# controle. Um botão de "mover controle" que não apaga o cache entrega um
-# controle quebrado — por isso o cache entra no MESMO verbo do esquecimento, e
-# não como passo separado que alguém pode pular.
+# O `rm` do cache SDP de todos os adaptadores, que este cabeçalho já defendeu como
+# SDP-CACHE-01, SAIU em 07/10/2026 (O-BLUEZ-SO-PELA-PORTA-OFICIAL-01). Lido no fonte
+# do BlueZ 5.86, `device_remove_stored` (device.c:5402-5456) apaga a pasta do bond e
+# tira do `cache/<MAC>` os grupos ServiceRecords, Attributes e Endpoints; sem
+# ServiceRecords, `device.c:4441-4444` marca o serviço como não resolvido e o
+# BlueZ refaz o SDP na conexão seguinte. Um cache com só o nome não faz o pareamento
+# novo nascer com SDP vazio, então apagar o cache do destino não curava nada.
 #
 # COMO A JANELA CHAMA SEM PEDIR SENHA — e por que `sudoers.d`
 #
@@ -84,7 +85,7 @@
 #   adaptadores        —                      lista MAC, alias, ligado e hciN
 #   bonds              adaptador              lista os controles pareados naquele
 #   renomear           adaptador, nome novo   escreve o alias novo
-#   esquecer           adaptador, controle    remove o bond E o cache SDP
+#   esquecer           adaptador, controle    remove o bond e o cache da origem
 #   descobrir <SEG>    adaptador              janela de busca (BLOQUEIA <SEG>) e,
 #                                             enquanto ela vive, os candidatos
 #   parear             adaptador, controle    Pair() + Trusted=true
@@ -572,11 +573,10 @@ verbo_renomear() {
     exit 1
 }
 
-#: O verbo que paga o script. Faz o §6.3 do guia inteiro do lado de SAÍDA: tira
-#: o bond E o cache SDP, na mesma execução, para que ninguém possa fazer meio
-#: gesto e culpar o controle depois (SDP-CACHE-01).
+#: O verbo que paga o script. Tira o bond (pelo D-Bus, e pelo disco quando o
+#: dongle está fora da mesa), o cache da ORIGEM e deixa a lápide.
 verbo_esquecer() {
-    local adaptador="$1" controle="$2" hci no pasta_bond pasta_adap
+    local adaptador="$1" controle="$2" hci no pasta_bond
     _exige_root esquecer
     hci="$(_hci_do_mac "${adaptador}" || true)"
     no="$(_no_do_dispositivo "${controle}")"
@@ -594,47 +594,19 @@ verbo_esquecer() {
     #: reconectar nele no próximo plug. Daí a remoção em disco também.
     pasta_bond="${LIB}/${adaptador}/${controle}"
     _apagar "${pasta_bond}" "bond"
-    #: O cache SDP sai de TODOS os adaptadores, como no §6.3 do guia: o dongue
-    #: de DESTINO também pode ter uma entrada velha desse controle, de um scan
-    #: anterior, e é ela que faria o pareamento novo nascer com SDP vazio.
-    #:
-    #: MENOS O QUE MORA AO LADO DE UM BOND VIVO (MOVER-UM-POR-VEZ-01, 23/09/2026).
-    #: O mover de agora é parear no destino → conferir → esquecer na origem, e
-    #: quando este verbo roda o controle JÁ TEM bond novo no destino — com o
-    #: registro SDP daquele pareamento no cache do destino. É desse registro que
-    #: o `bluetoothd` tira o descritor HID ao reiniciar: apagá-lo seria fazer, de
-    #: propósito, o SDP-CACHE-01 que este verbo existe para curar. Cache ao lado
-    #: de bond com chave é do bond; cache sem bond é sobra de scan, e sai.
-    for pasta_adap in "${LIB}"/*; do
-        [[ -d "${pasta_adap}" ]] || continue
-        [[ "${pasta_adap##*/}" =~ ${_MAC_FORMA} ]] || continue
-        #: O adaptador de ORIGEM nunca entra na exceção: o bond dele é o que este
-        #: verbo acabou de tirar (ou, a seco, tiraria).
-        if [[ "${pasta_adap##*/}" != "${adaptador}" ]] \
-            && _bond_com_chave "${pasta_adap}/${controle}"; then
-            _registrar "cache SDP do controle mantido em outro adaptador, ao lado de um bond com chave"
-            continue
-        fi
-        _apagar "${pasta_adap}/cache/${controle}" "cache SDP"
-    done
+    #: O cache da ORIGEM só sai porque, sem o BlueZ para limpá-lo, o
+    #: `[ServiceRecords]` ficaria órfão do bond que acabou de sair. Nos outros
+    #: adaptadores o cache NÃO se toca: o BlueZ não precisa disso (ver o cabeçalho).
+    _apagar "${LIB}/${adaptador}/cache/${controle}" "cache SDP da origem"
     _enterrar "${adaptador}" "${controle}"
     if ! _seco; then
-        _registrar "um controle esquecido $(_onde "${hci}") (bond + cache SDP + lápide)"
+        _registrar "um controle esquecido $(_onde "${hci}") (bond + cache da origem + lápide)"
         _diario "bt-ponte" "esqueceu o controle" "pedido à ponte privilegiada" \
             "{\"bond\": $(_json_texto "no adaptador")}" \
             "{\"bond\": null, \"lapide\": true}" \
             "\"adaptador\": $(_json_texto "${adaptador}"), \"controle\": $(_json_texto "${controle}"), \"pedido_por\": $(_json_texto "${SUDO_USER:-}")"
     fi
     return 0
-}
-
-#: Esta pasta é um bond VIVO — tem `info` com chave de pareamento? A mesma
-#: pergunta que o `bonds` faz para a coluna com-chave/sem-chave: `[LinkKey]` é o
-#: bond do BR/EDR (o DualSense), `[LongTermKey]` o do LE.
-_bond_com_chave() {
-    local pasta="$1"
-    [[ -f "${pasta}/info" && ! -L "${pasta}/info" ]] || return 1
-    grep -qE '^\[(LinkKey|LongTermKey)\]' "${pasta}/info" 2>/dev/null
 }
 
 #: A LÁPIDE (O-DIARIO-DO-RADIO-01). Quem esquece um bond de propósito escreve

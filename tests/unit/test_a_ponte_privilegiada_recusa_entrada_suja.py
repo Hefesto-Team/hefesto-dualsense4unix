@@ -123,22 +123,26 @@ def _linhas(*dados: str) -> str:
     return "".join(f"{dado}\n" for dado in dados)
 
 
-def test_esquecer_apaga_o_bond_e_o_cache_de_todos_os_adaptadores(arvore: Path) -> None:
-    """O gesto do §6.3, inteiro, numa execução — inclusive o SDP-CACHE-01."""
+def test_esquecer_apaga_o_bond_e_o_cache_so_da_origem(arvore: Path) -> None:
+    """O gesto do §3.3, numa execução. O cache dos OUTROS adaptadores não se toca.
+
+    O-BLUEZ-SO-PELA-PORTA-OFICIAL-01 (07/10/2026): o `RemoveDevice` do BlueZ 5.86 já tira o
+    `[ServiceRecords]` do cache (device.c:5440), e sem ele o BlueZ refaz o SDP; apagar o cache do
+    destino não curava nada. MORDIDA: devolva o laço que apagava `cache/<MAC>` de todo adaptador.
+    """
     antes = _tudo(arvore)
     resultado = _rodar(arvore, "esquecer", entrada=_linhas(ADAPTADOR, CONTROLE))
     assert resultado.returncode == 0, resultado.stderr
 
     assert not (arvore / ADAPTADOR.upper() / CONTROLE.upper()).exists()
     assert not (arvore / ADAPTADOR.upper() / "cache" / CONTROLE.upper()).exists()
-    assert not (arvore / ADAPTADOR_2.upper() / "cache" / CONTROLE.upper()).exists()
+    assert (arvore / ADAPTADOR_2.upper() / "cache" / CONTROLE.upper()).exists()
 
     sumiram = antes - _tudo(arvore)
     esperado = {
         f"{ADAPTADOR.upper()}/{CONTROLE.upper()}",
         f"{ADAPTADOR.upper()}/{CONTROLE.upper()}/info",
         f"{ADAPTADOR.upper()}/cache/{CONTROLE.upper()}",
-        f"{ADAPTADOR_2.upper()}/cache/{CONTROLE.upper()}",
     }
     assert sumiram == esperado
 

@@ -45,8 +45,13 @@ OUI, sem casar por nome, sem depender da bancada.
 
 A terceira é também o que separa este defeito do **"conectado sem hidraw"** que
 o ``scripts/doctor.sh`` já pega (``check_bt_connected_sem_hidraw``): lá o BlueZ
-CONHECE o device, e a cura é outra — o cache SDP envenenado (SDP-CACHE-01), que
-não se resolve derrubando link nenhum.
+CONHECE o device, e a cura é outra — o pareamento sem registro SDP (o cache sem
+``[ServiceRecords]``), que não se resolve derrubando link nenhum.
+
+POR QUE O ``hcitool`` FICA (medido em 07/10/2026, fonte do BlueZ 5.86): o zumbi é
+um ACL SEM ``Device1``, e o D-Bus só enumera o que tem objeto; a leitura de links
+sem objeto não tem porta oficial medida. O recado já nomeia o pacote quando a
+ferramenta falta, em vez de calar.
 
 O TEMPO É PARTE DA REGRA
 -------------------------
