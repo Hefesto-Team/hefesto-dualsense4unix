@@ -482,9 +482,10 @@ CSS = """
   /* OS TRÊS DEGRAUS DE FORÇA — LADO A LADO, COM A MESMA LARGURA. Pedido dela de
      06/10/2026 (*«Esses 3 botões tem que ficarem lado a lado na horizontal com
      mesma largura»*), que revoga o 2 em cima e o terceiro ocupando a largura,
-     feito quando a coluna não comportava os três (era estimativa de 05/09: o
-     «Balanceado» a 12px e recuo de 8px estourava 2px). Agora `repeat(3,1fr)`,
-     recuo de 4px e fonte de 11,5px, e a régua mede que nenhum botão estoura
+     feito quando a coluna não comportava os três (medido em 05/09: a melhor
+     das 27 combinações de vão, fonte e recuo estourava 2px na coluna de
+     então). Agora `repeat(3,1fr)`, vão de 6px, recuo de 4px e fonte de 11,5px
+     na coluna de hoje, e a régua mede no WebKit que nenhum botão estoura
      (`scrollWidth`). A Força perde a segunda faixa de degraus:
      `--r-forca` 112 → 69 = 36 + 7 + 26. */
   .vib .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}

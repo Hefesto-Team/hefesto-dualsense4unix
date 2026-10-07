@@ -79,6 +79,24 @@ def test_a_06_tem_o_endereco_do_numero_no_cartao() -> None:
             assert 'data-campo="jogador"' in r, f"número sem endereço: {r[:120]}"
 
 
+@pytest.mark.parametrize("pagina", [P02, P06])
+def test_o_lugar_vazio_do_desenho_da_o_numero_do_assento(
+        pagina: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A régua 5 da sprint: o molde do lugar vazio, lido sobre a bancada, dá o número do assento.
+
+    No produto o assento vazio é pintado pelo molde; sem a chave `jogador` nele, o número
+    cai no «—».
+    MORDIDA: o endereço sem `data-hef-alvo="html"` — a chave some do molde.
+    """
+    real = onde.pagina
+    monkeypatch.setattr(
+        onde, "pagina", lambda p, publicado=True, **k: real(p, publicado=False, **k))
+    monkeypatch.setattr(pacotes, "_DESENHO_DO_VAZIO", {})
+    molde = pacotes.o_que_o_desenho_diz_do_lugar_vazio(pagina)
+    assert {p: c.get("jogador") for p, c in molde.items()} == {
+        "p1": "1", "p2": "2", "p3": "3", "p4": "4"}, molde
+
+
 # ---------------------------------------------------------------- 2/3/5. no WebKit
 
 
@@ -144,6 +162,12 @@ def medido() -> dict[str, Any]:
             "getComputedStyle(document.querySelector("
             "'.ctl[data-controle=\"p3\"] .so-aberto')).display")
         fora["normal"] = tela._cru(_pior_caso())
+        fora["giro"] = tela._cru(
+            "(function(){var n=document.querySelector("
+            "'.ctl[data-controle=\"p1\"] .faixa .no-jogo');"
+            "var t=n&&n.querySelector('.no-jogo-t');if(!t)return null;"
+            "return {d:getComputedStyle(n).display,rotulo:n.getAttribute('aria-label'),"
+            "texto:t.innerText,sw:t.scrollWidth,cw:n.clientWidth}})()")
         escrever(tela, "p1", "quem-joga", NOME_LONGO)
         escrever(tela, "p1", "peca", PLASTICO_LONGO)
         fora["pior"] = tela._cru(_pior_caso())
@@ -178,6 +202,17 @@ def test_em_todos_os_conectados_dizem_quem_joga_e_os_vazios_nao(medido: dict[str
 
 def test_o_lugar_vazio_nao_mostra_o_nome(medido: dict[str, Any]) -> None:
     assert medido["vazio_so_aberto"] == "none"
+
+
+def test_com_a_cena_do_desenho_a_frase_do_giroscopio_cabe_inteira(medido: dict[str, Any]) -> None:
+    """A régua 3 da sprint, o primeiro item: o nome no título não corta a frase do giroscópio.
+
+    MORDIDA: tirar o `min-width:0` do `.no-jogo` aberto (`aba02.py`) — a frase passa da caixa.
+    """
+    g = medido["giro"]
+    assert g is not None, "o p1 aberto perdeu a frase do giroscópio"
+    assert g["d"] != "none", f"a cena do desenho deixou de mostrar a frase no p1: {g}"
+    assert g["sw"] <= g["cw"], f"a frase do giroscópio foi cortada: {g}"
 
 
 def test_o_nome_de_24_letras_nao_quebra_a_faixa(medido: dict[str, Any]) -> None:

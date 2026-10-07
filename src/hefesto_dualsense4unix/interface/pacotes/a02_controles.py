@@ -1356,15 +1356,15 @@ def volume_em_padrao(ctx: Contexto, uniq: str, lido: tuple[int, bool | None] | N
 
 
 def nomes_de_quem_joga() -> dict[str, str]:
-    """``{endereço: nome}`` que ela deu a cada controle — o leitor da 08, chamado e não copiado.
+    """``{endereço: nome}`` que ela deu a cada controle — o leitor único, chamado e não copiado.
 
-    É a leitura em fundo do ``Alias`` do BlueZ (``_em_fundo``, validade de 3 s, o mesmo fundo da
-    seção do rádio): não bloqueia o tique e não abre viagem nova enquanto o fundo está fresco.
-    O import é tardio porque a 08 importa esta aba (``mudo``).
+    É ``nome_do_jogador.nomes_dos_donos``, o mesmo leitor da Iluminação e da Vibração: a leitura
+    em fundo do ``Alias`` do BlueZ (validade de 3 s, o mesmo fundo da seção do rádio da 08), que
+    não bloqueia o tique e não abre viagem nova enquanto o fundo está fresco.
     """
-    from . import a08_conexoes
+    from .nome_do_jogador import nomes_dos_donos
 
-    return a08_conexoes._nomes_dos_donos()
+    return nomes_dos_donos()
 
 
 def _so_se_a_pagina_tiver(campos: dict[str, Any]) -> dict[str, Any]:
