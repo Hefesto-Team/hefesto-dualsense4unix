@@ -74,7 +74,7 @@ FERRAMENTAS = (
     "pw-top", "parec", "parecord", "paplay", "amixer", "aplay", "arecord",
     "systemctl", "journalctl", "loginctl", "busctl", "bluetoothctl", "btmgmt", "hciconfig",
     "hcitool", "steam", "gio", "xdg-open", "xdg-mime", "flatpak", "dpkg", "apt", "curl",
-    "wmctrl", "xdotool", "xprop", "sudo", "pkexec", "udevadm", "setfacl", "modprobe",
+    "wmctrl", "xdotool", "xprop", "sudo", "pkexec", "udevadm", "setfacl", "modprobe", "modinfo",
     "rfkill", "nmcli", "iw", "lsusb", "lutris", "heroic", "google-chrome", "wlr-randr",
     "cosmic-comp", "gdbus", "dbus-send", "upower", "uname", "ffmpeg", "wlrctl", "systemd-run",
     "xdg-desktop-portal",
@@ -165,12 +165,63 @@ def _referencia_a_processo(no: ast.AST) -> bool:
             and no.attr in _PROCESSO_ATRIBUTOS.get(no.value.id, ()))
 
 
+#: a raiz nua (``Path("/sys")`` como parâmetro injetável) também é contato: o resto do caminho vem
+#: de variável, e a régua não pode enxergar só a forma escrita por inteiro.
+_RAIZ_NUA_RX = re.compile(r"^/(sys|proc|dev|run)/?$")
+_CONSTRUTORES_DE_CAMINHO = frozenset({"Path", "PurePath", "PosixPath", "PurePosixPath"})
+
+
+def _dobra(no: ast.AST) -> str | None:
+    """O caminho de uma expressão feita só de constantes, ou ``None``.
+
+    ``Path("/var/lib") / "bluetooth"``, ``"/var/lib/" + "bluetooth"``, ``os.path.join("/var/lib",
+    "bluetooth")`` e ``Path("/var", "lib", "bluetooth")`` são a mesma leitura que
+    ``"/var/lib/bluetooth"``; medida em 07/10/2026, a régua só via a última.
+    """
+    if isinstance(no, ast.Constant):
+        return no.value if isinstance(no.value, str) else None
+    if isinstance(no, ast.BinOp) and isinstance(no.op, (ast.Div, ast.Add)):
+        esq, dir_ = _dobra(no.left), _dobra(no.right)
+        if esq is None or dir_ is None:
+            return None
+        return f"{esq.rstrip('/')}/{dir_.lstrip('/')}" if isinstance(no.op, ast.Div) else esq + dir_
+    if isinstance(no, ast.Call) and no.args and not no.keywords:
+        f = no.func
+        nome = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else ""
+        e_join = (nome == "join" and isinstance(f, ast.Attribute)
+                  and isinstance(f.value, ast.Attribute) and f.value.attr == "path")
+        if nome in _CONSTRUTORES_DE_CAMINHO or e_join:
+            partes = [_dobra(a) for a in no.args]
+            if any(p is None for p in partes):
+                return None
+            return "/".join(p.strip("/") if i else p.rstrip("/")  # type: ignore[union-attr]
+                            for i, p in enumerate(partes))
+    return None
+
+
 class _Percorredor(ast.NodeVisitor):
     def __init__(self, docstrings: set[int]) -> None:
         self.docstrings = docstrings
         self.pilha: list[str] = []
         self.achados: dict[str, list[str]] = {}
         self.lanca_processo = False
+        #: as subexpressões de um caminho já dobrado por inteiro: o pedaço não é outro contato.
+        self._dentro_do_dobrado: set[int] = set()
+
+    def _caminho_dobrado(self, no: ast.BinOp | ast.Call) -> None:
+        if id(no) in self._dentro_do_dobrado or isinstance(no, ast.Constant):
+            return
+        valor = _dobra(no)
+        if valor is None:
+            return
+        self._dentro_do_dobrado.update(id(n) for n in ast.walk(no))
+        if (_CAMINHO_RX.match(valor) and not _CAMINHO_PROPRIO_RX.search(valor)) \
+                or _RAIZ_NUA_RX.match(valor):
+            self._anota(f"path:{normaliza_caminho(valor)}")
+
+    def visit_BinOp(self, no: ast.BinOp) -> None:
+        self._caminho_dobrado(no)
+        self.generic_visit(no)
 
     def _anota(self, alvo: str) -> None:
         simbolo = ".".join(self.pilha) or "<módulo>"
@@ -202,6 +253,7 @@ class _Percorredor(ast.NodeVisitor):
             self._anota(f"lib:{no.module.split('.')[0]}")
 
     def visit_Call(self, no: ast.Call) -> None:
+        self._caminho_dobrado(no)
         if _e_processo(no):
             self.lanca_processo = True
         f = no.func
@@ -249,6 +301,8 @@ class _Percorredor(ast.NodeVisitor):
         elif _CAMINHO_RX.match(valor):
             if not _CAMINHO_PROPRIO_RX.search(valor):
                 self._anota(f"path:{normaliza_caminho(valor)}")
+        elif _RAIZ_NUA_RX.match(valor) and id(no) not in self._dentro_do_dobrado:
+            self._anota(f"path:{normaliza_caminho(valor)}")
         elif _DBUS_RX.match(valor):
             self._anota(f"dbus:{normaliza_dbus(valor)}")
         elif _CFG_RX.search(valor):
@@ -343,18 +397,24 @@ def _simbolos_do_arquivo(raiz: Path, arquivo: str) -> set[str] | None:
     return nomes
 
 
-def contratos_do_doctor(raiz: Path) -> set[str]:
-    """Os ids declarados no módulo do doctor (``id="…"`` da tabela), lidos por AST."""
+def contratos_do_doctor(raiz: Path) -> dict[str, set[str]]:
+    """Os contratos do módulo do doctor, ``{id: alvos que a sonda cobre}``, lidos por AST."""
     caminho = raiz / MODULO_DO_DOCTOR
     if not caminho.exists():
-        return set()
-    ids: set[str] = set()
+        return {}
+    contratos: dict[str, set[str]] = {}
     for no in ast.walk(ast.parse(caminho.read_text(encoding="utf-8"))):
         if isinstance(no, ast.Call) and getattr(no.func, "id", "") == "Contrato":
-            for kw in no.keywords:
-                if kw.arg == "id" and isinstance(kw.value, ast.Constant):
-                    ids.add(str(kw.value.value))
-    return ids
+            campos = {kw.arg: kw.value for kw in no.keywords}
+            ident = campos.get("id")
+            if not isinstance(ident, ast.Constant):
+                continue
+            cobre = campos.get("cobre")
+            alvos = {
+                str(e.value) for e in getattr(cobre, "elts", []) if isinstance(e, ast.Constant)
+            }
+            contratos[str(ident.value)] = alvos
+    return contratos
 
 
 def julgar(raiz: Path, contatos: Iterable[Contato] | None = None) -> list[str]:
@@ -414,8 +474,19 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
         if not filha or (tem_sprints and not list((raiz / SPRINTS).glob(f"*{filha}*.md"))):
             q.append(f"{rotulo}: linha frágil sem `sprint_filha` que exista em {SPRINTS} ({filha!r})")
     doctor = linha["como_o_doctor_ve"]
-    if doctor.startswith("contrato:") and doctor.split(":", 1)[1] not in contratos_do_doctor(raiz):
-        q.append(f"{rotulo}: o doctor não declara {doctor!r} em {MODULO_DO_DOCTOR}")
+    if doctor.startswith("contrato:"):
+        contratos = contratos_do_doctor(raiz)
+        nome = doctor.split(":", 1)[1]
+        if nome not in contratos:
+            q.append(f"{rotulo}: o doctor não declara {doctor!r} em {MODULO_DO_DOCTOR}")
+        elif (linha["porta"] == "interna" or linha["pergunta"] == "versão") \
+                and linha["alvo"] not in contratos[nome]:
+            # A sonda pergunta a porta oficial; a interna pode mudar com ela verde. Medido em
+            # 07/10/2026: 50 linhas frágeis citavam um contrato que nunca as olhava.
+            q.append(
+                f"{rotulo}: linha frágil cita {doctor!r}, mas a sonda dele não pergunta "
+                f"`{linha['alvo']}` (o `cobre` do contrato): o doctor daria [ OK ] com ela "
+                "quebrada. Use `-` ou faça a sonda perguntar.")
     return q
 
 

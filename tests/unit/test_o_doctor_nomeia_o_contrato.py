@@ -161,3 +161,43 @@ def test_pactl_com_rc_diferente_de_zero_diz_o_rc(tmp_path):
         amb, [c for c in cf.CONTRATOS if c.id == "pipewire-pactl-json"]
     )
     assert tag == "[WARN]" and "rc=3" in msg
+
+
+def test_ferramenta_que_existe_e_nao_responde_quebra_e_nao_e_ausencia(tmp_path):
+    """O tempo esgotado do busctl é o BlueZ travado, não uma máquina sem BlueZ."""
+
+    def rodar(argv):
+        return cf.Falta("TimeoutExpired: 3 s", ausente=False)
+
+    amb = cf.Ambiente(rodar=rodar, home=tmp_path, env={}, raiz=tmp_path)
+    for ident in ("bluez-dbus", "pipewire-pactl-json", "pipewire-wpctl", "systemd-usuario"):
+        ((tag, msg),) = cf.linhas_do_doctor(amb, [c for c in cf.CONTRATOS if c.id == ident])
+        assert tag == "[WARN]" and ident in msg and "TimeoutExpired" in msg
+
+
+def test_rodar_de_verdade_separa_ausente_de_quem_nao_responde(monkeypatch):
+    monkeypatch.setattr(cf, "ESPERA_S", 0.2)
+    sem = cf.rodar_de_verdade(["ferramenta-que-nao-existe-hefesto"])
+    assert isinstance(sem, cf.Falta) and sem.ausente
+    lenta = cf.rodar_de_verdade(["sleep", "10"])
+    assert isinstance(lenta, cf.Falta) and not lenta.ausente
+
+
+def _sony(tmp_path, saidas):
+    return cf.linhas_do_doctor(
+        _amb(tmp_path, saidas), [c for c in cf.CONTRATOS if c.id == "kernel-driver-sony"]
+    )[0]
+
+
+def test_driver_sony_sem_controle_desde_o_boot_e_ok_se_o_kernel_o_tem(tmp_path):
+    """O módulo só carrega quando o primeiro controle chega: pasta ausente não é defeito."""
+    ko = "/lib/modules/x/kernel/drivers/hid/hid-playstation.ko.zst\n"
+    tag, _ = _sony(tmp_path, {"modinfo": (0, ko)})
+    assert tag == "[ OK ]"
+    tag, msg = _sony(tmp_path, {"modinfo": (1, "")})
+    assert tag == "[WARN]" and "kernel-driver-sony" in msg and "modinfo" in msg
+    tag, _ = _sony(tmp_path, {})
+    assert tag == "[INFO]"
+    (tmp_path / "raiz/sys/bus/hid/drivers/playstation").mkdir(parents=True)
+    tag, _ = _sony(tmp_path, {"modinfo": (1, "")})
+    assert tag == "[ OK ]"

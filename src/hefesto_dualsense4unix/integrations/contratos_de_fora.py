@@ -33,9 +33,15 @@ AUSENTE = "ausente"
 
 @dataclass(frozen=True)
 class Falta:
-    """A ferramenta não existe nesta máquina, ou não respondeu a tempo. ``motivo`` diz qual."""
+    """A ferramenta não respondeu. ``ausente`` separa as duas causas, que não são a mesma coisa.
+
+    ``ausente=True``: a ferramenta não existe nesta máquina (o dono não está aqui, ``[INFO]``).
+    ``ausente=False``: ela existe e não respondeu (o tempo esgotou, a permissão faltou): o
+    contrato quebrou, e isso nunca se lê como ausência.
+    """
 
     motivo: str
+    ausente: bool = True
 
 
 Rodar = Callable[[Sequence[str]], "tuple[int, str] | Falta"]
@@ -49,9 +55,18 @@ def rodar_de_verdade(argv: Sequence[str]) -> tuple[int, str] | Falta:
         feito = subprocess.run(
             list(argv), capture_output=True, text=True, timeout=ESPERA_S, check=False, env=ambiente
         )
-    except (OSError, subprocess.SubprocessError) as erro:
+    except FileNotFoundError as erro:
         return Falta(f"{type(erro).__name__}: {erro}")
+    except (OSError, subprocess.SubprocessError) as erro:
+        return Falta(f"{type(erro).__name__}: {erro}", ausente=False)
     return feito.returncode, feito.stdout
+
+
+def _sem_resposta(falta: Falta, ferramenta: str) -> Resultado:
+    """Ferramenta que não existe é ``[INFO]``; ferramenta que existe e não respondeu quebrou."""
+    if falta.ausente:
+        return Resultado(AUSENTE, f"sem {ferramenta} nesta máquina")
+    return Resultado(QUEBROU, f"o {ferramenta} não respondeu ({falta.motivo})")
 
 
 @dataclass(frozen=True)
@@ -82,6 +97,10 @@ class Contrato:
     promessa: str
     conferir: str
     sonda: Callable[[Ambiente], Resultado]
+    #: os alvos de porta interna (ou de pergunta por versão) que a sonda pergunta DE FATO. Uma
+    #: linha frágil do censo só cita este contrato se o alvo dela estiver aqui: a sonda da porta
+    #: oficial não vê a interna quebrar, e dizer que vê é dar [ OK ] sobre o que mudou.
+    cobre: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +110,7 @@ class Contrato:
 def _sonda_bluez(amb: Ambiente) -> Resultado:
     saida = amb.rodar(["busctl", "--system", "tree", "org.bluez"])
     if isinstance(saida, Falta):
-        return Resultado(AUSENTE, "sem busctl nesta máquina")
+        return _sem_resposta(saida, "busctl")
     rc, texto = saida
     if rc == 0 and "/org/bluez" in texto:
         return Resultado(OK)
@@ -101,7 +120,7 @@ def _sonda_bluez(amb: Ambiente) -> Resultado:
 def _sonda_pactl_json(amb: Ambiente) -> Resultado:
     saida = amb.rodar(["pactl", "--format=json", "info"])
     if isinstance(saida, Falta):
-        return Resultado(AUSENTE, "sem pactl nesta máquina")
+        return _sem_resposta(saida, "pactl")
     rc, texto = saida
     if rc != 0:
         return Resultado(QUEBROU, f"o pactl respondeu rc={rc} ao formato JSON")
@@ -117,7 +136,7 @@ def _sonda_pactl_json(amb: Ambiente) -> Resultado:
 def _sonda_wpctl(amb: Ambiente) -> Resultado:
     saida = amb.rodar(["wpctl", "status"])
     if isinstance(saida, Falta):
-        return Resultado(AUSENTE, "sem wpctl nesta máquina")
+        return _sem_resposta(saida, "wpctl")
     return (
         Resultado(OK) if saida[0] == 0 else Resultado(QUEBROU, "o wpctl não fala com o WirePlumber")
     )
@@ -126,7 +145,7 @@ def _sonda_wpctl(amb: Ambiente) -> Resultado:
 def _sonda_systemd(amb: Ambiente) -> Resultado:
     saida = amb.rodar(["systemctl", "--user", "show-environment"])
     if isinstance(saida, Falta):
-        return Resultado(AUSENTE, "sem systemctl nesta máquina")
+        return _sem_resposta(saida, "systemctl")
     return (
         Resultado(OK) if saida[0] == 0 else Resultado(QUEBROU, "o systemd de usuário não responde")
     )
@@ -149,9 +168,24 @@ def _sonda_nos_do_kernel(amb: Ambiente) -> Resultado:
 
 
 def _sonda_driver_sony(amb: Ambiente) -> Resultado:
+    """O kernel TEM o driver: ligado ao barramento agora, ou disponível para carregar.
+
+    O ``hid_playstation`` é módulo que o kernel carrega quando o primeiro controle Sony chega;
+    numa máquina sem controle desde o boot a pasta do driver não existe, e isso não é defeito.
+    A pergunta à porta oficial (o ``modinfo`` do kmod) é se o kernel em uso sabe carregá-lo.
+    """
     if amb.caminho("/sys/bus/hid/drivers/playstation").is_dir():
         return Resultado(OK)
-    return Resultado(QUEBROU, "o driver playstation do kernel não está ligado ao barramento HID")
+    saida = amb.rodar(["modinfo", "-F", "filename", "hid_playstation"])
+    if isinstance(saida, Falta):
+        if saida.ausente:
+            return Resultado(
+                AUSENTE, "sem controle Sony ligado desde o boot e sem modinfo para perguntar"
+            )
+        return _sem_resposta(saida, "modinfo")
+    if saida[0] == 0 and saida[1].strip():
+        return Resultado(OK)
+    return Resultado(QUEBROU, "o kernel em uso não tem o driver playstation (hid_playstation)")
 
 
 def _raizes_da_steam(amb: Ambiente) -> list[Path]:
@@ -219,7 +253,7 @@ CONTRATOS: tuple[Contrato, ...] = (
     Contrato(
         id="pipewire-pactl-json",
         dono="pipewire",
-        promessa="o pactl entrega JSON (`--format=json`), sem ler o texto longo",
+        promessa="o pactl entrega JSON (`--format=json`)",
         conferir="LC_ALL=C pactl --format=json info",
         sonda=_sonda_pactl_json,
     ),
@@ -247,8 +281,8 @@ CONTRATOS: tuple[Contrato, ...] = (
     Contrato(
         id="kernel-driver-sony",
         dono="kernel",
-        promessa="o driver playstation está no barramento HID",
-        conferir="ls /sys/bus/hid/drivers/playstation",
+        promessa="o kernel em uso tem o driver playstation, ligado ou pronto para carregar",
+        conferir="modinfo -F filename hid_playstation",
         sonda=_sonda_driver_sony,
     ),
     Contrato(
@@ -257,6 +291,7 @@ CONTRATOS: tuple[Contrato, ...] = (
         promessa="o localconfig.vdf da Steam abre com a raiz UserLocalConfigStore",
         conferir="head -c 200 ~/.steam/steam/userdata/*/config/localconfig.vdf",
         sonda=_sonda_steam,
+        cobre=("cfg:localconfig.vdf",),
     ),
     Contrato(
         id="proton-de-terceiros",

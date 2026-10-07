@@ -83,6 +83,7 @@ def test_com_a_linha_a_mesma_leitura_passa(tmp_path):
         forma="comando",
         motivo="o BlueZ não expõe o bond",
         sprint_filha="QUALQUER-01",
+        como_o_doctor_ve="-",
     )
     raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [linha])
     assert regua.julgar(raiz) == []
@@ -118,6 +119,42 @@ def test_contrato_que_o_doctor_nao_declara_reprova(tmp_path):
     assert any("que-nao-existe" in q for q in regua.julgar(raiz))
 
 
+@pytest.mark.parametrize(
+    "fonte",
+    [
+        'from pathlib import Path\n\ndef ler():\n    return Path("/var/lib") / "bluetooth"\n',
+        'from pathlib import Path\n\ndef ler(x):\n    return Path("/var", "lib", "bluetooth") / x',
+        'import os\n\ndef ler():\n    return os.path.join("/var/lib", "bluetooth")\n',
+        'def ler():\n    return open("/var/lib/" + "bluetooth")\n',
+    ],
+)
+def test_o_caminho_montado_por_partes_tambem_e_contato(tmp_path, fonte):
+    """A mesma leitura de /var/lib/bluetooth, escrita em pedaços: a régua não pode ficar cega."""
+    arq = f"{PACOTE}/novo.py"
+    raiz = _arvore(tmp_path, {arq: fonte}, [])
+    queixas = regua.julgar(raiz)
+    assert any("SEM LINHA" in q and "path:/var/lib/bluetooth" in q for q in queixas), queixas
+
+
+def test_a_raiz_injetavel_do_sysfs_e_contato(tmp_path):
+    arq = f"{PACOTE}/novo.py"
+    fonte = 'from pathlib import Path\n\ndef ler(sysfs=Path("/sys")):\n    return sysfs\n'
+    raiz = _arvore(tmp_path, {arq: fonte}, [])
+    assert any("SEM LINHA" in q and "path:/sys`" in q for q in regua.julgar(raiz))
+
+
+def test_linha_fragil_que_cita_contrato_que_nao_a_pergunta_reprova(tmp_path):
+    """A sonda da porta oficial não vê a interna quebrar: citar o contrato é [ OK ] mentiroso."""
+    arq = f"{PACOTE}/novo.py"
+    frag = _linha(arq, "path:/var/lib/bluetooth", porta="interna", motivo="m", sprint_filha="X-01")
+    raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [frag])
+    assert any("não pergunta" in q and "cobre" in q for q in regua.julgar(raiz))
+    # a sonda que pergunta DE FATO pelo alvo (o `cobre`) pode ser citada.
+    doctor = 'Contrato(id="bluez-dbus", dono="bluez", cobre=("path:/var/lib/bluetooth",))\n'
+    (raiz / f"{PACOTE}/contratos_de_fora.py").write_text(doctor, encoding="utf-8")
+    assert regua.julgar(raiz) == []
+
+
 def test_comentario_e_docstring_nao_contam(tmp_path):
     arq = f"{PACOTE}/calado.py"
     fonte = '"""Fala de /var/lib/bluetooth e de busctl."""\n# /var/lib/bluetooth\nX = 1\n'
@@ -127,7 +164,14 @@ def test_comentario_e_docstring_nao_contam(tmp_path):
 
 def test_a_catraca_so_desce(tmp_path, capsys):
     arq = f"{PACOTE}/novo.py"
-    frag = _linha(arq, "path:/var/lib/bluetooth", porta="interna", motivo="m", sprint_filha="X-01")
+    frag = _linha(
+        arq,
+        "path:/var/lib/bluetooth",
+        porta="interna",
+        motivo="m",
+        sprint_filha="X-01",
+        como_o_doctor_ve="-",
+    )
     raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [frag])
     # sem sprints no tmp, a filha não se confere (clone limpo); o piso nasce em 1.
     assert regua.main(["--raiz", str(raiz), "--aceitar", regua.FRAGEIS]) == 0
@@ -136,7 +180,12 @@ def test_a_catraca_so_desce(tmp_path, capsys):
     outro = f"{PACOTE}/outro.py"
     (raiz / outro).write_text(LE_O_BOND, encoding="utf-8")
     frag2 = _linha(
-        outro, "path:/var/lib/bluetooth", porta="interna", motivo="m", sprint_filha="X-01"
+        outro,
+        "path:/var/lib/bluetooth",
+        porta="interna",
+        motivo="m",
+        sprint_filha="X-01",
+        como_o_doctor_ve="-",
     )
     _arvore(raiz, {outro: LE_O_BOND}, [frag, frag2])
     capsys.readouterr()
