@@ -1112,7 +1112,9 @@ def corpo_do_ruleset(r: dict[str, Any]) -> dict[str, Any]:
     if r.get("sem_push_forcado"):
         regras.append({"type": "non_fast_forward"})
     if r.get("sem_atualizar"):
-        regras.append({"type": "update", "parameters": {"update_allows_fetch_and_merge": False}})
+        # Em tag o GitHub guarda a regra sem o parâmetro (ele só vale para ramo) e a devolve sem ele.
+        regras.append({"type": "update"} if "tags" in r
+                      else {"type": "update", "parameters": {"update_allows_fetch_and_merge": False}})
     if r.get("historico_linear"):
         regras.append({"type": "required_linear_history"})
     if r.get("assinatura") == "exigida":

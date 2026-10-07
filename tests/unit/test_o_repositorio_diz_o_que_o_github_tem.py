@@ -1158,7 +1158,9 @@ def test_o_gh_de_mentira_recusa_o_que_o_servidor_recusa_no_ruleset_de_tag(
     )
     assert r.returncode != 0 and "422" in r.stdout
     assert "não vale num ruleset de tag" in json.loads(r.stdout.split("\n\n", 1)[1])["message"]
-    corpo["rules"] = [{"type": "update"}]  # a regra `update` pede o parâmetro
+    # Em tag, o `update` vai sem o parâmetro (ele só vale para ramo): o GitHub aceita, e o devolve assim
+    # (medido no repositório recriado em 07/10/2026).
+    corpo["rules"] = [{"type": "update"}]
     r = subprocess.run(
         ["gh", "api", "-i", "-X", "POST", f"repos/{REPO}/rulesets", "--input", "-"],
         input=json.dumps(corpo),
@@ -1167,7 +1169,8 @@ def test_o_gh_de_mentira_recusa_o_que_o_servidor_recusa_no_ruleset_de_tag(
         check=False,
         env=os.environ.copy(),
     )
-    assert "422" in r.stdout and "update_allows_fetch_and_merge" in r.stdout
+    assert "422" not in r.stdout
+    assert json.loads(r.stdout.split("\n\n", 1)[1])["rules"] == [{"type": "update"}]
 
 
 def test_o_de_fora_diz_o_motivo_de_cada_coisa_que_a_casa_nao_usa() -> None:

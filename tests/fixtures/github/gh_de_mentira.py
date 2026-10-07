@@ -925,7 +925,8 @@ def valida(c):
             saida(422, msg=f"regra desconhecida: {r.get('type')}")
         if c["target"] == "tag" and r["type"] not in TIPOS_DE_TAG:
             saida(422, msg=f"{r['type']} não vale num ruleset de tag")
-        for p in TIPOS[r["type"]] or []:
+        # Num ruleset de tag o GitHub aceita o `update` sem o parâmetro, que só vale para ramo (medido em 07/10/2026).
+        for p in [] if c["target"] == "tag" and r["type"] == "update" else TIPOS[r["type"]] or []:
             if p not in r.get("parameters", {}):
                 saida(422, msg=f"{r['type']}: falta o parâmetro {p}")
         if r["type"] == "required_status_checks" and not all("context" in x for x in r["parameters"]["required_status_checks"]):
@@ -938,6 +939,8 @@ def detalhe(c, ident):
     d["conditions"]["ref_name"].setdefault("exclude", [])
     d.setdefault("bypass_actors", [])
     for r in d["rules"]:
+        if d["target"] == "tag" and r["type"] == "update":
+            r.pop("parameters", None)  # e o guarda e devolve sem ele
         if r["type"] == "pull_request":
             r["parameters"].setdefault("allowed_merge_methods", ["merge", "squash", "rebase"])
     return d
