@@ -449,16 +449,23 @@ def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_facto
     fecho = _fecho_de_brinquedo(
         raiz, rodar, PAGA, tmp_path_factory.mktemp("fecho"))
     topo = _git(raiz, "rev-parse", "HEAD")
+    # O índice da integração pode ter o que quem coordena já adicionou: o passo não o leva junto.
+    (raiz / "outro.bin").write_bytes(b"\x00")
+    _git(raiz, "add", "outro.bin")
     conferido = fecho("--so", "catraca", "--conferir")
     assert conferido.returncode == 1 and "rodaria: catraca" in conferido.stdout, conferido.stdout
     assert _git(raiz, "rev-parse", "HEAD") == topo, "o --conferir não commita"
     r = fecho("--so", "catraca")
     assert r.returncode == 0, r.stdout + r.stderr
     assert "piso do tamanho registrado e commitado" in r.stdout
-    arvore_nova = _git(raiz, "rev-parse", "HEAD^{tree}")[:12]
-    assert arvore_nova in r.stdout, "os recibos seguintes são da árvore nova"
+    arvore_nova = _git(raiz, "write-tree")[:12]
+    assert arvore_nova in r.stdout, "os recibos seguintes são da árvore nova do índice"
     assert _git(raiz, "log", "-1", "--format=%s").startswith("chore(catraca)")
     assert _git(raiz, "show", "--name-only", "--format=").splitlines() == [CADERNO]
+    assert _git(raiz, "diff", "--cached", "--name-only").splitlines() == ["outro.bin"], (
+        "o que já estava no índice segue no índice, fora do commit da catraca")
+    _git(raiz, "rm", "-q", "--cached", "outro.bin")
+    (raiz / "outro.bin").unlink()
     commit = _git(raiz, "rev-parse", "HEAD")
     outra = fecho("--so", "catraca")
     assert outra.returncode == 0 and "o piso não precisou subir" in outra.stdout, outra.stdout
