@@ -55,10 +55,10 @@
       "universo": 359
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-06",
+      "data": "2026-10-07",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 479,
+      "piso": 478,
       "por_item": {
         "__init__.py": 1,
         "app/actions/config/secao_controles.py": 2,
@@ -147,7 +147,7 @@
         "integrations/ondas_de_som.py": 3,
         "integrations/prontuario_dos_jogos.py": 4,
         "integrations/proton_pin.py": 10,
-        "integrations/quem_o_jogo_le.py": 4,
+        "integrations/quem_o_jogo_le.py": 3,
         "integrations/quem_ouve_o_microfone.py": 4,
         "integrations/reposicao_dos_lancadores.py": 1,
         "integrations/retrato_do_som.py": 1,
@@ -201,7 +201,7 @@
       },
       "razao": "o teto desceu sozinho com o número",
       "unidade": "remendos",
-      "universo": 357
+      "universo": 359
     },
     "tamanho": {
       "data": "2026-10-05",
