@@ -1601,11 +1601,15 @@ def start_gamepad_emulation_desfecho(
         stop_mouse_emulation(daemon, persist=False)
 
     # (DualSense com hidraw de verdade = vibração in-game na máscara DualSense)
+    # O-PAD-DEGRADADO-DO-P1-DIZ-A-CARTA-01: a carta se pergunta UMA vez e vale para o
+    # nome do pad (o uhid e o gadget em USB levam o mesmo `player`) e para a linha
+    # da degradação; sem mesa, o 1 nos dois.
+    carta = numero_do_nome_do_primario(daemon)
     device: VirtualPad | None = make_virtual_pad(
         key,
         identity=identity,
         rumble_sink=make_primary_rumble_sink(daemon),
-        player=numero_do_nome_do_primario(daemon),
+        player=carta,
         allow_uhid=controller_allows_uhid(daemon),
         calibration_0x05=read_primary_calibration(daemon),
         caminho=caminho_pedido,
@@ -1624,7 +1628,7 @@ def start_gamepad_emulation_desfecho(
         if store is not None:
             with contextlib.suppress(Exception):
                 store.bump("gamepad.uhid.fallback")
-        notify_vpad_degradado(daemon, player=1, motivo=motivo_da_queda)
+        notify_vpad_degradado(daemon, player=carta, motivo=motivo_da_queda)
     start_motion_reader(daemon, device)
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = key

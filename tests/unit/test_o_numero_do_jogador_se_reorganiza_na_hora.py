@@ -1035,6 +1035,90 @@ class TestODiarioDizACarta:
         assert _jogadores_sem_imu(daemon) == [str(CARTA_DO_ROXO)]
 
 
+def _o_posto_do_p1_nasce(
+    daemon: Any, monkeypatch: pytest.MonkeyPatch, backend: str
+) -> list[dict[str, Any]]:
+    """O ``start_gamepad_emulation`` de produção, com a fábrica devolvendo ``backend``.
+
+    Devolve o que a fábrica recebeu. O pad dublado leva o ``player`` que ela ouviu,
+    como o uhid de produção (e o gadget em USB dentro dele, que loga com ele).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_mod
+
+    chamadas: list[dict[str, Any]] = []
+
+    def _fabrica(flavor: str | None, **kwargs: Any) -> Any:
+        chamadas.append({"flavor": flavor, **kwargs})
+        pad = _PadDoRoxo(backend)
+        pad.player = kwargs["player"]  # type: ignore[attr-defined]
+        return pad
+
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad", _fabrica
+    )
+    monkeypatch.setattr(gamepad_mod, "_set_controller_grab", lambda *_a: None)
+    monkeypatch.setattr(gamepad_mod, "_materialize_launch_env", lambda *_a: None)
+    monkeypatch.setattr(gamepad_mod, "start_motion_reader", lambda *_a: None)
+    monkeypatch.setattr(gamepad_mod, "read_primary_calibration", lambda *_a: None)
+    daemon._mouse_device = None
+    daemon.config.gamepad_emulation_enabled = False
+    daemon.controller._desired = SimpleNamespace(player_leds=None)
+    daemon.controller.set_player_leds = lambda _bits: None
+    gamepad_mod.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
+    return chamadas
+
+
+class TestOPadDegradadoDoP1DizACarta:
+    """O-PAD-DEGRADADO-DO-P1-DIZ-A-CARTA-01 (07/10/2026).
+
+    O nome do pad do P1 perguntava a carta, e a linha ``vpad_degradado`` do mesmo
+    pad cravava 1: com o roxo (carta 2) no posto, o diário dizia ``player=1`` de um
+    pad chamado «Hefesto P2». Agora a carta se pergunta uma vez e serve aos dois.
+
+    AS MORDIDAS (07/10/2026, cada uma devolvida com o md5 conferido): o
+    ``player=1`` de volta na linha reprova a primeira; uma segunda pergunta ao dono
+    na linha (``numero_do_nome_do_primario`` de novo) reprova a segunda.
+    """
+
+    def test_o_posto_alimentado_pela_carta_2_diz_2(
+        self, coop_do_roxo: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        daemon = coop_do_roxo._daemon
+        daemon.controller.primary_uniq = P4
+        with structlog.testing.capture_logs() as registros:
+            chamadas = _o_posto_do_p1_nasce(daemon, monkeypatch, "uinput")
+        assert [c["player"] for c in chamadas] == [CARTA_DO_ROXO]
+        assert _linhas(registros, "vpad_degradado") == [(CARTA_DO_ROXO, None)], (
+            "o diário diz um número e o nome do pad, outro"
+        )
+
+    def test_o_pad_que_nao_degradou_nao_fala(
+        self, coop_do_roxo: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O uhid (com o gadget em USB dentro dele) nasce com a carta e não degrada."""
+        daemon = coop_do_roxo._daemon
+        daemon.controller.primary_uniq = P4
+        with structlog.testing.capture_logs() as registros:
+            chamadas = _o_posto_do_p1_nasce(daemon, monkeypatch, "uhid")
+        assert [c["player"] for c in chamadas] == [CARTA_DO_ROXO]
+        assert daemon._gamepad_device.player == CARTA_DO_ROXO
+        assert _linhas(registros, "vpad_degradado") == []
+
+    def test_o_nome_e_a_linha_saem_da_mesma_pergunta(
+        self, coop_do_roxo: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
+
+        respostas = iter([3, 4, 4, 4])
+        monkeypatch.setattr(
+            coop_mod, "numero_do_nome_do_primario", lambda _d, fallback=1: next(respostas)
+        )
+        with structlog.testing.capture_logs() as registros:
+            chamadas = _o_posto_do_p1_nasce(coop_do_roxo._daemon, monkeypatch, "uinput")
+        assert [c["player"] for c in chamadas] == [3]
+        assert _linhas(registros, "vpad_degradado") == [(3, None)]
+
+
 PLAYER_IDS = {1: 0x04, 2: 0x0A, 3: 0x15, 4: 0x1B}
 
 
