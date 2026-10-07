@@ -204,17 +204,17 @@
       "universo": 359
     },
     "tamanho": {
-      "data": "2026-10-05",
+      "data": "2026-10-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 931129,
+      "piso": 954874,
       "por_item": {
-        "docs": 57155,
-        "scripts": 95565,
-        "src": 280742,
-        "tests": 497667
+        "docs": 58089,
+        "scripts": 103680,
+        "src": 282621,
+        "tests": 510484
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +23745 linhas (931129 -> 954874), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo f678238a10ae",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -257,10 +257,16 @@
           "de": 928712,
           "para": 931693,
           "razao": "o crescimento do conjunto «Conexões 3» (2d4d16d8a), já pago no fecho de 05/10; base da leva 1.6"
+        },
+        {
+          "data": "2026-10-07",
+          "de": 931129,
+          "para": 954874,
+          "razao": "tamanho: +23745 linhas (931129 -> 954874), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo f678238a10ae"
         }
       ],
       "unidade": "linhas",
-      "universo": 2436
+      "universo": 2487
     }
   }
 }
