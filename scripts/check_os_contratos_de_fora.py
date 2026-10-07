@@ -482,7 +482,7 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
         elif (linha["porta"] == "interna" or linha["pergunta"] == "versão") \
                 and linha["alvo"] not in contratos[nome]:
             # A sonda pergunta a porta oficial; a interna pode mudar com ela verde. Medido em
-            # 07/10/2026: 50 linhas frágeis citavam um contrato que nunca as olhava.
+            # 07/10/2026: 48 linhas frágeis citavam um contrato que nunca as olhava.
             q.append(
                 f"{rotulo}: linha frágil cita {doctor!r}, mas a sonda dele não pergunta "
                 f"`{linha['alvo']}` (o `cobre` do contrato): o doctor daria [ OK ] com ela "
