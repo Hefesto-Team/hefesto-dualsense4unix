@@ -8,13 +8,13 @@ O DualSense completo no Linux: gatilhos adaptativos, luz, vibração, giroscópi
 
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT%20%2B%20GPL--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.4.5%20alfa-6a3fb4.svg)](CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.5%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![CI](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml)
 [![Patreon](https://img.shields.io/badge/Patreon-apoiar-f96854.svg?logo=patreon&logoColor=white)](https://www.patreon.com/Hefesto_Team)
 
 </div>
 
-Versão: 0.9.4.5 (alfa)
+Versão: 0.9.5 (alfa)
 
 ## O que é
 

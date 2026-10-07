@@ -4,6 +4,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ## [Unreleased]
 
+## [0.9.5] — 2026-10-06
+
 ### Adicionado
 
 - Uma janela nova, com dez abas: Jogar, Controles, Gatilhos, Iluminação, Vibração, Navegação, Lançadores, Conexões, Sistema e Perfis.

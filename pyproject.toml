@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hefesto-dualsense4unix"
-version = "0.9.4.5"
+version = "0.9.5"
 description = "DualSense no Linux: gatilhos adaptativos, luz, vibração, sensores, áudio e co-op local"
 readme = "README.md"
 requires-python = ">=3.10"

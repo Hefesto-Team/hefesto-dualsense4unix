@@ -5,7 +5,7 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("hefesto-dualsense4unix")
 except PackageNotFoundError:
-    __version__ = "0.9.4.5"
+    __version__ = "0.9.5"
 
 
 def _check_pydantic_v2() -> None:
