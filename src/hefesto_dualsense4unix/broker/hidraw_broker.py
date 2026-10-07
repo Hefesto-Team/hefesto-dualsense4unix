@@ -106,6 +106,9 @@ ACCEPTED_BUSES = frozenset({BUS_USB, BUS_BT})
 #: Identidade do vpad no HID — espelhada de `core/backend_pydualsense.py`
 VPAD_PHYS_PREFIX = "hefesto-vpad"
 VPAD_UNIQ_PREFIX = "02fe"
+#: O começo do serial USB do pad em USB (``pad_usb.SERIAL_PREFIXO``).
+PAD_USB_SERIAL_PREFIX = "hefesto-pad-"
+_USB_DEVICE_RE = re.compile(r"^\d+-[\d.]+$")
 
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
 
@@ -201,14 +204,45 @@ def _adapter_addresses(sys_class_bluetooth: str) -> set[str] | None:
 
 
 def _e_o_nosso_vpad(uevent: dict[str, str], hid_parent: str, bus: int) -> bool:
-    """True quando o pai HID é o vpad do daemon (D1/D2), qualquer que seja o PID."""
-    if "/misc/uhid/" in hid_parent and bus != BUS_BT:
-        return True
+    """True quando o pai HID é um pad do daemon (D1/D2), qualquer que seja o PID.
+
+    ESPELHO de ``integrations/pad_usb.e_pad_nosso`` (O-PAD-VIRTUAL-E-O-SOM-DELE-
+    NASCEM-NO-MESMO-USB-01, 07/10/2026): este arquivo roda no ``python3`` do
+    sistema, sem o pacote, e não pode importá-lo. A régua
+    ``tests/unit/test_o_pad_nasce_no_mesmo_usb_do_som.py`` passa a mesma tabela
+    pelas duas funções e reprova a primeira divergência. O pad é o uhid de
+    sempre OU o gadget USB sob o ``vhci_hcd``, que tem ``usb_device`` pai como
+    um controle no cabo e passaria por físico sem a última perna.
+    """
     phys = uevent.get("HID_PHYS", "").strip().lower()
     uniq = uevent.get("HID_UNIQ", "").strip().lower()
-    return phys.startswith(VPAD_PHYS_PREFIX) or uniq.replace(":", "").startswith(
-        VPAD_UNIQ_PREFIX
-    )
+    if phys.startswith(VPAD_PHYS_PREFIX):
+        return True
+    if uniq.replace(":", "").startswith(VPAD_UNIQ_PREFIX) or uniq.startswith(
+        PAD_USB_SERIAL_PREFIX
+    ):
+        return True
+    if "/misc/uhid/" in hid_parent and bus != BUS_BT:
+        return True
+    if "/vhci_hcd." in hid_parent:
+        usb_device = _usb_device_do_caminho(hid_parent)
+        if usb_device:
+            try:
+                with open(f"{usb_device}/serial", encoding="utf-8", errors="replace") as fh:
+                    serial = fh.read().strip().lower()
+            except OSError:
+                return False
+            return serial.startswith(PAD_USB_SERIAL_PREFIX)
+    return False
+
+
+def _usb_device_do_caminho(caminho: str) -> str:
+    """O ``usb_device`` (``X-P``) mais fundo do caminho — espelho do ``pad_usb``."""
+    partes = caminho.rstrip("/").split("/")
+    for fim in range(len(partes), 0, -1):
+        if _USB_DEVICE_RE.match(partes[fim - 1]):
+            return "/".join(partes[:fim])
+    return ""
 
 
 def validate_physical_node(
@@ -301,6 +335,8 @@ def _pai_hid_e_dualsense_fisico(
         return False
     if product not in PHYS_PRODUCTS:
         return False
+    if "/vhci_hcd." in hid_parent and _e_o_nosso_vpad(uevent, hid_parent, bus):
+        return False  # o pad em USB: tem pai USB, mas é o que o Hefesto entrega ao jogo
     if "/devices/virtual/" in hid_parent:
         if "/misc/uhid/" not in hid_parent:
             return False

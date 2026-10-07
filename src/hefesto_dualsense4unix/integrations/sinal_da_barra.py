@@ -122,8 +122,11 @@ from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 
 RAIZ_UHID = "/sys/devices/virtual/misc/uhid"
 
-#: O DualSense, e só ele. ``0CE6`` por rádio e por cabo; o ``0DF2`` do vpad
-_ID_DUALSENSE = "054C:0CE6"
+#: O DualSense, e só ele: ``0CE6`` e o Edge ``0DF2``, por rádio e por cabo. O
+#: ``0DF2`` é também o PID do NOSSO pad, e quem o separa do Edge de plástico é o
+#: ``pad_usb.e_pad_nosso`` (07/10/2026), não o PID: o pad em USB e o Edge pelo
+#: rádio passariam os dois por um filtro de ID.
+_IDS_DUALSENSE = ("054C:0CE6", "054C:0DF2")
 
 CONFIANCA_LIMPA = "limpa"
 CONFIANCA_SUSPEITA = "suspeita"
@@ -279,8 +282,10 @@ def instancias_dualsense(raiz_uhid: str = RAIZ_UHID) -> list[Instancia]:
         nomes = sorted(os.listdir(raiz_uhid))
     except OSError:
         return achadas
+    from hefesto_dualsense4unix.integrations import pad_usb
+
     for nome in nomes:
-        if _ID_DUALSENSE not in nome.upper():
+        if not any(ident in nome.upper() for ident in _IDS_DUALSENSE):
             continue
         base = os.path.join(raiz_uhid, nome)
         campos: dict[str, str] = {}
@@ -289,6 +294,15 @@ def instancias_dualsense(raiz_uhid: str = RAIZ_UHID) -> list[Instancia]:
                 for chave, valor in _RE_UEVENT.findall(fh.read()):
                     campos[chave] = valor.strip()
         except OSError:
+            continue
+        # Tudo o que esta raiz lista mora sob o uhid (também na régua, que a
+        # desvia para um diretório de mentira): o caminho é o do sistema.
+        if pad_usb.e_pad_nosso(
+            os.path.join(RAIZ_UHID, nome),
+            phys=campos.get("HID_PHYS", ""),
+            uniq=campos.get("HID_UNIQ", ""),
+            bus=pad_usb.bus_do_hid_id(campos.get("HID_ID", "")),
+        ):
             continue
         instancia = nome.rsplit(".", 1)[-1]
         bus = campos.get("HID_ID", "").split(":")[0].lower()
@@ -350,7 +364,7 @@ def nascimentos_pelo_diario(
     nascimentos: dict[str, Nascimento] = {}
     for quando, texto in kernel:
         achou = _RE_NASCIMENTO.search(texto)
-        if not achou or _ID_DUALSENSE not in achou.group("hid").upper():
+        if not achou or not any(i in achou.group("hid").upper() for i in _IDS_DUALSENSE):
             continue
         nascimentos[achou.group("inst").lower()] = Nascimento(
             instancia=achou.group("inst").lower(),

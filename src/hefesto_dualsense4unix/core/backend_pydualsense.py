@@ -167,14 +167,22 @@ def _is_virtual_hidraw(path: bytes) -> bool:
         destino = os.path.realpath(os.path.join(RAIZ_CLASS_HIDRAW, node, "device"))
     except OSError:  # pragma: no cover - sysfs some sob replug
         return False
-    if "/devices/virtual/" not in destino:
+    from hefesto_dualsense4unix.integrations import pad_usb
+
+    sob_o_vhci = pad_usb.sob_o_vhci(destino)
+    if "/devices/virtual/" not in destino and not sob_o_vhci:
         return False
     uevent = _hidraw_uevent(node)
     if not uevent:
-        return True
-    phys = uevent.get("HID_PHYS", "")
-    uniq = uevent.get("HID_UNIQ", "").lower().replace(":", "")
-    return phys == _VPAD_PHYS or uniq.startswith(_VPAD_UNIQ_PREFIX)
+        # Sob o uhid, a dúvida é virtual (o risco é a auto-adoção); sob o
+        # `vhci_hcd`, um uevent ilegível não prova que é o nosso pad em USB.
+        return not sob_o_vhci
+    return pad_usb.e_pad_nosso(
+        destino,
+        phys=uevent.get("HID_PHYS", ""),
+        uniq=uevent.get("HID_UNIQ", ""),
+        bus=pad_usb.bus_do_hid_id(uevent.get("HID_ID", "")),
+    )
 
 #: e, em certos estados degenerados do USB (driver kernel hid_playstation
 #: contendendo o device, hidraw com handle órfão de daemon anterior, hub em

@@ -220,29 +220,20 @@ def nos_abertos_por(
 def hidraws_de_vpad(nomes: Iterable[str]) -> frozenset[str]:
     """Dos ``hidrawN`` dados, os que são do NOSSO vpad — pelo ``uevent`` do pai HID.
 
-    A marca é a que só o produto escreve (``uhid_gamepad.VPAD_HID_PHYS``,
-    ``hefesto-vpad``), a mesma que o backend e o broker usam. Morar sob
+    Quem responde é o ``pad_usb.e_pad_nosso``, o dono único da pergunta: o uhid
+    (``HID_PHYS`` ``hefesto-vpad``) e, desde 07/10/2026, o pad em USB (o
+    gadget sob o ``vhci_hcd``, com o serial do Hefesto). Morar sob
     ``/devices/virtual/misc/uhid/`` não separa nada: com o BlueZ de hoje, o
     DualSense FÍSICO pelo rádio também nasce por ``uhid``. Nó ilegível não
     conta. Só a linha do portão fechado pergunta, e só quando ela muda.
     """
-    from hefesto_dualsense4unix.integrations.uhid_gamepad import VPAD_HID_PHYS
+    from hefesto_dualsense4unix.integrations import pad_usb
 
-    raiz = pathlib.Path(RAIZ_CLASS_HIDRAW)
-    achados: set[str] = set()
-    for nome in nomes:
-        try:
-            texto = (raiz / nome / "device" / "uevent").read_text(
-                encoding="utf-8", errors="replace"
-            )
-        except OSError:
-            continue
-        for linha in texto.splitlines():
-            chave, _, valor = linha.partition("=")
-            if chave == "HID_PHYS" and valor.strip().startswith(VPAD_HID_PHYS):
-                achados.add(nome)
-                break
-    return frozenset(achados)
+    return frozenset(
+        nome
+        for nome in nomes
+        if pad_usb.e_hidraw_de_pad_nosso(nome, raiz_class_hidraw=RAIZ_CLASS_HIDRAW)
+    )
 
 
 def quem_o_jogo_le(

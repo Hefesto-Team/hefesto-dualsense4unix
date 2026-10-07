@@ -243,20 +243,29 @@ def _is_virtual_evdev(event_path: str) -> bool:
     """
     import os
 
+    from hefesto_dualsense4unix.integrations import pad_usb
+
     try:
         name = os.path.basename(event_path)
         link = os.path.realpath(f"/sys/class/input/{name}/device")
     except Exception:
         return False
     if "/devices/virtual/" not in link:
-        return False
+        # O PAD EM USB (07/10/2026): o gadget mora sob o `vhci_hcd`, com pai USB
+        # como um controle no cabo. Quem diz se é nosso é o `pad_usb`, o dono
+        # único da pergunta; o físico fora do `vhci` não lê nada a mais.
+        if not pad_usb.sob_o_vhci(link):
+            return False
+        return pad_usb.e_pad_nosso(
+            link, phys=_read_input_attr(link, "phys"), uniq=_read_input_attr(link, "uniq")
+        )
     if "/misc/uhid/" not in link:
         return True
     phys = _read_input_attr(link, "phys")
-    uniq = _read_input_attr(link, "uniq").lower().replace(":", "")
+    uniq = _read_input_attr(link, "uniq")
     if not phys and not uniq:
         return True
-    return phys.startswith("hefesto-vpad") or uniq.startswith("02fe")
+    return pad_usb.e_pad_nosso(link, phys=phys, uniq=uniq)
 
 
 UDEV_DB_DIR = Path("/run/udev/data")

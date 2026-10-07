@@ -580,7 +580,6 @@ SO_O_0CE6_POR_ESCOLHA = {
     "app/actions/emulation_actions.py": "marcador do quirk, que sai com os dois PIDs",
     "integrations/storm_doctor.py": "diagnóstico do quirk, que sai com os dois PIDs",
     "integrations/vestido_de_dualsense.py": "a identidade forjada para o jogo",
-    "integrations/sinal_da_barra.py": "DÍVIDA: o Edge pelo rádio fica sem o carimbo da barra",
 }
 
 

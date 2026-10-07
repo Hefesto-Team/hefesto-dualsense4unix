@@ -58,8 +58,6 @@ RAIZ_SYSFS = "/sys"
 
 RAIZ_HIDRAW = "/sys/class/hidraw"
 
-_MARCA_UNIQ = "HID_UNIQ="
-
 
 def dispositivo_usb_pai(
     caminho: str,
@@ -171,7 +169,8 @@ def usb_pai_por_uniq(
 
     Controle sem nó USB (rádio, ou vpad virtual) entra com ``""``, pelo mesmo
     motivo de :func:`nos_e_sysfs`: a ausência é o dado que impede emprestar a
-    placa do vizinho.
+    placa do vizinho. O pad em USB também entra com ``""``, pelo
+    ``pad_usb.e_pad_nosso``.
 
     Uma varredura de ``/sys`` por ciclo, sem subprocesso nenhum e sem abrir
     ``/dev`` — nada aqui disputa o hidraw com o daemon.
@@ -184,25 +183,31 @@ def usb_pai_por_uniq(
         nos = sorted(listar(raiz))
     except OSError:
         return saida
+    from hefesto_dualsense4unix.integrations import pad_usb
+
     leitor = ler if ler is not None else _ler_texto
     for no in nos:
         dispositivo = os.path.join(raiz, no, "device")
-        hex_uniq = _so_hex(_uniq_do_uevent(leitor(os.path.join(dispositivo, "uevent"))))
+        campos = pad_usb.campos_do_uevent(leitor(os.path.join(dispositivo, "uevent")))
+        hex_uniq = _so_hex(campos.get("HID_UNIQ", ""))
         if not hex_uniq:
             continue
         original = procurados.get(hex_uniq)
         if original is None or saida[original]:
             continue
+        # O pad em USB (07/10/2026) tem pai USB de verdade, o do `vhci_hcd`, e
+        # não placa de som: quem diz que é nosso é o `pad_usb`, e a resposta
+        # continua "", a do pad que não empresta placa a ninguém.
+        if pad_usb.e_pad_nosso(
+            real(dispositivo),
+            phys=campos.get("HID_PHYS", ""),
+            uniq=campos.get("HID_UNIQ", ""),
+            bus=pad_usb.bus_do_hid_id(campos.get("HID_ID", "")),
+            ler=leitor,
+        ):
+            continue
         saida[original] = dispositivo_usb_pai(dispositivo, existe=existe, real=real)
     return saida
-
-
-def _uniq_do_uevent(texto: str) -> str:
-    """O valor de ``HID_UNIQ=`` no uevent — "" quando o nó não declara um."""
-    for linha in texto.splitlines():
-        if linha.startswith(_MARCA_UNIQ):
-            return linha[len(_MARCA_UNIQ) :].strip()
-    return ""
 
 
 def _ler_texto(caminho: str) -> str:

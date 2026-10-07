@@ -231,15 +231,19 @@ class TestAEnumeracaoNaoTocaOAparelho:
         assert achada.hidraw == "/dev/hidraw6"
         assert achada.hw_version == "0x00000811"
 
-    def test_o_bus_0003_e_cabo(self, tmp_path) -> None:
-        """O transporte sai do BUS do HID_ID, e não de adivinhação."""
+    def test_o_bus_0003_sob_o_uhid_e_o_pad_e_fica_de_fora(self, tmp_path) -> None:
+        """USB de verdade nunca nasce por uhid: o bus 0003 nesta raiz é o pad.
+
+        Até 07/10/2026 esta régua dizia o contrário (o 0003 virava «cabo»), sobre
+        um estado que o sysfs não produz. Quem decide agora é o
+        ``pad_usb.e_pad_nosso``, com a regra D1 que o broker já aplicava.
+        """
         base = tmp_path / "0003:054C:0CE6.0025"
         base.mkdir(parents=True)
         (base / "uevent").write_text(
             f"HID_ID=0003:0000054C:00000CE6\nHID_UNIQ={_UNIQ_CABO}\n", encoding="utf-8"
         )
-        (achada,) = sb.instancias_dualsense(str(tmp_path))
-        assert achada.transporte == "usb"
+        assert sb.instancias_dualsense(str(tmp_path)) == []
 
     def test_o_vpad_do_projeto_fica_de_fora(self, tmp_path) -> None:
         """O 0DF2 é o nosso gamepad virtual: barra desenhada, não de plástico."""
