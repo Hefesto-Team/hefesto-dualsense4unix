@@ -2,7 +2,7 @@
 
 **03/09/2026.** Levantamento em repositório público para as cinco linhas de
 `luz.*` do DualSense que estavam com o caminho incompleto no mapa. **Nada foi ao
-aparelho nesta leva** — ela estava usando a máquina com dois controles vivos.
+aparelho neste levantamento** — a máquina estava em uso com dois controles vivos.
 Tudo aqui é `afirmado-no-doc` ou `inferido-do-codigo`; nenhuma célula ganhou
 `ate_onde_foi`.
 

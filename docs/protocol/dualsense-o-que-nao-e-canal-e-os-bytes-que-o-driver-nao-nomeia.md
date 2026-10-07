@@ -1,8 +1,8 @@
 # DualSense — o que NÃO é canal do aparelho, e os bytes que o driver não nomeia
 
 > **Levantamento em fonte pública, 03/09/2026. NADA AQUI FOI MEDIDO NO
-> APARELHO.** Nenhum byte foi ao aparelho nesta leva: ela estava usando a
-> máquina com dois controles vivos. Toda linha deste documento é
+> APARELHO.** Nenhum byte foi ao aparelho neste levantamento: a máquina
+> estava em uso com dois controles vivos. Toda linha deste documento é
 > `afirmado-no-doc` — leitura cruzada de repositórios de terceiros contra o
 > `hid-playstation.c` que está compilado nesta máquina.
 >

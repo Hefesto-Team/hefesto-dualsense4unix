@@ -976,7 +976,7 @@ vive só no ensaio"* — **caducou em horas**:
 **O QUE CONTINUA ABERTO É ENSAIO NO APARELHO, e é de quem o tem:** o **negativo de rota** (o mesmo
 timbre mirado no HDMI não sai do controle) e o **teste cego**. Enquanto os dois
 não acontecerem, `audio.alto_falante@dualsense` fica com `radio_aciona: não` —
-por disciplina do Hefesto, não por dúvida sobre o que ela ouviu.
+por disciplina do Hefesto, não por dúvida sobre o que se ouviu.
 
 ### O microfone por rádio, e o driver que o desliga — 10/09/2026
 
