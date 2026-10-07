@@ -331,12 +331,6 @@ def interface_do_aparelho(identidade: str) -> str | None:
         return _INTERFACE_DO_APARELHO.get(_so_hex(identidade))
 
 
-def interfaces_vivas() -> dict[str, str]:
-    """``{identidade: interface}`` de todo gadget de pé (cópia)."""
-    with _TRAVA:
-        return dict(_INTERFACE_DO_APARELHO)
-
-
 def anotar_contrato_que_faltou(contrato: str) -> None:
     """O daemon mediu, ao montar, um contrato que o kernel não cumpre."""
     with _TRAVA:
@@ -430,7 +424,6 @@ __all__ = [
     "hidraw_do_gadget",
     "interface_do_aparelho",
     "interface_do_gadget",
-    "interfaces_vivas",
     "ler_o_id_do_get_report",
     "pacote_do_get_report",
     "registrar_gadget",

@@ -190,10 +190,11 @@ def contrato_do_pad_em_usb(
     """Os contratos do kernel que faltam para o pad nascer em USB; [] = nenhum.
 
     O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). É a
-    pergunta do daemon (`pad_usb.contrato_que_falta`), importada e não
-    redigitada: o `doctor.sh` a faz por aqui. Sem o contrato o pad nasce uhid,
-    sem pai USB, e o jogo com a biblioteca da Sony pode não casar o som com o
-    controle. Nunca levanta: o que não se lê volta como «não sei» (``["?"]``).
+    pergunta de `pad_usb.contrato_que_falta`, importada e não redigitada: o
+    daemon (`uhid_gamepad.CONTRATO_QUE_FALTA`) e o `doctor.sh` a fazem por
+    aqui. Sem o contrato o pad nasce uhid, sem pai USB, e o jogo com a
+    biblioteca da Sony pode não casar o som com o controle. Nunca levanta: o
+    que não se lê volta como «não sei» (``["?"]``).
     """
     try:
         from hefesto_dualsense4unix.integrations import pad_usb

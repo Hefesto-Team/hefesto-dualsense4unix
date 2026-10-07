@@ -64,6 +64,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
+from hefesto_dualsense4unix.core import system_check
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
@@ -2134,7 +2135,9 @@ def _ha_jogo_aberto() -> bool:
 PEDIR_O_PAD_USB: Callable[[str, bytes, str], _GadgetDoPad | None] = _pedir_ao_broker
 HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
 JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
-CONTRATO_QUE_FALTA: Callable[[], list[str]] = pad_usb.contrato_que_falta
+#: a mesma pergunta do doctor (`system_check.contrato_do_pad_em_usb`): o que não
+#: se lê volta «não sei» (``["?"]``), e na dúvida o pad nasce uhid.
+CONTRATO_QUE_FALTA: Callable[[], list[str]] = system_check.contrato_do_pad_em_usb
 
 
 class _GadgetsEstacionados:
