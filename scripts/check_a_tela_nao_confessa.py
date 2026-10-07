@@ -49,7 +49,7 @@ FATOS: dict[str, str] = {
         "dado não veio ainda, não que não venha — 07/09/2026",
     "a Steam ainda não mudou de lado para ele":
         "o sujeito é A STEAM. Estado de agora, e MEDIDO: depois de escrever, o "
-        "gesto do chip «Steam Input» RELÊ o `localconfig.vdf` e diz o que "
+        "gesto do chip «Steam Input» RELÊ o arquivo da Steam e diz o que "
         "ficou lá. A causa comum é aquele jogo não existir naquele arquivo — a "
         "Steam só o escreve depois de o jogo ter aberto uma vez por ela —, e "
         "por isso a frase termina no que ELA faz a seguir. Calar seria pior: "

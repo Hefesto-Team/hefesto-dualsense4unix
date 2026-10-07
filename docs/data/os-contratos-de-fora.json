@@ -4,18 +4,17 @@
     "linhas-frageis": {
       "data": "2026-10-07",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 74,
+      "piso": 59,
       "por_item": {
         "bluez": 12,
         "kernel": 3,
-        "lancadores": 15,
+        "lancadores": 5,
         "pipewire": 18,
-        "proton": 1,
         "sistema": 2,
-        "steam": 21,
+        "steam": 17,
         "udev": 2
       },
-      "razao": "a Steam reaberta é conferida pelo estado lido (reopen_steam espera a Steam de pé e tenta a porta seguinte): cmd:steam e cmd:xdg-open de steam_launch_options passam de comando a converge",
+      "razao": "o proton_pin pergunta as bibliotecas ao pastas_steamapps do steam_launch_options: o libraryfolders.vdf passa a ser lido em UM lugar só",
       "subidas": [
         {
           "data": "2026-10-07",
@@ -25,7 +24,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 303
+      "universo": 299
     }
   }
 }

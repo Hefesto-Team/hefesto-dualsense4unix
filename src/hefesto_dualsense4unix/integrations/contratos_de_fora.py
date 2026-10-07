@@ -196,20 +196,57 @@ def _raizes_da_steam(amb: Ambiente) -> list[Path]:
     ]
 
 
+def _perderam_o_wrapper(amb: Ambiente, texto: str) -> list[str]:
+    """Os jogos que o Hefesto JÁ viu com o wrapper e que a Steam devolveu sem ele.
+
+    O registro é o da sentinela (``wrapper-visto.json``): a Steam é a dona do arquivo e já apagou
+    o ``hefesto-launch`` de um jogo sem aviso (17/09/2026). Jogo que ela recusou fica de fora, e
+    leitura sem nenhum app (a Steam no meio da regravação) não conclui nada.
+    """
+    from .sentinela_do_wrapper import ler_registro
+    from .steam_launch_options import (
+        WRAPPER_PREFIX,
+        ler_jogos_sem_wrapper,
+        read_apps_by_appid,
+        sem_wrapper_path,
+    )
+
+    apps = read_apps_by_appid(texto)
+    recusados = set(ler_jogos_sem_wrapper(sem_wrapper_path(amb.home / ".config")))
+    vistos = ler_registro(home=amb.home)
+    return sorted(
+        appid
+        for appid, valor in apps.items()
+        if appid in vistos and appid not in recusados and WRAPPER_PREFIX not in (valor or "")
+    )
+
+
 def _sonda_steam(amb: Ambiente) -> Resultado:
     raizes = _raizes_da_steam(amb)
     if not raizes:
         return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
     ilegiveis: list[str] = []
+    abriu = False
+    perderam: list[str] = []
     for raiz in raizes:
         for conf in sorted((raiz / "userdata").glob("*/config/localconfig.vdf")):
             try:
-                cabeca = conf.read_text(encoding="utf-8", errors="replace")[:4096]
+                texto = conf.read_text(encoding="utf-8", errors="replace")
             except OSError as erro:
                 ilegiveis.append(f"{conf.name}: {erro.strerror}")
                 continue
-            if '"UserLocalConfigStore"' in cabeca:
-                return Resultado(OK)
+            if '"UserLocalConfigStore"' in texto[:4096]:
+                abriu = True
+                perderam += _perderam_o_wrapper(amb, texto)
+    if abriu and perderam:
+        mostrados = ", ".join(sorted(set(perderam))[:5])
+        return Resultado(
+            QUEBROU,
+            f"{len(set(perderam))} jogo(s) que tinham o wrapper do Hefesto voltaram sem ele "
+            f"(a Steam reescreveu o localconfig.vdf): {mostrados}",
+        )
+    if abriu:
+        return Resultado(OK)
     detalhe = "nenhum localconfig.vdf com a raiz UserLocalConfigStore que o Hefesto lê"
     if ilegiveis:
         detalhe += " (ilegíveis: " + ", ".join(ilegiveis) + ")"
@@ -288,8 +325,14 @@ CONTRATOS: tuple[Contrato, ...] = (
     Contrato(
         id="steam-localconfig",
         dono="steam",
-        promessa="o localconfig.vdf da Steam abre com a raiz UserLocalConfigStore",
-        conferir="head -c 200 ~/.steam/steam/userdata/*/config/localconfig.vdf",
+        promessa=(
+            "o localconfig.vdf da Steam abre com a raiz UserLocalConfigStore e guarda o wrapper "
+            "dos jogos que o Hefesto aplicou"
+        ),
+        conferir=(
+            "head -c 200 ~/.steam/steam/userdata/*/config/localconfig.vdf; "
+            "grep -c hefesto-launch ~/.steam/steam/userdata/*/config/localconfig.vdf"
+        ),
         sonda=_sonda_steam,
         cobre=("cfg:localconfig.vdf",),
     ),

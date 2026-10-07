@@ -1,6 +1,6 @@
 [Unit]
 # doc: docs/usage/instalacao.md
-Description=Hefesto — vigia os localconfig.vdf da Steam e reaplica Steam Input OFF
+Description=Hefesto — vigia a pasta de usuário da Steam e reaplica Steam Input OFF
 
 [Path]
 # A Steam reescreve localconfig.vdf ao sair / após updates, re-ativando o

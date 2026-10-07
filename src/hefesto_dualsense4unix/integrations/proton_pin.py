@@ -43,6 +43,8 @@ import subprocess
 import sys
 import tarfile
 import time
+import urllib.error
+import urllib.request
 from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,6 +54,7 @@ try:
     from .steam_launch_options import (
         add_appid_to_steam_input_allowlist,
         parse_steam_input_allowlist,
+        pastas_steamapps,
         remove_appid_from_steam_input_allowlist,
         steam_game_running,
         steam_running,
@@ -60,6 +63,7 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo inst
     from steam_launch_options import (  # type: ignore[no-redef]
         add_appid_to_steam_input_allowlist,
         parse_steam_input_allowlist,
+        pastas_steamapps,
         remove_appid_from_steam_input_allowlist,
         steam_game_running,
         steam_running,
@@ -298,14 +302,29 @@ def sha256_of_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def curl_downloader(url: str, dest: Path) -> None:
-    """Downloader padrão do install: curl com resume (-C -) e fail explícito."""
-    proc = subprocess.run(
-        ["curl", "-L", "--fail", "-C", "-", "-o", str(dest), url],
-        check=False,
-    )
-    if proc.returncode != 0:
-        raise OSError(f"curl falhou (rc={proc.returncode}) baixando {url}")
+def baixar_a_release(url: str, dest: Path) -> None:
+    """Downloader padrão do install: HTTP pela stdlib, com retomada (Range) e falha explícita.
+
+    A release do GE-Proton é um endereço público do GitHub: a porta é o HTTP, não o `curl` da
+    máquina (que pode nem existir). O arquivo parcial em `dest` é retomado do byte em que parou;
+    se o servidor ignora o `Range` (200 em vez de 206), recomeça do zero. Quem confere o que veio
+    é o sha256 do `proton-pin.conf`, depois: este downloader só traz os bytes.
+    """
+    parado = dest.stat().st_size if dest.is_file() else 0
+    pedido = urllib.request.Request(url, headers={"User-Agent": "hefesto-dualsense4unix"})
+    if parado:
+        pedido.add_header("Range", f"bytes={parado}-")
+    try:
+        with urllib.request.urlopen(pedido, timeout=60) as resposta:
+            retomou = parado > 0 and resposta.status == 206
+            with dest.open("ab" if retomou else "wb") as saida:
+                shutil.copyfileobj(resposta, saida, 1024 * 1024)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 416 and parado:  # já tinha tudo: o sha256 diz se é o certo
+            return
+        raise OSError(f"download falhou (HTTP {exc.code}) baixando {url}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise OSError(f"download falhou ({exc}) baixando {url}") from exc
 
 
 def pinned_proton_installed(name: str, compat_dir: Path) -> bool:
@@ -1409,20 +1428,13 @@ def list_installed_appids(home: Path | None = None) -> list[str]:
 
 
 def _pastas_de_biblioteca(home: Path | None = None) -> list[Path]:
-    """A `steamapps` da Steam nativa mais as do `libraryfolders.vdf`."""
-    steamapps = default_steam_root(home) / "steamapps"
-    library_dirs = [steamapps]
-    libraries_vdf = steamapps / "libraryfolders.vdf"
-    try:
-        for raw in libraries_vdf.read_text(encoding="utf-8").splitlines():
-            pair = _PAIR_RE.match(raw.strip())
-            if pair is not None and _vdf_unescape(pair.group("key")).lower() == "path":
-                candidate = Path(_vdf_unescape(pair.group("value"))) / "steamapps"
-                if candidate.is_dir() and candidate not in library_dirs:
-                    library_dirs.append(candidate)
-    except OSError:
-        pass
-    return library_dirs
+    """As `steamapps` de cada Steam e das bibliotecas dela: UMA leitura, a do irmão.
+
+    O `libraryfolders.vdf` é arquivo interno da Steam, sem formato prometido. Quem o lê é só o
+    `steam_launch_options.pastas_steamapps`; este módulo pergunta a ele, em vez de manter uma
+    segunda cópia do mesmo parser que podia divergir da primeira.
+    """
+    return pastas_steamapps(home)
 
 
 _APPINFO_MAGICS = {0x07564428: 28, 0x07564429: 29}
@@ -1817,7 +1829,7 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
     if isinstance(conf, int):
         return conf
     cache = args.cache_dir if args.cache_dir else default_cache_dir()
-    downloader = None if args.offline else curl_downloader
+    downloader = None if args.offline else baixar_a_release
     if args.compat_dir:
         compat = args.compat_dir
     else:

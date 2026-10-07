@@ -148,7 +148,7 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture()
 def download_local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
-    """O `curl` do `--ensure` vira uma cópia local, e conta quantas vezes rodou."""
+    """O download do `--ensure` vira uma cópia local, e conta quantas vezes rodou."""
     tarball = _tarball(tmp_path / "release")
     estado = {"baixou": 0, "tarball": tarball, "conf": _conf(tarball, tmp_path)}
 
@@ -156,7 +156,7 @@ def download_local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
         estado["baixou"] += 1
         destino.write_bytes(tarball.read_bytes())
 
-    monkeypatch.setattr(pp, "curl_downloader", _baixar)
+    monkeypatch.setattr(pp, "baixar_a_release", _baixar)
     return estado
 
 

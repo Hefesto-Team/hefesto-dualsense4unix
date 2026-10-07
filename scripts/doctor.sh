@@ -2817,7 +2817,7 @@ print("erros=" + str(len(d.get("erros") or [])))
     fi
 
     if [[ -n "${regressao}" ]]; then
-        fail "jogo(s) que PERDERAM as Opções de Inicialização do Hefesto: ${regressao} — no Bluetooth o jogo tende a não enxergar controle nenhum, com o controle vivo, a luz acesa e o perfil aplicado (foi o defeito do Pragmata em 15/08); ${como}"
+        fail "contrato steam-localconfig quebrou (confira: grep -c hefesto-launch ~/.steam/steam/userdata/*/config/localconfig.vdf): jogo(s) que PERDERAM as Opções de Inicialização do Hefesto: ${regressao} — no Bluetooth o jogo tende a não enxergar controle nenhum, com o controle vivo, a luz acesa e o perfil aplicado (foi o defeito do Pragmata em 15/08); ${como}"
     elif [[ -n "${novo}" ]]; then
         warn "jogo(s) sem as Opções de Inicialização do Hefesto: ${novo} — ${como}"
     else
