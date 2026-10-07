@@ -87,13 +87,13 @@ python3Packages.buildPythonApplication rec {
     bash scripts/i18n_compile.sh
   '';
 
-  # O `hidapiUsb` mora AQUI e nao num `let` no topo: o `check_version_consistency.py` le a
-  # primeira `version = "...";` do arquivo, e ela tem de ser a do proprio pacote.
+  # O `hidapiUsb` mora AQUI e não num `let` no topo: o `check_version_consistency.py` lê a
+  # primeira `version = "...";` do arquivo, e ela tem de ser a do próprio pacote.
   dependencies =
     let
-    # O modulo `hidapi` do PyPI `hidapi-usb` 0.3.2 (CFFI sobre a libhidapi), que o
-    # nixpkgs nao empacota. O sdist e imutavel pelo endereco por conteudo do
-    # proprio PyPI; o sha256 em hexa (a31a7eda…c8164d) e o que o PyPI publica para
+    # O módulo `hidapi` do PyPI `hidapi-usb` 0.3.2 (CFFI sobre a libhidapi), que o
+    # nixpkgs não empacota. O sdist é imutável pelo endereço por conteúdo do
+    # próprio PyPI; o sha256 em hexa (a31a7eda…c8164d) é o que o PyPI publica para
     # o arquivo, e foi conferido contra o download em 07/10/2026.
     hidapiUsb = python3Packages.buildPythonPackage {
       pname = "hidapi-usb";
@@ -105,10 +105,10 @@ python3Packages.buildPythonApplication rec {
       };
       build-system = with python3Packages; [ setuptools wheel ];
       dependencies = with python3Packages; [ cffi ];
-      # O modulo faz `ffi.dlopen` de nomes SEM caminho (libhidapi-hidraw.so, ...)
-      # e levanta OSError no import se nenhum abre. No Nix a libhidapi nao esta em
-      # nenhum caminho de busca da construcao: o caminho absoluto do nixpkgs vai na
-      # frente da lista (hidraw, que e o backend dos caminhos /dev/hidraw*), e os
+      # O módulo faz `ffi.dlopen` de nomes SEM caminho (libhidapi-hidraw.so, ...)
+      # e levanta OSError no import se nenhum abre. No Nix a libhidapi não está em
+      # nenhum caminho de busca da construção: o caminho absoluto do nixpkgs vai na
+      # frente da lista (hidraw, que é o backend dos caminhos /dev/hidraw*), e os
       # nomes soltos seguem como estavam.
       postPatch = ''
         substituteInPlace hidapi.py \
@@ -148,12 +148,12 @@ python3Packages.buildPythonApplication rec {
       build-system = with python3Packages; [ poetry-core ];
       # O `pydualsense` 0.7.5 declara `hidapi-usb (>=0.3.2,<0.4.0)` e faz
       # `import hidapi` (pydualsense/pydualsense.py:17). O `python3Packages.hidapi`
-      # do nixpkgs e OUTRO pacote (o `import hid`, em Cython): dava o nome certo
-      # da biblioteca e nao o modulo, e a checagem de dependencias da construcao
+      # do nixpkgs é OUTRO pacote (o `import hid`, em Cython): dava o nome certo
+      # da biblioteca e não o módulo, e a checagem de dependências da construção
       # reprovava com `hidapi-usb not installed` (CI do dev, 07/10/2026).
       dependencies = [ hidapiUsb ];
-      # Sem a lista de testes: a suite e do repo, nao do sdist. O import PROVA o
-      # par inteiro (modulo `hidapi` + a libhidapi achada) ainda na construcao.
+      # Sem a lista de testes: a suíte é do repo, não do sdist. O import PROVA o
+      # par inteiro (módulo `hidapi` + a libhidapi achada) ainda na construção.
       pythonImportsCheck = [ "pydualsense" ];
       doCheck = false;
     })
