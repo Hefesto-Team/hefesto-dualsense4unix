@@ -405,6 +405,23 @@ class TestOBrokerMontaOGadgetSoHid:
         assert resposta["porta"] == 0
         assert kernel.concedidos == [(str(Path(kernel.raizes.dev) / "hidg0"), 1000)]
 
+    def test_a_porta_livre_pula_a_linha_torta_e_a_ocupada(self, kernel: KernelDeMentira) -> None:
+        status = Path(kernel.raizes.plataforma) / "vhci_hcd.0/status"
+        _escrever(status, "\n".join([
+            "hub port sta spd dev      sockfd local_busid",
+            "hs  000x 004 000 00000000 000000 0-0",
+            "hs  0000 006 003 00010002 000003 1-1",
+            "hs  0001 004 000 00000000 000000 0-0",
+        ]) + "\n")
+        assert kernel.ops().porta_livre() == 1
+
+    @pytest.mark.parametrize(("hid_id", "bus"), [
+        ("0003:0000054C:00000DF2", 3), ("0005:0000054C:00000CE6", 5),
+        ("", None), ("zz03:0000054C:00000DF2", None), ("-3:0", None),
+    ])
+    def test_o_barramento_do_hid_id_e_hex_ou_nao_sei(self, hid_id: str, bus: int | None) -> None:
+        assert pad_usb.bus_do_hid_id(hid_id) == bus
+
     def test_o_no_cedido_e_o_do_gadget_e_nao_o_hidg_de_outro(
         self, kernel: KernelDeMentira
     ) -> None:

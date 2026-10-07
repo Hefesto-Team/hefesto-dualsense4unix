@@ -51,6 +51,7 @@ from __future__ import annotations
 import fcntl
 import os
 import re
+import string
 import struct
 import threading
 from collections.abc import Callable, Iterable
@@ -218,10 +219,7 @@ def hidraw_do_gadget(
     for nome in nomes:
         if not nome.startswith("hidraw"):
             continue
-        try:
-            caminho = real(os.path.join(raiz_class_hidraw, nome, "device"))
-        except OSError:
-            continue
+        caminho = real(os.path.join(raiz_class_hidraw, nome, "device"))
         if not sob_o_vhci(caminho):
             continue
         usb_device = usb_device_do_caminho(caminho)
@@ -289,10 +287,9 @@ def campos_do_uevent(texto: str) -> dict[str, str]:
 def bus_do_hid_id(hid_id: str) -> int | None:
     """O barramento do ``HID_ID`` (``0003:0000054C:00000DF2`` dá 3), ou None."""
     cabeca = hid_id.split(":", 1)[0]
-    try:
-        return int(cabeca, 16) if cabeca else None
-    except ValueError:
+    if not cabeca or cabeca.strip(string.hexdigits):
         return None
+    return int(cabeca, 16)
 
 
 # --- o registro dos gadgets vivos (o som se ancora nele) ---------------------

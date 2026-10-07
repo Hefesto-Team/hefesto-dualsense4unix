@@ -1023,12 +1023,10 @@ class PadUsbOps:
             campos = linha.split()
             if len(campos) < 3 or campos[0] != "hs":
                 continue
-            try:
-                porta, estado = int(campos[1]), int(campos[2])
-            except ValueError:
+            if not (campos[1].isdigit() and campos[2].isdigit()):
                 continue
-            if estado == _VHCI_LIVRE:
-                return porta
+            if int(campos[2]) == _VHCI_LIVRE:
+                return int(campos[1])
         raise OSError(errno.EBUSY, "nenhuma porta livre no vhci_hcd.0")
 
     # -- montar, ligar, desmontar -----------------------------------------
@@ -1117,7 +1115,8 @@ class PadUsbOps:
         for no in nos:
             try:
                 fd = self._abrir(f"{self.raizes.dev}/{no}")
-            except OSError:
+            except OSError as exc:
+                _log("pad_usb_hidg_ilegivel", no=no, errno=exc.errno)
                 continue
             try:
                 if self._rdev_de(fd) == os.makedev(maior, menor):

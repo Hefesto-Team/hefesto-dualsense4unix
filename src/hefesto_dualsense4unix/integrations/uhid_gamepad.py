@@ -2322,7 +2322,8 @@ def _fio_do_gadget(pad: UhidDualSense) -> Callable[[int, int, threading.Event], 
             )
             try:
                 prontos = dict(sondador.poll(int(espera * 1000)))
-            except (OSError, ValueError):
+            except (OSError, ValueError) as exc:
+                logger.warning("pad_usb_fio_saiu", err=str(exc), player=pad.player)
                 return
             if pare.is_set():
                 return
