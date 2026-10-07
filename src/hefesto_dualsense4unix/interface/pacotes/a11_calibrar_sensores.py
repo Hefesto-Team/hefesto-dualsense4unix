@@ -57,6 +57,7 @@ DE ONDE VEM CADA IMPORT, porque dois deles surpreendem:
 """
 from __future__ import annotations
 
+import functools
 from typing import Any
 
 import calibrar
@@ -95,6 +96,9 @@ SENSORES = (
 )
 
 BLOCO_DAS_MIRAS = '[data-bloco="miras"]'
+
+#: O separador de uma frase só, o da casa («BT • Navega o PC»).
+PONTO = " • "
 
 _TEM_A_MIRA: bool | None = None
 
@@ -143,6 +147,73 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
         campos[f"mira-inverter-{qual}"] = _selo_do_sensor(
             valor if isinstance(valor, bool) else None)
     return campos
+
+
+#: O QUE O DAEMON DIZ DA MIRA, em cinco chaves (`ipc_handlers._merge_mira`): se nenhuma vem, o bloco
+#: não é o da mira e o resumo não existe.
+CHAVES_DOS_AJUSTES = ("sensibilidade", "zona_morta_graus_s", "gatilho",
+                      "inverter_horizontal", "inverter_vertical")
+
+#: O bloco que a CENA dos geradores (06, 08 e 10) carrega: os números de nascença da Calibrar
+#: (`calibrar.SENSIBILIDADE`, `calibrar.TREMOR`), o «Sempre» e nenhum lado invertido. A cena não
+#: digita número: lê o mesmo dono que o produto.
+def bloco_de_nascenca(ligada: bool = True) -> dict[str, Any]:
+    """O bloco `mira` de um controle com os ajustes de nascença; `ligada` é só o chip."""
+    return {"ligada": ligada, "sensibilidade": calibrar.SENSIBILIDADE[2],
+            "zona_morta_graus_s": calibrar.TREMOR[2], "gatilho": None,
+            "inverter_horizontal": False, "inverter_vertical": False}
+
+
+@functools.lru_cache(maxsize=1)
+def _pecas_do_mapa() -> dict[str, Any]:
+    """O mapa das peças, lido UMA vez (o nome do botão do «segurar» sai dele)."""
+    return dict(calibrar._pecas())
+
+
+def _numero(valor: Any) -> str:
+    ok = isinstance(valor, (int, float)) and not isinstance(valor, bool)
+    return str(round(valor)) if ok else str(calibrar.SEM_LEITURA)
+
+
+def _o_segurar(b: dict[str, Any]) -> str:
+    """O texto do «Só enquanto eu segurar»: «Sempre», o botão, ou o travessão sem leitura."""
+    if "gatilho" not in b:
+        return str(calibrar.SEM_LEITURA)
+    gatilho = b["gatilho"]
+    if gatilho is None:
+        return str(calibrar.ROTULO_SEMPRE)
+    if gatilho in calibrar.REMAPEAVEIS:
+        return str(calibrar.nome_do_botao(gatilho, _pecas_do_mapa()))
+    return str(calibrar.SEM_LEITURA)
+
+
+def resumo_da_mira(bloco: Any, curto: bool = False) -> str | None:
+    """Os quatro ajustes da Mira de UM controle numa frase, pelo bloco `mira` do daemon.
+
+    É o irmão de leitura do `_campos_da_mira`: o MESMO bloco, os mesmos cinco campos, e as
+    palavras são as da Calibrar (`calibrar.ROTULO_*`, `calibrar.nome_do_botao`) — nenhuma nasce
+    aqui. As abas Navegação, Conexões e Perfis dizem os números por esta função, e a Calibrar
+    segue sendo o lugar de MUDAR.
+
+    `curto` é o que cabe num cartão estreito: só os valores, na ordem da Calibrar
+    (`6 • 3 graus/s • Sempre`). O inteiro leva o rótulo de cada um e os lados invertidos
+    (`dica` de quem tem a frase de sobra). Sem o bloco, `None`: a tela não inventa número.
+    """
+    if not isinstance(bloco, dict) or not any(k in bloco for k in CHAVES_DOS_AJUSTES):
+        return None
+    anda = _numero(bloco.get("sensibilidade"))
+    tremor = f"{_numero(bloco.get('zona_morta_graus_s'))} {calibrar.UNIDADE_DO_TREMOR}"
+    segurar = _o_segurar(bloco)
+    if curto:
+        return f"{anda}{PONTO}{tremor}{PONTO}{segurar}"
+    partes = [f"{calibrar.ROTULO_SENSIBILIDADE}: {anda}",
+              f"{calibrar.ROTULO_TREMOR}: {tremor}",
+              f"{calibrar.ROTULO_SEGURAR}: {segurar}"]
+    lados = [rotulo[0].lower() + rotulo[1:] for qual, rotulo, chave in calibrar.INVERTER
+             if bloco.get(chave) is True]
+    if lados:
+        partes.append(f"{calibrar.ROTULO_INVERTER}: {', '.join(lados)}")
+    return PONTO.join(partes)
 
 
 SEM_DONO = ("calibrar", )

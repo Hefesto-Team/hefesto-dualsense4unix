@@ -30,6 +30,13 @@
   h1{font-size:18px;font-weight:700}
   h1 .p{color:var(--pink)}
   .sub{font-size:12.5px;color:var(--texto-mudo);margin-top:3px}
+  /* O PERFIL ATIVO, no canto do topo: cópia do `.perfil-ativo` do `topo.html` (a Calibrar é página
+     avulsa e não tem a fita). Os ajustes da Mira caem no perfil que vale, e este chip diz qual. */
+  .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
+                padding:5px 11px;border-radius:7px;border:1px solid var(--linha);
+                background:var(--panel)}
+  .pa-rot{font-size:10.5px;color:var(--comment)}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
   .voltar{position:absolute;left:20px;top:17px;display:inline-flex;align-items:center;
           gap:6px;padding:5px 11px;border-radius:7px;text-decoration:none;
           border:1px solid var(--border-forte);background:var(--panel);
@@ -225,6 +232,7 @@
     <a class="voltar" href="02-controles.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
     <h1><span class="p">Calibrar sensores de movimento</span></h1>
     <div class="sub">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez.</div>
+    <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
 
   <div class="corpo">

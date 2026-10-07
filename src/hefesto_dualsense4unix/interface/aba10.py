@@ -1093,6 +1093,12 @@ def opts(lista, escolhido, vazio=False, travessao=False):
     return "\n".join(linhas)
 
 
+from pacotes.a11_calibrar_sensores import bloco_de_nascenca as _mira_de_nascenca  # noqa: E402
+from pacotes.a11_calibrar_sensores import resumo_da_mira as _resumo_da_mira  # noqa: E402
+
+_RESUMO_DA_MIRA_NA_CENA = _resumo_da_mira(_mira_de_nascenca()) or ""
+
+
 def _celula_de_agora(c, campo, agora):
     """`(aceso, não_diz, dica)` de uma célula do cenário `AGORA`.
 
@@ -1109,7 +1115,9 @@ def _celula_de_agora(c, campo, agora):
     valor = agora.get(campo, "sim")
     if valor == NAO_DIZ:
         return False, True, DICA_DO_NAO_DIZ
-    return valor == "sim", False, ""
+    # os «comandos virtuais» dizem os ajustes da Mira na dica: a cena leva os de nascença da Calibrar
+    return valor == "sim", False, (_RESUMO_DA_MIRA_NA_CENA
+                             if campo == "movimento" and c.get("conectado", True) else "")
 
 
 def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
@@ -1813,7 +1821,8 @@ def _conferir(html: str) -> None:
                f"{quantas}")
     dicas_das_celulas = re.findall(
         r'<span class="gc" data-hef="guarda\.dica"[^>]*?title="([^"]*)"', html)
-    estranhas = [d for d in dicas_das_celulas if d != DICA_DO_NAO_DIZ
+    estranhas = [d for d in dicas_das_celulas
+                 if d not in (DICA_DO_NAO_DIZ, _RESUMO_DA_MIRA_NA_CENA)
                  and not re.fullmatch(re.escape(DICA_DA_MASCARA).replace(
                      re.escape("{mascara}"), ".+"), d)]
     exigir(not estranhas,

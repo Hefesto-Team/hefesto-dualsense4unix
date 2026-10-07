@@ -110,7 +110,7 @@ def test_conexao_e_bateria_sairam_do_cartao() -> None:
     pac = _pac()
     c = {"uniq": UNIQS[0], "transport": "bt", "battery_pct": 40, "hz_movimento": 20}
     assert set(pac.estado_do_controle(c, {}, {}, _Declaracao())) == {
-        "est-mic", "est-som", "est-modo", "est-visto"}
+        "est-mic", "est-som", "est-modo", "est-visto", "est-mira"}
     assert pac.nome_com_a_bateria("Cosmic Red", 40) == 'Cosmic Red <span class="pt">•</span> 40%'
     assert pac.nome_com_a_bateria("Cosmic Red", None) == "Cosmic Red"
 

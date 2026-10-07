@@ -1123,7 +1123,8 @@
      matar: duas cópias da mesma palavra, livres para divergir. */
   :is(.nav-ctl.vazia, .nav-ctl.off){border:1px solid var(--border-forte);background:transparent}
   :is(.nav-ctl.vazia, .nav-ctl.off) .nav-rot,
-  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-est{color:var(--linha)}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-est,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-mira{visibility:hidden}
   :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .peca,
   :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .corpo,
   :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .miolo *{fill:var(--linha) !important}
@@ -1159,6 +1160,12 @@
            overflow:hidden;text-overflow:ellipsis}
   .nav-est{font-size:10px;color:var(--texto-mudo);text-align:center;white-space:nowrap;
            display:flex;align-items:center;justify-content:center;gap:5px;height:13px}
+  /* A MIRA DO CARTÃO — os quatro ajustes da Calibrar (o quanto um gesto anda, o tremor, o segurar),
+     que na Navegação são o que move o cursor. Duas linhas reservadas em TODO cartão, para o
+     cartão não andar quando a Mira acende; apagada, a linha diz `—`, como o resto da casa diz
+     «nada a dizer»; no lugar vazio ela some. A dica leva a frase inteira. */
+  .nav-mira{font-size:10px;line-height:13px;color:var(--texto-mudo);text-align:center;height:26px;
+            overflow:hidden}
   /* O VERDE, E NÃO O LILÁS: nesta casa o interior lilás quer dizer "esta é a
      peça que a fita escolheu" (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), e a fita aqui
      está apagada. O que este cartão diz é outra coisa — "é este que navega" —,
@@ -2786,6 +2793,7 @@
 </svg>
                 <div class="nav-rot">P<span data-campo="jogador" data-hef-alvo="html">1</span> <span class="pt">•</span> <span data-campo="identidade">Cosmic Red</span></div>
                 <div class="nav-est" data-campo="navega" data-hef-alvo="html"><span class="bolinha"></span>USB <span class="pt">•</span> Navega o PC</div>
+                <div class="nav-mira" data-campo="mira-resumo-dica" data-hef-alvo="atributo" data-hef-atributo="title" title=""><span data-campo="mira-resumo" data-hef-alvo="texto">—</span></div>
               </div>
               <div class="nav-ctl" style="color:#7eb8d4" data-controle="p2" data-conectado="sim" data-campo="plastico" data-hef-alvo="cor">
                 <?xml version="1.0" encoding="utf-8"?>
@@ -3094,6 +3102,7 @@
 </svg>
                 <div class="nav-rot">P<span data-campo="jogador" data-hef-alvo="html">2</span> <span class="pt">•</span> <span data-campo="identidade">Starlight Blue</span></div>
                 <div class="nav-est" data-campo="navega" data-hef-alvo="html">BT <span class="pt">•</span> Só a janela</div>
+                <div class="nav-mira" data-campo="mira-resumo-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre"><span data-campo="mira-resumo" data-hef-alvo="texto">6 • 3 graus/s • Sempre</span></div>
               </div>
               <div class="nav-ctl vazia" data-controle="p3" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
@@ -3402,6 +3411,7 @@
 </svg>
                 <div class="nav-rot">P<span data-campo="jogador" data-hef-alvo="html">3</span> <span class="pt">•</span> <span data-campo="identidade">Desconectado</span></div>
                 <div class="nav-est" data-campo="navega" data-hef-alvo="html">—</div>
+                <div class="nav-mira" data-campo="mira-resumo-dica" data-hef-alvo="atributo" data-hef-atributo="title" title=""><span data-campo="mira-resumo" data-hef-alvo="texto">—</span></div>
               </div>
               <div class="nav-ctl vazia" data-controle="p4" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
@@ -3710,6 +3720,7 @@
 </svg>
                 <div class="nav-rot">P<span data-campo="jogador" data-hef-alvo="html">4</span> <span class="pt">•</span> <span data-campo="identidade">Desconectado</span></div>
                 <div class="nav-est" data-campo="navega" data-hef-alvo="html">—</div>
+                <div class="nav-mira" data-campo="mira-resumo-dica" data-hef-alvo="atributo" data-hef-atributo="title" title=""><span data-campo="mira-resumo" data-hef-alvo="texto">—</span></div>
               </div>
             </div>
           </div>

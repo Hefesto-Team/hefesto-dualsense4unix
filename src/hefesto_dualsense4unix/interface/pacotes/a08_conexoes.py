@@ -6136,15 +6136,19 @@ MODO_NATIVO = "Nativo"
 MODO_PELO_HEFESTO = "Pelo Hefesto"
 
 
-def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok") -> str:
-    """Um selo da linha: «Mic ✓», «Bateria 64% · carregando», «Visto como Xbox 360»."""
+def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok", dica: str = "") -> str:
+    """Um selo da linha: «Mic ✓», «Bateria 64% · carregando», «Visto como Xbox 360».
+
+    `dica` é o `title` do selo inteiro, para o que a linha não cabe dizer (a Mira diz os números).
+    """
     miolo = html.escape(rotulo)
     if valor:
         miolo += f" <b>{html.escape(valor)}</b>"
     if estado == "ok":
         miolo += f' <i class="certo">{CERTO}</i>'
     classe = f"est {estado}" if estado else "est"
-    return f'<span class="{classe}">{miolo}</span>'
+    titulo = f' title="{html.escape(dica, quote=True)}"' if dica else ""
+    return f'<span class="{classe}"{titulo}>{miolo}</span>'
 
 
 def modo_da_fileira(st: dict[str, Any]) -> str:
@@ -6178,7 +6182,7 @@ def modo_da_fileira(st: dict[str, Any]) -> str:
 # D-O-ESCOPO-DO-MIC-SAIU-DA-08 — 25/09/2026, pedido (A-08-O-CHECKUP-ABSORVE-
 def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any],
                        declaracao: Any, modo: str | None = None) -> dict[str, str]:
-    """Os seis selos de UM controle, lidos do daemon vivo e da declaração.
+    """Os selos de UM controle, lidos do daemon vivo e da declaração.
 
     `c` é a entrada do `state_full` (o `ctx.conectados`), `eu` a da mesa (o
     número e a máscara por aparelho), `st` o estado inteiro. Vale para todo
@@ -6214,7 +6218,31 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 
     # (:func:`nome_com_a_bateria`); a queda do rádio aparece no exame e em
     # Rádio e Adaptadores. (noqa-acento: citação literal)
-    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto}
+    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto,
+            "est-mira": selo_da_mira(c, st)}
+
+
+def selo_da_mira(c: dict[str, Any], st: dict[str, Any]) -> str:
+    """O selo «Mira Virtual» da linha: ✓ acesa, «apagada», «Nativo» (chip cinza) ou «—» sem leitura.
+
+    A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01. O `ligada` é o do chip da aba Controles
+    (`a02_controles._mira_ligada`) e o `title` é o resumo dos ajustes da Calibrar
+    (`a11.resumo_da_mira`), pelo mesmo bloco `mira` do daemon. No Modo Nativo o chip fica cinza e a
+    Mira não grava (`a02_controles.MIRA_CINZA_NO_NATIVO`): o selo diz isso, e não o «✓».
+    """
+    import calibrar
+
+    from .a02_controles import MIRA_CINZA_NO_NATIVO, _mira_ligada
+    from .a11_calibrar_sensores import resumo_da_mira
+
+    rotulo = calibrar.ROTULO_DA_MIRA
+    if st.get("native_mode") is True:
+        return selo_do_estado(rotulo, MODO_NATIVO, "", MIRA_CINZA_NO_NATIVO)
+    ligada = _mira_ligada(c)
+    if ligada is None:
+        return selo_do_estado(rotulo, TRAVESSAO_DA_LINHA, "")
+    dica = resumo_da_mira(c.get("mira")) or ""
+    return selo_do_estado(rotulo, "" if ligada else "apagada", "ok" if ligada else "", dica)
 
 
 def nome_com_a_bateria(rotulo: str, pct: object) -> str:

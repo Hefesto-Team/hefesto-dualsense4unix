@@ -745,6 +745,30 @@ def _linha_do_cartao(c: dict[str, Any], primario: bool, cursor: bool = False) ->
     return linha_do_cartao(str(c.get("via") or ""), primario, cursor)
 
 
+#: A linha da mira sem nada a dizer — o lugar vazio, o chip apagado e o Nativo escrevem isto.
+MIRA_VAZIA = {"mira-resumo": "", "mira-resumo-dica": ""}
+
+
+def a_mira_do_cartao(dele: dict[str, Any], ctx: Contexto) -> dict[str, str]:
+    """Os dois campos da linha da mira do cartão: o resumo curto e a dica com o inteiro.
+
+    A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01 (29/09/2026, ela: *«isso aqui tem que tá
+    sincronizado com a aba Conexões, Navegação. e Perfis»*). Na Navegação o giro vira cursor pelos
+    quatro ajustes da Calibrar, e o cartão passa a dizê-los quando a Mira dele está acesa — pelo
+    MESMO leitor da Calibrar (`a11.resumo_da_mira`, sobre o bloco `mira` do daemon) e pelo mesmo
+    `ligada` do chip (`a02._mira_ligada`). Apagada, sem leitura ou no Modo Nativo (o chip fica
+    cinza e a Mira não anda), a linha fica vazia: afirmação sem leitura é chute.
+    """
+    from .a02_controles import _mira_ligada, _nativo
+    from .a11_calibrar_sensores import resumo_da_mira
+
+    bloco = dele.get("mira")
+    if _mira_ligada(dele) is not True or _nativo(ctx):
+        return dict(MIRA_VAZIA)
+    return {"mira-resumo": resumo_da_mira(bloco, curto=True) or "",
+            "mira-resumo-dica": resumo_da_mira(bloco) or ""}
+
+
 def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
     """Este controle, que NÃO navega o PC, move o cursor agora pelo giro?
 
@@ -1366,6 +1390,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "navega": _linha_do_cartao(na_mesa, primario,
                                        move_o_cursor(c, ctx, primario)),
             "identidade": identidade_de(c, ctx.mesa),
+            **a_mira_do_cartao(c, ctx),
         }
         # O NÚMERO DO CARTÃO É O VIVO (`casa["jogador"]`, o mesmo das lâmpadas da 02 e do chip da
         # fita), e não o assento que o gerador cravou. Sem número vivo ele não sai.
@@ -1412,7 +1437,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": cards,
         "mesa": mesa,
-        LUGAR_VAZIO: {"identidade": SEM_NINGUEM_AQUI, "navega": TRAVESSAO},
+        LUGAR_VAZIO: {"identidade": SEM_NINGUEM_AQUI, "navega": TRAVESSAO, **MIRA_VAZIA},
         MARCAS_DO_LUGAR: {
             "navega": [str(chefe.get("uniq") or "")] if chefe else [],
             "vazia": sorted(TODOS_OS_LUGARES - {str(m.get("pref") or "") for m in ctx.mesa}),

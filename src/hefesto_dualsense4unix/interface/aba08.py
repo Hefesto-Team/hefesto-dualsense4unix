@@ -21,6 +21,7 @@ from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas  # noqa: E402
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens  # noqa: E402
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
+from pacotes.a11_calibrar_sensores import bloco_de_nascenca as _mira_de_nascenca  # noqa: E402
 
 def _valor(no, ja):
     """O valor de um nó de AST, resolvendo NOME contra o que já foi lido."""
@@ -552,7 +553,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-abre .ds-mini{flex:0 0 76px;width:76px;height:auto}
   .gc-nome{flex:0 1 auto;min-width:0;max-width:100%;font-size:12.5px;font-weight:600;color:var(--texto-suave);
            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* OS SEIS SELOS, UM POR LINHA. O selo é do produto
+  /* OS SELOS, UM POR LINHA. O selo é do produto
      (`a08_conexoes.selo_do_estado`: o rótulo, o valor em `<b>` e o ✓ em
      `<i class="certo">`), e a linha só o arruma: o rótulo à esquerda e o que
      vier depois dele empurrado para a direita. */
@@ -1087,7 +1088,7 @@ def nome_do_lugar_vazio(c):
 
 
 #: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
-ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto")
+ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-mira")
 DONO_DA_CENA = {"p1": "Vitória"}
 PERFIL_DA_CENA = {"p1": "tudo_ligado", "p2": "bateria_longa"}
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orc  # noqa: E402
@@ -1111,12 +1112,17 @@ _DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace
 DICAS_DA_CENA = _dicas_da_cena()
 
 
+#: Quem tem a Mira acesa na cena: o P1, com os números de nascença da Calibrar (lidos de lá).
+MIRA_ACESA_NA_CENA = {"p1"}
+
+
 def _estado_da_bancada(c):
-    """Os seis selos da cena, pelo MESMO dono que o produto chama a cada tique."""
+    """Os cinco selos da cena, pelo MESMO dono que o produto chama a cada tique."""
     radio = e_radio(c)
     vivo = {"uniq": "", "transport": "bt" if radio else "usb",
             "battery_pct": DA_CONTROLES[c["pref"]]["bat"], "hz_movimento": 480,
-            "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False}}
+            "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False},
+            "mira": _mira_de_nascenca(c["pref"] in MIRA_ACESA_NA_CENA)}
     return _pacote08.estado_do_controle(vivo, {"mascara": c["mascara"]}, {"native_mode": False},
                                         _DECLARACAO_DA_BANCADA, _MODO_DA_CENA)
 

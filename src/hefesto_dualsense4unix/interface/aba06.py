@@ -48,6 +48,8 @@ from pacotes.a06_navegacao import (  # noqa: E402
     rotulo_de_quem_navega,
 )
 from pacotes.a06_navegacao import linha_do_cartao as _linha_do_cartao  # noqa: E402
+from pacotes.a11_calibrar_sensores import bloco_de_nascenca as _mira_de_nascenca  # noqa: E402
+from pacotes.a11_calibrar_sensores import resumo_da_mira as _resumo_da_mira  # noqa: E402
 from pacotes.a06_navegacao import SEM_TROCA as _SEM_TROCA_DO_PACOTE  # noqa: E402
 
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
@@ -250,7 +252,8 @@ CSS = CSS_GLIFO + """
      matar: duas cópias da mesma palavra, livres para divergir. */
   :is(.nav-ctl.vazia, .nav-ctl.off){border:1px solid var(--border-forte);background:transparent}
   :is(.nav-ctl.vazia, .nav-ctl.off) .nav-rot,
-  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-est{color:var(--linha)}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-est,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-mira{visibility:hidden}
   :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .peca,
   :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .corpo,
   :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .miolo *{fill:var(--linha) !important}
@@ -286,6 +289,12 @@ CSS = CSS_GLIFO + """
            overflow:hidden;text-overflow:ellipsis}
   .nav-est{font-size:10px;color:var(--texto-mudo);text-align:center;white-space:nowrap;
            display:flex;align-items:center;justify-content:center;gap:5px;height:13px}
+  /* A MIRA DO CARTÃO — os quatro ajustes da Calibrar (o quanto um gesto anda, o tremor, o segurar),
+     que na Navegação são o que move o cursor. Duas linhas reservadas em TODO cartão, para o
+     cartão não andar quando a Mira acende; apagada, a linha diz `—`, como o resto da casa diz
+     «nada a dizer»; no lugar vazio ela some. A dica leva a frase inteira. */
+  .nav-mira{font-size:10px;line-height:13px;color:var(--texto-mudo);text-align:center;height:26px;
+            overflow:hidden}
   /* O VERDE, E NÃO O LILÁS: nesta casa o interior lilás quer dizer "esta é a
      peça que a fita escolheu" (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), e a fita aqui
      está apagada. O que este cartão diz é outra coisa — "é este que navega" —,
@@ -1309,6 +1318,22 @@ def desenho(c, **kw):
 VAZIO = "—"
 
 
+#: Os cartões da cena com a Mira acesa: o P2 (o P1 navega e o dele diria o mesmo cursor). Os números
+#: são os de nascença da Calibrar, lidos de lá.
+MIRA_ACESA_NA_CENA = {"p2"}
+
+
+def _mira_do_cartao(c):
+    """`(curto, inteiro)` da linha da mira da CENA: o travessão com a Mira apagada.
+
+    O piloto escreve `—` num valor vazio (`escrever`), e a cena diz o mesmo que o produto dirá.
+    """
+    if c["pref"] not in MIRA_ACESA_NA_CENA:
+        return VAZIO, ""
+    bloco = _mira_de_nascenca()
+    return _resumo_da_mira(bloco, curto=True), _resumo_da_mira(bloco)
+
+
 def controle(c):
     """UM lugar da mesa — cheio ou vazio, pela MESMA função e com os MESMOS
     endereços. O `conectado` decide só duas coisas: (a) a classe e os atributos
@@ -1414,6 +1439,7 @@ def controle(c):
     luz = {"luz": _hex(player_slot_color(n))} if conectado else {}
     identidade = c["nome"] if conectado else SEM_NINGUEM_AQUI
     estado = _linha_do_cartao(c["via"], navega) if conectado else VAZIO
+    mira = _mira_do_cartao(c) if conectado else (VAZIO, "")
     return (
         f'              <div class="{classe}"{tinta}'
         f' data-controle="{c.get("uniq") or c["pref"]}"'
@@ -1424,6 +1450,9 @@ def controle(c):
         f'<span data-campo="identidade">{identidade}</span></div>\n'
         f'                <div class="nav-est" data-campo="navega"'
         f' data-hef-alvo="html">{estado}</div>\n'
+        f'                <div class="nav-mira" data-campo="mira-resumo-dica" data-hef-alvo="atributo"'
+        f' data-hef-atributo="title" title="{mira[1]}"><span data-campo="mira-resumo"'
+        f' data-hef-alvo="texto">{mira[0]}</span></div>\n'
         f'              </div>')
 
 

@@ -2792,8 +2792,22 @@ def o_agora_da_linha(linha: dict[str, Any], state: dict[str, Any]
         elif secao == "mascara" and not aceso:
             fora.append(("", DICA_DA_MASCARA.format(mascara=linha.get("mascara"))))
         else:
-            fora.append(("sim" if aceso else "", ""))
+            fora.append(("sim" if aceso else "", _dica_do_agora(secao, entrada)))
     return fora
+
+
+def _dica_do_agora(secao: str, entrada: dict[str, Any]) -> str:
+    """A dica de uma célula que tem o que dizer além de aceso ou apagado.
+
+    Hoje só os «comandos virtuais» (A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01): o `title` diz
+    os quatro ajustes da Mira DESTE controle, pelo leitor da Calibrar (`a11.resumo_da_mira`) sobre o
+    bloco `mira` do daemon. Sem o bloco, nada: a tela não inventa número.
+    """
+    if secao != "movimento":
+        return ""
+    from .a11_calibrar_sensores import resumo_da_mira
+
+    return resumo_da_mira(entrada.get("mira")) or ""
 
 
 def _entrada_viva(conectados: Any, uniq: str) -> dict[str, Any]:
