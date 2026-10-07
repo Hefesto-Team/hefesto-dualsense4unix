@@ -40,7 +40,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
     # O ruff fica pinado: uma versão nova muda regras e reprova código que passava.
-    "ruff==0.15.20",
+    "ruff==0.16.10",
     "mypy>=1.7",
     "types-python-xlib",
     # Os testes do workflow de release leem os YAML do GitHub; sem o PyYAML eles pulam no CI.
