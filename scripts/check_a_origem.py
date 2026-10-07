@@ -25,6 +25,13 @@ Faixa dos commits do tamanho: ``--base REV``, ou ``HEFESTO_BASE_DA_LEVA``, ou a
 base da leva (``merge-base HEAD dev``), ou, no próprio ``dev``, o último commit
 que mexeu no teto. Uma ``Origem:`` ainda sem commit entra por
 ``--origem ID`` ou ``HEFESTO_ORIGEM``.
+
+O pagamento viaja com o crescimento. Na integração, o crescimento passa por causa da
+``Origem:`` da faixa; no ``dev``, depois do merge ff, a faixa é vazia e o mesmo número
+reprova. Por isso o fecho roda ``--registrar-subida`` ANTES do merge: se o tamanho passou
+do piso e a faixa o paga, o piso sobe no caderno, com a razão gerada (as ``Origem:`` que
+pagaram), e o ``dev`` herda o piso novo. Sem ``Origem:`` válida nenhum piso sobe;
+``--registrar-subida --conferir`` diz o que registraria, sem gravar.
 """
 
 from __future__ import annotations
@@ -461,6 +468,29 @@ def avaliar_o_tamanho(veredito: Veredito, raiz: Path, base: str | None,
                    f"{MAPA} ou de uma decisão do {DECISOES}.")
 
 
+def registrar_subida(catraca: Catraca, raiz: Path, base: str | None, origem: str | None,
+                     so_conferir: bool = False) -> tuple[int, str]:
+    """Sobe o piso do tamanho quando ele passou do piso E a faixa o paga. ``(rc, relato)``.
+
+    0: nada a registrar, ou registrou (com ``so_conferir``, 1 diz «registraria»).
+    1: o tamanho passou do piso e a faixa não o paga, e nenhum piso sobe.
+    """
+    veredito = next(v for v in catraca.comparar([TAMANHO]) if v.medida.nome == TAMANHO)
+    if veredito.estado != "VERMELHO" or veredito.numero is None or veredito.piso.numero is None:
+        return 0, f"tamanho: nada a registrar (hoje={veredito.numero} piso={veredito.piso.numero})"
+    passa, relato = avaliar_o_tamanho(veredito, raiz, base, origem)
+    if not passa:
+        return 1, f"{relato}\n      nenhum piso sobe sem Origem: a subida NÃO foi registrada."
+    topo = subprocess.run(
+        ["git", "rev-parse", "--short=12", "HEAD"], cwd=raiz, capture_output=True,
+        text=True, check=False).stdout.strip() or "sem git"
+    razao = f"{relato}; registrado no fecho, topo {topo}"
+    if so_conferir:
+        return 1, f"registraria: {razao}"
+    catraca.forcar_piso(TAMANHO, razao)
+    return 0, f"registrada: {razao}"
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -482,9 +512,28 @@ def main(argv: list[str] | None = None) -> int:
     p = montar_argumentos(__doc__.split("\n", 1)[0])
     p.add_argument("--base", default=None, help="a faixa dos commits do tamanho (base..HEAD)")
     p.add_argument("--origem", default=None, help="uma Origem ainda sem commit")
+    p.add_argument("--registrar-subida", action="store_true",
+                   help="o fecho: sobe o piso do tamanho quando a faixa o paga (grava a razão no caderno)")
+    p.add_argument("--conferir", action="store_true",
+                   help="com --registrar-subida: diz o que registraria, sem gravar (sai 1 se registraria)")
     a = p.parse_args(argv)
     raiz = Path(a.raiz) if a.raiz else RAIZ
     catraca = CatracaDaOrigem(raiz / CADERNO, MEDIDAS, raiz)
+    if a.conferir and not a.registrar_subida:
+        print("RECUSADO: --conferir só vale com --registrar-subida", file=sys.stderr)
+        return 2
+    if a.registrar_subida:
+        if a.aceitar is not None or a.forcar_piso:
+            print("RECUSADO: --registrar-subida não se mistura com --aceitar nem --forcar-piso",
+                  file=sys.stderr)
+            return 2
+        try:
+            rc, relato = registrar_subida(catraca, raiz, a.base, a.origem, a.conferir)
+        except CatracaTorta as erro:
+            print(f"RECUSADO: {erro}", file=sys.stderr)
+            return 2
+        print(f"  {relato}")
+        return rc
     if a.aceitar is not None or a.forcar_piso:
         return executar(catraca, a, "A catraca da origem")
     try:

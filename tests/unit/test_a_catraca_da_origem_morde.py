@@ -306,3 +306,184 @@ def test_a_faixa_e_a_leva_e_nao_encolhe_quando_o_teto_se_regrava(arvore):
     _git(raiz, "checkout", "-q", "dev")
     _git(raiz, "merge", "-q", "--ff-only", "integra/leva")
     assert rodar(paga=False) == 1, "no dev, a faixa vazia não pode pagar o que o teto não subiu"
+
+
+# 6. O pagamento viaja com o crescimento: o fecho registra a subida ANTES do merge ff
+
+CADERNO = "docs/data/a-catraca-da-origem.json"
+FECHO = RAIZ / "docs" / "process" / "ferramentas-da-leva" / "fecho.sh"
+PAGA = "feat(x): cresce\n\nOrigem: audio.alto_falante"
+
+
+def _caderno(raiz: Path) -> bytes:
+    return (raiz / CADERNO).read_bytes()
+
+
+def _integracao(raiz: Path, mensagem: str) -> None:
+    """O `dev` com o teto gravado e uma integração que cresce com a `mensagem` no commit.
+
+    Depois do crescimento a integração ainda regrava o teto (outra medida desceu): é o que,
+    no `dev`, tira a `Origem:` da faixa, que passa a começar no último commit do teto.
+    """
+    _git(raiz, "init", "-q", "-b", "dev")
+    _git(raiz, "add", "-A")
+    _git(raiz, "commit", "-q", "-m", "base")
+    _git(raiz, "checkout", "-q", "-b", "integra/leva")
+    _cresce(raiz)
+    _git(raiz, "add", "-A")
+    _git(raiz, "commit", "-q", "-m", mensagem)
+    teto = raiz / CADERNO
+    teto.write_text(teto.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    _git(raiz, "add", CADERNO)
+    _git(raiz, "commit", "-q", "-m", "chore(catraca): o teto se regravou")
+
+
+def _desce_ao_dev(raiz: Path) -> None:
+    _git(raiz, "checkout", "-q", "dev")
+    _git(raiz, "merge", "-q", "--ff-only", "integra/leva")
+
+
+def test_o_passo_do_fecho_leva_o_pagamento_ao_dev(arvore):
+    """O estado de 07/10: pago na integração, vermelho no `dev`. Com o passo, o `dev` herda."""
+    raiz, _mod, rodar = arvore
+    antes = _teto(raiz, "tamanho")["piso"]
+    _integracao(raiz, PAGA)
+    assert rodar("--registrar-subida", paga=False) == 0
+    tamanho = _teto(raiz, "tamanho")
+    assert tamanho["piso"] > antes
+    subida = tamanho["subidas"][-1]
+    assert (subida["de"], subida["para"]) == (antes, tamanho["piso"])
+    assert "audio.alto_falante" in subida["razao"], "a razão diz as Origem que pagaram"
+    _git(raiz, "add", CADERNO)
+    _git(raiz, "commit", "-q", "-m", "chore(catraca): o piso sobe")
+    assert rodar(paga=False) == 0, "na integração, com o teto novo"
+    _desce_ao_dev(raiz)
+    assert rodar(paga=False) == 0, "no dev, a faixa vazia não precisa pagar o que o teto já subiu"
+
+
+def test_sem_o_passo_do_fecho_o_mesmo_dev_fica_vermelho(arvore):
+    """A mordida: arrancado o passo, o `dev` fica vermelho como hoje (a faixa dele é vazia)."""
+    raiz, _mod, rodar = arvore
+    _integracao(raiz, PAGA)
+    assert rodar(paga=False) == 0, "a integração passa: a faixa traz a Origem"
+    _desce_ao_dev(raiz)
+    assert rodar(paga=False) == 1
+
+
+def test_crescimento_sem_origem_nao_sobe_piso_nenhum(arvore):
+    raiz, _mod, rodar = arvore
+    _integracao(raiz, "feat(x): cresce sem dizer por quê")
+    antes = _caderno(raiz)
+    assert rodar("--registrar-subida", paga=False) == 1
+    assert _caderno(raiz) == antes
+
+
+def test_origem_que_ninguem_cadastrou_tambem_nao_sobe_piso(arvore):
+    raiz, _mod, rodar = arvore
+    _integracao(raiz, "feat(x): cresce\n\nOrigem: id-que-ninguem-cadastrou")
+    antes = _caderno(raiz)
+    assert rodar("--registrar-subida", paga=False) == 1
+    assert _caderno(raiz) == antes
+
+
+def test_registrar_a_subida_e_idempotente_e_sem_crescimento_nao_faz_nada(arvore):
+    raiz, _mod, rodar = arvore
+    inicial = _caderno(raiz)
+    assert rodar("--registrar-subida", paga=False) == 0, "sem crescimento: nada a registrar"
+    assert _caderno(raiz) == inicial
+    _integracao(raiz, PAGA)
+    assert rodar("--registrar-subida", paga=False) == 0
+    registrado = _caderno(raiz)
+    assert registrado != inicial
+    assert rodar("--registrar-subida", paga=False) == 0
+    assert _caderno(raiz) == registrado, "a segunda corrida não acrescenta subida"
+    assert len(_teto(raiz, "tamanho")["subidas"]) == 1
+
+
+def test_o_conferir_diz_o_que_registraria_sem_gravar(arvore):
+    raiz, _mod, rodar = arvore
+    _integracao(raiz, PAGA)
+    antes = _caderno(raiz)
+    assert rodar("--registrar-subida", "--conferir", paga=False) == 1
+    assert _caderno(raiz) == antes
+    assert rodar("--conferir", paga=False) == 2, "--conferir sozinho não é um modo"
+    assert rodar("--registrar-subida", "--aceitar", paga=False) == 2
+    assert rodar("--registrar-subida", "--forcar-piso", "tamanho", "x", paga=False) == 2
+    assert _caderno(raiz) == antes
+
+
+def _fecho_de_brinquedo(raiz: Path, rodar, mensagem: str, tmp: Path):
+    """O `fecho.sh` de verdade, com o brinquedo como integração e uma casa de mentira."""
+    import shutil
+
+    if not FECHO.exists():
+        pytest.skip("o fecho.sh mora em docs/process, que o git ignora: clone limpo não o tem")
+    for nome in ("check_a_origem.py", "catraca.py"):
+        destino = raiz / "scripts" / nome
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(RAIZ / "scripts" / nome, destino)
+    assert rodar("--forcar-piso", "tamanho", "a base do teste traz os dois scripts") == 0
+    _integracao(raiz, mensagem)
+    casa = tmp / "casa"
+    casa.mkdir()
+    (casa / "leva.env").write_text(
+        f"MESA={raiz}\nVOO={tmp}\nINT={raiz}\nBRANCH=integra/leva\nPY={sys.executable}\n",
+        encoding="utf-8")
+    ambiente = {
+        **os.environ, "LEVA": "teste", "CASA": str(casa), "TMPDIR": str(tmp), "HOME": str(raiz),
+        "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@exemplo.invalid",
+        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@exemplo.invalid",
+    }
+
+    def fecho(*args: str):
+        import subprocess
+
+        return subprocess.run(["bash", str(FECHO), *args], cwd=raiz, env=ambiente,
+                              capture_output=True, text=True, check=False)
+
+    return fecho
+
+
+def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_factory):
+    raiz, _mod, rodar = arvore
+    fecho = _fecho_de_brinquedo(
+        raiz, rodar, PAGA, tmp_path_factory.mktemp("fecho"))
+    topo = _git(raiz, "rev-parse", "HEAD")
+    conferido = fecho("--so", "catraca", "--conferir")
+    assert conferido.returncode == 1 and "rodaria: catraca" in conferido.stdout, conferido.stdout
+    assert _git(raiz, "rev-parse", "HEAD") == topo, "o --conferir não commita"
+    r = fecho("--so", "catraca")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "piso do tamanho registrado e commitado" in r.stdout
+    assert _git(raiz, "rev-parse", "HEAD^{tree}")[:12] in r.stdout, "os recibos seguintes são da árvore nova"
+    assert _git(raiz, "log", "-1", "--format=%s").startswith("chore(catraca)")
+    assert _git(raiz, "show", "--name-only", "--format=").splitlines() == [CADERNO]
+    commit = _git(raiz, "rev-parse", "HEAD")
+    outra = fecho("--so", "catraca")
+    assert outra.returncode == 0 and "o piso não precisou subir" in outra.stdout, outra.stdout
+    assert _git(raiz, "rev-parse", "HEAD") == commit, "idempotente: a segunda corrida não commita"
+    _desce_ao_dev(raiz)
+    assert rodar(paga=False) == 0, "o dev que recebe o merge ff do fecho fica verde"
+
+
+def test_o_fecho_sem_o_passo_catraca_deixa_o_dev_vermelho(arvore, tmp_path_factory):
+    """A mordida do fecho.sh: `--sem catraca` não registra nada, e o dev reprova como hoje."""
+    raiz, _mod, rodar = arvore
+    fecho = _fecho_de_brinquedo(
+        raiz, rodar, PAGA, tmp_path_factory.mktemp("fecho"))
+    topo = _git(raiz, "rev-parse", "HEAD")
+    assert fecho("--so", "catraca", "--sem", "catraca").returncode == 0
+    assert _git(raiz, "rev-parse", "HEAD") == topo
+    _desce_ao_dev(raiz)
+    assert rodar(paga=False) == 1
+
+
+def test_o_fecho_para_no_crescimento_sem_origem(arvore, tmp_path_factory):
+    raiz, _mod, rodar = arvore
+    fecho = _fecho_de_brinquedo(
+        raiz, rodar, "feat(x): cresce sem dizer por quê", tmp_path_factory.mktemp("fecho"))
+    topo = _git(raiz, "rev-parse", "HEAD")
+    antes = _caderno(raiz)
+    r = fecho("--so", "catraca")
+    assert r.returncode == 1 and "VERMELHO em catraca" in r.stdout, r.stdout
+    assert _git(raiz, "rev-parse", "HEAD") == topo and _caderno(raiz) == antes
