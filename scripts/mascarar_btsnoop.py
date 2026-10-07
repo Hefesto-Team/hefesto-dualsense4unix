@@ -16,6 +16,7 @@ _OUIS_REAIS_OCTETOS = (
     ("14", "3a", "9a"),
     ("d4", "2f", "4b"),
     ("44", "46", "48"),
+    ("ac", "a7", "f1"),
 )
 
 ASSINATURA_BTSNOOP = b"btsnoop\x00"

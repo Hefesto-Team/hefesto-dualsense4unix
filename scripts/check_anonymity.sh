@@ -57,7 +57,8 @@ import sys
 # scripts/mascarar_btsnoop.py. tests/unit/test_mascarar_btsnoop.py reprova a
 # divergência entre as três cópias.
 OUIS = ("d84489", "a0fa9c", "e417d8", "e0f6b5",
-        "48b25d", "143a9a", "d42f4b", "444648")
+        "48b25d", "143a9a", "d42f4b", "444648",
+        "aca7f1")
 # Imagem e catálogo compilado ficam de fora: três bytes casam por acaso em dado
 # comprimido, e PNG que muda a cada captura de tela geraria alarme intermitente.
 # `.svg` SAIU daqui em 26/08/2026, e a razão é a mesma que tirou o `.svg` do
