@@ -83,3 +83,39 @@ def test_leitura_sem_nenhum_app_nao_conclui_nada(tmp_path: Path) -> None:
     amb = _lar(tmp_path, {}, vistos=["620"])
 
     assert _linha(amb)[0] == "[ OK ]"
+
+
+def test_linha_com_o_par_estendido_nao_e_regressao(tmp_path: Path) -> None:
+    """A pergunta é a da sentinela: a linha que ela chama de intocável não vira contrato quebrado.
+
+    MORDIDA: volte a sonda a uma regra própria (``WRAPPER_PREFIX not in valor``) e este reprova.
+    """
+    estendida = 'SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%'
+    amb = _lar(tmp_path, {"620": slo._vdf_escape(estendida)}, vistos=["620"])
+
+    assert _linha(amb)[0] == "[ OK ]"
+
+
+def test_a_recusa_mora_onde_o_xdg_config_home_diz(tmp_path: Path) -> None:
+    amb = _lar(tmp_path, {"620": "%command%"}, vistos=["620"])
+    config = tmp_path / "config-noutro-lugar"
+    slo.marcar_jogo_sem_wrapper(620, path=slo.sem_wrapper_path(config))
+    amb = cf.Ambiente(
+        rodar=amb.rodar, home=amb.home, env={"XDG_CONFIG_HOME": str(config)}, raiz=amb.raiz
+    )
+
+    assert _linha(amb)[0] == "[ OK ]"
+
+
+def test_o_registro_mora_onde_o_xdg_state_home_diz(tmp_path: Path) -> None:
+    amb = _lar(tmp_path, {"620": "%command%"}, vistos=[])
+    estado = tmp_path / "estado-noutro-lugar"
+    sen.gravar_registro(["620"], path=estado / "hefesto-dualsense4unix" / sen.REGISTRO_BASENAME)
+    amb = cf.Ambiente(
+        rodar=amb.rodar, home=amb.home, env={"XDG_STATE_HOME": str(estado)}, raiz=amb.raiz
+    )
+
+    tag, msg = _linha(amb)
+
+    assert tag == "[WARN]"
+    assert "620" in msg

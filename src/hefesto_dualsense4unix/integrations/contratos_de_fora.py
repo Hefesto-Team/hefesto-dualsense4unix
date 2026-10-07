@@ -196,29 +196,34 @@ def _raizes_da_steam(amb: Ambiente) -> list[Path]:
     ]
 
 
-def _perderam_o_wrapper(amb: Ambiente, texto: str) -> list[str]:
+def _pasta_xdg(amb: Ambiente, variavel: str, padrao: str) -> Path:
+    """A pasta XDG do lar que a sonda enxerga: a variável do ambiente dele, ou o padrão no lar."""
+    valor = amb.env.get(variavel, "").strip()
+    return Path(valor) if valor else amb.home / padrao
+
+
+def _perderam_o_wrapper(amb: Ambiente, conf: Path) -> list[str]:
     """Os jogos que o Hefesto JÁ viu com o wrapper e que a Steam devolveu sem ele.
 
-    O registro é o da sentinela (``wrapper-visto.json``): a Steam é a dona do arquivo e já apagou
-    o ``hefesto-launch`` de um jogo sem aviso (17/09/2026). Jogo que ela recusou fica de fora, e
-    leitura sem nenhum app (a Steam no meio da regravação) não conclui nada.
+    A pergunta é a da sentinela (``censo_do_wrapper``, a ``regressao`` dela), e não uma segunda
+    cópia da regra: a Steam é a dona do arquivo e já apagou o ``hefesto-launch`` de um jogo sem
+    aviso (17/09/2026). Jogo recusado, arquivo da Steam Flatpak/Snap (onde o wrapper não se
+    escreve) e linha com o par estendido ficam de fora como lá; leitura sem nenhum app (a Steam no
+    meio da regravação) não conclui nada. Só leitura: o registro não é anotado daqui.
     """
-    from .sentinela_do_wrapper import ler_registro
-    from .steam_launch_options import (
-        WRAPPER_PREFIX,
-        ler_jogos_sem_wrapper,
-        read_apps_by_appid,
-        sem_wrapper_path,
-    )
+    from .sentinela_do_wrapper import REGISTRO_BASENAME, censo_do_wrapper
+    from .steam_launch_options import ler_jogos_sem_wrapper, sem_wrapper_path
 
-    apps = read_apps_by_appid(texto)
-    recusados = set(ler_jogos_sem_wrapper(sem_wrapper_path(amb.home / ".config")))
-    vistos = ler_registro(home=amb.home)
-    return sorted(
-        appid
-        for appid, valor in apps.items()
-        if appid in vistos and appid not in recusados and WRAPPER_PREFIX not in (valor or "")
+    config = _pasta_xdg(amb, "XDG_CONFIG_HOME", ".config")
+    estado = _pasta_xdg(amb, "XDG_STATE_HOME", ".local/state")
+    censo = censo_do_wrapper(
+        home=amb.home,
+        vdfs=[conf],
+        registro=estado / "hefesto-dualsense4unix" / REGISTRO_BASENAME,
+        recusados=ler_jogos_sem_wrapper(sem_wrapper_path(config)),
+        anotar=False,
     )
+    return sorted(j.appid for j in censo.regressoes)
 
 
 def _sonda_steam(amb: Ambiente) -> Resultado:
@@ -237,7 +242,7 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
                 continue
             if '"UserLocalConfigStore"' in texto[:4096]:
                 abriu = True
-                perderam += _perderam_o_wrapper(amb, texto)
+                perderam += _perderam_o_wrapper(amb, conf)
     if abriu and perderam:
         mostrados = ", ".join(sorted(set(perderam))[:5])
         return Resultado(
