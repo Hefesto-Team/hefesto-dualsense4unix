@@ -413,16 +413,29 @@ def _plastico(c):
     return "var(--border-forte)"
 
 
+def _quem(c):
+    """Quem joga com o controle: o que o pacote trouxe (`<nome> • P<n>`), ou o «P<n>» da cena."""
+    if c.get("quem"):
+        return c["quem"]
+    if c.get("jogador"):
+        return f"P{monta.numero_do_jogador(c['jogador'])}"
+    return SEM_LEITURA
+
+
 def controle(c):
-    """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias."""
-    jogador = c.get("jogador") or SEM_LEITURA
+    """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias.
+
+    A PRIMEIRA LINHA DIZ QUEM JOGA (07/10/2026, a [45] dela): o nome que ela deu ao controle e o
+    número, ou só o número sem nome. A Calibrar não tem lâmpadas, por isso leva os dois. «Player N»
+    e o «Sony •» saíram para a gramática da casa (`P<n>`).
+    """
     nome = c.get("nome") or SEM_LEITURA
     via = c.get("via") or SEM_LEITURA
     return f'''          <div class="ctr" style="--plastico:{_plastico(c)}"
                data-controle="{c.get("pref") or ""}">
             <div class="ctr-topo">
               {_svg(c)}
-              <span class="nome">Sony <span class="pt">•</span> <b>Player {jogador}</b><br>{nome} <span class="pt">•</span> {via}</span>
+              <span class="nome"><b data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</b><br>{nome} <span class="pt">•</span> {via}</span>
               <span class="selo"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span></span>
             </div>
             <div class="leitura">
@@ -476,9 +489,8 @@ def _inverter():
 
 def mira(c):
     """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu"""
-    jogador = c.get("jogador") or SEM_LEITURA
     return (f'          <div class="mira" data-controle="{c.get("pref") or ""}">\n'
-            f'            <span class="quem">Player {jogador}</span>\n'
+            f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
             f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'
             f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
             f'{_segurar()}\n'

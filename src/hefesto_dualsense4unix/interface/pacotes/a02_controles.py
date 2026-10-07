@@ -123,7 +123,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     texto_motion,
     uniq_do_entry,
 )
-from hefesto_dualsense4unix.interface.monta import luzinhas
+from hefesto_dualsense4unix.interface.monta import dono_na_linha, luzinhas
 from hefesto_dualsense4unix.interface.sensores import (
     ESCALA_ACCEL_G,
     ESCALA_GYRO_GRAUS_S,
@@ -1355,10 +1355,34 @@ def volume_em_padrao(ctx: Contexto, uniq: str, lido: tuple[int, bool | None] | N
     return lido is not None and percentual_do_volume(lido[0]) >= 100
 
 
+def nomes_de_quem_joga() -> dict[str, str]:
+    """``{endereço: nome}`` que ela deu a cada controle — o leitor da 08, chamado e não copiado.
+
+    É a leitura em fundo do ``Alias`` do BlueZ (``_em_fundo``, validade de 3 s, o mesmo fundo da
+    seção do rádio): não bloqueia o tique e não abre viagem nova enquanto o fundo está fresco.
+    O import é tardio porque a 08 importa esta aba (``mudo``).
+    """
+    from . import a08_conexoes
+
+    return a08_conexoes._nomes_dos_donos()
+
+
 def _so_se_a_pagina_tiver(campos: dict[str, Any]) -> dict[str, Any]:
     """Dos `campos`, só os que a página publicada tem onde pôr."""
     tem = _enderecos_da_pagina()
     return {k: v for k, v in campos.items() if k in tem}
+
+
+def _quem_joga(nomes: dict[str, str], uniq: str, jogador: Any) -> dict[str, Any]:
+    """Os campos `jogador` e `quem-joga` do cabeçalho de UM controle; só os que têm o que dizer."""
+    numero = jogador if isinstance(jogador, int) and not isinstance(jogador, bool) else None
+    campos: dict[str, Any] = {}
+    if numero and numero > 0:
+        campos["jogador"] = str(numero)
+    quem = dono_na_linha(nomes, uniq, numero if numero and numero > 0 else None, em_html=True)
+    if quem:
+        campos["quem-joga"] = quem
+    return campos
 
 
 @registrar("02-controles.html")
@@ -1387,6 +1411,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             if no:
                 nos_das_ondas[no] = uniq
     _seguir_as_ondas(nos_das_ondas)
+    nomes = nomes_de_quem_joga()
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         # `is_primary` traz `inputs`; o outro vem `None`
@@ -1533,6 +1558,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # não uma leitura do aparelho. O `state_full` publica o
                 # `player_slot` e não os `player_leds`; um perfil que escreva as
                 "lampadas": luzinhas(int(casa.get("jogador") or 0) or 1),
+                # O NÚMERO E QUEM JOGA, do mesmo dono das lâmpadas (`casa["jogador"]`, lido uma
+                # vez): sem número vivo ele não sai (o `or 1` de cima inventaria um P1).
+                **_so_se_a_pagina_tiver(_quem_joga(nomes, uniq, casa.get("jogador"))),
                 # O NOME É DE `identidade_de`, que é o dono da ordem das quatro
                 "peca": "" if nome_na_tela == ultimo_degrau else nome_na_tela,
                 "via": via_na_tela,

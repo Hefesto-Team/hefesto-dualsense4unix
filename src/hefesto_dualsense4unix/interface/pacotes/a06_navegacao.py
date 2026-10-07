@@ -1367,6 +1367,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                                        move_o_cursor(c, ctx, primario)),
             "identidade": identidade_de(c, ctx.mesa),
         }
+        # O NÚMERO DO CARTÃO É O VIVO (`casa["jogador"]`, o mesmo das lâmpadas da 02 e do chip da
+        # fita), e não o assento que o gerador cravou. Sem número vivo ele não sai.
+        numero = na_mesa.get("jogador")
+        if isinstance(numero, int) and not isinstance(numero, bool) and numero > 0:
+            cards[uniq]["jogador"] = str(numero)
     plastico = [cor_do_plastico(str(m.get("cor") or "")) for m in ctx.mesa]
     # pede, teria QUEBRADO o desenho — e foi por isso que a página passou a
     desenho = [colorway_do_aparelho(str(m.get("cor") or "")) for m in ctx.mesa]

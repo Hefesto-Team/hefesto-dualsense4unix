@@ -66,6 +66,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     accel_do_inputs,
     gyro_do_inputs,
 )
+from hefesto_dualsense4unix.interface.monta import quem_joga_com_o_numero
 from hefesto_dualsense4unix.interface.sensores import (
     ESCALA_ACCEL_G,
     ESCALA_GYRO_GRAUS_S,
@@ -81,6 +82,7 @@ from .a02_controles import (
     _selo_do_sensor,
     _uniq,
     meias_da_barra,
+    nomes_de_quem_joga,
 )
 
 PAGINA = "calibrar-sensores.html"
@@ -188,9 +190,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         colunas[pref] = _eixos_do_controle(dele)
         if tem_a_mira:
             colunas[pref].update(_campos_da_mira(dele))
-    blocos = {BLOCO_DOS_CONTROLES: calibrar.controles(ctx.mesa)}
+    # QUEM JOGA, pela regra única de `monta` e pelo leitor da 08: o cartão e a coluna da mira
+    # dizem `<nome> • P<n>`, ou só `P<n>` sem nome. O número é o vivo (`item["jogador"]`).
+    nomes = nomes_de_quem_joga()
+    com_quem = [{**item, "quem": quem_joga_com_o_numero(
+        nomes, str(item.get("uniq") or ""), item.get("jogador"))} for item in ctx.mesa]
+    blocos = {BLOCO_DOS_CONTROLES: calibrar.controles(com_quem)}
     if tem_a_mira:
-        blocos[BLOCO_DAS_MIRAS] = calibrar.miras(ctx.mesa)
+        blocos[BLOCO_DAS_MIRAS] = calibrar.miras(com_quem)
     return {
         "blocos": blocos,
         "quantos": calibrar.contagem(len(ctx.mesa)),

@@ -4,7 +4,8 @@ import marca_da_camada as _marca
 import onde
 from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    MESA, CONECTADOS,
-                   NADA_A_DIZER, SEPARADOR, cor_da_zona, luzinhas, player_slot_color,
+                   NADA_A_DIZER, SEPARADOR, cor_da_zona, luzinhas, numero_do_jogador,
+                   player_slot_color,
                    ressalva as monta_ressalva, tom_da_casa)
 
 # A DIREÇÃO É OBRIGATÓRIA, e não gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz`
@@ -1567,12 +1568,19 @@ def identidade(c, *, bat, carga=None, meio=""):
     """
     # O NOME DO PLÁSTICO E O TRANSPORTE GANHARAM ENDEREÇO — 03/09/2026, e a lei é
     via_na_tela = palavra_do_transporte(c.get("transporte"))
+    #
+    # QUEM JOGA — D-2909-O-CARTAO-DIZ-QUEM-JOGA (29/09/2026, ela no chat): o título do cartão
+    # ABERTO diz o NOME de quem joga com o controle (o da aba Conexões), e o «Pn» só quando
+    # ele não tem nome. A tira FECHADA segue com o «Pn •» dela (não tem lâmpada). O número tem
+    # endereço nos dois (`monta.numero_do_jogador`), e o nome é pintado pelo pacote da aba.
+    n_com_endereco = numero_do_jogador(c["jogador"])
     com_endereco = {
         **c,
         "nome": f'<span data-campo="peca">{c["nome"]}</span>',
         "via": f'<span data-campo="via">{via_na_tela}</span>',
+        "quem": f'<span data-campo="quem-joga" data-hef-alvo="html">P{n_com_endereco}</span>',
     }
-    return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
+    return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -2599,6 +2607,16 @@ CSS += f"""
      valendo para as outras nove abas; esta a estreita para a 02. */
   .miolo > .quadro.estica{{flex:0 1 auto}}
   {_aberto(" .so-fechado")}{{display:none}}
+  /* QUEM JOGA, só no cartão aberto: o nome dele, ou o «Pn» sem nome. A tira fechada tem o «Pn •»
+     dela (`.so-fechado`), e o assento vazio nunca abre, então o par volta a sumir nele. */
+  .so-aberto{{display:none}}
+  {_aberto(" .so-aberto")}{{display:inline}}
+  /* O PREÇO DO NOME: a faixa aberta quebra em duas linhas (e a bateria cai) quando a soma dos itens
+     passa da largura, porque o `flex-wrap:wrap` conta o tamanho CHEIO de cada um. Um nome de 24
+     letras com o plástico mais longo da tabela (31) passava. O `.card-nome` aberto tem teto, corta
+     com reticência e já leva o `title` com a linha inteira (`card-vpad`); a frase do giroscópio
+     (`flex:1 1 0`) é quem cede primeiro, antes de o nome perder uma letra. */
+  {_aberto(" .card-nome")}{{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
   /* A LINHA DO GIROSCÓPIO ACENDE COM O CARD, e some sem `title` — ver o bloco
      `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:
      quem apagar uma sem a outra deixa ou um vão elástico vazio no cabeçalho, ou
@@ -2619,6 +2637,7 @@ CSS += f"""
   {_fechado_de_vez(" > .corpo-cx")}{{flex:0 0 0;height:0;overflow:hidden;
     visibility:hidden;display:block}}
   {_fechado_de_vez(" .so-fechado")}{{display:inline}}
+  {_fechado_de_vez(" .so-aberto")}{{display:none}}
   {CHIP_ACESO}{{background:var(--sel-bg);color:var(--fg);font-weight:600}}
   .fita label.chip{{cursor:pointer}}
   /* A LÁPIDE DA LEGENDA. Um item que fala do que SAIU não pode ter a mesma cara
@@ -2751,6 +2770,10 @@ MIOLO = f'''
 
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que mudou em 07/10</h2>
+  <ul>
+    <li><b>O título do cartão aberto diz quem joga</b>, como você escolheu: o <b>nome</b> que você deu ao controle na aba Conexões, e o <b>«P1»</b> só quando ele não tem nome (por exemplo, «Vitória • Galactic Purple • BT»). No «Todos», cada cartão diz o seu, na ordem dos jogadores. A tira fechada continua com o «P1 •» dela. O número, onde aparece, agora segue o do jogo: o cabeçalho, as lâmpadas e a fita dizem o mesmo.</li>
+  </ul>
   <h2>O que mudou em 03/10</h2>
   <ul>
     <li><b>Os botões «Virtual» e «Nativo» do Microfone saíram</b>, como você decidiu: <i>"deixariamos de ter a opção nativo ou virtual como escolha na interface"</i>. <!-- noqa-acento: citação literal --> Todo controle tem o microfone e o alto-falante dele, no cabo e no BT, e o microfone do computador (uma webcam, por exemplo) continua o padrão quando você não escolheu outro. O 🎙 continua ligando e calando.</li>
@@ -2799,7 +2822,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Os analógicos estavam mentindo de dois jeitos.</b> (1) No fim do curso — analógico todo à esquerda ou todo para cima — o valor <b>0</b> era trocado por <b>128</b>, o centro: a bolinha <b>pulava de volta ao meio</b> no talo. (2) A bolinha era posicionada pelo <b>canto</b> e não pelo <b>centro</b>, então em repouso ela nascia <b>4,7 px</b> abaixo e à direita da cruz — como se cada eixo tivesse 12,5 unidades presas. Agora o desvio em repouso é <b>0,19 px</b> e os dois extremos são simétricos.</li>
     <li><b>O motivo que eu te dei para o acelerômetro não estar na tela era falso.</b> Eu escrevi aqui que <b>"o aparelho não entrega esse dado"</b>. Ele entrega. Medido nos seus dois controles: o mesmo nó de sensor publica os três eixos do acelerômetro a <b>250 leituras por segundo</b>, calibrados, e a conta fecha na gravidade — <b>0,996 g</b> num controle e <b>0,993 g</b> no outro, contra 1 g de referência. Os dois estavam em <b>poses diferentes</b> (25° de diferença), então não é número decorado, é leitura. Quem não lia era o <b>Hefesto</b>: o dado chegava até a linha que o descarta. A pergunta que ficou — <i>vale ler?</i> — foi respondida no dia seguinte, e o campo está na tela desde 30/08.</li>
     <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>1 toque</b> — a palavra do produto, a mesma que a janela de hoje escreve (<code>sensor_widgets.texto_toques</code>), por decisão sua de 02/09. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
-    <li><b>O LED do jogador virou campo</b>, com rótulo e moldura próprios, embaixo da Barra de luz — as cinco lâmpadas no padrão do controle. Ele nasceu ontem como uma <b>linha espremida</b> dentro da moldura da Barra de luz (13 px num campo de 75) e agora é o <b>terceiro campo</b> da coluna. Com ele ali, <b>o número do jogador saiu do título do card</b>, como você pediu. Ele <b>continua nas linhas fechadas</b>, e isso é de propósito: linha fechada não tem lâmpada, e sem o número não sobraria quem aquele controle é.</li>
+    <li><b>O LED do jogador virou campo</b>, com rótulo e moldura próprios, embaixo da Barra de luz — as cinco lâmpadas no padrão do controle. Ele nasceu ontem como uma <b>linha espremida</b> dentro da moldura da Barra de luz (13 px num campo de 75) e agora é o <b>terceiro campo</b> da coluna. Com ele ali, <b>o número do jogador saiu do título do card</b>, como você pediu. Ele <b>continua nas linhas fechadas</b>, e isso é de propósito: linha fechada não tem lâmpada, e sem o número não sobraria quem aquele controle é. <i>(Nota de 07/10: o título aberto voltou a dizer quem joga, pelo nome; o «P1» só aparece nele sem nome.)</i></li>
     <li><b>O touchpad tinha voltado a esticar, e agora ele não estica mais.</b> Ontem a superfície ganhou a proporção do sensor como <b>piso</b>, não como regra — e com um piso ela virou a esponja da coluna: medido hoje com os seus controles, <b>148 × 203</b>, que são <b>2,4 vezes</b> a altura que 148 px de largura pedem num sensor 16:9. A correção de anteontem tinha derrubado 41% de esticada e o piso devolveu 145%. Agora a superfície é <b>148 × 83</b> com quantos controles houver, e quem cresce são a <b>cor</b> da barra e o <b>campo</b> do LED, que não têm proporção a respeitar.</li>
     <li><b>O maior buraco da tela fechou: eram 181 px.</b> Entre o eixo Z do giroscópio e o L2 havia um vazio do tamanho de meio card, e ele não era desenho — era <b>resto</b>: o L2/R2 morava dentro da moldura do giroscópio, colado no pé, e a sobra da coluna inteira empoçava no meio. Ele até mudava de tamanho com o número de controles (181 px com os seus dois, 95 com quatro). Agora a coluna são <b>dois campos</b>, cada um com rótulo — <b>Sensores</b> e <b>Gatilhos</b> —, e a sobra entra por dentro dos dois abrindo as linhas. Maior vão da coluna: <b>5 px</b>. As cinco colunas continuam terminando na mesma linha.</li>
   </ul>
@@ -3264,7 +3287,8 @@ def _conferir(doc):
            f"a promessa de abrir o card não está nos {len(CONECTADOS)} conectados")
     for sufixo, oque in ((" ", "a altura do cartão"), (" > .faixa", "a moldura da faixa"),
                          (" > .corpo-cx", "o corpo que apareceria"),
-                         (" .so-fechado", "o número do jogador na tira")):
+                         (" .so-fechado", "o número do jogador na tira"),
+                         (" .so-aberto", "o «quem joga» do título aberto")):
         regra = _fechado_de_vez("" if sufixo == " " else sufixo)
         exigir(regra in folha,
                f"o lugar vazio voltou a poder abrir: sumiu a regra que fecha "
@@ -3291,6 +3315,11 @@ def _conferir(doc):
     exigir(corpo.count('data-campo="mascara"') == len(MESA),
            "a máscara sumiu com o texto — ela FICA, e é o dado")
 
+    exigir(corpo.count('data-campo="quem-joga"') == len(MESA),
+           "o «quem joga» do título aberto perdeu o endereço — o nome dela não chega ao cartão")
+    exigir(corpo.count('data-campo="jogador" data-hef-alvo="html"') == 2 * len(MESA),
+           "o número do jogador do cabeçalho perdeu o endereço: ele voltou a ser o assento "
+           "cravado pelo gerador, e discorda do daemon quando a mesa conta por posição")
     for campo in ("peca", "via"):
         exigir(corpo.count(f'data-campo="{campo}"') == len(MESA),
                f"o `{campo}` do cabeçalho do card perdeu o endereço — "

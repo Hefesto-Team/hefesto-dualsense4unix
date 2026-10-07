@@ -54,6 +54,7 @@ from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402, F401
     player_slot_color,
 )
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 
 PADRAO_JOGADOR = {
     n: "".join(str(i + 1) for i, on in enumerate(player_led_pattern(n)) if on)
@@ -110,12 +111,52 @@ SEPARADOR = ' <span class="pt">•</span> '
 TRAVESSAO = "—"
 
 
+def numero_do_jogador(n: Any) -> str:
+    """O número do jogador COM ENDEREÇO: o `<span>` que o tique repinta com o do daemon.
+
+    Um lugar só: a 02 (cabeçalho e tira), a 06 (`.nav-rot`) e a Calibrar o chamam, e o endereço
+    não ganha uma segunda grafia. O alvo é `html` de propósito: com `texto`, o molde do lugar
+    vazio cairia no travessão e a tira diria «P— • — • —».
+    """
+    return f'<span data-campo="jogador" data-hef-alvo="html">{n}</span>'
+
+
+def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any, *,
+                  em_html: bool = False) -> str:
+    """Quem joga com o controle: o nome que ela deu a ele, ou o «P N» quando não há nome.
+
+    A REGRA É UMA SÓ, e mora aqui (D-2909-O-CARTAO-DIZ-QUEM-JOGA): a 08 a mostra no campo do dono,
+    o cartão aberto da 02 e a Calibrar a mostram no título. `nomes` é `{endereço: nome}` do
+    leitor da 08 (o `Alias` do BlueZ). Com `em_html`, o nome sai ESCAPADO (é texto dela) e o
+    número leva o endereço de `numero_do_jogador`.
+    """
+    nome = nomes.get(str(norm_mac(str(uniq or "")) or "").upper(), "")
+    if nome:
+        return html.escape(nome) if em_html else nome
+    if isinstance(jogador, int) and not isinstance(jogador, bool):
+        return f"P{numero_do_jogador(jogador)}" if em_html else f"P{jogador}"
+    return ""
+
+
+def quem_joga_com_o_numero(nomes: dict[str, str], uniq: str, jogador: Any) -> str:
+    """Para quem não tem lâmpadas (a Calibrar): `<nome> • P<n>`, ou só `P<n>` sem nome.
+
+    Sai da MESMA regra de `dono_na_linha`; aqui o número fica ao lado do nome, e não no lugar dele.
+    """
+    quem = dono_na_linha(nomes, uniq, jogador, em_html=True)
+    numero = dono_na_linha({}, uniq, jogador, em_html=True)
+    return quem if quem in ("", numero) else f"{quem}{SEPARADOR}{numero}"
+
+
 def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só."""
     if forma == "curta":
         return SEPARADOR.join(p for p in [f'P{c["jogador"]}', c["nome"], c["via"]] if p)
     if forma == "peca":
-        return SEPARADOR.join([c["nome"], c["via"]])
+        corpo = SEPARADOR.join([c["nome"], c["via"]])
+        quem = c.get("quem")
+        # `<quem>` vai na frente e só aparece no cartão ABERTO (a tira fechada tem o «Pn •» dela)
+        return f'<span class="so-aberto">{quem}{SEPARADOR}</span>{corpo}' if quem else corpo
     return SEPARADOR.join(["Sony", f'Player {c["jogador"]}', c["nome"], c["via"]])
 
 

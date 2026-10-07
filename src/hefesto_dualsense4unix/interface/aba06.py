@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
 from monta import NADA_A_DIZER  # noqa: E402
+from monta import numero_do_jogador  # noqa: E402
 from monta import TITULOS_DA_FITA  # noqa: E402
 from monta import folha_das_cores  # noqa: E402
 
@@ -1370,8 +1371,10 @@ def controle(c):
       não há aparelho.);
     * o nome do plástico virou `<span data-campo="identidade">`, que o pacote
       escreve com `pacotes.identidade_de` — o dono do nome desde a ROTA-A. O
-      `P{n}` fica FORA do span de propósito: o número do jogador é ESTRUTURA
-      (a posição na mesa), e a lei do dia diz para não tocá-lo.
+      `P` fica FORA do span de propósito. O NÚMERO, que era estrutura cravada pelo gerador
+      (a posição na mesa), ganhou endereço em 07/10/2026 (`monta.numero_do_jogador`,
+      `data-campo="jogador"`): o `a06_navegacao.pacote` o lê do dono, o mesmo número do chip
+      da fita, e o cartão não discorda dele quando a mesa conta por posição.
 
     E O DESENHO SEGUIU — 03/09/2026, A-COR-VEM-DO-APARELHO. O `<svg>` ganhou o
     `ENDERECO_DO_DESENHO` e perdeu a folha podada de um modelo só (ver
@@ -1417,7 +1420,7 @@ def controle(c):
         f' data-conectado="{"sim" if conectado else "nao"}"'  # (noqa-acento) valor do atributo
         f' data-campo="plastico" data-hef-alvo="cor"{dica}>\n'
         f'                {desenho(c, **luz)}\n'
-        f'                <div class="nav-rot">P{n} <span class="pt">•</span> '
+        f'                <div class="nav-rot">P{numero_do_jogador(n)} <span class="pt">•</span> '
         f'<span data-campo="identidade">{identidade}</span></div>\n'
         f'                <div class="nav-est" data-campo="navega"'
         f' data-hef-alvo="html">{estado}</div>\n'
@@ -2235,7 +2238,7 @@ def _conferir(doc):
            f"a fileira não tem os {len(MESA)} lugares")
     #    `<span data-campo="identidade">`, que é o que faz o produto ter onde
     for c in vazios:
-        exigir(f'P{c["jogador"]} <span class="pt">•</span> '
+        exigir(f'P{numero_do_jogador(c["jogador"])} <span class="pt">•</span> '
                f'<span data-campo="identidade">{SEM_NINGUEM_AQUI}</span>' in corpo,
                f"o lugar do P{c['jogador']} não diz {SEM_NINGUEM_AQUI} no rótulo "
                f"endereçado — ou a palavra mudou, ou o endereço caiu e o produto "
@@ -2292,7 +2295,7 @@ def _conferir(doc):
                f"esqueleto) têm de ficar IGUAIS, e é a queixa dela de 17/09")
     exigir(QUEM_NAVEGA.get("conectado", True),
            f"quem navega (P{NAVEGA}) não está conectado")
-    exigir(f'>P{NAVEGA} <span class="pt">•</span> '
+    exigir(f'>P{numero_do_jogador(NAVEGA)} <span class="pt">•</span> '
            f'<span data-campo="identidade">{QUEM_NAVEGA["nome"]}</span></div>' in corpo,
            "o card de quem navega não é o do controle certo")
 

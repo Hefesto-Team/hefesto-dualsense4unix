@@ -32,6 +32,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+from hefesto_dualsense4unix.interface.monta import dono_na_linha
 
 from . import TODOS_OS_LUGARES, Contexto, perfil, registrar
 
@@ -6263,15 +6264,8 @@ def _nomes_dos_donos() -> dict[str, str]:
     return _nomes_por_endereco(bluez[1])
 
 
-def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any) -> str:
-    """O que o campo do dono mostra: o nome dela, ou «P N» quando não há nome."""
-    nome = nomes.get(_mac(uniq), "")
-    if nome:
-        return nome
-    if isinstance(jogador, int) and not isinstance(jogador, bool):
-        return f"P{jogador}"
-    return ""
-
+# `dono_na_linha` (importada no topo) é a regra «o nome, ou o Pn», que mora em `monta` desde
+# 07/10/2026: a 02 e a Calibrar dizem quem joga pela mesma regra, e o nome daqui é o alias.
 
 _SO_O_NUMERO = re.compile(r"\s*p\s*\d+\s*", re.IGNORECASE)
 
