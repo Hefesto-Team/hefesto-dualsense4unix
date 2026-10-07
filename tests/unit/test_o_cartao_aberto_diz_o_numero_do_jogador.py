@@ -79,9 +79,9 @@ def test_a_06_tem_o_endereco_do_numero_no_cartao() -> None:
             assert 'data-campo="jogador"' in r, f"número sem endereço: {r[:120]}"
 
 
-@pytest.mark.parametrize("pagina", [P02, P06])
+@pytest.mark.parametrize("aba", [P02, P06])
 def test_o_lugar_vazio_do_desenho_da_o_numero_do_assento(
-        pagina: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        aba: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """A régua 5 da sprint: o molde do lugar vazio, lido sobre a bancada, dá o número do assento.
 
     No produto o assento vazio é pintado pelo molde; sem a chave `jogador` nele, o número
@@ -90,9 +90,9 @@ def test_o_lugar_vazio_do_desenho_da_o_numero_do_assento(
     """
     real = onde.pagina
     monkeypatch.setattr(
-        onde, "pagina", lambda p, publicado=True, **k: real(p, publicado=False, **k))
+        onde, real.__name__, lambda p, publicado=True, **k: real(p, publicado=False, **k))
     monkeypatch.setattr(pacotes, "_DESENHO_DO_VAZIO", {})
-    molde = pacotes.o_que_o_desenho_diz_do_lugar_vazio(pagina)
+    molde = pacotes.o_que_o_desenho_diz_do_lugar_vazio(aba)
     assert {p: c.get("jogador") for p, c in molde.items()} == {
         "p1": "1", "p2": "2", "p3": "3", "p4": "4"}, molde
 
