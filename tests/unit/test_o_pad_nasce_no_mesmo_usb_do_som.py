@@ -884,10 +884,17 @@ class TestOPadEmUsbNaoQuebraOResto:
         # O dublê de sempre (um MagicMock morto) continua morto.
         assert vpad_vivo(MagicMock(_started=False)) is False
 
-    def test_com_o_aparelho_aqui_o_gadget_desce_mesmo_com_o_jogo_aberto(
+    def test_o_estacionado_do_aparelho_que_ficou_e_fantasma_e_desce_com_o_jogo(
         self, bancada: BancadaDoGadget
     ) -> None:
-        """A troca de máscara com o jogo aberto não deixa um DualSense fantasma."""
+        """A troca de máscara com o jogo aberto não deixa um DualSense fantasma.
+
+        O pad que renasce na hora retoma o gadget (o GUID do jogo fica); o
+        aparelho que está AQUI e não o retoma no prazo trocou de máscara ou
+        saiu da emulação, e o gadget desce. O que CAIU continua esperando.
+        """
+        import time
+
         bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
         bancada.jogo_aberto = True
         bancada.aparelho_presente = True
@@ -895,7 +902,16 @@ class TestOPadEmUsbNaoQuebraOResto:
         assert pad.start()
         assert bancada.esperar(lambda: pad.is_bound)
         pad.stop()
-        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
+        estacionados = bancada.ug._GADGETS_ESTACIONADOS
+        prazo = bancada.ug._GADGET_RETOMA_S
+        assert estacionados.quantos() == 1
+        assert estacionados.varrer(agora=time.monotonic() + 1.0) == 0
+        bancada.aparelho_presente = False
+        assert estacionados.varrer(agora=time.monotonic() + prazo + 1.0) == 0
+        assert bancada.clientes[0].desmontados == []
+        bancada.aparelho_presente = True
+        assert estacionados.varrer(agora=time.monotonic() + prazo + 1.0) == 1
+        assert estacionados.quantos() == 0
         assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
 
     def test_o_gadget_que_cai_com_o_jogo_aberto_volta_ao_uhid(

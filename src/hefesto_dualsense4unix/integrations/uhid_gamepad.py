@@ -2078,6 +2078,8 @@ def _e_eco_puro(body: bytes) -> bool:
 
 _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
+#: o prazo do pad que renasce para retomar o gadget do aparelho que ficou.
+_GADGET_RETOMA_S = 10.0
 _GADGET_VIGIA_S = 0.25
 _GADGET_VEZ_DA_ESCRITA_MS = 8
 _GADGET_LEITURA = 512
@@ -2154,7 +2156,8 @@ def _ha_jogo_aberto() -> bool:
 PEDIR_O_PAD_USB: Callable[[str, bytes, str], _GadgetDoPad | None] = _pedir_ao_broker
 HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
 JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
-#: o aparelho físico ainda está na máquina? Só o que CAIU estaciona o gadget.
+#: o aparelho físico ainda está na máquina? O estacionado dele que não foi
+#: retomado é fantasma, e desce mesmo com o jogo aberto.
 APARELHO_PRESENTE: Callable[[str], bool] = pad_usb.aparelho_presente
 #: a mesma pergunta do doctor (`system_check.contrato_do_pad_em_usb`): o que não
 #: se lê volta «não sei» (``["?"]``), e na dúvida o pad nasce uhid.
@@ -2169,18 +2172,25 @@ class _GadgetsEstacionados:
     muda o GUID e o som se perde. Por isso, com jogo aberto, o gadget do
     aparelho que saiu fica de pé, parado no neutro, e o aparelho que volta o
     retoma; sem jogo, ele desce. É a regra do nó de háptica.
+
+    O pad que renasce na hora (o co-op que refaz o jogador, o nó que mudou)
+    retoma o gadget no mesmo tique. Mas o aparelho que continua AQUI e não o
+    retoma em `_GADGET_RETOMA_S` trocou de máscara ou saiu da emulação: de pé,
+    o gadget seria um DualSense fantasma ao lado do pad novo ou do físico
+    devolvido, e ele desce mesmo com o jogo aberto.
     """
 
     def __init__(self) -> None:
         self._trava = threading.Lock()
-        self._por_aparelho: dict[str, _GadgetDoPad] = {}
+        self._por_aparelho: dict[str, tuple[_GadgetDoPad, float]] = {}
         self._vigia: threading.Thread | None = None
 
     def estacionar(self, identidade: str, gadget: _GadgetDoPad) -> None:
         chave = pad_usb._so_hex(identidade)
         with self._trava:
-            antigo = self._por_aparelho.pop(chave, None)
-            self._por_aparelho[chave] = gadget
+            antigo_e_hora = self._por_aparelho.pop(chave, None)
+            antigo = antigo_e_hora[0] if antigo_e_hora is not None else None
+            self._por_aparelho[chave] = (gadget, time.monotonic())
             if self._vigia is None or not self._vigia.is_alive():
                 self._vigia = threading.Thread(
                     target=self._vigiar, name="hefesto-pad-usb-estacionados", daemon=True
@@ -2193,25 +2203,45 @@ class _GadgetsEstacionados:
         if not identidade:
             return None
         with self._trava:
-            return self._por_aparelho.pop(pad_usb._so_hex(identidade), None)
+            achado = self._por_aparelho.pop(pad_usb._so_hex(identidade), None)
+        return achado[0] if achado is not None else None
 
     def quantos(self) -> int:
         with self._trava:
             return len(self._por_aparelho)
 
-    def varrer(self) -> int:
-        """Sem jogo aberto, todo gadget estacionado desce. Devolve quantos."""
+    def varrer(self, agora: float | None = None) -> int:
+        """Sem jogo, todo gadget estacionado desce; com jogo, só o fantasma.
+
+        O fantasma é o do aparelho que está AQUI e não retomou o gadget em
+        `_GADGET_RETOMA_S`. Devolve quantos desceram.
+        """
         with self._trava:
             if not self._por_aparelho:
                 return 0
         if JOGO_ABERTO():
-            return 0
-        with self._trava:
-            todos = list(self._por_aparelho.values())
-            self._por_aparelho.clear()
-        for gadget in todos:
+            momento = time.monotonic() if agora is None else agora
+            with self._trava:
+                vencidos = [
+                    chave for chave, (_g, hora) in self._por_aparelho.items()
+                    if momento - hora >= _GADGET_RETOMA_S
+                ]
+            fantasmas = [chave for chave in vencidos if APARELHO_PRESENTE(chave)]
+            with self._trava:
+                descem = [
+                    self._por_aparelho.pop(chave)[0]
+                    for chave in fantasmas
+                    if chave in self._por_aparelho
+                    and momento - self._por_aparelho[chave][1] >= _GADGET_RETOMA_S
+                ]
+        else:
+            with self._trava:
+                descem = [gadget for gadget, _hora in self._por_aparelho.values()]
+                self._por_aparelho.clear()
+        for gadget in descem:
+            logger.info("pad_usb_estacionado_desce", gadget=gadget.gadget)
             gadget.desmontar()
-        return len(todos)
+        return len(descem)
 
     def _vigiar(self) -> None:
         while True:
@@ -2464,17 +2494,7 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
     pad._gadget_prazo = None
     pad._gadget_falhou = False
     pad._gadget_caiu = False
-    # Estaciona só o gadget do aparelho que CAIU com o jogo aberto (a cura 7).
-    # Com o aparelho aqui (a troca de máscara, a emulação desligada, o co-op
-    # desfeito) o gadget desce: de pé, ele seria um DualSense fantasma ao lado
-    # do pad novo ou do físico devolvido.
-    if (
-        not falhou
-        and gadget.hidraw is not None
-        and pad.identity
-        and JOGO_ABERTO()
-        and not APARELHO_PRESENTE(pad.identity)
-    ):
+    if not falhou and gadget.hidraw is not None and pad.identity and JOGO_ABERTO():
         with contextlib.suppress(OSError):
             os.write(gadget.fd, _report_neutro(pad))
         _GADGETS_ESTACIONADOS.estacionar(pad.identity, gadget)
