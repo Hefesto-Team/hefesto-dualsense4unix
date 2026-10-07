@@ -1,7 +1,7 @@
 # O modo de relatório do DualSense — o que faz o `0x01` virar `0x31`
 
 **Levantado em 03/09/2026, em fonte pública, sem tocar o aparelho.** Nada nesta
-página foi medido aqui. O grau de cada afirmação está escrito ao lado dela, e a
+página foi medido aqui. O grau de cada afirmação está escrito junto do texto, e a
 regra é a de sempre: o que eu li em repositório de terceiro é
 `afirmado-no-doc`, nunca `medido`.
 
@@ -18,7 +18,7 @@ O endereço do driver desta máquina é sempre
 
 ## 1. Não existe `SET_REPORT_MODE` no DualSense. A troca é EFEITO COLATERAL de uma leitura
 
-A auditoria de 11/08/2026 desta casa concluiu, e continua certa: **não há
+A auditoria de 11/08/2026 do Hefesto concluiu, e continua certa: **não há
 equivalente Sony do `SET_REPORT_MODE`**. O que faltava era a outra metade — se
 não há comando, o que troca o modo?
 
@@ -30,7 +30,7 @@ COMPLETO. Não há segundo modo no fio.
 | quem diz | onde | grau |
 |---|---|---|
 | o driver desta máquina | `:140-141` (`DS_INPUT_REPORT_USB 0x01`, `_SIZE 64`) e o despacho em `:1579-1581` | fonte desta máquina |
-| o descritor lido do aparelho do usuário | `plataforma.descritor_hid@dualsense`: *"INPUT `0x01` (64 B com o id)"* | MEDIDO nesta casa, 15/08/2026 |
+| o descritor lido do aparelho do usuário | `plataforma.descritor_hid@dualsense`: *"INPUT `0x01` (64 B com o id)"* | MEDIDO neste projeto, 15/08/2026 |
 | o SDL | `SDL_hidapi_ps5.c:413-415` — lê UM report de entrada e decide pelo TAMANHO: `size == 64` ⇒ *"Connected over USB"*, modo completo. Ele **não pergunta nada** | afirmado-no-doc |
 
 ### Por rádio o aparelho NASCE mudo, e uma leitura o acorda
@@ -39,7 +39,7 @@ Por rádio o DualSense começa emitindo o `0x01` de **10 bytes com o id** — o
 modo básico, sem IMU, sem touchpad, sem bateria — e só passa ao `0x31` de 78
 bytes **depois que o host faz um `GET_REPORT` num feature report**.
 
-O descritor que esta casa leu em 15/08 **já declarava os dois** (*"INPUT `0x01`
+O descritor que este projeto leu em 15/08 **já declarava os dois** (*"INPUT `0x01`
 (10 B com o id) e `0x31` (78 B)"*). O que ninguém tinha era o gatilho.
 
 **Quatro fontes independentes dizem que é uma leitura de feature — e nomeiam
@@ -64,7 +64,7 @@ Native PS mode"*.
 > escreveu. A explicação mais econômica é que **o gatilho não é um id
 > específico: é o ATO de fazer `GET_REPORT` num feature que o aparelho
 > responde.** Isso NÃO está escrito em fonte nenhuma, e não foi medido aqui.
-> Quem for à bancada mede assim: por rádio, com o `hid-playstation`
+> Quem for ao aparelho mede assim: por rádio, com o `hid-playstation`
 > desvinculado, ler um feature de cada vez e ver em qual deles o `0x01` de 10 B
 > vira `0x31` de 78 B.
 
@@ -125,7 +125,7 @@ No DualSense **não há nada disso**, e três corpos independentes concordam pel
 silêncio:
 
 - o driver desta máquina não tem uma linha de handshake no caminho DualSense —
-  a auditoria de 11/08/2026 desta casa já tinha varrido `src/` e achado só o
+  a auditoria de 11/08/2026 do Hefesto já tinha varrido `src/` e achado só o
   handshake de force-feedback do uinput, que é outra coisa;
 - o `SDL_hidapi_ps5.c` inteiro não faz aperto de mão nenhum: ele **lê um report
   de entrada e olha o tamanho** (`:405-422`);
@@ -140,7 +140,7 @@ passa a dizer.
 
 ## 3. Não há canal de TAXA no DualSense — e a fonte que parecia discordar não discorda
 
-Esta casa já mediu o que o aparelho ENTREGA (cabo 250,0 Hz exatos; rádio
+Este projeto já mediu o que o aparelho ENTREGA (cabo 250,0 Hz exatos; rádio
 variável em rajadas, de ~38 a ~392 Hz entre janelas consecutivas — a canônica,
 §5). O que faltava era saber se dá para PEDIR.
 
@@ -160,7 +160,7 @@ Bluetooth."* O valor mora em `ProfileSchema.Legacy.cs` (`BTPollRate`, default
 **4**) e o setter em `DS4Library/DS4Device.cs` recusa fora de `0..16`.
 
 **Fico com os textos do programa e com as outras duas implementações: é campo
-de hardware do DS4.** A medição desta casa está do mesmo lado — um aparelho com
+de hardware do DS4.** A medição do Hefesto está do mesmo lado — um aparelho com
 intervalo negociado não entrega 38 Hz numa janela e 392 Hz na seguinte, parado
 sobre a mesa.
 
@@ -173,7 +173,7 @@ classificação, e ela fica escrita para a próxima pessoa não caçar o report.
 
 | | keepalive quando nada muda | piso entre escritas |
 |---|---|---|
-| **esta casa** | `OUT_REPORT_KEEPALIVE_SEC = 0.5 s` | `REPORT_THREAD_THROTTLE_SEC = 0.008 s`, teto adaptativo `0.032 s` |
+| **este projeto** | `OUT_REPORT_KEEPALIVE_SEC = 0.5 s` | `REPORT_THREAD_THROTTLE_SEC = 0.008 s`, teto adaptativo `0.032 s` |
 | **SDL** | `BLUETOOTH_DISCONNECT_TIMEOUT_MS = 500` (`SDL_hidapi_ps5.c:44`, usado em `:1653`) | não tem piso: ele **funde** a escrita pendente com a nova (`:1132-1136`) |
 | **DS4Windows** | — | `BTPollRate` default 4 ms; a documentação sugere **≥ 10 ms** com vários controles no rádio |
 | **driver do Linux** | nenhum | nenhum |
@@ -196,7 +196,7 @@ daqui. Nenhum dos dois é limite do APARELHO: são políticas de quem escreve.
 
 Duas implementações em produção, dois tamanhos, as duas funcionando. **Os 15
 reservados são opcionais.** E os 48 do SDL são confirmação independente do
-número que o descritor desta casa já dava.
+número que o descritor do Hefesto já dava.
 
 ### 4.2 Por rádio, o número de sequência NÃO é cobrado — e o CRC errado é um NADA silencioso
 
@@ -219,7 +219,7 @@ produção, comportamentos opostos, as duas funcionando.
 that should have no effect, since we don't set the CRC"*, só para manter a
 pilha Bluetooth acordada depois de 500 ms de silêncio.
 
-> **Para esta casa isto é o MECANISMO por trás de uma ressalva que já estava
+> **Para este projeto isto é o MECANISMO por trás de uma ressalva que já estava
 > escrita** em `plataforma.escrita_crua@dualsense`: o sucesso do `os.write()`
 > num hidraw diz que o KERNEL aceitou os bytes, não que o firmware executou
 > alguma coisa. Um CRC errado por rádio é exatamente isso — uma escrita que dá
@@ -285,7 +285,7 @@ aparelho.
 | `SundayMoments/DS5_Bridge` (`src/bt.cpp:5448-5456`) | `0x20`, `0x09`, `0x22`, `0x05`, espaçados de **5 ms** |
 
 **São os mesmos quatro**, em ordem quase igual, e são quatro dos que o censo dos
-dezessete desta casa já mediu. Nenhum dos dois lê mais nada para começar a
+dezessete do Hefesto já mediu. Nenhum dos dois lê mais nada para começar a
 funcionar, e nenhum dos dois trata o `0x01` depois disso. **Para pôr um
 DualSense de pé por rádio, esses quatro bastam** — e três deles são os três
 gatilhos da §1, o que fecha o círculo.
@@ -297,7 +297,7 @@ aparelho.
 
 ### 5.3 As sementes de CRC não são mágicas: são o cabeçalho HIDP
 
-Esta casa já sabe as três sementes e já mediu, em 27/08, que **escrever**
+Este projeto já sabe as três sementes e já mediu, em 27/08, que **escrever**
 feature por rádio pede `0x53`. O que estes projetos acrescentam é a **razão
 mecânica**, e ela explica as quatro de uma vez.
 
@@ -315,7 +315,7 @@ cabeçalho HIDP com todas as letras.
 
 **O que isso muda para quem escreve aqui:** o hidraw do Linux esconde esse byte
 — você escreve começando no report id —, mas o CRC que o firmware confere
-**inclui o byte escondido**. É a explicação de um fato que esta casa pagou caro
+**inclui o byte escondido**. É a explicação de um fato que este projeto pagou caro
 para achar medindo.
 
 ### 5.4 Três pedaços da escada `0x31`-`0x39`, de graça
@@ -334,14 +334,14 @@ canônica registra estes pontos como abertos. **Grau: `afirmado-no-doc`.**
 - **O `0x32` de 142 bytes é o report de estado de um host real.** O `DS5Dongle`
   acende lightbar e player LEDs escrevendo `0x32` com **142 bytes**, cabeçalho
   `0x32 0x10 0x90 0x3f` e a estrutura de estado a partir do offset 4
-  (`src/bt.cpp:917-923`). **142 é exatamente o número desta casa** — o descritor
+  (`src/bt.cpp:917-923`). **142 é exatamente o número do Hefesto** — o descritor
   do rádio declara 141 mais o id, e o `btmon` de 15/08 registrou `dlen 147` =
   142 + 5. **Aviso:** o `0x31` e o `0x32` **não** compartilham o cabeçalho, então
   quem for medir a escada não pode supor um envelope só.
 
 ### 5.5 O feature `0x08` escrito é controle de energia
 
-Esta casa leu o feature `0x08` (48 bytes) e o achou **todo zero nos quatro
+Este projeto leu o feature `0x08` (48 bytes) e o achou **todo zero nos quatro
 aparelhos**. O que ninguém aqui sabia é o que acontece ao **escrevê-lo**: o
 `DS5_Bridge` desliga o controle mandando `SET_REPORT` do feature `0x08` com o
 byte de valor `0x02`, sob o comentário de que **`1` = ligado e `2` = desligado**
@@ -355,7 +355,7 @@ aparelho: quem ensaiar isso desliga um controle de verdade.
 ## 6. O QUE A INTERNET NÃO SABE
 
 Esta lista é entrega tanto quanto a de cima: ela diz onde **só o aparelho
-responde**, e é o que sobra para a bancada.
+responde**, e é o que sobra para o ensaio no aparelho.
 
 1. **Ninguém mediu o teto de escrita do DualSense.** Não achei uma única fonte
    pública com uma curva de "quantos reports de saída por segundo antes de
@@ -407,14 +407,14 @@ foi número, offset, ordem e endereço — que é informação, não obra.
 
 ## O método, para a próxima leva repetir
 
-O usuário pediu um jeito de preencher a lacuna da Sony sem bancada:
+O usuário pediu um jeito de preencher a lacuna da Sony sem o aparelho:
 *"lançar novo workflow pra agentes procurarem no Github tais canais ou tais id.
 (…) como é só informação eles trouxeram e me ajudaram no mapa do controle."*
 <!-- noqa-acento: citação literal -->
 
 O que funcionou, na ordem:
 
-1. **Ler a casa primeiro.** A canônica e o `hid-playstation.c` desta árvore já
+1. **Ler o projeto primeiro.** A canônica e o `hid-playstation.c` desta árvore já
    respondiam metade. Caçar o que já se sabe é o desperdício mais comum.
 2. **Busca por CÓDIGO, não por prosa.** A busca de código do GitHub achou em
    segundos o que a busca em texto não achava — e a frase distintiva de um

@@ -25,13 +25,13 @@
 > se aplica a eles.
 >
 > **Consequência a confirmar:** `rigid()`, `simple_rigid()` e `feedback()`
-> mandariam OFF. A medição está na sprint
-> TRIGGER-CANON-01.
+> mandariam OFF. A medição está registrada na
+> canônica do DualSense.
 >
-> O texto abaixo fica como registro do que se acreditava. Pela regra da casa,
+> O texto abaixo fica como registro do que se acreditava. Pela regra do projeto,
 > **fato errado se substitui e decisão medida se data** — e este é o segundo
-> caso: a tabela antiga não é um número errado, é o que a bancada acreditava
-> antes de a TRIGGER-CANON-01 medir contra a enum da Sony. Apagá-la faria
+> caso: a tabela antiga não é um número errado, é o que se acreditava
+> antes de a medição contra a enum da Sony. Apagá-la faria
 > alguém remedir o que já foi medido, e é esse o teste que decide entre guardar
 > e substituir.
 

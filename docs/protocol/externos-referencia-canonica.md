@@ -22,7 +22,7 @@ DualSense entendem.**
 - **Por que este arquivo existe:** o usuário pediu, literal — *"não deveríamos mapear
   a conexão bt dos outros 2, pro e 8bitdo?"*. E a lacuna estava medida: um
   `grep -i -E "nintendo|8bitdo|pro controller|057e"` em `docs/protocol/`
-  devolvia **zero linhas**. A casa mapeou o DualSense a fundo e nunca mapeou os
+  devolvia **zero linhas**. O projeto mapeou o DualSense a fundo e nunca mapeou os
   vizinhos.
 - **Documento irmão:**
   [a referência canônica do DualSense](dualsense-referencia-canonica.md). Quando
@@ -39,13 +39,13 @@ DualSense entendem.**
 ### 0.1 Os graus de confiança
 
 Toda linha técnica aqui carrega um grau, e ele não é decorativo. É a mesma
-tabela da referência do DualSense, e pela mesma razão: esta casa já tomou
+tabela da referência do DualSense, e pela mesma razão: este projeto já tomou
 decisão errada por confundir "documentação de comunidade" com "fato".
 
 | grau | significa |
 |---|---|
 | **ALTA** | está no código do driver que **esta máquina carrega**, ou em duas engenharias reversas independentes que concordam |
-| **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida na bancada** |
+| **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida no aparelho** |
 | **BAIXA** | inferência, ou fonte única, ou derivação de duas medições que não se tocam |
 | **MEDIDO AQUI** | conferido nesta máquina na varredura de 07/08, com o comando citado |
 | **MEDIDO 11/08** | conferido nesta máquina em 11/08/2026, com o 8BitDo pelo **cabo** em modo Switch e o Pro genuíno no rádio. Vale o mesmo que MEDIDO AQUI; a data está no rótulo porque a **mesa era outra**, e transporte não atravessa |
@@ -54,7 +54,7 @@ decisão errada por confundir "documentação de comunidade" com "fato".
 
 A referência do DualSense separa "a Sony documenta" de "o kernel implementa".
 Aqui a separação é de **três** camadas, e confundi-las já produziu conclusão
-errada nesta casa duas vezes:
+errada neste projeto duas vezes:
 
 1. **O DRIVER FAZ.** O que o `hid-nintendo` ou o `hid-playstation` **desta
    árvore** emitem e parseiam. Verificável por leitura de código, sem hardware.
@@ -90,7 +90,7 @@ E a lei desta página, medida no 8BitDo e válida para os dois aparelhos:
 | DualSense | `a0:fa:9c` | `054c:0ce6` | `playstation` | `.0024` | `hidraw6` | 320 B |
 | DualSense | `14:3a:9a` | `054c:0ce6` | `playstation` | `.0026`, de 07/08 19:07:16 | `hidraw8` | 320 B |
 
-Endereços mascarados pela máscara da casa (octetos 4 e 5 zerados); há portão que
+Endereços mascarados pela máscara do projeto (octetos 4 e 5 zerados); há uma verificação automática que
 reprova o contrário.
 
 **Esta tabela é a foto de 07/08, com os quatro no rádio.** Em **11/08** a mesa
@@ -106,7 +106,7 @@ caminho da barra verde e o da lightbar RGB.
 
 ### 1.1 Os módulos, e eles NÃO são os do kernel de fábrica
 
-**MEDIDO AQUI:** os dois drivers carregados são os **DKMS desta casa**
+**MEDIDO AQUI:** os dois drivers carregados são os **DKMS do Hefesto**
 (`modinfo -F filename` aponta para `updates/dkms`), não o vanilla. Toda medição
 de taxa, de probe e de recuperação desta página **só vale declarando isso**.
 
@@ -159,7 +159,7 @@ varredura**, entre uma frente e outra:
 | afirmação | GRAU |
 |---|---|
 | o 8BitDo passou de "mudo com HID" para "sem HID, com ACL vivo" numa janela de 8 minutos, observada | **MEDIDO AQUI** |
-| esta é uma **terceira** forma de zumbi, que a casa não tinha catalogado — as duas da vigia 3 são "SDP não resolvido" e "pilha do controle travada" | **MEDIDO AQUI** (leitura de `scripts/bt_health_watchdog.sh` contra o estado medido) |
+| esta é uma **terceira** forma de zumbi, que o projeto não tinha catalogado — as duas da vigia 3 são "SDP não resolvido" e "pilha do controle travada" | **MEDIDO AQUI** (leitura de `scripts/bt_health_watchdog.sh` contra o estado medido) |
 | a sessão HIDP caiu **do lado do aparelho**, com o ACL preservado | **BAIXA** — é a explicação com mecanismo, e separá-la de "o BlueZ derrubou" exige `btmon` como root |
 | isto enterra a hipótese "ele só manda quando algo muda, o silêncio parado na mesa é normal" | **BAIXA** — enfraquece muito, mas silêncio e queda de HIDP podem ter causas distintas |
 
@@ -188,7 +188,7 @@ quem vence e por quê.
 | 5 | **o limiar do aviso de perda** | frente do driver: "a partir de 3 pacotes perdidos" | **a partir de 4** — ALTA. O código é `if (dropped_pkts > JC_IMU_DROPPED_PKT_WARNING)` com a constante em **3**, e `>` não é `>=` |
 | 6 | **quantos subcomandos o driver envia no probe** | frente do driver: "DOZE subcomandos"; a mesma frente, três linhas depois: "`grep` devolve exatamente **sete** usos de `subcmd_id = JC_SUBCMD`" | **as duas estão certas e falam de coisas diferentes** — ALTA. São **sete** funções que montam subcomando no arquivo inteiro, e o probe as chama **doze vezes** (a leitura de SPI é chamada seis vezes com endereços distintos). Conferido: os sete usos estão nas linhas 1226, 1240, 1265, 1549, 1562, 1575 e 2704 de `assets/dkms/hid-nintendo/hid-nintendo.c` |
 
-**Uma sétima divergência, que é com o passado desta casa e não entre as
+**Uma sétima divergência, que é com o passado do Hefesto e não entre as
 frentes:** a seção 3.4 do
 estudo dos externos de 07/08
 registrou *"~268 pacotes por segundo"* no Pro. **Aquilo não era a taxa do
@@ -214,12 +214,12 @@ ATENÇÃO: **o discriminador de USB não atravessa para o Bluetooth.** O campo
 `d` do Modalias publicado por rádio é `0001` nos dois, e **não** é o `bcdDevice`.
 Por rádio o **único** discriminador entre o Pro genuíno e o clone é a OUI.
 
-> **Atualizado em 22/08/2026 (N-IGUAL-A-UM-01 e UMA-FAIXA-NAO-E-UM-FABRICANTE-01).**
+> **Atualizado em 22/08/2026.**
 > Isto estava em três lugares que "concordavam" — e concordar não é o mesmo que
-> ter um dono. A faixa `e0:f6:b5` é a do 8BitDo **desta bancada**, não a
+> ter um dono. A faixa `e0:f6:b5` é a do 8BitDo **usado nos ensaios**, não a
 > definição de 8BitDo, e usá-la como identidade de modelo faz quem tem outro
 > lote receber outro comportamento sem nada avisar. Agora o dono da regra é
-> `core/linhagem_nintendo.py`, e há portão de paridade entre ele e os
+> `core/linhagem_nintendo.py`, e há teste de paridade entre ele e os
 > escritores.
 
 A regra vive em `core/linhagem_nintendo.py`; `NINTENDO_REAL_OUI`
@@ -342,9 +342,9 @@ ATENÇÃO: **isto muda a leitura do E-1 do estudo de hoje.** As 348 recusas de
 degradou o rádio. O storm era de CPU e de log, não de rádio. GRAU: ALTA (segue
 do código, dado o parâmetro medido).
 
-**O `subcmd_silence_streak_max=3`** (remendo da casa, ligado aqui) faz o driver
+**O `subcmd_silence_streak_max=3`** (remendo do projeto, ligado aqui) faz o driver
 desistir cedo de um controle mudo. O comentário do próprio remendo traz a
-medição que o justifica, e ela é a régua do custo: **sem ele, UMA escrita de LED
+medição que o justifica, e ela é a medida do custo: **sem ele, UMA escrita de LED
 num controle calado custa 4 x 25 x 500 ms = 50 segundos segurando o
 `output_mutex`, mais 100 linhas de log, repetido para sempre a cada escrita.**
 GRAU: ALTA (`:883-911`) + MEDIDO AQUI (o parâmetro).
@@ -395,11 +395,10 @@ controle do usuário está no ramo de 11 ms. GRAU: ALTA.
 
 ATENÇÃO: **quem integrar velocidade angular do Pro pela constante do driver, em
 vez de pelo valor aprendido, erra a escala.** É o análogo, para o Pro, da
-divergência que a `GYRO-EDGE-RATE-01` deixa aberta para o DualSense.
+divergência da taxa do giroscópio que fica aberta para o DualSense.
 
-> **NOTA DATADA — 11/08/2026:** `GYRO-EDGE-RATE-01` é **nome de divergência**,
-> não sprint — não há documento com esse nome em `docs/process/sprints/`
-> (conferido hoje). E a assimetria entre os dois aparelhos é a informação
+> **NOTA DATADA — 11/08/2026:** a taxa do giroscópio do DualSense é uma
+> **divergência registrada**, não um trabalho em curso. E a assimetria entre os dois aparelhos é a informação
 > importante: **aqui o número está medido** (11,2 ms, três medições em 07/08);
 > **no DualSense a taxa continua NÃO MEDIDA**. Ver a seção 11 desta página.
 
@@ -418,7 +417,7 @@ O driver avisa sempre que perde **mais de 3** relatórios de IMU seguidos
 | hoje (07/08) | **1613** | **10285** |
 
 E a perda **não é uniforme** — é a coisa mais próxima de um medidor de contenção
-de rádio que esta casa tem. Por janela de 10 minutos, hoje (MEDIDO AQUI):
+de rádio que este projeto tem. Por janela de 10 minutos, hoje (MEDIDO AQUI):
 
 ```
 12:00 a 14:00   1 a 4 episódios por janela      2 controles
@@ -436,7 +435,7 @@ banda BR/EDR —, e o `btmon` que a fecharia não roda sem privilégio; ver 8.1)
 ATENÇÃO — **isto contradiz a leitura "o Pro é o estável"**, e a contradição é
 útil: o **link** do Pro não cai (20h33m sem trocar de instância), mas o **rádio**
 dele está furado o dia inteiro, e piora com a mesa cheia. É a primeira medida
-quantitativa da qualidade do link do Pro que a casa tem. **É também a explicação
+quantitativa da qualidade do link do Pro que o projeto tem. **É também a explicação
 candidata para o que ela sente** quando a mesa enche.
 
 ### 3.6 Os LEDs — e o que a árvore faz de errado neles
@@ -537,7 +536,7 @@ adaptadores diferentes, com `Bluetooth: Frame is too long (len 54, expected len
 relato de usuário com log, não medição controlada, **não conferido nesta
 máquina**. Casa com o comentário do kernel, o que não é o mesmo que confirmar.
 
-### 3.8 Bateria — o instrumento que a casa quase usou errado
+### 3.8 Bateria — o instrumento que o projeto quase usou errado
 
 O `hid-nintendo` publica **só** `capacity_level` (cinco degraus), mais `status`,
 `present` e `scope`. **Não existe `capacity`**: o vetor de propriedades tem
@@ -558,9 +557,9 @@ altos daqui). GRAU: ALTA (duas fontes independentes concordando).
 
 ATENÇÃO: **é o defeito de instrumento que o item E-3 do estudo de hoje
 apontou.** Um amostrador que leia `capacity` gravaria `AUSENTE` a noite inteira
-neste controle. A régua de cinco degraus **funciona e tem sinal** — hoje o Pro
+neste controle. A escala de cinco degraus **funciona e tem sinal** — hoje o Pro
 leu `capacity_level=Full`, `status=Charging` — só não tem percentual, e **não se
-compara** com a régua do DualSense.
+compara** com a escala do DualSense.
 
 ### 3.9 Energia — como se desliga um Pro, e por que ninguém desliga
 
@@ -631,7 +630,7 @@ as duas de `feature_retries=2` (MEDIDO AQUI). E isto é **reprodutível a cada
 reconexão**: as **dez** subidas dele neste boot têm o mesmo bloco, palavra por
 palavra. GRAU: MEDIDO AQUI.
 
-ATENÇÃO: **o `-5` não é o erro real.** O comentário do remendo da casa mede que
+ATENÇÃO: **o `-5` não é o erro real.** O comentário do remendo do projeto mede que
 é o timeout de 3 s do HIDP do BlueZ, achatado em `-EIO` pelo `uhid`. GRAU: ALTA
 (comentário de `ps_get_report` em `assets/dkms/hid-playstation/hid-playstation.c`).
 
@@ -707,7 +706,7 @@ report de saída do host. O driver **aceita** o curto: reusa o parser e retorna
 antes de sensores, touchpad e bateria, pela variável `is_minimal`. O comentário
 do kernel nomeia esta classe de aparelho: *"Some third-party pads never switch
 to the full 0x11 report."* GRAU: ALTA (`:361-362`, `:2585-2596`, `:2629`) —
-**vanilla**, `grep -c minimal` nos dois remendos da casa devolve 0.
+**vanilla**, `grep -c minimal` nos dois remendos do projeto devolve 0.
 
 **MORRE aqui a explicação mais natural para o mudo** — *"ele só manda o `0x01`
 curto e o driver o ignora"*. Dois caminhos independentes a matam:
@@ -798,7 +797,7 @@ Aquilo é a cache do subsistema de LED do kernel. E o SN30 Pro **não tem lightb
 RGB física**: os quatro LEDs azuis dele são indicadores de **modo** (LED1
 D-input, LED2 X-input, LED3 macOS, rotativo = Switch ou pareamento). GRAU:
 **MÉDIA** — a semântica dos LEDs vem do manual do fabricante, e **a parte física
-nunca foi olhada nesta casa**. Fecha com cinco segundos de olho de quem confere.
+nunca foi olhada neste projeto**. Fecha com cinco segundos de olho de quem confere.
 
 > **NOTA DATADA — 07/08/2026 21h06: o usuário olhou, e a metade física da `P-4` está
 > respondida.** Nas palavras do usuário, sobre o aparelho na mão: *"não há lightbar
@@ -830,7 +829,7 @@ nunca foi olhada nesta casa**. Fecha com cinco segundos de olho de quem confere.
 **O produto não escreve nesses nós desde 07/08 02:59**
 (`EXTERNAL_PLAYER_LED_ENABLED = False`).
 
-### 4.8 Sensores e touchpad — a correção a uma linha que a casa escreveu hoje
+### 4.8 Sensores e touchpad — a correção a uma linha que o projeto escreveu hoje
 
 A seção 3.2 do estudo de hoje concluiu, dos nós `Wireless Controller Motion
 Sensors` e `... Touchpad`, que *"ele tem giroscópio neste modo"*.
@@ -874,7 +873,7 @@ probe do `hid-nintendo` concluiu. A instância é `0003:057E:2009.0008`:
 GRAU: **MEDIDO 11/08**. Compare com o estado quebrado que o
 `assets/dkms/hid-nintendo/README.md` descreve, em que o diretório do device
 tinha só `modalias power report_descriptor subsystem uevent`: **quem fez a
-diferença foi o patch `0003` do DKMS desta casa, e ele está no ar.**
+diferença foi o patch `0003` do DKMS do Hefesto, e ele está no ar.**
 
 **Três coisas que o cabo fechou, e cada uma estava escrita ao contrário:**
 
@@ -891,8 +890,8 @@ diferença foi o patch `0003` do DKMS desta casa, e ele está no ar.**
    entre **4200 e 4207** — é a gravidade **na mesma escala**, a de 4096 LSB/g da
    seção 3.5. Um firmware que mentisse não acertaria a escala do genuíno por
    acaso. GRAU: **MEDIDO 11/08**, ALTA. As taxas (199,4 amostras/s no clone pelo
-   cabo, 267,2 no genuíno pelo rádio) foram medidas duas vezes por réguas
-   diferentes e concordam, mas **não são a prova** — são o contexto dela.
+   cabo, 267,2 no genuíno pelo rádio) foram medidas duas vezes por métodos
+   diferentes e concordam, mas **não são a prova** — são o contexto.
 3. **A quinta lâmpada NÃO é um quinto jogador.** Os cinco nós do clone são os
    mesmos cinco do genuíno: quatro `:green:player-N` de escala 0-1, por
    `SET_PLAYER_LIGHTS` (`0x30`), e **um `:blue:player-5` de escala 0-15, que é o
@@ -929,7 +928,7 @@ O que o cabo **não** responde, e por construção:
   patch `0003` no ar;
 - **se a distinção por OUI se comporta neste modo por rádio.** Ver 5.3.
 
-### 5.3 A identidade, por transporte — e a doutrina da casa, agora medida
+### 5.3 A identidade, por transporte — e a doutrina do projeto, agora medida
 
 | afirmação | transporte | GRAU |
 |---|---|---|
@@ -948,10 +947,9 @@ driver que pega. **Nenhuma chave sozinha basta: precisa das duas.** GRAU: ALTA.
 endereços **diferentes em cada modo**, os dois com a OUI `E4:17:D8`. Duas rotas
 independentes, 17 dias entre elas:
 
-- **25/07** — os bonds do BlueZ nesta bancada, dois endereços que só diferem no
+- **25/07** — os bonds do BlueZ no aparelho de teste, dois endereços que só diferem no
   fim, um em modo Switch e outro em `054c:05c4`. Registrado em
-  [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md) e
-  na IDENT-01,
+  [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md),
   que é quem mediu;
 - **11/08** — o `REQ_DEV_INFO` pelo cabo devolveu, para o modo Switch, **o mesmo
   endereço** que o log daquele dia registrara para aquele modo, sem parear nada.
@@ -968,7 +966,7 @@ os dois endereços medidos do clone carregam a OUI da 8BitDo — em modo nenhum 
 do Pro. **A doutrina de escopo por OUI está certa e agora está medida.**
 
 O que resta aberto é outra coisa, e menor: o clone **por rádio em modo Switch**
-nunca esteve nesta bancada, então a regra nunca foi **observada** com ele naquele
+nunca esteve entre os aparelhos de teste, então a regra nunca foi **observada** com ele naquele
 estado. Isso é a `P-2` do
 [`driver-hid-nintendo-por-dentro.md`](driver-hid-nintendo-por-dentro.md), seção
 8, item 4 — e vive em 5.2, não na fila de perguntas abertas desta página.
@@ -1026,7 +1024,7 @@ MEDIDO AQUI.
 `scripts/bt_active_mode.sh` reaplica a cada 2 minutos (visto no journal às
 19:31:20, 19:33:20, 19:35:20, 19:37:20 e 19:39:21). GRAU: MEDIDO AQUI.
 
-ATENÇÃO — **a única regra da casa em que dois controles têm requisitos de
+ATENÇÃO — **a única regra do projeto em que dois controles têm requisitos de
 firmware OPOSTOS.** O 8BitDo **precisa** do sniff: com no-sniff **global** ele
 acumulou 4 probes falhadas e 0 sucessos, sempre em `Failed to get joycon info;
 ret=-110`; com o sniff devolvido, probou em 54 s na primeira tentativa. **O
@@ -1073,7 +1071,7 @@ aberto.** GRAU: MEDIDO AQUI para as linhas; SEM PROVA para o autor.
 O que **continua valendo** do estudo, e não muda: **não existe ajuste no host que
 mantenha o link de pé com o controle DESLIGADO.**
 
-### 6.5 Os dois modos de falha de reconexão que a casa já cura
+### 6.5 Os dois modos de falha de reconexão que o projeto já cura
 
 1. **Bond sem trust: reconexão ENTRANTE recusada.** Duas linhas em par:
    `profiles/input/server.c:connect_event_cb() Refusing input device connect: No
@@ -1111,7 +1109,7 @@ GRAU: MEDIDO AQUI para o estado; **BAIXA** para a contribuição à perda.
 
 ## 7. O que o Hefesto depende hoje — a dívida, visível
 
-Esta seção existe porque a regra da casa manda: **se o produto se apoia numa
+Esta seção existe porque a regra do projeto manda: **se o produto se apoia numa
 linha de grau baixo, isso é dívida e tem de estar à vista.**
 
 ### 7.1 A superfície inteira de escrita em externo — duas linhas de código
@@ -1129,15 +1127,15 @@ linha de grau baixo, isso é dívida e tem de estar à vista.**
 | 2 | identifica o Pro genuíno por OUI em três lugares | a OUI ser o único discriminador por rádio | **ALTA** | **nenhuma, e agora medida nos dois modos do clone** (5.3): o endereço dele muda com o modo, a OUI não |
 | 3 | `ExternalImuEnabler` monta um `0x40`/`0x01` de **12 bytes** e o manda por `hidraw` | que o firmware honre um report `0x01` **curto**, contra os 48 bytes de corpo que o descritor declara | **SEM PROVA** | **dívida real** — e o item E-2 do estudo de hoje é quem a paga |
 | 4 | o mesmo componente existe para ligar a IMU | o driver **já a liga**, em todo barramento, no probe | **ALTA de que é duplicado** | **provável código morto**; o porteiro `bus == "usb"` só impede que a duplicação vá ao rádio |
-| 5 | `write_player_number` trata o `:blue:player-5` como o bit "+5" da numeração e escreve `1` nele | o nó é o **LED HOME**, escala 0-15, outro subcomando | **ALTA de que está errado** | **defeito conhecido**, hoje calado pelo portão. **Não voltar sem corrigir** |
+| 5 | `write_player_number` trata o `:blue:player-5` como o bit "+5" da numeração e escreve `1` nele | o nó é o **LED HOME**, escala 0-15, outro subcomando | **ALTA de que está errado** | **defeito conhecido**, hoje calado pelo filtro. **Não voltar sem corrigir** |
 | 6 | `write_player_number` faz cinco escritas de `sysfs` em sequência | cada escrita vira subcomando; a de verde reescreve os quatro | **ALTA** | **cinco subcomandos por chamada** — é a origem medida das 12 recusas e 3 `-110` por chamada, e é o que a escrita idempotente da E3 tem de curar |
 | 7 | `discover_external_gamepads` conta o externo como presente e ele participa da numeração | presença de nó, não de tráfego | **ALTA de que é insuficiente** | o 8BitDo **mudo** contava como presente e disparava renumeração dos outros |
 | 8 | o produto **não lê** bateria de externo | — | — | **é bom que não leia**: leria `AUSENTE` no Pro e `100%` mentiroso no 8BitDo |
 | 9 | a vigia de zumbi do watchdog | `Connected=true` **e** zero `hidraw` **e** cache de SDP sem `[ServiceRecords]` | **ALTA de que tem buraco** | **duas** formas escapam: "link de pé + `hidraw` presente + mudo" e "link de pé + sem `hidraw` + cache completo" — esta segunda foi observada ao vivo na varredura de **07/08** (seção 1.2) |
 
-### 7.3 A dívida de doutrina — PAGA em 11/08, e o que sobra dela
+### 7.3 A dívida de doutrina — PAGA em 11/08, e o que sobra
 
-As regras `udev` da casa casam por **`HID_UNIQ`**, isto é, **por endereço de
+As regras `udev` do projeto casam por **`HID_UNIQ`**, isto é, **por endereço de
 rádio**. Até 07/08 esta seção registrava, com grau BAIXA, que *"o clone pode
 trocar de endereço ao trocar de modo"* — e era a única linha da página em que o
 produto se apoiava, sem saber, num grau baixo.
@@ -1154,7 +1152,7 @@ produto se apoiava, sem saber, num grau baixo.
   — o prefixo do Pro **genuíno**. Ela nunca esteve acertando por sorte. **A
   doutrina de escopo por OUI está certa e agora está MEDIDA.**
 
-**O que sobra, e não é doutrina, é bancada:** o clone **por rádio em modo
+**O que sobra, e não é doutrina, é ensaio no aparelho:** o clone **por rádio em modo
 Switch** nunca esteve neste adaptador, então nenhuma destas regras foi observada
 com ele naquele estado. Ver 5.2.
 
@@ -1162,7 +1160,7 @@ com ele naquele estado. Ver 5.2.
 
 ## 8. O que falta medir — o protocolo
 
-Convenção da casa: **P0** tranca (com o destrancar embutido); **ANTES** é a foto
+Convenção do projeto: **P0** tranca (com o destrancar embutido); **ANTES** é a foto
 numérica; **CONTRASTE** é o caso sem o qual nada se conclui; **PREVISÃO** é
 falsificável e derivada do código; **LEITURA** é a tabela escrita **antes** de
 medir.
@@ -1172,7 +1170,7 @@ estudo dos externos de 07/08
 (E-1 a E-5). Estes são os que **esta página** abriu.
 
 **A fila abriu com cinco e hoje tem QUATRO.** A `P-2` fechou em 11/08 — e o
-essencial dela já estava respondido desde 25/07, em outra página desta mesma
+essencial da resposta já estava registrado desde 25/07, em outra página desta mesma
 árvore. O número fica no lugar, com a resposta no corpo, para não quebrar as
 citações das páginas irmãs; o que saiu foi a pergunta.
 
@@ -1196,7 +1194,7 @@ destrancar além de encerrar a captura.
 **PREVISÃO.** Se o timeout de supervisão do 8BitDo for da ordem de **dezenas de
 segundos**, a hipótese do ciclo de 26 minutos morre. Se for de **minutos**, ela
 ganha.
-**CONSEQUÊNCIA.** **A casa nunca soube o timeout de supervisão de nenhum destes
+**CONSEQUÊNCIA.** **O projeto nunca soube o timeout de supervisão de nenhum destes
 controles.** Nenhum instrumento da árvore o lê.
 
 ### 8.2 P-2. RESPONDIDA — o 8BitDo troca de endereço ao trocar de modo: SIM
@@ -1210,9 +1208,8 @@ dia. O desenvolvimento está em 5.3.
 
 **Onde ela já estava respondida, e é a lição que custa.** A medição de 25/07
 está em [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md)
-e na IDENT-01
 **desde 25/07** — duas semanas antes de esta página abrir a pergunta. Esta
-página perguntou o que a casa já sabia, em outra página da mesma árvore. Fica
+página perguntou o que o projeto já sabia, em outra página da mesma árvore. Fica
 registrado: **antes de abrir item de medição, procurar a resposta no
 repositório.**
 
@@ -1226,7 +1223,7 @@ qualquer modo. O risco existe e continua nomeado — mas é para regras que case
 **MEDIDA**.
 
 **O que continua sem medição, e é outro item.** O clone **por rádio em modo
-Switch** nunca esteve nesta bancada — não há bond dele aqui, e qualquer medição
+Switch** nunca esteve entre os aparelhos de teste — não há bond dele aqui, e qualquer medição
 começa por um pareamento novo. Isso é 5.2, não fila de perguntas de protocolo.
 
 ### 8.3 P-3. O botão de taxa do DualShock 4 muda a permanência do 8BitDo?
@@ -1238,7 +1235,7 @@ com o silêncio e com o ciclo de 26 minutos?
 qualquer controle desta mesa (4.3), e **ninguém aqui mexeu nele**.
 
 **P0.** **Só fecha ESCREVENDO no aparelho** (report de saída `0x11` com o
-`hw_control` alterado), logo é protocolo e não experimento de bancada.
+`hw_control` alterado), logo é protocolo e não observação passiva.
 Trancar: o Hefesto **não escreve** nesse aparelho, então não há concorrência de
 escritor — mas o driver escreve o valor **uma vez, no probe**, e qualquer
 reconexão o restaura. **Destrancar:** desconectar e reconectar devolve os 4 ms.
@@ -1279,9 +1276,9 @@ E3.
 >   o item mais barato desta seção;
 > - **P0 e travas:** o aparelho tem de estar **ligado e no rádio** — ele não
 >   está desde a saída de 19h38 (seção 1.2). A escrita é no caminho `ds4`, que
->   **não** passa pelo `EXTERNAL_PLAYER_LED_ENABLED`, então a decisão 12 dela
+>   **não** passa pelo `EXTERNAL_PLAYER_LED_ENABLED`, então a decisão de produto 12
 >   (a luz dos externos fica calada) tem de ser lida **antes** de armar isto:
->   pintar uma cor É afirmar alguma coisa no plástico dela;
+>   pintar uma cor É afirmar alguma coisa no plástico do aparelho do usuário;
 > - **DECISÃO DE PRODUTO (resposta 23, 07/08):** *"preparar, e rodar quando ele
 >   estiver ligado"*. Logo o preparo pode ser escrito agora; a rodada espera o
 >   aparelho.
@@ -1370,7 +1367,7 @@ varredura acrescentou:
 
 **Código do kernel — nesta árvore, e é o que a máquina do usuário carrega**
 
-- `assets/dkms/hid-nintendo/hid-nintendo.c` (3303 linhas) e os remendos da casa
+- `assets/dkms/hid-nintendo/hid-nintendo.c` (3303 linhas) e os remendos do projeto
   em `assets/dkms/hid-nintendo/patch/`
 - `assets/dkms/hid-playstation/hid-playstation.c` (3132 linhas) e
   `assets/dkms/hid-playstation/patch/0001-HID-playstation-retry-feature-reports-that-time-out-o.patch`,
@@ -1392,7 +1389,7 @@ varredura acrescentou:
   (`bluetooth_hid_notes.md`, `bluetooth_hid_subcommands_notes.md`,
   `rumble_data_table.md`). **Conferido nesta varredura:** o mapa do byte de
   bateria **concorda** com o driver; a taxa publicada (60/120 Hz) foi
-  **refutada** na bancada
+  **refutada** no aparelho
 - `joycon-turnoff` (o modo de sleep do firmware) —
   `https://github.com/Sopsy/joycon-turnoff`. **Não conferido**; coerente com o
   medido
@@ -1401,9 +1398,9 @@ varredura acrescentou:
   reproduzido aqui**
 - Manual do 8BitDo SN30 Pro (semântica dos LEDs de modo) —
   `https://manuals.plus/8bitdo/8bitdo-sn30-pro-bluetooth-gamepad-user-manual`.
-  **A parte física nunca foi olhada nesta casa** — ver 8.4
+  **A parte física nunca foi olhada neste projeto** — ver 8.4
 
-**Documentos desta casa**
+**Documentos do Hefesto**
 
 - [a referência canônica do DualSense](dualsense-referencia-canonica.md) — o
   molde desta página, e o contraste em cada tabela
@@ -1412,7 +1409,7 @@ varredura acrescentou:
   — o método, o E-1 fechado e os cinco itens de protocolo que esta página **não**
   repete
 - [a página de uso do 8BitDo](../usage/troubleshooting-8bitdo.md) — e a nota 3
-  dela, que **continua aberta** (ver 4.8). É também quem mediu, em 25/07, os
+  daquela página, que **continua aberta** (ver 4.8). É também quem mediu, em 25/07, os
   dois endereços de rádio do clone — a resposta da `P-2`
 - [firmware e modos dos externos](externos-firmware-e-modos.md) — a mesa de
   11/08 com o clone no cabo: a identidade real, a IMU provada por valor, o mapa
@@ -1429,7 +1426,7 @@ varredura acrescentou:
 Esta página cita a
 [referência canônica do DualSense](dualsense-referencia-canonica.md) em todas as
 tabelas de contraste. **A recíproca ainda não existe**, e não foi escrita aqui de
-propósito: outro trabalho pode estar naquele arquivo agora, e a casa não edita
+propósito: outro trabalho pode estar naquele arquivo agora, e o projeto não edita
 documento que outra mão pode estar segurando.
 
 A linha a ligar lá, quando houver mão livre — sugerida para o cabeçalho, logo
@@ -1437,7 +1434,7 @@ abaixo da "Regra de uso":
 
 > **Documento irmão:** [os externos — Pro Controller e 8BitDo](externos-referencia-canonica.md).
 > Esta página vale **só para o DualSense**. Os controles das outras linhagens têm
-> envelope, escalas de IMU, régua de bateria e limitador de taxa **diferentes** —
+> envelope, escalas de IMU, escala de bateria e limitador de taxa **diferentes** —
 > e um instrumento escrito para um deles escreve lixo no outro.
 
 E os três pontos em que a página do DualSense **ganha** conteúdo desta:
@@ -1448,25 +1445,24 @@ E os três pontos em que a página do DualSense **ganha** conteúdo desta:
 2. **Seção 7 (o checklist do virtual).** As sementes de CRC-32 `0xA1` (entrada) e
    `0xA3` (feature) são **compartilhadas** com o DualShock 4; a página só
    documenta a de saída (`0xA2`).
-3. **`GYRO-EDGE-RATE-01`.** O Pro **declara** uma taxa (8 ms no comentário do
+3. **A taxa do giroscópio.** O Pro **declara** uma taxa (8 ms no comentário do
    driver, 15 ms no default) e **entrega outra** (11,2 ms, medida três vezes). É
-   a mesma família de defeito da sprint aberta, com um segundo aparelho e um
+   a mesma família de defeito da divergência aberta do DualSense, com um segundo aparelho e um
    número medido.
 
 > **NOTA DATADA — 11/08/2026: dívida PAGA, e uma correção de vocabulário.**
 >
 > Os quatro itens acima entraram na página do DualSense em 11/08, com a mão
-> livre: o "Documento irmão" está no cabeçalho dela, o contraste das escalas de
+> livre: o "Documento irmão" está no cabeçalho daquela página, o contraste das escalas de
 > IMU está na seção 5, e as três sementes de CRC-32 (`0xA2` saída, `0xA1`
 > entrada, `0xA3` feature) ganharam tabela própria na seção 7. Esta seção 11
 > fica como está — ela registra por que a recíproca demorou, e isso não se
 > apaga.
 >
-> **A correção:** `GYRO-EDGE-RATE-01` vem sendo citada como *"sprint aberta"*
-> aqui (`:371` e o item 3 acima), na página do DualSense e no mapa de canais —
-> e **não existe documento nenhum com esse nome** em `docs/process/sprints/`.
-> É um **nome de divergência**, não um trabalho em curso. Chamá-la de sprint
+> **A correção:** a taxa do giroscópio vinha sendo citada como *"trabalho aberto"*
+> aqui (`:371` e o item 3 acima), na página do DualSense e no mapa de canais.
+> É uma **divergência registrada**, não um trabalho em curso. Chamá-la de trabalho
 > faz parecer que alguém está com aquilo na mão, e ninguém está: a taxa do
 > DualSense **continua não medida**, e só é medível contra a SDL3 que a Steam
 > distribui. O que o Pro tem medido (11,2 ms contra os 8 ms declarados) é
-> **irmão** dela, não prova dela.
+> **irmão** desse número, não prova dele.

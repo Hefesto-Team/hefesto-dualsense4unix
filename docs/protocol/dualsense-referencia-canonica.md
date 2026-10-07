@@ -13,7 +13,7 @@
 
 ## Como ler os graus de confiança
 
-Toda linha técnica aqui carrega um grau, e ele não é decorativo. Esta casa já
+Toda linha técnica aqui carrega um grau, e ele não é decorativo. Este projeto já
 tomou decisão errada por confundir "documentação de comunidade" com "fato".
 
 | grau | significa | exemplo |
@@ -40,7 +40,7 @@ convincente e falso.** Em 01/08 mediu-se o gamepad virtual contra a `libSDL2`
 do Ubuntu e concluiu-se que ele não entregava nada; a biblioteca que os jogos
 usam entrega tudo. Todo instrumento tem de declarar contra o que mediu.
 
-**A régua de fonte, fixada em 11/08/2026 — toda citação diz contra QUE fonte
+**O critério de fonte, fixado em 11/08/2026 — toda citação diz contra QUE fonte
 foi feita.** São duas metades:
 
 1. **Fonte externa se cita por tag ou commit, nunca por ramo.** `master` e
@@ -49,7 +49,7 @@ foi feita.** São duas metades:
 2. **Afirmação sobre *"o kernel"* diz QUAL kernel.** O que roda aqui é
    `7.0.11-76070011-generic`, e o `hid-playstation` dele **não é o vanilla**: é
    o DKMS desta árvore (`assets/dkms/hid-playstation/`), que é o `v7.0.11` do
-   Pop!_OS mais os dois patches desta casa — proveniência e `sha256` conferidos
+   Pop!_OS mais os dois patches do Hefesto — proveniência e `sha256` conferidos
    em `assets/dkms/hid-playstation/patch/BASELINE`. É esse arquivo que as
    linhas **FONTE DESTA MÁQUINA** citam.
 
@@ -75,14 +75,14 @@ pagar um custo já pago.
 |---|---|---|
 | §2 | `common[4..7]` é PROVÁVEL; o kernel os chama `reserved[4]` | **CADUCOU** — ALTA nos bytes 5, 6 e 7. O byte 4 se parte em dois: campo ALTA, **bit** de autorização MÉDIA |
 | §3 | *"Este projeto escreve só o volume"* | **CADUCOU** — o pré-amp e a rota são escritos desde 01-02/08 |
-| §3 | o áudio por Bluetooth sai no report `0x32` | **RESPONDIDO EM 10/09/2026: é o `0x35`, de 334 B** — um quadro Opus de 10 ms por report, a cada 10,667 ms, escrito no `/dev/hidraw` com o daemon vivo. Ela ouviu 70 s sem corte. Nem `0x32` nem `0x39`: os dois aceitam o `common` e nenhum toca som — é a **falácia do canal que responde**. Ver *"O som que saiu pelo rádio"* |
-| §4 | a decodificação dos modos está curada | `weapon()` e `vibration()` seguem mandando o modo ERRADO pela régua desta própria seção — **não medido** |
-| §5 | player LED do jogador 4 | **CORRIGIDO** — é `xx-xx`, pelo fonte do driver desta máquina. O padrão que estava escrito aqui é o de *slot fora da tabela* do código desta casa |
+| §3 | o áudio por Bluetooth sai no report `0x32` | **RESPONDIDO EM 10/09/2026: é o `0x35`, de 334 B** — um quadro Opus de 10 ms por report, a cada 10,667 ms, escrito no `/dev/hidraw` com o daemon vivo. Foram 70 s de áudio ouvido, sem corte. Nem `0x32` nem `0x39`: os dois aceitam o `common` e nenhum toca som — é a **falácia do canal que responde**. Ver *"O som que saiu pelo rádio"* |
+| §4 | a decodificação dos modos está curada | `weapon()` e `vibration()` seguem mandando o modo ERRADO pelo critério desta própria seção — **não medido** |
+| §5 | player LED do jogador 4 | **CORRIGIDO** — é `xx-xx`, pelo fonte do driver instalado na máquina de teste. O padrão que estava escrito aqui é o de *slot fora da tabela* do código do Hefesto |
 | §5 | a taxa do giroscópio, *"nunca medida"* | **MEDIDA em 11/08** — cabo 250,0 Hz exatos, rádio variável em rajadas. O que continua aberto é o que o **SDL declara ao jogo**, não o que o aparelho entrega |
 | §6 | *"o gamepad virtual nunca escreve o byte 53"* | **CADUCOU** — escreve desde 09/08, e a conclusão que se tirava dali estava **invertida** |
 | §6 | byte 52 = `ucBatteryLevel` | **INCOMPLETO** — o nibble ALTO é estado de carga, e o código o decodifica em cinco casos |
 
-**E uma nona, medida na bancada de 11→12/08/2026, que é a mais cara das nove:**
+**E uma nona, medida no ensaio de 11→12/08/2026, que é a mais cara das nove:**
 a coluna *"validado por"* da tabela do §2 descreve o que o report **declara**,
 não o que o firmware **exige**. Para os dois bytes de motor os dois divergem —
 o aparelho obedeceu a `common[2]`/`common[3]` **com os bits de vibração
@@ -127,7 +127,7 @@ além do `common` carregam: isso continua **não identificado**.
 **Documento irmão:**
 [os externos — Pro Controller e 8BitDo](externos-referencia-canonica.md). Esta
 página vale **só para o DualSense**. Os controles das outras linhagens têm
-envelope, escalas de IMU, régua de bateria e limitador de taxa **diferentes** —
+envelope, escalas de IMU, escala de bateria e limitador de taxa **diferentes** —
 e um instrumento escrito para um deles escreve lixo no outro.
 
 ---
@@ -204,7 +204,7 @@ Fontes: `https://yhbt.net/lore/all/20210117230956.173031-3-roderick@gaikai.com/T
 · **e o fonte que roda aqui**, que é o que esta página cita por linha:
 `assets/dkms/hid-playstation/hid-playstation.c` — `v7.0.11` do Pop!_OS
 (`raw.githubusercontent.com/pop-os/linux/3af2f9de43174ce5063110f94b7b01226499ba13/drivers/hid/hid-playstation.c`)
-mais os dois patches desta casa
+mais os dois patches do Hefesto
 
 ### 1.3. O que a Sony publicou para PC — nada de técnico
 
@@ -248,7 +248,7 @@ campo a campo.
 ### §8.1 — `mute_button_led` é um ENUM DE QUATRO ESTADOS, não um brilho
 
 **Medido no aparelho em 02/09/2026, com o olho de quem confere, NOS DOIS TRANSPORTES.** Esta coluna
-esteve em branco desde que a tabela existe: ninguém nesta casa jamais tinha
+esteve em branco desde que a tabela existe: ninguém neste projeto jamais tinha
 escrito neste byte nada além de 0 e 1, porque o driver só escreve
 `ds->mic_muted`, que é `bool` (`hid-playstation.c:1540`).
 
@@ -268,7 +268,7 @@ forma: `255 & 0x03 = 3`, que deveria piscar lento — e apaga. Logo o firmware
 
 **Não existe controle de brilho por este byte** — era a hipótese que motivou a
 medição, e ela caiu. Mas o PWM EXISTE no aparelho: o pisca rampa em vez de
-ligar e desligar seco (observação dela, ao vivo). O brilho intermediário é
+ligar e desligar seco (observado ao vivo). O brilho intermediário é
 fisicamente possível; o que não se sabe é se algum campo o expõe. **Isso é
 pergunta em aberto, não fato.**
 
@@ -280,11 +280,11 @@ mas não se conseguiu cravar se a CADÊNCIA é a mesma. Resolver pede instrument
 estados saem idênticos por Bluetooth (`docs/data/ensaios.csv`:
 `led-mic-nivel-radio-1`). O envelope muda — report e CRC do rádio —, o campo
 não. A suspeita contrária era razoável e caiu: a lightbar por rádio é ignorada
-por alguns controles desta bancada, e o mapa registra isso desde 15/08/2026.
+por alguns controles usados nos ensaios, e o mapa registra isso desde 15/08/2026.
 
 Como se mede de novo: `scripts/ensaios/nivel_do_led_do_mic.py`. Ele fala pelo
 daemon vivo (`mic.led.set`), porque escrita crua no hidraw é sobrescrita pelo
-report seguinte — e devolve a posse no `finally`, sem o quê o botão físico dela
+report seguinte — e devolve a posse no `finally`, sem o quê o botão físico
 para de mandar na luz.
 
 **Nota de proveniência que muda o que estava escrito nesta árvore:** o
@@ -336,14 +336,14 @@ promovidos a ALTA; o byte 4 (fone) segue MÉDIA.
 
 ### Os BITS de vibração não são porteiro dos BYTES de motor
 
-**Grau: MEDIDO AQUI**, na bancada de 11→12/08/2026, com o olho de quem confere como
+**Grau: MEDIDO AQUI**, no ensaio de 11→12/08/2026, com o olho de quem confere como
 aceite. Ensaio `keepalive-premissa-troca-de-lado`
 (`docs/data/ensaios.csv:24`), instrumento
 `scripts/ensaio_o_keepalive_mata_o_rumble.py`, report montado pelo
 `_build_common` do próprio produto.
 
 A tabela acima diz que `motor_right`/`motor_left` são *"validados por flag0
-bit0/bit1"*. Isso descreve o que o report **declara** — e esta casa leu ali,
+bit0/bit1"*. Isso descreve o que o report **declara** — e este projeto leu ali,
 por meses, uma promessa que o firmware não faz: a de que **sem os bits o
 aparelho ignora os bytes**.
 
@@ -386,7 +386,7 @@ report é atômico, os dois bytes viajam em todo write, e o aparelho não devolv
 o que o outro escritor pediu — então "carregar o último valor conhecido" seria
 carregar o **nosso** zero com outro nome. Quem quiser preservar a vibração de
 outro dono só tem uma saída: **o write que não acontece**. Foi essa a cura
-aplicada aqui (`RUMBLE-SEM-DONO-01`, em
+aplicada aqui (em
 `core/backend_pydualsense.py`: o keepalive deixou de ser perpétuo e passou a
 valer só na janela de confirmação depois de cada mudança real).
 
@@ -406,8 +406,8 @@ a escada que responde.
 
 ### O instrumento, declarado — porque instrumento mente mais que produto
 
-- **A mesa é a medição.** Quatro DualSense, **dois no cabo e dois no rádio ao
-  mesmo tempo** — decisão **dela**. Sem essa mesa não há nada aqui: é ela que
+- **O arranjo é a medição.** Quatro DualSense, **dois no cabo e dois no rádio ao
+  mesmo tempo**. Sem esse arranjo não há nada aqui: é ele que
   garante que toda diferença observada seja do **transporte**, e não do
   aparelho, do dia, do kernel ou da máquina. O mesmo instrumento, no mesmo
   minuto, nos quatro.
@@ -415,7 +415,7 @@ a escada que responde.
   `/sys/class/hidraw/hidrawN/device/report_descriptor`. Nenhum byte foi escrito
   em controle nenhum para levantar a tabela abaixo.
 - **A parte que escreve** — o degrau que a lightbar respondeu — usou `hidraw`
-  cru com o **daemon parado** e a autorização dela, e teve **controle positivo e
+  cru com o **daemon parado** e com autorização do dono do aparelho, e teve **controle positivo e
   controle negativo** no mesmo desenho. Ver *"o instrumento que mentiu"*, mais
   abaixo.
 - **O veredito é o olho de quem confere.** Nenhuma linha desta seção se apoia no valor de
@@ -451,7 +451,7 @@ Três leituras, e as três são aritmética, não interpretação:
    sete degraus de exatamente 64** (525 - 77 = 448 = 7 x 64). O `0x39` seria
    589 se a progressão continuasse, e é **546**. O que isso significa **não foi
    medido**; o que se pode escrever é que o `0x39` é o **teto**, não o oitavo
-   degrau da mesma régua.
+   degrau da mesma escala.
 3. **O `0xF6` só existe por rádio, e é FEATURE, não OUTPUT** — 546 bytes, o
    mesmo tamanho de payload do `0x39`. A coincidência de tamanho é **observação**,
    não conclusão.
@@ -463,7 +463,7 @@ melhor prova de que a leitura está certa.** O tamanho declarado é payload; o
 | declarado | `+1` do id | onde este número já estava |
 |---|---|---|
 | `0x31` 77 B | **78** | os dois tamanhos de `0x31` do driver desta máquina: `hid-playstation.c:143` (entrada) e `:147` (saída) |
-| `0x32` 141 B | **142** | os 142 bytes do `0x32` que esta casa mediu ao vivo em 25/07 (§3) |
+| `0x32` 141 B | **142** | os 142 bytes do `0x32` que este projeto mediu ao vivo em 25/07 (§3) |
 | `0x39` 546 B | **547** | — |
 | `0xF6` 546 B | **547** | a linha do `0xf6` no censo dos dezessete, mais abaixo |
 
@@ -541,7 +541,7 @@ rádio.
 que **este envelope inteiro funciona**. **Ninguém aqui removeu uma peça de cada
 vez** para ver qual delas o firmware exige — nem o tag, nem o número de
 sequência, nem o CRC. Que o tag seja obrigatório vem do **comentário do driver da
-Sony**, não de ensaio desta casa. E a armadilha de fazer esse ensaio já está
+Sony**, não de ensaio do Hefesto. E a armadilha de fazer esse ensaio já está
 nomeada logo abaixo: uma escrita malformada **"dá certo"** para quem olha o valor
 de retorno.
 
@@ -580,7 +580,7 @@ de propósito, que tinha de ser recusado. O `btmon` mostra que o pacote errado
 carregou, e nada disso é o firmware concordando.
 
 Sem o controle negativo, esta seção teria afirmado o degrau **sem tê-lo medido**,
-com um instrumento que não aferia coisa nenhuma. É a regra da casa se pagando —
+com um instrumento que não aferia coisa nenhuma. É a regra do projeto se pagando —
 *"o instrumento mente mais que o produto"* — e a consequência é regra, não
 anedota: **todo ensaio desta família nasce com controle positivo E negativo, e o
 veredito é o olho de quem confere, nunca o valor de retorno da escrita.**
@@ -633,7 +633,7 @@ deixarmos.
 ### O crédito, que não é de quem escreveu esta seção
 
 A palavra *"impossível"* caiu duas vezes no mesmo dia, e as duas vezes por causa
-dela. De manhã pelo argumento, literal:
+da própria medição. De manhã pelo argumento, literal:
 
 > *"se no PlayStation via BT tudo isso funciona e pq tem um meio físico pra isso
 > funcionar e ainda não descobrimos, pq a documentação oficial é focada no cabo.
@@ -650,7 +650,7 @@ nossa própria vontade de ter achado mais do que achamos.
 
 ---
 
-## 3. Áudio — o caso do alto-falante que a mantenedora descreveu
+## 3. Áudio — o caso do alto-falante relatado pelo usuário
 
 Ela deu o exemplo: *"Zelda Skyward Sword: o speaker do controle faz os barulhos
 da espada enquanto na tela tem o som normal do jogo"*.
@@ -726,7 +726,7 @@ Os dois requisitos que a issue põe em cima: **USB antes de abrir o jogo** (o
 rádio não publica placa de som) e **Steam Input desligado para controles
 PlayStation**.
 
-**O que isto significa para esta casa:** o canal sempre esteve no aparelho —
+**O que isto significa para este projeto:** o canal sempre esteve no aparelho —
 faltava o Proton achá-lo, e desde 16/09/2026 o pino do produto é o
 `GE-Proton11-6-x86_64` exatamente por isso (`install.sh:4167-4174`). Num jogo
 que fale DualSense nativamente, **o alto-falante não passa pelo Hefesto**: o
@@ -734,7 +734,7 @@ jogo abre o sink do controle sozinho. O nó `hefesto_som_<marca>` e o `mix`/`sfx
 de `integrations/alto_falante_bt` são para o resto — o jogo que não sabe o que é
 um DualSense.
 
-### O que isso corrige na medição desta casa
+### O que isso corrige na medição do Hefesto
 
 Em 01/08 mediu-se a curva do volume do alto-falante: **mudo até 38, satura em
 102** — 60% do curso inerte. A explicação está aqui: o driver desta máquina,
@@ -750,7 +750,7 @@ common->audio_control2 = FIELD_PREP(...SP_PREAMP_GAIN, 0x2);    /* o PRÉ-AMP */
 
 Este projeto escreve **só o volume**. Os 64 passos úteis são a assinatura de
 estar mexendo em um de três botões — e o `0x64` que o driver escolhe é
-exatamente o topo da faixa medida aqui. **A medição desta casa e o driver
+exatamente o topo da faixa medida aqui. **A medição do Hefesto e o driver
 concordam**, e o que falta é o pré-amp e a rota. (O comentário do próprio fonte,
 em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 
@@ -764,7 +764,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:216-218` | **ALTA** — lido no código |
 > | pré-amp, `common[37]` | `core/backend_pydualsense.py:1227-1234`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1572-1574`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:122` | **ALTA** — lido no código |
-<!-- ENDEREÇOS REAPONTADOS em 20/09/2026: a O-NO-NASCE-FECHADO-01 acrescentou a
+<!-- ENDEREÇOS REAPONTADOS em 20/09/2026: um ajuste acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
      controle precisa do nó exposto DURANTE o open), e as citações desceram.
@@ -772,18 +772,18 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
      diff HEAD->árvore linha a linha, e o oráculo foi o próprio
      `scripts/validar-citacoes-de-linha.py --all`: 3285 citações conferidas
      antes e depois, o mesmo número, zero podre. -->
-<!-- ENDEREÇOS REAPONTADOS em 09/09/2026: a MIC-VOLUME-02 acrescentou a régua
+<!-- ENDEREÇOS REAPONTADOS em 09/09/2026: um ajuste acrescentou a função
      `byte_do_volume_do_microfone` e os dois métodos de posse do `common[6]` ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~57 linhas. As
      AFIRMAÇÕES não mudaram — só onde elas abrem. O mapa do reaponte foi o diff
      HEAD->árvore, linha por linha, e o símbolo prometido foi conferido dentro
      de cada faixa nova: reaponte por aritmética foi o que já pôs `:789` no meio
      de um docstring. -->
-<!-- ENDEREÇOS REAPONTADOS em 01/09/2026: MIC-DA-MESA-ELEICAO-01 acrescentou
+<!-- ENDEREÇOS REAPONTADOS em 01/09/2026: um ajuste acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.
      As AFIRMAÇÕES não mudaram — só onde elas abrem. -->
-<!-- ENDEREÇOS REAPONTADOS em 25/08/2026: a frente BG-01 acrescentou
+<!-- ENDEREÇOS REAPONTADOS em 25/08/2026: um ajuste acrescentou
      `set_primary_change_observer` e a reserva de posto ao
      `backend_pydualsense.py`, e as três citações de áudio desceram ~21 linhas.
      As AFIRMAÇÕES não mudaram — só onde elas abrem. -->
@@ -797,20 +797,20 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > podre. Desde então `scripts/validar-citacoes-de-linha.py` abre cada endereço
 > deste documento e reprova quando ele não contém o que promete.)*
 >
-> *(REAPONTADOS de novo em 14/08/2026, e o motivo é o mesmo de sempre: a
-> MESA-CHEIA-09 acrescentou um import no topo de `backend_pydualsense.py` e
+> *(REAPONTADOS de novo em 14/08/2026, e o motivo é o mesmo de sempre: um
+> ajuste acrescentou um import no topo de `backend_pydualsense.py` e
 > **empurrou o arquivo inteiro uma linha para baixo**. `:937` virou `:938` e a
 > faixa do `_byte_da_rota` virou `:286-316`. Endereço podre é fato errado, e
 > fato errado se substitui — a afirmação continua a mesma.)*
 >
-> *(REAPONTADOS de novo em 15/08/2026, mesmo motivo: o LACO-DE-ESCRITA-02 pôs
+> *(REAPONTADOS de novo em 15/08/2026, mesmo motivo: um ajuste pôs
 > lock no `writeReport` e guarda de leitura vazia no `sendReport`, e as linhas
 > novas empurraram o `_build_common` para baixo. `:930-932` virou
 > `:1063-1065`, e `:936-941`/`:938` virou `:1066-1073`/`:1070`. As afirmações
 > continuam as mesmas.)*
 >
 > *(REAPONTADOS de novo em 16/08/2026, e desta vez o empurrão veio do próprio
-> áudio: a POSSE-DO-VOLUME-01 acrescentou ao `_PinnedPyDualSense` o volume que
+> áudio: um ajuste acrescentou ao `_PinnedPyDualSense` o volume que
 > nasce em 100% — as três faixas desceram ~39 linhas. `:1063-1065` virou
 > `:1102-1104`, `:1066-1073`/`:1070` virou `:1105-1112`/`:1109`, e o
 > `_byte_da_rota`, que estava em `:286-316`, virou `:338-368`. Quarto reaponte
@@ -829,7 +829,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > pré-amp, num caminho de código que não existe mais. O número continua
 > verdadeiro sobre o que foi medido em 01/08 e **deixou de descrever o produto
 > de hoje**; a curva **com** pré-amp é **não medida**. Quem citar os 64 passos
-> úteis como propriedade do hardware está citando uma régua que mediu outra
+> úteis como propriedade do hardware está citando uma medida que mediu outra
 > coisa.
 >
 > Só o **quarto** item do áudio de saída continua não escrito, e ele não é
@@ -863,7 +863,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | esta página | os blocos TLV de áudio saem no report **`0x32`**, tag `0x12` | **BAIXA** — fonte única de comunidade (SAxense) |
 > | `integrations/dualsense_bt_audio.py:31` e `:213-219` | o `0x32` é o **AudioControl** (liga/desliga do microfone, tag `0x11`); quem carrega háptico (`0x12`) e alto-falante (`0x13`/`0x16`) é o report **`0x39`** | **BAIXA** — lido do firmware `DS5Dongle`, não medido |
 >
-> **O `0x32` que esta casa mediu não decide a questão.** O que foi medido ao
+> **O `0x32` que este projeto mediu não decide a questão.** O que foi medido ao
 > vivo em 25/07 é o `0x32` de **controle** — 142 bytes, TLV `0x11|0x80`, o
 > byte que destrava o microfone (`integrations/dualsense_bt_audio.py:210`).
 > Isso não é o report de **payload**, e nunca foi. Ninguém aqui escreveu um
@@ -885,7 +885,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > feita.** O descritor por rádio foi lido nos quatro controles do usuário. Não há
 > `0x32` **ou** `0x39`: **há nove reports de saída, `0x31` a `0x39`**, e os dois
 > candidatos estão os dois lá — o `0x32` com 141 bytes de payload (142 com o id,
-> exatamente os 142 que esta casa mediu em 25/07) e o `0x39` com 546 (547 com o
+> exatamente os 142 que este projeto mediu em 25/07) e o `0x39` com 546 (547 com o
 > id). A tabela inteira está em *"Os reports de saída por transporte"*, logo
 > acima do §3. **GRAU: LIDO NO DESCRITOR.**
 >
@@ -898,9 +898,9 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > som: é a **falácia do canal que responde**, batizada na mesma seção.
 
 > **E FOI MEDIDO EM 10/09/2026: é o `0x35`.** A frase acima — *"ninguém aqui
-> escreveu um byte de áudio de saída por rádio"* — **caducou na bancada**,
-> com o alto-falante do DualSense tocando por rádio pela primeira vez nesta
-> casa. Os dois candidatos de comunidade estavam **os dois errados**: não é o
+> escreveu um byte de áudio de saída por rádio"* — **caducou no ensaio**,
+> com o alto-falante do DualSense tocando por rádio pela primeira vez neste
+> projeto. Os dois candidatos de comunidade estavam **os dois errados**: não é o
 > `0x32` nem o `0x39`. É o quinto degrau, e o layout está logo abaixo.
 
 ### O som que saiu pelo rádio — o `0x35`, medido em 10/09/2026
@@ -933,9 +933,9 @@ sem primer · sem socket L2CAP · sem root · sem unbind
 `dualsense-neo` diagnosticou. Esta página dizia *"um report a cada 20 ms"*, e
 isso **caducou**.
 
-**QUATRO OUTRAS AFIRMAÇÕES DESTA CASA CAÍRAM NA MESMA CORRIDA:**
+**QUATRO OUTRAS AFIRMAÇÕES DESTE PROJETO CAÍRAM NA MESMA CORRIDA:**
 
-| a casa dizia | a medição diz |
+| o projeto dizia | a medição diz |
 |---|---|
 | *"o DS5Dongle é um dongle: prova report HID, não hidraw"* | **o hidraw basta.** Escrita direta em `/dev/hidraw`, no Linux, pelo BlueZ |
 | *"o MTU do BlueZ pode ser a parede"* | **672 basta.** O `setsockopt`/1024 foi trabalho pago por nada, e deu silêncio |
@@ -960,7 +960,7 @@ enquadramento. O layout vem do `HeadsetPlayMusic` de `awalol/dualsense-bt-haptic
 `install.sh` já a instala — ver `_dep_presente "lib:libopus.so.0"` —, e desde
 10/09 ela é dependência **do alto-falante por rádio também**, não só do microfone.
 
-**A PONTE ESTÁ NO PRODUTO desde a tarde do mesmo 10/09** (SOM-FIADO-01). O
+**A PONTE ESTÁ NO PRODUTO desde a tarde do mesmo 10/09**. O
 texto acima dizia *"o `alto_falante_bt.py` monta `0x39` a 20 ms; o som de hoje
 vive só no ensaio"* — **caducou em horas**:
 
@@ -973,15 +973,15 @@ vive só no ensaio"* — **caducou em horas**:
 * `GerenciadorDeNosDeSom.reconciliar` guarda o par: **sem rota, sem nó** — o
   `module-null-sink` mudo não nasce nem por acidente.
 
-**O QUE CONTINUA ABERTO É BANCADA, e é do usuário:** o **negativo de rota** (o mesmo
+**O QUE CONTINUA ABERTO É ENSAIO NO APARELHO, e é de quem o tem:** o **negativo de rota** (o mesmo
 timbre mirado no HDMI não sai do controle) e o **teste cego**. Enquanto os dois
 não acontecerem, `audio.alto_falante@dualsense` fica com `radio_aciona: não` —
-por disciplina desta casa, não por dúvida sobre o que ela ouviu.
+por disciplina do Hefesto, não por dúvida sobre o que ela ouviu.
 
 ### O microfone por rádio, e o driver que o desliga — 10/09/2026
 
 **GRAU: LIDO NO FONTE do driver que este produto instala**, mais a assinatura
-no journal da bancada.
+no journal do ensaio.
 
 Um quadro de microfone por Bluetooth chega com o **mesmo `reportID` `0x31`, o
 mesmo tamanho de 78 bytes e um CRC-32 válido** que um report de estado de
@@ -1000,13 +1000,13 @@ comprimido. As duas consequências foram medidas:
 | `ds_report->buttons[2]`, bit `DS_BUTTONS2_MIC_MUTE` | oscila com o áudio. Na borda de subida o driver inverte `ds->mic_muted` e escreve `POWER_SAVE_CONTROL_MIC_MUTE` — **desliga o microfone sozinho** |
 | os eixos e os demais botões | recebem valores de áudio: **o cursor e o teclado se mexem sozinhos** |
 
-**A segunda é a "entrada fantasma"**, relatada duas vezes na bancada. E ela
+**A segunda é a "entrada fantasma"**, relatada duas vezes nos ensaios. E ela
 explica por que uma medição de 120 s do evdev deu ZERO: naquela corrida o
 microfone não estava no ar, logo não havia quadro de áudio a ser lido como
 botão. *Um zero só derruba a hipótese se a corrida tiver a condição que a
 hipótese exige.*
 
-**Isso fecha o `BT-MIC-GATING-01`** — o bit `MicMuted` oscilando a ~16,7 Hz com
+**Isso fecha a hipótese de o firmware gatear o microfone** — o bit `MicMuted` oscilando a ~16,7 Hz com
 o mic ligado e estável com ele desligado **é o kernel oscilando**, não uma
 reação do firmware.
 
@@ -1014,7 +1014,7 @@ reação do firmware.
 debounce de 1,0 s do daemon (`MIC_SOSSEGO_S`) engole as primeiras transições; a
 seguinte é aceita como o dedo do usuário no botão; o daemon desliga o microfone. Sem
 o `0x32` o firmware para de oscilar, então nunca mais nasce borda e ele não
-volta. No journal da bancada, às 09:42 de 10/09:
+volta. No journal do ensaio, às 09:42 de 10/09:
 
 ```
 mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
@@ -1041,7 +1041,7 @@ sintomas de uma vez.
 **AS DUAS CURAS, e elas são de camadas diferentes:**
 
 1. **A raiz** — `if (data[1] & DS_INPUT_BT_FLAG_AUDIO) return 0;` no ramo
-   Bluetooth do parse (`patch/0003`, MIC-NAO-E-BOTAO-01). **INSTALADA E MEDIDA em 10/09/2026.** O módulo curado entrou pelo DKMS e foi carregado (o `srcversion` em memória foi de `E493EAD26536CF68977110C` para `CFB81A3D4C7FAA41489CCBD`), e os dois sintomas sumiram no mesmo instante.
+   Bluetooth do parse (`patch/0003`). **INSTALADA E MEDIDA em 10/09/2026.** O módulo curado entrou pelo DKMS e foi carregado (o `srcversion` em memória foi de `E493EAD26536CF68977110C` para `CFB81A3D4C7FAA41489CCBD`), e os dois sintomas sumiram no mesmo instante.
    Ela entra pelo caminho normal do `install.sh` (passo 3k);
 2. **A defesa** — do lado do daemon, o gesto do botão deixou de ser a virada
    do bit `MIC_MUTE` de `status[1]` e passou a ser o próprio BOTÃO
@@ -1054,8 +1054,7 @@ sintomas de uma vez.
    sessão de 28/09.
 
 **A METADE EM PYTHON JÁ FAZIA A GUARDA CERTA DESDE 16/08/2026** —
-`core/physical_report_reader.INPUT_FLAG_AUDIO`, do PS-PRESO-01. A casa sabia a
-resposta numa linguagem e a esquecia na outra; a régua
+`core/physical_report_reader.INPUT_FLAG_AUDIO`. A resposta existia numa linguagem e foi esquecida na outra; o teste
 `tests/unit/test_o_quadro_do_microfone_nao_e_botao.py` trava as duas no mesmo
 bit.
 
@@ -1104,13 +1103,13 @@ captura a escolher.
 captura nenhum, então o `Headset Capture Volume` (0…12288 = **0…+48 dB**) fica
 fora do alcance do PipeWire — e, portanto, do produto e da tela. Lido em
 repouso em 17/09 e de novo em 20/09/2026: **100% / +48,00 dB**, o topo da faixa.
-Quem decide é a definição da porta ativa, e desde o UCM desta casa
+Quem decide é a definição da porta ativa, e desde o UCM do Hefesto
 (`assets/ucm/DualSense-HiFi.conf`) **o dono dessa definição somos nós**: o
 `SectionDevice."Mic"` declara `CapturePCM` e `CapturePriority`, e nenhum
 `CaptureVolume`/`CaptureMixerElem`. Quem vigia é
 `_dualsense_porta_de_captura_status` em `scripts/doctor.sh`.
 
-**FATO SUBSTITUÍDO:** a MIC-USB-01 (25/07/2026) mediu esse elemento em **31%**,
+**FATO SUBSTITUÍDO:** a medição de 25/07/2026 mediu esse elemento em **31%**,
 e o ensaio do cabo carregava os 31% como hipótese mais forte. O número caiu, e a
 hipótese virou do avesso: não falta ganho — **sobra ganho, e ele não tem dono.**
 Se esses +48 dB pioram o som depende de o ganho ser analógico ou digital, e isso
@@ -1118,8 +1117,8 @@ Se esses +48 dB pioram o som depende de o ganho ser analógico ou digital, e iss
 mixer, e o valor final é decisão de produto.
 
 **O `ctlerr=1` de `/proc/asound/cardN/usbmixer` NÃO é contador de erro.** Ele é
-o `ignore_ctl_error` do mixer, e nesta máquina vem do quirk **desta casa**:
-`/etc/modprobe.d/hefesto-dualsense-storm.conf` (`SPRINT-GAME-RUMBLE-01`) define
+o `ignore_ctl_error` do mixer, e nesta máquina vem do quirk **do Hefesto**:
+`/etc/modprobe.d/hefesto-dualsense-storm.conf` define
 `quirk_flags=054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m`, enquanto o parâmetro
 global `ignore_ctl_error` continua em `N`. Ler `ctlerr=1` como «uma requisição
 de controle falhou» é ler outra coisa que não o produto.
@@ -1159,7 +1158,7 @@ exatamente com os 7 modos da enum da Sony.
 ### O `0x00` também desliga — MEDIDO AQUI em 05/08/2026
 
 Esta tabela listava só o `0x05` como Off, e essa omissão sustentou uma suspeita
-inteira (`ENTREGA-QUE-NÃO-LIGOU-01`, defeito 2): como **todo** caminho de
+inteira (defeito 2 daquela investigação): como **todo** caminho de
 desligar desta árvore manda `0x00` — `off()`, `trigger.reset`, o release do
 Modo Nativo, o fim de sessão de jogo — e a tabela não o reconhecia, concluiu-se
 que *"Desligar" podia não desfazer*.
@@ -1198,7 +1197,7 @@ como prova de que ele obedece. Não é. Um gatilho solto prova que o comando
 e o olho de quem confere em cada um.
 
 Até 12/08 **nenhum** ensaio sustentava o efeito adaptativo por Bluetooth: a
-afirmação vinha de leitura de código, e foi o portão `grau-sem-ensaio` (12/08)
+afirmação vinha de leitura de código, e foi a verificação automática `grau-sem-ensaio` (12/08)
 que flagrou a falta. Agora tem plástico atrás:
 
 - **`Rigid[0,8]` aplicado só no L2**, às 22:16:53, nos quatro controles: **L2
@@ -1272,7 +1271,7 @@ A tabela desta árvore herdou a nomenclatura opaca de uma engenharia reversa de
 | `PULSE_AB` | 0x26 | Vibration — os cinco presets que o usuário aprovou |
 | `CALIBRATION` | 0xFC | **Debug — REMOVIDO da enum em 01/08; o `custom()` recusa 0xFC-0xFE** |
 
-Desde a TRIGGER-CANON-01 os nomes da coluna 1 são **alias** dos canônicos
+Desde a unificação dos nomes de gatilho, os nomes da coluna 1 são **alias** dos canônicos
 (`FEEDBACK`, `WEAPON`, `VIBRATION`, `BOW`, `GALLOPING`, `MACHINE`) — eles
 ficam porque estão em perfis no disco do usuário.
 
@@ -1280,7 +1279,7 @@ Consequência, se a decodificação estiver certa: `rigid()`, `simple_rigid()` e
 `feedback()` mandam **OFF** — não fazem nada; `weapon()` **vibra** em vez de
 resistir; e por aí.
 
-**MEDIDO E CURADO em 01/08/2026 — TRIGGER-CANON-01.** Ela testou pela aba
+**MEDIDO E CURADO em 01/08/2026.** O teste pela aba
 Gatilhos e a decodificação se confirmou: *"rígido e desligado sem diferença"*,
 *"resistência nada também"*, *"arco, galope e pulso e metralhadora funcionam"*.
 
@@ -1296,20 +1295,20 @@ E a medição trouxe DUAS correções ao que estava escrito aqui:
    fez nada. Os modos oficiais VALIDAM os parâmetros; os legados e os não
    oficiais não.
 
-E o aceite de produto dela mudou o objetivo da correção: *"as duas temos nomes
+E o aceite de produto mudou o objetivo da correção: *"as duas temos nomes
 perfeitos, pq essa é a sensação de usar ambas"*. Os cinco que funcionam **não
 foram tocados** — os bytes deles viraram dado, travados em
 `tests/unit/test_trigger_canon_01.py`. Os sete que não faziam nada passaram a
 mandar o modo oficial correto COM o bitmask de zonas.
 
 **E refutou um bug registrado** (feito em 01/08, ver `trigger_effects.py`): o
-`BUG-TRIGGER-MULTIPOS-FORCA8-01` concluiu
+registro anterior concluiu
 *"o campo tem 3 bits, logo o máximo é 7 e a força 8 satura"*. A codificação real
 é `(strength − 1) & 0x07` com `strength` em 1..8, e `strength == 0` significa
 **zona inativa** — expresso no bitmask que esta árvore não escreve. Os 8 níveis
 SÃO expressáveis.
 
-> **NOTA DATADA — 11/08/2026: a cura da TRIGGER-CANON-01 não alcançou dois
+> **NOTA DATADA — 11/08/2026: a unificação dos nomes não alcançou dois
 > presets, e são justamente os dois de nome oficial.**
 >
 > A seção acima conta a leva curada. Conferido no código hoje, **dois efeitos
@@ -1326,7 +1325,7 @@ SÃO expressáveis.
 > aprovou pela sensação e cujos bytes viraram dado travado em
 > `tests/unit/test_trigger_canon_01.py`. Caíram no vão.
 >
-> **Grau: BAIXA, e a incerteza é real, não formal.** A régua que os condena é
+> **Grau: BAIXA, e a incerteza é real, não formal.** O critério que os condena é
 > a decodificação desta seção, que é ALTA; mas a §4 também registra que os
 > modos **não oficiais e legados NÃO validam parâmetros** — foi por isso que
 > os cinco presets de `0x26` produziram sensações diferentes por acidente. Um
@@ -1376,7 +1375,7 @@ e um default aplicado na probe (`:3022`); a `struct dualsense` de `:233` **não
 tem equivalente de nada disso**. O que chega é o que o aparelho e o transporte
 decidem, e foi isso que se mediu.
 
-**As réguas, declaradas** — duas, independentes, sobre o nó evdev
+**Os métodos, declarados** — dois, independentes, sobre o nó evdev
 `Motion Sensors`, que emite `MSC_TIMESTAMP` a cada report:
 
 1. **relógio do host** — contagem de `SYN_REPORT` sobre tempo de parede;
@@ -1396,8 +1395,8 @@ A terceira nem é medição: é o intervalo de serviço que o endpoint **declara
 **Os 250 Hz do cabo estão fechados.**
 
 **O rádio: variável, em rajadas, e nunca 1000 Hz.** Cinco janelas de 8 a 10 s,
-mesmo controle, parado sobre a mesa, e as duas réguas por janela (o traço é
-janela em que aquela régua não foi colhida):
+mesmo controle, parado sobre a mesa, e os dois métodos por janela (o traço é
+janela em que aquele método não foi colhido):
 
 | janela | relógio do host | relógio do controle |
 |---|---|---|
@@ -1427,19 +1426,18 @@ A medição completa, com as cinco janelas e as medianas, está em
 jogo que integre velocidade angular pela taxa declarada teria escala 4× errada.
 O lado do **aparelho** está medido acima; o lado do **SDL** não.
 
-> **NOTA DATADA — 11/08/2026: a régua é metade do ensaio, e ela custou um
+> **NOTA DATADA — 11/08/2026: o método é metade do ensaio, e ele custou um
 > alarme falso inteiro.**
 >
 > A metade que falta só vale medida contra a **SDL3 que a Steam distribui**,
 > que é a biblioteca que os jogos usam — **nunca** contra a `libSDL2` do
-> sistema. Medir contra a biblioteca errada já produziu, nesta casa, um alarme
+> sistema. Medir contra a biblioteca errada já produziu, neste projeto, um alarme
 > falso inteiro (é a armadilha do topo desta página). Enquanto o número não
 > vier de lá, o grau daquela metade é **BAIXA**, e a frase honesta é *"não
 > medido"*.
 >
-> **`GYRO-EDGE-RATE-01` é NOME DE DIVERGÊNCIA, não sprint.** Não existe
-> arquivo com esse nome em `docs/process/sprints/`, e chamá-lo de sprint faz
-> parecer que alguém está com o trabalho na mão. O apelido está registrado em
+> **A taxa do giroscópio do Edge é uma divergência registrada, não um trabalho
+> em curso.** O apelido está registrado em
 > divergências nomeadas, que é onde se
 > confere o que cada nome desses quer dizer.
 >
@@ -1455,7 +1453,7 @@ O lado do **aparelho** está medido acima; o lado do **SDL** não.
 `core/physical_report_reader.py`.
 
 **Lightbar — ALTA.** `lightbar_setup` bit1 é literalmente o **fade out**
-(confirma a armadilha `LIGHTBAR-BT-KEEPALIVE-01` desta casa). `led_brightness`
+(confirma a armadilha do keepalive da barra de luz, já conhecida no Hefesto). `led_brightness`
 tem 3 níveis.
 
 **O firmware GUARDA a cor entre conexões — MEDIDO AQUI em 12/08/2026.** Ensaio
@@ -1475,13 +1473,13 @@ pedia**. Literal: *"dois bt tão magenta... seguem iguais, nenhum mudou"*.
 **Uma cor escrita não precisa de keepalive para ficar de pé — QUANDO NÃO HÁ
 OUTRO ESCRITOR.** A condição não é detalhe: é o que o ensaio de fato mediu
 (daemon parado, Steam fechada), e sem ela a frase vira prescrição sem prova.
-Com escritor concorrente a conta se inverte, e a mesma bancada mediu isso: a
+Com escritor concorrente a conta se inverte, e o mesmo arranjo mediu isso: a
 Steam repinta na probe (`lightbar-probe-suja-steam`) e a reafirmação passa a ser
 justamente o instrumento com que o produto disputa a barra. O que o ensaio
 autoriza afirmar é sobre o FIRMWARE, não sobre a política de escrita do produto.
 O custo de reafirmar por hábito já foi medido noutro lugar, e ali é real: no
 rumble, a reafirmação perpétua **apagava motor alheio** (§2, *Os BITS de
-vibração não são porteiro dos BYTES de motor*). O ensaio de controle na mesma bancada
+vibração não são porteiro dos BYTES de motor*). O ensaio de controle no mesmo arranjo
 (`cor-rota-sysfs-sem-steam-2237`, `ensaios.csv:72`) fecha o par: sem outro
 escritor, **as duas rotas obedecem** — as mesmas barras saíram do magenta escrito
 por `0x31` e viraram verde escrito por `sysfs`. A rota `sysfs` **não** é rota
@@ -1519,7 +1517,7 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 > coisa**: `x-xx-`, byte a byte o `_PLAYER_LED_OVERFLOW` de
 > `core/led_control.py:99` — o padrão de *"slot fora da tabela"* (≥9),
 > escolhido justamente para **não** se confundir com número de jogador nenhum.
-> Alguém trocou os dois. **O código desta casa sempre esteve certo**
+> Alguém trocou os dois. **O código do Hefesto sempre esteve certo**
 > (`core/led_control.py:85-94`, com o P4 em `:109`); quem estava errado era
 > a página, e o número saiu.
 >
@@ -1550,10 +1548,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
 >   (`core/backend_pydualsense.py:578-583`), porque reengatá-lo em regime
->   trava a exibição no firmware — é a `LIGHTBAR-BT-KEEPALIVE-01`.
+>   trava a exibição no firmware — é o keepalive da barra de luz.
 >
-> E o perigo registrado, que esta página não carregava: a
-> `LIGHTBAR-BT-CLAIM-01` propôs usar o `LIGHT_OUT` para *"tomar a barra de
+> E o perigo registrado, que esta página não carregava: uma
+> proposta antiga era usar o `LIGHT_OUT` para *"tomar a barra de
 > volta"*. **Testado ao vivo: nenhum efeito.** Quem executasse aquela proposta
 > escreveria código para APAGAR a barra achando que a acendia. GRAU: MEDIDO
 > AQUI.
@@ -1595,8 +1593,7 @@ Quem escrever gesto de três dedos para este aparelho escreve código morto.
 `TouchpadReader` lia `ABS_X`/`ABS_Y`/`BTN_TOUCH` — o caminho **single-touch**
 que o kernel emula para o contato principal —, e o segundo dedo morria ali.
 O daemon publicava um ponto, e a aba Controles desenhava um ponto. *O desenho
-não estava errado: ele era fiel a um payload pobre.* A cura foi ler os slots
-(`MULTITOQUE-01`), e ela tem uma regra dentro: **o caminho single-touch de um
+não estava errado: ele era fiel a um payload pobre.* A cura foi ler os slots, e ela tem uma regra dentro: **o caminho single-touch de um
 nó multitouch é um resumo, não o dado** — quem precisa dos dedos pede os
 slots.
 
@@ -1618,13 +1615,13 @@ slots.
 
 ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele sai sempre
 `0x00`. Consequência: o vpad anuncia **"fone e microfone sempre plugados"**, que
-é o pior default possível justamente para o caso do alto-falante. Sprint aberta.
+é o pior default possível justamente para o caso do alto-falante. Estava aberto.
 
 > **NOTA DATADA — 11/08/2026: o parágrafo acima está errado DUAS VEZES, e o
 > título desta seção envelheceu com ele.**
 >
-> **(1) O byte 53 é escrito hoje.** A sprint fechou em 09/08/2026
-> (`JACK-QUE-NAO-LIGOU-01`), e o caminho inteiro existe:
+> **(1) O byte 53 é escrito hoje.** Isso foi curado em 09/08/2026,
+> e o caminho inteiro existe:
 >
 > | etapa | onde | grau |
 > |---|---|---|
@@ -1634,7 +1631,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:999`, offset `_STATUS1_OFFSET = 53` em `:526` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
-> dois**, porque sobreviveria mesmo se a sprint nunca tivesse fechado. Os bits
+> dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
 > são de **detecção**: `HP_DETECT` **ligado** significa *"há fone"*. Com o byte
 > em `0x00`, o vpad não anunciava *"fone e microfone sempre plugados"* —
 > anunciava **"nada plugado"**, que é o oposto. O código diz isso com todas as
@@ -1657,7 +1654,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > o byte em dois campos nomeados —
 > `assets/dkms/hid-playstation/hid-playstation.c:175-176`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
-> `GENMASK(7, 4)` — e o código desta casa o decodifica em cinco casos
+> `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
 > (`core/physical_report_reader.py:270-305`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
@@ -1675,7 +1672,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de
 > `dualsense_parse_report` está em
 > `assets/dkms/hid-playstation/hid-playstation.c:1727-1753`, com o
-> `min(battery_data * 10 + 5, 100)` em `:1733` e `:1737`, e o código desta casa
+> `min(battery_data * 10 + 5, 100)` em `:1733` e `:1737`, e o código do Hefesto
 > aplica a mesma conta nos dois sentidos. **O grau não é mais herdado de "o
 > kernel 6.18 faz assim":** é o fonte que compilou o módulo carregado agora, com
 > a linha na mão. **Não medido:** o que o **jogo** faz com o número — nenhum
@@ -1764,10 +1761,10 @@ if (ctx->rumble_left || ctx->rumble_right) {
 ```
 
 ⇒ **Na parada, o SDL emite um report com `valid_flag0 == 0x00` e motores
-zerados.** O portão deste projeto (`if not body[flag0] & 0x03: return`) descarta
+zerados.** O filtro deste projeto (`if not body[flag0] & 0x03: return`) descarta
 **exatamente** esse report. É a receita do "tremendo sem parar".
 
-O portão está certo pelo motivo certo (report de gatilho traz motores zerados).
+O filtro está certo pelo motivo certo (report de gatilho traz motores zerados).
 O discriminador que separa os dois casos é limpo:
 
 - **parada do SDL:** `valid_flag0 == 0` **e** `valid_flag1 == 0` **e** motores
@@ -1785,8 +1782,7 @@ O discriminador que separa os dois casos é limpo:
 > **GRAU: MEDIDO AQUI** para o mecanismo (§2, ensaio
 > `keepalive-premissa-troca-de-lado`); **INFERIDO** para a atribuição de
 > intenção ao SDL — ninguém aqui perguntou aos autores dele por que a parada tem
-> essa forma. A hipótese explica o que **já** funcionava, que é a régua desta
-> casa: a parada do SDL sempre funcionou no controle físico, e agora se sabe por
+> essa forma. A hipótese explica o que **já** funcionava, que é a regra do projeto: a parada do SDL sempre funcionou no controle físico, e agora se sabe por
 > quê.
 
 ---
@@ -1865,8 +1861,8 @@ pedido antes"*, e a frase foi **enfraquecida em 15/08/2026**, no mesmo dia:
 resultado nulo é compatível com as duas leituras — *"responde só depois de um
 pedido"* e *"não responde nunca"* devolvem o mesmo buffer de zeros. A leitura
 de *"responde ao que foi pedido antes"* vem do **caminho da cor**, mais abaixo,
-que esta casa marca como **CAMINHO IDENTIFICADO, NÃO MEDIDO por nós** — ele é a
-razão de a suspeita existir, e não pode ser a prova dela. Quem quiser decidir
+que este projeto marca como **CAMINHO IDENTIFICADO, NÃO MEDIDO por nós** — ele é a
+razão de a suspeita existir, e não pode ser a prova. Quem quiser decidir
 faz o par: escreve, lê, e compara com a leitura sem escrita.
 
 **O `0x22` não é código de cor.** Nos dois aparelhos com `sw_series = 11` o
@@ -1916,7 +1912,7 @@ Quem for atrás da cor por aqui: é um candidato, não uma resposta.
 ### A regra de leitura por rádio — retry e validação de id
 
 **GRAU: MEDIDO AQUI, 15/08/2026.** Esta é a parte que mais custou, e ela derruba
-uma hipótese que já esteve escrita nesta casa.
+uma hipótese que já esteve escrita neste projeto.
 
 **O tamanho do buffer não era o problema. O transporte era.** Por rádio o
 `GET_REPORT` sai pelo canal de controle L2CAP e bate no `REPORT_REQ_TIMEOUT` de
@@ -1953,9 +1949,9 @@ Daí as duas regras, e nenhuma delas é opcional:
 
 ### O caminho da cor do plástico — MEDIDO NOS DOIS TRANSPORTES
 
-**GRAU: ALTA, MEDIDO NESTA BANCADA em 27/08/2026**, no cabo e no rádio, com o
+**GRAU: ALTA, MEDIDO NOS ENSAIOS em 27/08/2026**, no cabo e no rádio, com o
 serial saindo dos dois. Foi `identificado-em-fonte-externa` de 15/08 até 27/08;
-o achado original desta casa é de **10/08/2026**, e ficou enterrado num
+o achado original do Hefesto é de **10/08/2026**, e ficou enterrado num
 transcrito de sessão — este parágrafo existe para que isso não se repita.
 
 O colorway de fábrica está no **serial impresso na traseira**, de 17 caracteres,
@@ -1983,17 +1979,17 @@ GET_FEATURE 0x81 -> 64 bytes
 Mais os códigos `Z1` a `ZB`, que são edições especiais.
 
 **ESTA TABELA ESTÁ INCOMPLETA, e a contagem é de 29/08/2026:** ela cobre 21
-códigos, e a fonte da verdade das cores desta casa — `docs/data/cores-do-dualsense.csv`
+códigos, e a fonte da verdade das cores do Hefesto — `docs/data/cores-do-dualsense.csv`
 — conhece **28**. Faltam aqui `13` HyperPop Techno Red, `14` HyperPop Remix
 Green, `15` HyperPop Rhythm Blue, `ZC` Ghost of Yōtei, `ZD` Marathon, `ZE`
 Genshin Impact e `ZF` 007 First Light — os sete mais novos. O PRODUTO NÃO
-TEM MAIS ESSA LACUNA desde 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01):
+TEM MAIS ESSA LACUNA desde 25/09/2026:
 `integrations/cor_do_plastico.TABELA` é LIDA do CSV, com os 28, e um código que
 nem o CSV conhece sai com o nome do modelo pelo PID («DualSense» ou «DualSense
 Edge»). **Não copie esta tabela para lugar nenhum:** o dono do dado é o CSV.
 
 **O DualSense Edge (`054C:0DF2`) recebe o MESMO pedido desde 25/09/2026, e isso
-não foi medido num Edge de verdade** — esta bancada não tem nenhum. A tradução
+não foi medido num Edge de verdade** — nenhum foi usado nos ensaios. A tradução
 do código é a do DualSense (as três fontes acima não separam os dois), e um Edge
 que recusar, não responder ou devolver um código fora do CSV sai com o nome
 «DualSense Edge», sem cor. O primeiro Edge que passar pela mesa vira a medição.
@@ -2004,7 +2000,7 @@ confirmando na issue #210; e **duas implementações independentes que concordam
 (`nsfm/dualsense-ts` e `TechAntohere/Senshi`). Três fontes que fecham entre si é
 mais do que esta página costuma exigir para MÉDIA.
 
-**As duas medições desta bancada, 27/08/2026** (`scripts/ensaios/cor_do_plastico.py`):
+**As duas medições de 27/08/2026** (`scripts/ensaios/cor_do_plastico.py`):
 
 | alvo | transporte | serial | código | cor | escrita |
 |---|---|---|---|---|---|
@@ -2053,7 +2049,7 @@ reports de entrada depois da escrita.
    caudas tentadas são ambas inválidas para um firmware que valide CRC no
    sentido de ESCRITA"* — e listou `0xA2`, `0xA1` e buffer curto como o que
    faltava tentar. **Nenhum dos três era o certo.** O `0x53` veio de uma
-   pesquisa externa (27/08) e esta bancada o mediu.
+   pesquisa externa (27/08) e o ensaio o mediu.
 
    Consequência de produto: **a cor do plástico se lê nos DOIS transportes.**
    O card não precisa mais perguntar a cor a quem só usa o controle no rádio.
@@ -2078,8 +2074,8 @@ acima **nesta mesma seção**. O caminho FOI percorrido, nos dois transportes.
 
 Com data e tamanho de amostra, o que se escreve hoje é: **o caminho está
 percorrido — quatro unidades pelo cabo (15/08/2026) e uma pelo rádio
-(27/08/2026) —, e quem ainda não o percorre é o PRODUTO**, por três portões
-nossos no rádio e por permissão de nó no cabo (o BROKER-01 deixa o hidraw
+(27/08/2026) —, e quem ainda não o percorre é o PRODUTO**, por três filtros
+nossos no rádio e por permissão de nó no cabo (o broker deixa o hidraw
 `0600 root:root` e o leitor não usa a porta do broker; medido em 29/08/2026).
 Ver `docs/data/mapa-controles.csv`, linha `identidade.cor_do_aparelho@dualsense`.
 
@@ -2114,12 +2110,12 @@ Estas cinco linhas **não** foram resolvidas na conferência de 11/08, e nenhuma
 delas se resolve lendo código: cada uma precisa do controle na mão. Estão aqui
 juntas porque é assim que se ataca uma de cada vez, com variável única.
 
-**Três perguntas entraram nesta lista em 12/08**, saídas da bancada de 11→12/08
+**Três perguntas entraram nesta lista em 12/08**, saídas do ensaio de 11→12/08
 e escritas aqui porque nenhuma delas se responde lendo arquivo:
 
 | # | pergunta em aberto | o ensaio que a fecha | onde |
 |---|---|---|---|
-| 6 | de **quantos** bits de autorização o firmware precisa para vibrar? Sabe-se que o conjunto inteiro funciona e que os bytes agem sem os bits; não se sabe qual bit ainda compra alguma coisa | bancada, **um bit por vez**, com a vibração em curso e o controle na mão do usuário | §2 |
+| 6 | de **quantos** bits de autorização o firmware precisa para vibrar? Sabe-se que o conjunto inteiro funciona e que os bytes agem sem os bits; não se sabe qual bit ainda compra alguma coisa | ensaio no aparelho, **um bit por vez**, com a vibração em curso e o controle na mão do usuário | §2 |
 | 7 | os bits são porteiro dos blocos de **LED** e de **áudio**? | o mesmo desenho de troca-de-lado do §2, aplicado a cor e a volume — mudar o valor com o bit desligado e ver se muda | §2 |
 | 8 | **quem** reaplica o efeito de gatilho com período de minutos? | reproduzir a rodada de 120 s do §4 com o daemon parado, e depois com ele vivo | §4 |
 
@@ -2140,21 +2136,21 @@ cinco canais para um.
 o padrão do player LED do **jogador 4** foi respondido pelo **fonte do driver**,
 e a §5 traz a tabela e a ressalva do que o fonte não cobre (o console PS5); e a
 **taxa do aparelho** foi medida nos dois transportes, também na §5 — o que
-sobrou dela é a pergunta 3 acima, que é do lado do SDL, não do lado do controle.
+sobrou é a pergunta 3 acima, que é do lado do SDL, não do lado do controle.
 
 A pergunta 3 tem irmão já medido no aparelho vizinho (o Pro declara 8 ms e
 entrega 11,2 ms) — ver a
 [canônica dos externos](externos-referencia-canonica.md), seção 3.5. Isso torna
 a hipótese plausível; **não** a torna provada aqui.
 
-A régua de paridade entre transportes, e o que já está medido em cada um, mora
+O critério de paridade entre transportes, e o que já está medido em cada um, mora
 em [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md).
 
 ---
 
 ## 9. Fontes
 
-**Toda URL desta lista está fixada em tag ou commit**, pela régua de fonte do
+**Toda URL desta lista está fixada em tag ou commit**, pelo critério de fonte do
 topo desta página: `master` e `main` andam, e uma citação de linha contra eles
 apodrece sozinha. Quem acrescentar fonte aqui fixa também.
 

@@ -24,7 +24,7 @@ mais que esta página usa muito:
 | **ALTA** | está no kernel mainline, ou na enum da própria Sony, ou em duas ou mais engenharias reversas independentes que concordam |
 | **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida |
 | **BAIXA** | inferência ou fonte única |
-| **MEDIDO AQUI** | conferido nesta máquina, nesta árvore, com a régua declarada |
+| **MEDIDO AQUI** | conferido nesta máquina, nesta árvore, com o método declarado |
 | **LIDO NO DESCRITOR** | o que o `report_descriptor` daquela unidade, naquele transporte, declara. É dado do aparelho — **não** é o que o driver faz com ele, e é justamente o contraste que a seção 1.4 explora |
 
 **Dois apelidos, acrescentados em 15/08/2026, e nenhum deles é grau novo:**
@@ -36,7 +36,7 @@ mesma equivalência.
 
 **GRAU: FONTE DESTA MÁQUINA.**
 
-O módulo carregado agora **não é o do kernel**. É o DKMS desta casa:
+O módulo carregado agora **não é o do kernel**. É o DKMS do Hefesto:
 
 ```
 $ modinfo -F filename hid_playstation
@@ -337,8 +337,8 @@ inteiro**. Uma ocorrência significa que ele foi definido e **nunca usado**.
 > EXIGE** (acrescentado em 12/08/2026). Os nomes abaixo são os do driver, e o
 > driver descreve a intenção do protocolo. **Onde alguém já perguntou ao
 > aparelho, a resposta divergiu:** os bytes de motor foram obedecidos com os
-> bits `0x01` e `0x02` **desligados** — medido na bancada de 11/08 com o olho
-> dela, e registrado na
+> bits `0x01` e `0x02` **desligados** — medido no aparelho em 11/08 com o olho
+> de quem confere, e registrado na
 > [canônica do DualSense](dualsense-referencia-canonica.md), §2. Para todos os
 > outros bits desta seção **ninguém perguntou**, e ler esta tabela como
 > porteiro é justamente o erro que já custou uma cura inteira aqui.
@@ -396,7 +396,7 @@ a resposta de firmware para "devolva as luzes ao aparelho", que é a pergunta qu
 a chave `luz.lightbar.release_leds` do
 [mapa de controles](../data/mapa-controles.csv) faz. **Existe o bit, existe o
 nome, e o kernel nunca o usou** — nem a favor nem contra a hipótese
-`LIGHTBAR-BT-CLAIM-01` registrada na canônica §5, que foi testada ao vivo por
+de tomar a barra de luz, registrada na canônica §5, que foi testada ao vivo por
 outro caminho (`LIGHT_OUT`) e não teve efeito.
 
 ### Uma armadilha real no `output_worker`
@@ -520,7 +520,7 @@ Nada mais. E o report de **entrada** não carrega estado de LED em campo nenhum
 que o driver leia — o `dualsense_parse_report` (`:1562`) toca sticks, botões,
 mudo do mic, jack, IMU, touchpad e bateria, e nunca `player_leds_state`.
 
-**Portanto a medição desta casa está CONFIRMADA pelo código:** se alguém
+**Portanto a medição do Hefesto está CONFIRMADA pelo código:** se alguém
 escrever o report de saída por HID cru — via `hidraw`, contornando o driver —,
 o aparelho muda e `player_leds_state` **não muda**. O nó sysfs passa a afirmar
 um valor que o aparelho não está mostrando, e nada no driver jamais o corrige.
@@ -588,7 +588,7 @@ e nenhum dos dois lados tinha sido medido.
 
 O `x-xx-` da canônica é, byte a byte, o `_PLAYER_LED_OVERFLOW` de
 `src/hefesto_dualsense4unix/core/led_control.py` — o padrão de "slot fora da
-tabela". A escolha desta casa de usá-lo como marca de overflow **continua
+tabela". A escolha do Hefesto de usá-lo como marca de overflow **continua
 segura**, porque ele não colide com nenhum dos cinco do driver.
 
 **Grau: ALTA para o driver (código do funcionário da Sony, comentário
@@ -610,10 +610,10 @@ Três consequências, todas **FONTE DESTA MÁQUINA**:
    `player_id` 0 acende `--x--`.
 2. **É `% ARRAY_SIZE(player_ids)`** (`:1844`): o sexto controle volta a `--x--`.
    O driver não tem noção de overflow — a tabela de 8 mais overflow em
-   `core/led_control.py` é invenção desta casa, e cobre um buraco real.
+   `core/led_control.py` é invenção do Hefesto, e cobre um buraco real.
 3. **Conta qualquer coisa que o driver aceite**, inclusive o gamepad virtual
    deste projeto. É a ordem de registro no kernel, não a ordem de entrada no
-   jogo. A memória desta casa já registra esse tropeço, e ele fica aqui com
+   jogo. A memória do Hefesto já registra esse tropeço, e ele fica aqui com
    linha de código.
 
 O padrão é enviado uma única vez, em `:2000`, logo após `ps_device_set_player_id`
@@ -761,16 +761,16 @@ Ler feature report é operação pura, sem efeito colateral; repetir é seguro.
 registra que a taxa **nunca havia sido medida em transporte nenhum**. Esta
 seção mede.
 
-### A régua, declarada
+### O método de medida, declarado
 
-Duas réguas independentes, sobre o nó evdev `Motion Sensors` de cada controle
+Dois métodos independentes, sobre o nó evdev `Motion Sensors` de cada controle
 (que emite `MSC_TIMESTAMP` a **cada** report, e por isso não sofre a filtragem
 de valores repetidos que afetaria o nó de gamepad):
 
 1. **Relógio do host:** contagem de `SYN_REPORT` dividida pelo tempo de parede.
 2. **Relógio do controle:** média das diferenças de `MSC_TIMESTAMP`, que o
    driver deriva do `sensor_timestamp` do próprio aparelho (`:1689-1701`,
-   unidade 0,33 us convertida para us). Esta régua **não depende do agendamento
+   unidade 0,33 us convertida para us). Este método **não depende do agendamento
    do host**.
 
 Leitura de evdev é passiva: não abre `hidraw`, não escreve nada, não disputa
@@ -802,12 +802,12 @@ bInterfaceNumber 3 / bInterfaceClass 3 Human Interface Device
 Em High Speed o intervalo de serviço é `2^(bInterval-1)` microquadros de 125 us,
 logo `2^5 x 125 us = 4000 us` = **250 Hz**. Medido:
 
-| régua | resultado |
+| método | resultado |
 |---|---|
 | relógio do host | **250,0 Hz** (4,00 ms), 2501 reports em 10,000 s |
 | relógio do controle | **250,0 Hz** (delta médio 4000,3 us) |
 
-As duas réguas concordam, e concordam com o descritor. **Os 250 Hz do cabo
+Os dois métodos concordam, e concordam com o descritor. **Os 250 Hz do cabo
 estão fechados**, e não como afirmação do SDL: como o intervalo de serviço que
 o endpoint declara nesta máquina.
 
@@ -815,7 +815,7 @@ o endpoint declara nesta máquina.
 
 Cinco janelas de 8 a 10 s, no mesmo controle, sem tocar nele:
 
-| janela | régua do host | régua do controle (média) | mediana | p05 | p95 |
+| janela | método do host | método do controle (média) | mediana | p05 | p95 |
 |---|---|---|---|---|---|
 | 1 (10 s) | 363,3 Hz | — | — | — | — |
 | 2 (10 s) | — | 239,9 Hz | 2510 us | 1255 us | 13 179 us |
@@ -836,7 +836,7 @@ Três leituras honestas:
    medido foi ~392 Hz.
 
 > **NOTA DATADA — 23/08/2026: os ~392 Hz não são do CONTROLE, são da METADE de
-> um adaptador.** A medição de 22/08 (QUATRO-MICROFONES-01), com a régua do
+> um adaptador.** A medição de 22/08, pelo
 > relógio do próprio aparelho, leu controles **sozinhos** no adaptador a
 > **796,8 e 800,8 Hz sustentados**, e controles **dividindo** um adaptador a
 > **398,3 e 400,2 Hz** — três adaptadores, duas safras, todos dentro de 0,6 %
@@ -848,7 +848,7 @@ Três leituras honestas:
 > * o p05 **teimosamente 1255 us** de TODAS as janelas — o número que a leitura
 >   2 chama de "instantâneo dentro da rajada" — é 797 Hz, que é exatamente o
 >   orçamento do adaptador aparecendo por baixo;
-> * e 392,4 é **metade** de ~800. **MEDIDO em 23/08 na bancada:** o adaptador
+> * e 392,4 é **metade** de ~800. **MEDIDO em 23/08 no aparelho de teste:** o adaptador
 >   `ac:a7:f1:00:00:41` hospeda **dois** controles, e os outros dois hospedam
 >   **um** cada (contagem por `HID_PHYS` inteiro; truncar no OUI funde os dois
 >   adaptadores desse fabricante e produz a distribuição errada).
@@ -865,12 +865,12 @@ Três leituras honestas:
 > **Consequência para quem for mexer no medidor:** o modelo `260,4 Hz por
 > controle, aditivo` de `integrations/radio_da_mesa.py` não é o que este
 > aparelho faz. Trocar as constantes é decisão de produto e exige o A/B refeito
-> com o microfone ligado — está registrado na QUATRO-MICROFONES-01.
+> com o microfone ligado — está registrado na medição de 22/08 com os quatro microfones.
 
 Isto **corrobora** a medição independente que a
 [paridade Bluetooth versus cabo](paridade-bluetooth-versus-cabo.md) já
-registrava por outra régua (contagem de bytes: "~300 Hz, 1.402.128 bytes em
-60 s"). Duas réguas diferentes, em datas diferentes, na mesma faixa.
+registrava por outro método (contagem de bytes: "~300 Hz, 1.402.128 bytes em
+60 s"). Dois métodos diferentes, em datas diferentes, na mesma faixa.
 
 **O que NÃO foi controlado, e por isso não se conclui:** o estado físico do
 controle. Ele estava parado sobre a mesa, e o colapso das janelas 4 e 5 é
@@ -883,12 +883,12 @@ sem parar, e comparar. Se a taxa se sustentar acima de 300 Hz sob movimento e
 só colapsar em repouso, a hipótese de economia de energia fica de pé. Variável
 única, custo de dois minutos.
 
-**O que isto faz com o `GYRO-EDGE-RATE-01`** (canônica §5): a premissa da
-sprint era que o vpad se declara Edge e entrega ~250 Hz, e que um jogo poderia
+**O que isto faz com a divergência da taxa do giroscópio do Edge** (canônica §5): a premissa
+era que o vpad se declara Edge e entrega ~250 Hz, e que um jogo poderia
 integrar por uma taxa declarada 4x errada. O cabo agora está medido e é
 exatamente 250 Hz. O rádio está medido e **não** é 1000 Hz. A pergunta que
 sobra deixou de ser "qual é a taxa" e passou a ser "o que o SDL declara ao
-jogo", que é medição do lado do SDL, com a régua do SDL3 da Steam — e essa
+jogo", que é medição do lado do SDL, com a medição do SDL3 da Steam — e essa
 continua por fazer.
 
 ## 7. O que o driver NÃO faz
@@ -1011,8 +1011,8 @@ apagada; cada uma precisa da sua nota datada.
 1. **Canônica §5, o P4.** A contradição em aberto está **resolvida a favor do
    código**: o driver diz `xx-xx`. A linha `x-xx-` da canônica descreve o
    `_PLAYER_LED_OVERFLOW`, não o jogador 4.
-2. **Canônica §5, as taxas.** Deixaram de ser "não medido". Cabo: 250 Hz, duas
-   réguas mais o descritor. Rádio: variável entre ~55 e ~392 Hz, em rajadas,
+2. **Canônica §5, as taxas.** Deixaram de ser "não medido". Cabo: 250 Hz, dois
+   métodos mais o descritor. Rádio: variável entre ~55 e ~392 Hz, em rajadas,
    nunca 1000 Hz. O que sobra por medir é o que o SDL **declara**, não o que o
    aparelho **entrega**.
 3. **Canônica §1.2, o limite honesto.** "O fonte do `hid-playstation` não foi
@@ -1021,6 +1021,6 @@ apagada; cada uma precisa da sua nota datada.
 4. **Canônica, *"Os reports de saída por transporte"* (15/08/2026).** Aquela
    seção mede o aparelho; a **seção 1.4** desta página fecha o outro lado, que é
    o que o driver sabe disso — **seis IDs, e nenhum dos oito degraus**. Onde as
-   duas se tocam, a régua da casa vale: o driver vence sobre o que o **Linux**
+   duas se tocam, a regra do projeto vale: o driver vence sobre o que o **Linux**
    manda, e o aparelho vence sobre o que o **firmware** faz. Aqui elas não
    divergem; elas falam de coisas diferentes.

@@ -44,7 +44,7 @@ soma de 3 não é dedução: ela já estava **medida** no mapa, em
 > **CONTRADIÇÃO, e o driver vence.** O `ReportOut31` do Game Controller
 > Collective Wiki mostra só **dois** bytes de envelope (`ReportID` + um byte de
 > `SeqNo`/flags). Isso poria `common[43]` em `report[45]`. O driver desta
-> máquina diz três, e a medição do LED do microfone desta casa confirma três.
+> máquina diz três, e a medição do LED do microfone do Hefesto confirma três.
 > **A wiki está curta em um byte.** É o único ponto em que ela diverge do
 > driver em tudo que li.
 
@@ -75,7 +75,7 @@ Os bits 6 e 7 do mesmo byte continuam sem nome — a wiki os declara
 
 ---
 
-## 3. O ACHADO QUE VALE A LEVA: a quinta lâmpada pode não ser dela mesma
+## 3. O ACHADO QUE VALE A LEVA: a quinta lâmpada pode não ser da mesma linha de luzes
 
 O Game Controller Collective Wiki, na seção **Hardware Revisions** da página
 `Sony DualSense`:
@@ -93,7 +93,7 @@ sugerida é `(HardwareInfo & 0x00FFFF00) == 0x00000400`, lido do **feature repor
 `0x20`** — o mesmo que o driver já lê para o firmware
 (`DS_FEATURE_REPORT_FIRMWARE_INFO`, `hid-playstation.c:153`, `:1281-1286`).
 
-**Por que isto importa para esta casa, e por que ninguém tinha visto:**
+**Por que isto importa para este projeto, e por que ninguém tinha visto:**
 
 1. O protocolo continua com cinco bits. **O hardware é que encolheu para três
    grupos:** `{1,5}`, `{2,4}`, `{3}`.
@@ -147,7 +147,7 @@ célula vazia faz a próxima pessoa caçar de novo.
 
 ---
 
-## 5. Existe UM canal proprietário de luz, e ninguém desta casa o tocou
+## 5. Existe UM canal proprietário de luz, e ninguém do Hefesto o tocou
 
 `luz.recursos_proprios` perguntava por turbo e LEDs de modo. As duas metades da
 resposta são opostas, e por isso a linha ficou `parcial`.
@@ -176,7 +176,7 @@ global de três degraus em `common[42]`. O aparelho declara `0x80` e `0x81` como
 `Feature` nos **dois** transportes (descritor HID), então o canal existe.
 
 **Grau: `afirmado-no-doc`, FONTE ÚNICA**, e o próprio autor escreveu *"seems
-to"*. O mesmo relato avisa de duas armadilhas de bancada: boa parte dos comandos
+to"*. O mesmo relato avisa de duas armadilhas de ensaio: boa parte dos comandos
 fica desabilitada **com a bateria desconectada**, e o payload máximo de um GET é
 **63 bytes**, não 256 como no DS4.
 
@@ -187,7 +187,7 @@ fica desabilitada **com a bateria desconectada**, e o payload máximo de um GET 
 Estas são as perguntas que sobraram, e todas têm a mesma resposta: **só o
 aparelho responde.**
 
-1. **A revisão de hardware desta casa é `0x03` ou `0x04`?** Um `GET FEATURE
+1. **A revisão de hardware do Hefesto é `0x03` ou `0x04`?** Um `GET FEATURE
    0x20` responde, sem escrever nada no aparelho. Enquanto não se ler, não se
    sabe se a quinta lâmpada daqui é endereçável sozinha.
 2. **O par lâmpada1+lâmpada5 realmente se acende junto?** Fonte única. Um
@@ -208,7 +208,7 @@ aparelho responde.**
 
 ## 7. Uma contradição fora do meu tema, escrita para quem for pegá-la
 
-**`common[42]` — a canônica desta casa e o mapa o tratam como brilho da
+**`common[42]` — a canônica do Hefesto e o mapa o tratam como brilho da
 LIGHTBAR** (`luz.lightbar.brilho`, com `fonte_externa = pydualsense`). Duas
 fontes lidas hoje discordam:
 
@@ -230,7 +230,7 @@ Vale registrar o que a leva **confirmou** de graça no caminho: o **bit0 do
 `valid_flag2`** — que o `hid-playstation` **não define** — é mesmo o porteiro do
 byte 42. A wiki o nomeia `38.0 AllowLightBrightnessChange` e o
 DualSense-Windows escreve `hidOutBuffer[0x26] = 0x03` (bits 0 e 1) exatamente
-quando vai escrever brilho. A canônica desta casa já dizia "flag2 0x01" sem
+quando vai escrever brilho. A canônica do Hefesto já dizia "flag2 0x01" sem
 fonte; agora tem duas.
 
 ---
@@ -247,9 +247,9 @@ fonte; agora tem duas.
 | `blog.the.al/2024/04/02/calibrating-dualsense.html` | `SET 0x80 0x0d 0x03`, o limite de 63 bytes, a bateria desconectada |
 | carpikes/ds4-tools, `ds5-calibration-tool.py:143,152` | corrobora o `0x80` sub-comando 3 (NVS lock/unlock) | <!-- ref-externa: arquivo do projeto carpikes/ds4-tools, lido pela web; não é, e não deve ser, versionado nesta árvore -->
 
-**A régua que sustenta o que entrou no mapa:**
+**O teste que sustenta o que entrou no mapa:**
 `tests/unit/test_luz_do_jogador_bate_com_o_fonte.py`. Ela não redigita o byte 43
 — **calcula** o offset somando os campos da `struct` do driver, e **lê** os
 report ids dos `#define`. Mordida provada em cinco arrancadas, uma delas no
-próprio fonte do driver (`reserved3[2]` → `[3]`), que é a que prova que a régua
+próprio fonte do driver (`reserved3[2]` → `[3]`), que é a que prova que o teste
 lê em vez de repetir.

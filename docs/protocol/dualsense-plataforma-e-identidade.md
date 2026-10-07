@@ -9,7 +9,7 @@ levantado em 03/09/2026 numa leva que não tocou o aparelho.
 > **como é só informação eles trouxeram**"*.
 
 **Grau de tudo o que está aqui: `afirmado-no-doc` ou leitura de fonte.** Nenhum
-byte saiu para o aparelho nesta leva — os dois controles estavam na bancada.
+byte saiu para o aparelho nesta leva — os dois controles estavam em uso.
 O que foi lido da máquina foi o `report_descriptor` no sysfs, que o kernel
 guarda desde a probe: ler o arquivo não gera tráfego.
 
@@ -23,7 +23,7 @@ hub; este arquivo é o rodapé de fonte.**
 
 ## 1. O censo de feature reports, por transporte
 
-Lido do `report_descriptor` que o kernel guarda para os dois controles da bancada, em 03/09/2026. Bate report a report com a tabela da Game Controller
+Lido do `report_descriptor` que o kernel guarda para os dois controles em uso, em 03/09/2026. Bate report a report com a tabela da Game Controller
 Collective e com o dump de descritor do `nondebug/dualsense`.
 
 | | quantos | quais |
@@ -49,7 +49,7 @@ Nomes que as fontes dão aos que este projeto usa ou pode usar:
 | `0x09` | 20 B | **«Get Controller and Host MAC»** — dois endereços, não um |
 | `0x0A` | 27 B | **«Set Bluetooth Pairing»** — host + link key. Só por cabo |
 | `0x20` | 64 B | firmware info: data de build, versões, `update_version` |
-| `0x22` | 64 B | «Get Hardware Info» — **nunca lido por linha nenhuma desta casa** |
+| `0x22` | 64 B | «Get Hardware Info» — **nunca lido por linha nenhuma do Hefesto** |
 | `0x80`/`0x81` | 64 B | «Set test command» / «Get test result» — é por aqui que este projeto lê serial e cor |
 | `0xE0` | 64 B | «Get system profile» — só por cabo |
 | `0xF0`…`0xF5` | — | comando de flash e atualização de firmware. **Não mexer.** |
@@ -125,7 +125,7 @@ propósito** — o comentário do caminho do DualShock4, nesta mesma cópia, diz
 *«the bytes that follow are the address of the host the controller was last
 paired to, which is never read»*.
 
-**O que isso abre.** O bond tem dois lados e esta casa só guarda um:
+**O que isso abre.** O bond tem dois lados e este projeto só guarda um:
 `scripts/bt_bonds_snapshot.sh` copia o `LinkKey` do BlueZ,
 `scripts/bt_bonds_restore.sh` devolve — sempre à mão, sempre com `sudo`. O
 `0x0A` escreve **esse mesmo valor** no controle, e a fonte diz explicitamente
@@ -235,7 +235,7 @@ inteira. Compare com o DualShock4 no mesmo fork, que tem duas saídas declaradas
 O `dualsensectl` percorre o mesmo caminho e mostra o que sobra: exige 17
 caracteres e, se não vierem, escreve `00:00:00:00:00:00` — **um endereço falso
 com cara de endereço**. A chave volátil `path:<path>` deste produto é menos
-enganosa que isso, e essa é a defesa dela: não se parece com identidade nenhuma.
+enganosa que isso, e essa é a defesa da chave: não se parece com identidade nenhuma.
 
 ---
 
@@ -244,7 +244,7 @@ enganosa que isso, e essa é a defesa dela: não se parece com identidade nenhum
 A lista do que não se achou é informação: ela diz onde só o aparelho responde.
 
 - **O conteúdo dos `0x80`/`0x81` além do serial.** As duas tabelas de terceiro
-  dizem literalmente *«please document»*. Esta casa sabe mais desse par do que
+  dizem literalmente *«please document»*. Este projeto sabe mais desse par do que
   as fontes públicas consultadas — o eco `1`/`19`/`2` e a fatia da cor foram
   medidos aqui.
 - **O `0x22` («Get Hardware Info»), o `0xE0` («Get system profile»), o `0x82`/
@@ -280,7 +280,7 @@ Todas fixadas por commit ou revisão — os números de linha só valem nelas.
 | LKML, «HID: sony: Support for DS4 clones that do not implement feature report 0x81» e «drivers: hid: warn feature report 0x81» | o precedente de clone do DS4 e a diferença de errno |
 | `assets/dkms/hid-playstation/hid-playstation.c` (cópia DKMS desta árvore) | os `#define`, a ordem da probe, as sementes, o comentário sobre o endereço do host |
 
-A régua que amarra isto ao mapa é
+O teste que amarra isto ao mapa é
 `tests/unit/test_plataforma_e_identidade_do_dualsense_no_mapa.py`: ela extrai os
 `#define` do driver e cobra que o mapa diga o mesmo, e guarda os dois censos de
 feature report para que uma lista copiada errada apareça em vermelho.

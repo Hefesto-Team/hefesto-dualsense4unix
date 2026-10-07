@@ -1,7 +1,7 @@
 # Onde a porta USB mora — o `physical_location` do kernel
 
-O kernel publica a posição **física** de cada porta USB no chassi. Medido nesta
-bancada em **23/08/2026**, kernel `7.0.11-76070011-generic`, uid 1000, sem root.
+O kernel publica a posição **física** de cada porta USB no chassi. Medido no
+aparelho de teste em **23/08/2026**, kernel `7.0.11-76070011-generic`, uid 1000, sem root.
 
 Esta página responde três perguntas e para: **o que o campo entrega**, **por que
 ele some em metade das portas desta máquina**, e **até onde o produto pode
@@ -31,7 +31,7 @@ grau cai, está dito na linha.
 `/sys/bus/usb/devices/usb1/1-0:1.0/usb1-port4/physical_location/` é um
 diretório com cinco arquivos. **GRAU: LIDO NA ABI + MEDIDO AQUI.**
 
-| arquivo | o que diz | valores vistos nesta bancada |
+| arquivo | o que diz | valores vistos no aparelho de teste |
 |---|---|---|
 | `panel` | a **face do chassi** onde o conector está | `left`, `right` |
 | `horizontal_position` | posição na largura daquela face | `left`, `center` |
@@ -39,7 +39,7 @@ diretório com cinco arquivos. **GRAU: LIDO NA ABI + MEDIDO AQUI.**
 | `lid` | o conector está na **tampa** (laptop)? | `no` em todas as 14 |
 | `dock` | o conector está numa **dock**/replicador? | `no` em todas as 14 |
 
-A ABI declara mais valores do que esta bancada produziu — `panel` admite as seis
+A ABI declara mais valores do que o aparelho de teste produziu — `panel` admite as seis
 faces (`top`, `bottom`, `front`, `back`, `left`, `right`) mais `unknown`. Um
 gabinete que só use duas delas não prova que as outras não existam; é por isso
 que `secao_mesa.py` traduz **as seis**, e não as duas que o desenho previa.
@@ -91,7 +91,7 @@ ACPI `_PLD` de cada porta.** Não é medição do kernel, não é do dispositivo
 **Consequência de procedência, e é a mais dura desta página:** o dado tem a
 qualidade da tabela do firmware. Uma BIOS que copie o mesmo `_PLD` para várias
 portas produz um valor **presente, plausível e errado como identificador** — e
-foi exatamente o que esta bancada mediu (§6).
+foi exatamente o que a medição mostrou (§6).
 
 Confirmado no `/sys` desta máquina, e é a mesma coisa dita pelo outro lado:
 
@@ -147,7 +147,7 @@ não há módulo, não há permissão que faça aparecer o que a BIOS não escre
 
 **HIPÓTESE, e continua hipótese:** que isso seja *padrão* em placas AM4 —
 descrever o chipset e ignorar o controlador direto da CPU. Uma placa não é uma
-amostra. **Esta bancada não prova nada sobre outras placas**; ver §7.
+amostra. **Esta medição não prova nada sobre outras placas**; ver §7.
 
 ### O detalhe que engana: 22 e 22 é coincidência
 
@@ -160,9 +160,9 @@ portas" é o erro que esta seção existe para impedir.
 
 ---
 
-## 4. A régua, validada
+## 4. O método de medida, validado
 
-A casa já tomou decisão errada por acreditar num instrumento. **Quatro contagens
+O projeto já tomou decisão errada por acreditar num instrumento. **Quatro contagens
 independentes do mesmo fato**, e todas fecham em 14/22:
 
 ```sh
@@ -184,13 +184,13 @@ ls /sys/bus/usb/devices/usb*/*/usb*-port*/location                         | wc 
 cat /sys/bus/usb/devices/usb*/*/usb*-port*/location | grep -vc 0x00000000  # 14
 ```
 
-As quatro réguas são de arquivos diferentes, e **duas delas são do lado do ACPI,
+Os quatro sinais são de arquivos diferentes, e **duas delas são do lado do ACPI,
 não do lado do USB** — que é o que faz a medição valer. Um quinto sinal
 acompanha na mesma divisão: `connect_type` diz `hotplug` nas 14 e `unknown` nas
 8 (ele vem do `_UPC`, objeto irmão do `_PLD`).
 
-**A régua que NÃO vale:** contar aparelhos conectados. Só dois dos onze
-aparelhos ligados agora estão em porta descrita, e isso mede onde ela plugou os
+**O método que NÃO vale:** contar aparelhos conectados. Só dois dos onze
+aparelhos ligados agora estão em porta descrita, e isso mede onde o usuário plugou os
 cabos, não o que o firmware descreve.
 
 ---
@@ -204,7 +204,7 @@ quando o kernel cala. O que esta medição acrescenta são **três coisas que o
 produto ainda não usa**:
 
 1. **`horizontal_position` e `vertical_position`.** O produto lê só `panel`.
-   Nesta bancada, `panel` sozinho separa as 14 portas em 2 grupos; com os três
+   Neste aparelho, `panel` sozinho separa as 14 portas em 2 grupos; com os três
    campos, em 5. Não resolve tudo (§6), mas triplica a resolução de graça.
 2. **A leitura pelo nó da PORTA.** O aparelho só responde ligado; **a porta
    responde vazia**. É o que permite dizer *"a porta ao lado está livre e é
@@ -219,7 +219,7 @@ VETO 3
 proíbe declarar o que o produto pode medir. Onde a controladora responde, **o
 produto sabe**, e perguntar vira a tela fingindo ignorância. A pergunta legítima
 encolhe para onde o dado não existe — e a §3 diz exatamente onde é. A
-sprint das portas
+escolha de porta na interface
 depende desta página para desenhar essa fronteira.
 
 ---
@@ -233,7 +233,7 @@ gabinete de pé e um horizontal apoiado sob a TV orientam a mesma placa de
 maneiras diferentes, e nenhum dos dois avisa o firmware. **Onde a leitura para
 de ser confiável:** no instante em que a tela troca a palavra do kernel por uma
 palavra de móvel — "frente", "atrás", "do lado do sofá". `Direita` é o que o
-kernel disse; `frente` é interpretação, e o produto não mediu a caixa dela.
+kernel disse; `frente` é interpretação, e o produto não mediu o gabinete.
 
 É por isso que a pergunta ao usuário **continua legítima**, mas com outro texto:
 não *"onde está o adaptador?"* (o produto sabe) e sim *"a face que o kernel
@@ -299,11 +299,11 @@ pergunta, para que ninguém cite como fato:
 
 | pergunta | grau | o que se sabe |
 |---|---|---|
-| Laptop responde? | **HIPÓTESE** | O campo `lid` existe justamente para laptop, o que sugere que alguém escreveu `_PLD` neles. Sugerir não é medir. Esta casa não tem laptop na bancada. |
+| Laptop responde? | **HIPÓTESE** | O campo `lid` existe justamente para laptop, o que sugere que alguém escreveu `_PLD` neles. Sugerir não é medir. O projeto não tem laptop entre os aparelhos de teste. |
 | Placa antiga responde? | **ABERTA** | O suporte entrou no kernel em 2022 (autoria de Won Chung, `Documentation/ABI/testing/sysfs-devices-physical_location`). O **kernel** é recente; o `_PLD` é do firmware e existe desde ACPI 3.0. Uma placa velha com BIOS caprichada pode responder mais que uma nova relaxada. |
 | Todo AM4 ignora o controlador da CPU? | **HIPÓTESE** | Medido em UMA B450M S2H. Nada além disso. |
 | Placa Intel responde? | **ABERTA** | Nenhuma medição. |
-| Hub externo some sempre? | **PARCIAL** | Nesta bancada, os dois hubs estão na Matisse, que já não descreve nada — as duas causas estão **confundidas** e a medição não as separa. O que sustenta a expectativa é estrutural, não medido: o `_PLD` descreve a placa-mãe, e o firmware não pode conhecer um hub que a pessoa comprou depois. Quem tiver um hub no barramento do chipset fecha esta linha em um comando. |
+| Hub externo some sempre? | **PARCIAL** | Neste aparelho, os dois hubs estão na Matisse, que já não descreve nada — as duas causas estão **confundidas** e a medição não as separa. O que sustenta a expectativa é estrutural, não medido: o `_PLD` descreve a placa-mãe, e o firmware não pode conhecer um hub que a pessoa comprou depois. Quem tiver um hub no barramento do chipset fecha esta linha em um comando. |
 
 **O que qualquer pessoa pode rodar para responder pela máquina do usuário**, sem root:
 
@@ -313,7 +313,7 @@ ls -d /sys/bus/usb/devices/usb*/*/usb*-port*/physical_location | wc -l  # descri
 ```
 
 Se os dois números forem iguais, aquela máquina não tem o problema da §3. Se o
-segundo for zero, o firmware dela não descreve porta nenhuma, e todo desenho que
+segundo for zero, o firmware daquela máquina não descreve porta nenhuma, e todo desenho que
 dependa desta página tem de sobreviver a isso.
 
 ---
@@ -325,5 +325,3 @@ dependa desta página tem de sobreviver a isso.
 - [bluetooth-varios-adaptadores.md](../usage/bluetooth-varios-adaptadores.md)
   — quantos controles cabem num adaptador Bluetooth e como dividi-los entre
   vários. Esta página é o instrumento; aquela é o motivo.
-- PORTAS-DA-CASA-01
-  — a leva que consome esta medição.

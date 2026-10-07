@@ -7,7 +7,7 @@
 >
 > **Nada aqui foi ao aparelho.** Esta página traz FATO LIDO — em fonte de
 > driver, em fonte de biblioteca pública e em relato de terceiro — com o
-> endereço de cada afirmação. O que foi medido nesta casa está no
+> endereço de cada afirmação. O que foi medido neste projeto está no
 > `docs/data/mapa-controles.csv` e nos ensaios; o que está aqui é o que a
 > busca externa acrescentou, e o grau de cada linha diz de onde veio.
 
@@ -72,7 +72,7 @@ transportes; o que muda é o cabeçalho e o rodapé.
    `0x10` com o comentário *"Magic value"*, e usa **offset 3** para o corpo;
    em USB escreve `0x02` e usa **offset 1**. O CRC ele calcula prefixando o byte
    `0xA2` — o comentário diz *"hidp header is part of the CRC calculation"*.
-3. **Esta casa**, `src/hefesto_dualsense4unix/core/ds_output_report.py`
+3. **Este projeto**, `src/hefesto_dualsense4unix/core/ds_output_report.py`
    (`build_bt_report`), que monta exatamente esse envelope — e o aparelho
    obedeceu, medido em 11 e 12/08/2026.
 
@@ -83,12 +83,12 @@ grau mais alto que uma leitura pode ter sem tocar no aparelho.
 
 `pydualsense` (`pydualsense/pydualsense.py`, `prepareReport`) monta o report BT
 com **um byte a menos de cabeçalho**: escreve `0x31` em `[0]`, a constante
-`0x02` em `[1]`, e começa o `common` em `[2]`. O resultado é que, na visão dela,
+`0x02` em `[1]`, e começa o `common` em `[2]`. O resultado é que, na visão da biblioteca,
 o motor direito cai em `report[4]` e os LEDs de jogador em `report[45]` — um
-byte antes de onde o kernel, o SDL3 e esta casa os põem.
+byte antes de onde o kernel, o SDL3 e este projeto os põem.
 
 **Quem está certo:** o kernel, o SDL3 e nós. A prova não é aritmética, é
-bancada: esta casa envia pelo `build_bt_report` (`common` em `[3]`, tag `0x10`)
+ensaio em aparelho: o Hefesto envia pelo `build_bt_report` (`common` em `[3]`, tag `0x10`)
 e o aparelho obedeceu no rádio, com o olho de quem confere, em 11 e 12/08/2026. O caminho
 BT da `pydualsense` **não é o que este produto usa** — o `ds_output_report.py`
 existe precisamente por isso.
@@ -97,13 +97,13 @@ O lado USB da `pydualsense` concorda com todo mundo (motor direito em
 `report[3]`, LEDs de jogador em `report[44]`), então a divergência é só do BT.
 
 > **Fica registrado como armadilha:** quem for conferir um offset de BT contra a
-> `pydualsense` vai achar que o mapa desta casa está deslocado. Não está.
+> `pydualsense` vai achar que o mapa do Hefesto está deslocado. Não está.
 
 ### 2.2 Um desacordo de TAMANHO que não é defeito
 
 São **três tamanhos** para o mesmo report USB de saída, e os três funcionam: o
 kernel emite **63 bytes** (`DS_OUTPUT_REPORT_USB_SIZE`), o SDL3 emite **48**, e
-esta casa emite **64** (`USB_REPORT_LEN` em `core/ds_output_report.py`).
+este projeto emite **64** (`USB_REPORT_LEN` em `core/ds_output_report.py`).
 `1 + 47 = 48` é o mínimo que carrega o `common` inteiro; o resto é enchimento.
 Anotado para que ninguém trate a diferença como bug — e para que ninguém
 "corrija" o nosso 64 achando que é erro.
@@ -146,9 +146,9 @@ O cabo não tem esse caminho: lá o quadro é aceito pelo tamanho e mais nada.
 
 **É a assimetria que importa na mesa cheia.** Com o ar congestionado, o rádio
 não avisa que está devagar: ele perde quadro em silêncio, e a única testemunha é
-o dmesg. Esta casa mediu **0 falhas de CRC em 35.351 quadros** (E-3, 15/08) com
+o dmesg. Este projeto mediu **0 falhas de CRC em 35.351 quadros** (E-3, 15/08) com
 quatro controles na mesa — o que é um resultado, não uma ausência de risco: diz
-que a bancada, naquela janela, não chegou perto do limite.
+que o ensaio, naquela janela, não chegou perto do limite.
 
 ---
 
@@ -175,11 +175,11 @@ nenhum dos 47 é intervalo. A `struct dualsense` do driver não tem
 
 **O que isso responde, e é uma resposta de verdade:** na mesa cheia **não há
 botão no aparelho** para trocar taxa por espaço no ar. Não adianta procurar. O
-único freio disponível é do host — nesta casa, o cap de
+único freio disponível é do host — neste projeto, o cap de
 `core/physical_report_reader.py`.
 
-De quebra, o comentário do DS4 é uma **confirmação independente** do que esta
-casa mediu por `readlink`/`lsusb` em 15/08: 4 ms no cabo, ou seja 250 Hz, e não
+De quebra, o comentário do DS4 é uma **confirmação independente** do que este
+projeto mediu por `readlink`/`lsusb` em 15/08: 4 ms no cabo, ou seja 250 Hz, e não
 ajustável.
 
 ### 4.1 A folclore de taxa está errada, e a fonte que a derruba é o SDL3
@@ -197,15 +197,15 @@ O SDL3, ao declarar a taxa dos sensores do DualSense, escreve o contrário:
 - e 1000 Hz no USB **só no DualSense Edge**.
 
 O `appears to be` é do SDL, e é honesto: eles inferiram, não mediram. Mas a
-DIREÇÃO bate com o que esta casa mediu e ninguém tinha explicado — o rádio
+DIREÇÃO bate com o que este projeto mediu e ninguém tinha explicado — o rádio
 entregando **mais** relatórios que o cabo, e de forma instável (157,8 a 402,9 Hz
 pelo laço em Python; ~398-400 Hz pelo relógio do próprio aparelho; 780 Hz num nó
 lido sozinho). Os 250,0 Hz cravados do cabo são o teto do `bInterval`; o rádio
 não tem teto declarado, e é por isso que ele varia.
 
 > **O que continua aberto:** ninguém — nem o SDL — sabe dizer QUAL é a taxa do
-> rádio. O SDL chuta 1000; a régua do relógio do sensor desta casa deu ~400; o
-> laço em Python deu de 157 a 403. Isso é ensaio de bancada, não de busca.
+> rádio. O SDL chuta 1000; a medição pelo relógio do sensor do Hefesto deu ~400; o
+> laço em Python deu de 157 a 403. Isso é ensaio com o aparelho, não pesquisa.
 
 ---
 
@@ -219,7 +219,7 @@ por conta própria:
 | --- | --- | --- |
 | **o kernel** (`hid-playstation`) | `ida_alloc()` — o menor id livre; `ida_free()` na remoção | **não.** O id volta para o poço e o próximo a chegar o pega |
 | **o SDL3 / Steam** | índice de jogador próprio, e ele ESCREVE nos LEDs | **não** — e há relato de embaralhamento (§5.2) |
-| **o daemon desta casa** | chaveado pelo MAC (`identity.py`, `slot_for`) | **em tese sim** — e medido `parcial` em 12/08 |
+| **o daemon do Hefesto** | chaveado pelo MAC (`identity.py`, `slot_for`) | **em tese sim** — e medido `parcial` em 12/08 |
 
 **O mostrador é um só:** os cinco LEDs brancos abaixo do touchpad, em
 `common[43]` (= `report[44]` no cabo, `report[46]` no rádio), autorizados pelo
@@ -247,7 +247,7 @@ com o comentário *"0x1F enables all lights, 0x20 changes instantly instead of
 fade"*. Ou seja: **`common[43]` bit `0x20` = aplicar na hora, sem transição**. O
 `hid-playstation` nunca liga esse bit, então o LED de jogador escrito pelo
 kernel **entra com fade** e o escrito pelo Steam **entra seco**. Informação
-nova para esta casa, e ela é visível a olho nu na mesa.
+nova para este projeto, e ela é visível a olho nu na mesa.
 
 ### 5.2 O que os outros relataram sobre a instabilidade do número
 
@@ -272,8 +272,8 @@ por último. São duas perguntas, e a linha do mapa estava juntando as duas.
 
 ## 6. Gente que nem a gente — o que outros mediram sobre a mesa cheia
 
-Nenhum destes é canal, e nenhum destes é medição desta bancada. São relatos de
-terceiros, com hardware diferente do dela, e valem pelo que confirmam ou
+Nenhum destes é canal, e nenhum destes é medição do Hefesto. São relatos de
+terceiros, com hardware diferente do usado nos ensaios do Hefesto, e valem pelo que confirmam ou
 derrubam.
 
 ### 6.1 Dois DualSense no rádio funcionam — confirmação independente
@@ -293,7 +293,7 @@ E ele conclui, com todas as letras: *"This does not appear to be a Bluetooth
 bandwidth limitation because two DualSense controllers can be used
 simultaneously without issues."*
 
-**Isto confirma o que esta casa mediu em 12/08** (`comb-dois-no-radio-saida-2235`,
+**Isto confirma o que este projeto mediu em 12/08** (`comb-dois-no-radio-saida-2235`,
 olho de quem confere: os dois obedeceram nas duas rotas) — em outro adaptador, em outra
 distribuição, por outra pessoa, dez meses depois. É a confirmação independente
 mais forte que esta frente achou.
@@ -313,7 +313,7 @@ de ~30 s; o outro perde fones Sony. A hipótese do segundo, dita por ele:
 fones entram em repouso e cedem o ar.
 
 **Os dois marcadores que eles publicam são o que interessa para nós**, porque
-são o que se procura no log quando a bancada engasgar:
+são o que se procura no log quando o rádio engasgar:
 
 - `bluetoothd: profiles/input/device.c:hidp_send_message() BT socket write
   error: Resource temporarily unavailable (11)` — a fila de SAÍDA do HID sobre
@@ -328,7 +328,7 @@ como pista para um ensaio de `btmon`, não como fato.
 ### 6.2.1 E NA NOSSA MESA A CAUSA ERA NOSSA — medido em 22/09/2026
 
 O §6.2 fecha dizendo que o EAGAIN dos relatores é *pista para um ensaio de
-`btmon`, não fato*. **Na bancada o ensaio aconteceu, e o culpado era o
+`btmon`, não fato*. **Nos aparelhos do projeto o ensaio aconteceu, e o culpado era o
 Hefesto.**
 
 A queixa de uso foi *"4 controles conectados só um aparece na interface agora"*.
@@ -348,7 +348,7 @@ subiu, os quatro controles caíram em 11, 15 e 89 segundos.
 
 **A corrente, na ordem em que os diários a mostram:** a bomba escreve → a fila
 de saída do `uhid` enche (é `uhid`, não `hid_playstation`: a frase «Output
-queue is full» não existe no driver que esta casa compila, e o BlueZ moderno
+queue is full» não existe no driver que este projeto compila, e o BlueZ moderno
 entrega HID de rádio por `uhid`) → o socket L2CAP enche → `bluetoothd` leva o
 `EAGAIN` do §6.2 em `hidp_send_message()` → a sessão HIDP cai → o daemon perde
 o `hidraw`. Nos quatro episódios em que os dois diários se cruzam, o EAGAIN vem
@@ -356,12 +356,12 @@ PRIMEIRO e a sessão cai no mesmo segundo.
 
 **E O QUE ESCONDEU ISTO POR SEMANAS:** *a escrita nunca falha*. O kernel
 descarta calado, o `os.write` devolve sucesso, a bomba conta
-`escritas_aceitas_pelo_kernel` e segue. Régua nenhuma tinha o que ler.
+`escritas_aceitas_pelo_kernel` e segue. Medidor nenhum tinha o que ler.
 
 **A cura é do host, e tinha de ser** — o §4 já diz que no DualSense não existe
 campo de taxa, então não há freio do lado do aparelho. A ponte de som passou a
 só existir enquanto alguém está tocando naquele controle
-(`RADIO-AFOGADO-01`, `daemon/subsystems/alto_falante.py`); com a mesa parada,
+(`daemon/subsystems/alto_falante.py`); com a mesa parada,
 as escritas vão de 400/s a ZERO.
 
 **O QUE ELA CUSTA, medido no mesmo dia às 17:57:45:** o som começou às `.967`,
@@ -403,7 +403,7 @@ responde — e é o que sobra para ela ensaiar.
 
 1. **Quantos DualSense cabem num adaptador.** Não há uma única medição pública
    com três ou quatro DualSense de rádio ao mesmo tempo, dizendo o que degrada
-   primeiro. O melhor que existe é o "dois funcionam" da §6.1. A bancada já é
+   primeiro. O melhor que existe é o "dois funcionam" da §6.1. O conjunto de aparelhos de teste do projeto já é
    maior que qualquer relato que eu tenha achado.
 2. **Qual é a taxa real do rádio.** Ninguém publicou. O SDL chuta 1000 Hz e diz
    que chuta.
@@ -427,6 +427,6 @@ As sete linhas de `familia = combinacao` do `dualsense` em
 aparelho nesta leva** —, e todo `de_onde_sei` que esta frente escreveu do zero é
 `afirmado-no-doc`.
 
-Régua desta página: `tests/unit/test_mapa_combinacao_enderecos.py`, que
+Teste desta página: `tests/unit/test_mapa_combinacao_enderecos.py`, que
 recalcula os offsets a partir do layout declarado do `common` e os confere
 contra o CSV. Se alguém deslocar um byte no mapa, ela reprova.

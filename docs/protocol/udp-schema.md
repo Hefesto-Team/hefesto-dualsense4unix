@@ -4,7 +4,7 @@
 
 `127.0.0.1:6969` (UDP). **Fixo** — não há arquivo de configuração que mude isso.
 
-O daemon não lê `daemon.toml` (BUG-DAEMON-TOML-DEAD-01: o próprio código diz
+O daemon não lê `daemon.toml` (o próprio código diz
 isso no cabeçalho que a GUI escreve no arquivo, `app/actions/emulation_actions.py`).
 Host e porta vivem em `DaemonConfig.udp_host` / `DaemonConfig.udp_port`
 (`daemon/lifecycle.py`), com o mesmo default do `daemon/udp_server.py`.

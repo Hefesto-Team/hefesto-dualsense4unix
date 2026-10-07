@@ -3,15 +3,15 @@
 - **Levantado em:** 25/08/2026
 - **Por que existe:** o produto afirma, em **quatro** lugares, que USB 3.0 emite
   ruído em cima da faixa de 2,4 GHz — e não dizia de onde tirou isso. Autoridade
-  anônima é exatamente como raciocínio se veste de medição, e esta casa tem selo
+  anônima é exatamente como raciocínio se veste de medição, e este projeto tem selo
   de procedência justamente para impedir isso. Esta página é o **dono** da
   afirmação: o selo `especificacao-de-terceiro` de R1
   (`integrations/ordens_da_mesa.py`) aponta para cá, e há teste que reprova se o
   arquivo sumir.
 - **Limite de escopo, declarado antes de qualquer afirmação:** **nada aqui foi
-  medido nesta bancada.** Esta página cita terceiro, e só. A medição que fecharia
-  o ganho de afastar o rádio de banda larga desta máquina é a **W1** da sprint
-  ORDEM-DE-SERVIÇO-01 §9, e é **dela**.
+  medido no aparelho de teste.** Esta página cita terceiro, e só. A medição que fecharia
+  o ganho de afastar o rádio de banda larga desta máquina ainda não foi feita:
+  depende de mover o hardware e de quem o tem em mãos.
 
 ---
 
@@ -70,6 +70,5 @@ Os quatro lugares que esta página passa a cobrir:
 | `docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md` | a frase da seção Conexões |
 
 Só o primeiro tem `fonte=` hoje. Dar dono aos outros três é varredura de texto de
-tela, e o texto desta aba tem uma frente dona única
-(CONFIGURACOES-O-LEXICO-01) — **não** se edita aqui, ou duas frentes escrevem a
+tela, e o texto desta aba tem um dono único — **não** se edita aqui, ou duas pessoas escrevem a
 mesma frase.

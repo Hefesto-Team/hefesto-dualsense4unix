@@ -1,10 +1,10 @@
 # Paridade Bluetooth × cabo — o que funciona em cada transporte
 
 - **Levantado em:** 03/08/2026, por quatro agentes com verificação adversarial,
-  e **medido no hardware dela** na mesma sessão
+  e **medido no hardware do projeto** na mesma sessão
 - **Por que existe:** o usuário definiu o requisito em uma frase — *"deixar o projeto
   robusto de tal forma que eu não note que estou no bt ou cabo, a ideia é termos
-  tudo funcionando via bt principalmente"*. Este documento é a régua desse
+  tudo funcionando via bt principalmente"*. Este documento é o critério desse
   requisito
 - **Regra de uso:** quando este documento e outro discordarem sobre o que
   funciona por Bluetooth, **este vence nas linhas MEDIDO AO VIVO** — as outras
@@ -14,12 +14,12 @@
 
 ## A distinção que este documento existe para impedir
 
-Em 03/08 esta casa afirmou à mantenedora:
+Em 03/08 este projeto afirmou aos mantenedores:
 
 > *"no BT o DualSense não tem placa de som, logo mic e alto-falante não
 > funcionam."*
 
-**A premissa é verdadeira e está medida duas vezes nesta casa. A conclusão é
+**A premissa é verdadeira e está medida duas vezes neste projeto. A conclusão é
 falsa, e o erro está no "logo".**
 
 Por Bluetooth o áudio **não passa por placa de som — passa dentro do HID**
@@ -43,7 +43,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 
 | recurso | hardware suporta? | projeto implementa? | ligado por padrão? | grau |
 |---|---|---|---|---|
-| **Lightbar** | sim (via kernel/sysfs) | sim — a cor sai por `core/sysfs_leds.py`; por BT a escrita da pydualsense é suprimida (`LIGHTBAR-BT-NEVER-01`) | sim | **MEDIDO AO VIVO** (03/08) — **e com uma condição medida em 12/08: ver a nota logo abaixo da tabela** |
+| **Lightbar** | sim (via kernel/sysfs) | sim — a cor sai por `core/sysfs_leds.py`; por BT a escrita da pydualsense é suprimida | sim | **MEDIDO AO VIVO** (03/08) — **e com uma condição medida em 12/08: ver a nota logo abaixo da tabela** |
 | **Player-LEDs** | sim | sim, pelo mesmo caminho | sim | **MEDIDO AO VIVO** |
 | **Gatilhos adaptativos** | sim | sim, **sem ramo de transporte** — o `common` é idêntico nos dois envelopes | com preset aplicado | **MEDIDO AO VIVO** (*"l2 funciona"*, 03/08) |
 | **Rumble** | sim (kernel implementa rumble + CRC-32 do BT) | sim, **zero gate de transporte** | exige o vpad | **MEDIDO AO VIVO** (03/08 — vibrou e parou); os dois motores separados e o zero que para de verdade, **medidos no rádio em 10/08**; a vibração que o **jogo** manda ao nó físico, **medida nos dois transportes em 11/08** — ver a nota |
@@ -55,7 +55,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 | **Áudio de sistema (card/sink no PipeWire)** | **impossível** — sem A2DP/HFP/HSP | — | — | **MEDIDO**: zero cards com o controle no rádio |
 
 > **NOTA DATADA — 12/08/2026: duas linhas da tabela ganharam condição, e as duas
-> condições foram medidas com quatro DualSense na bancada (dois no cabo, dois
+> condições foram medidas com quatro DualSense (dois no cabo, dois
 > no rádio).** Nenhuma das duas é diferença **de transporte** — e é por isso que
 > elas moram numa nota e não viraram coluna nova.
 >
@@ -78,7 +78,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 > Conexão Nativa —, o keepalive do daemon reescrevia `common[2]`/`common[3]`
 > zerados a cada 0,5 s e apagava o motor. **A causa foi isolada com número**
 > (a constante em 8,0 s produziu **oito segundos exatos** de vibração) e a cura
-> é `RUMBLE-SEM-DONO-01`: o keepalive deixou de ser perpétuo. **O defeito não
+> foi esta: o keepalive deixou de ser perpétuo. **O defeito não
 > distinguia cabo de rádio** — foi medido igual nos dois
 > (`docs/data/ensaios.csv:16-24`).
 
@@ -90,7 +90,7 @@ Tudo o mais é paridade. Estas três não são:
 
 > **NOTA DATADA — 15/08/2026, 19h: a TROCA DE BRAÇOS, e por que ela vale mais
 > que qualquer linha nova nesta página.** Até essa hora, **toda** comparação
-> cabo × rádio desta casa comparava **aparelhos diferentes** ao mesmo tempo que
+> cabo × rádio do Hefesto comparava **aparelhos diferentes** ao mesmo tempo que
 > comparava **transportes** — inclusive as medições que sustentam esta seção.
 > Ela desplugou os dois do cabo e religou por rádio, plugou os dois do rádio no
 > cabo, e os **mesmos quatro** aparelhos passaram pelos **dois** braços com
@@ -108,7 +108,7 @@ Tudo o mais é paridade. Estas três não são:
 >   no cabo, dois só no rádio; cabo declara 22, rádio 17, união 24, e nenhum é
 >   subconjunto do outro. **Não existe "a lista dos feature reports do
 >   DualSense" — existe uma por transporte**;
-> - **o custo de `GET_FEATURE` INVERTEU o que esta casa acreditava:** o **cabo**
+> - **o custo de `GET_FEATURE` INVERTEU o que este projeto acreditava:** o **cabo**
 >   custa 0,21 s por leitura (`min = max` em 44 leituras de cabo) e o **rádio**
 >   0,01-0,02 s — o rádio é **~20× mais rápido**. O timeout de 3 s do BlueZ
 >   existe e foi observado na manhã do mesmo dia, mas é a exceção: o retry é
@@ -135,22 +135,22 @@ não aparece nada.
 
 Por Bluetooth o firmware pode emudecer, e o projeto trata isso com um teto de
 silêncio **por transporte**: 30 s no rádio contra 1 s no cabo
-(`core/physical_report_reader.py`, `GYRO-BT-SILENCIO-01`). Quando o teto vence,
+(`core/physical_report_reader.py`). Quando o teto vence,
 o reader solta o fd, zera a janela de motion e **solta o clique do touchpad** no
 vpad, depois reabre.
 
-> **NOTA DATADA — 03/08/2026, e a régua fica registrada porque é reutilizável
-> e barata:** com os controles **parados na mesa**, medindo por **contagem de
+> **NOTA DATADA — 03/08/2026, e o método fica registrado porque é reutilizável
+> e barato:** com os controles **parados na mesa**, medindo por **contagem de
 > bytes**, os dois emitiram **~300 Hz** (1.402.128 bytes em 60 s). O rádio
 > **não** emudeceu nesta medição. O teto continua justificado pelo defeito que
 > o originou.
 >
-> **NOTA DATADA — 11/08/2026: a régua de 03/08 acertou a faixa; o que ela não
-> podia ver é que o número era a média de UMA janela.** Remedido com duas
-> réguas independentes sobre o nó evdev `Motion Sensors` — relógio do host e
+> **NOTA DATADA — 11/08/2026: o método de 03/08 acertou a faixa; o que ele não
+> podia ver é que o número era a média de UMA janela.** Remedido com dois
+> métodos independentes sobre o nó evdev `Motion Sensors` — relógio do host e
 > `sensor_timestamp` do próprio controle — em cinco janelas de 8 a 10 s, com o
 > controle parado: **363,3 · 239,9 · 334,1 · 55,4 · 69,7 Hz**. Os ~300 Hz de
-> 03/08 caem dentro dessa faixa, e é por isso que a régua antiga **fica**: ela
+> 03/08 caem dentro dessa faixa, e é por isso que o método antigo **fica**: ele
 > mostrou primeiro que o rádio não é 1000 Hz, é uma contagem de bytes, e
 > corrobora a nova por um caminho que não compartilha nenhum instrumento com
 > ela.
@@ -166,7 +166,7 @@ vpad, depois reabre.
 ### 3. A contenção com múltiplos controles
 
 Com 2+ controles no mesmo rádio o link degrada
-(`BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01`). A assinatura aparece no `dmesg`:
+(contenção de CRC entre controles no mesmo rádio). A assinatura aparece no `dmesg`:
 
 ```
 playstation 0005:054C:0CE6.0007: DualSense input CRC's check failed
@@ -194,13 +194,13 @@ Ordenado por (impacto ÷ custo):
    cai; a primitiva existe (`force_rumble_stop`) e não é chamada ali.
    Custo: baixo;
 5. **a ponte de SAÍDA de áudio (alto-falante) por BT** — o único recurso que
-   **não existe** no rádio. Custo: **sprint inteira**, e antes da primeira linha
+   **não existe** no rádio. Custo: **um trabalho inteiro**, e antes da primeira linha
    é preciso resolver uma contradição interna: `dualsense_bt_audio.py` diz report
    `0x39`, a referência canônica diz `0x32`. Nenhuma das duas foi medida aqui;
 
    > **NOTA DATADA — 11/08/2026: a contradição é mais estreita do que parece,
    > e a precisão importa para não fechá-la com a medição errada.** O `0x32`
-   > que esta casa mediu ao vivo em 25/07 é o de **controle** (142 bytes, TLV
+   > que este projeto mediu ao vivo em 25/07 é o de **controle** (142 bytes, TLV
    > `0x11` AudioControl, o byte que destrava o microfone —
    > `integrations/dualsense_bt_audio.py:210`). O report em disputa é o que
    > leva os **dados**: o módulo o dá como `0x39`, com os blocos `0x12`
@@ -231,21 +231,19 @@ Ordenado por (impacto ÷ custo):
   velocidade angular pela taxa declarada teria escala errada.
 
   A metade que falta é **só medível contra a SDL3 que a Steam distribui** —
-  medir contra a `libSDL2` do sistema já produziu um alarme falso inteiro nesta
-  casa.
+  medir contra a `libSDL2` do sistema já produziu um alarme falso inteiro neste
+  projeto.
 
   > **NOTA DATADA — 11/08/2026: o par transporte-número que estava escrito aqui
   > misturava os dois transportes, e a correção importa mais que o número.** A
   > frase antiga dizia *"o SDL atribui 1000 Hz a um Edge por **USB** enquanto o
   > espelho entrega ~300"*: os ~300 Hz são do **rádio**, não do cabo. Por cabo
-  > o físico entrega 250,0 Hz, medidos por duas réguas independentes e
+  > o físico entrega 250,0 Hz, medidos por dois métodos independentes e
   > previstos pelo `bInterval = 6` do descritor. Comparar o declarado de um
   > transporte com o entregue do outro produz uma razão que não existe.
   >
-  > **`GYRO-EDGE-RATE-01` é NOME DE DIVERGÊNCIA, não sprint.** Não existe
-  > arquivo com esse nome em `docs/process/sprints/`, e chamá-lo de sprint faz
-  > parecer que alguém está com o trabalho na mão. O apelido está registrado em
-  > divergências nomeadas.
+  > **A taxa declarada do Edge é uma divergência registrada, não um trabalho em
+  > curso.** O apelido está registrado em divergências nomeadas.
   >
   > **Continua não existindo nesta árvore uma linha que reconcilie a taxa
   > declarada com a real** — nem conversão, nem aviso, nem número guardado. E o
@@ -265,21 +263,21 @@ Ordenado por (impacto ÷ custo):
   medição** (Class of Device `0x002508`, sem o bit de áudio) e a escada de
   OUTPUT por HID como canal que responde. Nada ali diz mais "fora de escopo".
   Esta linha ficou cinco dias mandando alguém consertar o que já estava
-  consertado — que é o custo de leitura que esta casa combateu em 21/08. **Foi
+  consertado — que é o custo de leitura que este projeto combateu em 21/08. **Foi
   a fonte do erro de 03/08 registrado no topo deste documento**, e é só isso
   que continua verdade sobre ela;
 - **`README.md`** publicava um número para o mic por BT medido sob uma condição
   que deixou de existir quatro minutos depois — **caducou em 07/08/2026** e
   saiu do README (Z6-09, 24/08/2026, no commit que criou
   `docs/data/caducos.csv`). **Fechado no mesmo dia, e não pela ausência:** a
-  CONFIGURAÇÕES-FECHA-01/T6 mediu as taxas novas horas depois, e o README
+  medição das taxas novas, feita horas depois, entrou e o README
   ficou com elas — ver a nota logo abaixo. As duas frentes nasceram do mesmo
   commit-base e não se viram; a escolha entre as duas redações foi do usuário,
   24/08/2026;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
   instala (`install.sh` os deixa em opt-in, desligados).
 
-  > **Fechado em 24/08/2026 (T6, CONFIGURAÇÕES-FECHA-01):** o `README.md`
+  > **Fechado em 24/08/2026:** o `README.md`
   > publicava uma **fração de sinal com "causa em aberto"** — número medido sob
   > uma condição que deixou de existir quatro minutos depois, e que por isso não
   > se repete aqui. Substituído pelas

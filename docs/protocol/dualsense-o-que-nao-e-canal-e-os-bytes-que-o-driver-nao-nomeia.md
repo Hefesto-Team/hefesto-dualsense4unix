@@ -1,7 +1,7 @@
 # DualSense — o que NÃO é canal do aparelho, e os bytes que o driver não nomeia
 
-> **Levantamento em fonte pública, 03/09/2026. NADA AQUI FOI MEDIDO NESTA
-> BANCADA.** Nenhum byte foi ao aparelho nesta leva: ela estava usando a
+> **Levantamento em fonte pública, 03/09/2026. NADA AQUI FOI MEDIDO NO
+> APARELHO.** Nenhum byte foi ao aparelho nesta leva: ela estava usando a
 > máquina com dois controles vivos. Toda linha deste documento é
 > `afirmado-no-doc` — leitura cruzada de repositórios de terceiros contra o
 > `hid-playstation.c` que está compilado nesta máquina.
@@ -58,7 +58,7 @@ O mapa registrava, desde 19/08/2026, um buraco medido e honesto na linha
 `plataforma.vpad@dualsense`:
 
 > *"O que o DualSense FÍSICO põe nessas 26 posições NÃO ESTÁ REGISTRADO em lugar
-> nenhum desta casa, e enquanto não estiver ninguém pode afirmar que mandar zero
+> nenhum do Hefesto, e enquanto não estiver ninguém pode afirmar que mandar zero
 > ali é inofensivo."*
 
 **As 26 posições agora têm nome.** Elas não são 26 desconhecidas: **24 são
@@ -110,7 +110,7 @@ O argumento mais forte de que isso não é inofensivo não é teórico. O
 `cgutman/WinUHid` é um **DualSense virtual para Windows** — exatamente o trabalho
 que o nosso vpad faz. Ele preenche sticks, gatilhos, sequência, botões, IMU,
 carimbo do sensor, temperatura, toque, **o bloco 41-51 inteiro** e a bateria
-(52), e para ali: o resto (53-62) fica declarado como não implementado. **O
+(52), e para ali: o resto fica declarado como não implementado. **O
 único bloco que ele achou necessário preencher e nós não preenchemos é
 justamente 40-51.**
 
@@ -123,7 +123,7 @@ criptográfico. A afirmação vem de uma única linhagem de mapeamento e nenhuma
 fonte independente a corrobora aqui. O driver do Linux não lê esses oito bytes,
 e o vpad os zera; se algum jogo os validasse, o vpad já teria quebrado.
 
-**A tarde de bancada que o mapa pedia continua de pé** — o que mudou é que ela
+**A tarde de ensaio no aparelho que o mapa pedia continua de pé** — o que mudou é que ela
 agora tem hipótese endereçada para confirmar, em vez de 26 posições cegas.
 
 ---
@@ -162,7 +162,7 @@ decidir por leitura seria trocar o comentário de um driver que funciona pela
 palavra de um documento. O que se pode dizer sem medir: o driver aplica a
 calibração do feature `0x05` na mesma ordem em que lê, então uma troca de rótulo
 entre dois eixos pode ser invisível em teste de eixo único e aparecer só em
-rotação composta. **Fica registrada como pergunta de bancada, não como
+rotação composta. **Fica registrada como pergunta para o ensaio no aparelho, não como
 correção.**
 
 ---
@@ -199,7 +199,7 @@ não toca no 53.
 respondem "por onde vem o input". Eles **não separam cabo de dado de cabo de
 só-carga** — e o aparelho separa, nesses dois bits. Um DualSense carregando num
 cabo mudo enquanto manda input pelo rádio é configuração real, e é exatamente o
-caso em que a régua de hoje pode responder com confiança a pergunta errada.
+caso em que o método de hoje pode responder com confiança a pergunta errada.
 
 ---
 
@@ -214,7 +214,7 @@ O `common` do report de saída, na parte de luz:
 | 43 | `player_leds` | bits 0-4 as cinco luzes · **bit 5: se ligado, as luzes trocam na hora; se desligado, entram em fade** · bits 6-7 sem uso |
 | 44-46 | `lightbar_red/green/blue` | RGB |
 
-O portão de escrita é o `valid_flag1` no `common[1]`: `BIT(4)` libera o
+A condição de escrita é o `valid_flag1` no `common[1]`: `BIT(4)` libera o
 indicador de jogador — o driver e o dissector concordam na máscara `0x10`.
 
 **O bit 5 do `common[43]` o driver NUNCA escreve** — ele escreve só a máscara de
@@ -246,7 +246,7 @@ três deles nós não lemos:
 | **contador de falha de CRC do rádio** | **corpo 64 — absoluto 66 no report `0x31`** | **o aparelho conta os pacotes que chegaram corrompidos** |
 
 **O último é o que vale a viagem.** Um link que está de pé e apodrecendo é
-exatamente o que a vigia quer pegar, e o aparelho já conta isso. Nada nesta casa
+exatamente o que a vigia quer pegar, e o aparelho já conta isso. Nada neste projeto
 lê esse byte.
 
 **E há uma armadilha de transporte, que é a razão de eu não escrever `medido`
@@ -257,7 +257,7 @@ enquadramento do rádio traz sequência própria. **Se for verdade, uma checagem
 vivacidade construída sobre o corpo 6 funciona no cabo e é CEGA no rádio** — a
 pior forma de defeito, porque passa em todo teste feito com o cabo espetado.
 
-**Não medi.** É a primeira coisa que eu poria na bancada: ligar no rádio,
+**Não medi.** É a primeira coisa que eu poria no aparelho: ligar no rádio,
 capturar N reports parado na mesa, e olhar se o corpo 6 anda.
 
 ---
@@ -269,7 +269,7 @@ responde.
 
 1. **Nenhum canal de IR ou câmera no DualSense.** Busca de código por
    `dualsense infrared` no GitHub: zero. Aqui "não achei" é a resposta, não a
-   falta dela.
+   falta de resposta.
 2. **Nenhum protocolo de posse/adoção.** Nada em report de saída, feature report
    ou bit de estado diz "este host me tomou". A exclusividade que o Hefesto usa
    é do sistema operacional, não do aparelho.
@@ -314,7 +314,7 @@ As seis linhas do tema receberam escrita em `docs/data/mapa-controles.csv`, com
 `de_onde_sei = afirmado-no-doc` onde o fato é de fora, e `ate_onde_foi` **vazio
 em todas** — nada foi ao aparelho nesta leva.
 
-A régua que amarra este documento ao driver é
+O teste que amarra este documento ao driver é
 `tests/unit/test_os_bytes_que_o_driver_nao_nomeia.py`: ela calcula os offsets a
 partir do fonte C compilado nesta máquina e reprova se um número desta página
 divergir dele.

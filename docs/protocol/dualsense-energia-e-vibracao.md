@@ -48,7 +48,7 @@ Porcentagem = `min(nível*10+5, 100)` — satura em 100 porque o nível para em 
 | pydualsense | em `readInput` | `states[53]` no cabo, `states[54]` no rádio |
 | DS5Dongle | `utils.h:242-243`, `:152-159` | os dois nibbles **e o enum com os seis estados** |
 
-**O que o DS5Dongle acrescentou, e esta casa não tinha escrito:** a FAIXA do
+**O que o DS5Dongle acrescentou, e este projeto não tinha escrito:** a FAIXA do
 nibble baixo (`0x00`–`0x0A`) — que é a razão de a conta saturar — e o nome dos
 seis estados, incluindo os três de erro. Os três códigos de erro são exatamente
 os que o driver trata.
@@ -91,7 +91,7 @@ strength"*. São dois projetos que não se copiam dizendo a mesma coisa.
 
 ---
 
-## 3. O que é NOVO para esta casa
+## 3. O que é NOVO para este projeto
 
 Quatro fatos, todos do lado da vibração, nenhum medido:
 
@@ -100,7 +100,7 @@ Quatro fatos, todos do lado da vibração, nenhum medido:
    Quem o identificou diz tê-lo visto no tráfego de um jogo.
 2. **Byte 39 bit 0 é o filtro passa-baixa dos haptics**, autorizado pelo
    `valid_flag1` bit 5. A canônica já trazia essa linha **sem fonte**; agora
-   tem, e de uma família que se corrigiu em público — a nota antiga dela dizia
+   tem, e de uma família que se corrigiu em público — a nota antiga da própria família dizia
    que o filtro era o byte 40, e o próprio projeto registrou que estava
    deslocada de um.
 3. **O aparelho DEVOLVE se o filtro está ligado**: bit 1 do byte **54** do
@@ -159,7 +159,7 @@ a correção está registrada em público.
 
 ---
 
-## 5. O que a internet NÃO sabe — a lista para a bancada
+## 5. O que a internet NÃO sabe — a lista para o ensaio no aparelho
 
 Estas perguntas não têm resposta em repositório nenhum. Elas só se respondem
 com o aparelho na mesa:
@@ -190,7 +190,7 @@ com o aparelho na mesa:
 | `sqlCRT/ds5dongle-bl618-opensource` | `f7e36e1fb13151a7e9d376fe2f74f29cca104185` | `state_mgr.c` — o mapa dos 47 bytes em prosa |
 | `nikashan02/dualsense-go` | `de6b07a20b7099d08741f901764f553de862bef5` | `outputReport.go` — a montagem do byte 36 |
 
-O `awalol/DS5Dongle` já era fonte desta casa, no mesmo commit, para a linha
+O `awalol/DS5Dongle` já era fonte do Hefesto, no mesmo commit, para a linha
 `audio.alto_falante` do mapa.
 
 **Nada aqui é código copiado.** São números, offsets e nomes de campo — o que

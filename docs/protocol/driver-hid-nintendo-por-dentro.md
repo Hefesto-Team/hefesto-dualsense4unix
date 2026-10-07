@@ -22,9 +22,9 @@
 | marca | o que significa |
 |---|---|
 | **[DRIVER-AQUI]** | lido no fonte do módulo instalado nesta máquina. Verdade local, verificável agora |
-| **[MAINLINE]** | trecho que os patches da casa **não** tocam, logo é o `hid-nintendo` de origem |
-| **[COMUNIDADE]** | engenharia reversa pública (dekuNukem e derivados). O driver a cita como fonte, e ela **já foi refutada nesta casa em pelo menos um número** |
-| **[MEDIDO 11/08]** | medido no hardware dela hoje, com a régua descrita na seção 9 |
+| **[MAINLINE]** | trecho que os patches do projeto **não** tocam, logo é o `hid-nintendo` de origem |
+| **[COMUNIDADE]** | engenharia reversa pública (dekuNukem e derivados). O driver a cita como fonte, e ela **já foi refutada neste projeto em pelo menos um número** |
+| **[MEDIDO 11/08]** | medido no hardware do projeto hoje, com o método descrito na seção 9 |
 
 Graus de confiança: **ALTA**, **MÉDIA**, **SEM PROVA** — a mesma escala da
 página canônica.
@@ -49,7 +49,7 @@ u8 output_id; /* must be 0x01 for subcommand, 0x10 for rumble only */
 
 ## 1. Qual driver é a verdade desta máquina
 
-**Não é o `hid-nintendo` do kernel.** O módulo carregado é um fork da casa,
+**Não é o `hid-nintendo` do kernel.** O módulo carregado é um fork do projeto,
 por DKMS, e o kernel o marca `(OE)`:
 
 | item | valor |
@@ -312,7 +312,7 @@ defeito do patch: é o preço, escolhido e documentado, de poder curar o
 controle na escrita seguinte em vez de deixá-lo sem LEDs pela conexão inteira.
 Mas quem for **ler** o nó precisa saber.
 
-**Regra que sai daqui, e é a mesma dos dois lados da casa:** o nó de player LED
+**Regra que sai daqui, e é a mesma dos dois lados do projeto:** o nó de player LED
 é **fonte de intenção, nunca de estado**. Para saber o que a lâmpada está
 fazendo há dois caminhos, e nenhum deles é o sysfs: perguntar `0x31` por
 `hidraw`, ou o olho de quem confere. A docstring de `read_player_pattern` em
@@ -334,7 +334,7 @@ Confere com o que está aceso agora — o controle do rádio no padrão 0
 - o índice é **por ordem de probe do kernel**, não por jogador. Desconectar e
   reconectar troca o padrão;
 - **não existe estado "sem número"**: o kernel sempre acende alguma coisa,
-  antes de qualquer software da casa opinar.
+  antes de qualquer software do projeto opinar.
 
 ---
 
@@ -769,7 +769,7 @@ Honestidade primeiro, porque cada linha aqui é trabalho de outra sessão.
 
 ## 9. Notas de instrumento
 
-**A régua da seção 5.4 foi validada antes de eu acreditar nela.** Registro o
+**O método da seção 5.4 foi validado antes de eu acreditar nela.** Registro o
 caminho porque a primeira tentativa estava errada e teria produzido um número
 convincente e falso.
 
@@ -779,7 +779,7 @@ convincente e falso.
   da taxa do link.
 - **O que funcionou:** contar **só `SYN_REPORT`** (`type == EV_SYN && code ==
   SYN_REPORT`). Isso só é legítimo porque o fonte mostra **um `input_sync` por
-  amostra**, dentro do laço de três (seção 5.2) — a régua foi conferida contra
+  amostra**, dentro do laço de três (seção 5.2) — o método foi conferido contra
   o código antes de ser usada.
 - **A validação independente:** a rota B devolveu **11,27 ms** para o Pro
   genuíno. O kernel, sozinho e por outro caminho, vinha imprimindo
@@ -813,14 +813,14 @@ ordem inversa, como o `BASELINE` ensina.
 **Comunidade.** dekuNukem, *Nintendo Switch Reverse Engineering* — citado pelo
 próprio driver em `hid-nintendo.c:116` como origem dos `#define` de report. Toda
 afirmação que vem daí está marcada **[COMUNIDADE]**, e ao menos uma delas (a
-taxa de 8 ms por Bluetooth) **está refutada nesta casa**.
+taxa de 8 ms por Bluetooth) **está refutada neste projeto**.
 
 **Páginas irmãs, que esta não repete:**
 
 - `docs/protocol/externos-referencia-canonica.md` — o comportamento observável
   dos dois externos, o inventário, a bateria, o rumble, o rádio e a fila de
   perguntas abertas;
-- `docs/protocol/paridade-bluetooth-versus-cabo.md` — a régua do requisito de
+- `docs/protocol/paridade-bluetooth-versus-cabo.md` — o critério do requisito de
   paridade;
 - `assets/dkms/hid-nintendo/README.md` — a história dos quatro patches, o
   procedimento de A/B sem reboot e a escada de diagnóstico do clone;

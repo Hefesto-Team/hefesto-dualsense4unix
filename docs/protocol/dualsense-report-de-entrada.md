@@ -1,7 +1,7 @@
 # O report de ENTRADA do DualSense — os três layouts, byte a byte
 
 Escrito em 03/09/2026, num levantamento em fonte externa. **Nada aqui foi
-enviado a aparelho nenhum, e nada aqui foi medido nesta bancada** — salvo onde
+enviado a aparelho nenhum, e nada aqui foi medido no aparelho** — salvo onde
 a linha diz o contrário e nomeia a data.
 
 Ele existe porque o mapa de canais tinha uma lacuna estreita e cara: as linhas
@@ -71,7 +71,7 @@ acima fecham 63 sem buraco e sem sobreposição.
 ### O mapa de bits dos quatro bytes de botão
 
 Isto é o que faltava ao mapa: o `entrada.botoes@dualsense` tinha o **offset**
-medido nesta bancada em 15/08/2026 (`buttons[4]` = `08 00 00 00` em 8 de 8 nós)
+medido no aparelho em 15/08/2026 (`buttons[4]` = `08 00 00 00` em 8 de 8 nós)
 e dizia, na própria ressalva, que **qual bit é qual botão** não estava medido.
 Continua não estando — mas agora está **escrito**, com cinco fontes que
 concordam bit a bit.
@@ -105,7 +105,7 @@ sob `if self.is_edge`, lê também `buttons[2]` bit4 = L4, bit5 = R4, bit6 = L5 
 bit7 = R5. O driver desta máquina define **três** máscaras para esse byte
 (`hid-playstation.c:170-172`) e nenhuma delas alcança os bits 4-7 — de modo que
 **as costas de um Edge não chegam por evdev nesta máquina**. É lacuna do
-driver, não do aparelho, e ninguém desta casa tem um Edge para conferir.
+driver, não do aparelho, e ninguém do Hefesto tem um Edge para conferir.
 
 ---
 
@@ -113,7 +113,7 @@ driver, não do aparelho, e ninguém desta casa tem um Edge para conferir.
 
 | fonte | o que ela é | o que ela acrescenta aqui |
 |---|---|---|
-| `hid-playstation.c` desta árvore | o driver **compilado nesta máquina** | é a régua; vence as outras onde houver disputa |
+| `hid-playstation.c` desta árvore | o driver **compilado nesta máquina** | é a referência; vence as outras onde houver disputa |
 | `libsdl-org/SDL` `f443c429` `src/joystick/hidapi/SDL_hidapi_ps5.c:72-133` | a camada que os jogos usam | comenta o offset de **cada** campo; nomeia dois campos que o driver chama `reserved` |
 | `Ohjurot/DualSense-Windows` `a78fbab1` `.../DS5_Input.cpp` | leitor em C++ | é o **único** que nomeia o feedback de gatilho — e erra o vizinho (§5) |
 | `flok/pydualsense` `01445f5e` `pydualsense/pydualsense.py:286-332` | a biblioteca que **este** projeto usa | os bits do Edge; e o `[1:]` que alinha rádio com cabo |
@@ -211,7 +211,7 @@ GET_FEATURE 0x81 -> 64 bytes
 Se qualquer um dos quatro testes falhar, a fonte **descarta a leitura inteira**
 em vez de parsear.
 
-**É a mesma forma `[base, num]` do comando que esta bancada já mediu nos dois
+**É a mesma forma `[base, num]` do comando que já foi medida nos dois
 transportes** para achar a cor do plástico — `[1, 19]` devolve o serial de 17
 caracteres em `buf[4..20]`, com o mesmo `buf[3] == 2`. Muda o par de números,
 não o mecanismo. Isso é o que sustenta a expectativa de que o `[12, 2]`
@@ -237,8 +237,8 @@ axisY: 'LY'}` e `right: {suffixes: ['RL','RT','RR','RB'], axisX: 'RX', axisY:
 
 **O achado que mais ensina é o tipo.** São `uint16` num aparelho que publica
 stick de **8 bits**. A calibração vive numa resolução **maior** que a do report
-de entrada — o byte 0..255 que este projeto lê já é produto dela. É a
-explicação candidata para o que esta bancada mediu em 15/08/2026 e não soube
+de entrada — o byte 0..255 que este projeto lê já é produto dessa calibração. É a
+explicação candidata para o que se mediu em 15/08/2026 e não soube
 explicar: o centro de repouso não é 128 em unidade nenhuma, e passeia 1 LSB em
 escala de minutos.
 
@@ -260,7 +260,7 @@ E os doze podem ser escritos à mão: `SET_FEATURE 0x80` com
 
 ### A família de fábrica inteira, e por que ela não é de qualquer ferramenta
 
-O `0x80`/`0x81` é **uma família**, e a metade dela mexe no aparelho:
+O `0x80`/`0x81` é **uma família**, e metade da família mexe no aparelho:
 
 | payload | o que faz |
 |---|---|
@@ -269,7 +269,7 @@ O `0x80`/`0x81` é **uma família**, e a metade dela mexe no aparelho:
 | `[3, 2, 101, 50, 64, 12]` | **destrava** a memória não-volátil — a senha está em claro na fonte |
 | `[3, 3]` | status da trava (`0x03030200` destravado, `0x03030201` trancado, `0x15010100` esperando reinício) |
 | `[9, 2]` | devolve o endereço de rádio da unidade em `buf[4..9]` |
-| `[1, 19]` | o serial de 17 caracteres — o caminho da cor, medido nesta bancada em 27/08/2026 |
+| `[1, 19]` | o serial de 17 caracteres — o caminho da cor, medido no aparelho em 27/08/2026 |
 | `[12, 2]` | **lê** os doze de calibração |
 | `[12, 1, …]` | **grava** os doze |
 
@@ -280,8 +280,8 @@ de escrita não entra em ensaio nenhum sem a palavra de produto.
 
 **Um brinde do mesmo levantamento, e é conferência de graça:** o `[9, 2]`
 devolve o endereço de rádio pelo **mesmo** par `0x80`/`0x81` que o feature
-`0x09` já devolve por outro caminho. Duas rotas para o mesmo dado é régua
-independente — o tipo de coisa que esta casa usa para casar unidade com nó.
+`0x09` já devolve por outro caminho. Duas rotas para o mesmo dado é conferência
+independente — o tipo de coisa que o Hefesto usa para casar unidade com nó.
 
 ---
 
@@ -293,12 +293,12 @@ Escrito para que ninguém repita a busca:
    o quarto é ignorado por todos os cinco leitores lidos. Ou é reserva de
    verdade, ou carrega algo que só um aparelho responde.
 2. **O feedback de gatilho tem endereço de fonte única** (§5), e a mesma fonte
-   erra o campo vizinho. É o candidato número um a ensaio de bancada deste tema.
+   erra o campo vizinho. É o candidato número um a ensaio no aparelho deste tema.
 3. **Ninguém publicou os doze valores de calibração de uma unidade concreta**,
    nem a faixa que eles ocupam. Sabe-se o formato, não a grandeza.
 4. **Se o `[12, 2]` responde por RÁDIO, ninguém escreveu.** A ferramenta de
    comunidade é WebHID sobre USB e não computa CRC nenhum. Que responda por
-   rádio é extrapolação desta casa, apoiada na medição de 27/08/2026 sobre o
+   rádio é extrapolação do Hefesto, apoiada na medição de 27/08/2026 sobre o
    mesmo par de reports com outro par de números.
 5. **O `reserved3[12]` não é descrito inteiro por ninguém.** Doze bytes, e o
    máximo que se acha são dois nomes (o feedback de gatilho) e um `rgucTimer2`

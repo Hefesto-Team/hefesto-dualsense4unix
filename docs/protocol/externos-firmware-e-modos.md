@@ -34,7 +34,7 @@ cara, com a data.
 
 | marca | o que significa |
 |---|---|
-| **[MEDIDO 11/08]** | medido nesta máquina hoje, com a régua descrita na seção 8.1 |
+| **[MEDIDO 11/08]** | medido nesta máquina hoje, com o método descrito na seção 8.1 |
 | **[CÓDIGO]** | lido no fonte instalado nesta máquina (driver DKMS, `fwupd`, `src/` do produto) ou no fonte público de kernel/SDL |
 | **[FABRICANTE]** | documentação publicada pela 8BitDo ou pela Nintendo |
 | **[COMUNIDADE]** | engenharia reversa ou relato público de terceiro |
@@ -46,7 +46,7 @@ protocolo.
 ### 0.2 A resposta curta, para quem só quer ela
 
 1. **Não falta driver.** Os dois aparelhos são `057E:2009` e caem no mesmo
-   `hid_nintendo`; o fork DKMS da casa serve aos dois, e serve **melhor** ao
+   `hid_nintendo`; o fork DKMS do projeto serve aos dois, e serve **melhor** ao
    clone, porque três dos onze parâmetros existem por causa dele.
 2. **A versão de firmware do Pro Controller e a do clone CHEGAM ao kernel a
    cada probe — e o driver as joga fora.** Não há como lê-las sem escrever no
@@ -54,8 +54,8 @@ protocolo.
 3. **A versão do 8BitDo tem, sim, caminho pronto no Linux, e ele já está
    instalado aqui** — o `fwupd`, com o plugin `ebitdo`. Mas ele **só enxerga o
    aparelho num modo em que ele use o VID próprio**, e não é nenhum dos modos
-   que esta casa usa. Seções 3.4 e 7.2.
-4. **Há um modo do 8BitDo que esta casa nunca ligou**, e é justamente o que
+   que este projeto usa. Seções 3.4 e 7.2.
+4. **Há um modo do 8BitDo que este projeto nunca ligou**, e é justamente o que
    destrava o item 3. Seção 2.2.
 5. **Atualizar não é recomendado hoje** — e o motivo não é medo. Seção 7.
 
@@ -80,7 +80,7 @@ protocolo.
 | LEDs registrados | 5 (4 verdes + 1 azul) | 5 |
 | bateria | sim | sim |
 
-Os endereços aparecem com os octetos 4 e 5 zerados — a máscara desta casa.
+Os endereços aparecem com os octetos 4 e 5 zerados — a máscara do Hefesto.
 
 **O `bcdDevice` do genuíno não pôde ser medido hoje**, porque ele está no
 rádio. O `0210` que o repositório usa como discriminador vem de medições
@@ -125,7 +125,7 @@ calibrar num Switch muda. Grau **ALTA** para o mecanismo.
 
 ## 2. Os modos do 8BitDo — o mapa completo
 
-### 2.1 Qual aparelho é o dela, e por que isso decide tudo
+### 2.1 Qual modelo é o aparelho de teste, e por que isso decide tudo
 
 São **três** produtos com nome parecido e firmware independente: **SN30 Pro**
 (2018, gêmeo do SF30 Pro), **SN30 Pro+** (2020) e **Pro 2** (2021, sem "SN30" no
@@ -134,7 +134,7 @@ Pro 2 for Xbox — que têm **menos** modos e outros IDs.
 
 **Uma coisa já dá para eliminar sem tocar no aparelho:** o **Pro 2 não troca de
 modo por combo**, e sim por uma **chave física de quatro posições** (S/X/D/A) na
-traseira. **[FABRICANTE]**, grau **ALTA**. Como esta casa mediu com ela, em
+traseira. **[FABRICANTE]**, grau **ALTA**. Como este projeto mediu com ela, em
 03/08/2026, que o modo troca com `Start + A`, **o controle do usuário não é um Pro 2**.
 É SN30 Pro ou SN30 Pro+ — e essa distinção continua aberta, porque ela decide
 qual índice de firmware vale (seção 4).
@@ -172,7 +172,7 @@ que só está confirmado para o Pro+, e fica **MÉDIA**.
 >
 > **[FABRICANTE]** + **[CÓDIGO]**, grau **ALTA**. Data: 11/08/2026.
 
-**Consequência direta: há um quinto estado que esta bancada nunca ligou.** Os
+**Consequência direta: há um quinto estado que nunca foi ligado nos ensaios.** Os
 modos exercitados aqui são Switch (cabo e rádio) e macOS/`054c:05c4` (rádio). O
 X-input nunca foi ligado, e o **D-input verdadeiro (`B + Start`,
 `2dc8:6001`/`6002`) também não**.
@@ -234,7 +234,7 @@ daquele modo. **[MEDIDO 11/08]** para as duas primeiras; **[CÓDIGO]** grau
    da OUI, e os dois aparelhos têm o mesmo par. Grau **ALTA**.
 2. **Em modo macOS pelo CABO ele chama o clone de "Sony".** Este é novo. Por
    rádio o `uniq` é o endereço real e a OUI salva o rótulo; por cabo o
-   `hid-playstation` da casa entrega ou um endereço truncado do pairing info
+   `hid-playstation` do projeto entrega ou um endereço truncado do pairing info
    (`ds4_short_pairing_info`) ou um **sintético começando em `02:`**
    (`hid-playstation.c:2308`). No caminho sintético a OUI vira `02054c`, que não
    está em `_BRAND_BY_OUI`, e a função cai em `_VENDOR_BY_VID["054c"]`. O
@@ -346,7 +346,7 @@ Se o aparelho não aparecer na saída, a previsão está confirmada.
 
 ### 2.7 O endereço muda com o modo — e a P-2 já estava respondida
 
-`docs/usage/troubleshooting-8bitdo.md` registra, **medido nesta bancada em
+`docs/usage/troubleshooting-8bitdo.md` registra, **medido no aparelho em
 25/07**, que o 8BitDo usa **endereços de rádio diferentes em cada modo**, ambos
 com a OUI `E4:17:D8`. O endereço que o `REQ_DEV_INFO` devolveu **hoje pelo
 cabo**, em modo Switch, é `E4:17:D8:00:00:1A` — **o mesmo** que o log do BlueZ
@@ -359,7 +359,7 @@ entre elas, mesmo endereço. **[MEDIDO 11/08]**, grau **ALTA**.
 > grau BAIXA, com um plano de pareamento novo como custo. **Ela já estava
 > respondida** na página de uso, medida em 25/07/2026 — e a medição de hoje a
 > corrobora por um terceiro caminho, sem parear nada. Isto não é achado novo: é
-> a casa sabendo em duas páginas e a terceira não ter sido avisada. Fica aqui
+> o projeto sabendo em duas páginas e a terceira não ter sido avisada. Fica aqui
 > porque a canônica não é editável por esta sessão.
 
 ---
@@ -383,7 +383,7 @@ pública (`dekuNukem/Nintendo_Switch_Reverse_Engineering`), este payload:
 | 11 | `0x01` = usa as cores gravadas na SPI |
 
 **[COMUNIDADE]** para o layout, grau **MÉDIA** — é a mesma fonte que o driver
-credita, e ela já foi refutada nesta casa em pelo menos um número.
+credita, e ela já foi refutada neste projeto em pelo menos um número.
 
 E o `joycon_read_info` do fonte instalado (`hid-nintendo.c:2696`) lê **dois** dos
 seis campos:
@@ -474,7 +474,7 @@ e a nenhum outro:
 
 **Nem `057E:2009` nem `054C:05C4` estão na lista** — conferido com `grep` no
 arquivo. E os dois são justamente os pares que o 8BitDo veste em modo Switch e
-em modo macOS, que são os dois modos que esta casa usa.
+em modo macOS, que são os dois modos que este projeto usa.
 
 **Mas `2DC8:6001` e `2DC8:6002` estão**, e são os pares do modo **D-input**. O
 arquivo desta máquina diz, literalmente:
@@ -503,7 +503,7 @@ de outra marca, e o modo que o desmascara é justamente o que ninguém ligou.
 
 **Três ressalvas honestas:**
 
-1. **Não sei o PID exato dela.** `6001` é SN30 Pro, `6002` é SN30 Pro+, e a
+1. **Não sei o PID exato do aparelho de teste.** `6001` é SN30 Pro, `6002` é SN30 Pro+, e a
    seção 2.1 não resolveu qual dos dois é. **Os dois estão na lista**, então a
    ressalva não bloqueia o teste — só impede prometer o resultado.
 2. **O `xpad` tem `2dc8:6001` na tabela interna dele.** Como o casamento real é
@@ -555,7 +555,7 @@ coisas são exatamente onde o clone diverge nesta mesa.
   citada não foi confirmada em fonte oficial. **SEM PROVA**, e não sustenta
   decisão;
 - **nada sobre o handshake USB do modo Switch** — a divergência mais cara medida
-  nesta casa (seção 6);
+  neste projeto (seção 6);
 - **nada sobre sniff Bluetooth.**
 
 **Duas ressalvas grandes, e elas limitam tudo acima:**
@@ -635,7 +635,7 @@ garantia do fabricante.
 WebUSB e por isso só roda em navegador da família Chromium, com relato de
 comunidade de que funciona no Linux. **Mas ele cobre aparelhos novos e exclui
 modelos antigos**, e **não há confirmação de que o SN30 Pro esteja na lista
-dele**. **[COMUNIDADE]**, **SEM PROVA** para o modelo dela.
+dele**. **[COMUNIDADE]**, **SEM PROVA** para o modelo do aparelho de teste.
 
 Há também três projetos de terceiros no Linux — um que baixa da interface
 oficial e grava via `fwupd`, um TUI declaradamente inacabado, e um que roda o
@@ -702,7 +702,7 @@ para prever o resultado de uma atualização.
 `docs/protocol/driver-hid-nintendo-por-dentro.md`, seção 6.2, afirma **"IMU de
 verdade: sim — 200,5 amostras/s medidas"**. **A taxa sozinha não prova isso** —
 o relatório `0x30` sempre carrega os bytes de IMU, e um firmware que mandasse
-zeros produziria a mesma taxa. É exatamente a armadilha que esta casa já nomeou:
+zeros produziria a mesma taxa. É exatamente a armadilha que este projeto já nomeou:
 o instrumento mente mais que o produto.
 
 **Medido hoje, por valor e não por taxa** — 6 s por controle, os dois em repouso,
@@ -725,7 +725,7 @@ dizer qual**, e nenhum changelog da 8BitDo menciona IMU para este modelo. **SEM
 PROVA** para a causa; **ALTA** para o número.
 
 As taxas de hoje (199,4 e 267,2) batem com as de mais cedo (200,5 e 266,1),
-medidas por outra sessão com outra régua. **Duas rotas, mesmo número** — é o que
+medidas por outra sessão com outro método. **Duas rotas, mesmo número** — é o que
 autoriza acreditar nelas.
 
 ### 6.2 Uma afirmação do repositório que NÃO se reproduziu hoje
@@ -780,14 +780,14 @@ A pergunta foi *"vale ou não vale atualizar o firmware dos aparelhos do usuári
    fica.
 3. **Ele funciona.** Hoje ele entrega 267 amostras de IMU por segundo, 11,27 ms
    por relatório, calibração de usuário lida, cinco LEDs, bateria. Não há
-   defeito aberto nesta casa que aponte para o firmware dele.
+   defeito aberto neste projeto que aponte para o firmware dele.
 
-**Uma ressalva que não é recomendação, é aviso:** se ela atualizar o console
-Switch e ele oferecer a atualização do controle, isso é assunto dela e do
+**Uma ressalva que não é recomendação, é aviso:** se o usuário atualizar o console
+Switch e ele oferecer a atualização do controle, isso é assunto do usuário e do
 console. Mas vale saber que **o Linux não avisa quando muda**, porque o
 `hid-nintendo` não lê a versão. Se depois de uma atualização de console algo
 aqui mudar de comportamento, **a correlação vai ser invisível** — e é o tipo de
-coisa que esta casa costuma passar semanas caçando. **Isso é motivo para ANOTAR
+coisa que este projeto costuma passar semanas caçando. **Isso é motivo para ANOTAR
 a data**, não para atualizar nem para deixar de atualizar.
 
 ### 7.2 O 8BitDo — NÃO AINDA, e agora há um caminho barato para saber
@@ -804,7 +804,7 @@ D-input, e `get-devices` é leitura pura.
 
 1. **Descobrir o modelo.** SN30 Pro e SN30 Pro+ têm numerações independentes.
    **Já se sabe que não é um Pro 2** (aquele troca de modo por chave física, e o
-   dela troca por combo). Falta separar Pro de Pro+ — é olhar o aparelho: o Pro+
+   aparelho de teste troca por combo). Falta separar Pro de Pro+ — é olhar o aparelho: o Pro+
    tem gatilhos maiores e o nome impresso atrás. **Cinco segundos de olho de quem confere.**
 2. **Ler a versão, sem gravar.** Com o controle **desligado**, segurar
    **`B + Start`** para ligar em D-input (uma lâmpada piscando), ligar o cabo, e
@@ -850,10 +850,10 @@ aqui.
 - **não há downgrade documentado**;
 - e o modo em que ele funciona bem hoje **funciona bem hoje**: o cabo em modo
   Switch está estável, com IMU real e rumble, e o `054c:05c4` por rádio é o
-  caminho bom que a casa já escolheu.
+  caminho bom que o projeto já escolheu.
 
 **A recomendação de uma linha:** **fazer os três passos e não gravar nada até o
-passo 3 responder.** O único passo que precisa dela é o primeiro, e é olhar o
+passo 3 responder.** O único passo que precisa de quem tem o aparelho é o primeiro, e é olhar o
 aparelho.
 
 ---
@@ -870,15 +870,15 @@ Honestidade primeiro, porque cada linha aqui é trabalho de outra sessão.
    do `usb_device` (só `bcdDevice`, que não é versão de firmware).
 2. **O `bcdDevice` do Pro genuíno.** Ele esteve no rádio o dia inteiro, e
    `bcdDevice` é descritor USB. O `0210` da árvore vem de medições anteriores.
-3. **Qual dos dois modelos é o dela** — SN30 Pro ou SN30 Pro+. Eliminei o Pro 2
+3. **Qual dos dois modelos é o aparelho de teste** — SN30 Pro ou SN30 Pro+. Eliminei o Pro 2
    pelo mecanismo de troca de modo; os outros dois só se separam olhando.
 4. **Os modos D-input, X-input e macOS-pelo-cabo.** Tudo o que as seções 2.4,
    2.5 e 2.6 afirmam sobre eles vem dos **módulos e do código instalados nesta
    máquina**, não do aparelho naqueles modos. **Não pedi para ela trocar de
    modo**, por instrução.
-5. **Se o `fwupd` realmente lê a versão do modelo dela.** O plugin existe, está
+5. **Se o `fwupd` realmente lê a versão do modelo do aparelho de teste.** O plugin existe, está
    ligado, e os dois PIDs candidatos (`6001` e `6002`) estão na lista. Se o PID
-   exato dela é um deles, não dá para saber sem o aparelho no modo certo.
+   exato do aparelho é um deles, não dá para saber sem o aparelho no modo certo.
 6. **O modo de fábrica do SN30 Pro / Pro+.** Nenhuma fonte oficial o declara.
 7. **Em qual modo apareceu o `unknown main item tag 0x0` de 25/07.** A linha não
    está mais em nenhum journal legível.
@@ -899,7 +899,7 @@ clone e `0x01 0x10 0x11 0x12 0x21 0x30 0x31 0x32 0x33 0x3F` para o genuíno —
 `driver-hid-nintendo-por-dentro.md` publicou hoje, por outro caminho. Duas
 rotas, mesmas listas, e só então a ausência de anomalia virou afirmação.
 
-**A régua da IMU conta valor, não byte.** Contar eventos de `evdev` mede o
+**A medida da IMU conta valor, não byte.** Contar eventos de `evdev` mede o
 quanto o controle está tremendo, não a taxa; e contar `SYN_REPORT` mede a taxa,
 mas **não** prova que o dado é real. Por isso a seção 6.1 registra as duas
 coisas separadas: a taxa (`SYN_REPORT`) e a **distribuição de valor por eixo**.
@@ -957,7 +957,7 @@ usados — todos leitura. Nada de `update`, `install` ou `--force`.
 
 - `github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering` — o layout da
   resposta ao subcomando `0x02`. **É a mesma fonte que o driver credita, e ela
-  já foi refutada nesta casa em pelo menos um número**;
+  já foi refutada neste projeto em pelo menos um número**;
 - a wiki do `fwupd` sobre controles 8BitDo;
 - `linux-hardware.org` para `2dc8:6001`, `2dc8:6002` e `2dc8:6006`;
 - o *gamepad-cheatsheet* do SN30 Pro+, única fonte achada com a tabela
@@ -967,7 +967,7 @@ usados — todos leitura. Nada de `update`, `install` ou `--force`.
 - relatos de leitura e gravação de firmware 8BitDo no Linux por terceiros e o
   relato do atualizador web com WebUSB.
 
-**Páginas desta casa:** `docs/usage/troubleshooting-8bitdo.md`,
+**Páginas do Hefesto:** `docs/usage/troubleshooting-8bitdo.md`,
 `docs/protocol/externos-referencia-canonica.md`,
 `docs/protocol/driver-hid-nintendo-por-dentro.md`,
 `docs/data/mapa-controles.csv`.
@@ -1005,7 +1005,7 @@ não com endereço.
 
 ### O remapeamento persistente não existe para este modelo
 
-Medição dela, no aparelho: *"8bitdo ultimate software não funciona nem a pau no
+Relato de quem usa o aparelho: *"8bitdo ultimate software não funciona nem a pau no
 meu controle"*.
 
 Bate com o que se sabe da linha: o **Ultimate Software** atende os aparelhos
@@ -1031,7 +1031,7 @@ Os dois botões, para quem for escrever a regra (medido no fonte do driver,
 - **estrela** = `JC_BTN_HOME` -> `BTN_MODE`
 - **coração** = `JC_BTN_CAP` -> `BTN_Z`
 
-**Não medido:** qual botão físico o aparelho **dela** associa a cada bit. A
+**Não medido:** qual botão físico o aparelho de teste associa a cada bit. A
 leitura por `evdev` foi tentada em 11/08 e não capturou nada — ficou pendente,
 e é o que decide se o mapeamento no Linux já está igual ao do Switch ou
 invertido.
@@ -1075,7 +1075,7 @@ errou a sintaxe.
 
 **O que funciona é o `input-remapper`**, que intercepta no nível do `evdev` em
 vez do scancode — e ele já está instalado nesta máquina, ativo em três outros
-dispositivos dela. É por interface: escolher o 8BitDo, apertar o botão, dizer o
+dispositivos da máquina de teste. É por interface: escolher o 8BitDo, apertar o botão, dizer o
 que ele passa a emitir, salvar. A troca é `BTN_MODE` <-> `BTN_Z`, e desfazer é
 apagar o preset.
 

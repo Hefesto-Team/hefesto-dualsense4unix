@@ -116,6 +116,21 @@ def test_a_arvore_de_hoje_passa() -> None:
     assert r.returncode == 0, r.stdout
 
 
+def test_as_paginas_do_protocolo_da_wiki_nao_trazem_o_vocabulario_de_dentro() -> None:
+    """A Wiki do protocolo sai de `docs/protocol/`: a página que volta a dizer «régua»,
+    «bancada» ou um código de tarefa fica segurada lá, calada. A do Proton fica de fora."""
+    modulo = _modulo()
+    achados = []
+    for pagina in sorted((RAIZ / "docs" / "protocol").glob("*.md")):
+        if pagina.name.startswith("proton-"):
+            continue
+        for numero, linha in enumerate(pagina.read_text(encoding="utf-8").splitlines(), 1):
+            for nome, rx in modulo.EXPRESSOES:
+                if rx.search(linha):
+                    achados.append(f"{pagina.name}:{numero}: [{nome}]")
+    assert achados == []
+
+
 def test_o_que_a_lista_promete_varrer_existe(tmp_path: Path) -> None:
     """Um arquivo da lista que muda de nome não sai da varredura calado."""
     modulo = _modulo()
