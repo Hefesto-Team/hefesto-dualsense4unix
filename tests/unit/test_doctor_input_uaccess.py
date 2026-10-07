@@ -281,17 +281,18 @@ class TestOVpadNaoRespondePeloFisico:
         assert "event261" in r.stdout
 
 
+_CENA_DO_GADGET = [
+    ("event40", "054c", "DualSense Edge Wireless Controller Motion Sensors", GADGET, 0o660),
+    ("event41", "054c", "DualSense Edge Wireless Controller Touchpad", GADGET, 0o660),
+]
+
+
 class TestOPadEmUsbNaoRespondePeloFisico:
     """O gadget tem pai USB e é 054c:0df2, como o Edge pelo cabo: é o vpad."""
 
-    _CENA = [
-        ("event40", "054c", "DualSense Edge Wireless Controller Motion Sensors", GADGET, 0o660),
-        ("event41", "054c", "DualSense Edge Wireless Controller Touchpad", GADGET, 0o660),
-    ]
-
     def test_so_o_pad_em_usb_presente_nao_da_pass(self, tmp_path: Path) -> None:
         env = _monta_cena(
-            tmp_path, self._CENA, com_acl=("event40", "event41"),
+            tmp_path, _CENA_DO_GADGET, com_acl=("event40", "event41"),
             uniqs={"event40": "02:fe:00:00:00:01", "event41": "02:fe:00:00:00:01"},
         )
         r = _roda(tmp_path, env)
@@ -300,7 +301,7 @@ class TestOPadEmUsbNaoRespondePeloFisico:
 
     def test_o_edge_por_um_usbip_de_verdade_e_fisico(self, tmp_path: Path) -> None:
         env = _monta_cena(
-            tmp_path, self._CENA, com_acl=("event40", "event41"),
+            tmp_path, _CENA_DO_GADGET, com_acl=("event40", "event41"),
             uniqs={"event40": "aa:bb:cc:00:00:11", "event41": "aa:bb:cc:00:00:11"},
         )
         r = _roda(tmp_path, env)
