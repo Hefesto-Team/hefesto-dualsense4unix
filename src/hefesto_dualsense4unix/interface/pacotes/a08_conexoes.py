@@ -6223,7 +6223,7 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 
 
 def selo_da_mira(c: dict[str, Any], st: dict[str, Any]) -> str:
-    """O selo «Mira Virtual» da linha: ✓ acesa, «apagada», «Nativo» (chip cinza) ou «—» sem leitura.
+    """O selo «Mira Virtual» da linha: ✓ acesa, «Apagada», «Nativo» (chip cinza) ou «—» sem leitura.
 
     A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01. O `ligada` é o do chip da aba Controles
     (`a02_controles._mira_ligada`) e o `title` é o resumo dos ajustes da Calibrar
@@ -6242,7 +6242,7 @@ def selo_da_mira(c: dict[str, Any], st: dict[str, Any]) -> str:
     if ligada is None:
         return selo_do_estado(rotulo, TRAVESSAO_DA_LINHA, "")
     dica = resumo_da_mira(c.get("mira")) or ""
-    return selo_do_estado(rotulo, "" if ligada else "apagada", "ok" if ligada else "", dica)
+    return selo_do_estado(rotulo, "" if ligada else "Apagada", "ok" if ligada else "", dica)
 
 
 def nome_com_a_bateria(rotulo: str, pct: object) -> str:

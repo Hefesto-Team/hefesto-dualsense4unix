@@ -227,14 +227,14 @@ def test_mudar_de_novo_chega_no_tique_seguinte_sem_reabrir(perfis: Path, tmp_pat
 
 def test_o_chip_apagado_nao_afirma_a_mira_nas_outras_abas(perfis: Path, tmp_path: Path) -> None:  # noqa: F811
     """O número existe com o chip apagado (a Calibrar o mostra), mas a Navegação não diz a linha
-    e a 08 diz «apagada»: nenhuma aba afirma uma Mira que não anda."""
+    e a 08 diz «Apagada»: nenhuma aba afirma uma Mira que não anda."""
     servidor = _servidor_com_perfil(tmp_path)
     _mira_set(servidor, uniq=_P3, ligada=False, sensibilidade=9)
     ctx = _ctx(_estado(servidor))
     lido = _lado_a_lado(ctx, _P3)
     assert lido["calibrar"]["mira-sensibilidade-num"] == "9"
     assert lido["navegacao"]["mira-resumo"] == ""
-    assert "apagada" in lido["conexões"]["est-mira"]
+    assert "Apagada" in lido["conexões"]["est-mira"]
     assert "✓" not in lido["conexões"]["est-mira"]
 
 
