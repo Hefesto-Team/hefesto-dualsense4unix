@@ -307,12 +307,14 @@ def test_gravar_de_novo_nao_muda_nada_e_o_conferir_diz_o_que_faria(brinquedo: Pa
 
 
 def test_gravar_abre_a_entrada_do_changelog_do_spec_com_o_epoch(brinquedo: Path) -> None:
-    """O dnf lê o topo do `%changelog`: o spec que sobe o Version sem a entrada conta duas versões."""
+    """O dnf lê o topo do `%changelog`: subir o Version sem a entrada conta duas versões."""
     assert rodar(VERSAO, "gravar", "0.9.6", "--data", "2026-10-20", raiz=brinquedo).returncode == 0
-    spec = (brinquedo / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").read_text(encoding="utf-8")
+    spec_arq = brinquedo / "packaging" / "fedora" / "hefesto-dualsense4unix.spec"
+    spec = spec_arq.read_text(encoding="utf-8")
     topo = re.search(r"^%changelog\n(\*[^\n]*)", spec, re.MULTILINE)
     assert topo is not None
-    assert topo.group(1).startswith("* Tue Oct 20 2026 ") and topo.group(1).endswith(" - 1:0.9.6-1"), topo.group(1)
+    cabeca = topo.group(1)
+    assert cabeca.startswith("* Tue Oct 20 2026 ") and cabeca.endswith(" - 1:0.9.6-1"), cabeca
 
 
 def test_gravar_sem_versao_grava_a_proposta(brinquedo: Path) -> None:
