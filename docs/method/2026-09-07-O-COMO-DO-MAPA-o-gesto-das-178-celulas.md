@@ -1338,7 +1338,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-combinacao.tres_na_mesa-cabo — TRÊS controles ao mesmo tempo (o caso de co-op dela) · cabo
+## mapa-combinacao.tres_na_mesa-cabo — TRÊS controles ao mesmo tempo (o caso de co-op) · cabo
 
 *Célula:* `combinacao.tres_na_mesa @ cabo`
 
@@ -1378,7 +1378,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-combinacao.tres_na_mesa-radio — TRÊS controles ao mesmo tempo (o caso de co-op dela) · rádio
+## mapa-combinacao.tres_na_mesa-radio — TRÊS controles ao mesmo tempo (o caso de co-op) · rádio
 
 *Célula:* `combinacao.tres_na_mesa @ rádio`
 
