@@ -64,7 +64,7 @@ class IpcHandlersMixin:
         """Aplica perfil escolhido pela usuária."""
 
     async def _handle_rumble_set(self, params):
-        """Aplica rumble com política de intensidade."""
+        """Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01 + NATIVO-RUMBLE-01)."""
 '''
 
 DOCUMENTO = f"""\
@@ -121,6 +121,27 @@ def envelhece_as_fontes(arvore: Path) -> None:
         os.utime(fonte, (ontem, ontem))
     agora = time.time()
     os.utime(documento(arvore), (agora, agora))
+
+
+def test_o_codigo_de_sprint_do_docstring_nao_chega_a_tabela(arvore: Path) -> None:
+    """A tabela é lida por quem está fora: a frase do docstring fica, o código interno não viaja."""
+    texto = documento(arvore).read_text(encoding="utf-8")
+    assert "Aplica rumble com política de intensidade." in texto
+    assert "FEAT-RUMBLE-POLICY-01" not in texto and "NATIVO-RUMBLE-01" not in texto
+
+
+def test_o_parentese_com_prosa_e_o_codigo_solto_no_fim(arvore: Path) -> None:
+    """Só o parêntese feito de códigos sai; o que tem palavra minúscula é prosa e fica."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gerador_ipc", GERADOR)
+    assert spec and spec.loader
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    assert modulo.sem_id_de_sprint("Fixa o par (0, 0) (D4 + SOM-02).") == "Fixa o par (0, 0)."
+    assert modulo.sem_id_de_sprint("Reordena a fila — ONDA-U/NUM-01.") == "Reordena a fila."
+    frase = "Liga (o valor de FOO-01 manda)."
+    assert modulo.sem_id_de_sprint(frase) == frase
 
 
 def test_o_bloco_recem_gerado_passa_no_check(arvore: Path) -> None:

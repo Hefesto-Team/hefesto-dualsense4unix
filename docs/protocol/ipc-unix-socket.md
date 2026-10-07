@@ -18,8 +18,8 @@ nada no código escreve esse caminho à mão:
      `hefesto-dualsense4unix-fake.sock`, isolado do daemon real;
   3. produção → `hefesto-dualsense4unix.sock`.
 
-O passo 2 é o que impede um daemon fake de sequestrar o socket de produção
-(BUG-FAKE-SOCKET-SYNC-01): quem for falar com o daemon deve **derivar** o
+O passo 2 é o que impede um daemon fake de sequestrar o socket de produção:
+quem for falar com o daemon deve **derivar** o
 caminho dessas funções, não concatenar a string.
 
 ## Formato de fio
@@ -32,7 +32,7 @@ Não a edite: ela sai do dicionário `_handlers` de `daemon/ipc_server.py` por
 `scripts/gerar-contrato-ipc.py`, e o `--check` dele reprova quando o publicado
 deixa de ser o que o código produz. A razão de ser gerada está escrita no
 cabeçalho do gerador e é curta: a contagem de métodos sem contrato já saiu 15,
-17, 18 e 14 no mesmo dia, sem commit no meio. Número que quatro réguas não
+17, 18 e 14 no mesmo dia, sem commit no meio. Número que quatro verificações não
 reproduzem não se escreve à mão.
 
 A coluna **Contrato em prosa** diz se o método aparece em alguma outra parte
@@ -54,47 +54,47 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `trigger.reset` | `daemon/ipc_handlers.py:1047` (`_handle_trigger_reset`) | Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19). | sim |
 | `led.set` | `daemon/ipc_handlers.py:1094` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
 | `led.auto_release` | `daemon/ipc_handlers.py:1253` (`_handle_led_auto_release`) | Devolve a luz ao automático: solta a trava manual de `"led"` — e SÓ ela. | sim |
-| `rumble.set` | `daemon/ipc_handlers.py:3971` (`_handle_rumble_set`) | Fixa a vibração; RECUSA no Modo Nativo (FEAT-RUMBLE-POLICY-01 + NATIVO-RUMBLE-01). | sim |
-| `rumble.stop` | `daemon/ipc_handlers.py:4101` (`_handle_rumble_stop`) | Para o rumble e fixa (0, 0); no Modo Nativo SOLTA o par (NATIVO-RUMBLE-01). | sim |
-| `rumble.passthrough` | `daemon/ipc_handlers.py:4154` (`_handle_rumble_passthrough`) | Libera controle de rumble para jogo/UDP (BUG-RUMBLE-APPLY-IGNORED-01). | sim |
-| `rumble.policy_set` | `daemon/ipc_handlers.py:4197` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01). | **não** |
-| `rumble.policy_custom` | `daemon/ipc_handlers.py:4213` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01). | **não** |
-| `rumble.motores.set` | `daemon/ipc_handlers.py:4278` (`_handle_rumble_motores_set`) | `rumble.motores.set` — a barra de CADA motor, no perfil (VIBRACAO-POR-MOTOR-01). | sim |
+| `rumble.set` | `daemon/ipc_handlers.py:3971` (`_handle_rumble_set`) | Fixa a vibração; RECUSA no Modo Nativo. | sim |
+| `rumble.stop` | `daemon/ipc_handlers.py:4101` (`_handle_rumble_stop`) | Para o rumble e fixa (0, 0); no Modo Nativo SOLTA o par. | sim |
+| `rumble.passthrough` | `daemon/ipc_handlers.py:4154` (`_handle_rumble_passthrough`) | Libera controle de rumble para jogo/UDP. | sim |
+| `rumble.policy_set` | `daemon/ipc_handlers.py:4197` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble. | **não** |
+| `rumble.policy_custom` | `daemon/ipc_handlers.py:4213` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito. | **não** |
+| `rumble.motores.set` | `daemon/ipc_handlers.py:4278` (`_handle_rumble_motores_set`) | `rumble.motores.set` — a barra de CADA motor, no perfil. | sim |
 | `sensor.set` | `daemon/ipc_handlers.py:4411` (`_handle_sensor_set`) | `sensor.set` — desliga giroscópio e acelerômetro DE VERDADE. | **não** |
 | `daemon.status` | `daemon/ipc_handlers.py:1864` (`_handle_daemon_status`) | _(o handler não tem docstring)_ | sim |
 | `daemon.state_full` | `daemon/ipc_handlers.py:2212` (`_handle_daemon_state_full`) | Estado completo pra GUI consumir a 20Hz. | sim |
-| `daemon.pause` | `daemon/ipc_handlers.py:2116` (`_handle_daemon_pause`) | Pausa o despacho de input sem matar o daemon (FEAT-DAEMON-PAUSE-RESUME-01). | **não** |
-| `daemon.resume` | `daemon/ipc_handlers.py:2121` (`_handle_daemon_resume`) | Retoma o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01). | **não** |
+| `daemon.pause` | `daemon/ipc_handlers.py:2116` (`_handle_daemon_pause`) | Pausa o despacho de input sem matar o daemon. | **não** |
+| `daemon.resume` | `daemon/ipc_handlers.py:2121` (`_handle_daemon_resume`) | Retoma o despacho de input. | **não** |
 | `freestyle.set` | `daemon/ipc_handlers.py:2126` (`_handle_freestyle_set`) | Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar. | sim |
-| `native.mode.set` | `daemon/ipc_handlers.py:2192` (`_handle_native_mode_set`) | Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01). | sim |
+| `native.mode.set` | `daemon/ipc_handlers.py:2192` (`_handle_native_mode_set`) | Liga/desliga o Modo Nativo — "release total" do controle. | sim |
 | `controller.list` | `daemon/ipc_handlers.py:3763` (`_handle_controller_list`) | Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01. | sim |
-| `controller.target.set` | `daemon/ipc_handlers.py:3914` (`_handle_controller_target_set`) | Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01). | **não** |
-| `daemon.reload` | `daemon/ipc_handlers.py:4599` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime (REFACTOR-DAEMON-RELOAD-01). | sim |
-| `launch_env.refresh` | `daemon/ipc_handlers.py:4627` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper (DEDUP-04) sob demanda. | **não** |
+| `controller.target.set` | `daemon/ipc_handlers.py:3914` (`_handle_controller_target_set`) | Define o ALVO das ações de output. | **não** |
+| `daemon.reload` | `daemon/ipc_handlers.py:4599` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime. | sim |
+| `launch_env.refresh` | `daemon/ipc_handlers.py:4627` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper sob demanda. | **não** |
 | `lightbar.reset` | `daemon/ipc_handlers.py:3948` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | sim |
 | `debug.player_leds` | `daemon/ipc_handlers.py:3959` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
-| `speaker.set` | `daemon/ipc_handlers.py:4649` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02). | sim |
-| `mic.set` | `daemon/ipc_handlers.py:4834` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01). | sim |
-| `mic.canal.set` | `daemon/ipc_handlers.py:4907` (`_handle_mic_canal_set`) | `mic.canal.set` — O ATO INTEIRO do microfone (MICROFONE-UM-ATO-01). | **não** |
+| `speaker.set` | `daemon/ipc_handlers.py:4649` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante. | sim |
+| `mic.set` | `daemon/ipc_handlers.py:4834` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle. | sim |
+| `mic.canal.set` | `daemon/ipc_handlers.py:4907` (`_handle_mic_canal_set`) | `mic.canal.set` — O ATO INTEIRO do microfone. | **não** |
 | `mic.led.set` | `daemon/ipc_handlers.py:5010` (`_handle_mic_led_set`) | `mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele. | sim |
-| `mic.volume.set` | `daemon/ipc_handlers.py:5075` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01). | sim |
-| `mouse.emulation.set` | `daemon/ipc_handlers.py:5210` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
-| `mouse.emulation.restore` | `daemon/ipc_handlers.py:5286` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
+| `mic.volume.set` | `daemon/ipc_handlers.py:5075` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema. | sim |
+| `mouse.emulation.set` | `daemon/ipc_handlers.py:5210` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
+| `mouse.emulation.restore` | `daemon/ipc_handlers.py:5286` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:5307` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO. | sim |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:5405` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:5405` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
 | `desktop.status.set` | `daemon/ipc_handlers.py:5349` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:5514` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | sim |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:5514` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
 | `gamepad.mask.set` | `daemon/ipc_handlers.py:5441` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:5593` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
+| `coop.set` | `daemon/ipc_handlers.py:5593` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
 | `coop.sync` | `daemon/ipc_handlers.py:5623` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
 | `daemon.emulation.suppress` | `daemon/ipc_handlers.py:5639` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:1133` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `led.player_brightness_set` | `daemon/ipc_handlers.py:1174` (`_handle_led_player_brightness_set`) | O brilho das cinco luzes de número: Fraco, Médio ou Forte. | sim |
-| `identity.renumber` | `daemon/ipc_handlers.py:1294` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
-| `identity.number.set` | `daemon/ipc_handlers.py:1538` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
-| `machine.declare` | `daemon/ipc_handlers.py:5651` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:5734` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:5742` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
+| `identity.renumber` | `daemon/ipc_handlers.py:1294` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos). | sim |
+| `identity.number.set` | `daemon/ipc_handlers.py:1538` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle. | sim |
+| `machine.declare` | `daemon/ipc_handlers.py:5651` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa. | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:5734` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:5742` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:6067` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
 | `radio.mover` | `daemon/ipc_handlers.py:6097` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
 | `mira.set` | `daemon/ipc_handlers.py:6166` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
@@ -123,7 +123,7 @@ dispatcher. Ela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 | `native.mode.set`   | `{enabled?: bool}` (ausente = toggle)         | `{status, native_mode}`                |
 | `freestyle.set`     | `{ligado?: bool}` (ausente = inverte)         | `{status, freestyle_ligado, active_profile}` |
 
-### `uniq` — o alvo por controle (PERFIL-05 / R-17 / ABAS-06)
+### `uniq` — o alvo por controle
 
 Os comandos de SAÍDA aceitam um `uniq` opcional (o MAC normalizado, 12 hex) e,
 com ele, escrevem SÓ naquele controle, registrando o override por-MAC —
@@ -136,19 +136,18 @@ registrar: neles, omitir NÃO é broadcast — é o controle **primário**. O á
 mora num handle só (`_handle_for`), não numa lista, então nunca houve o risco de
 "mexi num e mudou todos" que os outros quatro tinham.
 
-`rumble.set`, `rumble.stop` e `rumble.passthrough` aceitam `uniq` desde 03/10/2026
-(A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01): com ele, o par fixado é
+`rumble.set`, `rumble.stop` e `rumble.passthrough` aceitam `uniq` desde 03/10/2026: com ele, o par fixado é
 SÓ daquele controle, e o «Testar» do P2 não cala a vibração do jogo no P1. Omitido,
 `rumble.set` e `rumble.stop` valem para o alvo de agora, e `rumble.passthrough` solta
 os pares de todos.
 
-`trigger.reset` foi o último dos quatro primeiros a ganhar o parâmetro (ABAS-06, 25/07) — o botão
+`trigger.reset` foi o último dos quatro primeiros a ganhar o parâmetro (25/07) — o botão
 "Desligar" da aba Gatilhos zerava o gatilho dos quatro enquanto o "Aplicar" ao
 lado mandava para um só. Ele libera a trava manual apenas da categoria
-`trigger` (ABAS-05): desligar um gatilho não pode destravar o LED nem a
+`trigger`: desligar um gatilho não pode destravar o LED nem a
 vibração que ela ajustou em outra aba.
 
-### `led.auto_release` — o par que faltava à luz (A-TRAVA-DO-LED-NÃO-SOLTA-01)
+### `led.auto_release` — o par que faltava à luz
 
 `{}` → `{status, categoria: "led", escopo}`. **Não escreve byte nenhum no
 controle** e **não aceita `uniq`**: ele solta a trava manual da categoria
@@ -169,11 +168,11 @@ A ordem é o conserto — o `led.set` do meio ARMA a categoria, então um releas
 posto antes dele sairia desfeito na linha seguinte. É por isso que a rota é
 própria, e não um parâmetro nos outros dois.
 
-A categoria `audio` continua sem par (ÁUDIO-QUE-TRANCA-01/E1). Para ela, e para
+A categoria `audio` continua sem par. Para ela, e para
 todo caminho que arma `led` fora desse botão, a rede é o teto de ociosidade de
 `MANUAL_OVERRIDE_STALE_AFTER_SEC`.
 
-### `aplicado_em` e `guardado_em` — o que a resposta AFIRMA (MESA-CHEIA-09)
+### `aplicado_em` e `guardado_em` — o que a resposta AFIRMA
 
 Os quatro comandos de saída por-MAC (`trigger.set`, `trigger.reset`, `led.set`,
 `led.player_set`) devolvem **duas listas de MAC**, e a diferença entre elas é a
@@ -198,17 +197,17 @@ opostos na tela — o que ficou guardado e vai valer, e o que não guardou nada
 outra.
 
 **O conserto de 14/08 (à tarde):** a primeira leva matou DUAS das três
-condições da tabela de mentiras da sprint e deixou a terceira — **Modo Nativo
+condições da tabela de mentiras e deixou a terceira — **Modo Nativo
 com o output mutado** — respondendo `aplicado_em`. Mutado, a rota sysfs do LED
 está desabilitada, o report `0x31` avulso é pulado e o `report_thread` não
 escreve nada: nenhum byte sai, e o desejado é re-escrito no desmute. Isso é
 `guardado_em`, pela mesma definição do controle fora da mesa — o que muda é o
 evento que o libera. Na mesma leva, a escrita que LEVANTA (o `hidraw` que some
-debaixo dela) deixou de contar como aplicada: o backend devolve `falhou` e as
+debaixo da escrita) deixou de contar como aplicada: o backend devolve `falhou` e as
 duas listas saem vazias, porque prometer "guardado" ali seria mandá-la esperar
 um evento que pode nunca vir.
 
-### `led.player_brightness_set` — o brilho das luzes de número (O-BRILHO-DAS-LUZES-DE-NUMERO-01)
+### `led.player_brightness_set` — o brilho das luzes de número
 
 `{brilho: "fraco" | "medio" | "forte", uniq?}` → `{status, brilho,
 aplicado_em, guardado_em}`. Decisão de 24/09/2026
@@ -243,7 +242,7 @@ brilho); no rádio, no `0x31` que acende o número. O `flag2` leva só o bit0
 Iluminação, e ela grava a palavra no override do controle ANTES de chamar —
 uma troca de perfil reaplica o que o perfil diz, que é o que o usuário escolheu.
 
-**A leitura de volta é o `state_full`** (A-04-PERGUNTA-AO-DAEMON-VIVO-01): cada
+**A leitura de volta é o `state_full`**: cada
 controle traz `brilho_das_luzes` (`"fraco"`, `"medio"` ou `"forte"`, o degrau
 que o merge manda ao aparelho) e `brilho_da_barra` (`0.0`-`1.0`, o brilho em
 que a cor de `lightbar_rgb` foi acesa). Os dois saem do dono do merge, com a
@@ -252,12 +251,12 @@ quer dizer «não sei»: a aba Iluminação cai no perfil do disco. O `led.set`
 leva o `brightness` até o backend para isso, e a cor que chega sem ele (a CLI
 antiga) publica `null`.
 
-**O jogo pintando agora** (O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01): cada controle traz `luz_do_jogo`,
+**O jogo pintando agora**: cada controle traz `luz_do_jogo`,
 sempre presente: `true` quando a camada do jogo tem a cor da barra deste controle (a que o merge
 aceitou, e que cai no fim da sessão), `false` em qualquer outro caso, inclusive backend sem a leitura.
 A aba Iluminação diz «Agora: a cor do jogo» só com ele.
 
-### `rumble.motores.set` — a BARRA de cada motor (VIBRACAO-POR-MOTOR-01)
+### `rumble.motores.set` — a BARRA de cada motor
 
 | Método               | Parâmetros                                         | Retorno                                                        |
 |----------------------|----------------------------------------------------|----------------------------------------------------------------|
@@ -294,8 +293,7 @@ traz o 100 do "sem opinião" para a tela não digitá-lo. A fonte é a MESMA que
 segunda leitura do disco: duas leituras podem divergir, e a tela pintaria o que
 o motor não usa.
 
-**O ganho da háptica por áudio vai no mesmo pedido** (O-GANHO-DA-HAPTICA-TEM-DONO-01,
-29/09/2026): `haptica_pct`, de 0 a 200, com o mesmo contrato (omitido não mexe; o
+**O ganho da háptica por áudio vai no mesmo pedido** (29/09/2026): `haptica_pct`, de 0 a 200, com o mesmo contrato (omitido não mexe; o
 padrão, 150, apaga a chave). Ele não multiplica o degrau: no PCM do jogo a Força não
 alcança, e esta barra é o único fator. Quem o aplica é o dono do ganho
 (`daemon/ganho_da_haptica.py`), relido no mesmo ato: os traseiros da placa daquele
@@ -305,7 +303,7 @@ controle no cabo, em fator linear, e o conversor da ponte no rádio, antes do in
 dele) e `haptica_no_ar` (há háptica chegando a ele agora: no cabo, o monitor da placa
 dele; no rádio, a ponte em háptica com sinal), e `haptica_pct_padrao` traz o padrão.
 
-### `mic.set` / `speaker.set` — o áudio do controle (D4 / MIC-USB-01)
+### `mic.set` / `speaker.set` — o áudio do controle
 
 | Método        | Parâmetros                                                       | Retorno                                        |
 |---------------|------------------------------------------------------------------|------------------------------------------------|
@@ -313,13 +311,11 @@ dele; no rádio, a ponte em háptica com sinal), e `haptica_pct_padrao` traz o p
 | `mic.led.set` | `{aceso: bool\|null, uniq?: str}`                                | `{status, aceso}`                              |
 | `speaker.set` | `{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}`     | `{status, speaker}`                            |
 
-Os dois escrevem no MESMO bloco do report de saída (`common[4..9]`,
-AUDIO-OWNER-01) e seguem a mesma disciplina: o hefesto só toca o campo depois de
+Os dois escrevem no MESMO bloco do report de saída (`common[4..9]`) e seguem a mesma disciplina: o hefesto só toca o campo depois de
 alguém pedir, e o que não tem dono sai com o bit de validação apagado — o
 firmware conserva o que tinha.
 
-**A posse, porém, é por BYTE e por BIT — não é do bloco inteiro** (medido na
-SOM-02, 29/07). Este documento tratava `common[4..9]` como uma coisa só, e para
+**A posse, porém, é por BYTE e por BIT — não é do bloco inteiro** (medido em 29/07). Este documento tratava `common[4..9]` como uma coisa só, e para
 efeito de disciplina isso está certo; para efeito de PREÇO, não:
 
 | Campo                    | Byte        | Bit de autoridade | Quem toma     |
@@ -333,11 +329,11 @@ efeito de disciplina isso está certo; para efeito de PREÇO, não:
 
 Fontes: `core/ds_output_report.py:59-86`, a aplicação por byte em
 `core/backend_pydualsense.py` (`_build_common`) e o mudo do microfone em ramo
-separado, logo abaixo dela.
+separado, logo abaixo desse bloco.
 
 **A consequência prática, que a tela precisa dizer do jeito certo: mexer no
 volume pela janela NÃO mata o botão de microfone do controle.** São bits
-diferentes. O que a MIC-USB-01 viveu — `mic unmute` toma a posse e o botão
+diferentes. O que se mediu no microfone — `mic unmute` toma a posse e o botão
 físico para de valer até `mic release` — vale para o MICROFONE. O alto-falante
 tem um preço próprio, menor e diferente: ele toma o volume do fone junto (é o
 mesmo valor nos dois bytes, de propósito), e não toca `common[6]` nem
@@ -358,11 +354,10 @@ byte de mute (`3d9bb7e`): o keepalive do upstream mandava `common[9]=0x00` a
 60 Hz por cima do kernel, e o botão de microfone do controle parecia não
 funcionar.
 
-**`mic.led.set` é o BYTE VIZINHO, e acender NÃO muta** (MIC-DA-MESA-ELEICAO-01,
-01/09/2026). `common[8]` e `common[9]` têm bits de autorização diferentes, e é
+**`mic.led.set` é o BYTE VIZINHO, e acender NÃO muta** (01/09/2026). `common[8]` e `common[9]` têm bits de autorização diferentes, e é
 por isso que a inversão que o usuário pediu — *"as pessoas precisam ter um aviso
 visual que o mic tá funcionando"* — cabe sem escrever uma linha no byte do mudo.
-**Nesta casa, ACESO = este microfone está VIVO**, ao contrário da convenção da
+**Neste projeto, ACESO = este microfone está VIVO**, ao contrário da convenção da
 Sony; o contrato do byte não inverteu, quem decide o argumento é o chamador.
 
 Os três estados são os mesmos, com o mesmo cuidado:
@@ -395,7 +390,7 @@ vir um report atrás da escrita — não é o eco do que foi mandado.
 devolve o volume (não há report de input nem feature report que o leia), então
 antes disso qualquer número seria chute.
 
-**`speaker.set` tem uma quarta chave, `release` (SOM-02, 31/07):**
+**`speaker.set` tem uma quarta chave, `release` (31/07):**
 
 - `release: true` — **devolve a posse** dos bytes de volume. Os bits de áudio do
   `flag0` voltam a sair zerados, o firmware volta a mandar no bloco e a chave
@@ -413,7 +408,7 @@ volume antes de nós, e o firmware fica com o ÚLTIMO número que mandamos até 
 controle desconectar. Nenhum texto do produto pode prometer restauração.
 
 `muted` **sem volume conhecido é recusado** (erro `-32003`), e isso é entrega, e
-não rigor: medido na SOM-02, mudo como PRIMEIRA escrita manda zero e guarda zero
+não rigor: medido, mudo como PRIMEIRA escrita manda zero e guarda zero
 como preferência — o "desmudo" seguinte restaura zero e o próprio par
 mudo/desmudo não solta mais o alto-falante. Mande um `volume` antes. Pela mesma
 razão, nada no produto manda `speaker.set` **vazio**: a chamada sem `volume`
@@ -450,7 +445,7 @@ por fora — `scripts/doctor.sh --fix-mic`:
 
 Os dois escrevem o MESMO estado — a **fila de preferência** do
 `controllers.json` (schema 3, campo `order`), compartilhada entre DualSense e
-externos. Desde a NUM-01 o que se grava é o **lugar na fila**, nunca um número
+externos. Desde a numeração por lugar na fila, o que se grava é o **lugar na fila**, nunca um número
 absoluto: o número que a janela mostra é a *colocação desse lugar entre quem está
 presente agora*. É por isso que um controle sozinho na mesa é sempre o 1.
 
@@ -458,7 +453,7 @@ presente agora*. É por isso que um controle sozinho na mesa é sempre o 1.
   relativa, e empurra quem está ausente para o fim da fila. É o acabamento do
   botão **"Reconectar Controles"** da aba Jogar — um gesto de faxina (ver
   `coop.sync`, abaixo).
-- `identity.number.set` (PLAYER-01, 25/07) atribui o número de **UM** controle:
+- `identity.number.set` (25/07) atribui o número de **UM** controle:
   permuta entre si os lugares que os PRESENTES já ocupam, pondo o alvo na
   posição pedida. Os lugares de quem está ausente ficam intocados — este gesto
   não rebaixa ninguém que está na gaveta.
@@ -467,20 +462,20 @@ Ele é `number` e não `player` de propósito: "jogador" nomeia outra PERGUNTA
 neste projeto — "este controle está jogando agora?" —, respondida pelo campo
 `controllers[].player` do `state_full`, que é `null` fora do co-op.
 
-O que mudou em **15/08/2026 (MESA-CHEIA-12)**: os dois deixaram de ser espaços
+O que mudou em **15/08/2026**: os dois deixaram de ser espaços
 de numeração diferentes. Até ali o `player` saía do índice de alocação do vpad
 do co-op (`_next_player_index`, ordem em que o grab confirmou na sessão) e a
 barra de LED do controle saía desta fila — e, com os quatro DualSense do usuário no
 rádio, três dos quatro acendiam um número e eram chamados de outro. Agora
 `CoopManager.numeros_de_jogador()` é a fonte única dos dois: quando `player`
 existe, ele é igual ao `player_slot`. A ordem de chegada é a verdade, e a barra
-é função dela.
+é função dessa ordem.
 
 **Recusas** (nenhuma escreve nada):
 
 | `reason`                | quando                                                      |
 |-------------------------|-------------------------------------------------------------|
-| `sessao_de_jogo_aberta` | `display_authority == "game"` — repintar o LED do controle que o jogo está usando no meio da partida é o erro que o NUMA-03 fechou |
+| `sessao_de_jogo_aberta` | `display_authority == "game"` — repintar o LED do controle que o jogo está usando no meio da partida é um erro já curado |
 | `controle_ausente`      | o `uniq` não está entre os presentes; número exibido só existe para quem está na mesa |
 | `numero_fora_da_mesa`   | `number` maior que a quantidade de presentes (a resposta traz `max`) |
 | `lock_timeout`          | os `RLock` dos registros não vieram em 5 s (mesmo teto do renumber) |
@@ -495,7 +490,7 @@ no renumber, para a interface não anunciar sucesso de um no-op.
 | `coop.set`  | `{enabled: bool}` | `{status: "ok", enabled: true, players}` \| `{status: "recusado", enabled: true, players, motivo}` |
 | `coop.sync` | `{}`              | `{status: "ok", players, active}`                 |
 
-**COOP-SEM-INTERRUPTOR-01 (06/08/2026, decisão da mantenedora):** o co-op local
+**O co-op sem interruptor (06/08/2026, decisão de produto):** o co-op local
 não é mais uma opção — cada controle conectado é um jogador, sempre. Palavra
 de produto: *"se eu conecto 4 controles no PC eu espero, com 4 pessoas jogando, que
 cada um controle o próprio personagem"*.
@@ -519,7 +514,7 @@ de Steam Input suspendeu os vpads. Nesse estado o ciclo apenas desmonta o que
 sobrou: reconciliar **nunca** ressuscita o que o jogo suspendeu (a suspensão é
 `CoopManager.disable()`, que não depende da flag).
 
-### `native.mode.set` — Modo Nativo (FEAT-NATIVE-MODE-01)
+### `native.mode.set` — Modo Nativo
 
 "Release total" do controle: solta o DualSense para o jogo usar os gatilhos
 adaptativos NATIVOS da Sony (Sackboy & cia). `enabled=true` → gatilhos Off/Off,
@@ -528,9 +523,9 @@ gateados e daemon pausado; persiste em `native_mode.flag` (sobrevive a restart).
 `enabled=false` → restaura o último perfil. `daemon.state_full` e `daemon.status`
 expõem `native_mode: bool`. Com `origin: "manual"`, ligar grava o modo
 `native` no perfil ativo depois do aparelho, como o `gamepad.emulation.set` e o
-`desktop.arranjo.apply` à mão gravam o modo deles (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
+`desktop.arranjo.apply` à mão gravam o modo deles.
 
-### `freestyle.set` — o Modo Freestyle (O-FREESTYLE-E-UMA-CAMADA-SO-01)
+### `freestyle.set` — o Modo Freestyle
 
 O botão «Modo Freestyle» da aba Jogar. Substitui o `autoswitch.lock` (o cadeado
 de 23/07, que cedia a todo perfil de jogo) desde 28/09/2026. `ligado=true` é o
@@ -543,7 +538,7 @@ lançamento com o perfil dele. Persiste em `freestyle_ligado.flag`; o
 e `daemon.status` expõem `freestyle_ligado: bool` (no lugar de
 `autoswitch_locked`).
 
-### `mouse.emulation.set` — `enabled` é OPCIONAL (BUG-MOUSE-GUI-SYNC-01 A4)
+### `mouse.emulation.set` — `enabled` é OPCIONAL
 
 - **com `enabled`** (bool): liga/desliga a emulação de mouse (cria/destrói o
   device virtual, persiste o flag). Ligar desliga o gamepad virtual (mútua
@@ -553,7 +548,7 @@ e `daemon.status` expõem `freestyle_ligado: bool` (no lugar de
   device, e só re-persiste o flag se a emulação já estava ligada. Impede que
   arrastar um slider religue uma emulação desligada.
 
-### `machine.declare` — o que o Hefesto NÃO tem como medir (CONFIG-03)
+### `machine.declare` — o que o Hefesto NÃO tem como medir
 
 O único método que escreve o `maquina.json` (`utils/maquina.py`), o terceiro
 arquivo de `config_dir()` depois de `controllers.json` e `controller_masks.json`.
@@ -586,7 +581,7 @@ A declaração **não** entra no `daemon.state_full`: aquilo é o tique de 20 Hz
 isto muda por gesto do usuário. O daemon lê o arquivo uma vez no boot
 (`daemon/lifecycle.py`, ao lado dos flags de sessão).
 
-### `radio.mover` — mover UM aparelho, ou conectar um novo (MOVER-UM-POR-VEZ-01)
+### `radio.mover` — mover UM aparelho, ou conectar um novo
 
 O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
 `HID_PHYS` e pelo movimento chegando, e só então esquece a origem, com a lápide.
@@ -597,11 +592,10 @@ O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
 
 Sem `aparelho` é o «Conectar»: a busca abre no adaptador da D8 (mais vaga de ponte; no
 empate, menos controles; quem varre por último), e nada pareia sem o clique do usuário: com
-`aparelho` que a janela viu, no destino da busca, é o «Parear» dela; o «Parear de Novo» pede o mesmo antes de a janela ver o aparelho, que esteja fora do ar em todo adaptador, e o `Pair` só sai quando a janela o vê. Sem `destino`, a D8 escolhe
+`aparelho` que a janela viu, no destino da busca, é o «Parear» do usuário; o «Parear de Novo» pede o mesmo antes de a janela ver o aparelho, que esteja fora do ar em todo adaptador, e o `Pair` só sai quando a janela o vê. Sem `destino`, a escolha automática do destino escolhe
 também no mover. `status: "ocupado"` é a recusa, e ela tem duas causas: OUTRO
 movimento está em curso, ou outro motor segurou a trava do rádio por mais de 5 s.
-Um por vez vale também para o arrastar e para o «Conectar»
-(A-COSTURA-DA-ONDA-2-01). Nos dois casos o botão treme e nada mudou. O mesmo
+Um por vez vale também para o arrastar e para o «Conectar». Nos dois casos o botão treme e nada mudou. O mesmo
 pedido feito de novo devolve o mesmo movimento, e não uma recusa.
 
 A resposta volta assim que a trava vem, com o movimento em `esperando`; o resto
@@ -616,7 +610,7 @@ e é sempre `null` enquanto um movimento está `esperando`. `busca` é a busca d
 «Procurar»: `{adaptador, desde, ate}` enquanto a janela de um movimento SEM
 aparelho está aberta, ou `null`.
 
-### `radio.busca.set` — o «Procurar» da aba Conexões (O-CONECTAR-E-UM-INTERRUPTOR-01)
+### `radio.busca.set` — o «Procurar» da aba Conexões
 
 | Método            | Parâmetros                                 | Retorno                         |
 |-------------------|--------------------------------------------|---------------------------------|
@@ -630,7 +624,7 @@ Conectou» dele). Pedir o estado que já vale responde `ok` sem tocar no rádio.
 resposta traz a `busca` que ficou valendo; `status` diferente de `ok` é a
 recusa (`ocupado`, com um «Mover» em curso; `sem_destino`; `sem_central`).
 
-### `radio_receptores` — a saúde do receptor 2.4G (O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01)
+### `radio_receptores` — a saúde do receptor 2.4G
 
 Chave do `daemon.state_full`, sem método: `{ "usb:<vid>:<pid>": {teclas_presas, buracos, janela_s,
 lendo} }` para cada receptor 2.4G de teclado e mouse que o censo reconhece. `teclas_presas` conta
@@ -639,7 +633,7 @@ depois; `buracos`, os vazios de 8 ms e 4× o intervalo do próprio mouse, ou mai
 `lendo` é falso quando o `/dev/input` dele não abriu (sem leitura não há número). **Nunca** leva o
 código de uma tecla nem texto: só contagens. A chave é `{}` sob a suíte e no modo falso.
 
-### `mira.set` — o chip «Mira Virtual», por controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01)
+### `mira.set` — o chip «Mira Virtual», por controle
 
 A palavra, 23/09/2026: um botão «Mira Virtual» ao lado de Giroscópio e
 Acelerômetro, no cartão de cada controle — o movimento do controle vira o
@@ -655,9 +649,9 @@ perfil. `sensibilidade` e `zona_morta_graus_s` são os dois deslizantes da tela
 Calibrar sensores («O quanto um gesto anda» e «Ignorar tremor até»); `gatilho`
 é o «Só enquanto eu segurar» (um botão de `REMAPEAVEIS`, ou `null` para a mira
 andar sempre — o PS é recusado), e `inverter_horizontal`/`inverter_vertical`
-são os dois «Inverter» (A-MIRA-POR-MOVIMENTO-NA-TELA-02). `inclinacao` e
-`toque` são os dois arranjos da resposta de 28/09/2026
-(NO-MODO-XBOX-TUDO-FUNCIONA-01): `inclinacao` grava o `acelerometro` da peça —
+são os dois «Inverter». `inclinacao` e
+`toque` são os dois arranjos da resposta de 28/09/2026:
+`inclinacao` grava o `acelerometro` da peça —
 o analógico que a inclinação do controle move, `"analogico_esquerdo"` ou
 `"analogico_direito"` (o chip embaixo de cada um), ou `"nenhum"` —, e `toque`
 grava o destino do touchpad —
@@ -691,13 +685,13 @@ inverter_horizontal, inverter_vertical}` — o que vale AGORA para aquela peça
 pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`), e os
 números mesmo com a mira apagada.
 
-### `haptica.testar` — o botão «Háptica» da aba Vibração (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01)
+### `haptica.testar` — o botão «Háptica» da aba Vibração
 
 | Método           | Parâmetros                     | Retorno                                 |
 |------------------|--------------------------------|-----------------------------------------|
 | `haptica.testar` | `{uniq: str, ligado: bool}`    | `{status, uniq, ligado, leva, par?}`    |
 
-A resposta [24] dela, 29/09/2026: o «Testar agora» tem dois botões, «Vibração» e
+Decisão de produto de 29/09/2026: o «Testar agora» tem dois botões, «Vibração» e
 «Háptica». Ligado, o tocador do aparelho daquele controle toca o par `(127, 127)`
 no endpoint dele (a amplitude é `nível / 255`, e com o ganho no teto, 200 %, dá
 0,996, sem cortar), com o ganho da linha «Sensor Háptico» aplicado depois (a placa
@@ -713,7 +707,7 @@ fixado (`rumble.TETO_DO_RUMBLE_FIXADO_S`) sem rebate. `status` pode ser `"ok"`,
 subsystem do som fora do ar), os dois últimos com `motivo`. Sem `uniq` ou sem
 `ligado` booleano, o erro é de parâmetro.
 
-## Perfil com seção `mouse` (FEAT-POINT-AND-CLICK-01)
+## Perfil com seção `mouse`
 
 O schema de perfil aceita uma seção opcional `mouse`
 (`{"enabled": bool, "speed": 1-12, "scroll_speed": 1-5}`) e o campo booleano
@@ -722,10 +716,9 @@ autoswitch por janela, hotkey PS+D-pad):
 
 - perfil **com** seção `mouse` → as velocidades do perfil entram, e o
   liga/desliga só quando o perfil diz Navegação (`mode.kind: desktop`): fora
-  dela quem desliga o mouse é a exclusão mútua do modo, e um perfil sem opinião
-  de modo não desliga o mouse da Navegação (O-MOUSE-SEGUE-A-NAVEGACAO-01,
-  29/09/2026). Tudo respeitando o **lock manual**
-  (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01): se a usuária mexeu na emulação (mouse
+  da Navegação quem desliga o mouse é a exclusão mútua do modo, e um perfil sem opinião
+  de modo não desliga o mouse da Navegação (29/09/2026). Tudo respeitando o **lock manual**:
+  se a usuária mexeu na emulação (mouse
   OU gamepad) manualmente há menos de 30 s, o perfil NÃO toca no estado — não
   sequestra um gamepad virtual ligado na mão. É idempotente (não recria o
   device a cada tick do autoswitch);
@@ -737,7 +730,7 @@ autoswitch por janela, hotkey PS+D-pad):
   (D-2909-A-NAVEGACAO-LIGA-O-MOUSE); o «Status do Modo» (`desktop.status.set`)
   o desliga enquanto ela estiver lá, e com `origin: manual` grava o `enabled`
   da seção `mouse` e o `teclado_emulado` no perfil ativo;
-- **restore no boot** (BUG-BOOT-RESTORE-FLIPS-EMULATION-01): a seção `mouse` do
+- **restore no boot**: a seção `mouse` do
   último perfil NÃO é reaplicada — o estado da emulação no boot vem dos **flags
   persistidos** (`mouse_emulation.flag`/`gamepad_emulation.flag`), não do perfil.
   Reaplicar matava o gamepad recém-restaurado e invertia a escolha da usuária a

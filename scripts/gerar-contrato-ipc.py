@@ -56,6 +56,28 @@ def handlers_do_mixin(raiz: Path) -> dict[str, tuple[int, str | None]]:
     return achados
 
 
+_ID_DE_SPRINT = re.compile(r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b")
+_PARENTESE = re.compile(r"\s*\(([^()]*)\)")
+_ID_SOLTO_NO_FIM = re.compile(r"\s+—\s+[A-Z0-9/-]+\.$")
+
+
+def sem_id_de_sprint(texto: str) -> str:
+    """O texto sem o código interno de sprint que o docstring carrega: a tabela é lida por quem está fora.
+
+    Sai o parêntese feito só de códigos (`(FEAT-X-01 + Y-02)`, `(D4 + SOM-02)`) e o código solto no fim da frase; o
+    parêntese com palavra minúscula é prosa e fica. A frase do docstring continua inteira, o código é que não viaja.
+    """
+    def parentese(m: re.Match[str]) -> str:
+        dentro = m.group(1)
+        return "" if _ID_DE_SPRINT.search(dentro) and not re.search(r"[a-zà-ú]", dentro) else m.group(0)
+
+    saida = _PARENTESE.sub(parentese, texto)
+    solto = _ID_SOLTO_NO_FIM.search(saida)
+    if solto and _ID_DE_SPRINT.search(solto.group(0)):
+        saida = saida[: solto.start()] + "."
+    return saida
+
+
 def celula(texto: str) -> str:
     """Um texto qualquer virando célula de tabela markdown sem quebrar a tabela."""
     return texto.replace("|", r"\|").replace("\n", " ")
@@ -86,7 +108,7 @@ def monta(raiz: Path) -> str:
             sem_docstring += 1
             diz = "_(o handler não tem docstring)_"
         else:
-            diz = celula(primeira)
+            diz = celula(sem_id_de_sprint(primeira))
         endereco = (
             f"`{HANDLERS.relative_to(PACOTE).as_posix()}:{linha}` (`{handler}`)"
             if linha else "_(handler não encontrado)_"
