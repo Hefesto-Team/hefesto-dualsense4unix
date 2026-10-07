@@ -73,6 +73,7 @@ import argparse
 import contextlib
 import errno
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -863,6 +864,308 @@ def reinicio_sem_abrir_pedido(
     return -5.0 <= idade <= REINICIO_SEM_ABRIR_VALIDADE_S
 
 
+# --- O PAD EM USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01, 07/10/2026) ---
+#
+# O pad virtual nascia só por uhid, sem `usb_device` pai, e o jogo com a
+# biblioteca da Sony não casava o som dele pelo contêiner (o engasgo do
+# Sackboy). A cura é um gadget `libcomposite` SÓ HID, preso ao `usbip-vudc` e
+# ligado de volta pelo `vhci_hcd`: o pad ganha um pai USB de verdade. A raiz é
+# deste broker, com o pedido mínimo: montar, ligar, entregar o fd do
+# `/dev/hidgN` e desmontar. Nada aqui é escolhido pelo cliente além do serial
+# (no formato do Hefesto) e do descritor, que só passa se for o do DualSense
+# que o produto já usa (`PAD_USB_DESCRITORES_SHA256`): o broker nunca vira uma
+# fábrica de teclado USB para quem fala com ele.
+#
+# O que a prova mediu e este código honra (rodadas 18 a 22):
+#   - SEM endpoint OUT (`no_out_endpoint=1`): com OUT, o `f_hid` estala o
+#     SET_REPORT e o jogo recusa o pad;
+#   - SEM a função `uac2`: o isócrono pelo `vhci` congela o jogo;
+#   - no máximo quatro pads (`PAD_USB_MAX`): o Sackboy só inicializa quatro.
+# O `attach` vai pelo sysfs com um par de sockets AF_UNIX (o `usbip_sockfd` do
+# `vudc` e o `attach` do `vhci`), sem o `usbipd` por TCP da prova.
+
+CONFIGFS_GADGETS = "/sys/kernel/config/usb_gadget"
+SYS_PLATFORM = "/sys/devices/platform"
+SYS_CLASS_UDC = "/sys/class/udc"
+PAD_USB_MAX = 4
+PAD_USB_NOME = "hefesto-pad-"
+PAD_USB_FUNCAO = "hid.usb0"
+PAD_USB_CONFIG = "c.1"
+#: sha256 do descritor do DualSense que o pad usa
+#: (`integrations/uhid_blueprint.CANONICAL_DESCRIPTOR_USB`); a régua do pad
+#: reprova se o blueprint mudar sem esta linha.
+PAD_USB_DESCRITORES_SHA256 = frozenset(
+    {"4f48767516627510521512af13c20a064877465122b7bcc7cac1f3b608d37994"}
+)
+_SERIAL_DO_PAD_RE = re.compile(r"^hefesto-pad-[0-9a-f]{12}$")
+_VUDC_RE = re.compile(r"^usbip-vudc\.[0-9]+$")
+_VHCI_LIVRE = 4  # VDEV_ST_NULL
+_VELOCIDADES = {"low-speed": 1, "full-speed": 2, "high-speed": 3, "super-speed": 5}
+_VELOCIDADE_PADRAO = 3  # o gadget declara bcdUSB 0x0200 (alta velocidade)
+
+
+class PadUsbSemContratoError(OSError):
+    """O kernel não cumpre um contrato do pad em USB; ``contrato`` diz qual."""
+
+    def __init__(self, contrato: str, detalhe: str = "") -> None:
+        super().__init__(errno.ENODEV, f"{contrato}: {detalhe}".rstrip(": "))
+        self.contrato = contrato
+
+
+@dataclass
+class RaizesDoPad:
+    """Onde o pad em USB mexe — injetável para a régua (nunca o /sys real)."""
+
+    configfs: str = CONFIGFS_GADGETS
+    plataforma: str = SYS_PLATFORM
+    classe_udc: str = SYS_CLASS_UDC
+    dev: str = "/dev"
+
+
+def _escrever_attr(caminho: str, valor: str | bytes) -> None:
+    """Escreve num atributo que o kernel JÁ publicou (sem ``O_CREAT``: o que
+    falta é contrato que falta, e não arquivo a criar)."""
+    dados = valor if isinstance(valor, bytes) else valor.encode("ascii")
+    fd = os.open(caminho, os.O_WRONLY | os.O_CLOEXEC | os.O_TRUNC)
+    try:
+        os.write(fd, dados)
+    finally:
+        os.close(fd)
+
+
+def _conceder_ao_uid(fd: int, uid: int) -> None:
+    """``chmod 0660`` + ACL ``u:<uid>:rw`` no inode pinado (o ``restore``)."""
+    ref = f"/proc/self/fd/{fd}"
+    os.chmod(ref, 0o660)
+    os.setxattr(ref, _ACL_XATTR, encode_access_acl(uid))
+
+
+def _ler_attr(caminho: str) -> str:
+    try:
+        with open(caminho, encoding="ascii", errors="replace") as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+class PadUsbOps:
+    """As operações de raiz do pad em USB: configfs, vudc, vhci e /dev/hidgN.
+
+    ``remover`` é o ``rmdir`` (a régua injeta um que recusa, como o configfs,
+    diretório com grupo dentro); ``povoar`` faz, na régua, o que o configfs
+    faz sozinho ao nascer um grupo (publicar os atributos dele); ``abrir``,
+    ``rdev_de`` e ``conceder`` servem ao ``/dev/hidgN``, que não se cria sem root.
+
+    O broker NÃO abre o ``/dev/hidgN`` para ler e escrever: o grupo ``hidg``
+    só aparece no ``/proc/devices`` quando nasce a primeira instância da
+    função (medido em 07/10/2026: com o ``usb_f_hid`` carregado e nenhum
+    gadget, não há linha ``hidg``), e o ``DeviceAllow=char-hidg`` da unit,
+    resolvido no start, não acharia o grupo. O broker pina o nó por
+    ``O_PATH`` (que o cgroup de device não barra), concede ``rw`` ao uid da
+    sessão no MESMO inode (``chmod 0660`` + ACL, como o ``restore``) e
+    entrega o fd ``O_PATH``; o daemon reabre por ``/proc/self/fd/N``, sem
+    janela de troca de nó.
+    """
+
+    def __init__(
+        self,
+        raizes: RaizesDoPad | None = None,
+        *,
+        remover: Callable[[str], None] = os.rmdir,
+        abrir: Callable[[str], int] | None = None,
+        rdev_de: Callable[[int], int] | None = None,
+        conceder: Callable[[int, int], None] | None = None,
+        par_de_sockets: Callable[[], tuple[socket.socket, socket.socket]] | None = None,
+        povoar: Callable[[str], None] | None = None,
+    ) -> None:
+        self.raizes = raizes if raizes is not None else RaizesDoPad()
+        self._remover = remover
+        self._povoar = povoar or (lambda _grupo: None)
+        self._abrir = abrir or (
+            lambda p: os.open(p, os.O_PATH | os.O_CLOEXEC | os.O_NOFOLLOW)
+        )
+        self._rdev_de = rdev_de or (lambda fd: os.fstat(fd).st_rdev)
+        self._conceder = conceder or _conceder_ao_uid
+        self._par = par_de_sockets or (
+            lambda: socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        )
+
+    # -- leitura -----------------------------------------------------------
+
+    def gadgets_nossos(self) -> list[str]:
+        try:
+            nomes = os.listdir(self.raizes.configfs)
+        except OSError:
+            return []
+        return sorted(n for n in nomes if n.startswith(PAD_USB_NOME))
+
+    def udcs_livres(self) -> list[str]:
+        try:
+            udcs = sorted(n for n in os.listdir(self.raizes.classe_udc) if _VUDC_RE.match(n))
+        except OSError:
+            udcs = []
+        try:
+            gadgets = os.listdir(self.raizes.configfs)
+        except OSError:
+            gadgets = []
+        presos = {_ler_attr(f"{self.raizes.configfs}/{g}/UDC") for g in gadgets}
+        return [u for u in udcs if u not in presos]
+
+    def porta_livre(self) -> int:
+        """A primeira porta de alta velocidade livre do ``vhci_hcd.0``."""
+        status = f"{self.raizes.plataforma}/vhci_hcd.0/status"
+        try:
+            with open(status, encoding="ascii", errors="replace") as fh:
+                linhas = fh.read().splitlines()
+        except OSError as exc:
+            raise PadUsbSemContratoError("vhci_hcd", "sem o status do vhci_hcd.0") from exc
+        for linha in linhas[1:]:
+            campos = linha.split()
+            if len(campos) < 3 or campos[0] != "hs":
+                continue
+            try:
+                porta, estado = int(campos[1]), int(campos[2])
+            except ValueError:
+                continue
+            if estado == _VHCI_LIVRE:
+                return porta
+        raise OSError(errno.EBUSY, "nenhuma porta livre no vhci_hcd.0")
+
+    # -- montar, ligar, desmontar -----------------------------------------
+
+    def montar(self, nome: str, serial: str, descritor: bytes, udc: str) -> None:
+        """O gadget com UMA função ``hid``, sem OUT, preso ao ``udc``."""
+        if not os.path.isdir(self.raizes.configfs):
+            raise PadUsbSemContratoError("libcomposite", "sem o configfs de usb_gadget")
+        g = f"{self.raizes.configfs}/{nome}"
+        os.mkdir(g)
+        self._povoar(g)
+        try:
+            _escrever_attr(f"{g}/idVendor", "0x054c")
+            _escrever_attr(f"{g}/idProduct", "0x0df2")
+            _escrever_attr(f"{g}/bcdDevice", "0x0100")
+            _escrever_attr(f"{g}/bcdUSB", "0x0200")
+            self._grupo(f"{g}/strings/0x409")
+            _escrever_attr(f"{g}/strings/0x409/manufacturer", "Sony Interactive Entertainment")
+            _escrever_attr(f"{g}/strings/0x409/product", "DualSense Edge Wireless Controller")
+            _escrever_attr(f"{g}/strings/0x409/serialnumber", serial)
+            self._grupo(f"{g}/configs/{PAD_USB_CONFIG}")
+            _escrever_attr(f"{g}/configs/{PAD_USB_CONFIG}/MaxPower", "500")
+            funcao = f"{g}/functions/{PAD_USB_FUNCAO}"
+            try:
+                self._grupo(funcao)
+            except OSError as exc:
+                raise PadUsbSemContratoError("usb_f_hid", str(exc)) from exc
+            _escrever_attr(f"{funcao}/protocol", "0")
+            _escrever_attr(f"{funcao}/subclass", "0")
+            _escrever_attr(f"{funcao}/report_length", "64")
+            try:
+                _escrever_attr(f"{funcao}/no_out_endpoint", "1")
+            except OSError as exc:
+                raise PadUsbSemContratoError("usb_f_hid", "sem o no_out_endpoint") from exc
+            _escrever_attr(f"{funcao}/report_desc", descritor)
+            os.symlink(funcao, f"{g}/configs/{PAD_USB_CONFIG}/{PAD_USB_FUNCAO}")
+            _escrever_attr(f"{g}/UDC", udc)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                self.desmontar(nome, None)
+            raise
+
+    def _grupo(self, caminho: str) -> None:
+        """Um grupo do configfs (o ``mkdir`` que faz o kernel publicar atributos)."""
+        os.mkdir(caminho)
+        self._povoar(caminho)
+
+    def ligar(self, udc: str) -> int:
+        """Liga o ``udc`` ao ``vhci_hcd`` por um par de sockets; devolve a porta."""
+        vudc = f"{self.raizes.plataforma}/{udc}/usbip_sockfd"
+        attach = f"{self.raizes.plataforma}/vhci_hcd.0/attach"
+        if not os.path.exists(attach):
+            raise PadUsbSemContratoError("vhci_hcd", "sem o attach do vhci_hcd.0")
+        if not os.path.exists(vudc):
+            raise PadUsbSemContratoError("usbip_vudc", f"sem o usbip_sockfd de {udc}")
+        porta = self.porta_livre()
+        velocidade = _VELOCIDADES.get(
+            _ler_attr(f"{self.raizes.classe_udc}/{udc}/maximum_speed"), _VELOCIDADE_PADRAO
+        )
+        servidor, cliente = self._par()
+        try:
+            _escrever_attr(vudc, str(servidor.fileno()))
+            # devid 0: o `usbip` lê busnum/devnum zerados do vudc, e nem o
+            # vudc nem o vhci validam o campo (a bancada confirma no fecho).
+            _escrever_attr(attach, f"{porta} {cliente.fileno()} 0 {velocidade}")
+        finally:
+            servidor.close()
+            cliente.close()
+        return porta
+
+    def ceder_hidg(self, nome: str, uid: int) -> int:
+        """O fd ``O_PATH`` do ``/dev/hidgN`` DESTE gadget, já concedido ao ``uid``.
+
+        O nó se casa pelo ``dev`` da função no configfs, conferido no fd
+        pinado (``fstat``), nunca pelo nome: o ``hidgN`` de outro gadget não
+        passa.
+        """
+        alvo = _ler_attr(f"{self.raizes.configfs}/{nome}/functions/{PAD_USB_FUNCAO}/dev")
+        if ":" not in alvo:
+            raise OSError(errno.ENOENT, f"o gadget {nome} não publicou o dev da função")
+        maior, menor = (int(x) for x in alvo.split(":", 1))
+        try:
+            nos = sorted(n for n in os.listdir(self.raizes.dev) if n.startswith("hidg"))
+        except OSError:
+            nos = []
+        for no in nos:
+            try:
+                fd = self._abrir(f"{self.raizes.dev}/{no}")
+            except OSError:
+                continue
+            try:
+                if self._rdev_de(fd) == os.makedev(maior, menor):
+                    self._conceder(fd, uid)
+                    return fd
+            except OSError:
+                os.close(fd)
+                raise
+            os.close(fd)
+        raise OSError(errno.ENOENT, f"nenhum /dev/hidg* tem o dev {alvo}")
+
+    def desmontar(self, nome: str, porta: int | None) -> None:
+        """Desliga do ``vhci``, solta o ``udc`` e desfaz o configfs, nesta ordem."""
+        if porta is not None:
+            with contextlib.suppress(OSError):
+                _escrever_attr(f"{self.raizes.plataforma}/vhci_hcd.0/detach", str(porta))
+        g = f"{self.raizes.configfs}/{nome}"
+        if not os.path.isdir(g):
+            return
+        with contextlib.suppress(OSError):
+            if _ler_attr(f"{g}/UDC"):
+                _escrever_attr(f"{g}/UDC", "\n")
+        elo = f"{g}/configs/{PAD_USB_CONFIG}/{PAD_USB_FUNCAO}"
+        if os.path.islink(elo):
+            os.unlink(elo)
+        for grupo in (
+            f"{g}/configs/{PAD_USB_CONFIG}/strings/0x409",
+            f"{g}/configs/{PAD_USB_CONFIG}",
+            f"{g}/functions/{PAD_USB_FUNCAO}",
+            f"{g}/strings/0x409",
+        ):
+            if os.path.isdir(grupo):
+                self._remover(grupo)
+        self._remover(g)
+
+    def desmontar_todos(self) -> list[str]:
+        """O cinto do início e do fim do broker: nenhum pad sobrevive a ele."""
+        feitos: list[str] = []
+        for nome in self.gadgets_nossos():
+            try:
+                self.desmontar(nome, None)
+            except OSError as exc:
+                _log("pad_usb_desmontar_falhou", gadget=nome, errno=exc.errno)
+                continue
+            feitos.append(nome)
+        return feitos
+
+
 _RESTORE_BACKOFF_S = (0.0, 0.05, 0.2)
 
 
@@ -903,6 +1206,7 @@ class BrokerState:
         sys_class_input: str = "/sys/class/input",
         validator_entrada: Callable[[str], str | None] | None = None,
         reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
+        pad_ops: PadUsbOps | None = None,
     ) -> None:
         self.allowed_uid = allowed_uid
         self.no_nasce_fechado = bool(no_nasce_fechado)
@@ -932,6 +1236,10 @@ class BrokerState:
         self.expostos_by_conn: dict[int, set[str]] = {}
         self.entradas_by_conn: dict[int, set[str]] = {}
         self.podados_by_conn: dict[int, set[str]] = {}
+        self._pad_ops = pad_ops if pad_ops is not None else PadUsbOps()
+        #: {conexão: {gadget: porta do vhci}} — a lease do pad em USB.
+        self.pads_by_conn: dict[int, dict[str, int]] = {}
+        self._serial_do_gadget: dict[str, str] = {}
 
 
     def _validate(self, node: str) -> str | None:
@@ -1123,6 +1431,10 @@ class BrokerState:
             return (self._cmd_restore_all(conn_id), None)
         if cmd == "open":
             return self._cmd_open(conn_id, request.get("node"))
+        if cmd == "pad_usb_montar":
+            return self._cmd_pad_usb_montar(conn_id, request)
+        if cmd == "pad_usb_desmontar":
+            return (self._cmd_pad_usb_desmontar(conn_id, request.get("gadget")), None)
         return (
             {
                 "ok": False,
@@ -1364,6 +1676,91 @@ class BrokerState:
         self._log("node_fd_servido", node=canon, conn=conn_id, state=state)
         return ({"ok": True, "cmd": "open", "node": canon, "state": state}, fd)
 
+    def _cmd_pad_usb_montar(
+        self, conn_id: int, request: dict[str, Any]
+    ) -> tuple[dict[str, object], int | None]:
+        """Monta o pad em USB, liga ao ``vhci`` e cede o ``/dev/hidgN`` (``O_PATH``).
+
+        A lease é a conexão, como a do ``hide``: o EOF desmonta. No máximo
+        :data:`PAD_USB_MAX` pads, um por serial (o MAC da 0x09 tem de ser
+        único: o ``hid_playstation`` recusa o repetido com ``-17``).
+        """
+        cmd = "pad_usb_montar"
+        serial = request.get("serial")
+        if not isinstance(serial, str) or _SERIAL_DO_PAD_RE.match(serial) is None:
+            return ({"ok": False, "cmd": cmd, "error": "reject_bad_serial"}, None)
+        hexa = request.get("descritor")
+        try:
+            descritor = bytes.fromhex(hexa) if isinstance(hexa, str) else b""
+        except ValueError:
+            descritor = b""
+        if hashlib.sha256(descritor).hexdigest() not in PAD_USB_DESCRITORES_SHA256:
+            return ({"ok": False, "cmd": cmd, "error": "reject_bad_descriptor"}, None)
+        if serial in self._serial_do_gadget.values():
+            return ({"ok": False, "cmd": cmd, "error": "reject_serial_repetido"}, None)
+        existentes = set(self._pad_ops.gadgets_nossos()) | set(self._serial_do_gadget)
+        livres = [f"{PAD_USB_NOME}{i}" for i in range(PAD_USB_MAX)]
+        livres = [n for n in livres if n not in existentes]
+        if not livres:
+            return ({"ok": False, "cmd": cmd, "error": "reject_quinto_pad"}, None)
+        nome = livres[0]
+        udcs = self._pad_ops.udcs_livres()
+        if not udcs:
+            return (
+                {"ok": False, "cmd": cmd, "error": "pad_usb_sem_contrato",
+                 "contrato": "usbip_vudc"},
+                None,
+            )
+        porta: int | None = None
+        try:
+            self._pad_ops.montar(nome, serial, descritor, udcs[0])
+            porta = self._pad_ops.ligar(udcs[0])
+            fd = self._pad_ops.ceder_hidg(nome, self.allowed_uid)
+        except OSError as exc:
+            with contextlib.suppress(OSError):
+                self._pad_ops.desmontar(nome, porta)
+            contrato = getattr(exc, "contrato", None)
+            self._log("pad_usb_montar_falhou", gadget=nome, errno=exc.errno,
+                      contrato=contrato or "-")
+            if contrato:
+                return (
+                    {"ok": False, "cmd": cmd, "error": "pad_usb_sem_contrato",
+                     "contrato": contrato},
+                    None,
+                )
+            return ({"ok": False, "cmd": cmd, "error": "pad_usb_falhou", "errno": exc.errno},
+                    None)
+        self.pads_by_conn.setdefault(conn_id, {})[nome] = porta
+        self._serial_do_gadget[nome] = serial
+        self._log("pad_usb_montado", gadget=nome, udc=udcs[0], porta=porta, conn=conn_id)
+        return ({"ok": True, "cmd": cmd, "gadget": nome, "porta": porta, "udc": udcs[0]}, fd)
+
+    def _cmd_pad_usb_desmontar(self, conn_id: int, gadget: object) -> dict[str, object]:
+        cmd = "pad_usb_desmontar"
+        pads = self.pads_by_conn.get(conn_id, {})
+        if not isinstance(gadget, str) or gadget not in pads:
+            return {"ok": False, "cmd": cmd, "error": "reject_not_held"}
+        porta = pads.pop(gadget)
+        self._serial_do_gadget.pop(gadget, None)
+        try:
+            self._pad_ops.desmontar(gadget, porta)
+        except OSError as exc:
+            self._log("pad_usb_desmontar_falhou", gadget=gadget, errno=exc.errno)
+            return {"ok": False, "cmd": cmd, "gadget": gadget, "error": "pad_usb_falhou",
+                    "errno": exc.errno}
+        self._log("pad_usb_desmontado", gadget=gadget, conn=conn_id)
+        return {"ok": True, "cmd": cmd, "gadget": gadget}
+
+    def _desmontar_os_pads_da(self, conn_id: int) -> None:
+        for gadget, porta in sorted(self.pads_by_conn.pop(conn_id, {}).items()):
+            self._serial_do_gadget.pop(gadget, None)
+            try:
+                self._pad_ops.desmontar(gadget, porta)
+            except OSError as exc:
+                self._log("pad_usb_desmontar_falhou", gadget=gadget, errno=exc.errno)
+                continue
+            self._log("pad_usb_desmontado_no_eof", gadget=gadget, conn=conn_id)
+
     def _cmd_open_entrada(
         self, conn_id: int, raw: str
     ) -> tuple[dict[str, object], int | None]:
@@ -1441,6 +1838,7 @@ class BrokerState:
         físico que ninguém pediu para esconder.
         """
         self._podar_o_que_saiu()
+        self._desmontar_os_pads_da(conn_id)
         restored: list[str] = []
         failed: list[str] = []
         entradas_da_conn = self.entradas_by_conn.pop(conn_id, set())
@@ -1522,6 +1920,10 @@ class BrokerState:
         self.expostos.clear()
         self.expostos_by_conn.clear()
         self.entradas_by_conn.clear()
+        for conn_id in sorted(self.pads_by_conn):
+            self._desmontar_os_pads_da(conn_id)
+        with contextlib.suppress(OSError):
+            self._pad_ops.desmontar_todos()
         return restored
 
 
@@ -1943,6 +2345,11 @@ def main(argv: list[str] | None = None) -> int:
         if allowed_uid == 0:
             _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
             return 1
+        # O pad em USB não sobrevive ao broker que o montou (a lease morreu).
+        with contextlib.suppress(OSError):
+            desmontados = PadUsbOps().desmontar_todos()
+            if desmontados:
+                _log("pad_usb_orfaos_desmontados", gadgets=",".join(desmontados))
         if args.fechar_tudo_e_sair and no_nasce_fechado:
             fechados = fechar_todo_fisico(uid=allowed_uid)
             _log("fechar_tudo_done", count=len(fechados))

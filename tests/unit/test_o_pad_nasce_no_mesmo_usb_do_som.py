@@ -1,4 +1,6 @@
-"""O pad virtual e o som dele nascem no mesmo USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01).
+"""O pad virtual e o som dele nascem no mesmo USB.
+
+A sprint é a O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026).
 
 Tudo aqui roda num sysfs e num configfs DE MENTIRA, montados no ``tmp_path``: a
 suíte nunca monta gadget, nunca escreve no ``/sys`` real e nunca acha o aparelho
@@ -233,3 +235,312 @@ class TestOsSeisLugaresPerguntamAoDono:
         raiz_uhid = mesa.sys / "devices/virtual/misc/uhid"
         (achada,) = sb.instancias_dualsense(str(raiz_uhid))
         assert (achada.instancia, achada.transporte) == ("0012", "bt")
+
+
+# --- 2. O broker monta o gadget só HID, liga ao vhci e desmonta no EOF --------
+
+
+_ATTRS_DO_GRUPO = {
+    "gadget": ("idVendor", "idProduct", "bcdDevice", "bcdUSB", "UDC"),
+    "0x409": ("manufacturer", "product", "serialnumber"),
+    "c.1": ("MaxPower",),
+    "hid.usb0": ("protocol", "subclass", "report_length", "report_desc", "no_out_endpoint"),
+}
+
+
+class KernelDeMentira:
+    """O configfs, o vudc, o vhci e o /dev de mentira, estritos como os de verdade.
+
+    O ``povoar`` publica os atributos de cada grupo, como o configfs faz ao
+    nascer o grupo; o ``remover`` recusa diretório com grupo ou elo dentro,
+    como o ``rmdir`` do configfs. ``sem`` tira do kernel um pedaço do contrato.
+    """
+
+    def __init__(self, raiz: Path, *, udcs: int = 4, sem: frozenset[str] = frozenset()) -> None:
+        self.raiz = raiz
+        self.sem = sem
+        self.raizes = broker.RaizesDoPad(
+            configfs=str(raiz / "configfs/usb_gadget"),
+            plataforma=str(raiz / "platform"),
+            classe_udc=str(raiz / "class/udc"),
+            dev=str(raiz / "dev"),
+        )
+        if "libcomposite" not in sem:
+            Path(self.raizes.configfs).mkdir(parents=True)
+        Path(self.raizes.dev).mkdir(parents=True)
+        Path(self.raizes.classe_udc).mkdir(parents=True)
+        if "usbip_vudc" not in sem:
+            for n in range(udcs):
+                (Path(self.raizes.classe_udc) / f"usbip-vudc.{n}").mkdir()
+                _escrever(Path(self.raizes.plataforma) / f"usbip-vudc.{n}/usbip_sockfd", "")
+        if "vhci_hcd" not in sem:
+            vhci = Path(self.raizes.plataforma) / "vhci_hcd.0"
+            linhas = ["hub port sta spd dev      sockfd local_busid"]
+            linhas += [f"hs  {p:04d} 004 000 00000000 000000 0-0" for p in range(4)]
+            linhas += [f"ss  {p:04d} 004 000 00000000 000000 0-0" for p in range(4, 8)]
+            _escrever(vhci / "status", "\n".join(linhas) + "\n")
+            _escrever(vhci / "attach", "")
+            _escrever(vhci / "detach", "")
+        self.rdev: dict[str, int] = {}
+        self.anexos: list[str] = []
+        self.desligadas: list[str] = []
+        self.proximo_menor = 0
+        self.concedidos: list[tuple[str, int]] = []
+        #: os grupos que o configfs cria sozinho e some com o pai.
+        self.padrao: set[str] = set()
+
+    def povoar(self, grupo: str) -> None:
+        nome = os.path.basename(grupo)
+        if os.path.dirname(grupo) == self.raizes.configfs:
+            nome = "gadget"
+            for sub in ("strings", "configs", "functions"):
+                os.mkdir(os.path.join(grupo, sub))
+                self.padrao.add(os.path.join(grupo, sub))
+        if nome == "c.1":
+            os.mkdir(os.path.join(grupo, "strings"))
+            self.padrao.add(os.path.join(grupo, "strings"))
+        for attr in _ATTRS_DO_GRUPO.get(nome, ()):
+            if nome == "hid.usb0" and attr in self.sem:
+                continue
+            _escrever(Path(grupo) / attr, "0\n" if attr == "no_out_endpoint" else "")
+        if nome == "hid.usb0":
+            menor = self.proximo_menor
+            self.proximo_menor += 1
+            _escrever(Path(grupo) / "dev", f"240:{menor}\n")
+            no = Path(self.raizes.dev) / f"hidg{menor}"
+            no.write_text("", encoding="utf-8")
+            self.rdev[str(no)] = os.makedev(240, menor)
+
+    def remover(self, caminho: str) -> None:
+        if caminho in self.padrao:
+            raise OSError(1, "grupo padrão do configfs não se remove sozinho", caminho)
+        padroes = []
+        for filho in os.scandir(caminho):
+            vazio_padrao = filho.path in self.padrao and not any(os.scandir(filho.path))
+            if filho.is_symlink() or (filho.is_dir() and not vazio_padrao):
+                raise OSError(39, "o configfs não remove grupo com grupo dentro", caminho)
+            if filho.is_dir():
+                padroes.append(filho.path)
+        for filho in os.scandir(caminho):
+            if not filho.is_dir():
+                os.unlink(filho.path)
+        for sub in padroes:
+            os.rmdir(sub)
+            self.padrao.discard(sub)
+        os.rmdir(caminho)
+
+    def ops(self) -> broker.PadUsbOps:
+        return broker.PadUsbOps(
+            self.raizes,
+            remover=self.remover,
+            povoar=self.povoar,
+            abrir=lambda p: os.open(p, os.O_PATH | os.O_CLOEXEC | os.O_NOFOLLOW),
+            rdev_de=lambda fd: self.rdev[os.readlink(f"/proc/self/fd/{fd}")],
+            conceder=lambda fd, uid: self.concedidos.append(
+                (os.readlink(f"/proc/self/fd/{fd}"), uid)
+            ),
+        )
+
+    def estado(self, **kw: object) -> broker.BrokerState:
+        return broker.BrokerState(allowed_uid=1000, pad_ops=self.ops(), log=lambda *_a, **_k: None)
+
+    def gadget(self, nome: str) -> Path:
+        return Path(self.raizes.configfs) / nome
+
+    def lido(self, caminho: Path) -> str:
+        return caminho.read_text(encoding="utf-8").strip()
+
+
+def _descritor() -> bytes:
+    from hefesto_dualsense4unix.integrations.uhid_blueprint import CANONICAL_DESCRIPTOR_USB
+
+    return CANONICAL_DESCRIPTOR_USB
+
+
+def _pedido(serial: str = SERIAL_DO_PAD, descritor: bytes | None = None) -> bytes:
+    import json
+
+    corpo = {
+        "cmd": "pad_usb_montar",
+        "serial": serial,
+        "descritor": (_descritor() if descritor is None else descritor).hex(),
+    }
+    return json.dumps(corpo).encode()
+
+
+def _serial(n: int) -> str:
+    return f"hefesto-pad-02fe8a0000{n:02x}"
+
+
+@pytest.fixture
+def kernel(tmp_path: Path) -> KernelDeMentira:
+    return KernelDeMentira(tmp_path)
+
+
+class TestOBrokerMontaOGadgetSoHid:
+    def test_o_gadget_montado_tem_so_a_funcao_hid_sem_out(self, kernel: KernelDeMentira) -> None:
+        estado = kernel.estado()
+        resposta, fd = estado.handle_line(7, 1000, _pedido())
+        assert resposta["ok"] is True, resposta
+        assert fd is not None
+        os.close(fd)
+        g = kernel.gadget(str(resposta["gadget"]))
+        assert sorted(os.listdir(g / "functions")) == ["hid.usb0"]
+        elos = [e for e in os.listdir(g / "configs/c.1") if (g / "configs/c.1" / e).is_symlink()]
+        assert elos == ["hid.usb0"]
+        hid = g / "functions/hid.usb0"
+        assert kernel.lido(hid / "no_out_endpoint") == "1"
+        assert kernel.lido(hid / "report_length") == "64"
+        assert (hid / "report_desc").read_bytes() == _descritor()
+        assert (kernel.lido(g / "idVendor"), kernel.lido(g / "idProduct")) == ("0x054c", "0x0df2")
+        assert kernel.lido(g / "strings/0x409/serialnumber") == SERIAL_DO_PAD
+        assert kernel.lido(g / "UDC") == "usbip-vudc.0"
+        porta, _sockfd, devid, velocidade = kernel.lido(
+            Path(kernel.raizes.plataforma) / "vhci_hcd.0/attach"
+        ).split()
+        assert (porta, devid, velocidade) == ("0", "0", "3")
+        assert resposta["porta"] == 0
+        assert kernel.concedidos == [(str(Path(kernel.raizes.dev) / "hidg0"), 1000)]
+
+    def test_o_no_cedido_e_o_do_gadget_e_nao_o_hidg_de_outro(
+        self, kernel: KernelDeMentira
+    ) -> None:
+        alheio = Path(kernel.raizes.dev) / "hidg0"
+        alheio.write_text("", encoding="utf-8")
+        kernel.rdev[str(alheio)] = os.makedev(240, 9)
+        kernel.proximo_menor = 1
+        _, fd = kernel.estado().handle_line(7, 1000, _pedido())
+        assert fd is not None
+        os.close(fd)
+        assert kernel.concedidos == [(str(Path(kernel.raizes.dev) / "hidg1"), 1000)]
+
+    def test_o_eof_da_conexao_desmonta_o_gadget(self, kernel: KernelDeMentira) -> None:
+        estado = kernel.estado()
+        resposta, fd = estado.handle_line(7, 1000, _pedido())
+        assert fd is not None
+        os.close(fd)
+        estado.on_conn_closed(7)
+        assert os.listdir(kernel.raizes.configfs) == []
+        assert kernel.lido(Path(kernel.raizes.plataforma) / "vhci_hcd.0/detach") == str(
+            resposta["porta"]
+        )
+
+    def test_o_desmontar_pedido_so_vale_para_quem_montou(self, kernel: KernelDeMentira) -> None:
+        import json
+
+        estado = kernel.estado()
+        resposta, fd = estado.handle_line(7, 1000, _pedido())
+        assert fd is not None
+        os.close(fd)
+        pedido = json.dumps({"cmd": "pad_usb_desmontar", "gadget": resposta["gadget"]}).encode()
+        alheio, _ = estado.handle_line(8, 1000, pedido)
+        assert alheio["error"] == "reject_not_held"
+        dono, _ = estado.handle_line(7, 1000, pedido)
+        assert dono["ok"] is True
+        assert os.listdir(kernel.raizes.configfs) == []
+
+    def test_com_mais_de_quatro_controles_nascem_quatro_pads(
+        self, tmp_path: Path
+    ) -> None:
+        kernel = KernelDeMentira(tmp_path, udcs=6)
+        estado = kernel.estado()
+        montados = []
+        for n in range(5):
+            resposta, fd = estado.handle_line(7, 1000, _pedido(_serial(n)))
+            if fd is not None:
+                os.close(fd)
+                montados.append(resposta["gadget"])
+            else:
+                assert resposta["error"] == "reject_quinto_pad"
+        assert len(montados) == 4
+        assert len(os.listdir(kernel.raizes.configfs)) == 4
+
+    def test_o_mesmo_serial_nao_monta_dois_pads(self, kernel: KernelDeMentira) -> None:
+        estado = kernel.estado()
+        _, fd = estado.handle_line(7, 1000, _pedido())
+        assert fd is not None
+        os.close(fd)
+        resposta, fd2 = estado.handle_line(7, 1000, _pedido())
+        assert fd2 is None
+        assert resposta["error"] == "reject_serial_repetido"
+
+    def test_o_broker_nao_monta_descritor_alheio_nem_serial_fora_do_formato(
+        self, kernel: KernelDeMentira
+    ) -> None:
+        estado = kernel.estado()
+        teclado = bytes.fromhex("05010906a101050719e029e715002501750195088102c0")
+        resposta, fd = estado.handle_line(7, 1000, _pedido(descritor=teclado))
+        assert (resposta["error"], fd) == ("reject_bad_descriptor", None)
+        resposta, fd = estado.handle_line(7, 1000, _pedido(serial="hefesto-pad-zz"))
+        assert (resposta["error"], fd) == ("reject_bad_serial", None)
+        assert os.listdir(kernel.raizes.configfs) == []
+
+    def test_o_hash_do_broker_e_o_do_descritor_do_blueprint(self) -> None:
+        import hashlib
+
+        assert hashlib.sha256(_descritor()).hexdigest() in broker.PAD_USB_DESCRITORES_SHA256
+
+    @pytest.mark.parametrize(
+        "sem", ["libcomposite", "usbip_vudc", "vhci_hcd", "no_out_endpoint"]
+    )
+    def test_sem_o_contrato_o_broker_diz_qual_e_nao_deixa_resto(
+        self, tmp_path: Path, sem: str
+    ) -> None:
+        kernel = KernelDeMentira(tmp_path, sem=frozenset({sem}))
+        estado = kernel.estado()
+        resposta, fd = estado.handle_line(7, 1000, _pedido())
+        assert fd is None
+        assert resposta["error"] == "pad_usb_sem_contrato", resposta
+        esperado = "usb_f_hid" if sem == "no_out_endpoint" else sem
+        assert resposta["contrato"] == esperado
+        if sem != "libcomposite":
+            assert os.listdir(kernel.raizes.configfs) == []
+
+    def test_o_cinto_do_broker_desmonta_o_pad_orfao(self, kernel: KernelDeMentira) -> None:
+        _, fd = kernel.estado().handle_line(7, 1000, _pedido())
+        assert fd is not None
+        os.close(fd)
+        assert kernel.ops().desmontar_todos() == ["hefesto-pad-0"]
+        assert os.listdir(kernel.raizes.configfs) == []
+
+
+class TestOClienteRecebeOPadPeloSocket:
+    """Ponta a ponta: o cliente do daemon pede, o broker monta e cede, o EOF desmonta."""
+
+    def test_o_cliente_reabre_o_no_cedido_e_o_eof_desmonta(
+        self, kernel: KernelDeMentira
+    ) -> None:
+        import socket
+        import threading
+
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
+
+        estado = kernel.estado()
+        estado.allowed_uid = os.getuid()
+        servidor = broker.Broker(estado, None, log=lambda *_a, **_k: None)
+        a, b = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        assert servidor.register_client(a) is not None
+        b.settimeout(5.0)
+        cliente = HidrawBrokerClient("/nao/existe")
+        cliente._sock = b
+        passo = threading.Thread(target=servidor.step, kwargs={"timeout": 5.0})
+        passo.start()
+        fd, resposta = cliente.montar_pad_usb(SERIAL_DO_PAD, _descritor())
+        passo.join(5.0)
+        assert resposta is not None and resposta["ok"] is True, resposta
+        assert fd is not None
+        try:
+            assert os.fstat(fd).st_ino == os.stat(Path(kernel.raizes.dev) / "hidg0").st_ino
+            assert fcntl_acesso(fd) == os.O_RDWR
+        finally:
+            os.close(fd)
+        assert os.listdir(kernel.raizes.configfs) == ["hefesto-pad-0"]
+        b.close()
+        servidor.step(timeout=2.0)
+        assert os.listdir(kernel.raizes.configfs) == []
+
+
+def fcntl_acesso(fd: int) -> int:
+    import fcntl
+
+    return fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE

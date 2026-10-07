@@ -173,6 +173,46 @@ class HidrawBrokerClient:
         """Pede ao broker um fd O_RDWR do nó. None = indisponível/recusado."""
         return self.abrir_no(node)[0]
 
+    def montar_pad_usb(
+        self, serial: str, descritor: bytes
+    ) -> tuple[int | None, dict[str, Any] | None]:
+        """``(fd do /dev/hidgN, resposta)``: o pad em USB montado pelo broker.
+
+        O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). A lease
+        é esta conexão: se ela cai, o broker desmonta o gadget. ``None`` no fd é
+        o pad que fica no uhid; a resposta diz por quê (``contrato`` quando o
+        kernel não cumpre um).
+        """
+        with self._lock:
+            response, fds = self._request_with_fds(
+                {"cmd": "pad_usb_montar", "serial": serial, "descritor": descritor.hex()}
+            )
+        if response is not None and response.get("ok") and len(fds) == 1:
+            # O broker cede o nó por ``O_PATH`` (o cgroup de device dele não
+            # alcança o grupo ``hidg``); a leitura e a escrita se abrem AQUI,
+            # no mesmo inode, pelo ``/proc/self/fd``.
+            try:
+                return reabrir_o_no_cedido(fds[0]), response
+            except OSError as exc:
+                response = {**response, "ok": False, "error": "pad_usb_reabrir",
+                            "errno": exc.errno}
+                with contextlib.suppress(OSError):
+                    self.desmontar_pad_usb(str(response.get("gadget", "")))
+            finally:
+                with contextlib.suppress(OSError):
+                    os.close(fds[0])
+            fds = []
+        for fd in fds:
+            with contextlib.suppress(OSError):
+                os.close(fd)
+        self._log_falha("pad_usb_montar", serial, response)
+        return None, response
+
+    def desmontar_pad_usb(self, gadget: str) -> bool:
+        """Devolve o gadget ao broker, que o desliga e desmonta."""
+        response = self._request({"cmd": "pad_usb_desmontar", "gadget": gadget})
+        return bool(response is not None and response.get("ok"))
+
     def status(self) -> dict[str, Any] | None:
         """Resposta crua do `status` (nós escondidos) — para doctor/telemetria."""
         return self._request({"cmd": "status"})
@@ -319,6 +359,11 @@ class HidrawBrokerClient:
             node=node,
             error=(response or {}).get("error"),
         )
+
+
+def reabrir_o_no_cedido(fd_o_path: int) -> int:
+    """O fd de leitura e escrita do nó que o broker cedeu por ``O_PATH``."""
+    return os.open(f"/proc/self/fd/{fd_o_path}", os.O_RDWR | os.O_CLOEXEC | os.O_NONBLOCK)
 
 
 def nos_de_entrada_do_hidraw(

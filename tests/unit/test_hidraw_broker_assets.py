@@ -126,7 +126,11 @@ class TestServiceHardening:
         assert d["Requires"] == ["hefesto-hidraw-broker.socket"]
         assert d["ExecStart"] == ["/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"]
         assert d["ExecStartPre"] == [
-            "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fechar-tudo-e-sair"
+            "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fechar-tudo-e-sair",
+            # O pad em USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01):
+            # só o modprobe sai do sandbox (`+`), e a falta dele não derruba (`-`).
+            "-+/sbin/modprobe -qa libcomposite usb_f_hid vhci-hcd",
+            "-+/sbin/modprobe -q usbip-vudc num=4",
         ]
         assert d["ExecStopPost"] == [
             "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit"

@@ -49,6 +49,13 @@ Environment=HEFESTO_BROKER_NO_NASCE_FECHADO=__NO_NASCE_FECHADO__
 # já estava conectado) e, sem a cura instalada, cai sozinho no comportamento
 # histórico: uma unit só serve às duas máquinas, sem branch no systemd.
 ExecStartPre=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fechar-tudo-e-sair
+# O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026): o pad virtual
+# nasce DualSense USB (um gadget só HID no `usbip-vudc`, ligado pelo `vhci_hcd`).
+# O `+` roda SÓ esta linha fora do sandbox (o `ProtectKernelModules` do broker
+# fica intacto); o `-` faz o kernel sem os módulos cair no pad uhid, sem
+# derrubar o broker. `num=4`: um `vudc` por pad, e o jogo inicializa quatro.
+ExecStartPre=-+/sbin/modprobe -qa libcomposite usb_f_hid vhci-hcd
+ExecStartPre=-+/sbin/modprobe -q usbip-vudc num=4
 # Se o broker cai/é parado, RESTAURA todo físico escondido (belt final). Este
 # ABRE mesmo com a cura, e é de propósito: broker fora do ar é broker que
 # deixou de ser a porta, e um nó 0600 sem porta só volta com sudo. Num app de
@@ -100,6 +107,12 @@ DeviceAllow=char-hidraw rw
 # Sem esta linha o open(2) do broker volta EPERM e o controle fica mudo. O
 # `char-input` é o grupo do major 13 em /proc/devices, pelo nome.
 DeviceAllow=char-input rw
+# O pad em USB: o broker monta o gadget no configfs e liga o `vudc` ao `vhci`
+# pelo sysfs. O `ProtectKernelTunables` deixa o /sys só de leitura; estes dois
+# ramos voltam a ser graváveis, e nada além deles. O `/dev/hidgN` NÃO entra no
+# `DeviceAllow`: o grupo `hidg` só aparece no /proc/devices com o primeiro
+# gadget (medido em 07/10), e o broker o cede por O_PATH, sem abri-lo.
+ReadWritePaths=-/sys/kernel/config -/sys/devices/platform
 
 [Install]
 WantedBy=multi-user.target
