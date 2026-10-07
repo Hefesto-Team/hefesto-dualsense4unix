@@ -20,6 +20,8 @@ _TARGETS: list[tuple[str, str, str]] = [
     ("README.md", "README.md", r"Versão:\s*(\S+)"),
     ("README.md (emblema de versão)", "README.md",
      r"shields\.io/badge/vers%C3%A3o-([0-9][^%-]*)"),
+    ("guia de instalação", "docs/usage/instalacao.md",
+     r"A versão corrente é a alfa \*\*([^*]+)\*\*"),
     ("__init__ fallback", "src/hefesto_dualsense4unix/__init__.py",
      r'__version__\s*=\s*"([^"]+)"'),
     ("PKGBUILD", "packaging/arch/PKGBUILD", r"^pkgver=(\S+)"),

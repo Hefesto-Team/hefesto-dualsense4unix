@@ -24,7 +24,7 @@ As versões conferidas de cada peça estão em [versoes-validadas.md](versoes-va
 
 ## Do código-fonte
 
-A versão corrente é a alfa **0.9.4.5**. Instale pelo ramo padrão, que é o que
+A versão corrente é a alfa **0.9.5**. Instale pelo ramo padrão, que é o que
 as fotos e as páginas descrevem:
 
 ```bash
