@@ -964,3 +964,68 @@ def test_o_alto_falante_ancora_o_no_do_aparelho_no_gadget_dele(
     assert "/vhci_hcd." not in emprestada and emprestada.startswith("/devices/pci0000:00/")
     do_gadget = [c for c in mesa.registro() if c.container_pid == 0x0DF2]
     assert [(c.bus, c.dev) for c in do_gadget] == [(5, 2)]
+
+
+# --- 5. A regra 73 abre o pad em USB ao jogo, e o Edge físico segue fechado ---
+
+
+def _pelo_vhci(serial: str | None) -> Any:
+    """Um 0df2 ligado pelo `vhci_hcd`: o nosso gadget, ou um Edge de verdade por usbip."""
+    from tests.unit.test_o_fisico_nasce_escondido_em_qualquer_maquina import Aparelho, Elo
+
+    hid = "0003:054C:0DF2.0010"
+    attrs = {"idVendor": "054c", "idProduct": "0df2"}
+    if serial is not None:
+        attrs["serial"] = serial
+    return Aparelho(
+        f"/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0/{hid}/hidraw/hidraw9",
+        [
+            Elo(hid, "hid", "playstation"),
+            Elo("3-1:1.0", "usb", "usbhid"),
+            Elo("3-1", "usb", "usb", attrs),
+            Elo("usb3", "usb", "usb", {"idVendor": "1d6b", "idProduct": "0002"}),
+            Elo("vhci_hcd.0", "platform", "vhci_hcd"),
+        ],
+    )
+
+
+@pytest.mark.parametrize("maquina", ["as-duas", "nenhuma", "so-game-devices-udev", "arch-so-steam"])
+class TestARegra73AbreOPadEmUsb:
+    def _rodar(self, tmp_path: Path, maquina: str, ap: Any) -> Any:
+        from tests.unit import test_o_fisico_nasce_escondido_em_qualquer_maquina as udev
+
+        raiz = udev.montar(tmp_path, terceiros=udev.TERCEIROS_POR_MAQUINA[maquina])
+        return udev.rodar(ap, raiz)
+
+    def test_o_pad_em_usb_nasce_aberto_para_o_jogo(self, tmp_path: Path, maquina: str) -> None:
+        ap = self._rodar(tmp_path, maquina, _pelo_vhci(pad_usb.serial_do_pad("02:fe:80:00:00:01")))
+        assert ap.acl_da_sessao and ap.modo == "0660", (ap.tags, ap.modo, ap.run)
+
+    @pytest.mark.parametrize("serial", [None, "", "8c41f2000000", "HEFESTO"])
+    def test_o_edge_fisico_por_usbip_segue_fechado(
+        self, tmp_path: Path, maquina: str, serial: str | None
+    ) -> None:
+        from tests.unit import test_o_fisico_nasce_escondido_em_qualquer_maquina as udev
+
+        fechado, motivo = udev._fechado(self._rodar(tmp_path, maquina, _pelo_vhci(serial)))
+        assert fechado, motivo
+
+    def test_o_serial_do_hefesto_fora_do_vhci_nao_abre_o_cabo(
+        self, tmp_path: Path, maquina: str
+    ) -> None:
+        from tests.unit import test_o_fisico_nasce_escondido_em_qualquer_maquina as udev
+
+        ap = udev.pelo_cabo("0df2")
+        ap.pais[2].attrs["serial"] = pad_usb.serial_do_pad("02:fe:80:00:00:01")
+        fechado, motivo = udev._fechado(self._rodar(tmp_path, maquina, ap))
+        assert fechado, motivo
+
+
+def test_a_marca_da_regra_73_e_o_serial_que_o_broker_escreve() -> None:
+    from hefesto_dualsense4unix.broker import hidraw_broker
+
+    regra = (Path(__file__).resolve().parents[2] / "assets" / "73-hefesto-ps5-controller.rules")
+    texto = regra.read_text(encoding="utf-8")
+    assert f'ATTRS{{serial}}=="{pad_usb.SERIAL_PREFIXO}*"' in texto
+    assert hidraw_broker.PAD_USB_NOME == pad_usb.SERIAL_PREFIXO
+    assert 'KERNEL=="hidg*", SUBSYSTEM=="hidg", MODE="0660"' in texto

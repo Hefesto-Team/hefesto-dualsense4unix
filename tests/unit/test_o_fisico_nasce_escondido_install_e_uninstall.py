@@ -147,7 +147,8 @@ def test_o_opt_out_grava_a_nova_aberta_e_tira_a_velha(tmp_path: Path) -> None:
     assert sorted(p.name for p in etc.iterdir()) == [NOVA]
     linhas = _efetivas(etc / NOVA)
     assert not any('TAG-="uaccess"' in linha for linha in linhas), linhas
-    assert sum('TAG+="uaccess"' in linha for linha in linhas) == 5, linhas
+    # os quatro físicos, o vpad uhid e o pad em USB
+    assert sum('TAG+="uaccess"' in linha for linha in linhas) == 6, linhas
 
 
 LACO_DA_ORIGEM = _recorte(

@@ -243,7 +243,7 @@ def test_a_regra_fechada_que_fica_vira_a_aberta(tmp_path: Path, nome: str) -> No
     texto = (etc / nome).read_text(encoding="utf-8")
     assert not _fechada(texto), texto
     abertas = [linha for linha in _efetivas(texto) if 'TAG+="uaccess"' in linha]
-    assert len(abertas) == 5, abertas
+    assert len(abertas) == 6, abertas  # os quatro físicos, o vpad uhid e o pad em USB
 
 
 ENCHIMENTO = "".join(f'ENV{{HEFESTO_ENCHIMENTO}}="{i:06d}"\n' for i in range(8000))
