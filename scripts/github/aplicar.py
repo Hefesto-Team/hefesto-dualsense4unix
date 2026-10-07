@@ -80,6 +80,8 @@ MESCLAGEM = {
     "apagar_ramo": "delete_branch_on_merge",
     "atualizar_ramo": "allow_update_branch",
 }
+# O nome de um ramo que o git aceita sem aspas: sem espaço, sem `..`, sem barra na ponta.
+RAMO_VALIDO = re.compile(r"[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*")
 # O ambiente só aceita implantar dos ramos e das tags que o arquivo lista (não dos «protegidos»).
 POLITICA_DE_RAMOS = {"protected_branches": False, "custom_branch_policies": True}
 PERMISSAO_DO_FLUXO = {"leitura": "read", "escrita": "write"}
@@ -197,6 +199,8 @@ def validar(dados: Any) -> list[str]:
     ):
         if grupo in dados:
             erros += validador(dados[grupo])
+    if "configuração" not in dados:
+        erros += _validar_configuracao(None)
     return erros
 
 
@@ -329,11 +333,26 @@ def _validar_ruleset(r: Any) -> list[str]:
     return erros
 
 
+def _validar_ramo_padrao(ramo: Any) -> list[str]:
+    """O ramo padrão é decisão declarada: sem ela o primeiro push é quem decide."""
+    if ramo is None:
+        return ["configuração.ramo_padrao: falta declarar"]
+    if not isinstance(ramo, str) or not RAMO_VALIDO.fullmatch(ramo) or ".." in ramo:
+        return [f"configuração.ramo_padrao: «{ramo}» não é nome de ramo"]
+    return []
+
+
 def _validar_configuracao(cfg: Any) -> list[str]:
-    mesc = cfg.get("mesclagem") if isinstance(cfg, dict) else None
+    if not isinstance(cfg, dict):
+        return ["configuração: falta (a mesclagem e o ramo padrão)"]
+    erros = _validar_ramo_padrao(cfg.get("ramo_padrao"))
+    erros += [
+        f"configuração.{k}: desconhecida" for k in cfg if k not in ("mesclagem", "ramo_padrao")
+    ]
+    mesc = cfg.get("mesclagem")
     if not isinstance(mesc, dict):
-        return ["configuração.mesclagem: falta"]
-    erros = [f"configuração.mesclagem.{k}: desconhecida" for k in mesc if k not in MESCLAGEM]
+        return [*erros, "configuração.mesclagem: falta"]
+    erros += [f"configuração.mesclagem.{k}: desconhecida" for k in mesc if k not in MESCLAGEM]
     erros += [f"configuração.mesclagem.{k}: falta declarar" for k in MESCLAGEM if k not in mesc]
     erros += [
         f"configuração.mesclagem.{k}: verdadeiro ou falso"
@@ -737,10 +756,27 @@ def planejar_about(c: Contexto) -> list[Acao]:
 def planejar_configuracao(c: Contexto) -> list[Acao]:
     quer = c.dados["configuração"]["mesclagem"]
     r = c.estado_do_repo()
+    acoes: list[Acao] = []
     corpo = {MESCLAGEM[k]: v for k, v in quer.items() if bool(r.get(MESCLAGEM[k])) != v}
-    if not corpo:
+    if corpo:
+        acoes.append(Acao(f"configuração: {', '.join(sorted(corpo))} diferem", c.patch(corpo)))
+    return acoes + _planejar_ramo_padrao(c, r)
+
+
+def _planejar_ramo_padrao(c: Contexto, r: dict[str, Any]) -> list[Acao]:
+    """O ramo padrão que o arquivo declara; mudá-lo para um ramo que o remoto não tem o GitHub recusa."""
+    quer: str = c.dados["configuração"]["ramo_padrao"]
+    real = r.get("default_branch")
+    if not isinstance(real, str) or not real:
+        raise ErroDeServidor("o repositório não disse qual é o ramo padrão")
+    if real == quer:
         return []
-    return [Acao(f"configuração: {', '.join(sorted(corpo))} diferem", c.patch(corpo))]
+    falta = f"configuração: o ramo padrão é «{real}» e o arquivo declara «{quer}»"
+    status, _ = c.gh.ler(f"repos/{c.repo}/branches/{quote(quer, safe='/')}", aceita=(200, 404))
+    if status == 404:
+        return [so_mede(f"{falta}, que não existe no remoto",
+                        f"empurrar o ramo «{quer}» e rodar o --aplicar de novo")]
+    return [Acao(falta, c.patch({"default_branch": quer}))]
 
 
 def _planejar_função(nome: str) -> Callable[[Contexto], list[Acao]]:

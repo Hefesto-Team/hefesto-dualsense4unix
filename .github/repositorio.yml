@@ -23,6 +23,9 @@ about:
 # A mesclagem de PR em linha reta: o histórico do `dev` e do `main` não ganha commit de merge feito
 # pelo botão do GitHub (a porta, abaixo, também exige histórico linear de quem não mantém).
 configuração:
+  # O ramo padrão é declarado, não herdado do primeiro push: o `--conferir` reprova o repositório
+  # recriado que nasceu com `main`, e o `--aplicar` o volta a este (o ramo tem de existir no remoto).
+  ramo_padrao: dev
   mesclagem:
     merge_commit: false
     squash: true

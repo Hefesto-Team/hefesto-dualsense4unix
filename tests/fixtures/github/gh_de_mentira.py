@@ -478,6 +478,11 @@ if sub == "":
                 if not isinstance(v, bool):
                     saida(422, msg=f"{k} não é booleano")
                 repo[k] = v
+            elif k == "default_branch":
+                # O GitHub recusa mudar o padrão para um ramo que o remoto não tem.
+                if not isinstance(v, str) or (v != st["ramo_padrao"] and v not in st["ramos"]):
+                    saida(422, msg="Branch not found")
+                st["ramo_padrao"] = v
             elif k == "security_and_analysis":
                 if st["privado"]:
                     saida(422, msg="Advanced Security must be enabled for this repository")
@@ -491,6 +496,12 @@ if sub == "":
                    for k in ("allow_merge_commit", "allow_squash_merge", "allow_rebase_merge")):
             saida(422, msg="ao menos um jeito de mesclar fica ligado")
         saida(200, corpo_do_repo())
+if sub.startswith("branches/") and metodo == "GET":
+    # O ramo padrão existe sempre; os outros, só se o estado os tem.
+    ramo_ = sub[len("branches/"):]
+    if ramo_ != st["ramo_padrao"] and ramo_ not in st["ramos"]:
+        saida(404, msg="Branch not found")
+    saida(200, {"name": ramo_})
 if sub == "topics":
     if metodo == "GET":
         saida(200, {"names": st["topics"]})

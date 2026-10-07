@@ -182,6 +182,13 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
         lambda d: d["rulesets"][1].update(regra_inventada=True),
         lambda d: d["rulesets"][1].update(nome=d["rulesets"][0]["nome"]),
         lambda d: d.update(versão=2),
+        lambda d: d["configuração"].pop("ramo_padrao"),
+        lambda d: d["configuração"].update(ramo_padrao=""),
+        lambda d: d["configuração"].update(ramo_padrao="dev main"),
+        lambda d: d["configuração"].update(ramo_padrao="dev/"),
+        lambda d: d["configuração"].update(ramo_padrao=["dev"]),
+        lambda d: d["configuração"].update(ramo_inventado="x"),
+        lambda d: d.pop("configuração"),
     ],
 )
 def test_mordida_o_esquema_reprova_o_arquivo_estragado(estraga: Any) -> None:
@@ -702,6 +709,53 @@ def test_a_mesclagem_chega_ao_repositorio_e_a_deriva_volta(gh: Mentira) -> None:
     assert gh.estado["repo"]["allow_merge_commit"] is False
 
 
+COMMIT_DE_MENTIRA = "a" * 40
+
+
+def test_o_ramo_padrao_que_o_arquivo_declara_e_o_dev() -> None:
+    assert _dados()["configuração"]["ramo_padrao"] == "dev"
+
+
+def test_o_repositorio_recriado_em_main_reprova_e_volta_ao_ramo_do_arquivo(
+    gh: Mentira, tmp_path: Path
+) -> None:
+    gh.mudar(ramo_padrao="main", ramos={"dev": COMMIT_DE_MENTIRA, "main": COMMIT_DE_MENTIRA})
+    codigo, detalhe = _detalhe(tmp_path, "--conferir", "--so", "configuração")
+    assert codigo == 1 and "«main»" in detalhe and "«dev»" in detalhe
+    assert gh.escritas() == [], "o --conferir não escreve"
+    assert rodar("--aplicar", "--so", "configuração") == 0
+    assert gh.estado["ramo_padrao"] == "dev"
+    assert any(
+        e["m"] == "PATCH" and (e["b"] or {}).get("default_branch") == "dev"
+        for e in gh.escritas()
+    )
+    assert rodar("--conferir", "--so", "configuração") == 0
+
+
+def test_o_ramo_que_o_remoto_nao_tem_so_se_mede_e_nao_vira_verde(
+    gh: Mentira, tmp_path: Path
+) -> None:
+    gh.mudar(ramo_padrao="main", ramos={"main": COMMIT_DE_MENTIRA})
+    gh.zerar_log()
+    codigo, detalhe = _detalhe(tmp_path, "--aplicar", "--so", "configuração")
+    assert codigo == 1 and "não existe no remoto" in detalhe and "empurrar" in detalhe
+    assert gh.estado["ramo_padrao"] == "main"
+    assert not any("default_branch" in (e["b"] or {}) for e in gh.escritas())
+    gh.mudar(ramos={"main": COMMIT_DE_MENTIRA, "dev": COMMIT_DE_MENTIRA})
+    assert rodar("--aplicar", "--so", "configuração") == 0 and gh.estado["ramo_padrao"] == "dev"
+
+
+def test_o_ramo_padrao_declarado_outro_e_conferido_contra_o_servidor(
+    gh: Mentira, tmp_path: Path
+) -> None:
+    """A Forja declara `main`: a chave vale para qualquer repositório, não só para o `dev`."""
+    arq = _arquivo(tmp_path, lambda d: d["configuração"].update(ramo_padrao="main"))
+    gh.mudar(ramo_padrao="dev", ramos={"main": COMMIT_DE_MENTIRA})
+    assert rodar("--conferir", "--so", "configuração", arquivo=arq) == 1
+    assert rodar("--aplicar", "--so", "configuração", arquivo=arq) == 0
+    assert gh.estado["ramo_padrao"] == "main"
+
+
 def test_as_pages_saem_do_fluxo_e_a_deriva_volta(gh: Mentira) -> None:
     assert rodar("--aplicar", "--so", "funções") == 0
     assert gh.estado["pages"] is True and gh.estado["pages_tipo"] == "workflow"
@@ -1069,11 +1123,14 @@ def test_o_arquivo_de_um_repositorio_so_com_o_minimo_continua_valendo() -> None:
     minimo = {
         k: v
         for k, v in _dados().items()
-        if k in ("versão", "about", "funções", "seguranca", "mantenedores", "rulesets")
+        if k in (
+            "versão", "about", "configuração", "funções", "seguranca", "mantenedores", "rulesets"
+        )
     }
     minimo["seguranca"].pop("linguagens_da_varredura", None)
     for n in aplicar.SEGURANCA_OPCIONAL:
         minimo["seguranca"].pop(n, None)
+    # A configuração não é opcional desde 07/10/2026: sem ela ninguém declara o ramo padrão.
     assert aplicar.validar(minimo) == [], "cada grupo novo é opcional: o arquivo antigo não quebra"
 
 
