@@ -138,6 +138,20 @@ def _usuario(chave: str, valor: str) -> str:
     return valor
 
 
+def _crc_do_pix_confere(codigo: str) -> bool:
+    """O código «copia e cola» termina no campo `63` (`6304` + 4 hex): o CRC-16/CCITT do texto até o `6304`.
+    Um código copiado pela metade vira um QR que o aplicativo do banco recusa, e ninguém o lê antes de publicar."""
+    if len(codigo) < 8 or codigo[-8:-4] != "6304":
+        return False
+    crc = 0xFFFF
+    for byte in codigo[:-4].encode("utf-8"):
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) if crc & 0x8000 else (crc << 1)
+            crc &= 0xFFFF
+    return f"{crc:04X}" == codigo[-4:].upper()
+
+
 def apoios(raiz: Path) -> list[Apoio]:
     """As formas de apoiar que o `FUNDING.yml` da raiz tem ativas, na ordem da página. Valor que não é nome de
     conta, endereço `https://` nem código PIX levanta `ValueError`: nada é adivinhado nem arrumado."""
@@ -159,6 +173,8 @@ def apoios(raiz: Path) -> list[Apoio]:
         if _URL.fullmatch(alvo):
             saida.append(Apoio("PIX", alvo, svg_do_qr(alvo, "QR code do PIX")))
         elif _COPIA_E_COLA.fullmatch(alvo):
+            if not _crc_do_pix_confere(alvo):
+                raise ValueError(f"{FUNDING}: o código PIX não fecha com o CRC do fim (copiado pela metade?)")
             saida.append(Apoio("PIX", None, svg_do_qr(alvo, "QR code do PIX"), alvo))
         else:
             raise ValueError(f"{FUNDING}: `custom` não é um endereço https nem um código PIX: {alvo[:40]!r}")
@@ -177,7 +193,9 @@ def secao_de_apoio(formas: list[Apoio]) -> str:
         else:
             itens.append(f"<li>{e(f.rotulo)}: leia o QR code abaixo ou copie o código.</li>")
         if f.qr:
-            legenda = f"{e(f.rotulo)}: aponte a câmera do aplicativo do banco"
+            # O código PIX se lê pelo aplicativo do banco; o QR de um endereço, pela câmera do celular.
+            leitor = "do aplicativo do banco" if f.codigo else "do celular"
+            legenda = f"{e(f.rotulo)}: aponte a câmera {leitor}"
             qrs.append(f"<figure>{f.qr}<figcaption>{legenda}</figcaption></figure>")
         if f.codigo:
             qrs.append(f'<p><label>Código copia e cola do PIX<br><textarea readonly rows="3">'

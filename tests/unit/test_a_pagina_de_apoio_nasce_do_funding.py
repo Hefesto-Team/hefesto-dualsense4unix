@@ -15,7 +15,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 PASTA = RAIZ / "scripts" / "github"
 CODIGO_FALSO = (
     "00020126330014br.gov.bcb.pix0111exemplo-fake"
-    "5204000053039865802BR5904Nome6004Cida62070503***6304"
+    "5204000053039865802BR5904Nome6004Cida62070503***63043897"
 )
 
 
@@ -136,6 +136,28 @@ def test_o_codigo_copia_e_cola_vira_qr_e_texto_sem_link(mp: Any, tmp_path: Path)
     assert pagina.count("<svg") == 1
     assert f"{CODIGO_FALSO}</textarea>" in pagina
     assert f'href="{CODIGO_FALSO}' not in pagina
+    assert "aponte a câmera do aplicativo do banco" in pagina
+
+
+def test_o_qr_de_um_endereco_se_le_pela_camera_do_celular(mp: Any, tmp_path: Path) -> None:
+    """O aplicativo do banco lê o código PIX, não um endereço: a legenda não manda a pessoa
+    ao lugar errado."""
+    pagina = _pagina(mp, _raiz(tmp_path, "custom: [https://exemplo.org/doar]\n"), tmp_path)
+    assert "aponte a câmera do celular" in pagina
+    assert "aplicativo do banco" not in pagina
+
+
+def test_o_crc_do_codigo_pix_confere_com_o_exemplo_do_manual_e_o_truncado_reprova(mp: Any) -> None:
+    """O exemplo do manual do BR Code do Banco Central (vetor independente) fecha; um dígito
+    trocado não."""
+    manual = (
+        "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR"
+        "5913Fulano de Tal6008BRASILIA62070503***63041D3D"
+    )
+    assert mp._crc_do_pix_confere(manual)
+    assert not mp._crc_do_pix_confere(manual[:-1] + "E")
+    assert not mp._crc_do_pix_confere(manual[:-8])
+    assert mp._crc_do_pix_confere(CODIGO_FALSO)
 
 
 @pytest.mark.parametrize(
@@ -143,6 +165,8 @@ def test_o_codigo_copia_e_cola_vira_qr_e_texto_sem_link(mp: Any, tmp_path: Path)
     [
         "custom: [http://exemplo.org/sem-tls]\n",
         "custom: [uma-chave-pix-solta]\n",
+        f"custom: [{CODIGO_FALSO[:-4]}0000]\n",
+        f"custom: [{CODIGO_FALSO[:-12]}]\n",
         'custom: ["https://exemplo.org/a b"]\n',
         "ko_fi: nome com espaço\n",
         "github: ['<script>']\n",
@@ -185,7 +209,7 @@ def test_o_fluxo_das_paginas_remonta_quando_a_chave_ou_o_qr_mudam() -> None:
 VETORES = {
     "https://exemplo.org/doar": ("11955347ddc1b26e7874139c", 25),
     "x" * 150: ("1336208e161628515a3ac797", 49),
-    CODIGO_FALSO: ("972e4ee0baa81c2e054b4750", 41),
+    CODIGO_FALSO: ("8e9c61d32ef7dfb3763a6393", 41),
 }
 
 
