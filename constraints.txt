@@ -14,6 +14,6 @@
 # 1.7.0, o do apt, que o `python3-inputremapper` trouxe. Trocar uma linha
 # destas é trocar de versão DE PROPÓSITO, com a medida no aparelho junto.
 evdev==1.7.0
-hidapi-usb==0.3.2
+hidapi-usb==0.3.3
 pydantic==2.13.5
 pydualsense==0.7.5
