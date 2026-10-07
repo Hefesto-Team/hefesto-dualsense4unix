@@ -887,9 +887,31 @@ jobs:
           GDK_BACKEND: x11
           NO_AT_BRIDGE: "1"
           SUITE_PYTEST_ARGS: --cov=hefesto_dualsense4unix --cov-append --cov-report=
+          # O `rodar-a-suite.sh` grava cada parte em `$SAIDA/parte-NN.log` e só
+          # imprime o NOME de quem reprovou. O runner morre com o `/tmp`: sem
+          # fixar a pasta, a pilha de um vermelho intermitente se perdia.
+          SAIDA: /tmp/suite-ci
         run: |
           xvfb-run -a --server-args="-screen 0 1280x1024x24" \
             bash scripts/rodar-a-suite.sh
+      # O vermelho traz a pilha (07/10/2026): a seção FAILURES de cada parte
+      # que reprovou vai ao log, e os logs inteiros sobem como artefato.
+      - name: A pilha de quem reprovou na suíte
+        if: failure()
+        run: |
+          for log in /tmp/suite-ci/parte-*.log; do
+            grep -qE '^(FAILED|ERROR) ' "$log" || continue
+            echo "::group::$log"
+            sed -n '/^=* \(FAILURES\|ERRORS\) =*$/,/^=* short test summary info =*$/p' "$log" | head -n 400
+            echo "::endgroup::"
+          done
+      - name: Os logs da suíte
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-gtk-real
+          path: /tmp/suite-ci/*.log
+          retention-days: 14
       - name: A cobertura da suíte inteira
         if: always()
         run: .venv/bin/python -m coverage report --fail-under=70
