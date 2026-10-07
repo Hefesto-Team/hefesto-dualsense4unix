@@ -18,7 +18,7 @@ O PORTÃO NASCE ANTES DO DADO, E ISSO É O DESENHO
 -------------------------------------------------
 Hoje não existe curva própria nenhuma no repositório: quem as vai medir é a
 CR-04, com a mantenedora sentindo o gatilho. Com o catálogo vazio a função
-devolve `_(nenhum ainda — ver CR-04)_`, que é a linha que o documento já tem —
+devolve `_(nenhum ainda)_`, que é a linha que o documento já tem —
 então o portão entra verde e continua verde até o primeiro efeito nascer.
 
 É de propósito. Um portão criado DEPOIS do dado nasce vermelho e é desligado na

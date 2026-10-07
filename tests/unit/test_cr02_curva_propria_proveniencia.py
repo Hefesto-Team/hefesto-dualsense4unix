@@ -223,7 +223,7 @@ class TestATabelaEGeradaDoDado:
 
     def test_catalogo_vazio_devolve_a_linha_que_o_documento_ja_tem(self) -> None:
         assert gerar_tabela_markdown(CatalogoCurvasProprias()) == (
-            "_(nenhum ainda — ver CR-04)_"
+            "_(nenhum ainda)_"
         )
 
     def test_a_tabela_carrega_os_quatro_campos_de_proveniencia(self) -> None:
@@ -275,4 +275,4 @@ class TestODocumentoDeProvenienciaSegueVazio:
         raiz = pathlib.Path(__file__).resolve().parents[2]
         doc = raiz / "docs" / "protocol" / "curvas-proprias.md"
         assert doc.is_file(), "o documento de proveniência sumiu"
-        assert "_(nenhum ainda — ver CR-04)_" in doc.read_text(encoding="utf-8")
+        assert "_(nenhum ainda)_" in doc.read_text(encoding="utf-8")

@@ -235,7 +235,7 @@ class CatalogoCurvasProprias(BaseModel):
 def gerar_tabela_markdown(catalogo: CatalogoCurvasProprias) -> str:
     """Devolve a tabela de ``docs/protocol/curvas-proprias.md``, gerada do dado."""
     if not catalogo.curvas:
-        return "_(nenhum ainda — ver CR-04)_"
+        return "_(nenhum ainda)_"
 
     linhas = [
         "| Nome | Medido por | Medido em | Controle | Curva | Nota |",

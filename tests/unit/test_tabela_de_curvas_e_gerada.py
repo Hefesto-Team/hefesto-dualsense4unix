@@ -29,7 +29,7 @@ O PORTÃO NASCE ANTES DO DADO, E ISSO É O DESENHO
 -------------------------------------------------
 Não existe curva própria nenhuma no repositório: quem as vai medir é a CR-04,
 com a mão da mantenedora no gatilho. Com o catálogo vazio a função devolve
-`_(nenhum ainda — ver CR-04)_`, que é a linha que o documento já tinha — então o
+`_(nenhum ainda)_`, que é a linha que o documento já tinha — então o
 portão entra verde. Criado DEPOIS do dado ele nasceria vermelho e seria
 desligado na mesma semana; criado antes, ele já está de pé no dia em que a
 primeira curva chega.
@@ -53,7 +53,7 @@ COMANDO = "scripts/gerar-tabela-de-curvas.py --check"
 
 ABRE = "<!-- BLOCO GERADO por scripts/gerar-tabela-de-curvas.py — não edite à mão -->"
 FECHA = "<!-- FIM DO BLOCO GERADO -->"
-VAZIO = "_(nenhum ainda — ver CR-04)_"
+VAZIO = "_(nenhum ainda)_"
 
 CURVA = {
     "nome": "Tranco curto de teste",

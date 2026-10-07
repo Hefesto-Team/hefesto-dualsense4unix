@@ -6,9 +6,9 @@ pelo Hefesto**. Ele existe por causa do processo de sala limpa
 se separam.
 
 > **Vazio, e agora vazio de vez — nota datada de 29/08/2026, grau: DECISÃO DE PRODUTO.**
-> Esta tabela seria preenchida pela corrente `CR-03 → CR-04 → CR-06`, e a corrente
-> **saiu do disco** (`docs/data/decisoes-de-produto.csv`, `D-A-CORRENTE-DO-CLEAN-ROOM-SAI`):
-> sem a bancada de medir não há efeitos da casa, e sem eles não há o que devolver ao
+> Esta tabela seria preenchida por uma cadeia de etapas (medir a curva, registrá-la e publicá-la), e a cadeia
+> **saiu do projeto** (`docs/data/decisoes-de-produto.csv`, `D-A-CORRENTE-DO-CLEAN-ROOM-SAI`):
+> sem o ensaio de medir não há efeitos do projeto, e sem eles não há o que devolver ao
 > ecossistema. O Hefesto vive com o catálogo de efeitos que já tem. Para onde foram
 > as três, veja
 > o manifesto do corte.
@@ -18,17 +18,17 @@ se separam.
 > separam* —, e essa regra segue normativa: a posição jurídica e o formato que recusa
 > foram entregues, e `profiles/curva_propria.py` continua reprovando efeito sem
 > `medido_por`, `controle` ou `nota`. No dia em que alguém medir uma curva própria —
-> por bancada, por script ou à mão —, o registro dela é aqui, e o portão que mantém a
+> por ensaio no aparelho, por script ou à mão —, o registro é aqui, e a verificação automática que mantém a
 > tabela honesta já está de pé.
 
 **Atualização de 2026-07-31 — o formato já existe, e ele recusa.** A
-CR-02 foi
+etapa do formato foi
 entregue: `profiles/curva_propria.py` define `CurvaPropria`, e um efeito com
 `medido_por`, `controle` ou `nota` vazios **não instancia** — levanta erro, não
 aviso. A tabela da seção "Efeitos" sai da função `gerar_tabela_markdown`, a
 partir do catálogo, e não da mão de ninguém.
 
-Quem **preenche**, agora que a bancada não vem: ninguém, por enquanto — e a ausência
+Quem **preenche**, agora que o ensaio não vem: ninguém, por enquanto — e a ausência
 de atalho continua sendo o produto. A R3 proíbe valor sem quem sentiu; um número sem
 mão e sem sensação entraria com `Medido por`, `Controle` e `Nota` preenchidos com
 ficção, contaminando a defesa da tabela inteira. Quem medir a primeira curva escreve
@@ -48,14 +48,14 @@ no catálogo (`docs/data/curvas-proprias.json`) e roda o gerador: a tabela sai s
 
 A tabela abaixo é **gerada** do catálogo (`docs/data/curvas-proprias.json`) por
 `scripts/gerar-tabela-de-curvas.py`, que chama `gerar_tabela_markdown` — a
-função que a CR-02 escreveu para este fim e que, MEDIDO em 12/08/2026, ninguém
+função que essa etapa escreveu para este fim e que, MEDIDO em 12/08/2026, ninguém
 chamava. O `--check` do gerador reprova quando o publicado deixa de ser o que o
-catálogo produz. Não a edite à mão: essa foi a proibição da CR-02, e ela só
+catálogo produz. Não a edite à mão: essa foi a proibição daquela etapa, e ela só
 passou a valer no dia em que este chamador nasceu.
 
 <!-- BLOCO GERADO por scripts/gerar-tabela-de-curvas.py — não edite à mão -->
 
-_(nenhum ainda — ver CR-04)_
+_(nenhum ainda)_
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -63,11 +63,11 @@ _(nenhum ainda — ver CR-04)_
 
 **CC0-1.0** — domínio público, sem exigência de crédito.
 
-**Grau: DECISÃO DE PRODUTO**, 07/08/2026. A pergunta estava aberta desde 25/07 na CR-06 —
-a sprint de publicação, cortada em 29/08 —, e a resposta separa as duas coisas de
+**Grau: DECISÃO DE PRODUTO**, 07/08/2026. A pergunta estava aberta desde 25/07 na etapa de
+publicação, cortada em 29/08, e a resposta separa as duas coisas de
 propósito: o **código** é MIT, os **dados medidos** são CC0.
 
-O motivo é o objetivo declarado da própria CR-06 — que a curva seja **adotada**.
+O motivo é o objetivo declarado da própria etapa de publicação — que a curva seja **adotada**.
 Exigir crédito num número medido cria uma dúvida ("dado factual tem autoria?")
 que só serve para fazer o outro projeto reescrever a medição em vez de usar a
 nossa. O registro de procedência continua aqui, e é ele que responde a pergunta
