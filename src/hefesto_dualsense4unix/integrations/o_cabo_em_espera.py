@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
+from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -94,6 +95,8 @@ def cabos_em_espera(raiz: str | os.PathLike[str] | None = None) -> list[CaboEmEs
     Custo: um ``listdir`` e um ``stat`` por HID da Sony no cabo — microssegundos.
     O vpad do produto nasce por ``uhid`` com barramento 0003 também, mas mora em
     ``/devices/virtual/`` e fica fora por construção: ele não tem cabo nenhum.
+    O pad em USB (o gadget sob o ``vhci_hcd``) também é 0003:054C:0DF2 e
+    também não tem cabo: quem diz que é pad nosso é o ``pad_usb.e_pad_nosso``.
     """
     base = Path(RAIZ_DO_BARRAMENTO_HID if raiz is None else raiz)
     try:
@@ -107,7 +110,8 @@ def cabos_em_espera(raiz: str | os.PathLike[str] | None = None) -> list[CaboEmEs
         caminho = base / nome
         if (caminho / "driver").exists():
             continue
-        if "/devices/virtual/" in os.path.realpath(caminho):
+        real = os.path.realpath(caminho)
+        if "/devices/virtual/" in real or pad_usb.e_pad_nosso(real):
             continue
         achados.append(CaboEmEspera(instancia=nome))
     return achados

@@ -986,6 +986,27 @@ class TestOCaboEmEspera:
         (raiz / "0003:3554:FA07.0013").mkdir()
         assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0CE6.001B")]
 
+    def test_o_pad_em_usb_sem_driver_nao_e_cabo_em_espera(self, tmp_path: Path) -> None:
+        """O gadget do pad mora sob o ``vhci_hcd`` e é 0003:054C:0DF2: não é cabo.
+
+        Um gadget que o ``hid_playstation`` recusou (ou que está no meio do
+        bind) fica sem driver; tomado por cabo em espera, o laço do cabo
+        mandaria religar um aparelho que não existe. O Edge de verdade pelo
+        ``usbip`` (sem o serial do pad) continua contando.
+        """
+        raiz = tmp_path / "hid"
+        raiz.mkdir()
+        usb = tmp_path / "devices" / "platform" / "vhci_hcd.0" / "usb3"
+        for porta, serial, inst in (
+            ("3-1", "hefesto-pad-02fe008a0001", "0003:054C:0DF2.0014"),
+            ("3-2", "", "0003:054C:0DF2.0015"),
+        ):
+            hid = usb / porta / f"{porta}:1.0" / inst
+            hid.mkdir(parents=True)
+            (usb / porta / "serial").write_text(serial + "\n")
+            (raiz / inst).symlink_to(hid)
+        assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0DF2.0015")]
+
     def test_a_linha_do_kernel_da_o_endereco(self) -> None:
         texto = (
             "playstation 0003:054C:0CE6.001B: hidraw1: USB HID v1.11 Gamepad\n"
