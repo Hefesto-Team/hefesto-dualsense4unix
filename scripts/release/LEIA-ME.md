@@ -13,8 +13,8 @@ git add <os arquivos que o gravar listou> && git commit -m "chore(release): 0.9.
 git tag v0.9.5 && git push origin v0.9.5             # a tag dispara o .github/workflows/release.yml
 ```
 
-A série (`0.9`, ou `4` para seguir do `v4.0.0`) é a linha `release.serie` de `.github/repositorio.yml`: `feat` sobe o
-primeiro número depois dela e `fix` o seguinte (0.9.4.5 -> 0.9.5 com `feat`; 0.9.4.5 -> 0.9.4.6 com `fix`). Nenhum número
+A série (`0.9.5`, ou `4` para seguir do `v4.0.0`) é a linha `release.serie` de `.github/repositorio.yml`: `feat` e `fix`
+sobem o mesmo número, o primeiro depois dela (0.9.5 -> 0.9.5.1 -> 0.9.5.2). Nenhum número
 é escolhido à mão, e `docs`, `test` e `chore` sozinhos não lançam nada.
 
 O que entra na seção do CHANGELOG, sem repetir linha:

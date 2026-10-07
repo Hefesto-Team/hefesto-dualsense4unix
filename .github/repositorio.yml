@@ -96,12 +96,12 @@ equipes:
         função: maintainer
 
 # A série da versão: o prefixo das versões que este repositório numera. O `scripts/release/versao.py`
-# lê esta linha, descobre a última tag da série e propõe a próxima pelo tipo dos commits (`feat` sobe o
-# primeiro número depois do prefixo, `fix` o seguinte); nenhum número é escolhido à mão. «0.9» segue a
-# numeração do `pyproject.toml` (0.9.4.5 -> 0.9.5); seguir do `v4.0.0`, que também está nas tags, é
-# trocar por «4» (-> 4.1.0). Nenhuma versão foi publicada com esta série ainda: trocar custa uma linha.
+# lê esta linha, descobre a última tag da série e propõe a próxima: se há algo a lançar (`feat`, `fix` ou
+# `perf`), sobe o primeiro número depois do prefixo, sempre a quarta casa (0.9.5 -> 0.9.5.1 -> 0.9.5.2);
+# nenhum número é escolhido à mão.
+# Seguir do `v4.0.0`, que também está nas tags, é trocar por «4» (-> 4.1.0): trocar custa uma linha.
 release:
-  serie: "0.9"
+  serie: "0.9.5"
 
 # O arquivo é a lista dos rótulos de triagem. Os nove que o GitHub cria sozinho entram aqui com a
 # descrição em português, e o que não está no arquivo fica como está (apagar rótulo solta ele das issues).

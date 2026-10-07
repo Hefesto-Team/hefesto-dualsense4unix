@@ -42,12 +42,12 @@ def comparavel(numero: str) -> tuple[int, ...]:
 
 
 def tags_da_serie(raiz: Path, serie: str) -> list[str]:
-    """As versões (sem o `v`) das tags que começam pela série, da menor para a maior."""
+    """As versões (sem o `v`) das tags que começam pela série, da menor para a maior. A tag da própria série (`v0.9.5` na série «0.9.5») entra: é de onde a série parte."""
     prefixo = como_tupla(serie)
     achadas = []
     for linha in git(raiz, "tag", "--list", "v*").split():
         m = TAG.match(linha)
-        if m and como_tupla(m.group(1))[: len(prefixo)] == prefixo and len(como_tupla(m.group(1))) > len(prefixo):
+        if m and como_tupla(m.group(1))[: len(prefixo)] == prefixo and len(como_tupla(m.group(1))) >= len(prefixo):
             achadas.append(m.group(1))
     return sorted(achadas, key=comparavel)
 

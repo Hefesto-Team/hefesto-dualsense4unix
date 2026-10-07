@@ -174,14 +174,14 @@ def brinquedo(tmp_path: Path) -> Path:
     ("commits", "esperada"),
     [
         (["feat(tela): uma aba nova"], "0.9.5"),
-        (["fix(som): o microfone calava"], "0.9.4.6"),
+        (["fix(som): o microfone calava"], "0.9.5"),
         (["fix: um", "feat: dois", "docs: três"], "0.9.5"),
-        (["perf(radio): menos pacotes"], "0.9.4.6"),
+        (["perf(radio): menos pacotes"], "0.9.5"),
         (["feat!: troca o formato do perfil"], "0.9.5"),
         (["fix: corrige\n\nBREAKING CHANGE: o perfil muda"], "0.9.5"),
     ],
 )
-def test_a_proxima_versao_sai_do_tipo_dos_commits(
+def test_na_serie_0_9_feat_e_fix_sobem_a_mesma_casa(
     brinquedo: Path, commits: list[str], esperada: str
 ) -> None:
     for c in commits:
@@ -197,17 +197,63 @@ def test_commit_que_nao_lanca_nada_nao_propoe_versao(brinquedo: Path) -> None:
     assert r.returncode == 0 and "nada a lançar" in r.stdout
 
 
-def test_a_ultima_tag_e_a_mais_alta_da_serie_e_a_proxima_parte_dela(brinquedo: Path) -> None:
-    commitar(brinquedo, "feat: um")
-    git(brinquedo, "tag", "v0.9.5")
-    commitar(brinquedo, "fix: dois")
-    r = rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo)
-    assert r.stdout.splitlines()[-1] == "0.9.5.1", "um fix depois da 0.9.5 sobe a quarta casa"
-    commitar(brinquedo, "feat: três")
-    assert (
-        rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1]
-        == "0.9.6"
+def _na_serie_0_9_5(brinquedo: Path) -> None:
+    """A série da ordem dela de 06/10: a base é a tag `v0.9.5` e tudo depois sobe a quarta casa."""
+    (brinquedo / ".github" / "repositorio.yml").write_text(
+        REPOSITORIO_DO_BRINQUEDO.format(serie="0.9.5"), encoding="utf-8"
     )
+    commitar(brinquedo, "chore(release): 0.9.5")
+    git(brinquedo, "tag", "v0.9.5")
+
+
+def _proposta(brinquedo: Path) -> str:
+    return rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1]
+
+
+@pytest.mark.parametrize(
+    "commits",
+    [
+        ["feat(tela): uma aba nova"],
+        ["fix(som): o microfone calava"],
+        ["fix: um", "feat: dois", "docs: três"],
+        ["perf(radio): menos pacotes"],
+        ["feat!: troca o formato do perfil"],
+        ["fix: corrige\n\nBREAKING CHANGE: o perfil muda"],
+    ],
+)
+def test_depois_da_0_9_5_toda_proposta_sobe_a_quarta_casa(
+    brinquedo: Path, commits: list[str]
+) -> None:
+    """A ordem dela de 06/10 era 0.9.5.1, não 0.9.6: nem `feat` pula para a terceira casa."""
+    _na_serie_0_9_5(brinquedo)
+    for c in commits:
+        commitar(brinquedo, c)
+    assert _proposta(brinquedo) == "0.9.5.1"
+
+
+def test_a_ultima_tag_e_a_mais_alta_da_serie_e_a_proxima_parte_dela(brinquedo: Path) -> None:
+    _na_serie_0_9_5(brinquedo)
+    commitar(brinquedo, "feat: um")
+    assert _proposta(brinquedo) == "0.9.5.1"
+    git(brinquedo, "tag", "v0.9.5.1")
+    commitar(brinquedo, "fix: dois")
+    assert _proposta(brinquedo) == "0.9.5.2", "a quarta casa segue subindo"
+    commitar(brinquedo, "feat: três")
+    assert _proposta(brinquedo) == "0.9.5.2", "feat e fix juntos sobem uma casa só"
+    git(brinquedo, "tag", "v0.9.5.2")
+    commitar(brinquedo, "docs: um texto")
+    assert "nada a lançar" in rodar(VERSAO, "seguinte", raiz=brinquedo).stdout
+
+
+def test_a_tag_da_propria_serie_e_de_onde_ela_parte(brinquedo: Path) -> None:
+    """Sem a `v0.9.5` entre as tags da série, o changelog da 0.9.5.1 leria a história inteira."""
+    _na_serie_0_9_5(brinquedo)
+    spec = importlib.util.spec_from_file_location("comum_da_release", RELEASE / "_comum.py")
+    assert spec is not None and spec.loader is not None
+    comum = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(comum)
+    assert comum.tags_da_serie(brinquedo, "0.9.5") == ["0.9.5"]
+    assert comum.tags_da_serie(brinquedo, "0.9") == ["0.9.4.5", "0.9.5"]
 
 
 def test_trocar_a_serie_e_trocar_a_linha_do_arquivo(brinquedo: Path) -> None:
@@ -1142,7 +1188,7 @@ def test_as_notas_automaticas_agrupam_pelos_rotulos_de_area_do_repositorio() -> 
 
 def test_a_serie_e_o_bloco_release_do_arquivo_do_repositorio() -> None:
     dados = yaml.safe_load(REPOSITORIO_YML.read_text(encoding="utf-8"))
-    assert dados["release"] == {"serie": "0.9"}
+    assert dados["release"] == {"serie": "0.9.5"}
     assert dados["seguranca"]["releases_imutaveis"] == {"ligada": True}
 
 

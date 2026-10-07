@@ -7,11 +7,11 @@
   versao.py conferir-tag vX.Y.Z         a tag diz a versão que o pacote tem (o `release.yml` chama)
   versao.py hash ARQUIVO                grava no PKGBUILD o hash do tarball da tag
 
-A SÉRIE mora numa linha de `.github/repositorio.yml` (`release: serie: "0.9"`): é o prefixo das versões que
-esta série numera. O primeiro número depois do prefixo sobe com `feat` (0.9.4.5 -> 0.9.5), o seguinte com
-`fix` ou `perf` (0.9.4.5 -> 0.9.4.6); `docs`, `test`, `chore` e afins sozinhos não lançam nada. Mudança
-incompatível (`!` ou `BREAKING CHANGE`) sobe como `feat` e sai no resumo, para quem mantém decidir se ela
-pede série nova. Trocar a série é trocar a linha: nenhum número é escolhido à mão.
+A SÉRIE mora numa linha de `.github/repositorio.yml` (`release: serie: "0.9.5"`): é o prefixo das versões que
+esta série numera. `feat`, `fix` e `perf` sobem o MESMO número, o primeiro depois do prefixo (0.9.5 -> 0.9.5.1
+-> 0.9.5.2); `docs`, `test`, `chore` e afins sozinhos não lançam nada. Mudança incompatível (`!` ou
+`BREAKING CHANGE`) sobe igual e sai no resumo, para quem mantém decidir se ela pede série nova. Trocar a
+série é trocar a linha: nenhum número é escolhido à mão.
 
 Os alvos são os que o `scripts/check_version_consistency.py` já confere (a lista é a dele, lida de lá),
 mais o `pyproject.toml`. Para a versão nova o AppStream ganha uma `<release>` com a data; a data da
@@ -77,10 +77,10 @@ def classificar(mensagem: str) -> tuple[str | None, bool]:
     return (("feat", True) if incompativel else (None, False))
 
 
-def subir(partida: str, serie: str, nivel: str) -> str:
-    """`feat` sobe o primeiro número depois da série; `fix`, o seguinte. Sempre com ao menos três números."""
+def subir(partida: str, serie: str) -> str:
+    """Sobe o primeiro número depois da série, seja `feat` ou `fix`. Sempre com ao menos três números."""
     partes = list(_comum.como_tupla(partida))
-    posicao = len(_comum.como_tupla(serie)) + (0 if nivel == "feat" else 1)
+    posicao = len(_comum.como_tupla(serie))
     partes += [0] * (posicao + 1 - len(partes))
     partes = [*partes[:posicao], partes[posicao] + 1]
     partes += [0] * (3 - len(partes))
@@ -109,7 +109,7 @@ def proposta(raiz: Path, desde: str | None = None) -> dict[str, Any]:
     return {
         "serie": serie, "partida": partida, "tag": tag if tem_tag else None, "contagem": contagem,
         "incompativeis": incompativeis,
-        "seguinte": subir(partida, serie, nivel) if nivel else None,
+        "seguinte": subir(partida, serie) if nivel else None,
     }
 
 
