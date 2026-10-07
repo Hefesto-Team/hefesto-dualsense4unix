@@ -79,3 +79,15 @@ def test_o_modulo_acha_a_libhidapi_no_caminho_do_nixpkgs() -> None:
     assert "--replace-fail" in bloco, (
         "o substituteInPlace tem de falhar alto se o módulo mudar de forma"
     )
+
+
+def test_a_primeira_versao_do_arquivo_e_a_do_proprio_pacote() -> None:
+    """O `check_version_consistency.py` lê a primeira `version = "...";`: a do pacote vem antes."""
+    texto = NIX.read_text(encoding="utf-8")
+    primeira = re.search(r'version\s*=\s*"([^"]+)";', texto)
+    toml = (RAIZ / "pyproject.toml").read_text(encoding="utf-8")
+    pyproject = re.search(r'^version\s*=\s*"([^"]+)"', toml, re.M)
+    assert primeira and pyproject
+    assert primeira.group(1) == pyproject.group(1), (
+        "um pacote de dependência declarado antes do principal rouba a versão do conferente"
+    )

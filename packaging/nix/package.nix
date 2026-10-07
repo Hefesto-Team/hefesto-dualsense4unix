@@ -48,35 +48,6 @@
 , wvkbd ? null
 }:
 
-let
-  # O modulo `hidapi` do PyPI `hidapi-usb` 0.3.2 (CFFI sobre a libhidapi), que o
-  # nixpkgs nao empacota. O sdist e imutavel pelo endereco por conteudo do
-  # proprio PyPI; o sha256 em hexa (a31a7eda…c8164d) e o que o PyPI publica para
-  # o arquivo, e foi conferido contra o download em 07/10/2026.
-  hidapiUsb = python3Packages.buildPythonPackage {
-    pname = "hidapi-usb";
-    version = "0.3.2";
-    pyproject = true;
-    src = fetchurl {
-      url = "https://files.pythonhosted.org/packages/55/80/960ae94b615e26a7d1aeebe8e9fefda2f25608bf1016f9aec268b328c35e/hidapi_usb-0.3.2.tar.gz";
-      hash = "sha256-oxp+2i+qqYd1uwiS2Dh8/PzO62iYQQXpR936MnDIFk0=";
-    };
-    build-system = with python3Packages; [ setuptools wheel ];
-    dependencies = with python3Packages; [ cffi ];
-    # O modulo faz `ffi.dlopen` de nomes SEM caminho (libhidapi-hidraw.so, ...)
-    # e levanta OSError no import se nenhum abre. No Nix a libhidapi nao esta em
-    # nenhum caminho de busca da construcao: o caminho absoluto do nixpkgs vai na
-    # frente da lista (hidraw, que e o backend dos caminhos /dev/hidraw*), e os
-    # nomes soltos seguem como estavam.
-    postPatch = ''
-      substituteInPlace hidapi.py \
-        --replace-fail "library_paths = (" \
-        "library_paths = ('${lib.getLib hidapi}/lib/libhidapi-hidraw.so.0',"
-    '';
-    pythonImportsCheck = [ "hidapi" ];
-    doCheck = false;
-  };
-in
 python3Packages.buildPythonApplication rec {
   pname = "hefesto-dualsense4unix";
   version = "0.9.5";
@@ -116,7 +87,39 @@ python3Packages.buildPythonApplication rec {
     bash scripts/i18n_compile.sh
   '';
 
-  dependencies = with python3Packages; [
+  # O `hidapiUsb` mora AQUI e nao num `let` no topo: o `check_version_consistency.py` le a
+  # primeira `version = "...";` do arquivo, e ela tem de ser a do proprio pacote.
+  dependencies =
+    let
+    # O modulo `hidapi` do PyPI `hidapi-usb` 0.3.2 (CFFI sobre a libhidapi), que o
+    # nixpkgs nao empacota. O sdist e imutavel pelo endereco por conteudo do
+    # proprio PyPI; o sha256 em hexa (a31a7eda…c8164d) e o que o PyPI publica para
+    # o arquivo, e foi conferido contra o download em 07/10/2026.
+    hidapiUsb = python3Packages.buildPythonPackage {
+      pname = "hidapi-usb";
+      version = "0.3.2";
+      pyproject = true;
+      src = fetchurl {
+        url = "https://files.pythonhosted.org/packages/55/80/960ae94b615e26a7d1aeebe8e9fefda2f25608bf1016f9aec268b328c35e/hidapi_usb-0.3.2.tar.gz";
+        hash = "sha256-oxp+2i+qqYd1uwiS2Dh8/PzO62iYQQXpR936MnDIFk0=";
+      };
+      build-system = with python3Packages; [ setuptools wheel ];
+      dependencies = with python3Packages; [ cffi ];
+      # O modulo faz `ffi.dlopen` de nomes SEM caminho (libhidapi-hidraw.so, ...)
+      # e levanta OSError no import se nenhum abre. No Nix a libhidapi nao esta em
+      # nenhum caminho de busca da construcao: o caminho absoluto do nixpkgs vai na
+      # frente da lista (hidraw, que e o backend dos caminhos /dev/hidraw*), e os
+      # nomes soltos seguem como estavam.
+      postPatch = ''
+        substituteInPlace hidapi.py \
+          --replace-fail "library_paths = (" \
+          "library_paths = ('${lib.getLib hidapi}/lib/libhidapi-hidraw.so.0',"
+      '';
+      pythonImportsCheck = [ "hidapi" ];
+      doCheck = false;
+    };
+    in
+    with python3Packages; [
     pygobject3
     pydantic
     typer
