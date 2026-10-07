@@ -230,6 +230,22 @@ def test_arquivo_com_o_canario_no_nome_que_entrou_e_saiu_reprova_s12(repo: Path)
     assert CANARIO not in saida(p)
 
 
+def test_importar_a_regua_nao_desliga_o_refs_replace_de_quem_importa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A régua mede sem `refs/replace` só no git que ela chama: gravado no ambiente ao importar,
+    o `GIT_NO_REPLACE_OBJECTS` vazava para os testes seguintes do processo (o S4 reprovou no CI)."""
+    import importlib.util
+
+    monkeypatch.delenv("GIT_NO_REPLACE_OBJECTS", raising=False)
+    spec = importlib.util.spec_from_file_location("check_autoria_importada", REGUA)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    assert "GIT_NO_REPLACE_OBJECTS" not in os.environ
+    assert modulo.ambiente_do_git()["GIT_NO_REPLACE_OBJECTS"] == "1"
+
+
 def test_refs_replace_que_mascara_um_trailer_reprova_s4(repo: Path) -> None:
     """O `git log` obedece a `refs/replace`; o push não. A régua mede o que viaja."""
     limpo = commitar(repo, "feat: limpo")

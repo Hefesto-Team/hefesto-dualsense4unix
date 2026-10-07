@@ -27,9 +27,14 @@ import sys
 import unicodedata
 from pathlib import Path
 
-# O push e o pack não obedecem a `refs/replace/*`, e o `git log` obedece: a história
-# medida é a que VIAJA.
-os.environ["GIT_NO_REPLACE_OBJECTS"] = "1"
+
+
+def ambiente_do_git() -> dict[str, str]:
+    """O push e o pack não obedecem a `refs/replace/*`, e o `git log` obedece: a história medida é a
+    que VIAJA. Vai só no git que a régua chama: gravado no `os.environ` ao importar, ele vazava para
+    quem importa o módulo (no CI, desligava o `refs/replace` dos testes que vinham depois)."""
+    return {**os.environ, "GIT_NO_REPLACE_OBJECTS": "1"}
+
 
 ZERO = "0" * 40
 PUBLICAVEIS_PADRAO = (
@@ -58,7 +63,7 @@ def git(*args: str, entrada: str | None = None, ok: bool = False) -> str:
     # UTF-8 com troca do byte que não se lê: um arquivo em Latin-1 no diff derrubava a
     # régua com um traceback, e o push ficava barrado sem medida nenhuma.
     r = subprocess.run(["git", *args], input=entrada, capture_output=True,
-                       encoding="utf-8", errors="replace")
+                       encoding="utf-8", errors="replace", env=ambiente_do_git())
     if r.returncode != 0 and not ok:
         sys.exit(f"autoria: git {' '.join(args[:2])} falhou: {r.stderr.strip()[:200]}")
     return r.stdout
@@ -344,7 +349,7 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
         if rref.startswith("refs/tags/"):
             tags_.append(lsha)
         if rsha != ZERO and subprocess.run(["git", "cat-file", "-e", rsha],
-                                           capture_output=True).returncode == 0:
+                                           capture_output=True, env=ambiente_do_git()).returncode == 0:
             novos_de.append(rsha)
     # O nível 2 mede só o que o push ACRESCENTA: a base é o que o remoto já tinha (o
     # valor antigo de cada ref e os ramos de rastreio DESTE remoto). Ramo de rastreio
@@ -367,7 +372,7 @@ def _arquivos(rev: str | None) -> list[tuple[str, bytes]]:
     if rev:  # uma leitura só: `cat-file --batch` em vez de um `git show` por arquivo
         lista = [ln.split("\t", 1) for ln in git("ls-tree", "-r", "-z", "--full-tree", rev).split("\0") if ln]
         blobs = [(meta.split()[2], nome) for meta, nome in lista if meta.split()[1] == "blob"]
-        saida = subprocess.run(["git", "cat-file", "--batch"], capture_output=True,
+        saida = subprocess.run(["git", "cat-file", "--batch"], capture_output=True, env=ambiente_do_git(),
                                input="".join(f"{b}\n" for b, _ in blobs).encode()).stdout
         fora, pos = [], 0
         for _, nome in blobs:
