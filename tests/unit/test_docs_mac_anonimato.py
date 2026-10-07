@@ -24,6 +24,8 @@ _OUIS_REAIS_OCTETOS = (
     ("14", "3a", "9a"),
     ("d4", "2f", "4b"),
     ("44", "46", "48"),
+    # 06/10/2026: o OUI de dois adaptadores BT desta bancada, que a lista não tinha.
+    ("ac", "a7", "f1"),
 )
 
 OUIS_REAIS = tuple("[:_-]".join(o) for o in _OUIS_REAIS_OCTETOS)
@@ -42,6 +44,20 @@ MAC_COMPLETO_RE = re.compile(
     r"(?P<a2>[0-9a-f]{2})(?P<b2>[0-9a-f]{2})(?P<c2>[0-9a-f]{2})"
     r")" + _NAO_HEX_DEPOIS
 )
+
+
+def test_o_oui_dos_adaptadores_entra_na_lista_e_o_sufixo_exposto_reprova() -> None:
+    """O OUI de 06/10 casa nas duas grafias; montado aqui, para o arquivo não conter o endereço."""
+    oui = ("ac", "a7", "f1")
+    assert oui in _OUIS_REAIS_OCTETOS
+    for sep in (":", "_", ""):
+        exposto = sep.join((*oui, "12", "34", "56"))
+        achado = MAC_COMPLETO_RE.search(f"adaptador {exposto} no log")
+        assert achado is not None, sep
+        assert _partes(achado)[1:] == ("12", "34"), sep
+        mascarado = sep.join((*oui, "00", "00", "56"))
+        achado = MAC_COMPLETO_RE.search(f"adaptador {mascarado} no log")
+        assert achado is not None and _partes(achado)[1:] == ("00", "00"), sep
 
 
 def _partes(m: re.Match[str]) -> tuple[str, str, str]:
