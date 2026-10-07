@@ -125,6 +125,7 @@ def test_chave_comentada_nao_aparece_nem_inventa_link_ou_qr(mp: Any, tmp_path: P
 
 
 def test_sem_nenhuma_chave_nao_ha_secao_nem_link_no_menu(mp: Any, tmp_path: Path) -> None:
+    # A decisão D-0610-O-APOIE-SO-COM-CHAVE-ATIVA.
     for funding in ("# github: []\n# ko_fi:\n", None):
         pasta = tmp_path / ("sem" if funding is None else "comentado")
         pagina = _pagina(mp, _raiz(pasta, funding), pasta)
@@ -175,6 +176,7 @@ def test_o_crc_do_codigo_pix_confere_com_o_exemplo_do_manual_e_o_truncado_reprov
 def test_valor_que_nao_e_conta_endereco_nem_codigo_reprova_e_nada_se_adivinha(
     mp: Any, tmp_path: Path, funding: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    # A decisão D-0610-O-PIX-ENTRA-COMO-LINK.
     raiz = _raiz(tmp_path, funding)
     with pytest.raises(ValueError):
         mp.montar(raiz, tmp_path / "site")
