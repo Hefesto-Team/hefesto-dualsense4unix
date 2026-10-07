@@ -2135,6 +2135,33 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
 
 
 @pytest.fixture(autouse=True, scope="session")
+def _nenhum_pad_em_usb_na_suite() -> Iterator[None]:
+    """O vpad da suíte nasce uhid, sem perguntar ao kernel nem ao broker.
+
+    O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). Sem esta
+    fixture, cada ``UhidDualSense.start`` lia o ``/sys/module`` da máquina: com
+    os módulos do gadget carregados ele batia no socket do broker; sem eles,
+    avisava o contrato. A mesma régua daria um diário numa máquina e outro na
+    seguinte. Quem prova o gadget aponta os dois pontos com ``monkeypatch``
+    (``test_o_pad_nasce_no_mesmo_usb_do_som``).
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import uhid_gamepad
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+        yield
+        return
+    antes = (uhid_gamepad.CONTRATO_QUE_FALTA, uhid_gamepad.PEDIR_O_PAD_USB)
+    uhid_gamepad.CONTRATO_QUE_FALTA = lambda **_kw: []
+    uhid_gamepad.PEDIR_O_PAD_USB = lambda *_a: None
+    try:
+        yield
+    finally:
+        uhid_gamepad.CONTRATO_QUE_FALTA, uhid_gamepad.PEDIR_O_PAD_USB = antes
+
+
+@pytest.fixture(autouse=True, scope="session")
 def _nenhum_cabo_em_espera_vivo_na_suite(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Iterator[None]:
