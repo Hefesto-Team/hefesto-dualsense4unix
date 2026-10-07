@@ -554,6 +554,12 @@ fi
 %{_datadir}/%{app_id}/scripts/sondas/uhid-raw-request.bt
 
 %changelog
+* Tue Oct 06 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5-1
+- Uma janela nova, com dez abas: Jogar, Controles, Gatilhos, Iluminação, Vibração, Navegação, Lançadores, Conexões, Sistema e Perfis.
+- Cada controle é um jogador, com gatilhos, luz, vibração, microfone, alto-falante e máscara próprios no perfil.
+- Mira Virtual: o giroscópio de cada controle vira o analógico direito; no modo Navegação, ele move o cursor.
+- Microfone e alto-falante de cada controle por cabo e por Bluetooth, com os quatro microfones ligados ao mesmo tempo.
+- A vibração fina do DualSense, que o jogo manda como áudio, chega ao controle em jogos pelo Proton, no cabo e no Bluetooth.
 * Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.5-1
 - Lightbar: o controle pisca na cor do modo ao trocar de ponte, e volta a cor dela
 - Gesto: PS + R3 troca de ponte sem sair do jogo

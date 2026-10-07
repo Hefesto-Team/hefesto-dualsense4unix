@@ -122,11 +122,11 @@ def nova_release_no_metainfo(texto: str, numero: str, data: str, resumo: str | N
     return re.sub(r"(<releases>\n)", lambda m: m.group(1) + bloco, texto, count=1)
 
 
-def resumo_do_changelog(raiz: Path, numero: str) -> str | None:
-    """Os primeiros itens da seção da versão, sem formatação, para o AppStream (None se a seção não existe)."""
+def itens_do_changelog(raiz: Path, numero: str) -> list[str]:
+    """Os itens da seção da versão no CHANGELOG, sem formatação (vazio se a seção não existe)."""
     arq = raiz / "CHANGELOG.md"
     if not arq.is_file():
-        return None
+        return []
     corpo: list[str] | None = None
     for linha in arq.read_text(encoding="utf-8").splitlines():
         if re.match(rf"^##\s*\[{re.escape(numero)}\]", linha):
@@ -136,10 +136,40 @@ def resumo_do_changelog(raiz: Path, numero: str) -> str | None:
             break
         if corpo is not None and linha.startswith("- "):
             corpo.append(linha[2:].strip().replace("`", ""))
+    return corpo or []
+
+
+def resumo_do_changelog(raiz: Path, numero: str) -> str | None:
+    """Os primeiros itens da seção da versão, sem formatação, para o AppStream (None se a seção não existe)."""
+    corpo = itens_do_changelog(raiz, numero)
     if not corpo:
         return None
     texto = " ".join(corpo[:3])
     return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+SPEC = "packaging/fedora/hefesto-dualsense4unix.spec"
+_DIAS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_MESES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def nova_entrada_no_spec(texto: str, numero: str, data: str, itens: list[str]) -> str:
+    """Uma entrada nova no topo do `%changelog` do spec, com o Epoch e o autor da entrada anterior.
+
+    O dnf ordena pelo topo do `%changelog`: sem a entrada, o spec anuncia uma versão e conta outra.
+    A data vai em inglês, como o rpm a lê, e os itens são os primeiros da seção do CHANGELOG."""
+    epoch = re.search(r"^Epoch:\s*(\d+)$", texto, re.MULTILINE)
+    prefixo = f"{epoch.group(1)}:" if epoch else ""
+    topo = re.search(r"^%changelog\n\*\s*\w{3} \w{3} \d{2} \d{4} (?P<autor>.*?) - (?P<ver>\S+)\s*$", texto, re.MULTILINE)
+    if topo is None:
+        raise SystemExit(f"{SPEC}: o topo do %changelog não casa com «* Dia Mês DD AAAA Autor - Versão»")
+    if topo.group("ver").startswith(f"{prefixo}{numero}-"):
+        return texto
+    dia = dt.date.fromisoformat(data)
+    cabeca = f"* {_DIAS[dia.weekday()]} {_MESES[dia.month - 1]} {dia.day:02d} {dia.year} {topo.group('autor')} - {prefixo}{numero}-1"
+    linhas = [f"- {item}" for item in (itens[:5] or [f"Versão {numero}"])]
+    bloco = "\n".join([cabeca, *linhas]) + "\n"
+    return texto[: topo.start() + len("%changelog\n")] + bloco + texto[topo.start() + len("%changelog\n"):]
 
 
 def plano_de_gravacao(raiz: Path, numero: str, data: str) -> list[tuple[str, str, str]]:
@@ -171,6 +201,11 @@ def plano_de_gravacao(raiz: Path, numero: str, data: str) -> list[tuple[str, str
     trocar(PYPROJECT, "pyproject", r'^version\s*=\s*"([^"]+)"', traduzir=False)
     for rotulo, rel, padrao in conf._TARGETS:
         trocar(rel, rotulo, padrao)
+    if (raiz / SPEC).is_file():
+        originais.setdefault(SPEC, (raiz / SPEC).read_text(encoding="utf-8"))
+        textos[SPEC] = nova_entrada_no_spec(
+            textos.get(SPEC, originais[SPEC]), numero, data, itens_do_changelog(raiz, numero)
+        )
     return [(rel, originais[rel], novo) for rel, novo in textos.items() if novo != originais[rel]]
 
 
