@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-03",
+      "data": "2026-10-07",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 42,
+      "piso": 43,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -22,6 +22,7 @@
         "integrations/ponte_escada.py::mascara": 1,
         "integrations/sinal_da_barra.py::transporte": 1,
         "integrations/storm_doctor.py::transporte": 1,
+        "integrations/uhid_gamepad.py::modelo": 1,
         "interface/aba01.py::transporte": 1,
         "interface/aba02.py::transporte": 1,
         "interface/aba07.py::transporte": 2,
@@ -35,17 +36,23 @@
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
       },
-      "razao": "a régua passou a ler a constante com nome no topo do módulo (RADIO, VID_SONY, DUALSENSE_EDGE_PID…): os 14 ramos existiam e eram invisíveis, nada novo entrou; conferência da A-CATRACA-DA-ORIGEM-01, 03/10/2026",
+      "razao": "07/10/2026, leva 1.6.5, pad: o ramo pad.product != VPAD_PRODUCT em uhid_gamepad._o_pad_em_usb é necessário enquanto o broker publica todo gadget como 054c:0df2; a cura no dono (o broker veste o PID que o pad pede, de uma lista fechada) vai para a leva 1.7",
       "subidas": [
         {
           "data": "2026-10-03",
           "de": 28,
           "para": 42,
           "razao": "a régua passou a ler a constante com nome no topo do módulo (RADIO, VID_SONY, DUALSENSE_EDGE_PID…): os 14 ramos existiam e eram invisíveis, nada novo entrou; conferência da A-CATRACA-DA-ORIGEM-01, 03/10/2026"
+        },
+        {
+          "data": "2026-10-07",
+          "de": 42,
+          "para": 43,
+          "razao": "07/10/2026, leva 1.6.5, pad: o ramo pad.product != VPAD_PRODUCT em uhid_gamepad._o_pad_em_usb é necessário enquanto o broker publica todo gadget como 054c:0df2; a cura no dono (o broker veste o PID que o pad pede, de uma lista fechada) vai para a leva 1.7"
         }
       ],
       "unidade": "ramos",
-      "universo": 353
+      "universo": 359
     },
     "remendos-de-sintoma": {
       "data": "2026-10-06",
