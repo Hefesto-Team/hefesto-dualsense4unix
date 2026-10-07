@@ -10,6 +10,8 @@ on:
       - docs/usage/**
       - assets/appimage/**
       - scripts/github/montar_pagina.py
+      - scripts/github/qr_svg.py
+      - .github/FUNDING.yml
       - .github/workflows/paginas.yml
   workflow_dispatch:
 
