@@ -16,8 +16,11 @@ O que se prova, nesta ordem:
 
 from __future__ import annotations
 
+import errno
 import os
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -544,3 +547,303 @@ def fcntl_acesso(fd: int) -> int:
     import fcntl
 
     return fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE
+
+
+# --- 3. O vpad nasce no gadget, fala pelo /dev/hidgN e volta ao uhid ----------
+
+
+IDENTIDADE = "aa:bb:cc:00:00:11"
+INTERFACE_DO_GADGET = "/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0"
+
+
+class ClienteDeMentira:
+    def __init__(self) -> None:
+        self.desmontados: list[str] = []
+        self.fechado = False
+
+    def desmontar_pad_usb(self, gadget: str) -> bool:
+        self.desmontados.append(gadget)
+        return True
+
+    def close(self) -> None:
+        self.fechado = True
+
+
+class BancadaDoGadget:
+    """O lado do jogo de um /dev/hidgN: um par SEQPACKET guarda um report por escrita."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        import socket
+
+        from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+        self.ug = uhid_gamepad
+        self.pedidos: list[tuple[str, bytes, str]] = []
+        self.clientes: list[ClienteDeMentira] = []
+        self.guardadas: dict[int, bytes] = {}
+        self.enumerado: tuple[str, str] | None = None
+        self.jogo_aberto = False
+        self.falta: list[str] = []
+        self.jogo: socket.socket | None = None
+        self.ioctl_erro: int | None = None
+
+        def pedir(serial: str, descritor: bytes, identidade: str) -> Any:
+            self.pedidos.append((serial, descritor, identidade))
+            nosso, jogo = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+            jogo.settimeout(2.0)
+            self.jogo = jogo
+            os.set_blocking(nosso.fileno(), False)
+            cliente = ClienteDeMentira()
+            self.clientes.append(cliente)
+            return uhid_gamepad._GadgetDoPad(
+                cliente=cliente, fd=nosso.detach(), gadget=f"hefesto-pad-{len(self.pedidos) - 1}",
+                serial=serial, identidade=identidade,
+            )
+
+        def escrever(fd: int, report_id: int, dados: bytes, **_k: Any) -> None:
+            if self.ioctl_erro is not None:
+                raise OSError(self.ioctl_erro, "ioctl")
+            self.guardadas[report_id] = bytes(dados)
+
+        monkeypatch.setattr(uhid_gamepad, "PEDIR_O_PAD_USB", pedir)
+        monkeypatch.setattr(uhid_gamepad, "HIDRAW_DO_GADGET", lambda _s: self.enumerado)
+        monkeypatch.setattr(uhid_gamepad, "JOGO_ABERTO", lambda: self.jogo_aberto)
+        monkeypatch.setattr(uhid_gamepad, "CONTRATO_QUE_FALTA", lambda: list(self.falta))
+        monkeypatch.setattr(pad_usb, "escrever_get_report", escrever)
+        monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
+        monkeypatch.setattr(pad_usb, "_CONTRATO_QUE_FALTOU", [])
+        monkeypatch.setattr(
+            uhid_gamepad, "_GADGETS_ESTACIONADOS", uhid_gamepad._GadgetsEstacionados()
+        )
+        uhid_falso = tmp_path / "uhid-de-mentira"
+        uhid_falso.write_bytes(b"")
+        monkeypatch.setattr(uhid_gamepad, "UHID_NODE", str(uhid_falso))
+
+    def pad(self, **kw: Any) -> Any:
+        from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
+
+        kw.setdefault("identity", IDENTIDADE)
+        return self.ug.UhidDualSense(player=1, blueprint=canonical_blueprint(), **kw)
+
+    def esperar(self, condicao: Callable[[], bool], segundos: float = 3.0) -> bool:
+        import time
+
+        fim = time.monotonic() + segundos
+        while time.monotonic() < fim:
+            if condicao():
+                return True
+            time.sleep(0.02)
+        return condicao()
+
+
+@pytest.fixture
+def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> BancadaDoGadget:
+    return BancadaDoGadget(monkeypatch, tmp_path)
+
+
+class TestOVpadNasceNoGadget:
+    def test_o_vpad_nasce_no_gadget_com_as_features_do_probe(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        pad = bancada.pad()
+        try:
+            assert pad.start() is True
+            assert pad._gadget is not None
+            serial, descritor, identidade = bancada.pedidos[0]
+            assert serial == pad_usb.serial_do_pad(pad.mac)
+            assert descritor == _descritor()
+            assert identidade == IDENTIDADE
+            assert sorted(bancada.guardadas) == [0x05, 0x09, 0x20]
+            mac_le = bytes(int(x, 16) for x in reversed(pad.mac.split(":")))
+            assert bancada.guardadas[0x09][1:7] == mac_le
+            assert pad.wait_for_bind(0.5) is True
+            assert pad.is_bound is False
+            bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+            assert bancada.esperar(lambda: pad.is_bound)
+            assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
+        finally:
+            pad.stop()
+
+    def test_a_entrada_sai_crua_e_o_output_do_jogo_chega_ao_controle(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        pedidos: list[tuple[int, int]] = []
+        pad = bancada.pad(rumble_sink=lambda w, s: pedidos.append((w, s)))
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        try:
+            assert pad.start()
+            assert bancada.esperar(lambda: pad.is_bound)
+            assert bancada.jogo is not None
+            pad.forward_buttons(frozenset({"cross"}))
+            report = bancada.jogo.recv(512)
+            assert len(report) == 64 and report[0] == 0x01
+            saida = bytearray(48)
+            saida[0] = 0x02
+            saida[1] = 0x03  # valid_flag0: as duas vibrações
+            saida[3], saida[4] = 0x40, 0x80
+            import time
+
+            time.sleep(0.6)  # a graça do bind (`_GAME_REPLICA_GRACE_S`)
+            bancada.jogo.send(bytes([0x08]) + bytes(46))
+            bancada.jogo.send(bytes(saida))
+            assert bancada.esperar(lambda: pad.output_count == 1)
+            for _ in range(20):
+                pad.pump_ff()
+                if pedidos:
+                    break
+                time.sleep(0.02)
+            assert pedidos and pedidos[-1] != (0, 0)
+            assert pad.ff_report_estranho_count == 0
+        finally:
+            pad.stop()
+
+    def test_sem_o_contrato_o_vpad_nasce_uhid_e_nao_pede_ao_broker(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        bancada.falta = ["usbip_vudc"]
+        pad = bancada.pad()
+        try:
+            assert pad.start() is True
+            assert pad._gadget is None
+            assert bancada.pedidos == []
+        finally:
+            pad.stop()
+
+    def test_sem_o_ioctl_o_contrato_vai_ao_doctor_e_o_vpad_nasce_uhid(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        bancada.ioctl_erro = errno.ENOTTY
+        pad = bancada.pad()
+        try:
+            assert pad.start() is True
+            assert pad._gadget is None
+            assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+            assert pad_usb.CONTRATO_DO_IOCTL in pad_usb.contrato_que_faltou_ao_montar()
+        finally:
+            pad.stop()
+
+    def test_o_gadget_que_nao_enumera_volta_ao_uhid(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        relogio = [100.0]
+        pad = bancada.pad(time_fn=lambda: relogio[0])
+        try:
+            assert pad.start()
+            relogio[0] += 16.0
+            assert bancada.esperar(lambda: pad._gadget_falhou)
+            pad.pump_ff()
+            assert pad._gadget is None and pad.is_active
+            assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+            assert bancada.ug.CONTRATO_DA_ENUMERACAO in pad_usb.contrato_que_faltou_ao_montar()
+        finally:
+            pad.stop()
+
+    def test_sem_jogo_o_gadget_desce_com_o_vpad(self, bancada: BancadaDoGadget) -> None:
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        pad.stop()
+        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
+
+    def test_com_o_jogo_aberto_o_gadget_espera_e_o_aparelho_o_retoma(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        bancada.jogo_aberto = True
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        assert bancada.jogo is not None
+        pad.forward_buttons(frozenset({"cross"}))
+        bancada.jogo.recv(512)
+        pad.stop()
+        neutro = bancada.jogo.recv(512)
+        assert neutro[0] == 0x01 and neutro[1:5] == bytes([0x80] * 4)
+        assert neutro[8] == 0x08  # o d-pad no neutro, e nenhum botão
+        assert bancada.clientes[0].desmontados == []
+        assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
+        de_volta = bancada.pad()
+        try:
+            assert de_volta.start()
+            assert len(bancada.pedidos) == 1
+            assert de_volta.is_bound
+        finally:
+            de_volta.stop()
+        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
+        bancada.jogo_aberto = False
+        assert bancada.ug._GADGETS_ESTACIONADOS.varrer() == 1
+        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+
+    def test_o_estacionado_desce_quando_o_jogo_fecha(self, bancada: BancadaDoGadget) -> None:
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        bancada.jogo_aberto = True
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        pad.stop()
+        estacionados = bancada.ug._GADGETS_ESTACIONADOS
+        assert estacionados.varrer() == 0
+        bancada.jogo_aberto = False
+        assert estacionados.varrer() == 1
+        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+
+
+class TestOGetReportEOHidrawDoGadget:
+    def test_a_struct_do_get_report_e_a_do_kernel(self) -> None:
+        pacote = pad_usb.pacote_do_get_report(0x09, b"\x09" + bytes(19))
+        assert len(pacote) == 72  # sizeof(struct usb_hidg_report)
+        assert pacote[0] == 0x09 and pacote[1] == 0  # 0 = vale para todo pedido futuro
+        assert int.from_bytes(pacote[2:4], "little") == 20
+        with pytest.raises(ValueError):
+            pad_usb.pacote_do_get_report(0x20, bytes(65))
+        chamadas: list[tuple[int, int, bytes]] = []
+        pad_usb.escrever_get_report(7, 0x05, b"\x05", ioctl=lambda *a: chamadas.append(a))
+        assert chamadas[0][:2] == (7, pad_usb.GADGET_HID_WRITE_GET_REPORT)
+
+    def test_o_get_report_pendente_se_responde_com_a_feature_guardada(
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import select
+
+        pad = bancada.pad()
+        try:
+            assert pad.start()
+            monkeypatch.setattr(pad_usb, "ler_o_id_do_get_report", lambda _fd: 0x20)
+            bancada.guardadas.clear()
+            bancada.ug._drenar_o_gadget(pad, pad._fd, select.POLLPRI)
+            assert bancada.guardadas == {0x20: pad._features[0x20]}
+        finally:
+            pad.stop()
+
+    def test_o_hidraw_do_gadget_e_o_do_serial_dele_sob_o_vhci(self, tmp_path: Path) -> None:
+        sys_ = tmp_path / "sys"
+        classe = sys_ / "class" / "hidraw"
+        classe.mkdir(parents=True)
+        series = {}
+
+        def aparelho(nome: str, usb_device: Path, serial: str) -> None:
+            hid = usb_device / f"{usb_device.name}:1.0" / "0003:054C:0DF2.0001"
+            hid.mkdir(parents=True)
+            (classe / nome).mkdir()
+            (classe / nome / "device").symlink_to(hid)
+            series[str(usb_device / "serial")] = serial
+
+        vhci = sys_ / "devices" / "platform" / "vhci_hcd.0" / "usb3"
+        aparelho("hidraw3", vhci / "3-1", "hefesto-pad-02fe80000001")
+        aparelho("hidraw4", vhci / "3-2", "hefesto-pad-02fe80000002")
+        fisico = sys_ / "devices" / "pci0000:00" / "usb1"
+        aparelho("hidraw1", fisico / "1-4", "hefesto-pad-02fe80000002")
+
+        def ler(caminho: str) -> str:
+            return series.get(caminho, "")
+
+        achado = pad_usb.hidraw_do_gadget(
+            "hefesto-pad-02fe80000002", raiz_class_hidraw=str(classe), ler=ler
+        )
+        assert achado == ("hidraw4", "/devices/platform/vhci_hcd.0/usb3/3-2/3-2:1.0")
+        assert pad_usb.hidraw_do_gadget(
+            "hefesto-pad-02fe80000009", raiz_class_hidraw=str(classe), ler=ler
+        ) is None
+        assert pad_usb.hidraw_do_gadget("teclado", raiz_class_hidraw=str(classe), ler=ler) is None

@@ -65,6 +65,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
+from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -597,6 +598,10 @@ class UhidDualSense:
     _trava_da_saida: threading.RLock = field(default_factory=threading.RLock)
     _rumble_a_entregar: tuple[int, int] | None = None
     _fim_de_sessao_a_entregar: bool = False
+    _gadget: _GadgetDoPad | None = None
+    _gadget_prazo: float | None = None
+    _gadget_falhou: bool = False
+    _sem_gadget: bool = False
 
     @classmethod
     def for_flavor(
@@ -870,6 +875,8 @@ class UhidDualSense:
         except (KeyError, TypeError, ValueError) as exc:
             logger.warning("uhid_blueprint_invalido", err=str(exc), player=self.player)
             return False
+        if _o_pad_em_usb(self, features):
+            return True
 
         try:
             fd = os.open(UHID_NODE, os.O_RDWR)
@@ -929,10 +936,11 @@ class UhidDualSense:
             self._entregar_o_pendente()
             self._silence_rumble()
             self._end_game_session()
-            with contextlib.suppress(OSError):
-                os.write(fd, struct.pack("<I", UHID_DESTROY))
-            with contextlib.suppress(OSError):
-                os.close(fd)
+            if not _soltar_o_gadget(self):
+                with contextlib.suppress(OSError):
+                    os.write(fd, struct.pack("<I", UHID_DESTROY))
+                with contextlib.suppress(OSError):
+                    os.close(fd)
             self._features = {}
             self._last_sent = (0, 0)
             self._output_count = 0
@@ -1248,6 +1256,8 @@ class UhidDualSense:
         """Bloqueia até o `hid_playstation` REGISTRAR o controle, ou estourar."""
         if self._fd is None:
             return False
+        if self._gadget is not None:
+            return True  # a enumeração pelo vhci leva segundos: o fio a vigia
         deadline = self.time_fn() + timeout_s
         while not self._started:
             self.pump_ff()
@@ -1275,6 +1285,8 @@ class UhidDualSense:
 
     def send_report(self, report: bytes) -> bool:
         """Entrega um input report HID ao kernel (UHID_INPUT2)."""
+        if self._gadget is not None:
+            return _enviar_pelo_gadget(self, report)
         if len(report) > HID_MAX_DESCRIPTOR_SIZE:
             logger.warning("uhid_input_grande_demais", tamanho=len(report))
             return False
@@ -1294,6 +1306,8 @@ class UhidDualSense:
 
     def pump_ff(self) -> None:
         """Drena os eventos do uhid; entrega o rumble do jogo ao `rumble_sink`."""
+        if self._gadget is not None:
+            return _bombear_o_gadget(self)
         fd = self._fd
         if fd is None:
             return
@@ -1681,7 +1695,7 @@ class UhidDualSense:
         pare = threading.Event()
         self._pare_o_fio = pare
         fio = threading.Thread(
-            target=self._atender_o_uhid,
+            target=self._atender_o_uhid if self._gadget is None else _fio_do_gadget(self),
             args=(fd, leitura, pare),
             name=f"hefesto-uhid-p{self.player}",
             daemon=True,
@@ -2020,7 +2034,390 @@ def _e_eco_puro(body: bytes) -> bool:
     return not body[_VALID_FLAG1_OFFSET] & ~_FLAG1_DO_ECO_PURO & 0xFF
 
 
+# --- O PAD EM USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01, 07/10/2026) ---
+#
+# O vpad nascia só por uhid, sem `usb_device` pai, e o jogo com a biblioteca da
+# Sony não casava o som dele pelo contêiner (o engasgo do Sackboy). Onde o
+# kernel cumpre o contrato (`pad_usb.contrato_que_falta`), o MESMO
+# `UhidDualSense` nasce num gadget só HID que o broker monta, prende ao
+# `usbip-vudc` e liga pelo `vhci_hcd`; o resto da classe não sabe a diferença.
+# O fd do `/dev/hidgN` faz o papel do `/dev/uhid`, e o que ele diz se traduz
+# nos eventos do uhid que a classe já atende:
+#   - a entrada (o report 0x01) se escreve crua, um report por `write()`;
+#   - o output do jogo (o 0x02, que sem endpoint OUT chega por SET_REPORT) se
+#     lê do `read()` e vira um UHID_OUTPUT;
+#   - as features do probe (0x05, 0x09, 0x20) se guardam no `f_hid` antes do
+#     `attach` (`GADGET_HID_WRITE_GET_REPORT`), e o GET_REPORT que sobrar
+#     (`POLLPRI`) se responde com elas;
+#   - o 0x08 que o jogo manda é SET_FEATURE: o `f_hid` já o confirmou, e ele
+#     não vai ao controle (é o que o uhid fazia com o UHID_SET_REPORT);
+#   - o bind é o `hidraw` do lado do jogo nascer sob o `usb_device` com o serial
+#     do gadget, e vira o UHID_START + UHID_OPEN de sempre (o `hid_playstation`
+#     abre o aparelho no probe).
+# A enumeração leva segundos (~9 s na prova): o `wait_for_bind` aceita o gadget
+# montado, e o fio vigia a enumeração; se ela não vier em
+# `_GADGET_ENUMERA_S`, o pad volta ao uhid e o contrato que faltou vai ao doctor.
+
+_GADGET_ENUMERA_S = 15.0
+_GADGET_VARRE_S = 5.0
+_GADGET_VIGIA_S = 0.25
+_GADGET_VEZ_DA_ESCRITA_MS = 8
+_GADGET_LEITURA = 512
+_FEATURES_DO_PROBE = (0x05, 0x09, 0x20)
+#: o contrato que só se mede montando: o gadget não enumerou pelo `vhci_hcd`.
+CONTRATO_DA_ENUMERACAO = "enumeração pelo vhci_hcd"
+
+
+@dataclass
+class _GadgetDoPad:
+    """Um gadget de pé: a conexão com o broker é a lease dele."""
+
+    cliente: Any
+    fd: int
+    gadget: str
+    serial: str
+    identidade: str = ""
+    hidraw: str | None = None
+    interface: str | None = None
+    escrita_falhou: int = 0
+
+    def desmontar(self) -> None:
+        with contextlib.suppress(OSError):
+            os.close(self.fd)
+        with contextlib.suppress(Exception):
+            self.cliente.desmontar_pad_usb(self.gadget)
+        with contextlib.suppress(Exception):
+            self.cliente.close()
+        if self.identidade:
+            pad_usb.esquecer_gadget(self.identidade)
+        logger.info("pad_usb_desmontado", gadget=self.gadget)
+
+
+def _pedir_ao_broker(serial: str, descritor: bytes, identidade: str) -> _GadgetDoPad | None:
+    """O gadget pedido ao broker, numa conexão só dele (a lease), ou None."""
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
+
+    cliente = HidrawBrokerClient()
+    fd, resposta = cliente.montar_pad_usb(serial, descritor)
+    if fd is None:
+        with contextlib.suppress(Exception):
+            cliente.close()
+        contrato = (resposta or {}).get("contrato")
+        if contrato:
+            pad_usb.anotar_contrato_que_faltou(str(contrato))
+        logger.info(
+            "pad_usb_indisponivel_fica_o_uhid",
+            motivo=(resposta or {}).get("error", "broker_fora_do_ar"),
+        )
+        return None
+    return _GadgetDoPad(
+        cliente=cliente,
+        fd=fd,
+        gadget=str((resposta or {}).get("gadget", "")),
+        serial=serial,
+        identidade=identidade,
+    )
+
+
+def _ha_jogo_aberto() -> bool:
+    """A pergunta do nó de háptica (`quem_o_jogo_le.pids_de_jogo`)."""
+    from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
+
+    try:
+        return bool(pids_de_jogo())
+    except Exception:  # pragma: no cover - defensivo: na dúvida, há jogo
+        return True
+
+
+#: as portas do pad em USB, injetáveis pela régua (a suíte nunca fala com o
+#: broker dela: o `conftest` desvia o socket, e a régua troca estas).
+PEDIR_O_PAD_USB: Callable[[str, bytes, str], _GadgetDoPad | None] = _pedir_ao_broker
+HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
+JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
+CONTRATO_QUE_FALTA: Callable[[], list[str]] = pad_usb.contrato_que_falta
+
+
+class _GadgetsEstacionados:
+    """O gadget do aparelho que caiu espera o jogo fechar (a cura 7).
+
+    O jogo grava o device KS no lançamento com o GUID daquela hora, e o GUID
+    sai do `usb_device` (`DEVNUM`, `USEC_INITIALIZED`): remontar o gadget
+    muda o GUID e o som se perde. Por isso, com jogo aberto, o gadget do
+    aparelho que saiu fica de pé, parado no neutro, e o aparelho que volta o
+    retoma; sem jogo, ele desce. É a regra do nó de háptica.
+    """
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._por_aparelho: dict[str, _GadgetDoPad] = {}
+        self._vigia: threading.Thread | None = None
+
+    def estacionar(self, identidade: str, gadget: _GadgetDoPad) -> None:
+        chave = pad_usb._so_hex(identidade)
+        with self._trava:
+            antigo = self._por_aparelho.pop(chave, None)
+            self._por_aparelho[chave] = gadget
+            if self._vigia is None or not self._vigia.is_alive():
+                self._vigia = threading.Thread(
+                    target=self._vigiar, name="hefesto-pad-usb-estacionados", daemon=True
+                )
+                self._vigia.start()
+        if antigo is not None and antigo is not gadget:
+            antigo.desmontar()
+
+    def retomar(self, identidade: str | None) -> _GadgetDoPad | None:
+        if not identidade:
+            return None
+        with self._trava:
+            return self._por_aparelho.pop(pad_usb._so_hex(identidade), None)
+
+    def quantos(self) -> int:
+        with self._trava:
+            return len(self._por_aparelho)
+
+    def varrer(self) -> int:
+        """Sem jogo aberto, todo gadget estacionado desce. Devolve quantos."""
+        with self._trava:
+            if not self._por_aparelho:
+                return 0
+        if JOGO_ABERTO():
+            return 0
+        with self._trava:
+            todos = list(self._por_aparelho.values())
+            self._por_aparelho.clear()
+        for gadget in todos:
+            gadget.desmontar()
+        return len(todos)
+
+    def _vigiar(self) -> None:
+        while True:
+            time.sleep(_GADGET_VARRE_S)
+            self.varrer()
+            with self._trava:
+                if not self._por_aparelho:
+                    self._vigia = None
+                    return
+
+
+_GADGETS_ESTACIONADOS = _GadgetsEstacionados()
+
+
+def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
+    """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
+    if pad._sem_gadget or pad.product != VPAD_PRODUCT or pad.blueprint is None:
+        return False
+    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity)
+    if gadget is None:
+        if CONTRATO_QUE_FALTA():
+            return False
+        try:
+            serial = pad_usb.serial_do_pad(pad.mac)
+        except ValueError:
+            return False
+        gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "")
+        if gadget is None:
+            return False
+    try:
+        for report_id in _FEATURES_DO_PROBE:
+            if report_id in features:
+                pad_usb.escrever_get_report(gadget.fd, report_id, features[report_id])
+    except (OSError, ValueError) as exc:
+        if getattr(exc, "errno", None) == errno.ENOTTY:
+            pad_usb.anotar_contrato_que_faltou(pad_usb.CONTRATO_DO_IOCTL)
+        logger.warning("pad_usb_features_recusadas_fica_o_uhid", err=str(exc),
+                       player=pad.player)
+        gadget.desmontar()
+        return False
+    with pad._lock:
+        pad._features = features
+        pad._fd = gadget.fd
+        pad._gadget = gadget
+        pad._gadget_prazo = pad.time_fn() + _GADGET_ENUMERA_S
+    pad._iniciar_o_fio_do_uhid(gadget.fd)
+    logger.info("pad_usb_montado", gadget=gadget.gadget, mac=pad.mac, player=pad.player)
+    _vigiar_a_enumeracao(pad)
+    return True
+
+
+def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
+    """O `hidraw` do gadget nasceu do lado do jogo? Então o bind aconteceu."""
+    gadget = pad._gadget
+    if gadget is None or pad._started:
+        return
+    achado = gadget.hidraw and gadget.interface and (gadget.hidraw, gadget.interface)
+    if not achado:
+        achado = HIDRAW_DO_GADGET(gadget.serial)
+    if not achado:
+        prazo = pad._gadget_prazo
+        if prazo is not None and pad.time_fn() >= prazo:
+            pad._gadget_falhou = True
+        return
+    gadget.hidraw, gadget.interface = achado
+    if gadget.identidade:
+        pad_usb.registrar_gadget(gadget.identidade, gadget.interface)
+    with pad._a_trava_da_saida():
+        pad._handle_event(struct.pack("<I", UHID_START))
+        pad._handle_event(struct.pack("<I", UHID_OPEN))
+    logger.info("pad_usb_enumerou", gadget=gadget.gadget, hidraw=gadget.hidraw,
+                player=pad.player)
+
+
+def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> None:
+    """Atende o `/dev/hidgN`: o GET_REPORT pendente e o output do jogo."""
+    import select
+
+    if eventos & select.POLLPRI:
+        try:
+            report_id = pad_usb.ler_o_id_do_get_report(fd)
+            pad_usb.escrever_get_report(fd, report_id, pad._features.get(report_id, b""))
+        except (OSError, ValueError) as exc:
+            logger.debug("pad_usb_get_report_falhou", err=str(exc), player=pad.player)
+    if not eventos & select.POLLIN:
+        return
+    for _ in range(_MAX_EVENTS_PER_PUMP):
+        try:
+            report = os.read(fd, _GADGET_LEITURA)
+        except BlockingIOError:
+            return
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                logger.warning("pad_usb_leitura_falhou", err=str(exc), player=pad.player)
+            return
+        if not report:
+            return
+        if report[0] != _OUTPUT_REPORT_USB:
+            continue
+        evento = (
+            struct.pack("<I", UHID_OUTPUT)
+            + report.ljust(HID_MAX_DESCRIPTOR_SIZE, b"\0")[:HID_MAX_DESCRIPTOR_SIZE]
+            + struct.pack("<HB", len(report), 1)
+        )
+        with pad._a_trava_da_saida():
+            pad._handle_event(evento)
+
+
+def _fio_do_gadget(pad: UhidDualSense) -> Callable[[int, int, threading.Event], None]:
+    """O laço do fio quando o fd é o `/dev/hidgN` (o par do `_atender_o_uhid`)."""
+    import select
+
+    def atender(fd: int, despertador: int, pare: threading.Event) -> None:
+        sondador = select.poll()
+        sondador.register(fd, select.POLLIN | select.POLLPRI)
+        sondador.register(despertador, select.POLLIN)
+        while not pare.is_set():
+            espera = _GADGET_VIGIA_S if not pad._started or pad._last_body is None else (
+                _UHID_FIO_ACORDA_S
+            )
+            try:
+                prontos = dict(sondador.poll(int(espera * 1000)))
+            except (OSError, ValueError):
+                return
+            if pare.is_set():
+                return
+            if not pad._started:
+                _vigiar_a_enumeracao(pad)
+            elif pad._last_body is None:
+                with pad._a_trava_da_saida():
+                    pad._emit_if_changed(from_reader=True)
+            if fd in prontos:
+                try:
+                    _drenar_o_gadget(pad, fd, prontos[fd])
+                except Exception as exc:
+                    logger.warning("pad_usb_evento_falhou", err=str(exc), player=pad.player)
+
+    return atender
+
+
+def _bombear_o_gadget(pad: UhidDualSense) -> None:
+    """O `pump_ff` do gadget: o mesmo serviço, e a volta ao uhid se não enumerou."""
+    import select
+
+    if pad._gadget_falhou:
+        logger.warning("pad_usb_nao_enumerou_fica_o_uhid", player=pad.player,
+                       prazo_s=_GADGET_ENUMERA_S)
+        pad_usb.anotar_contrato_que_faltou(CONTRATO_DA_ENUMERACAO)
+        pad._destruir_o_device()
+        pad._sem_gadget = True
+        pad._criar_o_device()
+        return
+    fd = pad._fd
+    if fd is None:
+        return
+    with pad._a_trava_da_saida():
+        pad._entregar_o_pendente()
+        pad._flush_replicas()
+        pad._expirar_rumble_preso()
+        fio = pad._fio_do_uhid
+        if fio is not None and fio.is_alive():
+            return
+        _vigiar_a_enumeracao(pad)
+        _drenar_o_gadget(pad, fd, select.POLLIN | select.POLLPRI)
+
+
+def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
+    """Um input report no `/dev/hidgN`. O `f_hid` guarda UM em voo por vez."""
+    import select
+
+    with pad._lock:
+        gadget, fd = pad._gadget, pad._fd
+        if gadget is None or fd is None:
+            return False
+        for tentativa in (0, 1):
+            try:
+                os.write(fd, report)
+                return True
+            except BlockingIOError:
+                if tentativa:
+                    break
+                sondador = select.poll()
+                sondador.register(fd, select.POLLOUT)
+                with contextlib.suppress(OSError):
+                    sondador.poll(_GADGET_VEZ_DA_ESCRITA_MS)
+            except OSError as exc:
+                if pad._started:
+                    if not gadget.escrita_falhou:
+                        logger.warning("pad_usb_escrita_falhou", err=str(exc),
+                                       player=pad.player)
+                    gadget.escrita_falhou += 1
+                break
+        # O estado que não saiu sai no próximo compasso do fio: nada fica preso.
+        pad._last_body = None
+        return False
+
+
+def _report_neutro(pad: UhidDualSense) -> bytes:
+    """O 0x01 de um controle largado: eixos no centro, nada apertado."""
+    body = bytearray(_INPUT_PAYLOAD_SIZE)
+    body[_MOTION_WINDOW] = _MOTION_NEUTRAL
+    body[_STATUS_OFFSET] = pad._status_byte
+    body[_STATUS1_OFFSET] = pad._status1_byte
+    body[0:6] = bytes(_AXES_NEUTRAL)
+    body[_BUTTONS0_OFFSET] = _DPAD_NEUTRAL
+    body[_SEQ_OFFSET] = (pad._seq + 1) & 0xFF
+    return bytes([_INPUT_REPORT_USB]) + bytes(body)
+
+
+def _soltar_o_gadget(pad: UhidDualSense) -> bool:
+    """A metade do `_destruir_o_device` do gadget. False = o fd é do uhid."""
+    gadget = pad._gadget
+    if gadget is None:
+        return False
+    falhou = pad._gadget_falhou
+    pad._gadget = None
+    pad._gadget_prazo = None
+    pad._gadget_falhou = False
+    if not falhou and gadget.hidraw is not None and pad.identity and JOGO_ABERTO():
+        with contextlib.suppress(OSError):
+            os.write(gadget.fd, _report_neutro(pad))
+        _GADGETS_ESTACIONADOS.estacionar(pad.identity, gadget)
+        logger.info("pad_usb_espera_o_jogo_fechar", gadget=gadget.gadget, player=pad.player)
+        return True
+    gadget.desmontar()
+    return True
+
+
 __all__ = [
+    "CONTRATO_DA_ENUMERACAO",
     "UHID_NODE",
     "VPAD_HID_PHYS",
     "VPAD_MAC_PREFIXO",

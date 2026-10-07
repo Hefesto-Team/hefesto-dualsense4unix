@@ -48,8 +48,10 @@ nenhuma das quatro, e continua físico.
 
 from __future__ import annotations
 
+import fcntl
 import os
 import re
+import struct
 import threading
 from collections.abc import Callable, Iterable
 
@@ -192,6 +194,88 @@ def e_hidraw_de_pad_nosso(
     )
 
 
+def hidraw_do_gadget(
+    serial: str,
+    *,
+    raiz_class_hidraw: str = "/sys/class/hidraw",
+    ler: Callable[[str], str] = _ler_atributo,
+    real: Callable[[str], str] = os.path.realpath,
+) -> tuple[str, str] | None:
+    """``(hidrawN, interface)`` do lado do jogo para o gadget de ``serial``.
+
+    É a prova de que o ``hid_playstation`` registrou o pad pelo ``vhci``: o
+    ``hidraw`` nasce sob o ``usb_device`` cujo serial é o do gadget. A
+    interface volta RELATIVA a ``/sys`` (``/devices/...``), o formato do
+    ``sysfs.path`` do PipeWire. None = ainda não enumerou.
+    """
+    alvo = (serial or "").strip().lower()
+    if not alvo.startswith(SERIAL_PREFIXO):
+        return None
+    try:
+        nomes = sorted(os.listdir(raiz_class_hidraw))
+    except OSError:
+        return None
+    for nome in nomes:
+        if not nome.startswith("hidraw"):
+            continue
+        try:
+            caminho = real(os.path.join(raiz_class_hidraw, nome, "device"))
+        except OSError:
+            continue
+        if not sob_o_vhci(caminho):
+            continue
+        usb_device = usb_device_do_caminho(caminho)
+        if not usb_device:
+            continue
+        if ler(os.path.join(usb_device, "serial")).strip().lower() != alvo:
+            continue
+        interface = interface_do_gadget(usb_device)
+        indice = interface.find("/devices/")
+        return nome, interface[indice:] if indice >= 0 else interface
+    return None
+
+
+# --- o GET_REPORT do f_hid (linux/usb/g_hid.h) -------------------------------
+
+#: ``_IOR('g', 0x41, __u8)``: o id do GET_REPORT que o jogo pediu e espera.
+GADGET_HID_READ_GET_REPORT_ID = 0x80016741
+#: ``_IOW('g', 0x42, struct usb_hidg_report)``: a resposta de um GET_REPORT.
+GADGET_HID_WRITE_GET_REPORT = 0x40486742
+#: ``struct usb_hidg_report`` = id, userspace_req, length, data[64], padding[4].
+_USB_HIDG_REPORT = struct.Struct("<BBH64s4x")
+_MAX_REPORT_LENGTH = 64
+
+
+def pacote_do_get_report(report_id: int, dados: bytes) -> bytes:
+    """A ``struct usb_hidg_report`` que guarda ``dados`` para todo GET_REPORT futuro."""
+    if len(dados) > _MAX_REPORT_LENGTH:
+        raise ValueError(f"feature 0x{report_id:02x} com {len(dados)} bytes (> 64)")
+    return _USB_HIDG_REPORT.pack(report_id & 0xFF, 0, len(dados), bytes(dados))
+
+
+def escrever_get_report(
+    fd: int,
+    report_id: int,
+    dados: bytes,
+    *,
+    ioctl: Callable[[int, int, bytes], object] = fcntl.ioctl,
+) -> None:
+    """Guarda no ``f_hid`` a resposta do GET_REPORT de ``report_id``.
+
+    Um ``ENOTTY`` aqui é o kernel sem o ``GADGET_HID_WRITE_GET_REPORT``
+    (:data:`CONTRATO_DO_IOCTL`): quem chama anota e devolve o pad ao uhid.
+    """
+    ioctl(fd, GADGET_HID_WRITE_GET_REPORT, pacote_do_get_report(report_id, dados))
+
+
+def ler_o_id_do_get_report(
+    fd: int, *, ioctl: Callable[[int, int, bytes], object] = fcntl.ioctl
+) -> int:
+    """O id do GET_REPORT pendente (o ``POLLPRI`` do ``/dev/hidgN``)."""
+    resposta = ioctl(fd, GADGET_HID_READ_GET_REPORT_ID, b"\0")
+    return bytes(resposta)[0] if isinstance(resposta, (bytes, bytearray)) else 0
+
+
 def campos_do_uevent(texto: str) -> dict[str, str]:
     """Pares chave=valor de um uevent do sysfs."""
     campos: dict[str, str] = {}
@@ -322,6 +406,8 @@ def contrato_que_falta(
 
 __all__ = [
     "CONTRATO_DO_IOCTL",
+    "GADGET_HID_READ_GET_REPORT_ID",
+    "GADGET_HID_WRITE_GET_REPORT",
     "MAX_PADS_USB",
     "MODULOS_DO_GADGET",
     "PRODUTO_DO_PAD",
@@ -335,10 +421,14 @@ __all__ = [
     "contrato_que_faltou_ao_montar",
     "e_hidraw_de_pad_nosso",
     "e_pad_nosso",
+    "escrever_get_report",
     "esquecer_gadget",
+    "hidraw_do_gadget",
     "interface_do_aparelho",
     "interface_do_gadget",
     "interfaces_vivas",
+    "ler_o_id_do_get_report",
+    "pacote_do_get_report",
     "registrar_gadget",
     "serial_do_pad",
     "sob_o_vhci",
