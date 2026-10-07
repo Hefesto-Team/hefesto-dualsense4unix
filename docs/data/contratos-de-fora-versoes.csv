@@ -1,0 +1,9 @@
+dono,versao_de_hoje,nova_disponivel,o_que_o_hefesto_pergunta,roteiro_da_prova
+proton,GE-Proton11-7 (pinado),"GE-Proton11-8 (anunciada por ela, não instalada)",existe compatibilitytool.vdf e o executável proton na pasta; o jogo abre com o pinado,instalar o 11-8 ao lado do 11-7 pela rotina do Hefesto; abrir um jogo de 4 players e conferir o doctor (proton-de-terceiros) e os 4 controles
+bluez,5.86-0ubuntu0.1~hefesto24.04.4 (backport próprio),nenhuma no apt local (candidato igual ao instalado),org.bluez responde no D-Bus do sistema; Device1 expõe Paired e Trusted,parear de novo um controle depois de RemoveDevice e conferir que o bond nasce inteiro; doctor sem WARN em bluez-dbus
+pipewire,1.6.8 (pactl 16.1),nenhuma medida (sem acesso à rede nesta tarefa),pactl --format=json entrega JSON; o diretório de módulos vem do pkg-config,som e microfone dos 4 controles antes e depois; doctor sem WARN em pipewire-pactl-json
+wireplumber,0.5.12,nenhuma medida,wpctl status fala com o WirePlumber,trocar a fonte padrão pelo Hefesto e conferir no wpctl
+kernel,7.1.5-76070105,nenhuma medida,"/dev/uinput, /dev/uhid, hidraw e o driver playstation existem",doctor sem WARN em kernel-nos e kernel-driver-sony depois de reiniciar com o kernel novo
+steam,canal publicbeta,nenhuma medida,o localconfig.vdf abre com a raiz UserLocalConfigStore e guarda o wrapper,fechar e reabrir a Steam e conferir se a Opção de Lançamento do jogo ainda carrega o wrapper
+systemd,255,nenhuma medida,systemctl --user show-environment responde,doctor sem WARN em systemd-usuario
+cosmic,cosmic-comp 1.0.0,nenhuma medida,a sessão é COSMIC e ~/.config/cosmic existe,doctor sem WARN em cosmic-config depois de entrar na sessão

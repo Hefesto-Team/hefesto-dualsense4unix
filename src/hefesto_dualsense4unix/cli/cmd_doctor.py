@@ -118,6 +118,15 @@ def _print_bloco_perfis() -> bool:
     return houve_erro
 
 
+def _print_bloco_contratos() -> None:
+    """Os contratos de fora (BlueZ, PipeWire, systemd, kernel, Steam, Proton, COSMIC)."""
+    from hefesto_dualsense4unix.integrations import contratos_de_fora
+
+    console.print("\n== contratos de fora (o que o Hefesto assume dos outros) ==")
+    for tag, mensagem in contratos_de_fora.linhas_do_doctor():
+        console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+
+
 def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
@@ -144,6 +153,8 @@ def doctor_cmd(
 
     # PERFIL-NASCE-CERTO-01/E4: o detector também roda no doctor COMPLETO — a
     _print_bloco_perfis()
+
+    _print_bloco_contratos()
 
     console.print("\n== daemon (via IPC) ==")
     for tag, message in asyncio.run(_daemon_checks()):
