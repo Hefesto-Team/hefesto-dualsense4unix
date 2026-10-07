@@ -129,6 +129,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     CANAIS_DA_HAPTICA,
     o_servidor_e_o_pipewire,
@@ -224,6 +225,8 @@ def ancoras(sysfs: Path | None = None) -> list[Ancora]:
             continue
         if any(dev.glob("*/sound/card*")):
             continue
+        if _e_gadget_nosso(dev):
+            continue  # o gadget de um pad é a âncora do PRÓPRIO aparelho, nunca emprestada
         interface = next(
             (i for i in sorted(dev.glob(f"{dev.name}:*")) if (i / "uevent").is_file()), None
         )
@@ -242,6 +245,29 @@ def ancoras(sysfs: Path | None = None) -> list[Ancora]:
     return achadas
 
 
+def _e_gadget_nosso(dev: Path) -> bool:
+    try:
+        caminho = str(dev.resolve())
+    except OSError:
+        return False
+    return pad_usb.e_pad_nosso(caminho)
+
+
+def ancora_do_gadget(uniq: str) -> Ancora | None:
+    """A âncora PRÓPRIA do aparelho: a interface do gadget do pad dele.
+
+    O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). O pad em
+    USB e o nó de som sobem ao MESMO ``usb_device``: o ``winebus`` e o
+    ``winepulse`` tiram dele o mesmo ``ContainerId``, e o jogo casa o som com
+    o controle. None = o aparelho não tem gadget (o pad é uhid), e a âncora
+    emprestada segue valendo para ele.
+    """
+    interface = pad_usb.interface_do_aparelho(str(uniq or ""))
+    if not interface:
+        return None
+    return Ancora(syspath=os.path.dirname(interface), declarado=interface)
+
+
 def distribuir_ancoras(
     aparelhos: Iterable[str],
     disponiveis: Iterable[Ancora],
@@ -249,8 +275,13 @@ def distribuir_ancoras(
     *,
     ja_postas: Mapping[str, Ancora] | None = None,
     ocupados: Iterable[str] = (),
+    proprias: Mapping[str, Ancora] | None = None,
 ) -> dict[str, Ancora]:
-    """Uma âncora por APARELHO, e NUNCA a mesma para dois. Função pura."""
+    """Uma âncora por APARELHO, e NUNCA a mesma para dois. Função pura.
+
+    ``proprias`` (marca → a âncora do gadget dele) vence tudo: a âncora
+    emprestada fica só para o aparelho sem gadget.
+    """
     lista = list(disponiveis)
     por_aparelho = {a.syspath: a for a in lista}
     por_declarado = {a.declarado: a for a in lista}
@@ -265,8 +296,12 @@ def distribuir_ancoras(
         tomadas.add(ancora.syspath)
         return True
 
+    for marca in ordem:
+        tomar(marca, (proprias or {}).get(marca))
     lembradas = ja_postas or {}
     for marca in ordem:
+        if marca in postas:
+            continue
         lembrada = lembradas.get(marca)
         if lembrada is not None and lembrada.syspath in por_aparelho:
             tomar(marca, lembrada)
@@ -1121,6 +1156,7 @@ __all__ = [
     "Ancora",
     "EndpointDeHaptica",
     "TocadorDoRumble",
+    "ancora_do_gadget",
     "ancoras",
     "argv_do_tocador",
     "bloco_da_haptica",

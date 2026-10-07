@@ -847,3 +847,120 @@ class TestOGetReportEOHidrawDoGadget:
             "hefesto-pad-02fe80000009", raiz_class_hidraw=str(classe), ler=ler
         ) is None
         assert pad_usb.hidraw_do_gadget("teclado", raiz_class_hidraw=str(classe), ler=ler) is None
+
+
+# --- 4. O som se ancora no gadget do próprio aparelho -------------------------
+
+
+def _usb_da_mesa(
+    sysfs: Path, pai: str, nome: str, *, vid: str, pid: str, dev: str, serial: str = ""
+) -> Path:
+    raiz = sysfs / pai / nome
+    (raiz / f"{nome}:1.0").mkdir(parents=True)
+    (raiz / f"{nome}:1.0" / "uevent").write_text("DEVTYPE=usb_interface\n")
+    for attr, valor in {
+        "busnum": nome.split("-")[0], "devnum": "2", "idVendor": vid,
+        "idProduct": pid, "dev": dev, "serial": serial, "product": "x",
+    }.items():
+        (raiz / attr).write_text(valor + "\n")
+    ligacoes = sysfs / "bus" / "usb" / "devices"
+    ligacoes.mkdir(parents=True, exist_ok=True)
+    (ligacoes / nome).symlink_to(raiz)
+    return raiz
+
+
+@pytest.fixture
+def mesa_do_som(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    sysfs = tmp_path / "sys"
+    _usb_da_mesa(sysfs, "devices/platform/vhci_hcd.0/usb3", "3-1", vid="054c", pid="0df2",
+                dev="189:257", serial=pad_usb.serial_do_pad("02:fe:80:00:00:01"))
+    _usb_da_mesa(sysfs, "devices/pci0000:00/0000:00:14.0/usb1", "1-2", vid="046d",
+                pid="c52b", dev="189:2")
+    _usb_da_mesa(sysfs, "devices/pci0000:00/0000:00:14.0/usb1", "1-3", vid="1a2c",
+                pid="2124", dev="189:3")
+    monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
+    return sysfs
+
+
+class TestOSomSeAncoraNoGadget:
+    def test_o_gadget_nunca_e_ancora_emprestada(self, mesa_do_som: Path) -> None:
+        from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+
+        achadas = [a.syspath for a in eh.ancoras(mesa_do_som)]
+        assert achadas == [
+            "/devices/pci0000:00/0000:00:14.0/usb1/1-2",
+            "/devices/pci0000:00/0000:00:14.0/usb1/1-3",
+        ]
+
+    def test_o_aparelho_com_gadget_ancora_nele_e_o_sem_gadget_empresta(
+        self, mesa_do_som: Path
+    ) -> None:
+        from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import marca_do_aparelho
+
+        com, sem = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
+        interface = "/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0"
+        pad_usb.registrar_gadget(com, interface)
+        marca_com, marca_sem = marca_do_aparelho(com), marca_do_aparelho(sem)
+        emprestadas = eh.ancoras(mesa_do_som)
+        postas = eh.distribuir_ancoras(
+            [marca_com, marca_sem], emprestadas,
+            ja_postas={marca_com: emprestadas[0]},
+            proprias={marca_com: eh.ancora_do_gadget(com)},  # type: ignore[dict-item]
+        )
+        assert postas[marca_com].declarado == interface
+        assert postas[marca_sem].syspath == emprestadas[0].syspath
+        assert eh.ancora_do_gadget(sem) is None
+
+    def test_o_no_de_som_e_o_pad_dao_o_mesmo_container(
+        self, mesa_do_som: Path, tmp_path: Path
+    ) -> None:
+        import re
+
+        from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+        from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+
+        uniq = "aa:bb:cc:00:00:01"
+        pad_usb.registrar_gadget(uniq, "/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0")
+        ancora = eh.ancora_do_gadget(uniq)
+        assert ancora is not None
+        props = eh.propriedades_do_endpoint(uniq, ancora, rotulo="Háptica")
+        caminho = re.search(r"sysfs\.path=(\S+)", props)
+        assert caminho is not None
+        sink = (
+            "Sink #7\n\tName: alsa_output.usb-Sony_x.HiFi__Speaker__sink\n\tProperties:\n"
+            '\t\tdevice.vendor.id = "054c"\n\t\tdevice.product.id = "0ce6"\n'
+            f'\t\tsysfs.path = "{caminho.group(1)}"\n'
+        )
+        udev = tmp_path / "udev"
+        udev.mkdir()
+        (udev / "c189:257").write_text("I:1234567\n")
+        controles = ks.controles_no_radio(mesa_do_som, udev, runner=lambda _a: sink)
+        assert len(controles) == 1
+        c = controles[0]
+        # o que o winebus lê do usb_device do pad: 054c:0df2, o bus 3, o devnum 2
+        assert (c.container_vid, c.container_pid, c.bus, c.dev, c.usec) == (
+            0x054C, 0x0DF2, 3, 2, 1234567,
+        )
+
+
+def test_o_alto_falante_ancora_o_no_do_aparelho_no_gadget_dele(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A reconciliação do daemon, com a mesa de mentira da háptica: P3 tem gadget."""
+    from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
+
+    mesa = h.mesa.__wrapped__(monkeypatch, tmp_path)  # type: ignore[attr-defined]
+    monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
+    _usb_da_mesa(mesa.sysfs, "devices/platform/vhci_hcd.0/usb5", "5-1", vid="054c",
+                 pid="0df2", dev="189:513", serial=pad_usb.serial_do_pad("02:fe:80:00:00:03"))
+    interface = "/devices/platform/vhci_hcd.0/usb5/5-1/5-1:1.0"
+    pad_usb.registrar_gadget(h._P3, interface)
+    for uniq, lugar in ((h._P3, 3), (h._P4, 4)):
+        mesa.assentos[uniq] = lugar
+    mesa.volta(h._Controle(h._P3, "bt", "/dev/hidraw3"), h._Controle(h._P4, "bt", "/dev/hidraw4"))
+    assert h._ancora_do_aparelho(mesa.servidor, h._P3) == interface
+    emprestada = h._ancora_do_aparelho(mesa.servidor, h._P4)
+    assert "/vhci_hcd." not in emprestada and emprestada.startswith("/devices/pci0000:00/")
+    do_gadget = [c for c in mesa.registro() if c.container_pid == 0x0DF2]
+    assert [(c.bus, c.dev) for c in do_gadget] == [(5, 2)]

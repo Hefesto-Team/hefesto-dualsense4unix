@@ -1493,6 +1493,7 @@ class AltoFalanteSubsystem:
         )
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
             EndpointDeHaptica,
+            ancora_do_gadget,
             ancoras,
             distribuir_ancoras,
             endpoints_de_pe,
@@ -1534,6 +1535,11 @@ class AltoFalanteSubsystem:
             de_pe_agora, ancoras(), de_pe,
             ja_postas={m: e.ancora for m, e in self._endpoints.items()},
             ocupados=set(aparelho_de.values()),
+            proprias={
+                marca: propria
+                for marca, uniq in de_pe_agora.items()
+                if (propria := ancora_do_gadget(uniq)) is not None
+            },
         )
         for marca, uniq in de_pe_agora.items():
             posta = postas.get(marca)
