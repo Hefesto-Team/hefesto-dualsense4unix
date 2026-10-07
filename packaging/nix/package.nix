@@ -112,7 +112,7 @@ python3Packages.buildPythonApplication rec {
         # conferido contra o download em 06/10/2026.
         hash = "sha256-YgX8AJE4f8p7geKT3xlCD0Mlh1GcyHpBz4rEIqdwKgs=";
       };
-      build-system = with python3Packages; [ setuptools ];
+      build-system = with python3Packages; [ poetry-core ];
       dependencies = with python3Packages; [ hidapi ];
       doCheck = false;
     })
