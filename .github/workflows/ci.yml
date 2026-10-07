@@ -419,6 +419,10 @@ jobs:
       # FONTE, e uma dívida FECHADA reprova para o dado ser reescrito.
       - name: O terceiro número (paridade GTK × HTML)
         run: python3 scripts/check_paridade_gtk_html.py
+      # OS CONTRATOS DE FORA (07/10/2026): ponto de contato novo com o mundo do outro se declara
+      # no censo, com a porta oficial e a pergunta por capacidade; a catraca só desce.
+      - name: Os contratos de fora (censo e catraca)
+        run: python3 scripts/check_os_contratos_de_fora.py
       # O DONO DE CADA COMPORTAMENTO (05/09/2026): o mapa dos 50 comportamentos
       # que decidem a migração, com o endereço do dono dos dois lados. Reprova
       # endereço morto, cura descosturada, SO-GTK já migrado, e dívida que cresce.

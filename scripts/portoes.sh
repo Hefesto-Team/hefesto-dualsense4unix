@@ -25,7 +25,7 @@
 #
 # Uso:
 #   scripts/portoes.sh              a leva inteira (rápidos + completos)
-#   scripts/portoes.sh --rapido     só a camada rápida (50 portões: 69 a 82 s em série, 19 a 29 s em paralelo)
+#   scripts/portoes.sh --rapido     só a camada rápida (51 portões: 69 a 82 s em série, 19 a 29 s em paralelo)
 #   scripts/portoes.sh --suite      acrescenta a suíte de testes
 #   scripts/portoes.sh --listar     a tabela crua, que é o que o portão do portão lê
 #   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
@@ -71,8 +71,8 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
 # O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
 # isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
-# enquanto a tabela tinha o dobro. Medida em 06/10/2026: **50 `rapido` e 19
-# `completo`** (69 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# enquanto a tabela tinha o dobro. Medida em 07/10/2026: **51 `rapido` e 19
+# `completo`** (70 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
 # aqui conta de novo, e o comando é o dono da resposta:
 #   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
@@ -138,6 +138,9 @@ rapido|paridade-transporte|py|scripts/check_paridade_transporte.py|@dia
 # reprova para o dado ser atualizado. Sem isso o número vira propaganda no dia
 # seguinte à primeira cura. Camada rápida porque custa 0,4 s.
 rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
+# 07/10/2026 — OS CONTRATOS DE FORA: cada ponto de contato com o BlueZ, o PipeWire, o systemd, a Steam, o
+# Proton, o kernel e o COSMIC tem linha em `docs/data/contratos-de-fora.csv`, e a catraca das linhas frágeis só desce.
+rapido|contratos-de-fora|py|scripts/check_os_contratos_de_fora.py
 # O DONO DE CADA COMPORTAMENTO — 05/09/2026, e a queixa é do usuário: *"estamos
 # recriando um produto que estava praticamente pronto pro gtk"*. Cinco laudos
 # mediram 410 comportamentos das dez abas; os 50 que decidem estão em

@@ -1,0 +1,22 @@
+{
+  "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
+  "medidas": {
+    "linhas-frageis": {
+      "data": "2026-10-07",
+      "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
+      "piso": 74,
+      "por_item": {
+        "bluez": 12,
+        "kernel": 3,
+        "lancadores": 15,
+        "pipewire": 18,
+        "proton": 1,
+        "sistema": 2,
+        "steam": 23
+      },
+      "razao": "piso descido pelo censo do dia",
+      "unidade": "linhas",
+      "universo": 290
+    }
+  }
+}
