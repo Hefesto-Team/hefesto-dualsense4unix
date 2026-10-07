@@ -1042,7 +1042,7 @@
      sozinhas, estavam certas.
 
      1. As alturas de faixa foram calculadas para serem EXATAMENTE a altura do
-        conteúdo: `--r-forca` 79 = 36 (`--h-escolha`) + 7 (vão do `.seg`) + 36;
+        conteúdo: `--r-forca` 69 = 36 (`--h-escolha`) + 7 (vão do `.forca`) + 26;
         `--r-motor` 36 = o `.lado`, que é `--h-escolha`; `--r-acoes` 74 = 34
         (`--h-acao`) + 6 + 34. Sem uma sobra, o filho preenche a célula e o topo
         dele cai em cima da borda.
@@ -1076,7 +1076,7 @@
        deixa estranho essa área da primeira coluna."* */
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
-    --r-des:124px;--r-nome:17px;--r-forca:112px;--r-barra:26px;--r-motor:36px;
+    --r-des:124px;--r-nome:17px;--r-forca:69px;--r-barra:26px;--r-motor:36px;
     --r-acoes:34px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
@@ -1102,7 +1102,7 @@
   }
   /* O DESENHO NOVO DO USUÁRIO — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
      DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
-     para dentro da Força (`--r-forca` 112 = 79 dos degraus + 7 de vão + 26 do
+     para dentro da Força (`--r-forca` 69 = 36 dos degraus, numa linha só, + 7 de vão + 26 do
      trilho, `--r-barra`), e a faixa que era dele vira a «Sensor Háptico», a
      linha da háptica por áudio (36, com o interruptor). A linha de baixo dos
      motores, que a háptica ocupava desde 29/09 com o desenho pagando 46 px,
@@ -1364,29 +1364,16 @@
   .rot-ctrl{font-size:11px;color:var(--texto-mudo);text-align:center;
             display:flex;align-items:center;justify-content:center}
 
-  /* OS TRÊS DEGRAUS DE FORÇA — 2 em cima, o terceiro OCUPANDO A LARGURA.
-     Eram quatro em 2x2 até o `Auto` sair em 05/09/2026 (ver :data:`FORCA`), e
-     com três o 2x2 puro deixava o "Máximo" sozinho e curto na segunda linha —
-     o desenho anunciando um quarto botão que não existe.
-
-     OS TRÊS NUMA LINHA SÓ NÃO CABEM, e isto foi MEDIDO em vez de estimado: a
-     coluna tem 227,5px, o `.ctrl` recolhe 24 e sobram 203 para três botões mais
-     dois vãos. "Balanceado" mede 68px a 12px de fonte, e o botão fica com 63.
-     Varridas 27 combinações de vão (7/5/4), fonte (12/11,5/11) e recuo (8/4/2),
-     a MELHOR ainda estoura em 2px — e mesmo com o recuo do pai a zero o texto
-     ocupa 68 de 72, sem respiro. Encolher a fonte até caber daria um degrau com
-     letra menor que o resto da tela para esconder um problema de largura.
-
-     O `span 2` do terceiro é o que faz a falta do quarto parecer o que é: uma
-     escolha. E ele não custa altura nenhuma — `--r-forca` continua nos 79 que
-     as duas faixas sempre custaram.
-
-     QUANDO A COLUNA CRESCER, os três cabem lado a lado e este bloco volta a ser
-     `repeat(3, 1fr)` com `--r-forca:36px` — são 43px devolvidos à aba que mais
-     rola. A medição acima é o que diz a partir de que largura isso vale. */
-  .vib .seg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-  .vib .seg button:last-child{grid-column:1 / -1}
-  .vib .seg button{min-width:0;padding:0 8px;font-size:12px}
+  /* OS TRÊS DEGRAUS DE FORÇA — LADO A LADO, COM A MESMA LARGURA. Pedido dela de
+     06/10/2026 (*«Esses 3 botões tem que ficarem lado a lado na horizontal com
+     mesma largura»*), que revoga o 2 em cima e o terceiro ocupando a largura,
+     feito quando a coluna não comportava os três (era estimativa de 05/09: o
+     «Balanceado» a 12px e recuo de 8px estourava 2px). Agora `repeat(3,1fr)`,
+     recuo de 4px e fonte de 11,5px, e a régua mede que nenhum botão estoura
+     (`scrollWidth`). A Força perde a segunda faixa de degraus:
+     `--r-forca` 112 → 69 = 36 + 7 + 26. */
+  .vib .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .vib .seg button{min-width:0;padding:0 4px;font-size:11.5px}
 
   /* O DEGRAU HERDADO TEM CARA PRÓPRIA — VIBRA-ACESA-01, 17/09/2026.
 
@@ -1486,11 +1473,14 @@
   .lado.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
   .lado:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
 
-  /* os dois testes lado a lado («Vibração» e «Háptica», a resposta [24] dela)
-     e o «Parar» na mesma linha, no tamanho do texto dele: os dois testes
-     dividem o resto (75 px cada, para os 62 que «Vibração» pede) */
-  .acoes-col{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
-  .acoes-col .btn{width:100%;justify-content:center;padding:0 6px;font-size:11.5px}
+  /* os três do «Testar agora» lado a lado e com a MESMA largura, e o «Parar» em
+     fundo vermelho com letra branca (pedido dela de 06/10/2026: *«Mesma coisa
+     pros três botões da Testar Agora. E aqui o botão Parar tem que ter a cor
+     vermelha e a fonte branca.»*) */
+  .acoes-col{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .acoes-col .btn{width:100%;min-width:0;justify-content:center;padding:0 4px;font-size:11.5px}
+  .acoes-col .btn.vermelho,.acoes-col .btn.vermelho:hover{
+    background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
   /* o Testar aceso é o teste ligado naquela coluna: a mesma cor do lado que treme */
   .acoes-col .btn.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
 
