@@ -1126,8 +1126,8 @@ def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 "Não achei como abrir a Steam nesta máquina. Abra-a pelo seu "
                 "menu — nada foi alterado.")
         raise RuntimeError(
-            "A Steam ainda não abriu. Se não aparecer, abra-a pelo seu menu "
-            "— nada foi alterado.")
+            "A Steam foi chamada e não apareceu a tempo. Se ela não abrir, "
+            "abra-a pelo seu menu — nada foi alterado.")
     return None
 
 

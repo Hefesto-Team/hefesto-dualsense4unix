@@ -247,7 +247,7 @@ def test_a_steam_pedida_que_nao_aparece_nao_vira_maquina_sem_steam(
     frase = _clicar_abrir_a_steam()
 
     assert "não achei" not in frase.lower(), frase
-    assert "ainda não abriu" in frase and "nada foi alterado" in frase, frase
+    assert "não apareceu a tempo" in frase and "nada foi alterado" in frase, frase
 
 
 def test_a_maquina_sem_porta_nenhuma_diz_que_nao_achou(monkeypatch: pytest.MonkeyPatch) -> None:
