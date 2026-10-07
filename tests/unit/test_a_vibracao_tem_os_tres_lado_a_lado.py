@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """A VIBRAÇÃO TEM OS TRÊS LADO A LADO — A-VIBRACAO-TEM-OS-TRES-LADO-A-LADO-01.
 
-Pedido dela de 06/10/2026: os três degraus da Força na mesma linha e com a mesma
+Pedido de 06/10/2026: os três degraus da Força na mesma linha e com a mesma
 largura, o mesmo para os três do «Testar agora», e o «Parar» com fundo vermelho
 e letra branca.
 
 A régua mede no WebKit, na janela do tamanho do produto (`TAMANHO_OCULTA`,
 importado), a página da BANCADA (`mockup/05-vibracao.html`) pintada pelo pacote
-da aba: o `--publicar` copia a bancada byte a byte e é de quem coordena, então a
+da aba: o `--publicar` copia a bancada byte a byte e é um passo à parte, então a
 medida vale antes e depois dele.
 
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):

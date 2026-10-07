@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """O CARTÃO ABERTO DIZ O NÚMERO DO JOGADOR — O-CARTAO-ABERTO-DIZ-O-NUMERO-DO-JOGADOR-01.
 
-Pedido dela de 07/10/2026 (a [45]): o título do cartão aberto da aba Controles diz quem joga, o
+Pedido de 07/10/2026 (a [45]): o título do cartão aberto da aba Controles diz quem joga, o
 nome que ela deu ao controle ou o «Pn» sem nome; o número é o VIVO (o mesmo das lâmpadas); e a
 Calibrar fala a mesma língua, sem «Player N» nem «Sony».
 
 A régua mede a BANCADA (`mockup/`, `onde.pagina(..., publicado=False)`): o `--publicar` a copia
-byte a byte e é de quem coordena, então a medida vale antes e depois dele.
+byte a byte e é um passo à parte, então a medida vale antes e depois dele.
 
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 

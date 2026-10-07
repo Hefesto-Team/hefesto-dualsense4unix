@@ -91,7 +91,7 @@ def test_o_preto_continua_sem_casa() -> None:
 
 
 def test_a_cor_que_nao_e_plastico_nem_tom_continua_sem_casa() -> None:
-    """O global dela (`#2850B4`) é escolha dela: marcar o vizinho inventaria um dono."""
+    """O global (`#2850B4`) é escolha do usuário: marcar o vizinho inventaria um dono."""
     assert _a04().a_casa_da_cor((0x28, 0x50, 0xB4)) is None
 
 

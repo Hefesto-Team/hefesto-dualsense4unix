@@ -168,7 +168,7 @@ def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só."""
     if forma == "modelo":
         # a linha «Modelo» das abas 04 e 05 leva o nome do jogador (o `Alias` que a aba Conexões dá
-        # ao controle) antes do modelo: pedido dela de 06/10/2026. O nome é texto DELA: escapado.
+        # ao controle) antes do modelo: pedido de 06/10/2026. O nome é texto DO USUÁRIO: escapado.
         return SEPARADOR.join(html.escape(p) for p in partes_do_modelo(c))
     if forma == "curta":
         return SEPARADOR.join(p for p in [f'P{c["jogador"]}', c["nome"], c["via"]] if p)

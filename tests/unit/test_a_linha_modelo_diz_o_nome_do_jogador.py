@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A linha «Modelo» diz o nome do jogador — A-LINHA-MODELO-DIZ-O-NOME-DO-JOGADOR-01.
 
-Pedido dela de 06/10/2026: *«em qualquer aba onde tivermos modelo tem que aparecer o nome do
+Pedido de 06/10/2026: *«em qualquer aba onde tivermos modelo tem que aparecer o nome do
 jogador também.»* A linha existe na Iluminação (04) e na Vibração (05): «P1 • Vitória • Cosmic Red
 • USB», e sem nome «P2 • Starlight Blue • BT». O nome tem UM dono (o `Alias` do BlueZ, lido por
 `nome_do_jogador` com o filtro dele), e a 08 e as duas abas o dizem igual.
