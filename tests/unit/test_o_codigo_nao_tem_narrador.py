@@ -164,3 +164,16 @@ class TestMorde:
         assert "dela" not in modulo.reescrever_prosa("# a máquina dela não tem rádio")
         gramatical = "# a função devolve o valor dela mesma"
         assert modulo.reescrever_prosa(gramatical) == gramatical
+
+
+def test_o_comentario_de_marcacao_numa_f_string_conta_em_todo_python() -> None:
+    """Do 3.12 em diante, cada pedaço de uma f-string tem a posição exata, e um comentário com
+    ``{CAMPO}`` no meio cruzava dois pedaços e escapava; no 3.10 e no 3.11, não. O CI roda os três:
+    a régua tem de dar a mesma resposta em todos (o da aba 08 só reprovava no 3.10 e no 3.11)."""
+    spec = importlib.util.spec_from_file_location("neutralizar_o_texto", SCRIPT)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    fonte = 'X = 1\nMIOLO = f"""\n<div>\n<!-- o texto\n     com {X} no meio -->\n</div>\n"""\n'
+    comentario = fonte.index("<!--"), fonte.index("-->") + 3
+    assert any(a <= comentario[0] and comentario[1] <= b for a, b in modulo._spans_py(fonte))

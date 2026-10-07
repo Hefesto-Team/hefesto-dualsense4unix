@@ -190,7 +190,10 @@ def _spans_py(texto: str) -> list[tuple[int, int]]:
     strings: list[tuple[int, int]] = []
     if arvore is not None:
         for no in ast.walk(arvore):
-            if isinstance(no, ast.Constant) and isinstance(no.value, str) and no.end_lineno:
+            # a f-string conta inteira: do 3.12 em diante cada pedaço tem a posição exata, e um comentário
+            # com `{CAMPO}` no meio cruzava dois pedaços e escapava (no 3.10 e no 3.11, não)
+            string = isinstance(no, ast.JoinedStr) or (isinstance(no, ast.Constant) and isinstance(no.value, str))
+            if string and no.end_lineno:
                 strings.append((linhas[no.lineno - 1] + no.col_offset, linhas[no.end_lineno - 1] + no.end_col_offset))
     strings.sort()
     for rx in (_MARCACAO, _JS):
