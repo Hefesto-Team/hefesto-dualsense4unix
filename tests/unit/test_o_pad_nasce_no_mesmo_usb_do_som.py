@@ -382,6 +382,7 @@ def kernel(tmp_path: Path) -> KernelDeMentira:
 
 class TestOBrokerMontaOGadgetSoHid:
     def test_o_gadget_montado_tem_so_a_funcao_hid_sem_out(self, kernel: KernelDeMentira) -> None:
+        """D-0710-O-PAD-E-UM-GADGET-SO-HID: só a função HID, sem OUT, no lugar do uhid."""
         estado = kernel.estado()
         resposta, fd = estado.handle_line(7, 1000, _pedido())
         assert resposta["ok"] is True, resposta
@@ -1092,6 +1093,7 @@ def mesa_do_som(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 class TestOSomSeAncoraNoGadget:
     def test_o_gadget_nunca_e_ancora_emprestada(self, mesa_do_som: Path) -> None:
+        """D-0710-O-SOM-DO-PAD-ANCORA-NO-GADGET: o gadget é âncora só do próprio aparelho."""
         from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
         achadas = [a.syspath for a in eh.ancoras(mesa_do_som)]
