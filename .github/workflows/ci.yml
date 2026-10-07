@@ -895,15 +895,25 @@ jobs:
           xvfb-run -a --server-args="-screen 0 1280x1024x24" \
             bash scripts/rodar-a-suite.sh
       # O vermelho traz a pilha (07/10/2026): a seção FAILURES de cada parte
-      # que reprovou vai ao log, e os logs inteiros sobem como artefato.
+      # que reprovou vai ao log, e os logs inteiros sobem como artefato. A parte
+      # que MORREU (sem sumário, ou por sinal depois dele) não tem FAILURES: a
+      # pilha dela é o fim do log, e é o fim que sai.
       - name: A pilha de quem reprovou na suíte
         if: failure()
         run: |
           for log in /tmp/suite-ci/parte-*.log; do
-            grep -qE '^(FAILED|ERROR) ' "$log" || continue
-            echo "::group::$log"
-            sed -n '/^=* \(FAILURES\|ERRORS\) =*$/,/^=* short test summary info =*$/p' "$log" | head -n 400
-            echo "::endgroup::"
+            [ -f "$log" ] || continue
+            if grep -qE '^(FAILED|ERROR) ' "$log"; then
+              echo "::group::$log"
+              sed -n '/^=* \(FAILURES\|ERRORS\) =*$/,/^=* short test summary info =*$/p' "$log" | head -n 400
+              echo "::endgroup::"
+            fi
+            if ! grep -qE '(passed|failed|errors?|skipped|deselected|no tests ran).* in [0-9.]+s' "$log" \
+                || grep -qE '^(pilha nativa: sinal|Fatal Python error)' "$log"; then
+              echo "::group::$log (o processo morreu)"
+              tail -n 200 "$log"
+              echo "::endgroup::"
+            fi
           done
       - name: Os logs da suíte
         if: failure()

@@ -13,6 +13,7 @@ depois, um passo `if: failure()` que sobe os logs como artefato.
 from __future__ import annotations
 
 import subprocess
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +39,17 @@ def _passos_que_rodam_a_suite(job: dict[str, Any]) -> list[int]:
 
 
 def _com_falha(passo: dict[str, Any]) -> bool:
-    return str(passo.get("if", "")).replace(" ", "") == "failure()"
+    condicao = str(passo.get("if", "")).replace(" ", "")
+    return condicao.removeprefix("${{").removesuffix("}}") == "failure()"
+
+
+def _sobe_o_log_da_parte(caminho: object, saida: str) -> bool:
+    """O `path` do artefato alcança o log que o script grava (`parte-NN.log`)."""
+    log = f"{saida}/parte-01.log"
+    return any(
+        linha.strip().rstrip("/") == saida or fnmatch(log, linha.strip())
+        for linha in str(caminho or "").splitlines()
+    )
 
 
 def faltas_do_job(nome: str, job: dict[str, Any]) -> list[str]:
@@ -67,7 +78,7 @@ def faltas_do_job(nome: str, job: dict[str, Any]) -> list[str]:
         sobe = [
             p for p in depois
             if _com_falha(p) and str(p.get("uses", "")).startswith("actions/upload-artifact")
-            and str((p.get("with") or {}).get("path", "")).startswith(saida)
+            and _sobe_o_log_da_parte((p.get("with") or {}).get("path"), saida)
         ]
         if not sobe:
             faltas.append(
@@ -129,6 +140,16 @@ def test_o_passo_imprime_so_a_parte_vermelha(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     (tmp_path / "parte-02.log").write_text("........\n8 passed in 1.00s\n", encoding="utf-8")
+    # As duas mortes que o script conta como vermelho e que não têm FAILURES:
+    # sem sumário, e por sinal depois do sumário (o WebKit ao sair).
+    (tmp_path / "parte-03.log").write_text(
+        "....\nFatal Python error: Segmentation fault\n  File \"x.py\", line 9 in morre_sem_sumario\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "parte-04-test_w.log").write_text(
+        "...\n3 passed in 2.00s\n\npilha nativa: sinal 11 no processo 42\n#0 morre_ao_sair\n",
+        encoding="utf-8",
+    )
     script = str(passo["run"]).replace(saida, str(tmp_path))
     r = subprocess.run(
         ["bash", "-e", "-c", script], capture_output=True, text=True, check=False, timeout=60
@@ -138,6 +159,8 @@ def test_o_passo_imprime_so_a_parte_vermelha(tmp_path: Path) -> None:
     assert "assert familia == 'xbox'" in r.stdout
     assert "parte-01.log" in r.stdout
     assert "parte-02.log" not in r.stdout
+    assert "morre_sem_sumario" in r.stdout
+    assert "#0 morre_ao_sair" in r.stdout
 
 
 def _job_de_brinquedo(**mudancas: Any) -> dict[str, Any]:
@@ -175,3 +198,15 @@ def test_a_regua_morde_em_cada_falta() -> None:
     sem_condicao = _job_de_brinquedo()
     del sem_condicao["steps"][2]["if"]
     assert any("upload-artifact" in f for f in faltas_do_job("j", sem_condicao))
+
+    impressao_sem_condicao = _job_de_brinquedo()
+    del impressao_sem_condicao["steps"][1]["if"]
+    assert any("FAILURES" in f for f in faltas_do_job("j", impressao_sem_condicao))
+
+    artefato_sem_o_log = _job_de_brinquedo()
+    artefato_sem_o_log["steps"][2]["with"]["path"] = "/tmp/suite-ci/*.txt"
+    assert any("upload-artifact" in f for f in faltas_do_job("j", artefato_sem_o_log))
+
+    com_expressao = _job_de_brinquedo()
+    com_expressao["steps"][2]["if"] = "${{ failure() }}"
+    assert faltas_do_job("j", com_expressao) == []
