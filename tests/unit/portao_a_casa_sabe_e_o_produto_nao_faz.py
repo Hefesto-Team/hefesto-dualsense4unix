@@ -531,6 +531,12 @@ _SEM_MAO_HOJE: dict[str, str] = {}
 
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "interface/pacotes/a11_calibrar_sensores.py::bloco_de_nascenca": (
+        "07/10/2026, A-MIRA — é do gerador do desenho, não do produto: os geradores "
+        "da 06, da 08 e da 10 (`interface/aba06.py`, `aba08.py`, `aba10.py`, o import "
+        "`_mira_de_nascenca`) escrevem com ela a cena da Mira no mockup; o produto pinta "
+        "os quatro números pelo `pacote` da aba, do `mira` que o daemon devolve."
+    ),
     "core/acoes_do_gesto.py::por_grupo": (
         "02/10/2026 — é do gerador do desenho, não do produto: `interface/aba06.py` "
         "(o gerador do mockup da Navegação) monta com ela as opções da tabela dos seis "
