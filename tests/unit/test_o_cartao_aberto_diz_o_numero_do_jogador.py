@@ -167,7 +167,7 @@ def medido() -> dict[str, Any]:
             "'.ctl[data-controle=\"p1\"] .faixa .no-jogo');"
             "var t=n&&n.querySelector('.no-jogo-t');if(!t)return null;"
             "return {d:getComputedStyle(n).display,rotulo:n.getAttribute('aria-label'),"
-            "texto:t.innerText,sw:t.scrollWidth,cw:n.clientWidth}})()")
+            "texto:t.innerText,sw:n.scrollWidth,cw:n.clientWidth}})()")
         escrever(tela, "p1", "quem-joga", NOME_LONGO)
         escrever(tela, "p1", "peca", PLASTICO_LONGO)
         fora["pior"] = tela._cru(_pior_caso())
@@ -207,7 +207,9 @@ def test_o_lugar_vazio_nao_mostra_o_nome(medido: dict[str, Any]) -> None:
 def test_com_a_cena_do_desenho_a_frase_do_giroscopio_cabe_inteira(medido: dict[str, Any]) -> None:
     """A régua 3 da sprint, o primeiro item: o nome no título não corta a frase do giroscópio.
 
-    MORDIDA: tirar o `min-width:0` do `.no-jogo` aberto (`aba02.py`) — a frase passa da caixa.
+    MORDIDA: um `max-width:40px` no `.no-jogo` aberto (`aba02.py`) — a frase passa da caixa.
+    (Tirar o `min-width:0` não morde aqui: sem ele a frase não encolhe, e o preço vai para a
+    faixa, que é o que o `test_o_nome_de_24_letras_nao_quebra_a_faixa` mede.)
     """
     g = medido["giro"]
     assert g is not None, "o p1 aberto perdeu a frase do giroscópio"
@@ -292,6 +294,28 @@ def test_o_lugar_vazio_nao_recebe_quem_joga(
     monkeypatch.setattr(a02, "nomes_de_quem_joga", lambda: {})
     cards = a02.pacote(_ctx((1,)))["cards"]
     assert set(cards) == {UNIQS[0]}
+
+
+def test_o_nome_chega_a_02_pelo_alias_que_a_08_le(
+    com_a_bancada: None, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O nome da 02 vem do mesmo leitor da 04 e da 05 (`nome_do_jogador`), dublado no `Alias`.
+
+    MORDIDA: a 02 ler o nome de outro lugar (um `{}` no `nomes_de_quem_joga`) — o nome some.
+    """
+    import time
+    import types
+
+    from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
+
+    aparelho = types.SimpleNamespace(nome="Vitória", endereco=UNIQS[0].upper(), conectado=True,
+                                     icone="input-gaming", classe=None, modalias="")
+    monkeypatch.setattr(a08, "_FUNDO", {"bluez": (time.monotonic() + 1e6, ((), (aparelho,)))})
+    monkeypatch.setattr(a08, "_FUNDO_EM_VOO", set())
+    assert a02.nomes_de_quem_joga() == nome_do_jogador.nomes_dos_donos() == {MAC_NORM: "Vitória"}
+    cards = a02.pacote(_ctx((1, 2)))["cards"]
+    assert cards[UNIQS[0]]["quem-joga"] == "Vitória"
+    assert cards[UNIQS[1]]["quem-joga"].startswith("P<span")
 
 
 def test_a_06_manda_o_numero_vivo(monkeypatch: pytest.MonkeyPatch) -> None:
