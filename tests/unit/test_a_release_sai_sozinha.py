@@ -153,6 +153,9 @@ def brinquedo(tmp_path: Path) -> Path:
     (raiz / ".github" / "repositorio.yml").write_text(
         REPOSITORIO_DO_BRINQUEDO.format(serie="0.9"), encoding="utf-8"
     )
+    # os alvos copiados dizem a versão do repositório no dia; a base do brinquedo é sempre a 0.9.4.5
+    base = rodar(VERSAO, "gravar", "0.9.4.5", "--data", "2026-08-20", raiz=raiz)
+    assert base.returncode == 0, base.stdout + base.stderr
     git(raiz, "add", "-A")
     commitar(raiz, "chore: base do brinquedo", data="2026-08-20")
     git(raiz, "tag", "v0.9.4.5")

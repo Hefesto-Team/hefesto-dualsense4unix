@@ -90,6 +90,16 @@ EXCECOES: dict[str, str] = {
         "edita arquivos .vdf da Steam; as menções a hidraw descrevem o que a "
         "STEAM faz com o nó, não o que este script faz. Não abre nó."
     ),
+    "banco_de_prova/sonda_plastico.py": (
+        "abre o /dev/uhid para CRIAR um DualSense de mentira (UHID_CREATE2), no "
+        "runner do CI ou numa VM; não abre o nó de controle nenhum, e nunca roda "
+        "na máquina do usuário, onde o uhid é do produto."
+    ),
+    "banco_de_prova/sonda.sh": (
+        "LISTA os nós (`ls -l` e `getfacl`, que não fazem open(2)) para gravar a ACL "
+        "que o runner do CI dá ao aparelho de mentira. Não abre nó, e nunca roda na "
+        "máquina do usuário."
+    ),
 }
 
 USAM_O_CLIENTE = (
