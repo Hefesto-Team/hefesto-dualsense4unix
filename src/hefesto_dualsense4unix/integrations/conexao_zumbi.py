@@ -48,10 +48,12 @@ o ``scripts/doctor.sh`` já pega (``check_bt_connected_sem_hidraw``): lá o Blue
 CONHECE o device, e a cura é outra — o pareamento sem registro SDP (o cache sem
 ``[ServiceRecords]``), que não se resolve derrubando link nenhum.
 
-POR QUE O ``hcitool`` FICA (medido em 07/10/2026, fonte do BlueZ 5.86): o zumbi é
-um ACL SEM ``Device1``, e o D-Bus só enumera o que tem objeto; a leitura de links
-sem objeto não tem porta oficial medida. O recado já nomeia o pacote quando a
-ferramenta falta, em vez de calar.
+POR QUE O ``hcitool`` FICA (lido no fonte do BlueZ 5.86, 07/10/2026): o zumbi é
+um ACL SEM ``Device1``. O ``bluetoothd`` cria o objeto para todo ACL que o kernel
+anuncia (``connected_callback``, ``src/adapter.c:9558``), e o ``Adapter1`` não tem
+método que liste conexões (a tabela ``adapter_methods``, ``src/adapter.c:3945-3959``):
+o link que ficou sem objeto só se lê na camada do kernel, abaixo do D-Bus. O recado
+já nomeia o pacote quando a ferramenta falta, em vez de calar.
 
 O TEMPO É PARTE DA REGRA
 -------------------------

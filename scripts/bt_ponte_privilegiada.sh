@@ -806,7 +806,7 @@ verbo_parear() {
 #: `org.bluez.Device1` NÃO serve aqui: o zumbi não tem objeto no BlueZ para
 #: receber a chamada. É exatamente o que o distingue do "conectado sem hidraw"
 #: que o `doctor.sh` já pega (`check_bt_connected_sem_hidraw`), cuja cura é
-#: outra (o cache SDP) e cujo device o BlueZ conhece.
+#: outra (RemoveDevice e parear de novo) e cujo device o BlueZ conhece.
 #:
 #: A ESCADA, E A ORDEM É POR MEDIÇÃO:
 #:   1. `hcitool dc` — o único caminho MEDIDO (derrubou o zumbi de 18/09). Foi
