@@ -134,6 +134,7 @@ class TestReabrirASteamSemBinario:
             "Popen",
             lambda cmd, **_k: chamadas.append(list(cmd)),  # type: ignore[misc]
         )
+        monkeypatch.setattr(slo, "steam_running", lambda: True)
         assert slo.reopen_steam() is True
         assert chamadas == [["xdg-open", "steam://open/main"]]
 

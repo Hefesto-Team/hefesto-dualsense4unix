@@ -76,6 +76,9 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo inst
 
 WRAPPER_HOME_RELPATH = ".local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 
+#: O motivo de erro de quem foi gravado e, relido do disco, não está como gravamos.
+MOTIVO_NAO_FIRMOU = "nao_firmou"
+
 #: LaunchOption pré-existente `VAR=VAL %command%` vira `$1` e o env(1) a
 #: processa como assignment em vez de tentar executá-la (ENOENT).
 _WRAPPER_INNER = (
@@ -575,6 +578,25 @@ def apply_wrapper_vdf_text(
     return "".join(out), applied, skipped
 
 
+def nao_firmaram(vdf: Path, appids: Sequence[str], *, com_wrapper: bool) -> list[str]:
+    """Relê o ``vdf`` do disco e devolve os appids que NÃO ficaram como gravamos.
+
+    CONVERGE PELO ESTADO LIDO (07/10/2026). Gravar com ``tmp.replace`` e dar o jogo por aplicado
+    é dar por feito o que ninguém leu de volta: a Steam já apagou o wrapper de um jogo sem aviso
+    (memória de 17/09), e o arquivo é dela. ``com_wrapper=True`` pergunta quem NÃO tem o wrapper
+    na linha; ``False``, quem ainda o tem. Arquivo que não abre devolve todos: sem leitura não há
+    prova de que firmou.
+    """
+    try:
+        lidos = read_apps_by_appid(vdf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return list(appids)
+    return [
+        a for a in appids
+        if (WRAPPER_PREFIX in (lidos.get(a) or "")) != com_wrapper
+    ]
+
+
 def apply_wrapper_to_all_games(
     home: Path | None = None,
     vdfs: list[Path] | None = None,
@@ -649,6 +671,14 @@ def apply_wrapper_to_all_games(
                     {"vdf": str(vdf), "appid": "", "reason": str(exc)}
                 )
                 continue
+        if not dry_run:
+            soltos = set(nao_firmaram(vdf, applied, com_wrapper=True))
+            for appid in applied:
+                if appid in soltos:
+                    result["errors"].append(
+                        {"vdf": str(vdf), "appid": appid, "reason": MOTIVO_NAO_FIRMOU}
+                    )
+            applied = [a for a in applied if a not in soltos]
         for appid in applied:
             result["applied"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
     return result
@@ -730,6 +760,14 @@ def tirar_o_atalho_dos_jogos(
                     {"vdf": str(vdf), "appid": "", "reason": str(exc)}
                 )
                 continue
+        if not dry_run:
+            soltos = set(nao_firmaram(vdf, tirados, com_wrapper=False))
+            for appid in tirados:
+                if appid in soltos:
+                    result["errors"].append(
+                        {"vdf": str(vdf), "appid": appid, "reason": MOTIVO_NAO_FIRMOU}
+                    )
+            tirados = [a for a in tirados if a not in soltos]
         for appid in tirados:
             result["removed"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
     return result
@@ -1169,8 +1207,32 @@ def stop_steam(
     return not de_pe()
 
 
-def reopen_steam() -> bool:
-    """Reabre a Steam desanexada. True = o pedido saiu.
+#: Quanto esperar a Steam aparecer de pé depois do pedido de reabrir, e o passo da conferência.
+ESPERA_DA_STEAM_S: float = 15.0
+PASSO_DA_STEAM_S: float = 0.5
+
+#: As portas de reabrir, na ordem: o binário e a URL ``steam://`` (a que o `.desktop` da Flatpak e
+#: da Snap registra). Cada uma só vale o que o estado lido diz: a Steam de pé.
+_PORTAS_DE_REABRIR: tuple[tuple[str, ...], ...] = (
+    ("steam",),
+    ("xdg-open", "steam://open/main"),
+)
+
+
+def reopen_steam(
+    *,
+    de_pe: Callable[[], bool] | None = None,
+    dormir: Callable[[float], None] | None = None,
+    espera_s: float = ESPERA_DA_STEAM_S,
+) -> bool:
+    """Reabre a Steam desanexada e CONFERE que ela voltou. True = a Steam está de pé.
+
+    CONVERGE PELO ESTADO LIDO (07/10/2026, A-STEAM-E-OS-LANCADORES-SEM-ARQUIVO-INTERNO-01).
+    Até aqui o retorno dizia só que o PEDIDO saiu: o ``Popen`` do ``steam`` ou do ``xdg-open``
+    voltava ``True`` e ninguém olhava se a Steam subiu. Agora cada porta é seguida da pergunta
+    que o ``stop_steam`` já faz (a Steam deste lar está de pé?), e a porta seguinte só é
+    tentada quando a anterior não levantou a Steam dentro de ``espera_s``. Com a Steam já de
+    pé o pedido é repassado a ela e a conferência responde na hora.
 
     AMBIENTE-PRESUMIDO-01 (23/08/2026): isto exigia o binário ``steam`` no
     PATH e, quando não achava, voltava MUDO. Quem instalou a Steam pela
@@ -1180,7 +1242,7 @@ def reopen_steam() -> bool:
     `.desktop` da Flatpak/Snap registra.
 
     Sobra um caso sem voz — nem ``steam`` nem ``xdg-open`` no PATH —, e é por
-    isso que o retorno virou `bool`: os três chamadores de `with_steam_closed`
+    isso que o retorno é `bool`: os três chamadores de `with_steam_closed`
     ainda o ignoram, e enquanto ignorarem a Steam pode ficar fechada sem uma
     palavra na tela. Fechar esse último palmo é mudar o contrato de
     `with_steam_closed`, que mora em `app/actions/daemon_actions.py` também.
@@ -1201,16 +1263,23 @@ def reopen_steam() -> bool:
     decisão do PS da bandeja (`steam_launcher.open_or_focus_steam`). Quem
     decide SE reabre é quem fechou (`with_steam_closed`, pelo `steam_running`).
     """
-    for cmd in (["steam"], ["xdg-open", "steam://open/main"]):
+    de_pe_agora = steam_running if de_pe is None else de_pe
+    esperar = time.sleep if dormir is None else dormir
+    for cmd in _PORTAS_DE_REABRIR:
         if shutil.which(cmd[0]) is None:
             continue
         try:
             fora_do_servico.abrir(
-                cmd, env=ambiente_limpo(os.environ), popen=subprocess.Popen
+                list(cmd), env=ambiente_limpo(os.environ), popen=subprocess.Popen
             )
-            return True
         except (OSError, subprocess.SubprocessError):
             continue
+        for _ in range(max(1, int(espera_s / PASSO_DA_STEAM_S))):
+            if de_pe_agora():
+                return True
+            esperar(PASSO_DA_STEAM_S)
+        if de_pe_agora():
+            return True
     return False
 
 
@@ -1584,6 +1653,12 @@ def process_vdf(vdf: Path, mode: str, *, dry_run: bool = False) -> tuple[int, st
     tmp.write_text(new_text, encoding="utf-8")
     shutil.copymode(vdf, tmp)
     tmp.replace(vdf)
+    _, resto = transform_vdf_text(vdf.read_text(encoding="utf-8"), mode)
+    if resto:
+        raise OSError(
+            f"{MOTIVO_NAO_FIRMOU}: a releitura de {vdf} ainda pede {resto} LaunchOptions "
+            "do que acabei de gravar"
+        )
     return changed, diff
 
 
@@ -1688,7 +1763,14 @@ def _report_apply(
 
     rc = 0
     for erro in resultado["errors"]:
-        print(f"[launch-options] ERRO em {erro['vdf']}: {erro['reason']}")
+        if erro["reason"] == MOTIVO_NAO_FIRMOU:
+            print(
+                f"[launch-options] ERRO em {erro['vdf']}: o jogo {erro['appid']} não "
+                "ficou como gravei (a releitura do arquivo não bate); rode de novo "
+                "com a Steam fechada"
+            )
+        else:
+            print(f"[launch-options] ERRO em {erro['vdf']}: {erro['reason']}")
         rc = 1
     return rc
 

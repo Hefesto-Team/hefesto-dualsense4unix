@@ -4,7 +4,7 @@
     "linhas-frageis": {
       "data": "2026-10-07",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 76,
+      "piso": 74,
       "por_item": {
         "bluez": 12,
         "kernel": 3,
@@ -12,10 +12,10 @@
         "pipewire": 18,
         "proton": 1,
         "sistema": 2,
-        "steam": 23,
+        "steam": 21,
         "udev": 2
       },
-      "razao": "a conferência de 07/10/2026 achou o banco do udev (/run/udev/data) lido por arquivo em dois módulos: interno, não oficial; as 2 linhas vão à filha O-SISTEMA-NAO-LE-O-TEXTO-DO-DIARIO-01",
+      "razao": "a Steam reaberta é conferida pelo estado lido (reopen_steam espera a Steam de pé e tenta a porta seguinte): cmd:steam e cmd:xdg-open de steam_launch_options passam de comando a converge",
       "subidas": [
         {
           "data": "2026-10-07",

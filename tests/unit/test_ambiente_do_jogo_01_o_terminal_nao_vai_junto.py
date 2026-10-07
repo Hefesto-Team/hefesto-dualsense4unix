@@ -191,7 +191,9 @@ class TestAPontaPython:
         terminal_sujo: dict[str, str],
         sessao: dict[str, str],
         popen_de_mentira: list[dict[str, Any]],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr(slo, "steam_running", lambda: True)
         assert slo.reopen_steam() is True
         assert popen_de_mentira[0]["cmd"] == ["steam"]
         _confere_limpo(popen_de_mentira[0]["env"], terminal_sujo, sessao)
