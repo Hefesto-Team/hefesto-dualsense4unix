@@ -31,6 +31,12 @@ EXCLUIDOS: dict[str, str] = {
 
 SUFIXOS_DE_TEXTO = frozenset({".md", ".txt", ".xml", ".yml", ".yaml", ""})
 
+# ID de sprint: NOME-NOME-NN. A exceção é por FORMA, não por lista de páginas: nome de algoritmo é UMA palavra com o
+# número de bits (CRC-32, CRC-64) e UTF-16/CRC-16; ID real com «-16» existe (HARM-16), por isso o 16 só vale para esses dois.
+ID_DE_SPRINT = re.compile(
+    r"(?!(?:[A-Z]{2,}-(?:32|64)|(?:UTF|CRC)-16)(?![-A-Z0-9]))\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b"
+)
+
 EXPRESSOES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("dela", re.compile(r"\bdela\b", re.IGNORECASE)),
     ("desta casa", re.compile(r"\bdesta casa\b", re.IGNORECASE)),
@@ -41,7 +47,7 @@ EXPRESSOES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("bancada", re.compile(r"\bbancada\b", re.IGNORECASE)),
     ("quem coordena", re.compile(r"quem coordena", re.IGNORECASE)),
     ("docs/process", re.compile(r"docs/process")),
-    ("ID", re.compile(r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b")),
+    ("ID", ID_DE_SPRINT),
 )
 
 DECLARADOS: dict[tuple[str, str], str] = {}

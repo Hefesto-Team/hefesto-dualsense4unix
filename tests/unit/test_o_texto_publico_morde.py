@@ -44,6 +44,13 @@ def _pagina(raiz: Path, texto: str, relativo: str = "docs/usage/pagina.md") -> P
         ("O que esta casa aceita.", False),
         ("O que desta casa sai.", True),
         ("A decisão está no ADR-009, e o hash é SHA-256.", False),
+        # nome de algoritmo com o número de bits NÃO é ID de sprint (a exceção é por forma) ...
+        ("Os 4 últimos bytes são CRC-32, e o texto vem em UTF-16.", False),
+        ("O CRC-64 e o CRC-16 também passam.", False),
+        # ... e o ID real, mesmo com número que lembra bits, continua reprovando
+        ("Curado na HARM-16.", True),
+        ("Veja a SOM-02 e a CRC-32-01.", True),
+        ("O CRC-32 passa, mas a MIC-USB-01 não.", True),
     ],
 )
 def test_a_frase(tmp_path: Path, frase: str, reprova: bool) -> None:
