@@ -2802,13 +2802,36 @@ class PyDualSenseController(IController):
         if reserva is None:
             return None
         key, quando = reserva
-        if self._relogio() - quando >= PRIMARIO_RESERVA_SEC:
+        if (
+            self._relogio() - quando >= PRIMARIO_RESERVA_SEC
+            and not self._o_lugar_do_deposto_espera_locked(key)
+        ):
             self._primario_deposto = None
             logger.info("primario_reserva_caducou", key=key)
             return None
         if key not in self._handles or key == self._primary_key:
             return None
         return key
+
+    def _o_lugar_do_deposto_espera_locked(self, key: str) -> bool:
+        """A reserva do posto passa dos 30 s enquanto a pergunta da vaga diz que espera.
+
+        `D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA` (dela, 02/10/2026): com o jogo
+        na autoridade, o prazo do lugar guardado para no registro, e o posto do
+        P1 é o mesmo lugar. Caducar a reserva aqui, no relógio próprio, punha o
+        P2 no vpad do jogador 1 com a lâmpada dizendo 2. Quem decide é a mesma
+        pergunta da vaga (`set_espera_do_posto`); sem ela, a regra de sempre.
+        Ele de volta na mesa também conta: é a retomada do posto.
+        """
+        pergunta = self._espera_do_posto
+        uniq = self._key_to_uniq(key)
+        if pergunta is None or uniq is None:
+            return False
+        try:
+            return bool(pergunta(uniq))
+        except Exception as exc:
+            logger.warning("posto_do_p1_pergunta_falhou", err=str(exc))
+            return False
 
     def _recompute_primary(self) -> None:
         """(Re)elege o primário e re-atrela evdev/transport SÓ quando ele muda.

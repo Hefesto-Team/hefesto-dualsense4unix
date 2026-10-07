@@ -222,6 +222,17 @@ def _sai_e_o_prazo_passa(bancada: MesaDaLuz, sai: str) -> dict[str, int]:
     }, "dentro do prazo ninguém troca de número (D-2409)"
     for _ in range(math.ceil(PRAZO / TIQUE) + 1):
         bancada.tique()
+    if bancada.daemon.display_authority == "game":
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        # na autoridade o prazo para, e a fatia arma quando o jogo solta e o
+        # prazo que sobrou passa.
+        assert bancada.reg.numeros_da_mesa() == {
+            u: n + 1 for n, u in enumerate(ordem) if u != sai
+        }, "com o jogo aberto ninguém renumera por quem saiu (D-3009)"
+        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is False
+        bancada.daemon.display_authority = "daemon"
+        for _ in range(math.ceil(PRAZO / TIQUE) + 1):
+            bancada.tique()
     conta = {u: n + 1 for n, u in enumerate(u for u in ordem if u != sai)}
     andou = conta != {u: n + 1 for n, u in enumerate(ordem) if u != sai}
     assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is andou, (
@@ -321,9 +332,23 @@ class TestORenumerarEAVoltaTardia:
     def test_o_p1_que_volta_depois_do_prazo(
         self, mesa_da_luz: Callable[..., MesaDaLuz]
     ) -> None:
+        """O lugar do P1 se solta pelo «Renumerar agora», e ele volta com o jogo aberto.
+
+        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        na autoridade o prazo não vence; o que solta o lugar de quem saiu, no
+        meio da partida, é o gesto dela.
+        """
         bancada = mesa_da_luz("mista", jogo=True)
         via = bancada.mesa.transporte_de(P1)
-        _sai_e_o_prazo_passa(bancada, P1)
+        bancada.mesa.levantar(P1)
+        for _ in range(math.ceil(PRAZO / TIQUE) + 1):
+            bancada.tique()
+        assert bancada.reg.numeros_da_mesa() == {P2: 2, P3: 3, P4: 4}, (
+            "com o jogo aberto o prazo do P1 venceu (D-3009)"
+        )
+        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
+        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is True
+        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
         bancada.disparar()
         bancada.mesa.sentar(P1, transporte=via)
         for _ in range(3):

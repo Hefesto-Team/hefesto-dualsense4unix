@@ -1,4 +1,9 @@
-"""O-ASSENTO-GUARDADO-NAO-ANDA-04 — os 60 arranjos raros também fecham o buraco no jogo."""
+"""O-ASSENTO-GUARDADO-NAO-ANDA-04 — os 60 arranjos raros também fecham o buraco no jogo.
+
+Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026), com o jogo
+na autoridade nenhum prazo vence: as bancadas vivas provam que ninguém renasce
+por quem saiu, e a matriz de quatro solta os lugares pelo «Renumerar agora».
+"""
 from __future__ import annotations
 
 import functools
@@ -11,7 +16,6 @@ import pytest
 from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import (
-    _CHAVE_DO_P1,
     _a_mesa_depois,
     _em_ordem,
     _fora_do_boneco,
@@ -331,10 +335,18 @@ def mesa_de_seis(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.usefixtures("config_isolado", "mesa_de_seis")
 class TestUmDosSessentaComSeisControles:
-    """A forma ``1F@1 2@3 3@4 5@5``, com a classe real e seis controles."""
+    """A forma ``1F@1 2@3 3@4 5@5`` com a classe real e seis controles — e o jogo aberto.
+
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+    autoridade o prazo para, e a mesa da forma (o P2 vencido com o g ainda
+    guardado) não chega a existir ao vivo: os dois lugares esperam, e o gesto
+    dela solta os dois juntos. A faixa segue provada pela :class:`TestOs60` e
+    pela :class:`TestAVarredura`; aqui fica a prova de que, com o jogo, ninguém
+    renasce por quem saiu.
+    """
 
     @staticmethod
-    def _ate_o_p2_vencer(
+    def _o_prazo_do_p2_passa(
         monkeypatch: pytest.MonkeyPatch, bancada: MesaDoJogo, g: str
     ) -> tuple[int, Planos, Any]:
         bancada.mesa.levantar(P2)
@@ -347,12 +359,12 @@ class TestUmDosSessentaComSeisControles:
         planos = Planos(monkeypatch)
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             bancada.tique()
-        assert bancada.reg.guardados(), "o prazo do g venceu junto — a mesa não é a dos 60"
+        assert len(bancada.reg.guardados()) == 2, "com o jogo aberto um prazo venceu"
         return antes, planos, vpad_do_z
 
-    @pytest.mark.parametrize("volta", [True, False], ids=["o-g-volta", "o-g-vence"])
+    @pytest.mark.parametrize("volta", [True, False], ids=["o-p2-volta", "ninguem-volta"])
     @pytest.mark.parametrize("transporte", list(TRANSPORTES_DE_SEIS))
-    def test_o_buraco_fecha_e_o_z_nao_se_mexe(
+    def test_com_o_jogo_o_buraco_espera_e_ninguem_renasce(
         self, monkeypatch: pytest.MonkeyPatch, transporte: str, volta: bool
     ) -> None:
         g = NOVO
@@ -363,46 +375,45 @@ class TestUmDosSessentaComSeisControles:
         assert bancada.vpad_de(g) is None, "o g devia estar esperando o grab"
         assert bancada.o_jogo_ve() == {1: P1, 2: P2, 3: P3, 4: P4, 5: SEXTO}
         vias = dict(zip(quem, TRANSPORTES_DE_SEIS[transporte], strict=True))
+        vpads_de_antes = {u: bancada.vpad_de(u) for u in (P3, P4)}
 
-        antes, planos, vpad_do_z = self._ate_o_p2_vencer(monkeypatch, bancada, g)
+        antes, planos, vpad_do_z = self._o_prazo_do_p2_passa(monkeypatch, bancada, g)
 
-        mudados = planos.os_que_a_faixa_mudou()
-        assert len(mudados) == 1, mudados
-        mesa, cartas, nascer, fixos, compacta, resposta = mudados[0]
-        assert (nascer, fixos, compacta) == ((), frozenset({_CHAVE_DO_P1}), False)
-        assert _forma(mesa, cartas, fixos) == "1F@1 2@3 3@4 5@5"
-        assert resposta == ([P3, P4], True)
-        assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, SEXTO: 5}
-        bancada.o_jogo_segue_a_tela()
-        assert 4 not in bancada.o_jogo_ve(), "o boneco 4 é do g, que ainda pode voltar"
-        for uniq in (P3, P4):
-            assert len(_nascidos(bancada, antes, uniq)) == 1, f"{uniq} renasce uma vez"
+        assert planos.os_que_a_faixa_mudou() == []
+        assert bancada.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
+        assert 2 not in bancada.o_jogo_ve(), "o boneco 2 é do P2, que ainda pode voltar"
+        assert len(bancada.vpads) == antes, "com o jogo aberto alguém renasceu"
+        for uniq, vpad in vpads_de_antes.items():
+            assert bancada.vpad_de(uniq) is vpad, f"{uniq} renasceu"
         assert bancada.vpad_de(SEXTO) is vpad_do_z, "o z estava certo e renasceu"
 
         if volta:
-            monkeypatch.setattr(_LeitorQueDemora, "demorados", frozenset())
-            bancada.mesa.sentar(g, transporte=vias[g])
+            bancada.mesa.sentar(P2, transporte=vias[P2])
             bancada.tique()
             bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, g: 4, SEXTO: 5}
-            assert bancada.vpad_de(SEXTO) is vpad_do_z
+            assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3, P4: 4, SEXTO: 6}
+            assert bancada.o_jogo_ve()[2] == P2, "o P2 voltou fora do boneco dele"
         else:
             for _ in range(_ticks(DEPOIS) + 1):
                 bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, SEXTO: 4}
-            assert len(_nascidos(bancada, antes, SEXTO)) == 1
-        bancada.o_jogo_segue_a_tela()
-        for uniq in (P3, P4):
-            assert len(_nascidos(bancada, antes, uniq)) == 1, f"{uniq} renasceu de novo"
+            assert bancada.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
+        assert planos.os_que_a_faixa_mudou() == []
+        for uniq, vpad in vpads_de_antes.items():
+            assert bancada.vpad_de(uniq) is vpad, f"{uniq} renasceu"
+        assert bancada.vpad_de(SEXTO) is vpad_do_z
 
 
 @pytest.mark.usefixtures("config_isolado")
 class TestQuemEsperaOLugarGuardado:
-    """Cinco controles, e quem espera o lugar guardado não renasce à toa."""
+    """Cinco controles, e quem espera o lugar guardado não renasce à toa.
 
-    @pytest.mark.parametrize("volta", [True, False], ids=["o-p4-volta", "o-p4-vence"])
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo aberto, nenhum dos dois
+    prazos vence, e o novo fica no boneco dele.
+    """
+
+    @pytest.mark.parametrize("volta", [True, False], ids=["o-p2-volta", "ninguem-volta"])
     @pytest.mark.parametrize("transporte", list(TRANSPORTES_DE_SEIS))
-    def test_o_novo_renasce_uma_vez_so(
+    def test_com_o_jogo_o_novo_nao_renasce(
         self, monkeypatch: pytest.MonkeyPatch, transporte: str, volta: bool
     ) -> None:
         quem = (P1, P2, P3, P4, NOVO)
@@ -410,6 +421,7 @@ class TestQuemEsperaOLugarGuardado:
         bancada = _montar(monkeypatch, quem, vias)
         assert bancada.o_jogo_ve() == {n + 1: u for n, u in enumerate(quem)}
         vpad_do_novo = bancada.vpad_de(NOVO)
+        vpad_do_p3 = bancada.vpad_de(P3)
 
         bancada.mesa.levantar(P2)
         for _ in range(_ticks(DEPOIS)):
@@ -419,28 +431,24 @@ class TestQuemEsperaOLugarGuardado:
         antes = len(bancada.vpads)
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             bancada.tique()
-        assert bancada.reg.guardados(), "o prazo do P4 venceu junto"
+        assert len(bancada.reg.guardados()) == 2, "com o jogo aberto um prazo venceu"
 
-        assert bancada.a_tela() == {P1: 1, P3: 2, NOVO: 4}
-        jogo = bancada.o_jogo_ve()
-        assert jogo[2] == P3 and len(_nascidos(bancada, antes, P3)) == 1
-        assert 3 not in jogo, "o boneco 3 é do P4, que ainda pode voltar"
-        assert bancada.vpad_de(NOVO) is vpad_do_novo, (
-            "o novo renasceu para cair no lugar guardado do P4"
-        )
+        assert bancada.a_tela() == {P1: 1, P3: 3, NOVO: 5}
+        bancada.o_jogo_segue_a_tela()
+        assert len(bancada.vpads) == antes, "com o jogo aberto alguém renasceu"
 
         if volta:
-            bancada.mesa.sentar(P4, transporte=vias[3])
+            bancada.mesa.sentar(P2, transporte=vias[1])
             bancada.tique()
             bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, NOVO: 4}
+            assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3, NOVO: 5}
         else:
             for _ in range(_ticks(DEPOIS) + 1):
                 bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 2, NOVO: 3}
+            assert bancada.a_tela() == {P1: 1, P3: 3, NOVO: 5}
         bancada.o_jogo_segue_a_tela()
-        assert len(_nascidos(bancada, antes, NOVO)) == 1, "o novo renasce uma vez só"
-        assert len(_nascidos(bancada, antes, P3)) == 1
+        assert bancada.vpad_de(NOVO) is vpad_do_novo, "o novo renasceu"
+        assert bancada.vpad_de(P3) is vpad_do_p3, "o P3 renasceu"
 
 
 DOIS_FORA = [
@@ -496,6 +504,11 @@ class TestAMatrizDeQuatro:
         bancada.mesa.levantar(UNIQS[segundo])
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             tique()
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        # aberto os dois lugares esperam, e é o gesto dela que os solta.
+        assert len(bancada.reg.guardados()) == 2
+        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
+        tique()
         if volta:
             bancada.mesa.sentar(UNIQS[segundo], transporte=via)
             tique()

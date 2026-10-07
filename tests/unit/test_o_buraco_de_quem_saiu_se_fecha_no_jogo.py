@@ -1,4 +1,8 @@
-"""O-ASSENTO-GUARDADO-NAO-ANDA-03 — passado o prazo, o jogo fecha o buraco junto com a tela."""
+"""O-ASSENTO-GUARDADO-NAO-ANDA-03 — passado o prazo, o jogo fecha o buraco junto com a tela.
+
+Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026), com o jogo
+na autoridade o prazo para, e o buraco fecha no «Renumerar agora» dela.
+"""
 from __future__ import annotations
 
 import itertools
@@ -59,6 +63,23 @@ def _nascidos(bancada: MesaDoJogo, desde: int, uniq: str) -> list[Any]:
 def _ticks_ate_o_fim_do_prazo(ja_passou: float) -> int:
     prazo = max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado())
     return int((prazo - ja_passou + TIQUE) / TIQUE) + 1
+
+
+def _o_prazo_passa_e_ela_renumera(bancada: MesaDoJogo, ja_passou: float) -> None:
+    """O prazo passa com o jogo aberto, e quem fecha o buraco é o gesto dela.
+
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+    autoridade o prazo não vence; o «Renumerar agora»
+    (``soltar_os_lugares_guardados``) solta o lugar no meio da partida, e o
+    co-op fecha o buraco no tique seguinte, como fechava no vencimento.
+    """
+    bancada.tique()
+    tela = bancada.a_tela()
+    for _ in range(_ticks_ate_o_fim_do_prazo(ja_passou) - 1):
+        bancada.tique()
+    assert bancada.a_tela() == tela, "com o jogo aberto o prazo venceu (D-3009)"
+    bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
+    bancada.tique()
 
 
 def _atras_e_na_frente(quantos: int, quem: int) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -154,11 +175,10 @@ def montar_honesto(
 
 
 def _sai_e_volta_tarde(bancada: MesaDoJogo, uniq: str, *, para: str | None = None) -> None:
-    """``uniq`` sai, o prazo do lugar guardado vence, e ele volta com o jogo aberto."""
+    """``uniq`` sai, ela renumera depois do prazo, e ele volta com o jogo aberto (D-3009)."""
     via = para if para is not None else bancada.mesa.transporte_de(uniq)
     bancada.mesa.levantar(uniq)
-    for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
-        bancada.tique()
+    _o_prazo_passa_e_ela_renumera(bancada, 0.0)
     bancada.mesa.sentar(uniq, transporte=via)
     bancada.tique()
     bancada.tique()
@@ -204,7 +224,11 @@ def trocar_a_mascara_do_p1(bancada: MesaHonesta) -> None:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestPassadoOPrazoOJogoFechaOBuraco:
-    """O boneco de cada jogador antes do prazo, no fim dele, e depois, parado."""
+    """O boneco de cada jogador antes do prazo, no gesto dela, e depois, parado.
+
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+    aberto o buraco não fecha no fim do prazo; fecha no «Renumerar agora».
+    """
 
     @pytest.mark.parametrize(("quantos", "transporte", "quem"), QUEM_SAI)
     def test_quem_ficou_atras_renasce_no_boneco_do_numero_novo(
@@ -222,8 +246,7 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
             bancada.o_jogo_segue_a_tela()
         assert len(bancada.vpads) == antes, "alguém renasceu dentro do prazo"
 
-        for _ in range(_ticks_ate_o_fim_do_prazo(VINTE_SEGUNDOS)):
-            bancada.tique()
+        _o_prazo_passa_e_ela_renumera(bancada, VINTE_SEGUNDOS)
         tela = bancada.a_tela()
         assert tela == {
             u: n + 1 for n, u in enumerate(u for u in UNIQS[:quantos] if u != UNIQS[quem])
@@ -258,11 +281,10 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
         bancada.reg.liberar_as_lampadas()
         vpads_de_antes = {u: bancada.vpad_de(u) for u in UNIQS[1:quantos]}
         bancada.mesa.levantar(UNIQS[1])
-        for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
-            bancada.tique()
+        _o_prazo_passa_e_ela_renumera(bancada, 0.0)
         assert bancada.a_tela() == {
             u: n + 1 for n, u in enumerate(u for u in UNIQS[:quantos] if u != UNIQS[1])
-        }, "a tela não fechou a fila no fim do prazo"
+        }, "a tela não fechou a fila no gesto dela"
         for uniq in UNIQS[2:quantos]:
             assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], (
                 f"{uniq} renasceu antes de a lâmpada mudar"
@@ -282,8 +304,7 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
             bancada.tique()
         with structlog.testing.capture_logs() as registros:
-            for _ in range(_ticks_ate_o_fim_do_prazo(VINTE_SEGUNDOS)):
-                bancada.tique()
+            _o_prazo_passa_e_ela_renumera(bancada, VINTE_SEGUNDOS)
         recriadas = [r for r in registros if r["event"] == "coop_ordem_recriada"]
         if quantos == 2:
             assert recriadas == []
@@ -319,14 +340,17 @@ class TestORenumerarAgoraFechaNaHora:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAVoltaTardiaDoP1:
-    """O P1 que volta depois do prazo: o número na tela, o boneco que o jogo deu."""
+    """O P1 que volta depois do prazo: o número na tela, o boneco que o jogo deu.
+
+    D-3009 (dela, 02/10/2026): com o jogo aberto, «depois do prazo» é depois do
+    «Renumerar agora» dela — o prazo sozinho não solta o lugar.
+    """
 
     @staticmethod
     def _p1_sai_e_volta_tarde(bancada: MesaDoJogo) -> list[dict[str, Any]]:
         via = bancada.mesa.transporte_de(P1)
         bancada.mesa.levantar(P1)
-        for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
-            bancada.tique()
+        _o_prazo_passa_e_ela_renumera(bancada, 0.0)
         with structlog.testing.capture_logs() as registros:
             bancada.mesa.sentar(P1, transporte=via)
             bancada.tique()
@@ -394,8 +418,7 @@ class TestAVoltaTardiaDoP1:
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         for antes in UNIQS[:quem]:
             bancada.mesa.levantar(antes)
-            for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
-                bancada.tique()
+            _o_prazo_passa_e_ela_renumera(bancada, 0.0)
         uniq = UNIQS[quem]
         assert bancada.inst.primary_uniq == uniq
         trocar_a_mascara_do_p1(bancada)
@@ -459,7 +482,12 @@ DOIS_FORA = [
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOPrazoDeOutroVenceComOPostoVago:
-    """Dois fora: o prazo de um vence enquanto o posto do P1 espera por ele."""
+    """Dois fora com o jogo aberto: nenhum prazo vence, e o posto do P1 espera por ele.
+
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026). Antes, o prazo
+    do outro vencia com o posto vago e quem ficou atrás descia no meio da
+    partida; agora a mesa fica como estava até o jogo soltar.
+    """
 
     @pytest.mark.parametrize(("quantos", "transporte", "outro", "volta"), DOIS_FORA)
     def test_quem_ficou_atras_desce_com_o_posto_vago(
@@ -474,8 +502,8 @@ class TestOPrazoDeOutroVenceComOPostoVago:
         vpad_do_posto = bancada.vpad_do_p1
         via_do_p1 = bancada.mesa.transporte_de(P1)
         ficaram = [u for u in UNIQS[1:quantos] if u != UNIQS[outro]]
-        atras = UNIQS[outro + 1 : quantos]
         vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram}
+        numero_de = {u: UNIQS.index(u) + 1 for u in ficaram}
 
         bancada.mesa.levantar(UNIQS[outro])
         for _ in range(int(OUTRO_JA_FORA / TIQUE)):
@@ -483,39 +511,32 @@ class TestOPrazoDeOutroVenceComOPostoVago:
         bancada.mesa.levantar(P1)
         antes = len(bancada.vpads)
         with structlog.testing.capture_logs() as registros:
-            for _ in range(_ticks_ate_o_fim_do_prazo(OUTRO_JA_FORA)):
+            for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
                 bancada.tique()
 
         assert bancada.inst.primary_uniq == P1
         assert bancada.dono_do_vpad_do_p1() is None
         assert bancada.daemon._gamepad_device is vpad_do_posto and vpad_do_posto.vivo
-        assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
+        assert bancada.a_tela() == numero_de, "com o jogo aberto um prazo venceu"
         bancada.o_jogo_segue_a_tela()
-        for uniq in atras:
-            assert len(_nascidos(bancada, antes, uniq)) == 1, (
-                f"{uniq} ficou atrás do buraco com o posto vago e não desceu (ou desceu duas vezes)"
-            )
-        for uniq in set(ficaram) - set(atras):
-            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], f"{uniq} estava na frente"
-        recriadas = [r for r in registros if r["event"] == "coop_ordem_recriada"]
-        assert [r["recriar"] for r in recriadas] == ([list(atras)] if atras else [])
-        assert all("p1" not in r["cartas"] for r in recriadas)
-        assert not [r for r in registros if r["event"] == "coop_ordem_do_p1_espera_o_jogo"]
+        assert len(bancada.vpads) == antes, "com o jogo aberto alguém renasceu"
+        for uniq in ficaram:
+            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], f"{uniq} se mexeu"
+        assert not [r for r in registros if r["event"] == "coop_ordem_recriada"]
 
-        assentada = len(bancada.vpads)
         if volta:
             bancada.mesa.sentar(P1, transporte=via_do_p1)
             bancada.tique()
             bancada.tique()
             assert bancada.inst.primary_uniq == P1
             assert bancada.dono_do_vpad_do_p1() == P1
-            assert bancada.a_tela() == {P1: 1, **{u: n + 2 for n, u in enumerate(ficaram)}}
-            assert len(bancada.vpads) == assentada, "a volta do P1 recriou alguém"
+            assert bancada.a_tela() == {P1: 1, **numero_de}
         else:
             for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
                 bancada.tique()
-            assert bancada.dono_do_vpad_do_p1() == ficaram[0]
-            assert bancada.a_tela() == {u: n + 1 for n, u in enumerate(ficaram)}
+            assert bancada.dono_do_vpad_do_p1() is None
+            assert bancada.a_tela() == numero_de
+        assert len(bancada.vpads) == antes, "a volta do P1 recriou alguém"
         bancada.o_jogo_segue_a_tela()
 
     @MATRIZ

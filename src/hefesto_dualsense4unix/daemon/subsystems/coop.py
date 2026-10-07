@@ -373,6 +373,7 @@ class CoopManager:
     def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         """Reconcilia os secundários com os controles plugados. Idempotente."""
         self._garantir_aviso_de_primario()
+        self._o_prazo_do_lugar_guardado_espera_o_jogo()
         if not self.should_be_active():
             self._was_active = False
             if self._players or self._leds_overridden:
@@ -1583,6 +1584,21 @@ class CoopManager:
         )
 
         return _autoridade_do_jogo(self._daemon)
+
+    def _o_prazo_do_lugar_guardado_espera_o_jogo(self) -> None:
+        """D-3009: com o jogo na autoridade, o prazo de quem saiu não corre.
+
+        Uma chamada por ``sync``, antes do gate do co-op ligado: a regra vale
+        com um controle só, e o registro a repassa aos externos.
+        """
+        registro = getattr(self._daemon, "identity_registry", None)
+        segurar = getattr(registro, "segurar_os_prazos", None)
+        if not callable(segurar):
+            return
+        try:
+            segurar(self._jogo_com_a_autoridade())
+        except Exception as exc:
+            logger.warning("lugar_guardado_sem_a_espera_do_jogo", err=str(exc))
 
     def _no_fio_do_laco(self) -> bool:
         """Estamos na thread do poll loop (ou ele ainda não rodou: dublês)?"""

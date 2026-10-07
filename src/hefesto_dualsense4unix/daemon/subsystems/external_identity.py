@@ -413,6 +413,8 @@ class ExternalIdentityRegistry:
         self._guardados: dict[str, float] = {}
         #: solta o lugar guardado dos DualSense quando um externo novo chega.
         self._soltar_os_dualsense: Callable[[], object] | None = None
+        #: D-3009: o instante em que o jogo tomou a autoridade (None = o prazo corre).
+        self._prazos_seguros_desde: float | None = None
         self._ordem: dict[str, int] = {}
         self._volatile: set[str] = set()
         self._connected: set[str] = set()
@@ -488,12 +490,37 @@ class ExternalIdentityRegistry:
 
     def _guardados_locked(self) -> set[str]:
         """Quem tem o lugar guardado AGORA (sob o lock). Espelho do DualSense."""
-        agora = self._clock()
+        agora = self._agora_do_prazo_locked()
         return {
             key
             for key, ate in self._guardados.items()
             if ate > agora and key in self._ordem and key not in self._connected
         }
+
+    def _agora_do_prazo_locked(self) -> float:
+        """O agora do lugar guardado, parado enquanto o jogo tem a autoridade (D-3009)."""
+        seguro = self._prazos_seguros_desde
+        return self._clock() if seguro is None else seguro
+
+    def segurar_os_prazos(self, segura: bool) -> None:
+        """Espelho de ``ControllerIdentityRegistry.segurar_os_prazos`` (D-3009).
+
+        Quem chama é o registro dos DualSense, pela ponte do ``ExternalLedSync``,
+        SEMPRE fora do ``_lock`` dele. Idempotente.
+        """
+        segura = bool(segura)
+        with self._lock:
+            seguro = self._prazos_seguros_desde
+            if segura == (seguro is not None):
+                return
+            if segura:
+                self._prazos_seguros_desde = self._clock()
+                return
+            assert seguro is not None
+            segurado = max(0.0, self._clock() - seguro)
+            for key in self._guardados:
+                self._guardados[key] += segurado
+            self._prazos_seguros_desde = None
 
     def lugares_da_mesa(self) -> set[int]:
         """Lugares que CONTAM na mesa: os presentes e os guardados.
@@ -646,11 +673,11 @@ class ExternalIdentityRegistry:
                 prazo_do_lugar_guardado,
             )
 
-            agora = self._clock()
+            agora = self._agora_do_prazo_locked()
             for key in [k for k, ate in self._guardados.items() if ate <= agora]:
                 del self._guardados[key]
                 logger.info("external_lugar_guardado_venceu", uniq=key)
-            chegou_gente_nova = bool(
+            chegou_gente_nova = self._prazos_seguros_desde is None and bool(
                 vivos - self._connected - self._guardados_locked()
             )
             if chegou_gente_nova:
@@ -1052,6 +1079,10 @@ class ExternalLedSync:
         if callable(soltar):
             with contextlib.suppress(Exception):
                 soltar(externo.soltar_os_lugares_guardados)
+        segurar = getattr(ds, "set_external_hold_provider", None)
+        if callable(segurar):
+            with contextlib.suppress(Exception):
+                segurar(externo.segurar_os_prazos)
         soltar_ds = getattr(ds, "soltar_os_lugares_guardados", None)
         set_soltar_ds = getattr(externo, "set_dualsense_release_provider", None)
         if callable(soltar_ds) and callable(set_soltar_ds):

@@ -23,7 +23,9 @@ node que ele lê.
 2. a volta dele: o P1 no vpad 1 de novo, ninguém recriado;
 3. depois do prazo: a NUM-01 — o P2 no vpad 1 com o número 1, ninguém que
    ficou perde o controle, e quem ficou atrás renasce no boneco do número
-   novo (O-ASSENTO-GUARDADO-NAO-ANDA-03);
+   novo (O-ASSENTO-GUARDADO-NAO-ANDA-03). Desde a
+   D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026), com o jogo
+   aberto o prazo para e o posto espera; a NUM-01 vale quando o jogo solta;
 4. o prazo atravessando uma suspensão simulada pelo relógio do kernel: o
    ``CLOCK_BOOTTIME`` anda, o ``CLOCK_MONOTONIC`` não.
 
@@ -510,12 +512,25 @@ class TestOP1ForaPorVinteSegundos:
     def test_depois_do_prazo_vale_a_num01(
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
     ) -> None:
-        """Passado o prazo, o P2 assume o vpad do P1 com o número 1, e ninguém fica sem controle."""
+        """O prazo passa com o jogo aberto e o posto espera; a NUM-01 vale quando o jogo solta.
+
+        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        na autoridade, o prazo do lugar guardado para, e a reserva do posto
+        espera com ele. Antes, passado o prazo, o P2 assumia o vpad do P1 no
+        meio da partida.
+        """
         bancada = montar(monkeypatch, quantos, transporte)
         vpad_do_p1 = bancada.vpad_do_p1
 
         bancada.mesa.levantar(P1)
         passos = int((max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado()) + TIQUE) / TIQUE)
+        for _ in range(passos + 1):
+            bancada.tique()
+        assert bancada.dono_do_vpad_do_p1() is None, "com o jogo aberto o posto não espera"
+        assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(UNIQS[1:quantos])}
+        bancada.o_jogo_segue_a_tela()
+
+        bancada.daemon.display_authority = "daemon"
         for _ in range(passos + 1):
             bancada.tique()
 
@@ -584,9 +599,15 @@ class TestQuandoOPostoNaoEspera:
         bancada.tique()
         assert bancada.dono_do_vpad_do_p1() == P2
 
-    def test_gente_nova_refaz_a_mesa_e_solta_o_posto(
+    def test_gente_nova_com_o_jogo_senta_depois_do_ultimo_e_o_posto_espera(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026).
+
+        Com o jogo na autoridade, quem chega não solta o lugar de ninguém: senta
+        depois do último, e o posto do P1 segue à espera dele. Antes, a gente
+        nova refazia a mesa e o P2 assumia o jogador 1 no meio da partida.
+        """
         bancada = montar(monkeypatch, 3)
         bancada.mesa.levantar(P1)
         bancada.tique()
@@ -594,8 +615,8 @@ class TestQuandoOPostoNaoEspera:
         bancada.mesa.sentar(NOVO)
         bancada.tique()
         bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() == P2
-        assert bancada.a_tela()[P2] == 1
+        assert bancada.dono_do_vpad_do_p1() is None
+        assert bancada.a_tela() == {P2: 2, P3: 3, NOVO: 4}
 
     def test_o_renumerar_agora_solta_o_posto(self, monkeypatch: pytest.MonkeyPatch) -> None:
         bancada = montar(monkeypatch, 3)
@@ -663,6 +684,14 @@ class TestOPrazoAtravessaASuspensao:
         bancada.tique()
         assert bancada.dono_do_vpad_do_p1() is None
 
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na autoridade
+        # o prazo para, a suspensão inclusive; ele volta a correr quando o jogo solta.
+        kernel.dormir(3600.0)
+        bancada.tique(0.0)
+        assert bancada.dono_do_vpad_do_p1() is None
+        assert bancada.a_tela()[P2] == 2
+        bancada.daemon.display_authority = "daemon"
+        bancada.tique(0.0)
         kernel.dormir(3600.0)
         bancada.tique(0.0)
 
@@ -684,6 +713,10 @@ class TestOPrazoAtravessaASuspensao:
         bancada.tique()
         assert bancada.a_tela() == {}
 
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): o jogo fechou antes
+        # de a máquina dormir; com ele aberto, o P3 retomaria o 3.
+        bancada.daemon.display_authority = "daemon"
+        bancada.tique(0.0)
         kernel.dormir(3600.0)
         bancada.mesa.sentar(P3)
         bancada.tique(0.0)

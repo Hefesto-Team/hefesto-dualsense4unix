@@ -470,6 +470,10 @@ class ControllerIdentityRegistry:
         #: nenhum DualSense pode exibir), mas ``_extra_reserved`` não sabe
         self._external_present: Callable[[], set[int]] | None = None
         self._soltar_os_externos: Callable[[], object] | None = None
+        #: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA: o instante em que o jogo
+        #: tomou a autoridade (None = o prazo corre), e quem segura o dos externos.
+        self._prazos_seguros_desde: float | None = None
+        self._segurar_os_externos: Callable[[bool], object] | None = None
         self._auto_colors = True
         self._auto_numbers = True
         self._auto_brightness = 1.0
@@ -666,6 +670,22 @@ class ControllerIdentityRegistry:
         with self._lock:
             self._soltar_os_externos = provider
 
+    def set_external_hold_provider(
+        self, provider: Callable[[bool], object] | None
+    ) -> None:
+        """Injeta quem segura o prazo dos externos (D-3009, a mesma ponte do soltar).
+
+        Se o jogo já segura os prazos quando a ponte chega (o daemon que sobe com
+        o jogo aberto), o externo é segurado na hora: o ``segurar_os_prazos`` é
+        idempotente e não repassaria de novo.
+        """
+        with self._lock:
+            self._segurar_os_externos = provider
+            segura = self._prazos_seguros_desde is not None
+        if provider is not None and segura:
+            with contextlib.suppress(Exception):
+                provider(True)
+
     def slot_for(
         self,
         uniq: str | None,
@@ -736,7 +756,11 @@ class ControllerIdentityRegistry:
                 self._marcar_chegada_locked(key)
                 self._entrou_na_mesa_locked(key)
                 self._retomar_o_lugar_locked(key)
-                if not dono_de_lugar and persistable:
+                if (
+                    not dono_de_lugar
+                    and persistable
+                    and self._prazos_seguros_desde is None
+                ):
                     chegou_gente_nova = True
                     self._quem_chega_novo_refaz_a_mesa_locked()
             numero = self._posicao_locked(key)
@@ -841,7 +865,7 @@ class ControllerIdentityRegistry:
         if key not in self._ordem or key in self._volatile:
             return
         prazo = prazo_do_lugar_guardado()
-        self._guardados[key] = self._clock() + prazo
+        self._guardados[key] = self._agora_do_prazo_locked() + prazo
         logger.info("lugar_guardado", uniq=key, prazo_s=prazo)
 
     def _retomar_o_lugar_locked(self, key: str) -> None:
@@ -849,9 +873,14 @@ class ControllerIdentityRegistry:
         if self._guardados.pop(key, None) is not None:
             logger.info("lugar_guardado_retomado", uniq=key)
 
+    def _agora_do_prazo_locked(self) -> float:
+        """O agora do lugar guardado: parado no instante em que o jogo tomou a autoridade."""
+        seguro = self._prazos_seguros_desde
+        return self._clock() if seguro is None else seguro
+
     def _guardados_locked(self) -> list[str]:
         """Quem tem o lugar guardado AGORA. Leitura pura, sob o lock."""
-        agora = self._clock()
+        agora = self._agora_do_prazo_locked()
         return [
             key
             for key, ate in self._guardados.items()
@@ -860,14 +889,20 @@ class ControllerIdentityRegistry:
 
     def _vencer_os_guardados_locked(self) -> None:
         """Esquece o lugar guardado cujo prazo passou (tique lento, sob o lock)."""
-        agora = self._clock()
+        agora = self._agora_do_prazo_locked()
         for key in [k for k, ate in self._guardados.items() if ate <= agora]:
             del self._guardados[key]
             logger.info("lugar_guardado_venceu", uniq=key)
 
     def soltar_os_lugares_guardados(self, *, motivo: str = "renumerar") -> bool:
-        """Solta todo lugar guardado, dos dois registros. Devolve se havia."""
+        """Solta todo lugar guardado, dos dois registros. Devolve se havia.
+
+        Com o jogo na autoridade (D-3009), gente nova não solta lugar de ninguém:
+        só o gesto dela (``motivo="renumerar"``) passa.
+        """
         with self._lock:
+            if motivo == "chegou_gente_nova" and self._prazos_seguros_desde is not None:
+                return False
             havia = bool(self._guardados)
             self._guardados.clear()
         if havia:
@@ -904,8 +939,45 @@ class ControllerIdentityRegistry:
     def guardados(self) -> dict[str, float]:
         """Cópia de quem tem o lugar guardado agora → segundos que faltam."""
         with self._lock:
-            agora = self._clock()
+            agora = self._agora_do_prazo_locked()
             return {k: self._guardados[k] - agora for k in self._guardados_locked()}
+
+    def segurar_os_prazos(self, segura: bool) -> None:
+        """Com o jogo na autoridade, o prazo do lugar guardado espera. Idempotente.
+
+        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026, «Esperar o
+        jogo»): com um jogo aberto, quem cai ou entra não muda o número de
+        ninguém. Ao segurar, o relógio do prazo para no instante de agora (o
+        vencimento não corre, e quem sai durante o jogo guarda o lugar a partir
+        daí); gente nova senta no fim sem soltar os guardados. Ao soltar, o
+        ``ate`` de cada guardado anda o tempo segurado, e o prazo que sobrava
+        volta a correr. Quem chama é o tique do co-op, uma vez por ``sync``. O
+        «Renumerar agora» (``soltar_os_lugares_guardados``) não espera: é o
+        gesto dela.
+        """
+        segura = bool(segura)
+        with self._lock:
+            seguro = self._prazos_seguros_desde
+            if segura == (seguro is not None):
+                return
+            if segura:
+                self._prazos_seguros_desde = self._clock()
+                logger.info("lugares_guardados_esperam_o_jogo", guardados=len(self._guardados))
+            else:
+                assert seguro is not None
+                segurado = max(0.0, self._clock() - seguro)
+                for key in self._guardados:
+                    self._guardados[key] += segurado
+                self._prazos_seguros_desde = None
+                logger.info(
+                    "lugares_guardados_voltam_a_correr",
+                    segurado_s=round(segurado, 1),
+                    guardados=len(self._guardados),
+                )
+            externos = self._segurar_os_externos
+        if externos is not None:
+            with contextlib.suppress(Exception):
+                externos(segura)
 
     def _external_present_ranks_locked(self) -> set[int]:
         """Lugares dos externos que contam para a exibição (já sob o lock).
@@ -1224,6 +1296,8 @@ class ControllerIdentityRegistry:
                 and self._entrada.get(key, 0) > self._entradas_no_ultimo_tique
                 for key in vistos
             )
+            if chegou_gente_nova and self._prazos_seguros_desde is not None:
+                chegou_gente_nova = False
             if chegou_gente_nova:
                 self._quem_chega_novo_refaz_a_mesa_locked()
             else:

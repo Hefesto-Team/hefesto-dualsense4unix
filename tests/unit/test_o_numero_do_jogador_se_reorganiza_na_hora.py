@@ -644,11 +644,31 @@ def _tique_lento(bancada: Any) -> None:
     bancada.conferir_invariantes()
 
 
+#: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+#: autoridade o prazo de quem saiu não vence, e o que solta o lugar no meio da
+#: partida é o «Renumerar agora». O gesto cai três fatias depois do prazo.
+GESTO_EM = PRAZO + 3 * FATIA
+
+
+def _o_renumerar_dela(bancada: Any) -> Callable[[], None]:
+    """O «Renumerar agora» da aba Controles, na agenda da espera."""
+
+    def _gesto() -> None:
+        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
+
+    return _gesto
+
+
 class TestComOJogoNaAutoridade:
+    """Com o jogo aberto, o prazo espera, e o gesto dela renumera (D-3009, 02/10/2026)."""
+
     def test_os_secundarios_se_recriam_e_o_p1_fica(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A fala do usuário: o P2 e o P3 desligam, o roxo (P4) vira P2 no jogo."""
+        """A fala do usuário: o P2 e o P3 desligam, o roxo (P4) vira P2 no jogo.
+
+        D-3009 (dela, 02/10/2026): com o jogo aberto, só pelo «Renumerar agora».
+        """
         bancada, escritores = jogo_aberto((P2, P3))
         vpad_do_p1 = bancada.vpad_do_p1
         vpad_do_p4 = bancada.vpad_de(P4)
@@ -657,14 +677,15 @@ class TestComOJogoNaAutoridade:
             monkeypatch,
             bancada.daemon,
             bancada.tempo,
-            ate=PRAZO + 3 * FATIA,
+            ate=GESTO_EM + 3 * FATIA,
             tique=lambda: _tique_lento(bancada),
+            agenda={GESTO_EM: _o_renumerar_dela(bancada)},
         )
         assert espera.rodar(_WatchParado()) is False
 
         armou = espera.armou_por_numeracao()
-        assert armou and armou[0] <= saida + PRAZO + FATIA, (
-            f"a numeração não armou na fatia depois do prazo: {armou}"
+        assert armou and saida + GESTO_EM <= armou[0] <= saida + GESTO_EM + FATIA, (
+            f"a numeração armou antes do gesto, ou não armou na fatia dele: {armou}"
         )
         assert escritores.numeros() == {P1: 1, P4: 2}
         assert bancada.a_tela() == {P1: 1, P4: 2}
@@ -680,10 +701,57 @@ class TestComOJogoNaAutoridade:
     def test_o_p1_sai_e_o_vpad_dele_fica(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O P1 sai e o prazo passa: os outros descem, e o vpad do P1 não renasce."""
+        """O P1 sai, o prazo passa e o posto espera; o gesto dela desce os outros.
+
+        D-3009 (dela, 02/10/2026): o vpad do P1 não renasce em nenhum dos dois.
+        """
         bancada, escritores = jogo_aberto((P1,))
         vpad_do_p1 = bancada.vpad_do_p1
         saida = bancada.tempo()
+        no_prazo: list[str | None] = []
+        renumerar = _o_renumerar_dela(bancada)
+
+        def _gesto() -> None:
+            no_prazo.append(bancada.dono_do_vpad_do_p1())
+            renumerar()
+
+        espera = _Espera(
+            monkeypatch,
+            bancada.daemon,
+            bancada.tempo,
+            ate=GESTO_EM + 3 * FATIA,
+            tique=lambda: _tique_lento(bancada),
+            agenda={GESTO_EM: _gesto},
+        )
+        espera.rodar(_WatchParado())
+
+        assert no_prazo == [None], f"passado o prazo, o posto não esperou: {no_prazo}"
+        armou = espera.armou_por_numeracao()
+        assert armou and saida + GESTO_EM <= armou[0] <= saida + GESTO_EM + FATIA, (
+            f"a numeração armou antes do gesto, ou não armou na fatia dele: {armou}"
+        )
+        assert escritores.numeros() == {P2: 1, P3: 2, P4: 3}
+        assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo, (
+            "a R-04: o vpad do P1 não se recria com o jogo na autoridade"
+        )
+        assert bancada.dono_do_vpad_do_p1() == P2
+        bancada.o_jogo_segue_a_tela()
+
+    def test_dois_fora_nenhum_prazo_vence_e_o_vpad_do_p1_espera(
+        self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O P2 sai, o P1 sai dez segundos depois, e com o jogo nenhum dos dois vence.
+
+        D-3009 (dela, 02/10/2026). Antes, o prazo do P2 vencia primeiro e o P3 e o
+        P4 desciam no meio da partida.
+        """
+        bancada, escritores = jogo_aberto((P2,))
+        vpad_do_p1 = bancada.vpad_do_p1
+        for _ in range(5):
+            bancada.tique()
+        bancada.mesa.levantar(P1)
+        bancada.tique()
+        _a_volta(bancada.daemon)
         espera = _Espera(
             monkeypatch,
             bancada.daemon,
@@ -693,52 +761,24 @@ class TestComOJogoNaAutoridade:
         )
         espera.rodar(_WatchParado())
 
-        armou = espera.armou_por_numeracao()
-        assert armou and armou[0] <= saida + PRAZO + FATIA, (
-            f"a numeração não armou na fatia depois do prazo: {armou}"
-        )
-        assert escritores.numeros() == {P2: 1, P3: 2, P4: 3}
-        assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo, (
-            "a R-04: o vpad do P1 não se recria com o jogo na autoridade"
-        )
-        assert bancada.dono_do_vpad_do_p1() == P2
-        bancada.o_jogo_segue_a_tela()
-
-    def test_o_prazo_de_outro_vence_com_o_p1_fora_e_o_vpad_dele_espera(
-        self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O P2 sai, o P1 sai dez segundos depois, e o prazo do P2 vence primeiro."""
-        bancada, escritores = jogo_aberto((P2,))
-        vpad_do_p1 = bancada.vpad_do_p1
-        for _ in range(5):
-            bancada.tique()
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        _a_volta(bancada.daemon)
-        faltam = PRAZO - 6 * TIQUE_LENTO
-        espera = _Espera(
-            monkeypatch,
-            bancada.daemon,
-            bancada.tempo,
-            ate=faltam + 3 * FATIA,
-            tique=lambda: _tique_lento(bancada),
-        )
-        espera.rodar(_WatchParado())
-
-        assert espera.armou_por_numeracao(), "o prazo do P2 venceu e a fatia não armou"
-        assert escritores.numeros() == {P3: 2, P4: 3}
+        assert espera.armou_por_numeracao() == [], "com o jogo aberto um prazo venceu"
+        assert escritores.numeros() == {P3: 3, P4: 4}
         assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo, (
             "a R-04: o vpad do P1 não se recria com o jogo na autoridade"
         )
         assert bancada.dono_do_vpad_do_p1() is None, "o posto do P1 ainda espera por ele"
-        assert bancada.o_jogo_ve() == {1: None, 2: P3, 3: P4}, (
+        assert bancada.o_jogo_ve() == {1: None, 3: P3, 4: P4}, (
             f"o jogo não vê a mesa de agora: {bancada.o_jogo_ve()}"
         )
 
     def test_o_p1_que_voltou_tarde_segue_no_boneco_do_posto(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Onde a R-04 segura de verdade quando a fatia renumera."""
+        """Onde a R-04 segura de verdade quando a fatia renumera.
+
+        D-3009 (dela, 02/10/2026): com o jogo aberto, o lugar de quem saiu só se
+        solta pelo «Renumerar agora» — o do P1 aqui, e o do P3 na espera.
+        """
         bancada, escritores = jogo_aberto(())
         vpad_do_p1 = bancada.vpad_do_p1
         via = bancada.mesa.transporte_de(P1)
@@ -746,6 +786,10 @@ class TestComOJogoNaAutoridade:
         for _ in range(int(PRAZO / TIQUE_LENTO) + 3):
             bancada.tique()
             bancada.reg.liberar_as_lampadas()
+        assert bancada.dono_do_vpad_do_p1() is None, "com o jogo aberto o posto não esperou"
+        _o_renumerar_dela(bancada)()
+        bancada.tique()
+        bancada.reg.liberar_as_lampadas()
         bancada.mesa.sentar(P1, transporte=via)
         for _ in range(3):
             bancada.tique()
@@ -765,15 +809,16 @@ class TestComOJogoNaAutoridade:
             monkeypatch,
             bancada.daemon,
             bancada.tempo,
-            ate=PRAZO + 3 * FATIA,
+            ate=GESTO_EM + 3 * FATIA,
             tique=lambda: _tique_lento(bancada),
+            agenda={GESTO_EM: _o_renumerar_dela(bancada)},
         )
         with structlog.testing.capture_logs() as registros:
             espera.rodar(_WatchParado())
 
         armou = espera.armou_por_numeracao()
-        assert armou and armou[0] <= saida + PRAZO + FATIA, (
-            f"a numeração não armou na fatia depois do prazo do P3: {armou}"
+        assert armou and saida + GESTO_EM <= armou[0] <= saida + GESTO_EM + FATIA, (
+            f"a numeração armou antes do gesto, ou não armou na fatia dele: {armou}"
         )
         assert escritores.numeros() == {P1: 1, P2: 2, P4: 3}
         recriadas = [r["recriar"] for r in registros if r["event"] == "coop_ordem_recriada"]
