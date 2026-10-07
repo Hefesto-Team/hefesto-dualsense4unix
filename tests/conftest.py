@@ -2135,7 +2135,9 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
 
 
 @pytest.fixture(autouse=True, scope="session")
-def _nenhum_pad_em_usb_na_suite() -> Iterator[None]:
+def _nenhum_pad_em_usb_na_suite(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
     """O vpad da suíte nasce uhid, sem perguntar ao kernel nem ao broker.
 
     O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). Sem esta
@@ -2144,8 +2146,15 @@ def _nenhum_pad_em_usb_na_suite() -> Iterator[None]:
     avisava o contrato. A mesma régua daria um diário numa máquina e outro na
     seguinte. Quem prova o gadget aponta os dois pontos com ``monkeypatch``
     (``test_o_pad_nasce_no_mesmo_usb_do_som``).
+
+    O broker também: todo ``BrokerState()`` sem ``pad_ops`` nasceria com o
+    configfs, o vudc e o vhci da máquina, e o ``restore_all`` e o EOF da régua
+    listariam os gadgets do usuário e tentariam desmontá-los. As raízes do
+    pad apontam para uma pasta vazia da sessão.
     """
+    vazio = tmp_path_factory.mktemp("sem-pad-em-usb")
     try:
+        from hefesto_dualsense4unix.broker import hidraw_broker
         from hefesto_dualsense4unix.integrations import uhid_gamepad
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
         if not _o_produto_nao_roda_neste_ambiente(erro):
@@ -2153,12 +2162,25 @@ def _nenhum_pad_em_usb_na_suite() -> Iterator[None]:
         yield
         return
     antes = (uhid_gamepad.CONTRATO_QUE_FALTA, uhid_gamepad.PEDIR_O_PAD_USB)
+    raizes = (
+        hidraw_broker.CONFIGFS_GADGETS,
+        hidraw_broker.SYS_PLATFORM,
+        hidraw_broker.SYS_CLASS_UDC,
+    )
     uhid_gamepad.CONTRATO_QUE_FALTA = lambda **_kw: []
     uhid_gamepad.PEDIR_O_PAD_USB = lambda *_a: None
+    hidraw_broker.CONFIGFS_GADGETS = str(vazio / "usb_gadget")
+    hidraw_broker.SYS_PLATFORM = str(vazio / "platform")
+    hidraw_broker.SYS_CLASS_UDC = str(vazio / "udc")
     try:
         yield
     finally:
         uhid_gamepad.CONTRATO_QUE_FALTA, uhid_gamepad.PEDIR_O_PAD_USB = antes
+        (
+            hidraw_broker.CONFIGFS_GADGETS,
+            hidraw_broker.SYS_PLATFORM,
+            hidraw_broker.SYS_CLASS_UDC,
+        ) = raizes
 
 
 @pytest.fixture(autouse=True, scope="session")

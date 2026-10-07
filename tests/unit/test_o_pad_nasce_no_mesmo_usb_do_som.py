@@ -475,6 +475,24 @@ class TestOBrokerMontaOGadgetSoHid:
         assert len(montados) == 4
         assert len(os.listdir(kernel.raizes.configfs)) == 4
 
+    def test_com_o_vudc_preso_o_pad_fica_sem_vaga_e_nao_sem_contrato(
+        self, tmp_path: Path
+    ) -> None:
+        # O `usbip-vudc` carregado antes do broker com uma instância só: o
+        # `modprobe num=4` dele não troca o que já está no kernel. O segundo
+        # pad fica sem vaga, e isso não pode virar «falta o usbip_vudc», que o
+        # daemon guarda e com que manda todo pad seguinte ao uhid.
+        kernel = KernelDeMentira(tmp_path, udcs=1)
+        estado = kernel.estado()
+        _, fd = estado.handle_line(7, 1000, _pedido(_serial(0)))
+        assert fd is not None
+        os.close(fd)
+        resposta, fd2 = estado.handle_line(7, 1000, _pedido(_serial(1)))
+        assert fd2 is None
+        assert resposta["error"] == "pad_usb_sem_udc_livre", resposta
+        assert "contrato" not in resposta
+        assert len(os.listdir(kernel.raizes.configfs)) == 1
+
     def test_o_mesmo_serial_nao_monta_dois_pads(self, kernel: KernelDeMentira) -> None:
         estado = kernel.estado()
         _, fd = estado.handle_line(7, 1000, _pedido())
@@ -515,6 +533,14 @@ class TestOBrokerMontaOGadgetSoHid:
         assert resposta["contrato"] == esperado
         if sem != "libcomposite":
             assert os.listdir(kernel.raizes.configfs) == []
+
+    def test_o_broker_sem_raizes_da_suite_nao_ve_o_configfs_da_maquina(self) -> None:
+        # Todo `BrokerState()` das outras réguas nasce sem `pad_ops`: o EOF e o
+        # `restore_all` delas listariam os gadgets do usuário e tentariam
+        # desmontá-los. O `conftest` desvia as raízes para uma pasta vazia.
+        raizes = broker.BrokerState(allowed_uid=1000, log=lambda *_a, **_k: None)._pad_ops.raizes
+        for raiz in (raizes.configfs, raizes.plataforma, raizes.classe_udc):
+            assert not raiz.startswith("/sys"), raizes
 
     def test_o_cinto_do_broker_desmonta_o_pad_orfao(self, kernel: KernelDeMentira) -> None:
         _, fd = kernel.estado().handle_line(7, 1000, _pedido())

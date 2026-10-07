@@ -85,7 +85,7 @@ import struct
 import sys
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
@@ -914,11 +914,16 @@ class PadUsbSemContratoError(OSError):
 
 @dataclass
 class RaizesDoPad:
-    """Onde o pad em USB mexe — injetável para a régua (nunca o /sys real)."""
+    """Onde o pad em USB mexe — injetável para a régua (nunca o /sys real).
 
-    configfs: str = CONFIGFS_GADGETS
-    plataforma: str = SYS_PLATFORM
-    classe_udc: str = SYS_CLASS_UDC
+    O padrão se lê do módulo na hora de nascer, e não na definição da classe:
+    é assim que o ``conftest`` desvia todo ``BrokerState()`` da suíte do
+    configfs da máquina sem passar raízes uma a uma.
+    """
+
+    configfs: str = field(default_factory=lambda: CONFIGFS_GADGETS)
+    plataforma: str = field(default_factory=lambda: SYS_PLATFORM)
+    classe_udc: str = field(default_factory=lambda: SYS_CLASS_UDC)
     dev: str = "/dev"
 
 
@@ -999,11 +1004,15 @@ class PadUsbOps:
             return []
         return sorted(n for n in nomes if n.startswith(PAD_USB_NOME))
 
-    def udcs_livres(self) -> list[str]:
+    def vudcs(self) -> list[str]:
+        """Todo ``usbip-vudc.N`` que o kernel publica, livre ou preso."""
         try:
-            udcs = sorted(n for n in os.listdir(self.raizes.classe_udc) if _VUDC_RE.match(n))
+            return sorted(n for n in os.listdir(self.raizes.classe_udc) if _VUDC_RE.match(n))
         except OSError:
-            udcs = []
+            return []
+
+    def udcs_livres(self) -> list[str]:
+        udcs = self.vudcs()
         try:
             gadgets = os.listdir(self.raizes.configfs)
         except OSError:
@@ -1705,6 +1714,12 @@ class BrokerState:
         nome = livres[0]
         udcs = self._pad_ops.udcs_livres()
         if not udcs:
+            # Sem vudc nenhum, falta o contrato; com todos presos (o módulo
+            # carregou antes com menos de `num=4`), falta só a vaga, e o pad
+            # deste controle fica no uhid sem condenar os outros ao uhid.
+            if self._pad_ops.vudcs():
+                self._log("pad_usb_sem_udc_livre", gadget=nome)
+                return ({"ok": False, "cmd": cmd, "error": "pad_usb_sem_udc_livre"}, None)
             return (
                 {"ok": False, "cmd": cmd, "error": "pad_usb_sem_contrato",
                  "contrato": "usbip_vudc"},
