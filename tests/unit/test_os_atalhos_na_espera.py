@@ -52,6 +52,7 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
 )
 
 VINTE_SEGUNDOS = 20.0
+_TIQUES_DE_TREZENTOS_SEGUNDOS = int(300.0 / TIQUE)
 
 ATOS = {
     "on_next_bridge": "ponte",
@@ -557,14 +558,29 @@ class TestForaDaEsperaNadaMuda:
     def test_depois_do_prazo_os_atalhos_sao_do_novo_primario(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        """Passado o prazo vale a NUM-01: o P2 vira o 1 e segura pelo leitor do posto."""
-        bancada = montar_atalhos(monkeypatch, kernel, 3)
+        """Passado o prazo, sem jogo, vale a NUM-01: o P2 vira o 1 e segura pelo leitor do posto."""
+        bancada = montar_atalhos(monkeypatch, kernel, 3, jogo=False)
         _fora_dentro_do_prazo(bancada, P1)
-        while bancada.vaga():
+        for _ in range(_TIQUES_DE_TREZENTOS_SEGUNDOS):
+            if not bancada.vaga():
+                break
             bancada.tique()
+        assert not bancada.vaga(), "passado o prazo, sem jogo, o posto não pode seguir vago"
         assert bancada.inst.primary_uniq == P2 and bancada.dono_do_vpad_do_p1() == P2
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
         assert bancada.apertar(P3, "ps", "r3") == ["ponte"]
+
+    def test_com_o_jogo_o_posto_espera_e_os_atalhos_seguem_com_o_p2(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+    ) -> None:
+        """D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): o posto espera o jogo."""
+        bancada = montar_atalhos(monkeypatch, kernel, 3)
+        _fora_dentro_do_prazo(bancada, P1)
+        for _ in range(_TIQUES_DE_TREZENTOS_SEGUNDOS):
+            bancada.tique()
+        assert bancada.vaga(), "com o jogo aberto o posto do P1 espera quem saiu"
+        assert quem_segura_os_atalhos(bancada.daemon) == P2
+        assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
 
 
 @pytest.mark.usefixtures("config_isolado")

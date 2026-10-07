@@ -235,10 +235,17 @@ def levar_o_posto(bancada: MesaHonesta, quem: int, *, nasceu: str, volta: bool) 
         trocar_a_mascara_do_p1(bancada)
     saidos = list(UNIQS[:quem])
     vias = {u: bancada.mesa.transporte_de(u) for u in saidos}
+    # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+    # autoridade o posto espera quem saiu. Ele só passa adiante com o jogo
+    # fechado, e o jogo abre de novo antes de quem saiu voltar.
+    autoridade = bancada.daemon.display_authority
+    bancada.daemon.display_authority = "daemon"
     for uniq in saidos:
         bancada.mesa.levantar(uniq)
         for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
             bancada.tique()
+    bancada.daemon.display_authority = autoridade
+    bancada.tique()
     if volta:
         for uniq in saidos:
             bancada.mesa.sentar(uniq, transporte=vias[uniq])
