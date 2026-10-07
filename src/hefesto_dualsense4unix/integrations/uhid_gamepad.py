@@ -602,6 +602,7 @@ class UhidDualSense:
     _gadget: _GadgetDoPad | None = None
     _gadget_prazo: float | None = None
     _gadget_falhou: bool = False
+    _gadget_caiu: bool = False
     _sem_gadget: bool = False
 
     @classmethod
@@ -861,6 +862,22 @@ class UhidDualSense:
 
     def is_active(self) -> bool:
         return self._fd is not None
+
+    @property
+    def gadget_enumerando(self) -> bool:
+        """O pad em USB de pé, à espera do `hidraw` do gadget (até `_GADGET_ENUMERA_S`).
+
+        Nesse intervalo o `_started` ainda é False, e quem pergunta pela VIDA
+        do pad (`gamepad.vpad_vivo`) tem de ouvir «vivo»: senão o co-op desmonta
+        e renasce o jogador a cada tique, e o gadget nunca chega a enumerar.
+        """
+        gadget = self._gadget
+        return bool(
+            gadget is not None
+            and not self._gadget_falhou
+            and not self._gadget_caiu
+            and gadget.hidraw is None
+        )
 
 
     def _criar_o_device(self) -> bool:
@@ -2064,6 +2081,7 @@ _GADGET_VARRE_S = 5.0
 _GADGET_VIGIA_S = 0.25
 _GADGET_VEZ_DA_ESCRITA_MS = 8
 _GADGET_LEITURA = 512
+_GADGET_PERGUNTA_A_CADA = 8
 _FEATURES_DO_PROBE = (0x05, 0x09, 0x20)
 #: o contrato que só se mede montando: o gadget não enumerou pelo `vhci_hcd`.
 CONTRATO_DA_ENUMERACAO = "enumeração pelo vhci_hcd"
@@ -2081,6 +2099,7 @@ class _GadgetDoPad:
     hidraw: str | None = None
     interface: str | None = None
     escrita_falhou: int = 0
+    falhas_seguidas: int = 0
 
     def desmontar(self) -> None:
         with contextlib.suppress(OSError):
@@ -2135,6 +2154,8 @@ def _ha_jogo_aberto() -> bool:
 PEDIR_O_PAD_USB: Callable[[str, bytes, str], _GadgetDoPad | None] = _pedir_ao_broker
 HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
 JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
+#: o aparelho físico ainda está na máquina? Só o que CAIU estaciona o gadget.
+APARELHO_PRESENTE: Callable[[str], bool] = pad_usb.aparelho_presente
 #: a mesma pergunta do doctor (`system_check.contrato_do_pad_em_usb`): o que não
 #: se lê volta «não sei» (``["?"]``), e na dúvida o pad nasce uhid.
 CONTRATO_QUE_FALTA: Callable[[], list[str]] = system_check.contrato_do_pad_em_usb
@@ -2348,10 +2369,11 @@ def _bombear_o_gadget(pad: UhidDualSense) -> None:
     """O `pump_ff` do gadget: o mesmo serviço, e a volta ao uhid se não enumerou."""
     import select
 
-    if pad._gadget_falhou:
-        logger.warning("pad_usb_nao_enumerou_fica_o_uhid", player=pad.player,
-                       prazo_s=_GADGET_ENUMERA_S)
-        pad_usb.anotar_contrato_que_faltou(CONTRATO_DA_ENUMERACAO)
+    if pad._gadget_caiu or pad._gadget_falhou:
+        if pad._gadget_falhou:
+            logger.warning("pad_usb_nao_enumerou_fica_o_uhid", player=pad.player,
+                           prazo_s=_GADGET_ENUMERA_S)
+            pad_usb.anotar_contrato_que_faltou(CONTRATO_DA_ENUMERACAO)
         pad._destruir_o_device()
         pad._sem_gadget = True
         pad._criar_o_device()
@@ -2381,6 +2403,7 @@ def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
         for tentativa in (0, 1):
             try:
                 os.write(fd, report)
+                gadget.falhas_seguidas = 0
                 return True
             except BlockingIOError:
                 if tentativa:
@@ -2395,10 +2418,28 @@ def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
                         logger.warning("pad_usb_escrita_falhou", err=str(exc),
                                        player=pad.player)
                     gadget.escrita_falhou += 1
+                    gadget.falhas_seguidas += 1
+                    _o_gadget_caiu(pad, gadget)
                 break
         # O estado que não saiu sai no próximo compasso do fio: nada fica preso.
         pad._last_body = None
         return False
+
+
+def _o_gadget_caiu(pad: UhidDualSense, gadget: _GadgetDoPad) -> None:
+    """A escrita falha: o gadget ainda existe do lado do jogo?
+
+    O broker que cai ou reinicia, ou o ``vhci`` que solta a porta, tira o
+    gadget de baixo do pad com o ``_started`` ainda True: sem esta pergunta o
+    pad ficaria mudo para sempre. Pergunta na primeira falha e a cada
+    ``_GADGET_PERGUNTA_A_CADA`` seguidas; sumido o ``hidraw``, o bombeio do
+    tique desmonta e o pad renasce no uhid (o contrato não faltou: não se anota).
+    """
+    if pad._gadget_caiu or (gadget.falhas_seguidas - 1) % _GADGET_PERGUNTA_A_CADA:
+        return
+    if HIDRAW_DO_GADGET(gadget.serial) is None:
+        pad._gadget_caiu = True
+        logger.warning("pad_usb_caiu_fica_o_uhid", gadget=gadget.gadget, player=pad.player)
 
 
 def _report_neutro(pad: UhidDualSense) -> bytes:
@@ -2418,11 +2459,22 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
     gadget = pad._gadget
     if gadget is None:
         return False
-    falhou = pad._gadget_falhou
+    falhou = pad._gadget_falhou or pad._gadget_caiu
     pad._gadget = None
     pad._gadget_prazo = None
     pad._gadget_falhou = False
-    if not falhou and gadget.hidraw is not None and pad.identity and JOGO_ABERTO():
+    pad._gadget_caiu = False
+    # Estaciona só o gadget do aparelho que CAIU com o jogo aberto (a cura 7).
+    # Com o aparelho aqui (a troca de máscara, a emulação desligada, o co-op
+    # desfeito) o gadget desce: de pé, ele seria um DualSense fantasma ao lado
+    # do pad novo ou do físico devolvido.
+    if (
+        not falhou
+        and gadget.hidraw is not None
+        and pad.identity
+        and JOGO_ABERTO()
+        and not APARELHO_PRESENTE(pad.identity)
+    ):
         with contextlib.suppress(OSError):
             os.write(gadget.fd, _report_neutro(pad))
         _GADGETS_ESTACIONADOS.estacionar(pad.identity, gadget)

@@ -626,6 +626,8 @@ class BancadaDoGadget:
         self.guardadas: dict[int, bytes] = {}
         self.enumerado: tuple[str, str] | None = None
         self.jogo_aberto = False
+        #: o aparelho físico na máquina; False = ele CAIU (o caso do estacionar).
+        self.aparelho_presente = False
         self.falta: list[str] = []
         self.jogo: socket.socket | None = None
         self.ioctl_erro: int | None = None
@@ -651,6 +653,9 @@ class BancadaDoGadget:
         monkeypatch.setattr(uhid_gamepad, "PEDIR_O_PAD_USB", pedir)
         monkeypatch.setattr(uhid_gamepad, "HIDRAW_DO_GADGET", lambda _s: self.enumerado)
         monkeypatch.setattr(uhid_gamepad, "JOGO_ABERTO", lambda: self.jogo_aberto)
+        monkeypatch.setattr(
+            uhid_gamepad, "APARELHO_PRESENTE", lambda _i: self.aparelho_presente
+        )
         monkeypatch.setattr(uhid_gamepad, "CONTRATO_QUE_FALTA", lambda: list(self.falta))
         monkeypatch.setattr(pad_usb, "escrever_get_report", escrever)
         monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
@@ -854,6 +859,127 @@ class TestOVpadNasceNoGadget:
         bancada.jogo_aberto = False
         assert estacionados.varrer() == 1
         assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+
+
+class TestOPadEmUsbNaoQuebraOResto:
+    """O que o conferente final achou: o gadget convivendo com o co-op e a máscara."""
+
+    def test_em_enumeracao_o_pad_esta_vivo_para_o_coop(self, bancada: BancadaDoGadget) -> None:
+        """~9 s sem o ``_started``: sem isto o co-op renascia o jogador a cada tique."""
+        from unittest.mock import MagicMock
+
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
+
+        relogio = [100.0]
+        pad = bancada.pad(time_fn=lambda: relogio[0])
+        try:
+            assert pad.start()
+            assert pad._started is False
+            assert vpad_vivo(pad) is True
+            relogio[0] += 16.0
+            assert bancada.esperar(lambda: pad._gadget_falhou)
+            assert vpad_vivo(pad) is False
+        finally:
+            pad.stop()
+        # O dublê de sempre (um MagicMock morto) continua morto.
+        assert vpad_vivo(MagicMock(_started=False)) is False
+
+    def test_com_o_aparelho_aqui_o_gadget_desce_mesmo_com_o_jogo_aberto(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        """A troca de máscara com o jogo aberto não deixa um DualSense fantasma."""
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        bancada.jogo_aberto = True
+        bancada.aparelho_presente = True
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        pad.stop()
+        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
+        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+
+    def test_o_gadget_que_cai_com_o_jogo_aberto_volta_ao_uhid(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        """O broker que cai tira o gadget de baixo do pad: ele renasce, não emudece."""
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        bancada.jogo_aberto = True
+        pad = bancada.pad()
+        try:
+            assert pad.start()
+            assert bancada.esperar(lambda: pad.is_bound)
+            assert bancada.jogo is not None
+            bancada.jogo.close()
+            # A escrita falha com o hidraw ainda de pé: não caiu, só falhou.
+            pad.forward_buttons(frozenset({"cross"}))
+            assert pad._gadget_caiu is False
+            bancada.enumerado = None
+            pad.forward_buttons(frozenset({"circle"}))
+            assert bancada.esperar(lambda: pad._gadget_caiu, segundos=6.0)
+            pad.pump_ff()
+            assert pad._gadget is None and pad.is_active
+            assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+            assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
+            assert bancada.ug.CONTRATO_DA_ENUMERACAO not in (
+                pad_usb.contrato_que_faltou_ao_montar()
+            )
+        finally:
+            pad.stop()
+
+
+def _sysfs_do_aparelho(raiz: Path) -> tuple[Path, Path]:
+    """Uma classe hidraw e uma classe input de mentira, vazias."""
+    hidraw = raiz / "class" / "hidraw"
+    entrada = raiz / "class" / "input"
+    hidraw.mkdir(parents=True)
+    entrada.mkdir(parents=True)
+    return hidraw, entrada
+
+
+def _hidraw(raiz: Path, classe: Path, nome: str, devpath: str, uniq: str) -> None:
+    hid = raiz / devpath
+    hid.mkdir(parents=True)
+    _escrever(hid / "uevent", _uevent("0005:0000054C:00000CE6", uniq=uniq))
+    (classe / nome).mkdir()
+    (classe / nome / "device").symlink_to(hid)
+
+
+class TestOAparelhoPresente:
+    def _pergunta(self, identidade: str, hidraw: Path, entrada: Path) -> bool:
+        return pad_usb.aparelho_presente(
+            identidade, raiz_class_hidraw=str(hidraw), raiz_class_input=str(entrada)
+        )
+
+    def test_o_aparelho_pelo_radio_esta_aqui(self, tmp_path: Path) -> None:
+        hidraw, entrada = _sysfs_do_aparelho(tmp_path)
+        _hidraw(tmp_path, hidraw, "hidraw3", "devices/bt/0005:054C:0CE6.0003", MAC_DO_EDGE)
+        assert self._pergunta(MAC_DO_EDGE, hidraw, entrada) is True
+        assert self._pergunta(MAC_DO_EDGE.replace(":", "").upper(), hidraw, entrada) is True
+
+    def test_o_aparelho_so_pelo_uniq_do_evdev_esta_aqui(self, tmp_path: Path) -> None:
+        hidraw, entrada = _sysfs_do_aparelho(tmp_path)
+        _escrever(entrada / "input7" / "uniq", MAC_DO_EDGE + "\n")
+        assert self._pergunta(MAC_DO_EDGE, hidraw, entrada) is True
+
+    def test_o_aparelho_que_saiu_nao_esta(self, tmp_path: Path) -> None:
+        hidraw, entrada = _sysfs_do_aparelho(tmp_path)
+        _hidraw(tmp_path, hidraw, "hidraw3", "devices/bt/0005:054C:0CE6.0003",
+                "aa:bb:cc:00:00:22")
+        _escrever(entrada / "input7" / "uniq", "aa:bb:cc:00:00:22\n")
+        assert self._pergunta(MAC_DO_EDGE, hidraw, entrada) is False
+
+    def test_o_pad_nosso_com_o_mesmo_uniq_nao_e_o_aparelho(self, tmp_path: Path) -> None:
+        hidraw, entrada = _sysfs_do_aparelho(tmp_path)
+        _hidraw(tmp_path, hidraw, "hidraw4", "devices/virtual/misc/uhid/0005:054C:0CE6.0004",
+                MAC_DO_EDGE)
+        _escrever(tmp_path / "devices/virtual/misc/uhid/0005:054C:0CE6.0004/uevent",
+                  _uevent("0005:0000054C:00000CE6", phys="hefesto-vpad-1", uniq=MAC_DO_EDGE))
+        assert self._pergunta(MAC_DO_EDGE, hidraw, entrada) is False
+
+    def test_na_duvida_o_aparelho_esta_aqui(self, tmp_path: Path) -> None:
+        hidraw, entrada = _sysfs_do_aparelho(tmp_path)
+        assert self._pergunta("path:/dev/input/event7", hidraw, entrada) is True
+        assert self._pergunta(MAC_DO_EDGE, tmp_path / "nao-existe", entrada) is True
 
 
 class TestOGetReportEOHidrawDoGadget:

@@ -363,7 +363,11 @@ def vpad_vivo(device: Any) -> bool:
     """VIDA de UM objeto vpad, não existência (lição 6/#17 da auditoria)."""
     if device is None:
         return False
-    return getattr(device, "_started", None) is not False
+    if getattr(device, "_started", None) is not False:
+        return True
+    # O pad em USB nasce com `_started` False e só o ganha quando o gadget
+    # enumera (~9 s): em enumeração ele está vivo, não morto.
+    return getattr(device, "gadget_enumerando", False) is True
 
 
 def _vpad_vivo(daemon: DaemonProtocol) -> bool:

@@ -240,6 +240,49 @@ def hidraw_do_gadget(
     return None
 
 
+def aparelho_presente(
+    identidade: str,
+    *,
+    raiz_class_hidraw: str = "/sys/class/hidraw",
+    raiz_class_input: str = "/sys/class/input",
+    ler: Callable[[str], str] = _ler_atributo,
+    real: Callable[[str], str] = os.path.realpath,
+) -> bool:
+    """O aparelho de ``identidade`` (o MAC) ainda está na máquina?
+
+    É a pergunta que separa «o aparelho caiu» (o gadget espera o jogo fechar)
+    de «o pad trocou de máscara ou a emulação desligou com o aparelho aqui»
+    (o gadget desce, senão o jogo vê um DualSense fantasma ao lado do pad
+    novo). Procura o MAC no ``HID_UNIQ`` dos ``hidraw`` que não são pad nosso e
+    no ``uniq`` dos ``inputN``. Na dúvida (identidade sem os 12 hex, classe
+    ilegível) responde True: o lado seguro é não deixar fantasma.
+    """
+    alvo = _so_hex(identidade or "")
+    if len(alvo) != 12:
+        return True
+    try:
+        hidraws = sorted(os.listdir(raiz_class_hidraw))
+        inputs = sorted(os.listdir(raiz_class_input))
+    except OSError:
+        return True
+    for nome in hidraws:
+        if not nome.startswith("hidraw"):
+            continue
+        dispositivo = os.path.join(raiz_class_hidraw, nome, "device")
+        campos = campos_do_uevent(ler(os.path.join(dispositivo, "uevent")))
+        if _so_hex(campos.get("HID_UNIQ", "")) != alvo:
+            continue
+        if not e_hidraw_de_pad_nosso(nome, raiz_class_hidraw=raiz_class_hidraw, ler=ler,
+                                     real=real):
+            return True
+    for nome in inputs:
+        if not nome.startswith("input"):
+            continue
+        if _so_hex(ler(os.path.join(raiz_class_input, nome, "uniq"))) == alvo:
+            return True
+    return False
+
+
 # --- o GET_REPORT do f_hid (linux/usb/g_hid.h) -------------------------------
 
 #: ``_IOR('g', 0x41, __u8)``: o id do GET_REPORT que o jogo pediu e espera.
@@ -413,6 +456,7 @@ __all__ = [
     "VPAD_HID_PHYS",
     "VPAD_UNIQ_PREFIXO",
     "anotar_contrato_que_faltou",
+    "aparelho_presente",
     "bus_do_hid_id",
     "campos_do_uevent",
     "contrato_que_falta",
