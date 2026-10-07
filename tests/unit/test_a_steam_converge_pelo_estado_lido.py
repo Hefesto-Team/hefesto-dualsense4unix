@@ -221,3 +221,40 @@ def test_reabrir_nao_espera_quando_a_steam_ja_esta_de_pe(portas_da_steam) -> Non
 
     assert voltou is True
     assert esperas == []
+
+
+def _clicar_abrir_a_steam() -> str:
+    """O gesto «Abrir o lançador» da 07 no cartão da Steam; devolve a recusa que ele diz."""
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+
+    with pytest.raises(RuntimeError) as erro:
+        a07.abrir_lancador(None, {"gesto": desenho.ABRIR, "v": desenho.STEAM}, None)
+    return str(erro.value)
+
+
+def test_a_steam_pedida_que_nao_aparece_nao_vira_maquina_sem_steam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Com a porta no PATH e a Steam sem ficar de pé, a frase não diz «não achei como abrir».
+
+    O `False` do `reopen_steam` passou a ter duas causas quando ele começou a conferir a Steam de
+    pé; a recusa da tela tem de dizer a que aconteceu. MORDIDA: volte o gesto à frase única.
+    """
+    monkeypatch.setattr(slo, "reopen_steam", lambda: False)
+    monkeypatch.setattr(slo.shutil, "which", lambda n: f"/usr/bin/{n}")
+
+    frase = _clicar_abrir_a_steam()
+
+    assert "não achei" not in frase.lower(), frase
+    assert "ainda não abriu" in frase and "nada foi alterado" in frase, frase
+
+
+def test_a_maquina_sem_porta_nenhuma_diz_que_nao_achou(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(slo, "reopen_steam", lambda: False)
+    monkeypatch.setattr(slo.shutil, "which", lambda _n: None)
+
+    frase = _clicar_abrir_a_steam()
+
+    assert frase.startswith("Não achei como abrir a Steam"), frase
+    assert "nada foi alterado" in frase, frase

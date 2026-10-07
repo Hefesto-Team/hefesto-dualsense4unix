@@ -1118,9 +1118,16 @@ def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"Abra o {nomes.get(qual, qual)} como você já abre — o perfil "
             "entra do mesmo jeito, pelo nome do processo e pela janela.")
     if not slo.reopen_steam():
+        # O `False` tem duas causas desde que o `reopen_steam` confere a Steam
+        # de pé (07/10/2026): sem porta nenhuma, ou o pedido saiu e ela não
+        # apareceu no tempo da conferência. A frase diz a que aconteceu.
+        if not slo.ha_porta_de_reabrir():
+            raise RuntimeError(
+                "Não achei como abrir a Steam nesta máquina. Abra-a pelo seu "
+                "menu — nada foi alterado.")
         raise RuntimeError(
-            "Não achei como abrir a Steam nesta máquina. Abra-a pelo seu "
-            "menu — nada foi alterado.")
+            "A Steam ainda não abriu. Se não aparecer, abra-a pelo seu menu "
+            "— nada foi alterado.")
     return None
 
 

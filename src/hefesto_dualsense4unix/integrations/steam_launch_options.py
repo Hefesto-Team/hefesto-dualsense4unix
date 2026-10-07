@@ -1219,6 +1219,15 @@ _PORTAS_DE_REABRIR: tuple[tuple[str, ...], ...] = (
 )
 
 
+def ha_porta_de_reabrir() -> bool:
+    """Esta máquina tem alguma porta de reabrir a Steam no PATH (o `steam` ou o `xdg-open`)?
+
+    Separa as duas razões de o ``reopen_steam`` devolver ``False``: não haver porta nenhuma, e
+    a porta existir e a Steam não ter ficado de pé no tempo da conferência.
+    """
+    return any(shutil.which(cmd[0]) is not None for cmd in _PORTAS_DE_REABRIR)
+
+
 def reopen_steam(
     *,
     de_pe: Callable[[], bool] | None = None,
