@@ -1027,7 +1027,7 @@ CSS = """
      ficou verde sobre um botão que não existe mais. As outras duas, que ninguém
      tinha citado, reprovaram certo.
 
-     É a armadilha que o `GUIA.md` desta casa nomeia três vezes em três dias:
+     É a armadilha que o contrato desta casa nomeia três vezes em três dias:
      *um comentário que descreve o padrão proibido VIRA a primeira ocorrência
      dele*. Quem for escrever aqui o nome de um `data-gesto` que saiu, escreva-o
      sem o atributo — ou não escreva. Os nomes estão no pacote desta aba, na
