@@ -87,10 +87,21 @@ def linhas() -> list[str]:
     `MODE="0600"`, `event*` e `js*`). Elas têm régua própria, em
     `tests/unit/test_hide_so_o_hidraw_02_os_quatro_nos_de_entrada.py`; aqui
     ficam as de acesso, que continuam valendo linha a linha.
+
+    O PAD EM USB (07/10/2026): antes da linha que fecha o cabo vem a linha
+    que só MARCA o gadget (`ENV{HEFESTO_PAD_USB}="1"`), a mesma marca da
+    `73`; ela não dá nem tira acesso, e tem régua própria abaixo.
     """
     if not REGRA.is_file():
         pytest.fail(f"regra ausente: {REGRA}")
-    return [ln for ln in _linhas_de_codigo(REGRA) if 'TAG-="uaccess"' not in ln]
+    return [
+        ln for ln in _linhas_de_codigo(REGRA)
+        if 'TAG-="uaccess"' not in ln and not _e_a_marca_do_pad(ln)
+    ]
+
+
+def _e_a_marca_do_pad(linha: str) -> bool:
+    return 'ENV{HEFESTO_PAD_USB}="1"' in linha
 
 
 def test_o_arquivo_existe() -> None:
@@ -123,11 +134,32 @@ def test_toda_linha_de_codigo_da_uaccess(linhas: list[str]) -> None:
 
 
 def test_toda_linha_ou_da_acesso_ou_fecha_o_fisico() -> None:
-    """Cada linha de código faz UMA das duas coisas, e nunca as duas."""
+    """Cada linha de código faz UMA das duas coisas, e nunca as duas.
+
+    A exceção é a linha da marca do pad em USB, que não faz nenhuma das duas.
+    """
     for ln in _linhas_de_codigo(REGRA):
         da = 'TAG+="uaccess"' in ln
         tira = 'TAG-="uaccess"' in ln
+        if _e_a_marca_do_pad(ln):
+            assert not da and not tira, f"a linha da marca mexe no acesso: {ln}"
+            continue
         assert da != tira, f"linha que não dá nem tira a TAG uaccess (ou faz as duas): {ln}"
+
+
+def test_a_marca_do_pad_em_usb_so_marca_e_vem_antes_de_fechar() -> None:
+    """A marca é pelo lugar E pelo serial que só o broker escreve, como na `73`."""
+    codigo = _linhas_de_codigo(REGRA)
+    marcas = [i for i, ln in enumerate(codigo) if _e_a_marca_do_pad(ln)]
+    assert len(marcas) == 1, marcas
+    marca = codigo[marcas[0]]
+    assert 'DEVPATH=="/devices/platform/vhci_hcd.*"' in marca
+    assert 'ATTRS{serial}=="hefesto-pad-*"' in marca
+    for proibido in ("MODE", "OWNER", "GROUP", "TAG"):
+        assert proibido not in marca, marca
+    do_cabo = [i for i, ln in enumerate(codigo) if 'KERNELS=="0003:054C:' in ln]
+    assert do_cabo and all(marcas[0] < i for i in do_cabo)
+    assert all('ENV{HEFESTO_PAD_USB}!="1"' in codigo[i] for i in do_cabo)
 
 
 def test_motion_tem_uaccess(linhas: list[str]) -> None:

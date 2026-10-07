@@ -86,6 +86,7 @@ class _NoDeEntrada:
         nome = pais[0][1].get("name", "")
         eh_gamepad = not nome.endswith(("Motion Sensors", "Touchpad", "Headset Jack"))
         self.tags: set[str] = {"uaccess"} if eh_gamepad else set()
+        self.env: dict[str, str] = {}
 
 
 def _casa(padrao: str, valor: str) -> bool:
@@ -114,6 +115,8 @@ def _aplicar_a_72(no: _NoDeEntrada, *, existe: set[str]) -> _NoDeEntrada:
                 ok = _casa(valor, no.devpath)
             elif chave == "TEST":
                 ok = valor in existe
+            elif chave.startswith("ENV{"):
+                ok = _casa(valor, no.env.get(chave[4:-1], ""))
             elif chave == "KERNELS" or chave.startswith("ATTRS{"):
                 de_pai.append((chave, valor))
                 continue
@@ -144,6 +147,8 @@ def _aplicar_a_72(no: _NoDeEntrada, *, existe: set[str]) -> _NoDeEntrada:
                 no.tags.add(valor)
             elif chave == "TAG" and op == "-=":
                 no.tags.discard(valor)
+            elif chave.startswith("ENV{") and op == "=":
+                no.env[chave[4:-1]] = valor
     return no
 
 
@@ -200,6 +205,29 @@ def _do_vpad(qual: str) -> _NoDeEntrada:
     )
 
 
+def _do_gadget(qual: str, serial: str = "hefesto-pad-02fe00000001") -> _NoDeEntrada:
+    """O pad em USB: o gadget só HID pelo ``vhci_hcd``, com pai USB e 0003:054C:0DF2.
+
+    ``serial=""`` é um Edge FÍSICO por um ``usbip`` de verdade: mesmo lugar,
+    mesmo par, mas sem o serial que só o broker escreve.
+    """
+    nome, kernel = _NOMES[qual]
+    hid = "0003:054C:0DF2.0010"
+    usb = {"idVendor": "054c", "idProduct": "0df2"}
+    if serial:
+        usb["serial"] = serial
+    return _NoDeEntrada(
+        f"/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0/{hid}/input/input130/{kernel}",
+        [
+            ("input130", {"id/vendor": "054c", "id/product": "0df2", "name": nome,
+                          "uniq": "02:fe:00:00:00:01"}),
+            (hid, {}),
+            ("3-1:1.0", {}),
+            ("3-1", usb),
+        ],
+    )
+
+
 _TODOS = ("gamepad", "movimento", "touchpad", "fone", "joystick")
 
 
@@ -231,6 +259,23 @@ class TestARegraFechaOsNosDeEntrada:
         assert no.mode != "0600", (qual, no.mode)
         if qual in ("gamepad", "joystick", "movimento", "touchpad"):
             assert "uaccess" in no.tags, (qual, no.tags)
+
+    @pytest.mark.parametrize("qual", _TODOS)
+    def test_o_pad_em_usb_continua_aberto(self, qual: str) -> None:
+        """O gadget tem pai USB e é 0DF2, como o Edge pelo cabo; a marca o separa."""
+        no = _aplicar_a_72(_do_gadget(qual), existe={SOCKET_DO_BROKER})
+
+        assert no.mode != "0600", (qual, no.mode)
+        if qual in ("gamepad", "joystick", "movimento", "touchpad"):
+            assert "uaccess" in no.tags, (qual, no.tags)
+
+    @pytest.mark.parametrize("qual", _TODOS)
+    def test_o_edge_por_um_usbip_de_verdade_continua_fechado(self, qual: str) -> None:
+        """Sem o serial do broker, o mesmo lugar não abre nada."""
+        no = _aplicar_a_72(_do_gadget(qual, serial=""), existe={SOCKET_DO_BROKER})
+
+        assert no.mode == "0600", (qual, no.mode)
+        assert "uaccess" not in no.tags, (qual, no.tags)
 
     @pytest.mark.parametrize("qual", _TODOS)
     def test_sem_o_broker_de_pe_nada_fecha(self, qual: str) -> None:

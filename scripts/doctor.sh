@@ -1189,9 +1189,12 @@ check_input_uaccess() {
         # controle do usuário pelo BT era contado como «gamepad VIRTUAL». Quem
         # separa os dois ali é a identidade do vpad (o `uniq` 02:fe), como em
         # `core/evdev_reader.py:_is_virtual_evdev`.
+        # O pad em USB (o gadget pelo `vhci_hcd`) tem pai USB e é 054c:0df2,
+        # como o Edge pelo cabo: o que o separa é o mesmo `uniq` 02:fe do vpad.
         uniq="$(cat "/sys/class/input/${base}/device/uniq" 2>/dev/null || true)"
-        if [[ "${dev_real}" == */devices/virtual/* \
-              && ( "${dev_real}" != */misc/uhid/* || -z "${uniq}" || "${uniq,,}" == 02:fe:* ) ]]; then
+        if [[ ( "${dev_real}" == */devices/virtual/* \
+                && ( "${dev_real}" != */misc/uhid/* || -z "${uniq}" || "${uniq,,}" == 02:fe:* ) ) \
+              || ( "${dev_real}" == */vhci_hcd.*/* && "${uniq,,}" == 02:fe:* ) ]]; then
             classe="virt"
             vistos_virt=$((vistos_virt + 1))
         else

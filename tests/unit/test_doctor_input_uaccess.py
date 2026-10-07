@@ -77,6 +77,8 @@ def _sem_comentarios(texto: str) -> str:
 
 FISICO = "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.0/0003:054C:0CE6.0042"
 VIRTUAL = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F"
+#: o pad em USB: o gadget só HID pelo `vhci_hcd`, com pai USB de verdade.
+GADGET = "/sys/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0/0003:054C:0DF2.0010"
 
 
 def _monta_cena(
@@ -85,8 +87,9 @@ def _monta_cena(
     *,
     com_regra: bool = True,
     com_acl: tuple[str, ...] = (),
+    uniqs: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Monta a árvore falsa."""
+    """Monta a árvore falsa. ``uniqs`` dá o ``uniq`` do ``inputN`` de cada nó."""
     (raiz / "dev" / "input").mkdir(parents=True, exist_ok=True)
     (raiz / "sys" / "class" / "input").mkdir(parents=True, exist_ok=True)
     if com_regra:
@@ -99,6 +102,8 @@ def _monta_cena(
         (dev_dir / "id").mkdir(exist_ok=True)
         (dev_dir / "id" / "vendor").write_text(f"{vendor}\n", encoding="utf-8")
         (dev_dir / "name").write_text(f"{nome}\n", encoding="utf-8")
+        if uniqs and base in uniqs:
+            (dev_dir / "uniq").write_text(f"{uniqs[base]}\n", encoding="utf-8")
         classe = raiz / "sys" / "class" / "input" / base
         classe.mkdir(parents=True, exist_ok=True)
         enlace = classe / "device"
@@ -274,6 +279,32 @@ class TestOVpadNaoRespondePeloFisico:
         assert "[FAIL]" in r.stdout, r.stdout
         assert "VIRTUAL" in r.stdout
         assert "event261" in r.stdout
+
+
+class TestOPadEmUsbNaoRespondePeloFisico:
+    """O gadget tem pai USB e é 054c:0df2, como o Edge pelo cabo: é o vpad."""
+
+    _CENA = [
+        ("event40", "054c", "DualSense Edge Wireless Controller Motion Sensors", GADGET, 0o660),
+        ("event41", "054c", "DualSense Edge Wireless Controller Touchpad", GADGET, 0o660),
+    ]
+
+    def test_so_o_pad_em_usb_presente_nao_da_pass(self, tmp_path: Path) -> None:
+        env = _monta_cena(
+            tmp_path, self._CENA, com_acl=("event40", "event41"),
+            uniqs={"event40": "02:fe:00:00:00:01", "event41": "02:fe:00:00:00:01"},
+        )
+        r = _roda(tmp_path, env)
+        assert "[PASS]" not in r.stdout, r.stdout
+        assert "[INFO]" in r.stdout and "virtual" in r.stdout.lower(), r.stdout
+
+    def test_o_edge_por_um_usbip_de_verdade_e_fisico(self, tmp_path: Path) -> None:
+        env = _monta_cena(
+            tmp_path, self._CENA, com_acl=("event40", "event41"),
+            uniqs={"event40": "aa:bb:cc:00:00:11", "event41": "aa:bb:cc:00:00:11"},
+        )
+        r = _roda(tmp_path, env)
+        assert "[PASS]" in r.stdout and "físico" in r.stdout, r.stdout
 
 
 class TestOEscopoEEstreito:
