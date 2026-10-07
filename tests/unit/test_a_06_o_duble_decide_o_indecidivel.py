@@ -60,16 +60,21 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: O `player_slot` NÃO É ENFEITE: é ele que ordena a mesa
+#: O `player_slot` NÃO É ENFEITE: é ele que ordena a mesa. E ele é de 2 a 5, e não de 1 a 4,
+#: desde que o cartão diz o número VIVO (O-CARTAO-ABERTO-DIZ-O-NUMERO-DO-JOGADOR-01, o endereço
+#: `jogador` de cada cartão): com 1 a 4, cada número cai no assento de mesmo número e concorda
+#: com o que o gerador crava. De 2 a 5 é o caso real de um externo na mesa empurrando os
+#: DualSense para cima (`mesa_viva._lugares_da_mesa`): o assento volta à posição e o número
+#: vivo discorda do cravado nos quatro cartões.
 CONTROLES = [
     {"uniq": "aa:bb:cc:00:00:01", "connected": True, "transport": "bt",
-     "player_slot": 1, "is_primary": False},
+     "player_slot": 2, "is_primary": False},
     {"uniq": "02:fe:00:00:00:02", "connected": True, "transport": "usb",
-     "player_slot": 2, "is_primary": True},
+     "player_slot": 3, "is_primary": True},
     {"uniq": "e8:47:3a:00:00:03", "connected": True, "transport": "usb",
-     "player_slot": 3, "is_primary": False},
-    {"uniq": "aa:bb:cc:00:00:04", "connected": True, "transport": "usb",
      "player_slot": 4, "is_primary": False},
+    {"uniq": "aa:bb:cc:00:00:04", "connected": True, "transport": "usb",
+     "player_slot": 5, "is_primary": False},
 ]
 
 
@@ -443,7 +448,8 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     lugar = primario[0]
     c = por_uniq[str(lugar["uniq"])]
     dica = str(valor["quem-navega"])
-    for pedaco in (str(lugar["pref"]).upper(), modelo[str(lugar["pref"])],
+    # o «Pn» é o NÚMERO do controle (`lugar["jogador"]`), e não o assento: no dublê eles discordam
+    for pedaco in (f'P{lugar["jogador"]}', modelo[str(lugar["pref"])],
                    home_actions.palavra_do_transporte(c.get("transport"))):
         assert pedaco in dica, (
             f"quem-navega: o primário do dublê é o {lugar['pref']} "
@@ -456,7 +462,7 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
         f"a mesa do dublê tem {len(mesa)} controles e a fita traz {quantos} "
         f"chips (contando o 'Todos'): {fita!r}")
     for lugar in mesa:
-        assert str(lugar["pref"]).upper() in fita, (
+        assert f'P{lugar["jogador"]}' in fita, (
             f"a fita não traz o chip do {lugar['pref']}: {fita!r}")
         assert modelo[str(lugar["pref"])] in fita, (
             f"a fita não nomeia o {modelo[str(lugar['pref'])]} do "
