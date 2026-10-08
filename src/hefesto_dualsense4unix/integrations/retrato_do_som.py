@@ -76,6 +76,7 @@ from hefesto_dualsense4unix.integrations.porta_do_som import (
     NoDeSom,
     argv_da_lista,
     argv_do_curto,
+    descricoes_do_pw_dump,
     fluxos_do_texto,
     nos_do_texto,
     sem_o_formato,
@@ -286,6 +287,26 @@ def ler_do_servidor(argv: Sequence[str]) -> str | None:
     return proc.stdout or ""
 
 
+def ler_o_pw_dump() -> str | None:
+    """O stdout do ``pw-dump``, ou ``None``: sem a ferramenta, falhou, ou é a suíte.
+
+    Só leitura, e não passa pelo recuo do ``pactl``: é outro programa, e a
+    resposta dele não diz nada da saúde do servidor pela porta do ``pactl``.
+    """
+    from hefesto_dualsense4unix.integrations.bluez_dbus import a_suite_esta_rodando
+
+    if a_suite_esta_rodando() or shutil.which("pw-dump") is None:
+        return None
+    try:
+        proc = subprocess.run(
+            ["pw-dump"], capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=TETO_DA_LEITURA_S, check=False, env=_ambiente(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.stdout if proc.returncode == 0 else None
+
+
 def _servidor_sob_suspeita() -> bool:
     """O recuo do servidor está de pé (em curso, ou vencido sem resposta desde então)."""
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import PACTL
@@ -324,6 +345,7 @@ class RetratoDoSom:
         self._geracao_do_tipo: dict[str, int] = dict.fromkeys(TIPOS, 0)
         self._esperas: set[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = set()
         self._sem_json = False
+        self._do_pw_dump: tuple[tuple[int, int], dict[str, str]] | None = None
 
 
     def _ler(self, argv: Sequence[str]) -> str | None:
@@ -691,13 +713,38 @@ class RetratoDoSom:
         return campos.get("Default Sink" if de == "sink" else "Default Source")
 
     def descricoes(self) -> dict[str, str]:
-        """``{nome cru: Description}`` de todas as saídas e entradas que o retrato tem."""
+        """``{nome cru: Description}`` de todas as saídas e entradas que o retrato tem.
+
+        São as palavras do painel de som do sistema. Nó cuja descrição o JSON do
+        ``pactl`` perdeu (:attr:`NoDeSom.descricao_nula`, o acento) pede a inteira ao
+        ``pw-dump``, UMA vez por releitura dos nós; sem resposta, fica o recuo.
+        """
         fora: dict[str, str] = {}
+        nulas: list[str] = []
         for tipo in ("sinks", "sources"):
             for no in self._nos(tipo) or ():
+                if no.descricao_nula:
+                    nulas.append(no.nome)
                 if no.descricao:
                     fora[no.nome] = no.descricao
+        if nulas:
+            inteiras = self._descricoes_inteiras()
+            for nome in nulas:
+                if inteiras.get(nome):
+                    fora[nome] = inteiras[nome]
         return fora
+
+    def _descricoes_inteiras(self) -> dict[str, str]:
+        """O ``pw-dump`` desta releitura dos nós, guardado até a próxima."""
+        with self._trava:
+            chave = (self._seq.get("sinks", 0), self._seq.get("sources", 0))
+            if self._do_pw_dump is not None and self._do_pw_dump[0] == chave:
+                return self._do_pw_dump[1]
+        texto = self._ler(["pw-dump"]) if self._ler_injetado is not None else ler_o_pw_dump()
+        inteiras = descricoes_do_pw_dump(texto) or {}
+        with self._trava:
+            self._do_pw_dump = (chave, inteiras)
+        return inteiras
 
 
 RETRATO: Final[RetratoDoSom] = RetratoDoSom()
@@ -733,6 +780,7 @@ __all__ = [
     "escreveu",
     "fluxos_do_texto",
     "ler_do_servidor",
+    "ler_o_pw_dump",
     "nos_do_texto",
     "responder",
     "tipos_da_escrita",

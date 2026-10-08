@@ -24,8 +24,11 @@ estáveis, lido onde só o índice e o nome bastam.
 
 * texto com acento vira `null` no campo inteiro (`Invalid non-ASCII character`
   no stderr, e o valor sai como a cadeia `(null)`): a descrição «Estéreo digital» de
-  uma placa vem `(null)`. Aqui `(null)` é lido como VAZIO, e a descrição recua para
-  o `device.description` do nó. Nome de nó, `sysfs.path`, `alsa.card` e as
+  uma placa vem `(null)`. Aqui `(null)` é lido como VAZIO, a descrição recua para
+  o `device.description` do nó (também `(null)` quando tem acento, e só «HDA NVidia»
+  na placa HDMI) e o nó fica marcado (:attr:`NoDeSom.descricao_nula`): quem mostra o
+  nome ao usuário pede o inteiro ao ``pw-dump``, que fala UTF-8
+  (:func:`descricoes_do_pw_dump`). Nome de nó, `sysfs.path`, `alsa.card` e as
   identidades de fabricante são ASCII e chegam inteiros;
 * `list modules` em JSON não traz o ÍNDICE do módulo. Quem precisa dele (os
   módulos que o Hefesto carrega e descarrega) lê `list short modules`, de colunas
@@ -150,6 +153,8 @@ class NoDeSom:
     canais: tuple[Canal, ...] = ()
     balanco: str = ""
     propriedades: Mapping[str, str] = field(default_factory=dict)
+    #: o servidor perdeu a descrição (``null`` ou ``(null)``): a de cima é o recuo
+    descricao_nula: bool = False
 
     @property
     def volume(self) -> str:
@@ -241,7 +246,10 @@ def _no_do_json(o: Mapping[str, Any]) -> NoDeSom | None:
     if indice is None:
         return None
     props = _propriedades(o.get("properties"))
-    descricao = _texto(o.get("description")) or props.get("device.description", "")
+    descricao = _texto(o.get("description"))
+    nula = not descricao
+    if nula:
+        descricao = _texto(props.get("device.description"))
     return NoDeSom(
         indice=indice,
         nome=_texto(o.get("name")),
@@ -253,7 +261,34 @@ def _no_do_json(o: Mapping[str, Any]) -> NoDeSom | None:
         canais=_canais(o.get("volume")),
         balanco=_balanco(o.get("balance")),
         propriedades=props,
+        descricao_nula=nula,
     )
+
+
+def descricoes_do_pw_dump(texto: str | None) -> dict[str, str] | None:
+    """``{node.name: node.description}`` dos nós do ``pw-dump``. Função pura.
+
+    ``None`` é «não sei» (o texto não é JSON). O ``pw-dump`` fala UTF-8 inteiro, e é
+    por ele que volta a descrição com acento que o JSON do ``pactl`` 16.1 perde:
+    medido em 08/10/2026 nesta máquina, «HDA NVidia Estéreo digital (HDMI)» pelo
+    ``pw-dump`` contra «HDA NVidia» pelo recuo.
+    """
+    objetos = lista_do_json(texto)
+    if objetos is None:
+        return None
+    fora: dict[str, str] = {}
+    for o in objetos:
+        if o.get("type") != "PipeWire:Interface:Node":
+            continue
+        info = o.get("info")
+        props = info.get("props") if isinstance(info, dict) else None
+        if not isinstance(props, dict):
+            continue
+        nome = _texto(props.get("node.name"))
+        descricao = _texto(props.get("node.description"))
+        if nome and descricao:
+            fora[nome] = descricao
+    return fora
 
 
 def _fluxo_do_json(o: Mapping[str, Any]) -> Fluxo | None:
@@ -442,6 +477,7 @@ __all__ = [
     "NoDeSom",
     "argv_da_lista",
     "argv_do_curto",
+    "descricoes_do_pw_dump",
     "diretorios_de_modulos",
     "fluxos_do_texto",
     "ler_fluxos",

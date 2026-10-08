@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
 import pytest
@@ -11,16 +12,31 @@ from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 from tests.unit import pactl_json_de_mentira as pj
 
-#: o que o `pactl --format=json list sinks` devolve nesta máquina: o campo com acento
-#: (a descrição «Estéreo digital» da placa HDMI) vem `(null)`, e o nome do painel
-#: recua para o `device.description` do nó, que é ASCII.
+HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo"
+HAPTICA = "hefesto_haptica_000003"
+NOME_DA_HAPTICA = "Háptica do Controle (DualSense Wireless Controller)"
+
+#: o que o `pactl --format=json list sinks` devolve nesta máquina (medido em 08/10/2026,
+#: `pactl` 16.1): o campo com acento vem `(null)` — a descrição «Estéreo digital» da
+#: placa HDMI e o `device.description` da háptica, que também tem acento —, e o recuo
+#: da placa é só «HDA NVidia».
 LISTA_MEDIDA = pj.texto(
     pj.no(551, "alsa_output.usb-Sony_..._Controller-00.HiFi__Speaker__sink",
           descricao="DualSense wireless controller (PS5) Controller speaker"),
     pj.no(593, "hefesto_som_000003", descricao="Alto-falante do Controle 1"),
-    pj.no(56923, "alsa_output.pci-0000_0a_00.1.hdmi-stereo", descricao="(null)",
-          props={"device.description": "HDA NVidia Digital Stereo (HDMI)"}),
+    pj.no(56923, HDMI, descricao="(null)", props={"device.description": "HDA NVidia"}),
+    pj.no(600, HAPTICA, descricao="(null)", props={"device.description": "(null)"}),
 )
+
+#: o `pw-dump` da mesma máquina, no mesmo instante: o UTF-8 inteiro.
+PW_DUMP_MEDIDO = json.dumps([
+    {"id": 31, "type": "PipeWire:Interface:Node",
+     "info": {"props": {"node.name": HDMI,
+                        "node.description": "HDA NVidia Estéreo digital (HDMI)"}}},
+    {"id": 32, "type": "PipeWire:Interface:Node",
+     "info": {"props": {"node.name": HAPTICA, "node.description": NOME_DA_HAPTICA}}},
+    {"id": 33, "type": "PipeWire:Interface:Port", "info": {"props": {"node.name": HDMI}}},
+], ensure_ascii=False)
 
 
 @pytest.mark.parametrize("linha", [
@@ -45,15 +61,23 @@ def test_o_que_nao_importa_nao_rele_o_padrao(linha: str, tipo: str | None) -> No
     assert ods.tipo_do_evento(linha) not in ods._TIPOS_DO_PADRAO
 
 
-def _retrato_com(saidas: str, padrao_da_saida: str = "") -> Any:
+def _retrato_com(saidas: str, padrao_da_saida: str = "", pw_dump: str = "",
+                 lidas: list[tuple[str, ...]] | None = None) -> Any:
     """O retrato do som, vivo, alimentado com a saída dada — sem servidor nenhum."""
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
     respostas = {
         ("pactl", "--format=json", "list", "sinks"): saidas,
         ("pactl", "info"): f"Default Sink: {padrao_da_saida}\nDefault Source: \n",
+        ("pw-dump",): pw_dump,
     }
-    retrato = rs.RetratoDoSom(ler=lambda argv: respostas.get(tuple(argv), ""))
+
+    def _ler(argv: list[str]) -> str:
+        if lidas is not None:
+            lidas.append(tuple(argv))
+        return respostas.get(tuple(argv), "")
+
+    retrato = rs.RetratoDoSom(ler=_ler)
     assert retrato.carregar()
     retrato.assumir()
     return retrato
@@ -68,8 +92,42 @@ def test_a_descricao_sai_do_formato_longo_medido(monkeypatch: pytest.MonkeyPatch
     som = ods._o_padrao_do_retrato()
     assert som.saida == "hefesto_som_000003"
     assert som.saida_nome == "Alto-falante do Controle 1"
-    assert retrato.descricoes()["alsa_output.pci-0000_0a_00.1.hdmi-stereo"] == (
-        "HDA NVidia Digital Stereo (HDMI)")
+    assert retrato.descricoes()[HDMI] == "HDA NVidia", "sem o pw-dump, o recuo medido"
+    assert HAPTICA not in retrato.descricoes(), "melhor o nome cru que um vazio"
+
+
+def test_a_descricao_com_acento_volta_pelo_pw_dump(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O nome da tela é o do painel, com acento — e o `pw-dump` roda UMA vez por releitura."""
+    from hefesto_dualsense4unix.integrations import retrato_do_som as rs
+
+    lidas: list[tuple[str, ...]] = []
+    retrato = _retrato_com(LISTA_MEDIDA, padrao_da_saida=HDMI,
+                           pw_dump=PW_DUMP_MEDIDO, lidas=lidas)
+    monkeypatch.setattr(rs, "RETRATO", retrato)
+    som = ods._o_padrao_do_retrato()
+    assert som.saida_nome == "HDA NVidia Estéreo digital (HDMI)"
+    mapa = retrato.descricoes()
+    assert mapa[HAPTICA] == NOME_DA_HAPTICA
+    assert mapa["hefesto_som_000003"] == "Alto-falante do Controle 1", (
+        "a descrição que o JSON trouxe inteira não se troca")
+    assert lidas.count(("pw-dump",)) == 1, f"o pw-dump releu sem releitura dos nós: {lidas}"
+
+
+def test_o_pw_dump_ilegivel_e_nao_sei() -> None:
+    from hefesto_dualsense4unix.integrations.porta_do_som import descricoes_do_pw_dump
+
+    assert descricoes_do_pw_dump("") is None
+    assert descricoes_do_pw_dump("pw-dump: não conectou") is None
+    assert descricoes_do_pw_dump(PW_DUMP_MEDIDO) == {
+        HDMI: "HDA NVidia Estéreo digital (HDMI)",
+        HAPTICA: NOME_DA_HAPTICA}
+
+
+def test_sem_descricao_perdida_o_pw_dump_nao_roda() -> None:
+    lidas: list[tuple[str, ...]] = []
+    retrato = _retrato_com(pj.texto(pj.no(1, "a", descricao="A")), lidas=lidas)
+    assert retrato.descricoes() == {"a": "A"}
+    assert ("pw-dump",) not in lidas
 
 
 def test_um_no_sem_descricao_nao_entra() -> None:
