@@ -2,29 +2,35 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "linhas-frageis": {
-      "data": "2026-10-07",
+      "data": "2026-10-08",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 59,
+      "piso": 60,
       "por_item": {
         "bluez": 12,
         "kernel": 3,
         "lancadores": 5,
         "pipewire": 18,
         "sistema": 2,
-        "steam": 17,
+        "steam": 18,
         "udev": 2
       },
-      "razao": "o proton_pin pergunta as bibliotecas ao pastas_steamapps do steam_launch_options: o libraryfolders.vdf passa a ser lido em UM lugar só",
+      "razao": "o dono das opções por jogo lê o config/loginusers.vdf para escrever só na conta logada da Steam (A-OPCAO-POR-JOGO-CHEGA-AO-LANCAMENTO-01)",
       "subidas": [
         {
           "data": "2026-10-07",
           "de": 74,
           "para": 76,
           "razao": "a conferência de 07/10/2026 achou o banco do udev (/run/udev/data) lido por arquivo em dois módulos: interno, não oficial; as 2 linhas vão à filha O-SISTEMA-NAO-LE-O-TEXTO-DO-DIARIO-01"
+        },
+        {
+          "data": "2026-10-08",
+          "de": 59,
+          "para": 60,
+          "razao": "o dono das opções por jogo lê o config/loginusers.vdf para escrever só na conta logada da Steam (A-OPCAO-POR-JOGO-CHEGA-AO-LANCAMENTO-01)"
         }
       ],
       "unidade": "linhas",
-      "universo": 299
+      "universo": 307
     }
   }
 }
