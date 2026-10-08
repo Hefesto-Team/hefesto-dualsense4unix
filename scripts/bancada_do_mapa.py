@@ -53,7 +53,7 @@ _ESTADO_RUMBLE_FF = (
     "não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito segundos) e "
     "por troca de lado (bits desligados trocaram o motor que vibra). A cura ESTA escrita e "
     "LIGADA: `OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC = 2.0` "
-    "(core/backend_pydualsense.py:198), consumida no laco vivo em :973-980, com mordida em "
+    "(core/backend_pydualsense.py:212), consumida no laco vivo em :926-932, com mordida em "
     "tests/unit/test_rumble_sem_dono_01.py. O que ela NAO tem e medicao de radio: a mordida "
     "prova o LACO, nunca o motor."
 )
