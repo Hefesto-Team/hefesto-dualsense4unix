@@ -462,10 +462,14 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
         _estado_do_tique=lambda: agora["st"], _contexto=contexto,
         trocas={}, tiques={}, pinturas={}, voltas=0, custos=[], custo_do_ipc=[],
         _contar_mutacoes=lambda: None)
-    for metodo in ("_o_que_mandar", "_esperando_o_estado_novo", "_moldes_da_pagina"):
+    # A-NAVEGACAO-INTERNA-…-01 (08/10/2026): o tique dá um passo da Navegação Interna;
+    # sem o bloco `navegacao` no estado, ele só apaga as molduras que houver.
+    for metodo in ("_o_que_mandar", "_esperando_o_estado_novo", "_moldes_da_pagina",
+                   "_navegar"):
         setattr(piloto, metodo, types.MethodType(getattr(hefesto_vivo.Piloto, metodo), piloto))
     vars(piloto).update(
         _escondida=False, _geracao_na_volta=None, _pintada=None, _ate_a_inteira=0,
+        _com_molduras=False,
         _moldes={}, TIQUES_ENTRE_CARGAS_INTEIRAS=hefesto_vivo.Piloto.TIQUES_ENTRE_CARGAS_INTEIRAS)
     cargas = []
     for controles in mesas:

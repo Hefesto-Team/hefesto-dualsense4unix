@@ -8,6 +8,7 @@ from typing import Any
 import argparse
 import contextlib
 import dataclasses
+import json
 import os
 import pathlib
 import sys
@@ -32,6 +33,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 # a página. Medido no lar de mentira: os dois custam ~0,3 s, e importados no
 from hefesto_dualsense4unix.interface import (  # noqa: E402
     monta,
+    navegacao_interna,
     onde,
     regua_do_mockup,
 )
@@ -2122,6 +2124,136 @@ CLIQUE_COM_ALVO = r"""
 })(%s, %s)
 """
 
+#: A Navegação Interna na página (A-NAVEGACAO-INTERNA-…-01). Instala uma vez por
+#: carga o `window.__hefNav`: ele MEDE o que se seleciona e EXECUTA o que o
+#: Python decidiu (`navegacao_interna.Selecoes`). A geometria mora no Python, que
+#: a régua mede sem WebKit; aqui só se lê o DOM e se aciona o que já existe.
+#: O que se seleciona é o mesmo vocabulário que o ouvinte clica (`manda_do_alvo`),
+#: menos os chips da fita: o X de quem apertou já escolhe o controle dele.
+NAV_INSTALAR = r"""
+(function(){
+  if(window.__hefNav) return;
+  const SEL = '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],' +
+    '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v],' +
+    '.r-aplicar,.r-salvar,.r-importar,.r-exportar';
+  function aberta(){
+    for(const d of document.querySelectorAll('[role="dialog"]')){
+      if(d.getAttribute('aria-hidden') !== 'true' && !d.hasAttribute('inert')) return d;
+    }
+    return null;
+  }
+  function visivel(el){
+    if(el.closest('[aria-hidden="true"],[inert],[hidden]')) return false;
+    if(el.disabled) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden';
+  }
+  function dono(el){
+    // O desenho do controle também tem `data-controle` (o modelo): sobe até o bloco pN.
+    let b = el.closest('[data-controle]');
+    while(b && !/^p[1-4]$/.test(b.dataset.controle || '')){
+      b = b.parentElement ? b.parentElement.closest('[data-controle]') : null;
+    }
+    return b ? b.dataset.controle : '';
+  }
+  function nome(el){
+    const d = el.dataset;
+    const r = Array.from(el.classList).find(function(k){ return k.indexOf('r-') === 0; }) || '';
+    return [dono(el), d.gesto || d.hefGesto || d.papel || d.modo || d.forca || d.player ||
+            d.sensor || d.rota || d.mudo || d.micModo || r, d.campo || '', d.v || ''].join('|');
+  }
+  function lista(){
+    const raiz = aberta() || document;
+    const vistos = {};
+    const fora = [];
+    for(const el of raiz.querySelectorAll(SEL)){
+      if(el.dataset.campo === 'fita-chip' || el.closest('.fita') || !visivel(el)) continue;
+      const base = nome(el);
+      vistos[base] = (vistos[base] || 0) + 1;
+      fora.push({el: el, endereco: base + '#' + vistos[base]});
+    }
+    return fora;
+  }
+  function achar(endereco){
+    for(const c of lista()) if(c.endereco === endereco) return c.el;
+    return null;
+  }
+  window.__hefNav = {
+    ler: function(){
+      return JSON.stringify({
+        popup: !!aberta(), largura: innerWidth, altura: innerHeight,
+        caixas: lista().map(function(c){
+          const r = c.el.getBoundingClientRect();
+          const tag = c.el.tagName.toLowerCase();
+          const tipo = tag === 'select' ? 'lista'
+            : (tag === 'input' && c.el.type === 'range') ? 'trilho' : '';
+          return {endereco: c.endereco, x: r.left, y: r.top, w: r.width, h: r.height,
+                  tipo: tipo, dono: dono(c.el)};
+        })
+      });
+    },
+    aplicar: function(ops, molduras){
+      for(const op of ops){
+        if(op.op === 'salvar'){
+          const b = document.querySelector('.r-salvar');
+          if(b) b.click();
+        } else if(op.op === 'fechar'){
+          const d = aberta();
+          const f = d && d.querySelector('.fechar');
+          if(f) f.click();
+          else document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+        } else {
+          const el = achar(op.endereco);
+          if(!el) continue;
+          if(op.op === 'clicar'){
+            if(window.__hef && op.pref) window.__hef.alvoPadrao = op.pref;
+            el.click();
+          } else if(op.op === 'escolha'){
+            const i = Math.max(0, Math.min(el.options.length - 1, el.selectedIndex + op.passo));
+            if(i !== el.selectedIndex){
+              el.selectedIndex = i;
+              el.dispatchEvent(new Event('change', {bubbles: true}));
+            }
+          } else if(op.op === 'trilho'){
+            if(op.passo > 0) el.stepUp(); else el.stepDown();
+            el.dispatchEvent(new Event('input', {bubbles: true}));
+            el.dispatchEvent(new Event('change', {bubbles: true}));
+          }
+        }
+      }
+      this.molduras(molduras || []);
+      return ops.length;
+    },
+    molduras: function(molduras){
+      for(const m of document.querySelectorAll('.hef-nav-moldura')) m.remove();
+      const por = {};
+      for(const m of molduras){
+        const el = achar(m.endereco);
+        if(!el) continue;
+        const n = por[m.endereco] = (por[m.endereco] || 0) + 1;
+        const r = el.getBoundingClientRect();
+        const folga = 2 + (n - 1) * 4;
+        const q = document.createElement('div');
+        q.className = 'hef-nav-moldura';
+        q.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483000;' +
+          'border-radius:8px;box-sizing:border-box;' +
+          'left:' + (r.left - folga) + 'px;top:' + (r.top - folga) + 'px;' +
+          'width:' + (r.width + 2 * folga) + 'px;height:' + (r.height + 2 * folga) + 'px;' +
+          'border:' + (m.dentro ? 3 : 2) + 'px solid ' + (m.cor || 'var(--acento, #6aa0ff)');
+        const p = document.createElement('span');
+        p.textContent = (m.pref || '').toUpperCase();
+        p.style.cssText = 'position:absolute;top:-10px;right:-6px;font:600 10px/14px sans-serif;' +
+          'padding:0 4px;border-radius:6px;color:#fff;background:' + (m.cor || 'var(--acento, #6aa0ff)');
+        q.appendChild(p);
+        document.body.appendChild(q);
+      }
+    }
+  };
+})();
+"""
+
+NAV_LER = "window.__hefNav.ler()"
+
 PEDIR_A_PINTURA = r"""
 (window.__hef && window.__hef.pintar) ? window.__hef.pintar(CARGA) : -1
 """
@@ -2336,6 +2468,11 @@ class FolgaDoServicoMudo:
         return {}
 
 
+def _declarar_o_foco(ativa: bool) -> Any:
+    """O `navegacao.foco` do daemon: o pulso e a renovação do prazo."""
+    return ponte.resultado("navegacao.foco", ativa=bool(ativa))
+
+
 class LeitorDoEstado:
     """O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01, 15/09/2026.
 
@@ -2388,8 +2525,17 @@ class LeitorDoEstado:
         ler: Callable[[], dict[str, Any]] | None = None,
         *,
         intervalo: float = TIQUE_MS / 1000.0,
+        declarar_foco: Callable[[bool], Any] | None = None,
     ) -> None:
         self._ler = ler if ler is not None else mesa_viva.estado_do_daemon
+        #: A Navegação Interna (A-NAVEGACAO-INTERNA-…-01): com ela ligada, cada
+        #: leitura declara ao daemon se a janela está na frente (a renovação do
+        #: prazo dele) e guarda os toques que ele devolve.
+        self._declarar_foco = (declarar_foco if declarar_foco is not None
+                               else _declarar_o_foco)
+        self._ativa = False
+        self._toques: dict[str, dict[str, int]] = {}
+        self._pulso = threading.Event()
         self._intervalo = intervalo
         self._trava = threading.Lock()
         self._estado: dict[str, Any] | None = None
@@ -2412,6 +2558,23 @@ class LeitorDoEstado:
         with self._trava:
             return self._ultima_viagem_ms
 
+    def definir_ativa(self, ativa: bool) -> None:
+        """A janela ganhou ou perdeu o foco: o fio lê já, e a leitura é o pulso."""
+        with self._trava:
+            mudou, self._ativa = self._ativa != bool(ativa), bool(ativa)
+        if mudou:
+            self._pulso.set()
+
+    def ativa(self) -> bool:
+        """A janela está na frente, pelo último `notify::is-active`."""
+        with self._trava:
+            return self._ativa
+
+    def toques(self) -> dict[str, dict[str, int]]:
+        """Os contadores do último `navegacao.foco`, que só sobem."""
+        with self._trava:
+            return {u: dict(t) for u, t in self._toques.items()}
+
     def comecar(self) -> None:
         """Semeia UMA leitura e sobe o fio. Chamar duas vezes não sobe dois."""
         if self._fio is not None:
@@ -2425,6 +2588,7 @@ class LeitorDoEstado:
         """Pede o fim do fio. Ele é `daemon`, então o processo não o espera."""
         self._parar.set()
         self._acordar.set()
+        self._pulso.set()
 
     def pausar(self) -> None:
         """A janela foi escondida: o fio passa a ler de segundo em segundo."""
@@ -2446,15 +2610,38 @@ class LeitorDoEstado:
                 self._geracao += 1
                 self._ultima_viagem_ms = (time.perf_counter() - t0) * 1000
         else:
+            self._declarar(st)
             with self._trava:
                 self._estado, self._erro = st, None
                 self._geracao += 1
                 self._ultima_viagem_ms = (time.perf_counter() - t0) * 1000
 
+    def _declarar(self, st: Any) -> None:
+        """Com a Interna ligada, o foco vai ao daemon e os toques voltam.
+
+        Desligada, nada vai: o foco que a janela declarou antes cai sozinho no
+        prazo do daemon (`PRAZO_DO_FOCO_S`). Uma recusa não derruba a leitura.
+        """
+        nav = st.get("navegacao") if isinstance(st, dict) else None
+        if not isinstance(nav, dict) or not nav.get("interna_ligada"):
+            return
+        with self._trava:
+            ativa = self._ativa
+        try:
+            resposta = self._declarar_foco(ativa)
+        except Exception:  # noqa: BLE001 — o daemon mudo já aparece na leitura
+            return
+        toques = resposta.get("toques") if isinstance(resposta, dict) else None
+        if isinstance(toques, dict):
+            with self._trava:
+                self._toques = {str(u): {str(k): int(v or 0) for k, v in t.items()}
+                                for u, t in toques.items() if isinstance(t, dict)}
+
     def _laco(self) -> None:
         while not self._parar.is_set():
             if self._a_vista.is_set():
-                self._parar.wait(self._intervalo)
+                self._pulso.wait(self._intervalo)
+                self._pulso.clear()
             else:
                 self._acordar.wait(max(self._intervalo,
                                        self.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA))
@@ -2552,6 +2739,21 @@ class Piloto:
         #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
         self._estado_vivo = LeitorDoEstado()
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
+        #: A Navegação Interna (A-NAVEGACAO-INTERNA-…-01): os toques viram atos
+        #: (`Navegador`), cada controle tem a sua seleção (`navegacao_interna.Selecoes`), e a
+        #: página mede o leiaute uma vez por tique, só com ela agindo.
+        self._navegador = navegacao_interna.Navegador()
+        self._selecoes = navegacao_interna.Selecoes()
+        self._leiaute_no_ar = False
+        self._atos_pendentes: list[navegacao_interna.Ato] = []
+        self._com_molduras = False
+        janela = getattr(self.tela, "janela", None)
+        if getattr(args, "na_frente", False):
+            self._estado_vivo.definir_ativa(True)
+        elif janela is not None and hasattr(janela, "is_active"):
+            janela.connect("notify::is-active",
+                           lambda w, _p: self._estado_vivo.definir_ativa(w.is_active()))
+            self._estado_vivo.definir_ativa(bool(janela.is_active()))
 
         ponte.escolher_arquivo = self._escolher_arquivo
         ponte.salvar_arquivo = self._salvar_arquivo
@@ -3168,6 +3370,7 @@ class Piloto:
         t_ipc = (time.perf_counter() - t0) * 1000
         self._mesa_de_agora, self._ctx_de_agora = ctx.mesa, ctx
         pacotes.bater_os_coracoes(ctx, ponte)
+        self._navegar(st, ctx)
         t_pacote0 = time.perf_counter()
         try:
             pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
@@ -3649,6 +3852,84 @@ class Piloto:
                 return sem_eco | set(getattr(mod, "SEM_ECO", ()))
         return sem_eco
 
+    def _navegar(self, st: dict[str, Any], ctx: pacotes.Contexto) -> None:
+        """A Navegação Interna, um passo por tique (A-NAVEGACAO-INTERNA-…-01).
+
+        Os toques do daemon viram atos; com atos ou molduras a desenhar, a
+        página mede o leiaute (`NAV_LER`) e a resposta vira as operações que o
+        `__hef.nav` executa. A janela fora da frente só ressincroniza a base:
+        o R1 dentro do jogo nunca anda uma aba escondida.
+        """
+        nav = st.get("navegacao") if isinstance(st, dict) else None
+        if not isinstance(nav, dict) or not nav.get("interna_ligada"):
+            if self._com_molduras:
+                self._com_molduras = False
+                self._js(NAV_INSTALAR + "window.__hefNav.molduras([])")
+            return
+        from hefesto_dualsense4unix.interface.pacotes import a06_navegacao
+
+        controles = [c for c in st.get("controllers") or [] if isinstance(c, dict)]
+        inputs = {str(c.get("uniq") or ""): c.get("inputs") or {} for c in controles
+                  if c.get("uniq")}
+        sem = {str(c.get("uniq") or "") for c in controles
+               if c.get("is_primary") and a06_navegacao.o_mouse_navega(st)}
+        dez = [p.name for p in onde.paginas(publicado=True) if p.name[:2].isdigit()]
+        ativa = self._estado_vivo.ativa()
+        atos = self._navegador.atos(
+            pagina=self.pagina, dez=dez, toques=self._estado_vivo.toques(),
+            ativa=ativa, inputs=inputs, sem_selecao=sem)
+        if not ativa:
+            return
+        self._selecoes.esquecer_quem_saiu(set(inputs) - sem)
+        self._atos_pendentes.extend(atos)
+        if self._leiaute_no_ar or not (self._atos_pendentes or self._selecoes.alguma()):
+            return
+        pref_de = {str(c.get("uniq") or ""): str(c.get("pref") or "") for c in ctx.mesa}
+        cor_de = {str(c.get("uniq") or ""): monta.cor_da_zona(str(c.get("cor")))
+                  for c in ctx.mesa if c.get("cor")}
+        pendentes, self._atos_pendentes = self._atos_pendentes, []
+        pagina = self.pagina
+        self._leiaute_no_ar = True
+
+        def mediu(valor: Any, erro: Any) -> None:
+            self._leiaute_no_ar = False
+            if erro is not None or pagina != self.pagina:
+                return
+            try:
+                leiaute = json.loads(str(valor))
+            except (TypeError, ValueError):
+                return
+            if not isinstance(leiaute, dict):
+                return
+            self._agir(pendentes, leiaute, ctx, pref_de, cor_de)
+
+        self.ponte.perguntar(NAV_INSTALAR + NAV_LER, mediu)
+
+    def _agir(self, atos: list[navegacao_interna.Ato], leiaute: dict[str, Any],
+              ctx: pacotes.Contexto, pref_de: dict[str, str],
+              cor_de: dict[str, str]) -> None:
+        """Os atos sobre o leiaute medido: a aba, o Start, a seleção e o X."""
+        popup = bool(leiaute.get("popup"))
+        ops = self._selecoes.aplicar(
+            navegacao_interna.no_espaco_da_pagina(atos, leiaute),
+            lambda uniq: navegacao_interna.caixas_do_leiaute(leiaute, pref_de.get(uniq, "")),
+            pref_de=pref_de, popup=popup)
+        if any(a.tipo == "salvar" for a in atos):
+            ops.append({"op": "salvar"})
+        for op in ops:
+            if op.get("op") == "clicar" and op.get("pref") and \
+                    _a_fita_desta_pagina_escolhe(self.pagina):
+                # D-CADA-JOGADOR-NAVEGA-COM-O-SEU: o X do irmão grava no dele.
+                with contextlib.suppress(Exception):
+                    _escolher_na_fita(ctx, {"pref": op["pref"]}, ponte)
+        molduras = self._selecoes.molduras(pref_de, cor_de)
+        self._com_molduras = bool(molduras)
+        self._js(NAV_INSTALAR + "window.__hefNav.aplicar("
+                 + json.dumps(ops) + "," + json.dumps(molduras) + ")")
+        ir = next((a.pagina for a in reversed(atos) if a.tipo == "ir"), "")
+        if ir and not popup:
+            GLib.idle_add(self._ir, ir)
+
     def _ir(self, pagina: str) -> bool:
         """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`."""
         alvo = onde.pagina(_a_pagina_pedida(pagina), publicado=True)
@@ -3991,6 +4272,10 @@ def main() -> None:
                    help="MORDIDA: arranca a comparação com o arquivo publicado e "
                         "compara a tela com ela mesma. A régua tem de parar de "
                         "acusar — se continuar acusando, ela não mede o que diz")
+    p.add_argument("--na-frente", action="store_true",
+                   help="PROVA: a janela (mesmo oculta) se declara na frente à "
+                        "Navegação Interna, para a bancada no lar de mentira "
+                        "provar o R1, o L1 e a seleção sem janela visível")
     p.add_argument("--sem-selo", action="store_true",
                    help="MORDIDA: arranca o selo da visita. Os campos que "
                         "coincidem com o desenho voltam a ser INDECIDÍVEIS — e "

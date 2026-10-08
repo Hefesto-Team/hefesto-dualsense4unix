@@ -149,6 +149,9 @@ METODOS_QUE_ESCREVEM = {
     "radio.busca.set",
     "radio.dispensar",
     "desktop.status.set",
+    # A-NAVEGACAO-INTERNA-…-01 (08/10/2026): o ligar e o tipo da Navegação Interna
+    # gravam na configuração da máquina.
+    "navegacao.interna.set",
 }
 
 _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")

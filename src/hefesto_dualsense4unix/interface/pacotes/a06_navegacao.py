@@ -1967,7 +1967,7 @@ def _ligar_a_interna(ctx: Contexto, p: Any) -> dict[str, Any] | None:
             "o Hefesto não respondeu — a Navegação Interna ficou como estava") from erro
     if isinstance(resposta, dict) and resposta.get("status") != "ok":
         _largar_a_reserva("modo", reserva)
-        raise RuntimeError("o Hefesto não ligou a Navegação Interna agora")
+        raise RuntimeError("a Navegação Interna ficou como estava")
     return None
 
 
@@ -1992,7 +1992,7 @@ def navegacao_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
         raise RuntimeError(
             "o Hefesto não respondeu — o tipo de navegação ficou como estava") from erro
     if isinstance(resposta, dict) and resposta.get("status") != "ok":
-        raise RuntimeError("o Hefesto não guardou o tipo de navegação agora")
+        raise RuntimeError("o tipo de navegação ficou como estava")
     return None
 
 
