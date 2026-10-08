@@ -97,6 +97,7 @@ O QUE ESTE MÓDULO **NÃO** FAZ, E TEM DONO
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import ctypes
 import errno as _errno
 import json
@@ -737,6 +738,53 @@ NOME_DO_ALTO_FALANTE_DO_CONTROLE = "Alto-falante do Controle"
 
 _TIMEOUT_PACTL_S = 5.0
 
+#: O orçamento do stop do som (O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01):
+#: todo ``pactl`` do stop cabe nele, cada um com ``timeout=min(5 s, restante)``;
+#: vencido, o que sobrou é da varredura de órfãos do próximo início. O
+#: ``TimeoutStopSec`` da unit do daemon tem de caber este, os ``join`` e um estouro do microfone.
+ORCAMENTO_DO_STOP_S = 10.0
+_FIM_DO_ORCAMENTO: contextvars.ContextVar[float | None] = contextvars.ContextVar(
+    "fim_do_orcamento_do_stop", default=None
+)
+#: O relógio do orçamento (as réguas o trocam pelo de mentira).
+relogio_do_orcamento: Callable[[], float] = time.monotonic
+
+
+def fim_do_orcamento_do_stop(segundos: float = ORCAMENTO_DO_STOP_S) -> float:
+    """O instante em que o orçamento aberto agora vence."""
+    return relogio_do_orcamento() + segundos
+
+
+def no_orcamento_do_stop(fim: float, passo: Callable[[], object]) -> None:
+    """Roda ``passo`` com todo ``pactl`` dele dentro do orçamento que vence em ``fim``."""
+    marca = _FIM_DO_ORCAMENTO.set(fim)
+    try:
+        passo()
+    finally:
+        _FIM_DO_ORCAMENTO.reset(marca)
+
+
+def _prazo_do_pactl() -> float | None:
+    """O ``timeout`` do próximo ``pactl``; ``None`` = o orçamento do stop venceu."""
+    fim = _FIM_DO_ORCAMENTO.get()
+    if fim is None:
+        return _TIMEOUT_PACTL_S
+    restante = fim - relogio_do_orcamento()
+    return min(_TIMEOUT_PACTL_S, restante) if restante > 0 else None
+
+
+def _fica_para_a_varredura(sink: str, module_id: str | None = None) -> bool:
+    """O servidor calou (o recuo) ou o orçamento do stop venceu: não se manda nada.
+
+    O mesmo desenho do microfone (``_descarregar_ou_deixar``): servidor que não
+    responde não tem módulo a descarregar nem a conferir, e o que ficou é da
+    varredura de órfãos do próximo início.
+    """
+    if not _o_recuo().mudo() and _prazo_do_pactl() is not None:
+        return False
+    logger.warning("som_ficou_para_a_varredura", sink=sink, module_id=module_id or "-")
+    return True
+
 def nome_do_sink(uniq: str) -> str:
     """``hefesto_som_<marca>`` a partir do ``uniq`` do controle. "" se ilegível.
 
@@ -783,6 +831,10 @@ def _rodar(argv: list[str]) -> str | None:
     """Roda um comando curto e devolve o stdout (None em qualquer falha)."""
     from hefesto_dualsense4unix.integrations import retrato_do_som
 
+    prazo = _prazo_do_pactl()
+    if prazo is None:
+        logger.debug("som_orcamento_do_stop_vencido", argv=" ".join(argv[:3]))
+        return None
     resposta = retrato_do_som.responder(argv)
     if resposta is not None:
         return resposta if isinstance(resposta, str) else None
@@ -791,7 +843,7 @@ def _rodar(argv: list[str]) -> str | None:
     try:
         proc = subprocess.run(
             argv,
-            timeout=_TIMEOUT_PACTL_S,
+            timeout=prazo,
             capture_output=True, text=True, check=False,
             env={**os.environ, "LC_ALL": "C"},
         )
@@ -886,6 +938,8 @@ def varrer_nos_orfaos(
     derrubados.
     """
     chamar = runner or _rodar
+    if modulos is None and _fica_para_a_varredura("orfaos"):
+        return []
     lidos = modulos_do_servidor(chamar) if modulos is None else list(modulos)
     if lidos is None:
         return []
@@ -896,6 +950,8 @@ def varrer_nos_orfaos(
         if (dono := _nome_do_sink_do_som_no(m[1], m[2])) and dono not in mantidos
     ]
     for module_id, _modulo, _args in sorted(orfaos, key=lambda m: m[1] == _MODULO_NULL_SINK):
+        if _fica_para_a_varredura("orfaos", module_id):
+            break
         chamar(["pactl", "unload-module", module_id])
         caidos.append(module_id)
     if caidos:
@@ -1057,19 +1113,27 @@ class SinkVirtualPipeWire:
         return True
 
     def parar(self) -> None:
-        """Descarrega a rota e o módulo, nessa ordem. Idempotente."""
-        for module_id in reversed(self._rotas):
-            self.runner(["pactl", "unload-module", module_id])
-        self._rotas.clear()
-        if self._module_id is None:
+        """Descarrega a rota e o módulo, nessa ordem. Idempotente.
+
+        Com o servidor calado ou o orçamento do stop vencido não manda nada: a
+        memória zera e o que ficou no servidor é da varredura do próximo início.
+        """
+        rotas, self._rotas = list(self._rotas), []
+        module_id, self._module_id = self._module_id, None
+        for rota_id in reversed(rotas):
+            if _fica_para_a_varredura(self.nome, rota_id):
+                return
+            self.runner(["pactl", "unload-module", rota_id])
+        if module_id is None or _fica_para_a_varredura(self.nome, module_id):
             return
-        self.runner(["pactl", "unload-module", self._module_id])
+        self.runner(["pactl", "unload-module", module_id])
         logger.info("som_sink_removido", sink=self.nome)
-        self._module_id = None
         self._conferir_que_saiu()
 
     def _conferir_que_saiu(self) -> None:
         """Pergunta ao servidor se algo deste nó ficou; o que ficou desce de novo."""
+        if _fica_para_a_varredura(self.nome):
+            return
         restou = modulos_do_no(modulos_do_servidor(self.runner) or (), self.nome)
         for module_id, _modulo, _args in restou:
             self.runner(["pactl", "unload-module", module_id])
@@ -2975,6 +3039,7 @@ __all__ = [
     "OFFSET_APOS_O_COMMON",
     "OFFSET_DO_COMMON",
     "ORCAMENTO_DO_DEGRAU",
+    "ORCAMENTO_DO_STOP_S",
     "OUVIDO",
     "POR_CABO",
     "POR_RADIO",
@@ -3018,6 +3083,7 @@ __all__ = [
     "diagnosticar",
     "e_radio",
     "escritor_de_hidraw",
+    "fim_do_orcamento_do_stop",
     "fonte_com_ritmo",
     "fonte_de_arquivo",
     "fonte_do_monitor_do_no",
@@ -3026,6 +3092,7 @@ __all__ = [
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
     "montar_relatorio_combinado",
+    "no_orcamento_do_stop",
     "nome_do_sink",
     "o_mix_fecha_laco",
     "o_servidor_e_o_pipewire",

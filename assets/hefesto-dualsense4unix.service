@@ -28,6 +28,11 @@ RestartSec=2
 # BUG-MULTI-INSTANCE-01: SIGTERM (143) é desligamento limpo — o takeover da
 # próxima instância e o "Sair" do tray não devem disparar respawn.
 SuccessExitStatus=143 SIGTERM
+# O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01: o prazo do stop
+# é declarado. Cabe o orçamento do som (ORCAMENTO_DO_STOP_S, 10 s), os dois join
+# dele (4 s) e o join e um estouro do microfone (7 s), com folga para o resto do
+# desligamento; estourar aqui é SIGKILL, e o SIGKILL deixa os nós de som órfãos.
+TimeoutStopSec=45
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

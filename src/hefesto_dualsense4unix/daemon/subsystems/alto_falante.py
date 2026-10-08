@@ -2073,8 +2073,17 @@ class AltoFalanteSubsystem:
             await asyncio.gather(
                 *(asyncio.to_thread(o.descer) for o in ouvidos), return_exceptions=True
             )
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            fim_do_orcamento_do_stop,
+            no_orcamento_do_stop,
+            registrar_dizedor_da_fonte,
+        )
+
+        # O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01: daqui em
+        # diante todo `pactl` divide um orçamento só, e roda fora do laço.
+        fim = fim_do_orcamento_do_stop()
         with contextlib.suppress(Exception):
-            await asyncio.to_thread(GANHO.devolver_as_placas)
+            await asyncio.to_thread(no_orcamento_do_stop, fim, GANHO.devolver_as_placas)
         governador, self.governador = self.governador, None
         if governador is not None:
             with contextlib.suppress(Exception):
@@ -2082,10 +2091,7 @@ class AltoFalanteSubsystem:
         gerenciador = self._gerenciador
         if gerenciador is not None:
             with contextlib.suppress(Exception):
-                gerenciador.parar()
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-            registrar_dizedor_da_fonte,
-        )
+                await asyncio.to_thread(no_orcamento_do_stop, fim, gerenciador.parar)
 
         self._gerenciador = None
         self._desinstalar_o_numerador()
