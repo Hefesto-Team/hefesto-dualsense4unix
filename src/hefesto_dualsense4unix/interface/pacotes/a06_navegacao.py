@@ -779,7 +779,7 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         rotulo = monta.SEPARADOR.join(p for p in partes if p)
         aceso = " on" if str(lugar.get("pref") or "") == escolhido else ""
         chips.append(f'<label class="chip plastico{aceso}"'
-                     ' title="a borda é a cor do plástico">'
+                     ' title="A borda é a cor do plástico">'
                      f"{rotulo}</label>")
     return "".join(chips)
 

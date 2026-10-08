@@ -1946,17 +1946,6 @@
   .gestos:has(.g5:hover) :is(#p1-glifo-ps,#p1-glifo-ps *,#p1-stick_l > .peca,#p1-glifo-stick_l,#p1-glifo-stick_l *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
   .gestos:has(.g6:hover) :is(#p1-glifo-ps,#p1-glifo-ps *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
 
-.camadas{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:17px}
-.camada-rot{font-size:11px;line-height:17px;color:var(--texto-mudo,#9aa0b4)}
-.camada{display:inline-flex;gap:6px;align-items:center;height:17px;max-width:100%;
-  font-size:11px;line-height:15px;color:var(--texto-mudo,#9aa0b4);white-space:nowrap}
-.camada-dono{padding:0 6px;border:1px solid currentColor;border-radius:8px;
-  flex:0 100 auto;min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis}
-.camada a{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
-  cursor:pointer;color:var(--cyan,#8be9fd);text-decoration:none}
-.camada a:hover{text-decoration:underline}
-[data-conectado="nao"] .camada{visibility:hidden}
-
   /* ---- as 28 cores do mapa, publicadas UMA vez ---- */
 
     /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
@@ -2423,7 +2412,7 @@
   </g>
 </svg></div>
     <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
-    <div class="fita inerte" title="Não se aplica: mouse, teclado e gestos saem de um controle só — o do Player 1 — e o que eles fazem é do perfil." data-campo="fita-chips" data-hef-alvo="html"><span>Selecionar:</span><label class="chip on">Todos</label><label class="chip plastico" title="a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label><label class="chip plastico" title="a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label></div>
+    <div class="fita inerte" title="Não se aplica: mouse, teclado e gestos saem de um controle só — o do Player 1 — e o que eles fazem é do perfil." data-campo="fita-chips" data-hef-alvo="html"><span>Selecionar:</span><label class="chip on">Todos</label><label class="chip plastico" title="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label><label class="chip plastico" title="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label></div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -3806,7 +3795,6 @@
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">As opções de ativação</span>
-        <span class="camadas"><span class="camada-rot">Mouse</span><span class="camada" data-campo="camada-mouse" data-hef-alvo="html"><span class="camada-dono" aria-label="PC">PC</span></span><span class="camada-rot">Teclado</span><span class="camada" data-campo="camada-teclado" data-hef-alvo="html"><span class="camada-dono" aria-label="PC">PC</span></span></span>
       </div>
       <div class="quadro-corpo">
         <div class="moldura">
@@ -3819,7 +3807,7 @@
             <div class="at-col">
               <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Vale para o <b>analógico esquerdo</b> e para o <b>touchpad</b>. De 1 a 12; o padrão é 6.<span class="viva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="vel-cursor" data-campo="vel-cursor" data-hef-alvo="valor" title="Vale na hora."><span class="num" data-campo="vel-cursor">6</span></div></div>
               <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Vale para o <b>analógico direito</b>. De 1 a 5; o padrão é 1.<span class="viva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="5" step="1" value="1" data-gesto="vel-rolagem" data-campo="vel-rolagem" data-hef-alvo="valor" title="Vale na hora."><span class="num" data-campo="vel-rolagem">1</span></div></div>
-              <div class="at-linha"><span class="at-rot">Modo Big Picture na Steam<span class="ajuda" tabindex="0">?<span class="dica">O controle navega o <b>Big Picture</b> da Steam, em qualquer modo de conexão, pelo cabo e pelo BT.</span></span></span><select class="escolha-at" data-gesto="modo-steam"><option selected>Desligado</option><option>Ligado — o controle navega o Big Picture</option></select></div>
+              <div class="at-linha"><span class="at-rot">Modo Big Picture na Steam<span class="ajuda" tabindex="0">?<span class="dica">O controle navega o <b>Big Picture</b> da Steam, em qualquer modo de conexão, pelo cabo e pelo BT.</span></span></span><select class="escolha-at" data-gesto="modo-steam" data-campo="modo-big-picture" data-hef-alvo="valor"><option selected>Desligado</option><option>Ligado — o controle navega o Big Picture</option></select></div>
             </div>
           </div>
           <!-- ---------- A RESSALVA DA D3 SAIU DA MOLDURA ----------
