@@ -507,8 +507,9 @@ class ControleDeclarado(BaseModel):
 
     ``modo`` é a chave física do 8BitDo e afins, escolhida ANTES de ligar e que o
     aparelho não informa. ``botoes`` é só o desenho que aparece na tela — nada é
-    remapeado no controle. ``cor`` é texto livre porque a tela oferece os nomes
-    de fábrica E um campo "Outra", para edição especial fora da lista. **Eram
+    remapeado no controle. ``cor`` é texto no arquivo, mas a tela só oferece os nomes
+    de fábrica (a lista da Conexões): um nome escrito à mão aqui aparece lá, e não pinta
+    nada se o mapa não o conhece. **Eram
     SEIS até 25/08/2026, e passaram a ser TODOS desde a LEX-5**, que trocou a fileira de
     botões por busca — ver ``app/actions/external_controllers.py``,
     ``cores_para_busca``. O número não volta a aparecer aqui de propósito: o

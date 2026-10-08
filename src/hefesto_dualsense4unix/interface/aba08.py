@@ -460,25 +460,30 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
      do kernel, e a saída estável é o cabo. */
   .gc .ext-vaga{display:contents}
-  /* NA GRADE DOS CARTÕES o externo atravessa as quatro colunas, embaixo. */
-  .gc .ext-linha{grid-column:1/-1;border:1px solid var(--border-sutil);
+  /* NA GRADE DOS CARTÕES o externo ocupa DUAS das quatro colunas, embaixo: dois por fileira, como
+     os assentos, e a altura da seção não cresce uma linha inteira por externo (A-LINHA-DO-EXTERNO-
+     VOLTA-AOS-30-PX-01). O que traz o aviso do Nintendo pelo BT é a frase mais longa e atravessa
+     as quatro (`data-larga`, posto pelo gerador). */
+  .gc .ext-linha{grid-column:span 2;border:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte);border-radius:7px}
   .gc .ext-vaga > .nada{display:none}
-  .gc .ext-linha{display:flex;align-items:center;gap:11px;
-                 min-height:30px;padding:4px 12px;
+  .gc .ext-linha[data-larga]{grid-column:1/-1}
+  .gc .ext-linha{display:flex;align-items:center;gap:8px;
+                 min-height:28px;padding:0 12px;
                  font-size:12px;color:var(--texto-mudo);
                  border-top:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte)}
-  .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;
-                flex:0 0 var(--larg-nome)}
+  .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 auto}
   .gc .ext-via{flex:1;font-size:11.5px;white-space:nowrap}
   .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
   .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
   /* as três listas do externo têm largura FIXA e moram no fim da linha: de um externo
-     para o outro elas caem na mesma coluna, com ou sem o aviso do Nintendo pelo BT */
+     para o outro elas caem na mesma coluna, com ou sem o aviso do Nintendo pelo BT. 26 px de
+     altura + a borda de 1 px da linha = 28, e 64 px abrigam o texto mais largo de «Chave» e de
+     «Botões» (40 px) com o recuo de 8 px de cada lado. */
   .gc .ext-declara{display:flex;align-items:center;gap:6px;flex:none}
-  .gc .ext-declara select.pronto{height:28px;line-height:1.2;padding-top:0;padding-bottom:0;
-                                 width:76px}
+  .gc .ext-declara select.pronto{height:26px;line-height:1.2;padding-top:0;padding-bottom:0;
+                                 width:64px}
   .gc .ext-declara select.pronto[data-gesto="externo-cor"]{width:132px}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----

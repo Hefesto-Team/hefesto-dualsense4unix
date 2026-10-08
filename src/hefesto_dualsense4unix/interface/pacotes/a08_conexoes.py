@@ -1157,8 +1157,9 @@ def a_declaracao_do_externo(entrada: dict[str, Any],
     daemon, e o `uniq` quando não há) e o que não tem endereço fixo não tem
     onde ter declaração: devolve vazio, e vazio não mostra nada.
 
-    ``cor`` é o hex do plástico (``""`` para o nome que o mapa não conhece, o
-    campo «Outra»), ``cor_nome`` o nome do mapa e ``botoes`` ``"xbox"``,
+    ``cor`` é o hex do plástico (``""`` para um nome que o mapa não conhece, escrito à
+    mão no `maquina.json`: a tela o mostra na lista e não o pinta), ``cor_nome`` o nome do mapa
+    e ``botoes`` ``"xbox"``,
     ``"nintendo"`` ou ``""`` (nada declarado: o cartão não afirma desenho nenhum).
     """
     vazio = {"cor": "", "cor_nome": "", "botoes": ""}
@@ -1360,7 +1361,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
         da_borda, botoes = marcas_do_externo(entrada, "span")
         declara = declaracao_do_externo_para_editar(entrada)
         fora.append(
-            f'<div class="ext-linha"{da_borda}>'
+            f'<div class="ext-linha"{" data-larga" if aviso else ""}{da_borda}>'
             f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
             f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
             f'{linha_do_aviso}{botoes}{declara}</div>')

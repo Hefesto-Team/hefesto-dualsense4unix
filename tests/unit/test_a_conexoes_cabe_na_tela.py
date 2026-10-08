@@ -299,3 +299,111 @@ def test_os_cartoes_tem_a_mesma_altura_e_o_porque_nao_estica_os_vizinhos(largura
     assert vistas["porque"]["porqueFora"] == [True], (
         f"o porquê aberto não flutua por baixo do cartão: {vistas['porque']['porqueFora']}")
     assert vistas["certo"]["alturas"] == [], "o «Tudo certo» ainda tem cartão"
+
+
+# ───────────────── os controles externos (A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-01) ─────────────────
+
+#: Quantos externos a régua fixa: quatro, o número de assentos (decisão por delegação de
+#: 08/10/2026, a validar por ela). Com a linha de 28 px e dois por fileira, quatro cabem a 1272 px.
+TETO_DE_EXTERNOS = 4
+#: A linha do externo não passa de 30 px: era 38 (o `select` de 28 px dentro de um padding de 4 px)
+#: e somava uma linha inteira por controle.
+ALTURA_DA_LINHA_DO_EXTERNO = 30
+
+
+def _medir_os_externos() -> str:
+    return r"""(function(){
+  const r = [];
+  for (const e of document.querySelectorAll('*')) {
+    const cs = getComputedStyle(e);
+    if (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 2
+        && e.clientHeight > 80)
+      r.push((String(e.className).split(' ')[0] || e.tagName) + ': '
+             + (e.scrollHeight - e.clientHeight));
+  }
+  const d = document.documentElement;
+  if (d.scrollHeight > innerHeight + 2) r.push('página: ' + (d.scrollHeight - innerHeight));
+  const linhas = [...document.querySelectorAll('.ext-linha')];
+  const alturas = linhas.map(x => Math.round(x.getBoundingClientRect().height));
+  // o que passa da borda direita da linha (a lista da cor que escapa para fora do cartão)
+  const sobra = linhas.map(x => { const b = x.getBoundingClientRect(); let m = 0;
+    for (const c of x.children)
+      m = Math.max(m, Math.round(c.getBoundingClientRect().right - b.right));
+    return m; });
+  const largas = linhas.filter(x => x.hasAttribute('data-larga')).length;
+  return JSON.stringify({rola: r, alturas: alturas, sobra: sobra, largas: largas});
+})()"""
+
+
+def _os_externos(quantos: int, com_aviso: int = 0) -> list[dict[str, Any]]:
+    """Controles externos de mentira (faixa forjada `aa:bb:cc`); os primeiros `com_aviso` são
+    Nintendo pelo rádio, que é o único que traz a frase longa do `hid-nintendo`."""
+    nomes = ["Pro Controller", "Xbox 360 Controller", "8BitDo Pro 2", "Controle genérico"]
+    saida = []
+    for i in range(quantos):
+        nintendo = i < com_aviso
+        saida.append({"name": nomes[i], "vid": "057e" if nintendo else "2dc8",
+                      "pid": "2009" if nintendo else "6003", "bus": "bluetooth",
+                      "uniq": f"aa:bb:cc:00:00:{0x31 + i:02x}", "driver": "hid-generic",
+                      "player_slot": 3 + i})
+    return saida
+
+
+_VISTAS_DOS_EXTERNOS: dict[int, dict[str, Any]] = {}
+
+
+def _vistas_dos_externos(largura: int) -> dict[str, Any]:
+    """Duas, quatro e quatro-com-aviso externos, TODOS com cor, botões e chave declarados (o pior
+    caso: a linha ganha o desenho dos botões). A linha vem da saída do gerador, nunca de HTML
+    escrito no teste."""
+    if largura not in _VISTAS_DOS_EXTERNOS:
+        from unittest import mock
+
+        from hefesto_dualsense4unix.interface import mesa_viva
+        from hefesto_dualsense4unix.interface.pacotes import Contexto
+        from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+        declarados = MaquinaConfig.model_validate({"controles": {
+            f"aabbcc0000{0x31 + i:02x}": {"modo": "xinput", "botoes": "nintendo",
+                                          "cor": "Cosmic Red"}
+            for i in range(TETO_DE_EXTERNOS)}})
+
+        def _pintar(quantos: int, com_aviso: int = 0) -> str:
+            ctx = Contexto(state={"connected": True}, mesa=[], conectados=[],
+                           externos=_os_externos(quantos, com_aviso))
+            html = a08._html_dos_externos(ctx)
+            return f"String(window.__hef.pintar({json.dumps({'mesa': {'externos-lista': html}})}))"
+
+        with mock.patch.object(mesa_viva, "_declaracao_do_disco", lambda: declarados):
+            passos = [_pintar(2), _medir_os_externos(), _pintar(TETO_DE_EXTERNOS),
+                      _medir_os_externos(), _pintar(TETO_DE_EXTERNOS, 2), _medir_os_externos()]
+        # a bancada (o que o gerador escreve), não o publicado: a régua morde o gerador e, depois do
+        # `--publicar`, as duas páginas são a mesma
+        lidas = _no_webkit(onde.pagina("08-conexoes.html"), (largura, LARGURAS[largura]), passos)
+        _VISTAS_DOS_EXTERNOS[largura] = {"dois": lidas[1], "quatro": lidas[3],
+                                         "quatro_com_aviso": lidas[5]}
+    return _VISTAS_DOS_EXTERNOS[largura]
+
+
+@pytest.mark.parametrize("largura", sorted(LARGURAS))
+def test_com_externos_a_conexoes_nao_rola_e_a_linha_nao_passa_de_30_px(largura: int) -> None:
+    """O teto de externos cabe sem rolagem vertical, a linha do externo fica em até 30 px e nada da
+    linha escapa pela direita (a 1272 px a fileira de dois divide só 589 px)."""
+    for nome, vista in _vistas_dos_externos(largura).items():
+        esperados = {"dois": 2, "quatro": TETO_DE_EXTERNOS,
+                     "quatro_com_aviso": TETO_DE_EXTERNOS}[nome]
+        assert len(vista["alturas"]) == esperados, f"{nome}: o gerador não desenhou os externos"
+        assert not vista["rola"], f"a {largura} px, com {nome} externos, rola: {vista['rola']}"
+        assert max(vista["alturas"]) <= ALTURA_DA_LINHA_DO_EXTERNO, (
+            f"a linha do externo passou de {ALTURA_DA_LINHA_DO_EXTERNO} px: {vista['alturas']}")
+        assert not any(vista["sobra"]), (
+            f"a {largura} px a linha vaza pela direita: {vista['sobra']}")
+
+
+@pytest.mark.parametrize("largura", sorted(LARGURAS))
+def test_so_o_externo_com_o_aviso_do_nintendo_pede_a_fileira_inteira(largura: int) -> None:
+    """A frase longa do `hid-nintendo` (Nintendo pelo rádio) atravessa as quatro colunas; os outros
+    dividem a fileira com um vizinho."""
+    vistas = _vistas_dos_externos(largura)
+    assert vistas["quatro"]["largas"] == 0, "sem aviso nenhuma linha pede a fileira inteira"
+    assert vistas["quatro_com_aviso"]["largas"] == 2, "só os dois Nintendo pelo rádio atravessam"
