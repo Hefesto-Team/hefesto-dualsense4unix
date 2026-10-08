@@ -167,11 +167,19 @@ def test_cada_parte_guarda_os_arquivos_em_ordem_de_nome(mentira: Path, tmp_path:
         assert arquivos == sorted(arquivos), f"a parte {numero} saiu fora da ordem do LC_ALL=C"
 
 
-def test_a_partilha_e_a_mesma_em_toda_maquina(mentira: Path, tmp_path: Path) -> None:
+# Nomes que o pt_BR ordena ao contrário do C (ele ignora o `_`), todos de mesmo tempo: o desempate é
+# a posição na lista, e uma lista ordenada no idioma de quem roda muda a divisão.
+NOMES_DO_IDIOMA = ["test_a.py", "test_a_b.py", "test_a_c.py", "test_aa_z.py", "test_ab.py"]
+
+
+def test_a_partilha_e_a_mesma_em_toda_maquina(tmp_path: Path) -> None:
+    raiz = tmp_path / "arvore"
+    _arvore(raiz, {n: 5_000 for n in NOMES_DO_IDIOMA}, nomes=NOMES_DO_IDIOMA)
     a, b, c = tmp_path / "a", tmp_path / "b", tmp_path / "c"
-    _rodar(mentira, a, PARTES=str(PARTES), A_SECO="1")
-    _rodar(mentira, b, PARTES=str(PARTES), A_SECO="1", LC_ALL="pt_BR.UTF-8", LANG="pt_BR.UTF-8")
-    _rodar(mentira, c, PARTES=str(PARTES), A_SECO="1", LC_ALL="C.UTF-8")
+    _rodar(raiz, a, PARTES="2", A_SECO="1")
+    _rodar(raiz, b, PARTES="2", A_SECO="1", LC_ALL="pt_BR.UTF-8", LANG="pt_BR.UTF-8")
+    _rodar(raiz, c, PARTES="2", A_SECO="1", LC_ALL="C.UTF-8")
+    assert _partes(a), "a seco não deixou as partes"
     assert _partes(a) == _partes(b) == _partes(c), "o idioma de quem roda mudou a divisão"
 
 
