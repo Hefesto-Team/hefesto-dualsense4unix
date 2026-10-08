@@ -99,7 +99,6 @@ def mesa_de_dois(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(usb_pai, "usb_pai_por_uniq", fake_por_uniq)
     monkeypatch.setattr(usb_pai, "usb_pai_por_no", fake_por_no)
-    monkeypatch.setattr(usb_pai, "nos_e_sysfs", lambda _s: {})
     _dublar_pactl(monkeypatch, _curta(_P1, _P2, _MONITOR))
 
 
@@ -117,7 +116,6 @@ def mesa_de_cabo_e_radio(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(usb_pai, "usb_pai_por_uniq", fake_por_uniq)
     monkeypatch.setattr(usb_pai, "usb_pai_por_no", fake_por_no)
-    monkeypatch.setattr(usb_pai, "nos_e_sysfs", lambda _s: {})
     _dublar_pactl(monkeypatch, _curta(_P1, _PONTE_BT, _MONITOR))
 
 

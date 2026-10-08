@@ -48,6 +48,7 @@ from dataclasses import dataclass, replace
 from typing import Any, ClassVar
 
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
+from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (  # noqa: F401
     MARCADORES_DUALSENSE as _MARCADORES_DUALSENSE,
 )
@@ -69,7 +70,6 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (  # noqa: F40
     so_hex as _so_hex,
 )
 from hefesto_dualsense4unix.integrations.usb_pai import (
-    nos_e_sysfs,
     usb_pai_por_no,
     usb_pai_por_uniq,
 )
@@ -281,23 +281,25 @@ class MicMonitor:
     ) -> CasamentoUSB | None:
         """Monta o casamento por dispositivo USB deste lado (sources ou sinks).
 
-        Um `pactl list <tipo>` LONGO por lado e por ciclo — o curto não traz o
-        ``sysfs.path``, que é o fio inteiro desta cura. É subprocesso, então
+        Pergunta à porta do servidor de som (:func:`porta_do_som.sysfs_por_no`):
+        o ``sysfs.path`` de cada nó, que o curto não traz e é o fio inteiro desta
+        cura, vem do ``pactl --format=json`` com NOME de campo. É subprocesso, então
         ele só sai quando há nó de DualSense na lista: sem candidato não há
         casamento a fazer, e o ciclo fica exatamente tão caro quanto era.
 
-        ``None`` quando não deu para montar (sem `pactl`, sem candidato, saída
-        ilegível). Quem recebe ``None`` volta ao comportamento anterior à cura,
-        que é conservador e não inventa dado — degradar não pode virar chute.
+        ``None`` quando não deu para montar (sem `pactl`, sem candidato, sem a porta
+        do JSON, saída ilegível). Quem recebe ``None`` volta ao comportamento
+        anterior à cura, que é conservador e não inventa dado — degradar não pode
+        virar chute.
         """
         if not nomes:
             return None
-        longa = self._runner(["pactl", "list", tipo]) or ""
-        if not longa.strip():
+        sysfs = porta_do_som.sysfs_por_no(tipo, self._runner)
+        if not sysfs:
             return None
         return CasamentoUSB(
             por_uniq=dict(usb_por_uniq),
-            por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+            por_no=usb_pai_por_no(sysfs),
         )
 
     def _descobrir_saidas(

@@ -272,5 +272,5 @@ def test_nada_e_escrito_no_pipewire() -> None:
 
     assert registro != []
     for argv in registro:
-        assert argv[1] in {"list", "get-sink-mute", "get-source-mute"}, argv
+        assert argv[1] in {"list", "--format=json", "get-sink-mute", "get-source-mute"}, argv
         assert not any("set" in parte for parte in argv), argv

@@ -56,12 +56,13 @@ from hefesto_dualsense4unix.app.mic_monitor import (
     escolher_sink,
     sinks_dualsense,
 )
+from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.integrations.usb_pai import (
     dispositivo_usb_pai,
-    nos_e_sysfs,
     usb_pai_por_no,
     usb_pai_por_uniq,
 )
+from tests.unit import pactl_json_de_mentira as pj
 
 
 _CABO_A = "aa:bb:cc:00:00:ab"
@@ -235,20 +236,28 @@ def test_o_radio_nao_tem_dispositivo_usb_e_isso_e_uma_resposta() -> None:
     assert dispositivo_usb_pai(virtual, existe=_existe, real=lambda c: c) == ""
 
 
-def test_o_parser_do_pactl_longo_acha_o_sysfs_de_cada_no() -> None:
+def _servidor_de_som(argv: list[str]) -> str | None:
+    """O servidor de mentira: só a lista de sinks em JSON, escrita à mão na fixture."""
+    if pj.e_lista_json(argv, "sinks"):
+        return pj.json_do_longo(_SINKS_LONGO)
+    return None
+
+
+def test_a_porta_acha_o_sysfs_de_cada_no() -> None:
     """E não se apoia em texto traduzido nem confunde `Name:` de porta."""
-    mapa = nos_e_sysfs(_SINKS_LONGO)
+    mapa = porta_do_som.sysfs_por_no("sinks", _servidor_de_som)
+    assert mapa is not None
     assert mapa[_SINK_A].endswith("/3-2/3-2:1.0/sound/card3")
     assert mapa[_SINK_B].endswith("/3-3/3-3:1.0/sound/card2")
     # O nó que não é DualSense entra igual: quem filtra é o `sinks_dualsense`.
     assert "alsa_output.pci-0000_0c_00.4.iec958-stereo" in mapa
 
 
-def test_o_parser_atravessa_o_pactl_ate_o_dispositivo_usb() -> None:
-    """A ponta a ponta do lado do PipeWire: texto do `pactl` -> nó USB."""
-    por_no = usb_pai_por_no(
-        nos_e_sysfs(_SINKS_LONGO), existe=_existe, real=lambda c: c
-    )
+def test_a_porta_atravessa_o_servidor_ate_o_dispositivo_usb() -> None:
+    """A ponta a ponta do lado do PipeWire: JSON do `pactl` -> nó USB."""
+    mapa = porta_do_som.sysfs_por_no("sinks", _servidor_de_som)
+    assert mapa is not None
+    por_no = usb_pai_por_no(mapa, existe=_existe, real=lambda c: c)
     assert por_no[_SINK_A] == _USB_DO_CABO_A
     assert por_no[_SINK_B] == _USB_DO_CABO_B
     assert por_no["alsa_output.pci-0000_0c_00.4.iec958-stereo"] == ""
@@ -294,15 +303,21 @@ def test_o_uniq_do_kernel_leva_ao_dispositivo_usb_sem_olhar_ordem() -> None:
     }
 
 
-@pytest.fixture
-def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
+def _monitor_da_bancada(
+    monkeypatch: pytest.MonkeyPatch,
+    registro: list[list[str]] | None = None,
+    *,
+    com_json: bool = True,
+) -> mm.MicMonitor:
     """Um `MicMonitor` com o `pactl` e o sysfs da bancada de 15/08, dublados."""
 
     def _runner(cmd: list[str]) -> str:
+        if registro is not None:
+            registro.append(list(cmd))
         if cmd[:4] == ["pactl", "list", "sinks", "short"]:
             return _SINKS_CURTO
-        if cmd[:3] == ["pactl", "list", "sinks"]:
-            return _SINKS_LONGO
+        if com_json and pj.e_lista_json(cmd, "sinks"):
+            return pj.json_do_longo(_SINKS_LONGO)
         if cmd[:2] == ["pactl", "get-sink-mute"]:
             return "Mute: yes" if cmd[2] == _SINK_A else "Mute: no"
         return ""
@@ -321,6 +336,11 @@ def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
     return monitor
 
 
+@pytest.fixture
+def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
+    return _monitor_da_bancada(monkeypatch)
+
+
 def test_o_selo_da_saida_muda_acende_no_card_certo(
     monitor_da_bancada: mm.MicMonitor,
 ) -> None:
@@ -334,3 +354,67 @@ def test_o_selo_da_saida_muda_acende_no_card_certo(
     assert monitor_da_bancada.leitura(_RADIO_A) is None
 
 
+def test_o_monitor_so_pergunta_o_sysfs_pela_porta_do_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nenhum `pactl list sinks|sources` LONGO sai: o sysfs vem do `--format=json`.
+
+    Mordida: devolver a chamada longa (`["pactl", "list", tipo]`) ao
+    `_casar_por_usb` faz o argv longo aparecer no registro e o casamento sumir.
+    """
+    registro: list[list[str]] = []
+    monitor = _monitor_da_bancada(monkeypatch, registro)
+
+    monitor.reconciliar()
+
+    longas = [a for a in registro if a[:2] == ["pactl", "list"] and "short" not in a]
+    assert longas == [], longas
+    assert any(pj.e_lista_json(a, "sinks") for a in registro)
+    leitura = monitor.leitura(_CABO_A)
+    assert leitura is not None
+    assert leitura.sink == _SINK_A
+
+
+def test_o_casamento_do_monitor_sai_igual_ao_do_texto_longo_da_mesma_bancada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O `por_no` do JSON é o do texto longo de 15/08, medido no código antigo.
+
+    O «antes» (`nos_e_sysfs` lendo `_SINKS_LONGO`, de `e18ce4378`) foi rodado
+    numa árvore de leitura e deu estes três pares; a expectativa é escrita à mão, nunca
+    o parser novo chamado de dentro do teste.
+    """
+    monitor = _monitor_da_bancada(monkeypatch)
+    monkeypatch.setattr(
+        mm, "usb_pai_por_no", lambda mapa: usb_pai_por_no(mapa, existe=_existe, real=lambda c: c)
+    )
+
+    casamento = monitor._casar_por_usb(
+        "sinks", sinks_dualsense(_SINKS_CURTO), dict(_USB_POR_UNIQ)
+    )
+
+    assert casamento is not None
+    assert casamento.por_no == {
+        _SINK_A: _USB_DO_CABO_A,
+        _SINK_B: _USB_DO_CABO_B,
+        "alsa_output.pci-0000_0c_00.4.iec958-stereo": "",
+    }
+    assert casamento.por_uniq == _USB_POR_UNIQ
+
+
+def test_sem_a_porta_do_json_o_casamento_vale_none_e_nao_chuta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`pactl` anterior ao 16: o JSON não vem, o casamento é `None` e o selo some.
+
+    Os dois sinks de cabo têm nomes que não os distinguem; sem o USB, nenhum
+    controle ganha placa. «Não sei» nunca vira «é este».
+    """
+    monitor = _monitor_da_bancada(monkeypatch, com_json=False)
+
+    assert monitor._casar_por_usb(
+        "sinks", sinks_dualsense(_SINKS_CURTO), dict(_USB_POR_UNIQ)
+    ) is None
+    monitor.reconciliar()
+    assert monitor.leitura(_CABO_A) is None
+    assert monitor.leitura(_CABO_B) is None

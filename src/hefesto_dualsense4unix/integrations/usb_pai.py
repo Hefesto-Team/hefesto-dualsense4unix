@@ -93,47 +93,6 @@ def dispositivo_usb_pai(
     return ""
 
 
-def nos_e_sysfs(saida_pactl: str) -> dict[str, str]:
-    """``{nome do nó: sysfs.path}`` da saída LONGA do ``pactl list sinks|sources``.
-
-    Por que a saída longa e não a curta: a curta traz o nome e mais nada, e o
-    nome é justamente o que não distingue dois DualSense. O ``sysfs.path`` da
-    seção ``Properties`` é o fio que leva ao dispositivo USB.
-
-    O corte de registro é a linha SEM recuo (``Sink #N`` / ``Source #N``), não
-    o texto dela: o ``pactl`` traduz rótulos, e ancorar em palavra traduzida é
-    defeito esperando idioma. Dentro do registro só interessam a PRIMEIRA linha
-    ``Name:`` (as seguintes são de portas e formatos) e o ``sysfs.path``.
-
-    Nó sem ``sysfs.path`` entra com ``""`` — é o caso de todo nó virtual, como
-    a ponte de mic por Bluetooth deste projeto. Ele PRECISA entrar: "não tem
-    dispositivo USB" é um fato usado para decidir, não uma ausência de dado.
-    """
-    mapa: dict[str, str] = {}
-    nome = ""
-    caminho = ""
-
-    def _fechar() -> None:
-        nonlocal nome, caminho
-        if nome:
-            mapa[nome] = caminho
-        nome = ""
-        caminho = ""
-
-    for linha in saida_pactl.splitlines():
-        if linha and not linha[0].isspace():
-            _fechar()
-            continue
-        despida = linha.strip()
-        if not nome and despida.startswith("Name:"):
-            nome = despida[len("Name:") :].strip()
-        elif despida.startswith("sysfs.path"):
-            _, _, valor = despida.partition("=")
-            caminho = valor.strip().strip('"')
-    _fechar()
-    return mapa
-
-
 def usb_pai_por_no(
     sysfs_por_no: Mapping[str, str],
     *,
@@ -168,7 +127,7 @@ def usb_pai_por_uniq(
     só pelos dígitos hex: a janela e o sysfs não combinam maiúsculas.
 
     Controle sem nó USB (rádio, ou vpad virtual) entra com ``""``, pelo mesmo
-    motivo de :func:`nos_e_sysfs`: a ausência é o dado que impede emprestar a
+    motivo de :func:`usb_pai_por_no`: a ausência é o dado que impede emprestar a
     placa do vizinho. O pad em USB também entra com ``""``, pelo
     ``pad_usb.e_pad_nosso``.
 
@@ -228,7 +187,6 @@ __all__ = [
     "RAIZ_HIDRAW",
     "RAIZ_SYSFS",
     "dispositivo_usb_pai",
-    "nos_e_sysfs",
     "usb_pai_por_no",
     "usb_pai_por_uniq",
 ]

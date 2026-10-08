@@ -112,7 +112,6 @@ def _dublar_sysfs(
         usb_pai, "usb_pai_por_uniq",
         lambda uniqs, **_kw: {u: por_uniq.get(u, "") for u in uniqs if u})
     monkeypatch.setattr(usb_pai, "usb_pai_por_no", lambda _nos: dict(por_no))
-    monkeypatch.setattr(usb_pai, "nos_e_sysfs", lambda _s: {})
 
 
 class _EscritaEstrita:

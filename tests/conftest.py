@@ -1636,6 +1636,35 @@ def _nenhum_leitor_fisico_atravessa() -> Iterator[None]:
                 leitor.stop()
 
 
+def _supervisoras_do_mic_vivas() -> dict[int, Any]:
+    """``{ident da thread: monitor}`` de toda ``hefesto-mic-monitor`` rodando."""
+    vivas: dict[int, Any] = {}
+    for fio in threading.enumerate():
+        if fio.name != "hefesto-mic-monitor" or fio.ident is None:
+            continue
+        dono = getattr(getattr(fio, "_target", None), "__self__", None)
+        if type(dono).__name__ == "MicMonitor":
+            vivas[fio.ident] = dono
+    return vivas
+
+
+@pytest.fixture(autouse=True)
+def _nenhuma_supervisora_do_mic_atravessa() -> Iterator[None]:
+    """O `MicMonitor` que um caso ligou com a supervisão, o próprio caso derruba.
+
+    OS-ULTIMOS-LEITORES-DE-TEXTO-DE-FORA-PERGUNTAM-AO-DONO-01: o construtor padrão
+    sobe a thread `hefesto-mic-monitor` no primeiro `set_ativo`, e só o `stop()` a
+    junta. Uma que sobrava pedia o `pactl` ao servidor de mentira do caso SEGUINTE.
+    Cobre todo construtor (teste, piloto, tela), não só quem escreve `MicMonitor(`.
+    """
+    antes = set(_supervisoras_do_mic_vivas())
+    yield
+    for ident, monitor in _supervisoras_do_mic_vivas().items():
+        if ident not in antes:
+            with contextlib.suppress(Exception):
+                monitor.stop()
+
+
 _EXCECOES_DO_FILHO: dict[str, type[BaseException]] = {
     "ModuleNotFoundError": ModuleNotFoundError,
     "ImportError": ImportError,
