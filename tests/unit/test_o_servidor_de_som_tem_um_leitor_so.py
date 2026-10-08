@@ -541,6 +541,7 @@ PORTAS: dict[tuple[str, str], str] = {
     ("integrations/alto_falante_bt.py", "self.runner"): "alto_falante_bt._rodar",
     ("integrations/alto_falante_bt.py", "ler"): "alto_falante_bt._rodar",
     ("integrations/alto_falante_bt.py", "_rodar"): "alto_falante_bt._rodar",
+    ("integrations/alto_falante_bt.py", "runner or _rodar"): "alto_falante_bt._rodar",
     ("integrations/alto_falante_bt.py", "<módulo>"): "alto_falante_bt._rodar",
     ("integrations/audio_control.py", "_texto_do_pactl"): "audio_control._rodar_pelo_recuo",
     ("integrations/audio_control.py", "_rodar_pelo_recuo"): "audio_control._rodar_pelo_recuo",

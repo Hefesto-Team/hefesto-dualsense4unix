@@ -386,9 +386,29 @@ def propriedades_do_endpoint(uniq: str, ancora: Ancora, rotulo: str | None = Non
 def endpoints_de_pe(
     runner: Callable[[list[str]], str | None] | None = None,
 ) -> dict[str, list[tuple[str, str]]]:
-    """Os endpoints DESTA casa que estão de pé NO SERVIDOR, por nome de sink."""
+    """Os endpoints DESTA casa que estão de pé NO SERVIDOR, por nome de sink.
+
+    Servidor mudo vira ``{}``; quem precisa distinguir «não há endpoint» de «não
+    sei» usa :func:`endpoints_de_pe_ou_nada`.
+    """
+    return endpoints_de_pe_ou_nada(runner) or {}
+
+
+def endpoints_de_pe_ou_nada(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> dict[str, list[tuple[str, str]]] | None:
+    """Igual a :func:`endpoints_de_pe`, mas ``None`` quando o servidor não respondeu.
+
+    **O servidor de som é a verdade, a memória é cache:** tirar um endpoint da
+    memória porque ele não está na resposta só vale se houve resposta. ``{}`` é
+    «o servidor disse que não há nenhum»; ``None``, «não sei».
+    """
     chamar = runner or rodar_pactl
-    saida = chamar(["pactl", "list", "short", "modules"]) or ""
+    saida = chamar(["pactl", "list", "short", "modules"])
+    if saida is None or not any(
+        linha.split("\t")[0].strip().isdigit() and "\t" in linha for linha in saida.splitlines()
+    ):
+        return None  # servidor de pé sempre tem módulo seu: sem nenhuma linha dele é «não sei»
     de_pe: dict[str, list[tuple[str, str]]] = {}
     for module_id, nome, caminho, _rotulo in _modulos_desta_casa(saida):
         de_pe.setdefault(nome, []).append((module_id, caminho))
@@ -537,10 +557,36 @@ class EndpointDeHaptica:
         """O monitor de onde a ponte e o laço do cabo leem o PCM da háptica."""
         return f"{self.nome}.monitor" if self.nome else ""
 
+    def no_ar(
+        self, de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None
+    ) -> bool | None:
+        """O módulo deste endpoint existe no SERVIDOR? ``None`` = não sei.
+
+        ``de_pe`` é a resposta de :func:`endpoints_de_pe_ou_nada` que quem chama
+        já tem (a volta pergunta uma vez para todos).
+        """
+        if self._module_id is None:
+            return False
+        servidor = endpoints_de_pe_ou_nada(self.runner) if de_pe is None else de_pe
+        if servidor is None:
+            return None
+        return any(m == self._module_id for m, _caminho in servidor.get(self.nome, ()))
+
     def iniciar(self) -> bool:
-        """Publica o nó. Idempotente CONTRA O SERVIDOR; False quando não deu."""
+        """Publica o nó. Idempotente CONTRA O SERVIDOR; False quando não deu.
+
+        **O servidor é a verdade, a memória é cache:** com o módulo na memória,
+        só devolve ``True`` se o servidor ainda o tem (ou não soube dizer); módulo
+        tirado por fora zera a memória e o nó é adotado ou sobe de novo.
+        """
         if self._module_id is not None:
-            return True
+            if self.no_ar() is not False:
+                return True
+            logger.warning(
+                "haptica_endpoint_sumiu_por_fora", controle=self.marca, module_id=self._module_id
+            )
+            self._module_id = None
+            self.rotulo = ""
         if not self.nome:
             logger.info("haptica_endpoint_sem_identidade")
             return False

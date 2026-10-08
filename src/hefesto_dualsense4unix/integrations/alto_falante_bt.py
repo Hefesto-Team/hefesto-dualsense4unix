@@ -811,6 +811,98 @@ def rodar_pactl(argv: list[str]) -> str | None:
     return _rodar(argv)
 
 
+_MODULO_LOOPBACK = "module-loopback"
+
+#: ``(module_id, módulo, argumentos)`` de um módulo carregado no servidor.
+ModuloDeSom = tuple[str, str, str]
+
+
+def modulos_do_servidor(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> list[ModuloDeSom] | None:
+    """Os módulos que o SERVIDOR tem de pé agora. ``None`` = não sei (a pergunta falhou).
+
+    **O servidor de som é a verdade, a memória do daemon é cache.** Um módulo
+    tirado por fora (``pactl unload-module``, um daemon que morreu sem
+    ``stop``) some daqui e não da memória; quem decide «o nó está de pé» pergunta
+    isto. ``None`` não é resposta, e quem o recebe não derruba nada por causa
+    dele. **Saída sem nenhum módulo também é ``None``**: um servidor de pé sempre
+    tem os seus (o protocolo nativo, o ``rt``), então texto vazio é o ``pactl``
+    que respondeu sem dizer nada, e «não sei» não pode virar «sumiu».
+    """
+    saida = (runner or _rodar)(["pactl", "list", "short", "modules"])
+    if saida is None:
+        return None
+    achados: list[ModuloDeSom] = []
+    for linha in saida.splitlines():
+        partes = linha.split("\t")
+        if len(partes) < 2 or not partes[0].strip().isdigit():
+            continue
+        achados.append((partes[0].strip(), partes[1].strip(),
+                        partes[2] if len(partes) > 2 else ""))
+    return achados or None
+
+
+def _nome_do_sink_do_som_no(modulo: str, argumentos: str) -> str:
+    """O nó ``hefesto_som_*`` a que este módulo pertence, ou ``""``.
+
+    O ``module-null-sink`` é o próprio nó (``sink_name=``); os ``module-loopback``
+    da rota levam o nó numa ponta (``source=<nó>.monitor`` ou ``sink=<nó>``).
+    """
+    for pedaco in argumentos.split():
+        chave, _, valor = pedaco.partition("=")
+        if modulo == _MODULO_NULL_SINK and chave == "sink_name":
+            alvo = valor
+        elif modulo == _MODULO_LOOPBACK and chave == "source":
+            alvo = valor.removesuffix(".monitor")
+        elif modulo == _MODULO_LOOPBACK and chave == "sink":
+            alvo = valor
+        else:
+            continue
+        if alvo.startswith(PREFIXO_SINK_DO_SOM):
+            return alvo
+    return ""
+
+
+def modulos_do_no(modulos: Iterable[ModuloDeSom], nome: str) -> list[ModuloDeSom]:
+    """Os módulos do nó ``nome`` (ele e as rotas), as rotas primeiro — a ordem de derrubar."""
+    seus = [m for m in modulos if nome and _nome_do_sink_do_som_no(m[1], m[2]) == nome]
+    return sorted(seus, key=lambda m: m[1] == _MODULO_NULL_SINK)
+
+
+def varrer_nos_orfaos(
+    vivos: Iterable[str],
+    runner: Callable[[list[str]], str | None] | None = None,
+    *,
+    modulos: Sequence[ModuloDeSom] | None = None,
+) -> list[str]:
+    """Derruba todo nó de som desta casa que o daemon de agora não tem na mão.
+
+    ``vivos`` são os NOMES (``hefesto_som_<marca>``) dos nós que este processo
+    sustenta. O resto, com a rota inclusive, é de um daemon que morreu sem
+    ``stop`` (ou de um ``stop`` que não chegou ao fim) e entra na lista de saídas
+    de som da pessoa duplicado com o bom. ``modulos`` é a resposta de
+    :func:`modulos_do_servidor` que quem chama já tem. Devolve os ``module_id``
+    derrubados.
+    """
+    chamar = runner or _rodar
+    lidos = modulos_do_servidor(chamar) if modulos is None else list(modulos)
+    if lidos is None:
+        return []
+    mantidos = {v for v in vivos if v}
+    caidos: list[str] = []
+    orfaos = [
+        m for m in lidos
+        if (dono := _nome_do_sink_do_som_no(m[1], m[2])) and dono not in mantidos
+    ]
+    for module_id, _modulo, _args in sorted(orfaos, key=lambda m: m[1] == _MODULO_NULL_SINK):
+        chamar(["pactl", "unload-module", module_id])
+        caidos.append(module_id)
+    if caidos:
+        logger.info("som_nos_orfaos_derrubados", quantos=len(caidos))
+    return caidos
+
+
 class SinkVirtualPipeWire:
     """O nó de saída de UM controle, publicado no PipeWire por ``pactl``."""
 
@@ -841,13 +933,27 @@ class SinkVirtualPipeWire:
         return self._module_id
 
     def iniciar(self) -> bool:
-        """Carrega o ``module-null-sink`` E a rota dele. False = não deu."""
+        """Carrega o ``module-null-sink`` E a rota dele. False = não deu.
+
+        **O servidor é a verdade, a memória é cache:** com o módulo na memória,
+        só devolve ``True`` se o servidor ainda o tem (ou não soube dizer); módulo
+        sumido por fora zera a memória e o nó sobe de novo. E antes de carregar,
+        derruba o que um daemon anterior deixou com este mesmo nome, em vez de
+        publicar um segundo ao lado.
+        """
         if self._module_id is not None:
-            return True
+            if self.no_ar() is not False:
+                return True
+            logger.warning("som_sink_sumiu_por_fora", sink=self.nome, module_id=self._module_id)
+            self._esquecer_o_que_sumiu()
         if not self.nome:
             logger.info("som_sem_identidade", uniq=self.uniq)
             return False
         if not _o_servidor_atende(self.runner, self.nome):
+            return False
+        self._derrubar_o_que_sobrou()
+        if _o_recuo().mudo():  # a pergunta acima estourou o prazo: o load-module não sai atrás dela
+            logger.debug("som_pactl_mudo_nao_carrego", sink=self.nome)
             return False
         saida = self.runner(
             [
@@ -870,6 +976,38 @@ class SinkVirtualPipeWire:
         self._ligar_a_rota()
         self._passar_a_escolha_dela()
         return True
+
+    def no_ar(self, modulos: Sequence[ModuloDeSom] | None = None) -> bool | None:
+        """O módulo deste nó existe no SERVIDOR? ``None`` = não sei (e então nada se derruba).
+
+        Sem módulo na memória a resposta é ``False`` sem perguntar nada.
+        ``modulos`` é a resposta de :func:`modulos_do_servidor` que quem chama
+        já tem (a volta pergunta uma vez para todos os nós).
+        """
+        if self._module_id is None:
+            return False
+        lidos = modulos_do_servidor(self.runner) if modulos is None else modulos
+        if lidos is None:
+            return None
+        return any(
+            module_id == self._module_id and modulo == _MODULO_NULL_SINK
+            and _nome_do_sink_do_som_no(modulo, argumentos) == self.nome
+            for module_id, modulo, argumentos in lidos
+        )
+
+    def _esquecer_o_que_sumiu(self) -> None:
+        """O módulo saiu por fora: a memória zera, e as rotas dele (que ficaram) descem."""
+        for module_id in reversed(self._rotas):
+            self.runner(["pactl", "unload-module", module_id])
+        self._rotas.clear()
+        self._module_id = None
+
+    def _derrubar_o_que_sobrou(self) -> None:
+        """Módulos com o nome deste nó que este processo não carregou: de um daemon anterior."""
+        lidos = modulos_do_servidor(self.runner)
+        for module_id, _modulo, _args in modulos_do_no(lidos or (), self.nome):
+            self.runner(["pactl", "unload-module", module_id])
+            logger.info("som_orfao_derrubado", sink=self.nome, module_id=module_id)
 
     def _passar_a_escolha_dela(self) -> None:
         """A saída padrão gravada no nome velho deste nó passa ao nome novo. Nunca levanta."""
@@ -928,6 +1066,15 @@ class SinkVirtualPipeWire:
         self.runner(["pactl", "unload-module", self._module_id])
         logger.info("som_sink_removido", sink=self.nome)
         self._module_id = None
+        self._conferir_que_saiu()
+
+    def _conferir_que_saiu(self) -> None:
+        """Pergunta ao servidor se algo deste nó ficou; o que ficou desce de novo."""
+        restou = modulos_do_no(modulos_do_servidor(self.runner) or (), self.nome)
+        for module_id, _modulo, _args in restou:
+            self.runner(["pactl", "unload-module", module_id])
+        if restou:
+            logger.warning("som_sink_nao_saiu_de_primeira", sink=self.nome, quantos=len(restou))
 
 
     def estado(self) -> str | None:

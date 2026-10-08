@@ -279,7 +279,7 @@ class TestONoNaoViraASaidaPadraoSozinho:
     def test_o_load_module_leva_o_argumento_inteiro(self) -> None:
         runner = RunnerFalso()
         af.SinkVirtualPipeWire(uniq=MAC_A, runner=runner).iniciar()
-        argv = runner.chamadas[0]
+        argv = next(c for c in runner.chamadas if c[:2] == ["pactl", "load-module"])
         assert argv[:3] == ["pactl", "load-module", "module-null-sink"]
         assert f"sink_name={af.nome_do_sink(MAC_A)}" in argv
         assert any(a.startswith('sink_properties="') for a in argv)

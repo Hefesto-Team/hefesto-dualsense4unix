@@ -171,7 +171,9 @@ class GerenciadorDeNosDeSom:
         fabrica: Any = None,
         fonte_por_controle: Any = None,
         ponte_do_radio_por_controle: Any = None,
+        runner: Any = None,
     ) -> None:
+        self._runner = runner
         self._fabrica = fabrica
         self._fonte_por_controle = fonte_por_controle
         self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
@@ -360,6 +362,7 @@ class GerenciadorDeNosDeSom:
         for uniq in list(self._nos):
             if uniq not in alvos:
                 self._derrubar(uniq)
+        self._conferir_com_o_servidor()
         for uniq in alvos:
             transporte = vistos[uniq] or TRANSPORTE_CABO
             if uniq in self._nos and self._o_rotulo_envelheceu(uniq, self._nos[uniq]):
@@ -439,6 +442,53 @@ class GerenciadorDeNosDeSom:
             logger.warning("som_no_sumiu_ao_republicar", uniq=uniq)
         return False
 
+    def _pergunta_ao_servidor(self) -> Any:
+        """O ``runner`` com que o gerenciador pergunta ao servidor; ``None`` = não pergunta.
+
+        Com a ``fabrica`` de teste e sem ``runner`` o gerenciador não toca o
+        servidor de som: os nós de mentira não têm módulo lá.
+        """
+        if self._runner is not None:
+            return self._runner
+        if self._fabrica is not None:
+            return None
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
+
+        return rodar_pactl
+
+    def _conferir_com_o_servidor(self) -> None:
+        """**O servidor de som é a verdade, a memória é cache.**
+
+        Uma pergunta por volta (``pactl list short modules``, que o retrato do
+        som responde sem processo quando está vivo): o nó cujo módulo o servidor
+        não tem mais sai da memória e sobe de novo na mesma volta; o nó de um
+        daemon anterior, que este processo não sustenta, desce. Resposta «não sei»
+        não derruba nada.
+        """
+        runner = self._pergunta_ao_servidor()
+        if runner is None:
+            return
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            modulos_do_servidor,
+            varrer_nos_orfaos,
+        )
+
+        try:
+            modulos = modulos_do_servidor(runner)
+        except Exception:
+            logger.debug("som_modulos_ilegiveis", exc_info=True)
+            return
+        if modulos is None:
+            return
+        for uniq, no in list(self._nos.items()):
+            no_ar = getattr(no, "no_ar", None)
+            if callable(no_ar) and no_ar(modulos) is False:
+                logger.warning("som_no_sumiu_por_fora", uniq=uniq)
+                self._derrubar(uniq)
+        vivos = [str(getattr(no, "nome", "") or "") for no in self._nos.values()]
+        with contextlib.suppress(Exception):
+            varrer_nos_orfaos(vivos, runner, modulos=modulos)
+
     def _derrubar(self, uniq: str) -> None:
         no = self._nos.pop(uniq, None)
         if no is None:
@@ -452,9 +502,17 @@ class GerenciadorDeNosDeSom:
         return self._acordar.wait(segundos)
 
     def parar(self) -> None:
-        """Derruba todos os nós. Idempotente."""
+        """Derruba todos os nós e CONFERE no servidor que nenhum ficou. Idempotente."""
         for uniq in list(self._nos):
             self._derrubar(uniq)
+        runner = self._pergunta_ao_servidor()
+        if runner is not None:
+            from hefesto_dualsense4unix.integrations.alto_falante_bt import varrer_nos_orfaos
+
+            with contextlib.suppress(Exception):
+                restou = varrer_nos_orfaos((), runner)
+                if restou:
+                    logger.warning("som_nos_ficaram_no_stop", quantos=len(restou))
         self._acordar.set()
 
 
@@ -1496,7 +1554,7 @@ class AltoFalanteSubsystem:
             ancora_do_gadget,
             ancoras,
             distribuir_ancoras,
-            endpoints_de_pe,
+            endpoints_de_pe_ou_nada,
             varrer_endpoints_orfaos,
         )
 
@@ -1527,9 +1585,18 @@ class AltoFalanteSubsystem:
                 endpoint.parar()
         de_pe: dict[str, list[tuple[str, str]]] | None = None
         with contextlib.suppress(Exception):
-            de_pe = endpoints_de_pe()
-        with contextlib.suppress(Exception):
-            varrer_endpoints_orfaos(de_pe_agora, de_pe=de_pe)
+            de_pe = endpoints_de_pe_ou_nada()
+        if de_pe is not None:
+            # O servidor de som é a verdade: endpoint que ele não tem mais (tirado por fora)
+            # sai da memória, e o código abaixo o cria ou adota de novo. Sem resposta
+            # (``None``), nada cai: «não sei» não é «sumiu».
+            for marca in [m for m, e in self._endpoints.items() if e.no_ar(de_pe) is False]:
+                logger.warning("haptica_endpoint_sumiu_por_fora_na_volta", controle=marca)
+                self._o_cabo().soltar(marca)
+                self._parar_o_tocador(marca)
+                self._endpoints.pop(marca, None)
+            with contextlib.suppress(Exception):
+                varrer_endpoints_orfaos(de_pe_agora, de_pe=de_pe)
 
         postas = distribuir_ancoras(
             de_pe_agora, ancoras(), de_pe,

@@ -99,7 +99,8 @@ class _Gravador:
 
     @property
     def linhas(self) -> list[str]:
-        return [" ".join(a) for a in self.argvs]
+        """O que o nó ESCREVEU no servidor; a pergunta dos módulos órfãos é leitura."""
+        return [" ".join(a) for a in self.argvs if a[1:4] != ["list", "short", "modules"]]
 
 
 def _runner_de_leitura(*, com_placa: bool = True) -> Any:

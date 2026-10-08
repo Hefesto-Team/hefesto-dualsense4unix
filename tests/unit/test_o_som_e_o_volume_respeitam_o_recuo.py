@@ -92,11 +92,14 @@ def test_dois_ciclos_com_o_load_module_estourando_fazem_um_load_module(
     assert bt.pactl_mudo() is True
     recuo.agora += 1.0
     assert af.SinkVirtualPipeWire(uniq=DELE, runner=pactl).iniciar() is False
-    assert pactl.verbos().count("load-module") == 1, pactl.verbos()
+    # a primeira pergunta do ciclo (os módulos que um daemon anterior deixou) é a que
+    # estoura o prazo; o `load-module` não sai atrás dela
+    assert pactl.verbos() == ["list"], pactl.verbos()
 
     recuo.agora += 10.0
     assert af.SinkVirtualPipeWire(uniq=DELE, runner=pactl).iniciar() is False
-    assert pactl.verbos() == ["load-module", "info"], pactl.verbos()
+    assert pactl.verbos() == ["list", "info"], pactl.verbos()
+    assert "load-module" not in pactl.verbos()
     assert bt.PACTL.espera_s == 10.0
 
 
@@ -112,15 +115,15 @@ def test_vencido_o_recuo_a_sondagem_vem_antes_do_load(recuo: _Relogio) -> None:
     pactl.trava = _nunca
     no = af.SinkVirtualPipeWire(uniq=DELE, runner=pactl)
     assert no.iniciar() is True
-    assert pactl.verbos()[-2:] == ["info", "load-module"]
+    assert pactl.verbos()[-3:] == ["info", "list", "load-module"]
     assert bt.PACTL.espera_s == 0.0
 
 
 def test_sem_recuo_nenhum_o_load_module_sai_sem_sondagem(recuo: _Relogio) -> None:
-    """O caminho de todo dia não ganha pergunta a mais."""
+    """O caminho de todo dia ganha só a pergunta dos módulos órfãos, nunca a sondagem."""
     pactl = _Pactl()
     assert af.SinkVirtualPipeWire(uniq=DELE, runner=pactl).iniciar() is True
-    assert pactl.verbos() == ["load-module"]
+    assert pactl.verbos() == ["list", "load-module"]
 
 
 def test_estado_com_o_servidor_mudo_responde_nao_sei_sem_perguntar(

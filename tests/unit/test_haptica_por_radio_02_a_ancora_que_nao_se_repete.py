@@ -377,6 +377,18 @@ def test_o_servidor_mudo_numa_volta_nao_reancora_quem_ja_estava(
     assert len(set(caminhos)) == 2, caminhos
 
 
+def test_o_endpoint_tirado_por_fora_sobe_de_novo_na_volta_seguinte(mesa: _Mesa) -> None:
+    """O servidor de som é a verdade: o módulo que sumiu por fora volta, e um só."""
+    mesa.casar(_MENOR, _MAIOR)
+    nome = eh.nome_do_endpoint(_MAIOR)
+    (antigo,) = [m for m, (n, _c) in mesa.servidor.modulos.items() if n == nome]
+    del mesa.servidor.modulos[antigo]  # `pactl unload-module` na mão de alguém
+    mesa.casar(_MENOR, _MAIOR)
+    depois = mesa.servidor.caminho_de(_MAIOR)
+    assert len(depois) == 1, f"o endpoint não voltou, ou voltou duplicado: {depois}"
+    assert len(mesa.servidor.caminho_de(_MENOR)) == 1
+
+
 def _o_aparelho_da_ancora_sai(mesa: _Mesa, antes: list[str]) -> None:
     mesa.ancoras.remove(next(a for a in _CINCO if a.declarado == antes[0]))
 
