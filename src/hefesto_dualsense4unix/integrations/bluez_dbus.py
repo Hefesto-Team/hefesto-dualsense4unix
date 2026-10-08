@@ -117,13 +117,13 @@ def endereco_do_aparelho(caminho: str) -> str | None:
 
 def hci_do_adaptador(caminho: str) -> str | None:
     """O ``hciN`` de um caminho de ADAPTADOR (``…/hci0`` → ``hci0``); ``None`` se não for um."""
-    achado = _CAMINHO_DE_ADAPTADOR.match(caminho)
+    achado = _CAMINHO_DE_ADAPTADOR.fullmatch(caminho)
     return achado.group(1) if achado else None
 
 
 def e_caminho_de_aparelho(caminho: str) -> bool:
     """O caminho é de um APARELHO (``/org/bluez/hciN/dev_AA_BB_CC_DD_EE_FF``)?"""
-    return _CAMINHO_DE_APARELHO.match(caminho) is not None
+    return _CAMINHO_DE_APARELHO.fullmatch(caminho) is not None
 
 
 def _hci_de(caminho: str) -> str:

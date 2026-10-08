@@ -837,10 +837,11 @@ def test_a_tabela_de_isencao_do_caminho_morde() -> None:
         ("/org/bluez", None),
         ("/x/org/bluez/hci0", None),
         ("/org/bluez/hci0/", None),
+        ("/org/bluez/hci0\n", None),
     ],
 )
 def test_o_dono_diz_o_hci_so_do_caminho_de_adaptador(caminho: str, esperado: str | None) -> None:
-    """O adaptador é a ÚNICA forma que responde; o nó de aparelho e a raiz não."""
+    """O adaptador é a ÚNICA forma que responde; o nó de aparelho, a raiz e o ``\\n`` no fim não."""
     assert bd.hci_do_adaptador(caminho) == esperado
 
 
@@ -853,6 +854,7 @@ def test_o_dono_diz_o_hci_so_do_caminho_de_adaptador(caminho: str, esperado: str
         ("/org/bluez/hci0/dev_AA_BB_CC", False),
         ("/org/bluez/hci0", False),
         ("/x/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", False),
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF\n", False),
     ],
 )
 def test_o_dono_diz_se_o_caminho_e_de_aparelho(caminho: str, esperado: bool) -> None:
