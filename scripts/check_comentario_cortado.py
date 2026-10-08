@@ -58,7 +58,7 @@ def termina_no_meio(ultima_linha: str) -> bool:
     if _CITACAO_NO_FIM.search(texto):
         return True
     achou = _ULTIMA_PALAVRA.search(texto)
-    return bool(achou) and achou.group(1).lower() in CONECTIVOS
+    return achou is not None and achou.group(1).lower() in CONECTIVOS
 
 
 def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
