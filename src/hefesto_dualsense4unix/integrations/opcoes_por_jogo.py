@@ -344,14 +344,12 @@ def conta_logada(raiz: Path) -> str | None:
     """O número da pasta ``userdata/<conta>`` da conta que a Steam vai abrir.
 
     Lê ``<raiz>/config/loginusers.vdf``: a conta marcada ``MostRecent``, ou, sem
-    marca, a de maior ``Timestamp``. ``None`` quando o arquivo não existe, não
-    se lê ou não tem conta — quem chama decide o que fazer sem resposta.
+    marca, a de maior ``Timestamp``. ``None`` quando o arquivo não tem conta;
+    arquivo ausente ou ilegível levanta ``OSError``, e quem chama decide o que
+    fazer sem resposta (``so_a_conta_logada`` pula e diz o motivo no relato).
     """
-    try:
-        texto = (raiz / "config" / "loginusers.vdf").read_text(
-            encoding="utf-8", errors="replace")
-    except OSError:
-        return None
+    texto = (raiz / "config" / "loginusers.vdf").read_text(
+        encoding="utf-8", errors="replace")
     pilha: list[str] = []
     contas: dict[str, dict[str, str]] = {}
     for linha in texto.splitlines():
@@ -406,7 +404,10 @@ def so_a_conta_logada(
         if raiz is None:
             aceitos.extend(vdfs)
             continue
-        logada = conta_logada(raiz)
+        try:
+            logada = conta_logada(raiz)
+        except OSError:
+            logada = None
         for vdf in vdfs:
             conta = vdf.parent.parent.name
             if (logada is not None and conta == logada) or (
