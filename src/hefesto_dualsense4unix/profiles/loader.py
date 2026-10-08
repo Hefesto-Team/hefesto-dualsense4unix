@@ -16,15 +16,18 @@ acentuado; o arquivo é o que `arquivo_do_perfil` acha, em quatro pernas.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
 import time
 from collections.abc import Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -33,6 +36,7 @@ from filelock import FileLock
 from pydantic import ValidationError
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as _mascarar
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.profiles.steam_app import (
@@ -1731,6 +1735,18 @@ HISTORICO_MAX_VERSOES = 10
 
 HISTORICO_DIAS = 14
 
+# Uma semana inteira, versão por versão — a pergunta «quem mudou este campo
+# entre as 14h e as 19h» não se responde com um ponto por dia. O teto de
+# versões por perfil (~2,3 KB cada, ~1 MB no pior caso) segura a rajada.
+HISTORICO_SEMANA_DIAS = 7
+
+HISTORICO_TETO_POR_PERFIL = 500
+
+# O gesto em curso, posto por quem sabe (o `trabalhar` da janela, o `_dispatch`
+# do IPC) e lido por `save_profile`: um `ContextVar` atravessa `asyncio.to_thread`,
+# e quem não o põe (CLI, migração) deixa o campo vazio no `profile_salvo`.
+gesto_de_agora: ContextVar[str | None] = ContextVar("hefesto_gesto_de_agora", default=None)
+
 
 def historico_dir(slug: str, *, ensure: bool = False) -> Path:
     """Diretório do histórico de UM perfil: ``profiles/.historico/<slug>/``."""
@@ -1777,13 +1793,49 @@ def _as_primeiras_de_cada_dia(versoes: list[Path], dias: int) -> set[Path]:
     return {primeiras[dia] for dia in sorted(primeiras)[-dias:]} if dias > 0 else set()
 
 
+def _o_instante_da_versao(versao: Path) -> datetime | None:
+    """O instante que o carimbo do nome conta, ou None se o nome não é um carimbo."""
+    try:
+        return datetime.strptime(versao.name[:15], "%Y%m%dT%H%M%S")
+    except ValueError:
+        return None
+
+
+def _as_da_semana(versoes: list[Path], dias: int) -> list[Path]:
+    """Toda versão dos últimos `dias` dias, contados da MAIS NOVA do histórico.
+
+    O relógio é o da própria pasta: a poda roda logo depois de arquivar, então
+    a mais nova é o «agora» — e a régua não depende da hora da máquina.
+    """
+    if dias <= 0:
+        return []
+    instantes = [(v, _o_instante_da_versao(v)) for v in versoes]
+    datados = [i for _, i in instantes if i is not None]
+    if not datados:
+        return []
+    limite = max(datados) - timedelta(days=dias)
+    return [v for v, i in instantes if i is not None and i >= limite]
+
+
 def _podar_historico(
-    destino: Path, manter: int, *, dias: int = HISTORICO_DIAS
+    destino: Path,
+    manter: int,
+    *,
+    dias: int = HISTORICO_DIAS,
+    semana: int = HISTORICO_SEMANA_DIAS,
+    teto: int = HISTORICO_TETO_POR_PERFIL,
 ) -> list[Path]:
-    """Apaga as versões além das `manter` mais novas. Devolve as apagadas."""
+    """Apaga as versões fora de: as `manter` mais novas, a primeira de cada dia, a semana.
+
+    A semana inteira entra até o `teto` por perfil (as mais velhas dela saem
+    primeiro); as `manter` mais novas e as primeiras do dia nunca saem.
+    """
     versoes = sorted(destino.glob("*.json"))
     ficam = set(versoes[-manter:]) if manter > 0 else set()
     ficam |= _as_primeiras_de_cada_dia(versoes, dias)
+    da_semana = [v for v in _as_da_semana(versoes, semana) if v not in ficam]
+    vagas = max(0, teto - len(ficam))
+    ficam |= set(da_semana[-vagas:]) if vagas else set()
     apagadas: list[Path] = []
     for velha in versoes:
         if velha in ficam:
@@ -1882,15 +1934,125 @@ def _payload_do_perfil(profile: Profile) -> dict[str, object]:
     return payload
 
 
+_FOLHAS_NA_LINHA = 12
+
+_CAMPOS_DE_TEXTO_LIVRE = frozenset({
+    "name", "nome", "apelido", "label", "window_title_regex",
+    "o_que_faz", "razao", "falta", "onde", "dono",
+})
+
+_VALOR_CURTO = re.compile(r"[A-Za-z0-9_.:+\-]{1,24}")
+
+
+def _sha_curto(bruto: bytes | None) -> str | None:
+    """16 hex do sha256 (nunca 12: é a forma de endereço que os portões leem)."""
+    return hashlib.sha256(bruto).hexdigest()[:16] if bruto is not None else None
+
+
+def _o_valor_na_linha(chave: str, valor: object) -> str | None:
+    """O valor que entra na linha, ou None quando só o CAMINHO deve entrar.
+
+    Número, booleano e cadeia curta de uma palavra entram; nome e texto livre
+    (e lista, e seção inteira) entram só como caminho.
+    """
+    if isinstance(valor, bool):
+        return "true" if valor else "false"
+    if isinstance(valor, (int, float)):
+        return repr(valor)
+    if (
+        isinstance(valor, str)
+        and chave not in _CAMPOS_DE_TEXTO_LIVRE
+        and _VALOR_CURTO.fullmatch(valor)
+    ):
+        return valor
+    return None
+
+
+def _as_folhas_que_diferem(
+    antes: object, depois: object, caminho: tuple[str, ...] = ()
+) -> list[tuple[tuple[str, ...], object, object]]:
+    """Cada folha (caminho, antes, depois) em que os dois JSON divergem."""
+    ausente = _AUSENTE
+    if isinstance(antes, dict) and isinstance(depois, dict):
+        achadas: list[tuple[tuple[str, ...], object, object]] = []
+        for chave in sorted(set(antes) | set(depois)):
+            achadas += _as_folhas_que_diferem(
+                antes.get(chave, ausente), depois.get(chave, ausente), (*caminho, str(chave))
+            )
+        return achadas
+    if isinstance(antes, list) and isinstance(depois, list) and len(antes) == len(depois):
+        achadas = []
+        for indice, (a, d) in enumerate(zip(antes, depois, strict=True)):
+            achadas += _as_folhas_que_diferem(a, d, (*caminho, str(indice)))
+        return achadas
+    return [] if antes == depois else [(caminho, antes, depois)]
+
+
+_AUSENTE = object()
+
+
+def _o_que_mudou(anterior: bytes | None, novos: bytes) -> str:
+    """As folhas que diferem entre o que ESTÁ no disco e o que vai para ele.
+
+    `caminho.pontilhado:antes->depois` para número, booleano e cadeia curta; nome
+    e texto livre só pelo caminho. A chave de controle e todo valor passam pela
+    máscara da casa. Teto de `_FOLHAS_NA_LINHA`, e `+N` para o resto. Vazio
+    quando nada mudou, quando o perfil nasce e quando o disco não era legível
+    (esse caso diz `ilegivel`).
+    """
+    if anterior is None:
+        return ""
+    try:
+        antes = json.loads(anterior.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return "ilegivel"
+    depois = json.loads(novos.decode("utf-8"))
+    folhas = _as_folhas_que_diferem(antes, depois)
+    itens: list[str] = []
+    for caminho, de, para in folhas[:_FOLHAS_NA_LINHA]:
+        texto = _mascarar(".".join(caminho))
+        valores = [
+            None if v is _AUSENTE else _o_valor_na_linha(caminho[-1] if caminho else "", v)
+            for v in (de, para)
+        ]
+        if all(v is None for v in valores) and (de is not _AUSENTE and para is not _AUSENTE):
+            itens.append(texto)
+            continue
+        a_ = "ausente" if de is _AUSENTE else valores[0]
+        d_ = "ausente" if para is _AUSENTE else valores[1]
+        if a_ is None or d_ is None:
+            itens.append(texto)
+        else:
+            itens.append(f"{texto}:{_mascarar(a_)}->{_mascarar(d_)}")
+    if len(folhas) > _FOLHAS_NA_LINHA:
+        itens.append(f"+{len(folhas) - _FOLHAS_NA_LINHA}")
+    return ";".join(itens)
+
+
+def _bytes_do_payload(payload: object) -> bytes:
+    """Os bytes que `_atomic_write_json` grava — o mesmo texto, sem escrever."""
+    return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
 def save_profile(profile: Profile, *, origem: str | None = None) -> Path:
-    """Grava perfil em `<slugify(profile.name)>.json` de forma atômica."""
+    """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
+
+    Não arquiva a versão de antes quando ela é BYTE A BYTE a que vai para o
+    disco: a gravação que não mudou nada não gasta as vagas do histórico.
+    """
     path = _profile_path(profile)
     payload = _payload_do_perfil(profile)
+    novos = _bytes_do_payload(payload)
     with FileLock(str(_lock_path(path))):
         anterior = _bytes_se_existe(path)
-        backup = _arquivar_versao(path.stem, anterior) if anterior is not None else None
+        igual = anterior is not None and anterior == novos
+        backup = (
+            _arquivar_versao(path.stem, anterior)
+            if anterior is not None and not igual
+            else None
+        )
         _atomic_write_json(path, payload)
-    _registrar_gravacao(profile, path, anterior, backup, origem)
+    _registrar_gravacao(profile, path, anterior, backup, origem, novos, igual=igual)
     return path
 
 
@@ -1900,6 +2062,9 @@ def _registrar_gravacao(
     anterior: bytes | None,
     backup: Path | None,
     origem: str | None,
+    novos: bytes,
+    *,
+    igual: bool,
 ) -> None:
     """Emite o `profile_salvo` — a linha de journal que NÃO existia."""
     match_antes, priority_antes = _estado_gravado(anterior)
@@ -1914,6 +2079,11 @@ def _registrar_gravacao(
             priority_antes=priority_antes,
             priority_depois=profile.priority,
             origem=origem or _origem_do_processo(),
+            gesto=gesto_de_agora.get() or "",
+            mudou=_o_que_mudou(anterior, novos),
+            igual=igual,
+            sha_antes=_sha_curto(anterior),
+            sha_depois=_sha_curto(novos),
             pid=os.getpid(),
             backup=str(backup) if backup is not None else None,
         )
@@ -2027,8 +2197,7 @@ def delete_profile(identifier: str) -> None:
 
 
 def _atomic_write_json(target: Path, payload: object) -> None:
-    texto = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-    _atomic_write_bytes(target, texto.encode("utf-8"))
+    _atomic_write_bytes(target, _bytes_do_payload(payload))
 
 
 def _atomic_write_bytes(target: Path, bruto: bytes) -> None:
@@ -2058,6 +2227,8 @@ __all__ = [
     "HISTORICO_DIAS",
     "HISTORICO_DIR_NAME",
     "HISTORICO_MAX_VERSOES",
+    "HISTORICO_SEMANA_DIAS",
+    "HISTORICO_TETO_POR_PERFIL",
     "INTERVALO_MINIMO_DA_VARREDURA_S",
     "MARCA_DE_SEMEADURA_DE_JOGOS",
     "PREFIXO_DA_CHAVE_DE_JANELA",
@@ -2073,6 +2244,7 @@ __all__ = [
     "classes_do_perfil_do_jogo_de_lancador",
     "delete_profile",
     "enxugar_perfis_de_jogo",
+    "gesto_de_agora",
     "historico_dir",
     "listar_historico",
     "load_all_profiles",

@@ -84,18 +84,6 @@ def test_historico_vive_fora_do_alcance_das_varreduras(dir_perfis: Path) -> None
     assert [p.name for p in loader_module.load_all_profiles()] == ["pragmata"]
 
 
-def test_historico_retem_apenas_as_ultimas_n(dir_perfis: Path) -> None:
-    """A poda mantém `HISTORICO_MAX_VERSOES` recentes, mais a primeira do dia."""
-    total = HISTORICO_MAX_VERSOES + 5
-    for prioridade in range(total):
-        save_profile(_perfil(priority=prioridade))
-
-    versoes = listar_historico("pragmata")
-    assert len(versoes) == HISTORICO_MAX_VERSOES + 1
-    prioridades = [json.loads(v.read_text(encoding="utf-8"))["priority"] for v in versoes]
-    assert prioridades == [0, *range(total - HISTORICO_MAX_VERSOES - 1, total - 1)]
-
-
 def test_restore_devolve_a_versao_byte_a_byte(dir_perfis: Path) -> None:
     """Restaurar tem de reproduzir os BYTES guardados, não uma reserialização."""
     escrito_a_mao = (
@@ -245,23 +233,25 @@ def test_doze_gravacoes_seguidas_deixam_a_versao_de_antes_delas(
         save_profile(_perfil(priority=prioridade))
 
     guardadas = _prioridades()
-    assert 7 in guardadas, f"a versão de antes da rajada sumiu: {guardadas}"
-    assert guardadas[0] == 7
-    assert guardadas[-HISTORICO_MAX_VERSOES:] == list(range(101, 111))
+    assert guardadas == [7, *range(100, 111)], guardadas
     assert load_profile("pragmata").priority == 111
 
 
-def test_a_primeira_de_cada_dia_sobrevive_as_rajadas_dos_dias_seguintes(
+def test_fora_da_semana_ficam_as_dez_ultimas_e_a_primeira_de_cada_dia(
     dir_perfis: Path, relogio: _Relogio
 ) -> None:
-    """Uma rajada por dia, três dias: a versão de antes de cada uma fica."""
+    """Uma rajada por dia, com mais de uma semana entre elas: só a última fica inteira.
+
+    A semana é contada da versão mais nova do histórico. Das rajadas velhas
+    sobram a versão de antes de cada uma; a rajada de agora fica por inteiro.
+    """
     save_profile(_perfil(priority=1))
-    for dia, base in (("20260927", 2700), ("20260928", 2800), ("20260929", 2900)):
+    for dia, base in (("20260901", 2700), ("20260915", 2800), ("20260929", 2900)):
         relogio.dia = dia
         for passo in range(12):
             save_profile(_perfil(priority=base + passo))
 
-    assert _prioridades() == [1, 2711, 2811, *range(2901, 2911)]
+    assert _prioridades() == [1, 2711, 2811, *range(2900, 2911)]
 
 
 def test_os_dias_guardados_tem_teto(dir_perfis: Path, relogio: _Relogio) -> None:

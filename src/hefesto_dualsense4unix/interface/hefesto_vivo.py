@@ -44,6 +44,7 @@ if __name__ != "__main__":
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402
+from hefesto_dualsense4unix.profiles.loader import gesto_de_agora  # noqa: E402
 
 #: A PRIMEIRA PÁGINA é a Jogar, que é a primeira da tira. Não é escolha de
 #: gosto: é a aba que o `.desktop` dela abre.
@@ -2893,6 +2894,9 @@ class Piloto:
         def trabalhar() -> None:
             desta_vez: tuple[str, str] = ("", "")
             so_armou = False
+            # O gesto vai ao `profile_salvo` de quem grava no meio dele; a thread
+            # nasce com contexto vazio, então a marca é posta aqui.
+            marca_do_gesto = gesto_de_agora.set(f"{pagina} · {nome}")
             try:
                 resposta = acao(self._ctx_de_agora, o, ponte)
             except Exception as erro:
@@ -2910,6 +2914,7 @@ class Piloto:
                 GLib.idle_add(lambda r=resposta: self._deu_certo_dizendo(
                     pagina, nome, alvo, self._o_arranjo_relido(pagina, r)))
             finally:
+                gesto_de_agora.reset(marca_do_gesto)
                 certo: bool | None = (None if so_armou
                                       else desta_vez[0] == "aplicou")
                 GLib.idle_add(lambda v=voo, c=certo: self._pousou(v, c))

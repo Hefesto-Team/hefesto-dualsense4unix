@@ -126,6 +126,7 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     PROTOCOL_VERSION,
 )
 from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles.loader import gesto_de_agora
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
@@ -383,6 +384,9 @@ class IpcServer(IpcHandlersMixin):
             return None
 
         t0 = time.perf_counter()
+        # O gesto do pedido, para o `profile_salvo` de quem grava no meio dele:
+        # `asyncio.to_thread` leva o contexto junto.
+        marca_do_gesto = gesto_de_agora.set(f"ipc:{method}")
         try:
             result = await handler(params)
         except FileNotFoundError as exc:
@@ -397,6 +401,7 @@ class IpcServer(IpcHandlersMixin):
                 f"erro interno ({type(exc).__name__})",
             )
         finally:
+            gesto_de_agora.reset(marca_do_gesto)
             ms = (time.perf_counter() - t0) * 1000
             if ms > TETO_DO_PEDIDO_MS:
                 logger.info("ipc_lento", metodo=method, ms=round(ms))
