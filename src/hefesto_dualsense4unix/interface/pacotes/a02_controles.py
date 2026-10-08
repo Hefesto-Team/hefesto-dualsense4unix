@@ -728,7 +728,7 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
     :func:`eleicao_de_microfone.fonte_nativa_do_controle`.
 
     O QUE ELA CUSTA, medido na mesa de quatro dela em 20/09/2026: **~70 ms**,
-    dentro de uma thread que acorda a cada :data:`CAMADA_1_S` (2 s). A leitura LONGA do
+    dentro de uma thread que acorda a cada :data:`CAMADA_1_S` (2 s). A leitura em JSON do
     `pactl` é uma só para a mesa inteira (é dela que sai a placa de cada nó), e a do
     `amixer` é POR PLACA e nunca por controle: com quatro DualSense no cabo são quatro placas
     distintas, e a mesma placa nunca é lida duas vezes na mesma volta.

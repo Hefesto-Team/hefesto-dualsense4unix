@@ -515,7 +515,7 @@ def _veredito(
             alvo=alvo,
             confianca=CONFIANCA_NAO_SEI,
             porque=(
-                "o udev não respondeu quando esta conexão nasceu — sem isso "
+                "o sistema não disse quando esta conexão nasceu — sem isso "
                 "não dá para saber como ela nasceu"
             ),
         )
