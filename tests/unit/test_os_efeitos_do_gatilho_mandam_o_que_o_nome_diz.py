@@ -1,0 +1,407 @@
+"""A régua dos efeitos do gatilho: o bloco lido como o CONTROLE o lê.
+
+Os outros testes do gatilho travam o que o código MONTA (o modo, os bytes que
+ela aprovou em 01/08). Nenhum pergunta o que o aparelho FAZ com o bloco, e os
+nomes herdados de 2020 (`PULSE_A = 0x22`, `PULSE_B = 0x06`, `PULSE_AB = 0x26`)
+escondem que o mesmo byte de modo é, no firmware, o arco, a vibração simples e
+a vibração oficial: um efeito montado no layout errado passa em todo teste.
+
+O decodificador abaixo nasce da REGRA, o fato público de qual byte é o quê em
+cada modo (`docs/protocol/dualsense-referencia-canonica.md`, «O empacotamento
+dos 11 bytes»); não copia código de ninguém.
+
+    byte 0     modo
+    0x21/0x26  [1,2] zonas ativas u16 ; [3..6] amplitude u32 (3 bits por zona,
+               valor guardado = força - 1) ; 0x26 ainda leva a frequência no [9]
+    0x25       [1,2] (1<<início)|(1<<fim) ; [3] força - 1
+    0x22       [1,2] (1<<início)|(1<<fim) ; [3,4] (força-1) | (estalo-1)<<3
+    0x23       [1,2] zonas ; [3] segundo pé | primeiro pé<<3 ; [4] frequência
+    0x27       [1,2] zonas ; [3] ampA | ampB<<3 ; [4] frequência ; [5] período
+    0x06       [1] frequência ; [2] amplitude ; [3] posição (curso de 0 a 147)
+    0x02       a arma simples, sem parâmetro
+    0x00, 0x05 desligado
+
+Só valem os bits 0 a 9 da máscara: o curso tem dez zonas.
+
+A TABELA DE ISENÇÃO diz o que ainda está errado hoje, efeito por efeito, e com
+o ID da sprint que o cura. Ela só encolhe: uma isenção cujo efeito já saiu certo
+reprova (a linha velha se apaga), e um efeito FORA da tabela que falhe reprova.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import pytest
+
+from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
+from hefesto_dualsense4unix.core.controller import TriggerEffect
+from hefesto_dualsense4unix.core.trigger_effects import (
+    PRESET_FACTORIES,
+    build_from_name,
+)
+from hefesto_dualsense4unix.profiles.trigger_presets import VIBRATION_POSITION_PRESETS
+
+RAIZ = Path(__file__).resolve().parents[2]
+MOCKUP_GATILHOS = RAIZ / "mockup" / "03-gatilhos.html"
+
+ZONAS_DO_CURSO = 10
+CURSO_DO_0X06 = 147
+
+_MODOS_COM_MASCARA = (0x21, 0x22, 0x23, 0x25, 0x26, 0x27)
+_MODOS_DESLIGADOS = (0x00, 0x05)
+_MODOS_DA_REGUA = (
+    *_MODOS_COM_MASCARA, 0x06, 0x02, *_MODOS_DESLIGADOS,
+)
+
+
+def bloco_de(efeito: TriggerEffect) -> bytes:
+    """O bloco de 11 bytes como o relatório o monta (`common[10:21]`).
+
+    O modo no byte 0, as forças 0 a 5 nos bytes 1 a 6 e a sétima no byte 9
+    (`backend_pydualsense.py`, o laço dos dois gatilhos).
+    """
+    f = efeito.forces
+    return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
+
+
+@dataclass(frozen=True)
+class Lido:
+    """O que o controle entende de um bloco."""
+
+    modo: int
+    mascara: int = 0
+    amplitude_bruta: int = 0
+    frequencia: int | None = None
+    periodo: int | None = None
+    posicao: int | None = None
+    #: força (1 a 8) de cada zona ativa, nos modos que a guardam por zona
+    forca_por_zona: dict[int, int] = field(default_factory=dict)
+
+    @property
+    def zonas(self) -> tuple[int, ...]:
+        """As zonas ativas dentro do curso (bits 0 a 9, e só eles)."""
+        return tuple(z for z in range(ZONAS_DO_CURSO) if self.mascara >> z & 1)
+
+
+def decodificar(bloco: bytes) -> Lido:
+    """Lê um bloco de 11 bytes pela regra do firmware; modo fora da lista reprova."""
+    assert len(bloco) == 11, f"o bloco tem 11 bytes, não {len(bloco)}"
+    modo = bloco[0]
+    if modo in _MODOS_DESLIGADOS or modo == 0x02:
+        return Lido(modo=modo)
+    if modo == 0x06:
+        return Lido(modo=modo, frequencia=bloco[1], amplitude_bruta=bloco[2], posicao=bloco[3])
+    if modo not in _MODOS_COM_MASCARA:
+        raise AssertionError(
+            f"modo 0x{modo:02X} fora da régua (só o Custom manda o que a pessoa digita)"
+        )
+    mascara = bloco[1] | bloco[2] << 8
+    if modo in (0x21, 0x26):
+        bruto = int.from_bytes(bloco[3:7], "little")
+        zonas = [z for z in range(ZONAS_DO_CURSO) if mascara >> z & 1]
+        return Lido(
+            modo=modo,
+            mascara=mascara,
+            amplitude_bruta=bruto,
+            frequencia=bloco[9] if modo == 0x26 else None,
+            forca_por_zona={z: (bruto >> (3 * z) & 0x07) + 1 for z in zonas},
+        )
+    if modo == 0x23:
+        return Lido(modo=modo, mascara=mascara, amplitude_bruta=bloco[3], frequencia=bloco[4])
+    if modo == 0x27:
+        return Lido(
+            modo=modo,
+            mascara=mascara,
+            amplitude_bruta=bloco[3],
+            frequencia=bloco[4],
+            periodo=bloco[5],
+        )
+    # 0x22 (arco) e 0x25 (arma): início e fim viram bits, a força vem do byte 3
+    return Lido(modo=modo, mascara=mascara, amplitude_bruta=bloco[3] | bloco[4] << 8)
+
+
+# --- as regras: cada uma devolve o NOME da regra quebrada, ou nada ------------
+
+BIT_FORA_DO_CURSO = "bit_de_zona_fora_do_curso"
+SEM_ZONA_ATIVA = "efeito_sem_zona_ativa"
+FORCA_EM_ZONA_INATIVA = "forca_em_zona_inativa"
+POSICAO_FORA_DO_CURSO = "posicao_fora_do_curso"
+MACHINE_SEM_INICIO = "machine_com_inicio_fora_de_1_a_8"
+REPETE_SEM_FREQUENCIA = "promete_repeticao_e_manda_frequencia_zero"
+FIRMEZA_SEM_O_FUNDO = "firmeza_que_nao_chega_ao_fundo"
+
+
+def violacoes(
+    lido: Lido, *, repete: bool = False, segue_ate_o_fundo: bool = False
+) -> frozenset[str]:
+    """As regras que o bloco quebra, lido como o controle o lê."""
+    achadas: set[str] = set()
+    if lido.modo in _MODOS_COM_MASCARA:
+        if lido.mascara >> ZONAS_DO_CURSO:
+            achadas.add(BIT_FORA_DO_CURSO)
+        if not lido.zonas:
+            achadas.add(SEM_ZONA_ATIVA)
+        if lido.modo in (0x21, 0x26):
+            inativas = lido.amplitude_bruta
+            for z in lido.zonas:
+                inativas &= ~(0x07 << (3 * z))
+            if inativas:
+                achadas.add(FORCA_EM_ZONA_INATIVA)
+    if lido.modo == 0x06 and (lido.posicao or 0) > CURSO_DO_0X06:
+        achadas.add(POSICAO_FORA_DO_CURSO)
+    if lido.modo == 0x27 and not (lido.zonas and 1 <= lido.zonas[0] <= 8):
+        achadas.add(MACHINE_SEM_INICIO)
+    if repete and not lido.frequencia:
+        achadas.add(REPETE_SEM_FREQUENCIA)
+    if segue_ate_o_fundo and lido.modo != 0x00 and lido.mascara and (
+        ZONAS_DO_CURSO - 1 not in lido.zonas
+    ):
+        achadas.add(FIRMEZA_SEM_O_FUNDO)
+    return frozenset(achadas)
+
+
+# --- os efeitos, com os padrões da tela ---------------------------------------
+
+_SPEC_POR_NOME = {p.name: p for p in PRESETS}
+
+#: Fora da régua: o Montar do zero manda o que a pessoa digitar.
+FORA_DA_REGUA = frozenset({"Custom"})
+
+#: O efeito que carrega uma firmeza que, uma vez começada, vai até o fundo do curso.
+SEGUEM_ATE_O_FUNDO = frozenset(
+    {"Rigid", "SimpleRigid", "Resistance", "Feedback", "SlopeFeedback"}
+)
+
+#: Os efeitos cuja palavra, na tela, é repetição: o gatilho tem de bater.
+REPETEM = frozenset(
+    {"Galloping", "AutoGun", "Machine", "Vibration", "MultiPositionVibration"}
+)
+
+#: O perfil salvo da Vibração por posição em lista de listas (`[[v], …]`), o
+#: formato aninhado que a aba antiga gravava. É um caso à parte da mesma fábrica.
+VIBRACAO_ANINHADA = "MultiPositionVibration (perfil em lista de listas)"
+
+
+def _efeito_com_os_padroes(nome: str) -> TriggerEffect:
+    """O preset como a tela do usuário o aplica: com o padrão de cada controle."""
+    return build_from_name(nome, [p.default for p in _SPEC_POR_NOME[nome].params])
+
+
+def _efeito_aninhado() -> TriggerEffect:
+    forcas = VIBRATION_POSITION_PRESETS["machine_gun"]
+    return build_from_name("MultiPositionVibration", [[v] for v in forcas])
+
+
+def _casos() -> dict[str, TriggerEffect]:
+    casos = {
+        nome: _efeito_com_os_padroes(nome)
+        for nome in PRESET_FACTORIES
+        if nome not in FORA_DA_REGUA
+    }
+    casos[VIBRACAO_ANINHADA] = _efeito_aninhado()
+    return casos
+
+
+def _nome_da_fabrica(caso: str) -> str:
+    return "MultiPositionVibration" if caso == VIBRACAO_ANINHADA else caso
+
+
+def _violacoes_do_caso(caso: str) -> frozenset[str]:
+    nome = _nome_da_fabrica(caso)
+    return violacoes(
+        decodificar(bloco_de(_casos()[caso])),
+        repete=nome in REPETEM,
+        segue_ate_o_fundo=nome in SEGUEM_ATE_O_FUNDO,
+    )
+
+
+#: efeito -> (a sprint que o cura, as regras que ele ainda quebra). Só encolhe.
+_METRALHADORA = "A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01"
+_DISPARO = "O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01"
+_ARCO = "O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01"
+_RAMPA = "A-RAMPA-DE-FORCA-CHEGA-AO-FUNDO-E-A-VIBRACAO-SALVA-NAO-PERDE-A-FREQUENCIA-01"
+
+ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
+    # a Metralhadora, a Arma automática e a Vibração
+    "Machine": (_METRALHADORA, frozenset({
+        BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
+    })),
+    "AutoGun": (_METRALHADORA, frozenset({
+        BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
+    })),
+    "Vibration": (_METRALHADORA, frozenset({
+        BIT_FORA_DO_CURSO, REPETE_SEM_FREQUENCIA,
+    })),
+    # o Disparo, a Arma semi-automática e o Pulso (curva B)
+    "Weapon": (_DISPARO, frozenset({POSICAO_FORA_DO_CURSO})),
+    "PulseB": (_DISPARO, frozenset({POSICAO_FORA_DO_CURSO})),
+    "SemiAutoGun": (_DISPARO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
+    # o Arco, o Galope e o Pulso (curva A)
+    "Bow": (_ARCO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
+    "Galloping": (_ARCO, frozenset({
+        BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
+    })),
+    "PulseA": (_ARCO, frozenset({BIT_FORA_DO_CURSO})),
+    # a Rampa de força e a Vibração por posição salva em lista de listas
+    "SlopeFeedback": (_RAMPA, frozenset({FIRMEZA_SEM_O_FUNDO})),
+    VIBRACAO_ANINHADA: (_RAMPA, frozenset({REPETE_SEM_FREQUENCIA})),
+}
+
+
+# --- a tabela de isenção: o que ainda está errado, e quem cura -----------------
+
+
+def test_todo_efeito_da_fabrica_passa_pela_regua_menos_o_montar_do_zero() -> None:
+    assert set(PRESET_FACTORIES) >= FORA_DA_REGUA
+    casos = _casos()
+    assert len(casos) == len(PRESET_FACTORIES) - len(FORA_DA_REGUA) + 1
+    for nome in PRESET_FACTORIES:
+        assert nome in _SPEC_POR_NOME, f"{nome} sem controles na tela"
+
+
+@pytest.mark.parametrize("caso", sorted(_casos()))
+def test_o_efeito_manda_o_que_o_nome_diz_ou_esta_na_tabela(caso: str) -> None:
+    quebradas = _violacoes_do_caso(caso)
+    if caso not in ISENCOES:
+        assert not quebradas, (
+            f"{caso} manda um bloco que o controle lê errado ({sorted(quebradas)}) "
+            "e não está na tabela de isenção"
+        )
+        return
+    sprint, declaradas = ISENCOES[caso]
+    assert quebradas, (
+        f"{caso} já sai certo: apague a linha da tabela (era a cura de {sprint})"
+    )
+    assert quebradas == declaradas, (
+        f"{caso} quebra {sorted(quebradas)}, e a tabela diz {sorted(declaradas)} "
+        f"(sprint {sprint}): acerte a linha"
+    )
+
+
+def test_a_tabela_de_isencao_so_cita_efeito_que_existe() -> None:
+    assert set(ISENCOES) <= set(_casos())
+
+
+# --- o decodificador, com fixtures sintéticas ---------------------------------
+
+
+def _hex(texto: str) -> bytes:
+    return bytes.fromhex(texto)
+
+
+class TestDecodificador:
+    def test_vibracao_oficial_lida_com_frequencia_no_byte_9(self) -> None:
+        lido = decodificar(_hex("26 FC 03 C0 B6 6D 1B 00 00 28 00"))
+        assert lido.modo == 0x26
+        assert lido.zonas == (2, 3, 4, 5, 6, 7, 8, 9)
+        assert lido.frequencia == 40
+        assert set(lido.forca_por_zona.values()) == {4}
+        assert violacoes(lido, repete=True) == frozenset()
+
+    def test_vibracao_oficial_le_a_forca_de_cada_zona_menos_um(self) -> None:
+        # as dez forças 0,1,2,…,7,8,8 do preset «rampa crescente»: zona z = força z
+        lido = decodificar(_hex("26 FE 03 40 34 D6 3F 00 00 64 00"))
+        assert lido.forca_por_zona == {z: z for z in range(1, 9)} | {9: 8}
+        assert lido.frequencia == 100
+
+    def test_machine_lida_com_frequencia_no_byte_4_e_periodo_no_5(self) -> None:
+        lido = decodificar(_hex("27 02 02 1B 32 08 00 00 00 00 00"))
+        assert lido.modo == 0x27
+        assert lido.zonas == (1, 9)
+        assert lido.frequencia == 50
+        assert lido.periodo == 8
+        assert violacoes(lido, repete=True) == frozenset()
+
+    def test_machine_com_inicio_zero_e_denunciada(self) -> None:
+        lido = decodificar(_hex("27 01 02 1B 32 08 00 00 00 00 00"))
+        assert MACHINE_SEM_INICIO in violacoes(lido)
+
+    def test_machine_com_inicio_um_nao_e_denunciada(self) -> None:
+        lido = decodificar(_hex("27 02 02 1B 32 08 00 00 00 00 00"))
+        assert MACHINE_SEM_INICIO not in violacoes(lido)
+
+    def test_vibracao_simples_le_a_frequencia_no_byte_1_e_a_posicao_no_3(self) -> None:
+        lido = decodificar(_hex("06 28 05 40 00 00 00 00 00 00 00"))
+        assert (lido.frequencia, lido.amplitude_bruta, lido.posicao) == (40, 5, 0x40)
+        assert violacoes(lido) == frozenset()
+
+    def test_posicao_do_0x06_passa_do_curso_aos_148(self) -> None:
+        assert violacoes(decodificar(_hex("06 02 05 93 00 00 00 00 00 00 00"))) == frozenset()
+        passou = decodificar(_hex("06 02 05 94 00 00 00 00 00 00 00"))
+        assert violacoes(passou) == {POSICAO_FORA_DO_CURSO}
+
+    def test_o_arco_com_o_mesmo_byte_de_zona_nao_tem_frequencia(self) -> None:
+        lido = decodificar(_hex("22 02 02 1B 00 00 00 00 00 00 00"))
+        assert lido.modo == 0x22
+        assert lido.zonas == (1, 9)
+        assert lido.frequencia is None
+        assert REPETE_SEM_FREQUENCIA in violacoes(lido, repete=True)
+
+    def test_o_galope_le_a_frequencia_no_byte_4(self) -> None:
+        lido = decodificar(_hex("23 01 02 3F 0A 00 00 00 00 00 00"))
+        assert lido.zonas == (0, 9)
+        assert lido.frequencia == 10
+        assert violacoes(lido, repete=True) == frozenset()
+
+    def test_desligados_e_arma_simples_nao_quebram_nada(self) -> None:
+        for modo in (0x00, 0x05, 0x02):
+            assert violacoes(decodificar(bytes([modo]) + bytes(10))) == frozenset()
+
+    def test_bit_de_zona_fora_do_curso_e_denunciado(self) -> None:
+        # a máscara 0x0702 liga o bit 10, que o curso de dez zonas não tem
+        lido = decodificar(_hex("22 02 07 B4 00 00 00 00 00 00 00"))
+        assert lido.zonas == (1, 8, 9)
+        assert violacoes(lido) == {BIT_FORA_DO_CURSO}
+        # e a zona 12 também
+        assert BIT_FORA_DO_CURSO in violacoes(
+            decodificar(_hex("21 00 10 00 00 00 00 00 00 00 00"))
+        )
+
+    def test_efeito_sem_zona_ativa_e_denunciado(self) -> None:
+        assert SEM_ZONA_ATIVA in violacoes(decodificar(_hex("21 00 00 00 00 00 00 00 00 00 00")))
+
+    def test_forca_em_zona_inativa_e_denunciada(self) -> None:
+        # a zona 0 está ativa; a força da zona 1 (bits 3 a 5) não tem zona que a use
+        lido = decodificar(_hex("21 01 00 08 00 00 00 00 00 00 00"))
+        assert violacoes(lido) == {FORCA_EM_ZONA_INATIVA}
+
+    def test_firmeza_que_para_antes_do_fundo_e_denunciada(self) -> None:
+        sem_fundo = decodificar(_hex("21 FE 01 00 00 00 00 00 00 00 00"))
+        assert violacoes(sem_fundo, segue_ate_o_fundo=True) == {FIRMEZA_SEM_O_FUNDO}
+        com_fundo = decodificar(_hex("21 FE 03 00 00 00 00 00 00 00 00"))
+        assert violacoes(com_fundo, segue_ate_o_fundo=True) == frozenset()
+
+    def test_modo_fora_da_lista_reprova(self) -> None:
+        with pytest.raises(AssertionError, match="fora da régua"):
+            decodificar(_hex("3C 00 00 00 00 00 00 00 00 00 00"))
+
+    def test_bloco_de_monta_o_layout_do_relatorio(self) -> None:
+        efeito = TriggerEffect(mode=0x26, forces=(1, 2, 3, 4, 5, 6, 7))
+        assert bloco_de(efeito) == bytes([0x26, 1, 2, 3, 4, 5, 6, 0, 0, 7, 0])
+
+
+# --- a promessa da tela: quem diz «enquanto apertado» tem de bater ------------
+
+_PROMETE = re.compile(r"enquanto|contínu|continu", re.IGNORECASE)
+
+
+def _promessas_da_tela() -> set[str]:
+    """Os efeitos cuja descrição, na tela ou no desenho, promete repetição."""
+    prometem = {p.name for p in PRESETS if _PROMETE.search(p.description)}
+    html = MOCKUP_GATILHOS.read_text(encoding="utf-8")
+    opcoes = re.findall(r'<option value="([A-Za-z]+)"[^>]*? title="([^"]*)"', html)
+    assert len(opcoes) >= 10, "o desenho perdeu as opções do seletor de modo"
+    prometem |= {valor for valor, titulo in opcoes if _PROMETE.search(titulo)}
+    return prometem & set(PRESET_FACTORIES)
+
+
+def test_quem_promete_repeticao_na_tela_esta_na_lista_dos_que_repetem() -> None:
+    prometem = _promessas_da_tela()
+    assert prometem, "a régua não leu promessa nenhuma: o desenho mudou?"
+    assert prometem <= REPETEM, (
+        f"a tela promete repetição para {sorted(prometem - REPETEM)} "
+        "e a régua não cobra frequência deles"
+    )
