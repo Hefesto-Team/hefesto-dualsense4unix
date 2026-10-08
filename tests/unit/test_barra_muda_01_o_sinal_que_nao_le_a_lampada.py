@@ -141,31 +141,121 @@ class TestOHidrawEReciclado:
         assert sb._veredito(viva, nascimentos).confianca == sb.CONFIANCA_LIMPA
 
 
-class TestAVarreduraDoDiario:
-    """A régua do kernel. O defeito que estes testes pegam já aconteceu de"""
+class TestONascimentoVemDoUdev:
+    """A régua do udev. O defeito que estes testes pegam já aconteceu de"""
 
-    LINHA_CURTA = (
-        "playstation 0005:054C:0CE6.0033: hidraw6: BLUETOOTH HID v1.00 "
-        "Gamepad [DualSense Wireless Controller] on aa:bb:cc:99:88:77"
-    )
+    AGORA = 5000.0
 
-    def test_casa_a_forma_curta_que_o_kernel_imprime(self) -> None:
-        achou = sb._RE_NASCIMENTO.search(self.LINHA_CURTA)
-        assert achou is not None, (
-            "a varredura parou de casar a linha REAL do kernel. O uevent traz "
-            "0005:0000054C:00000CE6, mas o log traz 0005:054C:0CE6 — foi este o "
-            "primeiro defeito deste módulo, e ele não gritava: respondia "
-            "'não sei' para tudo."
+    @staticmethod
+    def _responde(usec_por_no: dict[str, str | None]):  # type: ignore[no-untyped-def]
+        def _perguntar(syspath: str, nome: str) -> str | None:
+            assert nome == "USEC_INITIALIZED", (
+                f"o nascimento voltou a perguntar {nome!r}: só o USEC_INITIALIZED é o "
+                "instante em que o udev recebeu o nó"
+            )
+            return usec_por_no.get(syspath.rsplit("/", 1)[-1])
+
+        return _perguntar
+
+    def test_o_instante_do_udev_vira_segundos_desde_o_boot(self) -> None:
+        nascimentos = sb.nascimentos_do_udev(
+            [_no_radio("0029", "/dev/hidraw7")],
+            perguntar=self._responde({"hidraw7": "4000500000"}),
+            relogio=lambda: self.AGORA,
         )
-        assert achou.group("inst") == "0033"
-        assert achou.group("no") == "hidraw6"
-        assert achou.group("via") == "BLUETOOTH"
+        assert nascimentos is not None
+        assert nascimentos["0029"].quando == pytest.approx(4000.5)
+        assert nascimentos["0029"].no == "/dev/hidraw7"
 
-    def test_separa_o_transporte_pela_palavra_do_kernel(self) -> None:
-        usb = self.LINHA_CURTA.replace("BLUETOOTH", "USB")
-        achou = sb._RE_NASCIMENTO.search(usb)
-        assert achou is not None
-        assert achou.group("via") == "USB"
+    def test_o_udev_mudo_e_nao_sei(self) -> None:
+        """Perguntou e ninguém respondeu: é `None`, nunca `{}` (que diria «nasceu limpo»)."""
+        assert sb.nascimentos_do_udev(
+            [_no_radio("0029", "/dev/hidraw7")],
+            perguntar=self._responde({}),
+            relogio=lambda: self.AGORA,
+        ) is None
+
+    def test_resposta_que_nao_e_numero_e_nao_sei(self) -> None:
+        assert sb.nascimentos_do_udev(
+            [_no_radio("0029", "/dev/hidraw7")],
+            perguntar=self._responde({"hidraw7": "abc"}),
+            relogio=lambda: self.AGORA,
+        ) is None
+
+    def test_sem_instancia_nao_pergunta_nem_le_o_diario(self, monkeypatch) -> None:
+        def _bomba(*_a: object, **_k: object) -> None:
+            raise AssertionError("sem instância viva não há o que ler no diário")
+
+        monkeypatch.setattr(sb, "_linhas_do_diario", _bomba)
+        assert sb.nascimentos_do_udev(
+            [], perguntar=self._responde({}), relogio=lambda: self.AGORA
+        ) == {}
+
+    def test_mais_velha_que_a_janela_do_diario_fica_de_fora(self, monkeypatch) -> None:
+        """O diário do daemon só é lido na janela; antes dela o escritor não se sabe."""
+        monkeypatch.setattr(sb, "_linhas_do_diario", lambda *_a: [])
+        velha_s = self.AGORA - sb.JANELA_DO_DIARIO_S - 10
+        nascimentos = sb.nascimentos_do_udev(
+            [_no_radio("0029", "/dev/hidraw7"), _no_radio("002a", "/dev/hidraw8")],
+            perguntar=self._responde(
+                {"hidraw7": str(int(velha_s * 1e6)), "hidraw8": str(int((self.AGORA - 60) * 1e6))}
+            ),
+            relogio=lambda: self.AGORA,
+        )
+        assert nascimentos is not None
+        assert set(nascimentos) == {"002a"}
+
+    def test_o_escritor_do_log_do_daemon_suja_o_nascimento(self, monkeypatch) -> None:
+        linha = (
+            "2026-08-22T18:06:02.847377 [info     ] lightbar_escritor_cru_detectado "
+            "nos=['/dev/hidraw7'] pids=[600105]"
+        )
+        visto: list[list[str]] = []
+
+        def _diario(argv, _orcamento):  # type: ignore[no-untyped-def]
+            visto.append(list(argv))
+            return [(4002.0, linha)]
+
+        monkeypatch.setattr(sb, "_linhas_do_diario", _diario)
+        nascimentos = sb.nascimentos_do_udev(
+            [_no_radio("0029", "/dev/hidraw7")],
+            perguntar=self._responde({"hidraw7": "4000500000"}),
+            relogio=lambda: self.AGORA,
+        )
+        assert nascimentos is not None
+        assert nascimentos["0029"].sujo is True
+        assert nascimentos["0029"].escritor == (600105,)
+        assert "--user" in visto[0] and "-b" in visto[0], (
+            "o log do daemon é lido do boot de agora: o monotônico só vale dentro dele"
+        )
+
+    def test_diario_ilegivel_nao_diz_limpo(self, monkeypatch) -> None:
+        monkeypatch.setattr(sb, "_linhas_do_diario", lambda *_a: None)
+        nascimentos = sb.nascimentos_do_udev(
+            [_no_radio("0029", "/dev/hidraw7")],
+            perguntar=self._responde({"hidraw7": "4000500000"}),
+            relogio=lambda: self.AGORA,
+        )
+        assert nascimentos is not None
+        assert nascimentos["0029"].escritor_conhecido is False
+
+    def test_o_diario_em_json_traz_o_monotonico_em_segundos(self, monkeypatch) -> None:
+        saida = (
+            '{"MESSAGE": "uma", "__MONOTONIC_TIMESTAMP": "64743103000"}\n'
+            "lixo que nao e json\n"
+            '{"MESSAGE": ["bytes"], "__MONOTONIC_TIMESTAMP": "1"}\n'
+            '{"MESSAGE": "duas", "__MONOTONIC_TIMESTAMP": "64762847000"}\n'
+        )
+
+        class _Proc:
+            returncode = 0
+            stdout = saida
+
+        monkeypatch.setattr(sb.subprocess, "run", lambda *_a, **_k: _Proc())
+        assert sb._linhas_do_diario(["journalctl"], 1.0) == [
+            (64743.103, "uma"),
+            (64762.847, "duas"),
+        ]
 
 
 class TestAMascara:

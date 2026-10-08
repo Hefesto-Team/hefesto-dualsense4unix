@@ -65,13 +65,14 @@ Daí as duas perguntas serem SEPARADAS neste arquivo, e nunca respondidas pela
 mesma função:
 
 - :func:`veredito_do_nascimento` — *"esta instância que já existe nasceu limpa?"*. É
-  DIAGNÓSTICO, e só a responde para instâncias cujo nascimento esteja no diário.
-  Sem diário, ``CONFIANCA_NAO_SEI`` — jamais ``limpa``.
+  DIAGNÓSTICO, e só a responde para instâncias cujo nascimento o udev sabe dizer
+  e o diário do daemon ainda guarda. Sem um dos dois, ``CONFIANCA_NAO_SEI`` — jamais
+  ``limpa``.
 
   **Ela se chamava ``ler_a_mesa`` até 25/08/2026, e o nome saiu porque custou.**
   ``integrations/mesa_de_radio`` tem uma ``ler_a_mesa`` também, e aquela LÊ a
   mesa de verdade (ocupação de adaptador, para a seção "A mesa"); esta lê o
-  DIÁRIO e dá um veredito. A homonímia fez a primeira varredura da
+  NASCIMENTO e dá um veredito. A homonímia fez a primeira varredura da
   ``SINAL-NO-NASCIMENTO-01`` parecer dizer que o veredito já estava ligado no
   produto — um ``grep`` achava a função errada. Não há alias de compatibilidade
   de propósito: um manteria a colisão viva, que é o defeito que o nome novo
@@ -118,6 +119,7 @@ import time
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 
+from hefesto_dualsense4unix.core import banco_do_udev
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 
 RAIZ_UHID = "/sys/devices/virtual/misc/uhid"
@@ -137,14 +139,11 @@ JANELA_DE_NASCIMENTO_S: float = 5.0
 
 ORCAMENTO_DO_DIARIO_S: float = 8.0
 
+#: Até onde o diário do daemon (a metade ``escritor_cru_detectado``) é lido. Uma
+#: instância que nasceu antes disso nasceu fora do que ele guarda: ``não sei``.
 JANELA_DO_DIARIO_S: float = 6 * 3600.0
 
 _RE_UEVENT = re.compile(r"^(HID_PHYS|HID_UNIQ|HID_ID)=(.*)$", re.MULTILINE)
-
-_RE_NASCIMENTO = re.compile(
-    r"playstation (?P<hid>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4,8}:[0-9A-Fa-f]{4,8})\."
-    r"(?P<inst>[0-9A-Fa-f]{4}): (?P<no>hidraw\d+): (?P<via>BLUETOOTH|USB) HID"
-)
 
 _RE_ESCRITOR = re.compile(r"escritor_cru_detectado.*?nos=\[(?P<nos>[^\]]*)\]")
 
@@ -268,7 +267,7 @@ class Carimbo:
 
 Sonda = Callable[[Iterable[str] | None], Mapping[str, Sequence[int]]]
 
-LeitorDeDiario = Callable[[], Mapping[str, Nascimento] | None]
+LeitorDeNascimentos = Callable[[], Mapping[str, Nascimento] | None]
 
 
 def instancias_dualsense(raiz_uhid: str = RAIZ_UHID) -> list[Instancia]:
@@ -349,32 +348,55 @@ def _primeiro_hidraw(base: str) -> str | None:
     return f"/dev/{nomes[0]}" if nomes else None
 
 
-def nascimentos_pelo_diario(
+def nascimentos_do_udev(
+    instancias: Sequence[Instancia] | None = None,
     *,
     unidade: str = "hefesto-dualsense4unix.service",
     orcamento_s: float = ORCAMENTO_DO_DIARIO_S,
     janela_s: float = JANELA_DE_NASCIMENTO_S,
     desde_s: float = JANELA_DO_DIARIO_S,
+    raiz_uhid: str = RAIZ_UHID,
+    perguntar: Callable[[str, str], str | None] | None = None,
+    relogio: Callable[[], float] = time.monotonic,
 ) -> dict[str, Nascimento] | None:
-    """Reconstrói, do diário, quem segurava o nó quando cada instância nasceu."""
-    recorte = _recorte_do_diario(desde_s)
-    kernel = _linhas_do_diario(["journalctl", "-k", "-o", "json", *recorte], orcamento_s)
-    if kernel is None:
-        return None
+    """Reconstrói quem segurava o nó quando cada instância viva nasceu.
+
+    O NASCIMENTO vem do udev, e não de uma frase do kernel: o ``USEC_INITIALIZED``
+    do ``hidraw`` da instância é o instante (``CLOCK_MONOTONIC``, microssegundos
+    desde o boot) em que o udev o recebeu — a mesma régua dos ``__MONOTONIC_TIMESTAMP``
+    do diário, e por isso a conta não depende do relógio de parede, que o suspender
+    desloca. Quem SEGURAVA o nó segue sendo o log do daemon (``escritor_cru_detectado``),
+    que é nosso. ``None`` = o udev não respondeu por nenhuma instância (não sei).
+    """
+    vivas = list(instancias) if instancias is not None else instancias_dualsense(raiz_uhid)
+    pergunta = perguntar or banco_do_udev.propriedade_do_syspath
+    agora = relogio()
     nascimentos: dict[str, Nascimento] = {}
-    for quando, texto in kernel:
-        achou = _RE_NASCIMENTO.search(texto)
-        if not achou or not any(i in achou.group("hid").upper() for i in _IDS_DUALSENSE):
+    perguntou = respondeu = 0
+    for viva in vivas:
+        if not viva.hidraw:
             continue
-        nascimentos[achou.group("inst").lower()] = Nascimento(
-            instancia=achou.group("inst").lower(),
-            quando=quando,
-            no=f"/dev/{achou.group('no')}",
-            transporte="bt" if achou.group("via") == "BLUETOOTH" else "usb",
+        perguntou += 1
+        no = os.path.basename(viva.hidraw)
+        try:
+            quando = int(pergunta(f"/sys/class/hidraw/{no}", "USEC_INITIALIZED") or "") / 1e6
+        except ValueError:
+            continue
+        respondeu += 1
+        if desde_s > 0 and quando < agora - desde_s:
+            continue
+        chave = viva.instancia.lower()
+        nascimentos[chave] = Nascimento(
+            instancia=chave, quando=quando, no=viva.hidraw, transporte=viva.transporte
         )
+    if perguntou and not respondeu:
+        return None
+    if not nascimentos:
+        return {}
 
     daemon = _linhas_do_diario(
-        ["journalctl", "--user", "-u", unidade, "-o", "json", *recorte], orcamento_s
+        ["journalctl", "--user", "-u", unidade, "-b", "-o", "json", *_recorte_do_diario(desde_s)],
+        orcamento_s,
     )
     if daemon is None:
         return {
@@ -434,7 +456,11 @@ def _recorte_do_diario(desde_s: float) -> list[str]:
 def _linhas_do_diario(
     argv: Sequence[str], orcamento_s: float
 ) -> list[tuple[float, str]] | None:
-    """``journalctl -o json`` -> [(epoch, mensagem)]. ``None`` = não deu para ler."""
+    """``journalctl -o json`` -> [(segundos desde o boot, mensagem)]. ``None`` = não deu para ler.
+
+    O instante é o ``__MONOTONIC_TIMESTAMP``, a mesma régua do ``USEC_INITIALIZED``
+    do udev. Quem chama passa ``-b``: o monotônico só vale dentro de um boot.
+    """
     try:
         proc = subprocess.run(
             list(argv),
@@ -457,7 +483,7 @@ def _linhas_do_diario(
         if not isinstance(mensagem, str):
             continue
         with contextlib.suppress(TypeError, ValueError):
-            linhas.append((int(evento["__REALTIME_TIMESTAMP"]) / 1e6, mensagem))
+            linhas.append((int(evento["__MONOTONIC_TIMESTAMP"]) / 1e6, mensagem))
     return linhas
 
 
@@ -466,12 +492,12 @@ def veredito_do_nascimento(
     instancias: Sequence[Instancia] | None = None,
     nascimentos: Mapping[str, Nascimento] | None = None,
     raiz_uhid: str = RAIZ_UHID,
-    leitor: LeitorDeDiario | None = None,
+    leitor: LeitorDeNascimentos | None = None,
 ) -> list[Leitura]:
     """DIAGNÓSTICO: cada instância viva nasceu limpa?"""
     alvos = list(instancias) if instancias is not None else instancias_dualsense(raiz_uhid)
     if nascimentos is None:
-        nascimentos = (leitor or nascimentos_pelo_diario)()
+        nascimentos = (leitor or (lambda: nascimentos_do_udev(alvos)))()
     return [_veredito(alvo, nascimentos) for alvo in alvos]
 
 
@@ -489,8 +515,8 @@ def _veredito(
             alvo=alvo,
             confianca=CONFIANCA_NAO_SEI,
             porque=(
-                "o diário do sistema não pôde ser lido — sem ele não dá "
-                "para saber como esta conexão nasceu"
+                "o udev não respondeu quando esta conexão nasceu — sem isso "
+                "não dá para saber como ela nasceu"
             ),
         )
     nasc = nascimentos.get(alvo.instancia.lower())
@@ -521,7 +547,7 @@ def _veredito(
             alvo=alvo,
             confianca=CONFIANCA_NAO_SEI,
             porque=(
-                "o kernel registrou o nascimento desta conexão, mas o diário do "
+                "o udev registrou o nascimento desta conexão, mas o diário do "
                 "daemon não pôde ser lido — não dá para saber se alguém segurava "
                 "o nó na hora"
             ),

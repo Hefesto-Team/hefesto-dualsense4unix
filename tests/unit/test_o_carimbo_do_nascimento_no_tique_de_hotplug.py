@@ -117,7 +117,7 @@ class TestOCarimboEPorInstancia:
                 "existia para não precisar disso"
             )
 
-        monkeypatch.setattr(sb, "nascimentos_pelo_diario", _bomba)
+        monkeypatch.setattr(sb, "nascimentos_do_udev", _bomba)
         assert cartorio.da_instancia("0028").pede_reconexao is True
         assert cartorio.da_instancia("0033").pede_reconexao is False
         assert cartorio.do_uniq("aa:bb:cc:11:22:02").confianca == sb.CONFIANCA_SUSPEITA
@@ -545,7 +545,9 @@ class TestODiarioENoRecorte:
             return []
 
         monkeypatch.setattr(sb, "_linhas_do_diario", _espiar)
-        sb.nascimentos_pelo_diario()
+        sb.nascimentos_do_udev(
+            _instancias_da_bancada()[:1], perguntar=lambda *_a: "1000000", relogio=lambda: 100.0
+        )
         assert vistos, "nenhuma leitura de diário aconteceu"
         for argv in vistos:
             assert "-S" in argv, (
