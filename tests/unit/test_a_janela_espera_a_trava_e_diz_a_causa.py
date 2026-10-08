@@ -130,7 +130,10 @@ def _dois_cliques() -> dict[str, Any]:
 def test_o_aplicar_espera_a_trava_e_diz_heroic(
         tmp_path: Path, _lar: Path, monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
-    """Trava presa além do prazo do serviço e dentro do da janela: o recibo diz «Heroic»."""
+    """Trava presa além do prazo do serviço e dentro do da janela: o recibo diz «Heroic».
+
+    A janela espera 5 s, o serviço 1 s (D-0810-A-LISTA-OCUPADA-DIZ-A-CAUSA).
+    """
     monkeypatch.setattr(cpe, "ESPERA_DO_SERVICO_S", 0.3)
     _dubles_da_steam(monkeypatch)
     outro = _prender(tmp_path, _lar, segundos=1.5)
@@ -239,6 +242,7 @@ def _vigia_parada(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_excluir_com_a_trava_presa_diz_que_a_lista_esta_sendo_gravada(
         _lar: Path, _trava_presa: subprocess.Popen[str], _vigia_parada: None,
         monkeypatch: pytest.MonkeyPatch) -> None:
+    """A lista ocupada recusa com a causa (D-0810-A-LISTA-OCUPADA-DIZ-A-CAUSA)."""
     monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
     assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "ocupada"
     with pytest.raises(RuntimeError) as erro:
