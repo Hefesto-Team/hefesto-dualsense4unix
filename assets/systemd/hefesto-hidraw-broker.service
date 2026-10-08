@@ -113,6 +113,9 @@ DeviceAllow=char-input rw
 # `DeviceAllow`: o grupo `hidg` só aparece no /proc/devices com o primeiro
 # gadget (medido em 07/10), e o broker o cede por O_PATH, sem abri-lo.
 ReadWritePaths=-/sys/kernel/config -/sys/devices/platform
+# A marca da entrega (MARCA_DA_ENTREGA_PATH): o broker reiniciado com o
+# Hefesto parado herda o controle entregue em vez de fechá-lo.
+ReadWritePaths=-/run/hefesto-hidraw-broker
 
 [Install]
 WantedBy=multi-user.target

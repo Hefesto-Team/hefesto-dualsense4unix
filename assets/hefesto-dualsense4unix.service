@@ -9,6 +9,9 @@ After=graphical-session.target default.target
 # se estourar, systemd marca failed e pára de respawnar.
 StartLimitIntervalSec=30
 StartLimitBurst=3
+# O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01: o daemon que falha
+# antes de falar com o broker não deixa o controle fechado sem dono.
+OnFailure=hefesto-dualsense4unix-presenca.service
 
 [Service]
 Type=simple

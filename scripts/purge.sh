@@ -134,6 +134,13 @@ reinforce_leftovers() {
                        /etc/modules-load.d/hefesto-dualsense4unix.conf
         run sudo udevadm control --reload-rules 2>/dev/null || true
     fi
+    ghost="${HOME}/.config/systemd/user/hefesto-dualsense4unix-presenca.service"
+    if [[ -f "${ghost}" ]]; then
+        log "reforço: removendo a presença do systemd --user"
+        run systemctl --user disable --now hefesto-dualsense4unix-presenca.service 2>/dev/null || true
+        run rm -f "${ghost}"
+        run systemctl --user daemon-reload 2>/dev/null || true
+    fi
     ghost="${HOME}/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service"
     if [[ -f "${ghost}" ]]; then
         log "reforço: removendo ghost do hotplug systemd --user"

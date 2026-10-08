@@ -1,0 +1,17 @@
+[Unit]
+Description=Hefesto - avisa o broker de que a sessão está sem o Hefesto, para o controle voltar ao sistema
+# O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01: o broker entrega o
+# controle físico ao sistema 30 s depois que o último cliente sai, e o Hefesto
+# que nunca sobe não deixa cliente nenhum. Esta unit é a evidência do login: um
+# ping ao broker, que conta a graça a partir dali. Roda no login e quando o
+# daemon cai em failed (o OnFailure dele), e só se o daemon não está habilitado
+# ou falhou: com o Hefesto subindo, o ping é dispensável.
+
+[Service]
+Type=oneshot
+ExecCondition=/bin/sh -c "! systemctl --user --quiet is-enabled hefesto-dualsense4unix.service || systemctl --user --quiet is-failed hefesto-dualsense4unix.service"
+# Prefixo '-': máquina sem o broker instalado não tem a quem avisar.
+ExecStart=-__PYTHON__ -m hefesto_dualsense4unix.integrations.hidraw_broker_client --ping
+
+[Install]
+WantedBy=default.target

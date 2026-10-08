@@ -450,7 +450,7 @@ echo "Copiando units systemd ..."
 # (storm-watch, steam-input-guard, dsx-recover) dependem de scripts que o .deb
 # não instala ou de placeholders (__SCRIPT__) que só o install.sh nativo resolve
 # — empacotá-las deixaria units quebradas visíveis em list-unit-files.
-for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service; do
+for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service hefesto-dualsense4unix-presenca.service; do
     service_file="assets/${base}"
     [ -f "$service_file" ] || continue
     cp "$service_file" "${STAGING}/usr/lib/systemd/user/${base}"
@@ -459,6 +459,8 @@ for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.se
     # o CLI quanto o -gui (o -gui casa pelo prefixo). Substituir in-place.
     sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
         "${STAGING}/usr/lib/systemd/user/${base}"
+    # A presença roda o cliente do broker pelo Python da venv do pacote.
+    sed -i "s|__PYTHON__|${FINAL_VENV}/bin/python|g" "${STAGING}/usr/lib/systemd/user/${base}"
 done
 
 # ---------------------------------------------------------------------------

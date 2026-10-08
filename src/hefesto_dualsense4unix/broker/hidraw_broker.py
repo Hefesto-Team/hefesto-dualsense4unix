@@ -1227,6 +1227,12 @@ GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
 #: desfaria a entrega que o usuário pediu ao parar o serviço.
 PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
 
+#: A marca de que o físico está ENTREGUE ao sistema (:meth:`BrokerState.entregar_ao_linux`),
+#: gravada pelo próprio broker e apagada quando o Hefesto o retoma. O broker que
+#: reinicia com ela (o ``Restart=``, a reinstalação) herda a entrega em vez de
+#: fechar tudo. ``/run`` é tmpfs: o boot volta ao fechado.
+MARCA_DA_ENTREGA_PATH = "/run/hefesto-hidraw-broker/entregue"
+
 
 class BrokerState:
     """Protocolo + contabilidade de lease. Puro (fs injetável) e testável."""
@@ -1248,8 +1254,12 @@ class BrokerState:
         validator_entrada: Callable[[str], str | None] | None = None,
         reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
         pad_ops: PadUsbOps | None = None,
+        marca_da_entrega: str | None = None,
     ) -> None:
         self.allowed_uid = allowed_uid
+        #: Onde gravar a marca da entrega; ``None`` = não grava (o ``main`` passa
+        #: :data:`MARCA_DA_ENTREGA_PATH`).
+        self._marca_da_entrega = marca_da_entrega
         self.no_nasce_fechado = bool(no_nasce_fechado)
         self._ops = (
             ops
@@ -1999,6 +2009,12 @@ class BrokerState:
         self.expostos.clear()
         if not self.entregue:
             self.entregue = True
+            if self._marca_da_entrega is not None:
+                try:
+                    with open(self._marca_da_entrega, "w", encoding="ascii") as marca:
+                        marca.write(f"{time.time():.0f}\n")
+                except OSError as erro:
+                    self._log("marca_da_entrega_falhou", erro=str(erro))
             self._log(
                 "fisico_entregue_ao_sistema",
                 nodes=",".join(sorted(set(entregues) | antes)) or "-",
@@ -2025,6 +2041,9 @@ class BrokerState:
             log=self._log,
         )
         self.entregue = False
+        if self._marca_da_entrega is not None:
+            with contextlib.suppress(OSError):
+                os.unlink(self._marca_da_entrega)
         self._log("entrega_desfeita", nodes=",".join(fechados) or "-")
         return fechados
 
@@ -2474,6 +2493,32 @@ def _graca_da_entrega_do_ambiente() -> float:
         return GRACA_DA_ENTREGA_S
 
 
+def entrega_herdada(path: str | None = None) -> bool:
+    """A marca da entrega está lá (arquivo de verdade, nunca um link)."""
+    try:
+        return stat_mod.S_ISREG(os.lstat(path or MARCA_DA_ENTREGA_PATH).st_mode)
+    except OSError:
+        return False
+
+
+def _o_repouso_do_inicio(allowed_uid: int, *, no_nasce_fechado: bool) -> bool:
+    """O físico no começo do broker; ``True`` = a entrega foi herdada e ficou.
+
+    Com a cura do nó fechado, o broker fecha tudo ao nascer, salvo quando a
+    marca diz que o Hefesto estava parado e o físico entregue
+    (O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01): fechar ali
+    devolveria o controle a ninguém.
+    """
+    if not no_nasce_fechado:
+        restore_all_physical(uid=allowed_uid)
+        return False
+    if entrega_herdada():
+        _log("entrega_herdada", marca=MARCA_DA_ENTREGA_PATH)
+        return True
+    fechar_todo_fisico(uid=allowed_uid)
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -2538,6 +2583,9 @@ def main(argv: list[str] | None = None) -> int:
             if desmontados:
                 _log("pad_usb_orfaos_desmontados", gadgets=",".join(desmontados))
         if args.fechar_tudo_e_sair and no_nasce_fechado:
+            if entrega_herdada():
+                _log("entrega_herdada", belt="fechar-tudo-e-sair")
+                return 0
             fechados = fechar_todo_fisico(uid=allowed_uid)
             _log("fechar_tudo_done", count=len(fechados))
             return 0
@@ -2555,17 +2603,19 @@ def main(argv: list[str] | None = None) -> int:
         _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
         return 1
 
-    if no_nasce_fechado:
-        fechar_todo_fisico(uid=allowed_uid)
-    else:
-        restore_all_physical(uid=allowed_uid)
+    herdada = _o_repouso_do_inicio(allowed_uid, no_nasce_fechado=no_nasce_fechado)
 
     listen = _sd_listen_socket()
     if listen is None:
         listen = _manual_listen_socket(args.socket_path)
         _log("listening_manual", path=args.socket_path)
 
-    state = BrokerState(allowed_uid=allowed_uid, no_nasce_fechado=no_nasce_fechado)
+    state = BrokerState(
+        allowed_uid=allowed_uid,
+        no_nasce_fechado=no_nasce_fechado,
+        marca_da_entrega=MARCA_DA_ENTREGA_PATH,
+    )
+    state.entregue = herdada
     broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
 
     def _stop(_signum: int, _frame: object) -> None:

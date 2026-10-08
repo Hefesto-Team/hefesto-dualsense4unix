@@ -3838,6 +3838,36 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 7a'. A PRESENÇA (O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01): o
+#     broker entrega o controle físico ao sistema 30 s depois que o último
+#     cliente sai, e o Hefesto que nunca sobe (o daemon desabilitado, ou em
+#     failed antes de falar com o broker) não deixa cliente nenhum. Esta unit
+#     manda um ping ao broker no login e quando o daemon falha (o OnFailure
+#     dele), e só roda se o daemon não está habilitado ou falhou. Habilitada em
+#     toda instalação: com o Hefesto de pé ela não faz nada. O `__PYTHON__` é o
+#     Python da venv. Simétrica no uninstall e no purge.
+# ---------------------------------------------------------------------------
+PRESENCA_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-presenca.service"
+PRESENCA_UNIT_NAME="hefesto-dualsense4unix-presenca.service"
+PRESENCA_UNIT_TARGET="${DAEMON_USER_UNIT_DIR}/${PRESENCA_UNIT_NAME}"
+if [[ "${SKIP_SYSTEMD}" -eq 1 ]] || ! command -v systemctl >/dev/null 2>&1; then
+    :
+elif [[ ! -f "${PRESENCA_UNIT_SRC}" ]]; then
+    warn "unit de presença ausente em assets/ — reinstale o repo"
+elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "copiar ${PRESENCA_UNIT_TARGET} e habilitá-la (com o daemon desligado, o controle volta ao sistema depois do login)"
+else
+    mkdir -p "${DAEMON_USER_UNIT_DIR}"
+    sed "s|__PYTHON__|${VENV_DIR}/bin/python|g" "${PRESENCA_UNIT_SRC}" > "${PRESENCA_UNIT_TARGET}"
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    if systemctl --user enable --now "${PRESENCA_UNIT_NAME}" >/dev/null 2>&1; then
+        printf '      presença habilitada (com o daemon desligado, o controle volta ao sistema)\n'
+    else
+        warn "enable da presença falhou — habilite: systemctl --user enable --now ${PRESENCA_UNIT_NAME}"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7b. kernel-watch (DEFAULT — opt-out --no-kernel-watch): vigia do ecossistema
 #     USB/BT/xHCI num log dedicado. Evolução do storm-watch (PLAT-06 item 4):
 #     além do storm -71, vigia o rate-limit do hid-nintendo (a morte do 8BitDo

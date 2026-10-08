@@ -711,6 +711,27 @@ def leitura_de_zero(estado_grab: str) -> str:
     return "0 (o controle não emitiu)"
 
 
+def main(argv: list[str] | None = None) -> int:
+    """``--ping``: o aviso da unit de presença, sem passar pelo daemon.
+
+    O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01. Uma conexão, um
+    ``ping`` (que não retoma o esconderijo) e o fechamento: o broker que nasceu
+    sem cliente passa a contar a graça e, sem o Hefesto, entrega o físico ao
+    sistema. Sai 0 se o broker respondeu, 1 se não.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="o cliente do broker hide-hidraw")
+    parser.add_argument("--ping", action="store_true", required=True,
+                        help="conecta, manda o ping e fecha (a presença da sessão)")
+    parser.parse_args(argv)
+    cliente = HidrawBrokerClient()
+    try:
+        return 0 if cliente.ping() else 1
+    finally:
+        cliente.close()
+
+
 __all__ = [
     "DEFAULT_SOCKET_PATH",
     "GRAB_DESCONHECIDO",
@@ -732,7 +753,12 @@ __all__ = [
     "leitura_de_zero",
     "linha_da_porta",
     "linha_do_grab",
+    "main",
     "make_broker_opener",
     "make_exposicao_factory",
     "porta_provavel",
 ]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

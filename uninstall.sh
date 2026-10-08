@@ -572,6 +572,9 @@ log "parando daemon hefesto-dualsense4unix (se ativo)"
 timeout 5 systemctl --user stop hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 systemctl --user disable hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix.service"
+# A presença (O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01) sai com o daemon.
+systemctl --user disable --now hefesto-dualsense4unix-presenca.service >/dev/null 2>&1 || true
+rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix-presenca.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
 # Mata GUIs e daemons órfãos — qualquer processo do hefesto, mesmo se rodando
