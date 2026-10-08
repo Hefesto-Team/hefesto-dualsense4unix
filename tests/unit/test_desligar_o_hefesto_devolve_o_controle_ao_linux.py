@@ -163,6 +163,7 @@ class TestPararODaemonEntregaOFisico:
     ) -> None:
         """MORDIDA: tire a chamada de `tique_da_entrega` (ou o `entregar_ao_linux`
         dele) e os seis ficam `0600` para sempre, que é a bancada de 03/10."""
+        # A decisão: D-0810-PARAR-O-HEFESTO-DEVOLVE-O-FISICO.
         _o_daemon_sobe_e_para(seis)
 
         seis.tique(GRACA - 1)

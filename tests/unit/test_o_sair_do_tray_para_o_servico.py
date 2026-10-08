@@ -101,6 +101,7 @@ def _sair(tray: Any) -> Any:
 def test_sair_para_o_servico_e_depois_fecha_o_icone(
         gtk_de_mentira: Any, sincrono: None, monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: volte o item a `lambda _w: self.on_quit()` e o `stop` nunca sai."""
+    # A decisão: D-0810-O-SAIR-DO-TRAY-PARA-O-SERVICO.
     pedidos: list[str] = []
     tray = _tray_montado(gtk_de_mentira, monkeypatch,
                          on_servico=lambda verbo: _anota(pedidos, verbo))
