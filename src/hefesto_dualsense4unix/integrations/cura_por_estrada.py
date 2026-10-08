@@ -1831,6 +1831,7 @@ class _PlanoDoYml:
 
     registro: YmlDoJogo
     texto: str | None  # ``None`` = o disco já está assim; só o registro muda
+    velho: YmlDoJogo  # o registro de antes, que volta se a gravação falhar
     tirou_o_xalia: bool = False
     pos_o_xalia: bool = False
 
@@ -1870,7 +1871,8 @@ def _o_registro_velho_provado(
     texto_esperado, postos, moldura = esperado
     if _sha(texto_esperado) != _sha(texto):
         return None
-    return _PlanoDoYml(YmlDoJogo(yml.arquivo, yml.antes, _sha(texto), postos, moldura), None)
+    return _PlanoDoYml(YmlDoJogo(yml.arquivo, yml.antes, _sha(texto), postos, moldura), None,
+                       yml)
 
 
 def _planejar_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> _PlanoDoYml | None:
@@ -1900,7 +1902,7 @@ def _planejar_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> _PlanoDoYml | None
     antes = yml.antes if _sha(texto) == yml.depois or texto == yml.antes else None
     todos = tuple({**dict(ja_nossos), **dict(postos)}.items())
     return _PlanoDoYml(
-        YmlDoJogo(yml.arquivo, antes, _sha(novo), todos, moldura), novo,
+        YmlDoJogo(yml.arquivo, antes, _sha(novo), todos, moldura), novo, yml,
         tirou_o_xalia=bool(velhos),
         pos_o_xalia=bool(_PAR_DO_XALIA & {k for k, _ in postos}))
 
@@ -1980,7 +1982,9 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
     """A carona sobre os `.yml` dos excluídos: os registros que mudaram.
 
     O REGISTRO ANDA ANTES DO ARQUIVO: sem a anotação em `"feito"` nenhum `.yml` é
-    tocado, e a falha vai ao diário. Registro ⊇ disco em todo caminho.
+    tocado, e a falha vai ao diário. Registro ⊇ disco em todo caminho. O `.yml` que
+    não se grava depois devolve o registro ao de antes: o `depois` novo não casaria
+    com o disco, e a passada seguinte perderia o `antes` que a volta devolve inteiro.
     """
     lista = list(ymls)
     if not lista:
@@ -2008,17 +2012,22 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
             _dizer_que_nao_anotou(status, len(planos), quem)
         return []
     gravados: list[YmlDoJogo] = []
+    desfeitos: list[YmlDoJogo] = []
     for plano in planos:
         if plano.texto is not None:
             try:
                 _escrever_atomico(Path(plano.registro.arquivo), plano.texto)
             except OSError:
+                desfeitos.append(plano.velho)
                 continue
             if plano.tirou_o_xalia:
                 _dizer_o_par(Path(plano.registro.arquivo), 0)
             if plano.pos_o_xalia:
                 _dizer_o_par(Path(plano.registro.arquivo), 1)
         gravados.append(plano.registro)
+    if desfeitos:
+        with contextlib.suppress(Exception):
+            lx.anotar_os_ymls(desfeitos)
     return gravados
 
 

@@ -21,6 +21,7 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
     _JANELA,
     _PONTE,
     _SO_SUPORTADAS,
+    _YML_DO_JOGO,
     _XALIA,
     _carona,
     _env_do_yml,
@@ -101,6 +102,53 @@ def test_a_anotacao_que_falha_deixa_o_yml_como_estava(
     _carona(_lar)  # o disco volta ao normal: a passada seguinte põe o par e anota
     assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}, yml.read_text()
     assert {k for k, _ in _o_registro().pares} >= {_XALIA, _SO_SUPORTADAS}
+
+
+def test_a_gravacao_que_falha_depois_da_anotacao_nao_perde_o_antes(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O `.yml` que não se grava devolve o registro ao que era, e a volta acha o `antes`.
+
+    O comentário do Lutris só sobrevive se a volta usar o `antes` byte a byte; a
+    remoção por valor passa pelo `safe_dump` e o perde.
+    """
+    yml = _lutris_flatpak(_lar, yml="# escrito pelo Lutris\n" + _YML_DO_JOGO)
+    antes = yml.read_text()
+    _carona(_lar)
+    with monkeypatch.context() as m:
+        m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
+        assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear",
+                            lar=_lar) == "adicionado"
+    sem_o_xalia = yml.read_text()
+    registro_antes = _o_registro()
+    escrever = cpe._escrever_atomico
+
+    def _so_o_yml_falha(alvo: Path, texto: str) -> None:
+        if Path(alvo).resolve() == yml.resolve():
+            raise OSError("disco cheio")
+        escrever(alvo, texto)
+
+    with monkeypatch.context() as m:
+        m.setattr(cpe, "_escrever_atomico", _so_o_yml_falha)
+        _carona(_lar)
+    assert yml.read_text() == sem_o_xalia
+    assert _o_registro() == registro_antes, "o registro ficou com o que o disco não tem"
+
+    _carona(_lar)
+    assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}, yml.read_text()
+    assert lx.tirar(_JANELA, lar=_lar) == "removido"
+    assert yml.read_text() == antes
+
+
+def test_a_lista_sem_o_yml_nao_grava_nem_vira_rastro(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`"nada"` (a lista não tem o `.yml`): sem registro não se grava, e não é falha."""
+    yml, _ = _excluido_sem_o_xalia(_lar, monkeypatch)
+    disco_antes = yml.read_bytes()
+    monkeypatch.setattr(lx, "anotar_os_ymls", lambda *_a, **_k: "nada")
+    with structlog.testing.capture_logs() as diario:
+        _carona(_lar)
+    assert yml.read_bytes() == disco_antes, yml.read_text()
+    assert not [x for x in diario if x.get("event") == _EVENTO], diario
 
 
 def test_a_janela_tambem_diz_quem_desistiu(
