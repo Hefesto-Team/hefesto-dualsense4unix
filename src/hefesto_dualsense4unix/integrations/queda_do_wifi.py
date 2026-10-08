@@ -2,9 +2,9 @@
 
 O-WIFI-SE-LE-NAS-DUAS-BANDAS-01 (04/10/2026). O «cai do nada» do Wi-Fi USB é a placa sumindo do
 barramento: o diário do kernel diz ``USB disconnect`` e, segundos depois, ``New USB device found``
-com o MESMO ``idVendor:idProduct``. Este módulo só LÊ esse diário (``journalctl -k -b``) e conta. A frase do
-diário é contrato que o kernel não promete: a cura (um ouvinte de uevent, com histórico por boot) está
-aberta em ``O-SISTEMA-NAO-LE-O-TEXTO-DO-DIARIO-01``.
+com o MESMO ``idVendor:idProduct``. Este módulo só LÊ esse diário (``journalctl -k -b``) e conta.
+A frase do diário é contrato que o kernel não promete: a cura (um ouvinte de uevent, com histórico
+por boot) está aberta em ``O-SISTEMA-NAO-LE-O-TEXTO-DO-DIARIO-01``.
 
 * **A identidade é o ``vid:pid``**, nunca o nó (``4-1.2`` vira ``3-1.2`` quando a placa volta em
   outro barramento) nem o nome da interface.
