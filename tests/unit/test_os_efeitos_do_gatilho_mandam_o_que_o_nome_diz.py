@@ -384,6 +384,44 @@ class TestDecodificador:
         assert bloco_de(efeito) == bytes([0x26, 1, 2, 3, 4, 5, 6, 0, 0, 7, 0])
 
 
+def _bloco_do_relatorio(efeito: TriggerEffect) -> bytes:
+    """O bloco do gatilho direito como o backend o escreve no relatório."""
+    from pydualsense.enums import ConnectionType
+    from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
+
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+    inst = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
+    inst.leftMotor = 0
+    inst.rightMotor = 0
+    inst.light = DSLight()
+    inst.audio = DSAudio()
+    inst.triggerL = DSTrigger()
+    inst.triggerR = DSTrigger()
+    inst.conType = ConnectionType.USB
+    inst._suppress_leds = True
+    inst._rumble_active = False
+    inst._rumble_stop_pending = False
+    inst._bt_seq = 0
+    inst._raw_trigger_right = None
+    inst._raw_trigger_left = None
+    bp.PyDualSenseController._apply_trigger(inst, "right", efeito)
+    return bytes(inst._build_common(rumble_asserted=False)[10:21])
+
+
+@pytest.mark.parametrize("caso", sorted(_nomes_dos_casos()))
+def test_a_regua_le_o_bloco_que_o_relatorio_manda(caso: str) -> None:
+    """O `bloco_de` da régua é o que o backend põe no relatório, efeito a efeito.
+
+    Sem isto a régua leria a própria cópia do layout, e um backend que mudasse
+    de lugar um byte passaria nela.
+
+    Mordida: pôr a sétima força no byte 4 do `bloco_de`.
+    """
+    efeito = _efeito_do_caso(caso)
+    assert bloco_de(efeito) == _bloco_do_relatorio(efeito)
+
+
 # --- a promessa da tela: quem diz «enquanto apertado» tem de bater ------------
 
 _PROMETE = re.compile(r"enquanto|contínu|continu", re.IGNORECASE)
