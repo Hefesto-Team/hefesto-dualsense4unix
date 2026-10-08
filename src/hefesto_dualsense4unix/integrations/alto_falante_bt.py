@@ -1950,18 +1950,28 @@ RECUO_PROIBIDO_DO_OUVIDO: tuple[str, ...] = (
 TAXA_DO_OUVIDO_DA_PLACA = 8_000
 
 
-class OuvidoDaPlaca:
-    """Escuta o monitor da placa de UM controle no cabo, só para o :data:`OUVIDO`."""
+class OuvidoDoNo:
+    """Escuta o monitor de UM nó, só para o :data:`OUVIDO`: sem hidraw, sem vaga, sem escrever.
+
+    É o ouvido de quem ainda não tem ponte: o :data:`OUVIDO` fica sabendo se o
+    nó tem sinal, e a troca de sinal acorda quem o escuta. ``canais`` é o
+    formato do nó (dois no alto-falante, quatro no endpoint da háptica) e
+    ``papel`` separa o rótulo do gravador do da ponte do mesmo controle.
+    """
 
     def __init__(
         self,
         *,
-        placa: str,
+        no: str,
         uniq: str,
+        canais: int = CANAIS_DA_HAPTICA,
+        papel: str = "ouvido",
         abrir: Callable[[list[str]], Any] | None = None,
     ) -> None:
-        self.placa = placa
+        self.no = no
         self.uniq = uniq
+        self.canais = int(canais)
+        self.papel = papel
         self._abrir = abrir
         self._proc: Any = None
         self._fio: threading.Thread | None = None
@@ -1978,12 +1988,12 @@ class OuvidoDaPlaca:
         if self.vivo:
             return True
         fonte, proc, motivo = fonte_do_monitor_do_no(
-            self.placa,
+            self.no,
             uniq=self.uniq,
-            papel="placa",
+            papel=self.papel,
             abrir=self._abrir,
             taxa=TAXA_DO_OUVIDO_DA_PLACA,
-            canais=CANAIS_DA_HAPTICA,
+            canais=self.canais,
             propriedades=RECUO_PROIBIDO_DO_OUVIDO,
         )
         if fonte is None:
@@ -1991,8 +2001,8 @@ class OuvidoDaPlaca:
             return False
         self._proc = proc
         self._parar = threading.Event()
-        ouvir = fonte_que_ouve(fonte, self.placa, canais=CANAIS_DA_HAPTICA)
-        tamanho = (TAXA_DO_OUVIDO_DA_PLACA // 100) * 2 * CANAIS_DA_HAPTICA
+        ouvir = fonte_que_ouve(fonte, self.no, canais=self.canais)
+        tamanho = (TAXA_DO_OUVIDO_DA_PLACA // 100) * 2 * self.canais
         parar = self._parar
 
         def _escutar() -> None:
@@ -2001,10 +2011,10 @@ class OuvidoDaPlaca:
                     if not ouvir(tamanho):
                         return
             except Exception:
-                logger.debug("haptica_ouvido_da_placa_caiu", exc_info=True)
+                logger.debug("som_ouvido_do_no_caiu", papel=self.papel, exc_info=True)
 
         self._fio = threading.Thread(
-            target=_escutar, name="hefesto-ouvido-da-placa", daemon=True
+            target=_escutar, name=f"hefesto-ouvido-{self.papel}", daemon=True
         )
         self._fio.start()
         return True
@@ -2021,6 +2031,22 @@ class OuvidoDaPlaca:
         if proc is not None:
             with contextlib.suppress(Exception):
                 derrubar_leitor_de_pipe(proc, leitor=fio)
+
+
+class OuvidoDaPlaca(OuvidoDoNo):
+    """Escuta o monitor da placa de UM controle no cabo, só para o :data:`OUVIDO`."""
+
+    def __init__(
+        self,
+        *,
+        placa: str,
+        uniq: str,
+        abrir: Callable[[list[str]], Any] | None = None,
+    ) -> None:
+        super().__init__(
+            no=placa, uniq=uniq, canais=CANAIS_DA_HAPTICA, papel="placa", abrir=abrir
+        )
+        self.placa = placa
 
 
 #: O PISO DOS MOTORES no sink de 4 canais do DualSense — HAPTICA-CABO-VOLUME-01
@@ -2972,6 +2998,7 @@ __all__ = [
     "ContagemDaBomba",
     "Diagnostico",
     "OuvidoDaPlaca",
+    "OuvidoDoNo",
     "OuvidoDosNos",
     "PonteDeSomPorRadio",
     "RelatorioCombinado",

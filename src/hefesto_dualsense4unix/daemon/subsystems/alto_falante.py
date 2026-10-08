@@ -621,6 +621,9 @@ class AltoFalanteSubsystem:
     _leva_da_ponte: Mapping[str, bool] = MappingProxyType({})
     _cabo: Any = None
     _ouvidos_das_placas: Mapping[str, Any] = MappingProxyType({})
+    #: ``{nó: OuvidoDoNo}`` de cada controle no rádio que, no Modo Nativo, tem
+    #: fluxo aberto e ainda não tem ponte: a ponte só sobe com o som do jogo.
+    _ouvidos_do_radio: Mapping[str, Any] = MappingProxyType({})
     _tocadores: Mapping[str, Any] = MappingProxyType({})
     _rumble_vivo: Mapping[str, tuple[Any, tuple[str | None, bool, bool]]] = MappingProxyType({})
     _clientes_do_rumble: frozenset[str] = frozenset()
@@ -1312,6 +1315,30 @@ class AltoFalanteSubsystem:
                 logger.debug("haptica_ouvido_da_placa_sem_fonte", motivo=ouvido.motivo)
         self._ouvidos_das_placas = MappingProxyType(vivos)
 
+    def _casar_os_ouvidos_do_radio(self, escutar: Mapping[str, tuple[str, int, str]]) -> None:
+        """Um ouvido por nó aberto de quem, no Nativo, espera o som do jogo; o resto desce.
+
+        ``escutar`` é ``{nó: (uniq, canais, papel)}`` desta volta. Quem ganhou a
+        ponte, fechou o fluxo, saiu da mesa ou saiu do Nativo não está nele.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import OuvidoDoNo
+
+        vivos = dict(self._ouvidos_do_radio)
+        for no, ouvido in list(vivos.items()):
+            pedido = escutar.get(no)
+            if pedido is None or pedido[0] != ouvido.uniq or not ouvido.vivo:
+                vivos.pop(no)
+                ouvido.descer()
+        for no, (uniq, canais, papel) in escutar.items():
+            if no in vivos:
+                continue
+            ouvido = OuvidoDoNo(no=no, uniq=uniq, canais=canais, papel=papel)
+            if ouvido.subir():
+                vivos[no] = ouvido
+            else:
+                logger.debug("som_ouvido_do_radio_sem_fonte", no=no, motivo=ouvido.motivo)
+        self._ouvidos_do_radio = MappingProxyType(vivos)
+
     def haptica_no_ar(self, uniq: str) -> bool:
         """Há háptica chegando a ESTE controle agora? LEITURA pura, nunca levanta."""
         try:
@@ -1537,6 +1564,7 @@ class AltoFalanteSubsystem:
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             CANAIS_DA_HAPTICA,
+            CANAIS_DO_ENCODER,
             PonteDeSomPorRadio,
             e_radio,
             fonte_do_monitor_do_no,
@@ -1671,6 +1699,7 @@ class AltoFalanteSubsystem:
         esperando: set[tuple[str, str]] = set()
         o_jogo_manda = self._o_jogo_manda_nos_motores()
         leva_de: dict[str, bool] = {}
+        escutar: dict[str, tuple[str, int, str]] = {}
         for uniq, caminho in vivos.items():
             morta = self._pontes.get(uniq)
             terminou = getattr(morta, "terminou_sozinha", None)
@@ -1703,6 +1732,21 @@ class AltoFalanteSubsystem:
                 continue
             tipo = "som" if som_toca else "haptica"
             lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
+            if o_jogo_manda and caminho and uniq not in self._pontes:
+                # DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, item 3: no
+                # Nativo o jogo abre o alto-falante e a háptica de todos, toque ou
+                # não. Fluxo aberto não é som: a ponte (a vaga do rádio e o
+                # hidraw) só sobe quando um nó dela tem sinal, e até lá quem
+                # escuta é o ouvido, que acorda a volta quando o jogo toca.
+                abertos = {
+                    **({nome_do_sink(uniq): (uniq, CANAIS_DO_ENCODER, "ouvido-som")}
+                       if som_toca else {}),
+                    **({lendo: (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")}
+                       if leva and lendo else {}),
+                }
+                if not any(self._o_no_tem_sinal(no) is True for no in abertos):
+                    escutar.update(abertos)
+                    continue
             if uniq in self._pontes:
                 # A ponte só sobe de novo quando o endpoint que ela LÊ muda: para
                 # ganhar a háptica, trocar de endpoint ou soltá-lo quando o jogo o
@@ -1796,6 +1840,7 @@ class AltoFalanteSubsystem:
                 ponte.descer()
                 self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
+        self._casar_os_ouvidos_do_radio(escutar)
         self._leva_da_ponte = MappingProxyType(leva_de)
         self._esperando_vaga = frozenset(esperando)
         self._conferir_o_teste_da_haptica()
@@ -2017,8 +2062,9 @@ class AltoFalanteSubsystem:
         if cabo is not None:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(cabo.parar)
-        ouvidos = list(self._ouvidos_das_placas.values())
+        ouvidos = [*self._ouvidos_das_placas.values(), *self._ouvidos_do_radio.values()]
         self._ouvidos_das_placas = MappingProxyType({})
+        self._ouvidos_do_radio = MappingProxyType({})
         if ouvidos:
             await asyncio.gather(
                 *(asyncio.to_thread(o.descer) for o in ouvidos), return_exceptions=True
