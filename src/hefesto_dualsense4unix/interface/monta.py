@@ -367,6 +367,44 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
             f' data-controle=""')
 
 
+#: OS DOIS MODOS DE UMA ABA — pedido dela de 06/10/2026, nas abas Iluminação e
+#: Gatilhos, que falam igual: *«Modo Automático (Se selecionado) o player não
+#: consegue interagir com os botões da página. Modo Personalizado (Que permite
+#: alterar as cores)»*  (noqa-acento: citação literal dela). Um par de botões na faixa do
+#: título, com a mesma largura; o escolhido acende. No Automático, a folha da aba
+#: deixa as colunas paradas pelo `data-modo-da-aba` do quadro (o pacote o escreve).
+MODO_AUTOMATICO = "automatico"  # (noqa-acento: valor de atributo)
+MODO_PERSONALIZADO = "personalizado"
+ROTULO_DO_MODO = {MODO_AUTOMATICO: "Modo Automático",
+                  MODO_PERSONALIZADO: "Modo Personalizado"}
+
+CSS_DO_PAR_DE_MODOS = """
+  .par-modo{margin-left:auto;display:inline-grid;grid-template-columns:1fr 1fr;gap:6px}
+  .par-modo button{height:22px;padding:0 10px;border-radius:6px;font-family:inherit;
+    font-size:11.5px;cursor:pointer;border:1px solid var(--linha);background:transparent;
+    color:var(--texto-suave);white-space:nowrap}
+  .par-modo button:hover:not(.on){border-color:var(--comment);color:var(--fg)}
+  .par-modo button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);
+    font-weight:600;cursor:default}
+  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
+"""
+
+
+def par_de_modos(gesto: str, modo: str) -> str:
+    """Os dois botões do modo da aba, com o `modo` aceso (o gesto leva o `data-modo`)."""
+    botoes = []
+    for chave, rot in ROTULO_DO_MODO.items():
+        aceso = chave == modo
+        classe = ' class="on"' if aceso else ""
+        botoes.append(
+            f'<button{classe} data-gesto="{gesto}" data-modo="{chave}"'
+            f' data-campo="{gesto}-{chave}" data-hef-alvo="classe"'
+            f' data-hef-atributo="aria-pressed"'
+            f' aria-pressed="{str(aceso).lower()}">{rot}</button>')
+    return ('<span class="par-modo" role="group" aria-label="Modo da aba">'
+            + "".join(botoes) + "</span>")
+
+
 def rotulo_do_chip(c: dict[str, Any]) -> str:
     """O rótulo curto com a VIA marcada, para o chip da fita."""
     texto = rotulo(c, "curta")

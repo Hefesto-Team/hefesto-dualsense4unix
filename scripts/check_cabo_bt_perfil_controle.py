@@ -110,6 +110,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                       "máquina, nunca do perfil",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
+    "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "
+                         "no perfil — o ATO no aparelho é o do gesto `modo` da 03",
     "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",
     # O desenho aprovado dela virou a cx8-3. Nenhum destes muda o DualSense:
     "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
@@ -183,7 +185,7 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "reenviar": ("luz.lightbar.cor",),
     "player": ("luz.led_jogador.escrita_hefesto",),
     "brilho-luzes": ("luz.led_jogador.brilho",),
-    "auto-cores": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
+    "modo-da-luz": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
     "custo-mic": ("audio.microfone.mudo",),
     "mira": ("movimento.giroscopio",),
@@ -218,7 +220,7 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "reenviar": ("leds", "leds"),
     "player": ("leds", "leds"),
     "brilho-luzes": ("leds", "leds"),
-    "auto-cores": ("leds", "leds"),
+    "modo-da-luz": ("leds", "leds"),
     "lado": ("rumble", "rumble"),
     "mira": ("movimento", "movimento"),
     "analogico-lado": ("movimento", "movimento"),

@@ -179,7 +179,7 @@ CLIQUES: dict[str, dict[str, Any]] = {
     "brilho": {"valor": "40", "tipo": "input", "evento": "change"},
     "apagar": {},
     "brilho-luzes": {"luzes": "forte"},
-    "auto-cores": {"tipo": "input", "evento": "change"},
+    "modo-da-luz": {"tipo": "button", "evento": "click", "modo": "personalizado"},
 }
 
 PINTADO = ("brilho", "brilho-pct", "hex", "brilho-luzes")

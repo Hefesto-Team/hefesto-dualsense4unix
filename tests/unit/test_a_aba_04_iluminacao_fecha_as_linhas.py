@@ -12,6 +12,9 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
            `test_a_04_as_lampadas_espelham_o_numero`, que guarda a AUSÊNCIA.
            A razão do tracejado continua no `title` das duas tiras.
     [02] o automático do perfil  interruptor DE VERDADE na aba            (D-13)
+         ↑ O INTERRUPTOR VIROU UM PAR EM 08/10/2026 («Modo Automático | Modo
+           Personalizado», gesto `modo-da-luz`, ordem dela de 06/10): a D-13 segue
+           valendo, e onde este texto diz «interruptor» leia-se o par.
     [03] reenviar uma cor        a caixa do hexadecimal vira o botão
     [04] o brilho guardado       uma frase curta
 
@@ -32,7 +35,7 @@ O QUE ESTE ARQUIVO MEDE, com a mordida escrita em cada caso:
 3. ligar de volta não apaga cor nenhuma, e o perfil é REAPLICADO nas duas
    direções (sem isso o campo só entra em vigor na próxima troca de perfil, e o
    interruptor seria o botão que aceita o toque e não age);
-4. o `click` que o navegador manda junto do `change` não inverte duas vezes;
+4. (caducou em 08/10/2026 com o interruptor: os botões do par só mandam `click`);
 5. o reenvio lê o TEXTO da caixa, e **ignora o `data-hex`** — que é a metade
    que morde: o `data-hex` é escrito pelo gerador e fica congelado no que o
    mockup sabia;
@@ -47,9 +50,10 @@ gravam escrevem perfil de verdade, com `save_profile`, dentro dele — que é a
 única forma de provar que o disco recebeu, em vez de provar que a função foi
 chamada. É o mesmo desenho de `test_a_04_o_trilho_de_brilho_grava.py`.
 
-**RELATADO, e é de outra posse:** `("04-iluminacao.html", "auto-cores")` tem de
-entrar em `hefesto_vivo.PERIGOSOS` — o gesto chama `gravar_e_reaplicar`, e a
-régua de clique acionaria o interruptor sozinha, desligando o automático no
+**RELATADO, e é de outra posse:** `("04-iluminacao.html", "modo-da-luz")` (que tomou o
+lugar do `auto-cores`) tem de entrar em `hefesto_vivo.PERIGOSOS` — o gesto chama
+`gravar_e_reaplicar`, e a
+régua de clique acionaria o par sozinha, desligando o automático no
 perfil do usuário para provar que sabe clicar. `interface/hefesto_vivo.py` é da ONDA 0
 e esta frente não o toca; quem já reprova por isso é
 `tests/unit/test_todo_gesto_que_grava_esta_protegido.py`, com o nome do gesto na
@@ -71,6 +75,7 @@ for _p in (str(RAIZ / "src"), str(INTERFACE)):
 
 PAGINA = "04-iluminacao.html"
 
+AUTOMATICO = "automatico"  # (noqa-acento) chave ASCII
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
 CHAVE_UM, CHAVE_DOIS = "aabbcc000001", "aabbcc000002"
@@ -172,61 +177,77 @@ def _mudanca(**extra) -> dict:
             "evento": "change", "valor": "on", "texto": "", **extra}
 
 
-def test_o_interruptor_tem_dono(pac, a04):
-    """Um `data-gesto` sem função é uma chave que engole o clique."""
-    assert pac.gesto_da_pagina(PAGINA, "auto-cores") is not None
+def _pedido(modo: str, **extra) -> dict:
+    """O clique num botão do par: o `data-modo` do botão chega como `modo`."""
+    return {"controle": "p1", "uniq": UM, "tipo": "button", "evento": "click",
+            "modo": modo, **extra}
+
+
+def test_o_par_tem_dono(pac, a04):
+    """Um `data-gesto` sem função é um botão que engole o clique."""
+    assert pac.gesto_da_pagina(PAGINA, "modo-da-luz") is not None
     vivos = {nome for (pagina, nome) in pac.GESTOS if pagina == PAGINA}
     assert len(vivos) == a04.PISO_DA_ABA, (
         f"o pacote registra {len(vivos)} gestos e o piso declarado é "
         f"{a04.PISO_DA_ABA} — os dois têm de dizer o mesmo, e a nota datada do "
         f"`PISO_DA_ABA` é quem explica cada degrau")
-    assert {"auto-cores", "reenviar"} <= vivos, (
-        "o interruptor ou o reenvio do hexadecimal saíram do pacote — os dois "
-        "são decisão dela de 04/09/2026, e nenhuma ordem posterior os tocou")
+    assert {"modo-da-luz", "reenviar"} <= vivos, (
+        "o par de modos ou o reenvio do hexadecimal saíram do pacote")
+    assert "auto-cores" not in vivos, (
+        "o interruptor `auto-cores` voltou: o par «Modo Automático | Modo "
+        "Personalizado» tomou o lugar dele em 08/10/2026")
 
 
-def test_a_pagina_oferece_o_interruptor_no_topo_da_aba():
-    """*"Um interruptor no topo da aba Iluminação."* — e o topo é a faixa do título."""
+def test_a_pagina_oferece_o_par_no_topo_da_aba():
+    """*"Modo Automático e Modo Personalizado"* no alto da aba — e o topo é a faixa do título."""
     from hefesto_dualsense4unix.interface import onde
     from pacotes import a04_iluminacao as a04
 
     texto = onde.pagina(PAGINA).read_text(encoding="utf-8")
     topo = texto.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
-    assert 'class="chave-auto"' in topo, (
-        "o interruptor não está na faixa do título — fora dela ele custa uma "
-        "linha da grade, e a coluna já está a 4px do teto medido")
-    for atributo in (f'data-gesto="{a04.ENDERECO_DO_AUTOMATICO}"',
-                     f'data-campo="{a04.ENDERECO_DO_AUTOMATICO}"',
-                     'data-hef-alvo="marcado"'):
-        assert atributo in topo, f"o interruptor perdeu {atributo!r}"
+    assert 'class="par-modo"' in topo, (
+        "o par de modos não está na faixa do título — fora dela custa uma linha da grade")
+    for modo in (AUTOMATICO, "personalizado"):
+        for atributo in (f'data-gesto="{a04.GESTO_DO_MODO}"', f'data-modo="{modo}"',
+                         f'data-campo="{a04.GESTO_DO_MODO}-{modo}"',
+                         'data-hef-alvo="classe"'):
+            assert atributo in topo, f"o botão {modo} perdeu {atributo!r}"
+    assert "Modo Automático" in topo and "Modo Personalizado" in topo
 
 
-def test_o_pacote_diz_o_estado_do_automatico(a04, pac):
+def test_o_pacote_diz_o_modo_da_aba(a04, pac):
     """A tela lê o PERFIL, e as duas respostas são exercitadas."""
     _semear(automatico=True)
-    assert a04.pacote(_ctx(pac))[a04.ENDERECO_DO_AUTOMATICO] == "sim"
+    saiu = a04.pacote(_ctx(pac))
+    assert saiu[a04.GESTO_DO_MODO] == AUTOMATICO
+    assert saiu[f"{a04.GESTO_DO_MODO}-automatico"] == "sim"
+    assert saiu[f"{a04.GESTO_DO_MODO}-personalizado"] == ""
     _semear(automatico=False)
-    assert a04.pacote(_ctx(pac))[a04.ENDERECO_DO_AUTOMATICO] == ""
+    saiu = a04.pacote(_ctx(pac))
+    assert saiu[a04.GESTO_DO_MODO] == "personalizado"
+    assert saiu[f"{a04.GESTO_DO_MODO}-automatico"] == ""
+    assert saiu[f"{a04.GESTO_DO_MODO}-personalizado"] == "sim"
 
 
-def test_o_estado_do_automatico_chega_a_tela(a04, pac):
+def test_o_modo_chega_a_tela(a04, pac):
     """E ele atravessa o `normalizar`, que é o que a tela consome."""
     _semear(automatico=True)
     fora = pac.normalizar(a04.pacote(_ctx(pac)))
-    assert fora["mesa"].get(a04.ENDERECO_DO_AUTOMATICO) == "sim", (
-        "o estado do automático não chegou à `mesa` — o piloto só escreve o "
-        f"que está lá, e o `{a04.ENDERECO_DO_AUTOMATICO}` sumiu no caminho")
+    assert fora["mesa"].get(f"{a04.GESTO_DO_MODO}-automatico") == "sim", (
+        "o modo não chegou à `mesa` — o piloto só escreve o que está lá, e o "
+        "endereço do botão sumiu no caminho")
 
 
-def test_desligar_grava_a_cor_de_cada_controle(pac, a04):
+def test_ir_ao_personalizado_grava_a_cor_de_cada_controle(pac, a04):
     """**A D-13 INTEIRA, e é o caso que o usuário aceitou por escrito.**"""
     caminho = _semear(automatico=True)
     p = PonteDeMentira()
-    a04.auto_cores(_ctx(pac), _mudanca(), p)
+    a04.modo_da_luz(_ctx(pac), _pedido("personalizado"), p)
 
     disco = _do_disco(caminho)
     assert disco["leds"]["auto_player_colors"] is False, (
-        "o interruptor não desligou o automático no perfil")
+        "o Personalizado não desligou o automático no perfil")
+    assert disco["leds"]["modo"] == "personalizado"
     cores = {}
     for chave in (CHAVE_UM, CHAVE_DOIS):
         dele = disco.get("controllers", {}).get(chave, {})
@@ -246,7 +267,7 @@ def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
     caminho = _semear(automatico=True, brilho=0.5)
     meio = dict(P1, lightbar_rgb=list(
         LedSettings(lightbar=(0, 255, 0)).apply_brightness(0.5).lightbar))
-    a04.auto_cores(_ctx(pac, conectados=[meio]), _mudanca(), PonteDeMentira())
+    a04.modo_da_luz(_ctx(pac, conectados=[meio]), _pedido("personalizado"), PonteDeMentira())
 
     gravada = _do_disco(caminho)["controllers"][CHAVE_UM]["leds"]["lightbar"]
     assert tuple(gravada) == (0, 255, 0), (
@@ -254,90 +275,107 @@ def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
         f"brilho o daemon publica a metade dela")
 
 
-def test_sem_cor_conhecida_grava_a_do_numero(pac, a04):
-    """A queda não é preto, e não é um remendo: é a cor que o automático dava.
+def test_sem_cor_conhecida_grava_a_do_automatico_e_nunca_o_preto(pac, a04):
+    """A queda não é preto: é a cor que o Automático dava àquele controle.
 
     Nos estados em que o motor não afirma cor (a Steam com o `fd`, Nativo, cor
-    desconhecida) o que o automático estava dando àquele controle é exatamente
-    `player_slot_color(numero)` — é essa a paleta que ele governa. Um preto aqui
-    apagaria a barra dela por um clique num interruptor.
+    desconhecida) o que o Automático estava dando é a cor do plástico daquele
+    controle (ou a do número, sem plástico conhecido). Um preto aqui apagaria a
+    barra dela por um clique no par.
 
     A MORDIDA: troque a queda por `(0, 0, 0)` e esta linha reprova.
     """
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
+    from hefesto_dualsense4unix.core.led_control import cor_escolhida
 
     caminho = _semear(automatico=True)
     cego = dict(P1, lightbar_source="desconhecida", lightbar_rgb=None)
-    a04.auto_cores(_ctx(pac, conectados=[cego]), _mudanca(), PonteDeMentira())
+    a04.modo_da_luz(_ctx(pac, conectados=[cego]), _pedido("personalizado"), PonteDeMentira())
 
     gravada = tuple(_do_disco(caminho)["controllers"][CHAVE_UM]["leds"]["lightbar"])
-    assert gravada == player_slot_color(1), (
-        f"gravou {gravada} — sem cor conhecida a resposta é a do número, que é "
-        f"o que o automático estava dando")
+    assert cor_escolhida(gravada) is not None, (
+        f"gravou {gravada} — sem cor conhecida a resposta é a do Automático "
+        f"(plástico ou número), nunca o preto")
 
 
-def test_ligar_de_volta_nao_apaga_cor_nenhuma(pac, a04):
+def test_ir_ao_automatico_nao_apaga_cor_nenhuma(pac, a04):
     """O caminho de volta, e ele não tem consequência a confessar."""
     caminho = _semear(automatico=False,
                       overrides={CHAVE_UM: {"lightbar": (7, 8, 9)}})
-    a04.auto_cores(_ctx(pac), _mudanca(), PonteDeMentira())
+    a04.modo_da_luz(_ctx(pac), _pedido(AUTOMATICO), PonteDeMentira())
 
     disco = _do_disco(caminho)
     assert disco["leds"]["auto_player_colors"] is True
+    assert disco["leds"]["modo"] == AUTOMATICO
     assert tuple(disco["controllers"][CHAVE_UM]["leds"]["lightbar"]) == (7, 8, 9), (
-        "ligar o automático apagou a cor que ela tinha escolhido para o "
-        "controle — override e camada automática convivem no merge por campo")
+        "o Automático apagou a cor que ela tinha escolhido para o controle — a "
+        "escolha fica no disco para o Personalizado devolver")
 
 
-def test_o_interruptor_reaplica_o_perfil(pac, a04):
+def test_o_gesto_reaplica_o_perfil(pac, a04):
     """Metade do gesto, e sem ela ele é o botão que aceita o toque e não age."""
     _semear(automatico=True)
     p = PonteDeMentira()
-    a04.auto_cores(_ctx(pac), _mudanca(), p)
+    a04.modo_da_luz(_ctx(pac), _pedido("personalizado"), p)
     assert "profile_reaplicar" in p.nomes(), (
         f"o gesto não mandou o daemon reaplicar o perfil: {p.nomes()}")
 
 
-def test_o_click_que_vem_junto_do_change_nao_inverte_duas_vezes(pac, a04):
-    """Um clique do usuário é UM ato — e o navegador manda dois eventos por ele.
-
-    Um `<input type="checkbox">` dispara `click` E `change` no mesmo ato, e o
-    BOOTSTRAP escuta os dois. Sem o guarda, um clique viraria DUAS inversões: o
-    interruptor voltaria sozinho ao lugar, com duas gravações no perfil do usuário
-    pelo caminho.
-
-    A MORDIDA: tire o `if _so_abriu_o_seletor(o): return None` do gesto e esta
-    linha reprova — o `auto_player_colors` volta a `True` e o arquivo ganha uma
-    segunda gravação.
-    """
+def test_pedir_o_modo_em_que_ja_esta_nao_grava_nada(pac, a04):
+    """O modo é lido do disco: o botão já aceso não regrava o perfil."""
     caminho = _semear(automatico=True)
-    ctx = _ctx(pac)
+    antes = pathlib.Path(caminho).read_bytes()
     p = PonteDeMentira()
-    a04.auto_cores(ctx, _mudanca(evento="click"), p)
-    assert _do_disco(caminho)["leds"]["auto_player_colors"] is True, (
-        "o `click` sozinho já inverteu — com o `change` que vem junto, um "
-        "clique dela viraria duas gravações")
-    assert p.chamadas == [], f"o `click` chegou a falar com o daemon: {p.nomes()}"
+    assert a04.modo_da_luz(_ctx(pac), _pedido(AUTOMATICO), p) is None
+    assert pathlib.Path(caminho).read_bytes() == antes
+    assert p.chamadas == [], f"o clique no botão já aceso falou com o daemon: {p.nomes()}"
 
 
-def test_sem_perfil_ativo_o_interruptor_grava_no_computador(pac, a04):
-    """As cores automáticas são do COMPUTADOR desde 01/10/2026."""
+def test_pedido_sem_modo_e_recusado(pac, a04):
+    """Um clique sem `data-modo` não vem da tela: recusa, não chuta."""
+    _semear(automatico=True)
+    with pytest.raises(ValueError):
+        a04.modo_da_luz(_ctx(pac), _pedido(""), PonteDeMentira())
+    with pytest.raises(ValueError):
+        a04.modo_da_luz(_ctx(pac), _pedido("qualquer"), PonteDeMentira())
+
+
+def test_sem_perfil_ativo_o_par_grava_no_computador(pac, a04):
+    """O modo da luz é do COMPUTADOR desde 01/10/2026 (como as cores automáticas)."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
-    a04.auto_cores(_ctx(pac, perfil=""), _mudanca(), PonteDeMentira())
+    a04.modo_da_luz(_ctx(pac, perfil=""), _pedido(AUTOMATICO), PonteDeMentira())
     leds = o_computador().global_.leds
-    assert leds is not None and "auto_player_colors" in leds.model_fields_set
+    assert leds is not None and {"auto_player_colors", "modo"} <= leds.model_fields_set
 
 
-def test_o_recado_do_interruptor_conta_a_consequencia(pac, a04):
-    """O cartão diz as DUAS metades do que aconteceu ao desligar."""
+def test_o_recado_do_par_conta_a_consequencia(pac, a04):
+    """O cartão diz as DUAS metades do que aconteceu ao ir ao Personalizado."""
     _semear(automatico=True)
-    saiu = a04.auto_cores(_ctx(pac), _mudanca(), PonteDeMentira())
+    saiu = a04.modo_da_luz(_ctx(pac), _pedido("personalizado"), PonteDeMentira())
     assert isinstance(saiu, dict) and "recado" in saiu, (
         "o gesto voltou calado — o canal de sucesso da D-01 existe justamente "
         "para o clique que muda o perfil dizer o que fez")
     assert "cor" in saiu["recado"].lower(), (
         f"o recado não conta a gravação da cor: {saiu['recado']!r}")
+
+
+@pytest.mark.parametrize("gesto", ["cor", "apagar", "reenviar", "brilho", "brilho-luzes",
+                                   "player"])
+def test_no_automatico_escrito_os_gestos_da_coluna_recusam(pac, a04, gesto):
+    """O Automático deixa PARADO o que a coluna escolhe: a porta sem a tela também fecha."""
+    caminho = _semear(automatico=True)
+    dados = _do_disco(caminho)
+    dados["leds"]["modo"] = AUTOMATICO
+    pathlib.Path(caminho).write_text(json.dumps(dados), encoding="utf-8")
+    funcao = pac.gesto_da_pagina(PAGINA, gesto)
+    assert funcao is not None
+    antes = pathlib.Path(caminho).read_bytes()
+    with pytest.raises(RuntimeError, match="Modo Automático"):
+        funcao(_ctx(pac), {"controle": "p1", "uniq": UM, "tipo": "input",
+                           "evento": "change", "valor": "#112233", "texto": "#112233",
+                           "numero": 2}, PonteDeMentira())
+    assert pathlib.Path(caminho).read_bytes() == antes, (
+        f"o gesto `{gesto}` recusou MAS gravou — recusa que grava é pior que nenhuma")
 
 
 def test_o_reenvio_manda_a_cor_escrita_na_caixa(pac, a04):

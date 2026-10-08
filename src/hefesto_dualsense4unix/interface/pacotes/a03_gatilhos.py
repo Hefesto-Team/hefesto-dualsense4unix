@@ -39,6 +39,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
+
 from . import Contexto, jogador_de, perfil, registrar
 
 SEM_DONO: dict[str, str] = {}
@@ -323,7 +325,14 @@ def descricao_do_modo(chave: str) -> str:
 #: `trigger.reset` do gesto é o mesmo): o que muda é o NOME, que diz o que o
 #: gesto faz. O dono do rótulo do produto (`trigger_specs`, «Desligado») não
 #: muda: a CLI e o daemon seguem falando dele.
-ROTULO_DO_JOGO_DECIDE = "O jogo decide"
+#:
+#: 06/10/2026, ela: o rótulo da chave `Off` é «Sem efeito» (o jogo que comanda
+#: vence nos dois modos; o rótulo diz o que o Hefesto faz, não quem decide). O
+#: NOME da constante ficou, porque os testes e o desenho a leem por ele.
+ROTULO_DO_JOGO_DECIDE = "Sem efeito"
+
+#: O gesto do par «Modo Automático | Modo Personalizado» (o mesmo `GESTO_DO_MODO` do desenho).
+GESTO_DO_MODO = "modo-dos-gatilhos"
 
 
 def _rotulo_do_modo(chave: str) -> str:
@@ -507,9 +516,87 @@ def _o_lado_que_o_perfil_cala(disco: str) -> dict[str, Any]:
         return {}
 
 
+def _modo_do_lado(lado: Any) -> str:
+    """A chave do modo de um lado do perfil CRU; sem nada escrito vale o de nascimento.
+
+    É o que o modelo faz (`TriggersConfig` nasce com `MODO_DE_NASCIMENTO_DO_GATILHO`): a tela e
+    o aparelho leem o mesmo perfil e têm de dizer o mesmo modo.
+    """
+    from hefesto_dualsense4unix.profiles.schema import MODO_DE_NASCIMENTO_DO_GATILHO
+
+    if isinstance(lado, dict) and lado:
+        return str(lado.get("mode") or MODO_DE_NASCIMENTO_DO_GATILHO)
+    return MODO_DE_NASCIMENTO_DO_GATILHO
+
+
+def _todos_os_gatilhos_sem_efeito(p: dict[str, Any]) -> bool:
+    """Os dois lados globais e todo lado escrito de cada controle são «Sem efeito»?"""
+    from hefesto_dualsense4unix.profiles.schema import MODO_SEM_EFEITO_DO_GATILHO
+
+    globais = p.get("triggers")
+    lados: list[Any] = [
+        globais.get(disco) if isinstance(globais, dict) else None for disco in LADOS.values()]
+    controles = p.get("controllers")
+    for dele in (controles.values() if isinstance(controles, dict) else ()):
+        seus = dele.get("triggers") if isinstance(dele, dict) else None
+        if isinstance(seus, dict):
+            lados.extend(seus.get(disco) for disco in LADOS.values()
+                         if isinstance(seus.get(disco), dict) and seus.get(disco))
+    return all(_modo_do_lado(lado) == MODO_SEM_EFEITO_DO_GATILHO for lado in lados)
+
+
+def modo_dos_gatilhos_do_perfil(p: dict[str, Any] | None) -> str:
+    """O modo da aba (Automático ou Personalizado), lido do perfil CRU.
+
+    A regra é a do esquema (`decidir_o_modo_dos_gatilhos`), a mesma que o `ProfileManager`
+    usa para decidir o que vai ao aparelho. Sem perfil, o Personalizado.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        MODO_PERSONALIZADO,
+        decidir_o_modo_dos_gatilhos,
+    )
+
+    if not isinstance(p, dict) or not p:
+        return MODO_PERSONALIZADO
+    globais = p.get("triggers")
+    escrito = globais.get("modo") if isinstance(globais, dict) else None
+    return decidir_o_modo_dos_gatilhos(
+        escrito if isinstance(escrito, str) else None, _todos_os_gatilhos_sem_efeito(p))
+
+
+def _o_modo_escrito_e_automatico(p: dict[str, Any] | None) -> bool:
+    """O perfil traz o Modo Automático ESCRITO em `triggers.modo` (e não deduzido)?"""
+    globais = p.get("triggers") if isinstance(p, dict) else None
+    return isinstance(globais, dict) and globais.get("modo") == MODO_AUTOMATICO
+
+
+RECADO_DO_AUTOMATICO_PARADO = (
+    "Os gatilhos estão no Modo Automático: sem efeito, e o jogo comanda quando quiser. "
+    "Passe para o Modo Personalizado para escolher.")
+
+
+def _nao_no_automatico(ctx: Contexto) -> None:
+    """A guarda de cada gesto que escolhe um efeito: recusa com o Automático ESCRITO.
+
+    A tela já deixa as colunas paradas (a folha da aba), então o clique não chega; esta é a
+    porta de quem fala com o gesto sem a tela. O perfil de antes, sem `triggers.modo`, segue
+    aceitando o que sempre aceitou.
+    """
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if nome and _o_modo_escrito_e_automatico(perfil.ativo_que_vale(nome)):
+        raise RuntimeError(RECADO_DO_AUTOMATICO_PARADO)
+
+
 def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
                              disco: str) -> dict[str, Any]:
-    """O gatilho que aquele controle RECEBE daquele lado — `{"mode", "params"}`."""
+    """O gatilho que aquele controle RECEBE daquele lado — `{"mode", "params"}`.
+
+    No Modo Automático ESCRITO a tela mostra «Sem efeito» nos dois lados de cada controle,
+    antes de olhar o rascunho: o aparelho recebe `Off` (a vista do `ProfileManager`), e as
+    escolhas guardadas ficam no disco para o Personalizado devolver.
+    """
+    if _o_modo_escrito_e_automatico(p):
+        return {"mode": "Off", "params": []}
     seu = _do_rascunho(uniq, disco)
     if seu:
         return seu
@@ -1303,9 +1390,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if CAMPO_DO_CHIP not in (colunas.get(pref) or {}):
             blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
+    modo_da_aba = modo_dos_gatilhos_do_perfil(p)
     return {
         "colunas": colunas,
         "blocos": blocos,
+        #: O MODO DA ABA: o quadro leva o modo no `data-modo-da-aba` (a folha deixa as colunas
+        #: paradas no Automático), e cada botão do par acende pelo modo do perfil.
+        GESTO_DO_MODO: modo_da_aba,
+        f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
+        f"{GESTO_DO_MODO}-personalizado": "sim" if modo_da_aba == "personalizado" else "",
         # `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO),
@@ -1989,6 +2082,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     de uma resposta bem-sucedida (`_recusa_no_corpo`). Com a `_checked`, a
     segunda chegaria como sucesso.
     """
+    _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "modo"), _lado(o)
     chave = _escolhido(o)
     if not chave:
@@ -1999,7 +2093,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     if chave == TRAVESSAO:
         raise ValueError(
             "modo: `—` é como esta tela diz que não há controle neste lugar, e "
-            "não um efeito a aplicar. Escolha `O jogo decide` para soltar o gatilho.")
+            "não um efeito a aplicar. Escolha `Sem efeito` para soltar o gatilho.")
     ok, motivo, recibo = _aplicar(p, lado, chave, _padroes(chave), uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, chave)
@@ -2046,6 +2140,7 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     função recusava dizendo *"não há onde guardar nem de onde ler um efeito com
     nome"*; agora há, e a frase saiu junto com o defeito.
     """
+    _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "efeito pronto"), _lado(o)
     chave = _escolhido(o)
     if chave.startswith(PREFIXO_DO_MEU):
@@ -2116,6 +2211,7 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     mortos, com o sinal trocado. Comparar com o RASCUNHO cala a repetição sem
     calar a prova: o primeiro pedido passa, o segundo é o mesmo pedido.
     """
+    _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "ajuste"), _lado(o)
     sigla = str(o.get("lado") or "").strip()
     forma = o.get("forma")
@@ -2271,6 +2367,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     dizia o contrário atravessou dois dias — o mesmo `--publicar` cuja outra
     metade deixou o `reenviar` sem botão. Ver a lápide dele neste arquivo.
     """
+    _nao_no_automatico(ctx)
     uniq = _exigir_controle(o, "em todos")
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
@@ -2398,6 +2495,7 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     *"Guarda o par L2+R2 em Meus efeitos"*. A frase morreu num redesenho de
     30/08; o comentário do CSS que a explica sobreviveu em `aba03.py`.
     """
+    _nao_no_automatico(ctx)
     uniq = _exigir_controle(o, "guardar")
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
@@ -2462,6 +2560,45 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
     loader = perfil._com_o_src()
     loader.save_profile(novo, origem="interface-nova")
     p.chamar("launch_env.refresh")
+
+
+@gesto("03-gatilhos.html", GESTO_DO_MODO, grava="_gravar_so_o_gatilho")
+def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O par «Modo Automático | Modo Personalizado» — e ele MUDA o perfil.
+
+    **O Automático** deixa os gatilhos «Sem efeito» (a chave `Off`) em todos os controles: é o
+    `triggers.modo` escrito como Automático, que o `ProfileManager` lê para mandar `Off` ao
+    aparelho. **Nada se apaga:** as escolhas guardadas ficam no disco, e o **Personalizado** as
+    devolve. O jogo que comanda o gatilho vence nos dois modos (a saída do jogo chega ao
+    controle; o Hefesto só potencializa, nunca veta).
+
+    **A LEITURA DE VOLTA É DO DISCO**, não do clique: o `data-modo` do botão diz o que ela
+    PEDIU, e pedir o modo em que o perfil já está não grava nada.
+
+    **REAPLICAR É METADE DO GESTO:** o modo só entra em vigor na ativação do perfil, e
+    `perfil.reaplicar` é o dono desse tempo. O `_gravar_so_o_gatilho` sozinho só grava.
+    """
+    pedido = str(o.get("modo") or "")
+    if pedido not in (MODO_AUTOMATICO, "personalizado"):
+        raise ValueError(
+            f"{GESTO_DO_MODO}: o clique não disse qual modo. Cada botão do par manda o "
+            f"`data-modo`; um pedido sem ele não vem da tela")
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if not nome:
+        raise RuntimeError(
+            "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
+    if modo_dos_gatilhos_do_perfil(perfil.ativo_que_vale(nome)) == pedido:
+        return None
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    novo = prof.model_copy(update={
+        "triggers": prof.triggers.model_copy(update={"modo": pedido})})
+    _gravar_so_o_gatilho(novo, p)
+    perfil.reaplicar(nome, ctx, p)
+    return {"recado": ("Gatilhos no Modo Automático: sem efeito, o jogo comanda."
+                       if pedido == MODO_AUTOMATICO
+                       else "Gatilhos no Modo Personalizado: valem as suas escolhas.")}
+
 
 
 def _salvar_o_meu(apelido: str, dos_lados: dict[str, dict[str, Any]]) -> None:

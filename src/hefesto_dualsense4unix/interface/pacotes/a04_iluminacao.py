@@ -107,7 +107,11 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from hefesto_dualsense4unix.interface.monta import partes_do_modelo
+from hefesto_dualsense4unix.interface.monta import (
+    MODO_AUTOMATICO,
+    MODO_PERSONALIZADO,
+    partes_do_modelo,
+)
 
 from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
 from .nome_do_jogador import nomes_dos_donos, o_nome_de
@@ -314,11 +318,15 @@ def brilho_aceso(c: dict[str, Any] | None, p: dict[str, Any] | None,
     return brilho_do_controle(p, uniq)
 
 
-ENDERECO_DO_AUTOMATICO = "auto-cores"
+#: O GESTO DO PAR DOS MODOS (A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, 08/10/2026). Ele tomou o
+#: lugar do interruptor «Cores automáticas por controle» (`auto-cores`, D-13): o Modo Automático
+#: é o interruptor ligado, e o Modo Personalizado é ele desligado com a cor de cada controle
+#: guardada. O mesmo nome é o endereço do quadro, que carrega o modo no `data-modo-da-aba`.
+GESTO_DO_MODO = "modo-da-luz"
 
 
 def automatico_do_perfil(p: dict[str, Any] | None) -> bool:
-    """O `leds.auto_player_colors` do perfil ativo — o martelo mais pesado da aba."""
+    """O `leds.auto_player_colors` do perfil ativo: a paleta automática vale quando ligado."""
     if not isinstance(p, dict):
         return True
     leds = p.get("leds")
@@ -327,7 +335,72 @@ def automatico_do_perfil(p: dict[str, Any] | None) -> bool:
     return bool(leds.get("auto_player_colors"))
 
 
-# O INTERRUPTOR CONTINUA COM O NOME DELE em `ENDERECO_DO_AUTOMATICO`, acima —
+def _tem_cor_propria(p: dict[str, Any]) -> bool:
+    """Algum controle do perfil guarda uma cor escolhida (não preta)?
+
+    SÓ A DE CONTROLE CONTA: no merge do backend a paleta automática vence a cor GLOBAL do perfil
+    (`base = merge(default, auto)`) e só perde para a cor do próprio controle (o override). A
+    cor global escrita num perfil com as cores automáticas ligadas não muda o que o plástico
+    acende, e a tela não pode dizer Personalizado sobre um aparelho que está no Automático.
+    """
+    from hefesto_dualsense4unix.core.led_control import cor_escolhida as a_cor_nao_e_o_preto
+
+    def _vale(leds: Any) -> bool:
+        rgb = leds.get("lightbar") if isinstance(leds, dict) else None
+        if not rgb or len(tuple(rgb)) < 3:
+            return False
+        r, g, b = tuple(rgb)[:3]
+        return a_cor_nao_e_o_preto((int(r), int(g), int(b))) is not None
+
+    return any(_vale((dono or {}).get("leds"))
+               for dono in (p.get("controllers") or {}).values() if isinstance(dono, dict))
+
+
+def modo_da_luz_do_perfil(p: dict[str, Any] | None) -> str:
+    """O modo da aba (Automático ou Personalizado), lido do perfil CRU.
+
+    A regra é a do esquema (`decidir_o_modo_da_luz`), a mesma que o `ProfileManager` usa para
+    decidir o que vai ao aparelho: a tela e o plástico não podem discordar. Sem perfil, o
+    Personalizado: «não há perfil» não é um modo.
+    """
+    from hefesto_dualsense4unix.profiles.schema import decidir_o_modo_da_luz
+
+    if not isinstance(p, dict) or not p:
+        return MODO_PERSONALIZADO
+    leds = p.get("leds")
+    escrito = leds.get("modo") if isinstance(leds, dict) else None
+    return decidir_o_modo_da_luz(
+        escrito if isinstance(escrito, str) else None,
+        automatico_do_perfil(p), _tem_cor_propria(p))
+
+
+def _o_modo_escrito_e_automatico(p: dict[str, Any] | None) -> bool:
+    """O perfil traz o Modo Automático ESCRITO em `leds.modo` (e não deduzido)?"""
+    leds = p.get("leds") if isinstance(p, dict) else None
+    return isinstance(leds, dict) and leds.get("modo") == MODO_AUTOMATICO
+
+
+RECADO_DO_AUTOMATICO_PARADO = (
+    "A iluminação está no Modo Automático: cada controle acende a cor do plástico dele. "
+    "Passe para o Modo Personalizado para escolher.")
+
+
+def _nao_no_automatico(ctx: Contexto) -> None:
+    """A guarda de cada gesto que escolhe a luz de um controle (ver `_recusar_no_automatico`)."""
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    _recusar_no_automatico(perfil.ativo_que_vale(nome) if nome else {})
+
+
+def _recusar_no_automatico(cru: dict[str, Any] | None) -> None:
+    """A recusa dos gestos de cor, brilho e números quando o Automático está ESCRITO.
+
+    A tela já deixa a coluna parada (a folha da aba), então o clique não chega; esta é a porta
+    de quem fala com o gesto sem a tela. Só o modo escrito recusa: o perfil de antes, sem
+    `leds.modo`, segue aceitando o que sempre aceitou.
+    """
+    if _o_modo_escrito_e_automatico(cru):
+        raise RuntimeError(RECADO_DO_AUTOMATICO_PARADO)
+
 
 ROTULO_DO_BRILHO = "Brilho da barra de luz deste controle"
 
@@ -1067,52 +1140,6 @@ def fileira_de_brilhos_das_luzes(escolhido: str, recuo: str = "") -> str:
     return "\n".join(botoes)
 
 
-#: A LINHA DA LUZ DO JOGO — 04/10/2026, desenho aprovado em `docs/process/estudos/2026-10-04-o-jogo-
-#: decide/` (item 3, «Uma linha curta embaixo das cores», sem botão novo). A regra já vale no
-#: produto desde a 1.5: com o jogo pintando a barra, vale a cor do jogo; sem jogo, a do perfil.
-#: A tela só a diz.
-ENDERECO_DA_LUZ_DO_JOGO = "luz-do-jogo"
-
-FRASE_DA_LUZ_DO_JOGO = "O jogo pinta por cima; sem jogo, a sua cor."
-
-
-def frase_da_luz_do_jogo(pintando: list[int], conectados: int) -> str:
-    """A linha curta embaixo das cores, em HTML (alvo `html`).
-
-    ``pintando`` são os números de jogador dos controles em que o JOGO pinta a barra agora, lidos do
-    ``luz_do_jogo`` do `state_full`. Todos pintando: «Agora: a cor do jogo»; só alguns, e a frase
-    diz quais (a luz de um controle não é a luz dos outros). Ninguém pintando, só a regra. A luz
-    nunca sai preta: a regra vale com ou sem jogo, e é por isso que a linha não tem botão.
-    """
-    if not pintando:
-        return FRASE_DA_LUZ_DO_JOGO
-    numeros = sorted(set(pintando))
-    if len(numeros) >= max(1, conectados):
-        agora = "Agora: a cor do jogo"
-    else:
-        nomes = [f"P{n}" for n in numeros]
-        onde = nomes[0] if len(nomes) == 1 else ", ".join(nomes[:-1]) + " e " + nomes[-1]
-        agora = f"Agora: a cor do jogo {'no' if len(nomes) == 1 else 'nos'} {onde}"
-    return f"{FRASE_DA_LUZ_DO_JOGO} <b>{agora}</b>"
-
-
-_TEM_A_LINHA_DA_LUZ: bool | None = None
-
-
-def a_pagina_tem_a_linha_da_luz() -> bool:
-    """A página PUBLICADA tem onde pôr a linha da luz do jogo? Antes do `--publicar`, não."""
-    global _TEM_A_LINHA_DA_LUZ
-    if _TEM_A_LINHA_DA_LUZ is None:
-        from hefesto_dualsense4unix.interface import onde
-
-        try:
-            pagina = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-        except OSError:
-            pagina = ""
-        _TEM_A_LINHA_DA_LUZ = f'data-campo="{ENDERECO_DA_LUZ_DO_JOGO}"' in pagina
-    return _TEM_A_LINHA_DA_LUZ
-
-
 _TEM_AS_PILULAS: bool | None = None
 
 
@@ -1591,6 +1618,7 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
+    modo_da_aba = modo_da_luz_do_perfil(p)
 
     # `interface/cartao_do_controle.rotulo_lightbar` é a mesma que os cards da
     # (`recado, _base = …`) e decidia de novo, com `c.get("lightbar_on", True)`
@@ -1615,7 +1643,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #: A LUZ DO DESENHO GRANDE, por LUGAR — ver `folha_da_luz`. Ela nasce vazia
     #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
     luz_do_desenho: dict[str, tuple[str, int | None]] = {}
-    jogo_pintando: list[int] = []
     for c, cor_dele in zip(ctx.conectados, cor_de, strict=True):
         uniq = str(c.get("uniq") or "")
         crua = cor_do_swatch(c)
@@ -1625,8 +1652,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         n = _numero(ctx, c)
         nome = str(casa.get("nome") or "—")
         via = str(casa.get("via") or (c.get("transport") or "").upper() or "—")
-        if c.get("luz_do_jogo") is True:
-            jogo_pintando.append(n)
         recado, base = rotulo_lightbar(c, ctx.state)
         #: `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base
         #: Ali a base volta preenchida **com `lightbar_on` falso**, porque a
@@ -1676,9 +1701,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         LUGAR_VAZIO: o_lugar_vazio(),
         #: JavaScript, e o que se lê no HTML é um `--plastico` com endereço sem
         ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
-        ENDERECO_DO_AUTOMATICO: "sim" if automatico_do_perfil(p) else "",
-        **({ENDERECO_DA_LUZ_DO_JOGO: frase_da_luz_do_jogo(jogo_pintando, len(ctx.conectados))}
-           if a_pagina_tem_a_linha_da_luz() else {}),
+        #: O MODO DA ABA: o quadro leva o modo no `data-modo-da-aba` (a folha deixa as colunas
+        #: paradas no Automático), e cada botão do par acende pelo modo do perfil.
+        GESTO_DO_MODO: modo_da_aba,
+        f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
+        f"{GESTO_DO_MODO}-{MODO_PERSONALIZADO}":
+            "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
         #: `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
@@ -1754,8 +1782,8 @@ def _so_abriu_o_seletor(o: dict[str, Any]) -> bool:
 
     O CHAMADOR QUE O PARIU SAIU EM 11/09/2026, e ele FICA. O seletor de cores
     do sistema deixou a guia (:data:`FORA_DA_GUIA`), e com ele o único caso em
-    que o `click` chegava ANTES. Quem continua chamando são o `brilho` e o
-    `auto-cores` — os dois pelo tempo invertido, que é o caso do trilho. A
+    que o `click` chegava ANTES. Quem continua chamando é o `brilho`, pelo
+    tempo invertido, que é o caso do trilho. A
     medição do caso de cor fica escrita porque é a razão de o guarda existir:
     apagá-la faria a próxima pessoa achar que ele é só para `range`.
     """
@@ -2228,7 +2256,7 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
                       evento:'change'}
 
     Sem a guarda, abrir e CANCELAR deixava a barra dela numa cor que ela nunca
-    pediu. **A guarda continua viva** — o `brilho` e o `auto-cores` a chamam
+    pediu. **A guarda continua viva** — o `brilho` a chama
     pelo mesmo motivo, com o tempo invertido —, mas não aqui: um botão da guia
     não abre nada.
 
@@ -2249,6 +2277,7 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     QUEM é a cor. Vale também para o `reenviar`, que passa pela mesma porta
     desde que a guarda mudou de lugar.
     """
+    _nao_no_automatico(ctx)
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
     uniq = _uniq(o)
@@ -2330,6 +2359,7 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     sai é `int(c * 0)`, e o daemon guarda o 0% ao lado dele — é o que o
     trilho desta coluna passa a mostrar.
     """
+    _nao_no_automatico(ctx)
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("apagar: o clique não disse em qual controle")
@@ -2384,6 +2414,7 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     alguém alcançar o gesto por outro caminho. `hex_to_rgb` recusaria dizendo,
     mas com uma frase que fala de formato, não do que aconteceu.
     """
+    _nao_no_automatico(ctx)
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
     uniq = _uniq(o)
@@ -2577,6 +2608,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     :return: `{"recado": …}` quando o número foi guardado e a barra não pôde
         mudar; `None` no caminho feliz, em que o cartão diz a frase padrão.
     """
+    _nao_no_automatico(ctx)
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("brilho: o clique não disse em qual controle")
@@ -2634,6 +2666,7 @@ def _com_o_brilho_das_luzes_gravado(prof: Any, uniq: str, palavra: str) -> Any:
 @gesto("04-iluminacao.html", GESTO_DO_BRILHO_DAS_LUZES, grava="gravar_pelo_gesto")
 def brilho_luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O usuário clicou numa pílula da linha LEDs: Fraco, Médio ou Forte."""
+    _nao_no_automatico(ctx)
     from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
 
     uniq = _uniq(o)
@@ -2722,6 +2755,10 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     tom = _o_tom_que_acende(efetiva, brilho_aceso(c, cru, uniq))
     if tom is not None:
         return tom
+    if modo_da_luz_do_perfil(cru) == MODO_AUTOMATICO:
+        #: No Modo Automático a cor guardada fica no disco e NÃO vale: o hex e o X dizem a
+        #: cor do plástico, que é a que o controle acende.
+        return cor_automatica(_numero(ctx, c), _tom_do_plastico(c))
     guardada = _a_cor_guardada_que_vale(ctx, cru, c)
     if guardada is not None:
         return guardada
@@ -2794,103 +2831,72 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
     return prof.model_copy(update={"controllers": atuais})
 
 
-_RECADO_DO_AUTOMATICO_SAIU = (
-    "Cores automáticas desligadas. Guardei a cor de cada controle no perfil, "
-    "para nenhuma se perder e nenhuma se repetir.")
+_RECADO_DO_AUTOMATICO = (
+    "Modo Automático: cada controle acende a cor do plástico dele, ou a do número, e duas "
+    "nunca ficam iguais. A cor que você escolheu para cada um fica guardada e volta no "
+    "Modo Personalizado.")
 
-_RECADO_DO_AUTOMATICO_VOLTOU = (
-    "Cores automáticas ligadas. Cada controle sem cor própria acende a cor do "
-    "plástico dele, ou a do número, e duas nunca ficam iguais.")
+_RECADO_DO_PERSONALIZADO = (
+    "Modo Personalizado: valem a cor, o brilho e as luzes que você escolher. Guardei a "
+    "cor de cada controle que ainda não tinha uma, para nenhuma se perder e nenhuma "
+    "se repetir.")
 
 
-@gesto("04-iluminacao.html", "auto-cores", grava="gravar_pelo_gesto")
-def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O interruptor do "Cores automáticas por controle" — e ele MUDA o perfil.
+@gesto("04-iluminacao.html", GESTO_DO_MODO, grava="gravar_pelo_gesto")
+def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O par «Modo Automático | Modo Personalizado» — e ele MUDA o perfil.
 
-    **DECISÃO, 04/09/2026 (D-13), contra a recomendação escrita.** A lista
-    desta aba propunha que o botão "Automático" só MOSTRASSE o estado, e que
-    mudá-lo continuasse na aba Perfis. Ela recusou as duas primeiras opções e
-    escolheu a terceira, com estas palavras:
+    **ELE TOMOU O LUGAR DO INTERRUPTOR `auto-cores` (D-13, 04/09/2026), e levou o contrato:**
+    o Automático é o interruptor ligado (`leds.auto_player_colors`), e o Personalizado é ele
+    desligado, com a cor de cada controle gravada no ato. O pedido dela de 06/10/2026 foi um
+    par de botões no alto da aba, e o Automático deixa PARADO tudo o que a coluna escolhe: a
+    cor, o brilho, o número e as luzes.
 
-        *"Um interruptor no topo da aba Iluminação."*
+    **O QUE O AUTOMÁTICO FAZ COM A COR QUE ELA JÁ ESCOLHEU:** nada se apaga. `leds.modo`
+    escrito como Automático é o que o `ProfileManager` lê para mandar ao aparelho a cor do
+    plástico, e a cor de cada controle fica no disco para o Personalizado devolver. Só a
+    paleta ligada não bastava: a cor própria de um controle VENCE a automática na aplicação,
+    e a tela diria Automático sobre um controle aceso na cor escolhida.
 
-    Mostrar sem poder mudar é menos do que o usuário pediu — e o campo é o martelo
-    mais pesado desta aba: ele governa a paleta automática **e** a numeração,
-    inclusive a dos controles de outras marcas.
+    **AO IR PARA O PERSONALIZADO** o controle que já tem cor guardada (e que não é fóssil)
+    a mantém; o que não tem recebe a cor que acende agora, como o interruptor fazia (D-13).
 
-    **A CONTRADIÇÃO QUE ELE ABRE, E O CAMINHO QUE O USUÁRIO ACEITOU.** A regra de
-    03/09 é *"nenhuma cor dos controles nunca pode ser a mesma"*. Com o
-    automático desligado, um controle que chega depois não tem cor própria e cai
-    na cor GLOBAL do perfil — o seguinte também, e dois ficam iguais. Hoje isso
-    não acontece só porque não HÁ como desligar o automático pela interface
-    nova; o interruptor tira essa proteção acidental. Ofereci avisar, recusar ou
-    gravar, e ela respondeu:
+    **A LEITURA DE VOLTA É DO DISCO**, não do clique: o `data-modo` do botão diz o que ela
+    PEDIU, e pedir o modo em que o perfil já está não grava nada.
 
-        *"ok aceito o caminho"*
-
-    **Então desligar GRAVA a cor de cada controle no ato.** O automático sai,
-    nenhuma cor se perde e nenhuma se repete, e o produto nunca precisa dizer
-    não a ela.
-
-    **A ORDEM É A DA GTK, e ela está medida lá:** os overrides por MAC vão
-    ANTES da mudança global (`lightbar_actions._persist_leds_update`, a nota da
-    R-14). Aqui os dois caem no MESMO `save_profile`, então a ordem não é de
-    escrita e sim de LEITURA: a cor de cada controle é lida com o automático
-    ainda valendo, que é o único instante em que ela existe para ser guardada.
-
-    **NÃO SE DEDUZ O ESTADO DO CLIQUE, PERGUNTA-SE AO DISCO.** O `value` de um
-    `<input type="checkbox">` é a string `"on"` em qualquer estado, e o piloto
-    manda o `value` — não o `checked`. Ler o clique daria sempre a mesma
-    resposta. O disco é a fonte que a tela já pinta a cada tique
-    (`automatico_do_perfil`), então virar o que está lá é o único jeito de o
-    interruptor e o perfil nunca discordarem.
-
-    **O `click` NÃO É UM SEGUNDO PEDIDO.** Um checkbox dispara `click` e
-    `change` no mesmo ato, e o BOOTSTRAP escuta os dois. Sem o guarda,
-    UM clique do usuário viraria DUAS inversões — e o interruptor voltaria sozinho ao
-    lugar, com duas gravações no perfil pelo caminho. `_so_abriu_o_seletor` já é
-    exatamente esse guarda: ele descarta o `click` de todo `<input>` e deixa o
-    `change`, que é o que carrega o ato.
-
-    **REAPLICAR É METADE DO GESTO**, e sem ela ele seria o botão que aceita o
-    toque e não age: `auto_player_colors` só entra em vigor na ATIVAÇÃO do
-    perfil (`ProfileManager._configure_auto_player_colors`, chamado por
-    `apply_profile`). `perfil.gravar_e_reaplicar` é o dono dos três tempos —
-    disco, `profile.switch`, `launch_env.refresh` — e já tinha dois chamadores.
-
-    E AQUI REAPLICAR NÃO DESFAZ ESCOLHA VIVA DO USUÁRIO, que é a razão pela qual o
-    gesto `brilho` o recusa: as cores que o `switch` vai reaplicar são as que
-    este mesmo gesto acabou de gravar, controle a controle. O que ele pinta é o
-    que já estava aceso.
-
-    :return: `{"recado": …}` — a frase que diz qual das duas metades
-        aconteceu. Ela ia ao cartão verde da D-01; desde 13/09/2026 vai ao
-        diário da janela.
+    **REAPLICAR É METADE DO GESTO** (ver o `auto-cores`, que a precedeu): o modo só entra em
+    vigor na ativação do perfil, e `perfil.reaplicar` é o dono desse tempo.
     """
-    if _so_abriu_o_seletor(o):
-        return None
+    pedido = str(o.get("modo") or "")
+    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+        raise ValueError(
+            f"{GESTO_DO_MODO}: o clique não disse qual modo. Cada botão do par manda o "
+            f"`data-modo`; um pedido sem ele não vem da tela")
 
     nome = perfil.nome_do_ativo(ctx.state).strip()
     perfil._com_o_src()
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     cru = perfil.ativo_que_vale(nome)
-    ligado = automatico_do_perfil(cru)
+    if modo_da_luz_do_perfil(cru) == pedido:
+        return None
 
     def _virar(prof: Any) -> Any:
-        if ligado:
+        if pedido == MODO_PERSONALIZADO:
             for c in ctx.conectados:
                 uniq = str(c.get("uniq") or "")
-                if uniq:
-                    prof = _com_a_cor_gravada(
-                        prof, uniq, _a_cor_de_agora(ctx, cru, c), _numero(ctx, c))
-        leds = prof.leds.model_copy(update={"auto_player_colors": not ligado})
+                if not uniq or _a_cor_guardada_que_vale(ctx, cru, c) is not None:
+                    continue
+                prof = _com_a_cor_gravada(
+                    prof, uniq, _a_cor_de_agora(ctx, cru, c), _numero(ctx, c))
+        leds = prof.leds.model_copy(update={
+            "modo": pedido, "auto_player_colors": pedido == MODO_AUTOMATICO})
         return prof.model_copy(update={"leds": leds})
 
     gravar_pelo_gesto("luz", nome, _virar, origem="interface-nova")
     perfil.reaplicar(nome, ctx, p)
-    return {"recado": (_RECADO_DO_AUTOMATICO_SAIU if ligado
-                       else _RECADO_DO_AUTOMATICO_VOLTOU)}
+    return {"recado": (_RECADO_DO_AUTOMATICO if pedido == MODO_AUTOMATICO
+                       else _RECADO_DO_PERSONALIZADO)}
 
 
 _RECONCILIAR_O_COOP = "coop.sync"
@@ -3185,6 +3191,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         DOIS controles não é esse caso** — cada um recebe o desenho do NÚMERO
         dele, e o aviso do dono fala de um MESMO desenho.
     """
+    _nao_no_automatico(ctx)
     uniq = _uniq(o)
     try:
         n = int(str(o.get("player") or "0"))

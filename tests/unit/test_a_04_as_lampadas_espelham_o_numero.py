@@ -197,7 +197,10 @@ def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
 
 
 def test_a_faixa_do_titulo_tem_um_morador_so():
-    """Ficou o interruptor, e só ele — ordem de 07/09/2026."""
+    """Ficou o par «Modo Automático | Modo Personalizado», e só ele — ordem de 06/10/2026.
+
+    Em 07/09 ficou o interruptor `auto-cores`; o par tomou o lugar dele (08/10).
+    """
     from hefesto_dualsense4unix.interface import onde
 
     for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
@@ -207,9 +210,13 @@ def test_a_faixa_do_titulo_tem_um_morador_so():
             f"o botão de escopo global voltou à faixa do título em "
             f"{caminho.name} — ela mandou tirar os três cantos que falavam de "
             f"automático em 07/09/2026")
-        assert 'data-gesto="auto-cores"' in topo, (
-            f"o interruptor saiu da faixa em {caminho.name} — ele é o ÚNICO "
-            f"que ela mandou deixar")
+    # O publicado só troca no `--publicar` da costura: o par se mede no desenho.
+    topo = onde.pagina(PAGINA).read_text(encoding="utf-8").split(
+        '<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
+    assert topo.count('data-gesto="modo-da-luz"') == 2, (
+        "o par de modos saiu da faixa do desenho — são dois botões, um por modo")
+    assert 'data-gesto="auto-cores"' not in topo, (
+        "o interruptor `auto-cores` voltou à faixa: o par tomou o lugar dele")
 
 
 def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
@@ -316,7 +323,7 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
     assert vivos == {"cor", "apagar", "brilho", "player",
-                     "reenviar", "auto-cores", "brilho-luzes"}, (
+                     "reenviar", "modo-da-luz", "brilho-luzes"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 

@@ -712,7 +712,7 @@ class TestOGestoDaAba:
         assert ponte.cores[-1][0] == (0, 0, 0)
 
 
-#: `auto-cores`, `brilho`, `cor`, `player` e `reenviar`.
+#: `modo-da-luz`, `brilho`, `cor`, `player` e `reenviar`.
 _BOTAO_MORTO = re.compile("autom" + "[áa]tico", re.I)
 
 
@@ -747,7 +747,10 @@ class TestAProsaQueVaiPararNaTela:
         ler = texto_visivel if pasta is BANCADA else texto_visivel_no_produto
         texto = ler((pasta / "04-iluminacao.html").read_text(encoding="utf-8"))
 
-        achados = _BOTAO_MORTO.findall(texto)
+        # O PAR «Modo Automático | Modo Personalizado» é palavra de produto desde 08/10/2026
+        # (ordem dela de 06/10): só ele tira o «Automático» da conta. Qualquer outro canto que
+        # fale do automático — o botão por controle, o interruptor — continua banido.
+        achados = _BOTAO_MORTO.findall(texto.replace("Modo Automático", ""))
 
         assert achados == [], (
             f"{pasta.name}/04-iluminacao.html ainda fala do botão que saiu, "
@@ -783,14 +786,16 @@ class TestAProsaQueVaiPararNaTela:
 
 
 class TestORecadoQueMentia:
-    """A frase do interruptor, e o comentário que a gerou."""
+    """A frase do Modo Automático (nascida no interruptor), e o comentário que a gerou."""
 
     def test_a_frase_nao_promete_o_que_o_produto_nao_faz(self) -> None:
         """*"Cada controle volta a acender a cor do número dele"* era FALSA."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao
 
-        frase = a04_iluminacao._RECADO_DO_AUTOMATICO_VOLTOU
+        frase = a04_iluminacao._RECADO_DO_AUTOMATICO
 
-        assert "sem cor própria" in frase, (
+        assert "plástico" in frase and "ou a do número" in frase, (
             "a frase voltou a prometer a cor do número para TODO controle")
         assert "duas nunca ficam iguais" in frase
+        assert "volta no Modo Personalizado" in frase, (
+            "a frase calou o que acontece com a cor que ela escolheu")

@@ -1546,6 +1546,18 @@
      sobre um botão que não existe — o mesmo defeito que o comentário do
      `sem_comentarios_de_css` documenta, e que já custou uma régua nesta aba. */
 
+  .par-modo{margin-left:auto;display:inline-grid;grid-template-columns:1fr 1fr;gap:6px}
+  .par-modo button{height:22px;padding:0 10px;border-radius:6px;font-family:inherit;
+    font-size:11.5px;cursor:pointer;border:1px solid var(--linha);background:transparent;
+    color:var(--texto-suave);white-space:nowrap}
+  .par-modo button:hover:not(.on){border-color:var(--comment);color:var(--fg)}
+  .par-modo button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);
+    font-weight:600;cursor:default}
+  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
+
+  .quadro[data-modo-da-aba="automatico"] .duas-colunas .ctrl > :not(.cabeca){
+    opacity:.45;pointer-events:none}
+
   .duas-colunas{
     --r-nome:24px;--r-modo:36px;--r-pronto:36px;
     --r-aj-e:92px;--r-sep:1px;--r-aj-d:46px;
@@ -1741,7 +1753,8 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
-    <div class="quadro">
+    <div class="quadro" data-modo-da-aba="personalizado" data-campo="modo-dos-gatilhos"
+         data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo">Gatilhos</span>
         <span class="ajuda">?<span class="dica">
@@ -1751,6 +1764,13 @@
           <b>aquele</b> controle na mão sente na hora.<br><br>
           <b>O DualSense não devolve o modo em que está:</b> o que você sente na mão é a
           confirmação.
+        </span></span>
+        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-dos-gatilhos" data-modo="automatico" data-campo="modo-dos-gatilhos-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo Automático</button><button class="on" data-gesto="modo-dos-gatilhos" data-modo="personalizado" data-campo="modo-dos-gatilhos-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo Personalizado</button></span>
+        <span class="ajuda esq">?<span class="dica">
+          <b>Modo Automático:</b> o jogo decide os dois gatilhos de todos os controles, e
+          os botões desta aba ficam parados.<br><br>
+          <b>Modo Personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
+          manda o efeito dele, o do jogo vence.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1838,7 +1858,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e">
                 <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -1914,7 +1934,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d">
                 <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -1984,7 +2004,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e">
                 <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -2055,7 +2075,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d">
                 <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -2125,7 +2145,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e">
                 <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -2182,7 +2202,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d">
                 <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -2243,7 +2263,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e">
                 <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -2300,7 +2320,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d">
                 <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">O jogo decide</option>
+                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>

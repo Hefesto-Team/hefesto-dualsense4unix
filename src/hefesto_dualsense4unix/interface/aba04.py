@@ -153,10 +153,8 @@ CSS = """
        medido no Chrome, o conteúdo ia de y=13 a y=49 dentro dela. Com 52 o
        respiro cai de 13 para 8px de cada lado, e nenhum botão encolhe.
 
-       A COLUNA VAI DE 460 PARA 472, contra o teto de 476. O interruptor da
-       D-13 não entra nesta conta porque não gasta linha nenhuma: ele mora na
-       faixa do TÍTULO do quadro, que tem 17px de altura e 1000px vazios à
-       direita — ver `.chave-auto`. */
+       A COLUNA VAI DE 460 PARA 472, contra o teto de 476. O par dos modos
+       mora na faixa do TÍTULO do quadro (06/10/2026). */
     /* AS TRÊS PÍLULAS DO BRILHO DAS LUZES MORAM NA LINHA DOS LEDs — 24/09/2026,
        decisão de produto (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco,
        Médio e Forte na linha LEDs, nascendo no Fraco"*. Elas pedem 30px
@@ -193,8 +191,6 @@ CSS = """
   .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
   /* A linha da luz do jogo: uma frase curta embaixo das cores, sem botão. Texto de apoio
      (nunca vermelho), com o «Agora» em tinta cheia só quando o jogo está pintando. */
-  .luz-do-jogo{margin:6px 0 0;font-size:12px;line-height:1.3;color:var(--texto-mudo)}
-  .luz-do-jogo b{font-weight:600;color:var(--fg)}
 
   /* ---------- O LUGAR VAZIO ----------
      A mesma gramática da Jogar, da Controles e da Gatilhos: cor explícita e
@@ -580,52 +576,9 @@ CSS = """
   .luz-grade .led-on{fill:var(--led-aceso);
                      filter:drop-shadow(0 0 .5px var(--led-aceso)) !important}
 
-  /* ---------- O INTERRUPTOR DO AUTOMÁTICO (D-13) ----------
-     O USUÁRIO ESCOLHEU O INTERRUPTOR DE VERDADE — 04/09/2026, e a recomendação
-     escrita propunha o contrário (só MOSTRAR o estado no botão "Automático"):
-     *"Um interruptor no topo da aba Iluminação."*
-
-     O CUSTO DECLARADO ERA ~30px, E ELE SAIU DE GRAÇA. A faixa do título do
-     quadro (`.quadro-topo`) é um flex de 17px de altura com dois filhos que
-     somam 87px numa linha de 1140 — mil pixels vazios à direita. O
-     `margin-left:auto` empurra o interruptor para lá, e a faixa não cresce um
-     pixel: nada aqui passa dos 17px que o `.ajuda` já ocupa. Os 30px que o usuário
-     aceitou pagar ficaram no bolso, e é o que deixou a linha de ressalva da
-     D-02 caber na mesma leva.
-
-     A ALTURA É 17px E NÃO 18: o trilho é 15 de caixa mais 1+1 de borda. Um
-     pixel a mais faria a faixa do título crescer, e com ela a coluna inteira
-     — que está a 4px do teto.
-
-     O `<input>` É INVISÍVEL E CONTINUA SENDO O ESTADO. Quem pinta é o
-     `:checked` do CSS; quem escreve é o alvo `marcado` do piloto, o décimo, e
-     é o único que toca `el.checked`. Uma caixinha `class="ligado"` pintada à
-     mão seria um estado que só o desenho sabe — e o desenho não sabe o perfil
-     do usuário.
-
-     A DICA ABRE PARA A ESQUERDA, e é medida: a `.dica` tem 330px e nasce em
-     `left:22px`; num `?` encostado na direita do quadro ela sairia da janela
-     de 1180. `right:22px` é a mesma peça, do outro lado. */
-  .chave-auto{
-    margin-left:auto;display:flex;align-items:center;gap:7px;cursor:pointer;
-    font-size:11.5px;color:var(--texto-suave);height:17px;position:relative;
-    -webkit-user-select:none;user-select:none;
-  }
-  .chave-auto:hover{color:var(--fg)}
-  .chave-auto input{position:absolute;width:0;height:0;opacity:0;margin:0;padding:0}
-  .chave-trilho{
-    width:28px;height:15px;flex:0 0 28px;border-radius:8px;position:relative;
-    background:var(--app-bg);border:1px solid var(--border-forte);
-  }
-  .chave-trilho::after{
-    content:"";position:absolute;top:2px;left:2px;width:9px;height:9px;
-    border-radius:50%;background:var(--texto-mudo);
-  }
-  .chave-auto input:checked + .chave-trilho{background:var(--sel-bg);border-color:var(--purple)}
-  .chave-auto input:checked + .chave-trilho::after{left:15px;background:var(--purple)}
-  .chave-auto:hover .chave-trilho{border-color:var(--comment)}
-  .chave-auto input:checked:focus-visible + .chave-trilho,
-  .chave-auto input:focus-visible + .chave-trilho{outline:1px solid var(--cyan);outline-offset:1px}
+  /* O MODO AUTOMÁTICO DEIXA AS COLUNAS PARADAS — pedido dela de 06/10/2026: o
+     desenho e o modelo continuam dizendo de quem é a coluna; a cor, o brilho, o
+     número, as luzes e o «Desligar» esmaecem e não recebem clique. */
   .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
   /* O ESCOPO GLOBAL DESTA FAIXA SAIU — 07/09/2026, e a faixa voltou a ter um
      morador só: o interruptor. A ordem de produto é de hoje, sobre os três cantos
@@ -1301,9 +1254,13 @@ def coluna(c):
 # A REGRA QUE SOBRA: `# noqa-…` só comenta em Python. Prosa de projeto que
 # precise de um `noqa` sai do HTML e vem para cá.
 
+#: o gesto do par dos modos; o pintor (`data-modo-da-aba` do quadro) é do pacote
+GESTO_DO_MODO = "modo-da-luz"
+
 MIOLO = f'''
 {CORES_DO_MAPA}
-    <div class="quadro luzes">
+    <div class="quadro luzes" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
+         data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo">Iluminação</span>
         <!-- DE 777 PARA ~230 CARACTERES — 30/08/2026, mesma regra da Vibração: o
@@ -1315,42 +1272,17 @@ MIOLO = f'''
           você sabe de quem é cada controle.<br><br>
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
-        <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13, decisão de 04/09/2026:
-             *"Um interruptor no topo da aba Iluminação."*
-
-             O QUE ELE GOVERNA não é o botão "Automático" da célula Opções: são
-             coisas diferentes com a mesma palavra. Aquele é POR CONTROLE e é um
-             toque só — larga o claim da barra para o jogo. Este é do PERFIL, e
-             governa a paleta automática E a numeração (inclusive a dos
-             externos). Pelo HTML ela não via o estado nem podia mudá-lo, e o
-             perfil do usuário está com ele LIGADO.
-
-             `checked` NO DESENHO porque é o estado do perfil do usuário hoje; no
-             produto quem manda é o alvo `marcado`, que o piloto escreve a cada
-             tique com o que está no disco. O `data-gesto` fica no `<input>` e
-             não no `<label>`: um clique no rótulo já dispara o do `<input>` por
-             ativação, e dois endereços para o mesmo ato mandariam dois pedidos.
-
-             A DICA DIZ A CONSEQUÊNCIA, e ela é a que o usuário aceitou por escrito
-             (*"ok aceito o caminho"*): desligar GRAVA a cor de cada controle no
-             ato, para nenhuma se perder e nenhuma se repetir.
-
-             E A REGRA DA COR AUTOMÁTICA É A DO PLÁSTICO desde 29/09/2026
-             (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): a cor da casca, e a do
-             número quando o plástico não tem tom ou se repete. -->
-        <label class="chave-auto">
-          <input type="checkbox" data-gesto="auto-cores" data-campo="auto-cores"
-                 data-hef-alvo="marcado" checked>
-          <span class="chave-trilho"></span>
-          <span>Cores automáticas por controle</span>
-        </label>
+        <!-- OS DOIS MODOS — pedido dela de 06/10/2026: o Modo Automático e o Modo
+             Personalizado tomam o lugar do interruptor das cores automáticas e da
+             frase da luz do jogo embaixo das colunas. -->
+        {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}
         <span class="ajuda esq">?<span class="dica">
-          Ligado, cada controle recebe um número e acende a cor do seu
-          <b>plástico</b>; sem cor de plástico, ou com dois iguais, a cor do
-          <b>número</b> — inclusive os de outras marcas.<br><br>
-          Ao <b>desligar</b>, a cor de agora fica <b>gravada no perfil</b>, para nenhuma
-          se perder.<br><br>
-          É do <b>perfil</b>: viaja quando você troca de perfil.
+          <b>Modo Automático:</b> cada controle acende a cor do seu <b>plástico</b>
+          (sem cor de plástico, ou com dois iguais, a do <b>número</b>), e os botões
+          desta aba ficam parados.<br><br>
+          <b>Modo Personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
+          controle. Ao passar para ele, a cor de agora fica <b>gravada no perfil</b>.<br><br>
+          Nos dois, o jogo que pinta a barra vence enquanto pinta.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1438,12 +1370,6 @@ MIOLO = f'''
 
         </div>
 
-        <!-- A LUZ DO JOGO — 04/10/2026, desenho aprovado em `docs/process/estudos/2026-10-04-o-jogo-
-             decide/` (item 3): nenhum botão novo, só uma linha curta embaixo das cores. A regra é a
-             da 1.5 (o jogo pinta por cima; sem jogo, a sua cor) e a luz nunca sai preta; com o jogo
-             pintando agora, a linha ganha «Agora: a cor do jogo». O sinal vem do `state_full`
-             (`luz_do_jogo`), e a frase, do pacote. -->
-        <div class="luz-do-jogo" data-campo="luz-do-jogo" data-hef-alvo="html">{_pacote04.FRASE_DA_LUZ_DO_JOGO}</div>
 
         <!-- A FOLHA VIVA DO PLÁSTICO — 03/09/2026, e ela fecha a maior
                identidade congelada desta aba: o DESENHO GRANDE.
@@ -1549,8 +1475,6 @@ def _conferir(doc):
 
     #    as outras. Com os quatro DualSense do usuário na mesa, ela não conseguia
     grade = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
-    #    A linha da luz do jogo é da página, não de um lugar: a régua das colunas não a conta.
-    grade = grade.split('<div class="luz-do-jogo"', 1)[0]
     #    `luzes`, `desenho-de` e `reenviar-desenho` —, e eles JÁ chegavam aos
     #    `apagar` e `reenviar` — são os do cartão, e são estes que a régua conta.
     gestos_por_lugar = {}
@@ -1649,17 +1573,12 @@ def _conferir(doc):
            "mockup parada num lugar sem aparelho")
 
     topo = corpo.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
-    exigir('class="chave-auto"' in topo,
-           "o interruptor das cores automáticas saiu da faixa do título — a "
-           "D-13 pede ele NO TOPO da aba, e qualquer outro lugar cobra uma "
-           "linha da grade que já está a 4px do teto")
-    #    `marcado`, e só acha o elemento pelo `data-campo`.
-    for atributo in (f'data-gesto="{_pacote04.ENDERECO_DO_AUTOMATICO}"',
-                     f'data-campo="{_pacote04.ENDERECO_DO_AUTOMATICO}"',
-                     'data-hef-alvo="marcado"'):
-        exigir(atributo in topo,
-               f"o interruptor perdeu {atributo!r} — sem os três ele é uma "
-               f"chave que não lê o perfil nem o muda")
+    exigir(topo.count(f'data-gesto="{GESTO_DO_MODO}"') == 2,
+           "o par dos modos saiu da faixa do título — o Modo Automático e o "
+           "Modo Personalizado moram no topo da aba (pedido dela de 06/10/2026)")
+    exigir('class="luz-do-jogo"' not in corpo,
+           "a frase da luz do jogo voltou embaixo das colunas — o par dos modos "
+           "a substituiu (pedido dela de 06/10/2026)")
     exigir(".quadro-topo .ajuda.esq .dica{left:auto;right:22px}" in doc,
            "a dica do interruptor voltou a abrir para a direita — ela tem "
            "330px e o `?` está encostado na borda do quadro")
@@ -1810,6 +1729,12 @@ CSS += _marca.CSS + """
   .luz-grade .ctrl > .camada{position:absolute;top:-8px;left:22px;z-index:1;
     padding:0 5px;background:var(--panel);max-width:calc(100% - 34px)}
   .luz-grade .ctrl > .camada::before{content:none}
+"""
+
+
+CSS += monta_.CSS_DO_PAR_DE_MODOS + f"""
+  .quadro[data-modo-da-aba="{monta_.MODO_AUTOMATICO}"] .luz-grade .ctrl > :not(.moldura):not(.ctrl-rot){{
+    opacity:.45;pointer-events:none}}
 """
 
 

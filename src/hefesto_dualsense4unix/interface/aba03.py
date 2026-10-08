@@ -592,10 +592,15 @@ if _SEM_DICA or _DICA_ORFA:
 
 ROT = {p.name: p.label for p in PRESETS}
 
-#: O «Desligado» do produto é, nesta tela, «O jogo decide» (ver `ROTULO_DO_JOGO_DECIDE`).
+#: O «Desligado» do produto é, nesta tela, «Sem efeito» (ver `ROTULO_DO_JOGO_DECIDE`).
+#: 06/10/2026: com o Modo Automático da aba, o rótulo desta chave muda — e muda no DONO
+#: (o pacote), na sprint O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01; o desenho só o lê.
 _ROTULO_DA_TELA = {p.name: ROTULO_DO_JOGO_DECIDE if p.name == "Off" else p.label
                    for p in PRESETS}
 MODOS = [(_ROTULO_DA_TELA[p.name], DICA_DO_MODO[p.name]) for p in PRESETS]
+
+#: o gesto do par dos modos; o pintor (`data-modo-da-aba` do quadro) é do pacote
+GESTO_DO_MODO = "modo-dos-gatilhos"
 
 PRONTOS = ["— Nenhum —"] + [rot for chave, rot in FEEDBACK_POSITION_LABELS.items()
                             if chave != "custom"]
@@ -852,6 +857,10 @@ CSS_DA_CENA = f"""
     for i in range(1, len(MESA) + 2))
 
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
+CSS += monta_.CSS_DO_PAR_DE_MODOS + f"""
+  .quadro[data-modo-da-aba="{monta_.MODO_AUTOMATICO}"] .duas-colunas .ctrl > :not(.cabeca){{
+    opacity:.45;pointer-events:none}}
+"""
 
 DICA_DE_ABRIR = "Abre os ajustes deste gatilho. Só um fica aberto por vez."
 DICA_DE_FECHAR = "Fecha os ajustes."
@@ -902,7 +911,8 @@ ROTULOS = f'''        <div class="rotulos">
         </div>'''
 
 MIOLO = f'''
-    <div class="quadro">
+    <div class="quadro" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
+         data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo">Gatilhos</span>
         <span class="ajuda">?<span class="dica">
@@ -912,6 +922,13 @@ MIOLO = f'''
           <b>aquele</b> controle na mão sente na hora.<br><br>
           <b>O DualSense não devolve o modo em que está:</b> o que você sente na mão é a
           confirmação.
+        </span></span>
+        {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}
+        <span class="ajuda esq">?<span class="dica">
+          <b>Modo Automático:</b> o jogo decide os dois gatilhos de todos os controles, e
+          os botões desta aba ficam parados.<br><br>
+          <b>Modo Personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
+          manda o efeito dele, o do jogo vence.
         </span></span>
       </div>
       <div class="quadro-corpo">

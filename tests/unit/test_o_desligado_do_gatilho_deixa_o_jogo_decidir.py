@@ -4,7 +4,8 @@ A foto dela, 03/10/2026 ~18h20 (aba Gatilhos, P1, L2): a lista do modo oferecia
 `—` e `Desligado`, que pareciam a mesma entrada. A regra de produto, ~18h15:
 *«o certo seria os controles obedecerem quando o jogo manda e na
 ausencia disso o perfil ganha»*  (noqa-acento: citação)
-Então o «Desligado» do gatilho é «O jogo decide»: sem jogo pintando, o
+Então o «Desligado» do gatilho é «O jogo decide» (desde 06/10/2026, por ordem dela, o rótulo
+é «Sem efeito»; a regra é a mesma): sem jogo pintando, o
 gatilho fica como o controle vem de fábrica (`trigger.reset`), e o que o jogo
 pintar chega. A chave no perfil continua `Off` (a forma do perfil não muda); o
 lado do daemon, que não trava o campo quando ele é `Off`, é do conjunto Microfone.
@@ -60,7 +61,7 @@ def test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado(fonte) -> None:
     assert listas, "nenhuma lista de modo encontrada"
     for dentro in listas:
         vistas = _visiveis(dentro)
-        assert vistas.count("O jogo decide") == 1, vistas
+        assert vistas.count("Sem efeito") == 1, vistas
         assert "Desligado" not in vistas, (
             "o «Desligado» voltou à lista: o gatilho tem duas palavras para a mesma coisa")
 

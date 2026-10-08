@@ -44,6 +44,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     leds_do_perfil_na_economia,
     leds_na_economia,
     normalizar_gamepad_flavor,
+    perfil_no_modo,
     vibracao_na_economia,
 )
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
@@ -418,7 +419,7 @@ class ProfileManager:
                 soltar()
 
         profile = _perfil_na_economia(
-            profile, economia_da_mesa(), controles_em_economia()
+            perfil_no_modo(profile), economia_da_mesa(), controles_em_economia()
         )
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)

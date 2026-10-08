@@ -172,11 +172,21 @@ def _gatilho_de_nascimento() -> TriggerConfig:
     )
 
 
+#: Os dois modos da aba Gatilhos e da aba Iluminação (A-O-MODO-AUTOMATICO-E-O-
+#: PERSONALIZADO-01, 08/10/2026). Automático: o Hefesto não escolhe nada e o jogo
+#: decide. Personalizado: vale o que a pessoa escolheu, e é o que ficou guardado.
+MODO_AUTOMATICO = "automatico"  # (noqa-acento) chave ASCII
+MODO_PERSONALIZADO = "personalizado"
+ModoDaAba = Literal["automatico", "personalizado"]  # (noqa-acento) chave ASCII
+
+
 class TriggersConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     left: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
     right: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
+    #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`modo_dos_gatilhos`.
+    modo: ModoDaAba | None = None
 
 
 class LedsConfig(BaseModel):
@@ -192,6 +202,8 @@ class LedsConfig(BaseModel):
     lightbar_para_o_numero: int | None = None
     # linha LEDs, nascendo no Fraco"*. Quem enxerga pouco não tinha como
     player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # noqa-acento: chave ASCII
+    #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`modo_da_luz`.
+    modo: ModoDaAba | None = None
 
     @field_validator("lightbar")
     @classmethod
@@ -1766,6 +1778,127 @@ def gatilhos_do_perfil_na_economia(triggers: TriggersConfig) -> TriggersConfig:
     )
 
 
+#: O gatilho «Sem efeito»: o que o modo Automático põe nos dois lados de todo controle.
+MODO_SEM_EFEITO_DO_GATILHO = "Off"
+
+
+def _sem_efeito() -> TriggerConfig:
+    return TriggerConfig(mode=MODO_SEM_EFEITO_DO_GATILHO, params=[])
+
+
+def _lados_escritos(triggers: TriggersConfig | None) -> list[TriggerConfig]:
+    if triggers is None:
+        return []
+    return [getattr(triggers, lado) for lado in ("left", "right")
+            if lado in triggers.model_fields_set]
+
+
+def decidir_o_modo_dos_gatilhos(escrito: str | None, todos_sem_efeito: bool) -> str:
+    """A REGRA do modo dos gatilhos, para quem lê o perfil como modelo ou como JSON.
+
+    O que está escrito (``triggers.modo``) manda. Sem nada escrito vale o que o
+    perfil já diz, e nada se reescreve: Automático só quando os dois gatilhos
+    globais e todo lado escrito de cada controle são «Sem efeito» (``Off``);
+    qualquer outra coisa é Personalizado.
+    """
+    if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+        return str(escrito)
+    return MODO_AUTOMATICO if todos_sem_efeito else MODO_PERSONALIZADO
+
+
+def decidir_o_modo_da_luz(
+    escrito: str | None, cores_automaticas: bool, tem_cor_propria: bool
+) -> str:
+    """A REGRA do modo da iluminação, para quem lê o perfil como modelo ou como JSON.
+
+    O que está escrito (``leds.modo``) manda. Sem nada escrito vale o que o
+    perfil já diz: Automático quando as cores automáticas estão ligadas e
+    nenhuma cor própria foi guardada; qualquer outra coisa é Personalizado.
+    """
+    if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+        return str(escrito)
+    return MODO_AUTOMATICO if cores_automaticas and not tem_cor_propria else MODO_PERSONALIZADO
+
+
+def modo_dos_gatilhos(profile: Profile) -> str:
+    """Automático ou Personalizado, nos gatilhos deste perfil."""
+    lados = [profile.triggers.left, profile.triggers.right]
+    for dele in (profile.controllers or {}).values():
+        lados.extend(_lados_escritos(dele.triggers))
+    return decidir_o_modo_dos_gatilhos(
+        profile.triggers.modo,
+        all(g.mode == MODO_SEM_EFEITO_DO_GATILHO for g in lados))
+
+
+def _tem_cor_propria(profile: Profile) -> bool:
+    """Algum controle do perfil guarda uma cor escolhida?
+
+    SÓ A DE CONTROLE CONTA: no merge do backend a paleta automática vence a cor GLOBAL do perfil
+    e só perde para a cor do próprio controle (o override).
+    """
+    from hefesto_dualsense4unix.core.led_control import cor_escolhida
+
+    return any(
+        dele.leds is not None and "lightbar" in dele.leds.model_fields_set
+        and cor_escolhida(dele.leds.lightbar) is not None
+        for dele in (profile.controllers or {}).values()
+    )
+
+
+def modo_da_luz(profile: Profile) -> str:
+    """Automático ou Personalizado, na iluminação deste perfil."""
+    return decidir_o_modo_da_luz(
+        profile.leds.modo, bool(profile.leds.auto_player_colors),
+        _tem_cor_propria(profile))
+
+
+def _leds_sem_a_cor(leds: LedsConfig | None) -> LedsConfig | None:
+    """A luz de um controle sem a cor escolhida; o resto (brilho, números) fica."""
+    if leds is None:
+        return None
+    resto = {
+        campo: valor for campo, valor in _escritos(leds).items()
+        if campo not in ("lightbar", "lightbar_para_o_numero")
+    }
+    return LedsConfig.model_validate(resto) if resto else None
+
+
+def perfil_no_modo(profile: Profile) -> Profile:
+    """A VISTA do perfil que vai ao aparelho, com os modos postos.
+
+    Só o que foi ESCRITO como Automático age: o perfil de antes, sem ``modo``,
+    segue como está. No Automático dos gatilhos os dois lados de todo controle
+    saem «Sem efeito» e no da luz nenhuma cor escolhida vale — a cor é a do
+    plástico. As escolhas continuam no disco, e voltam ao Personalizado.
+    """
+    update: dict[str, Any] = {}
+    if profile.triggers.modo == MODO_AUTOMATICO:
+        update["triggers"] = TriggersConfig(
+            left=_sem_efeito(), right=_sem_efeito(), modo=MODO_AUTOMATICO)
+    controles = dict(profile.controllers or {})
+    mexeu = False
+    if profile.triggers.modo == MODO_AUTOMATICO:
+        for chave, dele in controles.items():
+            if dele.triggers is None:
+                continue
+            lados = {lado: _sem_efeito() for lado in ("left", "right")
+                     if lado in dele.triggers.model_fields_set}
+            controles[chave] = dele.model_copy(
+                update={"triggers": TriggersConfig.model_validate(lados) if lados else None})
+            mexeu = True
+    if profile.leds.modo == MODO_AUTOMATICO:
+        update["leds"] = profile.leds.model_copy(
+            update={"lightbar": (0, 0, 0), "auto_player_colors": True})
+        for chave, dele in controles.items():
+            if dele.leds is not None:
+                controles[chave] = dele.model_copy(
+                    update={"leds": _leds_sem_a_cor(dele.leds)})
+                mexeu = True
+    if mexeu:
+        update["controllers"] = controles
+    return profile.model_copy(update=update) if update else profile
+
+
 def _mult_da_vibracao(policy: str | None, custom_mult: float | None) -> float | None:
     """O multiplicador de uma política fixa, lido do dono dos degraus."""
     if policy is None:
@@ -1909,6 +2042,19 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         NASCE_NO_ESQUEMA,
         "`True` desde a COR-03. É ele que faz a barra e o LED do número "
         "nascerem acesos — os dois campos acima dependem deste.",
+    ),
+    "LedsConfig.modo": Nascimento(
+        E_CONTRATO,
+        "É a escolha do modo da aba Iluminação, não uma feature que nasce "
+        "ligada. `None` = ninguém escolheu, e `modo_da_luz` lê o que o perfil "
+        "já diz (cores automáticas ligadas e nenhuma cor própria = Automático). "
+        "Semear um modo de fábrica reescreveria o perfil de quem já escolheu.",
+    ),
+    "TriggersConfig.modo": Nascimento(
+        E_CONTRATO,
+        "É a escolha do modo da aba Gatilhos. `None` = ninguém escolheu, e "
+        "`modo_dos_gatilhos` lê o perfil: todo gatilho «Sem efeito» é "
+        "Automático, o resto é Personalizado. Nada se reescreve.",
     ),
     "LedsConfig.lightbar_para_o_numero": Nascimento(
         E_CONTRATO,
@@ -2284,7 +2430,9 @@ __all__ = [
     "FATOR_DO_GATILHO_NA_ECONOMIA",
     "FORCAS_DO_GATILHO",
     "MODOS_DE_GATILHO_SEM_FORCA",
+    "MODO_AUTOMATICO",
     "MODO_DE_NASCIMENTO_DO_GATILHO",
+    "MODO_PERSONALIZADO",
     "NASCE_NA_ADOCAO",
     "NASCE_NO_ESQUEMA",
     "NASCE_NO_LEITOR",
@@ -2316,6 +2464,8 @@ __all__ = [
     "classes_de_jogo_conhecidas",
     "com_o_brilho_das_luzes_de",
     "controles_em_economia",
+    "decidir_o_modo_da_luz",
+    "decidir_o_modo_dos_gatilhos",
     "declaracao_da_economia",
     "e_endereco_de_jogo",
     "economia_da_declaracao",
@@ -2327,10 +2477,13 @@ __all__ = [
     "leds_do_perfil_na_economia",
     "leds_na_economia",
     "mesa_em_economia",
+    "modo_da_luz",
+    "modo_dos_gatilhos",
     "normalizar_gamepad_flavor",
     "origem_da_economia",
     "perfil_declara_modo_de_jogo",
     "perfil_e_regra_de_jogo",
+    "perfil_no_modo",
     "registrar_classes_de_jogo",
     "registrar_declaracao_da_mesa",
     "resolver_teclado_emulado",
