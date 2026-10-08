@@ -170,7 +170,7 @@ class AppTray:
         self._menu.append(Gtk.SeparatorMenuItem())
 
         quit_item = Gtk.MenuItem(label=_("Sair do Hefesto - DualSense4Unix"))
-        quit_item.connect("activate", lambda _w: self.on_quit())
+        quit_item.connect("activate", lambda _w: self._ao_sair())
         self._menu.append(quit_item)
 
         self._render_profiles([])
@@ -315,6 +315,38 @@ class AppTray:
             return
         if self.on_set_modo is not None:
             self._chamar_sem_cair(lambda: self.on_set_modo(ligado))
+
+    def _ao_sair(self) -> None:
+        """«Sair» PARA o serviço e só então fecha o ícone.
+
+        DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 (08/10/2026): o item
+        só chamava o ``on_quit`` (``Gtk.main_quit``), então o ícone sumia e o
+        daemon seguia de pé segurando o controle: quem clica em «Sair» acredita
+        que o Hefesto acabou. O ato é o MESMO do «Parar o serviço» (e da aba
+        Sistema): ``on_servico("stop")``, fora do fio da janela. Se a parada
+        falha, o ícone FICA e o aviso vai ao registro — sumir com o ícone de um
+        serviço que segue rodando é o defeito que este ato cura. Sem
+        ``on_servico`` (um tray sem serviço para parar) só sai.
+        """
+        if self.on_servico is None:
+            self.on_quit()
+            return
+        from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
+
+        servico = self.on_servico
+
+        def _parou(deu_certo: Any) -> bool:
+            if deu_certo:
+                self.on_quit()
+            else:
+                logger.warning("apptray_sair_nao_parou")
+            return False
+
+        def _nao_parou(erro: Exception) -> bool:
+            logger.warning("apptray_sair_nao_parou", erro=str(erro))
+            return False
+
+        run_in_thread(lambda: servico("stop"), _parou, _nao_parou)
 
     def _ao_mexer_no_servico(self, _item: Any) -> None:
         """Para quando está de pé; liga quando está parado."""
