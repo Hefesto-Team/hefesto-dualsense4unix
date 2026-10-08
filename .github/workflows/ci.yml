@@ -36,7 +36,7 @@ jobs:
     steps:
       # `fetch-depth: 0` veio com o portão da história, que agora roda no workflow
       # `autoria`; reduzir a profundidade deste job é medida à parte.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - run: bash scripts/check_anonymity.sh
@@ -185,7 +185,7 @@ jobs:
       matrix:
         python: ["3.10", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -202,7 +202,7 @@ jobs:
     # deixando a suíte verde com a função quebrada. O que apaga não reprova; o
     # que reprova é este job.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -225,7 +225,7 @@ jobs:
     # literalmente o que a E5 pede: "reintroduzir `daemon offline` num rótulo
     # tem de reprovar de novo".
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -258,7 +258,7 @@ jobs:
     # trabalho dela. O `README.md` passou a ser varrido: ficava de fora só por
     # morar na raiz, sendo a página que mais gente copia e cola.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -320,7 +320,7 @@ jobs:
       # no runner, e a regra 17 (`id-sumiu-sem-nota`, abaixo) nasceria verde
       # sem medir nada. O mesmo defeito já pago pelo workflow `autoria`,
       # agora no job do mapa.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
@@ -471,7 +471,7 @@ jobs:
     # antes e depois. A varredura sai com código 0 e o `continue-on-error` saiu
     # junto: a partir daqui o job PROTEGE, não relata.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Versão do shellcheck (vem no runner)
         run: shellcheck --version
       # `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script daquela
@@ -498,7 +498,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: A sonda
         run: bash scripts/banco_de_prova/sonda.sh
       - name: Sobe o que a sonda mediu
@@ -523,7 +523,7 @@ jobs:
     # `librsvg2-bin` é a única dependência — o mesmo `rsvg-convert` que o
     # `gtk-real` já instala por outro motivo.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Instalar rsvg-convert
         run: |
           sudo apt-get update
@@ -540,7 +540,7 @@ jobs:
     # regras udev, 4 arquivos de modprobe, 2 módulos DKMS e o broker); depois
     # que alguém acrescentar uma regra nova, descobrir a divergência custa caro.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: bash scripts/check_packaging_parity.sh
 
   promessa-sem-caminho:
@@ -557,7 +557,7 @@ jobs:
     # arquivo também não se chama `test_*` — o pytest só o coleta quando
     # apontado pelo caminho, que é o que esta linha faz.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
@@ -577,7 +577,7 @@ jobs:
   version-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -587,7 +587,7 @@ jobs:
     name: Sync fallback __init__.py vs pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -626,7 +626,7 @@ jobs:
       # Z6-07 (24/08/2026, P-11): histórico completo — este é o outro job que
       # a PAREAMENTO-01 nomeia como precisando dele (portões futuros que
       # comparam com o passado, como o P-09 desta família, nascem aqui).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
@@ -747,7 +747,7 @@ jobs:
     # falha deste job não pode cancelar nem mascarar o `lint-test`, o `mypy` ou
     # o `runtime-smoke`, que respondem perguntas diferentes.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # SEM `actions/setup-python`: o Python que ele instala é isolado e NÃO
       # enxerga /usr/lib/python3/dist-packages, onde o `python3-gi` do sistema
       # mora. Instalar PyGObject pelo pip ao lado das typelibs do sistema já
@@ -936,7 +936,7 @@ jobs:
     # Quatro portões declarados, zero portões vivos. A partir daqui eles rodam
     # aqui — que é onde o `hooksPath` de ninguém alcança.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -965,7 +965,7 @@ jobs:
     name: Mypy (gate rígido)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -998,7 +998,7 @@ jobs:
       TRANSPORT: ${{ matrix.transport }}
       DESKTOP_ENV: ${{ matrix.desktop_env }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -1091,7 +1091,7 @@ jobs:
     name: Build wheel (para smoke multi-distro)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -1153,7 +1153,7 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fontes da distro (${{ matrix.distro }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
@@ -1279,7 +1279,7 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fontes da distro (${{ matrix.distro }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes

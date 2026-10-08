@@ -46,7 +46,7 @@ jobs:
     #   3. o módulo NixOS avalia com `enable = true` e registra as regras, a unidade
     #      do snapshot dos bonds e os módulos do kernel.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
