@@ -330,8 +330,11 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     A `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (26/08/2026) FOI REVOGADA em
     09/09/2026 pela `D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`: a cor
     de outro controle se recusa no GESTO, com o X, *«e nada se desloca
-    sozinho»*. O que este resolvedor segue cumprindo é o FÓSSIL de 08/09 (a
-    cor escolhida para outro número sai sozinha, ver `_e_fossil`). O SALTO do
+    sozinho»*. A cor escolhida à mão acompanha o controle em qualquer número
+    (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`, ver `_e_fossil`): só o
+    legado prova fóssil, pela forma, e quando a escolha de um controle cai no
+    tom automático de outro (a mesa se renumerou), quem cede é a automática,
+    com ou sem a cor do plástico (`_repetida`). O SALTO do
     fóssil, do legado e da cor repetida ao primeiro tom livre não tem decisão
     de pé: é o que evita duas luzes iguais sem apagar nenhuma, e a
     A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01 o registra como o que é
@@ -423,11 +426,10 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
             return _ja_acesa(peca.pedida, tomadas, vizinhanca=False)
         if _ja_acesa(peca.pedida, tomadas):
             return True
-        if peca.do_plastico is None:
-            return False
         return _ja_acesa(
             peca.pedida,
             (luz for dono, luz in escolhas_que_ficam if dono != peca.uniq),
+            vizinhanca=peca.do_plastico is not None,
         )
 
     def _primeiro_tom_livre(peca: PecaDaMesa) -> RGB | None:

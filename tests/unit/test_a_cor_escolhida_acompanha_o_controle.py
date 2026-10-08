@@ -15,7 +15,10 @@ Três réguas na REGRA (`PecaDaMesa` → `fosseis`/`cores_sem_colisao`) e uma no
 2. `_e_fossil` tratando o legado como escolha (`return False` antes da prova pela
    forma) → a régua 2 reprova;
 3. `_repetida` sem consultar `escolhas_que_ficam` para a cor da paleta → a régua 3
-   reprova (a automática vence a escolha).
+   reprova (a automática vence a escolha);
+4. `_repetida` com o `if peca.do_plastico is None: return False` de volta → a automática
+   do número sem o plástico vence a escolha que voltou noutro número, e a régua 3 reprova;
+   a vizinhança ligada também sem o plástico reprova a régua do tom vizinho.
 """
 from __future__ import annotations
 
@@ -147,6 +150,31 @@ class TestNuncaDuasIguais:
 
         assert saida[UNIQS[1]] == azul
         assert saida[UNIQS[0]] != azul
+
+    def test_sem_a_cor_do_plastico_a_automatica_do_numero_tambem_cede(self) -> None:
+        """O azul escolhido quando ele era o P1; ele sai, outro vira P1, e ele volta P2.
+
+        Sem a cor do plástico (controle que não a informa), a automática é a do número:
+        o novo P1 acende o azul do número 1, e é ela quem cede, não a escolha.
+        """
+        azul = player_slot_color(1)
+        p1 = _automatica(UNIQS[0], 1)
+        p2 = _escolhida(UNIQS[1], azul, para=1, numero=2)
+
+        saida = cores_sem_colisao([p1, p2])
+
+        assert saida[UNIQS[1]] == azul, "a automática do número venceu a escolha do controle"
+        assert saida[UNIQS[0]] != azul, "duas luzes iguais na mesa"
+
+    def test_sem_o_plastico_a_automatica_nao_cede_a_vizinha(self) -> None:
+        """Sem o plástico, a automática cede só ao MESMO tom, e não a um tom vizinho."""
+        quase_azul = (20, 40, 255)
+        p1 = _automatica(UNIQS[0], 1)
+        p2 = _escolhida(UNIQS[1], quase_azul, para=2, numero=2)
+
+        saida = cores_sem_colisao([p1, p2])
+
+        assert saida == {UNIQS[0]: player_slot_color(1), UNIQS[1]: quase_azul}
 
 
 class _NoDeLed:

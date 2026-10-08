@@ -2131,15 +2131,8 @@ def _perfil_na_economia(
 def _controllers_to_procedencias(
     controllers: dict[str, ControllerOverrides] | None,
 ) -> dict[str, object]:
-    """Como cada cor do perfil foi escolhida (`{uniq: procedência}`).
-
-    O número gravado em `lightbar_para_o_numero` diz «escolhida à mão» (e para qual
-    número), e NÃO «vale só neste número»: `D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`,
-    dela, 29/09/2026 (~21h40, «Acompanha o controle»). A regra de 08/09, em que a cor
-    gravada virava fóssil e saía sozinha quando o número do aparelho mudava, foi
-    revogada por ela; o número fica no disco porque separa a escolha do legado (sem
-    carimbo), que ainda prova fóssil pela forma (`led_control._e_fossil`).
-    """
+    """A cor escolhida à mão de cada peça (`{uniq: procedência}`), que acompanha o controle em
+    qualquer número (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`; ver `led_control._e_fossil`)."""
     out: dict[str, object] = {}
     for uniq, cfg in (controllers or {}).items():
         if cfg.leds is None or "lightbar" not in cfg.leds.model_fields_set:
