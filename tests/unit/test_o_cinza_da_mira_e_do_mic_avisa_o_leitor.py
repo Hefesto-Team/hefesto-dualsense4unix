@@ -157,7 +157,7 @@ def test_a_geometria_nao_mudou(medido: dict) -> None:
         assert mira[2] > 0 and mira[3] > 0, f"{estado}: o chip da Mira sumiu {mira}"
         assert mira[1] == giro[1] == accel[1], (
             f"{estado}: o chip da Mira saiu da linha dos sensores: {mira} contra {giro}")
-        # A LARGURA É A DO RÓTULO (08/10/2026): o «Mira Virtual» media o mesmo que o
+        # A LARGURA É A DO RÓTULO (08/10/2026): o «Mira Virtual» tinha a largura do
         # «Acelerômetro» por acaso de tamanho de texto, e o «Analógico Virtual» é mais
         # largo. O que prova o invólucro sem caixa é o `display:contents` de cada um
         # entre o botão e a grade, e a mesma altura dos chips.
