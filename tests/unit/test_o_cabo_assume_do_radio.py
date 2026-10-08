@@ -13,7 +13,9 @@ Na bancada, 19:42 de 25/09, o kernel recusou o HID do cabo::
     playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address …
     playstation 0003:054C:0CE6.001B: probe with driver playstation failed with error -17
 
-e o ``connect()`` real, com a enumeração do kernel, ficou no rádio. Mais duas
+(o produto não lê mais essa frase, desde 08/10/2026: o endereço do gêmeo está no
+``HID_UNIQ`` do ``uevent`` do próprio HID recusado, que o driver gravou ANTES de
+recusar) e o ``connect()`` real, com a enumeração do kernel, ficou no rádio. Mais duas
 camadas, medidas no caminho real do backend: com os DOIS nós visíveis ele
 ficava com o que o hidapi listasse primeiro, e com o rádio saindo e o cabo
 entrando num tique só ele ficava com o handle do nó MORTO do rádio.
@@ -30,7 +32,8 @@ Código de produto de verdade: o ``PyDualSenseController`` (``connect``,
 Os dublês, e por que nenhum é mais frouxo que o real:
 
 - :class:`Kernel` é o ``hid-playstation``: um aparelho HID por conexão, e a
-  RECUSA por endereço repetido (``-EEXIST``) com a linha no diário. O cabo
+  RECUSA por endereço repetido (``-EEXIST``), que deixa o ``HID_UNIQ`` no
+  ``uevent`` do HID. O cabo
   recusado fica no barramento HID sem driver (uma pasta de verdade, que o
   produto lê com ``os.listdir``) e sem nó nenhum. A regra 85 só roda se estiver
   "instalada", e só na SAÍDA de um físico;
@@ -108,7 +111,7 @@ class Kernel:
         raiz.mkdir(parents=True, exist_ok=True)
         self.aparelhos: dict[str, dict[str, Any]] = {}
         self.presos: dict[str, str] = {}
-        self.diario: list[str] = []
+        self.uevent_legivel = True
         self.dono_do_grab: dict[str, str] = {}
         self.ebusy: list[str] = []
         self.regra_instalada = True
@@ -141,6 +144,7 @@ class Kernel:
             self.presos.pop(ap["uniq"], None)
             self.dono_do_grab.pop(ap["evdev"], None)
             (self.raiz / inst / "driver").unlink()
+        (self.raiz / inst / "uevent").unlink(missing_ok=True)
         (self.raiz / inst).rmdir()
         if ap["barramento"] == "usb":
             self.na_tomada.discard(ap["uniq"])
@@ -170,10 +174,12 @@ class Kernel:
         ap = self.aparelhos[inst]
         if ap["uniq"] in self.presos:
             mac = MAC_DE[ap["uniq"]]
-            self.diario.append(f"playstation {inst}: Duplicate device found for MAC address {mac}.")
-            self.diario.append(
-                f"playstation {inst}: probe with driver playstation failed with error -17"
-            )
+            if self.uevent_legivel:
+                # o driver leu o endereço (`hdev->uniq`) e só depois recusou por -EEXIST
+                (self.raiz / inst / "uevent").write_text(
+                    f"HID_ID=0003:0000054C:00000CE6\nHID_UNIQ={mac}\nMODALIAS=hid:b0003g0001\n",
+                    encoding="utf-8",
+                )
             return
         ap["preso"] = True
         self.presos[ap["uniq"]] = inst
@@ -384,7 +390,7 @@ class MesaDoCabo:
         coop: bool = True,
         jogo: bool = True,
         mascara: str = "dualsense",
-        diario_legivel: bool = True,
+        uevent_legivel: bool = True,
         regra_instalada: bool = True,
         watch_de_verdade: bool = True,
     ) -> None:
@@ -392,7 +398,7 @@ class MesaDoCabo:
         self.kernel = Kernel(tmp_path / "sys-bus-hid-devices")
         self.kernel.regra_instalada = regra_instalada
         self.bluez = BlueZ(self.kernel)
-        self.diario_legivel = diario_legivel
+        self.kernel.uevent_legivel = uevent_legivel
         self.nativo = False
         regra = tmp_path / "rules.d" / oce.NOME_DA_REGRA
         if regra_instalada:
@@ -457,9 +463,6 @@ class MesaDoCabo:
         self.vpads.append(vpad)
         return vpad
 
-    def ler_o_diario(self) -> str | None:
-        return "\n".join(self.kernel.diario) if self.diario_legivel else None
-
     def _o_watch_de_verdade(self, watch: Any) -> bool:
         """O `InputDirWatch.poll` como o real: "mudou" só quando os nós mudaram."""
         foto = frozenset(self.kernel.nodes.values())
@@ -490,7 +493,6 @@ class MesaDoCabo:
                 self.daemon,  # type: ignore[arg-type]
                 agora=self.relogio.t,
                 leitor_do_bluez=self.bluez,
-                ler_o_diario=self.ler_o_diario,
             )
         )
         self.inst.read_state()
@@ -714,7 +716,7 @@ class TestOCaboAssume:
         assert {u: mesa.boneco_de(u) for u in UNIQS} == bonecos
         assert all(getattr(b, "flavor", None) == mascara for b in bonecos.values())
 
-    @pytest.mark.parametrize("diario_legivel", [True, False], ids=["com-diario", "sem-diario"])
+    @pytest.mark.parametrize("uevent_legivel", [True, False], ids=["com-endereco", "sem-endereco"])
     @pytest.mark.parametrize(
         ("quantos", "posicao"),
         [(1, 0), (2, 1), (4, 0), (4, 3)],
@@ -726,14 +728,14 @@ class TestOCaboAssume:
         tmp_path: Path,
         quantos: int,
         posicao: int,
-        diario_legivel: bool,
+        uevent_legivel: bool,
     ) -> None:
         """Conferência de 25/09: pôr, tirar e pôr de novo dentro do teto."""
         mesa = montar(
             monkeypatch,
             tmp_path,
             ("bt", "bt", "bt", "bt")[:quantos],
-            diario_legivel=diario_legivel,
+            uevent_legivel=uevent_legivel,
         )
         alvo = UNIQS[posicao]
         numeros = mesa.numeros()
@@ -867,7 +869,7 @@ class TestQuandoOCaboNaoAssume:
         )
         assert mesa.transporte_de(UNIQS[0]) == "bt"
 
-    def test_sem_o_diario_a_borda_da_carga_acha_o_par(
+    def test_sem_o_endereco_do_cabo_a_borda_da_carga_acha_o_par(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         mesa = montar(
@@ -875,17 +877,17 @@ class TestQuandoOCaboNaoAssume:
             tmp_path,
             ("bt", "bt", "bt"),
             na_tomada=frozenset({UNIQS[2]}),
-            diario_legivel=False,
+            uevent_legivel=False,
         )
         plugar_o_cabo_e_esperar(mesa, UNIQS[1], tiques=6)
         assert mesa.bluez.desconectados == [UNIQS[1]]
         assert mesa.transporte_de(UNIQS[1]) == "usb"
         assert mesa.transporte_de(UNIQS[2]) == "bt"
 
-    def test_sem_o_diario_e_com_dois_cabos_ninguem_cai(
+    def test_sem_o_endereco_do_cabo_e_com_dois_cabos_ninguem_cai(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt"), diario_legivel=False)
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt"), uevent_legivel=False)
         mesa.kernel.conectar(UNIQS[0], "usb")
         mesa.kernel.conectar(UNIQS[1], "usb")
         for _ in range(6):
@@ -933,16 +935,16 @@ class TestQuandoOCaboNaoAssume:
     @pytest.mark.parametrize(
         "falha", ["trava-ocupada", "o-bluez-levantou", "o-bluez-nao-respondeu"]
     )
-    @pytest.mark.parametrize("diario_legivel", [True, False], ids=["com-diario", "sem-diario"])
+    @pytest.mark.parametrize("uevent_legivel", [True, False], ids=["com-endereco", "sem-endereco"])
     def test_o_radio_que_nao_caiu_de_primeira_cai_na_proxima(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         falha: str,
-        diario_legivel: bool,
+        uevent_legivel: bool,
     ) -> None:
         """Conferência de 25/09: uma recusa PASSAGEIRA do BlueZ não é desistência."""
-        mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt"), diario_legivel=diario_legivel)
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt"), uevent_legivel=uevent_legivel)
         desconectar = mesa.bluez.desconectar
         aparelhos = mesa.bluez.aparelhos
         estado = {"falhas": 1}
@@ -1007,29 +1009,36 @@ class TestOCaboEmEspera:
             (raiz / inst).symlink_to(hid)
         assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0DF2.0015")]
 
-    def test_a_linha_do_kernel_da_o_endereco(self) -> None:
-        texto = (
-            "playstation 0003:054C:0CE6.001B: hidraw1: USB HID v1.11 Gamepad\n"
-            "playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address "
-            "aa:bb:cc:00:00:02.\n"
-            "playstation 0003:054C:0CE6.001B: probe with driver playstation failed with error -17\n"
+    def test_o_hid_recusado_mostra_o_endereco_do_gemeo_no_uevent(self, tmp_path: Path) -> None:
+        raiz = tmp_path / "hid"
+        hid = raiz / "0003:054C:0CE6.001B"
+        hid.mkdir(parents=True)
+        (hid / "uevent").write_text(
+            f"HID_ID=0003:0000054C:00000CE6\nHID_UNIQ={MACS[1]}\nHID_NAME=Sony\n", encoding="utf-8"
         )
-        assert oce.enderecos_recusados(texto) == {"0003:054C:0CE6.001B": UNIQS[1]}
+        (cabo,) = oce.cabos_em_espera(raiz)
+        assert cabo == oce.CaboEmEspera("0003:054C:0CE6.001B", uniq=MACS[1])
+        assert oce.mac_de_12(cabo.uniq) == UNIQS[1]
 
     def test_o_contador_do_kernel_passa_de_quatro_digitos(self, tmp_path: Path) -> None:
         """``%04X`` é largura mínima: a instância 0x10020 existe num boot longo."""
         raiz = tmp_path / "hid"
         (raiz / "0003:054C:0CE6.10020").mkdir(parents=True)
-        assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0CE6.10020")]
-        texto = (
-            "playstation 0003:054C:0CE6.10020: Duplicate device found for MAC address "
-            "aa:bb:cc:00:00:03.\n"
+        (raiz / "0003:054C:0CE6.10020" / "uevent").write_text(
+            f"HID_UNIQ={MACS[2]}\n", encoding="utf-8"
         )
-        assert oce.enderecos_recusados(texto) == {"0003:054C:0CE6.10020": UNIQS[2]}
+        assert oce.cabos_em_espera(raiz) == [
+            oce.CaboEmEspera("0003:054C:0CE6.10020", uniq=MACS[2])
+        ]
 
-    def test_o_diario_que_nao_se_deixa_ler_e_nao_sei(self) -> None:
-        assert oce.ler_o_diario_do_kernel(lambda _cmd: "") is None
-        assert oce.ler_o_diario_do_kernel(lambda _cmd: None) is None
+    def test_o_uevent_sem_endereco_ou_ilegivel_nao_e_a_mesma_coisa(self, tmp_path: Path) -> None:
+        """Sem a linha ``HID_UNIQ``: o driver nunca leu (``""``). Sem o arquivo: não sei."""
+        raiz = tmp_path / "hid"
+        (raiz / "0003:054C:0CE6.0001").mkdir(parents=True)
+        (raiz / "0003:054C:0CE6.0002").mkdir()
+        (raiz / "0003:054C:0CE6.0001" / "uevent").write_text("HID_NAME=Sony\n", encoding="utf-8")
+        uniqs = {c.instancia: c.uniq for c in oce.cabos_em_espera(raiz)}
+        assert uniqs == {"0003:054C:0CE6.0001": "", "0003:054C:0CE6.0002": None}
 
     def test_a_regra_instalada_e_lida_na_chamada(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -1089,25 +1098,48 @@ class TestOCaboEmEspera:
 
     def test_a_vigia_espera_a_probe_e_desiste_de_quem_nao_e_gemeo(self) -> None:
         vigia = oce.VigiaDoCabo()
-        cabo = oce.CaboEmEspera("0003:054C:0CE6.0030")
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0030", uniq="")
         vigia.observar_os_cabos([cabo], 100.0)
         no_radio: dict[str, str | None] = {UNIQS[0]: "carregando"}
-        cedo = vigia.decidir(cabo, diario={}, no_radio=no_radio, agora=101.0)
+        cedo = vigia.decidir(cabo, no_radio=no_radio, agora=101.0)
         assert cedo.par is None and not cedo.desistir
-        tarde = vigia.decidir(
-            cabo, diario={}, no_radio=no_radio, agora=100.0 + oce.ESPERA_PARA_SER_ORFAO_S
-        )
+        tarde = vigia.decidir(cabo, no_radio=no_radio, agora=100.0 + oce.ESPERA_PARA_SER_ORFAO_S)
         assert tarde.par is None and tarde.desistir
+
+    def test_o_gemeo_fora_da_mesa_do_radio_e_desistencia(self) -> None:
+        vigia = oce.VigiaDoCabo()
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0035", uniq=MAC_DE[UNIQS[1]])
+        vigia.observar_os_cabos([cabo], 0.0)
+        decisao = vigia.decidir(cabo, no_radio={UNIQS[0]: None}, agora=0.0)
+        assert decisao.par is None and decisao.desistir
+
+    def test_o_endereco_do_cabo_vence_a_borda_da_carga(self) -> None:
+        """Com o endereço lido, a carga de OUTRO controle não manda no par."""
+        vigia = oce.VigiaDoCabo()
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0036", uniq=MAC_DE[UNIQS[1]])
+        vigia.observar_os_cabos([cabo], 100.0)
+        vigia.carga_de_fora_desde[UNIQS[0]] = 100.0
+        no_radio: dict[str, str | None] = {UNIQS[0]: "carregando", UNIQS[1]: "descarregando"}
+        decisao = vigia.decidir(cabo, no_radio=no_radio, agora=101.0)
+        assert (decisao.par, decisao.fonte) == (UNIQS[1], "hid_uniq_do_cabo")
+
+    def test_sem_ler_o_endereco_a_borda_da_carga_acha_o_par(self) -> None:
+        vigia = oce.VigiaDoCabo()
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0037", uniq=None)
+        vigia.observar_os_cabos([cabo], 100.0)
+        vigia.carga_de_fora_desde[UNIQS[0]] = 100.0
+        no_radio: dict[str, str | None] = {UNIQS[0]: "carregando", UNIQS[1]: "descarregando"}
+        decisao = vigia.decidir(cabo, no_radio=no_radio, agora=100.0 + oce.ESPERA_PARA_SER_ORFAO_S)
+        assert (decisao.par, decisao.fonte) == (UNIQS[0], "borda_da_carga")
 
     def test_o_teto_nao_derruba_o_mesmo_radio_em_laco(self) -> None:
         vigia = oce.VigiaDoCabo()
-        cabo = oce.CaboEmEspera("0003:054C:0CE6.0031")
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0031", uniq=MAC_DE[UNIQS[0]])
         vigia.observar_os_cabos([cabo], 0.0)
-        diario = {cabo.instancia: UNIQS[0]}
         no_radio: dict[str, str | None] = {UNIQS[0]: None}
-        assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=0.0).par == UNIQS[0]
+        assert vigia.decidir(cabo, no_radio=no_radio, agora=0.0).par == UNIQS[0]
         vigia.derrubou(UNIQS[0], 0.0)
-        de_novo = vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0)
+        de_novo = vigia.decidir(cabo, no_radio=no_radio, agora=10.0)
         assert de_novo.par is None and de_novo.desistir
 
     def test_a_recusa_do_bluez_espera_e_tem_teto(self) -> None:
@@ -1128,15 +1160,14 @@ class TestOCaboEmEspera:
 
     def test_o_teto_sai_quando_o_cabo_assumiu(self) -> None:
         vigia = oce.VigiaDoCabo()
-        cabo = oce.CaboEmEspera("0003:054C:0CE6.0032")
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0032", uniq=MAC_DE[UNIQS[0]])
         vigia.observar_os_cabos([cabo], 0.0)
-        diario = {cabo.instancia: UNIQS[0]}
         no_radio: dict[str, str | None] = {UNIQS[0]: None}
         vigia.derrubou(UNIQS[0], 0.0)
         vigia.observar_quem_esta_no_cabo([UNIQS[1]])
-        assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).desistir
+        assert vigia.decidir(cabo, no_radio=no_radio, agora=10.0).desistir
         vigia.observar_quem_esta_no_cabo([UNIQS[0]])
-        assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).par == UNIQS[0]
+        assert vigia.decidir(cabo, no_radio=no_radio, agora=10.0).par == UNIQS[0]
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -1356,7 +1387,6 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
         "hefesto_dualsense4unix.daemon.subsystems.gamepad.rehide_physical_hidraw",
         lambda _d: None,
     )
-    monkeypatch.setattr(oce, "ler_o_diario_do_kernel", mesa.ler_o_diario)
     monkeypatch.setattr(
         oce, "derrubar_o_radio", lambda uniq, leitor=None: _derrubar_na_bancada(mesa, uniq)
     )

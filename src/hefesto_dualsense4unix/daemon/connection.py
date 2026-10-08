@@ -298,7 +298,6 @@ async def vigiar_o_cabo_em_espera(
     *,
     agora: float | None = None,
     leitor_do_bluez: Any = None,
-    ler_o_diario: Any = None,
 ) -> int:
     """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram."""
     ctrl = getattr(daemon, "controller", None)
@@ -337,16 +336,9 @@ async def vigiar_o_cabo_em_espera(
         if vigia.primeira_vez("impedida"):
             logger.warning("o_cabo_em_espera_impedido", motivos=impedimentos)
         return 0
-    ler = ler_o_diario if callable(ler_o_diario) else oce.ler_o_diario_do_kernel
-    try:
-        texto = await asyncio.to_thread(ler)
-    except Exception as exc:
-        logger.debug("o_cabo_em_espera_diario_falhou", err=str(exc))
-        texto = None
-    diario = oce.enderecos_recusados(texto) if texto else None
     passaram = 0
     for cabo in pendentes:
-        decisao = vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=agora)
+        decisao = vigia.decidir(cabo, no_radio=no_radio, agora=agora)
         if decisao.par is None:
             if decisao.desistir:
                 vigia.resolver(cabo.instancia)

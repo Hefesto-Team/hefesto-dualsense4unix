@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import os
 import re
-import subprocess
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -28,10 +27,9 @@ REGRAS_QUE_RELIGAM: tuple[str, ...] = (
 #: O HID de um DualSense (comum ou Edge) NO CABO: barramento 0003, Sony 054C.
 _FORMA_DO_CABO = re.compile(r"^0003:054C:(0CE6|0DF2)\.[0-9A-F]{4,}$")
 
-_LINHA_DA_RECUSA = re.compile(
-    r"(?P<inst>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}): "
-    r"Duplicate device found for MAC address (?P<mac>[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})"
-)
+#: ``HID_UNIQ=<mac>`` no ``uevent`` do HID: o endereço que o ``hid-playstation`` leu
+#: do controle ANTES de recusar a probe (ver :func:`cabos_em_espera`).
+_RE_HID_UNIQ = re.compile(r"^HID_UNIQ=(.*)$", re.MULTILINE)
 
 CARGA_DE_FORA = frozenset({"carregando", "cheio", "fora_de_faixa", "erro"})
 
@@ -44,16 +42,21 @@ TETO_POR_CONTROLE_S = 120.0
 ESPERA_DEPOIS_DA_RECUSA_S = 5.0
 RECUSAS_ANTES_DE_DESISTIR = 5
 
-ESPERA_DO_DIARIO_S = 3.0
-
 QUEM = "o-cabo-assume"
 
 
 @dataclass(frozen=True)
 class CaboEmEspera:
-    """Um HID de DualSense no cabo, sem driver: o que o kernel deixou esperando."""
+    """Um HID de DualSense no cabo, sem driver: o que o kernel deixou esperando.
+
+    ``uniq`` é o ``HID_UNIQ`` que o ``uevent`` do HID mostra: o endereço do
+    controle que o driver leu antes de recusar a probe por endereço repetido, e
+    portanto o do GÊMEO no rádio. ``None`` = não deu para ler (não sei); ``""`` =
+    o driver nunca chegou a ler (não há gêmeo a derrubar).
+    """
 
     instancia: str
+    uniq: str | None = None
 
 
 @dataclass(frozen=True)
@@ -113,45 +116,25 @@ def cabos_em_espera(raiz: str | os.PathLike[str] | None = None) -> list[CaboEmEs
         real = os.path.realpath(caminho)
         if "/devices/virtual/" in real or pad_usb.e_pad_nosso(real):
             continue
-        achados.append(CaboEmEspera(instancia=nome))
+        achados.append(CaboEmEspera(instancia=nome, uniq=_uniq_do_hid(caminho)))
     return achados
 
 
-def enderecos_recusados(texto: str) -> dict[str, str]:
-    """``{instância: endereço 12-hex}`` das recusas por endereço repetido. Pura."""
-    achados: dict[str, str] = {}
-    for linha in texto.splitlines():
-        casou = _LINHA_DA_RECUSA.search(linha)
-        if casou is None:
-            continue
-        endereco = mac_de_12(casou.group("mac"))
-        if endereco is not None:
-            achados[casou.group("inst").upper()] = endereco
-    return achados
+def _uniq_do_hid(caminho: Path) -> str | None:
+    """O ``HID_UNIQ`` do ``uevent`` do HID, ou ``None`` se o arquivo não se lê.
 
-
-def ler_o_diario_do_kernel(
-    executor: Callable[[list[str]], str | None] | None = None,
-) -> str | None:
-    """O texto do diário do kernel deste boot, ou ``None`` se não deu para ler."""
-    comando = ["journalctl", "-k", "-b", "-o", "cat", "--no-pager"]
-    if executor is not None:
-        texto = executor(comando)
-        return texto or None
-    ambiente = dict(os.environ)
-    ambiente["LC_ALL"] = "C"
+    O ``hid-playstation`` grava o endereço em ``hdev->uniq`` ANTES de registrar o
+    aparelho na lista (e é essa lista que recusa o gêmeo, com ``-EEXIST``), então
+    o HID recusado continua mostrando o endereço no ``uevent`` sem driver nenhum.
+    É o mesmo ``uevent`` que a regra do udev e o ``sinal_da_barra`` já leem; nada
+    do texto do diário do kernel é preciso.
+    """
     try:
-        feito = subprocess.run(
-            comando,
-            capture_output=True,
-            text=True,
-            timeout=ESPERA_DO_DIARIO_S,
-            check=False,
-            env=ambiente,
-        )
-    except (OSError, subprocess.SubprocessError):
+        texto = (caminho / "uevent").read_text(encoding="utf-8", errors="replace")
+    except OSError:
         return None
-    return feito.stdout or None
+    achou = _RE_HID_UNIQ.search(texto)
+    return achou.group(1).strip() if achou else ""
 
 
 def impedimentos_da_troca(regras: Iterable[str] | None = None) -> list[str]:
@@ -263,27 +246,27 @@ class VigiaDoCabo:
         self,
         cabo: CaboEmEspera,
         *,
-        diario: Mapping[str, str] | None,
         no_radio: Mapping[str, str | None],
         agora: float,
     ) -> Decisao:
         """O par do cabo no rádio. Função do estado; não escreve em nada fora dela."""
         maduro = agora - self.visto_em.get(cabo.instancia, agora) >= ESPERA_PARA_SER_ORFAO_S
-        if diario is not None:
-            endereco = diario.get(cabo.instancia.upper())
+        if cabo.uniq is not None:
+            endereco = mac_de_12(cabo.uniq)
             if endereco is None:
                 if not maduro:
                     return Decisao(motivo="a probe do cabo ainda pode estar correndo")
                 return Decisao(
-                    motivo="o kernel não recusou este cabo por endereço repetido", desistir=True
+                    motivo="o driver não leu endereço deste cabo: não há gêmeo no rádio",
+                    desistir=True,
                 )
             if endereco not in no_radio:
                 return Decisao(
                     motivo="o gêmeo deste cabo não é um controle do rádio na mesa", desistir=True
                 )
-            return self._com_teto(Decisao(par=endereco, fonte="diario_do_kernel"), agora)
+            return self._com_teto(Decisao(par=endereco, fonte="hid_uniq_do_cabo"), agora)
         if not maduro:
-            return Decisao(motivo="sem o diário do kernel, o cabo espera ficar órfão")
+            return Decisao(motivo="sem o endereço do cabo, ele espera ficar órfão")
         visto = self.visto_em.get(cabo.instancia, agora)
         candidatos = [
             uniq
@@ -295,7 +278,7 @@ class VigiaDoCabo:
         if len(candidatos) != 1:
             return Decisao(
                 motivo=(
-                    "sem o diário do kernel, e a borda da carga aponta "
+                    "sem o endereço do cabo, e a borda da carga aponta "
                     f"{len(candidatos)} controles no rádio"
                 ),
                 desistir=True,
@@ -355,9 +338,7 @@ __all__ = [
     "VigiaDoCabo",
     "cabos_em_espera",
     "derrubar_o_radio",
-    "enderecos_recusados",
     "impedimentos_da_troca",
-    "ler_o_diario_do_kernel",
     "mac_com_dois_pontos",
     "mac_de_12",
     "mascarar",
