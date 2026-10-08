@@ -43,6 +43,24 @@ SÓ COM A STEAM FECHADA, pelo mesmo motivo de sempre: a Steam viva regrava o
 Quem chama de hora em hora é o ``hefesto-steam-input-guard``, na mesma carona
 do reparo do atalho — e ali "adiei" não é falha.
 
+ONDE A LINHA MORA, E O QUE SE MEDIU EM 08/10/2026
+-------------------------------------------------
+A Steam lê a opção de um jogo em ``…/Software/Valve/Steam/apps/<appid>``, na
+linha ``LaunchOptions`` que é FILHA DIRETA do bloco do jogo — e o bloco de
+metade dos jogos tem blocos filhos (``cloud``, ``autocloud``…) ANTES dessa
+linha. O escritor antigo fechava o jogo no primeiro ``}`` que via, que era o
+do filho, e inseria a linha lá dentro: o relato dizia ``aplicado``, o vdf
+ganhava uma linha que ninguém lê, e a Steam lançava o jogo com a opção velha
+(o Sackboy, 06/10: ``apps/1599660/cloud/LaunchOptions`` com o MangoHud, e a
+do jogo intacta). Não era a conta errada (a máquina tem uma só), nem a nuvem
+regravando (a linha sobreviveu a todas as subidas da Steam do dia).
+
+Agora o escritor acompanha a PROFUNDIDADE do bloco do jogo, e o ``aplicar``
+só diz ``aplicado`` depois de reler o vdf e achar a opção onde a Steam a lê.
+Se o arquivo não a guarda, o relato diz ``desfeito_pela_steam``, nunca verde.
+E só a conta LOGADA (``config/loginusers.vdf``) recebe a linha: numa máquina
+com duas contas, a outra não é da Steam que vai subir.
+
 NÃO É UM SEGUNDO ESCRITOR DE VDF: quem escreve continua sendo este arquivo
 (:func:`aplicar`), pelas mesmas funções puras de parse que o resto do módulo
 irmão usa, com backup ``.bak.hefesto-opcoes-<ts>`` ao lado de cada vdf.
@@ -97,12 +115,25 @@ CABECALHO = """\
 """
 
 APLICADO = "aplicado"
+DESFEITO = "desfeito_pela_steam"
 NADA = "nada_a_fazer"
 ADIADO_JOGO = "adiado_jogo_aberto"
 ADIADO_STEAM = "adiado_steam_aberta"
 ERRO = "erro"
 
 _APPID = re.compile(r"^[0-9]{1,10}$")
+
+#: O contrato que o relato nomeia quando o vdf não guarda o que o dono escreveu.
+CONTRATO_DA_LINHA = (
+    "a Steam lê a opção de cada jogo na LaunchOptions filha direta de "
+    "Software/Valve/Steam/apps/<appid>, no localconfig.vdf da conta logada"
+)
+
+#: SteamID64 = esta base + o número da pasta ``userdata/<conta>``.
+_BASE_DO_STEAMID64 = 76561197960265728
+
+_PAR_DO_VDF = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s+"((?:[^"\\]|\\.)*)"\s*$')
+_CHAVE_DO_VDF = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s*$')
 
 
 def tabela_path(config_home: Path | None = None) -> Path:
@@ -185,70 +216,207 @@ def _valor_do_vdf(bruto: str) -> str:
     return bruto.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _e_chave(nu: str) -> bool:
+    """A linha é só ``"chave"`` (o nome de um bloco que vem a seguir)?"""
+    return nu.startswith('"') and nu.endswith('"') and nu.count('"') == 2
+
+
 def definir_opcoes_vdf_text(
     texto: str, desejadas: dict[str, str]
 ) -> tuple[str, list[str], list[tuple[str, str]]]:
-    """Põe ``desejadas`` (``{appid: linha pronta}``) na árvore CANÔNICA do vdf."""
+    """Põe ``desejadas`` (``{appid: linha pronta}``) na árvore CANÔNICA do vdf.
+
+    O jogo é um QUADRO de profundidade fixa: a ``LaunchOptions`` que a Steam lê
+    é a FILHA DIRETA do bloco dele, e um ``}`` de bloco filho (``cloud``,
+    ``autocloud``…) não fecha o jogo. Uma ``LaunchOptions`` que já more dentro
+    de um filho é alinhada ao mesmo valor (nunca criada lá): a linha do jogo
+    tem um valor só, em todas as cópias que o bloco dele guarda.
+    """
     linhas = texto.splitlines(keepends=True)
     pilha: list[str] = []
     saida: list[str] = []
     aplicados: list[str] = []
     pulados: list[tuple[str, str]] = []
     vistos: set[str] = set()
-    appid_atual: str | None = None
-    tem_linha = False
-    indent_do_bloco = "\t\t\t\t\t\t"
-    inicio_do_bloco = -1
+    quadro: dict[str, object] | None = None
 
     for linha in linhas:
         nu = linha.strip()
-        if nu.startswith('"') and nu.endswith('"') and nu.count('"') == 2:
+        if _e_chave(nu):
             pilha.append(nu.strip('"'))
             saida.append(linha)
             continue
         if nu == "{":
             saida.append(linha)
-            if pilha and _APPID.match(pilha[-1]) and e_a_arvore_canonica(pilha[:-1]):
-                appid_atual = pilha[-1]
-                tem_linha = False
-                inicio_do_bloco = len(saida)
+            if (
+                quadro is None
+                and pilha
+                and _APPID.match(pilha[-1])
+                and e_a_arvore_canonica(pilha[:-1])
+            ):
+                base = linha[: len(linha) - len(linha.lstrip())]
+                quadro = {
+                    "appid": pilha[-1], "fundo": len(pilha), "recuo": base + "\t",
+                    "tem_linha": False, "igual": False, "mudou": False,
+                }
             continue
         if nu == "}":
-            if appid_atual is not None and appid_atual in desejadas and not tem_linha:
-                base = saida[inicio_do_bloco] if inicio_do_bloco < len(saida) else ""
-                indent = base[: len(base) - len(base.lstrip())] or indent_do_bloco
-                valor = _valor_do_vdf(desejadas[appid_atual])
-                saida.append(f'{indent}"LaunchOptions"\t\t"{valor}"\n')
-                aplicados.append(appid_atual)
-                vistos.add(appid_atual)
-            appid_atual = None
+            if quadro is not None and len(pilha) == quadro["fundo"]:
+                appid = str(quadro["appid"])
+                if appid in desejadas:
+                    vistos.add(appid)
+                    if not quadro["tem_linha"]:
+                        valor = _valor_do_vdf(desejadas[appid])
+                        saida.append(f'{quadro["recuo"]}"LaunchOptions"\t\t"{valor}"\n')
+                        quadro["mudou"] = True
+                    if quadro["mudou"]:
+                        if appid not in aplicados:
+                            aplicados.append(appid)
+                    elif quadro["igual"]:
+                        pulados.append((appid, "ja_e_o_desejado"))
+                quadro = None
             if pilha:
                 pilha.pop()
             saida.append(linha)
             continue
         casou = re.match(r'^(\s*)"LaunchOptions"(\s*)"((?:[^"\\]|\\.)*)"(\s*)$', linha)
-        if casou and appid_atual is not None and appid_atual in desejadas:
-            atual = casou.group(3)
-            querido = _valor_do_vdf(desejadas[appid_atual])
-            tem_linha = True
-            vistos.add(appid_atual)
-            if atual == querido:
-                pulados.append((appid_atual, "ja_e_o_desejado"))
-                saida.append(linha)
-                continue
-            saida.append(
-                f'{casou.group(1)}"LaunchOptions"{casou.group(2)}"{querido}"{casou.group(4)}'
-            )
-            aplicados.append(appid_atual)
-            continue
-        if casou and appid_atual is not None:
-            tem_linha = True
+        if casou and quadro is not None:
+            no_jogo = len(pilha) == quadro["fundo"]
+            if no_jogo:
+                quadro["tem_linha"] = True
+            appid = str(quadro["appid"])
+            if appid in desejadas:
+                querido = _valor_do_vdf(desejadas[appid])
+                if casou.group(3) == querido:
+                    if no_jogo:
+                        quadro["igual"] = True
+                else:
+                    quadro["mudou"] = True
+                    saida.append(
+                        f'{casou.group(1)}"LaunchOptions"{casou.group(2)}"{querido}"{casou.group(4)}'
+                    )
+                    continue
         saida.append(linha)
 
     for appid in desejadas:
         if appid not in vistos:
             pulados.append((appid, "jogo_nao_esta_neste_vdf"))
     return "".join(saida), aplicados, pulados
+
+
+def opcoes_lidas_do_jogo(texto: str, appid: str) -> list[str]:
+    """Todo valor de ``LaunchOptions`` que o bloco canônico do jogo guarda.
+
+    O primeiro é o do jogo (o que a Steam lê); os demais, de blocos filhos.
+    Leitor próprio e independente do escritor: quem confere não pode errar
+    igual a quem escreveu.
+    """
+    pilha: list[str] = []
+    achados: list[str] = []
+    fundo: int | None = None
+    for linha in texto.splitlines():
+        nu = linha.strip()
+        if _e_chave(nu):
+            pilha.append(nu.strip('"'))
+            continue
+        if nu == "{":
+            if (
+                fundo is None
+                and pilha
+                and pilha[-1] == appid
+                and e_a_arvore_canonica(pilha[:-1])
+            ):
+                fundo = len(pilha)
+            continue
+        if nu == "}":
+            if fundo is not None and len(pilha) == fundo:
+                fundo = None
+            if pilha:
+                pilha.pop()
+            continue
+        par = _PAR_DO_VDF.match(linha)
+        if par and fundo is not None and par.group(1).lower() == "launchoptions":
+            achados.append(par.group(2))
+    return achados
+
+
+def conta_logada(raiz: Path) -> str | None:
+    """O número da pasta ``userdata/<conta>`` da conta que a Steam vai abrir.
+
+    Lê ``<raiz>/config/loginusers.vdf``: a conta marcada ``MostRecent``, ou, sem
+    marca, a de maior ``Timestamp``. ``None`` quando o arquivo não existe, não
+    se lê ou não tem conta — quem chama decide o que fazer sem resposta.
+    """
+    try:
+        texto = (raiz / "config" / "loginusers.vdf").read_text(
+            encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    pilha: list[str] = []
+    contas: dict[str, dict[str, str]] = {}
+    for linha in texto.splitlines():
+        nu = linha.strip()
+        if _e_chave(nu):
+            pilha.append(nu.strip('"'))
+            continue
+        if nu == "{":
+            continue
+        if nu == "}":
+            if pilha:
+                pilha.pop()
+            continue
+        par = _PAR_DO_VDF.match(linha)
+        if par and len(pilha) == 2 and pilha[0].lower() == "users":
+            contas.setdefault(pilha[1], {})[par.group(1).lower()] = par.group(2)
+    contas = {c: d for c, d in contas.items() if c.isdigit()}
+    if not contas:
+        return None
+    marcadas = [c for c, d in contas.items() if d.get("mostrecent") == "1"]
+
+    def _quando(conta: str) -> int:
+        bruto = contas[conta].get("timestamp", "")
+        return int(bruto) if bruto.isdigit() else 0
+
+    escolhida = max(marcadas or list(contas), key=_quando)
+    numero = int(escolhida)
+    return str(numero - _BASE_DO_STEAMID64 if numero > _BASE_DO_STEAMID64 else numero)
+
+
+def so_a_conta_logada(
+    alvos: list[Path],
+) -> tuple[list[Path], list[dict[str, str]]]:
+    """Separa os vdfs da conta logada dos das outras contas da mesma Steam.
+
+    Vdf que não tem a forma ``<raiz>/userdata/<conta>/config/localconfig.vdf``
+    passa (foi apontado à mão). Sem ``loginusers.vdf`` que se leia, só passa
+    quem é o ÚNICO vdf da raiz: com duas contas e sem resposta, adivinhar é
+    escrever na conta errada.
+    """
+    por_raiz: dict[Path | None, list[Path]] = {}
+    for vdf in alvos:
+        forma = (
+            len(vdf.parents) > 3
+            and vdf.parent.name == "config"
+            and vdf.parent.parent.parent.name == "userdata"
+        )
+        por_raiz.setdefault(vdf.parents[3] if forma else None, []).append(vdf)
+    aceitos: list[Path] = []
+    pulados: list[dict[str, str]] = []
+    for raiz, vdfs in por_raiz.items():
+        if raiz is None:
+            aceitos.extend(vdfs)
+            continue
+        logada = conta_logada(raiz)
+        for vdf in vdfs:
+            conta = vdf.parent.parent.name
+            if logada is not None and conta == logada:
+                aceitos.append(vdf)
+            elif logada is None and len(vdfs) == 1:
+                aceitos.append(vdf)
+            else:
+                motivo = "conta_logada_desconhecida" if logada is None else "conta_nao_logada"
+                pulados.append({"vdf": str(vdf), "appid": "", "reason": motivo})
+    return aceitos, pulados
 
 
 class Relato(TypedDict):
@@ -258,6 +426,7 @@ class Relato(TypedDict):
     aplicados: list[dict[str, str]]
     pulados: list[dict[str, str]]
     erros: list[dict[str, str]]
+    desfeitos: list[dict[str, str]]
     vdfs: int
 
 
@@ -268,10 +437,16 @@ def aplicar(
     config_home: Path | None = None,
     dry_run: bool = False,
 ) -> Relato:
-    """Aplica a tabela aos ``localconfig.vdf`` elegíveis. NUNCA levanta."""
+    """Aplica a tabela aos ``localconfig.vdf`` da conta logada. NUNCA levanta.
+
+    ``aplicado`` só sai depois de reler o vdf do disco e achar, em cada jogo, a
+    opção onde a Steam a lê; o que o arquivo não guarda vai para ``desfeitos``
+    e o status é ``desfeito_pela_steam``.
+    """
     tabela = ler(config_home)
     relato: Relato = {
-        "status": NADA, "aplicados": [], "pulados": [], "erros": [], "vdfs": 0,
+        "status": NADA, "aplicados": [], "pulados": [], "erros": [],
+        "desfeitos": [], "vdfs": 0,
     }
     if not tabela:
         return relato
@@ -287,10 +462,12 @@ def aplicar(
         appid: linha_desejada(opcoes, com_atalho=appid not in sem_atalho)
         for appid, opcoes in tabela.items()
     }
-    alvos = list(vdfs) if vdfs is not None else discover_vdfs(home)
+    todos = list(vdfs) if vdfs is not None else discover_vdfs(home)
+    alvos, de_outra_conta = so_a_conta_logada(todos)
     aplicados: list[dict[str, str]] = []
-    pulados: list[dict[str, str]] = []
+    pulados: list[dict[str, str]] = list(de_outra_conta)
     erros: list[dict[str, str]] = []
+    desfeitos: list[dict[str, str]] = []
     for vdf in alvos:
         if is_sandboxed_layout(vdf):
             pulados.append({"vdf": str(vdf), "appid": "", "reason": "vdf_sandbox"})
@@ -314,14 +491,25 @@ def aplicar(
             backup = vdf.with_name(vdf.name + f".bak.hefesto-opcoes-{int(time.time())}")
             backup.write_text(texto, encoding="utf-8", errors="surrogateescape")
             vdf.write_text(novo, encoding="utf-8", errors="surrogateescape")
+            no_disco = vdf.read_text(encoding="utf-8", errors="surrogateescape")
         except OSError as exc:
             erros.append({"vdf": str(vdf), "appid": "", "reason": str(exc)})
             continue
-        aplicados.extend({"vdf": str(vdf), "appid": a, "reason": ""} for a in feitos)
+        for appid in feitos:
+            lidas = opcoes_lidas_do_jogo(no_disco, appid)
+            querida = _valor_do_vdf(desejadas[appid])
+            if lidas and all(valor == querida for valor in lidas):
+                aplicados.append({"vdf": str(vdf), "appid": appid, "reason": ""})
+            else:
+                desfeitos.append({
+                    "vdf": str(vdf), "appid": appid, "reason": CONTRATO_DA_LINHA})
 
     relato["aplicados"], relato["pulados"], relato["erros"] = aplicados, pulados, erros
+    relato["desfeitos"] = desfeitos
     if erros:
         relato["status"] = ERRO
+    elif desfeitos:
+        relato["status"] = DESFEITO
     elif aplicados:
         relato["status"] = APLICADO
     return relato
@@ -331,12 +519,18 @@ def _imprimir(relato: Relato) -> int:
     """A saída do vigia: uma linha por ato, no formato dos irmãos."""
     for item in relato["aplicados"]:
         print(f"[opcoes-por-jogo] {item['appid']}: aplicado")
+    for item in relato["desfeitos"]:
+        print(
+            f"[opcoes-por-jogo] {item['appid']}: {DESFEITO} — o vdf não guarda a opção "
+            f"onde a Steam a lê ({item['reason']})",
+            file=sys.stderr,
+        )
     for item in relato["erros"]:
         print(f"[opcoes-por-jogo] erro: {item['reason']}", file=sys.stderr)
     print(f"[opcoes-por-jogo] resultado={relato['status']}")
     if relato["status"] in (ADIADO_JOGO, ADIADO_STEAM):
         return 3
-    return 1 if relato["status"] == ERRO else 0
+    return 1 if relato["status"] in (ERRO, DESFEITO) else 0
 
 
 def main(argv: list[str] | None = None) -> int:
