@@ -540,11 +540,11 @@ def test_no_nativo_a_aba_04_desenha_a_tira_na_cor() -> None:
 
 
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
-_DICA_NO_DIREITO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+_DICA_NO_DIREITO = ("Com o Analógico Virtual aceso, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
-_DICA_NO_ESQUERDO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+_DICA_NO_ESQUERDO = ("Com o Analógico Virtual aceso, o giro deste controle vai ao jogo "
                      "pelo analógico esquerdo.")
-_DICA_NO_CURSOR = "Com a Mira Virtual acesa, o giro deste controle move o cursor."
+_DICA_NO_CURSOR = "Com o Analógico Virtual aceso, o giro deste controle move o cursor."
 
 #: Os três modos vivos, na forma do `state_full` que `mode_of_state` lê.
 _NAVEGACAO = {"native_mode": False, "gamepad_emulation": {"enabled": False}}

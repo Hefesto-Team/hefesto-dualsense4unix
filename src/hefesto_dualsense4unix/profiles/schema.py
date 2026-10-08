@@ -291,24 +291,26 @@ class ProfileMovimentoConfig(BaseModel):
     #: quem não os alcança. `nenhum` = sem opinião: o touchpad é o do computador
     #: (TOUCHPAD-DO-SISTEMA-01). Vale onde há controle virtual, P1 a P4.
     toque: Literal["nenhum", "cursor", "zonas"] = "nenhum"
-    #: A INCLINAÇÃO — o acelerômetro vira analógico (mesma resposta). A tela tem
-    #: um chip «Inclinação» embaixo de cada analógico, e ele escolhe qual dos
-    #: dois ela move; os dois apagados são o `nenhum`.
+    #: A INCLINAÇÃO — o acelerômetro vira analógico (mesma resposta). O lado vem
+    #: do Analógico Virtual (o `lado` abaixo); o `nenhum` é a inclinação apagada.
     acelerometro: Literal["nenhum", "analogico_esquerdo", "analogico_direito"] = (
         "nenhum"
     )
     #: O «Mesmo parado» da lista «Só enquanto eu segurar» (D-2909-O-CONTROLE-PARADO-NAO-INCLINA):
     #: o controle num suporte segue inclinando, e a pausa do parado não vale para ele.
     mesmo_parado: bool = False
+    #: O lado do Analógico Virtual (O-ANALOGICO-VIRTUAL-E-UM-SO, 08/10): ligar liga neste
+    #: lado. O perfil que não o escreveu lê o direito, o lado de antes.
+    lado: Literal["analogico_esquerdo", "analogico_direito"] = "analogico_direito"
 
     @model_serializer(mode="wrap")
     def _o_toque_e_a_inclinacao_sem_opiniao_nao_vao_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Os campos de 28/09 e o de 29/09 só vão ao arquivo quando alguém os escreveu."""
+        """Os campos de 28/09, o de 29/09 e o de 08/10 só vão ao arquivo quando escritos."""
         dados = handler(self)
         if isinstance(dados, dict):
-            for novo in ("toque", "acelerometro", "mesmo_parado"):
+            for novo in ("toque", "acelerometro", "mesmo_parado", "lado"):
                 if novo not in self.model_fields_set:
                     dados.pop(novo, None)
         return dados
@@ -2258,6 +2260,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`False` = a inclinação pausa com o controle largado na mesa "
         "(D-2909-O-CONTROLE-PARADO-NAO-INCLINA). Nascer ligado faria o analógico "
         "seguir o controle torto parado, o defeito que a pausa cura.",
+    ),
+    "ProfileMovimentoConfig.lado": Nascimento(
+        E_CONTRATO,
+        "`analogico_direito` = o lado que o `ligada` sempre cravou. Nascer no "
+        "esquerdo trocaria o analógico de todo perfil gravado sem pedido "
+        "(O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01).",
     ),
 }
 

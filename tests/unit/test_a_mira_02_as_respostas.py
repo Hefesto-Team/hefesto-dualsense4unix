@@ -127,7 +127,9 @@ def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     corpo = _mira_set(servidor, uniq=_P4, inverter_horizontal=True)
     assert corpo["inverter_horizontal"] is True and corpo["inverter_vertical"] is False
     dele = load_profile("Bancada").controllers["aabbcc000004"].movimento
-    assert dele.model_fields_set == {"destino", "gatilho", "inverter_horizontal"}
+    # O Analógico Virtual liga o giro e a inclinação no lado (O-ANALOGICO-VIRTUAL-E-UM-SO).
+    assert dele.model_fields_set == {"destino", "acelerometro", "lado", "gatilho",
+                                     "inverter_horizontal"}
     vivo = rot.da_peca(servidor.store, _P4, rot.ativo(servidor.store))
     assert vivo is not None and (vivo.gatilho, vivo.inverter_horizontal) == ("l2", True)
 
@@ -187,7 +189,7 @@ def test_a_leitura_de_volta_traz_os_tres(perfis: Path, tmp_path: Path) -> None:
 
 
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
-_DICA_COM_A_MIRA = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+_DICA_COM_A_MIRA = ("Com o Analógico Virtual aceso, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
 
 
@@ -225,8 +227,8 @@ def test_a_dica_do_giroscopio_muda_so_com_a_mira_acesa(
 ) -> None:
     """`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`, POR CONTROLE: o P2 com a"""
     cards = _cards(monkeypatch, _ctx(**{
-        "aa:bb:cc:00:00:02": {"ligada": True},
-        "aa:bb:cc:00:00:03": {"ligada": False},
+        "aa:bb:cc:00:00:02": {"ligada": True, "virtual": True},
+        "aa:bb:cc:00:00:03": {"ligada": False, "virtual": False},
         "aa:bb:cc:00:00:04": None,
     }))
     dicas = {u[-1]: c["giro-dica"] for u, c in cards.items()}
@@ -237,7 +239,8 @@ def test_no_nativo_a_dica_de_hoje_volta_mesmo_com_a_mira_acesa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """No Nativo o jogo lê o controle físico — o giro chega como giroscópio, e"""
-    cards = _cards(monkeypatch, _ctx(nativo=True, **{"aa:bb:cc:00:00:02": {"ligada": True}}))
+    cards = _cards(monkeypatch, _ctx(
+        nativo=True, **{"aa:bb:cc:00:00:02": {"ligada": True, "virtual": True}}))
     assert next(iter(cards.values()))["giro-dica"] == _DICA_DE_HOJE
 
 
@@ -251,7 +254,8 @@ def test_no_nativo_o_chip_da_mira_fica_cinza_nos_quatro(
                           r'data-hef-classe="sem-mira" data-hef-quando="([^"]+)"',
                           _bancada_02())
     assert esperado and set(esperado) == {"NATIVO"}, esperado
-    miras = {f"aa:bb:cc:00:00:0{n}": {"ligada": n % 2 == 0} for n in (1, 2, 3, 4)}
+    miras = {f"aa:bb:cc:00:00:0{n}": {"ligada": n % 2 == 0, "virtual": n % 2 == 0}
+             for n in (1, 2, 3, 4)}
     for nativo, valor in ((True, "NATIVO"), (False, "")):
         cards = _cards(monkeypatch, _ctx(nativo=nativo, **miras))
         assert {c["mira-fora"] for c in cards.values()} == {valor}, (nativo, cards)
@@ -265,7 +269,7 @@ def test_no_nativo_o_clique_no_chip_nao_chega_ao_daemon() -> None:
     p = _PonteDaMira(_OK)
     with pytest.raises(RuntimeError) as erro:
         _o_gesto("02-controles.html", "mira")(
-            _ctx(nativo=True, **{"aa:bb:cc:00:00:01": {"ligada": False}}),
+            _ctx(nativo=True, **{"aa:bb:cc:00:00:01": {"ligada": False, "virtual": False}}),
             {"uniq": "aa:bb:cc:00:00:01"}, p)
     assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
     assert p.chamadas == [], "o chip cinza pediu ao daemon"
@@ -278,7 +282,7 @@ def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
     p = _PonteDaMira({"status": "nativo", "uniq": "aa:bb:cc:00:00:01", "motivo": "x"})
     with pytest.raises(RuntimeError) as erro:
         _o_gesto("02-controles.html", "mira")(
-            _ctx(**{"aa:bb:cc:00:00:01": {"ligada": False}}),
+            _ctx(**{"aa:bb:cc:00:00:01": {"ligada": False, "virtual": False}}),
             {"uniq": "aa:bb:cc:00:00:01"}, p)
     assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
     assert p.chamadas == [{"ligada": True, "uniq": "aa:bb:cc:00:00:01"}]
@@ -309,8 +313,8 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
 
     estado: dict[str, Any] = {"rumble_ff": {"per_vpad": [
         {"player": jogador, "motion_streaming": True, "motion_hz": 250.0}]}}
-    apagada = {**entrada, "mira": {"ligada": False}}
-    acesa = {**entrada, "mira": {"ligada": True}}
+    apagada = {**entrada, "mira": {"ligada": False, "virtual": False}}
+    acesa = {**entrada, "mira": {"ligada": True, "virtual": True}}
     assert texto_motion(apagada, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
     assert texto_motion(acesa, estado) is None
     nativo = texto_motion(acesa, {**estado, "native_mode": True})
@@ -351,7 +355,7 @@ def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
                  "02-controles.html").read_text(encoding="utf-8")
     if 'data-campo="giro-dica"' in publicado:
         pytest.skip("a 02 já foi publicada com a dica — a guarda cumpriu o papel")
-    cards = a02.pacote(_ctx(**{"aa:bb:cc:00:00:02": {"ligada": True}}))["cards"]
+    cards = a02.pacote(_ctx(**{"aa:bb:cc:00:00:02": {"ligada": True, "virtual": True}}))["cards"]
     campos = next(iter(cards.values()))
     assert "giro-dica" not in campos and "mira-fora" not in campos
 

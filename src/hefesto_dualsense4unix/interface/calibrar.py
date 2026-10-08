@@ -409,8 +409,9 @@ CSS = """
   .mira-topo{display:flex;align-items:center;gap:7px;font-size:12.5px;min-height:20px}
   .mira-topo b{font-weight:600}
   /* O LIGA E O LADO DO ANALÓGICO VIRTUAL — 06/10/2026. A pastilha é a mesma
-     dos dois «Inverter» logo abaixo; o lado só vale com o liga aceso, e
-     apagado ele fica no cinza da casa (`.btn.apagado`), sem `opacity`. */
+     dos dois «Inverter» logo abaixo; com o liga apagado o lado fica no cinza
+     da casa (`.btn.apagado`), sem `opacity`, e segue clicável: o clique num
+     lado acende o Analógico Virtual nele. */
   .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .av .sw{height:20px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
     border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
@@ -422,7 +423,7 @@ CSS = """
     box-shadow:0 0 6px var(--green)}
   .av .liga > .sw{font-weight:600;font-size:12px}
   .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
-    background:var(--app-bg);cursor:not-allowed}
+    background:var(--app-bg)}
   .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
   .av > .ajuda{margin-left:auto}
   /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
@@ -549,7 +550,7 @@ def lugares_vazios(quem):
 
 def lugar(n):
     """O lugar vazio de um jogador: o número, e nada mais, como nas abas."""
-    return f'          <div class="lugar" aria-label="Lugar vazio do Player {n}">P{n}</div>'
+    return f'          <div class="lugar" aria-label="Lugar vazio do P{n}">P{n}</div>'
 
 
 def _numero(c):
@@ -617,9 +618,9 @@ def _inverter():
 def _analogico_virtual():
     """O liga do Analógico Virtual e os dois lados, nascendo apagados.
 
-    Os endereços (`mira-ligada`, `mira-lado`) são os que o pacote vai pintar do
-    bloco `mira` do `daemon.state_full`; os dois gestos ainda não têm dono, e a
-    sprint `O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01` os liga.
+    Os endereços (`mira-ligada`, `mira-lado`) são os que o pacote pinta do bloco
+    `mira` do `daemon.state_full`, pelos mesmos leitores da 02; os gestos
+    `analogico-virtual` e `analogico-lado` são os do pacote `a11_calibrar_sensores`.
     """
     lados = "".join(
         f'<span class="lado" data-campo="mira-lado" data-hef-alvo="classe"'

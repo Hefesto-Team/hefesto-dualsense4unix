@@ -367,9 +367,9 @@ def test_na_navegacao_a_peca_de_chip_apagado_drena(
 
 
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
-_DICA_NO_DIREITO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+_DICA_NO_DIREITO = ("Com o Analógico Virtual aceso, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
-_DICA_NO_CURSOR = "Com a Mira Virtual acesa, o giro deste controle move o cursor."
+_DICA_NO_CURSOR = "Com o Analógico Virtual aceso, o giro deste controle move o cursor."
 
 _RATO_ANDANDO = {"enabled": True, "device_ativo": True, "despachando": True, "bloqueio": None}
 _RATO_DESLIGADO = {"enabled": False, "device_ativo": False, "despachando": False,

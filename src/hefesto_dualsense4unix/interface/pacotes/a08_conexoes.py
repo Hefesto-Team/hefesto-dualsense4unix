@@ -6207,26 +6207,26 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 
 
 def selo_da_mira(c: dict[str, Any], st: dict[str, Any]) -> str:
-    """O selo «Mira Virtual» da linha: ✓ acesa, «Apagada», «Nativo» (chip cinza) ou «—» sem leitura.
+    """O selo «Analógico Virtual» da linha: ✓ aceso, «Apagado», «Nativo» (chip cinza) ou «—».
 
-    A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01. O `ligada` é o do chip da aba Controles
-    (`a02_controles._mira_ligada`) e o `title` é o resumo dos ajustes da Calibrar
+    A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01. O aceso é o do chip da aba Controles
+    (`a02_controles._analogico_virtual`) e o `title` é o resumo dos ajustes da Calibrar
     (`a11.resumo_da_mira`), pelo mesmo bloco `mira` do daemon. No Modo Nativo o chip fica cinza e a
     Mira não grava (`a02_controles.MIRA_CINZA_NO_NATIVO`): o selo diz isso, e não o «✓».
     """
     import calibrar
 
-    from .a02_controles import MIRA_CINZA_NO_NATIVO, _mira_ligada
+    from .a02_controles import MIRA_CINZA_NO_NATIVO, _analogico_virtual
     from .a11_calibrar_sensores import resumo_da_mira
 
     rotulo = calibrar.ROTULO_DA_MIRA
     if st.get("native_mode") is True:
         return selo_do_estado(rotulo, MODO_NATIVO, "", MIRA_CINZA_NO_NATIVO)
-    ligada = _mira_ligada(c)
-    if ligada is None:
+    aceso = _analogico_virtual(c)
+    if aceso is None:
         return selo_do_estado(rotulo, TRAVESSAO_DA_LINHA, "")
     dica = resumo_da_mira(c.get("mira")) or ""
-    return selo_do_estado(rotulo, "" if ligada else "Apagada", "ok" if ligada else "", dica)
+    return selo_do_estado(rotulo, "" if aceso else "Apagado", "ok" if aceso else "", dica)
 
 
 def nome_com_a_bateria(rotulo: str, pct: object) -> str:

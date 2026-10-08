@@ -213,8 +213,9 @@
   .mira-topo{display:flex;align-items:center;gap:7px;font-size:12.5px;min-height:20px}
   .mira-topo b{font-weight:600}
   /* O LIGA E O LADO DO ANALÓGICO VIRTUAL — 06/10/2026. A pastilha é a mesma
-     dos dois «Inverter» logo abaixo; o lado só vale com o liga aceso, e
-     apagado ele fica no cinza da casa (`.btn.apagado`), sem `opacity`. */
+     dos dois «Inverter» logo abaixo; com o liga apagado o lado fica no cinza
+     da casa (`.btn.apagado`), sem `opacity`, e segue clicável: o clique num
+     lado acende o Analógico Virtual nele. */
   .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .av .sw{height:20px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
     border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
@@ -226,7 +227,7 @@
     box-shadow:0 0 6px var(--green)}
   .av .liga > .sw{font-weight:600;font-size:12px}
   .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
-    background:var(--app-bg);cursor:not-allowed}
+    background:var(--app-bg)}
   .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
   .av > .ajuda{margin-left:auto}
   /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
@@ -1087,8 +1088,8 @@
               <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
-          <div class="lugar" aria-label="Lugar vazio do Player 3">P3</div>
-          <div class="lugar" aria-label="Lugar vazio do Player 4">P4</div>
+          <div class="lugar" aria-label="Lugar vazio do P3">P3</div>
+          <div class="lugar" aria-label="Lugar vazio do P4">P4</div>
     </div>
 
     <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o

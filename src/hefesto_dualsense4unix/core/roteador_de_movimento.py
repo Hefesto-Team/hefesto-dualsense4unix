@@ -58,6 +58,8 @@ DESTINOS_DA_INCLINACAO: Final[tuple[str, ...]] = (
     DESTINO_ANALOGICO_ESQUERDO,
     DESTINO_ANALOGICO_DIREITO,
 )
+#: Os lados do Analógico Virtual: o giro e a inclinação movem o analógico deste lado.
+LADOS_DO_VIRTUAL: Final[tuple[str, ...]] = (DESTINO_ANALOGICO_ESQUERDO, DESTINO_ANALOGICO_DIREITO)
 
 EIXO_YAW: Final = "yaw"
 EIXO_ROLL: Final = "roll"
@@ -105,6 +107,9 @@ class ArranjoDeMovimento:
     acelerometro: str = DESTINO_NENHUM
     #: O «Mesmo parado» da Calibrar: a inclinação desta peça nunca pausa por parado.
     mesmo_parado: bool = False
+    #: O lado guardado do Analógico Virtual: o `ligada` liga neste lado (no perfil antigo,
+    #: o direito).
+    lado: str = DESTINO_ANALOGICO_DIREITO
 
     @property
     def ligado(self) -> bool:
@@ -230,6 +235,12 @@ def montar(secao: object) -> ArranjoDeMovimento:
             f"destino da inclinação desconhecido: {inclinacao!r} "
             f"(conhecidos: {', '.join(DESTINOS_DA_INCLINACAO)})"
         )
+    lado = str(getattr(secao, "lado", DESTINO_ANALOGICO_DIREITO) or DESTINO_ANALOGICO_DIREITO)
+    if lado not in LADOS_DO_VIRTUAL:
+        raise ArranjoRecusadoError(
+            f"lado do analógico virtual desconhecido: {lado!r} "
+            f"(conhecidos: {', '.join(LADOS_DO_VIRTUAL)})"
+        )
     return ArranjoDeMovimento(
         destino=destino,
         sensibilidade=max(SENSIBILIDADE_MIN, min(SENSIBILIDADE_MAX, sens)),
@@ -245,7 +256,26 @@ def montar(secao: object) -> ArranjoDeMovimento:
         toque=toque,
         acelerometro=inclinacao,
         mesmo_parado=bool(getattr(secao, "mesmo_parado", False)),
+        lado=lado,
     )
+
+
+def lado_do_virtual(arranjo: ArranjoDeMovimento) -> str:
+    """O lado que a tela acende: o do giro; sem giro num analógico, o da inclinação; senão o
+    guardado."""
+    if arranjo.destino in LADOS_DO_VIRTUAL:
+        return arranjo.destino
+    if arranjo.acelerometro in LADOS_DO_VIRTUAL:
+        return arranjo.acelerometro
+    return arranjo.lado
+
+
+def virtual_aceso(arranjo: ArranjoDeMovimento) -> bool:
+    """O Analógico Virtual está aceso: o giro ou a inclinação move um analógico.
+
+    O `mouse` não conta: o giro no cursor não é lado de analógico.
+    """
+    return arranjo.destino in LADOS_DO_VIRTUAL or arranjo.acelerometro in LADOS_DO_VIRTUAL
 
 
 def definir_ativo(dono: object, arranjo: ArranjoDeMovimento | None) -> None:

@@ -1301,10 +1301,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      fechados. O `margin-left:auto` é dele agora, e saiu do `.bat`: com os dois
      pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em
      quatro lugares diferentes. */
-  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual», e as três pastilhas
-     têm a largura da maior. O vão e o enchimento encolheram para a frase do giroscópio no cartão aberto
-     continuar inteira no tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`). */
-  .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual». O vão e
+     o enchimento encolheram para a frase do giroscópio no cartão aberto continuar inteira no
+     tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`).
+     08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): com o nome de quem joga no título (07/10), as três
+     colunas da largura da maior cortavam a frase. Cada pastilha tem a largura do rótulo dela: o
+     rótulo é o mesmo nas quatro linhas, e os botões continuam nascendo no mesmo x. */
+  .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:auto;
                  gap:6px;margin-left:auto}
   .sensores-peca .sw{
     /* 17px E NÃO 26 — 20/09/2026. A pastilha continua cabendo nos 30px de
@@ -1371,14 +1374,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
   /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
      coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
-     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza:
-     escolher o lado só vale com ele aceso. */
+     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza e
+     seguem clicáveis: o clique num lado acende o Analógico Virtual nele. */
   .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
     padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
   .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
-    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
-    cursor:not-allowed}
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo)}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw .p{background:var(--border-sutil);box-shadow:none}
   /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
      «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
@@ -1512,17 +1514,19 @@ DICA_DOS_BOTOES = ("Usar o touchpad como botões: os dois terços da esquerda s�
 
 
 def chip_da_inclinacao(destino, aceso=False):
-    """O chip «Inclinação» embaixo do nome de UM analógico — 28/09/2026.
+    """O «Usar como analógico virtual» embaixo do nome de UM analógico — o lado.
 
-    O invólucro `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon
-    diz `inclinacao_parada` no bloco `mira`, e o chip aceso fica meio apagado.
+    O aceso é o `mira-lado` (o lado do Analógico Virtual, `a02_controles.lado_aceso`) e o
+    clique é o gesto `analogico-lado`, o mesmo da Calibrar. O invólucro
+    `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon diz
+    `inclinacao_parada` no bloco `mira`, e o chip aceso fica meio apagado.
     """
     return (f'<span class="pausa-da-inclinacao" data-campo="inclinacao-parada" '
             f'data-hef-alvo="classe" data-hef-classe="parada" '
             f'data-hef-quando="{INCLINACAO_PARADA}">'
-            f'<span class="chip-virtual{" on" if aceso else ""}" data-campo="inclinacao-destino" '
+            f'<span class="chip-virtual{" on" if aceso else ""}" data-campo="mira-lado" '
             f'data-hef-alvo="classe" data-hef-quando="{destino}">'
-            f'<button class="sw" data-gesto="inclinacao" data-destino="{destino}" '
+            f'<button class="sw" data-gesto="analogico-lado" data-lado="{destino}" '
             f'data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" '
             f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
             f'title="{DICA_DA_INCLINACAO[destino]}"><span class="p"></span>'
@@ -1542,12 +1546,18 @@ def modo_do_toque():
             f'{botao("zonas", ROTULO_DOS_BOTOES, DICA_DOS_BOTOES)}</span>')
 
 
-def sensores_da_peca(c):
-    """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE."""
+def sensores_da_peca(c, virtual=False):
+    """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE, e o «Analógico Virtual».
+
+    `virtual` acende o chip na cena do desenho: o exemplo do anel do P1 (a
+    inclinação no esquerdo) é o Analógico Virtual aceso naquele lado (08/10/2026,
+    O-ANALOGICO-VIRTUAL-E-UM-SO): chip apagado com o lado aceso seria a tela
+    velha, de dois interruptores. O produto repinta pelo `mira-ligada`.
+    """
     return f'''          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{DICA_DO_GIRO}"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button></span>
+            <span class="chip-da-mira{"" if virtual else " off"}" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button></span>
           </span>'''
 
 
@@ -1555,7 +1565,7 @@ MARCAS_DO_CARTAO = _marca.bloco("sensores")
 MARCA_DO_SOM = _marca.bloco("som")
 
 
-def identidade(c, *, bat, carga=None, meio=""):
+def identidade(c, *, bat, carga=None, meio="", virtual=False):
     """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
 
     Sai daqui a linha das quatro caixas — a do controle aberto e a dos fechados,
@@ -1703,7 +1713,7 @@ def identidade(c, *, bat, carga=None, meio=""):
                 data-hef-atributo="aria-label" aria-label="{GIRO_NO_JOGO_DO_DESENHO}"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
           {MARCAS_DO_CARTAO}
-{sensores_da_peca(c)}
+{sensores_da_peca(c, virtual)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
                desde que nasceu, e não havia um `data-campo` onde ele caísse —
@@ -2037,7 +2047,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     # linha, mesma barra. O que muda é a UNIDADE (g, não graus/s) e a
     accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
     fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD if conectado else LUGAR_VAZIO_AQUI}">
-{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
+{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo), virtual=no_jogo is not None)}
       </label>'''
     corpo_do_card = f'''    <div class="{classe}"{casca} data-controle="{c.get("uniq") or c["pref"]}"{marca}>
       <!-- O ACORDEÃO GANHOU O DÉCIMO ALVO — T-07, 04/09/2026. A ONDA0-P
@@ -3231,9 +3241,11 @@ def _conferir(doc):
            f"o chip «{ROTULO_DA_MIRA_VIRTUAL}» tem de estar nos {len(MESA)} "
            f"controles, e está em {len(miras)}")
     # `.ctl[data-conectado="nao"]` (ver `_so_o_travessao`). Os conectados, não.
-    exigir(sum("off" in cls.split() for cls, _ in miras) == len(CONECTADOS),
-           "o chip da mira nasceu aceso no desenho de um controle conectado — "
-           "ela nasce desligada")
+    exigir(sum("off" in cls.split() for cls, _ in miras)
+           == len(CONECTADOS) - sum(ESTADO[c["pref"]].get("no_jogo") is not None
+                                    for c in CONECTADOS),
+           "o chip da mira nasceu aceso no desenho de um controle conectado fora do "
+           "exemplo do anel — ela nasce desligada")
     exigir(all(dica == DICA_DA_MIRA_VIRTUAL for _, dica in miras),
            "a dica do chip da mira não é mais a frase dela")
     dicas_do_giro = re.findall(
@@ -3440,7 +3452,11 @@ def _conferir(doc):
            "o exemplo do anel do jogo saiu do esquerdo do P1 — o desenho o crava só ali")
     exigir(corpo.count(chip_da_inclinacao("analogico_esquerdo", aceso=True)) == 1
            and chip_da_inclinacao("analogico_direito", aceso=True) not in corpo,
-           "o anel do exemplo acende sem o chip «Inclinação» do mesmo analógico aceso")
+           f"o anel do exemplo acende sem o «{ROTULO_DA_INCLINACAO}» do mesmo analógico aceso")
+    exigir(len([cls for cls, _ in miras if "off" not in cls.split()])
+           - (len(MESA) - len(CONECTADOS)) == 1,
+           f"o exemplo do anel tem o lado aceso e o «{ROTULO_DA_MIRA_VIRTUAL}» apagado — "
+           "a tela velha, de dois interruptores")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")

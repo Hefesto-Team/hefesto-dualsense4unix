@@ -603,7 +603,10 @@ def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
     assert corpo["status"] == "ok" and corpo["gravado"] is True and corpo["ligada"]
     dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
     assert dele is not None and dele.destino == "analogico_direito"
-    assert dele.model_fields_set == {"destino"}, (
+    # O Analógico Virtual é o giro e a inclinação no MESMO lado, guardado com eles
+    # (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01, 08/10/2026).
+    assert dele.acelerometro == "analogico_direito" and dele.lado == "analogico_direito"
+    assert dele.model_fields_set == {"destino", "acelerometro", "lado"}, (
         "o chip gravou campos que ela não mexeu — a peça deixaria de herdar do "
         "perfil")
     corpo = _mira_set(servidor, uniq=_P3, zona_morta_graus_s=22.0)
@@ -738,9 +741,13 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
         assert 'data-hef-quando="DESLIGADO"' in involucro
         assert 'data-campo="mira-fora"' in atributos
         assert 'data-hef-atributo="aria-disabled"' in atributos
+        # 08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): o exemplo do anel do jogo (o P1, com a
+        # inclinação no esquerdo) é o Analógico Virtual aceso; o resto nasce desligado.
+        exemplo = 'class="chip-virtual on"' in miolo
         if 'data-conectado="nao"' not in abertura:
-            assert "off" in classe.split(), (
-                f"{abertura}: o chip da mira nasceu aceso — ela nasce desligada")
+            assert ("off" in classe.split()) != exemplo, (
+                f"{abertura}: o chip da mira não bate com o lado aceso — ela nasce "
+                "desligada, e o exemplo do anel nasce aceso")
         grupo = miolo.split('<span class="sensores-peca"', 1)[1].split("\n          </span>", 1)[0]
         assert grupo.index('data-sensor="acelerometro"') < grupo.index(
             'data-gesto="mira"'), "o chip não está ao lado dos dois de sensor"
@@ -847,7 +854,7 @@ def test_o_chip_alterna_pelo_que_o_daemon_diz() -> None:
     for agora in (False, True):
         p = _PonteDaMira(_OK)
         _o_gesto("02-controles.html", "mira")(
-            _ctx_da_aba(mira={"ligada": agora, "sensibilidade": 6}),
+            _ctx_da_aba(mira={"ligada": agora, "virtual": agora, "sensibilidade": 6}),
             {"uniq": _P1}, p)
         assert p.chamadas == [{"ligada": not agora, "uniq": _P1}]
 
@@ -870,7 +877,7 @@ def test_o_chip_recusa_o_que_o_daemon_nao_confirma() -> None:
     p = _PonteDaMira({"status": "sem_controle", "motivo": "texto do daemon"})
     with pytest.raises(RuntimeError) as erro:
         _o_gesto("02-controles.html", "mira")(
-            _ctx_da_aba(mira={"ligada": False}), {"uniq": _P1}, p)
+            _ctx_da_aba(mira={"ligada": False, "virtual": False}), {"uniq": _P1}, p)
     assert str(erro.value) == a02.MIRA_SEM_O_CONTROLE
 
 
@@ -887,8 +894,8 @@ def test_o_chip_pinta_pelo_que_o_daemon_diz(monkeypatch: pytest.MonkeyPatch) -> 
         assert cards, "o pacote não montou card nenhum — régua cega"
         return next(iter(cards.values()))["mira-ligada"]
 
-    assert _campo(mira={"ligada": True}) == a02.SENSOR_LIGADO
-    assert _campo(mira={"ligada": False}) == a02.SENSOR_DESLIGADO
+    assert _campo(mira={"ligada": True, "virtual": True}) == a02.SENSOR_LIGADO
+    assert _campo(mira={"ligada": False, "virtual": False}) == a02.SENSOR_DESLIGADO
     assert _campo() == mesa_viva.SEM_LEITOR
 
 
@@ -921,7 +928,7 @@ def test_a_calibrar_so_pinta_a_mira_quando_a_pagina_publicada_tem(
     mesa = [{"pref": "p1", "uniq": _P1, "jogador": 1, "cor": "cosmic-red",
              "nome": "Cosmic Red", "via": "USB"}]
     dele = {"uniq": _P1, "transport": "usb", "connected": True, "inputs": {},
-            "mira": {"ligada": True, "sensibilidade": 9,
+            "mira": {"ligada": True, "virtual": True, "sensibilidade": 9,
                      "zona_morta_graus_s": 25.0}}
     ctx = pacotes.Contexto(state={}, mesa=mesa, conectados=[dele], estados={})
 

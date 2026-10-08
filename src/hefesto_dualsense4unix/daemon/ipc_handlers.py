@@ -6231,7 +6231,7 @@ class IpcHandlersMixin:
 
     _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s",
                        "gatilho", "inverter_horizontal", "inverter_vertical",
-                       "inclinacao", "toque", "mesmo_parado")
+                       "inclinacao", "toque", "mesmo_parado", "lado")
 
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
         """``entry["mira"]`` de cada controle: o chip e o bloco da Calibrar."""
@@ -6249,6 +6249,10 @@ class IpcHandlersMixin:
             mira = vale if vale is not None and vale.ligado else None
             entry["mira"] = {
                 "ligada": mira is not None,
+                # O Analógico Virtual: aceso quando o giro ou a inclinação move um analógico,
+                # e o lado que a tela acende (O-ANALOGICO-VIRTUAL-E-UM-SO, 08/10).
+                "virtual": vale is not None and rot.virtual_aceso(vale),
+                "lado": rot.lado_do_virtual(vale if vale is not None else numeros),
                 "destino": mira.destino if mira is not None else rot.DESTINO_NENHUM,
                 "toque": vale.toque if vale is not None else rot.DESTINO_NENHUM,
                 "inclinacao": vale.acelerometro if vale is not None else rot.DESTINO_NENHUM,
@@ -6266,7 +6270,7 @@ class IpcHandlersMixin:
             }
 
     async def _handle_mira_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """`mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE."""
+        """`mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE."""
         from hefesto_dualsense4unix.core import roteador_de_movimento as rot
         from hefesto_dualsense4unix.profiles.schema import (
             ControllerOverrides,
@@ -6277,22 +6281,23 @@ class IpcHandlersMixin:
         if desconhecidos:
             raise ValueError(
                 f"mira.set não conhece {desconhecidos}: a tela oferece o chip "
-                "(`ligada`), os dois deslizantes (`sensibilidade`, "
+                "(`ligada`), o lado dele (`lado`), os dois deslizantes (`sensibilidade`, "
                 "`zona_morta_graus_s`), o `gatilho`, os dois `inverter_*`, a "
                 "`inclinacao`, o `toque` e o `mesmo_parado`, e o resto do arranjo "
                 "mora no perfil"
             )
         pedidos: dict[str, Any] = {}
-        if "ligada" in params:
-            ligada = params["ligada"]
-            if not isinstance(ligada, bool):
-                raise ValueError(
-                    "mira.set: 'ligada' precisa ser boolean — true acende a mira "
-                    "no analógico direito, false a apaga"
-                )
-            pedidos["destino"] = (
-                rot.DESTINO_ANALOGICO_DIREITO if ligada else rot.DESTINO_NENHUM
+        if "ligada" in params and not isinstance(params["ligada"], bool):
+            raise ValueError(
+                "mira.set: 'ligada' precisa ser boolean — true acende o Analógico "
+                "Virtual no lado guardado, false o apaga"
             )
+        if "lado" in params and params["lado"] not in rot.LADOS_DO_VIRTUAL:
+            raise ValueError(
+                f"mira.set: 'lado' é um de {', '.join(rot.LADOS_DO_VIRTUAL)} — o "
+                "analógico que o giro e a inclinação movem"
+            )
+        o_virtual = "ligada" in params or "lado" in params
         if "sensibilidade" in params:
             valor = params["sensibilidade"]
             if isinstance(valor, bool) or not isinstance(valor, int):
@@ -6345,7 +6350,7 @@ class IpcHandlersMixin:
                     "do «Só enquanto eu segurar»"
                 )
             pedidos["mesmo_parado"] = valor
-        if not pedidos:
+        if not pedidos and not o_virtual:
             raise ValueError(
                 f"mira.set exige ao menos um de {', '.join(self._CAMPOS_DA_MIRA)} "
                 "— campo omitido NÃO mexe na mira"
@@ -6379,7 +6384,7 @@ class IpcHandlersMixin:
         nativo = bool(
             self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
         )
-        if nativo and {"ligada", "inclinacao", "toque"} & set(params):
+        if nativo and {"ligada", "lado", "inclinacao", "toque"} & set(params):
             logger.info("mira_set_recusado_no_nativo", uniq=chave)
             return {
                 "status": "nativo",
@@ -6400,11 +6405,20 @@ class IpcHandlersMixin:
             dele = (perfil.controllers or {}).get(chave)
             antes = getattr(dele, "movimento", None)
             escritos = dict(antes.model_dump(exclude_unset=True)) if antes else {}
-        campos = {**escritos, **pedidos}
         try:
-            secao = ProfileMovimentoConfig.model_validate(campos)
             mesa = (perfil.movimento if perfil is not None
                     else rot.parametros_da_peca(self.store, chave))
+            if o_virtual:
+                # O Analógico Virtual é um só: o giro e a inclinação no MESMO lado (a
+                # PERGUNTA 1, a recomendada). O `lado` sozinho liga; a `inclinacao`
+                # explícita vem nos `pedidos` e vence.
+                atual = rot.arranjo_da_peca(
+                    mesa, ProfileMovimentoConfig.model_validate(escritos))
+                lado = params.get("lado") or rot.lado_do_virtual(atual)
+                rota = lado if params.get("ligada", True) else rot.DESTINO_NENHUM
+                pedidos = {"lado": lado, "destino": rota, "acelerometro": rota, **pedidos}
+            campos = {**escritos, **pedidos}
+            secao = ProfileMovimentoConfig.model_validate(campos)
             arranjo = rot.arranjo_da_peca(mesa, secao)
         except ValueError as exc:
             raise ValueError(f"mira.set recusado: {exc}") from exc
@@ -6435,6 +6449,7 @@ class IpcHandlersMixin:
             perfil=nome,
             gravado=gravado,
             ligada=arranjo.ligado,
+            lado=arranjo.lado,
             sensibilidade=arranjo.sensibilidade,
             zona_morta_graus_s=arranjo.zona_morta_graus_s,
             gatilho=arranjo.gatilho,
@@ -6451,6 +6466,8 @@ class IpcHandlersMixin:
             "perfil": nome if isinstance(nome, str) else None,
             "gravado": gravado,
             "ligada": arranjo.ligado,
+            "virtual": rot.virtual_aceso(arranjo),
+            "lado": rot.lado_do_virtual(arranjo),
             "sensibilidade": arranjo.sensibilidade,
             "zona_morta_graus_s": arranjo.zona_morta_graus_s,
             "gatilho": arranjo.gatilho,

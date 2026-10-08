@@ -79,12 +79,16 @@ from . import Contexto, gesto, registrar
 from .a02_controles import (
     MIRA_SEM_O_CONTROLE,
     SEM_LEITURA_DA_MIRA,
+    _analogico_virtual,
     _corpo,
     _selo_do_sensor,
     _uniq,
+    escolher_o_lado,
+    lado_aceso,
     meias_da_barra,
     nomes_de_quem_joga,
 )
+from .a02_controles import mira as mira_da_02
 
 PAGINA = "calibrar-sensores.html"
 
@@ -147,6 +151,9 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
         valor = b.get(chave)
         campos[f"mira-inverter-{qual}"] = _selo_do_sensor(
             valor if isinstance(valor, bool) else None)
+    # O liga e o lado do Analógico Virtual, pelos mesmos leitores da aba Controles.
+    campos["mira-ligada"] = _selo_do_sensor(_analogico_virtual(entrada))
+    campos["mira-lado"] = lado_aceso(entrada)
     return campos
 
 
@@ -160,7 +167,10 @@ CHAVES_DOS_AJUSTES = ("sensibilidade", "zona_morta_graus_s", "gatilho",
 #: digita número: lê o mesmo dono que o produto.
 def bloco_de_nascenca(ligada: bool = True) -> dict[str, Any]:
     """O bloco `mira` de um controle com os ajustes de nascença; `ligada` é só o chip."""
-    return {"ligada": ligada, "sensibilidade": calibrar.SENSIBILIDADE[2],
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    return {"ligada": ligada, "virtual": ligada, "lado": rot.DESTINO_ANALOGICO_DIREITO,
+            "sensibilidade": calibrar.SENSIBILIDADE[2],
             "zona_morta_graus_s": calibrar.TREMOR[2], "gatilho": None,
             "inverter_horizontal": False, "inverter_vertical": False}
 
@@ -308,6 +318,18 @@ def _numero_do_deslizante(o: dict[str, Any], nome: str, faixa: tuple[int, int, i
     if not minimo <= n <= maximo:
         raise ValueError(f"{nome}: {n} está fora de {minimo}-{maximo}")
     return n
+
+
+@gesto(PAGINA, "analogico-virtual", grava="mira_set_detalhado")
+def analogico_virtual(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O liga do Analógico Virtual no topo da coluna: o mesmo gesto do chip da aba Controles."""
+    mira_da_02(ctx, o, p)
+
+
+@gesto(PAGINA, "analogico-lado", grava="mira_set_detalhado")
+def analogico_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O «Esquerdo | Direito» embaixo do liga: escolhe o lado e liga, como na aba Controles."""
+    escolher_o_lado(ctx, o, p)
 
 
 @gesto(PAGINA, "mira-sensibilidade", grava="mira_set_detalhado")

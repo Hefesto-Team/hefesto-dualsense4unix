@@ -88,9 +88,9 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
     donos = {
         "Ligado: o jogo recebe o giro": {a02.DICA_DO_GIRO},
-        "Com a Mira Virtual acesa": {a02.DICA_DO_GIRO_COM_A_MIRA,
-                                     a02.DICA_DO_GIRO_NO_ESQUERDO,
-                                     a02.DICA_DO_GIRO_NO_CURSOR},
+        "Com o Analógico Virtual aceso": {a02.DICA_DO_GIRO_COM_A_MIRA,
+                                          a02.DICA_DO_GIRO_NO_ESQUERDO,
+                                          a02.DICA_DO_GIRO_NO_CURSOR},
     }
     vistas = {inicio: 0 for inicio in donos}
     erradas = []
@@ -102,7 +102,7 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
                     if citado not in dono:
                         erradas.append((titulo.split(" — ")[0], citado))
     assert not erradas, f"dicas citadas que não são as do pacote: {erradas}"
-    assert vistas["Com a Mira Virtual acesa"] >= 2, (
+    assert vistas["Com o Analógico Virtual aceso"] >= 2, (
         "nenhuma célula confere a dica que muda com a Mira acesa — no cabo e no "
         f"rádio, ela tem de aparecer pelo menos duas vezes: {vistas}")
 

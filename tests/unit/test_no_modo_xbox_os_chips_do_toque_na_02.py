@@ -17,6 +17,11 @@ pacote: clicar neles não fazia nada. Esta régua mede as três pernas:
 E a volta inteira com o `IpcServer` de verdade: o clique chega ao disco e ao
 `state_full`, e a tela lê de volta o que acabou de gravar.
 
+08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01): o chip «Inclinação»
+deixou de ser interruptor próprio e virou o lado do Analógico Virtual (gesto
+`analogico-lado`, campo `mira-lado`), medido em `test_o_analogico_virtual_e_um_so.py`.
+Aqui fica o chip do toque; o campo `inclinacao` do `mira.set` segue na ponte.
+
 Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI real.
 """
 
@@ -47,8 +52,6 @@ _TODOS = (_P1, _P2, _P3, _P4)
 _PAGINA = "02-controles.html"
 
 _CHIPS = (
-    ("inclinacao", "destino", "inclinacao", "inclinacao-destino",
-     (rot.DESTINO_ANALOGICO_ESQUERDO, rot.DESTINO_ANALOGICO_DIREITO)),
     ("toque", "toque", "toque", "toque-modo",
      (rot.TOQUE_CURSOR, rot.TOQUE_ZONAS)),
 )
@@ -139,8 +142,7 @@ def test_no_nativo_o_chip_recusa_sem_pedir(
     """No Nativo o chip é cinza e o clique não chega à ponte."""
     import pacotes.a02_controles as a02
 
-    cinza = {"inclinacao": a02.INCLINACAO_CINZA_NO_NATIVO,
-             "toque": a02.TOQUE_CINZA_NO_NATIVO}[gesto]
+    cinza = {"toque": a02.TOQUE_CINZA_NO_NATIVO}[gesto]
     p = _Ponte(_OK)
     with pytest.raises(RuntimeError) as erro:
         _o_gesto(gesto)(
@@ -266,13 +268,9 @@ def test_a_pintura_e_o_destino_do_daemon_por_controle() -> None:
     ]
     cards = list(_cards(*controles).values())
     assert len(cards) == 4, f"quatro controles, {len(cards)} cartões"
-    vistos = [(c["inclinacao-destino"], c["toque-modo"]) for c in cards]
-    assert vistos == [
-        (rot.DESTINO_ANALOGICO_ESQUERDO, rot.TOQUE_CURSOR),
-        (rot.DESTINO_NENHUM, rot.TOQUE_ZONAS),
-        (rot.DESTINO_ANALOGICO_DIREITO, rot.DESTINO_NENHUM),
-        (mesa_viva.SEM_LEITOR, mesa_viva.SEM_LEITOR),
-    ]
+    vistos = [c["toque-modo"] for c in cards]
+    assert vistos == [rot.TOQUE_CURSOR, rot.TOQUE_ZONAS, rot.DESTINO_NENHUM,
+                      mesa_viva.SEM_LEITOR]
 
 
 def test_no_nativo_o_cinza_vem_junto_e_o_aceso_fica() -> None:
@@ -283,7 +281,6 @@ def test_no_nativo_o_cinza_vem_junto_e_o_aceso_fica() -> None:
         _controle(_P1, "usb", inclinacao=rot.DESTINO_ANALOGICO_ESQUERDO,
                   toque=rot.TOQUE_ZONAS), nativo=True).values()))
     assert card["mira-fora"] == a02.MIRA_NO_NATIVO
-    assert card["inclinacao-destino"] == rot.DESTINO_ANALOGICO_ESQUERDO
     assert card["toque-modo"] == rot.TOQUE_ZONAS
 
 
@@ -388,7 +385,7 @@ def test_o_clique_chega_ao_disco_e_a_tela_le_de_volta(
 
     servidor = _servidor(tmp_path, transporte)
     _ligar_a_ponte_ao_servidor(monkeypatch, servidor)
-    schema = {"inclinacao": "acelerometro", "toque": "toque"}[campo]
+    schema = {"toque": "toque"}[campo]
     um = oferece[0]
 
     _o_gesto(gesto)(_ctx(*_lidos(servidor, transporte)), {"uniq": _P3, atributo: um},
@@ -421,8 +418,7 @@ def test_o_daemon_no_nativo_nao_grava(
 
     servidor = _servidor(tmp_path, "usb", nativo=True)
     _ligar_a_ponte_ao_servidor(monkeypatch, servidor)
-    cinza = {"inclinacao": a02.INCLINACAO_CINZA_NO_NATIVO,
-             "toque": a02.TOQUE_CINZA_NO_NATIVO}[gesto]
+    cinza = {"toque": a02.TOQUE_CINZA_NO_NATIVO}[gesto]
     with pytest.raises(RuntimeError) as erro:
         _o_gesto(gesto)(_ctx(*_lidos(servidor, "usb")),
                         {"uniq": _P2, atributo: oferece[0]}, ponte)

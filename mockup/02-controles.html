@@ -2289,10 +2289,13 @@
      fechados. O `margin-left:auto` é dele agora, e saiu do `.bat`: com os dois
      pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em
      quatro lugares diferentes. */
-  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual», e as três pastilhas
-     têm a largura da maior. O vão e o enchimento encolheram para a frase do giroscópio no cartão aberto
-     continuar inteira no tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`). */
-  .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual». O vão e
+     o enchimento encolheram para a frase do giroscópio no cartão aberto continuar inteira no
+     tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`).
+     08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): com o nome de quem joga no título (07/10), as três
+     colunas da largura da maior cortavam a frase. Cada pastilha tem a largura do rótulo dela: o
+     rótulo é o mesmo nas quatro linhas, e os botões continuam nascendo no mesmo x. */
+  .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:auto;
                  gap:6px;margin-left:auto}
   .sensores-peca .sw{
     /* 17px E NÃO 26 — 20/09/2026. A pastilha continua cabendo nos 30px de
@@ -2359,14 +2362,13 @@
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
   /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
      coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
-     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza:
-     escolher o lado só vale com ele aceso. */
+     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza e
+     seguem clicáveis: o clique num lado acende o Analógico Virtual nele. */
   .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
     padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
   .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
-    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
-    cursor:not-allowed}
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo)}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw .p{background:var(--border-sutil);box-shadow:none}
   /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
      «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
@@ -2926,7 +2928,7 @@
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico Virtual</button></span>
+            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico Virtual</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3014,7 +3016,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao" style="--hef-x:43.1%;--hef-y:78.4%"><span class="pj on" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -3023,7 +3025,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -3546,7 +3548,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -3555,7 +3557,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4078,7 +4080,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4087,7 +4089,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4610,7 +4612,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4619,7 +4621,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
