@@ -692,7 +692,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:790`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:924`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -2008,7 +2008,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     O VALOR VEM EM `valor`, E ISSO É O QUE MUDOU DESDE A PRIMEIRA LEVA: o
     ouvinte do piloto passou a escutar `change` além de `click` e a mandar o
-    `value` do alvo (`hefesto_vivo.py:75` e `:230`). Antes só chegava `texto`,
+    `value` do alvo (`hefesto_vivo.py:77` e `:230`). Antes só chegava `texto`,
     que num `<select>` é a lista INTEIRA de opções concatenada — foi por isso
     que esta lista ficou sem dono na primeira leva, e não por falta de método.
 

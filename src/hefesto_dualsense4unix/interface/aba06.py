@@ -731,7 +731,7 @@ CSS = CSS_GLIFO + """
      tela instalado", que é justamente a que precisa de espaço).
 
      O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
-     troca valor vazio por `—` (`hefesto_vivo.py:65`), então uma frase vazia
+     troca valor vazio por `—` (`hefesto_vivo.py:67`), então uma frase vazia
      viraria um travessão solto na tela do usuário — foi o que a primeira foto
      mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
      Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o
@@ -1089,7 +1089,7 @@ def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
 
     O `data-gesto` liga o campo **desde 01/09/2026**, e a frase que estava aqui
     ("nenhum `<select>` desta casa liga") caducou no mesmo dia: o piloto passou a
-    ouvir `change` além de `click` (`hefesto_vivo.py:75`) e a mandar o `valor` e
+    ouvir `change` além de `click` (`hefesto_vivo.py:77`) e a mandar o `valor` e
     o `rotulo` da opção escolhida. O motivo antigo era real — o clique num
     `<select>` chega quando a lista ABRE, com o valor ANTIGO —, e é exatamente o
     que o `change` resolve.

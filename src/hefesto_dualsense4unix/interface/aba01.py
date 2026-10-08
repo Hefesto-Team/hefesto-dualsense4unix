@@ -876,7 +876,7 @@ def cartao(c, bateria=None):
     o `P2 = Xbox 360` / `P3 = DualSense` da MESA, porque a fonte única existia e
     a tela de referência ficava de fora dela.
 
-    OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:373`)
+    OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:376`)
     ----------------------------------------------------------------
     `data-controle` é o `uniq` do aparelho quando há um (a mesa viva) e o `pref`
     quando não há (o mockup, cuja mesa é escrita à mão) — a MESMA linha do
@@ -1128,7 +1128,7 @@ MIOLO = f'''
              na coluna dos modos e no fluxo de leitura deles — e ali ela lia como
              um QUINTO modo. Não é modo nenhum: é uma trava sobre o perfil.
 
-             O MODELO É O QUE O USUÁRIO APONTOU, `aba06.py:1738`, a `.porta` do *"Banco
+             O MODELO É O QUE O USUÁRIO APONTOU, `aba06.py:1753`, a `.porta` do *"Banco
              de provas: o mapa do controle ↗"*: **a coisa que pertence ao bloco
              mas não é o miolo dele mora no canto, na linha do título.**
 

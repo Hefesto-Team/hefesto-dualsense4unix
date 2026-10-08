@@ -1435,7 +1435,7 @@ MIOLO = f'''
               <!-- OS QUATRO CAMPOS DESTE BLOCO PEDEM `data-hef-alvo="valor"`, e sem ele
                    o editor era a única parte da tela que MENTIA sozinha. Medido em
                    01/09/2026, num Chrome de verdade, injetando o `BOOTSTRAP` do piloto
-                   sobre o `src/hefesto_dualsense4unix/interface/paginas/10-perfis.html` publicado (`hefesto_vivo.py:44-59`):
+                   sobre o `src/hefesto_dualsense4unix/interface/paginas/10-perfis.html` publicado (`hefesto_vivo.py:46-61`):
 
                      editor.ambiente   5 opções → 0     `select.textContent = "Jogo da
                      editor.estilo    15 opções → 0      Steam"` APAGA a lista inteira

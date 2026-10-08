@@ -1474,7 +1474,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     thread: síncrono, este botão congelaria a janela inteira por nove segundos e
     meio, e quem clicou concluiria que o app travou. É também a razão de
     `daemon.reload` ter teto de 15 s em `ponte.TETOS` — e `chamar_detalhado`
-    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:161`),
+    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:164`),
     conferido: trocar de função não encolheu a espera para os 250 ms do padrão.
     Se encolher, este botão passa a recusar todo clique que funciona.
 
@@ -1496,7 +1496,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:74-81`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:2761`) e
+    `interface/hefesto_vivo.py:2960`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
@@ -1568,7 +1568,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:5651`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:5761`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:93`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no

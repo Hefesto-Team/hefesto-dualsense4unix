@@ -176,7 +176,7 @@ def plural(quantos: int, um: str, muitos: str) -> str:
 
     POR QUE ELE EXISTE, e o defeito é medido: esta página escrevia
     ``dos {n} controles`` e caía em *"dos 1 controles"* com um controle só
-    (`calibrar.py:146`, antes de 11/09). **O plural dito com um «s» entre
+    (`calibrar.py:189`, antes de 11/09). **O plural dito com um «s» entre
     parênteses não existe em língua nenhuma além da nossa** e não tem como ser
     traduzido: em inglês são duas formas, em russo são três.
 

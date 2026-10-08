@@ -945,7 +945,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      coisas — a dica e o atributo que apaga o botão —, e as duas querem valores
      opostos para "não há o que dizer": o atributo quer VAZIO (o piloto o
      remove) e a dica queria o marcador. Com o vazio, `escrever()` escreve o
-     travessão no `innerHTML` (`hefesto_vivo.py:99`, para TODOS os alvos), a
+     travessão no `innerHTML` (`hefesto_vivo.py:101`, para TODOS os alvos), a
      dica deixa de ser vazia e o `?` apareceu na tela — **com um `—` dentro**,
      ao lado dos dois botões que estavam clicáveis. Ruído com cara de dado, que
      é exatamente o que o `?` da D-03 existe para não ser.
@@ -1723,7 +1723,7 @@ def identidade(c, *, bat, carga=None, meio="", virtual=False):
                SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
                ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
                LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
-               piloto lê (`hefesto_vivo.py:51`). Um endereço só escreveria o
+               piloto lê (`hefesto_vivo.py:53`). Um endereço só escreveria o
                número DENTRO da barra. -->
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
