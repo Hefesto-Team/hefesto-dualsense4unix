@@ -79,7 +79,7 @@ def test_a_arvore_de_verdade_nao_passa_do_piso() -> None:
     )
     assert len(achados) <= cortado.PISO, (
         f"{len(achados)} comentário(s) cortado(s), piso {cortado.PISO}: termine a frase de quem "
-        "subiu (`scripts/check_comentario_cortado.py --original` traz o texto de antes do corte):\n  "
+        "subiu (`scripts/check_comentario_cortado.py --original` traz o texto de antes):\n  "
         + "\n  ".join(f"{a}:{n} {t.strip()}" for a, n, t in achados[-10:])
     )
     assert len(achados) == cortado.PISO, (

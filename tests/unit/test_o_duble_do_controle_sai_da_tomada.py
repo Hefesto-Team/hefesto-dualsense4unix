@@ -6,6 +6,7 @@ para o teste de queda não reinventar a sua.
 """
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -76,10 +77,8 @@ def test_o_desplugar_e_o_connect_concorrentes_nunca_deixam_religado() -> None:
         def _sonda(fc: FakeController = fc, corrida: threading.Barrier = corrida) -> None:
             corrida.wait(timeout=5.0)
             time.sleep(0.001)
-            try:
+            with contextlib.suppress(RuntimeError):
                 fc.connect()
-            except RuntimeError:
-                pass
 
         with ThreadPoolExecutor(max_workers=5) as ex:
             futuros = [ex.submit(_sonda) for _ in range(4)]
