@@ -103,6 +103,15 @@ COLISOES_DECLARADAS = {
         "não tem palavra de rádio. Até a ENTRADA-A-ENTRADA-02 ela era citada "
         "só no cabeçalho; ganhou régua de verdade, e a colisão é a prova."
     ),
+    "D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO": (
+        "É de PRODUTO pelo oráculo desde 08/10/2026: a decisão diz como o "
+        "`scripts/rodar-a-suite.sh`, que é versionado e viaja com o código, "
+        "parte a suíte, e `test_a_suite_parte_pelo_tempo.py::"
+        "test_dez_arquivos_de_tempo_conhecido_dao_partes_com_diferenca_menor_"
+        "que_o_maior` mede a partição. A triagem a chama de processo porque "
+        "«suíte» e «partes» são palavras de processo. A colisão fica declarada "
+        "porque é mais um caso do limite: o classificador lê palavra, não assunto."
+    ),
 }
 
 
