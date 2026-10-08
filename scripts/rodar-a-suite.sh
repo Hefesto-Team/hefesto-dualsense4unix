@@ -197,6 +197,23 @@ vermelhos=0
 verdes=0
 passaram=0
 pulados=0
+# OS LOGS DESTA EXECUÇÃO, e só eles: o resumo (`falhas.txt`) lê esta lista, nunca o
+# glob do diretório. O `SAIDA` guarda o que corridas anteriores deixaram (o
+# `fecho-suite.sh` chama este script uma vez por parte no mesmo `SAIDA`, e o log da
+# parte vermelha de uma chamada anterior é o que se tria), e `parte-*.log` lia tudo:
+# o resumo da parte 05 trazia o vermelho da 02 (6 vermelhos numa corrida de 1, no
+# fecho da 1.6.5). Nada se apaga; o log velho só não entra na conta.
+logs_desta_corrida=()
+# Os `parte-NN` que esta divisão fez são 00..PARTES-1; os de uma corrida de mais
+# partes (`parte-12..23` depois de um `PARTES=12`) ficam no disco e não correm.
+partes_desta_divisao=()
+for ((k = 0; k < PARTES; k++)); do partes_desta_divisao+=("$(printf '%02d' "$k")"); done
+if [ -n "$so_esta" ]; then
+  case " ${partes_desta_divisao[*]} " in
+    *" $so_esta "*) ;;
+    *) echo "ERRO: a parte «$so_esta» não existe nesta divisão (00 a $(printf '%02d' $((PARTES - 1))))."; exit 2;;
+  esac
+fi
 
 # O RECIBO DA MEDIDA. A trava do push da máquina só deixa o `dev` subir com o
 # recibo da suíte da MESMA árvore (`<git comum>/hefesto-recibos/<árvore>.suite`),
@@ -232,6 +249,7 @@ fi
 rodar_pytest() {  # $1 = o log; o resto, os arquivos
   local log="$1" rc_do_processo
   shift
+  logs_desta_corrida+=("$log")
   if [ -n "$pilha" ]; then
     LD_PRELOAD="$pilha${LD_PRELOAD:+ $LD_PRELOAD}" PYTHONPATH="$RAIZ/src" \
       "$PY" -m pytest "$@" "${extra[@]}" -q -p no:cacheprovider > "$log" 2>&1
@@ -277,8 +295,9 @@ feitas=" "
 # `paralelo-NN.*` e sai aqui, na ordem das partes, quando todos voltam.
 if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
   em_voo=0
-  for f in "$SAIDA"/parte-[0-9][0-9]; do
-    n="${f##*parte-}"
+  marca=$(mktemp "$SAIDA/marca.XXXXXX")
+  for n in "${partes_desta_divisao[@]}"; do
+    f="$SAIDA/parte-$n"
     [ -s "$f" ] || continue
     ! grep -qxFf "$SAIDA/toca-a-maquina.txt" "$f" || continue
     feitas="$feitas$n "
@@ -293,18 +312,24 @@ if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
   done
   wait
   for n in $feitas; do
+    # os logs que o filho escreveu agora: o que não é mais novo que a marca é de corrida
+    # velha (o filho morreu antes de abrir o log), e não conta
+    for l in "$SAIDA/parte-$n.log" "$SAIDA/parte-$n"-*.log; do
+      [ "$l" -nt "$marca" ] && logs_desta_corrida+=("$l")
+    done
     grep -E '^  parte-|^    ' "$SAIDA/paralelo-$n.saida" 2> /dev/null
     read -r _ok _pulo < "$SAIDA/paralelo-$n.contagem" 2> /dev/null || { _ok=0; _pulo=0; }
     passaram=$((passaram + _ok)); pulados=$((pulados + _pulo))
     sozinhos=$((sozinhos + $(grep -c 'em processo próprio' "$SAIDA/paralelo-$n.saida" 2> /dev/null || true)))
     if [ "$(cat "$SAIDA/paralelo-$n.rc" 2> /dev/null || echo 1)" = 0 ]; then verdes=$((verdes + 1)); else vermelhos=$((vermelhos + 1)); fi
   done
+  rm -f "$marca"
 fi
-for f in "$SAIDA"/parte-*; do
-  case "$f" in *.log|*.txt|*.so) continue;; esac
-  n="${f##*parte-}"
+for n in "${partes_desta_divisao[@]}"; do
+  f="$SAIDA/parte-$n"
   [ -z "$so_esta" ] || [ "$n" = "$so_esta" ] || continue
   case "$feitas" in *" $n "*) continue;; esac
+  [ -e "$f" ] || { echo "  parte-$n: SEM ARQUIVO — a divisão quebrou"; vermelhos=$((vermelhos+1)); continue; }
 
   quantos=$(wc -l < "$f")
   # TRAVA DE LOTE VAZIO: um lote sem arquivo passa como "0 testes" e some.
@@ -339,7 +364,12 @@ done
 # o filho da chave diz ao pai quantos passaram e quantos pularam
 [ -z "$so_esta" ] || echo "$passaram $pulados" > "$SAIDA/paralelo-$so_esta.contagem"
 echo
-grep -ho "^FAILED [^ ]*\|^ERROR [^ ]*" "$SAIDA"/parte-*.log 2>/dev/null | sort -u > "$SAIDA/falhas.txt"
+# SÓ os logs desta execução (ver `logs_desta_corrida`): sem arquivo, `grep` leria o stdin.
+if [ ${#logs_desta_corrida[@]} -gt 0 ]; then
+  grep -ho "^FAILED [^ ]*\|^ERROR [^ ]*" "${logs_desta_corrida[@]}" 2>/dev/null | sort -u > "$SAIDA/falhas.txt"
+else
+  : > "$SAIDA/falhas.txt"
+fi
 quantas=$(wc -l < "$SAIDA/falhas.txt")
 echo "testes que passaram: $passaram · pulados: $pulados"
 echo "partes verdes: $verdes · partes com vermelho: $vermelhos · testes vermelhos: $quantas"
