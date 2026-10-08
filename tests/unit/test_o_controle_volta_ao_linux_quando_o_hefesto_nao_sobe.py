@@ -360,6 +360,40 @@ def test_o_broker_que_nasce_com_a_marca_nao_fecha(
     assert sem_maquina.chamadas == esperado
 
 
+@pytest.mark.parametrize("com_marca", [False, True])
+def test_o_broker_que_herda_a_entrega_retoma_quando_o_hefesto_volta(
+    sem_maquina: _Gravador, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, com_marca: bool
+) -> None:
+    """MORDIDA: tirar o ``state.entregue = herdada`` do ``main``.
+
+    O primeiro ``hide`` do Hefesto que volta só retoma (fecha o físico) com o
+    estado ``entregue``: sem ele, o físico que a marca deixou aberto continua
+    aberto com o Hefesto de pé, e o jogo vê o físico e o pad.
+    """
+    if com_marca:
+        (tmp_path / "entregue").write_text("", encoding="ascii")
+    vistos: list[BrokerState] = []
+
+    class _BrokerQueGuarda:
+        def __init__(self, state: BrokerState, _escuta: object, **_k: object) -> None:
+            self._state = state
+            self._graca_da_entrega_s = GRACA
+            self.stopping = False
+
+        def run(self) -> None:
+            vistos.append(self._state)
+
+    monkeypatch.setattr(hb, "Broker", _BrokerQueGuarda)
+    monkeypatch.setattr(hb, "_sd_listen_socket", lambda: object())
+    monkeypatch.setattr(hb, "_sd_notify", lambda _m: None)
+    monkeypatch.setattr(hb.signal, "signal", lambda *_a: None)
+    assert hb.main([]) == 0
+    (state,) = vistos
+    assert state.entregue is com_marca
+    assert state._marca_da_entrega == hb.MARCA_DA_ENTREGA_PATH
+    assert sem_maquina.chamadas == ([] if com_marca else ["fechar"])
+
+
 def test_a_marca_e_um_arquivo_e_nao_um_link(sem_maquina: _Gravador, tmp_path: Path) -> None:
     (tmp_path / "alvo").write_text("", encoding="ascii")
     (tmp_path / "entregue").symlink_to(tmp_path / "alvo")
