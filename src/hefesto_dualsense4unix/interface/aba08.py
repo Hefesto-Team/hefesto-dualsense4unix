@@ -473,6 +473,9 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                 flex:0 0 var(--larg-nome)}
   .gc .ext-via{flex:1;font-size:11.5px}
   .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
+  .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
+  .gc .ext-declara{display:flex;align-items:center;gap:6px}
+  .gc .ext-declara select.pronto{height:28px;line-height:1.2;padding-top:0;padding-bottom:0}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,

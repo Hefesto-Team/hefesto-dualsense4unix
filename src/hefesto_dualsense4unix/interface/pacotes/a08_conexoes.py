@@ -1204,6 +1204,78 @@ def marcas_do_externo(entrada: dict[str, Any], elemento: str) -> tuple[str, str]
     return atributos, botoes
 
 
+#: O que o controle externo pode DECLARAR na Conexões, e o gesto de cada campo. A chave
+#: física (`modo`) e o desenho dos botões vêm do `ControleDeclarado`; a cor, dos nomes de
+#: fábrica. Vazio na lista = «não sei», e grava `None` (apaga o campo).
+_MODOS_DO_EXTERNO = (("xinput", "XInput"), ("dinput", "DInput"), ("switch", "Switch"))
+_FAMILIAS_DO_EXTERNO = ("xbox", "nintendo")
+GESTOS_DO_EXTERNO = {"modo": "externo-modo", "botoes": "externo-botoes",
+                     "cor": "externo-cor"}
+
+
+def _nomes_de_cor_do_externo() -> list[str]:
+    """Os nomes de fábrica que a tela oferece, sem repetir e na ordem do mapa."""
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
+
+    return list(dict.fromkeys(NOMES_DE_FABRICA.values()))
+
+
+def _lista_do_externo(gesto: str, quem: str, titulo: str, vazio: str,
+                      opcoes: list[tuple[str, str]], atual: str) -> str:
+    """Um ``<select>`` da declaração do externo: a primeira opção é «não sei»."""
+    itens = [("", vazio), *opcoes]
+    if atual and atual not in {v for v, _ in itens}:
+        itens.append((atual, atual))
+    miolo = "".join(
+        f'<option value="{html.escape(v, quote=True)}"'
+        f'{" selected" if v == atual else ""}>{html.escape(r)}</option>'
+        for v, r in itens)
+    dono = html.escape(quem, quote=True)
+    return (f'<select class="pronto" data-gesto="{gesto}" data-externo="{dono}" '
+            f'title="{html.escape(titulo, quote=True)}">{miolo}</select>')
+
+
+def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
+    """As três listas (modo, botões, cor) do cartão do externo na Conexões.
+
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01, item 2. Só o cartão da Conexões
+    escreve (o da Jogar só mostra), e só quando o controle tem chave no `maquina.json`:
+    sem endereço fixo não há onde guardar, e a lista não aparece. A escolha vale para o
+    desenho da tela; nada é remapeado no controle.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.external_controllers import (
+            chave_de_maquina,
+        )
+        from hefesto_dualsense4unix.interface import mesa_viva
+
+        chave = chave_de_maquina(entrada)
+        if not chave:
+            return ""
+        quem = str(entrada.get("identity") or entrada.get("uniq") or "")
+        declarado = mesa_viva._declarado(chave)
+        modo = str(getattr(declarado, "modo", None) or "")
+        botoes = str(getattr(declarado, "botoes", None) or "")
+        cor = str(getattr(declarado, "cor", None) or "").strip()
+        letras = mesa_viva.LETRAS_DA_FACE
+        familias = [(f, " ".join(letras[f][b] for b in _FACE_DO_EXTERNO))
+                    for f in _FAMILIAS_DO_EXTERNO]
+        cores = [(n, n) for n in _nomes_de_cor_do_externo()]
+    except Exception:
+        return ""
+    return (
+        '<span class="ext-declara">'
+        + _lista_do_externo(GESTOS_DO_EXTERNO["modo"], quem,
+                            "Chave do controle: só muda o que a tela mostra",
+                            "Modo", list(_MODOS_DO_EXTERNO), modo)
+        + _lista_do_externo(GESTOS_DO_EXTERNO["botoes"], quem,
+                            "Desenho dos botões: nada é remapeado no controle",
+                            "Botões", familias, botoes)
+        + _lista_do_externo(GESTOS_DO_EXTERNO["cor"], quem,
+                            "Cor do controle na tela", "Cor", cores, cor)
+        + "</span>")
+
+
 def _html_dos_externos(ctx: Contexto) -> str:
     """Uma linha por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
 
@@ -1275,11 +1347,12 @@ def _html_dos_externos(ctx: Contexto) -> str:
         linha_do_aviso = (f'<span class="ext-aviso">{_e(aviso)}</span>'
                           if aviso else "")
         da_borda, botoes = marcas_do_externo(entrada, "span")
+        declara = declaracao_do_externo_para_editar(entrada)
         fora.append(
             f'<div class="ext-linha"{da_borda}>'
             f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
             f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
-            f'{botoes}{linha_do_aviso}</div>')
+            f'{botoes}{declara}{linha_do_aviso}</div>')
     return "".join(fora)
 
 
@@ -2365,6 +2438,58 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not ok:
         raise RuntimeError(motivo or "não consegui gravar o que você declarou")
     _reler_a_declaracao()
+
+
+def _declarar_do_externo(ctx: Contexto, o: dict[str, Any], p: Any, campo: str,
+                         validos: set[str]) -> None:
+    """Grava ``controles[chave].<campo>`` de um controle externo, pelo `machine.declare`.
+
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01, item 2 (08/10/2026). O caminho de
+    gravação já existia (o mesmo do `mic-existe`: o daemon funde contra o disco sob lock,
+    relê e responde); faltava a tela. A chave NÃO vem do clique: sai do controle que a
+    tela tem agora (pelo `data-externo` do clique: o `identity` ou o `uniq`), e um
+    controle que não está mais aqui recusa, em vez de gravar sob um endereço que ninguém
+    escolheu. Lista em branco = «não sei» e grava ``None``, que apaga o campo.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import chave_de_maquina
+
+    nome = GESTOS_DO_EXTERNO[campo]
+    uniq = str(o.get("externo") or "")
+    if not uniq:
+        raise ValueError(f"{nome}: o clique não disse em qual controle")
+    entrada = next((e for e in (*ctx.externos, *ctx.conectados)
+                    if uniq in (str(e.get("identity") or ""), str(e.get("uniq") or ""))),
+                   None)
+    chave = chave_de_maquina(entrada) if entrada else ""
+    if not chave:
+        raise RuntimeError("Este controle não está mais aqui, ou não tem endereço fixo; "
+                           "sem ele a escolha não tem onde ser guardada.")
+    escolha = str(o.get("valor") or "").strip()
+    if escolha and escolha not in validos:
+        raise ValueError(f"{nome}: {escolha!r} não é resposta desta lista")
+    ok, motivo = _resposta(
+        p.machine_declare({"controles": {chave: {campo: escolha or None}}}))
+    if not ok:
+        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
+    _reler_a_declaracao()
+
+
+@gesto("08-conexoes.html", "externo-modo", grava="machine_declare")
+def externo_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Modo: XInput / DInput / Switch" — a chave física do controle externo."""
+    _declarar_do_externo(ctx, o, p, "modo", {v for v, _ in _MODOS_DO_EXTERNO})
+
+
+@gesto("08-conexoes.html", "externo-botoes", grava="machine_declare")
+def externo_botoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Botões: A B X Y / B A Y X" — só o desenho da tela; nada é remapeado."""
+    _declarar_do_externo(ctx, o, p, "botoes", set(_FAMILIAS_DO_EXTERNO))
+
+
+@gesto("08-conexoes.html", "externo-cor", grava="machine_declare")
+def externo_cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Cor" do controle externo, pelos nomes de fábrica que a tela oferece."""
+    _declarar_do_externo(ctx, o, p, "cor", set(_nomes_de_cor_do_externo()))
 
 
 def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
@@ -6123,7 +6248,7 @@ METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui",
 
 
 PAGINA = "08-conexoes.html"
-PISO_DA_ABA = 49
+PISO_DA_ABA = 52
 PROVAS = [
     # e o `_indice` cai na posição quando o daemon não publicou `index`.
     {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento) chave do contrato
@@ -6140,6 +6265,18 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "mic-existe", "clique": {"valor": "Desligado"},  # (noqa-acento) id
      "chama": [("machine_declare",
                 [{"controles": {"aabbcc000001": {"microfone": False}}}], {})]},
+    {"pagina": PAGINA, "gesto": "externo-modo",  # (noqa-acento) id
+     "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "switch"},
+     "chama": [("machine_declare",
+                [{"controles": {"aabbcc000001": {"modo": "switch"}}}], {})]},
+    {"pagina": PAGINA, "gesto": "externo-botoes",  # (noqa-acento) id
+     "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "nintendo"},
+     "chama": [("machine_declare",
+                [{"controles": {"aabbcc000001": {"botoes": "nintendo"}}}], {})]},
+    {"pagina": PAGINA, "gesto": "externo-cor",  # (noqa-acento) id
+     "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "Cosmic Red"},
+     "chama": [("machine_declare",
+                [{"controles": {"aabbcc000001": {"cor": "Cosmic Red"}}}], {})]},
 ]
 
 _NO_MAQUINA = "grava no `maquina.json`; o `state_full` não o republica"
@@ -6153,6 +6290,9 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
     "mic-existe": "grava no `maquina.json` e sobe ou desce o `bt_mic` no mesmo pedido: "
                   "tem efeito vivo, não tem eco",
     "vizinho-o-que-e": _NO_MAQUINA,
+    "externo-modo": _NO_MAQUINA,
+    "externo-botoes": _NO_MAQUINA,
+    "externo-cor": _NO_MAQUINA,
     "receptor-descobrir": "guarda o passo na tela; a banda achada vai ao `maquina.json` no tique "
                           "que fecha a medida, e o `state_full` não a republica",
     "ignorar": "a dispensa de uma ordem vai ao `maquina.json`; o `state_full` não a publica",
