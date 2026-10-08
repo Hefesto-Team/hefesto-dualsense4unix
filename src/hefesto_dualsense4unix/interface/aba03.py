@@ -355,7 +355,7 @@ CSS = CSS_GLIFO + """
   /* A CAIXA CRESCE COM O MODO, e por isso as linhas dela são AUTOMÁTICAS.
      Ela era `grid-template-rows:repeat(N,1fr)` — N trilhas iguais, com N vindo
      da cena do desenho. Com o produto trocando a caixa inteira (o `blocos:` do
-     pacote), o número de barras é o do MODO: zero no `Desligado`, seis na
+     pacote), o número de barras é o do MODO: zero no `Desligado`, quatro na
      Metralhadora, onze na Vibração por posição. `grid-auto-rows` dá a mesma
      altura a cada barra e deixa a caixa medir o que ela tem.
      O DESENHO NÃO MUDA DE PIXEL: `--r-aj-e` é `N_ESQ * --h-barra` por
@@ -1013,19 +1013,15 @@ LEGENDA = f'''<div class="nota">
     <li><b>A caixa de ajustes acompanha o modo, e a aba rola nos grandes</b> — sua decisão de
         02/09. A caixa reserva {N_ESQ} barras no L2 e {N_DIR} no R2 (é o que esta cena pede), e
         <b>cresce</b> quando o modo pede mais: o produto (<code>app/actions/trigger_specs.py</code>)
-        diz que <span class="marca">Galope</span> tem 5, <span class="marca">Metralhadora</span> 6,
+        diz que <span class="marca">Galope</span> tem 5, <span class="marca">Metralhadora</span> 4,
         <span class="marca">Montar do zero</span> 8, <span class="marca">Curva de força</span> 10 e
         <span class="marca">Vibração por posição</span> 11. Onze barras pedem {11 * ALT_BARRA}px numa
         linha — mais do que a coluna inteira tem hoje ({ALT_COLUNA}px) —, então a aba passa a rolar
         por dentro. <b>Era isso ou esconder</b>: até 02/09 a caixa mostrava as quatro primeiras e
         calava sobre as outras sete, com os números no disco.</li>
-    <li><b>Divergência real, e ela é mais velha que esta aba:</b> o P1 mostra
-        <span class="marca">Metralhadora</span> com quatro barras (Força, Frequência, Início do
-        curso, Fim do curso) e o produto lista <b>seis</b> com outros nomes (Início, Fim, Amplitude
-        A, Amplitude B, Frequência, Período). O P1 é a cena que você aprovou em 27/08 e ficou
-        literal; os outros três saem do <code>trigger_specs.py</code>, com a porcentagem do trilho
-        DERIVADA da faixa de cada parâmetro. <b>Uma das duas está errada</b> — e a escolha é
-        sua.</li>
+    <li><b>A Metralhadora tem quatro ajustes, no P1 e nos outros</b> — Início do curso, Fim do
+        curso, Força e Frequência. A divergência com o produto (seis ajustes, outros nomes) acabou
+        em 08/10/2026, pela escolha dela.</li>
     <li><b>O trilho das barras mede 80px</b>, contra 109 na tela de dois. É o que sobra de 220px
         depois dos 92px do rótulo (o token <code>--rot</code>, igual em toda aba) e dos 32 do
         número.</li>

@@ -75,6 +75,7 @@ class TestOCampoMortoSaiu:
         assert not hasattr(TriggerParamSpec("x", "X", 0, 1), "help_text")
 
     def test_e_a_conta_que_o_motivou_continua_a_mesma(self) -> None:
-        """73 parâmetros — o número que a medição da sprint corrigiu (não 38)."""
-        assert sum(len(spec.params) for spec in PRESETS) == 73
+        """71 parâmetros (eram 73 até 08/10/2026, quando a Metralhadora passou de seis
+        ajustes a quatro — não 38, o número que a medição da sprint corrigiu)."""
+        assert sum(len(spec.params) for spec in PRESETS) == 71
 
