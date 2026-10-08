@@ -1200,10 +1200,11 @@ async def _metade_do_canal(
     o mudo aqui seria pôr de volta no ar uma voz que o usuário mandou calar, que é o
     defeito de privacidade com o sinal trocado.
 
-    **E NO CABO ISTO NÃO FAZ NADA**, que é o desfecho certo: quem atende só
-    conhece nós de Bluetooth (`nos_dualsense_bluetooth`), e no fio a placa USB
-    publica o canal sozinha. Uma regra só no ato, em vez de um `if` de
-    transporte no caminho dela.
+    **NO CABO A PALAVRA CALA O NÓ, NÃO A PLACA**: o `BtMicSubsystem` escreve o
+    mudo dela no `hefesto_mic_*` de cada canal de pé, no cabo e no rádio
+    (`_dizer_o_mudo_aos_canais`); quem grava a placa física do controle não
+    passa pelo nó, e o bit do firmware (`_metade_do_firmware`) é o que a cala.
+    Uma regra só no ato, em vez de um `if` de transporte no caminho dela.
     """
     antes = palavra_no_ar(uniq)
     dizer_no_ar(uniq, ligado)
@@ -1890,12 +1891,15 @@ async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     """O corpo de `nascer_no_ar`, já com a vez na fila. Ver o docstring de lá."""
     if _ela_desligou_este_microfone(daemon, uniq):
         logger.info("mic_nasce_calado_por_recusa", uniq=uniq)
+        dizer_no_ar(uniq, False)
         return False
     if await _o_controle_pede_silencio(daemon, uniq):
         logger.info("mic_nasce_calado_pelo_controle", uniq=uniq)
+        dizer_no_ar(uniq, False)
         return False
     if _o_firmware_esta_mudo(daemon, uniq):
         logger.info("mic_nasce_calado_por_gesto", uniq=uniq)
+        dizer_no_ar(uniq, False)
         return False
     no_ar = _no_ar_da_sessao(daemon)
     if _eleitor(daemon).eleito is None and await _o_nascimento_pode_tomar_o_padrao(

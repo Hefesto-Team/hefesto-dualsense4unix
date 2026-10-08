@@ -207,13 +207,28 @@ def _rodar_pactl(argv: list[str]) -> bool:
         retrato_do_som.escreveu(argv)
 
 
-def desmutar(nome: str, *, rodar: Any = None) -> bool:
-    """Tira o mudo DE FÁBRICA do nó que acabamos de criar."""
+def _escrever_o_mudo(nome: str, valor: str, rodar: Any) -> bool:
+    """Um `set-source-mute` explícito. Nunca levanta: o gesto dela não vira traceback."""
     try:
-        return bool((rodar or _rodar_pactl)(["pactl", "set-source-mute", nome, "0"]))
+        return bool((rodar or _rodar_pactl)(["pactl", "set-source-mute", nome, valor]))
     except Exception:
-        logger.warning("canal_do_mic_nao_desmutou", exc_info=True)
+        logger.warning("canal_do_mic_nao_escreveu_o_mudo", exc_info=True)
         return False
+
+
+def desmutar(nome: str, *, rodar: Any = None) -> bool:
+    """Abre o nó: `set-source-mute <nó> 0`, escrito, nunca herdado."""
+    return _escrever_o_mudo(nome, "0", rodar)
+
+
+def calar(nome: str, *, rodar: Any = None) -> bool:
+    """Cala o nó: `set-source-mute <nó> 1`. O desligado dela chega aqui."""
+    return _escrever_o_mudo(nome, "1", rodar)
+
+
+def escrever_o_mudo_no_no(nome: str, mudo: bool, *, rodar: Any = None) -> bool:
+    """O mudo de uma palavra no nó: `True` cala, `False` abre."""
+    return (calar if mudo else desmutar)(nome, rodar=rodar)
 
 
 _DE_PE: dict[str, SourceVirtualPipeWire] = {}
@@ -221,6 +236,8 @@ _DE_PE: dict[str, SourceVirtualPipeWire] = {}
 _ALIMENTANDO: dict[str, _Alimentador] = {}
 
 _FONTE_PEDIDA: dict[str, str] = {}
+
+_MUDO_ESCRITO: dict[str, bool] = {}
 _TRANCA = threading.Lock()
 
 
@@ -232,6 +249,38 @@ def _passar_a_escolha_dela(uniq: str, nome: str) -> None:
 
     with contextlib.suppress(Exception):
         passar_a_escolha_gravada_ao_nome_novo(uniq, nome, prefixo=PREFIXO_CANAL)
+
+
+def _a_palavra_dela(uniq: str) -> bool | None:
+    """O que ela disse sobre este microfone (`False` = calado). `None` = nada, ou ninguém atende."""
+    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import palavra_no_ar
+
+    return palavra_no_ar(uniq)
+
+
+def escrever_o_mudo(uniq: str, mudo: bool, *, rodar: Any = None) -> bool:
+    """O mudo da palavra dela chega ao nó deste controle, e SÓ quando difere do último escrito.
+
+    `True` = escreveu. Escrever a cada volta desfaria um mudo posto de fora
+    (a tecla de mudo do sistema, o `pavucontrol`); a memória por canal é o que
+    separa o ato dela do gesto de terceiros.
+    """
+    with _TRANCA:
+        source = _DE_PE.get(uniq)
+        if source is None or _MUDO_ESCRITO.get(uniq) is mudo:
+            return False
+        nome = source.nome
+    if rodar is None:
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import pactl_mudo
+
+        if pactl_mudo():
+            return False
+    if not escrever_o_mudo_no_no(nome, mudo, rodar=rodar):
+        return False
+    with _TRANCA:
+        if _DE_PE.get(uniq) is source:
+            _MUDO_ESCRITO[uniq] = mudo
+    return True
 
 
 def abrir(
@@ -264,8 +313,11 @@ def abrir(
         _DE_PE[uniq] = source
         _FONTE_PEDIDA[uniq] = str(fonte or "")
         _passar_a_escolha_dela(uniq, nome)
-        if not desmutar(nome, rodar=rodar):
-            logger.warning("canal_do_mic_nasceu_mudo", extra={"source": nome})
+        mudo = _a_palavra_dela(uniq) is False
+        if escrever_o_mudo_no_no(nome, mudo, rodar=rodar):
+            _MUDO_ESCRITO[uniq] = mudo
+        else:
+            logger.warning("canal_do_mic_nao_escreveu_o_mudo_ao_nascer", extra={"source": nome})
         if fonte:
             alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
             if alimentador.iniciar():
@@ -374,6 +426,7 @@ def fechar(uniq: str) -> bool:
         source = _DE_PE.pop(uniq, None)
         alimentador = _ALIMENTANDO.pop(uniq, None)
         _FONTE_PEDIDA.pop(uniq, None)
+        _MUDO_ESCRITO.pop(uniq, None)
     if alimentador is not None:
         try:
             alimentador.parar()

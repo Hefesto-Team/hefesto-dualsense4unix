@@ -714,8 +714,25 @@ class BtMicSubsystem:
         chave = norm_mac(str(uniq)) or ""
         return self._registro.no_ar().get(chave)
 
+    def _dizer_o_mudo_aos_canais(self) -> None:
+        """O mudo da palavra dela chega ao nó de CADA canal de pé, no cabo e no rádio.
+
+        `False` cala o `hefesto_mic_*`; `True` e `None` o abrem. O canal só
+        escreve quando o mudo difere do último escrito (`escrever_o_mudo`): a
+        volta do laço não desfaz um mudo posto de fora.
+        """
+        from hefesto_dualsense4unix.integrations import canal_do_microfone
+
+        palavras = self._registro.no_ar()
+        for uniq in list(canal_do_microfone.de_pe()):
+            chave = norm_mac(str(uniq)) or ""
+            with contextlib.suppress(Exception):
+                canal_do_microfone.escrever_o_mudo(uniq, palavras.get(chave) is False)
+
     def _aplicar_a_palavra_dela(self) -> None:
-        """Entrega a cada ponte viva o que o usuário disse — ou `None`, se não disse."""
+        """Entrega a cada canal o mudo e a cada ponte viva o que o usuário disse."""
+        with contextlib.suppress(Exception):
+            self._dizer_o_mudo_aos_canais()
         gerenciador = self._gerenciador
         if gerenciador is None:
             return

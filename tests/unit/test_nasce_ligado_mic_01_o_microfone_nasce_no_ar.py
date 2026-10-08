@@ -426,7 +426,7 @@ class TestOSilencioDelaVence:
         assert await hotkey.nascer_no_ar(daemon, P1) is False
 
         assert mesa.registro.abertos() == frozenset(), "o canal subiu mesmo assim"
-        assert mesa.registro.no_ar() == {}, "o `0x32` foi aceso mesmo assim"
+        assert mesa.registro.no_ar() == {P1: False}, "o `0x32` foi aceso mesmo assim"
         assert not hotkey._no_ar_da_sessao(daemon).esta(P1)
         assert mesa.eleitor.eleito is None
 
@@ -466,7 +466,7 @@ class TestOSilencioDelaVence:
         daemon = mesa.daemon(mudo_no_firmware=True)
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
-        assert mesa.registro.no_ar() == {}
+        assert mesa.registro.no_ar() == {P1: False}
         assert mesa.eleitor.eleito is None
 
     @pytest.mark.asyncio
@@ -870,7 +870,7 @@ class TestARecusaDelaVenceONascimento:
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
 
-        assert mesa.registro.no_ar() == {}, "a palavra foi dita a quem ela calou"
+        assert mesa.registro.no_ar() == {P1: False}, "a palavra dita a quem ela calou é «calado»"
         assert mesa.registro.abertos() == frozenset(), (
             "o canal foi pedido para o controle que ela desligou — no cabo ele "
             "reabre o `hefesto_mic_<hex6>` dele"
@@ -888,7 +888,7 @@ class TestARecusaDelaVenceONascimento:
         await hotkey.nascer_no_ar(daemon, P1)
         await hotkey.nascer_no_ar(daemon, P2)
 
-        assert mesa.registro.no_ar() == {P2: True}
+        assert mesa.registro.no_ar() == {P1: False, P2: True}
         assert mesa.eleitor.eleito == P2
 
     def test_o_canal_do_cabo_nao_sobe_para_quem_ela_desligou(

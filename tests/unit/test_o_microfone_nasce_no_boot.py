@@ -189,7 +189,7 @@ async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
     )
 
     assert not hotkey._no_ar_da_sessao(daemon).esta(P1)
-    assert mesa.registro.no_ar() == {}, "a palavra foi dita a quem ela calou"
+    assert mesa.registro.no_ar() == {P1: False}, "a palavra dita a quem ela calou é «calado»"
     assert mesa.registro.abertos() == frozenset(), "o canal foi pedido mesmo assim"
     assert mesa.eleitor.chamadas == []
 
