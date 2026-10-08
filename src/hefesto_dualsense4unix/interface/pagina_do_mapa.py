@@ -6107,6 +6107,15 @@ EDICOES: tuple[Edicao, ...] = (
             ' trocas em cartões e a página sem rolar'
         ),
     ),
+    Edicao(
+        antes="     o pareamento, apagar o cache SDP e parear de novo, com o controle na mão.\n",
+        depois="     o pareamento e parear de novo, com o controle na mão.\n",
+        porque=(
+            "08/10/2026, O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01 — o comentário do arranjo dizia que"
+            " trocar de adaptador pede apagar o cache SDP; o RemoveDevice do BlueZ já tira o"
+            " [ServiceRecords] do cache (device.c do BlueZ 5.86), então não há cache a apagar"
+        ),
+    ),
 )
 
 
@@ -6123,20 +6132,11 @@ EDICOES: tuple[Edicao, ...] = (
 #: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
 #: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
 #: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
-#: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10 e 05/10: as do
+#: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10, 05/10 e 08/10: as do
 #: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as dos conjuntos «Conexões 2» e
-#: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
-    Edicao(
-        antes="     o pareamento, apagar o cache SDP e parear de novo, com o controle na mão.\n",
-        depois="     o pareamento e parear de novo, com o controle na mão.\n",
-        porque=(
-            "08/10/2026, O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01 — o comentário do arranjo dizia que"
-            " trocar de adaptador pede apagar o cache SDP; o RemoveDevice do BlueZ já tira o"
-            " [ServiceRecords] do cache (device.c do BlueZ 5.86), então não há cache a apagar"
-        ),
-    ),
-)
+#: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`; a da
+#: O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01, em 08/10.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
