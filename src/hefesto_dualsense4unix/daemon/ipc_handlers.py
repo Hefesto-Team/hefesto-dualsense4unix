@@ -6229,7 +6229,7 @@ class IpcHandlersMixin:
 
     _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s",
                        "gatilho", "inverter_horizontal", "inverter_vertical",
-                       "inclinacao", "toque")
+                       "inclinacao", "toque", "mesmo_parado")
 
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
         """``entry["mira"]`` de cada controle: o chip e o bloco da Calibrar."""
@@ -6237,6 +6237,7 @@ class IpcHandlersMixin:
 
         store = getattr(self, "store", None)
         mesa = rot.ativo(store)
+        agora = time.monotonic()
         for entry in entries:
             uniq = entry.get("uniq")
             if not isinstance(uniq, str) or not uniq:
@@ -6254,6 +6255,12 @@ class IpcHandlersMixin:
                 "gatilho": numeros.gatilho,
                 "inverter_horizontal": numeros.inverter_horizontal,
                 "inverter_vertical": numeros.inverter_vertical,
+                # A pausa do controle parado (a regra no último tique) e o «Mesmo parado».
+                "inclinacao_parada": (
+                    vale is not None and vale.inclina and not vale.mesmo_parado
+                    and rot.inclinacao_parada(store, uniq, agora)
+                ),
+                "mesmo_parado": numeros.mesmo_parado,
             }
 
     async def _handle_mira_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -6270,7 +6277,8 @@ class IpcHandlersMixin:
                 f"mira.set não conhece {desconhecidos}: a tela oferece o chip "
                 "(`ligada`), os dois deslizantes (`sensibilidade`, "
                 "`zona_morta_graus_s`), o `gatilho`, os dois `inverter_*`, a "
-                "`inclinacao` e o `toque`, e o resto do arranjo mora no perfil"
+                "`inclinacao`, o `toque` e o `mesmo_parado`, e o resto do arranjo "
+                "mora no perfil"
             )
         pedidos: dict[str, Any] = {}
         if "ligada" in params:
@@ -6327,6 +6335,14 @@ class IpcHandlersMixin:
                     "touchpad do computador, o cursor ou as zonas"
                 )
             pedidos["toque"] = valor
+        if "mesmo_parado" in params:
+            valor = params["mesmo_parado"]
+            if not isinstance(valor, bool):
+                raise ValueError(
+                    "mira.set: 'mesmo_parado' precisa ser boolean — o «Mesmo parado» "
+                    "do «Só enquanto eu segurar»"
+                )
+            pedidos["mesmo_parado"] = valor
         if not pedidos:
             raise ValueError(
                 f"mira.set exige ao menos um de {', '.join(self._CAMPOS_DA_MIRA)} "
@@ -6424,6 +6440,7 @@ class IpcHandlersMixin:
             inverter_vertical=arranjo.inverter_vertical,
             toque=arranjo.toque,
             acelerometro=arranjo.acelerometro,
+            mesmo_parado=arranjo.mesmo_parado,
             nativo=nativo,
         )
         return {
@@ -6439,6 +6456,7 @@ class IpcHandlersMixin:
             "inverter_vertical": arranjo.inverter_vertical,
             "toque": arranjo.toque,
             "inclinacao": arranjo.acelerometro,
+            "mesmo_parado": arranjo.mesmo_parado,
             "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
             "ressalva": ressalva,
         }

@@ -93,6 +93,10 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
 ROTULO_SEGURAR = "Só enquanto eu segurar"
 ROTULO_SEMPRE = "Sempre"
 SEMPRE = "sempre"
+#: «Sempre», e a pausa do controle parado não vale para ele: o controle num suporte
+#: (D-2909-O-CONTROLE-PARADO-NAO-INCLINA, a resposta dela de 29/09 ~21h30).
+ROTULO_MESMO_PARADO = "Mesmo parado"
+MESMO_PARADO = "mesmo_parado"
 ROTULO_INVERTER = "Inverter"
 INVERTER = (
     ("lado", "Esquerda e direita", "inverter_horizontal"),
@@ -123,9 +127,10 @@ def nome_do_botao(botao, pecas=None):
 
 
 def _opcoes_do_segurar():
-    """`(valor, rótulo)` de cada opção da lista, «Sempre» primeiro."""
+    """`(valor, rótulo)` de cada opção da lista, «Sempre» e «Mesmo parado» primeiro."""
     pecas = _pecas()
-    return [(SEMPRE, ROTULO_SEMPRE)] + [(b, nome_do_botao(b, pecas)) for b in REMAPEAVEIS]
+    return [(SEMPRE, ROTULO_SEMPRE), (MESMO_PARADO, ROTULO_MESMO_PARADO)] + [
+        (b, nome_do_botao(b, pecas)) for b in REMAPEAVEIS]
 
 
 def plural(quantos: int, um: str, muitos: str) -> str:

@@ -297,15 +297,18 @@ class ProfileMovimentoConfig(BaseModel):
     acelerometro: Literal["nenhum", "analogico_esquerdo", "analogico_direito"] = (
         "nenhum"
     )
+    #: O «Mesmo parado» da lista «Só enquanto eu segurar» (D-2909-O-CONTROLE-PARADO-NAO-INCLINA):
+    #: o controle num suporte segue inclinando, e a pausa do parado não vale para ele.
+    mesmo_parado: bool = False
 
     @model_serializer(mode="wrap")
     def _o_toque_e_a_inclinacao_sem_opiniao_nao_vao_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Os dois campos de 28/09 só vão ao arquivo quando alguém os escreveu."""
+        """Os campos de 28/09 e o de 29/09 só vão ao arquivo quando alguém os escreveu."""
         dados = handler(self)
         if isinstance(dados, dict):
-            for novo in ("toque", "acelerometro"):
+            for novo in ("toque", "acelerometro", "mesmo_parado"):
                 if novo not in self.model_fields_set:
                     dados.pop(novo, None)
         return dados

@@ -103,6 +103,8 @@ class ArranjoDeMovimento:
     gatilho: str | None = None
     toque: str = DESTINO_NENHUM
     acelerometro: str = DESTINO_NENHUM
+    #: O «Mesmo parado» da Calibrar: a inclinação desta peça nunca pausa por parado.
+    mesmo_parado: bool = False
 
     @property
     def ligado(self) -> bool:
@@ -242,6 +244,7 @@ def montar(secao: object) -> ArranjoDeMovimento:
         gatilho=(getattr(secao, "gatilho", None) or None),
         toque=toque,
         acelerometro=inclinacao,
+        mesmo_parado=bool(getattr(secao, "mesmo_parado", False)),
     )
 
 
@@ -474,9 +477,15 @@ def deflexao_da_inclinacao(
     acel: tuple[float, float, float],
     neutro: tuple[float, float, float],
     arranjo: ArranjoDeMovimento,
+    *,
+    parada: bool = False,
 ) -> tuple[int, int]:
-    """A inclinação desde o neutro vira deslocamento a SOMAR num analógico."""
-    if not arranjo.inclina:
+    """A inclinação desde o neutro vira deslocamento a SOMAR num analógico.
+
+    `parada` (a peça que ninguém segura, `inclina_agora` falso) não inclina nada: o
+    analógico volta ao centro, e o neutro da mão fica guardado na regra.
+    """
+    if not arranjo.inclina or parada:
         return 0, 0
     angulos = inclinacao(acel, neutro)
     if angulos is None:
@@ -501,13 +510,126 @@ def deflexao_da_inclinacao(
     )
 
 
+# O CONTROLE PARADO NÃO INCLINA (D-2909-O-CONTROLE-PARADO-NAO-INCLINA, 29/09/2026):
+# pelo pad virtual, o P2 largado na mesa segurava o esquerdo do jogo em X≈203, Y≈72,
+# porque o neutro era o da mão e a mesa ficava 19° de lado e 14° de frente dele.
+#: O maior pico a pico do giro, entre os três eixos, na janela. Não vê o viés: o ruído
+#: de mesa de 21/09 andou 0,13 °/s acima da média, e o viés muda de controle para controle.
+VARIACAO_DO_PARADO_GRAUS_S: Final = 1.5
+#: O quanto a gravidade pode andar na janela: protege a inclinação lenta e lisa, que tem
+#: pico a pico zero no giro (a 0,7 °/s ela já anda mais que isto em 3 s).
+GRAVIDADE_DO_PARADO_GRAUS: Final = 2.0
+#: A janela quieta de 21/09 (60 amostras a 20 Hz).
+TEMPO_DO_PARADO_S: Final = 3.0
+#: A gravidade que anda isto desde o parado tira do parado. Pico de giro sozinho não tira:
+#: a batida na mesa, o botão no controle deitado e a vibração não mexem a gravidade.
+SAIDA_DO_PARADO_GRAUS: Final = 3.0
+#: O neutro que nasceu na mesa se reaprende quando a mão assenta: o giro (norma) abaixo
+#: disto por `TEMPO_DO_ASSENTO_S`, com a gravidade andando menos que `SAIDA_DO_PARADO_GRAUS`.
+LIMIAR_DO_ASSENTO_GRAUS_S: Final = 20.0
+TEMPO_DO_ASSENTO_S: Final = 0.5
+
+
+@dataclass(slots=True)
+class _Repouso:
+    """O que a regra lembra de UMA peça entre dois tiques."""
+
+    neutro: tuple[float, float, float]
+    carimbo: float
+    inicio: float
+    menor: list[float]
+    maior: list[float]
+    gravidade_do_inicio: tuple[float, float, float]
+    virgem: bool = True
+    parado: bool = False
+    gravidade_do_parado: tuple[float, float, float] | None = None
+    provisorio: bool = False
+    assentando: bool = False
+    assento_desde: float = 0.0
+    gravidade_do_assento: tuple[float, float, float] | None = None
+
+
+def _graus_entre(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
+    """O ângulo entre duas leituras do acelerômetro; sem gravidade, 0."""
+    ua, ub = _unitario(a), _unitario(b)
+    if ua is None or ub is None:
+        return 0.0
+    produto = ua[0] * ub[0] + ua[1] * ub[1] + ua[2] * ub[2]
+    return math.degrees(math.acos(max(-1.0, min(1.0, produto))))
+
+
+def _recomecar_a_janela(
+    estado: _Repouso, giro: tuple[float, float, float], acel: tuple[float, float, float],
+    agora: float,
+) -> None:
+    estado.inicio = agora
+    estado.menor = [float(v) for v in giro]
+    estado.maior = [float(v) for v in giro]
+    estado.gravidade_do_inicio = acel
+
+
+def _o_tique_da_janela(
+    estado: _Repouso, giro: tuple[float, float, float], acel: tuple[float, float, float],
+    agora: float,
+) -> None:
+    """A janela quieta anda um tique; ao fechar 3 s, a peça está parada."""
+    for eixo, valor in enumerate(giro):
+        estado.menor[eixo] = min(estado.menor[eixo], float(valor))
+        estado.maior[eixo] = max(estado.maior[eixo], float(valor))
+    variacao = max(m - n for m, n in zip(estado.maior, estado.menor, strict=True))
+    if (
+        variacao > VARIACAO_DO_PARADO_GRAUS_S
+        or _graus_entre(acel, estado.gravidade_do_inicio) > GRAVIDADE_DO_PARADO_GRAUS
+    ):
+        _recomecar_a_janela(estado, giro, acel, agora)
+        estado.virgem = False
+        return
+    if agora - estado.inicio > TEMPO_DO_PARADO_S:
+        estado.parado = True
+        estado.gravidade_do_parado = acel
+        estado.provisorio = estado.provisorio or estado.virgem
+        estado.assentando = False
+
+
+def _o_tique_do_assento(
+    estado: _Repouso, giro: tuple[float, float, float], acel: tuple[float, float, float],
+    agora: float,
+) -> None:
+    """O neutro provisório espera a mão assentar, e ali vira a leitura dela."""
+    calmo = math.sqrt(sum(float(v) * float(v) for v in giro)) < LIMIAR_DO_ASSENTO_GRAUS_S
+    base = estado.gravidade_do_assento
+    if not calmo or base is None or _graus_entre(acel, base) >= SAIDA_DO_PARADO_GRAUS:
+        estado.assento_desde = agora
+        estado.gravidade_do_assento = acel
+        return
+    if agora - estado.assento_desde >= TEMPO_DO_ASSENTO_S:
+        estado.neutro = acel
+        estado.provisorio = False
+        estado.assentando = False
+
+
 def neutro_da_inclinacao(
     dono: object,
     uniq: str,
     acel: tuple[float, float, float],
     agora: float,
+    giro: tuple[float, float, float] | None = None,
+    *,
+    mesmo_parado: bool = False,
 ) -> tuple[float, float, float]:
-    """O NEUTRO desta peça: como ela estava na primeira leitura depois de um silêncio."""
+    """O NEUTRO desta peça: como ela estava na primeira leitura depois de um silêncio.
+
+    Com o `giro` (a velocidade angular do mesmo tique), a regra também sabe se a peça
+    está PARADA: o giro variando menos de `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico
+    em cada eixo e a gravidade andando menos de `GRAVIDADE_DO_PARADO_GRAUS`, por
+    `TEMPO_DO_PARADO_S`. Parada, a inclinação dela sai do analógico
+    (`inclina_agora` responde falso) e o neutro da mão fica guardado: não se recentra
+    na mesa, porque pegar de volta andaria sozinho. Sai do parado quando a gravidade
+    anda `SAIDA_DO_PARADO_GRAUS`, e a inclinação volta na hora contra o neutro antigo.
+    O neutro que NASCEU com a peça quieta é provisório e se reaprende quando a mão
+    assenta. `mesmo_parado` (o «Mesmo parado» da Calibrar) nunca entra no parado.
+    `giro=None` é o comportamento de antes, byte a byte: sem leitura ninguém para.
+    """
     if dono is None:
         return acel
     mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
@@ -515,13 +637,60 @@ def neutro_da_inclinacao(
         mapa = {}
         setattr(dono, _ATRIBUTO_DO_NEUTRO, mapa)
     chave = chave_de_sensor(uniq)
-    anterior = mapa.get(chave)
-    if anterior is None or agora - anterior[1] > SILENCIO_DA_DRENAGEM_S:
-        neutro = acel
+    estado = mapa.get(chave)
+    zero = (0.0, 0.0, 0.0) if giro is None else giro
+    if not isinstance(estado, _Repouso) or agora - estado.carimbo > SILENCIO_DA_DRENAGEM_S:
+        estado = _Repouso(
+            neutro=acel, carimbo=agora, inicio=agora,
+            menor=[float(v) for v in zero], maior=[float(v) for v in zero],
+            gravidade_do_inicio=acel,
+        )
+        mapa[chave] = estado
     else:
-        neutro = anterior[0]
-    mapa[chave] = (neutro, agora)
-    return neutro
+        estado.carimbo = agora
+    if giro is None or mesmo_parado:
+        estado.parado = estado.assentando = estado.provisorio = False
+        _recomecar_a_janela(estado, zero, acel, agora)
+        estado.virgem = False
+        return estado.neutro
+    if estado.parado:
+        base = estado.gravidade_do_parado
+        if base is None or _graus_entre(acel, base) < SAIDA_DO_PARADO_GRAUS:
+            return estado.neutro
+        estado.parado = False
+        estado.virgem = False
+        _recomecar_a_janela(estado, giro, acel, agora)
+        if estado.provisorio:
+            estado.assentando = True
+            estado.assento_desde = agora
+            estado.gravidade_do_assento = acel
+        return estado.neutro
+    if estado.assentando:
+        _o_tique_do_assento(estado, giro, acel, agora)
+    _o_tique_da_janela(estado, giro, acel, agora)
+    return estado.neutro
+
+
+def inclina_agora(dono: object, uniq: str) -> bool:
+    """A inclinação desta peça vai ao analógico: nem parada, nem esperando a mão assentar."""
+    mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
+    estado = mapa.get(chave_de_sensor(uniq)) if isinstance(mapa, dict) else None
+    if not isinstance(estado, _Repouso):
+        return True
+    return not (estado.parado or estado.assentando)
+
+
+def inclinacao_parada(dono: object, uniq: str, agora: float) -> bool:
+    """A última resposta da regra para esta peça: parada agora (o chip meio apagado).
+
+    Sem tique há mais de `SILENCIO_DA_DRENAGEM_S` (a rota apagou, o controle saiu),
+    a resposta é falsa: a regra não mede o que não lê.
+    """
+    mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
+    estado = mapa.get(chave_de_sensor(uniq)) if isinstance(mapa, dict) else None
+    if not isinstance(estado, _Repouso) or agora - estado.carimbo > SILENCIO_DA_DRENAGEM_S:
+        return False
+    return estado.parado
 
 
 def botoes_das_zonas(
@@ -613,20 +782,26 @@ __all__ = [
     "EIXO_YAW",
     "EXPO_DO_GIRO",
     "FRACAO_DO_DIRECIONAL",
+    "GRAVIDADE_DO_PARADO_GRAUS",
     "GRAVIDADE_MINIMA_G",
+    "LIMIAR_DO_ASSENTO_GRAUS_S",
     "MIOLO_DO_DIRECIONAL",
     "PIXELS_POR_GRAU_PADRAO",
     "PIXELS_POR_UNIDADE_DO_TOQUE",
+    "SAIDA_DO_PARADO_GRAUS",
     "SENSIBILIDADE_MAX",
     "SENSIBILIDADE_MIN",
     "SENSIBILIDADE_PADRAO",
     "SILENCIO_DA_DRENAGEM_S",
     "SO_NAS_PECAS",
+    "TEMPO_DO_ASSENTO_S",
+    "TEMPO_DO_PARADO_S",
     "TETO_DA_INCLINACAO_GRAUS",
     "TETO_PADRAO_GRAUS_S",
     "TOQUES",
     "TOQUE_CURSOR",
     "TOQUE_ZONAS",
+    "VARIACAO_DO_PARADO_GRAUS_S",
     "ZONA_MORTA_DA_INCLINACAO_GRAUS",
     "ZONA_MORTA_PADRAO_GRAUS_S",
     "ArranjoDeMovimento",
@@ -642,7 +817,9 @@ __all__ = [
     "deflexao",
     "deflexao_da_inclinacao",
     "delta_do_toque",
+    "inclina_agora",
     "inclinacao",
+    "inclinacao_parada",
     "misturar",
     "montar",
     "neutro_da_inclinacao",

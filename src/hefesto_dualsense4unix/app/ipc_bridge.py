@@ -1115,6 +1115,7 @@ def mira_set_detalhado(
     inverter_vertical: bool | None = None,
     inclinacao: str | None = None,
     toque: str | None = None,
+    mesmo_parado: bool | None = None,
 ) -> dict[str, Any] | None:
     """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e a Calibrar."""
     payload: dict[str, Any] = {}
@@ -1134,6 +1135,8 @@ def mira_set_detalhado(
         payload["inclinacao"] = str(inclinacao)
     if toque is not None:
         payload["toque"] = str(toque)
+    if mesmo_parado is not None:
+        payload["mesmo_parado"] = bool(mesmo_parado)
     if not payload:
         return None
     if uniq:

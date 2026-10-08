@@ -395,8 +395,10 @@ def test_a_lista_do_segurar_e_a_do_esquema_e_nasce_sempre() -> None:
         assert len(lista) == 1, coluna
         opcoes = re.findall(r'<option value="([^"]*)"( selected)?>([^<]*)</option>', lista[0])
         assert opcoes[0] == ("sempre", " selected", "Sempre")
-        assert [(v, r) for v, _, r in opcoes[1:]] == _BOTOES_DA_LISTA
-        assert not any(s for _, s, _ in opcoes[1:]), "outro botão nasceu escolhido"
+        # 08/10/2026 (O-NEUTRO): o suporte é o segundo valor, antes dos botões.
+        assert opcoes[1] == ("mesmo_parado", "", "Mesmo parado")
+        assert [(v, r) for v, _, r in opcoes[2:]] == _BOTOES_DA_LISTA
+        assert not any(s for _, s, _ in opcoes[1:]), "outro valor nasceu escolhido"
 
 
 def test_os_dois_inverter_nascem_apagados_e_dizem_o_ato() -> None:
@@ -487,11 +489,15 @@ def test_a_calibrar_pinta_cada_controle_com_o_dele(monkeypatch: pytest.MonkeyPat
 def test_escolher_o_botao_manda_um_campo_so() -> None:
     """A escolha vai ao `mira.set` sozinha; «Sempre» manda o vazio (que a ponte"""
     gesto = _o_gesto("calibrar-sensores.html", "mira-segurar")
-    for valor, esperado in (("l2", "l2"), ("sempre", "")):
+    # 08/10/2026 (O-NEUTRO): a lista é uma só, e cada escolha diz também o
+    # «Mesmo parado» (só ele o liga; o botão e o «Sempre» o desligam).
+    for valor, esperado, parado in (("l2", "l2", False), ("sempre", "", False),
+                                    ("mesmo_parado", "", True)):
         p = _PonteDaMira(_OK)
         assert gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": valor,
                                        "tipo": "select", "evento": "change"}, p) is None
-        assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", "gatilho": esperado}]
+        assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", "gatilho": esperado,
+                               "mesmo_parado": parado}]
     p = _PonteDaMira(_OK)
     volta = gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": "l2",
                                     "tipo": "select", "evento": "click"}, p)

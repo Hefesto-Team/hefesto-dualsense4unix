@@ -1940,15 +1940,29 @@ def _a_inclinacao(
     rx: int,
     ry: int,
 ) -> tuple[int, int, int, int]:
-    """O acelerômetro da peça somado ao analógico do arranjo. Nunca levanta."""
+    """O acelerômetro da peça somado ao analógico do arranjo. Nunca levanta.
+
+    O giro entra para a regra saber se alguém segura a peça (o controle parado não
+    inclina, D-2909-O-CONTROLE-PARADO-NAO-INCLINA), e é lido mesmo com o giroscópio
+    desligado por ela: ler para saber não roteia nada ao jogo.
+    """
     from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
 
     perguntar = getattr(hub, "aceleracao_do_movimento", None)
     acel = perguntar(uniq) if callable(perguntar) else None
     if acel is None:
         return lx, ly, rx, ry
-    neutro = roteador.neutro_da_inclinacao(store, uniq, acel, time.monotonic())
-    dh, dv = roteador.deflexao_da_inclinacao(acel, neutro, arranjo)
+    ler_o_giro = getattr(hub, "velocidade_do_movimento", None)
+    giro = ler_o_giro(uniq) if callable(ler_o_giro) else None
+    # Sem giro e sem o «Mesmo parado», a chamada é a de antes: ninguém para.
+    extra: dict[str, Any] = {}
+    if giro is not None:
+        extra["giro"] = giro
+    if getattr(arranjo, "mesmo_parado", False):
+        extra["mesmo_parado"] = True
+    neutro = roteador.neutro_da_inclinacao(store, uniq, acel, time.monotonic(), **extra)
+    parada = not roteador.inclina_agora(store, uniq)
+    dh, dv = roteador.deflexao_da_inclinacao(acel, neutro, arranjo, parada=parada)
     if dh == 0 and dv == 0:
         return lx, ly, rx, ry
     if arranjo.acelerometro == roteador.DESTINO_ANALOGICO_DIREITO:

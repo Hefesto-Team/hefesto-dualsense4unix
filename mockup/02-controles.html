@@ -2340,6 +2340,13 @@
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
     cursor:not-allowed}
   .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
+  /* A PAUSA DO CONTROLE PARADO — 29/09/2026, D-2909-O-CONTROLE-PARADO-NAO-INCLINA.
+     O controle que ninguém segura não inclina, e nada abre na tela: o chip aceso
+     daquele controle fica meio apagado enquanto dura a pausa, e o ponto perde o
+     brilho. O invólucro não ocupa caixa (`display:contents`). */
+  .pausa-da-inclinacao{display:contents}
+  .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
+  .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
   /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
      «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
      dela: a coluna não tem altura para uma fileira embaixo (ver
@@ -2986,7 +2993,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:23.5%;--hef-y:78.4%"></span></div>
@@ -2994,7 +3001,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:70.6%;--hef-y:35.3%"></span></div>
@@ -3516,7 +3523,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
@@ -3524,7 +3531,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
@@ -4046,7 +4053,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
@@ -4054,7 +4061,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
@@ -4576,7 +4583,7 @@
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
@@ -4584,7 +4591,7 @@
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>

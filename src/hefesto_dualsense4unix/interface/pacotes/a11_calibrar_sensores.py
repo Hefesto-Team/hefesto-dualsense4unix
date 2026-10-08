@@ -139,7 +139,8 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
     if "gatilho" in b:
         gatilho = b.get("gatilho")
         if gatilho is None:
-            campos["mira-segurar"] = calibrar.SEMPRE
+            campos["mira-segurar"] = (calibrar.MESMO_PARADO if b.get("mesmo_parado") is True
+                                      else calibrar.SEMPRE)
         elif gatilho in calibrar.REMAPEAVEIS:
             campos["mira-segurar"] = str(gatilho)
     for qual, _rotulo, chave in calibrar.INVERTER:
@@ -180,6 +181,8 @@ def _o_segurar(b: dict[str, Any]) -> str:
     if "gatilho" not in b:
         return str(calibrar.SEM_LEITURA)
     gatilho = b["gatilho"]
+    if gatilho is None and b.get("mesmo_parado") is True:
+        return str(calibrar.ROTULO_MESMO_PARADO)
     if gatilho is None:
         return str(calibrar.ROTULO_SEMPRE)
     if gatilho in calibrar.REMAPEAVEIS:
@@ -338,12 +341,13 @@ def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
     if str(o.get("evento") or "").lower() == "click":
         return {"armou": True}
     escolha = str(o.get("valor") or "").strip()
-    if escolha == calibrar.SEMPRE:
-        _pedir_a_mira(p, uniq, gatilho="")
+    # «Mesmo parado» é «Sempre» sem a pausa do parado; «Sempre» e um botão a devolvem.
+    if escolha in (calibrar.SEMPRE, calibrar.MESMO_PARADO):
+        _pedir_a_mira(p, uniq, gatilho="", mesmo_parado=escolha == calibrar.MESMO_PARADO)
         return None
     if escolha not in calibrar.REMAPEAVEIS:
         raise ValueError(f"mira-segurar: {escolha!r} não é um botão da lista")
-    _pedir_a_mira(p, uniq, gatilho=escolha)
+    _pedir_a_mira(p, uniq, gatilho=escolha, mesmo_parado=False)
     return None
 
 

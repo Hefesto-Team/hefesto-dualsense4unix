@@ -21,6 +21,7 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
                                    DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
                                    DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
+from pacotes.a02_controles import INCLINACAO_PARADA
 # divergem calada — esta casa já pagou isso com o `--plastico`. O `pos` era
 from pacotes.a02_controles import (CAMPOS_DA_POSICAO, MAX_DEDOS,
                                    REGRA_DAS_POSICOES,
@@ -1349,6 +1350,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
     cursor:not-allowed}
   .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
+  /* A PAUSA DO CONTROLE PARADO — 29/09/2026, D-2909-O-CONTROLE-PARADO-NAO-INCLINA.
+     O controle que ninguém segura não inclina, e nada abre na tela: o chip aceso
+     daquele controle fica meio apagado enquanto dura a pausa, e o ponto perde o
+     brilho. O invólucro não ocupa caixa (`display:contents`). */
+  .pausa-da-inclinacao{display:contents}
+  .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
+  .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
   /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
      «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
      dela: a coluna não tem altura para uma fileira embaixo (ver
@@ -1477,14 +1485,21 @@ DICA_DOS_BOTOES = ("Usar o touchpad como botões: os dois terços da esquerda s�
 
 
 def chip_da_inclinacao(destino):
-    """O chip «Inclinação» embaixo do nome de UM analógico — 28/09/2026."""
-    return (f'<span class="chip-virtual" data-campo="inclinacao-destino" '
+    """O chip «Inclinação» embaixo do nome de UM analógico — 28/09/2026.
+
+    O invólucro `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon
+    diz `inclinacao_parada` no bloco `mira`, e o chip aceso fica meio apagado.
+    """
+    return (f'<span class="pausa-da-inclinacao" data-campo="inclinacao-parada" '
+            f'data-hef-alvo="classe" data-hef-classe="parada" '
+            f'data-hef-quando="{INCLINACAO_PARADA}">'
+            f'<span class="chip-virtual" data-campo="inclinacao-destino" '
             f'data-hef-alvo="classe" data-hef-quando="{destino}">'
             f'<button class="sw" data-gesto="inclinacao" data-destino="{destino}" '
             f'data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" '
             f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
             f'title="{DICA_DA_INCLINACAO[destino]}"><span class="p"></span>'
-            f'{ROTULO_DA_INCLINACAO}</button></span>')
+            f'{ROTULO_DA_INCLINACAO}</button></span></span>')
 
 
 def modo_do_toque():

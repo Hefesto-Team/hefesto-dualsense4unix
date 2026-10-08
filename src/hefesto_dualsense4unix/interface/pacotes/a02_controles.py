@@ -1549,6 +1549,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # OS CHIPS DO TOQUE E DA INCLINAÇÃO — 29/09/2026, NO-MODO-XBOX-
                 **_so_se_a_pagina_tiver({
                     "inclinacao-destino": _chip_da_mira(c, "inclinacao"),
+                    "inclinacao-parada": _pausa_da_inclinacao(c),
                     "toque-modo": _chip_da_mira(c, "toque"),
                 }),
                 # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
@@ -1668,6 +1669,13 @@ def _destino_da_mira(dele: dict[str, Any], chave: str) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
+def _pausa_da_inclinacao(dele: dict[str, Any]) -> str:
+    """A pausa do controle parado: `parada` quando o daemon a diz; a tela só lê."""
+    bloco = dele.get("mira")
+    parada = isinstance(bloco, dict) and bloco.get("inclinacao_parada") is True
+    return INCLINACAO_PARADA if parada else "segurada"
+
+
 def _chip_da_mira(dele: dict[str, Any], chave: str) -> str:
     """O valor pintado no grupo de chips: o destino, ou o travessão sem leitura."""
     import mesa_viva
@@ -1724,6 +1732,9 @@ def dica_do_giro(dele: dict[str, Any], nativo: bool, navegacao: bool = False) ->
 
 
 MIRA_NO_NATIVO = "NATIVO"
+#: O valor do `inclinacao-parada` quando o daemon diz a pausa do controle parado
+#: (`aba02.chip_da_inclinacao`, o invólucro que deixa o chip aceso meio apagado).
+INCLINACAO_PARADA = "parada"
 
 
 def mira_fora(nativo: bool) -> str:
