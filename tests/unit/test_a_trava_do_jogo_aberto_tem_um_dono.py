@@ -522,3 +522,107 @@ def test_o_appid_em_cena_so_vale_com_o_jogo_na_autoridade() -> None:
 
     _sinal_que_vai(d, "game", _SEM_JOGO)
     assert (d.display_authority, d.appid_em_cena) == ("daemon", None)
+
+
+# A-TRAVA-DO-LANCAMENTO-SOLTA-QUANDO-O-LANCAMENTO-ACABA-01 (08/10/2026): o lançamento
+# que acaba sem a autoridade nunca ter dito `game` não tem borda, e a trava soltava só
+# no lançamento seguinte. O esperado sai das entradas plantadas (o marcador, a saída, o
+# PID, a varredura), nunca da saída da função.
+_TRAVA = (4235410, 1000)
+_MARCADOR_DA_TRAVA = dict(
+    _SEM_JOGO, marker=_TRAVA, marker_pid=4321, marker_pid_alive=False, now=1010.0,
+)
+
+
+def _diario_da_soltura(d: Any, de: str, inputs: dict[str, Any]) -> list[str]:
+    with structlog.testing.capture_logs() as diario:
+        _sinal_que_vai(d, de, inputs)
+    return [x["motivo"] for x in _linhas(diario, "pad_do_lancamento_destravado")]
+
+
+@pytest.mark.parametrize(
+    "inputs",
+    [
+        pytest.param(_MARCADOR_DA_TRAVA, id="o_pid_do_wrapper_morreu"),
+        pytest.param(
+            dict(_MARCADOR_DA_TRAVA, marker_pid_alive=True, exit_marker=1005, exit_pid=4321),
+            id="a_saida_anotada_para_o_mesmo_pid",
+        ),
+    ],
+)
+def test_o_lancamento_que_caiu_solta_a_trava_sem_borda(inputs: dict[str, Any]) -> None:
+    """Trava de pé, autoridade `daemon` antes e depois (sem borda), o jogo nunca abriu."""
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+
+    motivos = _diario_da_soltura(d, "daemon", inputs)
+
+    assert d.display_authority == "daemon"
+    assert d._pad_travado_pelo_lancamento is None
+    assert motivos == ["o_lancamento_acabou_sem_o_jogo"]
+
+
+def test_o_jogo_vivo_pela_varredura_sem_janela_segura_a_trava() -> None:
+    """O lançador que se separa do jogo: o processo com o appid da trava vivo → fica."""
+    from hefesto_dualsense4unix.daemon.lifecycle import _o_lancamento_da_trava_acabou
+
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+    vivo = dict(_MARCADOR_DA_TRAVA, appid_de_jogo_vivo=_TRAVA[0])
+
+    assert _o_lancamento_da_trava_acabou(d, vivo) is False
+    assert _o_lancamento_da_trava_acabou(d, _MARCADOR_DA_TRAVA) is True
+    motivos = _diario_da_soltura(d, "daemon", vivo)
+
+    assert d._pad_travado_pelo_lancamento == _TRAVA
+    assert motivos == []
+
+
+def test_o_marcador_de_outro_lancamento_nao_solta_a_trava() -> None:
+    """Mesmo appid e epoch diferente (ou outro appid), ou sem marcador: a trava fica."""
+    for marcador in ((_TRAVA[0], _TRAVA[1] + 60), (9999, _TRAVA[1]), None):
+        d = _daemon()
+        d._pad_travado_pelo_lancamento = _TRAVA
+
+        motivos = _diario_da_soltura(d, "daemon", dict(_MARCADOR_DA_TRAVA, marker=marcador))
+
+        assert d._pad_travado_pelo_lancamento == _TRAVA, marcador
+        assert motivos == [], marcador
+
+
+def test_o_vao_do_exec_com_o_pid_vivo_e_sem_saida_segura_a_trava() -> None:
+    """O wrapper vivo ainda não virou o jogo: nem o tique inteiro nem a pergunta soltam."""
+    from hefesto_dualsense4unix.daemon.lifecycle import _o_lancamento_da_trava_acabou
+
+    vivo = dict(_MARCADOR_DA_TRAVA, marker_pid_alive=True)
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+
+    assert _o_lancamento_da_trava_acabou(d, vivo) is False
+    assert _diario_da_soltura(d, "daemon", vivo) == []
+    assert d._pad_travado_pelo_lancamento == _TRAVA
+
+
+def test_a_soltura_do_lancamento_que_caiu_fica_de_fora_de_game() -> None:
+    """Com a autoridade `game` (a janela disse), a pergunta do lançamento não solta."""
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+
+    motivos = _diario_da_soltura(
+        d, "game", dict(_MARCADOR_DA_TRAVA, window_class_current="steam_app_4235410",
+                        window_seen_age=1.0, appid_de_jogo_vivo=_TRAVA[0]))
+
+    assert d.display_authority == "game"
+    assert d._pad_travado_pelo_lancamento == _TRAVA
+    assert motivos == []
+
+
+def test_a_borda_game_daemon_mantem_o_motivo_da_autoridade() -> None:
+    """Mesmo com o marcador da trava morto, a borda de 01/10 fica com a soltura e o motivo."""
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+
+    motivos = _diario_da_soltura(d, "game", _MARCADOR_DA_TRAVA)
+
+    assert d.display_authority == "daemon"
+    assert motivos == ["o_jogo_devolveu_a_autoridade"]

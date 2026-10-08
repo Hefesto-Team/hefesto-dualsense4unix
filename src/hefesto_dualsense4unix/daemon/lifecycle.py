@@ -172,15 +172,58 @@ def _o_appid_da_evidencia(inputs: dict[str, Any]) -> int | None:
     return None
 
 
-def _soltar_o_pad_do_lancamento(daemon: Any) -> None:
-    """O jogo devolveu a autoridade: a trava do lançamento acaba aqui."""
+MOTIVO_DA_AUTORIDADE = "o_jogo_devolveu_a_autoridade"
+MOTIVO_DO_LANCAMENTO_QUE_CAIU = "o_lancamento_acabou_sem_o_jogo"
+
+
+def _soltar_o_pad_do_lancamento(daemon: Any, motivo: str) -> None:
+    """A trava do lançamento acaba aqui, e o diário diz por quê (`motivo`).
+
+    O dono das duas solturas do sinal: a borda `game -> daemon`
+    (`MOTIVO_DA_AUTORIDADE`) e o lançamento que acabou sem o jogo
+    (`MOTIVO_DO_LANCAMENTO_QUE_CAIU`). A do lançamento seguinte
+    (`launch_env._soltar_a_trava_do_lancamento`) fica fora: a trava nova nasce
+    logo depois dela.
+    """
     travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
     if travado is None:
         return
     with contextlib.suppress(Exception):
         daemon._pad_travado_pelo_lancamento = None
-    logger.info("pad_do_lancamento_destravado", motivo="o_jogo_devolveu_a_autoridade",
+    logger.info("pad_do_lancamento_destravado", motivo=motivo,
                 appid=travado[0] if isinstance(travado, tuple) and travado else None)
+
+
+def _o_lancamento_da_trava_acabou(daemon: Any, inputs: dict[str, Any]) -> bool:
+    """O lançamento que armou a trava acabou sem o jogo abrir? Na dúvida, não.
+
+    Só é «acabou» quando o marcador lido é o DESTA trava (mesmo appid e mesmo
+    epoch), o marcador já não atesta jogo vivo (saída anotada para o mesmo PID,
+    ou o PID morto) e a varredura não vê processo de jogo com o appid dela. Marcador
+    de outro lançamento, ilegível, ou jogo vivo pela varredura: a trava fica.
+    """
+    from hefesto_dualsense4unix.daemon.launch_env import wrapper_game_running
+
+    travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
+    if not (isinstance(travado, tuple) and len(travado) == 2):
+        return False
+    try:
+        marker = inputs.get("marker")
+        if marker is None or int(marker[0]) != int(travado[0]) or int(marker[1]) != int(travado[1]):
+            return False
+        if wrapper_game_running(
+            marker=marker,
+            exit_marker=inputs.get("exit_marker"),
+            pid_alive=bool(inputs.get("marker_pid_alive")),
+            marker_pid=inputs.get("marker_pid"),
+            exit_pid=inputs.get("exit_pid"),
+            now=float(inputs.get("now") or time.time()),
+        ):
+            return False
+        vivo = inputs.get("appid_de_jogo_vivo")
+        return not (isinstance(vivo, int) and vivo == int(travado[0]))
+    except Exception:
+        return False
 
 
 def _mascara_da_maquina() -> str:
@@ -4034,6 +4077,7 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
 
         anterior = signal.authority
+        inputs: dict[str, Any] | None = None
         try:
             inputs = await self._run_blocking(self._gather_game_signal_inputs)
         except Exception as exc:
@@ -4045,10 +4089,18 @@ class Daemon:
             signal.evaluate(raw, session_open=bool(inputs["session_open"]))
             self._appid_da_evidencia = _o_appid_da_evidencia(inputs)
         novo = signal.authority
+        if anterior == "game" and novo == "daemon":
+            _soltar_o_pad_do_lancamento(self, MOTIVO_DA_AUTORIDADE)
+        # O lançamento que caiu não muda a autoridade (fica `daemon`): esta soltura
+        # roda ANTES do retorno de «sem borda», senão nunca rodaria.
+        if (
+            inputs is not None
+            and novo != "game"
+            and _o_lancamento_da_trava_acabou(self, inputs)
+        ):
+            _soltar_o_pad_do_lancamento(self, MOTIVO_DO_LANCAMENTO_QUE_CAIU)
         if novo == anterior:
             return
-        if anterior == "game" and novo == "daemon":
-            _soltar_o_pad_do_lancamento(self)
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.connection import (
                 armar_gatilho_da_cor_por_evento,
