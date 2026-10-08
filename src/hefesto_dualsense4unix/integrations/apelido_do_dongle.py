@@ -148,8 +148,6 @@ NOMES_NINTENDO = NOMES_LINHAGEM
 
 _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 
-_CAMINHO_DE_ADAPTADOR = re.compile(r"/org/bluez/hci[0-9]+")
-
 _MARCA_NOME = "HID_NAME="
 _MARCA_PHYS = "HID_PHYS="
 _MARCA_UNIQ = "HID_UNIQ="
@@ -280,7 +278,7 @@ def ler_os_dongles(
     )
     achados: list[Dongle] = []
     for caminho in caminhos:
-        if not _CAMINHO_DE_ADAPTADOR.fullmatch(caminho):
+        if bluez_dbus.hci_do_adaptador(caminho) is None:
             continue
         endereco = leitor.endereco_do_adaptador(caminho)
         if not endereco:

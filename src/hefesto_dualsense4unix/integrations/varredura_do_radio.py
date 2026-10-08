@@ -58,7 +58,6 @@ bastante para o motor escolher outro destino.
 
 from __future__ import annotations
 
-import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -70,8 +69,6 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import mac_limpo
 QUEDA_MINIMA_MEDIDA = 32.5
 QUEDA_MAXIMA_MEDIDA = 43.4
 
-
-_NO_DO_ADAPTADOR = re.compile(r"^/org/bluez/(hci[0-9]+)$")
 
 SEM_BUSCTL = "não há `busctl` nesta máquina — não consigo perguntar ao BlueZ"
 
@@ -122,9 +119,9 @@ def quem_esta_varrendo(*, orcamento: float = ORCAMENTO_DA_LEITURA) -> Varredura:
     ate = time.monotonic() + orcamento
     arvore = leitor.caminhos(espera=_resta(ate)) or ()
     adaptadores = [
-        (achado.group(1), caminho)
+        (hci, caminho)
         for caminho in arvore
-        if (achado := _NO_DO_ADAPTADOR.match(caminho)) is not None
+        if (hci := bluez_dbus.hci_do_adaptador(caminho)) is not None
     ]
     if not adaptadores:
         return Varredura(motivo=SEM_BLUEZ)

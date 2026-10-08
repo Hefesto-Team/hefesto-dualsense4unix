@@ -68,8 +68,6 @@ ROTULO_DAS_ORDENS = "Mudanças recomendadas"
 
 CHAVE_DAS_ORDENS = "ordens_da_mesa"
 
-_CAMINHO_DE_DISPOSITIVO = re.compile(r"/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+")
-
 
 @dataclass(frozen=True)
 class Item:
@@ -269,7 +267,7 @@ def pareamentos(
             estado=ESTADO_NAO_SEI,
             porque="Não deu para perguntar ao Bluetooth do sistema.",
         )
-    caminhos = [c for c in arvore if _CAMINHO_DE_DISPOSITIVO.fullmatch(c)]
+    caminhos = [c for c in arvore if bluez_dbus.e_caminho_de_aparelho(c)]
     if not caminhos:
         return Item(
             chave="pareamentos",

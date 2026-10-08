@@ -765,13 +765,8 @@ def test_a_sonda_do_bluez_nao_aceita_caminho_que_so_contem_a_raiz(arvore: str | 
 # --- o caminho ``/org/bluez`` em código também é conhecimento do dono ---
 
 _ISENTOS_DO_CAMINHO = {
-    # sai com: O-CAMINHO-DO-BLUEZ-SO-NO-DONO-01
-    "integrations/apelido_do_dongle.py": "re.compile do adaptador, refeito fora do dono",
     # sai com: O-BLUEZ-SO-PELA-PORTA-OFICIAL-01
     "integrations/conexao_zumbi.py": "re.compile do nó do aparelho, refeito fora do dono",
-    # sai com: O-CAMINHO-DO-BLUEZ-SO-NO-DONO-01
-    "integrations/exame_da_mesa.py": "re.compile do aparelho, refeito fora do dono",
-    "integrations/varredura_do_radio.py": "re.compile do adaptador, refeito fora do dono",
 }
 
 
@@ -816,7 +811,7 @@ def test_a_regua_de_caminho_morde_um_re_compile_novo() -> None:
 
 
 def test_ninguem_le_o_caminho_do_bluez_fora_do_dono() -> None:
-    """Um quinto arquivo com o literal reprova; a isenção declara a razão dos quatro."""
+    """Um quinto arquivo com o literal reprova; a isenção declara a razão do que resta."""
     assert all(_ISENTOS_DO_CAMINHO.values())
     novos, velhos = _com_caminho_fora_do_dono(_ISENTOS_DO_CAMINHO)
     assert novos == [], "segundo conhecedor do caminho do BlueZ:\n" + "\n".join(novos)
@@ -824,10 +819,42 @@ def test_ninguem_le_o_caminho_do_bluez_fora_do_dono() -> None:
 
 
 def test_a_tabela_de_isencao_do_caminho_morde() -> None:
-    """MORDIDA: tabela vazia reprova com os quatro nomes; entrada sem literal reprova."""
+    """MORDIDA: tabela vazia reprova com o nome que resta; entrada sem literal reprova."""
     novos, _velhos = _com_caminho_fora_do_dono({})
     assert sorted({n.split(":")[0] for n in novos}) == sorted(_ISENTOS_DO_CAMINHO)
     _novos, velhos = _com_caminho_fora_do_dono(
         {**_ISENTOS_DO_CAMINHO, "integrations/contratos_de_fora.py": "sem literal"}
     )
     assert velhos == ["integrations/contratos_de_fora.py"]
+
+
+@pytest.mark.parametrize(
+    ("caminho", "esperado"),
+    [
+        ("/org/bluez/hci0", "hci0"),
+        ("/org/bluez/hci12", "hci12"),
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", None),
+        ("/org/bluez", None),
+        ("/x/org/bluez/hci0", None),
+        ("/org/bluez/hci0/", None),
+    ],
+)
+def test_o_dono_diz_o_hci_so_do_caminho_de_adaptador(caminho: str, esperado: str | None) -> None:
+    """O adaptador é a ÚNICA forma que responde; o nó de aparelho e a raiz não."""
+    assert bd.hci_do_adaptador(caminho) == esperado
+
+
+@pytest.mark.parametrize(
+    ("caminho", "esperado"),
+    [
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", True),
+        ("/org/bluez/hci1/dev_aa_bb_cc_00_00_ff", True),
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF/sep1", False),
+        ("/org/bluez/hci0/dev_AA_BB_CC", False),
+        ("/org/bluez/hci0", False),
+        ("/x/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", False),
+    ],
+)
+def test_o_dono_diz_se_o_caminho_e_de_aparelho(caminho: str, esperado: bool) -> None:
+    """O endpoint de áudio (``…/sep1``) e o nó parcial não são aparelho."""
+    assert bd.e_caminho_de_aparelho(caminho) is esperado
