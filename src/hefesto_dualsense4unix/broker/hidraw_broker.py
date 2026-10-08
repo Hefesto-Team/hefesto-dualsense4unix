@@ -125,22 +125,6 @@ _INPUT_ID_FMT = "=HHHH"
 REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
 REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
-#: DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 (08/10/2026). Quanto o
-#: broker espera, sem NENHUM cliente, antes de entregar o físico ao sistema.
-#: Um reinício do daemon leva até 15 s entre o último EOF e o primeiro pedido
-#: (medido no diário de 05 a 08/10: 1, 2, 6, 9 e 15 s; os outros intervalos
-#: foram 124 s ou mais, que são parada de verdade), e entregar nesse vão
-#: reabriria a janela que a regra 73 fecha. O dobro do pior reinício medido.
-GRACA_DA_ENTREGA_S = 30.0
-#: ``0`` desliga a entrega (o comportamento de antes: sem daemon, o físico fica
-#: fechado até alguém pedir ao broker).
-GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
-#: Os pedidos que dizem «o Hefesto voltou»: esconder ou expor um físico, ou
-#: montar o pad dele. ``open`` NÃO entra: o exame da aba Conexões (outro
-#: processo, sem daemon) o usa só para ler, e fechar o físico por causa dele
-#: desfaria a entrega que o usuário pediu ao parar o serviço.
-PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
-
 _HIDIOCGRAWINFO = 0x80084803
 _HIDRAW_DEVINFO_FMT = "=Ihh"
 
@@ -1209,6 +1193,23 @@ class _ExpostoNode:
     uid: int
     refcount: int = 1
     pai: str | None = None
+
+
+#: DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 (08/10/2026). Quanto o
+#: broker espera, sem NENHUM cliente, antes de entregar o físico ao sistema.
+#: Um reinício do daemon leva até 15 s entre o último EOF e o primeiro pedido
+#: (medido no diário de 05 a 08/10: 1, 2, 6, 9 e 15 s; os outros intervalos
+#: foram 124 s ou mais, que são parada de verdade), e entregar nesse vão
+#: reabriria a janela que a regra 73 fecha. O dobro do pior reinício medido.
+GRACA_DA_ENTREGA_S = 30.0
+#: ``0`` desliga a entrega (o comportamento de antes: sem daemon, o físico fica
+#: fechado até alguém pedir ao broker).
+GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
+#: Os pedidos que dizem «o Hefesto voltou»: esconder ou expor um físico, ou
+#: montar o pad dele. ``open`` NÃO entra: o exame da aba Conexões (outro
+#: processo, sem daemon) o usa só para ler, e fechar o físico por causa dele
+#: desfaria a entrega que o usuário pediu ao parar o serviço.
+PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
 
 
 class BrokerState:
