@@ -246,6 +246,17 @@ def test_sem_declaracao_a_primeira_opcao_e_nao_sei(monkeypatch: pytest.MonkeyPat
         assert '<option value="" selected>' in lista
 
 
+def test_a_lista_da_chave_nao_se_chama_modo(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Na casa, «Modo» é como o controle chega ao jogo; a chave física do externo é outra coisa.
+
+    MORDIDA: o rótulo da primeira opção voltando a «Modo».
+    """
+    _ela(monkeypatch)
+    lista = _lista(conexoes._html_dos_externos(_ctx(_externo())), "externo-modo")
+    assert '<option value="" selected>Chave</option>' in lista
+    assert ">Modo<" not in lista
+
+
 def test_a_cor_fora_do_mapa_continua_na_lista(monkeypatch: pytest.MonkeyPatch) -> None:
     """Uma cor que o mapa não conhece não some nem é trocada em silêncio."""
     _ela(monkeypatch, cor="Rosa choque da minha tia")

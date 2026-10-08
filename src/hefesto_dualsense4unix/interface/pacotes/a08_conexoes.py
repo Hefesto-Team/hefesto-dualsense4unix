@@ -1218,6 +1218,10 @@ _MODOS_DO_EXTERNO = (("xinput", "XInput"), ("dinput", "DInput"), ("switch", "Swi
 _FAMILIAS_DO_EXTERNO = ("xbox", "nintendo")
 GESTOS_DO_EXTERNO = {"modo": "externo-modo", "botoes": "externo-botoes",
                      "cor": "externo-cor"}
+#: O rótulo da lista da chave física. NÃO é «Modo»: na casa, Modo é como o controle chega ao
+#: jogo (Jogar pelo Hefesto, Conexão Nativa…), e a mesma palavra para o XInput/DInput/Switch do
+#: externo faria as duas coisas parecerem uma (o glossário, `docs/A-LINGUA-DESTA-CASA-…`).
+ROTULO_DA_CHAVE_DO_EXTERNO = "Chave"
 
 
 def _nomes_de_cor_do_externo() -> list[str]:
@@ -1274,7 +1278,7 @@ def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
         '<span class="ext-declara">'
         + _lista_do_externo(GESTOS_DO_EXTERNO["modo"], quem,
                             "Chave do controle: só muda o que a tela mostra",
-                            "Modo", list(_MODOS_DO_EXTERNO), modo)
+                            ROTULO_DA_CHAVE_DO_EXTERNO, list(_MODOS_DO_EXTERNO), modo)
         + _lista_do_externo(GESTOS_DO_EXTERNO["botoes"], quem,
                             "Desenho dos botões: nada é remapeado no controle",
                             "Botões", familias, botoes)
