@@ -204,3 +204,179 @@ def test_o_cli_lista_define_e_tira(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert APPID in saida and OPCOES in saida
     assert opj.main(["--tirar", APPID]) == 0
     assert opj.ler(tmp_path) == {}
+
+
+# --- A-OPCAO-POR-JOGO-CHEGA-AO-LANCAMENTO-01 (08/10/2026) -------------------
+
+BASE_DO_STEAMID64 = 76561197960265728
+
+
+def _vdf_com_bloco_filho(appid: str = APPID) -> str:
+    """O jogo do Sackboy: o bloco `cloud` vem ANTES da `LaunchOptions` dele.
+
+    Medido na `localconfig.vdf` dela em 08/10: 36 dos 73 jogos têm bloco filho
+    antes da linha (ou ainda não têm linha). O escritor antigo fechava o jogo no
+    `}` do filho e escrevia a opção lá dentro.
+    """
+    return (
+        '"UserLocalConfigStore"\n{\n'
+        '\t"Software"\n\t{\n\t\t"Valve"\n\t\t{\n\t\t\t"Steam"\n\t\t\t{\n'
+        '\t\t\t\t"apps"\n\t\t\t\t{\n'
+        f'\t\t\t\t\t"{appid}"\n\t\t\t\t\t{{\n'
+        '\t\t\t\t\t\t"LastPlayed"\t\t"1791398598"\n'
+        '\t\t\t\t\t\t"cloud"\n\t\t\t\t\t\t{\n'
+        '\t\t\t\t\t\t\t"last_sync_state"\t\t"synchronized"\n'
+        '\t\t\t\t\t\t}\n'
+        '\t\t\t\t\t\t"LaunchOptions"\t\t"algo velho %command%"\n'
+        '\t\t\t\t\t}\n'
+        '\t\t\t\t\t"990000022"\n\t\t\t\t\t{\n'
+        '\t\t\t\t\t\t"autocloud"\n\t\t\t\t\t\t{\n'
+        '\t\t\t\t\t\t\t"lastexit"\t\t"1"\n'
+        '\t\t\t\t\t\t}\n'
+        '\t\t\t\t\t}\n'
+        '\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n'
+    )
+
+
+def test_a_opcao_entra_na_linha_do_jogo_e_nao_no_bloco_filho(tmp_path: Path) -> None:
+    """O defeito de 06/10: o relato dizia `aplicado` e a linha do jogo ficava velha.
+
+    ARRANQUE a profundidade do quadro (o `}` do filho voltar a fechar o jogo) e
+    este teste reprova: a opção vai para dentro do `cloud` e o leitor do
+    produto ainda vê `algo velho`.
+    """
+    vdf = tmp_path / "userdata" / "1" / "config" / "localconfig.vdf"
+    vdf.parent.mkdir(parents=True)
+    vdf.write_text(_vdf_com_bloco_filho(), encoding="utf-8")
+    _tabela(tmp_path, **{APPID: OPCOES, "990000022": "MANGOHUD=1 %command%"})
+
+    relato = opj.aplicar(vdfs=[vdf], config_home=tmp_path)
+    texto = vdf.read_text(encoding="utf-8")
+    lido = slo.read_launch_options_by_appid(texto)
+
+    assert relato["status"] == opj.APLICADO, relato
+    assert lido[APPID] == opj.linha_desejada(OPCOES, com_atalho=True), lido
+    assert lido["990000022"] == opj.linha_desejada("MANGOHUD=1 %command%", com_atalho=True)
+    # o bloco filho segue só com o que a Steam pôs nele
+    assert opj.opcoes_lidas_do_jogo(texto, APPID) == [_valor_escapado(OPCOES)]
+    assert opj.opcoes_lidas_do_jogo(texto, "990000022") == [
+        _valor_escapado("MANGOHUD=1 %command%")]
+    assert texto.count('"LaunchOptions"') == 2, texto
+
+
+def _valor_escapado(opcoes: str) -> str:
+    return opj._valor_do_vdf(opj.linha_desejada(opcoes, com_atalho=True))
+
+
+def test_a_linha_perdida_no_bloco_filho_pela_versao_velha_e_alinhada(
+        tmp_path: Path) -> None:
+    """O vdf dela JÁ tem a sujeira de 06/10 (`cloud/LaunchOptions`): fica igual à do jogo."""
+    sujo = _vdf_com_bloco_filho().replace(
+        '\t\t\t\t\t\t\t"last_sync_state"\t\t"synchronized"\n',
+        '\t\t\t\t\t\t\t"last_sync_state"\t\t"synchronized"\n'
+        '\t\t\t\t\t\t\t"LaunchOptions"\t\t"MANGOHUD=1 %command%"\n',
+    )
+    vdf = tmp_path / "userdata" / "1" / "config" / "localconfig.vdf"
+    vdf.parent.mkdir(parents=True)
+    vdf.write_text(sujo, encoding="utf-8")
+    _tabela(tmp_path, **{APPID: OPCOES})
+
+    relato = opj.aplicar(vdfs=[vdf], config_home=tmp_path)
+
+    assert relato["status"] == opj.APLICADO, relato
+    todas = opj.opcoes_lidas_do_jogo(vdf.read_text(encoding="utf-8"), APPID)
+    assert todas == [_valor_escapado(OPCOES)] * 2, todas
+
+
+def _duas_contas(home: Path, com_marca: bool) -> tuple[Path, Path]:
+    """Uma Steam com duas contas: a 111 (a antiga) e a 222 (a que está logada)."""
+    raiz = home / ".steam" / "steam"
+    pastas = []
+    for conta in ("111", "222"):
+        vdf = raiz / "userdata" / conta / "config" / "localconfig.vdf"
+        vdf.parent.mkdir(parents=True)
+        vdf.write_text(_vdf_texto(), encoding="utf-8")
+        pastas.append(vdf)
+    # com a marca, a logada é a de Timestamp MENOR: só a marca a distingue
+    marca = '\t\t"MostRecent"\t\t"1"\n' if com_marca else ""
+    quando = "1600000000" if com_marca else "1790000000"
+    (raiz / "config").mkdir()
+    (raiz / "config" / "loginusers.vdf").write_text(
+        '"users"\n{\n'
+        f'\t"{BASE_DO_STEAMID64 + 111}"\n\t{{\n\t\t"AccountName"\t\t"velha"\n'
+        '\t\t"Timestamp"\t\t"1700000000"\n\t}\n'
+        f'\t"{BASE_DO_STEAMID64 + 222}"\n\t{{\n\t\t"AccountName"\t\t"nova"\n'
+        f'{marca}\t\t"Timestamp"\t\t"{quando}"\n\t}}\n}}\n',
+        encoding="utf-8",
+    )
+    return pastas[0], pastas[1]
+
+
+@pytest.mark.parametrize("com_marca", [True, False], ids=["MostRecent", "Timestamp"])
+def test_so_a_conta_logada_recebe_a_linha(tmp_path: Path, com_marca: bool) -> None:
+    """Duas contas, o `loginusers.vdf` diz qual é a logada: só a dela é escrita.
+
+    ARRANQUE o filtro `so_a_conta_logada` do `aplicar` (escrever em todos) e
+    este teste reprova: a conta 111 ganha a linha.
+    """
+    velha, logada = _duas_contas(tmp_path, com_marca)
+    antes_da_velha = velha.read_text(encoding="utf-8")
+    _tabela(tmp_path, **{APPID: OPCOES})
+
+    relato = opj.aplicar(home=tmp_path, config_home=tmp_path)
+
+    assert relato["status"] == opj.APLICADO, relato
+    assert opj.linha_desejada(OPCOES, com_atalho=True) in slo.read_launch_options_by_appid(
+        logada.read_text(encoding="utf-8"))[APPID]
+    assert velha.read_text(encoding="utf-8") == antes_da_velha
+    assert not list(velha.parent.glob("*.bak.hefesto-opcoes-*"))
+    assert [p["reason"] for p in relato["pulados"] if p["vdf"] == str(velha.resolve())] == [
+        "conta_nao_logada"]
+
+
+def test_sem_resposta_do_loginusers_duas_contas_nao_se_adivinha(tmp_path: Path) -> None:
+    """Sem saber qual é a logada, escrever em uma das duas é escrever na errada."""
+    velha, logada = _duas_contas(tmp_path, com_marca=False)
+    (tmp_path / ".steam" / "steam" / "config" / "loginusers.vdf").unlink()
+    antes = [velha.read_text(encoding="utf-8"), logada.read_text(encoding="utf-8")]
+    _tabela(tmp_path, **{APPID: OPCOES})
+
+    relato = opj.aplicar(home=tmp_path, config_home=tmp_path)
+
+    assert relato["status"] == opj.NADA, relato
+    assert [velha.read_text(encoding="utf-8"), logada.read_text(encoding="utf-8")] == antes
+    assert {p["reason"] for p in relato["pulados"]} == {"conta_logada_desconhecida"}
+
+
+def test_vdf_que_a_steam_regravou_depois_da_escrita_nao_e_aplicado(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str]) -> None:
+    """O relato só diz `aplicado` depois de ler a opção onde a Steam a lê.
+
+    A Steam «regravou» o arquivo logo depois da escrita (o dublê devolve o texto
+    de antes). ARRANQUE a releitura (aceitar o que o escritor disse que fez) e
+    este teste reprova: o status volta a ser `aplicado`.
+    """
+    vdf = _vdf_de_mentira(tmp_path)
+    antes = vdf.read_text(encoding="utf-8")
+    _tabela(tmp_path, **{APPID: OPCOES})
+    escreve = Path.write_text
+
+    def steam_regrava(self: Path, dados: str, *args: object, **kw: object) -> int:
+        feito = escreve(self, dados, *args, **kw)  # type: ignore[arg-type]
+        if self.name == "localconfig.vdf":
+            escreve(self, antes, encoding="utf-8")
+        return feito
+
+    monkeypatch.setattr(Path, "write_text", steam_regrava)
+    relato = opj.aplicar(vdfs=[vdf], config_home=tmp_path)
+    monkeypatch.undo()
+
+    assert relato["status"] == opj.DESFEITO == "desfeito_pela_steam", relato
+    assert relato["aplicados"] == []
+    assert [d["appid"] for d in relato["desfeitos"]] == [APPID]
+    assert "LaunchOptions" in relato["desfeitos"][0]["reason"]
+    assert opj._imprimir(relato) == 1
+    saida = capsys.readouterr()
+    assert "aplicado" not in saida.out.replace("desfeito", "")
+    assert "desfeito_pela_steam" in saida.err
