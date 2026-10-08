@@ -583,9 +583,9 @@ def nao_firmaram(vdf: Path, appids: Sequence[str], *, com_wrapper: bool) -> list
 
     CONVERGE PELO ESTADO LIDO (07/10/2026). Gravar com ``tmp.replace`` e dar o jogo por aplicado
     é dar por feito o que ninguém leu de volta: a Steam já apagou o wrapper de um jogo sem aviso
-    (memória de 17/09), e o arquivo é do usuário. ``com_wrapper=True`` pergunta quem NÃO tem o wrapper
-    na linha; ``False``, quem ainda o tem. Arquivo que não abre devolve todos: sem leitura não há
-    prova de que firmou.
+    (memória de 17/09), e o arquivo é do usuário. ``com_wrapper=True`` pergunta quem NÃO tem o
+    wrapper na linha; ``False``, quem ainda o tem. Arquivo que não abre devolve todos: sem leitura
+    não há prova de que firmou.
     """
     try:
         lidos = read_apps_by_appid(vdf.read_text(encoding="utf-8"))
