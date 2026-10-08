@@ -4362,10 +4362,13 @@ class Daemon:
                 if blocked:
                     emu_buttons = buttons_pressed - blocked
             # A Navegação Interna com a janela do Hefesto na frente: o R1 e o L1
-            # andam as abas e não saem como Alt+Tab (D-20); fora dela, saem.
+            # andam as abas e não saem como Alt+Tab (D-20); fora dela, saem. Com o
+            # mouse desligado o primário navega a Interna: o Start também fica com ela.
             navegacao = getattr(self, "_navegacao_interna", None)
             if navegacao is not None:
-                emu_buttons = navegacao.calar_o_alt_tab(emu_buttons)
+                emu_buttons = navegacao.calar_o_alt_tab(
+                    emu_buttons, mouse_ligado=self.config.mouse_emulation_enabled
+                )
 
             emu_active = not self._emulation_suppressed
             if not gamepad_dispatched:

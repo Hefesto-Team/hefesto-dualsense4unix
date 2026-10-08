@@ -91,13 +91,13 @@ def test_2_com_o_foco_vivo_o_r1_nao_sai_como_alt_tab_e_e_contado() -> None:
     relogio = _Relogio()
     n = _interna(relogio, foco=False)
     n.contar({P1: {}})
-    assert n.calar_o_alt_tab(frozenset({"r1", "cross"})) == frozenset({"r1", "cross"}), (
-        "sem foco, o R1 tem de sair como Alt+Tab")
+    sai = n.calar_o_alt_tab(frozenset({"r1", "cross"}), mouse_ligado=True)
+    assert sai == frozenset({"r1", "cross"}), "sem foco, o R1 tem de sair como Alt+Tab"
     n.contar({P1: {"r1": 1}})
     assert n.toques()[P1]["r1"] == 0, "sem foco, o R1 que saiu como Alt+Tab não vira aba"
     n.declarar_foco(True)
-    assert n.calar_o_alt_tab(frozenset({"r1", "l1", "cross"})) == frozenset({"cross"}), (
-        "com a janela na frente, o R1 e o L1 saíram como Alt+Tab")
+    calado = n.calar_o_alt_tab(frozenset({"r1", "l1", "cross"}), mouse_ligado=True)
+    assert calado == frozenset({"cross"}), "com a janela na frente, o R1 e o L1 saíram como Alt+Tab"
     n.contar({P1: {"r1": 2}})
     assert n.toques()[P1]["r1"] == 1
 
@@ -105,10 +105,12 @@ def test_2_com_o_foco_vivo_o_r1_nao_sai_como_alt_tab_e_e_contado() -> None:
 def test_2_o_laco_cala_o_alt_tab_antes_do_teclado_emulado() -> None:
     """O `_poll_loop` passa os botões pela Interna antes do despacho do teclado."""
     fonte = inspect.getsource(Daemon._poll_loop)
-    calar = fonte.find("calar_o_alt_tab(emu_buttons)")
+    calar = fonte.find("calar_o_alt_tab(")
     despacho = fonte.find("_dispatch_mouse_emulation(state, emu_buttons)")
     assert calar != -1 and despacho != -1 and calar < despacho, (
         "o R1 do primário chega ao teclado emulado sem passar pela Interna")
+    assert "mouse_ligado=self.config.mouse_emulation_enabled" in fonte, (
+        "o laço não passa o estado do mouse (o mesmo campo que a janela lê)")
 
 
 def test_2_ligar_a_interna_nao_mexe_no_mouse() -> None:

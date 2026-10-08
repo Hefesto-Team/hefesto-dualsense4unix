@@ -56,6 +56,7 @@ TOQUES: dict[str, str] = {
 BOTOES_QUE_NAVEGAM = frozenset(TOQUES)
 
 #: O R1 e o L1 são o Alt+Tab do teclado emulado (D-20): com o foco vivo, calam.
+#: Com o mouse desligado calam todos os ``BOTOES_QUE_NAVEGAM`` (o Start inclusive).
 BOTOES_DO_ALT_TAB = frozenset({"r1", "l1"})
 
 
@@ -120,11 +121,19 @@ class NavegacaoInterna:
             return botoes
         return botoes - BOTOES_QUE_NAVEGAM
 
-    def calar_o_alt_tab(self, botoes: frozenset[str]) -> frozenset[str]:
-        """Os botões que vão ao teclado emulado: sem o R1 e o L1, quando ela age."""
+    def calar_o_alt_tab(
+        self, botoes: frozenset[str], *, mouse_ligado: bool
+    ) -> frozenset[str]:
+        """Os botões que vão ao teclado emulado, quando a Interna age.
+
+        Quem navega o PC (mouse ligado) fica com o Start como tecla e perde só
+        o R1 e o L1, que são o Alt+Tab. Quem não navega o PC (mouse desligado)
+        é quem navega a Interna: todo botão dela, o Start e os que o perfil
+        ligou a uma tecla, fica com a Interna e não sai como tecla.
+        """
         if not botoes or not self.age():
             return botoes
-        return botoes - BOTOES_DO_ALT_TAB
+        return botoes - (BOTOES_DO_ALT_TAB if mouse_ligado else BOTOES_QUE_NAVEGAM)
 
     def contar(self, apertos_por_uniq: Mapping[str, Mapping[str, int] | None]) -> None:
         """Soma nos toques a diferença dos ``apertos`` de cada leitor.
