@@ -69,6 +69,7 @@ def _so_o_yml_falha(monkeypatch: pytest.MonkeyPatch, yml: Path) -> None:
 
 def test_a_gravacao_que_falha_depois_da_anotacao_vai_ao_diario(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A decisão D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
     yml = _excluido_com_a_carona_por_fazer(_lar, monkeypatch)
     disco_antes = yml.read_bytes()
     registro_antes = _o_registro()
@@ -88,6 +89,7 @@ def test_a_gravacao_que_falha_depois_da_anotacao_vai_ao_diario(
 @pytest.mark.parametrize("como", ["erro", "excecao"])
 def test_a_reanotacao_que_tambem_falha_nao_morre_calada(
         _lar: Path, monkeypatch: pytest.MonkeyPatch, como: str) -> None:
+    # A decisão D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
     yml = _excluido_com_a_carona_por_fazer(_lar, monkeypatch)
     disco_antes = yml.read_bytes()
     registro_antes = _o_registro()
@@ -184,6 +186,7 @@ def _segunda_copia(yml: Path) -> Path:
 
 def test_so_o_yml_que_falhou_conta_e_volta(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A decisão D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
     """Dois `.yml` no mesmo jogo: só o que falhou volta ao de antes e entra na conta."""
     falha = _lutris_flatpak(_lar)
     grava = _segunda_copia(falha)
