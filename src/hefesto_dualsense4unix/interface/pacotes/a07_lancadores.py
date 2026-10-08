@@ -1153,19 +1153,10 @@ FRASE_DA_LISTA_ILEGIVEL = (
 FRASE_DO_EXCLUIR_SEM_CAUSA = "Não consegui excluir este jogo."
 FRASE_DO_TIRAR_SEM_CAUSA = "Não consegui tirar o jogo da lista de exclusão."
 
-#: Os dois status em que a lista volta ANTES de qualquer escrita: só neles a frase
-#: promete «nada foi alterado». No `"erro"` a Steam, o Heroic ou o Lutris já
-#: podem ter recebido a escrita, e o desfazer não confere o próprio resultado.
-_RECUSAS_DA_LISTA = {
-    "ocupada": FRASE_DA_LISTA_OCUPADA,
-    "ilegivel": FRASE_DA_LISTA_ILEGIVEL,
-}
-
-
-def _recusa_da_lista(status: str, sem_causa: str) -> str:
-    """A frase da causa que o dono da lista disse; o `"erro"` não chuta uma."""
-    _LOG.warning("lista de exclusão recusou: %s", status)
-    return _RECUSAS_DA_LISTA.get(status, sem_causa)
+#: Só `"ocupada"` e `"ilegivel"` prometem «nada foi alterado»: a lista volta ANTES
+#: de qualquer escrita. No `"erro"` a Steam, o Heroic ou o Lutris já podem ter
+#: recebido a escrita, e o desfazer não confere o próprio resultado. A frase vai
+#: escrita no `raise`, que é onde a régua `tela-nao-confessa` a lê.
 
 
 @gesto("07-lancadores.html", desenho.CONFIRMAR_EXCLUSAO, grava="adicionar")
@@ -1175,8 +1166,15 @@ def confirmar_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     status = lista_de_exclusao.adicionar(
         jogo.chave, lancador=_ESCOLHA.lancador, nome=jogo.nome,
         janelas=_ESCOLHA.janelas.get(jogo.chave, ()))
-    if status in _RECUSAS_DA_LISTA or status in ("erro", "chave_invalida"):
-        raise RuntimeError(_recusa_da_lista(status, FRASE_DO_EXCLUIR_SEM_CAUSA))
+    if status == "ocupada":
+        _LOG.warning("lista de exclusão recusou: %s", status)
+        raise RuntimeError(FRASE_DA_LISTA_OCUPADA)
+    if status == "ilegivel":
+        _LOG.warning("lista de exclusão recusou: %s", status)
+        raise RuntimeError(FRASE_DA_LISTA_ILEGIVEL)
+    if status in ("erro", "chave_invalida"):
+        _LOG.warning("lista de exclusão recusou: %s", status)
+        raise RuntimeError(FRASE_DO_EXCLUIR_SEM_CAUSA)
     disco = lista_de_exclusao.tirar_do_disco(jogo.chave)
     _relatar(desenho.CONFIRMAR_EXCLUSAO,
              f"{jogo.nome}: {status}; no disco: {disco}")
@@ -1190,8 +1188,15 @@ def tirar_da_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     """«Tirar da lista»: o jogo volta ao Hefesto."""
     chave = str(o.get("v") or "").strip()
     status = lista_de_exclusao.tirar(chave)
-    if status in _RECUSAS_DA_LISTA or status == "erro":
-        raise RuntimeError(_recusa_da_lista(status, FRASE_DO_TIRAR_SEM_CAUSA))
+    if status == "ocupada":
+        _LOG.warning("lista de exclusão recusou: %s", status)
+        raise RuntimeError(FRASE_DA_LISTA_OCUPADA)
+    if status == "ilegivel":
+        _LOG.warning("lista de exclusão recusou: %s", status)
+        raise RuntimeError(FRASE_DA_LISTA_ILEGIVEL)
+    if status == "erro":
+        _LOG.warning("lista de exclusão recusou: %s", status)
+        raise RuntimeError(FRASE_DO_TIRAR_SEM_CAUSA)
     _relatar(desenho.TIRAR_DA_EXCLUSAO, f"{chave}: {status}")
     VIGIA.esquecer()
     return _resposta(VIGIA.ler(), ctx.state)
