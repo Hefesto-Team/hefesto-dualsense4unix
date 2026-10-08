@@ -27,9 +27,19 @@
       display:flex;flex-direction:column}
   .topo{padding:15px 20px;border-bottom:1px solid var(--border-sutil);
         position:relative;padding-left:132px;flex:0 0 auto}
-  h1{font-size:18px;font-weight:700}
+  h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px}
   h1 .p{color:var(--pink)}
-  .sub{font-size:12.5px;color:var(--texto-mudo);margin-top:3px}
+  /* O `?` É CÓPIA DECLARADA DO `.ajuda` DA FOLHA DA CASA (`topo.html`): esta
+     página tem folha própria, e um `?` com outra cara seria outro vocabulário. */
+  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;font-weight:400;
+         border:1px solid var(--linha);color:var(--texto-mudo);font-size:11px;
+         line-height:15px;text-align:center;cursor:help;position:relative}
+  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda .dica{display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
+         background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
+         padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
+         text-align:left}
+  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
   /* O PERFIL ATIVO, no canto do topo: cópia do `.perfil-ativo` do `topo.html` (a Calibrar é página
      avulsa e não tem a fita). Os ajustes da Mira caem no perfil que vale, e este chip diz qual. */
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
@@ -52,15 +62,16 @@
      documenta, e a mesma cura. */
   .et{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
 
+  /* OS TRÊS PASSOS VIRARAM UMA FITA — 06/10/2026. Uma linha de 32px no lugar
+     de três cartões de 87px com duas frases cada; a frase mora no `title`. */
   .passos{display:flex;gap:9px}
-  .passo{flex:1;display:flex;gap:10px;align-items:flex-start;
-         padding:11px 13px;border-radius:9px;border:1px solid var(--border-sutil);
+  .passo{flex:1;display:flex;gap:9px;align-items:center;height:32px;
+         padding:0 12px;border-radius:8px;border:1px solid var(--border-sutil);
          background:var(--panel);cursor:pointer}
-  .passo .n{flex:0 0 22px;height:22px;border-radius:50%;display:flex;
+  .passo .n{flex:0 0 20px;height:20px;border-radius:50%;display:flex;
             align-items:center;justify-content:center;font-family:var(--m);
             font-size:11px;border:1px solid var(--border-forte);color:var(--texto-mudo)}
-  .passo b{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
-  .passo span.d{font-size:12px;color:var(--texto-mudo);line-height:16px}
+  .passo b{font-size:12.5px;font-weight:600}
   /* O PASSO EM QUE ELA ESTÁ. Cor explícita, nada de `opacity` — a lição medida
      da `.fita.inerte`: a opacidade tira contraste E peso do traço ao mesmo
      tempo, e o que sobra deixa de comunicar o que foi desenhado. */
@@ -78,17 +89,34 @@
      bloco passou a ser o alvo que o produto TROCA a cada mudança de bancada, e
      o seletor vive escrito no pacote: `[data-bloco="controles"]`. Um endereço
      novo nasce na língua de hoje. */
-  .controles{display:flex;gap:11px}
+  /* UM CARTÃO POR JOGADOR — 06/10/2026. Os dois blocos que o tique remonta
+     (`controles` e `miras`) somem da grade (`display:contents`) e os filhos
+     deles caem numa grade de quatro colunas: na primeira linha o controle, na
+     segunda a mira DELE, colada embaixo e com a mesma borda do plástico. Os
+     lugares vazios ocupam as duas linhas. O endereço dos dois blocos não muda,
+     e o pacote continua trocando cada um pelo gerador. */
+  .grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:11px;
+         grid-template-rows:auto minmax(0,1fr);flex:1 0 auto}
+  .controles,.mira-cx{display:contents}
+  .lugar{grid-row:span 2;border:1px dashed var(--border-forte);border-radius:9px;
+         display:flex;align-items:center;justify-content:center;
+         font-family:var(--m);font-size:22px;color:var(--border-forte)}
   /* SEM CONTROLE NENHUM não é cartão vazio: é uma frase. Ver `SEM_CONTROLE`. */
-  .vazio{flex:1;padding:22px 14px;text-align:center;border-radius:9px;
+  .vazio{grid-column:1 / -1;padding:22px 14px;text-align:center;border-radius:9px;
          border:1px dashed var(--border-forte);background:var(--panel);
          color:var(--texto-mudo);font-size:13px;line-height:19px}
-  .ctr{flex:1;border:2px solid var(--plastico,var(--border-forte));border-radius:9px;
-       background:var(--panel);padding:11px 12px 12px;display:flex;
+  .ctr{border:2px solid var(--plastico,var(--border-forte));border-bottom:0;
+       border-radius:9px 9px 0 0;
+       background:var(--panel);padding:11px 12px 10px;display:flex;
        flex-direction:column;gap:8px;min-width:0}
   .ctr-topo{display:flex;align-items:center;gap:9px;min-width:0}
   .ctr .nome{font-size:12.5px;color:var(--texto-mudo);line-height:15px;white-space:nowrap;
-             overflow:hidden;text-overflow:ellipsis}
+             overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
+  /* O SELO MORA NA LINHA DO NÚMERO (08/10/2026): ao lado do modelo e do transporte, o
+     «Medindo…» e o «Calibrado» comiam o «USB» e o «BT» do cartão; na primeira linha, ao
+     lado do «P<n>», a segunda fica com a largura inteira do cartão. */
+  .ctr .nome .l1{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:2px}
+  .ctr .nome .l1 b{flex:0 1 auto;min-width:0}
   .ctr .nome b{color:var(--fg);font-weight:600;display:inline-flex;max-width:100%;
                vertical-align:top}
   /* O nome encolhe com reticência e o «• P<n>» não: com o número no fim de um texto só, o
@@ -101,23 +129,34 @@
      estica o cartão inteiro. Medido: cada cartão saía com ~900px de vazio.
      As dez abas não sofrem disto porque o `topo.html` traz a regra no esqueleto
      comum; esta página tem folha própria, e por isso precisa dizê-la. */
-  .ds-svg{width:74px;height:auto;flex:0 0 74px}
-  .selo{margin-left:auto;flex:0 0 auto;font-size:11px;padding:2px 8px;border-radius:6px;
+  .ds-svg{width:60px;height:auto;flex:0 0 60px}
+  .selo{margin-left:auto;flex:0 0 auto;font-size:11px;line-height:13px;padding:2px 8px;border-radius:6px;
         border:1px solid var(--border-forte);color:var(--texto-mudo);white-space:nowrap}
-  #e-medindo:checked ~ .controles .selo{border-color:var(--orange);color:var(--orange)}
-  #e-pronto:checked  ~ .controles .selo{border-color:var(--green);color:var(--green)}
-  .selo .t2,.selo .t3{display:none}
-  #e-medindo:checked ~ .controles .selo .t1,
-  #e-medindo:checked ~ .controles .selo .t3,
-  #e-pronto:checked  ~ .controles .selo .t1,
-  #e-pronto:checked  ~ .controles .selo .t2{display:none}
-  #e-medindo:checked ~ .controles .selo .t2,
-  #e-pronto:checked  ~ .controles .selo .t3{display:inline}
+  /* O SELO É DE CADA CONTROLE (08/10/2026): o tique escreve o `data-zero` dele, e o
+     cartão que mexeu diz «Mexeu» sozinho. Sem o atributo (o desenho), os rádios mandam.
+     O «Mexeu» é o branco da casa, nunca vermelho: o vermelho não nasce fora do Hz e dos
+     canais (`D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE`). */
+  #e-medindo:checked ~ .grade .selo:not([data-zero]),
+  .selo[data-zero="medindo"]{border-color:var(--orange);color:var(--orange)}
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]),
+  .selo[data-zero="pronto"]{border-color:var(--green);color:var(--green)}
+  .selo[data-zero="mexeu"]{border-color:var(--fg);color:var(--fg)}
+  .selo .t2,.selo .t3,.selo .t4{display:none}
+  #e-medindo:checked ~ .grade .selo:not([data-zero]) .t1,
+  #e-medindo:checked ~ .grade .selo:not([data-zero]) .t3,
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]) .t1,
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]) .t2,
+  .selo[data-zero]:not([data-zero="parado"]) .t1{display:none}
+  #e-medindo:checked ~ .grade .selo:not([data-zero]) .t2,
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]) .t3,
+  .selo[data-zero="medindo"] .t2,
+  .selo[data-zero="pronto"] .t3,
+  .selo[data-zero="mexeu"] .t4{display:inline}
 
-  .leitura{border-top:1px solid var(--border-sutil);padding-top:7px;
-           display:flex;flex-direction:column;gap:5px}
+  .leitura{border-top:1px solid var(--border-sutil);padding-top:9px;
+           display:flex;flex-direction:column;gap:8px}
   .lin{display:flex;align-items:center;gap:7px;font-family:var(--m);font-size:11px}
-  .lin > .r{flex:0 0 80px;color:var(--texto-mudo)}
+  .lin > .r{flex:0 0 74px;color:var(--texto-mudo)}
   .lin > .v{flex:0 0 52px;text-align:right;color:var(--texto-suave)}
   .lin > .g{flex:1;height:4px;border-radius:2px;background:var(--border-sutil);
             position:relative;overflow:hidden;color:var(--border-forte)}
@@ -140,7 +179,7 @@
                 background:currentColor}
   .lin > .g > i.neg{right:50%}
   .lin > .g > i.pos{left:50%}
-  #e-pronto:checked ~ .controles .lin > .g::after{background:var(--green)}
+  #e-pronto:checked ~ .grade .lin > .g::after{background:var(--green)}
 
   .barra{height:6px;border-radius:3px;background:var(--border-sutil);overflow:hidden}
   .barra > i{display:block;height:100%;width:0;background:var(--purple)}
@@ -150,17 +189,24 @@
   /* O RODAPÉ DESCE PARA O FIM DA CAIXA, como o das abas: a altura que sobra
      vira vão ENTRE os cartões e os botões, nunca abaixo do aviso. */
   .rodape{display:flex;align-items:center;gap:13px;margin-top:auto}
+  .rodape .acoes{display:flex;gap:9px}
   .rodape .barra{flex:1}
   /* A CONTA DE QUEM ESTÁ AQUI, e ela fica ao lado do botão de propósito: é a
      última coisa que a tela diz antes de ela apertar «Começar». Ver
      `contagem()` — com zero controles esta linha fica VAZIA, e quem fala é o
      lugar dos cartões. */
   .quantos{font-size:12px;color:var(--texto-mudo);white-space:nowrap}
-  .btn{height:34px;padding:0 15px;border-radius:8px;font-size:13px;cursor:pointer;
+  /* OS DOIS BOTÕES DO PÉ SÃO UM GRUPO — 06/10/2026: a mesma largura e a mesma
+     altura, lado a lado, e o «Começar» é o verde cheio do «Aplicar» das abas
+     (`topo.html`, `.r-aplicar`). */
+  .btn{height:34px;width:150px;padding:0 15px;border-radius:8px;font-size:13px;cursor:pointer;
        border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);
-       display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
+       display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
+       white-space:nowrap;font-family:inherit}
   .btn:hover{border-color:var(--comment);color:var(--fg)}
-  .btn.fazer{border-color:var(--green);color:var(--green)}
+  .btn.fazer{border-color:var(--green);background:var(--green);color:var(--app-bg);
+             font-weight:600}
+  .btn.fazer:hover{color:var(--app-bg);filter:brightness(1.08)}
   .btn .t2,.btn .t3{display:none}
   #e-medindo:checked ~ .rodape .btn.fazer .t1,
   #e-medindo:checked ~ .rodape .btn.fazer .t3,
@@ -168,21 +214,41 @@
   #e-pronto:checked  ~ .rodape .btn.fazer .t2{display:none}
   #e-medindo:checked ~ .rodape .btn.fazer .t2,
   #e-pronto:checked  ~ .rodape .btn.fazer .t3{display:inline}
-  #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);color:var(--orange)}
+  #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);background:var(--orange)}
 
   /* A MIRA VIRTUAL — 24/09/2026. As colunas repetem o `gap` e o `flex:1` dos
      cartões, e por isso cada uma cai embaixo do cartão do mesmo controle. */
-  .mira-cx{border-top:1px solid var(--border-sutil);padding-top:11px;
-           display:flex;flex-direction:column;gap:8px}
-  .mira-cx:empty{display:none}
-  .mira-topo{font-size:13px}
+  .mira{min-width:0;display:flex;flex-direction:column;gap:13px;
+        padding:9px 12px 12px;border-radius:0 0 9px 9px;
+        border:2px solid var(--plastico,var(--border-forte));border-top:0;
+        background:var(--panel);position:relative}
+  /* O FIO ENTRE AS DUAS METADES DO CARTÃO: o controle em cima, a mira dele
+     embaixo, separados como a `.leitura` se separa do topo. */
+  .mira::before{content:"";position:absolute;left:12px;right:12px;top:0;
+                border-top:1px solid var(--border-sutil)}
+  .mira-topo{display:flex;align-items:center;gap:7px;font-size:12.5px;min-height:20px}
   .mira-topo b{font-weight:600}
-  .mira-topo .d{font-size:12px;color:var(--texto-mudo);margin-left:6px}
-  .miras{display:flex;gap:11px}
-  .mira{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;
-        padding:9px 12px;border-radius:9px;border:1px solid var(--border-sutil);
-        background:var(--panel)}
-  .mira .quem{font-size:11px;color:var(--texto-mudo)}
+  /* O LIGA E O LADO DO ANALÓGICO VIRTUAL — 06/10/2026. A pastilha é a mesma
+     dos dois «Inverter» logo abaixo; com o liga apagado o lado fica no cinza
+     da casa (`.btn.apagado`), sem `opacity`, e segue clicável: o clique num
+     lado acende o Analógico Virtual nele. */
+  .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .av .sw{height:20px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    display:inline-flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap}
+  .av .sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
+  .av .liga:not(.off) > .sw,.av .lado.on > .sw{border-color:var(--green);
+    background:rgba(80,250,123,.09);color:var(--green)}
+  .av .liga:not(.off) > .sw .p,.av .lado.on > .sw .p{background:var(--green);
+    box-shadow:0 0 6px var(--green)}
+  .av .liga > .sw{font-weight:600;font-size:12px}
+  .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
+    background:var(--app-bg)}
+  .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
+  .av > .ajuda{margin-left:auto}
+  /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
+  .av .lados{order:3;flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .av .lado > .sw{width:100%;justify-content:center}
   /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
      coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
      ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
@@ -210,7 +276,9 @@
      a mesma pastilha de 17px. É cópia declarada — esta página tem folha
      própria, como a paleta do topo —, e um interruptor com outra cara na
      mesma janela seria um segundo vocabulário para o mesmo ato. */
-  .inverter{display:flex;gap:6px;flex-wrap:wrap}
+  /* Os dois «Inverter» são um grupo: a mesma largura, lado a lado (06/10/2026). */
+  .inverter{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .inverter .sw{justify-content:center}
   .inverter .sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
     cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
     color:var(--green);display:inline-flex;align-items:center;gap:6px;padding:0 10px;
@@ -220,8 +288,6 @@
   .inverter .sw.off{border-color:var(--border-forte);background:var(--app-bg);
     color:var(--texto-mudo)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
-  .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
-  .aviso b{color:var(--texto-suave);font-weight:600}
   :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
   body{padding:var(--recuo-do-corpo)}
   .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
@@ -235,8 +301,7 @@
          abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
          o mesmo do mapa do controle. -->
     <a class="voltar" href="02-controles.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
-    <h1><span class="p">Calibrar sensores de movimento</span></h1>
-    <div class="sub">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez.</div>
+    <h1><span class="p">Calibrar sensores de movimento</span><span class="ajuda" tabindex="0">?<span class="dica">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez. A calibração não muda os seus ajustes: ela mede o zero de cada controle parado, e o Hefesto o guarda para aquele controle. Se o cursor anda sozinho com o controle parado, é isto que resolve.</span></span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
 
@@ -244,31 +309,20 @@
 
     <!-- OS TRÊS ESTADOS, CLICÁVEIS. Os rádios vêm antes de tudo o que reage a
          eles — o `~` só enxerga irmão posterior. -->
-    <input class="et" type="radio" name="etapa" id="e-parado" checked>
-    <input class="et" type="radio" name="etapa" id="e-medindo">
-    <input class="et" type="radio" name="etapa" id="e-pronto">
+    <input class="et" type="radio" name="etapa" id="e-parado" data-campo="passo-parado" data-hef-alvo="marcado" checked>
+    <input class="et" type="radio" name="etapa" id="e-medindo" data-campo="passo-medindo" data-hef-alvo="marcado">
+    <input class="et" type="radio" name="etapa" id="e-pronto" data-campo="passo-pronto" data-hef-alvo="marcado">
 
     <div class="passos">
-      <label class="passo" for="e-parado">
-        <span class="n">1</span>
-        <span><b>Deixe os controles parados</b>
-          <span class="d">Numa superfície plana, com os analógicos livres. Não precisa desconectar nada.</span></span>
-      </label>
-      <label class="passo" for="e-medindo">
-        <span class="n">2</span>
-        <span><b>Não toque neles</b>
-          <span class="d">São 5 segundos de leitura. Encostar no controle recomeça a conta dele.</span></span>
-      </label>
-      <label class="passo" for="e-pronto">
-        <span class="n">3</span>
-        <span><b>Pronto</b>
-          <span class="d">O zero de cada eixo fica gravado no controle e vale para todo jogo.</span></span>
-      </label>
+      <label class="passo" for="e-parado" title="Numa superfície plana, com os analógicos livres. Não precisa desconectar nada."><span class="n">1</span><b>Deixe parados</b></label>
+      <label class="passo" for="e-medindo" title="Não toque neles. Encostar no controle recomeça a conta dele."><span class="n">2</span><b>Medindo 5 s</b></label>
+      <label class="passo" for="e-pronto" title="O zero de cada controle fica guardado no Hefesto e vale para todo jogo."><span class="n">3</span><b>Pronto</b></label>
     </div>
 
     <!-- OS CONTROLES DE QUEM ABRE, e o bloco inteiro tem endereço: o tique o
          remonta a cada mudança de bancada, pelo MESMO gerador que escreveu
          isto aqui. Ver `pacotes/a11_calibrar_sensores.py`. -->
+    <div class="grade">
     <div class="controles" data-bloco="controles">
           <div class="ctr" style="--plastico:#ae335a"
                data-controle="p1">
@@ -648,8 +702,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="nome"><b data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></b><br>Cosmic Red <span class="pt">•</span> USB</span>
-              <span class="selo"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span></span>
+              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>Cosmic Red <span class="pt">•</span> USB</span>
             </div>
             <div class="leitura">
               <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v" data-campo="giro-x">—</span><span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
@@ -1038,8 +1091,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="nome"><b data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></b><br>Starlight Blue <span class="pt">•</span> BT</span>
-              <span class="selo"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span></span>
+              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>Starlight Blue <span class="pt">•</span> BT</span>
             </div>
             <div class="leitura">
               <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v" data-campo="giro-x">—</span><span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
@@ -1050,33 +1102,34 @@
               <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
+          <div class="lugar" aria-label="Lugar vazio do P3">P3</div>
+          <div class="lugar" aria-label="Lugar vazio do P4">P4</div>
     </div>
 
     <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
          bloco `A MIRA VIRTUAL` no topo deste arquivo. O bloco é outro de
          propósito: o dos cartões o produto remonta a cada tique. -->
     <div class="mira-cx" data-bloco="miras">
-      <div class="mira-topo"><b>Mira Virtual</b> <span class="d">Valem para o controle com a Mira Virtual acesa, na aba Controles. A Inclinação usa todos menos o tremor, e o Cursor do touchpad, só o quanto um gesto anda.</span></div>
-      <div class="miras">
-          <div class="mira" data-controle="p1">
+          <div class="mira" style="--plastico:#ae335a" data-controle="p1">
             <span class="quem" data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></span>
+            <div class="mira-topo av"><span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="analogico-virtual"><span class="p"></span>Analógico Virtual</button></span><span class="lados"><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo"><span class="p"></span>Esquerdo</button></span><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito"><span class="p"></span>Direito</button></span></span><span class="ajuda" tabindex="0">?<span class="dica">Os movimentos deste controle movem o analógico escolhido, como na aba Controles. O Cursor do touchpad usa só o quanto um gesto anda.</span></span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
-              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad Cima</option><option value="dpad_down">D-pad Baixo</option><option value="dpad_left">D-pad Esquerda</option><option value="dpad_right">D-pad Direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
+              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad Cima</option><option value="dpad_down">D-pad Baixo</option><option value="dpad_left">D-pad Esquerda</option><option value="dpad_right">D-pad Direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
-          <div class="mira" data-controle="p2">
+          <div class="mira" style="--plastico:#7eb8d4" data-controle="p2">
             <span class="quem" data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></span>
+            <div class="mira-topo av"><span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="analogico-virtual"><span class="p"></span>Analógico Virtual</button></span><span class="lados"><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo"><span class="p"></span>Esquerdo</button></span><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito"><span class="p"></span>Direito</button></span></span><span class="ajuda" tabindex="0">?<span class="dica">Os movimentos deste controle movem o analógico escolhido, como na aba Controles. O Cursor do touchpad usa só o quanto um gesto anda.</span></span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
-              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad Cima</option><option value="dpad_down">D-pad Baixo</option><option value="dpad_left">D-pad Esquerda</option><option value="dpad_right">D-pad Direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
+              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad Cima</option><option value="dpad_down">D-pad Baixo</option><option value="dpad_left">D-pad Esquerda</option><option value="dpad_right">D-pad Direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
-      </div>
+    </div>
     </div>
 
     <div class="rodape">
-      <button class="btn fazer"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
       <div class="barra"><i></i></div>
       <!-- O ALVO É `html` E NÃO O TEXTO, e a razão é medida NESTA tela: com
            zero controles a `contagem()` devolve vazio, e o alvo padrão escreve
@@ -1085,15 +1138,10 @@
            propósito. É o mesmo defeito que a aba Lançadores mediu em 11/09, e
            a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
       <span class="quantos" data-campo="quantos" data-hef-alvo="html">2 controles conectados</span>
-      <a class="btn" href="02-controles.html">Fechar</a>
-    </div>
-
-    <!-- O QUE ELA PRECISA SABER, E SÓ ISSO. A calibração não muda ajuste nenhum
-         do perfil: ela zera a leitura de repouso do aparelho. Escrever mais que
-         isto seria a mesma prosa que o usuário mandou cortar dos tooltips. -->
-    <div class="aviso">
-      A calibração <b>não muda os seus ajustes</b> — ela só ensina ao controle qual é o zero dele.
-      Se o cursor anda sozinho com o controle parado, é isto que resolve.
+      <span class="acoes">
+        <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
+        <a class="btn" href="02-controles.html">Fechar</a>
+      </span>
     </div>
 
   </div>
