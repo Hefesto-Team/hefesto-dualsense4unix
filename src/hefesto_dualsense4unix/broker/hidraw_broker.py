@@ -2289,14 +2289,16 @@ class Broker:
         Sem nenhuma conexão por :attr:`_graca_da_entrega_s`, o Hefesto está
         parado de verdade (um reinício volta antes disso) e o físico, que a
         regra 73 faz nascer fechado, passa a ser do sistema. Entregue, a
-        varredura repete uma vez por segundo, para o controle que conecta depois.
+        varredura repete uma vez por segundo, para o controle que conecta
+        depois, mas só sem cliente: o Hefesto que voltou e ainda não pediu
+        nada não pode ver o controle que liga agora aberto para a Steam.
         """
         state = self._state
         if self._graca_da_entrega_s <= 0:
             return
         agora = self._relogio()
         if state.entregue:
-            if agora - self._ultima_entrega >= 1.0:
+            if not self._peer_uids and agora - self._ultima_entrega >= 1.0:
                 self._ultima_entrega = agora
                 state.entregar_ao_linux()
             return

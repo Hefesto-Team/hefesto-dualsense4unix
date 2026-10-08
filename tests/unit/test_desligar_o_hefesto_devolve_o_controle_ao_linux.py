@@ -268,6 +268,48 @@ class TestLigarDeNovoEscondeOutraVez:
             assert all(_fechado(c) for c in _tudo_do_aparelho(seis.mesa, base)), (
                 f"{base} ficou aberto depois que o Hefesto voltou")
 
+    def test_montar_o_pad_tambem_e_o_hefesto_voltando(self, seis: Cena) -> None:
+        """O `pad_usb_montar` é pedido do daemon como o `hide`: fecha o físico
+        antes de o pedido seguir. O pad de mentira recusa qualquer toque, e o
+        serial inválido para o pedido antes do configfs. MORDIDA: tire o
+        `pad_usb_montar` de `PEDIDOS_QUE_RETOMAM` e os seis seguem abertos."""
+
+        class _PadIntocavel:
+            def __getattr__(self, nome: str) -> Any:
+                raise AssertionError(f"o pad de verdade foi tocado: {nome}")
+
+        seis.st._pad_ops = _PadIntocavel()  # type: ignore[assignment]
+        _o_daemon_sobe_e_para(seis)
+        seis.tique(GRACA)
+        conn = seis.conectar()
+        seis.pedir(conn, {"cmd": "pad_usb_montar", "serial": "x", "descritor": ""})
+        assert seis.st.entregue is False
+        for base, _ in OS_SEIS:
+            assert all(_fechado(c) for c in _tudo_do_aparelho(seis.mesa, base)), base
+
+    def test_o_controle_que_liga_com_um_cliente_conectado_nasce_fechado(
+        self, seis: Cena
+    ) -> None:
+        """O daemon voltou e conectou, mas ainda não pediu `hide` nem `expose`
+        (subiu sem controle à mão); o P1 liga agora. O nó nasce fechado pela
+        regra 73 e a varredura da entrega NÃO pode abri-lo enquanto há cliente,
+        ou a Steam o veria antes do `hide`. Quando o cliente sai sem pedir nada
+        (era o exame da aba Conexões), a varredura volta no segundo seguinte.
+        MORDIDA: tire a guarda de conexão viva do `tique_da_entrega` e o nó
+        abre em um segundo, com o Hefesto de pé."""
+        _o_daemon_sobe_e_para(seis)
+        seis.tique(GRACA)
+        conn = seis.conectar()
+        seis.mesa.nascer("hidraw11", "radio", 7)
+        seis.tique(3.0)
+        assert all(_fechado(c) for c in _tudo_do_aparelho(seis.mesa, "hidraw11")), (
+            "a entrega abriu um controle novo com um cliente do broker conectado")
+
+        seis.desconectar(conn)
+        seis.tique(1.0)
+        assert all(
+            _aberto_para_a_sessao(c) for c in _tudo_do_aparelho(seis.mesa, "hidraw11"))
+
     def test_ping_status_e_open_nao_recolhem_a_entrega(self, seis: Cena) -> None:
         """A aba Conexões (outro processo, sem daemon) abre o nó pelo broker só
         para ler; o doctor pergunta o `status`. Nenhum dos dois é «o Hefesto
