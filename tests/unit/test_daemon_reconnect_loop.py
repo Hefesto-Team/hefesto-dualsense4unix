@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import time
+from collections.abc import Callable
 
 import pytest
 
@@ -22,35 +24,53 @@ def _mk_state() -> ControllerState:
     )
 
 
-class _OfflineThenOnlineController(FakeController):
-    """FakeController cujo connect() falha com "No device detected" nas"""
+PRAZO_S = 5.0
 
-    def __init__(self, fail_until: int) -> None:
-        super().__init__(transport="usb", states=[_mk_state()])
-        self._fail_until = fail_until
-        self._calls = 0
 
-    def connect(self) -> None:
-        self._calls += 1
-        if self._calls <= self._fail_until:
-            self._connected = False
-            return
-        super().connect()
+async def _esperar(condicao: Callable[[], bool], o_que: str, prazo_s: float = PRAZO_S) -> None:
+    """Espera a CONDIÇÃO, não o relógio: sob carga o `run()` chega ao IPC tarde, e 0,15 s fixos
+    desmentiam o teste. Estourou o prazo, a mensagem diz o que não aconteceu."""
+    limite = time.monotonic() + prazo_s
+    while not condicao():
+        if time.monotonic() >= limite:
+            pytest.fail(f"em {prazo_s:.0f} s não aconteceu: {o_que}")
+        await asyncio.sleep(0.01)
+
+
+def _controle(*, plugado: bool) -> FakeController:
+    """O dublê com a tomada que o teste quer: desplugado, o `connect()` falha até o `plugar()`."""
+    return FakeController(transport="usb", states=[_mk_state()], plugado=plugado)
 
 
 @pytest.mark.asyncio
-async def test_run_inicia_ipc_antes_de_conectar(monkeypatch) -> None:
-    """Subsystems sobem mesmo quando o controle não conecta — `_start_ipc` é"""
-    fc = _OfflineThenOnlineController(fail_until=999)
+@pytest.mark.parametrize("passo_lento_s", [0.0, 0.3])
+async def test_run_inicia_ipc_antes_de_conectar(monkeypatch, passo_lento_s: float) -> None:
+    """Subsystems sobem mesmo quando o controle não conecta — `_start_ipc` é chamado ANTES do
+    primeiro `connect()`. A espera é pela condição, e o `passo_lento_s` põe à mão o que a carga
+    da máquina faz: um passo do `run()` antes do IPC que demora o dobro do prazo de hoje."""
+    fc = _controle(plugado=False)
     bus = EventBus()
-
-    ipc_started: list[bool] = []
+    eventos: list[str] = []
 
     async def _fake_start_ipc(self):  # type: ignore[no-untyped-def]
-        ipc_started.append(True)
+        eventos.append("ipc")
         self._ipc_server = object()
 
     monkeypatch.setattr(Daemon, "_start_ipc", _fake_start_ipc, raising=True)
+
+    if passo_lento_s:
+        async def _passo_lento(self):  # type: ignore[no-untyped-def]
+            await asyncio.sleep(passo_lento_s)
+
+        monkeypatch.setattr(Daemon, "_sync_game_signal", _passo_lento, raising=True)
+
+    conecta_original = fc.connect
+
+    def _conecta_e_anota() -> None:
+        eventos.append("connect")
+        conecta_original()
+
+    monkeypatch.setattr(fc, "connect", _conecta_e_anota)
 
     daemon = Daemon(
         controller=fc,
@@ -67,9 +87,14 @@ async def test_run_inicia_ipc_antes_de_conectar(monkeypatch) -> None:
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.15)
     try:
-        assert ipc_started, "_start_ipc não foi chamado em ≤150ms"
+        await _esperar(lambda: "ipc" in eventos, "o `run()` chamar `_start_ipc` (o IPC subir)")
+        await _esperar(
+            lambda: "connect" in eventos, "o `run()` tentar o primeiro `connect()` do controle"
+        )
+        assert eventos.index("ipc") < eventos.index("connect"), (
+            f"o IPC tem de subir ANTES do primeiro connect: {eventos}"
+        )
         assert daemon._ipc_server is not None
         assert fc.is_connected() is False
     finally:
@@ -84,7 +109,7 @@ async def test_reconnect_loop_publica_controller_connected_em_transicao(
     """reconnect_loop emite CONTROLLER_CONNECTED quando hardware aparece"""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
 
-    fc = _OfflineThenOnlineController(fail_until=1)
+    fc = _controle(plugado=False)
     bus = EventBus()
 
     import hefesto_dualsense4unix.daemon.connection as conn_mod
@@ -107,6 +132,10 @@ async def test_reconnect_loop_publica_controller_connected_em_transicao(
     )
 
     run_task = asyncio.create_task(daemon.run())
+    await _esperar(
+        lambda: fc.tentativas_de_conexao >= 1, "o `run()` tentar o `connect()` inicial, sem tomada"
+    )
+    fc.plugar()
     payload = await asyncio.wait_for(queue.get(), timeout=2.0)
     assert payload == {"transport": "usb"}
     daemon.stop()
@@ -177,7 +206,7 @@ async def test_hotplug_tardio_promove_o_vpad_exatamente_uma_vez(
     lock = _DepthLock()
     chamadas = _intercepta_upgrade(monkeypatch, lock)
 
-    fc = _OfflineThenOnlineController(fail_until=1)
+    fc = _controle(plugado=False)
     bus = EventBus()
     queue = bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
     daemon = Daemon(controller=fc, bus=bus, config=_config())
@@ -185,6 +214,11 @@ async def test_hotplug_tardio_promove_o_vpad_exatamente_uma_vez(
 
     run_task = asyncio.create_task(daemon.run())
     try:
+        await _esperar(
+            lambda: fc.tentativas_de_conexao >= 1,
+            "o `run()` tentar o `connect()` inicial, sem tomada",
+        )
+        fc.plugar()
         await asyncio.wait_for(queue.get(), timeout=2.0)
         for _ in range(40):
             if chamadas:
@@ -219,7 +253,7 @@ async def test_conectado_no_boot_so_o_gancho_do_boot_promove(
     lock = _DepthLock()
     chamadas = _intercepta_upgrade(monkeypatch, lock)
 
-    fc = _OfflineThenOnlineController(fail_until=0)
+    fc = _controle(plugado=True)
     bus = EventBus()
     queue = bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
     daemon = Daemon(controller=fc, bus=bus, config=_config())
@@ -250,7 +284,7 @@ async def test_offline_continuo_nao_promove(tmp_path, monkeypatch) -> None:
     lock = _DepthLock()
     chamadas = _intercepta_upgrade(monkeypatch, lock)
 
-    fc = _OfflineThenOnlineController(fail_until=999)
+    fc = _controle(plugado=False)
     bus = EventBus()
     daemon = Daemon(controller=fc, bus=bus, config=_config())
     daemon._emu_lock = lock
@@ -274,7 +308,7 @@ async def test_reconnect_loop_respeita_stop_event(tmp_path, monkeypatch) -> None
     monkeypatch.setattr(conn_mod, "RECONNECT_PROBE_INTERVAL_SEC", 30.0)
     monkeypatch.setattr(conn_mod, "RECONNECT_ONLINE_CHECK_INTERVAL_SEC", 30.0)
 
-    fc = _OfflineThenOnlineController(fail_until=999)
+    fc = _controle(plugado=False)
     bus = EventBus()
     daemon = Daemon(
         controller=fc,

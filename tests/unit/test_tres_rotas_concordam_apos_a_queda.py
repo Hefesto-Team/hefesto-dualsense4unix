@@ -29,11 +29,9 @@ daemon (poll loop de verdade), não com um estado montado à mão.
 from __future__ import annotations
 
 import asyncio
-import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -71,37 +69,6 @@ async def _esperar(condicao: Callable[[], bool], o_que: str, prazo_s: float = PR
         await asyncio.sleep(0.01)
 
 
-class _ControleComTomada(FakeController):
-    """O `FakeController` que sai da tomada: desplugado, o `connect()` falha NA HORA em que roda.
-
-    O dublê religava sozinho: o `reconnect_loop` do daemon sonda com `controller.connect()`, e
-    o `connect()` do `FakeController` põe `_connected = True` sem aparelho nenhum. Medido sob
-    carga (disconnect em 0,113 s, connect em 0,114 s): a queda era desfeita antes de o laço de
-    poll a ver. Trocar o método na instância não basta: a sonda que já tinha pegado o método
-    (ligado ao objeto, na fila do executor) ainda religava DEPOIS da queda publicada, e a
-    `controller.list` respondia conectado (1 em 14 com a CPU saturada). Aqui quem decide é o
-    momento em que o `connect()` RODA, sob a mesma trava do desplugar: um controle de verdade
-    desplugado faz o `connect()` falhar, venha a sonda de quando vier.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._tomada = threading.Lock()
-        self.plugado = True
-
-    def connect(self) -> None:
-        with self._tomada:
-            if not self.plugado:
-                raise RuntimeError("sem dispositivo: o controle foi desplugado")
-            super().connect()
-
-    def desplugar(self) -> None:
-        """O controle sai da mesa e NÃO volta."""
-        with self._tomada:
-            self.plugado = False
-            self.disconnect()
-
-
 @pytest.mark.asyncio
 async def test_as_tres_rotas_concordam_depois_da_queda_real(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -116,7 +83,7 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
 
-    fc = _ControleComTomada(transport="bt", states=_mk_states(60, "bt"))
+    fc = FakeController(transport="bt", states=_mk_states(60, "bt"))
     bus = EventBus()
     store = StateStore()
     daemon = Daemon(

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import threading
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,7 +35,16 @@ class FakeLedState:
 
 
 class FakeController(IController):
-    """Controle fake para testes unit e integration."""
+    """Controle fake para testes unit e integration.
+
+    Tem tomada, como o aparelho: plugado (o padrão), o `connect()` liga; depois de
+    `desplugar()` ele falha na hora em que RODA, como o backend real sem dispositivo,
+    venha a sonda do `reconnect_loop` de quando vier, até um `plugar()`. Antes da tomada o
+    dublê religava sozinho: a sonda chamava `connect()` e ele punha `_connected = True` sem
+    aparelho (medido sob carga: `disconnect` em 0,113 s, `connect` em 0,114 s, a queda desfeita
+    antes de o laço de poll a ver). Trocar o método na instância não bastava: a sonda já na fila
+    do executor religava DEPOIS da queda publicada. Por isso a decisão é tomada dentro da trava.
+    """
 
     DEFAULT_STATE: ClassVar[ControllerState] = ControllerState(
         battery_pct=75,
@@ -48,7 +58,11 @@ class FakeController(IController):
         self,
         transport: Transport = "usb",
         states: list[ControllerState] | None = None,
+        plugado: bool = True,
     ) -> None:
+        self._tomada = threading.Lock()
+        self.plugado: bool = plugado
+        self.tentativas_de_conexao: int = 0
         self._transport: Transport = transport
         self._states: list[ControllerState] = states or []
         self._idx: int = 0
@@ -65,18 +79,35 @@ class FakeController(IController):
         self._next_buttons = frozenset(names)
 
     def connect(self) -> None:
-        self._connected = True
-        if not self._states:
-            self._states = [
-                ControllerState(
-                    battery_pct=75,
-                    l2_raw=0,
-                    r2_raw=0,
-                    connected=True,
-                    transport=self._transport,
-                )
-            ]
-        self.commands.append(FakeControllerCommand("connect", None))
+        # a decisão é tomada DENTRO da trava do desplugar: uma sonda já na fila do executor
+        # não religa depois da queda publicada
+        with self._tomada:
+            self.tentativas_de_conexao += 1
+            if not self.plugado:
+                raise RuntimeError("sem dispositivo: o controle está desplugado")
+            self._connected = True
+            if not self._states:
+                self._states = [
+                    ControllerState(
+                        battery_pct=75,
+                        l2_raw=0,
+                        r2_raw=0,
+                        connected=True,
+                        transport=self._transport,
+                    )
+                ]
+            self.commands.append(FakeControllerCommand("connect", None))
+
+    def desplugar(self) -> None:
+        """O controle sai da tomada e NÃO volta sozinho: o `connect()` falha até o `plugar()`."""
+        with self._tomada:
+            self.plugado = False
+            self.disconnect()
+
+    def plugar(self) -> None:
+        """O controle volta à tomada. Não conecta: quem conecta é o `connect()` da sonda."""
+        with self._tomada:
+            self.plugado = True
 
     def disconnect(self) -> None:
         self._connected = False
