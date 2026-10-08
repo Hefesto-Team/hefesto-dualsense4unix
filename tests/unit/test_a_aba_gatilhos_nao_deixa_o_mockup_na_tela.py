@@ -225,7 +225,10 @@ def test_nenhum_endereco_da_pagina_fica_sem_dono(a03, publicada):
                 f"ficam com o que o gerador desenhou, e ninguém acusa.")
 
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', publicada)) - _do_cabecalho()
-    sem_dono = sorted(na_pagina - set(col) - da_caixa)
+    # O par «Modo Automático | Modo Personalizado» é da página inteira: o pacote o
+    # escreve no topo, fora das colunas, como a aba Iluminação faz com o dela.
+    da_pagina = {k for k, v in r.items() if isinstance(v, str)}
+    sem_dono = sorted(na_pagina - set(col) - da_caixa - da_pagina)
     assert not sem_dono, (
         f"{len(sem_dono)} endereço(s) da página que ninguém escreve: {sem_dono}. "
         f"Cada um continua mostrando o valor que o gerador desenhou.")
