@@ -325,9 +325,9 @@ NAO_SAO_DIVIDA: dict[str, str] = {
 PENDENTES: dict[str, tuple[str, str]] = {
     # 02/10/2026: o espelho dos `SEM_GESTO` da 06 e da 08 (a régua dos sem dono
     "tests/unit/test_cada_gesto_diz_de_quem_e.py::SEM_DONO_PERMITIDOS": (
-        "A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01",
-        "a `navegacao-interna` saiu com a A-NAVEGACAO-INTERNA (08/10); a `modo-steam` sai com "
-        "esta, e as quatro da 08 esperam a sprint da onda da 08 para ganhar dona"),
+        "AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01",
+        "a `navegacao-interna` saiu com a A-NAVEGACAO-INTERNA e a `modo-steam` com a "
+        "A-ABA-NAVEGACAO (08/10); as quatro da 08 esperam a sprint própria"),
 }
 
 

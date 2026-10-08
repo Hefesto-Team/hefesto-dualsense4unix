@@ -50,6 +50,11 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          A janela diz se está na frente (pulso e renovação; o
                          foco cai sozinho 1 s depois da última); os toques são
                          contadores que só sobem, contados com a Interna agindo.
+    navegacao.big_picture.set {ligado: bool, origin?}
+                         -> {status, big_picture: {ligado, agindo, quem_le}}
+                         O «Modo Big Picture na Steam»: com a Steam na frente, onde o
+                         controle é do Hefesto, o direcional, a Cruz e o Círculo
+                         viram setas, Enter e Esc. É da máquina, não do perfil.
     coop.set             {enabled: bool}       -> {status, enabled, players}
                          `enabled:false` é RECUSADO ({status: "recusado", motivo})
     coop.sync            {}                    -> {status, players, active}
@@ -204,6 +209,7 @@ class IpcServer(IpcHandlersMixin):
             "desktop.status.set": self._handle_desktop_status_set,
             "navegacao.interna.set": self._handle_navegacao_interna_set,
             "navegacao.foco": self._handle_navegacao_foco,
+            "navegacao.big_picture.set": self._handle_navegacao_big_picture_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "gamepad.mask.set": self._handle_gamepad_mask_set,
             "coop.set": self._handle_coop_set,

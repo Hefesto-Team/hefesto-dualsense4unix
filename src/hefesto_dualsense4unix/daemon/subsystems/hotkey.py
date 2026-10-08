@@ -312,6 +312,38 @@ def modo_vigente(daemon: DaemonProtocol) -> str:
     return ponte_atual(daemon)
 
 
+#: QUEM ENTREGA O CONTROLE À STEAM, em cada um dos cinco modos de conexão
+#: (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01, lido
+#: no código em 08/10/2026). Nativo: o físico fica solto e a Steam o lê direto.
+#: Steam Input: a exceção da allowlist solta o físico para a Steam. Sony
+#: DualSense e Xbox: o físico fica escondido e a Steam só enxerga o pad virtual
+#: do Hefesto. Navegação: não há pad nenhum, só o mouse e o teclado virtuais.
+#: Onde a Steam lê o físico, o Big Picture navega sozinho e o Hefesto não entra;
+#: nos outros três o controle é do Hefesto, e é ele quem leva o Big Picture.
+LE_A_STEAM = "steam"
+LE_O_HEFESTO = "hefesto"
+QUEM_LE_O_CONTROLE: dict[str, str] = {
+    MODO_NATIVO: LE_A_STEAM,
+    MODO_STEAM_INPUT: LE_A_STEAM,
+    PONTE_DUALSENSE: LE_O_HEFESTO,
+    PONTE_XBOX: LE_O_HEFESTO,
+    PONTE_MOUSE_TECLADO: LE_O_HEFESTO,
+}
+
+
+def quem_le_o_controle(daemon: DaemonProtocol) -> str:
+    """``LE_A_STEAM`` ou ``LE_O_HEFESTO``, pelo modo VIVO de agora. Nunca levanta.
+
+    Na dúvida (modo que a tabela não conhece) o controle é do Hefesto: é o
+    caminho que entrega a tecla ao Big Picture em vez de deixá-lo sem controle.
+    """
+    try:
+        modo = modo_vigente(daemon)
+    except Exception:
+        return LE_O_HEFESTO
+    return QUEM_LE_O_CONTROLE.get(modo, LE_O_HEFESTO)
+
+
 def _disparar_piscada(
     daemon: DaemonProtocol, cor: tuple[int, int, int], *, modo: str
 ) -> bool:
@@ -2624,6 +2656,8 @@ __all__ = [
     "CORES_DA_MASCARA",
     "CORES_DO_MODO",
     "ECO_DO_ATO_S",
+    "LE_A_STEAM",
+    "LE_O_HEFESTO",
     "MIC_SOSSEGO_S",
     "MODO_NATIVO",
     "MODO_STEAM_INPUT",
@@ -2631,6 +2665,7 @@ __all__ = [
     "PONTE_DUALSENSE",
     "PONTE_MOUSE_TECLADO",
     "PONTE_XBOX",
+    "QUEM_LE_O_CONTROLE",
     "AtoDoMicrofone",
     "MetadeDoAto",
     "MicrofonesNoAr",
@@ -2650,6 +2685,7 @@ __all__ = [
     "passar_o_padrao_do_no_morto",
     "ponte_atual",
     "proxima_ponte",
+    "quem_le_o_controle",
     "start_hotkey_manager",
     "start_mic_do_jogo",
     "start_mic_hotkey",

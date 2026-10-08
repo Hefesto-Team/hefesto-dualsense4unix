@@ -211,11 +211,23 @@ ROTULOS_DO_TIPO: dict[str, str] = {
     TIPO_COMPUTADOR: "O computador — mouse e teclado",
 }
 
+#: A lista «Modo Big Picture na Steam» (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-
+#: NAVEGA-O-BIG-PICTURE-01): dois valores, e o dono é o `navegacao.big_picture.set`.
+BIG_PICTURE_DESLIGADO = "Desligado"
+BIG_PICTURE_LIGADO = "Ligado — o controle navega o Big Picture"
+
 
 def _navegacao(estado: dict[str, Any] | None) -> dict[str, Any]:
     """O bloco `navegacao` do `state_full` (o dono é o daemon), ou vazio."""
     bloco = (estado or {}).get("navegacao")
     return bloco if isinstance(bloco, dict) else {}
+
+
+def big_picture_ligado(estado: dict[str, Any] | None) -> bool | None:
+    """O que o daemon diz do Modo Big Picture, ou ``None`` sem o bloco (a tela não afirma)."""
+    bloco = _navegacao(estado).get("big_picture")
+    ligado = bloco.get("ligado") if isinstance(bloco, dict) else None
+    return ligado if isinstance(ligado, bool) else None
 
 
 def tipo_de_navegacao(estado: dict[str, Any] | None) -> str:
@@ -1485,6 +1497,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         mesa["rato-ligado"] = LIGADO if rato["enabled"] else DESLIGADO
     if _navegacao(st):
         mesa["navegacao-tipo"] = ROTULOS_DO_TIPO[tipo_de_navegacao(st)]
+    bp = big_picture_ligado(st)
+    if bp is not None:
+        mesa["modo-big-picture"] = BIG_PICTURE_LIGADO if bp else BIG_PICTURE_DESLIGADO
     mesa["rato-estado"] = _o_mouse_virtual_em_uma_linha(rato)
     mesa["teclado-bloqueio"] = _o_teclado_em_uma_linha(tecla)
     mesa["teclado-osk"] = _o_teclado_na_tela_em_uma_linha(tecla)
@@ -1993,6 +2008,33 @@ def navegacao_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             "o Hefesto não respondeu — o tipo de navegação ficou como estava") from erro
     if isinstance(resposta, dict) and resposta.get("status") != "ok":
         raise RuntimeError("o tipo de navegação ficou como estava")
+    return None
+
+
+@gesto("06-navegacao.html", "modo-steam", grava="navegacao.big_picture.set")
+def modo_big_picture(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """A lista «Modo Big Picture na Steam»: liga ou desliga, e o daemon é o dono.
+
+    A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01. Era a
+    lista sem dono (`SEM_GESTO["modo-steam"]`: «não há método de Modo Steam no
+    daemon»). O nome do gesto segue `modo-steam` para a página publicada não
+    precisar mudar; na 01-jogar o mesmo nome é o chip do Steam Input, outro gesto.
+    É da máquina, nunca do perfil, como a Navegação Interna.
+    """
+    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
+    if escolhido not in (BIG_PICTURE_DESLIGADO, BIG_PICTURE_LIGADO):
+        raise ValueError(
+            f"modo-steam: não reconheci a opção escolhida ({escolhido!r}); as duas "
+            f"são «{BIG_PICTURE_DESLIGADO}» e «{BIG_PICTURE_LIGADO}».")
+    try:
+        resposta = p.resultado(
+            "navegacao.big_picture.set",
+            ligado=escolhido == BIG_PICTURE_LIGADO, origin=MANUAL)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o Hefesto não respondeu — o Modo Big Picture ficou como estava") from erro
+    if isinstance(resposta, dict) and resposta.get("status") != "ok":
+        raise RuntimeError("o Modo Big Picture ficou como estava")
     return None
 
 
@@ -3204,7 +3246,8 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #: ERAM SEIS ATÉ 13/09/2026: `guardar-remapeamento` e `padrao-remapeamento`
 #: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
 SEM_GESTO = {
-    "modo-steam": "não há método de Modo Steam no daemon — nenhum dos 39",
+    # `modo-steam` SAIU DAQUI em 08/10/2026 (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-
+    # STEAM-NAVEGA-O-BIG-PICTURE-01): o `navegacao.big_picture.set` é o dono dele.
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
     # `acao-do-gesto` SAIU DAQUI em 01/10/2026 (OS-GESTOS-DO-CONTROLE-01): a
@@ -3231,7 +3274,7 @@ SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
 PONTE = {"chamar", "machine_declare", "escolher_arquivo"}
 #: O `desktop.status.set` é o «Status do Modo» desde 29/09/2026
 METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set",
-           "machine.declare", "navegacao.interna.set"}
+           "machine.declare", "navegacao.interna.set", "navegacao.big_picture.set"}
 
 
 PAGINA = "06-navegacao.html"
@@ -3252,6 +3295,12 @@ PROVAS = [
     _prova("navegacao-tipo", {"valor": ROTULOS_DO_TIPO[TIPO_COMPUTADOR]},
            [("resultado", ["navegacao.interna.set"],
              {"tipo": TIPO_COMPUTADOR, "origin": "manual"})]),
+    _prova("modo-steam", {"valor": BIG_PICTURE_LIGADO},
+           [("resultado", ["navegacao.big_picture.set"],
+             {"ligado": True, "origin": "manual"})]),
+    _prova("modo-steam", {"valor": BIG_PICTURE_DESLIGADO},
+           [("resultado", ["navegacao.big_picture.set"],
+             {"ligado": False, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "9"},
            [("resultado", [_MOUSE], {"speed": 9, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "99"},

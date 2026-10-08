@@ -1533,6 +1533,10 @@ class CoopManager:
                 )
                 # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
                 botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
+                # O Modo Big Picture com a Steam na frente: o que navega vira tecla (P2 a P4).
+                botoes, soltos = levar_o_big_picture(
+                    self._daemon, player.identity, botoes, soltos
+                )
                 if marcas is not None:
                     marcas.anotar(
                         player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
@@ -2060,6 +2064,9 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
 )
 from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
     ativo as roteador_ativo,
+)
+from hefesto_dualsense4unix.daemon.subsystems.big_picture import (  # noqa: E402
+    levar_o_big_picture,
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ApertosVistos,

@@ -1631,7 +1631,8 @@ ATIVACAO_DIR = [
             "Vale na hora.")),
     ("Modo Big Picture na Steam", D_STEAM, simples([
         "Desligado",
-        "Ligado — o controle navega o Big Picture"], gesto="modo-steam")),
+        "Ligado — o controle navega o Big Picture"],
+        gesto="modo-steam", campo="modo-big-picture", escolhido="Desligado")),
 ]
 
 #:                        e `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`). É a linha que

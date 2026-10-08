@@ -521,6 +521,36 @@ def load_navegacao_interna() -> tuple[bool, str]:
     )
 
 
+_BIG_PICTURE_FLAG_FILE = "big_picture.flag"
+
+
+def save_big_picture(ligado: bool) -> None:
+    """Guarda o «Modo Big Picture na Steam»: ``{"ligado": bool}``.
+
+    A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01. É da
+    máquina e não do perfil, como a Navegação Interna: trocar de perfil não o
+    desliga. O I/O nunca derruba o IPC.
+    """
+    try:
+        flag = config_dir(ensure=True) / _BIG_PICTURE_FLAG_FILE
+        flag.write_text(json.dumps({"ligado": bool(ligado)}) + "\n", encoding="utf-8")
+        logger.debug("big_picture_salvo", ligado=ligado)
+    except Exception as exc:
+        logger.debug("big_picture_nao_salvou", err=str(exc))
+
+
+def load_big_picture() -> bool:
+    """O que foi guardado; sem arquivo, ou malformado, nasce desligado."""
+    try:
+        flag = config_dir() / _BIG_PICTURE_FLAG_FILE
+        if not flag.exists():
+            return False
+        data = json.loads(flag.read_text(encoding="utf-8").strip() or "{}")
+    except Exception:
+        return False
+    return isinstance(data, dict) and data.get("ligado") is True
+
+
 _PLUGINS_FLAG_FILE = "plugins.flag"
 
 

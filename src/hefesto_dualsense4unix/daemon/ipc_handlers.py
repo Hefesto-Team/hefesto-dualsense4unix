@@ -5510,7 +5510,41 @@ class IpcHandlersMixin:
         )
 
         nav = da_navegacao(self.daemon)
-        return nav.bloco() if nav is not None else None
+        bloco = nav.bloco() if nav is not None else None
+        if bloco is None:
+            return None
+        from hefesto_dualsense4unix.daemon.subsystems.big_picture import da_big_picture
+
+        bp = da_big_picture(self.daemon)
+        if bp is not None:
+            bloco = {**bloco, "big_picture": bp.bloco(self.daemon)}
+        return bloco
+
+    async def _handle_navegacao_big_picture_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga ou desliga o Modo Big Picture na Steam.
+
+        A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01. Ligado
+        e com a Steam na frente, onde o controle é do Hefesto (Sony DualSense, Xbox,
+        Navegação), o direcional, a Cruz e o Círculo viram setas, Enter e Esc do
+        Big Picture; no Nativo e no Steam Input a Steam lê o físico e o Hefesto não
+        entra. É da máquina, não do perfil.
+
+        Params:
+            ligado: bool — o valor da lista «Modo Big Picture na Steam»
+            origin: "manual"|"profile"
+
+        Resposta: ``{"status": "ok", "big_picture": {ligado, agindo, quem_le}}``.
+        """
+        ligado = params.get("ligado")
+        if not isinstance(ligado, bool):
+            raise ValueError("navegacao.big_picture.set exige 'ligado' boolean")
+        definir = getattr(self.daemon, "definir_o_big_picture", None)
+        if not callable(definir):
+            raise ValueError("daemon sem suporte ao Modo Big Picture")
+        bloco = definir(ligado, origin=origem_do_pedido(params))
+        return {"status": "ok", "big_picture": dict(bloco)}
 
     async def _handle_keyboard_emulation_set(
         self, params: dict[str, Any]

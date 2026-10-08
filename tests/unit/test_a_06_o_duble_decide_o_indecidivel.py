@@ -106,7 +106,10 @@ ESTADO = {
     "controllers": CONTROLES,
     # O tipo DIFERENTE do que o desenho crava (a Interna), e a Interna ligada: é com
     # ela que o «Só a janela» dos cartões é verdade (A-NAVEGACAO-INTERNA-…-01).
-    "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False},
+    # O Modo Big Picture LIGADO (o desenho crava «Desligado»): é a lista que o daemon
+    # passou a dar dono (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01).
+    "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False,
+                  "big_picture": {"ligado": True, "agindo": False, "quem_le": "hefesto"}},
 }
 
 
@@ -319,13 +322,17 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     # O «Tipo de navegação» (A-NAVEGACAO-INTERNA-…-01): uma lista, que a página
     # publicada só ganha no `--publicar 06` desta sprint.
     com_tipo = int(_opcoes_da_pagina(publicado, "navegacao-tipo") is not None)
-    esperados = len(BOTOES) + 3 + com_tecla + com_troca + com_gesto + com_tipo
+    # O «Modo Big Picture na Steam»: outra lista, publicada no `--publicar 06` da costura.
+    com_big_picture = int(_opcoes_da_pagina(publicado, "modo-big-picture") is not None)
+    esperados = (len(BOTOES) + 3 + com_tecla + com_troca + com_gesto + com_tipo
+                 + com_big_picture)
     assert len(conferidos) == esperados, (
         f"conferi {len(conferidos)} endereço(s) na página {onde_estou} e a aba tem "
         f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
         f"as DUAS barras de velocidade, {com_tecla} campo(s) de tecla, "
         f"{com_troca} linha(s) da troca de botões, {com_gesto} lista(s) dos "
-        f"gestos e {com_tipo} do tipo de navegação) — se o número caiu, uma "
+        f"gestos, {com_tipo} do tipo de navegação e {com_big_picture} do Modo "
+        "Big Picture) — se o número caiu, uma "
         "linha perdeu o endereço e saiu da conferência sem reprovar nada.")
 
 

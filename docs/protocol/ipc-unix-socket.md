@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**57 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **17** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**58 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **17** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -81,29 +81,30 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mouse.emulation.set` | `daemon/ipc_handlers.py:5216` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
 | `mouse.emulation.restore` | `daemon/ipc_handlers.py:5292` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:5313` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO. | sim |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:5515` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:5549` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
 | `desktop.status.set` | `daemon/ipc_handlers.py:5355` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
 | `navegacao.interna.set` | `daemon/ipc_handlers.py:5411` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo da lista «Tipo de navegação». | sim |
 | `navegacao.foco` | `daemon/ipc_handlers.py:5439` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:5624` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
-| `gamepad.mask.set` | `daemon/ipc_handlers.py:5551` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:5703` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
-| `coop.sync` | `daemon/ipc_handlers.py:5733` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
-| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:5749` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
+| `navegacao.big_picture.set` | `daemon/ipc_handlers.py:5523` (`_handle_navegacao_big_picture_set`) | Liga ou desliga o Modo Big Picture na Steam. | sim |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:5658` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
+| `gamepad.mask.set` | `daemon/ipc_handlers.py:5585` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
+| `coop.set` | `daemon/ipc_handlers.py:5737` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
+| `coop.sync` | `daemon/ipc_handlers.py:5767` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
+| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:5783` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:1133` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `led.player_brightness_set` | `daemon/ipc_handlers.py:1174` (`_handle_led_player_brightness_set`) | O brilho das cinco luzes de número: Fraco, Médio ou Forte. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1294` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos). | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1538` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle. | sim |
-| `machine.declare` | `daemon/ipc_handlers.py:5761` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:5844` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:5852` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:6164` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
-| `radio.mover` | `daemon/ipc_handlers.py:6194` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:6274` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
-| `haptica.testar` | `daemon/ipc_handlers.py:6485` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
-| `radio.busca.set` | `daemon/ipc_handlers.py:6517` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
-| `radio.dispensar` | `daemon/ipc_handlers.py:6532` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
-| `motion.calibrate` | `daemon/ipc_handlers.py:6621` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
+| `machine.declare` | `daemon/ipc_handlers.py:5795` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:5878` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:5886` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:6198` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:6228` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
+| `mira.set` | `daemon/ipc_handlers.py:6308` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `haptica.testar` | `daemon/ipc_handlers.py:6519` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
+| `radio.busca.set` | `daemon/ipc_handlers.py:6551` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
+| `radio.dispensar` | `daemon/ipc_handlers.py:6566` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
+| `motion.calibrate` | `daemon/ipc_handlers.py:6655` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -749,6 +750,24 @@ leu antes, e um toque curto entre dois tiques dela não se perde.
 
 O `state_full` traz o bloco `navegacao: {interna_ligada, tipo, foco}`; sem o dono no
 daemon, o bloco não sai.
+
+### `navegacao.big_picture.set` — o Modo Big Picture na Steam
+
+| Método                      | Parâmetros        | Retorno                                            |
+|-----------------------------|-------------------|----------------------------------------------------|
+| `navegacao.big_picture.set` | `{ligado: bool}`  | `{status, big_picture: {ligado, agindo, quem_le}}` |
+
+A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01. É a lista
+«Modo Big Picture na Steam» da aba Navegação, da máquina e não do perfil (a flag
+`big_picture.flag` guarda a escolha). `quem_le` diz quem lê o controle no modo vigente:
+`"steam"` (Nativo e Steam Input: a Steam lê o físico e o Hefesto não entra) ou
+`"hefesto"` (Sony DualSense, Xbox e Navegação). `agindo` é verdadeiro com o modo
+ligado, a janela do cliente da Steam na frente e `quem_le == "hefesto"`: então o
+direcional, a Cruz e o Círculo de qualquer controle (P1 a P4) viram setas, Enter e Esc
+num teclado virtual e saem do pad e do mouse virtuais, para o Big Picture não andar
+dois passos por aperto. Sem `/dev/uinput` para o teclado, nada é roubado.
+
+O `state_full` traz o mesmo bloco em `navegacao.big_picture`.
 
 ### `motion.calibrate` — o «Começar» da Calibrar
 

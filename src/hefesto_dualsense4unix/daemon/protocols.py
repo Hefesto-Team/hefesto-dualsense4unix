@@ -211,6 +211,19 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def definir_o_big_picture(
+        self,
+        ligado: bool,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> dict[str, Any]:
+        """Liga ou desliga o Modo Big Picture na Steam; devolve o bloco
+        ``{ligado, agindo, quem_le}``
+        (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01).
+        O `navegacao.big_picture.set` o chama.
+        """
+        ...
+
     def is_native_mode(self) -> bool:
         """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
         ...

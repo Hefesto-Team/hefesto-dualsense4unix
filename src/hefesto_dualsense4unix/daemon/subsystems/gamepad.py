@@ -1796,6 +1796,9 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
 from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
     ativo as roteador_ativo,
 )
+from hefesto_dualsense4unix.daemon.subsystems.big_picture import (  # noqa: E402
+    levar_o_big_picture,
+)
 from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (  # noqa: E402
     roubar_o_que_navega,
 )
@@ -1887,6 +1890,8 @@ def dispatch_gamepad(
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
     # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
     buttons_pressed, soltos = roubar_o_que_navega(daemon, buttons_pressed, soltos)
+    # O Modo Big Picture com a Steam na frente: o que navega vira tecla e não vai ao pad.
+    buttons_pressed, soltos = levar_o_big_picture(daemon, None, buttons_pressed, soltos)
     store = getattr(daemon, "store", None)
     limiar_l, limiar_r = getattr(store, "udp_trigger_thresholds", (0, 0))
     try:

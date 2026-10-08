@@ -152,6 +152,9 @@ METODOS_QUE_ESCREVEM = {
     # A-NAVEGACAO-INTERNA-…-01 (08/10/2026): o ligar e o tipo da Navegação Interna
     # gravam na configuração da máquina.
     "navegacao.interna.set",
+    # A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01 (08/10/2026): a
+    # lista «Modo Big Picture na Steam» grava a escolha na configuração da máquina.
+    "navegacao.big_picture.set",
     # O-COMECAR-DA-CALIBRAR-…-01 (08/10/2026): o «Começar» grava o zero de cada controle.
     "motion.calibrate",
 }

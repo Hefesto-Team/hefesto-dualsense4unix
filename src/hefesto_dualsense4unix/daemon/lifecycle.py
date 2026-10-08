@@ -26,6 +26,10 @@ from hefesto_dualsense4unix.daemon.battery_journal import (
 )
 from hefesto_dualsense4unix.daemon.protocols import GravaOModo, PortaQueGrava
 from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.daemon.subsystems.big_picture import (
+    BigPicture,
+    levar_o_big_picture,
+)
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     EMU_BLOQUEADO_POR_JOGO,
     OrigemEmulacao,
@@ -641,6 +645,9 @@ class Daemon:
     # A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01: o dono da
     # Interna (ligada, tipo, o foco com prazo e os toques); nasce no boot.
     _navegacao_interna: Any = None
+    # A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01: o dono do
+    # Modo Big Picture na Steam (ligado, o foco da Steam e as teclas); nasce no boot.
+    _big_picture: Any = None
     _vigia_do_sequestro: Any = None
 
 
@@ -762,6 +769,10 @@ class Daemon:
 
         if self._navegacao_interna is None:
             self._navegacao_interna = NavegacaoInterna.da_sessao()
+        # O Modo Big Picture na Steam guarda a última escolha na flag de sessão
+        # `big_picture.flag`; na primeira vez nasce desligado.
+        if self._big_picture is None:
+            self._big_picture = BigPicture.da_sessao()
         # O zero de cada controle, que o «Começar» da Calibrar gravou, volta ao roteador.
         from hefesto_dualsense4unix.core import roteador_de_movimento as _roteador
         from hefesto_dualsense4unix.utils.session import ler_os_zeros
@@ -1507,6 +1518,26 @@ class Daemon:
             "navegacao_interna_pedida", ligada=ligada, tipo=tipo, origin=origin
         )
         return dict(nav.bloco())
+
+    def definir_o_big_picture(
+        self,
+        ligado: bool,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> dict[str, Any]:
+        """Liga ou desliga o Modo Big Picture na Steam e guarda a escolha.
+
+        A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01. A lista
+        «Modo Big Picture na Steam» da aba Navegação chama aqui
+        (`navegacao.big_picture.set`). É da máquina, não do perfil, como a Interna:
+        trocar de perfil não a desliga. Devolve o bloco ``{ligado, agindo, quem_le}``.
+        """
+        if self._big_picture is None:
+            self._big_picture = BigPicture.da_sessao()
+        bp = self._big_picture
+        bp.definir(ligado)
+        logger.info("big_picture_pedido", ligado=bool(ligado), origin=origin)
+        return dict(bp.bloco(self))
 
     def set_mouse_speed(
         self,
@@ -4163,6 +4194,8 @@ class Daemon:
                     esquecer_a_leitura_publicada()
                 was_connected = False
                 previous_buttons = frozenset()
+                # Sem o controle, a tecla do Big Picture que ele segurava se solta.
+                levar_o_big_picture(self, None, frozenset())
                 stop_event = self._stop_event
                 assert stop_event is not None
                 with contextlib.suppress(asyncio.TimeoutError):
@@ -4281,6 +4314,9 @@ class Daemon:
 
             emu_active = not self._emulation_suppressed
             if not gamepad_dispatched:
+                # O Modo Big Picture com a Steam na frente: o direcional, a Cruz e o
+                # Círculo viram as teclas do Big Picture e não chegam ao mouse virtual.
+                emu_buttons = levar_o_big_picture(self, None, emu_buttons)[0]
                 if self._mouse_device is not None and emu_active:
                     self._dispatch_mouse_emulation(state, emu_buttons)
                 elif self._touchpad_reader is not None:
