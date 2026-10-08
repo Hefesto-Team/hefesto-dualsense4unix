@@ -120,6 +120,7 @@ NADA = "nada_a_fazer"
 ADIADO_JOGO = "adiado_jogo_aberto"
 ADIADO_STEAM = "adiado_steam_aberta"
 ERRO = "erro"
+SEM_CONTA = "conta_logada_desconhecida"
 
 _APPID = re.compile(r"^[0-9]{1,10}$")
 
@@ -307,7 +308,8 @@ def definir_opcoes_vdf_text(
 def opcoes_lidas_do_jogo(texto: str, appid: str) -> list[str]:
     """Todo valor de ``LaunchOptions`` que o bloco canônico do jogo guarda.
 
-    O primeiro é o do jogo (o que a Steam lê); os demais, de blocos filhos.
+    Na ordem do arquivo: a filha direta do jogo (a que a Steam lê) e as de
+    blocos filhos (``cloud``…) que a versão velha do escritor deixou.
     Leitor próprio e independente do escritor: quem confere não pode errar
     igual a quem escreveu.
     """
@@ -415,7 +417,7 @@ def so_a_conta_logada(
             ):
                 aceitos.append(vdf)
             else:
-                motivo = "conta_logada_desconhecida" if logada is None else "conta_nao_logada"
+                motivo = SEM_CONTA if logada is None else "conta_nao_logada"
                 pulados.append({"vdf": str(vdf), "appid": "", "reason": motivo})
     return aceitos, pulados
 
@@ -466,8 +468,14 @@ def aplicar(
     todos = list(vdfs) if vdfs is not None else discover_vdfs(home)
     alvos, de_outra_conta = so_a_conta_logada(todos)
     aplicados: list[dict[str, str]] = []
-    pulados: list[dict[str, str]] = list(de_outra_conta)
-    erros: list[dict[str, str]] = []
+    # Sem saber a conta logada, a tabela não chega à Steam: é erro, nunca
+    # «nada a fazer» (o ensaio do engasgo leria rc 0 como «pronto»).
+    pulados = [p for p in de_outra_conta if p["reason"] != SEM_CONTA]
+    erros = [
+        {**p, "reason": f"{SEM_CONTA}: o config/loginusers.vdf não diz qual das contas "
+                       "a Steam abre ({p['vdf']})"}
+        for p in de_outra_conta if p["reason"] == SEM_CONTA
+    ]
     desfeitos: list[dict[str, str]] = []
     for vdf in alvos:
         if is_sandboxed_layout(vdf):

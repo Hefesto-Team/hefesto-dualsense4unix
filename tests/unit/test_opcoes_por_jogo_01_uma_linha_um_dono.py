@@ -343,9 +343,12 @@ def test_sem_resposta_do_loginusers_duas_contas_nao_se_adivinha(tmp_path: Path) 
 
     relato = opj.aplicar(home=tmp_path, config_home=tmp_path)
 
-    assert relato["status"] == opj.NADA, relato
     assert [velha.read_text(encoding="utf-8"), logada.read_text(encoding="utf-8")] == antes
-    assert {p["reason"] for p in relato["pulados"]} == {"conta_logada_desconhecida"}
+    # «não sei a conta» nunca é «nada a fazer»: a tabela não chegou à Steam
+    assert relato["status"] == opj.ERRO, relato
+    assert sorted(e["reason"].split(":")[0] for e in relato["erros"]) == [
+        "conta_logada_desconhecida"] * 2
+    assert opj._imprimir(relato) == 1
 
 
 def test_vdf_que_a_steam_regravou_depois_da_escrita_nao_e_aplicado(
