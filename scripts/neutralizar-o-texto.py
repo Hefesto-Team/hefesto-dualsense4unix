@@ -77,6 +77,24 @@ def _c(padrao: str, flags: int = 0) -> re.Pattern[str]:
     return re.compile(padrao.replace(" ", _SEP), flags)
 
 
+#: «ela VERBO» é a pessoa, salvo quando a frase já pôs antes um substantivo feminino técnico: aí o
+#: «ela» é o pronome dele («a carona devolve os lançadores em que ela escreveu»). A lista é curta
+#: de propósito e medida no corpus (`alvos()`): a regra acha 3 trechos, e só a carona é pronome.
+_ELA_VERBO = _c(_E + r"ela (pediu|mandou|aprovou|decidiu|ordenou|definiu|determinou|autorizou|liberou|aceitou|validou|confirmou|corrigiu|escreveu|disse|nomeou|perguntou|queixou-se|reclamou|falou|contou|apertou|apontou|digitou|clicou|olhou|viu|mexeu|escolheu|colou)" + _D, re.I)
+_SUBSTANTIVO_TECNICO = re.compile(r"(?<![\w-])(?:carona|cura)(?![\w-])", re.I)
+#: o fim da frase: ponto, exclamação ou interrogação seguidos de espaço, ou a linha em branco
+#: (os dois-pontos e o ponto e vírgula NÃO fecham a frase: «a carona devolve: os lançadores em que ela...»)
+_FIM_DE_FRASE = re.compile(r"[.!?](?=\s)|\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?\n")
+
+
+def _pronome_de_substantivo_tecnico(m: re.Match[str]) -> bool:
+    """O «ela» do achado tem, antes dele na mesma frase, um substantivo feminino técnico?"""
+    antes = m.string[: m.start()]
+    fins = list(_FIM_DE_FRASE.finditer(antes))
+    inicio = fins[-1].end() if fins else 0
+    return _SUBSTANTIVO_TECNICO.search(antes, inicio) is not None
+
+
 REGRAS: list[tuple[re.Pattern[str], str]] = [
     # a data já diz de quando: «ordem dela de 19/09» -> «ordem de 19/09»
     (_c(_E + r"(" + _NOMES_DE_DECISAO + r") dela" + _DATA, re.I), r"\1"),
@@ -109,7 +127,7 @@ REGRAS: list[tuple[re.Pattern[str], str]] = [
     # quem diz e quem faz
     (_c(_E + r"(a validar|validad[oa]s?|aprovad[oa]s?|decidid[oa]s?|escolhid[oa]s?|pedid[oa]s?|confirmad[oa]s?|ditad[oa]s?|corrigid[oa]s?|delegad[oa]s?) por ela" + _D, re.I), r"\1 pelo usuário"),
     # só os verbos que uma função, uma tela ou um arquivo não têm como fazer
-    (_c(_E + r"ela (pediu|mandou|aprovou|decidiu|ordenou|definiu|determinou|autorizou|liberou|aceitou|validou|confirmou|corrigiu|escreveu|disse|nomeou|perguntou|queixou-se|reclamou|falou|contou|apertou|apontou|digitou|clicou|olhou|viu|mexeu|escolheu|colou)" + _D, re.I), r"o usuário \1"),
+    (_ELA_VERBO, r"o usuário \1"),
     # ênfase em maiúsculas: no corpus, «DELA» sozinho é sempre a pessoa
     (_c(r"(?<![\w-])ELA É DELA(?![\w-])"), "É DO USUÁRIO"),
     (_c(r"(?<![\w-])DELA(?![\w-])"), "DO USUÁRIO"),
@@ -138,7 +156,9 @@ def reescrever_prosa(texto: str) -> str:
     if "ela" not in texto.lower():
         return texto
     for padrao, troca in REGRAS:
-        def _sub(m: re.Match[str], troca: str = troca) -> str:
+        def _sub(m: re.Match[str], troca: str = troca, padrao: re.Pattern[str] = padrao) -> str:
+            if padrao is _ELA_VERBO and _pronome_de_substantivo_tecnico(m):
+                return m.group(0)
             novo = _adaptar(m.group(0), m.expand(troca))
             q = _QUEBRA.search(m.group(0))
             if q and "\n" in q.group(0):

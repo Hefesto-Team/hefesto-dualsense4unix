@@ -1,0 +1,89 @@
+"""O neutralizador só troca o «ela» que é a pessoa (AS-FERRAMENTAS-DE-MANUTENCAO-...-01).
+
+A regra «ela VERBO» casa por palavra. Quando a frase já pôs antes um substantivo feminino
+técnico (a carona, a cura), o «ela» é o pronome dele, e trocá-lo por «o usuário» diz outra
+coisa. As frases abaixo são escritas à mão: nenhuma régua lê arquivo do produto, porque o
+texto do produto é justamente o que a outra sprint reescreve.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+from typing import Any
+
+RAIZ = Path(__file__).resolve().parents[2]
+SCRIPT = RAIZ / "scripts" / "neutralizar-o-texto.py"
+
+
+def _modulo() -> Any:
+    spec = importlib.util.spec_from_file_location("neutralizar_o_texto_do_pronome", SCRIPT)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+# A forma da frase de `cura_por_estrada.py`: o substantivo e o «ela» na mesma frase, com
+# dois-pontos no meio (eles não fecham a frase).
+DA_CARONA = '''def lancadores():
+    """O que a carona devolve: os lançadores em que ela escreveu.
+
+    É uma tupla.
+    """
+'''
+
+# A forma da frase de `quem_gravou_o_brilho.py`: a pessoa dizendo, sem substantivo técnico antes.
+DA_PESSOA = '''"""Lê as cópias do perfil e diz quem gravou o brilho.
+
+Nasceu da queixa do brilho baixo (ela disse «Não fui eu» sobre o 8%).
+"""
+'''
+
+
+def test_o_ela_da_carona_nao_vira_o_usuario() -> None:
+    modulo = _modulo()
+    assert modulo.reescrever_arquivo(DA_CARONA, "py") == DA_CARONA
+    frase = "# a carona devolve: os lançadores em que ela escreveu"
+    assert modulo.reescrever_prosa(frase) == frase
+
+
+def test_o_ela_da_cura_nao_vira_o_usuario() -> None:
+    modulo = _modulo()
+    frase = "# a cura roda uma vez, e depois ela escreveu no arquivo"
+    assert modulo.reescrever_prosa(frase) == frase
+
+
+def test_o_ela_da_maiuscula_e_da_quebra_de_comentario_tambem_fica() -> None:
+    modulo = _modulo()
+    quebrado = "# a carona devolve os lançadores\n# em que ela escreveu\n"
+    assert modulo.reescrever_prosa(quebrado) == quebrado
+    gritado = "# a carona devolve o que ELA escreveu"
+    assert modulo.reescrever_prosa(gritado) == gritado
+
+
+def test_o_ela_da_pessoa_continua_trocado() -> None:
+    modulo = _modulo()
+    novo = modulo.reescrever_arquivo(DA_PESSOA, "py")
+    assert "o usuário disse «Não fui eu»" in novo
+    assert "ela disse" not in novo
+    assert modulo.reescrever_prosa("# ela pediu o contrário") == "# o usuário pediu o contrário"
+
+
+def test_o_substantivo_de_outra_frase_nao_protege_o_ela() -> None:
+    """A guarda é da MESMA frase: ponto final ou linha em branco a encerra."""
+    modulo = _modulo()
+    assert modulo.reescrever_prosa("# a carona devolve o resto. Ela disse que sim") == (
+        "# a carona devolve o resto. O usuário disse que sim"
+    )
+    assert modulo.reescrever_prosa("# a cura roda\n#\n# ela pediu o contrário") == (
+        "# a cura roda\n#\n# o usuário pediu o contrário"
+    )
+
+
+def test_o_substantivo_que_nao_e_da_lista_nao_protege() -> None:
+    """A lista é curta e medida: «sprint» fica fora dela, e o narrador continua achado."""
+    modulo = _modulo()
+    assert modulo.reescrever_prosa("# nasceu da sprint X (ela disse que não)") == (
+        "# nasceu da sprint X (o usuário disse que não)"
+    )
