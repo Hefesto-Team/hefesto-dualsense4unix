@@ -187,7 +187,9 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
     "custo-mic": ("audio.microfone.mudo",),
     "mira": ("movimento.giroscopio",),
-    "inclinacao": ("movimento.acelerometro",),
+    # O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01: o chip «Inclinação» saiu da
+    # 02, e o lado do Analógico Virtual leva o giro e a inclinação juntos.
+    "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
     "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
 }
@@ -219,7 +221,7 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "auto-cores": ("leds", "leds"),
     "lado": ("rumble", "rumble"),
     "mira": ("movimento", "movimento"),
-    "inclinacao": ("movimento", "movimento"),
+    "analogico-lado": ("movimento", "movimento"),
     "toque": ("movimento", "movimento"),
     "haptica": (None, "rumble"),
 }
