@@ -611,7 +611,7 @@ def test_o_esquecer_da_origem_guarda_o_cache_sdp_do_bond_novo(tmp_path: Path) ->
     assert not (lib / sala / "cache" / vermelho).exists()
     assert (lib / quarto / vermelho / "info").exists()
     assert (lib / quarto / "cache" / vermelho).exists(), "o SDP do bond novo sobrevive"
-    assert (lib / varanda / "cache" / vermelho).exists(), "o cache dos outros adaptadores não se toca"
+    assert (lib / varanda / "cache" / vermelho).exists(), "o cache alheio não se toca"
     [lapide] = (tmp_path / ".lapides").read_text(encoding="utf-8").splitlines()
     assert lapide.split()[1:] == [sala, vermelho]
 
