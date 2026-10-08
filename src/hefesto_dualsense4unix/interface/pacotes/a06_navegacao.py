@@ -3245,7 +3245,7 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 
 #: ERAM SEIS ATÉ 13/09/2026: `guardar-remapeamento` e `padrao-remapeamento`
 #: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
-SEM_GESTO = {
+SEM_GESTO: dict[str, str] = {
     # `modo-steam` SAIU DAQUI em 08/10/2026 (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-
     # STEAM-NAVEGA-O-BIG-PICTURE-01): o `navegacao.big_picture.set` é o dono dele.
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.

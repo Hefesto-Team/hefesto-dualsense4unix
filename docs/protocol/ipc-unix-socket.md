@@ -762,7 +762,7 @@ direcional, a Cruz e o Círculo de qualquer controle (P1 a P4) viram setas, Ente
 num teclado virtual e saem do pad e do mouse virtuais, para o Big Picture não andar
 dois passos por aperto. Sem `/dev/uinput` para o teclado, nada é roubado.
 
-O `state_full` traz o mesmo bloco em `navegacao.big_picture`.
+O `state_full` traz o mesmo bloco na chave `big_picture` do bloco `navegacao`.
 
 ### `motion.calibrate` — o «Começar» da Calibrar
 
