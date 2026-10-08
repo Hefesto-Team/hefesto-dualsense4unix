@@ -1737,15 +1737,17 @@ class AltoFalanteSubsystem:
                 # Nativo o jogo abre o alto-falante e a háptica de todos, toque ou
                 # não. Fluxo aberto não é som: a ponte (a vaga do rádio e o
                 # hidraw) só sobe quando um nó dela tem sinal, e até lá quem
-                # escuta é o ouvido, que acorda a volta quando o jogo toca.
+                # escuta é o ouvido, que acorda a volta quando o jogo toca. O
+                # ouvido só desce quando a ponte SOBE (abaixo): quem espera a
+                # vaga segue ouvindo, sem gravador novo a cada volta.
                 abertos = {
                     **({nome_do_sink(uniq): (uniq, CANAIS_DO_ENCODER, "ouvido-som")}
                        if som_toca else {}),
                     **({lendo: (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")}
                        if leva and lendo else {}),
                 }
+                escutar.update(abertos)
                 if not any(self._o_no_tem_sinal(no) is True for no in abertos):
-                    escutar.update(abertos)
                     continue
             if uniq in self._pontes:
                 # A ponte só sobe de novo quando o endpoint que ela LÊ muda: para
@@ -1832,6 +1834,8 @@ class AltoFalanteSubsystem:
             if ponte.subir():
                 self._pontes[uniq] = ponte
                 self._modo_da_ponte[uniq] = tipo
+                for no in [n for n, pedido in escutar.items() if pedido[0] == uniq]:
+                    escutar.pop(no)
                 self._endpoint_da_ponte = MappingProxyType({
                     **self._endpoint_da_ponte, uniq: lendo,
                 })

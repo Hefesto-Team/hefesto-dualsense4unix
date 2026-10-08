@@ -210,3 +210,53 @@ def test_ao_entrar_no_nativo_a_reescrita_para_na_hora_e_volta_ao_sair() -> None:
     nativo[0] = False
     _vigiar(daemon, 6.0, 7.0)
     assert len(controle.reescritos) > fora, "fora do Nativo de novo, a vigia não voltou"
+
+
+def test_no_nativo_quem_espera_a_vaga_com_som_segue_com_o_mesmo_ouvido(sala: Mesa) -> None:
+    """O rádio cheio recusa a vaga: o ouvido fica de pé até a ponte subir, sem nascer de novo.
+
+    Derrubar o ouvido no sinal, e não na ponte que subiu, deixava quem espera a
+    vaga sem ouvido: o sinal caía para «ninguém escuta» e um gravador novo nascia
+    a cada segundo e pouco, enquanto o jogo tocasse.
+    """
+    sala.sub._daemon = _daemon_real(nativo=True)
+    governador = _Governador()
+    sala.sub.governador = governador
+    sala.abrir_a_sala(MESA[0])
+    _voltas(sala, 2)
+    ouvido = sala.sub._ouvidos_do_radio.get(no_do(MESA[0]))
+    assert ouvido is not None and ouvido.vivo
+    sala.fonte(no_do(MESA[0])).quadro = MOTOR
+    sala.esperar(no_do(MESA[0]), True)
+    fim = time.monotonic() + 2.0
+    while time.monotonic() < fim:
+        _voltas(sala, 1)
+        assert sala.sub._ouvidos_do_radio.get(no_do(MESA[0])) is ouvido, (
+            "o ouvido de quem espera a vaga desceu antes de a ponte subir"
+        )
+    assert ouvido.vivo
+    assert [u for u, _ in governador.pedidos] and {u for u, _ in governador.pedidos} == {MESA[0]}, (
+        "com o som do jogo, a vaga não foi pedida"
+    )
+    assert sala.sub._pontes == {}
+
+
+def test_o_ouvido_do_no_pede_o_monitor_com_os_canais_do_no(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dois canais no alto-falante, quatro no endpoint: o ouvido pede o formato do nó."""
+    pedidos: list[dict[str, Any]] = []
+
+    def _monitor(no: str, **kw: Any) -> tuple[Any, Any, str]:
+        pedidos.append({"no": no, **kw})
+        return None, None, "dublê"
+
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _monitor)
+    assert not af.OuvidoDoNo(
+        no="som", uniq=UNIQS[0], canais=af.CANAIS_DO_ENCODER, papel="ouvido-som"
+    ).subir()
+    assert not af.OuvidoDaPlaca(placa="placa", uniq=UNIQS[0]).subir()
+    assert [(p["no"], p["canais"], p["papel"]) for p in pedidos] == [
+        ("som", af.CANAIS_DO_ENCODER, "ouvido-som"),
+        ("placa", af.CANAIS_DA_HAPTICA, "placa"),
+    ]
