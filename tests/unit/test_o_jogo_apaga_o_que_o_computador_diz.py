@@ -17,7 +17,9 @@ AS MORDIDAS, uma por caso (cada docstring diz o que arrancar):
   - sem ``_com_a_lapide_do_que_se_apagou`` em ``gravar_pelo_gesto``, o primeiro
     caso reprova (a tecla volta);
   - com a lápide estendida a ``button_actions``, o degrau reprova (o «voltar ao
-    padrão» do jogo vira «nada»).
+    padrão» do jogo vira «nada»);
+  - com a tecla apagada procurada só na vista (e não no computador), o jogo de
+    teclas vazias (``{}``) reprova: a tecla do computador volta.
 """
 from __future__ import annotations
 
@@ -142,18 +144,46 @@ def test_apagar_tudo_continua_sendo_o_tudo_ou_nada(gestos: Any) -> None:
     assert _vale().key_bindings == {}
 
 
+def test_o_jogo_de_teclas_vazias_apaga_uma_e_a_do_computador_nao_volta(
+    gestos: Any,
+) -> None:
+    """O jogo com ``key_bindings == {}`` (a vista não junta o computador) apaga uma tecla.
+
+    O campo que ela deixou vazio tem de valer «nada», também quando a vista de
+    partida não trazia a tecla do computador. A MORDIDA: procure a tecla
+    apagada só na VISTA (que é ``{}`` aqui) em vez de no computador, e a tecla
+    do computador volta.
+    """
+    ctx, mod = gestos
+    a, b = _botoes()
+    _computador({"global": {"key_bindings": {a: TECLA_A, b: TECLA_B}}})
+    save_profile(_perfil(key_bindings={}))
+    assert _vale().key_bindings == {}
+
+    mod.guardar_teclas(ctx, {"forma": _forma_das_teclas(mod, **{b: ""})}, _PonteMuda())
+
+    vale = _vale().key_bindings or {}
+    assert not vale.get(b), f"a tecla do computador voltou: {vale!r}"
+    _modo, do_teclado, _s = acoes.resolver(None, vale)
+    assert not do_teclado.get(b), f"o botão voltou a digitar {do_teclado.get(b)!r}"
+
+
 def test_sem_jogo_o_computador_perde_a_tecla_sem_lapide(gestos: Any) -> None:
     """No computador (sem perfil ativo) apagar é tirar a chave, não gravar ``[]``."""
     ctx, mod = gestos
     ctx.state["active_profile"] = ""
     a, b = _botoes()
     _computador({"global": {"key_bindings": {a: TECLA_A, b: TECLA_B}}})
+    vista = opc.perfil_que_vale(opc.perfil_vazio(), opc.o_computador())
+    forma = dict(mod.teclas_dos_botoes(vista.model_dump()))
+    assert forma[f"{mod.PREFIXO_DA_TECLA}{b}"], "a tela tem de mostrar a tecla antes"
+    forma[f"{mod.PREFIXO_DA_TECLA}{b}"] = ""
 
-    mod.guardar_teclas(ctx, {"forma": dict(
-        mod.teclas_dos_botoes(opc.perfil_vazio().model_dump()))
-        | {f"{mod.PREFIXO_DA_TECLA}{a}": "F5"}}, _PonteMuda())
+    mod.guardar_teclas(ctx, {"forma": forma}, _PonteMuda())
 
     teclas = opc.o_computador().global_.key_bindings or {}
+    assert b not in teclas, f"o computador guardou a tecla apagada: {teclas!r}"
+    assert teclas.get(a) == TECLA_A
     assert [] not in teclas.values(), f"o computador ganhou lápide: {teclas!r}"
 
 

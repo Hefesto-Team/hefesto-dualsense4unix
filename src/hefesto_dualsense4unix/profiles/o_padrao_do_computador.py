@@ -546,9 +546,7 @@ def o_que_mudou(
     return globais, por_controle
 
 
-def _com_a_lapide_do_que_se_apagou(
-    globais: dict[str, Any], vista: Profile, computador: Any
-) -> dict[str, Any]:
+def _com_a_lapide_do_que_se_apagou(globais: dict[str, Any], computador: Any) -> dict[str, Any]:
     """As teclas que o jogo APAGOU e o computador define, com a lápide ``[]`` no lugar.
 
     O perfil do jogo só diz o que difere, e a chave ausente quer dizer «herde».
@@ -568,6 +566,11 @@ def _com_a_lapide_do_que_se_apagou(
     «apagar»): lápide ali transformaria o degrau
     D-0110-VOLTAR-AO-PADRAO-E-UM-DEGRAU em «nada».
 
+    A tecla procurada é a do COMPUTADOR, não a da vista: o jogo com
+    ``key_bindings == {}`` tem a vista sem o computador, e o dicionário que ele
+    grava ao mudar um campo faria a junção voltar a valer; toda tecla do
+    computador que fica de fora do que o jogo grava ganha a lápide.
+
     ``{}`` fica como está: o «tudo ou nada» já ignora o computador por inteiro.
     """
     escritas = globais.get("key_bindings")
@@ -575,8 +578,8 @@ def _com_a_lapide_do_que_se_apagou(
         return globais
     do_computador = computador.global_.key_bindings or {}
     apagadas: dict[str, list[str]] = {
-        botao: [] for botao in (vista.key_bindings or {})
-        if botao not in escritas and do_computador.get(botao)
+        botao: [] for botao, teclas in do_computador.items()
+        if botao not in escritas and teclas
     }
     if not apagadas:
         return globais
@@ -612,7 +615,7 @@ def gravar_pelo_gesto(
     if novo is not None:
         globais, por_controle = o_que_mudou(cartao, vista, novo, uniq)
         if onde == JOGO and cru is not None:
-            globais = _com_a_lapide_do_que_se_apagou(globais, vista, computador)
+            globais = _com_a_lapide_do_que_se_apagou(globais, computador)
             if globais or por_controle:
                 _no_perfil_so_o_que_mudou(
                     cru, _com_os_pares(globais),
