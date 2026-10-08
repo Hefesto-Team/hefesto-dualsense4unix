@@ -23,6 +23,7 @@ from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from tests.unit.test_o_ar_do_adaptador import _SocketDeMentira
+from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
 
 #: faixa forjada (`aa:bb:cc`)
 APARELHO_A = "aa:bb:cc:00:00:11"
@@ -304,7 +305,8 @@ def test_a_tela_le_o_sinal_que_o_servico_publica() -> None:
     controle = {"uniq": "aabbcc000011", "transport": "bt", "adaptador": ADAPTADOR,
                 "hz_movimento": 21.0, "sinal_dbm": -53, "connected": True}
     ctx = a08.Contexto(state={"controllers": [controle]}, mesa=[], conectados=[], estados={})
-    aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, {}, [], (), {}, [a08._mac(ADAPTADOR)])
+    aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, {}, [], (), {},
+                                       [nome_do_jogador.mac(ADAPTADOR)])
     assert [a["sinal"] for a in aparelhos] == [-53]
 
 
@@ -567,7 +569,7 @@ def test_a_tela_le_a_pausa_que_o_governador_publica() -> None:
     governador = {ADAPTADOR: {"pontes": [{"uniq": APARELHO_A, "tipo": "som",
                                            "alem_do_limite": False, "pausada_pelo_sinal": True}]}}
     aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, governador, [], (), {},
-                                       [a08._mac(ADAPTADOR)])
+                                       [nome_do_jogador.mac(ADAPTADOR)])
     assert [a["ponte_pausada"] for a in aparelhos] == [True]
 
 

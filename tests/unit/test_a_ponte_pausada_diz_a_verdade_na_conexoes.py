@@ -40,6 +40,7 @@ from tests.unit.test_o_governador_do_radio import (
     _Diario,
     _Relogio,
 )
+from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
 
 POR_JANELA = 93.75 * gov.PERIODO_S
 JANELAS_ANTES = 100
@@ -340,7 +341,7 @@ def test_a_tela_le_a_taxa_e_o_ceder_que_o_governador_publica() -> None:
         {"uniq": "aa:bb:cc:00:00:11", "tipo": "som", "hz": 90.0, "cedendo": False},
         {"uniq": "aa:bb:cc:00:00:11", "tipo": "vibracao", "hz": 41.5, "cedendo": True}]}}
     (ap,) = a08._aparelhos_da_cena(ctx, ctx.state, governador, [], (), {},
-                                   [a08._mac(ADAPTADOR_A)])
+                                   [nome_do_jogador.mac(ADAPTADOR_A)])
     assert (ap["hz_ponte"], ap["ponte_cedendo"]) == (41.5, True), "leu a ponte do outro tipo"
 
 
@@ -357,7 +358,7 @@ def test_do_governador_a_caixa_da_tela_a_ponte_longe_fica_vazia_e_a_vizinha_diz_
                      for u in (CONTROLE_1, CONTROLE_2)]
         ctx = a08.Contexto(state={"controllers": controles}, mesa=[], conectados=[], estados={})
         aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, publicado, [], (), {},
-                                           [a08._mac(ADAPTADOR_A)])
+                                           [nome_do_jogador.mac(ADAPTADOR_A)])
         cena = {**_cena({}), "aparelhos": [{**a, "lugar": "L1"} for a in aparelhos]}
         return a08.campos_da_secao(cena)["hz-ponte"]
 

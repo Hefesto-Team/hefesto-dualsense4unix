@@ -32,6 +32,7 @@ from tests.unit.test_o_aparelho_se_corrige_onde_se_clica import (  # noqa: F401 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 LER_A_FAIXA = r"""
 (function(){
@@ -171,14 +172,15 @@ def test_a_cena_inteira_diz_de_que_dongle_e_cada_adaptador(
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA"):
         monkeypatch.setattr(a08, nome, {})
-    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     mesa = Mesa(adaptadores=(Adaptador(interface="hci0", no="9-2", vid="8888", pid="0008",
                                        busnum=9, devpath="2"),))
     monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: mesa)
     adaptador = AdaptadorDoBluez("/org/bluez/hci0", "hci0", ADAPTADOR, varrendo=False)
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((adaptador,), ()))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((adaptador,), ()))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)

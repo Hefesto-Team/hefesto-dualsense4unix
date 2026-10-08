@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.interface.monta import dono_na_linha
 
-from . import TODOS_OS_LUGARES, Contexto, nome_do_jogador, perfil, registrar
+from . import TODOS_OS_LUGARES, Contexto, em_fundo, nome_do_jogador, perfil, registrar
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.interface.conexoes import Vibracao
@@ -127,7 +127,7 @@ def _censo(recarregar: bool = False) -> Any:
     if recarregar:
         return _ler_o_censo_agora()
     if _CENSO is None:
-        _em_fundo("censo", _ler_o_censo_agora, 0.0)
+        em_fundo.em_fundo("censo", _ler_o_censo_agora, 0.0)
     return _CENSO
 
 
@@ -2051,7 +2051,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
 
     _correr_as_esperas()
 
-    nomes = _nomes_dos_donos()
+    nomes = nome_do_jogador.nomes_dos_donos()
     modo_da_mesa: str | None = None
     colunas = {}
     comeco_da_gestao = time.perf_counter()
@@ -2742,7 +2742,7 @@ def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o perfil de cada controle) o exame já relê.
     """
     global _LOGICA
-    _esquecer("bluez")
+    em_fundo.esquecer("bluez")
     _LOGICA = None
     _correr_o_exame_completo()
 
@@ -2875,8 +2875,9 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
     qual, motivo = (porta or broker.porta_provavel)()
     print(f"[relato] {PAGINA} · examinar-portas: {broker.linha_da_porta(qual, motivo)}",
           file=sys.stderr)
-    por_endereco = {_mac(chave): str(no) for chave, no in (nos or _nos_dos_controles)().items()}
-    caminho = por_endereco.get(_mac(primario.get("uniq")))
+    por_endereco = {nome_do_jogador.mac(chave): str(no)
+                    for chave, no in (nos or _nos_dos_controles)().items()}
+    caminho = por_endereco.get(nome_do_jogador.mac(primario.get("uniq")))
     if caminho:
         estado = (grab or broker.estado_do_grab)(caminho, abrir=_abridor(qual))
         print(f"[relato] {PAGINA} · examinar-portas: {broker.linha_do_grab(caminho, estado)}"
@@ -4268,7 +4269,7 @@ def _evitados_dos_adaptadores(ar: dict[str, Any]) -> dict[str, tuple[int, ...] |
     saida: dict[str, tuple[int, ...] | None] = {}
     for fim, publicado in ar.items():
         lista = publicado.get("canais_evitados") if isinstance(publicado, dict) else None
-        saida[_mac(fim) or str(fim)] = (
+        saida[nome_do_jogador.mac(fim) or str(fim)] = (
             tuple(int(c) for c in lista) if isinstance(lista, list) else None)
     return saida
 
@@ -4803,68 +4804,6 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
     }
 
 
-# `state_full` (o BlueZ, o diário, o `kernel.log`, o `maquina.json`) é lido num
-
-_FUNDO: dict[str, tuple[float, Any]] = {}
-_FUNDO_EM_VOO: set[str] = set()
-_TRAVA_DO_FUNDO = threading.Lock()
-_GERACAO: dict[str, int] = {}
-LER_NA_HORA = False
-VENCIDA = float("-inf")
-
-
-def _em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
-    """A última leitura de `chave`; pede outra num fio quando ela venceu."""
-    agora = time.monotonic()
-    with _TRAVA_DO_FUNDO:
-        visto = _FUNDO.get(chave)
-        if (visto is not None and agora - visto[0] < validade_s) or chave in _FUNDO_EM_VOO:
-            return None if visto is None else visto[1]
-        _FUNDO_EM_VOO.add(chave)
-        geracao = _GERACAO.get(chave, 0)
-
-    def trabalhar() -> None:
-        try:
-            valor = ler()
-        except Exception:
-            valor = None
-        with _TRAVA_DO_FUNDO:
-            fresca = _GERACAO.get(chave, 0) == geracao
-            _FUNDO[chave] = (time.monotonic() if fresca else VENCIDA, valor)
-            _FUNDO_EM_VOO.discard(chave)
-
-    if LER_NA_HORA:
-        trabalhar()
-        return _FUNDO[chave][1]
-    threading.Thread(target=trabalhar, name=f"radio-{chave}", daemon=True).start()
-    return None if visto is None else visto[1]
-
-
-def _esquecer(*chaves: str) -> None:
-    """Depois de um gesto que grava, a próxima volta lê de novo."""
-    with _TRAVA_DO_FUNDO:
-        for chave in chaves:
-            _GERACAO[chave] = _GERACAO.get(chave, 0) + 1
-            visto = _FUNDO.get(chave)
-            if visto is not None:
-                _FUNDO[chave] = (VENCIDA, visto[1])
-
-
-def _ler_o_bluez() -> tuple[tuple[Any, ...], tuple[Any, ...]] | None:
-    """`(adaptadores, aparelhos)` do dono do BlueZ. Sob a suíte, nada: a régua injeta."""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations import bluez_dbus
-
-    if bluez_dbus.a_suite_esta_rodando():
-        return None
-    dono = bluez_dbus.dono()
-    adaptadores = dono.adaptadores()
-    aparelhos = dono.aparelhos()
-    if adaptadores is None:
-        return None
-    return tuple(adaptadores), tuple(aparelhos or ())
-
-
 def _ler_o_wifi() -> list[dict[str, Any]] | None:
     """As redes sem fio ativas e a faixa de cada uma; `None` quando nada se lê."""
     perfil._com_o_src()
@@ -4929,9 +4868,6 @@ def _dicionario(valor: object) -> dict[str, Any]:
     return valor if isinstance(valor, dict) else {}
 
 
-_mac = nome_do_jogador.mac
-
-
 def _hora(carimbo: float, hoje: float) -> str:
     local = time.localtime(carimbo)
     if time.strftime("%Y%m%d", local) == time.strftime("%Y%m%d", time.localtime(hoje)):
@@ -4958,14 +4894,14 @@ def _quedas_por_adaptador(historico: dict[str, Any] | None, caminhos: dict[str, 
 
     for queda, fato, de_pe in historico.get("quedas") or ():
         cheio = max(de_pe.items(), key=lambda par: len(par[1]), default=("", set()))[0]
-        pousar(_mac(cheio), float(queda.carimbo), fato or "Os controles caíram")
+        pousar(nome_do_jogador.mac(cheio), float(queda.carimbo), fato or "Os controles caíram")
     for linha in historico.get("diario") or ():
         o_que = str(linha.get("o_que") or "")
         carimbo = float(linha.get("carimbo") or 0.0)
         if o_que == "ponte subiu" and not linha.get("alem_do_limite"):
             continue
         if o_que in FRASE_DO_DIARIO:
-            pousar(_mac(linha.get("adaptador")), carimbo, FRASE_DO_DIARIO[o_que])
+            pousar(nome_do_jogador.mac(linha.get("adaptador")), carimbo, FRASE_DO_DIARIO[o_que])
         elif o_que == PAROU_DE_REINICIAR:
             dita = entrada_a_entrada.com_o_nome_dela(
                 linha, maquina=maquina, controladores=controladores)
@@ -5010,11 +4946,6 @@ def _tipo_do_aparelho(icone: str, classe: int | None, aparencia: int | None = No
     return pela_classe if pela_classe != "outro" else _tipo_pela_aparencia(aparencia)
 
 
-nome_dado = nome_do_jogador.nome_dado
-_e_nome_de_fabrica = nome_do_jogador.e_nome_de_fabrica
-_ALIAS_QUE_E_ENDERECO = nome_do_jogador.ALIAS_QUE_E_ENDERECO
-
-
 def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]],
                            aparelhos_bz: tuple[Any, ...]) -> list[dict[str, str]]:
     """Os controles conhecidos que pedem para parear (``radio_central.pedindo``), na tela.
@@ -5023,25 +4954,22 @@ def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]
     dá o nome dela e o adaptador que o ouve. O nome de fábrica vira «Controle».
     """
     ids = {str(lug["id"]) for lug in lugares}
-    nomes = _nomes_por_endereco(aparelhos_bz)
+    nomes = nome_do_jogador.nomes_por_endereco(aparelhos_bz)
     saida = []
     for x in central.get("pedindo") or ():
         if not isinstance(x, dict):
             continue
-        aparelho, lugar = _mac(x.get("aparelho")), _mac(x.get("adaptador"))
+        aparelho = nome_do_jogador.mac(x.get("aparelho"))
+        lugar = nome_do_jogador.mac(x.get("adaptador"))
         if not aparelho or lugar not in ids:
             continue
         alias = str(x.get("nome") or "").strip()
         dado = nomes.get(aparelho) or (
-            nome_dado(alias) if alias and not _e_nome_de_fabrica(alias)
-            and not _ALIAS_QUE_E_ENDERECO.fullmatch(alias) else "")
+            nome_do_jogador.nome_dado(alias)
+            if alias and not nome_do_jogador.e_nome_de_fabrica(alias)
+            and not nome_do_jogador.ALIAS_QUE_E_ENDERECO.fullmatch(alias) else "")
         saida.append({"aparelho": aparelho, "lugar": lugar, "nome": dado or CONTROLE_SEM_NOME})
     return saida
-
-
-def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
-    """O nome que ela deu a cada controle, pelo ENDEREÇO — o leitor é o `nome_do_jogador`."""
-    return nome_do_jogador.nomes_por_endereco(aparelhos_bz, _e_controle_do_bluez)
 
 
 def _modelo_do_radio(radio: Any) -> str:
@@ -5060,16 +4988,16 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     ar: dict[str, Any] = _dicionario(st.get("radio_ar"))
     governador: dict[str, Any] = _dicionario(st.get("radio_governador"))
     central: dict[str, Any] = _dicionario(st.get("radio_central"))
-    bluez = _em_fundo("bluez", _ler_o_bluez, 3.0)
-    lida = _em_fundo("maquina", _ler_a_maquina, 5.0)
-    wifi = _o_wifi_com_as_quedas(_em_fundo("wifi", _ler_o_wifi, 10.0) or [],
-                                 _em_fundo("wifi-quedas", _ler_as_quedas, 30.0))
+    bluez = em_fundo.em_fundo("bluez", em_fundo.ler_o_bluez, 3.0)
+    lida = em_fundo.em_fundo("maquina", _ler_a_maquina, 5.0)
+    wifi = _o_wifi_com_as_quedas(em_fundo.em_fundo("wifi", _ler_o_wifi, 10.0) or [],
+                                 em_fundo.em_fundo("wifi-quedas", _ler_as_quedas, 30.0))
     maquina, controladores = lida if lida else (None, {})
     if _DESCOBERTA.ativa:
         # o «Descobrir a faixa» anda pelo censo, e o censo da porta é lido uma vez e no
         # «Examinar»: com o gesto em curso ele se relê no fundo, senão o receptor tirado
         # continuaria «na porta» até o gesto se desfazer sozinho
-        _em_fundo("mesa-do-gesto", lambda: _mesa_do_radio(recarregar=True),
+        em_fundo.em_fundo("mesa-do-gesto", lambda: _mesa_do_radio(recarregar=True),
                   RELER_A_PORTA_NO_GESTO_S)
     mesa = _mesa_do_radio()
     adaptadores_bz, aparelhos_bz = bluez if bluez else ((), ())
@@ -5077,17 +5005,17 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     por_hci = {str(getattr(a, "interface", "")): a for a in getattr(mesa, "adaptadores", ()) or ()}
     enderecos: list[str] = []
     for a in adaptadores_bz:
-        if _mac(a.endereco) and _mac(a.endereco) not in enderecos:
-            enderecos.append(_mac(a.endereco))
+        if nome_do_jogador.mac(a.endereco) and nome_do_jogador.mac(a.endereco) not in enderecos:
+            enderecos.append(nome_do_jogador.mac(a.endereco))
     for chave in (*ar.keys(), *governador.keys()):
-        if _mac(chave) and _mac(chave) not in enderecos:
-            enderecos.append(_mac(chave))
-    bz_de = {_mac(a.endereco): a for a in adaptadores_bz}
+        if nome_do_jogador.mac(chave) and nome_do_jogador.mac(chave) not in enderecos:
+            enderecos.append(nome_do_jogador.mac(chave))
+    bz_de = {nome_do_jogador.mac(a.endereco): a for a in adaptadores_bz}
 
     agora = time.time()
     movimentos = [m for m in central.get("movimentos") or () if isinstance(m, dict)]
     busca = central.get("busca") if isinstance(central.get("busca"), dict) else None
-    busca_em = _mac(busca.get("adaptador")) if busca else ""
+    busca_em = nome_do_jogador.mac(busca.get("adaptador")) if busca else ""
     esperando = [m for m in movimentos if _ainda_espera(m, agora, busca_em)]
     ocupado = bool(esperando)
 
@@ -5111,7 +5039,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             lugar, maquina=documento, controladores=controladores) if lugar else None
         face = entrada_a_entrada.face_do_lugar(
             lugar, maquina=documento, controladores=controladores) if lugar else None
-        publicado = ar.get(end) or next((v for k, v in ar.items() if _mac(k) == end), None) or {}
+        publicado = ar.get(end) or next(
+            (v for k, v in ar.items() if nome_do_jogador.mac(k) == end), None) or {}
         lista = publicado.get("canais_evitados") if isinstance(publicado, dict) else None
         if isinstance(publicado, dict) and isinstance(publicado.get("enlaces"), dict):
             enlaces[end] = publicado["enlaces"]
@@ -5124,7 +5053,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             junto = "colado em outro rádio"
         lugares.append({
             "id": end, "lugar": lugar,
-            "nome": nome_dado(nome_dado_ao_adaptador(maquina, end)),
+            "nome": nome_do_jogador.nome_dado(nome_dado_ao_adaptador(maquina, end)),
             "entrada": entrada or (DENTRO_DA_MAQUINA if bz is not None else ""),
             "sabido": bz is not None and maquina is not None,
             "face": face or "",
@@ -5134,32 +5063,34 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             "modelo": _modelo_do_radio(mz),
             "conectando": bool(busca_em) and end == busca_em,
             "chegou": [str(m.get("aparelho") or "") for m in movimentos
-                       if m.get("estado") == "chegou" and _mac(m.get("destino")) == end],
+                       if m.get("estado") == "chegou"
+                       and nome_do_jogador.mac(m.get("destino")) == end],
         })
         if caminho:
             portas.append({"id": f"porta-{end}", "caminho": caminho, "usb": "2.0",
                            "ocupa": end, "grupo": _grupo_da_porta(caminho),
                            "rotulo": entrada or caminho})
-    sino = _quedas_por_adaptador(_em_fundo("sino", _ler_o_historico, 60.0),
+    sino = _quedas_por_adaptador(em_fundo.em_fundo("sino", _ler_o_historico, 60.0),
                                  caminho_para_endereco, maquina, controladores)
-    lido_do_sino = _FUNDO.get("sino", (0.0, None))[1] or {}
+    lido_do_sino = em_fundo.lido("sino") or {}
     desde = str(lido_do_sino.get("desde") or "")
     for lug in lugares:
         lug["quedas"] = sino.get(lug["id"], [])
         if lug["quedas"] and desde:
             lug["quedas_desde"] = desde[8:10] + "/" + desde[5:7]
 
-    endereco_do_caminho = {str(getattr(a, "caminho", "")): _mac(a.endereco)
+    endereco_do_caminho = {str(getattr(a, "caminho", "")): nome_do_jogador.mac(a.endereco)
                            for a in adaptadores_bz}
     aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
                                    endereco_do_caminho, enderecos)
     no_ar = (frozenset(_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True)
              | frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados))
-    pareados = frozenset((endereco_do_caminho.get(str(a.adaptador), ""), _mac(a.endereco))
-                         for a in aparelhos_bz if a.pareado)
+    pareados = frozenset(
+        (endereco_do_caminho.get(str(a.adaptador), ""), nome_do_jogador.mac(a.endereco))
+        for a in aparelhos_bz if a.pareado)
     falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, no_ar, pareados)
     falhas += _os_que_nao_viraram_controle(
-        _em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas, time.monotonic())
+        em_fundo.em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas, time.monotonic())
     aparelhos += falhas
     no_usb = frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados
                        if str(c.get("transport") or "").lower() == "usb")
@@ -5200,7 +5131,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     for end, publicado in governador.items():
         for p in (publicado or {}).get("pedidos") or ():
             pedido = {"uniq": str(p.get("uniq") or ""), "tipo": str(p.get("tipo") or ""),
-                      "vagas": [_mac(v) for v in p.get("vagas") or ()], "lugar": _mac(end)}
+                      "vagas": [nome_do_jogador.mac(v) for v in p.get("vagas") or ()],
+                      "lugar": nome_do_jogador.mac(end)}
             break
         if pedido:
             break
@@ -5212,8 +5144,9 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     proposta = _a_proposta_da_cena(central.get("proposta"), aparelhos)
     lugares = _na_ordem_dela(lugares)
     buscas: dict[str, object] = {
-        _mac(m.get("destino")): (str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
-        for m in esperando if _mac(m.get("destino"))}
+        nome_do_jogador.mac(m.get("destino")): (
+            str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
+        for m in esperando if nome_do_jogador.mac(m.get("destino"))}
     cena = {
         # `radio_ar`/`radio_governador`. Sem isso a sala não diz «nenhum».
         "lido": bluez is not None or bool(ar) or bool(governador),
@@ -5383,8 +5316,8 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     da_mesa = {_so_hex(str(e.get("uniq") or "")): e for e in ctx.mesa}
     linhas: list[dict[str, Any]] = []
     for m in movimentos:
-        aparelho = _mac(m.get("aparelho")) if m.get("aparelho") else ""
-        destino = _mac(m.get("destino"))
+        aparelho = nome_do_jogador.mac(m.get("aparelho")) if m.get("aparelho") else ""
+        destino = nome_do_jogador.mac(m.get("destino"))
         if not aparelho or destino not in enderecos or _so_hex(aparelho) in no_ar:
             continue
         idade = agora - float(m.get("quando") or 0.0)
@@ -5437,7 +5370,8 @@ def _os_que_nao_viraram_controle(diario: dict[str, Any] | None, enderecos: list[
     fresca = 0.0 <= idade <= VOLTAS_DO_VIGIA_NA_TELA * INTERVALO_S
 
     def pares(chave: str) -> list[tuple[str, str]]:
-        return [(_mac(link.get("adaptador")), _so_hex(str(link.get("controle") or "")))
+        return [(nome_do_jogador.mac(link.get("adaptador")),
+                 _so_hex(str(link.get("controle") or "")))
                 for link in volta.get(chave) or () if isinstance(link, dict)]
 
     derrubados = set(pares("derrubados")) if fresca else set()
@@ -5464,20 +5398,6 @@ def _os_que_nao_viraram_controle(diario: dict[str, Any] | None, enderecos: list[
     return linhas
 
 
-def _e_controle_do_bluez(a: Any) -> bool:
-    """Pergunta à CLASSE (o dono é `gesto_de_pareamento.e_controle`), e sem ela"""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations.gesto_de_pareamento import e_controle
-
-    classe = getattr(a, "classe", None)
-    if classe is not None:
-        return e_controle(classe)
-    icone = str(getattr(a, "icone", "") or "")
-    if icone:
-        return icone == "input-gaming"
-    return "V054C" in str(getattr(a, "modalias", "") or "").upper()
-
-
 def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str, str],
                    ja: list[dict[str, Any]],
                    no_usb: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
@@ -5486,7 +5406,7 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
     vivos = {_so_hex(str(a["id"])) for a in ja if not a.get("nao_conectou")}
     falhas = {(_so_hex(str(a.get("aparelho") or "")), a["lugar"])
               for a in ja if a.get("nao_conectou")}
-    nomes = _nomes_por_endereco(aparelhos_bz)
+    nomes = nome_do_jogador.nomes_por_endereco(aparelhos_bz)
     vistos: set[tuple[str, str]] = set()
     fora: list[dict[str, Any]] = []
     for a in aparelhos_bz:
@@ -5497,16 +5417,18 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
             continue
         vistos.add((h, lugar))
         alias = str(a.nome or "")
-        alias = "" if _ALIAS_QUE_E_ENDERECO.fullmatch(alias) else alias
-        if _e_controle_do_bluez(a):
-            tipo, nome = "controle", nomes.get(_mac(a.endereco), "")
-            rotulo = alias if alias and not _e_nome_de_fabrica(alias) else "DualSense"
+        alias = "" if nome_do_jogador.ALIAS_QUE_E_ENDERECO.fullmatch(alias) else alias
+        if em_fundo.e_controle_do_bluez(a):
+            tipo, nome = "controle", nomes.get(nome_do_jogador.mac(a.endereco), "")
+            rotulo = (alias if alias and not nome_do_jogador.e_nome_de_fabrica(alias)
+                      else "DualSense")
         else:
             tipo = _tipo_do_aparelho(str(getattr(a, "icone", "") or ""), a.classe,
                                      getattr(a, "aparencia", None))
             nome, rotulo = alias, alias or PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()
         fora.append({
-            "id": _mac(a.endereco), "aparelho": _mac(a.endereco), "tipo": tipo,
+            "id": nome_do_jogador.mac(a.endereco), "aparelho": nome_do_jogador.mac(a.endereco),
+            "tipo": tipo,
             "lugar": lugar, "nome": nome, "rotulo": rotulo,
             "modalias": str(a.modalias or ""), "desligado": True,
             "usb": tipo == "controle" and h in no_usb, "esperando": False, "fixo": True,
@@ -5554,7 +5476,8 @@ def _a_proposta_da_cena(
         return None
     pelo_sinal = ({"pelo_sinal": True, "sinal_aqui": publicada.get("sinal_aqui"),
                    "sinal_la": publicada.get("sinal_la")} if publicada.get("pelo_sinal") else {})
-    return {"controle": dono["id"], "destino": _mac(publicada.get("destino")), **pelo_sinal}
+    return {"controle": dono["id"], "destino": nome_do_jogador.mac(publicada.get("destino")),
+            **pelo_sinal}
 
 
 def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, Any],
@@ -5575,14 +5498,14 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     ordem_da_vaga = {_so_hex(str(p.get("uniq") or "")): i
                      for publicado in governador.values()
                      for i, p in enumerate(_dicionario(publicado).get("pontes") or ())}
-    alias = _nomes_por_endereco(aparelhos_bz)
+    alias = nome_do_jogador.nomes_por_endereco(aparelhos_bz)
     fora: list[dict[str, Any]] = []
     vistos: set[str] = set()
     for c in st.get("controllers") or ():
         if not isinstance(c, dict) or str(c.get("transport") or "").lower() != "bt":
             continue
         uniq = str(c.get("uniq") or "")
-        adaptador = _mac(c.get("adaptador"))
+        adaptador = nome_do_jogador.mac(c.get("adaptador"))
         if not uniq or adaptador not in enderecos:
             continue
         eu = da_mesa.get(uniq) or {}
@@ -5593,7 +5516,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         tipo_gov, passou = alem.get(_so_hex(uniq), (None, False))
         if ponte not in ("som", "haptica") and tipo_gov in ("som", "vibracao"):
             ponte = "som" if tipo_gov == "som" else "haptica"
-        nome_bz = alias.get(_mac(uniq), "")
+        nome_bz = alias.get(nome_do_jogador.mac(uniq), "")
         vaga: dict[str, Any] = {}
         if _so_hex(uniq) in ordem_da_vaga:
             vaga["ordem_da_vaga"] = ordem_da_vaga[_so_hex(uniq)]
@@ -5622,7 +5545,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             continue
         ja = next((a for a in fora if _so_hex(a["id"]) == quem), None)
         if ja is not None:
-            ja.update(lugar=_mac(m.get("destino")), esperando=True)
+            ja.update(lugar=nome_do_jogador.mac(m.get("destino")), esperando=True)
             continue
         eu = next((m2 for u, m2 in da_mesa.items() if _so_hex(u) == quem), {})
         slug = str(eu.get("cor") or "")
@@ -5633,7 +5556,8 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
                 else _tipo_do_aparelho(str(m.get("icone") or ""),
                                        classe if isinstance(classe, int) else None))
         fora.append({"id": str(m.get("aparelho")), "tipo": tipo,
-                     "lugar": _mac(m.get("destino")), "nome": str(m.get("nome") or ""),
+                     "lugar": nome_do_jogador.mac(m.get("destino")),
+                     "nome": str(m.get("nome") or ""),
                      "modalias": str(m.get("modalias") or ""),
                      "jogador": eu.get("jogador"),
                      "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "",
@@ -5643,7 +5567,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
                      "esperando": True, "fixo": False})
         vistos.add(quem)
     for a in aparelhos_bz:
-        endereco = _mac(a.endereco)
+        endereco = nome_do_jogador.mac(a.endereco)
         adaptador = endereco_do_caminho.get(str(a.adaptador), "")
         # Um DualSense que o daemon não publica não vira «outro aparelho».
         if (not a.conectado or not adaptador or _so_hex(endereco) in vistos
@@ -5704,26 +5628,27 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
 
     QUEM É CONTROLE, E O NOME DA LINHA (O-PAREAR-ESPERA-O-CLIQUE-01): o tipo
     pergunta à classe, ao ``Icon`` e só então ao ``Modalias``
-    (:func:`_e_controle_do_bluez`, o mesmo dono da central) — antes de parear,
+    (:func:`em_fundo.e_controle_do_bluez`, o mesmo dono da central) — antes de parear,
     o BlueZ não tem o ``Modalias`` do DualSense, e a linha dele caía no
     desenho genérico. O nome é o que ela deu ou o que o aparelho anuncia
-    (:func:`_nomes_por_endereco`); sem ele, «DualSense» ou a palavra do tipo.
+    (:func:`nome_do_jogador.nomes_por_endereco`); sem ele, «DualSense» ou a palavra do tipo.
     Nunca o endereço.
     """
     ligados = {_so_hex(a["id"]) for a in ja}
-    adaptador_de = {str(getattr(a, "caminho", "")): _mac(a.endereco) for a in adaptadores_bz}
-    nomes = _nomes_por_endereco(aparelhos_bz)
+    adaptador_de = {str(getattr(a, "caminho", "")): nome_do_jogador.mac(a.endereco)
+                    for a in adaptadores_bz}
+    nomes = nome_do_jogador.nomes_por_endereco(aparelhos_bz)
     vistos: dict[tuple[str, str], dict[str, Any]] = {}
     for a in aparelhos_bz:
         onde = adaptador_de.get(str(a.adaptador), "")
         if not onde or a.conectado or a.rssi is None or _so_hex(a.endereco) in ligados:
             continue
-        tipo = ("controle" if _e_controle_do_bluez(a)
+        tipo = ("controle" if em_fundo.e_controle_do_bluez(a)
                 else _tipo_do_aparelho(getattr(a, "icone", ""), a.classe,
                                        getattr(a, "aparencia", None)))
-        vistos[(onde, _mac(a.endereco))] = {
-            "id": _mac(a.endereco), "adaptador": onde,
-            "nome": nomes.get(_mac(a.endereco)) or (
+        vistos[(onde, nome_do_jogador.mac(a.endereco))] = {
+            "id": nome_do_jogador.mac(a.endereco), "adaptador": onde,
+            "nome": nomes.get(nome_do_jogador.mac(a.endereco)) or (
                 "DualSense" if tipo == "controle"
                 else PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()),
             "tipo": tipo, "forca": a.rssi, "conhecido": bool(a.pareado),
@@ -5756,7 +5681,7 @@ def _destino_da_central(cena: dict[str, Any], st: dict[str, Any]) -> str:
         ordem = plano_de_radio.ordem_dos_destinos(
             planos, varrendo=[lug["id"] for lug in cena["lugares"] if lug.get("varrendo")])
         if ordem:
-            return _mac(ordem[0].endereco)
+            return nome_do_jogador.mac(ordem[0].endereco)
     return str(cena["lugares"][0]["id"])
 
 
@@ -5863,7 +5788,7 @@ def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not guardar_ordem_dos_adaptadores(ids):
         raise RuntimeError("a ordem das caixas não foi gravada")
     esquecer_a_ordem_dos_adaptadores_de_antes()
-    _esquecer("maquina")
+    em_fundo.esquecer("maquina")
     _CENA_NA_TELA["lugares"] = [na_tela[i] for i in ids] + [
         lug for i, lug in na_tela.items() if i not in ids]
 
@@ -5874,7 +5799,7 @@ def _gravar_o_nome(endereco: str, nome: str) -> Any:
     from hefesto_dualsense4unix.integrations.entrada_a_entrada import dar_nome_ao_adaptador
 
     feito = dar_nome_ao_adaptador(endereco, nome)
-    _esquecer("maquina")
+    em_fundo.esquecer("maquina")
     _reler_a_declaracao()
     return feito
 
@@ -5890,7 +5815,7 @@ def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     if _so_o_foco(o):
         return {"armou": True}
     lug = _lugar_na_tela(o)
-    novo = nome_dado(str(o.get("valor") or ""))
+    novo = nome_do_jogador.nome_dado(str(o.get("valor") or ""))
     if novo == str(lug.get("nome") or ""):
         return None
     feito = _gravar_o_nome(str(lug["id"]), novo)
@@ -5921,7 +5846,7 @@ def _alias_do_aparelho(endereco: str, nome: str) -> Any:
         raise RuntimeError("o Bluetooth do sistema não achou este aparelho agora")
     escritas = [dono.escrever_propriedade(
         caminho, bluez_dbus.APARELHO, "Alias", "s", nome, quem="tela") for caminho in caminhos]
-    _esquecer("bluez")
+    em_fundo.esquecer("bluez")
     return next((e for e in escritas if getattr(e, "feita", False)), escritas[0])
 
 
@@ -5933,7 +5858,7 @@ def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     ap = _aparelho_na_tela(str(o.get("alvo") or ""))
     novo = str(o.get("valor") or "").strip()
     if ap.get("tipo") == "controle":
-        novo = nome_dado(novo)
+        novo = nome_do_jogador.nome_dado(novo)
     if novo == str(ap.get("nome") or ""):
         return None
     endereco = norm_mac(str(ap["id"])) or ""
@@ -6091,7 +6016,7 @@ def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     feito = _esquecer_o_pareamento(lid, str(linha["aparelho"]))
     if not getattr(feito, "deu", False):
         raise RuntimeError(str(getattr(feito, "porque", "") or "o Bluetooth não esqueceu"))
-    _esquecer("bluez")
+    em_fundo.esquecer("bluez")
     with contextlib.suppress(Exception):
         _tirar_a_linha(p, linha)
     _ligar_a_busca(p, True, lid)
@@ -6108,7 +6033,7 @@ def parear_o_pedido(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «Parear» do cartão do controle que pede para parear: o mesmo ``radio.mover`` do
     «Mover», no adaptador que o ouve — a central tira o par velho do destino, espera o
     controle (ele já está em modo de parear), pareia, confere e esquece a origem."""
-    alvo, destino = _mac(o.get("alvo")), _mac(o.get("destino"))
+    alvo, destino = nome_do_jogador.mac(o.get("alvo")), nome_do_jogador.mac(o.get("destino"))
     pedido = next((x for x in _CENA_NA_TELA.get("pedindo") or ()
                    if x.get("aparelho") == alvo and x.get("lugar") == destino), None)
     if pedido is None:
@@ -6185,7 +6110,7 @@ def confirmar_esquecer(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     feito = _esquecer_o_pareamento(str(ap["lugar"]), aparelho)
     if not getattr(feito, "deu", False):
         raise RuntimeError(str(getattr(feito, "porque", "") or "o Bluetooth não esqueceu"))
-    _esquecer("bluez")
+    em_fundo.esquecer("bluez")
 
 
 @gesto("08-conexoes.html", "equilibrar-radio")
@@ -6206,8 +6131,12 @@ def _ligar_a_busca(p: Any, ligada: bool, destino: str) -> dict[str, Any]:
     resposta = p.resultado("radio.busca.set", **parametros)
     busca = resposta.get("busca") if isinstance(resposta, dict) else None
     status = str(resposta.get("status") or "") if isinstance(resposta, dict) else ""
-    feita = (isinstance(busca, dict) and (not destino or _mac(busca.get("adaptador"))
-                                          == _mac(destino))) if ligada else busca is None
+    if ligada:
+        feita = isinstance(busca, dict) and (
+            not destino
+            or nome_do_jogador.mac(busca.get("adaptador")) == nome_do_jogador.mac(destino))
+    else:
+        feita = busca is None
     if status != "ok" or not feita:
         raise RuntimeError(f"{PROCURAR_RECUSA} ({status or 'sem resposta'})")
     return {"armou": True}
@@ -6288,7 +6217,7 @@ def entrada_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A resposta de produto — uma das quatro faces do produto —, gravada na hora."""
     face = str(o.get("face") or o.get("valor") or "")
     gravacao = _laco().responder(face)
-    _esquecer("maquina")
+    em_fundo.esquecer("maquina")
     if not gravacao.gravou:
         raise RuntimeError("a entrada não foi gravada")
 
@@ -6311,7 +6240,7 @@ def entrada_levantar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
 def entrada_nao_alcanco(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Não alcanço»: a vaga sai da conta de vez."""
     _laco().nao_alcanco()
-    _esquecer("maquina")
+    em_fundo.esquecer("maquina")
 
 
 @gesto("08-conexoes.html", "entrada-parar")
@@ -6559,14 +6488,6 @@ def _recusa_da_mesa() -> str:
             "um só, escolha outro Perfil Global de Bateria lá.")
 
 
-def _nomes_dos_donos() -> dict[str, str]:
-    """``{endereço: nome}`` pelo dono do nome (o ``Alias`` do BlueZ)."""
-    bluez = _em_fundo("bluez", _ler_o_bluez, 3.0)
-    if not bluez:
-        return {}
-    return _nomes_por_endereco(bluez[1])
-
-
 # `dono_na_linha` (importada no topo) é a regra «o nome, ou o Pn», que mora em `monta` desde
 # 07/10/2026: a 02 e a Calibrar dizem quem joga pela mesma regra, e o nome daqui é o alias.
 
@@ -6579,10 +6500,10 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("dono-renomear: o clique não disse em qual controle")
-    novo = nome_dado(str(o.get("valor") or ""))
+    novo = nome_do_jogador.nome_dado(str(o.get("valor") or ""))
     if _SO_O_NUMERO.fullmatch(novo):
         novo = ""
-    if novo == _nomes_dos_donos().get(_mac(uniq), ""):
+    if novo == nome_do_jogador.nomes_dos_donos().get(nome_do_jogador.mac(uniq), ""):
         return
     endereco = _so_hex(uniq)
     if len(endereco) != 12:

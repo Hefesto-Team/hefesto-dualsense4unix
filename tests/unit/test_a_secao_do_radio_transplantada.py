@@ -51,6 +51,7 @@ from html.parser import HTMLParser
 from typing import Any
 
 import pytest
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -150,8 +151,8 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa, RadioUsb
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    monkeypatch.setattr(a08, "LER_NA_HORA", True)
-    monkeypatch.setattr(a08, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
     monkeypatch.setattr(a08, "_ABERTO", {})
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {})
     monkeypatch.setattr(a08, "_NIVEL_NA_TELA", {})
@@ -169,7 +170,7 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
         AparelhoDoBluez("/org/bluez/hci0/dev_AA_BB_CC_00_00_44", "/org/bluez/hci0",
                         "AA:BB:CC:00:00:44", nome="Caixa", conectado=True, classe=0x240414),
     )
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, aparelhos))
     maquina = MaquinaConfig(adaptadores={A1.replace(":", ""): {"nome": "Sala"}})
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
@@ -531,8 +532,8 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
-    descrito = mesa._ler_o_bluez
-    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: None)
+    descrito = em_fundo.ler_o_bluez
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: None)
     estado = _estado()
     estado["radio_central"]["proposta"] = {"controle": U3, "destino": A2}
     campos = mesa.campos_do_radio(_ctx(estado))
@@ -545,27 +546,27 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
         "a janela do pedido abriria com o texto do tique em que nada se sabia")
 
     adaptadores, aparelhos = descrito()
-    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: (adaptadores[:1], aparelhos))
-    mesa._FUNDO.clear()
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores[:1], aparelhos))
+    em_fundo._FUNDO.clear()
     assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
         "com a vaga ainda sem porta sabida, o pedido virou «Todas as entradas»")
 
-    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, aparelhos))
     lido = mesa._ler_a_maquina
 
     def no_fio() -> Any:
         raise TimeoutError("o maquina.json ainda não voltou")
 
     monkeypatch.setattr(mesa, "_ler_a_maquina", no_fio)
-    mesa._FUNDO.clear()
+    em_fundo._FUNDO.clear()
     assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
         "a janela do pedido abriria sem o nome que ela deu ao adaptador")
     monkeypatch.setattr(mesa, "_ler_a_maquina", lido)
 
     placa = AdaptadorDoBluez("/org/bluez/hci2", "hci2", "AA:BB:CC:00:00:21", lugar="",
                              varrendo=False)
-    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: ((*adaptadores, placa), aparelhos))
-    mesa._FUNDO.clear()
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((*adaptadores, placa), aparelhos))
+    em_fundo._FUNDO.clear()
     estado = _estado()
     estado["radio_ar"]["aa:bb:cc:00:00:21"] = {"pontes": [], "n_max": 2}
     campos = mesa.campos_do_radio(_ctx(estado))
@@ -621,7 +622,7 @@ def test_o_sino_diz_desde_quando_se_mede(mesa: Any, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(mesa, "_ler_o_historico", lambda: {
         "desde": "2026-09-21T08:00:00", "quedas": [],
         "diario": [{"o_que": "fila parada", "carimbo": time.time(), "adaptador": A1}]})
-    mesa._FUNDO.clear()
+    em_fundo._FUNDO.clear()
     cena = mesa.cena_do_radio(_ctx(_estado()))
     lug = next(lg for lg in cena["lugares"] if lg["id"] == I1)
     assert lug["quedas_desde"] == "21/09"
@@ -671,7 +672,7 @@ def test_o_microfone_da_linha_e_o_gesto_da_aba_02(mesa: Any,
 
 def _esperar_o_fio(mesa: Any, chave: str) -> None:
     for _ in range(500):
-        if chave not in mesa._FUNDO_EM_VOO:
+        if chave not in em_fundo._FUNDO_EM_VOO:
             return
         time.sleep(0.01)
     raise AssertionError(f"a leitura de fundo `{chave}` não voltou")
@@ -691,10 +692,10 @@ def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
         solta.wait(5)
         return MaquinaConfig(adaptadores={A1.replace(":", ""): {"nome": "Sala nova"}}), {3: PCI}
 
-    monkeypatch.setattr(mesa, "LER_NA_HORA", False)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
     monkeypatch.setattr(mesa, "_ler_a_maquina", ler_devagar)
     try:
-        mesa._esquecer("maquina")
+        em_fundo.esquecer("maquina")
         sala = _campos(mesa)["radio-sala"]
         assert 'value="Sala"' in sala, (
             "o tique logo depois do gesto pintou o nome em branco, com a leitura em voo")
@@ -709,7 +710,7 @@ def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
     """A leitura que começou ANTES de o gesto gravar leu o disco de antes: ela"""
     import threading
 
-    monkeypatch.setattr(mesa, "LER_NA_HORA", False)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
     solta = threading.Event()
     lidas: list[str] = []
 
@@ -719,15 +720,15 @@ def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
         return "velha" if len(lidas) == 1 else "nova"
 
     try:
-        assert mesa._em_fundo("prova-do-voo", ler, 60.0) is None
-        mesa._esquecer("prova-do-voo")
+        assert em_fundo.em_fundo("prova-do-voo", ler, 60.0) is None
+        em_fundo.esquecer("prova-do-voo")
     finally:
         solta.set()
         _esperar_o_fio(mesa, "prova-do-voo")
-    assert mesa._em_fundo("prova-do-voo", ler, 60.0) == "velha"
+    assert em_fundo.em_fundo("prova-do-voo", ler, 60.0) == "velha"
     _esperar_o_fio(mesa, "prova-do-voo")
     assert len(lidas) == 2, "a leitura de antes do gesto valeu pela validade inteira"
-    assert mesa._em_fundo("prova-do-voo", ler, 60.0) == "nova"
+    assert em_fundo.em_fundo("prova-do-voo", ler, 60.0) == "nova"
 
 
 def test_o_piloto_da_08_ouve_o_endereco_que_a_pagina_emite() -> None:

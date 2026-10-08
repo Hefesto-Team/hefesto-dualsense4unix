@@ -38,6 +38,7 @@ import sys
 from typing import Any
 
 import pytest
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -62,15 +63,15 @@ def bancada(monkeypatch: Any) -> Any:
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
     p = _pacote()
-    monkeypatch.setattr(p, "LER_NA_HORA", True)
-    monkeypatch.setattr(p, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
     monkeypatch.setattr(p, "_ABERTO", {})
     monkeypatch.setattr(p, "_mesa_do_radio", lambda recarregar=False: Mesa())
     monkeypatch.setattr(p, "_ler_o_historico", lambda: {})
 
     def declarar(nomes: list[str] | None) -> None:
         if nomes is None:
-            monkeypatch.setattr(p, "_ler_o_bluez", lambda: None)
+            monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: None)
             monkeypatch.setattr(p, "_ler_a_maquina", lambda: (None, {}))
             return
         lugares = {f"pci-{PCI}-usb-0:{i + 1}": nome for i, nome in enumerate(nomes)}
@@ -78,7 +79,7 @@ def bancada(monkeypatch: Any) -> Any:
             AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", f"AA:BB:CC:00:00:{i + 10:02d}",
                              lugar=lugar)
             for i, lugar in enumerate(lugares))
-        monkeypatch.setattr(p, "_ler_o_bluez", lambda: (adaptadores, ()))
+        monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, ()))
         maquina = MaquinaConfig(
             adaptadores={f"aabbcc0000{i + 10:02d}": {"nome": nome} for i, nome in enumerate(nomes)})
         monkeypatch.setattr(p, "_ler_a_maquina", lambda: (maquina, {3: PCI}))

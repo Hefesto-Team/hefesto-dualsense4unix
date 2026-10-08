@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 QUATRO = (VERMELHO, AZUL, VERDE, ROXO)
 TECLADO = "aa:bb:cc:00:00:7e"
@@ -334,8 +335,8 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
-    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
-    monkeypatch.setattr(a08_conexoes, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
     monkeypatch.setattr(a08_conexoes, "_ABERTO", {})
     monkeypatch.setattr(a08_conexoes, "_CENA_NA_TELA", {})
     monkeypatch.setattr(a08_conexoes, "_SALA_NA_TELA", {})
@@ -355,8 +356,8 @@ def _montar(a08: Any, monkeypatch: pytest.MonkeyPatch, *, adaptadores: int = 3,
         AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES_DA_TELA[i].upper(),
                          lugar=LUGARES_DA_TELA[i], varrendo=False)
         for i in range(adaptadores))
-    monkeypatch.setattr(a08, "_FUNDO", {})
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, aparelhos))
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (lidos, aparelhos))
     maquina = MaquinaConfig(adaptadores={_id(ADAPTADORES_DA_TELA[i]).lower():
                                          {"nome": NOMES_DA_TELA[i]}
                                          for i in range(adaptadores)})
@@ -731,7 +732,7 @@ def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
         AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES_DA_TELA[i].upper(),
                          lugar=LUGARES_DA_TELA[i], varrendo=(i == 2))
         for i in range(3))
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, ()))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (lidos, ()))
     janela = {"aparelho": "", "destino": centro, "estado": "esperando", "passo": "gesto",
               "motivo": "", "origens": [], "e_controle": True, "quando": time.time()}
     busca = {"adaptador": centro, "desde": time.time(), "ate": time.time() + 120.0}

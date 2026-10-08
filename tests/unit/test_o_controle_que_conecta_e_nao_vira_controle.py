@@ -61,6 +61,7 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     uniqs_com_hid,
     zumbis,
 )
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -409,14 +410,14 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
         AdaptadorDoBluez("/org/bluez/hci1", "hci1", DONGLE_B.upper(), lugar="3-2",
                          varrendo=False),
     )
-    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
-    monkeypatch.setattr(a08_conexoes, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
     monkeypatch.setattr(a08_conexoes, "_ABERTO", {})
     monkeypatch.setattr(a08_conexoes, "_CENA_NA_TELA", {})
     monkeypatch.setattr(a08_conexoes, "_DISPENSADOS", set())
     monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
     monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
-    monkeypatch.setattr(a08_conexoes, "_ler_o_bluez", lambda: (lidos, ()))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (lidos, ()))
     monkeypatch.setattr(a08_conexoes, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
     return a08_conexoes
 
@@ -424,7 +425,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 def _cena_da_aba(a08: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    a08._FUNDO.clear()
+    em_fundo._FUNDO.clear()
     estado = {"controllers": [], "radio_central": {"movimentos": [], "proposta": None}}
     a08.campos_do_radio(Contexto(state=estado, conectados=[], mesa=[]))
     return dict(a08._CENA_NA_TELA)

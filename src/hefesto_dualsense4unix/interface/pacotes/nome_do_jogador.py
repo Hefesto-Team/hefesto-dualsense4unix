@@ -7,16 +7,17 @@ POR AQUI, e a 08 também: o filtro mora ao lado do leitor, porque sem ele o ``Al
 («DualSense Wireless Controller») ou o que é o próprio endereço viraria «nome do jogador» e o
 endereço iria para a tela.
 
-A leitura em fundo (``_em_fundo``, validade de 3 s) continua na 08, que a divide com a seção do
-rádio e o sino; aqui só se pergunta a ela, com import tardio (a 08 importa este módulo).
+A leitura em fundo do BlueZ (validade de 3 s) é do ``em_fundo``, que a divide com a seção do
+rádio e o sino; este módulo e a 08 o importam, e nenhum dos dois é importado por ele.
 """
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+from . import em_fundo
 
 NOMES_DE_FABRICA = ("DualSense", "Wireless Controller")
 
@@ -50,31 +51,26 @@ def e_nome_dela(nome: str) -> bool:
     return bool(nome) and not e_nome_de_fabrica(nome) and not ALIAS_QUE_E_ENDERECO.fullmatch(nome)
 
 
-def nomes_por_endereco(aparelhos_bz: tuple[Any, ...],
-                       e_controle: Callable[[Any], bool] | None = None) -> dict[str, str]:
+def nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
     """O nome que ela deu a cada controle, pelo ENDEREÇO — um só por aparelho.
 
-    `e_controle` diz se o aparelho é um controle (o dono é a 08, que o divide com a central); só o
-    controle ganha a primeira letra maiúscula, o adaptador fica como veio.
+    Só o controle ganha a primeira letra maiúscula, o adaptador fica como veio.
     """
-    if e_controle is None:
-        from . import a08_conexoes
-
-        e_controle = a08_conexoes._e_controle_do_bluez
     nomes: dict[str, str] = {}
     for a in sorted(aparelhos_bz, key=lambda a: getattr(a, "conectado", None) is not True):
         nome = str(getattr(a, "nome", "") or "").strip()
         endereco = mac(getattr(a, "endereco", ""))
         if endereco and e_nome_dela(nome) and endereco not in nomes:
-            nomes[endereco] = nome_dado(nome) if e_controle(a) else nome
+            nomes[endereco] = nome_dado(nome) if em_fundo.e_controle_do_bluez(a) else nome
     return nomes
 
 
 def nomes_dos_donos() -> dict[str, str]:
-    """``{endereço: nome}`` do ``Alias`` do BlueZ, lido em fundo pela 08; sem leitura, vazio."""
-    from . import a08_conexoes
-
-    return a08_conexoes._nomes_dos_donos()
+    """``{endereço: nome}`` do ``Alias`` do BlueZ, lido em fundo; sem leitura, vazio."""
+    bluez = em_fundo.em_fundo("bluez", em_fundo.ler_o_bluez, 3.0)
+    if not bluez:
+        return {}
+    return nomes_por_endereco(bluez[1])
 
 
 def o_nome_de(nomes: dict[str, str], uniq: object) -> str:

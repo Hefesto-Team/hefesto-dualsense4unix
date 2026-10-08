@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.interface import monta, onde, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import a11_calibrar_sensores as a11
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 P02 = "02-controles.html"
 P06 = "06-navegacao.html"
@@ -312,8 +313,8 @@ def test_o_nome_chega_a_02_pelo_alias_que_a_08_le(
 
     aparelho = types.SimpleNamespace(nome="Vitória", endereco=UNIQS[0].upper(), conectado=True,
                                      icone="input-gaming", classe=None, modalias="")
-    monkeypatch.setattr(a08, "_FUNDO", {"bluez": (time.monotonic() + 1e6, ((), (aparelho,)))})
-    monkeypatch.setattr(a08, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(em_fundo, "_FUNDO", {"bluez": (time.monotonic() + 1e6, ((), (aparelho,)))})
+    monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
     assert a02.nomes_de_quem_joga() == nome_do_jogador.nomes_dos_donos() == {MAC_NORM: "Vitória"}
     cards = a02.pacote(_ctx((1, 2)))["cards"]
     assert cards[UNIQS[0]]["quem-joga"] == "Vitória"

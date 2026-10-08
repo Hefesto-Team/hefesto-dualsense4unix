@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, FONE, QUARTO, ROXO, SALA, VERDE, VERMELHO
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 
 @pytest.fixture()
@@ -175,9 +176,10 @@ def tela(monkeypatch: pytest.MonkeyPatch) -> Any:
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_SALA_NA_TELA", "_CHEGADAS"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_SALA_NA_TELA", "_CHEGADAS"):
         monkeypatch.setattr(a08_conexoes, nome, {})
-    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
     monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
     maquina = MaquinaConfig(adaptadores={_id(ADAPTADORES[i]).lower(): {"nome": NOMES[i]}
@@ -191,8 +193,8 @@ def tela(monkeypatch: pytest.MonkeyPatch) -> Any:
         novo = AparelhoDoBluez(f"/org/bluez/hci1/dev_{NOVO.upper().replace(':', '_')}",
                                "/org/bluez/hci1", NOVO.upper(), nome=nome, conectado=False,
                                pareado=False, rssi=-55, classe=rm.CLASSE_DE_CONTROLE)
-        a08_conexoes._FUNDO.clear()
-        monkeypatch.setattr(a08_conexoes, "_ler_o_bluez", lambda: (adaptadores, (novo,)))
+        em_fundo._FUNDO.clear()
+        monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, (novo,)))
 
     return a08_conexoes, ler
 

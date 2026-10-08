@@ -23,6 +23,7 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import ponte
+from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/08-conexoes.html"
@@ -76,7 +77,7 @@ def _linha_que_nao_conectou(
 
 
 def _par(adaptador: str, controle: str) -> tuple[str, str]:
-    return ADAPTADORES[adaptador], a08._mac(controle)
+    return ADAPTADORES[adaptador], nome_do_jogador.mac(controle)
 
 
 # --- 1. na lista do «+ Conectar», o pareado fora do ar tem «Conectar» --------------------
@@ -87,14 +88,15 @@ def test_o_pareado_fora_do_ar_aparece_com_conectar_e_o_novo_com_parear() -> None
                  _bz(novo, "/org/bluez/hci0", pareado=False))
     perto = a08._perto(aparelhos, (_adaptador("/org/bluez/hci0"),), [])
     por_id = {a["id"]: a for a in perto}
-    assert por_id[a08._mac(antigo)]["conhecido"] is True
-    assert por_id[a08._mac(novo)]["conhecido"] is False
+    assert por_id[nome_do_jogador.mac(antigo)]["conhecido"] is True
+    assert por_id[nome_do_jogador.mac(novo)]["conhecido"] is False
     cena = {"lugares": [{"id": ADAPTADORES["/org/bluez/hci0"], "sabido": True}], "aparelhos": [],
             "perto": perto, "destino_do_conectar": ADAPTADORES["/org/bluez/hci0"]}
     html = a08.html_dos_moldes(cena)
     botoes = {alvo: gesto for gesto, alvo in re.findall(
         r'data-gesto="(conectar-aparelho|parear-aparelho)" data-alvo="([^"]+)"', html)}
-    assert botoes == {a08._mac(antigo): "conectar-aparelho", a08._mac(novo): "parear-aparelho"}
+    assert botoes == {nome_do_jogador.mac(antigo): "conectar-aparelho",
+                      nome_do_jogador.mac(novo): "parear-aparelho"}
     assert re.search(r'conectar-aparelho" data-alvo="[^"]+">Conectar</button>', html)
 
 
@@ -106,7 +108,7 @@ def test_a_linha_do_pareado_que_nao_conectou_diz_parear_de_novo(
     controle: str, adaptador: str
 ) -> None:
     destino = ADAPTADORES[adaptador]
-    linha = _linha_que_nao_conectou(destino, a08._mac(controle),
+    linha = _linha_que_nao_conectou(destino, nome_do_jogador.mac(controle),
                                     frozenset({_par(adaptador, controle)}))
     assert linha["pareado_aqui"] is True
     html = a08.html_da_linha(linha, {"lugares": [], "aparelhos": [linha]})
@@ -121,7 +123,8 @@ def test_o_botao_da_linha_e_o_mesmo_parear_nos_dois_casos() -> None:
 
 
 def test_sem_par_velho_aqui_a_linha_continua_tentar_de_novo() -> None:
-    linha = _linha_que_nao_conectou(ADAPTADORES["/org/bluez/hci0"], a08._mac(CONTROLES[0]),
+    linha = _linha_que_nao_conectou(ADAPTADORES["/org/bluez/hci0"],
+                                    nome_do_jogador.mac(CONTROLES[0]),
                                     frozenset({_par("/org/bluez/hci1", CONTROLES[0])}))
     assert linha["pareado_aqui"] is False
     html = a08.html_da_linha(linha, {"lugares": [], "aparelhos": [linha]})
@@ -143,9 +146,10 @@ def test_a_cena_marca_o_par_velho_pelo_que_o_bluez_diz(
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA"):
         monkeypatch.setattr(a08, nome, {})
-    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: Mesa())
     adaptadores = tuple(AdaptadorDoBluez(caminho, caminho.rsplit("/", 1)[1],
                                          _com_dois_pontos(hexa), varrendo=False)
@@ -160,7 +164,7 @@ def test_a_cena_marca_o_par_velho_pelo_que_o_bluez_diz(
     aparelhos = (_aparelho(CONTROLES[0], adaptador, True),
                  _aparelho(CONTROLES[1], adaptador, False),
                  _aparelho(CONTROLES[2], outro, True))
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, aparelhos))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
@@ -171,8 +175,9 @@ def test_a_cena_marca_o_par_velho_pelo_que_o_bluez_diz(
     estado = {"controllers": [], "radio_central": {"movimentos": movimentos, "proposta": None}}
     cena = a08.cena_do_radio(pacotes.Contexto(state=estado, mesa=[], conectados=[]))
     linhas = {a["aparelho"]: a["pareado_aqui"] for a in cena["aparelhos"] if a.get("nao_conectou")}
-    assert linhas == {a08._mac(CONTROLES[0]): True, a08._mac(CONTROLES[1]): False,
-                      a08._mac(CONTROLES[2]): False}
+    assert linhas == {nome_do_jogador.mac(CONTROLES[0]): True,
+                      nome_do_jogador.mac(CONTROLES[1]): False,
+                      nome_do_jogador.mac(CONTROLES[2]): False}
 
 
 def _na_tela(monkeypatch: pytest.MonkeyPatch, linha: dict[str, Any], **cena: Any) -> None:
@@ -180,7 +185,7 @@ def _na_tela(monkeypatch: pytest.MonkeyPatch, linha: dict[str, Any], **cena: Any
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {
         "lugares": [lugar], "aparelhos": [linha], "procurando": a08.PROCURAR_DESLIGADO,
         "ocupado": False, **cena})
-    monkeypatch.setattr(a08, "_esquecer", lambda *a, **k: None)
+    monkeypatch.setattr(em_fundo, "esquecer", lambda *a, **k: None)
 
 
 @pytest.mark.parametrize("controle", CONTROLES)
@@ -189,7 +194,7 @@ def test_o_clique_esquece_o_par_velho_antes_de_abrir_a_busca(
     monkeypatch: pytest.MonkeyPatch, controle: str, adaptador: str
 ) -> None:
     destino = ADAPTADORES[adaptador]
-    linha = _linha_que_nao_conectou(destino, a08._mac(controle),
+    linha = _linha_que_nao_conectou(destino, nome_do_jogador.mac(controle),
                                     frozenset({_par(adaptador, controle)}))
     _na_tela(monkeypatch, linha)
     ordem: list[str] = []
@@ -204,20 +209,20 @@ def test_o_clique_esquece_o_par_velho_antes_de_abrir_a_busca(
 
     gesto(ctx, {"alvo": destino, "linha": linha["id"], "evento": "click"}, ponte_de_mentira)
 
-    assert ordem[0] == f"esqueceu {destino} {a08._mac(controle)}"
+    assert ordem[0] == f"esqueceu {destino} {nome_do_jogador.mac(controle)}"
     assert "radio.busca.set" in ordem and ordem.index("radio.busca.set") > 0
     busca = next(p for m, p in ponte_de_mentira.pedidos if m == "radio.busca.set")
     assert busca == {"ligada": True, "destino": destino}
     # o MESMO clique é a escolha do usuário: o `radio.mover` do aparelho no adaptador, depois da
     # busca
     assert ordem.index("radio.mover") > ordem.index("radio.busca.set")
-    assert ("radio.mover", {"destino": destino, "aparelho": a08._mac(controle)}
+    assert ("radio.mover", {"destino": destino, "aparelho": nome_do_jogador.mac(controle)}
             ) in ponte_de_mentira.pedidos
 
 
 def test_a_linha_sem_par_velho_nao_tem_o_que_refazer(monkeypatch: pytest.MonkeyPatch) -> None:
     destino = ADAPTADORES["/org/bluez/hci0"]
-    linha = _linha_que_nao_conectou(destino, a08._mac(CONTROLES[0]), frozenset())
+    linha = _linha_que_nao_conectou(destino, nome_do_jogador.mac(CONTROLES[0]), frozenset())
     _na_tela(monkeypatch, linha)
     escreveu: list[Any] = []
     monkeypatch.setattr(a08, "_esquecer_o_pareamento", lambda *a: escreveu.append(a))
@@ -233,8 +238,9 @@ def test_a_linha_sem_par_velho_nao_tem_o_que_refazer(monkeypatch: pytest.MonkeyP
 
 def _cena_do_menu(**extra: Any) -> dict[str, Any]:
     destino = ADAPTADORES["/org/bluez/hci0"]
-    ap = {"id": a08._mac(CONTROLES[0]), "tipo": "controle", "lugar": destino, "nome": "Pedro",
-          "rotulo": "DualSense", "aparelho": a08._mac(CONTROLES[0]), "esperando": False,
+    ap = {"id": nome_do_jogador.mac(CONTROLES[0]), "tipo": "controle", "lugar": destino,
+          "nome": "Pedro",
+          "rotulo": "DualSense", "aparelho": nome_do_jogador.mac(CONTROLES[0]), "esperando": False,
           "fixo": False, "mic": False, "ponte": None, "cor": "#7eb8d4"}
     return {"lugares": [{"id": destino, "sabido": True, "nome": "Direita"}], "aparelhos": [ap],
             "procurando": a08.PROCURAR_DESLIGADO, "ocupado": False, **extra}

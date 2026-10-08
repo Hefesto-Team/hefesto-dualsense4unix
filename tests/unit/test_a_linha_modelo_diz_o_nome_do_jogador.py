@@ -40,8 +40,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from hefesto_dualsense4unix.interface import monta, onde, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
-from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
-from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
+from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 MODELOS = ("Cosmic Red", "Starlight Blue", "Galactic Purple", "White")
@@ -56,8 +55,8 @@ def _aparelho(uniq: str, alias: str, *, conectado: bool = True) -> Any:
 @pytest.fixture(autouse=True)
 def _o_bluez_e_o_da_regua(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """O fundo da 08 começa limpo e é a régua quem o enche: nenhum BlueZ de verdade."""
-    monkeypatch.setattr(a08, "_FUNDO", {})
-    monkeypatch.setattr(a08, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
     return {}
 
 
@@ -65,7 +64,7 @@ def _com_aliases(aliases: dict[str, str], *, no_cabo: frozenset[str] = frozenset
     """Põe no fundo o que o BlueZ diria: um aparelho por controle com o `Alias` dado."""
     aparelhos = tuple(_aparelho(u, alias, conectado=u not in no_cabo)
                       for u, alias in aliases.items())
-    a08._FUNDO["bluez"] = (time.monotonic() + 1e6, ((), aparelhos))
+    em_fundo._FUNDO["bluez"] = (time.monotonic() + 1e6, ((), aparelhos))
 
 
 def _contexto(quantos: int, *, via: tuple[str, ...] | None = None) -> Any:
@@ -158,8 +157,8 @@ def test_a_08_e_as_duas_abas_dizem_o_mesmo_nome(monkeypatch: pytest.MonkeyPatch)
     """O dono é um: o nome do campo «dono» da Conexões é o que entra na linha da 04 e da 05."""
     _com_aliases({UNIQS[0]: "vitória", UNIQS[1]: "Amiga"})
     ctx = _contexto(2)
-    # o campo «dono» da 08 é `dono_na_linha(a08._nomes_dos_donos(), uniq, jogador)` (a08:1936)
-    nomes_da_08 = a08._nomes_dos_donos()
+    # o campo «dono» da 08 é `dono_na_linha(nome_do_jogador.nomes_dos_donos(), uniq, jogador)`
+    nomes_da_08 = nome_do_jogador.nomes_dos_donos()
     da_08 = {u: monta.dono_na_linha(nomes_da_08, u, n) for n, u in enumerate(UNIQS[:2], start=1)}
     for página, sep in PAGINAS:
         linhas = _linhas(monkeypatch, página, ctx)
@@ -168,17 +167,137 @@ def test_a_08_e_as_duas_abas_dizem_o_mesmo_nome(monkeypatch: pytest.MonkeyPatch)
     assert da_08[UNIQS[0]] == "Vitória", "a primeira letra maiúscula é regra dela"
 
 
-def test_o_leitor_e_um_so_e_a_08_o_chama() -> None:
-    """A 08 não tem mais a cópia do filtro: os nomes dela são os mesmos objetos do leitor."""
-    assert a08._e_nome_de_fabrica is nome_do_jogador.e_nome_de_fabrica
-    assert a08._ALIAS_QUE_E_ENDERECO is nome_do_jogador.ALIAS_QUE_E_ENDERECO
-    assert a08.nome_dado is nome_do_jogador.nome_dado
-    assert a08._mac is nome_do_jogador.mac
+def test_o_leitor_filtra_o_alias_de_fabrica_e_o_endereco() -> None:
+    """O leitor é UM (`nome_do_jogador`): só o nome dela passa, com a primeira maiúscula."""
     aparelhos = (_aparelho(UNIQS[0], "vitória"), _aparelho(UNIQS[1], "DualSense Wireless"),
                  _aparelho(UNIQS[2], "AA:BB:CC:00:00:03"))
     esperado = {nome_do_jogador.mac(UNIQS[0]): "Vitória"}
-    assert a08._nomes_por_endereco(aparelhos) == esperado
-    assert nome_do_jogador.nomes_por_endereco(aparelhos, lambda _a: True) == esperado
+    assert nome_do_jogador.nomes_por_endereco(aparelhos) == esperado
+
+
+# ---- O DONO É UM SÓ: a régua mede o FONTE, nunca a saída (O-NOME-DO-JOGADOR-TEM-UM-DONO-SO-01)
+
+PACOTES = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
+
+#: o que SAIU da 08 para o `em_fundo` (o cache em fundo e o leitor do BlueZ) e para o
+#: `nome_do_jogador` (o nome e o filtro dele), e como cada um se chama no dono novo
+SAIRAM_DA_08 = frozenset({
+    "_mac", "nome_dado", "_e_nome_de_fabrica", "_ALIAS_QUE_E_ENDERECO", "_nomes_por_endereco",
+    "_nomes_dos_donos", "_FUNDO", "_FUNDO_EM_VOO", "_TRAVA_DO_FUNDO", "_GERACAO",
+    "LER_NA_HORA", "VENCIDA", "_em_fundo", "_esquecer", "_ler_o_bluez", "_e_controle_do_bluez",
+})
+#: os dois donos: remendar o nome neles é o certo
+OS_DONOS = frozenset({"em_fundo", "nome_do_jogador"})
+
+
+def _ast(caminho: pathlib.Path) -> Any:
+    import ast
+
+    return ast.parse(caminho.read_text(encoding="utf-8"))
+
+
+def _nomes_que_o_modulo_define(arvore: Any) -> set[str]:
+    """Todo nome que o módulo LIGA: def, class, atribuição e import (com o `as`), em todo nível."""
+    import ast
+
+    achados: set[str] = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            achados.add(no.name)
+        elif isinstance(no, ast.Name) and isinstance(no.ctx, ast.Store):
+            achados.add(no.id)
+        elif isinstance(no, (ast.Import, ast.ImportFrom)):
+            achados.update((a.asname or a.name).split(".")[0] for a in no.names)
+    return achados
+
+
+def test_a_08_nao_define_nenhum_simbolo_do_que_saiu_dela() -> None:
+    """A 08 chama o dono de cada um, sem alias nem cópia: nenhum nome do conjunto é ligado nela.
+
+    MORDIDA: devolva `_mac = nome_do_jogador.mac` (ou qualquer `def _esquecer`) à 08 → reprova.
+    """
+    ligados = _nomes_que_o_modulo_define(_ast(PACOTES / "a08_conexoes.py"))
+    assert not (SAIRAM_DA_08 & ligados), sorted(SAIRAM_DA_08 & ligados)
+
+
+def test_nem_o_nome_do_jogador_nem_o_em_fundo_importam_a_08() -> None:
+    """Sem import tardio: o ciclo some, em qualquer fundo (também dentro de função).
+
+    MORDIDA: devolva `from . import a08_conexoes` dentro de uma função do `nome_do_jogador`.
+    """
+    import ast
+
+    for arquivo in ("nome_do_jogador.py", "em_fundo.py"):
+        for no in ast.walk(_ast(PACOTES / arquivo)):
+            if isinstance(no, ast.ImportFrom):
+                vistos = [no.module or "", *(a.name for a in no.names)]
+            elif isinstance(no, ast.Import):
+                vistos = [a.name for a in no.names]
+            else:
+                continue
+            assert not any("a08_conexoes" in v for v in vistos), (arquivo, no.lineno)
+    assert "nome_do_jogador" not in {
+        a.name for no in ast.walk(_ast(PACOTES / "em_fundo.py"))
+        if isinstance(no, ast.ImportFrom) for a in no.names}, "o em_fundo não importa o nome"
+
+
+def test_so_o_em_fundo_cria_a_trava_do_fundo() -> None:
+    """Uma trava e um cache só: nenhum outro pacote liga `_TRAVA_DO_FUNDO` nem um `Lock()` de fundo.
+
+    MORDIDA: uma segunda `_TRAVA_DO_FUNDO = threading.Lock()` na 08 → reprova.
+    """
+    import ast
+
+    donos = []
+    for arquivo in sorted(PACOTES.glob("*.py")):
+        for no in ast.walk(_ast(arquivo)):
+            if isinstance(no, (ast.Assign, ast.AnnAssign)):
+                alvos = no.targets if isinstance(no, ast.Assign) else [no.target]
+                nomes = [a.id for a in alvos if isinstance(a, ast.Name)]
+                chama_lock = isinstance(no.value, ast.Call) and "Lock" in ast.unparse(no.value.func)
+                if any("FUNDO" in n.upper() for n in nomes) and chama_lock:
+                    donos.append(arquivo.name)
+    assert donos == ["em_fundo.py"], donos
+
+
+def _os_remendos_na_08_que_saiu() -> list[str]:
+    """Todo arquivo de `tests/` que atribui, remenda ou lê, num OUTRO módulo, um nome que saiu."""
+    import ast
+
+    maus: list[str] = []
+    for arquivo in sorted((RAIZ / "tests").rglob("test_*.py")):
+        if arquivo == pathlib.Path(__file__).resolve():
+            continue
+        try:
+            arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for no in ast.walk(arvore):
+            ruim = ""
+            if isinstance(no, ast.Attribute) and no.attr in SAIRAM_DA_08:
+                if isinstance(no.value, ast.Name) and no.value.id not in OS_DONOS:
+                    ruim = f"{no.value.id}.{no.attr}"
+            elif (isinstance(no, ast.Call) and len(no.args) >= 2
+                  and isinstance(no.func, ast.Attribute) and no.func.attr == "setattr"
+                  and isinstance(no.args[1], ast.Constant) and no.args[1].value in SAIRAM_DA_08
+                  and not (isinstance(no.args[0], ast.Name) and no.args[0].id in OS_DONOS)):
+                ruim = f"setattr(..., {no.args[1].value!r})"
+            elif (isinstance(no, (ast.Tuple, ast.List)) and len(no.elts) >= 2
+                  and all(isinstance(e, ast.Constant) and isinstance(e.value, str) for e in no.elts)
+                  and SAIRAM_DA_08 & {e.value for e in no.elts}):
+                ruim = f"lista de nomes {sorted(SAIRAM_DA_08 & {e.value for e in no.elts})}"
+            if ruim:
+                maus.append(f"{arquivo.relative_to(RAIZ)}:{no.lineno} {ruim}")
+    return maus
+
+
+def test_nenhum_teste_remenda_na_08_um_nome_que_saiu_dela() -> None:
+    """O remendo vai ao dono (`em_fundo` ou `nome_do_jogador`); na 08 ele remendaria o nada.
+
+    A atribuição direta (`pac._nomes_dos_donos = ...`) não reprova sozinha, por isso o fonte.
+    MORDIDA: volte um `pac._nomes_dos_donos = lambda: {}` a um teste → reprova.
+    """
+    assert _os_remendos_na_08_que_saiu() == []
 
 
 def test_o_gerador_escapa_o_nome_dela_e_o_pacote_nao_o_transforma() -> None:

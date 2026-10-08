@@ -46,6 +46,7 @@ from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, SALA, VARANDA, VERDE, VERMELHO
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 PAGINA = "08-conexoes.html"
 ADAPTADORES = (SALA, QUARTO, VARANDA)
@@ -92,7 +93,7 @@ class Bancada:
             esquecer_na_ponte=mundo.esquecer_na_ponte, relogio=relogio,
             dormir=relogio.dormir, sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"})
         self.ponte = PonteQueVaiAoDaemon(self.central)
-        monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (
+        monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (
             tuple(self.dono.adaptadores() or ()), tuple(self.dono.aparelhos() or ())))
         monkeypatch.setattr(a08, "_ordem_gravada", lambda: [id_da_tela(e) for e in ordem])
 
@@ -123,7 +124,7 @@ class Bancada:
 
     def tique(self) -> dict[str, Any]:
         """Uma volta da tela, com o BlueZ lido de novo (a leitura vale 3 s)."""
-        self.a08._esquecer("bluez")
+        em_fundo.esquecer("bluez")
         return dict(self.a08.campos_do_radio(self.ctx()))
 
     def cena(self) -> dict[str, Any]:
@@ -173,8 +174,8 @@ def preparar_a_tela(monkeypatch: pytest.MonkeyPatch) -> Any:
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
-    monkeypatch.setattr(a08_conexoes, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
     monkeypatch.setattr(a08_conexoes, "_ABERTO", {})
     monkeypatch.setattr(a08_conexoes, "_CENA_NA_TELA", {})
     monkeypatch.setattr(a08_conexoes, "_DISPENSADOS", set())

@@ -24,6 +24,7 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     preparar_a_tela,
     preparar_o_diario,
 )
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -143,7 +144,7 @@ def desligar(bancada: Bancada, parada: Parada) -> dict[str, Any]:
 
 def tique(a08: Any, ctx: Any) -> dict[str, Any]:
     """Uma volta da tela com um ``Contexto`` dado (o BlueZ relido)."""
-    a08._esquecer("bluez")
+    em_fundo.esquecer("bluez")
     return dict(a08.campos_do_radio(ctx))
 
 

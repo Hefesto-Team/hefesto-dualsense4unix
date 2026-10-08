@@ -53,6 +53,7 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     preparar_a_tela,
     preparar_o_diario,
 )
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINA = "08-conexoes.html"
@@ -127,7 +128,7 @@ class Casa(Bancada):
         novo = importlib.reload(self.a08)
         preparar_a_tela(self.monkeypatch)
         dono, ordem = self.dono, [id_da_tela(e) for e in (SALA, QUARTO, VARANDA)]
-        self.monkeypatch.setattr(novo, "_ler_o_bluez", lambda: (
+        self.monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (
             tuple(dono.adaptadores() or ()), tuple(dono.aparelhos() or ())))
         self.monkeypatch.setattr(novo, "_ordem_gravada", lambda: ordem)
         self.monkeypatch.setattr(novo, "_ler_os_zumbis", lambda: {})
@@ -727,7 +728,7 @@ def test_o_dono_da_janela_nunca_grava_lapide(
     mundo, relogio = os_quatro_no_ar(), rm.Relogio()
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (
         tuple(dono.adaptadores() or ()), tuple(dono.aparelhos() or ())))
     monkeypatch.setattr(a08, "_ordem_gravada",
                         lambda: [id_da_tela(e) for e in (SALA, QUARTO, VARANDA)])
@@ -736,13 +737,13 @@ def test_o_dono_da_janela_nunca_grava_lapide(
 
     ctx = Contexto(state={"controllers": [], "radio_central": {}}, conectados=[], mesa=[])
     try:
-        a08._esquecer("bluez")
+        em_fundo.esquecer("bluez")
         a08.campos_do_radio(ctx)
         mundo.desligar(ROXO)
         mundo.remover_por_fora(VARANDA, ROXO)
         relogio.agora += cr.ESPERA_DA_LAPIDE_DE_FORA_S + 1.0
         for _ in range(3):
-            a08._esquecer("bluez")
+            em_fundo.esquecer("bluez")
             a08.campos_do_radio(ctx)
         assert mundo.lapides == [] and dono._ouvintes == []
     finally:

@@ -48,6 +48,7 @@ exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from tests.unit.test_a_conexoes_cabe_na_tela import _clicar, _no_webkit
+from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 TAMANHO = (1512, 860)
 ABAS = ("01-jogar", "02-controles", "03-gatilhos", "04-iluminacao", "05-vibracao",
@@ -202,7 +203,7 @@ def test_o_que_fazer_da_dica_chama_a_ferramenta_pelo_nome_do_botao_e_sem_primeir
     ("vermelho", "Vermelho"), ("  azul ", "Azul"), ("vERDE", "VERDE"), ("ána", "Ána"),
     ("Roxo", "Roxo"), ("", ""), ("2º controle", "2º controle")])
 def test_o_nome_ganha_so_a_primeira_letra_maiuscula(digitado: str, gravado: str) -> None:
-    assert a08.nome_dado(digitado) == gravado
+    assert nome_do_jogador.nome_dado(digitado) == gravado
 
 
 def test_renomear_o_controle_grava_com_a_primeira_maiuscula(
@@ -211,7 +212,7 @@ def test_renomear_o_controle_grava_com_a_primeira_maiuscula(
     escritos: list[tuple[str, str]] = []
     monkeypatch.setattr(a08, "_alias_do_aparelho", lambda end, nome: escritos.append(
         (end, nome)) or SimpleNamespace(feita=True))
-    monkeypatch.setattr(a08, "_nomes_dos_donos", dict)
+    monkeypatch.setattr(nome_do_jogador, "nomes_dos_donos", dict)
     a08.dono_renomear(None, {"uniq": "aa:bb:cc:00:00:01", "valor": "vermelho"}, None)
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {"aparelhos": [
         {"id": "aa:bb:cc:00:00:02", "tipo": "controle", "nome": ""},
@@ -235,10 +236,10 @@ def test_o_nome_gravado_em_minuscula_se_le_com_a_primeira_maiuscula(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """O que já estava no BlueZ como «azul» aparece «Azul»; o celular fica como o usuário
     escreveu."""
-    monkeypatch.setattr(a08, "_e_controle_do_bluez", lambda a: a.classe == 0x2508)
+    monkeypatch.setattr(em_fundo, "e_controle_do_bluez", lambda a: a.classe == 0x2508)
     lidos = (SimpleNamespace(nome="azul", endereco="AA:BB:CC:00:00:01", conectado=True,
                              classe=0x2508),
              SimpleNamespace(nome="iPhone de Ana", endereco="AA:BB:CC:00:00:02",
                              conectado=True, classe=0x5A020C))
-    nomes = a08._nomes_por_endereco(lidos)
+    nomes = nome_do_jogador.nomes_por_endereco(lidos)
     assert nomes == {"AABBCC000001": "Azul", "AABBCC000002": "iPhone de Ana"}, nomes

@@ -7,6 +7,7 @@ import sys
 from typing import Any
 
 import pytest
+from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -145,12 +146,13 @@ def test_o_modo_de_conexao_e_o_chip_aceso_da_jogar(monkeypatch: pytest.MonkeyPat
 def test_o_dono_mostra_o_nome_ou_p_n() -> None:
     pac = _pac()
     u = UNIQS[0]
-    assert pac.dono_na_linha({pac._mac(u): "Vitória"}, u, 1) == "Vitória"
+    assert pac.dono_na_linha({nome_do_jogador.mac(u): "Vitória"}, u, 1) == "Vitória"
     assert pac.dono_na_linha({}, u, 3) == "P3"
 
 
 @pytest.mark.parametrize("digitado, gravado", [("Ana", "Ana"), ("", ""), ("P2", ""), (" p 2 ", "")])
-def test_escrever_o_dono_grava_no_alias_e_apagar_volta_ao_p_n(digitado: str, gravado: str) -> None:
+def test_escrever_o_dono_grava_no_alias_e_apagar_volta_ao_p_n(
+        digitado: str, gravado: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: tire o `_SO_O_NUMERO` → «P2» vira nome gravado e reprova."""
     pac = _pac()
     chamadas: list[tuple[str, str]] = []
@@ -158,13 +160,11 @@ def test_escrever_o_dono_grava_no_alias_e_apagar_volta_ao_p_n(digitado: str, gra
     class _Escrita:
         feita = True
 
-    original_alias, original_nomes = pac._alias_do_aparelho, pac._nomes_dos_donos
-    pac._alias_do_aparelho = lambda e, n: (chamadas.append((e, n)), _Escrita())[1]  # type: ignore[assignment]
-    pac._nomes_dos_donos = lambda: {pac._mac(UNIQS[1]): "Antigo"}  # type: ignore[assignment]
-    try:
-        pac.dono_renomear(None, {"uniq": UNIQS[1], "valor": digitado}, None)
-    finally:
-        pac._alias_do_aparelho, pac._nomes_dos_donos = original_alias, original_nomes  # type: ignore[assignment]
+    monkeypatch.setattr(pac, "_alias_do_aparelho",
+                        lambda e, n: (chamadas.append((e, n)), _Escrita())[1])
+    monkeypatch.setattr(nome_do_jogador, "nomes_dos_donos",
+                        lambda: {nome_do_jogador.mac(UNIQS[1]): "Antigo"})
+    pac.dono_renomear(None, {"uniq": UNIQS[1], "valor": digitado}, None)
     assert chamadas == [(UNIQS[1].upper(), gravado)]
 
 
@@ -303,8 +303,8 @@ def test_o_examinar_tambem_rele_os_controles(monkeypatch: pytest.MonkeyPatch) ->
     corridas: list[bool] = []
     monkeypatch.setattr(pac, "_correr_o_exame_completo", lambda: corridas.append(True))
     monkeypatch.setattr(pac, "_LOGICA", object())
-    antes = pac._GERACAO.get("bluez", 0)
+    antes = em_fundo._GERACAO.get("bluez", 0)
     pac.examinar_portas(None, {}, None)
     assert corridas == [True], "o «Examinar Entradas» não refez o exame"
     assert pac._LOGICA is None, "o rascunho do mapa das portas não foi relido"
-    assert pac._GERACAO.get("bluez", 0) == antes + 1, "os nomes no BlueZ não foram relidos"
+    assert em_fundo._GERACAO.get("bluez", 0) == antes + 1, "os nomes no BlueZ não foram relidos"

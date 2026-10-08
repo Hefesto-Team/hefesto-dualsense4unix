@@ -11,6 +11,7 @@ import pytest
 
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import VERMELHO
+from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 PCI = "0000:00:14.0"
 ADAPTADORES = ("aa:bb:cc:00:00:09", "aa:bb:cc:00:00:15", "aa:bb:cc:00:00:21")
@@ -42,9 +43,10 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_SALA_NA_TELA", "_CHEGADAS"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_SALA_NA_TELA", "_CHEGADAS"):
         monkeypatch.setattr(a08_conexoes, nome, {})
-    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
     monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
     maquina = MaquinaConfig(adaptadores={_id(ADAPTADORES[i]).lower(): {"nome": NOMES[i]}
@@ -61,8 +63,8 @@ def _ler(a08: Any, monkeypatch: pytest.MonkeyPatch, aparelhos: tuple[Any, ...] =
     lidos = tuple(AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES[i].upper(),
                                    lugar=LUGARES[i], varrendo=varrendo[i])
                   for i in range(3))
-    a08._FUNDO.clear()
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, aparelhos))
+    em_fundo._FUNDO.clear()
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (lidos, aparelhos))
 
 
 def _busca(adaptador: int, *, passo: str = "gesto", aparelho: str = "",
@@ -389,13 +391,14 @@ def test_a_linha_da_08_diz_a_parte_em_que_o_tique_gastou(
     for nome, falso in (
             ("_pedir_o_exame_de_entrada", lambda: None), ("_itens_da_tela", lambda: []),
             ("_declaracao", lambda: {}), ("_orcamento_da_mesa", lambda: (None, False)),
-            ("_correr_as_esperas", lambda: None), ("_nomes_dos_donos", lambda: {}),
+            ("_correr_as_esperas", lambda: None),
             ("_confissao_do_mapa", lambda: {}), ("campos_do_radio", lambda _ctx: {}),
             ("_html_do_mapa", mapa_lento), ("campos_do_mapear", lambda: {}),
             ("_html_dos_aparelhos", lambda: ""), ("_html_das_dicas", lambda *_a: ""),
             ("_sala_na_tela", lambda *_a: {}), ("_html_dos_externos", lambda _ctx: ""),
     ):
         monkeypatch.setattr(a08, nome, falso)
+    monkeypatch.setattr(nome_do_jogador, "nomes_dos_donos", lambda: {})
     monkeypatch.setattr(a08.perfil, "ativo", lambda *_a: None)
 
     a08.pacote(Contexto(state={}, conectados=[], mesa=[]))

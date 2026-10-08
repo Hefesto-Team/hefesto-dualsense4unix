@@ -74,6 +74,7 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
     TECLADO,
     Gabinete,
 )
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 TETO_S = 0.05
 SONO_S = 6.0
@@ -292,10 +293,10 @@ def test_o_censo_da_aba_nao_e_lido_no_fio_da_janela(
     portao = Portao(lambda: lido)
     monkeypatch.setattr(censo_do_barramento, "ler_o_barramento", lambda *_a, **_k: portao())
     monkeypatch.setattr(pac, "_CENSO", None)
-    monkeypatch.setattr(pac, "LER_NA_HORA", False)
-    monkeypatch.setattr(pac, "_FUNDO", {})
-    monkeypatch.setattr(pac, "_FUNDO_EM_VOO", set())
-    monkeypatch.setattr(pac, "_GERACAO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(em_fundo, "_GERACAO", {})
 
     portao.segurar()
     try:
@@ -307,7 +308,7 @@ def test_o_censo_da_aba_nao_e_lido_no_fio_da_janela(
     finally:
         portao.soltar()
     assert _esperar(lambda: pac._censo() is lido), "a leitura voltou e o censo não chegou"
-    assert _esperar(lambda: "censo" not in pac._FUNDO_EM_VOO)
+    assert _esperar(lambda: "censo" not in em_fundo._FUNDO_EM_VOO)
 
 
 def test_a_leitura_que_passa_do_folego_esconde_a_porta_de_antes(
@@ -409,13 +410,13 @@ def test_o_tique_inteiro_da_08_nao_espera_o_barramento(
     monkeypatch.setattr(pac, "_laco", lambda: laco)
     monkeypatch.setattr(pac, "_LOGICA", None)
     monkeypatch.setattr(pac, "_EXAME_PEDIDO", True)
-    monkeypatch.setattr(pac, "LER_NA_HORA", False)
-    monkeypatch.setattr(pac, "_FUNDO", {})
-    monkeypatch.setattr(pac, "_FUNDO_EM_VOO", set())
-    monkeypatch.setattr(pac, "_GERACAO", {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(em_fundo, "_GERACAO", {})
     monkeypatch.setattr(pac, "_CENSO", None)
     pac.pacote(_ctx())
-    assert _esperar(lambda: "censo" not in pac._FUNDO_EM_VOO)
+    assert _esperar(lambda: "censo" not in em_fundo._FUNDO_EM_VOO)
     monkeypatch.setattr(pac, "_CENSO", None)
     assert laco.comecar()["estado"] == ee.SENTADA
     pac.mapear_comecar(None, {}, None)
@@ -431,7 +432,7 @@ def test_o_tique_inteiro_da_08_nao_espera_o_barramento(
             f"pediram {portao.leituras - antes}")
     finally:
         portao.soltar()
-    assert _esperar(lambda: "censo" not in pac._FUNDO_EM_VOO)
+    assert _esperar(lambda: "censo" not in em_fundo._FUNDO_EM_VOO)
     laco.parar()
     fluxo.parar()
     assert _pousou(laco) and _pousou(fluxo)

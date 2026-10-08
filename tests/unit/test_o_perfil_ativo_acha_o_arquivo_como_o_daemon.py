@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -90,7 +91,7 @@ def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
             fio.join(timeout=15)
     monkeypatch.setattr(a08_conexoes, "_EXAME_PEDIDO", True)
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", ())
-    monkeypatch.setattr(a08_conexoes, "_em_fundo",
+    monkeypatch.setattr(em_fundo, "em_fundo",
                         lambda chave, ler, validade_s: None)
 
 

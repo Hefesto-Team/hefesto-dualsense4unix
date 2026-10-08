@@ -23,6 +23,7 @@ exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.integrations import receptor_sem_fio as rx
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
+from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 ADAPTADOR = "AA:BB:CC:00:00:0A"
 #: o releitor de verdade, antes de a fixture o trocar (a régua de ponta a ponta precisa dele)
@@ -176,13 +177,14 @@ def test_a_cena_inteira_anda_o_gesto_pelo_censo_e_guarda_a_linha_do_receptor_tir
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
     from hefesto_dualsense4unix.interface import pacotes
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
         monkeypatch.setattr(a08, nome, {})
-    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     receptor = RadioUsb(no="3-1.4", vid="aaaa", pid="bbbb", busnum=3, devpath="1.4")
     na_mesa: dict[str, Any] = {"mesa": Mesa(radios=(receptor,))}
     monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: na_mesa["mesa"])
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((), ()))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((), ()))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
@@ -214,9 +216,10 @@ def test_o_censo_da_porta_se_rele_so_enquanto_o_gesto_anda(
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
         monkeypatch.setattr(a08, nome, {})
-    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     monkeypatch.setattr(a08, "RELER_A_PORTA_NO_GESTO_S", 0.0)
     monkeypatch.setattr(a08, "_MESA_DO_RADIO", None)
     receptor = RadioUsb(no="3-1.4", vid="aaaa", pid="bbbb", busnum=3, devpath="1.4")
@@ -227,7 +230,7 @@ def test_o_censo_da_porta_se_rele_so_enquanto_o_gesto_anda(
         return na_porta["mesa"]
 
     monkeypatch.setattr(mesa_de_radio, "ler_a_mesa", ler_a_mesa)
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((), ()))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((), ()))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
@@ -311,16 +314,17 @@ def test_a_faixa_medida_vai_ao_maquina_json_e_volta_pintada_na_linha_do_receptor
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
 
-    for nome in ("_FUNDO", "_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA", "_VISTO_NO_GESTO"):
         monkeypatch.setattr(a08, nome, {})
-    monkeypatch.setattr(a08, "LER_NA_HORA", True)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     monkeypatch.setattr(a08, "_GRAVAR_A_BANDA", None)
     monkeypatch.setattr(a08, "_reler_a_declaracao", _RELER_DE_VERDADE)
     monkeypatch.setattr(a08, "_DECLARACAO", None)
     receptor = RadioUsb(no="3-1.4", vid="aaaa", pid="bbbb", busnum=3, devpath="1.4")
     monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: Mesa(radios=(receptor,)))
     monkeypatch.setattr(a08, "_e_um_receptor", lambda no: True)
-    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: ((), ()))
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((), ()))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
