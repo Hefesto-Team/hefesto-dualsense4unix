@@ -85,7 +85,7 @@ SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
 #: «MIRA VIRTUAL» VIROU «ANALÓGICO VIRTUAL» — 06/10/2026, leva 1.7
-#: (desenho-navegacao, item 12), pedido dela: *«Vamos Mudar para Analógico
+#: (desenho-navegacao, item 12), pedido: *«Vamos Mudar para Analógico
 #: Virtual. E selecionar ele permite escolher entre (...) analógico esquerdo e
 #: Direito»*. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
 #: cabeçalho e os chips embaixo dos analógicos da aba Controles.
@@ -132,7 +132,7 @@ ROTULO_SEGURAR = "Só enquanto eu segurar"
 ROTULO_SEMPRE = "Sempre"
 SEMPRE = "sempre"
 #: «Sempre», e a pausa do controle parado não vale para ele: o controle num suporte
-#: (D-2909-O-CONTROLE-PARADO-NAO-INCLINA, a resposta dela de 29/09 ~21h30).
+#: (D-2909-O-CONTROLE-PARADO-NAO-INCLINA, a resposta de 29/09 ~21h30).
 ROTULO_MESMO_PARADO = "Mesmo parado"
 MESMO_PARADO = "mesmo_parado"
 ROTULO_INVERTER = "Inverter"
@@ -315,7 +315,12 @@ CSS = """
        flex-direction:column;gap:8px;min-width:0}
   .ctr-topo{display:flex;align-items:center;gap:9px;min-width:0}
   .ctr .nome{font-size:12.5px;color:var(--texto-mudo);line-height:15px;white-space:nowrap;
-             overflow:hidden;text-overflow:ellipsis}
+             overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
+  /* O SELO MORA NA LINHA DO NÚMERO (08/10/2026): ao lado do modelo e do transporte, o
+     «Medindo…» e o «Calibrado» comiam o «USB» e o «BT» do cartão; na primeira linha, ao
+     lado do «P<n>», a segunda fica com a largura inteira do cartão. */
+  .ctr .nome .l1{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:2px}
+  .ctr .nome .l1 b{flex:0 1 auto;min-width:0}
   .ctr .nome b{color:var(--fg);font-weight:600;display:inline-flex;max-width:100%;
                vertical-align:top}
   /* O nome encolhe com reticência e o «• P<n>» não: com o número no fim de um texto só, o
@@ -329,15 +334,17 @@ CSS = """
      As dez abas não sofrem disto porque o `topo.html` traz a regra no esqueleto
      comum; esta página tem folha própria, e por isso precisa dizê-la. */
   .ds-svg{width:60px;height:auto;flex:0 0 60px}
-  .selo{margin-left:auto;flex:0 0 auto;font-size:11px;padding:2px 8px;border-radius:6px;
+  .selo{margin-left:auto;flex:0 0 auto;font-size:11px;line-height:13px;padding:2px 8px;border-radius:6px;
         border:1px solid var(--border-forte);color:var(--texto-mudo);white-space:nowrap}
   /* O SELO É DE CADA CONTROLE (08/10/2026): o tique escreve o `data-zero` dele, e o
-     cartão que mexeu diz «Mexeu» sozinho. Sem o atributo (o desenho), os rádios mandam. */
+     cartão que mexeu diz «Mexeu» sozinho. Sem o atributo (o desenho), os rádios mandam.
+     O «Mexeu» é o branco da casa, nunca vermelho: o vermelho não nasce fora do Hz e dos
+     canais (`D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE`). */
   #e-medindo:checked ~ .grade .selo:not([data-zero]),
   .selo[data-zero="medindo"]{border-color:var(--orange);color:var(--orange)}
   #e-pronto:checked  ~ .grade .selo:not([data-zero]),
   .selo[data-zero="pronto"]{border-color:var(--green);color:var(--green)}
-  .selo[data-zero="mexeu"]{border-color:var(--red);color:var(--red)}
+  .selo[data-zero="mexeu"]{border-color:var(--fg);color:var(--fg)}
   .selo .t2,.selo .t3,.selo .t4{display:none}
   #e-medindo:checked ~ .grade .selo:not([data-zero]) .t1,
   #e-medindo:checked ~ .grade .selo:not([data-zero]) .t3,
@@ -549,8 +556,7 @@ def controle(c):
                data-controle="{c.get("pref") or ""}">
             <div class="ctr-topo">
               {_svg(c)}
-              <span class="nome"><b data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</b><br>{nome} <span class="pt">•</span> {via}</span>
-              <span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span>
+              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>{nome} <span class="pt">•</span> {via}</span>
             </div>
             <div class="leitura">
 {_eixos()}
