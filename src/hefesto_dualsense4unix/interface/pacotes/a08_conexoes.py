@@ -1133,6 +1133,77 @@ def _html_dos_aparelhos() -> str:
     return "\n".join(fora)
 
 
+#: A ordem em que a família dos botões se escreve: sul, leste, oeste, norte, a
+#: mesma de ``mesa_viva.LETRAS_DA_FACE`` (e do ✕ ○ □ △ do DualSense).
+_FACE_DO_EXTERNO = ("cross", "circle", "square", "triangle")
+
+
+def a_declaracao_do_externo(entrada: dict[str, Any],
+                            declaracao: Any = None) -> dict[str, str]:
+    """A cor e a família dos botões que ELA declarou deste controle externo.
+
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01 (08/10/2026). A FONTE É A
+    DA MESA que as dez abas leem (`mesa_viva.cor_declarada` e
+    `mesa_viva.familia_dos_botoes`): o externo e o DualSense não podem discordar
+    sobre o que `controles.cor`, `controles.botoes` e `controles.modo` querem
+    dizer. A chave é a do `maquina.json` (`chave_de_maquina`: o `identity` do
+    daemon, e o `uniq` quando não há) e o que não tem endereço fixo não tem
+    onde ter declaração: devolve vazio, e vazio não mostra nada.
+
+    ``cor`` é o hex do plástico (``""`` para o nome que o mapa não conhece, o
+    campo «Outra»), ``cor_nome`` o nome do mapa e ``botoes`` ``"xbox"``,
+    ``"nintendo"`` ou ``""`` (nada declarado: o cartão não afirma desenho nenhum).
+    """
+    vazio = {"cor": "", "cor_nome": "", "botoes": ""}
+    try:
+        from hefesto_dualsense4unix.app.actions.external_controllers import (
+            chave_de_maquina,
+        )
+        from hefesto_dualsense4unix.integrations.cor_do_plastico import nome_do_aparelho
+        from hefesto_dualsense4unix.interface import mesa_viva
+
+        chave = chave_de_maquina(entrada)
+        if not chave:
+            return vazio
+        cor = mesa_viva.cor_declarada(chave, declaracao)
+        familia = mesa_viva.familia_dos_botoes(chave, declaracao)
+        if cor is None:
+            return {**vazio, "botoes": familia}
+        slug, nome = mesa_viva.CORES.get(
+            str(cor.codigo), (str(cor.id or ""), ""))
+        return {"cor": _hex_do_plastico(slug),
+                "cor_nome": nome or nome_do_aparelho(cor), "botoes": familia}
+    except Exception:
+        return vazio
+
+
+def marcas_do_externo(entrada: dict[str, Any], elemento: str) -> tuple[str, str]:
+    """``(atributos da raiz do cartão, a peça dos botões)`` do que ela declarou.
+
+    Os DOIS CARTÕES (Jogar e Conexões) chamam esta função e só ela: a cor vira a
+    cor da borda do cartão (a borda do assento é a cor do plástico, e a do
+    externo continua tracejada, que é o «só vê»), e a família vira as quatro
+    letras da face, na ordem sul, leste, oeste, norte. Sem declaração, ``("",
+    "")``: campo sem informação não mostra nada, e a tela não inventa plástico
+    para um aparelho que ninguém mediu.
+    """
+    ela = a_declaracao_do_externo(entrada)
+    atributos = ""
+    if ela["cor"]:
+        atributos = (f' style="border-color:{ela["cor"]}" '
+                     f'title="{html.escape(ela["cor_nome"], quote=True)}"')
+    botoes = ""
+    if ela["botoes"]:
+        from hefesto_dualsense4unix.interface import mesa_viva
+
+        letras = mesa_viva.LETRAS_DA_FACE[ela["botoes"]]
+        texto = " ".join(letras[b] for b in _FACE_DO_EXTERNO)
+        dica = "Botões declarados"
+        botoes = (f'<{elemento} class="ext-botoes" data-botoes="{ela["botoes"]}" '
+                  f'title="{dica}">{texto}</{elemento}>')
+    return atributos, botoes
+
+
 def _html_dos_externos(ctx: Contexto) -> str:
     """Uma linha por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
 
@@ -1203,11 +1274,12 @@ def _html_dos_externos(ctx: Contexto) -> str:
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<span class="ext-aviso">{_e(aviso)}</span>'
                           if aviso else "")
+        da_borda, botoes = marcas_do_externo(entrada, "span")
         fora.append(
-            '<div class="ext-linha">'
+            f'<div class="ext-linha"{da_borda}>'
             f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
             f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
-            f'{linha_do_aviso}</div>')
+            f'{botoes}{linha_do_aviso}</div>')
     return "".join(fora)
 
 

@@ -799,6 +799,12 @@ def _html_dos_externos(ctx: Contexto) -> str:
     — a mesma regra que faz `_cor_do_plastico` devolver `""` para o que o SVG
     não conhece.
 
+    **NOTA DE 08/10/2026 (O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01):** a
+    cor que ELA declarou (`controles.cor`) é a palavra dela, não uma medida do
+    Hefesto: o cartão a mostra na borda, com a família dos botões que ela
+    declarou, e sem declaração nada se desenha. Quem lê é
+    `a08_conexoes.marcas_do_externo`, o mesmo dono dos dois cartões.
+
     **NEM NÚMERO DE JOGADOR ESMAECIDO, NEM BATERIA.** O externo não é jogador do
     co-op (`plataforma.vpad@sn30` está em `existe: desconhecido` no mapa de
     canais) e o daemon não lê a carga dele. Campo sem informação não mostra
@@ -840,16 +846,19 @@ def _html_dos_externos(ctx: Contexto) -> str:
         """Escapa para HTML — pelo `html.escape` da biblioteca, e não pelo `_e`"""
         return html.escape(str(x), quote=True)
 
+    from . import a08_conexoes
+
     fora = []
     for entrada in ctx.externos:
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
                           if aviso else "")
+        da_borda, botoes = a08_conexoes.marcas_do_externo(entrada, "div")
         fora.append(
-            '<div class="ext-cartao">'
+            f'<div class="ext-cartao"{da_borda}>'
             f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
             f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
-            f'{linha_do_aviso}</div>')
+            f'{botoes}{linha_do_aviso}</div>')
     return "".join(fora)
 
 
