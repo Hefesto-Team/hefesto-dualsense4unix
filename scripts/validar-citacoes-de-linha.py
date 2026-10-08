@@ -314,12 +314,17 @@ def main(argv: list[str] | None = None) -> int:
         print("")
         print("O reapontamento tem dono: `python3 scripts/reapontar-citacoes.py")
         print("--escrever` leva cada endereço pelo histórico do git até onde o")
-        print("símbolo prometido está hoje, e só escreve o que confere.")
+        print("símbolo prometido está hoje, e só escreve o que confere. A")
+        print("citação crua (sem símbolo) o reapontar leva pelo histórico do")
+        print("documento; sem `--escrever` ele só lista, e diz por que deixa à mão.")
         return 1
 
     print(f"OK: {conferidos} citação(ões) de linha conferida(s) em {onde}; "
           f"{de_fora} de fontes fora desta árvore (kernel, SDL, wine) "
           "foram ignoradas.")
+    print("Limite: a crua que aponta uma linha que existe mas é a errada passa "
+          "aqui; só o histórico a pega (`python3 scripts/reapontar-citacoes.py`, "
+          "sem `--escrever`).")
     return 0
 
 

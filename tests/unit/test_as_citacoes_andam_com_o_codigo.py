@@ -347,3 +347,281 @@ def test_o_script_roda_pela_linha_de_comando(repo: Path) -> None:
     assert feito.returncode == 0, feito.stdout + feito.stderr
     assert "reapontada(s)" in feito.stdout
     assert _validar(repo).returncode == 0
+
+
+# --- a citação CRUA (sem símbolo prometido) anda pelo histórico do documento -------------------
+
+END = "src/hefesto_dualsense4unix/alvo.py"
+
+
+def _escrever_e_commitar(raiz: Path, relativo: str, texto: str, mensagem: str) -> Path:
+    arquivo = raiz / relativo
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    arquivo.write_text(texto, encoding="utf-8")
+    _git(raiz, "add", relativo)
+    _git(raiz, "commit", "-q", "-m", mensagem)
+    return arquivo
+
+
+def _alvo_de(raiz: Path) -> Path:
+    return raiz / "src" / "hefesto_dualsense4unix" / "alvo.py"
+
+
+def test_a_crua_que_andou_doze_linhas_e_reapontada_no_md_e_no_csv(repo: Path) -> None:
+    """Sem `em`/`no` + símbolo antes, o endereço não promete nada: só o histórico o leva."""
+    md = _escrever_e_commitar(
+        repo,
+        "docs/protocol/crua.md",
+        f"# Crua\n\nA constante vale `{END}:3` e o corpo, `{END}:11-12`; de novo `{END}:3`.\n",
+        "a crua nasce",
+    )
+    planilha = repo / "docs" / "data" / "mapa.csv"
+    planilha.write_text(
+        planilha.read_text(encoding="utf-8") + f'linha.dois,"o corpo em {END}:11-12 é lido"\n',
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-q", "-am", "a crua nasce na planilha")
+    _inserir_no_topo(repo, 12, commitar=True)
+
+    plano, a_mao = _rodar(repo, escrever=False)
+    assert a_mao == [], a_mao
+    assert any("crua.md" in f and f"{END}:3` ->" in f and "(2x)" in f for f in plano), plano
+    assert md.read_text(encoding="utf-8").count(f"{END}:3") == 2, "a seco, nada se escreve"
+
+    modulo = _script()
+    _feitos, a_mao = modulo.reapontar(repo, escrever=True)
+
+    assert a_mao == [], a_mao
+    texto = md.read_text(encoding="utf-8")
+    assert texto.count(f"{END}:15") == 2 and f"{END}:23-24" in texto, texto
+    assert f"{END}:3`" not in texto and f"{END}:11-12" not in texto, texto
+    assert f"{END}:23-24 é lido" in planilha.read_text(encoding="utf-8")
+    assert modulo.ESTATISTICA["andaram"] >= 3, modulo.ESTATISTICA
+
+
+def test_o_bloco_que_se_repete_hoje_vai_para_a_mao_com_o_motivo(repo: Path) -> None:
+    """O corpo de ``segunda`` ganha uma cópia: qual das duas era a citada?"""
+    md = _escrever_e_commitar(
+        repo, "docs/protocol/crua.md", f"# Crua\n\nO corpo, `{END}:11-12`.\n", "a crua nasce"
+    )
+    alvo = _alvo_de(repo)
+    alvo.write_text(
+        alvo.read_text(encoding="utf-8") + "\n\ndef outra():\n    x = 2\n    return x\n",
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-q", "-am", "o corpo ganha uma cópia")
+    _inserir_no_topo(repo, 3, commitar=True)
+    antes = md.read_text(encoding="utf-8")
+
+    feitos, a_mao = _rodar(repo)
+
+    assert any("crua.md" in f and "aparece 2 vezes" in f for f in a_mao), a_mao
+    assert not any("crua.md" in f for f in feitos), feitos
+    assert md.read_text(encoding="utf-8") == antes
+
+
+def test_o_arquivo_que_encolheu_vai_para_a_mao(repo: Path) -> None:
+    """A função citada saiu do arquivo, que agora tem menos linhas que o endereço."""
+    md = _escrever_e_commitar(
+        repo, "docs/protocol/crua.md", f"# Crua\n\nO fim, `{END}:15-16`.\n", "a crua nasce"
+    )
+    alvo = _alvo_de(repo)
+    alvo.write_text(
+        alvo.read_text(encoding="utf-8").split("def terceira")[0].rstrip("\n") + "\n",
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-q", "-am", "o arquivo encolhe")
+    antes = md.read_text(encoding="utf-8")
+
+    _feitos, a_mao = _rodar(repo)
+
+    assert any("crua.md" in f and "nenhuma cópia intacta" in f for f in a_mao), a_mao
+    assert md.read_text(encoding="utf-8") == antes
+
+
+def test_a_crua_que_ja_nasceu_errada_nao_e_levada(repo: Path) -> None:
+    """Além do fim, em branco e curta demais: o histórico prova que NUNCA apontou o citado."""
+    md = _escrever_e_commitar(
+        repo,
+        "docs/protocol/crua.md",
+        f"# Crua\n\nAlém, `{END}:40`. Branco, `{END}:13`. Curta, `{END}:4-5`.\n",
+        "a crua nasce errada",
+    )
+    _inserir_no_topo(repo, 3, commitar=True)
+    antes = md.read_text(encoding="utf-8")
+
+    feitos, a_mao = _rodar(repo)
+
+    crua = [f for f in a_mao if "crua.md" in f]
+    assert any("já nascia errado" in f for f in crua), crua
+    assert any("em branco" in f for f in crua), crua
+    assert not any("crua.md" in f for f in feitos), feitos
+    assert md.read_text(encoding="utf-8") == antes
+
+
+def test_o_limite_da_crua_esta_escrito_no_help() -> None:
+    """A citação que nasceu apontando o lugar errado anda errada: o `--help` diz."""
+    feito = subprocess.run(
+        [sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True, check=False
+    )
+    ajuda = " ".join(feito.stdout.split())
+    assert "já nasceu errada anda errada" in ajuda and "rumble.ff" in ajuda, ajuda
+
+
+def test_a_crua_nao_encadeia_um_endereco_no_outro(repo: Path) -> None:
+    """``:3`` vai para ``:10`` e ``:10`` vai para ``:17``: o 10 novo não pode andar de novo."""
+    md = _escrever_e_commitar(
+        repo,
+        "docs/protocol/cascata.md",
+        f"# Cascata\n\nA constante `{END}:3`, e a função `{END}:10`.\n",
+        "dois endereços encadeados",
+    )
+    _inserir_no_topo(repo, 7, commitar=True)
+
+    _feitos, a_mao = _rodar(repo)
+
+    assert a_mao == [], a_mao
+    assert md.read_text(encoding="utf-8") == (
+        f"# Cascata\n\nA constante `{END}:10`, e a função `{END}:17`.\n"
+    )
+
+
+def test_o_mesmo_endereco_de_duas_epocas_vai_para_a_mao(repo: Path) -> None:
+    """Escrito antes e depois de o código andar: não há como saber qual cópia vale por qual."""
+    md = _escrever_e_commitar(
+        repo, "docs/protocol/crua.md", f"# Crua\n\nA constante `{END}:3`.\n", "a primeira época"
+    )
+    _inserir_no_topo(repo, 3, commitar=True)
+    md.write_text(
+        md.read_text(encoding="utf-8") + f"\nOutra coisa, `{END}:3`.\n", encoding="utf-8"
+    )
+    _git(repo, "commit", "-q", "-am", "a segunda época, o mesmo número")
+    antes = md.read_text(encoding="utf-8")
+
+    _feitos, a_mao = _rodar(repo)
+
+    assert any("crua.md" in f and "épocas diferentes" in f for f in a_mao), a_mao
+    assert md.read_text(encoding="utf-8") == antes
+
+
+def test_a_crua_recem_escrita_e_confiada_e_a_inexistente_nao(repo: Path) -> None:
+    """Sem commit ainda: vale como está. Linha que não existe, não."""
+    md = repo / "docs" / "protocol" / "nova.md"
+    md.write_text(f"# Nova\n\nBoa `{END}:3`. Má `{END}:90`.\n", encoding="utf-8")
+
+    feitos, a_mao = _rodar(repo, escrever=False)
+
+    assert not feitos, feitos
+    assert any("nova.md" in f and "a linha não existe" in f for f in a_mao), a_mao
+    assert not any("nova.md" in f and f"{END}:3`" in f for f in a_mao), a_mao
+
+
+CITANTE_CURTO = (
+    '"""Quem cita as duas, a inteira e a curta."""\n\n'
+    "# O `primeira` nasce em `alvo.py:6`, e a constante fica em `:3`.\nVALOR = 2\n"
+)
+
+
+def test_a_forma_curta_em_prosa_de_src_e_reconhecida_e_levada(repo: Path) -> None:
+    """O modelo do `luz_do_mic.py:554`: a inteira andava e a curta, ao lado, ficava."""
+    citante = _escrever_e_commitar(
+        repo,
+        "src/hefesto_dualsense4unix/citante_curto.py",
+        CITANTE_CURTO,
+        "a curta nasce ao lado da inteira",
+    )
+    _inserir_no_topo(repo, 3, commitar=True)
+
+    _feitos, a_mao = _rodar(repo)
+
+    texto = citante.read_text(encoding="utf-8")
+    assert "`alvo.py:9`" in texto and "`:6`" in texto, (texto, a_mao)
+    assert not any("citante_curto" in f for f in a_mao), a_mao
+
+
+def test_a_forma_curta_de_src_fica_no_lugar_quando_o_codigo_nao_andou(repo: Path) -> None:
+    citante = _escrever_e_commitar(
+        repo, "src/hefesto_dualsense4unix/citante_curto.py", CITANTE_CURTO, "a curta nasce"
+    )
+
+    feitos, a_mao = _rodar(repo)
+
+    assert citante.read_text(encoding="utf-8") == CITANTE_CURTO
+    assert not any("citante_curto" in f for f in (*feitos, *a_mao)), (feitos, a_mao)
+
+
+def test_a_crase_ao_lado_confirma_ou_desmente_o_endereco_antes_de_andar(repo: Path) -> None:
+    """Sem símbolo prometido, o identificador em crase colado ao endereço ainda é pista: o
+    trecho do commit em que o endereço entrou tem de mostrá-lo, ou o endereço já nascia errado
+    (foi o caso do `_CALIBRATION_FEATURE_ID` citado na linha de um comentário)."""
+    md = _escrever_e_commitar(
+        repo,
+        "docs/protocol/crua.md",
+        f"# Crua\n\nCerta, `{END}:10`, onde a `segunda` começa.\n"
+        f"Errada, `{END}:3`, onde a `segunda` começa.\n",
+        "uma pista que confere e outra que não",
+    )
+    _inserir_no_topo(repo, 4, commitar=True)
+
+    feitos, a_mao = _rodar(repo)
+
+    texto = md.read_text(encoding="utf-8")
+    assert f"`{END}:14`, onde" in texto, (texto, feitos, a_mao)
+    assert f"`{END}:3`, onde" in texto, "a que nasceu errada não anda"
+    assert any("já nascia errado" in f and "`segunda`" in f for f in a_mao), a_mao
+
+
+def test_a_crase_da_linha_de_cima_tambem_e_pista(repo: Path) -> None:
+    """O documento quebra a frase em linhas: a crase fica numa e o endereço na seguinte
+    (foi o caso do `_PLAYER_LED_OVERFLOW`, cuja citação já nascia 6 linhas errada)."""
+    md = _escrever_e_commitar(
+        repo,
+        "docs/protocol/quebrada.md",
+        f"# Quebrada\n\n> a figura é a de `segunda`, citada em\n> `{END}:3`, que não é ela.\n",
+        "a crase na linha de cima",
+    )
+    _inserir_no_topo(repo, 4, commitar=True)
+
+    _feitos, a_mao = _rodar(repo)
+
+    assert f"`{END}:3`, que" in md.read_text(encoding="utf-8"), "nasceu errada: não anda"
+    assert any("já nascia errado" in f and "`segunda`" in f for f in a_mao), a_mao
+
+
+def test_o_validador_diz_que_nao_ve_a_crua_errada(repo: Path) -> None:
+    """A crua que aponta uma linha que existe passa pelo validador; ele tem de dizer isso e
+    apontar o instrumento que a pega, para o verde dele não valer por mais do que mede."""
+    _escrever_e_commitar(
+        repo, "docs/protocol/crua.md", f"# Crua\n\nSai de `{END}:3`.\n", "uma crua que abre"
+    )
+    saida = _validar(repo)
+    assert saida.returncode == 0, saida.stdout
+    assert "reapontar-citacoes.py" in saida.stdout, saida.stdout
+    assert "só o histórico a pega" in saida.stdout, saida.stdout
+
+
+def test_o_endereco_reescrito_numa_varredura_vai_para_a_mao(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Um commit que mexe em centenas de arquivos e reescreve o endereço de um documento que já
+    existia não prova onde a linha estava (foi o `aba02.py:1702`, que a varredura de 02/10 deixou
+    em branco). O documento que NASCE na varredura, esse, foi escrito olhando o código dela."""
+    mod = _script()
+    monkeypatch.setattr(mod, "VARREDURA_DE_ARQUIVOS", 3)
+    velho = _escrever_e_commitar(
+        repo, "docs/protocol/velho.md", "# Velho\n\nSai de `x`.\n", "um documento que já existia"
+    )
+    velho.write_text(f"# Velho\n\nA `segunda` está em `{END}:10`.\n", encoding="utf-8")
+    nasce = repo / "docs" / "protocol" / "nasce.md"
+    nasce.write_text(f"# Nasce\n\nA `segunda` está em `{END}:10`.\n", encoding="utf-8")
+    for i in range(3):
+        (repo / "docs" / f"outro{i}.txt").write_text("varrido\n", encoding="utf-8")
+    _git(repo, "add", "docs")
+    _git(repo, "commit", "-q", "-m", "a varredura")
+    _inserir_no_topo(repo, 4, commitar=True)
+
+    _feitos, a_mao = mod.reapontar(repo, escrever=True)
+
+    assert f"`{END}:10`" in velho.read_text(encoding="utf-8"), "a varredura não prova: fica"
+    assert f"`{END}:14`" in nasce.read_text(encoding="utf-8"), "o que nasce na varredura anda"
+    assert any("varredura" in f and "velho.md" in f for f in a_mao), a_mao
