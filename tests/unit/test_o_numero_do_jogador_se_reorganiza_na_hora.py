@@ -660,7 +660,7 @@ def _o_renumerar_dela(bancada: Any) -> Callable[[], None]:
 
 
 class TestComOJogoNaAutoridade:
-    """Com o jogo aberto, o prazo espera, e o gesto dela renumera (D-3009, 02/10/2026)."""
+    """Com o jogo aberto, o prazo espera, e o gesto do usuário renumera (D-3009, 02/10/2026)."""
 
     def test_os_secundarios_se_recriam_e_o_p1_fica(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
@@ -701,7 +701,7 @@ class TestComOJogoNaAutoridade:
     def test_o_p1_sai_e_o_vpad_dele_fica(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O P1 sai, o prazo passa e o posto espera; o gesto dela desce os outros.
+        """O P1 sai, o prazo passa e o posto espera; o gesto do usuário desce os outros.
 
         D-3009 (dela, 02/10/2026): o vpad do P1 não renasce em nenhum dos dois.
         """

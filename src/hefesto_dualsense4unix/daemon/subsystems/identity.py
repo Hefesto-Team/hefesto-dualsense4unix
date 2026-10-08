@@ -898,7 +898,7 @@ class ControllerIdentityRegistry:
         """Solta todo lugar guardado, dos dois registros. Devolve se havia.
 
         Com o jogo na autoridade (D-3009), gente nova não solta lugar de ninguém:
-        só o gesto dela (``motivo="renumerar"``) passa.
+        só o gesto do usuário (``motivo="renumerar"``) passa.
         """
         with self._lock:
             if motivo == "chegou_gente_nova" and self._prazos_seguros_desde is not None:
@@ -953,7 +953,7 @@ class ControllerIdentityRegistry:
         ``ate`` de cada guardado anda o tempo segurado, e o prazo que sobrava
         volta a correr. Quem chama é o tique do co-op, uma vez por ``sync``. O
         «Renumerar agora» (``soltar_os_lugares_guardados``) não espera: é o
-        gesto dela.
+        gesto do usuário.
         """
         segura = bool(segura)
         with self._lock:

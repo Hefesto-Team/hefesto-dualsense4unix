@@ -1,9 +1,9 @@
 """A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 2 — com o jogo aberto, o lugar guardado espera.
 
-**A decisão é dela** (``D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA``, 02/10/2026, «Esperar
+**A decisão é de produto** (``D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA``, 02/10/2026, «Esperar
 o jogo»): com um jogo na autoridade, quem cai ou entra não muda o número de ninguém;
 cada um fica com o número que tinha, e o rearranjo acontece quando o jogo solta. O
-«Renumerar agora» continua sendo o gesto dela, e vale com o jogo aberto.
+«Renumerar agora» continua sendo o gesto do usuário, e vale com o jogo aberto.
 
 **A bancada é a de queda da O-ASSENTO-02** (:class:`MesaDoJogo`): o backend, o co-op e o
 registro de verdade, e o jogo visto de FORA (:class:`JogoPorFora`, o lugar de cada vpad
@@ -182,7 +182,7 @@ class TestQuemVoltaRetomaOLugar:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestORenumerarAgoraComOJogo:
-    """Régua 11: o gesto dela renumera e recria, com o jogo aberto."""
+    """Régua 11: o gesto do usuário renumera e recria, com o jogo aberto."""
 
     def test_o_gesto_dela_vale_com_o_jogo(
         self, monkeypatch: pytest.MonkeyPatch, gatilhos: list[str]

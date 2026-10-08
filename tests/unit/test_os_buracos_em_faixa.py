@@ -340,7 +340,7 @@ class TestUmDosSessentaComSeisControles:
     D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
     autoridade o prazo para, e a mesa da forma (o P2 vencido com o g ainda
     guardado) não chega a existir ao vivo: os dois lugares esperam, e o gesto
-    dela solta os dois juntos. A faixa segue provada pela :class:`TestOs60` e
+    do usuário solta os dois juntos. A faixa segue provada pela :class:`TestOs60` e
     pela :class:`TestAVarredura`; aqui fica a prova de que, com o jogo, ninguém
     renasce por quem saiu.
     """
@@ -505,7 +505,7 @@ class TestAMatrizDeQuatro:
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             tique()
         # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
-        # aberto os dois lugares esperam, e é o gesto dela que os solta.
+        # aberto os dois lugares esperam, e é o gesto do usuário que os solta.
         assert len(bancada.reg.guardados()) == 2
         bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
         tique()

@@ -66,7 +66,7 @@ def _ticks_ate_o_fim_do_prazo(ja_passou: float) -> int:
 
 
 def _o_prazo_passa_e_ela_renumera(bancada: MesaDoJogo, ja_passou: float) -> None:
-    """O prazo passa com o jogo aberto, e quem fecha o buraco é o gesto dela.
+    """O prazo passa com o jogo aberto, e quem fecha o buraco é o gesto do usuário.
 
     D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
     autoridade o prazo não vence; o «Renumerar agora»
@@ -224,7 +224,7 @@ def trocar_a_mascara_do_p1(bancada: MesaHonesta) -> None:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestPassadoOPrazoOJogoFechaOBuraco:
-    """O boneco de cada jogador antes do prazo, no gesto dela, e depois, parado.
+    """O boneco de cada jogador antes do prazo, no gesto do usuário, e depois, parado.
 
     D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
     aberto o buraco não fecha no fim do prazo; fecha no «Renumerar agora».

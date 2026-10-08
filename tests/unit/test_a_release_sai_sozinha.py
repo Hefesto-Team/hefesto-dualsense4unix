@@ -198,7 +198,7 @@ def test_commit_que_nao_lanca_nada_nao_propoe_versao(brinquedo: Path) -> None:
 
 
 def _na_serie_0_9_5(brinquedo: Path) -> None:
-    """A série da ordem dela de 06/10: a base é a tag `v0.9.5` e tudo depois sobe a quarta casa."""
+    """A série da ordem de 06/10: a base é a tag `v0.9.5` e tudo depois sobe a quarta casa."""
     (brinquedo / ".github" / "repositorio.yml").write_text(
         REPOSITORIO_DO_BRINQUEDO.format(serie="0.9.5"), encoding="utf-8"
     )
@@ -224,7 +224,7 @@ def _proposta(brinquedo: Path) -> str:
 def test_depois_da_0_9_5_toda_proposta_sobe_a_quarta_casa(
     brinquedo: Path, commits: list[str]
 ) -> None:
-    """A ordem dela de 06/10 era 0.9.5.1, não 0.9.6: nem `feat` pula para a terceira casa."""
+    """A ordem de 06/10 era 0.9.5.1, não 0.9.6: nem `feat` pula para a terceira casa."""
     _na_serie_0_9_5(brinquedo)
     for c in commits:
         commitar(brinquedo, c)

@@ -336,7 +336,7 @@ class TestORenumerarEAVoltaTardia:
 
         D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
         na autoridade o prazo não vence; o que solta o lugar de quem saiu, no
-        meio da partida, é o gesto dela.
+        meio da partida, é o gesto do usuário.
         """
         bancada = mesa_da_luz("mista", jogo=True)
         via = bancada.mesa.transporte_de(P1)

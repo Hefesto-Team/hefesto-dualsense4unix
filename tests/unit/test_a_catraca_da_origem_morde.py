@@ -449,7 +449,7 @@ def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_facto
     fecho = _fecho_de_brinquedo(
         raiz, rodar, PAGA, tmp_path_factory.mktemp("fecho"))
     topo = _git(raiz, "rev-parse", "HEAD")
-    # O índice da integração pode ter o que quem coordena já adicionou: o passo não o leva junto.
+    # O índice da integração pode ter o que já foi adicionado à mão: o passo não o leva junto.
     (raiz / "outro.bin").write_bytes(b"\x00")
     _git(raiz, "add", "outro.bin")
     conferido = fecho("--so", "catraca", "--conferir")

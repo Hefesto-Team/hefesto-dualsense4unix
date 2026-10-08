@@ -26,6 +26,14 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
     "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py":
         "a régua das listas de exceção: ela pergunta a cada sprint citada se "
         "ainda está aberta, e o estado de uma sprint é processo",
+    "scripts/check_os_contratos_de_fora.py":
+        "o portão do censo dos contratos: confere que a `sprint_filha` de uma "
+        "linha frágil existe entre as sprints, que são processo. Sem a pasta, "
+        "ele deixa de cobrar a sprint e segue com o resto",
+    "tests/unit/test_a_catraca_da_origem_morde.py":
+        "a régua 6 da catraca roda o `fecho.sh` da leva, que é ferramenta de "
+        "processo, para provar que o pagamento viaja antes do merge; sem o "
+        "arquivo, ela se pula",
 }
 
 RAIZES_REAIS = frozenset({
