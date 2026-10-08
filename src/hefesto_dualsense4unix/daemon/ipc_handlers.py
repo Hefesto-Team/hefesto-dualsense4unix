@@ -6642,9 +6642,10 @@ class IpcHandlersMixin:
 
         Responde na hora ``{status: "medindo", uniq, segundos}``; a medida corre por
         ``SEGUNDOS_DO_ZERO`` e o fim aparece no ``state_full`` (``entry["zero"]``):
-        ``pronto`` com o zero guardado, ``mexeu`` sem guardar nada, ``parado`` sem
-        leitura. Um segundo pedido no meio da medida responde a mesma medida. No Nativo
-        mede e guarda igual: o zero vale quando o Hefesto volta a traduzir.
+        ``pronto`` com o zero guardado no disco, ``mexeu`` sem guardar nada, ``parado`` sem
+        leitura ou com o disco que não gravou (o zero anterior volta).
+        Um segundo pedido no meio da medida responde a mesma medida. No Nativo mede e guarda
+        igual: o zero vale quando o Hefesto volta a traduzir.
         """
         from hefesto_dualsense4unix.core import roteador_de_movimento as rot
         from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
@@ -6693,8 +6694,16 @@ class IpcHandlersMixin:
                 estados[chave] = self._ZERO_MEXEU if lidas else self._ZERO_PARADO
                 logger.info("zero_nao_guardado", uniq=uniq, amostras=len(amostras))
                 return
+            anterior = rot.zero_de(self.store, uniq)
             rot.definir_o_zero(self.store, uniq, zero)
-            await asyncio.to_thread(gravar_os_zeros, rot.zeros_para_gravar(self.store))
+            gravou = await asyncio.to_thread(gravar_os_zeros, rot.zeros_para_gravar(self.store))
+            if not gravou:
+                # O zero que não foi ao disco some no próximo início: a memória volta ao que
+                # era e o selo fica em «parado», que já é honesto.
+                rot.definir_o_zero(self.store, uniq, anterior)
+                estados[chave] = self._ZERO_PARADO
+                logger.warning("zero_nao_gravado", uniq=uniq)
+                return
             estados[chave] = self._ZERO_PRONTO
             logger.info("zero_guardado", uniq=uniq, vies=[round(v, 3) for v in zero.giro])
         except asyncio.CancelledError:
