@@ -1094,8 +1094,10 @@
            o input cai de 260,4 para 170,5 Hz e o áudio sobe a 106,2 — o total
            mal se mexe. O mic custa +16,3 reports/s = +32,6 fatias.
     375    a ponte pelo rádio — 93,75 relatórios/s desde 29/09/2026 (antes eram
-           100/s; o diário dizia 93,75), a 4 fatias: o 0x35 tem 334 B, vai a
-           339 no ar, e o menor pacote legal é o 2-DH3 (3 fatias) mais a resposta.
+           100/s; o diário dizia 93,75), a 4 fatias: desde 03/10 o produto
+           escreve só o 0x36, de 398 B (403 no ar), que não cabe no 2-DH3
+           (367 B) e cabe no 3-DH3 (3 fatias) mais a resposta. O k = 3 é
+           provisório: a medida é da A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01.
 
   **SOM E VIBRAÇÃO PELO RÁDIO SÃO EXCLUSIVOS, e é uma fatia só para os dois.**
   `alto_falante_bt.py:537`, literal: *"pôr voz e vibração no MESMO report do
@@ -1110,8 +1112,10 @@
   tela anuncia *"caberiam mais 11 com microfone"* com o rádio em 250%.
 
   O CENÁRIO DESENHADO É O ALVO DELA: quatro DualSense com tudo ligado ao mesmo
-  tempo. 4 x (520,8+32,6+375) = 3.713,6 fatias, mais teclado e mouse, de 1.600
-  por antena. **Não cabe em duas** (116%); em três, cabe.
+  tempo. Os custos acima são DEMONSTRATIVOS do desenho: a entrada é elástica e a
+  ponte tira dela, então o que cada controle recebe sai de
+  Hz = (C_eff − custo das pontes) / 2 / n, com o custo da ponte a medir
+  (A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01). Soma de fatias não é a conta da tela.
 -->
 <script type="text/csv" id="dados">
 tabela,id,nome,a,b,c,d,e,f,g,h,i
@@ -1122,8 +1126,8 @@ aparelho,P1,Vitória,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz
 aparelho,P2,Pedro,controle,#7eb8d4,L3,520.8,32.6,375,Starlight Blue,mic+ponte+luz,L3
 aparelho,P3,Ana,controle,#e35b8c,L3,520.8,32.6,375,Nova Pink,mic+ponte+luz,L3
 aparelho,P4,Rafa,controle,#74588e,L3,520.8,32.6,375,Galactic Purple,mic+ponte+luz,L3|L1
-aparelho,S1,Caixa de som,caixa,,L2,244,0,0,,,L2
-aparelho,F1,Fone,fone,,L2,244,0,0,,,L2
+aparelho,S1,Caixa de som,caixa,,L2,366,0,0,,,L2
+aparelho,F1,Fone,fone,,L2,366,0,0,,,L2
 aparelho,W1,Webcam,webcam,,L1,0,0,0,,fixo,
 espectro,E1,Teclado,teclado,18,34,medio,,,
 espectro,E2,Mouse,mouse,52,68,medio,,,
@@ -1312,6 +1316,8 @@ const QUEDAS = lerCsv('quedas');
    UM DONO SÓ para "quanto este lugar está usando". A tela inteira lê daqui —
    e ela conta o que SAI, que é o que falta na de hoje. */
 const CUSTO_DE_UM_CONTROLE = 520.8 + 32.6 + 375;
+/* O pacote de A2DP (2-DH5) ocupa 5 fatias, mais a da resposta. Estimado. */
+const FATIAS_DO_PACOTE_A2DP = 6;
 function custoDe(ap) {
   return ap.entrada
     + (ap.ligado.mic ? ap.mic : 0)
@@ -1352,9 +1358,10 @@ const moradoresDe = lid => APARELHOS.filter(a => a.lugar === lid);
    BARRA DE LUZ e GATILHOS ADAPTATIVOS — 0 Hz em regime: o escritor só manda
    quando a cor ou a curva MUDA (`dualsense_bt_audio.py:68`).
 
-   CAIXA e FONE — 244 fatias, e este é o único número ESTIMADO da tela: A2DP
+   CAIXA e FONE — 366 fatias, e este é o único número ESTIMADO da tela: A2DP
    SBC a 328 kbps = 41 kB/s; a ~672 B por pacote dá ~61 pacotes/s, e cada um
-   é 2-DH5 (3 fatias) mais a resposta = 4. 61 x 4 = 244. Sem medição de fio.
+   é 2-DH5 (5 fatias) mais a resposta = 6. 61 x 6 = 366, dentro das 300 a 375
+   de `docs/data/orcamento-de-ar.csv`. Sem medição de fio.
 
    WEBCAM — 0 fatias: ela é USB, não rádio. Fica na tela porque OCUPA PORTA, e
    porque uma webcam USB 3.0 joga ~20 dB de ruído em 2,4 GHz
@@ -2404,13 +2411,13 @@ function linhaDe(ap) {
     v.appendChild(icone(ICONE_DO_APARELHO[ap.tipo] || 'i-radio'));
     const hzO = document.createElement('span');
     hzO.className = 'hz';
-    /* CADA PACOTE DE A2DP CUSTA 4 FATIAS (2-DH5 = 3, mais a resposta), então o
+    /* CADA PACOTE DE A2DP CUSTA 6 FATIAS (2-DH5 = 5, mais a resposta), então o
        hertz sai da divisão — e o zero da webcam sai como palavra, não como
        "0 Hz", que se leria como aparelho mudo em vez de aparelho sem rádio. */
     hzO.textContent = custoDe(ap) === 0 ? 'Sem rádio'
-                    : Math.round(custoDe(ap) / 4) + ' Hz';
+                    : Math.round(custoDe(ap) / FATIAS_DO_PACOTE_A2DP) + ' Hz';
     v.appendChild(hzO);
-    v.title = maiuscula(ap.nome) + ': ' + Math.round(custoDe(ap) / 4) + ' pacotes de som por segundo';
+    v.title = maiuscula(ap.nome) + ': ' + Math.round(custoDe(ap) / FATIAS_DO_PACOTE_A2DP) + ' pacotes de som por segundo';
     v.style.background = 'var(--panel)';
     v.style.borderColor = corDe(ap);
     v.style.color = corDe(ap);
@@ -2421,8 +2428,8 @@ function linhaDe(ap) {
   /* O NÚMERO QUE SOBRA NA DIREITA É «QUANTO DE UMA ANTENA», e não mais a
      contagem de fatias: *"o termo fatias é muito dificil de entender se
      tratando de bt"*.  <!-- (noqa-acento) -->
-     É o mesmo dado — 928 de 1.600 é 58% —, dito na grandeza em que a pergunta
-     é feita: cabe ou não cabe. */
+     É o mesmo dado, dito na grandeza em que a pergunta é feita: cabe ou não
+     cabe. */
   /* R10 — A COLUNA DA DIREITA DIZ QUAL VAGA DE PONTE ELE OCUPA, e não mais
      «% de uma antena»: a porcentagem era a soma que a D-CONTA-ADITIVA proíbe.
      É o que liga a linha à barra do adaptador lá em cima. */

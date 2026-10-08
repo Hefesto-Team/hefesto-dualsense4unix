@@ -21,4 +21,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## mapa-do-radio.html
+- **08/10/2026** — a caixa e o fone custam 366 fatias (61 pacotes x 6: o 2-DH5 ocupa 5 fatias, mais a
+  resposta), e não 244; o número do desenho é demonstrativo e continua estimado (sprint
+  O-232-SAI-E-A-CONTA-DA-PONTE-ENTRA-01). Até publicar, a página do produto continua a de antes, com os 244 no dado e no comentário
+  da caixa e do fone; o que ela vê na linha (61 Hz) não muda.

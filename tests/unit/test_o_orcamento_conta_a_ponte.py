@@ -179,7 +179,7 @@ def test_o_csv_tem_uma_linha_por_consumidor_com_a_procedencia() -> None:
         assert linha["o_que_nao_conta"].strip(), (
             f"{linha['consumidor']}: a coluna «o que NÃO conta» é o ponto do CSV")
     consumidores = {linha["consumidor"] for linha in linhas}
-    assert {"ponte de som (0x35)", "ponte de vibração (0x32)",
+    assert {"ponte de som (0x36)", "ponte de vibração (0x36)",
             "pontes por adaptador (n_max)", "relatório de entrada (0x31)"} <= consumidores
 
 
