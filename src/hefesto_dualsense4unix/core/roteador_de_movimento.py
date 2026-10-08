@@ -438,7 +438,12 @@ def angulo_do_tique(
     angulo: tuple[float, float, float],
     agora: float,
 ) -> tuple[float, float, float] | None:
-    """O ângulo que a peça acabou de drenar, ou `None` se ele é um acumulado."""
+    """O ângulo que a peça acabou de drenar, ou `None` se ele é um acumulado.
+
+    O ângulo é a integral do giro CRU: sai daqui sem o viés do zero que o «Começar» da
+    Calibrar guardou (`viés x dt`, nos três eixos, com o `dt` da drenagem anterior), a
+    mesma conta que `descontar_o_vies` faz na velocidade. Sem zero, o mesmo objeto.
+    """
     if dono is None:
         return angulo
     chave = chave_de_sensor(uniq)
@@ -450,7 +455,16 @@ def angulo_do_tique(
     mapa[chave] = agora
     if anterior is None or agora - anterior > SILENCIO_DA_DRENAGEM_S:
         return None
-    return angulo
+    zero = zero_de(dono, uniq)
+    if zero is None:
+        return angulo
+    dt = agora - anterior
+    vies = zero.giro
+    return (
+        float(angulo[0]) - vies[0] * dt,
+        float(angulo[1]) - vies[1] * dt,
+        float(angulo[2]) - vies[2] * dt,
+    )
 
 
 # há controle virtual — o modo DualSense e o modo Xbox, do P1 ao P4, no cabo e no
