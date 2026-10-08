@@ -36,12 +36,10 @@ tela.py` e `test_os_botoes_tem_dono.py` fazem `glob("a??_*.py")` e
 molde. Um arquivo fora dele nasceria **invisível para o portão da língua** e
 teria de ser importado à mão em `__init__.py` — duas cópias do mesmo fato.
 
-O QUE ELE NÃO FAZ, e é escolha: **não liga o botão «Começar»**. O daemon não tem
-método de calibração (não há `gyro.*`, `motion.*` nem `sensor.*` em
-`daemon/ipc_handlers.py` que zere o repouso), e um botão que responde calado é
-pior que um que recusa — regra da casa, e a razão pela qual sete gestos da aba
-Sistema seguem sem dono de propósito. O botão fica sem gesto, e o piloto o
-recusa dizendo o nome.
+O «COMEÇAR» TEM DONO desde 08/10/2026 (O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-
+CADA-CONTROLE-01): o gesto `calibrar-comecar` pede `motion.calibrate` para cada
+controle conectado, e o tique pinta o `zero.estado` de cada um no selo do cartão
+e a fita dos três passos pelo conjunto.
 
 DE ONDE VEM CADA IMPORT, porque dois deles surpreendem:
 
@@ -229,7 +227,7 @@ def resumo_da_mira(bloco: Any, curto: bool = False) -> str | None:
     return PONTO.join(partes)
 
 
-SEM_DONO = ("calibrar", )
+SEM_DONO: tuple[str, ...] = ()
 
 
 def _eixos_do_controle(entrada: dict[str, Any]) -> dict[str, Any]:
@@ -248,6 +246,29 @@ def _eixos_do_controle(entrada: dict[str, Any]) -> dict[str, Any]:
             campos[f"{chave}-pos"] = pos
             campos[f"{chave}-cor"] = cor
     return campos
+
+
+#: O selo de cada cartão: o `data-zero` que o CSS lê (`calibrar.ESTADOS_DO_ZERO`).
+CAMPO_DO_ZERO = "zero-estado"
+
+
+def estado_do_zero(entrada: dict[str, Any]) -> str:
+    """O estado da medida do zero DESTE controle, pelo `state_full`; sem leitura, parado."""
+    zero = entrada.get("zero")
+    estado = zero.get("estado") if isinstance(zero, dict) else None
+    return str(estado) if estado in calibrar.ESTADOS_DO_ZERO else str(calibrar.ZERO_PARADO)
+
+
+def passos_da_fita(estados: list[str]) -> dict[str, str]:
+    """A fita dos três passos pelo conjunto: medindo se algum mede, pronto se todos estão."""
+    if calibrar.ZERO_MEDINDO in estados:
+        aceso = calibrar.ZERO_MEDINDO
+    elif estados and all(e == calibrar.ZERO_PRONTO for e in estados):
+        aceso = calibrar.ZERO_PRONTO
+    else:
+        aceso = calibrar.ZERO_PARADO
+    return {f"passo-{estado}": "sim" if estado == aceso else ""
+            for estado in (calibrar.ZERO_PARADO, calibrar.ZERO_MEDINDO, calibrar.ZERO_PRONTO)}
 
 
 @registrar(PAGINA)
@@ -272,6 +293,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             continue
         dele = ctx.por_uniq(str(item.get("uniq") or ""))
         colunas[pref] = _eixos_do_controle(dele)
+        colunas[pref][CAMPO_DO_ZERO] = estado_do_zero(dele)
         if tem_a_mira:
             colunas[pref].update(_campos_da_mira(dele))
     # QUEM JOGA, pela regra única de `monta` e pelo leitor da 08: o cartão e a coluna da mira
@@ -285,8 +307,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "blocos": blocos,
         "quantos": calibrar.contagem(len(ctx.mesa)),
+        **passos_da_fita([colunas[p][CAMPO_DO_ZERO] for p in colunas]),
         "colunas": colunas,
-        "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 1,
+        "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 1
+                      + len(calibrar.PASSOS),
                       "sem_dono": len(SEM_DONO)},
         "sem_dono": {chave: "" for chave in SEM_DONO},
     }
@@ -394,3 +418,17 @@ def mira_inverter(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not isinstance(agora, bool):
         raise RuntimeError(SEM_LEITURA_DA_MIRA)
     _pedir_a_mira(p, uniq, **{chave: not agora})
+
+
+@gesto(PAGINA, "calibrar-comecar", grava="motion.calibrate")
+def calibrar_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O «Começar»: o Hefesto mede o repouso de cada controle conectado e guarda o zero dele."""
+    uniqs = [str(item.get("uniq") or "") for item in ctx.mesa]
+    uniqs = [u for u in uniqs if u]
+    if not uniqs:
+        raise ValueError("calibrar-comecar: nenhum controle conectado para medir")
+    for uniq in uniqs:
+        resposta = p.resultado("motion.calibrate", uniq=uniq)
+        if not isinstance(resposta, dict) or resposta.get("status") != calibrar.ZERO_MEDINDO:
+            raise RuntimeError(
+                "o Hefesto não começou a medida: reinicie o serviço e tente de novo")

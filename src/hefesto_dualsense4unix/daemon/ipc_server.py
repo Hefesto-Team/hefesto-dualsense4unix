@@ -223,6 +223,7 @@ class IpcServer(IpcHandlersMixin):
             "haptica.testar": self._handle_haptica_testar,
             "radio.busca.set": self._handle_radio_busca_set,
             "radio.dispensar": self._handle_radio_dispensar,
+            "motion.calibrate": self._handle_motion_calibrate,
         }
 
     async def start(self) -> None:

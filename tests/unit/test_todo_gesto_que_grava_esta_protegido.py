@@ -152,6 +152,8 @@ METODOS_QUE_ESCREVEM = {
     # A-NAVEGACAO-INTERNA-…-01 (08/10/2026): o ligar e o tipo da Navegação Interna
     # gravam na configuração da máquina.
     "navegacao.interna.set",
+    # O-COMECAR-DA-CALIBRAR-…-01 (08/10/2026): o «Começar» grava o zero de cada controle.
+    "motion.calibrate",
 }
 
 _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")

@@ -311,6 +311,12 @@ INVENTARIO: tuple[Lugar, ...] = (
         "o diário dos motores root do rádio",
     ),
     Lugar(
+        "zeros-dos-sensores", "config", f"{_C}/zeros-dos-sensores.json",
+        "utils/session.py:_ZEROS_DOS_SENSORES_FILE",
+        USUARIO, CONTROLES, MOVER,
+        "o zero do giroscópio de cada controle (o «Começar» da Calibrar), por endereço",
+    ),
+    Lugar(
         "configuracao-inteira", "config", _C,
         "utils/xdg_paths.py:config_dir",
         USUARIO, CASA, COPIAR,
@@ -414,6 +420,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "lugares-dos-adaptadores.json": (CONTROLES, "lugares-dos-adaptadores"),
     "conexao-zumbi.json": (CONTROLES, "conexao-zumbi"),
     "radio-diario.jsonl": (CONTROLES, "diario-do-radio"),
+    "zeros-dos-sensores.json": (CONTROLES, "zeros-dos-sensores"),
     "profiles": (CONTROLES, "ajustes-por-controle (a chave controllers de cada perfil)"),
     "session.json": (CASA, "o nome do último perfil ativado; não identifica controle"),
     "active_profile.txt": (CASA, "o marcador do perfil ativo; não identifica controle"),

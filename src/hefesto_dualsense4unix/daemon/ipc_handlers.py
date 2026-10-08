@@ -5906,6 +5906,8 @@ class IpcHandlersMixin:
             self._merge_mira(entries)
         with contextlib.suppress(Exception):
             self._merge_no_jogo(entries)
+        with contextlib.suppress(Exception):
+            self._merge_zero(entries)
 
     def _os_receptores_publicam(self) -> dict[str, Any]:
         """``state_full["radio_receptores"]``: a saúde de cada receptor 2.4G (a última hora).
@@ -6601,6 +6603,107 @@ class IpcHandlersMixin:
         if not all(isinstance(v, int) and not isinstance(v, bool) for v in eixos):
             return None
         return dict(zip(("lx", "ly", "rx", "ry"), eixos, strict=True))
+
+    # O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01 (08/10/2026): o «Começar» da
+    # Calibrar. No fim da classe para nenhuma citação `arquivo:linha` deste arquivo andar.
+    _ZERO_PARADO = "parado"
+    _ZERO_MEDINDO = "medindo"
+    _ZERO_PRONTO = "pronto"
+    _ZERO_MEXEU = "mexeu"
+    #: Uma amostra a cada 20 ms: 250 na medida de 5 s.
+    _INTERVALO_DO_ZERO_S = 0.02
+
+    def _estados_do_zero(self) -> dict[str, str]:
+        """Chave de sensor -> o estado da última medida desta sessão."""
+        estados = getattr(self, "_estados_do_zero_por_chave", None)
+        if not isinstance(estados, dict):
+            estados = {}
+            self._estados_do_zero_por_chave = estados
+        return estados
+
+    async def _handle_motion_calibrate(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele.
+
+        Responde na hora ``{status: "medindo", uniq, segundos}``; a medida corre por
+        ``SEGUNDOS_DO_ZERO`` e o fim aparece no ``state_full`` (``entry["zero"]``):
+        ``pronto`` com o zero guardado, ``mexeu`` sem guardar nada, ``parado`` sem
+        leitura. Um segundo pedido no meio da medida responde a mesma medida. No Nativo
+        mede e guarda igual: o zero vale quando o Hefesto volta a traduzir.
+        """
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        uniq = params.get("uniq")
+        if not isinstance(uniq, str) or not chave_de_sensor(uniq):
+            raise ValueError("motion.calibrate exige 'uniq': o zero é de um controle")
+        uniq = uniq.strip()
+        chave = chave_de_sensor(uniq)
+        estados = self._estados_do_zero()
+        resposta = {
+            "status": self._ZERO_MEDINDO, "uniq": uniq, "segundos": float(rot.SEGUNDOS_DO_ZERO),
+        }
+        if estados.get(chave) == self._ZERO_MEDINDO:
+            return resposta
+        estados[chave] = self._ZERO_MEDINDO
+        tarefa = asyncio.get_running_loop().create_task(self._medir_o_zero(uniq, chave))
+        em_voo = getattr(self, "_medidas_do_zero_em_voo", None)
+        if not isinstance(em_voo, set):
+            em_voo = set()
+            self._medidas_do_zero_em_voo = em_voo
+        em_voo.add(tarefa)
+        tarefa.add_done_callback(em_voo.discard)
+        return resposta
+
+    async def _medir_o_zero(self, uniq: str, chave: str) -> None:
+        """A medida: amostra o giro e o acelerômetro, decide e grava. Nunca levanta."""
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.utils.session import gravar_os_zeros
+
+        estados = self._estados_do_zero()
+        try:
+            hub = self._garantir_sensor_hub()
+            laco = asyncio.get_running_loop()
+            fim = laco.time() + float(rot.SEGUNDOS_DO_ZERO)
+            amostras: list[tuple[Any, Any]] = []
+            while laco.time() < fim:
+                giro = hub.velocidade_do_movimento(uniq)
+                acel = hub.aceleracao_do_movimento(uniq)
+                if giro is not None and acel is not None:
+                    amostras.append((giro, acel))
+                await asyncio.sleep(self._INTERVALO_DO_ZERO_S)
+            zero = rot.medir_o_zero(amostras)
+            if zero is None:
+                lidas = len(amostras) >= rot.MINIMO_DE_AMOSTRAS_DO_ZERO
+                estados[chave] = self._ZERO_MEXEU if lidas else self._ZERO_PARADO
+                logger.info("zero_nao_guardado", uniq=uniq, amostras=len(amostras))
+                return
+            rot.definir_o_zero(self.store, uniq, zero)
+            await asyncio.to_thread(gravar_os_zeros, rot.zeros_para_gravar(self.store))
+            estados[chave] = self._ZERO_PRONTO
+            logger.info("zero_guardado", uniq=uniq, vies=[round(v, 3) for v in zero.giro])
+        except asyncio.CancelledError:
+            estados[chave] = self._ZERO_PARADO
+            raise
+        except Exception as exc:
+            estados[chave] = self._ZERO_PARADO
+            logger.warning("zero_falhou", uniq=uniq, err=str(exc))
+
+    def _merge_zero(self, entries: list[dict[str, Any]]) -> None:
+        """``entry["zero"]``: ``{estado, guardado}`` da medida do zero deste controle."""
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        estados = self._estados_do_zero()
+        for entry in entries:
+            uniq = entry.get("uniq")
+            if not isinstance(uniq, str) or not chave_de_sensor(uniq):
+                entry["zero"] = None
+                continue
+            guardado = rot.zero_de(self.store, uniq) is not None
+            estado = estados.get(chave_de_sensor(uniq))
+            if estado is None:
+                estado = self._ZERO_PRONTO if guardado else self._ZERO_PARADO
+            entry["zero"] = {"estado": estado, "guardado": guardado}
 
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:

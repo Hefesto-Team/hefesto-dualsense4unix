@@ -732,11 +732,47 @@ def migrate_coop_optout() -> bool:
         return False
 
 
+# O zero de cada controle (O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01): o
+# «Começar» da Calibrar grava; o boot devolve ao roteador. Chave = o endereço do controle.
+_ZEROS_DOS_SENSORES_FILE = "zeros-dos-sensores.json"
+
+
+def ler_os_zeros() -> dict[str, Any]:
+    """Os zeros guardados, como o arquivo os tem; vazio sem arquivo ou com arquivo torto."""
+    try:
+        dados = json.loads((config_dir() / _ZEROS_DOS_SENSORES_FILE).read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return {}
+    except Exception as exc:
+        logger.debug("zeros_load_failed", err=str(exc))
+        return {}
+    return dados if isinstance(dados, dict) else {}
+
+
+def gravar_os_zeros(dados: dict[str, Any]) -> bool:
+    """Grava os zeros por troca atômica. True = gravou."""
+    try:
+        path = config_dir(ensure=True) / _ZEROS_DOS_SENSORES_FILE
+        texto = json.dumps(dados, ensure_ascii=False, indent=1, sort_keys=True)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".zeros_")
+        try:
+            os.write(fd, texto.encode())
+        finally:
+            os.close(fd)
+        os.replace(tmp, path)
+        return True
+    except Exception as exc:
+        logger.warning("zeros_save_failed", err=str(exc))
+        return False
+
+
 __all__ = [
     "a_escolha_dela",
     "espelhar_a_escolha",
     "esquecer_a_escolha",
     "gravar_a_escolha",
+    "gravar_os_zeros",
+    "ler_os_zeros",
     "load_freestyle_ligado",
     "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",

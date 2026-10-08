@@ -1847,7 +1847,7 @@ def aplicar_o_movimento(
         if not arranjo.ligado or not sensores.giroscopio:
             return lx, ly, rx, ry
 
-        velocidade = hub.velocidade_do_movimento(uniq)
+        velocidade = roteador.descontar_o_vies(store, uniq, hub.velocidade_do_movimento(uniq))
         if velocidade is None:
             return lx, ly, rx, ry
 
@@ -1952,8 +1952,8 @@ def _a_inclinacao(
     acel = perguntar(uniq) if callable(perguntar) else None
     if acel is None:
         return lx, ly, rx, ry
-    ler_o_giro = getattr(hub, "velocidade_do_movimento", None)
-    giro = ler_o_giro(uniq) if callable(ler_o_giro) else None
+    ler = getattr(hub, "velocidade_do_movimento", None)
+    giro = roteador.descontar_o_vies(store, uniq, ler(uniq)) if callable(ler) else None
     # Sem giro e sem o «Mesmo parado», a chamada é a de antes: ninguém para.
     extra: dict[str, Any] = {}
     if giro is not None:

@@ -762,6 +762,11 @@ class Daemon:
 
         if self._navegacao_interna is None:
             self._navegacao_interna = NavegacaoInterna.da_sessao()
+        # O zero de cada controle, que o «Começar» da Calibrar gravou, volta ao roteador.
+        from hefesto_dualsense4unix.core import roteador_de_movimento as _roteador
+        from hefesto_dualsense4unix.utils.session import ler_os_zeros
+
+        _roteador.carregar_os_zeros(self.store, ler_os_zeros())
         # FEAT-DSX-COOP-LOCAL-01 / LEIGO-01: apaga o opt-out gravado por versão
         # antiga (`coop_disabled.flag`) — one-shot, com marker próprio.
         #

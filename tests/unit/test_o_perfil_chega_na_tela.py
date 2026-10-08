@@ -234,7 +234,6 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         # (`a05_vibracao._aplicar_a_forca`, frase no cartão daquele controle) e
         "07-lancadores.html": ["criar-perfil"],
         "09-sistema.html": ["plugins"],
-        "calibrar-sensores.html": ["calibrar"],
     }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "
         f"como travessão — e a lição de 01/09 é que doze deles tinham dono e "

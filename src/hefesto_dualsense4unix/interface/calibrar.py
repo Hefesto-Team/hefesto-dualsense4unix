@@ -69,6 +69,14 @@ import caixa_da_janela  # noqa: E402
 
 SEGUNDOS = 5
 
+#: O ZERO DE CADA CONTROLE (08/10/2026): o `zero.estado` do `state_full`, que o selo do
+#: cartão mostra (`data-zero`) e a fita dos três passos resume (`passo-<estado>`).
+ZERO_PARADO = "parado"
+ZERO_MEDINDO = "medindo"
+ZERO_PRONTO = "pronto"
+ZERO_MEXEU = "mexeu"
+ESTADOS_DO_ZERO = (ZERO_PARADO, ZERO_MEDINDO, ZERO_PRONTO, ZERO_MEXEU)
+
 SEM_LEITURA = "—"
 
 FAMILIAS = (("giro", "Giroscópio"), ("accel", "Acelerômetro"))
@@ -323,15 +331,24 @@ CSS = """
   .ds-svg{width:60px;height:auto;flex:0 0 60px}
   .selo{margin-left:auto;flex:0 0 auto;font-size:11px;padding:2px 8px;border-radius:6px;
         border:1px solid var(--border-forte);color:var(--texto-mudo);white-space:nowrap}
-  #e-medindo:checked ~ .controles .selo{border-color:var(--orange);color:var(--orange)}
-  #e-pronto:checked  ~ .controles .selo{border-color:var(--green);color:var(--green)}
-  .selo .t2,.selo .t3{display:none}
-  #e-medindo:checked ~ .controles .selo .t1,
-  #e-medindo:checked ~ .controles .selo .t3,
-  #e-pronto:checked  ~ .controles .selo .t1,
-  #e-pronto:checked  ~ .controles .selo .t2{display:none}
-  #e-medindo:checked ~ .controles .selo .t2,
-  #e-pronto:checked  ~ .controles .selo .t3{display:inline}
+  /* O SELO É DE CADA CONTROLE (08/10/2026): o tique escreve o `data-zero` dele, e o
+     cartão que mexeu diz «Mexeu» sozinho. Sem o atributo (o desenho), os rádios mandam. */
+  #e-medindo:checked ~ .grade .selo:not([data-zero]),
+  .selo[data-zero="medindo"]{border-color:var(--orange);color:var(--orange)}
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]),
+  .selo[data-zero="pronto"]{border-color:var(--green);color:var(--green)}
+  .selo[data-zero="mexeu"]{border-color:var(--red);color:var(--red)}
+  .selo .t2,.selo .t3,.selo .t4{display:none}
+  #e-medindo:checked ~ .grade .selo:not([data-zero]) .t1,
+  #e-medindo:checked ~ .grade .selo:not([data-zero]) .t3,
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]) .t1,
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]) .t2,
+  .selo[data-zero]:not([data-zero="parado"]) .t1{display:none}
+  #e-medindo:checked ~ .grade .selo:not([data-zero]) .t2,
+  #e-pronto:checked  ~ .grade .selo:not([data-zero]) .t3,
+  .selo[data-zero="medindo"] .t2,
+  .selo[data-zero="pronto"] .t3,
+  .selo[data-zero="mexeu"] .t4{display:inline}
 
   .leitura{border-top:1px solid var(--border-sutil);padding-top:9px;
            display:flex;flex-direction:column;gap:8px}
@@ -359,7 +376,7 @@ CSS = """
                 background:currentColor}
   .lin > .g > i.neg{right:50%}
   .lin > .g > i.pos{left:50%}
-  #e-pronto:checked ~ .controles .lin > .g::after{background:var(--green)}
+  #e-pronto:checked ~ .grade .lin > .g::after{background:var(--green)}
 
   .barra{height:6px;border-radius:3px;background:var(--border-sutil);overflow:hidden}
   .barra > i{display:block;height:100%;width:0;background:var(--purple)}
@@ -533,7 +550,7 @@ def controle(c):
             <div class="ctr-topo">
               {_svg(c)}
               <span class="nome"><b data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</b><br>{nome} <span class="pt">•</span> {via}</span>
-              <span class="selo"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span></span>
+              <span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span>
             </div>
             <div class="leitura">
 {_eixos()}
@@ -691,9 +708,9 @@ def documento(quem):
 
     <!-- OS TRÊS ESTADOS, CLICÁVEIS. Os rádios vêm antes de tudo o que reage a
          eles — o `~` só enxerga irmão posterior. -->
-    <input class="et" type="radio" name="etapa" id="e-parado" checked>
-    <input class="et" type="radio" name="etapa" id="e-medindo">
-    <input class="et" type="radio" name="etapa" id="e-pronto">
+    <input class="et" type="radio" name="etapa" id="e-parado" data-campo="passo-parado" data-hef-alvo="marcado" checked>
+    <input class="et" type="radio" name="etapa" id="e-medindo" data-campo="passo-medindo" data-hef-alvo="marcado">
+    <input class="et" type="radio" name="etapa" id="e-pronto" data-campo="passo-pronto" data-hef-alvo="marcado">
 
     <div class="passos">
 {_passos()}
@@ -723,7 +740,7 @@ def documento(quem):
            a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
       <span class="quantos" data-campo="quantos" data-hef-alvo="html">{contagem(len(quem))}</span>
       <span class="acoes">
-        <button class="btn fazer"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
+        <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
         <a class="btn" href="02-controles.html">Fechar</a>
       </span>
     </div>

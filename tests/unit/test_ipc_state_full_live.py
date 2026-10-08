@@ -250,7 +250,7 @@ class TestPlayerPorControle:
                       "gatilho": None, "inverter_horizontal": False,
                       "inverter_vertical": False,
                       "inclinacao_parada": False, "mesmo_parado": False},
-             "no_jogo": None},
+             "no_jogo": None, "zero": {"estado": "parado", "guardado": False}},
         ]
 
     @pytest.mark.asyncio

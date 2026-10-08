@@ -33,7 +33,7 @@ não recebe canal nenhum da fábrica — mas TODAS passam `store=daemon.store`.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, fields, replace
 from types import MappingProxyType
 from typing import Final
@@ -795,6 +795,153 @@ def quer_cursor(dono: object) -> bool:
     )
 
 
+# O ZERO DE CADA CONTROLE (O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01, 08/10/2026):
+# um DualSense parado na mesa não marca zero no giro, e com a zona morta baixa a Mira anda
+# sozinha. O «Começar» da Calibrar mede o repouso de cada controle por `SEGUNDOS_DO_ZERO`,
+# com a mesma régua do parado (`_o_tique_da_janela`, sem segunda medida), e o viés medido
+# sai do giro antes da Mira e da inclinação. A chave é a de sensor: o endereço, o mesmo no
+# cabo e no BT. Nada se escreve no controle; o disco é do `utils/session.py`.
+
+#: Os 5 s que a Calibrar diz na tela (`interface/calibrar.SEGUNDOS`).
+SEGUNDOS_DO_ZERO: Final = 5.0
+#: Menos que isto não é medida: a janela de 5 s a 50 Hz dá 250.
+MINIMO_DE_AMOSTRAS_DO_ZERO: Final = 20
+
+_ATRIBUTO_DO_ZERO: Final = "_roteador_de_movimento_zero"
+
+Vetor = tuple[float, float, float]
+
+
+@dataclass(frozen=True, slots=True)
+class ZeroDoControle:
+    """O repouso medido de UM controle: o viés do giro (°/s) e a gravidade (g)."""
+
+    giro: Vetor
+    gravidade: Vetor
+
+
+def _media(vetores: Sequence[Vetor]) -> Vetor:
+    n = float(len(vetores))
+    return (
+        sum(float(v[0]) for v in vetores) / n,
+        sum(float(v[1]) for v in vetores) / n,
+        sum(float(v[2]) for v in vetores) / n,
+    )
+
+
+def medir_o_zero(amostras: Sequence[tuple[Vetor, Vetor]]) -> ZeroDoControle | None:
+    """O zero de uma peça a partir das amostras `(giro, acel)` da medida; `None` se mexeu.
+
+    A régua é a do parado: a janela quieta que recomeça quando o giro varia mais de
+    `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico ou a gravidade anda mais de
+    `GRAVIDADE_DO_PARADO_GRAUS`. Recomeçou uma vez, a peça mexeu e nada se guarda.
+    """
+    lista = list(amostras)
+    if len(lista) < MINIMO_DE_AMOSTRAS_DO_ZERO:
+        return None
+    giro0, acel0 = lista[0]
+    estado = _Repouso(
+        neutro=acel0, carimbo=0.0, inicio=0.0,
+        menor=[float(v) for v in giro0], maior=[float(v) for v in giro0],
+        gravidade_do_inicio=acel0,
+    )
+    for giro, acel in lista[1:]:
+        _o_tique_da_janela(estado, giro, acel, 0.0)
+        if not estado.virgem:
+            return None
+    return ZeroDoControle(
+        giro=_media([g for g, _ in lista]), gravidade=_media([a for _, a in lista])
+    )
+
+
+def _zeros(dono: object) -> dict[str, ZeroDoControle]:
+    mapa = getattr(dono, _ATRIBUTO_DO_ZERO, None)
+    if not isinstance(mapa, dict):
+        mapa = {}
+        setattr(dono, _ATRIBUTO_DO_ZERO, mapa)
+    return mapa
+
+
+def definir_o_zero(dono: object, uniq: str, zero: ZeroDoControle | None) -> None:
+    """Guarda (ou, com `None`, esquece) o zero de UM controle."""
+    if dono is None:
+        return
+    chave = chave_de_sensor(uniq)
+    if not chave:
+        return
+    mapa = _zeros(dono)
+    if zero is None:
+        mapa.pop(chave, None)
+    else:
+        mapa[chave] = zero
+
+
+def zero_de(dono: object, uniq: str | None) -> ZeroDoControle | None:
+    """O zero guardado deste controle, ou `None`."""
+    if dono is None or not uniq:
+        return None
+    mapa = getattr(dono, _ATRIBUTO_DO_ZERO, None)
+    if not isinstance(mapa, dict):
+        return None
+    zero = mapa.get(chave_de_sensor(uniq))
+    return zero if isinstance(zero, ZeroDoControle) else None
+
+
+def descontar_o_vies(dono: object, uniq: str | None, giro: Vetor | None) -> Vetor | None:
+    """O giro desta peça sem o viés medido; sem zero guardado, o MESMO objeto."""
+    if giro is None:
+        return None
+    zero = zero_de(dono, uniq)
+    if zero is None:
+        return giro
+    vies = zero.giro
+    return (
+        float(giro[0]) - vies[0],
+        float(giro[1]) - vies[1],
+        float(giro[2]) - vies[2],
+    )
+
+
+def zeros_para_gravar(dono: object) -> dict[str, dict[str, list[float]]]:
+    """Os zeros guardados, na forma do arquivo: chave de sensor → giro e gravidade."""
+    mapa = getattr(dono, _ATRIBUTO_DO_ZERO, None)
+    if not isinstance(mapa, dict):
+        return {}
+    return {
+        chave: {"giro": list(zero.giro), "gravidade": list(zero.gravidade)}
+        for chave, zero in sorted(mapa.items())
+        if isinstance(zero, ZeroDoControle)
+    }
+
+
+def _vetor(valor: object) -> Vetor | None:
+    if not isinstance(valor, (list, tuple)) or len(valor) != 3:
+        return None
+    try:
+        x, y, z = (float(v) for v in valor)
+    except (TypeError, ValueError):
+        return None
+    if not all(math.isfinite(v) for v in (x, y, z)):
+        return None
+    return (x, y, z)
+
+
+def carregar_os_zeros(dono: object, dados: object) -> int:
+    """Devolve ao `dono` os zeros lidos do arquivo; a entrada torta fica de fora."""
+    if dono is None or not isinstance(dados, Mapping):
+        return 0
+    contados = 0
+    for chave, valor in dados.items():
+        if not isinstance(valor, Mapping):
+            continue
+        giro, gravidade = _vetor(valor.get("giro")), _vetor(valor.get("gravidade"))
+        if giro is None or gravidade is None or not chave_de_sensor(str(chave)):
+            continue
+        definir_o_zero(dono, str(chave), ZeroDoControle(giro=giro, gravidade=gravidade))
+        contados += 1
+    return contados
+
+
 __all__ = [
     "BOTAO_DA_ZONA_DE_BAIXO",
     "BOTAO_DA_ZONA_DE_CIMA",
@@ -815,10 +962,12 @@ __all__ = [
     "GRAVIDADE_DO_PARADO_GRAUS",
     "GRAVIDADE_MINIMA_G",
     "LIMIAR_DO_ASSENTO_GRAUS_S",
+    "MINIMO_DE_AMOSTRAS_DO_ZERO",
     "MIOLO_DO_DIRECIONAL",
     "PIXELS_POR_GRAU_PADRAO",
     "PIXELS_POR_UNIDADE_DO_TOQUE",
     "SAIDA_DO_PARADO_GRAUS",
+    "SEGUNDOS_DO_ZERO",
     "SENSIBILIDADE_MAX",
     "SENSIBILIDADE_MIN",
     "SENSIBILIDADE_PADRAO",
@@ -836,20 +985,25 @@ __all__ = [
     "ZONA_MORTA_PADRAO_GRAUS_S",
     "ArranjoDeMovimento",
     "ArranjoRecusadoError",
+    "ZeroDoControle",
     "angulo_do_tique",
     "arranjo_da_peca",
     "ativo",
     "botoes_das_zonas",
+    "carregar_os_zeros",
     "da_peca",
     "definir_ativo",
     "definir_da_peca",
+    "definir_o_zero",
     "definir_por_peca",
     "deflexao",
     "deflexao_da_inclinacao",
     "delta_do_toque",
+    "descontar_o_vies",
     "inclina_agora",
     "inclinacao",
     "inclinacao_parada",
+    "medir_o_zero",
     "misturar",
     "montar",
     "neutro_da_inclinacao",
@@ -861,4 +1015,6 @@ __all__ = [
     "por_peca",
     "quer_cursor",
     "sincronizar_o_filtro",
+    "zero_de",
+    "zeros_para_gravar",
 ]
