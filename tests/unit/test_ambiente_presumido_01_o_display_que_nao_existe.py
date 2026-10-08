@@ -98,9 +98,14 @@ class TestOXwaylandNaoEOPadrao:
             assert not hasattr(arranque, nome), f"{nome} voltou a `app/arranque.py`"
 
     def test_o_lancador_nao_escreve_gdk_backend(self) -> None:
-        fonte = (RAIZ / "scripts" / "abrir_interface.py").read_text(encoding="utf-8")
-        assert "GDK_BACKEND" not in fonte
-        assert "forcar_xwayland" not in fonte
+        """O corpo do lançador (`interface/abrir.py`) e o calço da árvore, os dois."""
+        for caminho in (
+            RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "abrir.py",
+            RAIZ / "scripts" / "abrir_interface.py",
+        ):
+            fonte = caminho.read_text(encoding="utf-8")
+            assert "GDK_BACKEND" not in fonte, caminho.name
+            assert "forcar_xwayland" not in fonte, caminho.name
 
 
 class TestBackoffCrescenteEWarningUnico:

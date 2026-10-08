@@ -266,7 +266,10 @@ else
     # reprovaria a melhora — o defeito que este arquivo já pagou onze vezes.
     # A régua passa a cobrar o EFEITO: o nome sai da identidade, e não há
     # literal dentro da chamada.
-    LANCADOR_PY=scripts/abrir_interface.py
+    # 08/10/2026: o corpo do lançador foi para o pacote (`interface/abrir.py`),
+    # porque o console script `-gui` também tem de vestir a identidade; o
+    # `scripts/abrir_interface.py` virou um calço sem a chamada.
+    LANCADOR_PY=src/hefesto_dualsense4unix/interface/abrir.py
     if [[ ! -f "${LANCADOR_PY}" ]]; then
         echo "[FAIL] ${LANCADOR_PY} sumiu — ninguém veste o ícone no processo"
         echo "       e a janela dela nasce com o ícone genérico do sistema."

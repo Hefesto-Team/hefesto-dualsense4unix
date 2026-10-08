@@ -74,8 +74,8 @@ bancada = [
 
 [project.scripts]
 hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"
-# O `-gui` abre a janela de dez abas.
-hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.interface.hefesto_vivo:main"
+# O `-gui` abre a janela de dez abas, pela entrada que veste a identidade (o nome, a classe e o ícone do dock).
+hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.interface.abrir:entrada"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto_dualsense4unix"]

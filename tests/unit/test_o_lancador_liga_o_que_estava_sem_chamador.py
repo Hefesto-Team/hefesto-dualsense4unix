@@ -1,4 +1,9 @@
-"""O lançador liga duas curas que estavam sem chamador (28/09/2026)."""
+"""O lançador liga duas curas que estavam sem chamador (28/09/2026).
+
+08/10/2026 (O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01): o corpo do lançador mora em `interface/abrir.py`,
+que o
+console script e o calço `scripts/abrir_interface.py` chamam; as réguas seguem o corpo.
+"""
 from __future__ import annotations
 
 import ast
@@ -21,18 +26,19 @@ import pytest
 from tests.conftest import exigir_gi_real
 
 RAIZ = Path(__file__).resolve().parents[2]
-LANCADOR = RAIZ / "scripts" / "abrir_interface.py"
+LANCADOR = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "abrir.py"
 
 ESPERA_PELO_FILHO_SEC = 20.0
 
 _FILHO = """
 import os, sys, time, pathlib
 sys.path.insert(0, sys.argv[1])
-import abrir_interface as ai
+from hefesto_dualsense4unix.interface import abrir as ai
 if sys.argv[2] == "glib":
-    ai.achar_o_piloto = lambda: pathlib.Path(sys.argv[3])
+    sys.path.insert(0, str(pathlib.Path(sys.argv[3]).parent))
+    ai.achar_o_piloto = lambda: pathlib.Path(sys.argv[3]).stem
     ai.diario_da_janela = lambda: None
-    sys.exit(ai.main([]))
+    sys.exit(ai.abrir([]))
 nome = ai.tomar_a_vez([])
 print("vez:" + repr(nome), flush=True)
 if sys.argv[2] == "travada":
@@ -69,13 +75,8 @@ def _o_filho_tem_o_glib() -> None:
 
 
 def _carregar_o_lancador() -> ModuleType:
-    """O ``scripts/abrir_interface.py`` como módulo, sem o bloco de entrada."""
-    sys.path.insert(0, str(LANCADOR.parent))
-    try:
-        sys.modules.pop("abrir_interface", None)
-        return importlib.import_module("abrir_interface")
-    finally:
-        sys.path.remove(str(LANCADOR.parent))
+    """O ``interface/abrir.py`` como módulo: o corpo que as duas portas chamam."""
+    return importlib.import_module("hefesto_dualsense4unix.interface.abrir")
 
 
 @pytest.fixture
@@ -111,7 +112,7 @@ def _subir_o_primeiro(modo: str, pasta: Path) -> subprocess.Popen[str]:
     piloto = pasta / "piloto_que_fica.py"
     piloto.write_text(_PILOTO_QUE_FICA, encoding="utf-8")
     filho = subprocess.Popen(
-        [sys.executable, "-c", _FILHO, str(LANCADOR.parent), modo, str(piloto)],
+        [sys.executable, "-c", _FILHO, str(RAIZ / "src"), modo, str(piloto)],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -138,15 +139,16 @@ def _enterrar(filho: subprocess.Popen[str]) -> str:
     return saida or ""
 
 
-def _piloto_que_denuncia(tmp_path: Path) -> Path:
-    """Um piloto de mentira: se ele rodar, uma SEGUNDA janela teria nascido."""
+def _piloto_que_denuncia(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    """Um piloto de mentira: se ele rodar, uma SEGUNDA janela teria nascido. Devolve o MÓDULO."""
     piloto = tmp_path / "piloto_de_mentira.py"
+    monkeypatch.syspath_prepend(str(tmp_path))
     marca = tmp_path / "o-piloto-rodou"
     piloto.write_text(
         f"from pathlib import Path\nPath({str(marca)!r}).write_text('rodou')\n",
         encoding="utf-8",
     )
-    return piloto
+    return piloto.stem
 
 
 class TestOSegundoCliqueTrazAJanela:
@@ -159,12 +161,13 @@ class TestOSegundoCliqueTrazAJanela:
 
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda _p: True)
         monkeypatch.setattr(ai, "diario_da_janela", lambda: None)
-        monkeypatch.setattr(ai, "achar_o_piloto", lambda: _piloto_que_denuncia(tmp_path))
+        piloto = _piloto_que_denuncia(tmp_path, monkeypatch)
+        monkeypatch.setattr(ai, "achar_o_piloto", lambda: piloto)
         monkeypatch.setenv("XDG_ACTIVATION_TOKEN", "token-do-clique")
 
         primeiro = _subir_o_primeiro("glib", tmp_path)
         try:
-            rc = ai.main([])
+            rc = ai.abrir([])
             vivo = primeiro.poll() is None
         finally:
             saida = _enterrar(primeiro)
@@ -470,10 +473,11 @@ class TestOsLoadersDoGdkPixbuf:
         cache = self._cache(tmp_path, "/snap/terminal/1/usr/lib/libpixbufloader-svg.so")
         monkeypatch.setenv("GDK_PIXBUF_MODULE_FILE", str(cache))
         monkeypatch.setattr(ai, "diario_da_janela", lambda: None)
-        monkeypatch.setattr(ai, "achar_o_piloto", lambda: _piloto_que_denuncia(tmp_path))
+        piloto = _piloto_que_denuncia(tmp_path, monkeypatch)
+        monkeypatch.setattr(ai, "achar_o_piloto", lambda: piloto)
         monkeypatch.setattr(ai, "vestir_a_identidade", lambda _casa: [])
         monkeypatch.setattr(sys, "argv", list(sys.argv))
 
-        assert ai.main([]) == 0
+        assert ai.abrir([]) == 0
         assert "GDK_PIXBUF_MODULE_FILE" not in os.environ
         assert (tmp_path / "o-piloto-rodou").exists()
