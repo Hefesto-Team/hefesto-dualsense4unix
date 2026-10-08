@@ -3,30 +3,27 @@
 O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01 (07/10/2026, item B1.9 da bancada: «a logo some»). A janela abria
 por duas portas e só uma vestia o nome: o `run.sh --gui` passava por `scripts/abrir_interface.py`
 (prgname, classe, ícone), e o console script `hefesto-dualsense4unix-gui` ia direto ao piloto, que
-se
-anunciava `hefesto-dualsense4unix-gui` — nome que nenhum `.desktop` casa. A bandeja, que herda o
+se anunciava `hefesto-dualsense4unix-gui` — nome que nenhum `.desktop` casa. A bandeja, que herda o
 `PATH` da `.venv`, abre o painel por essa segunda porta.
 
 A fonte da verdade é o `.desktop` versionado (o nome do arquivo e o `StartupWMClass`) e o do
-Flatpak,
-lidos do disco: nunca `identidade.py`, que é o que o código diz de si.
+Flatpak, lidos do disco: nunca `identidade.py`, que é o que o código diz de si.
 
 Três réguas, medidas num SUBPROCESSO em lar de mentira (HOME, XDG_STATE_HOME e XDG_RUNTIME_DIR
 desviados; sem `WAYLAND_DISPLAY`; o piloto trocado por um dublê que só registra no momento em que a
 janela nasceria):
 
 1. o alvo do console script, lido do `pyproject.toml`, chega ao piloto com o prgname do `.desktop`,
-a
-   classe do `StartupWMClass`, `HEFESTO_NA_TELA=1` por padrão e o `DISPLAY` que o teste deu;
+   a classe do `StartupWMClass`, `HEFESTO_NA_TELA=1` por padrão e o `DISPLAY` que o teste deu;
 2. a porta `scripts/abrir_interface.py` dá nos mesmos três valores;
 3. a ordem: nenhum `gi.repository` quando o saneamento do GdkPixbuf roda, e nenhum piloto carregado
-   antes da identidade.
+   antes da identidade (o dublê registra cada vez que roda, e roda uma vez só, já vestido).
 
 MORDIDAS: o alvo do console script de volta a `hefesto_vivo:main` reprova a 1; a chamada de
 `vestir_a_identidade` arrancada reprova a 1 e a 2; `import hefesto_vivo` no topo de `abrir.py`
-reprova
-a 3; a entrada sem o `HEFESTO_NA_TELA` padrão reprova a 1; a guarda de tela de volta ao import de
-`abrir.py` reprova a 1 (o `DISPLAY` muda).
+reprova a 3; a entrada sem o `HEFESTO_NA_TELA` padrão reprova a 1; a guarda de tela de volta ao
+import de `abrir.py` reprova a 1 (o `DISPLAY` muda); o piloto importado antes de
+`tomar_a_vez` reprova a 3.
 """
 from __future__ import annotations
 
@@ -60,19 +57,21 @@ import json, os, sys
 import gi
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib
-with open(os.environ["HEFESTO_REGISTRO"], "w", encoding="utf-8") as f:
-    json.dump({
+with open(os.environ["HEFESTO_REGISTRO"], "a", encoding="utf-8") as f:
+    f.write(json.dumps({
         "prgname": GLib.get_prgname(),
         "classe": Gdk.get_program_class(),
         "na_tela": os.environ.get("HEFESTO_NA_TELA"),
         "display": os.environ.get("DISPLAY"),
         "wayland": os.environ.get("WAYLAND_DISPLAY"),
-    }, f)
+    }) + "\\n")
 '''
 
 _FILHO = '''
 import importlib, json, os, sys, threading, time
-threading.Timer(float(os.environ["HEFESTO_VIGIA"]), lambda: os._exit(3)).start()
+vigia = threading.Timer(float(os.environ["HEFESTO_VIGIA"]), lambda: os._exit(3))
+vigia.daemon = True
+vigia.start()
 registro = os.environ["HEFESTO_REGISTRO"]
 porta, alvo = sys.argv[1], sys.argv[2]
 sys.path.insert(0, os.environ["HEFESTO_DUBLE_DIR"])
@@ -171,7 +170,11 @@ def _abrir_por(porta: str, lar: Path, *, na_tela: str | None) -> dict[str, Any]:
                              "display_dado": display}
     ordem = Path(str(registro) + ".ordem")
     saida["ordem"] = json.loads(ordem.read_text()) if ordem.is_file() else None
-    saida["janela"] = json.loads(registro.read_text()) if registro.is_file() else None
+    saida["janelas"] = (
+        [json.loads(linha) for linha in registro.read_text().splitlines() if linha.strip()]
+        if registro.is_file() else []
+    )
+    saida["janela"] = saida["janelas"][-1] if saida["janelas"] else None
     for diario in (casa / "state").rglob("interface.log"):
         saida["texto"] += "\n--- diário ---\n" + diario.read_text(errors="replace")
     return saida
@@ -192,6 +195,10 @@ def pelo_lancador(lar: Path) -> dict[str, Any]:
 def _a_janela(medida: dict[str, Any], porta: str) -> dict[str, Any]:
     assert medida["janela"] is not None, (
         f"a porta `{porta}` não chegou ao piloto (rc={medida['rc']}):\n{medida['texto'][-3000:]}"
+    )
+    assert medida["rc"] == 0, (
+        f"a porta `{porta}` não saiu limpa (rc={medida['rc']}; 3 é o vigia):\n"
+        f"{medida['texto'][-3000:]}"
     )
     return medida["janela"]  # type: ignore[no-any-return]
 
@@ -271,4 +278,9 @@ class TestAIdentidadeVemAntesDoPiloto:
         )
         assert ordem["pilotos"] == [], (
             f"o piloto já estava carregado antes da identidade: {ordem['pilotos']}"
+        )
+        nome, classe = DESKTOP.stem, _chave(DESKTOP, "StartupWMClass")
+        assert [(j["prgname"], j["classe"]) for j in medida["janelas"]] == [(nome, classe)], (
+            "o piloto rodou mais de uma vez, ou rodou antes da identidade: "
+            f"{medida['janelas']}"
         )

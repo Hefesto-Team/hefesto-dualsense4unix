@@ -1,8 +1,7 @@
 """O lançador liga duas curas que estavam sem chamador (28/09/2026).
 
 08/10/2026 (O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01): o corpo do lançador mora em `interface/abrir.py`,
-que o
-console script e o calço `scripts/abrir_interface.py` chamam; as réguas seguem o corpo.
+que o console script e o calço `scripts/abrir_interface.py` chamam; as réguas seguem o corpo.
 """
 from __future__ import annotations
 

@@ -15,8 +15,8 @@ MORDIDAS: trocar `wm_instance` na identidade reprova o primeiro; trocar `Startup
 `.desktop` reprova o segundo; pôr `vestir_a_identidade` depois do piloto reprova o terceiro.
 
 08/10/2026 (O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01): o corpo do lançador mudou para `interface/abrir.py`,
-que as duas portas (o `run.sh --gui` e o console script) chamam; a régua `test_toda_porta_da_janela_
-veste_a_identidade.py` mede cada porta num subprocesso.
+que as duas portas (o `run.sh --gui` e o console script) chamam; a régua
+`test_toda_porta_da_janela_veste_a_identidade.py` mede cada porta num subprocesso.
 """
 
 from __future__ import annotations
