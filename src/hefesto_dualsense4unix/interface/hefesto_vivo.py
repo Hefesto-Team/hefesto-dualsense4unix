@@ -249,8 +249,17 @@ BOOTSTRAP = r"""
     // e a razão é a que aquelas duas guardas já escrevem: uma aba não pode ter
     // de lembrar-se disto — quem esquecer publica o defeito sem erro e sem
     // aviso.
+    //
+    // E TODO CAMPO DE TEXTO É DE DIGITAR (08/10/2026): os oito campos de
+    // «Teclas do teclado» (aba 06) não são `data-hef-vivo`, recebiam o `—` no
+    // botão que não digita nada, e o «Guardar» recusava a tela inteira
+    // («token '—' fora do padrão»). Apagar uma tecla só chegava ao disco com os
+    // oito campos preenchidos. O campo vazio mostra o `placeholder` dele.
+    const tipo = String(el.type || '').toLowerCase();
     const digitavel = !!(el.dataset && el.dataset.hefVivo !== undefined
-                         && String(el.dataset.hefVivo).trim() !== '');
+                         && String(el.dataset.hefVivo).trim() !== '')
+      || el.tagName === 'TEXTAREA'
+      || (el.tagName === 'INPUT' && (tipo === 'text' || tipo === 'search'));
     const t = vazio ? (digitavel ? '' : '—') : String(v);
     // O ALVO PADRÃO É O TEXTO. `data-hef-alvo` desvia para um atributo quando a
     // tela precisa de outra coisa — a largura de uma barra, o `value` de um

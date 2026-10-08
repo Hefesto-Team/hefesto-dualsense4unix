@@ -230,3 +230,92 @@ def test_o_nada_escolhido_na_tabela_ja_vale_no_jogo() -> None:
     vale = _vale().button_actions or {}
     assert vale.get(botao) == acoes.TOKEN_NADA
     assert vale.get(vizinho) == tokens[1]
+
+
+_PAGINA_DAS_TECLAS = """<html><body>
+<div id="teclas-do-teclado">
+  <input type="text" class="tecla" data-campo="tecla-l1" data-hef-alvo="valor"
+         data-gesto="tecla-escrita" placeholder="não digita nada">
+  <input type="text" class="tecla" data-campo="tecla-r1" data-hef-alvo="valor"
+         data-gesto="tecla-escrita" placeholder="não digita nada">
+</div>
+<span data-campo="so-leitura"></span>
+</body></html>"""
+
+_ROTEIRO_DAS_TECLAS = """
+(function(){
+  window.__hef.pintar({mesa: {'tecla-l1': 'F6', 'tecla-r1': '', 'so-leitura': ''}});
+  const q = function(c){ return document.querySelector('[data-campo="' + c + '"]'); };
+  return JSON.stringify({l1: q('tecla-l1').value, r1: q('tecla-r1').value,
+                         leitura: q('so-leitura').textContent});
+})()
+"""
+
+
+def _o_piloto_pinta_as_teclas() -> dict[str, str]:
+    """Instala o BOOTSTRAP do piloto (lido do fonte) num WebKit offscreen e pinta."""
+    import json
+    import re
+
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text(
+        encoding="utf-8")
+    achou = re.search(r'^BOOTSTRAP = r"""(.*?)"""$', fonte, re.S | re.M)
+    assert achou, "o piloto perdeu o BOOTSTRAP"
+    saiu: list[str] = []
+    janela = Gtk.OffscreenWindow()
+    view = WebKit2.WebView()
+    janela.add(view)
+    janela.show_all()
+
+    def leu(v: Any, res: Any) -> None:
+        try:
+            saiu.append(v.evaluate_javascript_finish(res).to_string())
+        except Exception as e:
+            saiu.append(f"ERRO {e}")
+        Gtk.main_quit()
+
+    def instalou(v: Any, res: Any) -> None:
+        try:
+            v.evaluate_javascript_finish(res)
+        except Exception as e:
+            saiu.append(f"ERRO no bootstrap: {e}")
+            Gtk.main_quit()
+            return
+        v.evaluate_javascript(_ROTEIRO_DAS_TECLAS, -1, None, None, None, leu)
+
+    def carregou(v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            v.evaluate_javascript(achou.group(1), -1, None, None, None, instalou)
+
+    view.connect("load-changed", carregou)
+    view.load_html(_PAGINA_DAS_TECLAS, "file:///")
+    guarda = GLib.timeout_add(20000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert saiu and not saiu[0].startswith("ERRO"), saiu
+    return dict(json.loads(saiu[0]))
+
+
+def test_o_campo_da_tecla_que_nao_digita_nada_chega_vazio_ao_guardar() -> None:
+    """O piloto não escreve o travessão num campo de digitar; o «Guardar» recebe vazio.
+
+    Com o ``—`` no campo do botão que não digita nada, o «Guardar» das teclas
+    recusa a tela inteira, e apagar uma tecla não chega ao disco. A MORDIDA:
+    devolva o ``digitavel`` do ``escrever()`` do piloto a só ``data-hef-vivo`` e
+    o R1 volta com ``—``.
+    """
+    pintado = _o_piloto_pinta_as_teclas()
+    assert pintado["l1"] == "F6", pintado
+    assert pintado["r1"] == "", f"o campo de digitar recebeu {pintado['r1']!r}"
+    assert pintado["leitura"] == "—", (
+        f"o lugar de leitura perdeu o travessão da ausência: {pintado['leitura']!r}")
