@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -124,6 +125,13 @@ def test_com_a_chave_ligada_o_resumo_tambem_le_so_a_corrida_dele(tmp_path: Path)
     raiz, saida = tmp_path / "arvore", tmp_path / "saida"
     _arvore(raiz, reprova="test_a04.py")
     _deixar_corrida_velha(saida, range(4, 8))
+    # o log velho de uma parte QUE ESTA DIVISÃO RODA, com um nome que esta corrida não reescreve
+    # (o arquivo do WebKit de então mudou de parte): o pai junta os `parte-NN-*.log` dos filhos
+    # por glob, e só o que é mais novo que o começo da corrida é deles
+    velho_de_dentro = saida / "parte-01-test_de_webkit.log"
+    velho_de_dentro.write_text(VELHO, encoding="utf-8")
+    uma_hora_antes = time.time() - 3600
+    os.utime(velho_de_dentro, (uma_hora_antes, uma_hora_antes))
     feito = _rodar(
         raiz, saida, PARTES="4", PARTES_EM_PARALELO="2", VEZ_DO_PYTEST="nenhum"
     )
@@ -133,6 +141,7 @@ def test_com_a_chave_ligada_o_resumo_tambem_le_so_a_corrida_dele(tmp_path: Path)
     assert [x for x in falhas if x] == ["FAILED tests/unit/test_a04.py::test_cai"]
     assert "test_de_outra_corrida" not in feito.stdout
     assert (saida / "parte-05.log").read_text(encoding="utf-8") == VELHO
+    assert velho_de_dentro.read_text(encoding="utf-8") == VELHO
 
 
 def test_pedir_uma_parte_que_a_divisao_nao_tem_e_erro_e_nao_verde(tmp_path: Path) -> None:
@@ -140,5 +149,7 @@ def test_pedir_uma_parte_que_a_divisao_nao_tem_e_erro_e_nao_verde(tmp_path: Path
     _arvore(raiz)
     _deixar_corrida_velha(saida, range(5, 6))
     feito = _rodar(raiz, saida, "05", PARTES="3")
-    assert feito.returncode != 0, feito.stdout
-    assert "05" in feito.stdout, feito.stdout
+    assert feito.returncode == 2, feito.stdout
+    assert "a parte «05» não existe nesta divisão (00 a 02)" in feito.stdout, feito.stdout
+    # o `parte-05` velho não rodou: o log dele é o de antes
+    assert (saida / "parte-05.log").read_text(encoding="utf-8") == VELHO
