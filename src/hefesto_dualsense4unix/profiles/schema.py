@@ -2253,6 +2253,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`nenhum` = a inclinação não move analógico nenhum. Ligada sem o gesto "
         "dela, o personagem andaria sozinho com o controle torto na mão.",
     ),
+    "ProfileMovimentoConfig.mesmo_parado": Nascimento(
+        E_CONTRATO,
+        "`False` = a inclinação pausa com o controle largado na mesa "
+        "(D-2909-O-CONTROLE-PARADO-NAO-INCLINA). Nascer ligado faria o analógico "
+        "seguir o controle torto parado, o defeito que a pausa cura.",
+    ),
 }
 
 
