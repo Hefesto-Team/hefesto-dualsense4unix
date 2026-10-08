@@ -448,7 +448,7 @@ def test_sem_leitura_do_sinal_a_ponte_nao_pausa() -> None:
 
 
 def test_a_pausa_pelo_sinal_nao_entra_na_conta_da_fila_do_adaptador() -> None:
-    """``cedendo`` é o que a ponte lê; a fila do governador só vê o que ELA mandou ceder."""
+    """``cedendo`` é o que a ponte lê; a fila do governador só vê o que ela mesma mandou ceder."""
     mesa = _Controles()
     mesa.sinal[12] = -60
     mesa.um_segundo()

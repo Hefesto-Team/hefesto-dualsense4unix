@@ -800,7 +800,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     não conhece.
 
     **NOTA DE 08/10/2026 (O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01):** a
-    cor que ELA declarou (`controles.cor`) é a palavra dela, não uma medida do
+    cor que o usuário declarou (`controles.cor`) é a palavra dele, não uma medida do
     Hefesto: o cartão a mostra na borda, com a família dos botões que ela
     declarou, e sem declaração nada se desenha. Quem lê é
     `a08_conexoes.marcas_do_externo`, o mesmo dono dos dois cartões.

@@ -171,7 +171,7 @@ def test_o_cartao_e_a_mesa_leem_a_mesma_fonte(monkeypatch: pytest.MonkeyPatch) -
     assert ela["cor_nome"] == item["nome"]
 
 
-# O ITEM 3, DECIDIDO PELO PADRÃO DELA (08/10/2026): a família declarada vale também para o
+# O ITEM 3, DECIDIDO PELO PADRÃO DE PRODUTO (08/10/2026): a família declarada vale também para o
 # DualSense. Razão: a interface é soberana (o que ela declara é o que a tela mostra),
 # `controles.botoes` é «só o desenho da tela», o PS continua no logo, e é o mais reversível.
 

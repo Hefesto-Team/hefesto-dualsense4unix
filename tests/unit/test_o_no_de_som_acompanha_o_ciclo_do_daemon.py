@@ -1,6 +1,6 @@
 """O-NO-DE-SOM-ACOMPANHA-O-CICLO-DO-DAEMON-01 — o servidor de som é a verdade, a memória é cache.
 
-O QUE SE VIU (rodadas do engasgo de 06/10/2026, com o daemon dela no ar):
+O QUE SE VIU (rodadas do engasgo de 06/10/2026, com o daemon do usuário no ar):
 um `stop`/`start` deixou os alto-falantes «Controle N» duplicados, e com os nós
 tirados por `pactl unload-module` o subsistema seguiu com o módulo velho na
 memória (o vigia acusou `laco_voltou parado_s=330.8`).

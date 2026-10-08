@@ -168,7 +168,7 @@ def test_o_flag_da_fila_nao_fica_na_vaga_longe() -> None:
 
     O flag existe para a fila do adaptador; numa vaga longe ele a deixaria na conta da vez
     (as vizinhas cedendo por uma ponte muda) e, quando o sinal voltasse, cedendo por uma fila
-    que não é dela. Na capacidade 24 a A é escolhida pelo rodízio quase toda janela.
+    que não é do usuário. Na capacidade 24 a A é escolhida pelo rodízio quase toda janela.
 
     MORDIDA: tirar JUNTOS o `vaga.cedendo = False` de `_o_sinal_protege_o_botao` e o
     `not v.longe` da conta da vez em `_a_vez`. MEDIDO em 08/10/2026: cada um sozinho deixa esta
