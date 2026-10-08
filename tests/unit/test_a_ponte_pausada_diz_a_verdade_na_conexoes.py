@@ -251,6 +251,8 @@ def test_a_ponte_que_cede_deixa_a_caixa_vazia_pelo_sinal_ou_pela_fila(campo: str
     """Pausada pelo sinal e cedendo pela fila são dois motivos, e os dois esvaziam a caixa.
 
     MORDIDA: `_hz_da_ponte` sem o `ponte_pausada` (o sinal) ou sem o `ponte_cedendo` (a fila).
+
+    Decisão: D-0810-A-CAIXA-DA-PONTE-SEGURA-VAZIA.
     """
     cena = _cena({"a": {"hz_ponte": 93.0, campo: True}, "b": {"hz_ponte": 93.0}})
     assert a08.campos_da_secao(cena)["hz-ponte"] == ["", "93 Hz"]
@@ -264,6 +266,8 @@ def test_o_rodizio_da_fila_nao_faz_a_caixa_piscar(monkeypatch: pytest.MonkeyPatc
     esvazia na hora; o número só volta depois de `SEGURA_O_NIVEL_S` sem ceder.
 
     MORDIDA: `campos_da_secao` voltando a chamar `_hz_da_ponte` com `segurar` (sem a espera).
+
+    Decisão: D-0810-A-CAIXA-DA-PONTE-SEGURA-VAZIA.
     """
     relogio = [1000.0]
     monkeypatch.setattr(a08, "_RELOGIO_DO_NIVEL", lambda: relogio[0])
@@ -423,6 +427,8 @@ def test_o_cartao_do_equilibrar_diz_sinal_fraco_com_os_dois_numeros() -> None:
 
     MORDIDA: `dica_do_movimento` sem o ramo `pelo_sinal`, ou `_o_movimento_da_central` sem passar
     a marca: o cartão volta a falar em «dividido» para um controle que só está longe.
+
+    Decisão: D-0810-O-SINAL-FRACO-SE-DIZ-PELO-CONTROLE.
     """
     proposta = {"controle": "ap", "destino": "L2", "pelo_sinal": True,
                 "sinal_aqui": -78, "sinal_la": -52}

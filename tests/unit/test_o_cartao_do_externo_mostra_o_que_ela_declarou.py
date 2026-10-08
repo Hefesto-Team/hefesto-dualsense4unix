@@ -178,6 +178,10 @@ def test_o_cartao_e_a_mesa_leem_a_mesma_fonte(monkeypatch: pytest.MonkeyPatch) -
 
 def test_a_familia_declarada_vale_tambem_para_o_dualsense(
         monkeypatch: pytest.MonkeyPatch) -> None:
+    """Letras Nintendo declaradas num DualSense desenham as letras; o logo segue PS.
+
+    Decisão: D-0810-A-FAMILIA-DECLARADA-VALE-PARA-O-DUALSENSE.
+    """
     from hefesto_dualsense4unix.interface import mesa_viva
 
     _ela(monkeypatch, botoes="nintendo")
@@ -250,6 +254,8 @@ def test_a_lista_da_chave_nao_se_chama_modo(monkeypatch: pytest.MonkeyPatch) -> 
     """Na casa, «Modo» é como o controle chega ao jogo; a chave física do externo é outra coisa.
 
     MORDIDA: o rótulo da primeira opção voltando a «Modo».
+
+    Decisão: D-0810-A-LISTA-DA-CHAVE-SE-CHAMA-CHAVE.
     """
     _ela(monkeypatch)
     lista = _lista(conexoes._html_dos_externos(_ctx(_externo())), "externo-modo")
