@@ -653,3 +653,25 @@ def test_o_documento_renomeado_guarda_o_historico_de_antes_do_nome_novo(
     novo = (repo / "docs" / "protocol" / "novo.md").read_text(encoding="utf-8")
     assert f"`{END}:23-24`" in novo, (novo, a_mao)
     assert not any("novo.md" in f for f in a_mao), a_mao
+
+
+def test_a_linha_curta_demais_nao_identifica_o_citado(repo: Path) -> None:
+    """Um `)` sozinho é único no arquivo de mentira, mas não diz o que foi citado: vai à mão."""
+    curto = _escrever_e_commitar(
+        repo, "src/hefesto_dualsense4unix/curto.py", "X = dict(\n    a=1,\n)\n", "o curto nasce"
+    )
+    md = _escrever_e_commitar(
+        repo,
+        "docs/protocol/curta.md",
+        "# Curta\n\nO fecho, `src/hefesto_dualsense4unix/curto.py:3`.\n",
+        "a crua nasce",
+    )
+    curto.write_text("A = 1\nB = 2\n" + curto.read_text(encoding="utf-8"), encoding="utf-8")
+    _git(repo, "commit", "-q", "-am", "o curto anda")
+    antes = md.read_text(encoding="utf-8")
+
+    feitos, a_mao = _rodar(repo)
+
+    assert any("curta.md" in f and "curta demais" in f for f in a_mao), a_mao
+    assert not any("curta.md" in f for f in feitos), feitos
+    assert md.read_text(encoding="utf-8") == antes
