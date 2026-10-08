@@ -668,7 +668,7 @@ def conferir(
 
     ``{"jogos": [{appid, estado, vdf}], "defeitos": [mesmos, só os defeitos]}``.
     Um jogo da tabela que não está no vdf da conta logada não entra (a conta não o
-    tem). A opção que não está lá nem foi escrita pelo Hefesto é ``novo``: o
+    tem). A opção que não está lá nem foi escrita pelo Hefesto nesta conta é ``novo``: o
     ``aplicar`` ainda vai pô-la, não é defeito. É defeito: a releitura do
     ``aplicar`` a desmentiu (``desfeito_na_escrita``), ela foi escrita e conferida
     e sumiu depois (``desfeito``), ou mora só num bloco filho (``fora_do_lugar``).
@@ -706,8 +706,11 @@ def conferir(
                     estado = FORA_DO_LUGAR
                 else:
                     anotado = registro.get(appid, {})
+                    # o registro é da conta em que o `aplicar` escreveu: noutra conta
+                    # (a Steam trocou de usuário) a opção nunca foi escrita, é `novo`
                     escrito = anotado.get("valor") == linha_desejada(
-                        opcoes, com_atalho=appid not in sem_atalho)
+                        opcoes, com_atalho=appid not in sem_atalho
+                    ) and anotado.get("conta") == _conta_do_vdf(str(vdf))
                     if escrito and anotado.get("resultado") == ESCRITO_E_DESFEITO:
                         estado = DESFEITO_NA_ESCRITA
                     elif escrito and anotado.get("resultado") == ESCRITO_E_CONFERIDO:

@@ -2814,7 +2814,9 @@ print("erros=" + str(len(d.get("erros") or [])))
 # desfaz a escrita sem aviso: sem este check, a opção some e o doctor dá [ OK ].
 # A pergunta é do `conferir` do dono da tabela (só lê; roda com a Steam aberta); o texto
 # de cada defeito também é dele, e aqui só se nomeia o jogo. Tabela vazia, ou nenhum jogo
-# dela na conta logada: nada a dizer.
+# dela na conta logada: nada a dizer. O grau é [WARN], como a sprint pede: o guard repõe a
+# opção sozinho quando a Steam fecha, e o código de saída do doctor (`FAILS`) não reprova a
+# saúde do Hefesto por uma linha que a Steam reescreveu e que ele mesmo vai repor.
 check_opcoes_por_jogo() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py"
     if [[ ! -f "${py}" ]] || ! command -v python3 >/dev/null 2>&1; then
@@ -2830,8 +2832,12 @@ sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
 d = json.load(sys.stdin)
 from hefesto_dualsense4unix.integrations.opcoes_por_jogo import AVISO_DO_DEFEITO
 print("jogos=" + str(len(d.get("jogos") or [])))
+vistos = set()
 for x in d.get("defeitos") or []:
-    print("defeito=%s|%s|%s" % (x["estado"], x["appid"], AVISO_DO_DEFEITO.get(x["estado"], "")))
+    linha = "defeito=%s|%s|%s" % (x["estado"], x["appid"], AVISO_DO_DEFEITO.get(x["estado"], ""))
+    if linha not in vistos:
+        vistos.add(linha)
+        print(linha)
 ' 2>/dev/null)"
     [[ -z "${resumo}" ]] && return
     local jogos defeitos
@@ -2839,7 +2845,7 @@ for x in d.get("defeitos") or []:
     defeitos="$(sed -n 's/^defeito=//p' <<<"${resumo}")"
     if [[ -z "${defeitos}" ]]; then
         if [[ "${jogos}" != "0" ]]; then
-            pass "as opções por jogo que ela declarou estão onde a Steam as lê"
+            pass "as opções por jogo declaradas no Hefesto estão onde a Steam as lê"
         fi
         return 0
     fi
@@ -2848,12 +2854,7 @@ for x in d.get("defeitos") or []:
         [[ -z "${estado}" ]] && continue
         nome="a conta da Steam"
         [[ "${appid}" =~ ^[0-9]+$ ]] && nome="$(_rotulo_do_appid "${appid}")"
-        case "${estado}" in
-            desfeito|desfeito_na_escrita)
-                fail "contrato steam-localconfig quebrou (confira: python3 ${py} --conferir): opção por jogo de ${nome}: ${aviso}" ;;
-            *)
-                warn "opção por jogo de ${nome}: ${aviso}" ;;
-        esac
+        warn "contrato steam-localconfig: opção por jogo de ${nome}: ${aviso} (confira: python3 ${py} --conferir)"
     done <<<"${defeitos}"
     return 0
 }

@@ -214,6 +214,67 @@ def test_o_cli_conferir_imprime_o_json_e_sai_0(
     assert [d["estado"] for d in dito["defeitos"]] == [opj.DESFEITO_DEPOIS]
 
 
+def _loginusers(raiz: Path, logada: str) -> None:
+    """O `loginusers.vdf` com as contas 111 e 222, a `logada` marcada `MostRecent`."""
+    base = opj._BASE_DO_STEAMID64
+    blocos = "".join(
+        f'\t"{base + int(c)}"\n\t{{\n\t\t"AccountName"\t\t"c{c}"\n'
+        + ('\t\t"MostRecent"\t\t"1"\n' if c == logada else "")
+        + '\t\t"Timestamp"\t\t"1700000000"\n\t}\n'
+        for c in ("111", "222")
+    )
+    (raiz / "config").mkdir(exist_ok=True)
+    (raiz / "config" / "loginusers.vdf").write_text(
+        '"users"\n{\n' + blocos + "}\n", encoding="utf-8")
+
+
+def test_a_conta_que_a_steam_trocou_nao_herda_o_registro_da_outra(tmp_path: Path) -> None:
+    """O registro é da conta em que o `aplicar` escreveu.
+
+    A Steam passa a abrir a conta 222, onde o Hefesto nunca escreveu: a opção ali é `novo`,
+    não `desfeito`. ARRANQUE a comparação da conta no `conferir` e este teste reprova: o
+    doctor acusaria «a Steam desfez» uma opção que nunca esteve naquela conta.
+    """
+    raiz = tmp_path / ".steam/steam"
+    vdfs = []
+    for conta in ("111", "222"):
+        v = raiz / "userdata" / conta / "config" / "localconfig.vdf"
+        v.parent.mkdir(parents=True)
+        v.write_text(_vdf("algo velho %command%"), encoding="utf-8")
+        vdfs.append(v)
+    config, estado = tmp_path / "config", tmp_path / "state"
+    opj.gravar({APPID: OPCOES}, config_home=config)
+    _loginusers(raiz, "111")
+    assert opj.aplicar(vdfs=vdfs, config_home=config, estado_home=estado)["status"] == (
+        opj.APLICADO)
+    assert opj.ler_registro(estado)[APPID]["conta"] == "111"
+
+    _loginusers(raiz, "222")
+    conferido = opj.conferir(vdfs=vdfs, config_home=config, estado_home=estado)
+
+    assert [(j["estado"], Path(j["vdf"]).parts[-3]) for j in conferido["jogos"]] == [
+        (opj.NOVO, "222")]
+    assert conferido["defeitos"] == []
+
+
+def test_o_json_continua_sendo_a_tabela(
+        lar: Lar, capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O `ensaio-do-engasgo.sh` lê a TABELA pelo `--json` (`opcao_de`): o relato e o
+    `--conferir` não tomam o lugar dela. TROQUE o `--json` pelo `conferir` e este teste reprova.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(lar.config))
+    monkeypatch.setenv("XDG_STATE_HOME", str(lar.estado))
+    lar.steam_escreve(_vdf("algo velho %command%"))
+    lar.aplicar()
+
+    assert opj.main(["--json"]) == 0
+
+    assert json.loads(capsys.readouterr().out) == {APPID: OPCOES}
+    ensaio = (RAIZ / "scripts/ensaio-do-engasgo.sh").read_text(encoding="utf-8")
+    assert '"$DONO" --json' in ensaio
+
+
 # --- o contrato steam-localconfig -------------------------------------------------------
 
 
@@ -264,7 +325,7 @@ def test_o_censo_declara_que_o_doctor_ve_a_conta_da_steam() -> None:
 # --- o doctor.sh --------------------------------------------------------------------------
 
 
-def _roda_o_check(lar: Lar) -> str:
+def _roda_o_check(lar: Lar, raiz_do_codigo: Path = RAIZ) -> str:
     texto = (RAIZ / "scripts/doctor.sh").read_text(encoding="utf-8")
     funcoes = ""
     for nome in ("check_opcoes_por_jogo", "_rotulo_do_appid"):
@@ -276,7 +337,7 @@ def _roda_o_check(lar: Lar) -> str:
         "fail() { printf '[FAIL] %s\\n' \"$*\"; }\n"
         "warn() { printf '[WARN] %s\\n' \"$*\"; }\n"
         "info() { :; }\n"
-        f'ROOT_DIR="{RAIZ}"\n{funcoes}check_opcoes_por_jogo\n'
+        f'ROOT_DIR="{raiz_do_codigo}"\n{funcoes}check_opcoes_por_jogo\n'
     )
     r = subprocess.run(
         ["bash", "-c", prelude], capture_output=True, text=True, timeout=60, check=False,
@@ -297,8 +358,10 @@ def test_o_doctor_sh_nomeia_o_jogo_que_perdeu_a_opcao(lar: Lar) -> None:
 
     saida = _roda_o_check(lar)
 
-    assert "[FAIL]" in saida and "steam-localconfig" in saida, saida
-    assert APPID in saida, saida
+    # [WARN], como a sprint pede («viram aviso com o que fazer»): o guard repõe sozinho, e o
+    # código de saída do doctor não reprova o Hefesto pela linha que a Steam reescreveu
+    assert "[WARN]" in saida and "[FAIL]" not in saida, saida
+    assert "steam-localconfig" in saida and APPID in saida and "--conferir" in saida, saida
 
 
 def test_o_doctor_sh_da_ok_com_a_opcao_no_lugar(lar: Lar) -> None:
@@ -313,6 +376,35 @@ def test_o_doctor_sh_fica_calado_com_a_tabela_vazia(lar: Lar) -> None:
     lar.steam_escreve(_vdf("algo velho %command%"))
 
     assert _roda_o_check(lar).strip() == ""
+
+
+def test_o_doctor_sh_repete_o_conferir_e_nao_reabre_o_vdf(lar: Lar, tmp_path: Path) -> None:
+    """O doctor só repete a resposta do dono: com um `--conferir` dublê, o aviso é o do dublê.
+
+    O vdf do lar diz que a opção está no lugar (o `aplicar` acabou de pô-la); o dublê responde
+    `fora_do_lugar` duas vezes, e o doctor diz `fora_do_lugar` uma vez. COPIE a regra para o
+    `doctor.sh` (reler o vdf) e este teste reprova: ele daria `[ OK ]`.
+    """
+    lar.steam_escreve(_vdf("algo velho %command%"))
+    lar.aplicar()
+    pacote = tmp_path / "duble" / "src" / "hefesto_dualsense4unix" / "integrations"
+    pacote.mkdir(parents=True)
+    for init in (pacote.parent / "__init__.py", pacote / "__init__.py"):
+        init.write_text("", encoding="utf-8")
+    defeito = {"appid": APPID, "estado": opj.FORA_DO_LUGAR, "vdf": str(lar.vdf)}
+    resposta = {"jogos": [defeito], "defeitos": [defeito, defeito]}
+    (pacote / "opcoes_por_jogo.py").write_text(
+        "import json\n"
+        "AVISO_DO_DEFEITO = {'fora_do_lugar': 'resposta do duble'}\n"
+        "if __name__ == '__main__':\n"
+        f"    print(json.dumps({resposta!r}))\n",
+        encoding="utf-8",
+    )
+
+    saida = _roda_o_check(lar, raiz_do_codigo=tmp_path / "duble")
+
+    assert "[ OK ]" not in saida, saida
+    assert saida.count("[WARN]") == 1 and "resposta do duble" in saida, saida
 
 
 def test_o_doctor_sh_chama_o_check_na_cadeia() -> None:
