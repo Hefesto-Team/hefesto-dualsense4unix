@@ -170,8 +170,11 @@ def test_o_flag_da_fila_nao_fica_na_vaga_longe() -> None:
     (as vizinhas cedendo por uma ponte muda) e, quando o sinal voltasse, cedendo por uma fila
     que não é dela. Na capacidade 24 a A é escolhida pelo rodízio quase toda janela.
 
-    MORDIDA: tirar o `vaga.cedendo = False` de `_o_sinal_protege_o_botao`, ou o `not vaga.longe`
-    do `_conceder`/`_a_vez`.
+    MORDIDA: tirar JUNTOS o `vaga.cedendo = False` de `_o_sinal_protege_o_botao` e o
+    `not v.longe` da conta da vez em `_a_vez`. MEDIDO em 08/10/2026: cada um sozinho deixa esta
+    régua verde, porque um cobre o outro (o flag zerado tira a vaga longe da conta; a conta sem
+    a longe não lhe devolve o flag), e o `not vaga.longe` do ramo `inteiro` não tem régua que o
+    arranque sozinho. O do `_conceder` morde na régua seguinte.
     """
     bancada = _Bancada((CONTROLE_1, CONTROLE_2, CONTROLE_3), 24)
     a = bancada.vagas[CONTROLE_1]
