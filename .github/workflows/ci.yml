@@ -503,7 +503,7 @@ jobs:
         run: bash scripts/banco_de_prova/sonda.sh
       - name: Sobe o que a sonda mediu
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: banco-de-prova-sonda
           path: sonda-saida/
@@ -917,7 +917,7 @@ jobs:
           done
       - name: Os logs da suíte
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: suite-gtk-real
           path: /tmp/suite-ci/*.log
@@ -1077,7 +1077,7 @@ jobs:
           echo "smoke limpo: sem AssertionError ou Traceback em $LOG"
       - name: Upload smoke log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hefesto-dualsense4unix-smoke-${{ matrix.transport }}-${{ matrix.desktop_env }}.log
           path: /tmp/hefesto_dualsense4unix_smoke_${{ matrix.transport }}.log
@@ -1106,7 +1106,7 @@ jobs:
         run: bash scripts/i18n_compile.sh
       - name: Build wheel
         run: python -m build --wheel
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: hefesto-dualsense4unix-wheel
           path: dist/*.whl
@@ -1301,7 +1301,7 @@ jobs:
         run: bash scripts/ci/instalar_como_usuaria.sh --so-dkms
       - name: Upload do log do install
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: install-como-usuaria-${{ matrix.distro }}.log
           path: /tmp/install-como-usuaria.log
