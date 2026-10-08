@@ -125,8 +125,8 @@ _APPID = re.compile(r"^[0-9]{1,10}$")
 
 #: O contrato que o relato nomeia quando o vdf não guarda o que o dono escreveu.
 CONTRATO_DA_LINHA = (
-    "a Steam lê a opção de cada jogo na LaunchOptions filha direta de "
-    "Software/Valve/Steam/apps/<appid>, no localconfig.vdf da conta logada"
+    "contrato:steam-localconfig — a Steam lê a opção de cada jogo na LaunchOptions "
+    "filha direta de Software/Valve/Steam/apps/<appid>, no localconfig.vdf da conta logada"
 )
 
 #: SteamID64 = esta base + o número da pasta ``userdata/<conta>``.
