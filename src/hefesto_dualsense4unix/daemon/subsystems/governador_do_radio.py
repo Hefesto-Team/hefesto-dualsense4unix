@@ -338,6 +338,10 @@ class Vaga:
     sem_medida: bool = False
     pedida_em: float = 0.0
     escritas: int = 0
+    #: o que a ponte pôs de verdade por segundo, suavizado janela a janela
+    #: (:data:`PESO_DA_JANELA_NA_MEDIA`); ``None`` = sem medida («não sei»). É a taxa que a
+    #: Conexões escreve na caixa da ponte, no lugar do alvo de projeto.
+    hz: float | None = None
     #: cedendo por causa da FILA do adaptador (o déficit do governador). O que a ponte lê é
     #: :attr:`cedendo`, que também vale quando o controle está :attr:`longe`.
     _cedendo_pela_fila: bool = False
@@ -1093,19 +1097,26 @@ class GovernadorDoRadio:
             if ar is None:
                 for vaga in vagas:
                     vaga._vistas = vaga.escritas
+                    vaga.hz = None
                 estado.deficit_medido = False
             return False
         estado.ultimo_ar = ar
         escritas = 0
         com_escrita: list[Vaga] = []
+        janela = float(getattr(ar, "janela_s", 0.0) or 0.0)
         for vaga in vagas:
             desta = vaga.escritas - vaga._vistas
             vaga._vistas = vaga.escritas
             escritas += desta
             if desta > 0:
                 com_escrita.append(vaga)
+            if janela > 0:
+                taxa = desta / janela
+                vaga.hz = (
+                    taxa if vaga.hz is None
+                    else vaga.hz + PESO_DA_JANELA_NA_MEDIA * (taxa - vaga.hz)
+                )
         saida = getattr(ar, "saida_por_s", None)
-        janela = float(getattr(ar, "janela_s", 0.0) or 0.0)
         if saida is None or janela <= 0:
             estado.deficit_medido = False
             return False
@@ -1393,6 +1404,8 @@ class GovernadorDoRadio:
                             "tipo": v.tipo,
                             "alem_do_limite": v.alem_do_limite,
                             "pausada_pelo_sinal": v.longe,
+                            "cedendo": v.cedendo,
+                            "hz": None if v.hz is None else round(v.hz, 1),
                         }
                         for v in self._vagas
                         if v.adaptador == endereco and v.subiu_em is not None

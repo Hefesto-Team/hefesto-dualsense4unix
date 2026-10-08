@@ -717,6 +717,11 @@ def _a_ordem_na_tela(ordem: Any) -> tuple[str, str]:
     return de, rotulo_do_numero(destino, maquina=dela) or destino
 
 
+def _dbm(valor: object) -> int | None:
+    """O dBm que a central publicou, ou `None`."""
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) else None
+
+
 def _o_movimento_da_central(cena: dict[str, Any] | None) -> Any:
     """A proposta da central (`radio_central.proposta`) como :class:`Movimento`, ou `None`."""
     perfil._com_o_src()
@@ -744,7 +749,9 @@ def _o_movimento_da_central(cena: dict[str, Any] | None) -> Any:
                             if a.get("lugar") == de.get("id") and a.get("tipo") == "controle"),
         bons=bons,
         sufocado=bons is not None
-        and ar_do_adaptador.nivel_dos_canais(bons) == ar_do_adaptador.NIVEL_ENGASGA)
+        and ar_do_adaptador.nivel_dos_canais(bons) == ar_do_adaptador.NIVEL_ENGASGA,
+        pelo_sinal=bool(proposta.get("pelo_sinal")),
+        sinal_aqui=_dbm(proposta.get("sinal_aqui")), sinal_la=_dbm(proposta.get("sinal_la")))
 
 
 def _perto_de(lug: dict[str, Any]) -> str:
@@ -3444,6 +3451,16 @@ def _dica_do_movimento_da_linha(ap: dict[str, Any], cena: dict[str, Any], nivel:
     return (cena.get("dicas") or {}).get(str(ap.get("id"))) or DICA_DO_MOVIMENTO[nivel]
 
 
+def _hz_da_ponte(ap: dict[str, Any]) -> str:
+    """A taxa que a ponte escreve AGORA: vazio quando ela cede (pela fila ou pelo sinal) ou
+    sem medida (o piloto põe o travessão); `HZ_DA_PONTE` é só o alvo de projeto, do desenho."""
+    if "hz_ponte" not in ap:  # o desenho: sem governador, a taxa de projeto
+        return _hz(HZ_DA_PONTE)
+    if ap.get("ponte_pausada") or ap.get("ponte_cedendo"):
+        return ""
+    return _hz(ap.get("hz_ponte"))
+
+
 def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> str:
     aid = _x(ap["id"])
     mic = bool(ap.get("mic"))
@@ -3466,14 +3483,15 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
     for k in ("som", "haptica"):
         ligado = ponte == k
         flex = "1 1 0" if (ponte is None or ligado) else "0 0 34px"
-        hz = f'<span class="hz">{_x(_hz(HZ_DA_PONTE))}</span>' if ligado else ""
+        hz = (f'<span class="hz" data-campo="hz-ponte" data-alvo="{aid}">'
+              f'{_x(_hz_da_ponte(ap)) if com_hz else ""}</span>') if ligado else ""
         passou = " Passou do limite: pode engasgar." if (ligado and alem) else ""
         rotulo = _maiuscula(NOME_DO_CUSTO[k])
         gesto = "custo-som" if k == "som" else "custo-vibracao"
         botoes_da_ponte.append(
             f'<button class="vaga {k}{" alem" if ligado and alem else ""}" '
             f'aria-pressed="{str(ligado).lower()}" aria-label="{rotulo} de {nome}" '
-            f'title="{rotulo}: {round(HZ_DA_PONTE)} por segundo. Pelo BT, som ou '
+            f'title="{rotulo}: até {round(HZ_DA_PONTE)} por segundo. Pelo BT, som ou '
             f'vibração, um por vez.{passou}" style="flex:{flex}" '
             f'data-gesto="{gesto}" data-alvo="{aid}">{_ic(ICONE_DO_CUSTO[k])}{hz}</button>')
     return (
@@ -4023,9 +4041,10 @@ def _molde_do_balao(cena: dict[str, Any]) -> str:
     if ap is None or destino is None or _ocupado(cena):
         return ""
     desenho = _silhueta(ap) if ap.get("tipo") == "controle" else ""
+    pelo_sinal = ' data-pelo-sinal="sim"' if proposta.get("pelo_sinal") else ""
     return (f'<template class="balao-molde" data-controle="{_x(ap["id"])}" '
             f'data-destino="{_x(destino["id"])}"><div class="balao" '
-            f'data-destino="{_x(destino["id"])}">{_ic("lampada")}{desenho}'
+            f'data-destino="{_x(destino["id"])}"{pelo_sinal}>{_ic("lampada")}{desenho}'
             f'<span>{_maiuscula(como_se_chama(ap))} funciona melhor '
             f'n{como_se_chama_o_lugar(destino)}</span>'
             f'<button class="ok" data-gesto="aceitar-sugestao" data-alvo="{_x(ap["id"])}">'
@@ -4746,6 +4765,7 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
         "hz-nivel": niveis,
         "hz-dica": dicas,
         "hz-voz": [_hz(a.get("hz_voz")) for a in com_mic],
+        "hz-ponte": [_hz_da_ponte(a) for a in controles if a.get("ponte") in ("som", "haptica")],
         "espectro-canais": html_dos_canais(cena),
         "radio-ocupado": "sim" if _ocupado(cena) else "",
     }
@@ -5157,12 +5177,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         dono = next((a for a in aparelhos if _so_hex(str(a["id"])) == _so_hex(quem)), None)
         pedido["uniq"] = str(dono["id"]) if dono else quem
     pedindo = _quem_pede_para_parear(central, lugares, aparelhos_bz)
-    proposta = central.get("proposta") if isinstance(central.get("proposta"), dict) else None
-    if proposta:
-        dono = next((a for a in aparelhos
-                     if _so_hex(a["id"]) == _so_hex(str(proposta.get("controle") or ""))), None)
-        proposta = ({"controle": dono["id"], "destino": _mac(proposta.get("destino"))}
-                    if dono else None)
+    proposta = _a_proposta_da_cena(central.get("proposta"), aparelhos)
     lugares = _na_ordem_dela(lugares)
     buscas: dict[str, object] = {
         _mac(m.get("destino")): (str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
@@ -5482,6 +5497,34 @@ def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
         _com_dois_pontos(lugar), _com_dois_pontos(aparelho), quem="tela")
 
 
+def _a_taxa_da_ponte(da_ponte: dict[tuple[str, str], dict[str, Any]], uniq: str,
+                     ponte: object) -> dict[str, Any]:
+    """`hz_ponte` e `ponte_cedendo` da ponte que o controle tem de pé (som ou vibração)."""
+    tipo = {"som": "som", "haptica": "vibracao"}.get(str(ponte), "")
+    publicada = da_ponte.get((_so_hex(uniq), tipo)) if tipo else None
+    if publicada is None:
+        return {"hz_ponte": None, "ponte_cedendo": False}
+    hz = publicada.get("hz")
+    return {"hz_ponte": hz if isinstance(hz, (int, float)) else None,
+            "ponte_cedendo": bool(publicada.get("cedendo"))}
+
+
+def _a_proposta_da_cena(
+    publicada: object, aparelhos: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """`radio_central.proposta` na forma da cena: o controle pelo id da tela e o destino; pelo
+    sinal, também a marca e os dois dBm (o Equilibrar diz «sinal fraco»)."""
+    if not isinstance(publicada, dict) or not publicada:
+        return None
+    dono = next((a for a in aparelhos
+                 if _so_hex(a["id"]) == _so_hex(str(publicada.get("controle") or ""))), None)
+    if dono is None:
+        return None
+    pelo_sinal = ({"pelo_sinal": True, "sinal_aqui": publicada.get("sinal_aqui"),
+                   "sinal_la": publicada.get("sinal_la")} if publicada.get("pelo_sinal") else {})
+    return {"controle": dono["id"], "destino": _mac(publicada.get("destino")), **pelo_sinal}
+
+
 def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, Any],
                        esperando: list[dict[str, Any]], aparelhos_bz: tuple[Any, ...],
                        endereco_do_caminho: dict[str, str],
@@ -5494,6 +5537,9 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     pausada = {_so_hex(str(p.get("uniq") or "")): bool(p.get("pausada_pelo_sinal"))
                for publicado in governador.values()
                for p in _dicionario(publicado).get("pontes") or ()}
+    da_ponte = {(_so_hex(str(p.get("uniq") or "")), str(p.get("tipo") or "")): p
+                for publicado in governador.values()
+                for p in _dicionario(publicado).get("pontes") or ()}
     ordem_da_vaga = {_so_hex(str(p.get("uniq") or "")): i
                      for publicado in governador.values()
                      for i, p in enumerate(_dicionario(publicado).get("pontes") or ())}
@@ -5534,6 +5580,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": True,
             "sinal": c.get("sinal_dbm"),
             "ponte_pausada": pausada.get(_so_hex(uniq), False),
+            **_a_taxa_da_ponte(da_ponte, uniq, ponte),
             "esperando": False, "fixo": False,
         })
         vistos.add(_so_hex(uniq))

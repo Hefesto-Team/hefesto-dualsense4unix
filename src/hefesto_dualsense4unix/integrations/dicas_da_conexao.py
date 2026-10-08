@@ -244,12 +244,22 @@ class Movimento:
     controles_no_de: int
     bons: int | None = None
     sufocado: bool = False
+    #: a proposta veio do sinal do controle (o dBm dele aqui e o que o outro adaptador ouve)
+    pelo_sinal: bool = False
+    sinal_aqui: int | None = None
+    sinal_la: int | None = None
 
 
 def dica_do_movimento(m: Movimento) -> Dica:
-    """«Meio sufocado» (o adaptador sem folga) ou «Esquerda dividido em 4», com o de→para."""
+    """«Meio sufocado», «Esquerda dividido em 4» ou «Esquerda com sinal fraco», com o de→para."""
     quem = f"P{m.jogador}" if m.jogador is not None else m.nome_do_controle
-    if m.sufocado:
+    if m.pelo_sinal:
+        titulo, nivel = f"{m.de_nome} com sinal fraco", AJUSTE
+        porque = (f"O sinal dele está em {m.sinal_aqui} dBm aqui; em {m.para_nome}, "
+                  f"chegaria a {m.sinal_la} dBm."
+                  if m.sinal_aqui is not None and m.sinal_la is not None
+                  else "O sinal dele está fraco aqui e outro adaptador o ouve melhor.")
+    elif m.sufocado:
         titulo, nivel = f"{m.de_nome} sufocado", GRAVE
         porque = (f"Ele usa só {m.bons} dos 79 canais: está colado no Wi-Fi e nos receptores."
                   if m.bons is not None else "Ele tem poucos canais livres para os controles.")

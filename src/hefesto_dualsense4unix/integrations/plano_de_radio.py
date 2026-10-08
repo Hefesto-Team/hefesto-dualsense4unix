@@ -118,6 +118,11 @@ class Redistribuicao:
     pontes_na_origem_depois: int
     pontes_no_destino_depois: int
     n_max: int
+    #: a proposta nasceu do SINAL do controle (e não da contagem de pontes): o dBm dele aqui e o
+    #: que o outro adaptador ouve. A Conexões lê isto para dizer «sinal fraco».
+    pelo_sinal: bool = False
+    sinal_aqui: int | None = None
+    sinal_la: int | None = None
 
     def publicar(self) -> dict[str, Any]:
         """O que viaja no ``state_full`` — só tipos de JSON."""
@@ -129,6 +134,9 @@ class Redistribuicao:
             "pontes_na_origem_depois": self.pontes_na_origem_depois,
             "pontes_no_destino_depois": self.pontes_no_destino_depois,
             "n_max": self.n_max,
+            "pelo_sinal": self.pelo_sinal,
+            "sinal_aqui": self.sinal_aqui,
+            "sinal_la": self.sinal_la,
         }
 
 
@@ -421,6 +429,9 @@ def _ordem_pelo_sinal(lugar: _MelhorLugar) -> Redistribuicao:
         pontes_na_origem_depois=origem.pontes - leva,
         pontes_no_destino_depois=destino.pontes + leva,
         n_max=origem.n_max,
+        pelo_sinal=True,
+        sinal_aqui=lugar.sinal_aqui,
+        sinal_la=lugar.sinal_la,
     )
 
 
