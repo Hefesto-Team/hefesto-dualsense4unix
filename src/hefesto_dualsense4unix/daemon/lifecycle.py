@@ -198,12 +198,13 @@ def _o_lancamento_da_trava_acabou(daemon: Any, inputs: dict[str, Any]) -> bool:
     """O lançamento que armou a trava acabou sem o jogo abrir? Na dúvida, não.
 
     Só é «acabou» quando o marcador lido é o DESTA trava (mesmo appid e mesmo
-    epoch), o marcador já não atesta jogo vivo (saída anotada para o mesmo PID,
-    ou o PID morto) e a varredura não vê processo de jogo com o appid dela. Marcador
-    de outro lançamento, ilegível, ou jogo vivo pela varredura: a trava fica.
+    epoch), o lançamento dele tem fim provado (o PID do wrapper morto, ou a saída
+    anotada para o mesmo PID) e a varredura não vê processo de jogo com o appid
+    dela. Marcador de outro lançamento, sem PID, ilegível, ou jogo vivo pela
+    varredura: a trava fica. A janela de 900 s do `wrapper_game_running` não
+    entra: o marcador velho com o PID vivo e sem saída é o jogo de janela sem
+    classe que ainda roda, não um lançamento que acabou.
     """
-    from hefesto_dualsense4unix.daemon.launch_env import wrapper_game_running
-
     travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
     if not (isinstance(travado, tuple) and len(travado) == 2):
         return False
@@ -211,14 +212,16 @@ def _o_lancamento_da_trava_acabou(daemon: Any, inputs: dict[str, Any]) -> bool:
         marker = inputs.get("marker")
         if marker is None or int(marker[0]) != int(travado[0]) or int(marker[1]) != int(travado[1]):
             return False
-        if wrapper_game_running(
-            marker=marker,
-            exit_marker=inputs.get("exit_marker"),
-            pid_alive=bool(inputs.get("marker_pid_alive")),
-            marker_pid=inputs.get("marker_pid"),
-            exit_pid=inputs.get("exit_pid"),
-            now=float(inputs.get("now") or time.time()),
-        ):
+        marker_pid = inputs.get("marker_pid")
+        if not isinstance(marker_pid, int) or marker_pid <= 0:
+            return False
+        saida = inputs.get("exit_marker")
+        saiu_este = (
+            saida is not None
+            and int(saida) >= int(travado[1])
+            and inputs.get("exit_pid") == marker_pid
+        )
+        if bool(inputs.get("marker_pid_alive")) and not saiu_este:
             return False
         vivo = inputs.get("appid_de_jogo_vivo")
         return not (isinstance(vivo, int) and vivo == int(travado[0]))

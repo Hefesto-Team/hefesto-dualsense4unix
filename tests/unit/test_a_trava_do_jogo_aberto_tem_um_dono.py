@@ -626,3 +626,49 @@ def test_a_borda_game_daemon_mantem_o_motivo_da_autoridade() -> None:
 
     assert d.display_authority == "daemon"
     assert motivos == ["o_jogo_devolveu_a_autoridade"]
+
+
+def test_o_marcador_velho_com_o_pid_vivo_e_sem_saida_segura_a_trava() -> None:
+    """Passada a janela do marcador (900 s), o PID vivo sem saída ainda é dúvida: fica.
+
+    O jogo cuja janela não tem classe roda com a autoridade `daemon`; a janela do marcador
+    vence aos 15 min, e o `wrapper_game_running` passa a dizer «não». Isso não prova que o
+    lançamento acabou: só a saída anotada para o mesmo PID, ou o PID morto, provam. ARRANQUE a
+    pergunta pelo PID e pela saída (voltar a perguntar ao `wrapper_game_running`) e este teste
+    reprova: a trava solta com o jogo aberto, e o pad dele seria recriado debaixo dele.
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import _o_lancamento_da_trava_acabou
+
+    velho = dict(_MARCADOR_DA_TRAVA, marker_pid_alive=True, now=_TRAVA[1] + 3600.0)
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+
+    assert _o_lancamento_da_trava_acabou(d, velho) is False
+    assert _diario_da_soltura(d, "daemon", velho) == []
+    assert d._pad_travado_pelo_lancamento == _TRAVA
+    # O mesmo marcador velho com o PID morto, ou com a saída do mesmo PID: acabou.
+    assert _o_lancamento_da_trava_acabou(d, dict(velho, marker_pid_alive=False)) is True
+    assert _o_lancamento_da_trava_acabou(
+        d, dict(velho, exit_marker=_TRAVA[1] + 5, exit_pid=4321)) is True
+
+
+def test_o_marcador_sem_pid_e_duvida_e_segura_a_trava() -> None:
+    """Marcador sem o PID (o wrapper antigo): não há como saber se acabou → fica."""
+    from hefesto_dualsense4unix.daemon.lifecycle import _o_lancamento_da_trava_acabou
+
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+
+    assert _o_lancamento_da_trava_acabou(d, dict(_MARCADOR_DA_TRAVA, marker_pid=None)) is False
+
+
+def test_a_saida_de_outro_pid_nao_solta_a_trava() -> None:
+    """A saída anotada é de outro processo (o `exec` que falhou de um lançamento velho): fica."""
+    from hefesto_dualsense4unix.daemon.lifecycle import _o_lancamento_da_trava_acabou
+
+    d = _daemon()
+    d._pad_travado_pelo_lancamento = _TRAVA
+    outro = dict(_MARCADOR_DA_TRAVA, marker_pid_alive=True, exit_marker=_TRAVA[1] + 5,
+                 exit_pid=9999)
+
+    assert _o_lancamento_da_trava_acabou(d, outro) is False
