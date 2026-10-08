@@ -258,3 +258,15 @@ def dentro_da_janela() -> bool:
 
 
 haptica_testar = _b.haptica_testar
+
+
+def navegacao_foco(ativa: bool) -> dict[str, Any] | None:
+    """O `navegacao.foco` da Navegação Interna: a resposta do daemon, ou ``None`` se ele não atende.
+
+    Não levanta, ao contrário do `resultado`: a declaração do foco anda a cada leitura, e
+    um daemon mudo já aparece na própria leitura; aqui só não chegam toques novos.
+    """
+    ok, r = _b._safe_call(
+        "navegacao.foco", {"ativa": bool(ativa)}, timeout=teto("navegacao.foco")
+    )
+    return r if ok and isinstance(r, dict) else None

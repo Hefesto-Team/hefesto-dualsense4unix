@@ -917,10 +917,9 @@ def zeros_para_gravar(dono: object) -> dict[str, dict[str, list[float]]]:
 def _vetor(valor: object) -> Vetor | None:
     if not isinstance(valor, (list, tuple)) or len(valor) != 3:
         return None
-    try:
-        x, y, z = (float(v) for v in valor)
-    except (TypeError, ValueError):
+    if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in valor):
         return None
+    x, y, z = (float(v) for v in valor)
     if not all(math.isfinite(v) for v in (x, y, z)):
         return None
     return (x, y, z)

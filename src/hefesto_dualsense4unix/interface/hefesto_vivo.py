@@ -2470,7 +2470,7 @@ class FolgaDoServicoMudo:
 
 def _declarar_o_foco(ativa: bool) -> Any:
     """O `navegacao.foco` do daemon: o pulso e a renovação do prazo."""
-    return ponte.resultado("navegacao.foco", ativa=bool(ativa))
+    return ponte.navegacao_foco(ativa)
 
 
 class LeitorDoEstado:
@@ -2627,10 +2627,7 @@ class LeitorDoEstado:
             return
         with self._trava:
             ativa = self._ativa
-        try:
-            resposta = self._declarar_foco(ativa)
-        except Exception:  # noqa: BLE001 — o daemon mudo já aparece na leitura
-            return
+        resposta = self._declarar_foco(ativa)  # o daemon mudo responde None: sem toques novos
         toques = resposta.get("toques") if isinstance(resposta, dict) else None
         if isinstance(toques, dict):
             with self._trava:
@@ -3897,7 +3894,8 @@ class Piloto:
                 return
             try:
                 leiaute = json.loads(str(valor))
-            except (TypeError, ValueError):
+            except ValueError as e:
+                self.cegueiras.append(f"{pagina}: o leiaute da navegação não veio em JSON — {e}")
                 return
             if not isinstance(leiaute, dict):
                 return

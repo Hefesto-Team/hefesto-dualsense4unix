@@ -701,7 +701,9 @@ async def test_o_ipc_ocupado_e_a_recusa_e_o_parametro_torto_levanta(
     central.fechar()
 
 
-_DEPOIS_DO_RADIO_MOVER = ("mira.set", "haptica.testar", "radio.busca.set", "radio.dispensar")
+_DEPOIS_DO_RADIO_MOVER = (
+    "mira.set", "haptica.testar", "radio.busca.set", "radio.dispensar", "motion.calibrate",
+)
 
 
 def test_radio_mover_e_o_ultimo_metodo_da_tabela() -> None:

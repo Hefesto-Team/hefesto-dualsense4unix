@@ -431,4 +431,4 @@ def calibrar_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         resposta = p.resultado("motion.calibrate", uniq=uniq)
         if not isinstance(resposta, dict) or resposta.get("status") != calibrar.ZERO_MEDINDO:
             raise RuntimeError(
-                "o Hefesto não começou a medida: reinicie o serviço e tente de novo")
+                "a medida não começou: ou o Hefesto parou, ou este controle se desligou")

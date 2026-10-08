@@ -103,7 +103,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `haptica.testar` | `daemon/ipc_handlers.py:6485` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
 | `radio.busca.set` | `daemon/ipc_handlers.py:6517` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
 | `radio.dispensar` | `daemon/ipc_handlers.py:6532` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
-| `motion.calibrate` | `daemon/ipc_handlers.py:6624` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | **não** |
+| `motion.calibrate` | `daemon/ipc_handlers.py:6621` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 

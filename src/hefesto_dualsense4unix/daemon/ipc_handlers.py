@@ -6594,10 +6594,7 @@ class IpcHandlersMixin:
         """`{lx, ly, rx, ry}` do último envio do `pad`, ou `None`."""
         if pad is None:
             return None
-        try:
-            eixos = pad.eixos_no_jogo
-        except Exception:
-            return None
+        eixos = getattr(pad, "eixos_no_jogo", None)
         if not isinstance(eixos, tuple) or len(eixos) != 4:
             return None
         if not all(isinstance(v, int) and not isinstance(v, bool) for v in eixos):
