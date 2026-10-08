@@ -7,6 +7,8 @@ tem: o registro volta ao de antes, e a reanotação que falha não é engolida c
 
 from __future__ import annotations
 
+import os
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -139,3 +141,68 @@ def test_o_docstring_da_carona_nao_chama_o_usuario_de_ela() -> None:
     doc = cpe.EstradasEscritas.__doc__ or ""
     assert "em que ela" not in doc, doc
     assert "onde a carona escreveu" in doc, doc
+
+
+def test_a_pasta_que_recusa_de_verdade_tambem_vai_ao_diario(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem dublê na gravação: a pasta dos `.yml` sem escrita, como o disco a recusa."""
+    if os.geteuid() == 0:  # pragma: no cover - como root o 0555 não recusa nada
+        pytest.skip("como root a pasta sem escrita não recusa")
+    yml = _excluido_com_a_carona_por_fazer(_lar, monkeypatch)
+    disco_antes = yml.read_bytes()
+    registro_antes = _o_registro()
+    pasta = yml.parent
+    modo = pasta.stat().st_mode
+    pasta.chmod(0o555)
+    try:
+        with structlog.testing.capture_logs() as diario:
+            _carona(_lar)
+    finally:
+        pasta.chmod(modo)
+    assert yml.read_bytes() == disco_antes
+    assert _o_registro() == registro_antes, "o registro ficou com o que o disco não tem"
+    linhas = [x for x in diario if x.get("event") == _EVENTO]
+    assert [(x["status"], x["reanotou"], x["arquivos"]) for x in linhas] == [
+        ("PermissionError", "feito", 1)], diario
+
+
+
+def _segunda_copia(yml: Path) -> Path:
+    """A mesma loja, instalada duas vezes no mesmo Lutris: dois `.yml` para um jogo."""
+    outro = yml.with_name("recettear-1759370001.yml")
+    outro.write_bytes(yml.read_bytes())
+    con = sqlite3.connect(yml.parent.parent / "pga.db")
+    with con:
+        con.execute(
+            "INSERT INTO games (name, slug, runner, executable, directory, installed, "
+            "configpath, service, service_id) "
+            "SELECT name, slug || '-2', runner, executable, directory, installed, "
+            "'recettear-1759370001', service, service_id FROM games WHERE slug = 'recettear'")
+    con.close()
+    return outro
+
+
+def test_so_o_yml_que_falhou_conta_e_volta(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Dois `.yml` no mesmo jogo: só o que falhou volta ao de antes e entra na conta."""
+    falha = _lutris_flatpak(_lar)
+    grava = _segunda_copia(falha)
+    _carona(_lar)
+    with monkeypatch.context() as m:
+        m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
+        assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear",
+                            lar=_lar) == "adicionado"
+    antes = {Path(y.arquivo).name: y for y in lx.ler()[0].lutris}
+    assert set(antes) == {falha.name, grava.name}, antes
+    disco_de_quem_grava = grava.read_bytes()
+    with monkeypatch.context() as m:
+        _so_o_yml_falha(m, falha)
+        with structlog.testing.capture_logs() as diario:
+            _carona(_lar)
+    depois = {Path(y.arquivo).name: y for y in lx.ler()[0].lutris}
+    assert depois[falha.name] == antes[falha.name], "o que falhou devia voltar"
+    assert depois[grava.name] != antes[grava.name], "o que gravou devia andar"
+    assert grava.read_bytes() != disco_de_quem_grava, "a carona devia ter gravado o outro"
+    linhas = [x for x in diario if x.get("event") == _EVENTO]
+    assert [(x["status"], x["reanotou"], x["arquivos"]) for x in linhas] == [
+        ("OSError", "feito", 1)], diario
