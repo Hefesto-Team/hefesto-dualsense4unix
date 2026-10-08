@@ -671,7 +671,7 @@ QUEM_JANELA = "janela"
 
 
 class EstradasEscritas(tuple[str, ...]):
-    """O que a carona devolve: os lançadores em que ela escreveu.
+    """O que a carona devolve: os lançadores onde a carona escreveu.
 
     É uma tupla, e quem a lê como sequência (o `list(...)` do diário do serviço)
     não muda. O `sem_a_trava` separa os dois vazios que a tupla sozinha confunde:
@@ -1976,6 +1976,21 @@ def _dizer_que_nao_anotou(status: str, arquivos: int, quem: str) -> None:
             "carona_nao_anotou_o_yml", status=status, arquivos=arquivos, quem=quem)
 
 
+def _dizer_que_nao_gravou(causa: str, reanotou: str, arquivos: int, quem: str) -> None:
+    """O diário: o `.yml` não se gravou depois de o registro anotar, e o registro voltou.
+
+    `status=` é a causa da gravação; `reanotou=` é o que a reanotação do registro de
+    antes respondeu (só `feito` fecha a conta: qualquer outro deixa o registro à frente
+    do disco).
+    """
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+        get_logger(__name__).info(
+            "carona_nao_gravou_o_yml", status=causa, reanotou=reanotou,
+            arquivos=arquivos, quem=quem)
+
+
 def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
                     pasta_do_ambiente: Path | None,
                     quem: str = QUEM_SERVICO) -> list[YmlDoJogo]:
@@ -1985,6 +2000,8 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
     tocado, e a falha vai ao diário. Registro ⊇ disco em todo caminho. O `.yml` que
     não se grava depois devolve o registro ao de antes: o `depois` novo não casaria
     com o disco, e a passada seguinte perderia o `antes` que a volta devolve inteiro.
+    A gravação que falha também vai ao diário (`carona_nao_gravou_o_yml`), com o que a
+    reanotação respondeu.
     """
     lista = list(ymls)
     if not lista:
@@ -2013,12 +2030,14 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
         return []
     gravados: list[YmlDoJogo] = []
     desfeitos: list[YmlDoJogo] = []
+    causa = ""
     for plano in planos:
         if plano.texto is not None:
             try:
                 _escrever_atomico(Path(plano.registro.arquivo), plano.texto)
-            except OSError:
+            except OSError as erro:
                 desfeitos.append(plano.velho)
+                causa = causa or type(erro).__name__
                 continue
             if plano.tirou_o_xalia:
                 _dizer_o_par(Path(plano.registro.arquivo), 0)
@@ -2026,8 +2045,11 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
                 _dizer_o_par(Path(plano.registro.arquivo), 1)
         gravados.append(plano.registro)
     if desfeitos:
-        with contextlib.suppress(Exception):
-            lx.anotar_os_ymls(desfeitos)
+        try:
+            reanotou = lx.anotar_os_ymls(desfeitos)
+        except Exception:
+            reanotou = "excecao"
+        _dizer_que_nao_gravou(causa, reanotou, len(desfeitos), quem)
     return gravados
 
 
