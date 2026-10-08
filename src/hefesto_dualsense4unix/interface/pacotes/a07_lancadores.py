@@ -1153,10 +1153,10 @@ FRASE_DA_LISTA_ILEGIVEL = (
 FRASE_DO_EXCLUIR_SEM_CAUSA = "Não consegui excluir este jogo."
 FRASE_DO_TIRAR_SEM_CAUSA = "Não consegui tirar o jogo da lista de exclusão."
 
-#: Só `"ocupada"` e `"ilegivel"` prometem «nada foi alterado»: a lista volta ANTES
-#: de qualquer escrita. No `"erro"` a Steam, o Heroic ou o Lutris já podem ter
-#: recebido a escrita, e o desfazer não confere o próprio resultado. A frase vai
-#: escrita no `raise`, que é onde a régua `tela-nao-confessa` a lê.
+# Só `"ocupada"` e `"ilegivel"` prometem «nada foi alterado»: a lista volta ANTES
+# de qualquer escrita. No `"erro"` a Steam, o Heroic ou o Lutris já podem ter
+# recebido a escrita, e o desfazer não confere o próprio resultado. A frase vai
+# escrita no `raise`, que é onde a régua `tela-nao-confessa` a lê.
 
 
 @gesto("07-lancadores.html", desenho.CONFIRMAR_EXCLUSAO, grava="adicionar")

@@ -710,13 +710,14 @@ def curar_todas_as_estradas(
                     "carona_esperou_a_janela", espera_s=prazo,
                     quem=QUEM_SERVICO if espera is None else QUEM_JANELA)
             return EstradasEscritas(sem_a_trava=True)
-        return EstradasEscritas(
-            _curar_na_trava(lar, pasta_do_ambiente, raiz_sistema, exclusao))
+        return EstradasEscritas(_curar_na_trava(
+            lar, pasta_do_ambiente, raiz_sistema, exclusao,
+            QUEM_SERVICO if espera is None else QUEM_JANELA))
 
 
 def _curar_na_trava(
     lar: Path | None, pasta_do_ambiente: Path | None, raiz_sistema: Path | None,
-    exclusao: NaExclusao | None,
+    exclusao: NaExclusao | None, quem: str = QUEM_SERVICO,
 ) -> tuple[str, ...]:
     """O corpo de :func:`curar_todas_as_estradas`, com a trava na mão."""
     fora = _a_exclusao() if exclusao is None else exclusao
@@ -745,7 +746,7 @@ def _curar_na_trava(
     for copia in fora.copias:
         with contextlib.suppress(Exception):
             _sem_o_nosso_no_jogo(Path(copia.arquivo), copia.app, pasta_do_ambiente)
-    _manter_os_ymls(fora.ymls, lar, pasta_do_ambiente)
+    _manter_os_ymls(fora.ymls, lar, pasta_do_ambiente, quem)
     return tuple(escritos)
 
 
@@ -1824,8 +1825,56 @@ def tirar_o_nosso_do_jogo_do_lutris(
     return tuple(feitos), "feito" if any(y.pares for y in feitos) else "nada"
 
 
-def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
-    """A carona mantém o `.yml` do excluído cobrindo a caixa de agora."""
+@dataclass(frozen=True)
+class _PlanoDoYml:
+    """O que a carona fará no `.yml` de um excluído: o registro e o texto, ainda sem gravar."""
+
+    registro: YmlDoJogo
+    texto: str | None  # ``None`` = o disco já está assim; só o registro muda
+    tirou_o_xalia: bool = False
+    pos_o_xalia: bool = False
+
+
+def _o_xalia_que_o_registro_nao_conhece(
+        texto: str, ja_nossos: tuple[tuple[str, str], ...]) -> bool:
+    """O `.yml` tem par do Xalia que o registro da volta não anotou?"""
+    yaml = _yaml()
+    if yaml is None:
+        return False
+    try:
+        raiz = yaml.safe_load(texto)
+    except yaml.YAMLError:
+        return False
+    sistema = raiz.get("system") if isinstance(raiz, dict) else None
+    env = sistema.get("env") if isinstance(sistema, dict) else None
+    if not isinstance(env, dict):
+        return False
+    nossos = {k for k, _ in ja_nossos}
+    return any(k in env and k not in nossos for k in _PAR_DO_XALIA)
+
+
+def _o_registro_velho_provado(
+        yml: YmlDoJogo, texto: str, pares: dict[str, str]) -> _PlanoDoYml | None:
+    """Registro que ficou sem os pares do Xalia, curado só com prova byte a byte.
+
+    O texto do disco é exatamente o que a carona escreveria sobre o `antes` do
+    registro com os pares de agora (mesmo `sha`): o par é nosso, e o registro é
+    reanotado. Qualquer diferença deixa o par como dela, e a volta não o toca.
+    """
+    if yml.antes is None:
+        return None
+    mantidos = {k: v for k, v in yml.pares if k not in _PAR_DO_XALIA}
+    esperado = _com_o_nosso_no_yml(yml.antes, {**mantidos, **pares})
+    if esperado is None:
+        return None
+    texto_esperado, postos, moldura = esperado
+    if _sha(texto_esperado) != _sha(texto):
+        return None
+    return _PlanoDoYml(YmlDoJogo(yml.arquivo, yml.antes, _sha(texto), postos, moldura), None)
+
+
+def _planejar_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> _PlanoDoYml | None:
+    """A carona sobre o `.yml` do excluído, sem gravar nada: o texto e o registro novos."""
     alvo = Path(yml.arquivo)
     try:
         texto = alvo.read_text(encoding="utf-8")
@@ -1838,23 +1887,22 @@ def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
     if base is None:
         return None
     ja_nossos = tuple(p for p in yml.pares if p not in velhos)
+    if not velhos and _o_xalia_que_o_registro_nao_conhece(texto, ja_nossos):
+        provado = _o_registro_velho_provado(yml, texto, pares)
+        if provado is not None:
+            return provado
     feito = _com_o_nosso_no_yml(base, pares, yml.moldura, ja_nossos)
     if feito is None:
         return None
     novo, postos, moldura = feito
     if novo == texto:
         return None
-    try:
-        _escrever_atomico(alvo, novo)
-    except OSError:
-        return None
-    if velhos:
-        _dizer_o_par(alvo, 0)
-    if _PAR_DO_XALIA & {k for k, _ in postos}:
-        _dizer_o_par(alvo, 1)
     antes = yml.antes if _sha(texto) == yml.depois or texto == yml.antes else None
     todos = tuple({**dict(ja_nossos), **dict(postos)}.items())
-    return YmlDoJogo(yml.arquivo, antes, _sha(novo), todos, moldura)
+    return _PlanoDoYml(
+        YmlDoJogo(yml.arquivo, antes, _sha(novo), todos, moldura), novo,
+        tirou_o_xalia=bool(velhos),
+        pos_o_xalia=bool(_PAR_DO_XALIA & {k for k, _ in postos}))
 
 
 def _sem_os_pares_no_yml(texto: str, yml: YmlDoJogo) -> str | None:
@@ -1917,28 +1965,61 @@ def devolver_ao_jogo_do_lutris(ymls: Iterable[YmlDoJogo]) -> str:
     return status
 
 
+def _dizer_que_nao_anotou(status: str, arquivos: int, quem: str) -> None:
+    """O diário: a carona não pôde anotar o que ia pôr nos `.yml`, e não os tocou."""
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+        get_logger(__name__).info(
+            "carona_nao_anotou_o_yml", status=status, arquivos=arquivos, quem=quem)
+
+
 def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
-                    pasta_do_ambiente: Path | None) -> list[YmlDoJogo]:
-    """A carona sobre os `.yml` dos excluídos: os registros que mudaram."""
+                    pasta_do_ambiente: Path | None,
+                    quem: str = QUEM_SERVICO) -> list[YmlDoJogo]:
+    """A carona sobre os `.yml` dos excluídos: os registros que mudaram.
+
+    O REGISTRO ANDA ANTES DO ARQUIVO: sem a anotação em `"feito"` nenhum `.yml` é
+    tocado, e a falha vai ao diário. Registro ⊇ disco em todo caminho.
+    """
     lista = list(ymls)
     if not lista:
         return []
     base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
     proton = _pelo_proton_por_yml(lar) if por_jogo else {}
-    mudados: list[YmlDoJogo] = []
+    planos: list[_PlanoDoYml] = []
     for yml in lista:
         with contextlib.suppress(Exception):
             pares = _com_o_padrao_do_jogo(
                 base, por_jogo, pelo_proton=proton.get(yml.arquivo, False))
-            novo = _manter_o_yml(yml, pares)
-            if novo is not None:
-                mudados.append(novo)
-    if mudados:
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
+            plano = _planejar_o_yml(yml, pares)
+            if plano is not None:
+                planos.append(plano)
+    if not planos:
+        return []
+    try:
+        from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 
-            lx.anotar_os_ymls(mudados)
-    return mudados
+        status = lx.anotar_os_ymls([p.registro for p in planos])
+    except Exception:
+        status = "excecao"
+    if status != "feito":
+        if status != "nada":
+            _dizer_que_nao_anotou(status, len(planos), quem)
+        return []
+    gravados: list[YmlDoJogo] = []
+    for plano in planos:
+        if plano.texto is not None:
+            try:
+                _escrever_atomico(Path(plano.registro.arquivo), plano.texto)
+            except OSError:
+                continue
+            if plano.tirou_o_xalia:
+                _dizer_o_par(Path(plano.registro.arquivo), 0)
+            if plano.pos_o_xalia:
+                _dizer_o_par(Path(plano.registro.arquivo), 1)
+        gravados.append(plano.registro)
+    return gravados
 
 
 def _pastas_do_ambiente_padrao(lar: Path) -> list[Path]:
