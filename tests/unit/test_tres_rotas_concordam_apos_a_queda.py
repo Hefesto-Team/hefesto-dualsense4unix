@@ -29,9 +29,11 @@ daemon (poll loop de verdade), não com um estado montado à mão.
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -58,12 +60,7 @@ def _mk_states(n: int, transport: str = "bt") -> list[ControllerState]:
 PRAZO_S = 5.0
 
 
-async def _esperar(
-    condicao: Callable[[], bool],
-    o_que: str,
-    prazo_s: float = PRAZO_S,
-    a_cada_volta: Callable[[], None] | None = None,
-) -> None:
+async def _esperar(condicao: Callable[[], bool], o_que: str, prazo_s: float = PRAZO_S) -> None:
     """Espera a CONDIÇÃO, não o relógio: sob carga o laço de poll chega tarde, e 0,2 s fixos
     desmentiam o teste (6 de 10 corridas com a CPU saturada). Estourou o prazo, a mensagem
     diz o que não aconteceu."""
@@ -71,25 +68,38 @@ async def _esperar(
     while not condicao():
         if time.monotonic() >= limite:
             pytest.fail(f"em {prazo_s:.0f} s não aconteceu: {o_que}")
-        if a_cada_volta is not None:
-            a_cada_volta()
         await asyncio.sleep(0.01)
 
 
-def _desplugar(fc: FakeController) -> None:
-    """O controle sai da mesa e NÃO volta: o `connect()` de quem sonda acha o aparelho ausente.
+class _ControleComTomada(FakeController):
+    """O `FakeController` que sai da tomada: desplugado, o `connect()` falha NA HORA em que roda.
 
     O dublê religava sozinho: o `reconnect_loop` do daemon sonda com `controller.connect()`, e
     o `connect()` do `FakeController` põe `_connected = True` sem aparelho nenhum. Medido sob
     carga (disconnect em 0,113 s, connect em 0,114 s): a queda era desfeita antes de o laço de
-    poll a ver. Um controle de verdade desplugado faz o `connect()` falhar.
+    poll a ver. Trocar o método na instância não basta: a sonda que já tinha pegado o método
+    (ligado ao objeto, na fila do executor) ainda religava DEPOIS da queda publicada, e a
+    `controller.list` respondia conectado (1 em 14 com a CPU saturada). Aqui quem decide é o
+    momento em que o `connect()` RODA, sob a mesma trava do desplugar: um controle de verdade
+    desplugado faz o `connect()` falhar, venha a sonda de quando vier.
     """
 
-    def sem_aparelho() -> None:
-        raise RuntimeError("sem dispositivo: o controle foi desplugado")
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._tomada = threading.Lock()
+        self.plugado = True
 
-    fc.connect = sem_aparelho  # type: ignore[method-assign]
-    fc.disconnect()
+    def connect(self) -> None:
+        with self._tomada:
+            if not self.plugado:
+                raise RuntimeError("sem dispositivo: o controle foi desplugado")
+            super().connect()
+
+    def desplugar(self) -> None:
+        """O controle sai da mesa e NÃO volta."""
+        with self._tomada:
+            self.plugado = False
+            self.disconnect()
 
 
 @pytest.mark.asyncio
@@ -106,7 +116,7 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
 
-    fc = FakeController(transport="bt", states=_mk_states(60, "bt"))
+    fc = _ControleComTomada(transport="bt", states=_mk_states(60, "bt"))
     bus = EventBus()
     store = StateStore()
     daemon = Daemon(
@@ -125,13 +135,10 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
             lambda: store.snapshot().controller is not None,
             "o laço de poll publicar um tique com o controle conectado (store.controller)",
         )
-        _desplugar(fc)
+        fc.desplugar()
         await _esperar(
             lambda: store.snapshot().controller is None and daemon._last_state is None,
             "o laço de poll publicar a queda (store.controller e _last_state vazios)",
-            # um connect() que já estava no ar quando o controle saiu ainda pode religar o
-            # dublê: o controle desplugado segue desplugado até o laço ver
-            a_cada_volta=fc.disconnect,
         )
     except BaseException:
         daemon.stop()
