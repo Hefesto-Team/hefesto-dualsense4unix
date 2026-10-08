@@ -9,6 +9,7 @@ MORDIDAS (cada uma foi feita e viu reprovar):
 
 * tirar a máscara de `_o_que_mudou` -> o endereço inteiro aparece na linha;
 * tirar o cálculo de `_o_que_mudou` -> `mudou` vazio;
+* tirar a descida da seção que nasce ou some inteira -> `mudou=controllers`;
 * arrancar o `gesto_de_agora.get()` do `_registrar_gravacao` -> `gesto` vazio;
 * arrancar o `gesto_de_agora.set` do `_dispatch` ou do `trabalhar` -> a régua de AST;
 * tirar o `sha_antes` (ou calculá-lo do payload) -> a corrente não acusa quem
@@ -136,6 +137,21 @@ def test_mudou_traz_a_folha_exata_e_a_chave_na_mascara(
     # Os octetos 4 e 5 do endereço de mentira não vão ao diário, em forma nenhuma.
     for forma in ("d1:e2", "d1e2", "D1:E2"):
         assert forma not in str(linha), forma
+
+
+def test_a_secao_que_nasce_ou_some_inteira_diz_a_folha(
+    dir_perfis: Path, espiao: _Espiao
+) -> None:
+    # O primeiro brilho de um controle no perfil: `controllers` vai de nada a um
+    # dicionário. A linha diz o campo, não só «controllers».
+    save_profile(_perfil())
+    save_profile(_perfil(0.37))
+    save_profile(_perfil())
+
+    nasceu, sumiu = espiao.salvos()[-2:]
+    folha = f"controllers.{CONTROLE_MASCARADO}.leds.lightbar_brightness"
+    assert nasceu["mudou"] == f"{folha}:ausente->0.37"
+    assert sumiu["mudou"] == f"{folha}:0.37->ausente"
 
 
 def test_nome_e_texto_livre_entram_so_como_caminho(

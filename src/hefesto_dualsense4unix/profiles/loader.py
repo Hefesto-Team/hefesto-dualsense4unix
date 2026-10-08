@@ -1980,6 +1980,13 @@ def _as_folhas_que_diferem(
                 antes.get(chave, ausente), depois.get(chave, ausente), (*caminho, str(chave))
             )
         return achadas
+    # A seção que NASCE (ou some) inteira desce até as folhas dela: o primeiro
+    # brilho de um controle no perfil é `controllers` de nada a um dicionário, e
+    # a linha tem de dizer qual campo, não só «controllers».
+    if isinstance(depois, dict) and (antes is None or antes is ausente):
+        return _as_folhas_que_diferem({}, depois, caminho) or [(caminho, antes, depois)]
+    if isinstance(antes, dict) and (depois is None or depois is ausente):
+        return _as_folhas_que_diferem(antes, {}, caminho) or [(caminho, antes, depois)]
     if isinstance(antes, list) and isinstance(depois, list) and len(antes) == len(depois):
         achadas = []
         for indice, (a, d) in enumerate(zip(antes, depois, strict=True)):
