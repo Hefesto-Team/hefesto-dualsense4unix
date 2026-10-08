@@ -22,6 +22,8 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
                                    DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
 from pacotes.a02_controles import INCLINACAO_PARADA
+from pacotes.a02_controles import (ACENDE_O_JOGO, CAMPOS_DO_JOGO,
+                                   DICA_DO_PONTO_DO_JOGO)
 # divergem calada — esta casa já pagou isso com o `--plastico`. O `pos` era
 from pacotes.a02_controles import (CAMPOS_DA_POSICAO, MAX_DEDOS,
                                    REGRA_DAS_POSICOES,
@@ -660,6 +662,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      e o widget do produto desenha o ponto centrado. */
   .stick .p{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--pink);z-index:2;
             transform:translate(-50%,-50%)}
+  /* O ANEL É O QUE O JOGO RECEBE (29/09/2026, O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01):
+     com a Inclinação ou a Mira num analógico, o jogo segura outra coisa que a mão. Embaixo
+     do ponto da mão, no verde do chip que liga a rota; apagado sem a classe `on`. */
+  .stick .pj{position:absolute;width:13px;height:13px;box-sizing:border-box;border-radius:50%;
+             border:2px solid var(--green);background:transparent;box-shadow:0 0 6px var(--green);
+             z-index:1;transform:translate(-50%,-50%);opacity:0}
+  .stick .pj.on{opacity:1}
   .xy{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);
       text-align:center;margin-top:6px;line-height:1.5}
   .eixo{display:grid;grid-template-columns:11px 52px 1fr;align-items:center;gap:8px;
@@ -1484,7 +1493,7 @@ DICA_DOS_BOTOES = ("Usar o touchpad como botões: os dois terços da esquerda s�
                    "direcional; à direita, em cima o L1 e embaixo o L2.")
 
 
-def chip_da_inclinacao(destino):
+def chip_da_inclinacao(destino, aceso=False):
     """O chip «Inclinação» embaixo do nome de UM analógico — 28/09/2026.
 
     O invólucro `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon
@@ -1493,7 +1502,7 @@ def chip_da_inclinacao(destino):
     return (f'<span class="pausa-da-inclinacao" data-campo="inclinacao-parada" '
             f'data-hef-alvo="classe" data-hef-classe="parada" '
             f'data-hef-quando="{INCLINACAO_PARADA}">'
-            f'<span class="chip-virtual" data-campo="inclinacao-destino" '
+            f'<span class="chip-virtual{" on" if aceso else ""}" data-campo="inclinacao-destino" '
             f'data-hef-alvo="classe" data-hef-quando="{destino}">'
             f'<button class="sw" data-gesto="inclinacao" data-destino="{destino}" '
             f'data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" '
@@ -1928,7 +1937,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           accel=None, conectado=True,
-          mic_ganho=GANHO_PADRAO_PCT):
+          mic_ganho=GANHO_PADRAO_PCT, no_jogo=None):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
@@ -1984,6 +1993,14 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     def onde_esta(x, y, quebra=""):
         """O exemplo do DESENHO para um pontinho — nada, no lugar sem controle."""
         return f'{quebra} style="--hef-x:{x}%;--hef-y:{y}%"' if conectado else ""
+
+    def anel(alvo, xy):
+        """O anel do jogo de UM analógico: aceso e cravado só onde o exemplo o põe."""
+        lugar = onde_esta(pos(xy[0]), pos(xy[1])) if xy is not None else ""
+        on = " on" if lugar else ""
+        return (f'<span data-campo="{CAMPOS_DO_JOGO[alvo]}" data-hef-alvo="posicao"{lugar}>'
+                f'<span class="pj{on}" data-campo="{ACENDE_O_JOGO[alvo]}" data-hef-alvo="classe" '
+                f'title="{DICA_DO_PONTO_DO_JOGO}"></span></span>')
     selo_do_mic = selo_do_microfone(mic_mudo, estilo=' style="margin-left:5px"')
     # é o que a bancada responde HOJE, medido no `state_full` dos dois
     alto_som = SELO_MUDO if alto_mudo else SELO_ATIVO
@@ -2091,9 +2108,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  {chip_da_inclinacao("analogico_esquerdo")}</div>
+                  {chip_da_inclinacao("analogico_esquerdo", aceso=no_jogo is not None)}</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">{ROTULO_DO_CLIQUE["l"]}</span>
+                  {anel("ana-e", no_jogo)}
                   <span class="p" data-campo="{CAMPOS_DA_POSICAO["ana-e"]}" data-hef-alvo="posicao"{onde_esta(pos(sticks[0]), pos(sticks[1]))}></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">{_texto_do_xy(sticks[0], sticks[1])}</div>
               </div>
@@ -2102,6 +2120,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                   {chip_da_inclinacao("analogico_direito")}</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">{ROTULO_DO_CLIQUE["r"]}</span>
+                  {anel("ana-d", None)}
                   <span class="p" data-campo="{CAMPOS_DA_POSICAO["ana-d"]}" data-hef-alvo="posicao"{onde_esta(pos(sticks[2]), pos(sticks[3]))}></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">{_texto_do_xy(sticks[2], sticks[3])}</div>
               </div>
@@ -2435,6 +2454,9 @@ ESTADO = {
   "p1": dict(bat=100, carga="cheio",
     mic_vol=80, glifos_on={"cross", "dpad_up", "l2"},
     l2=200, r2=40, touch=(62, 44), sticks=(60, 200, 180, 90),
+    # a Inclinação no esquerdo: o jogo recebe a mão somada ao acelerômetro (o anel),
+    # e o ponto rosa segue a mão. O P1 é o único cartão aberto do desenho.
+    no_jogo=(110, 200),
     giro=[("X", "+143.2", "left:50%;width:22%;background:var(--red)"),
           ("Y", "−412.0", "left:12%;width:38%;background:var(--green)"),
           ("Z", " +22.8", "left:50%;width:4%;background:var(--cyan)")],
@@ -3221,7 +3243,8 @@ def _conferir(doc):
         "o chip da Mira perdeu o `aria-disabled` em algum controle — no Nativo "
         "ele fica cinza e o leitor de tela o anuncia como clicável")
     for destino in DICA_DA_INCLINACAO:
-        exigir(corpo.count(chip_da_inclinacao(destino)) == len(MESA),
+        exigir(corpo.count(chip_da_inclinacao(destino))
+               + corpo.count(chip_da_inclinacao(destino, aceso=True)) == len(MESA),
                f"o chip «{ROTULO_DA_INCLINACAO}» do {destino} não está nos "
                f"{len(MESA)} controles")
     exigir(corpo.count(modo_do_toque()) == len(MESA),
@@ -3381,6 +3404,21 @@ def _conferir(doc):
                          f'style="--hef-x:') == len(CONECTADOS),
                f"o exemplo do desenho do pontinho `{campo}` não está cravado nos "
                f"{len(CONECTADOS)} conectado(s) — o mockup o mostraria no centro")
+    for alvo, campo in CAMPOS_DO_JOGO.items():
+        exigir(doc.count(f'data-campo="{campo}" data-hef-alvo="posicao"') == lugares,
+               f"o anel do jogo `{campo}` não tem o endereço do alvo `posicao` nos "
+               f"{lugares} lugares — o produto não teria onde pôr o que o jogo recebe")
+        exigir(doc.count(f'data-campo="{ACENDE_O_JOGO[alvo]}" data-hef-alvo="classe" '
+                         f'title="{DICA_DO_PONTO_DO_JOGO}"') == lugares,
+               f"o anel `{ACENDE_O_JOGO[alvo]}` não acende pela classe nos {lugares} lugares")
+    exigir(doc.count(f'data-campo="{CAMPOS_DO_JOGO["ana-e"]}" data-hef-alvo="posicao" '
+                     f'style="--hef-x:') == 1
+           and f'data-campo="{CAMPOS_DO_JOGO["ana-d"]}" data-hef-alvo="posicao" '
+               f'style="--hef-x:' not in doc,
+           "o exemplo do anel do jogo saiu do esquerdo do P1 — o desenho o crava só ali")
+    exigir(corpo.count(chip_da_inclinacao("analogico_esquerdo", aceso=True)) == 1
+           and chip_da_inclinacao("analogico_direito", aceso=True) not in corpo,
+           "o anel do exemplo acende sem o chip «Inclinação» do mesmo analógico aceso")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")

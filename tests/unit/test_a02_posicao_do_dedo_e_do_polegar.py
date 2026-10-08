@@ -121,7 +121,7 @@ def test_o_repouso_e_a_reserva_da_regra(a02):
     """A regra única lê as duas variáveis, e o repouso do analógico é a reserva."""
     assert a02.REPOUSO_DA_POSICAO == 50.2
     assert a02.REGRA_DAS_POSICOES == (
-        ".ctl .touch .ponto,.ctl .stick .p"
+        ".ctl .touch .ponto,.ctl .stick .p,.ctl .stick .pj"
         "{left:var(--hef-x,50.2%);top:var(--hef-y,50.2%)}")
     assert a02.texto_da_posicao(None) == ""
     assert a02.texto_da_posicao((0.0, 100.0)) == "0.0,100.0"

@@ -225,6 +225,16 @@ class VirtualPad(Protocol):
 
     def pump_ff(self) -> None: ...
 
+    @property
+    def eixos_no_jogo(self) -> tuple[int, int, int, int] | None:
+        """Os quatro eixos dos analógicos (lx, ly, rx, ry) do último envio ao jogo.
+
+        `None` enquanto o pad não tem nó (antes do `start`, depois do `stop`) ou
+        ainda não mandou nada. É leitura do que o pad já guarda para só escrever
+        o que mudou: nenhum custo no tique (O-CIRCULO-DO-ANALOGICO-…-01).
+        """
+        ...
+
 
 def make_virtual_pad(
     flavor: str | None,

@@ -841,6 +841,16 @@ class UinputGamepad:
             y = 1
         return x, y
 
+    @property
+    def eixos_no_jogo(self) -> tuple[int, int, int, int] | None:
+        """Os quatro eixos do último envio ao nó (`_last_axes`); `None` sem nó ou sem envio."""
+        if self._device is None:
+            return None
+        ultimo = self._last_axes
+        if ultimo is None:
+            return None
+        return (ultimo[0], ultimo[1], ultimo[2], ultimo[3])
+
 
 __all__ = [
     "BOTOES_POR_FLAVOR",

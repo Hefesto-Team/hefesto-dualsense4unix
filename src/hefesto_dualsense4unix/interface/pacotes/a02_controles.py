@@ -256,7 +256,7 @@ CAMPOS_DA_POSICAO: dict[str, str] = {
 REPOUSO_DA_POSICAO = pos_do_analogico(REPOUSO_DO_ANALOGICO)
 
 REGRA_DAS_POSICOES = (
-    f".ctl .touch .ponto,.ctl .stick .p"
+    f".ctl .touch .ponto,.ctl .stick .p,.ctl .stick .pj"
     f"{{left:var(--hef-x,{REPOUSO_DA_POSICAO}%);"
     f"top:var(--hef-y,{REPOUSO_DA_POSICAO}%)}}"
 )
@@ -291,6 +291,46 @@ def posicoes_do_controle(
             for alvo, (cx, cy) in (("ana-e", ("lx", "ly")), ("ana-d", ("rx", "ry")))
         },
     }
+
+
+#: O ANEL DO JOGO, um por analógico — O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01
+#: (29/09/2026). Com a Inclinação ou a Mira num analógico, o jogo recebe outra coisa
+#: que a mão; o `state_full` diz o que o pad mandou (`no_jogo`). Os endereços ficam
+#: fora do `CAMPOS_DA_POSICAO`: os quatro pontinhos da mão não mudam de sentido.
+CAMPOS_DO_JOGO: dict[str, str] = {"ana-e": "pos-ana-e-jogo", "ana-d": "pos-ana-d-jogo"}
+#: O anel acende pela classe `on` (alvo `classe`, como o `touch-ponto`).
+ACENDE_O_JOGO: dict[str, str] = {"ana-e": "ana-e-jogo", "ana-d": "ana-d-jogo"}
+DICA_DO_PONTO_DO_JOGO = "O que o jogo recebe."
+_O_ANALOGICO_DO_ANEL: dict[str, tuple[str, tuple[str, str]]] = {
+    "ana-e": ("analogico_esquerdo", ("lx", "ly")),
+    "ana-d": ("analogico_direito", ("rx", "ry")),
+}
+
+
+def posicoes_do_jogo(
+    entrada: dict[str, Any], nativo: bool, navegacao: bool
+) -> dict[str, tuple[float, float] | None]:
+    """Onde o jogo segura cada analógico, em %; `None` onde o anel fica apagado.
+
+    Acende só onde uma rota aponta para AQUELE analógico, perguntado aos mesmos
+    donos que pintam os chips: a Mira ligada com o destino nele, ou a Inclinação
+    nele. No Nativo o jogo lê o físico, e na Navegação não há pad: nada acende.
+    A conta é a mesma `pos_do_analogico` do ponto da mão.
+    """
+    saida: dict[str, tuple[float, float] | None] = dict.fromkeys(CAMPOS_DO_JOGO)
+    no_jogo = entrada.get("no_jogo")
+    if nativo or navegacao or not isinstance(no_jogo, dict):
+        return saida
+    mira = _mira_ligada(entrada) is True
+    destino = _destino_da_mira(entrada, "destino")
+    inclinacao = _destino_da_mira(entrada, "inclinacao")
+    for alvo, (analogico, eixos) in _O_ANALOGICO_DO_ANEL.items():
+        if not ((mira and destino == analogico) or inclinacao == analogico):
+            continue
+        x, y = (no_jogo.get(eixo) for eixo in eixos)
+        if all(isinstance(v, int) and not isinstance(v, bool) for v in (x, y)):
+            saida[alvo] = (pos_do_analogico(x), pos_do_analogico(y))
+    return saida
 
 
 def _eixos_do_sensor(
@@ -1506,6 +1546,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 **_so_se_a_pagina_tiver({
                     CAMPOS_DA_POSICAO[alvo]: texto_da_posicao(xy)
                     for alvo, xy in posicoes.items()
+                }),
+                **_so_se_a_pagina_tiver({
+                    campo: valor
+                    for alvo, xy in posicoes_do_jogo(
+                        c, _nativo(ctx), _na_navegacao(ctx)).items()
+                    for campo, valor in ((CAMPOS_DO_JOGO[alvo], texto_da_posicao(xy)),
+                                         (ACENDE_O_JOGO[alvo], "sim" if xy else ""))
                 }),
                 # class="mudo" data-campo="alto-estado" hidden>` que o piloto
                 "alto-estado": (

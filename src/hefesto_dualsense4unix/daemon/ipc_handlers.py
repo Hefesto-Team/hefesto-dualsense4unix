@@ -5904,6 +5904,8 @@ class IpcHandlersMixin:
             result["radio_central"] = self._a_central_publica(entries)
         with contextlib.suppress(Exception):
             self._merge_mira(entries)
+        with contextlib.suppress(Exception):
+            self._merge_no_jogo(entries)
 
     def _os_receptores_publicam(self) -> dict[str, Any]:
         """``state_full["radio_receptores"]``: a saúde de cada receptor 2.4G (a última hora).
@@ -6523,6 +6525,65 @@ class IpcHandlersMixin:
         if feito is None and atual is not None and atual.em_curso:
             return {"status": "ocupado", "dispensado": False}
         return {"status": "ok", "dispensado": feito is not None}
+
+    def _merge_no_jogo(self, entries: list[dict[str, Any]]) -> None:
+        """``entry["no_jogo"]``: os analógicos que o pad DAQUELE controle mandou ao jogo.
+
+        O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01. O cartão pintava só a mão
+        (`inputs`); com a Inclinação ou a Mira num analógico, o jogo recebe outra
+        coisa. O valor é o que o pad guardou do último envio (`eixos_no_jogo`), lido
+        do MESMO pad que dá o `vpad_backend`: nenhuma cópia no laço do jogo. `None`
+        sem pad (o Nativo, a Navegação, o pendente), com o jogador cedido ao
+        primário (o `forward_all` o pula, e o último valor seria de antes), sem
+        endereço, ou com o pad que ainda não mandou nada. Nunca levanta.
+        """
+        primario = (
+            getattr(self.daemon, "_gamepad_device", None) if self.daemon is not None else None
+        )
+        dos_outros = self._coop_pads_que_mandam()
+        for entry in entries:
+            uniq = entry.get("uniq")
+            uniq = uniq if isinstance(uniq, str) and uniq else None
+            if entry.get("is_primary"):
+                pad = primario
+            else:
+                pad = dos_outros.get(uniq) if uniq is not None else None
+            entry["no_jogo"] = self._eixos_do_pad(pad)
+
+    def _coop_pads_que_mandam(self) -> dict[str, Any]:
+        """MAC -> pad dos secundários que o `forward_all` alimenta agora.
+
+        O critério do `_coop_vpads_by_uniq` (a chave `path:` e o pendente sem
+        `vpad` ficam fora), e um a mais: o cedido ao primário.
+        """
+        coop = getattr(self.daemon, "_coop_manager", None) if self.daemon is not None else None
+        players = getattr(coop, "_players", None) if coop is not None else None
+        if not isinstance(players, dict):
+            return {}
+        pads: dict[str, Any] = {}
+        for mac, player in players.items():
+            if not isinstance(mac, str) or mac.startswith("path:"):
+                continue
+            vpad = getattr(player, "vpad", None)
+            if vpad is None or getattr(player, "cedido_ao_primario", False) is True:
+                continue
+            pads[mac] = vpad
+        return pads
+
+    @staticmethod
+    def _eixos_do_pad(pad: Any) -> dict[str, int] | None:
+        """`{lx, ly, rx, ry}` do último envio do `pad`, ou `None`."""
+        if pad is None:
+            return None
+        try:
+            eixos = pad.eixos_no_jogo
+        except Exception:
+            return None
+        if not isinstance(eixos, tuple) or len(eixos) != 4:
+            return None
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in eixos):
+            return None
+        return dict(zip(("lx", "ly", "rx", "ry"), eixos, strict=True))
 
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:

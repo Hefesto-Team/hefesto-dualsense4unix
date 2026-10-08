@@ -1932,6 +1932,18 @@ class UhidDualSense:
 
     _pendentes: frozenset[str] = frozenset()
 
+    @property
+    def eixos_no_jogo(self) -> tuple[int, int, int, int] | None:
+        """Os quatro eixos que o report leva ao jogo (`_axes`); `None` sem nó.
+
+        Sem o `_fd` o `_axes` é o `_AXES_NEUTRAL` do pad parado, e não o que o
+        jogo recebeu: o pad parado não diz posição nenhuma.
+        """
+        if self._fd is None:
+            return None
+        eixos = self._axes
+        return (eixos[0], eixos[1], eixos[2], eixos[3])
+
 
 _MACS_POR_APARELHO = 64
 

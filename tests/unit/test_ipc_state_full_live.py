@@ -248,7 +248,9 @@ class TestPlayerPorControle:
                       "toque": "nenhum", "inclinacao": "nenhum",
                       "sensibilidade": 6, "zona_morta_graus_s": 3.0,
                       "gatilho": None, "inverter_horizontal": False,
-                      "inverter_vertical": False}},
+                      "inverter_vertical": False,
+                      "inclinacao_parada": False, "mesmo_parado": False},
+             "no_jogo": None},
         ]
 
     @pytest.mark.asyncio
