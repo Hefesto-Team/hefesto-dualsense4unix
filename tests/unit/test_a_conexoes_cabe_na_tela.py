@@ -304,7 +304,8 @@ def test_os_cartoes_tem_a_mesma_altura_e_o_porque_nao_estica_os_vizinhos(largura
 # ───────────────── os controles externos (A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-01) ─────────────────
 
 #: Quantos externos a régua fixa: quatro, o número de assentos (decisão por delegação de
-#: 08/10/2026, a validar por ela). Com a linha de 28 px e dois por fileira, quatro cabem a 1272 px.
+#: 08/10/2026, a validar pelo usuário). Com a linha de 28 px e dois por fileira, quatro cabem
+#: a 1272 px.
 TETO_DE_EXTERNOS = 4
 #: A linha do externo não passa de 30 px: era 38 (o `select` de 28 px dentro de um padding de 4 px)
 #: e somava uma linha inteira por controle.

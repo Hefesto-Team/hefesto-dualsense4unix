@@ -2,9 +2,9 @@
 
 A docstring de ``ControleDeclarado`` prometia um «campo "Outra"» de texto livre que a tela nunca
 teve (a janela GTK que o tinha saiu no ``f1dd18fd8``). A decisão por delegação de 08/10/2026, a
-validar por ela, é a do caminho que não tira nada: a tela continua com a lista dos nomes de fábrica,
-e as duas docstrings passam a dizer o que ela faz. O que se mede aqui, com o ``maquina.json``
-dublado no ponto em que a mesa o lê:
+validar pelo usuário, é a do caminho que não tira nada: a tela continua com a lista dos nomes de
+fábrica, e as duas docstrings passam a dizer o que ela faz. O que se mede aqui, com o
+``maquina.json`` dublado no ponto em que a mesa o lê:
 
 * o que a docstring afirma que a tela oferece, a tela oferece (lido da saída do gerador);
 * a cor escrita à mão no arquivo APARECE na lista, não pinta nada e não derruba o cartão;
