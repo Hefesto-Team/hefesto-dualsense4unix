@@ -785,6 +785,7 @@ def _fica_para_a_varredura(sink: str, module_id: str | None = None) -> bool:
     logger.warning("som_ficou_para_a_varredura", sink=sink, module_id=module_id or "-")
     return True
 
+
 def nome_do_sink(uniq: str) -> str:
     """``hefesto_som_<marca>`` a partir do ``uniq`` do controle. "" se ilegível.
 
