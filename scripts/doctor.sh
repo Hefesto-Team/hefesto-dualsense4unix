@@ -2625,6 +2625,7 @@ check_launch_wrapper() {
     # censo, e o censo os nomeia.
     info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (aplica o wrapper aos jogos, preservando as opções existentes)."
     check_sentinela_wrapper
+    check_opcoes_por_jogo
 }
 
 # AS TRÊS CÓPIAS EM bin/ (INSTALL-UNIVERSAL, 18/09/2026). O wrapper chama dois
@@ -2804,6 +2805,56 @@ print("erros=" + str(len(d.get("erros") or [])))
     [[ -n "${estendido}" ]] && warn "Opções com a lista de IGNORE ESTENDIDA à mão em ${estendido} — intocáveis de propósito (remover só o trecho do Hefesto deixaria um fragmento que impede o jogo de abrir); reparo manual"
     [[ -n "${recusados}" ]] && info "fora do wrapper por escolha dela (jogos_sem_wrapper.txt): ${recusados}"
     check_arvore_canonica_do_wrapper
+    return 0
+}
+
+# A-OPCAO-QUE-A-STEAM-DESFAZ-APARECE-NO-DOCTOR-01 (08/10/2026) — o censo acima olha o
+# WRAPPER; este olha as OPÇÕES POR JOGO que ela declarou (`opcoes_por_jogo.txt`). O
+# `aplicar` já disse «aplicado» sobre uma linha que a Steam não leu (06/10), e a Steam
+# desfaz a escrita sem aviso: sem este check, a opção some e o doctor dá [ OK ].
+# A pergunta é do `conferir` do dono da tabela (só lê; roda com a Steam aberta); o texto
+# de cada defeito também é dele, e aqui só se nomeia o jogo. Tabela vazia, ou nenhum jogo
+# dela na conta logada: nada a dizer.
+check_opcoes_por_jogo() {
+    local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py"
+    if [[ ! -f "${py}" ]] || ! command -v python3 >/dev/null 2>&1; then
+        return
+    fi
+    local resumo
+    resumo="$(python3 "${py}" --conferir 2>/dev/null | HEFESTO_SRC="${ROOT_DIR}/src" python3 -c '
+import json
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+d = json.load(sys.stdin)
+from hefesto_dualsense4unix.integrations.opcoes_por_jogo import AVISO_DO_DEFEITO
+print("jogos=" + str(len(d.get("jogos") or [])))
+for x in d.get("defeitos") or []:
+    print("defeito=%s|%s|%s" % (x["estado"], x["appid"], AVISO_DO_DEFEITO.get(x["estado"], "")))
+' 2>/dev/null)"
+    [[ -z "${resumo}" ]] && return
+    local jogos defeitos
+    jogos="$(sed -n 's/^jogos=//p' <<<"${resumo}")"
+    defeitos="$(sed -n 's/^defeito=//p' <<<"${resumo}")"
+    if [[ -z "${defeitos}" ]]; then
+        if [[ "${jogos}" != "0" ]]; then
+            pass "as opções por jogo que ela declarou estão onde a Steam as lê"
+        fi
+        return 0
+    fi
+    local estado appid aviso nome
+    while IFS='|' read -r estado appid aviso; do
+        [[ -z "${estado}" ]] && continue
+        nome="a conta da Steam"
+        [[ "${appid}" =~ ^[0-9]+$ ]] && nome="$(_rotulo_do_appid "${appid}")"
+        case "${estado}" in
+            desfeito|desfeito_na_escrita)
+                fail "contrato steam-localconfig quebrou (confira: python3 ${py} --conferir): opção por jogo de ${nome}: ${aviso}" ;;
+            *)
+                warn "opção por jogo de ${nome}: ${aviso}" ;;
+        esac
+    done <<<"${defeitos}"
     return 0
 }
 

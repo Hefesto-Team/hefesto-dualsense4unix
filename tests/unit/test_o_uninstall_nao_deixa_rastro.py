@@ -575,7 +575,8 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
     jogo = _heroic_copia_para_o_jogo(heroic, "Jogo1")
     for nome_do_arquivo, corpo in (
         ("conexao-zumbi.json", '{"links": {}}'), ("lugares-dos-adaptadores.json", "{}"),
-        ("wrapper-visto.json", "{}"), ("camadas-vulkan.json", '{"prefixos": {}}'),
+        ("wrapper-visto.json", "{}"), ("opcoes-escritas.json", '{"schema": 1, "jogos": {}}'),
+        ("camadas-vulkan.json", '{"prefixos": {}}'),
         ("radio-diario.jsonl", "{}\n"), ("kernel.log", "boot\n"),
     ):
         (estado / nome_do_arquivo).write_text(corpo, encoding="utf-8")

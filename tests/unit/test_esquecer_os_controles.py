@@ -763,7 +763,8 @@ def desinstalar_de_mentira(r: m.Raizes, monkeypatch: pytest.MonkeyPatch) -> None
     estado = r.estado / m.SLUG
     _feitos, completo = cura_por_estrada.desfazer_as_estradas([estado / "launch_env"], r.lar)
     assert completo
-    for nome in ("launch_env", "wrapper-visto.json", "teclado-na-tela.conf", "gabinete.json",
+    for nome in ("launch_env", "wrapper-visto.json", "opcoes-escritas.json",
+                 "teclado-na-tela.conf", "gabinete.json",
                  "lugares-dos-adaptadores.json", "conexao-zumbi.json", "radio-diario.jsonl",
                  "radio-diario.jsonl.1", "kernel.log", "kernel-watch.boot",
                  "camadas-vulkan.json"):

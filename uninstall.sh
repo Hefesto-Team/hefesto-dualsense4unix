@@ -2385,6 +2385,16 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
         rm -f "${_estado}/wrapper-visto.json"
     fi
 done
+# A-OPCAO-QUE-A-STEAM-DESFAZ-APARECE-NO-DOCTOR-01: o registro do que o `aplicar` das opções por
+# jogo escreveu e releu também é estado NOSSO. Sobrando, a próxima instalação leria como «a
+# Steam desfez» uma opção que o uninstall deixou para trás. A tabela dela
+# (`opcoes_por_jogo.txt`) é escolha DELA e fica.
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -f "${_estado}/opcoes-escritas.json" ]]; then
+        log "removendo o registro das opções por jogo (${_estado}/opcoes-escritas.json)"
+        rm -f "${_estado}/opcoes-escritas.json"
+    fi
+done
 # TECLADO-QUE-NAO-DIGITA-01: o PACOTE do teclado na tela (wvkbd / onboard) NÃO
 # sai daqui. É pacote de SISTEMA, instalado pelo gerenciador da distribuição, e
 # pode estar servindo a qualquer outra coisa da máquina dela — remover seria o

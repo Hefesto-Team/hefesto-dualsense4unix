@@ -459,6 +459,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "gabinete.json": ("install", "o censo do gabinete: o install o grava lendo o SMBIOS"),
     "proton-pin-lock.json": ("install", "o registro do pino: o install novo grava o dele"),
     "wrapper-visto.json": ("install", "o registro da sentinela do atalho"),
+    "opcoes-escritas.json": ("install", "o registro das opções por jogo que o aplicar escreveu"),
     "launch_env": ("install", "o ambiente que o daemon materializa a cada transição"),
     "teclado-na-tela.json": ("install", "a sessão do teclado na tela (pasta de execução)"),
     "daemon.pid": ("install", "o pid do daemon (pasta de execução)"),

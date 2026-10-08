@@ -74,7 +74,7 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 try:
     from .steam_launch_options import (
@@ -83,6 +83,7 @@ try:
         e_a_arvore_canonica,
         is_sandboxed_layout,
         ler_jogos_sem_wrapper,
+        sem_wrapper_path,
         steam_game_running,
         steam_running,
     )
@@ -93,6 +94,7 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo vigi
         e_a_arvore_canonica,
         is_sandboxed_layout,
         ler_jogos_sem_wrapper,
+        sem_wrapper_path,
         steam_game_running,
         steam_running,
     )
@@ -121,6 +123,41 @@ ADIADO_JOGO = "adiado_jogo_aberto"
 ADIADO_STEAM = "adiado_steam_aberta"
 ERRO = "erro"
 SEM_CONTA = "conta_logada_desconhecida"
+
+#: O que ``conferir`` diz de cada jogo da tabela (só leitura).
+OK = "ok"
+NOVO = "novo"
+DESFEITO_NA_ESCRITA = "desfeito_na_escrita"
+DESFEITO_DEPOIS = "desfeito"
+FORA_DO_LUGAR = "fora_do_lugar"
+
+#: Os estados que o doctor e a sonda do contrato nomeiam; ``ok`` e ``novo`` não são defeito.
+DEFEITOS = (DESFEITO_NA_ESCRITA, DESFEITO_DEPOIS, FORA_DO_LUGAR, SEM_CONTA)
+
+#: O aviso de cada defeito, com o que fazer. Um dono só: o doctor e a sonda só o repetem.
+AVISO_DO_DEFEITO = {
+    DESFEITO_NA_ESCRITA: (
+        "a Steam não guardou a opção que o Hefesto escreveu; ele tenta de novo quando a Steam "
+        "fechar, e se repetir confira o localconfig.vdf"
+    ),
+    DESFEITO_DEPOIS: (
+        "a opção que o Hefesto pôs foi reescrita (pela Steam ou à mão); o Hefesto repõe "
+        "assim que a Steam fechar"
+    ),
+    FORA_DO_LUGAR: (
+        "a opção está num bloco que a Steam não lê; o Hefesto alinha na próxima aplicação, "
+        "com a Steam fechada"
+    ),
+    SEM_CONTA: (
+        "o Hefesto não sabe qual conta a Steam abre (config/loginusers.vdf), e por isso não "
+        "escreve as opções por jogo; abra a Steam uma vez com a sua conta"
+    ),
+}
+
+#: O que o registro anota do ``aplicar`` depois da releitura.
+REGISTRO_BASENAME = "opcoes-escritas.json"
+ESCRITO_E_CONFERIDO = "aplicado"
+ESCRITO_E_DESFEITO = "desfeito"
 
 _APPID = re.compile(r"^[0-9]{1,10}$")
 
@@ -195,14 +232,67 @@ def definir(appid: int | str, opcoes: str, config_home: Path | None = None) -> s
     return valor
 
 
-def tirar(appid: int | str, config_home: Path | None = None) -> bool:
-    """Tira um jogo da tabela. ``False`` quando ele já não estava lá."""
+def tirar(
+    appid: int | str,
+    config_home: Path | None = None,
+    estado_home: Path | None = None,
+) -> bool:
+    """Tira um jogo da tabela e do registro. ``False`` quando ele já não estava lá."""
     chave = str(appid).strip()
     tabela = ler(config_home)
     if chave not in tabela:
         return False
     del tabela[chave]
     gravar(tabela, config_home)
+    registro = ler_registro(estado_home)
+    if registro.pop(chave, None) is not None:
+        gravar_registro(registro, estado_home)
+    return True
+
+
+def registro_path(estado_home: Path | None = None) -> Path:
+    """``opcoes-escritas.json`` no state do produto (XDG), sem tocar no disco."""
+    if estado_home is not None:
+        base = estado_home
+    else:
+        env = os.environ.get("XDG_STATE_HOME", "").strip()
+        base = Path(env) if env else Path.home() / ".local" / "state"
+    return base / "hefesto-dualsense4unix" / REGISTRO_BASENAME
+
+
+def ler_registro(estado_home: Path | None = None) -> dict[str, dict[str, str]]:
+    """``{appid: {valor, conta, quando, resultado}}`` do que o ``aplicar`` anotou. Nunca levanta."""
+    try:
+        caminho = registro_path(estado_home)
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    jogos = dados.get("jogos") if isinstance(dados, dict) else None
+    if not isinstance(jogos, dict):
+        return {}
+    return {
+        str(a): {str(k): str(v) for k, v in e.items()}
+        for a, e in jogos.items()
+        if str(a).isdigit() and isinstance(e, dict)
+    }
+
+
+def gravar_registro(
+    registro: dict[str, dict[str, str]], estado_home: Path | None = None
+) -> bool:
+    """Grava o registro inteiro, por arquivo temporário. Best-effort: ``False`` se falhar."""
+    destino = registro_path(estado_home)
+    try:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        tmp = destino.with_name(destino.name + ".hefesto-tmp")
+        tmp.write_text(
+            json.dumps({"schema": 1, "jogos": registro}, ensure_ascii=False, indent=2,
+                       sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        tmp.replace(destino)
+    except OSError:
+        return False
     return True
 
 
@@ -305,16 +395,16 @@ def definir_opcoes_vdf_text(
     return "".join(saida), aplicados, pulados
 
 
-def opcoes_lidas_do_jogo(texto: str, appid: str) -> list[str]:
-    """Todo valor de ``LaunchOptions`` que o bloco canônico do jogo guarda.
+def lugares_das_opcoes(texto: str, appid: str) -> tuple[bool, list[tuple[bool, str]]]:
+    """``(jogo está na árvore canônica, [(é filha direta, valor)])``, na ordem do arquivo.
 
-    Na ordem do arquivo: a filha direta do jogo (a que a Steam lê) e as de
-    blocos filhos (``cloud``…) que a versão velha do escritor deixou.
-    Leitor próprio e independente do escritor: quem confere não pode errar
-    igual a quem escreveu.
+    A filha direta do jogo é a que a Steam lê; as de blocos filhos (``cloud``…) são
+    as que a versão velha do escritor deixou. Leitor próprio e independente do
+    escritor: quem confere não pode errar igual a quem escreveu.
     """
     pilha: list[str] = []
-    achados: list[str] = []
+    achados: list[tuple[bool, str]] = []
+    presente = False
     fundo: int | None = None
     for linha in texto.splitlines():
         nu = linha.strip()
@@ -329,6 +419,7 @@ def opcoes_lidas_do_jogo(texto: str, appid: str) -> list[str]:
                 and e_a_arvore_canonica(pilha[:-1])
             ):
                 fundo = len(pilha)
+                presente = True
             continue
         if nu == "}":
             if fundo is not None and len(pilha) == fundo:
@@ -338,8 +429,17 @@ def opcoes_lidas_do_jogo(texto: str, appid: str) -> list[str]:
             continue
         par = _PAR_DO_VDF.match(linha)
         if par and fundo is not None and par.group(1).lower() == "launchoptions":
-            achados.append(par.group(2))
-    return achados
+            achados.append((len(pilha) == fundo, par.group(2)))
+    return presente, achados
+
+
+def opcoes_lidas_do_jogo(texto: str, appid: str) -> list[str]:
+    """Todo valor de ``LaunchOptions`` que o bloco canônico do jogo guarda.
+
+    Na ordem do arquivo: a filha direta do jogo (a que a Steam lê) e as de
+    blocos filhos (``cloud``…) que a versão velha do escritor deixou.
+    """
+    return [valor for _, valor in lugares_das_opcoes(texto, appid)[1]]
 
 
 def conta_logada(raiz: Path) -> str | None:
@@ -438,13 +538,16 @@ def aplicar(
     vdfs: list[Path] | None = None,
     *,
     config_home: Path | None = None,
+    estado_home: Path | None = None,
     dry_run: bool = False,
 ) -> Relato:
     """Aplica a tabela aos ``localconfig.vdf`` da conta logada. NUNCA levanta.
 
     ``aplicado`` só sai depois de reler o vdf do disco e achar, em cada jogo, a
     opção onde a Steam a lê; o que o arquivo não guarda vai para ``desfeitos``
-    e o status é ``desfeito_pela_steam``.
+    e o status é ``desfeito_pela_steam``. O que escreveu (e o que a releitura
+    desmentiu) fica no registro do state, para o ``conferir`` saber depois se a
+    Steam desfez a opção e o doctor poder dizer.
     """
     tabela = ler(config_home)
     relato: Relato = {
@@ -473,10 +576,11 @@ def aplicar(
     pulados = [p for p in de_outra_conta if p["reason"] != SEM_CONTA]
     erros = [
         {**p, "reason": f"{SEM_CONTA}: o config/loginusers.vdf não diz qual das contas "
-                       "a Steam abre ({p['vdf']})"}
+                       f"a Steam abre ({p['vdf']})"}
         for p in de_outra_conta if p["reason"] == SEM_CONTA
     ]
     desfeitos: list[dict[str, str]] = []
+    anotar: list[tuple[str, str, str]] = []  # (appid, vdf, resultado)
     for vdf in alvos:
         if is_sandboxed_layout(vdf):
             pulados.append({"vdf": str(vdf), "appid": "", "reason": "vdf_sandbox"})
@@ -490,6 +594,9 @@ def aplicar(
         relato["vdfs"] += 1
         pulados.extend(
             {"vdf": str(vdf), "appid": a, "reason": m} for a, m in deixados
+        )
+        anotar.extend(
+            (a, str(vdf), ESCRITO_E_CONFERIDO) for a, m in deixados if m == "ja_e_o_desejado"
         )
         if not feitos or novo == texto:
             continue
@@ -509,12 +616,16 @@ def aplicar(
             querida = _valor_do_vdf(desejadas[appid])
             if lidas and all(valor == querida for valor in lidas):
                 aplicados.append({"vdf": str(vdf), "appid": appid, "reason": ""})
+                anotar.append((appid, str(vdf), ESCRITO_E_CONFERIDO))
             else:
                 desfeitos.append({
                     "vdf": str(vdf), "appid": appid, "reason": CONTRATO_DA_LINHA})
+                anotar.append((appid, str(vdf), ESCRITO_E_DESFEITO))
 
     relato["aplicados"], relato["pulados"], relato["erros"] = aplicados, pulados, erros
     relato["desfeitos"] = desfeitos
+    if anotar and not dry_run:
+        _anotar_no_registro(anotar, desejadas, estado_home)
     if erros:
         relato["status"] = ERRO
     elif desfeitos:
@@ -522,6 +633,94 @@ def aplicar(
     elif aplicados:
         relato["status"] = APLICADO
     return relato
+
+
+def _conta_do_vdf(vdf: str) -> str:
+    """``userdata/<conta>/config/localconfig.vdf`` -> ``<conta>``; vazio se a forma for outra."""
+    partes = Path(vdf).parts
+    return partes[-3] if len(partes) >= 3 and partes[-3].isdigit() else ""
+
+
+def _anotar_no_registro(
+    anotar: list[tuple[str, str, str]],
+    desejadas: dict[str, str],
+    estado_home: Path | None,
+) -> None:
+    """Guarda o que o ``aplicar`` fez e releu. Best-effort: o registro nunca derruba o ato."""
+    registro = ler_registro(estado_home)
+    agora = time.strftime("%Y-%m-%dT%H:%M:%S")
+    for appid, vdf, resultado in anotar:
+        registro[appid] = {
+            "valor": desejadas[appid], "conta": _conta_do_vdf(vdf),
+            "quando": agora, "resultado": resultado,
+        }
+    gravar_registro(registro, estado_home)
+
+
+def conferir(
+    home: Path | None = None,
+    vdfs: list[Path] | None = None,
+    *,
+    config_home: Path | None = None,
+    estado_home: Path | None = None,
+) -> dict[str, Any]:
+    """Confere a tabela contra o que a Steam guarda AGORA. Só lê; NUNCA levanta.
+
+    ``{"jogos": [{appid, estado, vdf}], "defeitos": [mesmos, só os defeitos]}``.
+    Um jogo da tabela que não está no vdf da conta logada não entra (a conta não o
+    tem). A opção que não está lá nem foi escrita pelo Hefesto é ``novo``: o
+    ``aplicar`` ainda vai pô-la, não é defeito. É defeito: a releitura do
+    ``aplicar`` a desmentiu (``desfeito_na_escrita``), ela foi escrita e conferida
+    e sumiu depois (``desfeito``), ou mora só num bloco filho (``fora_do_lugar``).
+    """
+    resultado: dict[str, Any] = {"jogos": [], "defeitos": []}
+    try:
+        tabela = ler(config_home)
+        if not tabela:
+            return resultado
+        sem_atalho = set(
+            ler_jogos_sem_wrapper(sem_wrapper_path(config_home))
+            if config_home is not None else ler_jogos_sem_wrapper()
+        )
+        todos = list(vdfs) if vdfs is not None else discover_vdfs(home)
+        alvos, de_outra_conta = so_a_conta_logada(todos)
+        registro = ler_registro(estado_home)
+        for p in de_outra_conta:
+            if p["reason"] == SEM_CONTA:
+                resultado["defeitos"].append(
+                    {"appid": "", "estado": SEM_CONTA, "vdf": p["vdf"]})
+        for vdf in alvos:
+            if is_sandboxed_layout(vdf):
+                continue
+            texto = vdf.read_text(encoding="utf-8", errors="surrogateescape")
+            for appid, opcoes in tabela.items():
+                presente, achados = lugares_das_opcoes(texto, appid)
+                if not presente:
+                    continue
+                querido = _valor_do_vdf(
+                    linha_desejada(opcoes, com_atalho=appid not in sem_atalho))
+                diretas = [v for direta, v in achados if direta]
+                if diretas and all(v == querido for _, v in achados):
+                    estado = OK
+                elif achados and not diretas:
+                    estado = FORA_DO_LUGAR
+                else:
+                    anotado = registro.get(appid, {})
+                    escrito = anotado.get("valor") == linha_desejada(
+                        opcoes, com_atalho=appid not in sem_atalho)
+                    if escrito and anotado.get("resultado") == ESCRITO_E_DESFEITO:
+                        estado = DESFEITO_NA_ESCRITA
+                    elif escrito and anotado.get("resultado") == ESCRITO_E_CONFERIDO:
+                        estado = DESFEITO_DEPOIS
+                    else:
+                        estado = NOVO
+                item = {"appid": appid, "estado": estado, "vdf": str(vdf)}
+                resultado["jogos"].append(item)
+                if estado in DEFEITOS:
+                    resultado["defeitos"].append(item)
+    except OSError:  # o vdf sumiu entre a descoberta e a leitura: nada a conferir
+        return {"jogos": [], "defeitos": []}
+    return resultado
 
 
 def _imprimir(relato: Relato) -> int:
@@ -563,6 +762,10 @@ def main(argv: list[str] | None = None) -> int:
         help="põe ou troca as opções de um jogo",
     )
     grupo.add_argument("--tirar", metavar="APPID", help="tira um jogo da tabela")
+    grupo.add_argument(
+        "--conferir", action="store_true",
+        help="confere a tabela contra o que a Steam guarda agora (só lê; JSON)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="não escreve (com --aplicar)")
     parser.add_argument(
         "--vdf", action="append", type=Path, default=None, metavar="ARQUIVO",
@@ -583,6 +786,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.tirar:
         print(f"[opcoes-por-jogo] {args.tirar}: "
               + ("tirado" if tirar(args.tirar) else "não estava na tabela"))
+        return 0
+    if args.conferir:
+        print(json.dumps(conferir(vdfs=args.vdf), ensure_ascii=False, indent=2, sort_keys=True))
         return 0
     if args.aplicar:
         return _imprimir(aplicar(vdfs=args.vdf, dry_run=args.dry_run))

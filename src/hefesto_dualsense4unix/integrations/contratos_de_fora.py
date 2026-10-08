@@ -239,6 +239,25 @@ def _perderam_o_wrapper(amb: Ambiente, conf: Path) -> list[str]:
     return sorted(j.appid for j in censo.regressoes)
 
 
+def _opcoes_desfeitas(amb: Ambiente, confs: list[Path]) -> list[str]:
+    """As opções por jogo da tabela do Hefesto que a Steam não guarda onde a lê.
+
+    A pergunta é a do ``conferir`` do dono da tabela (``opcoes_por_jogo``), e não uma segunda
+    cópia da regra: o ``aplicar`` já disse «aplicado» sobre uma linha que a Steam não leu
+    (06/10/2026) e já foi desfeito pela própria Steam sem aviso. Só leitura; sem tabela, vazio.
+    """
+    from .opcoes_por_jogo import AVISO_DO_DEFEITO, conferir
+
+    config = _pasta_xdg(amb, "XDG_CONFIG_HOME", ".config")
+    estado = _pasta_xdg(amb, "XDG_STATE_HOME", ".local/state")
+    achados = conferir(
+        home=amb.home, vdfs=confs, config_home=config, estado_home=estado)["defeitos"]
+    return sorted({
+        f"{d['appid'] or 'conta'} ({AVISO_DO_DEFEITO[d['estado']].split(';')[0]})"
+        for d in achados
+    })
+
+
 def _sonda_steam(amb: Ambiente) -> Resultado:
     raizes = _raizes_da_steam(amb)
     if not raizes:
@@ -246,8 +265,11 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
     ilegiveis: list[str] = []
     abriu = False
     perderam: list[str] = []
+    opcoes: list[str] = []
     for raiz in raizes:
-        for conf in sorted((raiz / "userdata").glob("*/config/localconfig.vdf")):
+        confs = sorted((raiz / "userdata").glob("*/config/localconfig.vdf"))
+        opcoes += _opcoes_desfeitas(amb, confs) if confs else []
+        for conf in confs:
             try:
                 texto = conf.read_text(encoding="utf-8", errors="replace")
             except OSError as erro:
@@ -256,13 +278,20 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
             if '"UserLocalConfigStore"' in texto[:4096]:
                 abriu = True
                 perderam += _perderam_o_wrapper(amb, conf)
-    if abriu and perderam:
-        mostrados = ", ".join(sorted(set(perderam))[:5])
-        return Resultado(
-            QUEBROU,
-            f"{len(set(perderam))} jogo(s) que tinham o wrapper do Hefesto voltaram sem ele "
-            f"(a Steam reescreveu o localconfig.vdf): {mostrados}",
-        )
+    if abriu and (perderam or opcoes):
+        partes = []
+        if perderam:
+            mostrados = ", ".join(sorted(set(perderam))[:5])
+            partes.append(
+                f"{len(set(perderam))} jogo(s) que tinham o wrapper do Hefesto voltaram sem ele "
+                f"(a Steam reescreveu o localconfig.vdf): {mostrados}"
+            )
+        if opcoes:
+            partes.append(
+                f"{len(opcoes)} opção(ões) por jogo que o Hefesto escreveu a Steam não guarda "
+                f"onde a lê: {', '.join(opcoes[:5])}"
+            )
+        return Resultado(QUEBROU, "; ".join(partes))
     if abriu:
         return Resultado(OK)
     detalhe = "nenhum localconfig.vdf com a raiz UserLocalConfigStore que o Hefesto lê"
@@ -345,14 +374,15 @@ CONTRATOS: tuple[Contrato, ...] = (
         dono="steam",
         promessa=(
             "o localconfig.vdf da Steam abre com a raiz UserLocalConfigStore e guarda o wrapper "
-            "dos jogos que o Hefesto aplicou"
+            "e as opções por jogo que o Hefesto aplicou"
         ),
         conferir=(
             "head -c 200 ~/.steam/steam/userdata/*/config/localconfig.vdf; "
-            "grep -c hefesto-launch ~/.steam/steam/userdata/*/config/localconfig.vdf"
+            "grep -c hefesto-launch ~/.steam/steam/userdata/*/config/localconfig.vdf; "
+            "python3 -m hefesto_dualsense4unix.integrations.opcoes_por_jogo --conferir"
         ),
         sonda=_sonda_steam,
-        cobre=("cfg:localconfig.vdf",),
+        cobre=("cfg:localconfig.vdf", "cfg:loginusers.vdf"),
     ),
     Contrato(
         id="proton-de-terceiros",
