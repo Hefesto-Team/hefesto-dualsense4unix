@@ -4,14 +4,13 @@
     "linhas-frageis": {
       "data": "2026-10-08",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 42,
+      "piso": 38,
       "por_item": {
         "bluez": 12,
-        "kernel": 3,
+        "kernel": 1,
         "lancadores": 5,
         "sistema": 2,
-        "steam": 18,
-        "udev": 2
+        "steam": 18
       },
       "razao": "o teto desceu sozinho com o número",
       "subidas": [
@@ -29,7 +28,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 289
+      "universo": 287
     }
   }
 }
