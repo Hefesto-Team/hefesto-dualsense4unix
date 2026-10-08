@@ -312,6 +312,10 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "os três handlers auditados, cada um com a derivação certa da sua fonte"),
     "tests/unit/test_release_workflow_nomes_e_portoes.py::PUBLICADORES_DE_HOJE": (
         "o piso dos publicadores que o detector tem de reconhecer"),
+    "tests/unit/test_o_bluez_nao_manda_apagar_o_cache.py::_ISENTOS": (
+        "a ponte privilegiada é o único lugar que apaga o cache da origem em disco, dentro do "
+        "`_apagar` que recusa tudo fora da forma esperada: é o que o BlueZ não expõe, não um "
+        "conselho ao usuário"),
     "tests/unit/test_t07_a_frase_que_ela_derrubou_nao_volta.py::ARQUIVOS_ISENTOS": (
         "a nota datada que registra a morte da frase"),
     "tests/unit/test_todo_gesto_que_grava_esta_protegido.py::ISENTOS": (

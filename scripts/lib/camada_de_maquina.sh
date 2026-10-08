@@ -625,11 +625,10 @@ install_bt_resilience_host() {
 # zero problemas."
 #
 # O gesto de migrar um controle (docs/usage/bluetooth-varios-adaptadores.md
-# §3.3) tem uma linha que só root faz — `rm /var/lib/bluetooth/*/cache/<MAC>`,
-# o SDP-CACHE-01 que o `scripts/doctor.sh` documenta. Sem ela o pareamento novo
-# nasce com SDP vazio, o BlueZ recusa a reconexão como *unknown device*, e
-# parece defeito do controle. Sem esta função, o botão dessa migração teria de
-# pedir senha a cada clique — ou não existir.
+# §3.3) é Adapter1.RemoveDevice e parear de novo; o RemoveDevice já tira o
+# ServiceRecords do cache (device.c:5440 do BlueZ 5.86), então não há arquivo
+# de root para apagar à mão. O que exige root é só a ponte privilegiada, para
+# o bond em disco com o dongle fora da mesa.
 #
 # O RACIONAL DA ESCOLHA (sudoers.d contra polkit contra unit contra daemon) está
 # no cabeçalho de `scripts/bt_ponte_privilegiada.sh`, junto com as três

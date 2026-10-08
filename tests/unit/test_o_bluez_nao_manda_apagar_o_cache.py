@@ -22,11 +22,6 @@ _RM_NO_CACHE = re.compile(r"\brm\b[^\n]*?/var/lib/bluetooth[^\n]*?/cache")
 # dentro de `_apagar` (que recusa tudo fora da forma esperada). Nada mais.
 _ISENTOS = {"scripts/bt_ponte_privilegiada.sh"}
 
-# DÍVIDA ESCRITA, de outra posse: o comentário (e só ele) de `scripts/lib/camada_de_maquina.sh`
-# (linhas 627-632) ainda repete a premissa velha. A sprint A-RAIZ-SO-COM-O-PRODUTO-01 é dona do
-# arquivo; a correção está no relato do tema portas. Ao corrigir, apague a linha daqui.
-_DIVIDA_DE_OUTRA_POSSE = {"scripts/lib/camada_de_maquina.sh"}
-
 
 def _arquivos() -> list[Path]:
     achados: list[Path] = []
@@ -50,7 +45,7 @@ def test_nenhum_guia_script_ou_modulo_manda_apagar_o_cache_do_bluez() -> None:
     fora: list[str] = []
     for caminho in _arquivos():
         relativo = str(caminho.relative_to(RAIZ))
-        if relativo in _ISENTOS | _DIVIDA_DE_OUTRA_POSSE:
+        if relativo in _ISENTOS:
             continue
         for linha in _acha(caminho.read_text(encoding="utf-8", errors="replace")):
             fora.append(f"{relativo}: {linha}")

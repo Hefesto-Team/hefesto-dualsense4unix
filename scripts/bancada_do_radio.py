@@ -365,8 +365,8 @@ def etapa_bonds() -> int:
         for h in sorted(hcis):
             print(f"    # tirar do {h}:")
             print(f"    python3 scripts/bancada_do_radio.py limpar {h} {_mascarar(mac)}")
-    print("\n  Ele apaga o bond E o cache SDP na mesma execução — o cache")
-    print("  sozinho envenena o pareamento seguinte (SDP-CACHE-01).")
+    print("\n  Ele apaga o bond em disco e o cache da origem na mesma execução;")
+    print("  o RemoveDevice do BlueZ já tira o [ServiceRecords] do cache.")
     print("  " + "─" * 58 + "\n")
     return 0
 
