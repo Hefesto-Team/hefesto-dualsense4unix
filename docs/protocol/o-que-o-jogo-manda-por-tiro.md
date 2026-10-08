@@ -1,7 +1,7 @@
 # O que o jogo manda ao controle por tiro
 
 Quantos relatórios de saída um jogo de DualSense escreve no controle a cada tiro, e de que
-tipo. Escrito em 08/10/2026 (`O-QUE-O-JOGO-MANDA-POR-TIRO-SE-CONTA-NO-PC-01`). Os emuladores
+tipo. Escrito em 08/10/2026. Os emuladores
 de PS5 mostram o que o jogo PODE pedir; nenhuma fonte pública dá o que ele pede de fato, e
 rodar um jogo de PS5 num emulador exige o jogo tirado de um console desbloqueado, coisa que a
 casa não faz. Medir no PC, com um jogo que fala DualSense (o PRAGMATA), é o caminho legal.
@@ -16,14 +16,14 @@ tiro só se um jogo fizer isso».
 .venv/bin/python scripts/ensaios/contar_o_que_o_jogo_manda.py --ler gravacao.jsonl \
     --jogo PRAGMATA --transporte cabo --controle P1          # conta uma gravação, em qualquer lugar
 .venv/bin/python scripts/ensaios/contar_o_que_o_jogo_manda.py --gravar 120 --saida gravacao.jsonl
-                                                              # bancada: sobe o vpad que só ouve
+                                                              # no aparelho: sobe o vpad que só ouve
 ```
 
 O **contador** (`--ler`) é puro: lê a gravação e imprime a tabela. O **gravador** (`--gravar`)
 sobe um vpad próprio, em lar de mentira, e anota cada `UHID_OUTPUT` no instante em que chega,
 ANTES da deduplicação do produto (o produto entrega ao sink só o bloco que mudou, então contar
 na saída dele subconta). Nada do produto muda: o gravador é uma subclasse do vpad que só ouve.
-O gravador recusa o `HOME` real e o daemon dela no ar, como o ensaio da latência
+O gravador recusa o `HOME` real e o daemon no ar, como o ensaio da latência
 (`docs/protocol/latencia-do-tato.md`).
 
 ## A gravação
@@ -52,9 +52,9 @@ flag do report a liga (o byte do bloco sozinho não vale). Mais as três pergunt
 - o jogo escreve Off e o mesmo efeito em menos de 4 ms: sim ou não (Off é o modo 0x00 ou o
   0x05 oficial; o mesmo efeito é o bloco igual ao último ativo do mesmo lado);
 - o jogo escreve o gatilho nos primeiros 0,5 s depois de abrir o controle: sim ou não (0,5 s é
-  a graça do vpad: o que o jogo escreve antes dela, o produto hoje descarta).
+  a graça do vpad: o que o jogo escreve antes desse prazo, o produto hoje descarta).
 
-## O resultado (preenchido pela bancada)
+## O resultado (preenchido por quem mede no aparelho)
 
 O contador imprime as linhas prontas.
 Nenhuma linha foi medida na árvore de desenvolvimento: ela não toca o aparelho nem joga.
@@ -62,4 +62,4 @@ Nenhuma linha foi medida na árvore de desenvolvimento: ela não toca o aparelho
 | jogo | transporte | controle | categoria | total | por segundo | pico em 1 s |
 | --- | --- | --- | --- | --- | --- | --- |
 
-As três respostas, quando a bancada as tiver: (8 de outubro de 2026: ainda sem sessão).
+As três respostas, quando houver uma sessão medida: (8 de outubro de 2026: ainda sem sessão).

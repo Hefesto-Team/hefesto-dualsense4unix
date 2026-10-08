@@ -1,15 +1,14 @@
 # A latência do tato
 
 Quanto tempo passa entre a escrita do relatório de vibração e o motor do DualSense
-mexer. Todas as sprints do tato (vibração, luz, som) precisam deste número; sem ele,
-«sente atrasado» é opinião. Escrito em 08/10/2026
-(`A-LATENCIA-DO-TATO-SE-MEDE-SEM-A-MAO-DELA-01`).
+mexer. Todo ajuste do tato (vibração, luz, som) precisa deste número; sem ele,
+«sente atrasado» é opinião. Escrito em 08/10/2026.
 
 ## O instrumento
 
 `scripts/ensaios/latencia_do_tato.py` lê o giroscópio do PRÓPRIO controle, pousado e
 parado: a vibração do atuador aparece no giro, e o instante em que o giro sai do ruído é
-o instante em que o motor mexeu. Não precisa da mão dela, nem de um segundo aparelho.
+o instante em que o motor mexeu. Não precisa de ninguém segurando o controle, nem de um segundo aparelho.
 
 ```
 .venv/bin/python scripts/ensaios/latencia_do_tato.py                     # plano e recusas, sem tocar em nada
@@ -43,7 +42,7 @@ O instrumento que briga com o produto recusa, não anuncia:
 
 | recusa | rc | por quê |
 | --- | --- | --- |
-| `HOME` é o lar real | 2 | roda em lar de mentira; no lar real migra o perfil dela |
+| `HOME` é o lar real | 2 | roda em lar de mentira; no lar real migra o perfil do usuário |
 | socket do daemon aceita conexão (o do ambiente ou o de `/run/user/<uid>`) | 2 | o daemon escreve no mesmo hidraw e o relatório dele no meio mediria outra coisa |
 | giro da linha de base com pico acima de 5 °/s | 3 | o controle está na mão ou se mexe, não pousado |
 | menos de 8 quadros de giro antes da escrita | 4 | não há ruído medido, logo não há medida |
@@ -51,14 +50,14 @@ O instrumento que briga com o produto recusa, não anuncia:
 Sem `--medir` nada vai ao aparelho: ele só imprime o plano e o que recusaria agora. Ao
 sair, por qualquer caminho, manda o relatório de motor zerado.
 
-## A tabela (preenchida pela bancada)
+## A tabela (preenchida por quem mede no aparelho)
 
-A tabela é o orçamento de que as sprints de vibração, luz e som falam. O ensaio imprime a
-linha pronta; a bancada cola abaixo, com a data. Nenhuma linha foi medida na árvore de
+A tabela é o orçamento de que a vibração, a luz e o som dependem. O ensaio imprime a
+linha pronta; quem mede cola abaixo, com a data. Nenhuma linha foi medida na árvore de
 desenvolvimento: ela não toca o aparelho.
 
 | transporte | controle | toques lidos | mediana | p95 | máximo |
 | --- | --- | --- | --- | --- | --- |
 
-Datas e condições de cada linha vão em nota abaixo da tabela quando a bancada a preencher
+Datas e condições de cada linha vão em nota abaixo da tabela quando for preenchida
 (8 de outubro de 2026: ainda sem linha).
