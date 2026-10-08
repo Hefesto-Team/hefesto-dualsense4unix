@@ -108,7 +108,7 @@ jobs:
           REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
         run: echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-${{ steps.info.outputs.version }}
           path: dist/
@@ -143,7 +143,7 @@ jobs:
       - name: Smoke AppImage
         run: ./dist/appimage/Hefesto-Dualsense4Unix-*-x86_64.AppImage version
       - name: Upload AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: appimage-${{ needs.build.outputs.version }}
           path: dist/appimage/*.AppImage
@@ -175,7 +175,7 @@ jobs:
       - name: Build .deb
         run: bash scripts/build_deb.sh
       - name: Upload pacote .deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: dist/*.deb
@@ -289,7 +289,7 @@ jobs:
             io.github.hefesto_team.hefesto_dualsense4unix \
             stable
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: flatpak-${{ needs.build.outputs.version }}
           path: Hefesto-Dualsense4Unix-${{ needs.build.outputs.version }}-x86_64.flatpak
@@ -415,7 +415,7 @@ jobs:
         with:
           subject-checksums: dist/tudo/SHA256SUMS
       - name: Guardar o SHA256SUMS
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sums-${{ needs.build.outputs.version }}
           path: dist/tudo/SHA256SUMS
@@ -483,7 +483,7 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: python3 scripts/release/pacotes.py preparar --numero "${VERSION}" --tarball fonte.tar.gz --saida dist/pacotes
       - name: Guardar os arquivos de pacote
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pacotes-${{ needs.build.outputs.version }}
           path: dist/pacotes/

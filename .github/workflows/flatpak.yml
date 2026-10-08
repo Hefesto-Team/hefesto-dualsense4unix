@@ -122,7 +122,7 @@ jobs:
           # registrado. `flatpak info` confirma metadata + runtime base.
 
       - name: Upload do bundle .flatpak
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hefesto-dualsense4unix-flatpak
           path: Hefesto-Dualsense4Unix.flatpak
@@ -131,7 +131,7 @@ jobs:
 
       - name: Upload do log de build (debug)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: flatpak-build-log
           path: |
