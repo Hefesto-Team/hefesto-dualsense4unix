@@ -113,7 +113,7 @@ roteiro.
 
 **Os passos.**
 
-1. Na aba Controles, confira que a «Mira Virtual» dos quatro está apagada; se alguma estiver acesa, anote qual e apague-a.
+1. Na aba Controles, confira que o «Analógico Virtual» dos quatro está apagado; se algum estiver aceso, anote qual e apague-o.
 2. Abra o jogo em modo de quatro jogadores, com os quatro bonecos na tela.
 3. Anote qual boneco é de qual controle, antes de mexer em nada.
 4. Largue os quatro controles na mesa e pegue só o P1.
@@ -132,7 +132,7 @@ roteiro.
 17. Repare se algum boneco sai da partida, trava ou troca de dono no meio.
 18. Se algum boneco errado tiver se mexido, vá ao Hefesto, aba Controles, clique no chip "Todos" da fita e mexa de novo no controle suspeito.
 19. Veja em qual cartão o pontinho anda ou o botão acende — o cartão diz de qual aparelho veio o movimento.
-20. Acenda de novo a «Mira Virtual» que você apagou no primeiro passo, se apagou alguma.
+20. Acenda de novo o «Analógico Virtual» que você apagou no primeiro passo, se apagou algum.
 
 **Passa quando.** O jogo vê os quatro: em cada uma das quatro voltas respondeu o boneco do controle que estava na sua mão, e só ele; nenhum boneco continuou andando depois que você soltou. E nos dois minutos com os quatro jogando juntos nenhum sumiu da partida nem trocou de boneco.
 
@@ -143,7 +143,7 @@ roteiro.
 * **P3** — Só o direcional, com os outros três largados na mesa. Só o boneco 3 pode responder — e ele está no rádio, que é onde este defeito costuma aparecer.
 * **P4** — Só os botões de face, com os outros três largados na mesa. Só o boneco 4 pode responder — este é o último a entrar e o mais propenso a nascer sem dono.
 
-**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, a «Mira Virtual»: acesa num controle, girá-lo move o analógico direito dele no jogo, e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com ela apagada.
+**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, o «Analógico Virtual»: aceso num controle, girá-lo move o analógico do lado escolhido dele no jogo (o direito, se ninguém trocou), e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com ela apagada.
 
 ---
 
@@ -721,7 +721,7 @@ roteiro.
 
 **O que isto prova.** Prova que, com o Hefesto fora do meio, um jogo de co-op de sofá enxerga os dois controles como DualSense de verdade — dois jogadores, nenhum fantasma, e o movimento do controle respondendo. E que o Modo Nativo é a ÚNICA porta que devolve o aparelho inteiro ao jogo: fora dele, o botão, o toque e o movimento do DualSense ficam escondidos de todo programa menos o Hefesto.
 
-**Onde olhar.** O resultado se lê na tela do JOGO, não na do Hefesto: quantos jogadores ele mostra, se ele pede "aperte um botão para entrar", e se girar o controle mexe alguma coisa. No Hefesto você confere só que o modo está de pé, na aba Jogar: a linha «Status» tem de estar em «Desligado», e o quadro «Modo» tem de mostrar «Modo Nativo · o controle sem o Hefesto no meio». E a conta no canto de cima à direita tem de dizer «2 USB» — com os dois do rádio desligados, o BT some da conta. Na aba Controles, o chip «Mira Virtual» de cada cartão fica cinza neste modo: o movimento vai inteiro ao jogo, sem a Mira no meio. A prova do movimento é no jogo, girando o controle na mão.
+**Onde olhar.** O resultado se lê na tela do JOGO, não na do Hefesto: quantos jogadores ele mostra, se ele pede "aperte um botão para entrar", e se girar o controle mexe alguma coisa. No Hefesto você confere só que o modo está de pé, na aba Jogar: a linha «Status» tem de estar em «Desligado», e o quadro «Modo» tem de mostrar «Modo Nativo · o controle sem o Hefesto no meio». E a conta no canto de cima à direita tem de dizer «2 USB» — com os dois do rádio desligados, o BT some da conta. Na aba Controles, o chip «Analógico Virtual» de cada cartão fica cinza neste modo: o movimento vai inteiro ao jogo, sem o Analógico Virtual no meio. A prova do movimento é no jogo, girando o controle na mão.
 
 **Os passos.**
 

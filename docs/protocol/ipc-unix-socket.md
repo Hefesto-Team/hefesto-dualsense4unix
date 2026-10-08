@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**57 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **20** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**57 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **17** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -83,8 +83,8 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:5313` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO. | sim |
 | `keyboard.emulation.set` | `daemon/ipc_handlers.py:5515` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
 | `desktop.status.set` | `daemon/ipc_handlers.py:5355` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
-| `navegacao.interna.set` | `daemon/ipc_handlers.py:5411` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo da lista «Tipo de navegação». | **não** |
-| `navegacao.foco` | `daemon/ipc_handlers.py:5439` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | **não** |
+| `navegacao.interna.set` | `daemon/ipc_handlers.py:5411` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo da lista «Tipo de navegação». | sim |
+| `navegacao.foco` | `daemon/ipc_handlers.py:5439` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
 | `gamepad.emulation.set` | `daemon/ipc_handlers.py:5624` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
 | `gamepad.mask.set` | `daemon/ipc_handlers.py:5551` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
 | `coop.set` | `daemon/ipc_handlers.py:5703` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
@@ -103,7 +103,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `haptica.testar` | `daemon/ipc_handlers.py:6485` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
 | `radio.busca.set` | `daemon/ipc_handlers.py:6517` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
 | `radio.dispensar` | `daemon/ipc_handlers.py:6532` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
-| `motion.calibrate` | `daemon/ipc_handlers.py:6621` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | **não** |
+| `motion.calibrate` | `daemon/ipc_handlers.py:6621` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -636,19 +636,25 @@ depois; `buracos`, os vazios de 8 ms e 4× o intervalo do próprio mouse, ou mai
 `lendo` é falso quando o `/dev/input` dele não abriu (sem leitura não há número). **Nunca** leva o
 código de uma tecla nem texto: só contagens. A chave é `{}` sob a suíte e no modo falso.
 
-### `mira.set` — o chip «Mira Virtual», por controle
+### `mira.set` — o chip «Analógico Virtual», por controle
 
-A palavra, 23/09/2026: um botão «Mira Virtual» ao lado de Giroscópio e
-Acelerômetro, no cartão de cada controle — o movimento do controle vira o
-**analógico direito** daquele controle, para quem não alcança o analógico.
+A palavra, 23/09/2026: um botão ao lado de Giroscópio e Acelerômetro, no
+cartão de cada controle — o movimento do controle vira um **analógico**
+daquele controle, para quem não alcança o analógico. Desde 08/10/2026
+(O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01) o chip é o «Analógico
+Virtual», um só: o giro e a inclinação vão juntos ao lado escolhido.
 
 | Método     | Parâmetros                                                                 | Retorno                                                                                    |
 |------------|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `mira.set` | `{uniq?: str, ligada?: bool, sensibilidade?: 1-12, zona_morta_graus_s?: 0-60, gatilho?: str \| null, inverter_horizontal?: bool, inverter_vertical?: bool, inclinacao?: "nenhum" \| "analogico_esquerdo" \| "analogico_direito", toque?: "nenhum" \| "cursor" \| "zonas"}` | `{status, uniq, perfil, gravado, ligada, sensibilidade, zona_morta_graus_s, gatilho, inverter_horizontal, inverter_vertical, toque, inclinacao, alcance, ressalva}` |
+| `mira.set` | `{uniq?: str, ligada?: bool, lado?: "analogico_esquerdo" \| "analogico_direito", sensibilidade?: 1-12, zona_morta_graus_s?: 0-60, gatilho?: str \| null, inverter_horizontal?: bool, inverter_vertical?: bool, inclinacao?: "nenhum" \| "analogico_esquerdo" \| "analogico_direito", toque?: "nenhum" \| "cursor" \| "zonas", mesmo_parado?: bool}` | `{status, uniq, perfil, gravado, ligada, virtual, lado, sensibilidade, zona_morta_graus_s, gatilho, inverter_horizontal, inverter_vertical, toque, inclinacao, mesmo_parado, alcance, ressalva}` |
 
-`ligada: true` grava o destino `analogico_direito` na peça, e `false` grava
-`nenhum` — com opinião: a peça que apagou o chip não mira nem pela mira do
-perfil. `sensibilidade` e `zona_morta_graus_s` são os dois deslizantes da tela
+`ligada: true` grava o giro (`destino`) e a inclinação (`acelerometro`) no
+lado guardado da peça (`lado`; o direito, se nunca se escolheu), e `false`
+grava `nenhum` nos dois — com opinião: a peça que apagou o chip não mira nem
+pela mira do perfil. `lado` grava o lado e acende o chip nele (o «Esquerdo» e
+o «Direito» da Calibrar); uma `inclinacao` explícita no mesmo pedido vence o
+lado na inclinação. `mesmo_parado` é o «Mesmo parado»: com ele, a inclinação
+não pausa quando o controle fica largado na mesa. `sensibilidade` e `zona_morta_graus_s` são os dois deslizantes da tela
 Calibrar sensores («O quanto um gesto anda» e «Ignorar tremor até»); `gatilho`
 é o «Só enquanto eu segurar» (um botão de `REMAPEAVEIS`, ou `null` para a mira
 andar sempre — o PS é recusado), e `inverter_horizontal`/`inverter_vertical`
@@ -672,8 +678,8 @@ campos escritos — nada mudou = `gravado: false`) e o **vivo** (o mapa por peç
 do `store`, que o tique pergunta com o `uniq` de cada jogador, e o filtro do
 report, que tira o giroscópio nativo da janela de quem mira — a câmera não anda
 em dobro no caminho Virtual). **Em Modo Nativo o pedido com `ligada` é
-recusado inteiro** (e o com `inclinacao` ou `toque`, que também precisam do
-controle virtual), sem escrita nenhuma, com `status: "nativo"` — palavra
+recusado inteiro** (e o com `lado`, `inclinacao` ou `toque`, que também
+precisam do controle virtual), sem escrita nenhuma, com `status: "nativo"` — palavra
 de 24/09/2026 (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`): no Nativo o chip fica
 cinza e não grava. Os ajustes sem `ligada` gravam também no Nativo, com
 `alcance.tique = "nao_se_aplica"` e a `ressalva` dizendo que valem quando o
@@ -681,12 +687,22 @@ modo voltar. `status` pode ser `"ok"`, `"nativo"`, `"sem_controle"` ou
 `"sem_endereco"`, os três últimos com `motivo`.
 
 **A leitura de volta é o `state_full`**: cada controle traz `mira: {ligada,
-destino, toque, inclinacao, sensibilidade, zona_morta_graus_s, gatilho,
-inverter_horizontal, inverter_vertical}` — o que vale AGORA para aquela peça
+virtual, lado, destino, toque, inclinacao, sensibilidade, zona_morta_graus_s,
+gatilho, inverter_horizontal, inverter_vertical, inclinacao_parada,
+mesmo_parado}` — o que vale AGORA para aquela peça
 (`ligada` e `destino` são o giro; `toque` e `inclinacao`, os outros dois, e
-`inclinacao` diz o analógico que ela move, como no pedido),
-pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`), e os
-números mesmo com a mira apagada.
+`inclinacao` diz o analógico que ela move, como no pedido; `virtual` é o chip
+aceso, com o giro ou a inclinação num analógico, e `lado` é o lado que ele
+acende), pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`),
+e os números mesmo com a mira apagada. `inclinacao_parada` é verdadeiro
+enquanto a inclinação está pausada porque o controle ficou parado (3 s sem
+mexer; a mão que pega o controle a devolve), e nunca com `mesmo_parado`.
+
+Cada controle traz também `no_jogo: {lx, ly, rx, ry}` — os quatro eixos que o
+pad virtual DAQUELE controle mandou ao jogo no último envio —, ou
+`null` sem pad (o Nativo, a Navegação), com o jogador cedido ao primário, ou
+antes do primeiro envio. É o segundo ponto do círculo do analógico na aba
+Controles: o que o jogo vê, ao lado do que a mão faz.
 
 ### `haptica.testar` — o botão «Háptica» da aba Vibração
 
@@ -709,6 +725,51 @@ fixado (`rumble.TETO_DO_RUMBLE_FIXADO_S`) sem rebate. `status` pode ser `"ok"`,
 `"sem_controle"` (o controle fora da mesa, ou sem háptica) ou `"sem_som"` (o
 subsystem do som fora do ar), os dois últimos com `motivo`. Sem `uniq` ou sem
 `ligado` booleano, o erro é de parâmetro.
+
+### `navegacao.interna.set` / `navegacao.foco` — a Navegação Interna
+
+| Método                   | Parâmetros                                   | Retorno                                        |
+|--------------------------|----------------------------------------------|------------------------------------------------|
+| `navegacao.interna.set`  | `{ligada?: bool, tipo?: "interna" \| "computador"}` | `{status, navegacao: {interna_ligada, tipo, foco}}` |
+| `navegacao.foco`         | `{ativa: bool}`                              | `{status, foco, toques: {uniq: {r1, l1, x, o, quadrado, triangulo, cima, baixo, esquerda, direita, start}}}` |
+
+A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. `navegacao.interna.set`
+é o «Status da navegação» no tipo Interna (`ligada`) e a lista «Tipo de navegação»
+(`tipo`, que só grava o tipo); exige ao menos um dos dois. A Interna é da máquina e
+não do perfil: trocar de perfil não a desliga, e ela não mexe no mouse.
+
+`navegacao.foco` é a janela dizendo que está na frente: um pulso quando ganha ou perde
+o foco, e uma renovação a cada tique dela com a Interna ligada. Sem renovação por
+1 s (`PRAZO_DO_FOCO_S`) o daemon larga o foco sozinho, e uma janela que morre sem se
+despedir não deixa botão roubado. Com a Interna ligada e o foco vivo, os botões que
+navegam (R1, L1, X, O, quadrado, triângulo, o direcional e o Start) não chegam ao
+jogo, e o R1 e o L1 não saem como Alt+Tab. `toques` são contadores que só sobem, por
+controle, contados só com a Interna agindo: a janela aplica a diferença com o que
+leu antes, e um toque curto entre dois tiques dela não se perde.
+
+O `state_full` traz o bloco `navegacao: {interna_ligada, tipo, foco}`; sem o dono no
+daemon, o bloco não sai.
+
+### `motion.calibrate` — o «Começar» da Calibrar
+
+| Método             | Parâmetros      | Retorno                          |
+|--------------------|-----------------|----------------------------------|
+| `motion.calibrate` | `{uniq: str}`   | `{status: "medindo", uniq, segundos}` |
+
+O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01. Mede o repouso de UM
+controle por 5 s (`SEGUNDOS_DO_ZERO`, uma amostra a cada 20 ms) e guarda o zero
+dele: o viés do giroscópio, que o motor desconta antes do Analógico Virtual e da
+inclinação (só o giro se desconta; a gravidade do repouso fica guardada junto). A resposta volta na hora; um segundo pedido no
+meio da medida responde a mesma medida. A régua é a do parado: o controle que
+mexeu durante a medida não guarda nada. O zero vai ao
+`~/.config/hefesto-dualsense4unix/zeros-dos-sensores.json`, por controle, e volta no
+boot. No Nativo mede e guarda igual: o zero vale quando o Hefesto volta a traduzir.
+Sem `uniq` de um controle, o erro é de parâmetro.
+
+O fim chega pelo `state_full`: cada controle traz `zero: {estado, guardado}`, com
+`estado` em `medindo`, `pronto` (o zero guardado, nesta medida ou numa de antes),
+`mexeu` (a medida não guardou nada) ou `parado` (sem zero e sem medida nesta sessão,
+ou a medida sem leitura), e `guardado` dizendo se há zero deste controle; `zero` é `null` para o controle sem endereço.
 
 ## Perfil com seção `mouse`
 

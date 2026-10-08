@@ -27,7 +27,7 @@ Você configura tudo por uma janela com dez abas. Também há um ícone na bande
 Para quem joga no Linux com um DualSense, e em especial para quem precisa adaptar o controle ao próprio corpo. Com o Hefesto dá para:
 
 - trocar um botão por outro, inclusive em jogos que não deixam remapear;
-- mirar movendo o controle: a Mira Virtual leva o giroscópio ao analógico direito;
+- mirar movendo o controle: o Analógico Virtual leva o giroscópio e a inclinação ao analógico escolhido, o esquerdo ou o direito;
 - usar o controle como mouse e teclado, com teclado na tela;
 - diminuir, aumentar ou desligar a vibração de cada lado, em cada controle;
 - deixar os gatilhos macios, duros ou sem resistência;

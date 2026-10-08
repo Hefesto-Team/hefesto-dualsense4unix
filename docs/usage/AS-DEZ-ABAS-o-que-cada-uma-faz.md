@@ -45,7 +45,7 @@ aparelho, e a traz de volta em outra porta ou pelo Bluetooth.
 
 **Dispositivos conectados**: uma linha por controle, com a borda na cor do
 plástico. Clicar numa linha abre a leitura ao vivo: giroscópio e acelerômetro
-(com um interruptor cada e a **Mira Virtual**), bateria, touchpad, barra de
+(com um interruptor cada e o **Analógico Virtual**), bateria, touchpad, barra de
 luz, analógicos, gatilhos de 0 a 255 e os botões que você aperta.
 
 - **Microfone**: a barra mostra o som entrando agora, o botão ao lado liga o
