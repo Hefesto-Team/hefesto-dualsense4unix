@@ -75,6 +75,10 @@ def test_poucas_amostras_nao_sao_medida() -> None:
 
 
 def test_o_desconto_zera_o_vies_e_sem_zero_e_o_mesmo_giro() -> None:
+    """Só o viés do giro é descontado, e só de quem tem zero.
+
+    D-0810-O-ZERO-DE-CADA-CONTROLE.
+    """
     dono = SimpleNamespace()
     cru = (_VIES[0], _VIES[1], _VIES[2])
     assert rot.descontar_o_vies(dono, _P1, cru) is cru, "sem zero, o giro mudou"
@@ -318,6 +322,10 @@ def test_o_comecar_pela_ponte_chega_ao_daemon(
 
 
 def test_o_selo_e_a_fita_seguem_o_estado_de_cada_controle() -> None:
+    """O selo é de cada controle; a fita só chega ao «Pronto» com todos prontos.
+
+    D-0810-O-ZERO-DE-CADA-CONTROLE.
+    """
     import pacotes.a11_calibrar_sensores as a11
 
     carga = a11.pacote(_ctx({

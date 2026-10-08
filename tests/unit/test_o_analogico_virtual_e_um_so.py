@@ -72,7 +72,10 @@ def test_inclina_num_lado_e_giro_no_outro_a_tela_acende_o_do_giro() -> None:
 
 
 def test_o_mouse_conta_como_apagado() -> None:
-    """O giro no cursor não é lado de analógico: o Analógico Virtual fica apagado."""
+    """O giro no cursor não é lado de analógico: o Analógico Virtual fica apagado.
+
+    D-0810-O-ANALOGICO-VIRTUAL-E-UM-SO.
+    """
     arranjo = rot.ArranjoDeMovimento(destino=rot.DESTINO_MOUSE, lado=_ESQ)
     assert not rot.virtual_aceso(arranjo)
     assert rot.lado_do_virtual(arranjo) == _ESQ, "o lado guardado se perdeu no cursor"
@@ -152,6 +155,8 @@ def test_o_ligada_liga_no_lado_guardado_e_os_dois_movimentos_vao_juntos(
     """`ligada` usa o lado guardado (o direito do perfil antigo); `lado` troca e liga.
 
     MORDIDA: o `destino` cravado no direito — o lado esquerdo não chega ao giro.
+
+    D-0810-O-ANALOGICO-VIRTUAL-E-UM-SO: os dois movimentos vão juntos para o lado escolhido.
     """
     servidor = _servidor(tmp_path)
     corpo = _mira_set(servidor, uniq=_P2, ligada=True)
