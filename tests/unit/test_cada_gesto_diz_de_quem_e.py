@@ -187,7 +187,7 @@ def test_o_gesto_do_computador_nao_toca_perfil_nenhum(
 
 #: ``acao-do-gesto`` (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01) e o
 SEM_DONO_PERMITIDOS = frozenset({
-    "modo-steam", "navegacao-interna",
+    "modo-steam",
     "custo-luz", "custo-som", "custo-vibracao", "novo-hub",
 })
 

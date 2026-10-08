@@ -109,6 +109,9 @@ TETOS = {
     "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
     "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
     "desktop.status.set": 2.0,
+    # A Navegação Interna: o interruptor e a lista gravam uma flag; o foco é o
+    # pulso de cada tique da janela, e um teto curto não segura a linha de fundo.
+    "navegacao.interna.set": 2.0, "navegacao.foco": 0.5,
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
     # Navegação. **3,0 s — a família do `profile.switch`, e não a do
     # `mouse.emulation.restore` de 2,0 s logo acima.** A razão é o que ele faz

@@ -638,6 +638,9 @@ class Daemon:
     _registro_de_gatilhos: Any = None
     _sentinela_de_escritor_cru: Any = None
     _cartorio_do_nascimento: Any = None
+    # A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01: o dono da
+    # Interna (ligada, tipo, o foco com prazo e os toques); nasce no boot.
+    _navegacao_interna: Any = None
     _vigia_do_sequestro: Any = None
 
 
@@ -751,6 +754,14 @@ class Daemon:
         kbd_pref = load_keyboard_preference()
         if kbd_pref is not None:
             self.config.keyboard_emulation_enabled = kbd_pref
+        # A Navegação Interna guarda a última escolha, como o mouse (a flag de
+        # sessão `navegacao_interna.flag`); na primeira vez nasce desligada.
+        from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (
+            NavegacaoInterna,
+        )
+
+        if self._navegacao_interna is None:
+            self._navegacao_interna = NavegacaoInterna.da_sessao()
         # FEAT-DSX-COOP-LOCAL-01 / LEIGO-01: apaga o opt-out gravado por versão
         # antiga (`coop_disabled.flag`) — one-shot, com marker próprio.
         #
@@ -1460,6 +1471,37 @@ class Daemon:
             **desfecho,
         )
         return desfecho
+
+    def definir_a_navegacao_interna(
+        self,
+        *,
+        ligada: bool | None = None,
+        tipo: str | None = None,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> dict[str, Any]:
+        """Liga ou desliga a Navegação Interna, ou troca o tipo da lista.
+
+        A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. O
+        interruptor «Status da navegação» no tipo Interna e a lista «Tipo de
+        navegação» chamam aqui (`navegacao.interna.set`). A Interna é da máquina
+        e não do perfil (`D-2909-A-NAVEGACAO-INTERNA-E-DA-JANELA`): trocar de
+        perfil não a desliga, e a flag de sessão guarda a escolha. Ela NÃO mexe
+        no mouse: com os dois ligados, quem decide o R1 é o foco (D-20).
+
+        Devolve o bloco ``navegacao`` do `state_full`. Tipo desconhecido levanta.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (
+            NavegacaoInterna,
+        )
+
+        if self._navegacao_interna is None:
+            self._navegacao_interna = NavegacaoInterna.da_sessao()
+        nav = self._navegacao_interna
+        nav.definir(ligada=ligada, tipo=tipo)
+        logger.info(
+            "navegacao_interna_pedida", ligada=ligada, tipo=tipo, origin=origin
+        )
+        return dict(nav.bloco())
 
     def set_mouse_speed(
         self,
@@ -4226,6 +4268,11 @@ class Daemon:
                 blocked = self._hotkey_manager.combo_buttons_active(buttons_pressed)
                 if blocked:
                     emu_buttons = buttons_pressed - blocked
+            # A Navegação Interna com a janela do Hefesto na frente: o R1 e o L1
+            # andam as abas e não saem como Alt+Tab (D-20); fora dela, saem.
+            navegacao = getattr(self, "_navegacao_interna", None)
+            if navegacao is not None:
+                emu_buttons = navegacao.calar_o_alt_tab(emu_buttons)
 
             emu_active = not self._emulation_suppressed
             if not gamepad_dispatched:

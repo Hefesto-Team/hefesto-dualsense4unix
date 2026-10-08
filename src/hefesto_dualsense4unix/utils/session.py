@@ -472,6 +472,55 @@ def load_keyboard_preference() -> bool | None:
 # `DaemonConfig.keyboard_emulation_enabled = True`, e o boot só o sobrescreve
 
 
+_NAVEGACAO_INTERNA_FLAG_FILE = "navegacao_interna.flag"
+#: Os dois tipos da lista «Tipo de navegação» da aba 06, na ordem da lista.
+TIPOS_DE_NAVEGACAO = ("interna", "computador")
+
+
+def save_navegacao_interna(ligada: bool, tipo: str) -> None:
+    """Guarda a Navegação Interna: ``{"ligada": bool, "tipo": "interna"|"computador"}``.
+
+    A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01, decisão
+    ``D-2909-A-NAVEGACAO-INTERNA-E-DA-JANELA``: a Interna é da máquina e não do
+    perfil, e guarda a última escolha como o mouse guarda a dele. Molde do
+    ``save_keyboard_emulation``: os dois sentidos ficam escritos, e o I/O nunca
+    derruba o IPC.
+    """
+    try:
+        tipo_valido = tipo if tipo in TIPOS_DE_NAVEGACAO else TIPOS_DE_NAVEGACAO[0]
+        flag = config_dir(ensure=True) / _NAVEGACAO_INTERNA_FLAG_FILE
+        flag.write_text(
+            json.dumps({"ligada": bool(ligada), "tipo": tipo_valido}) + "\n",
+            encoding="utf-8",
+        )
+        logger.debug("navegacao_interna_salva", ligada=ligada, tipo=tipo_valido)
+    except Exception as exc:
+        logger.debug("navegacao_interna_nao_salvou", err=str(exc))
+
+
+def load_navegacao_interna() -> tuple[bool, str]:
+    """``(ligada, tipo)`` guardados; sem arquivo, nasce desligada no tipo Interna.
+
+    Nasce desligada na primeira vez (*«possa Ligar o modo e mandar ver»*), e o
+    tipo que a lista mostra primeiro é a Interna. Conteúdo malformado conta
+    como nunca escolhido.
+    """
+    try:
+        flag = config_dir() / _NAVEGACAO_INTERNA_FLAG_FILE
+        if not flag.exists():
+            return False, TIPOS_DE_NAVEGACAO[0]
+        data = json.loads(flag.read_text(encoding="utf-8").strip() or "{}")
+    except Exception:
+        return False, TIPOS_DE_NAVEGACAO[0]
+    if not isinstance(data, dict):
+        return False, TIPOS_DE_NAVEGACAO[0]
+    tipo = data.get("tipo")
+    return (
+        data.get("ligada") is True,
+        tipo if tipo in TIPOS_DE_NAVEGACAO else TIPOS_DE_NAVEGACAO[0],
+    )
+
+
 _PLUGINS_FLAG_FILE = "plugins.flag"
 
 

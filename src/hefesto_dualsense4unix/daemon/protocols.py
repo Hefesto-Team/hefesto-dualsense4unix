@@ -198,6 +198,19 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def definir_a_navegacao_interna(
+        self,
+        *,
+        ligada: bool | None = None,
+        tipo: str | None = None,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> dict[str, Any]:
+        """Liga a Navegação Interna ou troca o tipo da lista; devolve o bloco
+        ``navegacao`` (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01).
+        O `navegacao.interna.set` o chama.
+        """
+        ...
+
     def is_native_mode(self) -> bool:
         """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
         ...

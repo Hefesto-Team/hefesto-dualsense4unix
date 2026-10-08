@@ -41,6 +41,15 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          O «Status do Modo» da aba Navegação: o mouse, depois o
                          teclado, e com `origin: manual` o `mouse.enabled` e o
                          `teclado_emulado` no perfil ativo, numa gravação só.
+    navegacao.interna.set {ligada?: bool, tipo?: "interna"|"computador", origin?}
+                         -> {status, navegacao: {interna_ligada, tipo, foco}}
+                         A Navegação Interna: o interruptor no tipo Interna e a
+                         lista «Tipo de navegação». É da máquina, não do perfil.
+    navegacao.foco       {ativa: bool} -> {status, foco, toques: {uniq: {r1, l1, x, o,
+                          quadrado, triangulo, cima, baixo, esquerda, direita, start}}}
+                         A janela diz se está na frente (pulso e renovação; o
+                         foco cai sozinho 1 s depois da última); os toques são
+                         contadores que só sobem, contados com a Interna agindo.
     coop.set             {enabled: bool}       -> {status, enabled, players}
                          `enabled:false` é RECUSADO ({status: "recusado", motivo})
     coop.sync            {}                    -> {status, players, active}
@@ -193,6 +202,8 @@ class IpcServer(IpcHandlersMixin):
             "desktop.arranjo.apply": self._handle_desktop_arranjo_apply,
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
             "desktop.status.set": self._handle_desktop_status_set,
+            "navegacao.interna.set": self._handle_navegacao_interna_set,
+            "navegacao.foco": self._handle_navegacao_foco,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "gamepad.mask.set": self._handle_gamepad_mask_set,
             "coop.set": self._handle_coop_set,

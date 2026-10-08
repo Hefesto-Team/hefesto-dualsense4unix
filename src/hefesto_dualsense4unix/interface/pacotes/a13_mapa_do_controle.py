@@ -276,7 +276,7 @@ def _papel_e_luz(ctx: Contexto, ativo: str,
         return "", luz
     primario = bool(dele.get("is_primary"))
     linha = a06.linha_do_cartao(str(item.get("via") or ""), primario,
-                                a06.move_o_cursor(dele, ctx, primario))
+                                a06.move_o_cursor(dele, ctx, primario), estado=ctx.state)
     return f" · Na Navegação: {linha}", luz
 
 

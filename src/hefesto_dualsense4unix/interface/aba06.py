@@ -44,6 +44,8 @@ from pacotes.a06_navegacao import (  # noqa: E402
     PAPEL_SO_A_JANELA,
     PREFIXO_DA_TROCA,
     ROTULOS_DA_TROCA,
+    ROTULOS_DO_TIPO,
+    TIPO_INTERNA,
     chips_da_fita,
     rotulo_de_quem_navega,
 )
@@ -1527,7 +1529,9 @@ if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_T
 #: (`D-2909-A-NAVEGACAO-INTERNA-E-DA-JANELA`): nenhum dos dois tipos é do perfil.
 D_QUANDO = ajuda(
     "Liga e desliga o <b>tipo de navegação</b> escolhido logo abaixo, em "
-    "<b>todos os perfis</b>. <b>Desligado</b>, o controle é só gamepad.",
+    "<b>todos os perfis</b>. A <b>Interna</b> liga em qualquer aba e em qualquer "
+    "Modo, e só age com o Hefesto na frente; <b>O computador</b> liga no Modo "
+    "Navegação. <b>Desligado</b>, o controle é só gamepad.",
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
     "Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado "
@@ -1559,7 +1563,8 @@ D_INTERNA = ajuda(
     "<b>Interna</b>: cada controle ajusta o próprio controle nas abas Jogar, "
     "Controles, Gatilhos, Iluminação e Vibração, ao mesmo tempo. <b>R1</b> e "
     "<b>L1</b> trocam de aba, o direcional escolhe, <b>X</b> aciona e "
-    "<b>Start</b> guarda os de todos no perfil.<br><br>"
+    "<b>Start</b> guarda os de todos no perfil. Com o Hefesto na frente, esses "
+    "botões não chegam ao jogo.<br><br>"
     "<b>O computador</b>: o controle vira mouse e teclado.")
 D_STEAM = ajuda(
     "O controle navega o <b>Big Picture</b> da Steam, em qualquer modo de "
@@ -1609,9 +1614,9 @@ ATIVACAO_ESQ = [
     ("Função do teclado", D_TECLADO,
      simples(OPCOES_TECLADO, gesto="teclado", campo="teclado-estado",
              escolhido=TECLADO_PADRAO)),
-    ("Tipo de navegação", D_INTERNA, simples([
-        "Interna — cada controle ajusta o seu",
-        "O computador — mouse e teclado"], gesto="navegacao-interna")),
+    ("Tipo de navegação", D_INTERNA, simples(
+        list(ROTULOS_DO_TIPO.values()), gesto="navegacao-tipo", campo="navegacao-tipo",
+        escolhido=ROTULOS_DO_TIPO[TIPO_INTERNA])),
 ]
 
 ATIVACAO_DIR = [

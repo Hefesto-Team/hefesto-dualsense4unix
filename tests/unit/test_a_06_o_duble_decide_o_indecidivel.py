@@ -104,6 +104,9 @@ ESTADO = {
                         "bloqueio": "", "despachando": True},
     "keyboard_emulation": {"enabled": False, "osk_disponivel": False},
     "controllers": CONTROLES,
+    # O tipo DIFERENTE do que o desenho crava (a Interna), e a Interna ligada: é com
+    # ela que o «Só a janela» dos cartões é verdade (A-NAVEGACAO-INTERNA-…-01).
+    "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False},
 }
 
 
@@ -313,14 +316,17 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     assert com_gesto in (0, len(GESTOS)), (
         f"a página {onde_estou} pinta {com_gesto} das {len(GESTOS)} listas dos "
         "gestos — meia tabela mentiria sobre a outra metade.")
-    esperados = len(BOTOES) + 3 + com_tecla + com_troca + com_gesto
+    # O «Tipo de navegação» (A-NAVEGACAO-INTERNA-…-01): uma lista, que a página
+    # publicada só ganha no `--publicar 06` desta sprint.
+    com_tipo = int(_opcoes_da_pagina(publicado, "navegacao-tipo") is not None)
+    esperados = len(BOTOES) + 3 + com_tecla + com_troca + com_gesto + com_tipo
     assert len(conferidos) == esperados, (
         f"conferi {len(conferidos)} endereço(s) na página {onde_estou} e a aba tem "
         f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
         f"as DUAS barras de velocidade, {com_tecla} campo(s) de tecla, "
-        f"{com_troca} linha(s) da troca de botões e {com_gesto} lista(s) dos "
-        "gestos) — se o número caiu, uma linha perdeu o endereço e saiu da "
-        "conferência sem reprovar nada.")
+        f"{com_troca} linha(s) da troca de botões, {com_gesto} lista(s) dos "
+        f"gestos e {com_tipo} do tipo de navegação) — se o número caiu, uma "
+        "linha perdeu o endereço e saiu da conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):

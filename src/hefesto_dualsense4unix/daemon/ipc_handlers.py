@@ -2695,6 +2695,12 @@ class IpcHandlersMixin:
         # casa: a `audio` sumia do `state_full` no hotplug-out e `bool(None)`
         result["mic_da_mesa"] = recado_do_microfone.publicar(self.daemon)
 
+        # A Navegação Interna (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01):
+        # sem o dono, o bloco não sai, e a tela não afirma lado nenhum.
+        navegacao = self._navegacao_payload()
+        if navegacao is not None:
+            result["navegacao"] = navegacao
+
         return result
 
 
@@ -5401,6 +5407,110 @@ class IpcHandlersMixin:
             "perfil": desfecho.get("perfil"),
             "gravado": bool(desfecho.get("gravado")),
         }
+
+    async def _handle_navegacao_interna_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga a Navegação Interna, ou troca o tipo da lista «Tipo de navegação».
+
+        A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01.
+
+        Params:
+            ligada: bool (opcional) — o interruptor «Status da navegação» no tipo Interna
+            tipo: "interna"|"computador" (opcional) — a lista, que só grava o tipo
+            origin: "manual"|"profile"
+
+        Resposta: ``{"status": "ok", "navegacao": {interna_ligada, tipo, foco}}``.
+        """
+        ligada = params.get("ligada")
+        tipo = params.get("tipo")
+        if ligada is not None and not isinstance(ligada, bool):
+            raise ValueError("navegacao.interna.set: 'ligada' tem de ser boolean")
+        if tipo is not None and not isinstance(tipo, str):
+            raise ValueError("navegacao.interna.set: 'tipo' tem de ser texto")
+        if ligada is None and tipo is None:
+            raise ValueError("navegacao.interna.set exige 'ligada' ou 'tipo'")
+        definir = getattr(self.daemon, "definir_a_navegacao_interna", None)
+        if not callable(definir):
+            raise ValueError("daemon sem suporte à Navegação Interna")
+        bloco = definir(ligada=ligada, tipo=tipo, origin=origem_do_pedido(params))
+        return {"status": "ok", "navegacao": dict(bloco)}
+
+    async def _handle_navegacao_foco(self, params: dict[str, Any]) -> dict[str, Any]:
+        """A janela diz se está na frente; a resposta traz os toques de cada controle.
+
+        A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. Um pulso
+        quando a janela ganha ou perde o foco, e uma renovação a cada tique dela
+        com a Interna ligada; sem renovação por ``PRAZO_DO_FOCO_S`` o daemon
+        larga o foco sozinho. Os toques são contadores que só sobem, por
+        controle (``r1``, ``l1``, ``x``, ``o``, ``quadrado``, ``triangulo``,
+        ``cima``, ``baixo``, ``esquerda``, ``direita``, ``start``), contados só
+        com a Interna agindo.
+
+        Params: ``ativa: bool``. Resposta: ``{"status", "foco", "toques"}``.
+        """
+        ativa = params.get("ativa")
+        if not isinstance(ativa, bool):
+            raise ValueError("navegacao.foco exige 'ativa' boolean")
+        from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (
+            da_navegacao,
+        )
+
+        nav = da_navegacao(self.daemon)
+        if nav is None:
+            raise ValueError("daemon sem suporte à Navegação Interna")
+        # A diferença desde a última leitura conta pelo foco DAQUELE intervalo,
+        # e só depois o pulso de agora renova (ou larga) o prazo.
+        apertos = self._apertos_de_cada_controle()
+        nav.contar(apertos)
+        nav.declarar_foco(ativa)
+        return {"status": "ok", "foco": nav.foco_vivo(), "toques": nav.toques(apertos)}
+
+    def _apertos_de_cada_controle(self) -> dict[str, dict[str, int] | None]:
+        """``uniq → apertos`` do leitor de cada controle: o do posto, os do co-op e os passivos.
+
+        As três fontes são as do ``inputs`` de cada cartão no `state_full`, e o
+        contador é o do leitor evdev (``EvdevSnapshot.apertos``), que soma a
+        borda de cada aperto por evento. O passivo só se lê se o hub já existe:
+        quem o abre é o `state_full`, nunca este método.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        entradas: list[Any] = []
+        if callable(describe):
+            with contextlib.suppress(Exception):
+                entradas = list(describe() or [])
+        coop = self._coop_live_snapshots()
+        hub = self._sensor_hub
+        out: dict[str, dict[str, int] | None] = {}
+        for entrada in entradas:
+            if not isinstance(entrada, dict) or not entrada.get("connected"):
+                continue
+            uniq = entrada.get("uniq")
+            if not isinstance(uniq, str) or not uniq:
+                continue
+            snap: Any = None
+            if entrada.get("is_primary"):
+                leitor = getattr(self.controller, "_evdev", None)
+                with contextlib.suppress(Exception):
+                    snap = leitor.snapshot() if leitor is not None else None
+            elif uniq in coop:
+                snap = coop[uniq]
+            elif hub is not None:
+                with contextlib.suppress(Exception):
+                    out[uniq] = hub.apertos(uniq)
+                continue
+            apertos = getattr(snap, "apertos", None)
+            out[uniq] = dict(apertos) if isinstance(apertos, dict) else None
+        return out
+
+    def _navegacao_payload(self) -> dict[str, Any] | None:
+        """O bloco ``navegacao`` do `state_full`: ``{interna_ligada, tipo, foco}``."""
+        from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (
+            da_navegacao,
+        )
+
+        nav = da_navegacao(self.daemon)
+        return nav.bloco() if nav is not None else None
 
     async def _handle_keyboard_emulation_set(
         self, params: dict[str, Any]

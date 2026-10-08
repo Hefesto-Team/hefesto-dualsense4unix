@@ -299,6 +299,24 @@ class SensorHub:
             logger.debug("sensor_hub_entradas_falhou", identity=uniq, err=str(exc))
             return None
 
+    def apertos(self, uniq: str) -> dict[str, int] | None:
+        """Os contadores de aperto do reader de gamepad de `uniq`; `None` sem reader.
+
+        A Navegação Interna conta os toques de cada controle pela borda, e o
+        passivo é a fonte do secundário sem co-op (o Nativo). Leitura pura:
+        não registra demanda, quem mantém o reader vivo é a `entradas`.
+        """
+        with self._lock:
+            reader = self._gamepad.get(uniq)
+        if reader is None:
+            return None
+        try:
+            apertos = getattr(reader.snapshot(), "apertos", None)
+        except Exception as exc:  # o IPC não cai por causa de um node
+            logger.debug("sensor_hub_apertos_falhou", identity=uniq, err=str(exc))
+            return None
+        return dict(apertos) if isinstance(apertos, dict) else None
+
     def hz_do_movimento(self, uniq: str) -> float | None:
         """Pacotes por segundo que o nó de movimento de `uniq` recebe AGORA."""
         agora = self._relogio()

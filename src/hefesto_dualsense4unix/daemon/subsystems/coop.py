@@ -1531,6 +1531,8 @@ class CoopManager:
                     apertos=getattr(snap, "apertos", None),
                     apertados=botoes,
                 )
+                # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
+                botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
                 if marcas is not None:
                     marcas.anotar(
                         player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
@@ -2064,6 +2066,9 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     aplicar_o_movimento,
     aplicar_o_toque,
     ralos_do_mic,
+)
+from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (  # noqa: E402
+    roubar_o_que_navega,
 )
 from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (  # noqa: E402
     marcas_da_partida,

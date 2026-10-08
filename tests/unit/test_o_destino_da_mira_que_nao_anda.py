@@ -459,8 +459,12 @@ def _estado_da_06(modo: dict[str, Any], mesa: str, quem_navega: int,
                          "acelerometro_ligado": True},
             "mira": {"ligada": acesa, "destino": "analogico_direito" if acesa else "nenhum"},
         })
+    # A Navegação Interna LIGADA: é com ela que «Só a janela» é verdade
+    # (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01); desligada, o
+    # cartão de quem não navega diz só o transporte, e a régua 8 dela cobra isso.
     return {**modo, "controllers": controles,
-            "keyboard_emulation": {"enabled": True, "osk_disponivel": False}}
+            "keyboard_emulation": {"enabled": True, "osk_disponivel": False},
+            "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False}}
 
 
 def _a_carga_da_06(estado: dict[str, Any]) -> dict[str, Any]:
@@ -531,7 +535,11 @@ def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
 def test_fora_do_cursor_o_cartao_continua_so_a_janela(nome: str, modo: dict[str, Any]) -> None:
     """A MESMA Mira acesa nos quatro, onde o giro NÃO vai ao cursor: o cartão de"""
     linhas = _linhas_do_pacote(_estado_da_06(modo, "A", 1, {1, 2, 3, 4}))
-    assert linhas == {1: f"USB • {_PAPEL_QUE_NAVEGA}", 2: f"BT • {_PAPEL_SO_A_JANELA}",
+    # Com o mouse DESLIGADO o primário não navega o PC: fica com o transporte e,
+    # com a Interna ligada, «Só a janela» (A-NAVEGACAO-INTERNA-…-01, régua 8).
+    rato_desligado = (modo.get("mouse_emulation") or {}).get("enabled") is False
+    primario = _PAPEL_SO_A_JANELA if rato_desligado else _PAPEL_QUE_NAVEGA
+    assert linhas == {1: f"USB • {primario}", 2: f"BT • {_PAPEL_SO_A_JANELA}",
                       3: f"BT • {_PAPEL_SO_A_JANELA}", 4: f"USB • {_PAPEL_SO_A_JANELA}"}, (
         nome, linhas)
 

@@ -106,7 +106,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "linha-de-troca": "escolhe o destino de uma linha da troca de botões — é da tela",
     "fechar-troca": "fecha um painel da própria tela",
     "acao-do-gesto": "escolhe a ação de um gesto — é do perfil",
-    "navegacao-interna": "liga a navegação dentro do Hefesto — é da tela",
+    "navegacao-tipo": "escolhe o tipo de navegação (Interna ou O computador) — é da "
+                      "máquina, nunca do perfil",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
     "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",

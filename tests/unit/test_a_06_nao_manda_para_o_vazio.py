@@ -98,12 +98,19 @@ def test_o_sem_endereco_nao_guarda_quem_ja_tem_casa(aba):
 
 def test_a_linha_do_cartao_leva_o_transporte(aba):
     """`navega` é a LINHA inteira, não o papel: o endereço cobre os dois."""
-    _, _, pronto = aba
+    _, mod, pronto = aba
+    # O ESTADO tem o mouse DESLIGADO: o primário fica com o transporte, sem a bolinha e
+    # sem «Navega o PC» (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01).
     linha = pronto["colunas"]["p1"]["navega"]
+    assert linha == "BT", (
+        f"o cartão do primário saiu {linha!r} com o mouse desligado. O "
+        "`data-campo=\"navega\"` cobre a linha inteira do desenho — sem o transporte, "
+        "a pintura o APAGA; «Navega o PC» com o mouse desligado é a mentira da foto.")
+    ligado = {**ESTADO, "mouse_emulation": {**ESTADO["mouse_emulation"], "enabled": True}}
+    linha = mod._linha_do_cartao({"via": "BT"}, True, estado=ligado)
     assert linha == '<span class="bolinha"></span>BT <span class="pt">•</span> Navega o PC', (
-        f"o cartão do primário saiu {linha!r}. O `data-campo=\"navega\"` cobre "
-        "a linha inteira do desenho — sem o transporte, a pintura o APAGA; sem a "
-        "bolinha, o primário perde o ponto verde.")
+        f"com o mouse ligado o cartão do primário saiu {linha!r}: sem a bolinha, o "
+        "primário perde o ponto verde.")
     assert "via" not in pronto["colunas"]["p1"], (
         "`via` voltou a ser chave própria: ela não tem endereço no desenho, e "
         "quem a recebia era o `navega`.")
@@ -113,7 +120,11 @@ def test_a_linha_do_cartao_nao_inventa_transporte(aba):
     """Sem casa na mesa, sai só o papel — nunca um transporte adivinhado."""
     _, mod, _ = aba
     assert mod._linha_do_cartao({}, True) == '<span class="bolinha"></span>Navega o PC'
-    assert mod._linha_do_cartao({}, False) == "Só a janela"
+    # A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01: «Só a janela» só sai com
+    # a Navegação Interna ligada; desligada, o secundário sem transporte não diz papel nenhum.
+    assert mod._linha_do_cartao({}, False) == ""
+    ligada = {"navegacao": {"interna_ligada": True, "tipo": "interna", "foco": False}}
+    assert mod._linha_do_cartao({}, False, estado=ligada) == "Só a janela"
 
 
 def test_o_gerador_e_o_pacote_desenham_a_mesma_linha(aba):

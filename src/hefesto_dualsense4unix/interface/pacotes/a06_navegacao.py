@@ -201,6 +201,33 @@ PAPEL_QUE_NAVEGA = "Navega o PC"
 PAPEL_SO_A_JANELA = "Só a janela"
 PAPEL_DO_CURSOR = "Move o cursor"
 
+#: A lista «Tipo de navegação» (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01):
+#: o tipo que o daemon guarda (`navegacao.interna.set {tipo}`) e o rótulo que a lista mostra,
+#: na ordem dela. A Interna vem primeiro, pela fala dela.
+TIPO_INTERNA = "interna"
+TIPO_COMPUTADOR = "computador"
+ROTULOS_DO_TIPO: dict[str, str] = {
+    TIPO_INTERNA: "Interna — cada controle ajusta o seu",
+    TIPO_COMPUTADOR: "O computador — mouse e teclado",
+}
+
+
+def _navegacao(estado: dict[str, Any] | None) -> dict[str, Any]:
+    """O bloco `navegacao` do `state_full` (o dono é o daemon), ou vazio."""
+    bloco = (estado or {}).get("navegacao")
+    return bloco if isinstance(bloco, dict) else {}
+
+
+def tipo_de_navegacao(estado: dict[str, Any] | None) -> str:
+    """O tipo escolhido na lista. Sem o bloco do daemon, só o computador existe."""
+    tipo = _navegacao(estado).get("tipo")
+    return tipo if tipo in ROTULOS_DO_TIPO else TIPO_COMPUTADOR
+
+
+def interna_ligada(estado: dict[str, Any] | None) -> bool:
+    """A Navegação Interna está ligada, pelo bloco do daemon; sem ele, não."""
+    return _navegacao(estado).get("interna_ligada") is True
+
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
 PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
 
@@ -447,8 +474,12 @@ RAZAO_DO_PORTAO = (
 
 
 def _a_razao_do_portao(estado: dict[str, Any]) -> str:
-    """Por que o "Status do Modo" vai recusar agora — ou nada a dizer."""
-    if not estado:
+    """Por que o «Status da navegação» vai recusar agora — ou nada a dizer.
+
+    O portão só vale no tipo «O computador», que é o que derruba o pad virtual:
+    a Interna liga em qualquer Modo (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01).
+    """
+    if not estado or tipo_de_navegacao(estado) == TIPO_INTERNA:
         return NADA_A_DIZER
     if mode_of_state(estado) == MODE_DESKTOP:
         return NADA_A_DIZER
@@ -741,9 +772,10 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     return "".join(chips)
 
 
-def _linha_do_cartao(c: dict[str, Any], primario: bool, cursor: bool = False) -> str:
+def _linha_do_cartao(c: dict[str, Any], primario: bool, cursor: bool = False,
+                     estado: dict[str, Any] | None = None) -> str:
     """A linha inteira do cartão: `"BT • Navega o PC"`."""
-    return linha_do_cartao(str(c.get("via") or ""), primario, cursor)
+    return linha_do_cartao(str(c.get("via") or ""), primario, cursor, estado=estado)
 
 
 #: A linha da mira sem nada a dizer — o lugar vazio, o chip apagado e o Nativo escrevem isto.
@@ -828,7 +860,19 @@ def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
     return rato.get("despachando") is True
 
 
-def linha_do_cartao(via: str, primario: bool, cursor: bool = False) -> str:
+def o_mouse_navega(estado: dict[str, Any] | None) -> bool:
+    """O primário navega o PC: o mouse não está desligado (sem bloco, o de nascença).
+
+    UM DONO, DOIS LEITORES: o cartão (a bolinha e «Navega o PC») e a janela da
+    Navegação Interna, que não dá seleção a quem navega o PC com o mouse ligado
+    (`D-2909-O-CURSOR-DE-QUEM-NAVEGA-O-PC-E-O-DO-PC`).
+    """
+    rato = (estado or {}).get("mouse_emulation")
+    return not (isinstance(rato, dict) and rato.get("enabled") is False)
+
+
+def linha_do_cartao(via: str, primario: bool, cursor: bool = False, *,
+                    estado: dict[str, Any] | None = None) -> str:
     """A linha de estado do cartão, em HTML — UM DONO, DOIS CHAMADORES.
 
     O gerador (`aba06.controle`) desenha a bancada com ela e o pacote pinta o
@@ -846,11 +890,22 @@ def linha_do_cartao(via: str, primario: bool, cursor: bool = False) -> str:
     este controle, sem navegar o PC, move o cursor pelo giro (ver
     `move_o_cursor`). Ele não acende a bolinha: o verde é de quem navega, e
     quem navega continua sendo um só.
+
+    O PAPEL DA HORA — A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01.
+    O `estado` é o `state_full`: o primário só diz «Navega o PC» (e só ele tem a
+    bolinha) com o mouse ligado, e «Só a janela» só sai com a Navegação Interna
+    ligada; no resto, o cartão diz só o transporte. Sem `estado` (o desenho da
+    bancada) vale o de nascença: o mouse ligado e a Interna desligada. Antes,
+    «Só a janela» era fixo nos secundários e afirmava um caminho que nenhum
+    código fazia.
     """
-    papel = (PAPEL_QUE_NAVEGA if primario
-             else PAPEL_DO_CURSOR if cursor else PAPEL_SO_A_JANELA)
-    corpo = f"{via}{PONTO}{papel}" if via else papel
-    return (BOLINHA if primario else "") + corpo
+    st = estado or {}
+    navega = primario and o_mouse_navega(st)
+    papel = (PAPEL_QUE_NAVEGA if navega
+             else PAPEL_DO_CURSOR if cursor and not primario
+             else PAPEL_SO_A_JANELA if interna_ligada(st) else "")
+    corpo = PONTO.join(p for p in (via, papel) if p)
+    return (BOLINHA if navega else "") + corpo
 
 
 def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
@@ -1391,7 +1446,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         primario = bool(c.get("is_primary"))
         cards[uniq] = {
             "navega": _linha_do_cartao(na_mesa, primario,
-                                       move_o_cursor(c, ctx, primario)),
+                                       move_o_cursor(c, ctx, primario), estado=st),
             "identidade": identidade_de(c, ctx.mesa),
             **a_mira_do_cartao(c, ctx),
         }
@@ -1422,8 +1477,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "gestos": len(atalhos),
         "gestos-lista": {k: v for k, v in list(atalhos.items())[:12]},
     }
-    if isinstance(rato.get("enabled"), bool):
+    # O interruptor mostra o estado do TIPO escolhido na lista (D-2909-O-INTERRUPTOR-
+    # LIGA-O-TIPO-ESCOLHIDO): a Interna pelo bloco `navegacao`, o computador pelo mouse.
+    if tipo_de_navegacao(st) == TIPO_INTERNA:
+        mesa["rato-ligado"] = LIGADO if interna_ligada(st) else DESLIGADO
+    elif isinstance(rato.get("enabled"), bool):
         mesa["rato-ligado"] = LIGADO if rato["enabled"] else DESLIGADO
+    if _navegacao(st):
+        mesa["navegacao-tipo"] = ROTULOS_DO_TIPO[tipo_de_navegacao(st)]
     mesa["rato-estado"] = _o_mouse_virtual_em_uma_linha(rato)
     mesa["teclado-bloqueio"] = _o_teclado_em_uma_linha(tecla)
     mesa["teclado-osk"] = _o_teclado_na_tela_em_uma_linha(tecla)
@@ -1856,6 +1917,8 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         raise RuntimeError(
             "não consegui falar com o Hefesto agora, então não sei se ligar o "
             "mouse derrubaria um jogo em andamento. Tente de novo em instantes.")
+    if tipo_de_navegacao(ctx.state) == TIPO_INTERNA:
+        return _ligar_a_interna(ctx, p)
     modo_agora = mode_of_state(ctx.state)
     if modo_agora != MODE_DESKTOP:
         # passaram a ser o mesmo texto: duas grafias do mesmo fato divergiriam
@@ -1883,6 +1946,53 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         raise RuntimeError(f"o mouse mudou e o teclado não: {_recusa_do_teclado(corpo)}")
     if corpo.get("gravado") is False:
         return {"recado": _o_que_nao_guardou(str(corpo.get("perfil") or ""))}
+    return None
+
+
+def _ligar_a_interna(ctx: Contexto, p: Any) -> dict[str, Any] | None:
+    """O «Status da navegação» no tipo Interna: liga ou desliga, em qualquer Modo.
+
+    A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. Sem portão: a
+    Interna não mexe no pad virtual nem no mouse (D-20), e quem decide o R1 é o
+    foco da janela. O lado para onde ir sai do bloco `navegacao` do daemon.
+    """
+    ligada = interna_ligada(ctx.state)
+    nova = not bool(_partir_de("modo", int(ligada), 0))
+    reserva = _reservar("modo", int(ligada), int(nova), 0)
+    try:
+        resposta = p.resultado("navegacao.interna.set", ligada=nova, origin=MANUAL)
+    except Exception as erro:
+        _largar_a_reserva("modo", reserva)
+        raise RuntimeError(
+            "o Hefesto não respondeu — a Navegação Interna ficou como estava") from erro
+    if isinstance(resposta, dict) and resposta.get("status") != "ok":
+        _largar_a_reserva("modo", reserva)
+        raise RuntimeError("o Hefesto não ligou a Navegação Interna agora")
+    return None
+
+
+@gesto("06-navegacao.html", "navegacao-tipo", grava="navegacao.interna.set")
+def navegacao_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """A lista «Tipo de navegação»: só grava o tipo, e o interruptor passa a mostrá-lo.
+
+    A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. Era a lista
+    «Navegação Interna» sem dono (`SEM_GESTO`). O tipo é da máquina, nunca do
+    perfil (`D-2909-A-NAVEGACAO-INTERNA-E-DA-JANELA`), e trocar a lista não
+    desliga o outro tipo: os dois são independentes, e o foco decide o R1.
+    """
+    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
+    tipo = next((t for t, rotulo in ROTULOS_DO_TIPO.items() if rotulo == escolhido), None)
+    if tipo is None:
+        raise ValueError(
+            f"navegacao-tipo: não reconheci a opção escolhida ({escolhido!r}); as duas "
+            f"são as de `ROTULOS_DO_TIPO`.")
+    try:
+        resposta = p.resultado("navegacao.interna.set", tipo=tipo, origin=MANUAL)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o Hefesto não respondeu — o tipo de navegação ficou como estava") from erro
+    if isinstance(resposta, dict) and resposta.get("status") != "ok":
+        raise RuntimeError("o Hefesto não guardou o tipo de navegação agora")
     return None
 
 
@@ -3094,10 +3204,6 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #: ERAM SEIS ATÉ 13/09/2026: `guardar-remapeamento` e `padrao-remapeamento`
 #: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
 SEM_GESTO = {
-    "navegacao-interna": "navegar a janela do Hefesto com o controle não tem "
-                         "método no daemon — nenhum dos 39, e o "
-                         "`core/disputa_de_botao.py` que as sprints citam não "
-                         "existe no disco",
     "modo-steam": "não há método de Modo Steam no daemon — nenhum dos 39",
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
@@ -3125,7 +3231,7 @@ SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
 PONTE = {"chamar", "machine_declare", "escolher_arquivo"}
 #: O `desktop.status.set` é o «Status do Modo» desde 29/09/2026
 METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set",
-           "machine.declare"}
+           "machine.declare", "navegacao.interna.set"}
 
 
 PAGINA = "06-navegacao.html"
@@ -3143,6 +3249,9 @@ PROVAS = [
     _prova("modo", {},
            [("resultado", ["desktop.status.set"],
              {"enabled": True, "origin": "manual"})]),
+    _prova("navegacao-tipo", {"valor": ROTULOS_DO_TIPO[TIPO_COMPUTADOR]},
+           [("resultado", ["navegacao.interna.set"],
+             {"tipo": TIPO_COMPUTADOR, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "9"},
            [("resultado", [_MOUSE], {"speed": 9, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "99"},
