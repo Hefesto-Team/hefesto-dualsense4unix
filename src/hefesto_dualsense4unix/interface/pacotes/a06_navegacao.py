@@ -203,7 +203,7 @@ PAPEL_DO_CURSOR = "Move o cursor"
 
 #: A lista «Tipo de navegação» (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01):
 #: o tipo que o daemon guarda (`navegacao.interna.set {tipo}`) e o rótulo que a lista mostra,
-#: na ordem dela. A Interna vem primeiro, pela fala dela.
+#: na ordem do pedido. A Interna vem primeiro, pela fala do usuário.
 TIPO_INTERNA = "interna"
 TIPO_COMPUTADOR = "computador"
 ROTULOS_DO_TIPO: dict[str, str] = {

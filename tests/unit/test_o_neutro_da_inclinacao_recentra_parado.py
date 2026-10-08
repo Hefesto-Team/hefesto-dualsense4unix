@@ -1,6 +1,6 @@
 """O-NEUTRO-DA-INCLINACAO-RECENTRA-COM-O-CONTROLE-PARADO-01 — o controle parado não inclina.
 
-D-2909-O-CONTROLE-PARADO-NAO-INCLINA (decidida por ela no chat, 29/09 ~21h15, «Sai e
+D-2909-O-CONTROLE-PARADO-NAO-INCLINA (decidida pelo usuário no chat, 29/09 ~21h15, «Sai e
 volta»; a tela, ~21h30, «Sem aviso, chip e opção»): parado por 3 s (o giro variando menos
 de 1,5 °/s de pico a pico em cada eixo, e a gravidade andando menos de 2°), a inclinação
 sai do analógico e o neutro da mão fica guardado; a gravidade que anda 3° a devolve. O
@@ -8,7 +8,7 @@ neutro que nasceu na mesa se reaprende quando a mão assenta, e o «Mesmo parado
 Calibrar nunca para.
 
 Pura, sem aparelho: o relógio e o giro são de mentira, a 60 Hz. As réguas 1 a 11 são as
-da sprint, na ordem; as quatro do fim são as da resposta dela das ~21h30. Endereços de
+da sprint, na ordem; as quatro do fim são as da resposta de produto das ~21h30. Endereços de
 rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``).
 """
 

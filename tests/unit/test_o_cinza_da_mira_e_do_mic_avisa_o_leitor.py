@@ -53,6 +53,10 @@ ROTEIRO = """
   const foto = () => ({
     aria_mira: mira.getAttribute('aria-disabled'),
     caixa_mira: caixa(mira), caixa_giro: caixa(giro), caixa_accel: caixa(accel),
+    invol_mira: (() => { const r = []; let e = mira.parentElement;
+      while (e && !e.classList.contains('sensores-peca')) {
+        r.push(getComputedStyle(e).display); e = e.parentElement; }
+      return r; })(),
     cara_mira: cara(mira), cara_accel: cara(accel),
   });
   const fora = {};
@@ -153,9 +157,15 @@ def test_a_geometria_nao_mudou(medido: dict) -> None:
         assert mira[2] > 0 and mira[3] > 0, f"{estado}: o chip da Mira sumiu {mira}"
         assert mira[1] == giro[1] == accel[1], (
             f"{estado}: o chip da Mira saiu da linha dos sensores: {mira} contra {giro}")
-        assert mira[2] == accel[2] and mira[3] == accel[3], (
-            f"{estado}: o chip da Mira mudou de tamanho — {mira} contra {accel}; o "
-            f"invólucro virou caixa e saiu da grade de três")
+        # A LARGURA É A DO RÓTULO (08/10/2026): o «Mira Virtual» media o mesmo que o
+        # «Acelerômetro» por acaso de tamanho de texto, e o «Analógico Virtual» é mais
+        # largo. O que prova o invólucro sem caixa é o `display:contents` de cada um
+        # entre o botão e a grade, e a mesma altura dos chips.
+        invol = foto["invol_mira"]
+        assert invol and all(d == "contents" for d in invol), (
+            f"{estado}: o invólucro da Mira virou caixa ({invol}) e saiu da grade de três")
+        assert mira[3] == accel[3], (
+            f"{estado}: o chip da Mira mudou de altura — {mira} contra {accel}")
     virgem = medido["virgem"]
     for estado in ("cinza", "livre", "apagada"):
         assert medido[estado]["caixa_mira"] == virgem["caixa_mira"], estado

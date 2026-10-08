@@ -108,19 +108,25 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
 
 def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
-    """O que a bancada diz morar no bloco «Mira Virtual» mora na Calibrar publicada."""
+    """O que a bancada diz morar nos ajustes do «Analógico Virtual» mora na Calibrar publicada.
+
+    O bloco «Mira Virtual» embaixo dos cartões virou, em 08/10/2026, os ajustes do
+    «Analógico Virtual» dentro do cartão de cada controle
+    (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01).
+    """
     tela = _texto_visivel("calibrar-sensores.html")
     frases_do_bloco = 0
     ausentes = []
     for titulo, corpo in _secoes().items():
         for frase in _frases(corpo):
-            if "bloco «Mira Virtual»" not in frase:
+            if "ajustes do «Analógico Virtual»" not in frase:
                 continue
             frases_do_bloco += 1
             for citado in _citados(frase):
                 if citado not in tela:
                     ausentes.append((titulo.split(" — ")[0], citado))
-    assert frases_do_bloco >= 2, "nenhuma célula fala do bloco da Mira na Calibrar — régua cega"
+    assert frases_do_bloco >= 2, (
+        "nenhuma célula fala dos ajustes do Analógico Virtual na Calibrar — régua cega")
     assert not ausentes, f"rótulos que a Calibrar publicada não tem: {ausentes}"
 
 
