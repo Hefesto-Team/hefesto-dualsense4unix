@@ -195,14 +195,20 @@ def _efeito_aninhado() -> TriggerEffect:
     return build_from_name("MultiPositionVibration", [[v] for v in forcas])
 
 
-def _casos() -> dict[str, TriggerEffect]:
-    casos = {
-        nome: _efeito_com_os_padroes(nome)
-        for nome in PRESET_FACTORIES
-        if nome not in FORA_DA_REGUA
-    }
-    casos[VIBRACAO_ANINHADA] = _efeito_aninhado()
-    return casos
+def _nomes_dos_casos() -> list[str]:
+    """Os casos da régua: cada fábrica menos as de fora, mais o perfil aninhado.
+
+    Só os NOMES: o efeito nasce dentro do teste, para uma fábrica que passe a
+    recusar os padrões reprovar o caso dela e não a coleta inteira.
+    """
+    nomes = [nome for nome in PRESET_FACTORIES if nome not in FORA_DA_REGUA]
+    return [*nomes, VIBRACAO_ANINHADA]
+
+
+def _efeito_do_caso(caso: str) -> TriggerEffect:
+    if caso == VIBRACAO_ANINHADA:
+        return _efeito_aninhado()
+    return _efeito_com_os_padroes(caso)
 
 
 def _nome_da_fabrica(caso: str) -> str:
@@ -212,7 +218,7 @@ def _nome_da_fabrica(caso: str) -> str:
 def _violacoes_do_caso(caso: str) -> frozenset[str]:
     nome = _nome_da_fabrica(caso)
     return violacoes(
-        decodificar(bloco_de(_casos()[caso])),
+        decodificar(bloco_de(_efeito_do_caso(caso))),
         repete=nome in REPETEM,
         segue_ate_o_fundo=nome in SEGUEM_ATE_O_FUNDO,
     )
@@ -252,13 +258,12 @@ ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
 
 def test_todo_efeito_da_fabrica_passa_pela_regua_menos_o_montar_do_zero() -> None:
     assert set(PRESET_FACTORIES) >= FORA_DA_REGUA
-    casos = _casos()
-    assert len(casos) == len(PRESET_FACTORIES) - len(FORA_DA_REGUA) + 1
+    assert len(_nomes_dos_casos()) == len(PRESET_FACTORIES) - len(FORA_DA_REGUA) + 1
     for nome in PRESET_FACTORIES:
         assert nome in _SPEC_POR_NOME, f"{nome} sem controles na tela"
 
 
-@pytest.mark.parametrize("caso", sorted(_casos()))
+@pytest.mark.parametrize("caso", sorted(_nomes_dos_casos()))
 def test_o_efeito_manda_o_que_o_nome_diz_ou_esta_na_tabela(caso: str) -> None:
     quebradas = _violacoes_do_caso(caso)
     if caso not in ISENCOES:
@@ -278,7 +283,7 @@ def test_o_efeito_manda_o_que_o_nome_diz_ou_esta_na_tabela(caso: str) -> None:
 
 
 def test_a_tabela_de_isencao_so_cita_efeito_que_existe() -> None:
-    assert set(ISENCOES) <= set(_casos())
+    assert set(ISENCOES) <= set(_nomes_dos_casos())
 
 
 # --- o decodificador, com fixtures sintéticas ---------------------------------
