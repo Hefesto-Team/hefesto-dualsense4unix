@@ -20,8 +20,9 @@ Fluxo do daemon:
   - `UinputGamepad.forward_*()` aplica os eventos no device virtual.
   - Jogo lê o device virtual com a máscara escolhida.
 
-O button mapping (evdev BTN_A/B/X/Y = south/east/north/west) é o mesmo nos
-dois flavors — o que muda os prompts é o VID/PID, não os códigos de botão.
+A tabela de botões segue o VID que o nó mostra: o SDL lê o quadrado e o triângulo
+em códigos diferentes conforme o VID. DualSense e Nintendo (VID Sony e Nintendo)
+escrevem a posicional do `hid-playstation`; o Xbox escreve a do `xpad`.
 
 FEAT-VPAD-FF-PASSTHROUGH-01 — force-feedback (rumble do JOGO):
   O device virtual anuncia EV_FF (FF_RUMBLE + FF_PERIODIC), então jogos/SDL
@@ -169,6 +170,8 @@ def normalize_flavor(flavor: str | None) -> str:
     return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
 # Mapeamento canonico Hefesto - DualSense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
+# É a tabela do `xpad` (máscara Xbox, VID 045e) e dos consumidores de botão fora do pad; as
+# máscaras de VID Sony e Nintendo usam :data:`BOTOES_POSICIONAIS`.
 BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_A",
     "circle": "BTN_B",
@@ -183,26 +186,36 @@ BUTTON_TO_UINPUT: dict[str, str] = {
     "r3": "BTN_THUMBR",
 }
 
-#: códigos que o kernel já usa para o DualSense físico
-#: DIGITAIS (`BTN_TL2`/`BTN_TR2`, ver :func:`_capacidades_procon`) e quem os
-BOTOES_PROCON: dict[str, str] = {
-    "cross": "BTN_SOUTH",
-    "circle": "BTN_EAST",
-    "square": "BTN_WEST",
-    "triangle": "BTN_NORTH",
-    "l1": "BTN_TL",
-    "r1": "BTN_TR",
-    "create": "BTN_SELECT",
-    "options": "BTN_START",
-    "ps": "BTN_MODE",
-    "l3": "BTN_THUMBL",
-    "r3": "BTN_THUMBR",
-}
+#: Os dois botões do físico que o `uinput` NÃO escreve pela tabela dos botões: os
+#: gatilhos digitais. Nas máscaras DualSense e Xbox os gatilhos saem como eixo
+#: (`ABS_Z`/`ABS_RZ`), e na Nintendo o `BTN_TL2`/`BTN_TR2` tem um escritor só, o
+#: `forward_analog` (ver :func:`_capacidades_procon`).
+_GATILHOS_DIGITAIS = frozenset({"l2_btn", "r2_btn"})
+
+
+def botoes_posicionais(mapa: dict[str, str] | None = None) -> dict[str, str]:
+    """A tabela posicional da Sony: o nome do botão -> o `BTN_*` que o kernel usa.
+
+    Nasce do leitor do físico (`EvdevReader.BUTTON_MAP`, invertido), não
+    digitada: o pad com VID Sony é, nos botões, o que o `hid-playstation`
+    escreve, e o leitor é quem lê o que o driver escreve. Ficam de fora só os
+    gatilhos digitais (:data:`_GATILHOS_DIGITAIS`). `mapa` existe para a régua
+    provar que a tabela acompanha o leitor.
+    """
+    if mapa is None:
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+        mapa = EvdevReader.BUTTON_MAP
+    return {nome: codigo for codigo, nome in mapa.items() if nome not in _GATILHOS_DIGITAIS}
+
+
+#: A tabela das máscaras de VID Sony e Nintendo: um dono, duas máscaras que a usam.
+BOTOES_POSICIONAIS: dict[str, str] = botoes_posicionais()
 
 BOTOES_POR_FLAVOR: dict[str, dict[str, str]] = {
-    "dualsense": BUTTON_TO_UINPUT,
+    "dualsense": BOTOES_POSICIONAIS,
     "xbox": BUTTON_TO_UINPUT,
-    "nintendo": BOTOES_PROCON,
+    "nintendo": BOTOES_POSICIONAIS,
 }
 
 #: Acima deste valor (0-255) o gatilho analógico do DualSense vira o botão
@@ -854,7 +867,7 @@ class UinputGamepad:
 
 __all__ = [
     "BOTOES_POR_FLAVOR",
-    "BOTOES_PROCON",
+    "BOTOES_POSICIONAIS",
     "BUS_USB",
     "BUTTON_TO_UINPUT",
     "CAPACIDADES_POR_FLAVOR",
@@ -878,6 +891,7 @@ __all__ = [
     "XBOX360_PRODUCT",
     "XBOX360_VENDOR",
     "UinputGamepad",
+    "botoes_posicionais",
     "nomes_de_flavor_aceitos",
     "normalize_flavor",
     "resolver_flavor",

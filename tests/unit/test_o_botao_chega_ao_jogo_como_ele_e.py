@@ -23,10 +23,10 @@ código escrito é o que o físico mandou». Não é, e não deve ser, na másca
 Xbox: o SDL lê o X da Xbox no `BTN_X` (o mesmo número do `BTN_NORTH`), e o
 quadrado do físico chega como `BTN_WEST`. O lado esperado da régua 2 é o botão
 que o JOGO lê, pela regra do SDL para o VID que o pad mostra
-(`_esperado_codigo_que_o_jogo_le`). E pela mesma regra a máscara DualSense do
-`uinput` (VID da Sony) troca o quadrado e o triângulo: o defeito fica escrito
-no xfail estrito da régua 2b, fora da posse desta sprint
-(`uinput_gamepad.py` é `nao_toca`).
+(`_esperado_codigo_que_o_jogo_le`). Pela mesma regra a máscara DualSense do
+`uinput` (VID da Sony) escreve o quadrado e o triângulo como o `hid-playstation`
+(A-MASCARA-DUALSENSE-DO-UINPUT-SEGUE-O-VID-01, régua 2b): a tabela dela é a
+posicional, nascida do leitor do físico (réguas 6 e 7).
 
 A MEDIDA ANTES DA CURA, com este arquivo sobre o `src/` do `c3db67ca6`: 46
 reprovavam (as 40 da régua 4, as 4 do grace da régua 8 e as 2 da contagem), e
@@ -56,6 +56,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.poll import evdev_buttons_once
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
+from hefesto_dualsense4unix.integrations import uinput_gamepad
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 from tests.unit import test_o_report_de_entrada_bate_com_o_driver as o_report
 
@@ -388,7 +389,8 @@ def _o_que_o_jogo_ve_no_uinput(
     return apertadas, (eixos.get(ecodes.ABS_HAT0X, 0), eixos.get(ecodes.ABS_HAT0Y, 0)), eixos
 
 
-#: Os dois botões da frente que, na máscara DualSense do `uinput`, chegam
+#: Os dois botões da frente que o SDL lê em códigos diferentes conforme o VID do nó
+#: (o quadrado e o triângulo): o par que a régua 2b isola na máscara DualSense.
 _A_FRENTE_QUE_O_VID_DECIDE = frozenset({"BTN_WEST", "BTN_NORTH"})
 
 
@@ -441,30 +443,102 @@ def test_as_mascaras_desta_regua_sao_as_do_produto() -> None:
 def test_regua_2_ida_e_volta_nas_mascaras_do_uinput(mascara: str, jogador: int) -> None:
     """Cada botão chega como o botão que o jogo lê, pelo VID da máscara.
 
-    Fica de fora só o par da frente na máscara DualSense (a régua 2b).
-    Mordidas: trocar `l3` e `r3` em `BUTTON_TO_UINPUT` reprova a DualSense e a
-    Xbox e não a Nintendo; o mesmo em `BOTOES_PROCON` reprova só a Nintendo."""
+    Mordidas: trocar `l3` e `r3` em `BUTTON_TO_UINPUT` reprova só a Xbox; o mesmo
+    em `BOTOES_POSICIONAIS` reprova a DualSense e a Nintendo e não a Xbox."""
     driver = _esperado_driver_lido()
     mesa, escritas = _mesa_uinput(mascara)
-    menos = _A_FRENTE_QUE_O_VID_DECIDE if mascara == "dualsense" else frozenset()
-    erros = _ida_e_volta_no_uinput(mesa, escritas, jogador, driver, menos=menos)
+    erros = _ida_e_volta_no_uinput(mesa, escritas, jogador, driver)
     assert not erros, "\n".join(erros)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Defeito lido no fonte, fora da posse desta sprint: a máscara DualSense do "
-        "uinput mostra o VID da Sony e escreve o quadrado como BTN_X (o número do "
-        "BTN_NORTH); o SDL lê o X da Sony no BTN_WEST, e o quadrado chega como "
-        "triângulo. Curado o uinput_gamepad.py, este xfail vira vermelho e sai."
-    ),
-)
-def test_regua_2b_a_frente_na_mascara_dualsense_do_uinput() -> None:
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_2b_a_frente_na_mascara_dualsense_do_uinput(jogador: int) -> None:
+    """O quadrado e o triângulo na máscara DualSense chegam como o SDL os lê no VID Sony.
+
+    Mordidas: devolver o `BUTTON_TO_UINPUT` à entrada `dualsense` reprova nos
+    quatro jogadores; trocar o quadrado e o triângulo na tabela nova reprova a
+    DualSense e a Nintendo e não a Xbox."""
     driver = _esperado_driver_lido()
     mesa, escritas = _mesa_uinput("dualsense")
-    erros = _ida_e_volta_no_uinput(mesa, escritas, 1, driver, so=_A_FRENTE_QUE_O_VID_DECIDE)
+    rotulos = {caso.rotulo for caso in _esperado_casos(driver)}
+    assert rotulos >= _A_FRENTE_QUE_O_VID_DECIDE, "a régua 2b filtrou o vazio"
+    erros = _ida_e_volta_no_uinput(
+        mesa, escritas, jogador, driver, so=_A_FRENTE_QUE_O_VID_DECIDE
+    )
     assert not erros, "\n".join(erros)
+
+
+def _modulo_do_uinput_com_o_leitor(mapa: dict[str, str]) -> Any:
+    """Uma CÓPIA do módulo do `uinput`, carregada com o `BUTTON_MAP` do leitor trocado.
+
+    Cópia sob outro nome: o módulo de verdade (e as classes que os outros testes
+    importaram dele) fica como está, e o `BUTTON_MAP` volta ao que era no fim."""
+    import importlib.util
+    import sys
+
+    original = EvdevReader.BUTTON_MAP
+    EvdevReader.BUTTON_MAP = mapa
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_copia_do_uinput_gamepad", Path(uinput_gamepad.__file__)
+        )
+        assert spec is not None and spec.loader is not None
+        copia = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = copia  # o @dataclass procura o módulo da classe aqui
+        spec.loader.exec_module(copia)
+    finally:
+        sys.modules.pop("_copia_do_uinput_gamepad", None)
+        EvdevReader.BUTTON_MAP = original
+    return copia
+
+
+def test_regua_6_a_tabela_das_mascaras_de_vid_sony_nasce_do_leitor() -> None:
+    """Troque dois botões no `EvdevReader.BUTTON_MAP` e a tabela da DualSense e a
+    da Nintendo acompanham: ela nasce do leitor do físico, não é digitada.
+
+    Mordida: a tabela digitada no `uinput_gamepad.py` (as 11 entradas, em
+    literal) reprova aqui, porque a cópia do módulo não segue o leitor trocado."""
+    trocado = dict(EvdevReader.BUTTON_MAP)
+    trocado["BTN_THUMBL"], trocado["BTN_THUMBR"] = trocado["BTN_THUMBR"], trocado["BTN_THUMBL"]
+    copia = _modulo_do_uinput_com_o_leitor(trocado)
+    for mascara in ("dualsense", "nintendo"):
+        assert copia.BOTOES_POR_FLAVOR[mascara]["l3"] == "BTN_THUMBR", mascara
+        assert copia.BOTOES_POR_FLAVOR[mascara]["r3"] == "BTN_THUMBL", mascara
+    assert copia.BOTOES_POR_FLAVOR["xbox"]["l3"] == "BTN_THUMBL"
+    assert uinput_gamepad.BOTOES_POR_FLAVOR["dualsense"]["l3"] == "BTN_THUMBL"
+    assert uinput_gamepad.BOTOES_POR_FLAVOR["dualsense"] is uinput_gamepad.BOTOES_POR_FLAVOR[
+        "nintendo"
+    ], "um dono, duas máscaras"
+
+
+def test_regua_7_a_dualsense_escreve_o_que_o_driver_escreve() -> None:
+    """A posicional da Sony, nomeada: cruz SOUTH, círculo EAST, quadrado WEST,
+    triângulo NORTH. Lê o `BUTTON_MAP` e o `hid-playstation`, não a tabela do produto.
+
+    Mordida: devolver o `BUTTON_TO_UINPUT` à entrada `dualsense` reprova no quadrado."""
+    tabela = uinput_gamepad.BOTOES_POR_FLAVOR["dualsense"]
+    assert (tabela["cross"], tabela["circle"]) == ("BTN_SOUTH", "BTN_EAST")
+    assert (tabela["square"], tabela["triangle"]) == ("BTN_WEST", "BTN_NORTH")
+    assert uinput_gamepad.BOTOES_POR_FLAVOR["xbox"]["square"] == "BTN_X"
+
+
+@pytest.mark.parametrize("mascara", ["dualsense", "xbox", "nintendo"])
+def test_regua_8_os_gatilhos_ficam_fora_da_tabela_e_as_capacidades_nao_mudam(
+    mascara: str,
+) -> None:
+    """Nenhuma tabela de botões tem `l2_btn`/`r2_btn`, e todo código que a tabela
+    escreve está entre as capacidades `EV_KEY` do nó (lidas do `_build_capabilities`).
+
+    Mordida: a inversão crua do `BUTTON_MAP`, com os dois gatilhos (esvaziar
+    `_GATILHOS_DIGITAIS`), reprova aqui e nomeia o `BTN_TL2`."""
+    tabela = uinput_gamepad.BOTOES_POR_FLAVOR[mascara]
+    escritos = {getattr(ecodes, nome) for nome in tabela.values()}
+    gatilhos = escritos & {ecodes.BTN_TL2, ecodes.BTN_TR2}
+    assert not gatilhos, f"{mascara}: {[ecodes.BTN[c] for c in gatilhos]} só o analógico escreve"
+    assert "l2_btn" not in tabela and "r2_btn" not in tabela, mascara
+    caps = uinput_gamepad._build_capabilities(with_ff=False, flavor=mascara)
+    declarados = set(caps[ecodes.EV_KEY])
+    assert escritos <= declarados, sorted(ecodes.BTN[c] for c in escritos - declarados)
 
 
 def test_regua_3_o_driver_trocado_reprova_a_regua_1(
@@ -498,7 +572,7 @@ _TABELAS_DO_PRODUTO = frozenset({
     "_HAT_BY_VECTOR",
     "BUTTON_MAP",
     "BUTTON_TO_UINPUT",
-    "BOTOES_PROCON",
+    "BOTOES_POSICIONAIS",
     "BOTOES_POR_FLAVOR",
 })
 
