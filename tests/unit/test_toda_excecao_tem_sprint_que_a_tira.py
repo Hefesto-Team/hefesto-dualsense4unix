@@ -230,6 +230,10 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "scripts/reapontar-citacoes.py::DIVIDA": (
+        "o acumulador da classificação das citações «à mão» (nova ou de antes, pelo merge-base), "
+        "que a varredura limpa e preenche a cada corrida para o rc dizer o que falta; "
+        "não isenta caso nenhum"),
     "scripts/recibo_da_medida.py::_IGNORADOS_QUE_ENTRAM": (
         "as pastas ignoradas pelo git que a chave da memória dos portões lê (medido por strace: "
         "quatro portões abrem arquivos de scripts/ que o git não leva); "
