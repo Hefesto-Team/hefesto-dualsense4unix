@@ -253,6 +253,35 @@ def test_a_ponte_que_cede_deixa_a_caixa_vazia_pelo_sinal_ou_pela_fila(campo: str
     assert a08.campos_da_secao(cena)["hz-ponte"] == ["", "93 Hz"]
 
 
+def test_o_rodizio_da_fila_nao_faz_a_caixa_piscar(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A caixa piora na hora e melhora devagar: o rodízio da fila não a faz piscar.
+
+    O rodízio troca quem cede a cada janela de 0,25 s, e a tela lê o ``state_full`` mais
+    depressa que isso: sem segurar, a mesma ponte alternaria «62 Hz» e vazio. Cedeu, a caixa
+    esvazia na hora; o número só volta depois de `SEGURA_O_NIVEL_S` sem ceder.
+
+    MORDIDA: `campos_da_secao` voltando a chamar `_hz_da_ponte` com `segurar` (sem a espera).
+    """
+    relogio = [1000.0]
+    monkeypatch.setattr(a08, "_RELOGIO_DO_NIVEL", lambda: relogio[0])
+    monkeypatch.setattr(a08, "_PONTE_CEDEU_EM", {})
+
+    def caixa(cedendo: bool) -> str:
+        cena = _cena({"a": {"hz_ponte": 62.0, "ponte_cedendo": cedendo}})
+        return str(a08.campos_da_secao(cena, segurar=True)["hz-ponte"][0])
+
+    assert caixa(False) == "62 Hz", "premissa: sem ceder, a caixa diz o número"
+    vistas = []
+    for janela in range(12):  # o rodízio: cede uma janela em cada três
+        relogio[0] += 0.25
+        vistas.append(caixa(janela % 3 == 0))
+    assert vistas == [""] * 12, f"a caixa piscou no rodízio: {vistas}"
+    relogio[0] += rm.SEGURA_O_NIVEL_S - 1.0  # a última cedida foi meio segundo antes
+    assert caixa(False) == "", "o número voltou antes da espera"
+    relogio[0] += 1.0
+    assert caixa(False) == "62 Hz", "o número não voltou depois da espera"
+
+
 def test_sem_medida_a_caixa_fica_vazia_e_no_cabo_o_campo_nao_existe() -> None:
     cena = _cena({"a": {"hz_ponte": None}, "b": {"ponte": None, "usb": True}})
     campos = a08.campos_da_secao(cena)
@@ -399,7 +428,8 @@ def test_o_cartao_do_equilibrar_diz_sinal_fraco_com_os_dois_numeros() -> None:
     from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 
     dica = dicas.dica_do_movimento(movimento)
-    assert "sinal fraco" in dica.titulo.lower() and len(dica.titulo.split()) <= 5
+    assert dica.titulo == "P2 com sinal fraco", (
+        f"o sinal fraco é do controle, e o título diz {dica.titulo!r}")
     assert "-78 dBm" in dica.porque and "-52 dBm" in dica.porque
     assert "dividido" not in dica.titulo and "mesa" not in dica.porque.lower()
     por_contagem = a08._o_movimento_da_central(

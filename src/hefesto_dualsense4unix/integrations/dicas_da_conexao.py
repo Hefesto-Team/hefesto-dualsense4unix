@@ -251,10 +251,11 @@ class Movimento:
 
 
 def dica_do_movimento(m: Movimento) -> Dica:
-    """«Meio sufocado», «Esquerda dividido em 4» ou «Esquerda com sinal fraco», com o de→para."""
+    """«Meio sufocado», «Esquerda dividido em 4» ou «P2 com sinal fraco», com o de→para."""
     quem = f"P{m.jogador}" if m.jogador is not None else m.nome_do_controle
     if m.pelo_sinal:
-        titulo, nivel = f"{m.de_nome} com sinal fraco", AJUSTE
+        # o sinal fraco é do CONTROLE naquele adaptador, não do adaptador: o título diz quem
+        titulo, nivel = f"{quem} com sinal fraco", AJUSTE
         porque = (f"O sinal dele está em {m.sinal_aqui} dBm aqui; em {m.para_nome}, "
                   f"chegaria a {m.sinal_la} dBm."
                   if m.sinal_aqui is not None and m.sinal_la is not None

@@ -3461,6 +3461,31 @@ def _hz_da_ponte(ap: dict[str, Any]) -> str:
     return _hz(ap.get("hz_ponte"))
 
 
+#: A última vez em que a ponte de cada controle foi vista cedendo (pela fila ou pelo sinal).
+_PONTE_CEDEU_EM: dict[str, float] = {}
+
+
+def _hz_da_ponte_seguro(ap: dict[str, Any], agora: float) -> str:
+    """:func:`_hz_da_ponte` que PIORA NA HORA E MELHORA DEVAGAR, como a cor (`_nivel_seguro`).
+
+    O rodízio da fila troca quem cede a cada janela de 0,25 s: lida pelo ``state_full``, a
+    ponte alternaria «62 Hz» e vazio, e a caixa piscaria. Cedeu, a caixa esvazia na hora; o
+    número só volta depois de :data:`SEGURA_O_NIVEL_S` sem ceder.
+    """
+    uid = str(ap.get("id"))
+    texto = _hz_da_ponte(ap)
+    if "hz_ponte" not in ap:
+        return texto
+    if ap.get("ponte_pausada") or ap.get("ponte_cedendo"):
+        _PONTE_CEDEU_EM[uid] = agora
+        return ""
+    cedeu = _PONTE_CEDEU_EM.get(uid)
+    if cedeu is not None and agora - cedeu < SEGURA_O_NIVEL_S:
+        return ""
+    _PONTE_CEDEU_EM.pop(uid, None)
+    return texto
+
+
 def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> str:
     aid = _x(ap["id"])
     mic = bool(ap.get("mic"))
@@ -4753,6 +4778,8 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
             _CAUSA_NA_TELA.pop(saiu, None)
             for chave in [k for k in _REFERENCIA_DO_HZ if k[0] == saiu]:
                 del _REFERENCIA_DO_HZ[chave]
+        for saiu in set(_PONTE_CEDEU_EM) - {str(a["id"]) for a in controles}:
+            del _PONTE_CEDEU_EM[saiu]
     cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)},
             "dicas": {str(a["id"]): d for a, d in zip(controles, dicas, strict=True)}}
     return {
@@ -4765,7 +4792,8 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
         "hz-nivel": niveis,
         "hz-dica": dicas,
         "hz-voz": [_hz(a.get("hz_voz")) for a in com_mic],
-        "hz-ponte": [_hz_da_ponte(a) for a in controles if a.get("ponte") in ("som", "haptica")],
+        "hz-ponte": [_hz_da_ponte_seguro(a, agora) if segurar else _hz_da_ponte(a)
+                     for a in controles if a.get("ponte") in ("som", "haptica")],
         "espectro-canais": html_dos_canais(cena),
         "radio-ocupado": "sim" if _ocupado(cena) else "",
     }
