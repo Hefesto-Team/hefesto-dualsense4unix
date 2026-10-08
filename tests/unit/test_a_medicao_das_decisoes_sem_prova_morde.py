@@ -474,11 +474,13 @@ def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     # microfone da máquina (um por controle).
     # Desde 08/10/2026 a decisão nova de produto nasce `implementada`, com a
     # prova: os degraus depois de `decidida` saem da conta, as `caduca` não.
+    # Dez desde 08/10/2026: as quatro do chip «Só neste jogo / Voltar ao do PC»
+    # caducaram com a D-0610-O-ESCOPO-SAI-DAS-ABAS.
     estados = [linha["estado"] for linha in mi._linhas()]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
-    assert estados.count("caduca") == 6, (
-        "o CSV tem seis linhas `caduca`; se isso mudou, o laudo tem de dizer")
-    assert medida["decididas"] == medida["linhas"] - 6 - adiante
+    assert estados.count("caduca") == 10, (
+        "o CSV tem dez linhas `caduca`; se isso mudou, o laudo tem de dizer")
+    assert medida["decididas"] == medida["linhas"] - 10 - adiante
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(

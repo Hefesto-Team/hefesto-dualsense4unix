@@ -108,6 +108,7 @@ def test_1_na_duvida_o_controle_e_do_hefesto() -> None:
     (hotkey.PONTE_MOUSE_TECLADO, True),
 ])
 def test_1_o_hefesto_so_entra_onde_o_controle_e_dele(modo: str, age: bool) -> None:
+    # A decisão D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO.
     bp, teclado, _ = _dono()
     d = _daemon(modo)
     ficam, _ = bp.rotear(d, None, frozenset({"dpad_down", "cross", "square"}))
@@ -170,6 +171,7 @@ def test_2_desligar_solta_tudo_e_fecha_o_teclado() -> None:
 
 
 def test_3_so_o_direcional_a_cruz_e_o_circulo_viram_tecla() -> None:
+    # A decisão D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO.
     from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
 
     assert dono.BOTOES_QUE_NAVEGAM == NAVEGAM
@@ -249,6 +251,7 @@ def test_6_o_bloco_diz_ligado_agindo_e_quem_le() -> None:
 
 
 def test_7_a_escolha_e_guardada_e_nasce_desligada() -> None:
+    # A decisão D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO.
     from hefesto_dualsense4unix.utils.session import load_big_picture
 
     assert load_big_picture() is False, "sem arquivo, o Modo Big Picture nasce desligado"

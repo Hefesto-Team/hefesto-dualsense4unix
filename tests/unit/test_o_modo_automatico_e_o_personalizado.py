@@ -175,6 +175,7 @@ def test_as_constantes_do_desenho_sao_as_do_esquema() -> None:
 ], ids=["vazio", "global-nao-conta", "auto-desligado", "cor-no-controle",
         "preto-no-controle-nao-conta", "escrito-personalizado", "escrito-vence"])
 def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04: Any) -> None:
+    # A decisão D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """``None`` vale o que o perfil já dizia; o escrito manda; o modelo e o JSON concordam.
 
     A cor GLOBAL não conta como «cor própria»: no merge do backend a paleta automática vence
@@ -244,6 +245,7 @@ def test_o_perfil_sem_modo_escrito_vai_inteiro_ao_aparelho() -> None:
 
 
 def test_o_automatico_dos_gatilhos_manda_sem_efeito_e_o_disco_fica() -> None:
+    # A decisão D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """Global e overrides saem ``Off``; o original (o que vai ao disco) não se mexe.
 
     MORDIDA: tire o ramo dos gatilhos de ``perfil_no_modo`` e o ``right`` volta ``Rigid``.
@@ -429,6 +431,7 @@ def test_no_automatico_a_tela_dos_gatilhos_diz_sem_efeito(a03: Any) -> None:
 
 
 def test_o_rotulo_da_chave_off_e_sem_efeito(a03: Any) -> None:
+    # A decisão D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """Resposta de 06/10: o ``Off`` aparece como «Sem efeito»; a chave não muda."""
     assert a03.ROTULO_DO_JOGO_DECIDE == "Sem efeito"
     assert a03._rotulo_do_modo("Off") == "Sem efeito"

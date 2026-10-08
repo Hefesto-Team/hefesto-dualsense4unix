@@ -78,6 +78,7 @@ def test_jogo_com_escolha_propria_num_controle_e_o_outro_controle_vao_ao_jogo(
 
 
 def test_freestyle_e_nenhum_perfil_vao_ao_computador() -> None:
+    # A decisão D-0610-O-ESCOPO-SAI-DAS-ABAS.
     """Linha 4: sem jogo aberto o que se muda vale para o PC."""
     save_profile(Profile.model_validate({"name": "Freestyle", "match": {"type": "any"}}))
     freestyle = load_profile("Freestyle")
@@ -102,6 +103,7 @@ def test_cartao_do_computador_inteiro_segue_a_mesma_regra(cartao: str) -> None:
 
 @pytest.mark.parametrize("uniq", CONTROLES)
 def test_so_o_campo_mudado_vai_ao_jogo(uniq: str) -> None:
+    # A decisão D-0610-O-ESCOPO-SAI-DAS-ABAS.
     """O jogo não copia o cartão: o resto da luz segue vindo do computador."""
     _computador({"global": {"leds": {"lightbar": [10, 20, 200]}},
                  "controles": {uniq: {"leds": {"lightbar": [0, 255, 0]}}}})
