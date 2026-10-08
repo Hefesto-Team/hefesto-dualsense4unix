@@ -29,6 +29,8 @@ daemon (poll loop de verdade), não com um estado montado à mão.
 from __future__ import annotations
 
 import asyncio
+import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -51,6 +53,43 @@ def _mk_states(n: int, transport: str = "bt") -> list[ControllerState]:
         )
         for _ in range(n)
     ]
+
+
+PRAZO_S = 5.0
+
+
+async def _esperar(
+    condicao: Callable[[], bool],
+    o_que: str,
+    prazo_s: float = PRAZO_S,
+    a_cada_volta: Callable[[], None] | None = None,
+) -> None:
+    """Espera a CONDIÇÃO, não o relógio: sob carga o laço de poll chega tarde, e 0,2 s fixos
+    desmentiam o teste (6 de 10 corridas com a CPU saturada). Estourou o prazo, a mensagem
+    diz o que não aconteceu."""
+    limite = time.monotonic() + prazo_s
+    while not condicao():
+        if time.monotonic() >= limite:
+            pytest.fail(f"em {prazo_s:.0f} s não aconteceu: {o_que}")
+        if a_cada_volta is not None:
+            a_cada_volta()
+        await asyncio.sleep(0.01)
+
+
+def _desplugar(fc: FakeController) -> None:
+    """O controle sai da mesa e NÃO volta: o `connect()` de quem sonda acha o aparelho ausente.
+
+    O dublê religava sozinho: o `reconnect_loop` do daemon sonda com `controller.connect()`, e
+    o `connect()` do `FakeController` põe `_connected = True` sem aparelho nenhum. Medido sob
+    carga (disconnect em 0,113 s, connect em 0,114 s): a queda era desfeita antes de o laço de
+    poll a ver. Um controle de verdade desplugado faz o `connect()` falhar.
+    """
+
+    def sem_aparelho() -> None:
+        raise RuntimeError("sem dispositivo: o controle foi desplugado")
+
+    fc.connect = sem_aparelho  # type: ignore[method-assign]
+    fc.disconnect()
 
 
 @pytest.mark.asyncio
@@ -79,9 +118,25 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.2)
-    fc.disconnect()
-    await asyncio.sleep(0.2)
+    try:
+        # a borda de queda só dispara se houve ao menos um tique conectado (`was_connected`
+        # no laço do `lifecycle.py`), e a queda só vale depois de o laço a ter publicado
+        await _esperar(
+            lambda: store.snapshot().controller is not None,
+            "o laço de poll publicar um tique com o controle conectado (store.controller)",
+        )
+        _desplugar(fc)
+        await _esperar(
+            lambda: store.snapshot().controller is None and daemon._last_state is None,
+            "o laço de poll publicar a queda (store.controller e _last_state vazios)",
+            # um connect() que já estava no ar quando o controle saiu ainda pode religar o
+            # dublê: o controle desplugado segue desplugado até o laço ver
+            a_cada_volta=fc.disconnect,
+        )
+    except BaseException:
+        daemon.stop()
+        await run_task
+        raise
 
     server = IpcServer(
         controller=fc,
