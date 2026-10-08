@@ -245,7 +245,7 @@ class TestONascimentoVemDoUdev:
     def test_o_diario_em_json_traz_o_monotonico_em_segundos(self, monkeypatch) -> None:
         saida = (
             '{"MESSAGE": "uma", "__MONOTONIC_TIMESTAMP": "64743103000"}\n'
-            "lixo que nao e json\n"
+            "lixo que não é json\n"
             '{"MESSAGE": ["bytes"], "__MONOTONIC_TIMESTAMP": "1"}\n'
             '{"MESSAGE": "duas", "__MONOTONIC_TIMESTAMP": "64762847000"}\n'
         )
