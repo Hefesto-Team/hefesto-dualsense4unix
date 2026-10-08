@@ -736,10 +736,17 @@ def test_o_desembrulho_nao_mutila_nome_com_espaco(bruto: str | None, valor: Any)
 
 
 def _sonda_com(arvore: str | None) -> cf.Resultado:
-    """A ``_sonda_bluez`` sobre um ``busctl`` de mentira que responde ``arvore`` (ou falha)."""
+    """A ``_sonda_bluez`` sobre um ``busctl`` de mentira que responde ``arvore`` (ou falha).
+
+    Só a pergunta exata recebe a árvore: sem o ``--list`` o ``busctl`` real devolve a árvore
+    desenhada (``└─/org/bluez``), e um dublê que responde a qualquer pergunta esconderia isso.
+    """
+    pergunta = [bd.FERRAMENTA, "--system", "tree", bd.SERVICO, "--list"]
 
     def rodar(argv: Any) -> Any:
-        return (0, arvore) if arvore is not None else (1, "")
+        if arvore is None or list(argv) != pergunta:
+            return (1, "")
+        return (0, arvore)
 
     return cf._sonda_bluez(cf.Ambiente(rodar=rodar))
 
@@ -758,10 +765,13 @@ def test_a_sonda_do_bluez_nao_aceita_caminho_que_so_contem_a_raiz(arvore: str | 
 # --- o caminho ``/org/bluez`` em código também é conhecimento do dono ---
 
 _ISENTOS_DO_CAMINHO = {
-    "integrations/apelido_do_dongle.py": "re.compile do adaptador; migra na sprint seguinte",
-    "integrations/conexao_zumbi.py": "re.compile do nó; migra com O-BLUEZ-SO-PELA-PORTA-OFICIAL-01",
-    "integrations/exame_da_mesa.py": "re.compile do aparelho; migra na sprint seguinte",
-    "integrations/varredura_do_radio.py": "re.compile do adaptador; migra na sprint seguinte",
+    # sai com: O-CAMINHO-DO-BLUEZ-SO-NO-DONO-01
+    "integrations/apelido_do_dongle.py": "re.compile do adaptador, refeito fora do dono",
+    # sai com: O-BLUEZ-SO-PELA-PORTA-OFICIAL-01
+    "integrations/conexao_zumbi.py": "re.compile do nó do aparelho, refeito fora do dono",
+    # sai com: O-CAMINHO-DO-BLUEZ-SO-NO-DONO-01
+    "integrations/exame_da_mesa.py": "re.compile do aparelho, refeito fora do dono",
+    "integrations/varredura_do_radio.py": "re.compile do adaptador, refeito fora do dono",
 }
 
 
