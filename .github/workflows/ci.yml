@@ -123,6 +123,8 @@ jobs:
       # está vazio e a resposta seria verde por vacuidade. Quem vigia o
       # `config_dir()` real é a FAIXA-NO-BERCO-01 do `tests/conftest.py`.
       - run: python3 scripts/check_faixa_sintetica.py
+      # 08/10/2026: o comentário que termina no meio da frase tem catraca (o PISO só desce).
+      - run: python3 scripts/check_comentario_cortado.py
 
       # INFRA-DE-EXECUCAO-01/I15 (25/08/2026): a posse de arquivo de cada
       # sprint tem UM formato, e uma máquina o lê. O defeito que ele fecha foi
