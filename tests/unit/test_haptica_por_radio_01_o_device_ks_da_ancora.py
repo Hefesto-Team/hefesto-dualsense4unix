@@ -12,12 +12,14 @@ Nenhuma régua daqui toca aparelho: o sysfs é de mentira e o ``pactl`` é dubl�
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from tests.unit import pactl_json_de_mentira as pj
+from tests.unit.udev_de_mentira import usec_pela_pasta
 
 _SINK = """Sink #61764
 \tState: SUSPENDED
@@ -83,12 +85,15 @@ def sysfs(tmp_path: Path) -> Path:
     return raiz
 
 
+_Leitor = Callable[[Path], int | None]
+
+
 @pytest.fixture
-def udev(tmp_path: Path) -> Path:
+def udev(tmp_path: Path) -> _Leitor:
     banco = tmp_path / "udev"
     banco.mkdir()
-    (banco / "c189:284").write_text(f"I:{_USEC_DA_ANCORA}\nE:FOO=1\n")
-    return banco
+    (banco / "c189:284").write_text(f"{_USEC_DA_ANCORA}\n")
+    return usec_pela_pasta(banco)
 
 
 def test_o_no_vestido_de_dualsense_e_lido() -> None:
@@ -138,20 +143,20 @@ def test_caminho_fora_do_sysfs_e_recusado(sysfs: Path) -> None:
     assert ks.pai_usb_device("/../../etc", sysfs) is None
 
 
-def test_o_container_id_e_o_da_ancora_nao_o_do_controle(sysfs: Path, udev: Path) -> None:
+def test_o_container_id_e_o_da_ancora_nao_o_do_controle(sysfs: Path, udev: _Leitor) -> None:
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     assert controle.prefixo_do_container() == "{06042357-0003-001d-"
     assert controle.pid == 0x0CE6, "o nome e o HardwareID continuam do controle"
     assert controle.usec == _USEC_DA_ANCORA
 
 
-def test_a_conta_bate_com_a_do_wine_byte_a_byte(sysfs: Path, udev: Path) -> None:
+def test_a_conta_bate_com_a_do_wine_byte_a_byte(sysfs: Path, udev: _Leitor) -> None:
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     d4 = (_USEC_DA_ANCORA).to_bytes(8, "little")
     assert ks.container_id(controle, d4) == "{06042357-0003-001d-0000-aabbcc000000}"
 
 
-def test_o_barramento_acima_de_255_dobra_como_no_c(sysfs: Path, udev: Path) -> None:
+def test_o_barramento_acima_de_255_dobra_como_no_c(sysfs: Path, udev: _Leitor) -> None:
     """Na origem `bus_num` e `dev_num` são `uint8_t`. 260 & 0xFF == 4."""
     (sysfs / _ANCORA.lstrip("/") / "devnum").write_text("260\n")
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
@@ -159,13 +164,14 @@ def test_o_barramento_acima_de_255_dobra_como_no_c(sysfs: Path, udev: Path) -> N
 
 
 def test_sem_o_banco_do_udev_o_data4_e_zero(sysfs: Path, tmp_path: Path) -> None:
-    """O runtime da Steam pode não enxergar /run/udev — e aí o campo sai zero."""
-    (controle,) = ks.controles_no_radio(sysfs, tmp_path / "vazio", _dubles(_sinks()))
+    """O runtime da Steam pode não enxergar o udev — e aí o campo sai zero."""
+    vazio = usec_pela_pasta(tmp_path / "vazio")
+    (controle,) = ks.controles_no_radio(sysfs, vazio, _dubles(_sinks()))
     assert controle.usec is None
     assert ks.variantes_de_data4(controle, []) == [bytes(8)]
 
 
-def test_as_duas_variantes_de_data4_saem_no_radio(sysfs: Path, udev: Path) -> None:
+def test_as_duas_variantes_de_data4_saem_no_radio(sysfs: Path, udev: _Leitor) -> None:
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     assert ks.variantes_de_data4(controle, []) == [
         bytes(8),
@@ -173,7 +179,7 @@ def test_as_duas_variantes_de_data4_saem_no_radio(sysfs: Path, udev: Path) -> No
     ]
 
 
-def test_ancora_com_placa_de_som_e_o_cabo_e_nao_entra(sysfs: Path, udev: Path) -> None:
+def test_ancora_com_placa_de_som_e_o_cabo_e_nao_entra(sysfs: Path, udev: _Leitor) -> None:
     """O `sysfs.path` de um DualSense no cabo sobe ao PRÓPRIO controle.
 
     Sem esta recusa o mesmo aparelho sairia nas duas listas, e as duas
@@ -183,7 +189,7 @@ def test_ancora_com_placa_de_som_e_o_cabo_e_nao_entra(sysfs: Path, udev: Path) -
     assert ks.controles_no_radio(sysfs, udev, _dubles(_sinks())) == []
 
 
-def test_o_registro_do_radio_tem_o_hardware_id_da_sony(sysfs: Path, udev: Path) -> None:
+def test_o_registro_do_radio_tem_o_hardware_id_da_sony(sysfs: Path, udev: _Leitor) -> None:
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     texto = "\n".join(ks.blocos_do_controle(controle, [bytes(8)], 1758000000))
     assert "USB\\\\VID_054C&PID_0CE6" in texto
@@ -191,7 +197,7 @@ def test_o_registro_do_radio_tem_o_hardware_id_da_sony(sysfs: Path, udev: Path) 
     assert f'"FriendlyName"="{ks.MODELOS[0x0CE6]}"' in texto
 
 
-def test_a_instancia_do_radio_e_reconhecida_como_nossa(sysfs: Path, udev: Path) -> None:
+def test_a_instancia_do_radio_e_reconhecida_como_nossa(sysfs: Path, udev: _Leitor) -> None:
     """Sem isso a rodada seguinte não apagaria a instância velha."""
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     for bloco in ks.blocos_do_controle(controle, [bytes(8)], 1758000000):

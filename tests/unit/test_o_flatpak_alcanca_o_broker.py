@@ -30,6 +30,13 @@ NAO_SE_EXPOE: dict[str, str] = {
     ),
 }
 
+#: O que o sandbox monta porque uma BIBLIOTECA lê dali, e não porque o código cita o
+#: caminho. A `libudev` abre o banco do udev sozinha (`core/banco_do_udev.py`); o
+#: código não tem mais o caminho escrito, e o Flatpak ainda precisa dele montado.
+LIDOS_PELA_BIBLIOTECA: dict[str, str] = {
+    "/run/udev/data": "libudev.so.1",
+}
+
 _RE_RUN = re.compile(r"(?<![\w:/])/run/[A-Za-z0-9_.@-]+(?:/[A-Za-z0-9_.@-]+)*")
 
 
@@ -90,7 +97,6 @@ def linhas_de_run_do_manifesto() -> dict[str, str]:
 
 def expostos() -> dict[str, str]:
     """O que o Flatpak monta, e com que modo — o caminho vem do DONO de cada um."""
-    from hefesto_dualsense4unix.core.evdev_reader import UDEV_DB_DIR
     from hefesto_dualsense4unix.integrations.diario_do_radio import TRAVA_COMUM
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         DEFAULT_SOCKET_PATH,
@@ -99,7 +105,7 @@ def expostos() -> dict[str, str]:
     return {
         str(PurePosixPath(DEFAULT_SOCKET_PATH).parent): "ro",
         str(TRAVA_COMUM.parent): "rw",
-        str(UDEV_DB_DIR): "ro",
+        **dict.fromkeys(LIDOS_PELA_BIBLIOTECA, "ro"),
     }
 
 
@@ -111,15 +117,22 @@ CAMINHOS, PARTES, BARRAMENTO_DE_SISTEMA = _ler_o_codigo()
 
 
 def test_a_leitura_do_codigo_enxerga_os_tres_donos() -> None:
-    """Controle: o varredor acha o socket, a trava e a base do udev."""
-    from hefesto_dualsense4unix.core.evdev_reader import UDEV_DB_DIR
+    """Controle: o varredor acha o socket e a trava; a base do udev é da biblioteca."""
     from hefesto_dualsense4unix.integrations.diario_do_radio import TRAVA_COMUM
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         DEFAULT_SOCKET_PATH,
     )
 
-    for dono in (DEFAULT_SOCKET_PATH, str(TRAVA_COMUM), str(UDEV_DB_DIR)):
+    for dono in (DEFAULT_SOCKET_PATH, str(TRAVA_COMUM)):
         assert dono in CAMINHOS, f"o varredor não achou {dono}: a régua ficou cega"
+    fonte = (PACOTE / "core" / "banco_do_udev.py").read_text(encoding="utf-8")
+    for caminho, biblioteca in LIDOS_PELA_BIBLIOTECA.items():
+        assert biblioteca in fonte, (
+            f"{caminho} está no manifesto por causa da {biblioteca}, e o código não a chama mais"
+        )
+        assert caminho not in CAMINHOS, (
+            f"o código voltou a citar {caminho}: o dono da leitura é a biblioteca, não o texto"
+        )
 
 
 @pytest.mark.parametrize("caminho", sorted(CAMINHOS))
@@ -144,7 +157,9 @@ def test_cada_linha_de_run_do_manifesto_tem_o_modo_decidido() -> None:
         "código usa; a montagem do arquivo do socket fica presa ao socket velho"
     )
     for linha in linhas:
-        assert any(_debaixo_de(caminho, linha) for caminho in CAMINHOS), (
+        assert linha in LIDOS_PELA_BIBLIOTECA or any(
+            _debaixo_de(caminho, linha) for caminho in CAMINHOS
+        ), (
             f"o manifesto monta {linha} e nenhum caminho do código mora ali"
         )
 

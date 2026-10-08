@@ -20,6 +20,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
+from hefesto_dualsense4unix.core import banco_do_udev
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -268,9 +269,6 @@ def _is_virtual_evdev(event_path: str) -> bool:
     return pad_usb.e_pad_nosso(link, phys=phys, uniq=uniq)
 
 
-UDEV_DB_DIR = Path("/run/udev/data")
-
-
 def libinput_ignora_device(event_path: Path | str | None) -> bool:
     """True se o udev marcou `LIBINPUT_IGNORE_DEVICE` neste nó de entrada.
 
@@ -280,10 +278,12 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
     ficar fora, senão o mesmo dedo move o cursor duas vezes (o "engasgo" medido
     em 26/06 em `assets/76-dualsense-touchpad-libinput-ignore.rules`).
 
-    Medido no nó vivo dela em 09/08/2026 (`/run/udev/data/c13:68`, o touchpad do
-    DualSense por USB): a linha é literalmente ``E:LIBINPUT_IGNORE_DEVICE=1``.
+    Medido no nó vivo dela em 09/08/2026 (o touchpad do DualSense por USB): a
+    propriedade ``LIBINPUT_IGNORE_DEVICE`` vale ``1``. Desde 08/10/2026 a
+    pergunta vai à `libudev` (`core/banco_do_udev.py`), e não ao arquivo interno
+    do udev, cujo formato o systemd não promete.
 
-    Falha de leitura (sem udev rodando, base ausente, nó sumido no meio do
+    Falha de leitura (sem a biblioteca, sem udev rodando, nó sumido no meio do
     caminho) devolve **False**, e isso não é um chute: sem base do udev nenhuma
     regra foi aplicada ao nó, então o libinput o está enxergando — "o sistema é
     o dono" é a resposta FISICAMENTE correta, e é também a conservadora, porque
@@ -293,16 +293,10 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
         return False
     try:
         st = os.stat(event_path)
-        arquivo = UDEV_DB_DIR / f"c{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
-        with open(arquivo, encoding="utf-8", errors="replace") as fh:
-            for linha in fh:
-                if not linha.startswith("E:LIBINPUT_IGNORE_DEVICE="):
-                    continue
-                valor = linha.split("=", 1)[1].strip()
-                return valor not in ("", "0")
     except OSError:
         return False
-    return False
+    valor = banco_do_udev.propriedade_do_devnum("c", st.st_rdev, "LIBINPUT_IGNORE_DEVICE")
+    return valor is not None and valor not in ("", "0")
 
 
 # A palavra de 23/09, «Esconder tudo»: os nós de entrada do DualSense

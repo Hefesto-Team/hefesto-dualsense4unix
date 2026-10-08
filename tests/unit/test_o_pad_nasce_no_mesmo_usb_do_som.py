@@ -27,6 +27,7 @@ import pytest
 from hefesto_dualsense4unix.broker import hidraw_broker as broker
 from hefesto_dualsense4unix.integrations import pad_usb
 from tests.unit import pactl_json_de_mentira as pj
+from tests.unit.udev_de_mentira import usec_pela_pasta
 
 # Faixas forjadas da casa: ``aa:bb:cc`` e ``02:fe:00``; nunca um endereço real.
 MAC_DO_PAD = "02:fe:00:8a:00:01"
@@ -1145,9 +1146,10 @@ class TestOSomSeAncoraNoGadget:
         )
         udev = tmp_path / "udev"
         udev.mkdir()
-        (udev / "c189:257").write_text("I:1234567\n")
+        (udev / "c189:257").write_text("1234567\n")
         em_json = pj.json_do_longo(sink)
-        controles = ks.controles_no_radio(mesa_do_som, udev, runner=lambda _a: em_json)
+        controles = ks.controles_no_radio(
+            mesa_do_som, usec_pela_pasta(udev), runner=lambda _a: em_json)
         assert len(controles) == 1
         c = controles[0]
         # o que o winebus lê do usb_device do pad: 054c:0df2, o bus 3, o devnum 2

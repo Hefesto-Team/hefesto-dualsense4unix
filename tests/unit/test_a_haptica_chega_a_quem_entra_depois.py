@@ -30,6 +30,7 @@ from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
     _DaemonQueResponde,
     _path_minimo,
 )
+from tests.unit.udev_de_mentira import usec_pela_pasta
 
 RAIZ = Path(__file__).resolve().parents[2]
 WRAPPER = RAIZ / "assets" / "hefesto-launch.sh"
@@ -311,7 +312,8 @@ class _Mesa:
 
     def registro(self) -> list[ks.Controle]:
         """A lista que o curador gravaria AGORA, perguntando a este servidor."""
-        return ks.controles_do_registro(self.sysfs, self.sysfs / "udev", self.servidor)
+        udev = usec_pela_pasta(self.sysfs / "udev")
+        return ks.controles_do_registro(self.sysfs, udev, self.servidor)
 
 
 @pytest.fixture
@@ -647,7 +649,7 @@ def test_sem_cabo_o_dono_da_lista_nao_pergunta_pelos_fluxos(tmp_path: Path) -> N
         return ""
 
     sysfs = _sysfs(tmp_path, ancoras=1)
-    assert ks.controles_do_registro(sysfs, tmp_path / "udev", servidor) == []
+    assert ks.controles_do_registro(sysfs, usec_pela_pasta(tmp_path / "udev"), servidor) == []
     assert perguntas == [("pactl", "--format=json", "list", "sinks")]
 
 
@@ -660,7 +662,7 @@ def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
         return None
 
     sysfs = _sysfs(tmp_path, ancoras=0, no_cabo=1)
-    lista = ks.controles_do_registro(sysfs, tmp_path / "udev", mudo)
+    lista = ks.controles_do_registro(sysfs, usec_pela_pasta(tmp_path / "udev"), mudo)
     assert [(c.bus, c.dev) for c in lista] == [(3, 28)], "o cabo tem de seguir pela placa"
     assert perguntas == [("pactl", "--format=json", "list", "sinks")]
 

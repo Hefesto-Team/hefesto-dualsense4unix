@@ -181,26 +181,52 @@ def _ler(caminho: Path) -> str | None:
         return None
 
 
-def _usec_do_udev(dev_sysfs: Path, udev_data: Path) -> int | None:
-    """O `I:` do banco do udev para o `usb_device` (`/run/udev/data/c<maj>:<min>`)."""
-    majmin = _ler(dev_sysfs / "dev")
-    if not majmin or ":" not in majmin:
+def _usec_do_udev(dev_sysfs: Path) -> int | None:
+    """O `USEC_INITIALIZED` do `usb_device`, perguntado à `libudev` (None = não sei).
+
+    Desde 08/10/2026 não se lê mais o arquivo do banco do udev: o systemd o
+    declara interno e muda o formato quando quer. Este módulo é copiado SOZINHO
+    pelo `install.sh`, então a pergunta é um `ctypes` mínimo aqui dentro, e não
+    um import do pacote (a mesma pergunta mora em `core/banco_do_udev.py`).
+    """
+    import ctypes
+
+    try:
+        lib = ctypes.CDLL("libudev.so.1")
+        lib.udev_new.restype = ctypes.c_void_p
+        lib.udev_unref.argtypes = [ctypes.c_void_p]
+        lib.udev_device_new_from_syspath.restype = ctypes.c_void_p
+        lib.udev_device_new_from_syspath.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        lib.udev_device_get_property_value.restype = ctypes.c_char_p
+        lib.udev_device_get_property_value.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        lib.udev_device_unref.argtypes = [ctypes.c_void_p]
+    except (OSError, AttributeError):
+        return None
+    contexto = lib.udev_new()
+    if not contexto:
         return None
     try:
-        linhas = (udev_data / f"c{majmin}").read_text(errors="replace").splitlines()
-    except OSError:
+        dispositivo = lib.udev_device_new_from_syspath(contexto, str(dev_sysfs).encode())
+        if not dispositivo:
+            return None
+        try:
+            valor = lib.udev_device_get_property_value(dispositivo, b"USEC_INITIALIZED")
+        finally:
+            lib.udev_device_unref(dispositivo)
+        return int(valor) if valor else None
+    except (ValueError, ctypes.ArgumentError):
         return None
-    for linha in linhas:
-        if linha.startswith("I:"):
-            try:
-                return int(linha[2:])
-            except ValueError:
-                return None
-    return None
+    finally:
+        lib.udev_unref(contexto)
+
+
+#: quem responde o `USEC_INITIALIZED` de um `usb_device` (injetável: a suíte
+#: nunca pergunta ao udev da máquina).
+LeitorDoUsec = Callable[[Path], "int | None"]
 
 
 def controles_no_cabo(
-    sysfs: Path = Path("/sys"), udev_data: Path = Path("/run/udev/data")
+    sysfs: Path = Path("/sys"), usec_do: LeitorDoUsec | None = None
 ) -> list[Controle]:
     """Os DualSense ligados por USB COM placa de som, lidos do sysfs.
 
@@ -230,7 +256,7 @@ def controles_no_cabo(
         if not (bus and num and bus.isdigit() and num.isdigit()):
             continue
         achados.append(
-            Controle(pid=pid, bus=int(bus), dev=int(num), usec=_usec_do_udev(dev, udev_data))
+            Controle(pid=pid, bus=int(bus), dev=int(num), usec=(usec_do or _usec_do_udev)(dev))
         )
     return achados
 
@@ -368,7 +394,7 @@ def pai_usb_device(sysfs_path: str, sysfs: Path = Path("/sys")) -> Path | None:
 
 def controles_no_radio(
     sysfs: Path = Path("/sys"),
-    udev_data: Path = Path("/run/udev/data"),
+    usec_do: LeitorDoUsec | None = None,
     runner: Callable[[list[str]], str | None] = _pactl,
 ) -> list[Controle]:
     """Um `Controle` por endpoint de mentira vivo, com os campos da ÂNCORA.
@@ -404,7 +430,7 @@ def controles_no_radio(
             pid=pid,
             bus=int(bus),
             dev=int(num),
-            usec=_usec_do_udev(ancora, udev_data),
+            usec=(usec_do or _usec_do_udev)(ancora),
             container_vid=a_vid,
             container_pid=a_pid,
         )
@@ -494,13 +520,13 @@ def indice_do_fluxo(
 
 def controles_do_registro(
     sysfs: Path = Path("/sys"),
-    udev_data: Path = Path("/run/udev/data"),
+    usec_do: LeitorDoUsec | None = None,
     runner: Callable[[list[str]], str | None] = _pactl,
 ) -> list[Controle]:
     """A lista que o registro grava — o DONO dela, desde 28/09/2026."""
     perguntar = _lembrando(runner)
-    endpoints = controles_no_radio(sysfs, udev_data, perguntar)
-    cabo = controles_no_cabo(sysfs, udev_data)
+    endpoints = controles_no_radio(sysfs, usec_do, perguntar)
+    cabo = controles_no_cabo(sysfs, usec_do)
     if cabo:
         servidas = set(placas_servidas(sysfs, perguntar))
         cabo = [c for c in cabo if (c.bus, c.dev) not in servidas]
@@ -752,7 +778,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--remover", action="store_true",
                         help="tira os nossos blocos e não grava nenhum")
     parser.add_argument("--sysfs", default="/sys", help=argparse.SUPPRESS)
-    parser.add_argument("--udev-data", default="/run/udev/data", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
     if args.remover_de_todos:
@@ -777,7 +802,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.remover:
         controles: list[Controle] = []
     else:
-        controles = controles_do_registro(Path(args.sysfs), Path(args.udev_data))
+        controles = controles_do_registro(Path(args.sysfs))
     try:
         resultado = aplicar(Path(args.prefixo), controles=controles)
     except OSError as erro:

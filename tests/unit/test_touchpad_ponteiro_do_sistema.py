@@ -5,7 +5,7 @@ mouse do sistema; o Hefesto impedia isso em todos os modos, e ele tem de voltar 
 no Nativo ou no DualSense. A emulação de mouse pelo analógico é outra coisa — o pedido é sobre o
 TOUCHPAD como ponteiro do sistema.
 
-A CAUSA, medida no controle do usuário (``/run/udev/data/c13:68``, DualSense por USB,
+A CAUSA, medida no controle do usuário (o nó 13:68 no banco do udev, DualSense por USB,
 09/08/2026): ``E:ID_INPUT_TOUCHPAD=1`` **e** ``E:LIBINPUT_IGNORE_DEVICE=1``. Uma
 linha só, com curinga, em ``assets/76-dualsense-touchpad-libinput-ignore.rules``
 apagava o touchpad de TODO aparelho em TODO modo::
@@ -42,7 +42,7 @@ AS MORDIDAS (cada uma foi arrancada e vista reprovar):
   do usuário mais um ``KEY_BACKSPACE``.
 
 Nenhum controle real, nenhum ``/dev``, nenhum ``udevadm control`` é tocado: a
-regra é lida como texto e a base do udev é um diretório temporário.
+regra é lida como texto e o udev é um dublê (`tests/unit/udev_de_mentira.py`).
 """
 from __future__ import annotations
 
@@ -61,6 +61,7 @@ from hefesto_dualsense4unix.core.evdev_reader import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.keyboard import _combine_with_touchpad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense, player_mac
+from tests.unit.udev_de_mentira import BancoDeMentira
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGRA = REPO_ROOT / "assets" / "76-dualsense-touchpad-libinput-ignore.rules"
@@ -204,15 +205,13 @@ class TestLibinputIgnoraDevice:
     """A leitura da base do udev — o único fato que o gate consulta."""
 
     @staticmethod
-    def _montar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corpo: str | None):
-        """Um "nó" e a entrada dele na base do udev, em diretório temporário."""
-        from hefesto_dualsense4unix.core import evdev_reader
-
-        monkeypatch.setattr(evdev_reader, "UDEV_DB_DIR", tmp_path)
+    def _montar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, props: dict[str, str] | None):
+        """Um "nó" e o que o udev responde dele (``props`` ausente = o udev não o conhece)."""
+        banco = BancoDeMentira(monkeypatch)
         no = tmp_path / "event0"
         no.write_text("", encoding="utf-8")
-        if corpo is not None:
-            (tmp_path / "c0:0").write_text(corpo, encoding="utf-8")
+        if props is not None:
+            banco.por_devnum[0] = props  # um arquivo comum tem `st_rdev` 0
         return no
 
     def test_marcado_com_1(
@@ -221,20 +220,20 @@ class TestLibinputIgnoraDevice:
         no = self._montar(
             tmp_path,
             monkeypatch,
-            "E:ID_INPUT=1\nE:ID_INPUT_TOUCHPAD=1\nE:LIBINPUT_IGNORE_DEVICE=1\nG:uaccess\n",
+            {"ID_INPUT": "1", "ID_INPUT_TOUCHPAD": "1", "LIBINPUT_IGNORE_DEVICE": "1"},
         )
         assert libinput_ignora_device(no) is True
 
     def test_sem_a_propriedade(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        no = self._montar(tmp_path, monkeypatch, "E:ID_INPUT=1\nE:ID_INPUT_TOUCHPAD=1\n")
+        no = self._montar(tmp_path, monkeypatch, {"ID_INPUT": "1", "ID_INPUT_TOUCHPAD": "1"})
         assert libinput_ignora_device(no) is False
 
     def test_marcado_com_zero_nao_conta(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        no = self._montar(tmp_path, monkeypatch, "E:LIBINPUT_IGNORE_DEVICE=0\n")
+        no = self._montar(tmp_path, monkeypatch, {"LIBINPUT_IGNORE_DEVICE": "0"})
         assert libinput_ignora_device(no) is False
 
     def test_sem_base_do_udev_o_sistema_e_o_dono(
@@ -298,9 +297,7 @@ class TestTouchpadReaderDonoDoCursor:
     def test_o_open_decide_o_dono_pela_base_do_udev(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from hefesto_dualsense4unix.core import evdev_reader
-
-        monkeypatch.setattr(evdev_reader, "UDEV_DB_DIR", tmp_path)
+        banco = BancoDeMentira(monkeypatch)
         no = tmp_path / "event0"
         no.write_text("", encoding="utf-8")
 
@@ -308,7 +305,7 @@ class TestTouchpadReaderDonoDoCursor:
         reader._on_device_opened(_DevFalso(str(no)))
         assert reader.ponteiro_do_sistema is True
 
-        (tmp_path / "c0:0").write_text("E:LIBINPUT_IGNORE_DEVICE=1\n", encoding="utf-8")
+        banco.por_devnum[0] = {"LIBINPUT_IGNORE_DEVICE": "1"}
         reader._on_device_opened(_DevFalso(str(no)))
         assert reader.ponteiro_do_sistema is False
 
@@ -316,12 +313,10 @@ class TestTouchpadReaderDonoDoCursor:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O delta do dono anterior viraria um salto de cursor no novo."""
-        from hefesto_dualsense4unix.core import evdev_reader
-
-        monkeypatch.setattr(evdev_reader, "UDEV_DB_DIR", tmp_path)
+        banco = BancoDeMentira(monkeypatch)
         no = tmp_path / "event0"
         no.write_text("", encoding="utf-8")
-        (tmp_path / "c0:0").write_text("E:LIBINPUT_IGNORE_DEVICE=1\n", encoding="utf-8")
+        banco.por_devnum[0] = {"LIBINPUT_IGNORE_DEVICE": "1"}
 
         reader = self._reader()
         reader._on_device_opened(_DevFalso(str(no)))
@@ -329,7 +324,7 @@ class TestTouchpadReaderDonoDoCursor:
         self._dedo(reader, 400)
         assert reader._accum_dx == 300
 
-        (tmp_path / "c0:0").write_text("E:ID_INPUT=1\n", encoding="utf-8")
+        banco.por_devnum[0] = {"ID_INPUT": "1"}
         reader._on_device_opened(_DevFalso(str(no)))
         assert reader.consume_motion() == (0, 0)
 

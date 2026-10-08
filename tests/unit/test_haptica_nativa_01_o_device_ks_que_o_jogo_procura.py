@@ -38,6 +38,7 @@ from pathlib import Path
 
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from tests.unit import pactl_json_de_mentira as pj
+from tests.unit.udev_de_mentira import usec_pela_pasta
 
 _CABECALHO = "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n"
 
@@ -128,9 +129,9 @@ def test_o_sysfs_sintetico_da_os_controles_com_placa_de_som(tmp_path: Path) -> N
     usb("1-4", "054c", "0df2", 1, 7, som=True, majmin="189:6")
     usb("1-5", "054c", "0ce6", 1, 9, som=False, majmin="189:8")
     usb("1-6", "046d", "c52b", 1, 3, som=True, majmin="189:2")
-    (udev / "c189:283").write_text("I:1234567\nE:ID_VENDOR=Sony\n")
+    (udev / "c189:283").write_text("1234567\n")
 
-    achados = ks.controles_no_cabo(sysfs, udev)
+    achados = ks.controles_no_cabo(sysfs, usec_pela_pasta(udev))
     assert [(c.pid, c.bus, c.dev, c.usec) for c in achados] == [
         (0x0DF2, 1, 7, None),
         (0x0CE6, 3, 28, 1234567),
@@ -291,7 +292,7 @@ def test_a_cli_grava_e_o_remover_tira(tmp_path: Path) -> None:
     campos = {"idVendor": "054c", "idProduct": "0ce6", "busnum": "3", "devnum": "28"}
     for nome, valor in campos.items():
         (d / nome).write_text(valor + "\n")
-    base = ["--prefixo", str(compat), "--sysfs", str(sysfs), "--udev-data", str(tmp_path / "udev")]
+    base = ["--prefixo", str(compat), "--sysfs", str(sysfs)]
     assert ks.main(base) == 0
     assert _nossos(_ler(compat))
     assert ks.main([*base, "--remover"]) == 0
