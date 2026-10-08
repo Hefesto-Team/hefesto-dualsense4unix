@@ -15,12 +15,15 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
 from hefesto_dualsense4unix.core.trigger_effects import (
+    FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO,
     TriggerMode,
     _flatten_multi_position,
     build_from_name,
 )
 from hefesto_dualsense4unix.profiles.schema import TriggerConfig
+from hefesto_dualsense4unix.profiles.trigger_presets import VIBRATION_POSITION_PRESETS
 
 
 class TestValidatorParams:
@@ -139,7 +142,54 @@ class TestBuildFromNameAninhado:
         nested = [[0], [0], [5], [5], [5], [8], [8], [8], [8], [8]]
         effect = build_from_name("MultiPositionVibration", nested)
         assert effect.mode == TriggerMode.VIBRATION
-        assert effect.forces[6] == 0, "frequency default = 0 no formato aninhado"
+        assert effect.forces[6] == 40, "o aninhado não guarda frequência: sai o padrão da tela"
+
+    def test_o_padrao_do_aninhado_e_o_da_tela(self) -> None:
+        """Uma só frequência padrão: a do controle da aba Gatilhos.
+
+        Mordida: mudar o `_frequency(40)` da tela, ou a constante, sem o outro.
+        """
+        spec = get_spec("MultiPositionVibration")
+        assert spec is not None
+        tela = next(p for p in spec.params if p.name == "frequency").default
+        assert tela == FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO
+
+    def test_efeito_pronto_machine_gun_salvo_aninhado_vibra_a_40(self) -> None:
+        """O `machine_gun` salvo em lista de listas saía com frequência 0, que o
+        controle lê como desligado.
+
+        Mordida: devolver `factory(0, …)` no caminho aninhado.
+        """
+        nested = [[v] for v in VIBRATION_POSITION_PRESETS["machine_gun"]]
+        effect = build_from_name("MultiPositionVibration", nested)
+        assert effect.forces[6] == 40
+
+    @pytest.mark.parametrize("cinco", [True, False])
+    def test_aninhado_em_cinco_e_em_duas_sublistas_tambem_vibra_a_40(
+        self, cinco: bool
+    ) -> None:
+        nested = (
+            [[0, 8], [0, 8], [0, 8], [0, 8], [0, 8]]
+            if cinco
+            else [[0, 8, 0, 8, 0], [8, 0, 8, 0, 8]]
+        )
+        assert build_from_name("MultiPositionVibration", nested).forces[6] == 40
+
+    def test_frequencia_explicita_posicional_e_mantida(self) -> None:
+        effect = build_from_name("MultiPositionVibration", [25, 0, 8, 0, 8, 0, 8, 0, 8, 0, 8])
+        assert effect.forces[6] == 25
+
+    def test_frequencia_explicita_nomeada_e_mantida(self) -> None:
+        params = {"frequency": 25, **{f"pos_{i}": 8 for i in range(10)}}
+        assert build_from_name("MultiPositionVibration", params).forces[6] == 25
+
+    def test_nomeado_sem_frequencia_recebe_o_padrao_da_tela(self) -> None:
+        params = {f"pos_{i}": 8 for i in range(10)}
+        assert build_from_name("MultiPositionVibration", params).forces[6] == 40
+
+    def test_amplitude_com_frequencia_zero_explicita_levanta(self) -> None:
+        with pytest.raises(ValueError, match="frequency 0"):
+            build_from_name("MultiPositionVibration", [0, 0, 8, 0, 8, 0, 8, 0, 8, 0, 8])
 
     def test_simples_ainda_funciona(self) -> None:
         """Backcompat: list[int] no formato antigo continua válido."""

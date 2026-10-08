@@ -179,13 +179,35 @@ class TestFeedbackEVibration:
         eff = tfx.slope_feedback(1, 8, 2, 7)
         assert eff.mode == TriggerMode.FEEDBACK
         zonas = eff.forces[0] | (eff.forces[1] << 8)
-        assert zonas == 0b0111111110, "zonas 1..8, e nenhuma fora da rampa"
+        assert zonas == 0b1111111110, "zonas 1..9: a rampa chega ao fundo do curso"
         forcas = (
             eff.forces[2] | (eff.forces[3] << 8)
             | (eff.forces[4] << 16) | (eff.forces[5] << 24)
         )
         assert (forcas >> 3) & 0x07 == 1, "zona 1 com força 2"
         assert (forcas >> 24) & 0x07 == 6, "zona 8 com força 7"
+        assert (forcas >> 27) & 0x07 == 6, "zona 9 com a força final, 7"
+
+    @pytest.mark.parametrize(
+        ("start", "end", "inicial", "final"),
+        [(1, 8, 2, 7), (0, 3, 1, 8), (2, 5, 8, 1), (4, 9, 3, 6)],
+    )
+    def test_rampa_enche_do_fim_ate_o_fundo_com_a_forca_final(
+        self, start: int, end: int, inicial: int, final: int
+    ) -> None:
+        """Depois de `end`, cada zona até a nona vale a força final; antes de
+        `start`, nenhuma zona liga.
+
+        Mordida: devolver só as zonas de `start` a `end`.
+        """
+        eff = tfx.slope_feedback(start, end, inicial, final)
+        zonas = eff.forces[0] | (eff.forces[1] << 8)
+        assert zonas == sum(1 << z for z in range(start, 10))
+        forcas = int.from_bytes(bytes(eff.forces[2:6]), "little")
+        por_zona = {z: (forcas >> (3 * z)) & 0x07 for z in range(10)}
+        assert all(por_zona[z] == final - 1 for z in range(end, 10))
+        assert por_zona[start] == inicial - 1
+        assert all(por_zona[z] == 0 for z in range(start))
 
     def test_slope_feedback_strength_0_rejeita(self):
         with pytest.raises(ValueError, match="start_strength"):
@@ -239,6 +261,19 @@ class TestMultiPosition:
         assert eff.mode == TriggerMode.VIBRATION
         assert int(eff.mode) == 0x26
         assert eff.forces[6] == 100
+
+    def test_vibration_frequencia_zero_com_amplitude_recusa(self):
+        """O controle lê frequência 0 como desligado: pedir vibração e mandar
+        zero é calar sem avisar.
+
+        Mordida: tirar a recusa de `multi_position_vibration`.
+        """
+        with pytest.raises(ValueError, match="frequency 0"):
+            tfx.multi_position_vibration(0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+
+    def test_vibration_frequencia_zero_sem_amplitude_e_o_desligado(self):
+        eff = tfx.multi_position_vibration(0, [0] * 10)
+        assert eff.forces == (0, 0, 0, 0, 0, 0, 0)
 
     def test_vibration_com_oitos_bytes_literais(self):
         """Mesmos literais de zona/força do feedback, mais a frequência."""

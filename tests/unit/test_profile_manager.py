@@ -418,7 +418,8 @@ def test_apply_propaga_multi_position(isolated_profiles_dir: Path):
     assert left_call.payload[1].forces == expected_left.forces
 
     right_call = next(c for c in triggers if c.payload[0] == "right")
-    expected_right = multi_position_vibration(0, [0, 0, 2, 2, 4, 5, 6, 7, 8, 8])
+    # o aninhado não guarda frequência: sai o padrão da tela, não o zero
+    expected_right = multi_position_vibration(40, [0, 0, 2, 2, 4, 5, 6, 7, 8, 8])
     assert right_call.payload[1].mode == TriggerMode.VIBRATION
     assert right_call.payload[1].forces == expected_right.forces
 

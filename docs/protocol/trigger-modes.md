@@ -97,6 +97,8 @@ Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mod
 **Notas:**
 - Multiplicador `*32` nas amplitudes normaliza `0–8` (DSX nomeado) para `0–255` (HID byte). Factories aplicam a conversão internamente; API pública usa os nomes DSX.
 - `multi_position_*` comprime array de 10 valores em bits HID — ver `pack10to7bytes()` em `trigger_effects.py` quando implementado.
+- **Rampa de força (08/10/2026):** `slope_feedback(start, end, …)` interpola de `start` a `end` e enche as zonas depois do fim, até a nona, com a força final (máscara `FE 03` com `end = 8`): o fundo do curso não fica sem força.
+- **Vibração por posição (08/10/2026):** a frequência `0` com alguma amplitude maior que zero é recusada (`ValueError`), porque o controle lê o bloco como desligado. O perfil em lista de listas, que não tem onde guardar a frequência, sai com `FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO` (40, o padrão da tela); o dict sem `frequency` também. Frequência explícita, no dict ou no posicional, é mantida.
 
 ---
 

@@ -13,6 +13,11 @@ AMPLITUDE_SCALE = 32
 
 MULTI_POSITION_MAX_STRENGTH = 7
 
+#: A frequência da Vibração por posição quando o perfil não traz a dele (o
+#: formato aninhado não tem onde guardá-la): o padrão do controle da tela, o
+#: `_frequency(40)` de `app/actions/trigger_specs.py`, preso por teste.
+FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO = 40
+
 
 MODOS_DE_DEPURACAO: frozenset[int] = frozenset({0xFC, 0xFD, 0xFE})
 
@@ -127,14 +132,24 @@ def _vibracao_oficial(
 def _rampa_de_zonas(
     start: int, end: int, forca_inicial: int, forca_final: int
 ) -> dict[int, int]:
-    """As forças de cada zona entre `start` e `end`, interpoladas linearmente."""
+    """As forças de cada zona da rampa: interpoladas de `start` a `end`, e da
+    zona seguinte ao fim até a última do curso, a força final.
+
+    Parar em `end` deixava o fundo do curso sem força (um degrau mole no fim);
+    o gerador público do firmware e o KytyPS5 enchem as zonas depois do fim com
+    a força final.
+    """
     if end <= start:
         return {start: forca_inicial}
     passo = (forca_final - forca_inicial) / (end - start)
-    return {
+    zonas = {
         zona: max(1, min(8, round(forca_inicial + passo * (zona - start))))
         for zona in range(start, end + 1)
     }
+    zonas.update(
+        {zona: zonas[end] for zona in range(end + 1, _ZONAS_DO_GATILHO)}
+    )
+    return zonas
 
 
 def _byte(value: int, *, name: str, lo: int = 0, hi: int = 255) -> int:
@@ -343,16 +358,24 @@ def multi_position_feedback(strengths: list[int]) -> TriggerEffect:
 
 
 def multi_position_vibration(frequency: int, strengths: list[int]) -> TriggerEffect:
-    """Amplitude por posição (array de 10) + frequência."""
+    """Amplitude por posição (array de 10) + frequência.
+
+    Frequência 0 com alguma amplitude maior que zero recusa: o controle lê o
+    bloco como desligado, e quem pediu a vibração ficaria sem ela calado.
+    """
     if len(strengths) != 10:
         raise ValueError(
             f"multi_position_vibration: precisa 10 strengths, recebeu {len(strengths)}"
         )
     for idx, s in enumerate(strengths):
         _byte(s, name=f"strengths[{idx}]", lo=0, hi=8)
-    return _vibracao_oficial(
-        dict(enumerate(strengths)), _byte(frequency, name="frequency")
-    )
+    _byte(frequency, name="frequency")
+    if frequency == 0 and any(s > 0 for s in strengths):
+        raise ValueError(
+            "multi_position_vibration: frequency 0 com amplitude maior que zero "
+            "o controle lê como desligado"
+        )
+    return _vibracao_oficial(dict(enumerate(strengths)), frequency)
 
 
 def custom(mode: int, forces: tuple[int, ...]) -> TriggerEffect:
@@ -474,7 +497,12 @@ def _traduzir_params_nomeados(
             return dict(params)
         if name == "MultiPositionFeedback":
             return {"strengths": strengths}
-        return {"frequency": int(params.get("frequency", 0)), "strengths": strengths}
+        return {
+            "frequency": int(
+                params.get("frequency", FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO)
+            ),
+            "strengths": strengths,
+        }
     if name == "Custom" and "force_0" in params:
         return {
             "mode": int(params.get("mode", 0)),
@@ -494,9 +522,10 @@ def build_from_name(
     os 10 strengths em JSON com agrupamento por zona (2/5/10 sublistas).
     Ver `_flatten_multi_position` para a expansão.
 
-    Para `MultiPositionVibration`, `frequency` é implicitamente 0 quando
-    o formato aninhado é usado — ajuste fino de frequency exige formato
-    dict (`{"frequency": N, "strengths": [...]}`) ou posicional.
+    Para `MultiPositionVibration`, o formato aninhado não tem onde guardar a
+    `frequency`: ela sai como `FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO`
+    (40, o padrão da tela). Frequência própria exige o formato dict
+    (`{"frequency": N, "strengths": [...]}`) ou o posicional.
     """
     from typing import Any, cast
     factory = cast("Any", PRESET_FACTORIES.get(name))
@@ -514,7 +543,7 @@ def build_from_name(
             result = factory(strengths)
         elif name == "MultiPositionVibration":
             strengths = _flatten_multi_position(nested)
-            result = factory(0, strengths)
+            result = factory(FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO, strengths)
         else:
             raise ValueError(
                 f"params aninhado só é aceito para MultiPositionFeedback "
@@ -539,6 +568,7 @@ def build_from_name(
 
 __all__ = [
     "AMPLITUDE_SCALE",
+    "FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO",
     "MULTI_POSITION_MAX_STRENGTH",
     "PRESET_FACTORIES",
     "TriggerMode",
