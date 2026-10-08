@@ -435,7 +435,7 @@ class _Controle:
         return dict.fromkeys(uniqs, True)
 
 
-def _daemon(controle: _Controle, mesa: _Mesa, *, nativo: bool = True) -> SimpleNamespace:
+def _daemon(controle: _Controle, mesa: _Mesa, *, nativo: bool = False) -> SimpleNamespace:
     async def _run_blocking(fn: Any, *args: Any) -> Any:
         return fn(*args)
 
@@ -451,12 +451,14 @@ def _daemon(controle: _Controle, mesa: _Mesa, *, nativo: bool = True) -> SimpleN
 
 
 class TestNoDaemon:
-    def test_o_modo_nativo_tambem_e_vigiado_e_o_diario_conta(self) -> None:
-        """A MATRIZ: no Nativo o jogo recebe o físico, e o número e a barra"""
+    def test_fora_do_nativo_o_jogo_e_vigiado_e_o_diario_conta(self) -> None:
+        """A MATRIZ, fora do Nativo desde 08/10/2026 (DESLIGAR-O-HEFESTO-DEVOLVE-O-
+        CONTROLE-AO-LINUX-01, item 3: no Nativo a barra é do jogo, e quem prova
+        é ``test_o_nativo_nao_toca_no_que_e_do_jogo.py``)."""
         mesa = _Mesa()
         mesa.abertos.add(NO_1)
         controle = _Controle({UNIQ_1: NO_1})
-        daemon = _daemon(controle, mesa, nativo=True)
+        daemon = _daemon(controle, mesa, nativo=False)
 
         async def _roteiro() -> list[dict[str, Any]]:
             with structlog.testing.capture_logs() as registros:
@@ -481,7 +483,7 @@ class TestNoDaemon:
         assert encerrado and encerrado[0]["reescritas"] == 2
         detectado = next(r for r in registros if r["event"] == "sequestro_detectado")
         assert detectado["pids"] == [JOGO]
-        assert detectado["modo_nativo"] is True
+        assert detectado["modo_nativo"] is False
 
     def test_a_fatia_encolhe_enquanto_ha_o_que_vigiar(
         self, monkeypatch: pytest.MonkeyPatch

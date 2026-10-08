@@ -901,10 +901,9 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     controle volta à Steam, e todo o resto é do Hefesto. Ali o dono do hidraw é o jogo, e um
     escritor cru não
     é intruso: é o dono. Sondar seria gastar `pgrep` para concluir que sim, o
-    jogo está lá. 24/09/2026 (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-
-    HEFESTO`): a barra e o número passaram a ser do Hefesto no Nativo também, e
-    quem os defende ali é a `VigiaDoSequestro` (em até 1 s); esta sonda segue
-    calada para não pagar o `pgrep` duas vezes pelo mesmo nó.
+    jogo está lá. Desde 08/10/2026 (DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-
+    LINUX-01, item 3) a `VigiaDoSequestro` também não vigia no Nativo: a barra e
+    o número que o jogo escreve ficam os do jogo.
 
     ``forcar`` é o tique de 30 s do `reconnect_loop` (o único com orçamento
     para o `pgrep`); sem ele, só sonda quando o produto acabou de pintar, e
@@ -1018,11 +1017,18 @@ def _nascimentos_condenados_entre(
 async def vigiar_o_sequestro(
     daemon: DaemonProtocol, *, agora: float | None = None
 ) -> int:
-    """Reescreve a barra e o número de quem outro processo sequestrou."""
+    """Reescreve a barra e o número de quem outro processo sequestrou.
+
+    **No Modo Nativo não vigia nó nenhum** (DESLIGAR-O-HEFESTO-DEVOLVE-O-
+    CONTROLE-AO-LINUX-01, item 3, 08/10/2026): ali o processo que segura o
+    nó é o jogo, dono da barra e do número. A vigia recebe a mesa vazia: o
+    sequestro aberto se encerra no diário, a fatia volta à de sempre, e nada
+    se varre nem se reescreve; fora do Nativo, a próxima varredura retoma.
+    """
     vigia = vigia_do_sequestro_de(daemon)
     nos_por_uniq: dict[str, str] = {}
     mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
-    if callable(mapear):
+    if callable(mapear) and not _modo_nativo(daemon):
         with contextlib.suppress(Exception):
             nos_por_uniq = dict(mapear() or {})
     agora = time.monotonic() if agora is None else float(agora)
@@ -1097,7 +1103,7 @@ async def vigiar_o_sequestro(
 
 
 def _modo_nativo(daemon: DaemonProtocol) -> bool:
-    """O daemon está em Modo Nativo? Para o diário, e para o cabo que espera o jogo soltar."""
+    """O daemon está em Modo Nativo? Para o diário, a vigia e o cabo que espera o jogo."""
     with contextlib.suppress(Exception):
         return bool(daemon.is_native_mode())
     return False
