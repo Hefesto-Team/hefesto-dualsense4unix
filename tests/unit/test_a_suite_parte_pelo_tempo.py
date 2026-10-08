@@ -118,6 +118,7 @@ def mentira(tmp_path: Path) -> Path:
 def test_dez_arquivos_de_tempo_conhecido_dao_partes_com_diferenca_menor_que_o_maior(
     mentira: Path, tmp_path: Path
 ) -> None:
+    # A decisão: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO.
     saida = tmp_path / "saida"
     feito = _rodar(mentira, saida, PARTES=str(PARTES), A_SECO="1")
     assert feito.returncode == 0, feito.stdout + feito.stderr
@@ -220,6 +221,7 @@ def test_a_chave_desligada_nao_separa_quem_toca_a_maquina(tmp_path: Path) -> Non
 
 
 def test_a_chave_pede_o_semaforo(tmp_path: Path) -> None:
+    # A decisão: D-0810-AS-PARTES-EM-PARALELO-ESPERAM-A-PROVA.
     raiz = tmp_path / "arvore"
     _arvore(raiz, None, nomes=["test_00.py", "test_01.py"])
     feito = _rodar(raiz, tmp_path / "saida", PARTES="2", PARTES_EM_PARALELO="2")
