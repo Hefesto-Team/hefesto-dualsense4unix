@@ -541,6 +541,13 @@ _SEM_MAO_HOJE: dict[str, str] = {}
 
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "interface/monta.py::par_de_modos": (
+        "08/10/2026, O-MODO-AUTOMATICO — é do gerador do desenho, não do produto: os geradores "
+        "da 03 e da 04 (`interface/aba03.py` e `aba04.py`, a chamada `monta_.par_de_modos`) "
+        "escrevem com ela os dois botões do modo no mockup; o produto acende o botão pelo "
+        "`pacote` da aba (`a03_gatilhos.modo_dos_gatilhos_do_perfil`, "
+        "`a04_iluminacao.modo_da_luz_do_perfil`)."
+    ),
     "interface/pacotes/a11_calibrar_sensores.py::bloco_de_nascenca": (
         "07/10/2026, A-MIRA — é do gerador do desenho, não do produto: os geradores "
         "da 06, da 08 e da 10 (`interface/aba06.py`, `aba08.py`, `aba10.py`, o import "

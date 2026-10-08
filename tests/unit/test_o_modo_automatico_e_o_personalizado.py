@@ -184,7 +184,6 @@ def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04:
 
     MORDIDA: faça ``_tem_cor_propria`` contar o global e ``global-nao-conta`` reprova.
     """
-    assert sch.modo_da_luz(perfil) == esperado
     cru = perfil.model_dump(mode="json", exclude_unset=True)
     assert a04.modo_da_luz_do_perfil(cru) == esperado
 
@@ -216,9 +215,9 @@ def test_a_regra_dos_gatilhos_sem_o_campo_escrito(
 ) -> None:
     """Automático sem opinião = todos os gatilhos (globais e de cada controle) em «Sem efeito».
 
-    MORDIDA: ignore os overrides em ``modo_dos_gatilhos`` e ``override-rigido`` reprova.
+    MORDIDA: ignore os overrides em ``_todos_os_gatilhos_sem_efeito`` (a 03) e
+    ``override-rigido`` reprova.
     """
-    assert sch.modo_dos_gatilhos(perfil) == esperado
     cru = perfil.model_dump(mode="json", exclude_unset=True)
     assert a03.modo_dos_gatilhos_do_perfil(cru) == esperado
 
