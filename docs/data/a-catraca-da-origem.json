@@ -207,14 +207,14 @@
       "data": "2026-10-08",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 954891,
+      "piso": 976496,
       "por_item": {
-        "docs": 58087,
-        "scripts": 103679,
-        "src": 282634,
-        "tests": 510491
+        "docs": 59809,
+        "scripts": 105896,
+        "src": 287803,
+        "tests": 522988
       },
-      "razao": "tamanho: +17 linhas (954874 -> 954891), pagas por Origem: D-0710-OS-CONTRATOS-DE-FORA-SAO-PORTAO, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 1e31dc621f0b",
+      "razao": "tamanho: +21605 linhas (954891 -> 976496), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo 2d8dcfbcc10e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -269,10 +269,16 @@
           "de": 954874,
           "para": 954891,
           "razao": "tamanho: +17 linhas (954874 -> 954891), pagas por Origem: D-0710-OS-CONTRATOS-DE-FORA-SAO-PORTAO, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 1e31dc621f0b"
+        },
+        {
+          "data": "2026-10-08",
+          "de": 954891,
+          "para": 976496,
+          "razao": "tamanho: +21605 linhas (954891 -> 976496), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo 2d8dcfbcc10e"
         }
       ],
       "unidade": "linhas",
-      "universo": 2487
+      "universo": 2535
     }
   }
 }
