@@ -1159,7 +1159,7 @@ jobs:
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
       - name: Instalar deps do sistema (${{ matrix.distro }})
         run: ${{ matrix.install_cmd }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: hefesto-dualsense4unix-wheel
           path: dist
