@@ -881,7 +881,7 @@ def varrer_nos_orfaos(
     ``vivos`` são os NOMES (``hefesto_som_<marca>``) dos nós que este processo
     sustenta. O resto, com a rota inclusive, é de um daemon que morreu sem
     ``stop`` (ou de um ``stop`` que não chegou ao fim) e entra na lista de saídas
-    de som da pessoa duplicado com o bom. ``modulos`` é a resposta de
+    de som da pessoa duplicado com o bom. O último parâmetro é a resposta de
     :func:`modulos_do_servidor` que quem chama já tem. Devolve os ``module_id``
     derrubados.
     """
@@ -981,7 +981,7 @@ class SinkVirtualPipeWire:
         """O módulo deste nó existe no SERVIDOR? ``None`` = não sei (e então nada se derruba).
 
         Sem módulo na memória a resposta é ``False`` sem perguntar nada.
-        ``modulos`` é a resposta de :func:`modulos_do_servidor` que quem chama
+        O argumento é a resposta de :func:`modulos_do_servidor` que quem chama
         já tem (a volta pergunta uma vez para todos os nós).
         """
         if self._module_id is None:
