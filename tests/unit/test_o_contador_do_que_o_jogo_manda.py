@@ -209,6 +209,14 @@ def test_off_e_outro_efeito_em_menos_de_4_ms_nao_conta() -> None:
     assert ens.contar(_off_e_volta(0.002, volta=VIBRACAO)).off_e_o_mesmo_em_menos_de_4ms == 0
 
 
+def test_sem_bloco_de_gatilho_o_off_e_sem_dado_e_nunca_nao() -> None:
+    """Uma gravação só de luz não sabe se o jogo rearma: a resposta é «sem dado», não «não»."""
+    c = ens.contar([Evento(0.0, "abriu"), saida(1.0, cor=(255, 0, 0)),
+                    saida(1.5, cor=(0, 255, 0))])
+    assert c.off_e_o_mesmo_em_menos_de_4ms is None
+    assert "4 ms: sem dado" in ens.respostas(c)[1]
+
+
 def test_o_off_de_um_lado_nao_casa_com_o_efeito_do_outro() -> None:
     eventos = [saida(1.0, direito=ARMA), saida(1.1, esquerdo=OFF), saida(1.101, direito=ARMA)]
     assert ens.contar(eventos).off_e_o_mesmo_em_menos_de_4ms == 0
@@ -345,11 +353,11 @@ def _blueprint() -> dict[str, Any]:
     }
 
 
-def test_o_gravador_anota_antes_da_deduplicacao_do_produto(fake_uhid: _FakeFd) -> None:
-    """O jogo escreve o MESMO bloco três vezes: o produto entrega um só, o gravador anota três."""
+def _tres_iguais_no_vpad_do_produto(fake_uhid: _FakeFd) -> tuple[Any, list[tuple[str, bytes]]]:
+    """Um vpad do PRODUTO recebe o mesmo bloco três vezes e um eco de outro id."""
     entregues: list[tuple[str, bytes]] = []
     relogio = _Relogio()
-    pad, eventos = ens.novo_gravador(
+    pad = ug.UhidDualSense(
         player=1, blueprint=_blueprint(), time_fn=relogio, sleep_fn=lambda _s: None,
         trigger_sink=lambda lado, bloco: entregues.append((lado, bloco)))
     pad._sem_gadget = True
@@ -361,11 +369,52 @@ def test_o_gravador_anota_antes_da_deduplicacao_do_produto(fake_uhid: _FakeFd) -
     fake_uhid.reads += [_output_event(bytes([0x02]) + c)] * 3
     fake_uhid.reads.append(_output_event(bytes([0x31]) + c))  # outro id: não é saída do jogo
     pad.pump_ff()
+    return pad, entregues
 
+
+def test_a_escuta_anota_no_vpad_do_produto_antes_da_deduplicacao(fake_uhid: _FakeFd) -> None:
+    """O jogo escreve o MESMO bloco três vezes: o produto entrega um só, a escuta anota três."""
+    eventos: list[ens.Evento] = []
+    tirar = ens.instalar_escuta(eventos)
+    try:
+        _pad, entregues = _tres_iguais_no_vpad_do_produto(fake_uhid)
+    finally:
+        tirar()
+
+    c = corpo(direito=ARMA)
     assert [e.tipo for e in eventos] == ["abriu", "saida", "saida", "saida"]
     assert all(e.corpo == c for e in eventos if e.tipo == "saida")
-    assert len(entregues) == 1, "o produto deduplica: o gravador existe para não subcontar"
+    assert len(entregues) == 1, "o produto deduplica: a escuta existe para não subcontar"
     assert ens.contar(eventos).categorias["gatilho_direito"].total == 3
+
+
+def test_tirada_a_escuta_o_vpad_do_produto_volta_a_ser_o_mesmo(fake_uhid: _FakeFd) -> None:
+    original = ug.UhidDualSense.__dict__["_handle_event"]
+    eventos: list[ens.Evento] = []
+    ens.instalar_escuta(eventos)()
+    assert ug.UhidDualSense.__dict__["_handle_event"] is original
+    _tres_iguais_no_vpad_do_produto(fake_uhid)
+    assert eventos == [], "tirada, a escuta não anota mais nada"
+
+
+def test_a_gravacao_roda_o_daemon_com_a_escuta_e_a_tira_mesmo_se_ele_cai(
+    fake_uhid: _FakeFd,
+) -> None:
+    """O jogo atira pelo vpad que o DAEMON liga ao físico: a gravação é o daemon com a escuta."""
+    original = ug.UhidDualSense.__dict__["_handle_event"]
+
+    def daemon_que_cria_o_vpad_e_cai() -> int:
+        _tres_iguais_no_vpad_do_produto(fake_uhid)
+        raise RuntimeError("o daemon caiu")
+
+    with pytest.raises(RuntimeError):
+        ens.gravar_no_aparelho(60.0, rodar_o_daemon=daemon_que_cria_o_vpad_e_cai)
+    assert ug.UhidDualSense.__dict__["_handle_event"] is original
+
+    eventos = ens.gravar_no_aparelho(
+        60.0, rodar_o_daemon=lambda: (_tres_iguais_no_vpad_do_produto(fake_uhid), 0)[1])
+    assert [e.tipo for e in eventos] == ["abriu", "saida", "saida", "saida"]
+    assert ug.UhidDualSense.__dict__["_handle_event"] is original
 
 
 # --- a linha de comando ------------------------------------------------------------------------

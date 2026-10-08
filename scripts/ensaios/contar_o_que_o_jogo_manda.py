@@ -12,10 +12,11 @@ DUAS METADES, e só uma delas precisa do aparelho
 1. O CONTADOR (``contar``, ``tiros_do_audio``, ``ler_gravacao``): puro, lê uma GRAVAÇÃO e
    devolve a tabela. Roda em qualquer lugar, sem aparelho, sem daemon, sem ``/dev/uhid``.
    É o que os testes prendem. ``--ler ARQUIVO`` usa só ele.
-2. O GRAVADOR (``--gravar``): sobe um vpad PRÓPRIO, em lar de mentira, que anota cada
-   ``UHID_OUTPUT`` ANTES da deduplicação do produto (o produto descarta o bloco igual ao
-   último entregue: contar na saída dele subconta). Nada do produto muda: o gravador é uma
-   subclasse do vpad que só ouve. NÃO foi rodado na árvore de desenvolvimento.
+2. O GRAVADOR (``--gravar``): roda o daemon do produto neste processo, em lar de mentira,
+   com uma escuta no vpad que anota cada ``UHID_OUTPUT`` ANTES da deduplicação do produto (o
+   produto descarta o bloco igual ao último entregue: contar na saída dele subconta). O jogo
+   atira pelo físico que o daemon liga ao vpad; um vpad que só ouvisse não teria entrada. Nada
+   do produto muda: a escuta só anota e repassa. NÃO foi rodado na árvore de desenvolvimento.
 
 O QUE A GRAVAÇÃO É
 ------------------
@@ -29,8 +30,8 @@ tiro», só «por segundo», e a tabela diz isso.
 
 O QUE ELE RECUSA (``--gravar``)
 -------------------------------
-Os mesmos motivos do ``latencia_do_tato.py``: ``HOME`` real, daemon dela no ar em qualquer
-socket. Dois vpads do mesmo produto na mesma sessão confundem o jogo (e o dela é o que conta).
+Os mesmos motivos do ``latencia_do_tato.py``: ``HOME`` real e daemon no ar em qualquer socket.
+Durante a sessão o ensaio é o daemon: com o serviço no ar, os dois disputariam o físico.
 """
 
 from __future__ import annotations
@@ -42,8 +43,7 @@ import pwd
 import statistics
 import struct
 import sys
-import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -214,7 +214,7 @@ class Contagem:
     origem_dos_tiros: str
     blocos_de_gatilho_por_tiro_mediana: float | None
     blocos_de_gatilho_por_tiro_maximo: int | None
-    off_e_o_mesmo_em_menos_de_4ms: int
+    off_e_o_mesmo_em_menos_de_4ms: int | None
     gatilho_nos_primeiros_meio_segundo: bool | None
 
 
@@ -227,8 +227,14 @@ def _tempos_de_gatilho(eventos: Sequence[Evento]) -> list[tuple[float, str, byte
     return achados
 
 
-def _reescritas_depois_do_off(gatilhos: Sequence[tuple[float, str, bytes]]) -> int:
-    """Quantas vezes o MESMO efeito voltou em menos de 4 ms depois de um Off, por lado."""
+def _reescritas_depois_do_off(gatilhos: Sequence[tuple[float, str, bytes]]) -> int | None:
+    """Quantas vezes o MESMO efeito voltou em menos de 4 ms depois de um Off, por lado.
+
+    Sem nenhum bloco de gatilho na gravação, ``None``: o jogo não escreveu gatilho, e «não»
+    seria uma resposta que a gravação não tem.
+    """
+    if not gatilhos:
+        return None
     achados = 0
     for lado in ("direito", "esquerdo"):
         ultimo_ativo: bytes | None = None
@@ -332,7 +338,9 @@ def respostas(c: Contagem) -> list[str]:
     return [
         por_tiro,
         "o jogo escreve Off e o mesmo efeito em menos de 4 ms: "
-        + (f"sim ({c.off_e_o_mesmo_em_menos_de_4ms} vez(es))"
+        + ("sem dado (a gravação não tem bloco de gatilho)"
+           if c.off_e_o_mesmo_em_menos_de_4ms is None
+           else f"sim ({c.off_e_o_mesmo_em_menos_de_4ms} vez(es))"
            if c.off_e_o_mesmo_em_menos_de_4ms else "não"),
         "o jogo escreve o gatilho nos primeiros 0,5 s depois de abrir o controle: "
         + _sim_nao(c.gatilho_nos_primeiros_meio_segundo),
@@ -357,50 +365,69 @@ def corpo_do_uhid_output(data: bytes) -> bytes | None:
     return bytes(report[1:])
 
 
-def novo_gravador(**kwargs: Any) -> tuple[Any, list[Evento]]:
-    """Um vpad que só ouve: devolve ``(pad, eventos)``; ``eventos`` enche enquanto o pad vive.
+def instalar_escuta(eventos: list[Evento]) -> Callable[[], None]:
+    """Põe no vpad do PRODUTO uma escuta que anota o que o jogo escreve; devolve quem a tira.
 
-    Anota o ``UHID_OPEN`` e cada ``UHID_OUTPUT`` que o vpad conta como saída do jogo (o eco
-    puro do driver fica de fora), no instante em que o evento CHEGA, antes de qualquer
-    deduplicação. Depois repassa o evento ao vpad como o produto o repassaria.
+    A escuta embrulha ``UhidDualSense._handle_event`` na CLASSE, então vale para todo vpad que o
+    daemon criar neste processo, pelo uhid ou pelo gadget USB (que entrega o output do jogo pelo
+    mesmo ``_handle_event``). Anota o ``UHID_OPEN`` e cada ``UHID_OUTPUT`` que o vpad conta como
+    saída do jogo (o eco puro do driver fica de fora), no instante em que o evento CHEGA e com o
+    corpo cru, antes de qualquer deduplicação. O evento segue inteiro para o vpad: o que o
+    produto faz com ele não muda.
     """
     from hefesto_dualsense4unix.integrations import uhid_gamepad as ug
 
-    eventos: list[Evento] = []
+    original = ug.UhidDualSense.__dict__["_handle_event"]
 
-    class Gravador(ug.UhidDualSense):  # type: ignore[misc]
-        def _handle_event(self, data: bytes) -> None:
-            t = self.time_fn()
-            tipo = struct.unpack("<I", data[:4])[0]
-            antes = self._output_count
-            super()._handle_event(data)
-            if tipo == ug.UHID_OPEN:
-                eventos.append(Evento(t, "abriu"))
-            elif tipo == ug.UHID_OUTPUT and self._output_count > antes:
-                corpo = corpo_do_uhid_output(data)
-                if corpo is not None:
-                    eventos.append(Evento(t, "saida", corpo))
+    def _handle_event(self: Any, data: bytes) -> None:
+        t = self.time_fn()
+        tipo = struct.unpack("<I", data[:4])[0]
+        antes = self._output_count
+        original(self, data)
+        if tipo == ug.UHID_OPEN:
+            eventos.append(Evento(t, "abriu"))
+        elif tipo == ug.UHID_OUTPUT and self._output_count > antes:
+            corpo = corpo_do_uhid_output(data)
+            if corpo is not None:
+                eventos.append(Evento(t, "saida", corpo))
 
-    return Gravador(**kwargs), eventos
+    ug.UhidDualSense._handle_event = _handle_event
+
+    def tirar() -> None:
+        ug.UhidDualSense._handle_event = original
+
+    return tirar
 
 
-def gravar_no_aparelho(segundos: float) -> list[Evento]:
-    """Sobe o vpad que só ouve, espera ``segundos`` e devolve o que o jogo escreveu nele.
+def gravar_no_aparelho(
+    segundos: float, rodar_o_daemon: Callable[[], int] | None = None
+) -> list[Evento]:
+    """O daemon do produto NESTE processo, com a escuta no vpad, por ``segundos``.
 
-    BANCADA: precisa de ``/dev/uhid`` e de um jogo que escolha este vpad. Sem gadget USB
-    (``_sem_gadget``): o produto não é tocado, o nó é só do uhid.
+    BANCADA. O jogo só atira com um controle que responde, e quem liga o físico ao vpad é o
+    daemon: um vpad que só ouvisse não teria entrada, e o jogo escreveria no controle que a
+    tem. Então, durante a sessão, o ensaio É o daemon (com o serviço parado antes, o que a
+    recusa do daemon no ar garante) e a escuta anota o que o jogo escreve no vpad. No fim do
+    prazo o processo manda SIGTERM a si mesmo, e o daemon para pelo caminho normal dele. A
+    escuta sai por qualquer caminho.
     """
-    from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
+    import signal
+    import threading
 
-    pad, eventos = novo_gravador(
-        player=1, blueprint=canonical_blueprint(), time_fn=time.monotonic)
-    pad._sem_gadget = True
-    if not pad.start():
-        raise OSError("o vpad não subiu (sem /dev/uhid ou sem permissão)")
+    if rodar_o_daemon is None:
+        from hefesto_dualsense4unix.daemon.main import run_daemon
+
+        rodar_o_daemon = run_daemon
+    eventos: list[Evento] = []
+    tirar = instalar_escuta(eventos)
+    prazo = threading.Timer(segundos, os.kill, (os.getpid(), signal.SIGTERM))
+    prazo.daemon = True
     try:
-        time.sleep(segundos)
+        prazo.start()
+        rodar_o_daemon()
     finally:
-        pad.stop()
+        prazo.cancel()
+        tirar()
     return list(eventos)
 
 

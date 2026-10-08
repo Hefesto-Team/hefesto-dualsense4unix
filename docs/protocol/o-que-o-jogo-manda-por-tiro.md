@@ -16,15 +16,19 @@ tiro só se um jogo fizer isso».
 .venv/bin/python scripts/ensaios/contar_o_que_o_jogo_manda.py --ler gravacao.jsonl \
     --jogo PRAGMATA --transporte cabo --controle P1          # conta uma gravação, em qualquer lugar
 .venv/bin/python scripts/ensaios/contar_o_que_o_jogo_manda.py --gravar 120 --saida gravacao.jsonl
-                                                              # no aparelho: sobe o vpad que só ouve
+                                                              # no aparelho: o daemon com a escuta
 ```
 
 O **contador** (`--ler`) é puro: lê a gravação e imprime a tabela. O **gravador** (`--gravar`)
-sobe um vpad próprio, em lar de mentira, e anota cada `UHID_OUTPUT` no instante em que chega,
-ANTES da deduplicação do produto (o produto entrega ao sink só o bloco que mudou, então contar
-na saída dele subconta). Nada do produto muda: o gravador é uma subclasse do vpad que só ouve.
-O gravador recusa o `HOME` real e o daemon no ar, como o ensaio da latência
-(`docs/protocol/latencia-do-tato.md`).
+roda o daemon do produto no próprio processo, em lar de mentira, com uma escuta no vpad que
+anota cada `UHID_OUTPUT` no instante em que chega, ANTES da deduplicação do produto (o produto
+entrega ao sink só o bloco que mudou, então contar na saída dele subconta). O jogo atira pelo
+físico que o daemon liga ao vpad; um vpad que só ouvisse não teria entrada. Nada do produto
+muda: a escuta só anota e repassa, e sai no fim da gravação. O gravador recusa o `HOME` real e
+o daemon no ar, como o ensaio da latência (`docs/protocol/latencia-do-tato.md`): o serviço do
+daemon para antes, porque durante a gravação o ensaio é o daemon.
+
+Pelo gadget USB o jogo não passa pelo `UHID_OPEN`, e a terceira pergunta sai «sem dado».
 
 ## A gravação
 
@@ -50,7 +54,8 @@ flag do report a liga (o byte do bloco sozinho não vale). Mais as três pergunt
 
 - blocos de gatilho por tiro (mediana e máximo);
 - o jogo escreve Off e o mesmo efeito em menos de 4 ms: sim ou não (Off é o modo 0x00 ou o
-  0x05 oficial; o mesmo efeito é o bloco igual ao último ativo do mesmo lado);
+  0x05 oficial; o mesmo efeito é o bloco igual ao último ativo do mesmo lado; sem nenhum bloco
+  de gatilho na gravação, «sem dado»);
 - o jogo escreve o gatilho nos primeiros 0,5 s depois de abrir o controle: sim ou não (0,5 s é
   a graça do vpad: o que o jogo escreve antes desse prazo, o produto hoje descarta).
 
