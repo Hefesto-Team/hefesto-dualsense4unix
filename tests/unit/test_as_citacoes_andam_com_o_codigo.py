@@ -625,3 +625,31 @@ def test_o_endereco_reescrito_numa_varredura_vai_para_a_mao(
     assert f"`{END}:10`" in velho.read_text(encoding="utf-8"), "a varredura não prova: fica"
     assert f"`{END}:14`" in nasce.read_text(encoding="utf-8"), "o que nasce na varredura anda"
     assert any("varredura" in f and "velho.md" in f for f in a_mao), a_mao
+
+
+def test_o_documento_renomeado_guarda_o_historico_de_antes_do_nome_novo(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Renomear o documento não o faz nascer de novo: o endereço entrou ANTES do nome novo.
+
+    Medido em 08/10/2026: a `docs/data/decisoes-de-produto.csv` foi renomeada num commit de 279
+    arquivos (380f46749), e sem seguir o nome o script tomava esse commit como o nascimento do
+    documento: lia o código citado no instante errado e pulava a recusa da varredura que, no
+    histórico inteiro, reescreveu o endereço (8002c142c)."""
+    mod = _script()
+    monkeypatch.setattr(mod, "VARREDURA_DE_ARQUIVOS", 3)
+    _escrever_e_commitar(
+        repo, "docs/protocol/antigo.md", f"# Doc\n\nO corpo, `{END}:11-12`.\n", "o endereço entra"
+    )
+    _inserir_no_topo(repo, 12, commitar=True)
+    _git(repo, "mv", "docs/protocol/antigo.md", "docs/protocol/novo.md")
+    for i in range(3):
+        (repo / "docs" / f"outro{i}.txt").write_text("renomeado junto\n", encoding="utf-8")
+    _git(repo, "add", "docs")
+    _git(repo, "commit", "-q", "-m", "a renomeação, numa varredura")
+
+    _feitos, a_mao = mod.reapontar(repo, escrever=True)
+
+    novo = (repo / "docs" / "protocol" / "novo.md").read_text(encoding="utf-8")
+    assert f"`{END}:23-24`" in novo, (novo, a_mao)
+    assert not any("novo.md" in f for f in a_mao), a_mao

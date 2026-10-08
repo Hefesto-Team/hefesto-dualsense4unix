@@ -579,38 +579,69 @@ def _relativo(raiz: Path, caminho: Path) -> str:
     return caminho.resolve().relative_to(raiz.resolve()).as_posix()
 
 
+def _historico_do_documento(raiz: Path, relativo: str) -> list[tuple[str, str, bool]]:
+    """``[(commit, caminho do documento naquele commit, nasceu ali)]``, do mais novo ao mais velho.
+
+    Segue o documento pelas renomeações (``--follow``): renomear não o faz nascer de novo, e o
+    endereço que entrou antes do nome novo tem de ser lido no código de ANTES. Sem isso, a
+    `decisoes-de-produto.csv` (renomeada num commit de 279 arquivos) tomava a renomeação por
+    nascimento, e o endereço que uma varredura reescreveu passava por recém-nascido.
+    """
+    feito = _git(
+        raiz, "log", "--follow", "-M", f"-n{HISTORICO_DA_CRUA}",
+        "--format=%x00%H", "--name-status", "--", relativo,
+    )
+    historico: list[tuple[str, str, bool]] = []
+    caminho = relativo
+    for bloco in feito.stdout.split("\0")[1:]:
+        linhas = [linha for linha in bloco.splitlines() if linha.strip()]
+        if not linhas:
+            continue
+        sha, estado, nome_velho = linhas[0].strip(), "", ""
+        for linha in linhas[1:]:
+            campos = linha.split("\t")
+            if len(campos) >= 2:
+                estado, caminho = campos[0][:1], campos[-1]
+                nome_velho = campos[1] if estado == "R" and len(campos) == 3 else ""
+        historico.append((sha, caminho, estado == "A"))
+        if nome_velho:
+            caminho = nome_velho  # daqui para trás, o documento tinha o nome velho
+    return historico
+
+
 def _introducoes(
     raiz: Path,
     cat: _Cat,
     val: ModuleType,
     documento: Path,
     atuais: collections.Counter[str],
-) -> dict[str, tuple[str | None, bool]]:
-    """``{endereço: (commit em que entrou, entrou em épocas diferentes)}`` do documento.
+) -> dict[str, tuple[str | None, bool, bool]]:
+    """``{endereço: (commit em que entrou, entrou em épocas diferentes, o documento nasceu ali)}``.
 
     O commit é o mais antigo da corrida contínua em que o endereço está escrito ao menos tantas
-    vezes quanto hoje. ``None``: nenhum commit o tem ainda (acabou de ser escrito). O segundo
-    valor sobe quando houve menos cópias antes: as cópias novas são de outra época.
+    vezes quanto hoje, seguindo o documento pelas renomeações. ``None``: nenhum commit o tem ainda
+    (acabou de ser escrito). O segundo valor sobe quando houve menos cópias antes: as cópias novas
+    são de outra época.
     """
     modo = _modo_de(documento)
-    relativo = _relativo(raiz, documento)
-    commits = _git(raiz, "log", f"-n{HISTORICO_DA_CRUA}", "--format=%H", "--", relativo)
     vivos = set(atuais)
-    entrou: dict[str, str] = {}
-    resultado: dict[str, tuple[str | None, bool]] = {}
-    for sha in commits.stdout.split():
+    entrou: dict[str, tuple[str, bool]] = {}
+    resultado: dict[str, tuple[str | None, bool, bool]] = {}
+    for sha, caminho, nasceu in _historico_do_documento(raiz, _relativo(raiz, documento)):
         if not vivos:
             break
-        texto = cat.texto(f"{sha}:{relativo}")
+        texto = cat.texto(f"{sha}:{caminho}")
         conta = _contagem(texto, val, modo) if texto is not None else collections.Counter()
         for endereco in list(vivos):
             if conta[endereco] >= atuais[endereco]:
-                entrou[endereco] = sha
+                entrou[endereco] = (sha, nasceu)
             else:
                 vivos.discard(endereco)
-                resultado[endereco] = (entrou.get(endereco), conta[endereco] > 0)
+                sha_de, nasceu_de = entrou.get(endereco, (None, True))
+                resultado[endereco] = (sha_de, conta[endereco] > 0, nasceu_de)
     for endereco in vivos:
-        resultado[endereco] = (entrou.get(endereco), False)
+        sha_de, nasceu_de = entrou.get(endereco, (None, True))
+        resultado[endereco] = (sha_de, False, nasceu_de)
     return resultado
 
 
@@ -750,7 +781,7 @@ def pelo_historico(
                 rotulo = f"{documento.relative_to(raiz)}: `{cit.texto}`"
                 if cit.curta:
                     rotulo += f" (forma curta `{cit.texto[len(cit.arquivo):]}`)"
-                sha, mista = entradas.get(endereco, (None, False))
+                sha, mista, nasceu = entradas.get(endereco, (None, False, True))
                 if mista:
                     ESTATISTICA["a_mao"] += 1
                     ESTATISTICA["a_mao:misturada"] += 1
@@ -772,7 +803,6 @@ def pelo_historico(
                     alvos[cit.alvo] = cit.alvo.read_text(
                         encoding="utf-8", errors="replace"
                     ).splitlines()
-                nasceu = sha is None or cat.texto(f"{sha}^:{_relativo(raiz, documento)}") is None
                 estado, novo, motivo = levar_crua(
                     cat, relativo, alvos[cit.alvo], cit.a, cit.b, sha, cit.pistas, nasceu
                 )
