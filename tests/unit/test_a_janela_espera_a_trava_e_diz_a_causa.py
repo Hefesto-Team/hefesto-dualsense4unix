@@ -30,11 +30,11 @@ from tests.unit.test_a_lista_de_exclusao_tem_um_escritor_por_vez import (
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.integrations import steam_launch_options as slo  # noqa: E402
-from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import Contexto  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09  # noqa: E402
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+from hefesto_dualsense4unix.interface.pacotes import Contexto
+from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
 GESTO = "aplicar-aos-jogos"
 _CHAVE = "steam_app_1088850"
@@ -108,6 +108,9 @@ class _Ctx:
     state: dict[str, Any] | None = None
 
 
+_CTX: Any = _Ctx()
+
+
 def _dubles_da_steam(monkeypatch: pytest.MonkeyPatch) -> None:
     """A Steam por dublê: o `with_steam_closed` de verdade varre o `/proc`."""
     monkeypatch.setattr(slo, "apply_wrapper_to_all_games",
@@ -159,7 +162,7 @@ def test_o_aplicar_com_a_trava_presa_alem_do_prazo_nao_diz_que_nao_havia_lancado
     assert "{\"defaultSettings\": {}}" in (_lar / ".config/heroic/config.json").read_text(), (
         "a carona escreveu sem a trava")
     esperou = [x for x in diario if x.get("event") == "carona_esperou_a_janela"]
-    assert [x.get("quem") for x in esperou] == ["janela"], esperou
+    assert [x.get("quem") for x in esperou] == [cpe.QUEM_JANELA], esperou
 
 
 # 2. A carona diz que a trava não veio
@@ -214,7 +217,7 @@ def test_o_servico_segue_com_o_prazo_dele_e_o_diario_diz_quem(
     assert time.monotonic() - antes < cpe.ESPERA_DO_SERVICO_S + 1.0
     esperou = [x for x in diario if x.get("event") == "carona_esperou_a_janela"]
     assert [(x.get("quem"), x.get("espera_s")) for x in esperou] == [
-        ("servico", cpe.ESPERA_DO_SERVICO_S)], esperou
+        (cpe.QUEM_SERVICO, cpe.ESPERA_DO_SERVICO_S)], esperou
 
 
 # 4. O «Excluir» diz a causa
@@ -239,7 +242,7 @@ def test_o_excluir_com_a_trava_presa_diz_que_a_lista_esta_sendo_gravada(
     monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
     assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "ocupada"
     with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_Ctx(), _escolher(_CAIXA), None)
+        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
     assert str(erro.value) == a07.FRASE_DA_LISTA_OCUPADA
     assert "ilegível" not in str(erro.value)
     assert not lx.caminho().exists(), "o «Excluir» escreveu sem a trava"
@@ -252,7 +255,7 @@ def test_o_excluir_com_a_lista_torta_diz_que_o_arquivo_esta_ilegivel(
     destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
     assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "ilegivel"
     with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_Ctx(), _escolher(_CAIXA), None)
+        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
     assert str(erro.value) == a07.FRASE_DA_LISTA_ILEGIVEL
     assert "sendo gravada" not in str(erro.value)
     assert destino.read_text(encoding="utf-8").endswith("ESTRAGADO"), "a lista torta foi regravada"
@@ -267,7 +270,7 @@ def test_o_excluir_com_erro_nao_chuta_a_causa_nem_promete_nada(
     monkeypatch.setattr(lx, "_gravar", _disco_cheio)
     assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "erro"
     with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_Ctx(), _escolher(_CAIXA), None)
+        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
     assert str(erro.value) == a07.FRASE_DO_EXCLUIR_SEM_CAUSA
     assert "nada foi alterado" not in str(erro.value)
     assert "ilegível" not in str(erro.value)
@@ -277,14 +280,14 @@ def test_a_chave_invalida_nao_cai_na_frase_do_arquivo(
         _lar: Path, _vigia_parada: None, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(lx, "adicionar", lambda *a, **k: "chave_invalida")
     with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_Ctx(), _escolher(_CAIXA), None)
+        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
     assert str(erro.value) == a07.FRASE_DO_EXCLUIR_SEM_CAUSA
 
 
 def test_o_excluir_com_a_trava_livre_adiciona(_lar: Path, _vigia_parada: None,
                                               monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(lx, "tirar_do_disco", lambda chave: "feito")
-    a07.confirmar_a_exclusao(_Ctx(), _escolher(_CAIXA), None)
+    a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
     assert lx.contem(_CAIXA)
 
 
@@ -300,7 +303,7 @@ def test_o_tirar_com_a_trava_presa_diz_que_a_lista_esta_sendo_gravada(
     try:
         assert lx.tirar(_CAIXA, lar=_lar) == "ocupada"
         with pytest.raises(RuntimeError) as erro:
-            a07.tirar_da_exclusao(_Ctx(), {"v": _CAIXA}, None)
+            a07.tirar_da_exclusao(_CTX, {"v": _CAIXA}, None)
     finally:
         outro.terminate()
         outro.communicate(timeout=30)
@@ -315,7 +318,7 @@ def test_o_tirar_com_a_lista_torta_diz_que_o_arquivo_esta_ilegivel(
     destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
     assert lx.tirar(_CAIXA, lar=_lar) == "ilegivel"
     with pytest.raises(RuntimeError) as erro:
-        a07.tirar_da_exclusao(_Ctx(), {"v": _CAIXA}, None)
+        a07.tirar_da_exclusao(_CTX, {"v": _CAIXA}, None)
     assert str(erro.value) == a07.FRASE_DA_LISTA_ILEGIVEL
 
 
@@ -329,7 +332,7 @@ def test_o_tirar_com_erro_segue_com_a_frase_de_sempre(
     monkeypatch.setattr(lx, "_gravar", _disco_cheio)
     assert lx.tirar(_CAIXA, lar=_lar) == "erro"
     with pytest.raises(RuntimeError) as erro:
-        a07.tirar_da_exclusao(_Ctx(), {"v": _CAIXA}, None)
+        a07.tirar_da_exclusao(_CTX, {"v": _CAIXA}, None)
     assert str(erro.value) == a07.FRASE_DO_TIRAR_SEM_CAUSA
 
 

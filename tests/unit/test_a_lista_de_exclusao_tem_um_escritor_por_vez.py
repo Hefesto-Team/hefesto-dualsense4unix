@@ -244,7 +244,7 @@ def test_a_carona_do_servico_nao_espera_a_janela(
     assert gasto < cpe.ESPERA_DO_SERVICO_S + 1.0, f"a carona esperou {gasto:.1f} s"
     esperou = [x for x in diario if x.get("event") == "carona_esperou_a_janela"]
     assert esperou, diario
-    assert esperou[0].get("quem") == "servico", esperou
+    assert esperou[0].get("quem") == cpe.QUEM_SERVICO, esperou
 
 
 _RETOMA_A_TRAVA = """

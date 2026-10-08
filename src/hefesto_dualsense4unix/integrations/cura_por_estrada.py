@@ -665,6 +665,11 @@ def cartoes_com_estrada() -> tuple[tuple[str, tuple[str, ...]], ...]:
         for lancador, (app_id, subpasta) in _ONDE.items())
 
 
+#: Quem desistiu da trava, como o diário diz (`quem=` na linha `carona_esperou_a_janela`).
+QUEM_SERVICO = "servico"  # noqa-acento: valor do diário que a régua de 02/10 lê
+QUEM_JANELA = "janela"
+
+
 class EstradasEscritas(tuple[str, ...]):
     """O que a carona devolve: os lançadores em que ela escreveu.
 
@@ -703,7 +708,7 @@ def curar_todas_as_estradas(
 
                 get_logger(__name__).info(
                     "carona_esperou_a_janela", espera_s=prazo,
-                    quem="servico" if espera is None else "janela")
+                    quem=QUEM_SERVICO if espera is None else QUEM_JANELA)
             return EstradasEscritas(sem_a_trava=True)
         return EstradasEscritas(
             _curar_na_trava(lar, pasta_do_ambiente, raiz_sistema, exclusao))
