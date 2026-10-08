@@ -87,9 +87,13 @@ _SUBSTANTIVO_TECNICO = re.compile(r"(?<![\w-])(?:carona|cura)(?![\w-])", re.I)
 _FIM_DE_FRASE = re.compile(r"[.!?](?=\s)|\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?\n")
 
 
-def _pronome_de_substantivo_tecnico(m: re.Match[str]) -> bool:
-    """O «ela» do achado tem, antes dele na mesma frase, um substantivo feminino técnico?"""
-    antes = m.string[: m.start()]
+def _pronome_de_substantivo_tecnico(m: re.Match[str], contexto: str = "") -> bool:
+    """O «ela» do achado tem, antes dele na mesma frase, um substantivo feminino técnico?
+
+    `contexto` é o comentário das linhas de cima: em Python e em shell cada linha de
+    comentário é um trecho, e a frase que começa numa linha continua na seguinte.
+    """
+    antes = contexto + m.string[: m.start()]
     fins = list(_FIM_DE_FRASE.finditer(antes))
     inicio = fins[-1].end() if fins else 0
     return _SUBSTANTIVO_TECNICO.search(antes, inicio) is not None
@@ -151,13 +155,13 @@ def _adaptar(achado: str, troca: str) -> str:
 
 
 
-def reescrever_prosa(texto: str) -> str:
-    """Aplica as regras a um pedaço de prosa."""
+def reescrever_prosa(texto: str, contexto: str = "") -> str:
+    """Aplica as regras a um pedaço de prosa; `contexto` é a prosa logo acima, só para ler."""
     if "ela" not in texto.lower():
         return texto
     for padrao, troca in REGRAS:
         def _sub(m: re.Match[str], troca: str = troca, padrao: re.Pattern[str] = padrao) -> str:
-            if padrao is _ELA_VERBO and _pronome_de_substantivo_tecnico(m):
+            if padrao is _ELA_VERBO and _pronome_de_substantivo_tecnico(m, contexto):
                 return m.group(0)
             novo = _adaptar(m.group(0), m.expand(troca))
             q = _QUEBRA.search(m.group(0))
@@ -266,12 +270,20 @@ def reescrever_arquivo(texto: str, tipo: str) -> str:
     return novo
 
 
+_LINHA_SEGUINTE = re.compile(r"[ \t]*\n[ \t]*")
+
+
 def _reescrever_arquivo(texto: str, tipo: str) -> str:
     partes: list[str] = []
     cursor = 0
+    contexto = ""
     for ini, fim in _fundir(_spans_de(texto, tipo)):
+        # o comentário da linha de cima, sem código no meio, é a mesma frase que continua
+        if not (partes and _LINHA_SEGUINTE.fullmatch(texto[cursor:ini])):
+            contexto = ""
         partes.append(texto[cursor:ini])
-        partes.append(reescrever_prosa(texto[ini:fim]))
+        partes.append(reescrever_prosa(texto[ini:fim], contexto))
+        contexto += texto[ini:fim] + "\n"
         cursor = fim
     partes.append(texto[cursor:])
     novo = "".join(partes)

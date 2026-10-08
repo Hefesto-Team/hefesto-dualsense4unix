@@ -62,6 +62,24 @@ def test_o_ela_da_maiuscula_e_da_quebra_de_comentario_tambem_fica() -> None:
     assert modulo.reescrever_prosa(gritado) == gritado
 
 
+def test_a_frase_que_continua_na_linha_de_comentario_de_baixo_tambem_fica() -> None:
+    """No arquivo, cada linha de comentário de Python e de shell é um trecho à parte.
+
+    A guarda lê as linhas de cima do mesmo bloco: sem isso a frase quebrada em duas
+    linhas passava pelo `reescrever_prosa` e era trocada pelo `reescrever_arquivo`.
+    """
+    modulo = _modulo()
+    em_py = "def f():\n    # a carona devolve os lançadores\n    # em que ela escreveu\n    return 1\n"
+    assert modulo.reescrever_arquivo(em_py, "py") == em_py
+    em_sh = "# a cura roda uma vez, e depois\n# ela escreveu no arquivo\n"
+    assert modulo.reescrever_arquivo(em_sh, "sh") == em_sh
+    # o bloco acaba no código ou na linha em branco, e a guarda acaba com ele
+    com_codigo = "# a carona devolve os lançadores\nx = 1\n# ela pediu o contrário\n"
+    assert modulo.reescrever_arquivo(com_codigo, "py") == com_codigo.replace("ela pediu", "o usuário pediu")
+    com_vazia = "# a carona devolve os lançadores\n\n# ela pediu o contrário\n"
+    assert modulo.reescrever_arquivo(com_vazia, "sh") == com_vazia.replace("ela pediu", "o usuário pediu")
+
+
 def test_o_ela_da_pessoa_continua_trocado() -> None:
     modulo = _modulo()
     novo = modulo.reescrever_arquivo(DA_PESSOA, "py")
