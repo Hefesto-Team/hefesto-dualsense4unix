@@ -217,9 +217,12 @@ class Navegador:
                         aba = seguinte
         if aba != pagina:
             atos.append(Ato("ir", pagina=aba))
-        if any(d.get("start", 0) > 0 for d in novos.values()):
-            atos.append(Ato("salvar"))
         fora = set(sem_selecao)
+        # Quem navega o PC com o mouse ligado usa da Interna só o R1 e o L1
+        # (D-2909-O-CURSOR-DE-QUEM-NAVEGA-O-PC-E-O-DO-PC): o Start dele segue
+        # sendo a tecla do teclado emulado, e não guarda o perfil por baixo dela.
+        if any(d.get("start", 0) > 0 for u, d in novos.items() if u not in fora):
+            atos.append(Ato("salvar"))
         agora = self.relogio()
         for uniq in sorted(set(novos) | set(inputs or {})):
             if uniq in fora:

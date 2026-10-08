@@ -1,4 +1,4 @@
-"""A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01 — as doze réguas.
+"""A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01 — as treze réguas.
 
 Com o desenho dela de 03/10/2026: a Interna liga em qualquer Modo, R1 e L1 de
 qualquer controle dão a volta entre as abas 01 a 05, cada controle anda a SUA
@@ -368,3 +368,24 @@ def test_12_cada_controle_seleciona_so_o_seu_bloco() -> None:
         {"endereco": "b", "x": 0, "y": 20, "w": 10, "h": 10, "dono": "p2"},
         {"endereco": "c", "x": 0, "y": 40, "w": 10, "h": 10}]}
     assert [c.endereco for c in nav.caixas_do_leiaute(leiaute, "p2")] == ["b", "c"]
+
+
+def test_13_o_start_de_quem_navega_o_pc_nao_guarda_o_perfil() -> None:
+    """Com o mouse ligado, o primário usa da Interna só o R1 e o L1.
+
+    D-2909-O-CURSOR-DE-QUEM-NAVEGA-O-PC-E-O-DO-PC: o Start dele é a tecla do
+    teclado emulado; guardar o perfil por baixo dela faria um gesto só ter dois
+    efeitos. O Start de um secundário, na mesma leitura, guarda.
+    """
+    n = nav.Navegador(relogio=_Relogio())
+    base = {P1: _toques(start=0, r1=0), P2: _toques(start=0)}
+    n.atos(pagina="02-controles.html", dez=DEZ, toques=base, ativa=True, sem_selecao={P1})
+    atos = n.atos(pagina="02-controles.html", dez=DEZ, ativa=True, sem_selecao={P1},
+                  toques={P1: _toques(start=1, r1=1), P2: _toques(start=0)})
+    assert nav.Ato("salvar") not in atos, (
+        f"o Start de quem navega o PC guardou o perfil: {atos}")
+    assert nav.Ato("ir", pagina="03-gatilhos.html") in atos, (
+        "o R1 de quem navega o PC tem de seguir andando a aba")
+    atos = n.atos(pagina="02-controles.html", dez=DEZ, ativa=True, sem_selecao={P1},
+                  toques={P1: _toques(start=1, r1=1), P2: _toques(start=1)})
+    assert nav.Ato("salvar") in atos, "o Start do secundário deixou de guardar"
