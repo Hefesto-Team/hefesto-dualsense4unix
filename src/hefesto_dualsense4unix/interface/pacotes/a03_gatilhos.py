@@ -2572,7 +2572,7 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     devolve. O jogo que comanda o gatilho vence nos dois modos (a saída do jogo chega ao
     controle; o Hefesto só potencializa, nunca veta).
 
-    **A LEITURA DE VOLTA É DO DISCO**, não do clique: o `data-modo` do botão diz o que ela
+    **A LEITURA DE VOLTA É DO DISCO**, não do clique: o `data-modo` do botão diz o que o usuário
     PEDIU, e pedir o modo em que o perfil já está não grava nada.
 
     **REAPLICAR É METADE DO GESTO:** o modo só entra em vigor na ativação do perfil, e

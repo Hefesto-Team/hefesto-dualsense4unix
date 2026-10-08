@@ -748,7 +748,7 @@ class TestAProsaQueVaiPararNaTela:
         texto = ler((pasta / "04-iluminacao.html").read_text(encoding="utf-8"))
 
         # O PAR «Modo Automático | Modo Personalizado» é palavra de produto desde 08/10/2026
-        # (ordem dela de 06/10): só ele tira o «Automático» da conta. Qualquer outro canto que
+        # (ordem de 06/10): só ele tira o «Automático» da conta. Qualquer outro canto que
         # fale do automático — o botão por controle, o interruptor — continua banido.
         achados = _BOTAO_MORTO.findall(texto.replace("Modo Automático", ""))
 

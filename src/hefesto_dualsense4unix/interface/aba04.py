@@ -575,7 +575,7 @@ CSS = """
   .luz-grade .led-on{fill:var(--led-aceso);
                      filter:drop-shadow(0 0 .5px var(--led-aceso)) !important}
 
-  /* O MODO AUTOMÁTICO DEIXA AS COLUNAS PARADAS — pedido dela de 06/10/2026: o
+  /* O MODO AUTOMÁTICO DEIXA AS COLUNAS PARADAS — pedido de 06/10/2026: o
      desenho e o modelo continuam dizendo de quem é a coluna; a cor, o brilho, o
      número, as luzes e o «Desligar» esmaecem e não recebem clique. */
   .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
@@ -1270,7 +1270,7 @@ MIOLO = f'''
           você sabe de quem é cada controle.<br><br>
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
-        <!-- OS DOIS MODOS — pedido dela de 06/10/2026: o Modo Automático e o Modo
+        <!-- OS DOIS MODOS — pedido de 06/10/2026: o Modo Automático e o Modo
              Personalizado tomam o lugar do interruptor das cores automáticas e da
              frase da luz do jogo embaixo das colunas. -->
         {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}

@@ -13,7 +13,7 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
            A razão do tracejado continua no `title` das duas tiras.
     [02] o automático do perfil  interruptor DE VERDADE na aba            (D-13)
          ↑ O INTERRUPTOR VIROU UM PAR EM 08/10/2026 («Modo Automático | Modo
-           Personalizado», gesto `modo-da-luz`, ordem dela de 06/10): a D-13 segue
+           Personalizado», gesto `modo-da-luz`, ordem de 06/10): a D-13 segue
            valendo, e onde este texto diz «interruptor» leia-se o par.
     [03] reenviar uma cor        a caixa do hexadecimal vira o botão
     [04] o brilho guardado       uma frase curta

@@ -367,10 +367,10 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
             f' data-controle=""')
 
 
-#: OS DOIS MODOS DE UMA ABA — pedido dela de 06/10/2026, nas abas Iluminação e
+#: OS DOIS MODOS DE UMA ABA — pedido de 06/10/2026, nas abas Iluminação e
 #: Gatilhos, que falam igual: *«Modo Automático (Se selecionado) o player não
 #: consegue interagir com os botões da página. Modo Personalizado (Que permite
-#: alterar as cores)»*  (noqa-acento: citação literal dela). Um par de botões na faixa do
+#: alterar as cores)»*  (noqa-acento: citação literal). Um par de botões na faixa do
 #: título, com a mesma largura; o escolhido acende. No Automático, a folha da aba
 #: deixa as colunas paradas pelo `data-modo-da-aba` do quadro (o pacote o escreve).
 MODO_AUTOMATICO = "automatico"  # (noqa-acento: valor de atributo)

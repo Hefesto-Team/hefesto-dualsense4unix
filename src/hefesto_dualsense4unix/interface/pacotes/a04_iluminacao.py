@@ -2848,7 +2848,7 @@ def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     **ELE TOMOU O LUGAR DO INTERRUPTOR `auto-cores` (D-13, 04/09/2026), e levou o contrato:**
     o Automático é o interruptor ligado (`leds.auto_player_colors`), e o Personalizado é ele
-    desligado, com a cor de cada controle gravada no ato. O pedido dela de 06/10/2026 foi um
+    desligado, com a cor de cada controle gravada no ato. O pedido de 06/10/2026 foi um
     par de botões no alto da aba, e o Automático deixa PARADO tudo o que a coluna escolhe: a
     cor, o brilho, o número e as luzes.
 
@@ -2861,7 +2861,7 @@ def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     **AO IR PARA O PERSONALIZADO** o controle que já tem cor guardada (e que não é fóssil)
     a mantém; o que não tem recebe a cor que acende agora, como o interruptor fazia (D-13).
 
-    **A LEITURA DE VOLTA É DO DISCO**, não do clique: o `data-modo` do botão diz o que ela
+    **A LEITURA DE VOLTA É DO DISCO**, não do clique: o `data-modo` do botão diz o que o usuário
     PEDIU, e pedir o modo em que o perfil já está não grava nada.
 
     **REAPLICAR É METADE DO GESTO** (ver o `auto-cores`, que a precedeu): o modo só entra em

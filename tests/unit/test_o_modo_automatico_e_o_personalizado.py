@@ -1,6 +1,6 @@
 """O Modo Automático e o Modo Personalizado das abas Gatilhos e Iluminação — 08/10/2026.
 
-A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01 (pedido dela de 06/10). Um par de botões no alto
+A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01 (pedido de 06/10). Um par de botões no alto
 de cada aba (``modo-dos-gatilhos`` e ``modo-da-luz``), um campo escrito no perfil
 (``triggers.modo`` e ``leds.modo``) e UMA regra de leitura para o perfil de antes, sem o campo.
 
@@ -429,7 +429,7 @@ def test_no_automatico_a_tela_dos_gatilhos_diz_sem_efeito(a03: Any) -> None:
 
 
 def test_o_rotulo_da_chave_off_e_sem_efeito(a03: Any) -> None:
-    """Resposta dela de 06/10: o ``Off`` aparece como «Sem efeito»; a chave não muda."""
+    """Resposta de 06/10: o ``Off`` aparece como «Sem efeito»; a chave não muda."""
     assert a03.ROTULO_DO_JOGO_DECIDE == "Sem efeito"
     assert a03._rotulo_do_modo("Off") == "Sem efeito"
 
