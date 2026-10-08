@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.unit.test_a_janela_aberta_nao_gasta_o_processador import (
+from tests.unit.janela_aberta_comum import (
     _args,
     _Estado,
     _gtk,

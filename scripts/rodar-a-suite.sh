@@ -139,17 +139,24 @@ partir_pelo_tempo() {  # $1 lista · $2 csv · $3 partes · $4 prefixo · $5 toc
 # `WebKit2` ou importa um deles; errar para mais custa um processo, errar para
 # menos põe o WebKit de volta no processo da parte. O nome do pacote tem
 # dígito (`hefesto_dualsense4unix`), e a classe de caracteres o aceita.
+# OS AJUDANTES DE `tests/unit/` (os `.py` sem prefixo `test_`: `janela_aberta_comum.py`,
+# `mesa_do_mockup.py`…) entram na varredura como os de `src/`: o arquivo de teste que
+# pede o `_gtk` a um ajudante não diz `WebKit2` e, sem isso, voltaria ao processo da
+# parte, onde o WebKit morre com `rc=139` (A-JANELA-ABERTA-CABE-NA-PARTE-01).
 importa_um_de() {  # $1 = os nomes, separados por `|`
   printf '%s' "^[[:space:]]*(import[[:space:]]+([A-Za-z0-9_]+\.)*($1)\b|from[[:space:]]+([A-Za-z0-9_]+\.)*($1)[[:space:]]+import|from[[:space:]]+[A-Za-z0-9_.]+[[:space:]]+import[[:space:]][^#]*\b($1)\b)"
 }
 nomes_de_modulo() { sed -E 's|/__init__\.py$|.py|; s|.*/||; s|\.py$||' | LC_ALL=C sort -u; }
+mapfile -t _ajudantes < <(find tests/unit -maxdepth 1 -name '*.py' ! -name 'test_*' \
+    ! -name '__init__.py' ! -name 'conftest.py' 2> /dev/null | LC_ALL=C sort)
+_onde_se_importa=(src scripts ${_ajudantes[@]+"${_ajudantes[@]}"})
 mapfile -t _modulos < <(grep -rlE --include='*.py' \
     "^[[:space:]]*(gi\.require_version\([\"']WebKit2|from gi\.repository import .*\bWebKit2\b)" \
-    src scripts 2> /dev/null | nomes_de_modulo)
+    "${_onde_se_importa[@]}" 2> /dev/null | nomes_de_modulo)
 while [ ${#_modulos[@]} -gt 0 ]; do
   mapfile -t _fecho < <({ printf '%s\n' "${_modulos[@]}"
     grep -rlE --include='*.py' "$(importa_um_de "$(IFS='|'; printf '%s' "${_modulos[*]}")")" \
-      src scripts 2> /dev/null | nomes_de_modulo; } | LC_ALL=C sort -u)
+      "${_onde_se_importa[@]}" 2> /dev/null | nomes_de_modulo; } | LC_ALL=C sort -u)
   [ ${#_fecho[@]} -gt ${#_modulos[@]} ] || break
   _modulos=("${_fecho[@]}")
 done
