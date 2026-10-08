@@ -59,6 +59,11 @@ CAMINHOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX)
 
 MASCARA_DO_CANAL_COMUM = "xbox"
 
+#: Por que o jogo recebeu outro aparelho que o do cartão: o modo Xbox foi o
+#: escolhido (D-2709). É a única troca que a fábrica faz, e a tela lê este nome
+#: para explicá-la em vez de deixar o cartão mostrar uma máscara e o jogo outra.
+MOTIVO_MODO_XBOX_ESCOLHIDO = "modo_xbox_escolhido"
+
 
 def normalizar_caminho(valor: object) -> str | None:
     """O caminho reconhecido, ou ``None`` — e ``None`` é *"ninguém escolheu"*."""
@@ -104,6 +109,18 @@ def mascara_no_jogo(caminho: object, mascara: str) -> str:
     if normalizar_caminho(caminho) == CAMINHO_XBOX:
         return MASCARA_DO_CANAL_COMUM
     return mascara
+
+
+def motivo_da_troca(caminho: object, mascara: str) -> str | None:
+    """Por que o aparelho do jogo não é a máscara do cartão — ``None`` quando é.
+
+    A pergunta do :func:`mascara_no_jogo` com a resposta em palavras, para o
+    diário e a tela dizerem a troca em vez de a calarem: hoje há um motivo só, o
+    modo Xbox escolhido. Xbox em Xbox não é troca.
+    """
+    if mascara_no_jogo(caminho, mascara) != mascara:
+        return MOTIVO_MODO_XBOX_ESCOLHIDO
+    return None
 
 
 def caminho_do_vpad(vpad: object) -> str | None:
@@ -154,15 +171,25 @@ def _pendurar_o_caminho(pad: object, caminho: str) -> None:
         logger.debug("vpad_sem_lugar_para_o_caminho", caminho=caminho)
 
 
-def _vestir_o_aparelho(pad: object, aparelho: str, *, mascara: str, player: int) -> None:
-    """Veste o pad ainda não criado com o aparelho que o jogo usa."""
+def _vestir_o_aparelho(
+    pad: object, aparelho: str, *, mascara: str, player: int, motivo: str | None = None
+) -> None:
+    """Veste o pad ainda não criado com o aparelho que o jogo usa.
+
+    O `motivo` (:func:`motivo_da_troca`) vai ao diário e fica no pad
+    (`troca_motivo`), que é onde a tela o encontra para explicar a troca.
+    """
     vestir = getattr(pad, "vestir", None)
     if not callable(vestir):
         logger.debug("vpad_sem_como_vestir", aparelho=aparelho, player=player)
         return
     vestir(aparelho)
+    try:
+        pad.troca_motivo = motivo  # type: ignore[attr-defined]
+    except (AttributeError, TypeError):
+        logger.debug("vpad_sem_lugar_para_o_motivo", motivo=motivo, player=player)
     logger.info("vpad_vestido_pelo_modo", mascara=mascara, no_jogo=aparelho,
-                player=player)
+                player=player, motivo=motivo)
 
 
 @runtime_checkable
@@ -355,7 +382,9 @@ def make_virtual_pad(
     pad = UinputGamepad.for_flavor(key, rumble_sink=rumble_sink)
     aparelho = mascara_no_jogo(caminho, key)
     if aparelho != key:
-        _vestir_o_aparelho(pad, aparelho, mascara=key, player=player)
+        _vestir_o_aparelho(
+            pad, aparelho, mascara=key, player=player, motivo=motivo_da_troca(caminho, key)
+        )
     if motivo is not None:
         # `state_full` o expõe (`gamepad_emulation.degraded_motivo`) para a
         pad.fallback_motivo = motivo
@@ -461,6 +490,7 @@ __all__ = [
     "CAMINHO_DUALSENSE",
     "CAMINHO_XBOX",
     "MASCARA_DO_CANAL_COMUM",
+    "MOTIVO_MODO_XBOX_ESCOLHIDO",
     "UHID_BIND_TIMEOUT_S",
     "VirtualPad",
     "caminho_do_vpad",
@@ -468,6 +498,7 @@ __all__ = [
     "make_virtual_pad",
     "mascara_no_jogo",
     "motivo_da_degradacao",
+    "motivo_da_troca",
     "normalizar_caminho",
     "o_aparelho_mudou",
     "quer_uhid",
