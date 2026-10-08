@@ -314,6 +314,7 @@ LIMIAR = rm.SINAL_QUE_ATRASA_DBM
 
 
 def test_a_pausa_comeca_na_primeira_leitura_fraca_e_so_acaba_com_folga_e_duas_leituras() -> None:
+    # A decisão: D-0810-O-ENLACE-FRACO-PAUSA-A-PONTE-DO-CONTROLE-LONGE.
     pausa = rm.PausaPeloSinal()
     assert pausa.ver(-31, 1.0, 1) is False
     assert pausa.ver(LIMIAR, 2.0, 2) is True, "no limiar que atrasa a ponte já cede"
@@ -616,6 +617,7 @@ def test_sem_ninguem_que_ouca_o_fraco_a_conta_por_contagem_segue_como_era() -> N
 
 
 def test_o_fraco_que_o_outro_adaptador_ouve_bem_melhor_e_o_que_se_propoe_mover() -> None:
+    # A decisão: D-0810-O-EQUILIBRAR-MOVE-O-FRACO-PELO-SINAL.
     ordem = _ordem(_mesa_equilibrada(), {FRACO: {QUARTO.replace(":", ""): -40}})
     assert ordem is not None
     assert (ordem.controle, ordem.origem, ordem.destino, ordem.modo) == (
