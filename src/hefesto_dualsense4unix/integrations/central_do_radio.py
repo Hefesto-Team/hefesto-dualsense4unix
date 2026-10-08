@@ -834,6 +834,30 @@ class CentralDoRadio:
                 return pedidos_de_pareamento(adaptadores, aparelhos, fora=movendo)
         return ()
 
+    def _ouvidos_publicados(self) -> dict[str, dict[str, int]]:
+        """O que cada adaptador ouve de cada controle, pela foto do dono vivo (memória, sem D-Bus).
+
+        ``{controle (12 hex): {adaptador (12 hex): dBm}}``, do ``RSSI`` que o BlueZ guarda por
+        aparelho enquanto a varredura do adaptador o ouve. É a entrada do «Equilibrar» pelo sinal
+        (:func:`plano_de_radio.ordem_de_redistribuicao`). Sem dono vivo, ou pelo caminho de
+        reserva, não há leitura: ``{}`` e a conta por contagem segue como era.
+        """
+        vivo = self._dono_sem_abrir()
+        if vivo is None or not getattr(vivo, "atende_o_proprio_pareamento", False):
+            return {}
+        saida: dict[str, dict[str, int]] = {}
+        with contextlib.suppress(Exception):
+            adaptadores, aparelhos = vivo.adaptadores(), vivo.aparelhos()
+            if adaptadores is None or aparelhos is None:
+                return {}
+            por_caminho = {a.caminho: _hex12(a.endereco) for a in adaptadores}
+            for endereco, objetos in _controles_pelo_endereco(aparelhos).items():
+                for objeto in objetos:
+                    onde = por_caminho.get(objeto.adaptador)
+                    if onde and objeto.rssi is not None:
+                        saida.setdefault(_hex12(endereco), {})[onde] = int(objeto.rssi)
+        return saida
+
     def _quem_pede_aqui(self, dono: bluez_dbus.LeitorDoBluez, destino: str) -> str:
         """O controle conhecido que pede para parear e que o ``destino`` ouve agora, ou ``""``."""
         adaptadores, aparelhos = dono.adaptadores(), dono.aparelhos()
@@ -1035,7 +1059,9 @@ class CentralDoRadio:
         if self.em_curso:
             return None
         planos, varrendo = self._planos(ar, esperar=esperar)
-        return plano_de_radio.ordem_de_redistribuicao(planos, varrendo=varrendo)
+        return plano_de_radio.ordem_de_redistribuicao(
+            planos, varrendo=varrendo, ouvidos=self._ouvidos_publicados()
+        )
 
     def conhecer(self, controles: Iterable[Mapping[str, Any]]) -> None:
         """Guarda o ``state["controllers"]`` de agora — é dele que a D8 e o"""

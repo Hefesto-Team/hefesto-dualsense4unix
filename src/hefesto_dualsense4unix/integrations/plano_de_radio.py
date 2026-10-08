@@ -16,7 +16,9 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_INPUT_SEM_MIC,
     N_MAX_PONTES,
     SEM_ADAPTADOR,
+    SINAL_QUE_ATRASA_DBM,
     SLOTS_POR_RELATORIO,
+    ControleNoAr,
     Ocupacao,
     OrcamentoDoAdaptador,
     adaptador_por_uniq,
@@ -136,6 +138,16 @@ POR_QUE_IMPORTA_O_NUMERO = (
 )
 
 DIFERENCA_QUE_EQUILIBRA = 2
+
+#: O sinal que o OUTRO adaptador ouve (RSSI da varredura do BlueZ) tem de ser melhor que o do
+#: enlace de agora por esta margem, em dB, para o movimento compensar: o RSSI do enlace e o da
+#: varredura vêm de leituras diferentes, e uma diferença pequena é ruído, não lugar melhor.
+MARGEM_DO_SINAL_QUE_COMPENSA_DBM = 8
+
+POR_QUE_IMPORTA_O_SINAL = (
+    "o sinal do controle está fraco neste adaptador e o outro o ouve melhor: mais perto do "
+    "rádio certo, o botão e o som chegam sem atraso."
+)
 
 FRASE_DO_ADAPTADOR_UNICO = (
     "Todos os controles estão no mesmo adaptador, e é o único que você tem. "
@@ -324,12 +336,107 @@ def _quem_move(origem: PlanoDoAdaptador) -> tuple[str, str] | None:
     return escolhido.uniq, str(escolhido.ponte)
 
 
+@dataclass(frozen=True)
+class _MelhorLugar:
+    """Um controle fraco e o adaptador que o ouve melhor (o sinal dos dois, em dBm)."""
+
+    origem: PlanoDoAdaptador
+    controle: ControleNoAr
+    destino: PlanoDoAdaptador
+    sinal_aqui: int
+    sinal_la: int
+
+
+def _melhor_lugar_pelo_sinal(
+    reais: Mapping[str, PlanoDoAdaptador],
+    ouvidos: Mapping[str, Mapping[str, int]] | None,
+    *,
+    origens: Iterable[PlanoDoAdaptador] | None = None,
+    so_com_ponte: bool = False,
+) -> _MelhorLugar | None:
+    """O controle fraco que um OUTRO adaptador ouve melhor, ou ``None``.
+
+    ``ouvidos`` é ``{controle (12 hex): {adaptador (12 hex): dBm}}``: o que a varredura de cada
+    adaptador ouviu do controle. Só vale o que está ACIMA do sinal do enlace de agora pela
+    :data:`MARGEM_DO_SINAL_QUE_COMPENSA_DBM`, num adaptador com vaga para a ponte do controle
+    (se ele tem). O controle é o de sinal mais fraco; o adaptador, o que o ouve mais forte.
+    Sem leitura de outro adaptador (a varredura é quem a traz) não há proposta por aqui, e a
+    regra por contagem segue como era: ``None`` nunca vira «melhor». Um adaptador que varre
+    PODE ser o destino: a leitura dele é a prova de que ouve o controle melhor, e o mover abre
+    a própria janela de busca lá.
+    """
+    if not ouvidos:
+        return None
+    por_endereco = {_hex(p.endereco): p for p in reais.values()}
+    melhor: _MelhorLugar | None = None
+    for origem in (origens if origens is not None else reais.values()):
+        if origem.orcamento is None:
+            continue
+        for controle in origem.orcamento.controles:
+            aqui = controle.sinal_dbm
+            if aqui is None or aqui > SINAL_QUE_ATRASA_DBM or not controle.uniq:
+                continue
+            if so_com_ponte and not controle.ponte:
+                continue
+            for adaptador, la in (ouvidos.get(_hex(controle.uniq)) or {}).items():
+                destino = por_endereco.get(_hex(adaptador))
+                if destino is None or destino.endereco == origem.endereco:
+                    continue
+                if isinstance(la, bool) or not isinstance(la, int):
+                    continue
+                if la < aqui + MARGEM_DO_SINAL_QUE_COMPENSA_DBM:
+                    continue
+                if controle.ponte and destino.pontes + 1 > destino.n_max:
+                    continue
+                candidato = _MelhorLugar(origem, controle, destino, aqui, la)
+                if melhor is None or (aqui, -la, origem.endereco, controle.uniq) < (
+                    melhor.sinal_aqui, -melhor.sinal_la, melhor.origem.endereco,
+                    melhor.controle.uniq,
+                ):
+                    melhor = candidato
+    return melhor
+
+
+def _ordem_pelo_sinal(lugar: _MelhorLugar) -> Redistribuicao:
+    """A ordem de serviço do «mover o fraco para onde ele é ouvido melhor»."""
+    origem, destino, controle = lugar.origem, lugar.destino, lugar.controle
+    leva = 1 if controle.ponte else 0
+    return Redistribuicao(
+        origem=origem.endereco,
+        destino=destino.endereco,
+        origem_na_tela=origem.nome_na_tela,
+        destino_na_tela=destino.nome_na_tela,
+        o_que_eu_vi=(
+            f'um controle com o sinal fraco no "{origem.nome_na_tela}" '
+            f'({lugar.sinal_aqui} dBm), e o "{destino.nome_na_tela}" o ouve a '
+            f"{lugar.sinal_la} dBm."
+        ),
+        por_que_importa=POR_QUE_IMPORTA_O_SINAL,
+        ganho_esperado=(
+            f'o sinal dele passaria de {lugar.sinal_aqui} dBm para cerca de {lugar.sinal_la} dBm '
+            f'no "{destino.nome_na_tela}".'
+        ),
+        controle=controle.uniq,
+        modo=str(controle.ponte or ""),
+        pontes_na_origem_depois=origem.pontes - leva,
+        pontes_no_destino_depois=destino.pontes + leva,
+        n_max=origem.n_max,
+    )
+
+
 def ordem_de_redistribuicao(
     planos: Mapping[str, PlanoDoAdaptador],
     *,
     varrendo: Iterable[str] | None = None,
+    ouvidos: Mapping[str, Mapping[str, int]] | None = None,
 ) -> Redistribuicao | None:
-    """A ordem de serviço — UM movimento —, ou ``None`` quando não há o que mover."""
+    """A ordem de serviço — UM movimento —, ou ``None`` quando não há o que mover.
+
+    ``ouvidos`` (``{controle: {adaptador: dBm}}``) é o que cada adaptador ouve de cada controle
+    na varredura. Com ele, o controle de sinal fraco que outro adaptador ouve bem melhor é o que
+    se propõe mover, antes da conta por contagem (SINAL-DE-CADA-CONTROLE-01, item 6); sem ele, a
+    conta é a de sempre.
+    """
     reais = {
         endereco: plano
         for endereco, plano in planos.items()
@@ -340,8 +447,14 @@ def ordem_de_redistribuicao(
         key=lambda p: (-(p.pontes - p.n_max), p.endereco),
     )
     if not alem:
+        lugar = _melhor_lugar_pelo_sinal(reais, ouvidos)
+        if lugar is not None:
+            return _ordem_pelo_sinal(lugar)
         return _ordem_que_equilibra(reais, varrendo=varrendo)
     origem = alem[0]
+    lugar = _melhor_lugar_pelo_sinal(reais, ouvidos, origens=[origem], so_com_ponte=True)
+    if lugar is not None:
+        return _ordem_pelo_sinal(lugar)
     quem = _quem_move(origem)
     if quem is None:
         return None
@@ -457,9 +570,11 @@ __all__ = [
     "DIFERENCA_QUE_EQUILIBRA",
     "ENSAIO_MAXIMO_DESTA_CASA",
     "FRASE_DO_ADAPTADOR_UNICO",
+    "MARGEM_DO_SINAL_QUE_COMPENSA_DBM",
     "MESA_CHEIA_DESTA_CASA",
     "POR_QUE_IMPORTA",
     "POR_QUE_IMPORTA_O_NUMERO",
+    "POR_QUE_IMPORTA_O_SINAL",
     "SEM_NUMERO",
     "PlanoDoAdaptador",
     "Redistribuicao",

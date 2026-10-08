@@ -541,3 +541,146 @@ def test_a_tela_le_a_pausa_que_o_governador_publica() -> None:
     aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, governador, [], (), {},
                                        [a08._mac(ADAPTADOR)])
     assert [a["ponte_pausada"] for a in aparelhos] == [True]
+
+
+# --- 7. o «Equilibrar» lê o sinal: o fraco vai para onde um outro adaptador o ouve melhor ---
+
+SALA = "aa:bb:cc:00:00:a1"
+QUARTO = "aa:bb:cc:00:00:b2"
+FRACO, FORTE, OUTRO, ULTIMO = (f"aabbcc0000{n:02x}" for n in (1, 2, 3, 4))
+
+
+def _controle(uniq: str, sinal: int | None, ponte: str | None = "som") -> rm.ControleNoAr:
+    return rm.ControleNoAr(uniq=uniq, ponte=ponte, sinal_dbm=sinal)
+
+
+def _plano(endereco: str, controles: tuple[rm.ControleNoAr, ...], n_max: int = 2) -> Any:
+    from hefesto_dualsense4unix.integrations import plano_de_radio as plano
+
+    return plano.PlanoDoAdaptador(
+        endereco=endereco, apelido="Sala" if endereco == SALA else "Quarto",
+        orcamento=rm.OrcamentoDoAdaptador(adaptador=endereco, controles=controles, n_max=n_max))
+
+
+def _mesa(a: tuple[rm.ControleNoAr, ...], b: tuple[rm.ControleNoAr, ...], **kw: int) -> Any:
+    return {SALA: _plano(SALA, a, **kw), QUARTO: _plano(QUARTO, b, **kw)}
+
+
+def _ordem(planos: Any, ouvidos: Any = None) -> Any:
+    from hefesto_dualsense4unix.integrations import plano_de_radio as plano
+
+    return plano.ordem_de_redistribuicao(planos, ouvidos=ouvidos)
+
+
+def _mesa_equilibrada() -> Any:
+    """Dois na Sala e um no Quarto: pela contagem (diferença 1) ninguém se move."""
+    return _mesa((_controle(FRACO, -55), _controle(FORTE, -30)), (_controle(OUTRO, -30),))
+
+
+def test_sem_ninguem_que_ouca_o_fraco_a_conta_por_contagem_segue_como_era() -> None:
+    assert _ordem(_mesa_equilibrada()) is None
+    assert _ordem(_mesa_equilibrada(), {}) is None
+    assert _ordem(_mesa_equilibrada(), {FRACO: {}}) is None
+    desequilibrada = _mesa((_controle(FRACO, -55, None), _controle(FORTE, -30, None),
+                            _controle(ULTIMO, -30, None)), ())
+    antes = _ordem(desequilibrada)
+    assert antes is not None and antes.controle == ULTIMO, "a regra antiga move o último a chegar"
+    assert _ordem(desequilibrada, {FRACO: {}}) == antes, "ouvidos vazios mudaram a conta"
+
+
+def test_o_fraco_que_o_outro_adaptador_ouve_bem_melhor_e_o_que_se_propoe_mover() -> None:
+    ordem = _ordem(_mesa_equilibrada(), {FRACO: {QUARTO.replace(":", ""): -40}})
+    assert ordem is not None
+    assert (ordem.controle, ordem.origem, ordem.destino, ordem.modo) == (
+        FRACO, SALA, QUARTO, "som")
+    assert (ordem.pontes_na_origem_depois, ordem.pontes_no_destino_depois) == (1, 2)
+    assert "-55" in ordem.o_que_eu_vi and "-40" in ordem.o_que_eu_vi
+
+
+def test_a_melhora_pequena_e_ruido_e_nao_move() -> None:
+    """O fraco está a -55: 7 dB de melhora é ruído entre duas leituras; 8 dB já compensa."""
+    quarto = QUARTO.replace(":", "")
+    assert _ordem(_mesa_equilibrada(), {FRACO: {quarto: -48}}) is None
+    assert _ordem(_mesa_equilibrada(), {FRACO: {quarto: -47}}) is not None
+
+
+def test_o_controle_de_sinal_bom_nao_se_move_por_mais_que_o_outro_o_ouca() -> None:
+    assert _ordem(_mesa_equilibrada(), {FORTE: {QUARTO.replace(":", ""): -10}}) is None
+
+
+def test_sinal_que_o_radio_nao_leu_nunca_e_fraco() -> None:
+    mesa = _mesa((_controle(FRACO, None), _controle(FORTE, -30)), (_controle(OUTRO, -30),))
+    assert _ordem(mesa, {FRACO: {QUARTO.replace(":", ""): -10}}) is None
+
+
+def test_o_destino_sem_vaga_de_ponte_nao_recebe_o_fraco() -> None:
+    cheio = _mesa((_controle(FRACO, -55), _controle(FORTE, -30)),
+                  (_controle(OUTRO, -30), _controle(ULTIMO, -30)))
+    assert _ordem(cheio, {FRACO: {QUARTO.replace(":", ""): -40}}) is None
+    sem_ponte = _mesa((_controle(FRACO, -55, None), _controle(FORTE, -30)),
+                      (_controle(OUTRO, -30), _controle(ULTIMO, -30)))
+    ordem = _ordem(sem_ponte, {FRACO: {QUARTO.replace(":", ""): -40}})
+    assert ordem is not None and ordem.modo == "", "o controle sem ponte não ocupa vaga de ponte"
+
+
+def test_com_dois_fracos_vai_o_mais_fraco() -> None:
+    mesa = _mesa((_controle(FRACO, -55), _controle(FORTE, -62)), (_controle(OUTRO, -30),))
+    ordem = _ordem(mesa, {FRACO: {QUARTO.replace(":", ""): -30},
+                          FORTE: {QUARTO.replace(":", ""): -35}})
+    assert ordem is not None and ordem.controle == FORTE
+
+
+def test_o_adaptador_que_ouve_o_controle_e_o_que_ele_ja_esta_nao_e_destino() -> None:
+    folgado = _mesa_equilibrada()
+    folgado = {e: _plano(e, p.orcamento.controles, n_max=4) for e, p in folgado.items()}
+    assert _ordem(folgado, {FRACO: {SALA.replace(":", ""): -20}}) is None
+
+
+def test_na_sobra_de_pontes_o_fraco_que_o_outro_ouve_melhor_sai_no_lugar_do_ultimo() -> None:
+    sobra = _mesa((_controle(FRACO, -55), _controle(FORTE, -30), _controle(ULTIMO, -30)), ())
+    antes = _ordem(sobra)
+    assert antes is not None and antes.controle == ULTIMO
+    depois = _ordem(sobra, {FRACO: {QUARTO.replace(":", ""): -38}})
+    assert depois is not None and (depois.controle, depois.destino) == (FRACO, QUARTO)
+
+
+def test_a_central_monta_o_que_cada_adaptador_ouve_do_dono_vivo_sem_perguntar() -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.integrations import central_do_radio as cr
+    from tests.unit.test_o_controle_que_pede_para_parear_aparece import _adaptadores, _objeto
+
+    ctrl = "aa:bb:cc:00:00:01"
+    aparelhos = [
+        _objeto(SALA, ctrl, pareado=True, conectado=True),
+        _objeto(QUARTO, ctrl, pareado=False, rssi=-41),
+    ]
+    dono = SimpleNamespace(
+        pode_perguntar=lambda: True, atende_o_proprio_pareamento=True,
+        adaptadores=lambda: _adaptadores(), aparelhos=lambda: aparelhos)
+    central = cr.CentralDoRadio(dono=dono)  # type: ignore[arg-type]
+    central._dono_visto = dono  # type: ignore[assignment]
+    assert central._ouvidos_publicados() == {"aabbcc000001": {QUARTO.replace(":", ""): -41}}
+    central._dono_visto = None
+    assert central._ouvidos_publicados() == {}, "sem dono vivo a central abriu o D-Bus"
+
+
+def test_o_equilibrar_da_central_propoe_pelo_sinal_que_o_dono_ouviu() -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.integrations import central_do_radio as cr
+    from tests.unit.test_o_controle_que_pede_para_parear_aparece import _adaptadores, _objeto
+
+    ctrl = "aa:bb:cc:00:00:01"
+    aparelhos = [_objeto(SALA, ctrl, pareado=True, conectado=True),
+                 _objeto(QUARTO, ctrl, rssi=-40)]
+    dono = SimpleNamespace(
+        pode_perguntar=lambda: True, atende_o_proprio_pareamento=True,
+        adaptadores=lambda: _adaptadores(), aparelhos=lambda: aparelhos)
+    central = cr.CentralDoRadio(dono=dono)  # type: ignore[arg-type]
+    central._dono_visto = dono  # type: ignore[assignment]
+    central._planos = lambda ar=None, *, esperar=True: (_mesa_equilibrada(), frozenset())  # type: ignore[method-assign]
+    ordem = central.propor(esperar=False)
+    assert ordem is not None and (ordem.controle, ordem.destino) == (FRACO, QUARTO)
+    central._dono_visto = None
+    assert central.propor(esperar=False) is None, "sem leitura do ar a proposta é a de contagem"
