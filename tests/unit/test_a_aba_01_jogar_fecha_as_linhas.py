@@ -806,7 +806,8 @@ def no_webkit() -> dict:
         return caixa[0]
 
     def vigia() -> dict[str, Any]:
-        lido = json.loads(perguntar(_LER_O_VIGIA, "a leitura do vigia da caixa"))
+        lido: dict[str, Any] | None = json.loads(
+            perguntar(_LER_O_VIGIA, "a leitura do vigia da caixa"))
         assert lido is not None, "o vigia da caixa não está na página"
         return lido
 
