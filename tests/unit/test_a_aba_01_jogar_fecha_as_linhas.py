@@ -682,10 +682,67 @@ _CLICAR_NO_CADEADO = r"""
 })()
 """
 
+# O VIGIA DA CAIXA (08/10/2026). A leitura da piscada era num relógio fixo: 700 ms depois do
+# clique, contra uma piscada que vive 1,5 s (`MS_DA_PISCADA`). Sob carga a resposta do serviço
+# chega depois dos 700 ms, ou a piscada já passou, e a régua reprovava «o serviço confirmou e
+# a caixa não piscou» sobre uma caixa que piscou (1 em 8 corridas com a CPU saturada, xvfb).
+# Aqui a página INJETADA grava cada transição de classe da caixa NO INSTANTE em que ela
+# acontece (largura do contorno inclusa), e o Python espera a condição com prazo, não o
+# relógio. A página publicada e o `hefesto_vivo.py` não mudam.
+_VIGIAR_O_CADEADO = r"""
+(function(){
+  const seletor = '[data-gesto="cadeado"]';
+  const c = document.querySelector(seletor);
+  // a caixa existe E a página já pintou uma vez e tem o ouvinte de clique: antes disso o clique
+  // não chega ao piloto
+  const h = window.__hef;
+  if(!c || !h || !h.ouvindo || !h.voltouDoVoo
+     || document.documentElement.classList.contains('hef-esperando'))
+    return JSON.stringify({achou: false});
+  const v = window.__vigia = {voou: 0, pousou: 0, verde: 0, verde_apagou: 0,
+                              recusou: 0, recusou_apagou: 0, larguras: [], duracoes: [],
+                              desde: 0};
+  const nomes = function(t){ return new Set((t || '').split(/\s+/).filter(Boolean)); };
+  new MutationObserver(function(registros){
+    const meus = registros.filter(function(r){ return r.target.matches(seletor); });
+    meus.forEach(function(r, i){
+      const antes = nomes(r.oldValue);
+      const depois = nomes(i + 1 < meus.length ? meus[i + 1].oldValue
+                           : r.target.getAttribute('class'));
+      const mudou = function(n){
+        return (!antes.has(n) && depois.has(n)) ? 1 : ((antes.has(n) && !depois.has(n)) ? -1 : 0);
+      };
+      if(mudou('hef-em-voo') > 0) v.voou += 1;
+      if(mudou('hef-em-voo') < 0) v.pousou += 1;
+      if(mudou('hef-recusou') > 0) v.recusou += 1;
+      if(mudou('hef-recusou') < 0) v.recusou_apagou += 1;
+      if(mudou('hef-deu-certo') > 0){
+        v.verde += 1; v.desde = performance.now();
+        v.larguras.push(getComputedStyle(r.target).outlineWidth);
+      }
+      if(mudou('hef-deu-certo') < 0){
+        v.verde_apagou += 1; v.duracoes.push(performance.now() - v.desde);
+      }
+    });
+  }).observe(document.documentElement, {attributes: true, subtree: true,
+                                        attributeFilter: ['class'], attributeOldValue: true});
+  return JSON.stringify({achou: true});
+})()
+"""
+
+_LER_O_VIGIA = "JSON.stringify(window.__vigia || null)"
+
+PRAZO_DA_TELA_S = 30.0
+
 
 @pytest.fixture(scope="module")
 def no_webkit() -> dict:
-    """Abre o piloto DE VERDADE, oculto, e clica a caixa nos TRÊS desfechos."""
+    """Abre o piloto DE VERDADE, oculto, e clica a caixa nos TRÊS desfechos.
+
+    Linear: cada passo espera a CONDIÇÃO que o próximo precisa, com prazo, e o que estoura o
+    prazo diz qual condição não veio. Só a piscada (e o apagar dela) é medida SEM derrubar o
+    roteiro: é o que a primeira régua afirma, e as outras duas precisam dos cliques seguintes.
+    """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -722,83 +779,100 @@ def no_webkit() -> dict:
         sem_cravado=False, sem_selo=False,
     )
     piloto = hv.Piloto(args)
-    fora: dict[str, Any] = {"piscada_ms": da_piscada_ms}
+    fora: dict[str, Any] = {"piscada_ms": da_piscada_ms, "sem_prazo": []}
+    contexto = GLib.MainContext.default()
 
-    def ler(rotulo: str):
-        def _leu(valor, erro):
-            fora[rotulo] = (f"ERRO {erro}" if erro is not None
-                            else json.loads(str(valor)))
-        return _leu
+    def girar_ate(condicao: Any, o_que: str, prazo_s: float = PRAZO_DA_TELA_S) -> bool:
+        """Gira o laço do GTK até a condição; estourou o prazo, devolve False e diz o quê."""
+        limite = _time.monotonic() + prazo_s
+        while not condicao():
+            if _time.monotonic() >= limite:
+                fora["sem_prazo"].append(f"em {prazo_s:.0f} s não aconteceu: {o_que}")
+                return False
+            contexto.iteration(False)
+            _time.sleep(0.005)
+        return True
 
-    def anotar(rotulo: str):
-        def _leu(valor, erro):
-            fora[rotulo] = f"ERRO {erro}" if erro is not None else str(valor)
-        return _leu
+    def perguntar(js: str, o_que: str) -> Any:
+        """Pergunta à página e espera a resposta (a ponte é assíncrona)."""
+        caixa: list[Any] = []
 
-    def comeco() -> bool:
-        if not piloto.pronto:
-            return True
-        piloto.ponte.perguntar(_LER_O_CADEADO, ler("antes"))
-        piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-1"))
-        GLib.timeout_add(700, no_verde)
-        return False
+        def _leu(valor: Any, erro: Any) -> None:
+            caixa.append(f"ERRO {erro}" if erro is not None else str(valor))
 
-    def no_verde() -> bool:
-        piloto.ponte.perguntar(_LER_O_CADEADO, ler("confirmou"))
-        GLib.timeout_add(da_piscada_ms + 500, apagou)
-        return False
+        piloto.ponte.perguntar(js, _leu)
+        if not girar_ate(lambda: bool(caixa), f"a página responder a «{o_que}»"):
+            pytest.fail(fora["sem_prazo"][-1])
+        return caixa[0]
 
-    def apagou() -> bool:
-        piloto.ponte.perguntar(_LER_O_CADEADO, ler("depois-da-piscada"))
-        GLib.timeout_add(200, sem_resposta)
-        return False
+    def vigia() -> dict[str, Any]:
+        lido = json.loads(perguntar(_LER_O_VIGIA, "a leitura do vigia da caixa"))
+        assert lido is not None, "o vigia da caixa não está na página"
+        return lido
 
-    def sem_resposta() -> bool:
-        resposta["como"] = "none"
-        piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-2"))
-        GLib.timeout_add(700, leu_sem_resposta)
-        return False
+    def exigir(condicao: Any, o_que: str, prazo_s: float = PRAZO_DA_TELA_S) -> None:
+        """Condição que o roteiro precisa para seguir: sem ela, a prova está pela metade."""
+        if not girar_ate(condicao, o_que, prazo_s):
+            pytest.fail(" | ".join(fora["sem_prazo"]))
 
-    def leu_sem_resposta() -> bool:
-        piloto.ponte.perguntar(_LER_O_CADEADO, ler("sem-resposta"))
-        fora["desfecho-sem-resposta"] = list(
-            piloto.desfechos.get("01-jogar.html:cadeado", ()))
-        GLib.timeout_add(da_piscada_ms + 500, levanta)
-        return False
+    def espera_vigia(
+        chave: str, quantos: int, o_que: str, prazo_s: float = PRAZO_DA_TELA_S
+    ) -> bool:
+        """Espera o vigia contar `quantos` do evento `chave`; True se veio, False no prazo."""
+        return girar_ate(lambda: vigia()[chave] >= quantos, o_que, prazo_s)
 
-    def levanta() -> bool:
-        resposta["como"] = "levanta"
-        piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-3"))
-        GLib.timeout_add(700, leu_o_levante)
-        return False
-
-    def leu_o_levante() -> bool:
-        piloto.ponte.perguntar(_LER_O_CADEADO, ler("levantou"))
-        GLib.timeout_add(400, fim)
-        return False
-
-    def fim() -> bool:
-        fora["desfechos"] = {k: list(v) for k, v in piloto.desfechos.items()}
-        Gtk.main_quit()
-        return False
+    def clicar(rotulo: str) -> None:
+        fora[rotulo] = perguntar(_CLICAR_NO_CADEADO, rotulo)
 
     GLib.timeout_add(400, lambda: piloto._ir(args.abre))
-    GLib.timeout_add(1500, comeco)
-    guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
-        limite = _time.monotonic() + 60.0
-        while "desfechos" not in fora and _time.monotonic() < limite:
-            Gtk.main()
+        exigir(lambda: piloto.pronto, "a página 01-jogar.html abrir no WebKit (piloto.pronto)")
+        exigir(
+            lambda: json.loads(perguntar(_VIGIAR_O_CADEADO, "vigiar a caixa"))["achou"],
+            "a caixa do cadeado aparecer na página que o piloto abriu",
+        )
+        chave = "01-jogar.html:cadeado"
+        fora["antes"] = json.loads(perguntar(_LER_O_CADEADO, "ler a caixa antes do clique"))
+
+        # 1) o serviço confirma: a caixa pisca, com contorno, e apaga sozinha
+        clicar("clique-1")
+        piscou = espera_vigia(
+            "verde", 1, "a caixa piscar verde depois do serviço confirmar o clique 1")
+        if piscou:
+            apagou = espera_vigia(
+                "verde_apagou", 1, "a piscada verde apagar sozinha", 2 * da_piscada_ms / 1000 + 20)
+            lido = vigia()
+            fora["confirmou"] = {"verde": True, "contorno_larg": lido["larguras"][0]}
+            fora["depois-da-piscada"] = {
+                "verde": not apagou, "duracao_ms": (lido["duracoes"] or [None])[0]}
+        else:
+            fora["confirmou"] = {"verde": False, "contorno_larg": "0px"}
+            fora["depois-da-piscada"] = {"verde": False, "duracao_ms": None}
+        exigir(lambda: vigia()["pousou"] >= 1, "o clique 1 pousar (a caixa sair do voo)")
+        verdes_antes = vigia()["verde"]
+
+        # 2) o serviço não responde: a tela não pode dizer que guardou
+        resposta["como"] = "none"
+        piloto.desfechos.pop(chave, None)
+        clicar("clique-2")
+        exigir(lambda: vigia()["pousou"] >= 2, "o clique 2 pousar (a caixa sair do voo)")
+        exigir(lambda: chave in piloto.desfechos, "o piloto anotar o desfecho do clique 2")
+        fora["desfecho-sem-resposta"] = list(piloto.desfechos[chave])
+        fora["sem-resposta"] = {"verde": vigia()["verde"] > verdes_antes}
+        exigir(lambda: vigia()["recusou_apagou"] >= vigia()["recusou"],
+               "a piscada de recusa do clique 2 apagar")
+
+        # 3) a ponte levanta: o mesmo
+        resposta["como"] = "levanta"
+        clicar("clique-3")
+        exigir(lambda: vigia()["pousou"] >= 3, "o clique 3 pousar (a caixa sair do voo)")
+        fora["levantou"] = {"verde": vigia()["verde"] > verdes_antes}
+        fora["desfechos"] = {k: list(v) for k, v in piloto.desfechos.items()}
     finally:
-        GLib.source_remove(guarda)
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon,
          hv.ponte.freestyle_set) = guardado  # type: ignore[assignment]
-    assert "desfechos" in fora, (
-        f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}. Quem "
-        f"guarda os `desfechos` é o último passo, e esperar por qualquer outro "
-        f"deixa a régua verde sobre uma medição pela metade")
     return fora
 
 
@@ -813,14 +887,19 @@ def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
     assert certo["verde"], (
         "o serviço confirmou e a caixa não piscou — é o gesto desta aba cujo "
         "efeito não aparece em lugar nenhum da tela, e sem a piscada ele "
-        "responde ao clique dela com nada")
+        f"responde ao clique dela com nada ({no_webkit['sem_prazo']})")
     assert certo["contorno_larg"] != "0px", (
         f"a classe entrou e a folha não pegou: `outline-width` "
         f"{certo['contorno_larg']!r}. É a diferença entre a régua verde e o "
         f"olho dela vendo alguma coisa")
 
     assert not no_webkit["depois-da-piscada"]["verde"], (
-        f"a piscada não apagou depois de {no_webkit['piscada_ms']} ms")
+        f"a piscada não apagou sozinha: {no_webkit['sem_prazo']}")
+    # ela vive o tempo que o produto diz (`MS_DA_PISCADA`), não menos: o timer da página nunca
+    # dispara antes do prazo, e uma piscada de 100 ms seria uma piscada que ela não vê
+    assert no_webkit["depois-da-piscada"]["duracao_ms"] >= 0.9 * no_webkit["piscada_ms"], (
+        f"a piscada durou {no_webkit['depois-da-piscada']['duracao_ms']} ms, menos que os "
+        f"{no_webkit['piscada_ms']} ms do produto")
 
 
 def test_o_cadeado_nao_pisca_sobre_o_que_nao_foi_guardado(no_webkit: dict) -> None:
