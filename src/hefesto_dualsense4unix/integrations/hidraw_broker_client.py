@@ -174,9 +174,12 @@ class HidrawBrokerClient:
         return self.abrir_no(node)[0]
 
     def montar_pad_usb(
-        self, serial: str, descritor: bytes
+        self, serial: str, descritor: bytes, par: tuple[int, int]
     ) -> tuple[int | None, dict[str, Any] | None]:
         """``(fd do /dev/hidgN, resposta)``: o pad em USB montado pelo broker.
+
+        ``par`` é o (VID, PID) que o pad pede; o broker o veste se estiver na
+        lista fechada dele, e recusa com ``reject_bad_product`` se não.
 
         O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). A lease
         é esta conexão: se ela cai, o broker desmonta o gadget. ``None`` no fd é
@@ -185,7 +188,8 @@ class HidrawBrokerClient:
         """
         with self._lock:
             response, fds = self._request_with_fds(
-                {"cmd": "pad_usb_montar", "serial": serial, "descritor": descritor.hex()}
+                {"cmd": "pad_usb_montar", "serial": serial, "descritor": descritor.hex(),
+                 "vendor": par[0], "product": par[1]}
             )
         if response is not None and response.get("ok") and len(fds) == 1:
             # O broker cede o nó por ``O_PATH`` (o cgroup de device dele não

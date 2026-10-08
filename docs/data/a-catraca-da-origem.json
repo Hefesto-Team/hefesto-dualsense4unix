@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-07",
+      "data": "2026-10-08",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 43,
+      "piso": 41,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -20,9 +20,7 @@
         "integrations/cor_do_plastico.py::transporte": 1,
         "integrations/dualsense_bt_audio.py::modelo": 1,
         "integrations/ponte_escada.py::mascara": 1,
-        "integrations/sinal_da_barra.py::transporte": 1,
         "integrations/storm_doctor.py::transporte": 1,
-        "integrations/uhid_gamepad.py::modelo": 1,
         "interface/aba01.py::transporte": 1,
         "interface/aba02.py::transporte": 1,
         "interface/aba07.py::transporte": 2,
@@ -36,7 +34,7 @@
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
       },
-      "razao": "07/10/2026, leva 1.6.5, pad: o ramo pad.product != VPAD_PRODUCT em uhid_gamepad._o_pad_em_usb é necessário enquanto o broker publica todo gadget como 054c:0df2; a cura no dono (o broker veste o PID que o pad pede, de uma lista fechada) vai para a leva 1.7",
+      "razao": "08/10/2026, leva 1.11, nativo-1-12: o broker veste o PID que o pad pede (O-BROKER-VESTE-O-PID-QUE-O-PAD-PEDE-01) e o ramo de uhid_gamepad._o_pad_em_usb sai (43 -> 42); o ramo de transporte de sinal_da_barra.py já tinha saído na base (42 -> 41)",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -52,7 +50,7 @@
         }
       ],
       "unidade": "ramos",
-      "universo": 359
+      "universo": 364
     },
     "remendos-de-sintoma": {
       "data": "2026-10-07",

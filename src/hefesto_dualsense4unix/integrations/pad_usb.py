@@ -61,7 +61,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 VENDOR_SONY = 0x054C
-PRODUTO_DO_PAD = 0x0DF2
 
 #: O ``HID_PHYS`` que o uhid do pad declara (``uhid_gamepad.VPAD_HID_PHYS``).
 VPAD_HID_PHYS = "hefesto-vpad"
@@ -451,7 +450,6 @@ __all__ = [
     "GADGET_HID_WRITE_GET_REPORT",
     "MAX_PADS_USB",
     "MODULOS_DO_GADGET",
-    "PRODUTO_DO_PAD",
     "SERIAL_PREFIXO",
     "VPAD_HID_PHYS",
     "VPAD_UNIQ_PREFIXO",

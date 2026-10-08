@@ -362,13 +362,20 @@ def _descritor() -> bytes:
     return CANONICAL_DESCRIPTOR_USB
 
 
-def _pedido(serial: str = SERIAL_DO_PAD, descritor: bytes | None = None) -> bytes:
+#: o par que o pad do produto pede (``uhid_gamepad.VPAD_PRODUCT``).
+PAR_DO_PAD = (0x054C, 0x0DF2)
+
+
+def _pedido(serial: str = SERIAL_DO_PAD, descritor: bytes | None = None,
+            par: tuple[int, int] = PAR_DO_PAD) -> bytes:
     import json
 
     corpo = {
         "cmd": "pad_usb_montar",
         "serial": serial,
         "descritor": (_descritor() if descritor is None else descritor).hex(),
+        "vendor": par[0],
+        "product": par[1],
     }
     return json.dumps(corpo).encode()
 
@@ -398,7 +405,8 @@ class TestOBrokerMontaOGadgetSoHid:
         assert kernel.lido(hid / "no_out_endpoint") == "1"
         assert kernel.lido(hid / "report_length") == "64"
         assert (hid / "report_desc").read_bytes() == _descritor()
-        assert (kernel.lido(g / "idVendor"), kernel.lido(g / "idProduct")) == ("0x054c", "0x0df2")
+        assert (kernel.lido(g / "idVendor"), kernel.lido(g / "idProduct")) == (
+            f"0x{PAR_DO_PAD[0]:04x}", f"0x{PAR_DO_PAD[1]:04x}")
         assert kernel.lido(g / "strings/0x409/serialnumber") == SERIAL_DO_PAD
         assert kernel.lido(g / "UDC") == "usbip-vudc.0"
         porta, _sockfd, devid, velocidade = kernel.lido(
@@ -574,7 +582,7 @@ class TestOClienteRecebeOPadPeloSocket:
         cliente._sock = b
         passo = threading.Thread(target=servidor.step, kwargs={"timeout": 5.0})
         passo.start()
-        fd, resposta = cliente.montar_pad_usb(SERIAL_DO_PAD, _descritor())
+        fd, resposta = cliente.montar_pad_usb(SERIAL_DO_PAD, _descritor(), PAR_DO_PAD)
         passo.join(5.0)
         assert resposta is not None and resposta["ok"] is True, resposta
         assert fd is not None
@@ -625,6 +633,7 @@ class BancadaDoGadget:
 
         self.ug = uhid_gamepad
         self.pedidos: list[tuple[str, bytes, str]] = []
+        self.pares: list[tuple[int, int]] = []
         self.clientes: list[ClienteDeMentira] = []
         self.guardadas: dict[int, bytes] = {}
         self.enumerado: tuple[str, str] | None = None
@@ -635,8 +644,9 @@ class BancadaDoGadget:
         self.jogo: socket.socket | None = None
         self.ioctl_erro: int | None = None
 
-        def pedir(serial: str, descritor: bytes, identidade: str) -> Any:
+        def pedir(serial: str, descritor: bytes, identidade: str, par: tuple[int, int]) -> Any:
             self.pedidos.append((serial, descritor, identidade))
+            self.pares.append(par)
             nosso, jogo = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
             jogo.settimeout(2.0)
             self.jogo = jogo

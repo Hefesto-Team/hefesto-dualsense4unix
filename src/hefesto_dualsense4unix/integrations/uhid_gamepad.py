@@ -2127,12 +2127,17 @@ class _GadgetDoPad:
         logger.info("pad_usb_desmontado", gadget=self.gadget)
 
 
-def _pedir_ao_broker(serial: str, descritor: bytes, identidade: str) -> _GadgetDoPad | None:
-    """O gadget pedido ao broker, numa conexão só dele (a lease), ou None."""
+def _pedir_ao_broker(
+    serial: str, descritor: bytes, identidade: str, par: tuple[int, int]
+) -> _GadgetDoPad | None:
+    """O gadget pedido ao broker, numa conexão só dele (a lease), ou None.
+
+    ``par`` é o (VID, PID) do pad: o broker veste o que o pad pede, ou recusa.
+    """
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
 
     cliente = HidrawBrokerClient()
-    fd, resposta = cliente.montar_pad_usb(serial, descritor)
+    fd, resposta = cliente.montar_pad_usb(serial, descritor, par)
     if fd is None:
         with contextlib.suppress(Exception):
             cliente.close()
@@ -2165,7 +2170,9 @@ def _ha_jogo_aberto() -> bool:
 
 #: as portas do pad em USB, injetáveis pela régua (a suíte nunca fala com o
 #: broker dela: o `conftest` desvia o socket, e a régua troca estas).
-PEDIR_O_PAD_USB: Callable[[str, bytes, str], _GadgetDoPad | None] = _pedir_ao_broker
+PEDIR_O_PAD_USB: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None] = (
+    _pedir_ao_broker
+)
 HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
 JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
 #: o aparelho físico ainda está na máquina? O estacionado dele que não foi
@@ -2280,7 +2287,7 @@ def _avisar_o_contrato_que_falta(faltam: list[str]) -> None:
 
 def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
-    if pad._sem_gadget or pad.product != VPAD_PRODUCT or pad.blueprint is None:
+    if pad._sem_gadget or pad.blueprint is None:
         return False
     gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity)
     if gadget is None:
@@ -2292,7 +2299,8 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
             serial = pad_usb.serial_do_pad(pad.mac)
         except ValueError:
             return False
-        gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "")
+        gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "",
+                                 (DUALSENSE_VENDOR, pad.product))
         if gadget is None:
             return False
     try:

@@ -897,6 +897,14 @@ PAD_USB_CONFIG = "c.1"
 PAD_USB_DESCRITORES_SHA256 = frozenset(
     {"4f48767516627510521512af13c20a064877465122b7bcc7cac1f3b608d37994"}
 )
+#: os pares (VID, PID) que o gadget pode vestir, com o nome USB de cada um. O
+#: par vem do pad (``uhid_gamepad.UhidDualSense.product``) e o broker só confere
+#: a pertença: nunca vira fábrica de aparelho USB para quem fala com ele. Um par
+#: só: o pad nunca é ``0ce6`` (VPAD-04, e a linha do DualSense comum da regra 73
+#: não respeita a marca do pad em USB).
+PAD_USB_VESTIDOS: dict[tuple[int, int], str] = {
+    (PHYS_VENDOR, VPAD_PRODUCT): "DualSense Edge Wireless Controller",
+}
 _SERIAL_DO_PAD_RE = re.compile(r"^hefesto-pad-[0-9a-f]{12}$")
 _VUDC_RE = re.compile(r"^usbip-vudc\.[0-9]+$")
 _VHCI_LIVRE = 4  # VDEV_ST_NULL
@@ -1040,21 +1048,29 @@ class PadUsbOps:
 
     # -- montar, ligar, desmontar -----------------------------------------
 
-    def montar(self, nome: str, serial: str, descritor: bytes, udc: str) -> None:
-        """O gadget com UMA função ``hid``, sem OUT, preso ao ``udc``."""
+    def montar(
+        self, nome: str, serial: str, descritor: bytes, udc: str, par: tuple[int, int]
+    ) -> None:
+        """O gadget com UMA função ``hid``, sem OUT, preso ao ``udc``, vestindo ``par``.
+
+        ``par`` já foi conferido contra :data:`PAD_USB_VESTIDOS` (um par fora
+        dela levanta ``KeyError`` antes de nascer qualquer grupo).
+        """
+        vendor, product = par
+        produto_usb = PAD_USB_VESTIDOS[par]
         if not os.path.isdir(self.raizes.configfs):
             raise PadUsbSemContratoError("libcomposite", "sem o configfs de usb_gadget")
         g = f"{self.raizes.configfs}/{nome}"
         os.mkdir(g)
         self._povoar(g)
         try:
-            _escrever_attr(f"{g}/idVendor", "0x054c")
-            _escrever_attr(f"{g}/idProduct", "0x0df2")
+            _escrever_attr(f"{g}/idVendor", f"0x{vendor:04x}")
+            _escrever_attr(f"{g}/idProduct", f"0x{product:04x}")
             _escrever_attr(f"{g}/bcdDevice", "0x0100")
             _escrever_attr(f"{g}/bcdUSB", "0x0200")
             self._grupo(f"{g}/strings/0x409")
             _escrever_attr(f"{g}/strings/0x409/manufacturer", "Sony Interactive Entertainment")
-            _escrever_attr(f"{g}/strings/0x409/product", "DualSense Edge Wireless Controller")
+            _escrever_attr(f"{g}/strings/0x409/product", produto_usb)
             _escrever_attr(f"{g}/strings/0x409/serialnumber", serial)
             self._grupo(f"{g}/configs/{PAD_USB_CONFIG}")
             _escrever_attr(f"{g}/configs/{PAD_USB_CONFIG}/MaxPower", "500")
@@ -1727,6 +1743,12 @@ class BrokerState:
             descritor = b""
         if hashlib.sha256(descritor).hexdigest() not in PAD_USB_DESCRITORES_SHA256:
             return ({"ok": False, "cmd": cmd, "error": "reject_bad_descriptor"}, None)
+        vendor = request.get("vendor")
+        product = request.get("product")
+        if not isinstance(vendor, int) or isinstance(vendor, bool) \
+                or not isinstance(product, int) or isinstance(product, bool) \
+                or (vendor, product) not in PAD_USB_VESTIDOS:
+            return ({"ok": False, "cmd": cmd, "error": "reject_bad_product"}, None)
         if serial in self._serial_do_gadget.values():
             return ({"ok": False, "cmd": cmd, "error": "reject_serial_repetido"}, None)
         existentes = set(self._pad_ops.gadgets_nossos()) | set(self._serial_do_gadget)
@@ -1750,7 +1772,7 @@ class BrokerState:
             )
         porta: int | None = None
         try:
-            self._pad_ops.montar(nome, serial, descritor, udcs[0])
+            self._pad_ops.montar(nome, serial, descritor, udcs[0], (vendor, product))
             porta = self._pad_ops.ligar(udcs[0])
             fd = self._pad_ops.ceder_hidg(nome, self.allowed_uid)
         except OSError as exc:
