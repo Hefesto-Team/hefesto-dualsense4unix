@@ -37,7 +37,7 @@ jobs:
           # A história inteira, como o lint-test do ci.yml: há réguas que a leem
           # (RELEASE-NO-CLONE-LIMPO-01).
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           # CI-CACHE-PIP-01 (v3.4.0): pip cache para release pipeline.
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -165,7 +165,7 @@ jobs:
           ref: ${{ github.event.inputs.tag || github.ref }}
       # setup-python 3.12 fica no PATH só para o build_deb.sh ler a versão via
       # tomllib (3.11+); o venv bundlado usa /usr/bin/python3 (default da distro).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
