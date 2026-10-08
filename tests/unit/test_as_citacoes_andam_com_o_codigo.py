@@ -675,3 +675,39 @@ def test_a_linha_curta_demais_nao_identifica_o_citado(repo: Path) -> None:
     assert any("curta.md" in f and "curta demais" in f for f in a_mao), a_mao
     assert not any("curta.md" in f for f in feitos), feitos
     assert md.read_text(encoding="utf-8") == antes
+
+
+def test_o_endereco_que_um_reapontamento_em_massa_deixou_vai_para_a_mao(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O commit que troca dezenas de endereços de um documento que já existia é um reapontamento:
+    ele deixou o endereço pelo mesmo algoritmo, e a linha dele não prova o que a frase citou.
+
+    Medido em 08/10/2026: o 719e58a46 (13/09) reapontou 1629 endereços de uma vez, e 83 das 182
+    trocas desta régua vinham dele; entre elas o `02-controles.html:2358` de uma frase sobre o
+    quadradinho `--plastico`, que seguia para o link da aba Lançadores. Poucos arquivos tocados:
+    a recusa da varredura não o pega. O documento que muda UM endereço anda."""
+    mod = _script()
+    monkeypatch.setattr(mod, "REESCRITA_EM_MASSA", 3)
+    massa = _escrever_e_commitar(
+        repo,
+        "docs/protocol/massa.md",
+        f"# Massa\n\nUm, `{END}:1`. Dois, `{END}:2`. Quatro, `{END}:4`.\n",
+        "o documento já existia",
+    )
+    uma = _escrever_e_commitar(
+        repo, "docs/protocol/uma.md", f"# Uma\n\nO valor, `{END}:1`.\n", "o outro também"
+    )
+    massa.write_text(
+        f"# Massa\n\nUm, `{END}:3`. Dois, `{END}:10`. Quatro, `{END}:11-12`.\n", encoding="utf-8"
+    )
+    uma.write_text(f"# Uma\n\nO valor, `{END}:3`.\n", encoding="utf-8")
+    _git(repo, "commit", "-q", "-am", "o reapontamento")
+    _inserir_no_topo(repo, 12, commitar=True)
+    antes = massa.read_text(encoding="utf-8")
+
+    feitos, a_mao = mod.reapontar(repo, escrever=True)
+
+    assert massa.read_text(encoding="utf-8") == antes, feitos
+    assert sum("massa.md" in f and "reapontamento em massa" in f for f in a_mao) == 3, a_mao
+    assert f"`{END}:15`." in uma.read_text(encoding="utf-8"), (feitos, a_mao)

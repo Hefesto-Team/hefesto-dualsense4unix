@@ -438,6 +438,13 @@ VARREDURA_DE_ARQUIVOS = 200
 """Um commit que tocou tantos arquivos foi uma varredura (renomear, limpar comentário): ninguém
 conferiu cada endereço contra o código daquele instante, e ele não prova onde a linha estava."""
 
+REESCRITA_EM_MASSA = 20
+"""Um commit que tirou tantos endereços de UM documento que já existia foi um reapontamento em
+massa (à mão, por script ou pela própria via crua de uma leva anterior): o endereço que ele deixou
+foi calculado, não escrito olhando o código, e não prova onde a linha estava. Medido em 08/10/2026:
+o `719e58a46` reescreveu 1157 endereços da paridade e 438 do mapa, e a `02-controles.html:2358` que
+ele deixou para o quadradinho da cor apontava o link da aba Lançadores."""
+
 LINHA_CURTA_DEMAIS = 6
 """Uma linha só com menos caracteres úteis que isto (`}`, `pass`) não identifica o que foi citado."""
 
@@ -615,33 +622,42 @@ def _introducoes(
     val: ModuleType,
     documento: Path,
     atuais: collections.Counter[str],
-) -> dict[str, tuple[str | None, bool, bool]]:
-    """``{endereço: (commit em que entrou, entrou em épocas diferentes, o documento nasceu ali)}``.
+) -> dict[str, tuple[str | None, bool, bool, int]]:
+    """``{endereço: (commit em que entrou, épocas diferentes, o documento nasceu ali, reescritos)}``.
 
     O commit é o mais antigo da corrida contínua em que o endereço está escrito ao menos tantas
     vezes quanto hoje, seguindo o documento pelas renomeações. ``None``: nenhum commit o tem ainda
     (acabou de ser escrito). O segundo valor sobe quando houve menos cópias antes: as cópias novas
-    são de outra época.
+    são de outra época. O quarto é quantos endereços o commit da entrada TIROU do documento (o
+    reapontamento em massa troca centenas de uma vez).
     """
     modo = _modo_de(documento)
     vivos = set(atuais)
     entrou: dict[str, tuple[str, bool]] = {}
-    resultado: dict[str, tuple[str | None, bool, bool]] = {}
+    tirados: dict[str, int] = {}
+    resultado: dict[str, tuple[str | None, bool, bool, int]] = {}
+    anterior: tuple[str, collections.Counter[str]] | None = None
     for sha, caminho, nasceu in _historico_do_documento(raiz, _relativo(raiz, documento)):
         if not vivos:
             break
         texto = cat.texto(f"{sha}:{caminho}")
         conta = _contagem(texto, val, modo) if texto is not None else collections.Counter()
+        if anterior is not None:
+            # o estado deste commit é o de ANTES do mais novo: o que some dele é o que o mais novo tirou
+            tirados[anterior[0]] = sum((conta - anterior[1]).values())
+        anterior = (sha, conta)
         for endereco in list(vivos):
             if conta[endereco] >= atuais[endereco]:
                 entrou[endereco] = (sha, nasceu)
             else:
                 vivos.discard(endereco)
                 sha_de, nasceu_de = entrou.get(endereco, (None, True))
-                resultado[endereco] = (sha_de, conta[endereco] > 0, nasceu_de)
+                resultado[endereco] = (
+                    sha_de, conta[endereco] > 0, nasceu_de, tirados.get(sha_de or "", 0)
+                )
     for endereco in vivos:
         sha_de, nasceu_de = entrou.get(endereco, (None, True))
-        resultado[endereco] = (sha_de, False, nasceu_de)
+        resultado[endereco] = (sha_de, False, nasceu_de, 0)
     return resultado
 
 
@@ -654,13 +670,15 @@ def levar_crua(
     sha: str | None,
     pistas: set[str] | None = None,
     documento_nasceu_no_commit: bool = True,
+    reescritos: int = 0,
 ) -> tuple[str, tuple[int, int] | None, str]:
     """O bloco citado no commit ``sha``, procurado intacto e único no arquivo de hoje.
 
     Devolve ``(estado, novo, motivo)``. ``estado``: ``no_lugar``; ``andou`` (``novo`` é o endereço);
     ou o motivo de ir à mão — ``nasceu_errada`` (o histórico prova que o endereço nunca apontou o
-    citado), ``ambigua`` (o bloco se repete), ``varredura`` (o documento já existia e o commit que reescreveu o endereço tocou centenas de arquivos) e ``mudou``
-    (nenhuma cópia intacta hoje).
+    citado), ``ambigua`` (o bloco se repete), ``varredura`` (o documento já existia e o commit
+    que reescreveu o endereço tocou centenas de arquivos, ou tirou ``REESCRITA_EM_MASSA``
+    endereços dele de uma vez) e ``mudou`` (nenhuma cópia intacta hoje).
     """
     if a < 1 or b < a:
         return "nasceu_errada", None, "a faixa está invertida ou começa em zero"
@@ -674,6 +692,11 @@ def levar_crua(
         return "varredura", None, (
             f"o commit {sha[:9]}, que reescreveu o endereço num documento que já existia, tocou "
             f"{cat.arquivos(sha)} arquivos: foi uma varredura, e ela não prova onde a linha estava"
+        )
+    if not documento_nasceu_no_commit and reescritos >= REESCRITA_EM_MASSA:
+        return "varredura", None, (
+            f"o commit {sha[:9]} reescreveu {reescritos} endereços deste documento de uma vez: foi "
+            "um reapontamento em massa, e o endereço que ele deixou não prova onde a linha estava"
         )
     velho = cat.linhas(sha, relativo)
     if velho is None:
@@ -781,7 +804,7 @@ def pelo_historico(
                 rotulo = f"{documento.relative_to(raiz)}: `{cit.texto}`"
                 if cit.curta:
                     rotulo += f" (forma curta `{cit.texto[len(cit.arquivo):]}`)"
-                sha, mista, nasceu = entradas.get(endereco, (None, False, True))
+                sha, mista, nasceu, reescritos = entradas.get(endereco, (None, False, True, 0))
                 if mista:
                     ESTATISTICA["a_mao"] += 1
                     ESTATISTICA["a_mao:misturada"] += 1
@@ -804,7 +827,7 @@ def pelo_historico(
                         encoding="utf-8", errors="replace"
                     ).splitlines()
                 estado, novo, motivo = levar_crua(
-                    cat, relativo, alvos[cit.alvo], cit.a, cit.b, sha, cit.pistas, nasceu
+                    cat, relativo, alvos[cit.alvo], cit.a, cit.b, sha, cit.pistas, nasceu, reescritos
                 )
                 if estado == "no_lugar":
                     ESTATISTICA["recentes" if sha is None else "no_lugar"] += 1
@@ -955,7 +978,10 @@ def main(argv: list[str] | None = None) -> int:
             "A citação crua (sem símbolo prometido) anda pelo histórico do documento: o commit em "
             "que o endereço entrou, o arquivo citado NAQUELE commit e o bloco procurado intacto e "
             "único hoje. LIMITE: a citação que já nasceu errada anda errada (foi o caso do "
-            "`rumble.ff`); o script move o que apontava, não corrige o que nunca apontou certo."
+            "`rumble.ff`); o script move o que apontava, não corrige o que nunca apontou certo. "
+            "O endereço que uma varredura (centenas de arquivos) ou um reapontamento em massa "
+            "(dezenas de endereços do mesmo documento num commit) deixou vai à mão: ele foi "
+            "calculado, e não prova onde a linha estava."
         ),
     )
     parser.add_argument("--escrever", action="store_true", help="grava as trocas e as confere")
@@ -980,7 +1006,8 @@ def main(argv: list[str] | None = None) -> int:
             f"{ESTATISTICA['a_mao:mudou']} mudaram sem cópia intacta, "
             f"{ESTATISTICA['a_mao:ambigua']} ambíguas, "
             f"{ESTATISTICA['a_mao:misturada']} de épocas misturadas, "
-            f"{ESTATISTICA['a_mao:varredura']} escritas numa varredura, "
+            f"{ESTATISTICA['a_mao:varredura']} escritas numa varredura ou num reapontamento "
+            "em massa, "
             f"{ESTATISTICA['a_mao:nasceu_errada']} já nasceram erradas)"
         )
     if a_mao:
