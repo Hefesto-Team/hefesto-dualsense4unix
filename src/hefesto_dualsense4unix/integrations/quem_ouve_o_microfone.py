@@ -78,8 +78,10 @@ from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_CANAL_DO_MIC,
     PREFIXO_SOURCE_PONTE_BT,
+    CasamentoUSB,
     escolher_fonte,
     fontes_dualsense,
+    sem_os_nos_nossos,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -259,6 +261,29 @@ def ouvintes_por_fonte(
     return ouvindo, pausados
 
 
+def _os_nos_que_carregam_a_voz(
+    no_do_controle: str,
+    fontes: list[str],
+    uniq: str,
+    uniqs: list[str],
+    usb: CasamentoUSB | None,
+) -> list[str]:
+    """Os nós por onde a voz deste controle passa: o que ele usa e o do kernel que o alimenta.
+
+    No cabo o canal `hefesto_mic_*` é alimentado pela placa física, e um app
+    escolhido pelo nome da placa a ouve sem passar pelo canal. A segunda
+    pergunta é a do `bt_mic` ao erguer o canal (`escolher_fonte` sobre
+    `sem_os_nos_nossos`): a lista INTEIRA, para o veto do USB e o um-para-um
+    valerem. No rádio não há nó do kernel e ela devolve `None`; no «Nativo» e
+    antes do canal subir os dois nós são o mesmo, e entra uma vez só.
+    """
+    nos = [no_do_controle]
+    do_kernel = escolher_fonte(sem_os_nos_nossos(fontes), uniq, uniqs, usb)
+    if do_kernel is not None and do_kernel not in nos:
+        nos.append(do_kernel)
+    return nos
+
+
 def quem_ouve_agora(
     uniqs: list[str], raiz_proc: Path | str = "/proc"
 ) -> dict[str, list[str]] | None:
@@ -313,8 +338,9 @@ def ler_quem_ouve(
         if fonte is None:
             sem_canal.append(uniq)
             continue
-        por_uniq[uniq] = list(ouvindo.get(fonte, ()))
-        pausados_por_uniq[uniq] = list(pausados.get(fonte, ()))
+        nos = _os_nos_que_carregam_a_voz(fonte, fontes, uniq, uniqs, usb)
+        por_uniq[uniq] = [nome for no in nos for nome in ouvindo.get(no, ())]
+        pausados_por_uniq[uniq] = [nome for no in nos for nome in pausados.get(no, ())]
     return LeituraDeOuvintes(
         por_uniq=por_uniq,
         pausados_por_uniq=pausados_por_uniq,
