@@ -387,6 +387,16 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "`/run`), para a régua montar um sistema de mentira. Sob root volta a "
         "`/`, e o «limpa?» só LÊ. Nenhum fluxo dela passa por aqui."
     ),
+    "HEFESTO_BROKER_GRACA_DA_ENTREGA_S": (
+        "08/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — quanto "
+        "o broker espera sem cliente antes de entregar o físico ao sistema "
+        "(broker/hidraw_broker.py:2443, `_graca_da_entrega_do_ambiente`). O "
+        "padrão é a medida (30 s, o dobro do pior reinício do daemon), e "
+        "nenhuma unit, install ou empacotamento a escreve: `0` é a válvula de "
+        "quem depura o broker para voltar ao comportamento de antes. Nenhum "
+        "fluxo dela passa por aqui; se um dia ela pedir o tempo na tela, vira "
+        "promessa com porta."
+    ),
 }
 
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
