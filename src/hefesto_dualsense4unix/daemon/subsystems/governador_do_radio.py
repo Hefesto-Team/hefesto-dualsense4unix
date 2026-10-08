@@ -790,12 +790,12 @@ class GovernadorDoRadio:
             pedida_em=agora,
             _dono=self,
         )
-        estado = self._estados.get(adaptador)
-        if estado is not None and estado.cedendo:
-            vaga.cedendo = True
         pausa = self._pausas.get(_chave(uniq))
         if pausa is not None and pausa.pausada:
             vaga.longe = True
+        estado = self._estados.get(adaptador)
+        if estado is not None and estado.cedendo and not vaga.longe:
+            vaga.cedendo = True
         self._vagas.append(vaga)
         return vaga
 
@@ -1059,6 +1059,9 @@ class GovernadorDoRadio:
             depois = pausa.ver(sinais.get(chave), agora, numero)
             for vaga in vagas:
                 vaga.longe = depois
+                if depois:
+                    # o sinal já a cala: o flag da fila não fica nela, nem na conta da vez
+                    vaga.cedendo = False
             if depois == antes:
                 continue
             sinal = sinais.get(chave)
@@ -1162,7 +1165,12 @@ class GovernadorDoRadio:
         o código de antes a deixava de pé, cedendo em rodízio consigo mesma.
         """
         com_escrita = janela.com_escrita
-        na_vez = [v for v in vagas if v._cedendo_pela_fila or any(v is e for e in com_escrita)]
+        # A ponte longe (pausada pelo sinal) é muda: a fila não tem o que cobrar dela, e as
+        # vizinhas não cedem por ela (A-PONTE-PAUSADA-DIZ-A-VERDADE-NA-CONEXOES-01).
+        na_vez = [
+            v for v in vagas
+            if not v.longe and (v._cedendo_pela_fila or any(v is e for e in com_escrita))
+        ]
         por_ponte = max(estado.por_ponte or 0.0, janela.por_ponte_na_janela)
         cabem = int(janela.no_ar / por_ponte) if por_ponte > 0 else 0
         if (
@@ -1177,7 +1185,7 @@ class GovernadorDoRadio:
         if cabem <= 0 or not na_vez:
             estado.inteiro = True
             for vaga in vagas:
-                vaga.cedendo = True
+                vaga.cedendo = not vaga.longe
             return
         estado.inteiro = False
         ceder = min(len(na_vez), max(0, len(na_vez) - cabem))
