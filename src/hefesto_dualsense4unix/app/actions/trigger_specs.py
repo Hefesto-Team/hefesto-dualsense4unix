@@ -50,8 +50,8 @@ def _strength(default: int = 4) -> TriggerParamSpec:
 _RAMPA_PADRAO: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 8)
 
 
-def _frequency(default: int = 10) -> TriggerParamSpec:
-    return TriggerParamSpec("frequency", "Frequência", 0, 255, default)
+def _frequency(default: int = 10, lo: int = 0) -> TriggerParamSpec:
+    return TriggerParamSpec("frequency", "Frequência", lo, 255, default)
 
 
 # GATILHO-PALAVRA-01 (29/07/2026): dois campos, dois donos.
@@ -178,7 +178,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "MultiPositionVibration", "Vibração por posição",
         params=(
-            _frequency(40),
+            _frequency(40, lo=1),
             *(
                 TriggerParamSpec(
                     f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]

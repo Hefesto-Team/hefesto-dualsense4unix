@@ -154,6 +154,23 @@ class TestBuildFromNameAninhado:
         tela = next(p for p in spec.params if p.name == "frequency").default
         assert tela == FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO
 
+    def test_a_tela_nao_oferece_a_frequencia_que_o_efeito_recusa(self) -> None:
+        """Toda frequência da barra, com as amplitudes padrão, monta o efeito.
+
+        Com a barra em 0, o arrasto mandava o que `multi_position_vibration`
+        recusa: o gatilho ficava no efeito anterior e a recusa crua ia ao cartão.
+
+        Mordida: devolver o mínimo da barra a 0.
+        """
+        spec = get_spec("MultiPositionVibration")
+        assert spec is not None
+        barra = next(p for p in spec.params if p.name == "frequency")
+        amplitudes = [p.default for p in spec.params if p.name.startswith("pos_")]
+        assert any(amplitudes)
+        for valor in range(barra.min_value, barra.max_value + 1):
+            efeito = build_from_name("MultiPositionVibration", [valor, *amplitudes])
+            assert efeito.forces[6] == valor
+
     def test_efeito_pronto_machine_gun_salvo_aninhado_vibra_a_40(self) -> None:
         """O `machine_gun` salvo em lista de listas saía com frequência 0, que o
         controle lê como desligado.

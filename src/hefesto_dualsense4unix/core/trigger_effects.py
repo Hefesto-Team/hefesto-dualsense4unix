@@ -372,8 +372,8 @@ def multi_position_vibration(frequency: int, strengths: list[int]) -> TriggerEff
     _byte(frequency, name="frequency")
     if frequency == 0 and any(s > 0 for s in strengths):
         raise ValueError(
-            "multi_position_vibration: frequency 0 com amplitude maior que zero "
-            "o controle lê como desligado"
+            "multi_position_vibration: frequency 0 com amplitude maior que zero, "
+            "que o controle lê como desligado"
         )
     return _vibracao_oficial(dict(enumerate(strengths)), frequency)
 
