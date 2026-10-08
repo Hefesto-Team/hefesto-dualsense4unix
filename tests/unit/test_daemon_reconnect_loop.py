@@ -38,7 +38,7 @@ async def _esperar(condicao: Callable[[], bool], o_que: str, prazo_s: float = PR
 
 
 def _controle(*, plugado: bool) -> FakeController:
-    """O dublê com a tomada que o teste quer: desplugado, o `connect()` falha até o `plugar()`."""
+    """O dublê com a tomada pedida: desplugado, o `connect()` não liga até o `plugar()`."""
     return FakeController(transport="usb", states=[_mk_state()], plugado=plugado)
 
 

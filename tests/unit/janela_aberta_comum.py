@@ -35,8 +35,8 @@ TIQUES_POR_FASE = 40
 
 #: O TETO de uma fase é este tanto de vezes o tempo nominal dela, que sai do
 #: `TIQUE_MS` do produto (ver `_teto_da_fase_s`). Bater o teto não é pulo: a
-#: fase anota a fome em `fora.famintas`, e a régua que a lê reprova dizendo que
-#: foi a máquina.
+#: fase anota a fome em `fora.famintas`, e o `_sem_fome` reprova com a causa
+#: medida: a máquina, ou o produto quando o tique para com o laço andando.
 VEZES_O_NOMINAL = 5
 
 ASSENTAR_S = 0.6

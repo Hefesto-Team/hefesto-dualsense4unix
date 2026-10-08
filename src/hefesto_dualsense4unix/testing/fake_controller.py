@@ -38,12 +38,10 @@ class FakeController(IController):
     """Controle fake para testes unit e integration.
 
     Tem tomada, como o aparelho: plugado (o padrão), o `connect()` liga; depois de
-    `desplugar()` ele falha na hora em que RODA, como o backend real sem dispositivo,
-    venha a sonda do `reconnect_loop` de quando vier, até um `plugar()`. Antes da tomada o
-    dublê religava sozinho: a sonda chamava `connect()` e ele punha `_connected = True` sem
-    aparelho (medido sob carga: `disconnect` em 0,113 s, `connect` em 0,114 s, a queda desfeita
-    antes de o laço de poll a ver). Trocar o método na instância não bastava: a sonda já na fila
-    do executor religava DEPOIS da queda publicada. Por isso a decisão é tomada dentro da trava.
+    `desplugar()`, ele volta SEM ligar e sem levantar, como o `connect()` do backend real
+    sem dispositivo (que fecha os handles, marca offline e retorna), até um `plugar()`. A
+    decisão é tomada quando o `connect()` RODA, dentro da trava do `desplugar()`: a sonda do
+    `reconnect_loop` já na fila do executor não religa depois da queda publicada.
     """
 
     DEFAULT_STATE: ClassVar[ControllerState] = ControllerState(
@@ -79,12 +77,11 @@ class FakeController(IController):
         self._next_buttons = frozenset(names)
 
     def connect(self) -> None:
-        # a decisão é tomada DENTRO da trava do desplugar: uma sonda já na fila do executor
-        # não religa depois da queda publicada
         with self._tomada:
             self.tentativas_de_conexao += 1
             if not self.plugado:
-                raise RuntimeError("sem dispositivo: o controle está desplugado")
+                self._connected = False
+                return
             self._connected = True
             if not self._states:
                 self._states = [
@@ -99,7 +96,7 @@ class FakeController(IController):
             self.commands.append(FakeControllerCommand("connect", None))
 
     def desplugar(self) -> None:
-        """O controle sai da tomada e NÃO volta sozinho: o `connect()` falha até o `plugar()`."""
+        """O controle sai da tomada e NÃO volta sozinho: o `connect()` não liga até o `plugar()`."""
         with self._tomada:
             self.plugado = False
             self.disconnect()
