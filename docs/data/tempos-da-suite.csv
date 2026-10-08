@@ -224,7 +224,6 @@ tests/unit/test_a_lista_de_exclusao_tem_um_escritor_por_vez.py,5401,medido
 tests/unit/test_a_lista_de_jogos_desta_maquina_oferece_sem_recusar.py,301,medido
 tests/unit/test_a_lista_de_perfis_cabe_inteira.py,461,medido
 tests/unit/test_a_luz_do_controle_nunca_sai_preta.py,14651,medido
-tests/unit/test_a_luz_do_jogo_na_iluminacao.py,3226,medido
 tests/unit/test_a_luz_do_mic_diz_quem_te_escuta.py,2441,medido
 tests/unit/test_a_luz_nao_acende_o_botao_do_card.py,346,medido
 tests/unit/test_a_luz_que_nao_acende_derruba_o_radio.py,341,medido
