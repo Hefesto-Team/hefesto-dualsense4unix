@@ -519,6 +519,33 @@ def test_o_leitor_do_servico_e_o_do_governador_quando_ele_existe(
     assert handlers._leitor_proprio_do_sinal is None, "o serviço abriu um segundo leitor"  # type: ignore[attr-defined]
 
 
+def test_a_bomba_de_verdade_cala_com_o_controle_longe_e_volta_a_escrever_perto() -> None:
+    """A régua do governador lê ``vaga.cedendo``; quem cala é a bomba que o lê. Esta é a ponta."""
+    from tests.unit.test_o_governador_do_radio import _bomba
+
+    mesa = _Controles()
+    mesa.um_segundo()
+    escritos: list[bytes] = []
+
+    def escritor(report: bytes) -> int:
+        escritos.append(report)
+        return len(report)
+
+    bomba = _bomba(mesa.vagas[(mesa.c1, "som")], mesa.relogio, escritor)
+    quadro = b"\x35" + b"\x00" * 333
+    mesa.sinal[12] = LIMIAR - 5
+    mesa.um_segundo()
+    for _ in range(10):
+        assert bomba.escrever(quadro) is True, "a bomba tratou a pausa como queda"
+    assert escritos == [], "a bomba escreveu no rádio com o controle longe"
+    assert bomba.contagem.quadros_cedidos_ao_governador == 10
+    mesa.sinal[12] = -30
+    mesa.um_segundo()
+    mesa.um_segundo()
+    bomba.escrever(quadro)
+    assert escritos == [quadro], "o controle voltou e a bomba seguiu calada"
+
+
 def test_a_dica_da_linha_diz_que_a_ponte_esta_pausada_e_nao_por_causa_do_hz(
     tela_limpa: list[float],
 ) -> None:
@@ -684,3 +711,25 @@ def test_o_equilibrar_da_central_propoe_pelo_sinal_que_o_dono_ouviu() -> None:
     assert ordem is not None and (ordem.controle, ordem.destino) == (FRACO, QUARTO)
     central._dono_visto = None
     assert central.propor(esperar=False) is None, "sem leitura do ar a proposta é a de contagem"
+
+
+def test_o_sinal_que_o_state_full_publica_chega_ao_equilibrar_sem_dubles_no_meio() -> None:
+    """A central pesa o ``state["controllers"]`` depois do ``_merge_radio``: o ``sinal_dbm`` de
+    cada controle passa pelo ``plano_por_adaptador`` até a conta do «Equilibrar»."""
+    from hefesto_dualsense4unix.integrations import plano_de_radio as plano
+
+    def entrada(uniq: str, adaptador: str, sinal: int | None, slot: int) -> dict[str, Any]:
+        return {"uniq": uniq, "transport": "bt", "connected": True, "adaptador": adaptador,
+                "ponte_do_radio": "som", "sinal_dbm": sinal, "player_slot": slot}
+
+    controles = [entrada(FRACO, SALA, -55, 1), entrada(FORTE, SALA, -30, 2),
+                 entrada(OUTRO, QUARTO, -30, 3)]
+    planos = plano.plano_por_adaptador(controles, adaptadores=[SALA, QUARTO],
+                                       listar=lambda _raiz: [])
+    ouvidos = {FRACO: {QUARTO.replace(":", ""): -40}}
+    ordem = plano.ordem_de_redistribuicao(planos, ouvidos=ouvidos)
+    assert ordem is not None and (ordem.controle, ordem.destino) == (FRACO, QUARTO)
+    controles[0]["sinal_dbm"] = None
+    planos = plano.plano_por_adaptador(controles, adaptadores=[SALA, QUARTO],
+                                       listar=lambda _raiz: [])
+    assert plano.ordem_de_redistribuicao(planos, ouvidos=ouvidos) is None
