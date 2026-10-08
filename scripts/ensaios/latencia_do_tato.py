@@ -295,14 +295,21 @@ def recusas(env: dict[str, str], uid: int, casa_real: str | None) -> list[str]:
 
 
 def relatorio_de_vibracao(transporte: str, forca: int, seq: int) -> bytes:
-    """O relatório de saída que liga (``forca`` > 0) ou desliga os dois motores."""
+    """O relatório de saída que liga (``forca`` > 0) ou desliga os dois motores.
+
+    As flags do rumble são as que o produto manda sem háptica por áudio tocando
+    (``backend_pydualsense._build_common``) e as que o ``hid_playstation`` manda:
+    ``COMPATIBLE_VIBRATION`` com ``HAPTICS_SELECT`` no ``flag0`` e a vibração v2 no
+    ``flag2``. Sem o ``HAPTICS_SELECT`` o firmware não troca os atuadores para a
+    vibração emulada, e a medida seria de um relatório que o produto não escreve.
+    """
     from hefesto_dualsense4unix.core import ds_output_report as rep
 
     common = bytearray(rep.COMMON_LEN)
-    common[0] = rep.VALID_FLAG0_COMPATIBLE_VIBRATION
+    common[0] = rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
     common[2] = forca & 0xFF
     common[3] = forca & 0xFF
-    common[38] = rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
+    common[rep.COMMON_VALID_FLAG2] = rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
     if transporte == "radio":
         return bytes(rep.build_bt_report(common, seq=seq))
     return bytes(rep.build_usb_report(common))

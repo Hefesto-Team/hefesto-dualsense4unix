@@ -291,6 +291,22 @@ def test_o_relatorio_de_vibracao_liga_e_desliga_os_dois_motores_nos_dois_transpo
     assert int.from_bytes(radio[-4:], "little") == rep.bt_crc32(radio[:-4])
 
 
+def test_o_toque_de_teste_leva_as_flags_do_rumble_que_o_produto_escreve() -> None:
+    """O relatório medido é o do produto: ``COMPATIBLE_VIBRATION`` + ``HAPTICS_SELECT``.
+
+    Sem o ``HAPTICS_SELECT`` o firmware não troca para a vibração emulada; o produto
+    (sem háptica por áudio tocando) e o ``hid_playstation`` mandam os dois bits, e o
+    ``flag2`` leva a vibração v2. A régua lê o bloco comum dos dois transportes.
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    rumble = rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
+    for transporte, inicio in (("cabo", 1), ("radio", 3)):
+        common = ens.relatorio_de_vibracao(transporte, 0xFF, 0)[inicio:]
+        assert common[0] & rumble == rumble, f"{transporte}: o flag0 do rumble do produto"
+        assert common[rep.COMMON_VALID_FLAG2] & rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
+
+
 # --- o protocolo e a tabela ------------------------------------------------------------------
 
 

@@ -36,6 +36,11 @@ computador: no cabo o quadro chega a cada ~4 ms; no rádio, em rajadas, e a lat�
 rádio inclui o intervalo do enlace. É a latência que o JOGO enxerga (do escritor ao
 primeiro quadro que mostra o motor), não a do firmware por dentro.
 
+O toque de teste é o relatório de vibração do produto: os dois motores com
+`COMPATIBLE_VIBRATION` e `HAPTICS_SELECT` no `flag0` e a vibração v2 no `flag2`, como o
+`hid_playstation` manda. A háptica por áudio (os canais 3 e 4 no cabo, a ponte `0x36` no
+rádio) é outro caminho e não passa por este número.
+
 ## O que ele recusa
 
 O instrumento que briga com o produto recusa, não anuncia:
