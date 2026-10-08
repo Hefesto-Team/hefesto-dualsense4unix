@@ -637,7 +637,7 @@ código de uma tecla nem texto: só contagens. A chave é `{}` sob a suíte e no
 A palavra, 23/09/2026: um botão ao lado de Giroscópio e Acelerômetro, no
 cartão de cada controle — o movimento do controle vira um **analógico**
 daquele controle, para quem não alcança o analógico. Desde 08/10/2026
-(O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01) o chip é o «Analógico
+o chip é o «Analógico
 Virtual», um só: o giro e a inclinação vão juntos ao lado escolhido.
 
 | Método     | Parâmetros                                                                 | Retorno                                                                                    |
@@ -729,19 +729,19 @@ subsystem do som fora do ar), os dois últimos com `motivo`. Sem `uniq` ou sem
 | `navegacao.interna.set`  | `{ligada?: bool, tipo?: "interna" \| "computador"}` | `{status, navegacao: {interna_ligada, tipo, foco}}` |
 | `navegacao.foco`         | `{ativa: bool}`                              | `{status, foco, toques: {uniq: {r1, l1, x, o, quadrado, triangulo, cima, baixo, esquerda, direita, start}}}` |
 
-A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. `navegacao.interna.set`
+`navegacao.interna.set`
 é o «Status da navegação» no tipo Interna (`ligada`) e a lista «Tipo de navegação»
 (`tipo`, que só grava o tipo); exige ao menos um dos dois. A Interna é da máquina e
 não do perfil: trocar de perfil não a desliga, e ela não mexe no mouse.
 
 `navegacao.foco` é a janela dizendo que está na frente: um pulso quando ganha ou perde
-o foco, e uma renovação a cada tique dela com a Interna ligada. Sem renovação por
+o foco, e uma renovação a cada tique da janela com a Interna ligada. Sem renovação por
 1 s (`PRAZO_DO_FOCO_S`) o daemon larga o foco sozinho, e uma janela que morre sem se
 despedir não deixa botão roubado. Com a Interna ligada e o foco vivo, os botões que
 navegam (R1, L1, X, O, quadrado, triângulo, o direcional e o Start) não chegam ao
 jogo, e o R1 e o L1 não saem como Alt+Tab. `toques` são contadores que só sobem, por
 controle, contados só com a Interna agindo: a janela aplica a diferença com o que
-leu antes, e um toque curto entre dois tiques dela não se perde.
+leu antes, e um toque curto entre dois tiques da janela não se perde.
 
 O `state_full` traz o bloco `navegacao: {interna_ligada, tipo, foco}`; sem o dono no
 daemon, o bloco não sai.
@@ -752,7 +752,7 @@ daemon, o bloco não sai.
 |-----------------------------|-------------------|----------------------------------------------------|
 | `navegacao.big_picture.set` | `{ligado: bool}`  | `{status, big_picture: {ligado, agindo, quem_le}}` |
 
-A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01. É a lista
+É a lista
 «Modo Big Picture na Steam» da aba Navegação, da máquina e não do perfil (a flag
 `big_picture.flag` guarda a escolha). `quem_le` diz quem lê o controle no modo vigente:
 `"steam"` (Nativo e Steam Input: a Steam lê o físico e o Hefesto não entra) ou
@@ -770,11 +770,11 @@ O `state_full` traz o mesmo bloco na chave `big_picture` do bloco `navegacao`.
 |--------------------|-----------------|----------------------------------|
 | `motion.calibrate` | `{uniq: str}`   | `{status: "medindo", uniq, segundos}` |
 
-O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01. Mede o repouso de UM
+Mede o repouso de UM
 controle por 5 s (`SEGUNDOS_DO_ZERO`, uma amostra a cada 20 ms) e guarda o zero
 dele: o viés do giroscópio, que o motor desconta antes do Analógico Virtual e da
 inclinação (só o giro se desconta; a gravidade do repouso fica guardada junto). A resposta volta na hora; um segundo pedido no
-meio da medida responde a mesma medida. A régua é a do parado: o controle que
+meio da medida responde a mesma medida. O critério é o do parado: o controle que
 mexeu durante a medida não guarda nada. O zero vai ao
 `~/.config/hefesto-dualsense4unix/zeros-dos-sensores.json`, por controle, e volta no
 boot. No Nativo mede e guarda igual: o zero vale quando o Hefesto volta a traduzir.
