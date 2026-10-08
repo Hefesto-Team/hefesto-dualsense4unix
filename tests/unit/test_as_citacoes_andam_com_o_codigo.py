@@ -721,7 +721,7 @@ def test_o_endereco_de_antes_que_tambem_e_massa_fica_a_mao_com_o_motivo(
 ) -> None:
     """Três reapontamentos em massa em fila: a segunda chance dá duas voltas e para (o `--help`).
     O que ficou depois do terceiro vai à mão, e o motivo diz que o de antes também é massa."""
-    mod = _script()
+    mod = _script()  # type: ignore[no-untyped-call]
     monkeypatch.setattr(mod, "REESCRITA_EM_MASSA", 3)
     cadeia = _escrever_e_commitar(
         repo,
