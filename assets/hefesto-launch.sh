@@ -242,13 +242,9 @@ trap '_hefesto_on_exit' EXIT
 # métodos Performance/Balanced/Battery (sem argumento) e o getter é
 # GetProfile — codificado contra o que existe, não contra o esperado.
 #
-# Restauração: o `exec env` final PRESERVA o PID (o wrapper VIRA o jogo),
-# então o trap de EXIT do sh morre no exec — quem restaura é um filho em
-# background que espera este PID sumir. O handler único `_hefesto_on_exit`
-# (topo do script, NUMA-01) fica mesmo assim: cobre a saída SEM exec (ex.:
-# env(1) ausente). Restaurar duas vezes é inócuo.
-# Se quem lança matar o grupo de processos inteiro no fim, a restauração se
-# perde — best-effort documentado, nunca pior que não ter Game Mode.
+# Restauração: quem devolve é `_restaurar_quando_sair`, fora da árvore do
+# jogo. O handler único `_hefesto_on_exit` (topo do script, NUMA-01) cobre a
+# saída SEM exec (ex.: env(1) ausente). Restaurar duas vezes é inócuo.
 #
 # HEFESTO_GM_POLL_SECS: período do poll do restaurador (default 2 s);
 # override existe para os testes não esperarem segundos reais.
@@ -290,30 +286,67 @@ gm_current_profile() {
     fi | head -n 1 | tr '[:upper:]' '[:lower:]'
 }
 
-gm_set_profile() {
-    # $1 SEMPRE validado antes: battery|balanced|performance (minúsculas).
-    # Saída inesperada do daemon nunca vira comando (case fechado).
-    case "$1" in
+gm_pelo_transporte() {
+    # $1 = quem executa (gm_run, ou o restaurador com o PID), $2 = o perfil,
+    # SEMPRE validado antes: battery|balanced|performance (minúsculas). Saída
+    # inesperada do daemon nunca vira comando (case fechado). O binário vai
+    # pelo caminho inteiro: o restaurador roda com o PATH do gerente.
+    gm_quem="$1"
+    case "$2" in
         battery) gm_method="Battery" ;;
         balanced) gm_method="Balanced" ;;
         performance) gm_method="Performance" ;;
         *) return 1 ;;
     esac
-    if command -v system76-power >/dev/null 2>&1; then
-        gm_run system76-power profile "$1" >/dev/null
-    elif command -v busctl >/dev/null 2>&1; then
-        gm_run busctl --system call \
-            "$GM_BUS_DEST" "$GM_BUS_PATH" "$GM_BUS_DEST" "$gm_method" \
-            >/dev/null
-    elif command -v dbus-send >/dev/null 2>&1; then
-        gm_run dbus-send --system --print-reply --dest="$GM_BUS_DEST" \
-            "$GM_BUS_PATH" "$GM_BUS_DEST.$gm_method" >/dev/null
+    if gm_bin="$(command -v system76-power)"; then
+        $gm_quem "$gm_bin" profile "$2"
+    elif gm_bin="$(command -v busctl)"; then
+        $gm_quem "$gm_bin" --system call \
+            "$GM_BUS_DEST" "$GM_BUS_PATH" "$GM_BUS_DEST" "$gm_method"
+    elif gm_bin="$(command -v dbus-send)"; then
+        $gm_quem "$gm_bin" --system --print-reply --dest="$GM_BUS_DEST" \
+            "$GM_BUS_PATH" "$GM_BUS_DEST.$gm_method"
     else
         return 1
     fi
 }
 
+gm_set_profile() {
+    gm_pelo_transporte gm_run "$1" >/dev/null
+}
+
+# --- O restaurador (O-RESTAURADOR-DO-LANCAMENTO-SOLTA-QUANDO-O-JOGO-ACABA-01)
+# Na Steam o `$$` vira o reaper do `%command%`, que espera todo descendente:
+# um restaurador filho dele espera o reaper, e o reaper espera o restaurador.
+# Por isso ele nasce do gerente de usuário (`systemd-run --user`), fora da
+# árvore do jogo, e o `kill -0` no `$$` vale dentro e fora da Steam. Sem o
+# `systemd-run`, nada troca: trocar sem quem devolva é pior que não trocar.
+# O comando de devolver recebe o PID pelo stdin.
+_RESTAURADOR='p=$1; t=$2; shift 2
+while kill -0 "$p" 2>/dev/null; do sleep "$t" || break; done
+printf "%s\n" "$p" | "$@"'
+
+tem_quem_restaure() {
+    command -v systemd-run >/dev/null 2>&1
+}
+
+_restaurar_quando_sair() {
+    # $1 = o PID que se espera sumir; o resto, o comando de devolver.
+    rq_pid="$1"
+    shift
+    tem_quem_restaure || return 1
+    rq_poll="${HEFESTO_GM_POLL_SECS:-2}"
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 5 systemd-run --user --collect --quiet -- /bin/sh -c "$_RESTAURADOR" \
+            hefesto-restaurador "$rq_pid" "$rq_poll" "$@" </dev/null >/dev/null 2>&1
+    else
+        systemd-run --user --collect --quiet -- /bin/sh -c "$_RESTAURADOR" \
+            hefesto-restaurador "$rq_pid" "$rq_poll" "$@" </dev/null >/dev/null 2>&1
+    fi
+}
+
 enter_game_mode() {
+    tem_quem_restaure || return 0
     gm_have_transport || return 0
     gm_prev="$(gm_current_profile)" || gm_prev=""
     case "$gm_prev" in
@@ -321,22 +354,15 @@ enter_game_mode() {
         *) return 0 ;;  # vazio, performance ou desconhecido: nada a fazer
     esac
     gm_set_profile performance || return 0
+    if ! gm_pelo_transporte "_restaurar_quando_sair $$" "$gm_prev"; then
+        gm_set_profile "$gm_prev"
+        return 0
+    fi
     # NUMA-01: em vez de armar o PRÓPRIO trap (que substituiria o handler
     # único `_hefesto_on_exit` registrado no topo do script, perdendo o
     # `record_last_exit`), só marca a variável que ele consulta. Cobre só a
     # saída SEM exec (exec bem-sucedido descarta o trap inteiro).
     hefesto_gm_prev="$gm_prev"
-    gm_pid=$$
-    (
-        # Restaurador: espera o PID do jogo (o mesmo deste wrapper, via
-        # exec) sumir e devolve o perfil anterior. FDs fechados para nunca
-        # segurar o pipe de stdout do jogo aberto (Steam esperaria).
-        gm_poll="${HEFESTO_GM_POLL_SECS:-2}"
-        while kill -0 "$gm_pid" 2>/dev/null; do
-            sleep "$gm_poll" || break
-        done
-        gm_set_profile "$gm_prev"
-    ) </dev/null >/dev/null 2>&1 &
     return 0
 }
 
@@ -352,22 +378,15 @@ PLACA_ACORDADA="${HEFESTO_PLACA_ACORDADA:-/usr/local/lib/hefesto-dualsense4unix/
 
 acordar_a_placa() {
     [ -x "$PLACA_ACORDADA" ] || return 0
-    command -v sudo >/dev/null 2>&1 || return 0
+    pa_sudo="$(command -v sudo)" || return 0
+    tem_quem_restaure || return 0
     if command -v timeout >/dev/null 2>&1; then
-        printf '%s\n' "$$" | timeout 5 sudo -n "$PLACA_ACORDADA" acordar >/dev/null 2>&1 || return 0
+        printf '%s\n' "$$" | timeout 5 "$pa_sudo" -n "$PLACA_ACORDADA" acordar >/dev/null 2>&1 || return 0
     else
-        printf '%s\n' "$$" | sudo -n "$PLACA_ACORDADA" acordar >/dev/null 2>&1 || return 0
+        printf '%s\n' "$$" | "$pa_sudo" -n "$PLACA_ACORDADA" acordar >/dev/null 2>&1 || return 0
     fi
-    pa_pid=$$
-    (
-        # O mesmo restaurador do Game Mode: espera o PID do jogo (este, via
-        # exec) sumir e devolve. FDs fechados para não segurar o jogo.
-        pa_poll="${HEFESTO_GM_POLL_SECS:-2}"
-        while kill -0 "$pa_pid" 2>/dev/null; do
-            sleep "$pa_poll" || break
-        done
-        printf '%s\n' "$pa_pid" | sudo -n "$PLACA_ACORDADA" devolver
-    ) </dev/null >/dev/null 2>&1 &
+    _restaurar_quando_sair "$$" "$pa_sudo" -n "$PLACA_ACORDADA" devolver && return 0
+    printf '%s\n' "$$" | "$pa_sudo" -n "$PLACA_ACORDADA" devolver >/dev/null 2>&1
     return 0
 }
 

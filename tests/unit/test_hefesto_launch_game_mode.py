@@ -12,8 +12,8 @@ _WRAPPER = _ROOT / "assets" / "hefesto-launch.sh"
 
 _FAKE_S76 = """#!/bin/sh
 # fake system76-power do teste — loga chamadas e simula o perfil em arquivo.
-log="${FAKE_S76_LOG:?}"
-prof_file="${FAKE_S76_PROFILE:?}"
+log="@LOG@"
+prof_file="@PERFIL@"
 if [ "$#" -ge 2 ] && [ "$1" = "profile" ]; then
     if [ "${FAKE_S76_SET_FAILS:-0}" = "1" ]; then
         echo "set-fail $2" >> "$log"
@@ -31,9 +31,19 @@ fi
 exit 0
 """
 
+# O gerente de usuário de mentira: roda a unidade fora do lançamento, com o
+# ambiente mínimo do gerente (nada do ambiente do jogo chega ao restaurador).
+_FAKE_SYSTEMD_RUN = """#!/bin/sh
+while [ "$#" -gt 0 ]; do
+    case "$1" in --) shift; break ;; --*) shift ;; *) break ;; esac
+done
+/usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/setsid "$@" </dev/null >/dev/null 2>&1 &
+exit 0
+"""
+
 _FAKE_BUSCTL = """#!/bin/sh
 # fake busctl do teste — loga a chamada inteira e responde só o GetProfile.
-log="${FAKE_BUSCTL_LOG:?}"
+log="@LOG@"
 echo "busctl $*" >> "$log"
 case "$*" in
     *GetProfile*) printf 's "Balanced"\\n' ;;
@@ -73,6 +83,9 @@ def _run_wrapper(
         "XDG_STATE_HOME": str(tmp_path / "state"),
         "SteamAppId": "1599660",
         "HEFESTO_GM_POLL_SECS": "0.2",
+        # A placa de verdade fica fora: com o sudo real no PATH, o lançamento
+        # travaria o piso da placa desta máquina.
+        "HEFESTO_PLACA_ACORDADA": str(tmp_path / "sem-placa.sh"),
     }
     env.update(extra_env or {})
     (tmp_path / "run").mkdir(exist_ok=True)
@@ -102,14 +115,13 @@ def _wait_for_log(log: Path, needle: str, timeout: float = 8.0) -> str:
 def _s76_env(tmp_path: Path, perfil: str) -> tuple[Path, Path, dict[str, str]]:
     fakebin = tmp_path / "fakebin"
     fakebin.mkdir(exist_ok=True)
-    _write_exec(fakebin / "system76-power", _FAKE_S76)
     log = tmp_path / "s76.log"
     prof = tmp_path / "s76.profile"
+    _write_exec(fakebin / "system76-power",
+                _FAKE_S76.replace("@LOG@", str(log)).replace("@PERFIL@", str(prof)))
+    _write_exec(fakebin / "systemd-run", _FAKE_SYSTEMD_RUN)
     prof.write_text(perfil + "\n", encoding="utf-8")
-    return fakebin, log, {
-        "FAKE_S76_LOG": str(log),
-        "FAKE_S76_PROFILE": str(prof),
-    }
+    return fakebin, log, {}
 
 
 def test_pede_performance_e_restaura_o_perfil_anterior(tmp_path: Path) -> None:
@@ -193,13 +205,13 @@ def test_fallback_busctl_usa_os_metodos_reais_da_interface(
     """Sem o binário system76-power, o wrapper fala com o fake busctl usando"""
     tools = ["sh", "env", "date", "mkdir", "sed", "head", "tr", "sleep", "cat"]
     bindir = _restricted_bin(tmp_path, tools)
-    _write_exec(bindir / "busctl", _FAKE_BUSCTL)
     log = tmp_path / "busctl.log"
+    _write_exec(bindir / "busctl", _FAKE_BUSCTL.replace("@LOG@", str(log)))
+    _write_exec(bindir / "systemd-run", _FAKE_SYSTEMD_RUN)
 
     result = _run_wrapper(
         tmp_path=tmp_path,
         path_env=str(bindir),
-        extra_env={"FAKE_BUSCTL_LOG": str(log)},
     )
 
     assert result.returncode == 0

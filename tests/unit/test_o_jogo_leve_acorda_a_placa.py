@@ -189,6 +189,13 @@ def _lar_do_lancador(base: Path) -> tuple[dict[str, str], Path]:
         falso = mudos / nome
         falso.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
         falso.chmod(0o755)
+    gerente = mudos / "systemd-run"
+    gerente.write_text(
+        '#!/bin/sh\nwhile [ "$#" -gt 0 ]; do case "$1" in --) shift; break ;; '
+        '--*) shift ;; *) break ;; esac; done\n'
+        '/usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/setsid "$@" '
+        '</dev/null >/dev/null 2>&1 &\n', encoding="utf-8")
+    gerente.chmod(0o755)
     sudo = mudos / "sudo"
     sudo.write_text('#!/bin/sh\n[ "$1" = "-n" ] && shift\nexec "$@"\n', encoding="utf-8")
     sudo.chmod(0o755)
