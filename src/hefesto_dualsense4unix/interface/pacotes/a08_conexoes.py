@@ -1363,7 +1363,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
             f'<div class="ext-linha"{da_borda}>'
             f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
             f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
-            f'{botoes}{declara}{linha_do_aviso}</div>')
+            f'{linha_do_aviso}{botoes}{declara}</div>')
     return "".join(fora)
 
 
