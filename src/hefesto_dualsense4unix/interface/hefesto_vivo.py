@@ -240,7 +240,7 @@ BOOTSTRAP = r"""
     // ela clicar, e de volta a cada fechamento. A guarda `sob_o_dedo` só
     // protege enquanto o campo TEM foco, e o travessão entra antes disso.
     //
-    // O ALVO É `data-hef-vivo`, que é a QUARTA PORTA (`:1406`) — o gesto que LÊ
+    // O ALVO É `data-hef-vivo`, que é a QUARTA PORTA (`:1391`) — o gesto que LÊ
     // e não grava, ou seja, exatamente os campos que a PESSOA dirige. São UM na
     // casa inteira hoje (`procurar`, na 10-perfis), então o alcance é o defeito
     // e nada mais; e no dia em que houver um segundo ele já nasce curado.
