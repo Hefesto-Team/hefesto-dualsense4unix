@@ -61,13 +61,17 @@ def test_a_regua_enxerga_o_conselho_antigo() -> None:
     assert _acha("busctl call org.bluez /org/bluez/hci0 org.bluez.Adapter1 RemoveDevice o /x") == []
 
 
-# A premissa em prosa: o cache SDP «sai junto», «é apagado» ou «envenena o pareamento seguinte».
-# A frase pode quebrar a linha, por isso a régua casa o texto inteiro, com `\s+` entre as palavras.
+# A premissa em prosa: o cache SDP «sai junto», «é apagado», «envenena o pareamento seguinte», ou,
+# sem ele apagado, «o pareamento novo nasce com SDP vazio» (a forma do comentário da camada de
+# máquina até 07/10). A frase pode quebrar a linha, e a quebra traz o `#` do comentário, o `*`
+# do bloco ou o `print("` seguinte: a régua tira esse começo e esse fim de cada linha, junta tudo
+# e casa com `\s+` entre as palavras.
 _PREMISSA = re.compile(
     r"apagar\s+o\s+cache\s+SDP"
     r"|cache\s+SDP\s+(?:tem\s+de\s+sair|sai)\s+junto"
     r"|o\s+cache\s+sozinho\s+envenena"
-    r"|envenena\s+o\s+pareamento",
+    r"|envenena\s+o\s+pareamento"
+    r"|pareamento\s+novo\s+nasce\s+com\s+SDP\s+vazio",
     re.IGNORECASE,
 )
 
@@ -75,13 +79,21 @@ _PREMISSA = re.compile(
 # propósito; o desenho vivo (a bancada) é varrido. A cópia publicada nasce dele pelo `--publicar`
 # e a régua da igualdade (`test_arranjo_invariantes`) as mantém iguais, então varrer a bancada
 # basta. O gerador carrega a frase velha como âncora da edição que a troca (`antes`) e como o
-# motivo dela (`porque`): é onde a frase PRECISA estar.
-_DESENHOS = ("mockup/mapa-das-portas.html",)
+# motivo dela (`porque`): é onde a frase PRECISA estar. Todo desenho vivo da bancada é varrido,
+# não só o do mapa: a premissa num desenho vizinho engana igual.
+_DESENHOS = tuple(sorted(str(p.relative_to(RAIZ)) for p in (RAIZ / "mockup").glob("*.html")))
 _ISENTOS_DA_PREMISSA = _ISENTOS | {"src/hefesto_dualsense4unix/interface/pagina_do_mapa.py"}
 
 
+_COMECO_DA_LINHA = re.compile(r"""^\s*(?:#+|//|/?\*+)?\s*(?:print\(\s*f?["'])?""")
+_FIM_DA_LINHA = re.compile(r"""["']\)\s*$""")
+
+
 def _acha_a_premissa(texto: str) -> list[str]:
-    return [" ".join(m.group(0).split()) for m in _PREMISSA.finditer(texto)]
+    corrido = " ".join(
+        _FIM_DA_LINHA.sub("", _COMECO_DA_LINHA.sub("", linha)) for linha in texto.splitlines()
+    )
+    return [" ".join(m.group(0).split()) for m in _PREMISSA.finditer(corrido)]
 
 
 def test_nenhum_texto_repete_que_o_cache_sdp_tem_de_sair_com_o_bond() -> None:
@@ -100,4 +112,11 @@ def test_a_regua_da_premissa_enxerga_a_frase_antiga_ate_quebrada() -> None:
     """A régua não pode ser cega: a frase velha casa, inclusive partida em duas linhas."""
     assert _acha_a_premissa("desfazer o pareamento, apagar o cache SDP e parear") != []
     assert _acha_a_premissa("o cache sozinho\n   envenena o pareamento seguinte") != []
+    assert _acha_a_premissa("# Sem ela o pareamento novo\n# nasce com SDP vazio") != []
+    assert _acha_a_premissa("  /* desfazer, apagar o\n     * cache SDP e parear */") != []
+    assert _acha_a_premissa(
+        'print("  (o bond E o cache SDP saem — o cache sozinho")\n'
+        '    print("   envenena a volta)")'
+    ) != []
+    assert "mockup/mapa-das-portas.html" in _DESENHOS
     assert _acha_a_premissa("o RemoveDevice do BlueZ já tira o [ServiceRecords] do cache") == []
