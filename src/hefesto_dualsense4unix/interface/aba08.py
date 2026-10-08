@@ -1489,8 +1489,7 @@ def face_dos_hubs():
         f' <span class="mudo">· {FACE_DA_ENTRADA[mae]}</span></span></div>'
         for mae, filha in EXTENSAO.items())
     return f'''            <div class="mm-face">
-              <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
-                <button class="btn mini" data-gesto="novo-hub" title="{_aba_conexoes.DICA_NOVO_HUB}">Acrescentar hub</button></div>
+              <div class="mm-face-cab"><span class="mm-face-nome" title="{_aba_conexoes.DICA_DOS_HUBS}">Hubs e extensões</span></div>
               <div class="mm-grade mm-grade-hubs">{celulas}</div>
             </div>'''
 
@@ -1506,8 +1505,7 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
              "nova_entrada": MAPA["ROTULO_NOVA_ENTRADA"]},
     dicas={"esticada": DICA_EXTENSAO,
            "enumera": DICA_ENUMERA,
-           "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA,
-           "novo_hub": _aba_conexoes.DICA_NOVO_HUB})
+           "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA})
 
 
 RESPOSTAS_DA_ALTURA = (("acima", "Sim"), ("abaixo", "Não"), ("", "Não sei"))
@@ -1723,6 +1721,16 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha .features .ar-selo{flex:none}
   .radio .aparelhos .faixa-do-aparelho:not(:has(.hz)){width:auto !important}
   .radio .aparelhos .faixa-do-aparelho:not(:has(.hz)) .vaga{flex:0 0 auto !important;padding:0 14px}
+  /* O som, a vibração e a luz de cada linha só MOSTRAM (`<span data-ligada>`): nenhum ato do produto
+     os atende, e o desenho aprovado os pintava por `aria-pressed` de botão. A dica é o que eles dizem. */
+  .radio span.vaga,.radio span.selo-zero{cursor:help}
+  .radio span.vaga[data-ligada],.radio span.selo-zero[data-ligada]{border-style:solid}
+  .radio span.vaga[data-ligada]{background:var(--panel)}
+  .radio span.vaga.som[data-ligada]{border-color:var(--c-som);color:var(--c-som)}
+  .radio span.vaga.haptica[data-ligada]{border-color:var(--c-haptica);color:var(--c-haptica)}
+  .radio span.selo-zero[data-ligada]{border-color:var(--yellow);color:var(--yellow)}
+  .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
+                                                          color:var(--texto-mudo)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
   .radio .lugar-topo{min-height:26px}
   .radio .lugar-nome,.radio .abre-lugar{height:24px;padding-top:0;padding-bottom:0}

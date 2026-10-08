@@ -199,24 +199,19 @@ def test_sem_jogo_o_gesto_vale_para_o_computador(
         f"{aba}·{gesto} não chegou ao maquina.json")
 
 
-#: ``acao-do-gesto`` (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01) e o
-SEM_DONO_PERMITIDOS = frozenset({
-    "custo-luz", "custo-som", "custo-vibracao", "novo-hub",
-})
-
-
 def test_os_sem_dono_so_diminuem() -> None:
-    """Todo gesto das dez tem atendente, ou está declarado entre os sem dono de hoje.
+    """Todo gesto das dez tem atendente: a lista dos sem dono está VAZIA (08/10/2026).
 
     O da fita (``monta.GESTO_DA_FITA``) é atendido pelo piloto, que o registra
     ao subir. MORDIDA: um ``data-gesto`` novo sem atendente reprova (*«tudo na
-    interface deveria funcionar»*), e uma entrada nova no ``SEM_GESTO`` também.
+    interface deveria funcionar»*), e uma entrada nova no ``SEM_GESTO`` também:
+    não há mais lista permitida, o botão ganha dono ou sai do desenho.
     """
     pac = _pacotes()
     import monta
 
     declarados = set(pac.a06_navegacao.SEM_GESTO) | set(pac.a08_conexoes.SEM_GESTO)
-    assert declarados <= SEM_DONO_PERMITIDOS, sorted(declarados - SEM_DONO_PERMITIDOS)
+    assert not declarados, f"gesto declarado sem dono: {sorted(declarados)}"
     sem_atendente = sorted(
         f"{p}·{g}" for p, g in _vistos()
         if pac.gesto_da_pagina(p, g) is None

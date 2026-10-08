@@ -328,11 +328,8 @@ NAO_SAO_DIVIDA: dict[str, str] = {
 }
 
 PENDENTES: dict[str, tuple[str, str]] = {
-    # 02/10/2026: o espelho dos `SEM_GESTO` da 06 e da 08 (a régua dos sem dono
-    "tests/unit/test_cada_gesto_diz_de_quem_e.py::SEM_DONO_PERMITIDOS": (
-        "AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01",
-        "a `navegacao-interna` saiu com a A-NAVEGACAO-INTERNA e a `modo-steam` com a "
-        "A-ABA-NAVEGACAO (08/10); as quatro da 08 esperam a sprint própria"),
+    # vazia desde 08/10/2026: os quatro gestos sem dono da 08 saíram do desenho
+    # (AS-QUATRO-LINHAS-DA-08, sprint 01).
 }
 
 

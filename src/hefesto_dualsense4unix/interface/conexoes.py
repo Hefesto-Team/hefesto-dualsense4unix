@@ -421,9 +421,10 @@ RESPOSTAS_DO_VIZINHO = (
 
 
 DICA_NOVA_ENTRADA = "Cria uma entrada nova nesta face, com o próximo número livre."
-DICA_NOVO_HUB = (
-    "Acrescenta um hub ou uma extensão. O sistema não os enxerga — quem diz "
-    "onde estão é você."
+#: A face «Hubs e extensões» só MOSTRA o que foi declarado (`nova-extensao`): o botão
+#: «Acrescentar hub» saiu em 08/10/2026, porque a `LogicaDoMapa` não acrescenta hub.
+DICA_DOS_HUBS = (
+    "O sistema não enxerga hubs nem extensões — quem diz onde estão é você."
 )
 
 
@@ -502,9 +503,8 @@ def html_do_mapa(
             for mae, filha in extensoes.items())
         blocos.append(
             f'''            <div class="mm-face" data-face="hubs">
-              <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
-                <button class="btn mini" data-gesto="novo-hub" '''
-            f'''title="{_e(dicas["novo_hub"])}">Acrescentar hub</button></div>
+              <div class="mm-face-cab"><span class="mm-face-nome" '''
+            f'''title="{_e(DICA_DOS_HUBS)}">Hubs e extensões</span></div>
               <div class="mm-grade mm-grade-hubs">{celulas}</div>
             </div>''')
     return "\n".join(blocos)

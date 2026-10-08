@@ -1110,8 +1110,7 @@ def _html_do_mapa() -> str:
                  "por_extensao": mm.ROTULO_POR_EXTENSAO,
                  "nova_entrada": mm.ROTULO_NOVA_ENTRADA},
         dicas={"esticada": mm.DICA_EXTENSAO, "enumera": mm.DICA_ENUMERA,
-               "nova_entrada": _tela.DICA_NOVA_ENTRADA,
-               "novo_hub": _tela.DICA_NOVO_HUB})
+               "nova_entrada": _tela.DICA_NOVA_ENTRADA})
 
 
 def _html_dos_aparelhos() -> str:
@@ -2131,33 +2130,19 @@ from .a02_controles import mudo as _o_mudo_da_aba_02  # noqa: E402
 
 # `integrations/gesto_de_reconexao.py`, que roda `busctl` e não passa pelo
 # de quem faça. O `gesto_de_reconexao` faz, é puro, mascara o endereço e devolve
-SEM_GESTO: dict[str, str] = {
-    # (`interface/conexoes.html_do_mapa`) e o motor de verdade
-    # (`arranjo_da_mesa.julgar`, pelo `veredito_do_quadrado`). Com alvo real, os
-    "novo-hub":
-        "ele é o único dos sete que sobra, e por duas razões que não são de "
-        "desenho. A primeira: `LogicaDoMapa` não tem `acrescentar_hub` — um hub "
-        "de bancada não é entrada do gabinete, e o produto não tem campo para "
-        "ele. A segunda está no próprio `title` do botão: ele promete "
-        "*\"pergunta em que entrada ele está ligado\"*, e a tela não tem onde "
-        "perguntar. Pendurá-lo no `acrescentar_extensao` faria o botão criar uma "
-        "filha numa entrada que ela não escolheu.",
-    "custo-som":
-        "a ponte de som por rádio sobe quando o JOGO manda som ao controle "
-        "(`radio_governador`), e não há interruptor por controle no produto: o "
-        "único ato que a liga à mão é o «Ligar aqui» da janela do adaptador "
-        "cheio. Um botão que desligasse a ponte brigaria com o jogo no tique "
-        "seguinte.",
-    "custo-vibracao":
-        "mesma razão do `custo-som`: a vibração por rádio viaja na MESMA ponte "
-        "(o 0x32 com o bloco 0x11), e quem a sobe é o jogo. Não há dono por "
-        "controle para desligá-la.",
-    "custo-luz":
-        "a barra de luz não custa rádio que se meça — ela viaja no mesmo "
-        "relatório de saída que o controle já manda. O desenho a mostra como "
-        "custo e o produto não tem o que tirar da conta; o interruptor dela "
-        "mora na aba Iluminação.",
-}
+#: Vazio desde 08/10/2026 (AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01):
+#: nenhum botão do desenho da 08 fica sem atendente. Os quatro que ficavam saíram do gerador, pela
+#: razão que cada um já trazia, e o que o produto sabe fica como TEXTO, sem botão:
+#: * `novo-hub` («Acrescentar hub»): a `LogicaDoMapa` não tem `acrescentar_hub` e a pergunta
+#:   «ligado em que entrada» não tinha onde ser feita; o botão saiu, e a face «Hubs e extensões»
+#:   continua a mostrar o que há;
+#: * `custo-som` e `custo-vibracao`: a ponte de rádio sobe quando o JOGO manda som ou vibração ao
+#:   controle (`radio_governador`) e não há interruptor por controle; um botão que a desligasse
+#:   brigaria com o jogo no tique seguinte. Viraram marcas (`<span data-ligada>`) que mostram qual
+#:   das duas a ponte carrega, com a dica de sempre;
+#: * `custo-luz`: a barra de luz não custa rádio que se meça (viaja no relatório de saída que o
+#:   controle já recebe), e o interruptor dela mora na aba Iluminação. Virou marca.
+SEM_GESTO: dict[str, str] = {}
 
 
 def _uniq(o: dict[str, Any]) -> str:
@@ -3518,13 +3503,13 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
               f'{_x(_hz_da_ponte(ap)) if com_hz else ""}</span>') if ligado else ""
         passou = " Passou do limite: pode engasgar." if (ligado and alem) else ""
         rotulo = _maiuscula(NOME_DO_CUSTO[k])
-        gesto = "custo-som" if k == "som" else "custo-vibracao"
         botoes_da_ponte.append(
-            f'<button class="vaga {k}{" alem" if ligado and alem else ""}" '
-            f'aria-pressed="{str(ligado).lower()}" aria-label="{rotulo} de {nome}" '
+            f'<span class="vaga {k}{" alem" if ligado and alem else ""}" role="img" '
+            f'{"data-ligada " if ligado else ""}'
+            f'aria-label="{rotulo} de {nome}: {"ligado" if ligado else "desligado"}" '
             f'title="{rotulo}: até {round(HZ_DA_PONTE)} por segundo. Pelo BT, som ou '
             f'vibração, um por vez.{passou}" style="flex:{flex}" '
-            f'data-gesto="{gesto}" data-alvo="{aid}">{_ic(ICONE_DO_CUSTO[k])}{hz}</button>')
+            f'data-alvo="{aid}">{_ic(ICONE_DO_CUSTO[k])}{hz}</span>')
     return (
         '<div class="faixa-do-aparelho" style="width:100%">'
         f'<div class="fluxo manda" style="flex:{manda} 1 0" title="O que o controle manda">'
@@ -3548,9 +3533,9 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
         f'{_ic("recebe", "seta")}'
         f'<div class="ponte" style="flex:{_LARGURA_DA_PONTE} 0 0">'
         + "".join(botoes_da_ponte) + '</div>'
-        f'<button class="selo-zero" aria-pressed="{str(bool(ap.get("luz", True))).lower()}" '
-        f'aria-label="Barra de luz de {nome}" title="Barra de luz: não pesa no rádio" '
-        f'data-gesto="custo-luz" data-alvo="{aid}">{_ic("lightbar")}</button>'
+        f'<span class="selo-zero" role="img" {"data-ligada " if ap.get("luz", True) else ""}'
+        f'aria-label="Barra de luz de {nome}: {"ligada" if ap.get("luz", True) else "desligada"}" '
+        f'title="Barra de luz: não pesa no rádio" data-alvo="{aid}">{_ic("lightbar")}</span>'
         '</div></div>')
 
 

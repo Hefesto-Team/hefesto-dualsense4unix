@@ -66,7 +66,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "nova-entrada": "declara uma entrada nova — é da máquina",
     "nova-extensao": "declara uma extensão nova — é da máquina",
     "nova-face": "declara uma face do gabinete — é da máquina",
-    "novo-hub": "declara um hub — é da máquina",
     "sala-altura": "a altura do gabinete no desenho — é da máquina",
     "sala-visada": "a visada do desenho — é da tela",
     "tirar-daqui": "tira uma declaração da máquina",
@@ -153,13 +152,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                          "som em si responde pelas linhas do `rota` e do `volume`",
     "adaptador-renomear": "dá nome ao LUGAR do adaptador no `maquina.json` — é da máquina",
     "aparelho-renomear": "dá nome a um aparelho no BlueZ (`Alias`) — é da máquina",
-    "custo-som": "sem dono no produto (`a08_conexoes.SEM_GESTO`, com a razão): a "
-                 "ponte sobe quando o JOGO manda som, e não há interruptor por "
-                 "controle — o clique não muda nada",
-    "custo-vibracao": "idem ao `custo-som`: a vibração pelo rádio viaja na mesma "
-                      "ponte, e quem a sobe é o jogo",
-    "custo-luz": "sem dono no produto (`a08_conexoes.SEM_GESTO`): a barra de luz "
-                 "não custa rádio que se meça, e o interruptor dela é o da 04",
     "entrada-comecar": "começa o «Mapear Entrada a Entrada» — é da máquina "
                        "(as entradas do gabinete dela)",
     "entrada-face": "grava a face de uma entrada no `maquina.json` — é da máquina",
