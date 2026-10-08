@@ -33,8 +33,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: a contagem de 08/10/2026 (`integra/1-9`, topo `cf4edc0e1`); só desce
-PISO = 524
+#: a contagem de 08/10/2026 (as integrações 1.7 a 1.10 empilhadas, topo `347e971fe`); só desce
+PISO = 523
 
 COMMIT_DO_CORTE = "8002c142c"
 PASTAS = ("src", "tests", "scripts")
