@@ -103,20 +103,20 @@ def _uinput_de_mentira() -> tuple[SimpleNamespace, list[tuple[str, int]]]:
     return modulo, emitidas
 
 
-def _estados(n: int) -> list[ControllerState]:
+def _estados(n: int, transporte: str) -> list[ControllerState]:
     return [
-        ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb")
+        ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport=transporte)
         for _ in range(n)
     ]
 
 
 async def _teclas_do_laco(
-    monkeypatch: pytest.MonkeyPatch, *, agindo: bool, mouse_ligado: bool
+    monkeypatch: pytest.MonkeyPatch, *, agindo: bool, mouse_ligado: bool, transporte: str
 ) -> set[str]:
-    """Roda o ``_poll_loop`` real com Start e o botão da Interna apertados."""
+    """Roda o ``_poll_loop`` real com Start, R1 e o botão da Interna apertados."""
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
     n_ticks = 8
-    fc = FakeController(transport="usb", states=_estados(n_ticks * 6))
+    fc = FakeController(transport=transporte, states=_estados(n_ticks * 6, transporte))
     snap = _Snap()
     snap.buttons_pressed = []
     evdev = MagicMock()
@@ -147,7 +147,7 @@ async def _teclas_do_laco(
         await asyncio.sleep(0.005)
     # O estado do mouse e os botões entram com o laço já vivo, sem abrir o mouse virtual.
     daemon.config.mouse_emulation_enabled = mouse_ligado
-    snap.buttons_pressed = ["options", BOTAO_LIGADO_A_TECLA]
+    snap.buttons_pressed = ["options", "r1", BOTAO_LIGADO_A_TECLA]
     base = daemon.store.counter("poll.tick")
     while daemon.store.counter("poll.tick") < base + n_ticks and time.monotonic() < prazo:
         await asyncio.sleep(0.005)
@@ -157,31 +157,42 @@ async def _teclas_do_laco(
     return {tecla for tecla, valor in emitidas if valor == 1}
 
 
+TRANSPORTES = pytest.mark.parametrize("transporte", ["usb", "bt"])
+
+
 @pytest.mark.asyncio
+@TRANSPORTES
 async def test_2_mouse_desligado_e_interna_agindo_o_start_nao_tecla_super(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, transporte: str
 ) -> None:
-    teclas = await _teclas_do_laco(monkeypatch, agindo=True, mouse_ligado=False)
+    teclas = await _teclas_do_laco(
+        monkeypatch, agindo=True, mouse_ligado=False, transporte=transporte)
     assert "KEY_LEFTMETA" not in teclas, f"o Start guardou e abriu a visão geral: {teclas}"
     assert "KEY_ENTER" not in teclas, f"o botão da Interna virou tecla do perfil: {teclas}"
+    assert "KEY_TAB" not in teclas, f"o R1 saiu como Alt+Tab: {teclas}"
 
 
 @pytest.mark.asyncio
+@TRANSPORTES
 async def test_2_mouse_ligado_e_interna_agindo_o_start_segue_tecla(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, transporte: str
 ) -> None:
-    teclas = await _teclas_do_laco(monkeypatch, agindo=True, mouse_ligado=True)
+    teclas = await _teclas_do_laco(
+        monkeypatch, agindo=True, mouse_ligado=True, transporte=transporte)
     assert {"KEY_LEFTMETA", "KEY_ENTER"} <= teclas, (
         f"quem navega o PC perdeu o Start como tecla: {teclas}")
+    assert "KEY_TAB" not in teclas, f"o R1 saiu como Alt+Tab com a janela na frente: {teclas}"
 
 
 @pytest.mark.asyncio
+@TRANSPORTES
 @pytest.mark.parametrize("mouse_ligado", [False, True])
 async def test_2_interna_parada_nada_sai_do_teclado(
-    monkeypatch: pytest.MonkeyPatch, mouse_ligado: bool
+    monkeypatch: pytest.MonkeyPatch, mouse_ligado: bool, transporte: str
 ) -> None:
-    teclas = await _teclas_do_laco(monkeypatch, agindo=False, mouse_ligado=mouse_ligado)
-    assert {"KEY_LEFTMETA", "KEY_ENTER"} <= teclas, (
+    teclas = await _teclas_do_laco(
+        monkeypatch, agindo=False, mouse_ligado=mouse_ligado, transporte=transporte)
+    assert {"KEY_LEFTMETA", "KEY_ENTER", "KEY_TAB"} <= teclas, (
         f"fora da Interna o teclado mudou: {teclas}")
 
 
