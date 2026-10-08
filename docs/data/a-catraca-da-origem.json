@@ -204,17 +204,17 @@
       "universo": 359
     },
     "tamanho": {
-      "data": "2026-10-07",
+      "data": "2026-10-08",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 954874,
+      "piso": 954891,
       "por_item": {
-        "docs": 58089,
-        "scripts": 103680,
-        "src": 282621,
-        "tests": 510484
+        "docs": 58087,
+        "scripts": 103679,
+        "src": 282634,
+        "tests": 510491
       },
-      "razao": "tamanho: +23745 linhas (931129 -> 954874), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo f678238a10ae",
+      "razao": "tamanho: +17 linhas (954874 -> 954891), pagas por Origem: D-0710-OS-CONTRATOS-DE-FORA-SAO-PORTAO, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 1e31dc621f0b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -263,6 +263,12 @@
           "de": 931129,
           "para": 954874,
           "razao": "tamanho: +23745 linhas (931129 -> 954874), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo f678238a10ae"
+        },
+        {
+          "data": "2026-10-08",
+          "de": 954874,
+          "para": 954891,
+          "razao": "tamanho: +17 linhas (954874 -> 954891), pagas por Origem: D-0710-OS-CONTRATOS-DE-FORA-SAO-PORTAO, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 1e31dc621f0b"
         }
       ],
       "unidade": "linhas",
