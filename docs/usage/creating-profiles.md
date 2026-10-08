@@ -94,7 +94,7 @@ carrega: `Off`, `Rigid`, `SimpleRigid`, `Pulse`, `PulseA`, `PulseB`,
 | `Resistance` | início, força (0 a 8) | `[3, 5]` |
 | `Bow` | início, fim, força, estalo | `[1, 7, 8, 8]` |
 | `Galloping` | início, fim, pé 1, pé 2, frequência | `[0, 9, 7, 7, 10]` |
-| `Machine` | seis valores | `[0, 9, 3, 3, 50, 8]` |
+| `Machine` | início, fim, força (1 a 8), frequência (a Metralhadora; os seis valores antigos ainda abrem, e o que passa da faixa encosta no limite) | `[2, 9, 4, 40]` |
 | `Weapon` | início, fim, força | `[2, 5, 200]` |
 | `Vibration` | posição, amplitude, frequência | `[3, 4, 40]` |
 

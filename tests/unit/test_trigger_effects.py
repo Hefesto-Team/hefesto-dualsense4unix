@@ -143,14 +143,34 @@ class TestGuns:
 
 
 class TestMachine:
-    def test_canonico_6_params_produz_7_forces(self):
-        eff = tfx.machine(0, 9, 3, 3, 50, 8)
-        assert eff.mode == TriggerMode.PULSE_AB
-        assert eff.forces == (0, 9, 3, 3, 50, 8, 0)
+    """A Metralhadora é a vibração da lista oficial (`0x26`), de 08/10/2026."""
 
-    def test_end_menor_rejeita(self):
-        with pytest.raises(ValueError, match="end"):
-            tfx.machine(5, 5, 0, 0, 0, 0)
+    def test_os_padroes_mandam_o_bloco_da_vibracao_oficial(self):
+        eff = tfx.machine(2, 9, 4, 40)
+        assert eff.mode == TriggerMode.VIBRATION
+        assert eff.forces == (0xFC, 0x03, 0xC0, 0xB6, 0x6D, 0x1B, 40)
+
+    def test_e_o_mesmo_bloco_da_vibracao_por_posicao_com_as_zonas_iguais(self):
+        igual = tfx.multi_position_vibration(40, [0, 0, 4, 4, 4, 4, 4, 4, 4, 4])
+        assert tfx.machine(2, 9, 4, 40) == igual
+
+    def test_o_fim_e_incluido_e_o_resto_do_curso_fica_de_fora(self):
+        eff = tfx.machine(1, 3, 8, 20)
+        assert eff.forces[0] | eff.forces[1] << 8 == 0b1110
+        assert eff.forces[6] == 20
+
+    def test_valor_fora_da_faixa_encosta_no_limite_mais_perto(self):
+        assert tfx.machine(0, 9, 255, 255) == tfx.machine(0, 9, 8, 255)
+        assert tfx.machine(0, 9, 0, 0) == tfx.machine(0, 9, 1, 1)
+        assert tfx.machine(9, 99, 4, 40) == tfx.machine(8, 9, 4, 40)
+        assert tfx.machine(-3, 5, 4, 40) == tfx.machine(0, 5, 4, 40)
+
+    def test_fim_que_nao_passa_do_inicio_vira_o_inicio_mais_um(self):
+        assert tfx.machine(5, 5, 4, 40) == tfx.machine(5, 6, 4, 40)
+        assert tfx.machine(7, 2, 4, 40) == tfx.machine(7, 8, 4, 40)
+
+    def test_a_frequencia_nunca_chega_zero_ao_controle(self):
+        assert tfx.machine(2, 9, 4, 0).forces[6] == 1
 
 
 class TestFeedbackEVibration:

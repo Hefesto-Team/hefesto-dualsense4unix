@@ -131,14 +131,12 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "Machine", "Metralhadora",
         params=(
-            _start(0, 9, 0),
-            _end(1, 9, 9),
-            TriggerParamSpec("amp_a", "Amplitude A", 0, 255, 3),
-            TriggerParamSpec("amp_b", "Amplitude B", 0, 255, 3),
-            _frequency(50),
-            TriggerParamSpec("period", "Período", 0, 255, 8),
+            TriggerParamSpec("start", "Início do curso", 0, 8, 2),
+            TriggerParamSpec("end", "Fim do curso", 1, 9, 9),
+            TriggerParamSpec("strength", "Força", 1, 8, 4),
+            _frequency(40, lo=1),
         ),
-        description="Metralhadora com dois picos de amplitude.",
+        description="Batidas rápidas enquanto o gatilho está apertado.",
     ),
     TriggerPresetSpec(
         "Feedback", "Ponto duro",

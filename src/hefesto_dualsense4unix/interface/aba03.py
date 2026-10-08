@@ -87,7 +87,7 @@ CSS = CSS_GLIFO + """
      O QUE ISSO QUEBRAVA: as nove trilhas eram px FIXOS, repetidos em cada uma
      das cinco colunas — e era a igualdade dos números que fazia as cinco
      acabarem no mesmo y. A linha de ajustes valia 4 barras à esquerda e 2 à
-     direita. `Machine` tem SEIS parâmetros e `MultiPositionVibration` tem ONZE:
+     direita. `Galloping` tem CINCO parâmetros e `MultiPositionVibration` tem ONZE:
      numa trilha de 92px, as sete que sobram vazam para fora da célula e caem
      por cima da linha de baixo.
 
@@ -607,13 +607,13 @@ PRONTOS = ["— Nenhum —"] + [rot for chave, rot in FEEDBACK_POSITION_LABELS.i
 MEUS = ["Recuo do MK — pesado no fim", "Freio do carro — trava tardia"]
 
 LITERAL_P1 = {
-    ROT["Machine"]: [("Força", 78, "7"), ("Frequência", 44, "4"),
-                     ("Início do curso", 25, "25"), ("Fim do curso", 90, "230")],
     ROT["Bow"]: [("Força no fim", 66, "6"), ("Início do curso", 15, "15")],
 }
 
 CENA = {
-    "p1": {"esq": (ROT["Machine"], MEUS[0], None),
+    "p1": {"esq": (ROT["Machine"], MEUS[0],
+                   [("Início do curso", 2), ("Fim do curso", 9),
+                    ("Força", 4), ("Frequência", 40)]),
            "dir": (ROT["Bow"], MEUS[0], None)},
     "p2": {"esq": (ROT["SemiAutoGun"], "Trava seca",
                    [("Início", 3), ("Fim", 6), ("Força", 5)]),

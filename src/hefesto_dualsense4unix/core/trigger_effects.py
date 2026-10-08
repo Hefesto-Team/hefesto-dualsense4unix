@@ -270,23 +270,31 @@ def auto_gun(start: int, strength: int, frequency: int) -> TriggerEffect:
     )
 
 
-def machine(
-    start: int, end: int, amp_a: int, amp_b: int, frequency: int, period: int
-) -> TriggerEffect:
-    """Machine gun style. 6 params nomeados, HID usa 7 forces (última zero)."""
-    _check_start_end(start, end)
-    return TriggerEffect(
-        mode=TriggerMode.PULSE_AB,
-        forces=(
-            start,
-            end,
-            _byte(amp_a, name="amp_a"),
-            _byte(amp_b, name="amp_b"),
-            _byte(frequency, name="frequency"),
-            _byte(period, name="period"),
-            0,
-        ),
-    )
+def _encostar(valor: int, lo: int, hi: int) -> int:
+    """O valor dentro da faixa: o que passa dela encosta no limite mais perto."""
+    return max(lo, min(hi, int(valor)))
+
+
+def machine(start: int, end: int, strength: int, frequency: int) -> TriggerEffect:
+    """A Metralhadora: a vibração da lista oficial (`0x26`), que bate enquanto
+    o dedo aperta.
+
+    Do início ao fim do curso (as duas pontas incluídas), todas as zonas levam
+    a mesma força (1 a 8), e a frequência vai no byte que o controle lê, em
+    batidas por segundo (1 a 255; zero é desligado para o controle). O bloco
+    é o mesmo da Vibração por posição com as zonas todas iguais.
+
+    Valor fora da faixa encosta no limite mais perto, sem recusar: é o que um
+    perfil escrito antes da faixa nova pode trazer. Fim que não passa do início
+    vira o início mais um.
+    """
+    inicio = _encostar(start, 0, 8)
+    fim = _encostar(end, 1, 9)
+    if fim <= inicio:
+        fim = inicio + 1
+    forca = _encostar(strength, 1, 8)
+    zonas = {zona: forca for zona in range(inicio, fim + 1)}
+    return _vibracao_oficial(zonas, _encostar(frequency, 1, 255))
 
 
 def feedback(position: int, strength: int) -> TriggerEffect:
@@ -476,6 +484,21 @@ PRESET_FACTORIES = {
 }
 
 
+#: Os seis valores que a Metralhadora guardava antes de 08/10/2026, na ordem:
+#: início, fim, amplitude A, amplitude B, frequência e período.
+_SEIS_DA_METRALHADORA_ANTIGA = 6
+
+
+def _metralhadora_de_seis(valores: list[int]) -> list[int]:
+    """Início, fim, força e frequência a partir dos seis valores antigos.
+
+    A amplitude A vira a força e a frequência fica onde estava; a amplitude B
+    e o período não têm lugar no efeito oficial e saem. Perfil gravado, mod do
+    DSX e linha de comando continuam abrindo a Metralhadora.
+    """
+    return [valores[0], valores[1], valores[2], valores[4]]
+
+
 def _traduzir_params_nomeados(
     name: str, params: dict[str, int]
 ) -> dict[str, object]:
@@ -503,6 +526,11 @@ def _traduzir_params_nomeados(
             ),
             "strengths": strengths,
         }
+    if name == "Machine" and "amp_a" in params:
+        antigo = [int(params.get(k, 0)) for k in
+                  ("start", "end", "amp_a", "amp_b", "frequency", "period")]
+        inicio, fim, forca, frequencia = _metralhadora_de_seis(antigo)
+        return {"start": inicio, "end": fim, "strength": forca, "frequency": frequencia}
     if name == "Custom" and "force_0" in params:
         return {
             "mode": int(params.get("mode", 0)),
@@ -560,6 +588,9 @@ def build_from_name(
     elif name == "Custom" and params:
         flat = cast("list[int]", params)
         result = factory(int(flat[0]), tuple(int(x) for x in flat[1:]))
+    elif name == "Machine" and len(params) == _SEIS_DA_METRALHADORA_ANTIGA:
+        flat = cast("list[int]", params)
+        result = factory(*_metralhadora_de_seis([int(x) for x in flat]))
     else:
         result = factory(*params)
     assert isinstance(result, TriggerEffect)

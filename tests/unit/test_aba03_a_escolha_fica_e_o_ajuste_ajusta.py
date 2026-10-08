@@ -207,9 +207,11 @@ def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
     _clicar("modo", {"lado": "e", "valor": "Machine"}, _Ponte())
     caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
     quantas = caixa.count('type="range"')
-    assert quantas == 6, (
-        f"o modo `Machine` tem seis parâmetros e a caixa trouxe "
-        f"{quantas} alavanca(s):\n{caixa}")
+    assert quantas == 4, (
+        f"o modo `Machine` tem quatro ajustes (início, fim, força e "
+        f"frequência) e a caixa trouxe {quantas} alavanca(s):\n{caixa}")
+    for rotulo in ("Início do curso", "Fim do curso", "Força", "Frequência"):
+        assert rotulo in caixa, f"a caixa da Metralhadora perdeu o ajuste {rotulo!r}"
     assert 'data-gesto="ajuste"' in caixa and 'data-hef-forma="@controle"' in caixa, (
         "a alavanca não pede a coluna — o gesto não saberia em que modo o "
         "gatilho está, e o daemon lê a lista de ajustes INTEIRA")

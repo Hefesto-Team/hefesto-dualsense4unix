@@ -21,10 +21,14 @@ def _efeito_com_os_padroes(nome: str):
     return build_from_name(nome, [p.default for p in spec.params])
 
 
+#: A Metralhadora saiu desta tabela de 01/08 e entrou pela escolha dela de
+#: 08/10/2026 na página dos desenhos (opção b, `ESCOLHAS.md`): a vibração da
+#: lista oficial, que bate enquanto o dedo aperta. Os bytes de 01/08 eram
+#: `26 00 09 03 03 32 08`, com a frequência em zero. A validar na mão dela.
 SENSACAO_APROVADA: dict[str, tuple[int, tuple[int, ...]]] = {
     "Bow": (0x26, (1, 7, 192, 224, 0, 0, 0)),
     "Galloping": (0x26, (0, 9, 7, 7, 10, 0, 0)),
-    "Machine": (0x26, (0, 9, 3, 3, 50, 8, 0)),
+    "Machine": (0x26, (0xFC, 0x03, 0xC0, 0xB6, 0x6D, 0x1B, 40)),
     "SemiAutoGun": (0x26, (3, 6, 160, 0, 0, 0, 0)),
     "AutoGun": (0x26, (2, 192, 60, 0, 0, 0, 0)),
     "Pulse": (0x02, (0, 0, 0, 0, 0, 0, 0)),
@@ -225,3 +229,27 @@ def test_o_raw_funciona_com_o_daemon_parado(monkeypatch) -> None:
     cmd_test.cmd_trigger(side="right", mode="38", params="1,2,3,4,5,6,7", raw=True)
 
     assert len(aplicados) == 1, "com o daemon parado o --raw chega ao hardware"
+
+
+def test_a_metralhadora_antiga_de_seis_valores_continua_abrindo() -> None:
+    """Perfil gravado, mod do DSX e linha de comando mandam os seis valores de
+    antes; a amplitude A vira a força, a frequência fica e o resto sai.
+
+    Mordida: apagar o ramo dos seis valores do `build_from_name`.
+    """
+    esperado = build_from_name("Machine", [0, 9, 3, 50])
+    assert build_from_name("Machine", [0, 9, 3, 3, 50, 8]) == esperado
+    nomeado = {"start": 0, "end": 9, "amp_a": 3, "amp_b": 3, "frequency": 50, "period": 8}
+    assert build_from_name("Machine", nomeado) == esperado
+    # o que passa da faixa nova encosta no limite, sem recusar
+    assert build_from_name("Machine", [1, 8, 200, 150, 20, 10]) == build_from_name(
+        "Machine", [1, 8, 8, 20]
+    )
+
+
+def test_a_metralhadora_da_tela_nao_tem_mais_o_que_o_efeito_nao_le() -> None:
+    """Quatro ajustes (início, fim, força, frequência), com a faixa do efeito."""
+    spec = _SPEC_POR_NOME["Machine"]
+    assert [(p.name, p.min_value, p.max_value) for p in spec.params] == [
+        ("start", 0, 8), ("end", 1, 9), ("strength", 1, 8), ("frequency", 1, 255),
+    ]

@@ -230,10 +230,7 @@ _DISPARO = "O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01"
 _ARCO = "O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01"
 
 ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
-    # a Metralhadora, a Arma automática e a Vibração
-    "Machine": (_METRALHADORA, frozenset({
-        BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
-    })),
+    # a Arma automática e a Vibração (a Metralhadora saiu em 08/10/2026)
     "AutoGun": (_METRALHADORA, frozenset({
         BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
     })),

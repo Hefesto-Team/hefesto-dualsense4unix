@@ -85,7 +85,7 @@ Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mod
 | `galloping(start, end, foot_a, foot_b, frequency)` | 5 | `start (0–8)`, `end (1–9)`, `foot_a (0–7)`, `foot_b (0–7)`, `frequency (0–255)` | `(Pulse_AB, [start, end, foot_a, foot_b, frequency, 0, 0])` |
 | `semi_auto_gun(start, end, force)` | 3 | `start (2–7)`, `end (start+1 .. 8)`, `force (0–8)`                                                | `(Pulse_AB, [start, end, force*32, 0, 0, 0, 0])` |
 | `auto_gun(start, strength, frequency)` | 3 | `start (0–9)`, `strength (0–8)`, `frequency (0–255)`                                          | `(Pulse_AB, [start, strength*32, frequency, 0, 0, 0, 0])` |
-| `machine(start, end, amp_a, amp_b, frequency, period)` | 6 | 6 params; HID usa 7 forces, último sempre 0                                              | `(Pulse_AB, [start, end, amp_a, amp_b, frequency, period, 0])` |
+| `machine(start, end, strength, frequency)` | 4 | `start (0–8)`, `end (1–9, > start)`, `strength (1–8)`, `frequency (1–255)` | `(Vibration 0x26, zonas start..end, força-1 em 3 bits, frequência no byte 9)` |
 | `feedback(position, strength)` | 2     | `position (0–9)`, `strength (0–8)`                                                                   | `(Rigid_B, [position, strength*32, 0, 0, 0, 0, 0])` |
 | `weapon(start, end, force)`    | 3     | `start`, `end`, `force`                                                                              | `(Pulse_B, [start, end, force, 0, 0, 0, 0])` |
 | `vibration(position, amplitude, frequency)` | 3 | `position (0–9)`, `amplitude (0–8)`, `frequency (0–255)`                                     | `(Pulse_A, [position, amplitude*32, frequency, 0, 0, 0, 0])` |
@@ -97,6 +97,7 @@ Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mod
 **Notas:**
 - Multiplicador `*32` nas amplitudes normaliza `0–8` (DSX nomeado) para `0–255` (HID byte). Factories aplicam a conversão internamente; API pública usa os nomes DSX.
 - `multi_position_*` comprime array de 10 valores em bits HID — ver `pack10to7bytes()` em `trigger_effects.py` quando implementado.
+- **Metralhadora (08/10/2026):** é a vibração da lista oficial (`0x26`), a que bate enquanto o dedo aperta: zonas de `start` a `end` (as duas pontas incluídas) com a mesma força, e a frequência no byte 9 (`26 FC 03 C0 B6 6D 1B 00 00 28 00` com os padrões 2, 9, 4 e 40). Valor fora da faixa encosta no limite mais perto, sem recusar. Os seis valores de antes (`start, end, amp_a, amp_b, frequency, period`) ainda abrem: `amp_a` vira a força, a `frequency` fica, e `amp_b` e `period` saem. A Arma automática e a Vibração seguem como estavam.
 - **Rampa de força (08/10/2026):** `slope_feedback(start, end, …)` interpola de `start` a `end` e enche as zonas depois do fim, até a nona, com a força final (máscara `FE 03` com `end = 8`): o fundo do curso não fica sem força.
 - **Vibração por posição (08/10/2026):** a frequência `0` com alguma amplitude maior que zero é recusada (`ValueError`), porque o controle lê o bloco como desligado. O perfil em lista de listas, que não tem onde guardar a frequência, sai com `FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO` (40, o padrão da tela); o dict sem `frequency` também. Frequência explícita, no dict ou no posicional, é mantida. A barra de frequência da aba Gatilhos começa em 1 para este efeito: a tela não oferece o que a fábrica recusa.
 
@@ -118,7 +119,7 @@ Acesso raw via `hefesto-dualsense4unix test trigger --raw --mode Pulse_AB --forc
 
 | Item | Questão original                       | Resposta fechada em V3                                                                      |
 |------|----------------------------------------|---------------------------------------------------------------------------------------------|
-| 1    | Arity de `Machine` (6 vs 7)            | **6 params nomeados** no preset; HID sempre recebe 7 forces, última posição preenchida com 0 |
+| 1    | Arity de `Machine` (6 vs 7)            | **4 params nomeados** desde 08/10/2026 (eram 6); o preset manda a vibração oficial `0x26` |
 | 2    | Ordem dos params de `PulseB`           | `start, end, force` (3 nomeados) → `forces = [start, end, force, 0, 0, 0, 0]`                |
 | 3    | Limite absoluto de `frequency`         | **0–255 aceitos**; saturação de firmware em ~150–160 Hz em modos `Pulse*`                    |
 | 4    | Exposição de `CustomTriggerValue` na CLI | **Exposto via `--raw`** em `hefesto-dualsense4unix test trigger`; presets nomeados continuam o default       |

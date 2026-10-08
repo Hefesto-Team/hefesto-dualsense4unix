@@ -1340,6 +1340,15 @@ SÃO expressáveis.
 > a decisão em 01/08 já disse qual vence — *"as duas temos nomes
 > perfeitos, pq essa é a sensação de usar ambas"*.
 
+> **NOTA DATADA — 08/10/2026: a Metralhadora saiu da tabela de 01/08.** Os bytes
+> aprovados (`26 00 09 03 03 32 08`) tinham a frequência em zero, e o `0x26` lê o
+> bloco com máscara de zonas, força em 3 bits e frequência no byte 9: o que ela
+> sentia era o toque de entrada na zona, não a batida. Por escolha dela na página
+> dos desenhos (opção b), a Metralhadora passou a mandar a vibração oficial com
+> quatro ajustes: `26 FC 03 C0 B6 6D 1B 00 00 28 00` nos padrões (zonas 2 a 9, força
+> 4, 40 por segundo). A Arma automática e a Vibração não mudaram. Falta a mão dela
+> no gatilho.
+
 ### Leitura de estado — recurso que ninguém usa aqui
 
 O **nibble alto** do byte de status de cada gatilho, no report de entrada, diz
