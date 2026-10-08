@@ -147,7 +147,7 @@ class TestBuildFromNameAninhado:
     def test_o_padrao_do_aninhado_e_o_da_tela(self) -> None:
         """Uma só frequência padrão: a do controle da aba Gatilhos.
 
-        Mordida: mudar o `_frequency(40)` da tela, ou a constante, sem o outro.
+        Mordida: mudar o padrão 40 da barra da tela, ou a constante, sem o outro.
         """
         spec = get_spec("MultiPositionVibration")
         assert spec is not None

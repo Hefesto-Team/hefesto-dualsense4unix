@@ -15,7 +15,7 @@ MULTI_POSITION_MAX_STRENGTH = 7
 
 #: A frequência da Vibração por posição quando o perfil não traz a dele (o
 #: formato aninhado não tem onde guardá-la): o padrão do controle da tela, o
-#: `_frequency(40)` de `app/actions/trigger_specs.py`, preso por teste.
+#: `_frequency(40, lo=1)` de `app/actions/trigger_specs.py`, preso por teste.
 FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO = 40
 
 
