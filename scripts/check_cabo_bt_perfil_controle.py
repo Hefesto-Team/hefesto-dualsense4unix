@@ -169,6 +169,10 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "entrada-parar": "fecha a cerimônia — é da tela",
     "receptor-descobrir": "descobre a faixa do receptor 2.4G por eliminação e a grava no "
                           "`maquina.json` — é da máquina",
+    "externo-cor": "declara a cor do plástico do controle externo — é a declaração "
+                   "dela no `maquina.json` (`ControleDeclarado.cor`), e nada muda no "
+                   "aparelho; o `externo-modo` e o `externo-botoes` são irmãos, e só "
+                   "a cor aparece na página publicada (no CSS da lista)",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
