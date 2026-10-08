@@ -24,6 +24,14 @@
 # SCM_RIGHTS (`hidraw_broker_fd_recebido`) e abre o handle de controle dentro
 # de uma exposição pedida ao broker.
 #
+# O FECHADO É O REPOUSO DE QUEM TEM HEFESTO DE PÉ, não de quem o desligou
+# (DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, 08/10/2026). Estas linhas
+# só agem no NASCIMENTO do nó; quem o devolve é o broker: sem nenhum cliente por
+# 30 s (`GRACA_DA_ENTREGA_S`, mais que o pior reinício do daemon medido), ele dá
+# ao físico a ACL da sessão (`entregar_ao_linux`), e o primeiro `hide`/`expose`
+# de um Hefesto que volta fecha tudo de novo. Nenhuma linha daqui muda por isso:
+# o nascimento fechado continua sendo o que segura a Steam na janela do boot.
+#
 # POR QUE O NOME É `73-hefesto-…` (25/09/2026, a sprint
 # O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01). O udev ordena as regras de
 # /etc, /run, /usr/local/lib e /usr/lib JUNTAS, pelo nome do arquivo (o de /etc

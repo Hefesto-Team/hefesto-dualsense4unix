@@ -125,6 +125,22 @@ _INPUT_ID_FMT = "=HHHH"
 REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
 REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
+#: DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 (08/10/2026). Quanto o
+#: broker espera, sem NENHUM cliente, antes de entregar o físico ao sistema.
+#: Um reinício do daemon leva até 15 s entre o último EOF e o primeiro pedido
+#: (medido no diário de 05 a 08/10: 1, 2, 6, 9 e 15 s; os outros intervalos
+#: foram 124 s ou mais, que são parada de verdade), e entregar nesse vão
+#: reabriria a janela que a regra 73 fecha. O dobro do pior reinício medido.
+GRACA_DA_ENTREGA_S = 30.0
+#: ``0`` desliga a entrega (o comportamento de antes: sem daemon, o físico fica
+#: fechado até alguém pedir ao broker).
+GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
+#: Os pedidos que dizem «o Hefesto voltou»: esconder ou expor um físico, ou
+#: montar o pad dele. ``open`` NÃO entra: o exame da aba Conexões (outro
+#: processo, sem daemon) o usa só para ler, e fechar o físico por causa dele
+#: desfaria a entrega que o usuário pediu ao parar o serviço.
+PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
+
 _HIDIOCGRAWINFO = 0x80084803
 _HIDRAW_DEVINFO_FMT = "=Ihh"
 
@@ -1248,6 +1264,9 @@ class BrokerState:
         #: {conexão: {gadget: porta do vhci}} — a lease do pad em USB.
         self.pads_by_conn: dict[int, dict[str, int]] = {}
         self._serial_do_gadget: dict[str, str] = {}
+        #: O físico foi ENTREGUE ao sistema (ver :meth:`entregar_ao_linux`) e
+        #: nenhum pedido do Hefesto o recolheu ainda.
+        self.entregue = False
 
 
     def _validate(self, node: str) -> str | None:
@@ -1402,6 +1421,8 @@ class BrokerState:
             return ({"ok": False, "error": "reject_malformed"}, None)
         cmd = request.get("cmd")
         self._podar_o_que_saiu(exceto=self._nomes_que_o_pedido_solta(conn_id, cmd, request))
+        if self.entregue and cmd in PEDIDOS_QUE_RETOMAM:
+            self.retomar_o_esconderijo()
         if cmd == "ping":
             return ({"ok": True, "cmd": "ping", "peer_uid": peer_uid}, None)
         if cmd == "status":
@@ -1415,6 +1436,7 @@ class BrokerState:
                         {no for held in self.entradas_by_conn.values() for no in held}
                     ),
                     "no_nasce_fechado": self.no_nasce_fechado,
+                    "entregue": self.entregue,
                 },
                 None,
             )
@@ -1905,6 +1927,84 @@ class BrokerState:
             self._log("lease_restore_parcial", conn=conn_id, failed=",".join(failed))
         return restored
 
+    def _alguem_segura_um_no(self) -> bool:
+        """Alguma conexão viva tem lease de esconder, de expor ou de entrada?"""
+        return any(
+            held
+            for mapa in (self.by_conn, self.expostos_by_conn, self.entradas_by_conn)
+            for held in mapa.values()
+        )
+
+    def entregar_ao_linux(self) -> list[str]:
+        """Sem Hefesto, o físico volta a ser do sistema: o que a sessão teria sem ele.
+
+        DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 (08/10/2026). Com a
+        regra 73 o nó nasce ``0600 root`` e o ``_repouso`` o devolve a esse
+        estado quando o último cliente sai: o fechado é o repouso de QUEM TEM
+        Hefesto de pé. Parar o serviço (a aba Sistema, o tray, o ``systemctl``)
+        deixava o controle fechado para todo programa da sessão, o contrário do
+        que quem para o Hefesto espera.
+
+        Quem chama é o laço do :class:`Broker`, depois de :data:`GRACA_DA_ENTREGA_S`
+        sem NENHUMA conexão. Varre ``/sys/class/hidraw`` e abre (ACL do uid da
+        sessão, ``0660``) todo DualSense físico e os nós de entrada dele — não só
+        os que alguma lease já tocou, e por isso vale para cabo e rádio, de P1 a
+        P4 e o Edge. O que o validador não aceita (o pad do Hefesto, os
+        externos) nem é tocado: os externos o Hefesto prende pelo ``EVIOCGRAB``,
+        que o kernel solta com o fim do processo. Idempotente: roda de novo a
+        cada volta do laço enquanto :attr:`entregue`, e é isso que entrega o
+        controle que conecta DEPOIS (o nó nasce fechado, e o próximo passo o abre).
+
+        Sem a cura instalada (``no_nasce_fechado`` falso) o nó já nasce aberto e
+        não há o que entregar.
+        """
+        if not self.no_nasce_fechado or self._alguem_segura_um_no():
+            return []
+        # Sem cliente, o que ainda consta é lease órfã de restore que falhou:
+        # entregar é o restore que faltou.
+        antes = set(self.hidden) | set(self.expostos)
+        entregues = restore_all_physical(
+            uid=self.allowed_uid,
+            ops=self._ops,
+            dev_root=self._dev_root,
+            sys_class_hidraw=self._sys_class_hidraw,
+            sys_class_bluetooth=self._sys_class_bluetooth,
+            validator=self._validate,
+            log=self._log,
+        )
+        self.hidden.clear()
+        self.expostos.clear()
+        if not self.entregue:
+            self.entregue = True
+            self._log(
+                "fisico_entregue_ao_sistema",
+                nodes=",".join(sorted(set(entregues) | antes)) or "-",
+            )
+        elif entregues:
+            self._log("fisico_novo_entregue_ao_sistema", nodes=",".join(entregues))
+        return entregues
+
+    def retomar_o_esconderijo(self) -> list[str]:
+        """O Hefesto voltou: fecha de novo (``0600 root``) o que a entrega abriu.
+
+        Corre ANTES do pedido que o anunciou (``hide``/``expose``/``pad_usb_montar``),
+        que então age sobre um físico já no repouso, como num boot. Nó que a
+        Steam abriu enquanto estava entregue segue aberto no descritor dela:
+        tirar a ACL não fecha fd aberto, e é o preço de ter parado o Hefesto.
+        """
+        fechados = fechar_todo_fisico(
+            uid=self.allowed_uid,
+            ops=self._ops,
+            dev_root=self._dev_root,
+            sys_class_hidraw=self._sys_class_hidraw,
+            sys_class_bluetooth=self._sys_class_bluetooth,
+            validator=self._validate,
+            log=self._log,
+        )
+        self.entregue = False
+        self._log("entrega_desfeita", nodes=",".join(fechados) or "-")
+        return fechados
+
     def restore_everything(self) -> list[str]:
         """Belt do shutdown do broker: restaura TODO nó ainda escondido."""
         restored: list[str] = []
@@ -2123,10 +2223,19 @@ class Broker:
         *,
         peercred_fn: Callable[[socket.socket], tuple[int, int, int]] = peer_credentials,
         log: Callable[..., None] = _log,
+        graca_da_entrega_s: float = GRACA_DA_ENTREGA_S,
+        relogio: Callable[[], float] = time.monotonic,
     ) -> None:
         self._state = state
         self._peercred_fn = peercred_fn
         self._log = log
+        #: Segundos sem cliente até entregar o físico ao sistema; ``<= 0`` desliga.
+        self._graca_da_entrega_s = graca_da_entrega_s
+        self._relogio = relogio
+        #: Desde quando NÃO há conexão nenhuma (``None`` = há, ou nunca houve; a
+        #: conexão nova o zera e o fechamento da última o marca).
+        self._sem_cliente_desde: float | None = None
+        self._ultima_entrega: float = 0.0
         self._sel = selectors.DefaultSelector()
         self._listen = listen_sock
         self._next_conn_id = 1
@@ -2154,6 +2263,7 @@ class Broker:
         self._sel.register(sock, selectors.EVENT_READ, ("conn", conn_id))
         self._buffers[conn_id] = bytearray()
         self._peer_uids[conn_id] = uid
+        self._sem_cliente_desde = None
         self._log("peer_accepted", conn=conn_id, peer_uid=uid, peer_pid=pid)
         return conn_id
 
@@ -2172,10 +2282,34 @@ class Broker:
             else:
                 self._service(sock, conn_id)
 
+    def tique_da_entrega(self) -> None:
+        """Entrega o físico ao sistema quando o Hefesto sumiu; vigia o que chega depois.
+
+        Sem nenhuma conexão por :attr:`_graca_da_entrega_s`, o Hefesto está
+        parado de verdade (um reinício volta antes disso) e o físico, que a
+        regra 73 faz nascer fechado, passa a ser do sistema. Entregue, a
+        varredura repete uma vez por segundo, para o controle que conecta depois.
+        """
+        state = self._state
+        if self._graca_da_entrega_s <= 0:
+            return
+        agora = self._relogio()
+        if state.entregue:
+            if agora - self._ultima_entrega >= 1.0:
+                self._ultima_entrega = agora
+                state.entregar_ao_linux()
+            return
+        if self._sem_cliente_desde is None:
+            return
+        if agora - self._sem_cliente_desde >= self._graca_da_entrega_s:
+            self._ultima_entrega = agora
+            state.entregar_ao_linux()
+
     def run(self) -> None:
         try:
             while not self.stopping:
                 self.step(timeout=1.0)
+                self.tique_da_entrega()
         finally:
             restored = self._state.restore_everything()
             if restored:
@@ -2242,6 +2376,8 @@ class Broker:
         self._buffers.pop(conn_id, None)
         self._peer_uids.pop(conn_id, None)
         self._state.on_conn_closed(conn_id)
+        if not self._peer_uids:
+            self._sem_cliente_desde = self._relogio()
         self._log("peer_closed", conn=conn_id)
 
 
@@ -2299,6 +2435,18 @@ def _parse_allowed_uid_from_unit(unit_path: str) -> int | None:
     if match is None:
         return None
     return int(match.group(1))
+
+
+def _graca_da_entrega_do_ambiente() -> float:
+    """A graça da entrega: a env, se for um número; senão a medida."""
+    bruto = os.environ.get(GRACA_DA_ENTREGA_ENV, "").strip()
+    if not bruto:
+        return GRACA_DA_ENTREGA_S
+    try:
+        return float(bruto)
+    except ValueError:
+        _log("graca_da_entrega_invalida", valor=bruto)
+        return GRACA_DA_ENTREGA_S
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -2393,7 +2541,7 @@ def main(argv: list[str] | None = None) -> int:
         _log("listening_manual", path=args.socket_path)
 
     state = BrokerState(allowed_uid=allowed_uid, no_nasce_fechado=no_nasce_fechado)
-    broker = Broker(state, listen)
+    broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
 
     def _stop(_signum: int, _frame: object) -> None:
         broker.stopping = True
@@ -2402,7 +2550,12 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGINT, _stop)
 
     _sd_notify("READY=1")
-    _log("ready", allowed_uid=allowed_uid, no_nasce_fechado=no_nasce_fechado)
+    _log(
+        "ready",
+        allowed_uid=allowed_uid,
+        no_nasce_fechado=no_nasce_fechado,
+        graca_da_entrega_s=broker._graca_da_entrega_s,
+    )
     broker.run()
     return 0
 
