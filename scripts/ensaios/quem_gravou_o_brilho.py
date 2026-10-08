@@ -440,10 +440,10 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
                 f"{nome} ({n})" for nome, n in gestos) + ".")
             chegada = [g for g in nele if m.ate.hora <= g.hora <= m.ate.hora + folga]
             if chegada and not m.ate.rotulo.startswith("histórico"):
-                g = chegada[0]
+                escrita = chegada[0]
                 saida.append(
-                    f"    a cópia de chegada tem a hora da gravação de {_h(g.hora)}, "
-                    f"pelo gesto «{g.gesto}»: o arquivo dela é o que esse gesto "
+                    f"    a cópia de chegada tem a hora da gravação de {_h(escrita.hora)}, "
+                    f"pelo gesto «{escrita.gesto}»: o arquivo dela é o que esse gesto "
                     "gravou (o valor pode já estar no perfil antes dele).")
             monta, grava = trilho
             onde = (f" (a04_iluminacao.py:{monta} monta, :{grava} grava, no código "
@@ -469,9 +469,9 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
                         f"o «Salvar» ({salvar}), que regrava o perfil inteiro: até "
                         "28/09/2026 (a5da60f3d) com o que estava valendo, e não com o "
                         "disco (a família da O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01)")
-                outros = len(nele) - no_trilho - salvar
-                if outros:
-                    candidatos.append(f"{outros} gravação(ões) de outros gestos")
+                de_outros = len(nele) - no_trilho - salvar
+                if de_outros:
+                    candidatos.append(f"{de_outros} gravação(ões) de outros gestos")
                 saida.append(
                     "    CANDIDATOS (todas as gravações são `interface-nova` e o valor "
                     f"é percentual inteiro, {_num(m.para)}): " + "; ".join(candidatos)
