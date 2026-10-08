@@ -1,6 +1,5 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
-import marca_da_camada as _marca
 import onde
 from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    MESA, CONECTADOS,
@@ -1561,10 +1560,6 @@ def sensores_da_peca(c, virtual=False):
           </span>'''
 
 
-MARCAS_DO_CARTAO = _marca.bloco("sensores")
-MARCA_DO_SOM = _marca.bloco("som")
-
-
 def identidade(c, *, bat, carga=None, meio="", virtual=False):
     """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
 
@@ -1712,7 +1707,6 @@ def identidade(c, *, bat, carga=None, meio="", virtual=False):
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="{GIRO_NO_JOGO_DO_DESENHO}"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
-          {MARCAS_DO_CARTAO}
 {sensores_da_peca(c, virtual)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -2205,7 +2199,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    falso nos doze). Conferir que os botões EXISTEM não prova que um
                    deles ACENDE. Este comentário não traz chaves: dentro da
                    f-string elas quebram o gerador. -->
-              {MARCA_DO_SOM}
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
@@ -2794,14 +2787,6 @@ CSS += f"""
      parágrafo acima já a aplicava a si mesmo. */
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"]{{
     border-color:var(--green);color:var(--green)}}
-"""
-
-CSS += _marca.CSS + f"""
-  .faixa > .camada{{display:none}}
-  {_aberto(" .faixa > .camada")}{{display:inline-flex;flex:0 1 auto;min-width:0;
-    margin-left:auto}}
-  {_aberto(" .faixa > .camada + .sensores-peca")}{{margin-left:0}}
-  .rot-linha > .camada{{min-width:0;flex:0 1 auto;margin-left:auto;font-weight:400}}
 """
 
 MIOLO = f'''

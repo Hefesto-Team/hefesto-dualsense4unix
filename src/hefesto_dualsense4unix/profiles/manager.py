@@ -1912,16 +1912,16 @@ def gravar_a_navegacao_no_perfil_ativo(
     mudou: dict[str, Any] = {}
     if profile.mouse is None or profile.mouse.model_dump() != mouse.model_dump():
         mudou["mouse"] = mouse
-    # O TECLADO É DO COMPUTADOR (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
+    # O STATUS DO MODO NÃO ESCOLHE O TECLADO DO JOGO (O-ESCOPO-SAI-DAS-ABAS-01):
     # vai ao perfil só quando ele já sobrepõe o cartão do teclado; nos outros
+    # casos vai ao computador, para o jogo não ganhar uma escolha que ela não fez.
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
-    if opc.onde_grava("teclado", profile) == opc.JOGO:
+    if opc.sobrepoe(profile, "teclado"):
         if profile.teclado_emulado is not bool(ligado):
             mudou["teclado_emulado"] = bool(ligado)
     elif opc.o_computador().global_.teclado_emulado is not bool(ligado):
-        opc.gravar("teclado", {"teclado_emulado": bool(ligado)}, perfil_ativo=nome,
-                   origem=porta)
+        opc.gravar("teclado", {"teclado_emulado": bool(ligado)}, origem=porta)
     if not mudou:
         return profile
     novo = profile.model_copy(update=mudou)

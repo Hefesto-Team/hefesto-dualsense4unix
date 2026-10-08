@@ -629,8 +629,10 @@ class TestOMetodoQueGrava:
 
         _grava_ipc(h, uniq=BRANCO, forte_pct=100)
 
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
-        assert dele.rumble is None
+        # O jogo guarda só o que mudou (D-0610-O-ESCOPO-SAI-DAS-ABAS): sem a seção
+        # `rumble`, a entrada do controle fica vazia e some do disco com ela.
+        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
+        assert dele is None or dele.rumble is None
 
     def test_nada_mudou_nao_regrava(self, perfis: Path) -> None:
         """Regravar perfil idêntico troca a data do arquivo e o daemon reaplica."""

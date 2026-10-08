@@ -84,7 +84,6 @@ ESCREVEM = {
     "_gravar_a_forca",
     "_gravar_so_o_gatilho",
     "gravar_pelo_gesto",
-    "so_neste_jogo",
     "voltar_ao_do_computador",
     "voltar_o_computador_ao_de_fabrica",
     "salvar_perfil",

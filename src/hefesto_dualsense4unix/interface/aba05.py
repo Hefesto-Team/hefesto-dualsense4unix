@@ -13,7 +13,6 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (  # noqa: E402
     MESA, cor_da_zona, glifo, monta, svg,
 )
-import marca_da_camada as _marca  # noqa: E402
 
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
     RUMBLE_POLICY_MULT,
@@ -1278,7 +1277,6 @@ def _coluna(c, e=None, conectado=None):
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
-            {_marca.bloco("vibracao")}
           </div>'''
 
 
@@ -1493,14 +1491,6 @@ LEGENDA = f'''<div class="nota">
 </body>
 </html>
 '''
-
-CSS += _marca.CSS + """
-  .vib .ctrl{position:relative}
-  .vib .ctrl > .camada{position:absolute;top:-8px;left:18px;z-index:1;
-    padding:0 5px;background:var(--panel);max-width:calc(100% - 30px)}
-  .vib .ctrl > .camada::before{content:none}
-"""
-
 
 CSS_DAS_MEDIDAS = f"""
   .vib{{

@@ -5,7 +5,6 @@ from itertools import cycle
 from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, player_slot_color, tom_da_casa)
 from pacotes import a04_iluminacao as _pacote04
-import marca_da_camada as _marca
 
 #
 
@@ -1246,7 +1245,6 @@ def coluna(c):
                  mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">{VAZIO}</span>
           </div>
-          {_marca.bloco("luz")}
         </div>'''
 
 # dela: *"ainda temos 3 cantos falando sobre o automatico"*.  # noqa-acento: citação literal
@@ -1722,14 +1720,6 @@ def _conferir(doc):
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
-
-
-CSS += _marca.CSS + """
-  .luz-grade .ctrl{position:relative}
-  .luz-grade .ctrl > .camada{position:absolute;top:-8px;left:22px;z-index:1;
-    padding:0 5px;background:var(--panel);max-width:calc(100% - 34px)}
-  .luz-grade .ctrl > .camada::before{content:none}
-"""
 
 
 CSS += monta_.CSS_DO_PAR_DE_MODOS + f"""

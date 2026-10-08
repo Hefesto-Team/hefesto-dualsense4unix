@@ -245,9 +245,6 @@ def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
     if fn is None:
         return None
     fora = fn(ctx)
-    from .camada import com_a_camada
-
-    fora = com_a_camada(pagina, ctx, fora)
     molde = molde_do_lugar(pagina, ctx, fora)
     if not molde:
         return fora

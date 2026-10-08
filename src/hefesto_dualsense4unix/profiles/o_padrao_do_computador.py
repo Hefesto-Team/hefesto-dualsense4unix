@@ -91,14 +91,6 @@ COMPUTADOR = "computador"
 JOGO = "jogo"
 
 
-class OFreestyleNaoSobrepoeError(RuntimeError):
-    """«Só neste jogo» pedido com o Freestyle: ele não sobrepõe nada."""
-
-
-class OJogoNaoTeriaOQueGuardarError(RuntimeError):
-    """«Só neste jogo» que não daria ao jogo escolha nenhuma naquele cartão."""
-
-
 def chave(endereco: object) -> str | None:
     """A identidade de um controle (doze hex minúsculos), ou ``None``."""
     from hefesto_dualsense4unix.utils.maquina import chave_do_controle
@@ -408,21 +400,34 @@ _GLOBAIS_DO_COMPUTADOR: frozenset[str] = frozenset(
 
 def _no_perfil(perfil: Profile, campos: Mapping[str, Any], uniq: object,
                origem: str | None) -> None:
+    """Os ``campos`` de UM lugar (o global, ou o controle ``uniq``) no perfil do jogo."""
+    por_controle: dict[str, dict[str, Any]] = {}
+    if uniq is not None:
+        por_controle = {chave(uniq) or str(uniq): dict(campos)}
+    _no_perfil_so_o_que_mudou(perfil, dict(campos) if uniq is None else {}, por_controle,
+                              origem)
+
+
+def _no_perfil_so_o_que_mudou(perfil: Profile, globais: Mapping[str, Any],
+                              por_controle: Mapping[str, Mapping[str, Any]],
+                              origem: str | None) -> None:
+    """Só o que mudou vai ao perfil do jogo; o resto do cartão segue vindo do computador."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
     cru = perfil.model_dump(mode="json", exclude_unset=True)
-    if uniq is None:
-        _remendar(cru, campos)
-    else:
-        identidade = chave(uniq)
+    if globais:
+        _remendar(cru, globais)
+    if por_controle:
         controles = dict(cru.get("controllers") or {})
-        original = _entradas_por_chave(controles).get(identidade or "", identidade or str(uniq))
-        entrada = dict(controles.get(original) or {})
-        _remendar(entrada, campos)
-        if entrada:
-            controles[original] = entrada
-        else:
-            controles.pop(original, None)
+        existentes = _entradas_por_chave(controles)
+        for identidade, secoes in por_controle.items():
+            original = existentes.get(identidade, identidade)
+            entrada = dict(controles.get(original) or {})
+            _remendar(entrada, secoes)
+            if entrada:
+                controles[original] = entrada
+            else:
+                controles.pop(original, None)
         cru["controllers"] = controles or None
     save_profile(Profile.model_validate(cru), origem=origem or "computador-ou-jogo")
 
@@ -438,18 +443,18 @@ def _carregar_cru(nome: str | None) -> Profile | None:
         return None
 
 
-def onde_grava(cartao: str, perfil: Profile | None, uniq: object = None, *,
-               so_neste_jogo: bool = False) -> str:
-    """``"jogo"`` ou ``"computador"``: onde um clique neste cartão grava."""
+def onde_grava(cartao: str, perfil: Profile | None) -> str:
+    """``"jogo"`` ou ``"computador"``: onde um clique neste cartão grava.
+
+    O que se muda vale para o PERFIL ATIVO (D-0610-O-ESCOPO-SAI-DAS-ABAS): o do
+    jogo aberto; sem jogo (nenhum perfil, ou o Freestyle, que não sobrepõe
+    nada), o do computador. Não há mais escopo para escolher na tela.
+    """
     if cartao not in SECOES:
         raise KeyError(f"{cartao!r} não é um cartão do computador")
-    if so_neste_jogo:
-        if perfil is None:
-            raise ValueError("«Só neste jogo» sem perfil ativo")
-        if e_o_freestyle(perfil.name):
-            raise OFreestyleNaoSobrepoeError("o Freestyle não sobrepõe nada")
-        return JOGO
-    return JOGO if sobrepoe(perfil, cartao, uniq) else COMPUTADOR
+    if perfil is None or e_o_freestyle(perfil.name):
+        return COMPUTADOR
+    return JOGO
 
 
 def gravar(
@@ -458,12 +463,11 @@ def gravar(
     *,
     uniq: object = None,
     perfil_ativo: str | None = None,
-    so_neste_jogo: bool = False,
     origem: str | None = None,
 ) -> str:
     """O único escritor de um cartão do computador. Devolve onde gravou."""
     perfil = _carregar_cru(perfil_ativo)
-    onde = onde_grava(cartao, perfil, uniq, so_neste_jogo=so_neste_jogo)
+    onde = onde_grava(cartao, perfil)
     campos = _com_os_pares(campos)
     if onde == JOGO and perfil is not None:
         _no_perfil(perfil, campos, uniq, origem)
@@ -473,10 +477,23 @@ def gravar(
     return onde
 
 
+#: «Nada mudou» numa seção que não é modelo. Não pode ser ``{}``, ``False`` nem
+#: ``0``: o ``teclado_emulado`` desligado e uma lista de teclas vazia são
+#: mudanças de verdade, e um valor «falso» lido como «igual» as perdia no gravar.
+_IGUAL: Any = object()
+
+
+def _houve_mudanca(secao: str, mudou: Any) -> bool:
+    """``mudou`` (a volta de ``_diferenca_de_secao``) traz algo a gravar?"""
+    if mudou is _IGUAL:
+        return False
+    return mudou is None or secao not in _MODELOS or bool(mudou)
+
+
 def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
-    """O que mudou numa seção: ``{campo: valor}``, ``None`` (tirada) ou ``{}``."""
+    """O que mudou numa seção: ``{campo: valor}``, ``None`` (tirada), ``{}`` ou ``_IGUAL``."""
     if secao not in _MODELOS:
-        return depois if antes != depois else {}
+        return depois if antes != depois else _IGUAL
     if depois is None:
         return None if antes is not None else {}
     novo = depois.model_dump(mode="json", exclude_unset=True)
@@ -507,7 +524,7 @@ def o_que_mudou(
         for secao in secao_do_cartao.globais:
             mudou = _diferenca_de_secao(
                 secao, getattr(antes, secao, None), getattr(depois, secao, None))
-            if mudou is None or mudou:
+            if _houve_mudanca(secao, mudou):
                 globais[secao] = mudou
     por_controle: dict[str, dict[str, Any]] = {}
     velhos = _entradas_por_chave(antes.controllers)
@@ -524,7 +541,7 @@ def o_que_mudou(
                 getattr(entrada_antes, secao, None) if entrada_antes is not None else None,
                 getattr(entrada_depois, secao, None) if entrada_depois is not None else None,
             )
-            if mudou is None or mudou:
+            if _houve_mudanca(secao, mudou):
                 por_controle.setdefault(identidade, {})[secao] = mudou
     return globais, por_controle
 
@@ -540,28 +557,32 @@ def gravar_pelo_gesto(
     muda: Callable[[Profile], Profile | None],
     *,
     uniq: object = None,
-    so_neste_jogo: bool = False,
     origem: str | None = None,
 ) -> tuple[str, Profile | None]:
-    """O gesto de um cartão, gravado onde a marca do cartão diz."""
+    """O gesto de um cartão, gravado no perfil ativo (o do jogo, ou o do computador).
+
+    O gesto roda sobre o que VALE (o perfil com o computador por baixo) e só a
+    diferença é gravada, onde ``onde_grava`` manda: o jogo não copia o cartão
+    inteiro, guarda o campo que mudou.
+    """
     from hefesto_dualsense4unix.profiles import loader
 
     cru = loader.load_profile(nome) if nome else None
-    onde = onde_grava(cartao, cru, uniq, so_neste_jogo=so_neste_jogo)
-    if onde == JOGO and cru is not None:
-        novo = muda(cru)
-        if novo is not None:
-            loader.save_profile(novo, origem=origem or "computador-ou-jogo")
-    else:
-        vista = perfil_que_vale(cru if cru is not None else perfil_vazio(), o_computador())
-        novo = muda(vista)
-        if novo is not None:
-            globais, por_controle = o_que_mudou(cartao, vista, novo, uniq)
+    onde = onde_grava(cartao, cru)
+    vista = perfil_que_vale(cru if cru is not None else perfil_vazio(), o_computador())
+    novo = muda(vista)
+    if novo is not None:
+        globais, por_controle = o_que_mudou(cartao, vista, novo, uniq)
+        if onde == JOGO and cru is not None:
+            if globais or por_controle:
+                _no_perfil_so_o_que_mudou(
+                    cru, _com_os_pares(globais),
+                    {i: _com_os_pares(sec) for i, sec in por_controle.items()}, origem)
+        else:
             if globais:
                 _no_computador(_com_os_pares(globais), None)
             for identidade, secoes in por_controle.items():
                 _no_computador(_com_os_pares(secoes), identidade)
-    if novo is not None:
         logger.info("cartao_gravado", cartao=cartao, onde=onde, perfil=nome)
     return onde, novo
 
@@ -889,114 +910,6 @@ def _identidades(perfil: Profile, uniq: object) -> list[str]:
     return sorted(_entradas_por_chave(perfil.controllers))
 
 
-_DE_FABRICA_NO_CONTROLE: dict[str, dict[str, Any]] = {
-    "sensores": {"giroscopio": True, "acelerometro": True},
-}
-
-
-def _o_que_vale_no_controle_sem_entrada(vista: Profile, nome: str) -> dict[str, Any]:
-    """A seção ``nome`` de um controle sem entrada própria, na forma da seção por controle."""
-    from pydantic import BaseModel
-
-    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
-
-    if nome == "mic":
-        return {}
-    global_ = getattr(vista, nome, None)
-    if isinstance(global_, BaseModel):
-        anotacao = ControllerOverrides.model_fields[nome].annotation
-        campos = {c for a in getattr(anotacao, "__args__", (anotacao,))
-                  if isinstance(a, type) and issubclass(a, BaseModel)
-                  for c in a.model_fields}
-        return {k: v for k, v in global_.model_dump(mode="json").items()
-                if k in campos and v is not None}
-    return dict(_DE_FABRICA_NO_CONTROLE.get(nome, {}))
-
-
-def perfil_so_neste_jogo(
-    cartao: str,
-    uniq: object,
-    cru_perfil: Profile,
-    computador: Any,
-    vivos: Mapping[str, Any] | None = None,
-) -> Profile:
-    """O perfil depois do «Só neste jogo», em memória: o disco não muda."""
-    vista = perfil_que_vale(cru_perfil, computador)
-    secao = SECOES[cartao]
-    vivos = vivos or {}
-    cru = cru_perfil.model_dump(mode="json", exclude_unset=True)
-    if uniq is None:
-        for nome in secao.globais:
-            valor = getattr(vista, nome, None)
-            if valor is not None:
-                cru[nome] = valor.model_dump(mode="json") if nome in _MODELOS else valor
-            elif nome in vivos and vivos[nome] is not None:
-                cru[nome] = vivos[nome]
-    identidades = _identidades(vista, uniq)
-    if uniq is None:
-        identidades = sorted(set(identidades) | set(computador.controles))
-    if secao.por_controle and identidades:
-        controles = dict(cru.get("controllers") or {})
-        originais = _entradas_por_chave(controles)
-        vistos = _entradas_por_chave(vista.controllers)
-        for identidade in identidades:
-            entrada_vista = (vista.controllers or {}).get(vistos.get(identidade, ""))
-            original = originais.get(identidade, identidade)
-            entrada = dict(controles.get(original) or {})
-            for nome in secao.por_controle:
-                valor = getattr(entrada_vista, nome, None) if entrada_vista else None
-                if valor is not None:
-                    entrada[nome] = valor.model_dump(mode="json", exclude_unset=True)
-                elif uniq is not None and nome not in entrada:
-                    copia = (_o_que_vale_no_controle_sem_entrada(vista, nome)
-                             or dict(vivos.get(nome) or {}))
-                    if copia:
-                        entrada[nome] = copia
-            if entrada:
-                controles[original] = entrada
-        cru["controllers"] = controles or None
-    return Profile.model_validate(cru)
-
-
-def pode_so_neste_jogo(
-    cartao: str,
-    uniq: object,
-    cru_perfil: Profile | None,
-    computador: Any = None,
-    vivos: Mapping[str, Any] | None = None,
-) -> bool:
-    """O «Só neste jogo» daria ao jogo escolha própria neste cartão?"""
-    if cru_perfil is None or e_o_freestyle(cru_perfil.name):
-        return False
-    try:
-        novo = perfil_so_neste_jogo(
-            cartao, uniq, cru_perfil,
-            computador if computador is not None else o_computador(), vivos)
-    except Exception:
-        return False
-    return sobrepoe(novo, cartao, uniq)
-
-
-def so_neste_jogo(
-    cartao: str, uniq: object, perfil: str, vivos: Mapping[str, Any] | None = None
-) -> Profile:
-    """Copia para o perfil o que vale agora no cartão. Daí em diante, o jogo manda."""
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-
-    if e_o_freestyle(perfil):
-        raise OFreestyleNaoSobrepoeError("o Freestyle não sobrepõe nada")
-    from hefesto_dualsense4unix.profiles import loader
-
-    novo = perfil_so_neste_jogo(cartao, uniq, loader.load_profile(perfil), o_computador(),
-                                vivos)
-    if not sobrepoe(novo, cartao, uniq):
-        raise OJogoNaoTeriaOQueGuardarError(
-            "este cartão está no de fábrica: o jogo não teria o que guardar.")
-    save_profile(novo, origem="so-neste-jogo")
-    logger.info("cartao_so_neste_jogo", cartao=cartao, perfil=perfil, uniq=str(uniq or ""))
-    return novo
-
-
 def voltar_ao_do_computador(cartao: str, uniq: object, perfil: str) -> Profile:
     """Tira do perfil o que ele escolheu neste cartão: volta a valer o computador."""
     from hefesto_dualsense4unix.profiles import loader
@@ -1061,13 +974,6 @@ def restaurar_o_computador() -> bool:
     return feito
 
 
-def marca(cartao: str, perfil: Profile | None, uniq: object = None) -> str:
-    """O que o cabeçalho do cartão diz: «Computador» ou o nome do jogo."""
-    if perfil is not None and sobrepoe(perfil, cartao, uniq):
-        return perfil.name
-    return "Computador"
-
-
 __all__ = [
     "COMPUTADOR",
     "DO_JOGO",
@@ -1076,8 +982,6 @@ __all__ = [
     "PARES",
     "SECOES",
     "SUFIXO_DA_COPIA",
-    "OFreestyleNaoSobrepoeError",
-    "OJogoNaoTeriaOQueGuardarError",
     "Secao",
     "carregar_o_que_vale",
     "ceder_ao_computador",
@@ -1090,20 +994,16 @@ __all__ = [
     "escolhas_globais_do_jogo",
     "gravar",
     "gravar_pelo_gesto",
-    "marca",
     "migrar_uma_vez",
     "o_computador",
     "o_que_mudou",
     "o_que_vale",
     "onde_grava",
     "perfil_que_vale",
-    "perfil_so_neste_jogo",
     "perfil_vazio",
-    "pode_so_neste_jogo",
     "restaurar_o_computador",
     "selo_da_maquina",
     "semente_do_freestyle",
-    "so_neste_jogo",
     "sobrepoe",
     "velocidades_do_computador",
     "voltar_ao_do_computador",

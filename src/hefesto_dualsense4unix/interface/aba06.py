@@ -66,7 +66,6 @@ from pacotes.a06_navegacao import (  # noqa: E402
 )
 #: que é exatamente como o desenho e o produto divergem calados.
 from pacotes import SEM_NINGUEM_AQUI  # noqa: E402
-import marca_da_camada as _marca  # noqa: E402
 
 MESA_DA_FITA = CONECTADOS
 
@@ -1229,7 +1228,6 @@ CSS += REALCE + "\n"
 _FOLHA_NO_SVG = re.compile(
     r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
 
-CSS += _marca.CSS
 CSS += "\n  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */\n"
 CSS += re.sub(r"</?style[^>]*>", "", folha_das_cores())
 
@@ -1913,10 +1911,6 @@ TELA_PONTO = f'''
 '''
 
 
-MARCAS_DA_ATIVACAO = "        " + _marca.rotuladas(
-    (("mouse", "Mouse"), ("teclado", "Teclado")))
-
-
 def at_linha(rot, dica, campo):
     return (f'              <div class="at-linha"><span class="at-rot">{rot}{dica}</span>'
             f'{campo}</div>')
@@ -2006,7 +2000,6 @@ MIOLO = f'''
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">As opções de ativação</span>
-{MARCAS_DA_ATIVACAO}
       </div>
       <div class="quadro-corpo">
         <div class="moldura">

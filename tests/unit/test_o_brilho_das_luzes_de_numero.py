@@ -443,13 +443,17 @@ class _PonteDeMentira:
 
 
 def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
-    """A pílula «Forte» do P3: o disco do usuário recebe o Forte SÓ no P3."""
+    """A pílula «Forte» do P3: o perfil ativo recebe o Forte SÓ no P3.
+
+    O escopo saiu das abas (D-0610-O-ESCOPO-SAI-DAS-ABAS): o clique vale para o
+    perfil ativo, e o computador (`maquina.json`) fica como estava.
+    """
     import json
 
     import pacotes
     from pacotes import a04_iluminacao as a04
 
-    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
 
     arquivo = save_profile(_perfil(None), origem="regua")
@@ -461,14 +465,18 @@ def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
 
     assert ponte.chamadas == [("player_led_brightness_set_detalhado", ("forte",),
                                {"uniq": MACS[2]})]
-    assert pathlib.Path(arquivo).read_bytes() == antes, "o clique mudou o perfil"
-    computador = json.loads(caminho_da_maquina().read_text(encoding="utf-8"))["computador"]
-    controles = computador.get("controles") or {}
-    assert controles.get(UNIQS[2], {}).get("leds") == {"player_led_brightness": "forte"}, (
-        f"o P3 no computador é {controles.get(UNIQS[2])} — só o campo "
-        f"clicado entra, para não densificar o resto")
-    assert set(controles) == {UNIQS[2]}, f"o clique no P3 gravou em {sorted(controles)}"
-    assert "global" not in computador, "o clique numa coluna mexeu no «Todos»"
+    assert pathlib.Path(arquivo).read_bytes() != antes, "o clique não chegou ao perfil ativo"
+    controles = load_profile(nome).controllers or {}
+    assert {k.lower().replace(":", "") for k in controles} == {UNIQS[2]}, (
+        f"o clique no P3 gravou em {sorted(controles)}")
+    entrada = next(iter(controles.values()))
+    assert entrada.leds is not None and entrada.leds.player_led_brightness == "forte"
+    assert entrada.leds.model_fields_set == {"player_led_brightness"}, (
+        "só o campo clicado entra, para não densificar o resto")
+    arq_maquina = caminho_da_maquina()
+    computador = (json.loads(arq_maquina.read_text(encoding="utf-8")).get("computador")
+                  if arq_maquina.exists() else None)
+    assert not computador, f"o clique do jogo vazou para o computador: {computador}"
 
 
 def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:

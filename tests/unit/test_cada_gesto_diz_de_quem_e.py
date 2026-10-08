@@ -9,10 +9,8 @@ from typing import Any
 import pytest
 
 import hefesto_dualsense4unix
-from hefesto_dualsense4unix.interface import marca_da_camada as marca
 from hefesto_dualsense4unix.interface import onde
-from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
-from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.schema import Profile
 from hefesto_dualsense4unix.utils import maquina as m
 
@@ -83,20 +81,17 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
     camada = _pacotes().camada
     faltam = sorted(
         f"{p}·{g}" for p, g in _vistos()
-        if (p, g) not in camada.CAMADA and ("*", g) not in camada.CAMADA)
+        if (p, g) not in camada.CAMADA)
     assert not faltam, f"gesto sem camada: {faltam}"
 
 
 def test_toda_linha_da_camada_tem_gesto() -> None:
-    """E toda linha tem gesto: na página, ou registrado para as dez (a marca)."""
+    """E toda linha tem gesto na página."""
     pac = _pacotes()
     camada = pac.camada
     vistos = _vistos()
-    sobra = sorted(f"{p}·{g}" for p, g in camada.CAMADA if p != "*" and (p, g) not in vistos)
+    sobra = sorted(f"{p}·{g}" for p, g in camada.CAMADA if (p, g) not in vistos)
     assert not sobra, f"linha sem gesto na página: {sobra}"
-    for p, g in camada.CAMADA:
-        if p == "*":
-            assert ("*", g) in pac.GESTOS, f"o coringa {g!r} não tem dono"
     assert set(camada.CAMADA.values()) <= camada.CAMADAS
 
 
@@ -107,9 +102,7 @@ def test_quem_grava_pelo_dono_e_do_computador() -> None:
     erradas = []
     for chave, escritor in pac.GESTOS_QUE_MEXEM.items():
         esperada = {"gravar_pelo_gesto": camada.COMPUTADOR,
-                    "voltar_o_computador_ao_de_fabrica": camada.COMPUTADOR,
-                    "so_neste_jogo": camada.JOGO,
-                    "voltar_ao_do_computador": camada.JOGO}.get(escritor)
+                    "voltar_o_computador_ao_de_fabrica": camada.COMPUTADOR}.get(escritor)
         if esperada is not None and camada.CAMADA.get(chave) != esperada:
             erradas.append(f"{chave} grava {escritor} e a camada diz {camada.CAMADA.get(chave)}")
     assert not erradas, erradas
@@ -161,25 +154,46 @@ CLIQUES: list[tuple[str, str, dict[str, Any]]] = [
 
 @pytest.mark.parametrize(("aba", "gesto", "carga"), CLIQUES,
                          ids=[f"{a[:2]}-{g}" for a, g, _c in CLIQUES])
-def test_o_gesto_do_computador_nao_toca_perfil_nenhum(
+def test_o_gesto_vale_para_o_perfil_ativo_e_para_nenhum_outro(
     aba: str, gesto: str, carga: dict[str, Any]
 ) -> None:
-    """Com um jogo ativo que não sobrepõe o cartão: os perfis ficam, o ``maquina.json`` muda.
+    """Com um jogo ativo o gesto grava no perfil DELE; o computador e os outros ficam.
 
-    Os três perfis do disco (o ativo, o Freestyle e um outro) ficam byte a
-    byte. É a régua que reprova o dia em que um campo voltar a mudar com o
-    perfil.
+    Os outros dois perfis do disco (o Freestyle e um outro jogo) ficam byte a
+    byte, e o ``maquina.json`` não muda (D-0610-O-ESCOPO-SAI-DAS-ABAS).
 
-    MORDIDA: devolver o ``vel-cursor`` ao ``_guardar_no_perfil`` reprova.
+    MORDIDA: devolver ao ``onde_grava`` o «só se o jogo já sobrepõe» reprova.
     """
     pac = _pacotes()
     assert pac.camada.CAMADA[(aba, gesto)] == pac.camada.COMPUTADOR
+    ativo = save_profile(_perfil("Jogo X"))
+    outros = [save_profile(_perfil(n)) for n in ("Freestyle", "Jogo Y")]
+    antes_ativo = ativo.read_bytes()
+    antes = [c.read_bytes() for c in outros]
+    maquina_antes = m.carregar_maquina().computador
+    fn = pac.gesto_da_pagina(aba, gesto)
+    assert fn is not None, f"{aba}·{gesto} sem dono"
+    fn(_contexto(pac, "Jogo X"), dict(carga), _Ponte())
+    assert [c.read_bytes() for c in outros] == antes, f"{aba}·{gesto} mudou outro perfil"
+    assert ativo.read_bytes() != antes_ativo, (
+        f"{aba}·{gesto} não chegou ao perfil do jogo ativo")
+    assert m.carregar_maquina().computador == maquina_antes, (
+        f"{aba}·{gesto} mexeu no computador com um jogo ativo")
+
+
+@pytest.mark.parametrize(("aba", "gesto", "carga"), CLIQUES,
+                         ids=[f"{a[:2]}-{g}" for a, g, _c in CLIQUES])
+def test_sem_jogo_o_gesto_vale_para_o_computador(
+    aba: str, gesto: str, carga: dict[str, Any]
+) -> None:
+    """Com o Freestyle ativo o gesto grava no ``maquina.json`` e em perfil nenhum."""
+    pac = _pacotes()
     caminhos = [save_profile(_perfil(n)) for n in ("Jogo X", "Freestyle", "Jogo Y")]
     antes = [c.read_bytes() for c in caminhos]
     maquina_antes = m.carregar_maquina().computador
     fn = pac.gesto_da_pagina(aba, gesto)
     assert fn is not None, f"{aba}·{gesto} sem dono"
-    fn(_contexto(pac, "Jogo X"), dict(carga), _Ponte())
+    fn(_contexto(pac, "Freestyle"), dict(carga), _Ponte())
     assert [c.read_bytes() for c in caminhos] == antes, f"{aba}·{gesto} mudou um perfil"
     assert m.carregar_maquina().computador != maquina_antes, (
         f"{aba}·{gesto} não chegou ao maquina.json")
@@ -208,125 +222,3 @@ def test_os_sem_dono_so_diminuem() -> None:
         if pac.gesto_da_pagina(p, g) is None
         and g not in declarados and g != monta.GESTO_DA_FITA)
     assert not sem_atendente, f"gesto sem atendente e sem declaração: {sem_atendente}"
-
-
-def _marca_da_luz(pac: Any, ctx: Any) -> dict[str, str]:
-    _da_mesa, por_controle = pac.camada.marcas("04-iluminacao.html", ctx)
-    return {u: c[marca.campo("luz")] for u, c in por_controle.items()}
-
-
-def test_a_marca_pinta_a_verdade() -> None:
-    """O jogo que sobrepõe só a luz do P2: «PC» no P1, o nome do jogo no P2."""
-    pac = _pacotes()
-    _computador = {"global": {"leds": {"lightbar": [10, 20, 200]}}}
-    assert m.gravar_o_computador(_computador)
-    save_profile(_perfil("Jogo X", controllers={
-        DOIS.replace(":", ""): {"leds": {"lightbar": [200, 10, 10]}}}))
-    ctx = _contexto(pac, "Jogo X", UM, DOIS)
-
-    luz = _marca_da_luz(pac, ctx)
-    assert luz[UM] == marca.miolo("luz", jogo="Jogo X", sobrepoe=False), luz[UM]
-    assert marca.COMPUTADOR in luz[UM] and marca.TEXTO_SO_NESTE_JOGO in luz[UM]
-    assert luz[DOIS] == marca.miolo("luz", jogo="Jogo X", sobrepoe=True), luz[DOIS]
-    assert "Jogo X" in luz[DOIS] and marca.TEXTO_VOLTAR in luz[DOIS]
-
-    gesto = pac.gesto_da_pagina("04-iluminacao.html", marca.VOLTAR_AO_DO_COMPUTADOR)
-    assert gesto is not None
-    gesto(ctx, {"linha": "luz", "uniq": DOIS}, _Ponte())
-    assert not opc.sobrepoe(load_profile("Jogo X"), "luz", DOIS)
-    luz = _marca_da_luz(pac, ctx)
-    assert luz[UM] == luz[DOIS] == marca.miolo("luz", jogo="Jogo X", sobrepoe=False)
-
-
-def test_so_neste_jogo_muda_o_dono_da_marca() -> None:
-    """«Só neste jogo» no P1 copia o que vale para o perfil, e a marca passa a ser do jogo."""
-    pac = _pacotes()
-    assert m.gravar_o_computador({"global": {"leds": {"lightbar": [10, 20, 200]}}})
-    save_profile(_perfil("Jogo X"))
-    ctx = _contexto(pac, "Jogo X", UM)
-    gesto = pac.gesto_da_pagina("04-iluminacao.html", marca.SO_NESTE_JOGO)
-    assert gesto is not None
-    gesto(ctx, {"linha": "luz", "uniq": UM}, _Ponte())
-    assert opc.sobrepoe(load_profile("Jogo X"), "luz", UM)
-    assert _marca_da_luz(pac, ctx)[UM] == marca.miolo("luz", jogo="Jogo X", sobrepoe=True)
-
-
-def test_com_o_freestyle_a_marca_e_do_pc_e_sem_botao() -> None:
-    """O Freestyle não sobrepõe nada: «PC», e nenhum dos dois botões."""
-    pac = _pacotes()
-    save_profile(_perfil("Freestyle", controllers={
-        UM.replace(":", ""): {"leds": {"lightbar": [200, 10, 10]}}}))
-    luz = _marca_da_luz(pac, _contexto(pac, "Freestyle", UM))
-    assert luz[UM] == marca.miolo("luz"), luz[UM]
-    assert "data-gesto" not in luz[UM]
-
-
-def test_sem_jogo_os_botoes_da_marca_recusam_dizendo() -> None:
-    """Sem jogo ativo, o «Só neste jogo» recusa com a frase, e não grava."""
-    pac = _pacotes()
-    gesto = pac.gesto_da_pagina("04-iluminacao.html", marca.SO_NESTE_JOGO)
-    assert gesto is not None
-    with pytest.raises(RuntimeError, match="não há jogo ativo"):
-        gesto(_contexto(pac, "Freestyle", UM), {"linha": "luz", "uniq": UM}, _Ponte())
-
-
-def test_a_pintura_so_pousa_onde_a_pagina_tem_lugar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A página publicada de antes desta leva não tem a marca: o pacote não a pinta."""
-    pac = _pacotes()
-    save_profile(_perfil("Jogo X"))
-    ctx = _contexto(pac, "Jogo X", UM)
-    fora = {"colunas": {UM: {"hex": "#000000"}}}
-    monkeypatch.setattr(pac, "alvos_da_pagina", lambda _p: {"hex": {"texto"}})
-    assert pac.camada.com_a_camada("04-iluminacao.html", ctx, fora) == fora
-    monkeypatch.setattr(pac, "alvos_da_pagina",
-                        lambda _p: {"hex": {"texto"}, marca.campo("luz"): {"html"}})
-    com = pac.camada.com_a_camada("04-iluminacao.html", ctx, fora)
-    assert com["colunas"][UM][marca.campo("luz")] == marca.miolo("luz", jogo="Jogo X")
-    assert com["colunas"][UM]["hex"] == "#000000"
-    assert fora == {"colunas": {UM: {"hex": "#000000"}}}, "a pintura mexeu no pacote da aba"
-
-
-def _contexto_vivo(pac: Any, ativo: str, *, speed: int, scroll: int) -> Any:
-    """O contexto da régua com o mouse em ``speed``/``scroll`` (o resto como em `_contexto`)."""
-    ctx = _contexto(pac, ativo, UM)
-    ctx.state["mouse_emulation"] = {"enabled": True, "speed": speed, "scroll_speed": scroll}
-    return ctx
-
-
-def _miolo_do(pac: Any, ctx: Any, cartao: str) -> str:
-    da_mesa, por_controle = pac.camada.marcas(opc.SECOES[cartao].pagina, ctx)
-    if opc.SECOES[cartao].por_controle:
-        return por_controle[UM][marca.campo(cartao)]
-    return da_mesa[marca.campo(cartao)]
-
-
-@pytest.mark.parametrize("cartao", sorted(opc.SECOES))
-def test_so_neste_jogo_de_todo_cartao_muda_o_dono_num_pc_sem_padrao(cartao: str) -> None:
-    """Num computador sem padrão, o «Só neste jogo» de CADA cartão dá o cartão ao jogo."""
-    pac = _pacotes()
-    save_profile(_perfil("Jogo X"))
-    ctx = _contexto_vivo(pac, "Jogo X", speed=9, scroll=2)
-    uniq = UM if opc.SECOES[cartao].por_controle else None
-    assert _miolo_do(pac, ctx, cartao) == marca.miolo(cartao, jogo="Jogo X", sobrepoe=False)
-    gesto = pac.gesto_da_pagina(opc.SECOES[cartao].pagina, marca.SO_NESTE_JOGO)
-    assert gesto is not None
-    gesto(ctx, {"linha": cartao, "uniq": uniq or ""}, _Ponte())
-    assert opc.sobrepoe(load_profile("Jogo X"), cartao, uniq), (
-        f"«Só neste jogo» em {cartao} não deu o cartão ao jogo")
-    assert _miolo_do(pac, ctx, cartao) == marca.miolo(cartao, jogo="Jogo X", sobrepoe=True)
-
-
-def test_o_botao_que_nao_mudaria_nada_nao_aparece_e_recusa_sem_gravar() -> None:
-    """As velocidades do mouse no de fábrica: a marca diz só «PC», e o clique velho recusa."""
-    pac = _pacotes()
-    caminho = save_profile(_perfil("Jogo X"))
-    antes = caminho.read_bytes()
-    ctx = _contexto_vivo(pac, "Jogo X", speed=6, scroll=1)
-    miolo = _miolo_do(pac, ctx, "mouse")
-    assert miolo == marca.miolo("mouse"), miolo
-    assert "data-gesto" not in miolo
-    gesto = pac.gesto_da_pagina("06-navegacao.html", marca.SO_NESTE_JOGO)
-    assert gesto is not None
-    with pytest.raises(RuntimeError, match="de fábrica"):
-        gesto(ctx, {"linha": "mouse"}, _Ponte())
-    assert caminho.read_bytes() == antes

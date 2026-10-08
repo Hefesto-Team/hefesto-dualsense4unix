@@ -377,16 +377,21 @@ def test_a_secao_do_mouse_nasce_quando_o_perfil_nao_a_tinha(pac, a06):
     assert (d["speed"], d["enabled"]) == (9, VIVO["enabled"])
 
 
-def test_sem_a_secao_e_sem_os_botoes_a_velocidade_vai_ao_computador(pac, a06):
-    """Perfil sem `mouse` e sem botões: o cartão é do computador, e o perfil fica."""
-    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+def test_sem_a_secao_a_velocidade_vai_ao_perfil_ativo_e_nao_ao_computador(pac, a06):
+    """O escopo saiu das abas (D-0610-O-ESCOPO-SAI-DAS-ABAS): vale para o perfil ativo.
 
-    caminho = _semear("regua", com_mouse=False)
-    antes = caminho.read_bytes()
+    Perfil sem `mouse` e sem botões: a seção nasce NO PERFIL, e o computador
+    (`maquina.json`) fica como estava.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        computador_vazio,
+        o_computador,
+    )
+
+    _semear("regua", com_mouse=False)
     a06.vel_cursor(_ctx(pac), {"valor": "9"}, PonteDeMentira())
-    assert caminho.read_bytes() == antes, "a velocidade mudou o perfil"
-    mouse = o_computador().global_.mouse
-    assert mouse is not None and mouse.speed == 9
+    assert _disco()["speed"] == 9, "a velocidade não chegou ao perfil ativo"
+    assert computador_vazio(o_computador()), "a velocidade do jogo vazou para o computador"
 
 
 def test_sem_o_bloco_do_daemon_a_secao_nao_nasce_chutada(pac, a06):

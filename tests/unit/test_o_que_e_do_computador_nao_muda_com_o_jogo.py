@@ -124,15 +124,14 @@ def test_os_botoes_e_as_teclas_do_computador_por_baixo_do_jogo() -> None:
     assert vista.teclado_emulado is True
 
 
-def test_o_clique_grava_no_computador_quando_o_jogo_nao_sobrepoe() -> None:
-    """O perfil fica byte a byte; o `maquina.json` muda."""
-    caminho = save_profile(_perfil())
-    antes = caminho.read_bytes()
+def test_o_clique_grava_no_jogo_ativo_mesmo_sem_escolha_propria() -> None:
+    """O escopo saiu das abas: o perfil ativo recebe só o campo; o computador fica."""
+    save_profile(_perfil())
     onde = opc.gravar("luz", {"leds": {"lightbar": [1, 2, 3]}}, uniq=P2,
                       perfil_ativo="Jogo X")
-    assert onde == opc.COMPUTADOR
-    assert caminho.read_bytes() == antes
-    assert opc.o_computador().controles[P2].leds.lightbar == (1, 2, 3)
+    assert onde == opc.JOGO
+    assert load_profile("Jogo X").controllers[P2].leds.lightbar == (1, 2, 3)
+    assert opc.computador_vazio(opc.o_computador())
 
 
 def test_o_clique_grava_no_jogo_quando_ele_ja_sobrepoe_o_cartao() -> None:
@@ -144,11 +143,11 @@ def test_o_clique_grava_no_jogo_quando_ele_ja_sobrepoe_o_cartao() -> None:
     assert P2 not in opc.o_computador().controles
 
 
-def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_computador() -> None:
-    """`gravar_pelo_gesto`: o gesto de sempre, sobre a vista; o perfil não muda."""
+def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_jogo() -> None:
+    """`gravar_pelo_gesto`: o gesto de sempre, sobre a vista; o jogo guarda só a diferença."""
     save_profile(_perfil(controllers={P1: {"triggers": {"left": {"mode": "Off"}}}}))
     _computador({"controles": {P2: {"leds": {"lightbar_brightness": 0.0}}}})
-    caminho_antes = load_profile("Jogo X").model_dump(mode="json")
+    computador_antes = opc.o_computador().model_dump(mode="json")
 
     def religar(perfil: Profile) -> Profile:
         cru = perfil.model_dump(mode="json", exclude_unset=True)
@@ -163,11 +162,11 @@ def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_computador() -> N
         return Profile.model_validate(cru)
 
     onde, _novo = opc.gravar_pelo_gesto("luz", "Jogo X", religar, uniq=P2)
-    assert onde == opc.COMPUTADOR
-    leds = opc.o_computador().controles[P2].leds
-    assert leds.lightbar == (1, 2, 3)
-    assert "lightbar_brightness" not in leds.model_fields_set
-    assert load_profile("Jogo X").model_dump(mode="json") == caminho_antes
+    assert onde == opc.JOGO
+    jogo = load_profile("Jogo X")
+    assert jogo.controllers[P2].leds.lightbar == (1, 2, 3)
+    assert jogo.controllers[P1].triggers.left.mode == "Off", "o resto do jogo ficou"
+    assert opc.o_computador().model_dump(mode="json") == computador_antes
 
 
 def test_o_gesto_le_o_que_vale_e_nao_o_cru() -> None:
@@ -187,36 +186,32 @@ def test_o_gesto_le_o_que_vale_e_nao_o_cru() -> None:
         return Profile.model_validate(cru)
 
     onde, _novo = opc.gravar_pelo_gesto("luz", "Jogo X", um_a_mais, uniq=P2)
-    assert onde == opc.COMPUTADOR
-    assert opc.o_computador().controles[P2].leds.lightbar == (11, 21, 31)
+    assert onde == opc.JOGO
+    assert load_profile("Jogo X").controllers[P2].leds.lightbar == (11, 21, 31)
+    assert opc.o_computador().controles[P2].leds.lightbar == (10, 20, 30)
 
 
-def test_so_neste_jogo_e_voltar_ao_do_computador() -> None:
-    """O jogo copia o que vale e passa a mandar; voltar tira, e o computador volta."""
+def test_o_clique_vai_ao_jogo_e_voltar_ao_do_computador_devolve_o_computador() -> None:
+    """O jogo guarda o que se muda; tirar a escolha do jogo (o «padrão») devolve o computador."""
     _computador({"controles": {P2: {"leds": {"lightbar": [0, 255, 0]}}}})
     save_profile(_perfil())
-    opc.so_neste_jogo("luz", P2, "Jogo X")
-    jogo = load_profile("Jogo X")
-    assert jogo.controllers[P2].leds.lightbar == (0, 255, 0)
-    assert opc.marca("luz", jogo, P2) == "Jogo X"
     assert opc.gravar("luz", {"leds": {"lightbar": [255, 0, 0]}}, uniq=P2,
                       perfil_ativo="Jogo X") == opc.JOGO
     assert opc.o_computador().controles[P2].leds.lightbar == (0, 255, 0)
+    assert load_profile("Jogo X").controllers[P2].leds.lightbar == (255, 0, 0)
     opc.voltar_ao_do_computador("luz", P2, "Jogo X")
     jogo = load_profile("Jogo X")
-    assert opc.marca("luz", jogo, P2) == "Computador"
+    assert not opc.sobrepoe(jogo, "luz", P2)
     assert opc.perfil_que_vale(jogo, opc.o_computador()).controllers[P2].leds.lightbar == (
         0, 255, 0)
 
 
 def test_o_freestyle_nao_sobrepoe_nada() -> None:
-    """Com o Freestyle, o clique grava no computador e o «Só neste jogo» recusa."""
+    """Com o Freestyle, o clique grava no computador."""
     save_profile(Profile.model_validate({"name": "Freestyle", "match": {"type": "any"},
                                          "leds": {"lightbar": [5, 5, 5]}}))
     assert opc.gravar("luz", {"leds": {"lightbar": [1, 2, 3]}},
                       perfil_ativo="Freestyle") == opc.COMPUTADOR
-    with pytest.raises(opc.OFreestyleNaoSobrepoeError):
-        opc.so_neste_jogo("luz", P2, "Freestyle")
 
 
 def test_na_vista_o_freestyle_fica_por_baixo_do_computador() -> None:
@@ -230,7 +225,7 @@ def test_na_vista_o_freestyle_fica_por_baixo_do_computador() -> None:
         "controllers": {P2: {"leds": {"lightbar": [255, 0, 0]},
                              "rumble": {"motor_forte_pct": 100}}}}))
     freestyle = load_profile("Freestyle")
-    assert opc.onde_grava("luz", freestyle, P2) == opc.COMPUTADOR
+    assert opc.onde_grava("luz", freestyle) == opc.COMPUTADOR
     vista = opc.o_que_vale(freestyle)
     entrada = vista.controllers[opc.chave_no_perfil(vista, P2)]
     assert tuple(entrada.leds.lightbar) == (0, 0, 255)
@@ -502,16 +497,19 @@ CLIQUES: list[tuple[str, str, str, dict[str, Any]]] = [
 def test_o_clique_basta_e_o_perfil_fica(
     cartao: str, aba: str, gesto: str, carga: dict[str, Any]
 ) -> None:
-    """Régua 6: o gesto do cartão grava no clique, sem «Salvar» nem «Aplicar»."""
+    """Régua 6: o gesto do cartão grava no clique, sem «Salvar» nem «Aplicar».
+
+    Com um jogo ativo o clique chega ao perfil dele, e o computador não muda.
+    """
     pac = _pacotes()
     caminho = save_profile(_perfil("Jogo X"))
     antes = caminho.read_bytes()
     fn = pac.gesto_da_pagina(aba, gesto)
     assert fn is not None, f"{aba}·{gesto} sem dono"
     fn(_contexto(pac, "Jogo X"), dict(carga), _Ponte())
-    assert caminho.read_bytes() == antes, f"o clique em «{cartao}» mudou o perfil"
+    assert caminho.read_bytes() != antes, f"o clique em «{cartao}» não chegou ao perfil"
     relido = m.carregar_maquina().computador
-    assert not opc.computador_vazio(relido), f"o clique em «{cartao}» não chegou ao computador"
+    assert opc.computador_vazio(relido), f"o clique em «{cartao}» mexeu no computador"
 
 
 def test_o_clique_grava_no_perfil_que_sobrepoe_o_cartao() -> None:
@@ -542,16 +540,21 @@ def _handlers(ativo: str | None) -> Any:
 
 @pytest.mark.parametrize("ativo", ["Jogo X", None], ids=["com-perfil", "sem-perfil"])
 def test_o_daemon_grava_a_barra_do_motor_pelo_dono(ativo: str | None) -> None:
-    """`rumble.motores.set`: o perfil sem a vibração do P1 deixa a barra no computador."""
+    """`rumble.motores.set`: a barra vale para o perfil ativo (o jogo, ou o computador sem ele)."""
     import asyncio
 
     caminho = save_profile(_perfil("Jogo X"))
     antes = caminho.read_bytes()
     h = _handlers(ativo)
     corpo = asyncio.run(h._handle_rumble_motores_set({"uniq": UM, "forte_pct": 40}))
-    assert corpo["status"] == "ok" and corpo["onde"] == opc.COMPUTADOR, corpo
-    assert caminho.read_bytes() == antes
-    assert opc.o_computador().controles[P1].rumble.motor_forte_pct == 40
+    if ativo is None:
+        assert corpo["status"] == "ok" and corpo["onde"] == opc.COMPUTADOR, corpo
+        assert caminho.read_bytes() == antes
+        assert opc.o_computador().controles[P1].rumble.motor_forte_pct == 40
+    else:
+        assert corpo["status"] == "ok" and corpo["onde"] == opc.JOGO, corpo
+        assert load_profile("Jogo X").controllers[P1].rumble.motor_forte_pct == 40
+        assert opc.computador_vazio(opc.o_computador())
 
 
 CONTROLES_DA_CASA = [f"aabbcc0000{n:02x}" for n in range(1, 5)]
@@ -760,26 +763,6 @@ def test_a_frase_fala_a_lingua_da_tela() -> None:
     assert "menos" in frase, frase
     for crua in ("button_actions", "remapeamento", "movimento"):
         assert crua not in frase, frase
-
-
-@pytest.mark.parametrize(("cartao", "secao", "esperado"), [
-    ("luz", "leds", {"lightbar": [10, 20, 200]}),
-    ("sensores", "sensores", {"giroscopio": True, "acelerometro": True}),
-    ("som", "speaker", {"volume": 70}),
-])
-def test_so_neste_jogo_num_controle_sem_entrada_copia_o_que_vale(
-    cartao: str, secao: str, esperado: dict[str, Any]
-) -> None:
-    """O controle sem entrada vale o global da vista (ou o de fábrica): é isso que se copia."""
-    _computador({"global": {"leds": {"lightbar": [10, 20, 200]},
-                            "speaker": {"volume": 70}}})
-    save_profile(_perfil("Jogo X"))
-    opc.so_neste_jogo(cartao, UM, "Jogo X")
-    perfil = load_profile("Jogo X")
-    assert opc.sobrepoe(perfil, cartao, UM)
-    gravado = getattr(perfil.controllers[opc.chave_no_perfil(perfil, UM)], secao)
-    dados = gravado.model_dump(mode="json")
-    assert {k: dados[k] for k in esperado} == esperado, dados
 
 
 @pytest.mark.parametrize("porta", ["status", "chip"])
