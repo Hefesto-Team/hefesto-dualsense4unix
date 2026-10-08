@@ -95,12 +95,12 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `machine.declare` | `daemon/ipc_handlers.py:5651` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
 | `plugin.list` | `daemon/ipc_handlers.py:5734` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
 | `plugin.reload` | `daemon/ipc_handlers.py:5742` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:6067` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
-| `radio.mover` | `daemon/ipc_handlers.py:6097` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:6166` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
-| `haptica.testar` | `daemon/ipc_handlers.py:6353` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
-| `radio.busca.set` | `daemon/ipc_handlers.py:6385` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
-| `radio.dispensar` | `daemon/ipc_handlers.py:6400` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:6050` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:6080` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
+| `mira.set` | `daemon/ipc_handlers.py:6149` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `haptica.testar` | `daemon/ipc_handlers.py:6336` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
+| `radio.busca.set` | `daemon/ipc_handlers.py:6368` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
+| `radio.dispensar` | `daemon/ipc_handlers.py:6383` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 
