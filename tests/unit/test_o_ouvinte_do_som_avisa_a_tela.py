@@ -97,6 +97,7 @@ def test_a_descricao_sai_do_formato_longo_medido(monkeypatch: pytest.MonkeyPatch
 
 
 def test_a_descricao_com_acento_volta_pelo_pw_dump(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A decisão D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
     """O nome da tela é o do painel, com acento — e o `pw-dump` roda UMA vez por releitura."""
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
@@ -124,6 +125,7 @@ def test_o_pw_dump_ilegivel_e_nao_sei() -> None:
 
 
 def test_sem_descricao_perdida_o_pw_dump_nao_roda() -> None:
+    # A decisão D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
     lidas: list[tuple[str, ...]] = []
     retrato = _retrato_com(pj.texto(pj.no(1, "a", descricao="A")), lidas=lidas)
     assert retrato.descricoes() == {"a": "A"}

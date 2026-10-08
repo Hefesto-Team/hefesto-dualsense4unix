@@ -102,6 +102,7 @@ def test_a_resposta_da_biblioteca_vira_texto(biblioteca) -> None:  # type: ignor
 
 
 def test_propriedade_ou_no_ausente_e_nao_sei(biblioteca) -> None:  # type: ignore[no-untyped-def]
+    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
     biblioteca({"OUTRA": b"1"})
     assert banco_do_udev.propriedade_do_devnum("c", 1, "LIBINPUT_IGNORE_DEVICE") is None
     biblioteca(None)
@@ -115,6 +116,7 @@ def test_tipo_de_no_invalido_nao_chega_a_biblioteca(biblioteca) -> None:  # type
 
 
 def test_sem_a_biblioteca_a_resposta_e_nao_sei(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
     def falta(*_a: Any, **_k: Any) -> Any:
         raise OSError("libudev.so.1: não achei")
 
@@ -160,5 +162,6 @@ def _strings_de_codigo(arquivo: str) -> list[str]:
 
 @pytest.mark.parametrize("arquivo", QUEM_PERGUNTA)
 def test_nenhum_modulo_le_o_arquivo_interno_do_udev(arquivo: str) -> None:
+    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
     achados = [t for t in _strings_de_codigo(arquivo) if O_ARQUIVO_INTERNO in t]
     assert not achados, f"{arquivo} voltou a citar o arquivo do banco do udev: {achados}"

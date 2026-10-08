@@ -158,6 +158,7 @@ class TestONascimentoVemDoUdev:
         return _perguntar
 
     def test_o_instante_do_udev_vira_segundos_desde_o_boot(self) -> None:
+        # A decisão D-0810-O-NASCIMENTO-DA-CONEXAO-VEM-DO-UDEV.
         nascimentos = sb.nascimentos_do_udev(
             [_no_radio("0029", "/dev/hidraw7")],
             perguntar=self._responde({"hidraw7": "4000500000"}),
@@ -168,6 +169,7 @@ class TestONascimentoVemDoUdev:
         assert nascimentos["0029"].no == "/dev/hidraw7"
 
     def test_o_udev_mudo_e_nao_sei(self) -> None:
+        # A decisão D-0810-O-NASCIMENTO-DA-CONEXAO-VEM-DO-UDEV.
         """Perguntou e ninguém respondeu: é `None`, nunca `{}` (que diria «nasceu limpo»)."""
         assert sb.nascimentos_do_udev(
             [_no_radio("0029", "/dev/hidraw7")],
@@ -192,6 +194,7 @@ class TestONascimentoVemDoUdev:
         ) == {}
 
     def test_mais_velha_que_a_janela_do_diario_fica_de_fora(self, monkeypatch) -> None:
+        # A decisão D-0810-O-NASCIMENTO-DA-CONEXAO-VEM-DO-UDEV.
         """O diário do daemon só é lido na janela; antes dela o escritor não se sabe."""
         monkeypatch.setattr(sb, "_linhas_do_diario", lambda *_a: [])
         velha_s = self.AGORA - sb.JANELA_DO_DIARIO_S - 10

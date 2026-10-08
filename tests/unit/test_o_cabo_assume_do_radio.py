@@ -1010,6 +1010,7 @@ class TestOCaboEmEspera:
         assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0DF2.0015")]
 
     def test_o_hid_recusado_mostra_o_endereco_do_gemeo_no_uevent(self, tmp_path: Path) -> None:
+        # A decisão D-0810-O-GEMEO-DO-CABO-VEM-DO-HID-UNIQ.
         raiz = tmp_path / "hid"
         hid = raiz / "0003:054C:0CE6.001B"
         hid.mkdir(parents=True)
@@ -1097,6 +1098,7 @@ class TestOCaboEmEspera:
         assert chamadas == ["/org/bluez/hci1/dev_X"]
 
     def test_a_vigia_espera_a_probe_e_desiste_de_quem_nao_e_gemeo(self) -> None:
+        # A decisão D-0810-O-GEMEO-DO-CABO-VEM-DO-HID-UNIQ.
         vigia = oce.VigiaDoCabo()
         cabo = oce.CaboEmEspera("0003:054C:0CE6.0030", uniq="")
         vigia.observar_os_cabos([cabo], 100.0)

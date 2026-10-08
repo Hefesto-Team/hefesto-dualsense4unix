@@ -87,6 +87,7 @@ def test_o_no_vem_por_campo_nomeado_e_a_ordem_dos_campos_nao_conta() -> None:
 
 
 def test_o_acento_que_o_pactl_nao_escreve_vira_vazio_e_a_descricao_recua() -> None:
+    # A decisão D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
     """`pactl` 16.1 imprime `(null)` no campo com acento: vazio, nunca a palavra «(null)»."""
     (hdmi, hap) = pds.ler_nos("sinks", _servidor({_json("sinks"): json.dumps(SINKS)})) or ()
     assert hdmi.descricao == "Navi HDMI"
@@ -95,6 +96,7 @@ def test_o_acento_que_o_pactl_nao_escreve_vira_vazio_e_a_descricao_recua() -> No
 
 
 def test_sem_a_porta_do_json_a_resposta_e_nao_sei_e_nunca_o_texto_longo() -> None:
+    # A decisão D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE.
     longo = "Sink #51\n\tState: SUSPENDED\n\tName: alsa_output.x\n"
     for resposta in (None, "", longo, "pactl: opção desconhecida '--format=json'", "{}"):
         ler = _servidor({_json("sinks"): resposta, _json("sources"): resposta})
@@ -268,6 +270,7 @@ def _fontes() -> list[Path]:
 
 
 def test_ninguem_em_src_pede_o_texto_longo_do_pactl() -> None:
+    # A decisão D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE.
     quem = [f"{p.relative_to(RAIZ)}:{n}"
             for p in _fontes()
             for n, linha in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
@@ -276,6 +279,7 @@ def test_ninguem_em_src_pede_o_texto_longo_do_pactl() -> None:
 
 
 def test_ninguem_em_src_crava_a_pasta_dos_modulos_do_pipewire() -> None:
+    # A decisão D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE.
     quem = [f"{p.relative_to(RAIZ)}:{n}"
             for p in _fontes()
             for n, linha in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)

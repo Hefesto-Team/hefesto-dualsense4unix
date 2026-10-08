@@ -169,6 +169,7 @@ def test_a_volta_do_daemon_ergue_os_quatro_que_foram_tirados_por_fora(
 
 
 def test_servidor_que_nao_responde_nao_derruba_nenhum_no(servidor: _Servidor) -> None:
+    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
     """«Não sei» não é «sumiu»: o `pactl` em recuo não pode esvaziar a mesa."""
     ger = _gerenciador(servidor)
     ger.reconciliar(_mesa())
@@ -230,6 +231,7 @@ def test_o_endpoint_com_o_servidor_mudo_segue_de_pe(servidor: _Servidor) -> None
 def test_o_start_derruba_o_que_o_daemon_anterior_deixou_e_nao_duplica(
     servidor: _Servidor,
 ) -> None:
+    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
     velho = mod.GerenciadorDeNosDeSom(fabrica=lambda u: _no(servidor, u), runner=servidor)
     velho.reconciliar([*_mesa(), _Controle(_QUINTO)])
     assert len(servidor.sinks_do_som()) == 5
@@ -257,6 +259,7 @@ def test_o_no_novo_nao_carrega_ao_lado_do_que_o_daemon_velho_deixou(
 
 
 def test_o_endpoint_do_daemon_anterior_e_adotado_e_nao_duplicado(servidor: _Servidor) -> None:
+    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
     ancora = eh.Ancora(syspath="/devices/pci0000:00/usb3/3-2",
                        declarado="/devices/pci0000:00/usb3/3-2/3-2:1.0")
     assert eh.EndpointDeHaptica(uniq=_P2, ancora=ancora, runner=servidor).iniciar()
@@ -318,6 +321,7 @@ def test_o_stop_derruba_o_no_que_so_o_servidor_conhece(servidor: _Servidor) -> N
 
 
 def test_o_stop_nao_toca_modulo_de_outro_dono(servidor: _Servidor) -> None:
+    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
     servidor.carregar("module-null-sink", "sink_name=sink_de_outra_gente format=s16le")
     servidor.carregar("module-loopback", "source=outra.monitor sink=outra_saida")
     ger = _gerenciador(servidor)
