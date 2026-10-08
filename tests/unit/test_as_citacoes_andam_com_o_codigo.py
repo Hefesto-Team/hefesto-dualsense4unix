@@ -492,9 +492,7 @@ def test_o_mesmo_endereco_de_duas_epocas_vai_para_a_mao(repo: Path) -> None:
         repo, "docs/protocol/crua.md", f"# Crua\n\nA constante `{END}:3`.\n", "a primeira época"
     )
     _inserir_no_topo(repo, 3, commitar=True)
-    md.write_text(
-        md.read_text(encoding="utf-8") + f"\nOutra coisa, `{END}:3`.\n", encoding="utf-8"
-    )
+    md.write_text(md.read_text(encoding="utf-8") + f"\nOutra coisa, `{END}:3`.\n", encoding="utf-8")
     _git(repo, "commit", "-q", "-am", "a segunda época, o mesmo número")
     antes = md.read_text(encoding="utf-8")
 
@@ -677,37 +675,72 @@ def test_a_linha_curta_demais_nao_identifica_o_citado(repo: Path) -> None:
     assert md.read_text(encoding="utf-8") == antes
 
 
-def test_o_endereco_que_um_reapontamento_em_massa_deixou_vai_para_a_mao(
+def test_o_endereco_que_um_reapontamento_em_massa_deixou_anda_pelo_endereco_de_antes(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O commit que troca dezenas de endereços de um documento que já existia é um reapontamento:
-    ele deixou o endereço pelo mesmo algoritmo, e a linha dele não prova o que a frase citou.
+    o endereço que ele deixou foi calculado, e a linha dele não prova o que a frase citou.
 
     Medido em 08/10/2026: o 719e58a46 (13/09) reapontou 1629 endereços de uma vez, e 83 das 182
     trocas desta régua vinham dele; entre elas o `02-controles.html:2358` de uma frase sobre o
     quadradinho `--plastico`, que seguia para o link da aba Lançadores. Poucos arquivos tocados:
-    a recusa da varredura não o pega. O documento que muda UM endereço anda."""
+    a recusa da varredura não o pega. O endereço que ele deixou não anda; o de ANTES dele, que tem
+    entrada própria, anda (a segunda chance). O documento que muda UM endereço anda direto.
+
+    Os esperados saem do fixture: as linhas 3 (`VALOR`), 10 (`segunda`) e 15 (`terceira`) do
+    ALVO andam 12 para baixo, e o reapontamento deixou `:1`, `:2` e `:4`, que não dizem nada."""
     mod = _script()
     monkeypatch.setattr(mod, "REESCRITA_EM_MASSA", 3)
     massa = _escrever_e_commitar(
         repo,
         "docs/protocol/massa.md",
-        f"# Massa\n\nUm, `{END}:1`. Dois, `{END}:2`. Quatro, `{END}:4`.\n",
+        f"# Massa\n\nUm, `{END}:3`. Dois, `{END}:10`. Quatro, `{END}:15`.\n",
         "o documento já existia",
     )
     uma = _escrever_e_commitar(
         repo, "docs/protocol/uma.md", f"# Uma\n\nO valor, `{END}:1`.\n", "o outro também"
     )
     massa.write_text(
-        f"# Massa\n\nUm, `{END}:3`. Dois, `{END}:10`. Quatro, `{END}:11-12`.\n", encoding="utf-8"
+        f"# Massa\n\nUm, `{END}:1`. Dois, `{END}:2`. Quatro, `{END}:4`.\n", encoding="utf-8"
     )
     uma.write_text(f"# Uma\n\nO valor, `{END}:3`.\n", encoding="utf-8")
     _git(repo, "commit", "-q", "-am", "o reapontamento")
     _inserir_no_topo(repo, 12, commitar=True)
-    antes = massa.read_text(encoding="utf-8")
 
     feitos, a_mao = mod.reapontar(repo, escrever=True)
 
-    assert massa.read_text(encoding="utf-8") == antes, feitos
-    assert sum("massa.md" in f and "reapontamento em massa" in f for f in a_mao) == 3, a_mao
+    assert massa.read_text(encoding="utf-8") == (
+        f"# Massa\n\nUm, `{END}:15`. Dois, `{END}:22`. Quatro, `{END}:27`.\n"
+    ), (feitos, a_mao)
     assert f"`{END}:15`." in uma.read_text(encoding="utf-8"), (feitos, a_mao)
+    assert not any("massa.md" in f for f in a_mao), a_mao
+
+
+def test_o_endereco_de_antes_que_tambem_e_massa_fica_a_mao_com_o_motivo(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Três reapontamentos em massa em fila: a segunda chance dá duas voltas e para (o `--help`).
+    O que ficou depois do terceiro vai à mão, e o motivo diz que o de antes também é massa."""
+    mod = _script()
+    monkeypatch.setattr(mod, "REESCRITA_EM_MASSA", 3)
+    cadeia = _escrever_e_commitar(
+        repo,
+        "docs/protocol/cadeia.md",
+        f"# Cadeia\n\nUm, `{END}:3`. Dois, `{END}:10`. Quatro, `{END}:15`.\n",
+        "o documento já existia",
+    )
+    for um, dois, quatro in ((4, 5, 6), (7, 8, 9), (1, 2, 13)):
+        cadeia.write_text(
+            f"# Cadeia\n\nUm, `{END}:{um}`. Dois, `{END}:{dois}`. Quatro, `{END}:{quatro}`.\n",
+            encoding="utf-8",
+        )
+        _git(repo, "commit", "-q", "-am", f"o reapontamento em massa {um}")
+    _inserir_no_topo(repo, 12, commitar=True)
+    antes = cadeia.read_text(encoding="utf-8")
+
+    _feitos, a_mao = mod.reapontar(repo, escrever=True)
+
+    assert cadeia.read_text(encoding="utf-8") == antes
+    mao = [f for f in a_mao if "cadeia.md" in f]
+    assert len(mao) == 3, a_mao
+    assert all("reapontamento em massa" in f and "segunda chance" in f for f in mao), mao

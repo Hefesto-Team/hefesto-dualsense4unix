@@ -27,7 +27,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 END = "src/hefesto_dualsense4unix/alvo.py"
 FORA = "src/hefesto_dualsense4unix/outro.py"
 
-OUTRO = '"""O outro alvo."""\n\nVALOR_B = 1\nPAR = (1, 2)\n'
+OUTRO = '"""O outro alvo."""\n\nVALOR_B = 1\nPAR_DOS_VALORES = (1, 2)\n'
 
 CABECALHO = "id,prosa\n"
 

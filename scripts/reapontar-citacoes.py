@@ -459,13 +459,40 @@ o `719e58a46` reescreveu 1157 endereços da paridade e 438 do mapa, e a `02-cont
 ele deixou para o quadradinho da cor apontava o link da aba Lançadores."""
 
 LINHA_CURTA_DEMAIS = 6
-"""Uma linha só com menos caracteres úteis que isto (`}`, `pass`) não identifica o que foi citado."""
+"""Uma linha só com menos caracteres úteis que isto (`}`, `pass`, `</span>`) não identifica o que foi
+citado. Os úteis são os de ``_caracteres_uteis``: sem marcação sem atributo, sem pontuação."""
+
+PROFUNDIDADE_DA_SEGUNDA_CHANCE = 2
+"""Quantas voltas a segunda chance dá para trás: o endereço que uma varredura ou um reapontamento em
+massa deixou tem o endereço de ANTES dele; se a entrada desse também veio de uma varredura, a volta
+seguinte olha o de antes dela, até este limite. Além dele, vai à mão."""
+
+_TAG_COM_ATRIBUTO = re.compile(r"<[A-Za-z][A-Za-z0-9-]*\s+[^<>/\s][^<>]*>")
+_TAG_SEM_ATRIBUTO = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*\s*/?>")
+
+
+def _caracteres_uteis(linha: str) -> int:
+    """Quanto a linha DIZ: as letras, os números e o `_`, sem a marcação que não carrega nada.
+
+    ``</span>``, ``<br>`` e ``</div>`` são cenário, não citado. A tag com atributo fica inteira
+    (``<div id="x">``): o atributo identifica. A pontuação e o espaço não contam.
+    """
+    com_atributo = _TAG_COM_ATRIBUTO.findall(linha)
+    resto = _TAG_SEM_ATRIBUTO.sub(" ", _TAG_COM_ATRIBUTO.sub(" ", linha))
+    return sum(len(tag) for tag in com_atributo) + sum(c.isalnum() or c == "_" for c in resto)
+
 
 HISTORICO_DA_CRUA = 2000
 
 #: Contagem da última corrida: ``conferidas``, ``no_lugar``, ``andaram``, ``a_mao``, ``recentes``.
 ESTATISTICA: collections.Counter[str] = collections.Counter()
 """Chaves de motivo (``a_mao:<estado>``) somam em ``a_mao``."""
+
+ESTADO_DA_MAO: dict[str, str] = {}
+"""Da última corrida: a linha de cada «à mão» da via crua e o estado que a mandou para lá."""
+
+DIVIDA: dict[str, list[str]] = {"nova": [], "de antes": []}
+"""Da última corrida: o «à mão» que a mudança de agora criou, e o que já era dívida de antes."""
 
 
 class _Cat:
@@ -814,6 +841,176 @@ def _historico_do_documento(raiz: Path, relativo: str) -> list[tuple[str, str, b
     return historico
 
 
+class _Memoria:
+    """O que a leitura de UM documento já pagou: o histórico, as contagens por commit e os diffs.
+
+    A segunda chance volta ao mesmo documento muitas vezes; sem isto cada volta releria o CSV de
+    megabytes em cada commit. Só a contagem fica (as chaves internadas): é o que a pergunta usa.
+    """
+
+    def __init__(self) -> None:
+        self._historico: dict[str, list[tuple[str, str, bool]]] = {}
+        self._contagens: dict[str, collections.Counter[str]] = {}
+        self._tirados: dict[tuple[str, str], int] = {}
+        self._diffs: dict[tuple[str, str], tuple[dict[str, set[str]], dict[str, str]]] = {}
+
+    def historico(self, raiz: Path, relativo: str) -> list[tuple[str, str, bool]]:
+        if relativo not in self._historico:
+            self._historico[relativo] = _historico_do_documento(raiz, relativo)
+        return self._historico[relativo]
+
+    def conta(
+        self,
+        cat: _Cat,
+        val: ModuleType,
+        modo: str,
+        resolve: Callable[[str], bool] | None,
+        sha: str,
+        caminho: str,
+    ) -> collections.Counter[str]:
+        chave = f"{sha}:{caminho}"
+        if chave not in self._contagens:
+            texto = cat.texto(chave)
+            conta = _contagens(texto, val, modo, resolve)[0] if texto is not None else None
+            self._contagens[chave] = collections.Counter(
+                {sys.intern(k): n for k, n in (conta or {}).items()}
+            )
+        return self._contagens[chave]
+
+    def tirados(
+        self,
+        cat: _Cat,
+        val: ModuleType,
+        modo: str,
+        resolve: Callable[[str], bool] | None,
+        de: tuple[str, str],
+        mais_velho: tuple[str, str],
+    ) -> int:
+        """Quantos endereços INTEIROS o commit ``de`` tirou do documento (o mais velho tinha, ele não)."""
+        if (de[0], mais_velho[0]) not in self._tirados:
+            inteiras = []
+            for sha, caminho in (mais_velho, de):
+                texto = cat.texto(f"{sha}:{caminho}")
+                inteiras.append(
+                    _contagens(texto, val, modo, resolve)[1]
+                    if texto is not None
+                    else collections.Counter()
+                )
+            self._tirados[(de[0], mais_velho[0])] = sum((inteiras[0] - inteiras[1]).values())
+        return self._tirados[(de[0], mais_velho[0])]
+
+    def antes_de(
+        self,
+        raiz: Path,
+        val: ModuleType,
+        modo: str,
+        resolve: Callable[[str], bool] | None,
+        sha: str,
+        caminho: str,
+        endereco: str,
+    ) -> tuple[str | None, str]:
+        """``(endereço de antes, "")`` ou ``(None, por que não)``: o que o commit ``sha`` trocou.
+
+        Lê o par «removida → adicionada» do diff DO DOCUMENTO naquele commit. Só vale o par de
+        linhas de mesma conta (o hunk troca N por N) e de mesma conta de endereços; a linha nova, a
+        que ganhou ou perdeu endereço e o endereço que mais de um de antes explica não têm par.
+        """
+        chave = (sha, caminho)
+        if chave not in self._diffs:
+            self._diffs[chave] = _pares_do_diff(raiz, val, modo, resolve, sha, caminho)
+        trocados, sem_par = self._diffs[chave]
+        if endereco in sem_par:
+            return None, sem_par[endereco]
+        antigos = trocados.get(endereco, set())
+        if not antigos:
+            return None, "o diff do documento nesse commit não mostra o endereço sendo trocado"
+        if len(antigos) > 1:
+            return None, "o endereço de antes tem mais de uma origem no diff do documento"
+        (antigo,) = antigos
+        return antigo, ""
+
+
+def _enderecos_da_linha(
+    linha: str, val: ModuleType, modo: str, resolve: Callable[[str], bool] | None
+) -> list[str]:
+    return [
+        _canonico(arquivo, a, b, faixa)
+        for _i, _f, arquivo, a, b, faixa, _curta, _vao in _achar(linha, val, modo, resolve)
+    ]
+
+
+def _pares_do_diff(
+    raiz: Path,
+    val: ModuleType,
+    modo: str,
+    resolve: Callable[[str], bool] | None,
+    sha: str,
+    caminho: str,
+) -> tuple[dict[str, set[str]], dict[str, str]]:
+    """``({endereço novo: {endereços de antes}}, {endereço novo: por que não tem par})`` do commit."""
+    feito = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(raiz),
+            "diff",
+            "-U0",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-renames",
+            f"{sha}^",
+            sha,
+            "--",
+            caminho,
+        ],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    hunks: list[tuple[list[str], list[str]]] = []
+    removidas: list[str] = []
+    adicionadas: list[str] = []
+    dentro = False
+    for linha in feito.stdout.split("\n") if feito.returncode == 0 else []:
+        if linha.startswith("@@"):
+            if dentro:
+                hunks.append((removidas, adicionadas))
+            removidas, adicionadas, dentro = [], [], True
+        elif dentro and linha.startswith("-"):
+            removidas.append(linha[1:])
+        elif dentro and linha.startswith("+"):
+            adicionadas.append(linha[1:])
+    if dentro:
+        hunks.append((removidas, adicionadas))
+    trocados: dict[str, set[str]] = collections.defaultdict(set)
+    sem_par: dict[str, str] = {}
+    for velhas, novas in hunks:
+        for i, nova in enumerate(novas):
+            depois = _enderecos_da_linha(nova, val, modo, resolve)
+            if not depois:
+                continue
+            if len(velhas) != len(novas):
+                porque = (
+                    f"o diff do documento troca {len(velhas)} linha(s) por {len(novas)}: "
+                    "não há par de linhas"
+                )
+            else:
+                antes = _enderecos_da_linha(velhas[i], val, modo, resolve)
+                if len(antes) == len(depois):
+                    for velho, novo in zip(antes, depois, strict=True):
+                        if velho != novo:
+                            trocados[novo].add(velho)
+                    continue
+                porque = (
+                    f"a linha tinha {len(antes)} endereço(s) e passou a ter {len(depois)}: "
+                    "não há par de endereços"
+                )
+            for endereco in depois:
+                sem_par.setdefault(endereco, porque)
+    return dict(trocados), sem_par
+
+
 def _introducoes(
     raiz: Path,
     cat: _Cat,
@@ -821,6 +1018,9 @@ def _introducoes(
     documento: Path,
     atuais: collections.Counter[str],
     resolve: Callable[[str], bool] | None = None,
+    *,
+    depois_de: str | None = None,
+    memo: _Memoria | None = None,
 ) -> dict[str, tuple[str | None, bool, bool, int]]:
     """``{endereço: (commit em que entrou, épocas diferentes, o documento nasceu ali, reescritos)}``.
 
@@ -830,43 +1030,38 @@ def _introducoes(
     são de outra época. O quarto é quantos endereços INTEIROS o commit da entrada TIROU do
     documento (o reapontamento em massa troca centenas de uma vez; a curta anda no rastro da inteira
     que a ancora, e contá-la reescreveria como «massa» a célula que só mudou de texto).
+
+    ``depois_de``: o commit a partir do qual se olha para trás (sem ele); ``atuais`` é então a
+    contagem do documento NAQUELE instante, não a de hoje.
     """
     modo = _modo_de(documento)
+    memo = memo if memo is not None else _Memoria()
+    historico = memo.historico(raiz, _relativo(raiz, documento))
+    if depois_de is not None:
+        shas = [sha for sha, _caminho, _nasceu in historico]
+        historico = historico[shas.index(depois_de) + 1 :] if depois_de in shas else []
     vivos = set(atuais)
-    entrou: dict[str, tuple[str, bool]] = {}
-    tirados: dict[str, int] = {}
+    entrou: dict[str, tuple[str, str, bool]] = {}
     resultado: dict[str, tuple[str | None, bool, bool, int]] = {}
-    anterior: tuple[str, collections.Counter[str]] | None = None
-    sem_curtas: collections.Counter[str] = collections.Counter()
-    for sha, caminho, nasceu in _historico_do_documento(raiz, _relativo(raiz, documento)):
+    for sha, caminho, nasceu in historico:
         if not vivos:
             break
-        texto = cat.texto(f"{sha}:{caminho}")
-        conta, inteiras = (
-            _contagens(texto, val, modo, resolve)
-            if texto is not None
-            else (collections.Counter(), collections.Counter())
-        )
-        if anterior is not None:
-            # o estado deste commit é o de ANTES do mais novo: o que some dele é o que o mais novo tirou
-            tirados[anterior[0]] = sum((inteiras - sem_curtas).values())
-        anterior = (sha, conta)
-        sem_curtas = inteiras
+        conta = memo.conta(cat, val, modo, resolve, sha, caminho)
         for endereco in list(vivos):
             if conta[endereco] >= atuais[endereco]:
-                entrou[endereco] = (sha, nasceu)
+                entrou[endereco] = (sha, caminho, nasceu)
             else:
                 vivos.discard(endereco)
-                sha_de, nasceu_de = entrou.get(endereco, (None, True))
-                resultado[endereco] = (
-                    sha_de,
-                    conta[endereco] > 0,
-                    nasceu_de,
-                    tirados.get(sha_de or "", 0),
+                sha_de, caminho_de, nasceu_de = entrou.get(endereco, ("", "", True))
+                reescritos = (
+                    memo.tirados(cat, val, modo, resolve, (sha_de, caminho_de), (sha, caminho))
+                    if sha_de
+                    else 0
                 )
+                resultado[endereco] = (sha_de or None, conta[endereco] > 0, nasceu_de, reescritos)
     for endereco in vivos:
-        sha_de, nasceu_de = entrou.get(endereco, (None, True))
-        resultado[endereco] = (sha_de, False, nasceu_de, 0)
+        sha_de, _caminho_de, nasceu_de = entrou.get(endereco, ("", "", True))
+        resultado[endereco] = (sha_de or None, False, nasceu_de, 0)
     return resultado
 
 
@@ -880,8 +1075,12 @@ def levar_crua(
     pistas: set[str] | None = None,
     documento_nasceu_no_commit: bool = True,
     reescritos: int = 0,
+    destino: tuple[int, int] | None = None,
 ) -> tuple[str, tuple[int, int] | None, str]:
     """O bloco citado no commit ``sha``, procurado intacto e único no arquivo de hoje.
+
+    ``destino``: o endereço que o documento diz HOJE, quando ``a``-``b`` é o de uma entrada de antes
+    (a segunda chance). O bloco é lido em ``a``-``b``, mas o «no lugar» pergunta pelo destino.
 
     Devolve ``(estado, novo, motivo)``. ``estado``: ``no_lugar``; ``andou`` (``novo`` é o endereço);
     ou o motivo de ir à mão — ``nasceu_errada`` (o histórico prova que o endereço nunca apontou o
@@ -936,13 +1135,17 @@ def levar_crua(
     bloco = velho[a - 1 : b]
     if not any(linha.strip() for linha in bloco):
         return "nasceu_errada", None, f"o trecho citado estava em branco no commit {sha[:9]}"
-    if b == a and len(bloco[0].strip()) < LINHA_CURTA_DEMAIS:
+    if b == a and _caracteres_uteis(bloco[0]) < LINHA_CURTA_DEMAIS:
         return (
             "nasceu_errada",
             None,
-            (f"a linha citada (`{bloco[0].strip()}`) é curta demais para dizer o que foi citado"),
+            (
+                f"a linha citada (`{bloco[0].strip()}`) é curta demais para dizer o que foi citado "
+                "(só marcação ou pontuação não identifica nada)"
+            ),
         )
-    if atual[a - 1 : b] == bloco:
+    de, ate = destino or (a, b)
+    if atual[de - 1 : ate] == bloco:
         return "no_lugar", None, ""
     corpo = "\n".join(bloco)
     if pistas and not any(pista in corpo for pista in pistas):
@@ -981,6 +1184,106 @@ def levar_crua(
         "ambigua",
         None,
         f"o trecho citado aparece {len(hoje)} vezes em {relativo}: não há como saber qual",
+    )
+
+
+_ENDERECO_CANONICO = re.compile(r"(?P<arq>.+):(?P<a>\d+)(?:-(?P<b>\d+))?")
+
+
+def segunda_chance(
+    raiz: Path,
+    cat: _Cat,
+    val: ModuleType,
+    resolve: Callable[[str], bool] | None,
+    memo: _Memoria,
+    documento: Path,
+    cit: Citacao,
+    sha: str,
+    atual: list[str],
+    relativo: str,
+    motivo_da_varredura: str,
+    *,
+    endereco: str | None = None,
+    destino: tuple[int, int] | None = None,
+    volta: int = 1,
+) -> tuple[str, tuple[int, int] | None, str]:
+    """O endereço que uma varredura ou um reapontamento em massa deixou não prova nada; o de ANTES dele, sim.
+
+    Lê no diff do documento, naquele commit, qual endereço a linha tinha antes (``endereco`` é o que o
+    documento diz depois), acha a entrada desse endereço de antes e roda ``levar_crua`` com o
+    bloco DAQUELA entrada. Devolve o mesmo ``(estado, novo, motivo)``: ``no_lugar`` (o endereço de
+    hoje já tem o bloco: a varredura acertou), ``andou`` (o bloco está intacto e único em outro
+    lugar), ou o motivo de seguir à mão. Sem par de linhas, sem a entrada de antes, ou depois de
+    ``PROFUNDIDADE_DA_SEGUNDA_CHANCE`` voltas, fica ``varredura``, com o motivo de antes e o desta volta.
+    """
+    endereco = endereco or _canonico(cit.arquivo, cit.a, cit.b, cit.faixa)
+    destino = destino or (cit.a, cit.b)
+
+    def sem_prova(porque: str) -> tuple[str, tuple[int, int] | None, str]:
+        return "varredura", None, f"{motivo_da_varredura}; sem segunda chance: {porque}"
+
+    if volta > PROFUNDIDADE_DA_SEGUNDA_CHANCE:
+        return sem_prova(
+            f"o endereço de antes também veio de uma varredura ou de um reapontamento em massa, "
+            f"{PROFUNDIDADE_DA_SEGUNDA_CHANCE} voltas atrás"
+        )
+    modo = _modo_de(documento)
+    historico = memo.historico(raiz, _relativo(raiz, documento))
+    posicao = next((i for i, (s, _c, _n) in enumerate(historico) if s == sha), None)
+    if posicao is None or posicao + 1 >= len(historico):
+        return sem_prova("o documento nasceu nesse commit, ou o histórico acaba nele")
+    antigo, porque = memo.antes_de(raiz, val, modo, resolve, sha, historico[posicao][1], endereco)
+    if antigo is None:
+        return sem_prova(porque)
+    achado = _ENDERECO_CANONICO.fullmatch(antigo)
+    if achado is None or achado["arq"] != cit.arquivo:
+        return sem_prova("o commit trocou também o arquivo citado")
+    a, b = int(achado["a"]), int(achado["b"] or achado["a"])
+    sha_antes, caminho_antes, _ = historico[posicao + 1]
+    quantas = memo.conta(cat, val, modo, resolve, sha_antes, caminho_antes)[antigo]
+    if quantas == 0:
+        return sem_prova(f"o endereço de antes (`{antigo}`) não está no documento antes do commit")
+    entrada = _introducoes(
+        raiz,
+        cat,
+        val,
+        documento,
+        collections.Counter({antigo: quantas}),
+        resolve,
+        depois_de=sha,
+        memo=memo,
+    )[antigo]
+    sha2, mista, nasceu, reescritos = entrada
+    if sha2 is None or mista:
+        return sem_prova(
+            f"o endereço de antes (`{antigo}`) entrou em épocas diferentes no documento"
+        )
+    estado, novo, motivo = levar_crua(
+        cat, relativo, atual, a, b, sha2, cit.pistas, nasceu, reescritos, destino
+    )
+    if estado == "varredura":
+        return segunda_chance(
+            raiz,
+            cat,
+            val,
+            resolve,
+            memo,
+            documento,
+            cit,
+            sha2,
+            atual,
+            relativo,
+            motivo_da_varredura,
+            endereco=antigo,
+            destino=destino,
+            volta=volta + 1,
+        )
+    if estado in ("no_lugar", "andou"):
+        return estado, novo, ""
+    return (
+        estado,
+        None,
+        f"pelo endereço de antes da varredura (`{antigo}`, commit {sha2[:9]}): {motivo}",
     )
 
 
@@ -1049,7 +1352,8 @@ def pelo_historico(
         for documento, lista in por_documento.items():
             texto = documento.read_text(encoding="utf-8", errors="replace")
             atuais = _contagem(texto, val, _modo_de(documento), resolve)
-            entradas = _introducoes(raiz, cat, val, documento, atuais, resolve)
+            memo = _Memoria()
+            entradas = _introducoes(raiz, cat, val, documento, atuais, resolve, memo=memo)
             escritas: collections.Counter[str] = collections.Counter()
             for cit in lista:
                 escritas[_canonico(cit.arquivo, cit.a, cit.b, cit.faixa)] += cit.vezes
@@ -1069,6 +1373,7 @@ def pelo_historico(
                         f"{rotulo}: o mesmo endereço entrou em épocas diferentes neste "
                         "documento: não há como saber qual cópia vale por qual código"
                     )
+                    ESTADO_DA_MAO[a_mao[-1]] = "misturada"
                     continue
                 if escritas[endereco] != atuais[endereco]:
                     ESTATISTICA["a_mao"] += 1
@@ -1077,6 +1382,7 @@ def pelo_historico(
                         f"{rotulo}: o mesmo texto também está escrito com símbolo prometido: "
                         "trocar um trocaria o outro"
                     )
+                    ESTADO_DA_MAO[a_mao[-1]] = "misturada"
                     continue
                 relativo = _relativo(raiz, cit.alvo)
                 if cit.alvo not in alvos:
@@ -1094,6 +1400,23 @@ def pelo_historico(
                     nasceu,
                     reescritos,
                 )
+                if estado == "varredura":
+                    estado, novo, motivo = segunda_chance(
+                        raiz,
+                        cat,
+                        val,
+                        resolve,
+                        memo,
+                        documento,
+                        cit,
+                        sha or "",
+                        alvos[cit.alvo],
+                        relativo,
+                        motivo,
+                    )
+                    ESTATISTICA["segunda_chance"] += 1
+                    if estado in ("no_lugar", "andou"):
+                        ESTATISTICA[f"segunda_chance:{estado}"] += 1
                 if estado == "no_lugar":
                     ESTATISTICA["recentes" if sha is None else "no_lugar"] += 1
                 elif estado == "andou" and novo is not None:
@@ -1103,6 +1426,7 @@ def pelo_historico(
                     ESTATISTICA["a_mao"] += 1
                     ESTATISTICA[f"a_mao:{estado}"] += 1
                     a_mao.append(f"{rotulo}: {motivo}")
+                    ESTADO_DA_MAO[a_mao[-1]] = estado
     return trocas, a_mao
 
 
@@ -1193,9 +1517,86 @@ def _aplicar(texto: str, trocas: Sequence[tuple[Citacao, str]]) -> tuple[str, li
     return texto, casou
 
 
-def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
-    """Devolve (feitos, à mão). Com ``escrever``, grava e confere cada documento."""
+_LINHA_DA_MAO = re.compile(r"^(?P<doc>[^\s`]+): `(?P<texto>[^`]+)`")
+
+
+def _ref_padrao(raiz: Path) -> str:
+    """De onde se mede «a mudança de agora»: o ``merge-base`` com ``dev``; sem ``dev``, o ``HEAD``."""
+    feito = _git(raiz, "merge-base", "dev", "HEAD")
+    return feito.stdout.strip() if feito.returncode == 0 and feito.stdout.strip() else "HEAD"
+
+
+def _classificar_a_mao(
+    raiz: Path, a_mao: Sequence[str], ref: str, certas: set[str]
+) -> dict[str, list[str]]:
+    """Separa o «à mão» em NOVO (a mudança desde ``ref`` o criou) e DE ANTES.
+
+    É novo quando o endereço entrou no documento depois de ``ref``, ou quando as linhas ``a..b`` do
+    arquivo citado diferem entre ``ref`` e a árvore de hoje. Linha que não se sabe ler, ou que o
+    próprio script acabou de causar (``certas``: documento devolvido, troca que não casou), é nova.
+    """
+    val = _validador(raiz)
+    resolve = _resolvedor(raiz, val)
+    divida: dict[str, list[str]] = {"nova": [], "de antes": []}
+    documentos: dict[str, tuple[collections.Counter[str], collections.Counter[str]] | None] = {}
+
+    def contagens(
+        documento: str,
+    ) -> tuple[collections.Counter[str], collections.Counter[str]] | None:
+        if documento not in documentos:
+            antes = cat.texto(f"{ref}:{documento}")
+            caminho = raiz / documento
+            if antes is None or not caminho.is_file():
+                documentos[documento] = None
+            else:
+                modo = _modo_de(caminho)
+                hoje = caminho.read_text(encoding="utf-8", errors="replace")
+                documentos[documento] = (
+                    _contagem(antes, val, modo, resolve),
+                    _contagem(hoje, val, modo, resolve),
+                )
+        return documentos[documento]
+
+    def de_antes(linha: str) -> bool:
+        lida = _LINHA_DA_MAO.match(linha)
+        achado = _ENDERECO.search(lida["texto"]) if lida else None
+        if lida is None or achado is None or linha in certas:
+            return False
+        a = int(achado["a"])
+        b = int(achado["b"] or a)
+        conta = contagens(lida["doc"])
+        endereco = _canonico(achado["arq"], a, b, achado["b"] is not None)
+        if conta is None or conta[0][endereco] < conta[1][endereco]:
+            return False
+        alvo = val.resolve(achado["arq"], raiz)
+        velhas = cat.linhas(ref, _relativo(raiz, alvo)) if alvo is not None else None
+        if alvo is None or velhas is None:
+            return False
+        hoje = alvo.read_text(encoding="utf-8", errors="replace").splitlines()
+        return bool(velhas[a - 1 : b] == hoje[a - 1 : b])
+
+    with _Cat(raiz) as cat:
+        for linha in a_mao:
+            divida["de antes" if de_antes(linha) else "nova"].append(linha)
+    return divida
+
+
+def reapontar(
+    raiz: Path, *, escrever: bool, desde: str | None = None
+) -> tuple[list[str], list[str]]:
+    """Devolve (feitos, à mão). Com ``escrever``, grava e confere cada documento.
+
+    ``desde``: o commit a partir do qual o «à mão» é NOVO (``DIVIDA``); o padrão é o ``merge-base``
+    com ``dev``. Um ``desde`` que não existe levanta ``ValueError`` antes de qualquer leitura.
+    """
+    ref = desde or _ref_padrao(raiz)
+    resolvido = _git(raiz, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    if resolvido.returncode != 0:
+        raise ValueError(f"`--desde {ref}` não é um commit deste repositório")
+    ref = resolvido.stdout.strip()
     ESTATISTICA.clear()
+    ESTADO_DA_MAO.clear()
+    certas: set[str] = set()
     feitos: list[str] = []
     citacoes, a_mao = podres_do_validador(raiz)
     do_src, a_mao_src = podres_do_src(raiz)
@@ -1243,6 +1644,7 @@ def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
             a_mao.append(
                 f"{documento.relative_to(raiz)}: tem byte nulo, não há como trocar sem cascata"
             )
+            certas.add(a_mao[-1])
             continue
         texto, casou = _aplicar(original, trocas)
         for (cit, endereco), n in zip(trocas, casou, strict=True):
@@ -1251,6 +1653,7 @@ def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
                     f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}`: o endereço "
                     "não está escrito no documento, nem inteiro nem na forma curta da linha"
                 )
+                certas.add(a_mao[-1])
                 continue
             feitos.append(f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}` ({n}x)")
         if not escrever or texto == original:
@@ -1264,6 +1667,10 @@ def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
                 f"{documento.relative_to(raiz)}: devolvido como estava — o endereço novo "
                 f"quebraria outra promessa ({'; '.join(quebradas)})"
             )
+            certas.add(a_mao[-1])
+    DIVIDA.clear()
+    DIVIDA.update(_classificar_a_mao(raiz, a_mao, ref, certas))
+    DIVIDA["ref"] = [ref]
     return feitos, a_mao
 
 
@@ -1282,6 +1689,15 @@ def _quebradas_pela_troca(raiz: Path, documento: Path, novos: set[str]) -> list[
     ]
 
 
+_MOTIVO_DA_MAO = {
+    "varredura": "varredura ou massa sem prova",
+    "mudou": "mudaram",
+    "ambigua": "ambíguas",
+    "misturada": "de épocas misturadas",
+    "nasceu_errada": "nasceram erradas",
+}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Reaponta as citações `arquivo:linha` que o código deslocou, pelo histórico.",
@@ -1295,10 +1711,29 @@ def main(argv: list[str] | None = None) -> int:
             "calculado, e não prova onde a linha estava. A forma curta (`:N`, `:N-M`) vale em .md, "
             "em .csv (solta, depois de vírgula, ponto-e-vírgula, `e` ou `(`) e em prosa de `src/`: "
             "anda com a inteira MAIS PRÓXIMA antes dela, na mesma linha ou célula, só se essa "
-            "âncora é um arquivo do repositório, e a troca é pelo lugar onde ela está escrita."
+            "âncora é um arquivo do repositório, e a troca é pelo lugar onde ela está escrita. "
+            "SEGUNDA CHANCE: antes de mandar à mão o endereço que uma varredura ou um "
+            "reapontamento em massa deixou, o script lê no diff do documento, naquele commit, o "
+            "endereço de ANTES da mesma linha, acha a entrada dele e leva o bloco daquela entrada: "
+            "se o endereço de hoje já o tem, fica no lugar; se ele existe intacto e único em outro "
+            "lugar, anda; senão fica à mão. Sem par de linhas (contagem desigual de linhas ou de "
+            "endereços), sem a entrada de antes, ou se ela também veio de uma varredura mais de "
+            f"{PROFUNDIDADE_DA_SEGUNDA_CHANCE} voltas atrás, fica à mão sem chute. A LINHA TEM DE "
+            "TER CONTEÚDO: marcação sem atributo (`</span>`, `<br>`) e pontuação não contam; "
+            "a tag com atributo conta. "
+            "O RC diz o que FALTA, não a dívida: vale 1 quando há troca a escrever (modo lista), "
+            "à mão NOVA (o endereço entrou no documento depois de --desde, ou as linhas citadas "
+            "do arquivo mudaram desde então) ou o --escrever devolveu um documento; a dívida de "
+            "antes é contada por motivo, à parte, e não muda o rc."
         ),
     )
     parser.add_argument("--escrever", action="store_true", help="grava as trocas e as confere")
+    parser.add_argument(
+        "--desde",
+        metavar="REF",
+        default=None,
+        help="de onde se mede «à mão nova» (padrão: o merge-base com `dev`; sem `dev`, o HEAD)",
+    )
     parser.add_argument(
         "--root",
         type=Path,
@@ -1307,7 +1742,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     raiz = args.root.resolve()
-    feitos, a_mao = reapontar(raiz, escrever=args.escrever)
+    try:
+        feitos, a_mao = reapontar(raiz, escrever=args.escrever, desde=args.desde)
+    except ValueError as erro:
+        parser.error(str(erro))
     verbo = "reapontada(s)" if args.escrever else "a reapontar (rode com --escrever)"
     print(f"{len(feitos)} citação(ões) {verbo}:")
     for linha in feitos:
@@ -1325,11 +1763,36 @@ def main(argv: list[str] | None = None) -> int:
             f"{ESTATISTICA['a_mao:nasceu_errada']} já nasceram erradas); "
             f"{ESTATISTICA['curtas_de_csv']} forma(s) curta(s) lida(s) em CSV"
         )
+    if ESTATISTICA["segunda_chance"]:
+        resto = ESTATISTICA["segunda_chance"] - ESTATISTICA["segunda_chance:no_lugar"]
+        print(
+            f"segunda chance (varredura ou massa): {ESTATISTICA['segunda_chance']} lidas — "
+            f"{ESTATISTICA['segunda_chance:no_lugar']} no lugar, "
+            f"{ESTATISTICA['segunda_chance:andou']} andaram, "
+            f"{resto - ESTATISTICA['segunda_chance:andou']} seguem à mão"
+        )
+    nova, de_antes = DIVIDA["nova"], DIVIDA["de antes"]
+    ref = DIVIDA["ref"][0][:9] if DIVIDA.get("ref") else "?"
     if a_mao:
-        print(f"{len(a_mao)} à mão (o script não chuta):")
-        for linha in a_mao:
+        print(
+            f"{len(a_mao)} à mão (o script não chuta): {len(nova)} nova(s) desde {ref}, "
+            f"{len(de_antes)} de antes"
+        )
+    if nova:
+        print(f"à mão NOVA (a mudança desde {ref} deslocou e o script não levou; o rc fica 1):")
+        for linha in nova:
             print(f"  {linha}")
-    return 1 if a_mao else 0
+    if de_antes:
+        por_motivo = collections.Counter(
+            _MOTIVO_DA_MAO.get(ESTADO_DA_MAO.get(x, ""), "outras") for x in de_antes
+        )
+        print(
+            "à mão DE ANTES (dívida que esta mudança não criou; não muda o rc): "
+            + ", ".join(f"{n} {motivo}" for motivo, n in por_motivo.most_common())
+        )
+        for linha in de_antes:
+            print(f"  {linha}")
+    return 1 if (feitos and not args.escrever) or nova else 0
 
 
 if __name__ == "__main__":
