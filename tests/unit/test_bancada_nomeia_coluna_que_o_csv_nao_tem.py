@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import ast
 import csv
+import re
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import pytest
@@ -249,11 +251,37 @@ def test_o_column_config_so_configura_coluna_que_a_grade_mostra() -> None:
     )
 
 
+def _funcao_da_bancada(nome: str) -> Callable[..., list[str]]:
+    """A função pura `nome` do módulo da bancada, compilada SEM importar o módulo (que exige o
+    streamlit, fora do produto)."""
+    for no in _arvore().body:
+        if isinstance(no, ast.FunctionDef) and no.name == nome:
+            espaco: dict[str, object] = {"Iterable": Iterable}
+            exec(  # o fonte é o do próprio repositório, lido por AST
+                compile(ast.Module([no], []), str(BANCADA), "exec"), espaco
+            )
+            return espaco[nome]  # type: ignore[return-value]
+    pytest.fail(f"não achei a função `{nome}` em {BANCADA.name}")
+
+
+def _opcoes_da_lista(nome: str, caminho: Path, coluna: str) -> list[str]:
+    """O que `options=<nome>` oferece: a lista literal, ou a montada do próprio CSV."""
+    for no in _arvore().body:
+        if not (isinstance(no, ast.Assign) and any(
+            isinstance(a, ast.Name) and a.id == nome for a in no.targets
+        )):
+            continue
+        if isinstance(no.value, ast.Call) and isinstance(no.value.func, ast.Name):
+            fixos = _lista_literal(no.value.args[0].id)  # type: ignore[attr-defined]
+            return _funcao_da_bancada(no.value.func.id)(fixos, _valores_da_coluna(caminho, coluna))
+    return _lista_literal(nome)
+
+
 def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
     """Um seletor cego ao dado não consegue devolver o dado que já estava lá."""
     orfaos: list[str] = []
     for coluna, lista in sorted(_options_por_coluna().items()):
-        oferecidos = set(_lista_literal(lista))
+        oferecidos = set(_opcoes_da_lista(lista, MAPA, coluna))
         for valor in _valores_da_coluna(MAPA, coluna):
             if valor not in oferecidos:
                 orfaos.append(f"  · `{coluna}` (options=`{lista}`): {_curto(valor)}")
@@ -281,4 +309,46 @@ def test_o_formulario_de_ensaio_escreve_o_cabecalho_de_ensaios_em_ordem() -> Non
     assert _campos_do_ensaio() == _cabecalho(ENSAIOS), (
         "o formulário de ensaio da bancada não grava exatamente o cabeçalho de "
         f"{ENSAIOS.relative_to(RAIZ)}, na mesma ordem"
+    )
+
+
+def test_as_opcoes_do_estado_hoje_saem_do_csv_e_nao_de_uma_copia() -> None:
+    """O texto longo do `estado_hoje` tem UM dono, o CSV: com um CSV de mentira cuja célula cita
+    `x.py:7`, o seletor oferece essa célula — e nenhuma cópia no fonte da bancada precisa
+    acompanhar o código (era o `_ESTADO_RUMBLE_FF`, que ficou com o endereço velho)."""
+    celula = "MEDIDO em 11/08/2026: a cura está em `x.py:7`, consumida no laço vivo."
+    opcoes = _opcoes_da_lista_de_mentira(celula)
+    assert celula in opcoes, (
+        "a célula do `estado_hoje` do CSV não chegou às opções do seletor: a bancada "
+        "voltou a oferecer só o que está escrito no fonte dela"
+    )
+    assert opcoes[0] == "" and "funciona" in opcoes
+    assert len(opcoes) == len(set(opcoes)), "opção repetida no seletor"
+
+
+def _opcoes_da_lista_de_mentira(celula: str) -> list[str]:
+    for no in _arvore().body:
+        if isinstance(no, ast.Assign) and any(
+            isinstance(a, ast.Name) and a.id == "ESTADOS" for a in no.targets
+        ):
+            assert isinstance(no.value, ast.Call) and isinstance(no.value.func, ast.Name), (
+                "`ESTADOS` deixou de ser montada por uma função a partir do CSV"
+            )
+            assert len(no.value.args) == 2 and "estado_hoje" in ast.unparse(no.value.args[1]), (
+                "`ESTADOS` não recebe a coluna `estado_hoje` do CSV que a bancada carrega"
+            )
+            fixos = _lista_literal(no.value.args[0].id)  # type: ignore[attr-defined]
+            return _funcao_da_bancada(no.value.func.id)(fixos, ["", "funciona", celula, celula])
+    pytest.fail("não achei `ESTADOS` em bancada_do_mapa.py")
+
+
+_ENDERECO_DE_LINHA = re.compile(r"[A-Za-z0-9_/-]+\.(?:py|c|h|md|csv|html|sh):\d+")
+
+
+def test_o_fonte_da_bancada_nao_traz_endereco_arquivo_linha() -> None:
+    """Endereço `arquivo:linha` escrito na bancada é cópia que ninguém reaponta."""
+    achados = sorted(set(_ENDERECO_DE_LINHA.findall(BANCADA.read_text(encoding="utf-8"))))
+    assert not achados, (
+        f"a bancada traz {achados} no fonte: o texto que cita linha mora no CSV, e a bancada "
+        "só o oferece (`estados_do_mapa`)"
     )

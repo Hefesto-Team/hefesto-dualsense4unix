@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import sys
+from collections.abc import Iterable
 from datetime import date, datetime
 from pathlib import Path
 
@@ -40,69 +41,6 @@ from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 PONTES = ["", *[degrau.ponte.chave for degrau in ESCADA]]
 QUEM = ["", "ci", "bancada", "olho-dela",
         "aparelho", "fonte-do-driver", "descritor", "instrumento"]
-_ESTADO_RUMBLE_SIMULTANEO = (
-    "RESPONDIDA em 11/08/2026 com a mesa cheia, e a causa do estorvo esta ISOLADA: quatro"
-    " controles vibram ao mesmo tempo nos dois transportes; o que os cancelava era o "
-    "keepalive do daemon, provado por dose-resposta. Fica ABERTA a cura — o keepalive não"
-    " pode escrever zero nos bytes de motor sem saber se ha um dono de fora — e fica "
-    "aberto por que o cancelamento e total com dois alvos e apenas parcial com quatro."
-)
-_ESTADO_RUMBLE_FF = (
-    "MEDIDO nos dois transportes em 11/08/2026 com quatro controles na mesa, e a causa esta "
-    "FECHADA: o keepalive do daemon cancela o rumble alheio, e o faz pelos BYTES de motor, "
-    "não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito segundos) e "
-    "por troca de lado (bits desligados trocaram o motor que vibra). A cura ESTA escrita e "
-    "LIGADA: `OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC = 2.0` "
-    "(core/backend_pydualsense.py:212), consumida no laco vivo em :926-932, com mordida em "
-    "tests/unit/test_rumble_sem_dono_01.py. O que ela NAO tem e medicao de radio: a mordida "
-    "prova o LACO, nunca o motor."
-)
-_ESTADO_GIROSCOPIO_BIAS = (
-    'Fechado nos dois transportes em 15/08/2026 pelo E-8. O número de repouso NÃO é zero: '
-    'as quatro unidades ficam entre 0,19 e 1,53 graus/s de bias de velocidade angular, '
-    'porque o driver zera o `bias` do giroscópio de propósito (`hid-playstation.c:1200, '
-    ':1206, :1212`) e só normaliza a escala. É bias de fábrica por unidade, não ruído e '
-    'não transporte — um jogo que integrar sem corrigir deriva de 0,2 a 1,5 grau por '
-    'segundo.'
-)
-_ESTADO_IMU_LIGAR = (
-    'PERGUNTA FECHADA POR BUSCA, 15/08/2026: NÃO existe, nesta árvore, código que tente '
-    'ligar a IMU do DualSense — logo não há nada a podar aqui. O `set_motion_streaming` é '
-    'flag DO VPAD (decide se o espelho emite) e o único Enable-IMU do projeto é o '
-    'subcomando 0x40 do protocolo Switch, em `core/external_leds.py:142`, que é do '
-    'Nintendo Pro REAL. Procurado por `git grep` em `imu`, `motion`, `enable_motion` e '
-    '`ligar` sobre `src/` e `app/`.'
-)
-_ESTADO_IMU_PERDA = (
-    'A assimetria "uma degradação de link no CABO é invisível para a telemetria" tem cura '
-    'medida e NÃO aplicada: o `__le32` de `corpo[11..14]` é contador de reports nos DOIS '
-    'transportes, e o produto hoje não o lê em transporte nenhum. Parseá-lo daria ao cabo '
-    'o contador que ele nunca teve e ao rádio um que mede perda de verdade, em vez do '
-    '`bt_drops`, que conta o que o PRODUTO descartou.'
-)
-_ESTADO_BRILHO_DO_PERFIL = (
-    'o perfil escolhe o brilho das luzes de número por controle — Fraco, '
-    'Médio ou Forte (`leds.player_led_brightness`, no global e no override de '
-    'cada controle), e todo controle nasce no Fraco (o degrau 2). O produto '
-    'manda o `flag2` bit0 com o degrau nos dois transportes: no cabo sem nó '
-    'gravável, pelo fluxo; no cabo com o nó do kernel, num 0x02 avulso logo '
-    'depois do número; no rádio, no 0x31 que acende o número. Vale para o '
-    '«Todos» do perfil, para um controle só, para o clique da linha LEDs '
-    '(`led.player_brightness_set`) e para o controle que chega depois, e a '
-    'escolha sobrevive à troca de perfil, ao «Salvar Perfil» do rodapé e ao '
-    'Estilo de Jogo. A pílula da aba Iluminação acende o degrau que o daemon '
-    'diz aceso naquele controle (`daemon.state_full` → '
-    '`controllers[].brilho_das_luzes`, o merge com a camada da usuária), e '
-    'por isso o clique sobrevive à troca automática também na tela; sem o '
-    'daemon, ou com um daemon que não publica a chave, ela cai no perfil do '
-    'disco. Ver O-BRILHO-DAS-LUZES-DE-NUMERO-01 e '
-    'A-04-PERGUNTA-AO-DAEMON-VIVO-01.'
-)
-ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
-           "não implementado", "impossível",
-           _ESTADO_RUMBLE_SIMULTANEO, _ESTADO_RUMBLE_FF,
-           _ESTADO_GIROSCOPIO_BIAS, _ESTADO_IMU_LIGAR, _ESTADO_IMU_PERDA,
-           _ESTADO_BRILHO_DO_PERFIL]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
 st.set_page_config(page_title="Hefesto · bancada de medição", layout="wide")
@@ -114,6 +52,21 @@ def carrega(mtime: float) -> pd.DataFrame:
 
 
 df = carrega(CSV_.stat().st_mtime)
+
+ESTADOS_FIXOS = ["", "funciona", "regrediu", "nunca funcionou",
+                 "não implementado", "impossível"]
+
+
+def estados_do_mapa(fixos: list[str], celulas: Iterable[str]) -> list[str]:
+    """As opções do `estado_hoje`: o vocabulário curto e, depois, cada texto que o CSV já tem.
+
+    O CSV é o único dono do texto longo (ele cita `arquivo:linha`, e o `reapontar-citacoes.py`
+    o anda com o código): uma cópia aqui ficaria para trás no primeiro reapontamento.
+    """
+    return list(dict.fromkeys([*fixos, *(c for c in celulas if c.strip())]))
+
+
+ESTADOS = estados_do_mapa(ESTADOS_FIXOS, df["estado_hoje"])
 
 st.title("Bancada de medição")
 st.caption(
