@@ -6,6 +6,7 @@ import ast
 import asyncio
 import contextlib
 import errno
+import json
 import os
 import shutil
 import stat
@@ -67,6 +68,25 @@ def _no(cabeca: str, indice: int, nome: str, desc: str, spec: str, estado: str,
     ]) + "\n"
 
 
+def _volume_json(canais: int, pct: int) -> dict[str, Any]:
+    bruto = int(65536 * pct / 100)
+    nomes = {1: ["mono"], 2: ["front-left", "front-right"],
+             4: ["front-left", "front-right", "rear-left", "rear-right"]}[canais]
+    return {c: {"value": bruto, "value_percent": f"{pct}%", "db": "-23.88 dB"} for c in nomes}
+
+
+def _no_json(indice: int, nome: str, desc: str, spec: str, estado: str, mudo: bool,
+             canais: int, pct: int, extra: dict[str, Any]) -> dict[str, Any]:
+    """Um nó de `pactl --format=json list sinks|sources`, na forma do pactl 16.1."""
+    return {
+        "index": indice, "state": estado, "name": nome, "description": desc,
+        "driver": "PipeWire", "sample_specification": spec, "owner_module": 4294967295,
+        "mute": mudo, "volume": _volume_json(canais, pct), "balance": 0.0, **extra,
+        "properties": {"node.name": nome, "device.description": desc,
+                       "object.serial": str(indice)},
+    }
+
+
 def _textos(*, mic_mudo: str = "") -> dict[str, str]:
     """Os arquivos do servidor. O CURTO é escrito à parte, pelo `printf` do `pactl`"""
     sinks = [(101, HDMI, "Saida HDMI", "s16le 2ch 48000Hz", "SUSPENDED", _vol(2, 100))]
@@ -81,6 +101,18 @@ def _textos(*, mic_mudo: str = "") -> dict[str, str]:
     fontes += [(401 + i, f"hefesto_mic_{h}", f"Microfone do Controle {i + 1}",
                 "s16le 1ch 48000Hz", "RUNNING" if i == 2 else "SUSPENDED", _vol(1, 100))
                for i, h in enumerate(HEX)]
+    canais_de = {"1ch": 1, "2ch": 2, "4ch": 4}
+
+    def _n_canais(spec: str) -> int:
+        return next(v for k, v in canais_de.items() if k in spec)
+
+    json_s = json.dumps([
+        _no_json(ix, n, d, sp, e, False, _n_canais(sp), int(v.split("/")[1].strip("% ")),
+                 {"monitor_source": f"{n}.monitor"}) for ix, n, d, sp, e, v in sinks])
+    json_f = json.dumps([
+        _no_json(ix, n, d, sp, e, n == mic_mudo, _n_canais(sp), int(v.split("/")[1].strip("% ")),
+                 {"monitor_of_sink": n[:-8] if n.endswith(".monitor") else None})
+        for ix, n, d, sp, e, v in fontes])
     longo_s = "\n".join(
         _no("Sink", ix, n, d, sp, e, False, v, f"\tMonitor Source: {n}.monitor")
         for ix, n, d, sp, e, v in sinks)
@@ -95,6 +127,18 @@ def _textos(*, mic_mudo: str = "") -> dict[str, str]:
              "\tResample method: PipeWire\n\tProperties:\n\t\tapplication.name = \"Jogo\"\n"
              "\t\tapplication.process.id = \"4242\"\n")
     return {
+        "sinks.json": json_s,
+        "sources.json": json_f,
+        "sink-inputs.json": json.dumps([{
+            "index": 901, "driver": "PipeWire", "owner_module": None, "client": "77",
+            "sink": 201, "sample_specification": "float32le 4ch 48000Hz",
+            "format": "pcm", "corked": False, "mute": False, "volume": _volume_json(4, 100),
+            "properties": {"application.name": "Jogo", "application.process.id": "4242"}}]),
+        "source-outputs.json": json.dumps([{
+            "index": 951, "driver": "PipeWire", "owner_module": None, "client": None,
+            "source": 403, "sample_specification": "s16le 1ch 48000Hz",
+            "format": "pcm", "corked": False, "mute": False, "volume": _volume_json(1, 100),
+            "properties": {"application.name": "Jogo", "application.process.id": "4242"}}]),
         "sinks.longo": longo_s,
         "sinks.curto": "".join(f"{ix}\t{n}\tPipeWire\t{sp}\t{e}\n"
                                for ix, n, _d, sp, e, _v in sinks),
@@ -145,13 +189,14 @@ alvo() {
   esac
 }
 case "$*" in
-  "list sinks") cat "$F/sinks.longo";;
+  "--format=json list sinks"|"-f json list sinks") cat "$F/sinks.json";;
+  "--format=json list sources"|"-f json list sources") cat "$F/sources.json";;
+  "--format=json list sink-inputs"|"-f json list sink-inputs") cat "$F/sink-inputs.json";;
+  "--format=json list source-outputs"|"-f json list source-outputs") cat "$F/source-outputs.json";;
+  "list sinks"|"list sources"|"list sink-inputs"|"list source-outputs") exit 1;;
   "list sinks short"|"list short sinks") cat "$F/sinks.curto";;
-  "list sources") cat "$F/sources.longo";;
   "list sources short"|"list short sources") cat "$F/sources.curto";;
-  "list sink-inputs") cat "$F/sink-inputs.longo";;
   "list sink-inputs short"|"list short sink-inputs") cat "$F/sink-inputs.curto";;
-  "list source-outputs") cat "$F/source-outputs.longo";;
   "list source-outputs short"|"list short source-outputs") cat "$F/source-outputs.curto";;
   "list modules short"|"list short modules") cat "$F/modules.curto";;
   "info") cat "$F/info";;
@@ -405,7 +450,7 @@ def test_um_evento_rele_so_o_tipo_que_mudou(
             await _ate(lambda: rs.RETRATO.marca(("sources",)) != marca, "o retrato reler as fontes")
             depois = await asyncio.to_thread(hotkey._ler_o_canal, UNIQS[2])
             assert depois["canal_mudo"] is True, "o retrato não acompanhou o evento"
-            assert servidor.chamadas() == ["list sources"], (
+            assert servidor.chamadas() == ["--format=json list sources"], (
                 f"um evento de fonte devia reler UMA vez: {servidor.chamadas()}")
         finally:
             await _parar(tarefa)
@@ -432,7 +477,7 @@ def test_a_rajada_de_eventos_rele_uma_vez(
             marca = rs.RETRATO.geracao
             servidor.evento(*["Event 'change' on sink-input #901"] * 5)
             await asyncio.sleep(ods.RAJADA_S * 6)
-            assert servidor.chamadas() == ["list sink-inputs"], servidor.chamadas()
+            assert servidor.chamadas() == ["--format=json list sink-inputs"], servidor.chamadas()
             assert rs.RETRATO.geracao == marca, "nada mudou e o retrato acordou quem espera"
         finally:
             await _parar(tarefa)
@@ -468,7 +513,7 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
             assert volta["padrão"] is None
             assert all(c["fonte"] is None for c in volta["canal"])
             assert all(r is None for r in volta["radio"])
-            assert rs.RETRATO.responder(["pactl", "list", "sinks"]) is rs.NAO_SEI
+            assert rs.RETRATO.responder(["pactl", "--format=json", "list", "sinks"]) is rs.NAO_SEI
             fora = _de_quem_mais(servidor, espiao)
             assert not fora, f"com o servidor caído, leitores perguntaram por conta própria: {fora}"
 
@@ -506,6 +551,7 @@ PORTAS: dict[tuple[str, str], str] = {
         "dualsense_bt_audio._rodar",
     ("integrations/eleicao_de_microfone.py", "_rodar"): "eleicao_de_microfone._rodar",
     ("integrations/eleicao_de_microfone.py", "_ler"): "eleicao_de_microfone._rodar",
+    ("integrations/eleicao_de_microfone.py", "_texto"): "eleicao_de_microfone._rodar",
     ("integrations/endpoint_de_haptica.py", "chamar"): "alto_falante_bt._rodar",
     ("integrations/endpoint_de_haptica.py", "self.runner"): "alto_falante_bt._rodar",
     ("integrations/ganho_do_microfone.py", "audio_saida.rodar_leitura"):
@@ -557,9 +603,44 @@ def _executores() -> dict[str, Callable[[list[str]], Any]]:
 
 def _e_leitura(elementos: list[str | None]) -> bool:
     """`["pactl", verbo, ...]` ou `[<variável>, verbo, ...]` com verbo de leitura."""
+    if len(elementos) >= 3 and elementos[1] == FORMATO and elementos[2] == "list":
+        return elementos[0] in ("pactl", None)  # a lista em JSON escrita por extenso
     if len(elementos) < 2 or elementos[1] not in rs.LEITURAS:
         return False
     return elementos[0] in ("pactl", None)
+
+
+FORMATO = "--format=json"
+#: as funções da porta que recebem o EXECUTOR e perguntam por ele (o executor é o último argumento,
+#: ou o primeiro em `placa_de_cada_fonte`); o tipo é o primeiro argumento de texto.
+_LEITORES_DA_PORTA = {
+    "ler_nos", "ler_fluxos", "sysfs_por_no", "volumes_do_no", "placa_de_cada_fonte"}
+_MONTADORES_DO_ARGV = {"argv_da_lista", "argv_do_curto"}
+
+
+def _nome_do_func(no: ast.Call) -> str:
+    return ast.unparse(no.func).rsplit(".", 1)[-1]
+
+
+def _pergunta_da_porta(no: ast.Call) -> tuple[str, str] | None:
+    """`(tipo, quem pergunta)` quando a chamada é uma pergunta montada pela porta do JSON.
+
+    Duas formas: `porta_do_som.ler_nos("sinks", runner)` (o executor vai de argumento) e
+    `runner(porta_do_som.argv_da_lista("sinks"))` (o argv vai ao executor).
+    """
+    nome = _nome_do_func(no)
+    if nome in _LEITORES_DA_PORTA and no.args:
+        tipo = "?"
+        if isinstance(no.args[0], ast.Constant) and isinstance(no.args[0].value, str):
+            tipo = no.args[0].value
+        return tipo, ast.unparse(no.args[-1])
+    for arg in no.args:
+        if isinstance(arg, ast.Call) and _nome_do_func(arg) in _MONTADORES_DO_ARGV:
+            tipo = "?"
+            if arg.args and isinstance(arg.args[0], ast.Constant):
+                tipo = str(arg.args[0].value)
+            return tipo, ast.unparse(no.func)
+    return None
 
 
 def _censo() -> list[tuple[str, int, str, list[str | None]]]:
@@ -567,8 +648,8 @@ def _censo() -> list[tuple[str, int, str, list[str | None]]]:
     achados: list[tuple[str, int, str, list[str | None]]] = []
     for arquivo in sorted(SRC.rglob("*.py")):
         relativo = arquivo.relative_to(SRC).as_posix()
-        if relativo == "integrations/retrato_do_som.py":
-            continue
+        if relativo in ("integrations/retrato_do_som.py", "integrations/porta_do_som.py"):
+            continue  # o retrato e a porta MONTAM o argv; quem pergunta é o `ler` de cada um
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         pais: dict[int, ast.AST] = {}
         funcao: dict[int, str] = {}
@@ -591,6 +672,9 @@ def _censo() -> list[tuple[str, int, str, list[str | None]]]:
                 else:
                     porta = funcao.get(id(no), "<módulo>")
                 achados.append((relativo, no.lineno, porta, elementos))
+            elif isinstance(no, ast.Call) and _pergunta_da_porta(no) is not None:
+                tipo, quem = _pergunta_da_porta(no)  # type: ignore[misc]
+                achados.append((relativo, no.lineno, quem, ["pactl", FORMATO, "list", tipo]))
             elif isinstance(no, ast.Call):
                 elementos = [a.value if isinstance(a, ast.Constant) and isinstance(a.value, str)
                              else "?" for a in no.args]
@@ -632,9 +716,12 @@ def test_todo_executor_com_o_retrato_vivo_nao_pergunta_nada(
         chave = PORTAS[(a, porta)]
         partes = ["pactl" if i == 0 else "?" if e is None else str(e)
                   for i, e in enumerate(argv)]
-        if partes[1:2] == ["list"] and len(partes) == 3 and partes[2] == "?":
+        if partes[1:2] == [FORMATO] and partes[3] != "?":
+            formas.setdefault(chave, set()).add(tuple(partes))
+            continue
+        if partes[1:2] in (["list"], [FORMATO]) and partes[-1] == "?" and len(partes) <= 4:
             for tipo in ("sinks", "sources"):
-                formas.setdefault(chave, set()).add(("pactl", "list", tipo))
+                formas.setdefault(chave, set()).add(("pactl", "--format=json", "list", tipo))
             continue
         alvo = HDMI if "sink" in partes[1] else f"hefesto_mic_{HEX[2]}"
         formas.setdefault(chave, set()).add(
@@ -676,14 +763,14 @@ def test_o_curto_sai_do_longo_como_o_pactl_o_imprime() -> None:
     """O oráculo é o `printf` do `pactl` 16.1, escrito à parte do retrato."""
     t = _textos()
     for tipo in ("sinks", "sources"):
-        assert rs.curto_dos_nos(rs.nos_do_texto(t[f"{tipo}.longo"])) == t[f"{tipo}.curto"]
+        assert rs.curto_dos_nos(rs.nos_do_texto(t[f"{tipo}.json"])) == t[f"{tipo}.curto"]
     for tipo in ("sink-inputs", "source-outputs"):
-        assert rs.curto_dos_fluxos(rs.fluxos_do_texto(t[f"{tipo}.longo"])) == t[f"{tipo}.curto"]
+        assert rs.curto_dos_fluxos(rs.fluxos_do_texto(t[f"{tipo}.json"])) == t[f"{tipo}.curto"]
 
 
 def test_o_fluxo_diz_de_quem_e_para_quem_o_pedir() -> None:
     """A partida pelo dono do fluxo (A-HAPTICA-DO-RADIO) lê isto do retrato."""
-    (fluxo,) = rs.fluxos_do_texto(_textos()["sink-inputs.longo"])
+    (fluxo,) = rs.fluxos_do_texto(_textos()["sink-inputs.json"])
     assert fluxo.alvo == "201"
     assert fluxo.propriedades["application.process.id"] == "4242"
     assert fluxo.corked is False
@@ -692,7 +779,10 @@ def test_o_fluxo_diz_de_quem_e_para_quem_o_pedir() -> None:
 @pytest.mark.parametrize(("argv", "esperado"), [
     (["pactl", "list", "sinks", "short"], rs.Pergunta("sinks", "curta")),
     (["pactl", "list", "short", "sink-inputs"], rs.Pergunta("sink-inputs", "curta")),
-    (["pactl", "list", "sources"], rs.Pergunta("sources", "longa")),
+    (["pactl", "--format=json", "list", "sources"], rs.Pergunta("sources", "json")),
+    (["pactl", "-f", "json", "list", "sinks"], rs.Pergunta("sinks", "json")),
+    (["pactl", "list", "sources"], None),  # o longo deixou de ser promessa
+    (["pactl", "--format=json", "list", "modules"], None),
     (["pactl", "list", "modules", "short"], rs.Pergunta("modules", "curta")),
     (["/usr/bin/pactl", "get-default-source"], rs.Pergunta("server", "padrão", "source")),
     (["pactl", "get-sink-mute", "x"], rs.Pergunta("sinks", "mudo", "x")),
@@ -714,7 +804,7 @@ def test_as_perguntas_que_o_retrato_entende(argv: list[str], esperado: Any) -> N
     (["pactl", "set-sink-volume", "x", "40%"], {"sinks", "sources"}),
     (["pactl", "set-sink-input-mute", "9", "1"], {"sink-inputs"}),
     (["pactl", "load-module", "module-null-sink"], set(rs.TIPOS)),
-    (["pactl", "list", "sinks"], set()),
+    (["pactl", "--format=json", "list", "sinks"], set()),
     (["pactl", "subscribe"], set()),
 ])
 def test_cada_escrita_deixa_pendente_o_que_ela_toca(argv: list[str], tipos: set[str]) -> None:
@@ -735,10 +825,10 @@ def _retrato_de_mentira(respostas: dict[tuple[str, ...], str | None]) -> tuple[
 def _respostas() -> dict[tuple[str, ...], str | None]:
     t = _textos()
     return {
-        ("pactl", "list", "sinks"): t["sinks.longo"],
-        ("pactl", "list", "sources"): t["sources.longo"],
-        ("pactl", "list", "sink-inputs"): t["sink-inputs.longo"],
-        ("pactl", "list", "source-outputs"): t["source-outputs.longo"],
+        ("pactl", "--format=json", "list", "sinks"): t["sinks.json"],
+        ("pactl", "--format=json", "list", "sources"): t["sources.json"],
+        ("pactl", "--format=json", "list", "sink-inputs"): t["sink-inputs.json"],
+        ("pactl", "--format=json", "list", "source-outputs"): t["source-outputs.json"],
         ("pactl", "list", "modules", "short"): t["modules.curto"],
         ("pactl", "info"): t["info"],
     }
@@ -767,24 +857,24 @@ def test_o_tipo_que_nao_releu_diz_nao_sei_e_nao_pergunta_a_cada_tique() -> None:
     r, lidas = _retrato_de_mentira(respostas)
     assert r.carregar()
     r.assumir()
-    respostas[("pactl", "list", "sinks")] = None
+    respostas[("pactl", "--format=json", "list", "sinks")] = None
     r.escreveu(["pactl", "set-sink-mute", HDMI, "1"])
     lidas.clear()
     for _ in range(20):
         assert r.responder(["pactl", "list", "sinks", "short"]) is rs.NAO_SEI
-    assert lidas.count(("pactl", "list", "sinks")) == 1
+    assert lidas.count(("pactl", "--format=json", "list", "sinks")) == 1
 
 
 def test_solto_nao_responde_e_dono_morto_e_solto() -> None:
     """Fora do daemon o executor pergunta como sempre; um laço que morreu solta o retrato."""
     r, _lidas = _retrato_de_mentira(_respostas())
-    assert r.responder(["pactl", "list", "sinks"]) is None
+    assert r.responder(["pactl", "--format=json", "list", "sinks"]) is None
     laco = asyncio.new_event_loop()
     assert r.carregar()
     r.assumir(laco)
-    assert isinstance(r.responder(["pactl", "list", "sinks"]), str)
+    assert isinstance(r.responder(["pactl", "--format=json", "list", "sinks"]), str)
     laco.close()
-    assert r.responder(["pactl", "list", "sinks"]) is None
+    assert r.responder(["pactl", "--format=json", "list", "sinks"]) is None
     assert not r.dono
 
 
@@ -830,7 +920,7 @@ def test_quem_espera_acorda_so_pelo_assunto_dele() -> None:
     r.assumir()
     fontes = r.marca(("sources", "server"))
     saidas = r.marca(("sink-inputs",))
-    respostas[("pactl", "list", "sink-inputs")] = ""
+    respostas[("pactl", "--format=json", "list", "sink-inputs")] = "[]"
     assert r.reler({"sink-inputs"}) == {"sink-inputs"}
     assert r.marca(("sources", "server")) == fontes
     assert r.marca(("sink-inputs",)) != saidas
@@ -1022,7 +1112,8 @@ def test_a_rajada_que_acabou_nao_fica_guardada(servidor: Servidor) -> None:
             servidor.zerar()
             for i in range(30):
                 servidor.evento("Event 'change' on sink-input #901")
-                await _ate(lambda i=i: servidor.chamadas().count("list sink-inputs") == i + 1,
+                pedido = "--format=json list sink-inputs"
+                await _ate(lambda i=i, pedido=pedido: servidor.chamadas().count(pedido) == i + 1,
                            "a rajada reler os fluxos")
                 await asyncio.sleep(ods.RAJADA_S * 2)
             guardadas = rajadas_guardadas()

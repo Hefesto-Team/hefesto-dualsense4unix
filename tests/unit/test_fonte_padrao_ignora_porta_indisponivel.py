@@ -33,6 +33,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit import pactl_json_de_mentira as pj
+
 DOCTOR = Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
 
 LISTA_COMPLETA = """\
@@ -52,6 +54,8 @@ Source #8242
 		analog-input-linein: Line In (type: Line, priority: 8100, not available)
 	Active Port: analog-input-front-mic
 """
+
+LISTA_EM_JSON = pj.json_do_longo(LISTA_COMPLETA)
 
 DS_MIC = (
     "alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
@@ -81,7 +85,7 @@ def _fonte(
 
 class TestPortaIndisponivel:
     def test_onboard_sem_nada_plugado_e_detectada_como_indisponivel(self) -> None:
-        r = _fonte("_source_porta_ativa_indisponivel", ONBOARD, entrada=LISTA_COMPLETA)
+        r = _fonte("_source_porta_ativa_indisponivel", ONBOARD, entrada=LISTA_EM_JSON)
         assert r.returncode == 0, (
             "as três portas da onboard estão `not available` e a ativa é uma "
             f"delas — tinha de reprovar. stderr={r.stderr!r}"
@@ -89,7 +93,7 @@ class TestPortaIndisponivel:
 
     def test_dualsense_com_availability_unknown_e_usavel(self) -> None:
         """`unknown` NÃO é `not available`. Confundir os dois descarta o único"""
-        r = _fonte("_source_porta_ativa_indisponivel", DS_MIC, entrada=LISTA_COMPLETA)
+        r = _fonte("_source_porta_ativa_indisponivel", DS_MIC, entrada=LISTA_EM_JSON)
         assert r.returncode != 0, (
             "porta com disponibilidade DESCONHECIDA tem de contar como usável — "
             "é a do DualSense, que grava de verdade (pico 441 medido)"

@@ -14,8 +14,9 @@ O que ela conta, por AST em ``src/`` (comentário e docstring não contam):
 * ``dbus:<nome>``      um nome do barramento (``org.bluez``, ``org.freedesktop.login1``…).
 * ``cfg:<arquivo>``     o arquivo de configuração de outro dono (``.vdf``, ``wireplumber``…).
 * ``lib:<módulo>``      uma biblioteca de dispositivo (``evdev``, ``pyudev``…).
-* ``cmd:pactl-list-longo``  ``pactl list sources|cards|sinks`` sem ``short``: o formato de
-  texto que a ferramenta não promete.
+* ``cmd:pactl-list-longo``  ``pactl list sources|cards|sinks`` sem ``short`` e sem
+  ``--format=json``: o formato de texto que a ferramenta não promete. O JSON é a porta
+  oficial (``integrations/porta_do_som.py``).
 
 Fora de ``src/`` (``scripts/``, ``assets/``, ``install.sh``…), por texto, só a lista curta
 das formas que já quebraram: ``/var/lib/bluetooth``, ``.vdf`` e o ``pactl list`` longo.
@@ -269,7 +270,9 @@ class _Percorredor(ast.NodeVisitor):
 
     def _lista_do_pactl(self, no: ast.List | ast.Tuple) -> None:
         textos = [e.value for e in no.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)]
-        if ("list" in textos and "short" not in textos
+        pede_json = "--format=json" in textos or (
+            "json" in textos and ("-f" in textos or "--format" in textos))
+        if ("list" in textos and "short" not in textos and not pede_json
                 and any(t in _LISTAGENS_DO_PACTL for t in textos)
                 and "pactl" in textos):
             self._anota("cmd:pactl-list-longo")

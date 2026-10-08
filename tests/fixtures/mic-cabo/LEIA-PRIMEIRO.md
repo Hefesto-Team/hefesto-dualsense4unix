@@ -18,7 +18,7 @@ reclama.
 | arquivo | de onde saiu | para que serve |
 | --- | --- | --- |
 | `descritores-usb-dualsense-2026-09-20.bin` | `/sys/bus/usb/devices/<X>/descriptors`, 245 B | responde «o microfone entra por uma porta digital?» sem servidor de som |
-| `sources-cabo-2026-09-20.txt` | `LC_ALL=C pactl list sources`, só o bloco `alsa_input.*DualSense*Controller-00.*` | a porta ATIVA de hoje |
+| `sources-cabo-2026-09-20.json` | `LC_ALL=C pactl --format=json list sources`, só o nó `alsa_input.*DualSense*Controller-00.*` (montado do texto medido em 20/09: o produto lê o JSON) | a porta ATIVA de hoje |
 | `scontents-dualsense-2026-09-20.txt` | `LC_ALL=C amixer -c <DualSense> scontents` | o elemento de ganho que a placa TEM |
 | `scontents-sem-captura-2026-09-20.txt` | `amixer -c 0 scontents` (placa HDMI desta máquina) | a placa que **não tem** o que ligar — a mordida 2 |
 | `porta-ucm-mic-2026-09-20.txt` | o `SectionDevice."Mic"` do `DualSense-HiFi.conf` instalado | a definição da porta de HOJE |

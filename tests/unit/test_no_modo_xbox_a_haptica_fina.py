@@ -21,6 +21,7 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+from tests.unit import pactl_json_de_mentira as pj
 from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
     _P1,
     _P2,
@@ -73,13 +74,10 @@ class _Fluxos:
                 f"{ix}\t{sink}\t{cli}\tPipeWire\tfloat32le 4ch 48000Hz"
                 for ix, sink, cli, _p in self._todos()
             )
-        if a == ["pactl", "list", "sink-inputs"]:
-            return "\n\n".join(
-                f"Sink Input #{ix}\n\tDriver: PipeWire\n\tOwner Module: n/a\n\tClient: {cli}\n"
-                f"\tSink: {sink}\n\tProperties:\n"
-                + "\n".join(f'\t\t{k} = "{v}"' for k, v in props.items())
-                for ix, sink, cli, props in self._todos()
-            )
+        if pj.e_lista_json(a, "sink-inputs"):
+            return pj.texto(*(
+                pj.fluxo(int(ix), sink, cliente=cli, props=props)
+                for ix, sink, cli, props in self._todos()))
         return self.servidor(argv)
 
 
@@ -329,7 +327,7 @@ def test_o_fluxo_nosso_se_separa_do_fluxo_do_jogo() -> None:
     )
 
     def _rodar(argv: list[str]) -> str | None:
-        return sinks if "short" in argv else longa
+        return sinks if "short" in argv else pj.json_do_longo(longa)
 
     assert eh.fluxos_nos_endpoints(nomes, _rodar) == (frozenset({"130"}), frozenset({nomes[0]}))
     assert eh.fluxos_nos_endpoints(nomes, lambda _a: None) is None

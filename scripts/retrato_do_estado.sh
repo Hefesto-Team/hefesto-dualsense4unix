@@ -123,7 +123,14 @@ retratar() {
     _capturar "${raiz}/70-audio-cards.txt" "cards de áudio" \
         bash -c "pactl list short cards 2>/dev/null | awk '{print \$2}' | sort"
     _capturar "${raiz}/71-audio-perfis.txt" "perfil ativo de cada card" \
-        bash -c "pactl list cards 2>/dev/null | grep -E 'Name:|Nome:|Active Profile:|Perfil ativo:' | paste - - 2>/dev/null | sed 's/\t\+/  /'"
+        bash -c "pactl --format=json list cards 2>/dev/null | python3 -c 'import json,sys
+try:
+    cartoes = json.load(sys.stdin)
+except ValueError:
+    sys.exit(0)
+for c in cartoes:
+    print(\"Name: %s  Active Profile: %s\" % (c.get(\"name\", \"\"), c.get(\"active_profile\") or \"\"))
+'"
     _capturar "${raiz}/72-audio-nos.txt" "sinks e sources (sem monitor)" \
         bash -c "{ pactl list short sinks 2>/dev/null | awk '{print \"sink   \", \$2}'
                    pactl list short sources 2>/dev/null | grep -v monitor | awk '{print \"source \", \$2}'; } | sort"

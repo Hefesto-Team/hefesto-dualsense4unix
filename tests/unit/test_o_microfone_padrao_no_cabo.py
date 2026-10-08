@@ -50,6 +50,7 @@ Nenhum teste deste arquivo toca o áudio da máquina.
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -77,34 +78,26 @@ ONBOARD = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 
 #: porta de captura do DualSense no cabo nem se chama mais assim.
 _FIXTURES_MIC_CABO = RAIZ / "tests" / "fixtures" / "mic-cabo"
-_SOURCES_GRAVADA = _FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.txt"
+_SOURCES_GRAVADA = _FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.json"
 
 
 def _primeira_porta_e_ativa(texto: str) -> tuple[str, str]:
-    """`(linha da porta, nome da porta ativa)` da PRIMEIRA source do texto."""
-    porta = ""
-    dentro = False
-    cabecalhos = nomes = 0
-    for linha in texto.splitlines():
-        nua = linha.strip()
-        if nua.startswith("Source #"):
-            cabecalhos += 1
-            if cabecalhos > 1:
-                break
-            continue
-        if nua.startswith("Name:"):
-            nomes += 1
-            if nomes > 1:
-                break
-            continue
-        if nua == "Ports:":
-            dentro = True
-            continue
-        if nua.startswith("Active Port:"):
-            return (porta, nua.split(":", 1)[1].strip())
-        if dentro and nua:
-            porta = porta or nua
-    return (porta, "")
+    """`(linha da porta, nome da porta ativa)` do PRIMEIRO nó do JSON.
+
+    A linha sai no formato do `pactl list` longo (o dublê a imprime assim e o
+    conversor a devolve a JSON): `nome: descrição (type: Mic, priority: 1, …)`.
+    """
+    nos = json.loads(texto)
+    if not nos:
+        return ("", "")
+    no = nos[0]
+    portas = no.get("ports") or []
+    linha = ""
+    if portas:
+        p = portas[0]
+        linha = (f"{p['name']}: {p.get('description', '')} "
+                 f"(type: Mic, priority: 1, {p.get('availability', '')})")
+    return (linha, no.get("active_port") or "")
 
 
 def _porta_desconhecida_gravada() -> tuple[str, str]:
@@ -305,12 +298,20 @@ _roteiro() {   # R1, R2 e R6: a fonte padrão sai de uma lista, uma linha por le
     sed -n "${n}p" "${SIM}/roteiro"
 }
 
+# O servidor responde em JSON (`--format=json`): o dublê escreve o estado no
+# texto longo que a bancada gravou e o converte, para o formato não divergir.
+_json() {
+    PYTHONPATH="${HEFESTO_RAIZ}" python3 -c 'import sys
+from tests.unit import pactl_json_de_mentira as pj
+sys.stdout.write(pj.json_do_longo(sys.stdin.read()) + "\n")'
+}
+
 case "$*" in
     "get-default-source")
         if [[ -f "${SIM}/roteiro" ]]; then _roteiro; else eleito; fi ;;
     "list sources short"|"list short sources") _curta ;;
-    "list sources") _longa ;;
-    "list cards") _cartoes ;;
+    "--format=json list sources"|"-f json list sources") _longa | _json ;;
+    "--format=json list cards"|"-f json list cards") _cartoes | _json ;;
     "get-source-mute "*) printf 'Mute: no\n' ;;
     "set-default-source "*)
         # Como o pactl de verdade: nome fora da lista é recusado. A R5 exige
@@ -745,28 +746,20 @@ def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:
 
 
 def test_a_leitura_da_porta_para_na_primeira_source() -> None:
-    """A dupla tem de sair do MESMO bloco, e a gravação de hoje não prova isso."""
-    com_cabecalho = (
-        "Source #1\n"
-        "\tName: alsa_input.primeira\n"
-        "\tPorts:\n"
-        "\t\tporta-da-primeira: Primeira (availability unknown)\n"
-        "\tActive Port: porta-da-primeira\n"
-        "Source #2\n"
-        "\tName: alsa_input.segunda\n"
-        "\tPorts:\n"
-        "\t\tporta-da-segunda: Segunda (available)\n"
-        "\tActive Port: porta-da-segunda\n"
-    )
-    porta, ativa = _primeira_porta_e_ativa(com_cabecalho)
+    """A dupla tem de sair do MESMO nó, e a gravação de hoje não prova isso."""
+    dois = json.dumps([
+        {"name": "alsa_input.primeira", "active_port": "porta-da-primeira",
+         "ports": [{"name": "porta-da-primeira", "description": "Primeira",
+                    "availability": "availability unknown"}]},
+        {"name": "alsa_input.segunda", "active_port": "porta-da-segunda",
+         "ports": [{"name": "porta-da-segunda", "description": "Segunda",
+                    "availability": "available"}]},
+    ])
+    porta, ativa = _primeira_porta_e_ativa(dois)
     assert ativa == "porta-da-primeira", f"veio {ativa!r}"
     assert porta.startswith("porta-da-primeira:"), f"veio {porta!r}"
+    assert "availability unknown" in porta, f"veio {porta!r}"
 
-    sem_cabecalho = com_cabecalho.replace("Source #1\n", "").replace(
-        "Source #2\n", ""
-    )
-    porta, ativa = _primeira_porta_e_ativa(sem_cabecalho)
-    assert (ativa, porta.startswith("porta-da-primeira:")) == (
-        "porta-da-primeira",
-        True,
-    ), f"veio porta={porta!r} ativa={ativa!r}"
+    sem_portas = json.dumps([{"name": "alsa_input.primeira", "active_port": "x"}])
+    assert _primeira_porta_e_ativa(sem_portas) == ("", "x")
+    assert _primeira_porta_e_ativa("[]") == ("", "")

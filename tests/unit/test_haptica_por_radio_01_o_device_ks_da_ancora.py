@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+from tests.unit import pactl_json_de_mentira as pj
 
 _SINK = """Sink #61764
 \tState: SUSPENDED
@@ -56,12 +57,13 @@ def _sinks(
     nome: str = _NOME_DO_NO,
 ) -> str:
     sysfs = f'sysfs.path = "{caminho}"' if caminho is not None else 'device.icon_name = "x"'
-    return _OUTRO + "\n" + _SINK.format(nome=nome, vid=vid, pid=pid, sysfs=sysfs)
+    return pj.json_do_longo(
+        _OUTRO + "\n" + _SINK.format(nome=nome, vid=vid, pid=pid, sysfs=sysfs))
 
 
 def _dubles(saida: str):
     def runner(argv: list[str]) -> str | None:
-        assert argv[:3] == ["pactl", "list", "sinks"]
+        assert argv[:4] == ["pactl", "--format=json", "list", "sinks"]
         return saida
 
     return runner
@@ -205,4 +207,4 @@ def test_o_pactl_e_perguntado_na_locale_c_porque_o_desta_casa_traduz(
     falso.chmod(0o755)
     monkeypatch.setenv("PATH", str(tmp_path))
     monkeypatch.setenv("LC_ALL", "pt_BR.UTF-8")
-    assert ks._pactl(["pactl", "list", "sinks"]) == "LC_ALL=C\n"
+    assert ks._pactl(["pactl", "--format=json", "list", "sinks"]) == "LC_ALL=C\n"

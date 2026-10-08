@@ -46,10 +46,14 @@ servidor, e não do controle.
 `pactl` desta máquina traduz, e um leitor que dependa do idioma respondeu
 *"não há"* sobre aparelho de pé.
 
-**O FORMATO CURTO SAI DO LONGO**, e isso foi medido antes de ser escrito: os
-`printf` do `pactl` 16.1 (lidos no binário) usam os mesmos campos nas duas
-formas, e a síntese a partir do longo deu o curto byte a byte, nas saídas e
-nas entradas da máquina da bancada, em 28/09/2026. Um tipo relido custa UM `pactl`.
+**O RETRATO GUARDA O JSON** (`pactl --format=json list`, a porta que o servidor
+promete; ver `porta_do_som`), e o formato CURTO sai dele: os `printf` do `pactl`
+16.1 (lidos no binário) usam os mesmos campos nas duas formas, e a síntese a
+partir do longo deu o curto byte a byte, nas saídas e nas entradas da máquina da
+bancada, em 28/09/2026. Um tipo relido custa UM `pactl`. O texto LONGO deixou de
+ser fotografado em 08/10/2026: era lido pelo rótulo, e o rótulo é traduzido.
+Sem a porta (`pactl` anterior ao 16) o retrato guarda o curto, e os campos que só
+o JSON traz (descrição, volume, propriedades) ficam em branco: «não sei».
 """
 
 from __future__ import annotations
@@ -63,9 +67,19 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Final
 
+from hefesto_dualsense4unix.integrations.porta_do_som import (
+    FORMATO_JSON,
+    Fluxo,
+    NoDeSom,
+    argv_da_lista,
+    argv_do_curto,
+    fluxos_do_texto,
+    nos_do_texto,
+    sem_o_formato,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -83,13 +97,20 @@ TIPO_DO_EVENTO: Final[Mapping[str, str]] = {
     "server": "server",
 }
 
+#: os quatro tipos que o servidor entrega em JSON com os campos que o retrato guarda.
+_TIPOS_EM_JSON: Final[tuple[str, ...]] = ("sinks", "sources", "sink-inputs", "source-outputs")
+
 _LEITURA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
-    "sinks": ("pactl", "list", "sinks"),
-    "sources": ("pactl", "list", "sources"),
-    "sink-inputs": ("pactl", "list", "sink-inputs"),
-    "source-outputs": ("pactl", "list", "source-outputs"),
+    **{t: tuple(argv_da_lista(t)) for t in _TIPOS_EM_JSON},
     "modules": ("pactl", "list", "modules", "short"),
     "server": ("pactl", "info"),
+}
+
+_SONDA_DO_JSON: Final[tuple[str, ...]] = ("pactl", FORMATO_JSON, "info")
+
+#: sem a porta do JSON (`pactl` anterior ao 16), o caminho curto: índice, nome e estado.
+_LEITURA_CURTA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
+    t: tuple(argv_do_curto(t)) for t in _TIPOS_EM_JSON
 }
 
 LEITURAS: Final[frozenset[str]] = frozenset({
@@ -122,138 +143,6 @@ class _NaoSei:
 
 
 NAO_SEI: Final[_NaoSei] = _NaoSei()
-
-
-@dataclass(frozen=True)
-class NoDeSom:
-    """Um nó de saída (`Sink`) ou de entrada (`Source`), como o `pactl list` o diz."""
-
-    indice: int
-    nome: str
-    descricao: str = ""
-    driver: str = ""
-    formato: str = ""
-    estado: str = ""
-    mudo: bool | None = None
-    volume: str = ""
-    balanco: str = ""
-    propriedades: Mapping[str, str] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class Fluxo:
-    """Um fluxo de um programa: `Sink Input` (tocando) ou `Source Output` (gravando)."""
-
-    indice: int
-    alvo: str
-    cliente: str = ""
-    driver: str = ""
-    formato: str = ""
-    corked: bool | None = None
-    mudo: bool | None = None
-    propriedades: Mapping[str, str] = field(default_factory=dict)
-
-
-_CABECAS_DE_NO: Final[tuple[str, ...]] = ("Sink", "Source")
-_CABECAS_DE_FLUXO: Final[tuple[str, ...]] = ("Sink Input", "Source Output")
-
-
-def _sim_ou_nao(valor: str) -> bool | None:
-    if valor == "yes":
-        return True
-    if valor == "no":
-        return False
-    return None
-
-
-@dataclass
-class _Bloco:
-    indice: int
-    campos: dict[str, str] = field(default_factory=dict)
-    props: dict[str, str] = field(default_factory=dict)
-    balanco: str = ""
-
-
-def _blocos(texto: str, cabecas: tuple[str, ...]) -> list[_Bloco]:
-    """Os blocos de um `pactl list` longo, com os campos de nível um e as propriedades."""
-    blocos: list[_Bloco] = []
-    atual: _Bloco | None = None
-    nas_propriedades = False
-    ultima = ""
-    for linha in texto.splitlines():
-        cabeca = next((c for c in cabecas if linha.startswith(c + " #")), None)
-        if cabeca is not None:
-            try:
-                atual = _Bloco(indice=int(linha[len(cabeca) + 2:].strip()))
-            except ValueError:
-                atual = None
-                continue
-            blocos.append(atual)
-            nas_propriedades = False
-            ultima = ""
-            continue
-        if atual is None:
-            continue
-        if linha.startswith("\t\t"):
-            if nas_propriedades:
-                chave, sep, valor = linha.strip().partition(" = ")
-                if sep:
-                    valor = valor.strip()
-                    if len(valor) >= 2 and valor[0] == valor[-1] == '"':
-                        valor = valor[1:-1]
-                    atual.props[chave.strip()] = valor
-            continue
-        if not linha.startswith("\t"):
-            continue
-        corpo = linha[1:]
-        if corpo.startswith(" "):
-            if ultima == "Volume" and "balance" in corpo:
-                atual.balanco = corpo.strip()
-            continue
-        chave, sep, valor = corpo.partition(":")
-        if not sep:
-            continue
-        chave = chave.strip()
-        nas_propriedades = chave == "Properties"
-        atual.campos.setdefault(chave, valor.strip())
-        ultima = chave
-    return blocos
-
-
-def nos_do_texto(texto: str) -> tuple[NoDeSom, ...]:
-    """Os nós de um `pactl list sinks` ou `pactl list sources` longo. Função pura."""
-    return tuple(
-        NoDeSom(
-            indice=b.indice,
-            nome=b.campos.get("Name", ""),
-            descricao=b.campos.get("Description", ""),
-            driver=b.campos.get("Driver", ""),
-            formato=b.campos.get("Sample Specification", ""),
-            estado=b.campos.get("State", ""),
-            mudo=_sim_ou_nao(b.campos.get("Mute", "")),
-            volume=b.campos.get("Volume", ""),
-            balanco=b.balanco,
-            propriedades=dict(b.props),
-        )
-        for b in _blocos(texto, _CABECAS_DE_NO)
-    )
-
-
-def fluxos_do_texto(texto: str) -> tuple[Fluxo, ...]:
-    """Os fluxos de um `pactl list sink-inputs|source-outputs` longo. Função pura."""
-    return tuple(
-        Fluxo(
-            indice=b.indice,
-            alvo=b.campos.get("Sink", b.campos.get("Source", "")),
-            cliente=b.campos.get("Client", ""),
-            driver=b.campos.get("Driver", ""),
-            formato=b.campos.get("Sample Specification", ""),
-            corked=_sim_ou_nao(b.campos.get("Corked", "")),
-            mudo=_sim_ou_nao(b.campos.get("Mute", "")),
-            propriedades=dict(b.props),
-        )
-        for b in _blocos(texto, _CABECAS_DE_FLUXO)
-    )
 
 
 def curto_dos_nos(nos: Iterable[NoDeSom]) -> str:
@@ -305,9 +194,10 @@ def verbo_do_pactl(argv: Sequence[object]) -> str | None:
         return None
     if os.path.basename(str(argv[0])) != "pactl":
         return None
-    if len(argv) < 2:
+    limpo, _ = sem_o_formato(argv)
+    if len(limpo) < 2:
         return ""
-    return str(argv[1])
+    return limpo[1]
 
 
 def entender(argv: Sequence[object]) -> Pergunta | None:
@@ -315,7 +205,8 @@ def entender(argv: Sequence[object]) -> Pergunta | None:
     verbo = verbo_do_pactl(argv)
     if not verbo:
         return None
-    resto = [str(a) for a in argv[2:]]
+    limpo, em_json = sem_o_formato(argv)
+    resto = limpo[2:]
     if verbo == "list":
         palavras = [p for p in resto if p != "short"]
         curta = len(palavras) < len(resto)
@@ -323,8 +214,12 @@ def entender(argv: Sequence[object]) -> Pergunta | None:
             return None
         tipo = palavras[0]
         if tipo == "modules":
-            return Pergunta("modules", "curta") if curta else None
-        return Pergunta(tipo, "curta" if curta else "longa")
+            return Pergunta("modules", "curta") if curta and not em_json else None
+        if em_json:
+            return None if curta else Pergunta(tipo, "json")
+        # o texto longo já não é fotografado: ninguém o lê, e quem ainda o pedir
+        # é atendido pelo leitor do retrato, que pergunta ao servidor e não guarda.
+        return Pergunta(tipo, "curta") if curta else None
     if verbo == "info" and not resto:
         return Pergunta("server", "info")
     if verbo in ("get-default-sink", "get-default-source") and not resto:
@@ -428,6 +323,7 @@ class RetratoDoSom:
         self._geracao = 0
         self._geracao_do_tipo: dict[str, int] = dict.fromkeys(TIPOS, 0)
         self._esperas: set[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = set()
+        self._sem_json = False
 
 
     def _ler(self, argv: Sequence[str]) -> str | None:
@@ -438,11 +334,33 @@ class RetratoDoSom:
             logger.debug("retrato_do_som_leitura_falhou", err=str(exc))
             return None
 
+    def _ler_o_tipo(self, tipo: str) -> str | None:
+        """O texto de UM tipo: o JSON, ou o curto quando o servidor não conhece a porta.
+
+        A porta ausente se PROVA, e não se presume: o JSON falhou, a sonda
+        `info` em JSON também, e o curto respondeu. Servidor mudo falha nos
+        três e segue «não sei»; leitura que falhou com a porta de pé também.
+        """
+        if tipo not in _TIPOS_EM_JSON:
+            return self._ler(_LEITURA_DO_TIPO[tipo])
+        if not self._sem_json:
+            texto = self._ler(_LEITURA_DO_TIPO[tipo])
+            if texto is not None and texto.lstrip().startswith("["):
+                return texto
+            sonda = self._ler(_SONDA_DO_JSON)
+            if sonda is not None and sonda.lstrip().startswith("{"):
+                return None
+        curto = self._ler(_LEITURA_CURTA_DO_TIPO[tipo])
+        if curto is not None and not self._sem_json:
+            logger.info("retrato_do_som_sem_a_porta_do_json", tipo=tipo)
+            self._sem_json = True
+        return curto
+
     def _reler_um(self, tipo: str) -> bool:
         """Relê UM tipo. True = o texto mudou."""
         with self._trava:
             seq = next(self._contador)
-        texto = self._ler(_LEITURA_DO_TIPO[tipo])
+        texto = self._ler_o_tipo(tipo)
         with self._trava:
             if texto is None:
                 if self._seq.get(tipo, 0) < seq:
@@ -521,6 +439,7 @@ class RetratoDoSom:
             self._pendente_desde.clear()
             self._duvida.clear()
             self._analisado.clear()
+            self._sem_json = False
         self._avisar()
 
     @property
@@ -695,8 +614,9 @@ class RetratoDoSom:
             return None if valor is None else f"{valor}\n"
         if p.forma in ("longa", "curta") and p.tipo == "modules":
             return self._texto_em_dia("modules")
-        if p.forma == "longa":
-            return self._texto_em_dia(p.tipo)
+        if p.forma == "json":
+            texto = self._texto_em_dia(p.tipo)
+            return texto if texto is not None and texto.lstrip().startswith("[") else None
         if p.tipo in ("sink-inputs", "source-outputs"):
             texto = self._texto_em_dia(p.tipo)
             if texto is None:

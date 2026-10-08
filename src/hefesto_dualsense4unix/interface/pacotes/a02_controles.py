@@ -100,6 +100,7 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 from hefesto_dualsense4unix.integrations import (
     ganho_do_microfone as _ganho_no_aparelho,
 )
+from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
     CANAL_NADA_NO_CONTROLE,
@@ -752,10 +753,14 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
     if not alvos:
         return fora
     try:
-        lista = _ler_pelo_dono(["pactl", "list", "sources"])
+        placa_da_fonte = porta_do_som.placa_de_cada_fonte(_ler_pelo_dono)
     except Exception:
         return {}
-    placa_da_fonte = _placa_de_cada_fonte(lista)
+    if placa_da_fonte is None:
+        # Sem o JSON do servidor é «não sei»: a chave fica AUSENTE, e não `None`.
+        for uniq in alvos:
+            fora.pop(uniq, None)
+        return fora
     por_placa: dict[str, tuple[int, float] | None] = {}
     for uniq, no in alvos.items():
         placa = placa_da_fonte.get(no, "")

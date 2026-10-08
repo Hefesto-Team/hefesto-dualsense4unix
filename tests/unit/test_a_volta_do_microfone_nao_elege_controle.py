@@ -45,6 +45,7 @@ import pytest
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.subsystems import bt_mic, hotkey, recado_do_microfone
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
+from tests.unit import pactl_json_de_mentira
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "fix_wireplumber_default_source.sh"
@@ -309,13 +310,14 @@ def _script_de_verdade(tmp_path: Path, fontes: list[_Fonte], flag: str) -> str:
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
     (binario / "pactl.curto").write_text(_curta(fontes), encoding="utf-8")
-    (binario / "pactl.longo").write_text(_longa(fontes), encoding="utf-8")
+    (binario / "pactl.json").write_text(
+        pactl_json_de_mentira.json_do_longo(_longa(fontes)) + "\n", encoding="utf-8")
     pactl = binario / "pactl"
     pactl.write_text(
         "#!/bin/bash\n"
         'case "$*" in\n'
         '  "list sources short") cat "$0.curto" ;;\n'
-        '  "list sources") cat "$0.longo" ;;\n'
+        '  "--format=json list sources"|"-f json list sources") cat "$0.json" ;;\n'
         "  *) : ;;\n"
         "esac\n",
         encoding="utf-8",

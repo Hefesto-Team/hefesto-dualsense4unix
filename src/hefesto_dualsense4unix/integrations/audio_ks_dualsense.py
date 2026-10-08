@@ -100,6 +100,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import json
 import os
 import re
 import subprocess
@@ -239,9 +240,6 @@ _PROP_VID = "device.vendor.id"
 _PROP_PID = "device.product.id"
 _PROP_SYSFS = "sysfs.path"
 
-_NOME_DO_SINK = re.compile(r"^\tName: (.+)$", re.M)
-
-
 def _pactl(argv: list[str]) -> str | None:
     """Roda um `pactl` curto. None em qualquer falha — ausência é resposta."""
     retrato = sys.modules.get("hefesto_dualsense4unix.integrations.retrato_do_som")
@@ -265,9 +263,67 @@ def _pactl(argv: list[str]) -> str | None:
     return proc.stdout if proc.returncode == 0 else None
 
 
-def _propriedade(bloco: str, chave: str) -> str:
-    m = re.search(rf'^\s*{re.escape(chave)} = "(.*)"\s*$', bloco, re.M)
-    return m.group(1) if m else ""
+@dataclass(frozen=True)
+class _Item:
+    """Um nó (`sink`) ou um fluxo (`sink-input`) do `pactl --format=json list`."""
+
+    indice: int
+    nome: str
+    alvo: str
+    propriedades: dict[str, str]
+
+    def carrega(self, marca: str) -> bool:
+        """A ``marca`` aparece em alguma propriedade (o nome que o dono deu)?"""
+        return bool(marca) and any(marca in v for v in self.propriedades.values())
+
+
+def _lista_do_pactl(
+    tipo: str, runner: Callable[[list[str]], str | None]
+) -> list[_Item] | None:
+    """Os itens de ``sinks``/``sink-inputs`` pela porta do JSON; ``None`` = não sei.
+
+    Este módulo é MATERIALIZADO sozinho ao lado do wrapper (só a stdlib, ver
+    acima), então não importa a porta do pacote (`integrations/porta_do_som.py`,
+    o leitor do daemon): lê o mesmo JSON, pelo mesmo contrato, em quinze linhas.
+    Sem a porta do JSON o `pactl` imprime erro e a resposta é «não sei».
+    """
+    texto = runner(["pactl", "--format=json", "list", tipo])
+    if texto is None or not texto.strip():
+        return None
+    try:
+        bruto = json.loads(texto)
+    except ValueError:
+        return None
+    if not isinstance(bruto, list):
+        return None
+    itens: list[_Item] = []
+    for o in bruto:
+        if not isinstance(o, dict) or not isinstance(o.get("index"), int):
+            continue
+        props = o.get("properties")
+        alvo = o.get("sink") if "sink" in o else None
+        itens.append(_Item(
+            indice=o["index"],
+            nome=_sem_nulo(o.get("name")),
+            alvo="" if alvo is None else str(alvo),
+            propriedades={str(k): _sem_nulo(v) for k, v in (
+                props.items() if isinstance(props, dict) else ())},
+        ))
+    return itens
+
+
+def _hexa(valor: str | None) -> int:
+    """``0x054c`` ou ``054c`` como número; ausente ou ilegível é ``0`` (nó de ninguém)."""
+    try:
+        return int(valor or "0", 16)
+    except ValueError:
+        return 0
+
+
+def _sem_nulo(valor: object) -> str:
+    """O texto de um campo; ausente e `(null)` (o que o `pactl` põe no acento) são vazios."""
+    texto = "" if valor is None else str(valor)
+    return "" if texto == "(null)" else texto
 
 
 def endpoints_de_mentira(
@@ -280,17 +336,14 @@ def endpoints_de_mentira(
     Wine tiraria `GUID_NULL`, que é o `ContainerId` de toda saída que não é
     USB, e um device KS declarando zero casaria com a caixa de som da pessoa.
     """
-    saida = runner(["pactl", "list", "sinks"]) or ""
+    nos = _lista_do_pactl("sinks", runner) or ()
     achados: list[tuple[int, str]] = []
-    for bloco in re.split(r"\n(?=Sink #\d+)", saida):
-        if not _NOME_DO_SINK.search(bloco):
+    for no in nos:
+        if not no.nome:
             continue
-        try:
-            vid = int(_propriedade(bloco, _PROP_VID) or "0", 16)
-            pid = int(_propriedade(bloco, _PROP_PID) or "0", 16)
-        except ValueError:
-            continue
-        caminho = _propriedade(bloco, _PROP_SYSFS)
+        vid = _hexa(no.propriedades.get(_PROP_VID))
+        pid = _hexa(no.propriedades.get(_PROP_PID))
+        caminho = no.propriedades.get(_PROP_SYSFS, "")
         if vid != VID_SONY or pid not in MODELOS or not caminho:
             continue
         achados.append((pid, caminho))
@@ -363,10 +416,6 @@ def controles_no_radio(
 FAMILIA_DO_LACO_DO_CABO = "haptica-do-cabo"
 MARCA_DO_LACO_DO_CABO = f"hefesto-{FAMILIA_DO_LACO_DO_CABO}-"
 
-_SINK_DA_ENTRADA = re.compile(r"^\tSink: (\d+)\s*$", re.M)
-_NUMERO_DO_SINK = re.compile(r"^Sink #(\d+)")
-
-
 def _lembrando(
     runner: Callable[[list[str]], str | None],
 ) -> Callable[[list[str]], str | None]:
@@ -403,23 +452,15 @@ def placas_servidas(
     `winepulse` faz (:func:`pai_usb_device`). Servidor mudo é lista vazia: o
     cabo segue pela placa, que é o caminho que já vibrava.
     """
-    entradas = runner(["pactl", "list", "sink-inputs"]) or ""
-    alvos: set[str] = set()
-    for bloco in re.split(r"\n(?=Sink Input #\d+)", entradas):
-        if MARCA_DO_LACO_DO_CABO not in bloco:
-            continue
-        m = _SINK_DA_ENTRADA.search(bloco)
-        if m:
-            alvos.add(m.group(1))
+    entradas = _lista_do_pactl("sink-inputs", runner) or ()
+    alvos = {f.alvo for f in entradas if f.alvo and f.carrega(MARCA_DO_LACO_DO_CABO)}
     if not alvos:
         return []
-    saida = runner(["pactl", "list", "sinks"]) or ""
     achadas: list[tuple[int, int]] = []
-    for bloco in re.split(r"\n(?=Sink #\d+)", saida):
-        m = _NUMERO_DO_SINK.match(bloco.lstrip("\n"))
-        if not m or m.group(1) not in alvos:
+    for no in _lista_do_pactl("sinks", runner) or ():
+        if str(no.indice) not in alvos:
             continue
-        aparelho = pai_usb_device(_propriedade(bloco, _PROP_SYSFS), sysfs)
+        aparelho = pai_usb_device(no.propriedades.get(_PROP_SYSFS, ""), sysfs)
         if aparelho is None:
             continue
         bus, num = _ler(aparelho / "busnum"), _ler(aparelho / "devnum")
@@ -445,13 +486,9 @@ def indice_do_fluxo(
     """
     if not marca:
         return None
-    saida = runner(["pactl", "list", "sink-inputs"])
-    if not saida:
-        return None
-    for bloco in re.split(r"\n(?=Sink Input #\d+)", saida):
-        achado = re.match(r"\s*Sink Input #(\d+)", bloco)
-        if achado and marca in bloco:
-            return achado.group(1)
+    for fluxo in _lista_do_pactl("sink-inputs", runner) or ():
+        if fluxo.carrega(marca):
+            return str(fluxo.indice)
     return None
 
 

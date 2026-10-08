@@ -86,11 +86,17 @@ fi
 
 echo
 echo "── 3. o sink do controle abriu em 4 canais ──────────────────────"
-achou4=0
-while IFS= read -r linha; do
-  case "$linha" in *float32le*4ch*|*"4ch"*float32le*) achou4=$((achou4+1));; esac
-done < <(pactl list sinks 2>/dev/null | grep -i "hefesto_som\|Sample Specification" || true)
-espec=$(pactl list sinks 2>/dev/null | grep -A 12 "hefesto_som" | grep -i "Sample Specification" | head -4)
+# O formato de cada sink `hefesto_som`, do JSON do servidor (o texto longo traduz rótulos).
+espec=$(pactl --format=json list sinks 2>/dev/null | python3 -c '
+import json, sys
+try:
+    sinks = json.load(sys.stdin)
+except ValueError:
+    sys.exit(0)
+for sink in sinks:
+    if "hefesto_som" in (sink.get("name") or ""):
+        print("Sample Specification: %s" % sink.get("sample_specification", ""))
+' | head -4)
 if [ -z "$espec" ]; then
   diz "sink do controle" "<nenhum hefesto_som na lista>   FALHA"; falhas=$((falhas+1))
 else

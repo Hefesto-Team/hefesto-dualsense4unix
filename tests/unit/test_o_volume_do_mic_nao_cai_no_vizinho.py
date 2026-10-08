@@ -45,6 +45,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.integrations import audio_control
+from tests.unit import pactl_json_de_mentira as pj
 
 
 #: Duas placas de DualSense no cabo, uma por aparelho. Os nomes são
@@ -64,15 +65,20 @@ _UNIQ_P1 = "aabbcc010203"
 _UNIQ_P2 = "aabbcc040506"
 _UNIQ_RADIO = "aabbcc070809"
 
-_LONGA = "(a saída longa; quem a lê é o `nos_e_sysfs`, que está dublado)"
-
-
 def _curta(*nomes: str) -> str:
     """`pactl list sources short`: `índice\\tnome\\tdriver\\tformato\\testado`."""
     return "\n".join(
         f"{600 + i}\t{nome}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED"
         for i, nome in enumerate(nomes)
     )
+
+
+def _json_da_curta(curta: str) -> str:
+    """`pactl --format=json list sources`: os mesmos nós da curta, com campos nomeados."""
+    return pj.texto(*(
+        pj.no(int(i), nome, estado=est, formato=fmt)
+        for i, nome, _drv, fmt, est in (ln.split("\t") for ln in curta.splitlines())
+    ))
 
 
 def _dublar_pactl(
@@ -89,7 +95,7 @@ def _dublar_pactl(
             return _Saida(curta)
         if longa_ilegivel:
             raise OSError("o `pactl list sources` não respondeu")
-        return _Saida(_LONGA)
+        return _Saida(_json_da_curta(curta))
 
     monkeypatch.setattr(audio_control.subprocess, "run", run)
 

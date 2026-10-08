@@ -129,7 +129,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.integrations import pad_usb
+from hefesto_dualsense4unix.integrations import pad_usb, porta_do_som
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     CANAIS_DA_HAPTICA,
     o_servidor_e_o_pipewire,
@@ -434,23 +434,18 @@ def rotulo_no_ar(
 
 
 def _volume_da_frente(saida_do_pactl: str, nome_do_sink: str) -> tuple[str, str]:
-    """Os dois volumes da FRENTE deste sink, na forma que o `pactl` aceita."""
-    dentro = False
-    for linha in saida_do_pactl.splitlines():
-        crua = linha.strip()
-        if crua.startswith("Name:"):
-            dentro = crua.split(":", 1)[1].strip() == nome_do_sink
+    """Os dois volumes da FRENTE deste sink, na forma que o `pactl` aceita.
+
+    ``saida_do_pactl`` é o ``pactl --format=json list sinks``. Sem o sink, ou sem
+    dois canais com número, a frente é ``100%``.
+    """
+    for no in porta_do_som.nos_do_texto(saida_do_pactl):
+        if no.nome != nome_do_sink:
             continue
-        if dentro and crua.startswith("Volume:"):
-            partes = [p.strip() for p in crua.split(":", 1)[1].split(",")]
-            lidos = []
-            for p in partes[:2]:
-                achado = [t for t in p.split("/") if t.strip().endswith("%")]
-                if achado:
-                    lidos.append(achado[0].strip())
-            if len(lidos) == 2:
-                return (lidos[0], lidos[1])
-            return ("100%", "100%")
+        lidos = [c.porcento.strip() for c in no.canais[:2] if c.porcento.strip().endswith("%")]
+        if len(lidos) == 2:
+            return (lidos[0], lidos[1])
+        break
     return ("100%", "100%")
 
 
@@ -653,7 +648,7 @@ class EndpointDeHaptica:
 
     def _ligar_os_motores(self) -> None:
         """Põe os canais traseiros em :data:`VOLUME_DOS_MOTORES`, preservando a frente."""
-        atual = self.runner(["pactl", "list", "sinks"]) or ""
+        atual = self.runner(porta_do_som.argv_da_lista("sinks")) or ""
         frente = _volume_da_frente(atual, self.nome)
         try:
             self.runner([
@@ -859,23 +854,18 @@ def fluxos_nos_endpoints(
             por_indice[campos[0].strip()] = campos[1]
     if not por_indice:
         return frozenset(), frozenset()
-    texto = chamar(["pactl", "list", "sink-inputs"])
-    if texto is None:
+    fluxos = porta_do_som.ler_fluxos("sink-inputs", chamar)
+    if fluxos is None:
         return None
     nossos: set[str] = set()
     com_outro: set[str] = set()
-    for bloco in texto.split("Sink Input #")[1:]:
-        cliente = sink = ""
-        nosso = False
-        for linha in bloco.splitlines():
-            chave, _, valor = linha.strip().partition(":")
-            if chave == "Client" and not cliente:
-                cliente = valor.strip()
-            elif chave == "Sink" and not sink:
-                sink = valor.strip()
-            elif linha.strip().startswith(("node.name", "media.name")):
-                nosso = nosso or MARCA_DO_TOCADOR in linha
-        alvo = por_indice.get(sink)
+    for fluxo in fluxos:
+        cliente = fluxo.cliente
+        nosso = any(
+            MARCA_DO_TOCADOR in fluxo.propriedades.get(chave, "")
+            for chave in ("node.name", "media.name")
+        )
+        alvo = por_indice.get(fluxo.alvo)
         if alvo is None:
             continue
         sem_cliente = cliente in ("", "n/a", "-")

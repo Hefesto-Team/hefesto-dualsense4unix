@@ -1485,10 +1485,9 @@ def diagnosticar() -> Diagnostico:
     tem_pactl = shutil.which("pactl") is not None
     pipe_source = False
     if tem_pactl:
-        pipe_source = any(
-            Path(d).joinpath("libpipewire-module-pipe-tunnel.so").exists()
-            for d in _DIRS_PIPEWIRE
-        )
+        from hefesto_dualsense4unix.integrations import porta_do_som
+
+        pipe_source = porta_do_som.tem_modulo("libpipewire-module-pipe-tunnel.so")
     broker = False
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
@@ -1503,13 +1502,6 @@ def diagnosticar() -> Diagnostico:
         pipe_source=pipe_source,
         broker=broker,
     )
-
-
-_DIRS_PIPEWIRE = (
-    "/usr/lib/x86_64-linux-gnu/pipewire-0.3",
-    "/usr/lib64/pipewire-0.3",
-    "/usr/lib/pipewire-0.3",
-)
 
 
 #: frente dela eram «Jogador 1 — microfone» e «DualSense 1 · mic»; a razão da

@@ -37,6 +37,7 @@ import threading
 from pathlib import Path
 
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+from tests.unit import pactl_json_de_mentira as pj
 
 _CABECALHO = "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n"
 
@@ -367,7 +368,7 @@ def _pactl_de_mentira(caminho: Path, sinks: str) -> None:
         "#!/bin/sh\n"
         'case "$*" in\n'
         f"    'list short sinks') {imprime(curto)} ;;\n"
-        f"    'list sinks') {imprime(sinks.splitlines())} ;;\n"
+        f"    '--format=json list sinks') {imprime([pj.json_do_longo(sinks)])} ;;\n"
         "    *) exit 1 ;;\n"
         "esac\n",
         encoding="utf-8",
@@ -666,13 +667,13 @@ def test_a_pergunta_do_curador_e_em_c_e_sem_o_loader_da_steam(tmp_path: Path) ->
     loader = tmp_path / "runtime-da-steam"
     loader.mkdir()
     preload = str(tmp_path / "nao-existe.so")
-    linhas = " ".join(f"'{ln}'" for ln in _SINK_DO_RADIO.splitlines())
+    linhas = f"'{pj.json_do_longo(_SINK_DO_RADIO)}'"
     corpo = (
         '[ -z "${LD_LIBRARY_PATH:-}" ] || exit 1\n'
         '[ -z "${LD_PRELOAD:-}" ] || exit 1\n'
         '[ "${LC_ALL:-}" = C ] || exit 1\n'
         'case "$*" in\n'
-        f"    'list sinks') printf '%s\\n' {linhas} ;;\n"
+        f"    '--format=json list sinks') printf '%s\\n' {linhas} ;;\n"
         "    *) exit 1 ;;\n"
         "esac\n"
     )

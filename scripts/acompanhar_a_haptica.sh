@@ -34,7 +34,17 @@ tem_opcoes() {
   printf '%s\n' "$e" | grep -q "^PROTON_ENABLE_MHWILDS_USB_AUDIO=1"
 }
 
-canais4() { pactl list sinks 2>/dev/null | grep -A 14 "hefesto_som" | grep -q "4ch"; }
+canais4() {
+  pactl --format=json list sinks 2>/dev/null | python3 -c '
+import json, sys
+try:
+    sinks = json.load(sys.stdin)
+except ValueError:
+    sys.exit(1)
+sys.exit(0 if any("hefesto_som" in (s.get("name") or "") and "4ch" in (s.get("sample_specification") or "")
+                  for s in sinks) else 1)
+'
+}
 
 echo "── acompanhando «$ALVO» · ${TOTAL}s, amostra a cada ${PASSO}s ──"
 echo

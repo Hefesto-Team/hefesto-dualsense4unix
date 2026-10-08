@@ -117,6 +117,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     COMMON_LEN,
     bt_crc32,
 )
+from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     BLOCO_AUDIO_CONTROL,
     BLOCO_DUPLO,
@@ -735,13 +736,6 @@ PRIORIDADE_SESSAO_DO_SOM = 10
 NOME_DO_ALTO_FALANTE_DO_CONTROLE = "Alto-falante do Controle"
 
 _TIMEOUT_PACTL_S = 5.0
-
-_DIRS_PIPEWIRE = (
-    "/usr/lib/x86_64-linux-gnu/pipewire-0.3",
-    "/usr/lib64/pipewire-0.3",
-    "/usr/lib/pipewire-0.3",
-)
-
 
 def nome_do_sink(uniq: str) -> str:
     """``hefesto_som_<marca>`` a partir do ``uniq`` do controle. "" se ilegível.
@@ -1575,7 +1569,7 @@ class Diagnostico:
 def _tem_modulo_pulse(nome: str) -> bool:
     """O nome do módulo está na camada de compatibilidade Pulse do PipeWire?"""
     alvo = nome.encode("ascii")
-    for pasta in _DIRS_PIPEWIRE:
+    for pasta in porta_do_som.diretorios_de_modulos():
         so = Path(pasta) / "libpipewire-module-protocol-pulse.so"
         try:
             if alvo in so.read_bytes():
@@ -1586,7 +1580,7 @@ def _tem_modulo_pulse(nome: str) -> bool:
 
 
 def _tem_so_pipewire(arquivo: str) -> bool:
-    return any(Path(d).joinpath(arquivo).exists() for d in _DIRS_PIPEWIRE)
+    return porta_do_som.tem_modulo(arquivo)
 
 
 def versao_libopus() -> str | None:
@@ -1891,26 +1885,7 @@ def volumes_do_sink(nome: str, runner: Callable[[list[str]], str | None] | None 
                     ) -> list[int] | None:
     """Os volumes por canal deste sink, em por cento. ``None`` = não se sabe."""
     correr: Any = runner or rodar_pactl
-    saida = correr(["pactl", "list", "sinks"])
-    if saida is None:
-        return None
-    dentro = False
-    for linha in saida.splitlines():
-        crua = linha.strip()
-        if crua.startswith("Name:"):
-            dentro = crua.split(":", 1)[1].strip() == nome
-            continue
-        if dentro and crua.startswith("Volume:"):
-            achados = []
-            for parte in crua.split(":", 1)[1].split(","):
-                for pedaco in parte.split("/"):
-                    pedaco = pedaco.strip()
-                    if pedaco.endswith("%"):
-                        with contextlib.suppress(ValueError):
-                            achados.append(int(pedaco[:-1]))
-                        break
-            return achados or None
-    return None
+    return porta_do_som.volumes_do_no("sinks", nome, correr)
 
 
 def garantir_motores_audiveis(
@@ -2504,16 +2479,15 @@ def sink_do_controle(
     usb: CasamentoUSB | None = None
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.integrations.usb_pai import (
-            nos_e_sysfs,
             usb_pai_por_no,
             usb_pai_por_uniq,
         )
 
-        longa = ler(["pactl", "list", "sinks"]) or ""
-        if longa.strip():
+        sysfs = porta_do_som.sysfs_por_no("sinks", ler)
+        if sysfs:
             usb = CasamentoUSB(
                 por_uniq=usb_pai_por_uniq(conhecidos),
-                por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+                por_no=usb_pai_por_no(sysfs),
             )
     return escolher_sink(sinks, uniq, conhecidos, usb) or proprio
 

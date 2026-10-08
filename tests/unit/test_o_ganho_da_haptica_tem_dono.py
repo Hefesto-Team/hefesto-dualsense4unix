@@ -32,6 +32,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     pct_da_haptica,
 )
 from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
+from tests.unit import pactl_json_de_mentira as pj
 from tests.unit import test_no_modo_xbox_a_haptica_fina as xbox
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     BRANCO,
@@ -87,17 +88,14 @@ class ServidorDeMentira:
             self.escritas.append(list(argv))
             self.sinks[nome] = [_cru_do_texto(v) for v in vols]
             return ""
-        if argv[:3] == ["pactl", "list", "sinks"] and len(argv) == 3:
-            blocos = []
-            for nome, vols in self.sinks.items():
-                canais = ["front-left", "front-right", "rear-left", "rear-right"]
-                partes = [
-                    f"{c}: {v} / {round(100 * v / VOLUME_NORMAL)}% / "
-                    f"{20 * math.log10(max(linear_do_cru(v), 1e-9)):.2f} dB"
-                    for c, v in zip(canais, vols, strict=False)
-                ]
-                blocos.append(f"Sink #1\n\tName: {nome}\n\tVolume: {',   '.join(partes)}\n")
-            return "\n".join(blocos)
+        if pj.e_lista_json(argv, "sinks"):
+            canais = ["front-left", "front-right", "rear-left", "rear-right"]
+            return pj.texto(*(
+                pj.no(1, nome, extra={"volume": {
+                    c: {"value": v, "value_percent": f"{round(100 * v / VOLUME_NORMAL)}%",
+                        "db": f"{20 * math.log10(max(linear_do_cru(v), 1e-9)):.2f} dB"}
+                    for c, v in zip(canais, vols, strict=False)}})
+                for nome, vols in self.sinks.items()))
         if argv[:2] == ["pactl", "list"] and "short" in argv:
             return "\n".join(
                 f"{i}\t{n}\tmodule-alsa-card.c\ts16le 4ch 48000Hz\tRUNNING"

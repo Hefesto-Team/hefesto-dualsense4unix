@@ -6,6 +6,7 @@ import re
 from collections.abc import Sequence
 
 from hefesto_dualsense4unix.app import audio_saida
+from hefesto_dualsense4unix.integrations import porta_do_som
 
 #: responder sobre o DualSense e calar em qualquer outro aparelho — e o produto
 _CAPACIDADE_DE_GANHO = "cvolume"
@@ -48,16 +49,12 @@ def elemento_e_ganho_do_scontents(texto: str) -> tuple[str, int, float] | None:
 
 
 def placa_de_cada_fonte(lista_de_sources: str) -> dict[str, str]:
-    """`{nome_do_no: placa_alsa}` da saída de `pactl list sources`."""
-    placa: dict[str, str] = {}
-    atual = ""
-    for linha in (lista_de_sources or "").splitlines():
-        crua = linha.strip()
-        if crua.startswith("Name: "):
-            atual = crua[6:]
-        elif atual and crua.startswith("alsa.card = "):
-            placa[atual] = crua.split("=", 1)[1].strip().strip('"')
-    return placa
+    """`{nome_do_no: placa_alsa}` da saída de `pactl --format=json list sources`."""
+    return {
+        no.nome: no.propriedades["alsa.card"]
+        for no in porta_do_som.nos_do_texto(lista_de_sources or "")
+        if no.nome and no.propriedades.get("alsa.card")
+    }
 
 
 def placa_do_controle(uniq: str, na_mesa: Sequence[str]) -> str:
@@ -74,10 +71,10 @@ def placa_do_controle(uniq: str, na_mesa: Sequence[str]) -> str:
     if not no:
         return ""
     try:
-        lista = audio_saida.rodar_leitura(["pactl", "list", "sources"])
+        placas = porta_do_som.placa_de_cada_fonte(audio_saida.rodar_leitura)
     except Exception:
         return ""
-    return placa_de_cada_fonte(lista).get(no, "")
+    return (placas or {}).get(no, "")
 
 
 def definir(

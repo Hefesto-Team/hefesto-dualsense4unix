@@ -29,6 +29,7 @@ from hefesto_dualsense4unix.integrations.quem_ouve_o_microfone import (
     e_stream_do_hefesto,
     ouvintes_por_fonte,
 )
+from tests.unit import pactl_json_de_mentira as pj
 
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
@@ -424,13 +425,8 @@ def test_o_bombeador_le_o_pedaco_do_no_e_nao_de_um_literal() -> None:
 
 
 def _bloco(indice: int, fonte: int, props: dict[str, str]) -> str:
-    corpo = "\n".join(f'\t\t{k} = "{v}"' for k, v in props.items())
-    return (
-        f"Source Output #{indice}\n"
-        f"\tSource: {fonte}\n"
-        f"\tCorked: no\n"
-        f"\tProperties:\n{corpo}\n"
-    )
+    """Um `source-output` no JSON que o `pactl --format=json list source-outputs` dá."""
+    return pj.texto(pj.fluxo(indice, fonte, tipo="source", props=props))
 
 
 def test_o_alimentador_nao_conta_como_ouvinte() -> None:

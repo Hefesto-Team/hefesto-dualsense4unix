@@ -8,6 +8,7 @@ import re
 import pytest
 
 from tests.conftest import exigir_gi_real
+from tests.unit import pactl_json_de_mentira as pj
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
@@ -147,12 +148,9 @@ class TestOElementoNaoSeDigita:
 
 class TestAPlacaSaiDoServidorDeSom:
     def test_o_no_casa_com_a_placa_alsa(self) -> None:
-        lista = (
-            'Source #7\n'
-            '\tName: alsa_input.usb-Sony-00.mono-fallback\n'
-            '\t\talsa.card = "3"\n'
-            'Source #9\n'
-            '\tName: hefesto_mic_a0fa9c\n')
+        lista = pj.texto(
+            pj.no(7, "alsa_input.usb-Sony-00.mono-fallback", props={"alsa.card": "3"}),
+            pj.no(9, "hefesto_mic_a0fa9c"))
         assert _placa_de_cada_fonte(lista) == {
             "alsa_input.usb-Sony-00.mono-fallback": "3"}
 

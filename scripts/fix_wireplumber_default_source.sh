@@ -286,7 +286,7 @@ fontes_elegiveis() {
     [[ -r "${DOCTOR_SH}" ]] || return 1
     command -v pactl >/dev/null 2>&1 || return 1
     local longo curta
-    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    longo="$(LC_ALL=C pactl --format=json list sources 2>/dev/null || true)"
     curta="$(LC_ALL=C pactl list sources short 2>/dev/null || true)"
     [[ -n "${curta}" ]] || return 1
     printf '%s\n' "${curta}" | bash -c '
@@ -330,7 +330,7 @@ fonte_se_sustenta() {
     [[ -r "${DOCTOR_SH}" ]] || return 1
     command -v pactl >/dev/null 2>&1 || return 1
     local longo curta
-    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    longo="$(LC_ALL=C pactl --format=json list sources 2>/dev/null || true)"
     curta="$(LC_ALL=C pactl list sources short 2>/dev/null || true)"
     [[ -n "${curta}" ]] || return 1
     printf '%s\n' "${curta}" | bash -c '

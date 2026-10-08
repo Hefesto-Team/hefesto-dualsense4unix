@@ -297,13 +297,13 @@ def fonte_de_captura_do_uniq(
     `mic.volume.set`): cair para a primeira da lista era, palavra por palavra, o
     defeito que ela chamou de bug.
     """
+    from hefesto_dualsense4unix.integrations import porta_do_som
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
         CasamentoUSB,
         escolher_fonte,
         fontes_dualsense,
     )
     from hefesto_dualsense4unix.integrations.usb_pai import (
-        nos_e_sysfs,
         usb_pai_por_no,
         usb_pai_por_uniq,
     )
@@ -321,12 +321,12 @@ def fonte_de_captura_do_uniq(
     if mesa is not None and uniq not in candidatos:
         candidatos.append(uniq)
     usb: CasamentoUSB | None = None
-    longa = _texto_do_pactl(["pactl", "list", "sources"])
-    if longa is not None:
+    sysfs = porta_do_som.sysfs_por_no("sources", _texto_do_pactl)
+    if sysfs is not None:
         censo = usb_pai_por_uniq(candidatos or [uniq])
         usb = CasamentoUSB(
             por_uniq={u: pai for u, pai in censo.items() if pai},
-            por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+            por_no=usb_pai_por_no(sysfs),
         )
     return escolher_fonte(fontes, uniq, candidatos, usb)
 

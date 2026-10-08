@@ -60,6 +60,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit import pactl_json_de_mentira as pj
+
 RAIZ = Path(__file__).resolve().parents[2]
 WP_FIX = RAIZ / "scripts" / "fix_wireplumber_default_source.sh"
 INSTALL = RAIZ / "install.sh"
@@ -113,12 +115,12 @@ def _dubla_pactl(
         'case "$*" in\n'
         f'  "get-default-source") printf "%s\\n" "{padrao}" ;;\n'
         '  "list sources short") cat "$0.curto" ;;\n'
-        '  "list sources") cat "$0.longo" ;;\n'
+        '  "--format=json list sources") cat "$0.longo" ;;\n'
         "  *) : ;;\n"
         "esac\n",
         encoding="utf-8",
     )
-    (binario / "pactl.longo").write_text(longo, encoding="utf-8")
+    (binario / "pactl.longo").write_text(pj.json_do_longo(longo), encoding="utf-8")
     (binario / "pactl.curto").write_text(curto, encoding="utf-8")
     (binario / "pactl").chmod(0o755)
     return {

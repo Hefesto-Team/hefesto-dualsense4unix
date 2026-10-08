@@ -28,6 +28,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit import pactl_json_de_mentira as pj
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
@@ -57,7 +59,7 @@ def _decidir(porta_conf: Path) -> tuple[str, str, str]:
     script = (
         f'source "{DOCTOR}" >/dev/null 2>&1 || true\n'
         f"_dualsense_porta_de_captura_status"
-        f' "{FIXTURES / "sources-cabo-2026-09-20.txt"}"'
+        f' "{FIXTURES / "sources-cabo-2026-09-20.json"}"'
         f' "{FIXTURES / "scontents-dualsense-2026-09-20.txt"}"'
         f' "{porta_conf}"\n'
     )
@@ -494,7 +496,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
                                        por_no={nativo: "3-2"}))
         monkeypatch.setattr(
             a02.audio_saida, "rodar_leitura",
-            lambda argv: longa if argv[0] == "pactl" else amixer)
+            lambda argv: pj.json_do_longo(longa) if argv[0] == "pactl" else amixer)
 
         lido = a02._ler_o_ganho((cabo, radio))
         assert lido[cabo] == (76, 36.5), (

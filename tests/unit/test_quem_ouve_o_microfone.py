@@ -11,6 +11,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone
 from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qom
 from hefesto_dualsense4unix.integrations.fontes_de_captura import CasamentoUSB
+from tests.unit import pactl_json_de_mentira as pj
 
 UNIQ_CABO = "aa:bb:cc:00:00:ab"
 UNIQ_RADIO = "aa:bb:cc:00:00:f0"
@@ -175,7 +176,7 @@ def ouvintes(
     saida: str, raiz_proc: Path | str = "/proc"
 ) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
     """Atalho: os dois mapas por nome de fonte, com a saída curta medida."""
-    return qom.ouvintes_por_fonte(saida, SOURCES_SHORT, raiz_proc)
+    return qom.ouvintes_por_fonte(pj.json_do_longo(saida), SOURCES_SHORT, raiz_proc)
 
 
 def test_o_mapa_de_indices_le_a_coluna_1_da_saida_curta() -> None:
@@ -202,7 +203,7 @@ def test_stream_de_fonte_desconhecida_e_descartado() -> None:
 
 def test_o_parser_le_indice_fonte_e_propriedades_do_bloco_medido() -> None:
     """A forma real: `Source Latency:` não pode ser confundido com `Source:`."""
-    (stream,) = qom.streams_de_captura(ALHEIO_SEM_TARGET)
+    (stream,) = qom.streams_de_captura(pj.json_do_longo(ALHEIO_SEM_TARGET))
     assert stream.indice == 1500
     assert stream.fonte == 600
     assert stream.corked is False
@@ -225,7 +226,7 @@ def test_a_saida_traduzida_nao_produz_bloco_nenhum() -> None:
         "\tPropriedades:\n"
         '\t\tapplication.name = "Google Chrome input"\n'
     )
-    assert qom.streams_de_captura(traduzido) == []
+    assert qom.streams_de_captura(traduzido) == [], "o texto longo não é lido, nem em C"
 
 
 def test_a_leitura_usa_o_pactl_blindado_da_casa() -> None:
@@ -248,7 +249,7 @@ def test_o_ambiente_c_chega_de_verdade_ao_pactl(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(eleicao_de_microfone.shutil, "which", lambda nome: f"/usr/bin/{nome}")
     monkeypatch.setattr(eleicao_de_microfone.subprocess, "run", _run)
 
-    assert qom._rodar(["pactl", "list", "source-outputs"]) == (0, "")
+    assert qom._rodar(["pactl", "--format=json", "list", "source-outputs"]) == (0, "")
     assert ambiente_visto.get("LC_ALL") == "C", "o pactl responderia traduzido"
     assert ambiente_visto.get("LANG") == "C"
 
@@ -256,7 +257,7 @@ def test_o_ambiente_c_chega_de_verdade_ao_pactl(monkeypatch: pytest.MonkeyPatch)
 def test_bloco_sem_campo_de_fonte_e_descartado() -> None:
     """Sem `Source:` não há a que atribuir o ouvinte — e não se chuta."""
     sem_fonte = 'Source Output #1502\n\tCorked: no\n\tProperties:\n\t\tapplication.name = "X"\n'
-    assert qom.streams_de_captura(sem_fonte) == []
+    assert qom.streams_de_captura(pj.json_do_longo(sem_fonte)) == []
 
 
 def test_o_medidor_pulse_nao_conta_como_ouvinte() -> None:
@@ -268,7 +269,7 @@ def test_o_medidor_pulse_nao_conta_como_ouvinte() -> None:
 
 def test_o_medidor_nativo_tambem_nao_conta_como_ouvinte() -> None:
     """A forma `pw-cat` não publica PID nenhum — e ainda assim sai da conta."""
-    (stream,) = qom.streams_de_captura(MEDIDOR_NATIVO)
+    (stream,) = qom.streams_de_captura(pj.json_do_longo(MEDIDOR_NATIVO))
     assert stream.pid is None
     assert qom.e_stream_do_hefesto(stream) is True
 
@@ -413,7 +414,7 @@ def test_medi_e_ninguem_ouve_e_uma_lista_vazia(monkeypatch: pytest.MonkeyPatch) 
     """`rc=0` com corpo vazio: sei, e a resposta é ninguém."""
     _falar_pactl(
         monkeypatch,
-        {"list source-outputs": (0, ""), "list sources short": (0, SOURCES_SHORT)},
+        {"--format=json list source-outputs": (0, "[]"), "list sources short": (0, SOURCES_SHORT)},
     )
     leitura = qom.ler_quem_ouve([UNIQ_CABO])
     assert leitura.lida is True
@@ -439,8 +440,8 @@ def test_o_controle_do_radio_vai_para_sem_canal(monkeypatch: pytest.MonkeyPatch)
 
     def falso(argv: list[str]) -> tuple[int, str]:
         chave = " ".join(argv[1:])
-        if chave == "list source-outputs":
-            return (0, ALHEIO_SEM_TARGET + MEDIDOR_PULSE)
+        if chave == "--format=json list source-outputs":
+            return (0, pj.json_do_longo(ALHEIO_SEM_TARGET + MEDIDOR_PULSE))
         if chave == "list sources short":
             return (0, SOURCES_SHORT)
         return (127, "")
@@ -460,7 +461,7 @@ def test_a_luz_de_um_controle_nao_fala_pelo_outro(monkeypatch: pytest.MonkeyPatc
     _falar_pactl(
         monkeypatch,
         {
-            "list source-outputs": (0, no_cabo),
+            "--format=json list source-outputs": (0, pj.json_do_longo(no_cabo)),
             "list sources short": (0, SOURCES_SHORT_DOIS_CANAIS),
         },
     )
@@ -477,7 +478,7 @@ def test_o_pausado_chega_a_peca_c_separado_e_por_uniq(monkeypatch: pytest.Monkey
     _falar_pactl(
         monkeypatch,
         {
-            "list source-outputs": (0, parado),
+            "--format=json list source-outputs": (0, pj.json_do_longo(parado)),
             "list sources short": (0, SOURCES_SHORT_DOIS_CANAIS),
         },
     )
@@ -498,8 +499,8 @@ def test_sem_fonte_de_dualsense_ninguem_tem_canal(monkeypatch: pytest.MonkeyPatc
     def falso(argv: list[str]) -> tuple[int, str]:
         chave = " ".join(argv[1:])
         chamadas.append(chave)
-        if chave == "list source-outputs":
-            return (0, "")
+        if chave == "--format=json list source-outputs":
+            return (0, "[]")
         if chave == "list sources short":
             return (0, "601\talsa_input.usb-046d_HD_Pro_Webcam_C920-02\tPipeWire\tx\tIDLE\n")
         return (127, "")
@@ -515,7 +516,7 @@ def test_sem_fonte_de_dualsense_ninguem_tem_canal(monkeypatch: pytest.MonkeyPatc
     assert leitura.lida is True
     assert leitura.sem_canal == (UNIQ_CABO,)
     assert leitura.por_uniq == {}
-    assert chamadas == ["list source-outputs", "list sources short"]
+    assert chamadas == ["--format=json list source-outputs", "list sources short"]
 
 
 def test_a_mesa_vazia_nao_gasta_uma_chamada_de_pactl(
@@ -535,7 +536,7 @@ def test_a_mesa_vazia_nao_gasta_uma_chamada_de_pactl(
 def test_o_uniq_vale_nos_dois_formatos(monkeypatch: pytest.MonkeyPatch) -> None:
     """Com e sem dois-pontos dão a mesma resposta — a armadilha 2 da sprint."""
     respostas = {
-        "list source-outputs": (0, ALHEIO_SEM_TARGET),
+        "--format=json list source-outputs": (0, pj.json_do_longo(ALHEIO_SEM_TARGET)),
         "list sources short": (0, SOURCES_SHORT),
     }
     _falar_pactl(monkeypatch, respostas)
@@ -553,7 +554,8 @@ def test_o_medidor_da_peca_b_nao_acende_a_luz_sozinho(
     _falar_pactl(
         monkeypatch,
         {
-            "list source-outputs": (0, MEDIDOR_PULSE + MEDIDOR_NATIVO),
+            "--format=json list source-outputs": (
+                0, pj.json_do_longo(MEDIDOR_PULSE + MEDIDOR_NATIVO)),
             "list sources short": (0, SOURCES_SHORT),
         },
     )
@@ -568,7 +570,8 @@ def test_o_alheio_aparece_mesmo_com_o_nosso_medidor_no_ar(
     _falar_pactl(
         monkeypatch,
         {
-            "list source-outputs": (0, MEDIDOR_PULSE + ALHEIO_SEM_TARGET + MEDIDOR_NATIVO),
+            "--format=json list source-outputs": (
+                0, pj.json_do_longo(MEDIDOR_PULSE + ALHEIO_SEM_TARGET + MEDIDOR_NATIVO)),
             "list sources short": (0, SOURCES_SHORT),
         },
     )
@@ -585,7 +588,7 @@ def test_a_leitura_nao_abre_stream_de_captura(monkeypatch: pytest.MonkeyPatch) -
         chave = " ".join(argv[1:])
         if chave == "list sources short":
             return (0, SOURCES_SHORT)
-        return (0, "")
+        return (0, "[]")
 
     monkeypatch.setattr(qom, "_rodar", falso)
     monkeypatch.setattr(qom, "casamento_usb_agora", lambda uniqs: None)
@@ -593,7 +596,7 @@ def test_a_leitura_nao_abre_stream_de_captura(monkeypatch: pytest.MonkeyPatch) -
     assert vistos, "a leitura tem de perguntar alguma coisa"
     for argv in vistos:
         assert argv[0] == "pactl"
-        assert argv[1] == "list", f"argv que não é leitura: {argv}"
+        assert "list" in argv[1:3], f"argv que não é leitura: {argv}"
 
 
 def test_o_custo_e_de_tres_chamadas_no_pior_caso(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -605,15 +608,15 @@ def test_o_custo_e_de_tres_chamadas_no_pior_caso(monkeypatch: pytest.MonkeyPatch
         contagem[chave] = contagem.get(chave, 0) + 1
         if chave == "list sources short":
             return (0, SOURCES_SHORT)
-        if chave == "list source-outputs":
-            return (0, ALHEIO_SEM_TARGET)
+        if chave == "--format=json list source-outputs":
+            return (0, pj.json_do_longo(ALHEIO_SEM_TARGET))
         return (127, "")
 
     monkeypatch.setattr(qom, "_rodar", falso)
     monkeypatch.setattr(qom, "casamento_usb_agora", lambda uniqs: None)
     quatro = [UNIQ_CABO, UNIQ_RADIO, "aa:bb:cc:00:00:11", "aa:bb:cc:00:00:22"]
     qom.quem_ouve_agora(quatro)
-    assert contagem == {"list source-outputs": 1, "list sources short": 1}
+    assert contagem == {"--format=json list source-outputs": 1, "list sources short": 1}
 
 
 def test_o_modulo_nao_escreve_no_controle() -> None:
@@ -628,7 +631,7 @@ def test_a_estrutura_e_dado_e_nao_texto(monkeypatch: pytest.MonkeyPatch) -> None
     _falar_pactl(
         monkeypatch,
         {
-            "list source-outputs": (0, ALHEIO_SEM_TARGET),
+            "--format=json list source-outputs": (0, pj.json_do_longo(ALHEIO_SEM_TARGET)),
             "list sources short": (0, SOURCES_SHORT),
         },
     )

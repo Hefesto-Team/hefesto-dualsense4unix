@@ -25,6 +25,7 @@ from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     chave_do_aparelho,
     no_de_captura,
 )
+from tests.unit import pactl_json_de_mentira as pj
 from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
     _DaemonQueResponde,
     _path_minimo,
@@ -201,16 +202,11 @@ class _Servidor:
                 f"{i}\t{s['nome']}\tPipeWire\tfloat32le {s['canais']}ch 48000Hz\tIDLE"
                 for i, s in self.sinks.items()
             )
-        if a[:3] == ["pactl", "list", "sinks"]:
-            blocos = []
-            for i, s in self.sinks.items():
-                props = "\n".join(f'\t\t{k} = "{v}"' for k, v in s["props"].items())
-                blocos.append(
-                    f"Sink #{i}\n\tState: IDLE\n\tName: {s['nome']}\n"
-                    f"\tSample Specification: float32le {s['canais']}ch 48000Hz\n"
-                    f"\tProperties:\n{props}"
-                )
-            return "\n\n".join(blocos)
+        if pj.e_lista_json(a, "sinks"):
+            return pj.texto(*(
+                pj.no(i, s["nome"], estado="IDLE", formato=f"float32le {s['canais']}ch 48000Hz",
+                      props=s["props"])
+                for i, s in self.sinks.items()))
         if a[:4] in (
             ["pactl", "list", "short", "sink-inputs"], ["pactl", "list", "sink-inputs", "short"]
         ):
@@ -223,12 +219,10 @@ class _Servidor:
                 for i, f in self.fluxos.items()
             ]
             return "\n".join(linhas)
-        if a[:3] == ["pactl", "list", "sink-inputs"]:
-            return "\n\n".join(
-                f"Sink Input #{i}\n\tDriver: PipeWire\n\tSink: {f['sink']}\n"
-                f"\tProperties:\n\t\tnode.name = \"{f['nome']}\""
-                for i, f in self.fluxos.items()
-            )
+        if pj.e_lista_json(a, "sink-inputs"):
+            return pj.texto(*(
+                pj.fluxo(i, f["sink"], props={"node.name": f["nome"]})
+                for i, f in self.fluxos.items()))
         if a[:4] == ["pactl", "list", "short", "clients"]:
             return "42\tprotocol-native.c\tjogo\n77\tPipeWire\tpw-loopback\n"
         if a[:2] == ["pactl", "set-sink-input-volume"]:
@@ -654,7 +648,7 @@ def test_sem_cabo_o_dono_da_lista_nao_pergunta_pelos_fluxos(tmp_path: Path) -> N
 
     sysfs = _sysfs(tmp_path, ancoras=1)
     assert ks.controles_do_registro(sysfs, tmp_path / "udev", servidor) == []
-    assert perguntas == [("pactl", "list", "sinks")]
+    assert perguntas == [("pactl", "--format=json", "list", "sinks")]
 
 
 def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
@@ -668,7 +662,7 @@ def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
     sysfs = _sysfs(tmp_path, ancoras=0, no_cabo=1)
     lista = ks.controles_do_registro(sysfs, tmp_path / "udev", mudo)
     assert [(c.bus, c.dev) for c in lista] == [(3, 28)], "o cabo tem de seguir pela placa"
-    assert perguntas == [("pactl", "list", "sinks")]
+    assert perguntas == [("pactl", "--format=json", "list", "sinks")]
 
 
 def _com_a_conferencia(mesa: _Mesa, responde: str | None) -> list[str]:

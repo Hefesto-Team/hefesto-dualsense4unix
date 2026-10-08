@@ -4,17 +4,16 @@
     "linhas-frageis": {
       "data": "2026-10-08",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 60,
+      "piso": 42,
       "por_item": {
         "bluez": 12,
         "kernel": 3,
         "lancadores": 5,
-        "pipewire": 18,
         "sistema": 2,
         "steam": 18,
         "udev": 2
       },
-      "razao": "o dono das opções por jogo lê o config/loginusers.vdf para escrever só na conta logada da Steam (A-OPCAO-POR-JOGO-CHEGA-AO-LANCAMENTO-01)",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-07",
@@ -30,7 +29,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 307
+      "universo": 289
     }
   }
 }

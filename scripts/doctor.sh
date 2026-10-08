@@ -1594,7 +1594,8 @@ _prefere_mic_do_dualsense() {
 }
 
 # PURA: 0 quando a PORTA ATIVA da source `$1` está marcada `not available` pelo
-# ALSA, no texto de `LC_ALL=C pactl list sources` (`$2` ou stdin).
+# ALSA, no JSON de `pactl --format=json list sources` (`$2` ou stdin). Sem JSON
+# (a porta não existe, ou o texto não é JSON) a resposta é 1: «não sei» não reprova.
 #
 # Este é o segundo degrau do critério de porta, e ele foi medido nesta máquina em
 # 29/07/2026. Ter porta ativa não basta: a entrada analógica da onboard tem
@@ -1607,31 +1608,22 @@ _prefere_mic_do_dualsense() {
 # Serve para DIZER a verdade, nunca para escolher escondido: quem decide quem é a
 # fonte padrão é `_prefere_mic_do_dualsense`, com os sinais explícitos dela.
 _source_porta_ativa_indisponivel() {
-    awk -v alvo="$1" '
-        /^[[:space:]]+Name: / {
-            atual = substr($0, index($0, ": ") + 2)
-            next
-        }
-        atual != alvo { next }
-        /^[[:space:]]+Active Port: / {
-            ativa = substr($0, index($0, ": ") + 2)
-            next
-        }
-        # Linha de porta: `<chave>: <descrição> (type: ..., not available)`.
-        # O `(` é o que separa porta de `Volume:`/`Latency:` e das propriedades
-        # (que usam ` = `, não `: `).
-        /^[[:space:]]+[A-Za-z0-9_-]+: .*\(/ {
-            linha = $0
-            sub(/^[[:space:]]+/, "", linha)
-            p = index(linha, ": ")
-            if (p < 2) next
-            chave = substr(linha, 1, p - 1)
-            if (chave ~ /[[:space:]]/) next
-            indisp[chave] = (linha ~ /not available/)
-            next
-        }
-        END { exit ((ativa != "" && indisp[ativa]) ? 0 : 1) }
-    ' "${2:--}"
+    python3 -c '
+import json, sys
+alvo, arquivo = sys.argv[1], sys.argv[2]
+try:
+    dados = json.load(sys.stdin if arquivo == "-" else open(arquivo, encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(1)
+for no in dados:
+    if no.get("name") != alvo:
+        continue
+    ativa = no.get("active_port")
+    for porta in no.get("ports") or []:
+        if porta.get("name") == ativa:
+            sys.exit(0 if porta.get("availability") == "not available" else 1)
+sys.exit(1)
+' "$1" "${2:--}"
 }
 
 # Melhor fonte de CAPTURA de verdade num `pactl list sources short` (arquivo ou
@@ -1659,8 +1651,8 @@ _melhor_source_de_captura() {
 }
 
 # PURA: filtra um `pactl list sources short` (stdin) e deixa passar só as fontes
-# cuja porta ativa NÃO está explicitamente `not available`. `$1` = o texto de
-# `LC_ALL=C pactl list sources` (o longo), de onde sai a disponibilidade.
+# cuja porta ativa NÃO está explicitamente `not available`. `$1` = o JSON de
+# `pactl --format=json list sources`, de onde sai a disponibilidade.
 #
 # Existe para que o CHECK e a CURA usem o mesmo critério. Enquanto cada um tinha
 # o seu, o doctor reprovava e mandava eleger a onboard, e o `--fix-mic` — que já
@@ -1677,6 +1669,13 @@ _sources_com_porta_usavel() {
         fi
         printf '%s\n' "${linha}"
     done
+}
+
+# O JSON de `pactl list <tipo>` (sources, cards...), com `LC_ALL=C`. Vazio quando o
+# servidor de som não responde ou o `pactl` não tem a porta do JSON. Desde
+# 08/10/2026 nenhum check lê o texto longo: ele traduz rótulos e muda de forma.
+_pactl_json() {
+    LC_ALL=C pactl --format=json list "$1" 2>/dev/null || true
 }
 
 # MIC-PADRAO-NO-CABO-01 §D.7 (decisão de produto): 0 = o alvo `$1` é o DualSense só por falta de outra entrada (`$2` = prefere 0) com o 51 no lugar; o WirePlumber o elege sozinho acima de qualquer monitor, e gravado ele venceria a webcam plugada depois (reproduzido com dublês, não medido no aparelho).
@@ -1700,7 +1699,7 @@ check_default_source_monitor() {
         # captura estavam sem nada plugado, e o único mic que captava era o do
         # controle. Isto é INFO, não reprovação — quem manda na promoção é ela.
         local sources_txt
-        sources_txt="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+        sources_txt="$(_pactl_json sources)"
         if printf '%s\n' "${sources_txt}" | _source_porta_ativa_indisponivel "${cur}"; then
             info "  mas a porta ativa dela está indisponível (nada plugado) — vai gravar silêncio"
             local src_ds
@@ -1731,7 +1730,7 @@ check_default_source_monitor() {
     # acontecendo em vez de apontar para um comando impotente.
     local prefere=0 alvo longo
     _prefere_mic_do_dualsense && prefere=1
-    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    longo="$(_pactl_json sources)"
     alvo="$(LC_ALL=C pactl list sources short 2>/dev/null \
             | _sources_com_porta_usavel "${longo}" \
             | _melhor_source_de_captura "${prefere}")"
@@ -1793,7 +1792,7 @@ fix_default_source_monitor() {
     # ofereça exatamente o alvo que a CURA elegeria — antes cada um tinha o seu
     # critério, e a tela dizia uma coisa e o `--fix-mic` fazia outra.
     local lista_curta lista_completa _linha _nome
-    lista_completa="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    lista_completa="$(_pactl_json sources)"
     lista_curta="$(LC_ALL=C pactl list sources short 2>/dev/null \
                    | _sources_com_porta_usavel "${lista_completa}")"
     while IFS= read -r _linha; do
@@ -2132,7 +2131,7 @@ _source_mute_veredito() {
 }
 
 # Camada 2, em uma linha: `card<TAB>perfil_ativo<TAB>perfil_alvo` a partir de um
-# `pactl list cards` (arquivo ou stdin). `perfil_alvo` vazio = nada a trocar.
+# `pactl --format=json list cards` (arquivo ou stdin). `perfil_alvo` vazio = nada a trocar.
 # Silêncio total = não há DualSense.
 #
 # ATENÇÃO — este decisor foi REESCRITO em 26/07/2026, e o motivo importa mais
@@ -2155,56 +2154,53 @@ _source_mute_veredito() {
 # alto-falante/fone do controle e o canal de haptic-de-áudio.
 # Função PURA: só parsing, nenhuma escrita.
 _dualsense_perfil_status() {
-    awk '
-        /^[[:space:]]+Name: alsa_card\./ {
-            nome = substr($0, index($0, ": ") + 2)
-            alvo = (tolower(nome) ~ /dualsense/)
-            if (alvo) { card = nome }
-            secao = ""
-            next
-        }
-        !alvo { next }
-        /^[[:space:]]+Profiles:/ { secao = "perfis"; next }
-        /^[[:space:]]+Active Profile:/ {
-            ativo = substr($0, index($0, ": ") + 2)
-            secao = ""
-            next
-        }
-        secao == "perfis" {
-            linha = $0
-            sub(/^[[:space:]]+/, "", linha)
-            pos = index(linha, ": ")
-            if (pos < 2) next
-            chave = substr(linha, 1, pos - 1)
-            if (chave ~ /[[:space:]]/) next
-            # `sources: N` e `available: yes|no` saem do próprio pactl em
-            # LC_ALL=C. Sem fonte de captura o perfil não serve ao microfone;
-            # indisponível, ele produz o nó sem porta que silenciou a medição.
-            temfonte = (linha ~ /sources: [1-9]/)
-            disponivel = (linha ~ /available: yes/)
-            prio = 0
-            if (match(linha, /priority: [0-9]+/)) {
-                prio = substr(linha, RSTART + 10, RLENGTH - 10) + 0
-            }
-            if (temfonte && disponivel && prio > melhorprio) {
-                melhorprio = prio
-                melhor = chave
-            }
-            # Guardado por chave, e NÃO comparado com `ativo` aqui: no `pactl`
-            # a linha `Active Profile:` vem DEPOIS da lista, então neste ponto
-            # `ativo` ainda está vazio. Comparar aqui fazia a guarda nunca
-            # ligar — defeito que o teste pegou.
-            serve[chave] = (temfonte && disponivel)
-            next
-        }
-        END {
-            if (card == "") exit 0
-            escolhido = ""
-            # Alvo só quando o ativo NÃO serve e há alternativa de verdade.
-            if (!serve[ativo] && melhor != "" && melhor != ativo) escolhido = melhor
-            printf "%s\t%s\t%s\n", card, ativo, escolhido
-        }
-    ' "${1:--}"
+    python3 -c '
+import json, sys
+arquivo = sys.argv[1]
+try:
+    cartoes = json.load(sys.stdin if arquivo == "-" else open(arquivo, encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(0)
+card = ativo = ""
+melhor, melhorprio, serve = "", 0, {}
+for c in cartoes:
+    nome = c.get("name") or ""
+    if not nome.startswith("alsa_card.") or "dualsense" not in nome.lower():
+        continue
+    card = nome
+    ativo = c.get("active_profile") or ""
+    for chave, perfil in (c.get("profiles") or {}).items():
+        # `sources` e `available` saem do próprio pactl. Sem fonte de captura o perfil
+        # não serve ao microfone; indisponível, ele produz o nó sem porta que
+        # silenciou a medição.
+        temfonte = (perfil.get("sources") or 0) >= 1
+        disponivel = perfil.get("available") is True
+        prio = perfil.get("priority") or 0
+        if temfonte and disponivel and prio > melhorprio:
+            melhorprio, melhor = prio, chave
+        serve[chave] = temfonte and disponivel
+if card:
+    escolhido = melhor if (not serve.get(ativo) and melhor and melhor != ativo) else ""
+    print("%s\t%s\t%s" % (card, ativo, escolhido))
+' "${1:--}"
+}
+
+# A PORTA ATIVA da source de captura do DualSense, lida do JSON em `$1` (arquivo).
+# Só `alsa_input.*`: o `.monitor` do sink também casa a marca no nome e é o
+# loopback da SAÍDA. Silêncio = não há.
+_porta_ativa_da_captura_do_dualsense() {
+    python3 -c '
+import json, sys
+try:
+    nos = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(0)
+for no in nos:
+    nome = (no.get("name") or "").lower()
+    if nome.startswith("alsa_input.") and "dualsense" in nome and no.get("active_port"):
+        print(no["active_port"])
+        break
+' "$1"
 }
 
 # --- MIC-CABO-SPDIF-01: a PORTA de captura, que a camada 2 não olha ---------
@@ -2242,7 +2238,7 @@ _dualsense_perfil_status() {
 # REALMENTE decide: a DEFINIÇÃO da porta ativa.
 #
 # PURA: três ARQUIVOS, nenhuma chamada a comando, nenhuma escrita.
-#   $1 = `LC_ALL=C pactl list sources`
+#   $1 = `pactl --format=json list sources`
 #   $2 = `LC_ALL=C amixer -c <N> scontents`
 #   $3 = a definição da porta ATIVA (o `SectionDevice` do UCM, ou o
 #        `paths/<porta>.conf` do alsa-card-profile)
@@ -2253,18 +2249,7 @@ _dualsense_porta_de_captura_status() {
 
     # A porta ATIVA da source de captura do DualSense. Só `alsa_input.*`: o
     # `.monitor` do sink também casa a marca no nome e é o loopback da SAÍDA.
-    porta="$(awk '
-        /^Source #/ { alvo = 0 }
-        /^[[:space:]]+Name: / {
-            nome = substr($0, index($0, ": ") + 2)
-            alvo = (tolower(nome) ~ /^alsa_input\..*dualsense/)
-            next
-        }
-        alvo && /^[[:space:]]+Active Port: / {
-            print substr($0, index($0, ": ") + 2)
-            exit
-        }
-    ' "${1:-/dev/null}")"
+    porta="$(_porta_ativa_da_captura_do_dualsense "${1:-/dev/null}")"
     [[ -n "${porta}" ]] || return 0
 
     # O elemento de ganho de CAPTURA que a placa tem para ligar. `cvolume` é a
@@ -2363,34 +2348,32 @@ _definicao_da_porta_de_captura() {
     esac
 }
 
-# PURA: 0 quando a source de nome `$1` tem PORTA ATIVA no texto de
-# `LC_ALL=C pactl list sources` lido de `$2` (arquivo) ou do stdin.
+# PURA: 0 quando a source de nome `$1` tem PORTA ATIVA no JSON de
+# `pactl --format=json list sources` lido de `$2` (arquivo) ou do stdin.
 #
 # É este o critério honesto de "dá para captar", e não o nome do perfil: uma
 # source sem porta abre o fluxo e entrega zeros, em qualquer perfil. Medido em
 # 26/07 — ver a nota em `_dualsense_perfil_status`.
 _source_tem_porta_ativa() {
-    awk -v alvo="$1" '
-        /^[[:space:]]+Name: / {
-            atual = substr($0, index($0, ": ") + 2)
-            next
-        }
-        /^[[:space:]]+Active Port: / {
-            if (atual == alvo) {
-                porta = substr($0, index($0, ": ") + 2)
-                if (porta != "" && porta != "(null)") { achou = 1 }
-            }
-            next
-        }
-        END { exit (achou ? 0 : 1) }
-    ' "${2:--}"
+    python3 -c '
+import json, sys
+alvo, arquivo = sys.argv[1], sys.argv[2]
+try:
+    dados = json.load(sys.stdin if arquivo == "-" else open(arquivo, encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(1)
+for no in dados:
+    if no.get("name") == alvo and (no.get("active_port") or "") not in ("", "(null)"):
+        sys.exit(0)
+sys.exit(1)
+' "$1" "${2:--}"
 }
 
 # Face viva do critério acima: pergunta ao pactl desta máquina.
 _dualsense_source_tem_porta() {
     local nome="$1"
     [[ -z "${nome}" ]] && return 1
-    LC_ALL=C pactl list sources 2>/dev/null | _source_tem_porta_ativa "${nome}"
+    _pactl_json sources | _source_tem_porta_ativa "${nome}"
 }
 
 # CAMADA 1 — mute guardado por rota (arquivo) e mute vivo na source (pactl).
@@ -2440,7 +2423,7 @@ check_mic_mute_persistido() {
 check_mic_perfil_sem_sinal() {
     command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo o perfil da placa do DualSense"; return; }
     local linha card ativo alvo
-    linha="$(LC_ALL=C pactl list cards 2>/dev/null | _dualsense_perfil_status)"
+    linha="$(_pactl_json cards | _dualsense_perfil_status)"
     if [[ -z "${linha}" ]]; then
         info "nenhuma placa de áudio do DualSense agora (controle fora do cabo — por BT não existe placa)"
         return
@@ -2488,17 +2471,9 @@ check_mic_ganho_de_captura() {
     fi
     local tmp porta elemento fora
     tmp="$(mktemp -d)" || return
-    LC_ALL=C pactl list sources > "${tmp}/sources" 2>/dev/null || true
+    _pactl_json sources > "${tmp}/sources"
     LC_ALL=C amixer -c "${indice}" scontents > "${tmp}/scontents" 2>/dev/null || true
-    porta="$(awk '
-        /^Source #/ { alvo = 0 }
-        /^[[:space:]]+Name: / {
-            nome = substr($0, index($0, ": ") + 2)
-            alvo = (tolower(nome) ~ /^alsa_input\..*dualsense/)
-            next
-        }
-        alvo && /^[[:space:]]+Active Port: / { print substr($0, index($0, ": ") + 2); exit }
-    ' "${tmp}/sources")"
+    porta="$(_porta_ativa_da_captura_do_dualsense "${tmp}/sources")"
     _definicao_da_porta_de_captura "${porta}" "${tmp}/porta"
     local linha
     linha="$(_dualsense_porta_de_captura_status "${tmp}/sources" "${tmp}/scontents" "${tmp}/porta")"
@@ -2541,7 +2516,7 @@ fix_mic_dualsense() {
 
     # Camada 2: perfil da placa num nó que REALMENTE capta.
     local linha card ativo alvo
-    linha="$(LC_ALL=C pactl list cards 2>/dev/null | _dualsense_perfil_status)"
+    linha="$(_pactl_json cards | _dualsense_perfil_status)"
     if [[ -n "${linha}" ]]; then
         IFS=$'\t' read -r card ativo alvo <<< "${linha}"
         local src_antes

@@ -26,6 +26,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import alto_falante_bt as bt
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+from tests.unit import pactl_json_de_mentira as pj
 
 SINK = "alsa_output.usb-Sony_DualSense.HiFi__Speaker__sink"
 
@@ -35,8 +36,8 @@ def _pactl(volume_linha: str) -> tuple:
     escritas: list[list[str]] = []
 
     def correr(cmd: list[str]) -> str | None:
-        if cmd[:3] == ["pactl", "list", "sinks"]:
-            return f"Sink #9\n\tName: {SINK}\n\t{volume_linha}\n"
+        if pj.e_lista_json(cmd, "sinks"):
+            return pj.json_do_longo(f"Sink #9\n\tName: {SINK}\n\t{volume_linha}\n")
         escritas.append(cmd)
         return ""
 
@@ -92,7 +93,7 @@ def test_servidor_mudo_nao_escreve() -> None:
     escritas: list[list[str]] = []
 
     def correr(cmd: list[str]) -> str | None:
-        if cmd[:3] == ["pactl", "list", "sinks"]:
+        if pj.e_lista_json(cmd, "sinks"):
             return None
         escritas.append(cmd)
         return ""
@@ -119,7 +120,7 @@ def test_o_piso_e_cem_e_esta_declarado() -> None:
 
 def test_o_endpoint_le_a_frente_antes_de_escrever() -> None:
     """`set-sink-volume` com quatro valores define os QUATRO — a frente é do usuário."""
-    saida = f"Sink #9\n\tName: {SINK}\n\t{QUARENTA}\n"
+    saida = pj.json_do_longo(f"Sink #9\n\tName: {SINK}\n\t{QUARENTA}\n")
     assert eh._volume_da_frente(saida, SINK) == ("40%", "40%")
     assert eh._volume_da_frente(saida, "outro_sink") == ("100%", "100%")
     assert eh._volume_da_frente("", SINK) == ("100%", "100%")
@@ -131,8 +132,8 @@ def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
 
     def correr(cmd: list[str]) -> str | None:
         chamadas.append(cmd)
-        if cmd[:3] == ["pactl", "list", "sinks"]:
-            return f"Sink #9\n\tName: hefesto_haptica_x\n\t{ZERO_ATRAS}\n"
+        if pj.e_lista_json(cmd, "sinks"):
+            return pj.json_do_longo(f"Sink #9\n\tName: hefesto_haptica_x\n\t{ZERO_ATRAS}\n")
         if cmd[:2] == ["pactl", "load-module"]:
             return "536870916"
         return ""

@@ -762,21 +762,26 @@ def _a_nativa_deste(uniq: str, conectados: list[str]) -> tuple[bool | None, str]
 
 def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
     """O casamento "quem pendura em qual dispositivo USB", montado agora."""
+    from hefesto_dualsense4unix.integrations import porta_do_som
     from hefesto_dualsense4unix.integrations.usb_pai import (
-        nos_e_sysfs,
         usb_pai_por_no,
         usb_pai_por_uniq,
     )
 
     if not uniqs:
         return None
-    rc, longa = _ler(["pactl", "list", "sources"])
-    if rc != 0 or not longa.strip():
+
+    def _texto(argv: list[str]) -> str | None:
+        rc, texto = _ler(argv)
+        return texto if rc == 0 else None
+
+    sysfs = porta_do_som.sysfs_por_no("sources", _texto)
+    if not sysfs:
         return None
     try:
         return CasamentoUSB(
             por_uniq=usb_pai_por_uniq(uniqs),
-            por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+            por_no=usb_pai_por_no(sysfs),
         )
     except OSError:
         return None

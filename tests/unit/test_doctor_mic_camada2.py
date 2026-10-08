@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit import pactl_json_de_mentira as pj
+
 BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = REPO_ROOT / "scripts" / "doctor.sh"
@@ -56,7 +58,7 @@ def _decide(ativo: str) -> tuple[str, str, str]:
         capture_output=True,
         text=True,
         env={
-            "CARDS": CARDS_MEDIDO.format(ativo=ativo),
+            "CARDS": pj.json_do_longo(CARDS_MEDIDO.format(ativo=ativo)),
             "PATH": "/usr/bin:/bin",
             "HOME": "/nonexistent",
             "LC_ALL": "C",
@@ -112,7 +114,7 @@ class TestOQueODoctorEscolhe:
                 BASH,
                 "-c",
                 f'source "{DOCTOR}" >/dev/null 2>&1 || true\n'
-                'printf "Card #1\\n\\tName: alsa_card.pci-0000_0a_00.1\\n" '
+                'printf \'[{"index": 1, "name": "alsa_card.pci-0000_0a_00.1"}]\' '
                 "| _dualsense_perfil_status",
             ],
             capture_output=True,
@@ -139,7 +141,7 @@ class TestAPortaEOCriterio:
             capture_output=True,
             text=True,
             env={
-                "SOURCES": sources,
+                "SOURCES": pj.json_do_longo(sources),
                 "PATH": "/usr/bin:/bin",
                 "HOME": "/nonexistent",
                 "LC_ALL": "C",
@@ -196,9 +198,9 @@ source "{DOCTOR}" >/dev/null 2>&1 || true
 pactl() {{
     printf '%s\\n' "pactl $*" >> {registro}
     case "$*" in
-        "list cards")         printf %s "$CARDS" ;;
-        "list sources short") printf %s "$CURTA" ;;
-        "list sources")       printf %s "$VERBOSA" ;;
+        "--format=json list cards")   printf %s "$CARDS" ;;
+        "list sources short")         printf %s "$CURTA" ;;
+        "--format=json list sources") printf %s "$VERBOSA" ;;
         *) : ;;
     esac
 }}
@@ -214,9 +216,9 @@ cat {registro}
             capture_output=True,
             text=True,
             env={
-                "CARDS": CARDS_MEDIDO.format(ativo=ativo),
+                "CARDS": pj.json_do_longo(CARDS_MEDIDO.format(ativo=ativo)),
                 "CURTA": curta,
-                "VERBOSA": verbosa,
+                "VERBOSA": pj.json_do_longo(verbosa),
                 "PATH": "/usr/bin:/bin",
                 "HOME": "/nonexistent",
                 "LC_ALL": "C",
@@ -319,7 +321,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     def test_o_estado_de_hoje_reprova(self) -> None:
         """O defeito vivo: a porta do UCM desta casa não liga o `Headset`."""
         porta, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             "porta-ucm-mic-2026-09-20.txt",
         )
@@ -337,7 +339,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     def test_a_porta_de_17_09_reprovava_pelo_mesmo_motivo(self) -> None:
         """Dois donos diferentes, o mesmo estado — e o decisor não olha o nome."""
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             "porta-acp-iec958-stereo-input.conf",
         )
@@ -347,7 +349,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     def test_mordida_2_placa_sem_elemento_de_captura_da_verde(self) -> None:
         """A mordida que mais importa das três."""
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-sem-captura-2026-09-20.txt",
             "porta-ucm-mic-2026-09-20.txt",
         )
@@ -362,7 +364,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     def test_mordida_3_porta_que_liga_o_ganho_da_verde(self) -> None:
         """Mesma placa, porta diferente: o veredito tem de virar."""
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             "porta-acp-analog-input-headset-mic.conf",
         )
@@ -387,7 +389,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         alvo = tmp_path / "porta-so-com-volume-desligado.conf"
         alvo.write_text(so_desligados, encoding="utf-8")
         _, _, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             alvo,
         )
@@ -405,7 +407,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
                 encoding="utf-8",
             )
             _, elemento, fora = self._decide(
-                "sources-cabo-2026-09-20.txt",
+                "sources-cabo-2026-09-20.json",
                 "scontents-dualsense-2026-09-20.txt",
                 alvo,
             )
@@ -424,7 +426,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
             encoding="utf-8",
         )
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             alvo,
         )
@@ -443,7 +445,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
             encoding="utf-8",
         )
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             alvo,
         )
@@ -462,7 +464,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
             encoding="utf-8",
         )
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             alvo,
         )
@@ -489,7 +491,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
             encoding="utf-8",
         )
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt",
+            "sources-cabo-2026-09-20.json",
             "scontents-dualsense-2026-09-20.txt",
             alvo,
         )
@@ -520,7 +522,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         alvo = tmp_path / "scontents-so-chave.txt"
         alvo.write_text(so_chave, encoding="utf-8")
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt", alvo, "porta-ucm-mic-2026-09-20.txt"
+            "sources-cabo-2026-09-20.json", alvo, "porta-ucm-mic-2026-09-20.txt"
         )
         assert elemento == "", (
             f"elemento só de chave não é ganho de captura; saiu {elemento!r}"
@@ -542,7 +544,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         alvo = tmp_path / "scontents-com-os-dois.txt"
         alvo.write_text(mudo + texto, encoding="utf-8")
         _, elemento, fora = self._decide(
-            "sources-cabo-2026-09-20.txt", alvo, "porta-ucm-mic-2026-09-20.txt"
+            "sources-cabo-2026-09-20.json", alvo, "porta-ucm-mic-2026-09-20.txt"
         )
         assert elemento == "Headset", (
             "com um elemento só de chave na frente, o ganho continua sendo o "
@@ -586,7 +588,7 @@ class TestOChamadorDoDoctorFalaComAMaquina:
     _RECEITA = """
 set -uo pipefail
 source "{doctor}" >/dev/null 2>&1 || true
-pactl() {{ [ "$*" = "list sources" ] && cat "${{SOURCES}}"; }}
+pactl() {{ [ "$*" = "--format=json list sources" ] && cat "${{SOURCES}}"; }}
 amixer() {{ cat "${{SCONTENTS}}"; }}
 pass() {{ printf 'PASS %s\\n' "$*"; }}
 warn() {{ printf 'WARN %s\\n' "$*"; }}
@@ -599,7 +601,7 @@ check_mic_ganho_de_captura
         tmp_path: Path,
         *,
         cards: str = CARDS_COM_DUALSENSE,
-        sources: str = "sources-cabo-2026-09-20.txt",
+        sources: str = "sources-cabo-2026-09-20.json",
         scontents: str = "scontents-dualsense-2026-09-20.txt",
         ucm: str | None = "assets/ucm/DualSense-HiFi.conf",
         acp: dict[str, str] | None = None,
@@ -760,7 +762,7 @@ check_mic_ganho_de_captura
             FIXTURES_MIC_CABO / "porta-acp-analog-input-headset-mic.conf"
         ).read_text(encoding="utf-8")
         gravada = (
-            FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.txt"
+            FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.json"
         ).read_text(encoding="utf-8")
         trocada = gravada.replace("[In] Mic", "analog-input-headset-mic")
         assert trocada != gravada, (

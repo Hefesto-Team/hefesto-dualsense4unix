@@ -16,6 +16,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit import pactl_json_de_mentira
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
@@ -1222,8 +1224,9 @@ def renovacao(monkeypatch: pytest.MonkeyPatch) -> Any:
             return SINKS_CURTOS
         if k == "pactl list sources short":
             return FONTE_NATIVA if conta.nativa else ""
-        if k == "pactl list sources":
-            return FONTE_NATIVA_LONGA if conta.nativa == "casada" else ""
+        if k == "pactl --format=json list sources":
+            return (pactl_json_de_mentira.json_do_longo(FONTE_NATIVA_LONGA)
+                    if conta.nativa == "casada" else "")
         return ""
 
     def rodar_leitura(argv: list[str]) -> str:
@@ -1281,8 +1284,8 @@ def test_r6_a_eleicao_roda_pelo_dono_dela(renovacao: Any) -> None:
     renovacao.conta.nativa = "casada"
     conta = renovacao.renovar(4)
     assert "pactl list sources short" in conta.eleicao, conta.eleicao
-    assert "pactl list sources" in conta.eleicao, conta.eleicao
-    assert "pactl list sources" in conta.audio, conta.audio
+    assert "pactl --format=json list sources" in conta.eleicao, conta.eleicao
+    assert "pactl --format=json list sources" in conta.audio, conta.audio
     assert "amixer -c 3 scontents" in conta.audio, conta.audio
 
 

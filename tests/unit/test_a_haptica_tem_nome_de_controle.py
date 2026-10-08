@@ -78,6 +78,7 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+from tests.unit import pactl_json_de_mentira as pj
 
 def _rabo_hex(uniq: str) -> str:
     """Os seis hex do rabo do endereço: a forma que os nomes levavam antes de 02/10/2026."""
@@ -219,17 +220,11 @@ class _Servidor:
                 for i, s in self.sinks.items()
                 if s["nome"] in self.jogo_em
             )
-        if argv[:3] == ["pactl", "list", "sinks"]:
-            blocos = []
-            for i, s in self.sinks.items():
-                props = "\n".join(f'\t\t{k} = "{v}"' for k, v in s["props"].items())
-                blocos.append(
-                    f"Sink #{i}\n\tState: SUSPENDED\n\tName: {s['nome']}\n"
-                    f"\tDescription: {self.descricao(s)}\n\tDriver: PipeWire\n"
-                    f"\tSample Specification: float32le {s['canais']}ch 48000Hz\n"
-                    f"\tProperties:\n{props}"
-                )
-            return "\n\n".join(blocos)
+        if pj.e_lista_json(argv, "sinks"):
+            return pj.texto(*(
+                pj.no(int(i), s["nome"], descricao=self.descricao(s), estado="SUSPENDED",
+                      formato=f"float32le {s['canais']}ch 48000Hz", props=s["props"])
+                for i, s in self.sinks.items()))
         return ""
 
     def _carregar(self, argv: list[str]) -> str | None:

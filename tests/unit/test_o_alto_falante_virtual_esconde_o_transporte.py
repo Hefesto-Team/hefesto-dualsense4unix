@@ -42,6 +42,7 @@ from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
 )
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
+from tests.unit import pactl_json_de_mentira as pj
 
 _SONY = " (DualSense Wireless Controller)"
 
@@ -104,14 +105,13 @@ class ServidorDeSomDeMentira:
                 for i, nome in self.nos().items()
             ]
             return "\n".join(linhas) + "\n"
-        if argv[:3] == ["pactl", "list", "sinks"]:
+        if pj.e_lista_json(argv, "sinks"):
             usb = {_SINK_P1: "3-1", _SINK_P2: "3-2"}
-            return "".join(
-                f"Sink #{70 + i}\n\tName: {p}\n\tProperties:\n"
-                f'\t\tsysfs.path = "/devices/pci0000:00/usb3/{usb.get(p, "9-9")}/'
-                f'{usb.get(p, "9-9")}:1.0/sound/card{3 + i}"\n'
-                for i, p in enumerate(self.placas)
-            )
+            return pj.texto(*(
+                pj.no(70 + i, p, props={
+                    "sysfs.path": f"/devices/pci0000:00/usb3/{usb.get(p, '9-9')}/"
+                                  f"{usb.get(p, '9-9')}:1.0/sound/card{3 + i}"})
+                for i, p in enumerate(self.placas)))
         if "get-default-sink" in argv:
             return f"{_HDMI}\n"
         if argv[:2] == ["pactl", "info"]:

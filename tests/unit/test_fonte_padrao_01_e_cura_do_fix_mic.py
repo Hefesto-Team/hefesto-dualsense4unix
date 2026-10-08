@@ -49,6 +49,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit import pactl_json_de_mentira as pj
+
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 INSTALL = RAIZ / "install.sh"
@@ -214,8 +216,8 @@ class Cenario:
         arq_longo = self.tmp / "sources_longo.txt"
         arq_cards = self.tmp / "cards.txt"
         arq_short.write_text(self.sources_short, encoding="utf-8")
-        arq_longo.write_text(self.sources_longo, encoding="utf-8")
-        arq_cards.write_text(self.cards, encoding="utf-8")
+        arq_longo.write_text(pj.json_do_longo(self.sources_longo), encoding="utf-8")
+        arq_cards.write_text(pj.json_do_longo(self.cards), encoding="utf-8")
         stub = self.bin / "pactl"
         stub.write_text(
             "#!/bin/sh\n"
@@ -223,8 +225,8 @@ class Cenario:
             'case "$*" in\n'
             f'  "get-default-source") printf "%s\\n" "{self.default_source}" ;;\n'
             f'  "list sources short"|"list short sources") cat "{arq_short}" ;;\n'
-            f'  "list sources") cat "{arq_longo}" ;;\n'
-            f'  "list cards") cat "{arq_cards}" ;;\n'
+            f'  "--format=json list sources") cat "{arq_longo}" ;;\n'
+            f'  "--format=json list cards") cat "{arq_cards}" ;;\n'
             '  "get-source-mute "*) printf "Mute: no\\n" ;;\n'
             "  *) : ;;\n"
             "esac\n"
@@ -260,7 +262,7 @@ class TestCuraPortadaDoFixMic:
     def test_o_iec958_ativo_e_medido_nao_pede_troca(self) -> None:
         """O estado REAL desta máquina agora: `iec958-stereo` ativo."""
         card, ativo, alvo = _rodar(
-            "_dualsense_perfil_status", entrada=CARDS_MEDIDO
+            "_dualsense_perfil_status", entrada=pj.json_do_longo(CARDS_MEDIDO)
         ).split("\t")
         assert card == CARD_DS
         assert ativo == "output:analog-surround-40+input:iec958-stereo"
@@ -274,38 +276,38 @@ class TestCuraPortadaDoFixMic:
         assert "priority: 1265, available: no" in CARDS_SEM_FONTE, (
             "a amostra precisa manter o analógico indisponível — é o caso"
         )
-        alvo = _rodar("_dualsense_perfil_status", entrada=CARDS_SEM_FONTE).split("\t")[2]
+        alvo = _rodar("_dualsense_perfil_status", entrada=pj.json_do_longo(CARDS_SEM_FONTE)).split("\t")[2]
         assert alvo == "output:analog-surround-40+input:iec958-stereo", (
             f"perfil `available: no` nunca pode ser alvo; veio {alvo!r}"
         )
 
     def test_o_alvo_preserva_a_saida_do_controle(self) -> None:
         """Contrato antigo que CONTINUA valendo, agora pela prioridade."""
-        alvo = _rodar("_dualsense_perfil_status", entrada=CARDS_SEM_FONTE).split("\t")[2]
+        alvo = _rodar("_dualsense_perfil_status", entrada=pj.json_do_longo(CARDS_SEM_FONTE)).split("\t")[2]
         assert alvo.startswith("output:"), f"o alvo tem de manter a saída; veio {alvo!r}"
 
     def test_active_profile_e_lido_apesar_de_vir_depois_da_lista(self) -> None:
         """O primeiro defeito confessado em `84d9f4e`."""
         _card, ativo, _alvo = _rodar(
-            "_dualsense_perfil_status", entrada=CARDS_MEDIDO
+            "_dualsense_perfil_status", entrada=pj.json_do_longo(CARDS_MEDIDO)
         ).split("\t")
         assert ativo != "", "o `Active Profile:` não foi capturado"
 
     def test_a_onboard_nao_e_confundida(self) -> None:
         so_onboard = CARDS_MEDIDO.split("Card #91")[0]
         assert "iec958" in so_onboard
-        assert _rodar("_dualsense_perfil_status", entrada=so_onboard) == ""
+        assert _rodar("_dualsense_perfil_status", entrada=pj.json_do_longo(so_onboard)) == ""
 
     def test_porta_ativa_de_verdade_e_reconhecida(self) -> None:
         """A PORTA é o critério honesto de "dá para captar"."""
-        assert _rc("_source_tem_porta_ativa", SRC_DS, entrada=SOURCES_LONGO) == 0
+        assert _rc("_source_tem_porta_ativa", SRC_DS, entrada=pj.json_do_longo(SOURCES_LONGO)) == 0
 
     def test_porta_nula_nao_conta(self) -> None:
         """`Active Port: (null)` é o que a cura refutada produzia."""
-        assert _rc("_source_tem_porta_ativa", MONITOR_DS, entrada=SOURCES_LONGO) == 1
+        assert _rc("_source_tem_porta_ativa", MONITOR_DS, entrada=pj.json_do_longo(SOURCES_LONGO)) == 1
 
     def test_source_inexistente_nao_tem_porta(self) -> None:
-        assert _rc("_source_tem_porta_ativa", "alsa_input.fantasma", entrada=SOURCES_LONGO) == 1
+        assert _rc("_source_tem_porta_ativa", "alsa_input.fantasma", entrada=pj.json_do_longo(SOURCES_LONGO)) == 1
 
     def test_a_cura_nao_troca_o_perfil_de_quem_ja_capta(self, cenario: Cenario) -> None:
         """O ramo que estragava a máquina, agora executado de verdade.
@@ -354,7 +356,7 @@ class TestFiacaoDaCuraDaCamada2:
             "a regra refutada voltou: trocar de perfil porque o nome do ativo "
             "tem 'iec958'"
         )
-        assert "available: yes" in corpo, "o filtro por disponibilidade sumiu"
+        assert 'perfil.get("available") is True' in corpo, "o filtro por disponibilidade sumiu"
 
     def test_a_nota_do_incidente_continua_no_codigo(self) -> None:
         """A guarda desta casa vem com o porquê datado. Sem a nota, o próximo"""

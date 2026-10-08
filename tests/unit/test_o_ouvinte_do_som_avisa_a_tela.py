@@ -9,18 +9,18 @@ import pytest
 
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
+from tests.unit import pactl_json_de_mentira as pj
 
-LISTA_MEDIDA = """
-Sink #551
-\tName: alsa_output.usb-Sony_..._Controller-00.HiFi__Speaker__sink
-\tDescription: DualSense wireless controller (PS5) Controller speaker
-Sink #593
-\tName: hefesto_som_000003
-\tDescription: Alto-falante do Controle 1
-Sink #56923
-\tName: alsa_output.pci-0000_0a_00.1.hdmi-stereo
-\tDescription: HDA NVidia Estéreo digital (HDMI)
-"""
+#: o que o `pactl --format=json list sinks` devolve nesta máquina: o campo com acento
+#: (a descrição «Estéreo digital» da placa HDMI) vem `(null)`, e o nome do painel
+#: recua para o `device.description` do nó, que é ASCII.
+LISTA_MEDIDA = pj.texto(
+    pj.no(551, "alsa_output.usb-Sony_..._Controller-00.HiFi__Speaker__sink",
+          descricao="DualSense wireless controller (PS5) Controller speaker"),
+    pj.no(593, "hefesto_som_000003", descricao="Alto-falante do Controle 1"),
+    pj.no(56923, "alsa_output.pci-0000_0a_00.1.hdmi-stereo", descricao="(null)",
+          props={"device.description": "HDA NVidia Digital Stereo (HDMI)"}),
+)
 
 
 @pytest.mark.parametrize("linha", [
@@ -50,7 +50,7 @@ def _retrato_com(saidas: str, padrao_da_saida: str = "") -> Any:
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
     respostas = {
-        ("pactl", "list", "sinks"): saidas,
+        ("pactl", "--format=json", "list", "sinks"): saidas,
         ("pactl", "info"): f"Default Sink: {padrao_da_saida}\nDefault Source: \n",
     }
     retrato = rs.RetratoDoSom(ler=lambda argv: respostas.get(tuple(argv), ""))
@@ -69,13 +69,14 @@ def test_a_descricao_sai_do_formato_longo_medido(monkeypatch: pytest.MonkeyPatch
     assert som.saida == "hefesto_som_000003"
     assert som.saida_nome == "Alto-falante do Controle 1"
     assert retrato.descricoes()["alsa_output.pci-0000_0a_00.1.hdmi-stereo"] == (
-        "HDA NVidia Estéreo digital (HDMI)")
+        "HDA NVidia Digital Stereo (HDMI)")
 
 
 def test_um_no_sem_descricao_nao_entra() -> None:
     """Melhor o nome cru na tela que um par errado."""
-    mapa = _retrato_com("\tName: so_o_nome\nSink #2\n\tName: outro\n"
-                        "\tDescription: Outro\n").descricoes()
+    mapa = _retrato_com(pj.texto(
+        pj.no(1, "so_o_nome", descricao=""),
+        pj.no(2, "outro", descricao="Outro"))).descricoes()
     assert "so_o_nome" not in mapa
     assert mapa["outro"] == "Outro"
 

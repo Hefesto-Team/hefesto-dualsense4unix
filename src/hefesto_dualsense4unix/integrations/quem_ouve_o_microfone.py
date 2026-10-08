@@ -32,10 +32,11 @@ AS TRÊS ARMADILHAS QUE ESTE MÓDULO EXISTE PARA NÃO CAIR — as três medidas 
    ``Source: <índice>``, cruzado com a coluna 1 de ``pactl list sources short``
    (:func:`nomes_de_fonte_por_indice`).
 2. **O ``pactl`` desta máquina responde em português** (``Saída da fonte #``,
-   ``Fonte:``, ``Cork: não``). Um parser que ancore em ``Source Output #`` acha
+   ``Fonte:``, ``Cork: não``). Um parser que ancore no rótulo do texto acha
    ZERO aqui e devolve lista vazia — e lista vazia se lê como "ninguém está
-   ouvindo", que é uma resposta plausível e falsa. O antídoto já existia:
-   ``_ambiente_c()`` (``LC_ALL=C``), reusado daqui de baixo.
+   ouvindo", que é uma resposta plausível e falsa. Desde 08/10/2026 o texto nem
+   é lido: ``pactl --format=json`` traz o campo ``source`` e o ``corked`` com
+   nome, e sem a porta do JSON a leitura é ``lida=False``.
 3. **O medidor do próprio Hefesto não pode contar como ouvinte.** Se contar, a
    luz acende sozinha e a peça inteira mente — é o risco central que a §3 da
    sprint nomeia. Ver :func:`e_stream_do_hefesto`.
@@ -69,6 +70,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
     _rodar,
     casamento_usb_agora,
@@ -82,8 +84,6 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-_CABECALHO_DE_BLOCO = "Source Output #"
 
 MARCA_HEFESTO = "hefesto"
 
@@ -156,53 +156,19 @@ def nomes_de_fonte_por_indice(saida_pactl: str) -> dict[int, str]:
 
 
 def streams_de_captura(saida_pactl: str) -> list[StreamDeCaptura]:
-    """Os blocos de ``pactl list source-outputs``, já em estrutura."""
+    """Os fluxos de ``pactl --format=json list source-outputs``, já em estrutura."""
     saidas: list[StreamDeCaptura] = []
-    indice: int | None = None
-    fonte: int | None = None
-    corked = False
-    props: dict[str, str] = {}
-    em_propriedades = False
-
-    def fechar() -> None:
-        if indice is not None and fonte is not None:
-            saidas.append(
-                StreamDeCaptura(indice=indice, fonte=fonte, corked=corked, props=dict(props))
+    for fluxo in porta_do_som.fluxos_do_texto(saida_pactl):
+        if not fluxo.alvo.isdigit():
+            continue
+        saidas.append(
+            StreamDeCaptura(
+                indice=fluxo.indice,
+                fonte=int(fluxo.alvo),
+                corked=bool(fluxo.corked),
+                props=dict(fluxo.propriedades),
             )
-
-    for linha in saida_pactl.splitlines():
-        nu = linha.strip()
-        if nu.startswith(_CABECALHO_DE_BLOCO):
-            fechar()
-            indice, fonte, corked, em_propriedades = None, None, False, False
-            props = {}
-            try:
-                indice = int(nu[len(_CABECALHO_DE_BLOCO) :].strip())
-            except ValueError:
-                indice = None
-            continue
-        if indice is None:
-            continue
-        if nu == "Properties:":
-            em_propriedades = True
-            continue
-        if em_propriedades:
-            chave, sep, valor = nu.partition(" = ")
-            if sep:
-                props[chave.strip()] = valor.strip().strip('"')
-            continue
-        chave, sep, valor = nu.partition(":")
-        if not sep:
-            continue
-        rotulo = chave.strip()
-        if rotulo == "Source":
-            try:
-                fonte = int(valor.strip())
-            except ValueError:
-                fonte = None
-        elif rotulo == "Corked":
-            corked = valor.strip().lower() == "yes"
-    fechar()
+        )
     return saidas
 
 
@@ -307,7 +273,7 @@ def ler_quem_ouve(
     """A leitura de um ciclo, inteira: quem ouve, quem pausou, quem não tem canal.
 
     Três chamadas de ``pactl`` no pior caso — ``source-outputs``,
-    ``sources short`` e a longa que o casamento USB pede —, ~6,8 ms de CPU,
+    ``sources short`` e a lista que o casamento USB pede —, ~6,8 ms de CPU,
     0,68% de um núcleo a 1 Hz (medido em 03/09/2026). O custo é **O(1) no
     número de controles**: uma chamada lista os streams de todas as fontes de
     uma vez, então quatro controles custam a mesma leitura que um.
@@ -322,9 +288,9 @@ def ler_quem_ouve(
     if not uniqs:
         return LeituraDeOuvintes(lida=True)
 
-    rc_so, saida_so = _rodar(["pactl", "list", "source-outputs"])
-    if rc_so != 0:
-        logger.debug("pactl list source-outputs falhou (rc=%s): não sei quem ouve", rc_so)
+    rc_so, saida_so = _rodar(porta_do_som.argv_da_lista("source-outputs"))
+    if rc_so != 0 or porta_do_som.lista_do_json(saida_so) is None:
+        logger.debug("pactl list source-outputs sem JSON (rc=%s): não sei quem ouve", rc_so)
         return LeituraDeOuvintes(lida=False)
 
     rc_short, saida_short = _rodar(["pactl", "list", "sources", "short"])

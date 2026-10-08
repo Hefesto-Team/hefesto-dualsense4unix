@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
+from tests.unit import pactl_json_de_mentira as pj
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = ROOT / "scripts" / "doctor.sh"
@@ -581,7 +582,7 @@ class TestCamada2PerfilDaPlaca:
 
     def test_nao_propoe_o_analogico_indisponivel(self) -> None:
         """Era `test_detecta_o_spdif_e_propoe_o_analogico`."""
-        saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_SPDIF)
+        saida = _rodar_doctor("_dualsense_perfil_status", entrada=pj.json_do_longo(_CARDS_SPDIF))
         card, ativo, alvo = saida.split("\t")
         assert card == _CARD_DS
         assert ativo == "output:analog-surround-40+input:iec958-stereo"
@@ -596,7 +597,7 @@ class TestCamada2PerfilDaPlaca:
             "\tActive Profile: output:analog-surround-40+input:iec958-stereo",
             "\tActive Profile: output:analog-surround-40",
         )
-        saida = _rodar_doctor("_dualsense_perfil_status", entrada=sem_fonte)
+        saida = _rodar_doctor("_dualsense_perfil_status", entrada=pj.json_do_longo(sem_fonte))
         alvo = saida.split("\t")[2]
         assert alvo.startswith("output:"), (
             f"o alvo precisa manter uma saida; veio {alvo!r}"
@@ -612,7 +613,7 @@ class TestCamada2PerfilDaPlaca:
             "\tActive Profile: output:analog-surround-40",
         )
         alvo = _rodar_doctor(
-            "_dualsense_perfil_status", entrada=sem_fonte
+            "_dualsense_perfil_status", entrada=pj.json_do_longo(sem_fonte)
         ).split("\t")[2]
         assert not alvo.endswith("input:analog-stereo"), (
             f"perfil `available: no` nunca pode ser alvo; veio {alvo!r}"
@@ -620,7 +621,7 @@ class TestCamada2PerfilDaPlaca:
 
     def test_o_estado_que_a_cura_antiga_deixava_e_desfeito(self) -> None:
         """Era `test_perfil_ja_analogico_nao_pede_troca`, e a inversao e o ponto."""
-        saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_CURADO)
+        saida = _rodar_doctor("_dualsense_perfil_status", entrada=pj.json_do_longo(_CARDS_CURADO))
         card, ativo, alvo = saida.split("\t")
         assert card == _CARD_DS
         assert ativo == "output:analog-surround-40+input:analog-stereo"
@@ -633,7 +634,7 @@ class TestCamada2PerfilDaPlaca:
         """A onboard também tem `iec958` no perfil ativo e NÃO é assunto nosso."""
         so_onboard = _CARDS_SPDIF.split("Card #91")[0]
         assert "iec958" in so_onboard
-        assert _rodar_doctor("_dualsense_perfil_status", entrada=so_onboard) == ""
+        assert _rodar_doctor("_dualsense_perfil_status", entrada=pj.json_do_longo(so_onboard)) == ""
 
     def test_sem_dualsense_e_silencio(self) -> None:
         assert _rodar_doctor("_dualsense_perfil_status", entrada="") == ""

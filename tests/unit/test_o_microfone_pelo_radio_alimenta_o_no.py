@@ -625,7 +625,9 @@ def test_a_regra_0_alcanca_quem_ouve(pactl, monkeypatch) -> None:  # type: ignor
     )
 
     def _falso(argv: list[str]) -> tuple[int, str]:
-        return (0, curta if "short" in argv else "")
+        if "short" in argv:
+            return (0, curta)
+        return (0, "[]" if "source-outputs" in argv else "")
 
     monkeypatch.setattr(qo, "_rodar", _falso)
     monkeypatch.setattr(qo, "casamento_usb_agora", lambda _u: None)
