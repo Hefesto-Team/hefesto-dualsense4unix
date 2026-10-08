@@ -2873,8 +2873,8 @@ VAGAS_NO_DESENHO = (sum(len(ns) for _n, ns in FACES) + len(EXTENSAO)
 CONECTORES_QUE_NINGUEM_ALCANCA = 2
 EM_PE_TOTAL = VAGAS_NO_DESENHO + CONECTORES_QUE_NINGUEM_ALCANCA
 
-#: `portao_a_casa_sabe_e_o_produto_nao_faz.py:1188`. A frase já está no `title`
-#: e sem chamador, e a lápide do `portao_a_casa_sabe_e_o_produto_nao_faz.py:1188`
+#: A frase volta à tela quando a peneira do controle (a posse tomada no `focus-in`)
+#: ganhar chamador; até lá, nada a mostra.
 PENEIRA_QUANDO_ELA_EXISTIR = (
     "Enquanto esta janela estiver na frente, o que você apertar no "
     "controle fica <b>aqui</b> — não chega ao jogo aberto atrás.")
