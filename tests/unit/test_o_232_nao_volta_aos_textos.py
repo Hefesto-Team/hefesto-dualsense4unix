@@ -215,3 +215,4 @@ def test_o_csv_da_ponte_fala_do_0x36_e_nao_do_0x35_aposentado() -> None:
                  if r["consumidor"].startswith("fatias por relatório"))
     assert f"{tamanho} B" in k["fonte"] and f"{tamanho + 5} no ar" in k["fonte"], (
         "a linha do k diz o tamanho do 0x36 e o que vai no ar (+5 de L2CAP e HIDP)")
+    assert "2-DH5 (5 fatias)" in k["fonte"], "o 2-DH5 ocupa cinco fatias, aqui como no mockup"
