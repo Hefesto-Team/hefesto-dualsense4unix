@@ -147,7 +147,11 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     SEM_BLUETOOTH,
     TIPO_ACL,
 )
-from hefesto_dualsense4unix.integrations.radio_da_mesa import N_MAX_PONTES
+from hefesto_dualsense4unix.integrations.radio_da_mesa import (
+    N_MAX_PONTES,
+    LeitorDoSinal,
+    PausaPeloSinal,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -203,6 +207,8 @@ CEDEU_NA_FONTE = "cedeu na fonte"
 VOLTOU_A_ESCREVER = "voltou a escrever"
 FILA_PARADA = "fila parada"
 FILA_ANDOU = "fila voltou a andar"
+PAUSADA_PELO_SINAL = "pausada pelo sinal"
+VOLTOU_DO_SINAL = "voltou do sinal"
 
 MOTIVO_DO_REINICIO = "o daemon reiniciou"
 
@@ -332,13 +338,28 @@ class Vaga:
     sem_medida: bool = False
     pedida_em: float = 0.0
     escritas: int = 0
-    cedendo: bool = False
+    #: cedendo por causa da FILA do adaptador (o déficit do governador). O que a ponte lê é
+    #: :attr:`cedendo`, que também vale quando o controle está :attr:`longe`.
+    _cedendo_pela_fila: bool = False
+    #: o enlace deste controle está fraco (:class:`~hefesto_dualsense4unix.integrations.
+    #: radio_da_mesa.PausaPeloSinal`): a ponte cede a vez ao relatório de entrada, que é o que
+    #: perde aperto. Não tem a ver com a fila, e a conta da fila não a vê.
+    longe: bool = False
     derrubar: bool = False
     subiu_em: float | None = None
     solta: bool = False
     _vistas: int = 0
     _calada: bool = False
     _dono: Any = field(default=None, repr=False)
+
+    @property
+    def cedendo(self) -> bool:
+        """A ponte não escreve agora: a fila do adaptador pede, ou o enlace está fraco."""
+        return self._cedendo_pela_fila or self.longe
+
+    @cedendo.setter
+    def cedendo(self, valor: bool) -> None:
+        self._cedendo_pela_fila = bool(valor)
 
     def contar_escrita(self) -> None:
         self.escritas += 1
@@ -514,6 +535,11 @@ class GovernadorDoRadio:
         self._bordas_no_diario: dict[str, _BordasNoDiario] = {}
         self._amostra: dict[str, Any] | None = None
         self._lista_lida = True
+        #: O sinal (RSSI) de cada enlace, lido a cada segundo enquanto há ponte de pé; é o MESMO
+        #: leitor que o ``state_full`` usa para mostrar o sinal (um dono, uma pergunta por segundo).
+        self.leitor_do_sinal = LeitorDoSinal()
+        #: ``{controle (12 hex): PausaPeloSinal}`` dos controles com ponte de pé.
+        self._pausas: dict[str, PausaPeloSinal] = {}
         #: :data:`TETO_DO_NAO_SEI_S`. Volta a ``None`` quando a medida chega.
         self._nao_sei_desde: float | None = None
         self._esperando_medida: dict[str, _EsperaDaMedida] = {}
@@ -767,6 +793,9 @@ class GovernadorDoRadio:
         estado = self._estados.get(adaptador)
         if estado is not None and estado.cedendo:
             vaga.cedendo = True
+        pausa = self._pausas.get(_chave(uniq))
+        if pausa is not None and pausa.pausada:
+            vaga.longe = True
         self._vagas.append(vaga)
         return vaga
 
@@ -964,6 +993,7 @@ class GovernadorDoRadio:
                     self._nao_sei_desde = None
             self._recolher(agora)
             acordar = self._quem_a_medida_acorda(agora)
+            self._o_sinal_protege_o_botao(agora, bordas)
             por_adaptador: dict[str, list[Vaga]] = {}
             for vaga in self._vagas:
                 if vaga.adaptador and vaga.subiu_em is not None:
@@ -981,7 +1011,7 @@ class GovernadorDoRadio:
                     paradas.append((endereco, list(vagas), estado.cedendo_medido_s))
             cedendo = {e for e, s in self._estados.items() if s.cedendo}
             for vaga in self._vagas:
-                if vaga.cedendo and vaga.adaptador not in cedendo:
+                if vaga._cedendo_pela_fila and vaga.adaptador not in cedendo:
                     vaga.cedendo = False
         for o_que, dados in bordas:
             self._escrever(o_que, **dados)
@@ -999,6 +1029,52 @@ class GovernadorDoRadio:
         if agora - self._autorizacoes_vistas_em >= INTERVALO_DAS_AUTORIZACOES_S:
             self._autorizacoes_vistas_em = agora
             self.conferir_as_autorizacoes()
+
+    def _o_sinal_protege_o_botao(
+        self, agora: float, bordas: list[tuple[str, dict[str, Any]]]
+    ) -> None:
+        """O enlace fraco protege o botão (SINAL-DE-CADA-CONTROLE-01, item 5).
+
+        O sinal de cada controle com ponte de pé se lê a cada segundo (o rádio ouve uma pergunta por
+        enlace, no máximo). Abaixo do que atrasa, a ponte de som e a de vibração DAQUELE controle
+        cedem a vez ao relatório de entrada, que é o que perde aperto; voltam quando o sinal volta
+        (:class:`~hefesto_dualsense4unix.integrations.radio_da_mesa.PausaPeloSinal`). Só o
+        controle longe cede: o vizinho no mesmo adaptador segue. Sem leitura do sinal («não sei») a
+        ponte NÃO pausa. Chamado com a trava.
+        """
+        no_ar = [v for v in self._vagas if v.subiu_em is not None]
+        por_controle: dict[str, list[Vaga]] = {}
+        for vaga in no_ar:
+            por_controle.setdefault(_chave(vaga.uniq), []).append(vaga)
+        for chave in [c for c in self._pausas if c not in por_controle]:
+            del self._pausas[chave]
+        if not por_controle:
+            return
+        if self._amostra is not None:
+            self.leitor_do_sinal.talvez_ler(self._amostra)
+        numero, sinais = self.leitor_do_sinal.leitura()
+        for chave, vagas in por_controle.items():
+            pausa = self._pausas.setdefault(chave, PausaPeloSinal())
+            antes = pausa.pausada
+            depois = pausa.ver(sinais.get(chave), agora, numero)
+            for vaga in vagas:
+                vaga.longe = depois
+            if depois == antes:
+                continue
+            sinal = sinais.get(chave)
+            bordas.append((
+                PAUSADA_PELO_SINAL if depois else VOLTOU_DO_SINAL,
+                {
+                    "por_que": (
+                        "o sinal do enlace está abaixo do que atrasa o botão"
+                        if depois else "o sinal do enlace voltou"
+                    ),
+                    "depois": {"sinal_dbm": sinal},
+                    "adaptador": vagas[0].adaptador or None,
+                    "controle": vagas[0].uniq,
+                    "tipos": sorted({v.tipo for v in vagas}),
+                },
+            ))
 
     def _medir(
         self,
@@ -1086,7 +1162,7 @@ class GovernadorDoRadio:
         o código de antes a deixava de pé, cedendo em rodízio consigo mesma.
         """
         com_escrita = janela.com_escrita
-        na_vez = [v for v in vagas if v.cedendo or any(v is e for e in com_escrita)]
+        na_vez = [v for v in vagas if v._cedendo_pela_fila or any(v is e for e in com_escrita)]
         por_ponte = max(estado.por_ponte or 0.0, janela.por_ponte_na_janela)
         cabem = int(janela.no_ar / por_ponte) if por_ponte > 0 else 0
         if (
@@ -1131,7 +1207,7 @@ class GovernadorDoRadio:
             self._a_vez(estado, vagas, janela)
         if not estado.cedendo and estado.fila > self._limiar(estado, janela):
             self._a_vez(estado, vagas, janela)
-            if not any(vaga.cedendo for vaga in vagas):
+            if not any(vaga._cedendo_pela_fila for vaga in vagas):
                 # todas cabem: não há episódio, e o diário não diz «cedeu»
                 return
             estado.cedendo = True
@@ -1308,6 +1384,7 @@ class GovernadorDoRadio:
                             "uniq": v.uniq,
                             "tipo": v.tipo,
                             "alem_do_limite": v.alem_do_limite,
+                            "pausada_pelo_sinal": v.longe,
                         }
                         for v in self._vagas
                         if v.adaptador == endereco and v.subiu_em is not None
@@ -1353,6 +1430,7 @@ __all__ = [
     "MOTIVO_DO_REINICIO",
     "MOTIVO_PARADO",
     "MOTIVO_SEM_MEDIDA",
+    "PAUSADA_PELO_SINAL",
     "PERIODO_S",
     "POR_QUE_NAO_HA_VAGA",
     "POR_QUE_NAO_SEI_SE_HA_VAGA",
@@ -1364,6 +1442,7 @@ __all__ = [
     "TIPO_VIBRACAO",
     "VALIDADE_DO_PEDIDO_S",
     "VOLTOU_A_ESCREVER",
+    "VOLTOU_DO_SINAL",
     "GovernadorDoRadio",
     "Recusa",
     "Vaga",

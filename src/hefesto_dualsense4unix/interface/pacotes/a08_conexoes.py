@@ -2951,6 +2951,7 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
     CAUSA_ADAPTADOR_CHEIO,
     CAUSA_INTERFERENCIA,
     CAUSA_LONGE,
+    CAUSA_LONGE_PAUSADA,
     CAUSA_SEM_SINAL,
     FATIAS_DA_PONTE,
     HZ_AUDIO_COM_MIC,
@@ -2975,6 +2976,8 @@ DICA_DO_MOVIMENTO = {
 }
 FRASE_DA_CAUSA = {
     CAUSA_LONGE: "Movimento por segundo: longe do adaptador",
+    CAUSA_LONGE_PAUSADA: ("Movimento por segundo: longe do adaptador, som e vibração "
+                          "pausados para não perder botão"),
     CAUSA_INTERFERENCIA: "Movimento por segundo: interferência no adaptador",
     CAUSA_ADAPTADOR_CHEIO: "Movimento por segundo: adaptador cheio",
     CAUSA_SEM_SINAL: "Movimento por segundo: sinal desconhecido",
@@ -4513,6 +4516,8 @@ def _niveis_e_dicas(controles: list[dict[str, Any]], cena: dict[str, Any], segur
                 _CAUSA_NA_TELA[uid] = (nivel, d.causa)
             else:
                 causa = _CAUSA_NA_TELA.get(uid, (nivel, ""))[1]
+        if a.get("ponte_pausada"):
+            causa = CAUSA_LONGE_PAUSADA
         niveis.append(nivel)
         dicas.append(dica_do_movimento(nivel, causa))
     return niveis, dicas
@@ -5289,6 +5294,9 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     alem = {_so_hex(str(p.get("uniq") or "")): (p.get("tipo"), bool(p.get("alem_do_limite")))
             for publicado in governador.values()
             for p in _dicionario(publicado).get("pontes") or ()}
+    pausada = {_so_hex(str(p.get("uniq") or "")): bool(p.get("pausada_pelo_sinal"))
+               for publicado in governador.values()
+               for p in _dicionario(publicado).get("pontes") or ()}
     ordem_da_vaga = {_so_hex(str(p.get("uniq") or "")): i
                      for publicado in governador.values()
                      for i, p in enumerate(_dicionario(publicado).get("pontes") or ())}
@@ -5328,6 +5336,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
             "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": True,
             "sinal": c.get("sinal_dbm"),
+            "ponte_pausada": pausada.get(_so_hex(uniq), False),
             "esperando": False, "fixo": False,
         })
         vistos.add(_so_hex(uniq))

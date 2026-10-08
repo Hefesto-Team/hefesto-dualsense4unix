@@ -123,7 +123,7 @@ def test_o_servico_pergunta_o_sinal_numa_thread_de_segundo_em_segundo(
     ar_do_adaptador = {ADAPTADOR: _leitura(ar.Enlace(12, APARELHO_A, ar.TIPO_ACL, True, 1, 7))}
     handlers._talvez_ler_o_sinal(ar_do_adaptador)  # type: ignore[attr-defined]
     prazo = time.monotonic() + 2.0
-    while handlers._sinal_em_voo and time.monotonic() < prazo:  # type: ignore[attr-defined]
+    while handlers._leitor_proprio_do_sinal.em_voo and time.monotonic() < prazo:  # type: ignore[attr-defined]
         time.sleep(0.01)
     assert perguntas == [(2, 12)] and nomes == ["radio-sinal"]
     assert handlers._sinal_dos_enlaces == {"aabbcc000011": -42}  # type: ignore[attr-defined]
@@ -306,3 +306,238 @@ def test_a_tela_le_o_sinal_que_o_servico_publica() -> None:
     ctx = a08.Contexto(state={"controllers": [controle]}, mesa=[], conectados=[], estados={})
     aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, {}, [], (), {}, [a08._mac(ADAPTADOR)])
     assert [a["sinal"] for a in aparelhos] == [-53]
+
+
+# --- 6. o enlace fraco protege o botão: a ponte do controle longe cede a vez ---------------
+
+LIMIAR = rm.SINAL_QUE_ATRASA_DBM
+
+
+def test_a_pausa_comeca_na_primeira_leitura_fraca_e_so_acaba_com_folga_e_duas_leituras() -> None:
+    pausa = rm.PausaPeloSinal()
+    assert pausa.ver(-31, 1.0, 1) is False
+    assert pausa.ver(LIMIAR, 2.0, 2) is True, "no limiar que atrasa a ponte já cede"
+    assert pausa.ver(-47, 3.0, 3) is True, "passou o limiar mas não a folga: segue pausada"
+    boa = LIMIAR + rm.FOLGA_DO_SINAL_DBM + 1
+    assert pausa.ver(boa, 4.0, 4) is True, "uma leitura boa não basta"
+    assert pausa.ver(-30, 5.0, 5) is False, "duas leituras boas seguidas soltam"
+
+
+def test_a_leitura_boa_que_o_tique_relê_nao_conta_duas_vezes() -> None:
+    """O governador olha a cada 250 ms; a leitura é de 1 s. O número da leitura é quem conta."""
+    pausa = rm.PausaPeloSinal()
+    pausa.ver(-60, 1.0, 1)
+    for tique in range(4):
+        assert pausa.ver(-30, 2.0 + tique * 0.25, 2) is True, "a mesma leitura valeu 2 vezes"
+    assert pausa.ver(-30, 3.0, 3) is False
+
+
+def test_uma_leitura_ruim_no_meio_zera_a_volta() -> None:
+    pausa = rm.PausaPeloSinal()
+    pausa.ver(-60, 1.0, 1)
+    pausa.ver(-30, 2.0, 2)
+    assert pausa.ver(-60, 3.0, 3) is True
+    assert pausa.ver(-30, 4.0, 4) is True, "a contagem de volta recomeçou do zero"
+    assert pausa.ver(-30, 5.0, 5) is False
+
+
+def test_nao_sei_nunca_pausa_e_nao_segura_a_pausa_para_sempre() -> None:
+    pausa = rm.PausaPeloSinal()
+    assert pausa.ver(None, 1.0, 1) is False, "sem leitura a ponte pausou"
+    assert pausa.ver(None, 2.0, 2) is False
+    pausa.ver(-60, 3.0, 3)
+    assert pausa.ver(None, 4.0, 4) is True, "um segundo sem resposta não prova que voltou"
+    assert pausa.ver(None, 3.0 + rm.SEM_SINAL_SOLTA_A_PAUSA_S + 1, 5) is False
+
+
+class _Controles:
+    """O governador de pé com dois controles no mesmo adaptador e o sinal na mão da régua."""
+
+    def __init__(self) -> None:
+        from tests.unit.test_o_governador_do_radio import (
+            ADAPTADOR_A,
+            CONTROLE_1,
+            CONTROLE_2,
+            _Diario,
+            _governador,
+            _Kernel,
+            _Relogio,
+        )
+
+        self.c1, self.c2 = CONTROLE_1, CONTROLE_2
+        self.relogio, self.registro = _Relogio(), _Diario()
+        kernel = _Kernel()
+        dado = kernel.por(0, ADAPTADOR_A)
+        dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL), (13, CONTROLE_2, ar.TIPO_ACL)]
+        self.governador = _governador(kernel, self.relogio, self.registro)
+        self.sinal = {12: -30, 13: -30}
+        self.perguntas: list[tuple[int, int]] = []
+
+        def ler(hci: int, handle: int) -> int | None:
+            self.perguntas.append((hci, handle))
+            return self.sinal[handle]
+
+        self.leitor = rm.LeitorDoSinal(ler, relogio=self.relogio)
+        self.governador.leitor_do_sinal = self.leitor
+        self.governador.tique()
+        self.vagas = {}
+        for uniq in (CONTROLE_1, CONTROLE_2):
+            for tipo in ("som", "haptica"):
+                vaga = self.governador.pedir_vaga(uniq, tipo)
+                assert not hasattr(vaga, "motivo"), "a ponte foi recusada"
+                vaga.subiu(tipo)  # type: ignore[union-attr]
+                self.vagas[(uniq, tipo)] = vaga
+
+    def um_segundo(self) -> None:
+        """Passa um segundo, o leitor pergunta (a thread acaba) e o governador olha."""
+        self.relogio.agora += 1.0
+        self.leitor.talvez_ler(self.governador.ultima_amostra() or {})
+        prazo = time.monotonic() + 2.0
+        while self.leitor.em_voo and time.monotonic() < prazo:
+            time.sleep(0.002)
+        self.governador.tique()
+
+    def cedendo(self, uniq: str, tipo: str) -> bool:
+        return bool(self.vagas[(uniq, tipo)].cedendo)  # type: ignore[attr-defined]
+
+
+def test_o_controle_longe_pausa_o_som_e_a_vibracao_e_o_vizinho_segue() -> None:
+    mesa = _Controles()
+    mesa.um_segundo()
+    assert not any(mesa.cedendo(u, t) for u in (mesa.c1, mesa.c2) for t in ("som", "haptica"))
+    mesa.sinal[12] = LIMIAR - 5
+    mesa.um_segundo()
+    assert mesa.cedendo(mesa.c1, "som") and mesa.cedendo(mesa.c1, "haptica")
+    assert not mesa.cedendo(mesa.c2, "som") and not mesa.cedendo(mesa.c2, "haptica"), (
+        "o vizinho no mesmo adaptador, perto, pausou junto")
+    [borda] = mesa.registro.de(gov_pausada())
+    assert borda["controle"] == mesa.c1 and borda["depois"] == {"sinal_dbm": LIMIAR - 5}
+
+
+def gov_pausada() -> str:
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    return gov.PAUSADA_PELO_SINAL
+
+
+def test_o_controle_volta_depois_de_duas_leituras_boas_e_o_diario_so_marca_as_bordas() -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    mesa = _Controles()
+    mesa.sinal[12] = -60
+    mesa.um_segundo()
+    mesa.um_segundo()
+    assert mesa.cedendo(mesa.c1, "som")
+    assert len(mesa.registro.de(gov.PAUSADA_PELO_SINAL)) == 1, "o diário repetiu a borda"
+    mesa.sinal[12] = -30
+    mesa.um_segundo()
+    assert mesa.cedendo(mesa.c1, "som"), "uma leitura boa soltou a pausa"
+    mesa.um_segundo()
+    assert not mesa.cedendo(mesa.c1, "som") and not mesa.cedendo(mesa.c1, "haptica")
+    assert len(mesa.registro.de(gov.VOLTOU_DO_SINAL)) == 1
+
+
+def test_sem_leitura_do_sinal_a_ponte_nao_pausa() -> None:
+    mesa = _Controles()
+    mesa.sinal[12] = None  # type: ignore[assignment]
+    for _ in range(3):
+        mesa.um_segundo()
+    assert not mesa.cedendo(mesa.c1, "som")
+    assert mesa.registro.de(gov_pausada()) == []
+
+
+def test_a_pausa_pelo_sinal_nao_entra_na_conta_da_fila_do_adaptador() -> None:
+    """``cedendo`` é o que a ponte lê; a fila do governador só vê o que ELA mandou ceder."""
+    mesa = _Controles()
+    mesa.sinal[12] = -60
+    mesa.um_segundo()
+    vaga = mesa.vagas[(mesa.c1, "som")]
+    assert vaga.cedendo is True and vaga._cedendo_pela_fila is False  # type: ignore[attr-defined]
+    estado = next(iter(mesa.governador._estados.values()))  # type: ignore[attr-defined]
+    assert estado.cedendo is False, "a pausa do sinal virou episódio de fila"
+
+
+def test_a_ponte_publica_a_pausa_pelo_sinal_por_controle() -> None:
+    from tests.unit.test_o_governador_do_radio import ADAPTADOR_A
+
+    mesa = _Controles()
+    mesa.sinal[12] = -60
+    mesa.um_segundo()
+    pontes = mesa.governador.publicar()[ADAPTADOR_A]["pontes"]
+    assert {(p["uniq"], p["tipo"]): p["pausada_pelo_sinal"] for p in pontes} == {
+        (mesa.c1, "som"): True, (mesa.c1, "vibracao"): True,
+        (mesa.c2, "som"): False, (mesa.c2, "vibracao"): False,
+    }
+
+
+def test_a_ponte_que_sobe_com_o_controle_ja_longe_nasce_pausada() -> None:
+    mesa = _Controles()
+    mesa.sinal[12] = -60
+    mesa.um_segundo()
+    mesa.vagas[(mesa.c1, "som")].soltar("sem som")  # type: ignore[attr-defined]
+    nova = mesa.governador.pedir_vaga(mesa.c1, "som")
+    assert nova.cedendo is True, "a ponte nova escreveu antes da próxima leitura"  # type: ignore[union-attr]
+
+
+def test_o_controle_pelo_cabo_nunca_pausa_porque_nao_tem_sinal() -> None:
+    mesa = _Controles()
+    mesa.sinal[12] = -80
+    mesa.um_segundo()
+    assert mesa.leitor.sinais().get("aabbcc000099") is None
+    mesa.vagas[(mesa.c2, "som")].soltar("sem som")  # type: ignore[attr-defined]
+    cabo = mesa.governador.pedir_vaga("aa:bb:cc:00:00:99", "som")
+    assert cabo.cedendo is False  # type: ignore[union-attr]
+
+
+def test_um_leitor_so_pergunta_uma_vez_por_segundo_por_enlace() -> None:
+    """O governador e o ``state_full`` dividem o leitor: não dobram a pergunta."""
+    mesa = _Controles()
+    mesa.um_segundo()
+    antes = len(mesa.perguntas)
+    for _ in range(4):
+        mesa.leitor.talvez_ler(mesa.governador.ultima_amostra() or {})
+        mesa.governador.tique()
+    assert len(mesa.perguntas) == antes, "perguntou de novo antes do período"
+    assert antes == 2, "uma pergunta por enlace"
+
+
+def test_o_leitor_do_servico_e_o_do_governador_quando_ele_existe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tests.unit.test_os_hz_de_cada_controle import _handlers
+
+    handlers = _handlers(monkeypatch)[1]
+    leitor = rm.LeitorDoSinal(lambda _hci, _handle: -42)
+    handlers._o_governador = lambda: type("G", (), {"leitor_do_sinal": leitor})()  # type: ignore[attr-defined]
+    handlers._ler_sinal = None  # type: ignore[attr-defined]
+    ar_do_adaptador = {ADAPTADOR: _leitura(ar.Enlace(12, APARELHO_A, ar.TIPO_ACL, True, 1, 7))}
+    handlers._talvez_ler_o_sinal(ar_do_adaptador)  # type: ignore[attr-defined]
+    prazo = time.monotonic() + 2.0
+    while leitor.em_voo and time.monotonic() < prazo:
+        time.sleep(0.002)
+    assert leitor.sinais() == {"aabbcc000011": -42}
+    assert handlers._leitor_proprio_do_sinal is None, "o serviço abriu um segundo leitor"  # type: ignore[attr-defined]
+
+
+def test_a_dica_da_linha_diz_que_a_ponte_esta_pausada_e_nao_por_causa_do_hz(
+    tela_limpa: list[float],
+) -> None:
+    tela_limpa[0] += 1.0
+    nivel, dica = _nivel_e_dica(_cena({"a": {"hz_mov": 21.0, "sinal": -53, "ponte_pausada": True}}))
+    assert nivel == rm.NIVEL_ENGASGA
+    assert dica == a08.FRASE_DA_CAUSA[rm.CAUSA_LONGE_PAUSADA]
+    assert "pausados" in dica and "mesa" not in dica.lower()
+    tela_limpa[0] += 1.0
+    _, dica = _nivel_e_dica(_cena({"a": {"hz_mov": 21.0, "sinal": -53, "ponte_pausada": False}}))
+    assert dica == a08.FRASE_DA_CAUSA[rm.CAUSA_LONGE]
+
+
+def test_a_tela_le_a_pausa_que_o_governador_publica() -> None:
+    controle = {"uniq": "aabbcc000011", "transport": "bt", "adaptador": ADAPTADOR,
+                "hz_movimento": 21.0, "sinal_dbm": -53, "connected": True}
+    ctx = a08.Contexto(state={"controllers": [controle]}, mesa=[], conectados=[], estados={})
+    governador = {ADAPTADOR: {"pontes": [{"uniq": APARELHO_A, "tipo": "som",
+                                           "alem_do_limite": False, "pausada_pelo_sinal": True}]}}
+    aparelhos = a08._aparelhos_da_cena(ctx, ctx.state, governador, [], (), {},
+                                       [a08._mac(ADAPTADOR)])
+    assert [a["ponte_pausada"] for a in aparelhos] == [True]

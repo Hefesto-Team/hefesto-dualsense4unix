@@ -107,6 +107,7 @@ from __future__ import annotations
 import os
 import re
 import threading
+import time
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -120,6 +121,9 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     NIVEL_LISO,
     NIVEL_MEDIO,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+_log = get_logger(__name__)
 
 #: Fatias de tempo por segundo do Bluetooth Classic — 625 µs cada. É
 #: ESPECIFICAÇÃO, não medição desta máquina; ver o cabeçalho.
@@ -400,6 +404,8 @@ FRACAO_QUE_ENGASGA = 0.3
 MEIA_VIDA_DA_REFERENCIA_S = 120.0
 
 CAUSA_LONGE = "longe"
+#: «longe» e a ponte deste controle pausada por isso (o enlace fraco protege o botão)
+CAUSA_LONGE_PAUSADA = "longe_pausada"
 CAUSA_INTERFERENCIA = "interferencia"
 CAUSA_ADAPTADOR_CHEIO = "adaptador_cheio"
 CAUSA_SEM_SINAL = "sem_sinal"
@@ -488,6 +494,133 @@ def sinais_dos_enlaces(
     return saida
 
 
+#: O sinal se pergunta ao rádio no máximo uma vez por segundo: o enlace é do jogo, e a leitura
+#: não pode atrasá-lo.
+PERIODO_DO_SINAL_S = 1.0
+
+
+class LeitorDoSinal:
+    """Pergunta o sinal de cada enlace numa thread, no máximo uma vez por segundo.
+
+    UM dono da leitura: o governador do rádio (que pausa a ponte do controle longe) e o
+    ``state_full`` (que mostra o sinal) leem o mesmo, e o rádio ouve uma pergunta por segundo
+    por enlace, não duas.
+    """
+
+    def __init__(
+        self,
+        ler: Callable[[int, int], int | None] | None = None,
+        *,
+        relogio: Callable[[], float] = time.monotonic,
+        periodo_s: float = PERIODO_DO_SINAL_S,
+    ) -> None:
+        self._ler = ler
+        self._relogio = relogio
+        self._periodo_s = periodo_s
+        self._trava = threading.Lock()
+        self._sinais: dict[str, int | None] = {}
+        self._numero = 0
+        self._lido_em = float("-inf")
+        self._em_voo = False
+
+    @property
+    def em_voo(self) -> bool:
+        with self._trava:
+            return self._em_voo
+
+    def talvez_ler(self, ar: Mapping[str, Any]) -> bool:
+        """Dispara a leitura se já passou o período e não há outra em curso. Nunca bloqueia."""
+        from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+        agora = self._relogio()
+        with self._trava:
+            if self._em_voo or agora - self._lido_em < self._periodo_s:
+                return False
+            if self._ler is None and fake_mode_enabled():
+                return False
+            self._em_voo = True
+            self._lido_em = agora
+        leituras = dict(ar)
+
+        def perguntar() -> None:
+            try:
+                sinais = sinais_dos_enlaces(leituras, ler=self._ler)
+                with self._trava:
+                    self._sinais = sinais
+                    self._numero += 1
+            except Exception:  # defensivo: jamais derruba o daemon
+                _log.debug("radio_sinal_nao_lido", exc_info=True)
+            finally:
+                with self._trava:
+                    self._em_voo = False
+
+        try:
+            threading.Thread(target=perguntar, name="radio-sinal", daemon=True).start()
+        except Exception:
+            with self._trava:
+                self._em_voo = False
+            return False
+        return True
+
+    def leitura(self) -> tuple[int, dict[str, int | None]]:
+        """``(número da leitura, {uniq: dBm | None})``: o número sobe a cada leitura completa."""
+        with self._trava:
+            return self._numero, dict(self._sinais)
+
+    def sinais(self) -> dict[str, int | None]:
+        return self.leitura()[1]
+
+
+#: O enlace só volta a valer para o som depois de passar o limiar que atrasa por esta folga, em
+#: duas leituras seguidas: o sinal oscila de uma leitura para outra, e a ponte que liga e desliga
+#: a cada segundo é pior que a que fica pausada um pouco mais. Pausar é na hora; voltar é devagar.
+FOLGA_DO_SINAL_DBM = 3
+LEITURAS_PARA_O_SINAL_VOLTAR = 2
+
+#: Enlace que não responde ao RSSI por tanto tempo deixa de provar que o controle está longe: a
+#: pausa solta. «Não sei» não pausa, e não segura pausa para sempre.
+SEM_SINAL_SOLTA_A_PAUSA_S = 10.0
+
+
+@dataclass
+class PausaPeloSinal:
+    """O enlace fraco protege o botão: a ponte de UM controle cede enquanto ele está longe.
+
+    Abaixo de :data:`SINAL_QUE_ATRASA_DBM` o relatório de entrada já atrasa, e a ponte de som e
+    a de vibração (saídas de ritmo fixo) disputam com ele o mesmo rádio: o botão vale mais que o
+    som. A pausa começa na primeira leitura fraca e acaba depois de
+    :data:`LEITURAS_PARA_O_SINAL_VOLTAR` leituras passadas do limiar mais a
+    :data:`FOLGA_DO_SINAL_DBM`.
+    """
+
+    pausada: bool = False
+    _boas: int = 0
+    _numero_visto: int = -1
+    _visto_em: float | None = None
+
+    def ver(self, sinal_dbm: object, agora: float, numero: int = 0) -> bool:
+        """Uma olhada: ``True`` = a ponte deste controle fica pausada. ``numero`` é o da leitura."""
+        if isinstance(sinal_dbm, bool) or not isinstance(sinal_dbm, int | float):
+            sem_prova = self._visto_em is None or agora - self._visto_em > SEM_SINAL_SOLTA_A_PAUSA_S
+            if self.pausada and sem_prova:
+                self.pausada, self._boas = False, 0
+            return self.pausada
+        nova = numero != self._numero_visto
+        self._numero_visto = numero
+        if self._visto_em is None or nova:
+            self._visto_em = agora
+        if sinal_dbm <= SINAL_QUE_ATRASA_DBM:
+            self.pausada, self._boas = True, 0
+        elif sinal_dbm > SINAL_QUE_ATRASA_DBM + FOLGA_DO_SINAL_DBM:
+            if self.pausada and nova:
+                self._boas += 1
+                if self._boas >= LEITURAS_PARA_O_SINAL_VOLTAR:
+                    self.pausada, self._boas = False, 0
+        elif nova:
+            self._boas = 0
+        return self.pausada
+
+
 def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
     """As três palavras de sempre, agora lendo PONTES contra ``n_max``."""
     if pontes < n_max:
@@ -505,6 +638,9 @@ class ControleNoAr:
     hz_movimento: float | None = None
     hz_voz: float | None = None
     ponte: str | None = None
+    #: o sinal do enlace (dBm) que o rádio mediu; não viaja no ``publicar`` (o ``state_full``
+    #: já o traz por controle em ``sinal_dbm``), é a entrada do «Equilibrar»
+    sinal_dbm: int | None = None
 
 
 @dataclass(frozen=True)
@@ -560,6 +696,12 @@ class OrcamentoDoAdaptador:
         }
 
 
+def _sinal_ou_none(valor: Any) -> int | None:
+    if isinstance(valor, bool) or not isinstance(valor, int | float) or valor != valor:
+        return None
+    return int(valor)
+
+
 def _numero_ou_none(valor: Any) -> float | None:
     if isinstance(valor, bool) or not isinstance(valor, (int, float)):
         return None
@@ -603,6 +745,7 @@ def orcamento_por_adaptador(
                 hz_movimento=_numero_ou_none(c.get("hz_movimento")),
                 hz_voz=_numero_ou_none(c.get("hz_voz")),
                 ponte=ponte if ponte in MODOS_DA_PONTE else None,
+                sinal_dbm=_sinal_ou_none(c.get("sinal_dbm")),
             )
         )
     medidos = dict(ar or {})
@@ -675,11 +818,13 @@ __all__ = [
     "CAUSA_ADAPTADOR_CHEIO",
     "CAUSA_INTERFERENCIA",
     "CAUSA_LONGE",
+    "CAUSA_LONGE_PAUSADA",
     "CAUSA_SEM_SINAL",
     "CORTE_APERTADA",
     "CORTE_FOLGADA",
     "FATIAS_DA_PONTE",
     "FATIAS_POR_RELATORIO_DE_ENTRADA",
+    "FOLGA_DO_SINAL_DBM",
     "FRACAO_QUE_AINDA_E_NORMAL",
     "FRACAO_QUE_ENGASGA",
     "HZ_AUDIO_COM_MIC",
@@ -688,6 +833,7 @@ __all__ = [
     "HZ_INPUT_COM_MIC",
     "HZ_INPUT_SEM_MIC",
     "HZ_QUE_ENGASGA",
+    "LEITURAS_PARA_O_SINAL_VOLTAR",
     "MODOS_DA_PONTE",
     "NIVEL_ENGASGA",
     "NIVEL_LISO",
@@ -697,16 +843,20 @@ __all__ = [
     "PALAVRA_APERTADA",
     "PALAVRA_CHEIA",
     "PALAVRA_FOLGADA",
+    "PERIODO_DO_SINAL_S",
     "SEGURA_O_NIVEL_S",
     "SEM_ADAPTADOR",
+    "SEM_SINAL_SOLTA_A_PAUSA_S",
     "SINAL_QUE_ATRASA_DBM",
     "SINAL_QUE_PERDE_APERTO_DBM",
     "SLOTS_POR_RELATORIO",
     "SLOTS_POR_SEGUNDO",
     "ControleNoAr",
     "Diagnostico",
+    "LeitorDoSinal",
     "Ocupacao",
     "OrcamentoDoAdaptador",
+    "PausaPeloSinal",
     "adaptador_por_uniq",
     "atualizar_a_referencia",
     "diagnosticar_o_movimento",
