@@ -546,6 +546,43 @@ def o_que_mudou(
     return globais, por_controle
 
 
+def _com_a_lapide_do_que_se_apagou(
+    globais: dict[str, Any], vista: Profile, computador: Any
+) -> dict[str, Any]:
+    """As teclas que o jogo APAGOU e o computador define, com a lápide ``[]`` no lugar.
+
+    O perfil do jogo só diz o que difere, e a chave ausente quer dizer «herde».
+    Apagar uma tecla que o computador define grava o dicionário SEM ela, e a
+    junção (``{**computador, **jogo}``) a devolve: o gesto «apagar» valia só
+    quando o computador não tinha aquela tecla. A lápide é o «nada» que já
+    existe — a lista vazia, que o schema aceita e a resolução lê como
+    «— Nada —» —, e a junção copia a chave presente do jogo, vazia ou não.
+
+    SÓ ``key_bindings``, e a razão é de vocabulário. Dentro de um dicionário de
+    teclas, chave ausente já SIGNIFICA «nada» (``acoes.tabela_efetiva``), e todo
+    gesto que quer o de fábrica ESCREVE o de fábrica (``padrao_da_tecla`` põe os
+    tokens, não tira a chave): apagar é o único jeito de uma chave sumir. Já em
+    ``button_actions`` a ausência é «herde», o «nada» é o valor ``__NADA__``
+    escolhido na tabela (a junção já o guarda), e a ausência vem do «voltar ao
+    padrão» (``padrao_da_tecla`` tira a chave da vista, forma idêntica à de
+    «apagar»): lápide ali transformaria o degrau
+    D-0110-VOLTAR-AO-PADRAO-E-UM-DEGRAU em «nada».
+
+    ``{}`` fica como está: o «tudo ou nada» já ignora o computador por inteiro.
+    """
+    escritas = globais.get("key_bindings")
+    if not isinstance(escritas, Mapping) or not escritas:
+        return globais
+    do_computador = computador.global_.key_bindings or {}
+    apagadas: dict[str, list[str]] = {
+        botao: [] for botao in (vista.key_bindings or {})
+        if botao not in escritas and do_computador.get(botao)
+    }
+    if not apagadas:
+        return globais
+    return {**globais, "key_bindings": {**escritas, **apagadas}}
+
+
 def perfil_vazio() -> Profile:
     """Um perfil que não escolhe nada: a base do computador quando não há perfil ativo."""
     return Profile.model_validate({"name": "computador", "match": {"type": "manual"}})
@@ -569,11 +606,13 @@ def gravar_pelo_gesto(
 
     cru = loader.load_profile(nome) if nome else None
     onde = onde_grava(cartao, cru)
-    vista = perfil_que_vale(cru if cru is not None else perfil_vazio(), o_computador())
+    computador = o_computador()
+    vista = perfil_que_vale(cru if cru is not None else perfil_vazio(), computador)
     novo = muda(vista)
     if novo is not None:
         globais, por_controle = o_que_mudou(cartao, vista, novo, uniq)
         if onde == JOGO and cru is not None:
+            globais = _com_a_lapide_do_que_se_apagou(globais, vista, computador)
             if globais or por_controle:
                 _no_perfil_so_o_que_mudou(
                     cru, _com_os_pares(globais),
