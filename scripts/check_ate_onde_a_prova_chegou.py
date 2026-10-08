@@ -56,12 +56,13 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "virar a câmera com o controle na mão dela, e a sensibilidade e o eixo "
         "(yaw ou roll) que só a mão decide. É da MESA-DE-QUATRO-01",
     ),
-    "inclinacao": (
+    "analogico-lado": (
         "médio",
         "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
-        "a Inclinação lê o acelerômetro, e `movimento.acelerometro@dualsense` está em "
-        "MONTOU nos dois transportes. A régua da E12b leva o clique ao perfil no disco e "
-        "de volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
+        "o lado do Analógico Virtual leva o giro e a inclinação juntos (o chip da "
+        "Inclinação saiu da 02), e `movimento.acelerometro@dualsense` está em MONTOU "
+        "nos dois transportes. A régua da E12b leva o clique ao perfil no disco e de "
+        "volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
         "aberto andar com o controle inclinado na mão dela, que é a prova da sprint",
     ),
     "toque": (
