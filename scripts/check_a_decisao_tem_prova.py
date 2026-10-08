@@ -235,14 +235,34 @@ def aceitar(raiz: Path, m: dict[str, Any], semear: bool = False) -> int:
         )
         _imprimir_ids(m["novas_sem_prova"])
         return 2
-    cabecalho = (
-        "# PISO das decisões decididas e sem prova (scripts/check_a_decisao_tem_prova.py).\n"
-        "# Um id por linha. Desce sozinho: `--aceitar` tira o que ganhou prova ou a marca\n"
-        "# `processo`. Só sobe à mão, no diff: a decisão registrada antes da régua dela.\n"
-    )
-    corpo = "".join(f"{i}\n" for i in m["sem_prova"])
-    (raiz / PISO).write_text(cabecalho + corpo, encoding="utf-8")
-    print(f"piso gravado: {len(m['sem_prova'])} decisões sem prova")
+    if semear:
+        # o primeiro censo GERA o arquivo; é o único caso em que ele nasce do zero
+        cabecalho = (
+            "# PISO das decisões decididas e sem prova (scripts/check_a_decisao_tem_prova.py).\n"
+            "# Um id por linha. Desce sozinho: `--aceitar` tira o que ganhou prova ou a marca\n"
+            "# `processo`. Só sobe à mão, no diff: a decisão registrada antes da régua dela.\n"
+        )
+        corpo = "".join(f"{i}\n" for i in m["sem_prova"])
+        (raiz / PISO).write_text(cabecalho + corpo, encoding="utf-8")
+        print(f"piso gravado: {len(m['sem_prova'])} decisões sem prova")
+        return 0
+    # O piso é editado por pessoas (comentário datado, bloco fora de ordem): o `--aceitar`
+    # só TIRA a linha do id que já não está sem prova, e o resto fica byte a byte onde estava.
+    sem_prova = set(m["sem_prova"])
+    vistos: set[str] = set()
+    mantidas: list[str] = []
+    tiradas = 0
+    for bruta in (raiz / PISO).read_text(encoding="utf-8").splitlines(keepends=True):
+        ident = bruta.split("#", 1)[0].strip()
+        if ident and (ident not in sem_prova or ident in vistos):
+            tiradas += 1
+            continue
+        if ident:
+            vistos.add(ident)
+        mantidas.append(bruta)
+    if tiradas:
+        (raiz / PISO).write_text("".join(mantidas), encoding="utf-8")
+    print(f"piso: {tiradas} linha(s) tirada(s), {len(vistos)} decisões sem prova no piso")
     return 0
 
 

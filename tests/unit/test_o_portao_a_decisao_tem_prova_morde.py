@@ -204,6 +204,83 @@ def test_piso_velho_reprova_e_o_aceitar_desce(arvore, capsys):
     assert _rodar(mod, raiz) == 0
 
 
+PISO_ANOTADO = (
+    "# PISO de mentira, com mão de gente\n"
+    "D-Z\n"
+    "\n"
+    "# registradas em 06/10/2026: só moravam em sprint; ainda sem prova.\n"
+    "D-C\n"
+    "D-M\n"
+    "# bloco de 07/10/2026, fora da ordem de propósito\n"
+    "D-K\n"
+)
+
+
+def _arvore_do_piso_anotado(raiz: Path) -> None:
+    """D-A com prova; D-C ganhou prova; D-Z, D-M e D-K seguem sem prova, no piso anotado."""
+    _escreve_csv(raiz, [
+        {"id": "D-A", "estado": "decidida", "prova": "tests/unit/test_a.py::test_a_cura_de_d_a"},
+        {"id": "D-C", "estado": "decidida", "prova": "tests/unit/test_a.py::test_a_cura_de_d_a"},
+        {"id": "D-Z", "estado": "decidida"},
+        {"id": "D-M", "estado": "decidida"},
+        {"id": "D-K", "estado": "decidida"},
+    ])
+    _escreve_teste(raiz, "test_a.py", UM_TESTE.replace("Mede a D-A.", "Mede a D-A e a D-C."))
+    (raiz / "docs/data/decisoes-sem-prova.txt").write_text(PISO_ANOTADO, encoding="utf-8")
+
+
+def test_o_aceitar_tira_so_a_linha_que_ganhou_prova(arvore):
+    """O piso é anotado por gente: a ordem, os comentários datados e as linhas em branco ficam."""
+    raiz, mod = arvore
+    _arvore_do_piso_anotado(raiz)
+    assert _rodar(mod, raiz, "--aceitar") == 0
+    esperado = PISO_ANOTADO.replace("D-C\n", "", 1)
+    assert esperado.count("\n") == PISO_ANOTADO.count("\n") - 1
+    assert (raiz / "docs/data/decisoes-sem-prova.txt").read_text(encoding="utf-8") == esperado
+    assert _rodar(mod, raiz) == 0
+
+
+def test_o_aceitar_sem_nada_a_tirar_nao_reescreve_o_piso(arvore):
+    raiz, mod = arvore
+    _arvore_do_piso_anotado(raiz)
+    linhas = list(csv.DictReader(
+        (raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
+    linhas[1]["prova"] = ""  # D-C volta a ser decisão sem prova e continua no piso
+    _escreve_csv(raiz, linhas)
+    piso = raiz / "docs/data/decisoes-sem-prova.txt"
+    antes = piso.stat().st_mtime_ns
+    assert _rodar(mod, raiz, "--aceitar") == 0
+    assert piso.read_text(encoding="utf-8") == PISO_ANOTADO
+    assert piso.stat().st_mtime_ns == antes, "sem nada a tirar o arquivo nem é aberto para escrita"
+
+
+def test_o_aceitar_nao_aceita_calado_a_decisao_que_perdeu_a_prova(arvore, capsys):
+    """D-C saiu do piso e perdeu a prova depois: o --aceitar recusa, não a devolve."""
+    raiz, mod = arvore
+    _arvore_do_piso_anotado(raiz)
+    piso = raiz / "docs/data/decisoes-sem-prova.txt"
+    sem_d_c = PISO_ANOTADO.replace("D-C\n", "", 1)
+    piso.write_text(sem_d_c, encoding="utf-8")
+    linhas = list(csv.DictReader(
+        (raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
+    linhas[1]["prova"] = ""
+    _escreve_csv(raiz, linhas)
+    assert _rodar(mod, raiz) == 1
+    assert _rodar(mod, raiz, "--aceitar") == 2
+    assert "D-C" in capsys.readouterr().out
+    assert piso.read_text(encoding="utf-8") == sem_d_c
+
+
+def test_o_aceitar_tira_o_id_repetido_e_deixa_o_resto_no_lugar(arvore):
+    raiz, mod = arvore
+    _arvore_do_piso_anotado(raiz)
+    piso = raiz / "docs/data/decisoes-sem-prova.txt"
+    piso.write_text(PISO_ANOTADO + "D-Z\n", encoding="utf-8")
+    assert _rodar(mod, raiz) == 1
+    assert _rodar(mod, raiz, "--aceitar") == 0
+    assert piso.read_text(encoding="utf-8") == PISO_ANOTADO.replace("D-C\n", "", 1)
+
+
 def test_o_aceitar_nao_sobe_o_piso(arvore, capsys):
     raiz, mod = arvore
     linhas = list(csv.DictReader(
