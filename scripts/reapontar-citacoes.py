@@ -1213,7 +1213,8 @@ def segunda_chance(
     documento diz depois), acha a entrada desse endereço de antes e roda ``levar_crua`` com o
     bloco DAQUELA entrada. Devolve o mesmo ``(estado, novo, motivo)``: ``no_lugar`` (o endereço de
     hoje já tem o bloco: a varredura acertou), ``andou`` (o bloco está intacto e único em outro
-    lugar), ou o motivo de seguir à mão. Sem par de linhas, sem a entrada de antes, ou depois de
+    lugar), ou o motivo de seguir à mão. Sem par de linhas, com a faixa de outra largura (o bloco
+    de antes escreveria ``:N-N`` ou cortaria a faixa), sem a entrada de antes, ou depois de
     ``PROFUNDIDADE_DA_SEGUNDA_CHANCE`` voltas, fica ``varredura``, com o motivo de antes e o desta volta.
     """
     endereco = endereco or _canonico(cit.arquivo, cit.a, cit.b, cit.faixa)
@@ -1239,6 +1240,9 @@ def segunda_chance(
     if achado is None or achado["arq"] != cit.arquivo:
         return sem_prova("o commit trocou também o arquivo citado")
     a, b = int(achado["a"]), int(achado["b"] or achado["a"])
+    if b - a != destino[1] - destino[0]:
+        # o bloco de antes tem outra largura: levá-lo escreveria ``:N-N`` ou cortaria a faixa
+        return sem_prova(f"o commit mudou a largura do endereço (`{antigo}` -> `{endereco}`)")
     sha_antes, caminho_antes, _ = historico[posicao + 1]
     quantas = memo.conta(cat, val, modo, resolve, sha_antes, caminho_antes)[antigo]
     if quantas == 0:
@@ -1717,7 +1721,8 @@ def main(argv: list[str] | None = None) -> int:
             "endereço de ANTES da mesma linha, acha a entrada dele e leva o bloco daquela entrada: "
             "se o endereço de hoje já o tem, fica no lugar; se ele existe intacto e único em outro "
             "lugar, anda; senão fica à mão. Sem par de linhas (contagem desigual de linhas ou de "
-            "endereços), sem a entrada de antes, ou se ela também veio de uma varredura mais de "
+            "endereços, ou faixa de outra largura), sem a entrada de antes, ou se ela também veio "
+            "de uma varredura mais de "
             f"{PROFUNDIDADE_DA_SEGUNDA_CHANCE} voltas atrás, fica à mão sem chute. A LINHA TEM DE "
             "TER CONTEÚDO: marcação sem atributo (`</span>`, `<br>`) e pontuação não contam; "
             "a tag com atributo conta. "

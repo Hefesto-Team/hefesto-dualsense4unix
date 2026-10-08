@@ -202,6 +202,34 @@ def test_a_varredura_sem_o_endereco_de_antes_continua_a_mao(
     assert len(mao) == 1 and "varredura" in mao[0] and "sem segunda chance" in mao[0], a_mao
 
 
+@pytest.mark.parametrize(("antes", "depois"), [("10", "12-13"), ("10-12", "12")])
+def test_a_varredura_que_mudou_a_largura_nao_tem_par_e_fica_a_mao(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, antes: str, depois: str
+) -> None:
+    """A varredura trocou ``:10`` por ``:12-13`` (ou ``:10-12`` por ``:12``): o bloco de antes tem
+    outra largura que o endereço de hoje. Levá-lo escreveria ``:14-14`` (ou cortaria a faixa em
+    ``:14``), um endereço que ninguém escreveu: sem chute, vai à mão e o documento fica."""
+    mod = _script()  # type: ignore[no-untyped-call]
+    monkeypatch.setattr(mod, "VARREDURA_DE_ARQUIVOS", 3)
+    doc = _escrever_e_commitar(
+        repo,
+        "docs/protocol/largo.md",
+        f"# Largo\n\nO corpo, `{END}:{antes}`.\n",
+        "o endereço entra",
+    )
+    _inserir_no_topo(repo, 4, commitar=False)
+    doc.write_text(f"# Largo\n\nO corpo, `{END}:{depois}`.\n", encoding="utf-8")
+    _varrer(repo, 3)
+    _git(repo, "add", "docs", "src")
+    _git(repo, "commit", "-q", "-am", "a varredura")
+
+    feitos, a_mao = mod.reapontar(repo, escrever=True)
+
+    assert doc.read_text(encoding="utf-8") == f"# Largo\n\nO corpo, `{END}:{depois}`.\n", feitos
+    mao = [f for f in a_mao if "largo.md" in f]
+    assert len(mao) == 1 and "sem segunda chance" in mao[0] and "largura" in mao[0], a_mao
+
+
 def test_a_linha_que_virou_duas_nao_tem_par_e_fica_a_mao(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -382,6 +410,59 @@ def test_o_endereco_que_entrou_depois_do_ref_e_nao_se_leva_e_novo(
     assert rc_novo == 1, saida
     assert "à mão NOVA" in saida and "fecho.md" in saida and "curta demais" in saida, saida
     assert rc_depois == 0
+
+
+def test_o_endereco_escrito_depois_do_ref_num_documento_que_ja_existia_e_novo(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """O documento existia no ``--desde``, sem a citação; ela entrou depois e não se leva. O citado
+    não mudou: só a conta do endereço no documento diz que é desta mudança."""
+    _escrever_e_commitar(repo, CURTO, "X = dict(\n    a=1,\n)\n", "o curto nasce")
+    _escrever_e_commitar(repo, "docs/protocol/fecho.md", "# Fecho\n\nAinda nada.\n", "o doc nasce")
+    ref = _commit_de(repo)
+    _escrever_e_commitar(
+        repo, "docs/protocol/fecho.md", f"# Fecho\n\nO fecho, `{CURTO}:3`.\n", "a crua entra"
+    )
+
+    mod = _script()  # type: ignore[no-untyped-call]
+    rc_novo = _main(mod, repo, "--desde", ref)
+    saida = capsys.readouterr().out
+    rc_depois = _main(mod, repo, "--desde", "HEAD")
+    capsys.readouterr()
+
+    assert rc_novo == 1, saida
+    assert "1 nova(s) desde" in saida and "fecho.md" in saida, saida
+    assert rc_depois == 0
+
+
+def test_sem_desde_o_ref_e_o_merge_base_com_dev(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A integração nasce do ``dev``: sem ``--desde``, o que mudou desde o ``merge-base`` com ele é
+    desta mudança, mesmo já commitado (com o HEAD como ref, a mesma linha seria dívida de antes)."""
+    _escrever_e_commitar(
+        repo, "docs/protocol/doc.md", f"# Doc\n\nO corpo, `{END}:10`.\n", "o endereço entra"
+    )
+    ref = _commit_de(repo)
+    _git(repo, "checkout", "-q", "-b", "trabalho")
+    _git(repo, "branch", "-f", "dev", ref)
+    alvo = repo / END
+    alvo.write_text(
+        alvo.read_text(encoding="utf-8").replace("def segunda():", "def outra_coisa():"),
+        encoding="utf-8",
+    )
+    _inserir_no_topo(repo, 3, commitar=False)
+    _git(repo, "commit", "-q", "-am", "o corpo mudou e andou, depois do dev")
+
+    mod = _script()  # type: ignore[no-untyped-call]
+    rc = _main(mod, repo)
+    saida = capsys.readouterr().out
+    rc_cabeca = _main(mod, repo, "--desde", "HEAD")
+    capsys.readouterr()
+
+    assert rc == 1, saida
+    assert f"1 nova(s) desde {ref[:9]}" in saida, saida
+    assert rc_cabeca == 0
 
 
 def test_a_troca_pendente_em_modo_lista_derruba_o_rc_e_escrever_zera(
