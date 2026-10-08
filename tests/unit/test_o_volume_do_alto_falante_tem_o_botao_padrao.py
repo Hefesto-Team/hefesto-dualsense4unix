@@ -209,6 +209,133 @@ def test_a_ativacao_aplica_os_cem_so_com_o_botao_ligado(flag: bool | None, esper
     assert chamadas == [esperado]
 
 
+# --- sem perfil ativo: o computador é o dono (O-PADRAO-DO-ALTO-FALANTE-DESLIGA-SEM-PERFIL-01) ---
+
+
+def _ctx_sem_perfil(registrador: int | None = CEM, uniq: str = P1) -> Any:
+    import pacotes
+
+    entrada = _dele(uniq, registrador) if registrador is not None else {
+        "uniq": uniq, "transport": "usb", "connected": True, "inputs": {},
+        "audio": {"mic_mudo": False}}
+    return pacotes.Contexto(state={"active_profile": ""}, mesa=[],
+                            conectados=[entrada], estados={})
+
+
+def _do_computador(chave: str = CHAVE_P1) -> dict[str, Any]:
+    """O que o ``maquina.json`` guarda deste controle, lido do disco, nunca do cache."""
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    entrada = carregar_maquina().computador.controles.get(chave)
+    return entrada.model_dump(mode="json", exclude_unset=True) if entrada is not None else {}
+
+
+def _bytes_do_computador() -> bytes:
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
+    alvo = caminho_da_maquina()
+    return alvo.read_bytes() if alvo.exists() else b""
+
+
+def test_sem_perfil_o_clique_desliga_o_padrao_e_o_computador_guarda(casa: Any) -> None:  # noqa: F811
+    """O defeito de 05/10: sem perfil, o clique mandava os 100% e a tela seguia em «Padrão».
+
+    MORDIDA: devolver o ``if not nome: return`` ao ``_lembrar_do_som`` — nada é gravado, o pacote
+    seguinte volta a dizer «Padrão» e a barra segue travada.
+    """
+    from pacotes import a02_controles as a02
+
+    assert a02.volume_em_padrao(_ctx_sem_perfil(), P1, (CEM, False)) is True, (
+        "o ponto de partida: aparelho nos 100% e nada gravado é Padrão")
+    p = Ponte()
+    _gesto("volume-padrao")(_ctx_sem_perfil(), {"uniq": P1}, p)
+
+    chamadas = [k for n, k in p.chamadas if n == "speaker_set"]
+    assert chamadas and chamadas[0]["volume"] == CEM, p.chamadas
+    dele = _do_computador().get("speaker") or {}
+    assert dele.get("volume_padrao") is False and dele.get("volume") == CEM, (
+        f"o clique não ficou no computador: {dele!r}")
+    assert a02.volume_em_padrao(_ctx_sem_perfil(), P1, (CEM, False)) is False, (
+        "a tela segue em «Padrão»: a barra fica travada e ela não ajusta o volume")
+
+
+def test_sem_perfil_a_tela_destrava_a_barra_e_diz_o_numero(
+        casa: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    from pacotes import a02_controles as a02
+
+    monkeypatch.setattr(a02, "_ENDERECOS", frozenset({*a02._enderecos_da_pagina(), "alto-padrao"}))
+    card = a02.pacote(_ctx_sem_perfil())["cards"][P1]
+    assert (card["alto-padrao"], card["alto-num"]) == ("1", "Padrão"), "antes do clique, Padrão"
+
+    _gesto("volume-padrao")(_ctx_sem_perfil(), {"uniq": P1}, Ponte())
+    card = a02.pacote(_ctx_sem_perfil())["cards"][P1]
+    assert card["alto-padrao"] == "" and card["alto-num"] == percentual_do_volume(CEM), card
+
+
+def test_sem_perfil_ida_e_volta_guarda_o_volume_que_ela_escolheu(casa: Any) -> None:  # noqa: F811
+    """Desliga, arrasta para 40%, liga (100% no aparelho) e desliga: os 40% voltam."""
+    guardado = volume_do_percentual(40)
+    p = Ponte()
+    _gesto("volume-padrao")(_ctx_sem_perfil(), {"uniq": P1}, p)                     # desliga
+    _gesto("volume")(_ctx_sem_perfil(CEM), {"uniq": P1, "volume": "alto-falante",
+                                            "valor": "40"}, p)                      # arrasta
+    _gesto("volume-padrao")(_ctx_sem_perfil(guardado), {"uniq": P1}, p)             # liga
+    ligado = _do_computador().get("speaker") or {}
+    assert ligado.get("volume_padrao") is True and ligado.get("volume") == guardado, ligado
+    _gesto("volume-padrao")(_ctx_sem_perfil(CEM), {"uniq": P1}, p)                  # desliga
+    volumes = [k["volume"] for n, k in p.chamadas if n == "speaker_set"]
+    assert volumes == [CEM, guardado, CEM, guardado], volumes
+    assert (_do_computador().get("speaker") or {}).get("volume_padrao") is False
+
+
+def test_sem_perfil_o_mudo_e_a_rota_tambem_ficam_no_computador(casa: Any) -> None:  # noqa: F811
+    p = Ponte()
+    _gesto("mudo")(_ctx_sem_perfil(), {"uniq": P1, "mudo": "alto-falante"}, p)
+    assert (_do_computador().get("speaker") or {}).get("muted") is True, _do_computador()
+    _gesto("rota")(_ctx_sem_perfil(), {"uniq": P1, "rota": "jogo"}, p)
+    assert (_do_computador().get("speaker") or {}).get("rota") == 2, _do_computador()
+
+
+def test_sem_perfil_o_computador_e_por_controle_e_o_outro_nao_muda(casa: Any) -> None:  # noqa: F811
+    """O P2 tem o computador dele; o clique no P1 não encosta ali (de um a quatro jogadores)."""
+    p = Ponte()
+    _gesto("volume-padrao")(_ctx_sem_perfil(uniq=P1), {"uniq": P1}, p)
+    assert _do_computador(CHAVE_P1) and _do_computador("aabbcc000002") == {}
+
+
+def test_sem_perfil_e_sem_endereco_estavel_fica_calado_como_sempre(casa: Any) -> None:  # noqa: F811
+    """Sem identidade não há onde guardar: o gesto funciona e não escreve nada (nem levanta)."""
+    antes = _bytes_do_computador()
+    avulso = "path:/dev/hidraw3"
+    _gesto("volume-padrao")(_ctx_sem_perfil(uniq=avulso), {"uniq": avulso}, Ponte())
+    assert _bytes_do_computador() == antes
+
+
+def test_sem_perfil_e_sem_volume_publicado_a_rota_fica_calada(casa: Any) -> None:  # noqa: F811
+    """O aparelho que ainda não publicou o volume: sem jogo, nada a guardar e nenhum recado.
+
+    MORDIDA: tirar o ``sem_jogo`` do ``_o_som_lembrado`` — o gesto levanta «arraste o volume».
+    """
+    antes = _bytes_do_computador()
+    _gesto("rota")(_ctx_sem_perfil(None), {"uniq": P1, "rota": "jogo"}, Ponte())
+    assert _bytes_do_computador() == antes
+
+
+def test_a_recusa_do_daemon_sem_perfil_nao_chega_ao_computador(casa: Any) -> None:  # noqa: F811
+    antes = _bytes_do_computador()
+    with pytest.raises(RuntimeError, match="não confirmou"):
+        _gesto("volume-padrao")(_ctx_sem_perfil(), {"uniq": P1}, Ponte(recusa="speaker_set"))
+    assert _bytes_do_computador() == antes
+
+
+def test_com_perfil_ativo_o_clique_segue_no_perfil_e_o_computador_nao_muda(casa: Any) -> None:  # noqa: F811
+    """O caminho de hoje: o jogo guarda o que mudou, o computador fica como estava."""
+    antes = _bytes_do_computador()
+    _gesto("volume-padrao")(_ctx(CEM), {"uniq": P1}, Ponte())
+    assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("volume_padrao") is False
+    assert _bytes_do_computador() == antes
+
+
 # --- a página (WebKit, bancada) -------------------------------------------------------------------
 
 LER = r"""

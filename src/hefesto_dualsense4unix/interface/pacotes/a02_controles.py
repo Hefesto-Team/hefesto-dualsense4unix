@@ -1391,13 +1391,37 @@ def volume_em_padrao(ctx: Contexto, uniq: str, lido: tuple[int, bool | None] | N
     sem leitura do volume (``lido`` é ``None``: ninguém o escreveu ainda) a tela não afirma nada.
     ``lido`` é o par `(registrador, mudo)` do daemon.
     """
-    chave = norm_mac(str(uniq or "").strip()) or ""
-    perfil = _perfil.ativo_que_vale(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
-    secao = ((perfil.get("controllers") or {}).get(chave) or {}).get("speaker") \
-        or perfil.get("speaker")
+    secao = _o_som_do_alto_falante(ctx, uniq)
     if isinstance(secao, dict):
         return secao.get("volume_padrao") is True
     return lido is not None and percentual_do_volume(lido[0]) >= 100
+
+
+def _o_som_do_alto_falante(ctx: Contexto, uniq: str) -> dict[str, Any] | None:
+    """A seção ``speaker`` que VALE para este controle: a do controle, ou a global; ``None`` sem.
+
+    Dono único da pergunta, para a tela (:func:`volume_em_padrao`) e para o gesto
+    (:func:`volume_padrao`). Com perfil ativo, é o perfil com o computador por baixo; **sem perfil
+    ativo, é o próprio computador** (``perfil_que_vale`` do perfil vazio): é onde
+    ``_lembrar_do_som`` grava quando não há jogo, e a tela tem de ler de onde o gesto escreve.
+    """
+    chave = norm_mac(str(uniq or "").strip()) or ""
+    nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
+    perfil = _perfil.ativo_que_vale(nome) if nome else _o_computador_sem_perfil()
+    secao = ((perfil.get("controllers") or {}).get(chave) or {}).get("speaker") \
+        or perfil.get("speaker")
+    return secao if isinstance(secao, dict) else None
+
+
+def _o_computador_sem_perfil() -> dict[str, Any]:
+    """O padrão do computador como um perfil que não escolhe nada (o que vale sem jogo aberto)."""
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    try:
+        vista = opc.perfil_que_vale(opc.perfil_vazio(), opc.o_computador())
+        return dict(vista.model_dump(mode="json", exclude_unset=True))
+    except Exception:
+        return {}
 
 
 def nomes_de_quem_joga() -> dict[str, str]:
@@ -2048,29 +2072,42 @@ def _lembrar_do_som(
     if not mic and not speaker:
         return
     nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
-    if not nome:
-        # publica um `active_profile` (medido no `state_full` vivo:
-        return
     chave = norm_mac(str(uniq or "").strip()) or ""
 
     loader = _perfil._com_o_src()
-    try:
-        loader.load_profile(nome)
-    except Exception as erro:
-        raise RuntimeError(
-            f"o ajuste chegou ao controle, mas não consegui ler o perfil "
-            f"{nome!r} para guardá-lo: {erro}") from erro
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+        chave as identidade_do_computador,
+    )
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
+    if not nome:
+        # SEM PERFIL ATIVO o escritor é o computador (nome vazio → `_no_computador`), o mesmo
+        # que já grava com o Freestyle. O computador é por controle: sem identidade estável
+        # (um `path:`) não há onde guardar, e o gesto segue calado como sempre.
+        if identidade_do_computador(chave or uniq) is None:
+            return
+    else:
+        try:
+            loader.load_profile(nome)
+        except Exception as erro:
+            raise RuntimeError(
+                f"o ajuste chegou ao controle, mas não consegui ler o perfil "
+                f"{nome!r} para guardá-lo: {erro}") from erro
+
     gravar_pelo_gesto("som", nome,
-                      lambda prof: _o_som_lembrado(ctx, uniq, chave, prof, mic, speaker),
+                      lambda prof: _o_som_lembrado(ctx, uniq, chave, prof, mic, speaker,
+                                                   sem_jogo=not nome),
                       uniq=chave or uniq, origem="interface-nova")
 
 
 def _o_som_lembrado(ctx: Contexto, uniq: str, chave: str, prof: Any,
                     mic: dict[str, Any] | None,
-                    speaker: dict[str, Any] | None) -> Any:
+                    speaker: dict[str, Any] | None, *, sem_jogo: bool = False) -> Any:
     """O perfil com o som que ficou de pé neste controle, ou `None` (nada mudou).
+
+    ``sem_jogo`` é o caminho do computador (sem perfil ativo): sem volume nenhum para guardar
+    junto (o aparelho ainda não o publicou), o gesto fica calado como sempre ficou, em vez de
+    pedir «arraste o volume uma vez» — sem jogo aberto isso é estado, não aviso.
 
     O corpo de :func:`_lembrar_do_som`, que roda sobre o perfil ou sobre o que
     vale (o perfil com o computador por baixo) — ver `gravar_pelo_gesto`.
@@ -2095,6 +2132,8 @@ def _o_som_lembrado(ctx: Contexto, uniq: str, chave: str, prof: Any,
                     base = base.model_copy(update=vivo)
             alvo = base.model_copy(update=speaker)
             if alvo.volume is None:
+                if sem_jogo:
+                    return None
                 raise RuntimeError(SOM_SEM_VOLUME_PARA_GUARDAR)
             novo = novo.with_controller_speaker(chave, alvo)
         if novo.source_controllers == draft.source_controllers:
@@ -2781,11 +2820,8 @@ def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     lido = speaker_do_entry(ctx.por_uniq(uniq))
     estava = volume_em_padrao(ctx, uniq, lido)
     padrao = _reg(100)
-    chave = norm_mac(uniq) or ""
-    perfil = _perfil.ativo_que_vale(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
-    secao = ((perfil.get("controllers") or {}).get(chave) or {}).get("speaker") \
-        or perfil.get("speaker")
-    guardado = (int(secao["volume"]) if isinstance(secao, dict)
+    secao = _o_som_do_alto_falante(ctx, uniq)
+    guardado = (int(secao["volume"]) if secao is not None
                 and secao.get("volume") is not None
                 else lido[0] if lido is not None else padrao)
     if estava:
