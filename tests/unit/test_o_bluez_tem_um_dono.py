@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
+from hefesto_dualsense4unix.integrations import contratos_de_fora as cf
 from hefesto_dualsense4unix.integrations import diario_do_radio, varredura_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from hefesto_dualsense4unix.integrations import gesto_de_reconexao as reconexao
@@ -732,3 +733,91 @@ def test_dongle_trocado_na_mesma_porta_e_outra_frase() -> None:
 )
 def test_o_desembrulho_nao_mutila_nome_com_espaco(bruto: str | None, valor: Any) -> None:
     assert bd.desembrulhar(bruto) == valor
+
+
+def _sonda_com(arvore: str | None) -> cf.Resultado:
+    """A ``_sonda_bluez`` sobre um ``busctl`` de mentira que responde ``arvore`` (ou falha)."""
+
+    def rodar(argv: Any) -> Any:
+        return (0, arvore) if arvore is not None else (1, "")
+
+    return cf._sonda_bluez(cf.Ambiente(rodar=rodar))
+
+
+def test_a_sonda_do_bluez_pergunta_ao_dono_pela_raiz_e_pelo_filho() -> None:
+    assert _sonda_com("/org/bluez\n/org/bluez/hci9\n").estado == cf.OK
+    assert _sonda_com("/org/bluez/hci9\n").estado == cf.OK
+
+
+@pytest.mark.parametrize("arvore", ["/x/org/bluez\n", "/org/bluezfalso\n", "", None])
+def test_a_sonda_do_bluez_nao_aceita_caminho_que_so_contem_a_raiz(arvore: str | None) -> None:
+    """MORDIDA: devolver o ``in`` aprova ``/x/org/bluez`` e reprova esta."""
+    assert _sonda_com(arvore).estado == cf.QUEBROU
+
+
+# --- o caminho ``/org/bluez`` em código também é conhecimento do dono ---
+
+_ISENTOS_DO_CAMINHO = {
+    "integrations/apelido_do_dongle.py": "re.compile do adaptador; migra na sprint seguinte",
+    "integrations/conexao_zumbi.py": "re.compile do nó; migra com O-BLUEZ-SO-PELA-PORTA-OFICIAL-01",
+    "integrations/exame_da_mesa.py": "re.compile do aparelho; migra na sprint seguinte",
+    "integrations/varredura_do_radio.py": "re.compile do adaptador; migra na sprint seguinte",
+}
+
+
+def caminhos_do_bluez(fonte: str) -> list[tuple[int, str]]:
+    """Os literais de caminho ``/org/bluez`` em código. Docstring e comentário não."""
+    arvore = ast.parse(fonte)
+    docs = _docstrings(arvore)
+    return [
+        (no.lineno, no.value.strip())
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.Constant)
+        and isinstance(no.value, str)
+        and id(no) not in docs
+        and "/org/bluez" in no.value
+    ]
+
+
+def _com_caminho_fora_do_dono(isentos: dict[str, str]) -> tuple[list[str], list[str]]:
+    novos: list[str] = []
+    achados: set[str] = set()
+    for arquivo in sorted(SRC.rglob("*.py")):
+        if arquivo == DONO:
+            continue
+        chave = arquivo.relative_to(SRC).as_posix()
+        for linha, valor in caminhos_do_bluez(arquivo.read_text(encoding="utf-8")):
+            achados.add(chave)
+            if chave not in isentos:
+                novos.append(f"{chave}:{linha}: {valor!r}")
+    velhos = sorted(set(isentos) - achados)
+    return novos, velhos
+
+
+def test_a_regua_de_caminho_morde_um_re_compile_novo() -> None:
+    novo = (
+        "import re\n"
+        "def f():\n"
+        "    \'\'\'/org/bluez/hci0 em docstring não conta.\'\'\'\n"
+        "N = re.compile(r\"^/org/bluez/hci\")\n"
+        "M = f\"/org/bluez/{1}\"\n"
+    )
+    assert [v for _l, v in caminhos_do_bluez(novo)] == ["^/org/bluez/hci", "/org/bluez/"]
+
+
+def test_ninguem_le_o_caminho_do_bluez_fora_do_dono() -> None:
+    """Um quinto arquivo com o literal reprova; a isenção declara a razão dos quatro."""
+    assert all(_ISENTOS_DO_CAMINHO.values())
+    novos, velhos = _com_caminho_fora_do_dono(_ISENTOS_DO_CAMINHO)
+    assert novos == [], "segundo conhecedor do caminho do BlueZ:\n" + "\n".join(novos)
+    assert velhos == [], f"isenção sem o literal (a tabela não envelhece): {velhos}"
+
+
+def test_a_tabela_de_isencao_do_caminho_morde() -> None:
+    """MORDIDA: tabela vazia reprova com os quatro nomes; entrada sem literal reprova."""
+    novos, _velhos = _com_caminho_fora_do_dono({})
+    assert sorted({n.split(":")[0] for n in novos}) == sorted(_ISENTOS_DO_CAMINHO)
+    _novos, velhos = _com_caminho_fora_do_dono(
+        {**_ISENTOS_DO_CAMINHO, "integrations/contratos_de_fora.py": "sem literal"}
+    )
+    assert velhos == ["integrations/contratos_de_fora.py"]

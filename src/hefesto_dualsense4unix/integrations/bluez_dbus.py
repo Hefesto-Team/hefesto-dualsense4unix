@@ -490,6 +490,16 @@ class LeitorDoBluez:
     def caminhos(self, *, espera: float | None = None) -> tuple[str, ...] | None:
         raise NotImplementedError
 
+    def responde(self, *, espera: float | None = None) -> bool:
+        """O ``org.bluez`` responde: a árvore traz a raiz dele ou um filho dela, nunca um ``in``."""
+        caminhos = self.caminhos(espera=espera)
+        if caminhos is None:
+            return False
+        return any(
+            caminho == RAIZ_DO_BLUEZ or caminho.startswith(RAIZ_DO_BLUEZ + "/")
+            for caminho in caminhos
+        )
+
     def propriedade(
         self, caminho: str, interface: str, nome: str, *, espera: float | None = None
     ) -> Any | None:
@@ -811,6 +821,7 @@ ESCRITAS = (
 LEITURAS = (
     "pode_perguntar",
     "caminhos",
+    "responde",
     "propriedade",
     "endereco_do_adaptador",
     "adaptadores",

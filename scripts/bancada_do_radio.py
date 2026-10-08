@@ -268,19 +268,19 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
         and _prop(f"/org/bluez/{hci}/dev_{mac.replace(':', '_')}",
                   "org.bluez.Device1", "Connected") == "true"
     ]
-    fio = None
-    quem = None
+    achado: tuple[str, str] | None = None
     for candidato in alvos:
-        fio = _evdev_de_movimento(candidato)
-        if fio:
-            quem = candidato
+        no_do_movimento = _evdev_de_movimento(candidato)
+        if no_do_movimento:
+            achado = (no_do_movimento, candidato)
             break
-    if not fio:
+    if achado is None:
         print("\n  não achei o nó de MOVIMENTO do controle que eu ia medir.")
         print(f"  Candidatos: {', '.join(_mascarar(m) for m in alvos) or '(nenhum)'}")
         print("  Sem o nó CERTO não há o que medir — e medir o nó de outro")
         print("  controle devolve um número que parece resposta e não é.\n")
         return 8
+    fio, quem = achado
     print(f"  medindo o controle {_mascarar(quem)}")
 
     print(f"\n  DANO DA VARREDURA em {alvo} ({_mascarar(endereco)})")

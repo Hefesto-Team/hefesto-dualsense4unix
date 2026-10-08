@@ -122,10 +122,10 @@ def _sonda_bluez(amb: Ambiente) -> Resultado:
         rc, texto = saida
         return texto if rc == 0 else None
 
-    caminhos = bluez_dbus.pelo_executor(executar).caminhos()
+    responde = bluez_dbus.pelo_executor(executar).responde()
     if faltas:
         return _sem_resposta(faltas[0], bluez_dbus.FERRAMENTA)
-    if caminhos and any("/org/bluez" in caminho for caminho in caminhos):
+    if responde:
         return Resultado(OK)
     return Resultado(QUEBROU, f"o nome {bluez_dbus.SERVICO} não responde no barramento do sistema")
 
