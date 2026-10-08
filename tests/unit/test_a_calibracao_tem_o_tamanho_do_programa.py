@@ -24,8 +24,16 @@ FOLGA = 2
 
 PISO = (1212, 809)
 
-VISTAS = {"piso": PISO, "dela": olhar.VISTA_DELA, "ladrilhada": (PISO[0], 700),
-          "baixa": (PISO[0], 480)}
+#: A largura da FOTO DELA de 04/09/2026 (`test_a_janela_estreita_nao_engole_o_desenho`): 272 px a
+#: menos que o piso. A queixa de 08/10: o segundo «Inverter» saía 32 px do cartão aqui.
+ESTREITA = (940, PISO[1])
+
+VISTAS = {"piso": PISO, "estreita": ESTREITA, "dela": olhar.VISTA_DELA,
+          "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
+
+#: As vistas em que a janela tem a altura do desenho: ali o miolo NÃO rola na vertical (ela,
+#: 05/10: «toda interface deve funcionar sem ativar a barra de rolagem vertical»).
+SEM_ROLAGEM_VERTICAL = ("piso", "estreita", "dela")
 
 
 def _controle(i: int, via: str) -> dict[str, Any]:
@@ -69,6 +77,24 @@ MEDIR = """() => {
           largura: Math.round(r.width), altura: Math.round(r.height),
           embaixo: Math.round(r.bottom), vista: [innerWidth, innerHeight],
           rola_de_lado: d.scrollWidth > d.clientWidth,
+          // O QUE TRANSBORDA POR DENTRO: scrollWidth passa de clientWidth quando o conteúdo
+          // sai da caixa, mesmo com o `overflow:hidden` calando o corte.
+          transborda: ['.ctr', '.mira', '.cx', '.corpo'].flatMap(sel =>
+            [...document.querySelectorAll(sel)].filter(e => e.scrollWidth > e.clientWidth)
+              .map(e => sel + ' ' + e.scrollWidth + '>' + e.clientWidth)),
+          corpo_rola_na_vertical: miolo ? miolo.scrollHeight > miolo.clientHeight : null,
+          inverter: [...document.querySelectorAll('.inverter')].map(g => {
+            const m = g.closest('.mira').getBoundingClientRect();
+            const bs = [...g.querySelectorAll('.sw')].map(b => b.getBoundingClientRect());
+            return {n: bs.length,
+                    empilhado: bs.length === 2 && bs[1].top >= bs[0].bottom - 1
+                               && Math.abs(bs[0].left - bs[1].left) <= 1
+                               && Math.abs(bs[0].width - bs[1].width) <= 1,
+                    dentro: bs.every(b => b.left >= m.left && b.right <= m.right + 0.5),
+                    cortado: [...g.querySelectorAll('.sw')]
+                               .some(b => b.scrollWidth > b.clientWidth),
+                    cheio: bs.every(b => Math.abs((b.left - m.left) - (m.right - b.right)) <= 1)};
+          }),
           rola_a_pagina: d.scrollHeight > d.clientHeight,
           cartoes: document.querySelectorAll('[data-bloco="controles"] .ctr').length};
 }"""
@@ -158,6 +184,40 @@ def test_a_calibracao_nao_passa_da_vista(medido: dict[str, Any], vista: str) -> 
         assert cal["fim_alcancavel"], (
             f"na vista {vista} ({mesa}) o fim da Calibrar (o rodapé com Começar e "
             f"Fechar, e o aviso) fica fora da caixa mesmo com o miolo rolado")
+
+
+@pytest.mark.parametrize("vista", VISTAS)
+def test_nada_da_calibracao_transborda_na_horizontal(medido: dict[str, Any], vista: str) -> None:
+    """`.ctr`, `.mira`, `.cx` e `.corpo` cabem na largura, com 1 a 4 controles.
+
+    Medido em 08/10/2026 a 940 px: o par do «Inverter» (180 px) estava num cartão de 204 px e o
+    segundo botão passava 32 px da borda, calado pelo `overflow:hidden` do `.cx`.
+    """
+    for mesa in ("dois", *MESAS):
+        fora = medido[vista][mesa]["transborda"]
+        assert not fora, f"na vista {vista} ({mesa}) o que transborda: {fora}"
+
+
+@pytest.mark.parametrize("vista", VISTAS)
+def test_o_inverter_fica_empilhado_na_largura_inteira_do_cartao(
+        medido: dict[str, Any], vista: str) -> None:
+    """Opção b dela (08/10/2026): os dois botões, um embaixo do outro, em qualquer largura."""
+    for mesa in ("um-no-cabo", "um-no-radio", "quatro"):
+        grupos = medido[vista][mesa]["inverter"]
+        assert len(grupos) == len(MESAS[mesa]), (vista, mesa, grupos)
+        for g in grupos:
+            assert g["n"] == 2 and g["empilhado"], f"{vista} ({mesa}): não empilhou: {g}"
+            assert g["dentro"] and g["cheio"], (
+                f"{vista} ({mesa}): os botões não ocupam a largura do cartão: {g}")
+            assert not g["cortado"], f"{vista} ({mesa}): rótulo cortado: {g}"
+
+
+@pytest.mark.parametrize("vista", SEM_ROLAGEM_VERTICAL)
+def test_o_miolo_nao_rola_na_vertical(medido: dict[str, Any], vista: str) -> None:
+    """Com o par empilhado o cartão cresce: o miolo da Calibrar continua sem barra vertical."""
+    for mesa in ("dois", *MESAS):
+        assert medido[vista][mesa]["corpo_rola_na_vertical"] is not True, (
+            f"na vista {vista} ({mesa}) o miolo da Calibrar ganhou barra vertical")
 
 
 @pytest.mark.parametrize("vista", VISTAS)

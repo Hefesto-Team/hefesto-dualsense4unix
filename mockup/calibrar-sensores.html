@@ -276,8 +276,10 @@
      a mesma pastilha de 17px. É cópia declarada — esta página tem folha
      própria, como a paleta do topo —, e um interruptor com outra cara na
      mesma janela seria um segundo vocabulário para o mesmo ato. */
-  /* Os dois «Inverter» são um grupo: a mesma largura, lado a lado (06/10/2026). */
-  .inverter{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  /* Os dois «Inverter» são um grupo: a mesma largura, UM EMBAIXO DO OUTRO em toda largura
+     de janela, cada um na largura inteira do cartão (08/10/2026, opção b dela). Lado a lado
+     o segundo botão passava 32 px da borda do cartão a 940 px. */
+  .inverter{display:grid;grid-template-columns:1fr;gap:6px}
   .inverter .sw{justify-content:center}
   .inverter .sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
     cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
