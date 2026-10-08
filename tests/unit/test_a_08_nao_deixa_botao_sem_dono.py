@@ -67,25 +67,50 @@ def test_a_linha_do_controle_mostra_som_vibracao_e_luz_sem_botao(
 
 
 def test_a_marca_da_luz_diz_o_que_o_daemon_publica(request: pytest.FixtureRequest) -> None:
-    """A luz da linha é a do ``lightbar_on`` de cada controle; sem fonte, acesa (nunca «desligada»).
+    """A luz da linha é a que o motor das outras abas diz; sem fonte, acesa (nunca «desligada»).
 
     MORDIDA: devolva ``"luz": True`` fixo em ``_aparelhos_da_cena`` — o P2 de barra apagada volta
     a aparecer aceso.
     """
     estado = _estado()
     por_uniq = {c["uniq"]: c for c in estado["controllers"]}
-    por_uniq[U2].update(lightbar_on=False, lightbar_source="sysfs")
-    por_uniq[U3].update(lightbar_on=True, lightbar_source="desired")
+    por_uniq[U2].update(lightbar_on=False, lightbar_source="sysfs", lightbar_rgb=[0, 0, 255])
+    por_uniq[U3].update(lightbar_on=True, lightbar_source="desired", lightbar_rgb=[0, 0, 255])
     sala = request.getfixturevalue("mesa").campos_do_radio(_ctx(estado))["radio-sala"]
+    assert "data-ligada" in _a_marca_da_luz(sala, U1) and ": ligada" in _a_marca_da_luz(sala, U1)
+    assert "data-ligada" not in _a_marca_da_luz(sala, U2)
+    assert ": desligada" in _a_marca_da_luz(sala, U2)
+    assert "data-ligada" in _a_marca_da_luz(sala, U3) and ": ligada" in _a_marca_da_luz(sala, U3)
 
-    def marca(uniq: str) -> str:
-        achadas = re.findall(rf'<span class="selo-zero"[^>]*data-alvo="{uniq}"[^>]*>', sala)
-        assert len(achadas) == 1, f"{uniq}: {achadas}"
-        return achadas[0]
 
-    assert "data-ligada" in marca(U1) and ": ligada" in marca(U1), marca(U1)
-    assert "data-ligada" not in marca(U2) and ": desligada" in marca(U2), marca(U2)
-    assert "data-ligada" in marca(U3) and ": ligada" in marca(U3), marca(U3)
+def _a_marca_da_luz(sala: str, uniq: str) -> str:
+    achadas = re.findall(rf'<span class="selo-zero"[^>]*data-alvo="{uniq}"[^>]*>', sala)
+    assert len(achadas) == 1, f"{uniq}: {achadas}"
+    return achadas[0]
+
+
+def test_a_marca_da_luz_e_a_mesma_resposta_das_outras_abas(
+    request: pytest.FixtureRequest,
+) -> None:
+    """A barra preta com fonte nossa é «apagada» na Iluminação e na Perfis; na 08 também.
+
+    E a Steam segurando o controle não vira «desligada»: o motor diz que não sabe.
+    MORDIDA: troque, em ``_a_luz_acesa``, a pergunta ao motor por ``bool(c.get("lightbar_on"))``
+    — o P2 de barra preta volta a aparecer aceso.
+    """
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao
+
+    estado = _estado()
+    por_uniq = {c["uniq"]: c for c in estado["controllers"]}
+    por_uniq[U2].update(lightbar_on=True, lightbar_source="desired", lightbar_rgb=[0, 0, 0])
+    por_uniq[U3].update(lightbar_on=False, lightbar_source="sysfs", lightbar_rgb=[0, 0, 255],
+                        lightbar_disputada=True)
+    assert a04_iluminacao.estado_da_tira(
+        rotulo_lightbar(por_uniq[U2], estado)[0]) == a04_iluminacao.APAGADA
+    sala = request.getfixturevalue("mesa").campos_do_radio(_ctx(estado))["radio-sala"]
+    assert "data-ligada" not in _a_marca_da_luz(sala, U2), _a_marca_da_luz(sala, U2)
+    assert "data-ligada" in _a_marca_da_luz(sala, U3), _a_marca_da_luz(sala, U3)
 
 
 def test_nenhum_gesto_da_sala_fica_sem_atendente(request: pytest.FixtureRequest) -> None:

@@ -5437,15 +5437,20 @@ def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
         _com_dois_pontos(lugar), _com_dois_pontos(aparelho), quem="tela")
 
 
-def _a_luz_acesa(c: dict[str, Any]) -> bool:
-    """A barra de luz do controle como o daemon a publica (``lightbar_on``), para a marca da linha.
+def _a_luz_acesa(c: dict[str, Any], st: dict[str, Any]) -> bool:
+    """A barra de luz do controle, para a marca da linha: apagada só quando o motor diz apagada.
 
-    Sem fonte (``lightbar_source`` ausente ou ``"desconhecida"``) a marca fica acesa: o LED pode
-    estar no azul do kernel, e a tela nunca diz «desligada» do que ninguém mediu.
+    Quem decide é o dono das outras abas (`cartao_do_controle.rotulo_lightbar`, traduzido por
+    `a04_iluminacao.estado_da_tira`, o mesmo que a Perfis pergunta): a fonte nossa com a barra
+    desligada OU de cor preta é «apagada». Sem fonte, sem cor ou com a Steam segurando o controle,
+    a marca fica acesa, porque a tela nunca diz «desligada» do que ninguém mediu.
     """
-    if str(c.get("lightbar_source") or "desconhecida") == "desconhecida":
-        return True
-    return bool(c.get("lightbar_on"))
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
+
+    from . import a04_iluminacao
+
+    estado = a04_iluminacao.estado_da_tira(rotulo_lightbar(c, st)[0])
+    return estado != a04_iluminacao.APAGADA
 
 
 def _a_taxa_da_ponte(da_ponte: dict[tuple[str, str], dict[str, Any]], uniq: str,
@@ -5529,7 +5534,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             "mic": (not audio.get("mic_mudo")) if "mic_mudo" in audio
             else bool(c.get("hz_voz")),
             "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
-            "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": _a_luz_acesa(c),
+            "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": _a_luz_acesa(c, st),
             "sinal": c.get("sinal_dbm"),
             "ponte_pausada": pausada.get(_so_hex(uniq), False),
             **_a_taxa_da_ponte(da_ponte, uniq, ponte),
