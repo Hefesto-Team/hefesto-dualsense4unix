@@ -710,7 +710,11 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
 
 
 _CAI_NO_MEIO = """\
-import os, sys, time
+import os, signal, sys, time
+# O filho nasce com o padrão dos sinais, não com o de quem o lançou: a suíte sob `nohup`
+# herda SIGHUP como SIG_IGN, e o instrumento respeita o sinal ignorado de propósito.
+for _sinal in (signal.SIGTERM, signal.SIGHUP):
+    signal.signal(_sinal, signal.SIG_DFL)
 sys.path.insert(0, {ensaios!r})
 import byte_no_fio
 captura = byte_no_fio.CapturaDoFio("cai-no-meio")
@@ -726,11 +730,21 @@ time.sleep(60)
 """
 
 
+def _como_o_nohup() -> None:
+    """``preexec_fn`` do filho: a suíte sob ``nohup`` herda SIGHUP ignorado."""
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+
+@pytest.mark.parametrize("nohup", [False, True], ids=["limpo", "sob-nohup"])
 @pytest.mark.parametrize("como", ["excecao", "sigterm", "sighup"])
 def test_o_instrumento_que_cai_no_meio_apaga_e_para_o_btmon(
-    tmp_path: Path, dubles: Dubles, como: str
+    tmp_path: Path, dubles: Dubles, como: str, nohup: bool
 ) -> None:
-    """Uma exceção, um ``kill`` ou o terminal que fecha: a captura sai e o ``btmon`` para."""
+    """Uma exceção, um ``kill`` ou o terminal que fecha: a captura sai e o ``btmon`` para.
+
+    Com ou sem ``nohup`` na suíte: o filho devolve os sinais ao padrão antes de importar o
+    instrumento, e o resultado deixa de depender de como a corrida nasceu.
+    """
     script = tmp_path / "cai_no_meio.py"
     script.write_text(_CAI_NO_MEIO.format(ensaios=str(ENSAIOS)), encoding="utf-8")
     processo = subprocess.Popen(
@@ -738,6 +752,7 @@ def test_o_instrumento_que_cai_no_meio_apaga_e_para_o_btmon(
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         env=dubles.ambiente(PYTHONPATH=str(REPO_ROOT / "src")),
         start_new_session=True,
+        preexec_fn=_como_o_nohup if nohup else None,
     )
     try:
         assert processo.stdout is not None
@@ -754,6 +769,32 @@ def test_o_instrumento_que_cai_no_meio_apaga_e_para_o_btmon(
         with contextlib.suppress(ProcessLookupError):
             os.killpg(processo.pid, signal.SIGKILL)
         processo.wait(timeout=20)
+
+
+_RESPEITA_O_IGNORADO = """\
+import signal, sys
+signal.signal(signal.SIGHUP, signal.SIG_IGN)
+sys.path.insert(0, {ensaios!r})
+import byte_no_fio
+captura = byte_no_fio.CapturaDoFio("respeita-o-ignorado")
+captura.comecar()
+print(signal.getsignal(signal.SIGHUP) is signal.SIG_IGN, flush=True)
+captura.encerrar()
+"""
+
+
+def test_o_instrumento_continua_respeitando_o_sighup_ignorado(
+    tmp_path: Path, dubles: Dubles
+) -> None:
+    """O reset do filho de teste é do teste: o instrumento não toma o sinal de quem o ignorou."""
+    script = tmp_path / "respeita.py"
+    script.write_text(_RESPEITA_O_IGNORADO.format(ensaios=str(ENSAIOS)), encoding="utf-8")
+    feito = subprocess.run(
+        [sys.executable, str(script)],
+        capture_output=True, text=True, timeout=30, check=False,
+        env=dubles.ambiente(PYTHONPATH=str(REPO_ROOT / "src")),
+    )
+    assert feito.stdout.split() == ["True"], (feito.stdout, feito.stderr)
 
 
 class TestOFormatoLeOBinarioESoUsaABibliotecaPadrao:
