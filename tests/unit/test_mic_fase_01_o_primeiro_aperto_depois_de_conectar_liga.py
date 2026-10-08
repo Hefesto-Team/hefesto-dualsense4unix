@@ -207,14 +207,6 @@ async def _drenar(segundos: float = 0.5) -> None:
         await asyncio.sleep(0.01)
 
 
-@pytest.fixture(autouse=True)
-def _sem_eco_de_teste_vizinho() -> Any:
-    """`hotkey._ECO_DO_ATO` é global por módulo: zerar antes e depois."""
-    hotkey._ECO_DO_ATO.clear()
-    yield
-    hotkey._ECO_DO_ATO.clear()
-
-
 def _recado(daemon: _Daemon, uniq: str) -> Any:
     return getattr(daemon, recado_do_microfone.ATRIBUTO, {}).get(uniq)
 

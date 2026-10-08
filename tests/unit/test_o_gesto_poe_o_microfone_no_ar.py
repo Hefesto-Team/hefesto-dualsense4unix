@@ -181,10 +181,8 @@ class _DaemonDeMentira:
 
 @pytest.fixture(autouse=True)
 def _sem_eco() -> Any:
-    hotkey._ECO_DO_ATO.clear()
     hotkey._CANAL_POR_UNIQ.clear()
     yield
-    hotkey._ECO_DO_ATO.clear()
     hotkey._CANAL_POR_UNIQ.clear()
 
 

@@ -349,7 +349,7 @@ def _a_bancada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     monkeypatch.setitem(sys.modules, luz.MODULO_DO_NIVEL, types.ModuleType(luz.MODULO_DO_NIVEL))
     registros = (
         luz._LUZ_DO_JOGO, luz._A_PESSOA_MANDOU_EM, luz._DECIDIDO, luz._OUVINTES,
-        hotkey._MUDO_DO_JOGO, hotkey._ECO_DO_ATO, gp._RETIDO_JA_DITO,
+        hotkey._MUDO_DO_JOGO, gp._RETIDO_JA_DITO,
     )
     for r in registros:
         r.clear()

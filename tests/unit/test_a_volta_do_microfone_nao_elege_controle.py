@@ -233,10 +233,8 @@ def sem_processo(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     monkeypatch.setattr(subprocess, "run", _recusa)
     monkeypatch.setattr(subprocess, "Popen", _recusa)
-    hotkey._ECO_DO_ATO.clear()
     hotkey._CANAL_POR_UNIQ.clear()
     yield
-    hotkey._ECO_DO_ATO.clear()
     hotkey._CANAL_POR_UNIQ.clear()
 
 

@@ -787,6 +787,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._mic_botao: bool | None = None
         self._mic_mudo_seq: int = 0
         self._mic_mudo_pedido: bool | None = None
+        self._mic_mudo_em_voo: bool = False
         self._mic_mudo_em: float | None = None
         self._mic_posse_solta_pela_mao: bool = False
 
@@ -1317,10 +1318,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         sumia calado.
 
         **O `mudo` do aperto é o que ele PEDE:** o contrário do que o firmware
-        segurava no report do aperto. O kernel escreve o mudo DEPOIS de ler
-        este mesmo report, então o `status` daqui ainda é o de antes. É o valor
-        que `hotkey._o_que_a_borda_pede` sempre recebeu (o bit depois da virada
-        do kernel), agora sem depender de o kernel e o firmware estarem em fase.
+        VAI segurar. O kernel escreve o mudo DEPOIS de ler este mesmo report,
+        então o `status` daqui ainda é o de antes. Com a posse nossa e a
+        escrita viva (o 🎙 acabou de calar e o bit ainda não confirmou), o que o
+        firmware vai segurar é a posse, e o contrário do bit velho seria o
+        MESMO que o 🎙 pediu (O-ECO-DO-ATO-SEM-OBJETO-01): a referência é a
+        posse, e `_mic_mudo_em_voo` avisa o ato de que o bit lido é o velho.
+        Sem posse, ou onde o jogo é dono do hidraw (`_output_muted`), a
+        referência é o bit do report.
 
         **E A MÃO DEVOLVE A POSSE DO MUDO.** Com a posse nossa (o «calado» do
         perfil, `set_microphone_mute(True)`), o próximo report do Hefesto —
@@ -1343,9 +1348,17 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         if anterior is None or anterior or not botao:
             return
         self._mic_mudo_seq += 1
-        self._mic_mudo_pedido = not mudo
+        posse = getattr(self, "_mic_mute_desejado", None)
+        # O aperto se lê contra o que o firmware VAI segurar: com a posse
+        # nossa e a escrita viva, o bit do report ainda é o velho (a escrita
+        # demora a confirmar) e o contrário dele seria o MESMO que o 🎙 pediu.
+        # Onde o jogo é dono do hidraw a posse não vai ao fio: vale o bit.
+        escreve = isinstance(posse, bool) and not getattr(self, "_output_muted", False)
+        referencia = posse if escreve else mudo
+        self._mic_mudo_pedido = not referencia
+        self._mic_mudo_em_voo = bool(escreve and posse != mudo)
         self._mic_mudo_em = _relogio_da_borda()
-        if getattr(self, "_mic_mute_desejado", None) is not None:
+        if posse is not None:
             self._mic_mute_desejado = None
             self._mic_posse_solta_pela_mao = True
 
@@ -5367,15 +5380,19 @@ class PyDualSenseController(IController):
             return self._merged_desired_for_key(uniq).led
 
 
-    def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
+    def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None, bool]]:
         """Contador de APERTOS do botão do microfone, por `uniq`.
 
-        `{uniq: (seq, mudo, quando)}` — `seq` é monotônico por controle e só
-        sobe quando o DEDO desce no botão (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01,
+        `{uniq: (seq, mudo, quando, em_voo)}` — `seq` é monotônico por controle
+        e só sobe quando o DEDO desce no botão (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01,
         28/09/2026: não mais quando o bit de mudo vira); `mudo` é o que o
-        último aperto PEDE (o contrário do que o firmware segurava) e, antes do
-        primeiro aperto, o bit lido — que ninguém publica, porque o `seq` não
-        andou; `quando` é o `time.monotonic()` do último aperto.
+        último aperto PEDE (o contrário do que o firmware VAI segurar: a posse
+        nossa, com a escrita viva, ou o bit lido) e, antes do primeiro aperto,
+        o bit lido — que ninguém publica, porque o `seq` não andou; `quando` é
+        o `time.monotonic()` do último aperto; `em_voo` diz que, no instante
+        do aperto, uma escrita nossa ainda não tinha confirmado no bit — o ato
+        não pode tomar o bit velho por «já está feito»
+        (O-ECO-DO-ATO-SEM-OBJETO-01).
 
         POR QUE ESTE É O ÚNICO LUGAR POSSÍVEL. É aqui que o produto vê todo
         report de TODO controle **com identidade** — cada `_PinnedPyDualSense`
@@ -5401,7 +5418,7 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             items = list(self._handles.items())
-        out: dict[str, tuple[int, bool, float | None]] = {}
+        out: dict[str, tuple[int, bool, float | None, bool]] = {}
         for key, handle in items:
             self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
             uniq = self._key_to_uniq(key)
@@ -5414,7 +5431,8 @@ class PyDualSenseController(IController):
             pedido = getattr(handle, "_mic_mudo_pedido", None)
             mudo = pedido if isinstance(pedido, bool) else lido
             quando = getattr(handle, "_mic_mudo_em", None)
-            out[uniq] = (seq, mudo, quando if isinstance(quando, float) else None)
+            em_voo = bool(getattr(handle, "_mic_mudo_em_voo", False))
+            out[uniq] = (seq, mudo, quando if isinstance(quando, float) else None, em_voo)
         return out
 
     def _levar_ao_mapa_a_posse_que_a_mao_soltou(self, key: str, handle: Any) -> None:

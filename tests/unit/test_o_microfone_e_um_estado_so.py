@@ -25,8 +25,9 @@ AS QUATRO MORDIDAS QUE ESTE ARQUIVO EXERCE
    do ato arrancado) — reprova `test_o_botao_do_plastico_e_o_da_tela_chamam_a_mesma_funcao`;
 2. **pôr um `if native_mode` em `ligar_o_microfone`** — reprova
    `test_o_ato_nao_muda_de_caminho_com_o_modo_nativo`;
-3. **tirar o `_borda_e_eco_do_ato` do laço** — reprova
-   `test_o_eco_da_nossa_escrita_nao_executa_o_ato_de_novo`;
+3. **(saiu em 08/10/2026, O-ECO-DO-ATO-SEM-OBJETO-01)** o eco da nossa
+   escrita perdeu o objeto — o gesto é o botão —, e as réguas dele moram em
+   `test_o_eco_do_ato_sem_objeto.py`;
 4. **tirar a guarda de idempotência da metade do firmware** — reprova
    `test_o_botao_do_plastico_nao_toma_a_posse_do_byte`, que é a régua da
    decisão de 30/08: *"o botão do Controle sempre controla a interface"*.
@@ -149,12 +150,10 @@ class DaemonDeMentira:
 
 
 @pytest.fixture(autouse=True)
-def _sem_eco_entre_testes() -> Any:
-    """O registro do eco é de módulo; um teste não pode herdar o do outro."""
-    hotkey._ECO_DO_ATO.clear()
+def _sem_canal_entre_testes() -> Any:
+    """O registro do canal é de módulo; um teste não pode herdar o do outro."""
     hotkey._CANAL_POR_UNIQ.clear()
     yield
-    hotkey._ECO_DO_ATO.clear()
     hotkey._CANAL_POR_UNIQ.clear()
 
 
@@ -240,34 +239,6 @@ def test_o_gesto_de_tela_escreve_o_byte_divergente() -> None:
     d = _daemon(backend={"mic_mudo": True})
     asyncio.run(hotkey.ligar_o_microfone(d, "aa:bb:cc:00:00:01", ligado=True))
     assert d.controller.escritas == [(False, "aa:bb:cc:00:00:01")]
-
-
-def test_o_eco_da_nossa_escrita_nao_executa_o_ato_de_novo() -> None:
-    """MORDIDA 3: a borda que a NOSSA escrita causa não pode virar gesto."""
-    hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
-    assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is True
-
-
-def test_o_eco_vale_uma_vez_so() -> None:
-    """A segunda borda com o mesmo valor é gesto do usuário, e tem de passar."""
-    hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
-    assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is True
-    assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is False
-
-
-def test_o_eco_nao_engole_o_gesto_contrario() -> None:
-    """Ela clica na tela e logo aperta o plástico para desfazer: TEM de valer."""
-    hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
-    assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", False) is False
-
-
-def test_o_eco_expira(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Passada a janela, a borda é gesto — o eco não vive para sempre."""
-    relogio = {"t": 100.0}
-    monkeypatch.setattr(hotkey, "_relogio", lambda: relogio["t"])
-    hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
-    relogio["t"] += hotkey.ECO_DO_ATO_S + 0.1
-    assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is False
 
 
 def test_a_recusa_diz_qual_das_duas_metades_faltou() -> None:

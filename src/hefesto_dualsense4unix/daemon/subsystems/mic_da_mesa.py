@@ -80,7 +80,7 @@ logger = get_logger(__name__)
 INTERVALO_S: float = 0.05
 
 
-def _bordas(backend: Any) -> dict[str, tuple[int, bool, float | None]]:
+def _bordas(backend: Any) -> dict[str, tuple[Any, ...]]:
     """`backend.bordas_do_mic()` quando o backend sabe responder; `{}` senão."""
     ler = getattr(backend, "bordas_do_mic", None)
     if not callable(ler):
@@ -130,7 +130,11 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
             if uniq not in atual:
                 visto.pop(uniq, None)
                 ultimo_por_uniq.pop(uniq, None)
-        for uniq, (seq, mudo, quando) in atual.items():
+        for uniq, borda in atual.items():
+            # `(seq, mudo, quando)` e, desde o fim do eco do ato, `em_voo`: o
+            # backend que não o diz (dublê, versão velha) é «sem escrita em voo».
+            seq, mudo, quando = borda[:3]
+            em_voo = bool(borda[3]) if len(borda) > 3 else False
             anterior = visto.get(uniq)
             visto[uniq] = seq
             if anterior is None or seq == anterior:
@@ -156,7 +160,8 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
             )
             repiques = 0
             daemon.bus.publish(
-                _TOPICO, {"uniq": uniq, "mudo": mudo, "seq": seq, "em": quando}
+                _TOPICO,
+                {"uniq": uniq, "mudo": mudo, "seq": seq, "em": quando, "em_voo": em_voo},
             )
 
 

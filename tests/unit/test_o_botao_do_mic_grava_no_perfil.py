@@ -211,7 +211,6 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
         lambda uniq: {"fonte": f"hefesto_mic_{uniq[-6:]}", "canal_ativo": False,
                       "canal_mudo": False, "volume_captura": 100},
     )
-    hotkey._ECO_DO_ATO.clear()
 
     class Casa:
         subsystem = sub
@@ -253,7 +252,6 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     try:
         yield Casa()
     finally:
-        hotkey._ECO_DO_ATO.clear()
         elm.registrar_pedidor_de_canal(anterior_pedidor)
         elm.registrar_dizedor_do_no_ar(*anteriores)
 

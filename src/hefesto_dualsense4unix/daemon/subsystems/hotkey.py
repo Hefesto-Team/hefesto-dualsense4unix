@@ -958,9 +958,6 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
                 logger.debug("mic_hotkey_desligado_por_config")
                 continue
             mudo = bool(payload.get("mudo"))
-            if _borda_e_eco_do_ato(uniq, mudo):
-                logger.debug("mic_da_mesa_eco_do_ato_engolido", uniq=uniq, mudo=mudo)
-                continue
             ligado = _o_que_a_borda_pede(daemon, uniq, mudo)
             em = _instante_da_borda(payload.get("em"))
             resposta = _a_resposta_do_jogo(uniq, em)
@@ -968,7 +965,13 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
                 ligado = not resposta
                 logger.info("mic_ato_segue_o_jogo", uniq=uniq, ligado=ligado)
             try:
-                await ligar_o_microfone(daemon, uniq, ligado=ligado, em=em)
+                await ligar_o_microfone(
+                    daemon,
+                    uniq,
+                    ligado=ligado,
+                    em=em,
+                    escrita_em_voo=bool(payload.get("em_voo")),
+                )
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))
     finally:
@@ -996,36 +999,12 @@ CONFIRMACAO_DO_MUDO_S: float = 3.0
 
 PASSO_DA_CONFIRMACAO_S: float = 0.1
 
-ECO_DO_ATO_S: float = 2.0
-
-_ECO_DO_ATO: dict[str, tuple[float, bool]] = {}
-
 
 def _relogio() -> float:
     """O monotônico, isolado num nome para o teste poder congelá-lo."""
     import time
 
     return time.monotonic()
-
-
-def _marcar_eco_do_ato(uniq: str, mudo: bool) -> None:
-    """Anota que NÓS escrevemos este valor no byte do mudo deste controle."""
-    _ECO_DO_ATO[uniq] = (_relogio(), bool(mudo))
-
-
-def _borda_e_eco_do_ato(uniq: str, mudo: bool) -> bool:
-    """A borda que chegou é o eco da nossa escrita, e não um gesto do usuário?"""
-    marca = _ECO_DO_ATO.get(uniq)
-    if marca is None:
-        return False
-    quando, escrito = marca
-    if bool(mudo) != escrito:
-        return False
-    if (_relogio() - quando) >= ECO_DO_ATO_S:
-        _ECO_DO_ATO.pop(uniq, None)
-        return False
-    _ECO_DO_ATO.pop(uniq, None)
-    return True
 
 
 @dataclass(frozen=True)
@@ -1096,14 +1075,26 @@ class AtoDoMicrofone:
 
 
 async def ligar_o_microfone(
-    daemon: DaemonProtocol, uniq: str, *, ligado: bool, em: float | None = None
+    daemon: DaemonProtocol,
+    uniq: str,
+    *,
+    ligado: bool,
+    em: float | None = None,
+    escrita_em_voo: bool = False,
 ) -> AtoDoMicrofone:
-    """O ATO — e é a MESMA função para o botão do plástico e o da tela."""
+    """O ATO — e é a MESMA função para o botão do plástico e o da tela.
+
+    ``escrita_em_voo``: o aperto chegou com uma escrita nossa ainda por
+    confirmar (O-ECO-DO-ATO-SEM-OBJETO-01). O bit lido é o velho, e o ato não o
+    toma por «já está feito»: escreve, e a posse volta ao kernel depois.
+    """
     from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import a_pessoa_mandou
 
     a_pessoa_mandou(uniq, em)
     no_sistema, ativo = await _metade_do_canal(daemon, uniq, ligado)
-    firmware = await _metade_do_firmware(daemon, uniq, ligado)
+    firmware = await _metade_do_firmware(
+        daemon, uniq, ligado, escrita_em_voo=escrita_em_voo
+    )
     ato = AtoDoMicrofone(
         uniq=uniq,
         ligado=ligado,
@@ -1247,8 +1238,8 @@ async def _metade_do_firmware(
     uniq: str,
     ligado: bool,
     *,
-    marcar_eco: bool = True,
     recado: bool = True,
+    escrita_em_voo: bool = False,
 ) -> MetadeDoAto:
     """A metade do APARELHO: o bit `MIC_MUTE` do firmware, e a posse de volta.
 
@@ -1283,7 +1274,8 @@ async def _metade_do_firmware(
             estado = leitor(uniq)
     mudo_agora = estado.get("mic_mudo") if isinstance(estado, dict) else None
     if (
-        isinstance(mudo_agora, bool)
+        not escrita_em_voo
+        and isinstance(mudo_agora, bool)
         and mudo_agora == mudo_desejado
         and _a_posse_nao_desdiz(controller, uniq, mudo_desejado)
     ):
@@ -1298,8 +1290,6 @@ async def _metade_do_firmware(
         ok = bool(await daemon._run_blocking(_mutar, setter, mudo_desejado, uniq))
     if not ok:
         return MetadeDoAto(False, MOTIVO_FIRMWARE_REPRESADO)
-    if marcar_eco:
-        _marcar_eco_do_ato(uniq, mudo_desejado)
     _agendar_a_devolucao_da_posse(daemon, uniq, mudo_desejado, recado=recado)
     return MetadeDoAto(True)
 
@@ -1313,6 +1303,22 @@ def _a_posse_nao_desdiz(controller: Any, uniq: str, mudo_desejado: bool) -> bool
     with contextlib.suppress(Exception):
         posse = leitor(uniq)
     return posse is None or (isinstance(posse, bool) and posse == mudo_desejado)
+
+
+def _a_posse_ainda_e_deste_ato(controller: Any, uniq: str, mudo_desejado: bool) -> bool:
+    """A posse do mudo segue sendo a que ESTE ato tomou?
+
+    Um aperto que chega com a escrita em voo solta a posse e o ato dele toma
+    outra; devolver (ou dar por represada) a posse do ato velho apagaria o
+    pedido novo antes de ir ao fio. Sem leitor da posse, vale o de sempre.
+    """
+    leitor = getattr(controller, "microphone_mute_for", None)
+    if not callable(leitor):
+        return True
+    posse: Any = None
+    with contextlib.suppress(Exception):
+        posse = leitor(uniq)
+    return isinstance(posse, bool) and posse == mudo_desejado
 
 
 def _mutar(setter: Any, muted: bool | None, uniq: str) -> bool:
@@ -1378,6 +1384,9 @@ async def _confirmar_e_devolver(
         await asyncio.sleep(PASSO_DA_CONFIRMACAO_S)
         esperou += PASSO_DA_CONFIRMACAO_S
         if daemon._is_stopping():
+            return
+        if not _a_posse_ainda_e_deste_ato(controller, uniq, mudo_desejado):
+            logger.info("mic_ato_superado", uniq=uniq, mudo_desejado=mudo_desejado)
             return
         estado: Any = None
         with contextlib.suppress(Exception):
@@ -2319,7 +2328,7 @@ async def o_jogo_pede_o_mudo(
     elif palavra_no_ar(chave) is False:
         esquecer_a_palavra(chave)
     firmware = await _metade_do_firmware(
-        daemon, chave, not mudo, marcar_eco=False, recado=False
+        daemon, chave, not mudo, recado=False
     )
     logger.info("mic_mudo_do_jogo", uniq=chave, mudo=mudo, feito=firmware.feita)
     return firmware
@@ -2655,7 +2664,6 @@ __all__ = [
     "CONFIRMACAO_DO_MUDO_S",
     "CORES_DA_MASCARA",
     "CORES_DO_MODO",
-    "ECO_DO_ATO_S",
     "LE_A_STEAM",
     "LE_O_HEFESTO",
     "MIC_SOSSEGO_S",
