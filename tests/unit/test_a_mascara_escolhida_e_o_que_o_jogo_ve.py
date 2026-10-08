@@ -4,8 +4,9 @@ A pergunta dela (03/10): *«se na aba jogar a máscara funciona independente do
 modo»*. O que se mediu no código e no diário (08/10): das nove combinações
 (caminho nenhum, DualSense, Xbox x as três máscaras) e dos dois estados do
 `/dev/uhid`, **uma só troca a máscara** — o caminho Xbox ESCOLHIDO, que veste
-Xbox 360 em qualquer máscara. É decisão medida (D-2709, G1/G3/L4 de 27/09: o
-Proton não segura Edge nem Pro em `uinput` sem hidraw), e o diário a conta:
+Xbox 360 em qualquer máscara. É decisão medida
+(D-2709-O-XBOX-360-EM-TODA-MASCARA-NO-MODO-XBOX, G1/G3/L4 de 27/09: o Proton
+não segura Edge nem Pro em `uinput` sem hidraw), e o diário a conta:
 `vpad_vestido_pelo_modo mascara=dualsense no_jogo=xbox`, nove vezes desde 06/10.
 O que faltava não era mais uma combinação respeitada: era a troca dizer POR QUE
 (o log e o pad só diziam «vestido»), para a tela poder explicá-la.

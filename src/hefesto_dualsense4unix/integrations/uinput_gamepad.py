@@ -170,8 +170,8 @@ def normalize_flavor(flavor: str | None) -> str:
     return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
 # Mapeamento canonico Hefesto - DualSense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
-# É a tabela do `xpad` (máscara Xbox, VID 045e) e dos consumidores de botão fora do pad; as
-# máscaras de VID Sony e Nintendo usam :data:`BOTOES_POSICIONAIS`.
+# É a tabela do `xpad` (máscara Xbox, VID 045e) e o piso de `_resolve_evdev`; as máscaras
+# de VID Sony e Nintendo usam :data:`BOTOES_POSICIONAIS`.
 BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_A",
     "circle": "BTN_B",

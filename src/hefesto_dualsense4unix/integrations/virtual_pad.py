@@ -60,8 +60,8 @@ CAMINHOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX)
 MASCARA_DO_CANAL_COMUM = "xbox"
 
 #: Por que o jogo recebeu outro aparelho que o do cartão: o modo Xbox foi o
-#: escolhido (D-2709). É a única troca que a fábrica faz, e a tela lê este nome
-#: para explicá-la em vez de deixar o cartão mostrar uma máscara e o jogo outra.
+#: escolhido (D-2709-O-XBOX-360-EM-TODA-MASCARA-NO-MODO-XBOX). É a única troca
+#: que a fábrica faz, e é este nome que o diário e o pad (`troca_motivo`) levam.
 MOTIVO_MODO_XBOX_ESCOLHIDO = "modo_xbox_escolhido"
 
 
@@ -177,7 +177,7 @@ def _vestir_o_aparelho(
     """Veste o pad ainda não criado com o aparelho que o jogo usa.
 
     O `motivo` (:func:`motivo_da_troca`) vai ao diário e fica no pad
-    (`troca_motivo`), que é onde a tela o encontra para explicar a troca.
+    (`troca_motivo`).
     """
     vestir = getattr(pad, "vestir", None)
     if not callable(vestir):
