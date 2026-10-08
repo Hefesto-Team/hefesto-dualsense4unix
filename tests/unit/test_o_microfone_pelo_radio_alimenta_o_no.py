@@ -655,7 +655,9 @@ def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # t
     from hefesto_dualsense4unix.app import mic_monitor as mm
 
     canais = _dois_canais()
-    monitor = mm.MicMonitor()
+    # sem a supervisora: o teste reconcilia à mão, e uma thread viva depois do
+    # desfazer dos monkeypatch pediria o `pactl list` longo no teste seguinte
+    monitor = mm.MicMonitor(auto_supervisao=False)
     capturas: dict[str, str] = {}
     monkeypatch.setattr(monitor, "_descobrir_fontes", lambda: sorted(canais.values()))
     monkeypatch.setattr(monitor, "_casar_por_usb", lambda *a, **k: None)
