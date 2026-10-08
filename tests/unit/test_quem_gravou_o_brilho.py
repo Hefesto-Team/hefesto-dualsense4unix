@@ -82,14 +82,23 @@ def lar(tmp_path: pathlib.Path) -> dict[str, pathlib.Path]:
         "arquivo=freestyle.json origem=interface-nova pid=60112",
         "2026-09-25T17:15:40.100000 [info     ] profile_salvo                  "
         "arquivo=freestyle.json origem=interface-nova pid=60112",
+        "[gesto] 04-iluminacao.html · brilho → aplicado",
         "2026-09-25T17:15:44.100000 [info     ] profile_salvo                  "
         "arquivo=freestyle.json origem=interface-nova pid=60112",
+        "[gesto] 02-controles.html · salvar → aplicado",
         "2026-09-25T17:15:48.100000 [info     ] profile_salvo                  "
         "arquivo=pragmata.json origem=interface-nova pid=60112",
+        "[gesto] 04-iluminacao.html · cor → aplicado",
+        # a linha da gravação sai DEPOIS da escrita: a cópia de 26/09 19:11:00
+        # (a hora do arquivo) é o que esta gravação escreveu
+        "2026-09-26T19:11:00.400000 [info     ] profile_salvo                  "
+        "arquivo=freestyle.json origem=interface-nova pid=60112",
+        "[gesto] 02-controles.html · salvar → aplicado",
         "===== a janela abriu em 2026-09-28T09:00:00 =====",
         "2026-09-28T09:00:01.000000 [info     ] perfis_de_jogo_semeados        jogos=1",
         "2026-09-28T09:00:01.050000 [info     ] profile_salvo                  "
         "arquivo=freestyle.json origem=interface-nova pid=777",
+        "[gesto] 02-controles.html · volume → aplicado",
     ]) + "\n", encoding="utf-8")
     loader = tmp_path / "loader.py"
     loader.write_text(
@@ -174,24 +183,43 @@ def test_as_cópias_vêm_em_ordem_de_hora_e_nao_em_ordem_de_descoberta(ens, lar)
 
 def test_casa_o_intervalo_com_as_gravacoes_do_log(ens, lar, capsys):
     saida = _rodar(ens, lar, capsys)
-    # as três do freestyle.json em 25/09 estão no primeiro intervalo (a do pragmata não)
-    assert "3 gravação(ões) do freestyle.json" in saida
+    # as três do freestyle.json em 25/09 e a de 26/09 19:11:00,4 (a que escreveu a
+    # cópia de chegada) estão no primeiro intervalo; a do pragmata não
+    assert "4 gravação(ões) do freestyle.json" in saida
     assert "janela de 25/09 17:15:01" in saida
     assert "pragmata" not in saida
 
 
-def test_diz_o_escritor_e_o_que_falta_quando_sao_varias(ens, lar, capsys):
+def test_diz_os_candidatos_e_o_que_falta_quando_sao_varias(ens, lar, capsys):
     saida = _rodar(ens, lar, capsys)
-    assert "ESCRITOR PROVÁVEL" in saida
+    assert "CANDIDATOS" in saida
     assert "trilho «Brilho»" in saida and "a04_iluminacao.py:1 monta, :5 grava" in saida
+    # o «Salvar» regravava o perfil inteiro com o que estava valendo: é candidato
+    assert "o «Salvar» (2)" in saida
     assert "NÃO FECHA a hora" in saida
+
+
+def test_cada_gravacao_leva_o_gesto_que_a_fez(ens, lar, capsys):
+    """O `[gesto]` não tem hora e sai DEPOIS das gravações do gesto."""
+    saida = _rodar(ens, lar, capsys)
+    assert ("os gestos que gravaram: 02-controles.html · salvar (2), "
+            "04-iluminacao.html · brilho (2).") in saida
+    assert "04-iluminacao.html · cor" not in saida, "a gravação do pragmata contou"
+
+
+def test_a_copia_de_chegada_diz_a_gravacao_que_a_escreveu(ens, lar, capsys):
+    saida = _rodar(ens, lar, capsys)
+    assert ("a cópia de chegada tem a hora da gravação de 26/09 19:11:00, pelo gesto "
+            "«02-controles.html · salvar»") in saida
 
 
 def test_a_unica_gravacao_do_intervalo_e_a_primeira_leitura_do_perfil(ens, lar, capsys):
     saida = _rodar(ens, lar, capsys)
     assert "28/09 09:00:01" in saida
     assert "primeira leitura de perfil da janela" in saida
-    assert "Provável e não provado" in saida
+    assert "A ÚNICA GRAVAÇÃO DO LOG" in saida
+    assert "pelo gesto «02-controles.html · volume»" in saida
+    assert "Só é a escritora se esse gesto grava o brilho" in saida
 
 
 def test_a_migracao_que_nao_fala_de_brilho_nao_e_a_escritora(ens, lar, capsys):

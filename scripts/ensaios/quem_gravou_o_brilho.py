@@ -14,8 +14,10 @@ O que faz, por ordem:
    `controllers[<peça>].leds.lightbar_brightness` muda, e de quanto a quanto.
 2. Casa o intervalo de cada mudança com as linhas `profile_salvo` do
    `interface.log*` (e do diário, quando ele alcança): quantas gravações, de que
-   janela, de que `origem`, e se foi uma rajada de arraste ou uma gravação de
-   abertura.
+   janela, de que `origem`, de que GESTO, e se foi uma rajada de arraste ou uma
+   gravação de abertura. O gesto é a linha `[gesto] <página> · <nome>` que o
+   piloto imprime quando o gesto termina: ela não tem hora, e vem DEPOIS das
+   gravações que o gesto fez (a primeira depois delas, na mesma janela).
 3. Lê a migração de `profiles/loader.py` e diz se ela toca o brilho.
 4. Diz o escritor que a medida sustenta, e o que falta quando ela não alcança.
 
@@ -45,6 +47,7 @@ _LINHA_DO_LOG = re.compile(
     r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?) \[\w+\s*\] (\S+)\s*(.*)$")
 _JANELA = re.compile(r"a janela abriu em (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
 _PARES = re.compile(r"(\w+)=(\S+)")
+_GESTO = re.compile(r"^\[gesto(?: falhou)?\] (\S+) · ([^:→]+)")
 _DIARIO = re.compile(
     r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})[^ ]* \S+ [^ ]+\[\d+\]: (.*)$")
 
@@ -54,6 +57,15 @@ SEGUNDOS_DA_RAJADA = 60.0
 #: gravação que vem logo depois é o primeiro gesto que lê o perfil.
 SEMEADURA = ("perfis_de_jogo_semeados", "perfil_de_jogo_recusado")
 SEGUNDOS_DA_SEMEADURA = 2.0
+#: A linha `profile_salvo` sai DEPOIS da escrita: a cópia que guardou a hora do
+#: arquivo (a `freestyle.json.antes-*`, a da casa) é anterior à linha da gravação
+#: que a escreveu, por milissegundos.
+SEGUNDOS_DO_LOG = 1.0
+#: O trilho «Brilho» da Iluminação: o gesto que grava o brilho de UM controle.
+TRILHO_DO_BRILHO = "04-iluminacao.html · brilho"
+#: O «Salvar» do rodapé (o mesmo nome em toda página) regrava o perfil inteiro;
+#: até 28/09/2026 (a5da60f3d) ele gravava o que estava valendo, e não o disco.
+SALVAR = "salvar"
 
 
 def mascarar(texto: str) -> str:
@@ -174,6 +186,7 @@ class Gravacao(NamedTuple):
     antes: str
     fonte: str
     depois_do_anterior_s: float | None = None
+    gesto: str = "?"
 
 
 def _parse_hora(texto: str) -> dt.datetime:
@@ -191,10 +204,19 @@ def ler_os_logs(logs: list[pathlib.Path]) -> tuple[list[Gravacao], list[dt.datet
             continue
         anterior = ""
         hora_do_anterior: dt.datetime | None = None
+        sem_gesto: list[Gravacao] = []
         for linha in linhas:
             abriu = _JANELA.search(linha)
             if abriu:
+                gravacoes.extend(sem_gesto)
+                sem_gesto = []
                 aberturas.append(_parse_hora(abriu.group(1)))
+                continue
+            gesto = _GESTO.match(linha)
+            if gesto:
+                nome = f"{gesto.group(1)} · {gesto.group(2).strip()}"
+                gravacoes.extend(g._replace(gesto=nome) for g in sem_gesto)
+                sem_gesto = []
                 continue
             casou = _LINHA_DO_LOG.match(linha)
             if not casou:
@@ -206,11 +228,12 @@ def ler_os_logs(logs: list[pathlib.Path]) -> tuple[list[Gravacao], list[dt.datet
                     quando = dt.datetime.fromisoformat(hora)
                     espaco = ((quando - hora_do_anterior).total_seconds()
                               if hora_do_anterior is not None else None)
-                    gravacoes.append(Gravacao(
+                    sem_gesto.append(Gravacao(
                         quando, pares.get("origem", "?"), pares.get("pid", "?"),
                         anterior, "log", espaco))
             anterior = evento
             hora_do_anterior = dt.datetime.fromisoformat(hora)
+        gravacoes.extend(sem_gesto)
     return sorted(gravacoes, key=lambda g: g.hora), sorted(set(aberturas))
 
 
@@ -324,6 +347,18 @@ def sem_repetidas(gravacoes: list[Gravacao]) -> list[Gravacao]:
     return sorted(vistas.values(), key=lambda g: g.hora)
 
 
+def _gestos(gravacoes: list[Gravacao]) -> list[tuple[str, int]]:
+    """Quantas gravações cada gesto fez, do que mais gravou ao que menos."""
+    conta: dict[str, int] = {}
+    for g in gravacoes:
+        conta[g.gesto] = conta.get(g.gesto, 0) + 1
+    return sorted(conta.items(), key=lambda x: (-x[1], x[0]))
+
+
+def _e_salvar(gesto: str) -> bool:
+    return gesto.rsplit(" · ", 1)[-1] == SALVAR
+
+
 def _h(hora: dt.datetime) -> str:
     return hora.strftime("%d/%m %H:%M:%S")
 
@@ -365,7 +400,14 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
                                 for x in outros)
                     + " (os outros controles moveram junto: não é prova de um gesto "
                     "só, nem de que a seção foi reescrita inteira).")
-            nele = [g for g in gravacoes if m.depois_de.hora <= g.hora <= m.ate.hora]
+            folga = dt.timedelta(seconds=SEGUNDOS_DO_LOG)
+            # A cópia do histórico leva a hora em que a gravação SEGUINTE a tirou
+            # do lugar (a linha dela vem logo depois, e é candidata); a que guardou
+            # a hora do arquivo leva a hora da gravação que a ESCREVEU, que não é.
+            do_historico = m.depois_de.rotulo.startswith("histórico")
+            nele = [g for g in gravacoes if g.hora <= m.ate.hora + folga and (
+                g.hora >= m.depois_de.hora if do_historico
+                else g.hora > m.depois_de.hora + folga)]
             grupos = agrupar_por_janela(nele, aberturas)
             if diario_desde is not None and m.ate.hora < diario_desde:
                 saida.append(f"    o diário do serviço só alcança de {_h(diario_desde)} "
@@ -393,27 +435,50 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
                     f"{g.rajada}; origem {'/'.join(g.origens)}; {tipo}")
             origens = {g.origem for g in nele}
             inteiro = _inteiro_em_percentual(m.para)
+            gestos = _gestos(nele)
+            saida.append("    os gestos que gravaram: " + ", ".join(
+                f"{nome} ({n})" for nome, n in gestos) + ".")
+            chegada = [g for g in nele if m.ate.hora <= g.hora <= m.ate.hora + folga]
+            if chegada and not m.ate.rotulo.startswith("histórico"):
+                g = chegada[0]
+                saida.append(
+                    f"    a cópia de chegada tem a hora da gravação de {_h(g.hora)}, "
+                    f"pelo gesto «{g.gesto}»: o arquivo dela é o que esse gesto "
+                    "gravou (o valor pode já estar no perfil antes dele).")
+            monta, grava = trilho
+            onde = (f" (a04_iluminacao.py:{monta} monta, :{grava} grava, no código "
+                    "de hoje)" if monta and grava else "")
+            salvar = sum(n for nome, n in gestos if _e_salvar(nome))
+            no_trilho = sum(n for nome, n in gestos if nome == TRILHO_DO_BRILHO)
             if len(nele) == 1:
                 unica = nele[0]
                 saida.append(
-                    f"    ESCRITOR PROVÁVEL: a única gravação do log neste intervalo, "
-                    f"{_h(unica.hora)} (origem {unica.origem}, pid {unica.pid}). "
-                    "Provável e não provado: o serviço também grava o perfil, e o "
-                    + ("diário dele não alcança esta hora."
+                    f"    A ÚNICA GRAVAÇÃO DO LOG neste intervalo: {_h(unica.hora)} "
+                    f"(origem {unica.origem}, pid {unica.pid}), pelo gesto "
+                    f"«{unica.gesto}». Só é a escritora se esse gesto grava o "
+                    "brilho; o serviço e uma cópia posta no lugar sem o "
+                    "`save_profile` não deixam linha no interface.log, e o "
+                    + ("diário do serviço não alcança esta hora."
                        if diario_desde is not None and m.ate.hora < diario_desde
-                       else "diário dele não mostra outra gravação."))
-            elif origens == {"interface-nova"} and inteiro:
-                monta, grava = trilho
-                onde = (f" (a04_iluminacao.py:{monta} monta, :{grava} grava)"
-                        if monta and grava else "")
+                       else "diário do serviço não mostra outra gravação."))
+            elif origens == {"interface-nova"} and inteiro and no_trilho:
+                candidatos = [f"o trilho «Brilho» da Iluminação{onde}, {no_trilho} "
+                              "gravação(ões)"]
+                if salvar:
+                    candidatos.append(
+                        f"o «Salvar» ({salvar}), que regrava o perfil inteiro: até "
+                        "28/09/2026 (a5da60f3d) com o que estava valendo, e não com o "
+                        "disco (a família da O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01)")
+                outros = len(nele) - no_trilho - salvar
+                if outros:
+                    candidatos.append(f"{outros} gravação(ões) de outros gestos")
                 saida.append(
-                    "    ESCRITOR PROVÁVEL: um gesto de janela da interface (todas as "
-                    "gravações são `interface-nova`) e o valor é percentual inteiro "
-                    f"({_num(m.para)}); o gesto que grava esse campo por controle é o "
-                    f"trilho «Brilho» da Iluminação{onde}.")
+                    "    CANDIDATOS (todas as gravações são `interface-nova` e o valor "
+                    f"é percentual inteiro, {_num(m.para)}): " + "; ".join(candidatos)
+                    + ".")
                 saida.append(f"    NÃO FECHA a hora: são {len(nele)} gravações possíveis "
-                             "e o log não diz o gesto nem o campo; falta a cópia "
-                             "anterior a cada uma e a linha do gesto.")
+                             "e o log não diz o campo nem o controle; falta a cópia "
+                             "anterior a cada uma.")
             else:
                 saida.append(f"    INDETERMINADO entre {len(nele)} gravações "
                              f"(origens: {'/'.join(sorted(origens))}).")
