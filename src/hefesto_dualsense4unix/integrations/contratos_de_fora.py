@@ -24,6 +24,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from hefesto_dualsense4unix.integrations import bluez_dbus
+
 ESPERA_S = 3.0
 
 OK = "ok"
@@ -108,13 +110,24 @@ class Contrato:
 
 
 def _sonda_bluez(amb: Ambiente) -> Resultado:
-    saida = amb.rodar(["busctl", "--system", "tree", "org.bluez"])
-    if isinstance(saida, Falta):
-        return _sem_resposta(saida, "busctl")
-    rc, texto = saida
-    if rc == 0 and "/org/bluez" in texto:
+    # A pergunta é do dono do D-Bus do BlueZ (BLUEZ-UM-DONO-01); aqui só se troca o executor,
+    # para a sonda separar a ferramenta ausente da que não respondeu.
+    faltas: list[Falta] = []
+
+    def executar(argumentos: Sequence[str]) -> str | None:
+        saida = amb.rodar([bluez_dbus.FERRAMENTA, "--system", *argumentos])
+        if isinstance(saida, Falta):
+            faltas.append(saida)
+            return None
+        rc, texto = saida
+        return texto if rc == 0 else None
+
+    caminhos = bluez_dbus.pelo_executor(executar).caminhos()
+    if faltas:
+        return _sem_resposta(faltas[0], bluez_dbus.FERRAMENTA)
+    if caminhos and any("/org/bluez" in caminho for caminho in caminhos):
         return Resultado(OK)
-    return Resultado(QUEBROU, "o nome org.bluez não responde no barramento do sistema")
+    return Resultado(QUEBROU, f"o nome {bluez_dbus.SERVICO} não responde no barramento do sistema")
 
 
 def _sonda_pactl_json(amb: Ambiente) -> Resultado:
@@ -289,7 +302,7 @@ CONTRATOS: tuple[Contrato, ...] = (
         id="bluez-dbus",
         dono="bluez",
         promessa="o BlueZ atende em org.bluez pelo D-Bus do sistema",
-        conferir="busctl --system tree org.bluez",
+        conferir=f"{bluez_dbus.FERRAMENTA} --system tree {bluez_dbus.SERVICO}",
         sonda=_sonda_bluez,
     ),
     Contrato(
