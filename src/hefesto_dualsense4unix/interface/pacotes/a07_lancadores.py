@@ -1145,6 +1145,29 @@ def abrir_o_criar_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     return _resposta(VIGIA.agora(), ctx.state)
 
 
+FRASE_DA_LISTA_OCUPADA = (
+    "A lista de exclusão está sendo gravada agora. Clique de novo em alguns "
+    "segundos — nada foi alterado.")
+FRASE_DA_LISTA_ILEGIVEL = (
+    "O arquivo da lista de exclusão está ilegível — nada foi alterado.")
+FRASE_DO_EXCLUIR_SEM_CAUSA = "Não consegui excluir este jogo."
+FRASE_DO_TIRAR_SEM_CAUSA = "Não consegui tirar o jogo da lista de exclusão."
+
+#: Os dois status em que a lista volta ANTES de qualquer escrita: só neles a frase
+#: promete «nada foi alterado». No `"erro"` a Steam, o Heroic ou o Lutris já
+#: podem ter recebido a escrita, e o desfazer não confere o próprio resultado.
+_RECUSAS_DA_LISTA = {
+    "ocupada": FRASE_DA_LISTA_OCUPADA,
+    "ilegivel": FRASE_DA_LISTA_ILEGIVEL,
+}
+
+
+def _recusa_da_lista(status: str, sem_causa: str) -> str:
+    """A frase da causa que o dono da lista disse; o `"erro"` não chuta uma."""
+    _LOG.warning("lista de exclusão recusou: %s", status)
+    return _RECUSAS_DA_LISTA.get(status, sem_causa)
+
+
 @gesto("07-lancadores.html", desenho.CONFIRMAR_EXCLUSAO, grava="adicionar")
 def confirmar_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Põe o jogo marcado na lista e tira dele, agora, o que o Hefesto pôs no disco."""
@@ -1152,10 +1175,8 @@ def confirmar_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     status = lista_de_exclusao.adicionar(
         jogo.chave, lancador=_ESCOLHA.lancador, nome=jogo.nome,
         janelas=_ESCOLHA.janelas.get(jogo.chave, ()))
-    if status in ("erro", "chave_invalida"):
-        raise RuntimeError(
-            "Não consegui gravar a lista de exclusão — o arquivo está ilegível "
-            "ou a pasta de configuração não aceita escrita.")
+    if status in _RECUSAS_DA_LISTA or status in ("erro", "chave_invalida"):
+        raise RuntimeError(_recusa_da_lista(status, FRASE_DO_EXCLUIR_SEM_CAUSA))
     disco = lista_de_exclusao.tirar_do_disco(jogo.chave)
     _relatar(desenho.CONFIRMAR_EXCLUSAO,
              f"{jogo.nome}: {status}; no disco: {disco}")
@@ -1169,8 +1190,8 @@ def tirar_da_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     """«Tirar da lista»: o jogo volta ao Hefesto."""
     chave = str(o.get("v") or "").strip()
     status = lista_de_exclusao.tirar(chave)
-    if status == "erro":
-        raise RuntimeError("Não consegui tirar o jogo da lista de exclusão.")
+    if status in _RECUSAS_DA_LISTA or status == "erro":
+        raise RuntimeError(_recusa_da_lista(status, FRASE_DO_TIRAR_SEM_CAUSA))
     _relatar(desenho.TIRAR_DA_EXCLUSAO, f"{chave}: {status}")
     VIGIA.esquecer()
     return _resposta(VIGIA.ler(), ctx.state)

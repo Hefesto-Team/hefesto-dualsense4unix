@@ -665,23 +665,48 @@ def cartoes_com_estrada() -> tuple[tuple[str, tuple[str, ...]], ...]:
         for lancador, (app_id, subpasta) in _ONDE.items())
 
 
+class EstradasEscritas(tuple[str, ...]):
+    """O que a carona devolve: os lançadores em que ela escreveu.
+
+    É uma tupla, e quem a lê como sequência (o `list(...)` do diário do serviço)
+    não muda. O `sem_a_trava` separa os dois vazios que a tupla sozinha confunde:
+    «não havia lançador» e «a trava da lista não veio no prazo» (nada se escreveu).
+    """
+
+    sem_a_trava: bool
+
+    def __new__(cls, escritos: Iterable[str] = (), *,
+                sem_a_trava: bool = False) -> EstradasEscritas:
+        eu = super().__new__(cls, escritos)
+        eu.sem_a_trava = sem_a_trava
+        return eu
+
+
 def curar_todas_as_estradas(
     lar: Path | None = None,
     pasta_do_ambiente: Path | None = None,
     raiz_sistema: Path | None = None,
     exclusao: NaExclusao | None = None,
     espera: float | None = None,
-) -> tuple[str, ...]:
-    """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu."""
+) -> EstradasEscritas:
+    """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu.
+
+    `espera=None` é o prazo do SERVIÇO (1 s); a janela passa o dela
+    (`ESPERA_DA_JANELA_S`). Sem a trava no prazo nada se escreve e o retorno traz
+    `sem_a_trava`; o diário diz quem desistiu (`quem=servico` ou `quem=janela`).
+    """
     prazo = ESPERA_DO_SERVICO_S if espera is None else espera
     with trava_da_lista(espera=prazo) as na_mao:
         if not na_mao:
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-                get_logger(__name__).info("carona_esperou_a_janela", espera_s=prazo)
-            return ()
-        return _curar_na_trava(lar, pasta_do_ambiente, raiz_sistema, exclusao)
+                get_logger(__name__).info(
+                    "carona_esperou_a_janela", espera_s=prazo,
+                    quem="servico" if espera is None else "janela")
+            return EstradasEscritas(sem_a_trava=True)
+        return EstradasEscritas(
+            _curar_na_trava(lar, pasta_do_ambiente, raiz_sistema, exclusao))
 
 
 def _curar_na_trava(
@@ -770,9 +795,17 @@ def _por_o_nosso_nas_copias(
     return mudaram
 
 
+FRASE_DA_TRAVA_QUE_NAO_VEIO = (
+    "A lista de exclusão estava sendo gravada agora; os outros lançadores ficaram "
+    "como estavam.")
+
+
 def frase_das_estradas(escritos: Iterable[str]) -> str:
     """O recibo da carona, para o diário: os lançadores que receberam o ambiente."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import _ONDE
+
+    if getattr(escritos, "sem_a_trava", False):
+        return FRASE_DA_TRAVA_QUE_NAO_VEIO
 
     nomes = {k.casefold(): k for k in _ONDE}
     quem = [nomes.get(c, c) for c in escritos]

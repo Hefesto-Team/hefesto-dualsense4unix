@@ -237,13 +237,17 @@ def o_que_a_carona_pula(config_home: Path | None = None) -> cpe.NaExclusao:
 
 
 def anotar_os_ymls(ymls: Iterable[cpe.YmlDoJogo], config_home: Path | None = None) -> str:
-    """A carona escreveu de novo nestes `.yml`: o registro da volta acompanha."""
+    """A carona escreveu de novo nestes `.yml`: o registro da volta acompanha.
+
+    Status: ``"nada"`` | ``"feito"`` | ``"ocupada"`` (a trava não veio no prazo) |
+    ``"erro"``.
+    """
     novos = {y.arquivo: y for y in ymls}
     if not novos:
         return "nada"
     destino = caminho(config_home)
     with cpe.trava_da_lista(destino) as na_mao:
-        return _anotar_na_trava(destino, novos) if na_mao else "erro"
+        return _anotar_na_trava(destino, novos) if na_mao else "ocupada"
 
 
 def _anotar_na_trava(destino: Path, novos: dict[str, cpe.YmlDoJogo]) -> str:
@@ -408,14 +412,21 @@ def adicionar(
     janelas: tuple[str, ...] = (),
     lar: Path | None = None,
 ) -> str:
-    """Exclui o jogo. Status: ``"adicionado"`` | ``"ja_estava"`` |"""
+    """Exclui o jogo.
+
+    Status: ``"adicionado"`` | ``"ja_estava"`` | ``"chave_invalida"`` |
+    ``"ocupada"`` (a trava não veio no prazo da janela) | ``"ilegivel"`` (a lista
+    existe e não se lê) | ``"erro"`` (o resto). ``"ocupada"`` e ``"ilegivel"`` voltam
+    antes de qualquer escrita; no ``"erro"`` a Steam, o Heroic ou o Lutris já podem
+    ter recebido a escrita.
+    """
     alvo = chave.strip()
     if not alvo:
         return "chave_invalida"
     destino = caminho(config_home)
     with cpe.trava_da_lista(destino) as na_mao:
         if not na_mao:
-            return "erro"
+            return "ocupada"
         return _adicionar_na_trava(
             alvo, destino, lancador=lancador, nome=nome, nota=nota,
             escritas_herdadas=escritas_herdadas, janelas=janelas, lar=lar)
@@ -428,7 +439,9 @@ def _adicionar_na_trava(
     """O corpo de :func:`adicionar`, com a trava na mão."""
     try:
         atuais = _ler_cru(destino)
-    except (_ArquivoTortoError, OSError):
+    except _ArquivoTortoError:
+        return "ilegivel"
+    except OSError:
         return "erro"
     if any(e.chave == alvo for e in atuais):
         return "ja_estava"
@@ -488,18 +501,25 @@ def _adicionar_na_trava(
 
 
 def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = None) -> str:
-    """Devolve o jogo ao Hefesto. Status: ``"removido"`` | ``"nao_estava"`` |"""
+    """Devolve o jogo ao Hefesto.
+
+    Status: ``"removido"`` | ``"nao_estava"`` | ``"ocupada"`` (a trava não veio no
+    prazo da janela) | ``"ilegivel"`` (a lista existe e não se lê) | ``"erro"``
+    (o resto). ``"ocupada"`` e ``"ilegivel"`` voltam antes de qualquer escrita.
+    """
     alvo = chave.strip()
     destino = caminho(config_home)
     with cpe.trava_da_lista(destino) as na_mao:
-        return _tirar_na_trava(alvo, destino, lar) if na_mao else "erro"
+        return _tirar_na_trava(alvo, destino, lar) if na_mao else "ocupada"
 
 
 def _tirar_na_trava(alvo: str, destino: Path, lar: Path | None) -> str:
     """O corpo de :func:`tirar`, com a trava na mão (a carona entra nela)."""
     try:
         atuais = _ler_cru(destino)
-    except (_ArquivoTortoError, OSError):
+    except _ArquivoTortoError:
+        return "ilegivel"
+    except OSError:
         return "erro"
     achada = next((e for e in atuais if e.chave == alvo), None)
     if achada is None:

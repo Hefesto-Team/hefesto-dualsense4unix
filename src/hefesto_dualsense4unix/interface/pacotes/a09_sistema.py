@@ -2113,7 +2113,8 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     _limpar_o_painel()
     from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 
-    das_estradas = cpe.frase_das_estradas(cpe.curar_todas_as_estradas())
+    das_estradas = cpe.frase_das_estradas(
+        cpe.curar_todas_as_estradas(espera=cpe.ESPERA_DA_JANELA_S))
     _relatar_o_recibo("aplicar-aos-jogos", das_estradas)
     janela, resultado = slo.with_steam_closed(aplicar)
     if janela == JANELA_COM_JOGO_ABERTO:

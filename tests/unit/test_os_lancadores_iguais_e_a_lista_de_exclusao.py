@@ -152,7 +152,7 @@ def test_arquivo_torto_e_recusado_e_nunca_sobrescrito() -> None:
     destino = lx.caminho()
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
-    assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "erro"
+    assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "ilegivel"
     assert destino.read_text(encoding="utf-8").endswith("ESTRAGADO")
     assert _nas_listas(_APPID)["entrada"] is False, (
         "o arquivo foi recusado e mesmo assim as listas ganharam a linha")

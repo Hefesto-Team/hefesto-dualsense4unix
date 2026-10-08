@@ -239,9 +239,12 @@ def test_a_carona_do_servico_nao_espera_a_janela(
         escritos = cpe.curar_todas_as_estradas(lar=_lar, raiz_sistema=_lar.parent / "sistema")
     gasto = time.monotonic() - antes
     assert escritos == ()
+    assert escritos.sem_a_trava, "a carona não disse que a trava não veio"
     assert not caixa.exists(), "a carona escreveu sem a trava"
     assert gasto < cpe.ESPERA_DO_SERVICO_S + 1.0, f"a carona esperou {gasto:.1f} s"
-    assert [x for x in diario if x.get("event") == "carona_esperou_a_janela"], diario
+    esperou = [x for x in diario if x.get("event") == "carona_esperou_a_janela"]
+    assert esperou, diario
+    assert esperou[0].get("quem") == "servico", esperou
 
 
 _RETOMA_A_TRAVA = """
@@ -303,9 +306,9 @@ def test_quem_desistiu_nao_fica_com_a_trava(tmp_path: Path, _lar: Path) -> None:
 def test_sem_a_trava_no_prazo_o_excluir_nao_escreve(
         _lar: Path, _a_janela_segura: subprocess.Popen[str],
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro lado: sem a trava no prazo da janela, o «Excluir» volta «erro»"""
+    """O outro lado: sem a trava no prazo da janela, o «Excluir» volta «ocupada»"""
     monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
-    assert lx.adicionar("steam_app_9", lancador="heroic", nome="o nove", lar=_lar) == "erro"
+    assert lx.adicionar("steam_app_9", lancador="heroic", nome="o nove", lar=_lar) == "ocupada"
     assert not lx.caminho().exists()
 
 
