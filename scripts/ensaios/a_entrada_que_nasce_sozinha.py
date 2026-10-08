@@ -52,8 +52,10 @@ INTERESSA = ("hefesto", "dualsense", "virtual", "wireless controller")
 
 
 def mascarar(uniq: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados."""
-    return re.sub(r"^(..):(..):(..):..:..:(..)$", r"\1:\2:\3:00:00:\4", uniq)
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(uniq)
 
 
 def nos_de_entrada() -> list[tuple[str, str, str]]:

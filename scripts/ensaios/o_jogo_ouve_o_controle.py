@@ -147,14 +147,16 @@ class Controle:
         return nome_do_canal(self.mac)
 
     def mascarar_no_texto(self, texto: str) -> str:
-        """O texto com os nomes de nó deste controle refeitos a partir da MÁSCARA."""
+        """O texto com os nomes de nó deste controle refeitos da MÁSCARA, e o resto pelo dono."""
+        from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
         for real, falso in (
             (self.no_de_som, nome_do_sink(self.mascarado)),
             (self.no_do_microfone, nome_do_canal(self.mascarado)),
         ):
             if real:
                 texto = texto.replace(real, falso)
-        return texto
+        return pelo_dono(texto, (self.mac,))
 
 
 @dataclass(frozen=True)

@@ -146,17 +146,12 @@ MAGICA_B = (0x44, 0x55, 0x66)
 MAGICA_C = (0x77, 0x88, 0x99)
 MAGICA_D = (0xAA, 0xBB, 0xCC)
 
-_RE_MAC = re.compile(r"\b([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})\b")
-
 
 def mascarar(texto: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados. Nada de MAC real em arquivo."""
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
 
-    def _troca(m: re.Match[str]) -> str:
-        p = m.group(1).split(":")
-        return ":".join([p[0], p[1], p[2], "00", "00", p[5]])
-
-    return _RE_MAC.sub(_troca, texto)
+    return pelo_dono(texto)
 
 
 _BTMON_FECHADO = 'umask 077 && exec btmon -w "$1"'

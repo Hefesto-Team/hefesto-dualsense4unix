@@ -57,11 +57,10 @@ _CLI = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), ".venv", "bin",
 
 
 def mascarar_mac(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`)."""
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 def hardware_version(dir_device: str) -> str:

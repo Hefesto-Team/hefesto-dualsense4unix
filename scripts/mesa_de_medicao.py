@@ -600,14 +600,10 @@ def todos_os_testes() -> list[Teste]:
 
 
 def _mascarar(endereco: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados. Há DOIS portões que a cobram."""
-    partes = endereco.split(":")
-    if len(partes) == 6:
-        partes[3] = partes[4] = "00"
-        return ":".join(partes)
-    if re.fullmatch(r"[0-9A-Fa-f]{12}", endereco):
-        return endereco[:6] + "0000" + endereco[10:]
-    return endereco
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(endereco)
 
 
 #: O DualSense por dentro do `hid_playstation`, no VID/PID que o driver casa.

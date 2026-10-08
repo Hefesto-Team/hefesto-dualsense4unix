@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     DUALSENSE_VENDOR,
     EvdevReader,
 )
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.core.led_control import (
     DA_MAO,
     DA_PALETA,
@@ -6159,10 +6160,14 @@ FOLGA_DEPOIS_DA_TROCA_S: float = 10.0
 
 
 def _endereco_mascarado(uniq: object) -> str | None:
-    """O MAC 12-hex com os octetos 4 e 5 zerados — a máscara da casa, para o diário."""
-    if not isinstance(uniq, str) or len(uniq) != 12:
+    """A chave do controle na máscara da casa, para o diário: o dono (`core/formas_do_endereco`).
+
+    Em qualquer grafia (a colada da chave, a do sysfs), com o virtual sem o hash; o que não
+    é endereço passa pelo mesmo dono, nunca cru. `None` só para o que não é texto.
+    """
+    if not isinstance(uniq, str):
         return None
-    return uniq[:6] + "0000" + uniq[10:]
+    return mascarar(uniq)
 
 
 def _barramento_do_hidraw(path: bytes) -> str | None:

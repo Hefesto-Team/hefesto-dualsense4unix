@@ -19,6 +19,8 @@ from hefesto_dualsense4unix.core.escritor_cru import (
 )
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as mascarar_pelo_dono
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar_endereco
 from hefesto_dualsense4unix.core.gatilho_fim_de_sequencia import (
     RegistroDeGatilhos,
     Tarefa,
@@ -991,11 +993,9 @@ MARCOS_DA_REESCRITA: tuple[int, ...] = (10, 100, 1_000, 10_000, 100_000)
 
 
 def _endereco_mascarado(valor: object) -> str:
-    """O endereço de rádio, em qualquer grafia (com `:` ou sem), com a máscara."""
-    hexa = endereco_normalizado(valor)
-    if len(hexa) != 12:
-        return str(valor)
-    return mascarar(":".join(hexa[i : i + 2] for i in range(0, 12, 2)))
+    """O endereço de rádio, em qualquer grafia, na máscara do dono (com `:`); o resto também."""
+    texto = str(valor)
+    return mascarar_endereco(texto) or mascarar_pelo_dono(texto)
 
 
 def _nascimentos_condenados_entre(

@@ -38,6 +38,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import numero_do_controle
 from hefesto_dualsense4unix.app.mesa import controles_conectados
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
 from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     MODELO_GENERICO,
@@ -229,7 +230,7 @@ class LeitorDeCor:
         """`pendentes` + uma thread por pergunta. É o que o tique chama."""
         for uniq in self.pendentes(entradas):
             threading.Thread(
-                target=self.perguntar, args=(uniq,), name=f"cor-{uniq[-6:]}", daemon=True
+                target=self.perguntar, args=(uniq,), name=mascarar(f"cor-{uniq}"), daemon=True
             ).start()
 
     def perguntar(self, uniq: str) -> Any:

@@ -152,11 +152,10 @@ def _taxa_no_fio(caminho: str, segundos: float) -> float:
 
 
 def _mascarar(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados. Nada de MAC real em arquivo."""
-    p = mac.split(":")
-    if len(p) != 6:
-        return mac
-    return ":".join([p[0], p[1], p[2], "00", "00", p[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return str(pelo_dono(mac))
 
 
 def etapa_estado() -> int:

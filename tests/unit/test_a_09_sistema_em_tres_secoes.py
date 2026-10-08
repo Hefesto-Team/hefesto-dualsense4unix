@@ -242,8 +242,8 @@ def test_cada_frase_curta_tem_o_seu_achado_no_doctor(a09) -> None:
     ("x AA-BB-CC-12-34-FF y", "x AA-BB-CC-00-00-FF y"),
     ("pid=307606 t=19:58:13.683581", "pid=307606 t=19:58:13.683581"),
 ])
-def test_o_diario_mascara_as_tres_formas(a09, cru, mascarado) -> None:
-    """MORDIDA: tire o `_MAC_COLADO` — o `uniq=` colado sai inteiro."""
+def test_o_diario_mascara_cada_forma(a09, cru, mascarado) -> None:
+    """MORDIDA: tire a forma colada do dono (`_COLADA`): o `uniq=` colado sai inteiro."""
     assert a09.mascarar_o_diario(cru) == mascarado
 
 

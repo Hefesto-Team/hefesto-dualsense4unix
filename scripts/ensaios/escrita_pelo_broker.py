@@ -48,11 +48,10 @@ COLUNAS_DO_CADERNO = (
 
 
 def mascarar(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados. Toda saída daqui é versionável."""
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão. Toda saída daqui é versionável."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 def alvos_da_mesa() -> list[Aparelho]:

@@ -8,6 +8,7 @@ import subprocess
 import threading
 from typing import Any
 
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as sem_o_endereco
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_AMOSTRAS_POR_QUADRO,
     MIC_BYTES_POR_AMOSTRA,
@@ -147,7 +148,7 @@ class _Alimentador:
         if self._proc is None or self._proc.stdout is None:
             return False
         self._bomba = threading.Thread(
-            target=self._bombear, name=f"canal-do-mic-{self.uniq}", daemon=True
+            target=self._bombear, name=sem_o_endereco(f"canal-do-mic-{self.uniq}"), daemon=True
         )
         self._bomba.start()
         return True

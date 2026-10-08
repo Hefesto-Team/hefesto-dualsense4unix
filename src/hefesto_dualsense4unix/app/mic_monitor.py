@@ -47,6 +47,7 @@ import threading
 from dataclasses import dataclass, replace
 from typing import Any, ClassVar
 
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (  # noqa: F401
     MARCADORES_DUALSENSE as _MARCADORES_DUALSENSE,
 )
@@ -389,7 +390,7 @@ class _Captura:
         if self.viva():
             return
         self._thread = threading.Thread(
-            target=self._loop, name=f"hefesto-mic-{self.uniq[:8]}", daemon=True
+            target=self._loop, name=mascarar(f"hefesto-mic-{self.uniq}"), daemon=True
         )
         self._thread.start()
 

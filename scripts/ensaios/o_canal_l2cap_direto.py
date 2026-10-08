@@ -113,11 +113,10 @@ COR_AZUL = (0, 0, 255)
 
 
 def mascarar(mac: str) -> str:
-    """Os octetos 4 e 5 zerados — a máscara desta casa, e ela vale na tela também."""
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([partes[0], partes[1], partes[2], "00", "00", partes[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão. Vale na tela também."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 def o_controle_no_radio() -> object | None:

@@ -62,11 +62,10 @@ def bytes_do_mac(mac: str) -> bytes:
 
 
 def mascarar(mac: str) -> str:
-    """`aa:bb:cc:dd:ee:ff` -> `aa:bb:cc:00:00:ff` — a máscara da casa."""
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 def mascarar_no_buffer(dados: bytes, macs: list[bytes]) -> bytes:

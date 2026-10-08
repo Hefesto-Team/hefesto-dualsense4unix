@@ -235,11 +235,10 @@ ANCORA_DO_JOGO = b"SteamAppId="
 
 
 def _mascara(mac: str) -> str:
-    """MAC com os octetos 4 e 5 zerados — a máscara desta casa."""
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 def _chave(caminho: str) -> tuple[int, int] | None:

@@ -5,6 +5,8 @@ import logging
 import os
 import re
 import sys
+import threading
+import traceback
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -71,6 +73,44 @@ class MascaraDoDiario(logging.Filter):
         return True
 
 
+def _escrever_no_stderr(texto: str) -> None:
+    """O texto no stderr de agora, já pelo dono. Nunca levanta (é o último recurso)."""
+    saida = sys.stderr
+    if saida is None:
+        return
+    try:
+        saida.write(mascarar_a_linha(texto))
+        saida.flush()
+    except Exception:
+        pass
+
+
+def _o_fio_que_cai(argumentos: threading.ExceptHookArgs) -> None:
+    """O `Exception in thread <nome>:` do gancho padrão, com o nome e o traceback pelo dono."""
+    if argumentos.exc_type is SystemExit:
+        return
+    fio = argumentos.thread
+    nome = fio.name if fio is not None else str(threading.get_ident())
+    corpo = "".join(
+        traceback.format_exception(
+            argumentos.exc_type, argumentos.exc_value, argumentos.exc_traceback
+        )
+    )
+    _escrever_no_stderr(f"Exception in thread {nome}:\n{corpo}")
+
+
+def _o_processo_que_cai(tipo: type[BaseException], valor: BaseException, rastro: Any) -> None:
+    """O traceback que o interpretador escreve ao morrer, pelo dono."""
+    _escrever_no_stderr("".join(traceback.format_exception(tipo, valor, rastro)))
+
+
+def instalar_os_ganchos_do_fio_que_cai() -> None:
+    """O fio e o processo que caem escrevem pelo dono: o nome do fio e o traceback saem crus
+    pelo stderr, por fora do ``logging``, e o filtro do diário não os vê."""
+    threading.excepthook = _o_fio_que_cai
+    sys.excepthook = _o_processo_que_cai
+
+
 def cadeia_do_diario(fmt: str = "console", stream: Any = None) -> list[Processor]:
     """Os processadores do structlog do produto, na ordem, com o dono no fim."""
     shared_processors: list[Processor] = [
@@ -115,6 +155,10 @@ def configure_logging(
     for manipulador in raiz.handlers:
         if manipulador not in antes:
             manipulador.addFilter(MascaraDoDiario())
+    if any(manipulador not in antes for manipulador in raiz.handlers):
+        # A mesma guarda do filtro: só quando o manipulador é do produto. Sob o pytest ou
+        # dentro de outro programa o raiz já tinha manipulador, e o gancho global não é nosso.
+        instalar_os_ganchos_do_fio_que_cai()
 
     structlog.configure(
         processors=cadeia_do_diario(log_fmt, stream),
@@ -146,6 +190,7 @@ __all__ = [
     "cadeia_do_diario",
     "configure_logging",
     "get_logger",
+    "instalar_os_ganchos_do_fio_que_cai",
     "mascarar_a_linha",
     "reset_for_tests",
 ]

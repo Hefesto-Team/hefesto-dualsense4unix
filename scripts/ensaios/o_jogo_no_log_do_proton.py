@@ -204,13 +204,10 @@ _DESTINOS = (
 
 
 def mascarar(texto: str) -> str:
-    """Zera os octetos 4 e 5 de todo MAC do texto — a máscara desta casa."""
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
 
-    def _troca(m: re.Match[str]) -> str:
-        p = m.group(1).split(":")
-        return ":".join([*p[:3], "00", "00", p[5]])
-
-    return _RX_MAC.sub(_troca, texto)
+    return pelo_dono(texto)
 
 
 @dataclass

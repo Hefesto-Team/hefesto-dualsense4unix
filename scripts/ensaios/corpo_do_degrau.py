@@ -128,9 +128,10 @@ PASSOS: dict[int, tuple[str, tuple[int, int, int]]] = {
     5: ("o mesmo, com len INCOERENTE", (0, 255, 255)),
 }
 def _masc(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados. A saída deste ensaio é versionada."""
-    p = mac.split(":")
-    return mac if len(p) != 6 else ":".join([*p[:3], "00", "00", p[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão. A saída deste ensaio é versionada."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 NOME_DA_COR = {

@@ -308,13 +308,10 @@ def piso_da_enumeracao_hid(
 
 
 def _mascara(uniq: str | None) -> str | None:
-    """O endereço com os octetos 4 e 5 zerados — a máscara desta casa."""
-    if not uniq:
-        return uniq
-    partes = uniq.split(":")
-    if len(partes) != 6:
-        return uniq
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(uniq) if uniq else uniq
 
 
 def _uniq_do_no(caminho: str | None) -> str | None:

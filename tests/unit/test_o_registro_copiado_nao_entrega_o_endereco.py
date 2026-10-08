@@ -566,6 +566,11 @@ _OS_QUE_CHAMAM_O_DONO = {
         "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "mascarar_o_diario"),
     "perfis_web._id_visivel": (
         "src/hefesto_dualsense4unix/app/actions/perfis_web.py", "_id_visivel"),
+    # O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-02: os dois mascaradores do daemon.
+    "backend._endereco_mascarado": (
+        "src/hefesto_dualsense4unix/core/backend_pydualsense.py", "_endereco_mascarado"),
+    "connection._endereco_mascarado": (
+        "src/hefesto_dualsense4unix/daemon/connection.py", "_endereco_mascarado"),
 }
 
 _MODULO_DO_DONO = "hefesto_dualsense4unix.core.formas_do_endereco"
@@ -577,7 +582,8 @@ def _o_corpo_chama_o_dono(fonte: str, nome: str) -> tuple[bool, list[str]]:
     arvore = ast.parse(fonte)
     apelidos: set[str] = set()
     nomes: set[str] = set()
-    for no in arvore.body:
+    # no topo do módulo, ou dentro da função (o estilo dos ensaios, que acertam o `sys.path` antes)
+    for no in ast.walk(arvore):
         if isinstance(no, ast.ImportFrom) and no.module == "hefesto_dualsense4unix.core":
             apelidos |= {a.asname or a.name for a in no.names if a.name == "formas_do_endereco"}
         elif isinstance(no, ast.ImportFrom) and no.module == _MODULO_DO_DONO:
@@ -656,6 +662,11 @@ _A_GRAFIA_DE_CADA_UM: dict[str, Callable[[str], str]] = {
     "o_cabo_em_espera.mascarar": lambda _grafia: "".join(MASCARADO),
     "ar_do_adaptador._mascarar": lambda grafia: dono.mascarar(grafia),
     "perfis_web._id_visivel": lambda _grafia: ":".join(MASCARADO).upper(),
+    "backend._endereco_mascarado": lambda grafia: dono.mascarar(grafia),
+    # o diário do `connection` fala com dois-pontos em toda grafia que é UM endereço
+    "connection._endereco_mascarado": lambda grafia: (
+        dono.mascarar_endereco(grafia) or dono.mascarar(grafia)
+    ),
 }
 
 
@@ -1310,3 +1321,337 @@ def test_o_portao_de_oui_ve_o_despejo_invertido() -> None:
     assert [ordem for _linha, ordem, _oui in portao._ocorrencias_em_texto_nas_duas_ordens(cru)] == [
         "invertida"
     ]
+
+
+# ---------------------------------------------------------------------------
+# O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-02: a máscara não tem cópia.
+# ---------------------------------------------------------------------------
+
+# Régua 2, parte AST: as funções de scripts/ que mascaram chamam o dono.
+_AS_DE_SCRIPTS: dict[str, tuple[str, str]] = {
+    "bancada_do_radio": ("scripts/bancada_do_radio.py", "_mascarar"),
+    "mesa_de_medicao": ("scripts/mesa_de_medicao.py", "_mascarar"),
+    "a_entrada_que_nasce_sozinha": (
+        "scripts/ensaios/a_entrada_que_nasce_sozinha.py", "mascarar"),
+    "byte_no_fio": ("scripts/ensaios/byte_no_fio.py", "mascarar"),
+    "corpo_do_0x32": ("scripts/ensaios/corpo_do_0x32.py", "mascarar_mac"),
+    "corpo_do_degrau": ("scripts/ensaios/corpo_do_degrau.py", "_masc"),
+    "escrita_pelo_broker": ("scripts/ensaios/escrita_pelo_broker.py", "mascarar"),
+    "identidade_nos_dois_transportes": (
+        "scripts/ensaios/identidade_nos_dois_transportes.py", "mascarar"),
+    "imu_no_cabo": ("scripts/ensaios/imu_no_cabo.py", "mascarar"),
+    "o_canal_l2cap_direto": ("scripts/ensaios/o_canal_l2cap_direto.py", "mascarar"),
+    "o_jogo_no_log_do_proton": ("scripts/ensaios/o_jogo_no_log_do_proton.py", "mascarar"),
+    "o_jogo_ouve_o_controle": (
+        "scripts/ensaios/o_jogo_ouve_o_controle.py", "mascarar_no_texto"),
+    "o_jogo_para_de_ver_o_giro": (
+        "scripts/ensaios/o_jogo_para_de_ver_o_giro.py", "_mascara"),
+    "o_jogo_segura_o_nosso_no": ("scripts/ensaios/o_jogo_segura_o_nosso_no.py", "_mascara"),
+    "quem_o_jogo_abre": ("scripts/ensaios/quem_o_jogo_abre.py", "_mascara"),
+    "tres_casos_de_som": ("scripts/ensaios/tres_casos_de_som.py", "_mascarar"),
+}
+
+
+@pytest.mark.parametrize("nome", sorted(_AS_DE_SCRIPTS))
+def test_a_funcao_de_scripts_chama_o_dono_e_nao_tem_conta_propria(nome: str) -> None:
+    caminho, funcao = _AS_DE_SCRIPTS[nome]
+    chama, contas = _o_corpo_chama_o_dono((RAIZ / caminho).read_text(encoding="utf-8"), funcao)
+    assert chama, f"{nome}.{funcao} não chama o dono"
+    assert contas == [], f"{nome}.{funcao} ainda faz conta própria: {contas}"
+
+
+_O_CORPO_DO_DEGRAU_DE_ANTES = textwrap.dedent('''
+    def _masc(mac: str) -> str:
+        p = mac.split(":")
+        return mac if len(p) != 6 else ":".join([*p[:3], "00", "00", p[5]])
+''')
+
+
+def test_mordida_o_masc_de_antes_no_corpo_do_degrau_reprova() -> None:
+    chama, contas = _o_corpo_chama_o_dono(_O_CORPO_DO_DEGRAU_DE_ANTES, "_masc")
+    assert not chama and "split" in contas
+    espaco: dict[str, Any] = {}
+    exec(compile(_O_CORPO_DO_DEGRAU_DE_ANTES, "<o corpo de antes>", "exec"), espaco)
+    assert _doze_do_cru(espaco["_masc"]("".join(OCTETOS)))
+
+
+_OS_QUE_SE_CARREGAM = sorted(n for n in _AS_DE_SCRIPTS if n not in {
+    "mesa_de_medicao", "o_jogo_ouve_o_controle"})
+
+
+@pytest.mark.parametrize("nome", _OS_QUE_SE_CARREGAM)
+def test_a_funcao_de_scripts_mascara_toda_grafia_e_tira_o_hash(
+    nome: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    caminho, funcao = _AS_DE_SCRIPTS[nome]
+    monkeypatch.syspath_prepend(str(RAIZ / "scripts/ensaios"))
+    monkeypatch.syspath_prepend(str(RAIZ / "scripts"))
+    modulo = _carregar(RAIZ / caminho, f"_{nome}_na_regua_02")
+    mascarar = getattr(modulo, funcao)
+    for grafia, valor in _grafias().items():
+        if grafia == "o endereço com a barra":
+            continue
+        saida = mascarar(valor)
+        assert not _doze_do_cru(saida), (nome, grafia, saida)
+        assert _janelas_que_sobram(str(saida)) == [], (nome, grafia, saida)
+    for virtual in _virtuais():
+        assert _hash_que_sobra(str(mascarar(virtual)), virtual) == [], nome
+
+
+# Régua 2, parte varredura: nenhuma linha do produto ou dos scripts com a forma da conta.
+_A_FORMA_DA_CONTA = re.compile(
+    r'"00",\s*"00"|(?<![=!<>])=\s*"00"|\+\s*"0000"\s*\+|:00:00:\{|\\{1,2}1:00:00'
+)
+
+#: Quem tem a forma por ofício, e a razão. A varredura exige que a entrada ainda case.
+_DONOS_DA_FORMA_DA_CONTA = {
+    "src/hefesto_dualsense4unix/core/formas_do_endereco.py": "o dono",
+    "src/hefesto_dualsense4unix/integrations/uhid_gamepad.py":
+        "o piso e o numerado do vpad: o endereço que o produto fabrica, não o que mascara",
+    "scripts/check_o_endereco_em_toda_forma.py":
+        "a régua de forma monta o mascarado para comparar com o achado",
+}
+
+
+def _as_linhas_com_a_forma_da_conta() -> dict[str, list[int]]:
+    achados: dict[str, list[int]] = {}
+    arquivos = subprocess.run(
+        ["git", "ls-files", "src", "scripts"], cwd=RAIZ, capture_output=True, text=True,
+        check=True,
+    ).stdout.split()
+    for arquivo in arquivos:
+        if not arquivo.endswith((".py", ".sh")) or not (RAIZ / arquivo).is_file():
+            continue
+        for numero, linha in enumerate(
+            (RAIZ / arquivo).read_text(encoding="utf-8", errors="replace").splitlines(), 1
+        ):
+            if _A_FORMA_DA_CONTA.search(linha):
+                achados.setdefault(arquivo, []).append(numero)
+    return achados
+
+
+def test_nenhuma_conta_a_mao_fora_do_dono_e_dos_isentos() -> None:
+    achados = _as_linhas_com_a_forma_da_conta()
+    fora = {a: n for a, n in achados.items() if a not in _DONOS_DA_FORMA_DA_CONTA}
+    assert fora == {}, (
+        f"conta de máscara à mão fora do dono: {fora}. Chame "
+        "`core.formas_do_endereco.mascarar`, ou ponha o arquivo na tabela com a razão."
+    )
+    sem_uso = sorted(set(_DONOS_DA_FORMA_DA_CONTA) - set(achados))
+    assert sem_uso == [], f"entrada da tabela que já não casa nada: {sem_uso}"
+
+
+def test_mordida_a_varredura_acha_a_conta_do_corpo_de_antes() -> None:
+    assert _A_FORMA_DA_CONTA.search('return ":".join([*p[:3], "00", "00", p[5]])')
+    assert _A_FORMA_DA_CONTA.search('partes[3] = partes[4] = "00"')
+    assert _A_FORMA_DA_CONTA.search('return endereco[:6] + "0000" + endereco[10:]')
+    assert _A_FORMA_DA_CONTA.search('fora[f"{p[0]}:{p[1]}:{p[2]}:00:00:{p[5]}"] = nome')
+    assert _A_FORMA_DA_CONTA.search(r"sed -E 's/(..)/\1:00:00:\2/g'")
+    assert not _A_FORMA_DA_CONTA.search('return o4 == "00" and o5 == "00"')
+
+
+# Régua 3: o retrato mascara pelo dono, em toda grafia, e sem o Python do produto não escreve.
+_RETRATO = RAIZ / "scripts/retrato_do_estado.sh"
+_LINHA_DO_RETRATO = (
+    "card aa:bb:cc:34:56:7e e aa_bb_cc_34_56_7e e aabbcc34567e e AA-BB-CC-34-56-7E"
+)
+
+
+def _o_retrato_numa_raiz(tmp_path: Path, *, com_o_python: bool) -> Path:
+    """Uma cópia do script numa raiz com `src/` do produto; o `main` fica de fora."""
+    raiz = tmp_path / "raiz"
+    (raiz / "scripts").mkdir(parents=True)
+    (raiz / "src").symlink_to(RAIZ / "src")
+    if com_o_python:
+        (raiz / ".venv").symlink_to(Path(sys.prefix))
+    texto = _RETRATO.read_text(encoding="utf-8")
+    assert texto.rstrip().endswith('main "$@"')
+    copia = raiz / "scripts" / "retrato_do_estado.sh"
+    copia.write_text(texto.rstrip().removesuffix('main "$@"'), encoding="utf-8")
+    return copia
+
+
+def _rodar_o_retrato(copia: Path, corpo: str, tmp_path: Path, *, path: str) -> str:
+    ambiente = {"PATH": path, "HOME": str(tmp_path / "lar"), "LC_ALL": "C.UTF-8"}
+    saida = subprocess.run(
+        ["/bin/bash", "-c", f'source "{copia}"\n{corpo}'], env=ambiente,
+        capture_output=True, text=True, timeout=60, check=False,
+    )
+    return saida.stdout + saida.stderr
+
+
+def test_o_retrato_mascara_em_toda_grafia_pelo_dono(tmp_path: Path) -> None:
+    copia = _o_retrato_numa_raiz(tmp_path, com_o_python=True)
+    saida = _rodar_o_retrato(
+        copia, f"printf '%s\\n' '{_LINHA_DO_RETRATO}' | _mascarar", tmp_path,
+        path=os.environ["PATH"],
+    )
+    assert "34" not in saida and "56" not in saida, saida
+    assert _janelas_que_sobram(saida) == [], saida
+    assert "aa:bb:cc:00:00:7e" in saida and "aabbcc00007e" in saida
+
+
+def test_o_retrato_sem_o_python_do_produto_nao_escreve(tmp_path: Path) -> None:
+    copia = _o_retrato_numa_raiz(tmp_path, com_o_python=False)
+    vazio = tmp_path / "bin-sem-python"
+    vazio.mkdir()
+    for ferramenta in ("dirname", "cat"):
+        achado = subprocess.run(
+            ["/usr/bin/env", "which", ferramenta], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        (vazio / ferramenta).symlink_to(achado)
+    destino = tmp_path / "saida.txt"
+    saida = _rodar_o_retrato(
+        copia, f"_capturar '{destino}' 'prova' echo '{_LINHA_DO_RETRATO}'; echo rc=$?",
+        tmp_path, path=str(vazio),
+    )
+    assert "rc=1" in saida, saida
+    assert not destino.exists(), "o retrato escreveu sem a máscara do dono"
+    assert "34" not in saida.replace("rc=1", ""), "a saída crua foi para a tela"
+
+
+def test_mordida_o_sed_de_antes_deixa_o_quinto_octeto() -> None:
+    sed = (
+        "s/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}):[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:"
+        "([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/\\1:00:00:\\2/g"
+    )
+    de_antes = subprocess.run(
+        ["sed", "-E", sed], input="aa:bb:cc:34:56:7e\n", capture_output=True, text=True,
+        check=True,
+    ).stdout
+    assert de_antes.strip() == ":".join([*OCTETOS[:2], "00", "00", *OCTETOS[4:]])
+    assert "56" in de_antes and de_antes.strip() != ":".join(MASCARADO)
+    assert dono.mascarar("aa:bb:cc:34:56:7e") == ":".join(MASCARADO)
+
+
+# Régua 4: o nome de um fio não fatia o endereço.
+_QUE_LEEM_O_ENDERECO = {"uniq", "mac", "endereco", "nome_curto"}
+
+#: O nome que lê um campo de endereço sem levar o endereço, e a razão.
+_NOME_DE_FIO_SEM_ENDERECO = {
+    ("src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py", "nome_curto"):
+        "a marca HMAC do aparelho (`marca_do_aparelho`): letras, sem octeto do endereço",
+}
+
+
+def _os_fios_que_leem_o_endereco() -> list[tuple[str, int, str, bool]]:
+    """`(arquivo, linha, texto do nome, passa pelo dono ou fatia só o fabricante)`."""
+    achados: list[tuple[str, int, str, bool]] = []
+    arquivos = subprocess.run(
+        ["git", "ls-files", "src"], cwd=RAIZ, capture_output=True, text=True, check=True
+    ).stdout.split()
+    for arquivo in arquivos:
+        if not arquivo.endswith(".py"):
+            continue
+        arvore = ast.parse((RAIZ / arquivo).read_text(encoding="utf-8"))
+        # o dono pode vir com outro nome: o caminho do microfone é cego à palavra «mascarar»
+        nomes_do_dono = {
+            a.asname or a.name
+            for no in ast.walk(arvore)
+            if isinstance(no, ast.ImportFrom) and no.module == _MODULO_DO_DONO
+            for a in no.names
+            if a.name in _API_DO_DONO
+        }
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.Call):
+                continue
+            alvo = no.func
+            nome_da_chamada = alvo.attr if isinstance(alvo, ast.Attribute) else getattr(
+                alvo, "id", "")
+            if nome_da_chamada != "Thread":
+                continue
+            for chave in no.keywords:
+                if chave.arg != "name":
+                    continue
+                valor = chave.value
+                chama_o_dono = (
+                    isinstance(valor, ast.Call)
+                    and isinstance(valor.func, ast.Name)
+                    and valor.func.id in nomes_do_dono
+                )
+                lidos = {
+                    n.attr if isinstance(n, ast.Attribute) else n.id
+                    for n in ast.walk(valor)
+                    if isinstance(n, ast.Attribute | ast.Name)
+                } & _QUE_LEEM_O_ENDERECO
+                if not lidos:
+                    continue
+                fatias = [n for n in ast.walk(valor) if isinstance(n, ast.Subscript)]
+                so_o_fabricante = bool(fatias) and all(
+                    isinstance(f.slice, ast.Slice)
+                    and f.slice.lower is None
+                    and isinstance(f.slice.upper, ast.Constant)
+                    and isinstance(f.slice.upper.value, int)
+                    and f.slice.upper.value <= 6
+                    for f in fatias
+                )
+                isento = any((arquivo, nome) in _NOME_DE_FIO_SEM_ENDERECO for nome in lidos)
+                achados.append(
+                    (arquivo, no.lineno, ast.unparse(valor), chama_o_dono or so_o_fabricante
+                     or isento)
+                )
+    return achados
+
+
+def test_o_nome_de_um_fio_com_endereco_passa_pelo_dono() -> None:
+    achados = _os_fios_que_leem_o_endereco()
+    assert len(achados) >= 5, f"a varredura deixou de ver os fios: {achados}"
+    fora = [(a, n, t) for a, n, t, ok in achados if not ok]
+    assert fora == [], f"fio com o endereço no nome, fora do dono: {fora}"
+
+
+def test_mordida_o_nome_de_antes_do_mesa_viva_reprova(monkeypatch: pytest.MonkeyPatch) -> None:
+    caminho = RAIZ / "src/hefesto_dualsense4unix/interface/mesa_viva.py"
+    de_hoje = caminho.read_text(encoding="utf-8")
+    assert 'name=mascarar(f"cor-{uniq}")' in de_hoje
+    de_antes = de_hoje.replace('name=mascarar(f"cor-{uniq}")', 'name=f"cor-{uniq[-6:]}"')
+    original = Path.read_text
+
+    def lendo(self: Path, *a: Any, **k: Any) -> str:
+        return de_antes if self == caminho else original(self, *a, **k)
+
+    monkeypatch.setattr(Path, "read_text", lendo)
+    reprovados = [t for _a, _n, t, ok in _os_fios_que_leem_o_endereco() if not ok]
+    assert any("[-6:]" in t for t in reprovados), reprovados
+
+
+# Régua 5: o fio que cai escreve pelo dono. Num processo à parte: o gancho é global.
+def _um_processo_com_o_fio_que_cai(tmp_path: Path, corpo: str) -> str:
+    codigo = textwrap.dedent(f"""
+        import sys, threading
+        sys.path.insert(0, {str(RAIZ / "src")!r})
+        from hefesto_dualsense4unix.utils import logging_config
+        {corpo}
+        def cai():
+            raise KeyError("{''.join(OCTETOS)}")
+        fio = threading.Thread(target=cai, name="cor-{''.join(OCTETOS)}")
+        fio.start()
+        fio.join()
+    """)
+    roteiro = tmp_path / "fio.py"
+    roteiro.write_text(codigo, encoding="utf-8")
+    saida = subprocess.run(
+        [sys.executable, "-I", str(roteiro)], capture_output=True, text=True, timeout=60,
+        env={"PATH": os.environ["PATH"], "HOME": str(tmp_path)}, check=False,
+    )
+    return saida.stderr
+
+
+def test_o_fio_que_cai_sai_sem_janela_no_stderr(tmp_path: Path) -> None:
+    saida = _um_processo_com_o_fio_que_cai(tmp_path, "logging_config.configure_logging()")
+    assert "Exception in thread cor-" in saida and "KeyError" in saida, saida
+    assert not _doze_do_cru(saida), saida
+    assert _janelas_que_sobram(saida) == [], saida
+
+
+def test_mordida_sem_o_gancho_o_fio_que_cai_sai_cru(tmp_path: Path) -> None:
+    saida = _um_processo_com_o_fio_que_cai(tmp_path, "pass")
+    assert _doze_do_cru(saida), "o gancho padrão deveria deixar o endereço à mostra"
+
+
+def test_o_gancho_so_entra_com_o_manipulador_do_produto(tmp_path: Path) -> None:
+    saida = _um_processo_com_o_fio_que_cai(
+        tmp_path,
+        "import logging; logging.basicConfig(); logging_config.configure_logging()",
+    )
+    assert _doze_do_cru(saida), "o gancho global entrou num processo que não é do produto"

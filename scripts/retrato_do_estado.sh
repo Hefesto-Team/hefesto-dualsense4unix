@@ -26,15 +26,39 @@
 
 set -uo pipefail
 
+_RAIZ_DO_PRODUTO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# O Python do produto, na ordem do `_python_do_produto` do doctor.sh: a venv ao lado deste
+# script, a do usuário, a do .deb. É ele que traz o dono da máscara.
+_python_do_produto() {
+    local py
+    for py in "${_RAIZ_DO_PRODUTO}/.venv/bin/python" \
+              "${HOME}/.local/share/hefesto-dualsense4unix/venv/bin/python" \
+              "/opt/hefesto-dualsense4unix/venv/bin/python"; do
+        [[ -x "${py}" ]] && { printf '%s\n' "${py}"; return 0; }
+    done
+    command -v python3 2>/dev/null
+}
+
 _mascarar() {
-    # AA:BB:CC:DD:EE:FF -> AA:BB:00:00:EE:FF (máscara da casa)
-    sed -E 's/([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}):[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/\1:00:00:\2/g'
+    # A máscara da casa é do dono (core/formas_do_endereco): qualquer grafia do endereço, o
+    # virtual sem hash. Aqui não há conta própria; sem o Python do produto, nada sai.
+    local py; py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || return 1
+    PYTHONPATH="${_RAIZ_DO_PRODUTO}/src${PYTHONPATH:+:${PYTHONPATH}}" "${py}" -c '
+import sys
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
+sys.stdout.write(mascarar(sys.stdin.read()))'
 }
 
 _capturar() {
     # _capturar <arquivo> <descrição> <comando...>
     local destino="$1" descricao="$2"
     shift 2
+    if [[ -z "$(_python_do_produto)" ]]; then
+        echo "retrato: sem o Python do produto não há máscara, e saída crua não vai ao disco (${destino})" >&2
+        return 1
+    fi
     {
         echo "# ${descricao}"
         echo "# comando: $*"

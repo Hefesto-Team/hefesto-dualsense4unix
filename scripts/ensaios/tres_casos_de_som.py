@@ -152,6 +152,13 @@ def _pactl(*args: str) -> str:
                           timeout=15, env=_AMBIENTE_C).stdout.strip()
 
 
+def _mascarar(mac: str) -> str:
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
+
+
 def sinks_de_controle() -> dict[str, str]:
     """MAC mascarado -> nome do sink, casados pelo dispositivo USB em comum."""
     fora: dict[str, str] = {}
@@ -181,8 +188,7 @@ def sinks_de_controle() -> dict[str, str]:
                 continue
             mu = re.search(r"HID_UNIQ=(\S+)", uevent)
             if mu:
-                p = mu.group(1).split(":")
-                fora[f"{p[0]}:{p[1]}:{p[2]}:00:00:{p[5]}"] = nome
+                fora[_mascarar(mu.group(1))] = nome
     return fora
 
 

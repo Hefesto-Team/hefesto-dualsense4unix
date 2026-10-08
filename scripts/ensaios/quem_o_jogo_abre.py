@@ -26,8 +26,10 @@ VPAD_VIDPID = "0x054c/0x0df2"
 
 
 def _mascara(mac: str) -> str:
-    p = mac.split(":")
-    return mac if len(p) != 6 else ":".join([*p[:3], "00", "00", p[5]])
+    """A máscara da casa, pelo dono (`core/formas_do_endereco`): nenhuma conta à mão."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as pelo_dono
+
+    return pelo_dono(mac)
 
 
 def nos_de_entrada() -> dict[str, str]:
