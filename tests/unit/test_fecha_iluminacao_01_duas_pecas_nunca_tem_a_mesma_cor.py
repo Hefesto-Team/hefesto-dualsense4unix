@@ -278,10 +278,16 @@ class TestAMesaDeQuatroNoProdutoReal:
 class TestAProcedenciaEOQueElaLe:
     """O campo de 08/09/2026 — o resolvedor LÊ, e parou de adivinhar."""
 
-    def test_a_cor_escolhida_para_outro_numero_e_fossil(
+    def test_a_cor_escolhida_para_outro_numero_acompanha_o_controle(
         self, tmp_path: Path
     ) -> None:
-        """A decisão de produto, palavra por palavra: *"quando o número daquele"""
+        """A regra de 08/09 (*"quando o número daquele aparelho muda, a cor gravada é
+        FÓSSIL"*) foi REVOGADA por ela em 29/09/2026, ~21h40 (*«Acompanha o controle»*,
+        `D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`): a cor escolhida para o número 1
+        e hoje no controle do número 2 segue acesa nele. Quem separa a escolha do
+        fóssil é o carimbo, e só o LEGADO (sem carimbo) ainda prova fóssil, pela forma
+        (`test_o_legado_do_disco_ainda_prova_fossil_pela_forma`).
+        """
         roxo = (90, 20, 140)
         _s, ctl, _n = _mesa_de_quatro(
             tmp_path,
@@ -289,8 +295,8 @@ class TestAProcedenciaEOQueElaLe:
             procedencias={UNIQS[1]: 1},
         )
 
-        assert ctl.resolved_led_for(UNIQS[1]) == player_slot_color(2), (
-            "o fóssil declarado ficou aceso")
+        assert ctl.resolved_led_for(UNIQS[1]) == roxo, (
+            "a cor escolhida saiu do controle quando o número mudou")
 
     def test_a_cor_escolhida_para_o_numero_de_hoje_fica(
         self, tmp_path: Path

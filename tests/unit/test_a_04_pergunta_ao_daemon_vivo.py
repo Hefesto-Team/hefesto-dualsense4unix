@@ -250,18 +250,20 @@ def test_o_clique_depois_do_autoswitch_age_so_naquele_controle(mesa_de, n, via, 
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize(("n", "para"), [(2, 3), (3, 1), (4, 1)], ids=["P2", "P3", "P4"])
-def test_sem_a_paleta_o_trilho_manda_a_cor_que_o_daemon_acende(mesa_de, via, n, para, alvo):
-    """O fóssil sem a paleta: o daemon o desloca, e o trilho não o ressuscita."""
+def test_sem_a_paleta_a_cor_de_outro_numero_acompanha_e_o_trilho_a_manda(
+    mesa_de, via, n, para, alvo
+):
+    """A cor carimbada para outro número NÃO é fóssil (D-2909): o trilho manda a do daemon."""
     mesa = mesa_de(alvo, via)
     if n == 4:
         mesa.clicar_no_tom(4, COR_DELE[4])
     mesa.desligar_a_paleta(GLOBAL)
-    mesa.fossilizar(n, escolhida_para=para)
-    fossil = COR_DELE[n]
+    mesa.carimbar_para(n, escolhida_para=para)
+    escolhida = COR_DELE[n]
     acesa = mesa.luz(n)
     tom = mesa.a04._o_tom_que_acende(acesa, BRILHO_GLOBAL)
-    assert tom is not None and tom != fossil, (
-        f"a régua precisa do daemon deslocando o fóssil do P{n}, e ele acende {acesa}")
+    assert tom == escolhida, (
+        f"a régua precisa do daemon acendendo a escolha do P{n}, e ele acende {acesa}")
     mesa.soltar(n, 50)
     assert tuple(mesa.ponte.enviados[-1]["rgb"]) == tom, (
         f"o trilho mandou {mesa.ponte.enviados[-1]['rgb']}, e o daemon acendia {tom}")

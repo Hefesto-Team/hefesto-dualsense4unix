@@ -444,12 +444,18 @@ def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_dela():
 
 
 def test_o_tom_livre_sai_no_brilho_da_peca():
-    """A mesa pura da regra: o fóssil a 60% vai ao primeiro tom livre a 60%."""
+    """A mesa pura da regra: a luz repetida a 60% vai ao primeiro tom livre a 60%.
+
+    Desde 29/09/2026 (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`) a cor carimbada para outro
+    número é escolha e fica; quem sai ao tom livre é a repetida (aqui o legado, no mesmo tom do P1).
+    """
+    from hefesto_dualsense4unix.core.led_control import LEGADO
+
     mesa = [
         PecaDaMesa(uniq="p1", pedida=_na(player_slot_color(1), 0.82),
                    do_numero=None, procedencia=1, numero=1, brilho=0.82),
-        PecaDaMesa(uniq="p3", pedida=_na((0, 255, 255), 0.6), do_numero=None,
-                   procedencia=2, numero=3, brilho=0.6),
+        PecaDaMesa(uniq="p3", pedida=_na(player_slot_color(1), 0.6), do_numero=None,
+                   procedencia=LEGADO, numero=3, brilho=0.6),
     ]
     saida = cores_sem_colisao(mesa)
     assert saida["p1"] == _na(player_slot_color(1), 0.82)

@@ -265,7 +265,32 @@ class Mesa:
                                   "tipo": "button", "evento": "click"}, self.ponte)
 
     def fossilizar(self, n: int, escolhida_para: int, *, reaplicar: bool = True) -> None:
-        """A cor gravada do P<n> passa a dizer que foi escolhida para OUTRO número."""
+        """A cor gravada do P<n> vira o tom automático do número `escolhida_para`, SEM carimbo.
+
+        É o único fóssil que sobrou: desde 29/09/2026
+        (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`) a cor com carimbo, ainda que de
+        outro número, é escolha e acompanha o controle; só o LEGADO (perfil de antes de
+        08/09, sem `lightbar_para_o_numero`) prova fóssil pela forma.
+        """
+        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+        prof = load_profile(NOME)
+        chave = self.a04.chave_do_override(UNIQS[n - 1])
+        dele = prof.controllers[chave]
+        leds = dele.leds.model_copy(update={
+            "lightbar": player_slot_color(escolhida_para), "lightbar_para_o_numero": None})
+        save_profile(prof.model_copy(update={"controllers": {
+            **prof.controllers, chave: dele.model_copy(update={"leds": leds})}}),
+            origem="regua")
+        if reaplicar:
+            self.pm.apply(self._perfil(), origin="manual")
+
+    def carimbar_para(self, n: int, escolhida_para: int, *, reaplicar: bool = True) -> None:
+        """A cor gravada do P<n> passa a dizer que foi escolhida para OUTRO número.
+
+        Desde 29/09/2026 (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`) isso NÃO é fóssil: a
+        escolha acompanha o controle em qualquer número.
+        """
         from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
         prof = load_profile(NOME)

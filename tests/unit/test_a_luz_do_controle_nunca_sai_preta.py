@@ -394,7 +394,11 @@ def test_a_escolha_ao_lado_de_um_plastico_vizinho_fica(plastico: str, escolha: R
 
 
 def test_na_mesa_das_0230_cada_plastico_acende_a_luz_da_prova() -> None:
-    """A prova da sprint na função pura: a mesa das 02:30 com os plásticos lidos."""
+    """A prova da sprint na função pura: a mesa das 02:30 com os plásticos lidos.
+
+    O amarelo do White, escolhido para o número 1, FICA no controle dele: a escolha acompanha o
+    controle desde 29/09/2026 (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`); antes era fóssil.
+    """
     mesa = [
         replace(_automatica(UNIQS[0], 1, "Cosmic Red"), pedida=VERMELHO,
                 procedencia=LEGADO),
@@ -406,7 +410,7 @@ def test_na_mesa_das_0230_cada_plastico_acende_a_luz_da_prova() -> None:
     saida = cores_sem_colisao(mesa)
     assert saida == {
         UNIQS[0]: VERMELHO,
-        UNIQS[1]: _na_escala(BRANCO, 0.08),
+        UNIQS[1]: _na_escala(AMARELO, 0.08),
         UNIQS[2]: LARANJA,
         UNIQS[3]: _na_escala(VERDE_AGUA, 0.99),
     }, saida

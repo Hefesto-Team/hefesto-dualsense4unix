@@ -185,7 +185,13 @@ _APAGADA: RGB = (0, 0, 0)
 
 @dataclass(frozen=True)
 class PecaDaMesa:
-    """Uma peça na mesa da regra de cor única."""
+    """Uma peça na mesa da regra de cor única.
+
+    `procedencia` diz de onde veio a cor pedida. Um inteiro é a cor ESCOLHIDA À MÃO (o
+    número para o qual foi escolhida): ela acompanha o controle em qualquer número
+    (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`; a regra de 08/09, da cor presa ao
+    número, caiu). `numero` é o de hoje, e já não decide o fóssil.
+    """
 
     uniq: str
     pedida: RGB | None
@@ -202,11 +208,18 @@ class PecaDaMesa:
 
 
 def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
-    """A cor desta peça é o número de ontem congelado, e não uma escolha?"""
-    if isinstance(peca.procedencia, bool):
-        return False
+    """A cor desta peça é o número de ontem congelado, e não uma escolha?
+
+    **A procedência inteira NUNCA faz fóssil** — `D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`,
+    dela, 29/09/2026 (~21h40): *«Acompanha o controle»*. A regra de 08/09 dizia que a cor
+    escolhida para um número era fóssil e saía sozinha quando o número do aparelho mudava
+    (`procedencia != numero`); foi ela que apagou o laranja e o verde-água às 02:51 de
+    29/09, quando a mesa se renumerou. O inteiro agora diz só «escolhida à mão», e a
+    escolha de um controle não muda com a mesa. Quem cede é a cor automática do outro
+    (`cores_sem_colisao`). Só o LEGADO, sem carimbo, ainda prova fóssil, pela forma.
+    """
     if isinstance(peca.procedencia, int):
-        return peca.numero is None or peca.procedencia != peca.numero
+        return False
     if peca.procedencia is not LEGADO or peca.pedida is None:
         return False
     proprias = (peca.do_plastico, peca.do_numero)
