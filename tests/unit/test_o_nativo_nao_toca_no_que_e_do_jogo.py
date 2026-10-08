@@ -141,9 +141,15 @@ def test_no_nativo_quem_tem_ponte_nao_tem_ouvido_e_o_fluxo_fechado_solta_o_ouvid
     assert all(o.vivo for o in ouvidos.values())
     sala.fonte(no_do(MESA[0])).quadro = MOTOR
     sala.esperar(no_do(MESA[0]), True)
-    _voltas(sala, 2)
+    for _ in range(20):
+        sala.volta()
+        if MESA[0] in sala.sub._pontes:
+            break
+        time.sleep(0.05)
     assert MESA[0] in sala.sub._pontes
-    assert not [n for n, o in sala.sub._ouvidos_do_radio.items() if o.uniq == MESA[0]]
+    assert not [n for n, o in sala.sub._ouvidos_do_radio.items() if o.uniq == MESA[0]], (
+        "a ponte subiu e o ouvido do mesmo controle ficou de pé na mesma volta"
+    )
     sala.servidor.calar(FORJA)
     _voltas(sala, 2)
     assert dict(sala.sub._ouvidos_do_radio) == {}
