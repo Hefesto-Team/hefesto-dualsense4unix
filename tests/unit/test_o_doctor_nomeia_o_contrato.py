@@ -25,7 +25,7 @@ def test_bluez_que_nao_responde_nomeia_contrato_e_comando(tmp_path):
 
 
 def test_bluez_que_responde_e_ok(tmp_path):
-    amb = _amb(tmp_path, {"busctl": (0, "└─/org/bluez\n")})
+    amb = _amb(tmp_path, {"busctl": (0, "/org/bluez\n/org/bluez/hci0\n")})
     ((tag, _),) = cf.linhas_do_doctor(amb, [c for c in cf.CONTRATOS if c.id == "bluez-dbus"])
     assert tag == "[ OK ]"
 
