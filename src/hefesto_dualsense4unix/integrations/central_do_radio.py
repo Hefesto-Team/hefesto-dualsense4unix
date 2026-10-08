@@ -23,7 +23,7 @@ LER → DECIDIR → APLICAR → CONFERIR
   pela borda do dono): a conexão velha que o aparelho tenha no DESTINO sai
   primeiro (é dele — a R6 revista permite); o aparelho é DESLIGADO e a conexão
   dele em cada ORIGEM é esquecida — pelo ``RemoveDevice`` do dono e pelo verbo
-  ``esquecer`` da ponte root (bond em disco, cache SDP e a LÁPIDE que impede o
+  ``esquecer`` da ponte root (bond em disco, cache da origem e a LÁPIDE que impede o
   autorestore de ressuscitá-lo); só então a janela de pareamento abre SÓ no
   destino, com ``Powered`` ligado se preciso e ``Pairable`` ligado SÓ durante a
   janela; o ``Pair`` é atendido pelo agente próprio (R5), e sem ele pelo piso;
@@ -402,7 +402,7 @@ def esquecer_pela_ponte(
     caminho: str = PONTE_INSTALADA,
     correr: Callable[[PedidoAPonte], tuple[int, str]] | None = None,
 ) -> tuple[bool, str]:
-    """O verbo ``esquecer`` da ponte root: bond em disco, cache SDP e a lápide."""
+    """O verbo ``esquecer`` da ponte root: bond em disco, cache da origem e a lápide."""
     try:
         pedido = pedido_a_ponte("esquecer", adaptador, aparelho, caminho=caminho)
     except ValueError:

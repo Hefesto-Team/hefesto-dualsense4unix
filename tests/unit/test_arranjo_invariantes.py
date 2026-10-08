@@ -173,7 +173,7 @@ def _quem_muda(controles: tuple[motor.Controle, ...],
 
 
 def test_ninguem_troca_de_adaptador_sem_baixar_o_pico() -> None:
-    """Trocar custa desfazer pareamento, apagar o cache SDP e parear de novo.
+    """Trocar custa desfazer o pareamento e parear de novo.
     (D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO)
     """
     equilibrados = (

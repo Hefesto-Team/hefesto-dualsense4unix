@@ -6126,7 +6126,17 @@ EDICOES: tuple[Edicao, ...] = (
 #: edições continuarem aqui. Vazia desde 26/09/2026 e de novo em 03/10 e 05/10: as do
 #: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as dos conjuntos «Conexões 2» e
 #: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    Edicao(
+        antes="     o pareamento, apagar o cache SDP e parear de novo, com o controle na mão.\n",
+        depois="     o pareamento e parear de novo, com o controle na mão.\n",
+        porque=(
+            "08/10/2026, O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01 — o comentário do arranjo dizia que"
+            " trocar de adaptador pede apagar o cache SDP; o RemoveDevice do BlueZ já tira o"
+            " [ServiceRecords] do cache (device.c do BlueZ 5.86), então não há cache a apagar"
+        ),
+    ),
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

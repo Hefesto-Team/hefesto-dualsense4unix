@@ -397,8 +397,8 @@ def etapa_limpar(alvo: str, mac_pedido: str) -> int:
         print(f"  a ponte não está instalada em {ponte} — rode o ./install.sh")
         return 5
     print(f"\n  APAGANDO o bond de {_mascarar(mac)} em {alvo}")
-    print("  (o bond E o cache SDP saem na mesma execução — o cache sozinho")
-    print("   envenena o pareamento seguinte)\n")
+    print("  (o bond e o cache da origem saem na mesma execução; o RemoveDevice")
+    print("   do BlueZ já tira o [ServiceRecords] do cache)\n")
     from hefesto_dualsense4unix.integrations.conexao_zumbi import pedido_a_ponte
 
     try:
