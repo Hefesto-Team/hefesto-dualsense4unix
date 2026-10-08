@@ -143,8 +143,10 @@ partir_pelo_tempo() {  # $1 lista · $2 csv · $3 partes · $4 prefixo · $5 toc
 # `mesa_do_mockup.py`…) entram na varredura como os de `src/`: o arquivo de teste que
 # pede o `_gtk` a um ajudante não diz `WebKit2` e, sem isso, voltaria ao processo da
 # parte, onde o WebKit morre com `rc=139` (A-JANELA-ABERTA-CABE-NA-PARTE-01).
+# O `\.*` depois do `from` é o import RELATIVO (`from .x import y`, `from ..pasta.x import y`):
+# sem ele o teste de WebKit que importasse assim voltava ao processo da parte, com `rc=139`.
 importa_um_de() {  # $1 = os nomes, separados por `|`
-  printf '%s' "^[[:space:]]*(import[[:space:]]+([A-Za-z0-9_]+\.)*($1)\b|from[[:space:]]+([A-Za-z0-9_]+\.)*($1)[[:space:]]+import|from[[:space:]]+[A-Za-z0-9_.]+[[:space:]]+import[[:space:]][^#]*\b($1)\b)"
+  printf '%s' "^[[:space:]]*(import[[:space:]]+([A-Za-z0-9_]+\.)*($1)\b|from[[:space:]]+\.*([A-Za-z0-9_]+\.)*($1)[[:space:]]+import|from[[:space:]]+[A-Za-z0-9_.]+[[:space:]]+import[[:space:]][^#]*\b($1)\b)"
 }
 nomes_de_modulo() { sed -E 's|/__init__\.py$|.py|; s|.*/||; s|\.py$||' | LC_ALL=C sort -u; }
 mapfile -t _ajudantes < <(find tests/unit -maxdepth 1 -name '*.py' ! -name 'test_*' \
