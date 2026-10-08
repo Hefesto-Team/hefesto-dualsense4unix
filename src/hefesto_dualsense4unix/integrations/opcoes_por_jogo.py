@@ -409,9 +409,9 @@ def so_a_conta_logada(
         logada = conta_logada(raiz)
         for vdf in vdfs:
             conta = vdf.parent.parent.name
-            if logada is not None and conta == logada:
-                aceitos.append(vdf)
-            elif logada is None and len(vdfs) == 1:
+            if (logada is not None and conta == logada) or (
+                logada is None and len(vdfs) == 1
+            ):
                 aceitos.append(vdf)
             else:
                 motivo = "conta_logada_desconhecida" if logada is None else "conta_nao_logada"

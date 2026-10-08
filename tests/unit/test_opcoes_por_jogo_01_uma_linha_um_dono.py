@@ -35,7 +35,7 @@ def _vdf_texto(appid: str = APPID) -> str:
 
 
 @pytest.fixture(autouse=True)
-def _a_steam_esta_fechada(monkeypatch: pytest.MonkeyPatch):
+def _a_steam_esta_fechada(monkeypatch: pytest.MonkeyPatch) -> None:
     """Os dois portões de processo, dublados — ver o cabeçalho."""
     monkeypatch.setattr(opj, "steam_running", lambda: False)
     monkeypatch.setattr(opj, "steam_game_running", lambda: False)
