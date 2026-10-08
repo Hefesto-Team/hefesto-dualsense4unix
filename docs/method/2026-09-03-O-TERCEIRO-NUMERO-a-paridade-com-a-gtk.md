@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
 | 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
-| 08-conexoes | 49 | 16 | 26 | 6 | 1 | 0 | 33% |
+| 08-conexoes | 49 | 17 | 26 | 6 | 0 | 0 | 35% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 393 | 130 | 172 | 35 | 53 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 393 | 131 | 172 | 35 | 52 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -666,6 +666,13 @@ dois lados conta as linhas do exame, e o sinal é a decisão escrita no pacote
 (`D-A-CONTAGEM-DO-EXAME-SAIU`). A tabela foi recontada do CSV: `09-sistema`
 vai de `12 IGUAL · 4 SO_HTML · 32%` para `13 · 3 · 34%`, e `TODAS` de
 `130 · 55` para `131 · 54`.
+
+## Nota de verificação — 08/10/2026, o «Acrescentar hub» sai do desenho
+
+`AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01`: o botão sem dono saiu da face
+«Hubs e extensões». A linha do CSV foi de `SO_NO_HTML` para **`IGUAL`**, pelo caminho do escopo do
+microfone: nenhum dos dois lados oferece o gesto. A tabela foi recontada do CSV: `08-conexoes` vai de
+`16 IGUAL · 1 SO_HTML · 33%` para `17 · 0 · 35%`, e `TODAS` de `130 · 53` para `131 · 52`.
 
 ## Nota de verificação — 26/09/2026, o escopo do microfone sai da aba Conexões
 
