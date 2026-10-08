@@ -29,7 +29,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/08-conexoes.html"
 PAGINA = "08-conexoes.html"
 
-#: o endereço que a cena guarda é o de 12 hexa (`a08._mac`)
+#: o endereço que a cena guarda é o de 12 hexa (`nome_do_jogador.mac`)
 ADAPTADORES = {"/org/bluez/hci0": "AABBCC000001", "/org/bluez/hci1": "AABBCC000002",
                "/org/bluez/hci2": "AABBCC000003"}
 #: P1 a P4, endereços da faixa forjada

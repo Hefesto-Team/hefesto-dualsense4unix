@@ -2132,7 +2132,7 @@ from .a02_controles import mudo as _o_mudo_da_aba_02  # noqa: E402
 # de quem faça. O `gesto_de_reconexao` faz, é puro, mascara o endereço e devolve
 #: Vazio desde 08/10/2026 (AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01):
 #: nenhum botão do desenho da 08 fica sem atendente. Os quatro que ficavam saíram do gerador, pela
-#: razão que cada um já trazia, e o que o produto sabe fica como TEXTO, sem botão:
+#: razão que cada um já trazia, e o que o produto sabe fica como marca, sem botão:
 #: * `novo-hub` («Acrescentar hub»): a `LogicaDoMapa` não tem `acrescentar_hub` e a pergunta
 #:   «ligado em que entrada» não tinha onde ser feita; o botão saiu, e a face «Hubs e extensões»
 #:   continua a mostrar o que há;
@@ -5437,6 +5437,17 @@ def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
         _com_dois_pontos(lugar), _com_dois_pontos(aparelho), quem="tela")
 
 
+def _a_luz_acesa(c: dict[str, Any]) -> bool:
+    """A barra de luz do controle como o daemon a publica (``lightbar_on``), para a marca da linha.
+
+    Sem fonte (``lightbar_source`` ausente ou ``"desconhecida"``) a marca fica acesa: o LED pode
+    estar no azul do kernel, e a tela nunca diz «desligada» do que ninguém mediu.
+    """
+    if str(c.get("lightbar_source") or "desconhecida") == "desconhecida":
+        return True
+    return bool(c.get("lightbar_on"))
+
+
 def _a_taxa_da_ponte(da_ponte: dict[tuple[str, str], dict[str, Any]], uniq: str,
                      ponte: object) -> dict[str, Any]:
     """`hz_ponte` e `ponte_cedendo` da ponte que o controle tem de pé (som ou vibração)."""
@@ -5518,7 +5529,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             "mic": (not audio.get("mic_mudo")) if "mic_mudo" in audio
             else bool(c.get("hz_voz")),
             "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
-            "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": True,
+            "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": _a_luz_acesa(c),
             "sinal": c.get("sinal_dbm"),
             "ponte_pausada": pausada.get(_so_hex(uniq), False),
             **_a_taxa_da_ponte(da_ponte, uniq, ponte),

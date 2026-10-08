@@ -19,7 +19,12 @@ from hefesto_dualsense4unix.interface.pacotes import GESTOS, a06_navegacao, a08_
 
 # as fixtures e os ajudantes da régua vizinha: a mesa declarada da seção do rádio
 from tests.unit.test_a_secao_do_radio_transplantada import (  # noqa: F401
+    U1,
+    U2,
+    U3,
     _campos,
+    _ctx,
+    _estado,
     a08,
     mesa,
 )
@@ -59,6 +64,28 @@ def test_a_linha_do_controle_mostra_som_vibracao_e_luz_sem_botao(
         assert 'role="img"' in tag and "aria-label=" in tag and "aria-pressed" not in tag, tag
     assert any("data-ligada" in t for t in vagas), "nenhuma marca acesa: a ponte não aparece"
     assert 'class="vaga som alem"' in sala, "a marca além do limite sumiu"
+
+
+def test_a_marca_da_luz_diz_o_que_o_daemon_publica(request: pytest.FixtureRequest) -> None:
+    """A luz da linha é a do ``lightbar_on`` de cada controle; sem fonte, acesa (nunca «desligada»).
+
+    MORDIDA: devolva ``"luz": True`` fixo em ``_aparelhos_da_cena`` — o P2 de barra apagada volta
+    a aparecer aceso.
+    """
+    estado = _estado()
+    por_uniq = {c["uniq"]: c for c in estado["controllers"]}
+    por_uniq[U2].update(lightbar_on=False, lightbar_source="sysfs")
+    por_uniq[U3].update(lightbar_on=True, lightbar_source="desired")
+    sala = request.getfixturevalue("mesa").campos_do_radio(_ctx(estado))["radio-sala"]
+
+    def marca(uniq: str) -> str:
+        achadas = re.findall(rf'<span class="selo-zero"[^>]*data-alvo="{uniq}"[^>]*>', sala)
+        assert len(achadas) == 1, f"{uniq}: {achadas}"
+        return achadas[0]
+
+    assert "data-ligada" in marca(U1) and ": ligada" in marca(U1), marca(U1)
+    assert "data-ligada" not in marca(U2) and ": desligada" in marca(U2), marca(U2)
+    assert "data-ligada" in marca(U3) and ": ligada" in marca(U3), marca(U3)
 
 
 def test_nenhum_gesto_da_sala_fica_sem_atendente(request: pytest.FixtureRequest) -> None:
