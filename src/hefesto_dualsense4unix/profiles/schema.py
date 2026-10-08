@@ -934,7 +934,7 @@ class ControllerMicOverride(BaseModel):
     ----------------------------------------------
     - ``button_toggles_system``. O interruptor é UM por máquina:
       ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
-      (``daemon/subsystems/hotkey.py:906``) e não consulta ``uniq`` nenhum.
+      (``daemon/subsystems/hotkey.py:957``) e não consulta ``uniq`` nenhum.
       Guardá-lo por peça faria quatro controles gravarem quatro opiniões sobre
       um interruptor só.
 

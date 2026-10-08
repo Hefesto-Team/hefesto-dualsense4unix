@@ -2018,7 +2018,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:210`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:211`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -2140,7 +2140,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o desenho não tem.
 
     **São métodos diferentes, e não é detalhe.** O `mic.set` é o MUDO NO
-    FIRMWARE (camada 3, `ipc_handlers.py:4795`): é o único que apaga a luz
+    FIRMWARE (camada 3, `ipc_handlers.py:4825`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
     ao alto-falante guardando o volume preferido (`ipc_handlers._handle_speaker_set`).

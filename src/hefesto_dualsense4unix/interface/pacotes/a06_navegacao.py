@@ -963,7 +963,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 
 # `input_actions.frase_dos_atalhos_fora_da_lista` termina com *"nada nesta aba
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:560`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:561`, `core/acoes_de_botao.resolver`, que nunca
 # cada linha faz sai de `core/acoes_de_botao`.
 # ---------------------------------------------------------------------------
 
@@ -1060,7 +1060,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:560`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:561`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -2078,7 +2078,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:2032`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:2063`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop no tique em que o gamepad virtual despachou (o
@@ -2093,11 +2093,11 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1151`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1162`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:1541`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1572`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
@@ -2834,7 +2834,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
 
     O QUE ELE FAZ: grava `key_bindings = None` no perfil ATIVO e manda o daemon
     reaplicá-lo. `None` não é "vazio" — o esquema o define como *"herda
-    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1172`), e `{}` é
+    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1268`), e `{}` é
     outra coisa (teclado silencioso). Escrever `{}` aqui devolveria um controle
     MUDO com o botão dizendo "de fábrica".
 
