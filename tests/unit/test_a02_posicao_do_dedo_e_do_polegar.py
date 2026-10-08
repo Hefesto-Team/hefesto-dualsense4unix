@@ -28,7 +28,7 @@ O QUE ESTA RÉGUA MEDE, e o que cada teste MORDE está escrito no teste:
    do mockup, o exemplo que o desenho cravou.
 
 O QUE ELA NÃO MEDE: o WebKit calculando o `left`. Isso é da régua no tempo
-(`test_a_janela_aberta_nao_gasta_o_processador.py`, R5), que abre o piloto.
+(`test_a_janela_aberta_pontinhos_e_contas_nao_gasta_o_processador.py`, R5), que abre o piloto.
 """
 from __future__ import annotations
 
