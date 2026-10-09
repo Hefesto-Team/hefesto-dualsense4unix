@@ -1,0 +1,4 @@
+tests/unit/janela_aberta_comum.py
+tests/unit/test_daemon_reconnect_loop.py
+tests/unit/test_o_comentario_com_dois_pontos_so_vale_em_cima_de_atribuicao.py
+tests/unit/test_o_comentario_nao_termina_no_meio.py

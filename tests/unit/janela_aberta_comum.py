@@ -45,7 +45,7 @@ ATRASO_NA_VOLTA_S = 0.12
 
 
 def _estado_da_fixture(n: int) -> dict[str, Any]:
-    d = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    d: dict[str, Any] = json.loads(FIXTURE.read_text(encoding="utf-8"))
     d["controllers"] = [d["controllers"][i] for i in MESAS[n]]
     return d
 
@@ -269,14 +269,14 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 fora.pinturas.append((time.monotonic(), carga, len(js)))
             original_perguntar(js, cb)
 
-        piloto.ponte.perguntar = perguntar  # type: ignore[method-assign]
+        piloto.ponte.perguntar = perguntar
         tique_original = piloto._tique
 
         def tique() -> bool:
             if fora.acabou:
                 return False
             no_tique[0] = False
-            volta = tique_original()
+            volta: bool = tique_original()
             fora.ticks.append(SimpleNamespace(
                 t=time.monotonic(), escondida=piloto._escondida, pintou=no_tique[0],
                 leituras=estado.leituras, pactl=len(fora.pactl),
@@ -285,7 +285,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 ondas=len(ondas_de_som.o_de_sempre()._desejado)))
             return volta
 
-        piloto._tique = tique  # type: ignore[method-assign]
+        piloto._tique = tique
         mudou_original = piloto._a_janela_mudou
 
         def a_janela_mudou(escondida: bool) -> None:
@@ -293,7 +293,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 fora.avisos.append((time.monotonic(), escondida, estado.leituras))
             mudou_original(escondida)
 
-        piloto._a_janela_mudou = a_janela_mudou  # type: ignore[method-assign]
+        piloto._a_janela_mudou = a_janela_mudou
         comeco = [0.0]
 
         def passo() -> bool:

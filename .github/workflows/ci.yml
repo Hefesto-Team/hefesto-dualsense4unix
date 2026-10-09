@@ -985,6 +985,9 @@ jobs:
         run: pip install -c constraints.txt -e ".[dev]"
       - name: Mypy
         run: mypy src/hefesto_dualsense4unix
+      # 09/10/2026: os arquivos de teste que já passam no mypy (`tests/mypy-limpos.txt`, só cresce).
+      - name: Mypy dos testes limpos
+        run: mypy @tests/mypy-limpos.txt
 
   runtime-smoke:
     runs-on: ubuntu-latest

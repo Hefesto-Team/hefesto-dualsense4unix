@@ -7,25 +7,33 @@ primeira, que muitas vezes acaba em «…a», «…que», «…e» e é seguida 
 `#: \\`TIQUE_MS\\` do produto (ver \\`_teto_da_fase_s\\`). Bater o teto não é pulo: a` não sabe o que
 vem depois, e a casa não tinha régua para isso.
 
-A RÉGUA CONTA, como a catraca: o bloco de comentário que acaba em conectivo (a, o, de, que, e,
-para, com, em…) ou numa citação `arquivo:linha` sem pontuação, seguido de linha que não é
-comentário. `PISO` é a contagem de quando a régua nasceu e SÓ DESCE: subir reprova; descer pede
-baixar o piso na mesma mudança (o ganho fica travado). A dívida dos demais é paga por quem tocar
-o arquivo, e `--original` mostra, para cada candidato, o texto de antes do corte.
+A RÉGUA CONTA o bloco de comentário que acaba em conectivo (a, o, de, que, e, para, com, em…)
+ou numa citação `arquivo:linha` sem pontuação, seguido de linha que não é comentário.
 
 A SEGUNDA PERGUNTA (O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01): o `#:` é o
 comentário de documentação de atributo e só significa algo colado numa atribuição. O bloco com
 `#:` cuja linha seguinte não começa uma atribuição (`NOME = 1`, `FORTE, LEVE = 1, 0`,
 `nome: int = 1`) é resto de corte ou marca errada: acima de `def`, dentro de dicionário literal,
-seguido de linha em branco ou no fim do arquivo. Ela conta com o mesmo fatiamento e tem o seu
-piso, `PISO_DOIS_PONTOS`, que também só desce.
+seguido de linha em branco ou no fim do arquivo.
+
+O PISO É POR ARQUIVO E NÃO GUARDA NÚMERO (A-DIVIDA-DA-BASE-DESCE-POR-ARQUIVO-E-POR-QUEM-TOCA-01):
+para cada arquivo que mudou desde o `merge-base` com `dev` (no CI, `origin/dev`), as duas
+perguntas contam no disco e na base, e o arquivo que SOBE reprova, pelo nome. Descer não pede
+nada: o ganho fica travado porque a base anda com o `dev`. Um número global só descia pelas mãos
+de UMA mudança por vez, e duas sprints que curavam em paralelo brigavam pela mesma linha na
+costura. Sem base alcançável a régua FALHA dizendo «sem base», nunca passa calada.
+
+QUEM TOCA UM ARQUIVO CURA OS DELE (`--de <arquivo...>` lista): termine a frase com o que
+`--original` diz, em até duas linhas, ou apague o fragmento quando o código já diz; nunca devolva
+o parágrafo inteiro que o corte tirou.
 
 Lê só o que o git versiona em `src/`, `tests/` e `scripts/` (`*.py`): a contagem é a mesma em
 toda árvore. Os comentários são os TOKENS do Python, então um `#` dentro de string não conta.
 
-    scripts/check_comentario_cortado.py              conta e compara com os pisos (rc 1 se subiu)
+    scripts/check_comentario_cortado.py              compara cada arquivo mudado com a base
     scripts/check_comentario_cortado.py --lista      um candidato por linha: arquivo:linha texto
                                                      (o `#:` solto vem marcado `[#:]`)
+    scripts/check_comentario_cortado.py --de A B     os candidatos só dos arquivos dados
     scripts/check_comentario_cortado.py --original   o candidato com o texto de `8002c142c~1`
 """
 
@@ -33,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import functools
 import io
 import re
 import subprocess
@@ -43,11 +52,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: a contagem de 08/10/2026 (as integrações 1.7 a 1.10 empilhadas, topo `347e971fe`); só desce
-PISO = 516
-
-#: a contagem de 09/10/2026 do `#:` que não está colado numa atribuição; só desce
-PISO_DOIS_PONTOS = 63
+#: de onde se mede «a mudança de agora», na ordem: o `dev` local e, no CI, o `origin/dev`
+REFS_DA_BASE = ("dev", "origin/dev")
 
 COMMIT_DO_CORTE = "8002c142c"
 PASTAS = ("src", "tests", "scripts")
@@ -76,8 +82,12 @@ def termina_no_meio(ultima_linha: str) -> bool:
     return achou is not None and achou.group(1).lower() in CONECTIVOS
 
 
+@functools.lru_cache(maxsize=4)
 def _comentarios_soltos(texto: str) -> dict[int, str]:
-    """`{linha: comentário}` de cada linha que só tem comentário (os tokens, não o texto cru)."""
+    """`{linha: comentário}` de cada linha que só tem comentário (os tokens, não o texto cru).
+
+    Guardada para o mesmo texto: as duas perguntas leem os mesmos tokens. Não altere o dicionário.
+    """
     soltos: dict[int, str] = {}
     try:
         for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
@@ -172,6 +182,92 @@ def varrer_dois_pontos(raiz: Path = RAIZ) -> list[tuple[str, int, str]]:
     return varrer(raiz, dois_pontos_soltos_do_texto)
 
 
+PERGUNTAS: dict[str, Callable[[str], list[tuple[int, str]]]] = {
+    "cortado": cortados_do_texto,
+    "#: fora de atribuição": dois_pontos_soltos_do_texto,
+}
+
+
+def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *args], cwd=raiz, capture_output=True, text=True, check=False)
+
+
+def base_de_comparacao(raiz: Path = RAIZ) -> str | None:
+    """O `merge-base` do `HEAD` com o primeiro de `REFS_DA_BASE` que existe, ou `None`."""
+    for ref in REFS_DA_BASE:
+        feito = _git(raiz, "merge-base", ref, "HEAD")
+        if feito.returncode == 0 and feito.stdout.strip():
+            return feito.stdout.strip()
+    return None
+
+
+def arquivos_mudados(raiz: Path, base: str) -> dict[str, str | None]:
+    """`{caminho de agora: caminho na base}` dos `*.py` mudados desde `base` (`None`: nasceu)."""
+    feito = _git(raiz, "diff", "--name-status", "-M", "-z", base, "--", *PASTAS)
+    if feito.returncode != 0:
+        raise RuntimeError(f"git diff falhou: {feito.stderr.strip()}")
+    campos = feito.stdout.split("\0")
+    mudados: dict[str, str | None] = {}
+    i = 0
+    while i < len(campos) and campos[i]:
+        estado = campos[i]
+        if estado[0] in "RC":
+            antigo, novo, i = campos[i + 1], campos[i + 2], i + 3
+        else:
+            antigo, novo, i = campos[i + 1], campos[i + 1], i + 2
+        if estado[0] == "D" or not novo.endswith(".py"):
+            continue
+        mudados[novo] = None if estado[0] == "A" else antigo
+    return mudados
+
+
+def subidas(raiz: Path, base: str) -> list[tuple[str, str, int, int]]:
+    """`(arquivo, pergunta, na base, agora)` de cada arquivo em que uma pergunta SOBE."""
+    achados: list[tuple[str, str, int, int]] = []
+    for arquivo, antigo in sorted(arquivos_mudados(raiz, base).items()):
+        caminho = raiz / arquivo
+        if not caminho.is_file():
+            continue
+        agora = caminho.read_text(encoding="utf-8", errors="replace")
+        antes = ""
+        if antigo is not None:
+            feito = _git(raiz, "show", f"{base}:{antigo}")
+            antes = feito.stdout if feito.returncode == 0 else ""
+        for nome, pergunta in PERGUNTAS.items():
+            n_antes, n_agora = len(pergunta(antes)), len(pergunta(agora))
+            if n_agora > n_antes:
+                achados.append((arquivo, nome, n_antes, n_agora))
+    return achados
+
+
+def verificar(raiz: Path = RAIZ) -> tuple[int, list[str]]:
+    """`(rc, linhas)`: rc 1 se algum arquivo mudado subiu, ou se não há base."""
+    base = base_de_comparacao(raiz)
+    if base is None:
+        return 1, [f"FALHA: sem base: nem {' nem '.join(REFS_DA_BASE)} alcançável deste HEAD; "
+                   "sem base a régua não mede (no CI, `fetch-depth: 0`)."]
+    subiu = subidas(raiz, base)
+    linhas = [f"{len(arquivos_mudados(raiz, base))} arquivo(s) .py mudado(s) desde {base[:9]}; "
+              f"{len(subiu)} com mais candidato(s) que na base."]
+    for arquivo, nome, antes, agora in subiu:
+        linhas.append(f"FALHA: {arquivo}: {nome} {antes} -> {agora}. Termine a frase ou apague "
+                      f"o fragmento (`--de {arquivo}` lista, `--original` traz o texto de antes).")
+    return (1 if subiu else 0), linhas
+
+
+def candidatos_de(arquivos: list[str], raiz: Path = RAIZ) -> list[str]:
+    """Os candidatos das duas perguntas nos arquivos dados, um por linha."""
+    linhas: list[str] = []
+    for arquivo in arquivos:
+        caminho = raiz / arquivo
+        if not caminho.is_file() or not arquivo.endswith(".py"):
+            continue
+        texto = caminho.read_text(encoding="utf-8", errors="replace")
+        linhas += [f"{arquivo}:{n} {t.strip()}" for n, t in cortados_do_texto(texto)]
+        linhas += [f"[#:] {arquivo}:{n} {t.strip()}" for n, t in dois_pontos_soltos_do_texto(texto)]
+    return linhas
+
+
 def texto_de_antes_do_corte(arquivo: str, ultima_linha: str, raiz: Path = RAIZ) -> list[str]:
     """O bloco de comentário que começava na linha `ultima_linha` em `8002c142c~1` (ou [])."""
     feito = subprocess.run(
@@ -197,11 +293,14 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__ and __doc__.splitlines()[0])
     ap.add_argument("--lista", action="store_true", help="um candidato por linha")
     ap.add_argument("--original", action="store_true", help="com o texto de antes do corte")
+    ap.add_argument("--de", nargs="+", metavar="ARQUIVO", help="os candidatos destes arquivos")
     args = ap.parse_args(argv)
 
-    achados = varrer()
-    soltos = varrer_dois_pontos()
+    if args.de:
+        print("\n".join(candidatos_de(args.de)) or "nenhum candidato.")
+        return 0
     if args.lista or args.original:
+        achados, soltos = varrer(), varrer_dois_pontos()
         for arquivo, n, texto in achados:
             print(f"{arquivo}:{n} {texto.strip()}")
             if args.original:
@@ -210,23 +309,9 @@ def main(argv: list[str] | None = None) -> int:
         for arquivo, n, texto in soltos:
             print(f"[#:] {arquivo}:{n} {texto.strip()}")
         return 0
-    print(f"{len(achados)} comentário(s) cortado(s); piso {PISO}.")
-    print(f"{len(soltos)} bloco(s) `#:` fora de atribuição; piso {PISO_DOIS_PONTOS}.")
-    rc = 0
-    if len(achados) > PISO:
-        print("FALHA: subiu. Termine a frase (o texto de antes está em --original).", file=sys.stderr)
-        rc = 1
-    elif len(achados) < PISO:
-        print(f"FALHA: desceu; baixe o PISO para {len(achados)} nesta mudança.", file=sys.stderr)
-        rc = 1
-    if len(soltos) > PISO_DOIS_PONTOS:
-        print("FALHA: o `#:` solto subiu. Cole-o na atribuição que ele documenta, ou tire o `:` "
-              "(acima de `def`, o texto vai à docstring).", file=sys.stderr)
-        rc = 1
-    elif len(soltos) < PISO_DOIS_PONTOS:
-        print(f"FALHA: o `#:` solto desceu; baixe o PISO_DOIS_PONTOS para {len(soltos)} nesta "
-              "mudança.", file=sys.stderr)
-        rc = 1
+    rc, linhas = verificar()
+    for linha in linhas:
+        print(linha, file=sys.stderr if linha.startswith("FALHA") else sys.stdout)
     return rc
 
 

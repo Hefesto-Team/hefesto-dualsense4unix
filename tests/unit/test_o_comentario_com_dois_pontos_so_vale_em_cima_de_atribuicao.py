@@ -3,7 +3,7 @@
 O `#:` é o comentário de documentação de atributo. Os cortes de comentário deixaram pedaços de
 blocos `#:` longe da atribuição que documentavam (acima de `def`, dentro de dicionário, seguidos
 de linha em branco). A segunda pergunta de `scripts/check_comentario_cortado.py` conta esses
-blocos, com o mesmo fatiamento da primeira e o piso `PISO_DOIS_PONTOS`, que só desce.
+blocos, com o mesmo fatiamento da primeira e o mesmo piso por arquivo contra o `dev`.
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "check_comentario_cortado.py"
@@ -45,7 +47,10 @@ def test_colado_numa_atribuicao_passa() -> None:
 
 
 def test_acima_de_def_reprova() -> None:
-    texto = "#: um comentário inteiro com a marca errada.\ndef f() -> int:\n    x = 1\n    return x\n"
+    texto = (
+        "#: um comentário inteiro com a marca errada.\n"
+        "def f() -> int:\n    x = 1\n    return x\n"
+    )
     assert _linhas(texto) == [1]
 
 
@@ -75,25 +80,43 @@ def test_os_cinco_arquivos_da_sprint_estao_limpos() -> None:
     assert achados == [], "\n".join(f"{a}:{n} {t}" for a, n, t in achados)
 
 
-def test_a_arvore_de_verdade_nao_passa_do_piso() -> None:
+def test_a_varredura_da_arvore_de_verdade_nao_esta_cega() -> None:
     achados = cortado.varrer_dois_pontos(RAIZ)
     assert len(achados) >= 20, (
         f"a varredura achou só {len(achados)}: a régua ficou cega (git ls-files vazio?)"
     )
-    assert len(achados) <= cortado.PISO_DOIS_PONTOS, (
-        f"{len(achados)} bloco(s) `#:` fora de atribuição, piso {cortado.PISO_DOIS_PONTOS}: "
-        "cole o `#:` na atribuição ou tire o `:` de quem subiu:\n  "
-        + "\n  ".join(f"{a}:{n} {t.strip()}" for a, n, t in achados[-10:])
-    )
-    assert len(achados) == cortado.PISO_DOIS_PONTOS, (
-        f"a contagem desceu para {len(achados)}: baixe o PISO_DOIS_PONTOS de "
-        f"{cortado.PISO_DOIS_PONTOS} para {len(achados)} em scripts/check_comentario_cortado.py"
-    )
 
 
-def test_o_script_diz_as_duas_contagens() -> None:
-    feito = subprocess.run(
-        [sys.executable, str(SCRIPT)], cwd=RAIZ, capture_output=True, text=True, check=False
+def test_o_piso_por_arquivo_vale_tambem_para_o_dois_pontos(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O `#:` solto que nasce num arquivo do ramo reprova pelo nome, como o cortado."""
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false",
+             "-c", "user.name=t", "-c", "user.email=t@exemplo.invalid", *args],
+            cwd=tmp_path, check=True, capture_output=True,
+        )
+
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "x.py").write_text("#: colado.\nNOME = 1\n", encoding="utf-8")
+    git("init", "-q", "-b", "dev")
+    git("add", ".")
+    git("commit", "-q", "-m", "base")
+    git("checkout", "-q", "-b", "ramo")
+    (tmp_path / "src" / "x.py").write_text(
+        "#: colado.\nNOME = 1\n\n#: solto acima de def.\ndef f() -> None:\n    pass\n",
+        encoding="utf-8",
     )
-    assert feito.returncode == 0, feito.stdout + feito.stderr
-    assert f"piso {cortado.PISO_DOIS_PONTOS}." in feito.stdout
+    git("commit", "-q", "-am", "ramo")
+    rc, linhas = cortado.verificar(tmp_path)
+    assert rc == 1, linhas
+    assert any("src/x.py: #: fora de atribuição 0 -> 1" in linha for linha in linhas), linhas
+
+
+def test_o_de_marca_o_dois_pontos_solto(tmp_path: Path) -> None:
+    (tmp_path / "x.py").write_text("#: solto.\n\nNOME = 1\n", encoding="utf-8")
+    assert cortado.candidatos_de(["x.py"], tmp_path) == ["[#:] x.py:1 #: solto."]

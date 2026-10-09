@@ -5,6 +5,7 @@ import asyncio
 import threading
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
@@ -44,7 +45,9 @@ def _controle(*, plugado: bool) -> FakeController:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("passo_lento_s", [0.0, 0.3])
-async def test_run_inicia_ipc_antes_de_conectar(monkeypatch, passo_lento_s: float) -> None:
+async def test_run_inicia_ipc_antes_de_conectar(
+    monkeypatch: pytest.MonkeyPatch, passo_lento_s: float
+) -> None:
     """Subsystems sobem mesmo quando o controle não conecta — `_start_ipc` é chamado ANTES do
     primeiro `connect()`. A espera é pela condição, e o `passo_lento_s` põe à mão o que a carga
     da máquina faz: um passo do `run()` antes do IPC que demora o dobro do prazo de hoje."""
@@ -104,7 +107,7 @@ async def test_run_inicia_ipc_antes_de_conectar(monkeypatch, passo_lento_s: floa
 
 @pytest.mark.asyncio
 async def test_reconnect_loop_publica_controller_connected_em_transicao(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """reconnect_loop emite CONTROLLER_CONNECTED quando hardware aparece"""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
@@ -195,7 +198,7 @@ def _intercepta_upgrade(
 
 @pytest.mark.asyncio
 async def test_hotplug_tardio_promove_o_vpad_exatamente_uma_vez(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """VPAD-01: a transição offline→online do probe chama a promoção 1x — e só"""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
@@ -242,7 +245,7 @@ async def test_hotplug_tardio_promove_o_vpad_exatamente_uma_vez(
 
 @pytest.mark.asyncio
 async def test_conectado_no_boot_so_o_gancho_do_boot_promove(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Já conectado no boot: quem promove é o gancho do lifecycle (síncrono,"""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
@@ -274,7 +277,9 @@ async def test_conectado_no_boot_so_o_gancho_do_boot_promove(
 
 
 @pytest.mark.asyncio
-async def test_offline_continuo_nao_promove(tmp_path, monkeypatch) -> None:
+async def test_offline_continuo_nao_promove(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Sem transição não há promoção: controle nunca aparece, vpad em paz."""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     import hefesto_dualsense4unix.daemon.connection as conn_mod
@@ -299,7 +304,9 @@ async def test_offline_continuo_nao_promove(tmp_path, monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_reconnect_loop_respeita_stop_event(tmp_path, monkeypatch) -> None:
+async def test_reconnect_loop_respeita_stop_event(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """_stop_event sinalizado durante o sleep do probe finaliza a task em ≤500ms."""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
 

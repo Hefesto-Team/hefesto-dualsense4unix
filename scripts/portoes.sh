@@ -71,8 +71,8 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
 # O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
 # isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
-# enquanto a tabela tinha o dobro. Medida em 07/10/2026: **51 `rapido` e 19
-# `completo`** (70 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# enquanto a tabela tinha o dobro. Medida em 09/10/2026: **53 `rapido` e 20
+# `completo`** (73 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
 # aqui conta de novo, e o comando é o dono da resposta:
 #   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
@@ -397,6 +397,14 @@ completo|anonimato|bash|scripts/check_anonymity.sh
 completo|autoria-arvore|py|scripts/check_autoria.py arvore|@sempre
 completo|acentuacao|py|scripts/validar-acentuacao.py --all
 completo|mypy|bin|mypy src/hefesto_dualsense4unix|src/** pyproject.toml
+# OS TESTES QUE JÁ PASSAM NO MYPY NÃO VOLTAM A SUJAR (09/10/2026,
+# A-DIVIDA-DA-BASE-DESCE-POR-ARQUIVO-E-POR-QUEM-TOCA-01): `mypy tests/` inteiro dá milhares de
+# erros e não cabe em portão nenhum; `tests/mypy-limpos.txt` lista, um caminho por linha e sem
+# comentário (o `@` do mypy lê cada linha como argumento), os arquivos de teste que passam. A lista
+# só CRESCE: quem limpa um arquivo de teste o põe ali, e o teste novo entra no nascimento. O que vem
+# de `hefesto_dualsense4unix` chega como `Any` (o pacote não tem `py.typed`), aqui e no CI.
+# Custo medido com o cache frio: 4,4 s com quatro arquivos.
+completo|mypy-testes|bin|mypy @tests/mypy-limpos.txt|tests/** src/** pyproject.toml
 completo|coleta-sem-gtk|py|scripts/check_a_coleta_sem_gtk.py
 suite|suite|bin|pytest -q
 TABELA
