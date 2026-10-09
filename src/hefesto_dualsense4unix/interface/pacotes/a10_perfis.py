@@ -1948,6 +1948,13 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     inocente. É o único caminho pelo qual a lei de produto cairia depois de o motor
     dizer que está tudo distinto.
 
+    A RECEITA INVISÍVEL (08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01)
+    entra pelos motores que já existem: `ajustes_do_gatilho` nos parâmetros do
+    modo, e o `modo` na seção `mode` do perfil (o Point-and-click liga a
+    Navegação). O estilo sem modo só tira a Navegação que o Point-and-click
+    deixou, e nunca escolhe máscara nem caminho: vale em todo modo. O resto da
+    receita (`estilos_de_jogo.SO_DADO`) não tem motor, e não se escreve aqui.
+
     `LedsConfig` COM DOIS CAMPOS SÓ, e isso é contrato: `_controllers_to_specs`
     lê `model_fields_set` (`profiles/manager.py`), então escrever `lightbar` e
     `lightbar_brightness` deixa `player_leds` e `auto_player_colors` SEM
@@ -1959,6 +1966,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
         LedsConfig,
+        ProfileModeConfig,
         RumbleConfig,
         TriggerConfig,
         TriggersConfig,
@@ -1966,6 +1974,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     )
 
     mudanca: dict[str, Any] = {}
+    receita = estilo.receita
+    ajustes = dict(receita.ajustes_do_gatilho) if receita else {}
     if estilo.gatilho:
         spec = specs.get_spec(estilo.gatilho)
         if spec is None:  # pragma: no cover — o motor só nomeia modo do produto
@@ -1974,13 +1984,17 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
                 f"que não é um dos modos do produto. Nada foi salvo.")
         lado = TriggerConfig(
             mode=estilo.gatilho,
-            params=list(specs.preset_to_positional_params(spec, {})))
+            params=list(specs.preset_to_positional_params(spec, ajustes)))
         mudanca["triggers"] = TriggersConfig(left=lado, right=lado)
     if estilo.vibracao:
         # CONSTRUÍDO, e não `model_copy`: o `custom_mult` do perfil antigo é
         mudanca["rumble"] = RumbleConfig(
             passthrough=bool(getattr(prof.rumble, "passthrough", True)),
             policy=estilo.vibracao)
+    if receita and receita.modo:
+        mudanca["mode"] = ProfileModeConfig(kind=receita.modo)
+    elif getattr(prof.mode, "kind", None) == "desktop":
+        mudanca["mode"] = None
 
     atuais = dict(prof.controllers or {})
     lugares: dict[int, str] = {}
@@ -2082,8 +2096,9 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     _gravar(novo, ctx, p)
     luz = (f"e a luz de {pintados} controle{'s' if pintados != 1 else ''}"
            if pintados else "e nenhum controle ligado para acender")
+    modo = ", e o modo Navegação" if estilo.receita and estilo.receita.modo else ""
     return _dizer(
-        f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}.")
+        f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}{modo}.")
 
 
 @gesto("10-perfis.html", "editor.jogo", grava="_gravar")

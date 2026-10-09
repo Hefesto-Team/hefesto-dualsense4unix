@@ -39,3 +39,5 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **08/10/2026** — na coluna «Funciona em», o Navegação e o Universal dizem «Só quando eu escolher», e o campo
   «Funciona em:» do editor não oferece mais «Qualquer jogo» (sprint SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01, opção a).
   Até publicar, a página do produto ainda oferece a opção, e o gesto a recusa sem gravar.
+- **08/10/2026** — o «Estilo de Jogo» ganha «Arco», e a dica conta catorze de fábrica
+  (sprint O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01). Até publicar, a página do produto não oferece o Arco.
