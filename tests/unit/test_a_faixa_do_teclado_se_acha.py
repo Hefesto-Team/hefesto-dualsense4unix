@@ -1,0 +1,152 @@
+"""A-FAIXA-DO-TECLADO-SE-ACHA-01: a procura da faixa diz a causa medida, não um «não achei» só.
+
+Antes da cura (medido em 09/10/2026 sobre os mesmos pares): o par de mapas de um receptor que
+salta de canal, o par sem mapa AFH e o par em que nada mudou davam TODOS o mesmo passo ``nada``,
+«Não achei a faixa dele» (na tela, a «Faixa não encontrada · Tentar de novo» que ela viu). Agora a
+procura (``receptor_sem_fio.classificar`` e ``Descoberta``) responde a faixa, o salto, a falta de
+mapa ou o mapa parado, sobre os pares guardados em ``tests/fixtures/a_faixa_do_receptor/``
+(sintéticos até a bancada gravar os do teclado dela com ``scripts/ensaios/a_faixa_do_receptor.py``).
+
+MORDIDAS (arrancar, ver reprovar, devolver):
+
+1. ``classificar`` sem a pergunta do salto: o par ``salta`` volta ao «Não achei» (test_1).
+2. ``classificar`` sem a pergunta do mapa: o par ``sem-mapa`` vira «mapa parado» (test_2).
+3. A medida «com ele» sem a espera até o mapa mudar: o par ``devagar`` com 120 s não acha (test_5).
+4. O «com» sem a soma das leituras: o par ``salta`` com 120 s não junta os oito canais (test_6).
+5. A cura inteira arrancada (a ``Descoberta`` volta a fechar só pela ``banda_por_eliminacao``): o
+   par ``salta`` fecha sem causa, e a frase é o «Não achei a faixa dele» de antes (test_1).
+"""
+from __future__ import annotations
+
+import importlib.util
+import json
+import re
+import sys
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.integrations import receptor_sem_fio as rx
+
+RAIZ = Path(__file__).resolve().parents[2]
+FIXTURES = RAIZ / "tests" / "fixtures" / "a_faixa_do_receptor"
+
+
+def _carregar() -> ModuleType:
+    caminho = RAIZ / "scripts" / "ensaios" / "a_faixa_do_receptor.py"
+    spec = importlib.util.spec_from_file_location("_a_faixa_do_receptor", caminho)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = modulo
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+ensaio = _carregar()
+
+
+def _fim(nome: str, **trocas: float | None) -> Any:
+    return ensaio.reproduzir(ensaio.ler_sessao(FIXTURES / f"{nome}.json"), **trocas)
+
+
+# --------------------------------------------------------------- a resposta de cada causa
+
+
+def test_1_o_receptor_que_salta_de_canal_e_resposta_e_nao_nao_achei() -> None:
+    fim = _fim("salta")
+    assert (fim.passo, fim.banda, fim.causa) == (rx.PASSO_NADA, None, rx.CAUSA_SALTA)
+    assert fim.frase == rx.FRASE_DA_CAUSA[rx.CAUSA_SALTA] == "Salta de canal: passa pela faixa toda"
+    assert fim.frase != rx.FRASE_DO_PASSO[rx.PASSO_NADA], "o mesmo par dava «não achei»"
+    assert len(fim.canais) >= rx.CANAIS_QUE_PROVAM_O_SALTO
+    assert all(b - a > 1 for a, b in zip(fim.canais, fim.canais[1:], strict=False)), "espalhados"
+
+
+def test_2_sem_mapa_afh_nao_ha_o_que_medir_e_a_frase_diz_o_passo_que_falta() -> None:
+    fim = _fim("sem-mapa")
+    assert (fim.passo, fim.causa, fim.canais) == (rx.PASSO_NADA, rx.CAUSA_SEM_MAPA, ())
+    assert "aparelho no Bluetooth" in fim.frase
+    assert rx.classificar({"hci0": None, "hci1": (1, 2)}, {"hci0": (5, 6, 7), "hci1": None}) == (
+        rx.Resposta(None, rx.CAUSA_SEM_MAPA, ())), "adaptador que não mediu nos dois não conta"
+
+
+def test_3_o_canal_solto_e_o_mapa_parado() -> None:
+    fim = _fim("parado")
+    assert (fim.passo, fim.causa, fim.canais) == (rx.PASSO_NADA, rx.CAUSA_SEM_MUDANCA, (40,))
+    assert fim.frase == rx.FRASE_DA_CAUSA[rx.CAUSA_SEM_MUDANCA]
+
+
+def test_4_a_faixa_fixa_continua_achada_e_guardada_como_antes() -> None:
+    fim = _fim("banda")
+    assert (fim.passo, fim.banda, fim.causa) == (rx.PASSO_ACHOU, (18, 35), "")
+    assert rx.banda_por_eliminacao({"L1": ()}, {"L1": (5, 40)}) is None, "a régua velha vale"
+
+
+def test_5_o_afh_lento_acha_com_a_espera_e_a_espera_nasce_desligada() -> None:
+    assert rx.ESPERA_ATE_O_MAPA_MUDAR_S == rx.ESPERA_DA_MEDIDA_S, "até a bancada, uma leitura só"
+    assert _fim("devagar").causa == rx.CAUSA_SEM_MUDANCA
+    fim = _fim("devagar", ate=120)
+    assert (fim.passo, fim.banda) == (rx.PASSO_ACHOU, (40, 53))
+
+
+def test_6_o_com_soma_as_leituras_da_espera() -> None:
+    """Quem salta deixa canais diferentes a cada leitura; a espera junta todos."""
+    assert len(_fim("salta").canais) == 7
+    assert len(_fim("salta", ate=120, salto=8).canais) == 8
+
+
+def test_7_os_interruptores_trocam_o_numero_sem_editar_codigo() -> None:
+    assert _fim("salta", salto=20).causa == rx.CAUSA_SEM_MUDANCA
+    assert _fim("parado", minimos=1).banda == (40, 41)
+    assert rx.CANAIS_MINIMOS_DA_BANDA == 3 and rx.CANAIS_QUE_PROVAM_O_SALTO == 6
+    assert rx.ESPERA_DA_MEDIDA_S == 25.0, "o ensaio devolve as constantes no fim"
+
+
+def test_8_o_gesto_que_recomeca_esquece_a_causa_velha() -> None:
+    d = rx.Descoberta()
+    d.iniciar("1234:5678", 0.0)
+    d.passo, d.causa, d.canais = rx.PASSO_NADA, rx.CAUSA_SALTA, (3, 11)
+    d.iniciar("1234:5678", 1.0)
+    assert d.causa == "" and not d.canais and rx.frase_do_fim(d) == ""
+
+
+# --------------------------------------------------------------- o ensaio
+
+
+def test_9_o_ensaio_recusa_sem_medir_e_grava_sem_endereco(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    saida = tmp_path / "mapas.jsonl"
+    assert ensaio.main(["gravar", "--momento", "sem", "--saida", str(saida)]) == 2
+    assert not saida.exists() and ensaio.RECUSA_SEM_MEDIR in capsys.readouterr().out
+
+    class _Conexao:
+        def __init__(self, handle: int, tipo: int, endereco: str) -> None:
+            self.handle, self.tipo, self.endereco = handle, tipo, endereco
+
+    class _Mapa:
+        def __init__(self, evitados: tuple[int, ...]) -> None:
+            self.evitados = evitados
+
+    from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
+
+    conexoes = {0: [_Conexao(1, ar.TIPO_ACL, "AA:BB:CC:00:00:01"),
+                    _Conexao(2, ar.TIPO_ACL, "AA:BB:CC:00:00:02")], 1: []}
+    mapas = {1: _Mapa((20, 21, 22)), 2: _Mapa((21, 22, 40))}
+
+    def ler() -> object:
+        return ensaio.mapas_de_agora(lambda: [0, 1], lambda hci: conexoes[hci],
+                                     lambda _hci, handle: mapas[handle])
+
+    assert ensaio.main(["gravar", "--momento", "com", "--saida", str(saida), "--medir",
+                        "--segundos", "0.02", "--cada", "0.01"], ler=ler) == 0
+    texto = saida.read_text(encoding="utf-8")
+    assert not re.search(r"([0-9a-f]{2}[:_-]?){5}[0-9a-f]{2}", texto, re.I), "endereço gravado"
+    linhas = [json.loads(li) for li in texto.splitlines()]
+    assert [li["t"] for li in linhas] == [0, 0.01, 0.02]
+    assert linhas[0]["adaptadores"] == {"hci0": [21, 22], "hci1": None}
+
+
+def test_10_o_ensaio_classifica_numa_linha_curta(capsys: pytest.CaptureFixture[str]) -> None:
+    assert ensaio.main(["classificar", str(FIXTURES / "salta.json")]) == 0
+    assert capsys.readouterr().out.strip().startswith(f"nada: {rx.FRASE_DA_CAUSA[rx.CAUSA_SALTA]}")

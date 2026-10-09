@@ -391,9 +391,26 @@ CANAIS_MINIMOS_DA_BANDA = 3
 ESPERA_DO_GESTO_S = 300.0
 CANAIS_DA_REGUA = 79
 
+#: A-FAIXA-DO-TECLADO-SE-ACHA-01 (09/10/2026): o «não achei» juntava três medidas diferentes, e a
+#: procura passa a dizer qual delas viu. Cada número abaixo é provisório até a bancada, e o
+#: ensaio ``scripts/ensaios/a_faixa_do_receptor.py`` troca cada um sem editar código.
+#: Canais novos espalhados, sem sequência de :data:`CANAIS_MINIMOS_DA_BANDA`, a partir dos quais
+#: o receptor SALTA de canal (uma faixa espalhada é resposta). Abaixo disso é o AFH mexendo sozinho.
+CANAIS_QUE_PROVAM_O_SALTO = 6
+#: até quando a medida «com ele» continua lendo o mapa se nada mudou ainda (o AFH lento). Igual a
+#: :data:`ESPERA_DA_MEDIDA_S` = uma leitura só, como antes; a bancada diz se 120 s acham mais.
+ESPERA_ATE_O_MAPA_MUDAR_S = ESPERA_DA_MEDIDA_S
+#: a causa do «não achei», na ordem em que se pergunta.
+CAUSA_SEM_MAPA = "sem-mapa"
+CAUSA_SALTA = "salta"
+CAUSA_SEM_MUDANCA = "sem-mudanca"
+
 
 def banda_por_eliminacao(
-    sem: Mapping[str, Iterable[int] | None], com: Mapping[str, Iterable[int] | None]
+    sem: Mapping[str, Iterable[int] | None],
+    com: Mapping[str, Iterable[int] | None],
+    *,
+    minimos: int | None = None,
 ) -> tuple[int, int] | None:
     """``(ini, fim)`` dos canais que os adaptadores passaram a EVITAR com o receptor no lugar.
 
@@ -402,22 +419,72 @@ def banda_por_eliminacao(
     adaptadores que mediram nos dois momentos. Menos de :data:`CANAIS_MINIMOS_DA_BANDA` seguidos é
     ruído do próprio AFH: devolve ``None`` — «não achei» é resposta.
     """
-    novos: set[int] = set()
-    for adaptador, evitados_com in com.items():
-        antes = sem.get(adaptador)
-        if antes is None or evitados_com is None:
-            continue
-        novos |= set(evitados_com) - set(antes)
+    novos = _canais_novos(sem, com)
+    if novos is None:
+        return None
+    piso = CANAIS_MINIMOS_DA_BANDA if minimos is None else minimos
     melhor: tuple[int, int] | None = None
     atual: list[int] = []
-    for canal in [*sorted(c for c in novos if 0 <= c < CANAIS_DA_REGUA), CANAIS_DA_REGUA + 1]:
+    for canal in [*novos, CANAIS_DA_REGUA + 1]:
         if atual and canal != atual[-1] + 1:
-            if len(atual) >= CANAIS_MINIMOS_DA_BANDA and (
-                    melhor is None or len(atual) > melhor[1] - melhor[0]):
+            if len(atual) >= piso and (melhor is None or len(atual) > melhor[1] - melhor[0]):
                 melhor = (atual[0], atual[-1] + 1)
             atual = []
         atual.append(canal)
     return melhor
+
+
+def _canais_novos(
+    sem: Mapping[str, Iterable[int] | None], com: Mapping[str, Iterable[int] | None]
+) -> tuple[int, ...] | None:
+    """Os canais evitados só no «com», somando os adaptadores que mediram nos dois momentos.
+
+    ``None`` = nenhum adaptador mediu nos dois (sem enlace clássico não há mapa AFH): «não sei»,
+    nunca «nada mudou».
+    """
+    novos: set[int] = set()
+    mediu = False
+    for adaptador, evitados_com in com.items():
+        antes = sem.get(adaptador)
+        if antes is None or evitados_com is None:
+            continue
+        mediu = True
+        novos |= set(evitados_com) - set(antes)
+    if not mediu:
+        return None
+    return tuple(sorted(c for c in novos if 0 <= c < CANAIS_DA_REGUA))
+
+
+@dataclass(frozen=True)
+class Resposta:
+    """O que o par de mapas diz: a ``banda``, ou a ``causa`` de não haver uma; e os ``canais``
+    novos."""
+
+    banda: tuple[int, int] | None
+    causa: str
+    canais: tuple[int, ...]
+
+
+def classificar(
+    sem: Mapping[str, Iterable[int] | None],
+    com: Mapping[str, Iterable[int] | None],
+    *,
+    minimos: int | None = None,
+    salto: int | None = None,
+) -> Resposta:
+    """A resposta da procura: a faixa, o salto de canal, a falta de mapa ou o mapa parado.
+
+    ``minimos`` e ``salto`` trocam :data:`CANAIS_MINIMOS_DA_BANDA` e
+    :data:`CANAIS_QUE_PROVAM_O_SALTO` (o ensaio da bancada).
+    """
+    novos = _canais_novos(sem, com)
+    if novos is None:
+        return Resposta(None, CAUSA_SEM_MAPA, ())
+    banda = banda_por_eliminacao(sem, com, minimos=minimos)
+    if banda is not None:
+        return Resposta(banda, "", novos)
+    piso = CANAIS_QUE_PROVAM_O_SALTO if salto is None else salto
+    return Resposta(None, CAUSA_SALTA if len(novos) >= piso else CAUSA_SEM_MUDANCA, novos)
 
 
 @dataclass
@@ -439,6 +506,12 @@ class Descoberta:
     banda: tuple[int, int] | None = None
     #: a banda achada já foi para o disco (o tique guarda uma vez só)
     guardada: bool = False
+    #: no «não achei», a causa medida (:data:`CAUSA_SEM_MAPA`, :data:`CAUSA_SALTA` ou
+    #: :data:`CAUSA_SEM_MUDANCA`); e os canais novos, os que a faixa espalhada pinta
+    causa: str = ""
+    canais: tuple[int, ...] = ()
+    #: quando começou a medida «com ele» (a espera até o mapa mudar conta daqui)
+    _com_desde: float = 0.0
 
     @property
     def ativa(self) -> bool:
@@ -447,6 +520,7 @@ class Descoberta:
     def iniciar(self, chave: str, agora: float) -> None:
         self.chave, self.passo, self.desde = chave, PASSO_TIRE, agora
         self.sem, self.com, self.banda, self.guardada = {}, {}, None, False
+        self.causa, self.canais = "", ()
 
     def andar(
         self,
@@ -466,7 +540,8 @@ class Descoberta:
             esperado = self.passo == PASSO_PONHA
             if presente is not None and presente == esperado:
                 self.passo = PASSO_MEDINDO_COM if esperado else PASSO_MEDINDO_SEM
-                self.desde = agora
+                self.desde = self._com_desde = agora
+                self.com = {}
             elif agora - self.desde >= ESPERA_DO_GESTO_S:
                 self.cancelar()
             return
@@ -484,9 +559,22 @@ class Descoberta:
             self.sem = lido
             self.passo, self.desde = PASSO_PONHA, agora
             return
-        self.com = lido
-        self.banda = banda_por_eliminacao(self.sem, self.com)
+        # o «com» soma as leituras da espera: quem salta deixa canais diferentes a cada uma
+        for adaptador, canais in lido.items():
+            antes = self.com.get(adaptador)
+            self.com[adaptador] = (canais if antes is None else tuple(sorted(
+                set(antes) | set(canais or ()))))
+        resposta = classificar(self.sem, self.com)
+        if (resposta.causa == CAUSA_SEM_MUDANCA
+                and agora - self._com_desde < ESPERA_ATE_O_MAPA_MUDAR_S):
+            return  # o mapa ainda não mudou: a próxima leitura decide
+        self.banda, self.causa, self.canais = resposta.banda, resposta.causa, resposta.canais
         self.passo, self.desde = (PASSO_ACHOU if self.banda else PASSO_NADA), agora
+        logger.info("faixa_do_receptor_medida", chave=self.chave, banda=self.banda,
+                    causa=self.causa or "achou", canais_novos=len(self.canais),
+                    # quantos canais cada adaptador evita, pela ordem: o endereço não vai ao diário
+                    sem=[None if v is None else len(v) for v in self.sem.values()],
+                    com=[None if v is None else len(v) for v in self.com.values()])
 
     def cancelar(self) -> None:
         self.chave, self.passo, self.banda = "", "", None
@@ -501,12 +589,31 @@ FRASE_DO_PASSO = {
     PASSO_NADA: "Não achei a faixa dele",
 }
 BOTAO_DE_COMECAR = "Descobrir"
+#: o que o «não achei» diz, pela causa medida (sem causa, o genérico do passo).
+FRASE_DA_CAUSA = {
+    CAUSA_SEM_MAPA: "Precisa de um aparelho no Bluetooth para medir",
+    CAUSA_SALTA: "Salta de canal: passa pela faixa toda",
+    CAUSA_SEM_MUDANCA: "O mapa de canais não mudou com ele",
+}
+
+
+def frase_do_fim(descoberta: Descoberta) -> str:
+    """A frase do gesto que terminou sem faixa: a da causa medida, ou o «não achei» genérico."""
+    if descoberta.passo != PASSO_NADA:
+        return ""
+    return FRASE_DA_CAUSA.get(descoberta.causa, FRASE_DO_PASSO[PASSO_NADA])
 
 
 __all__ = [
     "BOTAO_DE_COMECAR",
     "BURACOS_QUE_SOFREM",
+    "CANAIS_QUE_PROVAM_O_SALTO",
+    "CAUSA_SALTA",
+    "CAUSA_SEM_MAPA",
+    "CAUSA_SEM_MUDANCA",
     "ESPECIE",
+    "ESPERA_ATE_O_MAPA_MUDAR_S",
+    "FRASE_DA_CAUSA",
     "FRASE_DO_PASSO",
     "JANELA_S",
     "PASSO_ACHOU",
@@ -519,10 +626,13 @@ __all__ = [
     "ContadorDaSaude",
     "Descoberta",
     "MonitorDosReceptores",
+    "Resposta",
     "Saude",
     "banda_por_eliminacao",
     "chave_do_aparelho",
+    "classificar",
     "e_receptor",
     "eventos_do_fluxo",
+    "frase_do_fim",
     "selo_da_saude",
 ]

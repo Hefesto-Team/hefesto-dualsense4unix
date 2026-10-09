@@ -1,0 +1,342 @@
+{
+ "o_que_e": "o mapa não muda com o receptor: um canal solto é o AFH mexendo sozinho",
+ "instrumento": "a_faixa_do_receptor",
+ "versão": 1,
+ "leituras": [
+  {
+   "momento": "sem",
+   "t": 0,
+   "adaptadores": {
+    "hci0": [
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 5,
+   "adaptadores": {
+    "hci0": [
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 10,
+   "adaptadores": {
+    "hci0": [
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 15,
+   "adaptadores": {
+    "hci0": [
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 20,
+   "adaptadores": {
+    "hci0": [
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 25,
+   "adaptadores": {
+    "hci0": [
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 0,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 5,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 10,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 15,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 20,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 25,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 30,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 35,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 40,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 45,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 50,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 55,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 60,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 65,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 70,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 75,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 80,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 85,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 90,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 95,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 100,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 105,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 110,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 115,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  },
+  {
+   "momento": "com",
+   "t": 120,
+   "adaptadores": {
+    "hci0": [
+     40,
+     60,
+     61
+    ]
+   }
+  }
+ ]
+}

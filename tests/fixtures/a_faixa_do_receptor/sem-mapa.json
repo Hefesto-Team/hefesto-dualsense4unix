@@ -1,0 +1,224 @@
+{
+ "o_que_e": "nenhum aparelho clássico no Bluetooth: o mapa AFH não existe nos dois momentos",
+ "instrumento": "a_faixa_do_receptor",
+ "versão": 1,
+ "leituras": [
+  {
+   "momento": "sem",
+   "t": 0,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 5,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 10,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 15,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 20,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "sem",
+   "t": 25,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 0,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 5,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 10,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 15,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 20,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 25,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 30,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 35,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 40,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 45,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 50,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 55,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 60,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 65,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 70,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 75,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 80,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 85,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 90,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 95,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 100,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 105,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 110,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 115,
+   "adaptadores": {
+    "hci0": null
+   }
+  },
+  {
+   "momento": "com",
+   "t": 120,
+   "adaptadores": {
+    "hci0": null
+   }
+  }
+ ]
+}
