@@ -202,7 +202,9 @@ rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|
 # manhã, mas era teste da SUÍTE, e a suíte roda no FIM.
 rapido|serial-de-aparelho|py|scripts/check_numero_de_serie.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
-rapido|comentario-cortado|py|scripts/check_comentario_cortado.py
+# O comentário cortado compara cada arquivo com o `merge-base` do `dev` (09/10/2026): lê a história
+# e a ref `dev`, que andam sem a árvore mudar, e por isso nunca é lembrado.
+rapido|comentario-cortado|py|scripts/check_comentario_cortado.py|@sempre
 # 03/09/2026 — O PORTÃO AUTORITATIVO DE MAC ENTRA AQUI, e a razão é medida: os
 # documentos da leva de cliques trouxeram 37 endereços CRUS da bancada, e este
 # teste os acusou — a lista dele já trazia os quatro OUIs. Ele não estava cego;
