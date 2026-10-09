@@ -227,7 +227,12 @@ def test_a_guarda_do_jogo_pergunta_uma_vez_por_segundo() -> None:
 
 
 class _ProcDeMentira:
-    """O processo de som de mentira: lê o cano até fechar, e anota tudo o que chegou."""
+    """O processo de som de mentira: lê o cano até fechar, e anota tudo o que chegou.
+
+    Lê no passo de um tocador de verdade, um cano por vez: sem o passo, o laço de
+    escrita do silêncio e o de leitura giram soltos e, com a máquina carregada,
+    deixam a conferência do destino sem vez por mais que o prazo do teste.
+    """
 
     def __init__(self) -> None:
         leitura, escrita = os.pipe()
@@ -242,12 +247,13 @@ class _ProcDeMentira:
     def _ler(self) -> None:
         while True:
             try:
-                pedaco = os.read(self._leitura, 65536)
+                pedaco = os.read(self._leitura, 4096)
             except OSError:
                 break
             if not pedaco:
                 break
             self.recebido += pedaco
+            time.sleep(0.005)
         self._morto.set()
 
     def poll(self) -> int | None:
