@@ -136,7 +136,8 @@ class Jogo:
         """O co-op senta ``uniq`` num pad dele (o `_spawn_player`, sem nó de verdade)."""
         vpad = _Vpad(self.coop._make_player_rumble_sink(uniq))
         self.pads[pad] = vpad.pede
-        self.coop._players[uniq] = SimpleNamespace(
+        jogadores: dict[str, Any] = self.coop._players
+        jogadores[uniq] = SimpleNamespace(
             identity=uniq,
             player_index=pad - 1,
             vpad=vpad,
