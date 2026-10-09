@@ -177,7 +177,7 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
 
     import monta
 
-    do_piloto = set(_re.findall(r'data-campo="([^"]+)"', monta.fita([])))
+    do_piloto = set(_re.findall(r'data-campo="([^"]+)"', monta.fita("todos")))
 
     # (`aba02.py`, no `<input class="radio-mesa">`): os quatro rádios são um
     so_de_leitura = {

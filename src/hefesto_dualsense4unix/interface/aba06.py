@@ -32,7 +32,6 @@ from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA,
                    cor_da_zona, player_slot_color, DS)
 from monta import NADA_A_DIZER  # noqa: E402
 from monta import numero_do_jogador  # noqa: E402
-from monta import TITULOS_DA_FITA  # noqa: E402
 from monta import folha_das_cores  # noqa: E402
 
 # `pacotes/a04_iluminacao.um_botao_de_player`: o dono mora no PACOTE, porque é
@@ -2676,16 +2675,6 @@ def _gerar() -> None:
 
     p = onde.pagina("06-navegacao.html")
     s = p.read_text()
-    antes = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
-    depois = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
-    if f"Player {NAVEGA}" not in depois:
-        raise SystemExit(
-            f"ERRO: a fita da 06 nomeia o Player 1 e o mockup elegeu o {NAVEGA} — "
-            "reveja `monta.TITULOS_DA_FITA` antes de gerar")
-    if antes not in s:
-        raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
-    s = s.replace(antes, depois)
-
     fita_re = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
     if not fita_re.search(s):
         raise SystemExit("ERRO: a fita inerte mudou de forma — refaça o endereço")

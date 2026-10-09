@@ -174,10 +174,10 @@ ABAS_POR_CONTROLE: frozenset[str] = frozenset({
     "05-vibracao.html",
 })
 
-#: o que segue vivo no Nativo, dentro das cinco abas: o interruptor «Ligado | Desligado» (o caminho de
-#: volta), os dois botões do Desligado, o Modo Freestyle (é do computador) e o Reconectar controles
-#: (um ato sobre o aparelho, não uma escolha do Hefesto). O gesto da camada `janela` nem chega ao
-#: daemon e fica de fora da conta.
+#: o que segue vivo no Nativo, dentro das cinco abas: o interruptor «Ligado | Desligado» (o caminho
+#: de volta), os dois botões do Desligado, o Modo Freestyle (é do computador) e o
+#: Reconectar controles (um ato sobre o aparelho, não uma escolha do Hefesto). O gesto da camada
+#: `janela` nem chega ao daemon e fica de fora da conta.
 VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
     ("01-jogar.html", "cadeado"),
     ("01-jogar.html", "hefesto"),

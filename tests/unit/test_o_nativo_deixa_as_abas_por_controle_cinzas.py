@@ -20,10 +20,11 @@ A MORDIDA (feita em 09/10/2026, md5 antes e depois):
  (i)   tire a guarda do decorador (`guardado` devolve `fn` direto) → reprovam as recusas;
  (ii)  esvazie `VIVOS_NO_NATIVO` → reprova o gesto vivo e a lista de seletores do CSS;
  (iii) apague `CSS_DO_NATIVO` (monta.py) → reprova o motor, com o gesto nomeado;
- (iv)  tire `body.nativo .mascara .chip{display:none}` do `topo.html` → reprova «não oferece máscara».
+ (iv)  tire `body.nativo .mascara .chip{display:none}` do `topo.html` → reprova a máscara.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import subprocess
@@ -110,10 +111,8 @@ def test_no_nativo_nenhum_gesto_das_cinco_abas_chega_ao_daemon() -> None:
         if (pagina, nome) in camada.VIVOS_NO_NATIVO:
             continue
         ipc = _Dubla()
-        try:
+        with contextlib.suppress(Exception):  # o que importa é o daemon não ter ouvido
             pacotes.GESTOS[(pagina, nome)](_ctx(True), dict(ENTRADA), ipc)
-        except Exception:  # noqa: BLE001 — o que importa é o daemon não ter ouvido
-            pass
         if ipc.chamadas:
             chegaram.append(f"{pagina} · {nome} → {ipc.chamadas[:2]}")
     assert not chegaram, (
@@ -181,7 +180,7 @@ def test_o_rodape_despachado_pelas_cinco_abas_recusa_no_nativo() -> None:
 def test_o_topo_manda_o_nativo_para_o_corpo() -> None:
     pacotes = _pacotes()
     assert pacotes.topo(_ctx(True))["nativo"] == "sim"
-    assert pacotes.topo(_ctx(False))["nativo"] == "nao"
+    assert pacotes.topo(_ctx(False))["nativo"] == "nao"  # noqa-acento: valor que a página lê
 
 
 def test_os_vivos_do_css_sao_os_da_camada() -> None:

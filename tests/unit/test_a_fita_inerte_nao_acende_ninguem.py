@@ -1,53 +1,41 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO CHIP: numa fita que não escolhe nada, o marcado é igual aos outros.
+"""A RÉGUA DO CHIP: numa fita que não escolhe, todos os chips estão acesos e iguais.
 
-PEDIDO, 08/09/2026, na aba Gatilhos, com os quatro DualSense na mesa. A
-citação é palavra por palavra, inclusive onde falta acento — texto dela não se
-corrige:
-
-*"o player 1 tipo no caso cosmic red - cabo, fica sempre selecionado com borda
-diferente mesmo nas abas que cada player tem sua propria config.  (noqa-acento)
-conseguimos deixar ele cinza como os demais?"*
-
-A HIPÓTESE ÓBVIA ESTAVA ERRADA, e é o que esta régua NÃO mede
---------------------------------------------------------------
-*"A Gatilhos está na lista das que escolhem"* — falso. A lista é
-``monta.ABAS_QUE_ESCOLHEM = {"01-jogar", "02-controles", "08-conexoes"}``, a
-Gatilhos não está nela, a fita dela já nascia ``inerte``, e o produto estava
-certo nessa parte. O defeito era da folha: ``.fita.inerte .chip.on`` devolvia ao
-chip marcado uma borda própria, uma cor de texto mais clara e negrito, desfazendo
-as duas regras logo acima que apagavam todos os chips.
+MEDIDA NOVA, 09/10/2026 (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01). A régua de
+08/09 dizia o contrário: «o marcado é cinza como os demais», a pedido dela na aba
+Gatilhos (*"conseguimos deixar ele cinza como os demais?"*, citação dela, sem o
+acento onde faltava). Em 29/09 ela revogou o cinza: *"a cor de todos os botões do
+Selecionar deveriam estar acesas e com as bordas corretas"* (noqa-acento: citação
+literal dela). Quem leu o pedido de 08/09 certo foi esta régua; o que mudou foi o
+pedido. O que NÃO mudou: numa aba que não escolhe, ninguém se destaca sozinho, e o
+chip não leva a lugar nenhum (sem endereço de clique).
 
 O QUE ELA MEDE, e por que é a COR COMPUTADA
 --------------------------------------------
-Ela abre as páginas PUBLICADAS num Chrome de verdade e pergunta ao motor o que
-ele desenha. **Nenhuma cor está escrita aqui.** A comparação é entre chips da
-MESMA fita: o marcado contra os irmãos. Se a paleta da casa mudar, os dois mudam
-juntos e a régua continua certa; se alguém devolver uma aparência própria ao
-marcado, ela reprova — mesmo que a folha tenha sido reescrita de outro jeito.
+Ela abre as páginas do DESENHO (``mockup/``, que o gerador reescreve; o publicado
+só muda no ``--publicar`` da costura) num Chrome de verdade e pergunta ao motor o que
+ele desenha. **Nenhuma cor está escrita aqui.** A comparação é entre chips da MESMA
+fita: cada um contra os irmãos, no fundo, na cor do texto e no peso da letra. A borda
+fica de fora de propósito: cada controle leva a do seu plástico.
 
 Uma régua que lesse o texto do CSS mediria o arquivo que a cura editou, e daria
 verde sobre a própria edição. É a família de defeito que esta casa mais paga.
 
-E ELA MEDE O CASO DO USUÁRIO, QUE A PÁGINA ESTÁTICA NÃO TEM
-------------------------------------------------------
-Na página publicada o chip marcado é o ``Todos`` — o desenho nasce com o alvo em
-"todos". **Na tela do usuário o marcado era o P1**, porque o alvo escolhido viaja
-entre as abas e o piloto repinta a fita a cada tique. É o mesmo `.on` e a mesma
-regra, mas afirmar isso sem medir seria a hipótese que abriu a sprint. Por isso
-:func:`test_o_chip_do_plastico_marcado_tambem_fica_igual` MOVE o ``.on`` para o
-chip do P1 — que é ``.chip.plastico`` e cai em outra regra de mesma
-especificidade — e remede.
+A prova de que ela ENXERGA o aceso: ``test_o_apagado_tem_outra_cara`` tira o ``on``
+de um chip e exige que a cara mude. Sem ela, «todos iguais» passaria também sobre
+uma folha que apagasse tudo.
 
 A MORDIDA
 ---------
-Devolva a regra antiga ao ``interface/topo.html``::
+Devolva as regras antigas ao ``interface/topo.html``::
 
-    .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
-                          color:var(--texto-suave);font-weight:600}
+    .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
+                       color:var(--comment)}
+    .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
+                          color:var(--comment);font-weight:400}
 
-regere e publique. Caem os três primeiros casos, com a borda e o peso do
-marcado diferentes dos irmãos — que é exatamente o que o usuário viu.
+e regere (``aba03.py``): o chip aceso da Gatilhos perde fundo, cor e peso, e caem os
+casos de «todos acesos» e de «a mesma cara».
 """
 from __future__ import annotations
 
@@ -64,7 +52,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
+DESENHO = RAIZ / "mockup"
 
 O_QUE_O_MOTOR_DESENHA = """() => {
   const f = document.querySelector('.fita');
@@ -75,9 +63,8 @@ O_QUE_O_MOTOR_DESENHA = """() => {
       texto: (c.textContent || '').trim(),
       marcado: c.classList.contains('on'),
       plastico: c.classList.contains('plastico'),
-      // o que uma pessoa VÊ, e nada além
-      cara: [s.borderTopColor, s.borderTopWidth, s.backgroundColor,
-             s.color, s.fontWeight].join(' | '),
+      // o que uma pessoa VÊ no chip, menos a borda (cada plástico tem a sua)
+      cara: [s.backgroundColor, s.color, s.fontWeight].join(' | '),
       // o endereço do clique: numa fita inerte ele tem de ser VAZIO
       gesto: c.dataset.gesto || '',
     };
@@ -86,8 +73,8 @@ O_QUE_O_MOTOR_DESENHA = """() => {
 }"""
 
 
-def _abas_publicadas() -> list[pathlib.Path]:
-    return sorted(PUBLICADO.glob("[0-9][0-9]-*.html"))
+def _abas_do_desenho() -> list[pathlib.Path]:
+    return sorted(DESENHO.glob("[0-9][0-9]-*.html"))
 
 
 @pytest.fixture(scope="module")
@@ -95,9 +82,9 @@ def medido() -> dict:
     """A fita de cada aba publicada, medida no Chrome — uma abertura para todas."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    paginas = _abas_publicadas()
+    paginas = _abas_do_desenho()
     assert len(paginas) >= 10, (
-        f"achei {len(paginas)} abas publicadas em {PUBLICADO} — o caminho mudou? "
+        f"achei {len(paginas)} abas do desenho em {DESENHO} — o caminho mudou? "
         f"Uma régua de tela que mede zero página passa sobre tudo.")
 
     from playwright.sync_api import sync_playwright
@@ -125,7 +112,7 @@ def test_as_abas_de_fita_inerte_continuam_sendo_sete(medido: dict) -> None:
     import monta
 
     inertes = {n for n, _ in _inertes(medido)}
-    esperadas = {p.name for p in _abas_publicadas()
+    esperadas = {p.name for p in _abas_do_desenho()
                  if p.stem not in monta.ABAS_QUE_ESCOLHEM}
     assert inertes == esperadas, (
         f"a fita inerte e a lista do `monta` discordam.\n"
@@ -134,23 +121,24 @@ def test_as_abas_de_fita_inerte_continuam_sendo_sete(medido: dict) -> None:
     assert len(inertes) == 7, f"esperava sete abas de fita inerte, achei {len(inertes)}"
 
 
-def test_o_chip_marcado_tem_a_mesma_cara_dos_irmaos(medido: dict) -> None:
-    """Nas sete abas de fita inerte, todos os chips desenham igual."""
+def test_todo_chip_da_fita_inerte_esta_aceso(medido: dict) -> None:
+    """Nas sete abas, ninguém fica apagado: a aba vale para os quatro."""
+    apagados = [(n, c["texto"]) for n, r in _inertes(medido)
+                for c in r["chips"] if not c["marcado"]]
+    assert not apagados, f"chip apagado numa fita que não escolhe: {apagados}"
+
+
+def test_os_chips_da_fita_inerte_tem_a_mesma_cara(medido: dict) -> None:
+    """Fundo, cor do texto e peso da letra iguais em todos os chips da fita."""
     ruins = []
     for nome, r in _inertes(medido):
         caras = {c["cara"] for c in r["chips"]}
-        if len(caras) > 1:
-            marcado = next((c for c in r["chips"] if c["marcado"]), None)
-            outro = next((c for c in r["chips"] if not c["marcado"]), None)
-            ruins.append(
-                f"{nome}: {len(caras)} aparências numa fita que não escolhe nada\n"
-                f"      marcado {marcado['texto']!r}: {marcado['cara']}\n"
-                f"      irmão   {outro['texto']!r}: {outro['cara']}"
-                if marcado and outro else f"{nome}: {sorted(caras)}")
+        if len(caras) != 1:
+            ruins.append(f"{nome}: {len(caras)} aparências: " + "; ".join(
+                f"{c['texto']!r} → {c['cara']}" for c in r["chips"]))
     assert not ruins, (
-        "numa fita que não escolhe nada, 'o marcado' não quer dizer coisa "
-        "nenhuma para quem olha — e ela leu isso como *'fica sempre "
-        "selecionado'*:\n  " + "\n  ".join(ruins))
+        "numa fita que não escolhe, os chips acesos têm de ser iguais:\n  "
+        + "\n  ".join(ruins))
 
 
 def test_a_fita_inerte_nao_oferece_clique_em_chip_nenhum(medido: dict) -> None:
@@ -163,11 +151,11 @@ def test_a_fita_inerte_nao_oferece_clique_em_chip_nenhum(medido: dict) -> None:
         f"faz a tela oferecer uma escolha sem destino.")
 
 
-def test_o_chip_do_plastico_marcado_tambem_fica_igual() -> None:
-    """Move o `.on` para o chip do P1 e remede — que é o que ela tinha na tela."""
+def test_o_apagado_tem_outra_cara() -> None:
+    """Tira o `on` de um chip e remede: a régua tem de ENXERGAR a diferença."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    alvo = PUBLICADO / "03-gatilhos.html"
+    alvo = DESENHO / "03-gatilhos.html"
     assert alvo.is_file(), f"{alvo} sumiu — é a aba em que ela viu o defeito"
 
     from playwright.sync_api import sync_playwright
@@ -178,25 +166,20 @@ def test_o_chip_do_plastico_marcado_tambem_fica_igual() -> None:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
             pg.goto(alvo.as_uri())
             pg.wait_for_load_state("networkidle")
-            movido = pg.evaluate("""() => {
-              const f = document.querySelector('.fita');
-              const chips = [...f.querySelectorAll('.chip')];
-              const plastico = chips.find(c => c.classList.contains('plastico'));
-              if (!plastico) return {erro: 'a fita não tem chip de plástico'};
-              // é assim que o piloto repinta a fita quando ela escolhe o P1
-              chips.forEach(c => c.classList.remove('on'));
-              plastico.classList.add('on');
-              return null;
+            pg.evaluate("""() => {
+              const plastico = [...document.querySelectorAll('.fita .chip')]
+                .find(c => c.classList.contains('plastico'));
+              plastico.classList.remove('on');
             }""")
-            assert movido is None, movido
             r = pg.evaluate(O_QUE_O_MOTOR_DESENHA)
         finally:
             nav.close()
 
-    caras = {c["cara"] for c in r["chips"]}
-    marcado = next(c for c in r["chips"] if c["marcado"])
-    assert marcado["plastico"], "o `.on` não pousou no chip do plástico"
-    assert len(caras) == 1, (
-        "com o alvo no P1 — que é o que ela tinha na tela — o chip do plástico "
-        "volta a se destacar numa fita que não escolhe nada:\n"
-        + "\n".join(f"    {c['texto']!r}: {c['cara']}" for c in r["chips"]))
+    assert len(r["chips"]) >= 3, "a fita do desenho tem de ter o Todos e dois controles"
+    apagado = [c for c in r["chips"] if not c["marcado"]]
+    assert len(apagado) == 1, "o `on` não saiu do chip do plástico"
+    acesos = {c["cara"] for c in r["chips"] if c["marcado"]}
+    assert len(acesos) == 1 and apagado[0]["cara"] not in acesos, (
+        "o chip apagado tem a mesma cara dos acesos: a régua não enxerga o aceso, "
+        "e «todos iguais» passaria sobre uma folha que apagasse tudo.\n"
+        f"    apagado: {apagado[0]['cara']}\n    acesos: {sorted(acesos)}")

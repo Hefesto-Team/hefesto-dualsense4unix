@@ -2093,11 +2093,10 @@ def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
     #              chip nasce sem `--plastico` e cai no tom neutro do esqueleto.
     # veio é o `monta.fita`: o chip nasce sem `--plastico`, e o `.chip` cai
     #
-    titulo = monta.casca_da_fita(pagina)
     try:
         return monta.fita(ativo=_pref_escolhido(mesa),
                           inerte=not _a_fita_desta_pagina_escolhe(pagina),
-                          mesa=mesa, titulo=titulo)
+                          mesa=mesa)
     except (Exception, SystemExit):
         return ""
 

@@ -1012,7 +1012,7 @@ def _rotulo_da_fita() -> str:
         return ""
 
 
-def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
+def _um_chip(c: dict[str, Any], acesos: frozenset[str] = frozenset()) -> str:
     """Um chip da fita, com o que se LEU daquele controle — e nada mais.
 
     A COR SÓ APARECE SE ALGUÉM A LEU. Sem leitura o chip perde a classe
@@ -1024,8 +1024,8 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
     E O QUE SAI NÃO É `Não sei` NEM `—`: os dois são a AUSÊNCIA de leitura
     escrita como se fosse um nome. O chip termina no transporte.
 
-    `escolhido` É O `pref` DE QUEM ACENDE, e o padrão `""` não acende ninguém —
-    que é o certo enquanto o `Todos` está na fita, porque quem acende é ele.
+    `acesos` SÃO OS `pref` QUE ACENDEM (`monta.acesos_da_fita`), e o padrão vazio não
+    acende ninguém. Esta função não decide quem acende: só pergunta se o seu está lá.
 
     **A FITA E A LINHA DE IDENTIDADE FALAM A MESMA LÍNGUA — ONDA4-S10,
     06/09/2026.** A foto de 03/09 transcrita em `_linha_de_identidade` pegou as
@@ -1039,7 +1039,7 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
     via = html.escape(palavra_do_transporte(c.get("transporte")))
     jogador = html.escape(str(c.get("jogador") or ""))
     ponto = ' <span class="pt">•</span> '
-    aceso = " on" if escolhido and str(c.get("pref") or "") == escolhido else ""
+    aceso = " on" if str(c.get("pref") or "") in acesos else ""
     if not cor:
         return (f'<label class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}">'
                 f"P{jogador}{ponto}{via}</label>")
@@ -1053,11 +1053,13 @@ def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
     """O miolo da `.fita` desta aba, montado com a mesa VIVA."""
     if not mesa:
         return ""
-    mostra_todos, escolhido = _monta().escolha_da_fita("todos", mesa)
+    monta = _monta()
+    mostra_todos, _ = monta.escolha_da_fita("todos", mesa)
+    acesos = monta.acesos_da_fita("todos", mesa, escolhe=False)
     partes = [f"<span>{html.escape(_rotulo_da_fita())}</span>"]
     if mostra_todos:
-        partes.append('<label class="chip on">Todos</label>')
-    partes += [_um_chip(c, "" if mostra_todos else escolhido) for c in mesa]
+        partes.append(f'<label class="chip{" on" if "todos" in acesos else ""}">Todos</label>')
+    partes += [_um_chip(c, acesos) for c in mesa]
     return "\n      ".join(partes)
 
 

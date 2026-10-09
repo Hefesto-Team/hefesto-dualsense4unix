@@ -547,7 +547,8 @@ if __name__ == "__main__":
         + dl.tela_da_escolha_html().strip() + "\n\n" + _MARCA, 1)
     onde.gravar("07-lancadores.html", _DOC)
 
-    _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)
+    # (acesos desde 09/10/2026: a fita que não escolhe leva `on` em todos os chips)
+    _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico(?: on)?"[^\n]*\n', re.M)
     _DOC = onde.pagina("07-lancadores.html").read_text()
     _CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
     if not _CONGELADOS:

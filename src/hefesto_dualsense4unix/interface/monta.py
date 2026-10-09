@@ -319,22 +319,32 @@ def escolha_da_fita(ativo: str,
     return False, ativo
 
 
-#   * as abas 06 e 09 perdiam `data-campo="fita-chips"`, e com ele o endereço
-TITULOS_DA_FITA: dict[str, str] = {
-    "06-navegacao.html": (
-        "Não se aplica: mouse, teclado e gestos saem de um controle só — "
-        "o do Player 1 — e o que eles fazem é do perfil."
-    ),
-}
+def acesos_da_fita(ativo: str, mesa: list[dict[str, Any]] | None = None, *,
+                   escolhe: bool = True) -> frozenset[str]:
+    """Os chips que acendem na fita: o `pref` de cada um, e `"todos"` quando o `Todos` acende.
 
+    O chip aceso é quem está ESCOLHIDO (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01,
+    pedido dela de 29/09/2026): um controle escolhido acende só ele; o `Todos` escolhe
+    os quatro e acende os quatro com ele; numa aba que não escolhe (`escolhe=False`),
+    o ajuste vale para todos, e todos nascem acesos, qualquer que seja o `ativo` que o
+    piloto mande. Com um controle só não há `Todos`, e o único acende.
+
+    É a ÚNICA pergunta: o `fita()` e os escritores das abas 06 e 09 a fazem, e nenhum
+    escreve `on` por conta própria.
+    """
+    lista = CONECTADOS if mesa is None else mesa
+    prefs = frozenset(str(c["pref"]) for c in lista)
+    mostra_todos, ativo = escolha_da_fita(ativo, lista)
+    todos = frozenset({"todos"}) if mostra_todos else frozenset()
+    if not escolhe or ativo == "todos":
+        return prefs | todos
+    return frozenset({ativo})
+
+
+#   * as abas 06 e 09 perdiam `data-campo="fita-chips"`, e com ele o endereço
 TAG_DO_CHIP = "label"
 
 CAMPO_DA_FITA = "fita-chips"
-
-
-def casca_da_fita(pagina: str) -> str | None:
-    """O `title` PRÓPRIO daquela página, ou `None` para as nove comuns."""
-    return TITULOS_DA_FITA.get(pagina)
 
 
 ABAS_QUE_ESCOLHEM: frozenset[str] = frozenset({
@@ -422,7 +432,7 @@ DICA_DA_FITA_NO_NATIVO = (
     'aqui só se vê quem está conectado."></span>')
 
 
-def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
+def fita(ativo: str = "todos", inerte: bool = False,
          mesa: list[dict[str, Any]] | None = None) -> str:
     """Os chips da fita, um por controle da mesa, gerados.
 
@@ -432,7 +442,8 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     cor sai do desenho, e o chip sai da mesa.
 
     `ativo`: "todos" ou o `pref` de um controle. `inerte`: a aba não ajusta por
-    controle, e a fita fica esmaecida — é o que o `title` explica.
+    controle e vale para todos, então todos os chips nascem acesos e a fita não
+    tem balão (`acesos_da_fita`).
 
     `mesa`: OS CONTROLES DE VERDADE, quando quem chama os tem. O padrão `None`
     usa os `CONECTADOS` do mockup, e é por isso que as dez páginas geradas saem
@@ -478,16 +489,17 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     exatamente a cicatriz das *"cinco gramáticas na mesma janela"* que aquela
     função nasceu para fechar.
     """
-    t = titulo or ("Esta aba não usa o controle escolhido aqui — os cards são leitura."
-                   if inerte else "O que você mudar nesta aba vai para o controle escolhido aqui.")
+    balao = ("" if inerte else
+             ' title="O que você mudar nesta aba vai para o controle escolhido aqui."')
     lista = CONECTADOS if mesa is None else mesa
-    mostra_todos, ativo = escolha_da_fita(ativo, lista)
+    mostra_todos, _ = escolha_da_fita(ativo, lista)
+    acesos = acesos_da_fita(ativo, lista, escolhe=not inerte)
     chips: list[str] = []
     if mostra_todos:
-        chips.append(f'<label class="chip{" on" if ativo == "todos" else ""}"'
+        chips.append(f'<label class="chip{" on" if "todos" in acesos else ""}"'
                      + _endereco_do_chip("todos", inerte) + ">Todos</label>")
     for c in lista:
-        on = " on" if ativo == c["pref"] else ""
+        on = " on" if str(c["pref"]) in acesos else ""
         nome = c["nome"] if mesa is None else identidade_do_chip(c, mesa)
         # `identidade_de` é *"o transporte sozinho"* — honesto num card, que só
         if mesa is not None and nome in (_degrau_do_transporte(c), c["via"],
@@ -505,7 +517,7 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
             + rotulo_do_chip({**c, "nome": nome}) + "</label>")
     #
     rotulo = f"<span>{ROTULO_DA_FITA}</span>" if lista else ""
-    return (f'<div class="fita{" inerte" if inerte else ""}" title="{t}">\n'
+    return (f'<div class="fita{" inerte" if inerte else ""}"{balao}>\n'
             f"      {rotulo}\n      " + "\n      ".join(chips)
             + f'\n      {DICA_DA_FITA_NO_NATIVO}\n    </div>')
 

@@ -776,17 +776,19 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     primeiro passo do `pintar`), e o que fica na tela é o dele — que também é
     lido do aparelho. Os dois dizem a mesma coisa; um deles diz sempre.
 
-    SEM `--plastico`, e o desenho não muda: nesta aba a fita nasce `inerte`
-    (fora de `monta.ABAS_QUE_ESCOLHEM`), e `.fita.inerte .chip.plastico` já
-    sobrepõe a borda com
-    `var(--border-sutil)`. O hex do plástico ali nunca pintou um pixel — era só
-    identidade congelada esperando alguém acreditar nela.
+    OS ACESOS E A BORDA (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, 09/10/2026):
+    esta aba não escolhe controle e o que ela mostra vale para todos, então quem
+    acende é `monta.acesos_da_fita(…, escolhe=False)`: o `Todos` e todos da mesa.
+    O chip leva `--plastico` quando a cor foi lida, pela mesma regra do
+    `monta.fita()` (sem cor lida, nem a classe nem o `style`); a folha não apaga
+    mais o chip da fita inerte.
     """
     monta = _monta()
-    mostra_todos, escolhido = monta.escolha_da_fita("todos", mesa)
+    mostra_todos, _ = monta.escolha_da_fita("todos", mesa)
+    acesos = monta.acesos_da_fita("todos", mesa, escolhe=False)
     chips = [f"<span>{monta.ROTULO_DA_FITA}</span>"]
     if mostra_todos:
-        chips.append('<label class="chip on">Todos</label>')
+        chips.append(f'<label class="chip{" on" if "todos" in acesos else ""}">Todos</label>')
     for lugar in mesa:
         nome = str(lugar.get("nome") or "")
         if nome == NOME_SEM_LEITURA:
@@ -794,10 +796,15 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         partes = [f'P{lugar["jogador"]}' if lugar.get("jogador") else "",
                   nome, str(lugar.get("via") or "")]
         rotulo = monta.SEPARADOR.join(p for p in partes if p)
-        aceso = " on" if str(lugar.get("pref") or "") == escolhido else ""
-        chips.append(f'<label class="chip plastico{aceso}"'
-                     ' title="A borda é a cor do plástico">'
-                     f"{rotulo}</label>")
+        aceso = " on" if str(lugar.get("pref") or "") in acesos else ""
+        slug = str(lugar.get("cor") or "")
+        if slug and monta.o_desenho_conhece(slug):
+            chips.append(f'<label class="chip plastico{aceso}"'
+                         f' style="--plastico:{monta.cor_da_zona(slug)}"'
+                         ' title="A borda é a cor do plástico">'
+                         f"{rotulo}</label>")
+        else:
+            chips.append(f'<label class="chip{aceso}">{rotulo}</label>')
     return "".join(chips)
 
 

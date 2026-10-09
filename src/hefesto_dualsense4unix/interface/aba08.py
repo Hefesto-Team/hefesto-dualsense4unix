@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde  # noqa: E402
+from monta import acesos_da_fita as _acesos_da_fita  # noqa: E402
 from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noqa: E402
                    cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
@@ -995,7 +996,10 @@ _regras = [
 ]
 for estado in ESTADOS:
     marcado = f"body:has(#gc-{estado}:checked)"
-    chips = [f'{marcado} .fita .chip[data-pref="{estado}"]']
+    # QUEM ACENDE É A PERGUNTA DA FITA (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01): o cartão
+    # de um controle acende só o chip dele; o «Todos» acende o «Todos» e os quatro com ele.
+    chips = [f'{marcado} .fita .chip[data-pref="{aceso}"]'
+             for aceso in sorted(_acesos_da_fita(estado, MESA), key=ESTADOS.index)]
     if estado == "todos":
         chips.append(f'{marcado} .fita:not(:has(.chip[data-pref="todos"])) .chip[data-pref]')
     _regras.append("  " + ",".join(chips) + "{background:var(--sel-bg);"

@@ -120,9 +120,9 @@ def _cenas() -> list[dict[str, Any]]:
                 presentes = sorted(str(c["pref"]) for c in mesa)
                 fita = monta.fita(ativo=str(mesa[0]["pref"]),
                                   inerte=not monta.a_fita_escolhe(PAGINA),
-                                  mesa=mesa, titulo=monta.casca_da_fita(PAGINA))
+                                  mesa=mesa)
                 if alvo == "todos":
-                    acesos = ["todos"] if len(presentes) > 1 else presentes
+                    acesos = ["todos", *presentes] if len(presentes) > 1 else presentes
                     abertas = presentes
                 else:
                     acesos = abertas = [f"p{alvo}"]

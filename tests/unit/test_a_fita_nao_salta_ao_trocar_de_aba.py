@@ -8,7 +8,7 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
+DESENHO = RAIZ / "mockup"  # o desenho; o publicado é cópia dele depois do --publicar
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
@@ -44,8 +44,8 @@ O_QUE_O_MOTOR_DESENHA = """() => {
 }"""
 
 
-def _abas_publicadas() -> list[pathlib.Path]:
-    return sorted(PUBLICADO.glob("[0-9][0-9]-*.html"))
+def _abas_do_desenho() -> list[pathlib.Path]:
+    return sorted(DESENHO.glob("[0-9][0-9]-*.html"))
 
 
 @pytest.fixture(scope="module")
@@ -53,9 +53,9 @@ def medido() -> dict[str, dict[str, dict]]:
     """``{estado: {página: medida}}`` — as dez abas nos quatro estados, no Chrome."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    paginas = _abas_publicadas()
+    paginas = _abas_do_desenho()
     assert len(paginas) >= 10, (
-        f"achei {len(paginas)} abas publicadas em {PUBLICADO} — o caminho mudou? "
+        f"achei {len(paginas)} abas do desenho em {DESENHO} — o caminho mudou? "
         f"Uma régua de tela que mede zero página passa sobre tudo.")
 
     from playwright.sync_api import sync_playwright
@@ -124,15 +124,18 @@ def test_a_pintura_nao_move_a_linha_do_alvo(medido: dict) -> None:
         + "; ".join(f"{e}={sorted(_por_valor(m, 'linha'))}" for e, m in medido.items()))
 
 
-def test_a_fita_inerte_segue_com_uma_espessura_so(medido: dict) -> None:
-    """Com a cor lida, o chip do plástico na fita inerte tem a borda dos irmãos."""
+def test_a_fita_inerte_tem_a_borda_do_plastico_como_a_que_escolhe(medido: dict) -> None:
+    """09/10/2026: o cinza de 08/09 foi revogado. O chip do plástico tem 2 px em toda fita."""
     ruins = []
-    for nome, r in medido["com-cor-lida"].items():
-        if not r["inerte"]:
-            continue
-        bordas = {c["borda"] for c in r["chips"]}
-        if len(bordas) > 1:
-            ruins.append(f"{nome}: {[(c['texto'], c['borda']) for c in r['chips']]}")
+    for estado in ("como-publicado", "com-cor-lida"):
+        for nome, r in medido[estado].items():
+            for c in r["chips"]:
+                if c["texto"] == "Todos":
+                    continue
+                if c["borda"] != "2px":
+                    ruins.append(f"{estado} · {nome} · {c['texto']!r}: {c['borda']}")
+    inertes = [n for n, r in medido["como-publicado"].items() if r["inerte"]]
+    assert len(inertes) == 7, "a régua não achou as sete fitas inertes"
     assert not ruins, (
-        "numa fita que não escolhe nada, o chip do plástico voltou a ter borda "
-        "própria:\n  " + "\n  ".join(ruins))
+        "o chip do plástico perdeu a borda de 2 px (a cor do plástico) numa fita "
+        "inerte — a folha voltou a apagar o que a regra acendeu:\n  " + "\n  ".join(ruins))

@@ -722,9 +722,9 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
     return {
-        # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se ACINZENTA).
-        # `sim` com o `native_mode` de pé; o resto, `nao`, inclusive o daemon calado.
-        "nativo": "sim" if no_nativo(ctx.state) else "nao",
+        # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se
+        # ACINZENTA). `sim` com o `native_mode` de pé; o resto, não, inclusive o daemon calado.
+        "nativo": "sim" if no_nativo(ctx.state) else "nao",  # noqa-acento: valor que a página lê
         # *"Esse x controles cai fora  # (noqa-acento: citação literal)
         # pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,

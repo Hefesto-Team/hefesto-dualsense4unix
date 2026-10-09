@@ -280,72 +280,15 @@
   }
   .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  /* A FITA INERTE DEIXOU DE USAR `opacity` — 30/08/2026, e a troca é de
-     MECANISMO, não de valor.
-
-     ELA ERA `opacity:.42`, e isso escondia o texto de duas maneiras ao mesmo
-     tempo. A primeira: medido, "Ajustes vão para:" e os quatro chips ficavam a
-     **2,18:1** contra o fundo, e os `•` a 2,07:1 — menos da metade do 4,5:1 que
-     texto pequeno pede. A segunda é pior e explica por que ninguém via: a
-     opacidade mora no ANCESTRAL, então `getComputedStyle(filho).color` continua
-     devolvendo a cor cheia. **Toda régua de contraste que lê `color` é cega a
-     isto** — a desta casa era, e deu as sete abas por limpas.
-
-     SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
-     `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
-     .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
-     (decisão, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
-     ESMAECIDA porque nada ali se ajusta por controle).
-
-     A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
-     apagada que a viva, o chip perde a cor do plástico (que é o que diz a
-     IDENTIDADE, e identidade sem função é promessa falsa) e perde o fundo. Mas
-     cada texto tem cor própria, legível, e a régua passa a ENXERGAR. */
+  /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
+     (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido dela de 29/09: *"a cor de
+     todos os botões do Selecionar deveriam estar acesas e com as bordas
+     corretas"*). Quem acende é `monta.acesos_da_fita`; a folha não tem opinião
+     própria sobre a fita inerte, e as regras `.fita.inerte .chip` que apagavam
+     o chip (FITA-01, 08/09, e o cinza de 30/08) saíram. Só o rótulo
+     `Selecionar:` segue na cor de comentário: não é botão. O `opacity` não
+     volta: escondia o texto do contraste (2,18:1) sem a régua ver. */
   .fita.inerte{color:var(--comment)}
-  .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
-                     color:var(--comment)}
-  /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
-  .fita.inerte .chip.plastico{border-color:var(--border-sutil);--borda-do-chip:1px}
-  /* O CHIP MARCADO FICA IGUAL AOS OUTROS QUANDO A FITA NÃO ESCOLHE NADA —
-     08/09/2026, pedido na aba Gatilhos: *"o player 1 tipo no caso cosmic
-     red - cabo, fica sempre selecionado com borda diferente mesmo nas abas que
-     cada player tem sua propria config. conseguimos deixar ele cinza como os
-     demais?"* (a citação é palavra por palavra, inclusive onde falta acento).
-
-     A HIPÓTESE ÓBVIA ESTAVA ERRADA, e conferi-la primeiro poupa a sprint: a
-     Gatilhos NÃO está em `monta.ABAS_QUE_ESCOLHEM` ({"01-jogar",
-     "02-controles", "08-conexoes"}), a fita dela já nasce `inerte` e o produto
-     estava certo nessa parte. Quem devolvia o destaque eram estas três linhas:
-     as duas de cima apagam o chip na fita inerte, e esta desfazia as duas.
-
-     O QUE O `.on` CARREGA AQUI, medido antes de apagar, porque ele podia estar
-     dizendo mais de uma coisa: nada. `monta._endereco_do_chip` devolve string
-     VAZIA quando `inerte` — na fita que não escolhe, o chip não tem
-     endereço de clique nem de alvo, e não leva a lugar nenhum. O `.on` ali é
-     só a memória de uma escolha que esta aba não usa, e "o marcado" não quer
-     dizer coisa alguma para quem olha.
-
-     ESTE COMENTÁRIO NÃO ESCREVE OS ATRIBUTOS COM O NOME LITERAL, e isso é
-     medido, não asseio: a primeira redação dizia o nome do endereço de clique
-     entre crases, e como o `topo.html` entra INTEIRO nas dez páginas, cada uma
-     ganhou uma ocorrência a mais dele — 24 viraram 25 na Gatilhos. Há régua
-     desta casa que os conta esperando um número exato. É a armadilha de prosa
-     desta casa pela sexta vez, e desta vez quem a pegou foi `grep -c` na
-     página PUBLICADA, não no fonte.
-
-     ELA REPETE OS QUATRO VALORES em vez de ser apagada, e o `font-weight` é o
-     motivo: sem esta regra o chip cairia em `.fita.inerte .chip` (0,3,0) para
-     cor e fundo, mas o `font-weight:600` de `.chip.on` continuaria valendo — e
-     o chip seguiria em NEGRITO, diferente dos irmãos. "Cinza como os demais"
-     inclui o peso da letra.
-
-     A LARGURA DA BORDA vem de `.fita.inerte .chip.plastico`, que põe a
-     `--borda-do-chip` em 1px e que esta regra não sobrescreve: num chip
-     `plastico on` os dois seletores empatam em (0,4,0) e a cor é a mesma dos
-     dois lados. A fita que ESCOLHE não muda —
-     `.fita.inerte` é a única porta desta regra. */
-  .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
-                        color:var(--comment);font-weight:400}
   /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
      DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
      desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
@@ -427,7 +370,9 @@
      cima e de baixo lê dele. Borda mais ar somam sempre 7 px, que é o chip
      vivo do plástico (2 + 5): a linha das abas que escolhem não muda um pixel,
      e todo chip da fita mede 30 em qualquer estado — o «Todos», de borda 1,
-     ganha 1 px de ar em cima e embaixo nas dez. O ar horizontal não mudou. */
+     ganha 1 px de ar em cima e embaixo nas dez. O ar horizontal não mudou.
+     09/10/2026: a fita inerte também leva a borda de 2 px do plástico (o cinza de
+     08/09 foi revogado), e a linha mede o mesmo nas dez. */
   .fita .chip{padding-top:calc(7px - var(--borda-do-chip));
               padding-bottom:calc(7px - var(--borda-do-chip));
               white-space:nowrap}
@@ -2159,11 +2104,11 @@
   </g>
 </svg></div>
     <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
-    <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura.">
+    <div class="fita inerte">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>

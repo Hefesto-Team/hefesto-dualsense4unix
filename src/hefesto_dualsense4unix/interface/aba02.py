@@ -1,5 +1,6 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
+import monta as _monta_modulo
 import onde
 from monta import (monta, trava_do_nativo, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    MESA, CONECTADOS,
@@ -2580,7 +2581,21 @@ def _fechado_de_vez(sufixo=""):
 
 
 _CHIPS = ["c-todos"] + [f'c-{c["pref"]}' for c in MESA]
-CHIP_ACESO = ",\n  ".join(f'body:has(#{r}:checked) .chip[for="{r}"]' for r in _CHIPS)
+
+
+def _chips_acesos_com(radio):
+    """Os `for=` dos chips acesos quando aquele rádio está marcado: pergunta a `monta.acesos_da_fita`.
+
+    O rádio `c-todos` acende os três (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01); o de um
+    controle, só o dele. Quem decide é a regra da fita, não esta lista.
+    """
+    acesos = _monta_modulo.acesos_da_fita(radio[2:], MESA, escolhe=True)
+    return [r for r in _CHIPS if r[2:] in acesos]
+
+
+CHIP_ACESO = ",\n  ".join(
+    f'body:has(#{radio}:checked) .chip[for="{aceso}"]'
+    for radio in _CHIPS for aceso in _chips_acesos_com(radio))
 
 CSS_DA_CARGA = "".join(
     f'  .bat .carga-i[data-carga="{carga_na_tela(estado)}"] .{classe}'

@@ -22,12 +22,12 @@ SVGS = (INTERFACE / "ds_limpo.svg", RAIZ / "assets" / "control-svg" / "dualsense
 EXPORTAR = INTERFACE / "exportar.py"
 
 _TITULO = re.compile(r"<title>([^<]*)</title>")
-#: três letras ou mais, todas maiúsculas: «CHASSI», «INTEIRO». «PS», «L2» e «R1» ficam.
+#: três letras ou mais, todas maiúsculas: «CHASSI», «INTEIRO». «PS», «L2», «R1» ficam.
 _GRITO = re.compile(r"(?<![^\W\d_])[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?![^\W\d_])")
 
 
 def _gritos(texto: str) -> list[str]:
-    """Os gritos dos ``<title>`` do corpo: o do ``<head>`` é o nome da janela, e ``{…}`` é código."""
+    """Os gritos dos ``<title>`` do corpo: o do ``<head>`` é o nome da janela; ``{…}`` é código."""
     corpo = re.sub(r"<head>.*?</head>", "", texto, flags=re.S)
     return [g for t in _TITULO.findall(corpo) for g in _GRITO.findall(re.sub(r"\{[^}]*\}", "", t))]
 
