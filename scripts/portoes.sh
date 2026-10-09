@@ -716,6 +716,17 @@ command -v dbus-run-session >/dev/null 2>&1 && PREFIXO_DE_TELA="dbus-run-session
 command -v xvfb-run >/dev/null 2>&1 && PREFIXO_DE_TELA="${PREFIXO_DE_TELA:+$PREFIXO_DE_TELA }xvfb-run -a"
 
 # --- a memória -----------------------------------------------------------------
+# O TAB é espaço para o `read`: com `IFS=$'\t'`, dois TABs seguidos viram um, e a chave VAZIA do
+# portão que nunca se lembra (`@sempre`) sumia, com a dica de tempo subindo para o lugar dela. A
+# chave virava o número de milissegundos, e os portões que leem a máquina passavam por lembrados.
+_tres_campos() {  # a linha `a<TAB>b<TAB>c` -> _a _b _c, com o campo vazio no lugar dele
+  local resto
+  _a="${1%%$'\t'*}"; resto="${1#*$'\t'}"
+  if [ "$resto" = "$1" ]; then _b=""; _c=""; return; fi
+  _b="${resto%%$'\t'*}"; _c="${resto#*$'\t'}"
+  [ "$_c" = "$resto" ] && _c=""
+  return 0
+}
 [ -n "${CI:-}" ] && SEM_MEMORIA=1   # o CI mede de verdade, sempre
 OUT="$LAR_DE_MENTIRA/saidas"
 mkdir -p "$OUT"
@@ -734,7 +745,8 @@ if [ "$SEM_MEMORIA" -eq 0 ] && [ "$N" -gt 0 ]; then
              <<<"$_linhas" 2>"$OUT/memoria.err")" || _chaves=""
   [ -s "$OUT/memoria.err" ] && sed 's/^/  /' "$OUT/memoria.err"
   declare -A _CHAVE_DE=() _DICA_DE=()
-  while IFS=$'\t' read -r _a _b _c; do
+  while IFS= read -r _l; do
+    _tres_campos "$_l"
     case "$_a" in
       "#pasta") MEM_PASTA="$_b" ;;
       "") ;;
@@ -935,7 +947,8 @@ if [ -n "$VERDES_TSV" ] && [ -n "$MEM_PASTA" ]; then
   _chaves_depois="$(printf '%s' "$_depois" \
     | "$PY" "$RAIZ/scripts/recibo_da_medida.py" chaves --raiz "$RAIZ" 2>/dev/null)" || _chaves_depois=""
   declare -A _CHAVE_DEPOIS=()
-  while IFS=$'\t' read -r _a _b _c; do
+  while IFS= read -r _l; do
+    _tres_campos "$_l"
     case "$_a" in "#"*|"") ;; *) _CHAVE_DEPOIS["$_a"]="$_b" ;; esac
   done <<<"$_chaves_depois"
   _confirmados=""; _mudaram=()

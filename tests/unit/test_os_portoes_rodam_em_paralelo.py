@@ -479,6 +479,27 @@ def test_o_verde_de_antes_nao_roda_de_novo_e_o_que_nao_se_lembra_roda(tmp_path: 
     }
 
 
+
+def test_o_portao_que_le_a_maquina_nunca_e_lembrado(tmp_path: Path) -> None:
+    """A chave vazia do `@sempre` chega vazia: o TAB duplo não a troca pela dica de tempo.
+
+    Com `IFS=$'\\t'`, o `read` juntava os dois TABs de `sempre<TAB><TAB>ms`, e os milissegundos
+    viravam a chave: o portão era anotado e, quando a dica casava um arquivo, saía «lembrado».
+    """
+    repo = _repo_da_memoria(tmp_path)
+    assert set(_status(_corre(repo, "--rapido").stdout).values()) == {"ok"}
+    pasta = repo / ".git" / "hefesto-memoria"
+    assert pasta.is_dir()
+    assert not list(pasta.glob("sempre.*")), "o verde do `@sempre` foi anotado na memória"
+    feito = subprocess.run(
+        [sys.executable, "scripts/recibo_da_medida.py", "chaves", "--raiz", str(repo)],
+        cwd=repo, env=_ambiente(), input="sempre|py|scripts/g_ok.py|@sempre\n",
+        capture_output=True, text=True, check=False)
+    dica = next(ln.split("\t")[2] for ln in feito.stdout.splitlines() if ln.startswith("sempre\t"))
+    (pasta / f"sempre.{dica}").write_text(f'{{"ms": {dica}}}', encoding="utf-8")
+    assert _status(_corre(repo, "--rapido").stdout)["sempre"] == "ok", (
+        "o `@sempre` saiu lembrado: a dica de tempo fez as vezes da chave")
+
 def test_a_entrada_que_nao_casa_arquivo_e_dita_e_o_portao_roda(tmp_path: Path) -> None:
     repo = _repo_da_memoria(tmp_path)
     r = _corre(repo, "--rapido")
