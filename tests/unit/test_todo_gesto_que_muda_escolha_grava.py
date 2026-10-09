@@ -42,6 +42,9 @@ _FECHAR_DA_06 = (
 _LACO_DO_MAPEAR = (
     "tela do «Mapear entrada a entrada»: as fases do laço; cada resposta "
     "grava no gesto dela (`responder`, `nao_alcanco`, que declaram `grava=`)")
+_PERGUNTA_DO_HUB = (
+    "tela: abre ou fecha a pergunta do hub (`perguntando_o_hub`); quem liga "
+    "o hub e grava o mapa é o «Gravar» dela (`novo-hub-gravar`), que declara `grava=`")
 _PERGUNTA_DO_RADIO = (
     "abre a pergunta do rádio; quem muda o pareamento é a confirmação dela, "
     "que declara `grava=`")
@@ -117,6 +120,8 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "esquecer-aparelho"): _PERGUNTA_DO_RADIO,
     ("08-conexoes.html", "examinar-portas"):
         "leitura: refaz o exame das portas e a leitura do barramento",
+    ("08-conexoes.html", "novo-hub"): _PERGUNTA_DO_HUB,
+    ("08-conexoes.html", "novo-hub-cancelar"): _PERGUNTA_DO_HUB,
     ("08-conexoes.html", "receptor-descobrir"):
         "ato: começa e anda o «Descobrir a faixa» (tirar, medir, pôr, medir); a banda achada "
         "só vai ao `maquina.json` no tique que fecha a medida, e não é escolha dela",
