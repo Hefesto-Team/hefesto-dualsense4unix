@@ -1317,6 +1317,17 @@ class Profile(BaseModel):
     # entre USB e BT no DualSense). None = perfil v1 puro, sem opinião
     controllers: dict[str, ControllerOverrides] | None = None
     ponte: PonteConfirmada | None = None
+    # O estilo que o gesto da aba Perfis aplicou: a chave de
+    # `profiles/estilos_de_jogo.POR_CHAVE`. É por ele que o motor do tato acha a
+    # receita invisível (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01). None =
+    # nenhum estilo, e o motor fica desligado. Sem recusa de chave de propósito:
+    # um estilo que sai do produto (o «Co-op local» saiu em 25/09) não pode
+    # impedir o perfil de carregar; o motor só não acha receita e fica desligado.
+    estilo: str | None = None
+    # O desvio da bancada: campos da receita do motor (`tato_vivo.Receita`) que
+    # sobrepõem, um a um, a receita do estilo. None = a receita do estilo inteira.
+    # O motor ignora o campo que não conhece e limita cada valor (`Receita.de`).
+    receita_do_tato: dict[str, Any] | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
@@ -1325,7 +1336,9 @@ class Profile(BaseModel):
         """Perfil sem ponte confirmada sai do dump IDÊNTICO ao que era."""
         dados = handler(self)
         if isinstance(dados, dict):
-            for opcional in ("ponte", "remapeamento", "movimento"):
+            for opcional in (
+                "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
+            ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
         return dados

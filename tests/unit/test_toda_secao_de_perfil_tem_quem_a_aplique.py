@@ -235,6 +235,20 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "Nada é escrito no controle."
         )
     ),
+    "estilo": SecaoDireta(
+        razao=(
+            "O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01 (09/10/2026). A chave do "
+            "estilo de jogo, lida pelo motor do tato vivo "
+            "(`daemon/subsystems/tato_vivo.receita_ativa`) a cada segundo, não "
+            "pela ativação: o motor escreve por evento, não por estado."
+        )
+    ),
+    "receita_do_tato": SecaoDireta(
+        razao=(
+            "O desvio da bancada sobre a receita do estilo: mesma rota do "
+            "`estilo`, lido pelo motor do tato vivo, não pela ativação."
+        )
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),

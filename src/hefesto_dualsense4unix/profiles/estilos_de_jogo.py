@@ -56,8 +56,7 @@ controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não é um modo
 que se escolhe — um Estilo com esse nome prometia ligar o que nunca desliga.
 O que ele fazia (gatilho `SimpleRigid`,
 vibração `balanceado`, a família azul da paleta de jogador) não some de perfil
-nenhum: o estilo nunca foi guardado (ele é um verbo, ver
-`app/actions/perfis_web.ESTILO_APLICA_E_SAI`), e o perfil que o recebeu guarda
+nenhum: até 09/10 o estilo não se guardava, e o perfil que o recebeu guarda
 os três ajustes como valores. A régua que impede a volta é
 `tests/unit/test_o_co_op_local_saiu.py`.
 
@@ -68,12 +67,15 @@ veículo, e cada estilo leva as variáveis que a tela não mostra. Exemplo dela:
 *«É terror. (...) A cor do lightbar fica piscando a vibrção fina funciona se
 apertar o botão da arma de fogo (...) o dualsense vibra mais alto por default e
 por tempo x.»* <!-- noqa-acento: citação literal dela -->
-Duas variáveis têm motor hoje e o gesto as aplica (:data:`APLICADAS`): o ritmo
-e a frequência do gatilho (os parâmetros de `trigger_specs.PRESETS`) e o modo
-(o Point-and-click liga a Navegação, pela seção `mode` do perfil). As outras
-(:data:`SO_DADO`) não têm motor no produto de hoje e ficam aqui, como dado, para
-o motor do tato vivo ler. Todo número vem de fonte pública, citada na linha; o
-que é escolha nossa diz «escolha», a validar por ela na bancada.
+Duas variáveis o gesto aplica no perfil (:data:`APLICADAS`): o ritmo e a
+frequência do gatilho (os parâmetros de `trigger_specs.PRESETS`) e o modo (o
+Point-and-click liga a Navegação, pela seção `mode` do perfil). As outras
+(:data:`SO_DADO`) não se escrevem no perfil: desde 09/10
+(O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o perfil guarda a CHAVE do estilo
+(`Profile.estilo`), e o motor do tato vivo lê o toque, o lado e a luz daqui,
+pela tradução `daemon/subsystems/tato_vivo.receita_do_estilo`. Todo número vem
+de fonte pública, citada na linha; o que é escolha nossa diz «escolha», a validar
+por ela na bancada.
 """
 
 from __future__ import annotations
@@ -128,7 +130,7 @@ class Receita:
 
 #: as variáveis que o gesto do estilo aplica no perfil, por motor que já existe
 APLICADAS = ("ajustes_do_gatilho", "modo")
-#: as que ficam como dado, sem motor no produto de hoje
+#: as que ficam aqui, como dado: o motor do tato lê pelo estilo guardado no perfil
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
            "lado_do_som")
 

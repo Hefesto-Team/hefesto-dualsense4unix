@@ -297,14 +297,10 @@ def test_a_receita_vem_do_campo_do_perfil_com_os_limites() -> None:
     assert receita.reacao_ao_tiro == "parada"
 
 
-def test_a_receita_vem_do_estilo_que_o_perfil_guarda(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from hefesto_dualsense4unix.profiles import estilos_de_jogo
-
-    estilo = SimpleNamespace(**{tv.CAMPO_DA_RECEITA: {"reacao_ao_tiro": "pulsa"}})
-    monkeypatch.setitem(estilos_de_jogo.POR_CHAVE, "terror-de-mentira", estilo)
-    receita = tv.receita_do_perfil(SimpleNamespace(estilo="terror-de-mentira"))
+def test_a_receita_vem_do_estilo_que_o_perfil_guarda() -> None:
+    # O estilo guardado no perfil é traduzido (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01):
+    # a luz que pisca no Terror pulsa a cada tiro.
+    receita = tv.receita_do_perfil(SimpleNamespace(estilo="terror"))
     assert receita.reacao_ao_tiro == "pulsa"
 
 

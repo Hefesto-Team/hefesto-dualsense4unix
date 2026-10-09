@@ -95,6 +95,9 @@ def _o_perfil_que_recebeu_o_coop() -> tuple[pathlib.Path, bytes, Profile]:
     loader.save_profile(antes)
     com_o_coop, pintados = a10_perfis._com_o_estilo(antes, RECEITA_QUE_SAIU, MESA)
     assert pintados == len(MESA)
+    # Até 09/10 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o estilo não se
+    # guardava: o perfil que recebeu o co-op em 25/09 tem só os três ajustes.
+    com_o_coop = com_o_coop.model_copy(update={"estilo": None})
     arquivo = loader.save_profile(com_o_coop)
     return arquivo, arquivo.read_bytes(), com_o_coop
 
@@ -104,7 +107,7 @@ def test_o_perfil_que_recebeu_o_coop_fica_com_os_ajustes_e_sem_estilo(
 ) -> None:
     """Nenhum byte do arquivo muda, e os três ajustes continuam valendo.
 
-    O ESTILO NUNCA FOI GUARDADO — `Profile` não tem campo de estilo, e o que o
+    O ESTILO NÃO SE GUARDAVA quando o co-op saiu (25/09), e o que o
     «Co-op local» deixava no perfil eram três VALORES: o gatilho `SimpleRigid`
     com os parâmetros do dono, a vibração `balanceado` e uma cor por controle,
     com o carimbo do número. Nenhum depende do estilo existir.
@@ -118,7 +121,7 @@ def test_o_perfil_que_recebeu_o_coop_fica_com_os_ajustes_e_sem_estilo(
     carregados = {p.name: p for p in loader.load_all_profiles()}
     assert arquivo.read_bytes() == bruto, (
         "a primeira carga REESCREVEU o perfil que recebeu o «Co-op local» — o "
-        "estilo nunca foi guardado, e não há nada a migrar nele")
+        "estilo não se guardava, e não há nada a migrar nele")
     assert not CO_OP.search(bruto.decode("utf-8")), (
         "o arquivo do perfil nomeia o co-op: o estilo passou a ser guardado")
 

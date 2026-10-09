@@ -17,8 +17,10 @@ evento, com uma regra só para todos os canais:
   rádio pelo mesmo caminho, nunca broadcast);
 * **Modo Nativo calado**: sem pad virtual o jogo fala com o aparelho de
   verdade, e o motor não tem o que dizer;
-* **nasce desligado**: liga só quando a receita do estilo do perfil ativo
-  (campo ``receita_do_tato``) pede alguma reação.
+* **nasce desligado**: liga só quando a receita do perfil ativo pede alguma
+  reação: a do estilo que ele guarda (``Profile.estilo``), traduzida por
+  :func:`receita_do_estilo`, com o desvio da bancada (``receita_do_tato``) por
+  cima, campo a campo.
 
 Os efeitos de cada canal são os atuadores, que entram por sprint em cima deste
 núcleo. O estado de diagnóstico (contadores) mora em ``daemon._tato_vivo``.
@@ -31,7 +33,7 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, Protocol
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -237,9 +239,44 @@ class Receita:
 
 DESLIGADA = Receita()
 
+#: As variáveis do motor, na ordem: o vocabulário que o desvio da bancada aceita.
+CAMPOS_DA_RECEITA: tuple[str, ...] = tuple(f.name for f in fields(Receita))
+
+# O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01 (09/10/2026): a receita do estilo
+# (`profiles/estilos_de_jogo.Receita`, a que a tela não mostra) nasceu noutro
+# conjunto, com outro vocabulário. A ponte entre as duas línguas mora aqui, e
+# cada número tem nome. Escolhas nossas, a validar por ela na bancada.
+#: A força do toque pelo degrau de vibração do estilo (`Estilo.vibracao`).
+FORCA_DO_DEGRAU: dict[str, float] = {"max": 1.0, "balanceado": 0.6, "economia": 0.35}
+#: A luz do estilo que respira ou pisca pulsa a cada tiro; a parada não reage.
+REACAO_DA_LUZ_DO_ESTILO: dict[str, str] = {
+    "parada": "parada",
+    "respira": "pulsa",
+    "pisca": "pulsa",
+}
+#: Os estilos de arma de rajada: só neles o gatilho acompanha o ritmo do tiro.
+ESTILOS_DE_RAJADA = frozenset({"fps"})
+#: O estalo do tiro no alto-falante do controle nasce desligado em todo estilo.
+SOM_NO_CONTROLE_DO_ESTILO = False
+
+
+def receita_do_estilo(estilo: Any) -> Receita:
+    """A receita do motor para um ``Estilo`` de ``estilos_de_jogo``: a tradução."""
+    invisivel = getattr(estilo, "receita_invisivel", None)
+    if invisivel is None:
+        return DESLIGADA
+    return Receita(
+        vibracao_por_tiro=bool(invisivel.toque_por_tiro),
+        forca_do_toque=FORCA_DO_DEGRAU.get(estilo.vibracao, DESLIGADA.forca_do_toque),
+        gatilho_no_ritmo=estilo.chave in ESTILOS_DE_RAJADA,
+        reacao_ao_tiro=REACAO_DA_LUZ_DO_ESTILO.get(invisivel.luz, DESLIGADA.reacao_ao_tiro),
+        lado_do_som=bool(invisivel.lado_do_som),
+        som_no_controle=SOM_NO_CONTROLE_DO_ESTILO,
+    )
+
 
 def receita_do_perfil(perfil: Any) -> Receita:
-    """A receita do perfil: o campo dele, ou a do estilo que ele guarda."""
+    """A receita do estilo que o perfil guarda, com o desvio dele por cima."""
     if perfil is None:
         return DESLIGADA
 
@@ -248,20 +285,22 @@ def receita_do_perfil(perfil: Any) -> Receita:
             return alvo.get(nome)
         return getattr(alvo, nome, None)
 
-    cru = ler(perfil, CAMPO_DA_RECEITA)
-    if cru is None:
-        estilo = ler(perfil, "estilo")
-        chave = estilo if isinstance(estilo, str) else getattr(estilo, "chave", None)
-        if isinstance(chave, str):
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+    base = DESLIGADA
+    chave = ler(perfil, "estilo")
+    if isinstance(chave, str):
+        from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
-                cru = getattr(POR_CHAVE.get(chave), CAMPO_DA_RECEITA, None)
+        estilo = POR_CHAVE.get(chave)
+        if estilo is not None:
+            base = receita_do_estilo(estilo)
+    desvio = ler(perfil, CAMPO_DA_RECEITA)
+    if not isinstance(desvio, Mapping):
+        return base
     try:
-        return Receita.de(cru)
+        return Receita.de({**asdict(base), **desvio})
     except Exception:
         logger.debug("tato_vivo_receita_ilegivel", exc_info=True)
-        return DESLIGADA
+        return base
 
 
 class Teto:
@@ -1203,6 +1242,7 @@ def start_tato_vivo(daemon: DaemonProtocol) -> None:
 
 
 __all__ = [
+    "CAMPOS_DA_RECEITA",
     "CAMPO_DA_RECEITA",
     "CANAIS",
     "DESLIGADA",
@@ -1229,6 +1269,7 @@ __all__ = [
     "modo_do_pad",
     "motor_do",
     "pico_do_pulso",
+    "receita_do_estilo",
     "receita_do_perfil",
     "start_tato_vivo",
 ]

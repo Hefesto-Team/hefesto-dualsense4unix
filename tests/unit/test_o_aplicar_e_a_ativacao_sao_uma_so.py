@@ -43,6 +43,8 @@ FORA: dict[str, str] = {
     "priority": "decide QUEM ganha na seleção, não o que ele aplica",
     "ponte": "é o carimbo da escada do lançamento, lido por ela no jogo",
     "teclado_emulado": "é lido na entrada da Navegação, pelo arranjo do desktop",
+    "estilo": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
+    "receita_do_tato": "é o desvio da bancada, lido pelo motor do tato vivo",
 }
 FORA_POR_CONTROLE: dict[str, str] = {}
 

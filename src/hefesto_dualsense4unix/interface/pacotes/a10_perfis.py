@@ -1954,7 +1954,9 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     Navegação). O estilo sem modo tira do perfil o modo `desktop`, venha ele de
     onde vier (estilo de jogo não deixa o controle como teclado e mouse), deixa
     os outros modos como estão e nunca escolhe máscara nem caminho. O resto da
-    receita (`estilos_de_jogo.SO_DADO`) não tem motor, e não se escreve aqui.
+    receita (`estilos_de_jogo.SO_DADO`) não se escreve aqui: o perfil guarda a
+    CHAVE do estilo (`Profile.estilo`, O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01),
+    e o motor do tato lê a receita por ela.
 
     `LedsConfig` COM DOIS CAMPOS SÓ, e isso é contrato: `_controllers_to_specs`
     lê `model_fields_set` (`profiles/manager.py`), então escrever `lightbar` e
@@ -1974,7 +1976,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         com_o_brilho_das_luzes_de,
     )
 
-    mudanca: dict[str, Any] = {}
+    mudanca: dict[str, Any] = {"estilo": estilo.chave}
     invisivel = estilo.receita_invisivel
     ajustes = dict(invisivel.ajustes_do_gatilho) if invisivel else {}
     if estilo.gatilho:
@@ -2050,13 +2052,13 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     Agora ele **grava** — e é a diferença entre a tela pedir desculpa e a tela
     fazer o trabalho.
 
-    O ESTILO NÃO FICA GUARDADO NO PERFIL, e isso é a coisa mais importante a
-    entender aqui: `Profile` não tem campo de estilo, e não ganhou um. O estilo
-    é um **verbo**, não um campo — ele resolve gatilho, vibração e luz de uma
-    vez, e a partir daí quem manda são esses três, que ela pode reajustar nas
-    abas sem nada "voltar atrás". Por isso `editor.estilo` continua em
-    `NAO_PINTAVEIS` e o `<select>` continua abrindo no travessão: afirmar um
-    estilo depois do clique seria a tela dizendo que guardou o que não guardou.
+    O ESTILO É UM **VERBO** PARA A TELA: ele resolve gatilho, vibração e luz de
+    uma vez, e a partir daí quem manda são esses três, que ela pode reajustar
+    nas abas sem nada "voltar atrás". Por isso `editor.estilo` continua em
+    `NAO_PINTAVEIS` e o `<select>` continua abrindo no travessão. Desde
+    09/10/2026 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o perfil guarda
+    também a CHAVE do estilo (`Profile.estilo`): é por ela que o motor do tato
+    acha a receita invisível, que nenhuma aba mostra.
 
     "PERSONALIZADO" NÃO MEXE EM NADA, e é o único que responde sem gravar. Ele é
     o estilo que diz *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se
