@@ -77,9 +77,9 @@ def _aplicar(rotulo: str, mesa: list[dict[str, Any]] | None = None) -> dict[str,
 
 
 def test_todo_estilo_de_fabrica_tem_receita_e_o_personalizado_nao() -> None:
-    sem = [e.rotulo for e in ej.DE_FABRICA if e.receita is None]
+    sem = [e.rotulo for e in ej.DE_FABRICA if e.receita_invisivel is None]
     assert not sem, f"estilos de fábrica sem receita: {sem}"
-    assert ej.POR_CHAVE["personalizado"].receita is None
+    assert ej.POR_CHAVE["personalizado"].receita_invisivel is None
 
 
 def test_toda_variavel_da_receita_tem_destino() -> None:
@@ -101,7 +101,7 @@ def test_os_ajustes_estao_na_faixa_do_dono() -> None:
     for e in ej.DE_FABRICA:
         spec = trigger_specs.get_spec(e.gatilho or "")
         faixas = {p.name: (p.min_value, p.max_value) for p in (spec.params if spec else ())}
-        for nome, valor in (e.receita.ajustes_do_gatilho if e.receita else ()):
+        for nome, valor in (e.receita_invisivel.ajustes_do_gatilho if e.receita_invisivel else ()):
             lo, hi = faixas.get(nome, (1, 0))
             if not lo <= valor <= hi:
                 fora.append(f"{e.rotulo}: {nome}={valor}")
@@ -117,8 +117,8 @@ def test_os_ajustes_da_receita_chegam_ao_gatilho(
     dois gatilhos voltam ao padrão do dono (6).
     """
     arco = ej.POR_CHAVE["arco"]
-    tenso = dataclasses.replace(arco, receita=dataclasses.replace(
-        arco.receita, ajustes_do_gatilho=(("force", 3), ("snap", 2))))
+    tenso = dataclasses.replace(arco, receita_invisivel=dataclasses.replace(
+        arco.receita_invisivel, ajustes_do_gatilho=(("force", 3), ("snap", 2))))
     monkeypatch.setitem(ej.POR_ROTULO, "Arco", tenso)
     monkeypatch.setitem(ej.POR_CHAVE, "arco", tenso)
     _aplicar("Arco")
@@ -169,14 +169,14 @@ def test_os_tres_tambem_tem_toque_por_tiro_e_lado_do_som(chave: str) -> None:
 
     A MORDIDA: `toque_por_tiro=False` na Maratona e isto reprova.
     """
-    receita = ej.POR_CHAVE[chave].receita
+    receita = ej.POR_CHAVE[chave].receita_invisivel
     assert receita is not None
     assert receita.toque_por_tiro and receita.lado_do_som
 
 
 def test_a_luz_nunca_passa_do_teto_de_clarao() -> None:
     altas = [e.rotulo for e in ej.DE_FABRICA
-             if e.receita and e.receita.luz_por_segundo > ej.TETO_DO_PISCAR]
+             if e.receita_invisivel and e.receita_invisivel.luz_por_segundo > ej.TETO_DO_PISCAR]
     assert not altas, altas
 
 

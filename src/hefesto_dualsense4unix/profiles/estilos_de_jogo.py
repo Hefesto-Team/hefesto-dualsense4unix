@@ -149,7 +149,7 @@ class Estilo:
     familia: RGB
     brilho: float
     porque: str
-    receita: Receita | None = None
+    receita_invisivel: Receita | None = None
 
 
 ESTILOS: tuple[Estilo, ...] = (

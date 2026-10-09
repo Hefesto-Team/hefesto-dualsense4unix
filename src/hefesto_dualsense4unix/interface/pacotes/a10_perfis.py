@@ -1975,8 +1975,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     )
 
     mudanca: dict[str, Any] = {}
-    receita = estilo.receita
-    ajustes = dict(receita.ajustes_do_gatilho) if receita else {}
+    invisivel = estilo.receita_invisivel
+    ajustes = dict(invisivel.ajustes_do_gatilho) if invisivel else {}
     if estilo.gatilho:
         spec = specs.get_spec(estilo.gatilho)
         if spec is None:  # pragma: no cover — o motor só nomeia modo do produto
@@ -1992,8 +1992,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         mudanca["rumble"] = RumbleConfig(
             passthrough=bool(getattr(prof.rumble, "passthrough", True)),
             policy=estilo.vibracao)
-    if receita and receita.modo:
-        mudanca["mode"] = ProfileModeConfig(kind=receita.modo)
+    if invisivel and invisivel.modo:
+        mudanca["mode"] = ProfileModeConfig(kind=invisivel.modo)
     elif getattr(prof.mode, "kind", None) == "desktop":
         mudanca["mode"] = None
 
@@ -2097,7 +2097,8 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     _gravar(novo, ctx, p)
     luz = (f"e a luz de {pintados} controle{'s' if pintados != 1 else ''}"
            if pintados else "e nenhum controle ligado para acender")
-    modo = ", e o modo Navegação" if estilo.receita and estilo.receita.modo else ""
+    invisivel = estilo.receita_invisivel
+    modo = ", e o modo Navegação" if invisivel and invisivel.modo else ""
     return _dizer(
         f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}{modo}.")
 
