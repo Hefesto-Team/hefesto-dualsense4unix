@@ -193,7 +193,7 @@ _GATILHO_COALESCIDO = "coalescido"
 _A_REPLICA_DO_GATILHO = _GATILHO_EM_SEQUENCIA
 _INTERRUPTOR_DA_REPLICA_DO_GATILHO = "HEFESTO_DUALSENSE4UNIX_REPLICA_DO_GATILHO"
 _REPLICADAS_EM_SEQUENCIA = frozenset({"trigger_right", "trigger_left"})
-#: Teto da fila por lado: o jogo que muda mais rápido que 250 Hz perde o mais velho.
+#: Teto da fila por lado, entre duas voltas do laço; a entrega guarda só o último (ou o rearme).
 _SEQUENCIA_MAX = 8
 
 
@@ -1679,6 +1679,18 @@ class UhidDualSense:
             self._replica_last[categoria] = valor
             self._forward_replica(categoria, valor, primeira=primeira)
         for categoria, fila in filas.items():
+            # A fila sai uma por volta do laço (o fio do uhid só enfileira), e o
+            # jogo que muda o gatilho a cada quadro ficaria até oito voltas atrás:
+            # o último vale, e só a volta ao bloco que o físico já tem passa
+            # antes pelo bloco diferente que veio antes dela (o rearme).
+            if fila and fila[-1] != self._replica_last.get(categoria):
+                ultimo = fila[-1]
+                fila.clear()
+                fila.append(ultimo)
+            elif len(fila) > 2:
+                volta = (fila[-2], fila[-1])
+                fila.clear()
+                fila.extend(volta)
             while fila and fila[0] == self._replica_last.get(categoria):
                 fila.popleft()
             if not fila or categoria in self._replica_pending:

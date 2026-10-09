@@ -227,20 +227,56 @@ class TestASequenciaDoGatilho:
 
         assert sinks.triggers == [("right", _BLOCO_R)]
 
-    def test_a_fila_tem_teto_e_o_ultimo_valor_vence(self, fake_uhid: _FakeFd) -> None:
+    def test_a_rajada_dentro_do_limite_de_taxa_entrega_o_ultimo(
+        self, fake_uhid: _FakeFd
+    ) -> None:
         sinks = _Sinks()
         pad, clock = _pad_depois_da_graca(fake_uhid, sinks)
         blocos = [bytes([0x21, i] + [0] * 9) for i in range(1, 21)]
         for bloco in blocos:
             _jogo_manda(fake_uhid, pad, _edge_report(flag0=0x04, trigger_r=bloco))
-        assert len(pad._as_filas()["trigger_right"]) == ug._SEQUENCIA_MAX
+        assert len(pad._as_filas()["trigger_right"]) <= ug._SEQUENCIA_MAX
 
         for _ in range(ug._SEQUENCIA_MAX + 2):
             clock.t += ug._REPLICA_MIN_INTERVAL_S
             pad.pump_ff()
 
-        assert sinks.triggers[-1] == ("right", blocos[-1])
-        assert len(sinks.triggers) == 1 + ug._SEQUENCIA_MAX
+        assert sinks.triggers == [("right", blocos[0]), ("right", blocos[-1])]
+
+    @pytest.mark.parametrize("player", [1, 2, 3, 4])
+    def test_o_jogo_que_muda_a_cada_quadro_nao_fica_para_tras(
+        self, fake_uhid: _FakeFd, player: int
+    ) -> None:
+        """MORDIDA: a fila entregue um por volta e o físico fica voltas atrás do jogo.
+
+        Com o fio do uhid, o report só enfileira e a entrega é uma volta do laço
+        (60 Hz); o jogo que manda três blocos por volta tem de ver o último.
+        """
+        sinks = _Sinks()
+        pad, clock = _pad_recem_aberto(fake_uhid, sinks, player=player)
+        clock.t = ug._GAME_REPLICA_GRACE_S + 0.5
+        for volta in range(6):
+            mandados = [bytes([0x21, volta, k] + [0] * 8) for k in range(3)]
+            for bloco in mandados:
+                _jogo_manda(fake_uhid, pad, _edge_report(flag0=0x04, trigger_r=bloco))
+            clock.t += 1.0 / 60
+            pad.pump_ff()
+            assert sinks.triggers[-1] == ("right", mandados[-1]), f"volta {volta}"
+
+    def test_o_rearme_passa_pelo_bloco_de_antes_mesmo_com_a_fila_cheia(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        """A volta ao bloco que o físico tem passa pelo diferente que veio antes dela."""
+        sinks = _Sinks()
+        pad, clock = _pad_depois_da_graca(fake_uhid, sinks)
+        _jogo_manda(fake_uhid, pad, _edge_report(flag0=0x04, trigger_r=_BLOCO_R))
+        for bloco in (_OUTRO_R, _OFF, _BLOCO_R):
+            _jogo_manda(fake_uhid, pad, _edge_report(flag0=0x04, trigger_r=bloco))
+        for _ in range(3):
+            clock.t += ug._REPLICA_MIN_INTERVAL_S
+            pad.pump_ff()
+
+        assert sinks.triggers == [("right", _BLOCO_R), ("right", _OFF), ("right", _BLOCO_R)]
 
     def test_o_interruptor_coalescido_volta_ao_de_antes(
         self, fake_uhid: _FakeFd, monkeypatch: pytest.MonkeyPatch
