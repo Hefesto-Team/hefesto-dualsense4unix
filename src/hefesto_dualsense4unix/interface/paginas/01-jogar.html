@@ -1155,10 +1155,6 @@
      um número ali diria que o PS+R3 para naquele modo. É a mesma disciplina do
      `painel.SEM_LEITOR`: um traço, e não um zero. */
   .degrau i.tr{color:var(--comment);border-style:dashed}
-  /* A FAIXA DO DESLIGADO não se clica: ela não é uma escolha, é o que o
-     interruptor JÁ escolheu. Sem `cursor:pointer` e sem `:hover`. */
-  .degrau.fixo{cursor:default;justify-content:flex-start;padding-left:14px}
-  .degrau.fixo .mud{color:var(--texto-mudo);font-weight:400}
 
   /* OS QUATRO NUMA FILEIRA SÓ, E TODOS DA MESMA LARGURA. Era `flex`, e os dois
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
@@ -2348,9 +2344,6 @@
             <span class="degrau" data-degrau="xbox" data-gesto="modo-xbox"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="xbox"
                   title="O Hefesto entrega o controle ao jogo pelo canal comum, o mesmo do controle de Xbox.">Xbox</span>
-            <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
-                  data-campo="steam-input-aceso" data-hef-alvo="classe" data-hef-quando="steam"
-                  title="A Steam entrega os comandos ao jogo; a luz, os gatilhos e o número do jogador ficam com o Hefesto.">Steam Input</span>
             <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="navegacao"
                   title="O controle vira teclado e mouse do computador.">Navegação</span>
@@ -2361,8 +2354,12 @@
              36px), para a tela não pular quando ela vai e volta. -->
         <div class="hef-modo so-desligado">
           <div class="escada">
-            <span class="degrau on fixo"
-                  title="O jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o controle sem o Hefesto no meio</span></span>
+            <span class="degrau on" data-gesto="modo-nativo"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
+                  title="O jogo fala direto com o controle, e a Steam fica de fora.">Nativo</span>
+            <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
+                  data-campo="steam-input-aceso" data-hef-alvo="classe" data-hef-quando="steam"
+                  title="A Steam traduz o controle para este jogo.">Steam Input</span>
           </div>
         </div>
 
