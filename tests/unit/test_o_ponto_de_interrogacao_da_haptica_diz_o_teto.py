@@ -1,0 +1,50 @@
+"""O «?» da Sensor Háptico avisa o teto do Perfil de Bateria (A-TELA-PERGUNTA-AO-DONO-01, opção a).
+
+Desde 02/10/2026 a Economia corta a háptica como corta a Força, e só o «?» da Força dizia a
+frase do dono. Ela escolheu (08/10/2026) a opção a: a frase vem logo depois do 100%, antes do
+«Cinza quando…». A frase NÃO é digitada aqui: vem de ``app.telas.vibracao.DICA_DO_TETO_DA_MESA``.
+
+A régua lê a FONTE (o gerador) e o ``mockup/05-vibracao.html``, que ele reescreve; não depende
+do ``--publicar``, que é da costura.
+
+Mordidas (09/10/2026, md5 antes e depois): tirar a frase da dica da Sensor Háptico no
+``mockup/05-vibracao.html`` reprova a primeira; pô-la depois do «Cinza quando» reprova a ordem;
+digitar a frase no ``aba05.py`` reprova a terceira. E a régua do próprio gerador (régua 10 do
+``aba05.py``) recusa regerar a 05 sem a frase, de modo que o desenho nem chega a mudar.
+"""
+from __future__ import annotations
+
+import pathlib
+import re
+
+from hefesto_dualsense4unix.app.telas.vibracao import DICA_DO_TETO_DA_MESA
+
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+MOCKUP = RAIZ / "mockup" / "05-vibracao.html"
+GERADOR = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "aba05.py"
+
+
+def _dica(rotulo: str) -> str:
+    """O texto do «?» de uma linha da 05: do rótulo até o fecho dos três ``span``."""
+    html = MOCKUP.read_text(encoding="utf-8")
+    achou = re.search(rf'<span class="sec-rot">{re.escape(rotulo)}\s*<span class="ajuda"[^>]*>\?'
+                      r'<span class="dica">(.*?)</span></span></span>', html, re.S)
+    assert achou, f"o «?» de {rotulo!r} não está na 05"
+    return re.sub(r"\s+", " ", achou.group(1))
+
+
+def test_o_ponto_da_haptica_diz_o_teto_logo_depois_do_100() -> None:
+    texto = _dica("Sensor Háptico")
+    assert DICA_DO_TETO_DA_MESA in texto
+    assert (texto.index("O risco no meio é 100%")
+            < texto.index(DICA_DO_TETO_DA_MESA) < texto.index("Cinza quando")), texto
+
+
+def test_o_ponto_da_forca_segue_dizendo_o_teto() -> None:
+    assert DICA_DO_TETO_DA_MESA in _dica("Força da vibração")
+
+
+def test_a_frase_vem_do_dono_e_o_gerador_nao_a_digita() -> None:
+    fonte = GERADOR.read_text(encoding="utf-8")
+    assert "{DICA_DO_TETO_DA_MESA}" in fonte
+    assert "pode impor um teto" not in fonte, "a frase do teto foi digitada no gerador"

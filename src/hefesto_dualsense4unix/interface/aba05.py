@@ -1352,6 +1352,7 @@ MIOLO = f'''
                 O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
                 fica mais forte; em 0, ela para. A bolinha verde acende quando
                 ela está chegando ao controle.<br><br>
+                {DICA_DO_TETO_DA_MESA}<br><br>
                 Cinza quando o jogo fala direto com o controle, sem passar pelo
                 Hefesto.
               </span></span></span></div>
@@ -1616,6 +1617,13 @@ def _conferir(doc):
     for frase, nome in ((DICA_DO_TETO_DA_MESA, "o teto da mesa"),
                         (DICA_DOS_VALORES_QUE_PASSAM, "os valores que passam pela intensidade")):
         exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
+    # A-TELA-PERGUNTA-AO-DONO-01 (opção a, 08/10/2026): o «?» da Sensor Háptico também diz o teto,
+    # logo depois do 100% e antes do «Cinza quando». A Força já dizia; a háptica, desde 02/10, também corta.
+    _haptica = corpo.split("Sensor Háptico\n", 1)[1].split("</span></span></span>", 1)[0]
+    exigir(DICA_DO_TETO_DA_MESA in _haptica
+           and _haptica.index("O risco no meio é 100%")
+           < _haptica.index(DICA_DO_TETO_DA_MESA) < _haptica.index("Cinza quando"),
+           "o «?» da Sensor Háptico perdeu a frase do teto do Perfil de Bateria (logo depois do 100%)")
     sobrando = papeis - set(PAPEIS_QUE_SAO_GESTO)
     exigir(not sobrando,
            f"`data-papel` sem gesto que atenda: {sorted(sobrando)} — o ouvinte "
