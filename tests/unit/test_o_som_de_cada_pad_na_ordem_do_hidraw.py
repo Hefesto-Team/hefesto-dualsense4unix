@@ -258,6 +258,16 @@ def test_a_lista_ja_em_ordem_nao_renasce() -> None:
     assert eh.plano_da_ordem(p, _assento_de(p), no_servidor)[1] == []
 
 
+def test_o_no_fora_do_lugar_no_comeco_tambem_renasce_e_a_volta_seguinte_nao_refaz() -> None:
+    """O P3 na frente: ficar de pé só ele faria os outros renascerem atrás dele a cada volta."""
+    p = {"APARELHOaa": 1, "APARELHObb": 2, "APARELHOcc": 3}
+    no_servidor = {"APARELHOcc": 10, "APARELHOaa": 11, "APARELHObb": 12}
+    na_ordem, refazer = eh.plano_da_ordem(p, _assento_de(p), no_servidor)
+    assert refazer == ["APARELHOcc", "APARELHOaa", "APARELHObb"]
+    depois = {m: 20 + i for i, m in enumerate(na_ordem)}
+    assert eh.plano_da_ordem(p, _assento_de(p), depois)[1] == [], "a ordem refaz em laço"
+
+
 def test_o_interruptor_escolhe_entre_as_tres_e_ignora_o_resto() -> None:
     chave = eh.INTERRUPTOR_DA_ORDEM_DOS_NOS
     assert eh.ordem_dos_nos({}) == eh.ORDEM_DOS_NOS == eh.ORDEM_PELO_ASSENTO
@@ -350,6 +360,22 @@ def test_o_no_que_toca_nao_renasce(mesa: _Mesa) -> None:
     mesa.volta(_U, "usb")
     assert mesa.servidor.quedas == quedas
     assert mesa.ordem_no_servidor() == [_U[0], _U[2], _U[3], _U[1]]
+
+
+def test_o_assento_que_pisca_nao_reordena(mesa: _Mesa) -> None:
+    """O numerador sem resposta por uma volta é «não sei», e «não sei» não derruba nó."""
+    mesa.assentos = {u: n for n, u in enumerate(_U, start=1)}
+    for u in _U:
+        mesa.gadget(u)
+    mesa.volta(_U, "usb")
+    quedas = list(mesa.servidor.quedas)
+    del mesa.assentos[_U[1]]
+    mesa.volta(_U, "usb")
+    assert mesa.servidor.quedas == quedas, "o assento que piscou derrubou nó"
+    mesa.assentos[_U[1]] = 2
+    mesa.volta(_U, "usb")
+    assert mesa.servidor.quedas == quedas
+    assert mesa.ordem_no_servidor() == list(_U)
 
 
 # O interruptor de bancada

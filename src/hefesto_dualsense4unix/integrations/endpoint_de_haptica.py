@@ -360,8 +360,9 @@ def plano_da_ordem(
     ``assento(marca)`` é o número do jogador; ``no_servidor`` (marca → índice do
     módulo dele) são os nós que já existem, na ordem em que nasceram. Quem não
     tem assento vai para o fim; o empate fica na ordem da marca. Fica de pé o
-    maior começo da lista do servidor que já está na ordem e que nenhum nó
-    novo precisa passar; o resto renasce atrás. Função pura.
+    maior começo da lista do servidor que já é o começo de ``na_ordem``; o resto
+    renasce atrás, e depois disso a lista do servidor É ``na_ordem`` (a volta
+    seguinte não refaz nada). Função pura.
     """
 
     def chave(marca: str) -> tuple[int, int, str]:
@@ -373,14 +374,10 @@ def plano_da_ordem(
     na_ordem = sorted({str(m) for m in marcas}, key=chave)
     existentes = {m: i for m, i in (no_servidor or {}).items() if m in na_ordem}
     de_pe = sorted(existentes, key=lambda m: (existentes[m], m))
-    teto = min((chave(m) for m in na_ordem if m not in existentes), default=None)
     fica = 0
-    anterior: tuple[int, int, str] | None = None
-    for marca in de_pe:
-        atual = chave(marca)
-        if (anterior is not None and atual < anterior) or (teto is not None and atual > teto):
+    for marca, devida in zip(de_pe, na_ordem, strict=False):
+        if marca != devida:
             break
-        anterior = atual
         fica += 1
     return na_ordem, (de_pe[fica:] if refazer else [])
 

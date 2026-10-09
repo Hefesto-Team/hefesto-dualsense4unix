@@ -952,7 +952,9 @@ class AltoFalanteSubsystem:
         que ficou fora dela (o controle que saiu e voltou renasce no fim da
         lista) renasce atrás de quem chegou. Só sem jogo aberto, e só se nenhum
         deles toca ou alimenta uma ponte: nó que some debaixo do jogo quebra o
-        jogo que o escolheu (decisão de 08/09). Servidor mudo não reordena.
+        jogo que o escolheu (decisão de 08/09). «Não sei» não reordena: nem o
+        servidor mudo, nem o assento que pisca (``None``), nem o nó herdado de
+        rótulo ilegível, que nenhuma volta derruba.
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_esta_tocando
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
@@ -987,7 +989,8 @@ class AltoFalanteSubsystem:
         lido = {self._endpoint_da_ponte.get(u) for u in self._pontes}
         endpoints = [self._endpoints.get(m) for m in refazer]
         if (
-            any(e is None for e in endpoints)
+            any(e is None or not getattr(e, "rotulo", "") for e in endpoints)
+            or any(numero_do_assento(u) is None for u in de_pe_agora.values())
             or self._ha_jogo_aberto()
             or any(e.nome in lido or sink_esta_tocando(e.nome, na_duvida=True)
                    for e in endpoints if e is not None)
