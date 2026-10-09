@@ -127,7 +127,8 @@ def test_o_balao_do_aplicar_tem_onde_cair_nas_paginas() -> None:
                if 'class="r-aplicar"' in p.read_text(encoding="utf-8")]
     assert paginas, "nenhuma página publicada tem o rodapé"
     for chave in chaves:
-        endereco = f'data-campo="{chave}"\n            data-hef-alvo="atributo" data-hef-atributo="title"'
+        endereco = (f'data-campo="{chave}"\n'
+                    '            data-hef-alvo="atributo" data-hef-atributo="title"')
         assert endereco in fim, f"`{chave}` sai do `topo` e o `fim.html` não tem onde pô-la"
         sem = [p.name for p in paginas if endereco not in p.read_text(encoding="utf-8")]
         assert not sem, f"`{chave}` sem endereço nas páginas publicadas: {sem}"
