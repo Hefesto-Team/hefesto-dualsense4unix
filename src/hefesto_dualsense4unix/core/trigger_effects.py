@@ -288,13 +288,23 @@ def machine(start: int, end: int, strength: int, frequency: int) -> TriggerEffec
     perfil escrito antes da faixa nova pode trazer. Fim que não passa do início
     vira o início mais um.
     """
+    inicio, fim, forca, frequencia = _metralhadora_na_faixa(
+        start, end, strength, frequency
+    )
+    zonas = {zona: forca for zona in range(inicio, fim + 1)}
+    return _vibracao_oficial(zonas, frequencia)
+
+
+def _metralhadora_na_faixa(
+    start: int, end: int, strength: int, frequency: int
+) -> tuple[int, int, int, int]:
+    """Os quatro ajustes da Metralhadora como o efeito os manda: cada um na
+    faixa dele, e o fim sempre depois do início."""
     inicio = _encostar(start, 0, 8)
     fim = _encostar(end, 1, 9)
     if fim <= inicio:
         fim = inicio + 1
-    forca = _encostar(strength, 1, 8)
-    zonas = {zona: forca for zona in range(inicio, fim + 1)}
-    return _vibracao_oficial(zonas, _encostar(frequency, 1, 255))
+    return inicio, fim, _encostar(strength, 1, 8), _encostar(frequency, 1, 255)
 
 
 def feedback(position: int, strength: int) -> TriggerEffect:
@@ -499,6 +509,28 @@ def _metralhadora_de_seis(valores: list[int]) -> list[int]:
     return [valores[0], valores[1], valores[2], valores[4]]
 
 
+def ajustes_que_o_efeito_le(name: str, params: list[int]) -> list[int]:
+    """Os ajustes posicionais de um efeito como a fábrica os lê e manda.
+
+    Só a Metralhadora muda: os seis valores de antes de 08/10/2026 viram os
+    quatro de hoje, e cada um encosta na faixa. Quem mostra um perfil (a aba
+    Gatilhos) pergunta aqui, para a barra dizer a frequência que o controle
+    recebe, e não a amplitude B que estava na quarta casa. Os outros efeitos
+    e a lista que não se entende voltam como vieram.
+    """
+    if name != "Machine":
+        return list(params)
+    try:
+        valores = [int(x) for x in params]
+    except (TypeError, ValueError):
+        return list(params)
+    if len(valores) == _SEIS_DA_METRALHADORA_ANTIGA:
+        valores = _metralhadora_de_seis(valores)
+    if len(valores) != 4:
+        return list(params)
+    return list(_metralhadora_na_faixa(*valores))
+
+
 def _traduzir_params_nomeados(
     name: str, params: dict[str, int]
 ) -> dict[str, object]:
@@ -603,6 +635,7 @@ __all__ = [
     "MULTI_POSITION_MAX_STRENGTH",
     "PRESET_FACTORIES",
     "TriggerMode",
+    "ajustes_que_o_efeito_le",
     "auto_gun",
     "bow",
     "build_from_name",

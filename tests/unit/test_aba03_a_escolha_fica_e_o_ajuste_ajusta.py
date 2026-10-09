@@ -412,3 +412,31 @@ def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
     assert perfil.ativo("qualquer")["triggers"]["left"]["mode"] == "Rigid", (
         "a cena escrita por `_ctx()` não chega ao dublê — a troca virou pura e "
         "o caminho do dado se perdeu junto")
+
+
+def test_a_metralhadora_do_perfil_antigo_mostra_o_que_o_controle_recebe(a03):
+    """O perfil de antes de 08/10/2026 guarda seis valores na Metralhadora.
+
+    Lida pela posição, a quarta barra («Frequência») dizia 3, que era a
+    amplitude B, com o controle batendo a 50; e mexer na Força mandava o 3.
+
+    A MORDIDA: troque o `_como_o_efeito_le(...)` do `_do_lado` pela lista crua
+    e a caixa volta a dizer 3 na Frequência.
+    """
+    ctx = _ctx(modo_no_disco="Off")
+    _PERFIL_DA_CENA["triggers"]["left"] = {
+        "mode": "Machine", "params": [0, 9, 3, 3, 50, 8]}
+    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
+    for i, valor in enumerate((0, 9, 3, 50)):
+        assert f'data-campo="aj-val-e-{i}">{valor}<' in caixa, (
+            f"a barra {i} da Metralhadora antiga não diz {valor}:\n{caixa}")
+
+    ponte = _Ponte()
+    _clicar.ctx = ctx  # type: ignore[attr-defined]
+    _clicar("ajuste", {"lado": "e", "i": "2", "valor": "8",
+                       "forma": {"modo-chave-e": "Machine", "aj-val-e-0": "0",
+                                 "aj-val-e-1": "9", "aj-val-e-2": "3",
+                                 "aj-val-e-3": "50"}}, ponte)
+    _nome, (_lado, modo_, params), _k = ponte.chamadas[-1]
+    assert (modo_, list(params)) == ("Machine", [0, 9, 8, 50]), (
+        f"mexer na Força mandou {modo_} {params!r}, e devia mandar [0, 9, 8, 50]")

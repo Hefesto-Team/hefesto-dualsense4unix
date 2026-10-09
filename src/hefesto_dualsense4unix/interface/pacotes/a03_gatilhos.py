@@ -688,10 +688,28 @@ def _meu_efeito_que_casa(disco: str, cfg: dict[str, Any]) -> str:
     return ""
 
 
+def _como_o_efeito_le(nome: str, valores: list[Any]) -> list[Any]:
+    """Os ajustes do perfil na ordem e na faixa em que a fábrica os manda.
+
+    A Metralhadora gravada antes de 08/10/2026 tem seis valores, e a quarta
+    casa era a amplitude B: lida pela posição, a barra «Frequência» dizia 3
+    com o controle batendo a 50, e mexer em qualquer barra mandava o 3.
+    """
+    if any(isinstance(v, list) for v in valores):
+        return valores
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.core.trigger_effects import ajustes_que_o_efeito_le
+
+        return ajustes_que_o_efeito_le(nome, valores)
+    except Exception:
+        return valores
+
+
 def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
     """Um lado do gatilho, do perfil para a tela."""
     nome = str((cfg or {}).get("mode") or "Off")
-    valores = list((cfg or {}).get("params") or [])
+    valores = _como_o_efeito_le(nome, list((cfg or {}).get("params") or []))
     spec = specs.get_spec(nome) if specs else None
 
     fora: dict[str, object] = {
