@@ -201,7 +201,8 @@ TOQUE_CINZA_NO_NATIVO = (
 
 #: a frase própria de um gesto, quando ele nomeia o que o chip deixou de fazer. O Analógico
 #: Virtual também se liga e troca de lado na Calibrar, que não é uma das cinco abas: o gesto
-#: nomeado aqui recusa no Nativo em QUALQUER página, como recusava antes de a recusa vir para a camada.
+#: nomeado aqui recusa no Nativo em QUALQUER página, como recusava antes de a recusa vir
+#: para a camada.
 FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
     ("02-controles.html", "mira"): MIRA_CINZA_NO_NATIVO,
     ("02-controles.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
