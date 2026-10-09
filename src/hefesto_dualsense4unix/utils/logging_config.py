@@ -74,15 +74,16 @@ class MascaraDoDiario(logging.Filter):
 
 
 def _escrever_no_stderr(texto: str) -> None:
-    """O texto no stderr de agora, já pelo dono. Nunca levanta (é o último recurso)."""
+    """O texto no stderr de agora, já pelo dono; sem stderr aberto, não há onde escrever.
+
+    Se a escrita num stderr aberto falhar, o erro sobe ao interpretador, que é o
+    dono da falha de um gancho, e ele tenta o mesmo stderr: nada sai cru por outra porta.
+    """
     saida = sys.stderr
-    if saida is None:
+    if saida is None or getattr(saida, "closed", False):
         return
-    try:
-        saida.write(mascarar_a_linha(texto))
-        saida.flush()
-    except Exception:
-        pass
+    saida.write(mascarar_a_linha(texto))
+    saida.flush()
 
 
 def _o_fio_que_cai(argumentos: threading.ExceptHookArgs) -> None:

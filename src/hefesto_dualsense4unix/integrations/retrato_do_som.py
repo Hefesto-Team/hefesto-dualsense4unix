@@ -302,7 +302,8 @@ def ler_o_pw_dump() -> str | None:
             ["pw-dump"], capture_output=True, text=True, encoding="utf-8",
             errors="replace", timeout=TETO_DA_LEITURA_S, check=False, env=_ambiente(),
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("retrato_do_som_pw_dump_falhou", err=str(exc), err_type=type(exc).__name__)
         return None
     return proc.stdout if proc.returncode == 0 else None
 

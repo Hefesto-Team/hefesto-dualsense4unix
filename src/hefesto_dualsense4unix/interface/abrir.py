@@ -85,13 +85,10 @@ CANDIDATOS_DO_ICONE = (
 
 def achar_o_piloto() -> str | None:
     """O nome do primeiro módulo de piloto que existir, na ordem dos candidatos, ou `None`."""
-    for nome in CANDIDATOS_DO_PILOTO:
-        try:
-            if importlib.util.find_spec(nome) is not None:
-                return nome
-        except (ImportError, ValueError):
-            continue
-    return None
+    return next(
+        (nome for nome in CANDIDATOS_DO_PILOTO if importlib.util.find_spec(nome) is not None),
+        None,
+    )
 
 
 def achar_o_icone() -> Path | None:
@@ -228,11 +225,9 @@ TETO_DO_DIARIO = 1 << 20
 def diario_da_janela() -> TextIO | None:
     """O arquivo onde a janela dela deixa rastro, ou ``None`` se há terminal."""
     fluxo = sys.stderr
-    try:
-        if fluxo is not None and hasattr(fluxo, "isatty") and fluxo.isatty():
-            return None
-    except (ValueError, OSError):
-        pass
+    aberto = fluxo is not None and not getattr(fluxo, "closed", False)
+    if aberto and hasattr(fluxo, "isatty") and fluxo.isatty():
+        return None
 
     from hefesto_dualsense4unix.utils.xdg_paths import state_dir
 

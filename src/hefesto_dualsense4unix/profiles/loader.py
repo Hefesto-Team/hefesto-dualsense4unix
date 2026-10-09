@@ -15,6 +15,7 @@ acentuado; o arquivo é o que `arquivo_do_perfil` acha, em quatro pernas.
 """
 from __future__ import annotations
 
+import calendar
 import contextlib
 import hashlib
 import json
@@ -1795,12 +1796,24 @@ def _as_primeiras_de_cada_dia(versoes: list[Path], dias: int) -> set[Path]:
     return {primeiras[dia] for dia in sorted(primeiras)[-dias:]} if dias > 0 else set()
 
 
+_CARIMBO_DO_NOME = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})")
+
+
 def _o_instante_da_versao(versao: Path) -> datetime | None:
-    """O instante que o carimbo do nome conta, ou None se o nome não é um carimbo."""
-    try:
-        return datetime.strptime(versao.name[:15], "%Y%m%dT%H%M%S")
-    except ValueError:
+    """O instante que o carimbo do nome conta, ou None se o nome não é um carimbo.
+
+    O carimbo se confere na porta, campo a campo, antes de virar data: um nome
+    fora da forma de :func:`_carimbo_de_versao` não chega ao construtor.
+    """
+    achado = _CARIMBO_DO_NOME.match(versao.name)
+    if achado is None:
         return None
+    ano, mes, dia, hora, minuto, segundo = (int(campo) for campo in achado.groups())
+    if not (ano >= 1 and 1 <= mes <= 12 and hora < 24 and minuto < 60 and segundo < 60):
+        return None
+    if not 1 <= dia <= calendar.monthrange(ano, mes)[1]:
+        return None
+    return datetime(ano, mes, dia, hora, minuto, segundo)
 
 
 def _as_da_semana(versoes: list[Path], dias: int) -> list[Path]:
