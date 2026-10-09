@@ -112,6 +112,27 @@ def test_o_aplicar_de_sempre_e_o_do_rodape_congelado() -> None:
     assert f'title="{pacotes.DICA_DO_APLICAR}"' in botao.group(1)
 
 
+def test_o_balao_do_aplicar_tem_onde_cair_nas_paginas() -> None:
+    """Cada dica do rodapé que o `topo` emite tem um botão com aquele endereço.
+
+    O `rodape.aplicar` nasceu em 08/10 (1d1e65a5d) sem `data-campo` no Aplicar:
+    a cauda do Freestyle era calculada a cada tique e não chegava a tela nenhuma.
+    A MORDIDA: tire o `data-campo="rodape.aplicar"` do `fim.html` e esta reprova.
+    """
+    ctx = Contexto(state={"freestyle_ligado": True}, mesa=[], conectados=[], estados={})
+    chaves = [k for k in pacotes.topo(ctx) if k.startswith("rodape.")]
+    assert "rodape.aplicar" in chaves
+    fim = (onde.AQUI / "fim.html").read_text(encoding="utf-8")
+    paginas = [p for p in onde.paginas(publicado=True)
+               if 'class="r-aplicar"' in p.read_text(encoding="utf-8")]
+    assert paginas, "nenhuma página publicada tem o rodapé"
+    for chave in chaves:
+        endereco = f'data-campo="{chave}"\n            data-hef-alvo="atributo" data-hef-atributo="title"'
+        assert endereco in fim, f"`{chave}` sai do `topo` e o `fim.html` não tem onde pô-la"
+        sem = [p.name for p in paginas if endereco not in p.read_text(encoding="utf-8")]
+        assert not sem, f"`{chave}` sem endereço nas páginas publicadas: {sem}"
+
+
 def test_a_oferta_nao_traz_qualquer_jogo() -> None:
     """Numa máquina sem lançador, só «Navegação»; com lançadores, nunca «Qualquer jogo».
 
