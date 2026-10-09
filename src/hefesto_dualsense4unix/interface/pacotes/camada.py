@@ -199,11 +199,15 @@ TOQUE_CINZA_NO_NATIVO = (
     "touchpad não gravam."
 )
 
-#: a frase própria de um gesto, quando ele nomeia o que o chip deixou de fazer
+#: a frase própria de um gesto, quando ele nomeia o que o chip deixou de fazer. O Analógico
+#: Virtual também se liga e troca de lado na Calibrar, que não é uma das cinco abas: o gesto
+#: nomeado aqui recusa no Nativo em QUALQUER página, como recusava antes de a recusa vir para a camada.
 FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
     ("02-controles.html", "mira"): MIRA_CINZA_NO_NATIVO,
     ("02-controles.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
     ("02-controles.html", "toque"): TOQUE_CINZA_NO_NATIVO,
+    ("calibrar-sensores.html", "analogico-virtual"): MIRA_CINZA_NO_NATIVO,
+    ("calibrar-sensores.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
 }
 
 
@@ -226,8 +230,10 @@ def recusa_no_nativo(pagina: str, gesto: str, state: Any) -> str | None:
 
     Passa: fora do Nativo, fora das cinco abas, o que a tabela deixa vivo e o que é só da janela.
     O resto recusa, **inclusive o gesto que ainda não está na tabela** (não se sabe de quem é).
+    O gesto com frase própria (`FRASES_NO_NATIVO`) recusa também fora das cinco abas.
     """
-    if (pagina not in ABAS_POR_CONTROLE or (pagina, gesto) in VIVOS_NO_NATIVO
+    if (pagina, gesto) not in FRASES_NO_NATIVO and (
+            pagina not in ABAS_POR_CONTROLE or (pagina, gesto) in VIVOS_NO_NATIVO
             or gesto in RODAPE_VIVO_NO_NATIVO):
         return None
     if CAMADA.get((pagina, gesto)) == JANELA or not no_nativo(state):
