@@ -1051,14 +1051,6 @@ def _dois_donos() -> list[tuple[str, str, str]]:
     return fora
 
 
-#: OS DOIS MAPAS QUE O `set_button_actions` RECONSTRÓI DO DE FÁBRICA, e é deles
-#:     "— Nada —" no circle   -> AINDA emite KEY_ENTER
-#: Quadrado. A cura é do MOTOR (`uinput_mouse.set_button_actions` precisa saber
-#: quais botões foram calados de propósito, e hoje não sabe: `do_mouse` não
-#: Enquanto ela não vem, **a tela diz**, que é o contrário de um botão que
-#: `set_button_actions` DE VERDADE e compara com o que esta função responde.
-
-
 def _mapas_que_sobrevivem_ao_nada() -> frozenset[str]:
     """Os botões cujo som de fábrica o `— Nada —` da tela não desliga."""
     from hefesto_dualsense4unix.integrations.uinput_mouse import (

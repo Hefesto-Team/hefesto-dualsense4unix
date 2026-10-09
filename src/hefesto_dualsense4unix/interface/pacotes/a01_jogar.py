@@ -1439,10 +1439,6 @@ def _lembrar(campo: str, valor: str, rotulo: str) -> None:
     _ROTULO[campo] = rotulo or _rotulo_de(campo, valor)
 
 
-#: teto dela é 2,0 s, e o «Sony DualSense» das 01:43 de 29/09 trocou os quatro
-#: (`Daemon.gravar_o_modo_escolhido`), com ou sem a resposta chegar aqui a
-
-
 def _rotulo_de(campo: str, valor: str) -> str:
     """A palavra aprovada pelo usuário para aquela chave, sem passar pela tela.
 
@@ -1598,10 +1594,6 @@ def _relatar_a_pendencia(frase: str) -> None:
 from . import gesto  # noqa: E402
 
 BOTOES_SEM_DONO: dict[str, str] = {}
-
-#: próprio arquivo já dizia o contrário trinta linhas adiante: `gamepad.mask.set`
-#: tique — e este trazia `gamepad.mask.set` e `uniq` na frase. Como comentário
-#:   `gamepad.mask.set` recebe `uniq` e o gesto `mascara` tem dono desde
 
 
 def _painel() -> Any:

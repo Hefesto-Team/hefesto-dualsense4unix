@@ -13,28 +13,41 @@ comentário. `PISO` é a contagem de quando a régua nasceu e SÓ DESCE: subir r
 baixar o piso na mesma mudança (o ganho fica travado). A dívida dos demais é paga por quem tocar
 o arquivo, e `--original` mostra, para cada candidato, o texto de antes do corte.
 
+A SEGUNDA PERGUNTA (O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01): o `#:` é o
+comentário de documentação de atributo e só significa algo colado numa atribuição. O bloco com
+`#:` cuja linha seguinte não começa uma atribuição (`NOME = 1`, `FORTE, LEVE = 1, 0`,
+`nome: int = 1`) é resto de corte ou marca errada: acima de `def`, dentro de dicionário literal,
+seguido de linha em branco ou no fim do arquivo. Ela conta com o mesmo fatiamento e tem o seu
+piso, `PISO_DOIS_PONTOS`, que também só desce.
+
 Lê só o que o git versiona em `src/`, `tests/` e `scripts/` (`*.py`): a contagem é a mesma em
 toda árvore. Os comentários são os TOKENS do Python, então um `#` dentro de string não conta.
 
-    scripts/check_comentario_cortado.py              conta e compara com o piso (rc 1 se subiu)
+    scripts/check_comentario_cortado.py              conta e compara com os pisos (rc 1 se subiu)
     scripts/check_comentario_cortado.py --lista      um candidato por linha: arquivo:linha texto
+                                                     (o `#:` solto vem marcado `[#:]`)
     scripts/check_comentario_cortado.py --original   o candidato com o texto de `8002c142c~1`
 """
 
 from __future__ import annotations
 
 import argparse
+import ast
 import io
 import re
 import subprocess
 import sys
 import tokenize
+from collections.abc import Callable
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
 #: a contagem de 08/10/2026 (as integrações 1.7 a 1.10 empilhadas, topo `347e971fe`); só desce
-PISO = 519
+PISO = 516
+
+#: a contagem de 09/10/2026 do `#:` que não está colado numa atribuição; só desce
+PISO_DOIS_PONTOS = 63
 
 COMMIT_DO_CORTE = "8002c142c"
 PASTAS = ("src", "tests", "scripts")
@@ -63,12 +76,8 @@ def termina_no_meio(ultima_linha: str) -> bool:
     return achou is not None and achou.group(1).lower() in CONECTIVOS
 
 
-def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
-    """`(linha, texto)` do fim de cada bloco de comentário cortado, em ordem.
-
-    Bloco: linhas seguidas que só têm comentário. Cortado: a última acaba no meio e a
-    linha seguinte existe e não é comentário (fim de arquivo não conta).
-    """
+def _comentarios_soltos(texto: str) -> dict[int, str]:
+    """`{linha: comentário}` de cada linha que só tem comentário (os tokens, não o texto cru)."""
     soltos: dict[int, str] = {}
     try:
         for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
@@ -76,6 +85,16 @@ def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
                 soltos[tok.start[0]] = tok.string
     except (tokenize.TokenError, IndentationError, SyntaxError):
         pass  # o que o tokenizador leu até a quebra vale; arquivo quebrado não some da conta
+    return soltos
+
+
+def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
+    """`(linha, texto)` do fim de cada bloco de comentário cortado, em ordem.
+
+    Bloco: linhas seguidas que só têm comentário. Cortado: a última acaba no meio e a
+    linha seguinte existe e não é comentário (fim de arquivo não conta).
+    """
+    soltos = _comentarios_soltos(texto)
     linhas = texto.splitlines()
     achados: list[tuple[int, str]] = []
     for n in sorted(soltos):
@@ -83,6 +102,45 @@ def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
             continue
         if termina_no_meio(soltos[n]):
             achados.append((n, soltos[n]))
+    return achados
+
+
+_ATRIBUICAO_CRUA = re.compile(r"^\s*[A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*\s*(?::[^=]+)?=(?!=)")
+
+
+def _linhas_de_atribuicao(texto: str) -> set[int]:
+    """As linhas em que começa uma atribuição: `=`, a anotada e o `type X = ...`.
+
+    Arquivo que o `ast` não lê cai na forma crua da linha, para não sumir da conta.
+    """
+    try:
+        arvore = ast.parse(texto)
+    except (SyntaxError, ValueError):
+        return {n for n, linha in enumerate(texto.splitlines(), 1) if _ATRIBUICAO_CRUA.match(linha)}
+    tipos: tuple[type[ast.stmt], ...] = (ast.Assign, ast.AnnAssign)
+    if hasattr(ast, "TypeAlias"):  # o `type X = ...` nasceu no 3.12
+        tipos += (ast.TypeAlias,)
+    return {n.lineno for n in ast.walk(arvore) if isinstance(n, tipos)}
+
+
+def dois_pontos_soltos_do_texto(texto: str) -> list[tuple[int, str]]:
+    """`(linha, texto)` do início de cada bloco com `#:` que não está colado numa atribuição.
+
+    Bloco: linhas seguidas que só têm comentário. Colado: a linha logo depois da última do bloco
+    começa uma atribuição; linha em branco, `def`, chave de dicionário e fim de arquivo não colam.
+    """
+    soltos = _comentarios_soltos(texto)
+    atribuicoes = _linhas_de_atribuicao(texto)
+    achados: list[tuple[int, str]] = []
+    bloco: list[int] = []
+    for n in [*sorted(soltos), -1]:
+        if bloco and n == bloco[-1] + 1:
+            bloco.append(n)
+            continue
+        tem_dois_pontos = bool(bloco) and any(soltos[i].startswith("#:") for i in bloco)
+        if tem_dois_pontos and bloco[-1] + 1 not in atribuicoes:
+            achados.append((bloco[0], soltos[bloco[0]]))
+        bloco = [n]
     return achados
 
 
@@ -96,16 +154,22 @@ def arquivos_versionados(raiz: Path = RAIZ) -> list[str]:
     return sorted(a for a in feito.stdout.split("\0") if a.endswith(".py"))
 
 
-def varrer(raiz: Path = RAIZ) -> list[tuple[str, int, str]]:
-    """`(arquivo, linha, texto)` de todo comentário cortado nos arquivos versionados."""
+def varrer(raiz: Path = RAIZ, pergunta: Callable[[str], list[tuple[int, str]]] = cortados_do_texto,
+           ) -> list[tuple[str, int, str]]:
+    """`(arquivo, linha, texto)` de cada achado da `pergunta` nos arquivos versionados."""
     achados: list[tuple[str, int, str]] = []
     for arquivo in arquivos_versionados(raiz):
         caminho = raiz / arquivo
         if not caminho.is_file():
             continue
         texto = caminho.read_text(encoding="utf-8", errors="replace")
-        achados += [(arquivo, n, t) for n, t in cortados_do_texto(texto)]
+        achados += [(arquivo, n, t) for n, t in pergunta(texto)]
     return achados
+
+
+def varrer_dois_pontos(raiz: Path = RAIZ) -> list[tuple[str, int, str]]:
+    """`(arquivo, linha, texto)` de todo bloco `#:` que não está colado numa atribuição."""
+    return varrer(raiz, dois_pontos_soltos_do_texto)
 
 
 def texto_de_antes_do_corte(arquivo: str, ultima_linha: str, raiz: Path = RAIZ) -> list[str]:
@@ -136,21 +200,34 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     achados = varrer()
+    soltos = varrer_dois_pontos()
     if args.lista or args.original:
         for arquivo, n, texto in achados:
             print(f"{arquivo}:{n} {texto.strip()}")
             if args.original:
                 for linha in texto_de_antes_do_corte(arquivo, texto):
                     print(f"    | {linha}")
+        for arquivo, n, texto in soltos:
+            print(f"[#:] {arquivo}:{n} {texto.strip()}")
         return 0
     print(f"{len(achados)} comentário(s) cortado(s); piso {PISO}.")
+    print(f"{len(soltos)} bloco(s) `#:` fora de atribuição; piso {PISO_DOIS_PONTOS}.")
+    rc = 0
     if len(achados) > PISO:
         print("FALHA: subiu. Termine a frase (o texto de antes está em --original).", file=sys.stderr)
-        return 1
-    if len(achados) < PISO:
+        rc = 1
+    elif len(achados) < PISO:
         print(f"FALHA: desceu; baixe o PISO para {len(achados)} nesta mudança.", file=sys.stderr)
-        return 1
-    return 0
+        rc = 1
+    if len(soltos) > PISO_DOIS_PONTOS:
+        print("FALHA: o `#:` solto subiu. Cole-o na atribuição que ele documenta, ou tire o `:` "
+              "(acima de `def`, o texto vai à docstring).", file=sys.stderr)
+        rc = 1
+    elif len(soltos) < PISO_DOIS_PONTOS:
+        print(f"FALHA: o `#:` solto desceu; baixe o PISO_DOIS_PONTOS para {len(soltos)} nesta "
+              "mudança.", file=sys.stderr)
+        rc = 1
+    return rc
 
 
 if __name__ == "__main__":

@@ -174,8 +174,6 @@ _LOG = logging.getLogger(__name__)
 
 TTL_S = 20.0
 
-#: dono dele, `pacotes/confirmacao.SEGUNDOS_PARA_CONFIRMAR`.
-
 #: O `heroic` SAIU DAQUI EM 09/09/2026 — LANCADORES-ZERO-01, e o motivo escrito
 SEM_DONO: dict[str, str] = {
     "criar-perfil": "criar perfil é da aba Perfis (`a10_perfis`); dois caminhos "
@@ -629,10 +627,6 @@ def calados(lida: desenho.Leitura | None) -> set[str]:
     if lida is None:
         return set()
     return ({a for a, _ in lida.dispensados} | {a for a, _ in lida.recusados})
-
-
-#: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: `hefesto-launch` só
-#: CARONA (`perfil.com_a_carona`, que o Salvar e o Aplicar já chamam), e quem a
 
 
 def com_o_que_o_daemon_diz(

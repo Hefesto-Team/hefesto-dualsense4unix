@@ -750,8 +750,6 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
                                  for x in deitada]
             fora["pronto"] = _pronto_da_curva(nome, deitada)
 
-    #: posições do `MultiPositionFeedback` — logo, nos outros 18 modos não há
-
     for i, p in enumerate(spec.params):
         if por_indice:
             valor = por_indice.get(i, p.default)
@@ -768,9 +766,6 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
 
 
 SEM_AJUSTE = "Sem ajustes."
-
-
-#: `minmax(var(--r-aj-<lado>),auto)` na página e devolve `None`, então nada é
 
 
 def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
@@ -1412,8 +1407,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": colunas,
         "blocos": blocos,
-        #: O MODO DA ABA: o quadro leva o modo no `data-modo-da-aba` (a folha deixa as colunas
-        #: paradas no Automático), e cada botão do par acende pelo modo do perfil.
+        # O MODO DA ABA: o quadro leva o modo no `data-modo-da-aba` (a folha deixa as colunas
+        # paradas no Automático), e cada botão do par acende pelo modo do perfil.
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
         f"{GESTO_DO_MODO}-personalizado": "sim" if modo_da_aba == "personalizado" else "",
@@ -2268,35 +2263,6 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
                            or f"o Hefesto não aplicou o ajuste no modo «{_rotulo_do_modo(modo_)}»")
     return {"recado": recibo}
-
-
-#: A LÁPIDE DO `reenviar` — 08/09/2026, e o roteiro desta remoção foi escrito
-#: do aparelho — o DualSense não devolve o modo em que está, `state_full` não
-#: reenviar. Se ela pedir de novo, o lugar é uma faixa própria, não a `guardar`.
-
-    """O par L2+R2 que está NA COLUNA, pronto para o disco. Levanta se não houver.
-
-    ELE ERA O MIOLO DO `guardar` E VIROU FUNÇÃO em 06/09/2026, quando o
-    :func:`em_todos` passou a precisar exatamente do mesmo par. Escrito duas
-    vezes, o segundo é o que esquece o `TRAVESSAO` — e `—` não é *"desligue este
-    gatilho"*, é *"não há controle neste lugar"*. Gravar um `Off` por causa dele
-    silenciaria, no perfil, um gatilho que o perfil dava a todo mundo.
-
-    O LADO SEM MODO FICA DE FORA, e é o que faz a fusão por campo funcionar: o
-    esquema lê `model_fields_set` lado a lado, e um lado ausente do pedido
-    continua *"sem opinião"*. Ver :func:`_com_os_gatilhos`.
-    """
-    dos_lados: dict[str, dict[str, Any]] = {}
-    for lado, sigla in (("left", "e"), ("right", "d")):
-        modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
-        if not modo_ or modo_ == TRAVESSAO:
-            continue
-        dos_lados[lado] = {"mode": modo_,
-                           "params": _ajustes_da_coluna(forma, sigla, modo_)}
-    if not dos_lados:
-        raise RuntimeError(
-            "não consegui ler o modo desta coluna. Nada foi guardado.")
-    return dos_lados
 
 
 def _o_par_da_coluna(forma: dict[str, Any]) -> dict[str, dict[str, Any]]:

@@ -160,11 +160,14 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
 CHAVES_DOS_AJUSTES = ("sensibilidade", "zona_morta_graus_s", "gatilho",
                       "inverter_horizontal", "inverter_vertical")
 
-#: O bloco que a CENA dos geradores (06, 08 e 10) carrega: os números de nascença da Calibrar
-#: (`calibrar.SENSIBILIDADE`, `calibrar.TREMOR`), o «Sempre» e nenhum lado invertido. A cena não
-#: digita número: lê o mesmo dono que o produto.
+
 def bloco_de_nascenca(ligada: bool = True) -> dict[str, Any]:
-    """O bloco `mira` de um controle com os ajustes de nascença; `ligada` é só o chip."""
+    """O bloco `mira` de um controle com os ajustes de nascença; `ligada` é só o chip.
+
+    É o bloco que a cena dos geradores (06, 08 e 10) carrega: os números de nascença da
+    Calibrar (`calibrar.SENSIBILIDADE`, `calibrar.TREMOR`), o «Sempre» e nenhum lado invertido.
+    A cena não digita número: lê o mesmo dono que o produto.
+    """
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     return {"ligada": ligada, "virtual": ligada, "lado": rot.DESTINO_ANALOGICO_DIREITO,
