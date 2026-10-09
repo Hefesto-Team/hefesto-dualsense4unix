@@ -36,6 +36,13 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, Protocol
 
+from hefesto_dualsense4unix.daemon.lifecycle import (
+    MODO_DUALSENSE,
+    MODO_NATIVO,
+    MODO_XBOX,
+    modo_do_pad,
+    o_hefesto_fala_no_modo,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -64,9 +71,6 @@ _CARIMBO_DO_CANAL: dict[str, str] = {
     CANAL_SOM: "audio_do_jogo",
 }
 
-MODO_NATIVO = "nativo"
-MODO_DUALSENSE = "dualsense"
-MODO_XBOX = "xbox"
 
 JANELA_DO_JOGO_S = 3.0
 TETO_POR_CONTROLE = 12
@@ -86,18 +90,6 @@ LADO_DIREITO = "direito"
 LADO_CENTRO = "centro"
 
 REACOES_DA_LUZ = ("parada", "pulsa", "evento")
-
-
-def modo_do_pad(vpad: Any) -> str:
-    """O modo em que o controle está, pelo pad virtual que o jogo vê."""
-    if vpad is None:
-        return MODO_NATIVO
-    backend = getattr(vpad, "backend", None)
-    if backend == "uhid":
-        return MODO_DUALSENSE
-    if backend == "uinput":
-        return MODO_XBOX
-    return MODO_NATIVO
 
 
 @dataclass(frozen=True)
@@ -125,9 +117,14 @@ def _da_sessao(idade: float | None, estado: EstadoDoCanal) -> bool:
     return idade <= estado.sessao_ha_s + FOLGA_DA_SESSAO_S
 
 
+def _o_modo_cala_o_motor(estado: EstadoDoCanal) -> bool:
+    """Sem jogo, ou num modo em que o Hefesto não fala (o dono do modo decide)."""
+    return not estado.ha_jogo or not o_hefesto_fala_no_modo(estado.modo)
+
+
 def decidir(canal: str, estado: EstadoDoCanal) -> bool:
     """``True`` quando o jogo cala neste canal e o motor pode escrever."""
-    if estado.modo == MODO_NATIVO or not estado.ha_jogo:
+    if _o_modo_cala_o_motor(estado):
         return False
     carimbo = _CARIMBO_DO_CANAL.get(canal)
     if carimbo is None:
@@ -429,9 +426,7 @@ class TatoVivo:
             livres = [a for a in pedem if decidir(a.canal, estado)]
             if not livres:
                 chave = (
-                    "recusas_do_modo"
-                    if estado.modo == MODO_NATIVO or not estado.ha_jogo
-                    else "recusas_do_jogo"
+                    "recusas_do_modo" if _o_modo_cala_o_motor(estado) else "recusas_do_jogo"
                 )
                 self.contadores[chave] += 1
                 continue
@@ -1255,6 +1250,9 @@ __all__ = [
     "CAMPO_DA_RECEITA",
     "CANAIS",
     "DESLIGADA",
+    "MODO_DUALSENSE",
+    "MODO_NATIVO",
+    "MODO_XBOX",
     "Atuador",
     "AtuadorDaHaptica",
     "AtuadorDaLuz",

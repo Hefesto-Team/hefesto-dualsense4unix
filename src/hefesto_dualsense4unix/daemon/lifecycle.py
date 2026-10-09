@@ -575,6 +575,31 @@ class ModoJogoPadrao:
     wm_class: str
 
 
+# O modo que o jogo vê, pelo pad virtual de cada controle. O dono do eixo «modo» é
+# este módulo (`donos-de-comportamento.csv`, `eixo.modo/daemon`): quem precisa
+# decidir pelo modo pergunta aqui, sem ramificar pelo nome dele.
+MODO_NATIVO: Final = "nativo"
+MODO_DUALSENSE: Final = "dualsense"
+MODO_XBOX: Final = "xbox"
+
+
+def modo_do_pad(vpad: Any) -> str:
+    """O modo em que o controle está, pelo pad virtual que o jogo vê."""
+    if vpad is None:
+        return MODO_NATIVO
+    backend = getattr(vpad, "backend", None)
+    if backend == "uhid":
+        return MODO_DUALSENSE
+    if backend == "uinput":
+        return MODO_XBOX
+    return MODO_NATIVO
+
+
+def o_hefesto_fala_no_modo(modo: str) -> bool:
+    """``False`` no Modo Nativo: o jogo fala com o aparelho, e nada do Hefesto fala por cima."""
+    return modo != MODO_NATIVO
+
+
 @dataclass
 class ExclusaoViva:
     """O Modo Nativo que a lista de exclusão ligou (E3), e só ele."""
