@@ -124,10 +124,15 @@ _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "scripts/abrir_interface.py",
-        '"src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py"',
-        "o envoltório versionado: veste `prgname`, `program_class` e ícone no "
-        "PROCESSO e só então carrega o piloto com `runpy`, sem mudar uma linha "
-        "dele.",
+        "from hefesto_dualsense4unix.interface import abrir",
+        "o calço do `run.sh --gui`: entrega o argv à mesma porta que o console "
+        "script `-gui` usa.",
+    ),
+    (
+        "src/hefesto_dualsense4unix/interface/abrir.py",
+        'runpy.run_module(piloto, run_name="__main__")',
+        "a porta única: veste `prgname`, `program_class` e ícone no PROCESSO e "
+        "só então carrega o piloto com `runpy`, sem mudar uma linha dele.",
     ),
 )
 
