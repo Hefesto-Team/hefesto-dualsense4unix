@@ -878,6 +878,53 @@ BOOTSTRAP = r"""
   // mapa, e não como texto num `data-`: os botões desta casa têm `<span>` dentro
   // (o `.pt` da fita, os ícones), e devolver `textContent` os achataria — o
   // botão voltaria da espera diferente de como entrou.
+  // A ALAVANCA SEM ENDEREÇO E O NÚMERO DELA — O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01,
+  // 09/10/2026. A barra da aba Gatilhos é um `<input type=range>` sem `data-campo` por cima do
+  // trilho, e o número dela é o `.num` ao lado, que só o bloco do pacote reescreve. Medido: mexer
+  // a segunda barra antes de o bloco voltar recolhia a coluna pelo TEXTO velho da primeira e
+  // mandava ao daemon o número de antes (`trigger.set [0,9,3,60]` com a alavanca em 8).
+  //
+  // A FONTE É UMA SÓ, a alavanca: o gesto a lê no lugar do número (`forma`, abaixo), e o número e o
+  // `.cheio` a seguem a cada arrasto e no pouso. O par é estrutural: um elemento com `data-campo`
+  // cujo pai guarda UMA alavanca sem endereço, e que é o NÚMERO (texto que se lê como número) ou a
+  // LARGURA da barra — o rótulo ao lado («Força») mora no mesmo pai e fica de fora. A alavanca com
+  // endereço próprio (as outras abas) é pintada pelo laço de campos e não entra aqui.
+  function alavanca_sem_endereco(r){
+    return !!r && r.tagName === 'INPUT' && String(r.type).toLowerCase() === 'range'
+      && !r.hasAttribute('data-campo') && !r.hasAttribute('data-linha')
+      && !r.hasAttribute('data-hef');
+  }
+  function alavanca_do_numero(el){
+    if(!el || !el.parentElement || /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return null;
+    const alvo = el.dataset.hefAlvo || 'texto';
+    if(alvo === 'texto' ? !/^-?\d+(\.\d+)?$/.test((el.textContent || '').trim())
+                        : alvo !== 'largura') return null;
+    const achadas = Array.prototype.filter.call(
+      el.parentElement.querySelectorAll('input[type="range"]'), alavanca_sem_endereco);
+    return achadas.length === 1 ? achadas[0] : null;
+  }
+  function seguir_a_alavanca(r){
+    if(!alavanca_sem_endereco(r)) return 0;
+    const v = Number(r.value);
+    const de = Number(r.min || 0);
+    const ate = Number(r.max || 100);
+    const pct = Math.round(Math.max(0, Math.min(100, (v - de) / Math.max(1, ate - de) * 100)));
+    let n = 0;
+    // O `.cheio` mora no trilho e o número na barra: dois degraus acima da alavanca.
+    for(let cx = r.parentElement, d = 0; cx && d < 2; cx = cx.parentElement, d++){
+      for(const el of cx.querySelectorAll('[data-campo]')){
+        if(alavanca_do_numero(el) !== r) continue;
+        const alvo = el.dataset.hefAlvo || 'texto';
+        if(alvo === 'texto' && el.textContent !== String(r.value)){
+          el.textContent = String(r.value); n += 1;
+        } else if(alvo === 'largura' && el.style.width !== pct + '%'){
+          el.style.width = pct + '%'; n += 1;
+        }
+      }
+    }
+    return n;
+  }
+  window.__hef.alavancaDoNumero = alavanca_do_numero;
   window.__hef.voo = 0;
   window.__hef.rotulos = {};
   function em_voo(el){
@@ -940,6 +987,12 @@ BOOTSTRAP = r"""
         el.innerHTML = window.__hef.rotulos[chave];
       }
       el.removeAttribute('data-hef-voo');
+      // NO POUSO, A ALAVANCA É A FONTE: a recusa a devolve ao valor que o pacote pintou (o
+      // aparelho não mudou), e o número a segue nos dois desfechos.
+      if(alavanca_sem_endereco(el)){
+        if(certo === false && el.hasAttribute('value')) el.value = el.getAttribute('value');
+        seguir_a_alavanca(el);
+      }
       if(acende){ el.classList.remove(apaga); el.classList.add(acende); piscando.push(el); }
       k += 1;
     }
@@ -1300,7 +1353,8 @@ BOOTSTRAP = r"""
     // Conexões e o nome da face nova ficaram sem dono por isto, e a causa é a
     // mesma em cada aba: o ouvinte manda `texto: alvo.textContent`, que num
     // `<input>` é vazio.
-    document.addEventListener('change', function(ev){ manda_do_alvo(ev); }, true);
+    document.addEventListener('change', function(ev){
+      seguir_a_alavanca(ev.target); manda_do_alvo(ev); }, true);
     document.addEventListener('click', function(ev){
       // Os quatro atributos que marcam algo CLICÁVEL nas dez páginas. Eles já
       // existiam — cada piloto de aba usava o seu.
@@ -1327,7 +1381,10 @@ BOOTSTRAP = r"""
     // E O `input`, QUE É A QUARTA PORTA — ver `manda_do_vivo` logo abaixo. Ela
     // é a única das quatro que NÃO despacha o gesto de `data-hef-gesto`, e a
     // razão é que ali o gesto grava no disco do usuário.
-    document.addEventListener('input', function(ev){ manda_do_vivo(ev); }, true);
+    // O número e o `.cheio` acompanham o arrasto aqui, antes de qualquer gesto: a mão vê o que vai
+    // mandar (ver `seguir_a_alavanca`).
+    document.addEventListener('input', function(ev){
+      seguir_a_alavanca(ev.target); manda_do_vivo(ev); }, true);
     // A JANELA ESCONDIDA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Quem
     // sabe se a janela está à vista é o WebKit, e ele diz isso por
     // `document.hidden`, o mesmo sinal com que para de pintar. O aviso vai
@@ -1550,8 +1607,11 @@ BOOTSTRAP = r"""
           for(const el of cx.querySelectorAll('[data-linha],[data-campo]')){
             if(el.type === 'radio' && !el.checked) continue;
             const chave = el.dataset.linha || el.dataset.campo;
-            fora[chave] = ('value' in el)
-              ? String(el.value ?? '') : (el.textContent || '').trim();
+            // O NÚMERO DE UMA ALAVANCA vale o que a alavanca diz, nunca o texto (ver
+            // `alavanca_do_numero`): o texto só muda quando o bloco volta do pacote.
+            const par = (el.dataset.hefAlvo || 'texto') === 'texto' ? alavanca_do_numero(el) : null;
+            fora[chave] = par ? String(par.value)
+              : ('value' in el) ? String(el.value ?? '') : (el.textContent || '').trim();
           }
           return fora;
         })(),
