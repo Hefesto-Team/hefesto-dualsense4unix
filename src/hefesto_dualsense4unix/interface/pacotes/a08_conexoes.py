@@ -1291,30 +1291,41 @@ def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
         + "</span>")
 
 
-#: O símbolo do sprite (`aba08.SPRITE_DOS_EXTERNOS`) de cada marca que tem desenho. A marca é a
-#: de `external_controllers.brand_of`, o dono único; marca sem desenho (HORI, PowerA, Valve, o
-#: genérico) fica sem quadrado, porque a tela não afirma um modelo que ninguém desenhou.
-SIMBOLO_DO_EXTERNO = {"Nintendo": "ext-nintendo", "Xbox": "ext-xbox", "8BitDo": "ext-8bitdo"}
+#: O símbolo do sprite (`aba08.SPRITE_DOS_EXTERNOS`) de cada forma que tem desenho, pela marca de
+#: `external_controllers.brand_of` (o dono único; o OUI do 8BitDo vence o VID do modo Switch). O
+#: desenho do Pro Controller só vale para o Pro Controller: o Joy-Con, também da Nintendo, não tem
+#: aquela forma. O que não tem desenho próprio (Joy-Con, HORI, PowerA, Valve, o genérico) leva o
+#: contorno genérico, que não afirma modelo nenhum, e o nome do modelo fica na dica.
+SIMBOLO_DO_EXTERNO = {"Xbox": "ext-xbox", "8BitDo": "ext-8bitdo"}
+SIMBOLO_DO_PRO = "ext-pro"
+SIMBOLO_GENERICO = "ext-generico"
 
 
-def desenho_do_externo(entrada: dict[str, Any]) -> str:
-    """O quadrado da linha do externo: o desenho do modelo, com o nome dele na dica.
-
-    A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01 (08/10/2026). A marca vem de `brand_of` e o modelo de
-    `friendly_type`, os mesmos donos do título da linha; o texto do modelo não mora na linha, só
-    na dica do quadrado. Marca sem desenho devolve vazio.
-    """
+def simbolo_do_externo(entrada: dict[str, Any]) -> str:
+    """O símbolo do desenho deste controle de fora: o da forma dele, ou o contorno genérico."""
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         brand_of,
         friendly_type,
     )
 
-    simbolo = SIMBOLO_DO_EXTERNO.get(brand_of(entrada))
-    if not simbolo:
-        return ""
+    marca = brand_of(entrada)
+    if marca == "Nintendo" and friendly_type(entrada).startswith("Pro Controller"):
+        return SIMBOLO_DO_PRO
+    return SIMBOLO_DO_EXTERNO.get(marca, SIMBOLO_GENERICO)
+
+
+def desenho_do_externo(entrada: dict[str, Any]) -> str:
+    """O quadrado da linha do externo: o desenho do modelo, com o nome dele na dica.
+
+    A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01 (08/10/2026). O modelo vem de `friendly_type`, o mesmo
+    dono do título da linha; o texto do modelo não mora na linha, só na dica do quadrado. Todo
+    controle de fora tem quadrado, para a coluna dos nomes não mudar de lugar de uma linha à outra.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import friendly_type
+
     modelo = html.escape(friendly_type(entrada), quote=True)
     return (f'<span class="ext-desenho" title="{modelo}" role="img" aria-label="{modelo}">'
-            f'<svg aria-hidden="true"><use href="#{simbolo}"/></svg></span>')
+            f'<svg aria-hidden="true"><use href="#{simbolo_do_externo(entrada)}"/></svg></span>')
 
 
 def _html_dos_externos(ctx: Contexto) -> str:

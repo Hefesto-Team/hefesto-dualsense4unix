@@ -482,13 +482,12 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
   /* O QUADRADO DO MODELO (A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01): o desenho do sprite
      `ext-sprite`, na cor do texto mudo, sem número de modelo na linha (ele vai na dica). O traço
-     do desenho não escala com o quadrado (`non-scaling-stroke`): a 34 px, o traço de 4 unidades
-     de uma arte de 500 viraria um fio. */
+     do desenho não escala com o quadrado (`non-scaling-stroke`): a 34 px, o traço de 2,6 unidades
+     de uma arte de 100 viraria um fio de 0,9 px. */
   .gc .ext-desenho{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
                    width:34px;height:22px;color:var(--texto-mudo)}
   .gc .ext-desenho svg{width:34px;height:22px;display:block}
-  .ext-sprite #ext-xbox *, .ext-sprite #ext-8bitdo *{vector-effect:non-scaling-stroke;
-                                                      stroke-width:1.3px}
+  .ext-sprite symbol *{vector-effect:non-scaling-stroke;stroke-width:1.3px}
   /* as três listas do externo têm largura FIXA e moram no fim da linha: de um externo
      para o outro elas caem na mesma coluna, com ou sem o aviso do Nintendo pelo BT. 26 px de
      altura + a borda de 1 px da linha = 28, e 64 px abrigam o texto mais largo de «Chave» e de
@@ -2113,39 +2112,30 @@ SPRITE_DO_RADIO = _sprite_do_radio()
 
 
 #: Os desenhos do modelo de cada controle de fora: o arquivo de `assets/control-svg/` e o símbolo
-#: que a linha do externo usa (`pacotes.a08_conexoes.SIMBOLO_DO_EXTERNO`, que é o dono do mapa
-#: marca -> símbolo). O Xbox é desenho nosso (`xbox.svg`); o Pro Controller e o SN30 Pro são a
-#: arte que a casa já traz (a origem e a licença estão no relato da sprint).
-ARTE_DOS_EXTERNOS = {"ext-nintendo": "Nintendo-pro_controller.svg",
+#: que a linha do externo usa (`pacotes.a08_conexoes.simbolo_do_externo` é o dono da escolha). Os
+#: quatro são desenho nosso, só traçado: a arte que a casa já trazia (`Nintendo-pro_controller.svg`,
+#: `8bitdo-sn30pro.svg`) não tem origem nem licença registradas, e o contrato da sprint só aceita
+#: desenho próprio ou de licença compatível com MIT.
+ARTE_DOS_EXTERNOS = {"ext-pro": "pro-controller.svg",
                      "ext-xbox": "xbox.svg",
-                     "ext-8bitdo": "8bitdo-sn30pro.svg"}
+                     "ext-8bitdo": "8bitdo.svg",
+                     "ext-generico": "generico.svg"}
 
-
-def _arredonda(m: re.Match) -> str:
-    """Um número do traçado com uma casa; o espaço na frente impede que `1.3` e `0` colem em `1.30`
-    (o traçado compacto escreve `1.277.711` para dois números)."""
-    texto = f"{round(float(m.group(0)), 1):.1f}".rstrip("0").rstrip(".")
-    return " " + ("0" if texto in ("-0", "") else texto)
+#: os atributos de pintura que o `<svg>` do arquivo declara e que o `<symbol>` não herda
+_PINTURA = ("fill", "stroke", "stroke-width", "stroke-linejoin", "stroke-linecap")
 
 
 def _simbolo_do_externo(ident: str, arquivo: str) -> str:
-    """Um `<symbol>` em `currentColor`, enxuto: sem id, sem `data-name`, com uma casa decimal."""
+    """Um `<symbol>` em `currentColor`: a pintura do `<svg>` do arquivo desce para um `<g>`."""
     cru = (R / "assets" / "control-svg" / arquivo).read_text(encoding="utf-8")
-    caixa = re.search(r'viewBox="([^"]+)"', cru).group(1)
+    raiz = re.search(r"<svg([^>]*)>", cru).group(1)
+    caixa = re.search(r'viewBox="([^"]+)"', raiz).group(1)
     dentro = re.search(r"<svg[^>]*>(.*)</svg>", cru, re.S).group(1)
-    dentro = re.sub(r"<!--.*?-->", "", dentro, flags=re.S)
-    dentro = re.sub(r'\s(?:id|data-name)="[^"]*"', "", dentro)
-    dentro = re.sub(r'(\s(?:d|transform)=")([^"]*)"',
-                    lambda m: m.group(1) + re.sub(r"-?(?:\d+\.?\d*|\.\d+)", _arredonda,
-                                                  m.group(2)).strip() + '"', dentro)
-    dentro = re.sub(r'(stroke|fill)="#(?:111|000)(?:000)?"', r'\1="currentColor"', dentro)
     dentro = "".join(linha.strip() for linha in dentro.splitlines())
-    if arquivo == "xbox.svg":
-        dentro = ('<g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" '
-                  f'stroke-linecap="round">{dentro}</g>')
-    elif "stroke" not in dentro and "fill" not in dentro:
-        dentro = f'<g fill="currentColor">{dentro}</g>'      # arte só de preenchimento
-    return f'  <symbol id="{ident}" viewBox="{caixa}">{dentro}</symbol>'
+    pintura = " ".join(f'{a}="{v}"' for a in _PINTURA
+                       for v in re.findall(rf'\s{a}="([^"]*)"', raiz))
+    pintura = re.sub(r'="#(?:111|000)(?:000)?"', '="currentColor"', pintura)
+    return f'  <symbol id="{ident}" viewBox="{caixa}"><g {pintura}>{dentro}</g></symbol>'
 
 
 SPRITE_DOS_EXTERNOS = (

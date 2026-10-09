@@ -2,15 +2,17 @@
 
 Ela, 08/10/2026: *«temos os svgs deles no repo já (…) colocamos eles nos quadrados de cada
 controle.»*
-A linha do controle de fora ganha o desenho do modelo (o do repositório, ou o Xbox, que é desenho
-nosso) e o nome do modelo vai para a dica do quadrado, não para o corpo da linha.
+A linha do controle de fora ganha o desenho do modelo (desenho nosso: a arte que a casa já trazia
+não tem origem nem licença registradas) e o nome do modelo vai para a dica do quadrado, não para o
+corpo da linha.
 
 O que se mede, com cabo e com rádio e com quatro externos na mesma lista:
 
-* cada marca que tem desenho (Nintendo, Xbox, 8BitDo) leva UM quadrado `<svg><use>` apontando para
-  um símbolo que EXISTE no sprite da página, e o nome do modelo mora só no `title` do quadrado;
-* a marca sem desenho não ganha quadrado (a tela não afirma um modelo que ninguém desenhou);
-* o Xbox é desenho nosso: o arquivo existe, é só traçado e não cita nada de fora.
+* cada forma que tem desenho (Pro Controller, Xbox, 8BitDo) leva UM quadrado `<svg><use>` apontando
+  para um símbolo que EXISTE no sprite da página, e o nome do modelo mora só no `title` do quadrado;
+* o que não tem desenho próprio (o Joy-Con, a HORI) leva o contorno genérico: o Joy-Con é Nintendo,
+  mas não tem a forma do Pro Controller, e a tela não afirma um modelo que ninguém desenhou;
+* os quatro desenhos são nossos: só traçado, sem nada de fora, e são eles que a página leva.
 
 Item 2, o «Acrescentar hub» com dono (a face B-hub): o botão abre a pergunta curta (em qual entrada,
 nome opcional, Acrescentar/Cancelar) e o ato real é da `LogicaDoMapa`, que grava pelo mesmo caminho
@@ -50,9 +52,11 @@ PRO = {"name": "Pro Controller", "vid": "057e", "pid": "2009", "driver": "hid-ni
 XBOX = {"name": "Xbox 360 Controller", "vid": "045e", "pid": "028e", "driver": "xpad"}
 SN30 = {"name": "8BitDo SN30 Pro", "vid": "2dc8", "pid": "6003", "driver": "hid-generic"}
 HORI = {"name": "Controle da HORI", "vid": "0f0d", "pid": "0092", "driver": "hid-generic"}
+JOYCON = {"name": "Joy-Con (L)", "vid": "057e", "pid": "2006", "driver": "hid-nintendo"}
 
 MODELO = {"057e:2009": "Pro Controller (modo Switch)", "045e:028e": "Xbox 360"}
-SIMBOLO = {"057e:2009": "ext-nintendo", "045e:028e": "ext-xbox", "2dc8:6003": "ext-8bitdo"}
+SIMBOLO = {"057e:2009": "ext-pro", "045e:028e": "ext-xbox", "2dc8:6003": "ext-8bitdo"}
+NOSSOS = ("pro-controller.svg", "xbox.svg", "8bitdo.svg", "generico.svg")
 
 
 @pytest.fixture(autouse=True)
@@ -94,13 +98,15 @@ def test_cada_modelo_tem_o_seu_desenho_no_quadrado_no_cabo_e_no_radio(
 def test_o_simbolo_de_cada_quadrado_existe_no_sprite_da_pagina() -> None:
     pagina = _a_pagina()
     assert pagina.count('<svg class="ext-sprite"') == 1
-    for marca, simbolo in conexoes.SIMBOLO_DO_EXTERNO.items():
+    todos = {*conexoes.SIMBOLO_DO_EXTERNO.values(), conexoes.SIMBOLO_DO_PRO,
+             conexoes.SIMBOLO_GENERICO}
+    for simbolo in todos:
         achados = re.findall(
             rf'<symbol id="{simbolo}" viewBox="[^"]+">(.+?)</symbol>', pagina, re.S)
-        assert len(achados) == 1, f"{marca}: o símbolo {simbolo} não está no sprite da página"
-        assert "<path" in achados[0] or "<circle" in achados[0], marca
-        assert "currentColor" in achados[0], f"{marca}: o desenho não segue a cor do texto"
-    assert set(conexoes.SIMBOLO_DO_EXTERNO.values()) == set(SIMBOLO.values())
+        assert len(achados) == 1, f"o símbolo {simbolo} não está no sprite da página"
+        assert "<path" in achados[0] or "<circle" in achados[0], simbolo
+        assert "currentColor" in achados[0], f"{simbolo}: o desenho não segue a cor do texto"
+    assert todos == {*SIMBOLO.values(), "ext-generico"}
 
 
 @pytest.mark.parametrize("vp", ["057e:2009", "045e:028e"])
@@ -112,23 +118,34 @@ def test_o_nome_do_modelo_mora_na_dica_do_quadrado_e_nao_no_corpo_da_linha(vp: s
     assert MODELO[vp] not in sem_atributos, "o modelo voltou a ser texto da linha"
 
 
-def test_marca_sem_desenho_nao_ganha_quadrado_e_quatro_externos_cabem_em_quatro_linhas() -> None:
+def test_o_que_nao_tem_desenho_proprio_leva_o_generico_e_quatro_externos_cabem_em_quatro_linhas(
+        ) -> None:
     linhas = _linhas(_externo(PRO, "bluetooth", 1), _externo(XBOX, "usb", 2),
                      _externo(SN30, "bluetooth", 3), _externo(HORI, "usb", 4))
     assert len(linhas) == 4
-    com = ["ext-desenho" in x for x in linhas]
-    assert com == [True, True, True, False], com
+    simbolos = [re.findall(r'<use href="#([^"]+)"/>', x) for x in linhas]
+    assert simbolos == [["ext-pro"], ["ext-xbox"], ["ext-8bitdo"], ["ext-generico"]], simbolos
 
 
-def test_o_xbox_e_desenho_nosso_sem_nada_de_fora() -> None:
-    arquivo = RAIZ / "assets" / "control-svg" / "xbox.svg"
-    texto = arquivo.read_text(encoding="utf-8")
+@pytest.mark.parametrize("bus", ["usb", "bluetooth"])
+def test_o_joy_con_nao_ganha_o_desenho_do_pro_controller(bus: str) -> None:
+    (linha,) = _linhas(_externo(JOYCON, bus, 1))
+    assert '<use href="#ext-generico"/>' in linha, linha
+    assert 'title="Joy-Con (E)"' in linha, linha
+
+
+@pytest.mark.parametrize("nome", NOSSOS)
+def test_os_desenhos_sao_nossos_sem_nada_de_fora_e_sao_eles_que_a_pagina_leva(nome: str) -> None:
+    texto = (RAIZ / "assets" / "control-svg" / nome).read_text(encoding="utf-8")
     assert texto.lstrip().startswith("<svg") and "viewBox=" in texto
     for fora in ("<image", "http://", "https://", "<metadata", "xlink:href", "<script"):
         if fora == "http://":
             assert texto.count("http://") == texto.count("http://www.w3.org/2000/svg"), texto
         else:
             assert fora not in texto, f"o desenho nosso cita `{fora}`"
+    # o corpo do desenho (o primeiro traçado) é o que o sprite da página leva
+    (corpo,) = re.findall(r'<path d="([^"]+)"/>', texto)[:1]
+    assert f'<path d="{corpo}"/>' in _a_pagina(), f"{nome}: a página não leva este desenho"
 
 
 # ---------------------------------------------------------------- item 2: o hub pergunta a entrada
