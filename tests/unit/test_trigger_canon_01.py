@@ -52,6 +52,26 @@ def test_a_sensacao_que_ela_aprovou_nao_muda_um_byte(nome: str) -> None:
     )
 
 
+#: O Disparo e os dois Pulsos não estavam na tabela de 01/08. Saem do layout
+#: antigo (o `0x06` da vibração simples e o `0x22` com parâmetros em ordem) para
+#: o modo que o controle lê, em 08/10/2026, com os padrões da tela. A validar na
+#: mão dela, cabo e rádio.
+BLOCOS_DE_08_10: dict[str, tuple[int, tuple[int, ...]]] = {
+    "Weapon": (0x25, (0x24, 0x00, 0x05, 0, 0, 0, 0)),
+    "PulseB": (0x25, (0x84, 0x00, 0x05, 0, 0, 0, 0)),
+    "PulseA": (0x22, (0x84, 0x00, 0x2D, 0, 0, 0, 0)),
+}
+
+
+@pytest.mark.parametrize("nome", sorted(BLOCOS_DE_08_10))
+def test_o_disparo_e_os_pulsos_mandam_o_modo_que_o_controle_le(nome: str) -> None:
+    """Mordida: devolver o `weapon()` ao `PULSE_B` (`06 02 05 C8`)."""
+    esperado_modo, esperado_forces = BLOCOS_DE_08_10[nome]
+    efeito = _efeito_com_os_padroes(nome)
+    assert int(efeito.mode) == esperado_modo, nome
+    assert tuple(int(f) for f in efeito.forces) == esperado_forces, nome
+
+
 def test_a_enum_carrega_os_nomes_da_sony_sobre_os_mesmos_valores() -> None:
     """`RIGID_B` é OFF, e o nome escondia isso."""
     assert TriggerMode.RIGID_B == 0x05

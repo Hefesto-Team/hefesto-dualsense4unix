@@ -41,6 +41,7 @@ from hefesto_dualsense4unix.core.controller import TriggerEffect
 from hefesto_dualsense4unix.core.trigger_effects import (
     PRESET_FACTORIES,
     build_from_name,
+    custom,
 )
 from hefesto_dualsense4unix.profiles.trigger_presets import VIBRATION_POSITION_PRESETS
 
@@ -132,6 +133,12 @@ POSICAO_FORA_DO_CURSO = "posicao_fora_do_curso"
 MACHINE_SEM_INICIO = "machine_com_inicio_fora_de_1_a_8"
 REPETE_SEM_FREQUENCIA = "promete_repeticao_e_manda_frequencia_zero"
 FIRMEZA_SEM_O_FUNDO = "firmeza_que_nao_chega_ao_fundo"
+ARMA_SEM_DOIS_PONTOS = "arma_ou_arco_sem_inicio_e_fim_na_mascara"
+VALOR_FORA_DOS_BITS = "valor_que_passa_dos_bits_do_modo"
+
+#: Quantos bits o campo de valor de cada modo tem: a arma, três (força - 1); o
+#: arco, seis (força - 1 e estalo - 1); o galope, seis (as duas patas).
+BITS_DO_VALOR = {0x25: 3, 0x22: 6, 0x23: 6}
 
 
 def violacoes(
@@ -150,6 +157,10 @@ def violacoes(
                 inativas &= ~(0x07 << (3 * z))
             if inativas:
                 achadas.add(FORCA_EM_ZONA_INATIVA)
+    if lido.modo in (0x25, 0x22) and len(lido.zonas) != 2:
+        achadas.add(ARMA_SEM_DOIS_PONTOS)
+    if lido.modo in BITS_DO_VALOR and lido.amplitude_bruta >> BITS_DO_VALOR[lido.modo]:
+        achadas.add(VALOR_FORA_DOS_BITS)
     if lido.modo == 0x06 and (lido.posicao or 0) > CURSO_DO_0X06:
         achadas.add(POSICAO_FORA_DO_CURSO)
     if lido.modo == 0x27 and not (lido.zonas and 1 <= lido.zonas[0] <= 8):
@@ -237,16 +248,15 @@ ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
     "Vibration": (_METRALHADORA, frozenset({
         BIT_FORA_DO_CURSO, REPETE_SEM_FREQUENCIA,
     })),
-    # o Disparo, a Arma semi-automática e o Pulso (curva B)
-    "Weapon": (_DISPARO, frozenset({POSICAO_FORA_DO_CURSO})),
-    "PulseB": (_DISPARO, frozenset({POSICAO_FORA_DO_CURSO})),
+    # O Disparo, o Pulso (curva B) e o Pulso (curva A) saíram desta tabela em
+    # 08/10/2026 (arma `0x25` e arco `0x22` no layout do modo). Os três de baixo
+    # têm a sensação que a mão dela aprovou em 01/08 e ficam como estão até a
+    # sessão às cegas: os bytes só mudam se ela escolher o modo próprio.
     "SemiAutoGun": (_DISPARO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
-    # o Arco, o Galope e o Pulso (curva A)
     "Bow": (_ARCO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
     "Galloping": (_ARCO, frozenset({
         BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
     })),
-    "PulseA": (_ARCO, frozenset({BIT_FORA_DO_CURSO})),
 }
 
 
@@ -344,15 +354,41 @@ class TestDecodificador:
         assert lido.frequencia == 10
         assert violacoes(lido, repete=True) == frozenset()
 
+    def test_a_arma_le_a_forca_menos_um_no_byte_3(self) -> None:
+        lido = decodificar(_hex("25 24 00 05 00 00 00 00 00 00 00"))
+        assert lido.modo == 0x25
+        assert lido.zonas == (2, 5)
+        assert lido.amplitude_bruta == 5
+        assert violacoes(lido) == frozenset()
+
+    def test_arma_ou_arco_com_um_ponto_so_ou_tres_e_denunciado(self) -> None:
+        um = decodificar(_hex("25 04 00 05 00 00 00 00 00 00 00"))
+        tres = decodificar(_hex("22 8C 00 2D 00 00 00 00 00 00 00"))
+        assert violacoes(um) == {ARMA_SEM_DOIS_PONTOS}
+        assert violacoes(tres) == {ARMA_SEM_DOIS_PONTOS}
+
+    def test_a_arma_com_a_forca_fora_dos_tres_bits_e_denunciada(self) -> None:
+        passou = decodificar(_hex("25 24 00 08 00 00 00 00 00 00 00"))
+        assert violacoes(passou) == {VALOR_FORA_DOS_BITS}
+
+    def test_o_arco_e_o_galope_com_valor_fora_dos_seis_bits_sao_denunciados(self) -> None:
+        arco = decodificar(_hex("22 84 00 40 00 00 00 00 00 00 00"))
+        galope = decodificar(_hex("23 01 02 40 0A 00 00 00 00 00 00"))
+        assert violacoes(arco) == {VALOR_FORA_DOS_BITS}
+        assert violacoes(galope, repete=True) == {VALOR_FORA_DOS_BITS}
+
     def test_desligados_e_arma_simples_nao_quebram_nada(self) -> None:
         for modo in (0x00, 0x05, 0x02):
             assert violacoes(decodificar(bytes([modo]) + bytes(10))) == frozenset()
 
     def test_bit_de_zona_fora_do_curso_e_denunciado(self) -> None:
         # a máscara 0x0702 liga o bit 10, que o curso de dez zonas não tem
+        # o bloco antigo do Pulso (curva A), com os parâmetros em ordem
         lido = decodificar(_hex("22 02 07 B4 00 00 00 00 00 00 00"))
         assert lido.zonas == (1, 8, 9)
-        assert violacoes(lido) == {BIT_FORA_DO_CURSO}
+        assert violacoes(lido) == {
+            BIT_FORA_DO_CURSO, ARMA_SEM_DOIS_PONTOS, VALOR_FORA_DOS_BITS,
+        }
         # e a zona 12 também
         assert BIT_FORA_DO_CURSO in violacoes(
             decodificar(_hex("21 00 10 00 00 00 00 00 00 00 00"))
@@ -417,6 +453,42 @@ def test_a_regua_le_o_bloco_que_o_relatorio_manda(caso: str) -> None:
     """
     efeito = _efeito_do_caso(caso)
     assert bloco_de(efeito) == _bloco_do_relatorio(efeito)
+
+
+# --- os blocos da sessão às cegas: o que ela digita no Montar do zero ---------
+
+#: O modo próprio de cada efeito de 01/08 que a sessão às cegas compara com o
+#: bloco de hoje (`docs/process/sprints/*-O-DISPARO-E-A-ARMA-*` e
+#: `*-O-ARCO-E-O-GALOPE-*`), com os padrões da tela: modo e as sete forças como
+#: o Montar do zero as recebe. A régua os lê como o controle lê; o byte errado
+#: no roteiro, digitado por ela, não vai ao gatilho.
+BLOCOS_DA_SESSAO_AS_CEGAS: dict[str, tuple[int, tuple[int, ...]]] = {
+    "SemiAutoGun (arma 0x25)": (0x25, (0x48, 0x00, 0x04, 0, 0, 0, 0)),
+    "Bow (arco 0x22)": (0x22, (0x82, 0x00, 0x35, 0, 0, 0, 0)),
+    "Galloping (galope 0x23)": (0x23, (0x01, 0x02, 0x3F, 0x0A, 0, 0, 0)),
+    "PulseB (vibração simples 0x06)": (0x06, (40, 5, 70, 0, 0, 0, 0)),
+}
+
+
+@pytest.mark.parametrize("nome", sorted(BLOCOS_DA_SESSAO_AS_CEGAS))
+def test_os_blocos_do_roteiro_das_cegas_passam_pela_regua(nome: str) -> None:
+    """Mordida: pôr o bit do fim do galope fora do curso (`0x04` no byte 2)."""
+    modo, forces = BLOCOS_DA_SESSAO_AS_CEGAS[nome]
+    efeito = custom(modo, forces)
+    assert violacoes(
+        decodificar(bloco_de(efeito)), repete=modo == 0x23
+    ) == frozenset(), nome
+
+
+def test_os_blocos_do_roteiro_sao_os_dos_padroes_da_tela_no_modo_proprio() -> None:
+    """O roteiro não inventa byte: a arma da Semi-automática é a do Disparo com
+    os padrões dela, e o arco e o galope têm os valores da tela."""
+    semi = _SPEC_POR_NOME["SemiAutoGun"]
+    inicio, fim, forca = (p.default for p in semi.params)
+    assert BLOCOS_DA_SESSAO_AS_CEGAS["SemiAutoGun (arma 0x25)"] == (
+        0x25,
+        build_from_name("Weapon", [inicio, fim, round(forca / 8 * 255)]).forces,
+    )
 
 
 # --- a promessa da tela: quem diz «enquanto apertado» tem de bater ------------

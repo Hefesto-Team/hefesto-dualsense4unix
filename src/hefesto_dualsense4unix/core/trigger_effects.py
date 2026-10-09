@@ -105,6 +105,61 @@ def _forca_de_byte(valor: int) -> int:
     return max(1, min(8, round(valor / 255 * 8)))
 
 
+def _no_dominio(valor: int, lo: int, hi: int) -> int:
+    """O valor dentro do domínio do modo; o que passa encosta no limite."""
+    return max(lo, min(hi, int(valor)))
+
+
+def _arma_oficial(start: int, end: int, force: int) -> TriggerEffect:
+    """A arma oficial (`0x25`): o gatilho resiste entre `start` e `end`, estala
+    e rearma sozinho quando o dedo volta para antes do início.
+
+    O bloco leva a máscara `(1<<início)|(1<<fim)` nos bytes 1-2 e a força menos
+    um no byte 3. O domínio do modo é o da Sony: início de 2 a 7, fim de
+    `início + 1` a 8; a tela deixa mais folga que isso, e o que passa encosta
+    no limite, sem recusar. A força chega em byte (0 a 255, o que a tela
+    mostra) e vira 1 a 8; zero é sem força, e a arma sem força é o gatilho
+    desligado.
+    """
+    _check_start_end(start, end)
+    _byte(force, name="force")
+    forca = _forca_de_byte(force)
+    if forca <= 0:
+        return off()
+    inicio = _no_dominio(start, 2, 7)
+    fim = _no_dominio(end, inicio + 1, 8)
+    return TriggerEffect(
+        mode=TriggerMode.WEAPON,
+        forces=_forces_oficiais(
+            _bitmask_de_zonas((inicio, fim)), forca - 1
+        ),
+    )
+
+
+def _arco_do_firmware(start: int, end: int, force: int, snap: int) -> TriggerEffect:
+    """O arco do firmware (`0x22`, vivo mas fora da lista oficial): tensão entre
+    `start` e `end` e o estalo ao soltar.
+
+    A máscara `(1<<início)|(1<<fim)` vai nos bytes 1-2, e a força menos um mais
+    o estalo menos um, deslocado três bits, nos bytes 3-4. Início de 0 a 8 e
+    fim de `início + 1` a 9; o que passa encosta no limite. Força ou estalo
+    zero deixa o gatilho desligado.
+    """
+    if force <= 0 or snap <= 0:
+        return off()
+    inicio = _no_dominio(start, 0, 8)
+    fim = _no_dominio(end, inicio + 1, 9)
+    forca = _no_dominio(force, 1, 8)
+    estalo = _no_dominio(snap, 1, 8)
+    return TriggerEffect(
+        mode=TriggerMode.BOW,
+        forces=_forces_oficiais(
+            _bitmask_de_zonas((inicio, fim)),
+            (forca - 1) | ((estalo - 1) << 3),
+        ),
+    )
+
+
 def _feedback_oficial(forcas_por_zona: dict[int, int]) -> TriggerEffect:
     """Modo `FEEDBACK` (0x21) com zonas e forças no formato do firmware."""
     zonas = _bitmask_de_zonas(z for z, f in forcas_por_zona.items() if f > 0)
@@ -193,19 +248,17 @@ def pulse() -> TriggerEffect:
 
 
 def pulse_a(start: int, end: int, force: int) -> TriggerEffect:
+    """O Pulso (curva A): o arco do firmware (`0x22`) entre `start` e `end`,
+    com o estalo da mesma força. A força chega em byte (0 a 255) e vira 1 a 8."""
     _check_start_end(start, end)
-    s = _pos(start, name="start")
-    e = _pos(end, name="end")
-    f = _byte(force, name="force")
-    return TriggerEffect(mode=TriggerMode.PULSE_A, forces=(s, e, f, 0, 0, 0, 0))
+    forca = _forca_de_byte(_byte(force, name="force"))
+    return _arco_do_firmware(start, end, forca, forca)
 
 
 def pulse_b(start: int, end: int, force: int) -> TriggerEffect:
-    _check_start_end(start, end)
-    s = _pos(start, name="start")
-    e = _pos(end, name="end")
-    f = _byte(force, name="force")
-    return TriggerEffect(mode=TriggerMode.PULSE_B, forces=(s, e, f, 0, 0, 0, 0))
+    """O Pulso (curva B): a arma oficial (`0x25`) entre `start` e `end`, o
+    mesmo bloco do Disparo (ver `_arma_oficial`)."""
+    return _arma_oficial(start, end, force)
 
 
 def resistance(start: int, force: int) -> TriggerEffect:
@@ -218,7 +271,12 @@ def resistance(start: int, force: int) -> TriggerEffect:
 
 
 def bow(start: int, end: int, force: int, snap: int) -> TriggerEffect:
-    """Simula arco: tensão crescente entre `start` e `end`, `snap` ao soltar."""
+    """Simula arco: tensão crescente entre `start` e `end`, `snap` ao soltar.
+
+    Os bytes de 01/08 (a mão dela aprovou), mantidos até a sessão às cegas de
+    `O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01`; o bloco do modo
+    próprio (`0x22`) é o do `pulse_a`.
+    """
     _byte(start, name="start", lo=0, hi=8)
     _byte(end, name="end", lo=1, hi=9)
     if end <= start:
@@ -232,7 +290,13 @@ def bow(start: int, end: int, force: int, snap: int) -> TriggerEffect:
 def galloping(
     start: int, end: int, first_foot: int, second_foot: int, frequency: int
 ) -> TriggerEffect:
-    """Cadência de galope (5 params canônicos; HID usa 7 forces)."""
+    """Cadência de galope (5 params canônicos; HID usa 7 forces).
+
+    Os bytes de 01/08 (a mão dela aprovou), mantidos até a sessão às cegas de
+    `O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01`. Neste layout a
+    frequência cai nos bytes de amplitude do `0x26`, e o byte de frequência
+    do modo fica em zero: ela é inerte.
+    """
     _byte(start, name="start", lo=0, hi=8)
     _byte(end, name="end", lo=1, hi=9)
     if end <= start:
@@ -247,6 +311,9 @@ def galloping(
 
 
 def semi_auto_gun(start: int, end: int, force: int) -> TriggerEffect:
+    """Os bytes de 01/08 (a mão dela aprovou), mantidos até a sessão às cegas de
+    `O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01`; a arma
+    oficial (`0x25`) é o bloco do `weapon`."""
     _byte(start, name="start", lo=2, hi=7)
     _byte(end, name="end", lo=start + 1, hi=8)
     return TriggerEffect(
@@ -316,11 +383,8 @@ def feedback(position: int, strength: int) -> TriggerEffect:
 
 
 def weapon(start: int, end: int, force: int) -> TriggerEffect:
-    _check_start_end(start, end)
-    return TriggerEffect(
-        mode=TriggerMode.PULSE_B,
-        forces=(start, end, _byte(force, name="force"), 0, 0, 0, 0),
-    )
+    """O Disparo: a arma oficial (`0x25`), que resiste, estala e rearma sozinha."""
+    return _arma_oficial(start, end, force)
 
 
 def vibration(position: int, amplitude: int, frequency: int) -> TriggerEffect:

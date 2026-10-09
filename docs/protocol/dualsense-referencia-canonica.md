@@ -1349,6 +1349,13 @@ SÃO expressáveis.
 > 4, 40 por segundo). A Arma automática e a Vibração não mudaram. Falta a mão dela
 > no gatilho.
 
+> **NOTA DATADA — 08/10/2026: `weapon()` saiu do `0x06`.** O `weapon()` (e o `pulse_b()`, que
+> mandava o mesmo bloco) agora manda a arma oficial `0x25`: `25 24 00 05` nos padrões, com os
+> bits do início e do fim na máscara e a força menos um em 3 bits. O `0x06` é a vibração simples
+> (frequência, amplitude, posição), não a arma. O `vibration()` ficou como estava. **Grau: ALTA
+> para o byte** (Nielk1 e Microsoft concordam), **BAIXA para a sensação**: falta a mão dela no
+> gatilho, às cegas, cabo e rádio.
+
 ### Leitura de estado — recurso que ninguém usa aqui
 
 O **nibble alto** do byte de status de cada gatilho, no report de entrada, diz

@@ -58,21 +58,40 @@ class TestBasicos:
 
 
 class TestPulseAB:
-    def test_pulse_a(self):
+    def test_pulse_a_manda_o_arco_do_firmware_entre_duas_posicoes(self):
+        """`22 84 00 2D`: bits 2 e 7 na máscara, força 6 e estalo 6 (menos um)."""
         eff = tfx.pulse_a(2, 7, 180)
-        assert eff.mode == TriggerMode.PULSE_A
-        assert eff.forces == (2, 7, 180, 0, 0, 0, 0)
+        assert eff.mode == TriggerMode.BOW
+        assert eff.forces == (0x84, 0x00, 0x2D, 0, 0, 0, 0)
 
-    def test_pulse_b(self):
+    def test_pulse_b_manda_a_arma_oficial_entre_duas_posicoes(self):
+        """`25 84 00 05`: bits 2 e 7 na máscara e a força 6 menos um."""
         eff = tfx.pulse_b(2, 7, 180)
-        assert eff.mode == TriggerMode.PULSE_B
-        assert eff.forces == (2, 7, 180, 0, 0, 0, 0)
+        assert eff.mode == TriggerMode.WEAPON
+        assert eff.forces == (0x84, 0x00, 0x05, 0, 0, 0, 0)
+
+    def test_pulse_b_e_o_mesmo_bloco_do_disparo(self):
+        assert tfx.pulse_b(3, 6, 90) == tfx.weapon(3, 6, 90)
+
+    def test_pulse_a_sem_forca_e_o_gatilho_desligado(self):
+        assert tfx.pulse_a(2, 7, 0) == tfx.off()
+        assert tfx.pulse_b(2, 7, 0) == tfx.off()
+
+    def test_pulse_a_leva_as_pontas_do_curso_na_mascara(self):
+        assert tfx.pulse_a(0, 9, 255).forces[:2] == (0x01, 0x02)
+        assert tfx.pulse_a(8, 9, 255).forces[:2] == (0x00, 0x03)
 
     def test_end_menor_ou_igual_start_rejeita(self):
         with pytest.raises(ValueError, match="end"):
             tfx.pulse_a(5, 5, 100)
         with pytest.raises(ValueError, match="end"):
             tfx.pulse_b(5, 3, 100)
+
+    def test_force_fora_de_byte_rejeita(self):
+        with pytest.raises(ValueError, match="force"):
+            tfx.pulse_a(2, 7, 300)
+        with pytest.raises(ValueError, match="force"):
+            tfx.pulse_b(2, 7, -1)
 
 
 class TestResistance:
@@ -136,10 +155,42 @@ class TestGuns:
         assert eff.mode == TriggerMode.PULSE_AB
         assert eff.forces == (2, 6 * AMPLITUDE_SCALE, 100, 0, 0, 0, 0)
 
-    def test_weapon(self):
+
+
+class TestWeapon:
+    """O Disparo é a arma oficial (`0x25`), de 08/10/2026: a máscara com o início
+    e o fim nos bytes 1-2 e a força menos um no byte 3."""
+
+    def test_os_padroes_mandam_o_bloco_da_arma(self):
         eff = tfx.weapon(2, 5, 200)
-        assert eff.mode == TriggerMode.PULSE_B
-        assert eff.forces == (2, 5, 200, 0, 0, 0, 0)
+        assert eff.mode == TriggerMode.WEAPON
+        assert eff.forces == (0x24, 0x00, 0x05, 0, 0, 0, 0)
+
+    def test_a_forca_de_byte_vira_um_a_oito_e_o_bloco_guarda_menos_um(self):
+        for byte, guardado in ((1, 0), (32, 0), (64, 1), (128, 3), (200, 5), (255, 7)):
+            assert tfx.weapon(2, 5, byte).forces[2] == guardado, byte
+
+    def test_a_mascara_tem_o_bit_do_inicio_e_o_do_fim(self):
+        for inicio, fim in ((2, 3), (3, 8), (7, 8), (4, 6)):
+            forces = tfx.weapon(inicio, fim, 200).forces
+            assert forces[0] | forces[1] << 8 == (1 << inicio) | (1 << fim)
+
+    def test_sem_forca_e_o_gatilho_desligado(self):
+        assert tfx.weapon(2, 5, 0) == tfx.off()
+
+    def test_o_que_a_tela_deixa_e_a_arma_nao_aceita_encosta_no_limite(self):
+        """A tela vai de 0 a 9; o modo, de 2 a 7 no início e até 8 no fim."""
+        assert tfx.weapon(0, 9, 200) == tfx.weapon(2, 8, 200)
+        assert tfx.weapon(1, 2, 200) == tfx.weapon(2, 3, 200)
+        assert tfx.weapon(8, 9, 200) == tfx.weapon(7, 8, 200)
+
+    def test_end_menor_ou_igual_start_rejeita(self):
+        with pytest.raises(ValueError, match="end"):
+            tfx.weapon(5, 5, 200)
+
+    def test_force_fora_de_byte_rejeita(self):
+        with pytest.raises(ValueError, match="force"):
+            tfx.weapon(2, 5, 256)
 
 
 class TestMachine:

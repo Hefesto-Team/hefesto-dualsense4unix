@@ -78,8 +78,8 @@ Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mod
 | `rigid(position, force)`       | 2     | `position (0–9)`, `force (0–255)`                                                                    | `(Rigid_B, [position, force, 0, 0, 0, 0, 0])` |
 | `simple_rigid(strength)`       | 1     | `strength (0–8)`                                                                                     | atalho de `rigid(0, strength*32)` |
 | `pulse()`                      | 0     | —                                                                                                    | `(Pulse, [0]*7)`                  |
-| `pulse_a(start, end, force)`   | 3     | `start_pos`, `end_pos`, `force`                                                                      | `(Pulse_A, [start, end, force, 0, 0, 0, 0])` |
-| `pulse_b(start, end, force)`   | 3     | `start_pos`, `end_pos`, `force` — ordem confirmada: start, end, force, demais zero                   | `(Pulse_B, [start, end, force, 0, 0, 0, 0])` |
+| `pulse_a(start, end, force)`   | 3     | `start (0–8)`, `end (1–9, > start)`, `force (0–255)`                                                  | `(0x22 arco, máscara das duas zonas, (força-1) \| (estalo-1)<<3)`, estalo igual à força (ver nota de 08/10) |
+| `pulse_b(start, end, force)`   | 3     | `start (2–7)`, `end (start+1 .. 8)`, `force (0–255)`, igual ao `weapon`                              | `(0x25 arma oficial, máscara das duas zonas, força-1 em 3 bits)` |
 | `resistance(start, force)`     | 2     | `start_pos (0–9)`, `force (0–8)`                                                                     | `(Rigid_AB, [start, force*32, 0, 0, 0, 0, 0])` |
 | `bow(start, end, force, snap)` | 4     | `start (0–8)`, `end (1–9, > start)`, `force (0–8)`, `snap (0–8)`                                     | `(Pulse_AB, [start, end, force*32, snap*32, 0, 0, 0])` |
 | `galloping(start, end, foot_a, foot_b, frequency)` | 5 | `start (0–8)`, `end (1–9)`, `foot_a (0–7)`, `foot_b (0–7)`, `frequency (0–255)` | `(Pulse_AB, [start, end, foot_a, foot_b, frequency, 0, 0])` |
@@ -87,7 +87,7 @@ Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mod
 | `auto_gun(start, strength, frequency)` | 3 | `start (0–9)`, `strength (0–8)`, `frequency (0–255)`                                          | `(Pulse_AB, [start, strength*32, frequency, 0, 0, 0, 0])` |
 | `machine(start, end, strength, frequency)` | 4 | `start (0–8)`, `end (1–9, > start)`, `strength (1–8)`, `frequency (1–255)` | `(Vibration 0x26, zonas start..end, força-1 em 3 bits, frequência no byte 9)` |
 | `feedback(position, strength)` | 2     | `position (0–9)`, `strength (0–8)`                                                                   | `(Rigid_B, [position, strength*32, 0, 0, 0, 0, 0])` |
-| `weapon(start, end, force)`    | 3     | `start`, `end`, `force`                                                                              | `(Pulse_B, [start, end, force, 0, 0, 0, 0])` |
+| `weapon(start, end, force)`    | 3     | `start (2–7)`, `end (start+1 .. 8)`, `force (0–255, vira 1–8)`                                       | `(0x25 arma oficial, máscara das duas zonas, força-1 em 3 bits)` |
 | `vibration(position, amplitude, frequency)` | 3 | `position (0–9)`, `amplitude (0–8)`, `frequency (0–255)`                                     | `(Pulse_A, [position, amplitude*32, frequency, 0, 0, 0, 0])` |
 | `slope_feedback(start, end, start_strength, end_strength)` | 4 | `start`, `end`, `start_strength (1–8)`, `end_strength (1–8)`                     | `(Rigid_AB, [start, end, start_strength*32, end_strength*32, 0, 0, 0])` |
 | `multi_position_feedback(strengths: list[int])` | 1 lista de 10 | Array com strength por posição                                                          | `(Rigid_AB, pack10to7bytes(strengths))` |
@@ -125,3 +125,4 @@ Acesso raw via `hefesto-dualsense4unix test trigger --raw --mode Pulse_AB --forc
 | 4    | Exposição de `CustomTriggerValue` na CLI | **Exposto via `--raw`** em `hefesto-dualsense4unix test trigger`; presets nomeados continuam o default       |
 
 W2.1 destravado.
+- **Disparo e Pulso, curva B (08/10/2026):** `weapon` e `pulse_b` mandam a arma oficial (`0x25`): `25 24 00 05` nos padrões 2, 5 e 200 (zonas 2 e 5 na máscara, força 5 de 8). O `0x06` que mandavam é a vibração simples (frequência, amplitude, posição), e os três parâmetros da tela caíam nela como 2 batidas por segundo numa posição fora do curso. Início e fim fora do domínio da Sony (início 2 a 7, fim até 8) encostam no limite, sem recusar; força 0 desliga. O Pulso, curva A, manda o arco (`0x22`): `22 84 00 2D`, com a força e o estalo iguais à força da tela. A Semi-automática, o Arco e o Galope mantêm os bytes de 01/08 até a sessão às cegas.
