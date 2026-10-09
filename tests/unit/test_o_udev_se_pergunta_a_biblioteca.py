@@ -9,7 +9,8 @@ dele, sem importar o pacote.
 
 MORDIDAS (cada uma arrancada e vista reprovar):
 
-- voltar a ler o arquivo do banco em `core/evdev_reader.py` ->
+- voltar a ler o arquivo do banco em qualquer `.py` de `src/` ou `scripts/`, ou em
+  qualquer `.sh` de `scripts/` (o `sed` do `doctor.sh`, por exemplo) ->
   ``test_nenhum_modulo_le_o_arquivo_interno_do_udev`` reprova;
 - fazer a pergunta devolver o valor cru, sem decodificar ->
   ``test_a_resposta_da_biblioteca_vira_texto``;
@@ -21,6 +22,11 @@ from __future__ import annotations
 
 import ast
 import ctypes
+import importlib.util
+import json
+import os
+import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -31,12 +37,6 @@ from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 
 RAIZ = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 O_ARQUIVO_INTERNO = "/run/udev/data"
-QUEM_PERGUNTA = (
-    "core/evdev_reader.py",
-    "core/banco_do_udev.py",
-    "integrations/audio_ks_dualsense.py",
-    "integrations/sinal_da_barra.py",
-)
 
 
 class _Biblioteca:
@@ -146,22 +146,118 @@ def test_o_curador_de_audio_pergunta_pelo_caminho_do_usb_device(
     assert falsa.soltos == 1
 
 
-def _strings_de_codigo(arquivo: str) -> list[str]:
-    arvore = ast.parse((RAIZ / arquivo).read_text(encoding="utf-8"))
+RAIZ_DO_REPO = RAIZ.parents[1]
+
+#: Quem pode escrever o caminho do banco no código, e a razão. Vazia de propósito:
+#: o Flatpak monta o caminho num manifesto (YAML, fora desta varredura) e o
+#: `test_o_flatpak_alcanca_o_broker.py` o conta em `LIDOS_PELA_BIBLIOTECA`. Quem
+#: precisar entrar aqui escreve a razão ao lado do nome.
+PODE_ESCREVER_O_CAMINHO: dict[str, str] = {}
+
+_COMENTARIO_DO_SHELL = re.compile(r"(^|\s)#.*$")
+
+
+def _codigo_python(arquivo: Path) -> str:
+    """O texto das strings que EXECUTAM (sem docstring e sem comentário, que a AST não tem)."""
+    arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
     docs = {
         id(no.value)
         for no in ast.walk(arvore)
         if isinstance(no, ast.Expr) and isinstance(no.value, ast.Constant)
     }
-    return [
+    return "\n".join(
         no.value
         for no in ast.walk(arvore)
         if isinstance(no, ast.Constant) and isinstance(no.value, str) and id(no) not in docs
+    )
+
+
+def _codigo_shell(arquivo: Path) -> str:
+    """O shell sem as linhas de comentário nem o rabo `# ...` delas."""
+    linhas = arquivo.read_text(encoding="utf-8", errors="replace").splitlines()
+    return "\n".join(_COMENTARIO_DO_SHELL.sub("", linha) for linha in linhas)
+
+
+def _todo_leitor_de_codigo() -> list[Path]:
+    achados = sorted(
+        [*(RAIZ_DO_REPO / "src").rglob("*.py"), *(RAIZ_DO_REPO / "scripts").rglob("*.py"),
+         *(RAIZ_DO_REPO / "scripts").rglob("*.sh")]
+    )
+    return [a for a in achados if "__pycache__" not in a.parts]
+
+
+def test_nenhum_modulo_le_o_arquivo_interno_do_udev() -> None:
+    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
+    arquivos = _todo_leitor_de_codigo()
+    assert len(arquivos) > 100, "a varredura não achou o código: o caminho da raiz mudou"
+    achados: dict[str, str] = {}
+    for arquivo in arquivos:
+        rel = arquivo.relative_to(RAIZ_DO_REPO).as_posix()
+        if rel in PODE_ESCREVER_O_CAMINHO:
+            continue
+        codigo = _codigo_shell(arquivo) if arquivo.suffix == ".sh" else _codigo_python(arquivo)
+        if O_ARQUIVO_INTERNO in codigo:
+            achados[rel] = O_ARQUIVO_INTERNO
+    assert not achados, (
+        f"voltaram a citar o arquivo do banco do udev (pergunte à libudev): {sorted(achados)}"
+    )
+
+
+def _ensaio_dos_endpoints() -> Any:
+    caminho = RAIZ_DO_REPO / "scripts" / "ensaios" / "os_endpoints_de_haptica.py"
+    espec = importlib.util.spec_from_file_location("ensaio_os_endpoints_de_haptica", caminho)
+    assert espec is not None and espec.loader is not None
+    modulo = importlib.util.module_from_spec(espec)
+    sys.modules[espec.name] = modulo
+    espec.loader.exec_module(modulo)
+    return modulo
+
+
+def test_o_ensaio_dos_endpoints_pergunta_o_usec_a_biblioteca(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ensaio = _ensaio_dos_endpoints()
+    perguntas: list[tuple[str, int, str]] = []
+
+    def pergunta(tipo: str, devnum: int, nome: str) -> str | None:
+        perguntas.append((tipo, devnum, nome))
+        return "123456"
+
+    monkeypatch.setattr(ensaio, "propriedade_do_devnum", pergunta)
+    (tmp_path / "dev").write_text("189:5\n", encoding="utf-8")
+
+    assert ensaio._usec(tmp_path) == 123456
+    assert perguntas == [("c", os.makedev(189, 5), "USEC_INITIALIZED")]
+    assert ensaio._usec(tmp_path / "sem-no") == 0
+
+
+def test_o_ensaio_dos_endpoints_le_os_sinks_pelo_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    ensaio = _ensaio_dos_endpoints()
+    chamadas: list[list[str]] = []
+    nos = [
+        {
+            "index": 7,
+            "name": "alsa_output.usb-Sony_HEFESTOAABBCC-00.HiFi__Speaker__sink",
+            "sample_specification": "s16le 4ch 48000Hz",
+            "properties": {
+                "device.bus": "usb", "device.vendor.id": "054c", "device.product.id": "0ce6",
+                "sysfs.path": "/devices/pci0000:00/usb1/1-1", "audio.channels": "4",
+            },
+        },
+        {"index": 8, "name": "alsa_output.pci-0000_00_1f.3.analog-stereo", "properties": {}},
     ]
 
+    def ler(argv: list[str]) -> str | None:
+        chamadas.append(list(argv))
+        return json.dumps(nos) if "--format=json" in argv else None
 
-@pytest.mark.parametrize("arquivo", QUEM_PERGUNTA)
-def test_nenhum_modulo_le_o_arquivo_interno_do_udev(arquivo: str) -> None:
-    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
-    achados = [t for t in _strings_de_codigo(arquivo) if O_ARQUIVO_INTERNO in t]
-    assert not achados, f"{arquivo} voltou a citar o arquivo do banco do udev: {achados}"
+    monkeypatch.setattr(ensaio, "rodar_pactl", ler)
+
+    achados = ensaio.nossos_sinks()
+
+    assert [a["nome"] for a in achados] == [nos[0]["name"]]
+    assert achados[0] | {} == {
+        "nome": nos[0]["name"], "espec": "s16le 4ch 48000Hz", "bus": "usb", "vid": "054c",
+        "pid": "0ce6", "sysfs": "/devices/pci0000:00/usb1/1-1", "canais": "4", "id": "7",
+    }
+    assert all("--format=json" in c for c in chamadas), chamadas

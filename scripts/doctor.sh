@@ -503,13 +503,14 @@ check_udev() {
 # O doctor dava `[OK] 15 regras udev canônicas presentes` com três físicos
 # nascendo com a ACL da sessão e a Steam segurando os três.
 #
-# O que decide é o que o udev ESCREVEU no banco dele sobre o nó vivo: a tag
-# CORRENTE (`Q:` em /run/udev/data/c<major>:<minor>, desde o systemd 247; o
-# `G:` é a tag «pegajosa», que fica mesmo depois de um `TAG-=`). `Q:uaccess`
-# no físico quer dizer que o `73-seat-late.rules` deu a ACL da sessão no
-# nascimento — qualquer programa da sessão pode abri-lo antes de o broker
-# esconder. E `Q:uaccess` sem `Q:seat` é a assinatura de uma regra que devolve
-# o `uaccess` DEPOIS da `71-seat.rules`.
+# O que decide é o que o udev DECIDIU sobre o nó vivo, e quem responde é o
+# `udevadm info` (o banco em /run/udev/data é interno do systemd, e ninguém
+# promete o formato dele): a tag CORRENTE (`CURRENT_TAGS`, desde o systemd 247;
+# o `TAGS` é a tag «pegajosa», que fica mesmo depois de um `TAG-=`).
+# `uaccess` corrente no físico quer dizer que o `73-seat-late.rules` deu a ACL
+# da sessão no nascimento — qualquer programa da sessão pode abri-lo antes de o
+# broker esconder. E `uaccess` sem `seat` é a assinatura de uma regra que
+# devolve o `uaccess` DEPOIS da `71-seat.rules`.
 #
 # O CRITÉRIO DE «FÍSICO» NÃO NASCE AQUI: quem diz quais nós são DualSense
 # físicos é o `_censo_de_fisicos`, que pergunta ao MESMO validador do broker.
@@ -633,41 +634,48 @@ _regras_que_reabrem_o_fisico() {
     done < <(_regras_udev_em_ordem "$@")
 }
 
-# As tags CORRENTES de um nó, pelo banco do udev, uma por linha. No formato do
-# systemd >= 247 são as linhas `Q:`; quando a MÁQUINA não escreve `Q:` em
-# ninguém (udev antigo), as `G:` é que são as correntes.
-# $1 = o arquivo do nó no banco; $2 = a pasta do banco.
+# As tags CORRENTES de um nó, perguntadas ao udev (`udevadm info`), uma por
+# linha. No systemd >= 247 são as do `CURRENT_TAGS`; numa MÁQUINA com udev mais
+# antigo (`--version` < 247) esse campo não existe e as correntes são as do
+# `TAGS`. Quem decide é a versão da máquina, nunca a forma de um nó: um nó sem
+# tag corrente, no udev novo, tem a lista vazia e ponto.
+# Devolve 1 quando o udev não responde sobre o nó ("não sei").
+# $1 = o programa de consulta; $2 = o nó (`/dev/hidrawN`).
 _tags_correntes_do_no() {
-    local arq="$1" banco="$2"
-    [[ -r "${arq}" ]] || return 0
-    if grep -q '^Q:' "${arq}" 2>/dev/null; then
-        sed -n 's/^Q://p' "${arq}"
-    elif ! grep -rlqm1 '^Q:' "${banco}" 2>/dev/null; then
-        sed -n 's/^G://p' "${arq}"
+    local consulta="$1" no="$2" props v_udev campo="CURRENT_TAGS"
+    props="$("${consulta}" info --query=property --name="${no}" 2>/dev/null)" || return 1
+    [[ -n "${props}" ]] || return 1
+    v_udev="$("${consulta}" --version 2>/dev/null | sed -n '1s/^[^0-9]*\([0-9][0-9]*\).*/\1/p')"
+    if [[ "${v_udev}" =~ ^[0-9]+$ && "${v_udev}" -lt 247 ]]; then
+        campo="TAGS"
     fi
+    sed -n "s/^${campo}=//p" <<<"${props}" | tr ':' '\n' | sed '/^$/d'
+    return 0
 }
 
 # O veredito, puro: sem /run, /sys nem /etc de verdade — tudo entra por
 # argumento, para a régua poder rodá-lo numa raiz de mentira.
-# $1 = a pasta do banco do udev (/run/udev/data); $2 = /sys/class/hidraw;
-# $3 = o CENSO de físicos (`/dev/hidrawN` separados por espaço; vazio = não
-# sei); $4.. = os diretórios de regras.
+# $1 = o programa que responde pelo udev (`udevadm`; a régua põe um de
+# mentira); $2 = /sys/class/hidraw; $3 = o CENSO de físicos (`/dev/hidrawN`
+# separados por espaço; vazio = não sei); $4.. = os diretórios de regras.
 _veredito_do_no_fisico_no_udev() {
-    local banco="$1" sysroot="$2" censo="$3"
+    local consulta="$1" sysroot="$2" censo="$3"
     shift 3
-    local nossa no base dev arq bus prod transp tags abertos=() sem_seat=0 total=0
+    local nossa no base bus prod transp tags abertos=() sem_seat=0 total=0
     nossa="$(_regra_do_no_instalada "$@")"
     if [[ -z "${censo}" ]]; then
         info "nenhum DualSense físico no censo agora — o efeito da regra do nó se confere com um controle conectado"
         return 0
     fi
+    if ! command -v "${consulta}" >/dev/null 2>&1; then
+        info "sem o programa que pergunta ao udev — não dá para conferir como os DualSense físicos nasceram"
+        return 0
+    fi
     for no in ${censo}; do
         base="${no##*/}"
-        dev="$(cat "${sysroot}/${base}/dev" 2>/dev/null)" || continue
-        [[ -n "${dev}" ]] || continue
+        [[ -d "${sysroot}/${base}" ]] || continue
+        tags="$(_tags_correntes_do_no "${consulta}" "${no}")" || continue
         total=$((total + 1))
-        arq="${banco}/c${dev}"
-        tags="$(_tags_correntes_do_no "${arq}" "${banco}")"
         grep -qx 'uaccess' <<<"${tags}" || continue
         bus="$(sed -n 's/^HID_ID=\([0-9A-Fa-f]*\):.*/\1/p' "${sysroot}/${base}/device/uevent" 2>/dev/null)"
         prod="$(sed -n 's/^HID_ID=.*:0*\([0-9A-Fa-f]*\)$/\1/p' "${sysroot}/${base}/device/uevent" 2>/dev/null)"
@@ -681,7 +689,7 @@ _veredito_do_no_fisico_no_udev() {
         grep -qx 'seat' <<<"${tags}" || sem_seat=1
     done
     if [[ "${total}" -eq 0 ]]; then
-        info "sem o banco do udev dos DualSense físicos — não dá para conferir como eles nasceram"
+        info "o udev não respondeu sobre os DualSense físicos — não dá para conferir como eles nasceram"
         return 0
     fi
     if [[ ${#abertos[@]} -eq 0 ]]; then
@@ -731,7 +739,7 @@ check_o_no_fisico_nasce_sem_acl() {
     if [[ -e "/etc/udev/rules.d/${REGRA_DO_NO}" && -e "/etc/udev/rules.d/${REGRA_DO_NO_VELHA}" ]]; then
         warn "sobrou a regra do nó com o nome de antes (/etc/udev/rules.d/${REGRA_DO_NO_VELHA}) ao lado da de hoje — $(conselho_de_instalacao)"
     fi
-    _veredito_do_no_fisico_no_udev /run/udev/data /sys/class/hidraw "$(_censo_de_fisicos)"
+    _veredito_do_no_fisico_no_udev "udevadm" /sys/class/hidraw "$(_censo_de_fisicos)"
 }
 
 # True (0) se o snd-usb-audio AINDA está bindado em alguma interface de áudio

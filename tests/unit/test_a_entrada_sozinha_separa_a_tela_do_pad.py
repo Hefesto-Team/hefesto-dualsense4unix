@@ -177,31 +177,44 @@ def test_as_propriedades_medidas_dao_a_classe_certa(
     assert mod.classe_do_no(propriedades) == classe
 
 
-def test_o_banco_do_udev_se_le_pelo_st_rdev(mod: Any, tmp_path: Path) -> None:
+def _udev_de_mentira(nos: dict[tuple[int, int], dict[str, str]]) -> Any:
+    """A ``libudev`` de mentira: ``{(maior, menor): {propriedade: valor}}``."""
+
+    def _pergunta(tipo: str, devnum: int, nome: str) -> str | None:
+        assert tipo == "c"
+        return nos.get((os.major(devnum), os.minor(devnum)), {}).get(nome)
+
+    return _pergunta
+
+
+def test_o_udev_se_pergunta_pelo_st_rdev(mod: Any) -> None:
     """O `event263` é `c13:263`; a conta 64 + N daria `c13:327`, outro nó."""
-    (tmp_path / "c13:263").write_text(
-        "I:123\nE:ID_INPUT=1\nE:ID_INPUT_SWITCH=1\nG:seat\n", encoding="utf-8"
+    udev = _udev_de_mentira(
+        {
+            (13, 263): {"DEVNAME": "/dev/input/event263", "ID_INPUT_SWITCH": "1"},
+            (13, 327): {"DEVNAME": "/dev/input/event327", "ID_INPUT_TOUCHPAD": "1"},
+        }
     )
-    (tmp_path / "c13:327").write_text("E:ID_INPUT=1\nE:ID_INPUT_TOUCHPAD=1\n", encoding="utf-8")
 
     def _estat(_caminho: str) -> Any:
         return SimpleNamespace(st_mode=stat.S_IFCHR | 0o600, st_rdev=os.makedev(13, 263))
 
-    props = mod.propriedades_do_udev("/x/event263", raiz=str(tmp_path), estat=_estat)
-    assert props == {"ID_INPUT": "1", "ID_INPUT_SWITCH": "1"}
+    props = mod.propriedades_do_udev("/x/event263", pergunta=udev, estat=_estat)
+    assert props == {"ID_INPUT_SWITCH": "1"}
     assert mod.classe_do_no(props) == mod.CHAVE
 
 
-def test_sem_o_banco_do_udev_a_classe_e_nao_sei(mod: Any, tmp_path: Path) -> None:
-    """Numa caixa sem o banco à vista, a resposta honesta é «não sei»."""
+def test_sem_resposta_do_udev_a_classe_e_nao_sei(mod: Any, tmp_path: Path) -> None:
+    """Nó que o udev não conhece (ou sem a biblioteca) é «não sei», nunca «sem marca»."""
 
     def _estat(_caminho: str) -> Any:
         return SimpleNamespace(st_mode=stat.S_IFCHR | 0o600, st_rdev=os.makedev(13, 70))
 
-    assert mod.propriedades_do_udev("/x/event70", raiz=str(tmp_path), estat=_estat) is None
+    mudo = _udev_de_mentira({})
+    assert mod.propriedades_do_udev("/x/event70", pergunta=mudo, estat=_estat) is None
     arquivo_comum = tmp_path / "event70"
     arquivo_comum.write_bytes(b"")
-    assert mod.propriedades_do_udev(str(arquivo_comum), raiz=str(tmp_path)) is None
+    assert mod.propriedades_do_udev(str(arquivo_comum), pergunta=mudo) is None
 
 
 def test_quatro_nos_com_o_mesmo_nome_dao_quatro_linhas(mod: Any, comum: Any) -> None:

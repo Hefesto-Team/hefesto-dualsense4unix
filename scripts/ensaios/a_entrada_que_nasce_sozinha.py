@@ -80,8 +80,6 @@ def nos_de_entrada() -> list[tuple[str, str, str]]:
     return fora
 
 
-RAIZ_DO_BANCO_DO_UDEV = "/run/udev/data"
-
 TELA = "tela"
 PAD = "pad"
 IMU = "IMU"
@@ -105,31 +103,39 @@ MARCA_DA_CHAVE = "ID_INPUT_SWITCH"
 MARCAS_DE_CLASSE = (*MARCAS_DA_TELA, MARCA_DO_PAD, MARCA_DA_IMU, MARCA_DA_CHAVE)
 
 
+def _pergunta_ao_udev(tipo: str, devnum: int, nome: str) -> str | None:
+    """A pergunta à ``libudev``, pelo dono (`core/banco_do_udev`): nenhum arquivo lido à mão."""
+    from hefesto_dualsense4unix.core.banco_do_udev import propriedade_do_devnum
+
+    valor: str | None = propriedade_do_devnum(tipo, devnum, nome)
+    return valor
+
+
 def propriedades_do_udev(
     caminho: str,
     *,
-    raiz: str = RAIZ_DO_BANCO_DO_UDEV,
+    pergunta: Callable[[str, int, str], str | None] = _pergunta_ao_udev,
     estat: Callable[[str], Any] = os.stat,
 ) -> dict[str, str] | None:
-    """As propriedades `E:` que o udev guardou para o nó; None se ilegíveis."""
+    """As marcas de classe que o udev deu ao nó, perguntadas a ele; None = não sei.
+
+    O nó que o udev não conhece (ou sem a ``libudev``) não responde nem pelo
+    ``DEVNAME``, e isso é «não sei» (None), não «sem marca».
+    """
     try:
         info = estat(caminho)
     except OSError:
         return None
     if not stat.S_ISCHR(info.st_mode):
         return None
-    arquivo = os.path.join(raiz, f"c{os.major(info.st_rdev)}:{os.minor(info.st_rdev)}")
-    try:
-        with open(arquivo, encoding="utf-8", errors="replace") as fh:
-            texto = fh.read()
-    except OSError:
+    if pergunta("c", info.st_rdev, "DEVNAME") is None:
         return None
-    propriedades: dict[str, str] = {}
-    for linha in texto.splitlines():
-        if linha.startswith("E:") and "=" in linha:
-            chave, _, valor = linha[2:].partition("=")
-            propriedades[chave] = valor
-    return propriedades
+    marcas: dict[str, str] = {}
+    for marca in MARCAS_DE_CLASSE:
+        valor = pergunta("c", info.st_rdev, marca)
+        if valor is not None:
+            marcas[marca] = valor
+    return marcas
 
 
 def classe_do_no(propriedades: dict[str, str] | None) -> str:

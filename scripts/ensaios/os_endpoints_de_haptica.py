@@ -87,6 +87,7 @@ from __future__ import annotations
 import argparse
 import array
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -99,7 +100,9 @@ _RAIZ = Path(__file__).resolve().parents[2]
 if str(_RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(_RAIZ / "src"))
 
+from hefesto_dualsense4unix.core.banco_do_udev import propriedade_do_devnum
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
+from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
 from hefesto_dualsense4unix.integrations.audio_ks_dualsense import (
     container_id,
@@ -160,22 +163,16 @@ def _ler(caminho: Path) -> str:
         return ""
 
 
-def _usec(dev: Path, udev_data: Path) -> int:
-    majmin = _ler(dev / "dev")
-    if ":" not in majmin:
+def _usec(dev: Path) -> int:
+    """O ``USEC_INITIALIZED`` do nó do dispositivo, perguntado à ``libudev`` (0 = não sei)."""
+    maj, sep, men = _ler(dev / "dev").partition(":")
+    if not (sep and maj.isdigit() and men.isdigit()):
         return 0
-    for linha in _ler(udev_data / f"c{majmin}").splitlines():
-        if linha.startswith("I:"):
-            try:
-                return int(linha[2:])
-            except ValueError:
-                return 0
-    return 0
+    valor = propriedade_do_devnum("c", os.makedev(int(maj), int(men)), "USEC_INITIALIZED")
+    return int(valor) if valor is not None and valor.isdigit() else 0
 
 
-def ancoras(
-    sysfs: Path = Path("/sys"), udev_data: Path = Path("/run/udev/data")
-) -> list[Ancora]:
+def ancoras(sysfs: Path = Path("/sys")) -> list[Ancora]:
     """Os ``usb_device`` que servem de âncora, na ordem do barramento."""
     raiz = sysfs / "bus" / "usb" / "devices"
     achadas: list[Ancora] = []
@@ -206,7 +203,7 @@ def ancoras(
                 pid=pid,
                 bus=int(bus),
                 dev=int(num),
-                usec=_usec(dev, udev_data),
+                usec=_usec(dev),
                 nome=_ler(dev / "product") or f"{vendor}:{produto}",
             )
         )
@@ -237,46 +234,23 @@ def propriedades(ancora: Ancora, marca: str) -> str:
     return 'sink_properties="' + " ".join(campos) + '"'
 
 
-def _blocos_de_sinks(saida: str) -> list[str]:
-    blocos, atual = [], []
-    for linha in saida.splitlines():
-        if re.match(r"^Sink #\d+", linha):
-            if atual:
-                blocos.append("\n".join(atual))
-            atual = [linha]
-        elif atual:
-            atual.append(linha)
-    if atual:
-        blocos.append("\n".join(atual))
-    return blocos
-
-
-def _campo(bloco: str, chave: str) -> str:
-    m = re.search(rf'^\s*{re.escape(chave)} = "(.*)"\s*$', bloco, re.M)
-    return m.group(1) if m else ""
-
-
 def nossos_sinks() -> list[dict[str, str]]:
-    saida = rodar_pactl(["pactl", "list", "sinks"]) or ""
-    achados = []
-    for bloco in _blocos_de_sinks(saida):
-        m = re.search(r"^\tName: (.+)$", bloco, re.M)
-        if not m or "HEFESTO" not in m.group(1):
-            continue
-        espec = re.search(r"^\tSample Specification: (.+)$", bloco, re.M)
-        achados.append(
-            {
-                "nome": m.group(1),
-                "espec": espec.group(1) if espec else "",
-                "bus": _campo(bloco, "device.bus"),
-                "vid": _campo(bloco, "device.vendor.id"),
-                "pid": _campo(bloco, "device.product.id"),
-                "sysfs": _campo(bloco, "sysfs.path"),
-                "canais": _campo(bloco, "audio.channels"),
-                "id": re.search(r"^Sink #(\d+)", bloco, re.M).group(1),
-            }
-        )
-    return achados
+    """Os sinks com ``HEFESTO`` no nome, lidos pela porta do servidor de som (JSON)."""
+    nos = porta_do_som.ler_nos("sinks", rodar_pactl) or ()
+    return [
+        {
+            "nome": no.nome,
+            "espec": no.formato,
+            "bus": no.propriedades.get("device.bus", ""),
+            "vid": no.propriedades.get("device.vendor.id", ""),
+            "pid": no.propriedades.get("device.product.id", ""),
+            "sysfs": no.propriedades.get("sysfs.path", ""),
+            "canais": no.propriedades.get("audio.channels", ""),
+            "id": str(no.indice),
+        }
+        for no in nos
+        if "HEFESTO" in no.nome
+    ]
 
 
 def _laudo(sink: dict[str, str]) -> list[tuple[bool, str]]:

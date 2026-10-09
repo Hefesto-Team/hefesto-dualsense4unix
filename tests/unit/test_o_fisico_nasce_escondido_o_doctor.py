@@ -15,13 +15,13 @@ era lido por ninguém desde que a janela GTK saiu.
 
 As funções shell REAIS rodam aqui por `source` (o molde de
 `test_acusa_o_culpado_01_o_doctor_que_acusava_a_pessoa_errada.py`), contra um
-banco do udev, um /sys, um /proc e diretórios de regras DE MENTIRA. Nada lê o
-/run, o /sys, o /proc nem o /etc de verdade, e o socket do daemon é um servidor
+`udevadm` de mentira, um /sys, um /proc e diretórios de regras DE MENTIRA. Nada lê o
+banco do udev, o /sys, o /proc nem o /etc de verdade, e o socket do daemon é um servidor
 de mentira numa pasta temporária.
 
 AS MORDIDAS, medidas em 25/09/2026:
-  - `_tags_correntes_do_no` lendo `G:` em vez de `Q:` → a régua da tag
-    pegajosa reprova (o nó fechado seria acusado de aberto);
+  - `_tags_correntes_do_no` lendo `TAGS` em vez de `CURRENT_TAGS` → a régua da
+    tag pegajosa reprova (o nó fechado seria acusado de aberto);
   - o filtro do `hefesto` fora de `_veredito_de_quem_segura_o_fisico` → a
     régua do daemon reprova (o próprio Hefesto seria acusado);
   - o `pede_reconexao` ignorado em `_veredito_dos_nascimentos` → a régua do
@@ -79,8 +79,30 @@ def _regras(tmp: Path, *, nossa: str, extra: dict[str, str] | None = None) -> tu
     return etc, usr
 
 
-def _no(tmp: Path, base: str, dev: str, hid_id: str, banco_do_no: str) -> None:
-    """Um hidraw no /sys de mentira e a entrada dele no banco do udev."""
+def _udevadm(tmp: Path, v_udev: int = 255) -> str:
+    """O `udevadm` de mentira: responde `--version` e `info --name=/dev/<hidrawN>`.
+
+    As respostas moram em `<tmp>/udev/no-<hidrawN>` (o texto que o `info` imprime);
+    nó sem arquivo é nó que o udev não conhece (falha, como o de verdade).
+    """
+    pasta = tmp / "udev"
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / "udev-v").write_text(f"{v_udev}\n", encoding="utf-8")
+    programa = pasta / "udevadm"
+    programa.write_text(
+        "#!/bin/bash\n"
+        'D="$(dirname "$0")"\n'
+        'if [[ "$1" == "--version" ]]; then cat "$D/udev-v"; exit 0; fi\n'
+        'for a in "$@"; do case "$a" in --name=*) n="${a#--name=}";; esac; done\n'
+        'cat "$D/no-${n##*/}" 2>/dev/null || exit 1\n',
+        encoding="utf-8",
+    )
+    programa.chmod(0o755)
+    return str(programa)
+
+
+def _no(tmp: Path, base: str, dev: str, hid_id: str, resposta_do_udev: str) -> None:
+    """Um hidraw no /sys de mentira e o que o `udevadm info` diz dele."""
     sysdir = tmp / "sys" / "class" / "hidraw" / base
     (sysdir / "device").mkdir(parents=True)
     (sysdir / "dev").write_text(dev + "\n", encoding="utf-8")
@@ -88,21 +110,22 @@ def _no(tmp: Path, base: str, dev: str, hid_id: str, banco_do_no: str) -> None:
         f"DRIVER=playstation\nHID_ID={hid_id}\nHID_NAME=DualSense Wireless Controller\n",
         encoding="utf-8",
     )
-    banco = tmp / "run" / "udev" / "data"
-    banco.mkdir(parents=True, exist_ok=True)
-    (banco / f"c{dev}").write_text(banco_do_no, encoding="utf-8")
+    pasta = tmp / "udev"
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / f"no-{base}").write_text(resposta_do_udev, encoding="utf-8")
 
 
-def _banco(tmp: Path) -> str:
-    return str(tmp / "run" / "udev" / "data")
+def _banco(tmp: Path, v_udev: int = 255) -> str:
+    """O primeiro argumento do veredito: o programa que responde pelo udev."""
+    return _udevadm(tmp, v_udev)
 
 
 def _sys(tmp: Path) -> str:
     return str(tmp / "sys" / "class" / "hidraw")
 
 
-BANCO_ABERTO = "I:336334317\nG:uaccess\nQ:uaccess\nV:1\n"
-BANCO_FECHADO = "I:336334317\nG:uaccess\nG:seat\nQ:seat\nV:1\n"
+BANCO_ABERTO = "DEVNAME=/dev/hidraw\nCURRENT_TAGS=:uaccess:\nTAGS=:uaccess:\n"
+BANCO_FECHADO = "DEVNAME=/dev/hidraw\nCURRENT_TAGS=:seat:\nTAGS=:seat:uaccess:\n"
 
 
 class TestOBancoDoUdevDizComoONoNasceu:
@@ -169,15 +192,38 @@ class TestOBancoDoUdevDizComoONoNasceu:
         etc, usr = _regras(tmp_path, nossa=NOVA, extra={"99-nintendo.rules": outro})
         assert _chamar("_regras_que_reabrem_o_fisico", NOVA, str(etc), str(usr)) == ""
 
-    def test_udev_antigo_sem_q_le_o_g(self, tmp_path: Path) -> None:
-        """Antes do systemd 247 não existe `Q:`, e o `G:` é a tag corrente."""
+    def test_udev_antigo_sem_current_tags_le_o_tags(self, tmp_path: Path) -> None:
+        """Antes do systemd 247 não existe `CURRENT_TAGS`, e o `TAGS` é a tag corrente."""
         etc, usr = _regras(tmp_path, nossa=NOVA)
-        _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6", "G:uaccess\n")
+        _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6", "TAGS=:uaccess:\n")
+        saida = _chamar(
+            "_veredito_do_no_fisico_no_udev", _banco(tmp_path, 246), _sys(tmp_path),
+            "/dev/hidraw6", str(etc), str(usr),
+        )
+        assert "[FAIL]" in saida, saida
+
+    def test_no_udev_novo_o_no_sem_tag_corrente_nao_cai_no_tags(self, tmp_path: Path) -> None:
+        """A decisão é da versão da MÁQUINA: no 255, sem `CURRENT_TAGS`, `TAGS` não vale."""
+        etc, usr = _regras(tmp_path, nossa=NOVA)
+        _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6",
+            "DEVNAME=/dev/hidraw6\nTAGS=:uaccess:\n")
+        saida = _chamar(
+            "_veredito_do_no_fisico_no_udev", _banco(tmp_path, 255), _sys(tmp_path),
+            "/dev/hidraw6", str(etc), str(usr),
+        )
+        assert "[FAIL]" not in saida, saida
+        assert "[ OK ]" in saida, saida
+
+    def test_o_udev_que_nao_responde_nao_vira_veredito(self, tmp_path: Path) -> None:
+        """Sem resposta do udev sobre o nó, é «não sei»: nem OK nem FAIL."""
+        etc, usr = _regras(tmp_path, nossa=NOVA)
+        _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6", BANCO_ABERTO)
+        (tmp_path / "udev" / "no-hidraw6").unlink()
         saida = _chamar(
             "_veredito_do_no_fisico_no_udev", _banco(tmp_path), _sys(tmp_path), "/dev/hidraw6",
             str(etc), str(usr),
         )
-        assert "[FAIL]" in saida, saida
+        assert "[FAIL]" not in saida and "[ OK ]" not in saida, saida
 
     def test_sem_controle_no_censo_nao_ha_veredito(self, tmp_path: Path) -> None:
         etc, usr = _regras(tmp_path, nossa=NOVA)
