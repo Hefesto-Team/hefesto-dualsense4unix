@@ -53,10 +53,10 @@
       "universo": 364
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-07",
+      "data": "2026-10-09",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 478,
+      "piso": 477,
       "por_item": {
         "__init__.py": 1,
         "app/actions/config/secao_controles.py": 2,
@@ -124,7 +124,7 @@
         "integrations/central_do_radio.py": 2,
         "integrations/conexao_zumbi.py": 5,
         "integrations/cor_do_plastico.py": 3,
-        "integrations/cura_por_estrada.py": 17,
+        "integrations/cura_por_estrada.py": 16,
         "integrations/diario_do_radio.py": 3,
         "integrations/dualsense_bt_audio.py": 7,
         "integrations/eleicao_de_microfone.py": 1,
@@ -199,7 +199,7 @@
       },
       "razao": "o teto desceu sozinho com o número",
       "unidade": "remendos",
-      "universo": 359
+      "universo": 368
     },
     "tamanho": {
       "data": "2026-10-08",
