@@ -96,11 +96,15 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
         f"que a GTK-3 encontraria no dia de apagar:\n{saida.stderr[-3000:]}")
 
     pagina = (bancada / "05-vibracao.html").read_text(encoding="utf-8")
+    com_o_glade = (RAIZ / "mockup" / "05-vibracao.html").read_text(encoding="utf-8")
     from hefesto_dualsense4unix.app.telas import vibracao
 
+    # A conta é a da aba montada COM o glade (o mockup da árvore): a frase do
+    # teto mora em dois «?» desde 08/10 (a Força e a Sensor háptico).
     for nome in NO_GLADE:
         frase = getattr(vibracao, nome)
-        assert pagina.count(frase) == 1, (
+        assert com_o_glade.count(frase) >= 1, f"o mockup da 05 não tem {nome}"
+        assert pagina.count(frase) == com_o_glade.count(frase), (
             f"a aba montou sem o glade, mas {nome} sumiu da página — montar "
             "calado é pior que não montar")
 

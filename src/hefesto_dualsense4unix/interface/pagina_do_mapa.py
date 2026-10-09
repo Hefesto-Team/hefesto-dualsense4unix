@@ -444,7 +444,31 @@ def _com_os_dados(js: str) -> str:
     return js
 
 
-EDICOES: tuple[Edicao, ...] = (
+#: As edições, uma a uma. Elas citam pedaços da origem congelada, que mora em
+#: `mockup/` e não viaja no pacote: por isso se montam na HORA DO USO (o
+#: `__getattr__` do módulo), e o produto que só quer as cores do arranjo
+#: importa este módulo sem ler `mockup/`.
+EDICOES: tuple[Edicao, ...]
+
+
+def __getattr__(nome: str) -> Any:
+    """`EDICOES` se monta no primeiro acesso, lida da origem, e fica guardada."""
+    if nome == "EDICOES":
+        edicoes = _montar_as_edicoes()
+        globals()["EDICOES"] = edicoes
+        return edicoes
+    raise AttributeError(f"module {__name__!r} has no attribute {nome!r}")
+
+
+def _as_edicoes() -> tuple[Edicao, ...]:
+    """As `EDICOES` de agora: as montadas, ou as que alguém pôs no lugar."""
+    edicoes: tuple[Edicao, ...] = sys.modules[__name__].EDICOES
+    return edicoes
+
+
+def _montar_as_edicoes() -> tuple[Edicao, ...]:
+    """As edições sobre a origem congelada; lê a origem, e só se chama no uso."""
+    return (
     Edicao(
         antes="<title>Onde eu ponho isto?</title>",
         depois="<title>Hefesto — o mapa das entradas</title>",
@@ -6152,7 +6176,8 @@ def pagina(com_as_que_esperam: bool = True) -> str:
     casas divergiram em treze pedaços sem ninguém ver.
     """
     texto = ORIGEM.read_text(encoding="utf-8")
-    edicoes = EDICOES + (EDICOES_ESPERANDO_A_SESSAO_DELA if com_as_que_esperam else ())
+    edicoes = _as_edicoes() + (
+        EDICOES_ESPERANDO_A_SESSAO_DELA if com_as_que_esperam else ())
     for numero, edicao in enumerate(edicoes, 1):
         quantas = texto.count(edicao.antes)
         if quantas != 1:
@@ -6170,7 +6195,7 @@ def main(argv: list[str] | None = None) -> int:
     novo = pagina()
     antes = DESTINO.read_text(encoding="utf-8") if DESTINO.exists() else ""
     DESTINO.write_text(novo, encoding="utf-8")
-    print(f"mapa-das-portas: {len(EDICOES)} edições sobre a origem congelada"
+    print(f"mapa-das-portas: {len(_as_edicoes())} edições sobre a origem congelada"
           f" + {len(EDICOES_ESPERANDO_A_SESSAO_DELA)} esperando a sessão dela · "
           f"{len(novo.splitlines())} linhas · "
           f"{'mudou' if novo != antes else 'já estava igual'}")
