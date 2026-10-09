@@ -859,6 +859,9 @@ class Daemon:
             if self.config.mic_button_toggles_system:
                 await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
             await self._safe_start("luz_do_mic", lambda: start_luz_do_mic(self))
+            # O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01: o motor do tiro, desligado pela receita.
+            from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import start_tato_vivo
+            await self._safe_start("tato_vivo", lambda: start_tato_vivo(self))
             # PATH ele tenta, falha, espera e tenta de novo, sem derrubar nada.
             #
             # AQUI E NÃO ANTES: ele não é dono de nenhum nó, só observa. Subir

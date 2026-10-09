@@ -1,0 +1,622 @@
+"""O tato vivo: o motor que reage ao tiro, e só fala onde o jogo cala.
+
+O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01 (08/10/2026). No PS5 cada sensação do
+tiro é um canal que o jogo escreve no instante do tiro. No PC, quando o jogo
+não fala DualSense (ou fala e não escreve aquele canal), ninguém escrevia nada
+por EVENTO: o daemon só tinha caminhos por ESTADO. Este módulo é o caminho por
+evento, com uma regra só para todos os canais:
+
+* **o jogo manda, o controle obedece** (ordem de 29/09): ``decidir`` é a
+  política pura sobre os carimbos do pad virtual e o relógio; o motor só
+  escreve no canal em que o jogo está calado;
+* **teto de pulsos**: 12 por segundo por controle e 40 no total;
+* **volta ao perfil**: todo valor escrito tem prazo, e o tique devolve o canal
+  quando o prazo vence (ou solta sem devolver, se o jogo passou a mandar);
+* **por controle**: cada evento leva o ``uniq`` do controle que o gerou, e os
+  atuadores escrevem só pelas APIs por ``uniq`` do backend (P1 a P4, cabo e
+  rádio pelo mesmo caminho, nunca broadcast);
+* **Modo Nativo calado**: sem pad virtual o jogo fala com o aparelho de
+  verdade, e o motor não tem o que dizer;
+* **nasce desligado**: liga só quando a receita do estilo do perfil ativo
+  (campo ``receita_do_tato``) pede alguma reação.
+
+Os efeitos de cada canal são os atuadores, que entram por sprint em cima deste
+núcleo. O estado de diagnóstico (contadores) mora em ``daemon._tato_vivo``.
+"""
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import threading
+import time
+from collections import deque
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Protocol
+
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+
+logger = get_logger(__name__)
+
+CANAL_GATILHO = "gatilho"
+CANAL_LUZ = "luz"
+CANAL_HAPTICA = "haptica"
+CANAL_SOM = "som"
+CANAIS = (CANAL_GATILHO, CANAL_LUZ, CANAL_HAPTICA, CANAL_SOM)
+
+# Gatilho e luz são ESTADO: o valor que o jogo pôs fica na camada do jogo pela
+# sessão inteira (a arma troca uma vez, o gatilho fica). Háptica e som são
+# FLUXO: o jogo fala enquanto toca, e calar por 3 s é calar.
+CANAIS_DE_ESTADO = frozenset({CANAL_GATILHO, CANAL_LUZ})
+
+# O carimbo do pad virtual que diz «o jogo escreveu neste canal»
+# (`integrations/uhid_gamepad.py`, `ATIVIDADE_*`). A háptica do jogo DualSense
+# viaja como áudio; o rumble que o jogo pede é SINAL para o motor, não veto.
+_CARIMBO_DO_CANAL: dict[str, str] = {
+    CANAL_GATILHO: "trigger",
+    CANAL_LUZ: "lightbar",
+    CANAL_HAPTICA: "audio_do_jogo",
+    CANAL_SOM: "audio_do_jogo",
+}
+
+MODO_NATIVO = "nativo"
+MODO_DUALSENSE = "dualsense"
+MODO_XBOX = "xbox"
+
+JANELA_DO_JOGO_S = 3.0
+TETO_POR_CONTROLE = 12
+TETO_TOTAL = 40
+JANELA_DO_TETO_S = 1.0
+INTERVALO_S = 1.0 / 60.0
+RELEITURA_DA_RECEITA_S = 1.0
+
+CAMPO_DA_RECEITA = "receita_do_tato"
+
+TIPO_DEDO = "dedo"
+TIPO_RUMBLE = "rumble_tiro"
+TIPO_SOM = "som_tiro"
+
+LADO_ESQUERDO = "esquerdo"
+LADO_DIREITO = "direito"
+LADO_CENTRO = "centro"
+
+REACOES_DA_LUZ = ("parada", "pulsa", "evento")
+
+
+def modo_do_pad(vpad: Any) -> str:
+    """O modo em que o controle está, pelo pad virtual que o jogo vê."""
+    if vpad is None:
+        return MODO_NATIVO
+    backend = getattr(vpad, "backend", None)
+    if backend == "uhid":
+        return MODO_DUALSENSE
+    if backend == "uinput":
+        return MODO_XBOX
+    return MODO_NATIVO
+
+
+@dataclass(frozen=True)
+class EstadoDoCanal:
+    """O que a política precisa saber de UM controle, num instante."""
+
+    modo: str
+    visto_ha_s: Mapping[str, float] = field(default_factory=dict)
+    sessao_aberta: bool = False
+    ha_jogo: bool = False
+
+
+def decidir(canal: str, estado: EstadoDoCanal) -> bool:
+    """``True`` quando o jogo cala neste canal e o motor pode escrever."""
+    if estado.modo == MODO_NATIVO or not estado.ha_jogo:
+        return False
+    carimbo = _CARIMBO_DO_CANAL.get(canal)
+    if carimbo is None:
+        return False
+    idade = estado.visto_ha_s.get(carimbo)
+    if idade is None:
+        return True
+    if idade < JANELA_DO_JOGO_S:
+        return False
+    # Escreveu há mais de 3 s: no fluxo é silêncio; no estado, o valor dele
+    # segue valendo enquanto a sessão do jogo estiver aberta.
+    return not (canal in CANAIS_DE_ESTADO and estado.sessao_aberta)
+
+
+@dataclass(frozen=True)
+class Evento:
+    """Um tiro (ou o que parece um): de quem, quando, de que lado e com que força."""
+
+    instante: float
+    uniq: str
+    tipo: str
+    lado: str = LADO_CENTRO
+    energia: float = 1.0
+
+
+def _limitar(valor: Any, baixo: float, alto: float, padrao: float) -> float:
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        return padrao
+    if numero != numero:  # NaN
+        return padrao
+    return min(alto, max(baixo, numero))
+
+
+@dataclass(frozen=True)
+class Receita:
+    """A receita invisível do estilo: o que cada canal faz a cada tiro."""
+
+    vibracao_por_tiro: bool = False
+    forca_do_toque: float = 0.6
+    duracao_do_toque_ms: int = 40
+    gatilho_no_ritmo: bool = False
+    frequencia_da_rajada_hz: int = 20
+    reacao_ao_tiro: str = "parada"
+    cor_do_evento: tuple[int, int, int] | None = None
+    lado_do_som: bool = False
+    som_no_controle: bool = False
+
+    @property
+    def ligada(self) -> bool:
+        return (
+            self.vibracao_por_tiro
+            or self.gatilho_no_ritmo
+            or self.reacao_ao_tiro != "parada"
+            or self.lado_do_som
+            or self.som_no_controle
+        )
+
+    @classmethod
+    def de(cls, cru: Any) -> Receita:
+        """Lê a receita de um dicionário ou objeto, tolerante e com os limites."""
+        if cru is None:
+            return DESLIGADA
+        if isinstance(cru, Receita):
+            return cru
+
+        def campo(nome: str, padrao: Any) -> Any:
+            if isinstance(cru, Mapping):
+                return cru.get(nome, padrao)
+            return getattr(cru, nome, padrao)
+
+        reacao = campo("reacao_ao_tiro", "parada")
+        if reacao not in REACOES_DA_LUZ:
+            reacao = "parada"
+        cor_crua = campo("cor_do_evento", None)
+        cor: tuple[int, int, int] | None = None
+        if isinstance(cor_crua, (list, tuple)) and len(cor_crua) == 3:
+            cor = (
+                int(_limitar(cor_crua[0], 0, 255, 255)),
+                int(_limitar(cor_crua[1], 0, 255, 255)),
+                int(_limitar(cor_crua[2], 0, 255, 255)),
+            )
+        return cls(
+            vibracao_por_tiro=bool(campo("vibracao_por_tiro", False)),
+            forca_do_toque=_limitar(campo("forca_do_toque", 0.6), 0.0, 1.0, 0.6),
+            duracao_do_toque_ms=int(
+                _limitar(campo("duracao_do_toque_ms", 40), 25, 60, 40)
+            ),
+            gatilho_no_ritmo=bool(campo("gatilho_no_ritmo", False)),
+            frequencia_da_rajada_hz=int(
+                _limitar(campo("frequencia_da_rajada_hz", 20), 5, 40, 20)
+            ),
+            reacao_ao_tiro=str(reacao),
+            cor_do_evento=cor,
+            lado_do_som=bool(campo("lado_do_som", False)),
+            som_no_controle=bool(campo("som_no_controle", False)),
+        )
+
+
+DESLIGADA = Receita()
+
+
+def receita_do_perfil(perfil: Any) -> Receita:
+    """A receita do perfil: o campo dele, ou a do estilo que ele guarda."""
+    if perfil is None:
+        return DESLIGADA
+
+    def ler(alvo: Any, nome: str) -> Any:
+        if isinstance(alvo, Mapping):
+            return alvo.get(nome)
+        return getattr(alvo, nome, None)
+
+    cru = ler(perfil, CAMPO_DA_RECEITA)
+    if cru is None:
+        estilo = ler(perfil, "estilo")
+        chave = estilo if isinstance(estilo, str) else getattr(estilo, "chave", None)
+        if isinstance(chave, str):
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+
+                cru = getattr(POR_CHAVE.get(chave), CAMPO_DA_RECEITA, None)
+    try:
+        return Receita.de(cru)
+    except Exception:
+        logger.debug("tato_vivo_receita_ilegivel", exc_info=True)
+        return DESLIGADA
+
+
+class Teto:
+    """Janela deslizante: no máximo N pulsos por controle e M no total, por segundo."""
+
+    def __init__(
+        self,
+        por_controle: int = TETO_POR_CONTROLE,
+        total: int = TETO_TOTAL,
+        janela_s: float = JANELA_DO_TETO_S,
+    ) -> None:
+        self.por_controle = por_controle
+        self.total = total
+        self.janela_s = janela_s
+        self._por_uniq: dict[str, deque[float]] = {}
+        self._todos: deque[float] = deque()
+
+    def _podar(self, fila: deque[float], agora: float) -> None:
+        while fila and agora - fila[0] >= self.janela_s:
+            fila.popleft()
+
+    def cabe(self, uniq: str, agora: float) -> bool:
+        self._podar(self._todos, agora)
+        do_controle = self._por_uniq.setdefault(uniq, deque())
+        self._podar(do_controle, agora)
+        return len(do_controle) < self.por_controle and len(self._todos) < self.total
+
+    def gastar(self, uniq: str, agora: float) -> None:
+        self._por_uniq.setdefault(uniq, deque()).append(agora)
+        self._todos.append(agora)
+
+
+class Atuador(Protocol):
+    """Um canal que reage a eventos. Escreve só no controle do evento."""
+
+    canal: str
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        """Este evento, sob esta receita, pede algo deste canal?"""
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        """Escreve e devolve o prazo da volta ao perfil (``None``: nada a devolver)."""
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        """Devolve o canal deste controle ao valor do perfil."""
+
+
+class TatoVivo:
+    """A fila de eventos, a política, o teto e a volta. Sem efeito próprio."""
+
+    def __init__(
+        self,
+        atuadores: Iterable[Atuador] = (),
+        *,
+        teto: Teto | None = None,
+    ) -> None:
+        self.atuadores: list[Atuador] = list(atuadores)
+        self.teto = teto if teto is not None else Teto()
+        self._fila: deque[Evento] = deque(maxlen=512)
+        self._lock = threading.Lock()
+        self._pendentes: dict[tuple[str, str], float] = {}
+        self.contadores: dict[str, int] = {
+            "eventos": 0,
+            "escritas": 0,
+            "devolucoes": 0,
+            "soltos_ao_jogo": 0,
+            "recusas_do_jogo": 0,
+            "recusas_do_modo": 0,
+            "recusas_do_teto": 0,
+        }
+        self.ligado = False
+
+    def anotar(self, evento: Evento) -> None:
+        """Põe um evento na fila. Chamável de qualquer thread."""
+        with self._lock:
+            self._fila.append(evento)
+            self.contadores["eventos"] += 1
+
+    def _atuador(self, canal: str) -> Atuador | None:
+        for atuador in self.atuadores:
+            if atuador.canal == canal:
+                return atuador
+        return None
+
+    def tique(
+        self,
+        agora: float,
+        estado_de: Callable[[str], EstadoDoCanal | None],
+        receita: Receita,
+    ) -> int:
+        """Devolve o que venceu, decide cada evento da fila e escreve. Retorna as escritas."""
+        with self._lock:
+            eventos = list(self._fila)
+            self._fila.clear()
+        for (uniq, canal), prazo in list(self._pendentes.items()):
+            estado = estado_de(uniq)
+            if estado is not None and not decidir(canal, estado):
+                # O jogo passou a mandar (ou o modo mudou): o valor agora é dele.
+                del self._pendentes[(uniq, canal)]
+                self.contadores["soltos_ao_jogo"] += 1
+                continue
+            if agora >= prazo:
+                self._devolver(uniq, canal, agora)
+        escritas = 0
+        for evento in eventos:
+            estado = estado_de(evento.uniq)
+            if estado is None:
+                continue
+            pedem = [a for a in self.atuadores if a.responde_a(evento, receita)]
+            if not pedem:
+                continue
+            livres = [a for a in pedem if decidir(a.canal, estado)]
+            if not livres:
+                chave = (
+                    "recusas_do_modo"
+                    if estado.modo == MODO_NATIVO or not estado.ha_jogo
+                    else "recusas_do_jogo"
+                )
+                self.contadores[chave] += 1
+                continue
+            if not self.teto.cabe(evento.uniq, agora):
+                self.contadores["recusas_do_teto"] += 1
+                continue
+            self.teto.gastar(evento.uniq, agora)
+            for atuador in livres:
+                try:
+                    volta = atuador.escrever(evento, receita, agora)
+                except Exception:
+                    logger.debug("tato_vivo_escrita_falhou", canal=atuador.canal,
+                                 exc_info=True)
+                    continue
+                escritas += 1
+                self.contadores["escritas"] += 1
+                if volta is not None:
+                    chave_p = (evento.uniq, atuador.canal)
+                    self._pendentes[chave_p] = max(
+                        volta, self._pendentes.get(chave_p, volta)
+                    )
+        return escritas
+
+    def _devolver(self, uniq: str, canal: str, agora: float) -> None:
+        self._pendentes.pop((uniq, canal), None)
+        atuador = self._atuador(canal)
+        if atuador is None:
+            return
+        try:
+            atuador.devolver(uniq, agora)
+        except Exception:
+            logger.debug("tato_vivo_devolucao_falhou", canal=canal, exc_info=True)
+            return
+        self.contadores["devolucoes"] += 1
+
+    def parar(self, agora: float | None = None) -> None:
+        """Devolve tudo o que está preso e esvazia a fila."""
+        instante = time.monotonic() if agora is None else agora
+        with self._lock:
+            self._fila.clear()
+        for uniq, canal in list(self._pendentes):
+            self._devolver(uniq, canal, instante)
+
+    @property
+    def pendentes(self) -> dict[tuple[str, str], float]:
+        return dict(self._pendentes)
+
+    def estado(self) -> dict[str, Any]:
+        """Diagnóstico: contadores e se o motor está ligado. Nunca texto de tela."""
+        return {
+            "ligado": self.ligado,
+            "pendentes": len(self._pendentes),
+            **self.contadores,
+        }
+
+
+# --- As fontes de evento -------------------------------------------------
+
+
+DEDO_DISPARA = 160
+DEDO_SOLTA = 96
+
+
+class BordaDoDedo:
+    """O dedo que aperta o gatilho: um evento por aperto, com histerese."""
+
+    def __init__(self, dispara: int = DEDO_DISPARA, solta: int = DEDO_SOLTA) -> None:
+        self.dispara = dispara
+        self.solta = solta
+        self._apertado: dict[tuple[str, str], bool] = {}
+
+    def ver(self, uniq: str, l2: int, r2: int, agora: float) -> list[Evento]:
+        eventos: list[Evento] = []
+        for lado, valor in ((LADO_ESQUERDO, l2), (LADO_DIREITO, r2)):
+            chave = (uniq, lado)
+            apertado = self._apertado.get(chave, False)
+            if not apertado and valor >= self.dispara:
+                self._apertado[chave] = True
+                eventos.append(
+                    Evento(agora, uniq, TIPO_DEDO, lado, min(1.0, valor / 255.0))
+                )
+            elif apertado and valor <= self.solta:
+                self._apertado[chave] = False
+        return eventos
+
+    def apertado(self, uniq: str, lado: str) -> bool:
+        return self._apertado.get((uniq, lado), False)
+
+
+# --- A ligação com o daemon ----------------------------------------------
+
+
+@dataclass(frozen=True)
+class Controle:
+    """Um controle da mesa como o motor o vê: identidade, pad e os gatilhos."""
+
+    uniq: str
+    vpad: Any
+    l2: int = 0
+    r2: int = 0
+
+
+def _inteiro(valor: Any) -> int:
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return 0
+
+
+def controles_do_daemon(daemon: Any) -> list[Controle]:
+    """P1 (o pad primário) e P2 a P4 (os jogadores do co-op), cada um com o seu."""
+    vistos: dict[str, Controle] = {}
+    controller = getattr(daemon, "controller", None)
+    primario = getattr(controller, "primary_uniq", None)
+    if isinstance(primario, str) and primario:
+        estado = getattr(daemon, "_last_state", None)
+        vistos[primario] = Controle(
+            primario,
+            getattr(daemon, "_gamepad_device", None),
+            _inteiro(getattr(estado, "l2_raw", 0)),
+            _inteiro(getattr(estado, "r2_raw", 0)),
+        )
+    coop = getattr(daemon, "_coop_manager", None)
+    jogadores = getattr(coop, "_players", None)
+    if isinstance(jogadores, dict):
+        for mac, jogador in list(jogadores.items()):
+            if not isinstance(mac, str) or mac in vistos:
+                continue
+            l2 = r2 = 0
+            leitor = getattr(jogador, "reader", None)
+            with contextlib.suppress(Exception):
+                foto = leitor.snapshot() if leitor is not None else None
+                l2 = _inteiro(getattr(foto, "l2_raw", 0))
+                r2 = _inteiro(getattr(foto, "r2_raw", 0))
+            vistos[mac] = Controle(mac, getattr(jogador, "vpad", None), l2, r2)
+    return list(vistos.values())
+
+
+def ha_jogo(daemon: Any) -> bool:
+    """O sinal de jogo do daemon: a autoridade sticky, ou uma janela de jogo em foco."""
+    if getattr(daemon, "display_authority", "unknown") == "game":
+        return True
+    olhar = getattr(daemon, "_janela_de_jogo_em_foco", None)
+    if callable(olhar):
+        with contextlib.suppress(Exception):
+            return bool(olhar())
+    return False
+
+
+def estado_do_controle(controle: Controle, jogo: bool) -> EstadoDoCanal:
+    vpad = controle.vpad
+    visto: Mapping[str, float] = {}
+    with contextlib.suppress(Exception):
+        cru = getattr(vpad, "visto_ha_s", None)
+        if isinstance(cru, Mapping):
+            visto = cru
+    return EstadoDoCanal(
+        modo=modo_do_pad(vpad),
+        visto_ha_s=visto,
+        sessao_aberta=bool(getattr(vpad, "game_open", False)),
+        ha_jogo=jogo,
+    )
+
+
+def receita_ativa(daemon: Any) -> Receita:
+    """A receita do perfil ativo. Sem perfil, ou sem receita, desligada."""
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    if not isinstance(nome, str) or not nome:
+        return DESLIGADA
+    try:
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+
+        perfil = load_profile(nome)
+    except Exception:
+        logger.debug("tato_vivo_perfil_ilegivel", exc_info=True)
+        return DESLIGADA
+    return receita_do_perfil(perfil)
+
+
+def atuadores_de_producao(daemon: Any) -> list[Atuador]:
+    """Os canais que o motor sabe escrever hoje."""
+    return []
+
+
+def motor_do(daemon: Any) -> TatoVivo | None:
+    motor = getattr(daemon, "_tato_vivo", None)
+    return motor if isinstance(motor, TatoVivo) else None
+
+
+class Passo:
+    """Um tique do laço de produção, separado para se testar com relógio injetado."""
+
+    def __init__(self, daemon: Any, motor: TatoVivo) -> None:
+        self.daemon = daemon
+        self.motor = motor
+        self.dedo = BordaDoDedo()
+        self.receita: Receita = DESLIGADA
+        self._lida_em = float("-inf")
+
+    def receita_de_agora(self, agora: float) -> Receita:
+        if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
+            self._lida_em = agora
+            self.receita = receita_ativa(self.daemon)
+        return self.receita
+
+    def __call__(self, agora: float) -> int:
+        receita = self.receita_de_agora(agora)
+        ligado = receita.ligada
+        if not ligado:
+            if self.motor.ligado:
+                self.motor.parar(agora)
+            self.motor.ligado = False
+            return 0
+        self.motor.ligado = True
+        controles = controles_do_daemon(self.daemon)
+        for controle in controles:
+            for evento in self.dedo.ver(controle.uniq, controle.l2, controle.r2, agora):
+                self.motor.anotar(evento)
+        jogo = ha_jogo(self.daemon)
+        por_uniq = {c.uniq: estado_do_controle(c, jogo) for c in controles}
+        return self.motor.tique(agora, por_uniq.get, receita)
+
+
+async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
+    passo = Passo(daemon, motor)
+    try:
+        while not daemon._is_stopping():
+            await asyncio.sleep(INTERVALO_S)
+            try:
+                passo(time.monotonic())
+            except Exception:
+                logger.debug("tato_vivo_tique_falhou", exc_info=True)
+    finally:
+        motor.parar()
+
+
+def start_tato_vivo(daemon: DaemonProtocol) -> None:
+    """Sobe o motor do tato vivo. Desligado pela receita, o laço só lê o perfil."""
+    motor = TatoVivo(atuadores_de_producao(daemon))
+    daemon._tato_vivo = motor  # type: ignore[attr-defined]
+    task = asyncio.create_task(tato_vivo_loop(daemon, motor), name="tato_vivo_loop")
+    daemon._tasks.append(task)
+    logger.info("tato_vivo_iniciado")
+
+
+__all__ = [
+    "CAMPO_DA_RECEITA",
+    "CANAIS",
+    "DESLIGADA",
+    "Atuador",
+    "BordaDoDedo",
+    "Controle",
+    "EstadoDoCanal",
+    "Evento",
+    "Passo",
+    "Receita",
+    "TatoVivo",
+    "Teto",
+    "controles_do_daemon",
+    "decidir",
+    "modo_do_pad",
+    "motor_do",
+    "receita_do_perfil",
+    "start_tato_vivo",
+]
