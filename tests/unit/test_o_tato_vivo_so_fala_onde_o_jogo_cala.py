@@ -112,11 +112,11 @@ def test_o_rumble_que_o_jogo_pede_e_sinal_e_nao_veto() -> None:
         (10.0, None, False),  # não se viu a sessão abrir: na dúvida, o jogo manda
     ],
 )
-@pytest.mark.parametrize("de_quem", ["proprio", "outro"])
+@pytest.mark.parametrize("de_quem", ["este", "outro"])
 def test_o_carimbo_da_sessao_que_fechou_nao_cala_o_estado(
     canal: str, carimbo_ha_s: float, sessao_ha_s: float | None, escreve: bool, de_quem: str
 ) -> None:
-    alvo = canal if de_quem == "proprio" else next(iter(tv.CANAIS_DE_ESTADO - {canal}))
+    alvo = canal if de_quem == "este" else next(iter(tv.CANAIS_DE_ESTADO - {canal}))
     estado = tv.EstadoDoCanal(
         modo=tv.MODO_DUALSENSE,
         visto_ha_s={_CARIMBO[alvo]: carimbo_ha_s},
