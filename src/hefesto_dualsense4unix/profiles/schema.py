@@ -1279,6 +1279,14 @@ class Profile(BaseModel):
     # chamada por nenhum caminho de ativação real"*. Por 24 dias foi verdade —
     # preferência GLOBAL, e esta precedência deixaria de existir na ativação
     teclado_emulado: bool | None = None
+    # «Só dentro do jogo» da Função do teclado: com `teclado_emulado` ligado, o
+    # teclado digita SÓ com um jogo aberto (o sinal do portão trocado). None = sem
+    # opinião (o teclado digita fora do jogo, como sempre).
+    teclado_so_no_jogo: bool | None = None
+    # A chave «Também no jogo» da tabela de botões (aba Navegação): a tabela
+    # inteira passa a agir JUNTO com o jogo, sem tirar o controle dele. None =
+    # sem opinião (a tabela só age fora do jogo, como sempre).
+    tabela_no_jogo: bool | None = None
     mic: ProfileMicConfig | None = None
     speaker: ProfileSpeakerConfig | None = None
     mode: ProfileModeConfig | None = None
@@ -2266,6 +2274,19 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = a flag global manda, e ela nasce `True`. O teclado emulado "
         "já nasce ligado.",
         dono="hefesto_dualsense4unix.daemon.lifecycle:DaemonConfig",
+    ),
+    "Profile.teclado_so_no_jogo": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = o teclado digita fora do jogo, como sempre. «Só dentro do jogo» "
+        "é escolha dela na Função do teclado, e nada nasce nele.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
+    ),
+    "Profile.tabela_no_jogo": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = a tabela só age fora do jogo, como sempre. Ligada por padrão, "
+        "a Cruz e o Triângulo clicariam o mouse dentro de todo jogo: a chave é "
+        "escolha dela, e nada nasce ligado.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
     ),
     "Profile.mic": Nascimento(
         NASCE_NO_LEITOR,

@@ -41,10 +41,11 @@ SECOES: dict[str, Secao] = {
     "vibracao": Secao("vibracao", "05-vibracao.html", "Vibração",
                       ("rumble",), ("rumble",), ("rumble",)),
     "mouse": Secao("mouse", "06-navegacao.html", "Mouse",
-                   ("mouse", "button_actions"), ("mouse", "button_actions"), ()),
+                   ("mouse", "button_actions", "tabela_no_jogo"),
+                   ("mouse", "button_actions", "tabela_no_jogo"), ()),
     "teclado": Secao("teclado", "06-navegacao.html", "Teclado",
-                     ("teclado_emulado", "key_bindings"),
-                     ("teclado_emulado", "key_bindings"), ()),
+                     ("teclado_emulado", "teclado_so_no_jogo", "key_bindings"),
+                     ("teclado_emulado", "teclado_so_no_jogo", "key_bindings"), ()),
 }
 
 DO_JOGO: dict[str, str] = {
@@ -234,6 +235,10 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
             else {**do_global.key_bindings, **teclas_do_jogo})
     if do_global.teclado_emulado is not None and (freestyle or perfil.teclado_emulado is None):
         cru["teclado_emulado"] = do_global.teclado_emulado
+    for escalar in ("teclado_so_no_jogo", "tabela_no_jogo"):
+        valor = getattr(do_global, escalar)
+        if valor is not None and (freestyle or getattr(perfil, escalar) is None):
+            cru[escalar] = valor
     if computador.controles:
         cru["controllers"] = _controles_que_valem(perfil, cru.get("controllers"), computador)
     return Profile.model_validate(cru)
@@ -631,6 +636,13 @@ def gravar_pelo_gesto(
 
 SUFIXO_DA_COPIA = ".antes-do-computador"
 
+#: As seções do computador que são um valor inteiro (e não um modelo): o jogo
+#: tem opinião nelas ou não tem.
+_ESCALARES_DO_COMPUTADOR: tuple[str, ...] = (
+    "button_actions", "key_bindings", "teclado_emulado",
+    "teclado_so_no_jogo", "tabela_no_jogo",
+)
+
 _PS_QUE_E_DA_TABELA: frozenset[str] = frozenset({"__NADA__", "__STEAM__"})
 
 
@@ -649,7 +661,7 @@ def efetivo(perfil: Profile, computador: Any) -> dict[tuple[str, ...], Any]:
         dados = modelo.model_dump(mode="json") if modelo is not None else {}
         for campo, valor in dados.items():
             saida[("global", secao, campo)] = valor
-    for secao in ("button_actions", "key_bindings", "teclado_emulado"):
+    for secao in _ESCALARES_DO_COMPUTADOR:
         saida[("global", secao)] = getattr(vista, secao, None)
     identidades = set(_entradas_por_chave(perfil.controllers)) | set(computador.controles)
     vistos = _entradas_por_chave(vista.controllers)
@@ -672,7 +684,7 @@ def _escolhas(perfil: Profile) -> set[tuple[str, ...]]:
     saida: set[tuple[str, ...]] = set()
     for secao in ("leds", "rumble", "speaker", "mic", "mouse"):
         saida |= {("global", secao, c) for c in escolhas_globais_do_jogo(perfil, secao)}
-    for secao in ("button_actions", "key_bindings", "teclado_emulado"):
+    for secao in _ESCALARES_DO_COMPUTADOR:
         if escolhas_globais_do_jogo(perfil, secao):
             saida.add(("global", secao))
     for original in perfil.controllers or {}:
@@ -695,7 +707,7 @@ def _candidatos(perfil: Profile) -> list[tuple[tuple[str, ...], ...]]:
                 grupos.append(tuple(("global", secao, c) for c in par))
                 escolhidos -= set(par)
         grupos += [(("global", secao, c),) for c in sorted(escolhidos)]
-    for secao in ("button_actions", "key_bindings", "teclado_emulado"):
+    for secao in _ESCALARES_DO_COMPUTADOR:
         if escolhas_globais_do_jogo(perfil, secao):
             grupos.append((("global", secao),))
     for original in perfil.controllers or {}:
@@ -756,7 +768,7 @@ def ceder_ao_computador(perfil: Profile, computador: Any) -> tuple[Profile, int]
         cru = perfil.model_dump(mode="json", exclude_unset=True)
         saiu = 0
         for secao in ("leds", "rumble", "speaker", "button_actions", "key_bindings",
-                      "teclado_emulado"):
+                      "teclado_emulado", "teclado_so_no_jogo", "tabela_no_jogo"):
             saiu += secao in cru
             cru.pop(secao, None)
         if isinstance(cru.get("mouse"), dict):
@@ -808,6 +820,9 @@ def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
             do_global["key_bindings"] = freestyle.key_bindings
         if freestyle.teclado_emulado is not None:
             do_global["teclado_emulado"] = freestyle.teclado_emulado
+        for escalar in ("teclado_so_no_jogo", "tabela_no_jogo"):
+            if getattr(freestyle, escalar) is not None:
+                do_global[escalar] = getattr(freestyle, escalar)
         for original, entrada in (freestyle.controllers or {}).items():
             identidade = chave(original)
             if identidade is None:

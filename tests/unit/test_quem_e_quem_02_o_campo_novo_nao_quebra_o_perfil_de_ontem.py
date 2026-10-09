@@ -218,6 +218,8 @@ _VALORES_DE_SECAO: dict[str, object] = {
     "mode": ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense"),
     "key_bindings": {"cross": ["KEY_A"]},
     "teclado_emulado": True,
+    "teclado_so_no_jogo": True,
+    "tabela_no_jogo": True,
     "button_actions": {"cross": "KEY_ENTER"},
 }
 

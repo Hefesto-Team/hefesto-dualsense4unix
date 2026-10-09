@@ -135,6 +135,68 @@ def botoes_de_cada_controle(
     return maos
 
 
+def gatilhos_de_cada_controle(
+    daemon: object,
+) -> dict[str, tuple[frozenset[str], int, int]]:
+    """O que os OUTROS controles aperta agora: `{MAC: (botões, L2 0-255, R2 0-255)}`.
+
+    A tabela que age junto com o jogo (`subsystems/mouse.TabelaNoJogo`) precisa do
+    gatilho ANALÓGICO de cada controle, e não só do botão digital que
+    :func:`botoes_de_cada_controle` entrega. As fontes são as mesmas, na mesma
+    ordem — o co-op (`live_snapshots`) e o leitor passivo do `SensorHub` —, e o
+    dono do posto de P1 fica de fora: o laço já tem o `state` dele. Quem não
+    tem leitura neste tique fica com a mão vazia. Nunca levanta.
+    """
+    controller = getattr(daemon, "controller", None)
+    dono = _mac_ou_none(getattr(controller, "primary_uniq", None))
+    vivos = _snapshots_do_coop(daemon)
+    outros = [u for u in dict.fromkeys([*_na_mesa(controller), *vivos]) if u != dono]
+    if not outros:
+        return {}
+    sem_leitor = [u for u in outros if u not in vivos]
+    sentados = _sentados_no_coop(daemon) if sem_leitor else frozenset()
+    passivos = [u for u in sem_leitor if u not in sentados]
+    entradas = _entradas_do_hub(daemon) if passivos else None
+    maos: dict[str, tuple[frozenset[str], int, int]] = {}
+    for uniq in outros:
+        if uniq in vivos:
+            snap = vivos[uniq]
+            maos[uniq] = (
+                frozenset(getattr(snap, "buttons_pressed", ()) or ()),
+                _como_inteiro(getattr(snap, "l2_raw", 0)),
+                _como_inteiro(getattr(snap, "r2_raw", 0)),
+            )
+        elif uniq in sentados or entradas is None:
+            maos[uniq] = (frozenset(), 0, 0)
+        else:
+            maos[uniq] = _gatilhos_passivos(entradas, uniq)
+    return maos
+
+
+def _como_inteiro(valor: object) -> int:
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
+
+
+def _gatilhos_passivos(entradas: object, uniq: str) -> tuple[frozenset[str], int, int]:
+    """Botões e gatilhos de `uniq` pelo leitor passivo do hub; vazio sem leitura."""
+    vazio: tuple[frozenset[str], int, int] = (frozenset(), 0, 0)
+    if not callable(entradas):
+        return vazio
+    try:
+        leitura = entradas(uniq)
+    except Exception as exc:
+        logger.debug("tabela_no_jogo_leitura_passiva_falhou", identity=uniq, err=str(exc))
+        return vazio
+    if not isinstance(leitura, dict):
+        return vazio
+    botoes = leitura.get("buttons")
+    conjunto = (
+        frozenset(str(b) for b in botoes)
+        if isinstance(botoes, (list, tuple, set, frozenset)) else frozenset()
+    )
+    return (conjunto, _como_inteiro(leitura.get("l2_raw")), _como_inteiro(leitura.get("r2_raw")))
+
+
 def quem_segura_os_atalhos(daemon: object) -> str | None:
     """O MAC de quem fez o gesto em curso — o DONO ÚNICO da pergunta «de quem é o gesto»."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
@@ -172,8 +234,8 @@ def _na_mesa(controller: object) -> list[str]:
     return [u for u in conectados.values() if isinstance(u, str) and u]
 
 
-def _botoes_do_coop(daemon: object) -> dict[str, frozenset[str]]:
-    """`{MAC: botões}` dos jogadores do co-op com o vpad de pé (`live_snapshots`)."""
+def _snapshots_do_coop(daemon: object) -> dict[str, object]:
+    """`{MAC: snapshot}` dos jogadores do co-op com o vpad de pé (`live_snapshots`)."""
     coop = getattr(daemon, "_coop_manager", None)
     vivos_de = getattr(coop, "live_snapshots", None)
     if not callable(vivos_de):
@@ -182,14 +244,18 @@ def _botoes_do_coop(daemon: object) -> dict[str, frozenset[str]]:
         vivos = vivos_de()
         if not isinstance(vivos, dict):
             return {}
-        return {
-            mac: frozenset(getattr(snap, "buttons_pressed", ()) or ())
-            for mac, snap in vivos.items()
-            if isinstance(mac, str) and mac
-        }
+        return {mac: snap for mac, snap in vivos.items() if isinstance(mac, str) and mac}
     except Exception as exc:
         logger.debug("atalhos_sem_o_coop", err=str(exc))
         return {}
+
+
+def _botoes_do_coop(daemon: object) -> dict[str, frozenset[str]]:
+    """`{MAC: botões}` dos jogadores do co-op com o vpad de pé (`live_snapshots`)."""
+    return {
+        mac: frozenset(getattr(snap, "buttons_pressed", ()) or ())
+        for mac, snap in _snapshots_do_coop(daemon).items()
+    }
 
 
 def _sentados_no_coop(daemon: object) -> frozenset[str]:
@@ -285,6 +351,7 @@ __all__ = [
     "PollSubsystem",
     "botoes_de_cada_controle",
     "evdev_buttons_once",
+    "gatilhos_de_cada_controle",
     "observar_os_atalhos",
     "quem_segura_os_atalhos",
 ]

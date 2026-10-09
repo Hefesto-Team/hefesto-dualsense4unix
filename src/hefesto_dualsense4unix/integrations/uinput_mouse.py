@@ -10,8 +10,8 @@ Mapeamento canônico (FEAT-MOUSE-01/02, decidido pelo usuário):
 
 | DualSense                | Saída emulada          | evdev code    |
 |--------------------------|------------------------|---------------|
-| Cross (X) ou L2          | Botão esquerdo         | BTN_LEFT      |
-| Triangle () ou R2       | Botão direito          | BTN_RIGHT     |
+| Cross (X) e L2           | Botão esquerdo         | BTN_LEFT      |
+| Triangle () e R2        | Botão direito          | BTN_RIGHT     |
 | R3                       | Botão do meio          | BTN_MIDDLE    |
 | Circle ()               | Enter                  | KEY_ENTER     |
 | Square (□)               | Esc                    | KEY_ESC       |
@@ -71,7 +71,20 @@ DEFAULT_SCROLL_SPEED = 1
 
 MOUSE_SPEED_MIN, MOUSE_SPEED_MAX = 1, 12
 SCROLL_SPEED_MIN, SCROLL_SPEED_MAX = 1, 5
-TRIGGER_PRESS_THRESHOLD = 64
+
+#: O gatilho conta como apertado a partir daqui, em fração do curso. UM DONO: o
+#: mouse emulado e a tabela que age junto com o jogo leem o mesmo número. É o
+#: 0,35 que a ponte provisória do GON mediu; os 64/255 de antes (~0,25) clicavam
+#: com o dedo apenas encostado.
+LIMIAR_DO_GATILHO = 0.35
+TRIGGER_PRESS_THRESHOLD = math.ceil(LIMIAR_DO_GATILHO * 255)
+
+#: As duas linhas dos analógicos e os dois tokens que as ligam. Moram aqui e não em
+#: `core/acoes_de_botao` porque o device precisa delas e o módulo da tabela o importa.
+EIXO_ESQUERDO = "l3_direcao"
+EIXO_DIREITO = "r3_direcao"
+TOKEN_CURSOR = "__CURSOR__"
+TOKEN_ROLAGEM = "__ROLAGEM__"
 
 MOUSE_EXPO = 1.6
 MOUSE_PX_PER_SEC_STEP = 125.0
@@ -84,6 +97,10 @@ BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_LEFT",
     "triangle": "BTN_RIGHT",
     "r3": "BTN_MIDDLE",
+    # Os gatilhos são linha própria, e não mais espelho do Cruz e do Triângulo: o
+    # perfil escolhe o que cada um faz (um botão do mouse ou uma tecla).
+    "l2": "BTN_LEFT",
+    "r2": "BTN_RIGHT",
 }
 
 DPAD_TO_KEY: dict[str, str] = {
@@ -99,8 +116,18 @@ EDGE_KEY_MAP: dict[str, str] = {
 }
 
 
+def gatilho_apertado(bruto: int) -> bool:
+    """O gatilho de curso `bruto` (0-255) conta como apertado? O DONO da pergunta."""
+    return bruto >= TRIGGER_PRESS_THRESHOLD
+
+
 def _build_capabilities() -> list[tuple[Any, ...]]:
-    """Lista de eventos que o uinput device expõe. Import lazy."""
+    """Lista de eventos que o uinput device expõe. Import lazy.
+
+    `REL_X`/`REL_Y` ficam SEMPRE declarados, mesmo quando nenhuma linha move o
+    cursor: sem eles o udev não classifica o nó como mouse e o clique não chega a
+    lugar nenhum. Declarar não é emitir — quem decide emitir é :meth:`UinputMouseDevice.dispatch`.
+    """
     import uinput
 
     rels = [
@@ -166,6 +193,13 @@ class UinputMouseDevice:
     _device: Any = None
     _uinput_mod: Any = None
     _last_buttons_emulated: frozenset[str] = field(default_factory=frozenset)
+    # Os códigos `BTN_*` que ESTE device mantém apertados. A borda é por código, e
+    # não por botão: dois botões (a Cruz e o L2) podem dar o mesmo clique, e o
+    # clique só solta quando o último deles solta.
+    _codigos_apertados: frozenset[str] = field(default_factory=frozenset)
+    # O cursor e a rolagem só andam se a linha do analógico escolher o próprio token.
+    _cursor_ligado: bool = True
+    _rolagem_ligada: bool = True
     _last_scroll_at: float = -math.inf
     _prev_edge_keys: frozenset[str] = field(default_factory=frozenset)
     _tp_carry_x: float = 0.0
@@ -204,6 +238,7 @@ class UinputMouseDevice:
         self._device = None
         self._uinput_mod = None
         self._last_buttons_emulated = frozenset()
+        self._codigos_apertados = frozenset()
         self._last_scroll_at = -math.inf
         self._prev_edge_keys = frozenset()
         self._tp_carry_x = 0.0
@@ -261,17 +296,44 @@ class UinputMouseDevice:
         `core/acoes_de_botao.botoes_calados()`; `None` aqui quer dizer "ninguém
         informou", e é o contrato de antes byte a byte.
         """
+        self._soltar_o_que_segura()
+        self._stick_carry_x = 0.0
+        self._stick_carry_y = 0.0
         if do_mouse is None:
             self._mapa_botoes = dict(BUTTON_TO_UINPUT)
             self._mapa_dpad = dict(DPAD_TO_KEY)
             self._mapa_tap = dict(EDGE_KEY_MAP)
+            self._cursor_ligado = True
+            self._rolagem_ligada = True
             return
         mudos = frozenset(calados or ())
-        self._mapa_botoes = dict(do_mouse)
+        # AS DUAS LINHAS DOS ANALÓGICOS NÃO SÃO BOTÃO: o token delas liga o eixo.
+        # Linha ausente é o de fábrica (ligado); `— Nada —` chega por `calados`;
+        # qualquer outro token que não seja o próprio eixo desliga.
+        self._cursor_ligado = (
+            EIXO_ESQUERDO not in mudos
+            and do_mouse.get(EIXO_ESQUERDO, TOKEN_CURSOR) == TOKEN_CURSOR)
+        self._rolagem_ligada = (
+            EIXO_DIREITO not in mudos
+            and do_mouse.get(EIXO_DIREITO, TOKEN_ROLAGEM) == TOKEN_ROLAGEM)
+        eixos = (EIXO_ESQUERDO, EIXO_DIREITO)
+        self._mapa_botoes = {b: t for b, t in do_mouse.items() if b not in eixos}
         self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items()
                            if b not in do_mouse and b not in mudos}
         self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
                           if b not in do_mouse and b not in mudos}
+
+    def _soltar_o_que_segura(self) -> None:
+        """Solta os cliques que a tabela ANTERIOR mantinha: ela deixou de ser a vigente."""
+        if self._device is None or self._uinput_mod is None or not self._codigos_apertados:
+            self._codigos_apertados = frozenset()
+            return
+        for codigo in sorted(self._codigos_apertados):
+            ev = getattr(self._uinput_mod, codigo, None)
+            if ev is not None:
+                self._device.emit(ev, 0, syn=False)
+        self._device.syn()
+        self._codigos_apertados = frozenset()
 
     def dispatch(
         self,
@@ -290,8 +352,9 @@ class UinputMouseDevice:
         Args:
             lx, ly: stick esquerdo (0-255) — vira REL_X/REL_Y com deadzone.
             rx, ry: stick direito (0-255) — vira REL_WHEEL/REL_HWHEEL.
-            l2, r2: trigger analógico (0-255) — acima de TRIGGER_PRESS_THRESHOLD
-                    conta como botão pressionado (L2→cross, R2→triangle).
+            l2, r2: trigger analógico (0-255) — a partir de TRIGGER_PRESS_THRESHOLD
+                    o botão `l2`/`r2` conta como apertado, e a LINHA dele
+                    na tabela diz o que sai (cada gatilho tem a sua).
             buttons: conjunto canônico Hefesto - DualSense4Unix pressionado agora.
             now: timestamp monotônico opcional (injetável em testes). Default
                  usa `time.monotonic()`.
@@ -305,45 +368,48 @@ class UinputMouseDevice:
         self._emit_buttons(emulated)
         self._emit_dpad(buttons)
         self._emit_edge_keys(buttons)
-        self._emit_move(lx, ly)
-        self._emit_scroll(rx, ry, now)
+        if self._cursor_ligado:
+            self._emit_move(lx, ly)
+        if self._rolagem_ligada:
+            self._emit_scroll(rx, ry, now)
         self._last_buttons_emulated = emulated
         self._prev_edge_keys = frozenset(b for b in buttons if b in self._mapa_tap)
 
     def _resolve_emulated_set(
         self, buttons: frozenset[str], l2: int, r2: int
     ) -> frozenset[str]:
-        """Converte botões Hefesto - DualSense4Unix + triggers analógicos em set canônico emulado.
+        """Os botões apertados agora, com os gatilhos analógicos já viraram `l2`/`r2`.
 
-        L2 analógico acima de TRIGGER_PRESS_THRESHOLD injeta 'cross' virtual.
-        R2 análogo injeta 'triangle'. Se usuário também apertou cross/triangle
-        físicos, o set continua idempotente (frozenset absorve duplicatas).
+        Cada gatilho é uma LINHA própria da tabela (`l2`, `r2`), sem espelho no
+        Cruz ou no Triângulo: o que ele faz é o que o perfil escolheu para ele.
         """
         resolved = set(buttons)
-        if l2 >= TRIGGER_PRESS_THRESHOLD:
-            resolved.add("cross")
-        if r2 >= TRIGGER_PRESS_THRESHOLD:
-            resolved.add("triangle")
+        if gatilho_apertado(l2):
+            resolved.add("l2")
+        if gatilho_apertado(r2):
+            resolved.add("r2")
         return frozenset(resolved)
 
     def _emit_buttons(self, emulated: frozenset[str]) -> None:
-        """Edge-triggered press/release dos botões do mouse."""
+        """Edge-triggered press/release dos botões do mouse, POR CÓDIGO `BTN_*`."""
         u = self._uinput_mod
-        relevant_now = {b for b in emulated if b in self._mapa_botoes}
-        relevant_last = {b for b in self._last_buttons_emulated if b in self._mapa_botoes}
+        agora = frozenset(
+            self._mapa_botoes[b] for b in emulated if b in self._mapa_botoes)
+        antes = self._codigos_apertados
 
-        newly_pressed = relevant_now - relevant_last
-        newly_released = relevant_last - relevant_now
+        newly_pressed = agora - antes
+        newly_released = antes - agora
 
-        for name in newly_pressed:
-            ev = getattr(u, self._mapa_botoes[name], None)
+        for codigo in sorted(newly_pressed):
+            ev = getattr(u, codigo, None)
             if ev is not None:
                 self._device.emit(ev, 1, syn=False)
-        for name in newly_released:
-            ev = getattr(u, self._mapa_botoes[name], None)
+        for codigo in sorted(newly_released):
+            ev = getattr(u, codigo, None)
             if ev is not None:
                 self._device.emit(ev, 0, syn=False)
 
+        self._codigos_apertados = agora
         if newly_pressed or newly_released:
             self._device.syn()
 
@@ -600,17 +666,23 @@ __all__ = [
     "DEVICE_NAME",
     "DPAD_TO_KEY",
     "EDGE_KEY_MAP",
+    "EIXO_DIREITO",
+    "EIXO_ESQUERDO",
+    "LIMIAR_DO_GATILHO",
     "MOUSE_EXPO",
     "MOUSE_PX_PER_SEC_STEP",
     "MOVE_DEADZONE",
     "NOME_DO_CURSOR_DO_TOQUE",
     "SCROLL_DEADZONE",
     "SCROLL_RATE_LIMIT_SEC",
+    "TOKEN_CURSOR",
+    "TOKEN_ROLAGEM",
     "TOUCHPAD_SENSITIVITY",
     "TRIGGER_PRESS_THRESHOLD",
     "CursorDoToque",
     "UinputMouseDevice",
     "_compute_move_px_per_sec",
     "_compute_scroll_step",
+    "gatilho_apertado",
 ]
 

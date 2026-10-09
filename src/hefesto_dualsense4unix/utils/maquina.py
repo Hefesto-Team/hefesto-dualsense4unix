@@ -730,6 +730,8 @@ class ComputadorGlobal(BaseModel):
     button_actions: dict[str, str] | None = None
     key_bindings: dict[str, list[str]] | None = None
     teclado_emulado: bool | None = None
+    teclado_so_no_jogo: bool | None = None
+    tabela_no_jogo: bool | None = None
 
     @model_validator(mode="after")
     def _botoes_e_teclas_pelo_dono(self) -> ComputadorGlobal:

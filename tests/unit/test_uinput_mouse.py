@@ -81,7 +81,8 @@ def test_constantes_default_coerentes():
     assert MOVE_DEADZONE == 20
     assert SCROLL_DEADZONE == 40
     assert SCROLL_RATE_LIMIT_SEC == 0.050
-    assert TRIGGER_PRESS_THRESHOLD == 64
+    # 0,35 do curso (a ponte do GON mediu): 90 de 255. Os 64 de antes clicavam encostando.
+    assert TRIGGER_PRESS_THRESHOLD == 90
     assert MOUSE_EXPO == 1.6
     assert MOUSE_PX_PER_SEC_STEP == 125.0
     assert DEFAULT_POLL_HZ == 60
@@ -94,6 +95,9 @@ def test_button_map_canonico():
         "cross": "BTN_LEFT",
         "triangle": "BTN_RIGHT",
         "r3": "BTN_MIDDLE",
+        # os gatilhos são linha própria, e não espelho do Cruz e do Triângulo
+        "l2": "BTN_LEFT",
+        "r2": "BTN_RIGHT",
     }
     assert DPAD_TO_KEY == {
         "dpad_up": "KEY_UP",

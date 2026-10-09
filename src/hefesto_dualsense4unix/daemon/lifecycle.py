@@ -636,6 +636,11 @@ class Daemon:
     _coop_manager: Any = None
     _hotkey_manager: Any = None
     _emulation_suppressed: bool = False
+    # A tabela que age COM o jogo e o teclado «Só dentro do jogo»: travados do perfil
+    # efetivo a cada ativação (`apply_profile_suppression`), lidos pelo laço do tique.
+    _tabela_no_jogo: Any = None
+    _teclado_so_no_jogo: bool = False
+    _estava_no_jogo: bool = False
     _suppress_manual_ts: float = field(default=float("-inf"))
     _suppress_from_profile: bool = False
     _emu_manual_ts: float = field(default=float("-inf"))
@@ -2153,6 +2158,12 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
+        from hefesto_dualsense4unix.daemon.subsystems.mouse import trocar_a_tabela_no_jogo
+
+        # ANTES de qualquer saída por lock manual: a chave «Também no jogo» e o
+        # teclado «Só dentro do jogo» são do perfil, e não da supressão.
+        with contextlib.suppress(Exception):
+            trocar_a_tabela_no_jogo(self, profile)
 
         now = time.monotonic()
         if origin == "manual":
@@ -4330,6 +4341,11 @@ class Daemon:
 
             input_ready = grace_passed and not self._paused and not self._native_mode
             if not input_ready:
+                from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                    despachar_no_jogo as _largar_a_tabela,
+                )
+
+                _largar_a_tabela(self, state, frozenset(), no_jogo=False)
                 if self._touchpad_reader is not None:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                         discard_touchpad_motion,
@@ -4371,6 +4387,14 @@ class Daemon:
                 )
 
             emu_active = not self._emulation_suppressed
+            from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                botoes_com_os_gatilhos,
+                despachar_no_jogo,
+            )
+
+            # Os gatilhos entram pelo NOME (`l2`/`r2`): são linhas da tabela como
+            # qualquer botão, e o teclado só os conhece assim.
+            emu_buttons = botoes_com_os_gatilhos(emu_buttons, state.l2_raw, state.r2_raw)
             if not gamepad_dispatched:
                 # O Modo Big Picture com a Steam na frente: o direcional, a Cruz e o
                 # Círculo viram as teclas do Big Picture e não chegam ao mouse virtual.
@@ -4385,7 +4409,13 @@ class Daemon:
                     discard_touchpad_motion(self)
 
                 if self._keyboard_device is not None and emu_active:
-                    self._dispatch_keyboard_emulation(emu_buttons)
+                    if self._teclado_so_no_jogo:
+                        # «Só dentro do jogo»: fora dele o teclado fica calado.
+                        self._prime_keyboard_emulation(emu_buttons)
+                    else:
+                        self._dispatch_keyboard_emulation(emu_buttons)
+
+            despachar_no_jogo(self, state, emu_buttons, no_jogo=gamepad_dispatched)
 
             # `buttons_pressed` lá em cima, e só ele.
             from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos

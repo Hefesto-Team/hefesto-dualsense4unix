@@ -24,7 +24,6 @@ Os dois casos, pelo nome que a sprint lhes deu:
 """
 from __future__ import annotations
 
-import types
 from typing import Any
 
 import pytest
@@ -148,10 +147,10 @@ def test_sem_a_sacola_o_device_e_o_de_antes_byte_a_byte() -> None:
     `set_button_actions(do_mouse)` com um argumento só, e continuam a valer.
     """
     do_mouse, _t, _s = acoes.resolver({"dpad_up": "BTN_LEFT"})
-    velho = types.SimpleNamespace()
-    UinputMouseDevice.set_button_actions(velho, do_mouse)
-    novo = types.SimpleNamespace()
-    UinputMouseDevice.set_button_actions(novo, do_mouse, None)
+    velho = UinputMouseDevice()
+    velho.set_button_actions(do_mouse)
+    novo = UinputMouseDevice()
+    novo.set_button_actions(do_mouse, None)
     assert velho._mapa_dpad == novo._mapa_dpad
     assert velho._mapa_tap == novo._mapa_tap
     assert velho._mapa_botoes == novo._mapa_botoes

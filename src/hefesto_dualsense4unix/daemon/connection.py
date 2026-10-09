@@ -1411,6 +1411,11 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             client.close()
         daemon._hidraw_broker_client = None
+    tabela_no_jogo = getattr(daemon, "_tabela_no_jogo", None)
+    if tabela_no_jogo is not None:
+        with contextlib.suppress(Exception):
+            tabela_no_jogo.fechar()
+        daemon._tabela_no_jogo = None
     if getattr(daemon, "_keyboard_device", None) is not None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()

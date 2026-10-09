@@ -216,6 +216,25 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "faria toda troca de perfil mexer no teclado dela."
         )
     ),
+    "teclado_so_no_jogo": SecaoDireta(
+        razao=(
+            "O-TECLADO-SO-DENTRO-DO-JOGO-TEM-DONO-01 (08/10/2026). Não é applier "
+            "injetado: `Daemon.apply_profile_suppression` o TRAVA no daemon "
+            "(`subsystems.mouse.trocar_a_tabela_no_jogo`) a cada ativação, "
+            "ANTES da saída por lock manual, e o laço do tique lê o valor "
+            "travado para trocar o sinal do portão do teclado. Nada é escrito "
+            "no controle."
+        )
+    ),
+    "tabela_no_jogo": SecaoDireta(
+        razao=(
+            "O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01 (08/10/2026). Mesma "
+            "rota do `teclado_so_no_jogo`: `apply_profile_suppression` trava a "
+            "chave em `subsystems.mouse.trocar_a_tabela_no_jogo`, que abre a "
+            "`TabelaNoJogo` (mouse e teclado privados) só com a chave ligada. "
+            "Nada é escrito no controle."
+        )
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),

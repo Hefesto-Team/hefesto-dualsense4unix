@@ -149,6 +149,192 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
     mover_o_cursor_pelo_giro(daemon, buttons_pressed)
 
 
+def botoes_com_os_gatilhos(botoes: frozenset[str], l2: int, r2: int) -> frozenset[str]:
+    """Os botões apertados, com `l2`/`r2` quando o gatilho passa do limiar.
+
+    O gatilho analógico é uma LINHA da tabela como qualquer botão, e as duas
+    pontas (o mouse e o teclado) a leem pelo nome: este é o único lugar onde o
+    curso vira o nome, pelo limiar de `uinput_mouse.gatilho_apertado`.
+    """
+    from hefesto_dualsense4unix.integrations.uinput_mouse import gatilho_apertado
+
+    extra = {nome for nome, bruto in (("l2", l2), ("r2", r2)) if gatilho_apertado(bruto)}
+    return frozenset(botoes) | extra if extra else frozenset(botoes)
+
+
+class TabelaNoJogo:
+    """A tabela de botões da aba Navegação, agindo JUNTO com o jogo (a chave «Também no jogo»).
+
+    Com o gamepad virtual despachando, o laço pula a emulação de desktop inteira
+    (`gamepad_dispatched`), e o `_mouse_device` nem existe: ligar o mouse derruba o
+    gamepad virtual. Esta classe é o caminho que NÃO derruba: dois devices
+    PRIVADOS, de mouse e de teclado, criados só quando a chave está ligada, que
+    nunca tocam o gamepad virtual nem o `_mouse_device` do desktop.
+
+    O QUE ELA AGE, em frases:
+
+    * cada controle aperta as PRÓPRIAS linhas — a união dos botões de P1 a P4,
+      com o gatilho analógico de cada um virando `l2`/`r2` pelo mesmo limiar
+      (`uinput_mouse.gatilho_apertado`) — e a borda é por código, então dois
+      controles no mesmo clique soltam quando o último solta;
+    * o cursor e a rolagem andam SÓ pelo P1 (os outros analógicos viram centro),
+      e só se a linha do analógico escolheu o próprio token;
+    * a tabela vem do perfil EFETIVO (as três camadas), resolvida uma vez por
+      ativação; a chave não obedece à Função do teclado nem à supressão.
+    """
+
+    def __init__(self, button_actions: Any, key_bindings: Any, *, ligada: bool) -> None:
+        from hefesto_dualsense4unix.core.acoes_de_botao import botoes_calados, resolver
+
+        self.ligada = bool(ligada)
+        self._do_mouse, self._do_teclado, _sem_dono = resolver(button_actions, key_bindings)
+        self._calados = botoes_calados(button_actions, key_bindings)
+        self._mouse: Any = None
+        self._teclado: Any = None
+        self._desistiu = False
+
+    # -- ciclo de vida ---------------------------------------------------
+
+    def _abrir(self, daemon: Any) -> bool:
+        if self._mouse is not None and self._teclado is not None:
+            return True
+        if self._desistiu:
+            return False
+        try:
+            from hefesto_dualsense4unix.integrations.uinput_keyboard import (
+                UinputKeyboardDevice,
+            )
+            from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
+            from hefesto_dualsense4unix.profiles.manager import resolve_key_bindings
+
+            cfg = daemon.config
+            mouse = UinputMouseDevice(
+                mouse_speed=cfg.mouse_speed,
+                scroll_speed=cfg.mouse_scroll_speed,
+                poll_hz=cfg.poll_hz,
+            )
+            teclado = UinputKeyboardDevice()
+            if not mouse.start() or not teclado.start():
+                with contextlib.suppress(Exception):
+                    mouse.stop()
+                    teclado.stop()
+                self._desistiu = True
+                logger.warning("tabela_no_jogo_sem_uinput")
+                return False
+            # O teclado é dono do que sai por tecla (o d-pad, o Círculo, o Quadrado
+            # e o que ela escolheu): o mouse os cala, para a tecla não sair duas vezes.
+            mouse.set_button_actions(
+                self._do_mouse, self._calados | frozenset(self._do_teclado))
+            teclado.set_bindings(resolve_key_bindings(
+                {b: list(t) for b, t in self._do_teclado.items()}))
+        except Exception as exc:
+            self._desistiu = True
+            logger.warning("tabela_no_jogo_abrir_falhou", err=str(exc))
+            return False
+        self._mouse, self._teclado = mouse, teclado
+        logger.info("tabela_no_jogo_aberta")
+        return True
+
+    def soltar(self) -> None:
+        """Solta tudo o que a tabela mantém apertado. Idempotente; nunca levanta."""
+        if self._teclado is not None:
+            with contextlib.suppress(Exception):
+                self._teclado.dispatch(frozenset())
+        if self._mouse is not None:
+            with contextlib.suppress(Exception):
+                self._mouse.dispatch(
+                    lx=128, ly=128, rx=128, ry=128, l2=0, r2=0, buttons=frozenset())
+
+    def fechar(self) -> None:
+        """Solta e destrói os dois devices. Idempotente."""
+        self.soltar()
+        for dispositivo in (self._mouse, self._teclado):
+            if dispositivo is not None:
+                with contextlib.suppress(Exception):
+                    dispositivo.stop()
+        self._mouse = None
+        self._teclado = None
+
+    # -- o tique ---------------------------------------------------------
+
+    def tick(self, daemon: Any, state: Any, botoes_do_p1: frozenset[str]) -> None:
+        """Um tique COM o jogo: a união dos controles aperta as linhas da tabela."""
+        if not self.ligada or not self._abrir(daemon):
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.poll import gatilhos_de_cada_controle
+        l2 = int(getattr(state, "l2_raw", 0) or 0)
+        r2 = int(getattr(state, "r2_raw", 0) or 0)
+        conjunto = botoes_com_os_gatilhos(botoes_do_p1, l2, r2)
+        for botoes, outro_l2, outro_r2 in gatilhos_de_cada_controle(daemon).values():
+            conjunto |= botoes_com_os_gatilhos(botoes, outro_l2, outro_r2)
+        try:
+            self._mouse.dispatch(
+                lx=state.raw_lx,
+                ly=state.raw_ly,
+                rx=state.raw_rx,
+                ry=state.raw_ry,
+                l2=l2,
+                r2=r2,
+                buttons=conjunto,
+            )
+            self._teclado.dispatch(conjunto)
+        except Exception as exc:
+            logger.warning("tabela_no_jogo_dispatch_falhou", err=str(exc))
+
+
+def trocar_a_tabela_no_jogo(daemon: DaemonProtocol, profile: Any) -> None:
+    """Trava, a partir do perfil EFETIVO, o que a tabela faz com o jogo aberto.
+
+    Chamado a cada ativação (e a cada `reaplicar`), ANTES de qualquer saída por
+    lock manual: a chave é do perfil, não da supressão. Fecha a tabela anterior
+    (solta o que ela segurava) e abre outra só quando a chave estiver ligada.
+    """
+    anterior = getattr(daemon, "_tabela_no_jogo", None)
+    if anterior is not None:
+        anterior.fechar()
+    ligada = bool(getattr(profile, "tabela_no_jogo", None))
+    daemon._tabela_no_jogo = TabelaNoJogo(
+        getattr(profile, "button_actions", None),
+        getattr(profile, "key_bindings", None),
+        ligada=ligada,
+    ) if ligada else None
+    daemon._teclado_so_no_jogo = bool(getattr(profile, "teclado_so_no_jogo", None))
+
+
+def despachar_no_jogo(
+    daemon: DaemonProtocol,
+    state: Any,
+    emu_buttons: frozenset[str],
+    *,
+    no_jogo: bool,
+) -> None:
+    """O que o laço faz com o gamepad virtual despachando, e a saída dele.
+
+    * Tabela ligada: ela age (mouse e teclado privados). O teclado do desktop
+      não despacha junto, para a mesma tecla não sair duas vezes.
+    * Só o teclado «Só dentro do jogo»: o teclado do desktop despacha daqui,
+      mesmo com a emulação suprimida pelo perfil do jogo.
+    * Ao sair do jogo (ou ao largar a chave) tudo é solto.
+    """
+    tabela = getattr(daemon, "_tabela_no_jogo", None)
+    so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False))
+    estava = bool(getattr(daemon, "_estava_no_jogo", False))
+    daemon._estava_no_jogo = no_jogo
+    teclado = getattr(daemon, "_keyboard_device", None)
+    if not no_jogo:
+        if estava:
+            if tabela is not None:
+                tabela.soltar()
+            if so_dentro and teclado is not None:
+                with contextlib.suppress(Exception):
+                    teclado.dispatch(frozenset())
+        return
+    if tabela is not None:
+        tabela.tick(daemon, state, emu_buttons)
+    elif so_dentro and teclado is not None:
+        daemon._dispatch_keyboard_emulation(emu_buttons)
+
+
 def mover_o_cursor_pelo_giro(daemon: DaemonProtocol, botoes_do_primario: frozenset[str]) -> None:
     """Na Navegação, o giro de quem está com a Mira acesa move o cursor."""
     try:

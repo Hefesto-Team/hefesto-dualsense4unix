@@ -45,11 +45,14 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     BUTTON_TO_UINPUT,
     DPAD_TO_KEY,
     EDGE_KEY_MAP,
+    EIXO_DIREITO,
+    EIXO_ESQUERDO,
+    TOKEN_CURSOR,
+    TOKEN_ROLAGEM,
 )
 
 #: OS DOIS EIXOS DOS ANALÓGICOS, que são LINHA na tela e não são botão em lugar
-EIXO_ESQUERDO = "l3_direcao"
-EIXO_DIREITO = "r3_direcao"
+#: nenhum: `EIXO_ESQUERDO` e `EIXO_DIREITO` moram no device de mouse, que é quem os lê.
 
 BOTAO_PS = "ps"
 
@@ -62,8 +65,6 @@ BOTOES: tuple[str, ...] = (
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
 )
 
-TOKEN_CURSOR = "__CURSOR__"
-TOKEN_ROLAGEM = "__ROLAGEM__"
 TOKEN_STEAM = "__STEAM__"
 TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
@@ -82,6 +83,7 @@ ACOES: dict[str, tuple[str, str]] = {
     TOKEN_CURSOR: (GRUPO_MOUSE, "Movimento do cursor"),
     TOKEN_ROLAGEM: (GRUPO_MOUSE, "Rolagem vertical e horizontal"),
 
+    "KEY_E": (GRUPO_TECLADO, "E"),
     "KEY_UP": (GRUPO_TECLADO, "Seta para cima"),
     "KEY_DOWN": (GRUPO_TECLADO, "Seta para baixo"),
     "KEY_LEFT": (GRUPO_TECLADO, "Seta para a esquerda"),
@@ -224,8 +226,6 @@ def padrao() -> dict[str, str]:
         else:
             do_teclado = _do_teclado(botao)
             fora[botao] = do_teclado if do_teclado else TOKEN_NADA
-    fora["l2"] = fora["cross"]
-    fora["r2"] = fora["triangle"]
     fora[EIXO_ESQUERDO] = TOKEN_CURSOR
     fora[EIXO_DIREITO] = TOKEN_ROLAGEM
     # nem `DPAD_TO_KEY`, nem `EDGE_KEY_MAP`, nem `DEFAULT_BUTTON_BINDINGS`. A
@@ -337,6 +337,12 @@ def botoes_calados(
     return frozenset(b for b, token in tabela.items() if token == TOKEN_NADA)
 
 
+_TOKEN_DO_EIXO: dict[str, str] = {
+    EIXO_ESQUERDO: TOKEN_CURSOR,
+    EIXO_DIREITO: TOKEN_ROLAGEM,
+}
+
+
 def resolver(
     escolhas: dict[str, str] | None,
     key_bindings: dict[str, list[str]] | None = None,
@@ -368,14 +374,15 @@ def resolver(
     :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte
     a byte — os três chamadores que não o passam não mudam de resposta.
 
-    OS EIXOS FICAM DE FORA das duas primeiras sacolas: mover o cursor e rolar
-    não são evento de botão, e empurrá-los para o device como se fossem faria o
-    `_emit_buttons` procurar um `BTN___CURSOR__` que não existe.
+    AS DUAS LINHAS DOS ANALÓGICOS são lidas pelo device: o token PRÓPRIO
+    (`__CURSOR__` na esquerda, `__ROLAGEM__` na direita) é o de fábrica e não
+    viaja; `— Nada —` desliga o eixo e chega por :func:`botoes_calados`; qualquer
+    outro token desliga e viaja em `do_mouse`, e a linha cai em `sem_dono`, porque
+    ninguém atende aquela escolha. Antes disto o cursor andava qualquer que fosse
+    a escolha, e a tela oferecia a linha sem dono.
 
-    E OS DOIS GATILHOS TAMBÉM, pelo motivo escrito no corpo: eles são espelho do
-    `cross` e do `triangle`, não linha própria. É a única das vinte e duas linhas
-    que a tela oferece e o produto só pode atender POR TABELA — e dizer isso na
-    terceira sacola é melhor que guardar a escolha e não acender nada.
+    OS DOIS GATILHOS SÃO LINHA PRÓPRIA, sem espelho no `cross` e no `triangle`:
+    `l2` e `r2` entram em `do_mouse` ou em `do_teclado` como qualquer botão.
     """
     tabela = tabela_efetiva(escolhas, key_bindings)
 
@@ -383,16 +390,18 @@ def resolver(
     do_teclado: dict[str, tuple[str, ...]] = {}
     sem_dono: list[str] = []
 
-    for gatilho, espelho in (("l2", "cross"), ("r2", "triangle")):
-        if tabela.get(gatilho) != tabela.get(espelho):
-            sem_dono.append(gatilho)
-        tabela.pop(gatilho, None)
-
     # `button_actions_sem_atendente`.
     tabela.pop(BOTAO_PS, None)
 
     for botao, token in tabela.items():
-        if botao in (EIXO_ESQUERDO, EIXO_DIREITO):
+        if botao in _TOKEN_DO_EIXO:
+            # A linha do analógico diz o que o eixo faz. O token PRÓPRIO é o de
+            # fábrica e não viaja (ausente = ligado); `— Nada —` chega ao device por
+            # `botoes_calados`; qualquer outro desliga o eixo, viaja para o device
+            # dizer isso, e a linha fica sem dono.
+            if token not in (TOKEN_NADA, _TOKEN_DO_EIXO[botao]):
+                do_mouse[botao] = token
+                sem_dono.append(botao)
             continue
         if token == TOKEN_NADA:
             continue

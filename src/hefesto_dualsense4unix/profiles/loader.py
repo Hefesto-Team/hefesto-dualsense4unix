@@ -1707,6 +1707,8 @@ _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     "mode",
     "key_bindings",
     "teclado_emulado",
+    "teclado_so_no_jogo",
+    "tabela_no_jogo",
     # gravar `"button_actions": null` e um binário anterior a esta feature
     "button_actions",
 )
