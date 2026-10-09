@@ -815,6 +815,7 @@ class CoopManager:
         real).
         """
         daemon = self._daemon
+        dono = self._players.get(identity)
 
         def _sink(weak: int, strong: int) -> None:
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -823,8 +824,7 @@ class CoopManager:
             )
 
             target = None if identity.startswith("path:") else identity
-            jogador = self._players.get(identity)
-            if getattr(jogador, "cedido_ao_primario", False) and recolher_calado():
+            if self._o_pad_sem_dono(identity, dono):
                 # O aparelho dele dirige o pad 1 agora: o pad dele não tem dono.
                 logger.debug(
                     "coop_rumble_do_cedido_descartado", identity=identity,
@@ -840,6 +840,18 @@ class CoopManager:
             anotar_rumble_no_vpad(vpad, efetivo)
 
         return _sink
+
+    def _o_pad_sem_dono(self, identity: str, dono: Any = None) -> bool:
+        """O pad deste jogador cedeu o aparelho ao P1 e se recolhe calado.
+
+        O-PAD-CEDIDO-CALA-O-GATILHO-E-A-LUZ-TAMBEM-01: depois da cessão o aparelho
+        dirige o pad 1, e NENHUMA saída do pad que cedeu (vibração, gatilho, luz,
+        LED de jogador, microfone, fim de sessão) pode chegar a ele. `dono` é o
+        jogador que o pad serve, guardado quando os ralos nascem: no recolhimento
+        ele já saiu de `_players`, e o `stop` do pad ainda fecha a sessão.
+        """
+        jogador = dono if dono is not None else self._players.get(identity)
+        return bool(getattr(jogador, "cedido_ao_primario", False)) and recolher_calado()
 
     def _make_player_replica_sinks(self, identity: str) -> dict[str, Any]:
         """Sinks de replicação (REPLICA-03) do vpad de UM jogador → físico DELE.
@@ -880,7 +892,7 @@ class CoopManager:
 
             end_game_output_session(daemon, target_uniq=target)
 
-        return {
+        ralos: dict[str, Any] = {
             "trigger_sink": _trigger,
             "lightbar_sink": _lightbar,
             "player_led_sink": _player_leds,
@@ -888,6 +900,19 @@ class CoopManager:
             # A luz e o mudo do microfone que o jogo pede, ao controle DESTE jogador.
             **ralos_do_mic(daemon, lambda: target),
         }
+        dono = self._players.get(identity)
+
+        def _calado_se_cedeu(nome: str, ralo: Callable[..., Any]) -> Callable[..., Any]:
+            def _ralo(*args: Any, **kwargs: Any) -> Any:
+                if self._o_pad_sem_dono(identity, dono):
+                    logger.debug("coop_saida_do_cedido_descartada", identity=identity,
+                                 ralo=nome)
+                    return None
+                return ralo(*args, **kwargs)
+
+            return _ralo
+
+        return {nome: _calado_se_cedeu(nome, ralo) for nome, ralo in ralos.items()}
 
     def _promote_player(self, player: _SecondaryPlayer) -> None:
         """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
@@ -1190,7 +1215,9 @@ class CoopManager:
             with contextlib.suppress(Exception):
                 player.vpad.stop()
         self._levantar(identity)
-        self._revert_single_player_led(identity)
+        if not calado:
+            # O LED do aparelho que cedeu é do P1 agora: não se devolve ao perfil do P2.
+            self._revert_single_player_led(identity)
         self._materialize_launch_env()
         logger.info("coop_player_removed", identity=identity, players=self.player_count())
 
