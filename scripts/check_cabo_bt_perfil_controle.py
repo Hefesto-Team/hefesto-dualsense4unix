@@ -2,13 +2,17 @@
 """A RÉGUA DE PRONTO de toda feature da tela — CABO-BT-PERFIL-CONTROLE-01."""
 from __future__ import annotations
 
+import ast
 import csv
+import functools
 import pathlib
 import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
+SRC = RAIZ / "src"
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
+PACOTES = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 ESQUEMA = RAIZ / "src/hefesto_dualsense4unix/profiles/schema.py"
 MAQUINA = RAIZ / "src/hefesto_dualsense4unix/utils/maquina.py"
@@ -16,6 +20,10 @@ MAQUINA = RAIZ / "src/hefesto_dualsense4unix/utils/maquina.py"
 _SIM = {"sim", "1", "true"}
 
 #: deles toca o DualSense: são gestos de TELA (abrir, fechar, voltar ao
+_DO_EXTERNO = ("declara o controle externo (a cor do plástico, a chave de modo, a ordem dos "
+               "botões) no `maquina.json` (`ControleDeclarado`) — é da máquina, e nada muda no "
+               "aparelho")
+
 NAO_E_DO_APARELHO: dict[str, str] = {
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
     "fechar-definicoes": "fecha um painel da própria tela",
@@ -167,10 +175,55 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "entrada-parar": "fecha a cerimônia — é da tela",
     "receptor-descobrir": "descobre a faixa do receptor 2.4G por eliminação e a grava no "
                           "`maquina.json` — é da máquina",
-    "externo-cor": "declara a cor do plástico do controle externo — é a declaração "
-                   "dela no `maquina.json` (`ControleDeclarado.cor`), e nada muda no "
-                   "aparelho; o `externo-modo` e o `externo-botoes` são irmãos, e só "
-                   "a cor aparece na página publicada (no CSS da lista)",
+    "externo-cor": _DO_EXTERNO,
+    "externo-modo": _DO_EXTERNO,
+    "externo-botoes": _DO_EXTERNO,
+    # Os gestos que só o registro dos pacotes mostra (a página os gera em JS, ou não é
+    # uma das dez): AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01.
+    "todos": "volta as ações da 08 para a mesa inteira (o «▴») — é da tela",
+    "selecionar": "abre um perfil no editor — é da tela",
+    "ativar": "troca o perfil ativo (`profile.switch`) — é do perfil; o ATO no aparelho é o "
+              "de cada feature do perfil, que responde as quatro por conta própria",
+    "aplicar": "manda o perfil ativo inteiro aos controles, sem gravar — é do perfil; o ATO "
+               "no aparelho é o de cada feature do perfil",
+    "salvar": "regrava o perfil ativo — é do perfil",
+    "exportar": "escreve o perfil ativo num `.json` da pasta pessoal — é do disco",
+    "importar": "carrega um perfil de um `.json` escolhido — é do perfil",
+    "voltar-a-de-ontem": "desfaz a última gravação do perfil aberto — é do perfil",
+    "editor.nome": "renomeia o perfil — é do perfil",
+    "editor.prioridade": "a prioridade entre dois perfis que servem — é do perfil",
+    "editor.ambiente": "a regra que faz o perfil entrar — é do perfil",
+    "editor.estilo": "aplica a receita de um Estilo de Jogo no perfil — é do perfil; o ATO "
+                     "no aparelho é o de cada feature da receita",
+    "editor.jogo": "o jogo que faz o perfil entrar — é do perfil",
+    "novo": "cria um perfil em branco — é do perfil",
+    "duplicar": "copia um perfil — é do perfil",
+    "remover": "apaga um perfil do disco — é do perfil",
+    "recarregar": "relê a lista de perfis do disco — é leitura",
+    "ordenar": "ordena a tabela dos perfis — é da tela",
+    "largura-da-coluna": "grava a largura de uma coluna da tabela dos perfis — é da tela",
+    "adicionar-a-exclusao": "abre a escolha do jogo para a lista de exclusão — é da tela",
+    "confirmar-exclusao": "põe o jogo na lista de exclusão e tira dele o que o Hefesto pôs "
+                          "no disco — é da máquina",
+    "tirar-da-exclusao": "devolve o jogo ao Hefesto — é da máquina",
+    "confirmar-perfil": "cria o perfil do jogo marcado — é do perfil",
+    "esquecer-lancador": "desfaz o que o usuário declarou sobre um lançador "
+                         "(`machine_declare`) — é da máquina",
+    "voltar-a-usar": "tira o jogo do `jogos_sem_wrapper.txt` — é do disco",
+    "voltar-a-perguntar": "tira o jogo da lista dos avisos dispensados — é do disco",
+    "entrada-o-que-tem": "declara «Direto» ou «Hub» numa entrada do `maquina.json` — é da "
+                         "máquina",
+    "entrada-extensor": "declara o cabo de extensão de uma entrada — é da máquina",
+    "entrada-lugar": "declara a face do gabinete de uma entrada — é da máquina",
+    "entrada-velocidade": "declara USB 3.0 ou 2.0 numa entrada — é da máquina",
+    "entrada-nome": "dá nome a uma entrada — é da máquina",
+    "entrada-trocar": "troca duas entradas de posição no mapa das portas — é da máquina",
+    "entrada-ensinar": "ensina em qual entrada um aparelho está — é da máquina",
+    "aparelho-tipo": "o tipo que o usuário dá a um aparelho USB pelo `vid:pid` — é da máquina",
+    "aparelho-nome": "o nome que o usuário dá a um aparelho USB pelo `vid:pid` — é da máquina",
+    "voltar-ao-automatico": "tira o que o usuário declarou do aparelho e da entrada — é da "
+                            "máquina",
+    "reexaminar": "relê as portas da máquina — é leitura do barramento",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
@@ -196,6 +249,21 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
     "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
+    "testar-haptica": ("vibracao.haptics_vcm",),
+    "ajuste": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
+    "forca": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    "intensidade": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    "motor": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    "testar": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    "parar": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    "teto-da-vibracao": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    "mira-sensibilidade": ("movimento.giroscopio",),
+    "mira-tremor": ("movimento.giroscopio",),
+    "mira-segurar": ("movimento.giroscopio",),
+    "mira-inverter": ("movimento.giroscopio",),
+    "analogico-virtual": ("movimento.giroscopio",),
+    "calibrar-comecar": ("movimento.giroscopio",),
+    "mic-existe": ("audio.microfone",),
 }
 
 #: aplica na troca de perfil é `ProfileManager._aplicar_ganho_do_mic`. O campo
@@ -206,6 +274,11 @@ A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
         "transportes: o ganho grava e alcança a placa (cabo) e o conversor da ponte "
         "(rádio) com régua que morde, mas o grau do aparelho só sobe com a medida "
         "(o banco de prova, ou a mão dela nos Caminhos da Forja)",
+    ),
+    "testar-haptica": (  # sai com: O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01
+        "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
+        "o teste da háptica toca pela mesma linha `vibracao.haptics_vcm@dualsense` da "
+        "`haptica`, em dívida nos dois transportes até a medida do aparelho",
     ),
 }
 
@@ -228,27 +301,214 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "analogico-lado": ("movimento", "movimento"),
     "toque": ("movimento", "movimento"),
     "haptica": (None, "rumble"),
+    "testar-haptica": (None, "rumble"),
+    "ajuste": ("triggers", "triggers"),
+    "forca": ("rumble", "rumble"),
+    "intensidade": ("rumble", "rumble"),
+    "motor": ("rumble", "rumble"),
+    "testar": (None, "rumble"),
+    "parar": (None, "rumble"),
+    "teto-da-vibracao": ("rumble", "rumble"),
+    "mira-sensibilidade": ("movimento", "movimento"),
+    "mira-tremor": ("movimento", "movimento"),
+    "mira-segurar": ("movimento", "movimento"),
+    "mira-inverter": ("movimento", "movimento"),
+    "analogico-virtual": ("movimento", "movimento"),
 }
 
 
 NO_CONTROLE: dict[str, str] = {
     "mudo": "microfone_mudo",
     "custo-mic": "microfone_mudo",
+    "mic-existe": "microfone",
+}
+
+#: Gestos cujo valor é de cada controle, pelo `uniq`, num arquivo próprio e fora do perfil por
+#: desenho (o zero do sensor é daquela unidade, não do jogo): `{gesto: (fonte, função que grava)}`.
+#: A régua confere que a função existe no fonte.
+NO_ARQUIVO_DO_CONTROLE: dict[str, tuple[str, str]] = {
+    "calibrar-comecar": ("src/hefesto_dualsense4unix/utils/session.py", "gravar_os_zeros"),
 }
 
 _NO_CONTROLE = "no controle"
+_SO_POR_CONTROLE = "só por controle"
+
+
+def _grava_no_fonte(fonte: pathlib.Path, funcao: str) -> bool:
+    """A função que grava existe no fonte (lida, não importada)."""
+    try:
+        texto = fonte.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return re.search(rf"^def {re.escape(funcao)}\(", texto, re.M) is not None
+
+
+def _aba(pagina: str) -> str:
+    """`01-jogar.html` → `01`; `calibrar-sensores.html` → `calibrar-sensores`; `*` → `*`."""
+    nome = pagina.removesuffix(".html")
+    return nome[:2] if re.match(r"^\d\d-", nome) else nome
+
+
+def gestos_das_paginas(pasta: pathlib.Path = PAGINAS) -> dict[str, list[str]]:
+    """`{gesto: [abas]}` das dez páginas publicadas, SEM os blocos `<style>`.
+
+    Um `data-gesto` dentro do CSS (`select.pronto[data-gesto="externo-cor"]`) é um seletor
+    de estilo, não um botão: lido com o estilo, ele entrava na régua por acidente.
+    """
+    fora: dict[str, list[str]] = {}
+    for pagina in sorted(pasta.glob("*.html")):
+        if not re.match(r"^\d\d-", pagina.name):
+            continue
+        texto = _SEM_ESTILO.sub("", pagina.read_text(encoding="utf-8"))
+        for gesto in sorted(set(re.findall(r'data-gesto="([a-z0-9_@:.-]+)"', texto))):
+            fora.setdefault(gesto, []).append(_aba(pagina.name))
+    return fora
+
+
+_SEM_ESTILO = re.compile(r"<style\b[^>]*>.*?</style\s*>", re.S | re.I)
+
+
+def _modulo_do_arquivo(arquivo: pathlib.Path, src: pathlib.Path) -> str:
+    partes = arquivo.relative_to(src).with_suffix("").parts
+    return ".".join(partes[:-1] if partes[-1] == "__init__" else partes)
+
+
+def _arquivo_do_modulo(modulo: str, src: pathlib.Path) -> pathlib.Path | None:
+    base = src.joinpath(*modulo.split("."))
+    for candidato in (base.with_suffix(".py"), base / "__init__.py"):
+        if candidato.is_file():
+            return candidato
+    return None
+
+
+@functools.cache
+def _arvore(arquivo: pathlib.Path) -> ast.Module:
+    return ast.parse(arquivo.read_text(encoding="utf-8"), filename=str(arquivo))
+
+
+@functools.cache
+def _constantes(arquivo: pathlib.Path) -> dict[str, str | None]:
+    """As constantes de texto do módulo: `NOME = "..."`. Atribuída duas vezes com valores
+    diferentes, a constante vale `None` (ambígua): a régua não escolhe entre as duas."""
+    fora: dict[str, str | None] = {}
+    for no in _arvore(arquivo).body:
+        alvos: list[ast.expr] = []
+        valor: ast.expr | None = None
+        if isinstance(no, ast.Assign):
+            alvos, valor = no.targets, no.value
+        elif isinstance(no, ast.AnnAssign):
+            alvos, valor = [no.target], no.value
+        if not (isinstance(valor, ast.Constant) and isinstance(valor.value, str)):
+            continue
+        for alvo in alvos:
+            if isinstance(alvo, ast.Name):
+                antes = fora.get(alvo.id, valor.value)
+                fora[alvo.id] = valor.value if antes == valor.value else None
+    return fora
+
+
+@functools.cache
+def _importados(arquivo: pathlib.Path, src: pathlib.Path) -> dict[str, tuple[str, str | None]]:
+    """`{apelido: (módulo, nome)}`: `nome` é `None` quando o apelido é o próprio módulo."""
+    pacote = _modulo_do_arquivo(arquivo, src)
+    if arquivo.name != "__init__.py":
+        pacote = pacote.rpartition(".")[0]
+    fora: dict[str, tuple[str, str | None]] = {}
+    for no in ast.walk(_arvore(arquivo)):
+        if isinstance(no, ast.Import):
+            for a in no.names:
+                if a.asname:
+                    fora[a.asname] = (a.name, None)
+        elif isinstance(no, ast.ImportFrom):
+            if no.level:
+                raiz = pacote.split(".")
+                raiz = raiz[: len(raiz) - (no.level - 1)]
+                modulo = ".".join([*raiz, *([no.module] if no.module else [])])
+            else:
+                modulo = no.module or ""
+            for a in no.names:
+                inteiro = f"{modulo}.{a.name}"
+                if _arquivo_do_modulo(inteiro, src) is not None:
+                    fora[a.asname or a.name] = (inteiro, None)
+                else:
+                    fora[a.asname or a.name] = (modulo, a.name)
+    return fora
+
+
+def _no_modulo(modulo: str, nome: str, src: pathlib.Path, fundo: int) -> str | None:
+    arquivo = _arquivo_do_modulo(modulo, src)
+    if arquivo is None or fundo > 4:
+        return None
+    if nome in _constantes(arquivo):
+        return _constantes(arquivo)[nome]
+    de_onde = _importados(arquivo, src).get(nome)
+    if de_onde is None or de_onde[1] is None:
+        return None
+    return _no_modulo(de_onde[0], de_onde[1], src, fundo + 1)
+
+
+def _texto(expr: ast.expr, arquivo: pathlib.Path, src: pathlib.Path) -> str | None:
+    """O texto de um argumento de `@gesto(...)`: literal, constante do módulo, constante
+    importada (`from x import NOME`) ou atributo de módulo importado (`desenho.ABRIR`)."""
+    if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
+        return expr.value
+    if isinstance(expr, ast.Name):
+        if expr.id in _constantes(arquivo):
+            return _constantes(arquivo)[expr.id]
+        de_onde = _importados(arquivo, src).get(expr.id)
+        if de_onde is not None and de_onde[1] is not None:
+            return _no_modulo(de_onde[0], de_onde[1], src, 1)
+        return None
+    if isinstance(expr, ast.Attribute) and isinstance(expr.value, ast.Name):
+        de_onde = _importados(arquivo, src).get(expr.value.id)
+        if de_onde is not None and de_onde[1] is None:
+            return _no_modulo(de_onde[0], expr.attr, src, 1)
+    return None
+
+
+def _e_o_decorador(func: ast.expr) -> bool:
+    if isinstance(func, ast.Name):
+        return func.id == "gesto"
+    return (isinstance(func, ast.Attribute) and func.attr == "gesto"
+            and isinstance(func.value, ast.Name) and func.value.id == "pacotes")
+
+
+def registro_do_fonte(
+    pasta: pathlib.Path = PACOTES, src: pathlib.Path = SRC
+) -> tuple[set[tuple[str, str]], list[str]]:
+    """Os pares `(página, gesto)` de todo `gesto(...)` dos pacotes, LIDOS do fonte por `ast`.
+
+    É o mesmo registro que `interface.pacotes.GESTOS` monta ao importar, sem importar: os
+    pacotes carregam o GTK, e o job do CI que roda esta régua só tem o `pytest`. A régua
+    da régua (`test_os_gestos_lidos_do_fonte_sao_os_do_registro.py`) confere os dois.
+    Devolve também os que não se resolvem (`arquivo:linha`): argumento montado em tempo
+    de execução é um gesto que esta leitura não vê, e a régua reprova em vez de calar.
+    """
+    pares: set[tuple[str, str]] = set()
+    sem_texto: list[str] = []
+    for arquivo in sorted(pasta.glob("*.py")):
+        for no in ast.walk(_arvore(arquivo)):
+            if not (isinstance(no, ast.Call) and _e_o_decorador(no.func)):
+                continue
+            textos = [_texto(a, arquivo, src) for a in no.args[:2]]
+            if len(textos) == 2 and textos[0] is not None and textos[1] is not None:
+                pares.add((textos[0], textos[1]))
+            else:
+                onde = arquivo.relative_to(RAIZ) if arquivo.is_relative_to(RAIZ) else arquivo
+                sem_texto.append(f"{onde}:{no.lineno} {ast.unparse(no)}")
+    return pares, sem_texto
 
 
 def gestos_da_tela() -> dict[str, list[str]]:
-    """`{gesto: [abas]}` — LIDO das dez páginas publicadas, nunca digitado."""
-    fora: dict[str, list[str]] = {}
-    for pagina in sorted(PAGINAS.glob("*.html")):
-        if not re.match(r"^\d\d-", pagina.name):
-            continue
-        texto = pagina.read_text(encoding="utf-8")
-        for gesto in sorted(set(re.findall(r'data-gesto="([a-z0-9_@:.-]+)"', texto))):
-            fora.setdefault(gesto, []).append(pagina.stem[:2])
-    return fora
+    """`{gesto: [abas]}`: a união das páginas publicadas (sem o estilo) com o registro dos
+    pacotes (`@gesto`, lido do fonte). Nunca digitado."""
+    fora = gestos_das_paginas()
+    pares, _sem_texto = registro_do_fonte()
+    for pagina, gesto in sorted(pares):
+        abas = fora.setdefault(gesto, [])
+        if _aba(pagina) not in abas:
+            abas.append(_aba(pagina))
+    return {g: sorted(abas) for g, abas in fora.items()}
 
 
 def _linhas_do_mapa() -> dict[str, list[dict[str, str]]]:
@@ -332,9 +592,14 @@ def tabela() -> list[tuple[str, str, str, str, str, str, str]]:
             existe = NO_CONTROLE[gesto] in do_controle_declarado
             perfil = _NO_CONTROLE if existe else NAO
             controle = _SIM_ if existe else NAO
+        elif gesto in NO_ARQUIVO_DO_CONTROLE:
+            fonte, funcao = NO_ARQUIVO_DO_CONTROLE[gesto]
+            existe = _grava_no_fonte(RAIZ / fonte, funcao)
+            perfil = _SO_POR_CONTROLE if existe else NAO
+            controle = _SIM_ if existe else NAO
         else:
             campo, campo_ctrl = NO_PERFIL.get(gesto, ("", None))
-            perfil = ("só por controle" if campo is None
+            perfil = (_SO_POR_CONTROLE if campo is None
                       else _SIM_ if campo in do_perfil else NAO)
             controle = ("global" if campo_ctrl is None
                         else (_SIM_ if campo_ctrl in do_controle else NAO))
@@ -366,6 +631,17 @@ def main() -> int:
             print(f"{g:18} {abas:6} {cabo:13} {radio:13} {perfil:16} "
                   f"{ctrl:9} {falta}")
         print()
+
+    _pares, sem_texto = registro_do_fonte()
+    if sem_texto:
+        print(f"VERMELHO: {len(sem_texto)} `gesto(...)` dos pacotes com página ou nome que "
+              f"a leitura do fonte não resolve — um gesto que esta régua não vê:")
+        for linha in sem_texto:
+            print(f"  {linha}")
+        print()
+        print("Use um literal ou uma constante de texto do módulo (`NOME = \"...\"`), "
+              "própria ou importada.")
+        return 1
 
     if mortas:
         print(f"VERMELHO: {len(mortas)} gesto(s) classificados aqui que a tela "

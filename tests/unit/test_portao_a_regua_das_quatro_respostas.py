@@ -173,3 +173,132 @@ def test_morde_o_mudo_arrancado_do_controle(regua, monkeypatch, capsys):
     for gesto in ("mudo", "custo-mic"):
         assert f"{gesto}: não está no perfil" in saida
 
+
+
+# AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01: a régua lê as páginas SEM o
+# estilo e o registro dos `@gesto` do fonte. Antes, um gesto que só aparecia num seletor de CSS
+# entrava, e os que a página gera em JS (ou que moram fora das dez) ficavam invisíveis.
+
+
+def test_o_gesto_so_no_estilo_nao_conta(regua, tmp_path):
+    """MORDIDA: tirar o `_SEM_ESTILO.sub` de `gestos_das_paginas` conta o seletor de CSS."""
+    (tmp_path / "01-x.html").write_text(
+        '<style>select.pronto[data-gesto="so-no-css"]{width:132px}</style>\n'
+        '<button data-gesto="de-verdade">ok</button>\n', encoding="utf-8")
+    (tmp_path / "fora-das-dez.html").write_text(
+        '<button data-gesto="nao-e-das-dez">ok</button>\n', encoding="utf-8")
+    assert regua.gestos_das_paginas(tmp_path) == {"de-verdade": ["01"]}
+
+
+def test_o_externo_cor_vem_do_registro_e_nao_do_css(regua):
+    assert "externo-cor" not in regua.gestos_das_paginas()
+    assert regua.gestos_da_tela()["externo-cor"] == ["08"]
+
+
+def test_morde_gesto_so_no_registro_sem_classe(regua, monkeypatch, capsys):
+    """Um `@gesto` sem `data-gesto` na página, e sem classe, reprova nomeando."""
+    real = regua.registro_do_fonte
+
+    def com_um_a_mais():
+        pares, sem_texto = real()
+        return pares | {("05-vibracao.html", "so-no-registro")}, sem_texto
+
+    monkeypatch.setattr(regua, "registro_do_fonte", com_um_a_mais)
+    assert "so-no-registro" not in regua.gestos_das_paginas()
+    assert regua.main() == 1
+    saida = capsys.readouterr().out
+    assert "so-no-registro" in saida
+    assert "sem classificação" in saida
+
+
+@pytest.mark.parametrize("gesto", ["mira-sensibilidade", "mic-existe", "teto-da-vibracao"])
+def test_morde_gesto_de_aparelho_que_so_o_registro_mostra(regua, monkeypatch, capsys, gesto):
+    """Os de aparelho que a régua de antes não via: sem a classe, reprovam nomeando.
+
+    `mira-sensibilidade` tem a página por constante (`@gesto(PAGINA, …)`, a Calibrar, fora das
+    dez); `mic-existe` e `teto-da-vibracao` a 08 gera em JS.
+    """
+    assert gesto not in regua.gestos_das_paginas()
+    assert gesto in regua.gestos_da_tela()
+    monkeypatch.delitem(regua.DO_APARELHO, gesto)
+    assert regua.main() == 1
+    saida = capsys.readouterr().out
+    assert f"{gesto}: gesto sem classificação" in saida
+
+
+def _fonte(raiz: pathlib.Path, arquivos: dict[str, str]) -> tuple[pathlib.Path, pathlib.Path]:
+    src = raiz / "src"
+    for nome, texto in arquivos.items():
+        caminho = src / nome
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(texto, encoding="utf-8")
+    return src / "pk" / "pacotes", src
+
+
+def test_a_leitura_do_fonte_resolve_literal_constante_importada_e_atributo(regua, tmp_path):
+    pasta, src = _fonte(tmp_path, {
+        "pk/__init__.py": "",
+        "pk/desenho.py": 'ABRIR = "abrir-x"\n',
+        "pk/nomes.py": 'NOME = "nome-y"\n',
+        "pk/pacotes/__init__.py": "",
+        "pk/pacotes/a01_x.py": (
+            "from pk import desenho\n"
+            "from pk.nomes import NOME\n"
+            "from ..nomes import NOME as OUTRO\n"
+            "from .. import desenho as d2\n"
+            'PAGINA = "01-x.html"\n'
+            '@gesto(PAGINA, "literal")\n'
+            "def a(): ...\n"
+            '@gesto("02-y.html", desenho.ABRIR, grava="x")\n'
+            "def b(): ...\n"
+            "@gesto(PAGINA, NOME)\n"
+            "def c(): ...\n"
+            '@gesto("*", OUTRO)\n'
+            "def e(): ...\n"
+            'pacotes.gesto("*", d2.ABRIR)(a)\n'
+        ),
+    })
+    pares, sem_texto = regua.registro_do_fonte(pasta, src)
+    assert sem_texto == []
+    assert pares == {
+        ("01-x.html", "literal"), ("02-y.html", "abrir-x"), ("01-x.html", "nome-y"),
+        ("*", "nome-y"), ("*", "abrir-x"),
+    }
+
+
+def test_o_gesto_que_a_leitura_nao_resolve_reprova(regua, tmp_path, monkeypatch, capsys):
+    """Nome montado em tempo de execução é um gesto que a régua não vê: ela diz, não cala."""
+    pasta, src = _fonte(tmp_path, {
+        "pk/pacotes/a01_x.py": (
+            'PAGINA = "01-x.html"\n'
+            'DOIS = "a"\nDOIS = "b"\n'
+            '@gesto(PAGINA, f"montado-{1}")\n'
+            "def a(): ...\n"
+            "@gesto(PAGINA, DOIS)\n"
+            "def b(): ...\n"
+        ),
+    })
+    pares, sem_texto = regua.registro_do_fonte(pasta, src)
+    assert pares == set()
+    assert [linha.split(" ", 1)[0].rsplit(":", 1)[1] for linha in sem_texto] == ["4", "6"], (
+        "a f-string e a constante ambígua (dois valores) ficam sem texto")
+    monkeypatch.setattr(regua, "registro_do_fonte", lambda *_a: (set(), sem_texto))
+    assert regua.main() == 1
+    assert "a leitura do fonte não resolve" in capsys.readouterr().out
+
+
+def test_o_zero_do_sensor_responde_por_controle_no_arquivo_dele(regua):
+    linhas = {linha[0]: linha for linha in regua.tabela()}
+    _g, abas, _cabo, _radio, perfil, controle, falta = linhas["calibrar-comecar"]
+    assert abas == "calibrar-sensores"
+    assert (perfil, controle, falta) == ("só por controle", "sim", "")
+
+
+def test_morde_o_zero_sem_quem_o_grave(regua, monkeypatch, capsys):
+    """Tirar a função que grava o zero reprova o `calibrar-comecar`."""
+    fonte, _funcao = regua.NO_ARQUIVO_DO_CONTROLE["calibrar-comecar"]
+    monkeypatch.setitem(regua.NO_ARQUIVO_DO_CONTROLE, "calibrar-comecar",
+                        (fonte, "gravar_os_zeros_que_nao_existe"))
+    assert regua.main() == 1
+    saida = capsys.readouterr().out
+    assert "calibrar-comecar: não está no perfil; não é por controle" in saida
