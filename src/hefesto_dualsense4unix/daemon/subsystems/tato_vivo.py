@@ -116,13 +116,19 @@ def decidir(canal: str, estado: EstadoDoCanal) -> bool:
     if carimbo is None:
         return False
     idade = estado.visto_ha_s.get(carimbo)
-    if idade is None:
-        return True
-    if idade < JANELA_DO_JOGO_S:
+    if idade is not None and idade < JANELA_DO_JOGO_S:
         return False
-    # Escreveu há mais de 3 s: no fluxo é silêncio; no estado, o valor dele
-    # segue valendo enquanto a sessão do jogo estiver aberta.
-    return not (canal in CANAIS_DE_ESTADO and estado.sessao_aberta)
+    if canal in CANAIS_DE_ESTADO and estado.sessao_aberta:
+        # Escreveu há mais de 3 s: no fluxo é silêncio; no estado, o valor dele
+        # segue valendo enquanto a sessão do jogo estiver aberta.
+        if idade is not None:
+            return False
+        # A volta do backend é a sessão inteira (`end_game_session_for`): se o
+        # jogo pintou o OUTRO canal de estado, devolver este apagaria o dele.
+        for outro in CANAIS_DE_ESTADO - {canal}:
+            if _CARIMBO_DO_CANAL[outro] in estado.visto_ha_s:
+                return False
+    return True
 
 
 @dataclass(frozen=True)
@@ -310,6 +316,7 @@ class TatoVivo:
         }
         self.ligado = False
         self.borda_do_rumble = BordaDoRumble()
+        self.borda_do_dedo = BordaDoDedo()
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -333,12 +340,21 @@ class TatoVivo:
         with self._lock:
             eventos = list(self._fila)
             self._fila.clear()
+        for atuador in self.atuadores:
+            # O atuador que olha o tique inteiro (o ritmo do gatilho) ouve antes de
+            # responder: os dois lados de um controle no mesmo tique viram uma escrita.
+            ouvir = getattr(atuador, "ouvir", None)
+            if callable(ouvir):
+                ouvir(eventos, receita)
         for (uniq, canal), prazo in list(self._pendentes.items()):
             estado = estado_de(uniq)
             if estado is not None and not decidir(canal, estado):
                 # O jogo passou a mandar (ou o modo mudou): o valor agora é dele.
                 del self._pendentes[(uniq, canal)]
                 self.contadores["soltos_ao_jogo"] += 1
+                soltar = getattr(self._atuador(canal), "soltar", None)
+                if callable(soltar):
+                    soltar(uniq)
                 continue
             if agora >= prazo:
                 self._devolver(uniq, canal, agora)
@@ -347,6 +363,7 @@ class TatoVivo:
             estado = estado_de(evento.uniq)
             if estado is None:
                 continue
+            self._prolongar(evento, receita, agora)
             pedem = [a for a in self.atuadores if a.responde_a(evento, receita)]
             if not pedem:
                 continue
@@ -378,6 +395,17 @@ class TatoVivo:
                         volta, self._pendentes.get(chave_p, volta)
                     )
         return escritas
+
+    def _prolongar(self, evento: Evento, receita: Receita, agora: float) -> None:
+        """O canal que segue valendo enquanto o tiro continua empurra a volta."""
+        for atuador in self.atuadores:
+            chave = (evento.uniq, atuador.canal)
+            prolongar = getattr(atuador, "prolongar", None)
+            if chave not in self._pendentes or not callable(prolongar):
+                continue
+            novo = prolongar(evento, receita, agora)
+            if novo is not None:
+                self._pendentes[chave] = max(novo, self._pendentes[chave])
 
     def _devolver(self, uniq: str, canal: str, agora: float) -> None:
         self._pendentes.pop((uniq, canal), None)
@@ -548,6 +576,132 @@ class AtuadorDaHaptica:
         return None
 
 
+# O-GATILHO-ACOMPANHA-O-RITMO-DO-TIRO-01: o ritmo do tiro troca o bloco do gatilho.
+# O jogo escreve o gatilho uma vez por arma e o firmware rearma sozinho; enquanto
+# `docs/protocol/o-que-o-jogo-manda-por-tiro.md` não mostrar um jogo que rearma
+# por tiro, o motor não escreve nada por tiro: só troca o bloco quando o ritmo
+# muda, com os presets que a tela já tem (nenhum byte novo).
+GATILHO_ARMA = "arma"
+GATILHO_RAJADA = "rajada"
+RITMO_DA_ARMA_S = 0.25  # tiros espaçados: o estalo de cada aperto
+RITMO_DA_RAJADA_S = 0.11  # rajada; entre os dois, o modo fica (a histerese)
+MESMO_TIRO_S = 0.05  # o rumble que chega junto do aperto é o mesmo tiro
+CICLO_DO_GATILHO_S = 0.032  # um ciclo do laço de saída com quatro controles
+VOLTA_DO_GATILHO_S = 1.5
+_PRESET_DO_GATILHO = {
+    GATILHO_ARMA: "SemiAutoGun",
+    GATILHO_RAJADA: "MultiPositionVibration",
+}
+_LADO_DO_BACKEND = {LADO_ESQUERDO: "left", LADO_DIREITO: "right"}
+
+
+def bloco_do_gatilho(modo: str, receita: Receita) -> bytes:
+    """O bloco cru de 11 bytes do preset da tela, no layout que o relatório leva."""
+    from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+    from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+    nome = _PRESET_DO_GATILHO[modo]
+    spec = get_spec(nome)
+    valores = {p.name: p.default for p in spec.params} if spec is not None else {}
+    if modo == GATILHO_RAJADA:
+        valores["frequency"] = receita.frequencia_da_rajada_hz
+    efeito = build_from_name(nome, valores)
+    f = efeito.forces
+    # O relatório leva o `forces[6]` no décimo byte do bloco (`common[19]` do backend).
+    return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
+
+
+class AtuadorDoGatilho:
+    """Arma ou rajada, por lado e por controle, conforme o intervalo entre tiros."""
+
+    canal = CANAL_GATILHO
+
+    def __init__(
+        self,
+        escrever: Callable[[str, str, bytes], object],
+        devolver: Callable[[str], object],
+        apertado: Callable[[str, str], bool] | None = None,
+    ) -> None:
+        self._escrever = escrever
+        self._devolver = devolver
+        self.apertado = apertado
+        self._ultimo_tiro: dict[tuple[str, str], float] = {}
+        self._desejado: dict[tuple[str, str], str] = {}
+        self._escrito: dict[tuple[str, str], str] = {}
+        self._escreveu_em: dict[str, float] = {}
+
+    def _lados(self, evento: Evento) -> list[str]:
+        if evento.tipo == TIPO_DEDO:
+            return [evento.lado] if evento.lado in _LADO_DO_BACKEND else []
+        if evento.tipo == TIPO_RUMBLE and self.apertado is not None:
+            # A arma automática: um aperto só, e o jogo pede o motor a cada bala.
+            return [lado for lado in _LADO_DO_BACKEND if self.apertado(evento.uniq, lado)]
+        return []
+
+    def _ritmo(self, uniq: str, lado: str, instante: float) -> None:
+        chave = (uniq, lado)
+        ultimo = self._ultimo_tiro.get(chave)
+        if ultimo is not None and instante - ultimo < MESMO_TIRO_S:
+            return
+        self._ultimo_tiro[chave] = instante
+        if ultimo is None or instante - ultimo >= RITMO_DA_ARMA_S:
+            modo = GATILHO_ARMA
+        elif instante - ultimo <= RITMO_DA_RAJADA_S:
+            modo = GATILHO_RAJADA
+        else:
+            modo = self._desejado.get(chave, GATILHO_ARMA)
+        self._desejado[chave] = modo
+
+    def _a_trocar(self, uniq: str) -> list[str]:
+        return [
+            lado
+            for lado in _LADO_DO_BACKEND
+            if (uniq, lado) in self._desejado
+            and self._desejado[(uniq, lado)] != self._escrito.get((uniq, lado))
+        ]
+
+    def ouvir(self, eventos: list[Evento], receita: Receita) -> None:
+        """O ritmo de cada lado sai do tique inteiro, antes de qualquer escrita."""
+        if not receita.gatilho_no_ritmo:
+            return
+        for evento in eventos:
+            for lado in self._lados(evento):
+                self._ritmo(evento.uniq, lado, evento.instante)
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        if not receita.gatilho_no_ritmo or not self._lados(evento):
+            return False
+        ultima = self._escreveu_em.get(evento.uniq)
+        if ultima is not None and evento.instante - ultima < CICLO_DO_GATILHO_S:
+            return False
+        return bool(self._a_trocar(evento.uniq))
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        for lado in self._a_trocar(evento.uniq):
+            modo = self._desejado[(evento.uniq, lado)]
+            self._escrever(
+                evento.uniq, _LADO_DO_BACKEND[lado], bloco_do_gatilho(modo, receita)
+            )
+            self._escrito[(evento.uniq, lado)] = modo
+        self._escreveu_em[evento.uniq] = agora
+        return agora + VOLTA_DO_GATILHO_S
+
+    def prolongar(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        if not receita.gatilho_no_ritmo or not self._lados(evento):
+            return None
+        return agora + VOLTA_DO_GATILHO_S
+
+    def soltar(self, uniq: str) -> None:
+        """O jogo tomou o gatilho: o que o motor escreveu deixou de valer."""
+        for lado in _LADO_DO_BACKEND:
+            self._escrito.pop((uniq, lado), None)
+        self._escreveu_em.pop(uniq, None)
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        self.soltar(uniq)
+        self._devolver(uniq)
+
+
 # --- A ligação com o daemon ----------------------------------------------
 
 
@@ -648,7 +802,21 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             return False
         return tocar_o_toque(uniq, energia, lado, duracao_ms)
 
-    return [AtuadorDaHaptica(tocar)]
+    controller = getattr(daemon, "controller", None)
+
+    def gatilho(uniq: str, lado: str, bloco: bytes) -> object:
+        escrever = getattr(controller, "set_game_trigger_for", None)
+        return escrever(uniq, lado, bloco) if callable(escrever) else False
+
+    def sessao(uniq: str) -> object:
+        devolver = getattr(controller, "end_game_session_for", None)
+        return devolver(uniq) if callable(devolver) else False
+
+    def apertado(uniq: str, lado: str) -> bool:
+        motor = motor_do(daemon)
+        return motor is not None and motor.borda_do_dedo.apertado(uniq, lado)
+
+    return [AtuadorDaHaptica(tocar), AtuadorDoGatilho(gatilho, sessao, apertado)]
 
 
 def motor_do(daemon: Any) -> TatoVivo | None:
@@ -662,7 +830,7 @@ class Passo:
     def __init__(self, daemon: Any, motor: TatoVivo) -> None:
         self.daemon = daemon
         self.motor = motor
-        self.dedo = BordaDoDedo()
+        self.dedo = motor.borda_do_dedo
         self.receita: Receita = DESLIGADA
         self._lida_em = float("-inf")
 
@@ -718,6 +886,7 @@ __all__ = [
     "DESLIGADA",
     "Atuador",
     "AtuadorDaHaptica",
+    "AtuadorDoGatilho",
     "BordaDoDedo",
     "BordaDoRumble",
     "Controle",
@@ -728,6 +897,7 @@ __all__ = [
     "TatoVivo",
     "Teto",
     "anotar_o_rumble",
+    "bloco_do_gatilho",
     "controles_do_daemon",
     "decidir",
     "modo_do_pad",

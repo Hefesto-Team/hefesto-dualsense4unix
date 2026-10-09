@@ -68,3 +68,13 @@ Nenhuma linha foi medida na árvore de desenvolvimento: ela não toca o aparelho
 | --- | --- | --- | --- | --- | --- | --- |
 
 As três respostas, quando houver uma sessão medida: (8 de outubro de 2026: ainda sem sessão).
+
+## Quem espera o número
+
+Enquanto a tabela estiver vazia, vale «o jogo manda o gatilho uma vez por arma»: o motor do
+tato vivo não rearma o gatilho por tiro. Onde o jogo cala o gatilho, ele só troca o bloco
+quando o ritmo muda (arma semi-automática da tela para tiros espaçados, vibração oficial na
+rajada), uma escrita por troca, nunca uma por tiro (`O-GATILHO-ACOMPANHA-O-RITMO-DO-TIRO-01`,
+`AtuadorDoGatilho` em
+`src/hefesto_dualsense4unix/daemon/subsystems/tato_vivo.py`). Se uma sessão medida mostrar um jogo
+que escreve Off e o mesmo efeito em menos de 4 ms a cada tiro, o rearme por tiro ganha sprint.
