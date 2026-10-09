@@ -1858,8 +1858,7 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
 
 
 @gesto("01-jogar.html", "modo-nativo",
-       grava="o modo no perfil ativo, pelo native.mode.set (o daemon grava), e "
-             "remove_appid_from_steam_input_allowlist")
+       grava="remove_appid_from_steam_input_allowlist")
 def modo_nativo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Nativo": o Hefesto fora do meio, e a Steam fora do jogo da vez.
 

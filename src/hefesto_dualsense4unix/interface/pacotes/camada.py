@@ -13,6 +13,7 @@ CAMADA: dict[tuple[str, str], str] = {
     ("01-jogar.html", "hefesto"): _J,
     ("01-jogar.html", "mascara"): _J,
     ("01-jogar.html", "modo-dualsense"): _J,
+    ("01-jogar.html", "modo-nativo"): _J,
     ("01-jogar.html", "modo-navegacao"): _J,
     ("01-jogar.html", "modo-steam"): _J,
     ("01-jogar.html", "modo-xbox"): _J,
