@@ -141,6 +141,10 @@ _O_QUE_A_VOLTA_OUVE: tuple[str, ...] = ("sinks", "sink-inputs")
 
 RECUSA_DA_PONTE_S = 60.0
 
+#: o nó do rádio sem fonte de monitor espera isto antes de o ouvido tentar de novo:
+#: cada tentativa abre um subprocesso, e a volta roda a cada evento do servidor de som.
+RECUO_DO_OUVIDO_SEM_FONTE_S = RECONCILIA_S
+
 PAR_DO_TESTE_DA_HAPTICA: tuple[int, int] = (127, 127)
 
 _UNIQ_HEX = 12
@@ -658,6 +662,8 @@ class AltoFalanteSubsystem:
         self._endpoints: dict[str, Any] = {}
         self._modo_da_ponte: dict[str, str] = {}
         self._ponte_recusada: dict[str, float] = {}
+        #: ``{nó: (uniq, quando)}`` do ouvido que não achou fonte, até o recuo vencer.
+        self._ouvido_sem_fonte: dict[str, tuple[str, float]] = {}
         self._faltam_ancoras = 0
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         self._fonte_viva: dict[str, str] = {}
@@ -1482,13 +1488,22 @@ class AltoFalanteSubsystem:
             if pedido is None or pedido[0] != ouvido.uniq or not ouvido.vivo:
                 vivos.pop(no)
                 ouvido.descer()
+        agora = time.monotonic()
+        recuo = self._ouvido_sem_fonte
+        for no in [n for n, (u, _q) in recuo.items() if escutar.get(n, ("",))[0] != u]:
+            recuo.pop(no)
         for no, (uniq, canais, papel) in escutar.items():
             if no in vivos:
                 continue
+            falhou = recuo.get(no)
+            if falhou is not None and agora - falhou[1] < RECUO_DO_OUVIDO_SEM_FONTE_S:
+                continue
             ouvido = OuvidoDoNo(no=no, uniq=uniq, canais=canais, papel=papel)
             if ouvido.subir():
+                recuo.pop(no, None)
                 vivos[no] = ouvido
             else:
+                recuo[no] = (uniq, agora)
                 logger.debug("som_ouvido_do_radio_sem_fonte", no=no, motivo=ouvido.motivo)
         self._ouvidos_do_radio = MappingProxyType(vivos)
 

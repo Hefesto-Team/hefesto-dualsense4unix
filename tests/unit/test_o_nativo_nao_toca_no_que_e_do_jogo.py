@@ -266,3 +266,44 @@ def test_o_ouvido_do_no_pede_o_monitor_com_os_canais_do_no(
         ("som", af.CANAIS_DO_ENCODER, "ouvido-som"),
         ("placa", af.CANAIS_DA_HAPTICA, "placa"),
     ]
+
+
+def test_o_ouvido_sem_fonte_espera_o_recuo_antes_de_abrir_outro_gravador(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P1 a P4 no rádio, sem fonte de monitor: uma tentativa por nó a cada recuo.
+
+    A MORDIDA: tire o ``continue`` do recuo e cada volta abre quatro subprocessos.
+    """
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as sub_af
+
+    pedidos: list[str] = []
+
+    def _monitor(no: str, **_kw: Any) -> tuple[Any, Any, str]:
+        pedidos.append(no)
+        return None, None, "dublê"
+
+    relogio = {"agora": 100.0}
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _monitor)
+    monkeypatch.setattr(sub_af, "time", SimpleNamespace(monotonic=lambda: relogio["agora"]))
+    saida = sub_af.AltoFalanteSubsystem()
+    escutar = {f"no-{i}": (uniq, af.CANAIS_DO_ENCODER, "ouvido-som")
+               for i, uniq in enumerate(UNIQS[:4])}
+
+    for passo in range(5):
+        relogio["agora"] = 100.0 + passo * 0.5
+        saida._casar_os_ouvidos_do_radio(escutar)
+    assert sorted(pedidos) == sorted(escutar), f"o ouvido sem fonte insistiu: {pedidos}"
+
+    relogio["agora"] = 100.0 + sub_af.RECUO_DO_OUVIDO_SEM_FONTE_S
+    saida._casar_os_ouvidos_do_radio(escutar)
+    assert len(pedidos) == 8, "vencido o recuo, cada nó tenta de novo"
+
+    # Outro controle no mesmo nó não herda o recuo do anterior.
+    outro = dict(escutar)
+    outro["no-0"] = (UNIQS[1], af.CANAIS_DO_ENCODER, "ouvido-som")
+    saida._casar_os_ouvidos_do_radio(outro)
+    assert pedidos[8:] == ["no-0"]
+    assert dict(saida._ouvidos_do_radio) == {}
