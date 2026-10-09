@@ -69,14 +69,14 @@ _TABELA = [
 
 
 @pytest.mark.parametrize("canal", tv.CANAIS)
-@pytest.mark.parametrize(("situacao", "sessao", "no_estado", "no_fluxo"), _TABELA)
+@pytest.mark.parametrize(("quando", "aberta", "no_estado", "no_fluxo"), _TABELA)
 def test_a_tabela_verdade_no_modo_dualsense(
-    canal: str, situacao: str, sessao: bool, no_estado: bool, no_fluxo: bool
+    canal: str, quando: str, aberta: bool, no_estado: bool, no_fluxo: bool
 ) -> None:
     visto = {"nunca": {}, "agora": {_CARIMBO[canal]: 0.4},
-             "ha_3s": {_CARIMBO[canal]: 3.2}}[situacao]
+             "ha_3s": {_CARIMBO[canal]: 3.2}}[quando]
     esperado = no_estado if canal in tv.CANAIS_DE_ESTADO else no_fluxo
-    assert tv.decidir(canal, _estado(tv.MODO_DUALSENSE, visto, sessao=sessao)) is esperado
+    assert tv.decidir(canal, _estado(tv.MODO_DUALSENSE, visto, sessao=aberta)) is esperado
 
 
 @pytest.mark.parametrize("canal", tv.CANAIS)
