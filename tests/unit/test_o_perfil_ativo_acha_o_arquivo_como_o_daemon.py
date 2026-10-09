@@ -12,7 +12,6 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -91,9 +90,23 @@ def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
             fio.join(timeout=15)
     monkeypatch.setattr(a08_conexoes, "_EXAME_PEDIDO", True)
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", ())
-    monkeypatch.setattr(em_fundo, "em_fundo",
+    # O dublê vai no `em_fundo` que a 08 CHAMA: ela é importada como `pacotes.a08_conexoes`,
+    # e o `pacotes.em_fundo` dela é outro objeto que o `hefesto_dualsense4unix.interface.
+    # pacotes.em_fundo`; o dublê no segundo deixava o fio ler o barramento da máquina no meio.
+    monkeypatch.setattr(a08_conexoes.em_fundo, "em_fundo",
                         lambda chave, ler, validade_s: None)
 
+
+
+def test_o_duble_do_fundo_e_o_que_a_08_chama() -> None:
+    """A leitura em fundo que a 08 pede não sai: nenhum fio lê a máquina no meio da régua."""
+    import threading
+
+    from pacotes import a08_conexoes
+
+    lida = threading.Event()
+    assert a08_conexoes.em_fundo.em_fundo("regua-do-duble", lida.set, 0.0) is None
+    assert not lida.wait(1.0), "o fio da 08 leu: o dublê está noutro módulo que o que ela chama"
 
 @pytest.fixture
 def pasta() -> pathlib.Path:
