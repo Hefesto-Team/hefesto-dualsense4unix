@@ -144,8 +144,11 @@ def _remapeamento() -> dict[str, str]:
             for i, b in enumerate(REMAPEAVEIS)}
 
 
+#: A chave «Também no jogo» LIGADA: o desenho crava «Não», e sem ela ligada o
+#: endereço `tabela-no-jogo` concordaria com o desenho sob o dublê.
 PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions(),
-          "key_bindings": {"l1": ["KEY_F11"]}, "remapeamento": _remapeamento()}
+          "key_bindings": {"l1": ["KEY_F11"]}, "remapeamento": _remapeamento(),
+          "tabela_no_jogo": True}
 
 
 def _gestos_da_maquina() -> dict[str, dict[str, str]]:

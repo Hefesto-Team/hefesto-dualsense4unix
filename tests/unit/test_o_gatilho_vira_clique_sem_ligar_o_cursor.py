@@ -538,3 +538,52 @@ async def test_o_laco_solta_a_tabela_na_parada(
     assert any("l2" in c["buttons"] for c in mouse.chamadas if isinstance(c, dict)), (
         f"o L2 do {transporte} não chegou à tabela")
     assert fechou and daemon._tabela_no_jogo is None, "a parada deixou a tabela de pé"
+
+
+@pytest.mark.asyncio
+async def test_no_nativo_a_tabela_nao_age(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No Modo Nativo o jogo lê o controle direto: a chave ligada não aperta nada.
+
+    A tela apaga a chave no Nativo; o laço tem de concordar com ela.
+    MORDIDA: tirar o `not self._native_mode` do `input_ready` faz o L2 chegar à tabela.
+    """
+    monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
+
+    class _Snap:
+        buttons_pressed: list[str] = []  # noqa: RUF012
+
+    fc = FakeController(transport="usb", states=[
+        _estado(l2_raw=255, transport="usb") for _ in range(40)])  # type: ignore[arg-type]
+    mock_evdev = MagicMock()
+    mock_evdev.is_available.return_value = True
+    mock_evdev.snapshot.return_value = _Snap()
+    fc._evdev = mock_evdev
+    daemon = Daemon(
+        controller=fc,
+        config=DaemonConfig(
+            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            autoswitch_enabled=False, mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
+        ),
+    )
+    daemon._gamepad_device = MagicMock()
+    daemon._dispatch_gamepad_emulation = lambda estado, botoes: None  # type: ignore[method-assign]
+    daemon._native_mode = True
+    # A sessão do teste não guarda Nativo: o `run` o leria de volta como desligado.
+    daemon._carregar_o_modo_nativo = lambda: None  # type: ignore[method-assign]
+    tabela, mouse, _teclado = _tabela_com_gravadores(None)
+    daemon._tabela_no_jogo = tabela
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.poll.gatilhos_de_cada_controle",
+        lambda d: {})
+
+    run_task = asyncio.create_task(daemon.run())
+    prazo = time.monotonic() + 5.0
+    while daemon.store.counter("input.settling.tick") < 5 and time.monotonic() < prazo:
+        await asyncio.sleep(0.005)
+    daemon.stop()
+    await run_task
+
+    assert daemon.store.counter("input.settling.tick") >= 5, "o laço não girou no Nativo"
+    assert not any("l2" in c["buttons"] for c in mouse.chamadas if isinstance(c, dict)), (
+        "no Nativo o L2 chegou à tabela")
