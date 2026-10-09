@@ -1055,7 +1055,7 @@
      O QUE ISSO QUEBRAVA: as nove trilhas eram px FIXOS, repetidos em cada uma
      das cinco colunas — e era a igualdade dos números que fazia as cinco
      acabarem no mesmo y. A linha de ajustes valia 4 barras à esquerda e 2 à
-     direita. `Machine` tem SEIS parâmetros e `MultiPositionVibration` tem ONZE:
+     direita. `Galloping` tem CINCO parâmetros e `MultiPositionVibration` tem ONZE:
      numa trilha de 92px, as sete que sobram vazam para fora da célula e caem
      por cima da linha de baixo.
 
@@ -1323,7 +1323,7 @@
   /* A CAIXA CRESCE COM O MODO, e por isso as linhas dela são AUTOMÁTICAS.
      Ela era `grid-template-rows:repeat(N,1fr)` — N trilhas iguais, com N vindo
      da cena do desenho. Com o produto trocando a caixa inteira (o `blocos:` do
-     pacote), o número de barras é o do MODO: zero no `Desligado`, seis na
+     pacote), o número de barras é o do MODO: zero no `Desligado`, quatro na
      Metralhadora, onze na Vibração por posição. `grid-auto-rows` dá a mesma
      altura a cada barra e deixa a caixa medir o que ela tem.
      O DESENHO NÃO MUDA DE PIXEL: `--r-aj-e` é `N_ESQ * --h-barra` por
@@ -1899,24 +1899,24 @@
           </div>
           <div class="ajustes e">
             <div class="barra" data-ajuste="e-0">
-              <span class="nome" data-campo="aj-nome-e-0">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" data-hef-alvo="largura" style="width:78%"></span></span>
-              <span class="num" data-campo="aj-val-e-0">7</span>
+              <span class="nome" data-campo="aj-nome-e-0">Início do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" data-hef-alvo="largura" style="width:25%"></span></span>
+              <span class="num" data-campo="aj-val-e-0">2</span>
             </div>
             <div class="barra" data-ajuste="e-1">
-              <span class="nome" data-campo="aj-nome-e-1">Frequência</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" data-hef-alvo="largura" style="width:44%"></span></span>
-              <span class="num" data-campo="aj-val-e-1">4</span>
+              <span class="nome" data-campo="aj-nome-e-1">Fim do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" data-hef-alvo="largura" style="width:100%"></span></span>
+              <span class="num" data-campo="aj-val-e-1">9</span>
             </div>
             <div class="barra" data-ajuste="e-2">
-              <span class="nome" data-campo="aj-nome-e-2">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" data-hef-alvo="largura" style="width:25%"></span></span>
-              <span class="num" data-campo="aj-val-e-2">25</span>
+              <span class="nome" data-campo="aj-nome-e-2">Força</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" data-hef-alvo="largura" style="width:43%"></span></span>
+              <span class="num" data-campo="aj-val-e-2">4</span>
             </div>
             <div class="barra" data-ajuste="e-3">
-              <span class="nome" data-campo="aj-nome-e-3">Fim do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-3" data-hef-alvo="largura" style="width:90%"></span></span>
-              <span class="num" data-campo="aj-val-e-3">230</span>
+              <span class="nome" data-campo="aj-nome-e-3">Frequência</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-3" data-hef-alvo="largura" style="width:15%"></span></span>
+              <span class="num" data-campo="aj-val-e-3">40</span>
             </div>
           </div>
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
