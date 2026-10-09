@@ -621,10 +621,12 @@ class AtuadorDoGatilho:
         escrever: Callable[[str, str, bytes], object],
         devolver: Callable[[str], object],
         apertado: Callable[[str, str], bool] | None = None,
+        largar: Callable[[str], object] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
         self.apertado = apertado
+        self._largar = largar
         self._ultimo_tiro: dict[tuple[str, str], float] = {}
         self._desejado: dict[tuple[str, str], str] = {}
         self._escrito: dict[tuple[str, str], str] = {}
@@ -693,13 +695,161 @@ class AtuadorDoGatilho:
 
     def soltar(self, uniq: str) -> None:
         """O jogo tomou o gatilho: o que o motor escreveu deixou de valer."""
+        self._esquecer(uniq)
+        if self._largar is not None:
+            self._largar(uniq)
+
+    def _esquecer(self, uniq: str) -> None:
         for lado in _LADO_DO_BACKEND:
             self._escrito.pop((uniq, lado), None)
         self._escreveu_em.pop(uniq, None)
 
     def devolver(self, uniq: str, agora: float) -> None:
-        self.soltar(uniq)
+        self._esquecer(uniq)
         self._devolver(uniq)
+
+
+# A-LUZ-RESPIRA-A-CADA-TIRO-01: a barra pulsa (ou troca de cor) a cada tiro e volta.
+# Teto de 3 subidas por segundo por controle (WCAG 2.3.1, três flashes por
+# segundo), cobrado aqui e não só na tela: o tiro que chega com a luz ainda no
+# pico estende o pico, e a rajada vira um brilho contínuo, nunca um pisca-pisca.
+REACAO_PULSA = "pulsa"
+REACAO_EVENTO = "evento"
+TETO_DA_LUZ_POR_S = 3
+SEGURA_DA_LUZ_S = 0.12  # o pico; a volta vem no máximo um tique depois
+GANHO_MINIMO_DO_PULSO = 1.3  # abaixo disso a cor já está no máximo e o pulso mergulha
+MERGULHO_DO_PULSO = 0.35
+COR_DO_EVENTO_PADRAO = (255, 255, 255)
+_TIPOS_DA_LUZ = frozenset({TIPO_DEDO, TIPO_RUMBLE})
+
+
+def pico_do_pulso(base: tuple[int, int, int]) -> tuple[int, int, int] | None:
+    """A cor do perfil no brilho máximo; se ela já está lá, o pulso é um mergulho."""
+    maior = max(base)
+    if maior <= 0:
+        return None
+    ganho = 255.0 / maior
+    if ganho >= GANHO_MINIMO_DO_PULSO:
+        r, g, b = (min(255, round(c * ganho)) for c in base)
+    else:
+        r, g, b = (max(1, round(c * MERGULHO_DO_PULSO)) if c else 0 for c in base)
+    return (r, g, b)
+
+
+class SessaoDoMotor:
+    """Os canais de estado que o motor segura em cada controle.
+
+    A volta do backend é a sessão inteira (`end_game_session_for` devolve o
+    gatilho E a luz do perfil): ela só sai quando o motor solta o último canal
+    daquele controle. Se o jogo tomou o canal, o motor larga sem encerrar.
+    """
+
+    def __init__(self, encerrar: Callable[[str], object]) -> None:
+        self._encerrar = encerrar
+        self._canais: dict[str, set[str]] = {}
+
+    def tomar(self, uniq: str, canal: str) -> None:
+        self._canais.setdefault(uniq, set()).add(canal)
+
+    def segura(self, uniq: str) -> frozenset[str]:
+        return frozenset(self._canais.get(uniq, ()))
+
+    def _tirar(self, uniq: str, canal: str) -> bool:
+        canais = self._canais.get(uniq)
+        if not canais or canal not in canais:
+            return False
+        canais.discard(canal)
+        if canais:
+            return False
+        del self._canais[uniq]
+        return True
+
+    def soltar(self, uniq: str, canal: str) -> bool:
+        """Solta o canal; ``True`` quando era o último e a sessão voltou ao perfil."""
+        if not self._tirar(uniq, canal):
+            return False
+        self._encerrar(uniq)
+        return True
+
+    def largar(self, uniq: str, canal: str) -> None:
+        self._tirar(uniq, canal)
+
+
+class AtuadorDaLuz:
+    """O pulso de brilho, ou a cor do evento, na barra do controle do tiro."""
+
+    canal = CANAL_LUZ
+
+    def __init__(
+        self,
+        pintar: Callable[[str, tuple[int, int, int]], object],
+        cor_de: Callable[[str], tuple[int, int, int] | None],
+        devolver: Callable[[str], bool],
+        largar: Callable[[str], object] | None = None,
+    ) -> None:
+        self._pintar = pintar
+        self._cor_de = cor_de
+        self._devolver = devolver
+        self._largar = largar
+        self._base: dict[str, tuple[int, int, int]] = {}
+        self._no_pico: set[str] = set()
+        self._subidas: dict[str, deque[float]] = {}
+
+    @staticmethod
+    def _quer(evento: Evento, receita: Receita) -> bool:
+        return (
+            receita.reacao_ao_tiro in (REACAO_PULSA, REACAO_EVENTO)
+            and evento.tipo in _TIPOS_DA_LUZ
+        )
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        if not self._quer(evento, receita) or evento.uniq in self._no_pico:
+            return False
+        subidas = self._subidas.setdefault(evento.uniq, deque())
+        while subidas and evento.instante - subidas[0] >= 1.0:
+            subidas.popleft()
+        if len(subidas) >= TETO_DA_LUZ_POR_S:
+            return False
+        if evento.uniq not in self._base:
+            base = self._cor_de(evento.uniq)
+            if base is None or max(base) <= 0:
+                return False  # a barra apagada não tem o que respirar
+            self._base[evento.uniq] = base
+        return True
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        uniq = evento.uniq
+        base = self._base[uniq]
+        if receita.reacao_ao_tiro == REACAO_PULSA:
+            cor = pico_do_pulso(base) or base
+        else:
+            cor = receita.cor_do_evento or COR_DO_EVENTO_PADRAO
+        self._pintar(uniq, cor)
+        self._no_pico.add(uniq)
+        self._subidas.setdefault(uniq, deque()).append(evento.instante)
+        return agora + SEGURA_DA_LUZ_S
+
+    def prolongar(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        if evento.uniq not in self._no_pico or not self._quer(evento, receita):
+            return None
+        return agora + SEGURA_DA_LUZ_S
+
+    def soltar(self, uniq: str) -> None:
+        """O jogo tomou a barra: a cor agora é dele."""
+        self._base.pop(uniq, None)
+        self._no_pico.discard(uniq)
+        if self._largar is not None:
+            self._largar(uniq)
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        base = self._base.pop(uniq, None)
+        self._no_pico.discard(uniq)
+        if not self._devolver(uniq) and base is not None:
+            # O motor ainda segura outro canal deste controle: a cor volta à mão,
+            # e a luz repintada não prende a sessão (ela sai com o outro canal).
+            self._pintar(uniq, base)
+            if self._largar is not None:
+                self._largar(uniq)
 
 
 # --- A ligação com o daemon ----------------------------------------------
@@ -804,19 +954,52 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
 
     controller = getattr(daemon, "controller", None)
 
-    def gatilho(uniq: str, lado: str, bloco: bytes) -> object:
-        escrever = getattr(controller, "set_game_trigger_for", None)
-        return escrever(uniq, lado, bloco) if callable(escrever) else False
-
-    def sessao(uniq: str) -> object:
+    def encerrar(uniq: str) -> object:
         devolver = getattr(controller, "end_game_session_for", None)
         return devolver(uniq) if callable(devolver) else False
+
+    sessao = SessaoDoMotor(encerrar)
+
+    def gatilho(uniq: str, lado: str, bloco: bytes) -> object:
+        escrever = getattr(controller, "set_game_trigger_for", None)
+        if not callable(escrever):
+            return False
+        sessao.tomar(uniq, CANAL_GATILHO)
+        return escrever(uniq, lado, bloco)
 
     def apertado(uniq: str, lado: str) -> bool:
         motor = motor_do(daemon)
         return motor is not None and motor.borda_do_dedo.apertado(uniq, lado)
 
-    return [AtuadorDaHaptica(tocar), AtuadorDoGatilho(gatilho, sessao, apertado)]
+    def pintar(uniq: str, cor: tuple[int, int, int]) -> object:
+        escrever = getattr(controller, "set_game_output_for", None)
+        if not callable(escrever):
+            return False
+        sessao.tomar(uniq, CANAL_LUZ)
+        return escrever(uniq, led=cor)
+
+    def cor_de(uniq: str) -> tuple[int, int, int] | None:
+        ler = getattr(controller, "resolved_led_for", None)
+        cor = ler(uniq) if callable(ler) else None
+        if not isinstance(cor, tuple) or len(cor) != 3:
+            return None
+        return (int(cor[0]), int(cor[1]), int(cor[2]))
+
+    return [
+        AtuadorDaHaptica(tocar),
+        AtuadorDoGatilho(
+            gatilho,
+            lambda uniq: sessao.soltar(uniq, CANAL_GATILHO),
+            apertado,
+            lambda uniq: sessao.largar(uniq, CANAL_GATILHO),
+        ),
+        AtuadorDaLuz(
+            pintar,
+            cor_de,
+            lambda uniq: sessao.soltar(uniq, CANAL_LUZ),
+            lambda uniq: sessao.largar(uniq, CANAL_LUZ),
+        ),
+    ]
 
 
 def motor_do(daemon: Any) -> TatoVivo | None:
@@ -886,6 +1069,7 @@ __all__ = [
     "DESLIGADA",
     "Atuador",
     "AtuadorDaHaptica",
+    "AtuadorDaLuz",
     "AtuadorDoGatilho",
     "BordaDoDedo",
     "BordaDoRumble",
@@ -894,6 +1078,7 @@ __all__ = [
     "Evento",
     "Passo",
     "Receita",
+    "SessaoDoMotor",
     "TatoVivo",
     "Teto",
     "anotar_o_rumble",
@@ -902,6 +1087,7 @@ __all__ = [
     "decidir",
     "modo_do_pad",
     "motor_do",
+    "pico_do_pulso",
     "receita_do_perfil",
     "start_tato_vivo",
 ]
