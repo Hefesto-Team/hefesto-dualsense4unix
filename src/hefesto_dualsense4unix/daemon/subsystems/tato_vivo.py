@@ -1184,6 +1184,14 @@ class Passo:
         }
         return self.motor.tique(agora, por_uniq.get, receita)
 
+    def tique_do_laco(self, agora: float) -> int:
+        """O tique do laço de 60 Hz: o que falha num tique fica no log, e o seguinte vem."""
+        try:
+            return self(agora)
+        except Exception:
+            logger.debug("tato_vivo_tique_falhou", exc_info=True)
+            return 0
+
     def _sessao_ha_s(self, controle: Controle, agora: float) -> float | None:
         """A idade da sessão aberta, vista abrir por este passo; ``None`` se não se viu."""
         aberta = bool(getattr(controle.vpad, "game_open", False))
@@ -1226,10 +1234,7 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
     try:
         while not daemon._is_stopping():
             await asyncio.sleep(INTERVALO_S)
-            try:
-                passo(time.monotonic())
-            except Exception:
-                logger.debug("tato_vivo_tique_falhou", exc_info=True)
+            passo.tique_do_laco(time.monotonic())
     finally:
         motor.parar()
         with contextlib.suppress(Exception):

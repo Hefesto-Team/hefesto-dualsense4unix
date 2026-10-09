@@ -389,6 +389,7 @@ def argv_do_ouvido(
 PROCURA_S = 5.0
 #: o ouvido está vivo enquanto o PCM chega; sem PCM há mais disto, o jogo calou.
 VIVO_S = 1.0
+PRAZO_DA_VOLTA_DO_OUVIDO_S = 1.5  # a volta de procura acorda do `_parar` e cala
 LEITURA = BYTES_POR_JANELA * 4
 
 
@@ -509,6 +510,8 @@ class OuvidoDoJogo:
             try:
                 pedaco = saida.read(LEITURA)
             except (OSError, ValueError):
+                # O `_calar` fecha o cano no meio da leitura: é o fim do gravador.
+                logger.debug("tato_ouvido_leitura_fechou", exc_info=True)
                 return
             if not pedaco:
                 return
@@ -546,7 +549,7 @@ class OuvidoDoJogo:
         self._parar.set()
         volta = self._volta
         if volta is not None and volta is not threading.current_thread():
-            volta.join(timeout=1.5)
+            volta.join(timeout=PRAZO_DA_VOLTA_DO_OUVIDO_S)
         self._calar()
 
     # O que o motor lê ------------------------------------------------------
@@ -610,6 +613,9 @@ PRAZO_DO_RECORTE_S = 0.2
 VALIDADE_DA_GUARDA_S = 1.0
 RECUSA_DO_ESTALO_S = 60.0
 PRAZO_DA_ESCRITA_S = 1.0
+PRAZO_DO_FIO_DO_ESTALO_S = 2.0  # o fio sai do poll em 100 ms e do `_matar`
+VIGIA_DO_ESTALO_S = 1.0  # o fio acorda sozinho para ver o fim, sem pedido
+PRAZO_DA_MORTE_DO_ESTALO_S = 2.0  # o tocador morto pelo kill some do processo
 ESPERAS_DA_CONFERENCIA_S: tuple[float, ...] = (0.3, 0.7, 1.0)
 #: o nó do estalo nunca muda de alvo nem cai na saída padrão (a caixa ou o fone).
 RECUO_PROIBIDO_DO_ESTALO: tuple[str, ...] = (
@@ -764,7 +770,7 @@ class TocadorDoEstalo:
         self._matar(self._proc)
         fio = self._fio
         if fio is not None and fio is not threading.current_thread():
-            fio.join(timeout=2.0)
+            fio.join(timeout=PRAZO_DO_FIO_DO_ESTALO_S)
 
     def _o_jogo_toca_agora(self) -> bool:
         """O jogo toca no nó do controle? Na dúvida, sim: o jogo manda."""
@@ -823,7 +829,7 @@ class TocadorDoEstalo:
 
     def _correr(self) -> None:
         while not self._fim.is_set():
-            self._acordar.wait(timeout=1.0)
+            self._acordar.wait(timeout=VIGIA_DO_ESTALO_S)
             self._acordar.clear()
             if self._fim.is_set():
                 return
@@ -918,7 +924,7 @@ class TocadorDoEstalo:
             try:
                 escritos = os.write(fd, vista)
             except BlockingIOError:
-                continue
+                escritos = 0  # o poll disse pronto e o cano encheu: volta ao poll
             except OSError:
                 return False
             vista = vista[escritos:]
@@ -951,7 +957,7 @@ class TocadorDoEstalo:
         with contextlib.suppress(Exception):
             proc.kill()
         with contextlib.suppress(Exception):
-            proc.wait(timeout=2)
+            proc.wait(timeout=PRAZO_DA_MORTE_DO_ESTALO_S)
 
 
 __all__ = [

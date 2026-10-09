@@ -422,3 +422,15 @@ def test_o_daemon_sobe_o_motor_logo_depois_da_luz_do_mic() -> None:
     luz = fonte.index('self._safe_start("luz_do_mic"')
     tato = fonte.index('self._safe_start("tato_vivo"')
     assert luz < tato < fonte.index('self._safe_start("alto_falante"')
+
+
+def test_o_tique_que_falha_nao_derruba_o_laco(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O laço de 60 Hz chama `tique_do_laco`: um tique que levanta vira log, e o seguinte vem."""
+    passo = tv.Passo(SimpleNamespace(), tv.TatoVivo())
+
+    def quebra(_agora: float) -> tv.Receita:
+        raise RuntimeError("perfil ilegível")
+
+    monkeypatch.setattr(passo, "receita_de_agora", quebra)
+    assert passo.tique_do_laco(0.0) == 0
+    assert passo.tique_do_laco(1.0) == 0
