@@ -34,3 +34,8 @@ seção daqui**: a aba deixou de estar em trabalho.
   Steam Input sai do Ligado, que fica com Sony DualSense, Xbox e Navegação (sprint
   NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, opção a mudada por ela). Até publicar, o produto continua com
   o Steam Input no Ligado e a faixa fixa «Modo Nativo» no Desligado.
+
+## 10-perfis.html
+- **08/10/2026** — na coluna «Funciona em», o Navegação e o Universal dizem «Só quando eu escolher», e o campo
+  «Funciona em:» do editor não oferece mais «Qualquer jogo» (sprint SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01, opção a).
+  Até publicar, a página do produto ainda oferece a opção, e o gesto a recusa sem gravar.

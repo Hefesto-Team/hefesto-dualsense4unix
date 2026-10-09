@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Match,
     Profile,
 )
+from hefesto_dualsense4unix.profiles.simple_match import ROTULO_SO_QUANDO_ESCOLHER
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -39,10 +40,11 @@ _FOLGA_ACIMA_DO_CATCH_ALL = 10
 # DualSense."* — e escolher entre dois botões sem saber o que cada um custa não
 
 
-LABEL_SO_MANUAL = "Só manual (nunca ativa sozinho)"
+LABEL_SO_MANUAL = ROTULO_SO_QUANDO_ESCOLHER
 
+#: O `any` nunca entra sozinho desde 01/10/2026 (o gerente): ele é o manual.
 _MATCH_LABELS: dict[str, str] = {
-    "any": "Sempre",
+    "any": LABEL_SO_MANUAL,
     "criteria": "Só neste programa",
     "manual": LABEL_SO_MANUAL,
 }

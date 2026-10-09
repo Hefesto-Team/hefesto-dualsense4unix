@@ -58,7 +58,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 from hefesto_dualsense4unix.profiles.simple_match import (
-    PROCEDENCIA_DE_QUALQUER_JOGO,
+    PROCEDENCIA_DA_NAVEGACAO,
 )
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
@@ -175,7 +175,7 @@ def _prioridade(ctx: Contexto, ponte: Any) -> None:
 
 def _ambiente(ctx: Contexto, ponte: Any) -> None:
     a10_perfis.editor_ambiente(
-        ctx, {"valor": PROCEDENCIA_DE_QUALQUER_JOGO, "evento": "change"}, ponte)
+        ctx, {"valor": PROCEDENCIA_DA_NAVEGACAO, "evento": "change"}, ponte)
 
 
 def _jogo(ctx: Contexto, ponte: Any) -> None:

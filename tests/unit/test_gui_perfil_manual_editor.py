@@ -179,5 +179,5 @@ class TestColunaQuandoUsar:
     def test_contrato_antigo_por_string_segue_valendo(self) -> None:
         """A lista do daemon manda o discriminador cru pelo IPC."""
         assert pa._match_label("manual") == pa.LABEL_SO_MANUAL
-        assert pa._match_label("any") == "Sempre"
+        assert pa._match_label("any") == pa.LABEL_SO_MANUAL
         assert pa._match_label("criteria") == "Só neste programa"

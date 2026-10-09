@@ -445,6 +445,9 @@ PROCEDENCIA_DA_NAVEGACAO = "Navegação"
 
 PROCEDENCIA_DE_QUALQUER_JOGO = "Qualquer jogo"
 
+#: O rótulo da coluna «Funciona em» do perfil que nunca entra sozinho (`manual` e `any`).
+ROTULO_SO_QUANDO_ESCOLHER = "Só quando eu escolher"
+
 PROCEDENCIA_DA_STEAM = "Steam"
 
 SEPARADOR_DA_PROCEDENCIA = " · "
@@ -531,11 +534,14 @@ def oferta_do_funciona_em(
     lancadores_da_maquina: Iterable[str],
     atual: str = "",
 ) -> list[str]:
-    """O que o campo «Funciona em:» oferece NESTA máquina, na ordem da tela."""
+    """O que o campo «Funciona em:» oferece NESTA máquina, na ordem da tela.
+
+    «Qualquer jogo» não é oferta desde 08/10/2026: o `any` nunca entra sozinho
+    (o gerente, desde 01/10), e escolhê-lo gravaria um «Só quando eu escolher».
+    """
     fora = [PROCEDENCIA_DA_NAVEGACAO]
     for nome in list(lancadores_da_maquina) + ([atual] if atual else []):
         limpo = str(nome or "").strip()
         if limpo and limpo not in fora and limpo != PROCEDENCIA_DE_QUALQUER_JOGO:
             fora.append(limpo)
-    fora.append(PROCEDENCIA_DE_QUALQUER_JOGO)
     return fora

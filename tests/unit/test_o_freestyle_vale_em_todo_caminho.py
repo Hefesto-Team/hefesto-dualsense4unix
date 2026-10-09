@@ -581,15 +581,18 @@ def test_a_dica_do_salvar_so_promete_o_jogo_a_perfil_de_jogo(
 
 
 def test_a_dica_do_freestyle_diz_onde_ele_vale(semeadura_ligada: None) -> None:
-    """O achado da conferência, com o Freestyle de verdade e sem perfil ativo."""
+    """O achado da conferência, com o Freestyle de verdade e sem perfil ativo.
+
+    SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01, 08/10/2026: onde o Freestyle vale é o
+    balão do Aplicar que diz, com o botão aceso; o Salvar só diz onde grava.
+    """
     from hefesto_dualsense4unix.interface import pacotes
 
     loader.load_all_profiles()
     dica = pacotes.topo(_ctx(""))["rodape.salvar"]
 
-    assert dica.startswith("Grava no perfil Freestyle. É onde a mudança vai cair: ")
+    assert dica == "Grava no perfil Freestyle. É onde a mudança vai cair."
     assert PROMETE_O_JOGO not in dica
-    assert "fora do jogo" in dica
 
 
 def test_perfil_que_nao_se_le_nao_ganha_promessa() -> None:

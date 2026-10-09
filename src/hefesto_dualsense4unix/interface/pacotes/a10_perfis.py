@@ -147,10 +147,6 @@ SECOES_DA_COLUNA: tuple[str, ...] = (
 ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
 
 
-QUANDO = {"criteria": "Jogo", "any": "Todos — quando nenhum casa",
-          "manual": "Só quando eu escolher"}
-
-
 _ESCOLHIDO: str = ""
 
 
@@ -1133,7 +1129,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:2985`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:2998`): todo `RuntimeError` de gesto
     virava TARJA na tela — no cartão do controle quando a página tinha um, e no
     `document.body` quando não tinha, o caso desta aba —, até 13/09/2026, quando
     a recusa passou ao diário e à piscada do botão (FRASES-E-DICAS-01).
@@ -1335,8 +1331,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # e é uma sobrescrita de propósito: `perfis_web` continua servindo o
     procedencia, recado = _procedencia_e_recado(
         getattr(alvo, "match", None), editor.get("ambiente_recado"), foto)
+    sem_jogo = procedencia == PROCEDENCIA_DE_QUALQUER_JOGO
+    if sem_jogo:
+        procedencia = ""
     fora["editor.ambiente"] = procedencia
-    fora["editor.ambiente.travado"] = not procedencia
+    fora["editor.ambiente.travado"] = not procedencia and not sem_jogo
     fora["editor.ambiente.recado"] = recado
 
     fora["blocos"] = {
@@ -1597,31 +1596,6 @@ def _nome_livre(base: str, todos: Any) -> str:
     return f"{base} {n}"
 
 
-_ARMADO_REBAIXAR: tuple[str, float] | None = None
-
-
-def _pergunta_antes_de_rebaixar(prof: Any, chave: str) -> None:
-    """Trocar "Funciona em" para "Todos" APAGA a regra. Pergunta antes."""
-    global _ARMADO_REBAIXAR
-    from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
-    from hefesto_dualsense4unix.profiles.schema import MatchAny
-
-    if chave != "any" or isinstance(prof.match, MatchAny):
-        _ARMADO_REBAIXAR = None
-        return
-    agora = time.monotonic()
-    if (_ARMADO_REBAIXAR and _ARMADO_REBAIXAR[0] == prof.name
-            and (agora - _ARMADO_REBAIXAR[1]) < SEGUNDOS_PARA_CONFIRMAR):
-        _ARMADO_REBAIXAR = None
-        return
-    _ARMADO_REBAIXAR = (prof.name, agora)
-    raise RuntimeError(
-        f"O perfil “{prof.name}” não vale para tudo hoje — hoje ele é: "
-        f"{_match_label(prof.match)}. Trocar para “Todos” faz ele valer para "
-        f"TUDO (Quando usar: Sempre) e apaga os programas em que ele valia. "
-        f"Escolha “Todos” de novo para confirmar — o campo espera oito segundos.")
-
-
 _NOMES_DOS_JOGOS: tuple[tuple[tuple[str, int], ...], dict[str, str]] | None = None
 
 
@@ -1720,9 +1694,8 @@ def _agora_vale_em(prof: Any, texto: str = "") -> str:
     """A frase de desfecho de quem trocou a REGRA do perfil. Um dono, três gestos.
 
     O RÓTULO SAI DE `_match_label`, a mesma função pura que alimenta a coluna
-    "Quando usar" — pelo argumento que `_pergunta_antes_de_rebaixar` já usa
-    logo acima: *o desfecho não pode chamar de outra coisa um perfil que a
-    lista chama de "Só manual"*.
+    "Funciona em": *o desfecho não pode chamar de outra coisa um perfil que a
+    lista chama de «Só quando eu escolher»*.
 
     `texto` É O QUE O USUÁRIO DIGITOU (ou o que o «Detectar» achou: o appid da Steam
     **ou a `wm_class`**, desde 11/09/2026), e serve só para o nome do jogo.
@@ -1886,7 +1859,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
 
     **E O CAMPO PASSOU A DIZER DE ONDE O JOGO VEM — C4-FUNCIONA-EM,
     11/09/2026, desenho DO USUÁRIO.** O que chega agora é uma PROCEDÊNCIA
-    («Navegação», «Steam», «Heroic», «Qualquer jogo»…), e quem a traduz na
+    («Navegação», «Steam», «Heroic»…), e quem a traduz na
     forma técnica é `simple_match.forma_da_procedencia` — o produto, sozinho,
     com o que o lançador entrega. A recusa do "Estilo de Jogo" deixou de ser
     necessária pelo caminho mais simples: ele **saiu deste campo** e ficou no
@@ -1918,6 +1891,11 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
         raise RuntimeError(recado)
     if rotulo == agora:
         return None
+    if rotulo == PROCEDENCIA_DE_QUALQUER_JOGO:
+        # a página de antes do `--publicar 10` ainda oferece a opção: o `any`
+        # gravaria um «Só quando eu escolher» no lugar da regra do jogo
+        raise RuntimeError(
+            f"“{rotulo}” não é mais uma procedência. Escolha de onde o jogo vem.")
     if rotulo in (TRAVESSAO, ""):
         raise RuntimeError(
             f"“{TRAVESSAO}” não é uma procedência — ele é o que a tela mostra "
@@ -1933,7 +1911,6 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     chave = forma_da_procedencia(
         rotulo, jogo,
         forma_do_catalogo=str(getattr(achado, "forma", "") or ""))
-    _pergunta_antes_de_rebaixar(prof, chave)
     prof.match = from_simple_choice(chave, jogo, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
@@ -2306,7 +2283,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:416`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:418`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.

@@ -10,8 +10,8 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria
 
 
 class TestMatchLabel:
-    def test_any_vira_sempre(self) -> None:
-        assert _match_label("any") == "Sempre"
+    def test_any_vira_so_quando_eu_escolher(self) -> None:
+        assert _match_label("any") == "Só quando eu escolher"
 
     def test_criteria_vira_so_neste_programa(self) -> None:
         assert _match_label("criteria") == "Só neste programa"

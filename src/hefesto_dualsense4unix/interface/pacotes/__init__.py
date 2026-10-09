@@ -696,6 +696,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         # pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
+        "rodape.aplicar": _dica_do_aplicar(ctx.state),
         "rodape.salvar": _dica_do_salvar(do_rodape),
         "rodape.exportar": _dica_do_exportar(do_rodape),
     }
@@ -704,17 +705,39 @@ def topo(ctx: Contexto) -> dict[str, Any]:
 _SEM_PERFIL = "no perfil ativo"
 
 
+# O `any` não entra em seleção automática nenhuma (o gerente, desde 01/10): ele
+# vale quando ela o escolhe, que é a cauda do `manual`. O Freestyle é o botão, e
+# a cauda dele mora no Aplicar (`_dica_do_aplicar`), não aqui.
 _QUANDO_VOLTA = {
     "jogo": "o que você salvar aqui volta sozinho toda vez que este jogo abrir.",
-    "any": "vale fora do jogo e em todo jogo sem perfil próprio.",
     "manual": "vale quando você escolher este perfil.",
 }
 
+#: O Aplicar congelado do `fim.html`, e a cauda que ele ganha com o Freestyle ligado.
+DICA_DO_APLICAR = (
+    "Vale agora: envia a configuração aos controles na hora. Não grava — ao "
+    "trocar de perfil ou reiniciar, volta ao que está salvo.")
+CAUDA_DO_FREESTYLE = "Vale em todo jogo enquanto o Modo Freestyle estiver ligado."
+
+
+def _dica_do_aplicar(state: dict[str, Any] | None) -> str:
+    """A dica do Aplicar: com o Modo Freestyle ligado, ele vale em todo jogo.
+
+    Com o daemon calado (`state` None) o Aplicar não alcança controle nenhum, e
+    a dica é a de sempre.
+    """
+    if (state or {}).get("freestyle_ligado") is True:
+        return f"{DICA_DO_APLICAR} {CAUDA_DO_FREESTYLE}"
+    return DICA_DO_APLICAR
+
 
 def _tipo_do_perfil(nome: str) -> str:
-    """`jogo`, `any`, `manual` ou `""` — o `match` do disco, lido cru."""
+    """`freestyle`, `jogo`, `manual` ou `""` — a identidade, depois o `match` do disco."""
     from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle
 
+    if e_o_freestyle(nome):
+        return "freestyle"
     try:
         cru = _perfil.ativo(nome) if nome else {}
         casamento = cru.get("match") if cru else None
@@ -726,6 +749,8 @@ def _tipo_do_perfil(nome: str) -> str:
     if tipo == "criteria":
         regra = ("window_class", "window_title_regex", "process_name")
         return "jogo" if any(casamento.get(k) for k in regra) else "manual"
+    if tipo == "any":
+        return "manual"
     return tipo if tipo in _QUANDO_VOLTA else ""
 
 

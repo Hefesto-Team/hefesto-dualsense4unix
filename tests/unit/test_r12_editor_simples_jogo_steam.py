@@ -100,23 +100,29 @@ class TestColunaQuandoUsar:
         )
 
         assert _match_label(MatchCriteria()) == LABEL_SO_MANUAL
-        assert "nunca ativa sozinho" in LABEL_SO_MANUAL
+        assert LABEL_SO_MANUAL == "Só quando eu escolher"
 
     def test_criteria_com_alvo_e_any_seguem_como_antes(self) -> None:
         pytest.importorskip("gi")
-        from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
+        from hefesto_dualsense4unix.app.actions.profiles_actions import (
+            LABEL_SO_MANUAL,
+            _match_label,
+        )
 
         assert _match_label(MatchCriteria(window_class=["firefox"])) == (
             "Só neste programa"
         )
-        assert _match_label(MatchAny()) == "Sempre"
+        assert _match_label(MatchAny()) == LABEL_SO_MANUAL
 
     def test_contrato_antigo_por_string_preservado(self) -> None:
         """A função também é chamada com o discriminador cru (testes de"""
         pytest.importorskip("gi")
-        from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
+        from hefesto_dualsense4unix.app.actions.profiles_actions import (
+            LABEL_SO_MANUAL,
+            _match_label,
+        )
 
-        assert _match_label("any") == "Sempre"
+        assert _match_label("any") == LABEL_SO_MANUAL
         assert _match_label("criteria") == "Só neste programa"
         assert _match_label("regex_do_futuro") == "regex_do_futuro"
 

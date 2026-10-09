@@ -172,7 +172,7 @@ def _opcoes(html: str) -> list[str]:
 def test_o_campo_oferece_de_onde_o_jogo_vem(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Navegação» · os lançadores que a máquina tem · «Qualquer jogo»."""
+    """«Navegação» · os lançadores que a máquina tem (sem «Qualquer jogo» desde 08/10)."""
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=80,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])))
@@ -180,11 +180,11 @@ def test_o_campo_oferece_de_onde_o_jogo_vem(
     blocos = a10.pacote(_ctx())["blocos"]
 
     assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == [
-        "Navegação", "Steam", "Heroic", "Qualquer jogo"]
+        "Navegação", "Steam", "Heroic"]
     assert "Lutris" not in blocos[a10.SELETOR_DO_AMBIENTE]
 
 
-def test_a_maquina_sem_lancador_nenhum_sai_com_as_duas_fixas(
+def test_a_maquina_sem_lancador_nenhum_sai_com_a_navegacao(
     maquina_pelada: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """**A ORDEM DE PRODUTO:** o produto é para qualquer pessoa, não para esta bancada."""
@@ -193,8 +193,7 @@ def test_a_maquina_sem_lancador_nenhum_sai_com_as_duas_fixas(
 
     blocos = a10.pacote(_ctx())["blocos"]
 
-    assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == [
-        "Navegação", "Qualquer jogo"]
+    assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == ["Navegação"]
     assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == sm.oferta_do_funciona_em([])
     assert blocos[a10.SELETOR_DOS_JOGOS] == ""
     assert (f'<option value="{a10.TRAVESSAO}" disabled>'
@@ -206,9 +205,9 @@ def test_a_procedencia_do_perfil_entra_mesmo_desinstalado(
 ) -> None:
     """Ela desinstalou o Heroic; o perfil do jogo dele continua no disco."""
     assert sm.oferta_do_funciona_em([], "Heroic") == [
-        "Navegação", "Heroic", "Qualquer jogo"]
+        "Navegação", "Heroic"]
     assert sm.oferta_do_funciona_em(["Steam"], "Steam") == [
-        "Navegação", "Steam", "Qualquer jogo"]
+        "Navegação", "Steam"]
 
 
 def test_os_lancadores_que_a_tela_ordena_o_censo_sabe_ler() -> None:
@@ -391,10 +390,13 @@ def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
         assert jargao not in campo, (
             f"“{jargao}” voltou ao «Funciona em:» de `{caminho}` — é o jargão "
             f"de implementação que ela mandou tirar em 11/09/2026")
-    for fixa in (sm.PROCEDENCIA_DA_NAVEGACAO, sm.PROCEDENCIA_DE_QUALQUER_JOGO):
-        assert f">{fixa}<" in campo, (
-            f"“{fixa}” saiu do «Funciona em:» de `{caminho}` — as duas fixas "
-            f"são o que sobra numa máquina sem lançador nenhum")
+    assert f">{sm.PROCEDENCIA_DA_NAVEGACAO}<" in campo, (
+        f"“{sm.PROCEDENCIA_DA_NAVEGACAO}” saiu do «Funciona em:» de `{caminho}` — "
+        f"é a fixa que sobra numa máquina sem lançador nenhum")
+    if caminho.startswith("mockup/"):
+        # SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01: o desenho já não oferece «Qualquer
+        # jogo»; a página publicada deixa de oferecer no `--publicar 10` do fecho.
+        assert f">{sm.PROCEDENCIA_DE_QUALQUER_JOGO}<" not in campo
 
     assert 'data-hef="editor.estilo"' in html
     assert ">Estilo de Jogo:</span>" in html
@@ -481,5 +483,5 @@ def test_o_clique_no_campo_arrasta_a_coluna_junto(
     a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
     depois = a10.pacote(_ctx())["perfis.linha.quando"]
 
-    assert antes == ["Sempre"]
+    assert antes == ["Só quando eu escolher"]
     assert depois == ["Heroic · Marvel's Guardians of the Galaxy"]

@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
     PROCEDENCIA_DA_NAVEGACAO,
     PROCEDENCIA_DA_STEAM,
     PROCEDENCIA_DE_QUALQUER_JOGO,
+    ROTULO_SO_QUANDO_ESCOLHER,
     SEPARADOR_DA_PROCEDENCIA,
     oferta_do_funciona_em,
 )
@@ -552,7 +553,7 @@ CSS = CSS_GLIFO + """
 
   /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
      PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
-     num `_toast_profile` no rodapé (`profiles_actions.py:424`): "Perfil
+     num `_toast_profile` no rodapé (`profiles_actions.py:426`): "Perfil
      removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
      RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
      silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DO USUÁRIO,
@@ -1068,8 +1069,8 @@ PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
           ("Mina the Hollower", 68, "Instalado aqui · mina.exe", False),
           ("Terror (os dez)", 60, "Só neste programa", False),
           ("Luta", 58, "Só neste programa", False),
-          ("Navegação", 40, "Sempre — 4 disputam", False),
-          ("Universal", 0, "Sempre — quando nenhum casa", False)]
+          ("Navegação", 40, ROTULO_SO_QUANDO_ESCOLHER, False),
+          ("Universal", 0, ROTULO_SO_QUANDO_ESCOLHER, False)]
 
 PROCEDENCIA_DO_DESENHO = PERFIS[0][2].split(SEPARADOR_DA_PROCEDENCIA)[0]
 
@@ -2041,11 +2042,13 @@ def _conferir(html: str) -> None:
     exigir(">Jogo</option>" not in html,
            "“Jogo” voltou ao 'Funciona em' — a opção que pedia dela a "
            "diferença entre `process_name` e `wm_class`")
-    for fixa in (PROCEDENCIA_DA_NAVEGACAO, PROCEDENCIA_DE_QUALQUER_JOGO):
-        exigir(f">{fixa}</option>" in html,
-               f"“{fixa}” saiu do 'Funciona em' — as duas fixas são o que "
-               f"sobra numa máquina sem lançador nenhum, e sem elas o campo "
-               f"nasce vazio em quem acabou de instalar")
+    exigir(f">{PROCEDENCIA_DA_NAVEGACAO}</option>" in html,
+           f"“{PROCEDENCIA_DA_NAVEGACAO}” saiu do 'Funciona em' — é a fixa que "
+           f"sobra numa máquina sem lançador nenhum, e sem ela o campo nasce "
+           f"vazio em quem acabou de instalar")
+    exigir(f">{PROCEDENCIA_DE_QUALQUER_JOGO}</option>" not in html,
+           f"“{PROCEDENCIA_DE_QUALQUER_JOGO}” voltou ao 'Funciona em' — o `any` "
+           f"nunca entra sozinho, e a opção gravaria um «{ROTULO_SO_QUANDO_ESCOLHER}»")
 
     exigir("--rot-p:86px" in html,
            "a coluna do rótulo não é mais a medida do rótulo mais largo (86px)")

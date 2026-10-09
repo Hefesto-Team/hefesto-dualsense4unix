@@ -45,11 +45,11 @@ def _mesa_dela() -> list[Profile]:
 
 class TestOTextoDaColuna:
     def test_nenhum_sempre_anuncia_disputa(self) -> None:
-        """Os quatro «Sempre» da bancada dizem só «Sempre»: ninguém vence sozinho."""
+        """Os quatro `any` da bancada dizem «Só quando eu escolher»: nenhum entra sozinho."""
         perfis = _mesa_dela()
         for perfil in perfis:
             if perfil.match.type == "any":
-                assert rotulo_quando_usar(perfil, perfis, "Pragmata2") == "Sempre"
+                assert rotulo_quando_usar(perfil, perfis, "Pragmata2") == LABEL_SO_MANUAL
 
     def test_um_catch_all_sozinho_continua_sempre(self) -> None:
         """Recém-instalado: só o `fallback` no disco. Nada a explicar."""
@@ -57,7 +57,7 @@ class TestOTextoDaColuna:
             _catch_all("fallback", 0),
             _perfil("FPS", 60, MatchCriteria(process_name=["cs2"])),
         ]
-        assert rotulo_quando_usar(perfis[0], perfis, None) == "Sempre"
+        assert rotulo_quando_usar(perfis[0], perfis, None) == LABEL_SO_MANUAL
 
     def test_as_outras_frases_da_coluna_nao_mudaram(self) -> None:
         """R-12/LEIGO-06 continuam valendo — esta entrega só toca o "Sempre"."""
