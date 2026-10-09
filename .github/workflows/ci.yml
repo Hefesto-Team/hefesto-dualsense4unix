@@ -987,7 +987,7 @@ jobs:
         run: mypy src/hefesto_dualsense4unix
       # 09/10/2026: os arquivos de teste que já passam no mypy (`tests/mypy-limpos.txt`, só cresce).
       - name: Mypy dos testes limpos
-        run: mypy @tests/mypy-limpos.txt
+        run: mypy --follow-imports=silent @tests/mypy-limpos.txt
 
   runtime-smoke:
     runs-on: ubuntu-latest
