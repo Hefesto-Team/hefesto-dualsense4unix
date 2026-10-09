@@ -23,8 +23,12 @@ _PROBE = (
 
 
 def _runtime_dir() -> Path:
-    """Diretório de runtime CURTO (limite de ~108 bytes do AF_UNIX) e isolado"""
-    base = Path(tempfile.mkdtemp(prefix="hefl-"))
+    """Diretório de runtime CURTO (limite de ~108 bytes do AF_UNIX) e isolado.
+
+    Em `/tmp`, e não no `TMPDIR`: o `TMPDIR` de quem roda pode ser longo (o do harness
+    é), e o caminho do socket estoura o AF_UNIX antes do primeiro teste.
+    """
+    base = Path(tempfile.mkdtemp(prefix="hefl-", dir="/tmp"))
     (base / "hefesto-dualsense4unix").mkdir()
     return base
 

@@ -48,6 +48,8 @@ de `gamepad.py`.
 from __future__ import annotations
 
 import csv
+import shutil
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -327,7 +329,7 @@ def perfis_isolados(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-async def servidor(tmp_path: Path, perfis_isolados: Path) -> Any:
+async def servidor(perfis_isolados: Path) -> Any:
     """Servidor IPC REAL com `FakeController` — o padrão de contrato da casa."""
     fc = FakeController(transport="usb")
     fc.connect()
@@ -350,7 +352,10 @@ async def servidor(tmp_path: Path, perfis_isolados: Path) -> Any:
         gamepad_caminho="xbox",
     )
 
-    socket_path = tmp_path / "hefesto-dualsense4unix.sock"
+    # O socket nasce em `/tmp`, e não no `tmp_path`: sob um `TMPDIR` longo o caminho
+    # estoura o limite de ~108 bytes do AF_UNIX antes do servidor subir.
+    curto = Path(tempfile.mkdtemp(prefix="hf-imu-", dir="/tmp"))
+    socket_path = curto / "hefesto-dualsense4unix.sock"
     servidor = IpcServer(
         controller=fc,
         store=store,
@@ -363,6 +368,7 @@ async def servidor(tmp_path: Path, perfis_isolados: Path) -> Any:
         yield socket_path, daemon
     finally:
         await servidor.stop()
+        shutil.rmtree(curto, ignore_errors=True)
 
 
 async def _gamepad_emulation(socket_path: Path) -> dict[str, Any]:
