@@ -947,6 +947,13 @@ class Daemon:
             self._tasks.append(self._reconnect_task)
             await self._stop_event.wait()
         finally:
+            # A tabela que age com o jogo solta o que segura e destrói os dois
+            # devices privados ANTES da parada dos outros.
+            tabela_no_jogo = self._tabela_no_jogo
+            if tabela_no_jogo is not None:
+                with contextlib.suppress(Exception):
+                    tabela_no_jogo.fechar()
+                self._tabela_no_jogo = None
             try:
                 await shutdown(self)
             finally:

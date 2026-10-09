@@ -359,3 +359,182 @@ async def test_o_laco_real_chama_a_tabela_com_o_vpad_despachando(
     assert len(mouse.chamadas) >= 3, "o laço não chamou a tabela com o vpad despachando"
     vistos = [c["buttons"] for c in mouse.chamadas if isinstance(c, dict)]
     assert any("l2" in b for b in vistos), "o L2 apertado não chegou à tabela"
+
+
+# -- os dois devices privados, de verdade, sobre o uinput de mentira ---------------
+
+
+class _UinputPorDevice(types.ModuleType):
+    """O `uinput` com um gravador POR device (o mouse e o teclado da tabela)."""
+
+    def __init__(self) -> None:
+        super().__init__("uinput")
+        self.saiu: dict[str, list[tuple[str, int]]] = {}
+
+    def __getattr__(self, nome: str) -> Any:
+        if nome.startswith(("KEY_", "BTN_", "REL_")):
+            return _Ev(nome)
+        raise AttributeError(nome)
+
+    def Device(self, caps: Any, name: str = "") -> Any:  # noqa: N802 - é o nome do uinput
+        gravado = self.saiu.setdefault(name, [])
+
+        class _Dev:
+            def emit(self, ev: Any, valor: int, syn: bool = True) -> None:
+                gravado.append((ev.nome, valor))
+
+            def syn(self) -> None:
+                pass
+
+            def destroy(self) -> None:
+                pass
+
+        return _Dev()
+
+
+class _OskDeMentira:
+    def __init__(self) -> None:
+        self.toques: list[tuple[str, str]] = []
+
+    def dispatch_token(self, token: str, fase: str) -> None:
+        self.toques.append((token, fase))
+
+
+@pytest.fixture
+def dois_devices(monkeypatch: pytest.MonkeyPatch) -> _UinputPorDevice:
+    mod = _UinputPorDevice()
+    monkeypatch.setitem(sys.modules, "uinput", mod)
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.poll.gatilhos_de_cada_controle",
+        lambda d: {})
+    return mod
+
+
+def _saidas(mod: _UinputPorDevice) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
+    from hefesto_dualsense4unix.integrations.uinput_keyboard import DEVICE_NAME as TECLADO
+    from hefesto_dualsense4unix.integrations.uinput_mouse import DEVICE_NAME as MOUSE
+
+    return mod.saiu.get(MOUSE, []), mod.saiu.get(TECLADO, [])
+
+
+def test_o_r2_na_e_sai_pelo_teclado_da_tabela_e_nao_clica(
+    dois_devices: _UinputPorDevice,
+) -> None:
+    """O GON: R2 em «E». A tabela ABRE os dois devices e os liga pela tabela.
+
+    O leitor é o evento de cada device, e não o gravador que troca os devices:
+    esta régua passa pelo `_abrir`, que é onde a tecla e o clique se repartem.
+    MORDIDA: entregar ao mouse da tabela só os `calados` (sem as linhas do
+    teclado) faz o direcional sair duas vezes, e esta régua reprova.
+    """
+    daemon = _daemon_de_mentira()
+    daemon._osk_controller = _OskDeMentira()
+    tabela = TabelaNoJogo({"r2": "KEY_E", "l3_direcao": acoes.TOKEN_NADA}, None, ligada=True)
+    tabela.tick(daemon, _estado(r2_raw=255, raw_lx=255, raw_ly=255), frozenset({"dpad_up"}))
+    mouse, teclado = _saidas(dois_devices)
+    assert ("KEY_E", 1) in teclado, f"o R2 não digitou E: {teclado}"
+    assert ("KEY_UP", 1) in teclado, "o direcional não saiu pelo teclado"
+    assert "BTN_RIGHT" not in [n for n, _v in mouse], "o R2 em «E» também clicou"
+    assert "KEY_UP" not in [n for n, _v in mouse], "o direcional saiu duas vezes"
+    assert not [n for n, _v in mouse if n in ("REL_X", "REL_Y")], (
+        "o analógico em «— Nada —» moveu o cursor com o jogo aberto")
+
+
+def test_o_l3_de_fabrica_abre_o_teclado_na_tela_tambem_no_jogo(
+    dois_devices: _UinputPorDevice,
+) -> None:
+    """A linha do L3 (teclado na tela) tem o mesmo atendente do desktop.
+
+    MORDIDA: tirar o `virtual_token_callback` do teclado da tabela deixa o
+    toque sem ninguém (`keyboard_virtual_token_sem_callback`) e esta régua reprova.
+    """
+    daemon = _daemon_de_mentira()
+    osk = _OskDeMentira()
+    daemon._osk_controller = osk
+    tabela = TabelaNoJogo(None, None, ligada=True)
+    tabela.tick(daemon, _estado(), frozenset({"l3"}))
+    assert ("__TOGGLE_OSK__", "press") in osk.toques, osk.toques
+
+
+@pytest.mark.parametrize("de_quem", ["gesto", "perfil"])
+def test_suspender_mouse_e_teclado_cala_a_tabela_no_jogo(de_quem: str) -> None:
+    """«Suspender mouse e teclado» (o PS + Options) vale com o jogo aberto.
+
+    A supressão que ELA ligou cala a tabela; a do perfil do jogo não, porque o
+    jogo aberto é justamente onde a chave age. MORDIDA: tirar o
+    `_suspenso_por_ela` de `despachar_no_jogo` faz o caso «gesto» reprovar.
+    """
+    tabela, mouse, _teclado = _tabela_com_gravadores(None)
+    daemon = _daemon_de_mentira()
+    daemon._tabela_no_jogo = tabela
+    daemon._emulation_suppressed = True
+    daemon._suppress_from_profile = de_quem == "perfil"
+    sub_mouse.despachar_no_jogo(daemon, _estado(), frozenset({"cross"}), no_jogo=True)
+    apertou = [c for c in mouse.chamadas if isinstance(c, dict) and c["buttons"]]
+    if de_quem == "gesto":
+        assert not apertou, "a tabela clicou com o mouse e o teclado suspensos por ela"
+    else:
+        assert apertou, "a supressão do perfil do jogo calou a chave «Também no jogo»"
+
+
+def test_suspender_cala_o_teclado_so_dentro_do_jogo() -> None:
+    """O mesmo para o teclado «Só dentro do jogo»: suspenso por ela, não digita."""
+    daemon = _daemon_de_mentira()
+    daemon._teclado_so_no_jogo = True
+    daemon._keyboard_device = _Gravador()
+    digitou: list[frozenset[str]] = []
+    daemon._dispatch_keyboard_emulation = digitou.append
+    daemon._emulation_suppressed = True
+    daemon._suppress_from_profile = False
+    sub_mouse.despachar_no_jogo(daemon, _estado(), frozenset({"cross"}), no_jogo=True)
+    assert not digitou, "«Só dentro do jogo» digitou com o teclado suspenso por ela"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_o_laco_solta_a_tabela_na_parada(
+    monkeypatch: pytest.MonkeyPatch, transporte: str,
+) -> None:
+    """Pelo cabo e pelo rádio: o laço entrega o L2 à tabela, e a parada a fecha.
+
+    MORDIDA: tirar o `fechar()` do `finally` do `Daemon.run` deixa a tabela de pé.
+    """
+    monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
+
+    class _Snap:
+        buttons_pressed: list[str] = []  # noqa: RUF012
+
+    fc = FakeController(transport=transporte, states=[
+        _estado(l2_raw=255, transport=transporte) for _ in range(40)])  # type: ignore[arg-type]
+    mock_evdev = MagicMock()
+    mock_evdev.is_available.return_value = True
+    mock_evdev.snapshot.return_value = _Snap()
+    fc._evdev = mock_evdev
+    daemon = Daemon(
+        controller=fc,
+        config=DaemonConfig(
+            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            autoswitch_enabled=False, mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
+        ),
+    )
+    daemon._gamepad_device = MagicMock()
+    daemon._dispatch_gamepad_emulation = lambda estado, botoes: None  # type: ignore[method-assign]
+    tabela, mouse, _teclado = _tabela_com_gravadores(None)
+    fechou: list[bool] = []
+    tabela.fechar = lambda: fechou.append(True)  # type: ignore[method-assign]
+    daemon._tabela_no_jogo = tabela
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.poll.gatilhos_de_cada_controle",
+        lambda d: {})
+
+    run_task = asyncio.create_task(daemon.run())
+    prazo = time.monotonic() + 5.0
+    while len(mouse.chamadas) < 3 and time.monotonic() < prazo:
+        await asyncio.sleep(0.005)
+    daemon.stop()
+    await run_task
+
+    assert any("l2" in c["buttons"] for c in mouse.chamadas if isinstance(c, dict)), (
+        f"o L2 do {transporte} não chegou à tabela")
+    assert fechou and daemon._tabela_no_jogo is None, "a parada deixou a tabela de pé"

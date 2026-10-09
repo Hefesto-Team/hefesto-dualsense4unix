@@ -180,7 +180,8 @@ class TabelaNoJogo:
     * o cursor e a rolagem andam SÓ pelo P1 (os outros analógicos viram centro),
       e só se a linha do analógico escolheu o próprio token;
     * a tabela vem do perfil EFETIVO (as três camadas), resolvida uma vez por
-      ativação; a chave não obedece à Função do teclado nem à supressão.
+      ativação; a chave não obedece à Função do teclado nem à supressão do perfil do jogo,
+      e cala com «Suspender mouse e teclado» (`despachar_no_jogo`).
     """
 
     def __init__(self, button_actions: Any, key_bindings: Any, *, ligada: bool) -> None:
@@ -214,6 +215,16 @@ class TabelaNoJogo:
                 poll_hz=cfg.poll_hz,
             )
             teclado = UinputKeyboardDevice()
+            # As linhas do teclado na tela (`__TOGGLE_OSK__` e as duas irmãs) têm o
+            # mesmo atendente do teclado do desktop: sem ele, o L3 de fábrica ficaria
+            # mudo com o jogo aberto, e a tela diz que toda linha age.
+            from hefesto_dualsense4unix.daemon.subsystems.keyboard import _OSKController
+
+            osk = getattr(daemon, "_osk_controller", None)
+            if osk is None:
+                osk = _OSKController()
+                daemon._osk_controller = osk
+            teclado.virtual_token_callback = osk.dispatch_token
             if not mouse.start() or not teclado.start():
                 with contextlib.suppress(Exception):
                     mouse.stop()
@@ -301,6 +312,12 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
     daemon._teclado_so_no_jogo = bool(getattr(profile, "teclado_so_no_jogo", None))
 
 
+def _suspenso_por_ela(daemon: Any) -> bool:
+    """A emulação está suspensa por gesto dela (e não pelo perfil do jogo)?"""
+    return bool(getattr(daemon, "_emulation_suppressed", False)) and not bool(
+        getattr(daemon, "_suppress_from_profile", False))
+
+
 def despachar_no_jogo(
     daemon: Any,
     state: Any,
@@ -315,7 +332,12 @@ def despachar_no_jogo(
     * Só o teclado «Só dentro do jogo»: o teclado do desktop despacha daqui,
       mesmo com a emulação suprimida pelo perfil do jogo.
     * Ao sair do jogo (ou ao largar a chave) tudo é solto.
+    * «Suspender mouse e teclado» (o gesto, a interface, o IPC) cala os dois aqui
+      também: a supressão que ELA ligou vale com o jogo aberto. A do perfil do jogo
+      não cala, porque o jogo aberto é justamente onde a chave e o «Só dentro» agem.
     """
+    if no_jogo and _suspenso_por_ela(daemon):
+        no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)
     so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False))
     estava = bool(getattr(daemon, "_estava_no_jogo", False))
