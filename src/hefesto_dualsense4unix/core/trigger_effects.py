@@ -141,14 +141,15 @@ def _arco_do_firmware(start: int, end: int, force: int, snap: int) -> TriggerEff
     `start` e `end` e o estalo ao soltar.
 
     A máscara `(1<<início)|(1<<fim)` vai nos bytes 1-2, e a força menos um mais
-    o estalo menos um, deslocado três bits, nos bytes 3-4. Início de 0 a 8 e
-    fim de `início + 1` a 9; o que passa encosta no limite. Força ou estalo
-    zero deixa o gatilho desligado.
+    o estalo menos um, deslocado três bits, nos bytes 3-4. O domínio é o do
+    arco no gerador do Nielk1: fim de `início + 1` a 8 (o arco não tem a zona
+    9, que o galope tem), logo início de 0 a 7; o que passa encosta no limite.
+    Força ou estalo zero deixa o gatilho desligado.
     """
     if force <= 0 or snap <= 0:
         return off()
-    inicio = _no_dominio(start, 0, 8)
-    fim = _no_dominio(end, inicio + 1, 9)
+    inicio = _no_dominio(start, 0, 7)
+    fim = _no_dominio(end, inicio + 1, 8)
     forca = _no_dominio(force, 1, 8)
     estalo = _no_dominio(snap, 1, 8)
     return TriggerEffect(

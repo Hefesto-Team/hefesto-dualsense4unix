@@ -77,9 +77,11 @@ class TestPulseAB:
         assert tfx.pulse_a(2, 7, 0) == tfx.off()
         assert tfx.pulse_b(2, 7, 0) == tfx.off()
 
-    def test_pulse_a_leva_as_pontas_do_curso_na_mascara(self):
-        assert tfx.pulse_a(0, 9, 255).forces[:2] == (0x01, 0x02)
-        assert tfx.pulse_a(8, 9, 255).forces[:2] == (0x00, 0x03)
+    def test_pulse_a_encosta_o_fim_na_zona_8_do_arco(self):
+        """O arco vai até a zona 8 (a 9 é do galope): a tela deixa 9, o bloco leva 8."""
+        assert tfx.pulse_a(0, 9, 255).forces[:2] == (0x01, 0x01)
+        assert tfx.pulse_a(8, 9, 255).forces[:2] == (0x80, 0x01)
+        assert tfx.pulse_a(0, 8, 255).forces[:2] == (0x01, 0x01)
 
     def test_end_menor_ou_igual_start_rejeita(self):
         with pytest.raises(ValueError, match="end"):

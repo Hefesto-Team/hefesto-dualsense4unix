@@ -1357,8 +1357,8 @@ SÃO expressáveis.
 > gatilho, às cegas, cabo e rádio.
 
 > **NOTA DATADA — 08/10/2026: o arco e o galope.** O `pulse_a()` manda o arco do firmware (`0x22`):
-> `22 84 00 2D` nos padrões, com a máscara das duas zonas nos bytes 1-2 e, nos bytes 3-4, a força menos um
-> e o estalo menos um deslocado três bits. O `0x22` e o `0x23` vivem no firmware mas a Sony não os oferece, e
+> `22 84 00 2D` nos padrões, com a máscara das duas zonas nos bytes 1-2 (o fim vai até a zona 8; a 9 é do
+> galope) e, nos bytes 3-4, a força menos um e o estalo menos um deslocado três bits. O `0x22` e o `0x23` vivem no firmware mas a Sony não os oferece, e
 > **não mexem no estado do gatilho** do relatório de entrada (só os modos oficiais mexem). O Arco e o Galope
 > da aba seguem com os bytes de 01/08 (`26 01 07 C0 E0` e `26 00 09 07 07 0A`) até a sessão às cegas; neste
 > layout a frequência do Galope cai nos bytes de amplitude e é inerte. **Grau: BAIXA para a sensação.**

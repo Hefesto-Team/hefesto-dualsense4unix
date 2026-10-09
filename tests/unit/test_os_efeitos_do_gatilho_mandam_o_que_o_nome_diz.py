@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 from hefesto_dualsense4unix.core.controller import TriggerEffect
 from hefesto_dualsense4unix.core.trigger_effects import (
     PRESET_FACTORIES,
+    _arco_do_firmware,
     build_from_name,
     custom,
 )
@@ -135,6 +136,13 @@ REPETE_SEM_FREQUENCIA = "promete_repeticao_e_manda_frequencia_zero"
 FIRMEZA_SEM_O_FUNDO = "firmeza_que_nao_chega_ao_fundo"
 ARMA_SEM_DOIS_PONTOS = "arma_ou_arco_sem_inicio_e_fim_na_mascara"
 VALOR_FORA_DOS_BITS = "valor_que_passa_dos_bits_do_modo"
+PONTO_FORA_DO_DOMINIO = "inicio_ou_fim_fora_do_dominio_do_modo"
+PATAS_FORA_DE_ORDEM = "galope_com_a_primeira_pata_depois_da_segunda"
+
+#: O domínio do início e do fim de cada modo de dois pontos, no gerador do
+#: Nielk1: a arma, início de 2 a 7 e fim até 8; o arco, fim até 8 (a zona 9
+#: é do galope, que vai até ela).
+DOMINIO_DOS_PONTOS = {0x25: (2, 7, 8), 0x22: (0, 7, 8)}
 
 #: Quantos bits o campo de valor de cada modo tem: a arma, três (força - 1); o
 #: arco, seis (força - 1 e estalo - 1); o galope, seis (as duas patas).
@@ -161,6 +169,17 @@ def violacoes(
         achadas.add(ARMA_SEM_DOIS_PONTOS)
     if lido.modo in BITS_DO_VALOR and lido.amplitude_bruta >> BITS_DO_VALOR[lido.modo]:
         achadas.add(VALOR_FORA_DOS_BITS)
+    if lido.modo in DOMINIO_DOS_PONTOS and len(lido.zonas) == 2:
+        menor, maior_inicio, maior_fim = DOMINIO_DOS_PONTOS[lido.modo]
+        inicio, fim = lido.zonas
+        if not (menor <= inicio <= maior_inicio and fim <= maior_fim):
+            achadas.add(PONTO_FORA_DO_DOMINIO)
+    if lido.modo == 0x23:
+        # o byte 3 leva a segunda pata nos bits 0-2 e a primeira nos bits 3-5;
+        # a primeira vai de 0 a 6 e a segunda vem depois dela, até 7
+        primeira, segunda = lido.amplitude_bruta >> 3 & 0x07, lido.amplitude_bruta & 0x07
+        if primeira >= segunda:
+            achadas.add(PATAS_FORA_DE_ORDEM)
     if lido.modo == 0x06 and (lido.posicao or 0) > CURSO_DO_0X06:
         achadas.add(POSICAO_FORA_DO_CURSO)
     if lido.modo == 0x27 and not (lido.zonas and 1 <= lido.zonas[0] <= 8):
@@ -349,10 +368,25 @@ class TestDecodificador:
         assert REPETE_SEM_FREQUENCIA in violacoes(lido, repete=True)
 
     def test_o_galope_le_a_frequencia_no_byte_4(self) -> None:
-        lido = decodificar(_hex("23 01 02 3F 0A 00 00 00 00 00 00"))
+        lido = decodificar(_hex("23 01 02 37 0A 00 00 00 00 00 00"))
         assert lido.zonas == (0, 9)
         assert lido.frequencia == 10
         assert violacoes(lido, repete=True) == frozenset()
+
+    def test_o_galope_com_as_patas_iguais_ou_trocadas_e_denunciado(self) -> None:
+        """As patas 7 e 7 (`0x3F`) não cabem: a primeira vai até 6, antes da segunda."""
+        for byte3 in ("3F", "3E", "00"):
+            lido = decodificar(_hex(f"23 01 02 {byte3} 0A 00 00 00 00 00 00"))
+            assert violacoes(lido, repete=True) == {PATAS_FORA_DE_ORDEM}, byte3
+
+    def test_a_arma_e_o_arco_fora_do_dominio_dos_pontos_sao_denunciados(self) -> None:
+        # arma com início 1, arma com fim 9, arco com fim 9
+        for bloco in ("25 82 00 05", "25 04 02 05", "22 01 02 2D"):
+            lido = decodificar(_hex(bloco + " 00 00 00 00 00 00 00"))
+            assert violacoes(lido) == {PONTO_FORA_DO_DOMINIO}, bloco
+        for bloco in ("25 04 01 05", "22 01 01 2D", "22 80 01 2D"):
+            lido = decodificar(_hex(bloco + " 00 00 00 00 00 00 00"))
+            assert violacoes(lido) == frozenset(), bloco
 
     def test_a_arma_le_a_forca_menos_um_no_byte_3(self) -> None:
         lido = decodificar(_hex("25 24 00 05 00 00 00 00 00 00 00"))
@@ -373,7 +407,7 @@ class TestDecodificador:
 
     def test_o_arco_e_o_galope_com_valor_fora_dos_seis_bits_sao_denunciados(self) -> None:
         arco = decodificar(_hex("22 84 00 40 00 00 00 00 00 00 00"))
-        galope = decodificar(_hex("23 01 02 40 0A 00 00 00 00 00 00"))
+        galope = decodificar(_hex("23 01 02 77 0A 00 00 00 00 00 00"))
         assert violacoes(arco) == {VALOR_FORA_DOS_BITS}
         assert violacoes(galope, repete=True) == {VALOR_FORA_DOS_BITS}
 
@@ -465,7 +499,7 @@ def test_a_regua_le_o_bloco_que_o_relatorio_manda(caso: str) -> None:
 BLOCOS_DA_SESSAO_AS_CEGAS: dict[str, tuple[int, tuple[int, ...]]] = {
     "SemiAutoGun (arma 0x25)": (0x25, (0x48, 0x00, 0x04, 0, 0, 0, 0)),
     "Bow (arco 0x22)": (0x22, (0x82, 0x00, 0x35, 0, 0, 0, 0)),
-    "Galloping (galope 0x23)": (0x23, (0x01, 0x02, 0x3F, 0x0A, 0, 0, 0)),
+    "Galloping (galope 0x23)": (0x23, (0x01, 0x02, 0x37, 0x0A, 0, 0, 0)),
     "PulseB (vibração simples 0x06)": (0x06, (40, 5, 70, 0, 0, 0, 0)),
 }
 
@@ -489,6 +523,42 @@ def test_os_blocos_do_roteiro_sao_os_dos_padroes_da_tela_no_modo_proprio() -> No
         0x25,
         build_from_name("Weapon", [inicio, fim, round(forca / 8 * 255)]).forces,
     )
+    arco = [p.default for p in _SPEC_POR_NOME["Bow"].params]
+    assert BLOCOS_DA_SESSAO_AS_CEGAS["Bow (arco 0x22)"] == (
+        0x22, _arco_do_firmware(*arco).forces,
+    )
+    inicio, fim, pata1, pata2, frequencia = (
+        p.default for p in _SPEC_POR_NOME["Galloping"].params
+    )
+    # as patas da tela encostam no domínio do galope: a primeira até 6, a
+    # segunda depois dela
+    pata1 = min(pata1, 6)
+    pata2 = max(pata1 + 1, min(pata2, 7))
+    mascara = (1 << inicio) | (1 << fim)
+    assert BLOCOS_DA_SESSAO_AS_CEGAS["Galloping (galope 0x23)"] == (
+        0x23,
+        (mascara & 0xFF, mascara >> 8, pata2 | pata1 << 3, frequencia, 0, 0, 0),
+    )
+
+
+# --- o curso inteiro da tela, não só os padrões --------------------------------
+
+#: Os efeitos de dois pontos curados em 08/10/2026: a tela deixa início e fim
+#: de 0 a 9, e o bloco tem de caber no domínio do modo em toda combinação.
+DOIS_PONTOS_CURADOS = ("Weapon", "PulseA", "PulseB")
+
+
+@pytest.mark.parametrize("nome", DOIS_PONTOS_CURADOS)
+def test_todo_inicio_e_fim_da_tela_cabe_no_modo(nome: str) -> None:
+    """Mordida: o fim do arco até 9 (a zona 9 não é do arco) reprova o PulseA."""
+    inicio_spec, fim_spec, forca_spec = _SPEC_POR_NOME[nome].params
+    for inicio in range(inicio_spec.min_value, inicio_spec.max_value + 1):
+        for fim in range(max(inicio + 1, fim_spec.min_value), fim_spec.max_value + 1):
+            for forca in (forca_spec.min_value + 1, 64, 128, forca_spec.max_value):
+                efeito = build_from_name(nome, [inicio, fim, forca])
+                assert violacoes(decodificar(bloco_de(efeito))) == frozenset(), (
+                    nome, inicio, fim, forca,
+                )
 
 
 # --- a promessa da tela: quem diz «enquanto apertado» tem de bater ------------
