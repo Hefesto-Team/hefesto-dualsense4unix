@@ -2358,6 +2358,19 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = **ainda não sei**, e é a distinção entre 'nunca tentei' e "
         "'tentei e funciona' que faz a escada de pontes parar.",
     ),
+    "Profile.estilo": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhum estilo aplicado pelo gesto da aba Perfis. O estilo é "
+        "escolha dela por perfil, e o motor do tato fica desligado no perfil sem "
+        "estilo, como antes de o estilo existir "
+        "(O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01, 09/10/2026, «a validar por "
+        "ela»). Semear um estilo poria o tato de um gênero em todo jogo.",
+    ),
+    "Profile.receita_do_tato": Nascimento(
+        E_CONTRATO,
+        "`None` = a receita do estilo inteira. É o desvio campo a campo da "
+        "bancada sobre a receita do estilo, e não há desvio a semear.",
+    ),
     "Profile.movimento": Nascimento(
         E_CONTRATO,
         "`None` = nenhuma tradução do giro. É ARRANJO, não feature: ligada sem "
