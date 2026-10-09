@@ -15,7 +15,6 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, FONE, QUARTO, ROXO, SALA, VERDE, VERMELHO
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 
 @pytest.fixture()
@@ -171,6 +170,7 @@ class PonteDeMentira:
 def tela(monkeypatch: pytest.MonkeyPatch) -> Any:
     """A 08 lendo na hora, com três adaptadores e o DualSense novo que a
     Direita está vendo: classe de controle, com sinal, sem ``Modalias``."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez, AparelhoDoBluez
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes

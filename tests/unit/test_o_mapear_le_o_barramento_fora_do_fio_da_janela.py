@@ -74,7 +74,6 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
     TECLADO,
     Gabinete,
 )
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 TETO_S = 0.05
 SONO_S = 6.0
@@ -285,6 +284,7 @@ def test_a_cerimonia_fecha_sem_esperar_o_sys(gabinete: Gabinete, disco: Path) ->
 def test_o_censo_da_aba_nao_e_lido_no_fio_da_janela(
     gabinete: Gabinete, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     pac = _pac()
     from hefesto_dualsense4unix.integrations import censo_do_barramento
 
@@ -397,6 +397,7 @@ def test_o_tique_inteiro_da_08_nao_espera_o_barramento(
     gabinete: Gabinete, disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A RÉGUA DO TIQUE INTEIRO, e não de um chamador — a cura cobre todos."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     pac = _pac()
     from hefesto_dualsense4unix.integrations import censo_do_barramento
 

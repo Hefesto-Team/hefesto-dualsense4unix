@@ -46,7 +46,6 @@ from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, SALA, VARANDA, VERDE, VERMELHO
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 PAGINA = "08-conexoes.html"
 ADAPTADORES = (SALA, QUARTO, VARANDA)
@@ -84,6 +83,7 @@ class Bancada:
     def __init__(self, a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
                  relogio: rm.Relogio, *, ordem: tuple[str, ...] = ADAPTADORES,
                  jogadores: dict[str, int] | None = None) -> None:
+        from hefesto_dualsense4unix.interface.pacotes import em_fundo
         self.a08, self.mundo, self.relogio = a08, mundo, relogio
         self.jogadores = jogadores or {}
         self.dono = bd.DonoVivo(mundo)
@@ -124,6 +124,7 @@ class Bancada:
 
     def tique(self) -> dict[str, Any]:
         """Uma volta da tela, com o BlueZ lido de novo (a leitura vale 3 s)."""
+        from hefesto_dualsense4unix.interface.pacotes import em_fundo
         em_fundo.esquecer("bluez")
         return dict(self.a08.campos_do_radio(self.ctx()))
 
@@ -170,6 +171,7 @@ def preparar_o_diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def preparar_a_tela(monkeypatch: pytest.MonkeyPatch) -> Any:
     """O pacote da 08 lendo na hora, sem nada da tela de antes nem do disco do usuário."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig

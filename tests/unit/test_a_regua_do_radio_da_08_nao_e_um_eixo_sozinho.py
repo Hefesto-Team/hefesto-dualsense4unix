@@ -38,7 +38,6 @@ import sys
 from typing import Any
 
 import pytest
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -58,6 +57,7 @@ def _pacote() -> Any:
 @pytest.fixture
 def bancada(monkeypatch: Any) -> Any:
     """A mesa de rádio DECLARADA — nunca a da máquina que roda o teste."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig

@@ -11,7 +11,6 @@ import pytest
 
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import VERMELHO
-from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 PCI = "0000:00:14.0"
 ADAPTADORES = ("aa:bb:cc:00:00:09", "aa:bb:cc:00:00:15", "aa:bb:cc:00:00:21")
@@ -39,6 +38,7 @@ def _visto(adaptador: int, aparelho: str, rssi: int, **kw: Any) -> Any:
 
 @pytest.fixture()
 def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -58,6 +58,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 def _ler(a08: Any, monkeypatch: pytest.MonkeyPatch, aparelhos: tuple[Any, ...] = (),
          varrendo: tuple[bool, bool, bool] = (False, False, False)) -> None:
     """Uma leitura nova do BlueZ: os três adaptadores, e o que eles veem."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
     lidos = tuple(AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES[i].upper(),
@@ -382,6 +383,7 @@ def test_o_painel_aberto_se_remenda_no_webkit(painel_no_webkit: list[dict[str, A
 def test_a_linha_da_08_diz_a_parte_em_que_o_tique_gastou(
         a08: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Um mapa de mentira que dorme 120 ms: a linha ``[08 lento]`` diz o mapa"""
+    from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     def mapa_lento() -> str:

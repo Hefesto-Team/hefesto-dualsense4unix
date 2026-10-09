@@ -51,7 +51,6 @@ from html.parser import HTMLParser
 from typing import Any
 
 import pytest
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -144,6 +143,7 @@ def a08() -> Any:
 
 @pytest.fixture
 def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import (
         AdaptadorDoBluez,
         AparelhoDoBluez,
@@ -530,6 +530,7 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
     o `sabido` do filtro de `_moldes_de_pergunta`, ou deixe o `sabido` só com
     o BlueZ (sem o `maquina is not None`).
     """
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
     descrito = em_fundo.ler_o_bluez
@@ -619,6 +620,7 @@ def test_o_sino_diz_so_o_que_a_tela_sabe_dizer_e_pela_hora(a08: Any) -> None:
 
 def test_o_sino_diz_desde_quando_se_mede(mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """O «desde» vem do `medida_desde` do dono, no dia e mês dela."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     monkeypatch.setattr(mesa, "_ler_o_historico", lambda: {
         "desde": "2026-09-21T08:00:00", "quedas": [],
         "diario": [{"o_que": "fila parada", "carimbo": time.time(), "adaptador": A1}]})
@@ -671,6 +673,7 @@ def test_o_microfone_da_linha_e_o_gesto_da_aba_02(mesa: Any,
 
 
 def _esperar_o_fio(mesa: Any, chave: str) -> None:
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     for _ in range(500):
         if chave not in em_fundo._FUNDO_EM_VOO:
             return
@@ -681,6 +684,7 @@ def _esperar_o_fio(mesa: Any, chave: str) -> None:
 def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
         mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """O tique logo depois do renomear pinta o nome de ANTES até a leitura nova"""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     import threading
 
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -708,6 +712,7 @@ def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
 def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
         mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """A leitura que começou ANTES de o gesto gravar leu o disco de antes: ela"""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     import threading
 
     monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)

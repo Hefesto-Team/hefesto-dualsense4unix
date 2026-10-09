@@ -53,7 +53,6 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     preparar_a_tela,
     preparar_o_diario,
 )
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINA = "08-conexoes.html"
@@ -116,6 +115,7 @@ class Casa(Bancada):
 
     def janela_nova(self) -> Any:
         """Ela fecha e abre o Hefesto: o módulo da 08 é RECARREGADO (tudo o que a"""
+        from hefesto_dualsense4unix.interface.pacotes import em_fundo
         from hefesto_dualsense4unix.interface import pacotes
 
         nome = self.a08.__name__
@@ -725,6 +725,7 @@ def test_o_dono_da_janela_nunca_grava_lapide(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A janela tem o dono dela, sem central: o mesmo sinal, visto por ele, não"""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     mundo, relogio = os_quatro_no_ar(), rm.Relogio()
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()

@@ -61,7 +61,6 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     uniqs_com_hid,
     zumbis,
 )
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -399,6 +398,7 @@ class _PonteDoServico:
 @pytest.fixture()
 def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     """A aba 08 com dois adaptadores na tela, lidos na hora, sem BlueZ de verdade."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
@@ -423,6 +423,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def _cena_da_aba(a08: Any) -> dict[str, Any]:
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     em_fundo._FUNDO.clear()

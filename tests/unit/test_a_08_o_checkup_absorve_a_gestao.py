@@ -7,7 +7,6 @@ import sys
 from typing import Any
 
 import pytest
-from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -144,6 +143,7 @@ def test_o_modo_de_conexao_e_o_chip_aceso_da_jogar(monkeypatch: pytest.MonkeyPat
 
 
 def test_o_dono_mostra_o_nome_ou_p_n() -> None:
+    from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
     pac = _pac()
     u = UNIQS[0]
     assert pac.dono_na_linha({nome_do_jogador.mac(u): "Vitória"}, u, 1) == "Vitória"
@@ -154,6 +154,7 @@ def test_o_dono_mostra_o_nome_ou_p_n() -> None:
 def test_escrever_o_dono_grava_no_alias_e_apagar_volta_ao_p_n(
         digitado: str, gravado: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: tire o `_SO_O_NUMERO` → «P2» vira nome gravado e reprova."""
+    from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
     pac = _pac()
     chamadas: list[tuple[str, str]] = []
 
@@ -299,6 +300,7 @@ def test_o_cartao_da_ordem_diz_o_que_e_e_o_que_mover() -> None:
 
 def test_o_examinar_tambem_rele_os_controles(monkeypatch: pytest.MonkeyPatch) -> None:
     """`D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`: o «Atualizar» saiu, e o «Examinar"""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     pac = _pac()
     corridas: list[bool] = []
     monkeypatch.setattr(pac, "_correr_o_exame_completo", lambda: corridas.append(True))

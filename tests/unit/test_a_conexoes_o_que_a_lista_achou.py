@@ -15,7 +15,6 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
-from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 QUATRO = (VERMELHO, AZUL, VERDE, ROXO)
 TECLADO = "aa:bb:cc:00:00:7e"
@@ -332,6 +331,7 @@ def _objeto(adaptador: int, aparelho: str, **kw: Any) -> Any:
 
 @pytest.fixture()
 def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -349,6 +349,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 def _montar(a08: Any, monkeypatch: pytest.MonkeyPatch, *, adaptadores: int = 3,
             aparelhos: tuple[Any, ...] = ()) -> None:
     """O BlueZ e o `maquina.json` da mesa declarada, com ``adaptadores`` deles."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
@@ -724,6 +725,7 @@ def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
     a08: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O adaptador em que a janela abriu passa a VARRER, e a D8 manda quem varre"""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
     _montar(a08, monkeypatch)
