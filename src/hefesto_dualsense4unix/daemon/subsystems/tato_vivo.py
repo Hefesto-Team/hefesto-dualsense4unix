@@ -106,6 +106,21 @@ class EstadoDoCanal:
     visto_ha_s: Mapping[str, float] = field(default_factory=dict)
     sessao_aberta: bool = False
     ha_jogo: bool = False
+    # Há quanto tempo a sessão de agora abriu; ``None`` quando não se viu abrir.
+    sessao_ha_s: float | None = None
+
+
+# O `visto_ha_s` do pad vem arredondado a 0,1 s, e a abertura se vê um tique depois.
+FOLGA_DA_SESSAO_S = 0.25
+
+
+def _da_sessao(idade: float | None, estado: EstadoDoCanal) -> bool:
+    """O carimbo é desta sessão. O de uma sessão que já fechou não vale mais."""
+    if idade is None:
+        return False
+    if estado.sessao_ha_s is None:
+        return True
+    return idade <= estado.sessao_ha_s + FOLGA_DA_SESSAO_S
 
 
 def decidir(canal: str, estado: EstadoDoCanal) -> bool:
@@ -121,12 +136,13 @@ def decidir(canal: str, estado: EstadoDoCanal) -> bool:
     if canal in CANAIS_DE_ESTADO and estado.sessao_aberta:
         # Escreveu há mais de 3 s: no fluxo é silêncio; no estado, o valor dele
         # segue valendo enquanto a sessão do jogo estiver aberta.
-        if idade is not None:
+        # O fecho do pad devolve a sessão, mas guarda o carimbo: só o desta conta.
+        if _da_sessao(idade, estado):
             return False
         # A volta do backend é a sessão inteira (`end_game_session_for`): se o
         # jogo pintou o OUTRO canal de estado, devolver este apagaria o dele.
         for outro in CANAIS_DE_ESTADO - {canal}:
-            if _CARIMBO_DO_CANAL[outro] in estado.visto_ha_s:
+            if _da_sessao(estado.visto_ha_s.get(_CARIMBO_DO_CANAL[outro]), estado):
                 return False
     return True
 
@@ -975,7 +991,9 @@ def ha_jogo(daemon: Any) -> bool:
     return False
 
 
-def estado_do_controle(controle: Controle, jogo: bool) -> EstadoDoCanal:
+def estado_do_controle(
+    controle: Controle, jogo: bool, sessao_ha_s: float | None = None
+) -> EstadoDoCanal:
     vpad = controle.vpad
     visto: Mapping[str, float] = {}
     with contextlib.suppress(Exception):
@@ -987,6 +1005,7 @@ def estado_do_controle(controle: Controle, jogo: bool) -> EstadoDoCanal:
         visto_ha_s=visto,
         sessao_aberta=bool(getattr(vpad, "game_open", False)),
         ha_jogo=jogo,
+        sessao_ha_s=sessao_ha_s,
     )
 
 
@@ -1092,6 +1111,8 @@ class Passo:
         self.receita_vigente: Receita = DESLIGADA
         self.jogo = False
         self._lida_em = float("-inf")
+        # Quando o pad de cada controle abriu a sessão de agora (None: já estava aberta).
+        self._aberta_em: dict[str, float | None] = {}
 
     def receita_de_agora(self, agora: float) -> Receita:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
@@ -1106,6 +1127,7 @@ class Passo:
             if self.motor.ligado:
                 self.motor.parar(agora)
             self.motor.ligado = False
+            self._aberta_em.clear()
             return 0
         self.motor.ligado = True
         controles = controles_do_daemon(self.daemon)
@@ -1114,8 +1136,21 @@ class Passo:
                 self.motor.anotar(evento)
         self._ouvir_o_jogo(receita, controles)
         jogo = self.jogo = ha_jogo(self.daemon)
-        por_uniq = {c.uniq: estado_do_controle(c, jogo) for c in controles}
+        por_uniq = {
+            c.uniq: estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)) for c in controles
+        }
         return self.motor.tique(agora, por_uniq.get, receita)
+
+    def _sessao_ha_s(self, controle: Controle, agora: float) -> float | None:
+        """A idade da sessão aberta, vista abrir por este passo; ``None`` se não se viu."""
+        aberta = bool(getattr(controle.vpad, "game_open", False))
+        if not aberta:
+            self._aberta_em[controle.uniq] = agora
+            return None
+        if controle.uniq not in self._aberta_em:
+            self._aberta_em[controle.uniq] = None
+        desde = self._aberta_em[controle.uniq]
+        return None if desde is None else max(0.0, agora - desde)
 
     def _ouvir_o_jogo(self, receita: Receita, controles: Sequence[Controle]) -> None:
         """Sobe o ouvido quando a receita pede o som, e leva cada estalo a quem atirou."""

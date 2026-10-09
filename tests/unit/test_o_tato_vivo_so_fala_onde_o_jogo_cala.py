@@ -102,6 +102,31 @@ def test_o_rumble_que_o_jogo_pede_e_sinal_e_nao_veto() -> None:
     assert tv.decidir(tv.CANAL_HAPTICA, estado) is True
 
 
+# O pad guarda o carimbo depois do UHID_CLOSE: só o da sessão de agora cala o estado.
+@pytest.mark.parametrize("canal", sorted(tv.CANAIS_DE_ESTADO))
+@pytest.mark.parametrize(
+    ("carimbo_ha_s", "sessao_ha_s", "escreve"),
+    [
+        (10.0, 2.0, True),    # o jogo pintou na sessão que fechou
+        (5.0, 8.0, False),    # pintou nesta sessão, há mais de 3 s: o valor dele vale
+        (10.0, None, False),  # não se viu a sessão abrir: na dúvida, o jogo manda
+    ],
+)
+@pytest.mark.parametrize("de_quem", ["proprio", "outro"])
+def test_o_carimbo_da_sessao_que_fechou_nao_cala_o_estado(
+    canal: str, carimbo_ha_s: float, sessao_ha_s: float | None, escreve: bool, de_quem: str
+) -> None:
+    alvo = canal if de_quem == "proprio" else next(iter(tv.CANAIS_DE_ESTADO - {canal}))
+    estado = tv.EstadoDoCanal(
+        modo=tv.MODO_DUALSENSE,
+        visto_ha_s={_CARIMBO[alvo]: carimbo_ha_s},
+        sessao_aberta=True,
+        ha_jogo=True,
+        sessao_ha_s=sessao_ha_s,
+    )
+    assert tv.decidir(canal, estado) is escreve
+
+
 def test_o_modo_vem_do_pad_virtual() -> None:
     assert tv.modo_do_pad(None) == tv.MODO_NATIVO
     assert tv.modo_do_pad(SimpleNamespace(backend="uhid")) == tv.MODO_DUALSENSE
@@ -345,6 +370,32 @@ def test_no_modo_nativo_o_passo_nao_escreve(monkeypatch: pytest.MonkeyPatch) -> 
     passo(0.0)
     assert luz.escritas == []
     assert motor.contadores["recusas_do_modo"] == 4
+
+
+def _pads(daemon: Any) -> list[Pad]:
+    return [daemon._gamepad_device, *(j.vpad for j in daemon._coop_manager._players.values())]
+
+
+@pytest.mark.parametrize(("vista_abrir", "escreve"), [(True, True), (False, False)])
+def test_o_passo_ve_a_sessao_abrir_e_esquece_o_carimbo_da_anterior(
+    monkeypatch: pytest.MonkeyPatch, vista_abrir: bool, escreve: bool
+) -> None:
+    monkeypatch.setattr(tv, "receita_ativa", lambda daemon: _LIGADA)
+    daemon, leitores = _mesa(backend="uhid")
+    for pad in _pads(daemon):
+        # A barra foi do jogo na sessão de antes; o pad fechou e guardou o carimbo.
+        pad.visto_ha_s = {"lightbar": 10.0}
+        pad.game_open = not vista_abrir
+    luz = AtuadorDeMentira(tv.CANAL_LUZ)
+    passo = tv.Passo(daemon, tv.TatoVivo([luz]))
+    passo(0.0)
+    for pad in _pads(daemon):
+        pad.game_open = True
+    passo(0.02)
+    _apertar_todos(daemon, leitores, 255)
+    passo(0.04)
+    passo(0.06)
+    assert sorted(u for u, _ in luz.escritas) == (sorted(QUATRO) if escreve else [])
 
 
 def test_receita_desligada_o_passo_nao_le_controle_nenhum(
