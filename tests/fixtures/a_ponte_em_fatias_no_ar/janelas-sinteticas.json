@@ -1,0 +1,178 @@
+[
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "1",
+  "rotulo": "porta direta",
+  "controles": 1,
+  "pontes": 0,
+  "hz": {
+   "controle 1": 750.0
+  },
+  "acl_rx_por_s": 750.0,
+  "acl_tx_por_s": 0.0,
+  "mestre": {
+   "controle 1": true
+  },
+  "pontes_de_pe": 0.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "1",
+  "rotulo": "porta direta",
+  "controles": 1,
+  "pontes": 1,
+  "hz": {
+   "controle 1": 656.25
+  },
+  "acl_rx_por_s": 656.25,
+  "acl_tx_por_s": 93.75,
+  "mestre": {
+   "controle 1": true
+  },
+  "pontes_de_pe": 1.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "1",
+  "rotulo": "porta direta",
+  "controles": 2,
+  "pontes": 0,
+  "hz": {
+   "controle 1": 375.0,
+   "controle 2": 375.0
+  },
+  "acl_rx_por_s": 750.0,
+  "acl_tx_por_s": 0.0,
+  "mestre": {
+   "controle 1": true,
+   "controle 2": true
+  },
+  "pontes_de_pe": 0.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "1",
+  "rotulo": "porta direta",
+  "controles": 2,
+  "pontes": 1,
+  "hz": {
+   "controle 1": 330.0,
+   "controle 2": 326.25
+  },
+  "acl_rx_por_s": 656.25,
+  "acl_tx_por_s": 93.75,
+  "mestre": {
+   "controle 1": true,
+   "controle 2": true
+  },
+  "pontes_de_pe": 1.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "1",
+  "rotulo": "porta direta",
+  "controles": 2,
+  "pontes": 2,
+  "hz": {
+   "controle 1": 281.25,
+   "controle 2": 281.25
+  },
+  "acl_rx_por_s": 562.5,
+  "acl_tx_por_s": 187.5,
+  "mestre": {
+   "controle 1": true,
+   "controle 2": true
+  },
+  "pontes_de_pe": 2.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "1",
+  "rotulo": "porta direta",
+  "controles": 2,
+  "pontes": 2,
+  "hz": {
+   "controle 1": 375.0,
+   "controle 2": 375.0
+  },
+  "acl_rx_por_s": 750.0,
+  "acl_tx_por_s": 0.0,
+  "mestre": {
+   "controle 1": true,
+   "controle 2": true
+  },
+  "pontes_de_pe": 2.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": false,
+  "motivo": "a ponte pedida ficou de pé em 3 de 30 segundos"
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "2",
+  "rotulo": "atrás do hub",
+  "controles": 1,
+  "pontes": 0,
+  "hz": {
+   "controle 1": 656.0
+  },
+  "acl_rx_por_s": 656.0,
+  "acl_tx_por_s": 0.0,
+  "mestre": {
+   "controle 1": false
+  },
+  "pontes_de_pe": 0.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ },
+ {
+  "instrumento": "a_ponte_em_fatias_no_ar",
+  "versão": 1,
+  "adaptador": "2",
+  "rotulo": "atrás do hub",
+  "controles": 1,
+  "pontes": 1,
+  "hz": {
+   "controle 1": 468.5
+  },
+  "acl_rx_por_s": 468.5,
+  "acl_tx_por_s": 93.75,
+  "mestre": {
+   "controle 1": false
+  },
+  "pontes_de_pe": 1.0,
+  "sinal": "-60 dBFS",
+  "segundos": 30.0,
+  "valida": true,
+  "motivo": ""
+ }
+]

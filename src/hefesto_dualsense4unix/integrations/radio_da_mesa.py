@@ -362,6 +362,10 @@ N_MAX_PONTES = 2
 
 HZ_DA_PONTE = 93.75
 
+#: Fatias que um relatório da ponte (o ``0x36``, 403 B no ar) ocupa: 3 num 3-DH3, 5 num 2-DH5.
+#: Provisório: o pacote não se vê pelo HCI do host, e o ``k`` sai do deslocamento da entrada
+#: (``scripts/ensaios/a_ponte_em_fatias_no_ar.py``). Gravada a tabela da bancada em
+#: ``tests/fixtures/a_ponte_em_fatias_no_ar/bancada.json``, este número segue o ``k`` dela.
 FATIAS_DA_PONTE = 3
 
 FATIAS_POR_RELATORIO_DE_ENTRADA = 2

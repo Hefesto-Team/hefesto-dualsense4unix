@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import importlib
+import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -246,3 +248,20 @@ def test_ponte_que_levanta_ao_ser_perguntada_fica_de_fora() -> None:
     sub._pontes = {"aabbcc000001": _Quebrada()}
     sub._modo_da_ponte = {"aabbcc000001": "som"}
     assert sub.pontes_de_pe() == {}
+
+
+def test_o_k_da_ponte_segue_a_tabela_da_bancada() -> None:
+    """A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01: o ``FATIAS_DA_PONTE`` é o ``k`` que a bancada grava.
+
+    Sem ``tests/fixtures/a_ponte_em_fatias_no_ar/bancada.json`` o ``k`` é provisório no CSV; com
+    ela, a constante, o CSV e o desenho dizem o ``k`` medido, e voltar o 3 antigo reprova.
+    """
+    caminho = RAIZ / "scripts" / "ensaios" / "a_ponte_em_fatias_no_ar.py"
+    spec = importlib.util.spec_from_file_location("_orcamento_a_ponte_em_fatias_no_ar", caminho)
+    assert spec is not None and spec.loader is not None
+    ensaio = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = ensaio
+    spec.loader.exec_module(ensaio)
+    assert ensaio.conferir_a_constante(
+        ensaio.gravada(), fatias=rm.FATIAS_DA_PONTE, procedencia=ensaio.procedencia_do_k(),
+        marginal=ensaio.marginal_do_desenho()) == []
