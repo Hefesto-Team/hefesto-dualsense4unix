@@ -1048,14 +1048,19 @@ def estado_do_controle(
 
 
 def receita_ativa(daemon: Any) -> Receita:
-    """A receita do perfil ativo. Sem perfil, ou sem receita, desligada."""
+    """A receita do perfil ativo, lida da vista (o computador por baixo do jogo).
+
+    Sem perfil, ou sem receita, desligada.
+    """
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     if not isinstance(nome, str) or not nome:
         return DESLIGADA
     try:
-        from hefesto_dualsense4unix.profiles.loader import load_profile
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            carregar_o_que_vale,
+        )
 
-        perfil = load_profile(nome)
+        perfil = carregar_o_que_vale(nome)
     except Exception:
         logger.debug("tato_vivo_perfil_ilegivel", exc_info=True)
         return DESLIGADA
