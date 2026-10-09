@@ -177,10 +177,16 @@ class TestONascimentoVemDoUdev:
             relogio=lambda: self.AGORA,
         ) is None
 
-    def test_resposta_que_nao_e_numero_e_nao_sei(self) -> None:
+    @pytest.mark.parametrize("resposta", ["abc", "", "-5", "12.5", "²", "١٢٣"])
+    def test_resposta_que_nao_e_numero_e_nao_sei(self, resposta: str) -> None:
+        """Só dígito ASCII é instante: o resto é «não respondeu», sem levantar.
+
+        MORDIDA: tirar o ``isascii()`` da conferência faz o ``"²"`` (que é
+        ``isdigit``) chegar ao ``int`` e levantar ``ValueError`` aqui.
+        """
         assert sb.nascimentos_do_udev(
             [_no_radio("0029", "/dev/hidraw7")],
-            perguntar=self._responde({"hidraw7": "abc"}),
+            perguntar=self._responde({"hidraw7": resposta}),
             relogio=lambda: self.AGORA,
         ) is None
 

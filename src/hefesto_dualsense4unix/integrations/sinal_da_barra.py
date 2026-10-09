@@ -378,10 +378,11 @@ def nascimentos_do_udev(
             continue
         perguntou += 1
         no = os.path.basename(viva.hidraw)
-        try:
-            quando = int(pergunta(f"/sys/class/hidraw/{no}", "USEC_INITIALIZED") or "") / 1e6
-        except ValueError:
+        usec = pergunta(f"/sys/class/hidraw/{no}", "USEC_INITIALIZED") or ""
+        # O udev escreve o instante em dígitos ASCII; o resto é «não respondeu».
+        if not (usec.isascii() and usec.isdigit()):
             continue
+        quando = int(usec) / 1e6
         respondeu += 1
         if desde_s > 0 and quando < agora - desde_s:
             continue
