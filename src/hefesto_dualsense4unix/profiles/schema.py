@@ -153,6 +153,29 @@ class TriggerConfig(BaseModel):
                     )
         return value
 
+    @model_validator(mode="after")
+    def _vibracao_por_posicao_antiga_carrega_no_piso(self) -> TriggerConfig:
+        """O perfil de antes da recusa da frequência 0 carrega com a frequência 40.
+
+        `multi_position_vibration` recusa frequência 0 com amplitude (o controle lê o
+        bloco como desligado), e o perfil gravado antes disso só explodia no `apply()`,
+        derrubando o perfil inteiro por causa de um gatilho. Aqui, onde o perfil
+        nasce, a frequência 0 com alguma amplitude vira a do padrão da tela (40), sem
+        aviso, como os outros perfis antigos. Só o formato simples guarda a frequência
+        (na posição 0, a que o `build_from_name` lê); o aninhado já sai com 40.
+        Frequência não zero e amplitudes todas 0 ficam como estão.
+        """
+        if self.mode != "MultiPositionVibration" or not self.params or self.is_nested:
+            return self
+        simples = [int(x) for x in self.params if isinstance(x, int)]
+        if simples and simples[0] == 0 and any(x > 0 for x in simples[1:]):
+            from hefesto_dualsense4unix.core.trigger_effects import (
+                FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO,
+            )
+
+            self.params = [FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO, *simples[1:]]
+        return self
+
     @property
     def is_nested(self) -> bool:
         """True quando `params` está no formato aninhado `list[list[int]]`."""
