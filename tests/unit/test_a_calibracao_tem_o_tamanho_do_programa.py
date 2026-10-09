@@ -84,7 +84,11 @@ MEDIR = """() => {
               .map(e => sel + ' ' + e.scrollWidth + '>' + e.clientWidth)),
           corpo_rola_na_vertical: miolo ? miolo.scrollHeight > miolo.clientHeight : null,
           inverter: [...document.querySelectorAll('.inverter')].map(g => {
-            const m = g.closest('.mira').getBoundingClientRect();
+            const mira = g.closest('.mira'), m = mira.getBoundingClientRect();
+            // A CAIXA DE DENTRO do cartão: a borda e o recuo saem, o resto é do botão.
+            const st = getComputedStyle(mira);
+            const dentro_esq = m.left + parseFloat(st.borderLeftWidth) + parseFloat(st.paddingLeft);
+            const dentro_dir = m.right - parseFloat(st.borderRightWidth) - parseFloat(st.paddingRight);
             const bs = [...g.querySelectorAll('.sw')].map(b => b.getBoundingClientRect());
             return {n: bs.length,
                     empilhado: bs.length === 2 && bs[1].top >= bs[0].bottom - 1
@@ -93,7 +97,8 @@ MEDIR = """() => {
                     dentro: bs.every(b => b.left >= m.left && b.right <= m.right + 0.5),
                     cortado: [...g.querySelectorAll('.sw')]
                                .some(b => b.scrollWidth > b.clientWidth),
-                    cheio: bs.every(b => Math.abs((b.left - m.left) - (m.right - b.right)) <= 1)};
+                    cheio: bs.every(b => Math.abs(b.left - dentro_esq) <= 1
+                                         && Math.abs(dentro_dir - b.right) <= 1)};
           }),
           rola_a_pagina: d.scrollHeight > d.clientHeight,
           cartoes: document.querySelectorAll('[data-bloco="controles"] .ctr').length};
@@ -216,8 +221,9 @@ def test_o_inverter_fica_empilhado_na_largura_inteira_do_cartao(
 def test_o_miolo_nao_rola_na_vertical(medido: dict[str, Any], vista: str) -> None:
     """Com o par empilhado o cartão cresce: o miolo da Calibrar continua sem barra vertical."""
     for mesa in ("dois", *MESAS):
-        assert medido[vista][mesa]["corpo_rola_na_vertical"] is not True, (
-            f"na vista {vista} ({mesa}) o miolo da Calibrar ganhou barra vertical")
+        assert medido[vista][mesa]["corpo_rola_na_vertical"] is False, (
+            f"na vista {vista} ({mesa}) o miolo da Calibrar ganhou barra vertical "
+            f"(None: a página não tem `.corpo`, e a régua não mediu nada)")
 
 
 @pytest.mark.parametrize("vista", VISTAS)
