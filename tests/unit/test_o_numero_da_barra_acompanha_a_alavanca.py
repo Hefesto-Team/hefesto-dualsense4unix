@@ -351,3 +351,37 @@ def test_o_arrasto_leva_o_numero_e_a_recusa_devolve_os_dois(a03: Any) -> None:
     voltou = (pousou[2]["alavanca"], pousou[2]["num"], pousou[2]["cheio"])
     assert voltou == ("3", "3", antes[2]["cheio"]), (
         f"a recusa deixou a tela no 7 com o aparelho no 3: {pousou[2]}")
+
+
+def test_a_forma_le_a_alavanca_mesmo_com_o_texto_do_numero_velho(a03: Any) -> None:
+    """O gesto recolhe a coluna pela alavanca, nunca pelo texto do `.num`.
+
+    O seguir da alavanca já põe o texto em dia a cada arrasto; esta régua guarda a segunda
+    metade da cura, que as outras não separam: se qualquer pintura deixar o texto do número
+    atrás da alavanca (o bloco adiado pelo voo, ou um tique que pinte o `aj-val-*` pelo
+    campo), a forma ainda manda o que a mão pôs. Medido na conferência (09/10/2026): tirar só
+    o `par ? String(par.value)` da forma passava nas duas réguas de cima.
+
+    A MORDIDA: na forma do BOOTSTRAP, troque o `par ? String(par.value)` por
+    `false ? String(par.value)`: o gesto da Frequência leva a Força pelo texto, 3, e não 8.
+    """
+    ctx = _ctx()
+    carga = _carga(a03, ctx)
+    numero_velho = ("(function(){ const n = document.querySelector(" + json.dumps(CAIXA)
+                    + " + ' .barra[data-ajuste=\"e-2\"] .num'); n.textContent = '3';"
+                    " return JSON.stringify(window.__ler()); })()")
+    saidas = _no_webkit([
+        lambda _s: _pintar(carga),
+        lambda _s: _so_o_arrasto(2, 8),
+        lambda _s: numero_velho,
+        lambda _s: "JSON.stringify(window.__esvaziar())",
+        lambda _s: _arrastar(3, 50),
+        lambda _s: "JSON.stringify(window.__esvaziar())",
+    ])
+    assert saidas[2][2] == {**saidas[2][2], "alavanca": "8", "num": "3"}, saidas[2]
+    formas = [o.get("forma") or {} for o in map(json.loads, saidas[5])
+              if o.get("gesto") == "ajuste"]
+    assert len(formas) == 1, saidas[5]
+    assert formas[0].get("aj-val-e-2") == "8", (
+        f"a forma leu o texto do número, e não a alavanca: {formas[0]}")
+    assert formas[0].get("aj-val-e-3") == "50", formas[0]
