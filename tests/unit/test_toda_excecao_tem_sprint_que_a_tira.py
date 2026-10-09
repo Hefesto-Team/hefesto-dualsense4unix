@@ -317,6 +317,11 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "os três handlers auditados, cada um com a derivação certa da sua fonte"),
     "tests/unit/test_release_workflow_nomes_e_portoes.py::PUBLICADORES_DE_HOJE": (
         "o piso dos publicadores que o detector tem de reconhecer"),
+    "tests/unit/test_o_232_nao_volta_aos_textos.py::ISENCOES_DE_ARQUIVO": (
+        "o texto bruto de 23/09 e as sprints que contam a troca do número: história, não "
+        "afirmação, e cada isenção ainda contém o número (a régua reprova a isenção morta)"),
+    "tests/unit/test_o_232_nao_volta_aos_textos.py::ISENCOES_DE_LINHA": (
+        "a linha do desenho e da página publicada que NEGA o número («no lugar do 232%»)"),
     "tests/unit/test_o_bluez_nao_manda_apagar_o_cache.py::_ISENTOS": (
         "a ponte privilegiada é o único lugar que apaga o cache da origem em disco, dentro do "
         "`_apagar` que recusa tudo fora da forma esperada: é o que o BlueZ não expõe, não um "
