@@ -2,11 +2,16 @@
 from __future__ import annotations
 
 import asyncio
+import time
+import types
 from typing import Any
 
 import pytest
 
 from hefesto_dualsense4unix.core.controller import OutputSpec
+from hefesto_dualsense4unix.daemon.lifecycle import ADIADO_LOCK_MANUAL, Daemon
+from hefesto_dualsense4unix.daemon.subsystems import mouse as sub_mouse
+from hefesto_dualsense4unix.daemon.subsystems.mouse import trocar_a_tabela_no_jogo
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles import manager as manager_mod
@@ -137,6 +142,16 @@ def _anotador() -> tuple[dict[str, list[Any]], dict[str, Any]]:
                      "rumble_policy_applier", "rumble_passthrough_applier",
                      "speaker_applier", "mic_applier")
     }
+    anota_a_supressao = appliers["suppression_applier"]
+
+    def _supressao(*args: Any, **kwargs: Any) -> str:
+        # O `apply_profile_suppression` do daemon entrega o perfil ao dono da
+        # chave «Também no jogo» e do «Só dentro do jogo» ANTES de tudo (ver
+        # `test_o_applier_da_supressao_entrega_o_perfil_ao_dono_da_tabela`).
+        trocar_a_tabela_no_jogo(types.SimpleNamespace(), kwargs["profile"])
+        return str(anota_a_supressao(*args, **kwargs))
+
+    appliers["suppression_applier"] = _supressao
     return chegou, appliers
 
 
@@ -230,3 +245,22 @@ def test_o_profile_reaplicar_do_daemon_nao_arma_a_trava_da_troca_a_mao() -> None
     (_args, kwargs), = chegou["mode_applier"]
     assert kwargs["origin"] == "manual", (
         "o «Aplicar» é gesto dela: a R-04 vale igual à da ativação")
+
+
+def test_o_applier_da_supressao_entrega_o_perfil_ao_dono_da_tabela(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O applier real chama `trocar_a_tabela_no_jogo` com o perfil, mesmo sob a trava manual."""
+    recebidos: list[Any] = []
+    monkeypatch.setattr(sub_mouse, "trocar_a_tabela_no_jogo",
+                        lambda _daemon, perfil: recebidos.append(perfil))
+    perfil = _o_perfil_inteiro()
+    daemon = types.SimpleNamespace(_suppress_manual_ts=time.monotonic())
+
+    desfecho = Daemon.apply_profile_suppression(
+        daemon, True, profile=perfil, origin="autoswitch")
+
+    assert desfecho == ADIADO_LOCK_MANUAL
+    assert recebidos == [perfil], (
+        "o applier da supressão não entregou o perfil ao dono da tabela no jogo: "
+        "a chave «Também no jogo» e o «Só dentro do jogo» não andam no «Aplicar»")
