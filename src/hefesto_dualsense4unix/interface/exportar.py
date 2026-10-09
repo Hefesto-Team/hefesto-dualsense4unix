@@ -21,15 +21,15 @@ linhas = [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().spli
 NOME = {p["id"]: p["nome"] for p in csv.DictReader(linhas)}
 
 GRUPOS = [
-    ("chassi",     "CHASSI",              ["corpo", "aresta-topo"]),
-    ("face",       "BOTÕES DA FACE",      ["triangle", "circle", "square", "cross"]),
-    ("direcional", "DIRECIONAL",          ["dpad_up", "dpad_right", "dpad_down", "dpad_left"]),
-    ("ombros",     "OMBROS E GATILHOS",   ["l1", "l2", "r1", "r2"]),
-    ("analogicos", "ANALÓGICOS",          ["stick_l", "stick_r"]),
-    ("centro",     "CENTRO",              ["touchpad", "share", "options", "ps", "mic"]),
-    ("luzes",      "LUZES",               ["lightbar", "led-jogador"]),
-    ("audio",      "ÁUDIO",               ["alto-falante"]),
-    ("invisiveis", "SENSORES E MOTORES (não aparecem no mapa)",
+    ("chassi",     "Chassi",              ["corpo", "aresta-topo"]),
+    ("face",       "Botões da face",      ["triangle", "circle", "square", "cross"]),
+    ("direcional", "Direcional",          ["dpad_up", "dpad_right", "dpad_down", "dpad_left"]),
+    ("ombros",     "Ombros e gatilhos",   ["l1", "l2", "r1", "r2"]),
+    ("analogicos", "Analógicos",          ["stick_l", "stick_r"]),
+    ("centro",     "Centro",              ["touchpad", "share", "options", "ps", "mic"]),
+    ("luzes",      "Luzes",               ["lightbar", "led-jogador"]),
+    ("audio",      "Áudio",               ["alto-falante"]),
+    ("invisiveis", "Sensores e motores (não aparecem no mapa)",
                    ["feat-giroscopio", "feat-acelerometro", "feat-bateria",
                     "feat-rumble-esquerdo", "feat-rumble-direito"]),
 ]
@@ -116,7 +116,7 @@ for gid, titulo, pids in GRUPOS:
                      + "\n".join(dentro) + "\n  </g>")
 
 if glifos:
-    corpo.append('  <g id="grupo-glifos"><title>GLIFOS (o símbolo de cada peça)</title>\n'
+    corpo.append('  <g id="grupo-glifos"><title>Glifos (o símbolo de cada peça)</title>\n'
                  + "\n".join(glifos) + "\n  </g>")
 
 import sys as _sys  # noqa: E402

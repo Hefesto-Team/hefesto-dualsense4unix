@@ -170,22 +170,6 @@ SIGLA = frozenset({
 
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 DIVIDA: dict[str, tuple[str, str]] = {
-    # -- os rótulos de grupo do desenho do DualSense --------------------------
-    "CHASSI": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "BOTÕES": ("rótulo de grupo do SVG («BOTÕES DA FACE»)", "interface/exportar.py"),
-    "DA": ("rótulo de grupo do SVG («BOTÕES DA FACE»)", "interface/exportar.py"),
-    "FACE": ("rótulo de grupo do SVG («BOTÕES DA FACE»)", "interface/exportar.py"),
-    "DIRECIONAL": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "OMBROS": ("rótulo de grupo do SVG («OMBROS E GATILHOS»)", "interface/exportar.py"),
-    "GATILHOS": ("rótulo de grupo do SVG («OMBROS E GATILHOS»)", "interface/exportar.py"),
-    "ANALÓGICOS": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "CENTRO": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "ÁUDIO": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "SENSORES": ("rótulo de grupo do SVG («SENSORES E MOTORES»)", "interface/exportar.py"),
-    "MOTORES": ("rótulo de grupo do SVG («SENSORES E MOTORES»)", "interface/exportar.py"),
-    "GLIFOS": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "LUZES": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    "INTEIRO": ("ênfase na dica do giroscópio", "interface/exportar.py · aba01"),
     "MULTIPLICA": ("ênfase na dica da força", "aba05 · a05_vibracao"),
     "ESTE": ("ênfase na dica de ignorar", "aba08 · a08_conexoes"),
     "DERIVADO": ("ênfase na dica da cor do jogador", "aba02 · a02_controles"),
