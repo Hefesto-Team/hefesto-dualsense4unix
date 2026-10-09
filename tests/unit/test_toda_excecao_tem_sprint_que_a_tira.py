@@ -199,7 +199,7 @@ def catraca(achadas: dict[str, Lista], dividas: dict[str, int]) -> list[str]:
 
 DIVIDAS: dict[str, int] = {
     "scripts/check_a_cor_vem_do_aparelho.py::ISENCOES": 0,
-    "scripts/check_a_maiuscula_decorativa.py::DIVIDA": 34,
+    "scripts/check_a_maiuscula_decorativa.py::DIVIDA": 19,
     "scripts/check_a_tela_nao_confessa.py::A_DIVIDA": 2,
     "scripts/check_cabo_bt_perfil_controle.py::A_DIVIDA_CONHECIDA": 1,
     "scripts/check_identidade_vem_de_cima.py::ISENCOES": 0,
