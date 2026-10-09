@@ -402,6 +402,36 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "fluxo dela passa por aqui; se um dia ela pedir o tempo na tela, vira "
         "promessa com porta."
     ),
+    "HEFESTO_DUALSENSE4UNIX_ORDEM_DOS_NOS": (
+        "09/10/2026, O-SOM-DE-CADA-PAD-NA-ORDEM-DO-HIDRAW-01 — a ordem dos nós de háptica: assento, assento-sem-refazer ou endereco (integrations/endpoint_de_haptica.py, `INTERRUPTOR_DA_ORDEM_DOS_NOS`). Interruptor da bancada dela: o padrão é a "
+        "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
+        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "fluxo dela passa por aqui; a decisão está «a validar por ela»."
+    ),
+    "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO": (
+        "09/10/2026, A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01 — o gatilho que o jogo manda na graça: guarda ou descarta (integrations/uhid_gamepad.py, `_INTERRUPTOR_DA_GRACA`). Interruptor da bancada dela: o padrão é a "
+        "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
+        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "fluxo dela passa por aqui; a decisão está «a validar por ela»."
+    ),
+    "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO_S": (
+        "09/10/2026, A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01 — o prazo da graça, de 0 a 5 s (integrations/uhid_gamepad.py, `_INTERRUPTOR_DO_PRAZO_DA_GRACA`). Interruptor da bancada dela: o padrão é a "
+        "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
+        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "fluxo dela passa por aqui; a decisão está «a validar por ela»."
+    ),
+    "HEFESTO_DUALSENSE4UNIX_REPLICA_DO_GATILHO": (
+        "09/10/2026, A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01 — a réplica do gatilho: sequencia ou coalescido (integrations/uhid_gamepad.py, `_INTERRUPTOR_DA_REPLICA_DO_GATILHO`). Interruptor da bancada dela: o padrão é a "
+        "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
+        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "fluxo dela passa por aqui; a decisão está «a validar por ela»."
+    ),
+    "HEFESTO_DUALSENSE4UNIX_RECOLHER_O_CEDIDO": (
+        "09/10/2026, O-PAD-CEDIDO-AO-P1-NAO-FALA-COM-O-APARELHO-QUE-CEDEU-01 — o recolhimento do pad cedido: calado ou com-parada (daemon/subsystems/coop.py, `INTERRUPTOR_DO_RECOLHIMENTO`). Interruptor da bancada dela: o padrão é a "
+        "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
+        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "fluxo dela passa por aqui; a decisão está «a validar por ela»."
+    ),
 }
 
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
@@ -1131,6 +1161,21 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # 09/10/2026, leva 1-11, costura do pads-1-14: as duas do multi-1-14, que nasceram para a bancada B9.
+    "integrations/radio_da_mesa.py::ordem_de_ceder": (
+        "09/10/2026 — o degrau do meio antes do corte inteiro (A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01). "
+        "O caminho se perde no governador do rádio, que ainda corta a ponte inteira: o "
+        "`DEGRAU_DO_MEIO_LIGADO` nasceu `False` (integrations/radio_da_mesa.py:654) até a "
+        "bancada de quatro com ponte dela. Fecha quando a medida ligar o degrau e o "
+        "governador chamar esta ordem."
+    ),
+    "integrations/receptor_sem_fio.py::frase_do_fim": (
+        "09/10/2026 — a frase da causa medida quando a procura da faixa termina sem faixa "
+        "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio `scripts/ensaios/a_faixa_do_receptor.py` "
+        "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` (interface/pacotes/a08_conexoes.py:4353, "
+        "`_andar_a_descoberta`). Fecha quando a bancada B9 confirmar as causas e a 08 "
+        "trocar a frase genérica por esta, que é mudança visível e passa pelo desenho."
+    ),
 
 
     # pintando a volta com `state_full["rumble_motores"]`". A ONDA2-05 fez as
