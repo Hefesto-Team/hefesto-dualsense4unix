@@ -194,7 +194,7 @@ mesmo modo. A leitura que reconcilia as duas é que o indicador é uma
 | **vermelha piscando** | **bootloader / atualização** |
 
 **[FABRICANTE]** para as linhas; **MÉDIA** para a reconciliação, que é leitura e
-não citação. Bate com o que `docs/protocol/externos-referencia-canonica.md:753`
+não citação. Bate com o que `docs/protocol/externos-referencia-canonica.md:798`
 já registrava.
 
 `Start` sozinho **liga no último modo usado** e reconecta ao aparelho já

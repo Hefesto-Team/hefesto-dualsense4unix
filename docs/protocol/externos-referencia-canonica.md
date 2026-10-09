@@ -810,7 +810,7 @@ nunca foi olhada neste projeto**. Fecha com cinco segundos de olho de quem confe
 > - **o que a página não dizia, e é o achado:** o plástico **tem** luzes de
 >   identificação de jogador, como as do Pro. E o **driver não as expõe** — o
 >   `hid-playstation` registra `player_leds[5]` só no caminho do DualSense
->   (`assets/dkms/hid-playstation/hid-playstation.c:250-252` e o laço de
+>   (`assets/dkms/hid-playstation/hid-playstation.c:297-299` e o laço de
 >   registro em `:1946`); no caminho do DualShock 4 existe **só** `lightbar_leds`
 >   (`:2348`). Isso é correto para o DS4 da Sony, que de fato não tem a barra, e
 >   **errado como descrição do 8BitDo**, que é um clone com quatro luzes no
@@ -1116,7 +1116,7 @@ linha de grau baixo, isso é dívida e tem de estar à vista.**
 
 | caminho | escreve o quê | onde | estado |
 |---|---|---|---|
-| `apply_player_number` (`core/external_leds.py:306`) | número do jogador, lâmpada por lâmpada | `sysfs` | **DESLIGADO** desde 07/08 02:59 |
+| `apply_player_number` (`core/external_leds.py:366`) | número do jogador, lâmpada por lâmpada | `sysfs` | **DESLIGADO** desde 07/08 02:59 |
 | `enable_imu` (`core/external_leds.py:147`) | pacote cru de 12 bytes | `hidraw` | vivo, **só por USB** |
 
 ### 7.2 O que o produto apoia, e em que grau

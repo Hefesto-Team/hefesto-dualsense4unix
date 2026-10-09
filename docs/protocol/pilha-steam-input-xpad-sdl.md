@@ -223,7 +223,7 @@ fuzz 16 e flat 128; gatilhos `0..255` (`0..1023` no Xbox One); direcional
 `xpad.c:1743`). Um aparelho, um nó, sete eixos.
 
 **A consequência para este projeto, e é ela que custa:** a máscara Xbox 360
-(`045e:028e`, `integrations/uinput_gamepad.py:54-56`) **não tem onde pôr**
+(`045e:028e`, `integrations/uinput_gamepad.py:58-60`) **não tem onde pôr**
 giroscópio, touchpad, lightbar RGB, gatilhos adaptativos ou bateria. Não é bug
 nosso nem falta de trabalho: é o formato do aparelho que estamos imitando.
 Quem escolhe a máscara Xbox escolhe **rumble por evdev que funciona em tudo** e
@@ -330,7 +330,7 @@ Três funções, todas em `libsdl-org/SDL` branch `main`:
 
   ATENÇÃO: **no macOS o critério é `045e:028e` com `version == 0`** — que é
   exatamente o par da máscara Xbox 360 deste projeto
-  (`integrations/uinput_gamepad.py:54-55`). No Linux isso **não** acontece, e
+  (`integrations/uinput_gamepad.py:58-59`). No Linux isso **não** acontece, e
   esta página só se responsabiliza pelo Linux; mas quem um dia portar o projeto
   precisa saber que a colisão existe. **GRAU: ALTA.**
 
@@ -375,7 +375,7 @@ Leia a ordem: **para o par `28de:11ff`, a função retorna antes de consultar
 
 - com `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` **ausente ou 0**, o SDL
   já ignora os espelhos sozinho — e o par `0x28de/0x11ff` que este projeto
-  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:289-291`) é
+  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:171-173`) é
   **redundante**, não errado;
 - com a variável **em 1**, o SDL usa os espelhos — e aquele par **não os
   esconde**, porque a lista de ignorados nunca é consultada para ele.
@@ -605,7 +605,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:103`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:106`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -630,11 +630,11 @@ entrada, e ela é de Bluetooth**:
 
 enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 `050000004c050000e60c...` para BT). O vpad nasce `BUS_USB`
-(`integrations/uhid_gamepad.py:91`), então **não casa com entrada nenhuma do
+(`integrations/uhid_gamepad.py:95`), então **não casa com entrada nenhuma do
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:981`,
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1075`,
 declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
@@ -683,7 +683,7 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | leitor | o que a marca faz ali |
 |---|---|
 | o guard do Steam Input | **não** reverte o `UseSteamControllerConfig` daquele appid no `localconfig.vdf` — ou seja, o degrau 3 fica ligado para aquele jogo |
-| `integrations/storm_doctor.py:46` e `:72` | o diagnóstico deixa de acusar aquele appid como conflito |
+| `integrations/storm_doctor.py:46` e `:304` | o diagnóstico deixa de acusar aquele appid como conflito |
 | `daemon/launch_env.py:299-330` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
 **O que ela NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
@@ -1315,7 +1315,7 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:478-507` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:527-556` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 

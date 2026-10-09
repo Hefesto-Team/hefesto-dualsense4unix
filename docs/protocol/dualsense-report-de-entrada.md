@@ -29,7 +29,7 @@ tarde inteira.
 
 O `0x01` de rádio é o que quase todo levantamento esquece. O driver desta
 máquina o menciona e **não o decodifica** —
-`assets/dkms/hid-playstation/hid-playstation.c:1574-1578`, no comentário
+`assets/dkms/hid-playstation/hid-playstation.c:1595-1599`, no comentário
 *«Bluetooth uses a minimal HID report for reportID 1 and reports the full
 report using reportID 49»*. Ele é o layout de compatibilidade com DualShock 4,
 o que o aparelho publica antes de alguém pedir o modo estendido.

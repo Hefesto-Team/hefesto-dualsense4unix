@@ -1464,7 +1464,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
     (`daemon/ipc_handlers.py:4542`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
-    teclado comparam `old` com `new` (`daemon/lifecycle.py:1119` e `:2089`) e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:1236` e `:1243`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1117-1118` derruba e sobe
     o leitor dos atalhos do controle, e `ipc_handlers.py:4599` reescreve os
@@ -1498,7 +1498,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:74-81`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:2960`) e
+    `interface/hefesto_vivo.py:2972`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para

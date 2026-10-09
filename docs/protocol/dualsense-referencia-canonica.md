@@ -217,7 +217,7 @@ falando HID cru.
 ## 2. O report de saída `0x02` — os 47 bytes do `common`
 
 **Grau: FONTE DESTA MÁQUINA** — a `struct dualsense_output_report_common` do
-driver que roda aqui (`assets/dkms/hid-playstation/hid-playstation.c:320-348`,
+driver que roda aqui (`assets/dkms/hid-playstation/hid-playstation.c:341-369`,
 com o `static_assert` de 47 bytes em `:349`) e o `dualsensectl` são idênticos
 campo a campo.
 
@@ -292,7 +292,7 @@ para de mandar na luz.
 porque o kernel os declarava `reserved`. **Isso caducou**, e a fonte que o
 derruba está no disco: o driver desta máquina **nomeia esses campos exatamente
 assim** — `headphone_volume`, `speaker_volume`, `mic_volume` e `audio_control`
-em `assets/dkms/hid-playstation/hid-playstation.c:329-332`, com os tetos `0x7f`
+em `assets/dkms/hid-playstation/hid-playstation.c:350-353`, com os tetos `0x7f`
 e `0x40` escritos no próprio comentário do fonte. (A origem upstream é a série
 do jack de áudio da Collabora, que entrou no 6.18; o que se cita aqui por linha
 é o fonte compilado nesta máquina, não o 6.18.) Os bytes 5, 6 e 7 podem ser
@@ -739,7 +739,7 @@ um DualSense.
 Em 01/08 mediu-se a curva do volume do alto-falante: **mudo até 38, satura em
 102** — 60% do curso inerte. A explicação está aqui: o driver desta máquina,
 para fazer o alto-falante soar quando o fone sai, escreve **três** campos —
-`assets/dkms/hid-playstation/hid-playstation.c:1508-1524`, no ramo `else` da
+`assets/dkms/hid-playstation/hid-playstation.c:1529-1545`, no ramo `else` da
 borda de `DS_STATUS1_HP_DETECT`:
 
 ```c
@@ -763,7 +763,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:224-226` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1227-1234`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1580-1582`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:122` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1227-1234`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1594-1596`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:122` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: um ajuste acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
@@ -865,7 +865,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > **O `0x32` que este projeto mediu não decide a questão.** O que foi medido ao
 > vivo em 25/07 é o `0x32` de **controle** — 142 bytes, TLV `0x11|0x80`, o
-> byte que destrava o microfone (`integrations/dualsense_bt_audio.py:210`).
+> byte que destrava o microfone (`integrations/dualsense_bt_audio.py:279`).
 > Isso não é o report de **payload**, e nunca foi. Ninguém aqui escreveu um
 > byte de áudio de saída por rádio.
 >
@@ -1317,8 +1317,8 @@ SÃO expressáveis.
 >
 > | função | manda | a tabela desta seção decodifica como | deveria ser |
 > |---|---|---|---|
-> | `weapon()` — `core/trigger_effects.py:285-290` | `PULSE_B` = **`0x06`** (`:129`) | Simple_Vibration, **legado** | `0x25`, o Weapon oficial |
-> | `vibration()` — `core/trigger_effects.py:293-305` | `PULSE_A` = **`0x22`** (`:128`) | **Bow**, não oficial | `0x26`, o Vibration oficial |
+> | `weapon()` — `core/trigger_effects.py:285-290` | `PULSE_B` = **`0x06`** (`:52`) | Simple_Vibration, **legado** | `0x25`, o Weapon oficial |
+> | `vibration()` — `core/trigger_effects.py:391-403` | `PULSE_A` = **`0x22`** (`:51`) | **Bow**, não oficial | `0x26`, o Vibration oficial |
 >
 > Eles ficaram **fora dos dois grupos** da cura: não estão entre os SETE que
 > ela mediu como inertes e que foram corrigidos, nem entre os CINCO que ela
@@ -1403,7 +1403,7 @@ pede taxa nenhuma ao DualSense, nem por cabo nem por rádio — não há campo,
 função nem default no fonte desta máquina. O contraste dentro do mesmo arquivo
 é a prova:
 o **DualShock 4** tem `bt_poll_interval` na struct
-(`assets/dkms/hid-playstation/hid-playstation.c:483-484`, dentro de
+(`assets/dkms/hid-playstation/hid-playstation.c:504-505`, dentro de
 `struct dualshock4` de `:462`), um `dualshock4_set_bt_poll_interval` (`:2873`)
 e um default aplicado na probe (`:3022`); a `struct dualsense` de `:233` **não
 tem equivalente de nada disso**. O que chega é o que o aparelho e o transporte
@@ -1456,7 +1456,7 @@ A medição completa, com as cinco janelas e as medianas, está em
 **O que isto NÃO fecha, e é a divergência que continua aberta:** o SDL
 **declara** DualSense por USB 250 Hz, por Bluetooth 1000 Hz, e **Edge por USB
 1000 Hz**. O gamepad virtual deste projeto se declara **Edge** (`VPAD_PRODUCT =
-0x0DF2`, `integrations/uhid_gamepad.py:102`) e entrega os 250 Hz do físico. Um
+0x0DF2`, `integrations/uhid_gamepad.py:106`) e entrega os 250 Hz do físico. Um
 jogo que integre velocidade angular pela taxa declarada teria escala 4× errada.
 O lado do **aparelho** está medido acima; o lado do **SDL** não.
 
@@ -1527,7 +1527,7 @@ com medição no fio: ver
 [a pilha do Steam Input](pilha-steam-input-xpad-sdl.md), seção 6-bis.
 
 **Os padrões de player LED — FONTE DESTA MÁQUINA.** A tabela sai do driver, em
-`assets/dkms/hid-playstation/hid-playstation.c:1836-1842`, e o comentário logo
+`assets/dkms/hid-playstation/hid-playstation.c:1888-1894`, e o comentário logo
 acima (`:1831-1834`) diz de onde ela vem: *"Behavior on the PlayStation 5
 console is to center the player id across the LEDs"*.
 
@@ -1549,10 +1549,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > Esta página atribuiu ao jogador 4, até hoje, uma figura que **é de outra
 > coisa**: `x-xx-`, byte a byte o `_PLAYER_LED_OVERFLOW` de
-> `core/led_control.py:99` — o padrão de *"slot fora da tabela"* (≥9),
+> `core/led_control.py:119` — o padrão de *"slot fora da tabela"* (≥9),
 > escolhido justamente para **não** se confundir com número de jogador nenhum.
 > Alguém trocou os dois. **O código do Hefesto sempre esteve certo**
-> (`core/led_control.py:85-94`, com o P4 em `:109`); quem estava errado era
+> (`core/led_control.py:108-117`, com o P4 em `:112`); quem estava errado era
 > a página, e o número saiu.
 >
 > **O custo já pago, que é o motivo desta nota existir:** antes de alguém
@@ -1661,8 +1661,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > |---|---|---|
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:432` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:171` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:884-919` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1235` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:539` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:999`, offset `_STATUS1_OFFSET = 53` em `:526` | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1285` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:333` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1272`, offset `_STATUS1_OFFSET = 53` em `:327` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
@@ -1686,7 +1686,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > A linha diz `ucBatteryLevel` (`nibble*10+5`), e isso descreve só o **nibble
 > baixo**. O **nibble alto é o estado de carga**: o driver desta máquina parte
 > o byte em dois campos nomeados —
-> `assets/dkms/hid-playstation/hid-playstation.c:175-176`,
+> `assets/dkms/hid-playstation/hid-playstation.c:196-197`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
 > `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
 > (`core/physical_report_reader.py:466-501`, `decodificar_bateria`):
@@ -1700,7 +1700,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1029` `forward_battery`, saindo em `:1726`,
+> (`integrations/uhid_gamepad.py:1296` `forward_battery`, saindo em `:1726`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de

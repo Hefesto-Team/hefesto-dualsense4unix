@@ -734,7 +734,7 @@ CSS = CSS_GLIFO + """
      tela instalado", que é justamente a que precisa de espaço).
 
      O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
-     troca valor vazio por `—` (`hefesto_vivo.py:67`), então uma frase vazia
+     troca valor vazio por `—` (`hefesto_vivo.py:68`), então uma frase vazia
      viraria um travessão solto na tela do usuário — foi o que a primeira foto
      mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
      Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o

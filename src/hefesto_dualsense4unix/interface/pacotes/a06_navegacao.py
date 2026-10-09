@@ -79,7 +79,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DO USUÁRIO**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:2984`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:2997`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): **nenhuma frase de recusa fala
@@ -114,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela do usuário oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2984`) levava à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2997`) levava à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique do usuário;
@@ -724,7 +724,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:924`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:982`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -1940,7 +1940,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     O MOUSE VAI PRIMEIRO de propósito. É ele que tem exclusão mútua com o
     gamepad virtual: ligá-lo PARA o vpad (`set_mouse_emulation`,
-    `daemon/lifecycle.py:1163`). Se o mouse falhar, o teclado não é tocado e
+    `daemon/lifecycle.py:1254`). Se o mouse falhar, o teclado não é tocado e
     não fica ligado sozinho num modo que não é dele. A ordem mora no daemon
     desde 29/09/2026 (`Daemon.definir_o_status_da_navegacao`).
 
@@ -2120,15 +2120,15 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1162`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1254`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:1572`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1664`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
-    guarda está em `lifecycle.py:4225`, no `if not gamepad_dispatched`. Copiar o
+    guarda está em `lifecycle.py:4439`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa, 29/07).
@@ -2231,7 +2231,7 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     O ALCANCE É O DE UM NÚMERO SÓ, e a medição é de 01/09: `mouse_speed` move o
     analógico esquerdo **e** o cursor do touchpad — `emit_touchpad_move` escala
     por `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-    (`integrations/uinput_mouse.py:440`).
+    (`integrations/uinput_mouse.py:506`).
 
     E ELE PASSOU A DURAR ALÉM DA JANELA — 05/09/2026, decisão D2. Até aqui o
     número ia ao daemon e ao `session.json`, e o perfil só o recebia se ela
@@ -2360,7 +2360,7 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     trava; o `change` que vem depois a atualiza com o texto final.
 
     A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
-    `_recusou_dizendo` do piloto (`hefesto_vivo.py:2984`) guarda a classe da
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:2997`) guarda a classe da
     exceção no relato, e `ValueError` é a linguagem de quem programa. Desde
     13/09/2026 nenhuma das duas chega à tela: a combinação que o usuário digitou e o
     produto não sabe digitar pisca a recusa no campo (FRASES-E-DICAS-01).
@@ -2884,7 +2884,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
 
     O QUE ELE FAZ: grava `key_bindings = None` no perfil ATIVO e manda o daemon
     reaplicá-lo. `None` não é "vazio" — o esquema o define como *"herda
-    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1268`), e `{}` é
+    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1291`), e `{}` é
     outra coisa (teclado silencioso). Escrever `{}` aqui devolveria um controle
     MUDO com o botão dizendo "de fábrica".
 

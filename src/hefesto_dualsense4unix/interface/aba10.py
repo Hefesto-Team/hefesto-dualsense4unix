@@ -1676,7 +1676,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Os ajustes por controle</b> — <code>Profile.controllers</code> existe desde
       16/07 e gravava calado: nenhuma tela dizia quais controles têm ajuste próprio.
       Era a pergunta <b>4</b> do contrato desta aba, e a tabela é a resposta.</li>
-    <li><b>"Voltar à de ontem"</b> — cada gravação já guarda a anterior e nenhuma tela oferecia isso (<code>profiles/loader.py:740</code>).</li>
+    <li><b>"Voltar à de ontem"</b> — cada gravação já guarda a anterior e nenhuma tela oferecia isso (<code>profiles/loader.py:1864</code>).</li>
     <li><b>"Detectar"</b> — abra o jogo de onde for, volte e clique; o perfil nasce com a regra certa.</li>
   </ul>
 
