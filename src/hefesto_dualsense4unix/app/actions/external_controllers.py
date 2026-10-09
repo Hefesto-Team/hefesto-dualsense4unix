@@ -47,10 +47,16 @@ _TYPE_BY_VIDPID: dict[str, str] = {
     "28de:1142": "Steam Controller",
 }
 
+#: As marcas que a interface compara com `brand_of` (o desenho de cada forma na aba 08). Moram
+#: aqui, com o dono da marca, para a tela nunca digitar uma segunda grafia delas.
+MARCA_NINTENDO = "Nintendo"
+MARCA_XBOX = "Xbox"
+MARCA_8BITDO = "8BitDo"
+
 _VENDOR_BY_VID: dict[str, str] = {
-    "057e": "Nintendo",
-    "045e": "Xbox",
-    "2dc8": "8BitDo",
+    "057e": MARCA_NINTENDO,
+    "045e": MARCA_XBOX,
+    "2dc8": MARCA_8BITDO,
     "0f0d": "HORI",
     "20d6": "PowerA",
     "28de": "Valve",
@@ -59,7 +65,7 @@ _VENDOR_BY_VID: dict[str, str] = {
 
 _NINTENDO_MODE_VIDS = frozenset({"057e"})
 
-_BRAND_BY_OUI: dict[str, str] = dict.fromkeys(OUIS_CLONE, "8BitDo")
+_BRAND_BY_OUI: dict[str, str] = dict.fromkeys(OUIS_CLONE, MARCA_8BITDO)
 
 
 def _vidpid(entry: dict[str, Any]) -> str:

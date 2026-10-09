@@ -31,6 +31,7 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.app.actions import external_controllers as _marcas
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.interface.monta import dono_na_linha
 
@@ -1296,7 +1297,7 @@ def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
 #: desenho do Pro Controller só vale para o Pro Controller: o Joy-Con, também da Nintendo, não tem
 #: aquela forma. O que não tem desenho próprio (Joy-Con, HORI, PowerA, Valve, o genérico) leva o
 #: contorno genérico, que não afirma modelo nenhum, e o nome do modelo fica na dica.
-SIMBOLO_DO_EXTERNO = {"Xbox": "ext-xbox", "8BitDo": "ext-8bitdo"}
+SIMBOLO_DO_EXTERNO = {_marcas.MARCA_XBOX: "ext-xbox", _marcas.MARCA_8BITDO: "ext-8bitdo"}
 SIMBOLO_DO_PRO = "ext-pro"
 SIMBOLO_GENERICO = "ext-generico"
 
@@ -1309,7 +1310,7 @@ def simbolo_do_externo(entrada: dict[str, Any]) -> str:
     )
 
     marca = brand_of(entrada)
-    if marca == "Nintendo" and friendly_type(entrada).startswith("Pro Controller"):
+    if marca == _marcas.MARCA_NINTENDO and friendly_type(entrada).startswith("Pro Controller"):
         return SIMBOLO_DO_PRO
     return SIMBOLO_DO_EXTERNO.get(marca, SIMBOLO_GENERICO)
 
