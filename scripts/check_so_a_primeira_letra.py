@@ -14,6 +14,11 @@ O texto que a pessoa lê nas dez abas — a leitura do produto é a de
 `frases_que_ela_baniu.texto_visivel_no_produto`, com o `<style>`, o `<script>`,
 os comentários e o `<title>` do documento fora (o recorte é o da régua da caixa
 alta, `_so_a_tela`) — nas páginas publicadas e, com `--bancada`, no `mockup/`.
+E lê também os três mapas que as abas abrem (`MAPAS`: o das portas, o do controle e
+o do rádio), que até 09/10/2026 ficavam fora: o das portas carregou de 26/09 a
+05/10 um JS que punha maiúscula em TODA palavra na hora da pintura, e o texto
+parado da página não o mostra. Por isso a régua também reprova o mapa que volte a
+trazer esse JS (`TITULO_EM_TODA_PALAVRA`).
 Entra o `title`, o `aria-label`, o `placeholder` e o `alt`, cada um como uma
 frase própria.
 
@@ -62,6 +67,12 @@ BANCADA = RAIZ / "mockup"
 CORES_CSV = RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 PECAS_CSV = RAIZ / "docs" / "data" / "pecas-do-dualsense.csv"
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
+MAPAS = ("mapa-das-portas.html", "mapa-do-controle.html", "mapa-do-radio.html")
+
+#: A marca do JS de 26/09/2026 que punha maiúscula em toda palavra do mapa na hora da
+#: pintura (o `emTitulo` da `pagina_do_mapa`). O texto parado não o mostra: a régua
+#: o procura no HTML inteiro, com o `<script>`.
+TITULO_EM_TODA_PALAVRA = re.compile(r"function\s+emTitulo\b|TODA PALAVRA COM MAI[UÚ]SCULA")
 
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "scripts"))
@@ -75,7 +86,7 @@ MARCAS = frozenset({
 
 TECLAS = frozenset({
     "Alt", "Tab", "Shift", "Ctrl", "Super", "Enter", "Esc",
-    "Create", "Options", "Share", "Start", "Select",
+    "Create", "Options", "Share", "Start", "Select", "Menu",
 })
 
 UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
@@ -237,15 +248,28 @@ def dividas_mortas(paginas: list[pathlib.Path]) -> list[str]:
 DIVIDA: dict[str, str] = {}
 
 
+def titulo_em_toda_palavra(paginas: list[pathlib.Path]) -> list[str]:
+    """As páginas que trazem o JS que põe maiúscula em toda palavra na pintura."""
+    return [p.name for p in paginas
+            if TITULO_EM_TODA_PALAVRA.search(p.read_text(encoding="utf-8"))]
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     alvo = BANCADA if "--bancada" in argv else PUBLICADO
-    paginas = sorted(p for p in alvo.glob("*.html") if E_ABA.match(p.name))
-    if len(paginas) != 10:
-        print(f"achei {len(paginas)} abas em {alvo} — o caminho mudou?", file=sys.stderr)
+    abas = sorted(p for p in alvo.glob("*.html") if E_ABA.match(p.name))
+    if len(abas) != 10:
+        print(f"achei {len(abas)} abas em {alvo} — o caminho mudou?", file=sys.stderr)
         return 2
+    faltam = [m for m in MAPAS if not (alvo / m).exists()]
+    if faltam:
+        print(f"faltam os mapas {faltam} em {alvo} — o caminho mudou?", file=sys.stderr)
+        return 2
+    mapas = [alvo / m for m in MAPAS]
+    paginas = abas + mapas
 
     achados = censo(paginas)
+    em_toda_palavra = titulo_em_toda_palavra(paginas)
     fantasmas = rotulos_fantasmas(paginas)
     mortas = dividas_mortas(paginas)
     por_palavra: dict[str, list[str]] = {}
@@ -259,10 +283,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  ROTULOS_CITADOS: «{r}» não é rótulo de página nenhuma — tire da lista.")
     for d in mortas:
         print(f"  DIVIDA: «{d}» não aparece mais em página nenhuma — a linha sai da lista.")
+    for nome in em_toda_palavra:
+        print(f"  {nome}: traz o JS que põe maiúscula em toda palavra na pintura — tire-o.")
 
     if "--lista" in argv:
         return 0
-    if achados or fantasmas or mortas:
+    if achados or fantasmas or mortas or em_toda_palavra:
         print(f"\nREPROVADO — {len(achados)} maiúscula(s) no meio da frase em "
               f"{alvo.relative_to(RAIZ)}.\n"
               "A regra dela (09/10/2026): só a primeira letra da frase ou do rótulo é\n"
@@ -270,7 +296,7 @@ def main(argv: list[str] | None = None) -> int:
               "na lista que tem o nome do que ela guarda, no topo desta régua.",
               file=sys.stderr)
         return 1
-    print(f"OK: {len(paginas)} páginas de {alvo.relative_to(RAIZ)}, nenhuma maiúscula "
+    print(f"OK: {len(abas)} abas e {len(mapas)} mapas de {alvo.relative_to(RAIZ)}, nenhuma maiúscula "
           "no meio da frase fora de nome próprio e marca.")
     return 0
 

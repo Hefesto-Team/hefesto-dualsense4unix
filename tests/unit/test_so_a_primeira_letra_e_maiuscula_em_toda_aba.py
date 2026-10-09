@@ -92,3 +92,41 @@ def test_o_valor_do_selo_da_08_e_peca_propria() -> None:
     assert "Analógico virtual <b>Apagado</b>" in pagina
     lidas = [f for _, f in regua.frases(pagina)]
     assert "Apagado" in lidas, [f for f in lidas if "Apagado" in f]
+
+
+def test_os_tres_mapas_entram_na_leitura(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+                                         capsys: pytest.CaptureFixture[str]) -> None:
+    """«Mapear Entradas» devolvido a uma cópia do mapa do rádio reprova o `main`.
+
+    MORDIDA: tire `mapas` de `paginas` no `main` da régua — este caso reprova.
+    """
+    bancada = tmp_path / "mockup"
+    bancada.mkdir()
+    for p in [*_dez(regua.BANCADA), *(regua.BANCADA / m for m in regua.MAPAS)]:
+        shutil.copy(p, bancada / p.name)
+    monkeypatch.setattr(regua, "BANCADA", bancada)
+    monkeypatch.setattr(regua, "RAIZ", tmp_path)
+    assert regua.main(["--bancada"]) == 0, capsys.readouterr()
+
+    alvo = bancada / "mapa-do-radio.html"
+    texto = alvo.read_text(encoding="utf-8")
+    assert "Mapear entradas</a>" in texto
+    alvo.write_text(texto.replace("Mapear entradas</a>", "Mapear Entradas</a>"), encoding="utf-8")
+
+    assert regua.main(["--bancada"]) == 1
+    assert "mapa-do-radio.html" in capsys.readouterr().out
+
+
+def test_o_mapa_com_o_js_da_maiuscula_em_toda_palavra_reprova(tmp_path: pathlib.Path) -> None:
+    """O JS de 26/09 (`emTitulo`) devolvido a uma cópia do mapa das portas é acusado.
+
+    O texto parado da página não mostra o que o JS faz na pintura: a régua procura o JS.
+    MORDIDA: esvazie `TITULO_EM_TODA_PALAVRA` (`re.compile(r"(?!)")`) — este caso reprova.
+    """
+    alvo = tmp_path / "mapa-das-portas.html"
+    texto = (regua.BANCADA / "mapa-das-portas.html").read_text(encoding="utf-8")
+    assert regua.titulo_em_toda_palavra([regua.BANCADA / "mapa-das-portas.html"]) == []
+    alvo.write_text(texto.replace(
+        "</script>", "function emTitulo(raiz) { if (!raiz) return; }\n</script>", 1),
+        encoding="utf-8")
+    assert regua.titulo_em_toda_palavra([alvo]) == ["mapa-das-portas.html"]

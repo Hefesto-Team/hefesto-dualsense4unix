@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hefesto — Rádio e Adaptadores</title>
+<title>Hefesto — Rádio e adaptadores</title>
 <!--
   RÁDIO E ADAPTADORES — a seção nova. Mockup para ela aprovar. 22/09/2026.
 
@@ -853,7 +853,7 @@
 <div class="quadro">
   <div class="cab">
     <span class="seta" aria-hidden="true">&#9660;</span>
-    <h1>Rádio e Adaptadores</h1>
+    <h1>Rádio e adaptadores</h1>
     <span class="conta" id="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html"></span>
     <div class="direita">
       <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho">
@@ -920,14 +920,14 @@
          acham nada, e é de propósito: o mockup mostra a FORMA do contrato,
          não reimplementa as telas. -->
     <a class="btn" id="b-mapear" href="#mapear-entradas"
-       title="Mapear Entradas — desenhar o meu computador: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar">
-      <svg class="i"><use href="#i-mapa"/></svg> Mapear Entradas</a>
+       title="Mapear entradas — desenhar o meu computador: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar">
+      <svg class="i"><use href="#i-mapa"/></svg> Mapear entradas</a>
     <a class="btn" id="b-uma-a-uma" href="#mapear-entrada-a-entrada"
-       title="Mapear Entrada a Entrada — um toque por aparelho: você pluga, ele aprende">
-      <svg class="i"><use href="#i-uma-a-uma"/></svg> Mapear Entrada a Entrada</a>
+       title="Mapear entrada a entrada — um toque por aparelho: você pluga, ele aprende">
+      <svg class="i"><use href="#i-uma-a-uma"/></svg> Mapear entrada a entrada</a>
     <button class="btn" id="b-examinar" data-gesto="examinar-portas"
-            title="Examinar Entradas — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
-      <svg class="i"><use href="#i-reexaminar"/></svg> Examinar Entradas</button>
+            title="Examinar entradas — refaz o exame das entradas, energia e rádio, e repinta o check-up">
+      <svg class="i"><use href="#i-reexaminar"/></svg> Examinar entradas</button>
     <!-- R8, 23/09: SEM RECADO. A TELA-CALADA-01 vale aqui também: a
          confirmação de um ato é o destino que pisca, e a recusa é o botão que
          balança. A pergunta ANTES de mover continua — é pergunta, não
@@ -1814,7 +1814,7 @@ function pintar() {
       b.href = '#mapear-entrada-a-entrada';
       b.appendChild(icone('i-uma-a-uma'));
       b.append('Onde fica?');
-      b.title = 'Mapear Entrada a Entrada';
+      b.title = 'Mapear entrada a entrada';
       b.dataset.alvo = lug.id;
       b.addEventListener('click', () => ensinarOnde(lug));
       onde.appendChild(b);
@@ -2979,10 +2979,10 @@ document.getElementById('b-uma-a-uma').addEventListener('click', () => {
   ensinarOnde(LUGARES.find(l => !l.face) || LUGARES[0]);
 });
 for (const [bid, titulo, texto] of [
-  ['b-mapear', 'Mapear Entradas',
+  ['b-mapear', 'Mapear entradas',
    'Abre o desenho do gabinete: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar.'],
-  ['b-examinar', 'Examinar Entradas',
-   'Refaz o exame das entradas — energia e rádio — e repinta o Check-up.'],
+  ['b-examinar', 'Examinar entradas',
+   'Refaz o exame das entradas — energia e rádio — e repinta o check-up.'],
 ]) {
   document.getElementById(bid).addEventListener('click', () => {
     const corpo = document.createElement('div');
