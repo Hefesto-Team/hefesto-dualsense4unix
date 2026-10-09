@@ -982,6 +982,12 @@ class Daemon:
                 with contextlib.suppress(Exception):
                     tabela_no_jogo.fechar()
                 self._tabela_no_jogo = None
+            # O teclado do Big Picture é device privado do mesmo jeito: a seta que o
+            # dono segura sai solta, e o device fecha antes da parada dos outros.
+            big_picture = self._big_picture
+            if big_picture is not None:
+                with contextlib.suppress(Exception):
+                    big_picture.parar()
             try:
                 await shutdown(self)
             finally:

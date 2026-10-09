@@ -438,3 +438,43 @@ def test_10_o_daemon_nasce_com_o_dono() -> None:
     assert "_big_picture" in Daemon.__dataclass_fields__ or hasattr(Daemon, "_big_picture")
     fonte = inspect.getsource(Daemon)
     assert "BigPicture.da_sessao()" in fonte
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_10_a_parada_do_daemon_fecha_o_teclado_do_dono(transporte: str) -> None:
+    """Pelo cabo e pelo rádio: o daemon que para fecha o teclado do Big Picture.
+
+    O teclado é device privado do dono, como os dois da tabela que age com o jogo, e
+    a parada os fecha no mesmo `finally` do `Daemon.run`.
+    MORDIDA: tirar o `parar()` do `finally` do `Daemon.run` deixa o teclado aberto.
+    """
+    from unittest.mock import MagicMock
+
+    bp, teclado, _ = _dono()
+    bp.rotear(_daemon(hotkey.PONTE_DUALSENSE), None, frozenset({"cross"}))
+    assert bp._teclado is teclado and not teclado.parado
+    d = Daemon(
+        controller=FakeController(transport=transporte),
+        config=DaemonConfig(
+            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            autoswitch_enabled=False, mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
+        ),
+    )
+    d._gamepad_device = MagicMock()
+    d._dispatch_gamepad_emulation = lambda estado, botoes: None  # type: ignore[method-assign]
+    d._big_picture = bp
+
+    async def _rodar_e_parar() -> None:
+        tarefa = asyncio.create_task(d.run())
+        for _ in range(500):
+            if d._stop_event is not None:
+                break
+            await asyncio.sleep(0.01)
+        await asyncio.sleep(0.05)
+        d.stop()
+        await asyncio.wait_for(tarefa, 10)
+
+    asyncio.run(_rodar_e_parar())
+    assert teclado.parado and bp._teclado is None, (
+        f"pelo {transporte}, a parada do daemon deixou o teclado do Big Picture aberto")
