@@ -109,7 +109,7 @@ import contextlib
 import functools
 import threading
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -940,6 +940,68 @@ class AltoFalanteSubsystem:
                 de_pe[marca] = str(getattr(endpoint, "uniq", "") or "")
         return de_pe
 
+    def _nos_na_ordem(
+        self,
+        de_pe_agora: Mapping[str, str],
+        de_pe: Mapping[str, Sequence[tuple[str, str]]] | None,
+    ) -> list[str]:
+        """As marcas na ordem em que os nós nascem; derruba os que renascem atrás.
+
+        O-SOM-DE-CADA-PAD-NA-ORDEM-DO-HIDRAW-01 (09/10/2026): o nó nasce na
+        ordem do assento (o número do rótulo, :func:`numero_do_assento`), e o
+        que ficou fora dela (o controle que saiu e voltou renasce no fim da
+        lista) renasce atrás de quem chegou. Só sem jogo aberto, e só se nenhum
+        deles toca ou alimenta uma ponte: nó que some debaixo do jogo quebra o
+        jogo que o escolheu (decisão de 08/09). Servidor mudo não reordena.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_esta_tocando
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            numero_do_assento,
+        )
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+            ORDEM_PELO_ASSENTO,
+            ORDEM_PELO_ENDERECO,
+            nome_da_marca,
+            ordem_dos_nos,
+            plano_da_ordem,
+        )
+
+        ordem = ordem_dos_nos()
+        if ordem == ORDEM_PELO_ENDERECO:
+            return list(de_pe_agora)
+        no_servidor: dict[str, int] = {}
+        for marca in de_pe_agora:
+            indices = [
+                int(m) for m, _c in (de_pe or {}).get(nome_da_marca(marca), ()) if m.isdigit()
+            ]
+            if indices:
+                no_servidor[marca] = min(indices)
+        na_ordem, refazer = plano_da_ordem(
+            de_pe_agora,
+            lambda marca: numero_do_assento(de_pe_agora.get(marca, "")),
+            no_servidor if de_pe is not None else None,
+            refazer=ordem == ORDEM_PELO_ASSENTO,
+        )
+        if not refazer:
+            return na_ordem
+        lido = {self._endpoint_da_ponte.get(u) for u in self._pontes}
+        endpoints = [self._endpoints.get(m) for m in refazer]
+        if (
+            any(e is None for e in endpoints)
+            or self._ha_jogo_aberto()
+            or any(e.nome in lido or sink_esta_tocando(e.nome, na_duvida=True)
+                   for e in endpoints if e is not None)
+        ):
+            return na_ordem
+        for marca, endpoint in zip(refazer, endpoints, strict=True):
+            self._o_cabo().soltar(marca)
+            self._parar_o_tocador(marca)
+            self._endpoints.pop(marca, None)
+            if endpoint is not None:
+                endpoint.parar()
+        logger.info("haptica_nos_na_ordem_dos_assentos", renascem=len(refazer))
+        return na_ordem
+
     def _avisar_quem_o_jogo_nao_conhece(self, marca: str) -> None:
         """O endpoint que nasce com um jogo tocando: o registro do lançamento não o tem.
 
@@ -1709,6 +1771,7 @@ class AltoFalanteSubsystem:
             with contextlib.suppress(Exception):
                 varrer_endpoints_orfaos(de_pe_agora, de_pe=de_pe)
 
+        na_ordem = self._nos_na_ordem(de_pe_agora, de_pe)
         postas = distribuir_ancoras(
             de_pe_agora, ancoras(), de_pe,
             ja_postas={m: e.ancora for m, e in self._endpoints.items()},
@@ -1719,7 +1782,8 @@ class AltoFalanteSubsystem:
                 if (propria := ancora_do_gadget(uniq)) is not None
             },
         )
-        for marca, uniq in de_pe_agora.items():
+        for marca in na_ordem:
+            uniq = de_pe_agora[marca]
             posta = postas.get(marca)
             atual = self._endpoints.get(marca)
             if atual is not None:

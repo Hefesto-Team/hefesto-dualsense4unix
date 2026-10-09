@@ -323,6 +323,68 @@ def distribuir_ancoras(
     return postas
 
 
+#: O-SOM-DE-CADA-PAD-NA-ORDEM-DO-HIDRAW-01 (09/10/2026): a ordem em que os nós
+#: NASCEM no servidor de som. O par pad → nó já é por identidade
+#: (:func:`distribuir_ancoras`); a ordem é o que o Wine olha primeiro: o primeiro
+#: DualSense da lista leva o identificador canônico (patch 0187), e o nosso nó
+#: não tem ``alsa.card`` para o 0189 reordenar. «assento»: na ordem dos
+#: jogadores (a da luz e a dos pads), e o nó que ficou fora dela renasce atrás
+#: de quem chegou, só sem jogo aberto; «assento-sem-refazer»: a mesma ordem só
+#: no nascimento; «endereco»: a de antes, a ordem do endereço do controle.
+ORDEM_PELO_ASSENTO = "assento"
+ORDEM_PELO_ASSENTO_SEM_REFAZER = "assento-sem-refazer"
+ORDEM_PELO_ENDERECO = "endereco"
+ORDENS_DOS_NOS = (ORDEM_PELO_ASSENTO, ORDEM_PELO_ASSENTO_SEM_REFAZER, ORDEM_PELO_ENDERECO)
+ORDEM_DOS_NOS = ORDEM_PELO_ASSENTO
+
+#: O interruptor de bancada da ordem: troca a constante sem editar código.
+INTERRUPTOR_DA_ORDEM_DOS_NOS = "HEFESTO_DUALSENSE4UNIX_ORDEM_DOS_NOS"
+
+
+def ordem_dos_nos(ambiente: Mapping[str, str] | None = None) -> str:
+    """A ordem que vale agora: a do interruptor, quando ele diz uma das três."""
+    valor = (os.environ if ambiente is None else ambiente).get(INTERRUPTOR_DA_ORDEM_DOS_NOS, "")
+    valor = str(valor).strip().lower()
+    return valor if valor in ORDENS_DOS_NOS else ORDEM_DOS_NOS
+
+
+def plano_da_ordem(
+    marcas: Iterable[str],
+    assento: Callable[[str], int | None],
+    no_servidor: Mapping[str, int] | None = None,
+    *,
+    refazer: bool = True,
+) -> tuple[list[str], list[str]]:
+    """``(na_ordem, a_refazer)``: a ordem de nascimento e os nós de pé que renascem.
+
+    ``assento(marca)`` é o número do jogador; ``no_servidor`` (marca → índice do
+    módulo dele) são os nós que já existem, na ordem em que nasceram. Quem não
+    tem assento vai para o fim; o empate fica na ordem da marca. Fica de pé o
+    maior começo da lista do servidor que já está na ordem e que nenhum nó
+    novo precisa passar; o resto renasce atrás. Função pura.
+    """
+
+    def chave(marca: str) -> tuple[int, int, str]:
+        numero = assento(marca)
+        if isinstance(numero, bool) or not isinstance(numero, int) or numero <= 0:
+            return (1, 0, marca)
+        return (0, numero, marca)
+
+    na_ordem = sorted({str(m) for m in marcas}, key=chave)
+    existentes = {m: i for m, i in (no_servidor or {}).items() if m in na_ordem}
+    de_pe = sorted(existentes, key=lambda m: (existentes[m], m))
+    teto = min((chave(m) for m in na_ordem if m not in existentes), default=None)
+    fica = 0
+    anterior: tuple[int, int, str] | None = None
+    for marca in de_pe:
+        atual = chave(marca)
+        if (anterior is not None and atual < anterior) or (teto is not None and atual > teto):
+            break
+        anterior = atual
+        fica += 1
+    return na_ordem, (de_pe[fica:] if refazer else [])
+
+
 def nome_da_marca(marca: str) -> str:
     """O nome do nó do aparelho desta marca, ou "" quando ela não tem a forma de uma."""
     if not isinstance(marca, str) or not marca.startswith(PREFIXO_DA_MARCA_DO_APARELHO):
@@ -1269,11 +1331,17 @@ __all__ = [
     "FOLGA_DO_TOCADOR_S",
     "FREQUENCIA_DO_FORTE_HZ",
     "FREQUENCIA_DO_FRACO_HZ",
+    "INTERRUPTOR_DA_ORDEM_DOS_NOS",
     "LUGARES",
     "MARCA_DO_ENSAIO",
     "MARCA_DO_TOCADOR",
     "MOLDE_DO_NOME",
     "NOME_DA_HAPTICA_DO_CONTROLE",
+    "ORDEM_DOS_NOS",
+    "ORDEM_PELO_ASSENTO",
+    "ORDEM_PELO_ASSENTO_SEM_REFAZER",
+    "ORDEM_PELO_ENDERECO",
+    "ORDENS_DOS_NOS",
     "PID_DUALSENSE",
     "QUADROS_POR_BLOCO",
     "VID_SONY",
@@ -1294,6 +1362,8 @@ __all__ = [
     "misturar_o_toque",
     "nome_da_marca",
     "nome_do_endpoint",
+    "ordem_dos_nos",
+    "plano_da_ordem",
     "propriedades_do_endpoint",
     "rotulo_da_haptica",
     "rotulo_do_tocador",
