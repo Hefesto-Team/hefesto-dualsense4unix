@@ -98,7 +98,7 @@ def test_os_tres_mapas_entram_na_leitura(tmp_path: pathlib.Path, monkeypatch: py
                                          capsys: pytest.CaptureFixture[str]) -> None:
     """«Mapear Entradas» devolvido a uma cópia do mapa do rádio reprova o `main`.
 
-    MORDIDA: tire `mapas` de `paginas` no `main` da régua — este caso reprova.
+    MORDIDA: tire `mapas` da lista das páginas no `main` da régua — este caso reprova.
     """
     bancada = tmp_path / "mockup"
     bancada.mkdir()
