@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar
 
+import sys
+
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
@@ -369,3 +371,104 @@ def test_o_interruptor_sem_refazer_nasce_na_ordem_e_nao_recria(
     antes, depois = _sai_e_volta(mesa, "bluetooth")
     assert antes == list(_U)
     assert depois == [_U[0], _U[2], _U[3], _U[1]]
+
+
+# O ensaio da bancada (só leitura): a conta dele, sem servidor de som
+
+
+def _ensaio() -> Any:
+    import importlib.util
+
+    caminho = Path(__file__).resolve().parents[2] / "scripts/ensaios/o_som_de_cada_pad_no_wine.py"
+    spec = importlib.util.spec_from_file_location("o_som_de_cada_pad_no_wine", caminho)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = modulo  # o @dataclass procura o módulo aqui
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def _sinks_json(ordem: list[tuple[str, int]]) -> str:
+    """A lista ``pactl --format=json list sinks`` com os nós na ordem dada."""
+    import json
+
+    sinks = [{"index": 30, "name": "alsa_output.pci-0000_00_1f.3.analog-stereo",
+              "description": "Áudio interno", "properties": {}}]
+    for i, (uniq, assento) in enumerate(ordem):
+        sinks.append({
+            "index": 40 + i,
+            "name": eh.nome_do_endpoint(uniq),
+            "description": eh.rotulo_da_haptica(assento),
+            "properties": {"sysfs.path": _interface_do_gadget(_U.index(uniq) + 1)},
+        })
+    return json.dumps(sinks)
+
+
+def test_o_ensaio_le_a_ordem_e_nao_imprime_endereco(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ensaio = _ensaio()
+    sinks = tmp_path / "sinks.json"
+    sinks.write_text(_sinks_json([(_U[3], 1), (_U[0], 2), (_U[2], 3), (_U[1], 4)]))
+    entradas = tmp_path / "entradas.json"
+    entradas.write_text('[{"index": 7, "sink": 41, "properties": '
+                        '{"application.process.binary": "Jogo.exe"}}]')
+    log = tmp_path / "wine.log"
+    log.write_text("\n".join(f"trace:mmdevapi:x {eh.nome_do_endpoint(u)}" for u in (_U[0], _U[3])))
+    rc = ensaio.main(["--sinks-json", str(sinks), "--entradas-json", str(entradas),
+                      "--log-do-wine", str(log)], env={})
+    saida = capsys.readouterr().out
+    assert rc == 0
+    assert "VARIÁVEL ordem na lista do servidor: assento" in saida
+    assert "VARIÁVEL âncora: 4 de 4 no gadget" in saida
+    assert "Jogo.exe → controle 2" in saida
+    assert "VARIÁVEL Wine: controle 2, controle 1" in saida
+    assert "aa:bb:cc" not in saida.lower() and "HEFESTOAPARELHO" not in saida
+
+
+def test_o_ensaio_ve_a_lista_fora_da_ordem_e_o_conteiner_repetido(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json
+
+    ensaio = _ensaio()
+    sinks = tmp_path / "sinks.json"
+    lista = json.loads(_sinks_json([(_U[0], 2), (_U[1], 1)]))
+    lista[2]["properties"]["sysfs.path"] = lista[1]["properties"]["sysfs.path"]
+    sinks.write_text(json.dumps(lista))
+    assert ensaio.main(["--sinks-json", str(sinks)], env={}) == 0
+    saida = capsys.readouterr().out
+    assert "VARIÁVEL ordem na lista do servidor: outra (controle 2, controle 1)" in saida
+    assert "contêiner REPETIDO: controle 2 e controle 1" in saida
+
+
+def test_o_ensaio_recusa_com_o_daemon_no_ar_sem_medir(capsys: pytest.CaptureFixture[str]) -> None:
+    ensaio = _ensaio()
+    perguntas: list[list[str]] = []
+
+    def _pactl(argv: list[str]) -> str | None:
+        perguntas.append(argv)
+        return "[]"
+
+    rc = ensaio.main([], env={}, ler_pactl=_pactl, daemon_no_ar=lambda _e, _u: True)
+    assert rc == ensaio.RC_RECUSADO
+    assert perguntas == []
+    assert "RECUSADO" in capsys.readouterr().out
+    assert ensaio.main([], env={}, ler_pactl=_pactl, daemon_no_ar=lambda _e, _u: False) == 0
+    assert perguntas == []
+
+
+def test_o_ensaio_recusa_sem_pad_no_gadget(capsys: pytest.CaptureFixture[str]) -> None:
+    ensaio = _ensaio()
+    perguntas: list[list[str]] = []
+
+    def _pactl(argv: list[str]) -> str | None:
+        perguntas.append(argv)
+        return "[]"
+
+    assert ensaio.main(["--medir"], env={}, ler_pactl=_pactl, contar_pads=lambda: 0) == 2
+    assert perguntas == []
+    rc = ensaio.main(["--medir", "--sem-gadget"], env={}, ler_pactl=_pactl, contar_pads=lambda: 0)
+    assert rc == 0
+    assert all("load-module" not in a and "unload-module" not in a for a in perguntas)
+    assert "VARIÁVEL âncora: 0 de 0 no gadget; pads no gadget: 0" in capsys.readouterr().out
