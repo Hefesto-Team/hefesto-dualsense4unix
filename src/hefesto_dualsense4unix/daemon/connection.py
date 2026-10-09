@@ -1415,7 +1415,7 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     if tabela_no_jogo is not None:
         with contextlib.suppress(Exception):
             tabela_no_jogo.fechar()
-        daemon._tabela_no_jogo = None
+        daemon._tabela_no_jogo = None  # type: ignore[attr-defined]
     if getattr(daemon, "_keyboard_device", None) is not None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()

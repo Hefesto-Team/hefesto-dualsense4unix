@@ -99,6 +99,10 @@ class PonteDeMentira:
         self.chamadas.append((metodo, params))
         return True
 
+    def profile_reaplicar(self, nome: str):
+        self.chamadas.append(("profile.reaplicar", {"nome": nome}))
+        return {"status": "ok"}
+
     def profile_switch(self, nome: str):  # pragma: no cover - existe para ser visto
         self.chamadas.append(("profile.switch", {"nome": nome}))
         return True
@@ -224,12 +228,58 @@ def test_a_lista_do_teclado_grava_o_ligar_tambem(pac, a06):
     assert _disco()["teclado"] is True
 
 
-def test_a_opcao_sem_dono_nao_toca_no_disco(pac, a06):
-    """"Só dentro do jogo" recusa dizendo — e não grava um valor inventado."""
+def _so_no_jogo_do_disco() -> bool | None:
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    return load_profile("regua").teclado_so_no_jogo
+
+
+def test_so_dentro_do_jogo_grava_o_campo_e_manda_reaplicar(pac, a06):
+    """"Só dentro do jogo" liga o teclado, grava `teclado_so_no_jogo` e reaplica o perfil.
+
+    O-TECLADO-SO-DENTRO-DO-JOGO-TEM-DONO-01. O sinal do portão é travado pelo daemon
+    a cada ATIVAÇÃO: sem o `profile.reaplicar` a escolha só valeria no próximo
+    jogo. A volta ("Só fora do jogo") limpa o campo, e outra volta ao mesmo valor
+    não reaplica de novo.
+    """
     _semear("regua", teclado=True)
-    with pytest.raises(RuntimeError):
-        a06.teclado(_ctx(pac), {"valor": a06.TECLADO_SO_DENTRO}, PonteDeMentira())
+    ponte = PonteDeMentira()
+    a06.teclado(_ctx(pac), {"valor": a06.TECLADO_SO_DENTRO}, ponte)
     assert _disco()["teclado"] is True
+    assert _so_no_jogo_do_disco() is True
+    assert ponte.metodos == ["keyboard.emulation.set", "profile.reaplicar",
+                             "launch_env.refresh"]
+
+    volta = PonteDeMentira()
+    a06.teclado(_ctx(pac), {"valor": a06.TECLADO_SO_FORA}, volta)
+    assert _so_no_jogo_do_disco() is False
+    assert "profile.reaplicar" in volta.metodos
+
+
+def test_a_chave_tambem_no_jogo_grava_no_perfil_e_reaplica(pac, a06):
+    """O clique na chave inverte `tabela_no_jogo` no disco e manda o daemon reaplicar."""
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    _semear("regua")
+    ponte = PonteDeMentira()
+    a06.tabela_no_jogo(_ctx(pac), {}, ponte)
+    assert load_profile("regua").tabela_no_jogo is True
+    assert ponte.metodos == ["profile.reaplicar", "launch_env.refresh"]
+
+    a06.tabela_no_jogo(_ctx(pac), {}, PonteDeMentira())
+    assert load_profile("regua").tabela_no_jogo is False
+
+
+def test_a_chave_no_nativo_recusa_dizendo_e_nao_grava(pac, a06):
+    """No Nativo o tique congela: a chave fica apagada e o clique explica."""
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    _semear("regua")
+    ponte = PonteDeMentira()
+    with pytest.raises(RuntimeError, match="Nativo"):
+        a06.tabela_no_jogo(_ctx(pac, native_mode=True), {}, ponte)
+    assert load_profile("regua").tabela_no_jogo is None
+    assert not ponte.chamadas
 
 
 def test_o_teclado_recusado_pelo_daemon_nao_grava(pac, a06):

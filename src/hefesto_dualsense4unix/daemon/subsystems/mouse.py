@@ -282,7 +282,7 @@ class TabelaNoJogo:
             logger.warning("tabela_no_jogo_dispatch_falhou", err=str(exc))
 
 
-def trocar_a_tabela_no_jogo(daemon: DaemonProtocol, profile: Any) -> None:
+def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
     """Trava, a partir do perfil EFETIVO, o que a tabela faz com o jogo aberto.
 
     Chamado a cada ativação (e a cada `reaplicar`), ANTES de qualquer saída por
@@ -302,7 +302,7 @@ def trocar_a_tabela_no_jogo(daemon: DaemonProtocol, profile: Any) -> None:
 
 
 def despachar_no_jogo(
-    daemon: DaemonProtocol,
+    daemon: Any,
     state: Any,
     emu_buttons: frozenset[str],
     *,

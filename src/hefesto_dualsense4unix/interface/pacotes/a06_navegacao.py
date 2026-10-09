@@ -188,6 +188,19 @@ TECLADO_SO_FORA = "Só fora do jogo"
 TECLADO_DESATIVADO = "Desativado"
 TECLADO_SO_DENTRO = "Só dentro do jogo"
 
+#: A chave «Também no jogo» no topo das Definições (O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-
+#: O-CURSOR-01, opção b). O endereço pinta o interruptor (`Sim`/`Não`); o segundo
+#: acende o cinza no Modo Nativo, em que o jogo lê o controle direto e a tabela
+#: não toca em nada (o mesmo cinza da Mira, `a02_controles.MIRA_NO_NATIVO`).
+ENDERECO_DA_CHAVE = "tabela-no-jogo"
+ENDERECO_DA_CHAVE_FORA = "tabela-no-jogo-fora"
+CHAVE_LIGADA = "Sim"
+CHAVE_DESLIGADA = "Não"
+CHAVE_NO_NATIVO = "NATIVO"
+CHAVE_CINZA_NO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e a tabela não age junto "
+    "com ele.")
+
 PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
     True: (TECLADO_SO_FORA,),
     False: (TECLADO_DESATIVADO,),
@@ -324,9 +337,13 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     return ofertas
 
 
-def _o_teclado_em_palavras(ligado: bool) -> str:
-    """A palavra daquele estado que a página CARREGADA sabe receber."""
-    candidatas = PALAVRAS_DO_TECLADO[ligado]
+def _o_teclado_em_palavras(ligado: bool, so_dentro: bool = False) -> str:
+    """A palavra daquele estado que a página CARREGADA sabe receber.
+
+    «Só dentro do jogo» é o teclado LIGADO com o campo do perfil que troca o
+    sinal do portão (`teclado_so_no_jogo`): sem ele, ligado é «Só fora».
+    """
+    candidatas = (TECLADO_SO_DENTRO,) if ligado and so_dentro else PALAVRAS_DO_TECLADO[ligado]
     ofertas = _o_que_a_pagina_oferece()
     for palavra in candidatas:
         if palavra in ofertas:
@@ -1512,7 +1529,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `keyboard_emulation` (daemon mudo, ou config inacessível — o `state_full`
     # chega ao cartão dela na hora (`hefesto_vivo._recusou_dizendo`, pelo
     if "keyboard_emulation" in st:
-        mesa["teclado-estado"] = _o_teclado_em_palavras(bool(tecla.get("enabled")))
+        mesa["teclado-estado"] = _o_teclado_em_palavras(
+            bool(tecla.get("enabled")), so_dentro=bool((p or {}).get("teclado_so_no_jogo")))
+    mesa[ENDERECO_DA_CHAVE] = CHAVE_LIGADA if (p or {}).get("tabela_no_jogo") else CHAVE_DESLIGADA
+    mesa[ENDERECO_DA_CHAVE_FORA] = CHAVE_NO_NATIVO if _no_nativo(ctx) else ""
     return {
         "colunas": cards,
         "mesa": mesa,
@@ -1552,6 +1572,15 @@ MANUAL = "manual"
 def _rato(ctx: Contexto) -> dict[str, Any]:
     """O bloco `mouse_emulation` do último tique — o que está VALENDO agora."""
     return ctx.state.get("mouse_emulation") or {}
+
+
+def _no_nativo(ctx: Contexto) -> bool:
+    """O Modo Nativo está ligado? É GLOBAL no daemon (`state_full.native_mode`).
+
+    A mesma pergunta de `a02_controles._nativo`, escrita aqui porque um pacote
+    de aba não importa o privado de outro; sem estado, a resposta é «não».
+    """
+    return (getattr(ctx, "state", None) or {}).get("native_mode") is True
 
 
 # DISCO, E SÓ — NUNCA `perfil.gravar_e_reaplicar`. O preço está medido em 03/09
@@ -1611,7 +1640,8 @@ def _o_que_nao_guardou(nome: str) -> str:
 def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
     """Grava o que ESTE clique mudou onde a marca do cartão diz. Disco, e nada mais.
 
-    Aceita `teclado_emulado=` (a lista «Função do teclado») e os dois do rato
+    Aceita `teclado_emulado=` e `teclado_so_no_jogo=` (a lista «Função do
+    teclado»), `tabela_no_jogo=` (a chave «Também no jogo») e os dois do rato
     (`mouse_speed`, `mouse_scroll`) — ver `_DO_RATO`.
 
     :return: `""` quando gravou, e também quando não havia o que gravar (o
@@ -1642,10 +1672,11 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
 
     def _com_o_que_mudou(prof: Any) -> Any:
         mudanca: dict[str, Any] = {}
-        if "teclado_emulado" in campos:
-            quer = bool(campos["teclado_emulado"])
-            if getattr(prof, "teclado_emulado", None) is not quer:
-                mudanca["teclado_emulado"] = quer
+        for campo in ("teclado_emulado", "teclado_so_no_jogo", "tabela_no_jogo"):
+            if campo in campos:
+                quer = bool(campos[campo])
+                if getattr(prof, campo, None) is not quer:
+                    mudanca[campo] = quer
         do_rato = {_DO_RATO[k]: v for k, v in campos.items() if k in _DO_RATO}
         if do_rato:
             secao = _secao_do_mouse(prof, ctx, do_rato)
@@ -2038,10 +2069,11 @@ def modo_big_picture(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     return None
 
 
-_ESCOLHA_DELA: dict[str, bool | None] = {
-    "fora": True, "desativado": False, "dentro": None}
+#: (teclado ligado, só dentro do jogo) de cada palavra da lista.
+_ESCOLHA_DELA: dict[str, tuple[bool, bool]] = {
+    "fora": (True, False), "desativado": (False, False), "dentro": (True, True)}
 
-_ESCOLHA: dict[str, bool | None] = _ESCOLHA_DELA
+_ESCOLHA: dict[str, tuple[bool, bool]] = _ESCOLHA_DELA
 
 
 @gesto("06-navegacao.html", "teclado", grava="gravar_pelo_gesto")
@@ -2060,36 +2092,16 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     nasça amanhã mandaria a chave em `valor` e a frase em `rotulo`, e é o
     `rotulo` que continuaria casando com o desenho.
 
-    DUAS DAS TRÊS OPÇÕES TÊM DONO, e a terceira RECUSA DIZENDO — que é a regra
-    da casa, não uma falha desta ligação:
+    AS TRÊS OPÇÕES TÊM DONO (O-TECLADO-SO-DENTRO-DO-JOGO-TEM-DONO-01,
+    08/10/2026): «Só fora do jogo» → `enabled=True`; «Desativado» →
+    `enabled=False`; «Só dentro do jogo» → `enabled=True` mais o campo
+    `teclado_so_no_jogo` do perfil, que troca o sinal do portão no laço do
+    daemon (digita só com um jogo aberto). Antes deste campo a terceira opção
+    levantava `RuntimeError` e a lista voltava sozinha.
 
-    * "Só fora do jogo" → `enabled=True`; "Desativado" → `enabled=False`. O
-      handler (`daemon/ipc_handlers.py:3732`) só lê `enabled`, e ele é bool.
-    * "Só dentro do jogo" **não existe do outro lado**, e nem poderia: ele é o
-      INVERSO de tudo o que o produto faz hoje.
-
-    FATO DERRUBADO — 02/09/2026, e ele estava escrito NESTE arquivo e no
-    enunciado do trabalho: *"'Só fora do jogo' não existe do outro lado"* e
-    *"'Só dentro do jogo' já existe, e é o `suppress_desktop_emulation`"*. **Os
-    dois estão invertidos**, e a medição é de três leituras:
-
-    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1215`) diz, no
-       próprio comentário: *"True = ativar o perfil suprime a emulação de
-       mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
-       O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
-       jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:2063`) recebe esse
-       campo a cada ativação de perfil e liga a supressão com `desired=True`.
-    3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
-       desktop no tique em que o gamepad virtual despachou (o
-       `gamepad_dispatched` do laço de `daemon/lifecycle.py`).
-
-    Logo o teclado emulado ligado **é** "só fora do jogo", e a etiqueta velha
-    ("Ligada — atalhos e teclado na tela") é que afirmava um alcance maior do
-    que o produto tem. O que falta é o INVERSO: um teclado que só valha DENTRO
-    do jogo. Ele exigiria um portão por perfil com o sinal trocado — campo novo
-    no esquema, e ele **não existe**. Enquanto não existir, esta opção recusa
-    dizendo, que é o contrário de um botão que aceita o clique e não faz nada.
+    O FATO QUE SUSTENTA O PORTÃO, medido em 02/09/2026: com o gamepad virtual
+    despachando, o daemon já cala a emulação de desktop (o `gamepad_dispatched`
+    do laço); logo o teclado ligado sem o campo é «só fora do jogo».
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
@@ -2140,15 +2152,9 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             f"do desenho estão em `src/hefesto_dualsense4unix/interface/aba06.py:OPCOES_TECLADO`, "
             f"e cada uma tem de trazer exatamente uma destas palavras: "
             f"{', '.join(sorted(_ESCOLHA))}.")
-    ligar = _ESCOLHA[chaves.pop()]
-    if ligar is None:
-        raise RuntimeError(
-            f"“{TECLADO_SO_DENTRO}” ainda não tem dono, e é o INVERSO do que o "
-            "Hefesto faz: ele cala o teclado emulado quando um jogo assume o "
-            "controle, e o que sobra é justamente o “"
-            f"{TECLADO_SO_FORA}”. Um teclado que valha SÓ dentro do jogo pede um "
-            "campo novo no perfil — o portão com o sinal trocado —, e ele ainda "
-            "não existe. A lista volta sozinha para o que está valendo.")
+    ligar, so_dentro = _ESCOLHA[chaves.pop()]
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    era_so_dentro = bool((perfil.ativo_que_vale(nome) or {}).get("teclado_so_no_jogo"))
     try:
         resposta = p.resultado("keyboard.emulation.set", enabled=ligar)
     except RuntimeError as erro:
@@ -2157,7 +2163,36 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     if isinstance(resposta, dict) and resposta.get("status") == "failed":
         raise RuntimeError(
             f"o teclado ficou como estava: {_recusa_do_teclado(resposta)}")
-    recado = _guardar_no_perfil(ctx, teclado_emulado=ligar)
+    recado = _guardar_no_perfil(ctx, teclado_emulado=ligar, teclado_so_no_jogo=so_dentro)
+    if not recado and nome and era_so_dentro != so_dentro:
+        # O sinal do portão é travado pelo daemon a cada ATIVAÇÃO do perfil.
+        perfil.reaplicar(nome, ctx, p)
+    return {"recado": recado} if recado else None
+
+
+@gesto("06-navegacao.html", "tabela-no-jogo", grava="gravar_pelo_gesto")
+def tabela_no_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """A chave «Também no jogo». Grava `tabela_no_jogo` no perfil e manda reaplicar.
+
+    O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01 (opção b). Ligada, a tabela
+    inteira age junto com o jogo (cada controle aperta as próprias linhas; o
+    cursor e a rolagem só andam pelo P1). Desligada, as linhas só agem fora do
+    jogo, como sempre.
+
+    NÃO OBEDECE À FUNÇÃO DO TECLADO: a chave é da tabela inteira, e o teclado é
+    só uma das duas metades dela. NO NATIVO RECUSA DIZENDO: o jogo lê o controle
+    direto e o tique congela, então a chave aparece apagada e o clique explica.
+
+    SÓ O PERFIL: o daemon trava a chave a cada ativação (`apply_profile_suppression`),
+    e o `profile.reaplicar` é o que faz o valor novo valer na hora.
+    """
+    if _no_nativo(ctx):
+        raise RuntimeError(CHAVE_CINZA_NO_NATIVO)
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    atual = bool((perfil.ativo_que_vale(nome) or {}).get("tabela_no_jogo"))
+    recado = _guardar_no_perfil(ctx, tabela_no_jogo=not atual)
+    if not recado and nome:
+        perfil.reaplicar(nome, ctx, p)
     return {"recado": recado} if recado else None
 
 
@@ -3271,7 +3306,7 @@ SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
            "linha-de-troca", "fechar-troca")
 
 
-PONTE = {"chamar", "machine_declare", "escolher_arquivo"}
+PONTE = {"chamar", "machine_declare", "escolher_arquivo", "profile_reaplicar"}
 #: O `desktop.status.set` é o «Status do Modo» desde 29/09/2026
 METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set",
            "machine.declare", "navegacao.interna.set", "navegacao.big_picture.set"}

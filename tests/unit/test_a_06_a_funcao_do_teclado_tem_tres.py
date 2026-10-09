@@ -88,7 +88,7 @@ def test_as_tres_palavras_dela_estao_no_desenho():
 
 
 def test_o_desenho_nasce_no_padrao_dela():
-    """`Só fora do jogo` marcada, e é a única das três com dono hoje."""
+    """`Só fora do jogo` marcada: o padrão dela, com as outras duas ao lado."""
     import onde
     from pacotes import a06_navegacao as mod
 
@@ -99,8 +99,9 @@ def test_o_desenho_nasce_no_padrao_dela():
 
 
 @pytest.mark.parametrize("rotulo_e_bool", [("TECLADO_SO_FORA", True),
+                                           ("TECLADO_SO_DENTRO", True),
                                            ("TECLADO_DESATIVADO", False)])
-def test_as_duas_com_dono_chamam_o_daemon(ctx, rotulo_e_bool):
+def test_as_tres_chamam_o_daemon(ctx, rotulo_e_bool):
     """Uma chamada, `keyboard.emulation.set`, e o bool que a opção quer dizer."""
     from pacotes import a06_navegacao as mod
 
@@ -111,19 +112,17 @@ def test_as_duas_com_dono_chamam_o_daemon(ctx, rotulo_e_bool):
         f"{nome}: o gesto chamou {ponte.chamadas}")
 
 
-def test_a_terceira_recusa_dizendo_e_nao_chama_nada(ctx):
-    """"Só dentro do jogo" não tem dono, e o botão DIZ isso."""
+def test_a_terceira_tem_dono_e_nao_recusa(ctx):
+    """"Só dentro do jogo" liga o teclado e não levanta mais (o campo do perfil é o dono).
+
+    A MORDIDA: volte o `raise RuntimeError` para a terceira palavra no gesto
+    `teclado` e este caso reprova.
+    """
     from pacotes import a06_navegacao as mod
 
     ponte = _PonteQueAnota()
-    with pytest.raises(RuntimeError) as caiu:
-        mod.teclado(ctx, {"valor": mod.TECLADO_SO_DENTRO}, ponte)
-    frase = str(caiu.value)
-    assert mod.TECLADO_SO_DENTRO in frase, f"a recusa não diz qual opção: {frase!r}"
-    assert mod.TECLADO_SO_FORA in frase, (
-        "a recusa não diz o que o produto FAZ hoje, que é o outro lado — sem "
-        f"isso ela é um 'não dá' sem saída: {frase!r}")
-    assert not ponte.chamadas, f"recusou e ainda assim chamou {ponte.chamadas}"
+    mod.teclado(ctx, {"valor": mod.TECLADO_SO_DENTRO}, ponte)
+    assert ponte.chamadas == [("keyboard.emulation.set", {"enabled": True})]
 
 
 def test_o_gesto_casa_pela_palavra_que_distingue(ctx):
@@ -133,10 +132,6 @@ def test_o_gesto_casa_pela_palavra_que_distingue(ctx):
     ponte = _PonteQueAnota()
     mod.teclado(ctx, {"valor": "Só fora do jogo — o teclado vale no desktop"}, ponte)
     assert ponte.chamadas == [("keyboard.emulation.set", {"enabled": True})]
-
-    with pytest.raises(RuntimeError):
-        mod.teclado(ctx, {"valor": "Só dentro do jogo, e mais nada"},
-                    _PonteQueAnota())
 
     for lixo in ("Modo turbo", "Só dentro do jogo e só fora do jogo"):
         with pytest.raises(ValueError, match="não reconheci"):

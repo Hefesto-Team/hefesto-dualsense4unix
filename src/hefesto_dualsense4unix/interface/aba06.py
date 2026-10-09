@@ -38,6 +38,11 @@ from monta import folha_das_cores  # noqa: E402
 # `pacotes/a04_iluminacao.um_botao_de_player`: o dono mora no PACOTE, porque é
 # escritas do mesmo rótulo é como o desenho e o produto divergem calados.
 from pacotes.a06_navegacao import (  # noqa: E402
+    CHAVE_DESLIGADA,
+    CHAVE_LIGADA,
+    CHAVE_NO_NATIVO,
+    ENDERECO_DA_CHAVE,
+    ENDERECO_DA_CHAVE_FORA,
     ENDERECO_DA_RESSALVA,
     PAPEL_DO_CURSOR,
     PAPEL_QUE_NAVEGA,
@@ -844,6 +849,24 @@ CSS = CSS_GLIFO + """
   .tog.ligado{border-color:var(--green);background:rgba(80,250,123,.1);
        color:var(--fg);font-weight:600}
   .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
+  /* A CHAVE «TAMBÉM NO JOGO» (O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01, opção
+     b): no topo das Definições, entre o `?` do título e o `×`. Ligada acende em
+     verde como o `.tog`; no Modo Nativo fica cinza e recusa (cor explícita, sem
+     `opacity`), com o porquê no `?` dela. */
+  .chave-jogo{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:2px 4px}
+  .chave-jogo + .tn-x{margin-left:10px}
+  .chave-rot{font-size:11.5px;color:var(--texto-suave)}
+  .nj-tog{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;
+          border:1px solid var(--border-forte);border-radius:6px;font-size:11px;
+          color:var(--texto-mudo);cursor:pointer;user-select:none}
+  .nj-tog .pino{width:7px;height:7px;border-radius:50%;background:var(--border-forte)}
+  .nj-tog.ligado{border-color:var(--green);background:rgba(80,250,123,.1);color:var(--green)}
+  .nj-tog.ligado .pino{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .chave-jogo.apagada .nj-tog,.chave-jogo.apagada .nj-tog.ligado{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .chave-jogo.apagada .nj-tog .pino,.chave-jogo.apagada .nj-tog.ligado .pino{
+    background:var(--border-sutil);box-shadow:none}
 
   /* ---------- O PORTÃO DE MODO APAGA O INTERRUPTOR (D-03 + D-02) ----------
      Decisão do PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[01]`):
@@ -1533,7 +1556,9 @@ D_QUANDO = ajuda(
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
     "Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado "
-    "na tela e as três regiões do touchpad. Vale para este perfil.",
+    "na tela e as três regiões do touchpad. Vale para este perfil.<br><br>"
+    "<b>Só dentro do jogo</b>: digita só com um jogo aberto. "
+    "<b>Só fora do jogo</b>: digita só sem jogo aberto.",
     vivas=("teclado-osk", ENDERECO_DA_RESSALVA))
 D_MOUSE = ajuda(
     "Os <b>mapeamentos pré-prontos</b> de mouse. Trocar aqui reescreve as linhas "
@@ -1686,8 +1711,27 @@ PONTO_MAPA = [
     (gl("stick_r", rot="direção"),   "Rolagem vertical e horizontal", EIXO_DIREITO),
 ]
 
+D_CHAVE = ajuda(
+    "Com um <b>jogo aberto</b>, toda linha que não for <b>— Nada —</b> age "
+    "<b>junto</b> com o jogo. Vale para este perfil, em qualquer Modo, pelo cabo "
+    "e pelo BT, para os quatro jogadores; o cursor e a rolagem só andam pelo "
+    "<b>P1</b>.<br><br>No <b>Modo Nativo</b> o jogo lê o controle direto, e a "
+    "chave fica apagada.")
+CHAVE_NO_JOGO = (
+    f'<span class="chave-jogo" data-campo="{ENDERECO_DA_CHAVE_FORA}" '
+    f'data-hef-alvo="classe" data-hef-classe="apagada" '
+    f'data-hef-quando="{CHAVE_NO_NATIVO}" '
+    f'title="Com um jogo aberto, a tabela inteira age junto com o jogo.">'
+    f'<span class="nj-tog" data-gesto="tabela-no-jogo" data-campo="{ENDERECO_DA_CHAVE}" '
+    f'data-hef-alvo="classe" '
+    f'data-hef-classe="ligado" data-hef-quando="{CHAVE_LIGADA}">'
+    f'<span class="pino"></span>'
+    f'<span class="txt" data-campo="{ENDERECO_DA_CHAVE}">{CHAVE_DESLIGADA}</span></span>'
+    f'<span class="chave-rot">Também no jogo</span>{D_CHAVE}</span>')
+
+
 def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao,
-                   fechar="", aviso="", extra=""):
+                   fechar="", aviso="", extra="", chave=""):
     """Uma das duas telas de botões."""
     x = f' data-gesto="{fechar}"' if fechar else ""
     return f'''
@@ -1696,6 +1740,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
     <div class="tn-topo">
       <span class="tn-tit">{titulo}</span>
       {dica}
+      {chave}
       <a class="tn-x" href="#" title="Fechar"{x}>×</a>
     </div>
     <div class="tn-corpo">
@@ -1750,7 +1795,8 @@ TELA_DEFINICOES = tela_de_botoes(
     "<b>Teclas do teclado</b>. A tela <b>Trocar os botões</b> não é tocada.",
     guardar="guardar-definicoes", padrao="padrao-definicoes",
     fechar="fechar-definicoes", aviso=AVISO_DA_TABELA,
-    extra='      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>')
+    extra='      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>',
+    chave=CHAVE_NO_JOGO)
 
 LINHA_DE_TROCA = "linha-de-troca"
 FECHAR_TROCA = "fechar-troca"

@@ -32,7 +32,6 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
-import types
 
 import pytest
 
@@ -313,7 +312,7 @@ def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch
                "options": acoes.TOKEN_NADA}
     do_mouse, do_teclado, _sem = acoes.resolver(calados)
 
-    device = types.SimpleNamespace()
+    device = UinputMouseDevice()
     UinputMouseDevice.set_button_actions(device, do_mouse)
     ainda_falam = sorted(
         b for b in calados

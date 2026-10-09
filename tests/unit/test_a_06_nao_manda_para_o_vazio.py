@@ -350,7 +350,7 @@ def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
 
     with pytest.raises(RuntimeError) as caiu:
         a06_navegacao.guardar_definicoes(
-            ctx, {"forma": _forma_de_fabrica(cross="Esc")}, _PonteMuda())
+            ctx, {"forma": _forma_de_fabrica(l2="Movimento do cursor")}, _PonteMuda())
     frase = str(caiu.value)
     assert input_actions.humanize_button("l2") == "L2 (gatilho esquerdo)", (
         "o motor mudou o nome do L2; a frase abaixo cobra o que ela lê na GTK")
