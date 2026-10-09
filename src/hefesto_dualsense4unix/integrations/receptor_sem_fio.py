@@ -559,7 +559,7 @@ class Descoberta:
             self.sem = lido
             self.passo, self.desde = PASSO_PONHA, agora
             return
-        # o «com» soma as leituras da espera: quem salta deixa canais diferentes a cada uma
+        # o «com» soma as leituras da espera: quem salta deixa canais diferentes em cada uma.
         for adaptador, canais in lido.items():
             antes = self.com.get(adaptador)
             self.com[adaptador] = (canais if antes is None else tuple(sorted(
