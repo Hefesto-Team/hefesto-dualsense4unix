@@ -31,6 +31,12 @@ ENDERECO_CSV = re.compile(
     r":(?P<a>\d+)(?:-(?P<b>\d+))?`?"
 )
 
+CURTA_CSV = re.compile(
+    r"(?:[,;(]|(?<![A-Za-z0-9_])e)\s*`?(?P<vao>:(?P<a>\d+)(?:-(?P<b>\d+))?)(?!\w)")
+"""A forma curta numa célula (``:N`` ou ``:N-M`` depois de vírgula, ponto-e-vírgula, ``e`` ou
+abre-parêntese): o arquivo é o da citação inteira mais próxima ANTES dela, na MESMA célula. A
+gramática é a do ``_CURTA_DE_CSV`` do `reapontar-citacoes.py`, que a leva junto quando o código anda."""
+
 NOME_ANTES = re.compile(r"`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\s*(?:em|no|na)\s+$")
 
 NOME_DEPOIS = re.compile(
@@ -48,10 +54,13 @@ class Achado:
     endereco: str
     motivo: str
     contexto: str = ""
+    curta: bool = False
+    """Escrita na forma curta ``:N``, presa à inteira da célula: o ``endereco`` diz o arquivo dela."""
 
     def __str__(self) -> str:
         onde = f" ({self.contexto})" if self.contexto else ""
-        return f"{self.documento}:{self.linha}{onde}: {self.endereco} -- {self.motivo}"
+        forma = " (forma curta na célula)" if self.curta else ""
+        return f"{self.documento}:{self.linha}{onde}: {self.endereco}{forma} -- {self.motivo}"
 
 
 def resolve(arquivo: str, raiz: Path) -> Path | None:
@@ -119,8 +128,14 @@ def confere_endereco(
     corpos: dict[Path, list[str]],
     raiz: Path,
     separadores: tuple[str, ...] = (),
+    *,
+    curta: bool = False,
 ) -> tuple[list[Achado], bool, bool]:
-    """As três perguntas, para UM endereço."""
+    """As três perguntas, para UM endereço.
+
+    ``curta``: o ``achado`` é uma forma curta (o grupo ``vao`` é o ``:N``); o ``arquivo`` vem da
+    inteira antes dela, e o nome prometido se procura em volta do ``:N``.
+    """
     alvo = resolve(arquivo, raiz)
     if alvo is None:
         return [], False, True
@@ -135,19 +150,20 @@ def confere_endereco(
 
     if primeira < 1 or primeira > ultima:
         return ([Achado(origem, linha, endereco,
-                        "a faixa está invertida ou começa em zero", contexto)],
+                        "a faixa está invertida ou começa em zero", contexto, curta)],
                 True, False)
     if ultima > len(corpo):
         return ([Achado(origem, linha, endereco,
                         f"a linha não existe: {arquivo} tem {len(corpo)} linha(s)",
-                        contexto)],
+                        contexto, curta)],
                 True, False)
 
     trecho = "\n".join(corpo[primeira - 1:ultima])
-    nomes = sorted(nomes_prometidos(texto, achado.start(), achado.end(), separadores))
+    de, ate = achado.span("vao") if curta else achado.span()
+    nomes = sorted(nomes_prometidos(texto, de, ate, separadores))
     achados = [
         Achado(origem, linha, endereco,
-               f"a faixa não contém `{nome}`, que a citação promete", contexto)
+               f"a faixa não contém `{nome}`, que a citação promete", contexto, curta)
         for nome in nomes
         if nome not in trecho
     ]
@@ -159,7 +175,7 @@ def confere_endereco(
                     origem, linha, endereco,
                     f"a faixa começa antes do `def {nome}` (linha {no_def}) e abraça "
                     "código de fora dele: a função andou e a faixa não foi junto",
-                    contexto))
+                    contexto, curta))
     return achados, True, False
 
 
@@ -223,10 +239,21 @@ def varrer_planilha(
                 coluna = (cabecalho[indice] if indice < len(cabecalho)
                           else f"coluna {indice + 1}")
                 contexto = f"{chave} · {coluna}" if chave else coluna
-                for achado in ENDERECO_CSV.finditer(celula):
+                inteiras = list(ENDERECO_CSV.finditer(celula))
+                for achado in inteiras:
                     seus, conferido, fora = confere_endereco(
                         relativo, inicio, contexto, celula, achado,
                         achado.group("arq"), corpos, raiz, SEPARADORES_DE_BLOCO)
+                    achados.extend(seus)
+                    conferidos += conferido
+                    de_fora += fora
+                for curta in CURTA_CSV.finditer(celula):
+                    antes = [i for i in inteiras if i.end() <= curta.start("vao")]
+                    if not antes or resolve(antes[-1].group("arq"), raiz) is None:
+                        continue  # sem inteira na célula, ou presa a arquivo de fora: não se lê
+                    seus, conferido, fora = confere_endereco(
+                        relativo, inicio, contexto, celula, curta,
+                        antes[-1].group("arq"), corpos, raiz, SEPARADORES_DE_BLOCO, curta=True)
                     achados.extend(seus)
                     conferidos += conferido
                     de_fora += fora

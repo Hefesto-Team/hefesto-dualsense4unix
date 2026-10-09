@@ -15,6 +15,7 @@ O limite da via crua: a citação que já nasceu errada anda errada (foi o caso 
 from __future__ import annotations
 
 import argparse
+import bisect
 import ast
 import collections
 import csv
@@ -258,7 +259,7 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
         achados.extend(val.varrer_documento(documento, raiz, corpos)[0])
     for planilha in val.planilhas_de(raiz):
         achados.extend(val.varrer_planilha(planilha, raiz, corpos)[0])
-    por_chave: dict[tuple[str, str], Citacao] = {}
+    por_chave: dict[tuple[str, str, bool], Citacao] = {}
     a_mao: list[str] = []
     for achado in achados:
         endereco = _ENDERECO.search(achado.endereco)
@@ -269,9 +270,11 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
         alvo = val.resolve(endereco["arq"], raiz)
         if alvo is None:
             continue
-        chave = (achado.documento, endereco.group(0).strip("`"))
+        curta = achado.curta
+        chave = (achado.documento, endereco.group(0).strip("`"), curta)
         if chave not in por_chave:
             a = int(endereco["a"])
+            # a curta de célula vem sem posição: o lugar sai de ``_trechos_da_curta``, pela linha
             por_chave[chave] = Citacao(
                 raiz / achado.documento,
                 endereco["arq"],
@@ -279,6 +282,7 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
                 a,
                 int(endereco["b"] or a),
                 endereco["b"] is not None,
+                curta=curta,
             )
         por_chave[chave].linhas.add(achado.linha)
         if nome is None:
@@ -466,6 +470,14 @@ PROFUNDIDADE_DA_SEGUNDA_CHANCE = 2
 """Quantas voltas a segunda chance dá para trás: o endereço que uma varredura ou um reapontamento em
 massa deixou tem o endereço de ANTES dele; se a entrada desse também veio de uma varredura, a volta
 seguinte olha o de antes dela, até este limite. Além dele, vai à mão."""
+
+A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO = True
+"""Se a segunda chance atravessa o reapontamento em massa que mudou o TRECHO citado (o endereço de
+depois, no commit da massa, não tem o bloco que o de antes tinha na entrada dele). Esse commit pode ter
+CORRIGIDO um endereço que nasceu errado, e levar o de antes para a frente desfaria a correção; ou pode
+ter errado (o `719e58a46`), e o de antes é o certo. O texto não separa os dois casos sem a pista ao
+lado. Com ``False``, a trava manda esses à mão. Decisão de 09/10/2026, a validar por ela: fica
+``True`` até a amostra da costura (60 da segunda chance, limiar escrito antes) decidir."""
 
 _TAG_COM_ATRIBUTO = re.compile(r"<[A-Za-z][A-Za-z0-9-]*\s+[^<>/\s][^<>]*>")
 _TAG_SEM_ATRIBUTO = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*\s*/?>")
@@ -939,6 +951,37 @@ def _enderecos_da_linha(
     ]
 
 
+def _linha_de(quebras: list[int], posicao: int) -> int:
+    """A linha (base 1) da letra ``posicao`` do texto cru, dadas as posições das quebras."""
+    return bisect.bisect_left(quebras, posicao) + 1
+
+
+def _celulas_por_linha(texto: str) -> tuple[list[list[str]], dict[int, int]]:
+    """``(registros, dono)``: as células LIDAS de cada registro do CSV, e o registro de cada linha física.
+
+    O registro de uma célula com quebra de linha (entre aspas) ocupa mais de uma linha física; o
+    diff fala de linhas, e a curta só se prende à inteira da PRÓPRIA célula.
+    """
+    quebras = [i for i, letra in enumerate(texto) if letra == "\n"]
+    registros: list[list[str]] = []
+    dono: dict[int, int] = {}
+    for registro in _registros_do_csv(texto):
+        if not registro:
+            continue
+        _lido, inicio, _mapa = registro[0]
+        ultimo, inicio_ultimo, mapa_ultimo = registro[-1]
+        fim = mapa_ultimo[-1] if mapa_ultimo else inicio_ultimo + max(len(ultimo) - 1, 0)
+        for numero in range(_linha_de(quebras, inicio), _linha_de(quebras, fim) + 1):
+            dono[numero] = len(registros)
+        registros.append([celula for celula, _i, _m in registro])
+    return registros, dono
+
+
+def _texto_no_commit(raiz: Path, objeto: str) -> str:
+    feito = _git(raiz, "show", objeto)
+    return feito.stdout if feito.returncode == 0 else ""
+
+
 def _pares_do_diff(
     raiz: Path,
     val: ModuleType,
@@ -947,7 +990,13 @@ def _pares_do_diff(
     sha: str,
     caminho: str,
 ) -> tuple[dict[str, set[str]], dict[str, str]]:
-    """``({endereço novo: {endereços de antes}}, {endereço novo: por que não tem par})`` do commit."""
+    """``({endereço novo: {endereços de antes}}, {endereço novo: por que não tem par})`` do commit.
+
+    O CSV se lê por CÉLULA, como ``_contagens`` o lê: a linha física do diff junta células, e a
+    curta de uma célula sem inteira se prendia à inteira de OUTRA (medido em 08/10/2026: 170
+    curtas de `docs/data` assim, 0 pela leitura por célula). O par é de registro com registro
+    (as linhas trocadas do hunk) e, dentro dele, de célula com célula.
+    """
     feito = subprocess.run(
         [
             "git",
@@ -968,46 +1017,94 @@ def _pares_do_diff(
         errors="replace",
         check=False,
     )
-    hunks: list[tuple[list[str], list[str]]] = []
+    hunks: list[tuple[int, int, list[str], list[str]]] = []
     removidas: list[str] = []
     adicionadas: list[str] = []
+    de_antes = de_depois = 0
     dentro = False
     for linha in feito.stdout.split("\n") if feito.returncode == 0 else []:
         if linha.startswith("@@"):
             if dentro:
-                hunks.append((removidas, adicionadas))
+                hunks.append((de_antes, de_depois, removidas, adicionadas))
+            cabeca = _HUNK.match(linha)
+            de_antes = int(cabeca["os"]) if cabeca else 0
+            de_depois = int(cabeca["ns"]) if cabeca else 0
             removidas, adicionadas, dentro = [], [], True
         elif dentro and linha.startswith("-"):
             removidas.append(linha[1:])
         elif dentro and linha.startswith("+"):
             adicionadas.append(linha[1:])
     if dentro:
-        hunks.append((removidas, adicionadas))
+        hunks.append((de_antes, de_depois, removidas, adicionadas))
     trocados: dict[str, set[str]] = collections.defaultdict(set)
     sem_par: dict[str, str] = {}
-    for velhas, novas in hunks:
-        for i, nova in enumerate(novas):
+
+    def parear(velhas: list[str], novas: list[str], quais: str) -> None:
+        """Pareia as unidades (linhas, ou células de um registro) de mesma posição."""
+        for velha, nova in zip(velhas, novas, strict=True):
             depois = _enderecos_da_linha(nova, val, modo, resolve)
             if not depois:
                 continue
-            if len(velhas) != len(novas):
-                porque = (
-                    f"o diff do documento troca {len(velhas)} linha(s) por {len(novas)}: "
-                    "não há par de linhas"
-                )
-            else:
-                antes = _enderecos_da_linha(velhas[i], val, modo, resolve)
-                if len(antes) == len(depois):
-                    for velho, novo in zip(antes, depois, strict=True):
-                        if velho != novo:
-                            trocados[novo].add(velho)
-                    continue
-                porque = (
-                    f"a linha tinha {len(antes)} endereço(s) e passou a ter {len(depois)}: "
-                    "não há par de endereços"
-                )
+            antes = _enderecos_da_linha(velha, val, modo, resolve)
+            if len(antes) == len(depois):
+                for velho, novo in zip(antes, depois, strict=True):
+                    if velho != novo:
+                        trocados[novo].add(velho)
+                continue
+            porque = (
+                f"a {quais} tinha {len(antes)} endereço(s) e passou a ter {len(depois)}: "
+                "não há par de endereços"
+            )
             for endereco in depois:
                 sem_par.setdefault(endereco, porque)
+
+    def sem_par_de(unidades: list[str], porque: str) -> None:
+        for unidade in unidades:
+            for endereco in _enderecos_da_linha(unidade, val, modo, resolve):
+                sem_par.setdefault(endereco, porque)
+
+    def desigual(velhas: list[str], novas: list[str]) -> str:
+        return (
+            f"o diff do documento troca {len(velhas)} linha(s) por {len(novas)}: "
+            "não há par de linhas"
+        )
+
+    if modo != "csv":
+        for _de_antes, _de_depois, velhas, novas in hunks:
+            if len(velhas) != len(novas):
+                sem_par_de(novas, desigual(velhas, novas))
+            else:
+                parear(velhas, novas, "linha")
+        return dict(trocados), sem_par
+
+    registros_antes, dono_antes = _celulas_por_linha(_texto_no_commit(raiz, f"{sha}^:{caminho}"))
+    registros_depois, dono_depois = _celulas_por_linha(_texto_no_commit(raiz, f"{sha}:{caminho}"))
+    pares: dict[tuple[int, int], None] = {}
+    for de_antes, de_depois, velhas, novas in hunks:
+        if len(velhas) != len(novas):
+            tocados = {
+                dono_depois[n] for n in range(de_depois, de_depois + len(novas)) if n in dono_depois
+            }
+            sem_par_de(
+                [celula for k in sorted(tocados) for celula in registros_depois[k]],
+                desigual(velhas, novas),
+            )
+            continue
+        for i in range(len(novas)):
+            r_antes = dono_antes.get(de_antes + i)
+            r_depois = dono_depois.get(de_depois + i)
+            if r_antes is not None and r_depois is not None:
+                pares.setdefault((r_antes, r_depois))
+    for r_antes, r_depois in pares:
+        velhas, novas = registros_antes[r_antes], registros_depois[r_depois]
+        if len(velhas) != len(novas):
+            sem_par_de(
+                novas,
+                f"o registro tinha {len(velhas)} célula(s) e passou a ter {len(novas)}: "
+                "não há par de células",
+            )
+            continue
+        parear(velhas, novas, "célula")
     return dict(trocados), sem_par
 
 
@@ -1262,6 +1359,10 @@ def segunda_chance(
         return sem_prova(
             f"o endereço de antes (`{antigo}`) entrou em épocas diferentes no documento"
         )
+    if not A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO:
+        mudou = _a_massa_mudou_o_trecho(cat, relativo, sha, endereco, sha2, (a, b))
+        if mudou:
+            return sem_prova(mudou)
     estado, novo, motivo = levar_crua(
         cat, relativo, atual, a, b, sha2, cit.pistas, nasceu, reescritos, destino
     )
@@ -1288,6 +1389,30 @@ def segunda_chance(
         estado,
         None,
         f"pelo endereço de antes da varredura (`{antigo}`, commit {sha2[:9]}): {motivo}",
+    )
+
+
+def _a_massa_mudou_o_trecho(
+    cat: _Cat, relativo: str, sha: str, endereco: str, sha2: str, antes: tuple[int, int]
+) -> str:
+    """Por que o commit ``sha`` (a massa) mudou o trecho citado, ou ``""`` se ele só o levou.
+
+    Compara o bloco do endereço de antes (``antes``) no commit em que ELE entrou (``sha2``) com o
+    bloco do endereço que a massa deixou (``endereco``) no commit dela. Iguais: a massa só acompanhou
+    o código. Diferentes: ela trocou o que se citava, o que pode ter sido uma correção.
+    """
+    achado = _ENDERECO_CANONICO.fullmatch(endereco)
+    velho, depois = cat.linhas(sha2, relativo), cat.linhas(sha, relativo)
+    if achado is None or velho is None or depois is None:
+        return ""
+    a, b = antes
+    ea, eb = int(achado["a"]), int(achado["b"] or achado["a"])
+    if b > len(velho) or eb > len(depois) or velho[a - 1 : b] == depois[ea - 1 : eb]:
+        return ""
+    return (
+        f"o commit {sha[:9]}, que reescreveu o endereço sem prova, mudou o trecho citado "
+        f"(`{endereco}` não tem o bloco que o endereço de antes tinha no commit {sha2[:9]}): pode ter "
+        "sido uma correção, e a segunda chance não a desfaz"
     )
 
 
@@ -1491,7 +1616,10 @@ def _aplicar(texto: str, trocas: Sequence[tuple[Citacao, str]]) -> tuple[str, li
     marcador = [f"\x00{i}\x00" for i in range(len(trocas))]
     casou = [0] * len(trocas)
     pela_curta = [cit.curta for cit, _endereco in trocas]
-    trechos = [list(cit.trechos) if cit.curta else [] for cit, _endereco in trocas]
+    trechos = [
+        (list(cit.trechos) or _trechos_da_curta(texto, cit)) if cit.curta else []
+        for cit, _endereco in trocas
+    ]
     inteiras: set[str] = set()
     for i, (cit, _endereco) in enumerate(trocas):
         if cit.curta:
@@ -1611,7 +1739,9 @@ def reapontar(
     pelo_nome = [c for c in citacoes if not c.podre]
     do_historico = {(c.documento, c.texto, c.curta): c for c in citacoes if c.podre}
     for cit in cruas(raiz) + curtas_do_src(raiz):
-        do_historico.setdefault((cit.documento, cit.texto, cit.curta), cit)
+        ja = do_historico.setdefault((cit.documento, cit.texto, cit.curta), cit)
+        if ja.curta and not ja.trechos:
+            ja.trechos = list(cit.trechos)  # a do validador não sabe onde a curta está escrita
     for cit in pelo_nome:
         vistos.add((cit.documento, cit.texto))
         relativo = cit.alvo.resolve().relative_to(raiz.resolve()).as_posix()
@@ -1659,7 +1789,12 @@ def reapontar(
                 )
                 certas.add(a_mao[-1])
                 continue
-            feitos.append(f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}` ({n}x)")
+            # A curta se escreve `:N` no documento: a linha diz que a troca foi nela, e a que
+            # inteira ela se prendeu, para quem lê o plano não procurar o endereço inteiro.
+            presa = f" (curta, presa a `{cit.arquivo}`)" if cit.curta else ""
+            feitos.append(
+                f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}` ({n}x){presa}"
+            )
         if not escrever or texto == original:
             continue
         documento.write_text(texto, encoding="utf-8")
@@ -1720,10 +1855,13 @@ def main(argv: list[str] | None = None) -> int:
             "reapontamento em massa deixou, o script lê no diff do documento, naquele commit, o "
             "endereço de ANTES da mesma linha, acha a entrada dele e leva o bloco daquela entrada: "
             "se o endereço de hoje já o tem, fica no lugar; se ele existe intacto e único em outro "
-            "lugar, anda; senão fica à mão. Sem par de linhas (contagem desigual de linhas ou de "
-            "endereços, ou faixa de outra largura), sem a entrada de antes, ou se ela também veio "
-            "de uma varredura mais de "
-            f"{PROFUNDIDADE_DA_SEGUNDA_CHANCE} voltas atrás, fica à mão sem chute. A LINHA TEM DE "
+            "lugar, anda; senão fica à mão. Sem par (no CSV, de registro e de célula; no resto, "
+            "de linha: contagem desigual de linhas ou de endereços, ou faixa de outra largura), sem "
+            "a entrada de antes, ou se ela também veio de uma varredura mais de "
+            f"{PROFUNDIDADE_DA_SEGUNDA_CHANCE} voltas atrás, fica à mão sem chute. Com "
+            "A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO = False, fica à mão também o "
+            "endereço que a varredura deixou num trecho diferente do de antes (pode ter sido "
+            "correção). A LINHA TEM DE "
             "TER CONTEÚDO: marcação sem atributo (`</span>`, `<br>`) e pontuação não contam; "
             "a tag com atributo conta. "
             "O RC diz o que FALTA, não a dívida: vale 1 quando há troca a escrever (modo lista), "
