@@ -251,3 +251,29 @@ def test_sem_primario_a_dica_nao_inventa_um(monkeypatch):
     ctx = pacotes.Contexto(state=dict(ESTADO, controllers=sem_chefe), mesa=MESA,
                            conectados=sem_chefe, estados={})
     assert a06_navegacao.pacote(ctx)["mesa"]["quem-navega"] == ""
+
+
+def test_cada_chip_pintado_da_fita_tem_endereco_proprio(carga):
+    """O `--plastico` do chip mora no `style` do PRÓPRIO elemento.
+
+    O endereço do bloco (`fita-chips`) não alcança a régua da identidade, que lê
+    o `style` de cada elemento: em 09/10/2026 a 06 publicada reprovava
+    `identidade-de-cima` com dois `--plastico` cravados na fita. O chip ganha o
+    `data-campo="fita-chip"` que o `monta.fita()`, a 03 e a 09 já dão.
+    """
+    chips = re.findall(r"<label [^>]*>", carga["mesa"]["fita-chips"])
+    pintados = [c for c in chips if "--plastico" in c]
+    assert pintados, f"a mesa de mentira tem um controle com cor e nenhum chip pintou: {chips}"
+    sem = [c for c in pintados if 'data-campo="fita-chip"' not in c]
+    assert not sem, f"chip pintado sem endereço próprio: {sem}"
+
+
+def test_a_06_publicada_nao_tem_identidade_congelada():
+    """A régua do portão, na página que o produto renderiza."""
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    import check_identidade_vem_de_cima as regua
+    from hefesto_dualsense4unix.interface import onde
+
+    achados = regua.congelados_de(onde.pagina(PAGINA, publicado=True),
+                                  regua.nomes_de_colorway())
+    assert not achados, f"identidade congelada na 06 publicada: {achados}"

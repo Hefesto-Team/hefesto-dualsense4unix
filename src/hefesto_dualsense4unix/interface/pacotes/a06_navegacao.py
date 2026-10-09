@@ -192,6 +192,9 @@ TECLADO_SO_DENTRO = "Só dentro do jogo"
 #: O-CURSOR-01, opção b). O endereço pinta o interruptor (`Sim`/`Não`); o segundo
 #: acende o cinza no Modo Nativo, em que o jogo lê o controle direto e a tabela
 #: não toca em nada (o mesmo cinza da Mira, `a02_controles.MIRA_NO_NATIVO`).
+#: O endereço de CADA chip da fita, o mesmo do `monta.fita()` e da 09: sem ele, o
+#: `--plastico` do chip é cor cravada para `check_identidade_vem_de_cima.py`.
+CAMPO_DO_CHIP = "fita-chip"
 ENDERECO_DA_CHAVE = "tabela-no-jogo"
 ENDERECO_DA_CHAVE_FORA = "tabela-no-jogo-fora"
 CHAVE_LIGADA = "Sim"
@@ -782,6 +785,10 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     O chip leva `--plastico` quando a cor foi lida, pela mesma regra do
     `monta.fita()` (sem cor lida, nem a classe nem o `style`); a folha não apaga
     mais o chip da fita inerte.
+
+    CADA CHIP TEM ENDEREÇO PRÓPRIO (09/10/2026): `data-campo="fita-chip"`, como
+    no `monta.fita()`, na 03 e na 09. O endereço do bloco não basta para a régua
+    da identidade, que lê o `--plastico` no `style` do próprio elemento.
     """
     monta = _monta()
     mostra_todos, _ = monta.escolha_da_fita("todos", mesa)
@@ -799,12 +806,13 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         aceso = " on" if str(lugar.get("pref") or "") in acesos else ""
         slug = str(lugar.get("cor") or "")
         if slug and monta.o_desenho_conhece(slug):
-            chips.append(f'<label class="chip plastico{aceso}"'
+            chips.append(f'<label class="chip plastico{aceso}" data-campo="{CAMPO_DO_CHIP}"'
                          f' style="--plastico:{monta.cor_da_zona(slug)}"'
                          ' title="A borda é a cor do plástico">'
                          f"{rotulo}</label>")
         else:
-            chips.append(f'<label class="chip{aceso}">{rotulo}</label>')
+            chips.append(f'<label class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}">'
+                         f"{rotulo}</label>")
     return "".join(chips)
 
 
