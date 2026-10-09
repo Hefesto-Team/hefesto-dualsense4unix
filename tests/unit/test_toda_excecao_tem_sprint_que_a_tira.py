@@ -200,7 +200,7 @@ def catraca(achadas: dict[str, Lista], dividas: dict[str, int]) -> list[str]:
 DIVIDAS: dict[str, int] = {
     "scripts/check_a_cor_vem_do_aparelho.py::ISENCOES": 0,
     "scripts/check_a_maiuscula_decorativa.py::DIVIDA": 34,
-    "scripts/check_a_tela_nao_confessa.py::A_DIVIDA": 4,
+    "scripts/check_a_tela_nao_confessa.py::A_DIVIDA": 2,
     "scripts/check_cabo_bt_perfil_controle.py::A_DIVIDA_CONHECIDA": 1,
     "scripts/check_identidade_vem_de_cima.py::ISENCOES": 0,
     "scripts/validar-citacoes-de-linha.py::CSV_FORA_DO_PORTAO": 0,
@@ -213,6 +213,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
+    "tests/unit/test_os_efeitos_do_gatilho_mandam_o_que_o_nome_diz.py::ISENCOES": 5,
     "tests/unit/test_o_bluez_tem_um_dono.py::_ISENTOS_DO_CAMINHO": 1,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
     "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 0,

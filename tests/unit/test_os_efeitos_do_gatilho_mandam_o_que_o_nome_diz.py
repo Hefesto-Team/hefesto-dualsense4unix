@@ -261,9 +261,11 @@ _ARCO = "O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01"
 
 ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
     # a Arma automática e a Vibração (a Metralhadora saiu em 08/10/2026)
+    # sai com: A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01
     "AutoGun": (_METRALHADORA, frozenset({
         BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
     })),
+    # sai com: A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01
     "Vibration": (_METRALHADORA, frozenset({
         BIT_FORA_DO_CURSO, REPETE_SEM_FREQUENCIA,
     })),
@@ -271,8 +273,11 @@ ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
     # 08/10/2026 (arma `0x25` e arco `0x22` no layout do modo). Os três de baixo
     # têm a sensação que a mão dela aprovou em 01/08 e ficam como estão até a
     # sessão às cegas: os bytes só mudam se ela escolher o modo próprio.
+    # sai com: O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01
     "SemiAutoGun": (_DISPARO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
+    # sai com: O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01
     "Bow": (_ARCO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
+    # sai com: O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01
     "Galloping": (_ARCO, frozenset({
         BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
     })),
