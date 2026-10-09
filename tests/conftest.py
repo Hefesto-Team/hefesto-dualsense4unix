@@ -39,6 +39,36 @@ os.environ.pop("FORCE_COLOR", None)
 os.environ.setdefault("NO_COLOR", "1")
 
 
+# A-SUITE-NAO-ACORDA-A-PLACA-DE-VERDADE-01: o `assets/hefesto-launch.sh` chama
+# `sudo -n /usr/local/lib/…/hefesto_placa_acordada.sh acordar` quando o script
+# instalado existe, e o script de root trava o clock da placa da máquina. Medido
+# em 09/10: dezenas de `sudo … hefesto_placa_acordada.sh acordar/devolver` no
+# journal, com o PWD nas árvores `valida-*`, um par por teste que roda o
+# lançador. O desvio é a terceira tabela do embrulho único do `Popen.__init__`
+# (`_instalar_popen_da_sessao`), sempre armada: a variável que o lançador lê vai
+# a um caminho que nunca existe, também no `env={…}` montado do zero, onde um
+# `setenv` não chega. O teste que aponta a variável para um dublê dele continua
+# com o dublê; só o caminho instalado é trocado.
+PLACA_ACORDADA_ENV = "HEFESTO_PLACA_ACORDADA"
+PLACA_ACORDADA_INSTALADA = (
+    "/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
+)
+# Debaixo de `/dev/null` nada nasce: o `[ -x ]` do lançador falha sempre.
+PLACA_ACORDADA_DESVIADA = "/dev/null/a-suite-nao-acorda-a-placa"
+os.environ[PLACA_ACORDADA_ENV] = PLACA_ACORDADA_DESVIADA
+
+
+def _desviar_a_placa(argumentos: dict[str, Any]) -> None:
+    """Ajusta, no lugar, o `env` de um `Popen` que alcançaria a placa instalada."""
+    env = argumentos.get("env")
+    base = os.environ if env is None else env
+    if not hasattr(base, "get"):
+        return
+    if base.get(PLACA_ACORDADA_ENV) not in (None, PLACA_ACORDADA_INSTALADA):
+        return
+    argumentos["env"] = {**base, PLACA_ACORDADA_ENV: PLACA_ACORDADA_DESVIADA}
+
+
 from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
@@ -1059,6 +1089,7 @@ def pytest_sessionstart(session: Any) -> None:
     if not _LAR_REAL:
         _LAR_REAL.append(Path(os.environ.get("HOME") or os.path.expanduser("~")))
     _armar_berco(session)
+    _instalar_popen_da_sessao()
     _armar_som_de_mentira()
     _armar_lancador_de_mentira(session)
     if _faixa_ligada():
@@ -2996,7 +3027,7 @@ def _desviar_para_o_lancador(argumentos: dict[str, Any], duble: Path) -> None:
 
 
 def _instalar_popen_da_sessao() -> None:
-    """O embrulho ÚNICO do `Popen.__init__` da sessão, com as duas tabelas."""
+    """O embrulho ÚNICO do `Popen.__init__` da sessão: a placa, o som e o lançador."""
     import functools
     import subprocess
 
@@ -3009,21 +3040,19 @@ def _instalar_popen_da_sessao() -> None:
     def _init_da_sessao(self: Any, *args: Any, **kwargs: Any) -> None:
         som = som_de_mentira() if _POPEN_COM_SOM else None
         lancador = lancador_de_mentira()
-        if som is not None or lancador is not None:
-            try:
-                amarrado = assinatura.bind(self, *args, **kwargs)
-            except TypeError:
-                pass
-            else:
-                if som is not None:
-                    _desviar_para_o_duble(amarrado.arguments, som)
-                if lancador is not None:
-                    _desviar_para_o_lancador(amarrado.arguments, lancador)
-                _POPEN_INIT_REAL[0](*amarrado.args, **amarrado.kwargs)
-                if lancador is not None and _vai_ao_duble(amarrado.arguments, lancador):
-                    _FILHOS_NO_DUBLE.append(self)
-                return None
-        return _POPEN_INIT_REAL[0](self, *args, **kwargs)
+        try:
+            amarrado = assinatura.bind(self, *args, **kwargs)
+        except TypeError:
+            return _POPEN_INIT_REAL[0](self, *args, **kwargs)
+        _desviar_a_placa(amarrado.arguments)
+        if som is not None:
+            _desviar_para_o_duble(amarrado.arguments, som)
+        if lancador is not None:
+            _desviar_para_o_lancador(amarrado.arguments, lancador)
+        _POPEN_INIT_REAL[0](*amarrado.args, **amarrado.kwargs)
+        if lancador is not None and _vai_ao_duble(amarrado.arguments, lancador):
+            _FILHOS_NO_DUBLE.append(self)
+        return None
 
     _POPEN_INIT_REAL.append(real)
     subprocess.Popen.__init__ = _init_da_sessao  # type: ignore[method-assign]
