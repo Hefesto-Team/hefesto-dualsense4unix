@@ -29,7 +29,9 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-PADRAO = re.compile(r"232 *%|928,4")
+#: O número inteiro, e não o pedaço de outro: um CSV de medida bruta tem ``5.34928,4957…``
+#: (dois campos colados pela vírgula), que não é o custo de 928,4 por controle.
+PADRAO = re.compile(r"(?<![\d.])(?:232 *%|928,4(?!\d))")
 
 #: Só texto: o resto (imagem, fonte, binário) nunca carrega o número.
 SUFIXOS_DE_TEXTO = frozenset({
@@ -135,6 +137,15 @@ def test_a_regua_morde_o_numero_plantado_e_respeita_as_isencoes(tmp_path: Path) 
     assert len(achados) == 1 and achados[0].startswith("mockup/mapa-do-radio.html:2:"), (
         "só a linha que nega é isenta; outra linha do mesmo arquivo reprova")
 
+
+def test_a_regua_nao_le_o_numero_dentro_de_outro_numero(tmp_path: Path) -> None:
+    """O CSV de medida bruta tem ``5.34928,4957…``: dois campos, e nenhum é o 928,4."""
+    medida = tmp_path / "docs" / "process" / "estudos" / "medidas" / "JOGO.csv"
+    medida.parent.mkdir(parents=True)
+    medida.write_text("60.17,16.61,0,66,0,5.34928,49577862239\n1232%,7\n", encoding="utf-8")
+    assert varrer(tmp_path) == []
+    medida.write_text("custo,928,4\nuso,232%\n", encoding="utf-8")
+    assert len(varrer(tmp_path)) == 2, "o número inteiro, mesmo num CSV, ainda reprova"
 
 def test_nenhuma_isencao_esta_morta() -> None:
     """Isenção cujo arquivo já não tem o número é régua frouxa: sai da lista."""
