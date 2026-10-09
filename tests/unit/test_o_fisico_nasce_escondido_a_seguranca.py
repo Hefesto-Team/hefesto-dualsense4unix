@@ -473,6 +473,30 @@ def test_as_funcoes_novas_do_doctor_so_leem(nome: str) -> None:
         assert alvo.startswith(("/dev/null", "&")), (nome, alvo)
 
 
+def test_o_programa_que_responde_pelo_udev_so_pergunta() -> None:
+    """O `udevadm` entra por argumento (`"${consulta}"`), e a régua acima não o vê entre aspas.
+
+    Todo uso dele como comando é `info` ou `--version`, e o nome literal só aparece
+    como o argumento que o `check_o_no_fisico_nasce_sem_acl` passa ao veredito.
+    """
+    texto = DOCTOR.read_text(encoding="utf-8")
+    verbos: set[str] = set()
+    literais = 0
+    for nome in FUNCOES_NOVAS_DO_DOCTOR:
+        codigo = "\n".join(
+            linha.split(" #", 1)[0]
+            for linha in _funcao(texto, nome).splitlines()
+            if not linha.lstrip().startswith("#")
+        )
+        verbos.update(re.findall(r'"\$\{consulta\}"\s+([a-z-][^\s"]*)', codigo))
+        usos = re.findall(r'\budevadm\b', codigo)
+        aceitos = re.findall(r'_veredito_do_no_fisico_no_udev "udevadm" ', codigo)
+        assert len(usos) == len(aceitos), (nome, codigo)
+        literais += len(aceitos)
+    assert verbos == {"info", "--version"}, verbos
+    assert literais == 1, literais
+
+
 def test_o_ipc_do_doctor_so_pergunta_o_estado() -> None:
     corpo = _funcao(DOCTOR.read_text(encoding="utf-8"), "_nascimentos_do_daemon")
     metodos = re.findall(r'"method":\s*"([^"]+)"', corpo)
